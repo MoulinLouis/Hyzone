@@ -2,6 +2,10 @@ plugins {
     id 'java'
 }
 
+ext {
+    userHome = System.getProperty("user.home")
+}
+
 java {
     toolchain.languageVersion = JavaLanguageVersion.of(java_version)
     withSourcesJar()
@@ -12,14 +16,8 @@ javadoc {
     options.addStringOption('Xdoclint:-missing', '-quiet')
 }
 
-repositories {
-    mavenCentral()
-}
-
 dependencies {
-    testImplementation platform('org.junit:junit-bom:5.10.0')
-    testImplementation 'org.junit.jupiter:junit-jupiter'
-    implementation(files(System.getProperty("user.home") + "/AppData/Roaming/Hytale/install/release/package/game/$game_build/Server/HytaleServer.jar"))
+    implementation(files("$userHome/AppData/Roaming/Hytale/install/release/package/game/latest/Server/HytaleServer.jar"))
 }
 
 test {
@@ -34,9 +32,10 @@ processResources {
             'description'   : description,
             'website'       : website,
             'server_version': server_version,
-            'entry_point'   : entry_point
+            'entry_point'   : entry_point,
+            'project_group' : plugin_group,
+            'author'        : author
     ]
-
     filesMatching(['manifest.json']) {
         expand expandProps
     }

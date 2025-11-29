@@ -1,13 +1,11 @@
 {
-  "Group": "${group}",
+  "Group": "${project_group}",
   "Name": "${name}",
   "Version": "${version}",
   "Description": "${description}",
   "Authors": [
     {
-      "Name": "It's you!",
-      "Email": "",
-      "Url": "example.org"
+      "Name": "${author}"
     }
   ],
   "Website": "${website}",
