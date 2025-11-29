@@ -1,6 +1,6 @@
 package org.example;
 
-import com.hypixel.hytale.Main;
+import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.event.events.entity.LivingEntityBreakBlockEvent;
@@ -13,16 +13,18 @@ import javax.annotation.Nonnull;
  * This class serves as the entrypoint for your plugin. Use the setup method to register into game registries or add
  * event listeners.
  */
-public class PluginExample extends JavaPlugin {
+public class ExamplePlugin extends JavaPlugin {
 
-    public PluginExample(@Nonnull JavaPluginInit init) {
+    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
+
+    public ExamplePlugin(@Nonnull JavaPluginInit init) {
         super(init);
-        IO.println("Hello from " + this.getName() + " version " + this.getManifest().getVersion().toString());
+        LOGGER.atInfo().log("Hello from " + this.getName() + " version " + this.getManifest().getVersion().toString());
     }
 
     @Override
     protected void setup() {
-        IO.println("Setting up plugin " + this.getName());
+        LOGGER.atInfo().log("Setting up plugin " + this.getName());
         this.getCommandRegistry().registerCommand(new ExampleCommand(this.getName()));
         this.getEventRegistry().registerGlobal(LivingEntityBreakBlockEvent.class, this::onLivingBreakBlockEvent);
     }
