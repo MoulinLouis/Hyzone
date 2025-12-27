@@ -65,6 +65,9 @@ idea.project.settings.runConfigurations {
         if (load_user_mods) {
             programParameters += " --mods=$hytaleHome/UserData/Mods"
         }
+        if (use_insecure_auth) {
+            programParameters += " --auth-mode insecure"
+        }
         workingDirectory = serverRunDir.absolutePath
     }
 }
