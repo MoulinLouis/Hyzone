@@ -21,6 +21,8 @@ Please ensure all the requirements are met before getting started.
 2. Have Intellij IDEA installed. Community edition is fine.
 3. Download Java 25 and set it as the SDK in IDEA.
 
+Currently this template only supports Windows!
+
 ## Configuring Template
 It is important to configure the project before using it as a template. Doing
 this before importing the project will help avoid running into caching issues
@@ -62,6 +64,28 @@ the dropdown or click `Edit Configurations...` once to unhide it.**
 Once the server is running in IDEA you should be able to connect to 
 `Local Server` using your standard Hytale client. If the server does not show
 up automatically, add the IP as `127.0.0.1` manually.
+
+### You MUST authenticate your test server!
+In order to connect to the test server, you must authenticate it with Hytale.
+This is done by running the `auth login device` command in the server terminal.
+This command will print a URL that you can use to authenticate the server using
+your Hytale account. Once authenticated, you can run the 
+`auth persistence Encrypted` command to keep your server authenticated after 
+restarting it. 
+
+**Never share your encrypted auth file!**
+
+If you are unable to run commands from the IDEA terminal, you can also run the 
+command from code like this. Make sure to remove the code after your server is
+authenticated.
+
+```java
+    @Override
+    protected void start() {
+        CommandManager.get().handleCommand(ConsoleSender.INSTANCE, "auth login device");
+    }
+```
+
 
 ## Verifying The Example Plugin
 You can verify the Example plugin has loaded by running the `/test` command 
