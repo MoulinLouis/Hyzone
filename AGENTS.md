@@ -2,6 +2,9 @@
 
 This file tells Codex how to work in this repo when asked to create or modify a Hytale plugin. Ignore README.md because it is sample text.
 
+## Project workflow
+- Any code agent working on this project should update `CHANGELOG.md` with a short note describing each completed feature.
+
 ## Project map
 - Java sources live under `src/main/java`. Current plugin package is `io.parkour.plugins.parkour`.
 - Plugin entrypoint is `ExamplePlugin` (extends `JavaPlugin`) in `src/main/java/io/parkour/plugins/parkour/ExamplePlugin.java`.
