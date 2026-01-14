@@ -1,14 +1,14 @@
 {
-    "Group": "Example",
-    "Name": "ExamplePlugin",
+    "Group": "Parkour",
+    "Name": "ParkourPlugin",
     "Version": "0.0.2",
-    "Description": "An example plugin for HyTale!",
+    "Description": "A parkour plugin for Hytale.",
     "Authors": [
         {
-            "Name": "It's you!"
+            "Name": "Louis Moulin"
         }
     ],
-    "Website": "example.org",
+    "Website": "https://parkour.io",
     "ServerVersion": "*",
     "Dependencies": {
         
@@ -17,6 +17,6 @@
         
     },
     "DisabledByDefault": false,
-    "Main": "org.example.plugin.ExamplePlugin",
+    "Main": "io.parkour.plugins.parkour.ExamplePlugin",
     "IncludesAssetPack": true
 }
