@@ -1,11 +1,11 @@
-package org.example.plugin;
+package io.parkour.plugins.parkour;
+
+import javax.annotation.Nonnull;
 
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
-
-import javax.annotation.Nonnull;
 
 /**
  * This is an example command that will simply print the name of the plugin in chat when used.
@@ -17,6 +17,7 @@ public class ExampleCommand extends CommandBase {
 
     public ExampleCommand(String pluginName, String pluginVersion) {
         super("test", "Prints a test message from the " + pluginName + " plugin.");
+
         this.setPermissionGroup(GameMode.Adventure); // Allows the command to be used by anyone, not just OP
         this.pluginName = pluginName;
         this.pluginVersion = pluginVersion;
