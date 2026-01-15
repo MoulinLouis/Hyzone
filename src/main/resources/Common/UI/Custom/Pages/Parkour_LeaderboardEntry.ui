@@ -1,0 +1,37 @@
+$C = "../Common.ui";
+
+Group {
+  LayoutMode: Left;
+  Anchor: (Left: 2, Right: 2, Bottom: 6, Height: 46, Width: 470);
+  Background: $C.@InputBoxBackground;
+  Padding: (Left: 10, Right: 10, Top: 8);
+
+  Label #Rank {
+    Anchor: (Width: 30);
+    Style: (
+      FontSize: 14,
+      RenderBold: true,
+      TextColor: #93844c
+    );
+    Text: "1";
+  }
+
+  Label #PlayerName {
+    FlexWeight: 1;
+    Style: (
+      FontSize: 14,
+      TextColor: #cfd7dc
+    );
+    Text: "Player";
+  }
+
+  Label #Completion {
+    Anchor: (Width: 80, Right: 0);
+    Style: (
+      FontSize: 13,
+      RenderBold: true,
+      TextColor: #9fb0ba
+    );
+    Text: "0/0";
+  }
+}

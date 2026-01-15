@@ -1,5 +1,115 @@
 # Changelog
 
+- Removed the README ignore note from AGENTS instructions.
+- Removed temporary/test UI assets and example recipe files.
+- Removed unused example UI and test block assets.
+- Removed the parkour sound test command.
+- Renamed Hyzone branding, packages, and plugin entrypoint to Hyvexa across code, configs, UI, and docs.
+- Give parkour menu items on player ready so joiners spawn with the base items without /pkitem.
+- Skip replacing inventories with parkour items for OP players.
+- Block non-OP players from breaking blocks.
+- Hardened progress/map parsing, map ID validation, and coordinate/XP bounds for launch safety.
+- Removed the run HUD overlay dim so the game view stays at full brightness.
+- Ensure OP players still receive reset/leave items on map start while clearing only their hotbar.
+- Ensure OP players get the base menu items on map leave while clearing only their hotbar.
+- Return players to spawn and end the run if they fall longer than the configured timeout.
+- Updated the HUD server address to include port 5500.
+- Added a settings-driven category order for the /pk category list.
+- Added chat formatting to display rank before player names.
+- Colored chat rank tags and removed angle brackets.
+- Reworked rank display to use completion percent across Easy/Medium/Hard/Insane map totals.
+- Show rank thresholds and total possible XP in /pkadmin settings.
+- Added a stamina stat override that continuously refills stamina for all players.
+- Removed automatic spawn teleports on player join.
+- Colored rank thresholds in /pkadmin settings.
+- Colored the HUD rank label to match the player’s rank.
+- Updated completion ranks to start at Bronze and add Master at 100%.
+- Apply fall-to-spawn only when not in a run; falling during a run respawns at checkpoints again.
+- Removed the idle fall-to-spawn chat message.
+- Switched teleport-to-spawn to use the world spawn provider instead of fixed coords.
+- Skip idle fall-to-spawn for OP players while keeping run fall behavior.
+- Added a /pkadmin settings toggle for idle fall respawn on OP players.
+- Reset the run timer when a player falls before reaching the first checkpoint.
 - Added /cp checkpoint command (set, teleport, clear) stored in memory only.
 - Added positional /cp set and /cp clear support alongside --action flags.
 - Allow extra arguments so positional /cp set/clear parse without errors.
+- Added /parkourui command with a simple example custom UI page.
+- Added JSON-backed course/race storage plus setup commands for parkour data.
+- Allow parkour course/race commands to accept subcommands without argument count errors.
+- Added admin UI pages to manage courses and races via in-game menus.
+- Removed race management in favor of course-only flow aligned with server design.
+- Added player-facing course selection UI with teleport to start.
+- Renamed player/admin commands to /pk and /pkadmin.
+- Added course deletion button in the admin UI.
+- Added active course tracking to announce checkpoint and finish touches.
+- Added dead-zone respawn: if player falls below Y=300, teleport to last checkpoint or start.
+- Added course completion handling with spawn teleport and persisted best times.
+- Added course categories and category-first /pk flow with back navigation.
+- Added category editing for selected courses in /pkadmin.
+- Added /pk leaderboard to show completion counts per player.
+- Added leaderboard UI for /pk leaderboard.
+- Added leaderboard navigation for global and per-course best times.
+- Added a right-click menu item (and /pkitem command) to open /pk via interaction.
+- Added leaderboard item and updated /pkitem to give both items.
+- Prevented dropping parkour admin items by filtering drop actions in inventory.
+- Disabled dropping items globally via inventory drop filters.
+- Cancelled DropItemEvent player requests to block all item drops.
+- Allowed OP players to drop items while blocking others.
+- Clear inventory on course start/leave/finish and swap in reset/leave or menu/leaderboard items.
+- Added a non-blocking custom HUD timer that shows run time/status.
+- Hide the run HUD by default and show it only during active runs.
+- Sync parkour run/menu inventory on player connect based on active course state.
+- Teleport players to spawn on connect when no active run is active.
+- Added basic player progression with XP, levels, achievements, and title unlocks on completion.
+- Added `/pk stats` to show level, XP, achievements, and titles.
+- Added a `/pkadmin` page to view/reset player progression by UUID.
+- Updated the progress admin page to list tracked players instead of manual UUID entry.
+- Store and display last known player names in the progress admin list and summary.
+- Applied code review cleanup: lock safety, shared UI button data, constants/utils, settings config, and validation/name fallbacks.
+- Restructured the plugin into the Hyvexa package layout with renamed parkour modules and shared utilities.
+- Added legacy progress admin shims to prevent missing-class errors after the package move.
+- Added legacy parkour admin shims to avoid world-thread crashes when older classes are still cached.
+- Restricted /pkadmin to OP players only.
+- Replaced dead-zone respawns with a fall timer and added a /pkadmin setting for fall respawn seconds.
+- Added a persistent "Hello world" HUD element on the run HUD.
+- Reworked the run HUD to show player info, XP, date, and server IP on the right side.
+- Added course completion count to the run HUD info panel.
+- Applied color styling for EXP/Maps values, date, and server IP on the run HUD.
+- Replaced the HUD player line with a centered PARKOUR title.
+- Added test UI pages and commands for TestPage, Tutorial3Page, and InfoPanel.
+- Renamed parkour courses to maps across data, commands, and UI.
+- Added per-map first-completion XP rewards editable in /pkadmin.
+- Show first-completion XP rewards in the /pk map selection list for uncompleted maps.
+- Added a /pksound test command to play a sound event by id.
+- Added /pksound list to show loaded sound event ids.
+- Play the parkour victory sound when a player finishes a map.
+- Added a test ambience override to play custom music in Zone1 daytime.
+- Added global music fallback overrides for custom server music.
+- Added /pkmusic debug to list loaded ambience music assets and tracks.
+- Updated /pk map selection to show first-completion XP exactly as configured per map.
+- Moved first-completion XP text onto the map name line in /pk selection entries.
+- Removed the extra reward line from /pk map select entries to avoid blank spacing.
+- Removed the unused map reward selector write to prevent UI selector errors.
+- Reduced /pk map select entry height to remove extra blank space under status text.
+- Reworked progression to show rank tiers (Bronze→Grandmaster) with editable XP thresholds and rank-based displays.
+- Removed base completion XP so rewards only apply on first completion using map-configured values.
+- Added a /pk stats UI page to show player progression details in a custom UI.
+- Removed achievements and active title tracking from parkour progression displays.
+- Added a My Stats stick item that opens /pk stats.
+- Added Close buttons for UI pages without back navigation.
+- Removed titles display from the /pk stats UI.
+- Fixed Close buttons for /pk and /pk leaderboard root pages.
+- Restored the persistent run HUD on reconnect by reattaching the custom HUD each time.
+- Fixed run HUD info not updating by avoiding readiness timer resets each tick.
+- Recreate the run HUD on player connect to keep it visible after reconnects.
+- Added per-map start/leave trigger blocks to auto-join or leave runs with /pkadmin controls.
+- Added a leave teleport coord to /pkadmin that triggers when touching the leave block.
+- Wired the leave stick to use the map leave teleport when configured.
+- Reworked /pkadmin map buttons into two columns with shorter labels to free list space.
+- Forced parkour menu/run items into hotbar slots 0-2 to bypass pickup preference.
+- Moved the run timer to the top-center of the screen while running.
+- Wrapped the run HUD root so the timer label can sit at top-center without UI load errors.
+- Fixed run HUD timer alignment property to avoid UI load failures.
+- Adjusted run timer size and position for top-center display.
+- Updated run timer text to show the map name with elapsed time.
+- Replaced the HUD date line with a static music label.
