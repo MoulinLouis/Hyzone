@@ -1,0 +1,12 @@
+{
+    "Layers": [
+        {
+            "Files": [
+                "Sounds/Parkour/SFX_Victory_Sound.ogg"
+            ]
+        }
+    ],
+    "Volume": 0.0,
+    "MaxInstance": 5,
+    "PreventSoundInterruption": true
+}

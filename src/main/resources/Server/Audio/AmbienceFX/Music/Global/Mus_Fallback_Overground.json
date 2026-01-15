@@ -1,0 +1,16 @@
+{
+  "$Comment": "Override: force custom server music for overground conditions.",
+  "Conditions": {
+    "SunLightLevel": {
+      "Min": 10,
+      "Max": 15
+    }
+  },
+  "Music": {
+    "Tracks": [
+      "Music/Parkour/ZeldaThemeLong.ogg"
+    ]
+  },
+  "AudioCategory": "AudioCat_Music",
+  "Priority": 1000
+}
