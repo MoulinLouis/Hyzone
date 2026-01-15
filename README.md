@@ -1,97 +1,45 @@
-# Hytale Example Plugin
+# Parkour Plugin (Hytale)
 
-An example project that can build and run plugins for the game Hytale!
+A Hytale server plugin that provides a full parkour course experience with
+course selection, leaderboards, admin course management, and a live run timer HUD.
 
-> **⚠️ Warning: Early Access**    
-> The game Hytale is in early access, and so is this project! Features may be
-> incomplete, unstable, or change frequently. Please be patient and understanding as development
-> continues.
+## Features
+- Course selection UI via `/pk` (category-first).
+- Leaderboards via `/pk leaderboard` (global + per-course best times).
+- Admin management via `/pkadmin` (create, set start/finish, checkpoints, rename, delete, category).
+- Run flow: checkpoints, finish detection, dead-zone respawn below Y=300, best-time persistence.
+- Run items: **Reset current course** and **Leave course**.
+- Menu items: **Select a level** and **Leaderboards**.
+- Player-player collision disabled on connect; item drops blocked for non-OP players.
+- Lightweight HUD timer shown while running a course.
 
-## Introduction
-This project contains a Gradle project that can be imported into IDEA and used
-as the foundation for custom Hytale plugins. The template will add the Hytale
-server to your classpath and create a run configuration that can be used to
-run your plugin on the server. It can also be used to build a sharable JAR file
-that contains your plugin.
+## Commands
+- `/pk` - Open the course selector.
+- `/pk leaderboard` - Open leaderboard menu.
+- `/pkadmin` - Manage courses.
+- `/pkitem` - Give menu items.
 
-## Requirements
-Please ensure all the requirements are met before getting started.
+## Project layout
+- Java sources: `src/main/java`.
+- Plugin package: `io.parkour.plugins.parkour`.
+- Entrypoint: `src/main/java/io/parkour/plugins/parkour/ExamplePlugin.java`.
+- Plugin manifest: `src/main/resources/manifest.json`.
+- UI assets: `src/main/resources/Common/UI/Custom/Pages`.
+- Server assets/interactions: `src/main/resources/Server/...`.
 
-1. Download Hytale using the official launcher.
-2. Have Intellij IDEA installed. Community edition is fine.
-3. Download Java 25 and set it as the SDK in IDEA.
+## Build & run
+- Hytale server jar is expected at:
+  `%USERPROFILE%/AppData/Roaming/Hytale/install/<patchline>/package/game/latest/Server/HytaleServer.jar`
+- Build: `./gradlew build` (Windows: `gradlew.bat build`).
+- Run from IDEA: use the `HytaleServer` run config (creates `run/` directory).
 
-Currently this template only supports Windows!
+## Manifest/versioning
+- `manifest.json` fields `Main`, `Group`, `Name`, `Description` should match this plugin.
+- `Version` and `IncludesAssetPack` are written by Gradle from `gradle.properties`.
 
-## Configuring Template
-It is important to configure the project before using it as a template. Doing
-this before importing the project will help avoid running into caching issues
-later on.
+## Notes
+- Parkour data is stored at runtime under `Parkour/`.
+- JSON stubs may be placed in the repo root for testing (e.g., `Courses.json`, `Progress.json`).
 
-### 1: Project Name
-Set the name of the project in `settings.gradle`. This should be the name of
-your plugin. We recommend capitalizing your project name and avoiding 
-whitespace and most special characters. This will be used as the base name for
-any files produced by Gradle, like the sharable JAR file.
-
-### 2: Gradle Properties
-Review the properties defined in `gradle.properties`. You should change the 
-`maven_group` to match your project. You should also change the `version`
-property before making a new release, or set up CI/CD to automate it.
-
-### 3: Manifest
-The manifest file provides important information about your plugin to Hytale.
-You should update every property in this file to reflect your project. The 
-most important property to set is `Main` which tells the game which class
-file to load as the entry point for your plugin. The file can be found at 
-`src/main/resources/manifest.json`.
-
-**This template has configured Gradle to automatically update the `Version` and
-`IncludesAssetPack` property to reflect your Gradle properties every time you 
-run the game in development, or build the plugin. This is a workaround to allow
-the in-game asset editor to be used when working on your project.**
-
-## Importing into IDEA
-When opening the project in IDEA it should automatically create the
-`HytaleServer` run configuration and a `./run` folder. When you run the game it
-will generate all the relevant files in there. It will also load the default 
-assets from the games.
-
-**If you do not see the `HytaleServer` run configuration, you may need to open
-the dropdown or click `Edit Configurations...` once to unhide it.**
-
-## Connecting to Server
-Once the server is running in IDEA you should be able to connect to 
-`Local Server` using your standard Hytale client. If the server does not show
-up automatically, add the IP as `127.0.0.1` manually.
-
-### You MUST authenticate your test server!
-In order to connect to the test server, you must authenticate it with Hytale.
-This is done by running the `auth login device` command in the server terminal.
-This command will print a URL that you can use to authenticate the server using
-your Hytale account. Once authenticated, you can run the 
-`auth persistence Encrypted` command to keep your server authenticated after 
-restarting it. 
-
-**Never share your encrypted auth file!**
-
-If you are unable to run commands from the IDEA terminal, you can also run the 
-command from code like this. Make sure to remove the code after your server is
-authenticated.
-
-```java
-    @Override
-    protected void start() {
-        CommandManager.get().handleCommand(ConsoleSender.INSTANCE, "auth login device");
-    }
-```
-
-
-## Verifying The Example Plugin
-You can verify the Example plugin has loaded by running the `/test` command 
-in game. It will print the name and version of your plugin. This is for 
-demonstration purposes, and should **NOT** be included in your final build.
-
-The example plugin also includes a recipe defined by an asset pack. This recipe
-allows you to craft 10 dirt into 1 dirt using the crafting window. This is also
-an example and should not be removed before you release the plugin.
+## License
+- Internal project; add a license if you plan to distribute.
