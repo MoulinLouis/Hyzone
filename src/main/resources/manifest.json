@@ -1,14 +1,14 @@
 {
-    "Group": "Parkour",
-    "Name": "ParkourPlugin",
+    "Group": "io.hyvexa",
+    "Name": "Hyvexa",
     "Version": "0.0.2",
-    "Description": "A parkour plugin for Hytale.",
+    "Description": "Hyvexa server plugin",
     "Authors": [
         {
-            "Name": "Louis Moulin"
+            "Name": "Playfade"
         }
     ],
-    "Website": "https://parkour.io",
+    "Website": "",
     "ServerVersion": "*",
     "Dependencies": {
         
@@ -17,6 +17,6 @@
         
     },
     "DisabledByDefault": false,
-    "Main": "io.parkour.plugins.parkour.ExamplePlugin",
+    "Main": "io.hyvexa.HyvexaPlugin",
     "IncludesAssetPack": true
 }
