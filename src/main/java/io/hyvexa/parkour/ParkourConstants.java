@@ -7,6 +7,7 @@ public final class ParkourConstants {
     public static final String DEFAULT_CATEGORY = "Beginner";
 
     public static final String ITEM_RESET = "Parkour_Reset_Block";
+    public static final String ITEM_RESTART_CHECKPOINT = "Parkour_Restart_Checkpoint_Block";
     public static final String ITEM_LEAVE = "Parkour_Leave_Block";
     public static final String ITEM_MENU = "Parkour_Menu_Block";
     public static final String ITEM_LEADERBOARD = "Parkour_Leaderboard_Block";
