@@ -18,6 +18,7 @@ import io.hyvexa.parkour.interaction.MenuInteraction;
 import io.hyvexa.parkour.interaction.LeaderboardInteraction;
 import io.hyvexa.parkour.interaction.LeaveInteraction;
 import io.hyvexa.parkour.interaction.ResetInteraction;
+import io.hyvexa.parkour.interaction.RestartCheckpointInteraction;
 import io.hyvexa.parkour.interaction.StatsInteraction;
 import com.hypixel.hytale.server.core.event.events.player.PlayerConnectEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerChatEvent;
@@ -63,7 +64,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class HyvexaPlugin extends JavaPlugin {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final String SERVER_IP_DISPLAY = "play.hyvexa.com:5500";
+    private static final String SERVER_IP_DISPLAY = "play.hyvexa.com";
     private static HyvexaPlugin INSTANCE;
     private MapStore mapStore;
     private RunTracker runTracker;
@@ -106,6 +107,8 @@ public class HyvexaPlugin extends JavaPlugin {
         this.getCodecRegistry(Interaction.CODEC).register("Parkour_Leaderboard_Interaction", LeaderboardInteraction.class, LeaderboardInteraction.CODEC);
         this.getCodecRegistry(Interaction.CODEC).register("Parkour_Stats_Interaction", StatsInteraction.class, StatsInteraction.CODEC);
         this.getCodecRegistry(Interaction.CODEC).register("Parkour_Reset_Interaction", ResetInteraction.class, ResetInteraction.CODEC);
+        this.getCodecRegistry(Interaction.CODEC).register("Parkour_Restart_Checkpoint_Interaction",
+                RestartCheckpointInteraction.class, RestartCheckpointInteraction.CODEC);
         this.getCodecRegistry(Interaction.CODEC).register("Parkour_Leave_Interaction", LeaveInteraction.class, LeaveInteraction.CODEC);
 
         registerNoDropSystem();

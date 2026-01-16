@@ -6,13 +6,16 @@ import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
+import com.hypixel.hytale.server.core.entity.movement.MovementStatesComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.protocol.MovementStates;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.common.util.InventoryUtils;
 import io.hyvexa.common.util.PermissionUtils;
@@ -70,6 +73,10 @@ public class RunTracker {
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         Player player = store.getComponent(ref, Player.getComponentType());
         TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
+        MovementStatesComponent movementStatesComponent = store.getComponent(ref, MovementStatesComponent.getComponentType());
+        MovementStates movementStates = movementStatesComponent != null
+                ? movementStatesComponent.getMovementStates()
+                : null;
         if (playerRef == null || player == null || transform == null) {
             return;
         }
@@ -80,6 +87,7 @@ public class RunTracker {
             boolean allowOpIdleFall = settingsStore != null && settingsStore.isIdleFallRespawnForOp();
             if (fallTimeoutMs > 0 && (allowOpIdleFall || !PermissionUtils.isOp(player))
                     && shouldRespawnFromFall(getIdleFallState(playerRef.getUuid()), position.getY(),
+                    movementStates,
                     fallTimeoutMs)) {
                 teleportToSpawn(ref, store, transform);
                 return;
@@ -98,7 +106,7 @@ public class RunTracker {
             return;
         }
         long fallTimeoutMs = getFallRespawnTimeoutMs();
-        if (fallTimeoutMs > 0 && shouldRespawnFromFall(run, position.getY(), fallTimeoutMs)) {
+        if (fallTimeoutMs > 0 && shouldRespawnFromFall(run, position.getY(), movementStates, fallTimeoutMs)) {
             run.fallStartTime = null;
             run.lastY = null;
             if (run.lastCheckpointIndex < 0) {
@@ -173,7 +181,13 @@ public class RunTracker {
         return (long) Math.max(1L, seconds * 1000.0);
     }
 
-    private boolean shouldRespawnFromFall(ActiveRun run, double currentY, long fallTimeoutMs) {
+    private boolean shouldRespawnFromFall(ActiveRun run, double currentY, MovementStates movementStates,
+                                          long fallTimeoutMs) {
+        if (isFallTrackingBlocked(movementStates)) {
+            run.fallStartTime = null;
+            run.lastY = currentY;
+            return false;
+        }
         if (run.lastY == null) {
             run.lastY = currentY;
             run.fallStartTime = null;
@@ -194,7 +208,13 @@ public class RunTracker {
         return false;
     }
 
-    private boolean shouldRespawnFromFall(FallState fallState, double currentY, long fallTimeoutMs) {
+    private boolean shouldRespawnFromFall(FallState fallState, double currentY, MovementStates movementStates,
+                                          long fallTimeoutMs) {
+        if (isFallTrackingBlocked(movementStates)) {
+            fallState.fallStartTime = null;
+            fallState.lastY = currentY;
+            return false;
+        }
         if (fallState.lastY == null) {
             fallState.lastY = currentY;
             fallState.fallStartTime = null;
@@ -261,6 +281,7 @@ public class RunTracker {
                     player.sendMessage(Message.raw("Title unlocked: " + title));
                 }
             }
+            broadcastCompletion(playerId, playerName, map, durationMs);
             teleportToSpawn(ref, store, transform);
             clearActiveMap(playerId);
             InventoryUtils.giveMenuItems(player);
@@ -296,6 +317,76 @@ public class RunTracker {
         Vector3d position = new Vector3d(spawn.getX(), spawn.getY(), spawn.getZ());
         Vector3f rotation = new Vector3f(spawn.getRotX(), spawn.getRotY(), spawn.getRotZ());
         store.addComponent(ref, Teleport.getComponentType(), new Teleport(store.getExternalData().getWorld(), position, rotation));
+    }
+
+    public boolean teleportToLastCheckpoint(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef) {
+        if (playerRef == null) {
+            return false;
+        }
+        ActiveRun run = activeRuns.get(playerRef.getUuid());
+        if (run == null || run.lastCheckpointIndex < 0) {
+            return false;
+        }
+        Map map = mapStore.getMap(run.mapId);
+        if (map == null || run.lastCheckpointIndex >= map.getCheckpoints().size()) {
+            return false;
+        }
+        TransformData checkpoint = map.getCheckpoints().get(run.lastCheckpointIndex);
+        if (checkpoint == null) {
+            return false;
+        }
+        Vector3d position = new Vector3d(checkpoint.getX(), checkpoint.getY(), checkpoint.getZ());
+        Vector3f rotation = new Vector3f(checkpoint.getRotX(), checkpoint.getRotY(), checkpoint.getRotZ());
+        store.addComponent(ref, Teleport.getComponentType(),
+                new Teleport(store.getExternalData().getWorld(), position, rotation));
+        run.fallStartTime = null;
+        run.lastY = null;
+        return true;
+    }
+
+    private void broadcastCompletion(UUID playerId, String playerName, Map map, long durationMs) {
+        String mapName = map.getName();
+        if (mapName == null || mapName.isBlank()) {
+            mapName = map.getId();
+        }
+        String category = map.getCategory();
+        if (category == null || category.isBlank()) {
+            category = "Uncategorized";
+        } else {
+            category = category.trim();
+        }
+        String rank = progressStore != null ? progressStore.getRankName(playerId, mapStore) : "Unranked";
+        Message rankPart = Message.raw(rank).color(FormatUtils.getRankColor(rank));
+        String categoryColor = getCategoryColor(category);
+        Message message = Message.join(
+                Message.raw("["),
+                rankPart,
+                Message.raw("] "),
+                Message.raw(playerName),
+                Message.raw(" finished "),
+                Message.raw(mapName),
+                Message.raw(" ("),
+                Message.raw(category).color(categoryColor),
+                Message.raw(") in "),
+                Message.raw(FormatUtils.formatDuration(durationMs)),
+                Message.raw(".")
+        );
+        for (PlayerRef target : Universe.get().getPlayers()) {
+            target.sendMessage(message);
+        }
+    }
+
+    private String getCategoryColor(String category) {
+        if (category == null) {
+            return "#b2c0c7";
+        }
+        return switch (category.trim().toLowerCase()) {
+            case "easy" -> "#54d28e";
+            case "medium" -> "#f2c04d";
+            case "hard" -> "#ff7a45";
+            case "insane" -> "#ff4d6d";
+            default -> "#b2c0c7";
+        };
     }
 
     public void teleportToSpawn(Ref<EntityStore> ref, Store<EntityStore> store, TransformComponent transform) {
@@ -339,6 +430,10 @@ public class RunTracker {
     private static class FallState {
         private Long fallStartTime;
         private Double lastY;
+    }
+
+    private boolean isFallTrackingBlocked(MovementStates movementStates) {
+        return movementStates != null && (movementStates.climbing || movementStates.onGround);
     }
 
     private FallState getIdleFallState(UUID playerId) {

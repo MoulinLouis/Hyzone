@@ -1,6 +1,11 @@
 # Changelog
 
 - Removed the README ignore note from AGENTS instructions.
+- Ignore fall respawn timing while climbing or grounded to prevent ladder descents from triggering respawns.
+- Broadcast a global chat message when a player finishes a map.
+- Colorize map categories in completion broadcasts for Easy/Medium/Hard/Insane.
+- Updated the run HUD server address to play.hyvexa.com.
+- Added a run-start hotbar item to restart to the last checkpoint once one is reached.
 - Removed temporary/test UI assets and example recipe files.
 - Removed unused example UI and test block assets.
 - Removed the parkour sound test command.
