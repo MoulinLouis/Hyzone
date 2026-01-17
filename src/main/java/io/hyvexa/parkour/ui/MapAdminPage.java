@@ -35,7 +35,8 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
     private String mapId = "";
     private String mapName = "";
     private String mapCategory = "";
-    private String mapFirstCompletionXp = String.valueOf(ParkourConstants.XP_BONUS_FIRST_COMPLETION);
+    private String mapFirstCompletionXp = String.valueOf(ParkourConstants.MAP_XP_EASY);
+    private String mapOrder = String.valueOf(ParkourConstants.DEFAULT_MAP_ORDER);
     private String selectedMapId = "";
 
     public MapAdminPage(@Nonnull PlayerRef playerRef, MapStore mapStore) {
@@ -68,6 +69,9 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
         if (data.mapFirstCompletionXp != null) {
             mapFirstCompletionXp = data.mapFirstCompletionXp.trim();
         }
+        if (data.mapOrder != null) {
+            mapOrder = data.mapOrder.trim();
+        }
         if (data.button == null) {
             return;
         }
@@ -83,6 +87,7 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
                 mapName = map.getName() != null ? map.getName() : "";
                 mapCategory = map.getCategory() != null ? map.getCategory() : "";
                 mapFirstCompletionXp = String.valueOf(map.getFirstCompletionXp());
+                mapOrder = String.valueOf(map.getOrder());
             }
             sendRefresh(ref, store);
             return;
@@ -156,6 +161,11 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
             return;
         }
         map.setFirstCompletionXp(firstCompletionXp);
+        Integer order = parseMapOrder(player);
+        if (order == null) {
+            return;
+        }
+        map.setOrder(order);
         map.setStart(start);
         map.setCreatedAt(System.currentTimeMillis());
         map.setUpdatedAt(map.getCreatedAt());
@@ -308,6 +318,11 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
             return;
         }
         map.setFirstCompletionXp(firstCompletionXp);
+        Integer order = parseMapOrder(player);
+        if (order == null) {
+            return;
+        }
+        map.setOrder(order);
         map.setUpdatedAt(System.currentTimeMillis());
         try {
             mapStore.updateMap(map);
@@ -345,7 +360,8 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
         }
         ProgressStore progressStore = HyvexaPlugin.getInstance().getProgressStore();
         player.getPageManager().openCustomPage(ref, store,
-                new AdminIndexPage(playerRef, mapStore, progressStore, HyvexaPlugin.getInstance().getSettingsStore()));
+                new AdminIndexPage(playerRef, mapStore, progressStore, HyvexaPlugin.getInstance().getSettingsStore(),
+                        HyvexaPlugin.getInstance().getPlayerCountStore()));
     }
 
     private void sendRefresh(Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -362,6 +378,7 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
         commandBuilder.set("#MapNameField.Value", mapName);
         commandBuilder.set("#MapCategoryField.Value", mapCategory);
         commandBuilder.set("#MapFirstCompletionXpField.Value", mapFirstCompletionXp);
+        commandBuilder.set("#MapOrderField.Value", mapOrder);
         String selectedText = "Selected: (none)";
         if (!selectedMapId.isEmpty()) {
             Map map = mapStore.getMap(selectedMapId);
@@ -404,6 +421,8 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
                 EventData.of(MapData.KEY_MAP_CATEGORY, "#MapCategoryField.Value"), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#MapFirstCompletionXpField",
                 EventData.of(MapData.KEY_MAP_FIRST_COMPLETION_XP, "#MapFirstCompletionXpField.Value"), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#MapOrderField",
+                EventData.of(MapData.KEY_MAP_ORDER, "#MapOrderField.Value"), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CreateMapButton",
                 EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_CREATE), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SetStartButton",
@@ -446,7 +465,7 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
     private Long parseFirstCompletionXp(Player player) {
         String raw = mapFirstCompletionXp != null ? mapFirstCompletionXp.trim() : "";
         if (raw.isEmpty()) {
-            return ParkourConstants.XP_BONUS_FIRST_COMPLETION;
+            return ProgressStore.getCategoryXp(mapCategory);
         }
         try {
             long value = Long.parseLong(raw);
@@ -465,12 +484,31 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
         }
     }
 
+    private Integer parseMapOrder(Player player) {
+        String raw = mapOrder != null ? mapOrder.trim() : "";
+        if (raw.isEmpty()) {
+            return ParkourConstants.DEFAULT_MAP_ORDER;
+        }
+        try {
+            int value = Integer.parseInt(raw);
+            if (value < 0) {
+                player.sendMessage(Message.raw("Order must be 0 or higher."));
+                return null;
+            }
+            return value;
+        } catch (NumberFormatException ignored) {
+            player.sendMessage(Message.raw("Order must be a number."));
+            return null;
+        }
+    }
+
     public static class MapData {
         static final String KEY_BUTTON = "Button";
         static final String KEY_MAP_ID = "@MapId";
         static final String KEY_MAP_NAME = "@MapName";
         static final String KEY_MAP_CATEGORY = "@MapCategory";
         static final String KEY_MAP_FIRST_COMPLETION_XP = "@MapFirstCompletionXp";
+        static final String KEY_MAP_ORDER = "@MapOrder";
         static final String BUTTON_SELECT_PREFIX = "Select:";
         static final String BUTTON_BACK = "BackButton";
         static final String BUTTON_CREATE = "CreateMap";
@@ -491,6 +529,7 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
                 .addField(new KeyedCodec<>(KEY_MAP_CATEGORY, Codec.STRING), (data, value) -> data.mapCategory = value, data -> data.mapCategory)
                 .addField(new KeyedCodec<>(KEY_MAP_FIRST_COMPLETION_XP, Codec.STRING),
                         (data, value) -> data.mapFirstCompletionXp = value, data -> data.mapFirstCompletionXp)
+                .addField(new KeyedCodec<>(KEY_MAP_ORDER, Codec.STRING), (data, value) -> data.mapOrder = value, data -> data.mapOrder)
                 .build();
 
         private String button;
@@ -498,5 +537,6 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
         private String mapName;
         private String mapCategory;
         private String mapFirstCompletionXp;
+        private String mapOrder;
     }
 }

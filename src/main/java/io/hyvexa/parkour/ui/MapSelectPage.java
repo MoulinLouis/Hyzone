@@ -24,6 +24,8 @@ import io.hyvexa.parkour.data.ProgressStore;
 import io.hyvexa.parkour.tracker.RunTracker;
 
 import javax.annotation.Nonnull;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 public class MapSelectPage extends BaseParkourPage {
@@ -105,7 +107,10 @@ public class MapSelectPage extends BaseParkourPage {
         if (playerRef == null) {
             return;
         }
-        List<Map> maps = mapStore.listMaps();
+        List<Map> maps = new ArrayList<>(mapStore.listMaps());
+        maps.sort(Comparator.comparingInt(Map::getOrder)
+                .thenComparing(map -> map.getName() != null ? map.getName() : map.getId(),
+                        String.CASE_INSENSITIVE_ORDER));
         int index = 0;
         for (Map map : maps) {
             if (!FormatUtils.normalizeCategory(map.getCategory()).equalsIgnoreCase(category)) {

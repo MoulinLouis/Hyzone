@@ -2,7 +2,7 @@ $C = "../Common.ui";
 
 $C.@PageOverlay {
   $C.@Container {
-    Anchor: (Width: 420, Height: 300);
+    Anchor: (Width: 420, Height: 480);
 
     #Title {
       Group {
@@ -79,6 +79,63 @@ $C.@PageOverlay {
           );
           Text: "Settings";
         }
+      }
+
+      Button #PlaytimeButton {
+        LayoutMode: Left;
+        Anchor: (Left: 2, Right: 2, Top: 8, Height: 46, Width: 390);
+        Background: $C.@InputBoxBackground;
+        Padding: (Left: 10, Right: 10, Top: 8);
+        Style: ButtonStyle(
+          Sounds: $C.@ButtonSounds,
+        );
+
+        Label #PlaytimeLabel {
+          Style: (
+            FontSize: 16,
+            RenderBold: true,
+            TextColor: #93844c
+          );
+          Text: "Playtime";
+        }
+      }
+
+      Button #PopulationButton {
+        LayoutMode: Left;
+        Anchor: (Left: 2, Right: 2, Top: 8, Height: 46, Width: 390);
+        Background: $C.@InputBoxBackground;
+        Padding: (Left: 10, Right: 10, Top: 8);
+        Style: ButtonStyle(
+          Sounds: $C.@ButtonSounds,
+        );
+
+        Label #PopulationLabel {
+          Style: (
+            FontSize: 16,
+            RenderBold: true,
+            TextColor: #93844c
+          );
+          Text: "Population History";
+        }
+      }
+
+      Label {
+        Anchor: (Top: 12);
+        Style: (
+          FontSize: 13,
+          TextColor: #cfd7dc
+        );
+        Text: "Global announcement";
+      }
+
+      $C.@TextField #AnnouncementField {
+        Anchor: (Height: 26, Top: 4);
+        Style: (FontSize: 14, TextColor: #ffffff(0.85));
+      }
+
+      $C.@TextButton #AnnouncementSendButton {
+        Anchor: (Height: 22, Width: 140, Top: 6);
+        Text: "Broadcast";
       }
 
     }

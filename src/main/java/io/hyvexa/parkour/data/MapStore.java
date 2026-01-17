@@ -115,7 +115,8 @@ public class MapStore extends BlockingDiskFile {
                 map.setLeaveTrigger(readTransform(object, "leaveTrigger"));
                 map.setLeaveTeleport(readTransform(object, "leaveTeleport"));
                 map.setFirstCompletionXp(readLong(object, "firstCompletionXp",
-                        ParkourConstants.XP_BONUS_FIRST_COMPLETION));
+                        ProgressStore.getCategoryXp(map.getCategory())));
+                map.setOrder((int) readLong(object, "order", ParkourConstants.DEFAULT_MAP_ORDER));
                 map.setCreatedAt(readLong(object, "createdAt", 0L));
                 map.setUpdatedAt(readLong(object, "updatedAt", map.getCreatedAt()));
 
@@ -168,6 +169,7 @@ public class MapStore extends BlockingDiskFile {
                 object.add("leaveTeleport", writeTransform(map.getLeaveTeleport()));
             }
             object.addProperty("firstCompletionXp", Math.max(0L, map.getFirstCompletionXp()));
+            object.addProperty("order", Math.max(0, map.getOrder()));
             JsonArray checkpoints = new JsonArray();
             for (TransformData checkpoint : map.getCheckpoints()) {
                 checkpoints.add(writeTransform(checkpoint));
@@ -254,6 +256,10 @@ public class MapStore extends BlockingDiskFile {
             map.setCategory(trimmedCategory);
         }
         map.setFirstCompletionXp(Math.max(0L, map.getFirstCompletionXp()));
+        int order = map.getOrder();
+        if (order < 0) {
+            map.setOrder(ParkourConstants.DEFAULT_MAP_ORDER);
+        }
     }
 
     private static double validateCoordinate(double value) {

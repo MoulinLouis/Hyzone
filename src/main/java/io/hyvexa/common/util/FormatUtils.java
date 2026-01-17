@@ -11,6 +11,20 @@ public final class FormatUtils {
         return String.format(Locale.ROOT, "%.2fs", seconds);
     }
 
+    public static String formatPlaytime(long durationMs) {
+        long totalSeconds = Math.max(0L, durationMs / 1000L);
+        long hours = totalSeconds / 3600L;
+        long minutes = (totalSeconds % 3600L) / 60L;
+        long seconds = totalSeconds % 60L;
+        if (hours > 0) {
+            return String.format(Locale.ROOT, "%dh %dm %ds", hours, minutes, seconds);
+        }
+        if (minutes > 0) {
+            return String.format(Locale.ROOT, "%dm %ds", minutes, seconds);
+        }
+        return String.format(Locale.ROOT, "%ds", seconds);
+    }
+
     public static String normalizeCategory(String category) {
         if (category == null || category.isBlank()) {
             return "Beginner";

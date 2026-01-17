@@ -1,0 +1,76 @@
+{
+  "TranslationProperties": {
+    "Name": "Leaderboards",
+    "Description": "Right click to view parkour leaderboards."
+  },
+  "Categories": [
+    "Blocks.Deco"
+  ],
+  "Recipe": {
+    "Input": [
+      {
+        "ItemId": "Soil_Snow",
+        "Quantity": 1
+      }
+    ],
+    "BenchRequirement": [
+      {
+        "Type": "Crafting",
+        "Id": "Furniture_Bench",
+        "Categories": [
+          "Furniture_Seasonal"
+        ]
+      }
+    ]
+  },
+  "Quality": "Developer",
+  "Interactions": {
+    "Primary": "Block_Primary",
+    "Secondary": "WinterHoliday_Snowflake"
+  },
+  "BlockType": {
+    "Material": "Empty",
+    "DrawType": "Model",
+    "Opacity": "Transparent",
+    "CustomModel": "Items/Hypixel/Event_Decoration/Winter Holiday_Props/WinterHoliday_TreeTop_Snowflake.blockymodel",
+    "CustomModelTexture": [
+      {
+        "Weight": 1,
+        "Texture": "Items/Hypixel/Event_Decoration/Winter Holiday_Props/WinterHoliday_TreeTop_Snowflake_Texture.png"
+      }
+    ],
+    "Group": "Props",
+    "VariantRotation": "Wall",
+    "Flags": {},
+    "Gathering": {
+      "Soft": {}
+    },
+    "BlockParticleSetId": "Crystal",
+    "ParticleColor": "#60fff9",
+    "BlockSoundSetId": "Glass",
+    "HitboxType": "Beam"
+  },
+  "PlayerAnimationsId": "Block",
+  "IconProperties": {
+    "Scale": 1.1,
+    "Rotation": [
+      0.0,
+      0.0,
+      20.0
+    ],
+    "Translation": [
+      3.0,
+      -11.0
+    ]
+  },
+  "Tags": {
+    "Type": [
+      "Furniture"
+    ],
+    "Family": [
+      "Village"
+    ]
+  },
+  "Scale": 1.0,
+  "Icon": "Icons/ItemsGenerated/WinterHoliday_Snowflake.png"
+}

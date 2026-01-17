@@ -65,7 +65,10 @@ public class ParkourAdminCommand extends AbstractAsyncCommand {
                 PlayerRef playerRefComponent = store.getComponent(ref, PlayerRef.getComponentType());
                 if (playerRefComponent != null) {
                     player.getPageManager().openCustomPage(ref, store,
-                            new AdminIndexPage(playerRefComponent, mapStore, progressStore, settingsStore));
+                            new AdminIndexPage(playerRefComponent, mapStore, progressStore, settingsStore,
+                                    HyvexaPlugin.getInstance() != null
+                                            ? HyvexaPlugin.getInstance().getPlayerCountStore()
+                                            : null));
                 }
             }, world);
         }

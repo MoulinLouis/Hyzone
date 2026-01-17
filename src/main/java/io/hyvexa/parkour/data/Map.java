@@ -1,5 +1,6 @@
 package io.hyvexa.parkour.data;
 
+import io.hyvexa.parkour.ParkourConstants;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -15,6 +16,7 @@ public class Map {
     private TransformData leaveTeleport;
     private final List<TransformData> checkpoints = new ArrayList<>();
     private long firstCompletionXp;
+    private int order = ParkourConstants.DEFAULT_MAP_ORDER;
     private long createdAt;
     private long updatedAt;
 
@@ -100,6 +102,14 @@ public class Map {
 
     public void setFirstCompletionXp(long firstCompletionXp) {
         this.firstCompletionXp = firstCompletionXp;
+    }
+
+    public int getOrder() {
+        return order;
+    }
+
+    public void setOrder(int order) {
+        this.order = order;
     }
 
     public long getCreatedAt() {

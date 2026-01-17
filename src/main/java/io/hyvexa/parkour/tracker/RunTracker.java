@@ -260,6 +260,15 @@ public class RunTracker {
             return;
         }
         if (distanceSq(position, map.getFinish()) <= TOUCH_RADIUS_SQ) {
+            int checkpointCount = map.getCheckpoints().size();
+            if (checkpointCount > 0 && run.touchedCheckpoints.size() < checkpointCount) {
+                long now = System.currentTimeMillis();
+                if (now - run.lastFinishWarningMs >= 2000L) {
+                    run.lastFinishWarningMs = now;
+                    player.sendMessage(Message.raw("You did not get all checkpoints."));
+                }
+                return;
+            }
             run.finishTouched = true;
             playFinishSound(playerRef);
             long durationMs = Math.max(0L, System.currentTimeMillis() - run.startTimeMs);
@@ -268,9 +277,15 @@ public class RunTracker {
             int oldRank = progressStore.getCompletionRank(playerId, mapStore);
             ProgressStore.ProgressionResult result = progressStore.recordMapCompletion(playerId, playerName,
                     map.getId(), durationMs, map.getFirstCompletionXp());
+            int leaderboardPosition = progressStore.getLeaderboardPosition(map.getId(), playerId);
+            if (leaderboardPosition <= 0) {
+                leaderboardPosition = 1;
+            }
             player.sendMessage(Message.raw("Finish line touched"));
             player.sendMessage(Message.raw("Map completed in " + FormatUtils.formatDuration(durationMs) + "."));
-            player.sendMessage(Message.raw("You earned " + result.xpAwarded + " XP."));
+            if (result.xpAwarded > 0L) {
+                player.sendMessage(Message.raw("You earned " + result.xpAwarded + " XP."));
+            }
             int newRank = progressStore.getCompletionRank(playerId, mapStore);
             if (newRank > oldRank) {
                 String rankName = progressStore.getRankName(playerId, mapStore);
@@ -281,7 +296,9 @@ public class RunTracker {
                     player.sendMessage(Message.raw("Title unlocked: " + title));
                 }
             }
-            broadcastCompletion(playerId, playerName, map, durationMs);
+            if (result.newBest) {
+                broadcastCompletion(playerId, playerName, map, durationMs, leaderboardPosition);
+            }
             teleportToSpawn(ref, store, transform);
             clearActiveMap(playerId);
             InventoryUtils.giveMenuItems(player);
@@ -344,7 +361,7 @@ public class RunTracker {
         return true;
     }
 
-    private void broadcastCompletion(UUID playerId, String playerName, Map map, long durationMs) {
+    private void broadcastCompletion(UUID playerId, String playerName, Map map, long durationMs, int leaderboardPosition) {
         String mapName = map.getName();
         if (mapName == null || mapName.isBlank()) {
             mapName = map.getId();
@@ -358,6 +375,11 @@ public class RunTracker {
         String rank = progressStore != null ? progressStore.getRankName(playerId, mapStore) : "Unranked";
         Message rankPart = Message.raw(rank).color(FormatUtils.getRankColor(rank));
         String categoryColor = getCategoryColor(category);
+        boolean isWorldRecord = leaderboardPosition == 1;
+        Message positionPart = Message.raw("#" + leaderboardPosition).color(isWorldRecord ? "#ffd166" : "#9fb0ba");
+        Message wrPart = isWorldRecord
+                ? Message.raw(" WR!").color("#ffd166")
+                : Message.raw("");
         Message message = Message.join(
                 Message.raw("["),
                 rankPart,
@@ -369,6 +391,9 @@ public class RunTracker {
                 Message.raw(category).color(categoryColor),
                 Message.raw(") in "),
                 Message.raw(FormatUtils.formatDuration(durationMs)),
+                Message.raw(" - "),
+                positionPart,
+                wrPart,
                 Message.raw(".")
         );
         for (PlayerRef target : Universe.get().getPlayers()) {
@@ -420,6 +445,7 @@ public class RunTracker {
         private int lastCheckpointIndex = -1;
         private Long fallStartTime;
         private Double lastY;
+        private long lastFinishWarningMs;
 
         private ActiveRun(String mapId, long startTimeMs) {
             this.mapId = mapId;

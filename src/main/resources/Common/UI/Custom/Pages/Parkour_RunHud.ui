@@ -6,13 +6,13 @@ $C.@PageOverlay {
     Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
 
     Group #RunHudRoot {
-      Anchor: (Right: 20, Top: 500, Width: 260, Height: 140);
+      Anchor: (Right: 20, Top: 500, Width: 260, Height: 160);
       Background: #000000(0.0);
       LayoutMode: Top;
       Padding: (Left: 10, Right: 10, Top: 8, Bottom: 8);
 
       Group #InfoBox {
-        Anchor: (Left: 0, Right: 0, Height: 150);
+        Anchor: (Left: 0, Right: 0, Height: 170);
         Background: #000000(0.35);
         Padding: (Left: 8, Right: 8, Top: 6, Bottom: 6);
         LayoutMode: Top;
@@ -94,8 +94,53 @@ $C.@PageOverlay {
           );
           Text: "Server: play.hyvexa.com";
         }
+
+        Label #ServerDiscordText {
+          Anchor: (Left: 0, Right: 0, Top: 2);
+          Style: (
+            FontSize: 16,
+            TextColor: #ff7fb0
+          );
+          Text: "Discord: discord.hyvexa.com";
+        }
       }
 
+    }
+
+    Group #AnnouncementBox {
+      Anchor: (Left: 0, Right: 0, Top: 90, Height: 76);
+      LayoutMode: Top;
+      Padding: (Left: 14, Right: 14, Top: 6, Bottom: 6);
+
+      Label #AnnouncementLine1 {
+        Anchor: (Left: 0, Right: 0);
+        Style: (
+          FontSize: 20,
+          TextColor: #e3eef4,
+          HorizontalAlignment: Center
+        );
+        Text: "";
+      }
+
+      Label #AnnouncementLine2 {
+        Anchor: (Left: 0, Right: 0, Top: 3);
+        Style: (
+          FontSize: 20,
+          TextColor: #e3eef4,
+          HorizontalAlignment: Center
+        );
+        Text: "";
+      }
+
+      Label #AnnouncementLine3 {
+        Anchor: (Left: 0, Right: 0, Top: 3);
+        Style: (
+          FontSize: 20,
+          TextColor: #e3eef4,
+          HorizontalAlignment: Center
+        );
+        Text: "";
+      }
     }
 
     Label #RunTimerText {
