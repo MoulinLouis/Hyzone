@@ -18,6 +18,8 @@ import io.hyvexa.parkour.data.ProgressStore;
 import io.hyvexa.parkour.tracker.RunTracker;
 
 import javax.annotation.Nonnull;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -91,8 +93,9 @@ public class LeaderboardMenuPage extends BaseParkourPage {
         for (Map map : maps) {
             categories.add(FormatUtils.normalizeCategory(map.getCategory()));
         }
+        List<String> orderedCategories = orderCategories(categories, maps);
         int index = 1;
-        for (String category : categories) {
+        for (String category : orderedCategories) {
             commandBuilder.append("#MenuCards", "Pages/Parkour_LeaderboardMenuEntry.ui");
             commandBuilder.set("#MenuCards[" + index + "] #EntryName.Text", category);
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
@@ -100,5 +103,23 @@ public class LeaderboardMenuPage extends BaseParkourPage {
                     EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CATEGORY_PREFIX + category), false);
             index++;
         }
+    }
+
+    private List<String> orderCategories(Set<String> categories, List<Map> maps) {
+        List<String> ordered = new ArrayList<>(categories);
+        ordered.sort(Comparator.comparingInt((String category) -> getCategoryOrder(category, maps))
+                .thenComparing(String.CASE_INSENSITIVE_ORDER));
+        return ordered;
+    }
+
+    private int getCategoryOrder(String category, List<Map> maps) {
+        int minOrder = Integer.MAX_VALUE;
+        for (Map map : maps) {
+            String mapCategory = FormatUtils.normalizeCategory(map.getCategory());
+            if (mapCategory.equalsIgnoreCase(category)) {
+                minOrder = Math.min(minOrder, map.getOrder());
+            }
+        }
+        return minOrder == Integer.MAX_VALUE ? Integer.MAX_VALUE : minOrder;
     }
 }

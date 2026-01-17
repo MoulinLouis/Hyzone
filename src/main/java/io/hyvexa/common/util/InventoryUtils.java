@@ -22,16 +22,16 @@ public final class InventoryUtils {
         if (PermissionUtils.isOp(player)) {
             clearContainer(inventory.getHotbar());
             setHotbarItem(inventory, 0, new ItemStack(ParkourConstants.ITEM_RESET, 1));
-            setHotbarItem(inventory, 1, new ItemStack(ParkourConstants.ITEM_LEAVE, 1));
-            setHotbarItem(inventory, 2, new ItemStack(ParkourConstants.ITEM_RESTART_CHECKPOINT, 1));
+            setHotbarItem(inventory, 1, new ItemStack(ParkourConstants.ITEM_RESTART_CHECKPOINT, 1));
+            setHotbarItem(inventory, 2, new ItemStack(ParkourConstants.ITEM_LEAVE, 1));
             return;
         }
         boolean allowDrop = false;
         applyDropFilters(inventory, true);
         clearAllSections(inventory);
         setHotbarItem(inventory, 0, new ItemStack(ParkourConstants.ITEM_RESET, 1));
-        setHotbarItem(inventory, 1, new ItemStack(ParkourConstants.ITEM_LEAVE, 1));
-        setHotbarItem(inventory, 2, new ItemStack(ParkourConstants.ITEM_RESTART_CHECKPOINT, 1));
+        setHotbarItem(inventory, 1, new ItemStack(ParkourConstants.ITEM_RESTART_CHECKPOINT, 1));
+        setHotbarItem(inventory, 2, new ItemStack(ParkourConstants.ITEM_LEAVE, 1));
         applyDropFilters(inventory, allowDrop);
     }
 

@@ -36,6 +36,23 @@ public class ProgressStore extends BlockingDiskFile {
         return playerProgress != null && playerProgress.completedMaps.contains(mapId);
     }
 
+    public boolean shouldShowWelcome(UUID playerId) {
+        PlayerProgress playerProgress = progress.get(playerId);
+        return playerProgress == null || !playerProgress.welcomeShown;
+    }
+
+    public void markWelcomeShown(UUID playerId, String playerName) {
+        this.fileLock.writeLock().lock();
+        try {
+            PlayerProgress playerProgress = progress.computeIfAbsent(playerId, ignored -> new PlayerProgress());
+            storePlayerName(playerId, playerName);
+            playerProgress.welcomeShown = true;
+        } finally {
+            this.fileLock.writeLock().unlock();
+        }
+        this.syncSave();
+    }
+
     public Long getBestTimeMs(UUID playerId, String mapId) {
         PlayerProgress playerProgress = progress.get(playerId);
         if (playerProgress == null) {
@@ -61,9 +78,6 @@ public class ProgressStore extends BlockingDiskFile {
             long xpAwarded = 0L;
             if (firstCompletionForMap) {
                 xpAwarded = Math.max(0L, firstCompletionXp);
-            }
-            if (personalBest) {
-                xpAwarded += ParkourConstants.XP_BONUS_PERSONAL_BEST;
             }
             long oldXp = playerProgress.xp;
             int oldLevel = playerProgress.level;
@@ -106,6 +120,27 @@ public class ProgressStore extends BlockingDiskFile {
             }
         }
         return times;
+    }
+
+    public int getLeaderboardPosition(String mapId, UUID playerId) {
+        if (mapId == null || playerId == null) {
+            return -1;
+        }
+        Map<UUID, Long> times = getBestTimesForMap(mapId);
+        Long playerTime = times.get(playerId);
+        if (playerTime == null) {
+            return -1;
+        }
+        int position = 1;
+        for (Map.Entry<UUID, Long> entry : times.entrySet()) {
+            if (entry.getKey().equals(playerId)) {
+                continue;
+            }
+            if (entry.getValue() < playerTime) {
+                position++;
+            }
+        }
+        return position;
     }
 
     @Override
@@ -168,6 +203,12 @@ public class ProgressStore extends BlockingDiskFile {
                         }
                     }
                 }
+                if (object.has("welcomeShown") && object.get("welcomeShown").isJsonPrimitive()) {
+                    playerProgress.welcomeShown = object.get("welcomeShown").getAsBoolean();
+                }
+                if (object.has("playtimeMs") && object.get("playtimeMs").isJsonPrimitive()) {
+                    playerProgress.playtimeMs = object.get("playtimeMs").getAsLong();
+                }
                 progress.put(uuid, playerProgress);
             } catch (Exception e) {
                 LOGGER.at(Level.WARNING).log("Skipping invalid entry in progress data: " + e.getMessage());
@@ -197,6 +238,8 @@ public class ProgressStore extends BlockingDiskFile {
             }
             object.addProperty("xp", entry.getValue().xp);
             object.addProperty("level", entry.getValue().level);
+            object.addProperty("welcomeShown", entry.getValue().welcomeShown);
+            object.addProperty("playtimeMs", entry.getValue().playtimeMs);
             JsonArray titles = new JsonArray();
             for (String title : entry.getValue().titles) {
                 titles.add(title);
@@ -218,6 +261,8 @@ public class ProgressStore extends BlockingDiskFile {
         private final Set<String> titles = ConcurrentHashMap.newKeySet();
         private long xp;
         private int level = 1;
+        private boolean welcomeShown;
+        private long playtimeMs;
     }
 
     public long getXp(UUID playerId) {
@@ -294,6 +339,26 @@ public class ProgressStore extends BlockingDiskFile {
             this.syncSave();
         }
         return removed;
+    }
+
+    public void addPlaytime(UUID playerId, String playerName, long deltaMs) {
+        if (playerId == null || deltaMs <= 0L) {
+            return;
+        }
+        this.fileLock.writeLock().lock();
+        try {
+            PlayerProgress playerProgress = progress.computeIfAbsent(playerId, ignored -> new PlayerProgress());
+            storePlayerName(playerId, playerName);
+            playerProgress.playtimeMs = Math.max(0L, playerProgress.playtimeMs + deltaMs);
+        } finally {
+            this.fileLock.writeLock().unlock();
+        }
+        this.syncSave();
+    }
+
+    public long getPlaytimeMs(UUID playerId) {
+        PlayerProgress playerProgress = progress.get(playerId);
+        return playerProgress != null ? playerProgress.playtimeMs : 0L;
     }
 
     private static int calculateLevel(long xp) {

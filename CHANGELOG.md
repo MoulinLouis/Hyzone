@@ -1,11 +1,32 @@
 # Changelog
 
+- Added the Discord link to the run HUD info panel.
+- Matched the Discord HUD line color to the server label.
 - Removed the README ignore note from AGENTS instructions.
 - Ignore fall respawn timing while climbing or grounded to prevent ladder descents from triggering respawns.
 - Broadcast a global chat message when a player finishes a map.
 - Colorize map categories in completion broadcasts for Easy/Medium/Hard/Insane.
 - Updated the run HUD server address to play.hyvexa.com.
 - Added a run-start hotbar item to restart to the last checkpoint once one is reached.
+- Swapped the run hotbar order so restart-to-checkpoint sits before leave.
+- Added per-map order field in /pkadmin for admin-controlled list ordering.
+- Sort map select and leaderboard map lists by the admin order field.
+- Order categories in /pk and /pk leaderboard by the lowest map order in each category.
+- Added /pkadminitem to give the Media_RemoteControl admin item.
+- Swapped parkour menu/run items to custom ingredient/seasonal item ids while keeping interactions.
+- Overrode item names/interactions for the new menu/run items so right-click actions work.
+- Restored full item definitions for the new menu/run items so they render correctly.
+- Set parkour menu/run item rarity to Developer.
+- Stop awarding XP for repeat completions of the same map.
+- Hide the XP earned message when no XP is awarded.
+- Show a one-time welcome UI per player explaining the parkour hotbar items.
+- Updated the welcome UI hint to point to /pkitem.
+- Adjusted the welcome UI size to better fit its content.
+- Added an intro sentence to the welcome UI copy.
+- Updated the welcome UI intro to a general Hyvexa jump server greeting.
+- Added a "During a map:" label in the welcome UI list.
+- Show [Admin] in red for OP chat messages instead of rank.
+- Harden chat formatting against null sender names or content.
 - Removed temporary/test UI assets and example recipe files.
 - Removed unused example UI and test block assets.
 - Removed the parkour sound test command.
@@ -118,3 +139,38 @@
 - Adjusted run timer size and position for top-center display.
 - Updated run timer text to show the map name with elapsed time.
 - Replaced the HUD date line with a static music label.
+- Auto-close the first-join welcome UI after a short delay to avoid blocking chat.
+- Restored rank-prefixed chat formatting without the admin override.
+- Added rank-prefixed join/leave server messages.
+- Suppressed the default join broadcast so only the custom join message appears.
+- Added a /pkadmin global announcement field that displays a soft top-center HUD message for 10 seconds.
+- Ensured the announcement sender also sees the broadcast banner.
+- Moved the announcement banner lower and styled it as a larger boxed HUD element.
+- Removed the announcement frame box and increased announcement text size.
+- Require touching all checkpoints before completing a map and warn when missing.
+- Added a short cooldown between missing-checkpoint warnings at the finish line.
+- Broadcast admin announcements to chat in red as "ADMIN MESSAGE: <message>".
+- Removed an invalid leave-message event hook that prevented builds.
+- Include leaderboard position in completion broadcast messages.
+- Highlight leaderboard position and add WR wording for new first-place runs.
+- Color the /pk stats rank label and show XP progress against total possible XP.
+- Added playtime tracking and a /pkadmin Playtime page listing total playtime per player.
+- Fixed playtime entry UI styling to avoid CustomUI load errors.
+- Removed UUIDs from the playtime list display.
+- Added periodic playtime snapshots to ensure playtime shows even after short sessions.
+- Removed the custom leave broadcast while keeping the custom join message.
+- Changed the admin chat tag color to pink.
+- Reworked the stats candy cane item to a non-consumable definition to prevent unintended movement effects.
+- Removed the custom stamina override to restore default sprint behavior.
+- Removed the custom gameplay config override to fix asset validation errors on boot.
+- Removed an invalid sound set reference from the stats item to fix asset validation.
+- Restored the infinite stamina override.
+- Re-enabled player collision removal on connect to fully disable player-player collision.
+- Removed player collision after connect/ready/world events on the world thread to ensure it sticks.
+- Fixed the collision removal hook to handle PlayerReadyEvent references correctly.
+- Added a periodic collision cleanup task and removed the invalid AddPlayerToWorldEvent hook.
+- Only broadcast map completion globally when the run is a new personal best.
+- Changed the admin chat tag color to red.
+- Added a /pkadmin population history view with sampled online player counts and a simple chart.
+- Track online player counts via connect/disconnect events to keep population samples accurate.
+- Show only the numeric player count in the population history rows (no bar characters).

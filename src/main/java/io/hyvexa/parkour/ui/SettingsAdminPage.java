@@ -108,7 +108,8 @@ public class SettingsAdminPage extends InteractiveCustomUIPage<SettingsAdminPage
         MapStore mapStore = HyvexaPlugin.getInstance().getMapStore();
         ProgressStore progressStore = HyvexaPlugin.getInstance().getProgressStore();
         player.getPageManager().openCustomPage(ref, store,
-                new AdminIndexPage(playerRef, mapStore, progressStore, settingsStore));
+                new AdminIndexPage(playerRef, mapStore, progressStore, settingsStore,
+                        HyvexaPlugin.getInstance().getPlayerCountStore()));
     }
 
     private void populateFields(UICommandBuilder commandBuilder) {

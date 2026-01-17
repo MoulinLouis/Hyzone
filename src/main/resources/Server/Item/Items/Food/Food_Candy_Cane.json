@@ -1,0 +1,33 @@
+{
+  "TranslationProperties": {
+    "Name": "My stats",
+    "Description": "Right click to view your parkour stats."
+  },
+  "Icon": "Icons/ItemsGenerated/Food_Candy_Cane.png",
+  "Quality": "Developer",
+  "Categories": [
+    "Items.Food"
+  ],
+  "Model": "Items/Consumables/Food/Candy_Cane.blockymodel",
+  "Texture": "Items/Consumables/Food/Candy_Cane_Texture.png",
+  "PlayerAnimationsId": "Item",
+  "IconProperties": {
+    "Scale": 0.7,
+    "Rotation": [
+      0,
+      0,
+      0
+    ],
+    "Translation": [
+      0,
+      -8
+    ]
+  },
+  "ItemEntity": {
+    "ParticleSystemId": null
+  },
+  "DropOnDeath": true,
+  "Interactions": {
+    "Secondary": "Food_Candy_Cane"
+  }
+}

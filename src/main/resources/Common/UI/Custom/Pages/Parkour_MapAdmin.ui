@@ -71,6 +71,17 @@ $C.@PageOverlay {
         }
 
         Label {
+          Text: "Order (lower first)";
+          Style: (FontSize: 13, TextColor: #cfd7dc);
+          Anchor: (Top: 6);
+        }
+
+        $C.@TextField #MapOrderField {
+          Anchor: (Height: 26);
+          Style: (FontSize: 14, TextColor: #ffffff(0.85));
+        }
+
+        Label {
           Text: "First Completion XP";
           Style: (FontSize: 13, TextColor: #cfd7dc);
           Anchor: (Top: 6);

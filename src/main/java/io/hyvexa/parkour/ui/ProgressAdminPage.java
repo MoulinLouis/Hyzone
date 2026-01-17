@@ -130,7 +130,8 @@ public class ProgressAdminPage extends BaseParkourPage {
         }
         MapStore mapStore = HyvexaPlugin.getInstance().getMapStore();
         player.getPageManager().openCustomPage(ref, store,
-                new AdminIndexPage(playerRef, mapStore, progressStore, HyvexaPlugin.getInstance().getSettingsStore()));
+                new AdminIndexPage(playerRef, mapStore, progressStore, HyvexaPlugin.getInstance().getSettingsStore(),
+                        HyvexaPlugin.getInstance().getPlayerCountStore()));
     }
 
     private void populateFields(UICommandBuilder commandBuilder) {

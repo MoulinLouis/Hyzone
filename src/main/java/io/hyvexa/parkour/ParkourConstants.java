@@ -6,12 +6,12 @@ public final class ParkourConstants {
 
     public static final String DEFAULT_CATEGORY = "Beginner";
 
-    public static final String ITEM_RESET = "Parkour_Reset_Block";
-    public static final String ITEM_RESTART_CHECKPOINT = "Parkour_Restart_Checkpoint_Block";
-    public static final String ITEM_LEAVE = "Parkour_Leave_Block";
-    public static final String ITEM_MENU = "Parkour_Menu_Block";
-    public static final String ITEM_LEADERBOARD = "Parkour_Leaderboard_Block";
-    public static final String ITEM_STATS = "Parkour_Stats_Block";
+    public static final String ITEM_RESET = "Ingredient_Ice_Essence";
+    public static final String ITEM_RESTART_CHECKPOINT = "Ingredient_Lightning_Essence";
+    public static final String ITEM_LEAVE = "Ingredient_Void_Essence";
+    public static final String ITEM_MENU = "Ingredient_Bolt_Prismaloom";
+    public static final String ITEM_LEADERBOARD = "WinterHoliday_Snowflake";
+    public static final String ITEM_STATS = "Food_Candy_Cane";
 
     public static final String TITLE_NOVICE = "Parkour Novice";
     public static final String TITLE_PRO = "Parkour Pro";
@@ -48,12 +48,10 @@ public final class ParkourConstants {
     public static final long MAP_XP_MEDIUM = 30L;
     public static final long MAP_XP_HARD = 60L;
     public static final long MAP_XP_INSANE = 100L;
+    public static final int DEFAULT_MAP_ORDER = 1000;
     public static final int RANK_TITLE_NOVICE_LEVEL = 2;
     public static final int RANK_TITLE_PRO_LEVEL = 4;
     public static final int RANK_TITLE_MASTER_LEVEL = 6;
-
-    public static final long XP_BONUS_FIRST_COMPLETION = 50;
-    public static final long XP_BONUS_PERSONAL_BEST = 25;
 
     public static final double DEFAULT_FALL_RESPAWN_SECONDS = 3.0;
     public static final Vector3d DEFAULT_SPAWN_POSITION = new Vector3d(-484.70, 306.00, 627.48);

@@ -20,6 +20,8 @@ import io.hyvexa.parkour.data.SettingsStore;
 import io.hyvexa.parkour.tracker.RunTracker;
 
 import javax.annotation.Nonnull;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -85,6 +87,7 @@ public class CategorySelectPage extends BaseParkourPage {
             categories.add(category);
         }
         List<String> orderedCategories = applyCategoryOrder(categories);
+        orderedCategories = applyCategoryMapOrder(orderedCategories, maps);
         int index = 0;
         for (String category : orderedCategories) {
             commandBuilder.append("#CategoryCards", "Pages/Parkour_CategoryEntry.ui");
@@ -111,5 +114,23 @@ public class CategorySelectPage extends BaseParkourPage {
         }
         ordered.addAll(categories);
         return ordered;
+    }
+
+    private List<String> applyCategoryMapOrder(List<String> categories, List<Map> maps) {
+        List<String> ordered = new ArrayList<>(categories);
+        ordered.sort(Comparator.comparingInt((String category) -> getCategoryOrder(category, maps))
+                .thenComparing(String.CASE_INSENSITIVE_ORDER));
+        return ordered;
+    }
+
+    private int getCategoryOrder(String category, List<Map> maps) {
+        int minOrder = Integer.MAX_VALUE;
+        for (Map map : maps) {
+            String mapCategory = FormatUtils.normalizeCategory(map.getCategory());
+            if (mapCategory.equalsIgnoreCase(category)) {
+                minOrder = Math.min(minOrder, map.getOrder());
+            }
+        }
+        return minOrder == Integer.MAX_VALUE ? Integer.MAX_VALUE : minOrder;
     }
 }

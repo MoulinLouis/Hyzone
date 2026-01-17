@@ -10,6 +10,7 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.data.ProgressStore;
@@ -67,7 +68,9 @@ public class StatsPage extends BaseParkourPage {
 
         commandBuilder.set("#StatsPlayerName.Text", playerRef.getUsername());
         commandBuilder.set("#StatsRankValue.Text", rankName);
-        commandBuilder.set("#StatsXpValue.Text", xp + " XP");
+        commandBuilder.set("#StatsRankValue.Style.TextColor", FormatUtils.getRankColor(rankName));
+        long totalXp = ProgressStore.getTotalPossibleXp(mapStore);
+        commandBuilder.set("#StatsXpValue.Text", xp + " XP / " + totalXp + " XP");
         commandBuilder.set("#StatsMapsValue.Text", completed + "/" + totalMaps);
     }
 
