@@ -97,7 +97,7 @@ public class MapSelectPage extends BaseParkourPage {
                 map.getStart().getRotZ());
         store.addComponent(ref, Teleport.getComponentType(), new Teleport(world, position, rotation));
         sendMessage(store, ref, "Map loaded.");
-        InventoryUtils.giveRunItems(player);
+        InventoryUtils.giveRunItems(player, map);
         this.close();
     }
 
