@@ -1,5 +1,7 @@
 # Changelog
 
+- Show map difficulty alongside map names in selection and leaderboard pages when non-zero.
+- Sort map lists by difficulty (non-zero first) and then by name on /pk and /pk leaderboard map pages.
 - Added rank-prefixed player nameplates above players.
 - Guard run HUD hide/show against missing packet handlers to avoid crashes.
 - Replace clearing the custom HUD with a blank HUD overlay to avoid client crashes on hide.

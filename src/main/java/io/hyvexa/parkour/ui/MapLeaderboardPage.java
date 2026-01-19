@@ -58,7 +58,7 @@ public class MapLeaderboardPage extends InteractiveCustomUIPage<MapLeaderboardPa
         bindEvents(uiEventBuilder);
         var map = mapStore.getMap(mapId);
         if (map != null) {
-            uiCommandBuilder.set("#MapTitle.Text", "Best times for " + map.getName());
+            uiCommandBuilder.set("#MapTitle.Text", "Best times for " + ParkourUtils.formatMapName(map));
         }
         buildLeaderboard(uiCommandBuilder);
     }
@@ -104,7 +104,7 @@ public class MapLeaderboardPage extends InteractiveCustomUIPage<MapLeaderboardPa
         bindEvents(eventBuilder);
         var map = mapStore.getMap(mapId);
         if (map != null) {
-            commandBuilder.set("#MapTitle.Text", "Best times for " + map.getName());
+            commandBuilder.set("#MapTitle.Text", "Best times for " + ParkourUtils.formatMapName(map));
         }
         buildLeaderboard(commandBuilder);
         this.sendUpdate(commandBuilder, eventBuilder, false);

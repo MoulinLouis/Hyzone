@@ -22,6 +22,7 @@ import io.hyvexa.parkour.data.Map;
 import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.data.ProgressStore;
 import io.hyvexa.parkour.tracker.RunTracker;
+import io.hyvexa.parkour.util.ParkourUtils;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
@@ -108,7 +109,10 @@ public class MapSelectPage extends BaseParkourPage {
             return;
         }
         List<Map> maps = new ArrayList<>(mapStore.listMaps());
-        maps.sort(Comparator.comparingInt(Map::getOrder)
+        maps.sort(Comparator.comparingInt((Map map) -> {
+                    int difficulty = map.getDifficulty();
+                    return difficulty <= 0 ? Integer.MAX_VALUE : difficulty;
+                })
                 .thenComparing(map -> map.getName() != null ? map.getName() : map.getId(),
                         String.CASE_INSENSITIVE_ORDER));
         int index = 0;
@@ -124,7 +128,7 @@ public class MapSelectPage extends BaseParkourPage {
                 status += " | Best: " + FormatUtils.formatDuration(bestTime);
             }
             commandBuilder.set("#MapCards[" + index + "] #MapStatus.Text", status);
-            String mapName = map.getName();
+            String mapName = ParkourUtils.formatMapName(map);
             if (!completed) {
                 long rewardXp = Math.max(0L, map.getFirstCompletionXp());
                 mapName += " | +" + rewardXp + " XP";

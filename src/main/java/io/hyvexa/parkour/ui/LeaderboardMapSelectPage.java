@@ -16,6 +16,7 @@ import io.hyvexa.parkour.data.Map;
 import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.data.ProgressStore;
 import io.hyvexa.parkour.tracker.RunTracker;
+import io.hyvexa.parkour.util.ParkourUtils;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
@@ -77,7 +78,10 @@ public class LeaderboardMapSelectPage extends BaseParkourPage {
     private void buildMapList(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
         commandBuilder.clear("#MapCards");
         List<Map> maps = new ArrayList<>(mapStore.listMaps());
-        maps.sort(Comparator.comparingInt(Map::getOrder)
+        maps.sort(Comparator.comparingInt((Map map) -> {
+                    int difficulty = map.getDifficulty();
+                    return difficulty <= 0 ? Integer.MAX_VALUE : difficulty;
+                })
                 .thenComparing(map -> map.getName() != null ? map.getName() : map.getId(),
                         String.CASE_INSENSITIVE_ORDER));
         int index = 0;
@@ -86,7 +90,7 @@ public class LeaderboardMapSelectPage extends BaseParkourPage {
                 continue;
             }
             commandBuilder.append("#MapCards", "Pages/Parkour_LeaderboardMapEntry.ui");
-            commandBuilder.set("#MapCards[" + index + "] #MapName.Text", map.getName());
+            commandBuilder.set("#MapCards[" + index + "] #MapName.Text", ParkourUtils.formatMapName(map));
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
                     "#MapCards[" + index + "]",
                     EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_SELECT_PREFIX + map.getId()), false);
