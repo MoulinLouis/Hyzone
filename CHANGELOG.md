@@ -1,5 +1,6 @@
 # Changelog
 
+- Added rank-prefixed player nameplates above players.
 - Broadcast a global VexaGod announcement when a player reaches the final completion rank.
 - Styled the VexaGod announcement with rainbow rank text and bolded GG callout.
 - Split the VexaGod announcement into a main line plus a separate GG prompt.

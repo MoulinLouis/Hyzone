@@ -28,6 +28,7 @@ import com.hypixel.hytale.server.core.event.events.player.PlayerChatEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
 import com.hypixel.hytale.server.core.event.events.player.AddPlayerToWorldEvent;
+import com.hypixel.hytale.server.core.entity.nameplate.Nameplate;
 import com.hypixel.hytale.server.core.modules.entity.hitboxcollision.HitboxCollision;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.event.events.entity.LivingEntityInventoryChangeEvent;
@@ -117,6 +118,7 @@ public class HyvexaPlugin extends JavaPlugin {
             new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Long> playtimeSessionStart = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, String> cachedRankNames = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, String> cachedNameplateTexts = new ConcurrentHashMap<>();
     private final AtomicInteger onlinePlayerCount = new AtomicInteger(0);
     private ScheduledFuture<?> mapDetectionTask;
     private ScheduledFuture<?> hudUpdateTask;
@@ -263,6 +265,7 @@ public class HyvexaPlugin extends JavaPlugin {
                     runHudWasRunning.remove(playerId);
                     runHudIsRecords.remove(playerId);
                     cachedRankNames.remove(playerId);
+                    cachedNameplateTexts.remove(playerId);
                     PlayerVisibilityManager.get().clearHidden(playerId);
                     // Clean up announcements
                     announcements.remove(playerId);
@@ -383,6 +386,13 @@ public class HyvexaPlugin extends JavaPlugin {
      */
     public void invalidateAllRankCaches() {
         cachedRankNames.clear();
+    }
+
+    private String getCachedRankName(UUID playerId) {
+        if (playerId == null || progressStore == null) {
+            return "Unranked";
+        }
+        return cachedRankNames.computeIfAbsent(playerId, id -> progressStore.getRankName(id, mapStore));
     }
 
     /**
@@ -620,6 +630,7 @@ public class HyvexaPlugin extends JavaPlugin {
         announcements.keySet().removeIf(id -> !onlinePlayers.contains(id));
         playtimeSessionStart.keySet().removeIf(id -> !onlinePlayers.contains(id));
         cachedRankNames.keySet().removeIf(id -> !onlinePlayers.contains(id));
+        cachedNameplateTexts.keySet().removeIf(id -> !onlinePlayers.contains(id));
         if (runTracker != null) {
             runTracker.sweepStalePlayers(onlinePlayers);
         }
@@ -868,12 +879,38 @@ public class HyvexaPlugin extends JavaPlugin {
         applyDropFilter(inventory.getArmor(), allowDrop);
     }
 
+    private void updatePlayerNameplate(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef,
+                                       String rankName) {
+        if (ref == null || store == null || playerRef == null) {
+            return;
+        }
+        UUID playerId = playerRef.getUuid();
+        if (playerId == null) {
+            return;
+        }
+        String name = playerRef.getUsername();
+        if (name == null || name.isBlank()) {
+            name = "Player";
+        }
+        String safeRank = (rankName == null || rankName.isBlank()) ? "Unranked" : rankName;
+        String text = "[" + safeRank + "] " + name;
+        String cached = cachedNameplateTexts.get(playerId);
+        if (text.equals(cached)) {
+            return;
+        }
+        cachedNameplateTexts.put(playerId, text);
+        Nameplate nameplate = store.ensureAndGetComponent(ref, Nameplate.getComponentType());
+        nameplate.setText(text);
+    }
+
     private void updateRunHud(Ref<EntityStore> ref, Store<EntityStore> store) {
         Player player = store.getComponent(ref, Player.getComponentType());
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (player == null || playerRef == null) {
             return;
         }
+        String rankName = getCachedRankName(playerRef.getUuid());
+        updatePlayerNameplate(ref, store, playerRef, rankName);
         Long elapsedMs = runTracker.getElapsedTimeMs(playerRef.getUuid());
         RunHud hud = getActiveHud(playerRef);
         long readyAt = runHudReadyAt.getOrDefault(playerRef.getUuid(), Long.MAX_VALUE);
@@ -893,8 +930,6 @@ public class HyvexaPlugin extends JavaPlugin {
         }
         int completedMaps = progressStore.getCompletedMapCount(playerRef.getUuid());
         int totalMaps = mapStore.getMapCount();
-        String rankName = cachedRankNames.computeIfAbsent(playerRef.getUuid(),
-                id -> progressStore.getRankName(id, mapStore));
         hud.updateInfo(playerRef.getUsername(), rankName, completedMaps, totalMaps, SERVER_IP_DISPLAY);
         if (!running) {
             if (wasRunning) {
