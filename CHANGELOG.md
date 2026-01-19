@@ -1,5 +1,8 @@
 # Changelog
 
+- Broadcast a global VexaGod announcement when a player reaches the final completion rank.
+- Styled the VexaGod announcement with rainbow rank text and bolded GG callout.
+- Split the VexaGod announcement into a main line plus a separate GG prompt.
 - Render the next-rank XP suffix in white on the stats rank line.
 - Added stats rank display to include XP needed for the next completion rank.
 - Guard run tracking until PlayerReady to avoid teleport mismatches during login.

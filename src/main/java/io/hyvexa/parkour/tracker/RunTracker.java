@@ -391,6 +391,7 @@ public class RunTracker {
                 player.sendMessage(Message.raw("You earned " + result.xpAwarded + " XP."));
             }
             int newRank = progressStore.getCompletionRank(playerId, mapStore);
+            boolean reachedVexaGod = newRank == ParkourConstants.COMPLETION_RANK_NAMES.length && oldRank < newRank;
             if (newRank > oldRank) {
                 String rankName = progressStore.getRankName(playerId, mapStore);
                 player.sendMessage(Message.raw("Rank up! You are now " + rankName + "."));
@@ -402,6 +403,9 @@ public class RunTracker {
             }
             if (result.newBest) {
                 broadcastCompletion(playerId, playerName, map, durationMs, leaderboardPosition);
+                if (reachedVexaGod) {
+                    broadcastVexaGod(playerName);
+                }
             }
             teleportToSpawn(ref, store, transform);
             recordTeleport(playerId, TeleportCause.FINISH);
@@ -504,6 +508,20 @@ public class RunTracker {
         );
         for (PlayerRef target : Universe.get().getPlayers()) {
             target.sendMessage(message);
+        }
+    }
+
+    private void broadcastVexaGod(String playerName) {
+        Message message = Message.join(
+                Message.raw(playerName),
+                Message.raw(" is now a "),
+                FormatUtils.getRankMessage("VexaGod"),
+                Message.raw(" (but for how long?)")
+        );
+        Message ggMessage = Message.raw("SEND GG IN THE CHAT").bold(true);
+        for (PlayerRef target : Universe.get().getPlayers()) {
+            target.sendMessage(message);
+            target.sendMessage(ggMessage);
         }
     }
 
