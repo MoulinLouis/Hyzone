@@ -2,7 +2,7 @@ $C = "../Common.ui";
 
 $C.@PageOverlay {
   $C.@Container {
-    Anchor: (Width: 460, Height: 240);
+    Anchor: (Width: 460, Height: 270);
 
     #Title {
       Group {
@@ -50,6 +50,34 @@ $C.@PageOverlay {
         $C.@TextButton #ShowAllButton {
           Anchor: (Height: 24, Width: 200);
           Text: "Show players";
+        }
+      }
+
+      Label {
+        Anchor: (Top: 12);
+        Style: (
+          FontSize: 14,
+          TextColor: #9fb0ba
+        );
+        Text: "Run HUD visibility.";
+      }
+
+      Group {
+        Anchor: (Top: 8, Left: 0, Right: 0, Height: 24);
+        LayoutMode: Left;
+
+        $C.@TextButton #HideHudButton {
+          Anchor: (Height: 24, Width: 200);
+          Text: "Hide HUD";
+        }
+
+        Group {
+          Anchor: (Width: 8);
+        }
+
+        $C.@TextButton #ShowHudButton {
+          Anchor: (Height: 24, Width: 200);
+          Text: "Show HUD";
         }
       }
     }

@@ -50,6 +50,7 @@ import io.hyvexa.parkour.command.ParkourAdminItemCommand;
 import io.hyvexa.parkour.command.ParkourCommand;
 import io.hyvexa.parkour.command.ParkourItemCommand;
 import io.hyvexa.parkour.command.ParkourMusicDebugCommand;
+import io.hyvexa.parkour.tracker.HiddenRunHud;
 import io.hyvexa.parkour.tracker.RunHud;
 import io.hyvexa.parkour.tracker.RunRecordsHud;
 import io.hyvexa.parkour.tracker.RunTracker;
@@ -111,9 +112,11 @@ public class HyvexaPlugin extends JavaPlugin {
     private GlobalMessageStore globalMessageStore;
     private final ConcurrentHashMap<UUID, RunHud> runHuds = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, RunRecordsHud> runRecordHuds = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, HiddenRunHud> hiddenRunHuds = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Boolean> runHudIsRecords = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Long> runHudReadyAt = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Boolean> runHudWasRunning = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, Boolean> runHudHidden = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, ConcurrentLinkedDeque<Announcement>> announcements =
             new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Long> playtimeSessionStart = new ConcurrentHashMap<>();
@@ -261,9 +264,11 @@ public class HyvexaPlugin extends JavaPlugin {
                     // Clean up HUD tracking state
                     runHuds.remove(playerId);
                     runRecordHuds.remove(playerId);
+                    hiddenRunHuds.remove(playerId);
                     runHudReadyAt.remove(playerId);
                     runHudWasRunning.remove(playerId);
                     runHudIsRecords.remove(playerId);
+                    runHudHidden.remove(playerId);
                     cachedRankNames.remove(playerId);
                     cachedNameplateTexts.remove(playerId);
                     PlayerVisibilityManager.get().clearHidden(playerId);
@@ -451,6 +456,9 @@ public class HyvexaPlugin extends JavaPlugin {
         if (playerRef == null) {
             return;
         }
+        if (isRunHudHidden(playerRef.getUuid())) {
+            return;
+        }
         var ref = playerRef.getReference();
         if (ref == null || !ref.isValid()) {
             return;
@@ -463,6 +471,9 @@ public class HyvexaPlugin extends JavaPlugin {
         CompletableFuture.runAsync(() -> {
             Player player = store.getComponent(ref, Player.getComponentType());
             if (player == null) {
+                return;
+            }
+            if (isRunHudHidden(playerRef.getUuid())) {
                 return;
             }
             RunHud hud = getActiveHud(playerRef);
@@ -624,9 +635,11 @@ public class HyvexaPlugin extends JavaPlugin {
     private void sweepStalePlayerState(Set<UUID> onlinePlayers) {
         runHuds.keySet().removeIf(id -> !onlinePlayers.contains(id));
         runRecordHuds.keySet().removeIf(id -> !onlinePlayers.contains(id));
+        hiddenRunHuds.keySet().removeIf(id -> !onlinePlayers.contains(id));
         runHudIsRecords.keySet().removeIf(id -> !onlinePlayers.contains(id));
         runHudReadyAt.keySet().removeIf(id -> !onlinePlayers.contains(id));
         runHudWasRunning.keySet().removeIf(id -> !onlinePlayers.contains(id));
+        runHudHidden.keySet().removeIf(id -> !onlinePlayers.contains(id));
         announcements.keySet().removeIf(id -> !onlinePlayers.contains(id));
         playtimeSessionStart.keySet().removeIf(id -> !onlinePlayers.contains(id));
         cachedRankNames.keySet().removeIf(id -> !onlinePlayers.contains(id));
@@ -911,6 +924,10 @@ public class HyvexaPlugin extends JavaPlugin {
         }
         String rankName = getCachedRankName(playerRef.getUuid());
         updatePlayerNameplate(ref, store, playerRef, rankName);
+        if (isRunHudHidden(playerRef.getUuid())) {
+            attachHiddenHud(playerRef, player);
+            return;
+        }
         Long elapsedMs = runTracker.getElapsedTimeMs(playerRef.getUuid());
         RunHud hud = getActiveHud(playerRef);
         long readyAt = runHudReadyAt.getOrDefault(playerRef.getUuid(), Long.MAX_VALUE);
@@ -1049,6 +1066,9 @@ public class HyvexaPlugin extends JavaPlugin {
     }
 
     private void ensureRunHudNow(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef) {
+        if (isRunHudHidden(playerRef.getUuid())) {
+            return;
+        }
         Player player = store.getComponent(ref, Player.getComponentType());
         if (player == null) {
             return;
@@ -1068,6 +1088,75 @@ public class HyvexaPlugin extends JavaPlugin {
             return runRecordHuds.get(playerId);
         }
         return runHuds.get(playerId);
+    }
+
+    public void hideRunHud(PlayerRef playerRef) {
+        setRunHudHidden(playerRef, true);
+    }
+
+    public void showRunHud(PlayerRef playerRef) {
+        setRunHudHidden(playerRef, false);
+    }
+
+    private void setRunHudHidden(PlayerRef playerRef, boolean hidden) {
+        if (playerRef == null) {
+            return;
+        }
+        UUID playerId = playerRef.getUuid();
+        if (playerId == null) {
+            return;
+        }
+        if (hidden) {
+            runHudHidden.put(playerId, true);
+        } else {
+            runHudHidden.remove(playerId);
+        }
+        runHudReadyAt.remove(playerId);
+        runHudWasRunning.remove(playerId);
+        runHudIsRecords.remove(playerId);
+        var ref = playerRef.getReference();
+        if (ref == null || !ref.isValid()) {
+            return;
+        }
+        Store<EntityStore> store = ref.getStore();
+        World world = store.getExternalData().getWorld();
+        if (world == null) {
+            return;
+        }
+        CompletableFuture.runAsync(() -> {
+            if (!ref.isValid() || !playerRef.isValid()) {
+                return;
+            }
+            Player player = store.getComponent(ref, Player.getComponentType());
+            if (player == null) {
+                return;
+            }
+            if (hidden) {
+                attachHiddenHud(playerRef, player);
+                return;
+            }
+            ensureRunHudNow(ref, store, playerRef);
+        }, world);
+    }
+
+    private boolean isRunHudHidden(UUID playerId) {
+        return playerId != null && Boolean.TRUE.equals(runHudHidden.get(playerId));
+    }
+
+    private void attachHiddenHud(PlayerRef playerRef, Player player) {
+        if (playerRef == null || player == null) {
+            return;
+        }
+        if (playerRef.getPacketHandler() == null) {
+            return;
+        }
+        HiddenRunHud hud = getOrCreateHiddenHud(playerRef);
+        player.getHudManager().setCustomHud(playerRef, hud);
+    }
+
+    private HiddenRunHud getOrCreateHiddenHud(PlayerRef playerRef) {
+        UUID playerId = playerRef.getUuid();
+        return hiddenRunHuds.computeIfAbsent(playerId, ignored -> new HiddenRunHud(playerRef));
     }
 
     private RunHud getOrCreateHud(PlayerRef playerRef, boolean records) {
