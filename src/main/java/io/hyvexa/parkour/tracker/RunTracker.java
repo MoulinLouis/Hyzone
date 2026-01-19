@@ -29,6 +29,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -42,6 +43,7 @@ public class RunTracker {
     private final ConcurrentHashMap<UUID, ActiveRun> activeRuns = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, FallState> idleFalls = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, TeleportStats> teleportStats = new ConcurrentHashMap<>();
+    private final Set<UUID> readyPlayers = ConcurrentHashMap.newKeySet();
 
     public RunTracker(MapStore mapStore, ProgressStore progressStore,
                              SettingsStore settingsStore) {
@@ -63,6 +65,7 @@ public class RunTracker {
         clearActiveMap(playerId);
         idleFalls.remove(playerId);
         teleportStats.remove(playerId);
+        readyPlayers.remove(playerId);
     }
 
     public java.util.Map<UUID, TeleportStatsSnapshot> drainTeleportStats() {
@@ -129,6 +132,7 @@ public class RunTracker {
         activeRuns.keySet().removeIf(id -> !onlinePlayers.contains(id));
         idleFalls.keySet().removeIf(id -> !onlinePlayers.contains(id));
         teleportStats.keySet().removeIf(id -> !onlinePlayers.contains(id));
+        readyPlayers.removeIf(id -> !onlinePlayers.contains(id));
     }
 
     public String getActiveMapId(UUID playerId) {
@@ -155,8 +159,29 @@ public class RunTracker {
         if (playerRef == null || player == null || transform == null) {
             return;
         }
+        if (!isPlayerReady(playerRef.getUuid())) {
+            return;
+        }
         ActiveRun run = activeRuns.get(playerRef.getUuid());
         Vector3d position = transform.getPosition();
+        if (shouldTeleportFromVoid(position.getY())) {
+            if (run == null) {
+                teleportToSpawn(ref, store, transform);
+                recordTeleport(playerRef.getUuid(), TeleportCause.IDLE_RESPAWN);
+                return;
+            }
+            Map map = mapStore.getMap(run.mapId);
+            if (map != null) {
+                teleportToRespawn(ref, store, run, map);
+                run.fallStartTime = null;
+                run.lastY = null;
+                recordTeleport(playerRef.getUuid(), TeleportCause.RUN_RESPAWN);
+            } else {
+                teleportToSpawn(ref, store, transform);
+                recordTeleport(playerRef.getUuid(), TeleportCause.IDLE_RESPAWN);
+            }
+            return;
+        }
         if (run == null) {
             long fallTimeoutMs = getFallRespawnTimeoutMs();
             boolean allowOpIdleFall = settingsStore != null && settingsStore.isIdleFallRespawnForOp();
@@ -598,6 +623,51 @@ public class RunTracker {
 
     private FallState getIdleFallState(UUID playerId) {
         return idleFalls.computeIfAbsent(playerId, ignored -> new FallState());
+    }
+
+    private boolean shouldTeleportFromVoid(double currentY) {
+        double voidY = settingsStore != null
+                ? settingsStore.getFallFailsafeVoidY()
+                : ParkourConstants.FALL_FAILSAFE_VOID_Y;
+        return Double.isFinite(voidY) && currentY <= voidY;
+    }
+
+    public void markPlayerReady(PlayerRef playerRef) {
+        if (playerRef == null) {
+            return;
+        }
+        UUID playerId = playerRef.getUuid();
+        if (playerId != null) {
+            readyPlayers.add(playerId);
+        }
+    }
+
+    public void markPlayerReady(Ref<EntityStore> ref) {
+        if (ref == null || !ref.isValid()) {
+            return;
+        }
+        Store<EntityStore> store = ref.getStore();
+        World world = store.getExternalData().getWorld();
+        if (world == null) {
+            return;
+        }
+        CompletableFuture.runAsync(() -> {
+            if (!ref.isValid()) {
+                return;
+            }
+            PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+            if (playerRef == null) {
+                return;
+            }
+            UUID playerId = playerRef.getUuid();
+            if (playerId != null) {
+                readyPlayers.add(playerId);
+            }
+        }, world);
+    }
+
+    private boolean isPlayerReady(UUID playerId) {
+        return playerId != null && readyPlayers.contains(playerId);
     }
 
     private void recordTeleport(UUID playerId, TeleportCause cause) {
