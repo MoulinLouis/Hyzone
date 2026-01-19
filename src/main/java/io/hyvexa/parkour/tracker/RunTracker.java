@@ -248,7 +248,7 @@ public class RunTracker {
                 new Teleport(store.getExternalData().getWorld(), position, rotation));
         recordTeleport(playerRef.getUuid(), TeleportCause.START_TRIGGER);
         player.sendMessage(Message.raw("Map loaded."));
-        InventoryUtils.giveRunItems(player);
+        InventoryUtils.giveRunItems(player, map);
     }
 
     private boolean checkLeaveTrigger(Ref<EntityStore> ref, Store<EntityStore> store, Player player,
