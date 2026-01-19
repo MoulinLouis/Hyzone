@@ -223,10 +223,16 @@ public class HyvexaPlugin extends JavaPlugin {
         for (PlayerRef playerRef : Universe.get().getPlayers()) {
             ensureRunHud(playerRef);
             startPlaytimeSession(playerRef);
+            if (runTracker != null) {
+                runTracker.markPlayerReady(playerRef);
+            }
         }
 
         this.getEventRegistry().registerGlobal(PlayerReadyEvent.class, event -> {
             try {
+                if (runTracker != null) {
+                    runTracker.markPlayerReady(event.getPlayerRef());
+                }
                 syncRunInventoryOnReady(event.getPlayerRef());
             } catch (Exception e) {
                 LOGGER.at(Level.WARNING).log("Exception in PlayerReadyEvent (inventory): " + e.getMessage());
