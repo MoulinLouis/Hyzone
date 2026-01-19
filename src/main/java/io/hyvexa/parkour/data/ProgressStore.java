@@ -368,6 +368,40 @@ public class ProgressStore extends BlockingDiskFile {
         return 2;
     }
 
+    public long getCompletionXpToNextRank(UUID playerId, MapStore mapStore) {
+        if (mapStore == null) {
+            return 0L;
+        }
+        long totalXp = getCachedTotalXp(mapStore);
+        if (totalXp <= 0L) {
+            return 0L;
+        }
+        long playerXp = getPlayerCompletionXp(playerId, mapStore);
+        if (playerXp >= totalXp) {
+            return 0L;
+        }
+        int rank = getCompletionRank(playerId, mapStore);
+        double nextPercent = switch (rank) {
+            case 1 -> 0.01;
+            case 2 -> 10.0;
+            case 3 -> 20.0;
+            case 4 -> 30.0;
+            case 5 -> 40.0;
+            case 6 -> 50.0;
+            case 7 -> 60.0;
+            case 8 -> 70.0;
+            case 9 -> 80.0;
+            case 10 -> 90.0;
+            case 11 -> 100.0;
+            default -> 0.0;
+        };
+        if (nextPercent <= 0.0) {
+            return 0L;
+        }
+        long requiredXp = (long) Math.ceil((totalXp * nextPercent) / 100.0);
+        return Math.max(0L, requiredXp - playerXp);
+    }
+
     public Set<String> getTitles(UUID playerId) {
         PlayerProgress playerProgress = progress.get(playerId);
         return playerProgress != null ? Set.copyOf(playerProgress.titles) : Set.of();

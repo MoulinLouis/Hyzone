@@ -1,5 +1,9 @@
 # Changelog
 
+- Render the next-rank XP suffix in white on the stats rank line.
+- Added stats rank display to include XP needed for the next completion rank.
+- Guard run tracking until PlayerReady to avoid teleport mismatches during login.
+- Teleport players back to spawn or map start when they hit the configured void cutoff Y.
 - Added the Discord link to the run HUD info panel.
 - Matched the Discord HUD line color to the server label.
 - Removed the README ignore note from AGENTS instructions.

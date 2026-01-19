@@ -12,6 +12,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.common.ui.ButtonEventData;
+import io.hyvexa.parkour.ParkourConstants;
 import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.data.ProgressStore;
 
@@ -63,11 +64,18 @@ public class StatsPage extends BaseParkourPage {
         }
         long xp = progressStore.getXp(playerRef.getUuid());
         String rankName = progressStore.getRankName(playerRef.getUuid(), mapStore);
+        int completionRank = progressStore.getCompletionRank(playerRef.getUuid(), mapStore);
         int completed = progressStore.getCompletedMapCount(playerRef.getUuid());
         int totalMaps = mapStore.listMaps().size();
+        String rankSuffix = "";
+        if (completionRank < ParkourConstants.COMPLETION_RANK_NAMES.length) {
+            long xpToNextRank = progressStore.getCompletionXpToNextRank(playerRef.getUuid(), mapStore);
+            rankSuffix = " (" + xpToNextRank + "XP for next rank)";
+        }
 
         commandBuilder.set("#StatsPlayerName.Text", playerRef.getUsername());
         commandBuilder.set("#StatsRankValue.Text", rankName);
+        commandBuilder.set("#StatsRankSuffix.Text", rankSuffix);
         commandBuilder.set("#StatsRankValue.Style.TextColor", FormatUtils.getRankColor(rankName));
         long totalXp = ProgressStore.getTotalPossibleXp(mapStore);
         commandBuilder.set("#StatsXpValue.Text", xp + " XP / " + totalXp + " XP");
