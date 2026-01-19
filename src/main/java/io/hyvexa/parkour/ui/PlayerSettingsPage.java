@@ -15,6 +15,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.ui.ButtonEventData;
+import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.parkour.visibility.PlayerVisibilityManager;
 
 import javax.annotation.Nonnull;
@@ -24,6 +25,8 @@ public class PlayerSettingsPage extends BaseParkourPage {
     private static final String BUTTON_CLOSE = "Close";
     private static final String BUTTON_HIDE_ALL = "HideAll";
     private static final String BUTTON_SHOW_ALL = "ShowAll";
+    private static final String BUTTON_HIDE_HUD = "HideHud";
+    private static final String BUTTON_SHOW_HUD = "ShowHud";
 
     public PlayerSettingsPage(@Nonnull PlayerRef playerRef) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
@@ -39,6 +42,10 @@ public class PlayerSettingsPage extends BaseParkourPage {
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_HIDE_ALL), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ShowAllButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_SHOW_ALL), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#HideHudButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_HIDE_HUD), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ShowHudButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_SHOW_HUD), false);
     }
 
     @Override
@@ -65,6 +72,21 @@ public class PlayerSettingsPage extends BaseParkourPage {
         if (BUTTON_SHOW_ALL.equals(data.getButton())) {
             showAllPlayers(playerRef);
             player.sendMessage(Message.raw("All players shown."));
+        }
+        if (BUTTON_HIDE_HUD.equals(data.getButton())) {
+            HyvexaPlugin plugin = HyvexaPlugin.getInstance();
+            if (plugin != null) {
+                plugin.hideRunHud(playerRef);
+                player.sendMessage(Message.raw("Server HUD hidden."));
+            }
+            return;
+        }
+        if (BUTTON_SHOW_HUD.equals(data.getButton())) {
+            HyvexaPlugin plugin = HyvexaPlugin.getInstance();
+            if (plugin != null) {
+                plugin.showRunHud(playerRef);
+                player.sendMessage(Message.raw("Server HUD shown."));
+            }
         }
     }
 

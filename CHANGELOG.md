@@ -1,6 +1,9 @@
 # Changelog
 
 - Added rank-prefixed player nameplates above players.
+- Guard run HUD hide/show against missing packet handlers to avoid crashes.
+- Replace clearing the custom HUD with a blank HUD overlay to avoid client crashes on hide.
+- Added Hide HUD/Show HUD buttons in player settings to toggle the run HUD.
 - Broadcast a global VexaGod announcement when a player reaches the final completion rank.
 - Styled the VexaGod announcement with rainbow rank text and bolded GG callout.
 - Split the VexaGod announcement into a main line plus a separate GG prompt.
