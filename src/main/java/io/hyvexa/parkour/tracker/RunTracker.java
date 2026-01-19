@@ -506,8 +506,14 @@ public class RunTracker {
                 wrPart,
                 Message.raw(".")
         );
+        Message ggMessage = isWorldRecord
+                ? Message.raw("SAY GG IN THE CHAT!!").bold(true)
+                : Message.empty();
         for (PlayerRef target : Universe.get().getPlayers()) {
             target.sendMessage(message);
+            if (isWorldRecord) {
+                target.sendMessage(ggMessage);
+            }
         }
     }
 
