@@ -2,7 +2,7 @@ $C = "../Common.ui";
 
 $C.@PageOverlay {
   $C.@Container {
-    Anchor: (Width: 420, Height: 430);
+    Anchor: (Width: 420, Height: 540);
 
     #Title {
       Group {
@@ -40,12 +40,49 @@ $C.@PageOverlay {
         Text: "Fall respawn time (seconds)";
       }
 
-      $C.@TextField #FallRespawnField {
-        Anchor: (Height: 26, Top: 4);
-        Style: (FontSize: 14, TextColor: #ffffff(0.85));
+      Group {
+        Anchor: (Top: 4, Height: 26);
+        LayoutMode: Left;
+
+        $C.@TextField #FallRespawnField {
+          Anchor: (Width: 200, Height: 26);
+          Style: (FontSize: 14, TextColor: #ffffff(0.85));
+        }
+
+        $C.@TextButton #SaveSettingsButton {
+          Anchor: (Width: 80, Height: 22, Left: 8, Top: 2);
+          Text: "Save";
+        }
       }
 
       Label #CurrentValue {
+        Anchor: (Top: 6);
+        Style: (FontSize: 12, TextColor: #9fb0ba);
+        Text: "";
+      }
+
+      Label {
+        Anchor: (Top: 8);
+        Style: (FontSize: 13, TextColor: #cfd7dc);
+        Text: "Void cutoff Y";
+      }
+
+      Group {
+        Anchor: (Top: 4, Height: 26);
+        LayoutMode: Left;
+
+        $C.@TextField #FallFailSafeField {
+          Anchor: (Width: 200, Height: 26);
+          Style: (FontSize: 14, TextColor: #ffffff(0.85));
+        }
+
+        $C.@TextButton #SaveFailSafeButton {
+          Anchor: (Width: 80, Height: 22, Left: 8, Top: 2);
+          Text: "Save";
+        }
+      }
+
+      Label #FallFailSafeValue {
         Anchor: (Top: 6);
         Style: (FontSize: 12, TextColor: #9fb0ba);
         Text: "";
@@ -73,9 +110,48 @@ $C.@PageOverlay {
         }
       }
 
-      $C.@TextButton #SaveSettingsButton {
-        Anchor: (Height: 22, Width: 160, Top: 8);
-        Text: "Save";
+      Label {
+        Anchor: (Top: 8);
+        Style: (FontSize: 13, TextColor: #cfd7dc);
+        Text: "Disable weapon damage/knockback";
+      }
+
+      Group {
+        Anchor: (Top: 4, Height: 22);
+        LayoutMode: Left;
+
+        Label #WeaponDamageValue {
+          Anchor: (Width: 120);
+          Style: (FontSize: 12, TextColor: #9fb0ba);
+          Text: "";
+        }
+
+        $C.@TextButton #WeaponDamageToggle {
+          Anchor: (Width: 120, Height: 22);
+          Text: "Toggle";
+        }
+      }
+
+      Label {
+        Anchor: (Top: 8);
+        Style: (FontSize: 13, TextColor: #cfd7dc);
+        Text: "Teleport debug logging";
+      }
+
+      Group {
+        Anchor: (Top: 4, Height: 22);
+        LayoutMode: Left;
+
+        Label #TeleportDebugValue {
+          Anchor: (Width: 120);
+          Style: (FontSize: 12, TextColor: #9fb0ba);
+          Text: "";
+        }
+
+        $C.@TextButton #TeleportDebugToggle {
+          Anchor: (Width: 120, Height: 22);
+          Text: "Toggle";
+        }
       }
 
       Label {
@@ -87,6 +163,18 @@ $C.@PageOverlay {
       Label #RankThresholds {
         Anchor: (Top: 4);
         Style: (FontSize: 12, TextColor: #9fb0ba);
+        Text: "";
+      }
+
+      Label #RankUnranked {
+        Anchor: (Top: 4);
+        Style: (FontSize: 12, TextColor: #b2c0c7);
+        Text: "";
+      }
+
+      Label #RankIron {
+        Anchor: (Top: 2);
+        Style: (FontSize: 12, TextColor: #8d8f94);
         Text: "";
       }
 
@@ -108,9 +196,15 @@ $C.@PageOverlay {
         Text: "";
       }
 
-      Label #RankPlatinum {
+      Label #RankPlatinium {
         Anchor: (Top: 2);
         Style: (FontSize: 12, TextColor: #9fd3c7);
+        Text: "";
+      }
+
+      Label #RankEmerald {
+        Anchor: (Top: 2);
+        Style: (FontSize: 12, TextColor: #39c97a);
         Text: "";
       }
 
@@ -122,8 +216,73 @@ $C.@PageOverlay {
 
       Label #RankMaster {
         Anchor: (Top: 2);
-        Style: (FontSize: 12, TextColor: #ff7fb0);
+        Style: (FontSize: 12, TextColor: #9b5de5);
         Text: "";
+      }
+
+      Label #RankGrandmaster {
+        Anchor: (Top: 2);
+        Style: (FontSize: 12, TextColor: #ff7a7a);
+        Text: "";
+      }
+
+      Label #RankChallenger {
+        Anchor: (Top: 2);
+        Style: (FontSize: 12, TextColor: #1f4aa8);
+        Text: "";
+      }
+
+      Group #RankVexaGodRow {
+        Anchor: (Top: 2, Left: 0, Right: 0, Height: 16);
+        LayoutMode: Left;
+
+        Label #RankVexaGodV {
+          Anchor: (Width: 8);
+          Style: (FontSize: 12, TextColor: #ff4d4d);
+          Text: "";
+        }
+
+        Label #RankVexaGode {
+          Anchor: (Width: 8);
+          Style: (FontSize: 12, TextColor: #ffa94d);
+          Text: "";
+        }
+
+        Label #RankVexaGodx {
+          Anchor: (Width: 8);
+          Style: (FontSize: 12, TextColor: #ffe66d);
+          Text: "";
+        }
+
+        Label #RankVexaGoda {
+          Anchor: (Width: 8);
+          Style: (FontSize: 12, TextColor: #4cd964);
+          Text: "";
+        }
+
+        Label #RankVexaGodG {
+          Anchor: (Width: 8);
+          Style: (FontSize: 12, TextColor: #5ac8fa);
+          Text: "";
+        }
+
+        Label #RankVexaGodo {
+          Anchor: (Width: 8);
+          Style: (FontSize: 12, TextColor: #5e5ce6);
+          Text: "";
+        }
+
+        Label #RankVexaGodd {
+          Anchor: (Width: 8);
+          Style: (FontSize: 12, TextColor: #b76cff);
+          Text: "";
+        }
+
+        Label #RankVexaGodSuffix {
+          FlexWeight: 1;
+          Style: (FontSize: 12, TextColor: #ffb347);
+          Text: "";
+        }
       }
     }
   }

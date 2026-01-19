@@ -24,6 +24,7 @@ public class MapStore extends BlockingDiskFile {
     private static final String MAP_ID_PATTERN = "^[a-zA-Z0-9_-]+$";
     private static final double MAX_COORDINATE = 30000000.0;
     private final java.util.Map<String, Map> maps = new LinkedHashMap<>();
+    private volatile Runnable onChangeListener;
 
     public MapStore() {
         super(Path.of("Parkour/Maps.json"));
@@ -42,38 +43,101 @@ public class MapStore extends BlockingDiskFile {
         }
     }
 
+    /**
+     * Sets a listener that will be called when maps are added, updated, or removed.
+     * Used to invalidate caches that depend on map data.
+     */
+    public void setOnChangeListener(Runnable listener) {
+        this.onChangeListener = listener;
+    }
+
+    private void notifyChange() {
+        Runnable listener = this.onChangeListener;
+        if (listener != null) {
+            listener.run();
+        }
+    }
+
     public boolean hasMap(String id) {
         return this.maps.containsKey(id);
     }
 
     public Map getMap(String id) {
-        return this.maps.get(id);
+        return copyMap(this.maps.get(id));
     }
 
     public List<Map> listMaps() {
-        return Collections.unmodifiableList(new ArrayList<>(this.maps.values()));
+        List<Map> copies = new ArrayList<>(this.maps.size());
+        for (Map map : this.maps.values()) {
+            Map copy = copyMap(map);
+            if (copy != null) {
+                copies.add(copy);
+            }
+        }
+        return Collections.unmodifiableList(copies);
+    }
+
+    /**
+     * Finds the first map whose start trigger is within range without deep copying all maps.
+     */
+    public Map findMapByStartTrigger(double x, double y, double z, double touchRadiusSq) {
+        this.fileLock.readLock().lock();
+        try {
+            for (Map map : this.maps.values()) {
+                TransformData trigger = map.getStartTrigger();
+                if (trigger == null) {
+                    continue;
+                }
+                double dx = x - trigger.getX();
+                double dy = y - trigger.getY();
+                double dz = z - trigger.getZ();
+                if (dx * dx + dy * dy + dz * dz <= touchRadiusSq) {
+                    return copyMap(map);
+                }
+            }
+        } finally {
+            this.fileLock.readLock().unlock();
+        }
+        return null;
+    }
+
+    /**
+     * Returns the number of maps without copying.
+     * Use this instead of listMaps().size() in hot paths.
+     */
+    public int getMapCount() {
+        this.fileLock.readLock().lock();
+        try {
+            return this.maps.size();
+        } finally {
+            this.fileLock.readLock().unlock();
+        }
     }
 
     public void addMap(Map map) {
         validateMap(map);
+        Map stored = copyMap(map);
         this.fileLock.writeLock().lock();
         try {
-            this.maps.put(map.getId(), map);
+            this.maps.put(stored.getId(), stored);
         } finally {
             this.fileLock.writeLock().unlock();
         }
         this.syncSave();
+        notifyChange();
     }
 
     public void updateMap(Map map) {
         validateMap(map);
+        Map stored = copyMap(map);
         this.fileLock.writeLock().lock();
         try {
-            this.maps.put(map.getId(), map);
+            this.maps.put(stored.getId(), stored);
         } finally {
             this.fileLock.writeLock().unlock();
         }
         this.syncSave();
+        notifyChange();
     }
 
     public boolean removeMap(String id) {
@@ -86,6 +150,7 @@ public class MapStore extends BlockingDiskFile {
         }
         if (removed) {
             this.syncSave();
+            notifyChange();
         }
         return removed;
     }
@@ -116,7 +181,10 @@ public class MapStore extends BlockingDiskFile {
                 map.setLeaveTeleport(readTransform(object, "leaveTeleport"));
                 map.setFirstCompletionXp(readLong(object, "firstCompletionXp",
                         ProgressStore.getCategoryXp(map.getCategory())));
+                map.setDifficulty((int) readLong(object, "difficulty", 0L));
                 map.setOrder((int) readLong(object, "order", ParkourConstants.DEFAULT_MAP_ORDER));
+                map.setMithrilSwordEnabled(object.has("enableMithrilSword")
+                        && object.get("enableMithrilSword").getAsBoolean());
                 map.setCreatedAt(readLong(object, "createdAt", 0L));
                 map.setUpdatedAt(readLong(object, "updatedAt", map.getCreatedAt()));
 
@@ -169,7 +237,9 @@ public class MapStore extends BlockingDiskFile {
                 object.add("leaveTeleport", writeTransform(map.getLeaveTeleport()));
             }
             object.addProperty("firstCompletionXp", Math.max(0L, map.getFirstCompletionXp()));
+            object.addProperty("difficulty", Math.max(0, map.getDifficulty()));
             object.addProperty("order", Math.max(0, map.getOrder()));
+            object.addProperty("enableMithrilSword", map.isMithrilSwordEnabled());
             JsonArray checkpoints = new JsonArray();
             for (TransformData checkpoint : map.getCheckpoints()) {
                 checkpoints.add(writeTransform(checkpoint));
@@ -256,6 +326,10 @@ public class MapStore extends BlockingDiskFile {
             map.setCategory(trimmedCategory);
         }
         map.setFirstCompletionXp(Math.max(0L, map.getFirstCompletionXp()));
+        int difficulty = map.getDifficulty();
+        if (difficulty < 0) {
+            map.setDifficulty(0);
+        }
         int order = map.getOrder();
         if (order < 0) {
             map.setOrder(ParkourConstants.DEFAULT_MAP_ORDER);
@@ -273,5 +347,47 @@ public class MapStore extends BlockingDiskFile {
             return -MAX_COORDINATE;
         }
         return value;
+    }
+
+    private static Map copyMap(Map source) {
+        if (source == null) {
+            return null;
+        }
+        Map copy = new Map();
+        copy.setId(source.getId());
+        copy.setName(source.getName());
+        copy.setCategory(source.getCategory());
+        copy.setWorld(source.getWorld());
+        copy.setStart(copyTransform(source.getStart()));
+        copy.setFinish(copyTransform(source.getFinish()));
+        copy.setStartTrigger(copyTransform(source.getStartTrigger()));
+        copy.setLeaveTrigger(copyTransform(source.getLeaveTrigger()));
+        copy.setLeaveTeleport(copyTransform(source.getLeaveTeleport()));
+        copy.setFirstCompletionXp(source.getFirstCompletionXp());
+        copy.setDifficulty(source.getDifficulty());
+        copy.setOrder(source.getOrder());
+        copy.setMithrilSwordEnabled(source.isMithrilSwordEnabled());
+        copy.setCreatedAt(source.getCreatedAt());
+        copy.setUpdatedAt(source.getUpdatedAt());
+        if (source.getCheckpoints() != null) {
+            for (TransformData checkpoint : source.getCheckpoints()) {
+                copy.getCheckpoints().add(copyTransform(checkpoint));
+            }
+        }
+        return copy;
+    }
+
+    private static TransformData copyTransform(TransformData source) {
+        if (source == null) {
+            return null;
+        }
+        TransformData copy = new TransformData();
+        copy.setX(source.getX());
+        copy.setY(source.getY());
+        copy.setZ(source.getZ());
+        copy.setRotX(source.getRotX());
+        copy.setRotY(source.getRotY());
+        copy.setRotZ(source.getRotZ());
+        return copy;
     }
 }

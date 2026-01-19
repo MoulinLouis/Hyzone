@@ -1,0 +1,207 @@
+$C = "../Common.ui";
+
+$C.@PageOverlay {
+  Background: #000000(0.0);
+  Group #HudLayer {
+    Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+
+    Group #RunHudRoot {
+      Anchor: (Right: 20, Top: 500, Width: 260, Height: 160);
+      Background: #000000(0.0);
+      LayoutMode: Top;
+      Padding: (Left: 10, Right: 10, Top: 8, Bottom: 8);
+
+      Group #InfoBox {
+        Anchor: (Left: 0, Right: 0, Height: 170);
+        Background: #000000(0.35);
+        Padding: (Left: 8, Right: 8, Top: 6, Bottom: 6);
+        LayoutMode: Top;
+
+        Label #PlayerNameText {
+          Anchor: (Left: 65, Right: 0);
+          Style: (
+            FontSize: 16,
+            TextColor: #ff7fb0,
+            RenderBold: true
+          );
+          Text: "PARKOUR";
+        }
+
+        Group #PlayerXpRow {
+          Anchor: (Left: 0, Right: 0, Top: 2);
+          LayoutMode: Left;
+
+          Label #PlayerXpLabel {
+            Anchor: (Width: 60);
+            Style: (
+              FontSize: 16,
+              TextColor: #f2f5f7
+            );
+            Text: "Rank:";
+          }
+
+          Label #PlayerXpValue {
+            Style: (
+              FontSize: 16,
+              TextColor: #62d96b
+            );
+            Text: "0";
+          }
+
+          Group #PlayerRankRainbowRow {
+            LayoutMode: Left;
+
+            Label #PlayerRankV {
+              Anchor: (Width: 10);
+              Style: (FontSize: 16, TextColor: #ff4d4d);
+              Text: "";
+            }
+            Label #PlayerRankE {
+              Anchor: (Width: 10);
+              Style: (FontSize: 16, TextColor: #ffa94d);
+              Text: "";
+            }
+            Label #PlayerRankX {
+              Anchor: (Width: 10);
+              Style: (FontSize: 16, TextColor: #ffe66d);
+              Text: "";
+            }
+            Label #PlayerRankA {
+              Anchor: (Width: 10);
+              Style: (FontSize: 16, TextColor: #4cd964);
+              Text: "";
+            }
+            Label #PlayerRankG {
+              Anchor: (Width: 10);
+              Style: (FontSize: 16, TextColor: #5ac8fa);
+              Text: "";
+            }
+            Label #PlayerRankO {
+              Anchor: (Width: 10);
+              Style: (FontSize: 16, TextColor: #5e5ce6);
+              Text: "";
+            }
+            Label #PlayerRankD {
+              Anchor: (Width: 10);
+              Style: (FontSize: 16, TextColor: #b76cff);
+              Text: "";
+            }
+          }
+        }
+
+        Group #PlayerMapsRow {
+          Anchor: (Left: 0, Right: 0, Top: 2);
+          LayoutMode: Left;
+
+          Label #PlayerMapsLabel {
+            Anchor: (Width: 60);
+            Style: (
+              FontSize: 16,
+              TextColor: #f2f5f7
+            );
+            Text: "Maps:";
+          }
+
+          Label #PlayerMapsValue {
+            FlexWeight: 1;
+            Style: (
+              FontSize: 16,
+              TextColor: #62d96b
+            );
+            Text: "0/0";
+          }
+        }
+
+        Group {
+          Anchor: (Height: 6, Top: 20);
+        }
+
+        Label #ServerDateText {
+          Anchor: (Left: 0, Right: 0, Top: 0);
+          Style: (
+            FontSize: 16,
+            TextColor: #b2c0c7
+          );
+          Text: "Date: -";
+        }
+
+        Label #ServerIpText {
+          Anchor: (Left: 0, Right: 0, Top: 2);
+          Style: (
+            FontSize: 16,
+            TextColor: #ff7fb0
+          );
+          Text: "Server: play.hyvexa.com";
+        }
+
+        Label #ServerDiscordText {
+          Anchor: (Left: 0, Right: 0, Top: 2);
+          Style: (
+            FontSize: 16,
+            TextColor: #ff7fb0
+          );
+          Text: "Discord: discord.hyvexa.com";
+        }
+      }
+
+    }
+
+    Group #AnnouncementBox {
+      Anchor: (Left: 0, Right: 0, Top: 90, Height: 76);
+      LayoutMode: Top;
+      Padding: (Left: 14, Right: 14, Top: 6, Bottom: 6);
+
+      Label #AnnouncementLine1 {
+        Anchor: (Left: 0, Right: 0);
+        Style: (
+          FontSize: 20,
+          TextColor: #e3eef4,
+          HorizontalAlignment: Center
+        );
+        Text: "";
+      }
+
+      Label #AnnouncementLine2 {
+        Anchor: (Left: 0, Right: 0, Top: 3);
+        Style: (
+          FontSize: 20,
+          TextColor: #e3eef4,
+          HorizontalAlignment: Center
+        );
+        Text: "";
+      }
+
+      Label #AnnouncementLine3 {
+        Anchor: (Left: 0, Right: 0, Top: 3);
+        Style: (
+          FontSize: 20,
+          TextColor: #e3eef4,
+          HorizontalAlignment: Center
+        );
+        Text: "";
+      }
+    }
+
+    Label #RunTimerText {
+      Anchor: (Left: 0, Right: 0, Top: 45, Height: 38);
+      Style: (
+        FontSize: 30,
+        TextColor: #e7f1f4,
+        RenderBold: true,
+        HorizontalAlignment: Center
+      );
+      Text: "";
+    }
+
+    Label #RunCheckpointText {
+      Anchor: (Left: 0, Right: 0, Top: 83, Height: 22);
+      Style: (
+        FontSize: 18,
+        TextColor: #e7f1f4,
+        RenderBold: true,
+        HorizontalAlignment: Center
+      );
+      Text: "";
+    }
+  }
+}

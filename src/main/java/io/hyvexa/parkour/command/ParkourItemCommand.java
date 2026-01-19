@@ -33,7 +33,6 @@ public class ParkourItemCommand extends AbstractAsyncCommand {
         if (!(sender instanceof Player player)) {
             return CompletableFuture.completedFuture(null);
         }
-        player.getWorldMapTracker().tick(0);
         Ref<EntityStore> ref = player.getReference();
         if (ref == null || !ref.isValid()) {
             commandContext.sendMessage(MESSAGE_COMMANDS_ERRORS_PLAYER_NOT_IN_WORLD);
@@ -41,7 +40,9 @@ public class ParkourItemCommand extends AbstractAsyncCommand {
         }
         Store<EntityStore> store = ref.getStore();
         World world = store.getExternalData().getWorld();
-        return CompletableFuture.runAsync(() -> giveItem(commandContext, store, ref), world);
+        return CompletableFuture.runAsync(() -> {
+            giveItem(commandContext, store, ref);
+        }, world);
     }
 
     private void giveItem(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref) {
@@ -63,6 +64,7 @@ public class ParkourItemCommand extends AbstractAsyncCommand {
         hotbar.setItemStackForSlot((short) 0, new ItemStack(ParkourConstants.ITEM_MENU, 1));
         hotbar.setItemStackForSlot((short) 1, new ItemStack(ParkourConstants.ITEM_LEADERBOARD, 1));
         hotbar.setItemStackForSlot((short) 2, new ItemStack(ParkourConstants.ITEM_STATS, 1));
+        hotbar.setItemStackForSlot((short) 3, new ItemStack(ParkourConstants.ITEM_ADMIN_REMOTE, 1));
         player.sendMessage(Message.raw("Parkour items added to your inventory."));
     }
 }

@@ -56,7 +56,6 @@ public class ParkourAdminCommand extends AbstractAsyncCommand {
             commandContext.sendMessage(MESSAGE_OP_REQUIRED);
             return CompletableFuture.completedFuture(null);
         }
-        player.getWorldMapTracker().tick(0);
         Ref<EntityStore> ref = player.getReference();
         if (ref != null && ref.isValid()) {
             Store<EntityStore> store = ref.getStore();

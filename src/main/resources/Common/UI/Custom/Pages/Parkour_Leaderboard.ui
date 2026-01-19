@@ -34,6 +34,17 @@ $C.@PageOverlay {
         Text: "Overall completions across all maps.";
       }
 
+      Label {
+        Anchor: (Top: 6);
+        Style: (FontSize: 12, TextColor: #9fb0ba);
+        Text: "Search";
+      }
+
+      $C.@TextField #LeaderboardSearchField {
+        Anchor: (Height: 24, Top: 4);
+        Style: (FontSize: 13, TextColor: #ffffff(0.85));
+      }
+
       Label #EmptyText {
         Style: (
           FontSize: 14,
@@ -43,7 +54,7 @@ $C.@PageOverlay {
       }
 
       Group #LeaderboardList {
-        Anchor: (Width: 490, Top: 6);
+        Anchor: (Width: 490, Top: 8);
         FlexWeight: 1;
         LayoutMode: TopScrolling;
         Padding: (Left: 6, Right: 6);
@@ -53,6 +64,49 @@ $C.@PageOverlay {
           LayoutMode: Top;
         }
       }
+
+      Group #Pagination {
+        Anchor: (Top: 6, Height: 22, Width: 490);
+        LayoutMode: Left;
+
+        Group {
+          Anchor: (Width: 65);
+        }
+
+        $C.@TextButton #PrevPageButton {
+          Anchor: (Width: 110, Height: 22);
+          Text: "< Prev";
+        }
+
+        Group #PageLabelWrap {
+          Anchor: (Width: 140, Height: 22);
+          LayoutMode: Left;
+
+          Group {
+            Anchor: (Width: 35);
+          }
+
+          Label #PageLabel {
+            Anchor: (Width: 70);
+            Style: (FontSize: 12, TextColor: #9fb0ba);
+            Text: "";
+          }
+
+          Group {
+            Anchor: (Width: 35);
+          }
+        }
+
+        $C.@TextButton #NextPageButton {
+          Anchor: (Width: 110, Height: 22);
+          Text: "Next >";
+        }
+
+        Group {
+          Anchor: (Width: 65);
+        }
+      }
+
     }
   }
 }

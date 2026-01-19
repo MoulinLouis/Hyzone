@@ -7,6 +7,7 @@ import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.inventory.container.filter.FilterActionType;
 import com.hypixel.hytale.server.core.inventory.container.filter.SlotFilter;
 import io.hyvexa.parkour.ParkourConstants;
+import io.hyvexa.parkour.data.Map;
 
 
 public final class InventoryUtils {
@@ -15,6 +16,10 @@ public final class InventoryUtils {
     }
 
     public static void giveRunItems(Player player) {
+        giveRunItems(player, null);
+    }
+
+    public static void giveRunItems(Player player, Map map) {
         Inventory inventory = player.getInventory();
         if (inventory == null) {
             return;
@@ -24,15 +29,25 @@ public final class InventoryUtils {
             setHotbarItem(inventory, 0, new ItemStack(ParkourConstants.ITEM_RESET, 1));
             setHotbarItem(inventory, 1, new ItemStack(ParkourConstants.ITEM_RESTART_CHECKPOINT, 1));
             setHotbarItem(inventory, 2, new ItemStack(ParkourConstants.ITEM_LEAVE, 1));
+            if (map != null && map.isMithrilSwordEnabled()) {
+                setHotbarItem(inventory, 3, new ItemStack(ParkourConstants.ITEM_RUN_MITHRIL_SWORD, 1));
+            }
+            int settingsSlot = (map != null && map.isMithrilSwordEnabled()) ? 4 : 3;
+            setHotbarItem(inventory, settingsSlot, new ItemStack(ParkourConstants.ITEM_ADMIN_REMOTE, 1));
+            applyDropFilter(inventory.getHotbar(), false);
             return;
         }
-        boolean allowDrop = false;
-        applyDropFilters(inventory, true);
+        applyDropFilters(inventory, false);
         clearAllSections(inventory);
         setHotbarItem(inventory, 0, new ItemStack(ParkourConstants.ITEM_RESET, 1));
         setHotbarItem(inventory, 1, new ItemStack(ParkourConstants.ITEM_RESTART_CHECKPOINT, 1));
         setHotbarItem(inventory, 2, new ItemStack(ParkourConstants.ITEM_LEAVE, 1));
-        applyDropFilters(inventory, allowDrop);
+        if (map != null && map.isMithrilSwordEnabled()) {
+            setHotbarItem(inventory, 3, new ItemStack(ParkourConstants.ITEM_RUN_MITHRIL_SWORD, 1));
+        }
+        int settingsSlot = (map != null && map.isMithrilSwordEnabled()) ? 4 : 3;
+        setHotbarItem(inventory, settingsSlot, new ItemStack(ParkourConstants.ITEM_ADMIN_REMOTE, 1));
+        applyDropFilters(inventory, false);
     }
 
     public static void giveMenuItems(Player player) {
@@ -45,15 +60,16 @@ public final class InventoryUtils {
             setHotbarItem(inventory, 0, new ItemStack(ParkourConstants.ITEM_MENU, 1));
             setHotbarItem(inventory, 1, new ItemStack(ParkourConstants.ITEM_LEADERBOARD, 1));
             setHotbarItem(inventory, 2, new ItemStack(ParkourConstants.ITEM_STATS, 1));
+            setHotbarItem(inventory, 3, new ItemStack(ParkourConstants.ITEM_ADMIN_REMOTE, 1));
             return;
         }
-        boolean allowDrop = false;
-        applyDropFilters(inventory, true);
+        applyDropFilters(inventory, false);
         clearAllSections(inventory);
         setHotbarItem(inventory, 0, new ItemStack(ParkourConstants.ITEM_MENU, 1));
         setHotbarItem(inventory, 1, new ItemStack(ParkourConstants.ITEM_LEADERBOARD, 1));
         setHotbarItem(inventory, 2, new ItemStack(ParkourConstants.ITEM_STATS, 1));
-        applyDropFilters(inventory, allowDrop);
+        setHotbarItem(inventory, 3, new ItemStack(ParkourConstants.ITEM_ADMIN_REMOTE, 1));
+        applyDropFilters(inventory, false);
     }
 
     private static void clearAllSections(Inventory inventory) {
@@ -69,7 +85,10 @@ public final class InventoryUtils {
         if (container == null) {
             return;
         }
-        container.clear();
+        short capacity = container.getCapacity();
+        for (short slot = 0; slot < capacity; slot++) {
+            container.setItemStackForSlot(slot, ItemStack.EMPTY, false);
+        }
     }
 
     private static void setHotbarItem(Inventory inventory, int slotIndex, ItemStack itemStack) {
@@ -80,7 +99,7 @@ public final class InventoryUtils {
         if (slotIndex < 0 || slotIndex >= hotbar.getCapacity()) {
             return;
         }
-        hotbar.setItemStackForSlot((short) slotIndex, itemStack);
+        hotbar.setItemStackForSlot((short) slotIndex, itemStack, false);
     }
 
     private static void applyDropFilters(Inventory inventory, boolean allowDrop) {

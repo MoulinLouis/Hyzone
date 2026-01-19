@@ -16,7 +16,9 @@ public class Map {
     private TransformData leaveTeleport;
     private final List<TransformData> checkpoints = new ArrayList<>();
     private long firstCompletionXp;
+    private int difficulty;
     private int order = ParkourConstants.DEFAULT_MAP_ORDER;
+    private boolean mithrilSwordEnabled;
     private long createdAt;
     private long updatedAt;
 
@@ -104,12 +106,28 @@ public class Map {
         this.firstCompletionXp = firstCompletionXp;
     }
 
+    public int getDifficulty() {
+        return difficulty;
+    }
+
+    public void setDifficulty(int difficulty) {
+        this.difficulty = difficulty;
+    }
+
     public int getOrder() {
         return order;
     }
 
     public void setOrder(int order) {
         this.order = order;
+    }
+
+    public boolean isMithrilSwordEnabled() {
+        return mithrilSwordEnabled;
+    }
+
+    public void setMithrilSwordEnabled(boolean mithrilSwordEnabled) {
+        this.mithrilSwordEnabled = mithrilSwordEnabled;
     }
 
     public long getCreatedAt() {

@@ -42,7 +42,7 @@ $C.@PageOverlay {
         }
         Label {
           Style: (FontSize: 14, TextColor: #9fd3c7);
-          Text: "- My stats";
+          Text: "- My Stats";
         }
         Label {
           Style: (FontSize: 14, TextColor: #cfd7dc);
@@ -65,12 +65,30 @@ $C.@PageOverlay {
       Label {
         Anchor: (Top: 8);
         Style: (FontSize: 13, TextColor: #9fb0ba);
-        Text: "Type /pkitem if your items are missing.";
+        Text: "Type /pk items if your items are missing.";
       }
 
-      $C.@TextButton #CloseButton {
-        Anchor: (Height: 24, Width: 140, Top: 12);
-        Text: "Got it";
+      Group {
+        Anchor: (Height: 24, Top: 12, Left: 0, Right: 0);
+        LayoutMode: Left;
+
+        Group {
+          Anchor: (Width: 96);
+        }
+
+        $C.@TextButton #DiscordButton {
+          Anchor: (Height: 24, Width: 140);
+          Text: "Discord";
+        }
+
+        Group {
+          Anchor: (Width: 8);
+        }
+
+        $C.@TextButton #CloseButton {
+          Anchor: (Height: 24, Width: 140);
+          Text: "Got it";
+        }
       }
     }
   }
