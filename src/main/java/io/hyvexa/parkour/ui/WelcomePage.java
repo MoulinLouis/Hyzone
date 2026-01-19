@@ -4,6 +4,8 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
+import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
@@ -16,6 +18,13 @@ import javax.annotation.Nonnull;
 public class WelcomePage extends BaseParkourPage {
 
     private static final String BUTTON_CLOSE = "Close";
+    private static final String BUTTON_DISCORD = "Discord";
+    private static final String DISCORD_TEXT = "CLICK HERE!";
+    private static final String DISCORD_URL = "https://discord.gg/BDA7gRF5";
+    private static final Message MESSAGE_DISCORD = Message.join(
+            Message.raw("Discord: "),
+            Message.raw(DISCORD_TEXT).color("#8ab4f8").link(DISCORD_URL)
+    );
 
     public WelcomePage(@Nonnull PlayerRef playerRef) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
@@ -27,12 +36,21 @@ public class WelcomePage extends BaseParkourPage {
         uiCommandBuilder.append("Pages/Parkour_Welcome.ui");
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CloseButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#DiscordButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_DISCORD), false);
     }
 
     @Override
     public void handleDataEvent(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store,
                                 @Nonnull ButtonEventData data) {
         super.handleDataEvent(ref, store, data);
+        if (BUTTON_DISCORD.equals(data.getButton())) {
+            Player player = store.getComponent(ref, Player.getComponentType());
+            if (player != null) {
+                player.sendMessage(MESSAGE_DISCORD);
+            }
+            return;
+        }
         if (BUTTON_CLOSE.equals(data.getButton())) {
             this.close();
         }

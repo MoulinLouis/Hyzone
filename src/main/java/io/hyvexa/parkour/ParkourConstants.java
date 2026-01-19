@@ -12,6 +12,8 @@ public final class ParkourConstants {
     public static final String ITEM_MENU = "Ingredient_Bolt_Prismaloom";
     public static final String ITEM_LEADERBOARD = "WinterHoliday_Snowflake";
     public static final String ITEM_STATS = "Food_Candy_Cane";
+    public static final String ITEM_ADMIN_REMOTE = "Recipe_Book_Magic_Air";
+    public static final String ITEM_RUN_MITHRIL_SWORD = "Weapon_Sword_Mithril";
 
     public static final String TITLE_NOVICE = "Parkour Novice";
     public static final String TITLE_PRO = "Parkour Pro";
@@ -26,12 +28,18 @@ public final class ParkourConstants {
     };
 
     public static final String[] COMPLETION_RANK_NAMES = {
+            "Unranked",
+            "Iron",
             "Bronze",
             "Silver",
             "Gold",
-            "Platinum",
+            "Platinium",
+            "Emerald",
             "Diamond",
-            "Master"
+            "Master",
+            "Grandmaster",
+            "Challenger",
+            "VexaGod"
     };
     // XP required to reach each rank, aligned by index with RANK_NAMES.
     public static final long[] RANK_XP_REQUIREMENTS = {
@@ -54,6 +62,7 @@ public final class ParkourConstants {
     public static final int RANK_TITLE_MASTER_LEVEL = 6;
 
     public static final double DEFAULT_FALL_RESPAWN_SECONDS = 3.0;
+    public static final double FALL_FAILSAFE_VOID_Y = -10.0;
     public static final Vector3d DEFAULT_SPAWN_POSITION = new Vector3d(-484.70, 306.00, 627.48);
     public static final double TOUCH_RADIUS = 1.5;
 

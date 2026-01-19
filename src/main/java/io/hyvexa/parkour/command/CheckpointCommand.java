@@ -90,9 +90,9 @@ public class CheckpointCommand extends AbstractPlayerCommand {
         }
 
         Transform transform = checkpoint.transform.clone();
-        Teleport teleport = new Teleport(world, transform);
+        Teleport teleport = Teleport.createForPlayer(world, transform);
         if (checkpoint.headRotation != null) {
-            teleport = teleport.withHeadRotation(checkpoint.headRotation.clone());
+            teleport.setHeadRotation(checkpoint.headRotation.clone());
         }
         store.addComponent(ref, Teleport.getComponentType(), teleport);
         ctx.sendMessage(MESSAGE_TELEPORTED);

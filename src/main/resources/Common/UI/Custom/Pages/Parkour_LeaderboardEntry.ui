@@ -7,7 +7,7 @@ Group {
   Padding: (Left: 10, Right: 10, Top: 8);
 
   Label #Rank {
-    Anchor: (Width: 30);
+    Anchor: (Width: 46);
     Style: (
       FontSize: 14,
       RenderBold: true,
@@ -26,7 +26,7 @@ Group {
   }
 
   Label #Completion {
-    Anchor: (Width: 80, Right: 0);
+    Anchor: (Width: 76, Right: 0);
     Style: (
       FontSize: 13,
       RenderBold: true,

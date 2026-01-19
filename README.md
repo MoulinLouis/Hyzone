@@ -1,45 +1,81 @@
-# Parkour Plugin (Hytale)
+# Hyvexa Parkour Plugin (Hytale)
 
-A Hytale server plugin that provides a full parkour course experience with
-course selection, leaderboards, admin course management, and a live run timer HUD.
+A Hytale server plugin providing a complete parkour experience with map selection, leaderboards, progression system, and admin tools.
 
 ## Features
-- Course selection UI via `/pk` (category-first).
-- Leaderboards via `/pk leaderboard` (global + per-course best times).
-- Admin management via `/pkadmin` (create, set start/finish, checkpoints, rename, delete, category).
-- Run flow: checkpoints, finish detection, dead-zone respawn below Y=300, best-time persistence.
-- Run items: **Reset current course** and **Leave course**.
-- Menu items: **Select a level** and **Leaderboards**.
-- Player-player collision disabled on connect; item drops blocked for non-OP players.
-- Lightweight HUD timer shown while running a course.
+
+- **Map Selection** - Category-first UI via `/pk` with Easy/Medium/Hard/Insane difficulties
+- **Leaderboards** - Global and per-map best times via `/pk leaderboard`
+- **Progression** - XP system with ranks (Bronze to Grandmaster) based on map completions
+- **Admin Tools** - Full map management via `/pk admin` (OP only)
+- **Run HUD** - Live timer display during active runs
+- **Auto-respawn** - Fall detection teleports players back to checkpoint/start
+- **Collision-free** - Player-player collision disabled; item drops blocked for non-OPs
 
 ## Commands
-- `/pk` - Open the course selector.
-- `/pk leaderboard` - Open leaderboard menu.
-- `/pkadmin` - Manage courses.
-- `/pkitem` - Give menu items.
 
-## Project layout
-- Java sources: `src/main/java`.
-- Plugin package: `io.parkour.plugins.parkour`.
-- Entrypoint: `src/main/java/io/parkour/plugins/parkour/ExamplePlugin.java`.
-- Plugin manifest: `src/main/resources/manifest.json`.
-- UI assets: `src/main/resources/Common/UI/Custom/Pages`.
-- Server assets/interactions: `src/main/resources/Server/...`.
+| Command | Description |
+|---------|-------------|
+| `/pk` | Open map selection menu |
+| `/pk leaderboard` | Open leaderboard menu |
+| `/pk stats` | View your progression (XP, rank, completions) |
+| `/pk admin` | Admin panel for map/settings management (OP only) |
+| `/pk items` | Give yourself the menu items |
 
-## Build & run
-- Hytale server jar is expected at:
-  `%USERPROFILE%/AppData/Roaming/Hytale/install/<patchline>/package/game/latest/Server/HytaleServer.jar`
-- Build: `./gradlew build` (Windows: `gradlew.bat build`).
-- Run from IDEA: use the `HytaleServer` run config (creates `run/` directory).
+## Quick Start
 
-## Manifest/versioning
-- `manifest.json` fields `Main`, `Group`, `Name`, `Description` should match this plugin.
-- `Version` and `IncludesAssetPack` are written by Gradle from `gradle.properties`.
+### Build
+```bash
+./gradlew build
+# Windows: gradlew.bat build
+```
 
-## Notes
-- Parkour data is stored at runtime under `Parkour/`.
-- JSON stubs may be placed in the repo root for testing (e.g., `Courses.json`, `Progress.json`).
+### Run
+Use the `HytaleServer` IntelliJ run config, which launches from the `run/` directory.
+
+### Server JAR Location
+The Hytale server JAR is expected at:
+```
+%USERPROFILE%/AppData/Roaming/Hytale/install/<patchline>/package/game/latest/Server/HytaleServer.jar
+```
+Where `<patchline>` is configured in `gradle.properties`.
+
+## Project Layout
+
+```
+src/main/java/
+  io/hyvexa/
+    HyvexaPlugin.java          # Plugin entrypoint
+    parkour/
+      command/                 # Command handlers
+      data/                    # JSON persistence (MapStore, ProgressStore, etc.)
+      tracker/                 # Run tracking and HUD
+      ui/                      # Custom UI pages
+      interaction/             # Right-click item handlers
+
+src/main/resources/
+  manifest.json                # Plugin manifest
+  Common/UI/Custom/Pages/      # UI definition files
+  Server/                      # Server-side assets and interactions
+```
+
+## Configuration
+
+### Manifest
+- `manifest.json` fields `Main`, `Group`, `Name`, `Description` should match your plugin
+- `Version` and `IncludesAssetPack` are auto-populated by Gradle from `gradle.properties`
+
+### Runtime Data
+- All parkour data is stored in `Parkour/` at runtime
+- Files: `Maps.json`, `Progress.json`, `Settings.json`, `PlayerCounts.json`
+
+## Documentation
+
+- [AGENTS.md](AGENTS.md) - AI agent instructions for development
+- [ARCHITECTURE.md](ARCHITECTURE.md) - Technical design and edge cases
+- [CONTRIBUTING.md](CONTRIBUTING.md) - Contribution guidelines
+- [CHANGELOG.md](CHANGELOG.md) - Version history
 
 ## License
-- Internal project; add a license if you plan to distribute.
+
+Internal project. Add a license before distributing.

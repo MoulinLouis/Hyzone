@@ -17,9 +17,12 @@ public class SettingsStore extends BlockingDiskFile {
 
     private static final double MAX_COORDINATE = 30000000.0;
     private double fallRespawnSeconds = ParkourConstants.DEFAULT_FALL_RESPAWN_SECONDS;
+    private double fallFailsafeVoidY = ParkourConstants.FALL_FAILSAFE_VOID_Y;
     private TransformData spawnPosition = defaultSpawn();
     private final List<String> categoryOrder = new ArrayList<>();
     private boolean idleFallRespawnForOp = false;
+    private boolean disableWeaponDamage = false;
+    private boolean teleportDebugEnabled = false;
 
     public SettingsStore() {
         super(Path.of("Parkour/Settings.json"));
@@ -43,8 +46,53 @@ public class SettingsStore extends BlockingDiskFile {
         return spawnPosition;
     }
 
+    public double getFallFailsafeVoidY() {
+        return fallFailsafeVoidY;
+    }
+
+    public void setFallFailsafeVoidY(double fallFailsafeVoidY) {
+        this.fileLock.writeLock().lock();
+        try {
+            double sanitized = Double.isFinite(fallFailsafeVoidY)
+                    ? fallFailsafeVoidY
+                    : ParkourConstants.FALL_FAILSAFE_VOID_Y;
+            this.fallFailsafeVoidY = sanitized;
+        } finally {
+            this.fileLock.writeLock().unlock();
+        }
+        this.syncSave();
+    }
+
     public boolean isIdleFallRespawnForOp() {
         return idleFallRespawnForOp;
+    }
+
+    public boolean isWeaponDamageDisabled() {
+        return disableWeaponDamage;
+    }
+
+    public boolean isTeleportDebugEnabled() {
+        return teleportDebugEnabled;
+    }
+
+    public void setWeaponDamageDisabled(boolean disableWeaponDamage) {
+        this.fileLock.writeLock().lock();
+        try {
+            this.disableWeaponDamage = disableWeaponDamage;
+        } finally {
+            this.fileLock.writeLock().unlock();
+        }
+        this.syncSave();
+    }
+
+    public void setTeleportDebugEnabled(boolean teleportDebugEnabled) {
+        this.fileLock.writeLock().lock();
+        try {
+            this.teleportDebugEnabled = teleportDebugEnabled;
+        } finally {
+            this.fileLock.writeLock().unlock();
+        }
+        this.syncSave();
     }
 
     public void setIdleFallRespawnForOp(boolean idleFallRespawnForOp) {
@@ -95,12 +143,24 @@ public class SettingsStore extends BlockingDiskFile {
         if (fallRespawnSeconds <= 0) {
             fallRespawnSeconds = ParkourConstants.DEFAULT_FALL_RESPAWN_SECONDS;
         }
+        if (object.has("fallFailsafeVoidY")) {
+            fallFailsafeVoidY = object.get("fallFailsafeVoidY").getAsDouble();
+        } else if (object.has("fallFailsafeBufferY")) {
+            fallFailsafeVoidY = object.get("fallFailsafeBufferY").getAsDouble();
+        } else {
+            fallFailsafeVoidY = ParkourConstants.FALL_FAILSAFE_VOID_Y;
+        }
+        if (!Double.isFinite(fallFailsafeVoidY)) {
+            fallFailsafeVoidY = ParkourConstants.FALL_FAILSAFE_VOID_Y;
+        }
         if (object.has("spawn") && object.get("spawn").isJsonObject()) {
             spawnPosition = readTransform(object.getAsJsonObject("spawn"));
         } else {
             spawnPosition = defaultSpawn();
         }
         idleFallRespawnForOp = object.has("idleFallRespawnForOp") && object.get("idleFallRespawnForOp").getAsBoolean();
+        disableWeaponDamage = object.has("disableWeaponDamage") && object.get("disableWeaponDamage").getAsBoolean();
+        teleportDebugEnabled = object.has("teleportDebugEnabled") && object.get("teleportDebugEnabled").getAsBoolean();
         categoryOrder.clear();
         if (object.has("categoryOrder") && object.get("categoryOrder").isJsonArray()) {
             for (JsonElement element : object.getAsJsonArray("categoryOrder")) {
@@ -119,10 +179,13 @@ public class SettingsStore extends BlockingDiskFile {
     protected void write(BufferedWriter bufferedWriter) throws IOException {
         JsonObject object = new JsonObject();
         object.addProperty("fallRespawnSeconds", fallRespawnSeconds);
+        object.addProperty("fallFailsafeVoidY", fallFailsafeVoidY);
         if (spawnPosition != null) {
             object.add("spawn", writeTransform(spawnPosition));
         }
         object.addProperty("idleFallRespawnForOp", idleFallRespawnForOp);
+        object.addProperty("disableWeaponDamage", disableWeaponDamage);
+        object.addProperty("teleportDebugEnabled", teleportDebugEnabled);
         if (!categoryOrder.isEmpty()) {
             var array = new com.google.gson.JsonArray();
             for (String entry : categoryOrder) {

@@ -5,27 +5,42 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.hypixel.hytale.logger.HytaleLogger;
+import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.util.io.BlockingDiskFile;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.file.Path;
+import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.parkour.ParkourConstants;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 import java.util.Locale;
 
 public class ProgressStore extends BlockingDiskFile {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
+    private static final long SAVE_DEBOUNCE_MS = 5000L;
     private final Map<UUID, PlayerProgress> progress = new ConcurrentHashMap<>();
     private final Map<UUID, String> lastKnownNames = new ConcurrentHashMap<>();
+    private final Map<String, LeaderboardCache> leaderboardCache = new ConcurrentHashMap<>();
+    private final AtomicBoolean saveQueued = new AtomicBoolean(false);
+    private final AtomicReference<ScheduledFuture<?>> saveFuture = new AtomicReference<>();
     private static final int MAX_PLAYER_NAME_LENGTH = 32;
+    private volatile long cachedTotalXp = -1L;
 
     public ProgressStore() {
         super(Path.of("Parkour/Progress.json"));
@@ -50,7 +65,7 @@ public class ProgressStore extends BlockingDiskFile {
         } finally {
             this.fileLock.writeLock().unlock();
         }
-        this.syncSave();
+        queueSave();
     }
 
     public Long getBestTimeMs(UUID playerId, String mapId) {
@@ -65,13 +80,14 @@ public class ProgressStore extends BlockingDiskFile {
                                                  long firstCompletionXp) {
         this.fileLock.writeLock().lock();
         ProgressionResult result;
+        boolean newBest = false;
         try {
             PlayerProgress playerProgress = progress.computeIfAbsent(playerId, ignored -> new PlayerProgress());
             storePlayerName(playerId, playerName);
             boolean firstCompletionForMap = playerProgress.completedMaps.add(mapId);
             Long best = playerProgress.bestMapTimes.get(mapId);
             boolean personalBest = best != null && timeMs < best;
-            boolean newBest = best == null || timeMs < best;
+            newBest = best == null || timeMs < best;
             if (newBest) {
                 playerProgress.bestMapTimes.put(mapId, timeMs);
             }
@@ -99,7 +115,10 @@ public class ProgressStore extends BlockingDiskFile {
         } finally {
             this.fileLock.writeLock().unlock();
         }
-        this.syncSave();
+        if (newBest) {
+            invalidateLeaderboardCache(mapId);
+        }
+        queueSave();
         return result;
     }
 
@@ -112,41 +131,47 @@ public class ProgressStore extends BlockingDiskFile {
     }
 
     public Map<UUID, Long> getBestTimesForMap(String mapId) {
-        Map<UUID, Long> times = new ConcurrentHashMap<>();
-        for (Map.Entry<UUID, PlayerProgress> entry : progress.entrySet()) {
-            Long best = entry.getValue().bestMapTimes.get(mapId);
-            if (best != null) {
-                times.put(entry.getKey(), best);
-            }
+        if (mapId == null) {
+            return Map.of();
+        }
+        LeaderboardCache cache = leaderboardCache.computeIfAbsent(mapId, this::buildLeaderboardCache);
+        Map<UUID, Long> times = new HashMap<>(cache.entries.size());
+        for (Map.Entry<UUID, Long> entry : cache.entries) {
+            times.put(entry.getKey(), entry.getValue());
         }
         return times;
+    }
+
+    public List<Map.Entry<UUID, Long>> getLeaderboardEntries(String mapId) {
+        if (mapId == null) {
+            return List.of();
+        }
+        LeaderboardCache cache = leaderboardCache.computeIfAbsent(mapId, this::buildLeaderboardCache);
+        return cache.entries;
     }
 
     public int getLeaderboardPosition(String mapId, UUID playerId) {
         if (mapId == null || playerId == null) {
             return -1;
         }
-        Map<UUID, Long> times = getBestTimesForMap(mapId);
-        Long playerTime = times.get(playerId);
-        if (playerTime == null) {
-            return -1;
+        LeaderboardCache cache = leaderboardCache.computeIfAbsent(mapId, this::buildLeaderboardCache);
+        Integer position = cache.positions.get(playerId);
+        return position != null ? position : -1;
+    }
+
+    public Long getWorldRecordTimeMs(String mapId) {
+        if (mapId == null) {
+            return null;
         }
-        int position = 1;
-        for (Map.Entry<UUID, Long> entry : times.entrySet()) {
-            if (entry.getKey().equals(playerId)) {
-                continue;
-            }
-            if (entry.getValue() < playerTime) {
-                position++;
-            }
-        }
-        return position;
+        LeaderboardCache cache = leaderboardCache.computeIfAbsent(mapId, this::buildLeaderboardCache);
+        return cache.worldRecordMs;
     }
 
     @Override
     protected void read(BufferedReader bufferedReader) throws IOException {
         progress.clear();
         lastKnownNames.clear();
+        leaderboardCache.clear();
         JsonElement parsed = JsonParser.parseReader(bufferedReader);
         if (!parsed.isJsonArray()) {
             return;
@@ -265,6 +290,19 @@ public class ProgressStore extends BlockingDiskFile {
         private long playtimeMs;
     }
 
+    private static class LeaderboardCache {
+        private final List<Map.Entry<UUID, Long>> entries;
+        private final Map<UUID, Integer> positions;
+        private final Long worldRecordMs;
+
+        private LeaderboardCache(List<Map.Entry<UUID, Long>> entries, Map<UUID, Integer> positions,
+                                 Long worldRecordMs) {
+            this.entries = entries;
+            this.positions = positions;
+            this.worldRecordMs = worldRecordMs;
+        }
+    }
+
     public long getXp(UUID playerId) {
         PlayerProgress playerProgress = progress.get(playerId);
         return playerProgress != null ? playerProgress.xp : 0L;
@@ -277,7 +315,7 @@ public class ProgressStore extends BlockingDiskFile {
 
     public String getRankName(UUID playerId, MapStore mapStore) {
         int rank = getCompletionRank(playerId, mapStore);
-        int index = Math.min(rank, ParkourConstants.COMPLETION_RANK_NAMES.length) - 1;
+        int index = Math.max(1, Math.min(rank, ParkourConstants.COMPLETION_RANK_NAMES.length)) - 1;
         return ParkourConstants.COMPLETION_RANK_NAMES[index];
     }
 
@@ -285,27 +323,49 @@ public class ProgressStore extends BlockingDiskFile {
         if (mapStore == null) {
             return 1;
         }
-        long totalXp = getTotalPossibleXp(mapStore);
+        long totalXp = getCachedTotalXp(mapStore);
         if (totalXp <= 0L) {
             return 1;
         }
         long playerXp = getPlayerCompletionXp(playerId, mapStore);
+        if (playerXp <= 0L) {
+            return 1;
+        }
         if (playerXp >= totalXp) {
+            return 12;
+        }
+        double percent = (playerXp * 100.0) / totalXp;
+        if (percent < 0.01) {
+            return 1;
+        }
+        if (percent >= 90.0) {
+            return 11;
+        }
+        if (percent >= 80.0) {
+            return 10;
+        }
+        if (percent >= 70.0) {
+            return 9;
+        }
+        if (percent >= 60.0) {
+            return 8;
+        }
+        if (percent >= 50.0) {
+            return 7;
+        }
+        if (percent >= 40.0) {
             return 6;
         }
-        if (playerXp >= Math.round(totalXp * 0.8)) {
+        if (percent >= 30.0) {
             return 5;
         }
-        if (playerXp >= Math.round(totalXp * 0.6)) {
+        if (percent >= 20.0) {
             return 4;
         }
-        if (playerXp >= Math.round(totalXp * 0.4)) {
+        if (percent >= 10.0) {
             return 3;
         }
-        if (playerXp >= Math.round(totalXp * 0.2)) {
-            return 2;
-        }
-        return 1;
+        return 2;
     }
 
     public Set<String> getTitles(UUID playerId) {
@@ -336,9 +396,54 @@ public class ProgressStore extends BlockingDiskFile {
             this.fileLock.writeLock().unlock();
         }
         if (removed) {
-            this.syncSave();
+            leaderboardCache.clear();
+            queueSave();
+            // Invalidate rank cache so HUD updates immediately
+            HyvexaPlugin plugin = HyvexaPlugin.getInstance();
+            if (plugin != null) {
+                plugin.invalidateRankCache(playerId);
+            }
         }
         return removed;
+    }
+
+    public MapPurgeResult purgeMapProgress(String mapId, long xpReduction) {
+        if (mapId == null || mapId.isBlank()) {
+            return new MapPurgeResult(0, 0L);
+        }
+        String trimmedId = mapId.trim();
+        long reduction = Math.max(0L, xpReduction);
+        List<UUID> affectedPlayers = new ArrayList<>();
+        long totalXpRemoved = 0L;
+        this.fileLock.writeLock().lock();
+        try {
+            for (Map.Entry<UUID, PlayerProgress> entry : progress.entrySet()) {
+                PlayerProgress playerProgress = entry.getValue();
+                boolean removedCompletion = playerProgress.completedMaps.remove(trimmedId);
+                boolean removedBest = playerProgress.bestMapTimes.remove(trimmedId) != null;
+                if (removedCompletion || removedBest) {
+                    affectedPlayers.add(entry.getKey());
+                    long oldXp = playerProgress.xp;
+                    long newXp = Math.max(0L, oldXp - reduction);
+                    totalXpRemoved += (oldXp - newXp);
+                    playerProgress.xp = newXp;
+                    playerProgress.level = calculateLevel(playerProgress.xp);
+                }
+            }
+        } finally {
+            this.fileLock.writeLock().unlock();
+        }
+        if (!affectedPlayers.isEmpty()) {
+            invalidateLeaderboardCache(trimmedId);
+            queueSave();
+            HyvexaPlugin plugin = HyvexaPlugin.getInstance();
+            if (plugin != null) {
+                for (UUID playerId : affectedPlayers) {
+                    plugin.invalidateRankCache(playerId);
+                }
+            }
+        }
+        return new MapPurgeResult(affectedPlayers.size(), totalXpRemoved);
     }
 
     public void addPlaytime(UUID playerId, String playerName, long deltaMs) {
@@ -353,7 +458,7 @@ public class ProgressStore extends BlockingDiskFile {
         } finally {
             this.fileLock.writeLock().unlock();
         }
-        this.syncSave();
+        queueSave();
     }
 
     public long getPlaytimeMs(UUID playerId) {
@@ -408,6 +513,27 @@ public class ProgressStore extends BlockingDiskFile {
         return total;
     }
 
+    /**
+     * Returns cached total XP, computing it if not cached.
+     * Use invalidateTotalXpCache() when maps change.
+     */
+    private long getCachedTotalXp(MapStore mapStore) {
+        long cached = cachedTotalXp;
+        if (cached >= 0L) {
+            return cached;
+        }
+        cached = getTotalPossibleXp(mapStore);
+        cachedTotalXp = cached;
+        return cached;
+    }
+
+    /**
+     * Invalidates the cached total XP. Call when maps are added/removed/edited.
+     */
+    public void invalidateTotalXpCache() {
+        cachedTotalXp = -1L;
+    }
+
     private long getPlayerCompletionXp(UUID playerId, MapStore mapStore) {
         PlayerProgress playerProgress = progress.get(playerId);
         if (playerProgress == null) {
@@ -448,6 +574,63 @@ public class ProgressStore extends BlockingDiskFile {
         lastKnownNames.put(playerId, trimmedName);
     }
 
+    public void flushPendingSave() {
+        ScheduledFuture<?> pending = saveFuture.getAndSet(null);
+        if (pending != null) {
+            pending.cancel(false);
+        }
+        saveQueued.set(false);
+        syncSave();
+    }
+
+    private void queueSave() {
+        if (!saveQueued.compareAndSet(false, true)) {
+            return;
+        }
+        ScheduledFuture<?> future = HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
+            try {
+                syncSave();
+            } finally {
+                saveQueued.set(false);
+                saveFuture.set(null);
+            }
+        }, SAVE_DEBOUNCE_MS, TimeUnit.MILLISECONDS);
+        saveFuture.set(future);
+    }
+
+    private void invalidateLeaderboardCache(String mapId) {
+        if (mapId != null) {
+            leaderboardCache.remove(mapId);
+        }
+    }
+
+    private LeaderboardCache buildLeaderboardCache(String mapId) {
+        if (mapId == null) {
+            return new LeaderboardCache(List.of(), Map.of(), null);
+        }
+        List<Map.Entry<UUID, Long>> entries = new ArrayList<>();
+        for (Map.Entry<UUID, PlayerProgress> entry : progress.entrySet()) {
+            Long best = entry.getValue().bestMapTimes.get(mapId);
+            if (best != null) {
+                entries.add(Map.entry(entry.getKey(), best));
+            }
+        }
+        entries.sort(Comparator.comparingLong(Map.Entry::getValue));
+        Map<UUID, Integer> positions = new HashMap<>();
+        Long worldRecordMs = entries.isEmpty() ? null : entries.get(0).getValue();
+        long lastTime = Long.MIN_VALUE;
+        int rank = 0;
+        for (int i = 0; i < entries.size(); i++) {
+            long time = entries.get(i).getValue();
+            if (i == 0 || time > lastTime) {
+                rank = i + 1;
+                lastTime = time;
+            }
+            positions.put(entries.get(i).getKey(), rank);
+        }
+        return new LeaderboardCache(List.copyOf(entries), Map.copyOf(positions), worldRecordMs);
+    }
+
     public static class ProgressionResult {
         public final boolean firstCompletion;
         public final boolean newBest;
@@ -466,6 +649,16 @@ public class ProgressStore extends BlockingDiskFile {
             this.oldLevel = oldLevel;
             this.newLevel = newLevel;
             this.titlesUnlocked = titlesUnlocked;
+        }
+    }
+
+    public static class MapPurgeResult {
+        public final int playersUpdated;
+        public final long totalXpRemoved;
+
+        public MapPurgeResult(int playersUpdated, long totalXpRemoved) {
+            this.playersUpdated = playersUpdated;
+            this.totalXpRemoved = totalXpRemoved;
         }
     }
 }

@@ -36,7 +36,10 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
     private String mapName = "";
     private String mapCategory = "";
     private String mapFirstCompletionXp = String.valueOf(ParkourConstants.MAP_XP_EASY);
+    private String mapDifficulty = "0";
     private String mapOrder = String.valueOf(ParkourConstants.DEFAULT_MAP_ORDER);
+    private String mapSearch = "";
+    private boolean mapMithrilSwordEnabled = false;
     private String selectedMapId = "";
 
     public MapAdminPage(@Nonnull PlayerRef playerRef, MapStore mapStore) {
@@ -57,6 +60,7 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
     public void handleDataEvent(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store,
                                 @Nonnull MapData data) {
         super.handleDataEvent(ref, store, data);
+        String previousSearch = mapSearch;
         if (data.mapId != null) {
             mapId = data.mapId.trim();
         }
@@ -69,10 +73,19 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
         if (data.mapFirstCompletionXp != null) {
             mapFirstCompletionXp = data.mapFirstCompletionXp.trim();
         }
+        if (data.mapDifficulty != null) {
+            mapDifficulty = data.mapDifficulty.trim();
+        }
         if (data.mapOrder != null) {
             mapOrder = data.mapOrder.trim();
         }
+        if (data.mapSearch != null) {
+            mapSearch = data.mapSearch.trim();
+        }
         if (data.button == null) {
+            if (!previousSearch.equals(mapSearch)) {
+                sendRefresh(ref, store);
+            }
             return;
         }
         if (data.button.equals(MapData.BUTTON_BACK)) {
@@ -87,7 +100,9 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
                 mapName = map.getName() != null ? map.getName() : "";
                 mapCategory = map.getCategory() != null ? map.getCategory() : "";
                 mapFirstCompletionXp = String.valueOf(map.getFirstCompletionXp());
+                mapDifficulty = String.valueOf(map.getDifficulty());
                 mapOrder = String.valueOf(map.getOrder());
+                mapMithrilSwordEnabled = map.isMithrilSwordEnabled();
             }
             sendRefresh(ref, store);
             return;
@@ -130,6 +145,11 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
         }
         if (data.button.equals(MapData.BUTTON_REFRESH)) {
             sendRefresh(ref, store);
+            return;
+        }
+        if (data.button.equals(MapData.BUTTON_TOGGLE_MITHRIL_SWORD)) {
+            mapMithrilSwordEnabled = !mapMithrilSwordEnabled;
+            sendRefresh(ref, store);
         }
     }
 
@@ -161,11 +181,17 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
             return;
         }
         map.setFirstCompletionXp(firstCompletionXp);
+        Integer difficulty = parseMapDifficulty(player);
+        if (difficulty == null) {
+            return;
+        }
+        map.setDifficulty(difficulty);
         Integer order = parseMapOrder(player);
         if (order == null) {
             return;
         }
         map.setOrder(order);
+        map.setMithrilSwordEnabled(mapMithrilSwordEnabled);
         map.setStart(start);
         map.setCreatedAt(System.currentTimeMillis());
         map.setUpdatedAt(map.getCreatedAt());
@@ -318,11 +344,17 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
             return;
         }
         map.setFirstCompletionXp(firstCompletionXp);
+        Integer difficulty = parseMapDifficulty(player);
+        if (difficulty == null) {
+            return;
+        }
+        map.setDifficulty(difficulty);
         Integer order = parseMapOrder(player);
         if (order == null) {
             return;
         }
         map.setOrder(order);
+        map.setMithrilSwordEnabled(mapMithrilSwordEnabled);
         map.setUpdatedAt(System.currentTimeMillis());
         try {
             mapStore.updateMap(map);
@@ -378,7 +410,10 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
         commandBuilder.set("#MapNameField.Value", mapName);
         commandBuilder.set("#MapCategoryField.Value", mapCategory);
         commandBuilder.set("#MapFirstCompletionXpField.Value", mapFirstCompletionXp);
+        commandBuilder.set("#MapDifficultyField.Value", mapDifficulty);
         commandBuilder.set("#MapOrderField.Value", mapOrder);
+        commandBuilder.set("#MapSearchField.Value", mapSearch);
+        commandBuilder.set("#MithrilSwordValue.Text", mapMithrilSwordEnabled ? "Enabled" : "Disabled");
         String selectedText = "Selected: (none)";
         if (!selectedMapId.isEmpty()) {
             Map map = mapStore.getMap(selectedMapId);
@@ -392,15 +427,21 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
 
     private void buildMapList(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
         commandBuilder.clear("#MapCards");
+        String filter = mapSearch != null ? mapSearch.trim().toLowerCase() : "";
         List<Map> maps = mapStore.listMaps();
         int index = 0;
         for (Map map : maps) {
+            String displayName = map.getName() != null ? map.getName() : map.getId();
+            String displayLower = displayName != null ? displayName.toLowerCase() : "";
+            if (!filter.isEmpty() && !displayLower.startsWith(filter)) {
+                continue;
+            }
             commandBuilder.append("#MapCards", "Pages/Parkour_MapEntry.ui");
             commandBuilder.set("#MapCards[" + index + "].Background", "$C.@InputBoxBackground");
-            commandBuilder.set("#MapCards[" + index + "] #MapName.Text", map.getName());
+            commandBuilder.set("#MapCards[" + index + "] #MapName.Text", displayName);
             boolean isSelected = map.getId().equals(selectedMapId);
             if (isSelected) {
-                commandBuilder.set("#MapCards[" + index + "] #MapName.Text", ">> " + map.getName());
+                commandBuilder.set("#MapCards[" + index + "] #MapName.Text", ">> " + displayName);
                 commandBuilder.set("#MapCards[" + index + "].Background", "#253742");
             }
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
@@ -421,8 +462,12 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
                 EventData.of(MapData.KEY_MAP_CATEGORY, "#MapCategoryField.Value"), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#MapFirstCompletionXpField",
                 EventData.of(MapData.KEY_MAP_FIRST_COMPLETION_XP, "#MapFirstCompletionXpField.Value"), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#MapDifficultyField",
+                EventData.of(MapData.KEY_MAP_DIFFICULTY, "#MapDifficultyField.Value"), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#MapOrderField",
                 EventData.of(MapData.KEY_MAP_ORDER, "#MapOrderField.Value"), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#MapSearchField",
+                EventData.of(MapData.KEY_MAP_SEARCH, "#MapSearchField.Value"), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CreateMapButton",
                 EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_CREATE), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SetStartButton",
@@ -443,6 +488,8 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
                 EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_DELETE), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#RefreshButton",
                 EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_REFRESH), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#MithrilSwordToggle",
+                EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_TOGGLE_MITHRIL_SWORD), false);
     }
 
     private static TransformData readTransform(Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -502,13 +549,37 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
         }
     }
 
+    private Integer parseMapDifficulty(Player player) {
+        String raw = mapDifficulty != null ? mapDifficulty.trim() : "";
+        if (raw.isEmpty()) {
+            return 0;
+        }
+        try {
+            int value = Integer.parseInt(raw);
+            if (value < 0) {
+                player.sendMessage(Message.raw("Difficulty must be 0 or higher."));
+                return null;
+            }
+            if (value > 1_000_000) {
+                player.sendMessage(Message.raw("Difficulty cannot exceed 1,000,000."));
+                return null;
+            }
+            return value;
+        } catch (NumberFormatException ignored) {
+            player.sendMessage(Message.raw("Difficulty must be a number."));
+            return null;
+        }
+    }
+
     public static class MapData {
         static final String KEY_BUTTON = "Button";
         static final String KEY_MAP_ID = "@MapId";
         static final String KEY_MAP_NAME = "@MapName";
         static final String KEY_MAP_CATEGORY = "@MapCategory";
         static final String KEY_MAP_FIRST_COMPLETION_XP = "@MapFirstCompletionXp";
+        static final String KEY_MAP_DIFFICULTY = "@MapDifficulty";
         static final String KEY_MAP_ORDER = "@MapOrder";
+        static final String KEY_MAP_SEARCH = "@MapSearch";
         static final String BUTTON_SELECT_PREFIX = "Select:";
         static final String BUTTON_BACK = "BackButton";
         static final String BUTTON_CREATE = "CreateMap";
@@ -521,6 +592,7 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
         static final String BUTTON_UPDATE = "UpdateMap";
         static final String BUTTON_DELETE = "DeleteMap";
         static final String BUTTON_REFRESH = "Refresh";
+        static final String BUTTON_TOGGLE_MITHRIL_SWORD = "ToggleMithrilSword";
 
         public static final BuilderCodec<MapData> CODEC = BuilderCodec.<MapData>builder(MapData.class, MapData::new)
                 .addField(new KeyedCodec<>(KEY_BUTTON, Codec.STRING), (data, value) -> data.button = value, data -> data.button)
@@ -529,7 +601,10 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
                 .addField(new KeyedCodec<>(KEY_MAP_CATEGORY, Codec.STRING), (data, value) -> data.mapCategory = value, data -> data.mapCategory)
                 .addField(new KeyedCodec<>(KEY_MAP_FIRST_COMPLETION_XP, Codec.STRING),
                         (data, value) -> data.mapFirstCompletionXp = value, data -> data.mapFirstCompletionXp)
+                .addField(new KeyedCodec<>(KEY_MAP_DIFFICULTY, Codec.STRING),
+                        (data, value) -> data.mapDifficulty = value, data -> data.mapDifficulty)
                 .addField(new KeyedCodec<>(KEY_MAP_ORDER, Codec.STRING), (data, value) -> data.mapOrder = value, data -> data.mapOrder)
+                .addField(new KeyedCodec<>(KEY_MAP_SEARCH, Codec.STRING), (data, value) -> data.mapSearch = value, data -> data.mapSearch)
                 .build();
 
         private String button;
@@ -537,6 +612,8 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
         private String mapName;
         private String mapCategory;
         private String mapFirstCompletionXp;
+        private String mapDifficulty;
         private String mapOrder;
+        private String mapSearch;
     }
 }

@@ -36,12 +36,13 @@ public class ParkourMusicDebugCommand extends AbstractAsyncCommand {
         if (!(sender instanceof Player player)) {
             return java.util.concurrent.CompletableFuture.completedFuture(null);
         }
-        player.getWorldMapTracker().tick(0);
         Ref<EntityStore> ref = player.getReference();
         if (ref != null && ref.isValid()) {
             Store<EntityStore> store = ref.getStore();
             World world = store.getExternalData().getWorld();
-            return java.util.concurrent.CompletableFuture.runAsync(() -> handleCommand(commandContext, player), world);
+            return java.util.concurrent.CompletableFuture.runAsync(() -> {
+                handleCommand(commandContext, player);
+            }, world);
         }
         commandContext.sendMessage(MESSAGE_COMMANDS_ERRORS_PLAYER_NOT_IN_WORLD);
         return java.util.concurrent.CompletableFuture.completedFuture(null);

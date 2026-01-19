@@ -2,7 +2,7 @@ $C = "../Common.ui";
 
 $C.@PageOverlay {
   $C.@Container {
-    Anchor: (Width: 520, Height: 360);
+    Anchor: (Width: 520, Height: 430);
 
     #Title {
       Group {
@@ -31,37 +31,98 @@ $C.@PageOverlay {
           FontSize: 14,
           TextColor: #9fb0ba
         );
-        Text: "View or reset a player's progress by UUID.";
+        Text: "Delete player progress by UUID or purge a map id.";
       }
 
       Label {
-        Text: "Players";
-        Style: (FontSize: 13, TextColor: #cfd7dc);
         Anchor: (Top: 8);
+        Style: (FontSize: 13, TextColor: #cfd7dc);
+        Text: "Player UUID";
       }
 
-      Group #PlayerList {
-        Anchor: (Width: 490, Top: 6, Height: 140);
-        LayoutMode: TopScrolling;
-        Padding: (Left: 6, Right: 6);
-        ScrollbarStyle: $C.@DefaultScrollbarStyle;
-
-        Group #PlayerCards {
-          LayoutMode: Top;
-        }
+      $C.@TextField #PlayerUuidField {
+        Anchor: (Height: 24, Top: 6);
+        Style: (FontSize: 13, TextColor: #ffffff(0.85));
       }
 
-      $C.@TextButton #ResetProgressButton {
-        Anchor: (Height: 22, Width: 160, Top: 8);
-        Text: "Reset Progress";
+      $C.@TextButton #DeleteProgressButton {
+        Anchor: (Height: 22, Width: 160, Top: 6);
+        Text: "Delete Progress";
       }
 
       Label #ProgressSummary {
-        Anchor: (Top: 10, Height: 180);
+        Anchor: (Top: 6, Height: 36);
         Style: (
-          FontSize: 13,
-          TextColor: #cfd7dc
+          FontSize: 12,
+          TextColor: #9fb0ba
         );
+        Text: "";
+      }
+
+      Label {
+        Anchor: (Top: 8);
+        Style: (FontSize: 13, TextColor: #cfd7dc);
+        Text: "Refresh player progress";
+      }
+
+      Label {
+        Anchor: (Top: 6);
+        Style: (FontSize: 12, TextColor: #9fb0ba);
+        Text: "Player Name";
+      }
+
+      $C.@TextField #PlayerNameField {
+        Anchor: (Height: 24);
+        Style: (FontSize: 13, TextColor: #ffffff(0.85));
+      }
+
+      $C.@TextButton #RefreshProgressButton {
+        Anchor: (Height: 22, Width: 200, Top: 6);
+        Text: "Refresh Rank Cache";
+      }
+
+      Label #RefreshStatus {
+        Anchor: (Top: 6, Height: 30);
+        Style: (FontSize: 12, TextColor: #9fb0ba);
+        Text: "";
+      }
+
+      Label {
+        Anchor: (Top: 6);
+        Style: (FontSize: 13, TextColor: #cfd7dc);
+        Text: "Map progress cleanup";
+      }
+
+      Label {
+        Anchor: (Top: 6);
+        Style: (FontSize: 12, TextColor: #9fb0ba);
+        Text: "Map Id";
+      }
+
+      $C.@TextField #MapPurgeIdField {
+        Anchor: (Height: 24);
+        Style: (FontSize: 13, TextColor: #ffffff(0.85));
+      }
+
+      Label {
+        Anchor: (Top: 6);
+        Style: (FontSize: 12, TextColor: #9fb0ba);
+        Text: "XP to remove (per player)";
+      }
+
+      $C.@TextField #MapPurgeXpField {
+        Anchor: (Height: 24);
+        Style: (FontSize: 13, TextColor: #ffffff(0.85));
+      }
+
+      $C.@TextButton #PurgeMapButton {
+        Anchor: (Height: 22, Width: 200, Top: 6);
+        Text: "Purge Map Progress";
+      }
+
+      Label #MapPurgeStatus {
+        Anchor: (Top: 6, Height: 40);
+        Style: (FontSize: 12, TextColor: #9fb0ba);
         Text: "";
       }
     }

@@ -34,6 +34,7 @@ public class AdminIndexPage extends InteractiveCustomUIPage<AdminIndexPage.Admin
     private static final String BUTTON_SETTINGS = "Settings";
     private static final String BUTTON_PLAYTIME = "Playtime";
     private static final String BUTTON_POPULATION = "Population";
+    private static final String BUTTON_GLOBAL_MESSAGES = "GlobalMessages";
     private static final String BUTTON_BROADCAST = "Broadcast";
     private String announcementInput = "";
 
@@ -70,6 +71,8 @@ public class AdminIndexPage extends InteractiveCustomUIPage<AdminIndexPage.Admin
                 EventData.of(AdminIndexData.KEY_BUTTON, BUTTON_PLAYTIME), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#PopulationButton",
                 EventData.of(AdminIndexData.KEY_BUTTON, BUTTON_POPULATION), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#GlobalMessageButton",
+                EventData.of(AdminIndexData.KEY_BUTTON, BUTTON_GLOBAL_MESSAGES), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#AnnouncementField",
                 EventData.of(AdminIndexData.KEY_ANNOUNCEMENT, "#AnnouncementField.Value"), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#AnnouncementSendButton",
@@ -117,6 +120,16 @@ public class AdminIndexPage extends InteractiveCustomUIPage<AdminIndexPage.Admin
             player.getPageManager().openCustomPage(ref, store, new PlayerCountAdminPage(playerRef, playerCountStore));
             return;
         }
+        if (BUTTON_GLOBAL_MESSAGES.equals(data.button)) {
+            HyvexaPlugin plugin = HyvexaPlugin.getInstance();
+            if (plugin == null) {
+                player.sendMessage(Message.raw("Global messages unavailable."));
+                return;
+            }
+            player.getPageManager().openCustomPage(ref, store,
+                    new GlobalMessageAdminPage(playerRef, plugin.getGlobalMessageStore()));
+            return;
+        }
         if (BUTTON_BROADCAST.equals(data.button)) {
             if (announcementInput.isBlank()) {
                 player.sendMessage(com.hypixel.hytale.server.core.Message.raw("Enter a message to broadcast."));
@@ -147,6 +160,8 @@ public class AdminIndexPage extends InteractiveCustomUIPage<AdminIndexPage.Admin
                 EventData.of(AdminIndexData.KEY_BUTTON, BUTTON_PLAYTIME), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#PopulationButton",
                 EventData.of(AdminIndexData.KEY_BUTTON, BUTTON_POPULATION), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#GlobalMessageButton",
+                EventData.of(AdminIndexData.KEY_BUTTON, BUTTON_GLOBAL_MESSAGES), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#AnnouncementField",
                 EventData.of(AdminIndexData.KEY_ANNOUNCEMENT, "#AnnouncementField.Value"), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#AnnouncementSendButton",

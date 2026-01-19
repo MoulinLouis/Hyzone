@@ -25,10 +25,12 @@ import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.data.ProgressStore;
 import io.hyvexa.parkour.data.SettingsStore;
 import io.hyvexa.parkour.data.TransformData;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class RunTracker {
 
@@ -39,6 +41,7 @@ public class RunTracker {
     private final SettingsStore settingsStore;
     private final ConcurrentHashMap<UUID, ActiveRun> activeRuns = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, FallState> idleFalls = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, TeleportStats> teleportStats = new ConcurrentHashMap<>();
 
     public RunTracker(MapStore mapStore, ProgressStore progressStore,
                              SettingsStore settingsStore) {
@@ -54,6 +57,78 @@ public class RunTracker {
 
     public void clearActiveMap(UUID playerId) {
         activeRuns.remove(playerId);
+    }
+
+    public void clearPlayer(UUID playerId) {
+        clearActiveMap(playerId);
+        idleFalls.remove(playerId);
+        teleportStats.remove(playerId);
+    }
+
+    public java.util.Map<UUID, TeleportStatsSnapshot> drainTeleportStats() {
+        if (teleportStats.isEmpty()) {
+            return java.util.Map.of();
+        }
+        java.util.Map<UUID, TeleportStatsSnapshot> snapshots = new HashMap<>();
+        for (java.util.Map.Entry<UUID, TeleportStats> entry : teleportStats.entrySet()) {
+            TeleportStatsSnapshot snapshot = entry.getValue().snapshotAndReset();
+            if (snapshot.isEmpty()) {
+                teleportStats.remove(entry.getKey(), entry.getValue());
+                continue;
+            }
+            snapshots.put(entry.getKey(), snapshot);
+        }
+        return snapshots;
+    }
+
+    public static final class TeleportStatsSnapshot {
+        public final int startTrigger;
+        public final int leaveTrigger;
+        public final int runRespawn;
+        public final int idleRespawn;
+        public final int finish;
+        public final int checkpoint;
+
+        private TeleportStatsSnapshot(int startTrigger, int leaveTrigger, int runRespawn, int idleRespawn, int finish,
+                                      int checkpoint) {
+            this.startTrigger = startTrigger;
+            this.leaveTrigger = leaveTrigger;
+            this.runRespawn = runRespawn;
+            this.idleRespawn = idleRespawn;
+            this.finish = finish;
+            this.checkpoint = checkpoint;
+        }
+
+        public boolean isEmpty() {
+            return startTrigger == 0 && leaveTrigger == 0 && runRespawn == 0
+                    && idleRespawn == 0 && finish == 0 && checkpoint == 0;
+        }
+    }
+
+    public CheckpointProgress getCheckpointProgress(UUID playerId) {
+        ActiveRun run = activeRuns.get(playerId);
+        if (run == null) {
+            return null;
+        }
+        Map map = mapStore.getMap(run.mapId);
+        if (map == null) {
+            return null;
+        }
+        int total = map.getCheckpoints().size();
+        int touched = Math.min(run.touchedCheckpoints.size(), total);
+        return new CheckpointProgress(touched, total);
+    }
+
+    public void sweepStalePlayers(Set<UUID> onlinePlayers) {
+        if (onlinePlayers == null || onlinePlayers.isEmpty()) {
+            activeRuns.clear();
+            idleFalls.clear();
+            teleportStats.clear();
+            return;
+        }
+        activeRuns.keySet().removeIf(id -> !onlinePlayers.contains(id));
+        idleFalls.keySet().removeIf(id -> !onlinePlayers.contains(id));
+        teleportStats.keySet().removeIf(id -> !onlinePlayers.contains(id));
     }
 
     public String getActiveMapId(UUID playerId) {
@@ -90,6 +165,7 @@ public class RunTracker {
                     movementStates,
                     fallTimeoutMs)) {
                 teleportToSpawn(ref, store, transform);
+                recordTeleport(playerRef.getUuid(), TeleportCause.IDLE_RESPAWN);
                 return;
             }
             Map triggerMap = findStartTriggerMap(position);
@@ -113,6 +189,7 @@ public class RunTracker {
                 run.startTimeMs = System.currentTimeMillis();
             }
             teleportToRespawn(ref, store, run, map);
+            recordTeleport(playerRef.getUuid(), TeleportCause.RUN_RESPAWN);
             return;
         }
         checkCheckpoints(run, player, position, map);
@@ -144,6 +221,7 @@ public class RunTracker {
                 map.getStart().getRotZ());
         store.addComponent(ref, Teleport.getComponentType(),
                 new Teleport(store.getExternalData().getWorld(), position, rotation));
+        recordTeleport(playerRef.getUuid(), TeleportCause.START_TRIGGER);
         player.sendMessage(Message.raw("Map loaded."));
         InventoryUtils.giveRunItems(player);
     }
@@ -164,6 +242,7 @@ public class RunTracker {
                     leaveTeleport.getRotZ());
             store.addComponent(ref, Teleport.getComponentType(),
                     new Teleport(store.getExternalData().getWorld(), targetPosition, targetRotation));
+            recordTeleport(playerRef.getUuid(), TeleportCause.LEAVE_TRIGGER);
         }
         clearActiveMap(playerRef.getUuid());
         InventoryUtils.giveMenuItems(player);
@@ -300,6 +379,7 @@ public class RunTracker {
                 broadcastCompletion(playerId, playerName, map, durationMs, leaderboardPosition);
             }
             teleportToSpawn(ref, store, transform);
+            recordTeleport(playerId, TeleportCause.FINISH);
             clearActiveMap(playerId);
             InventoryUtils.giveMenuItems(player);
         }
@@ -356,6 +436,7 @@ public class RunTracker {
         Vector3f rotation = new Vector3f(checkpoint.getRotX(), checkpoint.getRotY(), checkpoint.getRotZ());
         store.addComponent(ref, Teleport.getComponentType(),
                 new Teleport(store.getExternalData().getWorld(), position, rotation));
+        recordTeleport(playerRef.getUuid(), TeleportCause.CHECKPOINT);
         run.fallStartTime = null;
         run.lastY = null;
         return true;
@@ -458,11 +539,71 @@ public class RunTracker {
         private Double lastY;
     }
 
+    private enum TeleportCause {
+        START_TRIGGER,
+        LEAVE_TRIGGER,
+        RUN_RESPAWN,
+        IDLE_RESPAWN,
+        FINISH,
+        CHECKPOINT
+    }
+
+    private static final class TeleportStats {
+        private final AtomicInteger startTrigger = new AtomicInteger();
+        private final AtomicInteger leaveTrigger = new AtomicInteger();
+        private final AtomicInteger runRespawn = new AtomicInteger();
+        private final AtomicInteger idleRespawn = new AtomicInteger();
+        private final AtomicInteger finish = new AtomicInteger();
+        private final AtomicInteger checkpoint = new AtomicInteger();
+
+        private void increment(TeleportCause cause) {
+            if (cause == null) {
+                return;
+            }
+            switch (cause) {
+                case START_TRIGGER -> startTrigger.incrementAndGet();
+                case LEAVE_TRIGGER -> leaveTrigger.incrementAndGet();
+                case RUN_RESPAWN -> runRespawn.incrementAndGet();
+                case IDLE_RESPAWN -> idleRespawn.incrementAndGet();
+                case FINISH -> finish.incrementAndGet();
+                case CHECKPOINT -> checkpoint.incrementAndGet();
+            }
+        }
+
+        private TeleportStatsSnapshot snapshotAndReset() {
+            return new TeleportStatsSnapshot(
+                    startTrigger.getAndSet(0),
+                    leaveTrigger.getAndSet(0),
+                    runRespawn.getAndSet(0),
+                    idleRespawn.getAndSet(0),
+                    finish.getAndSet(0),
+                    checkpoint.getAndSet(0)
+            );
+        }
+    }
+
+    public static class CheckpointProgress {
+        public final int touched;
+        public final int total;
+
+        public CheckpointProgress(int touched, int total) {
+            this.touched = touched;
+            this.total = total;
+        }
+    }
+
     private boolean isFallTrackingBlocked(MovementStates movementStates) {
         return movementStates != null && (movementStates.climbing || movementStates.onGround);
     }
 
     private FallState getIdleFallState(UUID playerId) {
         return idleFalls.computeIfAbsent(playerId, ignored -> new FallState());
+    }
+
+    private void recordTeleport(UUID playerId, TeleportCause cause) {
+        if (playerId == null || cause == null) {
+            return;
+        }
+        teleportStats.computeIfAbsent(playerId, ignored -> new TeleportStats()).increment(cause);
     }
 }

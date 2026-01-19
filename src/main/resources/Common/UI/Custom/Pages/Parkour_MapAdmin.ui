@@ -2,7 +2,7 @@ $C = "../Common.ui";
 
 $C.@PageOverlay {
   $C.@Container {
-    Anchor: (Width: 620, Height: 640);
+    Anchor: (Width: 920, Height: 760);
 
     #Title {
       Group {
@@ -23,10 +23,11 @@ $C.@PageOverlay {
     }
 
     #Content {
-      LayoutMode: Top;
+      LayoutMode: Left;
       Padding: (Left: 12, Right: 12, Top: 6, Bottom: 12);
 
-      Group {
+      Group #MapFormColumn {
+        Anchor: (Width: 560);
         LayoutMode: Top;
 
         Label {
@@ -71,6 +72,28 @@ $C.@PageOverlay {
         }
 
         Label {
+          Text: "First Completion XP";
+          Style: (FontSize: 13, TextColor: #cfd7dc);
+          Anchor: (Top: 6);
+        }
+
+        $C.@TextField #MapFirstCompletionXpField {
+          Anchor: (Height: 26);
+          Style: (FontSize: 14, TextColor: #ffffff(0.85));
+        }
+
+        Label {
+          Text: "Difficulty (lower first)";
+          Style: (FontSize: 13, TextColor: #cfd7dc);
+          Anchor: (Top: 6);
+        }
+
+        $C.@TextField #MapDifficultyField {
+          Anchor: (Height: 26);
+          Style: (FontSize: 14, TextColor: #ffffff(0.85));
+        }
+
+        Label {
           Text: "Order (lower first)";
           Style: (FontSize: 13, TextColor: #cfd7dc);
           Anchor: (Top: 6);
@@ -82,14 +105,25 @@ $C.@PageOverlay {
         }
 
         Label {
-          Text: "First Completion XP";
+          Text: "Mithril Sword (run item)";
           Style: (FontSize: 13, TextColor: #cfd7dc);
           Anchor: (Top: 6);
         }
 
-        $C.@TextField #MapFirstCompletionXpField {
-          Anchor: (Height: 26);
-          Style: (FontSize: 14, TextColor: #ffffff(0.85));
+        Group {
+          LayoutMode: Left;
+          Anchor: (Top: 4, Height: 22);
+
+          Label #MithrilSwordValue {
+            Anchor: (Width: 120);
+            Style: (FontSize: 12, TextColor: #9fb0ba);
+            Text: "";
+          }
+
+          $C.@TextButton #MithrilSwordToggle {
+            Anchor: (Width: 120, Height: 22);
+            Text: "Toggle";
+          }
         }
 
         Label #SelectedMapText {
@@ -164,25 +198,45 @@ $C.@PageOverlay {
         }
       }
 
-      Label {
-        Anchor: (Top: 10);
-        Style: (
-          FontSize: 16,
-          TextColor: #93844c,
-          RenderBold: true
-        );
-        Text: "Maps";
+      Group #MapSpacer {
+        Anchor: (Width: 12);
       }
 
-      Group #MapList {
-        Anchor: (Width: 590, Top: 4);
-        FlexWeight: 1;
-        LayoutMode: TopScrolling;
-        Padding: (Left: 6, Right: 6);
-        ScrollbarStyle: $C.@DefaultScrollbarStyle;
+      Group #MapListColumn {
+        Anchor: (Width: 320);
+        LayoutMode: Top;
 
-        Group #MapCards {
-          LayoutMode: Top;
+        Label {
+          Anchor: (Top: 10);
+          Style: (
+            FontSize: 16,
+            TextColor: #93844c,
+            RenderBold: true
+          );
+          Text: "Maps";
+        }
+
+        Label {
+          Anchor: (Top: 6);
+          Style: (FontSize: 12, TextColor: #9fb0ba);
+          Text: "Search";
+        }
+
+        $C.@TextField #MapSearchField {
+          Anchor: (Height: 24, Top: 4);
+          Style: (FontSize: 13, TextColor: #ffffff(0.85));
+        }
+
+        Group #MapList {
+          Anchor: (Width: 320, Top: 6, Height: 600);
+          FlexWeight: 1;
+          LayoutMode: TopScrolling;
+          Padding: (Left: 6, Right: 6);
+          ScrollbarStyle: $C.@DefaultScrollbarStyle;
+
+          Group #MapCards {
+            LayoutMode: Top;
+          }
         }
       }
     }

@@ -20,10 +20,10 @@ import static com.hypixel.hytale.server.core.command.commands.player.inventory.I
 
 public class ParkourAdminItemCommand extends AbstractAsyncCommand {
 
-    private static final String ITEM_REMOTE_CONTROL = "Media_RemoteControl";
+    private static final String ITEM_REMOTE_CONTROL = "Recipe_Book_Magic_Air";
 
     public ParkourAdminItemCommand() {
-        super("pkadminitem", "Give the admin media remote control item.");
+        super("pkadminitem", "Give the admin player settings item.");
         this.setPermissionGroup(GameMode.Adventure);
     }
 
@@ -34,7 +34,6 @@ public class ParkourAdminItemCommand extends AbstractAsyncCommand {
         if (!(sender instanceof Player player)) {
             return CompletableFuture.completedFuture(null);
         }
-        player.getWorldMapTracker().tick(0);
         Ref<EntityStore> ref = player.getReference();
         if (ref == null || !ref.isValid()) {
             commandContext.sendMessage(MESSAGE_COMMANDS_ERRORS_PLAYER_NOT_IN_WORLD);
@@ -42,7 +41,9 @@ public class ParkourAdminItemCommand extends AbstractAsyncCommand {
         }
         Store<EntityStore> store = ref.getStore();
         World world = store.getExternalData().getWorld();
-        return CompletableFuture.runAsync(() -> giveItem(commandContext, store, ref), world);
+        return CompletableFuture.runAsync(() -> {
+            giveItem(commandContext, store, ref);
+        }, world);
     }
 
     private void giveItem(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref) {

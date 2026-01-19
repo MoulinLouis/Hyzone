@@ -174,3 +174,6 @@
 - Added a /pkadmin population history view with sampled online player counts and a simple chart.
 - Track online player counts via connect/disconnect events to keep population samples accurate.
 - Show only the numeric player count in the population history rows (no bar characters).
+- Restore RunTracker telemetry helpers used by HUD and teleport debug.
+- Restore RunTracker player cleanup API used on disconnect.
+- Restore RunTracker teleport stats drain API used by debug logging.
