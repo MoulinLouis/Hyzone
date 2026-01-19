@@ -63,6 +63,11 @@ $C.@PageOverlay {
             Style: (FontSize: 14, TextColor: #62d96b);
             Text: "-";
           }
+          Label #StatsRankSuffix {
+            Anchor: (Width: 220);
+            Style: (FontSize: 14, TextColor: #f2f5f7);
+            Text: "";
+          }
         }
 
         Group {
