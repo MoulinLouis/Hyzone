@@ -1,21 +1,23 @@
 package io.hyvexa.parkour.data;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.hypixel.hytale.server.core.util.io.BlockingDiskFile;
+import com.hypixel.hytale.logger.HytaleLogger;
 import io.hyvexa.parkour.ParkourConstants;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.nio.file.Path;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.logging.Level;
 
-public class SettingsStore extends BlockingDiskFile {
+public class SettingsStore {
 
-    private static final double MAX_COORDINATE = 30000000.0;
+    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
+    private final ReadWriteLock fileLock = new ReentrantReadWriteLock();
+
     private double fallRespawnSeconds = ParkourConstants.DEFAULT_FALL_RESPAWN_SECONDS;
     private double fallFailsafeVoidY = ParkourConstants.FALL_FAILSAFE_VOID_Y;
     private TransformData spawnPosition = defaultSpawn();
@@ -25,7 +27,135 @@ public class SettingsStore extends BlockingDiskFile {
     private boolean teleportDebugEnabled = false;
 
     public SettingsStore() {
-        super(Path.of("Parkour/Settings.json"));
+    }
+
+    public void syncLoad() {
+        if (!DatabaseManager.getInstance().isInitialized()) {
+            LOGGER.atWarning().log("Database not initialized, using defaults for SettingsStore");
+            return;
+        }
+
+        String sql = """
+            SELECT fall_respawn_seconds, void_y_failsafe, weapon_damage_disabled, debug_mode,
+                   spawn_x, spawn_y, spawn_z, spawn_rot_x, spawn_rot_y, spawn_rot_z
+            FROM settings WHERE id = 1
+            """;
+
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+
+            if (rs.next()) {
+                fileLock.writeLock().lock();
+                try {
+                    fallRespawnSeconds = rs.getDouble("fall_respawn_seconds");
+                    if (fallRespawnSeconds <= 0) {
+                        fallRespawnSeconds = ParkourConstants.DEFAULT_FALL_RESPAWN_SECONDS;
+                    }
+                    fallFailsafeVoidY = rs.getDouble("void_y_failsafe");
+                    disableWeaponDamage = rs.getBoolean("weapon_damage_disabled");
+                    teleportDebugEnabled = rs.getBoolean("debug_mode");
+
+                    Double spawnX = rs.getObject("spawn_x", Double.class);
+                    if (spawnX != null) {
+                        spawnPosition = new TransformData();
+                        spawnPosition.setX(spawnX);
+                        spawnPosition.setY(rs.getDouble("spawn_y"));
+                        spawnPosition.setZ(rs.getDouble("spawn_z"));
+                        spawnPosition.setRotX(rs.getFloat("spawn_rot_x"));
+                        spawnPosition.setRotY(rs.getFloat("spawn_rot_y"));
+                        spawnPosition.setRotZ(rs.getFloat("spawn_rot_z"));
+                    } else {
+                        spawnPosition = defaultSpawn();
+                    }
+                } finally {
+                    fileLock.writeLock().unlock();
+                }
+                LOGGER.atInfo().log("SettingsStore loaded from database");
+            } else {
+                // No settings row exists, insert defaults
+                insertDefaults();
+                LOGGER.atInfo().log("SettingsStore created with defaults");
+            }
+        } catch (SQLException e) {
+            LOGGER.at(Level.SEVERE).log("Failed to load SettingsStore from database: " + e.getMessage());
+        }
+    }
+
+    private void insertDefaults() {
+        String sql = """
+            INSERT INTO settings (id, fall_respawn_seconds, void_y_failsafe, weapon_damage_disabled, debug_mode,
+                spawn_x, spawn_y, spawn_z, spawn_rot_x, spawn_rot_y, spawn_rot_z)
+            VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """;
+
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setDouble(1, fallRespawnSeconds);
+            stmt.setDouble(2, fallFailsafeVoidY);
+            stmt.setBoolean(3, disableWeaponDamage);
+            stmt.setBoolean(4, teleportDebugEnabled);
+            stmt.setDouble(5, spawnPosition.getX());
+            stmt.setDouble(6, spawnPosition.getY());
+            stmt.setDouble(7, spawnPosition.getZ());
+            stmt.setFloat(8, spawnPosition.getRotX());
+            stmt.setFloat(9, spawnPosition.getRotY());
+            stmt.setFloat(10, spawnPosition.getRotZ());
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            LOGGER.at(Level.SEVERE).log("Failed to insert default settings: " + e.getMessage());
+        }
+    }
+
+    private void syncSave() {
+        if (!DatabaseManager.getInstance().isInitialized()) {
+            return;
+        }
+
+        String sql = """
+            UPDATE settings SET
+                fall_respawn_seconds = ?,
+                void_y_failsafe = ?,
+                weapon_damage_disabled = ?,
+                debug_mode = ?,
+                spawn_x = ?,
+                spawn_y = ?,
+                spawn_z = ?,
+                spawn_rot_x = ?,
+                spawn_rot_y = ?,
+                spawn_rot_z = ?
+            WHERE id = 1
+            """;
+
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setDouble(1, fallRespawnSeconds);
+            stmt.setDouble(2, fallFailsafeVoidY);
+            stmt.setBoolean(3, disableWeaponDamage);
+            stmt.setBoolean(4, teleportDebugEnabled);
+
+            if (spawnPosition != null) {
+                stmt.setDouble(5, spawnPosition.getX());
+                stmt.setDouble(6, spawnPosition.getY());
+                stmt.setDouble(7, spawnPosition.getZ());
+                stmt.setFloat(8, spawnPosition.getRotX());
+                stmt.setFloat(9, spawnPosition.getRotY());
+                stmt.setFloat(10, spawnPosition.getRotZ());
+            } else {
+                stmt.setNull(5, java.sql.Types.DOUBLE);
+                stmt.setNull(6, java.sql.Types.DOUBLE);
+                stmt.setNull(7, java.sql.Types.DOUBLE);
+                stmt.setNull(8, java.sql.Types.FLOAT);
+                stmt.setNull(9, java.sql.Types.FLOAT);
+                stmt.setNull(10, java.sql.Types.FLOAT);
+            }
+
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            LOGGER.at(Level.SEVERE).log("Failed to save SettingsStore to database: " + e.getMessage());
+        }
     }
 
     public double getFallRespawnSeconds() {
@@ -39,7 +169,7 @@ public class SettingsStore extends BlockingDiskFile {
         } finally {
             this.fileLock.writeLock().unlock();
         }
-        this.syncSave();
+        syncSave();
     }
 
     public TransformData getSpawnPosition() {
@@ -60,7 +190,7 @@ public class SettingsStore extends BlockingDiskFile {
         } finally {
             this.fileLock.writeLock().unlock();
         }
-        this.syncSave();
+        syncSave();
     }
 
     public boolean isIdleFallRespawnForOp() {
@@ -82,7 +212,7 @@ public class SettingsStore extends BlockingDiskFile {
         } finally {
             this.fileLock.writeLock().unlock();
         }
-        this.syncSave();
+        syncSave();
     }
 
     public void setTeleportDebugEnabled(boolean teleportDebugEnabled) {
@@ -92,7 +222,7 @@ public class SettingsStore extends BlockingDiskFile {
         } finally {
             this.fileLock.writeLock().unlock();
         }
-        this.syncSave();
+        syncSave();
     }
 
     public void setIdleFallRespawnForOp(boolean idleFallRespawnForOp) {
@@ -102,7 +232,7 @@ public class SettingsStore extends BlockingDiskFile {
         } finally {
             this.fileLock.writeLock().unlock();
         }
-        this.syncSave();
+        syncSave();
     }
 
     public List<String> getCategoryOrder() {
@@ -127,78 +257,19 @@ public class SettingsStore extends BlockingDiskFile {
         } finally {
             this.fileLock.writeLock().unlock();
         }
-        this.syncSave();
+        syncSave();
     }
 
-    @Override
-    protected void read(BufferedReader bufferedReader) throws IOException {
-        JsonElement parsed = JsonParser.parseReader(bufferedReader);
-        if (!parsed.isJsonObject()) {
-            return;
-        }
-        JsonObject object = parsed.getAsJsonObject();
-        fallRespawnSeconds = object.has("fallRespawnSeconds")
-                ? object.get("fallRespawnSeconds").getAsDouble()
-                : ParkourConstants.DEFAULT_FALL_RESPAWN_SECONDS;
-        if (fallRespawnSeconds <= 0) {
-            fallRespawnSeconds = ParkourConstants.DEFAULT_FALL_RESPAWN_SECONDS;
-        }
-        if (object.has("fallFailsafeVoidY")) {
-            fallFailsafeVoidY = object.get("fallFailsafeVoidY").getAsDouble();
-        } else if (object.has("fallFailsafeBufferY")) {
-            fallFailsafeVoidY = object.get("fallFailsafeBufferY").getAsDouble();
-        } else {
-            fallFailsafeVoidY = ParkourConstants.FALL_FAILSAFE_VOID_Y;
-        }
-        if (!Double.isFinite(fallFailsafeVoidY)) {
-            fallFailsafeVoidY = ParkourConstants.FALL_FAILSAFE_VOID_Y;
-        }
-        if (object.has("spawn") && object.get("spawn").isJsonObject()) {
-            spawnPosition = readTransform(object.getAsJsonObject("spawn"));
-        } else {
-            spawnPosition = defaultSpawn();
-        }
-        idleFallRespawnForOp = object.has("idleFallRespawnForOp") && object.get("idleFallRespawnForOp").getAsBoolean();
-        disableWeaponDamage = object.has("disableWeaponDamage") && object.get("disableWeaponDamage").getAsBoolean();
-        teleportDebugEnabled = object.has("teleportDebugEnabled") && object.get("teleportDebugEnabled").getAsBoolean();
-        categoryOrder.clear();
-        if (object.has("categoryOrder") && object.get("categoryOrder").isJsonArray()) {
-            for (JsonElement element : object.getAsJsonArray("categoryOrder")) {
-                if (!element.isJsonPrimitive()) {
-                    continue;
-                }
-                String value = element.getAsString().trim();
-                if (!value.isEmpty()) {
-                    categoryOrder.add(value);
-                }
-            }
-        }
+    public boolean isDebugEnabled() {
+        return teleportDebugEnabled;
     }
 
-    @Override
-    protected void write(BufferedWriter bufferedWriter) throws IOException {
-        JsonObject object = new JsonObject();
-        object.addProperty("fallRespawnSeconds", fallRespawnSeconds);
-        object.addProperty("fallFailsafeVoidY", fallFailsafeVoidY);
-        if (spawnPosition != null) {
-            object.add("spawn", writeTransform(spawnPosition));
-        }
-        object.addProperty("idleFallRespawnForOp", idleFallRespawnForOp);
-        object.addProperty("disableWeaponDamage", disableWeaponDamage);
-        object.addProperty("teleportDebugEnabled", teleportDebugEnabled);
-        if (!categoryOrder.isEmpty()) {
-            var array = new com.google.gson.JsonArray();
-            for (String entry : categoryOrder) {
-                array.add(entry);
-            }
-            object.add("categoryOrder", array);
-        }
-        bufferedWriter.write(object.toString());
+    public boolean isFallRespawnEnabled() {
+        return fallRespawnSeconds > 0;
     }
 
-    @Override
-    protected void create(BufferedWriter bufferedWriter) throws IOException {
-        write(bufferedWriter);
+    public double getVoidYFailsafe() {
+        return fallFailsafeVoidY;
     }
 
     private static TransformData defaultSpawn() {
@@ -210,40 +281,5 @@ public class SettingsStore extends BlockingDiskFile {
         data.setRotY(0.0f);
         data.setRotZ(0.0f);
         return data;
-    }
-
-    private static TransformData readTransform(JsonObject object) {
-        TransformData data = new TransformData();
-        data.setX(validateCoordinate(object.has("x") ? object.get("x").getAsDouble() : 0.0));
-        data.setY(validateCoordinate(object.has("y") ? object.get("y").getAsDouble() : 0.0));
-        data.setZ(validateCoordinate(object.has("z") ? object.get("z").getAsDouble() : 0.0));
-        data.setRotX(object.has("rotX") ? object.get("rotX").getAsFloat() : 0.0f);
-        data.setRotY(object.has("rotY") ? object.get("rotY").getAsFloat() : 0.0f);
-        data.setRotZ(object.has("rotZ") ? object.get("rotZ").getAsFloat() : 0.0f);
-        return data;
-    }
-
-    private static JsonObject writeTransform(TransformData data) {
-        JsonObject object = new JsonObject();
-        object.addProperty("x", data.getX());
-        object.addProperty("y", data.getY());
-        object.addProperty("z", data.getZ());
-        object.addProperty("rotX", data.getRotX());
-        object.addProperty("rotY", data.getRotY());
-        object.addProperty("rotZ", data.getRotZ());
-        return object;
-    }
-
-    private static double validateCoordinate(double value) {
-        if (!Double.isFinite(value)) {
-            return 0.0;
-        }
-        if (value > MAX_COORDINATE) {
-            return MAX_COORDINATE;
-        }
-        if (value < -MAX_COORDINATE) {
-            return -MAX_COORDINATE;
-        }
-        return value;
     }
 }

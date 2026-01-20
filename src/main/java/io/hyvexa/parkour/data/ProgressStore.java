@@ -1,25 +1,19 @@
 package io.hyvexa.parkour.data;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.HytaleServer;
-import com.hypixel.hytale.server.core.util.io.BlockingDiskFile;
-
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.nio.file.Path;
 import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.parkour.ParkourConstants;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -27,23 +21,123 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.logging.Level;
-import java.util.Locale;
 
-public class ProgressStore extends BlockingDiskFile {
+public class ProgressStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final long SAVE_DEBOUNCE_MS = 5000L;
-    private final Map<UUID, PlayerProgress> progress = new ConcurrentHashMap<>();
-    private final Map<UUID, String> lastKnownNames = new ConcurrentHashMap<>();
-    private final Map<String, LeaderboardCache> leaderboardCache = new ConcurrentHashMap<>();
+    private static final int MAX_PLAYER_NAME_LENGTH = 32;
+
+    private final java.util.Map<UUID, PlayerProgress> progress = new ConcurrentHashMap<>();
+    private final java.util.Map<UUID, String> lastKnownNames = new ConcurrentHashMap<>();
+    private final java.util.Map<String, LeaderboardCache> leaderboardCache = new ConcurrentHashMap<>();
+    private final Set<UUID> dirtyPlayers = ConcurrentHashMap.newKeySet();
     private final AtomicBoolean saveQueued = new AtomicBoolean(false);
     private final AtomicReference<ScheduledFuture<?>> saveFuture = new AtomicReference<>();
-    private static final int MAX_PLAYER_NAME_LENGTH = 32;
+    private final ReadWriteLock fileLock = new ReentrantReadWriteLock();
     private volatile long cachedTotalXp = -1L;
 
     public ProgressStore() {
-        super(Path.of("Parkour/Progress.json"));
+    }
+
+    public void syncLoad() {
+        if (!DatabaseManager.getInstance().isInitialized()) {
+            LOGGER.atWarning().log("Database not initialized, ProgressStore will be empty");
+            return;
+        }
+
+        fileLock.writeLock().lock();
+        try {
+            progress.clear();
+            lastKnownNames.clear();
+            leaderboardCache.clear();
+            dirtyPlayers.clear();
+
+            loadPlayers();
+            loadCompletions();
+            loadTitles();
+
+            LOGGER.atInfo().log("ProgressStore loaded " + progress.size() + " players from database");
+
+        } finally {
+            fileLock.writeLock().unlock();
+        }
+    }
+
+    private void loadPlayers() {
+        String sql = "SELECT uuid, name, xp, level, welcome_shown, playtime_ms FROM players";
+
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+
+            while (rs.next()) {
+                UUID uuid = UUID.fromString(rs.getString("uuid"));
+                PlayerProgress playerProgress = new PlayerProgress();
+                playerProgress.xp = rs.getLong("xp");
+                playerProgress.level = rs.getInt("level");
+                playerProgress.welcomeShown = rs.getBoolean("welcome_shown");
+                playerProgress.playtimeMs = rs.getLong("playtime_ms");
+
+                progress.put(uuid, playerProgress);
+
+                String name = rs.getString("name");
+                if (name != null && !name.isBlank()) {
+                    lastKnownNames.put(uuid, name);
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.at(Level.SEVERE).log("Failed to load players: " + e.getMessage());
+        }
+    }
+
+    private void loadCompletions() {
+        String sql = "SELECT player_uuid, map_id, best_time_ms FROM player_completions";
+
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+
+            while (rs.next()) {
+                UUID uuid = UUID.fromString(rs.getString("player_uuid"));
+                String mapId = rs.getString("map_id");
+                long bestTime = rs.getLong("best_time_ms");
+
+                PlayerProgress playerProgress = progress.get(uuid);
+                if (playerProgress != null) {
+                    playerProgress.completedMaps.add(mapId);
+                    if (bestTime > 0) {
+                        playerProgress.bestMapTimes.put(mapId, bestTime);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.at(Level.SEVERE).log("Failed to load completions: " + e.getMessage());
+        }
+    }
+
+    private void loadTitles() {
+        String sql = "SELECT player_uuid, title FROM player_titles";
+
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+
+            while (rs.next()) {
+                UUID uuid = UUID.fromString(rs.getString("player_uuid"));
+                String title = rs.getString("title");
+
+                PlayerProgress playerProgress = progress.get(uuid);
+                if (playerProgress != null) {
+                    playerProgress.titles.add(title);
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.at(Level.SEVERE).log("Failed to load titles: " + e.getMessage());
+        }
     }
 
     public boolean isMapCompleted(UUID playerId, String mapId) {
@@ -57,13 +151,14 @@ public class ProgressStore extends BlockingDiskFile {
     }
 
     public void markWelcomeShown(UUID playerId, String playerName) {
-        this.fileLock.writeLock().lock();
+        fileLock.writeLock().lock();
         try {
             PlayerProgress playerProgress = progress.computeIfAbsent(playerId, ignored -> new PlayerProgress());
             storePlayerName(playerId, playerName);
             playerProgress.welcomeShown = true;
+            dirtyPlayers.add(playerId);
         } finally {
-            this.fileLock.writeLock().unlock();
+            fileLock.writeLock().unlock();
         }
         queueSave();
     }
@@ -78,7 +173,7 @@ public class ProgressStore extends BlockingDiskFile {
 
     public ProgressionResult recordMapCompletion(UUID playerId, String playerName, String mapId, long timeMs,
                                                  long firstCompletionXp) {
-        this.fileLock.writeLock().lock();
+        fileLock.writeLock().lock();
         ProgressionResult result;
         boolean newBest = false;
         try {
@@ -110,10 +205,19 @@ public class ProgressStore extends BlockingDiskFile {
             if (playerProgress.level >= ParkourConstants.RANK_TITLE_MASTER_LEVEL) {
                 addTitle(playerProgress, ParkourConstants.TITLE_MASTER, unlockedTitles);
             }
+
+            dirtyPlayers.add(playerId);
+            // Save titles immediately if new ones were unlocked
+            if (!unlockedTitles.isEmpty()) {
+                saveTitlesForPlayer(playerId, unlockedTitles);
+            }
+            // Save completion immediately
+            saveCompletion(playerId, mapId, timeMs);
+
             result = new ProgressionResult(firstCompletionForMap, newBest, personalBest, xpAwarded,
                     oldLevel, playerProgress.level, unlockedTitles);
         } finally {
-            this.fileLock.writeLock().unlock();
+            fileLock.writeLock().unlock();
         }
         if (newBest) {
             invalidateLeaderboardCache(mapId);
@@ -122,27 +226,65 @@ public class ProgressStore extends BlockingDiskFile {
         return result;
     }
 
-    public Map<UUID, Integer> getMapCompletionCounts() {
-        Map<UUID, Integer> counts = new ConcurrentHashMap<>();
-        for (Map.Entry<UUID, PlayerProgress> entry : progress.entrySet()) {
+    private void saveCompletion(UUID playerId, String mapId, long timeMs) {
+        if (!DatabaseManager.getInstance().isInitialized()) return;
+
+        String sql = """
+            INSERT INTO player_completions (player_uuid, map_id, best_time_ms)
+            VALUES (?, ?, ?)
+            ON DUPLICATE KEY UPDATE best_time_ms = LEAST(best_time_ms, VALUES(best_time_ms))
+            """;
+
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, playerId.toString());
+            stmt.setString(2, mapId);
+            stmt.setLong(3, timeMs);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            LOGGER.at(Level.WARNING).log("Failed to save completion: " + e.getMessage());
+        }
+    }
+
+    private void saveTitlesForPlayer(UUID playerId, Set<String> titles) {
+        if (!DatabaseManager.getInstance().isInitialized() || titles.isEmpty()) return;
+
+        String sql = "INSERT IGNORE INTO player_titles (player_uuid, title) VALUES (?, ?)";
+
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            for (String title : titles) {
+                stmt.setString(1, playerId.toString());
+                stmt.setString(2, title);
+                stmt.addBatch();
+            }
+            stmt.executeBatch();
+        } catch (SQLException e) {
+            LOGGER.at(Level.WARNING).log("Failed to save titles: " + e.getMessage());
+        }
+    }
+
+    public java.util.Map<UUID, Integer> getMapCompletionCounts() {
+        java.util.Map<UUID, Integer> counts = new ConcurrentHashMap<>();
+        for (java.util.Map.Entry<UUID, PlayerProgress> entry : progress.entrySet()) {
             counts.put(entry.getKey(), entry.getValue().completedMaps.size());
         }
         return counts;
     }
 
-    public Map<UUID, Long> getBestTimesForMap(String mapId) {
+    public java.util.Map<UUID, Long> getBestTimesForMap(String mapId) {
         if (mapId == null) {
-            return Map.of();
+            return java.util.Map.of();
         }
         LeaderboardCache cache = leaderboardCache.computeIfAbsent(mapId, this::buildLeaderboardCache);
-        Map<UUID, Long> times = new HashMap<>(cache.entries.size());
-        for (Map.Entry<UUID, Long> entry : cache.entries) {
+        java.util.Map<UUID, Long> times = new HashMap<>(cache.entries.size());
+        for (java.util.Map.Entry<UUID, Long> entry : cache.entries) {
             times.put(entry.getKey(), entry.getValue());
         }
         return times;
     }
 
-    public List<Map.Entry<UUID, Long>> getLeaderboardEntries(String mapId) {
+    public List<java.util.Map.Entry<UUID, Long>> getLeaderboardEntries(String mapId) {
         if (mapId == null) {
             return List.of();
         }
@@ -165,142 +307,6 @@ public class ProgressStore extends BlockingDiskFile {
         }
         LeaderboardCache cache = leaderboardCache.computeIfAbsent(mapId, this::buildLeaderboardCache);
         return cache.worldRecordMs;
-    }
-
-    @Override
-    protected void read(BufferedReader bufferedReader) throws IOException {
-        progress.clear();
-        lastKnownNames.clear();
-        leaderboardCache.clear();
-        JsonElement parsed = JsonParser.parseReader(bufferedReader);
-        if (!parsed.isJsonArray()) {
-            return;
-        }
-        for (JsonElement element : parsed.getAsJsonArray()) {
-            try {
-                if (!element.isJsonObject()) {
-                    continue;
-                }
-                JsonObject object = element.getAsJsonObject();
-                if (!object.has("uuid")) {
-                    continue;
-                }
-                UUID uuid;
-                try {
-                    uuid = UUID.fromString(object.get("uuid").getAsString());
-                } catch (IllegalArgumentException e) {
-                    LOGGER.at(Level.WARNING).log("Skipping invalid UUID in progress data: " + e.getMessage());
-                    continue;
-                }
-                PlayerProgress playerProgress = new PlayerProgress();
-                JsonArray completedArray = null;
-                if (object.has("completedMaps") && object.get("completedMaps").isJsonArray()) {
-                    completedArray = object.getAsJsonArray("completedMaps");
-                } else if (object.has("completedCourses") && object.get("completedCourses").isJsonArray()) {
-                    completedArray = object.getAsJsonArray("completedCourses");
-                }
-                if (completedArray != null) {
-                    for (JsonElement completed : completedArray) {
-                        if (completed.isJsonPrimitive()) {
-                            playerProgress.completedMaps.add(completed.getAsString());
-                        }
-                    }
-                }
-                if (object.has("bestTimes") && object.get("bestTimes").isJsonObject()) {
-                    JsonObject bestTimes = object.getAsJsonObject("bestTimes");
-                    for (Map.Entry<String, JsonElement> entry : bestTimes.entrySet()) {
-                        if (entry.getValue().isJsonPrimitive()) {
-                            playerProgress.bestMapTimes.put(entry.getKey(), entry.getValue().getAsLong());
-                        }
-                    }
-                }
-                if (object.has("name") && object.get("name").isJsonPrimitive()) {
-                    storePlayerName(uuid, object.get("name").getAsString());
-                }
-                if (object.has("xp") && object.get("xp").isJsonPrimitive()) {
-                    playerProgress.xp = object.get("xp").getAsLong();
-                }
-                playerProgress.level = calculateLevel(playerProgress.xp);
-                if (object.has("titles") && object.get("titles").isJsonArray()) {
-                    for (JsonElement title : object.getAsJsonArray("titles")) {
-                        if (title.isJsonPrimitive()) {
-                            playerProgress.titles.add(title.getAsString());
-                        }
-                    }
-                }
-                if (object.has("welcomeShown") && object.get("welcomeShown").isJsonPrimitive()) {
-                    playerProgress.welcomeShown = object.get("welcomeShown").getAsBoolean();
-                }
-                if (object.has("playtimeMs") && object.get("playtimeMs").isJsonPrimitive()) {
-                    playerProgress.playtimeMs = object.get("playtimeMs").getAsLong();
-                }
-                progress.put(uuid, playerProgress);
-            } catch (Exception e) {
-                LOGGER.at(Level.WARNING).log("Skipping invalid entry in progress data: " + e.getMessage());
-            }
-        }
-    }
-
-    @Override
-    protected void write(BufferedWriter bufferedWriter) throws IOException {
-        JsonArray array = new JsonArray();
-        for (Map.Entry<UUID, PlayerProgress> entry : progress.entrySet()) {
-            JsonObject object = new JsonObject();
-            object.addProperty("uuid", entry.getKey().toString());
-            JsonArray completed = new JsonArray();
-            for (String mapId : entry.getValue().completedMaps) {
-                completed.add(mapId);
-            }
-            object.add("completedMaps", completed);
-            JsonObject bestTimes = new JsonObject();
-            for (Map.Entry<String, Long> bestEntry : entry.getValue().bestMapTimes.entrySet()) {
-                bestTimes.addProperty(bestEntry.getKey(), bestEntry.getValue());
-            }
-            object.add("bestTimes", bestTimes);
-            String playerName = lastKnownNames.get(entry.getKey());
-            if (playerName != null && !playerName.isBlank()) {
-                object.addProperty("name", playerName);
-            }
-            object.addProperty("xp", entry.getValue().xp);
-            object.addProperty("level", entry.getValue().level);
-            object.addProperty("welcomeShown", entry.getValue().welcomeShown);
-            object.addProperty("playtimeMs", entry.getValue().playtimeMs);
-            JsonArray titles = new JsonArray();
-            for (String title : entry.getValue().titles) {
-                titles.add(title);
-            }
-            object.add("titles", titles);
-            array.add(object);
-        }
-        bufferedWriter.write(array.toString());
-    }
-
-    @Override
-    protected void create(BufferedWriter bufferedWriter) throws IOException {
-        bufferedWriter.write("[]");
-    }
-
-    private static class PlayerProgress {
-        private final Set<String> completedMaps = ConcurrentHashMap.newKeySet();
-        private final Map<String, Long> bestMapTimes = new ConcurrentHashMap<>();
-        private final Set<String> titles = ConcurrentHashMap.newKeySet();
-        private long xp;
-        private int level = 1;
-        private boolean welcomeShown;
-        private long playtimeMs;
-    }
-
-    private static class LeaderboardCache {
-        private final List<Map.Entry<UUID, Long>> entries;
-        private final Map<UUID, Integer> positions;
-        private final Long worldRecordMs;
-
-        private LeaderboardCache(List<Map.Entry<UUID, Long>> entries, Map<UUID, Integer> positions,
-                                 Long worldRecordMs) {
-            this.entries = entries;
-            this.positions = positions;
-            this.worldRecordMs = worldRecordMs;
-        }
     }
 
     public long getXp(UUID playerId) {
@@ -338,48 +344,24 @@ public class ProgressStore extends BlockingDiskFile {
         if (percent < 0.01) {
             return 1;
         }
-        if (percent >= 90.0) {
-            return 11;
-        }
-        if (percent >= 80.0) {
-            return 10;
-        }
-        if (percent >= 70.0) {
-            return 9;
-        }
-        if (percent >= 60.0) {
-            return 8;
-        }
-        if (percent >= 50.0) {
-            return 7;
-        }
-        if (percent >= 40.0) {
-            return 6;
-        }
-        if (percent >= 30.0) {
-            return 5;
-        }
-        if (percent >= 20.0) {
-            return 4;
-        }
-        if (percent >= 10.0) {
-            return 3;
-        }
+        if (percent >= 90.0) return 11;
+        if (percent >= 80.0) return 10;
+        if (percent >= 70.0) return 9;
+        if (percent >= 60.0) return 8;
+        if (percent >= 50.0) return 7;
+        if (percent >= 40.0) return 6;
+        if (percent >= 30.0) return 5;
+        if (percent >= 20.0) return 4;
+        if (percent >= 10.0) return 3;
         return 2;
     }
 
     public long getCompletionXpToNextRank(UUID playerId, MapStore mapStore) {
-        if (mapStore == null) {
-            return 0L;
-        }
+        if (mapStore == null) return 0L;
         long totalXp = getCachedTotalXp(mapStore);
-        if (totalXp <= 0L) {
-            return 0L;
-        }
+        if (totalXp <= 0L) return 0L;
         long playerXp = getPlayerCompletionXp(playerId, mapStore);
-        if (playerXp >= totalXp) {
-            return 0L;
-        }
+        if (playerXp >= totalXp) return 0L;
         int rank = getCompletionRank(playerId, mapStore);
         double nextPercent = switch (rank) {
             case 1 -> 0.01;
@@ -395,9 +377,7 @@ public class ProgressStore extends BlockingDiskFile {
             case 11 -> 100.0;
             default -> 0.0;
         };
-        if (nextPercent <= 0.0) {
-            return 0L;
-        }
+        if (nextPercent <= 0.0) return 0L;
         long requiredXp = (long) Math.ceil((totalXp * nextPercent) / 100.0);
         return Math.max(0L, requiredXp - playerXp);
     }
@@ -421,24 +401,39 @@ public class ProgressStore extends BlockingDiskFile {
     }
 
     public boolean clearProgress(UUID playerId) {
-        this.fileLock.writeLock().lock();
+        fileLock.writeLock().lock();
         boolean removed;
         try {
             removed = progress.remove(playerId) != null;
             lastKnownNames.remove(playerId);
+            dirtyPlayers.remove(playerId);
         } finally {
-            this.fileLock.writeLock().unlock();
+            fileLock.writeLock().unlock();
         }
         if (removed) {
             leaderboardCache.clear();
-            queueSave();
-            // Invalidate rank cache so HUD updates immediately
+            deletePlayerFromDatabase(playerId);
             HyvexaPlugin plugin = HyvexaPlugin.getInstance();
             if (plugin != null) {
                 plugin.invalidateRankCache(playerId);
             }
         }
         return removed;
+    }
+
+    private void deletePlayerFromDatabase(UUID playerId) {
+        if (!DatabaseManager.getInstance().isInitialized()) return;
+
+        // CASCADE will delete completions and titles
+        String sql = "DELETE FROM players WHERE uuid = ?";
+
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, playerId.toString());
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            LOGGER.at(Level.WARNING).log("Failed to delete player: " + e.getMessage());
+        }
     }
 
     public MapPurgeResult purgeMapProgress(String mapId, long xpReduction) {
@@ -449,9 +444,10 @@ public class ProgressStore extends BlockingDiskFile {
         long reduction = Math.max(0L, xpReduction);
         List<UUID> affectedPlayers = new ArrayList<>();
         long totalXpRemoved = 0L;
-        this.fileLock.writeLock().lock();
+
+        fileLock.writeLock().lock();
         try {
-            for (Map.Entry<UUID, PlayerProgress> entry : progress.entrySet()) {
+            for (java.util.Map.Entry<UUID, PlayerProgress> entry : progress.entrySet()) {
                 PlayerProgress playerProgress = entry.getValue();
                 boolean removedCompletion = playerProgress.completedMaps.remove(trimmedId);
                 boolean removedBest = playerProgress.bestMapTimes.remove(trimmedId) != null;
@@ -462,13 +458,16 @@ public class ProgressStore extends BlockingDiskFile {
                     totalXpRemoved += (oldXp - newXp);
                     playerProgress.xp = newXp;
                     playerProgress.level = calculateLevel(playerProgress.xp);
+                    dirtyPlayers.add(entry.getKey());
                 }
             }
         } finally {
-            this.fileLock.writeLock().unlock();
+            fileLock.writeLock().unlock();
         }
+
         if (!affectedPlayers.isEmpty()) {
             invalidateLeaderboardCache(trimmedId);
+            purgeMapFromDatabase(trimmedId);
             queueSave();
             HyvexaPlugin plugin = HyvexaPlugin.getInstance();
             if (plugin != null) {
@@ -480,17 +479,31 @@ public class ProgressStore extends BlockingDiskFile {
         return new MapPurgeResult(affectedPlayers.size(), totalXpRemoved);
     }
 
-    public void addPlaytime(UUID playerId, String playerName, long deltaMs) {
-        if (playerId == null || deltaMs <= 0L) {
-            return;
+    private void purgeMapFromDatabase(String mapId) {
+        if (!DatabaseManager.getInstance().isInitialized()) return;
+
+        String sql = "DELETE FROM player_completions WHERE map_id = ?";
+
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, mapId);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            LOGGER.at(Level.WARNING).log("Failed to purge map completions: " + e.getMessage());
         }
-        this.fileLock.writeLock().lock();
+    }
+
+    public void addPlaytime(UUID playerId, String playerName, long deltaMs) {
+        if (playerId == null || deltaMs <= 0L) return;
+
+        fileLock.writeLock().lock();
         try {
             PlayerProgress playerProgress = progress.computeIfAbsent(playerId, ignored -> new PlayerProgress());
             storePlayerName(playerId, playerName);
             playerProgress.playtimeMs = Math.max(0L, playerProgress.playtimeMs + deltaMs);
+            dirtyPlayers.add(playerId);
         } finally {
-            this.fileLock.writeLock().unlock();
+            fileLock.writeLock().unlock();
         }
         queueSave();
     }
@@ -503,9 +516,7 @@ public class ProgressStore extends BlockingDiskFile {
     private static int calculateLevel(long xp) {
         long[] thresholds = ParkourConstants.RANK_XP_REQUIREMENTS;
         int rankCount = Math.min(ParkourConstants.RANK_NAMES.length, thresholds.length);
-        if (rankCount <= 0) {
-            return 1;
-        }
+        if (rankCount <= 0) return 1;
         int level = 1;
         for (int i = 0; i < rankCount; i++) {
             if (xp >= thresholds[i]) {
@@ -519,9 +530,7 @@ public class ProgressStore extends BlockingDiskFile {
 
     public static String getRankNameForLevel(int level) {
         int rankCount = Math.min(ParkourConstants.RANK_NAMES.length, ParkourConstants.RANK_XP_REQUIREMENTS.length);
-        if (rankCount <= 0) {
-            return "Unranked";
-        }
+        if (rankCount <= 0) return "Unranked";
         int index = Math.max(1, Math.min(level, rankCount)) - 1;
         return ParkourConstants.RANK_NAMES[index];
     }
@@ -537,57 +546,40 @@ public class ProgressStore extends BlockingDiskFile {
     }
 
     public static long getTotalPossibleXp(MapStore mapStore) {
-        if (mapStore == null) {
-            return 0L;
-        }
+        if (mapStore == null) return 0L;
         long total = 0L;
-        for (io.hyvexa.parkour.data.Map map : mapStore.listMaps()) {
+        for (Map map : mapStore.listMaps()) {
             total += getCategoryXp(map != null ? map.getCategory() : null);
         }
         return total;
     }
 
-    /**
-     * Returns cached total XP, computing it if not cached.
-     * Use invalidateTotalXpCache() when maps change.
-     */
     private long getCachedTotalXp(MapStore mapStore) {
         long cached = cachedTotalXp;
-        if (cached >= 0L) {
-            return cached;
-        }
+        if (cached >= 0L) return cached;
         cached = getTotalPossibleXp(mapStore);
         cachedTotalXp = cached;
         return cached;
     }
 
-    /**
-     * Invalidates the cached total XP. Call when maps are added/removed/edited.
-     */
     public void invalidateTotalXpCache() {
         cachedTotalXp = -1L;
     }
 
     private long getPlayerCompletionXp(UUID playerId, MapStore mapStore) {
         PlayerProgress playerProgress = progress.get(playerId);
-        if (playerProgress == null) {
-            return 0L;
-        }
+        if (playerProgress == null) return 0L;
         long total = 0L;
         for (String mapId : playerProgress.completedMaps) {
-            io.hyvexa.parkour.data.Map map = mapStore.getMap(mapId);
-            if (map == null) {
-                continue;
-            }
+            Map map = mapStore.getMap(mapId);
+            if (map == null) continue;
             total += getCategoryXp(map.getCategory());
         }
         return total;
     }
 
     public static long getCategoryXp(String category) {
-        if (category == null || category.isBlank()) {
-            return ParkourConstants.MAP_XP_EASY;
-        }
+        if (category == null || category.isBlank()) return ParkourConstants.MAP_XP_EASY;
         String normalized = category.trim().toLowerCase(Locale.ROOT);
         return switch (normalized) {
             case "medium" -> ParkourConstants.MAP_XP_MEDIUM;
@@ -598,9 +590,7 @@ public class ProgressStore extends BlockingDiskFile {
     }
 
     private void storePlayerName(UUID playerId, String playerName) {
-        if (playerId == null || playerName == null || playerName.isBlank()) {
-            return;
-        }
+        if (playerId == null || playerName == null || playerName.isBlank()) return;
         String trimmedName = playerName.trim();
         if (trimmedName.length() > MAX_PLAYER_NAME_LENGTH) {
             trimmedName = trimmedName.substring(0, MAX_PLAYER_NAME_LENGTH);
@@ -618,9 +608,7 @@ public class ProgressStore extends BlockingDiskFile {
     }
 
     private void queueSave() {
-        if (!saveQueued.compareAndSet(false, true)) {
-            return;
-        }
+        if (!saveQueued.compareAndSet(false, true)) return;
         ScheduledFuture<?> future = HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
             try {
                 syncSave();
@@ -632,6 +620,46 @@ public class ProgressStore extends BlockingDiskFile {
         saveFuture.set(future);
     }
 
+    private void syncSave() {
+        if (!DatabaseManager.getInstance().isInitialized()) return;
+
+        Set<UUID> toSave = Set.copyOf(dirtyPlayers);
+        dirtyPlayers.clear();
+
+        if (toSave.isEmpty()) return;
+
+        String sql = """
+            INSERT INTO players (uuid, name, xp, level, welcome_shown, playtime_ms)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+                name = VALUES(name), xp = VALUES(xp), level = VALUES(level),
+                welcome_shown = VALUES(welcome_shown), playtime_ms = VALUES(playtime_ms)
+            """;
+
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            for (UUID playerId : toSave) {
+                PlayerProgress playerProgress = progress.get(playerId);
+                if (playerProgress == null) continue;
+
+                stmt.setString(1, playerId.toString());
+                stmt.setString(2, lastKnownNames.get(playerId));
+                stmt.setLong(3, playerProgress.xp);
+                stmt.setInt(4, playerProgress.level);
+                stmt.setBoolean(5, playerProgress.welcomeShown);
+                stmt.setLong(6, playerProgress.playtimeMs);
+                stmt.addBatch();
+            }
+            stmt.executeBatch();
+
+        } catch (SQLException e) {
+            LOGGER.at(Level.SEVERE).log("Failed to save players to database: " + e.getMessage());
+            // Re-add to dirty set for retry
+            dirtyPlayers.addAll(toSave);
+        }
+    }
+
     private void invalidateLeaderboardCache(String mapId) {
         if (mapId != null) {
             leaderboardCache.remove(mapId);
@@ -640,17 +668,17 @@ public class ProgressStore extends BlockingDiskFile {
 
     private LeaderboardCache buildLeaderboardCache(String mapId) {
         if (mapId == null) {
-            return new LeaderboardCache(List.of(), Map.of(), null);
+            return new LeaderboardCache(List.of(), java.util.Map.of(), null);
         }
-        List<Map.Entry<UUID, Long>> entries = new ArrayList<>();
-        for (Map.Entry<UUID, PlayerProgress> entry : progress.entrySet()) {
+        List<java.util.Map.Entry<UUID, Long>> entries = new ArrayList<>();
+        for (java.util.Map.Entry<UUID, PlayerProgress> entry : progress.entrySet()) {
             Long best = entry.getValue().bestMapTimes.get(mapId);
             if (best != null) {
-                entries.add(Map.entry(entry.getKey(), best));
+                entries.add(java.util.Map.entry(entry.getKey(), best));
             }
         }
-        entries.sort(Comparator.comparingLong(Map.Entry::getValue));
-        Map<UUID, Integer> positions = new HashMap<>();
+        entries.sort(Comparator.comparingLong(java.util.Map.Entry::getValue));
+        java.util.Map<UUID, Integer> positions = new HashMap<>();
         Long worldRecordMs = entries.isEmpty() ? null : entries.get(0).getValue();
         long lastTime = Long.MIN_VALUE;
         int rank = 0;
@@ -662,7 +690,30 @@ public class ProgressStore extends BlockingDiskFile {
             }
             positions.put(entries.get(i).getKey(), rank);
         }
-        return new LeaderboardCache(List.copyOf(entries), Map.copyOf(positions), worldRecordMs);
+        return new LeaderboardCache(List.copyOf(entries), java.util.Map.copyOf(positions), worldRecordMs);
+    }
+
+    private static class PlayerProgress {
+        final Set<String> completedMaps = ConcurrentHashMap.newKeySet();
+        final java.util.Map<String, Long> bestMapTimes = new ConcurrentHashMap<>();
+        final Set<String> titles = ConcurrentHashMap.newKeySet();
+        long xp;
+        int level = 1;
+        boolean welcomeShown;
+        long playtimeMs;
+    }
+
+    private static class LeaderboardCache {
+        final List<java.util.Map.Entry<UUID, Long>> entries;
+        final java.util.Map<UUID, Integer> positions;
+        final Long worldRecordMs;
+
+        LeaderboardCache(List<java.util.Map.Entry<UUID, Long>> entries, java.util.Map<UUID, Integer> positions,
+                         Long worldRecordMs) {
+            this.entries = entries;
+            this.positions = positions;
+            this.worldRecordMs = worldRecordMs;
+        }
     }
 
     public static class ProgressionResult {
