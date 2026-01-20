@@ -217,7 +217,7 @@ public class RunTracker {
             recordTeleport(playerRef.getUuid(), TeleportCause.RUN_RESPAWN);
             return;
         }
-        checkCheckpoints(run, player, position, map);
+        checkCheckpoints(run, playerRef, player, position, map);
         checkFinish(run, playerRef, player, position, map, transform, ref, store);
     }
 
@@ -341,7 +341,7 @@ public class RunTracker {
         return false;
     }
 
-    private void checkCheckpoints(ActiveRun run, Player player, Vector3d position, Map map) {
+    private void checkCheckpoints(ActiveRun run, PlayerRef playerRef, Player player, Vector3d position, Map map) {
         for (int i = 0; i < map.getCheckpoints().size(); i++) {
             if (run.touchedCheckpoints.contains(i)) {
                 continue;
@@ -353,6 +353,7 @@ public class RunTracker {
             if (distanceSq(position, checkpoint) <= TOUCH_RADIUS_SQ) {
                 run.touchedCheckpoints.add(i);
                 run.lastCheckpointIndex = Math.max(run.lastCheckpointIndex, i);
+                playCheckpointSound(playerRef);
                 player.sendMessage(Message.raw("Checkpoint touched"));
             }
         }
@@ -422,6 +423,14 @@ public class RunTracker {
         SoundUtil.playSoundEvent2dToPlayer(playerRef, soundIndex, com.hypixel.hytale.protocol.SoundCategory.SFX);
     }
 
+    private void playCheckpointSound(PlayerRef playerRef) {
+        int soundIndex = SoundEvent.getAssetMap().getIndex("SFX_Parkour_Checkpoint");
+        if (soundIndex <= SoundEvent.EMPTY_ID) {
+            return;
+        }
+        SoundUtil.playSoundEvent2dToPlayer(playerRef, soundIndex, com.hypixel.hytale.protocol.SoundCategory.SFX);
+    }
+
     private static double distanceSq(Vector3d position, TransformData target) {
         double dx = position.getX() - target.getX();
         double dy = position.getY() - target.getY();
@@ -468,6 +477,34 @@ public class RunTracker {
         recordTeleport(playerRef.getUuid(), TeleportCause.CHECKPOINT);
         run.fallStartTime = null;
         run.lastY = null;
+        return true;
+    }
+
+    public boolean resetRunToStart(Ref<EntityStore> ref, Store<EntityStore> store, Player player, PlayerRef playerRef) {
+        if (playerRef == null || player == null) {
+            return false;
+        }
+        World world = store.getExternalData().getWorld();
+        if (world == null) {
+            player.sendMessage(Message.raw("World not available."));
+            return false;
+        }
+        String mapId = getActiveMapId(playerRef.getUuid());
+        if (mapId == null) {
+            player.sendMessage(Message.raw("No active map to reset."));
+            return false;
+        }
+        Map map = mapStore.getMap(mapId);
+        if (map == null || map.getStart() == null) {
+            player.sendMessage(Message.raw("Map start not available."));
+            return false;
+        }
+        setActiveMap(playerRef.getUuid(), mapId);
+        Vector3d position = new Vector3d(map.getStart().getX(), map.getStart().getY(), map.getStart().getZ());
+        Vector3f rotation = new Vector3f(map.getStart().getRotX(), map.getStart().getRotY(),
+                map.getStart().getRotZ());
+        store.addComponent(ref, Teleport.getComponentType(), new Teleport(world, position, rotation));
+        player.sendMessage(Message.raw("Run reset."));
         return true;
     }
 
