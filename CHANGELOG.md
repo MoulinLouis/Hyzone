@@ -1,5 +1,15 @@
 # Changelog
 
+- Expand /dbmigrate to import global messages, player counts, and missing settings/progress fields from JSON.
+- Make /dbmigrate read JSON only (including Maps.json) without falling back to in-memory data.
+- Abort /dbmigrate when any required JSON file is missing.
+- Remove the unused title system and related database references.
+- Add database schema documentation for current tables.
+- Add a Clear button to the population history admin page to wipe samples.
+- Update population history sampling interval to 10 minutes.
+- Add /dbclear to wipe all parkour data from the database.
+- Align persistence and settings documentation with the current MySQL-backed implementation.
+- Add a smoke test checklist doc for quick manual verification after changes.
 - Migrate parkour persistence to MySQL with in-memory caching and HikariCP pooling.
 - Restore checkpoint sound playback when players touch checkpoints.
 - Make restart-to-checkpoint reset the run when no checkpoints have been reached.

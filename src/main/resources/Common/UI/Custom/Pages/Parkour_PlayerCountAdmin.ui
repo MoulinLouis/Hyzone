@@ -16,6 +16,16 @@ $C.@PageOverlay {
           );
           Background: #000000(0.13);
         }
+        TextButton #ClearButton {
+          Anchor: (Right: 12, Top: 4, Width: 72, Height: 24);
+          Padding: (Left: 8, Top: 2);
+          Text: "CLEAR";
+          Style: TextButtonStyle(
+            Default: (LabelStyle: (FontSize: 14, TextColor: #d9834b, RenderBold: true)),
+            Sounds: $C.@ButtonSounds,
+          );
+          Background: #000000(0.13);
+        }
         $C.@Title {
           @Text = "Population";
         }

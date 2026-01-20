@@ -46,6 +46,7 @@ import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.common.util.InventoryUtils;
 import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.parkour.command.CheckpointCommand;
+import io.hyvexa.parkour.command.DatabaseClearCommand;
 import io.hyvexa.parkour.command.DatabaseMigrateCommand;
 import io.hyvexa.parkour.command.DatabaseTestCommand;
 import io.hyvexa.parkour.command.DiscordCommand;
@@ -94,7 +95,7 @@ import java.util.logging.Level;
 public class HyvexaPlugin extends JavaPlugin {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final String SERVER_IP_DISPLAY = "play.hyvexa.com";
+    private static final String SERVER_IP_DISPLAY = "test.hyvexa.com";
     private static final int ANNOUNCEMENT_MAX_LINES = 3;
     private static final long ANNOUNCEMENT_DURATION_SECONDS = 10L;
     private static final long PLAYER_COUNT_SAMPLE_SECONDS = PlayerCountStore.DEFAULT_SAMPLE_INTERVAL_SECONDS;
@@ -197,6 +198,7 @@ public class HyvexaPlugin extends JavaPlugin {
                 this.playerCountStore, this.runTracker));
         this.getCommandRegistry().registerCommand(new ParkourAdminItemCommand());
         this.getCommandRegistry().registerCommand(new ParkourMusicDebugCommand());
+        this.getCommandRegistry().registerCommand(new DatabaseClearCommand());
         this.getCommandRegistry().registerCommand(new DatabaseTestCommand());
         this.getCommandRegistry().registerCommand(new DatabaseMigrateCommand());
 

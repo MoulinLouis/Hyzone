@@ -28,6 +28,7 @@ import java.util.concurrent.TimeUnit;
 public class PlayerCountAdminPage extends BaseParkourPage {
 
     private static final String BUTTON_BACK = "BackButton";
+    private static final String BUTTON_CLEAR = "ClearButton";
     private static final int MAX_ENTRIES = 200;
     private static final long WINDOW_MS = TimeUnit.HOURS.toMillis(24);
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("MMM dd HH:mm")
@@ -48,6 +49,8 @@ public class PlayerCountAdminPage extends BaseParkourPage {
         uiCommandBuilder.append("Pages/Parkour_PlayerCountAdmin.ui");
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_BACK), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ClearButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLEAR), false);
 
         List<PlayerCountStore.Sample> samples = getRecentSamples();
         updateSummary(samples);
@@ -63,6 +66,13 @@ public class PlayerCountAdminPage extends BaseParkourPage {
         }
         if (BUTTON_BACK.equals(data.getButton())) {
             openIndex(ref, store);
+            return;
+        }
+        if (BUTTON_CLEAR.equals(data.getButton())) {
+            if (playerCountStore != null) {
+                playerCountStore.clearAll();
+            }
+            openSelf(ref, store);
         }
     }
 
@@ -81,6 +91,16 @@ public class PlayerCountAdminPage extends BaseParkourPage {
         player.getPageManager().openCustomPage(ref, store,
                 new AdminIndexPage(playerRef, mapStore, progressStore, plugin.getSettingsStore(),
                         plugin.getPlayerCountStore()));
+    }
+
+    private void openSelf(Ref<EntityStore> ref, Store<EntityStore> store) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        if (player == null || playerRef == null) {
+            return;
+        }
+        player.getPageManager().openCustomPage(ref, store,
+                new PlayerCountAdminPage(playerRef, playerCountStore));
     }
 
     private List<PlayerCountStore.Sample> getRecentSamples() {

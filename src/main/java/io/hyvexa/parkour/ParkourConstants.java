@@ -15,9 +15,6 @@ public final class ParkourConstants {
     public static final String ITEM_ADMIN_REMOTE = "Recipe_Book_Magic_Air";
     public static final String ITEM_RUN_MITHRIL_SWORD = "Weapon_Sword_Mithril";
 
-    public static final String TITLE_NOVICE = "Parkour Novice";
-    public static final String TITLE_PRO = "Parkour Pro";
-    public static final String TITLE_MASTER = "Parkour Master";
 
     public static final String[] RANK_NAMES = {
             "Bronze",
@@ -57,9 +54,6 @@ public final class ParkourConstants {
     public static final long MAP_XP_HARD = 60L;
     public static final long MAP_XP_INSANE = 100L;
     public static final int DEFAULT_MAP_ORDER = 1000;
-    public static final int RANK_TITLE_NOVICE_LEVEL = 2;
-    public static final int RANK_TITLE_PRO_LEVEL = 4;
-    public static final int RANK_TITLE_MASTER_LEVEL = 6;
 
     public static final double DEFAULT_FALL_RESPAWN_SECONDS = 3.0;
     public static final double FALL_FAILSAFE_VOID_Y = -10.0;
