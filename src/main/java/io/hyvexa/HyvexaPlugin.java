@@ -10,6 +10,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.parkour.data.DatabaseManager;
 import io.hyvexa.parkour.data.GlobalMessageStore;
 import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.data.PlayerCountStore;
@@ -45,6 +46,8 @@ import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.common.util.InventoryUtils;
 import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.parkour.command.CheckpointCommand;
+import io.hyvexa.parkour.command.DatabaseMigrateCommand;
+import io.hyvexa.parkour.command.DatabaseTestCommand;
 import io.hyvexa.parkour.command.DiscordCommand;
 import io.hyvexa.parkour.command.ParkourAdminCommand;
 import io.hyvexa.parkour.command.ParkourAdminItemCommand;
@@ -156,6 +159,13 @@ public class HyvexaPlugin extends JavaPlugin {
         if (!folder.exists()) {
             folder.mkdirs();
         }
+        // Initialize database connection
+        try {
+            DatabaseManager.getInstance().initialize();
+            LOGGER.atInfo().log("Database connection initialized");
+        } catch (Exception e) {
+            LOGGER.at(Level.SEVERE).log("Failed to initialize database: " + e.getMessage());
+        }
         this.mapStore = new MapStore();
         this.mapStore.syncLoad();
         this.mapStore.setOnChangeListener(this::onMapStoreChanged);
@@ -187,6 +197,8 @@ public class HyvexaPlugin extends JavaPlugin {
                 this.playerCountStore, this.runTracker));
         this.getCommandRegistry().registerCommand(new ParkourAdminItemCommand());
         this.getCommandRegistry().registerCommand(new ParkourMusicDebugCommand());
+        this.getCommandRegistry().registerCommand(new DatabaseTestCommand());
+        this.getCommandRegistry().registerCommand(new DatabaseMigrateCommand());
 
         registerNoDropSystem();
         registerNoBreakSystem();
@@ -1431,6 +1443,7 @@ public class HyvexaPlugin extends JavaPlugin {
         if (progressStore != null) {
             progressStore.flushPendingSave();
         }
+        DatabaseManager.getInstance().shutdown();
         super.shutdown();
     }
 

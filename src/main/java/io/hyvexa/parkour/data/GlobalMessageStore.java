@@ -1,20 +1,20 @@
 package io.hyvexa.parkour.data;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.hypixel.hytale.server.core.util.io.BlockingDiskFile;
+import com.hypixel.hytale.logger.HytaleLogger;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.nio.file.Path;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.logging.Level;
 
-public class GlobalMessageStore extends BlockingDiskFile {
+public class GlobalMessageStore {
 
+    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     public static final long DEFAULT_INTERVAL_MINUTES = 10L;
     private static final long MIN_INTERVAL_MINUTES = 1L;
     private static final long MAX_INTERVAL_MINUTES = 1440L;
@@ -26,39 +26,170 @@ public class GlobalMessageStore extends BlockingDiskFile {
     );
 
     private final List<String> messages = new ArrayList<>();
+    private final ReadWriteLock fileLock = new ReentrantReadWriteLock();
     private long intervalMinutes = DEFAULT_INTERVAL_MINUTES;
 
     public GlobalMessageStore() {
-        super(Path.of("Parkour/GlobalMessages.json"));
+    }
+
+    public void syncLoad() {
+        if (!DatabaseManager.getInstance().isInitialized()) {
+            LOGGER.atWarning().log("Database not initialized, using defaults for GlobalMessageStore");
+            applyDefaults();
+            return;
+        }
+
+        fileLock.writeLock().lock();
+        try {
+            messages.clear();
+            loadSettings();
+            loadMessages();
+
+            if (messages.isEmpty()) {
+                applyDefaults();
+                saveAllToDatabase();
+            }
+
+            LOGGER.atInfo().log("GlobalMessageStore loaded " + messages.size() + " messages from database");
+        } finally {
+            fileLock.writeLock().unlock();
+        }
+    }
+
+    private void loadSettings() {
+        String sql = "SELECT interval_minutes FROM global_message_settings WHERE id = 1";
+
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+
+            if (rs.next()) {
+                intervalMinutes = clampInterval(rs.getLong("interval_minutes"));
+            } else {
+                intervalMinutes = DEFAULT_INTERVAL_MINUTES;
+                insertDefaultSettings();
+            }
+        } catch (SQLException e) {
+            LOGGER.at(Level.SEVERE).log("Failed to load global message settings: " + e.getMessage());
+            intervalMinutes = DEFAULT_INTERVAL_MINUTES;
+        }
+    }
+
+    private void insertDefaultSettings() {
+        String sql = "INSERT INTO global_message_settings (id, interval_minutes) VALUES (1, ?)";
+
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, intervalMinutes);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            LOGGER.at(Level.WARNING).log("Failed to insert default settings: " + e.getMessage());
+        }
+    }
+
+    private void loadMessages() {
+        String sql = "SELECT message FROM global_messages ORDER BY display_order, id";
+
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+
+            while (rs.next()) {
+                String cleaned = normalizeMessage(rs.getString("message"));
+                if (!cleaned.isEmpty()) {
+                    messages.add(cleaned);
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.at(Level.SEVERE).log("Failed to load global messages: " + e.getMessage());
+        }
+    }
+
+    private void saveAllToDatabase() {
+        if (!DatabaseManager.getInstance().isInitialized()) return;
+
+        // Save settings
+        String settingsSql = """
+            INSERT INTO global_message_settings (id, interval_minutes) VALUES (1, ?)
+            ON DUPLICATE KEY UPDATE interval_minutes = VALUES(interval_minutes)
+            """;
+
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(settingsSql)) {
+            stmt.setLong(1, intervalMinutes);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            LOGGER.at(Level.WARNING).log("Failed to save settings: " + e.getMessage());
+        }
+
+        // Clear and re-insert messages
+        String deleteSql = "DELETE FROM global_messages";
+        String insertSql = "INSERT INTO global_messages (message, display_order) VALUES (?, ?)";
+
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement deleteStmt = conn.prepareStatement(deleteSql);
+                 PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
+
+                deleteStmt.executeUpdate();
+
+                for (int i = 0; i < messages.size(); i++) {
+                    insertStmt.setString(1, messages.get(i));
+                    insertStmt.setInt(2, i);
+                    insertStmt.addBatch();
+                }
+                insertStmt.executeBatch();
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            }
+        } catch (SQLException e) {
+            LOGGER.at(Level.WARNING).log("Failed to save messages: " + e.getMessage());
+        }
     }
 
     public List<String> getMessages() {
-        this.fileLock.readLock().lock();
+        fileLock.readLock().lock();
         try {
             return List.copyOf(messages);
         } finally {
-            this.fileLock.readLock().unlock();
+            fileLock.readLock().unlock();
         }
     }
 
     public long getIntervalMinutes() {
-        this.fileLock.readLock().lock();
+        fileLock.readLock().lock();
         try {
             return intervalMinutes;
         } finally {
-            this.fileLock.readLock().unlock();
+            fileLock.readLock().unlock();
         }
     }
 
     public void setIntervalMinutes(long minutes) {
         long clamped = clampInterval(minutes);
-        this.fileLock.writeLock().lock();
+        fileLock.writeLock().lock();
         try {
             intervalMinutes = clamped;
         } finally {
-            this.fileLock.writeLock().unlock();
+            fileLock.writeLock().unlock();
         }
-        this.syncSave();
+        saveSettings();
+    }
+
+    private void saveSettings() {
+        if (!DatabaseManager.getInstance().isInitialized()) return;
+
+        String sql = "UPDATE global_message_settings SET interval_minutes = ? WHERE id = 1";
+
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, intervalMinutes);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            LOGGER.at(Level.WARNING).log("Failed to save settings: " + e.getMessage());
+        }
     }
 
     public boolean addMessage(String message) {
@@ -66,79 +197,51 @@ public class GlobalMessageStore extends BlockingDiskFile {
         if (cleaned.isEmpty()) {
             return false;
         }
-        boolean added;
-        this.fileLock.writeLock().lock();
+
+        int newOrder;
+        fileLock.writeLock().lock();
         try {
             messages.add(cleaned);
-            added = true;
+            newOrder = messages.size() - 1;
         } finally {
-            this.fileLock.writeLock().unlock();
+            fileLock.writeLock().unlock();
         }
-        if (added) {
-            this.syncSave();
+
+        addMessageToDatabase(cleaned, newOrder);
+        return true;
+    }
+
+    private void addMessageToDatabase(String message, int order) {
+        if (!DatabaseManager.getInstance().isInitialized()) return;
+
+        String sql = "INSERT INTO global_messages (message, display_order) VALUES (?, ?)";
+
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, message);
+            stmt.setInt(2, order);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            LOGGER.at(Level.WARNING).log("Failed to add message: " + e.getMessage());
         }
-        return added;
     }
 
     public boolean removeMessage(int index) {
         boolean removed = false;
-        this.fileLock.writeLock().lock();
+        fileLock.writeLock().lock();
         try {
             if (index >= 0 && index < messages.size()) {
                 messages.remove(index);
                 removed = true;
             }
         } finally {
-            this.fileLock.writeLock().unlock();
+            fileLock.writeLock().unlock();
         }
+
         if (removed) {
-            this.syncSave();
+            saveAllToDatabase();
         }
         return removed;
-    }
-
-    @Override
-    protected void read(BufferedReader bufferedReader) throws IOException {
-        messages.clear();
-        intervalMinutes = DEFAULT_INTERVAL_MINUTES;
-        JsonElement parsed = JsonParser.parseReader(bufferedReader);
-        if (!parsed.isJsonObject()) {
-            applyDefaults();
-            return;
-        }
-        JsonObject object = parsed.getAsJsonObject();
-        if (object.has("intervalMinutes")) {
-            intervalMinutes = clampInterval(object.get("intervalMinutes").getAsLong());
-        }
-        if (object.has("messages") && object.get("messages").isJsonArray()) {
-            for (JsonElement element : object.getAsJsonArray("messages")) {
-                if (!element.isJsonPrimitive()) {
-                    continue;
-                }
-                String cleaned = normalizeMessage(element.getAsString());
-                if (!cleaned.isEmpty()) {
-                    messages.add(cleaned);
-                }
-            }
-        }
-    }
-
-    @Override
-    protected void write(BufferedWriter bufferedWriter) throws IOException {
-        JsonObject object = new JsonObject();
-        object.addProperty("intervalMinutes", intervalMinutes);
-        JsonArray array = new JsonArray();
-        for (String message : messages) {
-            array.add(message);
-        }
-        object.add("messages", array);
-        bufferedWriter.write(object.toString());
-    }
-
-    @Override
-    protected void create(BufferedWriter bufferedWriter) throws IOException {
-        applyDefaults();
-        write(bufferedWriter);
     }
 
     private void applyDefaults() {

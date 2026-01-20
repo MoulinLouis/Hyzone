@@ -1,39 +1,97 @@
 package io.hyvexa.parkour.data;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.hypixel.hytale.server.core.util.io.BlockingDiskFile;
+import com.hypixel.hytale.logger.HytaleLogger;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.nio.file.Path;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.logging.Level;
 
-public class PlayerCountStore extends BlockingDiskFile {
+public class PlayerCountStore {
 
+    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     public static final long DEFAULT_SAMPLE_INTERVAL_SECONDS = 300L;
     public static final long DEFAULT_RETENTION_DAYS = 7L;
     private static final long DEFAULT_SAVE_INTERVAL_MS = TimeUnit.SECONDS.toMillis(DEFAULT_SAMPLE_INTERVAL_SECONDS);
 
     private final List<Sample> samples = new ArrayList<>();
+    private final ReadWriteLock fileLock = new ReentrantReadWriteLock();
     private final long retentionMs;
     private long lastSavedAtMs;
 
     public PlayerCountStore() {
-        super(Path.of("Parkour/PlayerCounts.json"));
         this.retentionMs = TimeUnit.DAYS.toMillis(DEFAULT_RETENTION_DAYS);
+    }
+
+    public void syncLoad() {
+        if (!DatabaseManager.getInstance().isInitialized()) {
+            LOGGER.atWarning().log("Database not initialized, PlayerCountStore will be empty");
+            return;
+        }
+
+        long cutoff = System.currentTimeMillis() - retentionMs;
+        String sql = "SELECT timestamp_ms, count FROM player_count_samples WHERE timestamp_ms >= ? ORDER BY timestamp_ms";
+
+        fileLock.writeLock().lock();
+        try {
+            samples.clear();
+
+            try (Connection conn = DatabaseManager.getInstance().getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+                stmt.setLong(1, cutoff);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        long timestampMs = rs.getLong("timestamp_ms");
+                        int count = Math.max(0, rs.getInt("count"));
+                        samples.add(new Sample(timestampMs, count));
+                    }
+                }
+            } catch (SQLException e) {
+                LOGGER.at(Level.SEVERE).log("Failed to load player count samples: " + e.getMessage());
+            }
+
+            lastSavedAtMs = System.currentTimeMillis();
+            LOGGER.atInfo().log("PlayerCountStore loaded " + samples.size() + " samples from database");
+
+        } finally {
+            fileLock.writeLock().unlock();
+        }
+
+        // Prune old samples from database
+        pruneOldSamplesFromDatabase();
+    }
+
+    private void pruneOldSamplesFromDatabase() {
+        if (!DatabaseManager.getInstance().isInitialized()) return;
+
+        long cutoff = System.currentTimeMillis() - retentionMs;
+        String sql = "DELETE FROM player_count_samples WHERE timestamp_ms < ?";
+
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, cutoff);
+            int deleted = stmt.executeUpdate();
+            if (deleted > 0) {
+                LOGGER.atInfo().log("Pruned " + deleted + " old player count samples");
+            }
+        } catch (SQLException e) {
+            LOGGER.at(Level.WARNING).log("Failed to prune old samples: " + e.getMessage());
+        }
     }
 
     public void recordSample(long timestampMs, int count) {
         int safeCount = Math.max(0, count);
         boolean shouldSave = false;
-        this.fileLock.writeLock().lock();
+
+        fileLock.writeLock().lock();
         try {
             samples.add(new Sample(timestampMs, safeCount));
             pruneOldSamples(timestampMs);
@@ -42,16 +100,32 @@ public class PlayerCountStore extends BlockingDiskFile {
                 shouldSave = true;
             }
         } finally {
-            this.fileLock.writeLock().unlock();
+            fileLock.writeLock().unlock();
         }
+
         if (shouldSave) {
-            this.syncSave();
+            saveSampleToDatabase(timestampMs, safeCount);
+        }
+    }
+
+    private void saveSampleToDatabase(long timestampMs, int count) {
+        if (!DatabaseManager.getInstance().isInitialized()) return;
+
+        String sql = "INSERT INTO player_count_samples (timestamp_ms, count) VALUES (?, ?)";
+
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, timestampMs);
+            stmt.setInt(2, count);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            LOGGER.at(Level.WARNING).log("Failed to save sample: " + e.getMessage());
         }
     }
 
     public List<Sample> getSamplesSince(long cutoffMs) {
         List<Sample> result = new ArrayList<>();
-        this.fileLock.readLock().lock();
+        fileLock.readLock().lock();
         try {
             for (Sample sample : samples) {
                 if (sample.timestampMs >= cutoffMs) {
@@ -59,7 +133,7 @@ public class PlayerCountStore extends BlockingDiskFile {
                 }
             }
         } finally {
-            this.fileLock.readLock().unlock();
+            fileLock.readLock().unlock();
         }
         result.sort(Comparator.comparingLong(Sample::getTimestampMs));
         return result;
@@ -67,57 +141,6 @@ public class PlayerCountStore extends BlockingDiskFile {
 
     public long getRetentionMs() {
         return retentionMs;
-    }
-
-    @Override
-    protected void read(BufferedReader bufferedReader) throws IOException {
-        JsonElement parsed = JsonParser.parseReader(bufferedReader);
-        if (!parsed.isJsonObject()) {
-            return;
-        }
-        JsonObject object = parsed.getAsJsonObject();
-        samples.clear();
-        if (object.has("samples") && object.get("samples").isJsonArray()) {
-            JsonArray array = object.getAsJsonArray("samples");
-            for (JsonElement element : array) {
-                if (!element.isJsonObject()) {
-                    continue;
-                }
-                JsonObject entry = element.getAsJsonObject();
-                if (!entry.has("timestampMs") || !entry.has("count")) {
-                    continue;
-                }
-                long timestampMs = entry.get("timestampMs").getAsLong();
-                int count = entry.get("count").getAsInt();
-                samples.add(new Sample(timestampMs, Math.max(0, count)));
-            }
-        }
-        pruneOldSamples(System.currentTimeMillis());
-        lastSavedAtMs = System.currentTimeMillis();
-    }
-
-    @Override
-    protected void write(BufferedWriter bufferedWriter) throws IOException {
-        JsonObject object = new JsonObject();
-        JsonArray array = new JsonArray();
-        this.fileLock.readLock().lock();
-        try {
-            for (Sample sample : samples) {
-                JsonObject entry = new JsonObject();
-                entry.addProperty("timestampMs", sample.timestampMs);
-                entry.addProperty("count", sample.count);
-                array.add(entry);
-            }
-        } finally {
-            this.fileLock.readLock().unlock();
-        }
-        object.add("samples", array);
-        bufferedWriter.write(object.toString());
-    }
-
-    @Override
-    protected void create(BufferedWriter bufferedWriter) throws IOException {
-        write(bufferedWriter);
     }
 
     private void pruneOldSamples(long nowMs) {

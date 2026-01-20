@@ -1,5 +1,8 @@
 # Changelog
 
+- Migrate parkour persistence to MySQL with in-memory caching and HikariCP pooling.
+- Restore checkpoint sound playback when players touch checkpoints.
+- Make restart-to-checkpoint reset the run when no checkpoints have been reached.
 - Fix mithril sword map toggle not applying when starting a run from map selection or start triggers.
 - Extend the player progress admin UI height to fit the added content.
 - Show map difficulty alongside map names in selection and leaderboard pages when non-zero.

@@ -15,7 +15,7 @@ Instructions for AI agents working on this Hytale plugin codebase.
 - **Plugin entrypoint**: `HyvexaPlugin.java` (extends `JavaPlugin`)
 - **Parkour code**: `io.hyvexa.parkour.*` subpackages
 - **Commands**: `io.hyvexa.parkour.command/` - extend `CommandBase`
-- **Data stores**: `io.hyvexa.parkour.data/` - JSON persistence
+- **Data stores**: `io.hyvexa.parkour.data/` - MySQL persistence with in-memory caching
 - **UI pages**: `io.hyvexa.parkour.ui/` - extend `InteractiveCustomUIPage`
 - **Interactions**: `io.hyvexa.parkour.interaction/` - right-click handlers
 
@@ -27,8 +27,8 @@ Instructions for AI agents working on this Hytale plugin codebase.
 
 ### Runtime Data
 - **Location**: `Parkour/` directory (created at runtime)
-- **Files**: `Maps.json`, `Progress.json`, `Settings.json`, `PlayerCounts.json`
-- `Progress.json` stores last-known player names for admin display
+- **Database config**: `Parkour/database.json` (MySQL credentials, gitignored)
+- Data is stored in MySQL database, loaded into memory on startup
 
 ## Current Features
 
@@ -134,15 +134,31 @@ getCodecRegistry(Interaction.CODEC).register("My_Interaction", MyInteraction.cla
 // Create JSON in src/main/resources/Server/Item/Interactions/
 ```
 
-### Data Storage
+### Data Storage (MySQL)
 ```java
-public class MyStore extends BlockingDiskFile {
-    public MyStore() {
-        super(Path.of("Parkour/MyData.json"));
+public class MyStore {
+    private final ConcurrentHashMap<UUID, MyData> data = new ConcurrentHashMap<>();
+
+    public void syncLoad() {
+        // Load from MySQL into memory on startup
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement("SELECT * FROM my_table")) {
+            // Populate in-memory map
+        }
     }
-    // Use syncLoad() on startup, syncSave() after changes
+
+    public void saveToDatabase(MyData item) {
+        // Write to MySQL on changes
+        String sql = "INSERT INTO my_table (...) VALUES (?) ON DUPLICATE KEY UPDATE ...";
+        // Execute
+    }
 }
 ```
+
+**Pattern**: Memory-first with MySQL persistence
+- Load all data into `ConcurrentHashMap` on startup via `syncLoad()`
+- All reads come from memory (fast)
+- Writes update memory + persist to MySQL (debounced for high-frequency updates)
 
 ## Common Gotchas
 
@@ -175,7 +191,7 @@ To find the `<patchline>` value:
 | `com.hypixel.hytale.server.core.world` | World operations, block access |
 | `com.hypixel.hytale.server.core.command` | Command framework (AbstractAsyncCommand) |
 | `com.hypixel.hytale.server.core.ui` | UI pages, HUD management |
-| `com.hypixel.hytale.server.core.util.io` | Persistence (BlockingDiskFile) |
+| `com.hypixel.hytale.server.core.util.io` | File utilities |
 | `com.hypixel.hytale.server.core.codec` | Serialization codecs |
 | `com.hypixel.hytale.server.core.event` | Event system |
 
@@ -188,7 +204,7 @@ Use any of these to explore the JAR:
 ### Discovered APIs in This Project
 | API Class | Used In | Purpose |
 |-----------|---------|---------|
-| `BlockingDiskFile` | `*Store` classes | JSON file persistence |
+| `HikariCP` | `DatabaseManager` | MySQL connection pooling |
 | `AbstractAsyncCommand` | All commands | Async command execution |
 | `InteractiveCustomUIPage` | All UI pages | Interactive UI framework |
 | `Teleport` component | `RunTracker` | Player teleportation |
@@ -226,5 +242,7 @@ Use any of these to explore the JAR:
 - See `ParkourCommand.java` for command with subcommands
 - See `MapSelectPage.java` for complete UI page example
 - See `MenuInteraction.java` for interaction pattern
-- See `MapStore.java` for data persistence pattern
+- See `MapStore.java` for MySQL persistence pattern
+- See `DatabaseManager.java` for connection pool management
 - See `docs/ARCHITECTURE.md` for threading model and edge cases
+- See `docs/MYSQL_MIGRATION.md` for database schema and migration details

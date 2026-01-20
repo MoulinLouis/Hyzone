@@ -1,52 +1,135 @@
 package io.hyvexa.parkour.data;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import com.hypixel.hytale.logger.HytaleLogger;
-import com.hypixel.hytale.server.core.util.io.BlockingDiskFile;
 import io.hyvexa.parkour.ParkourConstants;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.logging.Level;
 
-public class MapStore extends BlockingDiskFile {
+public class MapStore {
 
+    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final String MAP_ID_PATTERN = "^[a-zA-Z0-9_-]+$";
     private static final double MAX_COORDINATE = 30000000.0;
+
     private final java.util.Map<String, Map> maps = new LinkedHashMap<>();
+    private final ReadWriteLock fileLock = new ReentrantReadWriteLock();
     private volatile Runnable onChangeListener;
 
     public MapStore() {
-        super(Path.of("Parkour/Maps.json"));
-        migrateLegacyCoursesFile();
     }
 
-    private void migrateLegacyCoursesFile() {
-        Path newPath = Path.of("Parkour/Maps.json");
-        Path legacyPath = Path.of("Parkour/Courses.json");
-        if (Files.exists(newPath) || !Files.exists(legacyPath)) {
+    public void syncLoad() {
+        if (!DatabaseManager.getInstance().isInitialized()) {
+            LOGGER.atWarning().log("Database not initialized, MapStore will be empty");
             return;
         }
+
+        String mapSql = """
+            SELECT id, name, category, world, difficulty, display_order, first_completion_xp, mithril_sword_enabled,
+                   start_x, start_y, start_z, start_rot_x, start_rot_y, start_rot_z,
+                   finish_x, finish_y, finish_z, finish_rot_x, finish_rot_y, finish_rot_z,
+                   start_trigger_x, start_trigger_y, start_trigger_z, start_trigger_rot_x, start_trigger_rot_y, start_trigger_rot_z,
+                   leave_trigger_x, leave_trigger_y, leave_trigger_z, leave_trigger_rot_x, leave_trigger_rot_y, leave_trigger_rot_z,
+                   leave_teleport_x, leave_teleport_y, leave_teleport_z, leave_teleport_rot_x, leave_teleport_rot_y, leave_teleport_rot_z,
+                   created_at, updated_at
+            FROM maps ORDER BY display_order, id
+            """;
+
+        String checkpointSql = """
+            SELECT map_id, checkpoint_index, x, y, z, rot_x, rot_y, rot_z
+            FROM map_checkpoints ORDER BY map_id, checkpoint_index
+            """;
+
+        fileLock.writeLock().lock();
         try {
-            Files.copy(legacyPath, newPath);
-        } catch (IOException ignored) {
+            maps.clear();
+
+            try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+                // Load all maps
+                try (PreparedStatement stmt = conn.prepareStatement(mapSql);
+                     ResultSet rs = stmt.executeQuery()) {
+
+                    while (rs.next()) {
+                        Map map = new Map();
+                        map.setId(rs.getString("id"));
+                        map.setName(rs.getString("name"));
+                        map.setCategory(rs.getString("category"));
+                        map.setWorld(rs.getString("world"));
+                        map.setDifficulty(rs.getInt("difficulty"));
+                        map.setOrder(rs.getInt("display_order"));
+                        map.setFirstCompletionXp(rs.getLong("first_completion_xp"));
+                        map.setMithrilSwordEnabled(rs.getBoolean("mithril_sword_enabled"));
+
+                        map.setStart(readTransform(rs, "start_"));
+                        map.setFinish(readTransform(rs, "finish_"));
+                        map.setStartTrigger(readTransform(rs, "start_trigger_"));
+                        map.setLeaveTrigger(readTransform(rs, "leave_trigger_"));
+                        map.setLeaveTeleport(readTransform(rs, "leave_teleport_"));
+
+                        java.sql.Timestamp createdAt = rs.getTimestamp("created_at");
+                        java.sql.Timestamp updatedAt = rs.getTimestamp("updated_at");
+                        map.setCreatedAt(createdAt != null ? createdAt.getTime() : 0L);
+                        map.setUpdatedAt(updatedAt != null ? updatedAt.getTime() : map.getCreatedAt());
+
+                        maps.put(map.getId(), map);
+                    }
+                }
+
+                // Load all checkpoints
+                try (PreparedStatement stmt = conn.prepareStatement(checkpointSql);
+                     ResultSet rs = stmt.executeQuery()) {
+
+                    while (rs.next()) {
+                        String mapId = rs.getString("map_id");
+                        Map map = maps.get(mapId);
+                        if (map != null) {
+                            TransformData checkpoint = new TransformData();
+                            checkpoint.setX(rs.getDouble("x"));
+                            checkpoint.setY(rs.getDouble("y"));
+                            checkpoint.setZ(rs.getDouble("z"));
+                            checkpoint.setRotX(rs.getFloat("rot_x"));
+                            checkpoint.setRotY(rs.getFloat("rot_y"));
+                            checkpoint.setRotZ(rs.getFloat("rot_z"));
+                            map.getCheckpoints().add(checkpoint);
+                        }
+                    }
+                }
+
+                LOGGER.atInfo().log("MapStore loaded " + maps.size() + " maps from database");
+
+            } catch (SQLException e) {
+                LOGGER.at(Level.SEVERE).log("Failed to load MapStore from database: " + e.getMessage());
+            }
+        } finally {
+            fileLock.writeLock().unlock();
         }
     }
 
-    /**
-     * Sets a listener that will be called when maps are added, updated, or removed.
-     * Used to invalidate caches that depend on map data.
-     */
+    private TransformData readTransform(ResultSet rs, String prefix) throws SQLException {
+        Double x = rs.getObject(prefix + "x", Double.class);
+        if (x == null) {
+            return null;
+        }
+        TransformData data = new TransformData();
+        data.setX(validateCoordinate(x));
+        data.setY(validateCoordinate(rs.getDouble(prefix + "y")));
+        data.setZ(validateCoordinate(rs.getDouble(prefix + "z")));
+        data.setRotX(rs.getFloat(prefix + "rot_x"));
+        data.setRotY(rs.getFloat(prefix + "rot_y"));
+        data.setRotZ(rs.getFloat(prefix + "rot_z"));
+        return data;
+    }
+
     public void setOnChangeListener(Runnable listener) {
         this.onChangeListener = listener;
     }
@@ -59,29 +142,41 @@ public class MapStore extends BlockingDiskFile {
     }
 
     public boolean hasMap(String id) {
-        return this.maps.containsKey(id);
+        fileLock.readLock().lock();
+        try {
+            return this.maps.containsKey(id);
+        } finally {
+            fileLock.readLock().unlock();
+        }
     }
 
     public Map getMap(String id) {
-        return copyMap(this.maps.get(id));
+        fileLock.readLock().lock();
+        try {
+            return copyMap(this.maps.get(id));
+        } finally {
+            fileLock.readLock().unlock();
+        }
     }
 
     public List<Map> listMaps() {
-        List<Map> copies = new ArrayList<>(this.maps.size());
-        for (Map map : this.maps.values()) {
-            Map copy = copyMap(map);
-            if (copy != null) {
-                copies.add(copy);
+        fileLock.readLock().lock();
+        try {
+            List<Map> copies = new ArrayList<>(this.maps.size());
+            for (Map map : this.maps.values()) {
+                Map copy = copyMap(map);
+                if (copy != null) {
+                    copies.add(copy);
+                }
             }
+            return Collections.unmodifiableList(copies);
+        } finally {
+            fileLock.readLock().unlock();
         }
-        return Collections.unmodifiableList(copies);
     }
 
-    /**
-     * Finds the first map whose start trigger is within range without deep copying all maps.
-     */
     public Map findMapByStartTrigger(double x, double y, double z, double touchRadiusSq) {
-        this.fileLock.readLock().lock();
+        fileLock.readLock().lock();
         try {
             for (Map map : this.maps.values()) {
                 TransformData trigger = map.getStartTrigger();
@@ -96,200 +191,197 @@ public class MapStore extends BlockingDiskFile {
                 }
             }
         } finally {
-            this.fileLock.readLock().unlock();
+            fileLock.readLock().unlock();
         }
         return null;
     }
 
-    /**
-     * Returns the number of maps without copying.
-     * Use this instead of listMaps().size() in hot paths.
-     */
     public int getMapCount() {
-        this.fileLock.readLock().lock();
+        fileLock.readLock().lock();
         try {
             return this.maps.size();
         } finally {
-            this.fileLock.readLock().unlock();
+            fileLock.readLock().unlock();
         }
     }
 
     public void addMap(Map map) {
         validateMap(map);
         Map stored = copyMap(map);
-        this.fileLock.writeLock().lock();
+
+        fileLock.writeLock().lock();
         try {
             this.maps.put(stored.getId(), stored);
         } finally {
-            this.fileLock.writeLock().unlock();
+            fileLock.writeLock().unlock();
         }
-        this.syncSave();
+
+        saveMapToDatabase(stored);
         notifyChange();
     }
 
     public void updateMap(Map map) {
         validateMap(map);
         Map stored = copyMap(map);
-        this.fileLock.writeLock().lock();
+
+        fileLock.writeLock().lock();
         try {
             this.maps.put(stored.getId(), stored);
         } finally {
-            this.fileLock.writeLock().unlock();
+            fileLock.writeLock().unlock();
         }
-        this.syncSave();
+
+        saveMapToDatabase(stored);
         notifyChange();
     }
 
     public boolean removeMap(String id) {
-        this.fileLock.writeLock().lock();
+        fileLock.writeLock().lock();
         boolean removed;
         try {
             removed = this.maps.remove(id) != null;
         } finally {
-            this.fileLock.writeLock().unlock();
+            fileLock.writeLock().unlock();
         }
+
         if (removed) {
-            this.syncSave();
+            deleteMapFromDatabase(id);
             notifyChange();
         }
         return removed;
     }
 
-    @Override
-    protected void read(BufferedReader bufferedReader) throws IOException {
-        this.maps.clear();
-        JsonElement parsed = JsonParser.parseReader(bufferedReader);
-        if (!parsed.isJsonArray()) {
+    private void saveMapToDatabase(Map map) {
+        if (!DatabaseManager.getInstance().isInitialized()) {
             return;
         }
-        for (JsonElement entry : parsed.getAsJsonArray()) {
-            try {
-                if (!entry.isJsonObject()) {
-                    continue;
-                }
-                JsonObject object = entry.getAsJsonObject();
-                Map map = new Map();
-                String id = readString(object, "id", "");
-                map.setId(id);
-                map.setName(readString(object, "name", id));
-                map.setCategory(readString(object, "category", ""));
-                map.setWorld(readString(object, "world", "Unknown"));
-                map.setStart(readTransform(object, "start"));
-                map.setFinish(readTransform(object, "finish"));
-                map.setStartTrigger(readTransform(object, "startTrigger"));
-                map.setLeaveTrigger(readTransform(object, "leaveTrigger"));
-                map.setLeaveTeleport(readTransform(object, "leaveTeleport"));
-                map.setFirstCompletionXp(readLong(object, "firstCompletionXp",
-                        ProgressStore.getCategoryXp(map.getCategory())));
-                map.setDifficulty((int) readLong(object, "difficulty", 0L));
-                map.setOrder((int) readLong(object, "order", ParkourConstants.DEFAULT_MAP_ORDER));
-                map.setMithrilSwordEnabled(object.has("enableMithrilSword")
-                        && object.get("enableMithrilSword").getAsBoolean());
-                map.setCreatedAt(readLong(object, "createdAt", 0L));
-                map.setUpdatedAt(readLong(object, "updatedAt", map.getCreatedAt()));
 
-                JsonArray checkpointsArray = object.has("checkpoints") && object.get("checkpoints").isJsonArray()
-                        ? object.getAsJsonArray("checkpoints")
-                        : new JsonArray();
-                for (JsonElement checkpointElement : checkpointsArray) {
-                    if (!checkpointElement.isJsonObject()) {
-                        continue;
+        String mapSql = """
+            INSERT INTO maps (id, name, category, world, difficulty, display_order, first_completion_xp, mithril_sword_enabled,
+                start_x, start_y, start_z, start_rot_x, start_rot_y, start_rot_z,
+                finish_x, finish_y, finish_z, finish_rot_x, finish_rot_y, finish_rot_z,
+                start_trigger_x, start_trigger_y, start_trigger_z, start_trigger_rot_x, start_trigger_rot_y, start_trigger_rot_z,
+                leave_trigger_x, leave_trigger_y, leave_trigger_z, leave_trigger_rot_x, leave_trigger_rot_y, leave_trigger_rot_z,
+                leave_teleport_x, leave_teleport_y, leave_teleport_z, leave_teleport_rot_x, leave_teleport_rot_y, leave_teleport_rot_z,
+                created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+                name = VALUES(name), category = VALUES(category), world = VALUES(world),
+                difficulty = VALUES(difficulty), display_order = VALUES(display_order),
+                first_completion_xp = VALUES(first_completion_xp), mithril_sword_enabled = VALUES(mithril_sword_enabled),
+                start_x = VALUES(start_x), start_y = VALUES(start_y), start_z = VALUES(start_z),
+                start_rot_x = VALUES(start_rot_x), start_rot_y = VALUES(start_rot_y), start_rot_z = VALUES(start_rot_z),
+                finish_x = VALUES(finish_x), finish_y = VALUES(finish_y), finish_z = VALUES(finish_z),
+                finish_rot_x = VALUES(finish_rot_x), finish_rot_y = VALUES(finish_rot_y), finish_rot_z = VALUES(finish_rot_z),
+                start_trigger_x = VALUES(start_trigger_x), start_trigger_y = VALUES(start_trigger_y), start_trigger_z = VALUES(start_trigger_z),
+                start_trigger_rot_x = VALUES(start_trigger_rot_x), start_trigger_rot_y = VALUES(start_trigger_rot_y), start_trigger_rot_z = VALUES(start_trigger_rot_z),
+                leave_trigger_x = VALUES(leave_trigger_x), leave_trigger_y = VALUES(leave_trigger_y), leave_trigger_z = VALUES(leave_trigger_z),
+                leave_trigger_rot_x = VALUES(leave_trigger_rot_x), leave_trigger_rot_y = VALUES(leave_trigger_rot_y), leave_trigger_rot_z = VALUES(leave_trigger_rot_z),
+                leave_teleport_x = VALUES(leave_teleport_x), leave_teleport_y = VALUES(leave_teleport_y), leave_teleport_z = VALUES(leave_teleport_z),
+                leave_teleport_rot_x = VALUES(leave_teleport_rot_x), leave_teleport_rot_y = VALUES(leave_teleport_rot_y), leave_teleport_rot_z = VALUES(leave_teleport_rot_z),
+                updated_at = VALUES(updated_at)
+            """;
+
+        String deleteCheckpointsSql = "DELETE FROM map_checkpoints WHERE map_id = ?";
+        String insertCheckpointSql = """
+            INSERT INTO map_checkpoints (map_id, checkpoint_index, x, y, z, rot_x, rot_y, rot_z)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """;
+
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            conn.setAutoCommit(false);
+
+            try (PreparedStatement mapStmt = conn.prepareStatement(mapSql);
+                 PreparedStatement deleteStmt = conn.prepareStatement(deleteCheckpointsSql);
+                 PreparedStatement cpStmt = conn.prepareStatement(insertCheckpointSql)) {
+
+                // Insert/update map
+                int idx = 1;
+                mapStmt.setString(idx++, map.getId());
+                mapStmt.setString(idx++, map.getName());
+                mapStmt.setString(idx++, map.getCategory());
+                mapStmt.setString(idx++, map.getWorld());
+                mapStmt.setInt(idx++, map.getDifficulty());
+                mapStmt.setInt(idx++, map.getOrder());
+                mapStmt.setLong(idx++, map.getFirstCompletionXp());
+                mapStmt.setBoolean(idx++, map.isMithrilSwordEnabled());
+
+                idx = setTransform(mapStmt, idx, map.getStart());
+                idx = setTransform(mapStmt, idx, map.getFinish());
+                idx = setTransform(mapStmt, idx, map.getStartTrigger());
+                idx = setTransform(mapStmt, idx, map.getLeaveTrigger());
+                idx = setTransform(mapStmt, idx, map.getLeaveTeleport());
+
+                mapStmt.setTimestamp(idx++, new java.sql.Timestamp(map.getCreatedAt()));
+                mapStmt.setTimestamp(idx, new java.sql.Timestamp(map.getUpdatedAt()));
+
+                mapStmt.executeUpdate();
+
+                // Delete and re-insert checkpoints
+                deleteStmt.setString(1, map.getId());
+                deleteStmt.executeUpdate();
+
+                List<TransformData> checkpoints = map.getCheckpoints();
+                if (checkpoints != null) {
+                    for (int i = 0; i < checkpoints.size(); i++) {
+                        TransformData cp = checkpoints.get(i);
+                        cpStmt.setString(1, map.getId());
+                        cpStmt.setInt(2, i);
+                        cpStmt.setDouble(3, cp.getX());
+                        cpStmt.setDouble(4, cp.getY());
+                        cpStmt.setDouble(5, cp.getZ());
+                        cpStmt.setFloat(6, cp.getRotX());
+                        cpStmt.setFloat(7, cp.getRotY());
+                        cpStmt.setFloat(8, cp.getRotZ());
+                        cpStmt.addBatch();
                     }
-                    map.getCheckpoints().add(readTransform(checkpointElement.getAsJsonObject()));
+                    cpStmt.executeBatch();
                 }
 
-                if (map.getId() != null && !map.getId().isEmpty()) {
-                    this.maps.put(map.getId(), map);
-                }
-            } catch (Exception e) {
-                HytaleLogger.forEnclosingClass().at(Level.WARNING)
-                        .log("Skipping invalid entry in maps data: " + e.getMessage());
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
             }
+        } catch (SQLException e) {
+            LOGGER.at(Level.SEVERE).log("Failed to save map to database: " + e.getMessage());
         }
     }
 
-    @Override
-    protected void write(BufferedWriter bufferedWriter) throws IOException {
-        JsonArray array = new JsonArray();
-        for (Map map : this.maps.values()) {
-            JsonObject object = new JsonObject();
-            object.addProperty("id", map.getId());
-            object.addProperty("name", map.getName());
-            if (map.getCategory() != null && !map.getCategory().isEmpty()) {
-                object.addProperty("category", map.getCategory());
-            }
-            object.addProperty("world", map.getWorld());
-            object.addProperty("createdAt", map.getCreatedAt());
-            object.addProperty("updatedAt", map.getUpdatedAt());
-            if (map.getStart() != null) {
-                object.add("start", writeTransform(map.getStart()));
-            }
-            if (map.getFinish() != null) {
-                object.add("finish", writeTransform(map.getFinish()));
-            }
-            if (map.getStartTrigger() != null) {
-                object.add("startTrigger", writeTransform(map.getStartTrigger()));
-            }
-            if (map.getLeaveTrigger() != null) {
-                object.add("leaveTrigger", writeTransform(map.getLeaveTrigger()));
-            }
-            if (map.getLeaveTeleport() != null) {
-                object.add("leaveTeleport", writeTransform(map.getLeaveTeleport()));
-            }
-            object.addProperty("firstCompletionXp", Math.max(0L, map.getFirstCompletionXp()));
-            object.addProperty("difficulty", Math.max(0, map.getDifficulty()));
-            object.addProperty("order", Math.max(0, map.getOrder()));
-            object.addProperty("enableMithrilSword", map.isMithrilSwordEnabled());
-            JsonArray checkpoints = new JsonArray();
-            for (TransformData checkpoint : map.getCheckpoints()) {
-                checkpoints.add(writeTransform(checkpoint));
-            }
-            object.add("checkpoints", checkpoints);
-            array.add(object);
+    private int setTransform(PreparedStatement stmt, int startIndex, TransformData transform) throws SQLException {
+        if (transform != null) {
+            stmt.setDouble(startIndex, transform.getX());
+            stmt.setDouble(startIndex + 1, transform.getY());
+            stmt.setDouble(startIndex + 2, transform.getZ());
+            stmt.setFloat(startIndex + 3, transform.getRotX());
+            stmt.setFloat(startIndex + 4, transform.getRotY());
+            stmt.setFloat(startIndex + 5, transform.getRotZ());
+        } else {
+            stmt.setNull(startIndex, java.sql.Types.DOUBLE);
+            stmt.setNull(startIndex + 1, java.sql.Types.DOUBLE);
+            stmt.setNull(startIndex + 2, java.sql.Types.DOUBLE);
+            stmt.setNull(startIndex + 3, java.sql.Types.FLOAT);
+            stmt.setNull(startIndex + 4, java.sql.Types.FLOAT);
+            stmt.setNull(startIndex + 5, java.sql.Types.FLOAT);
         }
-        bufferedWriter.write(array.toString());
+        return startIndex + 6;
     }
 
-    @Override
-    protected void create(BufferedWriter bufferedWriter) throws IOException {
-        bufferedWriter.write("[]");
-    }
-
-    private static String readString(JsonObject object, String key, String fallback) {
-        return object.has(key) ? object.get(key).getAsString() : fallback;
-    }
-
-    private static long readLong(JsonObject object, String key, long fallback) {
-        return object.has(key) ? object.get(key).getAsLong() : fallback;
-    }
-
-    private static TransformData readTransform(JsonObject parent, String key) {
-        if (!parent.has(key) || !parent.get(key).isJsonObject()) {
-            return null;
+    private void deleteMapFromDatabase(String mapId) {
+        if (!DatabaseManager.getInstance().isInitialized()) {
+            return;
         }
-        return readTransform(parent.getAsJsonObject(key));
-    }
 
-    private static TransformData readTransform(JsonObject object) {
-        TransformData data = new TransformData();
-        data.setX(validateCoordinate(object.has("x") ? object.get("x").getAsDouble() : 0.0));
-        data.setY(validateCoordinate(object.has("y") ? object.get("y").getAsDouble() : 0.0));
-        data.setZ(validateCoordinate(object.has("z") ? object.get("z").getAsDouble() : 0.0));
-        data.setRotX(object.has("rotX") ? object.get("rotX").getAsFloat() : 0.0f);
-        data.setRotY(object.has("rotY") ? object.get("rotY").getAsFloat() : 0.0f);
-        data.setRotZ(object.has("rotZ") ? object.get("rotZ").getAsFloat() : 0.0f);
-        return data;
-    }
+        // Checkpoints will be deleted by CASCADE
+        String sql = "DELETE FROM maps WHERE id = ?";
 
-    private static JsonObject writeTransform(TransformData data) {
-        JsonObject object = new JsonObject();
-        object.addProperty("x", data.getX());
-        object.addProperty("y", data.getY());
-        object.addProperty("z", data.getZ());
-        object.addProperty("rotX", data.getRotX());
-        object.addProperty("rotY", data.getRotY());
-        object.addProperty("rotZ", data.getRotZ());
-        return object;
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, mapId);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            LOGGER.at(Level.SEVERE).log("Failed to delete map from database: " + e.getMessage());
+        }
     }
 
     private static void validateMap(Map map) {

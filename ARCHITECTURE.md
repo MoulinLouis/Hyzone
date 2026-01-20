@@ -13,18 +13,26 @@ Technical design documentation for the Hyvexa Parkour Plugin.
          ▼                    ▼                    ▼
 ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
 │   RunTracker    │  │   Data Stores   │  │   UI Pages      │
-│ (Active runs,   │  │ (Persistence)   │  │ (Player menus)  │
+│ (Active runs,   │  │ (Memory + MySQL)│  │ (Player menus)  │
 │  checkpoints,   │  │                 │  │                 │
 │  fall detection)│  │ - MapStore      │  │ - MapSelectPage │
 └─────────────────┘  │ - ProgressStore │  │ - LeaderboardPage│
          │           │ - SettingsStore │  │ - AdminPages    │
          │           │ - PlayerCountStore│ └─────────────────┘
+         │           │ - GlobalMessageStore│
          │           └─────────────────┘
          │                    │
          ▼                    ▼
 ┌─────────────────────────────────────────────────────────────────────┐
-│                    Parkour/ (Runtime Data Directory)                │
-│  Maps.json  |  Progress.json  |  Settings.json  |  PlayerCounts.json│
+│                       DatabaseManager                               │
+│  (HikariCP connection pool - Parkour/database.json for credentials) │
+└─────────────────────────────────────────────────────────────────────┘
+                             │
+                             ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                         MySQL Database                              │
+│  players | maps | map_checkpoints | player_completions | settings   │
+│  player_titles | global_messages | player_count_samples             │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -37,7 +45,7 @@ Technical design documentation for the Hyvexa Parkour Plugin.
 | **Main/Calling** | Command execution, event handlers | Read-only queries, scheduling |
 | **World Thread** | Entity/world modifications | Teleports, inventory, components |
 | **Scheduled Executor** | Periodic tasks | Tick loops, delayed callbacks |
-| **File I/O** | Persistence | JSON read/write (blocking) |
+| **HikariCP Pool** | Database I/O | MySQL queries via connection pool |
 
 ### Thread Safety Rules
 
@@ -48,11 +56,17 @@ Technical design documentation for the Hyvexa Parkour Plugin.
    }, world);
    ```
 
-2. **Data stores use file locks**:
-   - `BlockingDiskFile` provides `fileLock.readLock()` and `fileLock.writeLock()`
-   - In-memory maps use `ConcurrentHashMap`
+2. **Data stores use memory-first pattern**:
+   - All reads from `ConcurrentHashMap` (fast, no database hit)
+   - Writes update memory + persist to MySQL
+   - `ReadWriteLock` protects complex operations
 
-3. **Scheduled tasks run on executor thread**:
+3. **Database connections**:
+   - HikariCP manages connection pooling
+   - Connections auto-returned via try-with-resources
+   - Never hold connections across async boundaries
+
+4. **Scheduled tasks run on executor thread**:
    - Cannot directly modify entities
    - Must dispatch to world thread for entity operations
 
@@ -82,11 +96,13 @@ RunTracker.checkFinish()
     │
     ├── ProgressStore.recordMapCompletion()
     │   │
-    │   ├── Update completedMaps set
-    │   ├── Update bestMapTimes if new best
+    │   ├── Update in-memory completedMaps set
+    │   ├── Update in-memory bestMapTimes if new best
     │   ├── Award XP (first completion only)
     │   ├── Check title unlocks
-    │   └── syncSave() to Progress.json
+    │   ├── INSERT INTO player_completions (immediate)
+    │   ├── INSERT INTO player_titles if new (immediate)
+    │   └── Queue player XP/level save (debounced 5s)
     │
     ├── Broadcast completion message (if new best)
     │
@@ -178,51 +194,66 @@ checkpoint  finish     N seconds  │
 
 ## Persistence
 
-### JSON File Formats
+### MySQL Database
 
-#### Maps.json
+All data is stored in MySQL with in-memory caching for performance.
+
+#### Database Configuration
+Credentials stored in `Parkour/database.json` (gitignored):
 ```json
-[
-  {
-    "id": "map_001",
-    "name": "Tutorial",
-    "category": "Easy",
-    "order": 1,
-    "firstCompletionXp": 100,
-    "start": { "x": 0, "y": 64, "z": 0, "rotX": 0, "rotY": 0, "rotZ": 0 },
-    "finish": { "x": 100, "y": 64, "z": 0, ... },
-    "checkpoints": [ { "x": 50, "y": 64, "z": 0, ... } ],
-    "startTrigger": { ... },
-    "leaveTrigger": { ... },
-    "leaveTeleport": { ... }
-  }
-]
+{
+  "host": "localhost",
+  "port": 3306,
+  "database": "hytale_parkour",
+  "user": "parkour",
+  "password": "secret"
+}
 ```
 
-#### Progress.json
-```json
-[
-  {
-    "uuid": "550e8400-e29b-41d4-a716-446655440000",
-    "name": "PlayerName",
-    "completedMaps": ["map_001", "map_002"],
-    "bestTimes": { "map_001": 45230, "map_002": 123456 },
-    "xp": 500,
-    "level": 3,
-    "titles": ["Novice"],
-    "welcomeShown": true,
-    "playtimeMs": 3600000
-  }
-]
+#### Database Tables
+
+| Table | Purpose |
+|-------|---------|
+| `players` | Player XP, level, playtime, welcome state |
+| `maps` | Map definitions with all transform positions |
+| `map_checkpoints` | Checkpoint positions per map |
+| `player_completions` | Completed maps with best times per player |
+| `player_titles` | Earned titles per player |
+| `settings` | Global server settings (single row) |
+| `global_messages` | Broadcast messages |
+| `global_message_settings` | Message interval (single row) |
+| `player_count_samples` | Analytics time-series data |
+
+#### Data Flow Pattern
+
+```
+Server Start
+     │
+     ▼
+DatabaseManager.initialize()  ──►  HikariCP connection pool
+     │
+     ▼
+Store.syncLoad()  ──►  SELECT * FROM table  ──►  ConcurrentHashMap (memory)
+     │
+     ▼
+Runtime: All reads from memory (fast)
+     │
+     ▼
+Writes: Update memory + INSERT/UPDATE to MySQL
+     │
+     ├── Immediate: completions, titles, map changes
+     └── Debounced (5s): player XP/level/playtime updates
+     │
+     ▼
+Server Stop: flushPendingSave() + connection pool shutdown
 ```
 
-### File Locking
+### Thread Safety
 
-All stores extend `BlockingDiskFile` which provides:
-- `fileLock.readLock()` - Multiple concurrent readers
-- `fileLock.writeLock()` - Exclusive write access
-- `syncLoad()` - Blocking read from disk
-- `syncSave()` - Blocking write to disk
+- `ConcurrentHashMap` for all in-memory data
+- `ReadWriteLock` for complex multi-step operations
+- HikariCP handles connection thread safety
+- Debounced saves use `ScheduledExecutor` with dirty tracking
 
 ## Edge Cases and Known Limitations
 
@@ -281,13 +312,14 @@ All stores extend `BlockingDiskFile` which provides:
 - Acceptable for <1000 players per map
 - May need optimization for larger player bases
 
-### File I/O
+### Database I/O
 
-- `syncSave()` blocks calling thread
-- Called after every progress update
-- Could cause latency spikes under heavy load
+- Most writes are non-blocking (HikariCP pool handles connections)
+- ProgressStore uses 5-second debounced saves for XP/level updates
+- Completions and titles saved immediately for data integrity
+- Connection pool sized for 10 concurrent connections (configurable)
 
-**Mitigation**: Consider batching saves or async I/O for high-traffic deployments.
+**Note**: Database latency affects write operations but reads are always from memory.
 
 ## Configuration
 
@@ -326,13 +358,14 @@ Hardcoded values that may need tuning:
 
 1. **Run persistence**: Save active runs to survive disconnects/restarts
 2. **Checkpoint IDs**: Use UUIDs instead of array indices
-3. **Async saves**: Background file I/O with dirty flag batching
-4. **Leaderboard caching**: Maintain sorted structure for O(1) position lookup
-5. **Admin locking**: Prevent concurrent edits to same map
-6. **Data versioning**: Schema version field with migration support
+3. **Leaderboard caching**: Maintain sorted structure for O(1) position lookup
+4. **Admin locking**: Prevent concurrent edits to same map
+5. **Data versioning**: Schema version field with migration support
+6. **Read replicas**: Add read-only database replicas for analytics
 
 ### Scaling Considerations
 
-- Current design supports ~100 concurrent players comfortably
-- File-based persistence limits horizontal scaling
-- Consider database backend for multi-server deployments
+- Current design supports ~100+ concurrent players comfortably
+- MySQL backend enables horizontal scaling and multi-server deployments
+- Connection pool can be tuned for higher concurrency
+- Consider Redis caching layer for extremely high traffic
