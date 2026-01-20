@@ -14,7 +14,7 @@ Instructions for AI agents working on this Hytale plugin codebase.
 - **Java sources**: `src/main/java/io/hyvexa/`
 - **Plugin entrypoint**: `HyvexaPlugin.java` (extends `JavaPlugin`)
 - **Parkour code**: `io.hyvexa.parkour.*` subpackages
-- **Commands**: `io.hyvexa.parkour.command/` - extend `CommandBase`
+- **Commands**: `io.hyvexa.parkour.command/` - extend `AbstractAsyncCommand` or `AbstractPlayerCommand`
 - **Data stores**: `io.hyvexa.parkour.data/` - MySQL persistence with in-memory caching
 - **UI pages**: `io.hyvexa.parkour.ui/` - extend `InteractiveCustomUIPage`
 - **Interactions**: `io.hyvexa.parkour.interaction/` - right-click handlers
@@ -26,9 +26,11 @@ Instructions for AI agents working on this Hytale plugin codebase.
 - **Audio**: `src/main/resources/Common/Sounds/`, `Common/Music/`
 
 ### Runtime Data
-- **Location**: `Parkour/` directory for runtime config
-- **Database config**: `Parkour/database.json` (MySQL credentials, gitignored)
-- Parkour data is stored in MySQL and loaded into memory on startup
+- **Working dir**: Server runs from `run/`, so runtime data lives at `run/Parkour/`
+- **Database config**: `run/Parkour/database.json` (MySQL credentials, gitignored)
+- **Source of truth**: Parkour data is stored in MySQL and loaded into memory on startup
+- **/dbmigrate JSON inputs** (required, no fallback): `Settings.json`, `GlobalMessages.json`,
+  `PlayerCounts.json`, `Progress.json`, `Maps.json` in `run/Parkour/`
 
 ## Current Features
 
@@ -47,6 +49,13 @@ Instructions for AI agents working on this Hytale plugin codebase.
 | `/pk admin` | Player progress management (view, reset) |
 | `/pk admin` | Settings (fall respawn, void cutoff, idle fall for OP, weapon damage, teleport debug) |
 
+### Maintenance Commands (OP only)
+| Command | Function |
+|---------|----------|
+| `/dbtest` | Validate MySQL connection and core tables |
+| `/dbmigrate` | Migrate JSON data to MySQL (requires all JSON files) |
+| `/dbclear` | Clear all parkour tables (restart to reset in-memory caches) |
+
 ### Runtime Behavior
 - Checkpoint/finish detection with radius-based triggers
 - Fall respawn after configurable timeout (returns to checkpoint or start)
@@ -62,6 +71,7 @@ Instructions for AI agents working on this Hytale plugin codebase.
 ./gradlew build          # Linux/Mac
 gradlew.bat build        # Windows
 ```
+Build outputs a shaded plugin JAR that bundles runtime dependencies.
 
 ### Server Location
 Hytale server JAR expected at:
@@ -103,10 +113,11 @@ HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(this::tick, 200, 200, Tim
 
 ### Commands
 ```java
-public class MyCommand extends CommandBase {
+public class MyCommand extends AbstractAsyncCommand {
     @Override
-    public void execute(CommandSource source, String[] args) {
+    public CompletableFuture<Void> executeAsync(CommandContext context) {
         // Implementation
+        return CompletableFuture.completedFuture(null);
     }
 }
 // Register in HyvexaPlugin.setup():
@@ -165,7 +176,7 @@ public class MyStore {
 1. **Entity refs expire** - Always check `ref.isValid()` before use
 2. **World thread required** - Use `CompletableFuture.runAsync(..., world)` for entity/world operations
 3. **UI paths** - Use forward slashes: `"Common/UI/Custom/Pages/MyPage.ui"`
-4. **Runtime data** - DB credentials live in `Parkour/database.json`; parkour data is in MySQL
+4. **Runtime data** - DB credentials live in `run/Parkour/database.json`; parkour data is in MySQL
 5. **Inventory access** - Need `Player` component, not just `PlayerRef`
 6. **Event registration** - Use `getEventRegistry().registerGlobal(...)` in `setup()`
 7. **Null annotations** - Use `@Nonnull` following existing patterns

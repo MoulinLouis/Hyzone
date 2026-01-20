@@ -45,6 +45,7 @@ public class DatabaseTestCommand extends AbstractAsyncCommand {
                 db.initialize();
             } catch (Exception e) {
                 commandContext.sendMessage(Message.raw("Failed to initialize: " + e.getMessage()).color("#ff4444"));
+                e.printStackTrace();
                 return CompletableFuture.completedFuture(null);
             }
         }
@@ -56,6 +57,9 @@ public class DatabaseTestCommand extends AbstractAsyncCommand {
             commandContext.sendMessage(Message.raw(result.message).color("#44ff44"));
         } else {
             commandContext.sendMessage(Message.raw(result.message).color("#ff4444"));
+            if (result.cause != null) {
+                result.cause.printStackTrace();
+            }
         }
 
         return CompletableFuture.completedFuture(null);
