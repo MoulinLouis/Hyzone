@@ -38,6 +38,11 @@ public class RestartCheckpointInteraction extends SimpleInteraction {
         if (world == null) {
             return;
         }
-        CompletableFuture.runAsync(() -> plugin.getRunTracker().teleportToLastCheckpoint(ref, store, playerRef), world);
+        CompletableFuture.runAsync(() -> {
+            boolean teleported = plugin.getRunTracker().teleportToLastCheckpoint(ref, store, playerRef);
+            if (!teleported) {
+                plugin.getRunTracker().resetRunToStart(ref, store, player, playerRef);
+            }
+        }, world);
     }
 }
