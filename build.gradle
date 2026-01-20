@@ -62,6 +62,12 @@ tasks.named('processResources') {
 // Use a stable plugin jar name.
 tasks.named('jar') {
     archiveFileName = "HyvexaPlugin-${version}.jar"
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
+    from {
+        configurations.runtimeClasspath.findAll { it.name != 'HytaleServer.jar' }
+                .collect { it.isDirectory() ? it : zipTree(it) }
+    }
 }
 
 

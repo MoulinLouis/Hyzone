@@ -18,11 +18,12 @@ $C.@PageOverlay {
         LayoutMode: Top;
 
         Label #PlayerNameText {
-          Anchor: (Left: 65, Right: 0);
+          Anchor: (Left: 0, Right: 0);
           Style: (
             FontSize: 16,
             TextColor: #ff7fb0,
-            RenderBold: true
+            RenderBold: true,
+            HorizontalAlignment: Center
           );
           Text: "PARKOUR";
         }

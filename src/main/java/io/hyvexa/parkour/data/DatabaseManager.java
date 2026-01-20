@@ -32,6 +32,10 @@ public class DatabaseManager {
      */
     public void initialize() {
         config = DatabaseConfig.load();
+        LOGGER.atInfo().log("DB config loaded. Host=" + config.getHost()
+                + " Port=" + config.getPort()
+                + " Database=" + config.getDatabase()
+                + " User=" + config.getUser());
         initialize(config.getHost(), config.getPort(), config.getDatabase(),
                    config.getUser(), config.getPassword());
     }
@@ -44,6 +48,14 @@ public class DatabaseManager {
         config.setJdbcUrl("jdbc:mysql://" + host + ":" + port + "/" + database);
         config.setUsername(user);
         config.setPassword(password);
+        config.setDriverClassName("com.mysql.cj.jdbc.Driver");
+
+        try {
+            Class.forName("com.mysql.cj.jdbc.Driver");
+        } catch (ClassNotFoundException e) {
+            LOGGER.at(Level.SEVERE).log("MySQL driver not found on classpath: " + e.getMessage());
+            throw new RuntimeException("MySQL driver missing", e);
+        }
 
         // Connection pool settings
         config.setMaximumPoolSize(10);
@@ -140,7 +152,7 @@ public class DatabaseManager {
                     playerCount, mapCount, completionCount));
 
         } catch (SQLException e) {
-            return new TestResult(false, "SQL error: " + e.getMessage());
+            return new TestResult(false, "SQL error: " + e.getMessage(), e);
         }
     }
 
@@ -157,10 +169,18 @@ public class DatabaseManager {
     public static class TestResult {
         public final boolean success;
         public final String message;
+        public final Throwable cause;
 
         public TestResult(boolean success, String message) {
             this.success = success;
             this.message = message;
+            this.cause = null;
+        }
+
+        public TestResult(boolean success, String message, Throwable cause) {
+            this.success = success;
+            this.message = message;
+            this.cause = cause;
         }
     }
 }
