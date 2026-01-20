@@ -40,6 +40,7 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.event.events.ecs.DropItemEvent;
 import com.hypixel.hytale.server.core.event.events.ecs.BreakBlockEvent;
 import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.universe.world.WorldMapTracker;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.common.util.InventoryUtils;
 import io.hyvexa.common.util.PermissionUtils;
@@ -96,6 +97,7 @@ public class HyvexaPlugin extends JavaPlugin {
     private static final long PLAYER_COUNT_SAMPLE_SECONDS = PlayerCountStore.DEFAULT_SAMPLE_INTERVAL_SECONDS;
     private static final long STALE_PLAYER_SWEEP_SECONDS = 120L;
     private static final long TELEPORT_DEBUG_INTERVAL_SECONDS = 120L;
+    private static final boolean DISABLE_WORLD_MAP = true; // Parkour server doesn't need world map
     private static final String CHAT_LINK_PLACEHOLDER = "{link}";
     private static final String CHAT_LINK_LABEL = "click here";
     private static final String DISCORD_URL = "https://discord.gg/BDA7gRF5";
@@ -239,6 +241,10 @@ public class HyvexaPlugin extends JavaPlugin {
                     runTracker.markPlayerReady(event.getPlayerRef());
                 }
                 syncRunInventoryOnReady(event.getPlayerRef());
+                // Disable world map generation to save memory (parkour server doesn't need it)
+                if (DISABLE_WORLD_MAP) {
+                    disableWorldMapForPlayer(event.getPlayerRef());
+                }
             } catch (Exception e) {
                 LOGGER.at(Level.WARNING).log("Exception in PlayerReadyEvent (inventory): " + e.getMessage());
             }
@@ -1361,6 +1367,40 @@ public class HyvexaPlugin extends JavaPlugin {
                     () -> settingsStore != null && settingsStore.isWeaponDamageDisabled()
             ));
         }
+    }
+
+    /**
+     * Disables world map generation for a player to save memory.
+     * On a parkour server with a static world, players don't need the world map feature.
+     */
+    private void disableWorldMapForPlayer(Ref<EntityStore> ref) {
+        if (ref == null || !ref.isValid()) {
+            return;
+        }
+        Store<EntityStore> store = ref.getStore();
+        World world = store.getExternalData().getWorld();
+        if (world == null) {
+            return;
+        }
+        CompletableFuture.runAsync(() -> {
+            if (!ref.isValid()) {
+                return;
+            }
+            Player player = store.getComponent(ref, Player.getComponentType());
+            PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+            if (player == null) {
+                return;
+            }
+            WorldMapTracker tracker = player.getWorldMapTracker();
+            if (tracker != null) {
+                // Set view radius to 0 to prevent map generation
+                tracker.setViewRadiusOverride(0);
+                // Clear any already loaded map data
+                tracker.clear();
+                String name = playerRef != null ? playerRef.getUsername() : "unknown";
+                LOGGER.atInfo().log("Disabled world map for player: " + name);
+            }
+        }, world);
     }
 
     private void registerInteractionCodecs() {
