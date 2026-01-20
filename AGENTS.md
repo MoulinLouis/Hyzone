@@ -26,9 +26,9 @@ Instructions for AI agents working on this Hytale plugin codebase.
 - **Audio**: `src/main/resources/Common/Sounds/`, `Common/Music/`
 
 ### Runtime Data
-- **Location**: `Parkour/` directory (created at runtime)
+- **Location**: `Parkour/` directory for runtime config
 - **Database config**: `Parkour/database.json` (MySQL credentials, gitignored)
-- Data is stored in MySQL database, loaded into memory on startup
+- Parkour data is stored in MySQL and loaded into memory on startup
 
 ## Current Features
 
@@ -45,7 +45,7 @@ Instructions for AI agents working on this Hytale plugin codebase.
 |---------|----------|
 | `/pk admin` | Map management UI (create, edit, delete) |
 | `/pk admin` | Player progress management (view, reset) |
-| `/pk admin` | Settings (fall respawn, category order) |
+| `/pk admin` | Settings (fall respawn, void cutoff, idle fall for OP, weapon damage, teleport debug) |
 
 ### Runtime Behavior
 - Checkpoint/finish detection with radius-based triggers
@@ -165,7 +165,7 @@ public class MyStore {
 1. **Entity refs expire** - Always check `ref.isValid()` before use
 2. **World thread required** - Use `CompletableFuture.runAsync(..., world)` for entity/world operations
 3. **UI paths** - Use forward slashes: `"Common/UI/Custom/Pages/MyPage.ui"`
-4. **Runtime data** - JSON files go in `Parkour/` at runtime, not in resources
+4. **Runtime data** - DB credentials live in `Parkour/database.json`; parkour data is in MySQL
 5. **Inventory access** - Need `Player` component, not just `PlayerRef`
 6. **Event registration** - Use `getEventRegistry().registerGlobal(...)` in `setup()`
 7. **Null annotations** - Use `@Nonnull` following existing patterns

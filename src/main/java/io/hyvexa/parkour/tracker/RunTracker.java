@@ -397,11 +397,6 @@ public class RunTracker {
                 String rankName = progressStore.getRankName(playerId, mapStore);
                 player.sendMessage(Message.raw("Rank up! You are now " + rankName + "."));
             }
-            if (!result.titlesUnlocked.isEmpty()) {
-                for (String title : result.titlesUnlocked) {
-                    player.sendMessage(Message.raw("Title unlocked: " + title));
-                }
-            }
             if (result.newBest) {
                 broadcastCompletion(playerId, playerName, map, durationMs, leaderboardPosition);
                 if (reachedVexaGod) {

@@ -17,7 +17,7 @@ import java.util.logging.Level;
 public class PlayerCountStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    public static final long DEFAULT_SAMPLE_INTERVAL_SECONDS = 300L;
+    public static final long DEFAULT_SAMPLE_INTERVAL_SECONDS = 600L;
     public static final long DEFAULT_RETENTION_DAYS = 7L;
     private static final long DEFAULT_SAVE_INTERVAL_MS = TimeUnit.SECONDS.toMillis(DEFAULT_SAMPLE_INTERVAL_SECONDS);
 
@@ -105,6 +105,26 @@ public class PlayerCountStore {
 
         if (shouldSave) {
             saveSampleToDatabase(timestampMs, safeCount);
+        }
+    }
+
+    public void clearAll() {
+        if (!DatabaseManager.getInstance().isInitialized()) return;
+
+        fileLock.writeLock().lock();
+        try {
+            samples.clear();
+            lastSavedAtMs = System.currentTimeMillis();
+        } finally {
+            fileLock.writeLock().unlock();
+        }
+
+        String sql = "DELETE FROM player_count_samples";
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            LOGGER.at(Level.WARNING).log("Failed to clear player count samples: " + e.getMessage());
         }
     }
 

@@ -6,27 +6,34 @@ import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractAsyncCommand;
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import io.hyvexa.HyvexaPlugin;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.reflect.TypeToken;
 import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.parkour.data.DatabaseManager;
-import io.hyvexa.parkour.data.Map;
-import io.hyvexa.parkour.data.MapStore;
-import io.hyvexa.parkour.data.ProgressStore;
-import io.hyvexa.parkour.data.SettingsStore;
+import io.hyvexa.parkour.data.GlobalMessageStore;
 import io.hyvexa.parkour.data.TransformData;
 
 import javax.annotation.Nonnull;
+import java.io.IOException;
+import java.lang.reflect.Type;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 public class DatabaseMigrateCommand extends AbstractAsyncCommand {
 
     private static final Message MESSAGE_OP_REQUIRED = Message.raw("You must be OP to use /dbmigrate.");
+    private static final Gson GSON = new GsonBuilder().create();
+    private static final Type PROGRESS_LIST_TYPE = new TypeToken<List<ProgressEntry>>() {}.getType();
 
     public DatabaseMigrateCommand() {
         super("dbmigrate", "Migrate JSON data to MySQL database.");
@@ -56,26 +63,36 @@ public class DatabaseMigrateCommand extends AbstractAsyncCommand {
             }
         }
 
-        HyvexaPlugin plugin = HyvexaPlugin.getInstance();
-        if (plugin == null) {
-            commandContext.sendMessage(Message.raw("Plugin not available.").color("#ff4444"));
-            return CompletableFuture.completedFuture(null);
-        }
-
         commandContext.sendMessage(Message.raw("Starting migration from JSON to MySQL...").color("#ffaa00"));
 
         try {
+            SettingsJson settingsJson = loadSettingsJson(commandContext);
+            GlobalMessagesJson globalMessagesJson = loadGlobalMessagesJson(commandContext);
+            PlayerCountsJson playerCountsJson = loadPlayerCountsJson(commandContext);
+            List<ProgressEntry> progressEntries = loadProgressJson(commandContext);
+            List<MapJson> mapEntries = loadMapsJson(commandContext);
+
+            if (settingsJson == null || globalMessagesJson == null || playerCountsJson == null
+                    || progressEntries == null || mapEntries == null) {
+                commandContext.sendMessage(Message.raw(
+                        "Migration aborted: missing required JSON files. Ensure Settings.json, GlobalMessages.json, " +
+                                "PlayerCounts.json, Progress.json, and Maps.json are present.")
+                        .color("#ff4444"));
+                return CompletableFuture.completedFuture(null);
+            }
+
             // Migrate in order of dependencies
-            int settingsCount = migrateSettings(commandContext, plugin.getSettingsStore());
-            int mapsCount = migrateMaps(commandContext, plugin.getMapStore());
-            int playersCount = migratePlayers(commandContext, plugin.getProgressStore());
-            int completionsCount = migrateCompletions(commandContext, plugin.getProgressStore());
-            int titlesCount = migrateTitles(commandContext, plugin.getProgressStore());
+            int settingsCount = migrateSettings(commandContext, settingsJson);
+            int globalMessagesCount = migrateGlobalMessages(commandContext, globalMessagesJson);
+            int mapsCount = migrateMaps(commandContext, mapEntries);
+            int playersCount = migratePlayers(commandContext, progressEntries);
+            int completionsCount = migrateCompletions(commandContext, progressEntries);
+            int playerCounts = migratePlayerCounts(commandContext, playerCountsJson);
 
             commandContext.sendMessage(Message.raw("Migration complete!").color("#44ff44"));
             commandContext.sendMessage(Message.raw(String.format(
-                    "Migrated: %d settings, %d maps, %d players, %d completions, %d titles",
-                    settingsCount, mapsCount, playersCount, completionsCount, titlesCount)));
+                    "Migrated: %d settings, %d global messages, %d maps, %d players, %d completions, %d player count samples",
+                    settingsCount, globalMessagesCount, mapsCount, playersCount, completionsCount, playerCounts)));
 
         } catch (Exception e) {
             commandContext.sendMessage(Message.raw("Migration failed: " + e.getMessage()).color("#ff4444"));
@@ -85,9 +102,9 @@ public class DatabaseMigrateCommand extends AbstractAsyncCommand {
         return CompletableFuture.completedFuture(null);
     }
 
-    private int migrateSettings(CommandContext ctx, SettingsStore settingsStore) throws SQLException {
-        if (settingsStore == null) {
-            ctx.sendMessage(Message.raw("SettingsStore not available, skipping...").color("#ffaa00"));
+    private int migrateSettings(CommandContext ctx, SettingsJson settingsJson) throws SQLException {
+        if (settingsJson == null) {
+            ctx.sendMessage(Message.raw("Settings.json not available, skipping...").color("#ffaa00"));
             return 0;
         }
 
@@ -95,8 +112,9 @@ public class DatabaseMigrateCommand extends AbstractAsyncCommand {
 
         String sql = """
             INSERT INTO settings (id, fall_respawn_seconds, void_y_failsafe, weapon_damage_disabled, debug_mode,
-                spawn_x, spawn_y, spawn_z, spawn_rot_x, spawn_rot_y, spawn_rot_z)
-            VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                spawn_x, spawn_y, spawn_z, spawn_rot_x, spawn_rot_y, spawn_rot_z,
+                idle_fall_respawn_for_op, category_order_json)
+            VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 fall_respawn_seconds = VALUES(fall_respawn_seconds),
                 void_y_failsafe = VALUES(void_y_failsafe),
@@ -107,18 +125,36 @@ public class DatabaseMigrateCommand extends AbstractAsyncCommand {
                 spawn_z = VALUES(spawn_z),
                 spawn_rot_x = VALUES(spawn_rot_x),
                 spawn_rot_y = VALUES(spawn_rot_y),
-                spawn_rot_z = VALUES(spawn_rot_z)
+                spawn_rot_z = VALUES(spawn_rot_z),
+                idle_fall_respawn_for_op = VALUES(idle_fall_respawn_for_op),
+                category_order_json = VALUES(category_order_json)
             """;
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setDouble(1, settingsStore.getFallRespawnSeconds());
-            stmt.setDouble(2, settingsStore.getFallFailsafeVoidY());
-            stmt.setBoolean(3, settingsStore.isWeaponDamageDisabled());
-            stmt.setBoolean(4, settingsStore.isTeleportDebugEnabled());
+            double fallRespawnSeconds = settingsJson.fallRespawnSeconds != null
+                    ? settingsJson.fallRespawnSeconds
+                    : 0.0;
+            double voidY = settingsJson.fallFailsafeVoidY != null
+                    ? settingsJson.fallFailsafeVoidY
+                    : 0.0;
+            boolean weaponDamageDisabled = settingsJson.disableWeaponDamage != null
+                    ? settingsJson.disableWeaponDamage
+                    : false;
+            boolean teleportDebugEnabled = settingsJson.teleportDebugEnabled != null
+                    ? settingsJson.teleportDebugEnabled
+                    : false;
+            boolean idleFallRespawnForOp = settingsJson.idleFallRespawnForOp != null
+                    ? settingsJson.idleFallRespawnForOp
+                    : false;
 
-            TransformData spawn = settingsStore.getSpawnPosition();
+            stmt.setDouble(1, fallRespawnSeconds);
+            stmt.setDouble(2, voidY);
+            stmt.setBoolean(3, weaponDamageDisabled);
+            stmt.setBoolean(4, teleportDebugEnabled);
+
+            TransformData spawn = toTransform(settingsJson.spawn);
             if (spawn != null) {
                 stmt.setDouble(5, spawn.getX());
                 stmt.setDouble(6, spawn.getY());
@@ -134,6 +170,8 @@ public class DatabaseMigrateCommand extends AbstractAsyncCommand {
                 stmt.setNull(9, java.sql.Types.FLOAT);
                 stmt.setNull(10, java.sql.Types.FLOAT);
             }
+            stmt.setBoolean(11, idleFallRespawnForOp);
+            stmt.setString(12, GSON.toJson(normalizeCategoryOrder(settingsJson)));
 
             stmt.executeUpdate();
         }
@@ -142,14 +180,109 @@ public class DatabaseMigrateCommand extends AbstractAsyncCommand {
         return 1;
     }
 
-    private int migrateMaps(CommandContext ctx, MapStore mapStore) throws SQLException {
-        if (mapStore == null) {
-            ctx.sendMessage(Message.raw("MapStore not available, skipping...").color("#ffaa00"));
+    private int migrateGlobalMessages(CommandContext ctx, GlobalMessagesJson json) throws SQLException {
+        if (json == null) {
+            ctx.sendMessage(Message.raw("GlobalMessages.json not available, skipping...").color("#ffaa00"));
             return 0;
         }
 
-        List<Map> maps = mapStore.listMaps();
-        ctx.sendMessage(Message.raw("Migrating " + maps.size() + " maps..."));
+        List<String> messages = json.messages != null ? json.messages : List.of();
+        long intervalMinutes = json.intervalMinutes != null
+                ? json.intervalMinutes
+                : GlobalMessageStore.DEFAULT_INTERVAL_MINUTES;
+
+        ctx.sendMessage(Message.raw("Migrating global messages..."));
+
+        String settingsSql = """
+            INSERT INTO global_message_settings (id, interval_minutes) VALUES (1, ?)
+            ON DUPLICATE KEY UPDATE interval_minutes = VALUES(interval_minutes)
+            """;
+        String deleteSql = "DELETE FROM global_messages";
+        String insertSql = "INSERT INTO global_messages (message, display_order) VALUES (?, ?)";
+
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement settingsStmt = conn.prepareStatement(settingsSql)) {
+            settingsStmt.setLong(1, intervalMinutes);
+            settingsStmt.executeUpdate();
+        }
+
+        int count = 0;
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement deleteStmt = conn.prepareStatement(deleteSql);
+                 PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
+                deleteStmt.executeUpdate();
+                for (int i = 0; i < messages.size(); i++) {
+                    String message = messages.get(i);
+                    if (message == null || message.isBlank()) {
+                        continue;
+                    }
+                    insertStmt.setString(1, message.trim());
+                    insertStmt.setInt(2, count);
+                    insertStmt.addBatch();
+                    count++;
+                }
+                insertStmt.executeBatch();
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            }
+        }
+
+        ctx.sendMessage(Message.raw("Global messages migrated: " + count).color("#44ff44"));
+        return count;
+    }
+
+    private int migratePlayerCounts(CommandContext ctx, PlayerCountsJson json) throws SQLException {
+        List<PlayerCountSampleJson> samples = json != null && json.samples != null ? json.samples : List.of();
+        if (samples.isEmpty()) {
+            ctx.sendMessage(Message.raw("Player count samples not available, skipping...").color("#ffaa00"));
+            return 0;
+        }
+
+        ctx.sendMessage(Message.raw("Migrating player count samples..."));
+
+        String deleteSql = "DELETE FROM player_count_samples";
+        String insertSql = "INSERT INTO player_count_samples (timestamp_ms, count) VALUES (?, ?)";
+
+        int count = 0;
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement deleteStmt = conn.prepareStatement(deleteSql);
+                 PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
+                deleteStmt.executeUpdate();
+                for (PlayerCountSampleJson sample : samples) {
+                    if (sample == null) {
+                        continue;
+                    }
+                    insertStmt.setLong(1, sample.timestampMs);
+                    insertStmt.setInt(2, Math.max(0, sample.count));
+                    insertStmt.addBatch();
+                    count++;
+                    if (count % 250 == 0) {
+                        insertStmt.executeBatch();
+                    }
+                }
+                insertStmt.executeBatch();
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            }
+        }
+
+        ctx.sendMessage(Message.raw("Player count samples migrated: " + count).color("#44ff44"));
+        return count;
+    }
+
+    private int migrateMaps(CommandContext ctx, List<MapJson> mapEntries) throws SQLException {
+        if (mapEntries == null) {
+            ctx.sendMessage(Message.raw("Maps.json not available, skipping...").color("#ffaa00"));
+            return 0;
+        }
+
+        ctx.sendMessage(Message.raw("Migrating " + mapEntries.size() + " maps..."));
 
         String mapSql = """
             INSERT INTO maps (id, name, category, world, difficulty, display_order, first_completion_xp, mithril_sword_enabled,
@@ -189,37 +322,43 @@ public class DatabaseMigrateCommand extends AbstractAsyncCommand {
                  PreparedStatement cpStmt = conn.prepareStatement(checkpointSql);
                  PreparedStatement deleteStmt = conn.prepareStatement(deleteCheckpointsSql)) {
 
-                for (Map map : maps) {
+                for (MapJson map : mapEntries) {
+                    if (map == null || map.id == null || map.id.isBlank()) {
+                        continue;
+                    }
                     // Insert/update map
-                    mapStmt.setString(1, map.getId());
-                    mapStmt.setString(2, map.getName());
-                    mapStmt.setString(3, map.getCategory());
-                    mapStmt.setString(4, map.getWorld());
-                    mapStmt.setInt(5, map.getDifficulty());
-                    mapStmt.setInt(6, map.getOrder());
-                    mapStmt.setLong(7, map.getFirstCompletionXp());
-                    mapStmt.setBoolean(8, map.isMithrilSwordEnabled());
+                    mapStmt.setString(1, map.id);
+                    mapStmt.setString(2, map.name);
+                    mapStmt.setString(3, map.category);
+                    mapStmt.setString(4, map.world);
+                    mapStmt.setInt(5, map.difficulty != null ? map.difficulty : 0);
+                    mapStmt.setInt(6, map.order != null ? map.order : 0);
+                    mapStmt.setLong(7, map.firstCompletionXp != null ? map.firstCompletionXp : 0L);
+                    mapStmt.setBoolean(8, map.enableMithrilSword != null && map.enableMithrilSword);
 
-                    setTransform(mapStmt, 9, map.getStart());
-                    setTransform(mapStmt, 15, map.getFinish());
-                    setTransform(mapStmt, 21, map.getStartTrigger());
-                    setTransform(mapStmt, 27, map.getLeaveTrigger());
-                    setTransform(mapStmt, 33, map.getLeaveTeleport());
+                    setTransform(mapStmt, 9, toTransform(map.start));
+                    setTransform(mapStmt, 15, toTransform(map.finish));
+                    setTransform(mapStmt, 21, toTransform(map.startTrigger));
+                    setTransform(mapStmt, 27, toTransform(map.leaveTrigger));
+                    setTransform(mapStmt, 33, toTransform(map.leaveTeleport));
 
-                    mapStmt.setTimestamp(39, new java.sql.Timestamp(map.getCreatedAt()));
-                    mapStmt.setTimestamp(40, new java.sql.Timestamp(map.getUpdatedAt()));
+                    mapStmt.setTimestamp(39, new java.sql.Timestamp(map.createdAt != null ? map.createdAt : 0L));
+                    mapStmt.setTimestamp(40, new java.sql.Timestamp(map.updatedAt != null ? map.updatedAt : 0L));
 
                     mapStmt.addBatch();
 
                     // Delete existing checkpoints and re-insert
-                    deleteStmt.setString(1, map.getId());
+                    deleteStmt.setString(1, map.id);
                     deleteStmt.addBatch();
 
-                    List<TransformData> checkpoints = map.getCheckpoints();
+                    List<TransformJson> checkpoints = map.checkpoints;
                     if (checkpoints != null) {
                         for (int i = 0; i < checkpoints.size(); i++) {
-                            TransformData cp = checkpoints.get(i);
-                            cpStmt.setString(1, map.getId());
+                            TransformData cp = toTransform(checkpoints.get(i));
+                            if (cp == null) {
+                                continue;
+                            }
+                            cpStmt.setString(1, map.id);
                             cpStmt.setInt(2, i);
                             cpStmt.setDouble(3, cp.getX());
                             cpStmt.setDouble(4, cp.getY());
@@ -267,14 +406,13 @@ public class DatabaseMigrateCommand extends AbstractAsyncCommand {
         }
     }
 
-    private int migratePlayers(CommandContext ctx, ProgressStore progressStore) throws SQLException {
-        if (progressStore == null) {
-            ctx.sendMessage(Message.raw("ProgressStore not available, skipping...").color("#ffaa00"));
+    private int migratePlayers(CommandContext ctx, List<ProgressEntry> progressEntries) throws SQLException {
+        if (progressEntries == null) {
+            ctx.sendMessage(Message.raw("Progress.json not available, skipping...").color("#ffaa00"));
             return 0;
         }
 
-        var playerIds = progressStore.getPlayerIds();
-        ctx.sendMessage(Message.raw("Migrating " + playerIds.size() + " players..."));
+        ctx.sendMessage(Message.raw("Migrating " + progressEntries.size() + " players..."));
 
         String sql = """
             INSERT INTO players (uuid, name, xp, level, welcome_shown, playtime_ms)
@@ -288,13 +426,18 @@ public class DatabaseMigrateCommand extends AbstractAsyncCommand {
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            for (UUID playerId : playerIds) {
+            for (ProgressEntry entry : progressEntries) {
+                UUID playerId = parseUuid(entry.uuid);
+                if (playerId == null) {
+                    continue;
+                }
                 stmt.setString(1, playerId.toString());
-                stmt.setString(2, progressStore.getPlayerName(playerId));
-                stmt.setLong(3, progressStore.getXp(playerId));
-                stmt.setInt(4, progressStore.getLevel(playerId));
-                stmt.setBoolean(5, !progressStore.shouldShowWelcome(playerId));
-                stmt.setLong(6, progressStore.getPlaytimeMs(playerId));
+                stmt.setString(2, entry.name);
+                stmt.setLong(3, entry.xp != null ? Math.max(0L, entry.xp) : 0L);
+                int level = entry.level != null ? Math.max(1, entry.level) : 1;
+                stmt.setInt(4, level);
+                stmt.setBoolean(5, entry.welcomeShown != null && entry.welcomeShown);
+                stmt.setLong(6, entry.playtimeMs != null ? Math.max(0L, entry.playtimeMs) : 0L);
                 stmt.addBatch();
                 count++;
 
@@ -309,8 +452,8 @@ public class DatabaseMigrateCommand extends AbstractAsyncCommand {
         return count;
     }
 
-    private int migrateCompletions(CommandContext ctx, ProgressStore progressStore) throws SQLException {
-        if (progressStore == null) {
+    private int migrateCompletions(CommandContext ctx, List<ProgressEntry> progressEntries) throws SQLException {
+        if (progressEntries == null) {
             return 0;
         }
 
@@ -323,7 +466,7 @@ public class DatabaseMigrateCommand extends AbstractAsyncCommand {
             """;
 
         // Get valid map IDs from database to avoid foreign key errors
-        java.util.Set<String> validMapIds = new java.util.HashSet<>();
+        Set<String> validMapIds = new HashSet<>();
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement("SELECT id FROM maps");
              ResultSet rs = stmt.executeQuery()) {
@@ -336,20 +479,37 @@ public class DatabaseMigrateCommand extends AbstractAsyncCommand {
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            for (UUID playerId : progressStore.getPlayerIds()) {
-                // For each map, check if player has a best time
-                for (String mapId : validMapIds) {
-                    Long bestTime = progressStore.getBestTimeMs(playerId, mapId);
-                    if (bestTime != null) {
-                        stmt.setString(1, playerId.toString());
-                        stmt.setString(2, mapId);
-                        stmt.setLong(3, bestTime);
-                        stmt.addBatch();
-                        count++;
-
-                        if (count % 100 == 0) {
-                            stmt.executeBatch();
+            for (ProgressEntry entry : progressEntries) {
+                UUID playerId = parseUuid(entry.uuid);
+                if (playerId == null) {
+                    continue;
+                }
+                Set<String> mapIds = new HashSet<>();
+                if (entry.completedMaps != null) {
+                    mapIds.addAll(entry.completedMaps);
+                }
+                if (entry.bestTimes != null) {
+                    mapIds.addAll(entry.bestTimes.keySet());
+                }
+                for (String mapId : mapIds) {
+                    if (!validMapIds.contains(mapId)) {
+                        continue;
+                    }
+                    long bestTime = 0L;
+                    if (entry.bestTimes != null) {
+                        Long value = entry.bestTimes.get(mapId);
+                        if (value != null) {
+                            bestTime = value;
                         }
+                    }
+                    stmt.setString(1, playerId.toString());
+                    stmt.setString(2, mapId);
+                    stmt.setLong(3, bestTime);
+                    stmt.addBatch();
+                    count++;
+
+                    if (count % 100 == 0) {
+                        stmt.executeBatch();
                     }
                 }
             }
@@ -360,35 +520,185 @@ public class DatabaseMigrateCommand extends AbstractAsyncCommand {
         return count;
     }
 
-    private int migrateTitles(CommandContext ctx, ProgressStore progressStore) throws SQLException {
-        if (progressStore == null) {
-            return 0;
+    private SettingsJson loadSettingsJson(CommandContext ctx) {
+        return loadJson(ctx, "Settings.json", SettingsJson.class,
+                "Parkour/Settings.json", "run/Parkour/Settings.json");
+    }
+
+    private GlobalMessagesJson loadGlobalMessagesJson(CommandContext ctx) {
+        return loadJson(ctx, "GlobalMessages.json", GlobalMessagesJson.class,
+                "Parkour/GlobalMessages.json", "Parkour/GlobalMessage.json",
+                "run/Parkour/GlobalMessages.json", "run/Parkour/GlobalMessage.json");
+    }
+
+    private PlayerCountsJson loadPlayerCountsJson(CommandContext ctx) {
+        Path path = resolveJsonPath("Parkour/PlayerCounts.json", "run/Parkour/PlayerCounts.json");
+        if (path == null) {
+            ctx.sendMessage(Message.raw("PlayerCounts.json not found.").color("#ff4444"));
+            return null;
         }
+        try {
+            return GSON.fromJson(Files.readString(path), PlayerCountsJson.class);
+        } catch (IOException | RuntimeException e) {
+            ctx.sendMessage(Message.raw("Failed to read PlayerCounts.json: " + e.getMessage()).color("#ff4444"));
+            return null;
+        }
+    }
 
-        ctx.sendMessage(Message.raw("Migrating player titles..."));
+    private List<ProgressEntry> loadProgressJson(CommandContext ctx) {
+        return loadJson(ctx, "Progress.json", PROGRESS_LIST_TYPE,
+                "Parkour/Progress.json", "run/Parkour/Progress.json");
+    }
 
-        String sql = """
-            INSERT INTO player_titles (player_uuid, title)
-            VALUES (?, ?)
-            ON DUPLICATE KEY UPDATE title = VALUES(title)
-            """;
+    private List<MapJson> loadMapsJson(CommandContext ctx) {
+        Type mapListType = new TypeToken<List<MapJson>>() {}.getType();
+        return loadJson(ctx, "Maps.json", mapListType,
+                "Parkour/Maps.json", "run/Parkour/Maps.json");
+    }
 
-        int count = 0;
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+    private <T> T loadJson(CommandContext ctx, String label, Class<T> type, String... candidates) {
+        Path path = resolveJsonPath(candidates);
+        if (path == null) {
+            ctx.sendMessage(Message.raw(label + " not found.").color("#ff4444"));
+            return null;
+        }
+        try {
+            return GSON.fromJson(Files.readString(path), type);
+        } catch (IOException | RuntimeException e) {
+            ctx.sendMessage(Message.raw("Failed to read " + label + ": " + e.getMessage()).color("#ff4444"));
+            return null;
+        }
+    }
 
-            for (UUID playerId : progressStore.getPlayerIds()) {
-                for (String title : progressStore.getTitles(playerId)) {
-                    stmt.setString(1, playerId.toString());
-                    stmt.setString(2, title);
-                    stmt.addBatch();
-                    count++;
-                }
+    private <T> T loadJson(CommandContext ctx, String label, Type type, String... candidates) {
+        Path path = resolveJsonPath(candidates);
+        if (path == null) {
+            ctx.sendMessage(Message.raw(label + " not found.").color("#ff4444"));
+            return null;
+        }
+        try {
+            return GSON.fromJson(Files.readString(path), type);
+        } catch (IOException | RuntimeException e) {
+            ctx.sendMessage(Message.raw("Failed to read " + label + ": " + e.getMessage()).color("#ff4444"));
+            return null;
+        }
+    }
+
+    private Path resolveJsonPath(String... candidates) {
+        for (String candidate : candidates) {
+            Path path = Path.of(candidate);
+            if (Files.exists(path)) {
+                return path;
             }
-            stmt.executeBatch();
         }
+        return null;
+    }
 
-        ctx.sendMessage(Message.raw("Titles migrated: " + count).color("#44ff44"));
-        return count;
+    private UUID parseUuid(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return UUID.fromString(value);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    private TransformData toTransform(TransformJson json) {
+        if (json == null || json.x == null || json.y == null || json.z == null) {
+            return null;
+        }
+        TransformData data = new TransformData();
+        data.setX(json.x);
+        data.setY(json.y);
+        data.setZ(json.z);
+        data.setRotX(json.rotX != null ? json.rotX : 0.0f);
+        data.setRotY(json.rotY != null ? json.rotY : 0.0f);
+        data.setRotZ(json.rotZ != null ? json.rotZ : 0.0f);
+        return data;
+    }
+
+    private List<String> normalizeCategoryOrder(SettingsJson settingsJson) {
+        List<String> source = settingsJson != null && settingsJson.categoryOrder != null
+                ? settingsJson.categoryOrder
+                : List.of();
+        if (source.isEmpty()) {
+            return List.of();
+        }
+        List<String> normalized = new java.util.ArrayList<>();
+        for (String entry : source) {
+            if (entry == null) {
+                continue;
+            }
+            String trimmed = entry.trim();
+            if (!trimmed.isEmpty()) {
+                normalized.add(trimmed);
+            }
+        }
+        return normalized;
+    }
+
+    private static final class SettingsJson {
+        Double fallRespawnSeconds;
+        Double fallFailsafeVoidY;
+        TransformJson spawn;
+        Boolean idleFallRespawnForOp;
+        Boolean disableWeaponDamage;
+        Boolean teleportDebugEnabled;
+        List<String> categoryOrder;
+    }
+
+    private static final class GlobalMessagesJson {
+        Long intervalMinutes;
+        List<String> messages;
+    }
+
+    private static final class PlayerCountsJson {
+        List<PlayerCountSampleJson> samples;
+    }
+
+    private static final class PlayerCountSampleJson {
+        long timestampMs;
+        int count;
+    }
+
+    private static final class ProgressEntry {
+        String uuid;
+        List<String> completedMaps;
+        java.util.Map<String, Long> bestTimes;
+        String name;
+        Long xp;
+        Integer level;
+        Boolean welcomeShown;
+        Long playtimeMs;
+    }
+
+    private static final class MapJson {
+        String id;
+        String name;
+        String category;
+        String world;
+        TransformJson start;
+        TransformJson finish;
+        TransformJson startTrigger;
+        TransformJson leaveTrigger;
+        TransformJson leaveTeleport;
+        Long firstCompletionXp;
+        Integer difficulty;
+        Integer order;
+        Boolean enableMithrilSword;
+        Long createdAt;
+        Long updatedAt;
+        List<TransformJson> checkpoints;
+    }
+
+    private static final class TransformJson {
+        Double x;
+        Double y;
+        Double z;
+        Float rotX;
+        Float rotY;
+        Float rotZ;
     }
 }

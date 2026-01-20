@@ -32,7 +32,7 @@ Technical design documentation for the Hyvexa Parkour Plugin.
 ┌─────────────────────────────────────────────────────────────────────┐
 │                         MySQL Database                              │
 │  players | maps | map_checkpoints | player_completions | settings   │
-│  player_titles | global_messages | player_count_samples             │
+│  global_messages | global_message_settings | player_count_samples   │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -99,9 +99,7 @@ RunTracker.checkFinish()
     │   ├── Update in-memory completedMaps set
     │   ├── Update in-memory bestMapTimes if new best
     │   ├── Award XP (first completion only)
-    │   ├── Check title unlocks
     │   ├── INSERT INTO player_completions (immediate)
-    │   ├── INSERT INTO player_titles if new (immediate)
     │   └── Queue player XP/level save (debounced 5s)
     │
     ├── Broadcast completion message (if new best)
@@ -218,7 +216,6 @@ Credentials stored in `Parkour/database.json` (gitignored):
 | `maps` | Map definitions with all transform positions |
 | `map_checkpoints` | Checkpoint positions per map |
 | `player_completions` | Completed maps with best times per player |
-| `player_titles` | Earned titles per player |
 | `settings` | Global server settings (single row) |
 | `global_messages` | Broadcast messages |
 | `global_message_settings` | Message interval (single row) |
@@ -241,7 +238,7 @@ Runtime: All reads from memory (fast)
      ▼
 Writes: Update memory + INSERT/UPDATE to MySQL
      │
-     ├── Immediate: completions, titles, map changes
+     ├── Immediate: completions, map changes
      └── Debounced (5s): player XP/level/playtime updates
      │
      ▼
@@ -288,7 +285,7 @@ Server Stop: flushPendingSave() + connection pool shutdown
 
 - Uses Y-coordinate comparison over time
 - Blocked while `climbing` or `onGround` (movement states)
-- Configurable timeout in Settings.json (`fallRespawnSeconds`)
+- Configurable timeout in the `settings` table (`fall_respawn_seconds`)
 
 **Edge case**: Falling through a ladder resets fall timer on each rung touch.
 
@@ -316,28 +313,33 @@ Server Stop: flushPendingSave() + connection pool shutdown
 
 - Most writes are non-blocking (HikariCP pool handles connections)
 - ProgressStore uses 5-second debounced saves for XP/level updates
-- Completions and titles saved immediately for data integrity
+- Completions saved immediately for data integrity
 - Connection pool sized for 10 concurrent connections (configurable)
 
 **Note**: Database latency affects write operations but reads are always from memory.
 
 ## Configuration
 
-### Settings.json
+### Settings (database-backed)
 
-```json
-{
-  "fallRespawnSeconds": 3.0,
-  "idleFallRespawnForOp": false,
-  "categoryOrder": ["Easy", "Medium", "Hard", "Insane"]
-}
-```
+Settings are stored in the `settings` table (single row, `id = 1`) and loaded by `SettingsStore`.
 
 | Setting | Type | Description |
 |---------|------|-------------|
-| `fallRespawnSeconds` | double | Seconds of falling before respawn (0 = disabled) |
-| `idleFallRespawnForOp` | boolean | Whether OPs get idle fall respawn |
-| `categoryOrder` | string[] | Order of categories in selection UI |
+| `fall_respawn_seconds` | double | Seconds of falling before respawn (<= 0 resets to default) |
+| `void_y_failsafe` | double | Void cutoff Y for fail-safe teleport |
+| `weapon_damage_disabled` | boolean | Disable weapon damage/knockback |
+| `debug_mode` | boolean | Enable teleport debug logging |
+| `spawn_*` | doubles/floats | Optional spawn position/rotation override |
+
+### Runtime-only toggles
+
+These are currently held in memory and reset on restart:
+
+| Setting | Source | Description |
+|---------|--------|-------------|
+| `idleFallRespawnForOp` | `SettingsStore` | Whether OPs get idle fall respawn |
+| `categoryOrder` | `SettingsStore` | Category ordering hints for selection UI |
 
 ### ParkourConstants.java
 

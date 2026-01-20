@@ -58,7 +58,6 @@ public class ProgressStore {
 
             loadPlayers();
             loadCompletions();
-            loadTitles();
 
             LOGGER.atInfo().log("ProgressStore loaded " + progress.size() + " players from database");
 
@@ -119,27 +118,6 @@ public class ProgressStore {
         }
     }
 
-    private void loadTitles() {
-        String sql = "SELECT player_uuid, title FROM player_titles";
-
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
-
-            while (rs.next()) {
-                UUID uuid = UUID.fromString(rs.getString("player_uuid"));
-                String title = rs.getString("title");
-
-                PlayerProgress playerProgress = progress.get(uuid);
-                if (playerProgress != null) {
-                    playerProgress.titles.add(title);
-                }
-            }
-        } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to load titles: " + e.getMessage());
-        }
-    }
-
     public boolean isMapCompleted(UUID playerId, String mapId) {
         PlayerProgress playerProgress = progress.get(playerId);
         return playerProgress != null && playerProgress.completedMaps.contains(mapId);
@@ -195,27 +173,12 @@ public class ProgressStore {
             playerProgress.xp = Math.max(0L, oldXp + xpAwarded);
             playerProgress.level = calculateLevel(playerProgress.xp);
 
-            Set<String> unlockedTitles = ConcurrentHashMap.newKeySet();
-            if (playerProgress.level >= ParkourConstants.RANK_TITLE_NOVICE_LEVEL) {
-                addTitle(playerProgress, ParkourConstants.TITLE_NOVICE, unlockedTitles);
-            }
-            if (playerProgress.level >= ParkourConstants.RANK_TITLE_PRO_LEVEL) {
-                addTitle(playerProgress, ParkourConstants.TITLE_PRO, unlockedTitles);
-            }
-            if (playerProgress.level >= ParkourConstants.RANK_TITLE_MASTER_LEVEL) {
-                addTitle(playerProgress, ParkourConstants.TITLE_MASTER, unlockedTitles);
-            }
-
             dirtyPlayers.add(playerId);
-            // Save titles immediately if new ones were unlocked
-            if (!unlockedTitles.isEmpty()) {
-                saveTitlesForPlayer(playerId, unlockedTitles);
-            }
             // Save completion immediately
             saveCompletion(playerId, mapId, timeMs);
 
             result = new ProgressionResult(firstCompletionForMap, newBest, personalBest, xpAwarded,
-                    oldLevel, playerProgress.level, unlockedTitles);
+                    oldLevel, playerProgress.level);
         } finally {
             fileLock.writeLock().unlock();
         }
@@ -243,24 +206,6 @@ public class ProgressStore {
             stmt.executeUpdate();
         } catch (SQLException e) {
             LOGGER.at(Level.WARNING).log("Failed to save completion: " + e.getMessage());
-        }
-    }
-
-    private void saveTitlesForPlayer(UUID playerId, Set<String> titles) {
-        if (!DatabaseManager.getInstance().isInitialized() || titles.isEmpty()) return;
-
-        String sql = "INSERT IGNORE INTO player_titles (player_uuid, title) VALUES (?, ?)";
-
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            for (String title : titles) {
-                stmt.setString(1, playerId.toString());
-                stmt.setString(2, title);
-                stmt.addBatch();
-            }
-            stmt.executeBatch();
-        } catch (SQLException e) {
-            LOGGER.at(Level.WARNING).log("Failed to save titles: " + e.getMessage());
         }
     }
 
@@ -382,9 +327,9 @@ public class ProgressStore {
         return Math.max(0L, requiredXp - playerXp);
     }
 
-    public Set<String> getTitles(UUID playerId) {
+    public Set<String> getCompletedMaps(UUID playerId) {
         PlayerProgress playerProgress = progress.get(playerId);
-        return playerProgress != null ? Set.copyOf(playerProgress.titles) : Set.of();
+        return playerProgress != null ? Set.copyOf(playerProgress.completedMaps) : Set.of();
     }
 
     public Set<UUID> getPlayerIds() {
@@ -424,7 +369,7 @@ public class ProgressStore {
     private void deletePlayerFromDatabase(UUID playerId) {
         if (!DatabaseManager.getInstance().isInitialized()) return;
 
-        // CASCADE will delete completions and titles
+        // CASCADE will delete completions
         String sql = "DELETE FROM players WHERE uuid = ?";
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
@@ -537,12 +482,6 @@ public class ProgressStore {
 
     public static String getRankNameForXp(long xp) {
         return getRankNameForLevel(calculateLevel(xp));
-    }
-
-    private static void addTitle(PlayerProgress progress, String title, Set<String> unlockedTitles) {
-        if (progress.titles.add(title)) {
-            unlockedTitles.add(title);
-        }
     }
 
     public static long getTotalPossibleXp(MapStore mapStore) {
@@ -696,7 +635,6 @@ public class ProgressStore {
     private static class PlayerProgress {
         final Set<String> completedMaps = ConcurrentHashMap.newKeySet();
         final java.util.Map<String, Long> bestMapTimes = new ConcurrentHashMap<>();
-        final Set<String> titles = ConcurrentHashMap.newKeySet();
         long xp;
         int level = 1;
         boolean welcomeShown;
@@ -723,17 +661,15 @@ public class ProgressStore {
         public final long xpAwarded;
         public final int oldLevel;
         public final int newLevel;
-        public final Set<String> titlesUnlocked;
 
         public ProgressionResult(boolean firstCompletion, boolean newBest, boolean personalBest, long xpAwarded,
-                                 int oldLevel, int newLevel, Set<String> titlesUnlocked) {
+                                 int oldLevel, int newLevel) {
             this.firstCompletion = firstCompletion;
             this.newBest = newBest;
             this.personalBest = personalBest;
             this.xpAwarded = xpAwarded;
             this.oldLevel = oldLevel;
             this.newLevel = newLevel;
-            this.titlesUnlocked = titlesUnlocked;
         }
     }
 

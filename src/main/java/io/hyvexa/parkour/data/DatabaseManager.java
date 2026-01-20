@@ -109,7 +109,7 @@ public class DatabaseManager {
             }
 
             // Test tables exist
-            String[] tables = {"players", "maps", "player_completions", "player_titles", "map_checkpoints", "settings"};
+            String[] tables = {"players", "maps", "player_completions", "map_checkpoints", "settings"};
             StringBuilder missingTables = new StringBuilder();
 
             for (String table : tables) {
