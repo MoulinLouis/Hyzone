@@ -90,7 +90,7 @@ public class MapSelectPage extends BaseParkourPage {
         if (playerRef == null || player == null) {
             return;
         }
-        runTracker.setActiveMap(playerRef.getUuid(), mapId);
+        runTracker.setActiveMap(playerRef.getUuid(), mapId, map.getStart());
         World world = store.getExternalData().getWorld();
         Vector3d position = new Vector3d(map.getStart().getX(), map.getStart().getY(), map.getStart().getZ());
         Vector3f rotation = new Vector3f(map.getStart().getRotX(), map.getStart().getRotY(),

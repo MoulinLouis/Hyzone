@@ -231,3 +231,4 @@
 - Restore RunTracker telemetry helpers used by HUD and teleport debug.
 - Restore RunTracker player cleanup API used on disconnect.
 - Restore RunTracker teleport stats drain API used by debug logging.
+- Delay run timer start until the player moves off the start position after map start/reset.

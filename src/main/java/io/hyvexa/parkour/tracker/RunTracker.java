@@ -36,6 +36,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class RunTracker {
 
     private static final double TOUCH_RADIUS_SQ = ParkourConstants.TOUCH_RADIUS * ParkourConstants.TOUCH_RADIUS;
+    private static final double START_MOVE_THRESHOLD_SQ = 0.0025;
 
     private final MapStore mapStore;
     private final ProgressStore progressStore;
@@ -53,8 +54,14 @@ public class RunTracker {
     }
 
     public void setActiveMap(UUID playerId, String mapId) {
-        activeRuns.put(playerId, new ActiveRun(mapId, System.currentTimeMillis()));
+        setActiveMap(playerId, mapId, null);
+    }
+
+    public void setActiveMap(UUID playerId, String mapId, TransformData start) {
+        ActiveRun run = new ActiveRun(mapId, System.currentTimeMillis());
+        activeRuns.put(playerId, run);
         idleFalls.remove(playerId);
+        armStartOnMovement(run, start);
     }
 
     public void clearActiveMap(UUID playerId) {
@@ -145,6 +152,9 @@ public class RunTracker {
         if (run == null) {
             return null;
         }
+        if (run.waitingForStart) {
+            return 0L;
+        }
         return Math.max(0L, System.currentTimeMillis() - run.startTimeMs);
     }
 
@@ -203,6 +213,7 @@ public class RunTracker {
         if (map == null) {
             return;
         }
+        updateStartOnMovement(run, position);
         if (checkLeaveTrigger(ref, store, player, playerRef, position, map)) {
             return;
         }
@@ -211,7 +222,7 @@ public class RunTracker {
             run.fallStartTime = null;
             run.lastY = null;
             if (run.lastCheckpointIndex < 0) {
-                run.startTimeMs = System.currentTimeMillis();
+                armStartOnMovement(run, map.getStart());
             }
             teleportToRespawn(ref, store, run, map);
             recordTeleport(playerRef.getUuid(), TeleportCause.RUN_RESPAWN);
@@ -240,7 +251,7 @@ public class RunTracker {
             player.sendMessage(Message.raw("Map '" + map.getId() + "' has no start set."));
             return;
         }
-        setActiveMap(playerRef.getUuid(), map.getId());
+        setActiveMap(playerRef.getUuid(), map.getId(), map.getStart());
         Vector3d position = new Vector3d(map.getStart().getX(), map.getStart().getY(), map.getStart().getZ());
         Vector3f rotation = new Vector3f(map.getStart().getRotX(), map.getStart().getRotY(),
                 map.getStart().getRotZ());
@@ -439,6 +450,37 @@ public class RunTracker {
         return dx * dx + dy * dy + dz * dz;
     }
 
+    private static double distanceSq(Vector3d position, Vector3d target) {
+        double dx = position.getX() - target.getX();
+        double dy = position.getY() - target.getY();
+        double dz = position.getZ() - target.getZ();
+        return dx * dx + dy * dy + dz * dz;
+    }
+
+    private void armStartOnMovement(ActiveRun run, TransformData start) {
+        if (run == null) {
+            return;
+        }
+        if (start == null) {
+            run.waitingForStart = false;
+            run.startPosition = null;
+            return;
+        }
+        run.startPosition = new Vector3d(start.getX(), start.getY(), start.getZ());
+        run.waitingForStart = true;
+        run.startTimeMs = System.currentTimeMillis();
+    }
+
+    private void updateStartOnMovement(ActiveRun run, Vector3d position) {
+        if (run == null || !run.waitingForStart || run.startPosition == null || position == null) {
+            return;
+        }
+        if (distanceSq(position, run.startPosition) > START_MOVE_THRESHOLD_SQ) {
+            run.waitingForStart = false;
+            run.startTimeMs = System.currentTimeMillis();
+        }
+    }
+
     private void teleportToRespawn(Ref<EntityStore> ref, Store<EntityStore> store, ActiveRun run, Map map) {
         TransformData spawn = null;
         if (run.lastCheckpointIndex >= 0 && run.lastCheckpointIndex < map.getCheckpoints().size()) {
@@ -500,7 +542,7 @@ public class RunTracker {
             player.sendMessage(Message.raw("Map start not available."));
             return false;
         }
-        setActiveMap(playerRef.getUuid(), mapId);
+        setActiveMap(playerRef.getUuid(), mapId, map.getStart());
         Vector3d position = new Vector3d(map.getStart().getX(), map.getStart().getY(), map.getStart().getZ());
         Vector3f rotation = new Vector3f(map.getStart().getRotX(), map.getStart().getRotY(),
                 map.getStart().getRotZ());
@@ -608,6 +650,8 @@ public class RunTracker {
     private static class ActiveRun {
         private final String mapId;
         private long startTimeMs;
+        private boolean waitingForStart;
+        private Vector3d startPosition;
         private final Set<Integer> touchedCheckpoints = new HashSet<>();
         private boolean finishTouched;
         private int lastCheckpointIndex = -1;
