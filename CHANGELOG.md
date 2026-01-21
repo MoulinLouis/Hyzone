@@ -5,6 +5,7 @@
 - Added a Player Settings button to switch music to the Celeste OST.
 - Preserve the Player Settings music label per player when reopening the page.
 - Sync the run HUD music line with the player's selected track.
+- Disabled player damage from all sources (global god mode).
 - Widen the admin player action buttons so labels are fully visible.
 - Added default/no-music buttons in Player Settings that reset to the Hytale music mix.
 - Added a dedicated Player Settings music page with all music controls.
