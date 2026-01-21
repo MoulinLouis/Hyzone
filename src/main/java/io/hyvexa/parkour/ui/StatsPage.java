@@ -62,7 +62,7 @@ public class StatsPage extends BaseParkourPage {
         if (playerRef == null || player == null) {
             return;
         }
-        long xp = progressStore.getXp(playerRef.getUuid());
+        long xp = progressStore.getCalculatedCompletionXp(playerRef.getUuid(), mapStore);
         String rankName = progressStore.getRankName(playerRef.getUuid(), mapStore);
         int completionRank = progressStore.getCompletionRank(playerRef.getUuid(), mapStore);
         int completed = progressStore.getCompletedMapCount(playerRef.getUuid());
