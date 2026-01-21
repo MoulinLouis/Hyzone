@@ -34,8 +34,17 @@ $C.@PageOverlay {
         Text: "Total playtime per player.";
       }
 
+      Label #AveragePlaytime {
+        Anchor: (Top: 6);
+        Style: (
+          FontSize: 13,
+          TextColor: #cfd7dc
+        );
+        Text: "Average playtime: --";
+      }
+
       Group #PlaytimeList {
-        Anchor: (Width: 490, Top: 10, Height: 220);
+        Anchor: (Width: 490, Top: 8, Height: 212);
         LayoutMode: TopScrolling;
         Padding: (Left: 6, Right: 6);
         ScrollbarStyle: $C.@DefaultScrollbarStyle;

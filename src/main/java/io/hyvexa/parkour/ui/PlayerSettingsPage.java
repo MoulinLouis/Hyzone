@@ -4,8 +4,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
-import com.hypixel.hytale.protocol.packets.world.UpdateEnvironmentMusic;
-import com.hypixel.hytale.server.core.asset.type.ambiencefx.config.AmbienceFX;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.Message;
@@ -21,8 +19,6 @@ import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.parkour.visibility.PlayerVisibilityManager;
 
 import javax.annotation.Nonnull;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class PlayerSettingsPage extends BaseParkourPage {
 
@@ -31,14 +27,7 @@ public class PlayerSettingsPage extends BaseParkourPage {
     private static final String BUTTON_SHOW_ALL = "ShowAll";
     private static final String BUTTON_HIDE_HUD = "HideHud";
     private static final String BUTTON_SHOW_HUD = "ShowHud";
-    private static final String BUTTON_PLAY_ZELDA = "PlayZelda";
-    private static final String BUTTON_PLAY_CELESTE = "PlayCeleste";
-    private static final String DEFAULT_MUSIC_AMBIENCE = "Mus_Fallback_Overground";
-    private static final String DEFAULT_MUSIC_AMBIENCE_ALT = "Mus_Fallback_Underground";
-    private static final String CELESTE_MUSIC_AMBIENCE = "Mus_Parkour_Celeste";
-    private static final String MUSIC_LABEL_SELECTOR = "#CurrentMusicLabel";
-    private static final String DEFAULT_MUSIC_LABEL = "Zelda OST";
-    private static final ConcurrentHashMap<UUID, String> MUSIC_LABELS = new ConcurrentHashMap<>();
+    private static final String BUTTON_MUSIC = "Music";
 
     public PlayerSettingsPage(@Nonnull PlayerRef playerRef) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
@@ -48,8 +37,6 @@ public class PlayerSettingsPage extends BaseParkourPage {
     public void build(@Nonnull Ref<EntityStore> ref, @Nonnull UICommandBuilder uiCommandBuilder,
                       @Nonnull UIEventBuilder uiEventBuilder, @Nonnull Store<EntityStore> store) {
         uiCommandBuilder.append("Pages/Parkour_PlayerSettings.ui");
-        uiCommandBuilder.set(MUSIC_LABEL_SELECTOR + ".Text",
-                "Now Playing: " + getStoredMusicLabel(playerRef.getUuid()));
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#HideAllButton",
@@ -60,10 +47,8 @@ public class PlayerSettingsPage extends BaseParkourPage {
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_HIDE_HUD), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ShowHudButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_SHOW_HUD), false);
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#PlayZeldaMusicButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_PLAY_ZELDA), false);
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#PlayCelesteMusicButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_PLAY_CELESTE), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#MusicButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_MUSIC), false);
     }
 
     @Override
@@ -107,12 +92,8 @@ public class PlayerSettingsPage extends BaseParkourPage {
             }
             return;
         }
-        if (BUTTON_PLAY_ZELDA.equals(data.getButton())) {
-            restartDefaultMusic(ref, store, playerRef, DEFAULT_MUSIC_LABEL);
-            return;
-        }
-        if (BUTTON_PLAY_CELESTE.equals(data.getButton())) {
-            playMusic(ref, store, playerRef, CELESTE_MUSIC_AMBIENCE, "Celeste OST");
+        if (BUTTON_MUSIC.equals(data.getButton())) {
+            player.getPageManager().openCustomPage(ref, store, new PlayerMusicPage(playerRef));
         }
     }
 
@@ -150,67 +131,4 @@ public class PlayerSettingsPage extends BaseParkourPage {
         }
     }
 
-    private void restartDefaultMusic(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store,
-                                     @Nonnull PlayerRef playerRef, @Nonnull String label) {
-        playMusic(ref, store, playerRef, resolveDefaultMusicIndex(), label);
-    }
-
-    private void playMusic(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store,
-                           @Nonnull PlayerRef playerRef, @Nonnull String ambienceId,
-                           @Nonnull String label) {
-        int musicIndex = AmbienceFX.getAssetMap().getIndex(ambienceId);
-        playMusic(ref, store, playerRef, musicIndex, label);
-    }
-
-    private void playMusic(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store,
-                           @Nonnull PlayerRef playerRef, int musicIndex, @Nonnull String label) {
-        World world = store.getExternalData().getWorld();
-        if (world == null) {
-            return;
-        }
-        world.execute(() -> {
-            if (!ref.isValid() || !playerRef.isValid()) {
-                return;
-            }
-            Player player = store.getComponent(ref, Player.getComponentType());
-            if (player == null) {
-                return;
-            }
-            var packetHandler = playerRef.getPacketHandler();
-            if (packetHandler == null) {
-                player.sendMessage(Message.raw("Unable to restart music right now."));
-                return;
-            }
-            if (musicIndex <= 0) {
-                player.sendMessage(Message.raw("Music not loaded."));
-                return;
-            }
-            storeMusicLabel(playerRef.getUuid(), label);
-            packetHandler.write(new UpdateEnvironmentMusic(musicIndex));
-            player.getPageManager().openCustomPage(ref, store, new PlayerSettingsPage(playerRef));
-            player.sendMessage(Message.raw("Now playing: " + label + "."));
-        });
-    }
-
-    private int resolveDefaultMusicIndex() {
-        int musicIndex = AmbienceFX.getAssetMap().getIndex(DEFAULT_MUSIC_AMBIENCE);
-        if (musicIndex <= 0) {
-            musicIndex = AmbienceFX.getAssetMap().getIndex(DEFAULT_MUSIC_AMBIENCE_ALT);
-        }
-        return musicIndex;
-    }
-
-    public static String getStoredMusicLabel(UUID playerId) {
-        if (playerId == null) {
-            return DEFAULT_MUSIC_LABEL;
-        }
-        return MUSIC_LABELS.getOrDefault(playerId, DEFAULT_MUSIC_LABEL);
-    }
-
-    private static void storeMusicLabel(UUID playerId, String label) {
-        if (playerId == null || label == null) {
-            return;
-        }
-        MUSIC_LABELS.put(playerId, label);
-    }
 }

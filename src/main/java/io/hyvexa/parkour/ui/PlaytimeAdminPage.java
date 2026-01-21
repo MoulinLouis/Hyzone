@@ -70,15 +70,23 @@ public class PlaytimeAdminPage extends BaseParkourPage {
         commandBuilder.clear("#PlaytimeCards");
         List<UUID> playerIds = new ArrayList<>(progressStore.getPlayerIds());
         playerIds.sort(Comparator.comparingLong((UUID id) -> progressStore.getPlaytimeMs(id)).reversed());
+        long totalPlaytimeMs = 0L;
         int index = 0;
         for (UUID playerId : playerIds) {
             commandBuilder.append("#PlaytimeCards", "Pages/Parkour_PlaytimeEntry.ui");
             String name = formatDisplayName(playerId);
             long playtimeMs = progressStore.getPlaytimeMs(playerId);
+            totalPlaytimeMs += playtimeMs;
             commandBuilder.set("#PlaytimeCards[" + index + "] #PlaytimeName.Text", name);
             commandBuilder.set("#PlaytimeCards[" + index + "] #PlaytimeValue.Text",
                     FormatUtils.formatPlaytime(playtimeMs));
             index++;
+        }
+        if (playerIds.isEmpty()) {
+            commandBuilder.set("#AveragePlaytime.Text", "Average playtime: --");
+        } else {
+            long averageMs = totalPlaytimeMs / playerIds.size();
+            commandBuilder.set("#AveragePlaytime.Text", "Average playtime: " + FormatUtils.formatPlaytime(averageMs));
         }
         if (playerIds.isEmpty()) {
             commandBuilder.set("#EmptyText.Text", "No playtime tracked yet.");

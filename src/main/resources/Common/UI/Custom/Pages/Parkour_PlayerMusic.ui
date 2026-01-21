@@ -9,7 +9,7 @@ $C.@PageOverlay {
         TextButton #BackButton {
           Anchor: (Left: 12, Top: 4, Width: 64, Height: 24);
           Padding: (Left: 8, Top: 2);
-          Text: "Close";
+          Text: "< Back";
           Style: TextButtonStyle(
             Default: (LabelStyle: (FontSize: 14, TextColor: #93844c, RenderBold: true)),
             Sounds: $C.@ButtonSounds,
@@ -17,7 +17,7 @@ $C.@PageOverlay {
           Background: #000000(0.13);
         }
         $C.@Title {
-          @Text = "Player Settings";
+          @Text = "Music Settings";
         }
       }
     }
@@ -31,72 +31,53 @@ $C.@PageOverlay {
           FontSize: 14,
           TextColor: #9fb0ba
         );
-        Text: "Control player visibility preferences.";
+        Text: "Music selection (developer items).";
+      }
+
+      Label #CurrentMusicLabel {
+        Anchor: (Top: 8);
+        Style: (
+          FontSize: 14,
+          TextColor: #c8d6df
+        );
+        Text: "Now Playing: Zelda OST";
       }
 
       Group {
-        Anchor: (Top: 12, Left: 0, Right: 0, Height: 24);
+        Anchor: (Top: 10, Left: 0, Right: 0, Height: 24);
         LayoutMode: Left;
 
-        $C.@TextButton #HideAllButton {
+        $C.@TextButton #PlayZeldaMusicButton {
           Anchor: (Height: 24, Width: 200);
-          Text: "Hide players";
+          Text: "Play Zelda OST";
         }
 
         Group {
           Anchor: (Width: 8);
         }
 
-        $C.@TextButton #ShowAllButton {
+        $C.@TextButton #PlayCelesteMusicButton {
           Anchor: (Height: 24, Width: 200);
-          Text: "Show players";
+          Text: "Play Celeste OST";
         }
-      }
-
-      Label {
-        Anchor: (Top: 12);
-        Style: (
-          FontSize: 14,
-          TextColor: #9fb0ba
-        );
-        Text: "Run HUD visibility.";
       }
 
       Group {
         Anchor: (Top: 8, Left: 0, Right: 0, Height: 24);
         LayoutMode: Left;
 
-        $C.@TextButton #HideHudButton {
+        $C.@TextButton #PlayDefaultMusicButton {
           Anchor: (Height: 24, Width: 200);
-          Text: "Hide HUD";
+          Text: "Default Music";
         }
 
         Group {
           Anchor: (Width: 8);
         }
 
-        $C.@TextButton #ShowHudButton {
+        $C.@TextButton #PlayNoMusicButton {
           Anchor: (Height: 24, Width: 200);
-          Text: "Show HUD";
-        }
-      }
-
-      Label {
-        Anchor: (Top: 12);
-        Style: (
-          FontSize: 14,
-          TextColor: #9fb0ba
-        );
-        Text: "Music options.";
-      }
-
-      Group {
-        Anchor: (Top: 8, Left: 0, Right: 0, Height: 24);
-        LayoutMode: Left;
-
-        $C.@TextButton #MusicButton {
-          Anchor: (Height: 24, Width: 200);
-          Text: "Music";
+          Text: "No Music";
         }
       }
     }
