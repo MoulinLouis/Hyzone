@@ -25,18 +25,28 @@ public class PlayerMusicPage extends BaseParkourPage {
     private static final String BUTTON_CLOSE = "Close";
     private static final String BUTTON_PLAY_ZELDA = "PlayZelda";
     private static final String BUTTON_PLAY_CELESTE = "PlayCeleste";
+    private static final String BUTTON_PLAY_AURA = "PlayAura";
     private static final String BUTTON_PLAY_DEFAULT = "PlayDefault";
     private static final String BUTTON_PLAY_NONE = "PlayNone";
+    private static final String BUTTON_TOGGLE_CHECKPOINT_SFX = "ToggleCheckpointSfx";
+    private static final String BUTTON_TOGGLE_VICTORY_SFX = "ToggleVictorySfx";
     private static final String DEFAULT_MUSIC_AMBIENCE = "Mus_Fallback_Overground";
     private static final String DEFAULT_MUSIC_AMBIENCE_ALT = "Mus_Fallback_Underground";
     private static final String CELESTE_MUSIC_AMBIENCE = "Mus_Parkour_Celeste";
+    private static final String AURA_MUSIC_AMBIENCE = "Mus_Parkour_Aura";
     private static final String NO_MUSIC_AMBIENCE = "AmbFX_Void";
     private static final String HYTALE_DEFAULT_MUSIC_AMBIENCE = "Mus_Forgotten_Temple";
     private static final String MUSIC_LABEL_SELECTOR = "#CurrentMusicLabel";
+    private static final String CHECKPOINT_SFX_LABEL_SELECTOR = "#CheckpointSfxButton.Text";
+    private static final String VICTORY_SFX_LABEL_SELECTOR = "#VictorySfxButton.Text";
     private static final String DEFAULT_MUSIC_LABEL = "Zelda OST";
     private static final String Hytale_MUSIC_LABEL = "Default Music";
     private static final String NO_MUSIC_LABEL = "No Music";
+    private static final String SFX_ENABLED_LABEL = "Disable";
+    private static final String SFX_DISABLED_LABEL = "Enable";
     private static final ConcurrentHashMap<UUID, String> MUSIC_LABELS = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<UUID, Boolean> CHECKPOINT_SFX_ENABLED = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<UUID, Boolean> VICTORY_SFX_ENABLED = new ConcurrentHashMap<>();
 
     public PlayerMusicPage(@Nonnull PlayerRef playerRef) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
@@ -48,16 +58,24 @@ public class PlayerMusicPage extends BaseParkourPage {
         uiCommandBuilder.append("Pages/Parkour_PlayerMusic.ui");
         uiCommandBuilder.set(MUSIC_LABEL_SELECTOR + ".Text",
                 "Now Playing: " + getStoredMusicLabel(playerRef.getUuid()));
+        uiCommandBuilder.set(CHECKPOINT_SFX_LABEL_SELECTOR, getCheckpointSfxLabel(playerRef.getUuid()));
+        uiCommandBuilder.set(VICTORY_SFX_LABEL_SELECTOR, getVictorySfxLabel(playerRef.getUuid()));
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#PlayZeldaMusicButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_PLAY_ZELDA), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#PlayCelesteMusicButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_PLAY_CELESTE), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#PlayAuraMusicButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_PLAY_AURA), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#PlayDefaultMusicButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_PLAY_DEFAULT), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#PlayNoMusicButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_PLAY_NONE), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CheckpointSfxButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TOGGLE_CHECKPOINT_SFX), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#VictorySfxButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TOGGLE_VICTORY_SFX), false);
     }
 
     @Override
@@ -89,12 +107,26 @@ public class PlayerMusicPage extends BaseParkourPage {
             playMusic(ref, store, playerRef, CELESTE_MUSIC_AMBIENCE, "Celeste OST");
             return;
         }
+        if (BUTTON_PLAY_AURA.equals(data.getButton())) {
+            playMusic(ref, store, playerRef, AURA_MUSIC_AMBIENCE, "Aura");
+            return;
+        }
         if (BUTTON_PLAY_DEFAULT.equals(data.getButton())) {
             playHytaleDefaultMusic(ref, store, playerRef, Hytale_MUSIC_LABEL);
             return;
         }
         if (BUTTON_PLAY_NONE.equals(data.getButton())) {
             playEmptyMusic(ref, store, playerRef, NO_MUSIC_LABEL);
+            return;
+        }
+        if (BUTTON_TOGGLE_CHECKPOINT_SFX.equals(data.getButton())) {
+            toggleCheckpointSfx(playerRef.getUuid());
+            player.getPageManager().openCustomPage(ref, store, new PlayerMusicPage(playerRef));
+            return;
+        }
+        if (BUTTON_TOGGLE_VICTORY_SFX.equals(data.getButton())) {
+            toggleVictorySfx(playerRef.getUuid());
+            player.getPageManager().openCustomPage(ref, store, new PlayerMusicPage(playerRef));
         }
     }
 
@@ -171,5 +203,37 @@ public class PlayerMusicPage extends BaseParkourPage {
             return;
         }
         MUSIC_LABELS.put(playerId, label);
+    }
+
+    public static boolean isCheckpointSfxEnabled(UUID playerId) {
+        return playerId != null && CHECKPOINT_SFX_ENABLED.getOrDefault(playerId, true);
+    }
+
+    public static boolean isVictorySfxEnabled(UUID playerId) {
+        return playerId != null && VICTORY_SFX_ENABLED.getOrDefault(playerId, true);
+    }
+
+    private static void toggleCheckpointSfx(UUID playerId) {
+        if (playerId == null) {
+            return;
+        }
+        boolean enabled = CHECKPOINT_SFX_ENABLED.getOrDefault(playerId, true);
+        CHECKPOINT_SFX_ENABLED.put(playerId, !enabled);
+    }
+
+    private static void toggleVictorySfx(UUID playerId) {
+        if (playerId == null) {
+            return;
+        }
+        boolean enabled = VICTORY_SFX_ENABLED.getOrDefault(playerId, true);
+        VICTORY_SFX_ENABLED.put(playerId, !enabled);
+    }
+
+    private static String getCheckpointSfxLabel(UUID playerId) {
+        return (isCheckpointSfxEnabled(playerId) ? SFX_ENABLED_LABEL : SFX_DISABLED_LABEL) + " Checkpoint SFX";
+    }
+
+    private static String getVictorySfxLabel(UUID playerId) {
+        return (isVictorySfxEnabled(playerId) ? SFX_ENABLED_LABEL : SFX_DISABLED_LABEL) + " Victory SFX";
     }
 }
