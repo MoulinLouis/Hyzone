@@ -6,6 +6,14 @@
 - Preserve the Player Settings music label per player when reopening the page.
 - Sync the run HUD music line with the player's selected track.
 - Widen the admin player action buttons so labels are fully visible.
+- Added default/no-music buttons in Player Settings that reset to the Hytale music mix.
+- Added a dedicated Player Settings music page with all music controls.
+- Set the "No Music" button to return players to the Zelda OST.
+- Added a silent ambience asset so "No Music" can mute music per player.
+- Updated "Default Music" to force the Hytale Mus_Fallback_Overground ambience.
+- Fixed "Default Music" to target the Hytale ambience path and allow empty ambience for "No Music".
+- Updated music button targets to use AmbFX_Void for silence and Mus_Forgotten_Temple for default music.
+- Added average playtime to the playtime admin page.
 - Added a /pk admin Players page with search, pagination, and per-player map stats detail view.
 - Added admin player actions for teleporting and killing from the player stats page with confirmation prompts.
 - Added admin player fly toggles to grant or revoke flight without changing game mode.

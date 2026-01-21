@@ -1,0 +1,8 @@
+{
+  "$Comment": "Manual selection: no music (silence).",
+  "Music": {
+    "Tracks": []
+  },
+  "AudioCategory": "AudioCat_Music",
+  "Priority": 1100
+}

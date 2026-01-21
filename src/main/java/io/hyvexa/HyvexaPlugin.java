@@ -95,7 +95,7 @@ import java.util.logging.Level;
 public class HyvexaPlugin extends JavaPlugin {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final String SERVER_IP_DISPLAY = "test.hyvexa.com";
+    private static final String SERVER_IP_DISPLAY = "play.hyvexa.com";
     private static final int ANNOUNCEMENT_MAX_LINES = 3;
     private static final long ANNOUNCEMENT_DURATION_SECONDS = 10L;
     private static final long PLAYER_COUNT_SAMPLE_SECONDS = PlayerCountStore.DEFAULT_SAMPLE_INTERVAL_SECONDS;
