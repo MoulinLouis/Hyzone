@@ -1,0 +1,10 @@
+{
+  "$Comment": "Manual selection: Aura OST.",
+  "Music": {
+    "Tracks": [
+      "Music/Parkour/AuraThemeLong.ogg"
+    ]
+  },
+  "AudioCategory": "AudioCat_Music",
+  "Priority": 950
+}

@@ -2,7 +2,7 @@ $C = "../Common.ui";
 
 $C.@PageOverlay {
   $C.@Container {
-    Anchor: (Width: 460, Height: 270);
+    Anchor: (Width: 520, Height: 340);
 
     #Title {
       Group {
@@ -31,24 +31,24 @@ $C.@PageOverlay {
           FontSize: 14,
           TextColor: #9fb0ba
         );
-        Text: "Music selection (developer items).";
+        Text: "Music selection.";
       }
 
       Label #CurrentMusicLabel {
         Anchor: (Top: 8);
         Style: (
-          FontSize: 14,
+          FontSize: 15,
           TextColor: #c8d6df
         );
         Text: "Now Playing: Zelda OST";
       }
 
       Group {
-        Anchor: (Top: 10, Left: 0, Right: 0, Height: 24);
+        Anchor: (Top: 12, Left: 0, Right: 0, Height: 26);
         LayoutMode: Left;
 
         $C.@TextButton #PlayZeldaMusicButton {
-          Anchor: (Height: 24, Width: 200);
+          Anchor: (Height: 26, Width: 230);
           Text: "Play Zelda OST";
         }
 
@@ -57,17 +57,27 @@ $C.@PageOverlay {
         }
 
         $C.@TextButton #PlayCelesteMusicButton {
-          Anchor: (Height: 24, Width: 200);
+          Anchor: (Height: 26, Width: 230);
           Text: "Play Celeste OST";
         }
       }
 
       Group {
-        Anchor: (Top: 8, Left: 0, Right: 0, Height: 24);
+        Anchor: (Top: 8, Left: 0, Right: 0, Height: 26);
+        LayoutMode: Left;
+
+        $C.@TextButton #PlayAuraMusicButton {
+          Anchor: (Height: 26, Width: 230);
+          Text: "Play Aura";
+        }
+      }
+
+      Group {
+        Anchor: (Top: 8, Left: 0, Right: 0, Height: 26);
         LayoutMode: Left;
 
         $C.@TextButton #PlayDefaultMusicButton {
-          Anchor: (Height: 24, Width: 200);
+          Anchor: (Height: 26, Width: 230);
           Text: "Default Music";
         }
 
@@ -76,8 +86,36 @@ $C.@PageOverlay {
         }
 
         $C.@TextButton #PlayNoMusicButton {
-          Anchor: (Height: 24, Width: 200);
+          Anchor: (Height: 26, Width: 230);
           Text: "No Music";
+        }
+      }
+
+      Label {
+        Anchor: (Top: 10);
+        Style: (
+          FontSize: 13,
+          TextColor: #9fb0ba
+        );
+        Text: "SFX toggles.";
+      }
+
+      Group {
+        Anchor: (Top: 6, Left: 0, Right: 0, Height: 26);
+        LayoutMode: Left;
+
+        $C.@TextButton #CheckpointSfxButton {
+          Anchor: (Height: 26, Width: 230);
+          Text: "Disable Checkpoint SFX";
+        }
+
+        Group {
+          Anchor: (Width: 8);
+        }
+
+        $C.@TextButton #VictorySfxButton {
+          Anchor: (Height: 26, Width: 230);
+          Text: "Disable Victory SFX";
         }
       }
     }

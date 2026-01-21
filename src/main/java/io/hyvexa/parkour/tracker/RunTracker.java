@@ -411,6 +411,9 @@ public class RunTracker {
     }
 
     private void playFinishSound(PlayerRef playerRef) {
+        if (playerRef == null || !io.hyvexa.parkour.ui.PlayerMusicPage.isVictorySfxEnabled(playerRef.getUuid())) {
+            return;
+        }
         int soundIndex = SoundEvent.getAssetMap().getIndex("SFX_Parkour_Victory");
         if (soundIndex <= SoundEvent.EMPTY_ID) {
             return;
@@ -419,6 +422,9 @@ public class RunTracker {
     }
 
     private void playCheckpointSound(PlayerRef playerRef) {
+        if (playerRef == null || !io.hyvexa.parkour.ui.PlayerMusicPage.isCheckpointSfxEnabled(playerRef.getUuid())) {
+            return;
+        }
         int soundIndex = SoundEvent.getAssetMap().getIndex("SFX_Parkour_Checkpoint");
         if (soundIndex <= SoundEvent.EMPTY_ID) {
             return;

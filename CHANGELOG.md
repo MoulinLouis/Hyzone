@@ -14,6 +14,11 @@
 - Fixed "Default Music" to target the Hytale ambience path and allow empty ambience for "No Music".
 - Updated music button targets to use AmbFX_Void for silence and Mus_Forgotten_Temple for default music.
 - Added average playtime to the playtime admin page.
+- Added an Aura OST button to the music settings page.
+- Enlarged the music settings page and button widths to prevent label cropping.
+- Removed the developer item note from the music page label.
+- Renamed the Aura music button label to drop the OST suffix.
+- Added per-player toggles for checkpoint and victory SFX on the music page.
 - Added a /pk admin Players page with search, pagination, and per-player map stats detail view.
 - Added admin player actions for teleporting and killing from the player stats page with confirmation prompts.
 - Added admin player fly toggles to grant or revoke flight without changing game mode.
