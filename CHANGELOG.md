@@ -1,5 +1,11 @@
 # Changelog
 
+- Added a Player Settings music label to show the currently playing track.
+- Added a Player Settings music button to restart the default Zelda OST.
+- Added a Player Settings button to switch music to the Celeste OST.
+- Preserve the Player Settings music label per player when reopening the page.
+- Sync the run HUD music line with the player's selected track.
+- Widen the admin player action buttons so labels are fully visible.
 - Added a /pk admin Players page with search, pagination, and per-player map stats detail view.
 - Added admin player actions for teleporting and killing from the player stats page with confirmation prompts.
 - Added admin player fly toggles to grant or revoke flight without changing game mode.
