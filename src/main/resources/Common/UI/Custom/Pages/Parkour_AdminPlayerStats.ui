@@ -1,0 +1,238 @@
+$C = "../Common.ui";
+
+$C.@PageOverlay {
+  $C.@Container {
+    Anchor: (Width: 560, Height: 600);
+
+    #Title {
+      Group {
+        TextButton #BackButton {
+          Anchor: (Left: 12, Top: 4, Width: 64, Height: 24);
+          Padding: (Left: 8, Top: 2);
+          Text: "< Back";
+          Style: TextButtonStyle(
+            Default: (LabelStyle: (FontSize: 14, TextColor: #93844c, RenderBold: true)),
+            Sounds: $C.@ButtonSounds,
+          );
+          Background: #000000(0.13);
+        }
+        $C.@Title {
+          @Text = "Player Stats";
+        }
+      }
+    }
+
+    #Content {
+      LayoutMode: Top;
+      Padding: (Left: 12, Right: 12, Top: 6, Bottom: 12);
+
+      Label {
+        Style: (
+          FontSize: 14,
+          TextColor: #9fb0ba
+        );
+        Text: "Player overview";
+      }
+
+      Group {
+        Anchor: (Top: 6, Height: 20);
+        LayoutMode: Left;
+
+        Label {
+          Anchor: (Width: 70);
+          Style: (FontSize: 13, TextColor: #9fb0ba);
+          Text: "Name";
+        }
+
+        Label #PlayerName {
+          FlexWeight: 1;
+          Style: (FontSize: 13, TextColor: #cfd7dc);
+          Text: "";
+        }
+      }
+
+      Group {
+        Anchor: (Top: 2, Height: 20);
+        LayoutMode: Left;
+
+        Label {
+          Anchor: (Width: 70);
+          Style: (FontSize: 13, TextColor: #9fb0ba);
+          Text: "UUID";
+        }
+
+        Label #PlayerUuid {
+          FlexWeight: 1;
+          Style: (FontSize: 12, TextColor: #cfd7dc);
+          Text: "";
+        }
+      }
+
+      Group {
+        Anchor: (Top: 2, Height: 20);
+        LayoutMode: Left;
+
+        Label {
+          Anchor: (Width: 70);
+          Style: (FontSize: 13, TextColor: #9fb0ba);
+          Text: "Rank";
+        }
+
+        Label #PlayerRank {
+          FlexWeight: 1;
+          Style: (FontSize: 13, TextColor: #cfd7dc, RenderBold: true);
+          Text: "";
+        }
+      }
+
+      Group {
+        Anchor: (Top: 2, Height: 20);
+        LayoutMode: Left;
+
+        Label {
+          Anchor: (Width: 70);
+          Style: (FontSize: 13, TextColor: #9fb0ba);
+          Text: "XP";
+        }
+
+        Label #PlayerXp {
+          FlexWeight: 1;
+          Style: (FontSize: 13, TextColor: #cfd7dc);
+          Text: "";
+        }
+      }
+
+      Group {
+        Anchor: (Top: 2, Height: 20);
+        LayoutMode: Left;
+
+        Label {
+          Anchor: (Width: 70);
+          Style: (FontSize: 13, TextColor: #9fb0ba);
+          Text: "Maps";
+        }
+
+        Label #PlayerMaps {
+          FlexWeight: 1;
+          Style: (FontSize: 13, TextColor: #cfd7dc);
+          Text: "";
+        }
+      }
+
+      Group #ActionButtons {
+        Anchor: (Top: 10, Height: 74, Width: 530);
+        LayoutMode: Top;
+
+        Group {
+          Anchor: (Height: 22, Width: 530);
+          LayoutMode: Left;
+
+          $C.@TextButton #TeleportToPlayerButton {
+            Anchor: (Width: 160, Height: 22);
+            Text: "Teleport To Player";
+          }
+
+          Group {
+            Anchor: (Width: 8);
+          }
+
+          $C.@TextButton #TeleportPlayerHereButton {
+            Anchor: (Width: 170, Height: 22);
+            Text: "Teleport Player Here";
+          }
+
+          Group {
+            Anchor: (Width: 8);
+          }
+
+          $C.@TextButton #KillPlayerButton {
+            Anchor: (Width: 90, Height: 22);
+            Text: "Kill";
+          }
+        }
+
+        Group {
+          Anchor: (Top: 4, Height: 22, Width: 530);
+          LayoutMode: Left;
+
+          $C.@TextButton #GiveFlyButton {
+            Anchor: (Width: 110, Height: 22);
+            Text: "Give Fly";
+          }
+
+          Group {
+            Anchor: (Width: 8);
+          }
+
+          $C.@TextButton #RemoveFlyButton {
+            Anchor: (Width: 120, Height: 22);
+            Text: "Remove Fly";
+          }
+
+          Group {
+            Anchor: (Width: 8);
+          }
+
+          $C.@TextButton #ResetInventoryButton {
+            Anchor: (Width: 150, Height: 22);
+            Text: "Reset Inventory";
+          }
+        }
+
+        Group {
+          Anchor: (Top: 4, Height: 22, Width: 530);
+          LayoutMode: Left;
+
+          $C.@TextButton #ClearAllProgressButton {
+            Anchor: (Width: 150, Height: 22);
+            Text: "Clear All Progress";
+          }
+
+          Group {
+            Anchor: (Width: 8);
+          }
+
+          $C.@TextButton #ClearMapProgressButton {
+            Anchor: (Width: 160, Height: 22);
+            Text: "Clear Map Progress";
+          }
+        }
+      }
+
+      Label #ActionStatus {
+        Anchor: (Top: 6, Height: 20);
+        Style: (FontSize: 12, TextColor: #d9b072);
+        Text: "";
+      }
+
+      Label {
+        Anchor: (Top: 6);
+        Style: (FontSize: 13, TextColor: #9fb0ba);
+        Text: "Map stats";
+      }
+
+      Group #MapList {
+        Anchor: (Width: 530, Top: 6);
+        FlexWeight: 1;
+        LayoutMode: TopScrolling;
+        Padding: (Left: 6, Right: 6);
+        ScrollbarStyle: $C.@DefaultScrollbarStyle;
+
+        Group #PlayerMapCards {
+          LayoutMode: Top;
+        }
+      }
+
+      Label #EmptyText {
+        Anchor: (Top: 6);
+        Style: (
+          FontSize: 12,
+          TextColor: #9fb0ba
+        );
+        Text: "";
+      }
+    }
+  }
+}
+
+$C.@BackButton {}

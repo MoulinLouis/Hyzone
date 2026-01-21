@@ -36,6 +36,7 @@ public class AdminIndexPage extends InteractiveCustomUIPage<AdminIndexPage.Admin
     private static final String BUTTON_POPULATION = "Population";
     private static final String BUTTON_GLOBAL_MESSAGES = "GlobalMessages";
     private static final String BUTTON_BROADCAST = "Broadcast";
+    private static final String BUTTON_PLAYERS = "Players";
     private String announcementInput = "";
 
     public AdminIndexPage(@Nonnull PlayerRef playerRef, MapStore mapStore,
@@ -67,6 +68,8 @@ public class AdminIndexPage extends InteractiveCustomUIPage<AdminIndexPage.Admin
                 EventData.of(AdminIndexData.KEY_BUTTON, BUTTON_PROGRESS), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SettingsButton",
                 EventData.of(AdminIndexData.KEY_BUTTON, BUTTON_SETTINGS), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#PlayersButton",
+                EventData.of(AdminIndexData.KEY_BUTTON, BUTTON_PLAYERS), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#PlaytimeButton",
                 EventData.of(AdminIndexData.KEY_BUTTON, BUTTON_PLAYTIME), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#PopulationButton",
@@ -106,6 +109,11 @@ public class AdminIndexPage extends InteractiveCustomUIPage<AdminIndexPage.Admin
         if (BUTTON_SETTINGS.equals(data.button)) {
             player.getPageManager().openCustomPage(ref, store,
                     new SettingsAdminPage(playerRef, settingsStore, mapStore));
+            return;
+        }
+        if (BUTTON_PLAYERS.equals(data.button)) {
+            player.getPageManager().openCustomPage(ref, store,
+                    new AdminPlayersPage(playerRef, mapStore, progressStore));
             return;
         }
         if (BUTTON_PLAYTIME.equals(data.button)) {
@@ -156,6 +164,8 @@ public class AdminIndexPage extends InteractiveCustomUIPage<AdminIndexPage.Admin
                 EventData.of(AdminIndexData.KEY_BUTTON, BUTTON_PROGRESS), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SettingsButton",
                 EventData.of(AdminIndexData.KEY_BUTTON, BUTTON_SETTINGS), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#PlayersButton",
+                EventData.of(AdminIndexData.KEY_BUTTON, BUTTON_PLAYERS), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#PlaytimeButton",
                 EventData.of(AdminIndexData.KEY_BUTTON, BUTTON_PLAYTIME), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#PopulationButton",

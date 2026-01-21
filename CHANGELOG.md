@@ -1,5 +1,10 @@
 # Changelog
 
+- Added a /pk admin Players page with search, pagination, and per-player map stats detail view.
+- Added admin player actions for teleporting and killing from the player stats page with confirmation prompts.
+- Added admin player fly toggles to grant or revoke flight without changing game mode.
+- Added an admin player inventory reset button to restore the base menu items.
+- Added per-player progress clearing actions, including per-map selection in the admin player page.
 - Expand /dbmigrate to import global messages, player counts, and missing settings/progress fields from JSON.
 - Make /dbmigrate read JSON only (including Maps.json) without falling back to in-memory data.
 - Abort /dbmigrate when any required JSON file is missing.

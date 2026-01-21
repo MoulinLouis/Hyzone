@@ -1,0 +1,30 @@
+$C = "../Common.ui";
+
+Button {
+  LayoutMode: Left;
+  Anchor: (Left: 2, Right: 2, Bottom: 6, Height: 46, Width: 470);
+  Background: $C.@InputBoxBackground;
+  Padding: (Left: 10, Right: 10, Top: 8);
+  Style: ButtonStyle(
+    Sounds: $C.@ButtonSounds,
+  );
+
+  Label #PlayerName {
+    FlexWeight: 1;
+    Style: (
+      FontSize: 14,
+      TextColor: #cfd7dc
+    );
+    Text: "Player";
+  }
+
+  Label #PlayerProgress {
+    Anchor: (Width: 110, Right: 0);
+    Style: (
+      FontSize: 13,
+      RenderBold: true,
+      TextColor: #9fb0ba
+    );
+    Text: "0/0 maps";
+  }
+}

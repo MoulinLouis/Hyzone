@@ -62,6 +62,25 @@ $C.@PageOverlay {
         }
       }
 
+      Button #PlayersButton {
+        LayoutMode: Left;
+        Anchor: (Left: 2, Right: 2, Top: 8, Height: 46, Width: 390);
+        Background: $C.@InputBoxBackground;
+        Padding: (Left: 10, Right: 10, Top: 8);
+        Style: ButtonStyle(
+          Sounds: $C.@ButtonSounds,
+        );
+
+        Label #PlayersLabel {
+          Style: (
+            FontSize: 16,
+            RenderBold: true,
+            TextColor: #93844c
+          );
+          Text: "Players";
+        }
+      }
+
       Button #SettingsButton {
         LayoutMode: Left;
         Anchor: (Left: 2, Right: 2, Top: 8, Height: 46, Width: 390);

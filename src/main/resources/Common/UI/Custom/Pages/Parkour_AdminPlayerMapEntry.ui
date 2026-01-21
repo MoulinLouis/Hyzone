@@ -1,0 +1,27 @@
+$C = "../Common.ui";
+
+Group {
+  LayoutMode: Left;
+  Anchor: (Left: 2, Right: 2, Bottom: 6, Height: 46, Width: 510);
+  Background: $C.@InputBoxBackground;
+  Padding: (Left: 10, Right: 10, Top: 8);
+
+  Label #MapName {
+    FlexWeight: 1;
+    Style: (
+      FontSize: 14,
+      RenderBold: true,
+      TextColor: #93844c
+    );
+    Text: "Map";
+  }
+
+  Label #MapStatus {
+    Anchor: (Width: 220, Right: 0);
+    Style: (
+      FontSize: 12,
+      TextColor: #cfd7dc
+    );
+    Text: "";
+  }
+}
