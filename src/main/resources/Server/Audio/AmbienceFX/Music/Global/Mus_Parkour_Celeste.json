@@ -1,0 +1,10 @@
+{
+  "$Comment": "Manual selection: Celeste OST.",
+  "Music": {
+    "Tracks": [
+      "Music/Parkour/CelesteThemeLong.ogg"
+    ]
+  },
+  "AudioCategory": "AudioCat_Music",
+  "Priority": 950
+}

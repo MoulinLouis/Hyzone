@@ -80,6 +80,43 @@ $C.@PageOverlay {
           Text: "Show HUD";
         }
       }
+
+      Label {
+        Anchor: (Top: 12);
+        Style: (
+          FontSize: 14,
+          TextColor: #9fb0ba
+        );
+        Text: "Music selection (developer items).";
+      }
+
+      Label #CurrentMusicLabel {
+        Anchor: (Top: 8);
+        Style: (
+          FontSize: 14,
+          TextColor: #c8d6df
+        );
+        Text: "Now Playing: Zelda OST";
+      }
+
+      Group {
+        Anchor: (Top: 8, Left: 0, Right: 0, Height: 24);
+        LayoutMode: Left;
+
+        $C.@TextButton #PlayZeldaMusicButton {
+          Anchor: (Height: 24, Width: 200);
+          Text: "Play Zelda OST";
+        }
+
+        Group {
+          Anchor: (Width: 8);
+        }
+
+        $C.@TextButton #PlayCelesteMusicButton {
+          Anchor: (Height: 24, Width: 200);
+          Text: "Play Celeste OST";
+        }
+      }
     }
   }
 }

@@ -2,7 +2,7 @@ $C = "../Common.ui";
 
 $C.@PageOverlay {
   $C.@Container {
-    Anchor: (Width: 560, Height: 600);
+    Anchor: (Width: 700, Height: 600);
 
     #Title {
       Group {
@@ -120,15 +120,15 @@ $C.@PageOverlay {
       }
 
       Group #ActionButtons {
-        Anchor: (Top: 10, Height: 74, Width: 530);
+        Anchor: (Top: 10, Height: 80, Width: 670);
         LayoutMode: Top;
 
         Group {
-          Anchor: (Height: 22, Width: 530);
+          Anchor: (Height: 24, Width: 670);
           LayoutMode: Left;
 
           $C.@TextButton #TeleportToPlayerButton {
-            Anchor: (Width: 160, Height: 22);
+            Anchor: (Width: 230, Height: 24);
             Text: "Teleport To Player";
           }
 
@@ -137,7 +137,7 @@ $C.@PageOverlay {
           }
 
           $C.@TextButton #TeleportPlayerHereButton {
-            Anchor: (Width: 170, Height: 22);
+            Anchor: (Width: 260, Height: 24);
             Text: "Teleport Player Here";
           }
 
@@ -146,17 +146,17 @@ $C.@PageOverlay {
           }
 
           $C.@TextButton #KillPlayerButton {
-            Anchor: (Width: 90, Height: 22);
+            Anchor: (Width: 100, Height: 24);
             Text: "Kill";
           }
         }
 
         Group {
-          Anchor: (Top: 4, Height: 22, Width: 530);
+          Anchor: (Top: 4, Height: 24, Width: 670);
           LayoutMode: Left;
 
           $C.@TextButton #GiveFlyButton {
-            Anchor: (Width: 110, Height: 22);
+            Anchor: (Width: 160, Height: 24);
             Text: "Give Fly";
           }
 
@@ -165,7 +165,7 @@ $C.@PageOverlay {
           }
 
           $C.@TextButton #RemoveFlyButton {
-            Anchor: (Width: 120, Height: 22);
+            Anchor: (Width: 170, Height: 24);
             Text: "Remove Fly";
           }
 
@@ -174,17 +174,17 @@ $C.@PageOverlay {
           }
 
           $C.@TextButton #ResetInventoryButton {
-            Anchor: (Width: 150, Height: 22);
+            Anchor: (Width: 200, Height: 24);
             Text: "Reset Inventory";
           }
         }
 
         Group {
-          Anchor: (Top: 4, Height: 22, Width: 530);
+          Anchor: (Top: 4, Height: 24, Width: 670);
           LayoutMode: Left;
 
           $C.@TextButton #ClearAllProgressButton {
-            Anchor: (Width: 150, Height: 22);
+            Anchor: (Width: 220, Height: 24);
             Text: "Clear All Progress";
           }
 
@@ -193,7 +193,7 @@ $C.@PageOverlay {
           }
 
           $C.@TextButton #ClearMapProgressButton {
-            Anchor: (Width: 160, Height: 22);
+            Anchor: (Width: 240, Height: 24);
             Text: "Clear Map Progress";
           }
         }
@@ -212,7 +212,7 @@ $C.@PageOverlay {
       }
 
       Group #MapList {
-        Anchor: (Width: 530, Top: 6);
+        Anchor: (Width: 670, Top: 6);
         FlexWeight: 1;
         LayoutMode: TopScrolling;
         Padding: (Left: 6, Right: 6);
