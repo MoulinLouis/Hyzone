@@ -61,6 +61,7 @@ import io.hyvexa.parkour.tracker.RunRecordsHud;
 import io.hyvexa.parkour.tracker.RunTracker;
 import io.hyvexa.parkour.system.NoDropSystem;
 import io.hyvexa.parkour.system.NoBreakSystem;
+import io.hyvexa.parkour.system.NoPlayerDamageSystem;
 import io.hyvexa.parkour.system.NoPlayerKnockbackSystem;
 import io.hyvexa.parkour.system.NoWeaponDamageSystem;
 import io.hyvexa.parkour.system.PlayerVisibilityFilterSystem;
@@ -1351,6 +1352,7 @@ public class HyvexaPlugin extends JavaPlugin {
      */
     private void registerDeferredSystems() {
         registerPlayerVisibilitySystem();
+        registerNoPlayerDamageSystem();
         registerNoWeaponDamageSystem();
         registerNoPlayerKnockbackSystem();
     }
@@ -1371,6 +1373,16 @@ public class HyvexaPlugin extends JavaPlugin {
             registry.registerSystem(new NoWeaponDamageSystem(
                     () -> settingsStore != null && settingsStore.isWeaponDamageDisabled()
             ));
+        }
+    }
+
+    private void registerNoPlayerDamageSystem() {
+        var registry = EntityStore.REGISTRY;
+        if (registry.getEntityEventTypeForClass(com.hypixel.hytale.server.core.modules.entity.damage.Damage.class) == null) {
+            registry.registerEntityEventType(com.hypixel.hytale.server.core.modules.entity.damage.Damage.class);
+        }
+        if (!registry.hasSystemClass(NoPlayerDamageSystem.class)) {
+            registry.registerSystem(new NoPlayerDamageSystem());
         }
     }
 
