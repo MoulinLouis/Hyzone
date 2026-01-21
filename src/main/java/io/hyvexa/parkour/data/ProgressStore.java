@@ -424,6 +424,54 @@ public class ProgressStore {
         return new MapPurgeResult(affectedPlayers.size(), totalXpRemoved);
     }
 
+    public boolean clearPlayerMapProgress(UUID playerId, String mapId) {
+        if (playerId == null || mapId == null || mapId.isBlank()) {
+            return false;
+        }
+        String trimmedId = mapId.trim();
+        boolean removed;
+        fileLock.writeLock().lock();
+        try {
+            PlayerProgress playerProgress = progress.get(playerId);
+            if (playerProgress == null) {
+                return false;
+            }
+            boolean removedCompletion = playerProgress.completedMaps.remove(trimmedId);
+            boolean removedBest = playerProgress.bestMapTimes.remove(trimmedId) != null;
+            removed = removedCompletion || removedBest;
+            if (removed) {
+                dirtyPlayers.add(playerId);
+            }
+        } finally {
+            fileLock.writeLock().unlock();
+        }
+        if (removed) {
+            deletePlayerMapCompletion(playerId, trimmedId);
+            invalidateLeaderboardCache(trimmedId);
+            queueSave();
+            HyvexaPlugin plugin = HyvexaPlugin.getInstance();
+            if (plugin != null) {
+                plugin.invalidateRankCache(playerId);
+            }
+        }
+        return removed;
+    }
+
+    private void deletePlayerMapCompletion(UUID playerId, String mapId) {
+        if (!DatabaseManager.getInstance().isInitialized()) return;
+
+        String sql = "DELETE FROM player_completions WHERE player_uuid = ? AND map_id = ?";
+
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, playerId.toString());
+            stmt.setString(2, mapId);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            LOGGER.at(Level.WARNING).log("Failed to delete player map completion: " + e.getMessage());
+        }
+    }
+
     private void purgeMapFromDatabase(String mapId) {
         if (!DatabaseManager.getInstance().isInitialized()) return;
 
