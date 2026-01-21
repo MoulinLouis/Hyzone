@@ -565,6 +565,11 @@ public class ProgressStore {
         return total;
     }
 
+    public long getCalculatedCompletionXp(UUID playerId, MapStore mapStore) {
+        if (playerId == null || mapStore == null) return 0L;
+        return getPlayerCompletionXp(playerId, mapStore);
+    }
+
     public static long getCategoryXp(String category) {
         if (category == null || category.isBlank()) return ParkourConstants.MAP_XP_EASY;
         String normalized = category.trim().toLowerCase(Locale.ROOT);

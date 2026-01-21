@@ -9,9 +9,6 @@
 - Added default/no-music buttons in Player Settings that reset to the Hytale music mix.
 - Added a dedicated Player Settings music page with all music controls.
 - Set the "No Music" button to return players to the Zelda OST.
-- Added a silent ambience asset so "No Music" can mute music per player.
-- Updated "Default Music" to force the Hytale Mus_Fallback_Overground ambience.
-- Fixed "Default Music" to target the Hytale ambience path and allow empty ambience for "No Music".
 - Updated music button targets to use AmbFX_Void for silence and Mus_Forgotten_Temple for default music.
 - Added average playtime to the playtime admin page.
 - Added an Aura OST button to the music settings page.
@@ -198,6 +195,7 @@
 - Suppressed the default join broadcast so only the custom join message appears.
 - Added a /pkadmin global announcement field that displays a soft top-center HUD message for 10 seconds.
 - Ensured the announcement sender also sees the broadcast banner.
+- Calculated My Stats XP from completed map totals instead of stored EXP values.
 - Moved the announcement banner lower and styled it as a larger boxed HUD element.
 - Removed the announcement frame box and increased announcement text size.
 - Require touching all checkpoints before completing a map and warn when missing.
