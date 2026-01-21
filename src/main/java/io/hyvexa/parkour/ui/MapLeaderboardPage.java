@@ -135,8 +135,15 @@ public class MapLeaderboardPage extends InteractiveCustomUIPage<MapLeaderboardPa
                 .sorted(Map.Entry.comparingByValue(Comparator.naturalOrder()))
                 .toList();
         List<LeaderboardRow> filtered = new java.util.ArrayList<>();
+        long lastTime = Long.MIN_VALUE;
+        int rank = 0;
         for (int i = 0; i < sorted.size(); i++) {
             Map.Entry<UUID, Long> entry = sorted.get(i);
+            long time = toDisplayedCentiseconds(entry.getValue());
+            if (i == 0 || time > lastTime) {
+                rank = i + 1;
+                lastTime = time;
+            }
             String name = ParkourUtils.resolveName(entry.getKey(), progressStore);
             if (!filter.isEmpty()) {
                 String safeName = name != null ? name : "";
@@ -144,7 +151,7 @@ public class MapLeaderboardPage extends InteractiveCustomUIPage<MapLeaderboardPa
                     continue;
                 }
             }
-            filtered.add(new LeaderboardRow(i + 1, entry, name));
+            filtered.add(new LeaderboardRow(rank, entry, name));
         }
         if (filtered.isEmpty()) {
             commandBuilder.set("#EmptyText.Text", "No matches.");
@@ -178,6 +185,10 @@ public class MapLeaderboardPage extends InteractiveCustomUIPage<MapLeaderboardPa
             this.entry = entry;
             this.name = name != null ? name : "";
         }
+    }
+
+    private static long toDisplayedCentiseconds(long durationMs) {
+        return Math.round(durationMs / 10.0);
     }
 
     public static class MapLeaderboardData extends ButtonEventData {

@@ -675,7 +675,7 @@ public class ProgressStore {
         long lastTime = Long.MIN_VALUE;
         int rank = 0;
         for (int i = 0; i < entries.size(); i++) {
-            long time = entries.get(i).getValue();
+            long time = toDisplayedCentiseconds(entries.get(i).getValue());
             if (i == 0 || time > lastTime) {
                 rank = i + 1;
                 lastTime = time;
@@ -683,6 +683,10 @@ public class ProgressStore {
             positions.put(entries.get(i).getKey(), rank);
         }
         return new LeaderboardCache(List.copyOf(entries), java.util.Map.copyOf(positions), worldRecordMs);
+    }
+
+    private static long toDisplayedCentiseconds(long durationMs) {
+        return Math.round(durationMs / 10.0);
     }
 
     private static class PlayerProgress {
