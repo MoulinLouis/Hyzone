@@ -1,5 +1,7 @@
 # Changelog
 
+- Show tied map leaderboard times with shared ranks (e.g., #1 #1 #3).
+- Rank map leaderboards by displayed time precision to avoid hidden millisecond tie breaks.
 - Added a Player Settings music label to show the currently playing track.
 - Added a Player Settings music button to restart the default Zelda OST.
 - Added a Player Settings button to switch music to the Celeste OST.
