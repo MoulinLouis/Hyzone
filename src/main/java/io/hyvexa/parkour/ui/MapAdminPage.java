@@ -41,6 +41,7 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
     private String mapSearch = "";
     private boolean mapMithrilSwordEnabled = false;
     private boolean mapMithrilDaggersEnabled = false;
+    private boolean mapFreeFallEnabled = false;
     private String selectedMapId = "";
 
     public MapAdminPage(@Nonnull PlayerRef playerRef, MapStore mapStore) {
@@ -105,6 +106,7 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
                 mapOrder = String.valueOf(map.getOrder());
                 mapMithrilSwordEnabled = map.isMithrilSwordEnabled();
                 mapMithrilDaggersEnabled = map.isMithrilDaggersEnabled();
+                mapFreeFallEnabled = map.isFreeFallEnabled();
             }
             sendRefresh(ref, store);
             return;
@@ -157,6 +159,11 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
         if (data.button.equals(MapData.BUTTON_TOGGLE_MITHRIL_DAGGERS)) {
             mapMithrilDaggersEnabled = !mapMithrilDaggersEnabled;
             sendRefresh(ref, store);
+            return;
+        }
+        if (data.button.equals(MapData.BUTTON_TOGGLE_FREE_FALL)) {
+            mapFreeFallEnabled = !mapFreeFallEnabled;
+            sendRefresh(ref, store);
         }
     }
 
@@ -200,6 +207,7 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
         map.setOrder(order);
         map.setMithrilSwordEnabled(mapMithrilSwordEnabled);
         map.setMithrilDaggersEnabled(mapMithrilDaggersEnabled);
+        map.setFreeFallEnabled(mapFreeFallEnabled);
         map.setStart(start);
         map.setCreatedAt(System.currentTimeMillis());
         map.setUpdatedAt(map.getCreatedAt());
@@ -364,6 +372,7 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
         map.setOrder(order);
         map.setMithrilSwordEnabled(mapMithrilSwordEnabled);
         map.setMithrilDaggersEnabled(mapMithrilDaggersEnabled);
+        map.setFreeFallEnabled(mapFreeFallEnabled);
         map.setUpdatedAt(System.currentTimeMillis());
         try {
             mapStore.updateMap(map);
@@ -424,6 +433,7 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
         commandBuilder.set("#MapSearchField.Value", mapSearch);
         commandBuilder.set("#MithrilSwordValue.Text", mapMithrilSwordEnabled ? "Enabled" : "Disabled");
         commandBuilder.set("#MithrilDaggersValue.Text", mapMithrilDaggersEnabled ? "Enabled" : "Disabled");
+        commandBuilder.set("#FreeFallValue.Text", mapFreeFallEnabled ? "YES" : "NO");
         String selectedText = "Selected: (none)";
         if (!selectedMapId.isEmpty()) {
             Map map = mapStore.getMap(selectedMapId);
@@ -502,6 +512,8 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
                 EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_TOGGLE_MITHRIL_SWORD), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#MithrilDaggersToggle",
                 EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_TOGGLE_MITHRIL_DAGGERS), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#FreeFallToggle",
+                EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_TOGGLE_FREE_FALL), false);
     }
 
     private static TransformData readTransform(Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -606,6 +618,7 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
         static final String BUTTON_REFRESH = "Refresh";
         static final String BUTTON_TOGGLE_MITHRIL_SWORD = "ToggleMithrilSword";
         static final String BUTTON_TOGGLE_MITHRIL_DAGGERS = "ToggleMithrilDaggers";
+        static final String BUTTON_TOGGLE_FREE_FALL = "ToggleFreeFall";
 
         public static final BuilderCodec<MapData> CODEC = BuilderCodec.<MapData>builder(MapData.class, MapData::new)
                 .addField(new KeyedCodec<>(KEY_BUTTON, Codec.STRING), (data, value) -> data.button = value, data -> data.button)

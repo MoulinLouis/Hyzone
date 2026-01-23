@@ -20,6 +20,7 @@ public class Map {
     private int order = ParkourConstants.DEFAULT_MAP_ORDER;
     private boolean mithrilSwordEnabled;
     private boolean mithrilDaggersEnabled;
+    private boolean freeFallEnabled;
     private long createdAt;
     private long updatedAt;
 
@@ -137,6 +138,14 @@ public class Map {
 
     public void setMithrilDaggersEnabled(boolean mithrilDaggersEnabled) {
         this.mithrilDaggersEnabled = mithrilDaggersEnabled;
+    }
+
+    public boolean isFreeFallEnabled() {
+        return freeFallEnabled;
+    }
+
+    public void setFreeFallEnabled(boolean freeFallEnabled) {
+        this.freeFallEnabled = freeFallEnabled;
     }
 
     public long getCreatedAt() {
