@@ -71,6 +71,7 @@ import io.hyvexa.parkour.system.NoPlayerKnockbackSystem;
 import io.hyvexa.parkour.system.NoWeaponDamageSystem;
 import io.hyvexa.parkour.system.PlayerVisibilityFilterSystem;
 import io.hyvexa.parkour.ui.WelcomePage;
+import io.hyvexa.parkour.ui.PlayerMusicPage;
 import io.hyvexa.parkour.util.ParkourUtils;
 import io.hyvexa.parkour.visibility.PlayerVisibilityManager;
 
@@ -258,6 +259,7 @@ public class HyvexaPlugin extends JavaPlugin {
             if (runTracker != null) {
                 runTracker.markPlayerReady(playerRef);
             }
+            PlayerMusicPage.applyStoredMusic(playerRef);
         }
 
         this.getEventRegistry().registerGlobal(PlayerReadyEvent.class, event -> {
@@ -266,6 +268,7 @@ public class HyvexaPlugin extends JavaPlugin {
                     runTracker.markPlayerReady(event.getPlayerRef());
                 }
                 syncRunInventoryOnReady(event.getPlayerRef());
+                PlayerMusicPage.applyStoredMusic(event.getPlayerRef());
                 // Disable world map generation to save memory (parkour server doesn't need it)
                 if (DISABLE_WORLD_MAP) {
                     disableWorldMapForPlayer(event.getPlayerRef());

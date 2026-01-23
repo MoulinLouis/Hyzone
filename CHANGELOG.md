@@ -1,5 +1,6 @@
 # Changelog
 
+- Reapply a player's selected music track on reconnect so the actual track matches the saved label.
 - Clear VIP speed boosts when players touch start triggers to prevent momentum carryover into runs.
 - Show personal best time and leaderboard placement on map leaderboard selection entries after completion.
 - Added a map admin free-fall toggle to disable fall respawn timing per map while keeping void cutoff respawns.
