@@ -82,7 +82,7 @@ public class RunHud extends CustomUIHud {
         commandBuilder.set("#PlayerMapsValue.Text", completedMaps + "/" + totalMaps);
         String musicLabel = PlayerMusicPage.getStoredMusicLabel(getPlayerRef().getUuid());
         commandBuilder.set("#ServerDateText.Text", "Music: " + musicLabel);
-        commandBuilder.set("#ServerIpText.Text", "Server: " + safeServerIp);
+        commandBuilder.set("#ServerIpText.Text", "IP: " + safeServerIp);
         update(false, commandBuilder);
     }
 

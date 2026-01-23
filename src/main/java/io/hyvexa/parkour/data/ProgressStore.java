@@ -67,7 +67,7 @@ public class ProgressStore {
     }
 
     private void loadPlayers() {
-        String sql = "SELECT uuid, name, xp, level, welcome_shown, playtime_ms FROM players";
+        String sql = "SELECT uuid, name, xp, level, welcome_shown, playtime_ms, vip, founder FROM players";
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql);
@@ -80,6 +80,8 @@ public class ProgressStore {
                 playerProgress.level = rs.getInt("level");
                 playerProgress.welcomeShown = rs.getBoolean("welcome_shown");
                 playerProgress.playtimeMs = rs.getLong("playtime_ms");
+                playerProgress.vip = rs.getBoolean("vip");
+                playerProgress.founder = rs.getBoolean("founder");
 
                 progress.put(uuid, playerProgress);
 
@@ -139,6 +141,58 @@ public class ProgressStore {
             fileLock.writeLock().unlock();
         }
         queueSave();
+    }
+
+    public boolean setPlayerRank(UUID playerId, String playerName, boolean vip, boolean founder) {
+        if (playerId == null) {
+            return false;
+        }
+        boolean changed = false;
+        fileLock.writeLock().lock();
+        try {
+            PlayerProgress playerProgress = progress.computeIfAbsent(playerId, ignored -> new PlayerProgress());
+            storePlayerName(playerId, playerName);
+            if (founder) {
+                vip = true;
+            }
+            if (playerProgress.vip != vip || playerProgress.founder != founder) {
+                playerProgress.vip = vip;
+                playerProgress.founder = founder;
+                dirtyPlayers.add(playerId);
+                changed = true;
+            }
+        } finally {
+            fileLock.writeLock().unlock();
+        }
+        if (changed) {
+            queueSave();
+        }
+        return changed;
+    }
+
+    public boolean isVip(UUID playerId) {
+        PlayerProgress playerProgress = progress.get(playerId);
+        return playerProgress != null && (playerProgress.vip || playerProgress.founder);
+    }
+
+    public boolean isFounder(UUID playerId) {
+        PlayerProgress playerProgress = progress.get(playerId);
+        return playerProgress != null && playerProgress.founder;
+    }
+
+
+    public UUID getPlayerIdByName(String playerName) {
+        if (playerName == null || playerName.isBlank()) {
+            return null;
+        }
+        String target = playerName.trim().toLowerCase(Locale.ROOT);
+        for (java.util.Map.Entry<UUID, String> entry : lastKnownNames.entrySet()) {
+            String name = entry.getValue();
+            if (name != null && name.toLowerCase(Locale.ROOT).equals(target)) {
+                return entry.getKey();
+            }
+        }
+        return null;
     }
 
     public Long getBestTimeMs(UUID playerId, String mapId) {
@@ -621,11 +675,12 @@ public class ProgressStore {
         if (toSave.isEmpty()) return;
 
         String sql = """
-            INSERT INTO players (uuid, name, xp, level, welcome_shown, playtime_ms)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO players (uuid, name, xp, level, welcome_shown, playtime_ms, vip, founder)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 name = VALUES(name), xp = VALUES(xp), level = VALUES(level),
-                welcome_shown = VALUES(welcome_shown), playtime_ms = VALUES(playtime_ms)
+                welcome_shown = VALUES(welcome_shown), playtime_ms = VALUES(playtime_ms),
+                vip = VALUES(vip), founder = VALUES(founder)
             """;
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
@@ -641,6 +696,8 @@ public class ProgressStore {
                 stmt.setInt(4, playerProgress.level);
                 stmt.setBoolean(5, playerProgress.welcomeShown);
                 stmt.setLong(6, playerProgress.playtimeMs);
+                stmt.setBoolean(7, playerProgress.vip);
+                stmt.setBoolean(8, playerProgress.founder);
                 stmt.addBatch();
             }
             stmt.executeBatch();
@@ -696,6 +753,8 @@ public class ProgressStore {
         int level = 1;
         boolean welcomeShown;
         long playtimeMs;
+        boolean vip;
+        boolean founder;
     }
 
     private static class LeaderboardCache {

@@ -415,11 +415,12 @@ public class DatabaseMigrateCommand extends AbstractAsyncCommand {
         ctx.sendMessage(Message.raw("Migrating " + progressEntries.size() + " players..."));
 
         String sql = """
-            INSERT INTO players (uuid, name, xp, level, welcome_shown, playtime_ms)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO players (uuid, name, xp, level, welcome_shown, playtime_ms, vip, founder)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 name = VALUES(name), xp = VALUES(xp), level = VALUES(level),
-                welcome_shown = VALUES(welcome_shown), playtime_ms = VALUES(playtime_ms)
+                welcome_shown = VALUES(welcome_shown), playtime_ms = VALUES(playtime_ms),
+                vip = VALUES(vip), founder = VALUES(founder)
             """;
 
         int count = 0;
@@ -438,6 +439,8 @@ public class DatabaseMigrateCommand extends AbstractAsyncCommand {
                 stmt.setInt(4, level);
                 stmt.setBoolean(5, entry.welcomeShown != null && entry.welcomeShown);
                 stmt.setLong(6, entry.playtimeMs != null ? Math.max(0L, entry.playtimeMs) : 0L);
+                stmt.setBoolean(7, false);
+                stmt.setBoolean(8, false);
                 stmt.addBatch();
                 count++;
 

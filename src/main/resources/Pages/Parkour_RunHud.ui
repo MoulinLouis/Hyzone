@@ -6,21 +6,21 @@ $C.@PageOverlay {
     Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
 
     Group #RunHudRoot {
-      Anchor: (Right: 20, Top: 500, Width: 260, Height: 160);
+      Anchor: (Right: 20, Top: 400, Width: 320, Height: 320);
       Background: #000000(0.0);
       LayoutMode: Top;
-      Padding: (Left: 10, Right: 10, Top: 8, Bottom: 8);
+      Padding: (Left: 12, Right: 12, Top: 10, Bottom: 20);
 
       Group #InfoBox {
-        Anchor: (Left: 0, Right: 0, Height: 170);
-        Background: #000000(0.35);
-        Padding: (Left: 8, Right: 8, Top: 6, Bottom: 6);
+        Anchor: (Left: 0, Right: 0, Height: 320);
+        Background: #000000(0.4);
+        Padding: (Left: 10, Right: 10, Top: 8, Bottom: 8);
         LayoutMode: Top;
 
         Label #PlayerNameText {
-          Anchor: (Left: 65, Right: 0);
+          Anchor: (Left: Anchor: (Left: 24, Right: 0);, Right: 0);
           Style: (
-            FontSize: 16,
+            FontSize: 18,
             TextColor: #ff7fb0,
             RenderBold: true
           );
@@ -32,9 +32,9 @@ $C.@PageOverlay {
           LayoutMode: Left;
 
           Label #PlayerXpLabel {
-            Anchor: (Width: 60);
+            Anchor: (Width: 70);
             Style: (
-              FontSize: 16,
+              FontSize: 18,
               TextColor: #f2f5f7
             );
             Text: "Rank:";
@@ -42,7 +42,7 @@ $C.@PageOverlay {
 
           Label #PlayerXpValue {
             Style: (
-              FontSize: 16,
+              FontSize: 18,
               TextColor: #62d96b
             );
             Text: "0";
@@ -53,37 +53,37 @@ $C.@PageOverlay {
 
             Label #PlayerRankV {
               Anchor: (Width: 10);
-              Style: (FontSize: 16, TextColor: #ff4d4d);
+              Style: (FontSize: 18, TextColor: #ff4d4d);
               Text: "";
             }
             Label #PlayerRankE {
               Anchor: (Width: 10);
-              Style: (FontSize: 16, TextColor: #ffa94d);
+              Style: (FontSize: 18, TextColor: #ffa94d);
               Text: "";
             }
             Label #PlayerRankX {
               Anchor: (Width: 10);
-              Style: (FontSize: 16, TextColor: #ffe66d);
+              Style: (FontSize: 18, TextColor: #ffe66d);
               Text: "";
             }
             Label #PlayerRankA {
               Anchor: (Width: 10);
-              Style: (FontSize: 16, TextColor: #4cd964);
+              Style: (FontSize: 18, TextColor: #4cd964);
               Text: "";
             }
             Label #PlayerRankG {
               Anchor: (Width: 10);
-              Style: (FontSize: 16, TextColor: #5ac8fa);
+              Style: (FontSize: 18, TextColor: #5ac8fa);
               Text: "";
             }
             Label #PlayerRankO {
               Anchor: (Width: 10);
-              Style: (FontSize: 16, TextColor: #5e5ce6);
+              Style: (FontSize: 18, TextColor: #5e5ce6);
               Text: "";
             }
             Label #PlayerRankD {
               Anchor: (Width: 10);
-              Style: (FontSize: 16, TextColor: #b76cff);
+              Style: (FontSize: 18, TextColor: #b76cff);
               Text: "";
             }
           }
@@ -94,9 +94,9 @@ $C.@PageOverlay {
           LayoutMode: Left;
 
           Label #PlayerMapsLabel {
-            Anchor: (Width: 60);
+            Anchor: (Width: 70);
             Style: (
-              FontSize: 16,
+              FontSize: 18,
               TextColor: #f2f5f7
             );
             Text: "Maps:";
@@ -105,7 +105,7 @@ $C.@PageOverlay {
           Label #PlayerMapsValue {
             FlexWeight: 1;
             Style: (
-              FontSize: 16,
+              FontSize: 18,
               TextColor: #62d96b
             );
             Text: "0/0";
@@ -113,13 +113,13 @@ $C.@PageOverlay {
         }
 
         Group {
-          Anchor: (Height: 6, Top: 20);
+          Anchor: (Height: 8, Top: 18);
         }
 
         Label #ServerDateText {
           Anchor: (Left: 0, Right: 0, Top: 0);
           Style: (
-            FontSize: 16,
+            FontSize: 17,
             TextColor: #b2c0c7
           );
           Text: "Date: -";
@@ -128,19 +128,88 @@ $C.@PageOverlay {
         Label #ServerIpText {
           Anchor: (Left: 0, Right: 0, Top: 2);
           Style: (
-            FontSize: 16,
+            FontSize: 17,
             TextColor: #ff7fb0
           );
-          Text: "Server: play.hyvexa.com";
+          Text: "IP: play.hyvexa.com";
         }
 
         Label #ServerDiscordText {
           Anchor: (Left: 0, Right: 0, Top: 2);
           Style: (
-            FontSize: 16,
+            FontSize: 17,
             TextColor: #ff7fb0
           );
           Text: "Discord: discord.hyvexa.com";
+        }
+
+        Group {
+          Anchor: (Height: 8, Top: 14);
+        }
+
+        Label #SupportUsTitle {
+          Anchor: (Left: 0, Right: 0, Top: 0);
+          Style: (
+            FontSize: 18,
+            TextColor: #ffd166,
+            RenderBold: true
+          );
+          Text: "Support Hyvexa ( /store )";
+        }
+
+        Group #SupportUsLine1Row {
+          Anchor: (Left: 0, Right: 0, Top: 2, Height: 20);
+          LayoutMode: Left;
+
+          Group {
+            Anchor: (Width: 18, Height: 18);
+            Background: (TexturePath: "../Textures/star.png");
+          }
+
+          Group {
+            Anchor: (Width: 6);
+          }
+
+          Label #SupportUsLine1Text {
+            Style: (
+              FontSize: 17,
+              TextColor: #e7f1f4
+            );
+            Text: "Exclusive Ranks";
+          }
+        }
+
+        Group #SupportUsLine2Row {
+          Anchor: (Left: 0, Right: 0, Top: 2, Height: 20);
+          LayoutMode: Left;
+
+          Group {
+            Anchor: (Width: 18, Height: 18);
+            Background: (TexturePath: "../Textures/storm.png");
+          }
+
+          Group {
+            Anchor: (Width: 6);
+          }
+
+          Label #SupportUsLine2Text {
+            Style: (
+              FontSize: 17,
+              TextColor: #e7f1f4
+            );
+            Text: "Speed Boost (not for maps)";
+          }
+        }
+
+        Label #SupportUsStoreLink {
+          Anchor: (Left: 0, Right: 0, Top: 10);
+          Style: (
+            FontSize: 18,
+            TextColor: #ffd166,
+            RenderBold: true,
+            HorizontalAlignment: Center
+          );
+          Text: "store.hyvexa.com";
         }
       }
 
@@ -154,7 +223,7 @@ $C.@PageOverlay {
       Label #AnnouncementLine1 {
         Anchor: (Left: 0, Right: 0);
         Style: (
-          FontSize: 20,
+          FontSize: 22,
           TextColor: #e3eef4,
           HorizontalAlignment: Center
         );
@@ -164,7 +233,7 @@ $C.@PageOverlay {
       Label #AnnouncementLine2 {
         Anchor: (Left: 0, Right: 0, Top: 3);
         Style: (
-          FontSize: 20,
+          FontSize: 22,
           TextColor: #e3eef4,
           HorizontalAlignment: Center
         );
@@ -174,7 +243,7 @@ $C.@PageOverlay {
       Label #AnnouncementLine3 {
         Anchor: (Left: 0, Right: 0, Top: 3);
         Style: (
-          FontSize: 20,
+          FontSize: 22,
           TextColor: #e3eef4,
           HorizontalAlignment: Center
         );
@@ -185,7 +254,7 @@ $C.@PageOverlay {
     Label #RunTimerText {
       Anchor: (Left: 0, Right: 0, Top: 45, Height: 38);
       Style: (
-        FontSize: 30,
+        FontSize: 34,
         TextColor: #e7f1f4,
         RenderBold: true,
         HorizontalAlignment: Center
@@ -196,7 +265,7 @@ $C.@PageOverlay {
     Label #RunCheckpointText {
       Anchor: (Left: 0, Right: 0, Top: 83, Height: 22);
       Style: (
-        FontSize: 18,
+        FontSize: 20,
         TextColor: #e7f1f4,
         RenderBold: true,
         HorizontalAlignment: Center

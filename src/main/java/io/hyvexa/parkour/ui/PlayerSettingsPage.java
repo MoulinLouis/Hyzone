@@ -19,6 +19,7 @@ import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.parkour.visibility.PlayerVisibilityManager;
 
 import javax.annotation.Nonnull;
+import java.util.UUID;
 
 public class PlayerSettingsPage extends BaseParkourPage {
 
@@ -28,6 +29,9 @@ public class PlayerSettingsPage extends BaseParkourPage {
     private static final String BUTTON_HIDE_HUD = "HideHud";
     private static final String BUTTON_SHOW_HUD = "ShowHud";
     private static final String BUTTON_MUSIC = "Music";
+    private static final String BUTTON_SPEED_X1 = "SpeedX1";
+    private static final String BUTTON_SPEED_X2 = "SpeedX2";
+    private static final String BUTTON_SPEED_X4 = "SpeedX4";
 
     public PlayerSettingsPage(@Nonnull PlayerRef playerRef) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
@@ -37,6 +41,18 @@ public class PlayerSettingsPage extends BaseParkourPage {
     public void build(@Nonnull Ref<EntityStore> ref, @Nonnull UICommandBuilder uiCommandBuilder,
                       @Nonnull UIEventBuilder uiEventBuilder, @Nonnull Store<EntityStore> store) {
         uiCommandBuilder.append("Pages/Parkour_PlayerSettings.ui");
+        HyvexaPlugin plugin = HyvexaPlugin.getInstance();
+        boolean showSpeedBoost = false;
+        if (plugin != null && plugin.getProgressStore() != null) {
+            var playerId = playerRef.getUuid();
+            boolean isVipOrFounder = playerId != null
+                    && (plugin.getProgressStore().isVip(playerId) || plugin.getProgressStore().isFounder(playerId));
+            boolean inMap = playerId != null && plugin.getRunTracker() != null
+                    && plugin.getRunTracker().getActiveMapId(playerId) != null;
+            showSpeedBoost = isVipOrFounder && !inMap;
+        }
+        uiCommandBuilder.set("#VipSpeedLabel.Visible", showSpeedBoost);
+        uiCommandBuilder.set("#VipSpeedRow.Visible", showSpeedBoost);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#HideAllButton",
@@ -49,6 +65,12 @@ public class PlayerSettingsPage extends BaseParkourPage {
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_SHOW_HUD), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#MusicButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_MUSIC), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#VipSpeedX1Button",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_SPEED_X1), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#VipSpeedX2Button",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_SPEED_X2), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#VipSpeedX4Button",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_SPEED_X4), false);
     }
 
     @Override
@@ -94,6 +116,50 @@ public class PlayerSettingsPage extends BaseParkourPage {
         }
         if (BUTTON_MUSIC.equals(data.getButton())) {
             player.getPageManager().openCustomPage(ref, store, new PlayerMusicPage(playerRef));
+            return;
+        }
+        if (BUTTON_SPEED_X1.equals(data.getButton())
+                || BUTTON_SPEED_X2.equals(data.getButton())
+                || BUTTON_SPEED_X4.equals(data.getButton())) {
+            HyvexaPlugin plugin = HyvexaPlugin.getInstance();
+            if (plugin == null || plugin.getProgressStore() == null) {
+                player.sendMessage(Message.raw("Speed boost unavailable right now."));
+                return;
+            }
+            UUID playerId = playerRef.getUuid();
+            boolean isVipOrFounder = playerId != null
+                    && (plugin.getProgressStore().isVip(playerId) || plugin.getProgressStore().isFounder(playerId));
+            if (!isVipOrFounder) {
+                player.sendMessage(Message.raw("Speed boost is VIP/Founder only."));
+                return;
+            }
+            boolean inMap = playerId != null && plugin.getRunTracker() != null
+                    && plugin.getRunTracker().getActiveMapId(playerId) != null;
+            if (inMap) {
+                player.sendMessage(Message.raw("Speed boost is only available outside runs."));
+                return;
+            }
+            float multiplier = 1.0f;
+            if (BUTTON_SPEED_X2.equals(data.getButton())) {
+                multiplier = 2.0f;
+            } else if (BUTTON_SPEED_X4.equals(data.getButton())) {
+                multiplier = 4.0f;
+            }
+            World world = store.getExternalData().getWorld();
+            if (world == null) {
+                return;
+            }
+            float finalMultiplier = multiplier;
+            world.execute(() -> {
+                if (!ref.isValid() || !playerRef.isValid()) {
+                    return;
+                }
+                plugin.applyVipSpeedMultiplier(ref, store, playerRef, finalMultiplier, true);
+                Player playerEntity = store.getComponent(ref, Player.getComponentType());
+                if (playerEntity != null) {
+                    playerEntity.getPageManager().openCustomPage(ref, store, new PlayerSettingsPage(playerRef));
+                }
+            });
         }
     }
 

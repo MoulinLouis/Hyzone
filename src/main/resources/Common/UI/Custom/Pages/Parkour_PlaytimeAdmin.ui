@@ -2,7 +2,7 @@ $C = "../Common.ui";
 
 $C.@PageOverlay {
   $C.@Container {
-    Anchor: (Width: 520, Height: 320);
+    Anchor: (Width: 520, Height: 360);
 
     #Title {
       Group {
@@ -43,8 +43,28 @@ $C.@PageOverlay {
         Text: "Average playtime: --";
       }
 
+      Label {
+        Anchor: (Top: 8);
+        Style: (FontSize: 12, TextColor: #9fb0ba);
+        Text: "Search";
+      }
+
+      $C.@TextField #PlaytimeSearchField {
+        Anchor: (Height: 24, Top: 4);
+        Style: (FontSize: 13, TextColor: #ffffff(0.85));
+      }
+
+      Label #EmptyText {
+        Style: (
+          FontSize: 12,
+          TextColor: #9fb0ba
+        );
+        Text: "";
+      }
+
       Group #PlaytimeList {
-        Anchor: (Width: 490, Top: 8, Height: 212);
+        Anchor: (Width: 490, Top: 8);
+        FlexWeight: 1;
         LayoutMode: TopScrolling;
         Padding: (Left: 6, Right: 6);
         ScrollbarStyle: $C.@DefaultScrollbarStyle;
@@ -53,14 +73,47 @@ $C.@PageOverlay {
           LayoutMode: Top;
         }
       }
-      
-      Label #EmptyText {
-        Anchor: (Top: 6);
-        Style: (
-          FontSize: 12,
-          TextColor: #9fb0ba
-        );
-        Text: "";
+
+      Group #Pagination {
+        Anchor: (Top: 6, Height: 22, Width: 490);
+        LayoutMode: Left;
+
+        Group {
+          Anchor: (Width: 65);
+        }
+
+        $C.@TextButton #PrevPageButton {
+          Anchor: (Width: 110, Height: 22);
+          Text: "< Prev";
+        }
+
+        Group #PageLabelWrap {
+          Anchor: (Width: 140, Height: 22);
+          LayoutMode: Left;
+
+          Group {
+            Anchor: (Width: 35);
+          }
+
+          Label #PageLabel {
+            Anchor: (Width: 70);
+            Style: (FontSize: 12, TextColor: #9fb0ba);
+            Text: "";
+          }
+
+          Group {
+            Anchor: (Width: 35);
+          }
+        }
+
+        $C.@TextButton #NextPageButton {
+          Anchor: (Width: 110, Height: 22);
+          Text: "Next >";
+        }
+
+        Group {
+          Anchor: (Width: 65);
+        }
       }
     }
   }

@@ -30,6 +30,7 @@ import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
 import com.hypixel.hytale.server.core.event.events.player.AddPlayerToWorldEvent;
 import com.hypixel.hytale.server.core.entity.nameplate.Nameplate;
+import com.hypixel.hytale.server.core.entity.entities.player.movement.MovementManager;
 import com.hypixel.hytale.server.core.modules.entity.hitboxcollision.HitboxCollision;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.event.events.entity.LivingEntityInventoryChangeEvent;
@@ -42,6 +43,7 @@ import com.hypixel.hytale.server.core.event.events.ecs.DropItemEvent;
 import com.hypixel.hytale.server.core.event.events.ecs.BreakBlockEvent;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.universe.world.WorldMapTracker;
+import com.hypixel.hytale.protocol.MovementSettings;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.common.util.InventoryUtils;
 import io.hyvexa.common.util.PermissionUtils;
@@ -55,6 +57,7 @@ import io.hyvexa.parkour.command.ParkourAdminItemCommand;
 import io.hyvexa.parkour.command.ParkourCommand;
 import io.hyvexa.parkour.command.ParkourItemCommand;
 import io.hyvexa.parkour.command.ParkourMusicDebugCommand;
+import io.hyvexa.parkour.command.StoreCommand;
 import io.hyvexa.parkour.tracker.HiddenRunHud;
 import io.hyvexa.parkour.tracker.RunHud;
 import io.hyvexa.parkour.tracker.RunRecordsHud;
@@ -103,6 +106,8 @@ public class HyvexaPlugin extends JavaPlugin {
     private static final long STALE_PLAYER_SWEEP_SECONDS = 120L;
     private static final long TELEPORT_DEBUG_INTERVAL_SECONDS = 120L;
     private static final boolean DISABLE_WORLD_MAP = true; // Parkour server doesn't need world map
+    private static final float VIP_SPEED_MIN_MULTIPLIER = 1.0f;
+    private static final float VIP_SPEED_MAX_MULTIPLIER = 4.0f;
     private static final String CHAT_LINK_PLACEHOLDER = "{link}";
     private static final String CHAT_LINK_LABEL = "click here";
     private static final String DISCORD_URL = "https://discord.gg/BDA7gRF5";
@@ -129,6 +134,7 @@ public class HyvexaPlugin extends JavaPlugin {
     private final ConcurrentHashMap<UUID, Long> playtimeSessionStart = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, String> cachedRankNames = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, String> cachedNameplateTexts = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, Float> vipSpeedMultiplier = new ConcurrentHashMap<>();
     private final AtomicInteger onlinePlayerCount = new AtomicInteger(0);
     private ScheduledFuture<?> mapDetectionTask;
     private ScheduledFuture<?> hudUpdateTask;
@@ -193,12 +199,14 @@ public class HyvexaPlugin extends JavaPlugin {
                 TELEPORT_DEBUG_INTERVAL_SECONDS, TimeUnit.SECONDS);
         refreshChatAnnouncements();
 
+
         this.getCommandRegistry().registerCommand(new CheckpointCommand());
         this.getCommandRegistry().registerCommand(new DiscordCommand());
         this.getCommandRegistry().registerCommand(new ParkourCommand(this.mapStore, this.progressStore, this.settingsStore,
                 this.playerCountStore, this.runTracker));
         this.getCommandRegistry().registerCommand(new ParkourAdminItemCommand());
         this.getCommandRegistry().registerCommand(new ParkourMusicDebugCommand());
+        this.getCommandRegistry().registerCommand(new StoreCommand());
         this.getCommandRegistry().registerCommand(new DatabaseClearCommand());
         this.getCommandRegistry().registerCommand(new DatabaseTestCommand());
         this.getCommandRegistry().registerCommand(new DatabaseMigrateCommand());
@@ -292,6 +300,7 @@ public class HyvexaPlugin extends JavaPlugin {
                     runHudHidden.remove(playerId);
                     cachedRankNames.remove(playerId);
                     cachedNameplateTexts.remove(playerId);
+                    vipSpeedMultiplier.remove(playerId);
                     PlayerVisibilityManager.get().clearHidden(playerId);
                     // Clean up announcements
                     announcements.remove(playerId);
@@ -352,6 +361,22 @@ public class HyvexaPlugin extends JavaPlugin {
                     }
                     String rank = progressStore != null ? progressStore.getRankName(sender.getUuid(), mapStore) : "Unranked";
                     Message rankPart = FormatUtils.getRankMessage(rank);
+                    String badgeLabel = getSpecialRankLabel(sender.getUuid());
+                    String badgeColor = getSpecialRankColor(sender.getUuid());
+                    if (badgeLabel != null) {
+                        return Message.join(
+                                Message.raw("["),
+                                rankPart,
+                                Message.raw("] "),
+                                Message.raw("(").color("#ffffff"),
+                                Message.raw(badgeLabel).color(badgeColor != null ? badgeColor : "#b2c0c7"),
+                                Message.raw(")").color("#ffffff"),
+                                Message.raw(" "),
+                                Message.raw(name),
+                                Message.raw(": "),
+                                Message.raw(safeContent)
+                        );
+                    }
                     return Message.join(
                             Message.raw("["),
                             rankPart,
@@ -419,6 +444,112 @@ public class HyvexaPlugin extends JavaPlugin {
             return "Unranked";
         }
         return cachedRankNames.computeIfAbsent(playerId, id -> progressStore.getRankName(id, mapStore));
+    }
+
+    private String getSpecialRankLabel(UUID playerId) {
+        if (playerId == null || progressStore == null) {
+            return null;
+        }
+        if (progressStore.isFounder(playerId)) {
+            return "FOUNDER";
+        }
+        if (progressStore.isVip(playerId)) {
+            return "VIP";
+        }
+        return null;
+    }
+
+    private String getSpecialRankColor(UUID playerId) {
+        if (playerId == null || progressStore == null) {
+            return null;
+        }
+        if (progressStore.isFounder(playerId)) {
+            return "#ff8a3d";
+        }
+        if (progressStore.isVip(playerId)) {
+            return "#b76cff";
+        }
+        return null;
+    }
+
+    public float getVipSpeedMultiplier(UUID playerId) {
+        if (playerId == null) {
+            return VIP_SPEED_MIN_MULTIPLIER;
+        }
+        return vipSpeedMultiplier.getOrDefault(playerId, VIP_SPEED_MIN_MULTIPLIER);
+    }
+
+    public void applyVipSpeedMultiplier(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef,
+                                        float multiplier, boolean notify) {
+        if (ref == null || store == null || playerRef == null) {
+            return;
+        }
+        UUID playerId = playerRef.getUuid();
+        if (playerId == null) {
+            return;
+        }
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null) {
+            return;
+        }
+        if (progressStore == null || (!progressStore.isVip(playerId) && !progressStore.isFounder(playerId))) {
+            if (notify) {
+                player.sendMessage(Message.raw("Speed boost is VIP/Founder only."));
+            }
+            return;
+        }
+        MovementManager movementManager = store.getComponent(ref, MovementManager.getComponentType());
+        if (movementManager == null) {
+            if (notify) {
+                player.sendMessage(Message.raw("Movement settings unavailable."));
+            }
+            return;
+        }
+        movementManager.refreshDefaultSettings(ref, store);
+        movementManager.applyDefaultSettings();
+        MovementSettings settings = movementManager.getSettings();
+        if (settings == null) {
+            if (notify) {
+                player.sendMessage(Message.raw("Movement settings unavailable."));
+            }
+            return;
+        }
+        float clampedMultiplier = Math.max(VIP_SPEED_MIN_MULTIPLIER,
+                Math.min(VIP_SPEED_MAX_MULTIPLIER, multiplier));
+        if (clampedMultiplier > VIP_SPEED_MIN_MULTIPLIER) {
+            settings.maxSpeedMultiplier *= clampedMultiplier;
+            settings.forwardRunSpeedMultiplier *= clampedMultiplier;
+            settings.backwardRunSpeedMultiplier *= clampedMultiplier;
+            settings.strafeRunSpeedMultiplier *= clampedMultiplier;
+            settings.forwardSprintSpeedMultiplier *= clampedMultiplier;
+            vipSpeedMultiplier.put(playerId, clampedMultiplier);
+        } else {
+            vipSpeedMultiplier.remove(playerId);
+        }
+        var packetHandler = playerRef.getPacketHandler();
+        if (packetHandler != null) {
+            movementManager.update(packetHandler);
+        }
+        if (notify) {
+            String label = clampedMultiplier > VIP_SPEED_MIN_MULTIPLIER
+                    ? "Speed set to x" + stripTrailingZeros(clampedMultiplier) + "."
+                    : "Speed reset to normal.";
+            player.sendMessage(Message.raw(label));
+        }
+    }
+
+    private void disableVipSpeedBoost(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef) {
+        if (playerRef == null) {
+            return;
+        }
+        applyVipSpeedMultiplier(ref, store, playerRef, VIP_SPEED_MIN_MULTIPLIER, false);
+    }
+
+    private String stripTrailingZeros(float value) {
+        if (value == (long) value) {
+            return String.valueOf((long) value);
+        }
+        return String.valueOf(value);
     }
 
     /**
@@ -665,6 +796,7 @@ public class HyvexaPlugin extends JavaPlugin {
         playtimeSessionStart.keySet().removeIf(id -> !onlinePlayers.contains(id));
         cachedRankNames.keySet().removeIf(id -> !onlinePlayers.contains(id));
         cachedNameplateTexts.keySet().removeIf(id -> !onlinePlayers.contains(id));
+        vipSpeedMultiplier.keySet().removeIf(id -> !onlinePlayers.contains(id));
         if (runTracker != null) {
             runTracker.sweepStalePlayers(onlinePlayers);
         }
@@ -827,6 +959,12 @@ public class HyvexaPlugin extends JavaPlugin {
                     if (context.ref == null || !context.ref.isValid()) {
                         continue;
                     }
+                    if (runTracker != null) {
+                        String activeMapId = runTracker.getActiveMapId(context.playerRef.getUuid());
+                        if (activeMapId != null) {
+                            disableVipSpeedBoost(context.ref, context.store, context.playerRef);
+                        }
+                    }
                     runTracker.checkPlayer(context.ref, context.store);
                     ensureRunHudNow(context.ref, context.store, context.playerRef);
                     updateRunHud(context.ref, context.store);
@@ -927,7 +1065,9 @@ public class HyvexaPlugin extends JavaPlugin {
             name = "Player";
         }
         String safeRank = (rankName == null || rankName.isBlank()) ? "Unranked" : rankName;
-        String text = "[" + safeRank + "] " + name;
+        String badgeLabel = getSpecialRankLabel(playerId);
+        String badgeSuffix = badgeLabel != null ? "(" + badgeLabel + ")" : "";
+        String text = "[" + safeRank + "]" + badgeSuffix + " " + name;
         String cached = cachedNameplateTexts.get(playerId);
         if (text.equals(cached)) {
             return;
