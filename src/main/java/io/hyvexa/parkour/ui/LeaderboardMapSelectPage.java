@@ -48,7 +48,7 @@ public class LeaderboardMapSelectPage extends BaseParkourPage {
         uiCommandBuilder.append("Pages/Parkour_LeaderboardMapSelect.ui");
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_BACK), false);
-        buildMapList(uiCommandBuilder, uiEventBuilder);
+        buildMapList(ref, store, uiCommandBuilder, uiEventBuilder);
     }
 
     @Override
@@ -75,8 +75,13 @@ public class LeaderboardMapSelectPage extends BaseParkourPage {
         }
     }
 
-    private void buildMapList(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
+    private void buildMapList(Ref<EntityStore> ref, Store<EntityStore> store, UICommandBuilder commandBuilder,
+                              UIEventBuilder eventBuilder) {
         commandBuilder.clear("#MapCards");
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        if (playerRef == null) {
+            return;
+        }
         List<Map> maps = new ArrayList<>(mapStore.listMaps());
         maps.sort(Comparator.comparingInt((Map map) -> {
                     int difficulty = map.getDifficulty();
@@ -91,6 +96,24 @@ public class LeaderboardMapSelectPage extends BaseParkourPage {
             }
             commandBuilder.append("#MapCards", "Pages/Parkour_LeaderboardMapEntry.ui");
             commandBuilder.set("#MapCards[" + index + "] #MapName.Text", ParkourUtils.formatMapName(map));
+            boolean completed = progressStore.isMapCompleted(playerRef.getUuid(), map.getId());
+            if (completed) {
+                Long bestTime = progressStore.getBestTimeMs(playerRef.getUuid(), map.getId());
+                int position = progressStore.getLeaderboardPosition(map.getId(), playerRef.getUuid());
+                StringBuilder status = new StringBuilder();
+                if (bestTime != null) {
+                    status.append("PB: ").append(FormatUtils.formatDuration(bestTime));
+                }
+                if (position > 0) {
+                    if (status.length() > 0) {
+                        status.append(" | ");
+                    }
+                    status.append("#").append(position);
+                }
+                commandBuilder.set("#MapCards[" + index + "] #MapStatus.Text", status.toString());
+            } else {
+                commandBuilder.set("#MapCards[" + index + "] #MapStatus.Text", "");
+            }
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
                     "#MapCards[" + index + "]",
                     EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_SELECT_PREFIX + map.getId()), false);

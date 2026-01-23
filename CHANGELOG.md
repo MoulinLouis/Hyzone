@@ -1,5 +1,7 @@
 # Changelog
 
+- Clear VIP speed boosts when players touch start triggers to prevent momentum carryover into runs.
+- Show personal best time and leaderboard placement on map leaderboard selection entries after completion.
 - Added a map admin free-fall toggle to disable fall respawn timing per map while keeping void cutoff respawns.
 - Added a map admin toggle to enable Mithril daggers as a run item during map creation/updates.
 - Show tied map leaderboard times with shared ranks (e.g., #1 #1 #3).
