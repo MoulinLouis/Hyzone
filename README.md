@@ -7,10 +7,16 @@ A Hytale server plugin providing a complete parkour experience with map selectio
 - **Map Selection** - Category-first UI via `/pk` with Easy/Medium/Hard/Insane difficulties
 - **Leaderboards** - Global and per-map best times via `/pk leaderboard`
 - **Progression** - XP system with ranks (Bronze to Grandmaster) based on map completions
-- **Admin Tools** - Full map management via `/pk admin` (OP only)
-- **Run HUD** - Live timer display during active runs
-- **Auto-respawn** - Fall detection teleports players back to checkpoint/start
-- **Collision-free** - Player-player collision disabled; item drops blocked for non-OPs
+- **Admin Tools** - Full map/player management, settings, playtime tracking, population history via `/pk admin` (OP only)
+- **VIP/Founder Ranks** - Purchasable ranks with chat tags, nameplates, and speed multipliers (x1/x2/x4)
+- **Player Settings** - Music controls (multiple OSTs), HUD visibility toggle, speed boost, SFX toggles
+- **Run HUD** - Live timer display during active runs with server info and support links
+- **Auto-respawn** - Fall detection teleports players back to checkpoint/start (configurable per-map)
+- **Void Protection** - Teleport back to checkpoint/start when falling below configured Y level
+- **Collision-free** - Player-player collision disabled; item drops/block breaking blocked for non-OPs
+- **God Mode** - Player damage and knockback disabled globally
+- **Personal Checkpoints** - `/cp` command for setting personal checkpoints (memory-only, separate from map checkpoints)
+- **Community Links** - `/discord` and `/store` commands for server links
 
 ## Commands
 
@@ -19,8 +25,15 @@ A Hytale server plugin providing a complete parkour experience with map selectio
 | `/pk` | Open map selection menu |
 | `/pk leaderboard` | Open leaderboard menu |
 | `/pk stats` | View your progression (XP, rank, completions) |
-| `/pk admin` | Admin panel for map/settings management (OP only) |
 | `/pk items` | Give yourself the menu items |
+| `/cp [set\|clear]` | Save/teleport to personal checkpoint |
+| `/discord` | Display Discord server link |
+| `/store` | Display store link |
+| `/pk admin` | Admin panel for map/player/settings management (OP only) |
+| `/pk admin rank give <player> <vip\|founder>` | Grant VIP or Founder rank (OP only) |
+| `/pk admin rank remove <player> <vip\|founder>` | Remove VIP or Founder rank (OP only) |
+| `/pk admin rank broadcast <player> <vip\|founder>` | Broadcast rank announcement (OP only) |
+| `/pkadminitem` | Give admin remote control item (OP only) |
 | `/dbtest` | Test MySQL connection (OP only) |
 | `/dbmigrate` | Migrate JSON data into MySQL (OP only) |
 | `/dbclear` | Clear all parkour tables (OP only) |
@@ -50,12 +63,15 @@ Where `<patchline>` is configured in `gradle.properties`.
 src/main/java/
   io/hyvexa/
     HyvexaPlugin.java          # Plugin entrypoint
+    common/                    # Shared utilities
     parkour/
       command/                 # Command handlers
       data/                    # MySQL persistence (MapStore, ProgressStore, etc.)
       tracker/                 # Run tracking and HUD
       ui/                      # Custom UI pages
       interaction/             # Right-click item handlers
+      system/                  # Event filtering systems
+      visibility/              # Player visibility management
 
 src/main/resources/
   manifest.json                # Plugin manifest
