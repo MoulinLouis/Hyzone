@@ -14,10 +14,14 @@ Instructions for AI agents working on this Hytale plugin codebase.
 - **Java sources**: `src/main/java/io/hyvexa/`
 - **Plugin entrypoint**: `HyvexaPlugin.java` (extends `JavaPlugin`)
 - **Parkour code**: `io.hyvexa.parkour.*` subpackages
+- **Common utilities**: `io.hyvexa.common.*` - shared utilities (FormatUtils, InventoryUtils, PermissionUtils)
 - **Commands**: `io.hyvexa.parkour.command/` - extend `AbstractAsyncCommand` or `AbstractPlayerCommand`
 - **Data stores**: `io.hyvexa.parkour.data/` - MySQL persistence with in-memory caching
-- **UI pages**: `io.hyvexa.parkour.ui/` - extend `InteractiveCustomUIPage`
+- **UI pages**: `io.hyvexa.parkour.ui/` - extend `InteractiveCustomUIPage` or `BaseParkourPage`
 - **Interactions**: `io.hyvexa.parkour.interaction/` - right-click handlers
+- **Systems**: `io.hyvexa.parkour.system/` - event filtering systems (NoDropSystem, NoBreakSystem, etc.)
+- **Tracker**: `io.hyvexa.parkour.tracker/` - run tracking, HUD management
+- **Visibility**: `io.hyvexa.parkour.visibility/` - player visibility management
 
 ### Resources
 - **Plugin manifest**: `src/main/resources/manifest.json`
@@ -41,13 +45,18 @@ Instructions for AI agents working on this Hytale plugin codebase.
 | `/pk leaderboard` | Global + per-map best times |
 | `/pk stats` | Player XP, level, rank |
 | `/pk items` | Give menu items |
+| `/cp [set\|clear]` | Save/teleport to personal checkpoint (memory-only) |
+| `/discord` | Display Discord server link |
+| `/store` | Display store link |
 
 ### Admin Commands (OP only)
 | Command | Function |
 |---------|----------|
-| `/pk admin` | Map management UI (create, edit, delete) |
-| `/pk admin` | Player progress management (view, reset) |
-| `/pk admin` | Settings (fall respawn, void cutoff, idle fall for OP, weapon damage, teleport debug) |
+| `/pk admin` | Open admin panel UI (Maps, Players, Settings, Playtime, Population) |
+| `/pk admin rank give <player> <vip\|founder>` | Grant VIP or Founder rank |
+| `/pk admin rank remove <player> <vip\|founder>` | Remove VIP or Founder rank |
+| `/pk admin rank broadcast <player> <vip\|founder>` | Broadcast rank announcement to server |
+| `/pkadminitem` | Give admin remote control item (opens player settings) |
 
 ### Maintenance Commands (OP only)
 | Command | Function |
@@ -55,14 +64,46 @@ Instructions for AI agents working on this Hytale plugin codebase.
 | `/dbtest` | Validate MySQL connection and core tables |
 | `/dbmigrate` | Migrate JSON data to MySQL (requires all JSON files) |
 | `/dbclear` | Clear all parkour tables (restart to reset in-memory caches) |
+| `/pkmusic` | Debug command to list loaded ambience music assets |
+
+### Admin UI Features
+The `/pk admin` panel provides access to:
+- **Maps**: Create, edit, delete maps; set categories, difficulties, XP rewards, start/checkpoint/finish/leave positions and triggers; toggle free-fall mode, mithril daggers
+- **Players**: Search and view all players; detailed per-player stats with map progress; teleport, kill, grant/revoke flight, reset inventory, clear progress per map
+- **Settings**: Fall respawn timeout, void cutoff Y, idle fall for OPs, weapon damage toggle, teleport debug, rank thresholds, category order, global announcement
+- **Playtime**: View total playtime per player with search and pagination
+- **Population**: View online player count history with 10-minute sampling intervals
+- **Global Messages**: Configure server-wide announcement messages
+- **Player Counts**: (Legacy feature for map-specific counts)
 
 ### Runtime Behavior
 - Checkpoint/finish detection with radius-based triggers
-- Fall respawn after configurable timeout (returns to checkpoint or start)
+- Fall respawn after configurable timeout (returns to checkpoint or start, optional per-map)
+- Void cutoff respawn at configured Y level (always active)
 - Completion persistence with best-time tracking
 - Inventory swaps between run items (Reset/Checkpoint/Leave) and menu items
 - Player collision disabled via `HitboxCollision` removal
 - Item drops blocked for non-OP players
+- Block breaking blocked for non-OP players
+- Player damage disabled (global god mode)
+- Player knockback disabled
+- Weapon damage disabled (configurable in admin settings)
+- Run timer starts on first movement after map start
+- VIP/Founder rank perks: chat tags, nameplates, speed multipliers (x1/x2/x4)
+- Player settings: music controls, HUD visibility, speed boost, SFX toggles
+- Welcome UI shown on first join
+- Playtime tracking with periodic snapshots
+- Population history tracking (10-minute intervals)
+
+### Hotbar Interactions
+Players receive right-click items that open UIs or perform actions:
+- **Menu Item** (Candy Cane) - Opens `/pk` map selector
+- **Leaderboard Item** (Trophy) - Opens `/pk leaderboard`
+- **Stats Item** (Candy Cane Stick) - Opens `/pk stats`
+- **Player Settings Item** (Remote Control) - Opens player settings (music, HUD, speed)
+- **Reset Item** (during run) - Restart map from beginning
+- **Restart-to-Checkpoint Item** (during run, after first checkpoint) - Restart from last checkpoint
+- **Leave Item** (during run) - Exit map and return to spawn/leave position
 
 ## Build and Run
 
@@ -145,6 +186,18 @@ getCodecRegistry(Interaction.CODEC).register("My_Interaction", MyInteraction.cla
 // Create JSON in src/main/resources/Server/Item/Interactions/
 ```
 
+### Systems (Event Filters)
+Systems modify player behavior by filtering events. Current systems:
+```java
+// NoDropSystem - blocks item drops for non-OP players
+// NoBreakSystem - blocks block breaking for non-OP players
+// NoPlayerDamageSystem - blocks all player damage (god mode)
+// NoPlayerKnockbackSystem - blocks player knockback
+// NoWeaponDamageSystem - blocks weapon damage (configurable)
+// PlayerVisibilityFilterSystem - manages player visibility filters
+```
+Register systems in `setup()` or defer to avoid blocking on module initialization.
+
 ### Data Storage (MySQL)
 ```java
 public class MyStore {
@@ -223,6 +276,9 @@ Use any of these to explore the JAR:
 | `HudManager` | `HyvexaPlugin` | Custom HUD attachment |
 | `Interaction` codec | `*Interaction` classes | Right-click item handlers |
 | `HitboxCollision` | `HyvexaPlugin` | Player collision control |
+| `MovementSettings` | `HyvexaPlugin` | Speed multiplier adjustments |
+| `Nameplate` | `HyvexaPlugin` | Player nameplate customization |
+| `SlotFilter` | `HyvexaPlugin` | Inventory action filtering |
 
 ### APIs Needing Exploration
 - Particle effects and visual feedback
@@ -250,10 +306,16 @@ Use any of these to explore the JAR:
 
 ## References
 
-- See `ParkourCommand.java` for command with subcommands
-- See `MapSelectPage.java` for complete UI page example
+- See `ParkourCommand.java` for command with subcommands (including rank management)
+- See `MapSelectPage.java` for complete UI page example with pagination
+- See `PlayerSettingsPage.java` for UI page with speed/music controls
+- See `AdminPlayersPage.java` for search and pagination patterns
 - See `MenuInteraction.java` for interaction pattern
 - See `MapStore.java` for MySQL persistence pattern
+- See `ProgressStore.java` for VIP/Founder rank management
 - See `DatabaseManager.java` for connection pool management
+- See `NoPlayerDamageSystem.java` for event filtering system pattern
+- See `PlayerVisibilityManager.java` for player visibility management
 - See `docs/ARCHITECTURE.md` for threading model and edge cases
+- See `docs/DATABASE.md` for database schema reference
 - See `docs/MYSQL_MIGRATION.md` for database schema and migration details
