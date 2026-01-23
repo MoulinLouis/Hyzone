@@ -14,6 +14,7 @@ public final class ParkourConstants {
     public static final String ITEM_STATS = "Food_Candy_Cane";
     public static final String ITEM_ADMIN_REMOTE = "Recipe_Book_Magic_Air";
     public static final String ITEM_RUN_MITHRIL_SWORD = "Weapon_Sword_Mithril";
+    public static final String ITEM_RUN_MITHRIL_DAGGERS = "Weapon_Daggers_Mithril";
 
 
     public static final String[] RANK_NAMES = {

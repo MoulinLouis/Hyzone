@@ -126,6 +126,28 @@ $C.@PageOverlay {
           }
         }
 
+        Label {
+          Text: "Mithril Daggers (run item)";
+          Style: (FontSize: 13, TextColor: #cfd7dc);
+          Anchor: (Top: 6);
+        }
+
+        Group {
+          LayoutMode: Left;
+          Anchor: (Top: 4, Height: 22);
+
+          Label #MithrilDaggersValue {
+            Anchor: (Width: 120);
+            Style: (FontSize: 12, TextColor: #9fb0ba);
+            Text: "";
+          }
+
+          $C.@TextButton #MithrilDaggersToggle {
+            Anchor: (Width: 120, Height: 22);
+            Text: "Toggle";
+          }
+        }
+
         Label #SelectedMapText {
           Anchor: (Top: 6);
           Style: (FontSize: 13, TextColor: #9fb0ba);

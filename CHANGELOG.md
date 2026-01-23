@@ -1,5 +1,6 @@
 # Changelog
 
+- Added a map admin toggle to enable Mithril daggers as a run item during map creation/updates.
 - Show tied map leaderboard times with shared ranks (e.g., #1 #1 #3).
 - Rank map leaderboards by displayed time precision to avoid hidden millisecond tie breaks.
 - Added a Player Settings music label to show the currently playing track.

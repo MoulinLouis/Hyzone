@@ -19,6 +19,7 @@ public class Map {
     private int difficulty;
     private int order = ParkourConstants.DEFAULT_MAP_ORDER;
     private boolean mithrilSwordEnabled;
+    private boolean mithrilDaggersEnabled;
     private long createdAt;
     private long updatedAt;
 
@@ -128,6 +129,14 @@ public class Map {
 
     public void setMithrilSwordEnabled(boolean mithrilSwordEnabled) {
         this.mithrilSwordEnabled = mithrilSwordEnabled;
+    }
+
+    public boolean isMithrilDaggersEnabled() {
+        return mithrilDaggersEnabled;
+    }
+
+    public void setMithrilDaggersEnabled(boolean mithrilDaggersEnabled) {
+        this.mithrilDaggersEnabled = mithrilDaggersEnabled;
     }
 
     public long getCreatedAt() {
