@@ -45,6 +45,7 @@ public class PlayerMusicPage extends BaseParkourPage {
     private static final String SFX_ENABLED_LABEL = "Disable";
     private static final String SFX_DISABLED_LABEL = "Enable";
     private static final ConcurrentHashMap<UUID, String> MUSIC_LABELS = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<UUID, MusicSelection> MUSIC_SELECTIONS = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<UUID, Boolean> CHECKPOINT_SFX_ENABLED = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<UUID, Boolean> VICTORY_SFX_ENABLED = new ConcurrentHashMap<>();
 
@@ -132,14 +133,16 @@ public class PlayerMusicPage extends BaseParkourPage {
 
     private void restartDefaultMusic(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store,
                                      @Nonnull PlayerRef playerRef, @Nonnull String label) {
-        playMusic(ref, store, playerRef, resolveDefaultMusicIndex(), label, false);
+        playMusic(ref, store, playerRef, resolveDefaultMusicIndex(), label,
+                MusicSelection.defaultSelection(label), false);
     }
 
     private void playMusic(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store,
                            @Nonnull PlayerRef playerRef, @Nonnull String ambienceId,
                            @Nonnull String label) {
         int musicIndex = AmbienceFX.getAssetMap().getIndex(ambienceId);
-        playMusic(ref, store, playerRef, musicIndex, label, false);
+        playMusic(ref, store, playerRef, musicIndex, label,
+                MusicSelection.ambienceSelection(label, ambienceId), false);
     }
 
     private void playHytaleDefaultMusic(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store,
@@ -154,7 +157,7 @@ public class PlayerMusicPage extends BaseParkourPage {
 
     private void playMusic(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store,
                            @Nonnull PlayerRef playerRef, int musicIndex, @Nonnull String label,
-                           boolean allowZero) {
+                           @Nonnull MusicSelection selection, boolean allowZero) {
         World world = store.getExternalData().getWorld();
         if (world == null) {
             return;
@@ -177,13 +180,14 @@ public class PlayerMusicPage extends BaseParkourPage {
                 return;
             }
             storeMusicLabel(playerRef.getUuid(), label);
+            storeMusicSelection(playerRef.getUuid(), selection);
             packetHandler.write(new UpdateEnvironmentMusic(musicIndex));
             player.getPageManager().openCustomPage(ref, store, new PlayerMusicPage(playerRef));
             player.sendMessage(Message.raw("Now playing: " + label + "."));
         });
     }
 
-    private int resolveDefaultMusicIndex() {
+    private static int resolveDefaultMusicIndex() {
         int musicIndex = AmbienceFX.getAssetMap().getIndex(DEFAULT_MUSIC_AMBIENCE);
         if (musicIndex <= 0) {
             musicIndex = AmbienceFX.getAssetMap().getIndex(DEFAULT_MUSIC_AMBIENCE_ALT);
@@ -203,6 +207,89 @@ public class PlayerMusicPage extends BaseParkourPage {
             return;
         }
         MUSIC_LABELS.put(playerId, label);
+    }
+
+    private static void storeMusicSelection(UUID playerId, MusicSelection selection) {
+        if (playerId == null || selection == null) {
+            return;
+        }
+        MUSIC_SELECTIONS.put(playerId, selection);
+    }
+
+    public static void applyStoredMusic(@Nonnull PlayerRef playerRef) {
+        Ref<EntityStore> ref = playerRef.getReference();
+        if (ref == null || !ref.isValid()) {
+            return;
+        }
+        Store<EntityStore> store = ref.getStore();
+        World world = store.getExternalData().getWorld();
+        if (world == null) {
+            return;
+        }
+        world.execute(() -> {
+            applyStoredMusic(ref, store, playerRef);
+        });
+    }
+
+    public static void applyStoredMusic(@Nonnull Ref<EntityStore> ref) {
+        if (!ref.isValid()) {
+            return;
+        }
+        Store<EntityStore> store = ref.getStore();
+        World world = store.getExternalData().getWorld();
+        if (world == null) {
+            return;
+        }
+        world.execute(() -> {
+            if (!ref.isValid()) {
+                return;
+            }
+            PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+            if (playerRef == null) {
+                return;
+            }
+            applyStoredMusic(ref, store, playerRef);
+        });
+    }
+
+    private static void applyStoredMusic(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store,
+                                         @Nonnull PlayerRef playerRef) {
+        if (!ref.isValid() || !playerRef.isValid()) {
+            return;
+        }
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null) {
+            return;
+        }
+        var packetHandler = playerRef.getPacketHandler();
+        if (packetHandler == null) {
+            return;
+        }
+        Integer musicIndex = resolveStoredMusicIndex(playerRef.getUuid());
+        if (musicIndex == null || musicIndex <= AmbienceFX.EMPTY_ID) {
+            return;
+        }
+        packetHandler.write(new UpdateEnvironmentMusic(musicIndex));
+    }
+
+    private static Integer resolveStoredMusicIndex(UUID playerId) {
+        if (playerId == null) {
+            return null;
+        }
+        MusicSelection selection = MUSIC_SELECTIONS.get(playerId);
+        if (selection == null && MUSIC_LABELS.containsKey(playerId)) {
+            selection = MusicSelection.fromLabel(MUSIC_LABELS.get(playerId));
+        }
+        if (selection == null) {
+            return null;
+        }
+        if (selection.type == MusicSelectionType.DEFAULT) {
+            return resolveDefaultMusicIndex();
+        }
+        if (selection.ambienceId == null) {
+            return null;
+        }
+        return AmbienceFX.getAssetMap().getIndex(selection.ambienceId);
     }
 
     public static boolean isCheckpointSfxEnabled(UUID playerId) {
@@ -235,5 +322,52 @@ public class PlayerMusicPage extends BaseParkourPage {
 
     private static String getVictorySfxLabel(UUID playerId) {
         return (isVictorySfxEnabled(playerId) ? SFX_ENABLED_LABEL : SFX_DISABLED_LABEL) + " Victory SFX";
+    }
+
+    private enum MusicSelectionType {
+        DEFAULT,
+        AMBIENCE_ID
+    }
+
+    private static final class MusicSelection {
+        private final MusicSelectionType type;
+        private final String ambienceId;
+        private final String label;
+
+        private MusicSelection(MusicSelectionType type, String ambienceId, String label) {
+            this.type = type;
+            this.ambienceId = ambienceId;
+            this.label = label;
+        }
+
+        private static MusicSelection defaultSelection(String label) {
+            return new MusicSelection(MusicSelectionType.DEFAULT, null, label);
+        }
+
+        private static MusicSelection ambienceSelection(String label, String ambienceId) {
+            return new MusicSelection(MusicSelectionType.AMBIENCE_ID, ambienceId, label);
+        }
+
+        private static MusicSelection fromLabel(String label) {
+            if (label == null) {
+                return null;
+            }
+            if (DEFAULT_MUSIC_LABEL.equals(label)) {
+                return defaultSelection(label);
+            }
+            if ("Celeste OST".equals(label)) {
+                return ambienceSelection(label, CELESTE_MUSIC_AMBIENCE);
+            }
+            if ("Aura".equals(label)) {
+                return ambienceSelection(label, AURA_MUSIC_AMBIENCE);
+            }
+            if (Hytale_MUSIC_LABEL.equals(label)) {
+                return ambienceSelection(label, HYTALE_DEFAULT_MUSIC_AMBIENCE);
+            }
+            if (NO_MUSIC_LABEL.equals(label)) {
+                return ambienceSelection(label, NO_MUSIC_AMBIENCE);
+            }
+            return null;
+        }
     }
 }
