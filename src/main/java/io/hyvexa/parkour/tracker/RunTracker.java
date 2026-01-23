@@ -218,6 +218,11 @@ public class RunTracker {
             return;
         }
         long fallTimeoutMs = getFallRespawnTimeoutMs();
+        if (map.isFreeFallEnabled()) {
+            run.fallStartTime = null;
+            run.lastY = position.getY();
+            fallTimeoutMs = 0L;
+        }
         if (fallTimeoutMs > 0 && shouldRespawnFromFall(run, position.getY(), movementStates, fallTimeoutMs)) {
             run.fallStartTime = null;
             run.lastY = null;
