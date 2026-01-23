@@ -270,7 +270,7 @@ public class SettingsAdminPage extends InteractiveCustomUIPage<SettingsAdminPage
             commandBuilder.set("#RankBronze.Text", "");
             commandBuilder.set("#RankSilver.Text", "");
             commandBuilder.set("#RankGold.Text", "");
-            commandBuilder.set("#RankPlatinium.Text", "");
+            commandBuilder.set("#RankPlatinum.Text", "");
             commandBuilder.set("#RankEmerald.Text", "");
             commandBuilder.set("#RankDiamond.Text", "");
             commandBuilder.set("#RankMaster.Text", "");
@@ -292,7 +292,7 @@ public class SettingsAdminPage extends InteractiveCustomUIPage<SettingsAdminPage
         commandBuilder.set("#RankBronze.Text", "Bronze: 10.00% - 19.99%");
         commandBuilder.set("#RankSilver.Text", "Silver: 20.00% - 29.99%");
         commandBuilder.set("#RankGold.Text", "Gold: 30.00% - 39.99%");
-        commandBuilder.set("#RankPlatinium.Text", "Platinium: 40.00% - 49.99%");
+        commandBuilder.set("#RankPlatinum.Text", "Platinum: 40.00% - 49.99%");
         commandBuilder.set("#RankEmerald.Text", "Emerald: 50.00% - 59.99%");
         commandBuilder.set("#RankDiamond.Text", "Diamond: 60.00% - 69.99%");
         commandBuilder.set("#RankMaster.Text", "Master: 70.00% - 79.99%");

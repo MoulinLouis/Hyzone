@@ -19,6 +19,7 @@ import com.hypixel.hytale.protocol.MovementStates;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.common.util.InventoryUtils;
 import io.hyvexa.common.util.PermissionUtils;
+import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.parkour.ParkourConstants;
 import io.hyvexa.parkour.data.Map;
 import io.hyvexa.parkour.data.MapStore;
@@ -217,6 +218,7 @@ public class RunTracker {
         if (checkLeaveTrigger(ref, store, player, playerRef, position, map)) {
             return;
         }
+        checkCheckpoints(run, playerRef, player, position, map);
         long fallTimeoutMs = getFallRespawnTimeoutMs();
         if (map.isFreeFallEnabled()) {
             run.fallStartTime = null;
@@ -233,7 +235,6 @@ public class RunTracker {
             recordTeleport(playerRef.getUuid(), TeleportCause.RUN_RESPAWN);
             return;
         }
-        checkCheckpoints(run, playerRef, player, position, map);
         checkFinish(run, playerRef, player, position, map, transform, ref, store);
     }
 
@@ -368,7 +369,7 @@ public class RunTracker {
             }
             if (distanceSq(position, checkpoint) <= TOUCH_RADIUS_SQ) {
                 run.touchedCheckpoints.add(i);
-                run.lastCheckpointIndex = Math.max(run.lastCheckpointIndex, i);
+                run.lastCheckpointIndex = i;
                 playCheckpointSound(playerRef);
                 player.sendMessage(Message.raw("Checkpoint touched"));
             }
@@ -410,6 +411,10 @@ public class RunTracker {
             int newRank = progressStore.getCompletionRank(playerId, mapStore);
             boolean reachedVexaGod = newRank == ParkourConstants.COMPLETION_RANK_NAMES.length && oldRank < newRank;
             if (newRank > oldRank) {
+                HyvexaPlugin plugin = HyvexaPlugin.getInstance();
+                if (plugin != null) {
+                    plugin.invalidateRankCache(playerId);
+                }
                 String rankName = progressStore.getRankName(playerId, mapStore);
                 player.sendMessage(Message.raw("Rank up! You are now " + rankName + "."));
             }
@@ -488,8 +493,9 @@ public class RunTracker {
 
     private void teleportToRespawn(Ref<EntityStore> ref, Store<EntityStore> store, ActiveRun run, Map map) {
         TransformData spawn = null;
-        if (run.lastCheckpointIndex >= 0 && run.lastCheckpointIndex < map.getCheckpoints().size()) {
-            spawn = map.getCheckpoints().get(run.lastCheckpointIndex);
+        int checkpointIndex = resolveCheckpointIndex(run, map);
+        if (checkpointIndex >= 0 && checkpointIndex < map.getCheckpoints().size()) {
+            spawn = map.getCheckpoints().get(checkpointIndex);
         }
         if (spawn == null) {
             spawn = map.getStart();
@@ -507,14 +513,18 @@ public class RunTracker {
             return false;
         }
         ActiveRun run = activeRuns.get(playerRef.getUuid());
-        if (run == null || run.lastCheckpointIndex < 0) {
+        if (run == null) {
             return false;
         }
         Map map = mapStore.getMap(run.mapId);
-        if (map == null || run.lastCheckpointIndex >= map.getCheckpoints().size()) {
+        if (map == null) {
             return false;
         }
-        TransformData checkpoint = map.getCheckpoints().get(run.lastCheckpointIndex);
+        int checkpointIndex = resolveCheckpointIndex(run, map);
+        if (checkpointIndex < 0 || checkpointIndex >= map.getCheckpoints().size()) {
+            return false;
+        }
+        TransformData checkpoint = map.getCheckpoints().get(checkpointIndex);
         if (checkpoint == null) {
             return false;
         }
@@ -526,6 +536,27 @@ public class RunTracker {
         run.fallStartTime = null;
         run.lastY = null;
         return true;
+    }
+
+    private int resolveCheckpointIndex(ActiveRun run, Map map) {
+        if (run == null || map == null) {
+            return -1;
+        }
+        int index = run.lastCheckpointIndex;
+        if (index >= 0 && index < map.getCheckpoints().size()) {
+            return index;
+        }
+        int best = -1;
+        for (Integer touched : run.touchedCheckpoints) {
+            if (touched == null) {
+                continue;
+            }
+            int candidate = touched;
+            if (candidate >= 0 && candidate < map.getCheckpoints().size()) {
+                best = Math.max(best, candidate);
+            }
+        }
+        return best;
     }
 
     public boolean resetRunToStart(Ref<EntityStore> ref, Store<EntityStore> store, Player player, PlayerRef playerRef) {
@@ -552,7 +583,6 @@ public class RunTracker {
         Vector3f rotation = new Vector3f(map.getStart().getRotX(), map.getStart().getRotY(),
                 map.getStart().getRotZ());
         store.addComponent(ref, Teleport.getComponentType(), new Teleport(world, position, rotation));
-        player.sendMessage(Message.raw("Run reset."));
         return true;
     }
 

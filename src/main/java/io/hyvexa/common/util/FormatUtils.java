@@ -45,7 +45,7 @@ public final class FormatUtils {
             case "Bronze" -> "#cd7f32";
             case "Silver" -> "#c0c0c0";
             case "Gold" -> "#ffd700";
-            case "Platinium", "Platinum" -> "#9fd3c7";
+            case "Platinum" -> "#9fd3c7";
             case "Emerald" -> "#39c97a";
             case "Diamond" -> "#4dd7ff";
             case "Master" -> "#9b5de5";

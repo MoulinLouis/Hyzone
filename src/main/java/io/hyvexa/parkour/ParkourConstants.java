@@ -31,7 +31,7 @@ public final class ParkourConstants {
             "Bronze",
             "Silver",
             "Gold",
-            "Platinium",
+            "Platinum",
             "Emerald",
             "Diamond",
             "Master",

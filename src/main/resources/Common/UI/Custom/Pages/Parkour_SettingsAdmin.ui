@@ -196,7 +196,7 @@ $C.@PageOverlay {
         Text: "";
       }
 
-      Label #RankPlatinium {
+      Label #RankPlatinum {
         Anchor: (Top: 2);
         Style: (FontSize: 12, TextColor: #9fd3c7);
         Text: "";
