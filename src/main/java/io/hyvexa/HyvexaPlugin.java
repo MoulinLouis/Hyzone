@@ -9,6 +9,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.parkour.data.DatabaseManager;
 import io.hyvexa.parkour.data.GlobalMessageStore;
@@ -58,6 +59,7 @@ import io.hyvexa.parkour.command.ParkourCommand;
 import io.hyvexa.parkour.command.ParkourItemCommand;
 import io.hyvexa.parkour.command.ParkourMusicDebugCommand;
 import io.hyvexa.parkour.command.StoreCommand;
+import io.hyvexa.parkour.ParkourConstants;
 import io.hyvexa.parkour.tracker.HiddenRunHud;
 import io.hyvexa.parkour.tracker.RunHud;
 import io.hyvexa.parkour.tracker.RunRecordsHud;
@@ -545,6 +547,27 @@ public class HyvexaPlugin extends JavaPlugin {
         applyVipSpeedMultiplier(ref, store, playerRef, VIP_SPEED_MIN_MULTIPLIER, false);
     }
 
+    private boolean shouldDisableVipSpeedForStartTrigger(Store<EntityStore> store, Ref<EntityStore> ref,
+                                                         PlayerRef playerRef) {
+        if (store == null || ref == null || playerRef == null || mapStore == null) {
+            return false;
+        }
+        UUID playerId = playerRef.getUuid();
+        if (playerId == null || getVipSpeedMultiplier(playerId) <= VIP_SPEED_MIN_MULTIPLIER) {
+            return false;
+        }
+        TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
+        if (transform == null) {
+            return false;
+        }
+        Vector3d position = transform.getPosition();
+        if (position == null) {
+            return false;
+        }
+        double touchRadiusSq = ParkourConstants.TOUCH_RADIUS * ParkourConstants.TOUCH_RADIUS;
+        return mapStore.findMapByStartTrigger(position.getX(), position.getY(), position.getZ(), touchRadiusSq) != null;
+    }
+
     private String stripTrailingZeros(float value) {
         if (value == (long) value) {
             return String.valueOf((long) value);
@@ -962,6 +985,9 @@ public class HyvexaPlugin extends JavaPlugin {
                     if (runTracker != null) {
                         String activeMapId = runTracker.getActiveMapId(context.playerRef.getUuid());
                         if (activeMapId != null) {
+                            disableVipSpeedBoost(context.ref, context.store, context.playerRef);
+                        } else if (shouldDisableVipSpeedForStartTrigger(context.store, context.ref,
+                                context.playerRef)) {
                             disableVipSpeedBoost(context.ref, context.store, context.playerRef);
                         }
                     }
