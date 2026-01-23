@@ -2,7 +2,7 @@ $C = "../Common.ui";
 
 $C.@PageOverlay {
   $C.@Container {
-    Anchor: (Width: 460, Height: 270);
+    Anchor: (Width: 460, Height: 310);
 
     #Title {
       Group {
@@ -78,6 +78,39 @@ $C.@PageOverlay {
         $C.@TextButton #ShowHudButton {
           Anchor: (Height: 24, Width: 200);
           Text: "Show HUD";
+        }
+      }
+
+      Label #VipSpeedLabel {
+        Anchor: (Top: 12);
+        Style: (
+          FontSize: 14,
+          TextColor: #9fb0ba
+        );
+        Text: "VIP/Founder speed boost.";
+      }
+
+      Group #VipSpeedRow {
+        Anchor: (Top: 8, Left: 6, Right: 6, Height: 24);
+        LayoutMode: Left;
+
+        $C.@TextButton #VipSpeedX1Button {
+          Anchor: (Height: 24, Width: 78);
+          Text: "x1";
+        }
+
+        Group { Anchor: (Width: 6); }
+
+        $C.@TextButton #VipSpeedX2Button {
+          Anchor: (Height: 24, Width: 78);
+          Text: "x2";
+        }
+
+        Group { Anchor: (Width: 6); }
+
+        $C.@TextButton #VipSpeedX4Button {
+          Anchor: (Height: 24, Width: 78);
+          Text: "x4";
         }
       }
 

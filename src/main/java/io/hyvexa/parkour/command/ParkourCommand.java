@@ -10,6 +10,7 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.util.PermissionUtils;
@@ -24,6 +25,8 @@ import io.hyvexa.parkour.ui.CategorySelectPage;
 import io.hyvexa.parkour.ui.LeaderboardMenuPage;
 import io.hyvexa.parkour.ui.StatsPage;
 import javax.annotation.Nonnull;
+import java.util.Locale;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 import static com.hypixel.hytale.server.core.command.commands.player.inventory.InventorySeeCommand.MESSAGE_COMMANDS_ERRORS_PLAYER_NOT_IN_WORLD;
@@ -55,6 +58,7 @@ public class ParkourCommand extends AbstractAsyncCommand {
     protected CompletableFuture<Void> executeAsync(CommandContext commandContext) {
         CommandSender sender = commandContext.sender();
         if (!(sender instanceof Player player)) {
+            handleConsoleCommand(commandContext);
             return CompletableFuture.completedFuture(null);
         }
         Ref<EntityStore> ref = player.getReference();
@@ -67,6 +71,15 @@ public class ParkourCommand extends AbstractAsyncCommand {
         }
         commandContext.sendMessage(MESSAGE_COMMANDS_ERRORS_PLAYER_NOT_IN_WORLD);
         return CompletableFuture.completedFuture(null);
+    }
+
+    private void handleConsoleCommand(CommandContext ctx) {
+        String[] tokens = tokenize(ctx);
+        if (tokens.length >= 2 && tokens[0].equalsIgnoreCase("admin") && tokens[1].equalsIgnoreCase("rank")) {
+            handleAdminRank(ctx, null, tokens);
+            return;
+        }
+        ctx.sendMessage(Message.raw("Usage: /pk admin rank <give|remove|broadcast> <player|uuid> <vip|founder>"));
     }
 
     private void handleCommand(CommandContext ctx, Player player, Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -88,6 +101,10 @@ public class ParkourCommand extends AbstractAsyncCommand {
             return;
         }
         if (tokens[0].equalsIgnoreCase("admin")) {
+            if (tokens.length >= 2 && tokens[1].equalsIgnoreCase("rank")) {
+                handleAdminRank(ctx, player, tokens);
+                return;
+            }
             openAdminMenu(ctx, player, store, ref);
             return;
         }
@@ -126,6 +143,149 @@ public class ParkourCommand extends AbstractAsyncCommand {
         }
         player.getPageManager().openCustomPage(ref, store,
                 new AdminIndexPage(playerRef, mapStore, progressStore, settingsStore, playerCountStore));
+    }
+
+    private void handleAdminRank(CommandContext ctx, Player player, String[] tokens) {
+        if (player != null && !PermissionUtils.isOp(player)) {
+            ctx.sendMessage(MESSAGE_OP_REQUIRED);
+            return;
+        }
+        if (progressStore == null) {
+            ctx.sendMessage(Message.raw("Progress store not available.").color("#ff4444"));
+            return;
+        }
+        if (tokens.length >= 3 && tokens[2].equalsIgnoreCase("broadcast")) {
+            handleAdminRankBroadcast(ctx, tokens);
+            return;
+        }
+        if (tokens.length < 5) {
+            ctx.sendMessage(Message.raw("Usage: /pk admin rank <give|remove> <player|uuid> <vip|founder>"));
+            ctx.sendMessage(Message.raw("Usage: /pk admin rank broadcast <player|uuid> <vip|founder>"));
+            return;
+        }
+        String action = tokens[2].toLowerCase(Locale.ROOT);
+        String target = tokens[3];
+        String rankInput = tokens[4].toLowerCase(Locale.ROOT);
+
+        boolean isAdd = "give".equals(action);
+        boolean isRemove = "remove".equals(action);
+        if (!isAdd && !isRemove) {
+            ctx.sendMessage(Message.raw("Unknown action: " + action + ". Use give or remove."));
+            return;
+        }
+        boolean isVip = "vip".equals(rankInput);
+        boolean isFounder = "founder".equals(rankInput);
+        if (!isVip && !isFounder) {
+            ctx.sendMessage(Message.raw("Unknown rank: " + rankInput + ". Use vip or founder."));
+            return;
+        }
+
+        PlayerRef onlineMatch = findOnlineByName(target);
+        UUID playerId = onlineMatch != null ? onlineMatch.getUuid() : parseUuid(target);
+        if (playerId == null) {
+            playerId = progressStore.getPlayerIdByName(target);
+        }
+        if (playerId == null) {
+            ctx.sendMessage(Message.raw("Player not found: " + target).color("#ff4444"));
+            return;
+        }
+
+        String resolvedName = onlineMatch != null ? onlineMatch.getUsername() : progressStore.getPlayerName(playerId);
+        if (resolvedName == null || resolvedName.isBlank()) {
+            resolvedName = target;
+        }
+
+        boolean currentVip = progressStore.isVip(playerId);
+        boolean currentFounder = progressStore.isFounder(playerId);
+        boolean newVip = isVip ? isAdd : currentVip;
+        boolean newFounder = isFounder ? isAdd : currentFounder;
+        if (isVip && isRemove) {
+            newVip = currentFounder;
+        } else if (isFounder && isRemove) {
+            newFounder = false;
+        }
+
+        boolean changed = progressStore.setPlayerRank(playerId, resolvedName, newVip, newFounder);
+        String label = (isVip ? "VIP" : "Founder") + " " + (isAdd ? "added" : "removed");
+        if (changed) {
+            ctx.sendMessage(Message.raw(label + " for " + resolvedName + ".").color("#44ff44"));
+        } else {
+            ctx.sendMessage(Message.raw(resolvedName + " already has that rank setting.").color("#ffaa00"));
+        }
+    }
+
+    private void handleAdminRankBroadcast(CommandContext ctx, String[] tokens) {
+        if (tokens.length < 5) {
+            ctx.sendMessage(Message.raw("Usage: /pk admin rank broadcast <player|uuid> <vip|founder>"));
+            return;
+        }
+        if (progressStore == null) {
+            ctx.sendMessage(Message.raw("Progress store not available.").color("#ff4444"));
+            return;
+        }
+        String target = tokens[3];
+        String rankInput = tokens[4].toLowerCase(Locale.ROOT);
+        boolean isVip = "vip".equals(rankInput);
+        boolean isFounder = "founder".equals(rankInput);
+        if (!isVip && !isFounder) {
+            ctx.sendMessage(Message.raw("Unknown rank: " + rankInput + ". Use vip or founder."));
+            return;
+        }
+        PlayerRef onlineMatch = findOnlineByName(target);
+        UUID playerId = onlineMatch != null ? onlineMatch.getUuid() : parseUuid(target);
+        if (playerId == null) {
+            playerId = progressStore.getPlayerIdByName(target);
+        }
+        String resolvedName = onlineMatch != null ? onlineMatch.getUsername() : progressStore.getPlayerName(playerId);
+        if (resolvedName == null || resolvedName.isBlank()) {
+            resolvedName = target;
+        }
+
+        broadcastSupporterMessage(resolvedName, isFounder);
+    }
+
+    private void broadcastSupporterMessage(String playerName, boolean founder) {
+        Message rankPart = Message.raw(founder ? "FOUNDER" : "VIP")
+                .color(founder ? "#ff8a3d" : "#b76cff");
+        Message message = Message.join(
+                Message.raw("["),
+                rankPart,
+                Message.raw("] "),
+                Message.raw(playerName),
+                Message.raw(" supports our server and helps us a lot!")
+        );
+        Message ggMessage = Message.raw("SEND GG IN THE CHAT!!").bold(true);
+        Universe.get().getWorlds().forEach((id, world) -> world.execute(() -> {
+            for (PlayerRef targetRef : world.getPlayerRefs()) {
+                targetRef.sendMessage(message);
+                targetRef.sendMessage(ggMessage);
+            }
+        }));
+    }
+
+    private static PlayerRef findOnlineByName(String name) {
+        if (name == null || name.isBlank()) {
+            return null;
+        }
+        String target = name.trim().toLowerCase(Locale.ROOT);
+        for (PlayerRef playerRef : Universe.get().getPlayers()) {
+            String username = playerRef.getUsername();
+            if (username != null && username.toLowerCase(Locale.ROOT).equals(target)) {
+                return playerRef;
+            }
+        }
+        return null;
+    }
+
+    private static UUID parseUuid(String input) {
+        if (input == null || input.isBlank()) {
+            return null;
+        }
+        try {
+            return UUID.fromString(input.trim());
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
     }
 
     private void giveItems(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref) {

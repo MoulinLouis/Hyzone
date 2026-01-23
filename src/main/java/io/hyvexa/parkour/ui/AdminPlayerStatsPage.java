@@ -151,6 +151,9 @@ public class AdminPlayerStatsPage extends BaseParkourPage {
         int completed = progressStore.getCompletedMapCount(targetId);
         int totalMaps = mapStore != null ? mapStore.listMaps().size() : 0;
         String rankName = progressStore.getRankName(targetId, mapStore);
+        long playtimeMs = progressStore.getPlaytimeMs(targetId);
+        boolean vip = progressStore.isVip(targetId);
+        boolean founder = progressStore.isFounder(targetId);
 
         commandBuilder.set("#PlayerName.Text", name);
         commandBuilder.set("#PlayerUuid.Text", targetId.toString());
@@ -158,6 +161,9 @@ public class AdminPlayerStatsPage extends BaseParkourPage {
         commandBuilder.set("#PlayerRank.Style.TextColor", FormatUtils.getRankColor(rankName));
         commandBuilder.set("#PlayerXp.Text", xp + " XP");
         commandBuilder.set("#PlayerMaps.Text", completed + "/" + totalMaps + " maps");
+        commandBuilder.set("#PlayerPlaytime.Text", FormatUtils.formatPlaytime(playtimeMs));
+        commandBuilder.set("#PlayerVip.Text", vip ? "Yes" : "No");
+        commandBuilder.set("#PlayerFounder.Text", founder ? "Yes" : "No");
     }
 
     private void handleTeleportToPlayer(Ref<EntityStore> ref, Store<EntityStore> store) {

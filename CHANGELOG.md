@@ -232,3 +232,36 @@
 - Restore RunTracker player cleanup API used on disconnect.
 - Restore RunTracker teleport stats drain API used by debug logging.
 - Delay run timer start until the player moves off the start position after map start/reset.
+- Added Tebex-friendly /pkrank command and VIP/Founder flags on players for rank purchases.
+- Allowed /pkrank to run from console while keeping OP-only for in-game use.
+- Added VIP/Founder chat tags and nameplate suffixes based on database flags.
+- Colored VIP (purple) and Founder (orange) chat tags.
+- Set VIP/Founder chat tag parentheses to white and add spacing after rank.
+- Added VIP/Founder speed multiplier buttons (x1/x2/x4) in player settings, auto-reset when entering a map.
+- Tweaked VIP speed button widths/spacers to prevent cropping.
+- Added side padding to VIP speed row so rounded corners show.
+- Added playtime and VIP/Founder status fields to the admin player detail page.
+- Moved VIP/Founder rank management under /pk admin rank give/remove <player> <vip/founder>.
+- Treated Founder as higher than VIP (Founder implies VIP in rank checks and updates).
+- Added /pk admin rank broadcast to send a global supporter message and GG prompt.
+- Allowed /pk admin rank commands to run from console for Tebex.
+- Scheduled rank broadcast messages on world threads for Tebex safety.
+- Added playtime admin search and pagination.
+- Added /store command for the Hyvexa store link.
+- Enlarged Run HUD typography and added a Support Us section.
+- Restored Run HUD UI files to satisfy the Pages/Parkour_RunHud.ui lookup.
+- Extended the Run HUD background to fit the Support Us section.
+- Added centered store.hyvexa.com line under the Support Us bullets.
+- Extended the Run HUD background and moved it slightly higher.
+- Extended Run HUD background padding so the store line sits inside the box.
+- Kept Run HUD loading path as Pages/Parkour_RunHud.ui (resolved under Common/UI/Custom/Pages at runtime).
+- Shifted HUD title text left for better alignment.
+- Unified /discord and /store link formatting/colors.
+- Replaced HUD emojis with ASCII bullets after rendering fallback.
+- Added storm icon before the Speed Boost line in the Run HUD.
+- Adjusted storm icon texture path to a relative UI path.
+- Added star icon before the Exclusive Ranks line in the Run HUD.
+- Nudged the store link down for spacing.
+- Increased Support/Store section font sizes to match the HUD.
+- Increased Support/Store icon sizes and row heights for better alignment.
+- Extended Run HUD background bottom padding/height for the footer.

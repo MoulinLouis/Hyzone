@@ -119,6 +119,57 @@ $C.@PageOverlay {
         }
       }
 
+      Group {
+        Anchor: (Top: 2, Height: 20);
+        LayoutMode: Left;
+
+        Label {
+          Anchor: (Width: 70);
+          Style: (FontSize: 13, TextColor: #9fb0ba);
+          Text: "Playtime";
+        }
+
+        Label #PlayerPlaytime {
+          FlexWeight: 1;
+          Style: (FontSize: 13, TextColor: #cfd7dc);
+          Text: "";
+        }
+      }
+
+      Group {
+        Anchor: (Top: 2, Height: 20);
+        LayoutMode: Left;
+
+        Label {
+          Anchor: (Width: 70);
+          Style: (FontSize: 13, TextColor: #9fb0ba);
+          Text: "VIP";
+        }
+
+        Label #PlayerVip {
+          FlexWeight: 1;
+          Style: (FontSize: 13, TextColor: #cfd7dc);
+          Text: "";
+        }
+      }
+
+      Group {
+        Anchor: (Top: 2, Height: 20);
+        LayoutMode: Left;
+
+        Label {
+          Anchor: (Width: 70);
+          Style: (FontSize: 13, TextColor: #9fb0ba);
+          Text: "Founder";
+        }
+
+        Label #PlayerFounder {
+          FlexWeight: 1;
+          Style: (FontSize: 13, TextColor: #cfd7dc);
+          Text: "";
+        }
+      }
+
       Group #ActionButtons {
         Anchor: (Top: 10, Height: 80, Width: 670);
         LayoutMode: Top;
