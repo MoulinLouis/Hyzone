@@ -1093,6 +1093,18 @@ public class HyvexaPlugin extends JavaPlugin {
         if (name == null || name.isBlank()) {
             name = "Player";
         }
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player != null && PermissionUtils.isOp(player)) {
+            String text = "[ADMIN] " + name;
+            String cached = cachedNameplateTexts.get(playerId);
+            if (text.equals(cached)) {
+                return;
+            }
+            cachedNameplateTexts.put(playerId, text);
+            Nameplate nameplate = store.ensureAndGetComponent(ref, Nameplate.getComponentType());
+            nameplate.setText(text);
+            return;
+        }
         String safeRank = (rankName == null || rankName.isBlank()) ? "Unranked" : rankName;
         String badgeLabel = getSpecialRankLabel(playerId);
         String badgeSuffix = badgeLabel != null ? "(" + badgeLabel + ")" : "";
