@@ -118,6 +118,7 @@
 - Updated completion ranks to start at Bronze and add Master at 100%.
 - Apply fall-to-spawn only when not in a run; falling during a run respawns at checkpoints again.
 - Removed the idle fall-to-spawn chat message.
+- Raised the vertical tolerance for checkpoint and finish line detection.
 - Switched teleport-to-spawn to use the world spawn provider instead of fixed coords.
 - Skip idle fall-to-spawn for OP players while keeping run fall behavior.
 - Added a /pkadmin settings toggle for idle fall respawn on OP players.
