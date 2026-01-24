@@ -385,13 +385,16 @@ public class RunTracker {
             if (checkpoint == null) {
                 continue;
             }
-            if (distanceSq(position, checkpoint) <= TOUCH_RADIUS_SQ) {
+            if (distanceSqWithVerticalBonus(position, checkpoint) <= TOUCH_RADIUS_SQ) {
                 run.touchedCheckpoints.add(i);
                 run.lastCheckpointIndex = i;
                 long elapsedMs = run.waitingForStart ? 0L : Math.max(0L, System.currentTimeMillis() - run.startTimeMs);
                 run.checkpointTouchTimes.put(i, elapsedMs);
                 playCheckpointSound(playerRef);
                 player.sendMessage(Message.raw("Checkpoint touched"));
+
+                // Show checkpoint feedback HUD
+                showCheckpointFeedback(playerRef, run.mapId, i, elapsedMs);
             }
         }
     }
@@ -401,7 +404,7 @@ public class RunTracker {
         if (run.finishTouched || map.getFinish() == null) {
             return;
         }
-        if (distanceSq(position, map.getFinish()) <= TOUCH_RADIUS_SQ) {
+        if (distanceSqWithVerticalBonus(position, map.getFinish()) <= TOUCH_RADIUS_SQ) {
             int checkpointCount = map.getCheckpoints().size();
             if (checkpointCount > 0 && run.touchedCheckpoints.size() < checkpointCount) {
                 long now = System.currentTimeMillis();
@@ -481,6 +484,16 @@ public class RunTracker {
     private static double distanceSq(Vector3d position, TransformData target) {
         double dx = position.getX() - target.getX();
         double dy = position.getY() - target.getY();
+        double dz = position.getZ() - target.getZ();
+        return dx * dx + dy * dy + dz * dz;
+    }
+
+    private static double distanceSqWithVerticalBonus(Vector3d position, TransformData target) {
+        double dx = position.getX() - target.getX();
+        double dy = position.getY() - target.getY();
+        if (dy > 0) {
+            dy = Math.max(0.0, dy - ParkourConstants.TOUCH_VERTICAL_BONUS);
+        }
         double dz = position.getZ() - target.getZ();
         return dx * dx + dy * dy + dz * dz;
     }
@@ -852,5 +865,60 @@ public class RunTracker {
             return;
         }
         teleportStats.computeIfAbsent(playerId, ignored -> new TeleportStats()).increment(cause);
+    }
+
+    private void showCheckpointFeedback(PlayerRef playerRef, String mapId, int checkpointIndex, long cpTimeMs) {
+        if (playerRef == null || mapId == null || progressStore == null) {
+            System.out.println("[CheckpointFeedback] Skipped - null params");
+            return;
+        }
+
+        UUID playerId = playerRef.getUuid();
+        System.out.println("[CheckpointFeedback] Called for player " + playerId + " on CP " + checkpointIndex + " with time " + cpTimeMs);
+
+        // Calculate placement by comparing against all players' PB checkpoint times
+        List<Long> allCpTimes = new ArrayList<>();
+        for (UUID otherPlayerId : progressStore.getPlayerIds()) {
+            List<Long> checkpointTimes = progressStore.getCheckpointTimes(otherPlayerId, mapId);
+            if (checkpointTimes.size() > checkpointIndex) {
+                long time = checkpointTimes.get(checkpointIndex);
+                if (time > 0) {
+                    allCpTimes.add(time);
+                }
+            }
+        }
+
+        // Add current time and sort
+        allCpTimes.add(cpTimeMs);
+        allCpTimes.sort(Long::compareTo);
+
+        // Find placement (1-indexed)
+        int placement = 1;
+        for (int i = 0; i < allCpTimes.size(); i++) {
+            if (allCpTimes.get(i).equals(cpTimeMs)) {
+                placement = i + 1;
+                break;
+            }
+        }
+
+        // Get player's PB checkpoint time for time diff calculation
+        Long timeDiffMs = null;
+        List<Long> pbCheckpointTimes = progressStore.getCheckpointTimes(playerId, mapId);
+        if (!pbCheckpointTimes.isEmpty() && pbCheckpointTimes.size() > checkpointIndex) {
+            long pbCpTime = pbCheckpointTimes.get(checkpointIndex);
+            if (pbCpTime > 0) {
+                timeDiffMs = cpTimeMs - pbCpTime;
+            }
+        }
+
+        System.out.println("[CheckpointFeedback] Placement: " + placement + ", TimeDiff: " + timeDiffMs + ", AllCpTimes count: " + allCpTimes.size());
+
+        // Show the feedback HUD
+        HyvexaPlugin plugin = HyvexaPlugin.getInstance();
+        if (plugin != null) {
+            plugin.showCheckpointFeedback(playerRef, placement, checkpointIndex, cpTimeMs, timeDiffMs);
+        } else {
+            System.out.println("[CheckpointFeedback] Plugin instance is null!");
+        }
     }
 }
