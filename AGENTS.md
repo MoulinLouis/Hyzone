@@ -78,6 +78,7 @@ The `/pk admin` panel provides access to:
 
 ### Runtime Behavior
 - Checkpoint/finish detection with radius-based triggers
+- Checkpoint split times stored on new personal best runs (player_checkpoint_times)
 - Fall respawn after configurable timeout (returns to checkpoint or start, optional per-map)
 - Void cutoff respawn at configured Y level (always active)
 - Completion persistence with best-time tracking
