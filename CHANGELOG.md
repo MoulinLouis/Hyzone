@@ -1,11 +1,14 @@
 # Changelog
 
+- Add checkpoint split times storage for personal best runs.
 - Reapply a player's selected music track on reconnect so the actual track matches the saved label.
 - Remove the "Run reset." chat message when players restart a run.
 - Show [ADMIN] nameplates for OP players instead of their rank.
 - Refresh cached rank on completion so run HUD shows new ranks immediately after a rank-up.
 - Ensure reset-to-checkpoint and fall respawns return players to their latest reached checkpoint.
 - Use the most recently touched checkpoint for respawn even if it is earlier than a previously reached checkpoint.
+- Added a player settings toggle to disable the "Reset current map" run item.
+- Clear player inventories when using reset or reset-to-checkpoint run items before re-issuing run items.
 - Clear VIP speed boosts when players touch start triggers to prevent momentum carryover into runs.
 - Show personal best time and leaderboard placement on map leaderboard selection entries after completion.
 - Added a map admin free-fall toggle to disable fall respawn timing per map while keeping void cutoff respawns.

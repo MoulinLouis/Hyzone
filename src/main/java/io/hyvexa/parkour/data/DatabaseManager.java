@@ -8,6 +8,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.logging.Level;
 
 public class DatabaseManager {
@@ -73,6 +74,7 @@ public class DatabaseManager {
         try {
             dataSource = new HikariDataSource(config);
             LOGGER.atInfo().log("Database connection pool initialized successfully");
+            ensureCheckpointTimesTable();
         } catch (Exception e) {
             LOGGER.at(Level.SEVERE).log("Failed to initialize database connection pool: " + e.getMessage());
             throw new RuntimeException("Database initialization failed", e);
@@ -121,7 +123,8 @@ public class DatabaseManager {
             }
 
             // Test tables exist
-            String[] tables = {"players", "maps", "player_completions", "map_checkpoints", "settings"};
+            String[] tables = {"players", "maps", "player_completions", "player_checkpoint_times", "map_checkpoints",
+                    "settings"};
             StringBuilder missingTables = new StringBuilder();
 
             for (String table : tables) {
@@ -163,6 +166,29 @@ public class DatabaseManager {
                 return rs.getInt(1);
             }
             return 0;
+        }
+    }
+
+    private void ensureCheckpointTimesTable() {
+        try (Connection conn = getConnection()) {
+            createPlayerCheckpointTimesTable(conn);
+        } catch (SQLException e) {
+            LOGGER.at(Level.WARNING).log("Failed to ensure player_checkpoint_times table: " + e.getMessage());
+        }
+    }
+
+    private void createPlayerCheckpointTimesTable(Connection conn) throws SQLException {
+        String sql = """
+            CREATE TABLE IF NOT EXISTS player_checkpoint_times (
+              player_uuid CHAR(36) NOT NULL,
+              map_id VARCHAR(64) NOT NULL,
+              checkpoint_index INT NOT NULL,
+              time_ms BIGINT NOT NULL,
+              PRIMARY KEY (player_uuid, map_id, checkpoint_index)
+            ) ENGINE=InnoDB
+            """;
+        try (Statement stmt = conn.createStatement()) {
+            stmt.executeUpdate(sql);
         }
     }
 

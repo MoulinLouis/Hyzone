@@ -16,6 +16,9 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.HyvexaPlugin;
+import io.hyvexa.common.util.InventoryUtils;
+import io.hyvexa.parkour.data.Map;
+import io.hyvexa.parkour.util.PlayerSettingsStore;
 import io.hyvexa.parkour.visibility.PlayerVisibilityManager;
 
 import javax.annotation.Nonnull;
@@ -32,6 +35,10 @@ public class PlayerSettingsPage extends BaseParkourPage {
     private static final String BUTTON_SPEED_X1 = "SpeedX1";
     private static final String BUTTON_SPEED_X2 = "SpeedX2";
     private static final String BUTTON_SPEED_X4 = "SpeedX4";
+    private static final String BUTTON_TOGGLE_RESET_ITEM = "ToggleResetItem";
+    private static final String RESET_ITEM_BUTTON_SELECTOR = "#ResetItemButton";
+    private static final String RESET_ITEM_LABEL_DISABLE = "Reset item: Off";
+    private static final String RESET_ITEM_LABEL_ENABLE = "Reset item: On";
 
     public PlayerSettingsPage(@Nonnull PlayerRef playerRef) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
@@ -53,6 +60,7 @@ public class PlayerSettingsPage extends BaseParkourPage {
         }
         uiCommandBuilder.set("#VipSpeedLabel.Visible", showSpeedBoost);
         uiCommandBuilder.set("#VipSpeedRow.Visible", showSpeedBoost);
+        uiCommandBuilder.set(RESET_ITEM_BUTTON_SELECTOR + ".Text", getResetItemLabel(playerRef.getUuid()));
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#HideAllButton",
@@ -71,6 +79,8 @@ public class PlayerSettingsPage extends BaseParkourPage {
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_SPEED_X2), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#VipSpeedX4Button",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_SPEED_X4), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ResetItemButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TOGGLE_RESET_ITEM), false);
     }
 
     @Override
@@ -116,6 +126,20 @@ public class PlayerSettingsPage extends BaseParkourPage {
         }
         if (BUTTON_MUSIC.equals(data.getButton())) {
             player.getPageManager().openCustomPage(ref, store, new PlayerMusicPage(playerRef));
+            return;
+        }
+        if (BUTTON_TOGGLE_RESET_ITEM.equals(data.getButton())) {
+            boolean enabled = PlayerSettingsStore.toggleResetItemEnabled(playerRef.getUuid());
+            HyvexaPlugin plugin = HyvexaPlugin.getInstance();
+            if (plugin != null && plugin.getRunTracker() != null) {
+                String mapId = plugin.getRunTracker().getActiveMapId(playerRef.getUuid());
+                if (mapId != null && plugin.getMapStore() != null) {
+                    Map map = plugin.getMapStore().getMap(mapId);
+                    InventoryUtils.giveRunItems(player, map);
+                }
+            }
+            player.sendMessage(Message.raw(enabled ? "Reset item enabled." : "Reset item disabled."));
+            player.getPageManager().openCustomPage(ref, store, new PlayerSettingsPage(playerRef));
             return;
         }
         if (BUTTON_SPEED_X1.equals(data.getButton())
@@ -195,6 +219,10 @@ public class PlayerSettingsPage extends BaseParkourPage {
                 PlayerVisibilityManager.get().showPlayer(viewerRef.getUuid(), uuidComponent.getUuid());
             }
         }
+    }
+
+    private static String getResetItemLabel(UUID playerId) {
+        return PlayerSettingsStore.isResetItemEnabled(playerId) ? RESET_ITEM_LABEL_DISABLE : RESET_ITEM_LABEL_ENABLE;
     }
 
 }

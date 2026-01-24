@@ -73,6 +73,7 @@ import io.hyvexa.parkour.system.PlayerVisibilityFilterSystem;
 import io.hyvexa.parkour.ui.WelcomePage;
 import io.hyvexa.parkour.ui.PlayerMusicPage;
 import io.hyvexa.parkour.util.ParkourUtils;
+import io.hyvexa.parkour.util.PlayerSettingsStore;
 import io.hyvexa.parkour.visibility.PlayerVisibilityManager;
 
 import javax.annotation.Nonnull;
@@ -83,7 +84,6 @@ import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -306,6 +306,7 @@ public class HyvexaPlugin extends JavaPlugin {
                     cachedRankNames.remove(playerId);
                     cachedNameplateTexts.remove(playerId);
                     vipSpeedMultiplier.remove(playerId);
+                    PlayerSettingsStore.clear(playerId);
                     PlayerVisibilityManager.get().clearHidden(playerId);
                     // Clean up announcements
                     announcements.remove(playerId);
@@ -1183,6 +1184,7 @@ public class HyvexaPlugin extends JavaPlugin {
         }
         hud.updateCheckpointText(checkpointText);
     }
+
 
     private List<RunRecordsHud.RecordLine> buildTopTimes(String mapId, UUID playerId) {
         if (mapId == null) {

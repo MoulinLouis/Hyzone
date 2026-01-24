@@ -11,6 +11,8 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.HyvexaPlugin;
+import io.hyvexa.common.util.InventoryUtils;
+import io.hyvexa.parkour.data.Map;
 
 import javax.annotation.Nonnull;
 import java.util.concurrent.CompletableFuture;
@@ -39,6 +41,15 @@ public class RestartCheckpointInteraction extends SimpleInteraction {
             return;
         }
         CompletableFuture.runAsync(() -> {
+            InventoryUtils.clearAllItems(player);
+            Map map = null;
+            if (plugin.getRunTracker() != null && plugin.getMapStore() != null) {
+                String mapId = plugin.getRunTracker().getActiveMapId(playerRef.getUuid());
+                if (mapId != null) {
+                    map = plugin.getMapStore().getMap(mapId);
+                }
+            }
+            InventoryUtils.giveRunItems(player, map);
             boolean teleported = plugin.getRunTracker().teleportToLastCheckpoint(ref, store, playerRef);
             if (!teleported) {
                 plugin.getRunTracker().resetRunToStart(ref, store, player, playerRef);

@@ -12,6 +12,9 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.HyvexaPlugin;
+import io.hyvexa.common.util.InventoryUtils;
+import io.hyvexa.parkour.data.Map;
+import io.hyvexa.parkour.util.PlayerSettingsStore;
 
 import javax.annotation.Nonnull;
 import java.util.concurrent.CompletableFuture;
@@ -35,11 +38,26 @@ public class ResetInteraction extends SimpleInteraction {
         if (player == null || playerRef == null) {
             return;
         }
+        if (!PlayerSettingsStore.isResetItemEnabled(playerRef.getUuid())) {
+            player.sendMessage(Message.raw("Reset item disabled in settings."));
+            return;
+        }
         World world = store.getExternalData().getWorld();
         if (world == null) {
             player.sendMessage(Message.raw("World not available."));
             return;
         }
-        CompletableFuture.runAsync(() -> plugin.getRunTracker().resetRunToStart(ref, store, player, playerRef), world);
+        CompletableFuture.runAsync(() -> {
+            InventoryUtils.clearAllItems(player);
+            Map map = null;
+            if (plugin.getRunTracker() != null && plugin.getMapStore() != null) {
+                String mapId = plugin.getRunTracker().getActiveMapId(playerRef.getUuid());
+                if (mapId != null) {
+                    map = plugin.getMapStore().getMap(mapId);
+                }
+            }
+            InventoryUtils.giveRunItems(player, map);
+            plugin.getRunTracker().resetRunToStart(ref, store, player, playerRef);
+        }, world);
     }
 }
