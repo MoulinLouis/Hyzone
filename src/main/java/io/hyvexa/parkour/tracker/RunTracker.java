@@ -26,8 +26,10 @@ import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.data.ProgressStore;
 import io.hyvexa.parkour.data.SettingsStore;
 import io.hyvexa.parkour.data.TransformData;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -128,6 +130,22 @@ public class RunTracker {
         int total = map.getCheckpoints().size();
         int touched = Math.min(run.touchedCheckpoints.size(), total);
         return new CheckpointProgress(touched, total);
+    }
+
+    public CheckpointSplit getLastCheckpointSplit(UUID playerId) {
+        ActiveRun run = activeRuns.get(playerId);
+        if (run == null) {
+            return null;
+        }
+        int index = run.lastCheckpointIndex;
+        if (index < 0) {
+            return null;
+        }
+        Long timeMs = run.checkpointTouchTimes.get(index);
+        if (timeMs == null) {
+            return null;
+        }
+        return new CheckpointSplit(index, timeMs);
     }
 
     public void sweepStalePlayers(Set<UUID> onlinePlayers) {
@@ -370,6 +388,8 @@ public class RunTracker {
             if (distanceSq(position, checkpoint) <= TOUCH_RADIUS_SQ) {
                 run.touchedCheckpoints.add(i);
                 run.lastCheckpointIndex = i;
+                long elapsedMs = run.waitingForStart ? 0L : Math.max(0L, System.currentTimeMillis() - run.startTimeMs);
+                run.checkpointTouchTimes.put(i, elapsedMs);
                 playCheckpointSound(playerRef);
                 player.sendMessage(Message.raw("Checkpoint touched"));
             }
@@ -394,11 +414,16 @@ public class RunTracker {
             run.finishTouched = true;
             playFinishSound(playerRef);
             long durationMs = Math.max(0L, System.currentTimeMillis() - run.startTimeMs);
+            List<Long> checkpointTimes = new ArrayList<>();
+            for (int i = 0; i < checkpointCount; i++) {
+                Long time = run.checkpointTouchTimes.get(i);
+                checkpointTimes.add(time != null ? time : 0L);
+            }
             UUID playerId = playerRef.getUuid();
             String playerName = playerRef.getUsername();
             int oldRank = progressStore.getCompletionRank(playerId, mapStore);
             ProgressStore.ProgressionResult result = progressStore.recordMapCompletion(playerId, playerName,
-                    map.getId(), durationMs, map.getFirstCompletionXp());
+                    map.getId(), durationMs, map.getFirstCompletionXp(), checkpointTimes);
             int leaderboardPosition = progressStore.getLeaderboardPosition(map.getId(), playerId);
             if (leaderboardPosition <= 0) {
                 leaderboardPosition = 1;
@@ -688,6 +713,7 @@ public class RunTracker {
         private boolean waitingForStart;
         private Vector3d startPosition;
         private final Set<Integer> touchedCheckpoints = new HashSet<>();
+        private final java.util.Map<Integer, Long> checkpointTouchTimes = new HashMap<>();
         private boolean finishTouched;
         private int lastCheckpointIndex = -1;
         private Long fallStartTime;
@@ -755,6 +781,16 @@ public class RunTracker {
         public CheckpointProgress(int touched, int total) {
             this.touched = touched;
             this.total = total;
+        }
+    }
+
+    public static class CheckpointSplit {
+        public final int index;
+        public final long timeMs;
+
+        public CheckpointSplit(int index, long timeMs) {
+            this.index = index;
+            this.timeMs = timeMs;
         }
     }
 

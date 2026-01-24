@@ -2,7 +2,7 @@ $C = "../Common.ui";
 
 $C.@PageOverlay {
   $C.@Container {
-    Anchor: (Width: 460, Height: 310);
+    Anchor: (Width: 460, Height: 370);
 
     #Title {
       Group {
@@ -31,11 +31,30 @@ $C.@PageOverlay {
           FontSize: 14,
           TextColor: #9fb0ba
         );
-        Text: "Control player visibility preferences.";
+        Text: "Music options.";
       }
 
       Group {
         Anchor: (Top: 12, Left: 0, Right: 0, Height: 24);
+        LayoutMode: Left;
+
+        $C.@TextButton #MusicButton {
+          Anchor: (Height: 24, Width: 200);
+          Text: "Music";
+        }
+      }
+
+      Label {
+        Anchor: (Top: 12);
+        Style: (
+          FontSize: 14,
+          TextColor: #9fb0ba
+        );
+        Text: "Control player visibility preferences.";
+      }
+
+      Group {
+        Anchor: (Top: 8, Left: 0, Right: 0, Height: 24);
         LayoutMode: Left;
 
         $C.@TextButton #HideAllButton {
@@ -120,16 +139,16 @@ $C.@PageOverlay {
           FontSize: 14,
           TextColor: #9fb0ba
         );
-        Text: "Music options.";
+        Text: "Run item preferences.";
       }
 
       Group {
-        Anchor: (Top: 8, Left: 0, Right: 0, Height: 24);
+        Anchor: (Top: 8, Left: 0, Right: 0, Height: 28);
         LayoutMode: Left;
 
-        $C.@TextButton #MusicButton {
-          Anchor: (Height: 24, Width: 200);
-          Text: "Music";
+        $C.@TextButton #ResetItemButton {
+          Anchor: (Height: 28, Width: 220);
+          Text: "Reset item: Off";
         }
       }
     }

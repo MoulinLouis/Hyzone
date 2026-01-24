@@ -51,6 +51,7 @@ public class DatabaseClearCommand extends AbstractAsyncCommand {
         commandContext.sendMessage(Message.raw("Clearing all parkour database data...").color("#ffaa00"));
 
         String[] tables = {
+                "player_checkpoint_times",
                 "player_completions",
                 "map_checkpoints",
                 "global_messages",

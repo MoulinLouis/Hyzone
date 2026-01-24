@@ -1,14 +1,20 @@
 package io.hyvexa.common.util;
 
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.inventory.container.filter.FilterActionType;
 import com.hypixel.hytale.server.core.inventory.container.filter.SlotFilter;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.parkour.ParkourConstants;
 import io.hyvexa.parkour.data.Map;
+import io.hyvexa.parkour.util.PlayerSettingsStore;
 
+import java.util.UUID;
 
 public final class InventoryUtils {
 
@@ -26,7 +32,9 @@ public final class InventoryUtils {
         }
         if (PermissionUtils.isOp(player)) {
             clearContainer(inventory.getHotbar());
-            setHotbarItem(inventory, 0, new ItemStack(ParkourConstants.ITEM_RESET, 1));
+            if (PlayerSettingsStore.isResetItemEnabled(resolvePlayerUuid(player))) {
+                setHotbarItem(inventory, 0, new ItemStack(ParkourConstants.ITEM_RESET, 1));
+            }
             setHotbarItem(inventory, 1, new ItemStack(ParkourConstants.ITEM_RESTART_CHECKPOINT, 1));
             setHotbarItem(inventory, 2, new ItemStack(ParkourConstants.ITEM_LEAVE, 1));
             boolean hasSword = map != null && map.isMithrilSwordEnabled();
@@ -44,7 +52,9 @@ public final class InventoryUtils {
         }
         applyDropFilters(inventory, false);
         clearAllSections(inventory);
-        setHotbarItem(inventory, 0, new ItemStack(ParkourConstants.ITEM_RESET, 1));
+        if (PlayerSettingsStore.isResetItemEnabled(resolvePlayerUuid(player))) {
+            setHotbarItem(inventory, 0, new ItemStack(ParkourConstants.ITEM_RESET, 1));
+        }
         setHotbarItem(inventory, 1, new ItemStack(ParkourConstants.ITEM_RESTART_CHECKPOINT, 1));
         setHotbarItem(inventory, 2, new ItemStack(ParkourConstants.ITEM_LEAVE, 1));
         boolean hasSword = map != null && map.isMithrilSwordEnabled();
@@ -80,6 +90,17 @@ public final class InventoryUtils {
         setHotbarItem(inventory, 2, new ItemStack(ParkourConstants.ITEM_STATS, 1));
         setHotbarItem(inventory, 3, new ItemStack(ParkourConstants.ITEM_ADMIN_REMOTE, 1));
         applyDropFilters(inventory, false);
+    }
+
+    public static void clearAllItems(Player player) {
+        if (player == null) {
+            return;
+        }
+        Inventory inventory = player.getInventory();
+        if (inventory == null) {
+            return;
+        }
+        clearAllSections(inventory);
     }
 
     private static void clearAllSections(Inventory inventory) {
@@ -131,5 +152,18 @@ public final class InventoryUtils {
             container.setSlotFilter(FilterActionType.DROP, slot, filter);
             container.setSlotFilter(FilterActionType.REMOVE, slot, filter);
         }
+    }
+
+    private static UUID resolvePlayerUuid(Player player) {
+        if (player == null) {
+            return null;
+        }
+        Ref<EntityStore> ref = player.getReference();
+        if (ref == null || !ref.isValid()) {
+            return null;
+        }
+        Store<EntityStore> store = ref.getStore();
+        UUIDComponent uuidComponent = store.getComponent(ref, UUIDComponent.getComponentType());
+        return uuidComponent != null ? uuidComponent.getUuid() : null;
     }
 }
