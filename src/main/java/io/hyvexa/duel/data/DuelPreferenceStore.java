@@ -37,13 +37,17 @@ public class DuelPreferenceStore {
             player_uuid VARCHAR(36) PRIMARY KEY,
             easy_enabled BOOLEAN DEFAULT TRUE,
             medium_enabled BOOLEAN DEFAULT TRUE,
-            hard_enabled BOOLEAN DEFAULT TRUE,
-            insane_enabled BOOLEAN DEFAULT TRUE,
+            hard_enabled BOOLEAN DEFAULT FALSE,
+            insane_enabled BOOLEAN DEFAULT FALSE,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         )
         """;
 
     private final ConcurrentHashMap<UUID, EnumSet<DuelCategory>> enabledByPlayer = new ConcurrentHashMap<>();
+
+    private static EnumSet<DuelCategory> defaultEnabled() {
+        return EnumSet.of(DuelCategory.EASY, DuelCategory.MEDIUM);
+    }
 
     public void syncLoad() {
         if (!DatabaseManager.getInstance().isInitialized()) {
@@ -74,7 +78,7 @@ public class DuelPreferenceStore {
                     enabled.add(DuelCategory.INSANE);
                 }
                 if (enabled.isEmpty()) {
-                    enabled = EnumSet.allOf(DuelCategory.class);
+                    enabled = defaultEnabled();
                 }
                 enabledByPlayer.put(playerId, enabled);
             }
@@ -96,7 +100,7 @@ public class DuelPreferenceStore {
     @Nonnull
     public EnumSet<DuelCategory> getEnabled(@Nonnull UUID playerId) {
         EnumSet<DuelCategory> enabled = enabledByPlayer.get(playerId);
-        return enabled != null ? EnumSet.copyOf(enabled) : EnumSet.allOf(DuelCategory.class);
+        return enabled != null ? EnumSet.copyOf(enabled) : defaultEnabled();
     }
 
     public boolean isEnabled(@Nonnull UUID playerId, @Nonnull DuelCategory category) {
@@ -106,7 +110,7 @@ public class DuelPreferenceStore {
 
     public void setEnabled(@Nonnull UUID playerId, @Nonnull DuelCategory category, boolean enabled) {
         EnumSet<DuelCategory> updated = enabledByPlayer.compute(playerId, (id, current) -> {
-            EnumSet<DuelCategory> next = current != null ? EnumSet.copyOf(current) : EnumSet.allOf(DuelCategory.class);
+            EnumSet<DuelCategory> next = current != null ? EnumSet.copyOf(current) : defaultEnabled();
             if (enabled) {
                 next.add(category);
             } else {
