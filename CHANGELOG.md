@@ -1,5 +1,23 @@
 # Changelog
 
+- Added 1v1 duel mode with matchmaking queue, duel stats, and per-map duel enable toggle.
+- Removed /dbmigrate command and JSON migration support now that all data is DB-backed.
+- Added /1v1 admin force <player> to start a duel for local testing.
+- Added a duel menu longsword item that opens a duel UI with a Queue button.
+- Added a duel menu Active Matches button for OPs.
+- Added checkpoint and finish sounds for duel runs.
+- Added a duel leaderboard UI and a Duel Menu leaderboard button.
+- Updated duel leaderboard entries to show W/L counts.
+- Updated duel finish messages to show winner time and opponent time for the loser.
+- Added a gg prompt with opponent name to duel win/lose finish messages.
+- Renamed the /1v1 command to /duel (including admin subcommands).
+- Moved the Duel menu item to hotbar slot 2 and shifted base menu items up one slot.
+- Prevented VIP/Founder speed boosts from being reset during duels.
+- Hide all other players during duels (only the opponent remains visible), then restore visibility after the match.
+- Reset VIP/Founder speed boosts to normal at duel start and restore after the match.
+- Added a duel menu toggle to show or hide your opponent during a duel (persists across reconnects).
+- Added duel category toggles (Easy/Medium/Hard/Insane) and matchmaking now requires shared categories.
+- Queue join messages now show the selected duel categories.
 - Add checkpoint split times storage for personal best runs.
 - Reapply a player's selected music track on reconnect so the actual track matches the saved label.
 - Remove the "Run reset." chat message when players restart a run.

@@ -1,0 +1,39 @@
+{
+  "TranslationProperties": {
+    "Name": "Forfeit duel",
+    "Description": "Right click to forfeit the current duel."
+  },
+  "Icon": "Icons/ItemsGenerated/Ingredient_Void_Essence.png",
+  "Quality": "Developer",
+  "Categories": [
+    "Items.Ingredients"
+  ],
+  "Model": "Resources/Ingredients/Essence.blockymodel",
+  "Texture": "Resources/Ingredients/Essence_Textures/Void_Essence_Texture.png",
+  "PlayerAnimationsId": "Item",
+  "IconProperties": {
+    "Scale": 0.6,
+    "Rotation": [
+      0,
+      0,
+      0
+    ],
+    "Translation": [
+      0,
+      -13
+    ]
+  },
+  "Tags": {
+    "Type": [
+      "Ingredient"
+    ]
+  },
+  "ItemEntity": {
+    "ParticleSystemId": null
+  },
+  "ItemSoundSetId": "ISS_Items_Gems",
+  "DropOnDeath": true,
+  "Interactions": {
+    "Secondary": "Ingredient_Duel_Forfeit"
+  }
+}

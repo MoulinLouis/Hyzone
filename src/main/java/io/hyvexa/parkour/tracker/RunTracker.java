@@ -191,6 +191,11 @@ public class RunTracker {
         if (!isPlayerReady(playerRef.getUuid())) {
             return;
         }
+        HyvexaPlugin plugin = HyvexaPlugin.getInstance();
+        if (plugin != null && plugin.getDuelTracker() != null
+                && plugin.getDuelTracker().isInMatch(playerRef.getUuid())) {
+            return;
+        }
         ActiveRun run = activeRuns.get(playerRef.getUuid());
         Vector3d position = transform.getPosition();
         if (shouldTeleportFromVoid(position.getY())) {

@@ -21,6 +21,7 @@ public class Map {
     private boolean mithrilSwordEnabled;
     private boolean mithrilDaggersEnabled;
     private boolean freeFallEnabled;
+    private boolean duelEnabled;
     private long createdAt;
     private long updatedAt;
 
@@ -146,6 +147,14 @@ public class Map {
 
     public void setFreeFallEnabled(boolean freeFallEnabled) {
         this.freeFallEnabled = freeFallEnabled;
+    }
+
+    public boolean isDuelEnabled() {
+        return duelEnabled;
+    }
+
+    public void setDuelEnabled(boolean duelEnabled) {
+        this.duelEnabled = duelEnabled;
     }
 
     public long getCreatedAt() {
