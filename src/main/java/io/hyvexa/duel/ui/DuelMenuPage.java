@@ -19,6 +19,7 @@ import io.hyvexa.duel.DuelTracker;
 import io.hyvexa.duel.DuelMatch;
 import io.hyvexa.duel.data.DuelPreferenceStore;
 import io.hyvexa.duel.data.DuelPreferenceStore.DuelCategory;
+import io.hyvexa.parkour.data.ProgressStore;
 import io.hyvexa.parkour.tracker.RunTracker;
 import io.hyvexa.parkour.ui.BaseParkourPage;
 
@@ -122,6 +123,9 @@ public class DuelMenuPage extends BaseParkourPage {
             player.sendMessage(Message.raw(DuelConstants.MSG_IN_PARKOUR));
             return;
         }
+        if (!meetsUnlockRequirement(plugin, playerId, player)) {
+            return;
+        }
         if (!duelTracker.hasAvailableMaps(playerId)) {
             player.sendMessage(Message.raw(DuelConstants.MSG_NO_MAPS));
             return;
@@ -138,6 +142,17 @@ public class DuelMenuPage extends BaseParkourPage {
         player.sendMessage(Message.raw(String.format(DuelConstants.MSG_QUEUE_JOINED, categories, pos)));
         duelTracker.tryMatch();
         refreshQueueState(ref, store);
+    }
+
+    private boolean meetsUnlockRequirement(HyvexaPlugin plugin, UUID playerId, Player player) {
+        DuelUnlockProgress progress = getUnlockProgress(plugin, playerId);
+        if (progress.unlocked()) {
+            return true;
+        }
+        int remaining = progress.required() - progress.completed();
+        player.sendMessage(Message.raw(String.format(DuelConstants.MSG_DUEL_UNLOCK_REQUIRED,
+                progress.required(), remaining, progress.completed(), progress.required())));
+        return false;
     }
 
     private void refreshQueueState(Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -187,6 +202,16 @@ public class DuelMenuPage extends BaseParkourPage {
             return;
         }
         UUID playerId = playerRef.getUuid();
+        DuelUnlockProgress unlockProgress = getUnlockProgress(plugin, playerId);
+        if (!unlockProgress.unlocked()) {
+            commandBuilder.set("#QueueButton.Text", "Locked");
+            commandBuilder.set("#QueueStatus.Text", "Unlock duels: complete "
+                    + unlockProgress.required() + " maps (" + unlockProgress.completed()
+                    + "/" + unlockProgress.required() + ").");
+            commandBuilder.set("#QueueStatus.Style.TextColor", "#e57373");
+            return;
+        }
+        commandBuilder.set("#QueueStatus.Style.TextColor", "#9fb0ba");
         if (duelTracker.isQueued(playerId)) {
             int pos = duelTracker.getQueuePosition(playerId);
             commandBuilder.set("#QueueButton.Text", "Leave Queue");
@@ -195,6 +220,22 @@ public class DuelMenuPage extends BaseParkourPage {
         }
         commandBuilder.set("#QueueButton.Text", "Queue");
         commandBuilder.set("#QueueStatus.Text", "Not queued.");
+    }
+
+    private DuelUnlockProgress getUnlockProgress(HyvexaPlugin plugin, UUID playerId) {
+        ProgressStore progressStore = plugin.getProgressStore();
+        int required = DuelConstants.DUEL_UNLOCK_MIN_COMPLETED_MAPS;
+        if (progressStore == null) {
+            return new DuelUnlockProgress(required, required);
+        }
+        int completed = progressStore.getCompletedMapCount(playerId);
+        return new DuelUnlockProgress(required, completed);
+    }
+
+    private record DuelUnlockProgress(int required, int completed) {
+        private boolean unlocked() {
+            return completed >= required;
+        }
     }
 
     private void applyOpponentState(Ref<EntityStore> ref, Store<EntityStore> store, UICommandBuilder commandBuilder) {

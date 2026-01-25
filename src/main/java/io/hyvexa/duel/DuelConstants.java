@@ -19,6 +19,9 @@ public final class DuelConstants {
     public static final String ITEM_FORFEIT = "Ingredient_Duel_Forfeit";
     public static final String ITEM_MENU = "Weapon_Longsword_Flame";
 
+    // Requirements
+    public static final int DUEL_UNLOCK_MIN_COMPLETED_MAPS = 40;
+
     // Messages
     public static final String MSG_QUEUE_JOINED = "Joined duel queue for %s. Position: #%d";
     public static final String MSG_QUEUE_LEFT = "Left duel queue.";
@@ -26,6 +29,8 @@ public final class DuelConstants {
     public static final String MSG_IN_MATCH = "You're already in a match!";
     public static final String MSG_IN_PARKOUR = "Leave your current parkour run first. (/pk leave)";
     public static final String MSG_NO_MAPS = "No duel maps available for your selected categories.";
+    public static final String MSG_DUEL_UNLOCK_REQUIRED =
+            "Complete %d maps to unlock duels. You need %d more. Progress: %d/%d.";
     public static final String MSG_MATCH_FOUND = "Match found! Racing against %s on %s";
     public static final String MSG_WIN = "You win! Your time: %s. Say gg to %s :)";
     public static final String MSG_WIN_VS = "You win! Your time: %s. Say gg to %s :)";
