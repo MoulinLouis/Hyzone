@@ -2,7 +2,7 @@ $C = "../Common.ui";
 
 $C.@PageOverlay {
   $C.@Container {
-    Anchor: (Width: 420, Height: 360);
+    Anchor: (Width: 420, Height: 440);
 
     #Title {
       Group {
@@ -87,13 +87,13 @@ $C.@PageOverlay {
           LayoutMode: Left;
 
           Label {
-            Anchor: (Width: 210);
+            Anchor: (Width: 192);
             Style: (FontSize: 12, TextColor: #cfd7dc);
             Text: "Easy";
           }
 
           $C.@TextButton #EasyToggleButton {
-            Anchor: (Height: 24, Width: 78);
+            Anchor: (Height: 24, Width: 96);
             Text: "";
           }
         }
@@ -112,13 +112,13 @@ $C.@PageOverlay {
           LayoutMode: Left;
 
           Label {
-            Anchor: (Width: 210);
+            Anchor: (Width: 192);
             Style: (FontSize: 12, TextColor: #cfd7dc);
             Text: "Medium";
           }
 
           $C.@TextButton #MediumToggleButton {
-            Anchor: (Height: 24, Width: 78);
+            Anchor: (Height: 24, Width: 96);
             Text: "";
           }
         }
@@ -137,13 +137,13 @@ $C.@PageOverlay {
           LayoutMode: Left;
 
           Label {
-            Anchor: (Width: 210);
+            Anchor: (Width: 192);
             Style: (FontSize: 12, TextColor: #cfd7dc);
             Text: "Hard";
           }
 
           $C.@TextButton #HardToggleButton {
-            Anchor: (Height: 24, Width: 78);
+            Anchor: (Height: 24, Width: 96);
             Text: "";
           }
         }
@@ -162,13 +162,13 @@ $C.@PageOverlay {
           LayoutMode: Left;
 
           Label {
-            Anchor: (Width: 210);
+            Anchor: (Width: 192);
             Style: (FontSize: 12, TextColor: #cfd7dc);
             Text: "Insane";
           }
 
           $C.@TextButton #InsaneToggleButton {
-            Anchor: (Height: 24, Width: 78);
+            Anchor: (Height: 24, Width: 96);
             Text: "";
           }
         }
