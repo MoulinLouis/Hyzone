@@ -25,7 +25,6 @@ public class PlayerMusicPage extends BaseParkourPage {
     private static final String BUTTON_CLOSE = "Close";
     private static final String BUTTON_PLAY_ZELDA = "PlayZelda";
     private static final String BUTTON_PLAY_CELESTE = "PlayCeleste";
-    private static final String BUTTON_PLAY_AURA = "PlayAura";
     private static final String BUTTON_PLAY_DEFAULT = "PlayDefault";
     private static final String BUTTON_PLAY_NONE = "PlayNone";
     private static final String BUTTON_TOGGLE_CHECKPOINT_SFX = "ToggleCheckpointSfx";
@@ -33,7 +32,6 @@ public class PlayerMusicPage extends BaseParkourPage {
     private static final String DEFAULT_MUSIC_AMBIENCE = "Mus_Fallback_Overground";
     private static final String DEFAULT_MUSIC_AMBIENCE_ALT = "Mus_Fallback_Underground";
     private static final String CELESTE_MUSIC_AMBIENCE = "Mus_Parkour_Celeste";
-    private static final String AURA_MUSIC_AMBIENCE = "Mus_Parkour_Aura";
     private static final String NO_MUSIC_AMBIENCE = "AmbFX_Void";
     private static final String HYTALE_DEFAULT_MUSIC_AMBIENCE = "Mus_Forgotten_Temple";
     private static final String MUSIC_LABEL_SELECTOR = "#CurrentMusicLabel";
@@ -67,8 +65,6 @@ public class PlayerMusicPage extends BaseParkourPage {
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_PLAY_ZELDA), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#PlayCelesteMusicButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_PLAY_CELESTE), false);
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#PlayAuraMusicButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_PLAY_AURA), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#PlayDefaultMusicButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_PLAY_DEFAULT), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#PlayNoMusicButton",
@@ -106,10 +102,6 @@ public class PlayerMusicPage extends BaseParkourPage {
         }
         if (BUTTON_PLAY_CELESTE.equals(data.getButton())) {
             playMusic(ref, store, playerRef, CELESTE_MUSIC_AMBIENCE, "Celeste OST");
-            return;
-        }
-        if (BUTTON_PLAY_AURA.equals(data.getButton())) {
-            playMusic(ref, store, playerRef, AURA_MUSIC_AMBIENCE, "Aura");
             return;
         }
         if (BUTTON_PLAY_DEFAULT.equals(data.getButton())) {
@@ -199,7 +191,12 @@ public class PlayerMusicPage extends BaseParkourPage {
         if (playerId == null) {
             return DEFAULT_MUSIC_LABEL;
         }
-        return MUSIC_LABELS.getOrDefault(playerId, DEFAULT_MUSIC_LABEL);
+        String storedLabel = MUSIC_LABELS.get(playerId);
+        if ("Aura".equals(storedLabel)) {
+            MUSIC_LABELS.put(playerId, DEFAULT_MUSIC_LABEL);
+            return DEFAULT_MUSIC_LABEL;
+        }
+        return storedLabel == null ? DEFAULT_MUSIC_LABEL : storedLabel;
     }
 
     private static void storeMusicLabel(UUID playerId, String label) {
@@ -352,14 +349,14 @@ public class PlayerMusicPage extends BaseParkourPage {
             if (label == null) {
                 return null;
             }
+            if ("Aura".equals(label)) {
+                return defaultSelection(DEFAULT_MUSIC_LABEL);
+            }
             if (DEFAULT_MUSIC_LABEL.equals(label)) {
                 return defaultSelection(label);
             }
             if ("Celeste OST".equals(label)) {
                 return ambienceSelection(label, CELESTE_MUSIC_AMBIENCE);
-            }
-            if ("Aura".equals(label)) {
-                return ambienceSelection(label, AURA_MUSIC_AMBIENCE);
             }
             if (Hytale_MUSIC_LABEL.equals(label)) {
                 return ambienceSelection(label, HYTALE_DEFAULT_MUSIC_AMBIENCE);

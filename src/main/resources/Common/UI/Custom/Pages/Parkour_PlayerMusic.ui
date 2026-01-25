@@ -66,16 +66,6 @@ $C.@PageOverlay {
         Anchor: (Top: 8, Left: 0, Right: 0, Height: 26);
         LayoutMode: Left;
 
-        $C.@TextButton #PlayAuraMusicButton {
-          Anchor: (Height: 26, Width: 230);
-          Text: "Play Aura";
-        }
-      }
-
-      Group {
-        Anchor: (Top: 8, Left: 0, Right: 0, Height: 26);
-        LayoutMode: Left;
-
         $C.@TextButton #PlayDefaultMusicButton {
           Anchor: (Height: 26, Width: 230);
           Text: "Default Music";
