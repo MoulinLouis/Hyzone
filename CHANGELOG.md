@@ -297,3 +297,4 @@
 - Increased Support/Store section font sizes to match the HUD.
 - Increased Support/Store icon sizes and row heights for better alignment.
 - Extended Run HUD background bottom padding/height for the footer.
+- Added /dbreload to reload Parkour/database.json and display sanitized connection settings, including the config path.

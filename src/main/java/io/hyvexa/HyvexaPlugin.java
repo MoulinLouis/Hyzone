@@ -58,6 +58,7 @@ import io.hyvexa.common.util.InventoryUtils;
 import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.parkour.command.CheckpointCommand;
 import io.hyvexa.parkour.command.DatabaseClearCommand;
+import io.hyvexa.parkour.command.DatabaseReloadCommand;
 import io.hyvexa.parkour.command.DatabaseTestCommand;
 import io.hyvexa.parkour.command.DiscordCommand;
 import io.hyvexa.parkour.command.ParkourAdminCommand;
@@ -120,7 +121,7 @@ public class HyvexaPlugin extends JavaPlugin {
     private static final float VIP_SPEED_MAX_MULTIPLIER = 4.0f;
     private static final String CHAT_LINK_PLACEHOLDER = "{link}";
     private static final String CHAT_LINK_LABEL = "click here";
-    private static final String DISCORD_URL = "https://discord.gg/BDA7gRF5";
+    private static final String DISCORD_URL = "https://discord.gg/2PAygkyFnK";
     private static final String JOIN_LANGUAGE_NOTICE =
             "This is an English-speaking community server. Please use English only in the chat. "
             + "For other languages, join our ";
@@ -179,7 +180,7 @@ public class HyvexaPlugin extends JavaPlugin {
     @Override
     protected void setup() {
         LOGGER.atInfo().log("Setting up plugin " + this.getName());
-        var folder = new File("Parkour");
+        var folder = new File("mods/Parkour");
         if (!folder.exists()) {
             folder.mkdirs();
         }
@@ -233,6 +234,7 @@ public class HyvexaPlugin extends JavaPlugin {
         this.getCommandRegistry().registerCommand(new ParkourMusicDebugCommand());
         this.getCommandRegistry().registerCommand(new StoreCommand());
         this.getCommandRegistry().registerCommand(new DatabaseClearCommand());
+        this.getCommandRegistry().registerCommand(new DatabaseReloadCommand());
         this.getCommandRegistry().registerCommand(new DatabaseTestCommand());
         this.getCommandRegistry().registerCommand(new DuelCommand(this.duelTracker, this.runTracker));
 

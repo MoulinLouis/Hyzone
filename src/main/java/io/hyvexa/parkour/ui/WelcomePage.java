@@ -20,7 +20,7 @@ public class WelcomePage extends BaseParkourPage {
     private static final String BUTTON_CLOSE = "Close";
     private static final String BUTTON_DISCORD = "Discord";
     private static final String DISCORD_TEXT = "CLICK HERE!";
-    private static final String DISCORD_URL = "https://discord.gg/BDA7gRF5";
+    private static final String DISCORD_URL = "https://discord.gg/2PAygkyFnK";
     private static final Message MESSAGE_DISCORD = Message.join(
             Message.raw("Discord: "),
             Message.raw(DISCORD_TEXT).color("#8ab4f8").link(DISCORD_URL)
