@@ -1,0 +1,29 @@
+{
+  "TranslationProperties": {
+    "Name": "Duel"
+  },
+  "Icon": "Icons/ItemsGenerated/Weapon_Longsword_Flame.png",
+  "Categories": [
+    "Items.Weapons"
+  ],
+  "Quality": "Developer",
+  "ItemLevel": 30,
+  "Model": "Items/Weapons/Longsword/Flame.blockymodel",
+  "Texture": "Items/Weapons/Longsword/Flame_Texture.png",
+  "PlayerAnimationsId": "Longsword",
+  "Interactions": {
+    "Secondary": "Weapon_Longsword_Flame"
+  },
+  "IconProperties": {
+    "Scale": 0.32,
+    "Translation": [
+      -42,
+      -43
+    ],
+    "Rotation": [
+      45,
+      90,
+      0
+    ]
+  }
+}

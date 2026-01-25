@@ -11,6 +11,14 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.duel.DuelQueue;
+import io.hyvexa.duel.DuelTracker;
+import io.hyvexa.duel.command.DuelCommand;
+import io.hyvexa.duel.data.DuelMatchStore;
+import io.hyvexa.duel.data.DuelPreferenceStore;
+import io.hyvexa.duel.data.DuelStatsStore;
+import io.hyvexa.duel.interaction.DuelMenuInteraction;
+import io.hyvexa.duel.interaction.ForfeitInteraction;
 import io.hyvexa.parkour.data.DatabaseManager;
 import io.hyvexa.parkour.data.GlobalMessageStore;
 import io.hyvexa.parkour.data.MapStore;
@@ -50,7 +58,6 @@ import io.hyvexa.common.util.InventoryUtils;
 import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.parkour.command.CheckpointCommand;
 import io.hyvexa.parkour.command.DatabaseClearCommand;
-import io.hyvexa.parkour.command.DatabaseMigrateCommand;
 import io.hyvexa.parkour.command.DatabaseTestCommand;
 import io.hyvexa.parkour.command.DiscordCommand;
 import io.hyvexa.parkour.command.ParkourAdminCommand;
@@ -125,6 +132,11 @@ public class HyvexaPlugin extends JavaPlugin {
     private SettingsStore settingsStore;
     private PlayerCountStore playerCountStore;
     private GlobalMessageStore globalMessageStore;
+    private DuelQueue duelQueue;
+    private DuelTracker duelTracker;
+    private DuelStatsStore duelStatsStore;
+    private DuelMatchStore duelMatchStore;
+    private DuelPreferenceStore duelPreferenceStore;
     private final ConcurrentHashMap<UUID, RunHud> runHuds = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, RunRecordsHud> runRecordHuds = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, HiddenRunHud> hiddenRunHuds = new ConcurrentHashMap<>();
@@ -147,6 +159,7 @@ public class HyvexaPlugin extends JavaPlugin {
     private ScheduledFuture<?> stalePlayerSweepTask;
     private ScheduledFuture<?> teleportDebugTask;
     private ScheduledFuture<?> chatAnnouncementTask;
+    private ScheduledFuture<?> duelTickTask;
     private final Object chatAnnouncementLock = new Object();
     private List<Message> chatAnnouncements = List.of();
     private int chatAnnouncementIndex = 0;
@@ -189,6 +202,14 @@ public class HyvexaPlugin extends JavaPlugin {
         this.globalMessageStore = new GlobalMessageStore();
         this.globalMessageStore.syncLoad();
         this.runTracker = new RunTracker(this.mapStore, this.progressStore, this.settingsStore);
+        this.duelStatsStore = new DuelStatsStore();
+        this.duelStatsStore.syncLoad();
+        this.duelMatchStore = new DuelMatchStore();
+        this.duelMatchStore.ensureTable();
+        this.duelPreferenceStore = new DuelPreferenceStore();
+        this.duelPreferenceStore.syncLoad();
+        this.duelQueue = new DuelQueue();
+        this.duelTracker = new DuelTracker(duelQueue, duelMatchStore, duelStatsStore, duelPreferenceStore, mapStore);
         onlinePlayerCount.set(Universe.get().getPlayers().size());
         mapDetectionTask = scheduleTick("map detection", this::tickMapDetection, 200, 200, TimeUnit.MILLISECONDS);
         hudUpdateTask = scheduleTick("hud updates", this::tickHudUpdates, 100, 100, TimeUnit.MILLISECONDS);
@@ -200,6 +221,7 @@ public class HyvexaPlugin extends JavaPlugin {
                 STALE_PLAYER_SWEEP_SECONDS, TimeUnit.SECONDS);
         teleportDebugTask = scheduleTick("teleport debug", this::tickTeleportDebug, TELEPORT_DEBUG_INTERVAL_SECONDS,
                 TELEPORT_DEBUG_INTERVAL_SECONDS, TimeUnit.SECONDS);
+        duelTickTask = scheduleTick("duel tick", this::tickDuel, 100, 100, TimeUnit.MILLISECONDS);
         refreshChatAnnouncements();
 
 
@@ -212,7 +234,7 @@ public class HyvexaPlugin extends JavaPlugin {
         this.getCommandRegistry().registerCommand(new StoreCommand());
         this.getCommandRegistry().registerCommand(new DatabaseClearCommand());
         this.getCommandRegistry().registerCommand(new DatabaseTestCommand());
-        this.getCommandRegistry().registerCommand(new DatabaseMigrateCommand());
+        this.getCommandRegistry().registerCommand(new DuelCommand(this.duelTracker, this.runTracker));
 
         registerNoDropSystem();
         registerNoBreakSystem();
@@ -295,6 +317,9 @@ public class HyvexaPlugin extends JavaPlugin {
             try {
                 if (event.getPlayerRef() != null) {
                     UUID playerId = event.getPlayerRef().getUuid();
+                    if (duelTracker != null) {
+                        duelTracker.handleDisconnect(playerId);
+                    }
                     // Clean up HUD tracking state
                     runHuds.remove(playerId);
                     runRecordHuds.remove(playerId);
@@ -306,7 +331,7 @@ public class HyvexaPlugin extends JavaPlugin {
                     cachedRankNames.remove(playerId);
                     cachedNameplateTexts.remove(playerId);
                     vipSpeedMultiplier.remove(playerId);
-                    PlayerSettingsStore.clear(playerId);
+                    PlayerSettingsStore.clearSession(playerId);
                     PlayerVisibilityManager.get().clearHidden(playerId);
                     // Clean up announcements
                     announcements.remove(playerId);
@@ -972,6 +997,14 @@ public class HyvexaPlugin extends JavaPlugin {
         return runTracker;
     }
 
+    public DuelTracker getDuelTracker() {
+        return duelTracker;
+    }
+
+    public DuelPreferenceStore getDuelPreferenceStore() {
+        return duelPreferenceStore;
+    }
+
     public SettingsStore getSettingsStore() {
         return settingsStore;
     }
@@ -987,12 +1020,16 @@ public class HyvexaPlugin extends JavaPlugin {
                         continue;
                     }
                     if (runTracker != null) {
-                        String activeMapId = runTracker.getActiveMapId(context.playerRef.getUuid());
-                        if (activeMapId != null) {
-                            disableVipSpeedBoost(context.ref, context.store, context.playerRef);
-                        } else if (shouldDisableVipSpeedForStartTrigger(context.store, context.ref,
-                                context.playerRef)) {
-                            disableVipSpeedBoost(context.ref, context.store, context.playerRef);
+                        UUID playerId = context.playerRef.getUuid();
+                        boolean inDuel = duelTracker != null && duelTracker.isInMatch(playerId);
+                        if (!inDuel) {
+                            String activeMapId = runTracker.getActiveMapId(playerId);
+                            if (activeMapId != null) {
+                                disableVipSpeedBoost(context.ref, context.store, context.playerRef);
+                            } else if (shouldDisableVipSpeedForStartTrigger(context.store, context.ref,
+                                    context.playerRef)) {
+                                disableVipSpeedBoost(context.ref, context.store, context.playerRef);
+                            }
                         }
                     }
                     runTracker.checkPlayer(context.ref, context.store);
@@ -1018,6 +1055,14 @@ public class HyvexaPlugin extends JavaPlugin {
                 }
             }, world);
         }
+    }
+
+    private void tickDuel() {
+        if (duelTracker == null) {
+            return;
+        }
+        duelTracker.sweepQueuedPlayersInRun(runTracker);
+        duelTracker.tick();
     }
 
     private Map<World, List<PlayerTickContext>> collectPlayersByWorld() {
@@ -1131,19 +1176,21 @@ public class HyvexaPlugin extends JavaPlugin {
             attachHiddenHud(playerRef, player);
             return;
         }
-        Long elapsedMs = runTracker.getElapsedTimeMs(playerRef.getUuid());
+        UUID playerId = playerRef.getUuid();
+        boolean duelActive = duelTracker != null && duelTracker.isInMatch(playerId);
+        Long elapsedMs = duelActive ? duelTracker.getElapsedTimeMs(playerId) : runTracker.getElapsedTimeMs(playerId);
         RunHud hud = getActiveHud(playerRef);
-        long readyAt = runHudReadyAt.getOrDefault(playerRef.getUuid(), Long.MAX_VALUE);
+        long readyAt = runHudReadyAt.getOrDefault(playerId, Long.MAX_VALUE);
         if (hud == null || System.currentTimeMillis() < readyAt) {
             return;
         }
         boolean running = elapsedMs != null;
-        boolean wasRunning = runHudWasRunning.getOrDefault(playerRef.getUuid(), false);
+        boolean wasRunning = runHudWasRunning.getOrDefault(playerId, false);
         if (!running && wasRunning) {
             RunHud baseHud = getOrCreateHud(playerRef, false);
             attachHud(playerRef, player, baseHud, false);
             hud = baseHud;
-        } else if (running && !Boolean.TRUE.equals(runHudIsRecords.get(playerRef.getUuid()))) {
+        } else if (running && !Boolean.TRUE.equals(runHudIsRecords.get(playerId))) {
             RunHud recordsHud = getOrCreateHud(playerRef, true);
             attachHud(playerRef, player, recordsHud, true);
             hud = recordsHud;
@@ -1162,8 +1209,8 @@ public class HyvexaPlugin extends JavaPlugin {
             }
             return;
         }
-        runHudWasRunning.put(playerRef.getUuid(), true);
-        String mapId = runTracker.getActiveMapId(playerRef.getUuid());
+        runHudWasRunning.put(playerId, true);
+        String mapId = duelActive ? duelTracker.getActiveMapId(playerId) : runTracker.getActiveMapId(playerId);
         String mapName = mapId;
         if (mapId != null) {
             var map = mapStore.getMap(mapId);
@@ -1172,7 +1219,9 @@ public class HyvexaPlugin extends JavaPlugin {
             }
         }
         String timeText = (mapName == null ? "Map" : mapName) + " - " + FormatUtils.formatDuration(elapsedMs);
-        RunTracker.CheckpointProgress checkpointProgress = runTracker.getCheckpointProgress(playerRef.getUuid());
+        RunTracker.CheckpointProgress checkpointProgress = duelActive
+                ? duelTracker.getCheckpointProgress(playerId)
+                : runTracker.getCheckpointProgress(playerId);
         String checkpointText = "";
         if (checkpointProgress != null && checkpointProgress.total > 0) {
             checkpointText = checkpointProgress.touched + "/" + checkpointProgress.total;
@@ -1625,6 +1674,8 @@ public class HyvexaPlugin extends JavaPlugin {
                 PlayerSettingsInteraction.class, PlayerSettingsInteraction.CODEC);
         registry.register("Media_RemoteControl",
                 PlayerSettingsInteraction.class, PlayerSettingsInteraction.CODEC);
+        registry.register("Forfeit_Interaction", ForfeitInteraction.class, ForfeitInteraction.CODEC);
+        registry.register("Duel_Menu_Interaction", DuelMenuInteraction.class, DuelMenuInteraction.CODEC);
     }
 
     @Override
@@ -1637,6 +1688,7 @@ public class HyvexaPlugin extends JavaPlugin {
         cancelScheduled(stalePlayerSweepTask);
         cancelScheduled(teleportDebugTask);
         cancelScheduled(chatAnnouncementTask);
+        cancelScheduled(duelTickTask);
         if (progressStore != null) {
             progressStore.flushPendingSave();
         }

@@ -36,7 +36,7 @@ public class MapStore {
 
         String mapSql = """
             SELECT id, name, category, world, difficulty, display_order, first_completion_xp, mithril_sword_enabled,
-                   mithril_daggers_enabled, free_fall_enabled,
+                   mithril_daggers_enabled, free_fall_enabled, duel_enabled,
                    start_x, start_y, start_z, start_rot_x, start_rot_y, start_rot_z,
                    finish_x, finish_y, finish_z, finish_rot_x, finish_rot_y, finish_rot_z,
                    start_trigger_x, start_trigger_y, start_trigger_z, start_trigger_rot_x, start_trigger_rot_y, start_trigger_rot_z,
@@ -72,6 +72,7 @@ public class MapStore {
                         map.setMithrilSwordEnabled(rs.getBoolean("mithril_sword_enabled"));
                         map.setMithrilDaggersEnabled(rs.getBoolean("mithril_daggers_enabled"));
                         map.setFreeFallEnabled(rs.getBoolean("free_fall_enabled"));
+                        map.setDuelEnabled(rs.getBoolean("duel_enabled"));
 
                         map.setStart(readTransform(rs, "start_"));
                         map.setFinish(readTransform(rs, "finish_"));
@@ -178,6 +179,25 @@ public class MapStore {
         }
     }
 
+    public List<Map> listDuelEnabledMaps() {
+        fileLock.readLock().lock();
+        try {
+            List<Map> copies = new ArrayList<>();
+            for (Map map : this.maps.values()) {
+                if (!map.isDuelEnabled()) {
+                    continue;
+                }
+                Map copy = copyMap(map);
+                if (copy != null) {
+                    copies.add(copy);
+                }
+            }
+            return Collections.unmodifiableList(copies);
+        } finally {
+            fileLock.readLock().unlock();
+        }
+    }
+
     public Map findMapByStartTrigger(double x, double y, double z, double touchRadiusSq) {
         fileLock.readLock().lock();
         try {
@@ -261,19 +281,20 @@ public class MapStore {
 
         String mapSql = """
             INSERT INTO maps (id, name, category, world, difficulty, display_order, first_completion_xp, mithril_sword_enabled,
-                mithril_daggers_enabled, free_fall_enabled,
+                mithril_daggers_enabled, free_fall_enabled, duel_enabled,
                 start_x, start_y, start_z, start_rot_x, start_rot_y, start_rot_z,
                 finish_x, finish_y, finish_z, finish_rot_x, finish_rot_y, finish_rot_z,
                 start_trigger_x, start_trigger_y, start_trigger_z, start_trigger_rot_x, start_trigger_rot_y, start_trigger_rot_z,
                 leave_trigger_x, leave_trigger_y, leave_trigger_z, leave_trigger_rot_x, leave_trigger_rot_y, leave_trigger_rot_z,
                 leave_teleport_x, leave_teleport_y, leave_teleport_z, leave_teleport_rot_x, leave_teleport_rot_y, leave_teleport_rot_z,
                 created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 name = VALUES(name), category = VALUES(category), world = VALUES(world),
                 difficulty = VALUES(difficulty), display_order = VALUES(display_order),
                 first_completion_xp = VALUES(first_completion_xp), mithril_sword_enabled = VALUES(mithril_sword_enabled),
                 mithril_daggers_enabled = VALUES(mithril_daggers_enabled), free_fall_enabled = VALUES(free_fall_enabled),
+                duel_enabled = VALUES(duel_enabled),
                 start_x = VALUES(start_x), start_y = VALUES(start_y), start_z = VALUES(start_z),
                 start_rot_x = VALUES(start_rot_x), start_rot_y = VALUES(start_rot_y), start_rot_z = VALUES(start_rot_z),
                 finish_x = VALUES(finish_x), finish_y = VALUES(finish_y), finish_z = VALUES(finish_z),
@@ -312,6 +333,7 @@ public class MapStore {
                 mapStmt.setBoolean(idx++, map.isMithrilSwordEnabled());
                 mapStmt.setBoolean(idx++, map.isMithrilDaggersEnabled());
                 mapStmt.setBoolean(idx++, map.isFreeFallEnabled());
+                mapStmt.setBoolean(idx++, map.isDuelEnabled());
 
                 idx = setTransform(mapStmt, idx, map.getStart());
                 idx = setTransform(mapStmt, idx, map.getFinish());
@@ -468,6 +490,7 @@ public class MapStore {
         copy.setMithrilSwordEnabled(source.isMithrilSwordEnabled());
         copy.setMithrilDaggersEnabled(source.isMithrilDaggersEnabled());
         copy.setFreeFallEnabled(source.isFreeFallEnabled());
+        copy.setDuelEnabled(source.isDuelEnabled());
         copy.setCreatedAt(source.getCreatedAt());
         copy.setUpdatedAt(source.getUpdatedAt());
         if (source.getCheckpoints() != null) {

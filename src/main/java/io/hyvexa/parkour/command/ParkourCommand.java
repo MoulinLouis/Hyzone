@@ -13,6 +13,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.parkour.ParkourConstants;
 import io.hyvexa.parkour.data.MapStore;
@@ -83,9 +84,17 @@ public class ParkourCommand extends AbstractAsyncCommand {
     }
 
     private void handleCommand(CommandContext ctx, Player player, Ref<EntityStore> ref, Store<EntityStore> store) {
+        PlayerRef playerRefComponent = store.getComponent(ref, PlayerRef.getComponentType());
+        if (playerRefComponent != null) {
+            HyvexaPlugin plugin = HyvexaPlugin.getInstance();
+            if (plugin != null && plugin.getDuelTracker() != null
+                    && plugin.getDuelTracker().isInMatch(playerRefComponent.getUuid())) {
+                ctx.sendMessage(Message.raw("You can't use parkour commands during a duel."));
+                return;
+            }
+        }
         String[] tokens = tokenize(ctx);
         if (tokens.length == 0 || tokens[0].equalsIgnoreCase("ui")) {
-            PlayerRef playerRefComponent = store.getComponent(ref, PlayerRef.getComponentType());
             if (playerRefComponent != null) {
                 player.getPageManager().openCustomPage(ref, store,
                         new CategorySelectPage(playerRefComponent, mapStore, progressStore, runTracker));

@@ -75,6 +75,7 @@ public class DatabaseManager {
             dataSource = new HikariDataSource(config);
             LOGGER.atInfo().log("Database connection pool initialized successfully");
             ensureCheckpointTimesTable();
+            ensureDuelEnabledColumn();
         } catch (Exception e) {
             LOGGER.at(Level.SEVERE).log("Failed to initialize database connection pool: " + e.getMessage());
             throw new RuntimeException("Database initialization failed", e);
@@ -174,6 +175,33 @@ public class DatabaseManager {
             createPlayerCheckpointTimesTable(conn);
         } catch (SQLException e) {
             LOGGER.at(Level.WARNING).log("Failed to ensure player_checkpoint_times table: " + e.getMessage());
+        }
+    }
+
+    private void ensureDuelEnabledColumn() {
+        try (Connection conn = getConnection()) {
+            if (columnExists(conn, "maps", "duel_enabled")) {
+                return;
+            }
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("ALTER TABLE maps ADD COLUMN duel_enabled BOOLEAN DEFAULT FALSE");
+            }
+        } catch (SQLException e) {
+            LOGGER.at(Level.WARNING).log("Failed to ensure maps.duel_enabled column: " + e.getMessage());
+        }
+    }
+
+    private boolean columnExists(Connection conn, String table, String column) throws SQLException {
+        String sql = """
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?
+            """;
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, table);
+            stmt.setString(2, column);
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next();
+            }
         }
     }
 

@@ -10,6 +10,7 @@ import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.inventory.container.filter.FilterActionType;
 import com.hypixel.hytale.server.core.inventory.container.filter.SlotFilter;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.duel.DuelConstants;
 import io.hyvexa.parkour.ParkourConstants;
 import io.hyvexa.parkour.data.Map;
 import io.hyvexa.parkour.util.PlayerSettingsStore;
@@ -70,6 +71,23 @@ public final class InventoryUtils {
         applyDropFilters(inventory, false);
     }
 
+    public static void giveDuelItems(Player player, Map map) {
+        Inventory inventory = player.getInventory();
+        if (inventory == null) {
+            return;
+        }
+        ItemContainer hotbar = inventory.getHotbar();
+        if (hotbar == null) {
+            return;
+        }
+        hotbar.setItemStackForSlot((short) 0, new ItemStack(ParkourConstants.ITEM_RESET, 1), false);
+        hotbar.setItemStackForSlot((short) 1, new ItemStack(ParkourConstants.ITEM_RESTART_CHECKPOINT, 1), false);
+        hotbar.setItemStackForSlot((short) 2, new ItemStack(DuelConstants.ITEM_FORFEIT, 1), false);
+        for (short i = 3; i < 9; i++) {
+            hotbar.setItemStackForSlot(i, ItemStack.EMPTY, false);
+        }
+    }
+
     public static void giveMenuItems(Player player) {
         Inventory inventory = player.getInventory();
         if (inventory == null) {
@@ -78,17 +96,19 @@ public final class InventoryUtils {
         if (PermissionUtils.isOp(player)) {
             clearContainer(inventory.getHotbar());
             setHotbarItem(inventory, 0, new ItemStack(ParkourConstants.ITEM_MENU, 1));
-            setHotbarItem(inventory, 1, new ItemStack(ParkourConstants.ITEM_LEADERBOARD, 1));
-            setHotbarItem(inventory, 2, new ItemStack(ParkourConstants.ITEM_STATS, 1));
-            setHotbarItem(inventory, 3, new ItemStack(ParkourConstants.ITEM_ADMIN_REMOTE, 1));
+            setHotbarItem(inventory, 1, new ItemStack(DuelConstants.ITEM_MENU, 1));
+            setHotbarItem(inventory, 2, new ItemStack(ParkourConstants.ITEM_LEADERBOARD, 1));
+            setHotbarItem(inventory, 3, new ItemStack(ParkourConstants.ITEM_STATS, 1));
+            setHotbarItem(inventory, 4, new ItemStack(ParkourConstants.ITEM_ADMIN_REMOTE, 1));
             return;
         }
         applyDropFilters(inventory, false);
         clearAllSections(inventory);
         setHotbarItem(inventory, 0, new ItemStack(ParkourConstants.ITEM_MENU, 1));
-        setHotbarItem(inventory, 1, new ItemStack(ParkourConstants.ITEM_LEADERBOARD, 1));
-        setHotbarItem(inventory, 2, new ItemStack(ParkourConstants.ITEM_STATS, 1));
-        setHotbarItem(inventory, 3, new ItemStack(ParkourConstants.ITEM_ADMIN_REMOTE, 1));
+        setHotbarItem(inventory, 1, new ItemStack(DuelConstants.ITEM_MENU, 1));
+        setHotbarItem(inventory, 2, new ItemStack(ParkourConstants.ITEM_LEADERBOARD, 1));
+        setHotbarItem(inventory, 3, new ItemStack(ParkourConstants.ITEM_STATS, 1));
+        setHotbarItem(inventory, 4, new ItemStack(ParkourConstants.ITEM_ADMIN_REMOTE, 1));
         applyDropFilters(inventory, false);
     }
 
