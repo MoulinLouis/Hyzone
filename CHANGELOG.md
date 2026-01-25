@@ -1,5 +1,6 @@
 # Changelog
 
+- Removed the Aura music option from player settings and fall back legacy Aura selections to the Zelda OST.
 - Added 1v1 duel mode with matchmaking queue, duel stats, and per-map duel enable toggle.
 - Removed /dbmigrate command and JSON migration support now that all data is DB-backed.
 - Added /1v1 admin force <player> to start a duel for local testing.
@@ -18,6 +19,10 @@
 - Added a duel menu toggle to show or hide your opponent during a duel (persists across reconnects).
 - Added duel category toggles (Easy/Medium/Hard/Insane) and matchmaking now requires shared categories.
 - Queue join messages now show the selected duel categories.
+- Extended the Duel menu UI height to fit the added toggles and buttons.
+- Default duel categories are now Easy/Medium ON and Hard/Insane OFF.
+- Widened the duel category ON/OFF buttons so the OFF label is no longer cropped.
+- Re-aligned the duel category toggles so the right edges line up cleanly.
 - Add checkpoint split times storage for personal best runs.
 - Reapply a player's selected music track on reconnect so the actual track matches the saved label.
 - Remove the "Run reset." chat message when players restart a run.
