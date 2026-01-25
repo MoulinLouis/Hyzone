@@ -1,5 +1,10 @@
 # Changelog
 
+- Added `/rules` command explaining that cuts/strategies are allowed but cheating and bug abuse are not.
+- Gate duel queue behind 5 completed maps, show an unlock message, and display a locked state in the duel UI.
+- Show per-category map completion counts (X/Y Completed) on the level category selector.
+- Added `{store}` global message placeholder that hyperlinks to the Hyvexa store.
+- Prevent non-OP players from interacting with Launchpad blocks.
 - Removed the Aura music option from player settings and fall back legacy Aura selections to the Zelda OST.
 - Added 1v1 duel mode with matchmaking queue, duel stats, and per-map duel enable toggle.
 - Removed /dbmigrate command and JSON migration support now that all data is DB-backed.

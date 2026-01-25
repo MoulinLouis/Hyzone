@@ -17,4 +17,13 @@ Button {
     );
     Text: "Beginner";
   }
+
+  Label #CategoryProgress {
+    Style: (
+      FontSize: 13,
+      TextColor: #cfc8a6
+    );
+    Anchor: (Left: 10, Bottom: 6);
+    Text: "0/0 Completed";
+  }
 }

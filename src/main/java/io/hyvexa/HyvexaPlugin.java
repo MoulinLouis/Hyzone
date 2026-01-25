@@ -50,6 +50,7 @@ import com.hypixel.hytale.server.core.inventory.container.filter.SlotFilter;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.event.events.ecs.DropItemEvent;
 import com.hypixel.hytale.server.core.event.events.ecs.BreakBlockEvent;
+import com.hypixel.hytale.server.core.event.events.ecs.UseBlockEvent;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.universe.world.WorldMapTracker;
 import com.hypixel.hytale.protocol.MovementSettings;
@@ -66,6 +67,7 @@ import io.hyvexa.parkour.command.ParkourAdminItemCommand;
 import io.hyvexa.parkour.command.ParkourCommand;
 import io.hyvexa.parkour.command.ParkourItemCommand;
 import io.hyvexa.parkour.command.ParkourMusicDebugCommand;
+import io.hyvexa.parkour.command.RulesCommand;
 import io.hyvexa.parkour.command.StoreCommand;
 import io.hyvexa.parkour.ParkourConstants;
 import io.hyvexa.parkour.tracker.HiddenRunHud;
@@ -74,6 +76,7 @@ import io.hyvexa.parkour.tracker.RunRecordsHud;
 import io.hyvexa.parkour.tracker.RunTracker;
 import io.hyvexa.parkour.system.NoDropSystem;
 import io.hyvexa.parkour.system.NoBreakSystem;
+import io.hyvexa.parkour.system.NoLaunchpadEditSystem;
 import io.hyvexa.parkour.system.NoPlayerDamageSystem;
 import io.hyvexa.parkour.system.NoPlayerKnockbackSystem;
 import io.hyvexa.parkour.system.NoWeaponDamageSystem;
@@ -120,8 +123,11 @@ public class HyvexaPlugin extends JavaPlugin {
     private static final float VIP_SPEED_MIN_MULTIPLIER = 1.0f;
     private static final float VIP_SPEED_MAX_MULTIPLIER = 4.0f;
     private static final String CHAT_LINK_PLACEHOLDER = "{link}";
+    private static final String CHAT_STORE_PLACEHOLDER = "{store}";
     private static final String CHAT_LINK_LABEL = "click here";
+    private static final String CHAT_STORE_LABEL = "store.hyvexa.com";
     private static final String DISCORD_URL = "https://discord.gg/2PAygkyFnK";
+    private static final String STORE_URL = "https://store.hyvexa.com";
     private static final String JOIN_LANGUAGE_NOTICE =
             "This is an English-speaking community server. Please use English only in the chat. "
             + "For other languages, join our ";
@@ -228,6 +234,7 @@ public class HyvexaPlugin extends JavaPlugin {
 
         this.getCommandRegistry().registerCommand(new CheckpointCommand());
         this.getCommandRegistry().registerCommand(new DiscordCommand());
+        this.getCommandRegistry().registerCommand(new RulesCommand());
         this.getCommandRegistry().registerCommand(new ParkourCommand(this.mapStore, this.progressStore, this.settingsStore,
                 this.playerCountStore, this.runTracker));
         this.getCommandRegistry().registerCommand(new ParkourAdminItemCommand());
@@ -240,6 +247,7 @@ public class HyvexaPlugin extends JavaPlugin {
 
         registerNoDropSystem();
         registerNoBreakSystem();
+        registerNoLaunchpadEditSystem();
         // Defer systems that access module singletons (EntityTrackerSystems, DamageModule)
         // to avoid blocking during plugin setup when those modules aren't ready yet
         HytaleServer.SCHEDULED_EXECUTOR.schedule(this::registerDeferredSystems, 1, TimeUnit.SECONDS);
@@ -905,19 +913,35 @@ public class HyvexaPlugin extends JavaPlugin {
         if (trimmed.isEmpty()) {
             return null;
         }
-        Message link = Message.raw(CHAT_LINK_LABEL).color("#8ab4f8").link(DISCORD_URL);
-        if (!trimmed.contains(CHAT_LINK_PLACEHOLDER)) {
+        Message discordLink = Message.raw(CHAT_LINK_LABEL).color("#8ab4f8").link(DISCORD_URL);
+        Message storeLink = Message.raw(CHAT_STORE_LABEL).color("#8ab4f8").link(STORE_URL);
+        boolean hasDiscordPlaceholder = trimmed.contains(CHAT_LINK_PLACEHOLDER);
+        boolean hasStorePlaceholder = trimmed.contains(CHAT_STORE_PLACEHOLDER);
+        if (!hasDiscordPlaceholder && !hasStorePlaceholder) {
             return Message.join(
                     Message.raw(trimmed),
                     Message.raw(" ("),
-                    link,
+                    discordLink,
                     Message.raw(").")
             );
         }
         List<Message> parts = new ArrayList<>();
         int index = 0;
         while (index < trimmed.length()) {
-            int next = trimmed.indexOf(CHAT_LINK_PLACEHOLDER, index);
+            int discordIndex = trimmed.indexOf(CHAT_LINK_PLACEHOLDER, index);
+            int storeIndex = trimmed.indexOf(CHAT_STORE_PLACEHOLDER, index);
+            int next = -1;
+            Message replacement = null;
+            int placeholderLength = 0;
+            if (discordIndex >= 0 && (storeIndex < 0 || discordIndex < storeIndex)) {
+                next = discordIndex;
+                replacement = discordLink;
+                placeholderLength = CHAT_LINK_PLACEHOLDER.length();
+            } else if (storeIndex >= 0) {
+                next = storeIndex;
+                replacement = storeLink;
+                placeholderLength = CHAT_STORE_PLACEHOLDER.length();
+            }
             if (next < 0) {
                 String tail = trimmed.substring(index);
                 if (!tail.isEmpty()) {
@@ -928,11 +952,11 @@ public class HyvexaPlugin extends JavaPlugin {
             if (next > index) {
                 parts.add(Message.raw(trimmed.substring(index, next)));
             }
-            parts.add(link);
-            index = next + CHAT_LINK_PLACEHOLDER.length();
+            parts.add(replacement);
+            index = next + placeholderLength;
         }
         if (parts.isEmpty()) {
-            return link;
+            return hasStorePlaceholder ? storeLink : discordLink;
         }
         return Message.join(parts.toArray(new Message[0]));
     }
@@ -1577,6 +1601,16 @@ public class HyvexaPlugin extends JavaPlugin {
         }
         if (!registry.hasSystemClass(NoBreakSystem.class)) {
             registry.registerSystem(new NoBreakSystem());
+        }
+    }
+
+    private void registerNoLaunchpadEditSystem() {
+        var registry = EntityStore.REGISTRY;
+        if (registry.getEntityEventTypeForClass(UseBlockEvent.Pre.class) == null) {
+            registry.registerEntityEventType(UseBlockEvent.Pre.class);
+        }
+        if (!registry.hasSystemClass(NoLaunchpadEditSystem.class)) {
+            registry.registerSystem(new NoLaunchpadEditSystem());
         }
     }
 

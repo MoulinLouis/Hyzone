@@ -22,13 +22,16 @@ import io.hyvexa.parkour.tracker.RunTracker;
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 public class CategorySelectPage extends BaseParkourPage {
 
+    private final PlayerRef playerRef;
     private final MapStore mapStore;
     private final ProgressStore progressStore;
     private final RunTracker runTracker;
@@ -39,6 +42,7 @@ public class CategorySelectPage extends BaseParkourPage {
     public CategorySelectPage(@Nonnull PlayerRef playerRef, MapStore mapStore,
                                      ProgressStore progressStore, RunTracker runTracker) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
+        this.playerRef = playerRef;
         this.mapStore = mapStore;
         this.progressStore = progressStore;
         this.runTracker = runTracker;
@@ -82,9 +86,16 @@ public class CategorySelectPage extends BaseParkourPage {
         commandBuilder.clear("#CategoryCards");
         Set<String> categories = new LinkedHashSet<>();
         List<Map> maps = mapStore.listMaps();
+        UUID playerId = playerRef.getUuid();
+        java.util.Map<String, Integer> totalByCategory = new HashMap<>();
+        java.util.Map<String, Integer> completedByCategory = new HashMap<>();
         for (Map map : maps) {
             String category = FormatUtils.normalizeCategory(map.getCategory());
             categories.add(category);
+            totalByCategory.merge(category, 1, Integer::sum);
+            if (progressStore.isMapCompleted(playerId, map.getId())) {
+                completedByCategory.merge(category, 1, Integer::sum);
+            }
         }
         List<String> orderedCategories = applyCategoryOrder(categories);
         orderedCategories = applyCategoryMapOrder(orderedCategories, maps);
@@ -92,6 +103,10 @@ public class CategorySelectPage extends BaseParkourPage {
         for (String category : orderedCategories) {
             commandBuilder.append("#CategoryCards", "Pages/Parkour_CategoryEntry.ui");
             commandBuilder.set("#CategoryCards[" + index + "] #CategoryName.Text", category);
+            int total = totalByCategory.getOrDefault(category, 0);
+            int completed = completedByCategory.getOrDefault(category, 0);
+            commandBuilder.set("#CategoryCards[" + index + "] #CategoryProgress.Text",
+                    completed + "/" + total + " Completed");
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
                     "#CategoryCards[" + index + "]",
                     EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_SELECT_PREFIX + category), false);

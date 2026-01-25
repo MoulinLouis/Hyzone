@@ -97,6 +97,9 @@ public class DuelCommand extends AbstractAsyncCommand {
             ctx.sendMessage(Message.raw(DuelConstants.MSG_IN_PARKOUR));
             return;
         }
+        if (!meetsUnlockRequirement(ctx, playerId)) {
+            return;
+        }
         if (!duelTracker.hasAvailableMaps(playerId)) {
             ctx.sendMessage(Message.raw(DuelConstants.MSG_NO_MAPS));
             return;
@@ -111,6 +114,22 @@ public class DuelCommand extends AbstractAsyncCommand {
         String categories = resolveCategoryLabel(playerId);
         ctx.sendMessage(Message.raw(String.format(DuelConstants.MSG_QUEUE_JOINED, categories, pos)));
         duelTracker.tryMatch();
+    }
+
+    private boolean meetsUnlockRequirement(CommandContext ctx, UUID playerId) {
+        HyvexaPlugin plugin = HyvexaPlugin.getInstance();
+        if (plugin == null || plugin.getProgressStore() == null) {
+            return true;
+        }
+        int required = DuelConstants.DUEL_UNLOCK_MIN_COMPLETED_MAPS;
+        int completed = plugin.getProgressStore().getCompletedMapCount(playerId);
+        if (completed >= required) {
+            return true;
+        }
+        int remaining = required - completed;
+        ctx.sendMessage(Message.raw(String.format(DuelConstants.MSG_DUEL_UNLOCK_REQUIRED,
+                required, remaining, completed, required)));
+        return false;
     }
 
     private String resolveCategoryLabel(UUID playerId) {
