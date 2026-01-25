@@ -12,7 +12,7 @@ import java.util.logging.Level;
 public class DatabaseConfig {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final Path CONFIG_PATH = Path.of("Parkour/database.json");
+    private static final Path CONFIG_PATH = Path.of("mods/Parkour/database.json");
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     private String host = "localhost";
@@ -67,5 +67,9 @@ public class DatabaseConfig {
 
     public String getPassword() {
         return password;
+    }
+
+    public static Path getConfigPath() {
+        return CONFIG_PATH;
     }
 }

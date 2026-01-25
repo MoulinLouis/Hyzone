@@ -30,11 +30,11 @@ Instructions for AI agents working on this Hytale plugin codebase.
 - **Audio**: `src/main/resources/Common/Sounds/`, `Common/Music/`
 
 ### Runtime Data
-- **Working dir**: Server runs from `run/`, so runtime data lives at `run/Parkour/`
-- **Database config**: `run/Parkour/database.json` (MySQL credentials, gitignored)
+- **Working dir**: Server runs from `run/`, so runtime data lives at `mods/Parkour/`
+- **Database config**: `mods/Parkour/database.json` (MySQL credentials, gitignored)
 - **Source of truth**: Parkour data is stored in MySQL and loaded into memory on startup
 - **/dbmigrate JSON inputs** (required, no fallback): `Settings.json`, `GlobalMessages.json`,
-  `PlayerCounts.json`, `Progress.json`, `Maps.json` in `run/Parkour/`
+  `PlayerCounts.json`, `Progress.json`, `Maps.json` in `mods/Parkour/`
 
 ## Current Features
 
@@ -230,7 +230,7 @@ public class MyStore {
 1. **Entity refs expire** - Always check `ref.isValid()` before use
 2. **World thread required** - Use `CompletableFuture.runAsync(..., world)` for entity/world operations
 3. **UI paths** - Use forward slashes: `"Common/UI/Custom/Pages/MyPage.ui"`
-4. **Runtime data** - DB credentials live in `run/Parkour/database.json`; parkour data is in MySQL
+4. **Runtime data** - DB credentials live in `mods/Parkour/database.json`; parkour data is in MySQL
 5. **Inventory access** - Need `Player` component, not just `PlayerRef`
 6. **Event registration** - Use `getEventRegistry().registerGlobal(...)` in `setup()`
 7. **Null annotations** - Use `@Nonnull` following existing patterns

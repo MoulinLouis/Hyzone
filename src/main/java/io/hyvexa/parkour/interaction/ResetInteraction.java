@@ -49,6 +49,12 @@ public class ResetInteraction extends SimpleInteraction {
         }
         CompletableFuture.runAsync(() -> {
             InventoryUtils.clearAllItems(player);
+            if (plugin.getDuelTracker() != null && plugin.getDuelTracker().isInMatch(playerRef.getUuid())) {
+                Map map = plugin.getDuelTracker().getActiveMap(playerRef.getUuid());
+                InventoryUtils.giveDuelItems(player, map);
+                plugin.getDuelTracker().resetRunToStart(ref, store, player, playerRef);
+                return;
+            }
             Map map = null;
             if (plugin.getRunTracker() != null && plugin.getMapStore() != null) {
                 String mapId = plugin.getRunTracker().getActiveMapId(playerRef.getUuid());

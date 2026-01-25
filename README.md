@@ -87,8 +87,8 @@ src/main/resources/
 
 ### Runtime Data
 - All runtime data is stored in MySQL and loaded into memory on startup
-- Working directory is `run/`, so runtime config lives in `run/Parkour/`
-- DB config: `run/Parkour/database.json` (gitignored)
+- Working directory is `run/`, so runtime config lives in `mods/Parkour/`
+- DB config: `mods/Parkour/database.json` (gitignored)
 - JSON files are only used by `/dbmigrate` and must all exist:
   `Settings.json`, `GlobalMessages.json`, `PlayerCounts.json`, `Progress.json`, `Maps.json`
 
