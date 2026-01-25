@@ -57,11 +57,13 @@ import com.hypixel.hytale.protocol.MovementSettings;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.common.util.InventoryUtils;
 import io.hyvexa.common.util.PermissionUtils;
+import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.parkour.command.CheckpointCommand;
 import io.hyvexa.parkour.command.DatabaseClearCommand;
 import io.hyvexa.parkour.command.DatabaseReloadCommand;
 import io.hyvexa.parkour.command.DatabaseTestCommand;
 import io.hyvexa.parkour.command.DiscordCommand;
+import io.hyvexa.parkour.command.MessageTestCommand;
 import io.hyvexa.parkour.command.ParkourAdminCommand;
 import io.hyvexa.parkour.command.ParkourAdminItemCommand;
 import io.hyvexa.parkour.command.ParkourCommand;
@@ -243,6 +245,7 @@ public class HyvexaPlugin extends JavaPlugin {
         this.getCommandRegistry().registerCommand(new DatabaseClearCommand());
         this.getCommandRegistry().registerCommand(new DatabaseReloadCommand());
         this.getCommandRegistry().registerCommand(new DatabaseTestCommand());
+        this.getCommandRegistry().registerCommand(new MessageTestCommand());
         this.getCommandRegistry().registerCommand(new DuelCommand(this.duelTracker, this.runTracker));
 
         registerNoDropSystem();
@@ -318,7 +321,7 @@ public class HyvexaPlugin extends JavaPlugin {
         });
         this.getEventRegistry().registerGlobal(PlayerConnectEvent.class, event -> {
             try {
-                broadcastPresence(event.getPlayerRef(), "joined");
+                broadcastPresence(event.getPlayerRef(), true);
             } catch (Exception e) {
                 LOGGER.at(Level.WARNING).log("Exception in PlayerConnectEvent (broadcast): " + e.getMessage());
             }
@@ -327,6 +330,7 @@ public class HyvexaPlugin extends JavaPlugin {
             try {
                 if (event.getPlayerRef() != null) {
                     UUID playerId = event.getPlayerRef().getUuid();
+                    broadcastPresence(event.getPlayerRef(), false);
                     if (duelTracker != null) {
                         duelTracker.handleDisconnect(playerId);
                     }
@@ -632,7 +636,7 @@ public class HyvexaPlugin extends JavaPlugin {
         if (trimmed.isEmpty()) {
             return;
         }
-        Message chatMessage = Message.raw("ADMIN MESSAGE: " + trimmed).color("#ff4d4d");
+        Message chatMessage = SystemMessageUtils.adminAnnouncement(trimmed);
         if (sender != null) {
             queueAnnouncement(sender, trimmed);
         }
@@ -977,7 +981,7 @@ public class HyvexaPlugin extends JavaPlugin {
         progressStore.addPlaytime(playerId, playerRef.getUsername(), deltaMs);
     }
 
-    private void broadcastPresence(PlayerRef playerRef, String verb) {
+    private void broadcastPresence(PlayerRef playerRef, boolean joined) {
         if (playerRef == null) {
             return;
         }
@@ -985,14 +989,13 @@ public class HyvexaPlugin extends JavaPlugin {
         if (name == null || name.isBlank()) {
             name = ParkourUtils.resolveName(playerRef.getUuid(), progressStore);
         }
-        String rank = progressStore != null ? progressStore.getRankName(playerRef.getUuid(), mapStore) : "Unranked";
-        Message rankPart = FormatUtils.getRankMessage(rank);
+        String sign = joined ? "+" : "-";
+        String signColor = joined ? SystemMessageUtils.SUCCESS : SystemMessageUtils.ERROR;
         Message message = Message.join(
-                Message.raw("["),
-                rankPart,
-                Message.raw("] "),
-                Message.raw(name),
-                Message.raw(" " + verb + " the server!")
+                Message.raw("[").color(SystemMessageUtils.SECONDARY),
+                Message.raw(sign).color(signColor),
+                Message.raw("] ").color(SystemMessageUtils.SECONDARY),
+                Message.raw(name).color(SystemMessageUtils.PRIMARY_TEXT)
         );
         for (PlayerRef target : Universe.get().getPlayers()) {
             target.sendMessage(message);

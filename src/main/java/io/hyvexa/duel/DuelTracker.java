@@ -19,6 +19,7 @@ import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.common.util.InventoryUtils;
+import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.parkour.ParkourConstants;
 import io.hyvexa.parkour.data.Map;
 import io.hyvexa.parkour.data.MapStore;
@@ -214,7 +215,9 @@ public class DuelTracker {
                 duelQueue.leave(playerId);
                 PlayerRef playerRef = Universe.get().getPlayer(playerId);
                 if (playerRef != null) {
-                    playerRef.sendMessage(Message.raw("Left duel queue because you started a parkour run."));
+                    playerRef.sendMessage(SystemMessageUtils.duelWarn(
+                            "You left the duel queue because you started a parkour run."
+                    ));
                 }
             }
         }
@@ -254,8 +257,12 @@ public class DuelTracker {
         String name1 = ref1 != null && ref1.getUsername() != null ? ref1.getUsername() : "Player";
         String name2 = ref2 != null && ref2.getUsername() != null ? ref2.getUsername() : "Player";
         String mapName = map.getName() != null && !map.getName().isBlank() ? map.getName() : map.getId();
-        Message matchMessage1 = Message.raw(String.format(DuelConstants.MSG_MATCH_FOUND, name2, mapName));
-        Message matchMessage2 = Message.raw(String.format(DuelConstants.MSG_MATCH_FOUND, name1, mapName));
+        Message matchMessage1 = SystemMessageUtils.duelSuccess(
+                String.format(DuelConstants.MSG_MATCH_FOUND, name2, mapName)
+        );
+        Message matchMessage2 = SystemMessageUtils.duelSuccess(
+                String.format(DuelConstants.MSG_MATCH_FOUND, name1, mapName)
+        );
         if (ref1 != null) {
             ref1.sendMessage(matchMessage1);
         }
@@ -292,7 +299,7 @@ public class DuelTracker {
         if (match.getState() == DuelState.STARTING) {
             if (opponentRef != null) {
                 duelQueue.addToFront(opponent);
-                opponentRef.sendMessage(Message.raw("Opponent disconnected. Returning you to the queue."));
+                opponentRef.sendMessage(SystemMessageUtils.duelWarn("Opponent disconnected. Returning you to the queue."));
                 tryMatch();
             }
             cancelMatch(match);
@@ -358,12 +365,12 @@ public class DuelTracker {
         }
         DuelMatch match = getMatch(playerRef.getUuid());
         if (match == null || match.getState() != DuelState.RACING) {
-            player.sendMessage(Message.raw("No active duel match."));
+            player.sendMessage(SystemMessageUtils.duelError("No active duel match."));
             return false;
         }
         Map map = mapStore.getMap(match.getMapId());
         if (map == null || map.getStart() == null) {
-            player.sendMessage(Message.raw("Map start not available."));
+            player.sendMessage(SystemMessageUtils.duelError("Map start not available."));
             return false;
         }
         DuelPlayerState state = playerStates.get(playerRef.getUuid());
@@ -372,7 +379,7 @@ public class DuelTracker {
         }
         World world = store.getExternalData().getWorld();
         if (world == null) {
-            player.sendMessage(Message.raw("World not available."));
+            player.sendMessage(SystemMessageUtils.duelError("World not available."));
             return false;
         }
         Vector3d position = new Vector3d(map.getStart().getX(), map.getStart().getY(), map.getStart().getZ());
@@ -505,7 +512,7 @@ public class DuelTracker {
                 state.touchedCheckpoints.add(i);
                 state.lastCheckpointIndex = i;
                 playCheckpointSound(playerRef);
-                player.sendMessage(Message.raw("Checkpoint touched"));
+                player.sendMessage(SystemMessageUtils.duelInfo("Checkpoint reached."));
             }
         }
     }
@@ -520,7 +527,7 @@ public class DuelTracker {
             if (checkpointCount > 0 && state.touchedCheckpoints.size() < checkpointCount) {
                 if (now - state.lastFinishWarningMs >= 2000L) {
                     state.lastFinishWarningMs = now;
-                    player.sendMessage(Message.raw("You did not get all checkpoints."));
+                    player.sendMessage(SystemMessageUtils.duelWarn("You did not reach all checkpoints."));
                 }
                 return;
             }
@@ -746,26 +753,30 @@ public class DuelTracker {
                 String opponentName = loserRef != null ? loserRef.getUsername() : "Opponent";
                 String winText = String.format(DuelConstants.MSG_WIN,
                         FormatUtils.formatDuration(winnerTime), opponentName);
-                winnerRef.sendMessage(Message.raw(winText));
+                winnerRef.sendMessage(SystemMessageUtils.duelSuccess(winText));
             }
             if (loserRef != null) {
                 String loseText = String.format(DuelConstants.MSG_LOSE,
                         FormatUtils.formatDuration(winnerTime),
                         winnerRef != null ? winnerRef.getUsername() : "Opponent");
-                loserRef.sendMessage(Message.raw(loseText));
+                loserRef.sendMessage(SystemMessageUtils.duelWarn(loseText));
             }
         } else if (reason == FinishReason.FORFEIT) {
             if (winnerRef != null) {
                 String name = loserRef != null ? loserRef.getUsername() : "Opponent";
-                winnerRef.sendMessage(Message.raw(String.format(DuelConstants.MSG_WIN_FORFEIT, name)));
+                winnerRef.sendMessage(SystemMessageUtils.duelSuccess(
+                        String.format(DuelConstants.MSG_WIN_FORFEIT, name)
+                ));
             }
             if (loserRef != null) {
-                loserRef.sendMessage(Message.raw(DuelConstants.MSG_FORFEITED));
+                loserRef.sendMessage(SystemMessageUtils.duelWarn(DuelConstants.MSG_FORFEITED));
             }
         } else if (reason == FinishReason.DISCONNECT) {
             if (winnerRef != null) {
                 String name = loserRef != null ? loserRef.getUsername() : "Opponent";
-                winnerRef.sendMessage(Message.raw(String.format(DuelConstants.MSG_WIN_DISCONNECT, name)));
+                winnerRef.sendMessage(SystemMessageUtils.duelSuccess(
+                        String.format(DuelConstants.MSG_WIN_DISCONNECT, name)
+                ));
             }
         }
 

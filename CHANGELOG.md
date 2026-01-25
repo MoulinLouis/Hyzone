@@ -1,5 +1,6 @@
 # Changelog
 
+- Unified system message styling with a clear color palette and added `/messagetest` to preview them in-game.
 - Added `/rules` command explaining that cuts/strategies are allowed but cheating and bug abuse are not.
 - Gate duel queue behind 5 completed maps, show an unlock message, and display a locked state in the duel UI.
 - Show per-category map completion counts (X/Y Completed) on the level category selector.

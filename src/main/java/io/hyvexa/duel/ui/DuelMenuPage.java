@@ -4,7 +4,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
-import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
@@ -14,6 +13,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.util.PermissionUtils;
+import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.duel.DuelConstants;
 import io.hyvexa.duel.DuelTracker;
 import io.hyvexa.duel.DuelMatch;
@@ -110,36 +110,36 @@ public class DuelMenuPage extends BaseParkourPage {
         if (duelTracker.isQueued(playerId)) {
             boolean left = duelTracker.dequeue(playerId);
             if (left) {
-                player.sendMessage(Message.raw(DuelConstants.MSG_QUEUE_LEFT));
+                player.sendMessage(SystemMessageUtils.duelSuccess(DuelConstants.MSG_QUEUE_LEFT));
             }
             refreshQueueState(ref, store);
             return;
         }
         if (duelTracker.isInMatch(playerId)) {
-            player.sendMessage(Message.raw(DuelConstants.MSG_IN_MATCH));
+            player.sendMessage(SystemMessageUtils.duelWarn(DuelConstants.MSG_IN_MATCH));
             return;
         }
         if (runTracker != null && runTracker.getActiveMapId(playerId) != null) {
-            player.sendMessage(Message.raw(DuelConstants.MSG_IN_PARKOUR));
+            player.sendMessage(SystemMessageUtils.duelWarn(DuelConstants.MSG_IN_PARKOUR));
             return;
         }
         if (!meetsUnlockRequirement(plugin, playerId, player)) {
             return;
         }
         if (!duelTracker.hasAvailableMaps(playerId)) {
-            player.sendMessage(Message.raw(DuelConstants.MSG_NO_MAPS));
+            player.sendMessage(SystemMessageUtils.duelWarn(DuelConstants.MSG_NO_MAPS));
             return;
         }
         boolean joined = duelTracker.enqueue(playerId);
         if (!joined) {
             int pos = duelTracker.getQueuePosition(playerId);
-            player.sendMessage(Message.raw(String.format(DuelConstants.MSG_QUEUE_ALREADY, pos)));
+            player.sendMessage(SystemMessageUtils.duelWarn(String.format(DuelConstants.MSG_QUEUE_ALREADY, pos)));
             return;
         }
         int pos = duelTracker.getQueuePosition(playerId);
         DuelPreferenceStore prefs = plugin.getDuelPreferenceStore();
         String categories = prefs != null ? prefs.formatEnabledLabel(playerId) : "Easy/Medium/Hard/Insane";
-        player.sendMessage(Message.raw(String.format(DuelConstants.MSG_QUEUE_JOINED, categories, pos)));
+        player.sendMessage(SystemMessageUtils.duelSuccess(String.format(DuelConstants.MSG_QUEUE_JOINED, categories, pos)));
         duelTracker.tryMatch();
         refreshQueueState(ref, store);
     }
@@ -150,7 +150,7 @@ public class DuelMenuPage extends BaseParkourPage {
             return true;
         }
         int remaining = progress.required() - progress.completed();
-        player.sendMessage(Message.raw(String.format(DuelConstants.MSG_DUEL_UNLOCK_REQUIRED,
+        player.sendMessage(SystemMessageUtils.duelWarn(String.format(DuelConstants.MSG_DUEL_UNLOCK_REQUIRED,
                 progress.required(), remaining, progress.completed(), progress.required())));
         return false;
     }
@@ -281,7 +281,7 @@ public class DuelMenuPage extends BaseParkourPage {
         refreshQueueState(ref, store);
         Player player = store.getComponent(ref, Player.getComponentType());
         if (player != null) {
-            player.sendMessage(Message.raw(hidden ? "Opponent hidden." : "Opponent visible."));
+            player.sendMessage(SystemMessageUtils.duelInfo(hidden ? "Opponent hidden." : "Opponent visible."));
         }
     }
 
@@ -303,13 +303,15 @@ public class DuelMenuPage extends BaseParkourPage {
         plugin.getDuelPreferenceStore().toggle(playerId, category);
         if (plugin.getDuelTracker().isQueued(playerId) && !plugin.getDuelTracker().hasAvailableMaps(playerId)) {
             plugin.getDuelTracker().dequeue(playerId);
-            player.sendMessage(Message.raw("No duel maps match your selected categories. You left the queue."));
+            player.sendMessage(SystemMessageUtils.duelWarn(
+                    "No duel maps match your selected categories. You left the queue."
+            ));
         } else {
             plugin.getDuelTracker().tryMatch();
         }
         refreshQueueState(ref, store);
         boolean enabled = plugin.getDuelPreferenceStore().isEnabled(playerId, category);
-        player.sendMessage(Message.raw(categoryLabel(category) + ": " + (enabled ? "ON" : "OFF")));
+        player.sendMessage(SystemMessageUtils.duelInfo(categoryLabel(category) + ": " + (enabled ? "ON" : "OFF")));
     }
 
     private DuelCategory parseCategory(String button) {
@@ -341,7 +343,7 @@ public class DuelMenuPage extends BaseParkourPage {
             return;
         }
         if (!PermissionUtils.isOp(player)) {
-            player.sendMessage(Message.raw("You must be OP to view active matches."));
+            player.sendMessage(SystemMessageUtils.duelError("You must be OP to view active matches."));
             return;
         }
         HyvexaPlugin plugin = HyvexaPlugin.getInstance();
@@ -350,14 +352,14 @@ public class DuelMenuPage extends BaseParkourPage {
         }
         List<DuelMatch> matches = plugin.getDuelTracker().getActiveMatches();
         if (matches.isEmpty()) {
-            player.sendMessage(Message.raw("No active matches."));
+            player.sendMessage(SystemMessageUtils.duelWarn("No active matches."));
             return;
         }
-        player.sendMessage(Message.raw("Active matches (" + matches.size() + "):"));
+        player.sendMessage(SystemMessageUtils.duelInfo("Active matches (" + matches.size() + "):"));
         for (DuelMatch match : matches) {
             String p1 = resolveName(match.getPlayer1());
             String p2 = resolveName(match.getPlayer2());
-            player.sendMessage(Message.raw("- " + match.getMatchId() + ": " + p1 + " vs " + p2
+            player.sendMessage(SystemMessageUtils.duelInfo("- " + match.getMatchId() + ": " + p1 + " vs " + p2
                     + " on " + match.getMapId() + " (" + match.getState() + ")"));
         }
     }

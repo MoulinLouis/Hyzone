@@ -19,6 +19,7 @@ import com.hypixel.hytale.protocol.MovementStates;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.common.util.InventoryUtils;
 import io.hyvexa.common.util.PermissionUtils;
+import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.parkour.ParkourConstants;
 import io.hyvexa.parkour.data.Map;
@@ -277,7 +278,7 @@ public class RunTracker {
     private void startRunFromTrigger(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef,
                                      Player player, Map map) {
         if (map.getStart() == null) {
-            player.sendMessage(Message.raw("Map '" + map.getId() + "' has no start set."));
+            player.sendMessage(SystemMessageUtils.parkourError("Map '" + map.getId() + "' has no start set."));
             return;
         }
         setActiveMap(playerRef.getUuid(), map.getId(), map.getStart());
@@ -287,7 +288,7 @@ public class RunTracker {
         store.addComponent(ref, Teleport.getComponentType(),
                 new Teleport(store.getExternalData().getWorld(), position, rotation));
         recordTeleport(playerRef.getUuid(), TeleportCause.START_TRIGGER);
-        player.sendMessage(Message.raw("Map loaded."));
+        player.sendMessage(SystemMessageUtils.parkourSuccess("Map loaded."));
         InventoryUtils.giveRunItems(player, map);
     }
 
@@ -311,7 +312,7 @@ public class RunTracker {
         }
         clearActiveMap(playerRef.getUuid());
         InventoryUtils.giveMenuItems(player);
-        player.sendMessage(Message.raw("Left map."));
+        player.sendMessage(SystemMessageUtils.parkourInfo("Left map."));
         return true;
     }
 
@@ -396,7 +397,7 @@ public class RunTracker {
                 long elapsedMs = run.waitingForStart ? 0L : Math.max(0L, System.currentTimeMillis() - run.startTimeMs);
                 run.checkpointTouchTimes.put(i, elapsedMs);
                 playCheckpointSound(playerRef);
-                player.sendMessage(Message.raw("Checkpoint touched"));
+                player.sendMessage(SystemMessageUtils.parkourInfo("Checkpoint reached."));
             }
         }
     }
@@ -412,7 +413,7 @@ public class RunTracker {
                 long now = System.currentTimeMillis();
                 if (now - run.lastFinishWarningMs >= 2000L) {
                     run.lastFinishWarningMs = now;
-                    player.sendMessage(Message.raw("You did not get all checkpoints."));
+                    player.sendMessage(SystemMessageUtils.parkourWarn("You did not reach all checkpoints."));
                 }
                 return;
             }
@@ -433,10 +434,12 @@ public class RunTracker {
             if (leaderboardPosition <= 0) {
                 leaderboardPosition = 1;
             }
-            player.sendMessage(Message.raw("Finish line touched"));
-            player.sendMessage(Message.raw("Map completed in " + FormatUtils.formatDuration(durationMs) + "."));
+            player.sendMessage(SystemMessageUtils.parkourInfo("Finish line reached."));
+            player.sendMessage(SystemMessageUtils.parkourSuccess(
+                    "Map completed in " + FormatUtils.formatDuration(durationMs) + "."
+            ));
             if (result.xpAwarded > 0L) {
-                player.sendMessage(Message.raw("You earned " + result.xpAwarded + " XP."));
+                player.sendMessage(SystemMessageUtils.parkourSuccess("You earned " + result.xpAwarded + " XP."));
             }
             int newRank = progressStore.getCompletionRank(playerId, mapStore);
             boolean reachedVexaGod = newRank == ParkourConstants.COMPLETION_RANK_NAMES.length && oldRank < newRank;
@@ -446,7 +449,7 @@ public class RunTracker {
                     plugin.invalidateRankCache(playerId);
                 }
                 String rankName = progressStore.getRankName(playerId, mapStore);
-                player.sendMessage(Message.raw("Rank up! You are now " + rankName + "."));
+                player.sendMessage(SystemMessageUtils.parkourSuccess("Rank up! You are now " + rankName + "."));
             }
             if (result.newBest) {
                 broadcastCompletion(playerId, playerName, map, durationMs, leaderboardPosition);
@@ -605,17 +608,17 @@ public class RunTracker {
         }
         World world = store.getExternalData().getWorld();
         if (world == null) {
-            player.sendMessage(Message.raw("World not available."));
+            player.sendMessage(SystemMessageUtils.parkourError("World not available."));
             return false;
         }
         String mapId = getActiveMapId(playerRef.getUuid());
         if (mapId == null) {
-            player.sendMessage(Message.raw("No active map to reset."));
+            player.sendMessage(SystemMessageUtils.parkourWarn("No active map to reset."));
             return false;
         }
         Map map = mapStore.getMap(mapId);
         if (map == null || map.getStart() == null) {
-            player.sendMessage(Message.raw("Map start not available."));
+            player.sendMessage(SystemMessageUtils.parkourError("Map start not available."));
             return false;
         }
         setActiveMap(playerRef.getUuid(), mapId, map.getStart());
@@ -638,31 +641,34 @@ public class RunTracker {
             category = category.trim();
         }
         String rank = progressStore != null ? progressStore.getRankName(playerId, mapStore) : "Unranked";
-        Message rankPart = Message.raw(rank).color(FormatUtils.getRankColor(rank));
+        Message rankPart = FormatUtils.getRankMessage(rank);
         String categoryColor = getCategoryColor(category);
         boolean isWorldRecord = leaderboardPosition == 1;
-        Message positionPart = Message.raw("#" + leaderboardPosition).color(isWorldRecord ? "#ffd166" : "#9fb0ba");
+        Message positionPart = Message.raw("#" + leaderboardPosition)
+                .color(isWorldRecord ? "#ffd166" : SystemMessageUtils.SECONDARY);
         Message wrPart = isWorldRecord
                 ? Message.raw(" WR!").color("#ffd166")
                 : Message.raw("");
-        Message message = Message.join(
-                Message.raw("["),
+        Message message = SystemMessageUtils.withParkourPrefix(
+                Message.raw("[").color(SystemMessageUtils.SECONDARY),
                 rankPart,
-                Message.raw("] "),
-                Message.raw(playerName),
-                Message.raw(" finished "),
-                Message.raw(mapName),
-                Message.raw(" ("),
+                Message.raw("] ").color(SystemMessageUtils.SECONDARY),
+                Message.raw(playerName).color(SystemMessageUtils.PRIMARY_TEXT),
+                Message.raw(" finished ").color(SystemMessageUtils.SECONDARY),
+                Message.raw(mapName).color(SystemMessageUtils.PRIMARY_TEXT),
+                Message.raw(" (").color(SystemMessageUtils.SECONDARY),
                 Message.raw(category).color(categoryColor),
-                Message.raw(") in "),
-                Message.raw(FormatUtils.formatDuration(durationMs)),
-                Message.raw(" - "),
+                Message.raw(") in ").color(SystemMessageUtils.SECONDARY),
+                Message.raw(FormatUtils.formatDuration(durationMs)).color(SystemMessageUtils.SUCCESS),
+                Message.raw(" - ").color(SystemMessageUtils.SECONDARY),
                 positionPart,
                 wrPart,
-                Message.raw(".")
+                Message.raw(".").color(SystemMessageUtils.SECONDARY)
         );
         Message ggMessage = isWorldRecord
-                ? Message.raw("SAY GG IN THE CHAT!!").bold(true)
+                ? SystemMessageUtils.withParkourPrefix(
+                        Message.raw("WORLD RECORD! SAY GG!").color(SystemMessageUtils.SUCCESS).bold(true)
+                )
                 : Message.empty();
         for (PlayerRef target : Universe.get().getPlayers()) {
             target.sendMessage(message);
@@ -673,13 +679,15 @@ public class RunTracker {
     }
 
     private void broadcastVexaGod(String playerName) {
-        Message message = Message.join(
-                Message.raw(playerName),
-                Message.raw(" is now a "),
+        Message message = SystemMessageUtils.withParkourPrefix(
+                Message.raw(playerName).color(SystemMessageUtils.PRIMARY_TEXT),
+                Message.raw(" is now ").color(SystemMessageUtils.SECONDARY),
                 FormatUtils.getRankMessage("VexaGod"),
-                Message.raw(" (but for how long?)")
+                Message.raw(" (but for how long?)").color(SystemMessageUtils.SECONDARY)
         );
-        Message ggMessage = Message.raw("SEND GG IN THE CHAT").bold(true);
+        Message ggMessage = SystemMessageUtils.withParkourPrefix(
+                Message.raw("SEND GG IN THE CHAT!").color(SystemMessageUtils.SUCCESS).bold(true)
+        );
         for (PlayerRef target : Universe.get().getPlayers()) {
             target.sendMessage(message);
             target.sendMessage(ggMessage);

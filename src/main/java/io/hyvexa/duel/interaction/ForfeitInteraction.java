@@ -3,7 +3,6 @@ package io.hyvexa.duel.interaction;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.protocol.InteractionType;
-import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.SimpleInteraction;
@@ -11,6 +10,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.HyvexaPlugin;
+import io.hyvexa.common.util.SystemMessageUtils;
 
 import javax.annotation.Nonnull;
 import java.util.concurrent.CompletableFuture;
@@ -40,7 +40,7 @@ public class ForfeitInteraction extends SimpleInteraction {
         }
         CompletableFuture.runAsync(() -> {
             if (!plugin.getDuelTracker().isInMatch(playerRef.getUuid())) {
-                player.sendMessage(Message.raw("You're not in a match."));
+                player.sendMessage(SystemMessageUtils.duelWarn("You're not in a duel."));
                 return;
             }
             plugin.getDuelTracker().handleForfeit(playerRef.getUuid());
