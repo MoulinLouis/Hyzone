@@ -3,7 +3,6 @@ package io.hyvexa.duel.command;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.GameMode;
-import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractAsyncCommand;
@@ -14,6 +13,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.common.util.PermissionUtils;
+import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.duel.DuelConstants;
 import io.hyvexa.duel.DuelMatch;
 import io.hyvexa.duel.DuelTracker;
@@ -49,7 +49,7 @@ public class DuelCommand extends AbstractAsyncCommand {
     protected CompletableFuture<Void> executeAsync(CommandContext commandContext) {
         CommandSender sender = commandContext.sender();
         if (!(sender instanceof Player player)) {
-            commandContext.sendMessage(Message.raw("This command can only be used in-game."));
+            commandContext.sendMessage(SystemMessageUtils.duelError("This command can only be used in-game."));
             return CompletableFuture.completedFuture(null);
         }
         Ref<EntityStore> ref = player.getReference();
@@ -78,41 +78,41 @@ public class DuelCommand extends AbstractAsyncCommand {
             case "forfeit" -> handleForfeit(ctx, playerRef);
             case "stats" -> handleStats(ctx, playerRef, tokens);
             case "admin" -> handleAdmin(ctx, playerRef, player, tokens);
-            default -> ctx.sendMessage(Message.raw("Usage: /duel [leave|forfeit|stats|admin]"));
+            default -> ctx.sendMessage(SystemMessageUtils.duelWarn("Usage: /duel [leave|forfeit|stats|admin]"));
         }
     }
 
     private void handleJoin(CommandContext ctx, PlayerRef playerRef) {
         UUID playerId = playerRef.getUuid();
         if (duelTracker.isInMatch(playerId)) {
-            ctx.sendMessage(Message.raw(DuelConstants.MSG_IN_MATCH));
+            ctx.sendMessage(SystemMessageUtils.duelWarn(DuelConstants.MSG_IN_MATCH));
             return;
         }
         if (duelTracker.isQueued(playerId)) {
             int pos = duelTracker.getQueuePosition(playerId);
-            ctx.sendMessage(Message.raw(String.format(DuelConstants.MSG_QUEUE_ALREADY, pos)));
+            ctx.sendMessage(SystemMessageUtils.duelWarn(String.format(DuelConstants.MSG_QUEUE_ALREADY, pos)));
             return;
         }
         if (runTracker != null && runTracker.getActiveMapId(playerId) != null) {
-            ctx.sendMessage(Message.raw(DuelConstants.MSG_IN_PARKOUR));
+            ctx.sendMessage(SystemMessageUtils.duelWarn(DuelConstants.MSG_IN_PARKOUR));
             return;
         }
         if (!meetsUnlockRequirement(ctx, playerId)) {
             return;
         }
         if (!duelTracker.hasAvailableMaps(playerId)) {
-            ctx.sendMessage(Message.raw(DuelConstants.MSG_NO_MAPS));
+            ctx.sendMessage(SystemMessageUtils.duelWarn(DuelConstants.MSG_NO_MAPS));
             return;
         }
         boolean joined = duelTracker.enqueue(playerId);
         if (!joined) {
             int pos = duelTracker.getQueuePosition(playerId);
-            ctx.sendMessage(Message.raw(String.format(DuelConstants.MSG_QUEUE_ALREADY, pos)));
+            ctx.sendMessage(SystemMessageUtils.duelWarn(String.format(DuelConstants.MSG_QUEUE_ALREADY, pos)));
             return;
         }
         int pos = duelTracker.getQueuePosition(playerId);
         String categories = resolveCategoryLabel(playerId);
-        ctx.sendMessage(Message.raw(String.format(DuelConstants.MSG_QUEUE_JOINED, categories, pos)));
+        ctx.sendMessage(SystemMessageUtils.duelSuccess(String.format(DuelConstants.MSG_QUEUE_JOINED, categories, pos)));
         duelTracker.tryMatch();
     }
 
@@ -127,7 +127,7 @@ public class DuelCommand extends AbstractAsyncCommand {
             return true;
         }
         int remaining = required - completed;
-        ctx.sendMessage(Message.raw(String.format(DuelConstants.MSG_DUEL_UNLOCK_REQUIRED,
+        ctx.sendMessage(SystemMessageUtils.duelWarn(String.format(DuelConstants.MSG_DUEL_UNLOCK_REQUIRED,
                 required, remaining, completed, required)));
         return false;
     }
@@ -141,15 +141,15 @@ public class DuelCommand extends AbstractAsyncCommand {
     private void handleLeave(CommandContext ctx, PlayerRef playerRef) {
         UUID playerId = playerRef.getUuid();
         if (duelTracker.dequeue(playerId)) {
-            ctx.sendMessage(Message.raw(DuelConstants.MSG_QUEUE_LEFT));
+            ctx.sendMessage(SystemMessageUtils.duelSuccess(DuelConstants.MSG_QUEUE_LEFT));
         } else {
-            ctx.sendMessage(Message.raw("You're not in the queue."));
+            ctx.sendMessage(SystemMessageUtils.duelWarn("You're not in the duel queue."));
         }
     }
 
     private void handleForfeit(CommandContext ctx, PlayerRef playerRef) {
         if (!duelTracker.isInMatch(playerRef.getUuid())) {
-            ctx.sendMessage(Message.raw("You're not in a match."));
+            ctx.sendMessage(SystemMessageUtils.duelWarn("You're not in a duel."));
             return;
         }
         duelTracker.handleForfeit(playerRef.getUuid());
@@ -158,16 +158,18 @@ public class DuelCommand extends AbstractAsyncCommand {
     private void handleStats(CommandContext ctx, PlayerRef playerRef, String[] tokens) {
         DuelStatsStore statsStore = duelTracker.getStatsStore();
         if (statsStore == null) {
-            ctx.sendMessage(Message.raw("Stats store unavailable."));
+            ctx.sendMessage(SystemMessageUtils.duelError("Stats store unavailable."));
             return;
         }
         if (tokens.length < 2) {
             DuelStats stats = statsStore.getStats(playerRef.getUuid());
             if (stats == null) {
-                ctx.sendMessage(Message.raw(String.format(DuelConstants.MSG_STATS_NONE, playerRef.getUsername())));
+                ctx.sendMessage(SystemMessageUtils.duelWarn(
+                        String.format(DuelConstants.MSG_STATS_NONE, playerRef.getUsername())
+                ));
                 return;
             }
-            ctx.sendMessage(Message.raw(String.format(DuelConstants.MSG_STATS, playerRef.getUsername(),
+            ctx.sendMessage(SystemMessageUtils.duelInfo(String.format(DuelConstants.MSG_STATS, playerRef.getUsername(),
                     stats.getWins(), stats.getLosses(), stats.getWinRate())));
             return;
         }
@@ -177,28 +179,28 @@ public class DuelCommand extends AbstractAsyncCommand {
         if (targetRef != null) {
             stats = statsStore.getStats(targetRef.getUuid());
             if (stats != null) {
-                ctx.sendMessage(Message.raw(String.format(DuelConstants.MSG_STATS, targetRef.getUsername(),
+                ctx.sendMessage(SystemMessageUtils.duelInfo(String.format(DuelConstants.MSG_STATS, targetRef.getUsername(),
                         stats.getWins(), stats.getLosses(), stats.getWinRate())));
                 return;
             }
         }
         stats = statsStore.getStatsByName(targetName);
         if (stats == null) {
-            ctx.sendMessage(Message.raw(String.format(DuelConstants.MSG_STATS_NONE, targetName)));
+            ctx.sendMessage(SystemMessageUtils.duelWarn(String.format(DuelConstants.MSG_STATS_NONE, targetName)));
             return;
         }
         String name = stats.getPlayerName() != null ? stats.getPlayerName() : targetName;
-        ctx.sendMessage(Message.raw(String.format(DuelConstants.MSG_STATS, name, stats.getWins(), stats.getLosses(),
+        ctx.sendMessage(SystemMessageUtils.duelInfo(String.format(DuelConstants.MSG_STATS, name, stats.getWins(), stats.getLosses(),
                 stats.getWinRate())));
     }
 
     private void handleAdmin(CommandContext ctx, PlayerRef playerRef, Player player, String[] tokens) {
         if (!PermissionUtils.isOp(player)) {
-            ctx.sendMessage(Message.raw("You must be OP to use /duel admin."));
+            ctx.sendMessage(SystemMessageUtils.duelError("You must be OP to use /duel admin."));
             return;
         }
         if (tokens.length < 2) {
-            ctx.sendMessage(Message.raw("Usage: /duel admin [maps|queue|matches|cancel|force]"));
+            ctx.sendMessage(SystemMessageUtils.duelWarn("Usage: /duel admin [maps|queue|matches|cancel|force]"));
             return;
         }
         String sub = tokens[1].toLowerCase(Locale.ROOT);
@@ -208,35 +210,35 @@ public class DuelCommand extends AbstractAsyncCommand {
             case "matches" -> handleAdminMatches(ctx);
             case "cancel" -> handleAdminCancel(ctx, tokens);
             case "force" -> handleAdminForce(ctx, playerRef, tokens);
-            default -> ctx.sendMessage(Message.raw("Usage: /duel admin [maps|queue|matches|cancel|force]"));
+            default -> ctx.sendMessage(SystemMessageUtils.duelWarn("Usage: /duel admin [maps|queue|matches|cancel|force]"));
         }
     }
 
     private void handleAdminMaps(CommandContext ctx) {
         List<Map> maps = HyvexaPlugin.getInstance().getMapStore().listDuelEnabledMaps();
         if (maps.isEmpty()) {
-            ctx.sendMessage(Message.raw("No duel-enabled maps."));
+            ctx.sendMessage(SystemMessageUtils.duelWarn("No duel-enabled maps."));
             return;
         }
-        ctx.sendMessage(Message.raw("Duel-enabled maps (" + maps.size() + "):"));
+        ctx.sendMessage(SystemMessageUtils.duelInfo("Duel-enabled maps (" + maps.size() + "):"));
         for (Map map : maps) {
             String name = map.getName() != null && !map.getName().isBlank() ? map.getName() : map.getId();
-            ctx.sendMessage(Message.raw("- " + name + " (" + map.getId() + ")"));
+            ctx.sendMessage(SystemMessageUtils.duelInfo("- " + name + " (" + map.getId() + ")"));
         }
     }
 
     private void handleAdminQueue(CommandContext ctx) {
         List<UUID> queued = duelTracker.getQueueSnapshot();
         if (queued.isEmpty()) {
-            ctx.sendMessage(Message.raw("Duel queue is empty."));
+            ctx.sendMessage(SystemMessageUtils.duelWarn("Duel queue is empty."));
             return;
         }
-        ctx.sendMessage(Message.raw("Duel queue (" + queued.size() + "):"));
+        ctx.sendMessage(SystemMessageUtils.duelInfo("Duel queue (" + queued.size() + "):"));
         int index = 1;
         for (UUID id : queued) {
             PlayerRef ref = Universe.get().getPlayer(id);
             String name = ref != null ? ref.getUsername() : id.toString();
-            ctx.sendMessage(Message.raw(index + ". " + name));
+            ctx.sendMessage(SystemMessageUtils.duelInfo(index + ". " + name));
             index++;
         }
     }
@@ -244,63 +246,63 @@ public class DuelCommand extends AbstractAsyncCommand {
     private void handleAdminMatches(CommandContext ctx) {
         List<DuelMatch> matches = duelTracker.getActiveMatches();
         if (matches.isEmpty()) {
-            ctx.sendMessage(Message.raw("No active matches."));
+            ctx.sendMessage(SystemMessageUtils.duelWarn("No active matches."));
             return;
         }
-        ctx.sendMessage(Message.raw("Active matches (" + matches.size() + "):"));
+        ctx.sendMessage(SystemMessageUtils.duelInfo("Active matches (" + matches.size() + "):"));
         for (DuelMatch match : matches) {
             String p1 = resolveName(match.getPlayer1());
             String p2 = resolveName(match.getPlayer2());
-            ctx.sendMessage(Message.raw("- " + match.getMatchId() + ": " + p1 + " vs " + p2
+            ctx.sendMessage(SystemMessageUtils.duelInfo("- " + match.getMatchId() + ": " + p1 + " vs " + p2
                     + " on " + match.getMapId() + " (" + match.getState() + ")"));
         }
     }
 
     private void handleAdminCancel(CommandContext ctx, String[] tokens) {
         if (tokens.length < 3) {
-            ctx.sendMessage(Message.raw("Usage: /duel admin cancel <matchId>"));
+            ctx.sendMessage(SystemMessageUtils.duelWarn("Usage: /duel admin cancel <matchId>"));
             return;
         }
         String matchId = tokens[2];
         duelTracker.cancelMatch(matchId);
-        ctx.sendMessage(Message.raw("Canceled match " + matchId + "."));
+        ctx.sendMessage(SystemMessageUtils.duelSuccess("Canceled match " + matchId + "."));
     }
 
     private void handleAdminForce(CommandContext ctx, PlayerRef adminRef, String[] tokens) {
         if (tokens.length < 3) {
-            ctx.sendMessage(Message.raw("Usage: /duel admin force <player>"));
+            ctx.sendMessage(SystemMessageUtils.duelWarn("Usage: /duel admin force <player>"));
             return;
         }
         if (adminRef == null) {
-            ctx.sendMessage(Message.raw("Admin player not available."));
+            ctx.sendMessage(SystemMessageUtils.duelError("Admin player not available."));
             return;
         }
         String targetName = tokens[2];
         PlayerRef targetRef = findOnlineByName(targetName);
         if (targetRef == null) {
-            ctx.sendMessage(Message.raw("Player not online: " + targetName));
+            ctx.sendMessage(SystemMessageUtils.duelError("Player not online: " + targetName));
             return;
         }
         UUID adminId = adminRef.getUuid();
         UUID targetId = targetRef.getUuid();
         if (adminId.equals(targetId)) {
-            ctx.sendMessage(Message.raw("You can't force a duel against yourself."));
+            ctx.sendMessage(SystemMessageUtils.duelWarn("You can't force a duel against yourself."));
             return;
         }
         if (duelTracker.isInMatch(adminId) || duelTracker.isInMatch(targetId)) {
-            ctx.sendMessage(Message.raw("One of the players is already in a match."));
+            ctx.sendMessage(SystemMessageUtils.duelWarn("One of the players is already in a match."));
             return;
         }
         if (!duelTracker.hasAvailableMaps(adminId, targetId)) {
-            ctx.sendMessage(Message.raw(DuelConstants.MSG_NO_MAPS));
+            ctx.sendMessage(SystemMessageUtils.duelWarn(DuelConstants.MSG_NO_MAPS));
             return;
         }
         boolean started = duelTracker.forceMatch(adminId, targetId);
         if (!started) {
-            ctx.sendMessage(Message.raw("Failed to start forced match."));
+            ctx.sendMessage(SystemMessageUtils.duelError("Failed to start forced match."));
             return;
         }
-        ctx.sendMessage(Message.raw("Forced duel started with " + targetRef.getUsername() + "."));
+        ctx.sendMessage(SystemMessageUtils.duelSuccess("Forced duel started with " + targetRef.getUsername() + "."));
     }
 
     private String resolveName(UUID playerId) {

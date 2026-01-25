@@ -15,6 +15,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.common.util.PermissionUtils;
+import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.parkour.ParkourConstants;
 import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.data.PlayerCountStore;
@@ -256,14 +257,16 @@ public class ParkourCommand extends AbstractAsyncCommand {
     private void broadcastSupporterMessage(String playerName, boolean founder) {
         Message rankPart = Message.raw(founder ? "FOUNDER" : "VIP")
                 .color(founder ? "#ff8a3d" : "#b76cff");
-        Message message = Message.join(
-                Message.raw("["),
+        Message message = SystemMessageUtils.withServerPrefix(
+                Message.raw("[").color(SystemMessageUtils.SECONDARY),
                 rankPart,
-                Message.raw("] "),
-                Message.raw(playerName),
-                Message.raw(" supports our server and helps us a lot!")
+                Message.raw("] ").color(SystemMessageUtils.SECONDARY),
+                Message.raw(playerName).color(SystemMessageUtils.PRIMARY_TEXT),
+                Message.raw(" supports our server and helps us a lot!").color(SystemMessageUtils.SECONDARY)
         );
-        Message ggMessage = Message.raw("SEND GG IN THE CHAT!!").bold(true);
+        Message ggMessage = SystemMessageUtils.withServerPrefix(
+                Message.raw("SEND GG IN THE CHAT!").color(SystemMessageUtils.SUCCESS).bold(true)
+        );
         Universe.get().getWorlds().forEach((id, world) -> world.execute(() -> {
             for (PlayerRef targetRef : world.getPlayerRefs()) {
                 targetRef.sendMessage(message);

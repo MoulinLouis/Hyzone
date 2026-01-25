@@ -23,21 +23,21 @@ public final class DuelConstants {
     public static final int DUEL_UNLOCK_MIN_COMPLETED_MAPS = 40;
 
     // Messages
-    public static final String MSG_QUEUE_JOINED = "Joined duel queue for %s. Position: #%d";
-    public static final String MSG_QUEUE_LEFT = "Left duel queue.";
-    public static final String MSG_QUEUE_ALREADY = "You're already in queue. Position: #%d";
-    public static final String MSG_IN_MATCH = "You're already in a match!";
+    public static final String MSG_QUEUE_JOINED = "You joined the duel queue (%s). Position: #%d.";
+    public static final String MSG_QUEUE_LEFT = "You left the duel queue.";
+    public static final String MSG_QUEUE_ALREADY = "You're already in the duel queue. Position: #%d.";
+    public static final String MSG_IN_MATCH = "You're already in a duel.";
     public static final String MSG_IN_PARKOUR = "Leave your current parkour run first. (/pk leave)";
-    public static final String MSG_NO_MAPS = "No duel maps available for your selected categories.";
+    public static final String MSG_NO_MAPS = "No duel maps are available for your selected categories.";
     public static final String MSG_DUEL_UNLOCK_REQUIRED =
             "Complete %d maps to unlock duels. You need %d more. Progress: %d/%d.";
-    public static final String MSG_MATCH_FOUND = "Match found! Racing against %s on %s";
-    public static final String MSG_WIN = "You win! Your time: %s. Say gg to %s :)";
-    public static final String MSG_WIN_VS = "You win! Your time: %s. Say gg to %s :)";
-    public static final String MSG_LOSE = "You lose. Opponent time: %s. Say gg to %s :)";
-    public static final String MSG_WIN_FORFEIT = "You win! %s forfeited.";
-    public static final String MSG_WIN_DISCONNECT = "You win! %s disconnected.";
-    public static final String MSG_FORFEITED = "You forfeited the match.";
-    public static final String MSG_STATS = "Duel Stats for %s: %dW / %dL (%d%%)";
+    public static final String MSG_MATCH_FOUND = "Match found! Opponent: %s - Map: %s.";
+    public static final String MSG_WIN = "Victory! Time: %s - Opponent: %s.";
+    public static final String MSG_WIN_VS = "Victory! Time: %s - Opponent: %s.";
+    public static final String MSG_LOSE = "Defeat. Opponent time: %s - Opponent: %s.";
+    public static final String MSG_WIN_FORFEIT = "Victory! %s forfeited.";
+    public static final String MSG_WIN_DISCONNECT = "Victory! %s disconnected.";
+    public static final String MSG_FORFEITED = "You forfeited the duel.";
+    public static final String MSG_STATS = "Duel stats for %s: %dW / %dL (%d%%).";
     public static final String MSG_STATS_NONE = "No duel stats found for %s.";
 }
