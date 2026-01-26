@@ -1,5 +1,19 @@
 # Changelog
 
+- Show checkpoint PB deltas and append a color-coded finish delta inline with the completion message.
+- Remove the redundant "Finish line reached." message on completion.
+- Replace "Map loaded." with the consistent "Run started." start message.
+- Replace "Left map." with the consistent "Run ended." leave message.
+- Add the Parkour prefix and include map names in run start/end messages.
+- Widen the "No reset item" toggle button to prevent text cropping.
+- Lower the category completion text so it aligns better with category names.
+- Fix category completion alignment by switching the category entry layout to Top.
+- Remove the Parkour prefix from PB/world-record completion broadcasts.
+- Stop sending the custom "[-] Name" leave message and rely on the default leave broadcast.
+- Nudge the category completion text slightly higher in the category list.
+- Lower the duel unlock requirement from 40 completed maps to 5.
+- Tweak PB/WR broadcast styling by replacing grey connector text with the info color.
+- Keep the rank brackets in PB/WR broadcasts white.
 - Unified system message styling with a clear color palette and added `/messagetest` to preview them in-game.
 - Added `/rules` command explaining that cuts/strategies are allowed but cheating and bug abuse are not.
 - Gate duel queue behind 5 completed maps, show an unlock message, and display a locked state in the duel UI.

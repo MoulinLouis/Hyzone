@@ -71,7 +71,7 @@ public class MessageTestCommand extends AbstractPlayerCommand {
         ctx.sendMessage(SystemMessageUtils.duelWarn(DuelConstants.MSG_IN_MATCH));
         ctx.sendMessage(SystemMessageUtils.duelWarn(DuelConstants.MSG_IN_PARKOUR));
         ctx.sendMessage(SystemMessageUtils.duelWarn(
-                String.format(DuelConstants.MSG_DUEL_UNLOCK_REQUIRED, 40, 5, 35, 40)
+                String.format(DuelConstants.MSG_DUEL_UNLOCK_REQUIRED, 5, 2, 3, 5)
         ));
         ctx.sendMessage(SystemMessageUtils.duelSuccess(
                 String.format(DuelConstants.MSG_MATCH_FOUND, "Rival", "Sky Ruins")
@@ -89,7 +89,11 @@ public class MessageTestCommand extends AbstractPlayerCommand {
     }
 
     private void previewParkourMessages(CommandContext ctx, String playerName) {
-        ctx.sendMessage(SystemMessageUtils.parkourSuccess("Map loaded."));
+        ctx.sendMessage(SystemMessageUtils.withParkourPrefix(
+                Message.raw("Run started: ").color(SystemMessageUtils.SECONDARY),
+                Message.raw("Tutorial").color(SystemMessageUtils.PRIMARY_TEXT),
+                Message.raw(".").color(SystemMessageUtils.SECONDARY)
+        ));
         ctx.sendMessage(SystemMessageUtils.parkourInfo("Checkpoint reached."));
         ctx.sendMessage(SystemMessageUtils.parkourWarn("You did not reach all checkpoints."));
         ctx.sendMessage(SystemMessageUtils.parkourInfo("Finish line reached."));

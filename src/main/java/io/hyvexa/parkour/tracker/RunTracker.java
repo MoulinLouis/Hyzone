@@ -288,7 +288,7 @@ public class RunTracker {
         store.addComponent(ref, Teleport.getComponentType(),
                 new Teleport(store.getExternalData().getWorld(), position, rotation));
         recordTeleport(playerRef.getUuid(), TeleportCause.START_TRIGGER);
-        player.sendMessage(SystemMessageUtils.parkourSuccess("Map loaded."));
+        player.sendMessage(buildRunStartMessage(map));
         InventoryUtils.giveRunItems(player, map);
     }
 
@@ -312,8 +312,37 @@ public class RunTracker {
         }
         clearActiveMap(playerRef.getUuid());
         InventoryUtils.giveMenuItems(player);
-        player.sendMessage(SystemMessageUtils.parkourInfo("Left map."));
+        player.sendMessage(buildRunEndMessage(map));
         return true;
+    }
+
+    private Message buildRunStartMessage(Map map) {
+        String mapName = getMapDisplayName(map);
+        return SystemMessageUtils.withParkourPrefix(
+                Message.raw("Run started: ").color(SystemMessageUtils.SECONDARY),
+                Message.raw(mapName).color(SystemMessageUtils.PRIMARY_TEXT),
+                Message.raw(".").color(SystemMessageUtils.SECONDARY)
+        );
+    }
+
+    private Message buildRunEndMessage(Map map) {
+        String mapName = getMapDisplayName(map);
+        return SystemMessageUtils.withParkourPrefix(
+                Message.raw("Run ended: ").color(SystemMessageUtils.SECONDARY),
+                Message.raw(mapName).color(SystemMessageUtils.PRIMARY_TEXT),
+                Message.raw(".").color(SystemMessageUtils.SECONDARY)
+        );
+    }
+
+    private String getMapDisplayName(Map map) {
+        if (map == null) {
+            return "Map";
+        }
+        String mapName = map.getName();
+        if (mapName == null || mapName.isBlank()) {
+            return map.getId() != null && !map.getId().isBlank() ? map.getId() : "Map";
+        }
+        return mapName;
     }
 
     private long getFallRespawnTimeoutMs() {
@@ -383,6 +412,9 @@ public class RunTracker {
     }
 
     private void checkCheckpoints(ActiveRun run, PlayerRef playerRef, Player player, Vector3d position, Map map) {
+        List<Long> personalBestSplits = progressStore != null
+                ? progressStore.getCheckpointTimes(playerRef.getUuid(), map.getId())
+                : List.of();
         for (int i = 0; i < map.getCheckpoints().size(); i++) {
             if (run.touchedCheckpoints.contains(i)) {
                 continue;
@@ -397,9 +429,49 @@ public class RunTracker {
                 long elapsedMs = run.waitingForStart ? 0L : Math.max(0L, System.currentTimeMillis() - run.startTimeMs);
                 run.checkpointTouchTimes.put(i, elapsedMs);
                 playCheckpointSound(playerRef);
-                player.sendMessage(SystemMessageUtils.parkourInfo("Checkpoint reached."));
+                player.sendMessage(buildCheckpointSplitMessage(i, elapsedMs, personalBestSplits));
             }
         }
+    }
+
+    private Message buildCheckpointSplitMessage(int checkpointIndex, long elapsedMs, List<Long> personalBestSplits) {
+        long pbSplitMs = 0L;
+        if (personalBestSplits != null && checkpointIndex >= 0 && checkpointIndex < personalBestSplits.size()) {
+            Long pbSplit = personalBestSplits.get(checkpointIndex);
+            pbSplitMs = pbSplit != null ? Math.max(0L, pbSplit) : 0L;
+        }
+        if (pbSplitMs <= 0L) {
+            return SystemMessageUtils.parkourInfo("Checkpoint reached.");
+        }
+
+        long deltaMs = elapsedMs - pbSplitMs;
+        long absDeltaMs = Math.abs(deltaMs);
+        String deltaPrefix = deltaMs < 0L ? "-" : "+";
+        String deltaColor = deltaMs <= 0L ? SystemMessageUtils.SUCCESS : SystemMessageUtils.ERROR;
+        String deltaText = deltaPrefix + FormatUtils.formatDuration(absDeltaMs);
+
+        return SystemMessageUtils.withParkourPrefix(
+                Message.raw("Checkpoint ").color(SystemMessageUtils.SECONDARY),
+                Message.raw("#" + (checkpointIndex + 1)).color(SystemMessageUtils.PRIMARY_TEXT),
+                Message.raw(" split: ").color(SystemMessageUtils.SECONDARY),
+                Message.raw(deltaText).color(deltaColor)
+        );
+    }
+
+    private Message buildFinishSplitPart(long durationMs, Long previousBestMs) {
+        if (previousBestMs == null || previousBestMs <= 0L) {
+            return null;
+        }
+        long deltaMs = durationMs - previousBestMs;
+        long absDeltaMs = Math.abs(deltaMs);
+        String deltaPrefix = deltaMs < 0L ? "-" : "+";
+        String deltaColor = deltaMs < 0L ? SystemMessageUtils.SUCCESS : SystemMessageUtils.ERROR;
+        String deltaText = deltaPrefix + FormatUtils.formatDuration(absDeltaMs);
+        return Message.join(
+                Message.raw(" (").color(SystemMessageUtils.SECONDARY),
+                Message.raw(deltaText).color(deltaColor),
+                Message.raw(")").color(SystemMessageUtils.SECONDARY)
+        );
     }
 
     private void checkFinish(ActiveRun run, PlayerRef playerRef, Player player, Vector3d position, Map map,
@@ -427,6 +499,7 @@ public class RunTracker {
             }
             UUID playerId = playerRef.getUuid();
             String playerName = playerRef.getUsername();
+            Long previousBestMs = progressStore.getBestTimeMs(playerId, map.getId());
             int oldRank = progressStore.getCompletionRank(playerId, mapStore);
             ProgressStore.ProgressionResult result = progressStore.recordMapCompletion(playerId, playerName,
                     map.getId(), durationMs, map.getFirstCompletionXp(), checkpointTimes);
@@ -434,10 +507,14 @@ public class RunTracker {
             if (leaderboardPosition <= 0) {
                 leaderboardPosition = 1;
             }
-            player.sendMessage(SystemMessageUtils.parkourInfo("Finish line reached."));
-            player.sendMessage(SystemMessageUtils.parkourSuccess(
-                    "Map completed in " + FormatUtils.formatDuration(durationMs) + "."
-            ));
+            Message finishSplitPart = buildFinishSplitPart(durationMs, previousBestMs);
+            Message completionMessage = SystemMessageUtils.withParkourPrefix(
+                    Message.raw("Map completed in ").color(SystemMessageUtils.SECONDARY),
+                    Message.raw(FormatUtils.formatDuration(durationMs)).color(SystemMessageUtils.SUCCESS),
+                    finishSplitPart != null ? finishSplitPart : Message.raw(""),
+                    Message.raw(".").color(SystemMessageUtils.SECONDARY)
+            );
+            player.sendMessage(completionMessage);
             if (result.xpAwarded > 0L) {
                 player.sendMessage(SystemMessageUtils.parkourSuccess("You earned " + result.xpAwarded + " XP."));
             }
@@ -645,30 +722,28 @@ public class RunTracker {
         String categoryColor = getCategoryColor(category);
         boolean isWorldRecord = leaderboardPosition == 1;
         Message positionPart = Message.raw("#" + leaderboardPosition)
-                .color(isWorldRecord ? "#ffd166" : SystemMessageUtils.SECONDARY);
+                .color(isWorldRecord ? "#ffd166" : SystemMessageUtils.INFO);
         Message wrPart = isWorldRecord
                 ? Message.raw(" WR!").color("#ffd166")
                 : Message.raw("");
-        Message message = SystemMessageUtils.withParkourPrefix(
-                Message.raw("[").color(SystemMessageUtils.SECONDARY),
+        Message message = Message.join(
+                Message.raw("[").color("#ffffff"),
                 rankPart,
-                Message.raw("] ").color(SystemMessageUtils.SECONDARY),
+                Message.raw("] ").color("#ffffff"),
                 Message.raw(playerName).color(SystemMessageUtils.PRIMARY_TEXT),
-                Message.raw(" finished ").color(SystemMessageUtils.SECONDARY),
+                Message.raw(" finished ").color(SystemMessageUtils.INFO),
                 Message.raw(mapName).color(SystemMessageUtils.PRIMARY_TEXT),
-                Message.raw(" (").color(SystemMessageUtils.SECONDARY),
+                Message.raw(" (").color(SystemMessageUtils.INFO),
                 Message.raw(category).color(categoryColor),
-                Message.raw(") in ").color(SystemMessageUtils.SECONDARY),
+                Message.raw(") in ").color(SystemMessageUtils.INFO),
                 Message.raw(FormatUtils.formatDuration(durationMs)).color(SystemMessageUtils.SUCCESS),
-                Message.raw(" - ").color(SystemMessageUtils.SECONDARY),
+                Message.raw(" - ").color(SystemMessageUtils.INFO),
                 positionPart,
                 wrPart,
-                Message.raw(".").color(SystemMessageUtils.SECONDARY)
+                Message.raw(".").color(SystemMessageUtils.INFO)
         );
         Message ggMessage = isWorldRecord
-                ? SystemMessageUtils.withParkourPrefix(
-                        Message.raw("WORLD RECORD! SAY GG!").color(SystemMessageUtils.SUCCESS).bold(true)
-                )
+                ? Message.raw("WORLD RECORD! SAY GG!").color(SystemMessageUtils.SUCCESS).bold(true)
                 : Message.empty();
         for (PlayerRef target : Universe.get().getPlayers()) {
             target.sendMessage(message);

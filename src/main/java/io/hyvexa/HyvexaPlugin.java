@@ -982,7 +982,7 @@ public class HyvexaPlugin extends JavaPlugin {
     }
 
     private void broadcastPresence(PlayerRef playerRef, boolean joined) {
-        if (playerRef == null) {
+        if (playerRef == null || !joined) {
             return;
         }
         String name = playerRef.getUsername();
