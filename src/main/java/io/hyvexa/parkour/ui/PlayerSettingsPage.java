@@ -37,8 +37,8 @@ public class PlayerSettingsPage extends BaseParkourPage {
     private static final String BUTTON_SPEED_X4 = "SpeedX4";
     private static final String BUTTON_TOGGLE_RESET_ITEM = "ToggleResetItem";
     private static final String RESET_ITEM_BUTTON_SELECTOR = "#ResetItemButton";
-    private static final String RESET_ITEM_LABEL_DISABLE = "Reset item: Off";
-    private static final String RESET_ITEM_LABEL_ENABLE = "Reset item: On";
+    private static final String RESET_ITEM_LABEL_DISABLE = "No reset item: Off";
+    private static final String RESET_ITEM_LABEL_ENABLE = "No reset item: On";
 
     public PlayerSettingsPage(@Nonnull PlayerRef playerRef) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);

@@ -1,10 +1,10 @@
 $C = "../Common.ui";
 
 Button {
-  LayoutMode: Left;
+  LayoutMode: Top;
   Anchor: (Left: 2, Right: 2, Bottom: 6, Height: 46, Width: 470);
   Background: $C.@InputBoxBackground;
-  Padding: (Left: 10, Right: 10, Top: 8);
+  Padding: (Left: 10, Right: 10, Top: 6);
   Style: ButtonStyle(
     Sounds: $C.@ButtonSounds,
   );
@@ -19,11 +19,11 @@ Button {
   }
 
   Label #CategoryProgress {
+    Anchor: (Top: 0);
     Style: (
       FontSize: 13,
       TextColor: #cfc8a6
     );
-    Anchor: (Left: 10, Bottom: 6);
     Text: "0/0 Completed";
   }
 }

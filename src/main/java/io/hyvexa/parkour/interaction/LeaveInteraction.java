@@ -17,6 +17,7 @@ import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.common.util.InventoryUtils;
+import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.parkour.data.Map;
 import io.hyvexa.parkour.data.TransformData;
 import javax.annotation.Nonnull;
@@ -70,6 +71,13 @@ public class LeaveInteraction extends SimpleInteraction {
             plugin.getRunTracker().teleportToSpawn(ref, store, transform);
         }
         InventoryUtils.giveMenuItems(player);
-        player.sendMessage(Message.raw("Left the map."));
+        String mapName = map != null && map.getName() != null && !map.getName().isBlank()
+                ? map.getName()
+                : mapId;
+        player.sendMessage(SystemMessageUtils.withParkourPrefix(
+                Message.raw("Run ended: ").color(SystemMessageUtils.SECONDARY),
+                Message.raw(mapName != null ? mapName : "Map").color(SystemMessageUtils.PRIMARY_TEXT),
+                Message.raw(".").color(SystemMessageUtils.SECONDARY)
+        ));
     }
 }

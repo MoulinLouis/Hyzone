@@ -18,6 +18,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.common.util.InventoryUtils;
+import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.parkour.data.Map;
 import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.data.ProgressStore;
@@ -96,7 +97,12 @@ public class MapSelectPage extends BaseParkourPage {
         Vector3f rotation = new Vector3f(map.getStart().getRotX(), map.getStart().getRotY(),
                 map.getStart().getRotZ());
         store.addComponent(ref, Teleport.getComponentType(), new Teleport(world, position, rotation));
-        sendMessage(store, ref, "Map loaded.");
+        String mapName = map.getName() != null && !map.getName().isBlank() ? map.getName() : map.getId();
+        player.sendMessage(SystemMessageUtils.withParkourPrefix(
+                Message.raw("Run started: ").color(SystemMessageUtils.SECONDARY),
+                Message.raw(mapName != null ? mapName : "Map").color(SystemMessageUtils.PRIMARY_TEXT),
+                Message.raw(".").color(SystemMessageUtils.SECONDARY)
+        ));
         InventoryUtils.giveRunItems(player, map);
         this.close();
     }

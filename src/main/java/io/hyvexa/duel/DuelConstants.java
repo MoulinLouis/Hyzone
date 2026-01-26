@@ -20,7 +20,7 @@ public final class DuelConstants {
     public static final String ITEM_MENU = "Weapon_Longsword_Flame";
 
     // Requirements
-    public static final int DUEL_UNLOCK_MIN_COMPLETED_MAPS = 40;
+    public static final int DUEL_UNLOCK_MIN_COMPLETED_MAPS = 5;
 
     // Messages
     public static final String MSG_QUEUE_JOINED = "You joined the duel queue (%s). Position: #%d.";

@@ -147,8 +147,8 @@ $C.@PageOverlay {
         LayoutMode: Left;
 
         $C.@TextButton #ResetItemButton {
-          Anchor: (Height: 28, Width: 220);
-          Text: "Reset item: Off";
+          Anchor: (Height: 28, Width: 260);
+          Text: "No reset item: Off";
         }
       }
     }
