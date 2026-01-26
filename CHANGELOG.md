@@ -1,5 +1,6 @@
 # Changelog
 
+- Remove legacy parkour compatibility shims from the old io.parkour package.
 - Add a code review guide with checklists, severity labels, and hotspot callouts.
 - Add per-query DB timeouts and validate countRows table names for safer persistence.
 - Warn players when completion saves fail and guard checkpoint access against null/empty lists.
