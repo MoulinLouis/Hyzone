@@ -37,6 +37,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/** Tracks active parkour runs, checkpoint detection, and finish logic. */
 public class RunTracker {
 
     private static final double TOUCH_RADIUS_SQ = ParkourConstants.TOUCH_RADIUS * ParkourConstants.TOUCH_RADIUS;
@@ -412,14 +413,18 @@ public class RunTracker {
     }
 
     private void checkCheckpoints(ActiveRun run, PlayerRef playerRef, Player player, Vector3d position, Map map) {
+        List<TransformData> checkpoints = map.getCheckpoints();
+        if (checkpoints == null || checkpoints.isEmpty()) {
+            return;
+        }
         List<Long> personalBestSplits = progressStore != null
                 ? progressStore.getCheckpointTimes(playerRef.getUuid(), map.getId())
                 : List.of();
-        for (int i = 0; i < map.getCheckpoints().size(); i++) {
+        for (int i = 0; i < checkpoints.size(); i++) {
             if (run.touchedCheckpoints.contains(i)) {
                 continue;
             }
-            TransformData checkpoint = map.getCheckpoints().get(i);
+            TransformData checkpoint = checkpoints.get(i);
             if (checkpoint == null) {
                 continue;
             }
@@ -480,7 +485,8 @@ public class RunTracker {
             return;
         }
         if (distanceSqWithVerticalBonus(position, map.getFinish()) <= TOUCH_RADIUS_SQ) {
-            int checkpointCount = map.getCheckpoints().size();
+            List<TransformData> checkpoints = map.getCheckpoints();
+            int checkpointCount = checkpoints != null ? checkpoints.size() : 0;
             if (checkpointCount > 0 && run.touchedCheckpoints.size() < checkpointCount) {
                 long now = System.currentTimeMillis();
                 if (now - run.lastFinishWarningMs >= 2000L) {
@@ -503,6 +509,10 @@ public class RunTracker {
             int oldRank = progressStore.getCompletionRank(playerId, mapStore);
             ProgressStore.ProgressionResult result = progressStore.recordMapCompletion(playerId, playerName,
                     map.getId(), durationMs, map.getFirstCompletionXp(), checkpointTimes);
+            if (!result.completionSaved) {
+                player.sendMessage(SystemMessageUtils.parkourWarn(
+                        "Warning: Your time might not have been saved. Please report this."));
+            }
             int leaderboardPosition = progressStore.getLeaderboardPosition(map.getId(), playerId);
             if (leaderboardPosition <= 0) {
                 leaderboardPosition = 1;

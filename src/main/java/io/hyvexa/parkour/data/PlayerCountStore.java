@@ -14,6 +14,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.logging.Level;
 
+/** MySQL-backed storage for sampled online player counts. */
 public class PlayerCountStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
@@ -45,7 +46,7 @@ public class PlayerCountStore {
 
             try (Connection conn = DatabaseManager.getInstance().getConnection();
                  PreparedStatement stmt = conn.prepareStatement(sql)) {
-
+                DatabaseManager.applyQueryTimeout(stmt);
                 stmt.setLong(1, cutoff);
                 try (ResultSet rs = stmt.executeQuery()) {
                     while (rs.next()) {
@@ -77,6 +78,7 @@ public class PlayerCountStore {
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
             stmt.setLong(1, cutoff);
             int deleted = stmt.executeUpdate();
             if (deleted > 0) {
@@ -122,6 +124,7 @@ public class PlayerCountStore {
         String sql = "DELETE FROM player_count_samples";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
             stmt.executeUpdate();
         } catch (SQLException e) {
             LOGGER.at(Level.WARNING).log("Failed to clear player count samples: " + e.getMessage());
@@ -135,6 +138,7 @@ public class PlayerCountStore {
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
             stmt.setLong(1, timestampMs);
             stmt.setInt(2, count);
             stmt.executeUpdate();

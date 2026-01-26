@@ -15,6 +15,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.logging.Level;
 
+/** MySQL-backed storage for parkour map definitions and checkpoints. */
 public class MapStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
@@ -57,54 +58,56 @@ public class MapStore {
 
             try (Connection conn = DatabaseManager.getInstance().getConnection()) {
                 // Load all maps
-                try (PreparedStatement stmt = conn.prepareStatement(mapSql);
-                     ResultSet rs = stmt.executeQuery()) {
+                try (PreparedStatement stmt = conn.prepareStatement(mapSql)) {
+                    DatabaseManager.applyQueryTimeout(stmt);
+                    try (ResultSet rs = stmt.executeQuery()) {
+                        while (rs.next()) {
+                            Map map = new Map();
+                            map.setId(rs.getString("id"));
+                            map.setName(rs.getString("name"));
+                            map.setCategory(rs.getString("category"));
+                            map.setWorld(rs.getString("world"));
+                            map.setDifficulty(rs.getInt("difficulty"));
+                            map.setOrder(rs.getInt("display_order"));
+                            map.setFirstCompletionXp(rs.getLong("first_completion_xp"));
+                            map.setMithrilSwordEnabled(rs.getBoolean("mithril_sword_enabled"));
+                            map.setMithrilDaggersEnabled(rs.getBoolean("mithril_daggers_enabled"));
+                            map.setFreeFallEnabled(rs.getBoolean("free_fall_enabled"));
+                            map.setDuelEnabled(rs.getBoolean("duel_enabled"));
 
-                    while (rs.next()) {
-                        Map map = new Map();
-                        map.setId(rs.getString("id"));
-                        map.setName(rs.getString("name"));
-                        map.setCategory(rs.getString("category"));
-                        map.setWorld(rs.getString("world"));
-                        map.setDifficulty(rs.getInt("difficulty"));
-                        map.setOrder(rs.getInt("display_order"));
-                        map.setFirstCompletionXp(rs.getLong("first_completion_xp"));
-                        map.setMithrilSwordEnabled(rs.getBoolean("mithril_sword_enabled"));
-                        map.setMithrilDaggersEnabled(rs.getBoolean("mithril_daggers_enabled"));
-                        map.setFreeFallEnabled(rs.getBoolean("free_fall_enabled"));
-                        map.setDuelEnabled(rs.getBoolean("duel_enabled"));
+                            map.setStart(readTransform(rs, "start_"));
+                            map.setFinish(readTransform(rs, "finish_"));
+                            map.setStartTrigger(readTransform(rs, "start_trigger_"));
+                            map.setLeaveTrigger(readTransform(rs, "leave_trigger_"));
+                            map.setLeaveTeleport(readTransform(rs, "leave_teleport_"));
 
-                        map.setStart(readTransform(rs, "start_"));
-                        map.setFinish(readTransform(rs, "finish_"));
-                        map.setStartTrigger(readTransform(rs, "start_trigger_"));
-                        map.setLeaveTrigger(readTransform(rs, "leave_trigger_"));
-                        map.setLeaveTeleport(readTransform(rs, "leave_teleport_"));
+                            java.sql.Timestamp createdAt = rs.getTimestamp("created_at");
+                            java.sql.Timestamp updatedAt = rs.getTimestamp("updated_at");
+                            map.setCreatedAt(createdAt != null ? createdAt.getTime() : 0L);
+                            map.setUpdatedAt(updatedAt != null ? updatedAt.getTime() : map.getCreatedAt());
 
-                        java.sql.Timestamp createdAt = rs.getTimestamp("created_at");
-                        java.sql.Timestamp updatedAt = rs.getTimestamp("updated_at");
-                        map.setCreatedAt(createdAt != null ? createdAt.getTime() : 0L);
-                        map.setUpdatedAt(updatedAt != null ? updatedAt.getTime() : map.getCreatedAt());
-
-                        maps.put(map.getId(), map);
+                            maps.put(map.getId(), map);
+                        }
                     }
                 }
 
                 // Load all checkpoints
-                try (PreparedStatement stmt = conn.prepareStatement(checkpointSql);
-                     ResultSet rs = stmt.executeQuery()) {
-
-                    while (rs.next()) {
-                        String mapId = rs.getString("map_id");
-                        Map map = maps.get(mapId);
-                        if (map != null) {
-                            TransformData checkpoint = new TransformData();
-                            checkpoint.setX(rs.getDouble("x"));
-                            checkpoint.setY(rs.getDouble("y"));
-                            checkpoint.setZ(rs.getDouble("z"));
-                            checkpoint.setRotX(rs.getFloat("rot_x"));
-                            checkpoint.setRotY(rs.getFloat("rot_y"));
-                            checkpoint.setRotZ(rs.getFloat("rot_z"));
-                            map.getCheckpoints().add(checkpoint);
+                try (PreparedStatement stmt = conn.prepareStatement(checkpointSql)) {
+                    DatabaseManager.applyQueryTimeout(stmt);
+                    try (ResultSet rs = stmt.executeQuery()) {
+                        while (rs.next()) {
+                            String mapId = rs.getString("map_id");
+                            Map map = maps.get(mapId);
+                            if (map != null) {
+                                TransformData checkpoint = new TransformData();
+                                checkpoint.setX(rs.getDouble("x"));
+                                checkpoint.setY(rs.getDouble("y"));
+                                checkpoint.setZ(rs.getDouble("z"));
+                                checkpoint.setRotX(rs.getFloat("rot_x"));
+                                checkpoint.setRotY(rs.getFloat("rot_y"));
+                                checkpoint.setRotZ(rs.getFloat("rot_z"));
+                                map.getCheckpoints().add(checkpoint);
+                            }
                         }
                     }
                 }
@@ -320,6 +323,9 @@ public class MapStore {
             try (PreparedStatement mapStmt = conn.prepareStatement(mapSql);
                  PreparedStatement deleteStmt = conn.prepareStatement(deleteCheckpointsSql);
                  PreparedStatement cpStmt = conn.prepareStatement(insertCheckpointSql)) {
+                DatabaseManager.applyQueryTimeout(mapStmt);
+                DatabaseManager.applyQueryTimeout(deleteStmt);
+                DatabaseManager.applyQueryTimeout(cpStmt);
 
                 // Insert/update map
                 int idx = 1;
@@ -406,6 +412,7 @@ public class MapStore {
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
             stmt.setString(1, mapId);
             stmt.executeUpdate();
         } catch (SQLException e) {

@@ -9,7 +9,6 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.duel.DuelQueue;
 import io.hyvexa.duel.DuelTracker;
@@ -38,10 +37,7 @@ import com.hypixel.hytale.server.core.event.events.player.PlayerChatEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
 import com.hypixel.hytale.server.core.event.events.player.AddPlayerToWorldEvent;
-import com.hypixel.hytale.server.core.entity.nameplate.Nameplate;
-import com.hypixel.hytale.server.core.entity.entities.player.movement.MovementManager;
 import com.hypixel.hytale.server.core.modules.entity.hitboxcollision.HitboxCollision;
-import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.event.events.entity.LivingEntityInventoryChangeEvent;
 import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
@@ -53,11 +49,9 @@ import com.hypixel.hytale.server.core.event.events.ecs.BreakBlockEvent;
 import com.hypixel.hytale.server.core.event.events.ecs.UseBlockEvent;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.universe.world.WorldMapTracker;
-import com.hypixel.hytale.protocol.MovementSettings;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.common.util.InventoryUtils;
 import io.hyvexa.common.util.PermissionUtils;
-import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.parkour.command.CheckpointCommand;
 import io.hyvexa.parkour.command.DatabaseClearCommand;
 import io.hyvexa.parkour.command.DatabaseReloadCommand;
@@ -71,10 +65,6 @@ import io.hyvexa.parkour.command.ParkourItemCommand;
 import io.hyvexa.parkour.command.ParkourMusicDebugCommand;
 import io.hyvexa.parkour.command.RulesCommand;
 import io.hyvexa.parkour.command.StoreCommand;
-import io.hyvexa.parkour.ParkourConstants;
-import io.hyvexa.parkour.tracker.HiddenRunHud;
-import io.hyvexa.parkour.tracker.RunHud;
-import io.hyvexa.parkour.tracker.RunRecordsHud;
 import io.hyvexa.parkour.tracker.RunTracker;
 import io.hyvexa.parkour.system.NoDropSystem;
 import io.hyvexa.parkour.system.NoBreakSystem;
@@ -85,27 +75,23 @@ import io.hyvexa.parkour.system.NoWeaponDamageSystem;
 import io.hyvexa.parkour.system.PlayerVisibilityFilterSystem;
 import io.hyvexa.parkour.ui.WelcomePage;
 import io.hyvexa.parkour.ui.PlayerMusicPage;
-import io.hyvexa.parkour.util.ParkourUtils;
-import io.hyvexa.parkour.util.PlayerSettingsStore;
 import io.hyvexa.parkour.visibility.PlayerVisibilityManager;
+import io.hyvexa.manager.AnnouncementManager;
+import io.hyvexa.manager.HudManager;
+import io.hyvexa.manager.PlaytimeManager;
+import io.hyvexa.manager.PlayerCleanupManager;
+import io.hyvexa.manager.PlayerPerksManager;
 
 import javax.annotation.Nonnull;
 import java.io.File;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Deque;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 
 /**
@@ -115,21 +101,11 @@ import java.util.logging.Level;
 public class HyvexaPlugin extends JavaPlugin {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final String SERVER_IP_DISPLAY = "play.hyvexa.com";
-    private static final int ANNOUNCEMENT_MAX_LINES = 3;
-    private static final long ANNOUNCEMENT_DURATION_SECONDS = 10L;
     private static final long PLAYER_COUNT_SAMPLE_SECONDS = PlayerCountStore.DEFAULT_SAMPLE_INTERVAL_SECONDS;
     private static final long STALE_PLAYER_SWEEP_SECONDS = 120L;
     private static final long TELEPORT_DEBUG_INTERVAL_SECONDS = 120L;
     private static final boolean DISABLE_WORLD_MAP = true; // Parkour server doesn't need world map
-    private static final float VIP_SPEED_MIN_MULTIPLIER = 1.0f;
-    private static final float VIP_SPEED_MAX_MULTIPLIER = 4.0f;
-    private static final String CHAT_LINK_PLACEHOLDER = "{link}";
-    private static final String CHAT_STORE_PLACEHOLDER = "{store}";
-    private static final String CHAT_LINK_LABEL = "click here";
-    private static final String CHAT_STORE_LABEL = "store.hyvexa.com";
     private static final String DISCORD_URL = "https://discord.gg/2PAygkyFnK";
-    private static final String STORE_URL = "https://store.hyvexa.com";
     private static final String JOIN_LANGUAGE_NOTICE =
             "This is an English-speaking community server. Please use English only in the chat. "
             + "For other languages, join our ";
@@ -146,20 +122,11 @@ public class HyvexaPlugin extends JavaPlugin {
     private DuelStatsStore duelStatsStore;
     private DuelMatchStore duelMatchStore;
     private DuelPreferenceStore duelPreferenceStore;
-    private final ConcurrentHashMap<UUID, RunHud> runHuds = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<UUID, RunRecordsHud> runRecordHuds = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<UUID, HiddenRunHud> hiddenRunHuds = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<UUID, Boolean> runHudIsRecords = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<UUID, Long> runHudReadyAt = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<UUID, Boolean> runHudWasRunning = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<UUID, Boolean> runHudHidden = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<UUID, ConcurrentLinkedDeque<Announcement>> announcements =
-            new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<UUID, Long> playtimeSessionStart = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<UUID, String> cachedRankNames = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<UUID, String> cachedNameplateTexts = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<UUID, Float> vipSpeedMultiplier = new ConcurrentHashMap<>();
-    private final AtomicInteger onlinePlayerCount = new AtomicInteger(0);
+    private HudManager hudManager;
+    private AnnouncementManager announcementManager;
+    private PlayerPerksManager perksManager;
+    private PlaytimeManager playtimeManager;
+    private PlayerCleanupManager cleanupManager;
     private ScheduledFuture<?> mapDetectionTask;
     private ScheduledFuture<?> hudUpdateTask;
     private ScheduledFuture<?> playtimeTask;
@@ -167,11 +134,7 @@ public class HyvexaPlugin extends JavaPlugin {
     private ScheduledFuture<?> playerCountTask;
     private ScheduledFuture<?> stalePlayerSweepTask;
     private ScheduledFuture<?> teleportDebugTask;
-    private ScheduledFuture<?> chatAnnouncementTask;
     private ScheduledFuture<?> duelTickTask;
-    private final Object chatAnnouncementLock = new Object();
-    private List<Message> chatAnnouncements = List.of();
-    private int chatAnnouncementIndex = 0;
 
     public HyvexaPlugin(@Nonnull JavaPluginInit init) {
         super(init);
@@ -219,7 +182,14 @@ public class HyvexaPlugin extends JavaPlugin {
         this.duelPreferenceStore.syncLoad();
         this.duelQueue = new DuelQueue();
         this.duelTracker = new DuelTracker(duelQueue, duelMatchStore, duelStatsStore, duelPreferenceStore, mapStore);
-        onlinePlayerCount.set(Universe.get().getPlayers().size());
+        this.perksManager = new PlayerPerksManager(progressStore, mapStore);
+        this.hudManager = new HudManager(progressStore, mapStore, runTracker, duelTracker, perksManager);
+        this.announcementManager = new AnnouncementManager(globalMessageStore, hudManager,
+                this::scheduleTick, this::cancelScheduled);
+        this.playtimeManager = new PlaytimeManager(progressStore, playerCountStore);
+        this.cleanupManager = new PlayerCleanupManager(hudManager, announcementManager, perksManager, playtimeManager,
+                runTracker, PlayerVisibilityManager.get());
+        this.playtimeManager.setOnlineCount(Universe.get().getPlayers().size());
         mapDetectionTask = scheduleTick("map detection", this::tickMapDetection, 200, 200, TimeUnit.MILLISECONDS);
         hudUpdateTask = scheduleTick("hud updates", this::tickHudUpdates, 100, 100, TimeUnit.MILLISECONDS);
         playtimeTask = scheduleTick("playtime", this::tickPlaytime, 60, 60, TimeUnit.SECONDS);
@@ -231,7 +201,7 @@ public class HyvexaPlugin extends JavaPlugin {
         teleportDebugTask = scheduleTick("teleport debug", this::tickTeleportDebug, TELEPORT_DEBUG_INTERVAL_SECONDS,
                 TELEPORT_DEBUG_INTERVAL_SECONDS, TimeUnit.SECONDS);
         duelTickTask = scheduleTick("duel tick", this::tickDuel, 100, 100, TimeUnit.MILLISECONDS);
-        refreshChatAnnouncements();
+        announcementManager.refreshChatAnnouncements();
 
 
         this.getCommandRegistry().registerCommand(new CheckpointCommand());
@@ -264,7 +234,7 @@ public class HyvexaPlugin extends JavaPlugin {
         });
         this.getEventRegistry().registerGlobal(PlayerConnectEvent.class, event -> {
             try {
-                onlinePlayerCount.incrementAndGet();
+                playtimeManager.incrementOnlineCount();
             } catch (Exception e) {
                 LOGGER.at(Level.WARNING).log("Exception in PlayerConnectEvent (count): " + e.getMessage());
             }
@@ -282,15 +252,15 @@ public class HyvexaPlugin extends JavaPlugin {
 
         this.getEventRegistry().registerGlobal(PlayerConnectEvent.class, event -> {
             try {
-                ensureRunHud(event.getPlayerRef());
-                startPlaytimeSession(event.getPlayerRef());
+                hudManager.ensureRunHud(event.getPlayerRef());
+                playtimeManager.startPlaytimeSession(event.getPlayerRef());
             } catch (Exception e) {
                 LOGGER.at(Level.WARNING).log("Exception in PlayerConnectEvent (hud/playtime): " + e.getMessage());
             }
         });
         for (PlayerRef playerRef : Universe.get().getPlayers()) {
-            ensureRunHud(playerRef);
-            startPlaytimeSession(playerRef);
+            hudManager.ensureRunHud(playerRef);
+            playtimeManager.startPlaytimeSession(playerRef);
             if (runTracker != null) {
                 runTracker.markPlayerReady(playerRef);
             }
@@ -321,7 +291,7 @@ public class HyvexaPlugin extends JavaPlugin {
         });
         this.getEventRegistry().registerGlobal(PlayerConnectEvent.class, event -> {
             try {
-                broadcastPresence(event.getPlayerRef(), true);
+                playtimeManager.broadcastPresence(event.getPlayerRef(), true);
             } catch (Exception e) {
                 LOGGER.at(Level.WARNING).log("Exception in PlayerConnectEvent (broadcast): " + e.getMessage());
             }
@@ -330,31 +300,13 @@ public class HyvexaPlugin extends JavaPlugin {
             try {
                 if (event.getPlayerRef() != null) {
                     UUID playerId = event.getPlayerRef().getUuid();
-                    broadcastPresence(event.getPlayerRef(), false);
+                    playtimeManager.broadcastPresence(event.getPlayerRef(), false);
                     if (duelTracker != null) {
                         duelTracker.handleDisconnect(playerId);
                     }
-                    // Clean up HUD tracking state
-                    runHuds.remove(playerId);
-                    runRecordHuds.remove(playerId);
-                    hiddenRunHuds.remove(playerId);
-                    runHudReadyAt.remove(playerId);
-                    runHudWasRunning.remove(playerId);
-                    runHudIsRecords.remove(playerId);
-                    runHudHidden.remove(playerId);
-                    cachedRankNames.remove(playerId);
-                    cachedNameplateTexts.remove(playerId);
-                    vipSpeedMultiplier.remove(playerId);
-                    PlayerSettingsStore.clearSession(playerId);
-                    PlayerVisibilityManager.get().clearHidden(playerId);
-                    // Clean up announcements
-                    announcements.remove(playerId);
-                    // Clean up run tracking state (active runs and idle fall detection)
-                    runTracker.clearPlayer(playerId);
-                    // Persist playtime before removing session
-                    finishPlaytimeSession(event.getPlayerRef());
+                    cleanupManager.handleDisconnect(event.getPlayerRef());
                 }
-                onlinePlayerCount.updateAndGet(current -> Math.max(0, current - 1));
+                playtimeManager.decrementOnlineCount();
             } catch (Exception e) {
                 LOGGER.at(Level.WARNING).log("Exception in PlayerDisconnectEvent: " + e.getMessage());
             }
@@ -406,8 +358,8 @@ public class HyvexaPlugin extends JavaPlugin {
                     }
                     String rank = progressStore != null ? progressStore.getRankName(sender.getUuid(), mapStore) : "Unranked";
                     Message rankPart = FormatUtils.getRankMessage(rank);
-                    String badgeLabel = getSpecialRankLabel(sender.getUuid());
-                    String badgeColor = getSpecialRankColor(sender.getUuid());
+                    String badgeLabel = perksManager != null ? perksManager.getSpecialRankLabel(sender.getUuid()) : null;
+                    String badgeColor = perksManager != null ? perksManager.getSpecialRankColor(sender.getUuid()) : null;
                     if (badgeLabel != null) {
                         return Message.join(
                                 Message.raw("["),
@@ -471,8 +423,8 @@ public class HyvexaPlugin extends JavaPlugin {
      * Call after map completion or any event that changes rank.
      */
     public void invalidateRankCache(UUID playerId) {
-        if (playerId != null) {
-            cachedRankNames.remove(playerId);
+        if (perksManager != null) {
+            perksManager.invalidateRankCache(playerId);
         }
     }
 
@@ -481,141 +433,23 @@ public class HyvexaPlugin extends JavaPlugin {
      * Call when total XP changes (maps added/removed/edited).
      */
     public void invalidateAllRankCaches() {
-        cachedRankNames.clear();
-    }
-
-    private String getCachedRankName(UUID playerId) {
-        if (playerId == null || progressStore == null) {
-            return "Unranked";
+        if (perksManager != null) {
+            perksManager.invalidateAllRankCaches();
         }
-        return cachedRankNames.computeIfAbsent(playerId, id -> progressStore.getRankName(id, mapStore));
-    }
-
-    private String getSpecialRankLabel(UUID playerId) {
-        if (playerId == null || progressStore == null) {
-            return null;
-        }
-        if (progressStore.isFounder(playerId)) {
-            return "FOUNDER";
-        }
-        if (progressStore.isVip(playerId)) {
-            return "VIP";
-        }
-        return null;
-    }
-
-    private String getSpecialRankColor(UUID playerId) {
-        if (playerId == null || progressStore == null) {
-            return null;
-        }
-        if (progressStore.isFounder(playerId)) {
-            return "#ff8a3d";
-        }
-        if (progressStore.isVip(playerId)) {
-            return "#b76cff";
-        }
-        return null;
     }
 
     public float getVipSpeedMultiplier(UUID playerId) {
-        if (playerId == null) {
-            return VIP_SPEED_MIN_MULTIPLIER;
+        if (perksManager == null) {
+            return 1.0f;
         }
-        return vipSpeedMultiplier.getOrDefault(playerId, VIP_SPEED_MIN_MULTIPLIER);
+        return perksManager.getVipSpeedMultiplier(playerId);
     }
 
     public void applyVipSpeedMultiplier(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef,
                                         float multiplier, boolean notify) {
-        if (ref == null || store == null || playerRef == null) {
-            return;
+        if (perksManager != null) {
+            perksManager.applyVipSpeedMultiplier(ref, store, playerRef, multiplier, notify);
         }
-        UUID playerId = playerRef.getUuid();
-        if (playerId == null) {
-            return;
-        }
-        Player player = store.getComponent(ref, Player.getComponentType());
-        if (player == null) {
-            return;
-        }
-        if (progressStore == null || (!progressStore.isVip(playerId) && !progressStore.isFounder(playerId))) {
-            if (notify) {
-                player.sendMessage(Message.raw("Speed boost is VIP/Founder only."));
-            }
-            return;
-        }
-        MovementManager movementManager = store.getComponent(ref, MovementManager.getComponentType());
-        if (movementManager == null) {
-            if (notify) {
-                player.sendMessage(Message.raw("Movement settings unavailable."));
-            }
-            return;
-        }
-        movementManager.refreshDefaultSettings(ref, store);
-        movementManager.applyDefaultSettings();
-        MovementSettings settings = movementManager.getSettings();
-        if (settings == null) {
-            if (notify) {
-                player.sendMessage(Message.raw("Movement settings unavailable."));
-            }
-            return;
-        }
-        float clampedMultiplier = Math.max(VIP_SPEED_MIN_MULTIPLIER,
-                Math.min(VIP_SPEED_MAX_MULTIPLIER, multiplier));
-        if (clampedMultiplier > VIP_SPEED_MIN_MULTIPLIER) {
-            settings.maxSpeedMultiplier *= clampedMultiplier;
-            settings.forwardRunSpeedMultiplier *= clampedMultiplier;
-            settings.backwardRunSpeedMultiplier *= clampedMultiplier;
-            settings.strafeRunSpeedMultiplier *= clampedMultiplier;
-            settings.forwardSprintSpeedMultiplier *= clampedMultiplier;
-            vipSpeedMultiplier.put(playerId, clampedMultiplier);
-        } else {
-            vipSpeedMultiplier.remove(playerId);
-        }
-        var packetHandler = playerRef.getPacketHandler();
-        if (packetHandler != null) {
-            movementManager.update(packetHandler);
-        }
-        if (notify) {
-            String label = clampedMultiplier > VIP_SPEED_MIN_MULTIPLIER
-                    ? "Speed set to x" + stripTrailingZeros(clampedMultiplier) + "."
-                    : "Speed reset to normal.";
-            player.sendMessage(Message.raw(label));
-        }
-    }
-
-    private void disableVipSpeedBoost(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef) {
-        if (playerRef == null) {
-            return;
-        }
-        applyVipSpeedMultiplier(ref, store, playerRef, VIP_SPEED_MIN_MULTIPLIER, false);
-    }
-
-    private boolean shouldDisableVipSpeedForStartTrigger(Store<EntityStore> store, Ref<EntityStore> ref,
-                                                         PlayerRef playerRef) {
-        if (store == null || ref == null || playerRef == null || mapStore == null) {
-            return false;
-        }
-        UUID playerId = playerRef.getUuid();
-        if (playerId == null || getVipSpeedMultiplier(playerId) <= VIP_SPEED_MIN_MULTIPLIER) {
-            return false;
-        }
-        TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
-        if (transform == null) {
-            return false;
-        }
-        Vector3d position = transform.getPosition();
-        if (position == null) {
-            return false;
-        }
-        double touchRadiusSq = ParkourConstants.TOUCH_RADIUS * ParkourConstants.TOUCH_RADIUS;
-        return mapStore.findMapByStartTrigger(position.getX(), position.getY(), position.getZ(), touchRadiusSq) != null;
-    }
-
-    private String stripTrailingZeros(float value) {
-        if (value == (long) value) {
-            return String.valueOf((long) value);
-        }
-        return String.valueOf(value);
     }
 
     /**
@@ -625,187 +459,32 @@ public class HyvexaPlugin extends JavaPlugin {
         if (progressStore != null) {
             progressStore.invalidateTotalXpCache();
         }
-        invalidateAllRankCaches();
+        if (perksManager != null) {
+            perksManager.invalidateAllRankCaches();
+        }
     }
 
     public void broadcastAnnouncement(String message, PlayerRef sender) {
-        if (message == null) {
-            return;
-        }
-        String trimmed = message.trim();
-        if (trimmed.isEmpty()) {
-            return;
-        }
-        Message chatMessage = SystemMessageUtils.adminAnnouncement(trimmed);
-        if (sender != null) {
-            queueAnnouncement(sender, trimmed);
-        }
-        for (PlayerRef target : Universe.get().getPlayers()) {
-            if (sender != null && sender.equals(target)) {
-                continue;
-            }
-            queueAnnouncement(target, trimmed);
-            target.sendMessage(chatMessage);
+        if (announcementManager != null) {
+            announcementManager.broadcastAnnouncement(message, sender);
         }
     }
-
-
-    private void queueAnnouncement(PlayerRef playerRef, String message) {
-        if (playerRef == null) {
-            return;
-        }
-        Announcement entry = new Announcement(message);
-        announcements.compute(playerRef.getUuid(), (key, queue) -> {
-            ConcurrentLinkedDeque<Announcement> target = queue != null ? queue : new ConcurrentLinkedDeque<>();
-            target.addLast(entry);
-            return target;
-        });
-        updateAnnouncementHud(playerRef);
-        HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
-            announcements.computeIfPresent(playerRef.getUuid(), (key, queue) -> {
-                queue.remove(entry);
-                return queue.isEmpty() ? null : queue;
-            });
-            updateAnnouncementHud(playerRef);
-        }, ANNOUNCEMENT_DURATION_SECONDS, TimeUnit.SECONDS);
-    }
-
-    private void updateAnnouncementHud(PlayerRef playerRef) {
-        if (playerRef == null) {
-            return;
-        }
-        if (isRunHudHidden(playerRef.getUuid())) {
-            return;
-        }
-        var ref = playerRef.getReference();
-        if (ref == null || !ref.isValid()) {
-            return;
-        }
-        Store<EntityStore> store = ref.getStore();
-        World world = store.getExternalData().getWorld();
-        if (world == null) {
-            return;
-        }
-        CompletableFuture.runAsync(() -> {
-            Player player = store.getComponent(ref, Player.getComponentType());
-            if (player == null) {
-                return;
-            }
-            if (isRunHudHidden(playerRef.getUuid())) {
-                return;
-            }
-            RunHud hud = getActiveHud(playerRef);
-            if (hud == null) {
-                hud = getOrCreateHud(playerRef, false);
-                attachHud(playerRef, player, hud, false);
-            }
-            hud.updateAnnouncements(getAnnouncementLines(playerRef.getUuid()));
-        }, world);
-    }
-
-    private List<String> getAnnouncementLines(UUID playerId) {
-        Deque<Announcement> queue = announcements.get(playerId);
-        if (queue == null) {
-            return List.of();
-        }
-        ArrayDeque<String> lines = new ArrayDeque<>(ANNOUNCEMENT_MAX_LINES);
-        for (Announcement entry : queue) {
-            if (lines.size() == ANNOUNCEMENT_MAX_LINES) {
-                lines.removeFirst();
-            }
-            lines.addLast(entry.message);
-        }
-        if (lines.isEmpty()) {
-            return List.of();
-        }
-        return new ArrayList<>(lines);
-    }
-
     private void tickPlaytime() {
-        if (progressStore == null) {
-            return;
+        if (playtimeManager != null) {
+            playtimeManager.tickPlaytime();
         }
-        long now = System.currentTimeMillis();
-        for (PlayerRef playerRef : Universe.get().getPlayers()) {
-            if (playerRef == null) {
-                continue;
-            }
-            UUID playerId = playerRef.getUuid();
-            var ref = playerRef.getReference();
-            if (ref == null || !ref.isValid()) {
-                playtimeSessionStart.remove(playerId);
-                continue;
-            }
-            long[] deltaMs = new long[1];
-            playtimeSessionStart.compute(playerId, (key, start) -> {
-                if (start == null) {
-                    return now;
-                }
-                long delta = Math.max(0L, now - start);
-                if (delta > 0L) {
-                    deltaMs[0] = delta;
-                }
-                return now;
-            });
-            if (deltaMs[0] > 0L) {
-                progressStore.addPlaytime(playerId, playerRef.getUsername(), deltaMs[0]);
-            }
-        }
-    }
-
-    private void startPlaytimeSession(PlayerRef playerRef) {
-        if (playerRef == null) {
-            return;
-        }
-        playtimeSessionStart.putIfAbsent(playerRef.getUuid(), System.currentTimeMillis());
     }
 
     private void tickPlayerCounts() {
-        if (playerCountStore == null) {
-            return;
-        }
-        int count = onlinePlayerCount.get();
-        playerCountStore.recordSample(System.currentTimeMillis(), count);
-    }
-
-    private void tickChatAnnouncements() {
-        Message message;
-        synchronized (chatAnnouncementLock) {
-            if (chatAnnouncements.isEmpty()) {
-                return;
-            }
-            if (chatAnnouncementIndex >= chatAnnouncements.size()) {
-                chatAnnouncementIndex = 0;
-            }
-            message = chatAnnouncements.get(chatAnnouncementIndex);
-            chatAnnouncementIndex = (chatAnnouncementIndex + 1) % chatAnnouncements.size();
-        }
-        var players = Universe.get().getPlayers();
-        if (players.isEmpty()) {
-            return;
-        }
-        for (PlayerRef playerRef : players) {
-            playerRef.sendMessage(message);
+        if (playtimeManager != null) {
+            playtimeManager.tickPlayerCounts();
         }
     }
 
     private void tickStalePlayerSweep() {
-        var players = Universe.get().getPlayers();
-        if (players.isEmpty()) {
-            sweepStalePlayerState(Set.of());
-            return;
+        if (cleanupManager != null) {
+            cleanupManager.tickStalePlayerSweep();
         }
-        Set<UUID> onlinePlayers = new HashSet<>(players.size());
-        for (PlayerRef playerRef : players) {
-            if (playerRef == null) {
-                continue;
-            }
-            UUID playerId = playerRef.getUuid();
-            if (playerId != null) {
-                onlinePlayers.add(playerId);
-            }
-        }
-        sweepStalePlayerState(onlinePlayers);
     }
 
     private void tickTeleportDebug() {
@@ -850,163 +529,9 @@ public class HyvexaPlugin extends JavaPlugin {
         }
     }
 
-    private void sweepStalePlayerState(Set<UUID> onlinePlayers) {
-        runHuds.keySet().removeIf(id -> !onlinePlayers.contains(id));
-        runRecordHuds.keySet().removeIf(id -> !onlinePlayers.contains(id));
-        hiddenRunHuds.keySet().removeIf(id -> !onlinePlayers.contains(id));
-        runHudIsRecords.keySet().removeIf(id -> !onlinePlayers.contains(id));
-        runHudReadyAt.keySet().removeIf(id -> !onlinePlayers.contains(id));
-        runHudWasRunning.keySet().removeIf(id -> !onlinePlayers.contains(id));
-        runHudHidden.keySet().removeIf(id -> !onlinePlayers.contains(id));
-        announcements.keySet().removeIf(id -> !onlinePlayers.contains(id));
-        playtimeSessionStart.keySet().removeIf(id -> !onlinePlayers.contains(id));
-        cachedRankNames.keySet().removeIf(id -> !onlinePlayers.contains(id));
-        cachedNameplateTexts.keySet().removeIf(id -> !onlinePlayers.contains(id));
-        vipSpeedMultiplier.keySet().removeIf(id -> !onlinePlayers.contains(id));
-        if (runTracker != null) {
-            runTracker.sweepStalePlayers(onlinePlayers);
-        }
-        PlayerVisibilityManager.get().sweepStalePlayers(onlinePlayers);
-    }
-
     public void refreshChatAnnouncements() {
-        List<Message> rebuilt = buildChatAnnouncements();
-        synchronized (chatAnnouncementLock) {
-            chatAnnouncements = rebuilt;
-            chatAnnouncementIndex = 0;
-        }
-        rescheduleChatAnnouncements();
-    }
-
-    private void rescheduleChatAnnouncements() {
-        cancelScheduled(chatAnnouncementTask);
-        chatAnnouncementTask = null;
-        long intervalMinutes = globalMessageStore != null
-                ? globalMessageStore.getIntervalMinutes()
-                : GlobalMessageStore.DEFAULT_INTERVAL_MINUTES;
-        long intervalSeconds = Math.max(60L, intervalMinutes * 60L);
-        if (!chatAnnouncements.isEmpty()) {
-            chatAnnouncementTask = scheduleTick("chat announcements", this::tickChatAnnouncements, 60,
-                    intervalSeconds, TimeUnit.SECONDS);
-        }
-    }
-
-    private List<Message> buildChatAnnouncements() {
-        if (globalMessageStore == null) {
-            return List.of();
-        }
-        List<String> messages = globalMessageStore.getMessages();
-        if (messages.isEmpty()) {
-            return List.of();
-        }
-        List<Message> built = new ArrayList<>();
-        for (String message : messages) {
-            Message formatted = buildChatAnnouncementMessage(message);
-            if (formatted != null) {
-                built.add(formatted);
-            }
-        }
-        return List.copyOf(built);
-    }
-
-    private Message buildChatAnnouncementMessage(String template) {
-        if (template == null) {
-            return null;
-        }
-        String trimmed = template.trim();
-        if (trimmed.isEmpty()) {
-            return null;
-        }
-        Message discordLink = Message.raw(CHAT_LINK_LABEL).color("#8ab4f8").link(DISCORD_URL);
-        Message storeLink = Message.raw(CHAT_STORE_LABEL).color("#8ab4f8").link(STORE_URL);
-        boolean hasDiscordPlaceholder = trimmed.contains(CHAT_LINK_PLACEHOLDER);
-        boolean hasStorePlaceholder = trimmed.contains(CHAT_STORE_PLACEHOLDER);
-        if (!hasDiscordPlaceholder && !hasStorePlaceholder) {
-            return Message.join(
-                    Message.raw(trimmed),
-                    Message.raw(" ("),
-                    discordLink,
-                    Message.raw(").")
-            );
-        }
-        List<Message> parts = new ArrayList<>();
-        int index = 0;
-        while (index < trimmed.length()) {
-            int discordIndex = trimmed.indexOf(CHAT_LINK_PLACEHOLDER, index);
-            int storeIndex = trimmed.indexOf(CHAT_STORE_PLACEHOLDER, index);
-            int next = -1;
-            Message replacement = null;
-            int placeholderLength = 0;
-            if (discordIndex >= 0 && (storeIndex < 0 || discordIndex < storeIndex)) {
-                next = discordIndex;
-                replacement = discordLink;
-                placeholderLength = CHAT_LINK_PLACEHOLDER.length();
-            } else if (storeIndex >= 0) {
-                next = storeIndex;
-                replacement = storeLink;
-                placeholderLength = CHAT_STORE_PLACEHOLDER.length();
-            }
-            if (next < 0) {
-                String tail = trimmed.substring(index);
-                if (!tail.isEmpty()) {
-                    parts.add(Message.raw(tail));
-                }
-                break;
-            }
-            if (next > index) {
-                parts.add(Message.raw(trimmed.substring(index, next)));
-            }
-            parts.add(replacement);
-            index = next + placeholderLength;
-        }
-        if (parts.isEmpty()) {
-            return hasStorePlaceholder ? storeLink : discordLink;
-        }
-        return Message.join(parts.toArray(new Message[0]));
-    }
-
-    private void finishPlaytimeSession(PlayerRef playerRef) {
-        if (playerRef == null || progressStore == null) {
-            return;
-        }
-        UUID playerId = playerRef.getUuid();
-        Long start = playtimeSessionStart.remove(playerId);
-        if (start == null) {
-            return;
-        }
-        long deltaMs = Math.max(0L, System.currentTimeMillis() - start);
-        if (deltaMs <= 0L) {
-            return;
-        }
-        progressStore.addPlaytime(playerId, playerRef.getUsername(), deltaMs);
-    }
-
-    private void broadcastPresence(PlayerRef playerRef, boolean joined) {
-        if (playerRef == null || !joined) {
-            return;
-        }
-        String name = playerRef.getUsername();
-        if (name == null || name.isBlank()) {
-            name = ParkourUtils.resolveName(playerRef.getUuid(), progressStore);
-        }
-        String sign = joined ? "+" : "-";
-        String signColor = joined ? SystemMessageUtils.SUCCESS : SystemMessageUtils.ERROR;
-        Message message = Message.join(
-                Message.raw("[").color(SystemMessageUtils.SECONDARY),
-                Message.raw(sign).color(signColor),
-                Message.raw("] ").color(SystemMessageUtils.SECONDARY),
-                Message.raw(name).color(SystemMessageUtils.PRIMARY_TEXT)
-        );
-        for (PlayerRef target : Universe.get().getPlayers()) {
-            target.sendMessage(message);
-        }
-    }
-
-    private static class Announcement {
-        private final String message;
-
-        private Announcement(String message) {
-            this.message = message;
+        if (announcementManager != null) {
+            announcementManager.refreshChatAnnouncements();
         }
     }
 
@@ -1038,6 +563,26 @@ public class HyvexaPlugin extends JavaPlugin {
         return settingsStore;
     }
 
+    public HudManager getHudManager() {
+        return hudManager;
+    }
+
+    public AnnouncementManager getAnnouncementManager() {
+        return announcementManager;
+    }
+
+    public PlayerPerksManager getPerksManager() {
+        return perksManager;
+    }
+
+    public PlaytimeManager getPlaytimeManager() {
+        return playtimeManager;
+    }
+
+    public PlayerCleanupManager getCleanupManager() {
+        return cleanupManager;
+    }
+
     private void tickMapDetection() {
         Map<World, List<PlayerTickContext>> playersByWorld = collectPlayersByWorld();
         for (Map.Entry<World, List<PlayerTickContext>> entry : playersByWorld.entrySet()) {
@@ -1051,19 +596,21 @@ public class HyvexaPlugin extends JavaPlugin {
                     if (runTracker != null) {
                         UUID playerId = context.playerRef.getUuid();
                         boolean inDuel = duelTracker != null && duelTracker.isInMatch(playerId);
-                        if (!inDuel) {
+                        if (!inDuel && perksManager != null) {
                             String activeMapId = runTracker.getActiveMapId(playerId);
                             if (activeMapId != null) {
-                                disableVipSpeedBoost(context.ref, context.store, context.playerRef);
-                            } else if (shouldDisableVipSpeedForStartTrigger(context.store, context.ref,
+                                perksManager.disableVipSpeedBoost(context.ref, context.store, context.playerRef);
+                            } else if (perksManager.shouldDisableVipSpeedForStartTrigger(context.store, context.ref,
                                     context.playerRef)) {
-                                disableVipSpeedBoost(context.ref, context.store, context.playerRef);
+                                perksManager.disableVipSpeedBoost(context.ref, context.store, context.playerRef);
                             }
                         }
                     }
                     runTracker.checkPlayer(context.ref, context.store);
-                    ensureRunHudNow(context.ref, context.store, context.playerRef);
-                    updateRunHud(context.ref, context.store);
+                    if (hudManager != null) {
+                        hudManager.ensureRunHudNow(context.ref, context.store, context.playerRef);
+                        hudManager.updateRunHud(context.ref, context.store);
+                    }
                 }
             }, world);
         }
@@ -1079,8 +626,10 @@ public class HyvexaPlugin extends JavaPlugin {
                     if (context.ref == null || !context.ref.isValid()) {
                         continue;
                     }
-                    ensureRunHudNow(context.ref, context.store, context.playerRef);
-                    updateRunHud(context.ref, context.store);
+                    if (hudManager != null) {
+                        hudManager.ensureRunHudNow(context.ref, context.store, context.playerRef);
+                        hudManager.updateRunHud(context.ref, context.store);
+                    }
                 }
             }, world);
         }
@@ -1155,305 +704,19 @@ public class HyvexaPlugin extends JavaPlugin {
         applyDropFilter(inventory.getArmor(), allowDrop);
     }
 
-    private void updatePlayerNameplate(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef,
-                                       String rankName) {
-        if (ref == null || store == null || playerRef == null) {
-            return;
-        }
-        UUID playerId = playerRef.getUuid();
-        if (playerId == null) {
-            return;
-        }
-        String name = playerRef.getUsername();
-        if (name == null || name.isBlank()) {
-            name = "Player";
-        }
-        Player player = store.getComponent(ref, Player.getComponentType());
-        if (player != null && PermissionUtils.isOp(player)) {
-            String text = "[ADMIN] " + name;
-            String cached = cachedNameplateTexts.get(playerId);
-            if (text.equals(cached)) {
-                return;
-            }
-            cachedNameplateTexts.put(playerId, text);
-            Nameplate nameplate = store.ensureAndGetComponent(ref, Nameplate.getComponentType());
-            nameplate.setText(text);
-            return;
-        }
-        String safeRank = (rankName == null || rankName.isBlank()) ? "Unranked" : rankName;
-        String badgeLabel = getSpecialRankLabel(playerId);
-        String badgeSuffix = badgeLabel != null ? "(" + badgeLabel + ")" : "";
-        String text = "[" + safeRank + "]" + badgeSuffix + " " + name;
-        String cached = cachedNameplateTexts.get(playerId);
-        if (text.equals(cached)) {
-            return;
-        }
-        cachedNameplateTexts.put(playerId, text);
-        Nameplate nameplate = store.ensureAndGetComponent(ref, Nameplate.getComponentType());
-        nameplate.setText(text);
-    }
-
-    private void updateRunHud(Ref<EntityStore> ref, Store<EntityStore> store) {
-        Player player = store.getComponent(ref, Player.getComponentType());
-        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-        if (player == null || playerRef == null) {
-            return;
-        }
-        String rankName = getCachedRankName(playerRef.getUuid());
-        updatePlayerNameplate(ref, store, playerRef, rankName);
-        if (isRunHudHidden(playerRef.getUuid())) {
-            attachHiddenHud(playerRef, player);
-            return;
-        }
-        UUID playerId = playerRef.getUuid();
-        boolean duelActive = duelTracker != null && duelTracker.isInMatch(playerId);
-        Long elapsedMs = duelActive ? duelTracker.getElapsedTimeMs(playerId) : runTracker.getElapsedTimeMs(playerId);
-        RunHud hud = getActiveHud(playerRef);
-        long readyAt = runHudReadyAt.getOrDefault(playerId, Long.MAX_VALUE);
-        if (hud == null || System.currentTimeMillis() < readyAt) {
-            return;
-        }
-        boolean running = elapsedMs != null;
-        boolean wasRunning = runHudWasRunning.getOrDefault(playerId, false);
-        if (!running && wasRunning) {
-            RunHud baseHud = getOrCreateHud(playerRef, false);
-            attachHud(playerRef, player, baseHud, false);
-            hud = baseHud;
-        } else if (running && !Boolean.TRUE.equals(runHudIsRecords.get(playerId))) {
-            RunHud recordsHud = getOrCreateHud(playerRef, true);
-            attachHud(playerRef, player, recordsHud, true);
-            hud = recordsHud;
-        }
-        int completedMaps = progressStore.getCompletedMapCount(playerRef.getUuid());
-        int totalMaps = mapStore.getMapCount();
-        hud.updateInfo(playerRef.getUsername(), rankName, completedMaps, totalMaps, SERVER_IP_DISPLAY);
-        if (!running) {
-            if (wasRunning) {
-                hud.updateText("");
-                hud.updateCheckpointText("");
-                runHudWasRunning.put(playerRef.getUuid(), false);
-            }
-            if (hud instanceof RunRecordsHud recordsHud) {
-                recordsHud.updateTopTimes(List.of());
-            }
-            return;
-        }
-        runHudWasRunning.put(playerId, true);
-        String mapId = duelActive ? duelTracker.getActiveMapId(playerId) : runTracker.getActiveMapId(playerId);
-        String mapName = mapId;
-        if (mapId != null) {
-            var map = mapStore.getMap(mapId);
-            if (map != null && map.getName() != null && !map.getName().isBlank()) {
-                mapName = map.getName();
-            }
-        }
-        String timeText = (mapName == null ? "Map" : mapName) + " - " + FormatUtils.formatDuration(elapsedMs);
-        RunTracker.CheckpointProgress checkpointProgress = duelActive
-                ? duelTracker.getCheckpointProgress(playerId)
-                : runTracker.getCheckpointProgress(playerId);
-        String checkpointText = "";
-        if (checkpointProgress != null && checkpointProgress.total > 0) {
-            checkpointText = checkpointProgress.touched + "/" + checkpointProgress.total;
-        }
-        if (hud instanceof RunRecordsHud recordsHud) {
-            recordsHud.updateRunDetails(timeText, buildTopTimes(mapId, playerRef.getUuid()));
-        } else {
-            hud.updateText(timeText);
-        }
-        hud.updateCheckpointText(checkpointText);
-    }
-
-
-    private List<RunRecordsHud.RecordLine> buildTopTimes(String mapId, UUID playerId) {
-        if (mapId == null) {
-            return List.of();
-        }
-        List<Map.Entry<UUID, Long>> entries = progressStore.getLeaderboardEntries(mapId);
-        if (entries.isEmpty()) {
-            return List.of();
-        }
-        List<RunRecordsHud.RecordLine> lines = new ArrayList<>();
-        for (int i = 0; i < 5; i++) {
-            if (i < entries.size()) {
-                UUID entryPlayerId = entries.get(i).getKey();
-                Long time = entries.get(i).getValue();
-                String name = progressStore.getPlayerName(entryPlayerId);
-                if (name == null || name.isBlank()) {
-                    name = "Player";
-                }
-                String trimmed = trimName(name, 14);
-                lines.add(new RunRecordsHud.RecordLine(String.valueOf(i + 1), trimmed,
-                        FormatUtils.formatDuration(time)));
-            } else {
-                lines.add(RunRecordsHud.RecordLine.empty(i + 1));
-            }
-        }
-        int selfIndex = -1;
-        long selfTime = 0L;
-        if (progressStore.getBestTimeMs(playerId, mapId) != null) {
-            for (int i = 0; i < entries.size(); i++) {
-                if (entries.get(i).getKey().equals(playerId)) {
-                    selfIndex = i;
-                    selfTime = entries.get(i).getValue();
-                    break;
-                }
-            }
-        }
-        if (selfIndex >= 0) {
-            String name = progressStore.getPlayerName(playerId);
-            if (name == null || name.isBlank()) {
-                name = "Player";
-            }
-            String trimmed = trimName(name, 14);
-            lines.add(new RunRecordsHud.RecordLine(String.valueOf(selfIndex + 1), trimmed,
-                    FormatUtils.formatDuration(selfTime)));
-        } else {
-            lines.add(RunRecordsHud.RecordLine.empty(0));
-        }
-        return lines;
-    }
-
-    private static String trimName(String name, int maxLength) {
-        if (name == null) {
-            return "";
-        }
-        String trimmed = name.trim();
-        if (trimmed.length() <= maxLength) {
-            return trimmed;
-        }
-        if (maxLength <= 3) {
-            return trimmed.substring(0, maxLength);
-        }
-        return trimmed.substring(0, maxLength - 3) + "...";
-    }
-
-    private void ensureRunHud(PlayerRef playerRef) {
-        if (playerRef == null) {
-            return;
-        }
-        UUID playerId = playerRef.getUuid();
-        runHuds.remove(playerId);
-        runHudReadyAt.remove(playerId);
-        runHudWasRunning.remove(playerId);
-        var ref = playerRef.getReference();
-        if (ref == null || !ref.isValid()) {
-            return;
-        }
-        Store<EntityStore> store = ref.getStore();
-        World world = store.getExternalData().getWorld();
-        if (world == null) {
-            return;
-        }
-        CompletableFuture.runAsync(() -> ensureRunHudNow(ref, store, playerRef), world);
-    }
-
-    private void ensureRunHudNow(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef) {
-        if (isRunHudHidden(playerRef.getUuid())) {
-            return;
-        }
-        Player player = store.getComponent(ref, Player.getComponentType());
-        if (player == null) {
-            return;
-        }
-        RunHud hud = getOrCreateHud(playerRef, false);
-        attachHud(playerRef, player, hud, false);
-        hud.updateAnnouncements(getAnnouncementLines(playerRef.getUuid()));
-        runHudReadyAt.putIfAbsent(playerRef.getUuid(), System.currentTimeMillis() + 250L);
-    }
-
-    private RunHud getActiveHud(PlayerRef playerRef) {
-        if (playerRef == null) {
-            return null;
-        }
-        UUID playerId = playerRef.getUuid();
-        if (Boolean.TRUE.equals(runHudIsRecords.get(playerId))) {
-            return runRecordHuds.get(playerId);
-        }
-        return runHuds.get(playerId);
-    }
-
     public void hideRunHud(PlayerRef playerRef) {
-        setRunHudHidden(playerRef, true);
+        if (hudManager != null) {
+            hudManager.hideRunHud(playerRef);
+        }
     }
 
     public void showRunHud(PlayerRef playerRef) {
-        setRunHudHidden(playerRef, false);
-    }
-
-    private void setRunHudHidden(PlayerRef playerRef, boolean hidden) {
-        if (playerRef == null) {
-            return;
+        if (hudManager != null) {
+            hudManager.showRunHud(playerRef);
         }
-        UUID playerId = playerRef.getUuid();
-        if (playerId == null) {
-            return;
+        if (announcementManager != null) {
+            announcementManager.updateAnnouncementHud(playerRef);
         }
-        if (hidden) {
-            runHudHidden.put(playerId, true);
-        } else {
-            runHudHidden.remove(playerId);
-        }
-        runHudReadyAt.remove(playerId);
-        runHudWasRunning.remove(playerId);
-        runHudIsRecords.remove(playerId);
-        var ref = playerRef.getReference();
-        if (ref == null || !ref.isValid()) {
-            return;
-        }
-        Store<EntityStore> store = ref.getStore();
-        World world = store.getExternalData().getWorld();
-        if (world == null) {
-            return;
-        }
-        CompletableFuture.runAsync(() -> {
-            if (!ref.isValid() || !playerRef.isValid()) {
-                return;
-            }
-            Player player = store.getComponent(ref, Player.getComponentType());
-            if (player == null) {
-                return;
-            }
-            if (hidden) {
-                attachHiddenHud(playerRef, player);
-                return;
-            }
-            ensureRunHudNow(ref, store, playerRef);
-        }, world);
-    }
-
-    private boolean isRunHudHidden(UUID playerId) {
-        return playerId != null && Boolean.TRUE.equals(runHudHidden.get(playerId));
-    }
-
-    private void attachHiddenHud(PlayerRef playerRef, Player player) {
-        if (playerRef == null || player == null) {
-            return;
-        }
-        if (playerRef.getPacketHandler() == null) {
-            return;
-        }
-        HiddenRunHud hud = getOrCreateHiddenHud(playerRef);
-        player.getHudManager().setCustomHud(playerRef, hud);
-    }
-
-    private HiddenRunHud getOrCreateHiddenHud(PlayerRef playerRef) {
-        UUID playerId = playerRef.getUuid();
-        return hiddenRunHuds.computeIfAbsent(playerId, ignored -> new HiddenRunHud(playerRef));
-    }
-
-    private RunHud getOrCreateHud(PlayerRef playerRef, boolean records) {
-        UUID playerId = playerRef.getUuid();
-        if (records) {
-            return runRecordHuds.computeIfAbsent(playerId, ignored -> new RunRecordsHud(playerRef));
-        }
-        return runHuds.computeIfAbsent(playerId, ignored -> new RunHud(playerRef));
-    }
-
-    private void attachHud(PlayerRef playerRef, Player player, RunHud hud, boolean records) {
-        runHudIsRecords.put(playerRef.getUuid(), records);
-        player.getHudManager().setCustomHud(playerRef, hud);
-        hud.resetCache();
-        hud.show();
     }
 
     private void syncRunInventoryOnConnect(PlayerRef playerRef) {
@@ -1726,8 +989,10 @@ public class HyvexaPlugin extends JavaPlugin {
         cancelScheduled(playerCountTask);
         cancelScheduled(stalePlayerSweepTask);
         cancelScheduled(teleportDebugTask);
-        cancelScheduled(chatAnnouncementTask);
         cancelScheduled(duelTickTask);
+        if (announcementManager != null) {
+            announcementManager.shutdown();
+        }
         if (progressStore != null) {
             progressStore.flushPendingSave();
         }

@@ -1,5 +1,10 @@
 # Changelog
 
+- Add a code review guide with checklists, severity labels, and hotspot callouts.
+- Add per-query DB timeouts and validate countRows table names for safer persistence.
+- Warn players when completion saves fail and guard checkpoint access against null/empty lists.
+- Fix DatabaseManager singleton initialization for consistent pool usage.
+- Extract HUD, announcements, perks, playtime, and cleanup managers to slim down HyvexaPlugin.
 - Show checkpoint PB deltas and append a color-coded finish delta inline with the completion message.
 - Remove the redundant "Finish line reached." message on completion.
 - Replace "Map loaded." with the consistent "Run started." start message.

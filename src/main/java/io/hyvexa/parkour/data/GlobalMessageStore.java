@@ -12,6 +12,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.logging.Level;
 
+/** MySQL-backed storage for global announcement messages and cadence. */
 public class GlobalMessageStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
@@ -60,14 +61,15 @@ public class GlobalMessageStore {
         String sql = "SELECT interval_minutes FROM global_message_settings WHERE id = 1";
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
-
-            if (rs.next()) {
-                intervalMinutes = clampInterval(rs.getLong("interval_minutes"));
-            } else {
-                intervalMinutes = DEFAULT_INTERVAL_MINUTES;
-                insertDefaultSettings();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    intervalMinutes = clampInterval(rs.getLong("interval_minutes"));
+                } else {
+                    intervalMinutes = DEFAULT_INTERVAL_MINUTES;
+                    insertDefaultSettings();
+                }
             }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Failed to load global message settings: " + e.getMessage());
@@ -80,6 +82,7 @@ public class GlobalMessageStore {
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
             stmt.setLong(1, intervalMinutes);
             stmt.executeUpdate();
         } catch (SQLException e) {
@@ -91,13 +94,14 @@ public class GlobalMessageStore {
         String sql = "SELECT message FROM global_messages ORDER BY display_order, id";
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
-
-            while (rs.next()) {
-                String cleaned = normalizeMessage(rs.getString("message"));
-                if (!cleaned.isEmpty()) {
-                    messages.add(cleaned);
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    String cleaned = normalizeMessage(rs.getString("message"));
+                    if (!cleaned.isEmpty()) {
+                        messages.add(cleaned);
+                    }
                 }
             }
         } catch (SQLException e) {
@@ -116,6 +120,7 @@ public class GlobalMessageStore {
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(settingsSql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
             stmt.setLong(1, intervalMinutes);
             stmt.executeUpdate();
         } catch (SQLException e) {
@@ -130,6 +135,8 @@ public class GlobalMessageStore {
             conn.setAutoCommit(false);
             try (PreparedStatement deleteStmt = conn.prepareStatement(deleteSql);
                  PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
+                DatabaseManager.applyQueryTimeout(deleteStmt);
+                DatabaseManager.applyQueryTimeout(insertStmt);
 
                 deleteStmt.executeUpdate();
 
@@ -185,6 +192,7 @@ public class GlobalMessageStore {
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
             stmt.setLong(1, intervalMinutes);
             stmt.executeUpdate();
         } catch (SQLException e) {
@@ -218,6 +226,7 @@ public class GlobalMessageStore {
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
             stmt.setString(1, message);
             stmt.setInt(2, order);
             stmt.executeUpdate();

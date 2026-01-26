@@ -9,12 +9,29 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Set;
 import java.util.logging.Level;
 
+/** Manages the MySQL connection pool and schema setup for parkour data. */
 public class DatabaseManager {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static DatabaseManager instance;
+    public static final int QUERY_TIMEOUT_SECONDS = 10;
+    private static final Set<String> ALLOWED_COUNT_TABLES = Set.of(
+            "players",
+            "maps",
+            "player_completions",
+            "player_checkpoint_times",
+            "map_checkpoints",
+            "settings",
+            "player_count_samples",
+            "global_messages",
+            "global_message_settings",
+            "duel_matches",
+            "duel_category_prefs",
+            "duel_player_stats"
+    );
+    private static final DatabaseManager INSTANCE = new DatabaseManager();
     private HikariDataSource dataSource;
     private DatabaseConfig config;
 
@@ -22,10 +39,7 @@ public class DatabaseManager {
     }
 
     public static DatabaseManager getInstance() {
-        if (instance == null) {
-            instance = new DatabaseManager();
-        }
-        return instance;
+        return INSTANCE;
     }
 
     /**
@@ -117,9 +131,11 @@ public class DatabaseManager {
 
             // Test we can query
             try (PreparedStatement stmt = conn.prepareStatement("SELECT 1")) {
-                ResultSet rs = stmt.executeQuery();
-                if (!rs.next()) {
-                    return new TestResult(false, "SELECT 1 returned no results");
+                applyQueryTimeout(stmt);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (!rs.next()) {
+                        return new TestResult(false, "SELECT 1 returned no results");
+                    }
                 }
             }
 
@@ -131,13 +147,15 @@ public class DatabaseManager {
             for (String table : tables) {
                 try (PreparedStatement stmt = conn.prepareStatement(
                         "SELECT 1 FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?")) {
+                    applyQueryTimeout(stmt);
                     stmt.setString(1, table);
-                    ResultSet rs = stmt.executeQuery();
-                    if (!rs.next()) {
-                        if (missingTables.length() > 0) {
-                            missingTables.append(", ");
+                    try (ResultSet rs = stmt.executeQuery()) {
+                        if (!rs.next()) {
+                            if (missingTables.length() > 0) {
+                                missingTables.append(", ");
+                            }
+                            missingTables.append(table);
                         }
-                        missingTables.append(table);
                     }
                 }
             }
@@ -161,12 +179,17 @@ public class DatabaseManager {
     }
 
     private int countRows(Connection conn, String table) throws SQLException {
+        if (table == null || !ALLOWED_COUNT_TABLES.contains(table)) {
+            throw new SQLException("Invalid table name for countRows: " + table);
+        }
         try (PreparedStatement stmt = conn.prepareStatement("SELECT COUNT(*) FROM " + table)) {
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                return rs.getInt(1);
+            applyQueryTimeout(stmt);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+                return 0;
             }
-            return 0;
         }
     }
 
@@ -197,6 +220,7 @@ public class DatabaseManager {
             WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?
             """;
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            applyQueryTimeout(stmt);
             stmt.setString(1, table);
             stmt.setString(2, column);
             try (ResultSet rs = stmt.executeQuery()) {
@@ -217,6 +241,12 @@ public class DatabaseManager {
             """;
         try (Statement stmt = conn.createStatement()) {
             stmt.executeUpdate(sql);
+        }
+    }
+
+    public static void applyQueryTimeout(PreparedStatement stmt) throws SQLException {
+        if (stmt != null) {
+            stmt.setQueryTimeout(QUERY_TIMEOUT_SECONDS);
         }
     }
 

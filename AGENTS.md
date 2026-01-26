@@ -23,6 +23,15 @@ Instructions for AI agents working on this Hytale plugin codebase.
 - **Tracker**: `io.hyvexa.parkour.tracker/` - run tracking, HUD management
 - **Visibility**: `io.hyvexa.parkour.visibility/` - player visibility management
 
+### Manager Layer
+- **HudManager**: Player HUD lifecycle (timer, checkpoints, leaderboard)
+- **AnnouncementManager**: HUD announcements + scheduled chat broadcasts
+- **PlayerPerksManager**: VIP speed, nameplates, rank caching
+- **PlaytimeManager**: Session tracking, player counts
+- **PlayerCleanupManager**: Disconnect cleanup, stale state sweeps
+
+Managers are instantiated in `HyvexaPlugin.setup()` and accessed via plugin helpers.
+
 ### Resources
 - **Plugin manifest**: `src/main/resources/manifest.json`
 - **UI definitions**: `src/main/resources/Common/UI/Custom/Pages/*.ui`
