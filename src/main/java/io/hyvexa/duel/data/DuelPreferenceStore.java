@@ -18,6 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
 
+/** MySQL-backed storage for duel category preferences. */
 public class DuelPreferenceStore {
 
     public enum DuelCategory {
@@ -60,29 +61,31 @@ public class DuelPreferenceStore {
             FROM duel_category_prefs
             """;
         try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
-            while (rs.next()) {
-                UUID playerId = UUID.fromString(rs.getString("player_uuid"));
-                EnumSet<DuelCategory> enabled = EnumSet.noneOf(DuelCategory.class);
-                if (rs.getBoolean("easy_enabled")) {
-                    enabled.add(DuelCategory.EASY);
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    UUID playerId = UUID.fromString(rs.getString("player_uuid"));
+                    EnumSet<DuelCategory> enabled = EnumSet.noneOf(DuelCategory.class);
+                    if (rs.getBoolean("easy_enabled")) {
+                        enabled.add(DuelCategory.EASY);
+                    }
+                    if (rs.getBoolean("medium_enabled")) {
+                        enabled.add(DuelCategory.MEDIUM);
+                    }
+                    if (rs.getBoolean("hard_enabled")) {
+                        enabled.add(DuelCategory.HARD);
+                    }
+                    if (rs.getBoolean("insane_enabled")) {
+                        enabled.add(DuelCategory.INSANE);
+                    }
+                    if (enabled.isEmpty()) {
+                        enabled = defaultEnabled();
+                    }
+                    enabledByPlayer.put(playerId, enabled);
                 }
-                if (rs.getBoolean("medium_enabled")) {
-                    enabled.add(DuelCategory.MEDIUM);
-                }
-                if (rs.getBoolean("hard_enabled")) {
-                    enabled.add(DuelCategory.HARD);
-                }
-                if (rs.getBoolean("insane_enabled")) {
-                    enabled.add(DuelCategory.INSANE);
-                }
-                if (enabled.isEmpty()) {
-                    enabled = defaultEnabled();
-                }
-                enabledByPlayer.put(playerId, enabled);
+                LOGGER.atInfo().log("DuelPreferenceStore loaded " + enabledByPlayer.size() + " player preferences");
             }
-            LOGGER.atInfo().log("DuelPreferenceStore loaded " + enabledByPlayer.size() + " player preferences");
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Failed to load DuelPreferenceStore: " + e.getMessage());
         }
@@ -91,6 +94,7 @@ public class DuelPreferenceStore {
     private void ensureTable() {
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(CREATE_TABLE_SQL)) {
+            DatabaseManager.applyQueryTimeout(stmt);
             stmt.executeUpdate();
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Failed to create duel_category_prefs table: " + e.getMessage());
@@ -173,6 +177,7 @@ public class DuelPreferenceStore {
             """;
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
             stmt.setString(1, playerId.toString());
             stmt.setBoolean(2, flags.get(DuelCategory.EASY));
             stmt.setBoolean(3, flags.get(DuelCategory.MEDIUM));

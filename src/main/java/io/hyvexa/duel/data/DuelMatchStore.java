@@ -11,6 +11,7 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.logging.Level;
 
+/** MySQL-backed storage for duel match history. */
 public class DuelMatchStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
@@ -34,6 +35,7 @@ public class DuelMatchStore {
         }
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(CREATE_TABLE_SQL)) {
+            DatabaseManager.applyQueryTimeout(stmt);
             stmt.executeUpdate();
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Failed to create duel_matches table: " + e.getMessage());
@@ -51,6 +53,7 @@ public class DuelMatchStore {
             """;
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
             stmt.setString(1, match.getMatchId());
             stmt.setString(2, match.getPlayer1().toString());
             stmt.setString(3, match.getPlayer2().toString());

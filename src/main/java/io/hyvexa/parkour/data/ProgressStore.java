@@ -25,6 +25,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.logging.Level;
 
+/** MySQL-backed storage for player progress, completions, and leaderboard caches. */
 public class ProgressStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
@@ -71,24 +72,25 @@ public class ProgressStore {
         String sql = "SELECT uuid, name, xp, level, welcome_shown, playtime_ms, vip, founder FROM players";
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    UUID uuid = UUID.fromString(rs.getString("uuid"));
+                    PlayerProgress playerProgress = new PlayerProgress();
+                    playerProgress.xp = rs.getLong("xp");
+                    playerProgress.level = rs.getInt("level");
+                    playerProgress.welcomeShown = rs.getBoolean("welcome_shown");
+                    playerProgress.playtimeMs = rs.getLong("playtime_ms");
+                    playerProgress.vip = rs.getBoolean("vip");
+                    playerProgress.founder = rs.getBoolean("founder");
 
-            while (rs.next()) {
-                UUID uuid = UUID.fromString(rs.getString("uuid"));
-                PlayerProgress playerProgress = new PlayerProgress();
-                playerProgress.xp = rs.getLong("xp");
-                playerProgress.level = rs.getInt("level");
-                playerProgress.welcomeShown = rs.getBoolean("welcome_shown");
-                playerProgress.playtimeMs = rs.getLong("playtime_ms");
-                playerProgress.vip = rs.getBoolean("vip");
-                playerProgress.founder = rs.getBoolean("founder");
+                    progress.put(uuid, playerProgress);
 
-                progress.put(uuid, playerProgress);
-
-                String name = rs.getString("name");
-                if (name != null && !name.isBlank()) {
-                    lastKnownNames.put(uuid, name);
+                    String name = rs.getString("name");
+                    if (name != null && !name.isBlank()) {
+                        lastKnownNames.put(uuid, name);
+                    }
                 }
             }
         } catch (SQLException e) {
@@ -100,19 +102,20 @@ public class ProgressStore {
         String sql = "SELECT player_uuid, map_id, best_time_ms FROM player_completions";
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    UUID uuid = UUID.fromString(rs.getString("player_uuid"));
+                    String mapId = rs.getString("map_id");
+                    long bestTime = rs.getLong("best_time_ms");
 
-            while (rs.next()) {
-                UUID uuid = UUID.fromString(rs.getString("player_uuid"));
-                String mapId = rs.getString("map_id");
-                long bestTime = rs.getLong("best_time_ms");
-
-                PlayerProgress playerProgress = progress.get(uuid);
-                if (playerProgress != null) {
-                    playerProgress.completedMaps.add(mapId);
-                    if (bestTime > 0) {
-                        playerProgress.bestMapTimes.put(mapId, bestTime);
+                    PlayerProgress playerProgress = progress.get(uuid);
+                    if (playerProgress != null) {
+                        playerProgress.completedMaps.add(mapId);
+                        if (bestTime > 0) {
+                            playerProgress.bestMapTimes.put(mapId, bestTime);
+                        }
                     }
                 }
             }
@@ -126,22 +129,24 @@ public class ProgressStore {
                 + " ORDER BY checkpoint_index";
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    UUID uuid = UUID.fromString(rs.getString("player_uuid"));
+                    String mapId = rs.getString("map_id");
+                    int checkpointIndex = rs.getInt("checkpoint_index");
+                    long timeMs = rs.getLong("time_ms");
 
-            while (rs.next()) {
-                UUID uuid = UUID.fromString(rs.getString("player_uuid"));
-                String mapId = rs.getString("map_id");
-                int checkpointIndex = rs.getInt("checkpoint_index");
-                long timeMs = rs.getLong("time_ms");
-
-                PlayerProgress playerProgress = progress.get(uuid);
-                if (playerProgress != null) {
-                    List<Long> times = playerProgress.checkpointTimes.computeIfAbsent(mapId, k -> new ArrayList<>());
-                    while (times.size() <= checkpointIndex) {
-                        times.add(0L);
+                    PlayerProgress playerProgress = progress.get(uuid);
+                    if (playerProgress != null) {
+                        List<Long> times = playerProgress.checkpointTimes
+                                .computeIfAbsent(mapId, k -> new ArrayList<>());
+                        while (times.size() <= checkpointIndex) {
+                            times.add(0L);
+                        }
+                        times.set(checkpointIndex, timeMs);
                     }
-                    times.set(checkpointIndex, timeMs);
                 }
             }
         } catch (SQLException e) {
@@ -246,6 +251,7 @@ public class ProgressStore {
         fileLock.writeLock().lock();
         ProgressionResult result;
         boolean newBest = false;
+        boolean completionSaved = false;
         try {
             PlayerProgress playerProgress = progress.computeIfAbsent(playerId, ignored -> new PlayerProgress());
             storePlayerName(playerId, playerName);
@@ -271,10 +277,10 @@ public class ProgressStore {
 
             dirtyPlayers.add(playerId);
             // Save completion immediately
-            saveCompletion(playerId, mapId, timeMs);
+            completionSaved = saveCompletion(playerId, mapId, timeMs);
 
             result = new ProgressionResult(firstCompletionForMap, newBest, personalBest, xpAwarded,
-                    oldLevel, playerProgress.level);
+                    oldLevel, playerProgress.level, completionSaved);
         } finally {
             fileLock.writeLock().unlock();
         }
@@ -285,8 +291,10 @@ public class ProgressStore {
         return result;
     }
 
-    private void saveCompletion(UUID playerId, String mapId, long timeMs) {
-        if (!DatabaseManager.getInstance().isInitialized()) return;
+    private boolean saveCompletion(UUID playerId, String mapId, long timeMs) {
+        if (!DatabaseManager.getInstance().isInitialized()) {
+            return false;
+        }
 
         String sql = """
             INSERT INTO player_completions (player_uuid, map_id, best_time_ms)
@@ -296,12 +304,15 @@ public class ProgressStore {
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
             stmt.setString(1, playerId.toString());
             stmt.setString(2, mapId);
             stmt.setLong(3, timeMs);
             stmt.executeUpdate();
+            return true;
         } catch (SQLException e) {
             LOGGER.at(Level.WARNING).log("Failed to save completion: " + e.getMessage());
+            return false;
         }
     }
 
@@ -318,6 +329,8 @@ public class ProgressStore {
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement deleteStmt = conn.prepareStatement(deleteSql);
              PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
+            DatabaseManager.applyQueryTimeout(deleteStmt);
+            DatabaseManager.applyQueryTimeout(insertStmt);
 
             deleteStmt.setString(1, playerId.toString());
             deleteStmt.setString(2, mapId);
@@ -504,6 +517,8 @@ public class ProgressStore {
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement checkpointStmt = conn.prepareStatement(deleteCheckpoints);
              PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(checkpointStmt);
+            DatabaseManager.applyQueryTimeout(stmt);
             checkpointStmt.setString(1, playerId.toString());
             checkpointStmt.executeUpdate();
             stmt.setString(1, playerId.toString());
@@ -600,6 +615,8 @@ public class ProgressStore {
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement checkpointStmt = conn.prepareStatement(deleteCheckpoints);
              PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(checkpointStmt);
+            DatabaseManager.applyQueryTimeout(stmt);
             checkpointStmt.setString(1, playerId.toString());
             checkpointStmt.setString(2, mapId);
             checkpointStmt.executeUpdate();
@@ -621,6 +638,8 @@ public class ProgressStore {
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement checkpointStmt = conn.prepareStatement(deleteCheckpoints);
              PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(checkpointStmt);
+            DatabaseManager.applyQueryTimeout(stmt);
             checkpointStmt.setString(1, mapId);
             checkpointStmt.executeUpdate();
 
@@ -776,6 +795,7 @@ public class ProgressStore {
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
 
             for (UUID playerId : toSave) {
                 PlayerProgress playerProgress = progress.get(playerId);
@@ -869,15 +889,17 @@ public class ProgressStore {
         public final long xpAwarded;
         public final int oldLevel;
         public final int newLevel;
+        public final boolean completionSaved;
 
         public ProgressionResult(boolean firstCompletion, boolean newBest, boolean personalBest, long xpAwarded,
-                                 int oldLevel, int newLevel) {
+                                 int oldLevel, int newLevel, boolean completionSaved) {
             this.firstCompletion = firstCompletion;
             this.newBest = newBest;
             this.personalBest = personalBest;
             this.xpAwarded = xpAwarded;
             this.oldLevel = oldLevel;
             this.newLevel = newLevel;
+            this.completionSaved = completionSaved;
         }
     }
 

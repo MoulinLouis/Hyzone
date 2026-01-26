@@ -16,6 +16,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.logging.Level;
 
+/** MySQL-backed storage for parkour settings and spawn configuration. */
 public class SettingsStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
@@ -48,64 +49,65 @@ public class SettingsStore {
             """;
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    fileLock.writeLock().lock();
+                    try {
+                        fallRespawnSeconds = rs.getDouble("fall_respawn_seconds");
+                        if (fallRespawnSeconds <= 0) {
+                            fallRespawnSeconds = ParkourConstants.DEFAULT_FALL_RESPAWN_SECONDS;
+                        }
+                        fallFailsafeVoidY = rs.getDouble("void_y_failsafe");
+                        disableWeaponDamage = rs.getBoolean("weapon_damage_disabled");
+                        teleportDebugEnabled = rs.getBoolean("debug_mode");
 
-            if (rs.next()) {
-                fileLock.writeLock().lock();
-                try {
-                    fallRespawnSeconds = rs.getDouble("fall_respawn_seconds");
-                    if (fallRespawnSeconds <= 0) {
-                        fallRespawnSeconds = ParkourConstants.DEFAULT_FALL_RESPAWN_SECONDS;
-                    }
-                    fallFailsafeVoidY = rs.getDouble("void_y_failsafe");
-                    disableWeaponDamage = rs.getBoolean("weapon_damage_disabled");
-                    teleportDebugEnabled = rs.getBoolean("debug_mode");
+                        Double spawnX = rs.getObject("spawn_x", Double.class);
+                        if (spawnX != null) {
+                            spawnPosition = new TransformData();
+                            spawnPosition.setX(spawnX);
+                            spawnPosition.setY(rs.getDouble("spawn_y"));
+                            spawnPosition.setZ(rs.getDouble("spawn_z"));
+                            spawnPosition.setRotX(rs.getFloat("spawn_rot_x"));
+                            spawnPosition.setRotY(rs.getFloat("spawn_rot_y"));
+                            spawnPosition.setRotZ(rs.getFloat("spawn_rot_z"));
+                        } else {
+                            spawnPosition = defaultSpawn();
+                        }
 
-                    Double spawnX = rs.getObject("spawn_x", Double.class);
-                    if (spawnX != null) {
-                        spawnPosition = new TransformData();
-                        spawnPosition.setX(spawnX);
-                        spawnPosition.setY(rs.getDouble("spawn_y"));
-                        spawnPosition.setZ(rs.getDouble("spawn_z"));
-                        spawnPosition.setRotX(rs.getFloat("spawn_rot_x"));
-                        spawnPosition.setRotY(rs.getFloat("spawn_rot_y"));
-                        spawnPosition.setRotZ(rs.getFloat("spawn_rot_z"));
-                    } else {
-                        spawnPosition = defaultSpawn();
-                    }
+                        Boolean idleFall = rs.getObject("idle_fall_respawn_for_op", Boolean.class);
+                        idleFallRespawnForOp = idleFall != null && idleFall;
 
-                    Boolean idleFall = rs.getObject("idle_fall_respawn_for_op", Boolean.class);
-                    idleFallRespawnForOp = idleFall != null && idleFall;
-
-                    categoryOrder.clear();
-                    String categoryJson = rs.getString("category_order_json");
-                    if (categoryJson != null && !categoryJson.isBlank()) {
-                        try {
-                            List<String> loaded = GSON.fromJson(categoryJson, CATEGORY_LIST_TYPE);
-                            if (loaded != null) {
-                                for (String entry : loaded) {
-                                    if (entry == null) {
-                                        continue;
-                                    }
-                                    String trimmed = entry.trim();
-                                    if (!trimmed.isEmpty()) {
-                                        categoryOrder.add(trimmed);
+                        categoryOrder.clear();
+                        String categoryJson = rs.getString("category_order_json");
+                        if (categoryJson != null && !categoryJson.isBlank()) {
+                            try {
+                                List<String> loaded = GSON.fromJson(categoryJson, CATEGORY_LIST_TYPE);
+                                if (loaded != null) {
+                                    for (String entry : loaded) {
+                                        if (entry == null) {
+                                            continue;
+                                        }
+                                        String trimmed = entry.trim();
+                                        if (!trimmed.isEmpty()) {
+                                            categoryOrder.add(trimmed);
+                                        }
                                     }
                                 }
+                            } catch (RuntimeException e) {
+                                LOGGER.at(Level.WARNING).log("Failed to parse category order: " + e.getMessage());
                             }
-                        } catch (RuntimeException e) {
-                            LOGGER.at(Level.WARNING).log("Failed to parse category order: " + e.getMessage());
                         }
+                    } finally {
+                        fileLock.writeLock().unlock();
                     }
-                } finally {
-                    fileLock.writeLock().unlock();
+                    LOGGER.atInfo().log("SettingsStore loaded from database");
+                } else {
+                    // No settings row exists, insert defaults
+                    insertDefaults();
+                    LOGGER.atInfo().log("SettingsStore created with defaults");
                 }
-                LOGGER.atInfo().log("SettingsStore loaded from database");
-            } else {
-                // No settings row exists, insert defaults
-                insertDefaults();
-                LOGGER.atInfo().log("SettingsStore created with defaults");
             }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Failed to load SettingsStore from database: " + e.getMessage());
@@ -122,7 +124,7 @@ public class SettingsStore {
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
-
+            DatabaseManager.applyQueryTimeout(stmt);
             stmt.setDouble(1, fallRespawnSeconds);
             stmt.setDouble(2, fallFailsafeVoidY);
             stmt.setBoolean(3, disableWeaponDamage);
@@ -165,7 +167,7 @@ public class SettingsStore {
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
-
+            DatabaseManager.applyQueryTimeout(stmt);
             stmt.setDouble(1, fallRespawnSeconds);
             stmt.setDouble(2, fallFailsafeVoidY);
             stmt.setBoolean(3, disableWeaponDamage);
