@@ -19,6 +19,7 @@ import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.hub.HubConstants;
+import io.hyvexa.hub.hud.HubHud;
 import io.hyvexa.core.event.ModeEnterEvent;
 import io.hyvexa.core.event.ModeExitEvent;
 import io.hyvexa.core.state.PlayerMode;
@@ -27,6 +28,7 @@ import io.hyvexa.core.state.PlayerModeStateStore;
 
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 
 public class HubRouter {
@@ -38,6 +40,7 @@ public class HubRouter {
 
     private final PlayerModeStateStore stateStore;
     private final EventBus eventBus;
+    private final ConcurrentHashMap<UUID, HubHud> hubHuds = new ConcurrentHashMap<>();
 
     public HubRouter(PlayerModeStateStore stateStore, EventBus eventBus) {
         this.stateStore = stateStore;
@@ -107,6 +110,11 @@ public class HubRouter {
             if (targetMode == PlayerMode.HUB) {
                 clearInventory(player);
                 giveHubItems(player);
+                attachHubHud(playerRef, player);
+            }
+            if (targetMode == PlayerMode.ASCEND) {
+                clearInventory(player);
+                giveAscendItems(player);
             }
             fireModeEnter(playerRef, targetMode, previousMode);
         }, currentWorld);
@@ -240,6 +248,32 @@ public class HubRouter {
             return;
         }
         inventory.getHotbar().setItemStackForSlot((short) 0, new ItemStack(HubConstants.ITEM_SERVER_SELECTOR, 1), false);
+    }
+
+    private void attachHubHud(PlayerRef playerRef, Player player) {
+        if (playerRef == null || player == null) {
+            return;
+        }
+        HubHud hud = hubHuds.computeIfAbsent(playerRef.getUuid(), ignored -> new HubHud(playerRef));
+        player.getHudManager().setCustomHud(playerRef, hud);
+        hud.show();
+        hud.applyStaticText();
+    }
+
+    private static void giveAscendItems(Player player) {
+        if (player == null) {
+            return;
+        }
+        Inventory inventory = player.getInventory();
+        if (inventory == null || inventory.getHotbar() == null) {
+            return;
+        }
+        ItemContainer hotbar = inventory.getHotbar();
+        if (hotbar.getCapacity() <= 0) {
+            return;
+        }
+        short slot = (short) (hotbar.getCapacity() - 1);
+        hotbar.setItemStackForSlot(slot, new ItemStack(HubConstants.ITEM_SERVER_SELECTOR, 1), false);
     }
 
     private static void clearContainer(ItemContainer container) {

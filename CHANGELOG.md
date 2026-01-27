@@ -1,5 +1,29 @@
 # Changelog
 
+- Add Ascend data-layer constants, models, stores, and schema setup.
+- Initialize Ascend plugin bootstrap with database setup and store loading.
+- Add /ascend command with collect and stats handling.
+- Add AscendRunTracker for manual map completion tracking.
+- Add Ascend robot state tracking and manager skeleton.
+- Route hub menu Ascend button to the Ascend world instead of the coming-soon message.
+- Clear Ascend inventories on mode enter, then give the hub Server Selector in the last hotbar slot.
+- Clear inventory and give the hub Server Selector in the last slot when routing into Ascend.
+- Gate Ascend commands to Ascend mode and add the matching /menu prompt message.
+- Add ASCEND_CURRENT.md status document for current Ascend implementation.
+- Wire Ascend plugin integration (run tracker tick, robot manager start/stop, shutdown saves).
+- Add Ascend map admin commands under /as admin and player map select UI for manual runs.
+- Add Ascend admin map UI at /as admin for editing map start/finish/reward/waypoints.
+- Enlarge Ascend admin UI buttons and fields to prevent label cropping.
+- Allow updating Ascend maps via the admin UI after selecting a map.
+- Add Ascend Run HUD copy with coin/map progress display and show it in Ascend mode.
+- Add Ascend Run HUD UI copies in Pages/Custom paths to fix HUD element lookup.
+- Align Ascend HUD layout with Parkour HUD and override static labels for Ascend.
+- Delay Ascend HUD updates briefly after attach to avoid missing UI elements.
+- Remove the unused Ascend hidden HUD; keep a single Ascend HUD in all modes.
+- Simplify Ascend HUD to only show the HYVEXA ASCEND label.
+- Add a simple Hub HUD label and stop hiding HUDs on mode transitions.
+- Attach the Hub HUD only when entering HUB mode to avoid overriding Ascend HUD.
+- Attach the Hub HUD directly during hub routing so it always overrides previous mode HUDs.
 - Rename the Depths module and all mode references to Parkour Ascend across code, docs, and build outputs.
 - Improve hub routing world resolution with case-insensitive lookup and on-demand load fallback to avoid /menu landing in the wrong world.
 - Switch hub routing world names to "Hub", "Parkour", and "Ascend" to match capitalized world folders.

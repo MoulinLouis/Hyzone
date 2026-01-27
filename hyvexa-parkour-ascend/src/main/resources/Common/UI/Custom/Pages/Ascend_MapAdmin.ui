@@ -1,0 +1,172 @@
+$C = "../Common.ui";
+
+$C.@PageOverlay {
+  $C.@Container {
+    Anchor: (Width: 860, Height: 640);
+
+    #Title {
+      Group {
+        TextButton #CloseButton {
+          Anchor: (Left: 12, Top: 4, Width: 64, Height: 24);
+          Padding: (Left: 8, Top: 2);
+          Text: "Close";
+          Style: TextButtonStyle(
+            Default: (LabelStyle: (FontSize: 14, TextColor: #93844c, RenderBold: true)),
+            Sounds: $C.@ButtonSounds,
+          );
+          Background: #000000(0.13);
+        }
+        $C.@Title {
+          @Text = "Ascend Map Admin";
+        }
+      }
+    }
+
+    #Content {
+      LayoutMode: Left;
+      Padding: (Left: 12, Right: 12, Top: 6, Bottom: 12);
+
+      Group #FormColumn {
+        Anchor: (Width: 440);
+        LayoutMode: Top;
+
+        Label {
+          Style: (
+            FontSize: 16,
+            TextColor: #93844c,
+            RenderBold: true
+          );
+          Text: "Create / Update";
+        }
+
+        Label {
+          Text: "Map Id";
+          Style: (FontSize: 13, TextColor: #cfd7dc);
+        }
+
+        $C.@TextField #MapIdField {
+          Anchor: (Height: 30);
+          Style: (FontSize: 14, TextColor: #ffffff(0.85));
+        }
+
+        Label {
+          Text: "Map Name";
+          Style: (FontSize: 13, TextColor: #cfd7dc);
+          Anchor: (Top: 6);
+        }
+
+        $C.@TextField #MapNameField {
+          Anchor: (Height: 30);
+          Style: (FontSize: 14, TextColor: #ffffff(0.85));
+        }
+
+        Label {
+          Text: "Base Reward (coins)";
+          Style: (FontSize: 13, TextColor: #cfd7dc);
+          Anchor: (Top: 6);
+        }
+
+        $C.@TextField #MapRewardField {
+          Anchor: (Height: 30);
+          Style: (FontSize: 14, TextColor: #ffffff(0.85));
+        }
+
+        Label #SelectedMapText {
+          Anchor: (Top: 6);
+          Style: (FontSize: 13, TextColor: #9fb0ba);
+          Text: "Selected: (none)";
+        }
+
+        Group {
+          LayoutMode: Left;
+          Anchor: (Top: 8, Height: 32);
+
+          $C.@TextButton #CreateButton {
+            Anchor: (Width: 170, Height: 32);
+            Text: "Create";
+          }
+
+          $C.@TextButton #UpdateButton {
+            Anchor: (Left: 10, Width: 170, Height: 32);
+            Text: "Update";
+          }
+        }
+
+        Group {
+          LayoutMode: Left;
+          Anchor: (Top: 8, Height: 32);
+
+          $C.@TextButton #SetRewardButton {
+            Anchor: (Width: 170, Height: 32);
+            Text: "Set Reward";
+          }
+        }
+
+        Group {
+          LayoutMode: Left;
+          Anchor: (Top: 8, Height: 32);
+
+          $C.@TextButton #SetStartButton {
+            Anchor: (Width: 170, Height: 32);
+            Text: "Set Start";
+          }
+
+          $C.@TextButton #SetFinishButton {
+            Anchor: (Left: 10, Width: 170, Height: 32);
+            Text: "Set Finish";
+          }
+        }
+
+        Group {
+          LayoutMode: Left;
+          Anchor: (Top: 8, Height: 32);
+
+          $C.@TextButton #AddWaypointButton {
+            Anchor: (Width: 170, Height: 32);
+            Text: "Add Waypoint";
+          }
+
+          $C.@TextButton #ClearWaypointsButton {
+            Anchor: (Left: 10, Width: 170, Height: 32);
+            Text: "Clear Waypoints";
+          }
+        }
+      }
+
+      Group #ListColumn {
+        Anchor: (Left: 20, Width: 360);
+        LayoutMode: Top;
+
+        Label {
+          Style: (
+            FontSize: 16,
+            TextColor: #93844c,
+            RenderBold: true
+          );
+          Text: "Maps";
+        }
+
+        $C.@TextField #MapSearchField {
+          Anchor: (Top: 4, Height: 28);
+          Style: (FontSize: 13, TextColor: #ffffff(0.85));
+        }
+
+        Group #MapList {
+          Anchor: (Top: 6, Width: 340, Height: 470);
+          LayoutMode: TopScrolling;
+          Padding: (Left: 6, Right: 6);
+          ScrollbarStyle: $C.@DefaultScrollbarStyle;
+
+          Group #MapCards {
+            LayoutMode: Top;
+          }
+        }
+
+        $C.@TextButton #RefreshButton {
+          Anchor: (Top: 6, Width: 160, Height: 30);
+          Text: "Refresh";
+        }
+      }
+    }
+  }
+}

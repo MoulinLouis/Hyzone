@@ -77,8 +77,8 @@ public class HubMenuPage extends BaseHubPage {
             return;
         }
         if (BUTTON_ASCEND.equals(data.getButton())) {
-            if (player != null) {
-                player.sendMessage(Message.raw("Hyvexa: Parkour Ascend coming soon"));
+            if (playerRef != null) {
+                router.routeToAscend(playerRef);
             }
             this.close();
             return;
