@@ -49,6 +49,7 @@ Managers are instantiated in `HyvexaPlugin.setup()` and accessed via plugin help
 - **Source of truth**: Parkour data is stored in MySQL and loaded into memory on startup
 - **/dbmigrate JSON inputs** (required, no fallback): `Settings.json`, `GlobalMessages.json`,
   `PlayerCounts.json`, `Progress.json`, `Maps.json` in `mods/Parkour/`
+- **World names**: Hub routing expects capitalized worlds: `Hub`, `Parkour`, `Ascend`
 
 ## Current Features
 

@@ -85,11 +85,17 @@ $C.@PageOverlay {
         LayoutMode: Left;
         Padding: (Left: 64);
 
-        Group #DiscordBanner {
+        Button #DiscordBannerButton {
           Anchor: (Width: 220, Height: 44);
           LayoutMode: Left;
           Padding: (Left: 12, Right: 12, Top: 8, Bottom: 8);
           Background: #1f2f57(0.9);
+          Style: ButtonStyle(
+            Default: (Background: #1f2f57(0.9)),
+            Hovered: (Background: #2a3d6a(0.95)),
+            Pressed: (Background: #344a7a(0.98)),
+            Sounds: $C.@ButtonSounds,
+          );
 
           Group {
             Anchor: (Width: 42, Height: 32);
@@ -100,7 +106,7 @@ $C.@PageOverlay {
             Anchor: (Width: 10);
           }
 
-          Group {
+          Group #DiscordLabel {
             Anchor: (Width: 140, Height: 28);
             Padding: (Left: 12, Right: 12, Top: 4, Bottom: 4);
             Background: #5865f2(0.95);
@@ -117,17 +123,24 @@ $C.@PageOverlay {
               Text: "DISCORD";
             }
           }
+
         }
 
         Group {
           Anchor: (Width: 12);
         }
 
-        Group #StoreBanner {
+        Button #StoreBannerButton {
           Anchor: (Width: 220, Height: 44);
           LayoutMode: Left;
           Padding: (Left: 12, Right: 12, Top: 8, Bottom: 8);
           Background: #a35a1a(0.92);
+          Style: ButtonStyle(
+            Default: (Background: #a35a1a(0.92)),
+            Hovered: (Background: #b4661f(0.95)),
+            Pressed: (Background: #c17023(0.98)),
+            Sounds: $C.@ButtonSounds,
+          );
 
           Group {
             Anchor: (Width: 32, Height: 32);
@@ -138,7 +151,7 @@ $C.@PageOverlay {
             Anchor: (Width: 10);
           }
 
-          Group {
+          Group #StoreLabel {
             Anchor: (Width: 140, Height: 28);
             Padding: (Left: 12, Right: 12, Top: 4, Bottom: 4);
             Background: #e28a22(0.96);
@@ -155,6 +168,7 @@ $C.@PageOverlay {
               Text: "STORE";
             }
           }
+
         }
       }
 

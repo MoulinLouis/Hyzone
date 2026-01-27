@@ -32,9 +32,9 @@ import java.util.logging.Level;
 public class HubRouter {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final String HUB_WORLD_NAME = "hub";
-    private static final String PARKOUR_WORLD_NAME = "parkour";
-    private static final String ASCEND_WORLD_NAME = "ascend";
+    private static final String HUB_WORLD_NAME = "Hub";
+    private static final String PARKOUR_WORLD_NAME = "Parkour";
+    private static final String ASCEND_WORLD_NAME = "Ascend";
 
     private final PlayerModeStateStore stateStore;
     private final EventBus eventBus;

@@ -35,6 +35,7 @@ Technical design documentation for the Hyvexa multi-module plugin suite.
 - `hyvexa-parkour`: current Parkour gameplay plugin
 - `hyvexa-parkour-ascend`: placeholder for Parkour Ascend mode (to be implemented)
 - `hyvexa-hub`: hub routing + UI (mode switching, teleport routing)
+- Hub routing targets the capitalized world names: `Hub`, `Parkour`, `Ascend`
 
 Module boundaries:
 - Parkour/Ascend/Hub depend on Core only

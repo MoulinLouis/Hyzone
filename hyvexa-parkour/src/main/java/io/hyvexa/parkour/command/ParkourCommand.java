@@ -324,6 +324,7 @@ public class ParkourCommand extends AbstractAsyncCommand {
         hotbar.setItemStackForSlot((short) 1, new ItemStack(ParkourConstants.ITEM_LEADERBOARD, 1));
         hotbar.setItemStackForSlot((short) 2, new ItemStack(ParkourConstants.ITEM_STATS, 1));
         hotbar.setItemStackForSlot((short) 3, new ItemStack(ParkourConstants.ITEM_ADMIN_REMOTE, 1));
+        hotbar.setItemStackForSlot((short) 8, new ItemStack(ParkourConstants.ITEM_HUB_MENU, 1));
         player.sendMessage(Message.raw("Parkour items added to your inventory."));
     }
     private static String[] tokenize(CommandContext ctx) {

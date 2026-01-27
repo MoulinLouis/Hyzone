@@ -8,6 +8,7 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.SimpleInteraction;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.core.state.PlayerMode;
 import io.hyvexa.hub.HyvexaHubPlugin;
 import io.hyvexa.hub.ui.HubMenuPage;
 
@@ -26,12 +27,21 @@ public class HubMenuInteraction extends SimpleInteraction {
         if (plugin == null) {
             return;
         }
+        var router = plugin.getRouter();
+        if (router == null) {
+            return;
+        }
         var store = ref.getStore();
         var player = store.getComponent(ref, Player.getComponentType());
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (player == null || playerRef == null) {
             return;
         }
-        player.getPageManager().openCustomPage(ref, store, new HubMenuPage(playerRef, plugin.getRouter()));
+        PlayerMode mode = router.getCurrentMode(playerRef.getUuid());
+        if (mode == PlayerMode.HUB) {
+            player.getPageManager().openCustomPage(ref, store, new HubMenuPage(playerRef, router));
+            return;
+        }
+        router.routeToHub(playerRef);
     }
 }
