@@ -453,12 +453,11 @@ public class HyvexaPlugin extends JavaPlugin {
                 }
                 CompletableFuture.runAsync(() -> {
                     Player player = store.getComponent(ref, Player.getComponentType());
-                    if (player != null) {
-                        InventoryUtils.clearAllItems(player);
-                    }
-                    runTracker.clearPlayer(playerRef.getUuid());
-                    hideRunHud(playerRef);
-                }, world);
+                        if (player != null) {
+                            InventoryUtils.clearAllItems(player);
+                        }
+                        runTracker.clearPlayer(playerRef.getUuid());
+                    }, world);
             } catch (Exception e) {
                 LOGGER.at(Level.WARNING).log("Exception in ModeExitEvent (parkour): " + e.getMessage());
             }
@@ -671,9 +670,6 @@ public class HyvexaPlugin extends JavaPlugin {
                     }
                     UUID playerId = context.playerRef != null ? context.playerRef.getUuid() : null;
                     if (!shouldApplyParkourMode(playerId)) {
-                        if (hudManager != null && context.playerRef != null) {
-                            hudManager.hideRunHud(context.playerRef);
-                        }
                         continue;
                     }
                     if (runTracker != null) {
@@ -710,9 +706,6 @@ public class HyvexaPlugin extends JavaPlugin {
                     }
                     UUID playerId = context.playerRef != null ? context.playerRef.getUuid() : null;
                     if (!shouldApplyParkourMode(playerId)) {
-                        if (hudManager != null && context.playerRef != null) {
-                            hudManager.hideRunHud(context.playerRef);
-                        }
                         continue;
                     }
                     if (hudManager != null) {

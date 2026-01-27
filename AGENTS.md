@@ -65,6 +65,18 @@ Managers are instantiated in `HyvexaPlugin.setup()` and accessed via plugin help
 | `/store` | Display store link |
 | `/menu` | Open hub mode selector |
 
+### Ascend (Current)
+- `/ascend` opens Ascend map selector UI (manual runs).
+- `/ascend collect` collects pending Ascend coins.
+- `/ascend stats` shows current Ascend coin balance.
+- Hub menu Ascend button routes to the Ascend world.
+- Ascend mode clears inventory and gives the hub Server Selector in the last hotbar slot.
+- Ascend mode shows a minimal HUD label: "HYVEXA ASCEND".
+
+### Ascend Admin (OP only)
+- `/as admin` opens Ascend map admin UI.
+- `/as admin map <create|setstart|setfinish|addwaypoint|clearwaypoints|setreward|list>` for map setup.
+
 ### Admin Commands (OP only)
 | Command | Function |
 |---------|----------|

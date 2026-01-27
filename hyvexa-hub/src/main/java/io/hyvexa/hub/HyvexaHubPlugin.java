@@ -11,10 +11,12 @@ import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.core.event.ModeEnterEvent;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.core.state.PlayerMode;
 import io.hyvexa.core.state.PlayerModeStateStore;
 import io.hyvexa.hub.command.HubCommand;
+import io.hyvexa.hub.hud.HubHud;
 import io.hyvexa.hub.interaction.HubMenuInteraction;
 import io.hyvexa.hub.routing.HubRouter;
 
@@ -33,6 +35,7 @@ public class HyvexaHubPlugin extends JavaPlugin {
 
     private PlayerModeStateStore modeStore;
     private HubRouter router;
+    private final java.util.concurrent.ConcurrentHashMap<UUID, HubHud> hubHuds = new java.util.concurrent.ConcurrentHashMap<>();
 
     public HyvexaHubPlugin(@Nonnull JavaPluginInit init) {
         super(init);
@@ -77,10 +80,48 @@ public class HyvexaHubPlugin extends JavaPlugin {
             PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
             ensureHubState(playerRef);
         });
+        this.getEventRegistry().registerGlobal(ModeEnterEvent.class, event -> {
+            if (event.getMode() != PlayerMode.HUB) {
+                return;
+            }
+            PlayerRef playerRef = event.getPlayerRef();
+            if (playerRef == null) {
+                return;
+            }
+            Ref<EntityStore> ref = playerRef.getReference();
+            if (ref == null || !ref.isValid()) {
+                return;
+            }
+            Store<EntityStore> store = ref.getStore();
+            attachHubHud(ref, store, playerRef);
+        });
 
         for (PlayerRef playerRef : Universe.get().getPlayers()) {
             ensureHubState(playerRef);
         }
+    }
+
+    private void attachHubHud(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef) {
+        if (playerRef == null) {
+            return;
+        }
+        var world = store.getExternalData().getWorld();
+        if (world == null) {
+            return;
+        }
+        java.util.concurrent.CompletableFuture.runAsync(() -> {
+            if (!ref.isValid() || !playerRef.isValid()) {
+                return;
+            }
+            var player = store.getComponent(ref, com.hypixel.hytale.server.core.entity.entities.Player.getComponentType());
+            if (player == null) {
+                return;
+            }
+            HubHud hud = hubHuds.computeIfAbsent(playerRef.getUuid(), ignored -> new HubHud(playerRef));
+            player.getHudManager().setCustomHud(playerRef, hud);
+            hud.show();
+            hud.applyStaticText();
+        }, world);
     }
 
     private void registerInteractionCodecs() {
