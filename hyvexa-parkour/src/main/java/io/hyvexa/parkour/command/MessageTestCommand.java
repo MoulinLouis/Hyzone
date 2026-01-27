@@ -28,7 +28,7 @@ public class MessageTestCommand extends AbstractPlayerCommand {
     @Override
     protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref,
                            @Nonnull PlayerRef playerRef, @Nonnull World world) {
-        if (ParkourModeGate.denyIfNotParkour(ctx, playerRef.getUuid())) {
+        if (ParkourModeGate.denyIfNotParkour(ctx, world)) {
             return;
         }
         Player player = store.getComponent(ref, Player.getComponentType());

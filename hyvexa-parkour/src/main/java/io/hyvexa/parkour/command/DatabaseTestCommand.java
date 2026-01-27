@@ -1,11 +1,15 @@
 package io.hyvexa.parkour.command;
 
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractAsyncCommand;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.parkour.util.ParkourModeGate;
@@ -30,8 +34,13 @@ public class DatabaseTestCommand extends AbstractAsyncCommand {
             commandContext.sendMessage(Message.raw("This command must be run by a player."));
             return CompletableFuture.completedFuture(null);
         }
-        if (ParkourModeGate.denyIfNotParkour(commandContext, ParkourModeGate.resolvePlayerId(player))) {
-            return CompletableFuture.completedFuture(null);
+        Ref<EntityStore> ref = player.getReference();
+        if (ref != null && ref.isValid()) {
+            Store<EntityStore> store = ref.getStore();
+            World world = store.getExternalData().getWorld();
+            if (ParkourModeGate.denyIfNotParkour(commandContext, world)) {
+                return CompletableFuture.completedFuture(null);
+            }
         }
         if (!PermissionUtils.isOp(player)) {
             commandContext.sendMessage(MESSAGE_OP_REQUIRED);

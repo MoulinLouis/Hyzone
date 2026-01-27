@@ -22,9 +22,8 @@ import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.hud.AscendHud;
 import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
-import io.hyvexa.core.event.ModeEnterEvent;
-import io.hyvexa.core.state.ModeGate;
-import io.hyvexa.core.state.PlayerMode;
+import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
+import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
@@ -41,6 +40,7 @@ import java.util.logging.Level;
 public class ParkourAscendPlugin extends JavaPlugin {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
+    private static final String ASCEND_WORLD_NAME = "Ascend";
     private static ParkourAscendPlugin INSTANCE;
 
     private AscendMapStore mapStore;
@@ -78,22 +78,19 @@ public class ParkourAscendPlugin extends JavaPlugin {
         getCommandRegistry().registerCommand(new AscendCommand());
         getCommandRegistry().registerCommand(new AscendAdminCommand());
 
-        this.getEventRegistry().registerGlobal(ModeEnterEvent.class, event -> {
+        this.getEventRegistry().registerGlobal(PlayerReadyEvent.class, event -> {
             try {
-                if (event.getMode() != PlayerMode.ASCEND) {
-                    return;
-                }
-                PlayerRef playerRef = event.getPlayerRef();
-                if (playerRef == null) {
-                    return;
-                }
-                Ref<EntityStore> ref = playerRef.getReference();
+                Ref<EntityStore> ref = event.getPlayerRef();
                 if (ref == null || !ref.isValid()) {
                     return;
                 }
                 Store<EntityStore> store = ref.getStore();
                 World world = store.getExternalData().getWorld();
-                if (world == null) {
+                if (world == null || !isAscendWorld(world)) {
+                    return;
+                }
+                PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+                if (playerRef == null) {
                     return;
                 }
                 CompletableFuture.runAsync(() -> {
@@ -105,7 +102,24 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     attachAscendHud(playerRef, player);
                 }, world);
             } catch (Exception e) {
-                LOGGER.at(Level.WARNING).log("Exception in ModeEnterEvent (ascend): " + e.getMessage());
+                LOGGER.at(Level.WARNING).log("Exception in PlayerReadyEvent (ascend): " + e.getMessage());
+            }
+        });
+
+        this.getEventRegistry().registerGlobal(PlayerDisconnectEvent.class, event -> {
+            PlayerRef playerRef = event.getPlayerRef();
+            if (playerRef == null) {
+                return;
+            }
+            UUID playerId = playerRef.getUuid();
+            if (playerId == null) {
+                return;
+            }
+            ascendHuds.remove(playerId);
+            ascendHudAttached.remove(playerId);
+            ascendHudReadyAt.remove(playerId);
+            if (runTracker != null) {
+                runTracker.cancelRun(playerId);
             }
         });
 
@@ -162,14 +176,13 @@ public class ParkourAscendPlugin extends JavaPlugin {
         Map<World, List<PlayerTickContext>> playersByWorld = collectPlayersByWorld();
         for (Map.Entry<World, List<PlayerTickContext>> entry : playersByWorld.entrySet()) {
             World world = entry.getKey();
+            if (!isAscendWorld(world)) {
+                continue;
+            }
             List<PlayerTickContext> players = entry.getValue();
             CompletableFuture.runAsync(() -> {
                 for (PlayerTickContext context : players) {
                     if (context.ref == null || !context.ref.isValid()) {
-                        continue;
-                    }
-                    UUID playerId = context.playerRef != null ? context.playerRef.getUuid() : null;
-                    if (!ModeGate.isMode(playerId, PlayerMode.ASCEND)) {
                         continue;
                     }
                     runTracker.checkPlayer(context.ref, context.store);
@@ -185,14 +198,14 @@ public class ParkourAscendPlugin extends JavaPlugin {
             return;
         }
         UUID playerId = context.playerRef.getUuid();
-        if (!Boolean.TRUE.equals(ascendHudAttached.get(playerId))) {
+        AscendHud hud = ascendHuds.get(playerId);
+        boolean needsAttach = !Boolean.TRUE.equals(ascendHudAttached.get(playerId));
+        if (needsAttach || hud == null) {
             attachAscendHud(context.playerRef, player);
             return;
         }
-        AscendHud hud = ascendHuds.get(playerId);
-        if (hud == null) {
-            return;
-        }
+        // Always ensure HUD is set on player (in case they came from another world)
+        player.getHudManager().setCustomHud(context.playerRef, hud);
         long readyAt = ascendHudReadyAt.getOrDefault(playerId, Long.MAX_VALUE);
         if (System.currentTimeMillis() < readyAt) {
             return;
@@ -244,6 +257,13 @@ public class ParkourAscendPlugin extends JavaPlugin {
         hud.applyStaticText();
         ascendHudAttached.put(playerRef.getUuid(), true);
         ascendHudReadyAt.put(playerRef.getUuid(), System.currentTimeMillis() + 250L);
+    }
+
+    private boolean isAscendWorld(World world) {
+        if (world == null || world.getName() == null) {
+            return false;
+        }
+        return ASCEND_WORLD_NAME.equalsIgnoreCase(world.getName());
     }
 
     private static void resetAscendInventory(Player player) {

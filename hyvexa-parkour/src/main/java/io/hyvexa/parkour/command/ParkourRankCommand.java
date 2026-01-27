@@ -1,5 +1,7 @@
 package io.hyvexa.parkour.command;
 
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -8,6 +10,8 @@ import com.hypixel.hytale.server.core.command.system.basecommands.AbstractAsyncC
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
+import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.parkour.data.ProgressStore;
 import io.hyvexa.parkour.util.ParkourModeGate;
@@ -35,8 +39,13 @@ public class ParkourRankCommand extends AbstractAsyncCommand {
     protected CompletableFuture<Void> executeAsync(CommandContext commandContext) {
         CommandSender sender = commandContext.sender();
         if (sender instanceof Player player) {
-            if (ParkourModeGate.denyIfNotParkour(commandContext, ParkourModeGate.resolvePlayerId(player))) {
-                return CompletableFuture.completedFuture(null);
+            Ref<EntityStore> ref = player.getReference();
+            if (ref != null && ref.isValid()) {
+                Store<EntityStore> store = ref.getStore();
+                World world = store.getExternalData().getWorld();
+                if (ParkourModeGate.denyIfNotParkour(commandContext, world)) {
+                    return CompletableFuture.completedFuture(null);
+                }
             }
             if (!PermissionUtils.isOp(player)) {
                 commandContext.sendMessage(MESSAGE_OP_REQUIRED);

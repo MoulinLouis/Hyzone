@@ -69,7 +69,7 @@ public class ParkourCommand extends AbstractAsyncCommand {
             Store<EntityStore> store = ref.getStore();
             World world = store.getExternalData().getWorld();
             return CompletableFuture.runAsync(() -> {
-                handleCommand(commandContext, player, ref, store);
+                handleCommand(commandContext, player, ref, store, world);
             }, world);
         }
         commandContext.sendMessage(MESSAGE_COMMANDS_ERRORS_PLAYER_NOT_IN_WORLD);
@@ -85,9 +85,9 @@ public class ParkourCommand extends AbstractAsyncCommand {
         ctx.sendMessage(Message.raw("Usage: /pk admin rank <give|remove|broadcast> <player|uuid> <vip|founder>"));
     }
 
-    private void handleCommand(CommandContext ctx, Player player, Ref<EntityStore> ref, Store<EntityStore> store) {
+    private void handleCommand(CommandContext ctx, Player player, Ref<EntityStore> ref, Store<EntityStore> store, World world) {
         PlayerRef playerRefComponent = store.getComponent(ref, PlayerRef.getComponentType());
-        if (playerRefComponent != null && ParkourModeGate.denyIfNotParkour(ctx, playerRefComponent.getUuid())) {
+        if (ParkourModeGate.denyIfNotParkour(ctx, world)) {
             return;
         }
         if (playerRefComponent != null) {

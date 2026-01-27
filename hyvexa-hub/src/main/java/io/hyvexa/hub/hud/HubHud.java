@@ -26,4 +26,8 @@ public class HubHud extends CustomUIHud {
         commandBuilder.set("#PlayerNameText.Text", "HYVEXA HUB");
         update(false, commandBuilder);
     }
+
+    public void resetCache() {
+        applied = false;
+    }
 }

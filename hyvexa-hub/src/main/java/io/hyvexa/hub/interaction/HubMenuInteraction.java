@@ -7,14 +7,16 @@ import com.hypixel.hytale.server.core.entity.InteractionContext;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.SimpleInteraction;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.core.state.PlayerMode;
 import io.hyvexa.hub.HyvexaHubPlugin;
 import io.hyvexa.hub.ui.HubMenuPage;
 
 import javax.annotation.Nonnull;
 
 public class HubMenuInteraction extends SimpleInteraction {
+
+    private static final String HUB_WORLD_NAME = "Hub";
 
     public static final BuilderCodec<HubMenuInteraction> CODEC =
             BuilderCodec.builder(HubMenuInteraction.class, HubMenuInteraction::new).build();
@@ -37,8 +39,8 @@ public class HubMenuInteraction extends SimpleInteraction {
         if (player == null || playerRef == null) {
             return;
         }
-        PlayerMode mode = router.getCurrentMode(playerRef.getUuid());
-        if (mode == PlayerMode.HUB) {
+        World world = store.getExternalData().getWorld();
+        if (world != null && HUB_WORLD_NAME.equalsIgnoreCase(world.getName())) {
             player.getPageManager().openCustomPage(ref, store, new HubMenuPage(playerRef, router));
             return;
         }

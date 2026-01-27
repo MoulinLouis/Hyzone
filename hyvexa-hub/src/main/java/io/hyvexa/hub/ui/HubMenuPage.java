@@ -12,6 +12,7 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.ui.ButtonEventData;
+import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.hub.routing.HubRouter;
 
 import javax.annotation.Nonnull;
@@ -31,6 +32,11 @@ public class HubMenuPage extends BaseHubPage {
     private static final Message MESSAGE_STORE = Message.join(
             Message.raw("Store: "),
             Message.raw("store.hyvexa.com").color(LINK_COLOR).link("https://store.hyvexa.com")
+    );
+    private static final Message MESSAGE_ASCEND_COMING_SOON = Message.join(
+            Message.raw("Hyvexa: ").color("#ff8a3d"),
+            Message.raw("Parkour Ascend is coming soon. More infos on "),
+            Message.raw("/discord").color(LINK_COLOR)
     );
 
     private final HubRouter router;
@@ -77,6 +83,11 @@ public class HubMenuPage extends BaseHubPage {
             return;
         }
         if (BUTTON_ASCEND.equals(data.getButton())) {
+            if (player != null && !PermissionUtils.isOp(player)) {
+                player.sendMessage(MESSAGE_ASCEND_COMING_SOON);
+                this.close();
+                return;
+            }
             if (playerRef != null) {
                 router.routeToAscend(playerRef);
             }
