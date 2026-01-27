@@ -1,5 +1,65 @@
 # Changelog
 
+- Prevent Parkour/Ascend HUD updates outside their worlds so Hub/Ascend/Parkour HUDs stay in sync when switching modes.
+- Ensure Hub HUD reattaches on player ready when in the Hub world, covering mode switches and relogs.
+- Reattach Parkour HUD on player ready when returning to Parkour mode after a relog.
+- Continuously enforce Hub HUD while in the Hub world to override lingering Parkour HUDs after mode switches.
+- Force players back to Hub on reconnect by resetting mode to HUB on disconnect and on ready.
+- Add Ascend data-layer constants, models, stores, and schema setup.
+- Initialize Ascend plugin bootstrap with database setup and store loading.
+- Add /ascend command with collect and stats handling.
+- Add AscendRunTracker for manual map completion tracking.
+- Add Ascend robot state tracking and manager skeleton.
+- Route hub menu Ascend button to the Ascend world instead of the coming-soon message.
+- Clear Ascend inventories on mode enter, then give the hub Server Selector in the last hotbar slot.
+- Clear inventory and give the hub Server Selector in the last slot when routing into Ascend.
+- Gate Ascend commands to Ascend mode and add the matching /menu prompt message.
+- Add ASCEND_CURRENT.md status document for current Ascend implementation.
+- Wire Ascend plugin integration (run tracker tick, robot manager start/stop, shutdown saves).
+- Add Ascend map admin commands under /as admin and player map select UI for manual runs.
+- Add Ascend admin map UI at /as admin for editing map start/finish/reward/waypoints.
+- Enlarge Ascend admin UI buttons and fields to prevent label cropping.
+- Allow updating Ascend maps via the admin UI after selecting a map.
+- Add Ascend Run HUD copy with coin/map progress display and show it in Ascend mode.
+- Add Ascend Run HUD UI copies in Pages/Custom paths to fix HUD element lookup.
+- Align Ascend HUD layout with Parkour HUD and override static labels for Ascend.
+- Delay Ascend HUD updates briefly after attach to avoid missing UI elements.
+- Remove the unused Ascend hidden HUD; keep a single Ascend HUD in all modes.
+- Simplify Ascend HUD to only show the HYVEXA ASCEND label.
+- Add a simple Hub HUD label and stop hiding HUDs on mode transitions.
+- Attach the Hub HUD only when entering HUB mode to avoid overriding Ascend HUD.
+- Attach the Hub HUD directly during hub routing so it always overrides previous mode HUDs.
+- Rename the Depths module and all mode references to Parkour Ascend across code, docs, and build outputs.
+- Improve hub routing world resolution with case-insensitive lookup and on-demand load fallback to avoid /menu landing in the wrong world.
+- Switch hub routing world names to "Hub", "Parkour", and "Ascend" to match capitalized world folders.
+- Disable Parkour Ascend routing from the hub menu and show a coming-soon message instead.
+- Add hover feedback on the Discord and Store banners in the hub menu.
+- Wire Discord/Store banner clicks to the same link messages as /discord and /store.
+- Add a Discord banner graphic to the hub menu UI.
+- Add a store banner graphic to the hub menu UI.
+- Route players to the Parkour Ascend world when selecting it from the hub menu.
+- Add the Hyvexa hub plugin with mode state persistence, /menu routing, and a basic hub menu UI for Parkour/Parkour Ascend selection.
+- Give hub players a Server Selector hotbar item backed by a custom icon asset.
+- Open the hub menu when right-clicking the hub Server Selector item.
+- Swap the hub Server Selector item model to use the custom golem blockymodel.
+- Add the hub Server Selector item to the parkour hotbar in slot 9.
+- Route players to the hub when they use the Server Selector item outside the hub.
+- Rename the hub command to /menu to avoid clashing with the built-in /hub command.
+- Shade core into hub/ascend jars, add a staging task to copy plugin jars to run/mods, add a Parkour Ascend plugin stub manifest/entrypoint, and rename the parkour jar to HyvexaParkour-<version>.jar.
+- Clear player inventories when routing into the hub so players start with no items until they choose a mode via /menu.
+- Gate parkour commands and HUD updates to PARKOUR mode so hub players can’t use parkour commands or see the parkour HUD.
+- Add shared ModeGate/ModeMessages helpers in core to centralize mode checks and messaging across modules.
+- Resolve parkour mode gating without deprecated Player.getUuid() calls in commands.
+- Convert the plugin to a multi-module Gradle layout with core, parkour, parkour-ascend, and hub modules.
+- Update ARCHITECTURE.md and DATABASE.md for the multi-module layout and shared database.
+- Document ARCHITECTURE.md and DATABASE.md references in AGENTS.md.
+- Revise Hyvexa: Parkour Ascend integration plan to use a multi-module architecture from day one.
+- Clarify hub routing authority, world-thread rules, and shared MySQL continuity in the Parkour Ascend plan.
+- Tighten threading rules, add routing failsafes, and specify UUID-backed shared MySQL identity for split-server.
+- Assign hub routing to a dedicated hyvexa-hub module and slim PlayerModeState plus Parkour Ascend-only economy in the plan.
+- Add integration approach documentation for the Hyvexa: Parkour Ascend mode.
+- Update mode naming in planning docs to Hyvexa: Parkour and Hyvexa: Parkour Ascend.
+- Remove legacy parkour compatibility shims from the old io.parkour package.
 - Add a code review guide with checklists, severity labels, and hotspot callouts.
 - Add per-query DB timeouts and validate countRows table names for safer persistence.
 - Warn players when completion saves fail and guard checkpoint access against null/empty lists.
@@ -328,3 +388,4 @@
 - Increased Support/Store icon sizes and row heights for better alignment.
 - Extended Run HUD background bottom padding/height for the footer.
 - Added /dbreload to reload Parkour/database.json and display sanitized connection settings, including the config path.
+

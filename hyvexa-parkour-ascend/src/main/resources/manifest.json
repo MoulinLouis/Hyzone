@@ -1,0 +1,22 @@
+{
+    "Group": "io.hyvexa",
+    "Name": "HyvexaParkourAscend",
+    "Version": "0.0.2",
+    "Description": "Hyvexa Parkour Ascend plugin",
+    "Authors": [
+        {
+            "Name": "Playfade"
+        }
+    ],
+    "Website": "",
+    "ServerVersion": "*",
+    "Dependencies": {
+        
+    },
+    "OptionalDependencies": {
+        
+    },
+    "DisabledByDefault": false,
+    "Main": "io.hyvexa.ascend.ParkourAscendPlugin",
+    "IncludesAssetPack": true
+}
