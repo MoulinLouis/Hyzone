@@ -1,5 +1,9 @@
 # Changelog
 
+- Clear inventory on Hub ready so only the Server Selector is present after reconnects.
+- Extended the Hub HUD background to fully enclose the store line.
+- Added a Hub HUD hint about right-clicking the Server Selector item to choose a mode.
+- Added IP and Support Hyvexa promo section to the Hub HUD.
 - Prevent Parkour/Ascend HUD updates outside their worlds so Hub/Ascend/Parkour HUDs stay in sync when switching modes.
 - Ensure Hub HUD reattaches on player ready when in the Hub world, covering mode switches and relogs.
 - Reattach Parkour HUD on player ready when returning to Parkour mode after a relog.

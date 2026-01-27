@@ -1,6 +1,6 @@
 {
   "TranslationProperties": {
-    "Name": "Server Selector",
+    "Name": "Game Selector",
     "Description": "Server selection item."
   },
   "Icon": "Icons/ItemsGenerated/golem.png",

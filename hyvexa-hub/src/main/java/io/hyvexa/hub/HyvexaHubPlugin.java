@@ -104,6 +104,7 @@ public class HyvexaHubPlugin extends JavaPlugin {
                 if (player == null) {
                     return;
                 }
+                clearInventory(player);
                 giveHubItems(player);
                 attachHubHud(ref, store, playerRef);
             }, world);
@@ -192,6 +193,29 @@ public class HyvexaHubPlugin extends JavaPlugin {
             return;
         }
         inventory.getHotbar().setItemStackForSlot((short) 0, new ItemStack(HubConstants.ITEM_SERVER_SELECTOR, 1), false);
+    }
+
+    private static void clearInventory(Player player) {
+        if (player == null) {
+            return;
+        }
+        Inventory inventory = player.getInventory();
+        if (inventory == null) {
+            return;
+        }
+        clearContainer(inventory.getHotbar());
+        clearContainer(inventory.getStorage());
+        clearContainer(inventory.getBackpack());
+        clearContainer(inventory.getTools());
+        clearContainer(inventory.getUtility());
+        clearContainer(inventory.getArmor());
+    }
+
+    private static void clearContainer(ItemContainer container) {
+        if (container == null) {
+            return;
+        }
+        container.clear();
     }
 
     private void tickHubHud() {
