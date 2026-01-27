@@ -1,0 +1,312 @@
+$C = "../Common.ui";
+
+$C.@PageOverlay {
+  $C.@Container {
+    Anchor: (Width: 920, Height: 760);
+
+    #Title {
+      Group {
+        TextButton #BackButton {
+          Anchor: (Left: 12, Top: 4, Width: 64, Height: 24);
+          Padding: (Left: 8, Top: 2);
+          Text: "< Back";
+          Style: TextButtonStyle(
+            Default: (LabelStyle: (FontSize: 14, TextColor: #93844c, RenderBold: true)),
+            Sounds: $C.@ButtonSounds,
+          );
+          Background: #000000(0.13);
+        }
+        $C.@Title {
+          @Text = "Map Admin";
+        }
+      }
+    }
+
+    #Content {
+      LayoutMode: Left;
+      Padding: (Left: 12, Right: 12, Top: 6, Bottom: 12);
+
+      Group #MapFormColumn {
+        Anchor: (Width: 560);
+        LayoutMode: Top;
+
+        Label {
+          Style: (
+            FontSize: 16,
+            TextColor: #93844c,
+            RenderBold: true
+          );
+          Text: "Create or Update";
+        }
+
+        Label {
+          Text: "Map Id";
+          Style: (FontSize: 13, TextColor: #cfd7dc);
+        }
+
+        $C.@TextField #MapIdField {
+          Anchor: (Height: 26);
+          Style: (FontSize: 14, TextColor: #ffffff(0.85));
+        }
+
+        Label {
+          Text: "Map Name";
+          Style: (FontSize: 13, TextColor: #cfd7dc);
+          Anchor: (Top: 6);
+        }
+
+        $C.@TextField #MapNameField {
+          Anchor: (Height: 26);
+          Style: (FontSize: 14, TextColor: #ffffff(0.85));
+        }
+
+        Label {
+          Text: "Category";
+          Style: (FontSize: 13, TextColor: #cfd7dc);
+          Anchor: (Top: 6);
+        }
+
+        $C.@TextField #MapCategoryField {
+          Anchor: (Height: 26);
+          Style: (FontSize: 14, TextColor: #ffffff(0.85));
+        }
+
+        Label {
+          Text: "First Completion XP";
+          Style: (FontSize: 13, TextColor: #cfd7dc);
+          Anchor: (Top: 6);
+        }
+
+        $C.@TextField #MapFirstCompletionXpField {
+          Anchor: (Height: 26);
+          Style: (FontSize: 14, TextColor: #ffffff(0.85));
+        }
+
+        Label {
+          Text: "Difficulty (lower first)";
+          Style: (FontSize: 13, TextColor: #cfd7dc);
+          Anchor: (Top: 6);
+        }
+
+        $C.@TextField #MapDifficultyField {
+          Anchor: (Height: 26);
+          Style: (FontSize: 14, TextColor: #ffffff(0.85));
+        }
+
+        Label {
+          Text: "Order (lower first)";
+          Style: (FontSize: 13, TextColor: #cfd7dc);
+          Anchor: (Top: 6);
+        }
+
+        $C.@TextField #MapOrderField {
+          Anchor: (Height: 26);
+          Style: (FontSize: 14, TextColor: #ffffff(0.85));
+        }
+
+        Label {
+          Text: "Free Fall (disable fall respawn time)";
+          Style: (FontSize: 13, TextColor: #cfd7dc);
+          Anchor: (Top: 6);
+        }
+
+        Group {
+          LayoutMode: Left;
+          Anchor: (Top: 4, Height: 22);
+
+          Label #FreeFallValue {
+            Anchor: (Width: 120);
+            Style: (FontSize: 12, TextColor: #9fb0ba);
+            Text: "";
+          }
+
+          $C.@TextButton #FreeFallToggle {
+            Anchor: (Width: 120, Height: 22);
+            Text: "Toggle";
+          }
+        }
+
+        Label {
+          Text: "Enable duel matchmaking";
+          Style: (FontSize: 13, TextColor: #cfd7dc);
+          Anchor: (Top: 6);
+        }
+
+        Group {
+          LayoutMode: Left;
+          Anchor: (Top: 4, Height: 22);
+
+          Label #DuelEnabledValue {
+            Anchor: (Width: 120);
+            Style: (FontSize: 12, TextColor: #9fb0ba);
+            Text: "";
+          }
+
+          $C.@TextButton #DuelEnabledToggle {
+            Anchor: (Width: 120, Height: 22);
+            Text: "Toggle";
+          }
+        }
+
+        Label {
+          Text: "Mithril Sword (run item)";
+          Style: (FontSize: 13, TextColor: #cfd7dc);
+          Anchor: (Top: 6);
+        }
+
+        Group {
+          LayoutMode: Left;
+          Anchor: (Top: 4, Height: 22);
+
+          Label #MithrilSwordValue {
+            Anchor: (Width: 120);
+            Style: (FontSize: 12, TextColor: #9fb0ba);
+            Text: "";
+          }
+
+          $C.@TextButton #MithrilSwordToggle {
+            Anchor: (Width: 120, Height: 22);
+            Text: "Toggle";
+          }
+        }
+
+        Label {
+          Text: "Mithril Daggers (run item)";
+          Style: (FontSize: 13, TextColor: #cfd7dc);
+          Anchor: (Top: 6);
+        }
+
+        Group {
+          LayoutMode: Left;
+          Anchor: (Top: 4, Height: 22);
+
+          Label #MithrilDaggersValue {
+            Anchor: (Width: 120);
+            Style: (FontSize: 12, TextColor: #9fb0ba);
+            Text: "";
+          }
+
+          $C.@TextButton #MithrilDaggersToggle {
+            Anchor: (Width: 120, Height: 22);
+            Text: "Toggle";
+          }
+        }
+
+        Label #SelectedMapText {
+          Anchor: (Top: 6);
+          Style: (FontSize: 13, TextColor: #9fb0ba);
+          Text: "Selected: (none)";
+        }
+
+        Group {
+          LayoutMode: Left;
+          Padding: (Top: 8);
+
+          Group {
+            Anchor: (Width: 280);
+            LayoutMode: Top;
+
+            $C.@TextButton #CreateMapButton {
+              Anchor: (Height: 22, Width: 260);
+              Text: "Create";
+            }
+
+            $C.@TextButton #SetStartButton {
+              Anchor: (Height: 22, Width: 260, Top: 6);
+              Text: "Set Start";
+            }
+
+            $C.@TextButton #SetFinishButton {
+              Anchor: (Height: 22, Width: 260, Top: 6);
+              Text: "Set Finish";
+            }
+
+            $C.@TextButton #AddCheckpointButton {
+              Anchor: (Height: 22, Width: 260, Top: 6);
+              Text: "Add Checkpoint";
+            }
+
+            $C.@TextButton #SetStartTriggerButton {
+              Anchor: (Height: 22, Width: 260, Top: 6);
+              Text: "Start Trigger";
+            }
+          }
+
+          Group {
+            Anchor: (Width: 280);
+            LayoutMode: Top;
+
+            $C.@TextButton #SetLeaveTriggerButton {
+              Anchor: (Height: 22, Width: 260);
+              Text: "Leave Trigger";
+            }
+
+            $C.@TextButton #SetLeaveTeleportButton {
+              Anchor: (Height: 22, Width: 260, Top: 6);
+              Text: "Leave Teleport";
+            }
+
+            $C.@TextButton #UpdateMapButton {
+              Anchor: (Height: 22, Width: 260, Top: 6);
+              Text: "Update Selected";
+            }
+
+            $C.@TextButton #DeleteMapButton {
+              Anchor: (Height: 22, Width: 260, Top: 6);
+              Text: "Delete Map";
+            }
+
+            $C.@TextButton #RefreshButton {
+              Anchor: (Height: 22, Width: 260, Top: 6);
+              Text: "Refresh";
+            }
+          }
+        }
+      }
+
+      Group #MapSpacer {
+        Anchor: (Width: 12);
+      }
+
+      Group #MapListColumn {
+        Anchor: (Width: 320);
+        LayoutMode: Top;
+
+        Label {
+          Anchor: (Top: 10);
+          Style: (
+            FontSize: 16,
+            TextColor: #93844c,
+            RenderBold: true
+          );
+          Text: "Maps";
+        }
+
+        Label {
+          Anchor: (Top: 6);
+          Style: (FontSize: 12, TextColor: #9fb0ba);
+          Text: "Search";
+        }
+
+        $C.@TextField #MapSearchField {
+          Anchor: (Height: 24, Top: 4);
+          Style: (FontSize: 13, TextColor: #ffffff(0.85));
+        }
+
+        Group #MapList {
+          Anchor: (Width: 320, Top: 6, Height: 600);
+          FlexWeight: 1;
+          LayoutMode: TopScrolling;
+          Padding: (Left: 6, Right: 6);
+          ScrollbarStyle: $C.@DefaultScrollbarStyle;
+
+          Group #MapCards {
+            LayoutMode: Top;
+          }
+        }
+      }
+    }
+  }
+}
+
+$C.@BackButton {}

@@ -11,10 +11,11 @@ Instructions for AI agents working on this Hytale plugin codebase.
 ## Project Structure
 
 ### Source Layout
-- **Java sources**: `src/main/java/io/hyvexa/`
-- **Plugin entrypoint**: `HyvexaPlugin.java` (extends `JavaPlugin`)
-- **Parkour code**: `io.hyvexa.parkour.*` subpackages
-- **Common utilities**: `io.hyvexa.common.*` - shared utilities (FormatUtils, InventoryUtils, PermissionUtils)
+- **Parkour Java sources**: `hyvexa-parkour/src/main/java/io/hyvexa/`
+- **Core Java sources**: `hyvexa-core/src/main/java/io/hyvexa/`
+- **Plugin entrypoint**: `hyvexa-parkour/src/main/java/io/hyvexa/HyvexaPlugin.java` (extends `JavaPlugin`)
+- **Parkour code**: `io.hyvexa.parkour.*` subpackages (in `hyvexa-parkour`)
+- **Common utilities**: `io.hyvexa.common.*` (mostly in `hyvexa-core`; `InventoryUtils` stays in `hyvexa-parkour` because it references parkour/duel types)
 - **Commands**: `io.hyvexa.parkour.command/` - extend `AbstractAsyncCommand` or `AbstractPlayerCommand`
 - **Data stores**: `io.hyvexa.parkour.data/` - MySQL persistence with in-memory caching
 - **UI pages**: `io.hyvexa.parkour.ui/` - extend `InteractiveCustomUIPage` or `BaseParkourPage`
@@ -33,10 +34,14 @@ Instructions for AI agents working on this Hytale plugin codebase.
 Managers are instantiated in `HyvexaPlugin.setup()` and accessed via plugin helpers.
 
 ### Resources
-- **Plugin manifest**: `src/main/resources/manifest.json`
-- **UI definitions**: `src/main/resources/Common/UI/Custom/Pages/*.ui`
-- **Server assets**: `src/main/resources/Server/...`
-- **Audio**: `src/main/resources/Common/Sounds/`, `Common/Music/`
+- **Plugin manifest**: `hyvexa-parkour/src/main/resources/manifest.json`
+- **UI definitions**: `hyvexa-parkour/src/main/resources/Common/UI/Custom/Pages/*.ui`
+- **Server assets**: `hyvexa-parkour/src/main/resources/Server/...`
+- **Audio**: `hyvexa-parkour/src/main/resources/Common/Sounds/`, `Common/Music/`
+
+### Docs
+- **ARCHITECTURE.md**: System overview, threading model, and runtime flow
+- **DATABASE.md**: MySQL schema reference and runtime data notes
 
 ### Runtime Data
 - **Working dir**: Server runs from `run/`, so runtime data lives at `mods/Parkour/`
@@ -57,6 +62,7 @@ Managers are instantiated in `HyvexaPlugin.setup()` and accessed via plugin help
 | `/cp [set\|clear]` | Save/teleport to personal checkpoint (memory-only) |
 | `/discord` | Display Discord server link |
 | `/store` | Display store link |
+| `/menu` | Open hub mode selector |
 
 ### Admin Commands (OP only)
 | Command | Function |
@@ -71,7 +77,6 @@ Managers are instantiated in `HyvexaPlugin.setup()` and accessed via plugin help
 | Command | Function |
 |---------|----------|
 | `/dbtest` | Validate MySQL connection and core tables |
-| `/dbmigrate` | Migrate JSON data to MySQL (requires all JSON files) |
 | `/dbclear` | Clear all parkour tables (restart to reset in-memory caches) |
 | `/pkmusic` | Debug command to list loaded ambience music assets |
 
@@ -123,6 +128,8 @@ Players receive right-click items that open UIs or perform actions:
 gradlew.bat build        # Windows
 ```
 Build outputs a shaded plugin JAR that bundles runtime dependencies.
+Use `./gradlew stagePlugins` to copy all plugin jars into `run/mods` for local testing.
+Use `./gradlew collectPlugins` to copy all plugin jars into `build/libs` for production packaging.
 
 ### Server Location
 Hytale server JAR expected at:
@@ -132,10 +139,11 @@ Hytale server JAR expected at:
 The `patchline` value comes from `gradle.properties`.
 
 ### Run
-Use the `HytaleServer` IntelliJ run config (defined in `build.gradle`). Launches from `run/` directory.
+Use the `HytaleServer` IntelliJ run config (defined in `hyvexa-parkour/build.gradle`). Launches from `run/` directory.
 
 ### Output
-JAR name: `HyvexaPlugin-<version>.jar` (version from `gradle.properties`)
+JAR name: `HyvexaParkour-<version>.jar` (version from `gradle.properties`)
+Additional modules output `HyvexaHub-<version>.jar` and `HyvexaParkourAscend-<version>.jar`.
 
 ## Hytale API Patterns
 
@@ -303,7 +311,7 @@ Use any of these to explore the JAR:
 1. Check existing code for similar patterns
 2. Create classes in appropriate subpackage (`data/`, `ui/`, `command/`, etc.)
 3. Register commands/interactions/systems in `HyvexaPlugin.setup()`
-4. Add UI files in `src/main/resources/Common/UI/Custom/Pages/` if needed
+4. Add UI files in `hyvexa-parkour/src/main/resources/Common/UI/Custom/Pages/` if needed
 5. Update `CHANGELOG.md` with feature description
 6. Test with `./gradlew build` and server run
 
@@ -312,7 +320,7 @@ Use any of these to explore the JAR:
 1. Create plugin entry class extending `JavaPlugin`
 2. Update `manifest.json` `Main` to the fully-qualified class name
 3. Register commands and listeners in `setup()`
-4. Place resources under `src/main/resources/Server/...`
+4. Place resources under the target module, e.g. `hyvexa-parkour/src/main/resources/Server/...`
 
 ## References
 
