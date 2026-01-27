@@ -43,17 +43,17 @@ public class ParkourAdminItemCommand extends AbstractAsyncCommand {
         Store<EntityStore> store = ref.getStore();
         World world = store.getExternalData().getWorld();
         return CompletableFuture.runAsync(() -> {
-            giveItem(commandContext, store, ref);
+            giveItem(commandContext, store, ref, world);
         }, world);
     }
 
-    private void giveItem(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref) {
+    private void giveItem(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref, World world) {
         Player player = store.getComponent(ref, Player.getComponentType());
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (player == null || playerRef == null) {
             return;
         }
-        if (ParkourModeGate.denyIfNotParkour(ctx, playerRef.getUuid())) {
+        if (ParkourModeGate.denyIfNotParkour(ctx, world)) {
             return;
         }
         var inventory = player.getInventory();

@@ -1,5 +1,10 @@
 # Changelog
 
+- Prevent Parkour/Ascend HUD updates outside their worlds so Hub/Ascend/Parkour HUDs stay in sync when switching modes.
+- Ensure Hub HUD reattaches on player ready when in the Hub world, covering mode switches and relogs.
+- Reattach Parkour HUD on player ready when returning to Parkour mode after a relog.
+- Continuously enforce Hub HUD while in the Hub world to override lingering Parkour HUDs after mode switches.
+- Force players back to Hub on reconnect by resetting mode to HUB on disconnect and on ready.
 - Add Ascend data-layer constants, models, stores, and schema setup.
 - Initialize Ascend plugin bootstrap with database setup and store loading.
 - Add /ascend command with collect and stats handling.
@@ -383,3 +388,4 @@
 - Increased Support/Store icon sizes and row heights for better alignment.
 - Extended Run HUD background bottom padding/height for the footer.
 - Added /dbreload to reload Parkour/database.json and display sanitized connection settings, including the config path.
+

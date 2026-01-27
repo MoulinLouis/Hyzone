@@ -5,24 +5,28 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.core.state.ModeGate;
 import io.hyvexa.core.state.ModeMessages;
-import io.hyvexa.core.state.PlayerMode;
 
 import java.util.UUID;
 
 public final class ParkourModeGate {
 
+    private static final String PARKOUR_WORLD_NAME = "Parkour";
+
     private ParkourModeGate() {
     }
 
-    public static boolean isParkourMode(UUID playerId) {
-        return ModeGate.isMode(playerId, PlayerMode.PARKOUR);
+    public static boolean isParkourWorld(World world) {
+        if (world == null || world.getName() == null) {
+            return false;
+        }
+        return PARKOUR_WORLD_NAME.equalsIgnoreCase(world.getName());
     }
 
-    public static boolean denyIfNotParkour(CommandContext context, UUID playerId) {
-        if (!isParkourMode(playerId)) {
+    public static boolean denyIfNotParkour(CommandContext context, World world) {
+        if (!isParkourWorld(world)) {
             if (context != null) {
                 context.sendMessage(ModeMessages.MESSAGE_ENTER_PARKOUR);
             }

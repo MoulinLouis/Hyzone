@@ -69,9 +69,9 @@ Managers are instantiated in `HyvexaPlugin.setup()` and accessed via plugin help
 - `/ascend` opens Ascend map selector UI (manual runs).
 - `/ascend collect` collects pending Ascend coins.
 - `/ascend stats` shows current Ascend coin balance.
-- Hub menu Ascend button routes to the Ascend world.
-- Ascend mode clears inventory and gives the hub Server Selector in the last hotbar slot.
-- Ascend mode shows a minimal HUD label: "HYVEXA ASCEND".
+- Hub menu Ascend button is OP-only (non-OP players see "coming soon" message).
+- Ascend world clears inventory and gives the hub Server Selector in the last hotbar slot.
+- Ascend world shows a minimal HUD label: "HYVEXA ASCEND".
 
 ### Ascend Admin (OP only)
 - `/as admin` opens Ascend map admin UI.
@@ -102,6 +102,14 @@ The `/pk admin` panel provides access to:
 - **Population**: View online player count history with 10-minute sampling intervals
 - **Global Messages**: Configure server-wide announcement messages
 - **Player Counts**: (Legacy feature for map-specific counts)
+
+### World-Based HUD System
+Each module's HUD is determined by which world the player is in:
+- **Hub world** → Hub HUD with "HYVEXA HUB" label
+- **Parkour world** → Parkour HUD with timer, checkpoints, leaderboard
+- **Ascend world** → Ascend HUD with "HYVEXA ASCEND" label
+
+No mode persistence is needed - players always spawn in Hub world on reconnect. Each plugin checks the player's current world and attaches the appropriate HUD.
 
 ### Runtime Behavior
 - Checkpoint/finish detection with radius-based triggers

@@ -53,7 +53,7 @@ public class AscendCommand extends AbstractAsyncCommand {
             if (playerRef == null) {
                 return;
             }
-            if (AscendModeGate.denyIfNotAscend(ctx, playerRef.getUuid())) {
+            if (AscendModeGate.denyIfNotAscend(ctx, world)) {
                 return;
             }
 

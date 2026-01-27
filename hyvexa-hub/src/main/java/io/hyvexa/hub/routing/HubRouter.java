@@ -2,9 +2,7 @@ package io.hyvexa.hub.routing;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.event.EventBus;
 import com.hypixel.hytale.logger.HytaleLogger;
-import com.hypixel.hytale.math.vector.Location;
 import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
@@ -20,11 +18,6 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.hub.HubConstants;
 import io.hyvexa.hub.hud.HubHud;
-import io.hyvexa.core.event.ModeEnterEvent;
-import io.hyvexa.core.event.ModeExitEvent;
-import io.hyvexa.core.state.PlayerMode;
-import io.hyvexa.core.state.PlayerModeState;
-import io.hyvexa.core.state.PlayerModeStateStore;
 
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -38,33 +31,25 @@ public class HubRouter {
     private static final String PARKOUR_WORLD_NAME = "Parkour";
     private static final String ASCEND_WORLD_NAME = "Ascend";
 
-    private final PlayerModeStateStore stateStore;
-    private final EventBus eventBus;
     private final ConcurrentHashMap<UUID, HubHud> hubHuds = new ConcurrentHashMap<>();
 
-    public HubRouter(PlayerModeStateStore stateStore, EventBus eventBus) {
-        this.stateStore = stateStore;
-        this.eventBus = eventBus;
-    }
-
-    public PlayerMode getCurrentMode(UUID playerId) {
-        return stateStore.getCurrentMode(playerId);
+    public HubRouter() {
     }
 
     public void routeToHub(PlayerRef playerRef) {
-        routeToMode(playerRef, PlayerMode.HUB);
+        routeToWorld(playerRef, HUB_WORLD_NAME, true);
     }
 
     public void routeToParkour(PlayerRef playerRef) {
-        routeToMode(playerRef, PlayerMode.PARKOUR);
+        routeToWorld(playerRef, PARKOUR_WORLD_NAME, false);
     }
 
     public void routeToAscend(PlayerRef playerRef) {
-        routeToMode(playerRef, PlayerMode.ASCEND);
+        routeToWorld(playerRef, ASCEND_WORLD_NAME, false);
     }
 
-    private void routeToMode(PlayerRef playerRef, PlayerMode targetMode) {
-        if (playerRef == null || targetMode == null) {
+    private void routeToWorld(PlayerRef playerRef, String targetWorldName, boolean isHub) {
+        if (playerRef == null || targetWorldName == null) {
             return;
         }
         UUID playerId = playerRef.getUuid();
@@ -89,58 +74,32 @@ public class HubRouter {
             if (player == null || transform == null) {
                 return;
             }
-            PlayerModeState state = stateStore.getOrCreate(playerId);
-            PlayerMode previousMode = state.getCurrentMode();
-            if (previousMode == targetMode) {
+            World targetWorld = resolveWorld(targetWorldName);
+            if (targetWorld == null) {
                 return;
             }
-            if (targetMode == PlayerMode.PARKOUR) {
-                state.setParkourReturnLocation(captureLocation(currentWorld, transform));
+            // Skip teleport if already in target world
+            String currentWorldName = currentWorld.getName();
+            if (currentWorldName != null && currentWorldName.equalsIgnoreCase(targetWorldName)) {
+                return;
             }
-            if (targetMode == PlayerMode.ASCEND) {
-                state.setAscendReturnLocation(captureLocation(currentWorld, transform));
-            }
-            fireModeExit(playerRef, previousMode, targetMode);
-            state.setCurrentMode(targetMode);
-            stateStore.saveState(playerId, state);
-            Teleport teleport = resolveTeleport(playerId, targetMode, state);
+            Teleport teleport = createTeleport(targetWorld, playerId);
             if (teleport != null) {
                 store.addComponent(ref, Teleport.getComponentType(), teleport);
             }
-            if (targetMode == PlayerMode.HUB) {
-                clearInventory(player);
+            clearInventory(player);
+            if (isHub) {
                 giveHubItems(player);
                 attachHubHud(playerRef, player);
-            }
-            if (targetMode == PlayerMode.ASCEND) {
-                clearInventory(player);
+            } else if (ASCEND_WORLD_NAME.equalsIgnoreCase(targetWorldName)) {
                 giveAscendItems(player);
             }
-            fireModeEnter(playerRef, targetMode, previousMode);
         }, currentWorld);
     }
 
-    private Teleport resolveTeleport(UUID playerId, PlayerMode targetMode, PlayerModeState state) {
-        Location returnLocation = null;
-        String worldName = HUB_WORLD_NAME;
-        if (targetMode == PlayerMode.PARKOUR) {
-            worldName = PARKOUR_WORLD_NAME;
-        } else if (targetMode == PlayerMode.ASCEND) {
-            worldName = ASCEND_WORLD_NAME;
-        } else if (targetMode == PlayerMode.HUB) {
-            worldName = HUB_WORLD_NAME;
-        }
-        World targetWorld = resolveWorld(returnLocation, worldName);
+    private Teleport createTeleport(World targetWorld, UUID playerId) {
         if (targetWorld == null) {
             return null;
-        }
-        if (returnLocation != null && returnLocation.getPosition() != null) {
-            Vector3d position = returnLocation.getPosition();
-            Vector3f rotation = returnLocation.getRotation();
-            if (rotation == null) {
-                rotation = new Vector3f(0f, 0f, 0f);
-            }
-            return new Teleport(targetWorld, position, rotation);
         }
         Transform spawn = resolveSpawnTransform(targetWorld, playerId);
         Vector3d position = spawn != null ? spawn.getPosition() : new Vector3d(0, 64, 0);
@@ -148,33 +107,27 @@ public class HubRouter {
         return new Teleport(targetWorld, position, rotation);
     }
 
-    private World resolveWorld(Location returnLocation, String fallbackName) {
-        World world = null;
-        if (returnLocation != null && returnLocation.getWorld() != null) {
-            world = Universe.get().getWorld(returnLocation.getWorld());
-            if (world == null) {
-                world = findWorldByName(returnLocation.getWorld());
-            }
+    private World resolveWorld(String worldName) {
+        if (worldName == null) {
+            return null;
+        }
+        World world = Universe.get().getWorld(worldName);
+        if (world == null) {
+            world = findWorldByName(worldName);
         }
         if (world == null) {
-            world = Universe.get().getWorld(fallbackName);
-            if (world == null) {
-                world = findWorldByName(fallbackName);
-            }
-        }
-        if (world == null && fallbackName != null) {
             try {
-                Universe.get().loadWorld(fallbackName);
+                Universe.get().loadWorld(worldName);
             } catch (Exception e) {
-                LOGGER.at(Level.WARNING).log("Failed to load world '" + fallbackName + "': " + e.getMessage());
+                LOGGER.at(Level.WARNING).log("Failed to load world '" + worldName + "': " + e.getMessage());
             }
-            world = Universe.get().getWorld(fallbackName);
+            world = Universe.get().getWorld(worldName);
             if (world == null) {
-                world = findWorldByName(fallbackName);
+                world = findWorldByName(worldName);
             }
         }
         if (world == null) {
-            LOGGER.at(Level.WARNING).log("World '" + fallbackName + "' not found, using default world.");
+            LOGGER.at(Level.WARNING).log("World '" + worldName + "' not found, using default world.");
             world = Universe.get().getDefaultWorld();
         }
         return world;
@@ -190,22 +143,6 @@ public class HubRouter {
             }
         }
         return null;
-    }
-
-    private static Location captureLocation(World world, TransformComponent transform) {
-        if (world == null || transform == null) {
-            return null;
-        }
-        Vector3d position = transform.getPosition();
-        Vector3f rotation = transform.getRotation();
-        if (position == null) {
-            return null;
-        }
-        String worldName = world.getName();
-        float rotX = rotation != null ? rotation.getX() : 0f;
-        float rotY = rotation != null ? rotation.getY() : 0f;
-        float rotZ = rotation != null ? rotation.getZ() : 0f;
-        return new Location(worldName, position.getX(), position.getY(), position.getZ(), rotX, rotY, rotZ);
     }
 
     private static Transform resolveSpawnTransform(World world, UUID playerId) {
@@ -283,28 +220,6 @@ public class HubRouter {
         short capacity = container.getCapacity();
         for (short slot = 0; slot < capacity; slot++) {
             container.setItemStackForSlot(slot, ItemStack.EMPTY, false);
-        }
-    }
-
-    private void fireModeExit(PlayerRef playerRef, PlayerMode mode, PlayerMode nextMode) {
-        if (eventBus == null || mode == null || mode == PlayerMode.NONE) {
-            return;
-        }
-        try {
-            eventBus.dispatchFor(ModeExitEvent.class, null).dispatch(new ModeExitEvent(playerRef, mode, nextMode));
-        } catch (Exception e) {
-            LOGGER.at(Level.WARNING).log("Failed to dispatch ModeExitEvent: " + e.getMessage());
-        }
-    }
-
-    private void fireModeEnter(PlayerRef playerRef, PlayerMode mode, PlayerMode previousMode) {
-        if (eventBus == null || mode == null || mode == PlayerMode.NONE) {
-            return;
-        }
-        try {
-            eventBus.dispatchFor(ModeEnterEvent.class, null).dispatch(new ModeEnterEvent(playerRef, mode, previousMode));
-        } catch (Exception e) {
-            LOGGER.at(Level.WARNING).log("Failed to dispatch ModeEnterEvent: " + e.getMessage());
         }
     }
 }

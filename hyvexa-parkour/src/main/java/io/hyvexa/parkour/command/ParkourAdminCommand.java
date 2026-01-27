@@ -53,18 +53,21 @@ public class ParkourAdminCommand extends AbstractAsyncCommand {
         if (!(sender instanceof Player player)) {
             return CompletableFuture.completedFuture(null);
         }
-        if (ParkourModeGate.denyIfNotParkour(commandContext, ParkourModeGate.resolvePlayerId(player))) {
+        Ref<EntityStore> ref = player.getReference();
+        if (ref == null || !ref.isValid()) {
+            commandContext.sendMessage(MESSAGE_COMMANDS_ERRORS_PLAYER_NOT_IN_WORLD);
+            return CompletableFuture.completedFuture(null);
+        }
+        Store<EntityStore> store = ref.getStore();
+        World world = store.getExternalData().getWorld();
+        if (ParkourModeGate.denyIfNotParkour(commandContext, world)) {
             return CompletableFuture.completedFuture(null);
         }
         if (!PermissionUtils.isOp(player)) {
             commandContext.sendMessage(MESSAGE_OP_REQUIRED);
             return CompletableFuture.completedFuture(null);
         }
-        Ref<EntityStore> ref = player.getReference();
-        if (ref != null && ref.isValid()) {
-            Store<EntityStore> store = ref.getStore();
-            World world = store.getExternalData().getWorld();
-            return CompletableFuture.runAsync(() -> {
+        return CompletableFuture.runAsync(() -> {
                 PlayerRef playerRefComponent = store.getComponent(ref, PlayerRef.getComponentType());
                 if (playerRefComponent != null) {
                     player.getPageManager().openCustomPage(ref, store,
@@ -73,9 +76,6 @@ public class ParkourAdminCommand extends AbstractAsyncCommand {
                                             ? HyvexaPlugin.getInstance().getPlayerCountStore()
                                             : null));
                 }
-            }, world);
-        }
-        commandContext.sendMessage(MESSAGE_COMMANDS_ERRORS_PLAYER_NOT_IN_WORLD);
-        return CompletableFuture.completedFuture(null);
+        }, world);
     }
 }

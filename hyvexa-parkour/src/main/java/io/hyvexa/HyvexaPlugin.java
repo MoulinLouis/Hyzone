@@ -12,11 +12,6 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.duel.DuelQueue;
 import io.hyvexa.duel.DuelTracker;
-import io.hyvexa.core.event.ModeEnterEvent;
-import io.hyvexa.core.event.ModeExitEvent;
-import io.hyvexa.core.state.ModeGate;
-import io.hyvexa.core.state.PlayerMode;
-import io.hyvexa.core.state.PlayerModeStateStore;
 import io.hyvexa.duel.command.DuelCommand;
 import io.hyvexa.duel.data.DuelMatchStore;
 import io.hyvexa.duel.data.DuelPreferenceStore;
@@ -110,6 +105,7 @@ public class HyvexaPlugin extends JavaPlugin {
     private static final long STALE_PLAYER_SWEEP_SECONDS = 120L;
     private static final long TELEPORT_DEBUG_INTERVAL_SECONDS = 120L;
     private static final boolean DISABLE_WORLD_MAP = true; // Parkour server doesn't need world map
+    private static final String PARKOUR_WORLD_NAME = "Parkour";
     private static final String DISCORD_URL = "https://discord.gg/2PAygkyFnK";
     private static final String JOIN_LANGUAGE_NOTICE =
             "This is an English-speaking community server. Please use English only in the chat. "
@@ -258,8 +254,14 @@ public class HyvexaPlugin extends JavaPlugin {
         this.getEventRegistry().registerGlobal(PlayerConnectEvent.class, event -> {
             try {
                 PlayerRef playerRef = event.getPlayerRef();
-                if (playerRef != null && shouldApplyParkourMode(playerRef.getUuid())) {
-                    hudManager.ensureRunHud(playerRef);
+                if (playerRef != null) {
+                    Ref<EntityStore> ref = playerRef.getReference();
+                    if (ref != null && ref.isValid()) {
+                        Store<EntityStore> store = ref.getStore();
+                        if (shouldApplyParkourMode(playerRef, store)) {
+                            hudManager.ensureRunHud(playerRef);
+                        }
+                    }
                 }
                 playtimeManager.startPlaytimeSession(event.getPlayerRef());
             } catch (Exception e) {
@@ -267,8 +269,12 @@ public class HyvexaPlugin extends JavaPlugin {
             }
         });
         for (PlayerRef playerRef : Universe.get().getPlayers()) {
-            if (shouldApplyParkourMode(playerRef.getUuid())) {
-                hudManager.ensureRunHud(playerRef);
+            Ref<EntityStore> ref = playerRef != null ? playerRef.getReference() : null;
+            if (ref != null && ref.isValid()) {
+                Store<EntityStore> store = ref.getStore();
+                if (shouldApplyParkourMode(playerRef, store)) {
+                    hudManager.ensureRunHud(playerRef);
+                }
             }
             playtimeManager.startPlaytimeSession(playerRef);
             if (runTracker != null) {
@@ -287,6 +293,14 @@ public class HyvexaPlugin extends JavaPlugin {
                 // Disable world map generation to save memory (parkour server doesn't need it)
                 if (DISABLE_WORLD_MAP) {
                     disableWorldMapForPlayer(event.getPlayerRef());
+                }
+                Ref<EntityStore> ref = event.getPlayerRef();
+                if (ref != null && ref.isValid()) {
+                    Store<EntityStore> store = ref.getStore();
+                    PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+                    if (playerRef != null && shouldApplyParkourMode(playerRef, store)) {
+                        hudManager.ensureRunHud(playerRef);
+                    }
                 }
             } catch (Exception e) {
                 LOGGER.at(Level.WARNING).log("Exception in PlayerReadyEvent (inventory): " + e.getMessage());
@@ -398,70 +412,6 @@ public class HyvexaPlugin extends JavaPlugin {
             }
         });
 
-        this.getEventRegistry().registerGlobal(ModeEnterEvent.class, event -> {
-            try {
-                if (event.getMode() != PlayerMode.PARKOUR) {
-                    return;
-                }
-                PlayerRef playerRef = event.getPlayerRef();
-                if (playerRef == null || runTracker == null) {
-                    return;
-                }
-                var ref = playerRef.getReference();
-                if (ref == null || !ref.isValid()) {
-                    return;
-                }
-                Store<EntityStore> store = ref.getStore();
-                World world = store.getExternalData().getWorld();
-                if (world == null) {
-                    return;
-                }
-                CompletableFuture.runAsync(() -> {
-                    Player player = store.getComponent(ref, Player.getComponentType());
-                    if (player == null) {
-                        return;
-                    }
-                    String activeMap = runTracker.getActiveMapId(playerRef.getUuid());
-                    if (activeMap == null) {
-                        InventoryUtils.giveMenuItems(player);
-                    } else {
-                        InventoryUtils.giveRunItems(player, mapStore != null ? mapStore.getMap(activeMap) : null);
-                    }
-                    showRunHud(playerRef);
-                }, world);
-            } catch (Exception e) {
-                LOGGER.at(Level.WARNING).log("Exception in ModeEnterEvent (parkour): " + e.getMessage());
-            }
-        });
-        this.getEventRegistry().registerGlobal(ModeExitEvent.class, event -> {
-            try {
-                if (event.getMode() != PlayerMode.PARKOUR) {
-                    return;
-                }
-                PlayerRef playerRef = event.getPlayerRef();
-                if (playerRef == null || runTracker == null) {
-                    return;
-                }
-                var ref = playerRef.getReference();
-                if (ref == null || !ref.isValid()) {
-                    return;
-                }
-                Store<EntityStore> store = ref.getStore();
-                World world = store.getExternalData().getWorld();
-                if (world == null) {
-                    return;
-                }
-                CompletableFuture.runAsync(() -> {
-                    Player player = store.getComponent(ref, Player.getComponentType());
-                        if (player != null) {
-                            InventoryUtils.clearAllItems(player);
-                        }
-                        runTracker.clearPlayer(playerRef.getUuid());
-                    }, world);
-            } catch (Exception e) {
-                LOGGER.at(Level.WARNING).log("Exception in ModeExitEvent (parkour): " + e.getMessage());
-            }
-        });
         for (PlayerRef playerRef : Universe.get().getPlayers()) {
             var ref = playerRef.getReference();
             if (ref != null && ref.isValid()) {
@@ -662,6 +612,9 @@ public class HyvexaPlugin extends JavaPlugin {
         Map<World, List<PlayerTickContext>> playersByWorld = collectPlayersByWorld();
         for (Map.Entry<World, List<PlayerTickContext>> entry : playersByWorld.entrySet()) {
             World world = entry.getKey();
+            if (!isParkourWorld(world)) {
+                continue;
+            }
             List<PlayerTickContext> players = entry.getValue();
             CompletableFuture.runAsync(() -> {
                 for (PlayerTickContext context : players) {
@@ -669,7 +622,7 @@ public class HyvexaPlugin extends JavaPlugin {
                         continue;
                     }
                     UUID playerId = context.playerRef != null ? context.playerRef.getUuid() : null;
-                    if (!shouldApplyParkourMode(playerId)) {
+                    if (!shouldApplyParkourMode(playerId, world)) {
                         continue;
                     }
                     if (runTracker != null) {
@@ -698,6 +651,9 @@ public class HyvexaPlugin extends JavaPlugin {
         Map<World, List<PlayerTickContext>> playersByWorld = collectPlayersByWorld();
         for (Map.Entry<World, List<PlayerTickContext>> entry : playersByWorld.entrySet()) {
             World world = entry.getKey();
+            if (!isParkourWorld(world)) {
+                continue;
+            }
             List<PlayerTickContext> players = entry.getValue();
             CompletableFuture.runAsync(() -> {
                 for (PlayerTickContext context : players) {
@@ -705,7 +661,7 @@ public class HyvexaPlugin extends JavaPlugin {
                         continue;
                     }
                     UUID playerId = context.playerRef != null ? context.playerRef.getUuid() : null;
-                    if (!shouldApplyParkourMode(playerId)) {
+                    if (!shouldApplyParkourMode(playerId, world)) {
                         continue;
                     }
                     if (hudManager != null) {
@@ -801,18 +757,34 @@ public class HyvexaPlugin extends JavaPlugin {
         }
     }
 
-    private boolean shouldApplyParkourMode(UUID playerId) {
+    private boolean shouldApplyParkourMode(UUID playerId, World world) {
         if (playerId == null) {
             return false;
         }
-        return ModeGate.isMode(playerId, PlayerMode.PARKOUR);
+        return isParkourWorld(world);
+    }
+
+    private boolean shouldApplyParkourMode(PlayerRef playerRef, Store<EntityStore> store) {
+        if (playerRef == null || store == null) {
+            return false;
+        }
+        UUID playerId = playerRef.getUuid();
+        if (playerId == null) {
+            return false;
+        }
+        World world = store.getExternalData().getWorld();
+        return isParkourWorld(world);
+    }
+
+    private boolean isParkourWorld(World world) {
+        if (world == null || world.getName() == null) {
+            return false;
+        }
+        return PARKOUR_WORLD_NAME.equalsIgnoreCase(world.getName());
     }
 
     private void syncRunInventoryOnConnect(PlayerRef playerRef) {
         if (playerRef == null) {
-            return;
-        }
-        if (!shouldApplyParkourMode(playerRef.getUuid())) {
             return;
         }
         var ref = playerRef.getReference();
@@ -820,6 +792,9 @@ public class HyvexaPlugin extends JavaPlugin {
             return;
         }
         Store<EntityStore> store = ref.getStore();
+        if (!shouldApplyParkourMode(playerRef, store)) {
+            return;
+        }
         syncRunInventoryOnConnect(ref, store, playerRef);
     }
 
@@ -869,7 +844,7 @@ public class HyvexaPlugin extends JavaPlugin {
             if (playerRef == null) {
                 return;
             }
-            if (!shouldApplyParkourMode(playerRef.getUuid())) {
+            if (!shouldApplyParkourMode(playerRef, store)) {
                 return;
             }
             syncRunInventoryOnConnect(ref, store, playerRef);
@@ -888,7 +863,7 @@ public class HyvexaPlugin extends JavaPlugin {
             if (player == null) {
                 return;
             }
-            if (!shouldApplyParkourMode(playerRef.getUuid())) {
+            if (!shouldApplyParkourMode(playerRef, store)) {
                 return;
             }
             String activeMap = runTracker.getActiveMapId(playerRef.getUuid());

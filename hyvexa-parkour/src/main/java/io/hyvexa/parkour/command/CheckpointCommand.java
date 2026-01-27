@@ -43,7 +43,7 @@ public class CheckpointCommand extends AbstractPlayerCommand {
     @Override
     protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref,
                            @Nonnull PlayerRef player, @Nonnull World world) {
-        if (ParkourModeGate.denyIfNotParkour(ctx, player.getUuid())) {
+        if (ParkourModeGate.denyIfNotParkour(ctx, world)) {
             return;
         }
         String action = null;

@@ -9,13 +9,14 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.core.state.PlayerMode;
 import io.hyvexa.hub.HyvexaHubPlugin;
 import io.hyvexa.hub.ui.HubMenuPage;
 
 import javax.annotation.Nonnull;
 
 public class HubCommand extends AbstractPlayerCommand {
+
+    private static final String HUB_WORLD_NAME = "Hub";
 
     private final HyvexaHubPlugin plugin;
 
@@ -31,8 +32,7 @@ public class HubCommand extends AbstractPlayerCommand {
         if (plugin == null || plugin.getRouter() == null) {
             return;
         }
-        PlayerMode mode = plugin.getRouter().getCurrentMode(playerRef.getUuid());
-        if (mode == PlayerMode.HUB) {
+        if (HUB_WORLD_NAME.equalsIgnoreCase(world.getName())) {
             Player player = store.getComponent(ref, Player.getComponentType());
             if (player != null) {
                 player.getPageManager().openCustomPage(ref, store, new HubMenuPage(playerRef, plugin.getRouter()));

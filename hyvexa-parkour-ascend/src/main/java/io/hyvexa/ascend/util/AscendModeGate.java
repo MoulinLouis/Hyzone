@@ -5,24 +5,28 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.core.state.ModeGate;
 import io.hyvexa.core.state.ModeMessages;
-import io.hyvexa.core.state.PlayerMode;
 
 import java.util.UUID;
 
 public final class AscendModeGate {
 
+    private static final String ASCEND_WORLD_NAME = "Ascend";
+
     private AscendModeGate() {
     }
 
-    public static boolean isAscendMode(UUID playerId) {
-        return ModeGate.isMode(playerId, PlayerMode.ASCEND);
+    public static boolean isAscendWorld(World world) {
+        if (world == null || world.getName() == null) {
+            return false;
+        }
+        return ASCEND_WORLD_NAME.equalsIgnoreCase(world.getName());
     }
 
-    public static boolean denyIfNotAscend(CommandContext context, UUID playerId) {
-        if (!isAscendMode(playerId)) {
+    public static boolean denyIfNotAscend(CommandContext context, World world) {
+        if (!isAscendWorld(world)) {
             if (context != null) {
                 context.sendMessage(ModeMessages.MESSAGE_ENTER_ASCEND);
             }
