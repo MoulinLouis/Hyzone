@@ -1,1 +1,6 @@
-rootProject.name = "ParkourPlugin"
+rootProject.name = "hyvexa-plugin"
+
+include "hyvexa-core"
+include "hyvexa-parkour"
+include "hyvexa-parkour-ascend"
+include "hyvexa-hub"
