@@ -2,6 +2,10 @@
 
 - Rename the Depths module and all mode references to Parkour Ascend across code, docs, and build outputs.
 - Improve hub routing world resolution with case-insensitive lookup and on-demand load fallback to avoid /menu landing in the wrong world.
+- Switch hub routing world names to "Hub", "Parkour", and "Ascend" to match capitalized world folders.
+- Disable Parkour Ascend routing from the hub menu and show a coming-soon message instead.
+- Add hover feedback on the Discord and Store banners in the hub menu.
+- Wire Discord/Store banner clicks to the same link messages as /discord and /store.
 - Add a Discord banner graphic to the hub menu UI.
 - Add a store banner graphic to the hub menu UI.
 - Route players to the Parkour Ascend world when selecting it from the hub menu.
@@ -9,6 +13,8 @@
 - Give hub players a Server Selector hotbar item backed by a custom icon asset.
 - Open the hub menu when right-clicking the hub Server Selector item.
 - Swap the hub Server Selector item model to use the custom golem blockymodel.
+- Add the hub Server Selector item to the parkour hotbar in slot 9.
+- Route players to the hub when they use the Server Selector item outside the hub.
 - Rename the hub command to /menu to avoid clashing with the built-in /hub command.
 - Shade core into hub/ascend jars, add a staging task to copy plugin jars to run/mods, add a Parkour Ascend plugin stub manifest/entrypoint, and rename the parkour jar to HyvexaParkour-<version>.jar.
 - Clear player inventories when routing into the hub so players start with no items until they choose a mode via /menu.

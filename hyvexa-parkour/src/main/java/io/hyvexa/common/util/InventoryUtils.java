@@ -100,6 +100,7 @@ public final class InventoryUtils {
             setHotbarItem(inventory, 2, new ItemStack(ParkourConstants.ITEM_LEADERBOARD, 1));
             setHotbarItem(inventory, 3, new ItemStack(ParkourConstants.ITEM_STATS, 1));
             setHotbarItem(inventory, 4, new ItemStack(ParkourConstants.ITEM_ADMIN_REMOTE, 1));
+            setHotbarItem(inventory, 8, new ItemStack(ParkourConstants.ITEM_HUB_MENU, 1));
             return;
         }
         applyDropFilters(inventory, false);
@@ -109,6 +110,7 @@ public final class InventoryUtils {
         setHotbarItem(inventory, 2, new ItemStack(ParkourConstants.ITEM_LEADERBOARD, 1));
         setHotbarItem(inventory, 3, new ItemStack(ParkourConstants.ITEM_STATS, 1));
         setHotbarItem(inventory, 4, new ItemStack(ParkourConstants.ITEM_ADMIN_REMOTE, 1));
+        setHotbarItem(inventory, 8, new ItemStack(ParkourConstants.ITEM_HUB_MENU, 1));
         applyDropFilters(inventory, false);
     }
 
