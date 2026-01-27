@@ -1,0 +1,22 @@
+{
+    "Group": "io.hyvexa",
+    "Name": "HyvexaHub",
+    "Version": "0.0.2",
+    "Description": "Hyvexa hub routing plugin",
+    "Authors": [
+        {
+            "Name": "Playfade"
+        }
+    ],
+    "Website": "",
+    "ServerVersion": "*",
+    "Dependencies": {
+        
+    },
+    "OptionalDependencies": {
+        
+    },
+    "DisabledByDefault": false,
+    "Main": "io.hyvexa.hub.HyvexaHubPlugin",
+    "IncludesAssetPack": true
+}
