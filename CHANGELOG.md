@@ -1,5 +1,7 @@
 # Changelog
 
+- Added practice mode run items to set per-run checkpoints, ignore map checkpoints, and block finishes while practicing.
+- Swapped the practice checkpoint item to use Ingredient_Fire_Essence instead of water essence.
 - Clear inventory on Hub ready so only the Server Selector is present after reconnects.
 - Extended the Hub HUD background to fully enclose the store line.
 - Added a Hub HUD hint about right-clicking the Server Selector item to choose a mode.

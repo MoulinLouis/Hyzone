@@ -58,7 +58,9 @@ public class RestartCheckpointInteraction extends SimpleInteraction {
                     map = plugin.getMapStore().getMap(mapId);
                 }
             }
-            InventoryUtils.giveRunItems(player, map);
+            boolean practiceEnabled = plugin.getRunTracker() != null
+                    && plugin.getRunTracker().isPracticeEnabled(playerRef.getUuid());
+            InventoryUtils.giveRunItems(player, map, practiceEnabled);
             boolean teleported = plugin.getRunTracker().teleportToLastCheckpoint(ref, store, playerRef);
             if (!teleported) {
                 plugin.getRunTracker().resetRunToStart(ref, store, player, playerRef);

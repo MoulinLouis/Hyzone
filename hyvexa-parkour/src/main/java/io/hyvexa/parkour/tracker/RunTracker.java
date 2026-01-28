@@ -58,15 +58,16 @@ public class RunTracker {
         this.settingsStore = settingsStore;
     }
 
-    public void setActiveMap(UUID playerId, String mapId) {
-        setActiveMap(playerId, mapId, null);
+    public ActiveRun setActiveMap(UUID playerId, String mapId) {
+        return setActiveMap(playerId, mapId, null);
     }
 
-    public void setActiveMap(UUID playerId, String mapId, TransformData start) {
+    public ActiveRun setActiveMap(UUID playerId, String mapId, TransformData start) {
         ActiveRun run = new ActiveRun(mapId, System.currentTimeMillis());
         activeRuns.put(playerId, run);
         idleFalls.remove(playerId);
         armStartOnMovement(run, start);
+        return run;
     }
 
     public void clearActiveMap(UUID playerId) {
@@ -166,6 +167,53 @@ public class RunTracker {
     public String getActiveMapId(UUID playerId) {
         ActiveRun run = activeRuns.get(playerId);
         return run != null ? run.mapId : null;
+    }
+
+    public boolean isPracticeEnabled(UUID playerId) {
+        ActiveRun run = activeRuns.get(playerId);
+        return run != null && run.practiceEnabled;
+    }
+
+    public boolean enablePractice(UUID playerId) {
+        ActiveRun run = activeRuns.get(playerId);
+        if (run == null) {
+            return false;
+        }
+        run.practiceEnabled = true;
+        run.practiceCheckpoint = null;
+        run.touchedCheckpoints.clear();
+        run.checkpointTouchTimes.clear();
+        run.lastCheckpointIndex = -1;
+        run.finishTouched = false;
+        return true;
+    }
+
+    public boolean setPracticeCheckpoint(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef) {
+        if (playerRef == null) {
+            return false;
+        }
+        ActiveRun run = activeRuns.get(playerRef.getUuid());
+        if (run == null || !run.practiceEnabled) {
+            return false;
+        }
+        TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
+        if (transform == null) {
+            return false;
+        }
+        Vector3d position = transform.getPosition();
+        Vector3f rotation = transform.getRotation();
+        if (position == null || rotation == null) {
+            return false;
+        }
+        TransformData checkpoint = new TransformData();
+        checkpoint.setX(position.getX());
+        checkpoint.setY(position.getY());
+        checkpoint.setZ(position.getZ());
+        checkpoint.setRotX(rotation.getX());
+        checkpoint.setRotY(rotation.getY());
+        checkpoint.setRotZ(rotation.getZ());
+        run.practiceCheckpoint = checkpoint;
+        return true;
     }
 
     public Long getElapsedTimeMs(UUID playerId) {
@@ -290,7 +338,7 @@ public class RunTracker {
                 new Teleport(store.getExternalData().getWorld(), position, rotation));
         recordTeleport(playerRef.getUuid(), TeleportCause.START_TRIGGER);
         player.sendMessage(buildRunStartMessage(map));
-        InventoryUtils.giveRunItems(player, map);
+        InventoryUtils.giveRunItems(player, map, false);
     }
 
     private boolean checkLeaveTrigger(Ref<EntityStore> ref, Store<EntityStore> store, Player player,
@@ -413,6 +461,9 @@ public class RunTracker {
     }
 
     private void checkCheckpoints(ActiveRun run, PlayerRef playerRef, Player player, Vector3d position, Map map) {
+        if (run.practiceEnabled) {
+            return;
+        }
         List<TransformData> checkpoints = map.getCheckpoints();
         if (checkpoints == null || checkpoints.isEmpty()) {
             return;
@@ -481,7 +532,7 @@ public class RunTracker {
 
     private void checkFinish(ActiveRun run, PlayerRef playerRef, Player player, Vector3d position, Map map,
                              TransformComponent transform, Ref<EntityStore> ref, Store<EntityStore> store) {
-        if (run.finishTouched || map.getFinish() == null) {
+        if (run.practiceEnabled || run.finishTouched || map.getFinish() == null) {
             return;
         }
         if (distanceSqWithVerticalBonus(position, map.getFinish()) <= TOUCH_RADIUS_SQ) {
@@ -623,8 +674,11 @@ public class RunTracker {
 
     private void teleportToRespawn(Ref<EntityStore> ref, Store<EntityStore> store, ActiveRun run, Map map) {
         TransformData spawn = null;
+        if (run.practiceEnabled && run.practiceCheckpoint != null) {
+            spawn = run.practiceCheckpoint;
+        }
         int checkpointIndex = resolveCheckpointIndex(run, map);
-        if (checkpointIndex >= 0 && checkpointIndex < map.getCheckpoints().size()) {
+        if (spawn == null && checkpointIndex >= 0 && checkpointIndex < map.getCheckpoints().size()) {
             spawn = map.getCheckpoints().get(checkpointIndex);
         }
         if (spawn == null) {
@@ -646,6 +700,9 @@ public class RunTracker {
         if (run == null) {
             return false;
         }
+        if (run.practiceEnabled) {
+            return teleportToPracticeCheckpoint(ref, store, playerRef, run);
+        }
         Map map = mapStore.getMap(run.mapId);
         if (map == null) {
             return false;
@@ -660,6 +717,25 @@ public class RunTracker {
         }
         Vector3d position = new Vector3d(checkpoint.getX(), checkpoint.getY(), checkpoint.getZ());
         Vector3f rotation = new Vector3f(checkpoint.getRotX(), checkpoint.getRotY(), checkpoint.getRotZ());
+        store.addComponent(ref, Teleport.getComponentType(),
+                new Teleport(store.getExternalData().getWorld(), position, rotation));
+        recordTeleport(playerRef.getUuid(), TeleportCause.CHECKPOINT);
+        run.fallStartTime = null;
+        run.lastY = null;
+        return true;
+    }
+
+    private boolean teleportToPracticeCheckpoint(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef,
+                                                 ActiveRun run) {
+        if (run == null || run.practiceCheckpoint == null) {
+            return false;
+        }
+        Vector3d position = new Vector3d(run.practiceCheckpoint.getX(),
+                run.practiceCheckpoint.getY(),
+                run.practiceCheckpoint.getZ());
+        Vector3f rotation = new Vector3f(run.practiceCheckpoint.getRotX(),
+                run.practiceCheckpoint.getRotY(),
+                run.practiceCheckpoint.getRotZ());
         store.addComponent(ref, Teleport.getComponentType(),
                 new Teleport(store.getExternalData().getWorld(), position, rotation));
         recordTeleport(playerRef.getUuid(), TeleportCause.CHECKPOINT);
@@ -708,7 +784,14 @@ public class RunTracker {
             player.sendMessage(SystemMessageUtils.parkourError("Map start not available."));
             return false;
         }
-        setActiveMap(playerRef.getUuid(), mapId, map.getStart());
+        ActiveRun previous = activeRuns.get(playerRef.getUuid());
+        boolean practiceEnabled = previous != null && previous.practiceEnabled;
+        TransformData practiceCheckpoint = previous != null ? previous.practiceCheckpoint : null;
+        ActiveRun run = setActiveMap(playerRef.getUuid(), mapId, map.getStart());
+        if (run != null) {
+            run.practiceEnabled = practiceEnabled;
+            run.practiceCheckpoint = practiceCheckpoint;
+        }
         Vector3d position = new Vector3d(map.getStart().getX(), map.getStart().getY(), map.getStart().getZ());
         Vector3f rotation = new Vector3f(map.getStart().getRotX(), map.getStart().getRotY(),
                 map.getStart().getRotZ());
@@ -824,6 +907,8 @@ public class RunTracker {
         private final java.util.Map<Integer, Long> checkpointTouchTimes = new HashMap<>();
         private boolean finishTouched;
         private int lastCheckpointIndex = -1;
+        private boolean practiceEnabled;
+        private TransformData practiceCheckpoint;
         private Long fallStartTime;
         private Double lastY;
         private long lastFinishWarningMs;

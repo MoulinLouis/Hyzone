@@ -29,6 +29,7 @@ import io.hyvexa.parkour.interaction.MenuInteraction;
 import io.hyvexa.parkour.interaction.LeaderboardInteraction;
 import io.hyvexa.parkour.interaction.LeaveInteraction;
 import io.hyvexa.parkour.interaction.PlayerSettingsInteraction;
+import io.hyvexa.parkour.interaction.PracticeInteraction;
 import io.hyvexa.parkour.interaction.ResetInteraction;
 import io.hyvexa.parkour.interaction.RestartCheckpointInteraction;
 import io.hyvexa.parkour.interaction.StatsInteraction;
@@ -871,7 +872,8 @@ public class HyvexaPlugin extends JavaPlugin {
                 InventoryUtils.giveMenuItems(player);
                 return;
             }
-            InventoryUtils.giveRunItems(player, mapStore != null ? mapStore.getMap(activeMap) : null);
+            boolean practiceEnabled = runTracker.isPracticeEnabled(playerRef.getUuid());
+            InventoryUtils.giveRunItems(player, mapStore != null ? mapStore.getMap(activeMap) : null, practiceEnabled);
         }, world);
     }
 
@@ -1042,6 +1044,7 @@ public class HyvexaPlugin extends JavaPlugin {
         registry.register("Parkour_Leaderboard_Interaction", LeaderboardInteraction.class, LeaderboardInteraction.CODEC);
         registry.register("Parkour_Stats_Interaction", StatsInteraction.class, StatsInteraction.CODEC);
         registry.register("Parkour_Reset_Interaction", ResetInteraction.class, ResetInteraction.CODEC);
+        registry.register("Parkour_Practice_Interaction", PracticeInteraction.class, PracticeInteraction.CODEC);
         registry.register("Parkour_Restart_Checkpoint_Interaction",
                 RestartCheckpointInteraction.class, RestartCheckpointInteraction.CODEC);
         registry.register("Parkour_Leave_Interaction", LeaveInteraction.class, LeaveInteraction.CODEC);

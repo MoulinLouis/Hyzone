@@ -23,17 +23,23 @@ public final class InventoryUtils {
     }
 
     public static void giveRunItems(Player player) {
-        giveRunItems(player, null);
+        giveRunItems(player, null, false);
     }
 
     public static void giveRunItems(Player player, Map map) {
+        giveRunItems(player, map, false);
+    }
+
+    public static void giveRunItems(Player player, Map map, boolean practiceEnabled) {
         Inventory inventory = player.getInventory();
         if (inventory == null) {
             return;
         }
         if (PermissionUtils.isOp(player)) {
             clearContainer(inventory.getHotbar());
-            if (PlayerSettingsStore.isResetItemEnabled(resolvePlayerUuid(player))) {
+            if (practiceEnabled) {
+                setHotbarItem(inventory, 0, new ItemStack(ParkourConstants.ITEM_PRACTICE_CHECKPOINT, 1));
+            } else if (PlayerSettingsStore.isResetItemEnabled(resolvePlayerUuid(player))) {
                 setHotbarItem(inventory, 0, new ItemStack(ParkourConstants.ITEM_RESET, 1));
             }
             setHotbarItem(inventory, 1, new ItemStack(ParkourConstants.ITEM_RESTART_CHECKPOINT, 1));
@@ -41,6 +47,9 @@ public final class InventoryUtils {
             boolean hasSword = map != null && map.isMithrilSwordEnabled();
             boolean hasDaggers = map != null && map.isMithrilDaggersEnabled();
             int slotIndex = 3;
+            if (!practiceEnabled) {
+                setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_PRACTICE, 1));
+            }
             if (hasSword) {
                 setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_RUN_MITHRIL_SWORD, 1));
             }
@@ -53,7 +62,9 @@ public final class InventoryUtils {
         }
         applyDropFilters(inventory, false);
         clearAllSections(inventory);
-        if (PlayerSettingsStore.isResetItemEnabled(resolvePlayerUuid(player))) {
+        if (practiceEnabled) {
+            setHotbarItem(inventory, 0, new ItemStack(ParkourConstants.ITEM_PRACTICE_CHECKPOINT, 1));
+        } else if (PlayerSettingsStore.isResetItemEnabled(resolvePlayerUuid(player))) {
             setHotbarItem(inventory, 0, new ItemStack(ParkourConstants.ITEM_RESET, 1));
         }
         setHotbarItem(inventory, 1, new ItemStack(ParkourConstants.ITEM_RESTART_CHECKPOINT, 1));
@@ -61,6 +72,9 @@ public final class InventoryUtils {
         boolean hasSword = map != null && map.isMithrilSwordEnabled();
         boolean hasDaggers = map != null && map.isMithrilDaggersEnabled();
         int slotIndex = 3;
+        if (!practiceEnabled) {
+            setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_PRACTICE, 1));
+        }
         if (hasSword) {
             setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_RUN_MITHRIL_SWORD, 1));
         }
