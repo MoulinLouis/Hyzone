@@ -536,13 +536,16 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
         }
         Vector3d position = transform.getPosition();
         Vector3f rotation = transform.getRotation();
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        Vector3f headRotation = playerRef != null ? playerRef.getHeadRotation() : null;
+        Vector3f useRotation = headRotation != null ? headRotation : rotation;
         TransformData data = new TransformData();
         data.setX(position.getX());
         data.setY(position.getY());
         data.setZ(position.getZ());
-        data.setRotX(rotation.getX());
-        data.setRotY(rotation.getY());
-        data.setRotZ(rotation.getZ());
+        data.setRotX(useRotation.getX());
+        data.setRotY(useRotation.getY());
+        data.setRotZ(useRotation.getZ());
         return data;
     }
 
