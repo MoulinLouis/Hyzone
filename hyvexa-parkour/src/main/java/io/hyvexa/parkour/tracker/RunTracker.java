@@ -2,6 +2,7 @@ package io.hyvexa.parkour.tracker;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.Message;
@@ -181,6 +182,7 @@ public class RunTracker {
         }
         run.practiceEnabled = true;
         run.practiceCheckpoint = null;
+        run.practiceHeadRotation = null;
         run.touchedCheckpoints.clear();
         run.checkpointTouchTimes.clear();
         run.lastCheckpointIndex = -1;
@@ -205,14 +207,17 @@ public class RunTracker {
         if (position == null || rotation == null) {
             return false;
         }
+        Vector3f headRotation = playerRef.getHeadRotation();
         TransformData checkpoint = new TransformData();
         checkpoint.setX(position.getX());
         checkpoint.setY(position.getY());
         checkpoint.setZ(position.getZ());
-        checkpoint.setRotX(rotation.getX());
-        checkpoint.setRotY(rotation.getY());
-        checkpoint.setRotZ(rotation.getZ());
+        Vector3f useRotation = headRotation != null ? headRotation : rotation;
+        checkpoint.setRotX(useRotation.getX());
+        checkpoint.setRotY(useRotation.getY());
+        checkpoint.setRotZ(useRotation.getZ());
         run.practiceCheckpoint = checkpoint;
+        run.practiceHeadRotation = headRotation != null ? headRotation.clone() : null;
         return true;
     }
 
@@ -736,8 +741,15 @@ public class RunTracker {
         Vector3f rotation = new Vector3f(run.practiceCheckpoint.getRotX(),
                 run.practiceCheckpoint.getRotY(),
                 run.practiceCheckpoint.getRotZ());
-        store.addComponent(ref, Teleport.getComponentType(),
-                new Teleport(store.getExternalData().getWorld(), position, rotation));
+        World world = store.getExternalData().getWorld();
+        if (world == null) {
+            return false;
+        }
+        Teleport teleport = Teleport.createForPlayer(world, new Transform(position, rotation));
+        if (run.practiceHeadRotation != null) {
+            teleport.setHeadRotation(run.practiceHeadRotation.clone());
+        }
+        store.addComponent(ref, Teleport.getComponentType(), teleport);
         recordTeleport(playerRef.getUuid(), TeleportCause.CHECKPOINT);
         run.fallStartTime = null;
         run.lastY = null;
@@ -787,10 +799,12 @@ public class RunTracker {
         ActiveRun previous = activeRuns.get(playerRef.getUuid());
         boolean practiceEnabled = previous != null && previous.practiceEnabled;
         TransformData practiceCheckpoint = previous != null ? previous.practiceCheckpoint : null;
+        Vector3f practiceHeadRotation = previous != null ? previous.practiceHeadRotation : null;
         ActiveRun run = setActiveMap(playerRef.getUuid(), mapId, map.getStart());
         if (run != null) {
             run.practiceEnabled = practiceEnabled;
             run.practiceCheckpoint = practiceCheckpoint;
+            run.practiceHeadRotation = practiceHeadRotation;
         }
         Vector3d position = new Vector3d(map.getStart().getX(), map.getStart().getY(), map.getStart().getZ());
         Vector3f rotation = new Vector3f(map.getStart().getRotX(), map.getStart().getRotY(),
@@ -909,6 +923,7 @@ public class RunTracker {
         private int lastCheckpointIndex = -1;
         private boolean practiceEnabled;
         private TransformData practiceCheckpoint;
+        private Vector3f practiceHeadRotation;
         private Long fallStartTime;
         private Double lastY;
         private long lastFinishWarningMs;
