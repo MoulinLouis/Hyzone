@@ -103,7 +103,7 @@ public class MapSelectPage extends BaseParkourPage {
                 Message.raw(mapName != null ? mapName : "Map").color(SystemMessageUtils.PRIMARY_TEXT),
                 Message.raw(".").color(SystemMessageUtils.SECONDARY)
         ));
-        InventoryUtils.giveRunItems(player, map);
+        InventoryUtils.giveRunItems(player, map, false);
         this.close();
     }
 

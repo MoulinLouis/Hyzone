@@ -135,7 +135,8 @@ public class PlayerSettingsPage extends BaseParkourPage {
                 String mapId = plugin.getRunTracker().getActiveMapId(playerRef.getUuid());
                 if (mapId != null && plugin.getMapStore() != null) {
                     Map map = plugin.getMapStore().getMap(mapId);
-                    InventoryUtils.giveRunItems(player, map);
+                    boolean practiceEnabled = plugin.getRunTracker().isPracticeEnabled(playerRef.getUuid());
+                    InventoryUtils.giveRunItems(player, map, practiceEnabled);
                 }
             }
             player.sendMessage(Message.raw(enabled ? "Reset item enabled." : "Reset item disabled."));

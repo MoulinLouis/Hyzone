@@ -4,7 +4,6 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.InteractionType;
-import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.SimpleInteraction;
@@ -13,16 +12,16 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.common.util.InventoryUtils;
+import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.parkour.data.Map;
-import io.hyvexa.parkour.util.PlayerSettingsStore;
 
 import javax.annotation.Nonnull;
 import java.util.concurrent.CompletableFuture;
 
-public class ResetInteraction extends SimpleInteraction {
+public class PracticeInteraction extends SimpleInteraction {
 
-    public static final BuilderCodec<ResetInteraction> CODEC =
-            BuilderCodec.builder(ResetInteraction.class, ResetInteraction::new).build();
+    public static final BuilderCodec<PracticeInteraction> CODEC =
+            BuilderCodec.builder(PracticeInteraction.class, PracticeInteraction::new).build();
 
     @Override
     public void handle(@Nonnull Ref<EntityStore> ref, boolean firstRun, float time,
@@ -38,34 +37,37 @@ public class ResetInteraction extends SimpleInteraction {
         if (player == null || playerRef == null) {
             return;
         }
-        if (!PlayerSettingsStore.isResetItemEnabled(playerRef.getUuid())) {
-            player.sendMessage(Message.raw("Reset item disabled in settings."));
-            return;
-        }
         World world = store.getExternalData().getWorld();
         if (world == null) {
-            player.sendMessage(Message.raw("World not available."));
             return;
         }
         CompletableFuture.runAsync(() -> {
-            InventoryUtils.clearAllItems(player);
             if (plugin.getDuelTracker() != null && plugin.getDuelTracker().isInMatch(playerRef.getUuid())) {
-                Map map = plugin.getDuelTracker().getActiveMap(playerRef.getUuid());
-                InventoryUtils.giveDuelItems(player, map);
-                plugin.getDuelTracker().resetRunToStart(ref, store, player, playerRef);
+                player.sendMessage(SystemMessageUtils.parkourWarn("Practice is unavailable during duels."));
                 return;
             }
-            Map map = null;
-            if (plugin.getRunTracker() != null && plugin.getMapStore() != null) {
-                String mapId = plugin.getRunTracker().getActiveMapId(playerRef.getUuid());
-                if (mapId != null) {
-                    map = plugin.getMapStore().getMap(mapId);
-                }
+            if (plugin.getRunTracker() == null) {
+                return;
             }
-            boolean practiceEnabled = plugin.getRunTracker() != null
-                    && plugin.getRunTracker().isPracticeEnabled(playerRef.getUuid());
-            InventoryUtils.giveRunItems(player, map, practiceEnabled);
-            plugin.getRunTracker().resetRunToStart(ref, store, player, playerRef);
+            String mapId = plugin.getRunTracker().getActiveMapId(playerRef.getUuid());
+            if (mapId == null) {
+                player.sendMessage(SystemMessageUtils.parkourWarn("Start a run before enabling practice."));
+                return;
+            }
+            Map map = plugin.getMapStore() != null ? plugin.getMapStore().getMap(mapId) : null;
+            if (!plugin.getRunTracker().isPracticeEnabled(playerRef.getUuid())) {
+                plugin.getRunTracker().enablePractice(playerRef.getUuid());
+                InventoryUtils.clearAllItems(player);
+                InventoryUtils.giveRunItems(player, map, true);
+                player.sendMessage(SystemMessageUtils.parkourInfo("Practice mode enabled."));
+                return;
+            }
+            boolean checkpointSet = plugin.getRunTracker().setPracticeCheckpoint(ref, store, playerRef);
+            if (checkpointSet) {
+                player.sendMessage(SystemMessageUtils.parkourInfo("Practice checkpoint set."));
+            } else {
+                player.sendMessage(SystemMessageUtils.parkourWarn("Unable to set a practice checkpoint here."));
+            }
         }, world);
     }
 }
