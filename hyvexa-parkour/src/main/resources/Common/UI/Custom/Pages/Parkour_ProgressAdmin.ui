@@ -31,7 +31,7 @@ $C.@PageOverlay {
           FontSize: 14,
           TextColor: #9fb0ba
         );
-        Text: "Delete player progress by UUID or purge a map id.";
+        Text: "Delete player progress by UUID or purge a map id (XP recalculates).";
       }
 
       Label {
@@ -100,17 +100,6 @@ $C.@PageOverlay {
       }
 
       $C.@TextField #MapPurgeIdField {
-        Anchor: (Height: 24);
-        Style: (FontSize: 13, TextColor: #ffffff(0.85));
-      }
-
-      Label {
-        Anchor: (Top: 6);
-        Style: (FontSize: 12, TextColor: #9fb0ba);
-        Text: "XP to remove (per player)";
-      }
-
-      $C.@TextField #MapPurgeXpField {
         Anchor: (Height: 24);
         Style: (FontSize: 13, TextColor: #ffffff(0.85));
       }

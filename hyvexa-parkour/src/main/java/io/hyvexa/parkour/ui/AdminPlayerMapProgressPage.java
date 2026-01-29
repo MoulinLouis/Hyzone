@@ -70,7 +70,7 @@ public class AdminPlayerMapProgressPage extends BaseParkourPage {
             return;
         }
         String mapId = data.getButton().substring(BUTTON_SELECT_PREFIX.length());
-        boolean removed = progressStore.clearPlayerMapProgress(targetId, mapId);
+        boolean removed = progressStore.clearPlayerMapProgress(targetId, mapId, mapStore);
         Player player = store.getComponent(ref, Player.getComponentType());
         if (player != null) {
             if (removed) {

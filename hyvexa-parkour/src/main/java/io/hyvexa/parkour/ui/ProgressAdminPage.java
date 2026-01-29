@@ -28,10 +28,9 @@ public class ProgressAdminPage extends InteractiveCustomUIPage<ProgressAdminPage
     private String playerUuidInput = "";
     private String playerNameInput = "";
     private String mapIdInput = "";
-    private String mapXpInput = "";
     private String summaryText = "Enter a player UUID to delete progress.";
     private String refreshStatusText = "Enter a player name to reload progress from disk.";
-    private String purgeStatusText = "Enter a map id and XP amount to purge.";
+    private String purgeStatusText = "Enter a map id to purge and recalculate XP.";
     private static final String BUTTON_BACK = "BackButton";
     private static final String BUTTON_DELETE = "DeleteProgress";
     private static final String BUTTON_PURGE = "PurgeMapProgress";
@@ -59,9 +58,6 @@ public class ProgressAdminPage extends InteractiveCustomUIPage<ProgressAdminPage
         }
         if (data.mapId != null) {
             mapIdInput = data.mapId.trim();
-        }
-        if (data.mapXp != null) {
-            mapXpInput = data.mapXp.trim();
         }
         if (data.playerName != null) {
             playerNameInput = data.playerName.trim();
@@ -111,17 +107,14 @@ public class ProgressAdminPage extends InteractiveCustomUIPage<ProgressAdminPage
             sendRefresh(ref, store);
             return;
         }
-        Long xpReduction = parseMapXp(player);
-        if (xpReduction == null) {
-            sendRefresh(ref, store);
-            return;
-        }
-        ProgressStore.MapPurgeResult result = progressStore.purgeMapProgress(mapId, xpReduction);
+        HyvexaPlugin plugin = HyvexaPlugin.getInstance();
+        MapStore mapStore = plugin != null ? plugin.getMapStore() : null;
+        ProgressStore.MapPurgeResult result = progressStore.purgeMapProgress(mapId, mapStore);
         if (result.playersUpdated == 0) {
             purgeStatusText = "No progress found for map '" + mapId + "'.";
         } else {
             purgeStatusText = "Removed map '" + mapId + "' from " + result.playersUpdated
-                    + " player(s). XP reduced by " + xpReduction + " each (total " + result.totalXpRemoved + ").";
+                    + " player(s). XP recalculated (total " + result.totalXpRemoved + " removed).";
         }
         sendRefresh(ref, store);
     }
@@ -139,33 +132,6 @@ public class ProgressAdminPage extends InteractiveCustomUIPage<ProgressAdminPage
             if (player != null) {
                 player.sendMessage(Message.raw("Invalid UUID format."));
             }
-            return null;
-        }
-    }
-
-    private Long parseMapXp(Player player) {
-        String raw = mapXpInput != null ? mapXpInput.trim() : "";
-        if (raw.isEmpty()) {
-            player.sendMessage(Message.raw("Enter an XP amount to remove."));
-            purgeStatusText = "XP amount is required.";
-            return null;
-        }
-        try {
-            long value = Long.parseLong(raw);
-            if (value < 0L) {
-                player.sendMessage(Message.raw("XP amount must be 0 or higher."));
-                purgeStatusText = "XP amount must be 0 or higher.";
-                return null;
-            }
-            if (value > 100_000L) {
-                player.sendMessage(Message.raw("XP amount cannot exceed 100,000."));
-                purgeStatusText = "XP amount cannot exceed 100,000.";
-                return null;
-            }
-            return value;
-        } catch (NumberFormatException ex) {
-            player.sendMessage(Message.raw("XP amount must be a number."));
-            purgeStatusText = "XP amount must be a number.";
             return null;
         }
     }
@@ -231,7 +197,6 @@ public class ProgressAdminPage extends InteractiveCustomUIPage<ProgressAdminPage
         commandBuilder.set("#PlayerUuidField.Value", playerUuidInput);
         commandBuilder.set("#PlayerNameField.Value", playerNameInput);
         commandBuilder.set("#MapPurgeIdField.Value", mapIdInput);
-        commandBuilder.set("#MapPurgeXpField.Value", mapXpInput);
     }
 
     private void sendRefresh(Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -255,8 +220,6 @@ public class ProgressAdminPage extends InteractiveCustomUIPage<ProgressAdminPage
                 EventData.of(ProgressData.KEY_BUTTON, BUTTON_REFRESH), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#MapPurgeIdField",
                 EventData.of(ProgressData.KEY_MAP_ID, "#MapPurgeIdField.Value"), false);
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#MapPurgeXpField",
-                EventData.of(ProgressData.KEY_MAP_XP, "#MapPurgeXpField.Value"), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#PurgeMapButton",
                 EventData.of(ProgressData.KEY_BUTTON, BUTTON_PURGE), false);
     }
@@ -266,7 +229,6 @@ public class ProgressAdminPage extends InteractiveCustomUIPage<ProgressAdminPage
         static final String KEY_PLAYER_UUID = "@PlayerUuid";
         static final String KEY_PLAYER_NAME = "@PlayerName";
         static final String KEY_MAP_ID = "@MapId";
-        static final String KEY_MAP_XP = "@MapXp";
 
         public static final BuilderCodec<ProgressData> CODEC = BuilderCodec.<ProgressData>builder(ProgressData.class,
                         ProgressData::new)
@@ -278,15 +240,12 @@ public class ProgressAdminPage extends InteractiveCustomUIPage<ProgressAdminPage
                         (data, value) -> data.playerName = value, data -> data.playerName)
                 .addField(new KeyedCodec<>(KEY_MAP_ID, Codec.STRING),
                         (data, value) -> data.mapId = value, data -> data.mapId)
-                .addField(new KeyedCodec<>(KEY_MAP_XP, Codec.STRING),
-                        (data, value) -> data.mapXp = value, data -> data.mapXp)
                 .build();
 
         private String button;
         private String playerUuid;
         private String playerName;
         private String mapId;
-        private String mapXp;
     }
 
 }
