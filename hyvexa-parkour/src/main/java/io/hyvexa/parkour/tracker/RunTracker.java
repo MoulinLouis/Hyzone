@@ -564,7 +564,7 @@ public class RunTracker {
             Long previousBestMs = progressStore.getBestTimeMs(playerId, map.getId());
             int oldRank = progressStore.getCompletionRank(playerId, mapStore);
             ProgressStore.ProgressionResult result = progressStore.recordMapCompletion(playerId, playerName,
-                    map.getId(), durationMs, map.getFirstCompletionXp(), checkpointTimes);
+                    map.getId(), durationMs, mapStore, checkpointTimes);
             if (!result.completionSaved) {
                 player.sendMessage(SystemMessageUtils.parkourWarn(
                         "Warning: Your time might not have been saved. Please report this."));

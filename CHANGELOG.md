@@ -1,5 +1,7 @@
 # Changelog
 
+- XP is now calculated from completed maps instead of being awarded on completion.
+- Removed the XP input from the progress admin purge UI now that XP is recalculated.
 - Added practice mode run items to set per-run checkpoints, ignore map checkpoints, and block finishes while practicing.
 - Swapped the practice checkpoint item to use Ingredient_Fire_Essence instead of water essence.
 - Save practice checkpoint head rotation and restore it on restart-to-checkpoint.

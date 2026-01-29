@@ -248,7 +248,7 @@ public class ProgressStore {
     }
 
     public ProgressionResult recordMapCompletion(UUID playerId, String playerName, String mapId, long timeMs,
-                                                 long firstCompletionXp, List<Long> checkpointTimes) {
+                                                 MapStore mapStore, List<Long> checkpointTimes) {
         fileLock.writeLock().lock();
         ProgressionResult result;
         boolean newBest = false;
@@ -267,20 +267,17 @@ public class ProgressStore {
                     saveCheckpointTimes(playerId, mapId, checkpointTimes);
                 }
             }
-            long xpAwarded = 0L;
-            if (firstCompletionForMap) {
-                xpAwarded = Math.max(0L, firstCompletionXp);
-            }
             long oldXp = playerProgress.xp;
             int oldLevel = playerProgress.level;
-            playerProgress.xp = Math.max(0L, oldXp + xpAwarded);
+            long recalculatedXp = mapStore != null ? calculateCompletionXp(playerProgress, mapStore) : oldXp;
+            playerProgress.xp = Math.max(0L, recalculatedXp);
             playerProgress.level = calculateLevel(playerProgress.xp);
 
             dirtyPlayers.add(playerId);
             // Save completion immediately
             completionSaved = saveCompletion(playerId, mapId, timeMs);
 
-            result = new ProgressionResult(firstCompletionForMap, newBest, personalBest, xpAwarded,
+            result = new ProgressionResult(firstCompletionForMap, newBest, personalBest, 0L,
                     oldLevel, playerProgress.level, completionSaved);
         } finally {
             fileLock.writeLock().unlock();
@@ -529,12 +526,11 @@ public class ProgressStore {
         }
     }
 
-    public MapPurgeResult purgeMapProgress(String mapId, long xpReduction) {
+    public MapPurgeResult purgeMapProgress(String mapId, MapStore mapStore) {
         if (mapId == null || mapId.isBlank()) {
             return new MapPurgeResult(0, 0L);
         }
         String trimmedId = mapId.trim();
-        long reduction = Math.max(0L, xpReduction);
         List<UUID> affectedPlayers = new ArrayList<>();
         long totalXpRemoved = 0L;
 
@@ -548,9 +544,9 @@ public class ProgressStore {
                 if (removedCompletion || removedBest || removedCheckpoints) {
                     affectedPlayers.add(entry.getKey());
                     long oldXp = playerProgress.xp;
-                    long newXp = Math.max(0L, oldXp - reduction);
-                    totalXpRemoved += (oldXp - newXp);
-                    playerProgress.xp = newXp;
+                    long newXp = mapStore != null ? calculateCompletionXp(playerProgress, mapStore) : oldXp;
+                    totalXpRemoved += Math.max(0L, oldXp - newXp);
+                    playerProgress.xp = Math.max(0L, newXp);
                     playerProgress.level = calculateLevel(playerProgress.xp);
                     dirtyPlayers.add(entry.getKey());
                 }
@@ -573,7 +569,7 @@ public class ProgressStore {
         return new MapPurgeResult(affectedPlayers.size(), totalXpRemoved);
     }
 
-    public boolean clearPlayerMapProgress(UUID playerId, String mapId) {
+    public boolean clearPlayerMapProgress(UUID playerId, String mapId, MapStore mapStore) {
         if (playerId == null || mapId == null || mapId.isBlank()) {
             return false;
         }
@@ -590,6 +586,9 @@ public class ProgressStore {
             boolean removedCheckpoints = playerProgress.checkpointTimes.remove(trimmedId) != null;
             removed = removedCompletion || removedBest || removedCheckpoints;
             if (removed) {
+                long newXp = mapStore != null ? calculateCompletionXp(playerProgress, mapStore) : playerProgress.xp;
+                playerProgress.xp = Math.max(0L, newXp);
+                playerProgress.level = calculateLevel(playerProgress.xp);
                 dirtyPlayers.add(playerId);
             }
         } finally {
@@ -701,7 +700,7 @@ public class ProgressStore {
         if (mapStore == null) return 0L;
         long total = 0L;
         for (Map map : mapStore.listMaps()) {
-            total += getCategoryXp(map != null ? map.getCategory() : null);
+            total += getMapCompletionXp(map);
         }
         return total;
     }
@@ -721,18 +720,27 @@ public class ProgressStore {
     private long getPlayerCompletionXp(UUID playerId, MapStore mapStore) {
         PlayerProgress playerProgress = progress.get(playerId);
         if (playerProgress == null) return 0L;
-        long total = 0L;
-        for (String mapId : playerProgress.completedMaps) {
-            Map map = mapStore.getMap(mapId);
-            if (map == null) continue;
-            total += getCategoryXp(map.getCategory());
-        }
-        return total;
+        return calculateCompletionXp(playerProgress, mapStore);
     }
 
     public long getCalculatedCompletionXp(UUID playerId, MapStore mapStore) {
         if (playerId == null || mapStore == null) return 0L;
         return getPlayerCompletionXp(playerId, mapStore);
+    }
+
+    private static long calculateCompletionXp(PlayerProgress playerProgress, MapStore mapStore) {
+        if (playerProgress == null || mapStore == null) return 0L;
+        long total = 0L;
+        for (String mapId : playerProgress.completedMaps) {
+            Map map = mapStore.getMap(mapId);
+            total += getMapCompletionXp(map);
+        }
+        return total;
+    }
+
+    private static long getMapCompletionXp(Map map) {
+        if (map == null) return 0L;
+        return Math.max(0L, map.getFirstCompletionXp());
     }
 
     public static long getCategoryXp(String category) {

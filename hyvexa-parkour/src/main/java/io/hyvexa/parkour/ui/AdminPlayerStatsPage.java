@@ -147,7 +147,7 @@ public class AdminPlayerStatsPage extends BaseParkourPage {
 
     private void populateSummary(UICommandBuilder commandBuilder) {
         String name = ParkourUtils.resolveName(targetId, progressStore);
-        long xp = progressStore.getXp(targetId);
+        long xp = progressStore.getCalculatedCompletionXp(targetId, mapStore);
         int completed = progressStore.getCompletedMapCount(targetId);
         int totalMaps = mapStore != null ? mapStore.listMaps().size() : 0;
         String rankName = progressStore.getRankName(targetId, mapStore);
