@@ -1,5 +1,7 @@
 # Changelog
 
+- Refresh the run timer HUD every 10ms instead of 100ms.
+- Refresh the duel tick loop every 10ms instead of 100ms.
 - Show checkpoint split time deltas in a temporary HUD overlay after reaching a checkpoint.
 - Format checkpoint split chat timings to two decimals instead of millisecond precision.
 - Move parkour run detection to an ECS per-tick system instead of the 200ms poll.

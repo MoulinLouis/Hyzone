@@ -194,7 +194,7 @@ public class HyvexaPlugin extends JavaPlugin {
                 runTracker, PlayerVisibilityManager.get());
         this.playtimeManager.setOnlineCount(Universe.get().getPlayers().size());
         registerRunTrackerTickSystem();
-        hudUpdateTask = scheduleTick("hud updates", this::tickHudUpdates, 100, 100, TimeUnit.MILLISECONDS);
+        hudUpdateTask = scheduleTick("hud updates", this::tickHudUpdates, 10, 10, TimeUnit.MILLISECONDS);
         playtimeTask = scheduleTick("playtime", this::tickPlaytime, 60, 60, TimeUnit.SECONDS);
         collisionTask = scheduleTick("collision removal", this::tickCollisionRemoval, 1, 2, TimeUnit.SECONDS);
         playerCountTask = scheduleTick("player counts", this::tickPlayerCounts, 5, PLAYER_COUNT_SAMPLE_SECONDS,
@@ -203,7 +203,7 @@ public class HyvexaPlugin extends JavaPlugin {
                 STALE_PLAYER_SWEEP_SECONDS, TimeUnit.SECONDS);
         teleportDebugTask = scheduleTick("teleport debug", this::tickTeleportDebug, TELEPORT_DEBUG_INTERVAL_SECONDS,
                 TELEPORT_DEBUG_INTERVAL_SECONDS, TimeUnit.SECONDS);
-        duelTickTask = scheduleTick("duel tick", this::tickDuel, 100, 100, TimeUnit.MILLISECONDS);
+        duelTickTask = scheduleTick("duel tick", this::tickDuel, 10, 10, TimeUnit.MILLISECONDS);
         announcementManager.refreshChatAnnouncements();
 
 
