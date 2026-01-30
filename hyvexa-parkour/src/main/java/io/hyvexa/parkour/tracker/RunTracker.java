@@ -48,9 +48,9 @@ public class RunTracker {
 
     private static final double TOUCH_RADIUS_SQ = ParkourConstants.TOUCH_RADIUS * ParkourConstants.TOUCH_RADIUS;
     private static final double START_MOVE_THRESHOLD_SQ = 0.0025;
-    private static final long PING_SAMPLE_INTERVAL_MS = 1000L;
     private static final long OFFLINE_RUN_EXPIRY_MS = TimeUnit.MINUTES.toMillis(30L);
     private static final long PING_HIGH_THRESHOLD_MS = 100L;
+    private static final long PING_DELTA_THRESHOLD_MS = 80L;
     private static final String CHECKPOINT_HUD_BG_FAST = "#1E4A7A";
     private static final String CHECKPOINT_HUD_BG_SLOW = "#6A1E1E";
     private static final String CHECKPOINT_HUD_BG_TIE = "#000000";
@@ -333,13 +333,12 @@ public class RunTracker {
         if (map == null) {
             return;
         }
-        updateStartOnMovement(run, position);
+        updateStartOnMovement(run, position, playerRef);
         long previousElapsedMs = getRunElapsedMs(run);
         Vector3d previousPosition = run.lastPosition;
         advanceRunTime(run, deltaSeconds);
         long currentElapsedMs = getRunElapsedMs(run);
         double deltaMs = Math.max(0.0, currentElapsedMs - previousElapsedMs);
-        updatePingStats(run, playerRef, currentElapsedMs);
         if (checkLeaveTrigger(ref, store, player, playerRef, position, map, buffer)) {
             return;
         }
@@ -694,7 +693,8 @@ public class RunTracker {
                     broadcastVexaGod(playerName);
                 }
             }
-            sendLagAccuracyMessage(run, player);
+            recordFinishPing(run, playerRef);
+            sendLatencyWarning(run, player);
             teleportToSpawn(ref, store, transform, buffer);
             recordTeleport(playerId, TeleportCause.FINISH);
             clearActiveMap(playerId);
@@ -763,10 +763,10 @@ public class RunTracker {
         run.elapsedMs = 0L;
         run.elapsedRemainderMs = 0.0;
         run.skipNextTimeIncrement = false;
-        resetPingStats(run);
+        resetPingSnapshots(run);
     }
 
-    private void updateStartOnMovement(ActiveRun run, Vector3d position) {
+    private void updateStartOnMovement(ActiveRun run, Vector3d position, PlayerRef playerRef) {
         if (run == null || !run.waitingForStart || run.startPosition == null || position == null) {
             return;
         }
@@ -776,7 +776,8 @@ public class RunTracker {
             run.elapsedMs = 0L;
             run.elapsedRemainderMs = 0.0;
             run.skipNextTimeIncrement = true;
-            resetPingStats(run);
+            resetPingSnapshots(run);
+            recordStartPing(run, playerRef);
         }
     }
 
@@ -1045,9 +1046,8 @@ public class RunTracker {
         private long elapsedMs;
         private double elapsedRemainderMs;
         private boolean skipNextTimeIncrement;
-        private long pingSampleCount;
-        private double pingSumMs;
-        private long nextPingSampleAtMs;
+        private Long startPingMs;
+        private Long finishPingMs;
 
         private ActiveRun(String mapId, long startTimeMs) {
             this.mapId = mapId;
@@ -1258,68 +1258,74 @@ public class RunTracker {
         return new Vector3d(position.getX(), position.getY(), position.getZ());
     }
 
-    private void updatePingStats(ActiveRun run, PlayerRef playerRef, long elapsedMs) {
-        if (run == null || playerRef == null || run.waitingForStart) {
+    private void recordStartPing(ActiveRun run, PlayerRef playerRef) {
+        if (run == null || playerRef == null || run.startPingMs != null) {
             return;
         }
-        if (elapsedMs < run.nextPingSampleAtMs) {
+        run.startPingMs = readPingMs(playerRef);
+    }
+
+    private void recordFinishPing(ActiveRun run, PlayerRef playerRef) {
+        if (run == null || playerRef == null || run.finishPingMs != null) {
             return;
         }
-        run.nextPingSampleAtMs = elapsedMs + PING_SAMPLE_INTERVAL_MS;
+        run.finishPingMs = readPingMs(playerRef);
+    }
+
+    private void resetPingSnapshots(ActiveRun run) {
+        if (run == null) {
+            return;
+        }
+        run.startPingMs = null;
+        run.finishPingMs = null;
+    }
+
+    private void sendLatencyWarning(ActiveRun run, Player player) {
+        if (player == null || run == null || run.startPingMs == null || run.finishPingMs == null) {
+            return;
+        }
+        long startPingMs = run.startPingMs;
+        long finishPingMs = run.finishPingMs;
+        long deltaMs = Math.abs(finishPingMs - startPingMs);
+        boolean highPing = startPingMs >= PING_HIGH_THRESHOLD_MS || finishPingMs >= PING_HIGH_THRESHOLD_MS;
+        boolean highDelta = deltaMs >= PING_DELTA_THRESHOLD_MS;
+        if (!highPing && !highDelta) {
+            return;
+        }
+        Message message = SystemMessageUtils.withParkourPrefix(
+                Message.raw("Latency warning ").color(SystemMessageUtils.WARN),
+                Message.raw("(start ").color(SystemMessageUtils.SECONDARY),
+                Message.raw(startPingMs + "ms").color(SystemMessageUtils.PRIMARY_TEXT),
+                Message.raw(", finish ").color(SystemMessageUtils.SECONDARY),
+                Message.raw(finishPingMs + "ms").color(SystemMessageUtils.PRIMARY_TEXT),
+                Message.raw("). ").color(SystemMessageUtils.SECONDARY),
+                Message.raw("Timer may be less accurate due to lag.").color(SystemMessageUtils.WARN)
+        );
+        player.sendMessage(message);
+    }
+
+    private Long readPingMs(PlayerRef playerRef) {
+        if (playerRef == null) {
+            return null;
+        }
         PacketHandler handler = playerRef.getPacketHandler();
         if (handler == null) {
-            return;
+            return null;
         }
         PacketHandler.PingInfo pingInfo = handler.getPingInfo(PongType.Tick);
         if (pingInfo == null) {
-            return;
+            return null;
         }
         HistoricMetric metric = pingInfo.getPingMetricSet();
         if (metric == null) {
-            return;
+            return null;
         }
         double avg = metric.getAverage(0);
         double avgMs = convertPingToMs(avg, PacketHandler.PingInfo.TIME_UNIT);
         if (!Double.isFinite(avgMs) || avgMs <= 0.0) {
-            return;
+            return null;
         }
-        run.pingSampleCount++;
-        run.pingSumMs += avgMs;
-    }
-
-    private void resetPingStats(ActiveRun run) {
-        if (run == null) {
-            return;
-        }
-        run.pingSampleCount = 0L;
-        run.pingSumMs = 0.0;
-        run.nextPingSampleAtMs = 0L;
-    }
-
-    private void sendLagAccuracyMessage(ActiveRun run, Player player) {
-        if (player == null || run == null || run.pingSampleCount <= 0L) {
-            return;
-        }
-        long avgPingMs = Math.round(run.pingSumMs / (double) run.pingSampleCount);
-        Message message;
-        if (avgPingMs < PING_HIGH_THRESHOLD_MS) {
-            message = SystemMessageUtils.withParkourPrefix(
-                    Message.raw("Connection stable ").color(SystemMessageUtils.SUCCESS),
-                    Message.raw("(avg ").color(SystemMessageUtils.SECONDARY),
-                    Message.raw(avgPingMs + "ms").color(SystemMessageUtils.PRIMARY_TEXT),
-                    Message.raw("). ").color(SystemMessageUtils.SECONDARY),
-                    Message.raw("Timer is accurate and fair.").color(SystemMessageUtils.INFO)
-            );
-        } else {
-            message = SystemMessageUtils.withParkourPrefix(
-                    Message.raw("High latency ").color(SystemMessageUtils.WARN),
-                    Message.raw("(avg ").color(SystemMessageUtils.SECONDARY),
-                    Message.raw(avgPingMs + "ms").color(SystemMessageUtils.PRIMARY_TEXT),
-                    Message.raw("). ").color(SystemMessageUtils.SECONDARY),
-                    Message.raw("Timer may be less accurate due to lag.").color(SystemMessageUtils.WARN)
-            );
-        }
-        player.sendMessage(message);
+        return Math.round(avgMs);
     }
 
     private static double convertPingToMs(double value, TimeUnit unit) {

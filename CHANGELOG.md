@@ -29,7 +29,7 @@
 - Ensure per-tick run checks pass the ECS command buffer to teleport safely.
 - Show checkpoint split times and deltas with millisecond precision while keeping map times at 2 decimals.
 - Interpolate checkpoint and finish times within a tick using segment-sphere intersection.
-- Show a ping-based accuracy notice at the end of a run (stable vs high latency).
+- Warn about latency only when start/finish ping is high or changes significantly.
 - Document the per-tick ECS run tracking approach and require English documentation in AGENTS.
 - Add run elapsed time to checkpoint split diff messages.
 - XP is now calculated from completed maps instead of being awarded on completion.
