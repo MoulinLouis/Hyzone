@@ -1,5 +1,7 @@
 # Changelog
 
+- Show checkpoint split time deltas in a temporary HUD overlay after reaching a checkpoint.
+- Format checkpoint split chat timings to two decimals instead of millisecond precision.
 - Move parkour run detection to an ECS per-tick system instead of the 200ms poll.
 - Drive the parkour run timer from per-tick ECS updates to match HUD timing.
 - Use CommandBuffer-backed teleports during per-tick run checks to avoid store processing crashes.

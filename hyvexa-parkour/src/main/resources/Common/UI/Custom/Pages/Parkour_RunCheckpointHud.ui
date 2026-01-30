@@ -1,0 +1,26 @@
+$C = "../Common.ui";
+
+$C.@PageOverlay {
+  Background: #000000(0.0);
+  Group #HudLayer {
+    Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+
+    Group #CheckpointSplitHud {
+      Anchor: (Top: 112, Width: 140, Height: 34);
+      Background: #000000(0.35);
+      Padding: (Left: 10, Right: 10, Top: 2, Bottom: 2);
+      Visible: false;
+
+      Label #CheckpointSplitText {
+        Anchor: (Left: 0, Right: 0);
+        Style: (
+          FontSize: 24,
+          TextColor: #FFFFFF,
+          RenderBold: true,
+          HorizontalAlignment: Center
+        );
+        Text: "";
+      }
+    }
+  }
+}

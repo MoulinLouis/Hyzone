@@ -15,7 +15,7 @@ public class RunRecordsHud extends RunHud {
 
     @Override
     protected void build(UICommandBuilder commandBuilder) {
-        commandBuilder.append("Pages/Parkour_RunHud.ui");
+        super.build(commandBuilder);
         commandBuilder.append("Pages/Parkour_RunRecordsHud.ui");
     }
 
