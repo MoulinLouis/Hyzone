@@ -11,10 +11,9 @@
     "Website": "",
     "ServerVersion": "*",
     "Dependencies": {
-        
+        "ehko:Hylograms": "*"
     },
     "OptionalDependencies": {
-        
     },
     "DisabledByDefault": false,
     "Main": "io.hyvexa.ascend.ParkourAscendPlugin",

@@ -19,7 +19,9 @@ import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.ui.AscendAdminPage;
+import io.hyvexa.common.util.HylogramsBridge;
 import io.hyvexa.common.util.PermissionUtils;
+import io.hyvexa.common.util.SystemMessageUtils;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -57,8 +59,12 @@ public class AscendAdminCommand extends AbstractAsyncCommand {
 
     private void handleCommand(CommandContext ctx, Player player, Ref<EntityStore> ref, Store<EntityStore> store) {
         String[] args = getArgs(ctx);
+        if (args.length >= 1 && "holograms".equalsIgnoreCase(args[0])) {
+            listHolograms(ctx);
+            return;
+        }
         if (args.length < 1 || !"admin".equalsIgnoreCase(args[0])) {
-            player.sendMessage(Message.raw("Usage: /as admin map <create|setstart|setfinish|addwaypoint|clearwaypoints|setreward|list> ..."));
+            player.sendMessage(Message.raw("Usage: /as holograms | /as admin map <create|setstart|setfinish|addwaypoint|clearwaypoints|setreward|list> ..."));
             return;
         }
         if (args.length == 1) {
@@ -126,6 +132,21 @@ public class AscendAdminCommand extends AbstractAsyncCommand {
             return trimmed;
         }
         return tokens;
+    }
+
+    private void listHolograms(CommandContext ctx) {
+        try {
+            List<String> names = HylogramsBridge.listHologramNames();
+            if (names.isEmpty()) {
+                ctx.sendMessage(SystemMessageUtils.serverInfo("No holograms found."));
+                return;
+            }
+            ctx.sendMessage(SystemMessageUtils.serverInfo("Holograms (" + names.size() + "): " + String.join(", ", names)));
+        } catch (IllegalStateException e) {
+            ctx.sendMessage(SystemMessageUtils.serverError(e.getMessage()));
+        } catch (Exception e) {
+            ctx.sendMessage(SystemMessageUtils.serverError("Failed to list holograms."));
+        }
     }
 
     private void handleCreateMap(Player player, Store<EntityStore> store, AscendMapStore mapStore, String[] args) {

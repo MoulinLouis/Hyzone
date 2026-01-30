@@ -238,6 +238,11 @@ Systems modify player behavior by filtering events. Current systems:
 ```
 Register systems in `setup()` or defer to avoid blocking on module initialization.
 
+### Hylograms API
+- Hylograms classes are isolated in their own plugin classloader. Do not import `dev.ehko.hylograms.api.*` directly in runtime code.
+- Use `io.hyvexa.common.util.HylogramsBridge` to access Hylograms API methods via the Hylograms classloader.
+- Ensure `hyvexa-parkour` `manifest.json` lists the dependency `ehko:Hylograms`, and keep the Hylograms JAR in `libs/` for compile-only access.
+
 ### Data Storage (MySQL)
 ```java
 public class MyStore {
