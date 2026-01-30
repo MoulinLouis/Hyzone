@@ -49,6 +49,7 @@ public class RunTracker {
     private static final double TOUCH_RADIUS_SQ = ParkourConstants.TOUCH_RADIUS * ParkourConstants.TOUCH_RADIUS;
     private static final double START_MOVE_THRESHOLD_SQ = 0.0025;
     private static final long PING_SAMPLE_INTERVAL_MS = 1000L;
+    private static final long OFFLINE_RUN_EXPIRY_MS = TimeUnit.MINUTES.toMillis(30L);
     private static final long PING_HIGH_THRESHOLD_MS = 100L;
     private static final String CHECKPOINT_HUD_BG_FAST = "#1E4A7A";
     private static final String CHECKPOINT_HUD_BG_SLOW = "#6A1E1E";
@@ -61,6 +62,7 @@ public class RunTracker {
     private final ConcurrentHashMap<UUID, FallState> idleFalls = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, TeleportStats> teleportStats = new ConcurrentHashMap<>();
     private final Set<UUID> readyPlayers = ConcurrentHashMap.newKeySet();
+    private final ConcurrentHashMap<UUID, Long> lastSeenAt = new ConcurrentHashMap<>();
 
     public RunTracker(MapStore mapStore, ProgressStore progressStore,
                              SettingsStore settingsStore) {
@@ -90,6 +92,24 @@ public class RunTracker {
         idleFalls.remove(playerId);
         teleportStats.remove(playerId);
         readyPlayers.remove(playerId);
+        lastSeenAt.remove(playerId);
+    }
+
+    public void handleDisconnect(UUID playerId) {
+        if (playerId == null) {
+            return;
+        }
+        ActiveRun run = activeRuns.get(playerId);
+        if (run != null) {
+            run.lastPosition = null;
+            run.fallStartTime = null;
+            run.lastY = null;
+            run.skipNextTimeIncrement = true;
+        }
+        idleFalls.remove(playerId);
+        teleportStats.remove(playerId);
+        readyPlayers.remove(playerId);
+        lastSeenAt.put(playerId, System.currentTimeMillis());
     }
 
     public java.util.Map<UUID, TeleportStatsSnapshot> drainTeleportStats() {
@@ -164,15 +184,16 @@ public class RunTracker {
 
     public void sweepStalePlayers(Set<UUID> onlinePlayers) {
         if (onlinePlayers == null || onlinePlayers.isEmpty()) {
-            activeRuns.clear();
             idleFalls.clear();
             teleportStats.clear();
             return;
         }
-        activeRuns.keySet().removeIf(id -> !onlinePlayers.contains(id));
+        long now = System.currentTimeMillis();
         idleFalls.keySet().removeIf(id -> !onlinePlayers.contains(id));
         teleportStats.keySet().removeIf(id -> !onlinePlayers.contains(id));
         readyPlayers.removeIf(id -> !onlinePlayers.contains(id));
+        lastSeenAt.keySet().removeIf(id -> onlinePlayers.contains(id));
+        activeRuns.keySet().removeIf(id -> !onlinePlayers.contains(id) && isExpiredOfflineRun(id, now));
     }
 
     public String getActiveMapId(UUID playerId) {
@@ -265,6 +286,7 @@ public class RunTracker {
         if (!isPlayerReady(playerRef.getUuid())) {
             return;
         }
+        lastSeenAt.put(playerRef.getUuid(), System.currentTimeMillis());
         HyvexaPlugin plugin = HyvexaPlugin.getInstance();
         if (plugin != null && plugin.getDuelTracker() != null
                 && plugin.getDuelTracker().isInMatch(playerRef.getUuid())) {
@@ -1142,6 +1164,14 @@ public class RunTracker {
 
     private boolean isPlayerReady(UUID playerId) {
         return playerId != null && readyPlayers.contains(playerId);
+    }
+
+    private boolean isExpiredOfflineRun(UUID playerId, long nowMs) {
+        Long lastSeen = lastSeenAt.get(playerId);
+        if (lastSeen == null) {
+            return false;
+        }
+        return nowMs - lastSeen >= OFFLINE_RUN_EXPIRY_MS;
     }
 
     private void recordTeleport(UUID playerId, TeleportCause cause) {

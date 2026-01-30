@@ -59,7 +59,7 @@ public class PlayerCleanupManager {
             visibilityManager.clearHidden(playerId);
         }
         if (runTracker != null) {
-            runTracker.clearPlayer(playerId);
+            runTracker.handleDisconnect(playerId);
         }
     }
 
