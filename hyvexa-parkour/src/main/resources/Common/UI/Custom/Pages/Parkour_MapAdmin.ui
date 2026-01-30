@@ -260,6 +260,11 @@ $C.@PageOverlay {
               Anchor: (Height: 22, Width: 260, Top: 6);
               Text: "Refresh";
             }
+
+            $C.@TextButton #CreateHoloButton {
+              Anchor: (Height: 22, Width: 260, Top: 6);
+              Text: "Create Holo";
+            }
           }
         }
       }

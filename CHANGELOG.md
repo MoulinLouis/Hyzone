@@ -1,5 +1,16 @@
 # Changelog
 
+- Update the leaderboard hologram to show position, name, and maps completed.
+- Add /pk admin hologram refresh to manually update the leaderboard hologram.
+- Expose Hylograms API wrappers (builder, hologram, interactions) through HylogramsBridge.
+- Align leaderboard hologram columns and clamp long names for consistent spacing.
+- Split leaderboard counts into a separate hologram column for improved alignment.
+- Keep leaderboard in a single hologram with separators to avoid camera-facing drift.
+- Add a Map Admin "Create Holo" button to spawn a top-5 times hologram for the selected map.
+- Auto-refresh map leaderboard holograms when a new top-5 time is recorded.
+- Refresh map leaderboard holograms after any completion for the map.
+- Resolve map leaderboard hologram updates against the hologram world for reliable refreshes.
+- Respawn map leaderboard holograms after updates to prevent overlapping lines.
 - Added /as holograms to list Hylograms names in Ascend admin commands.
 - Added Hylograms dependency to the Parkour Ascend plugin manifest so it can access the API at runtime.
 - Documented Hylograms API usage and classloader rules in AGENTS.

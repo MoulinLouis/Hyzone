@@ -243,6 +243,29 @@ Register systems in `setup()` or defer to avoid blocking on module initializatio
 - Use `io.hyvexa.common.util.HylogramsBridge` to access Hylograms API methods via the Hylograms classloader.
 - Ensure `hyvexa-parkour` `manifest.json` lists the dependency `ehko:Hylograms`, and keep the Hylograms JAR in `libs/` for compile-only access.
 
+#### HylogramsBridge quick usage
+Use the wrappers below instead of the Hylograms classes:
+```java
+// Create + spawn
+HylogramsBridge.Hologram holo = HylogramsBridge.create("example", store)
+        .inWorld("Parkour")
+        .at(0, 64, 0)
+        .color("#FFFFFF")
+        .addLine("Header")
+        .spawn();
+
+// Update lines
+HylogramsBridge.updateHologramLines("example", List.of("Title", "1. Player 10"), store);
+
+// Interactions
+Object callback = HylogramsBridge.createInteractionCallback((player, name, line, action) -> {
+    // handle interaction
+});
+HylogramsBridge.registerInteractionCallback(callback);
+```
+Common wrappers available: `create`, `get`, `exists`, `delete`, `list`, `getAll`, `spawnAll`, `saveAll`,
+`listAnimations`, `getAnimation`, `fireInteraction`, plus `Hologram`/`HologramBuilder` instance methods.
+
 ### Data Storage (MySQL)
 ```java
 public class MyStore {

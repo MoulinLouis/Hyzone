@@ -121,6 +121,11 @@ public class ParkourCommand extends AbstractAsyncCommand {
                 handleAdminRank(ctx, player, tokens);
                 return;
             }
+            if (tokens.length >= 3 && tokens[1].equalsIgnoreCase("hologram")
+                    && tokens[2].equalsIgnoreCase("refresh")) {
+                handleAdminHologramRefresh(ctx, player, store);
+                return;
+            }
             openAdminMenu(ctx, player, store, ref);
             return;
         }
@@ -133,6 +138,7 @@ public class ParkourCommand extends AbstractAsyncCommand {
             return;
         }
         ctx.sendMessage(Message.raw("Usage: /pk [leaderboard|stats|admin|items|holograms]"));
+        ctx.sendMessage(Message.raw("Usage: /pk admin hologram refresh"));
     }
 
     private void openLeaderboardMenu(Player player, Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -347,6 +353,28 @@ public class ParkourCommand extends AbstractAsyncCommand {
         } catch (Exception e) {
             ctx.sendMessage(SystemMessageUtils.serverError("Failed to list holograms."));
         }
+    }
+
+    private void handleAdminHologramRefresh(CommandContext ctx, Player player, Store<EntityStore> store) {
+        if (player != null && !PermissionUtils.isOp(player)) {
+            ctx.sendMessage(MESSAGE_OP_REQUIRED);
+            return;
+        }
+        HyvexaPlugin plugin = HyvexaPlugin.getInstance();
+        if (plugin == null) {
+            ctx.sendMessage(SystemMessageUtils.serverError("Plugin not available."));
+            return;
+        }
+        if (!HylogramsBridge.isAvailable()) {
+            ctx.sendMessage(SystemMessageUtils.serverError("Hylograms plugin is not available."));
+            return;
+        }
+        if (store == null) {
+            ctx.sendMessage(SystemMessageUtils.serverError("Player store not available."));
+            return;
+        }
+        plugin.refreshLeaderboardHologram(store);
+        ctx.sendMessage(SystemMessageUtils.serverInfo("Leaderboard hologram refreshed."));
     }
 
     private static String[] tokenize(CommandContext ctx) {

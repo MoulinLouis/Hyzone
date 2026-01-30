@@ -51,6 +51,7 @@ import com.hypixel.hytale.server.core.event.events.ecs.UseBlockEvent;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.universe.world.WorldMapTracker;
 import io.hyvexa.common.util.FormatUtils;
+import io.hyvexa.common.util.HylogramsBridge;
 import io.hyvexa.common.util.InventoryUtils;
 import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.parkour.command.CheckpointCommand;
@@ -77,6 +78,7 @@ import io.hyvexa.parkour.system.PlayerVisibilityFilterSystem;
 import io.hyvexa.parkour.system.RunTrackerTickSystem;
 import io.hyvexa.parkour.ui.WelcomePage;
 import io.hyvexa.parkour.ui.PlayerMusicPage;
+import io.hyvexa.parkour.util.ParkourUtils;
 import io.hyvexa.parkour.visibility.PlayerVisibilityManager;
 import io.hyvexa.manager.AnnouncementManager;
 import io.hyvexa.manager.HudManager;
@@ -87,8 +89,10 @@ import io.hyvexa.manager.PlayerPerksManager;
 import javax.annotation.Nonnull;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -108,6 +112,16 @@ public class HyvexaPlugin extends JavaPlugin {
     private static final long TELEPORT_DEBUG_INTERVAL_SECONDS = 120L;
     private static final boolean DISABLE_WORLD_MAP = true; // Parkour server doesn't need world map
     private static final String PARKOUR_WORLD_NAME = "Parkour";
+    private static final String LEADERBOARD_HOLOGRAM_NAME = "leaderboard";
+    private static final int LEADERBOARD_HOLOGRAM_ENTRIES = 10;
+    private static final int LEADERBOARD_NAME_MAX = 16;
+    private static final int LEADERBOARD_POSITION_WIDTH = 4;
+    private static final int LEADERBOARD_COUNT_WIDTH = 4;
+    private static final int MAP_HOLOGRAM_TOP_LIMIT = 5;
+    private static final int MAP_HOLOGRAM_NAME_MAX = 16;
+    private static final int MAP_HOLOGRAM_POS_WIDTH = 3;
+    private static final boolean DEBUG_MAP_HOLOGRAM = false;
+    private static final long LEADERBOARD_HOLOGRAM_REFRESH_DELAY_SECONDS = 2L;
     private static final String DISCORD_URL = "https://discord.gg/2PAygkyFnK";
     private static final String JOIN_LANGUAGE_NOTICE =
             "This is an English-speaking community server. Please use English only in the chat. "
@@ -205,6 +219,7 @@ public class HyvexaPlugin extends JavaPlugin {
                 TELEPORT_DEBUG_INTERVAL_SECONDS, TimeUnit.SECONDS);
         duelTickTask = scheduleTick("duel tick", this::tickDuel, 10, 10, TimeUnit.MILLISECONDS);
         announcementManager.refreshChatAnnouncements();
+        scheduleLeaderboardHologramRefresh();
 
 
         this.getCommandRegistry().registerCommand(new CheckpointCommand());
@@ -465,6 +480,92 @@ public class HyvexaPlugin extends JavaPlugin {
         }
     }
 
+    public void refreshLeaderboardHologram(Store<EntityStore> store) {
+        if (store == null) {
+            return;
+        }
+        World world = store.getExternalData().getWorld();
+        if (!isParkourWorld(world)) {
+            return;
+        }
+        if (world != null) {
+            world.execute(() -> updateLeaderboardHologram(store));
+        } else {
+            updateLeaderboardHologram(store);
+        }
+    }
+
+    public void refreshMapLeaderboardHologram(String mapId, Store<EntityStore> store) {
+        if (mapId == null || mapId.isBlank() || store == null || progressStore == null) {
+            return;
+        }
+        if (DEBUG_MAP_HOLOGRAM) {
+            World storeWorld = store.getExternalData().getWorld();
+            String storeWorldName = storeWorld != null ? storeWorld.getName() : "unknown";
+            logMapHologramDebug("Map holo refresh requested for '" + mapId + "' from world '" + storeWorldName + "'.");
+        }
+        if (!HylogramsBridge.isAvailable()) {
+            if (DEBUG_MAP_HOLOGRAM) {
+                logMapHologramDebug("Map holo refresh skipped: Hylograms not available.");
+            }
+            return;
+        }
+        String holoName = mapId + "_holo";
+        if (!HylogramsBridge.exists(holoName)) {
+            if (DEBUG_MAP_HOLOGRAM) {
+                logMapHologramDebug("Map holo refresh skipped: '" + holoName + "' does not exist.");
+            }
+            return;
+        }
+        HylogramsBridge.Hologram holo = HylogramsBridge.get(holoName);
+        World targetWorld = null;
+        Store<EntityStore> targetStore = null;
+        if (holo != null && holo.getWorldName() != null) {
+            targetWorld = Universe.get().getWorld(holo.getWorldName());
+            if (targetWorld == null) {
+                for (World candidate : Universe.get().getWorlds().values()) {
+                    if (candidate != null && holo.getWorldName().equalsIgnoreCase(candidate.getName())) {
+                        targetWorld = candidate;
+                        break;
+                    }
+                }
+            }
+        }
+        if (targetWorld == null) {
+            targetWorld = store.getExternalData().getWorld();
+        }
+        if (targetWorld != null) {
+            if (DEBUG_MAP_HOLOGRAM) {
+                logMapHologramDebug("Map holo '" + holoName + "' target world resolved to '"
+                        + targetWorld.getName() + "'.");
+            }
+            targetStore = targetWorld.getEntityStore().getStore();
+            Store<EntityStore> finalStore = targetStore != null ? targetStore : store;
+            targetWorld.execute(() -> updateMapLeaderboardHologramLines(mapId, holoName, finalStore));
+            return;
+        }
+        updateMapLeaderboardHologramLines(mapId, holoName, store);
+    }
+
+    private void updateMapLeaderboardHologramLines(String mapId, String holoName, Store<EntityStore> store) {
+        if (store == null) {
+            return;
+        }
+        List<String> lines = buildMapLeaderboardHologramLines(mapId);
+        if (DEBUG_MAP_HOLOGRAM) {
+            logMapHologramDebug("Updating map holo '" + holoName + "' with " + lines.size() + " lines.");
+        }
+        try {
+            HylogramsBridge.Hologram existing = HylogramsBridge.get(holoName);
+            HylogramsBridge.updateHologramLines(holoName, lines, store);
+            if (existing != null) {
+                existing.respawn(store).save(store);
+            }
+        } catch (Exception e) {
+            LOGGER.at(Level.WARNING).log("Failed to update map leaderboard hologram: " + e.getMessage());
+        }
+    }
+
     public float getVipSpeedMultiplier(UUID playerId) {
         if (perksManager == null) {
             return 1.0f;
@@ -495,6 +596,196 @@ public class HyvexaPlugin extends JavaPlugin {
         if (announcementManager != null) {
             announcementManager.broadcastAnnouncement(message, sender);
         }
+    }
+
+    private void scheduleLeaderboardHologramRefresh() {
+        HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
+            try {
+                refreshLeaderboardHologram();
+            } catch (Exception e) {
+                LOGGER.at(Level.WARNING).log("Failed to refresh leaderboard hologram: " + e.getMessage());
+            }
+        }, LEADERBOARD_HOLOGRAM_REFRESH_DELAY_SECONDS, TimeUnit.SECONDS);
+    }
+
+    private void refreshLeaderboardHologram() {
+        if (!HylogramsBridge.isAvailable()) {
+            return;
+        }
+        World world = resolveParkourWorld();
+        if (world == null) {
+            return;
+        }
+        world.execute(() -> updateLeaderboardHologram(world.getEntityStore().getStore()));
+    }
+
+    private void updateLeaderboardHologram(Store<EntityStore> store) {
+        if (store == null || progressStore == null || !HylogramsBridge.isAvailable()) {
+            return;
+        }
+        List<String> lines = buildLeaderboardHologramLines();
+        try {
+            HylogramsBridge.updateHologramLines(LEADERBOARD_HOLOGRAM_NAME, lines, store);
+            HylogramsBridge.delete("leaderboard_counts", store);
+        } catch (Exception e) {
+            LOGGER.at(Level.WARNING).log("Failed to update leaderboard hologram: " + e.getMessage());
+        }
+    }
+
+    private List<String> buildLeaderboardHologramLines() {
+        List<String> lines = new ArrayList<>();
+        lines.add(formatLeaderboardHeader());
+        if (progressStore == null) {
+            return lines;
+        }
+        Map<UUID, Integer> counts = progressStore.getMapCompletionCounts();
+        if (counts.isEmpty()) {
+            return lines;
+        }
+        List<CompletionRow> rows = buildLeaderboardRows(counts);
+        int entries = Math.min(rows.size(), LEADERBOARD_HOLOGRAM_ENTRIES);
+        for (int i = 0; i < entries; i++) {
+            CompletionRow row = rows.get(i);
+            String name = formatLeaderboardName(row.name);
+            String position = formatLeaderboardPosition(i + 1);
+            String count = formatLeaderboardCount(row.count);
+            lines.add(formatLeaderboardLine(position, name, count));
+        }
+        return lines;
+    }
+
+    private List<CompletionRow> buildLeaderboardRows(Map<UUID, Integer> counts) {
+        List<CompletionRow> rows = new ArrayList<>(counts.size());
+        for (Map.Entry<UUID, Integer> entry : counts.entrySet()) {
+            UUID playerId = entry.getKey();
+            if (playerId == null) {
+                continue;
+            }
+            int count = entry.getValue() != null ? entry.getValue() : 0;
+            String name = ParkourUtils.resolveName(playerId, progressStore);
+            rows.add(new CompletionRow(playerId, name, count));
+        }
+        rows.sort(CompletionRow.COMPARATOR);
+        return rows;
+    }
+
+    private static String formatLeaderboardHeader() {
+        return formatLeaderboardLine("Pos", "Name", "Maps");
+    }
+
+    private static String formatLeaderboardPosition(int position) {
+        if (position < 10) {
+            return position + ". ";
+        }
+        return position + ".";
+    }
+
+    private static String formatLeaderboardCount(int count) {
+        return String.format(Locale.ROOT, "%" + LEADERBOARD_COUNT_WIDTH + "d", count);
+    }
+
+    private static String formatLeaderboardLine(String position, String name, String count) {
+        String safePosition = clampToWidth(position, LEADERBOARD_POSITION_WIDTH);
+        String safeName = clampToWidth(name, LEADERBOARD_NAME_MAX);
+        String safeCount = clampToWidth(count, LEADERBOARD_COUNT_WIDTH);
+        return String.format(Locale.ROOT, "%-" + LEADERBOARD_POSITION_WIDTH + "s | %-"
+                        + LEADERBOARD_NAME_MAX + "s | %" + LEADERBOARD_COUNT_WIDTH + "s",
+                safePosition, safeName, safeCount);
+    }
+
+    private static String formatLeaderboardName(String name) {
+        if (name == null) {
+            return "";
+        }
+        String trimmed = name.trim();
+        if (trimmed.length() <= LEADERBOARD_NAME_MAX) {
+            return trimmed;
+        }
+        if (LEADERBOARD_NAME_MAX <= 3) {
+            return trimmed.substring(0, LEADERBOARD_NAME_MAX);
+        }
+        return trimmed.substring(0, LEADERBOARD_NAME_MAX - 3) + "...";
+    }
+
+    private static String clampToWidth(String value, int width) {
+        if (value == null || value.isBlank()) {
+            return "";
+        }
+        String trimmed = value.trim();
+        if (trimmed.length() <= width) {
+            return trimmed;
+        }
+        if (width <= 3) {
+            return trimmed.substring(0, width);
+        }
+        return trimmed.substring(0, width - 3) + "...";
+    }
+
+    public List<String> buildMapLeaderboardHologramLines(String mapId) {
+        List<String> lines = new ArrayList<>();
+        String mapName = mapId;
+        if (mapStore != null && mapId != null) {
+            io.hyvexa.parkour.data.Map map = mapStore.getMap(mapId);
+            if (map != null && map.getName() != null && !map.getName().isBlank()) {
+                mapName = map.getName().trim();
+            }
+        }
+        if (mapName != null && !mapName.isBlank()) {
+            lines.add(mapName);
+        }
+        lines.add(formatMapHologramHeader());
+        if (progressStore == null || mapId == null) {
+            return lines;
+        }
+        List<Map.Entry<UUID, Long>> entries = progressStore.getLeaderboardEntries(mapId);
+        int limit = Math.min(entries.size(), MAP_HOLOGRAM_TOP_LIMIT);
+        for (int i = 0; i < limit; i++) {
+            Map.Entry<UUID, Long> entry = entries.get(i);
+            String name = ParkourUtils.resolveName(entry.getKey(), progressStore);
+            String safeName = clampToWidth(name, MAP_HOLOGRAM_NAME_MAX);
+            String time = entry.getValue() != null ? FormatUtils.formatDuration(entry.getValue()) : "--";
+            String position = String.valueOf(i + 1) + ".";
+            lines.add(formatMapHologramLine(position, safeName, time));
+        }
+        if (lines.size() == 1) {
+            lines.add("No completions yet.");
+        }
+        return lines;
+    }
+
+    private static String formatMapHologramHeader() {
+        return formatMapHologramLine("Pos", "Name", "Time");
+    }
+
+    private static String formatMapHologramLine(String position, String name, String time) {
+        String safePosition = clampToWidth(position, MAP_HOLOGRAM_POS_WIDTH);
+        String safeName = clampToWidth(name, MAP_HOLOGRAM_NAME_MAX);
+        return String.format(Locale.ROOT, "%-" + MAP_HOLOGRAM_POS_WIDTH + "s | %-"
+                        + MAP_HOLOGRAM_NAME_MAX + "s | %s",
+                safePosition, safeName, time);
+    }
+
+    private World resolveParkourWorld() {
+        World world = Universe.get().getWorld(PARKOUR_WORLD_NAME);
+        if (world != null) {
+            return world;
+        }
+        for (World candidate : Universe.get().getWorlds().values()) {
+            if (candidate != null && PARKOUR_WORLD_NAME.equalsIgnoreCase(candidate.getName())) {
+                return candidate;
+            }
+        }
+        return null;
+    }
+
+    public void logMapHologramDebug(String message) {
+        if (!DEBUG_MAP_HOLOGRAM) {
+            return;
+        }
+        if (message == null || message.isBlank()) {
+            return;
+        }
+        LOGGER.atInfo().log(message);
     }
     private void tickPlaytime() {
         if (playtimeManager != null) {
@@ -571,6 +862,25 @@ public class HyvexaPlugin extends JavaPlugin {
             this.playerRef = playerRef;
             this.ref = ref;
             this.store = store;
+        }
+    }
+
+    private static final class CompletionRow {
+        private static final Comparator<CompletionRow> COMPARATOR = Comparator
+                .comparingInt((CompletionRow row) -> row.count).reversed()
+                .thenComparing(row -> row.sortName)
+                .thenComparing(row -> row.playerId.toString());
+
+        private final UUID playerId;
+        private final String name;
+        private final String sortName;
+        private final int count;
+
+        private CompletionRow(UUID playerId, String name, int count) {
+            this.playerId = playerId;
+            this.name = name != null ? name : "";
+            this.sortName = this.name.toLowerCase(Locale.ROOT);
+            this.count = count;
         }
     }
 
