@@ -49,8 +49,7 @@ public class RunTracker {
     private static final double TOUCH_RADIUS_SQ = ParkourConstants.TOUCH_RADIUS * ParkourConstants.TOUCH_RADIUS;
     private static final double START_MOVE_THRESHOLD_SQ = 0.0025;
     private static final long OFFLINE_RUN_EXPIRY_MS = TimeUnit.MINUTES.toMillis(30L);
-    private static final long PING_HIGH_THRESHOLD_MS = 100L;
-    private static final long PING_DELTA_THRESHOLD_MS = 80L;
+    private static final long PING_DELTA_THRESHOLD_MS = 50L;
     private static final String CHECKPOINT_HUD_BG_FAST = "#1E4A7A";
     private static final String CHECKPOINT_HUD_BG_SLOW = "#6A1E1E";
     private static final String CHECKPOINT_HUD_BG_TIE = "#000000";
@@ -1281,27 +1280,34 @@ public class RunTracker {
     }
 
     private void sendLatencyWarning(ActiveRun run, Player player) {
-        if (player == null || run == null || run.startPingMs == null || run.finishPingMs == null) {
+        if (player == null || run == null) {
             return;
         }
-        long startPingMs = run.startPingMs;
-        long finishPingMs = run.finishPingMs;
-        long deltaMs = Math.abs(finishPingMs - startPingMs);
-        boolean highPing = startPingMs >= PING_HIGH_THRESHOLD_MS || finishPingMs >= PING_HIGH_THRESHOLD_MS;
-        boolean highDelta = deltaMs >= PING_DELTA_THRESHOLD_MS;
-        if (!highPing && !highDelta) {
-            return;
-        }
+        Long startPingMs = run.startPingMs;
+        Long finishPingMs = run.finishPingMs;
+        String startText = startPingMs != null ? startPingMs + "ms" : "N/A";
+        String finishText = finishPingMs != null ? finishPingMs + "ms" : "N/A";
         Message message = SystemMessageUtils.withParkourPrefix(
-                Message.raw("Latency warning ").color(SystemMessageUtils.WARN),
+                Message.raw("Ping ").color(SystemMessageUtils.SECONDARY),
                 Message.raw("(start ").color(SystemMessageUtils.SECONDARY),
-                Message.raw(startPingMs + "ms").color(SystemMessageUtils.PRIMARY_TEXT),
+                Message.raw(startText).color(SystemMessageUtils.PRIMARY_TEXT),
                 Message.raw(", finish ").color(SystemMessageUtils.SECONDARY),
-                Message.raw(finishPingMs + "ms").color(SystemMessageUtils.PRIMARY_TEXT),
-                Message.raw("). ").color(SystemMessageUtils.SECONDARY),
-                Message.raw("Timer may be less accurate due to lag.").color(SystemMessageUtils.WARN)
+                Message.raw(finishText).color(SystemMessageUtils.PRIMARY_TEXT),
+                Message.raw(")").color(SystemMessageUtils.SECONDARY)
         );
         player.sendMessage(message);
+        if (startPingMs == null || finishPingMs == null) {
+            return;
+        }
+        long deltaMs = Math.abs(finishPingMs - startPingMs);
+        if (deltaMs <= PING_DELTA_THRESHOLD_MS) {
+            return;
+        }
+        player.sendMessage(SystemMessageUtils.withParkourPrefix(
+                Message.raw("Notice: ").color(SystemMessageUtils.WARN),
+                Message.raw("Latency changed significantly during your run; timing may be less accurate.")
+                        .color(SystemMessageUtils.WARN)
+        ));
     }
 
     private Long readPingMs(PlayerRef playerRef) {
