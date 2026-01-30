@@ -1,10 +1,17 @@
 package io.hyvexa.common.util;
 
 import com.hypixel.hytale.common.plugin.PluginIdentifier;
+import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.plugin.PluginBase;
 import com.hypixel.hytale.server.core.plugin.PluginManager;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
+import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -12,6 +19,7 @@ public final class HylogramsBridge {
     private static final String HYLOGRAMS_GROUP = "ehko";
     private static final String HYLOGRAMS_NAME = "Hylograms";
     private static final String HYLOGRAMS_API_CLASS = "dev.ehko.hylograms.api.HologramsAPI";
+    private static final String HYLOGRAMS_INTERACTION_CLASS = "dev.ehko.hylograms.api.HologramInteractionCallback";
 
     private HylogramsBridge() {
     }
@@ -37,6 +45,423 @@ public final class HylogramsBridge {
             return names;
         } catch (ReflectiveOperationException e) {
             throw new IllegalStateException("Failed to access Hylograms API.", e);
+        }
+    }
+
+    public static HologramBuilder create(String name, Store<EntityStore> store) {
+        Object builder = invokeStatic("create", new Class<?>[]{String.class, Store.class}, name, store);
+        return builder != null ? new HologramBuilder(builder) : null;
+    }
+
+    public static Hologram get(String name) {
+        Object hologram = invokeStatic("get", new Class<?>[]{String.class}, name);
+        return hologram != null ? new Hologram(hologram) : null;
+    }
+
+    public static boolean exists(String name) {
+        Object result = invokeStatic("exists", new Class<?>[]{String.class}, name);
+        return result instanceof Boolean value && value;
+    }
+
+    public static boolean delete(String name, Store<EntityStore> store) {
+        Object result = invokeStatic("delete", new Class<?>[]{String.class, Store.class}, name, store);
+        return result instanceof Boolean value && value;
+    }
+
+    public static List<String> list() {
+        return listHologramNames();
+    }
+
+    public static List<Hologram> getAll() {
+        Object result = invokeStatic("getAll", new Class<?>[]{});
+        if (!(result instanceof List<?> rawList)) {
+            return List.of();
+        }
+        List<Hologram> holograms = new ArrayList<>(rawList.size());
+        for (Object entry : rawList) {
+            if (entry != null) {
+                holograms.add(new Hologram(entry));
+            }
+        }
+        return holograms;
+    }
+
+    public static void spawnAll(Store<EntityStore> store) {
+        invokeStatic("spawnAll", new Class<?>[]{Store.class}, store);
+    }
+
+    public static void saveAll(Store<EntityStore> store) {
+        invokeStatic("saveAll", new Class<?>[]{Store.class}, store);
+    }
+
+    public static void registerInteractionCallback(Object callback) {
+        if (callback == null) {
+            return;
+        }
+        Class<?> callbackClass = resolveHylogramsClass(HYLOGRAMS_INTERACTION_CLASS);
+        invokeStatic("registerInteractionCallback", new Class<?>[]{callbackClass}, callback);
+    }
+
+    public static void unregisterInteractionCallback(Object callback) {
+        if (callback == null) {
+            return;
+        }
+        Class<?> callbackClass = resolveHylogramsClass(HYLOGRAMS_INTERACTION_CLASS);
+        invokeStatic("unregisterInteractionCallback", new Class<?>[]{callbackClass}, callback);
+    }
+
+    public static Object createInteractionCallback(HylogramsInteractionHandler handler) {
+        if (handler == null) {
+            return null;
+        }
+        Class<?> callbackClass = resolveHylogramsClass(HYLOGRAMS_INTERACTION_CLASS);
+        ClassLoader classLoader = callbackClass.getClassLoader();
+        InvocationHandler proxyHandler = (proxy, method, args) -> {
+            if ("onInteract".equals(method.getName()) && args != null && args.length >= 4) {
+                Player player = (Player) args[0];
+                String hologramName = (String) args[1];
+                int lineIndex = ((Number) args[2]).intValue();
+                String action = (String) args[3];
+                handler.onInteract(player, hologramName, lineIndex, action);
+            }
+            return null;
+        };
+        return Proxy.newProxyInstance(classLoader, new Class<?>[]{callbackClass}, proxyHandler);
+    }
+
+    public static void fireInteraction(Player player, String hologramName, int lineIndex, String action) {
+        invokeStatic("fireInteraction", new Class<?>[]{Player.class, String.class, int.class, String.class},
+                player, hologramName, lineIndex, action);
+    }
+
+    public static List<String> listAnimations() {
+        Object result = invokeStatic("listAnimations", new Class<?>[]{});
+        if (!(result instanceof List<?> rawList)) {
+            return List.of();
+        }
+        List<String> names = new ArrayList<>(rawList.size());
+        for (Object entry : rawList) {
+            if (entry != null) {
+                names.add(entry.toString());
+            }
+        }
+        return names;
+    }
+
+    public static Object getAnimation(String name) {
+        return invokeStatic("getAnimation", new Class<?>[]{String.class}, name);
+    }
+
+    public static boolean updateHologramLines(String name, List<String> lines, Store<EntityStore> store) {
+        if (name == null || name.isBlank()) {
+            return false;
+        }
+        List<String> safeLines = new ArrayList<>();
+        if (lines != null) {
+            for (String line : lines) {
+                safeLines.add(line != null ? line : "");
+            }
+        }
+        Class<?> apiClass = resolveApiClass();
+        try {
+            Method getMethod = apiClass.getMethod("get", String.class);
+            Object hologram = getMethod.invoke(null, name);
+            if (hologram == null) {
+                return false;
+            }
+            Method getLineCount = hologram.getClass().getMethod("getLineCount");
+            Method setLine = hologram.getClass().getMethod("setLine", int.class, String.class);
+            Method addLine = hologram.getClass().getMethod("addLine", String.class);
+            Method removeLine = hologram.getClass().getMethod("removeLine", int.class);
+            Method respawn = hologram.getClass().getMethod("respawn", Store.class);
+            Method save = hologram.getClass().getMethod("save", Store.class);
+
+            int currentCount = ((Number) getLineCount.invoke(hologram)).intValue();
+            int targetCount = safeLines.size();
+            int setCount = Math.min(currentCount, targetCount);
+            for (int i = 0; i < setCount; i++) {
+                setLine.invoke(hologram, i + 1, safeLines.get(i));
+            }
+            if (targetCount > currentCount) {
+                for (int i = currentCount; i < targetCount; i++) {
+                    addLine.invoke(hologram, safeLines.get(i));
+                }
+            } else if (currentCount > targetCount) {
+                for (int i = currentCount; i > targetCount; i--) {
+                    removeLine.invoke(hologram, i);
+                }
+            }
+            if (store != null) {
+                respawn.invoke(hologram, store);
+                save.invoke(hologram, store);
+            }
+            return true;
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException("Failed to update Hylograms hologram lines.", e);
+        }
+    }
+
+    public interface HylogramsInteractionHandler {
+        void onInteract(Player player, String hologramName, int lineIndex, String action);
+    }
+
+    public static final class Hologram {
+        private final Object handle;
+
+        private Hologram(Object handle) {
+            this.handle = handle;
+        }
+
+        public Object getHandle() {
+            return handle;
+        }
+
+        public String getName() {
+            return (String) invoke("getName", new Class<?>[]{});
+        }
+
+        public String getWorldName() {
+            return (String) invoke("getWorldName", new Class<?>[]{});
+        }
+
+        public Vector3d getPosition() {
+            return (Vector3d) invoke("getPosition", new Class<?>[]{});
+        }
+
+        public Vector3f getRotation() {
+            return (Vector3f) invoke("getRotation", new Class<?>[]{});
+        }
+
+        public String getColor() {
+            return (String) invoke("getColor", new Class<?>[]{});
+        }
+
+        public String[] getLines() {
+            return (String[]) invoke("getLines", new Class<?>[]{});
+        }
+
+        public int getLineCount() {
+            Object value = invoke("getLineCount", new Class<?>[]{});
+            return value instanceof Number number ? number.intValue() : 0;
+        }
+
+        public String getLine(int index) {
+            return (String) invoke("getLine", new Class<?>[]{int.class}, index);
+        }
+
+        public Hologram setLine(int index, String text) {
+            invoke("setLine", new Class<?>[]{int.class, String.class}, index, text);
+            return this;
+        }
+
+        public Hologram addLine(String text) {
+            invoke("addLine", new Class<?>[]{String.class}, text);
+            return this;
+        }
+
+        public Hologram addItem(String itemId, float scale) {
+            invoke("addItem", new Class<?>[]{String.class, float.class}, itemId, scale);
+            return this;
+        }
+
+        public Hologram removeLine(int index) {
+            invoke("removeLine", new Class<?>[]{int.class}, index);
+            return this;
+        }
+
+        public Hologram alignLine(int index, double x, double y, double z) {
+            invoke("alignLine", new Class<?>[]{int.class, double.class, double.class, double.class}, index, x, y, z);
+            return this;
+        }
+
+        public Vector3d getLineOffset(int index) {
+            return (Vector3d) invoke("getLineOffset", new Class<?>[]{int.class}, index);
+        }
+
+        public Hologram moveTo(Vector3d position) {
+            invoke("moveTo", new Class<?>[]{Vector3d.class}, position);
+            return this;
+        }
+
+        public Hologram moveTo(double x, double y, double z) {
+            invoke("moveTo", new Class<?>[]{double.class, double.class, double.class}, x, y, z);
+            return this;
+        }
+
+        public Hologram rotate(Vector3f rotation) {
+            invoke("rotate", new Class<?>[]{Vector3f.class}, rotation);
+            return this;
+        }
+
+        public Hologram loadAnimation(int index, String animationName) {
+            invoke("loadAnimation", new Class<?>[]{int.class, String.class}, index, animationName);
+            return this;
+        }
+
+        public Hologram removeAnimation(int index) {
+            invoke("removeAnimation", new Class<?>[]{int.class}, index);
+            return this;
+        }
+
+        public boolean hasAnimation(int index) {
+            Object value = invoke("hasAnimation", new Class<?>[]{int.class}, index);
+            return value instanceof Boolean flag && flag;
+        }
+
+        public String getAnimationName(int index) {
+            return (String) invoke("getAnimationName", new Class<?>[]{int.class}, index);
+        }
+
+        public Hologram playAnimation(Store<EntityStore> store, int index) {
+            invoke("playAnimation", new Class<?>[]{Store.class, int.class}, store, index);
+            return this;
+        }
+
+        public Hologram stopAnimation(int index) {
+            invoke("stopAnimation", new Class<?>[]{int.class}, index);
+            return this;
+        }
+
+        public Hologram spawn(Store<EntityStore> store) {
+            invoke("spawn", new Class<?>[]{Store.class}, store);
+            return this;
+        }
+
+        public Hologram despawn(Store<EntityStore> store) {
+            invoke("despawn", new Class<?>[]{Store.class}, store);
+            return this;
+        }
+
+        public Hologram respawn(Store<EntityStore> store) {
+            invoke("respawn", new Class<?>[]{Store.class}, store);
+            return this;
+        }
+
+        public Hologram save(Store<EntityStore> store) {
+            invoke("save", new Class<?>[]{Store.class}, store);
+            return this;
+        }
+
+        public Hologram setInteractable(int index, String action) {
+            invoke("setInteractable", new Class<?>[]{int.class, String.class}, index, action);
+            return this;
+        }
+
+        public Hologram setInteractable(int index) {
+            invoke("setInteractable", new Class<?>[]{int.class}, index);
+            return this;
+        }
+
+        public Hologram setNotInteractable(int index) {
+            invoke("setNotInteractable", new Class<?>[]{int.class}, index);
+            return this;
+        }
+
+        public boolean isInteractable(int index) {
+            Object value = invoke("isInteractable", new Class<?>[]{int.class}, index);
+            return value instanceof Boolean flag && flag;
+        }
+
+        public String getInteractAction(int index) {
+            return (String) invoke("getInteractAction", new Class<?>[]{int.class}, index);
+        }
+
+        private Object invoke(String methodName, Class<?>[] paramTypes, Object... args) {
+            try {
+                Method method = handle.getClass().getMethod(methodName, paramTypes);
+                return method.invoke(handle, args);
+            } catch (ReflectiveOperationException e) {
+                throw new IllegalStateException("Failed to invoke Hylograms hologram method: " + methodName, e);
+            }
+        }
+    }
+
+    public static final class HologramBuilder {
+        private final Object handle;
+
+        private HologramBuilder(Object handle) {
+            this.handle = handle;
+        }
+
+        public Object getHandle() {
+            return handle;
+        }
+
+        public HologramBuilder at(Vector3d position) {
+            invoke("at", new Class<?>[]{Vector3d.class}, position);
+            return this;
+        }
+
+        public HologramBuilder at(double x, double y, double z) {
+            invoke("at", new Class<?>[]{double.class, double.class, double.class}, x, y, z);
+            return this;
+        }
+
+        public HologramBuilder inWorld(String worldName) {
+            invoke("inWorld", new Class<?>[]{String.class}, worldName);
+            return this;
+        }
+
+        public HologramBuilder color(String color) {
+            invoke("color", new Class<?>[]{String.class}, color);
+            return this;
+        }
+
+        public HologramBuilder addLine(String text) {
+            invoke("addLine", new Class<?>[]{String.class}, text);
+            return this;
+        }
+
+        public HologramBuilder addItem(String itemId) {
+            invoke("addItem", new Class<?>[]{String.class}, itemId);
+            return this;
+        }
+
+        public HologramBuilder addItem(String itemId, float scale) {
+            invoke("addItem", new Class<?>[]{String.class, float.class}, itemId, scale);
+            return this;
+        }
+
+        public HologramBuilder addItem(String itemId, float scale, float yaw, float pitch, float roll) {
+            invoke("addItem", new Class<?>[]{String.class, float.class, float.class, float.class, float.class},
+                    itemId, scale, yaw, pitch, roll);
+            return this;
+        }
+
+        public Hologram spawn() {
+            Object hologram = invoke("spawn", new Class<?>[]{});
+            return hologram != null ? new Hologram(hologram) : null;
+        }
+
+        private Object invoke(String methodName, Class<?>[] paramTypes, Object... args) {
+            try {
+                Method method = handle.getClass().getMethod(methodName, paramTypes);
+                return method.invoke(handle, args);
+            } catch (ReflectiveOperationException e) {
+                throw new IllegalStateException("Failed to invoke Hylograms builder method: " + methodName, e);
+            }
+        }
+    }
+
+    private static Object invokeStatic(String methodName, Class<?>[] paramTypes, Object... args) {
+        Class<?> apiClass = resolveApiClass();
+        try {
+            Method method = apiClass.getMethod(methodName, paramTypes);
+            return method.invoke(null, args);
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException("Failed to invoke Hylograms API method: " + methodName, e);
+        }
+    }
+
+    private static Class<?> resolveHylogramsClass(String className) {
+        ClassLoader classLoader = resolveHylogramsClassLoader();
+        if (classLoader == null) {
+            throw new IllegalStateException("Hylograms plugin is not loaded.");
+        }
+        try {
+            return Class.forName(className, true, classLoader);
+        } catch (ClassNotFoundException e) {
+            throw new IllegalStateException("Hylograms API class not available: " + className, e);
         }
     }
 

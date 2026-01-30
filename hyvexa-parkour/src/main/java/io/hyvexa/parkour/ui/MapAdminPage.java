@@ -20,6 +20,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.common.util.FormatUtils;
+import io.hyvexa.common.util.HylogramsBridge;
 import io.hyvexa.parkour.ParkourConstants;
 import io.hyvexa.parkour.data.Map;
 import io.hyvexa.parkour.data.MapStore;
@@ -151,6 +152,10 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
         }
         if (data.button.equals(MapData.BUTTON_REFRESH)) {
             sendRefresh(ref, store);
+            return;
+        }
+        if (data.button.equals(MapData.BUTTON_CREATE_HOLO)) {
+            handleCreateHologram(ref, store);
             return;
         }
         if (data.button.equals(MapData.BUTTON_TOGGLE_MITHRIL_SWORD)) {
@@ -412,6 +417,69 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
         sendRefresh(ref, store);
     }
 
+    private void handleCreateHologram(Ref<EntityStore> ref, Store<EntityStore> store) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null) {
+            return;
+        }
+        if (selectedMapId.isEmpty()) {
+            player.sendMessage(Message.raw("Select a map first."));
+            return;
+        }
+        Map map = mapStore.getMap(selectedMapId);
+        if (map == null) {
+            player.sendMessage(Message.raw("Map '" + selectedMapId + "' not found."));
+            return;
+        }
+        HyvexaPlugin plugin = HyvexaPlugin.getInstance();
+        ProgressStore progressStore = plugin != null ? plugin.getProgressStore() : null;
+        if (progressStore == null) {
+            player.sendMessage(Message.raw("Progress store not available."));
+            return;
+        }
+        if (!HylogramsBridge.isAvailable()) {
+            player.sendMessage(Message.raw("Hylograms plugin not available."));
+            return;
+        }
+        TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
+        if (transform == null || transform.getPosition() == null) {
+            player.sendMessage(Message.raw("Could not read your position."));
+            return;
+        }
+        String holoName = map.getId() + "_holo";
+        if (plugin == null) {
+            player.sendMessage(Message.raw("Plugin not available."));
+            return;
+        }
+        List<String> lines = plugin.buildMapLeaderboardHologramLines(map.getId());
+        if (HylogramsBridge.exists(holoName)) {
+            HylogramsBridge.Hologram holo = HylogramsBridge.get(holoName);
+            if (holo != null) {
+                holo.moveTo(transform.getPosition()).respawn(store).save(store);
+            }
+            HylogramsBridge.updateHologramLines(holoName, lines, store);
+            player.sendMessage(Message.raw("Updated hologram '" + holoName + "'."));
+            return;
+        }
+        HylogramsBridge.HologramBuilder builder = HylogramsBridge.create(holoName, store);
+        if (builder == null) {
+            player.sendMessage(Message.raw("Failed to create hologram."));
+            return;
+        }
+        if (player.getWorld() != null) {
+            builder.inWorld(player.getWorld().getName());
+        }
+        builder.at(transform.getPosition());
+        for (String line : lines) {
+            builder.addLine(line);
+        }
+        HylogramsBridge.Hologram holo = builder.spawn();
+        if (holo != null) {
+            holo.save(store);
+        }
+        player.sendMessage(Message.raw("Created hologram '" + holoName + "'."));
+    }
+
     private void openIndex(Ref<EntityStore> ref, Store<EntityStore> store) {
         Player player = store.getComponent(ref, Player.getComponentType());
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
@@ -519,6 +587,8 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
                 EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_DELETE), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#RefreshButton",
                 EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_REFRESH), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CreateHoloButton",
+                EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_CREATE_HOLO), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#MithrilSwordToggle",
                 EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_TOGGLE_MITHRIL_SWORD), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#MithrilDaggersToggle",
@@ -632,6 +702,7 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
         static final String BUTTON_UPDATE = "UpdateMap";
         static final String BUTTON_DELETE = "DeleteMap";
         static final String BUTTON_REFRESH = "Refresh";
+        static final String BUTTON_CREATE_HOLO = "CreateHolo";
         static final String BUTTON_TOGGLE_MITHRIL_SWORD = "ToggleMithrilSword";
         static final String BUTTON_TOGGLE_MITHRIL_DAGGERS = "ToggleMithrilDaggers";
         static final String BUTTON_TOGGLE_FREE_FALL = "ToggleFreeFall";

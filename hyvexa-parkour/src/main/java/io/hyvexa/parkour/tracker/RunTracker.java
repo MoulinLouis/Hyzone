@@ -652,9 +652,21 @@ public class RunTracker {
                 player.sendMessage(SystemMessageUtils.parkourWarn(
                         "Warning: Your time might not have been saved. Please report this."));
             }
+            if (result.firstCompletion) {
+                HyvexaPlugin plugin = HyvexaPlugin.getInstance();
+                if (plugin != null) {
+                    plugin.refreshLeaderboardHologram(store);
+                }
+            }
             int leaderboardPosition = progressStore.getLeaderboardPosition(map.getId(), playerId);
             if (leaderboardPosition <= 0) {
                 leaderboardPosition = 1;
+            }
+            HyvexaPlugin plugin = HyvexaPlugin.getInstance();
+            if (plugin != null) {
+                plugin.refreshMapLeaderboardHologram(map.getId(), store);
+                plugin.logMapHologramDebug("Map holo refresh fired for '" + map.getId()
+                        + "' (player " + playerName + ").");
             }
             Message finishSplitPart = buildFinishSplitPart(durationMs, previousBestMs);
             Message completionMessage = SystemMessageUtils.withParkourPrefix(
@@ -670,7 +682,6 @@ public class RunTracker {
             int newRank = progressStore.getCompletionRank(playerId, mapStore);
             boolean reachedVexaGod = newRank == ParkourConstants.COMPLETION_RANK_NAMES.length && oldRank < newRank;
             if (newRank > oldRank) {
-                HyvexaPlugin plugin = HyvexaPlugin.getInstance();
                 if (plugin != null) {
                     plugin.invalidateRankCache(playerId);
                 }
