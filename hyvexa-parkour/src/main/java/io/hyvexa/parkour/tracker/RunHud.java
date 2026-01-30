@@ -11,6 +11,9 @@ public class RunHud extends CustomUIHud {
 
     private String lastTimeText;
     private String lastCheckpointText;
+    private String lastCheckpointSplitText;
+    private String lastCheckpointSplitColor;
+    private Boolean lastCheckpointSplitVisible;
     private String lastInfoKey;
     private String lastAnnouncementKey;
 
@@ -21,6 +24,7 @@ public class RunHud extends CustomUIHud {
     @Override
     protected void build(UICommandBuilder commandBuilder) {
         commandBuilder.append("Pages/Parkour_RunHud.ui");
+        commandBuilder.append("Pages/Parkour_RunCheckpointHud.ui");
     }
 
     public void updateText(String timeText) {
@@ -42,6 +46,25 @@ public class RunHud extends CustomUIHud {
         lastCheckpointText = safeText;
         UICommandBuilder commandBuilder = new UICommandBuilder();
         commandBuilder.set("#RunCheckpointText.Text", safeText);
+        update(false, commandBuilder);
+    }
+
+    public void updateCheckpointSplit(String splitText, String splitColor, boolean visible) {
+        String safeText = splitText != null ? splitText : "";
+        String safeColor = splitColor != null ? splitColor : "#000000";
+        if (safeText.equals(lastCheckpointSplitText)
+                && safeColor.equals(lastCheckpointSplitColor)
+                && Boolean.valueOf(visible).equals(lastCheckpointSplitVisible)) {
+            return;
+        }
+        lastCheckpointSplitText = safeText;
+        lastCheckpointSplitColor = safeColor;
+        lastCheckpointSplitVisible = visible;
+        UICommandBuilder commandBuilder = new UICommandBuilder();
+        commandBuilder.set("#CheckpointSplitHud.Visible", visible);
+        commandBuilder.set("#CheckpointSplitHud.Background", safeColor);
+        commandBuilder.set("#CheckpointSplitText.Text", safeText);
+        commandBuilder.set("#CheckpointSplitText.Style.TextColor", "#FFFFFF");
         update(false, commandBuilder);
     }
 
@@ -116,6 +139,9 @@ public class RunHud extends CustomUIHud {
     public void resetCache() {
         lastTimeText = null;
         lastCheckpointText = null;
+        lastCheckpointSplitText = null;
+        lastCheckpointSplitColor = null;
+        lastCheckpointSplitVisible = null;
         lastInfoKey = null;
         lastAnnouncementKey = null;
     }

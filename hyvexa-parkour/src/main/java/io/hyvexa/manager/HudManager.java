@@ -27,6 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class HudManager {
 
     private static final String SERVER_IP_DISPLAY = "play.hyvexa.com";
+    private static final long CHECKPOINT_SPLIT_HUD_DURATION_MS = 2500L;
 
     private final ConcurrentHashMap<UUID, RunHud> runHuds = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, RunRecordsHud> runRecordHuds = new ConcurrentHashMap<>();
@@ -35,6 +36,7 @@ public class HudManager {
     private final ConcurrentHashMap<UUID, Long> runHudReadyAt = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Boolean> runHudWasRunning = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Boolean> runHudHidden = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, CheckpointSplitHudState> checkpointSplitHuds = new ConcurrentHashMap<>();
 
     private final ProgressStore progressStore;
     private final MapStore mapStore;
@@ -130,9 +132,11 @@ public class HudManager {
                 hud.updateCheckpointText("");
                 runHudWasRunning.put(playerRef.getUuid(), false);
             }
+            hud.updateCheckpointSplit("", null, false);
             if (hud instanceof RunRecordsHud recordsHud) {
                 recordsHud.updateTopTimes(List.of());
             }
+            checkpointSplitHuds.remove(playerId);
             return;
         }
         runHudWasRunning.put(playerId, true);
@@ -158,6 +162,7 @@ public class HudManager {
             hud.updateText(timeText);
         }
         hud.updateCheckpointText(checkpointText);
+        updateCheckpointSplitHud(playerRef, hud, running, duelActive);
     }
 
     public void hideRunHud(PlayerRef playerRef) {
@@ -214,6 +219,7 @@ public class HudManager {
         runHudReadyAt.remove(playerId);
         runHudWasRunning.remove(playerId);
         runHudIsRecords.remove(playerId);
+        checkpointSplitHuds.remove(playerId);
         var ref = playerRef.getReference();
         if (ref == null || !ref.isValid()) {
             return;
@@ -329,6 +335,7 @@ public class HudManager {
         runHudWasRunning.remove(playerId);
         runHudIsRecords.remove(playerId);
         runHudHidden.remove(playerId);
+        checkpointSplitHuds.remove(playerId);
     }
 
     public void sweepStalePlayers(Set<UUID> onlinePlayers) {
@@ -339,5 +346,61 @@ public class HudManager {
         runHudReadyAt.keySet().removeIf(id -> !onlinePlayers.contains(id));
         runHudWasRunning.keySet().removeIf(id -> !onlinePlayers.contains(id));
         runHudHidden.keySet().removeIf(id -> !onlinePlayers.contains(id));
+        checkpointSplitHuds.keySet().removeIf(id -> !onlinePlayers.contains(id));
+    }
+
+    public void showCheckpointSplit(PlayerRef playerRef, String splitText, String splitColor) {
+        if (playerRef == null) {
+            return;
+        }
+        UUID playerId = playerRef.getUuid();
+        if (playerId == null) {
+            return;
+        }
+        if (splitText == null || splitText.isBlank()) {
+            checkpointSplitHuds.remove(playerId);
+            return;
+        }
+        long expiresAt = System.currentTimeMillis() + CHECKPOINT_SPLIT_HUD_DURATION_MS;
+        checkpointSplitHuds.put(playerId, new CheckpointSplitHudState(splitText, splitColor, expiresAt));
+    }
+
+    private void updateCheckpointSplitHud(PlayerRef playerRef, RunHud hud, boolean running, boolean duelActive) {
+        if (playerRef == null || hud == null) {
+            return;
+        }
+        UUID playerId = playerRef.getUuid();
+        if (playerId == null) {
+            return;
+        }
+        if (!running || duelActive) {
+            checkpointSplitHuds.remove(playerId);
+            hud.updateCheckpointSplit("", null, false);
+            return;
+        }
+        CheckpointSplitHudState state = checkpointSplitHuds.get(playerId);
+        if (state == null) {
+            hud.updateCheckpointSplit("", null, false);
+            return;
+        }
+        long now = System.currentTimeMillis();
+        if (now >= state.expiresAt) {
+            checkpointSplitHuds.remove(playerId, state);
+            hud.updateCheckpointSplit("", null, false);
+            return;
+        }
+        hud.updateCheckpointSplit(state.text, state.color, true);
+    }
+
+    private static final class CheckpointSplitHudState {
+        private final String text;
+        private final String color;
+        private final long expiresAt;
+
+        private CheckpointSplitHudState(String text, String color, long expiresAt) {
+            this.text = text;
+            this.color = color;
+            this.expiresAt = expiresAt;
+        }
     }
 }

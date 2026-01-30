@@ -50,6 +50,9 @@ public class RunTracker {
     private static final double START_MOVE_THRESHOLD_SQ = 0.0025;
     private static final long PING_SAMPLE_INTERVAL_MS = 1000L;
     private static final long PING_HIGH_THRESHOLD_MS = 100L;
+    private static final String CHECKPOINT_HUD_BG_FAST = "#1E4A7A";
+    private static final String CHECKPOINT_HUD_BG_SLOW = "#6A1E1E";
+    private static final String CHECKPOINT_HUD_BG_TIE = "#000000";
 
     private final MapStore mapStore;
     private final ProgressStore progressStore;
@@ -517,29 +520,41 @@ public class RunTracker {
                         previousElapsedMs, deltaMs);
                 run.checkpointTouchTimes.put(i, elapsedMs);
                 playCheckpointSound(playerRef);
-                player.sendMessage(buildCheckpointSplitMessage(i, elapsedMs, personalBestSplits));
+                CheckpointSplitInfo splitInfo = buildCheckpointSplitInfo(i, elapsedMs, personalBestSplits);
+                player.sendMessage(splitInfo.message);
+                HyvexaPlugin plugin = HyvexaPlugin.getInstance();
+                if (plugin != null && plugin.getHudManager() != null) {
+                    if (splitInfo.hudText != null && splitInfo.hudColor != null) {
+                        plugin.getHudManager().showCheckpointSplit(playerRef, splitInfo.hudText, splitInfo.hudColor);
+                    } else {
+                        plugin.getHudManager().showCheckpointSplit(playerRef, null, null);
+                    }
+                }
             }
         }
     }
 
-    private Message buildCheckpointSplitMessage(int checkpointIndex, long elapsedMs, List<Long> personalBestSplits) {
+    private CheckpointSplitInfo buildCheckpointSplitInfo(int checkpointIndex, long elapsedMs,
+                                                        List<Long> personalBestSplits) {
         long pbSplitMs = 0L;
         if (personalBestSplits != null && checkpointIndex >= 0 && checkpointIndex < personalBestSplits.size()) {
             Long pbSplit = personalBestSplits.get(checkpointIndex);
             pbSplitMs = pbSplit != null ? Math.max(0L, pbSplit) : 0L;
         }
         if (pbSplitMs <= 0L) {
-            return SystemMessageUtils.parkourInfo("Checkpoint reached.");
+            return new CheckpointSplitInfo(SystemMessageUtils.parkourInfo("Checkpoint reached."), null, null);
         }
 
         long deltaMs = elapsedMs - pbSplitMs;
         long absDeltaMs = Math.abs(deltaMs);
         String deltaPrefix = deltaMs < 0L ? "-" : "+";
         String deltaColor = deltaMs <= 0L ? SystemMessageUtils.SUCCESS : SystemMessageUtils.ERROR;
-        String deltaText = deltaPrefix + FormatUtils.formatDurationPrecise(absDeltaMs);
-        String checkpointTime = FormatUtils.formatDurationPrecise(Math.max(0L, elapsedMs));
+        String hudBackground = deltaMs < 0L ? CHECKPOINT_HUD_BG_FAST
+                : (deltaMs > 0L ? CHECKPOINT_HUD_BG_SLOW : CHECKPOINT_HUD_BG_TIE);
+        String deltaText = deltaPrefix + FormatUtils.formatDuration(absDeltaMs);
+        String checkpointTime = FormatUtils.formatDuration(Math.max(0L, elapsedMs));
 
-        return SystemMessageUtils.withParkourPrefix(
+        Message message = SystemMessageUtils.withParkourPrefix(
                 Message.raw("Checkpoint ").color(SystemMessageUtils.SECONDARY),
                 Message.raw("#" + (checkpointIndex + 1)).color(SystemMessageUtils.PRIMARY_TEXT),
                 Message.raw(" split: ").color(SystemMessageUtils.SECONDARY),
@@ -547,6 +562,19 @@ public class RunTracker {
                 Message.raw(" at ").color(SystemMessageUtils.SECONDARY),
                 Message.raw(checkpointTime).color(SystemMessageUtils.PRIMARY_TEXT)
         );
+        return new CheckpointSplitInfo(message, deltaText, hudBackground);
+    }
+
+    private static final class CheckpointSplitInfo {
+        private final Message message;
+        private final String hudText;
+        private final String hudColor;
+
+        private CheckpointSplitInfo(Message message, String hudText, String hudColor) {
+            this.message = message;
+            this.hudText = hudText;
+            this.hudColor = hudColor;
+        }
     }
 
     private Message buildFinishSplitPart(long durationMs, Long previousBestMs) {
