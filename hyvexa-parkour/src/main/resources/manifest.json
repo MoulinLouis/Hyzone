@@ -11,7 +11,7 @@
     "Website": "",
     "ServerVersion": "*",
     "Dependencies": {
-        
+        "ehko:Hylograms": "*"
     },
     "OptionalDependencies": {
         
