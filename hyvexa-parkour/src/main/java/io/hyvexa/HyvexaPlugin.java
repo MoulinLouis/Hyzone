@@ -74,6 +74,7 @@ import io.hyvexa.parkour.system.NoPlayerDamageSystem;
 import io.hyvexa.parkour.system.NoPlayerKnockbackSystem;
 import io.hyvexa.parkour.system.NoWeaponDamageSystem;
 import io.hyvexa.parkour.system.PlayerVisibilityFilterSystem;
+import io.hyvexa.parkour.system.RunTrackerTickSystem;
 import io.hyvexa.parkour.ui.WelcomePage;
 import io.hyvexa.parkour.ui.PlayerMusicPage;
 import io.hyvexa.parkour.visibility.PlayerVisibilityManager;
@@ -192,7 +193,7 @@ public class HyvexaPlugin extends JavaPlugin {
         this.cleanupManager = new PlayerCleanupManager(hudManager, announcementManager, perksManager, playtimeManager,
                 runTracker, PlayerVisibilityManager.get());
         this.playtimeManager.setOnlineCount(Universe.get().getPlayers().size());
-        mapDetectionTask = scheduleTick("map detection", this::tickMapDetection, 200, 200, TimeUnit.MILLISECONDS);
+        registerRunTrackerTickSystem();
         hudUpdateTask = scheduleTick("hud updates", this::tickHudUpdates, 100, 100, TimeUnit.MILLISECONDS);
         playtimeTask = scheduleTick("playtime", this::tickPlaytime, 60, 60, TimeUnit.SECONDS);
         collisionTask = scheduleTick("collision removal", this::tickCollisionRemoval, 1, 2, TimeUnit.SECONDS);
@@ -758,7 +759,7 @@ public class HyvexaPlugin extends JavaPlugin {
         }
     }
 
-    private boolean shouldApplyParkourMode(UUID playerId, World world) {
+    public boolean shouldApplyParkourMode(UUID playerId, World world) {
         if (playerId == null) {
             return false;
         }
@@ -777,7 +778,7 @@ public class HyvexaPlugin extends JavaPlugin {
         return isParkourWorld(world);
     }
 
-    private boolean isParkourWorld(World world) {
+    public boolean isParkourWorld(World world) {
         if (world == null || world.getName() == null) {
             return false;
         }
@@ -970,6 +971,13 @@ public class HyvexaPlugin extends JavaPlugin {
         var registry = EntityStore.REGISTRY;
         if (!registry.hasSystemClass(PlayerVisibilityFilterSystem.class)) {
             registry.registerSystem(new PlayerVisibilityFilterSystem());
+        }
+    }
+
+    private void registerRunTrackerTickSystem() {
+        var registry = EntityStore.REGISTRY;
+        if (!registry.hasSystemClass(RunTrackerTickSystem.class)) {
+            registry.registerSystem(new RunTrackerTickSystem(this, runTracker, perksManager, duelTracker));
         }
     }
 

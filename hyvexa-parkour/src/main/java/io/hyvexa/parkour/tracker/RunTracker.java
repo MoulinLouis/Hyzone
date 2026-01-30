@@ -1,6 +1,7 @@
 package io.hyvexa.parkour.tracker;
 
 import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.math.vector.Vector3d;
@@ -9,6 +10,7 @@ import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
 import com.hypixel.hytale.server.core.entity.movement.MovementStatesComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.io.PacketHandler;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.universe.world.SoundUtil;
@@ -17,6 +19,8 @@ import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.protocol.MovementStates;
+import com.hypixel.hytale.protocol.packets.connection.PongType;
+import com.hypixel.hytale.metrics.metric.HistoricMetric;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.common.util.InventoryUtils;
 import io.hyvexa.common.util.PermissionUtils;
@@ -36,6 +40,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /** Tracks active parkour runs, checkpoint detection, and finish logic. */
@@ -43,6 +48,8 @@ public class RunTracker {
 
     private static final double TOUCH_RADIUS_SQ = ParkourConstants.TOUCH_RADIUS * ParkourConstants.TOUCH_RADIUS;
     private static final double START_MOVE_THRESHOLD_SQ = 0.0025;
+    private static final long PING_SAMPLE_INTERVAL_MS = 1000L;
+    private static final long PING_HIGH_THRESHOLD_MS = 100L;
 
     private final MapStore mapStore;
     private final ProgressStore progressStore;
@@ -229,10 +236,19 @@ public class RunTracker {
         if (run.waitingForStart) {
             return 0L;
         }
-        return Math.max(0L, System.currentTimeMillis() - run.startTimeMs);
+        return Math.max(0L, run.elapsedMs);
     }
 
     public void checkPlayer(Ref<EntityStore> ref, Store<EntityStore> store) {
+        checkPlayer(ref, store, null, Float.NaN);
+    }
+
+    public void checkPlayer(Ref<EntityStore> ref, Store<EntityStore> store, float deltaSeconds) {
+        checkPlayer(ref, store, null, deltaSeconds);
+    }
+
+    public void checkPlayer(Ref<EntityStore> ref, Store<EntityStore> store, CommandBuffer<EntityStore> buffer,
+                            float deltaSeconds) {
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         Player player = store.getComponent(ref, Player.getComponentType());
         TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
@@ -255,18 +271,18 @@ public class RunTracker {
         Vector3d position = transform.getPosition();
         if (shouldTeleportFromVoid(position.getY())) {
             if (run == null) {
-                teleportToSpawn(ref, store, transform);
+                teleportToSpawn(ref, store, transform, buffer);
                 recordTeleport(playerRef.getUuid(), TeleportCause.IDLE_RESPAWN);
                 return;
             }
             Map map = mapStore.getMap(run.mapId);
             if (map != null) {
-                teleportToRespawn(ref, store, run, map);
+                teleportToRespawn(ref, store, run, map, buffer);
                 run.fallStartTime = null;
                 run.lastY = null;
                 recordTeleport(playerRef.getUuid(), TeleportCause.RUN_RESPAWN);
             } else {
-                teleportToSpawn(ref, store, transform);
+                teleportToSpawn(ref, store, transform, buffer);
                 recordTeleport(playerRef.getUuid(), TeleportCause.IDLE_RESPAWN);
             }
             return;
@@ -278,13 +294,13 @@ public class RunTracker {
                     && shouldRespawnFromFall(getIdleFallState(playerRef.getUuid()), position.getY(),
                     movementStates,
                     fallTimeoutMs)) {
-                teleportToSpawn(ref, store, transform);
+                teleportToSpawn(ref, store, transform, buffer);
                 recordTeleport(playerRef.getUuid(), TeleportCause.IDLE_RESPAWN);
                 return;
             }
             Map triggerMap = findStartTriggerMap(position);
             if (triggerMap != null) {
-                startRunFromTrigger(ref, store, playerRef, player, triggerMap);
+                startRunFromTrigger(ref, store, playerRef, player, triggerMap, buffer);
             }
             return;
         }
@@ -293,10 +309,16 @@ public class RunTracker {
             return;
         }
         updateStartOnMovement(run, position);
-        if (checkLeaveTrigger(ref, store, player, playerRef, position, map)) {
+        long previousElapsedMs = getRunElapsedMs(run);
+        Vector3d previousPosition = run.lastPosition;
+        advanceRunTime(run, deltaSeconds);
+        long currentElapsedMs = getRunElapsedMs(run);
+        double deltaMs = Math.max(0.0, currentElapsedMs - previousElapsedMs);
+        updatePingStats(run, playerRef, currentElapsedMs);
+        if (checkLeaveTrigger(ref, store, player, playerRef, position, map, buffer)) {
             return;
         }
-        checkCheckpoints(run, playerRef, player, position, map);
+        checkCheckpoints(run, playerRef, player, position, map, previousPosition, previousElapsedMs, deltaMs);
         long fallTimeoutMs = getFallRespawnTimeoutMs();
         if (map.isFreeFallEnabled()) {
             run.fallStartTime = null;
@@ -309,11 +331,15 @@ public class RunTracker {
             if (run.lastCheckpointIndex < 0) {
                 armStartOnMovement(run, map.getStart());
             }
-            teleportToRespawn(ref, store, run, map);
+            teleportToRespawn(ref, store, run, map, buffer);
             recordTeleport(playerRef.getUuid(), TeleportCause.RUN_RESPAWN);
             return;
         }
-        checkFinish(run, playerRef, player, position, map, transform, ref, store);
+        checkFinish(run, playerRef, player, position, map, transform, ref, store, buffer, previousPosition,
+                previousElapsedMs, deltaMs);
+        if (activeRuns.get(playerRef.getUuid()) == run) {
+            run.lastPosition = copyPosition(position);
+        }
     }
 
     private Map findStartTriggerMap(Vector3d position) {
@@ -330,7 +356,7 @@ public class RunTracker {
     }
 
     private void startRunFromTrigger(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef,
-                                     Player player, Map map) {
+                                     Player player, Map map, CommandBuffer<EntityStore> buffer) {
         if (map.getStart() == null) {
             player.sendMessage(SystemMessageUtils.parkourError("Map '" + map.getId() + "' has no start set."));
             return;
@@ -339,15 +365,15 @@ public class RunTracker {
         Vector3d position = new Vector3d(map.getStart().getX(), map.getStart().getY(), map.getStart().getZ());
         Vector3f rotation = new Vector3f(map.getStart().getRotX(), map.getStart().getRotY(),
                 map.getStart().getRotZ());
-        store.addComponent(ref, Teleport.getComponentType(),
-                new Teleport(store.getExternalData().getWorld(), position, rotation));
+        addTeleport(ref, store, buffer, new Teleport(store.getExternalData().getWorld(), position, rotation));
         recordTeleport(playerRef.getUuid(), TeleportCause.START_TRIGGER);
         player.sendMessage(buildRunStartMessage(map));
         InventoryUtils.giveRunItems(player, map, false);
     }
 
     private boolean checkLeaveTrigger(Ref<EntityStore> ref, Store<EntityStore> store, Player player,
-                                      PlayerRef playerRef, Vector3d position, Map map) {
+                                      PlayerRef playerRef, Vector3d position, Map map,
+                                      CommandBuffer<EntityStore> buffer) {
         TransformData trigger = map.getLeaveTrigger();
         if (trigger == null) {
             return false;
@@ -360,8 +386,7 @@ public class RunTracker {
             Vector3d targetPosition = new Vector3d(leaveTeleport.getX(), leaveTeleport.getY(), leaveTeleport.getZ());
             Vector3f targetRotation = new Vector3f(leaveTeleport.getRotX(), leaveTeleport.getRotY(),
                     leaveTeleport.getRotZ());
-            store.addComponent(ref, Teleport.getComponentType(),
-                    new Teleport(store.getExternalData().getWorld(), targetPosition, targetRotation));
+            addTeleport(ref, store, buffer, new Teleport(store.getExternalData().getWorld(), targetPosition, targetRotation));
             recordTeleport(playerRef.getUuid(), TeleportCause.LEAVE_TRIGGER);
         }
         clearActiveMap(playerRef.getUuid());
@@ -465,7 +490,8 @@ public class RunTracker {
         return false;
     }
 
-    private void checkCheckpoints(ActiveRun run, PlayerRef playerRef, Player player, Vector3d position, Map map) {
+    private void checkCheckpoints(ActiveRun run, PlayerRef playerRef, Player player, Vector3d position, Map map,
+                                  Vector3d previousPosition, long previousElapsedMs, double deltaMs) {
         if (run.practiceEnabled) {
             return;
         }
@@ -487,7 +513,8 @@ public class RunTracker {
             if (distanceSqWithVerticalBonus(position, checkpoint) <= TOUCH_RADIUS_SQ) {
                 run.touchedCheckpoints.add(i);
                 run.lastCheckpointIndex = i;
-                long elapsedMs = run.waitingForStart ? 0L : Math.max(0L, System.currentTimeMillis() - run.startTimeMs);
+                long elapsedMs = resolveInterpolatedTimeMs(run, previousPosition, position, checkpoint,
+                        previousElapsedMs, deltaMs);
                 run.checkpointTouchTimes.put(i, elapsedMs);
                 playCheckpointSound(playerRef);
                 player.sendMessage(buildCheckpointSplitMessage(i, elapsedMs, personalBestSplits));
@@ -509,8 +536,8 @@ public class RunTracker {
         long absDeltaMs = Math.abs(deltaMs);
         String deltaPrefix = deltaMs < 0L ? "-" : "+";
         String deltaColor = deltaMs <= 0L ? SystemMessageUtils.SUCCESS : SystemMessageUtils.ERROR;
-        String deltaText = deltaPrefix + FormatUtils.formatDuration(absDeltaMs);
-        String checkpointTime = FormatUtils.formatDuration(Math.max(0L, elapsedMs));
+        String deltaText = deltaPrefix + FormatUtils.formatDurationPrecise(absDeltaMs);
+        String checkpointTime = FormatUtils.formatDurationPrecise(Math.max(0L, elapsedMs));
 
         return SystemMessageUtils.withParkourPrefix(
                 Message.raw("Checkpoint ").color(SystemMessageUtils.SECONDARY),
@@ -539,7 +566,9 @@ public class RunTracker {
     }
 
     private void checkFinish(ActiveRun run, PlayerRef playerRef, Player player, Vector3d position, Map map,
-                             TransformComponent transform, Ref<EntityStore> ref, Store<EntityStore> store) {
+                             TransformComponent transform, Ref<EntityStore> ref, Store<EntityStore> store,
+                             CommandBuffer<EntityStore> buffer, Vector3d previousPosition, long previousElapsedMs,
+                             double deltaMs) {
         if (run.practiceEnabled || run.finishTouched || map.getFinish() == null) {
             return;
         }
@@ -556,7 +585,8 @@ public class RunTracker {
             }
             run.finishTouched = true;
             playFinishSound(playerRef);
-            long durationMs = Math.max(0L, System.currentTimeMillis() - run.startTimeMs);
+            long durationMs = resolveInterpolatedTimeMs(run, previousPosition, position, map.getFinish(),
+                    previousElapsedMs, deltaMs);
             List<Long> checkpointTimes = new ArrayList<>();
             for (int i = 0; i < checkpointCount; i++) {
                 Long time = run.checkpointTouchTimes.get(i);
@@ -603,7 +633,8 @@ public class RunTracker {
                     broadcastVexaGod(playerName);
                 }
             }
-            teleportToSpawn(ref, store, transform);
+            sendLagAccuracyMessage(run, player);
+            teleportToSpawn(ref, store, transform, buffer);
             recordTeleport(playerId, TeleportCause.FINISH);
             clearActiveMap(playerId);
             InventoryUtils.giveMenuItems(player);
@@ -668,6 +699,10 @@ public class RunTracker {
         run.startPosition = new Vector3d(start.getX(), start.getY(), start.getZ());
         run.waitingForStart = true;
         run.startTimeMs = System.currentTimeMillis();
+        run.elapsedMs = 0L;
+        run.elapsedRemainderMs = 0.0;
+        run.skipNextTimeIncrement = false;
+        resetPingStats(run);
     }
 
     private void updateStartOnMovement(ActiveRun run, Vector3d position) {
@@ -677,10 +712,18 @@ public class RunTracker {
         if (distanceSq(position, run.startPosition) > START_MOVE_THRESHOLD_SQ) {
             run.waitingForStart = false;
             run.startTimeMs = System.currentTimeMillis();
+            run.elapsedMs = 0L;
+            run.elapsedRemainderMs = 0.0;
+            run.skipNextTimeIncrement = true;
+            resetPingStats(run);
         }
     }
 
-    private void teleportToRespawn(Ref<EntityStore> ref, Store<EntityStore> store, ActiveRun run, Map map) {
+    private void teleportToRespawn(Ref<EntityStore> ref, Store<EntityStore> store, ActiveRun run, Map map,
+                                   CommandBuffer<EntityStore> buffer) {
+        if (run != null) {
+            run.lastPosition = null;
+        }
         TransformData spawn = null;
         if (run.practiceEnabled && run.practiceCheckpoint != null) {
             spawn = run.practiceCheckpoint;
@@ -697,7 +740,7 @@ public class RunTracker {
         }
         Vector3d position = new Vector3d(spawn.getX(), spawn.getY(), spawn.getZ());
         Vector3f rotation = new Vector3f(spawn.getRotX(), spawn.getRotY(), spawn.getRotZ());
-        store.addComponent(ref, Teleport.getComponentType(), new Teleport(store.getExternalData().getWorld(), position, rotation));
+        addTeleport(ref, store, buffer, new Teleport(store.getExternalData().getWorld(), position, rotation));
     }
 
     public boolean teleportToLastCheckpoint(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef) {
@@ -730,6 +773,7 @@ public class RunTracker {
         recordTeleport(playerRef.getUuid(), TeleportCause.CHECKPOINT);
         run.fallStartTime = null;
         run.lastY = null;
+        run.lastPosition = null;
         return true;
     }
 
@@ -756,6 +800,7 @@ public class RunTracker {
         recordTeleport(playerRef.getUuid(), TeleportCause.CHECKPOINT);
         run.fallStartTime = null;
         run.lastY = null;
+        run.lastPosition = null;
         return true;
     }
 
@@ -893,6 +938,11 @@ public class RunTracker {
     }
 
     public void teleportToSpawn(Ref<EntityStore> ref, Store<EntityStore> store, TransformComponent transform) {
+        teleportToSpawn(ref, store, transform, null);
+    }
+
+    private void teleportToSpawn(Ref<EntityStore> ref, Store<EntityStore> store, TransformComponent transform,
+                                 CommandBuffer<EntityStore> buffer) {
         World world = store.getExternalData().getWorld();
         if (world == null) {
             return;
@@ -912,7 +962,7 @@ public class RunTracker {
         Vector3f rotation = spawnTransform != null
                 ? spawnTransform.getRotation()
                 : (transform != null ? transform.getRotation() : new Vector3f(0f, 0f, 0f));
-        store.addComponent(ref, Teleport.getComponentType(), new Teleport(world, position, rotation));
+        addTeleport(ref, store, buffer, new Teleport(world, position, rotation));
     }
 
     private static class ActiveRun {
@@ -920,6 +970,7 @@ public class RunTracker {
         private long startTimeMs;
         private boolean waitingForStart;
         private Vector3d startPosition;
+        private Vector3d lastPosition;
         private final Set<Integer> touchedCheckpoints = new HashSet<>();
         private final java.util.Map<Integer, Long> checkpointTouchTimes = new HashMap<>();
         private boolean finishTouched;
@@ -930,10 +981,17 @@ public class RunTracker {
         private Long fallStartTime;
         private Double lastY;
         private long lastFinishWarningMs;
+        private long elapsedMs;
+        private double elapsedRemainderMs;
+        private boolean skipNextTimeIncrement;
+        private long pingSampleCount;
+        private double pingSumMs;
+        private long nextPingSampleAtMs;
 
         private ActiveRun(String mapId, long startTimeMs) {
             this.mapId = mapId;
             this.startTimeMs = startTimeMs;
+            this.elapsedMs = 0L;
         }
     }
 
@@ -1063,5 +1121,178 @@ public class RunTracker {
             return;
         }
         teleportStats.computeIfAbsent(playerId, ignored -> new TeleportStats()).increment(cause);
+    }
+
+    private void addTeleport(Ref<EntityStore> ref, Store<EntityStore> store, CommandBuffer<EntityStore> buffer,
+                             Teleport teleport) {
+        if (ref == null || teleport == null) {
+            return;
+        }
+        if (buffer != null) {
+            buffer.addComponent(ref, Teleport.getComponentType(), teleport);
+        } else if (store != null) {
+            store.addComponent(ref, Teleport.getComponentType(), teleport);
+        }
+    }
+
+    private long resolveInterpolatedTimeMs(ActiveRun run, Vector3d previousPosition, Vector3d currentPosition,
+                                           TransformData target, long previousElapsedMs, double deltaMs) {
+        long currentElapsedMs = getRunElapsedMs(run);
+        if (run == null || run.waitingForStart || previousPosition == null || currentPosition == null
+                || target == null || deltaMs <= 0.0) {
+            return currentElapsedMs;
+        }
+        double t = segmentSphereIntersectionT(previousPosition, currentPosition, target, ParkourConstants.TOUCH_RADIUS);
+        if (!Double.isFinite(t)) {
+            return currentElapsedMs;
+        }
+        long interpolated = previousElapsedMs + Math.round(deltaMs * t);
+        return Math.max(0L, Math.min(currentElapsedMs, interpolated));
+    }
+
+    private static double segmentSphereIntersectionT(Vector3d from, Vector3d to, TransformData target, double radius) {
+        if (from == null || to == null || target == null) {
+            return Double.NaN;
+        }
+        double dx = to.getX() - from.getX();
+        double dy = to.getY() - from.getY();
+        double dz = to.getZ() - from.getZ();
+        double a = dx * dx + dy * dy + dz * dz;
+        if (a <= 1e-9) {
+            return Double.NaN;
+        }
+        double fx = from.getX() - target.getX();
+        double fy = from.getY() - target.getY();
+        double fz = from.getZ() - target.getZ();
+        double b = 2.0 * (fx * dx + fy * dy + fz * dz);
+        double c = fx * fx + fy * fy + fz * fz - radius * radius;
+        double discriminant = b * b - 4.0 * a * c;
+        if (discriminant < 0.0) {
+            return Double.NaN;
+        }
+        double sqrt = Math.sqrt(discriminant);
+        double t1 = (-b - sqrt) / (2.0 * a);
+        if (t1 >= 0.0 && t1 <= 1.0) {
+            return t1;
+        }
+        double t2 = (-b + sqrt) / (2.0 * a);
+        if (t2 >= 0.0 && t2 <= 1.0) {
+            return t2;
+        }
+        return Double.NaN;
+    }
+
+    private static Vector3d copyPosition(Vector3d position) {
+        if (position == null) {
+            return null;
+        }
+        return new Vector3d(position.getX(), position.getY(), position.getZ());
+    }
+
+    private void updatePingStats(ActiveRun run, PlayerRef playerRef, long elapsedMs) {
+        if (run == null || playerRef == null || run.waitingForStart) {
+            return;
+        }
+        if (elapsedMs < run.nextPingSampleAtMs) {
+            return;
+        }
+        run.nextPingSampleAtMs = elapsedMs + PING_SAMPLE_INTERVAL_MS;
+        PacketHandler handler = playerRef.getPacketHandler();
+        if (handler == null) {
+            return;
+        }
+        PacketHandler.PingInfo pingInfo = handler.getPingInfo(PongType.Tick);
+        if (pingInfo == null) {
+            return;
+        }
+        HistoricMetric metric = pingInfo.getPingMetricSet();
+        if (metric == null) {
+            return;
+        }
+        double avg = metric.getAverage(0);
+        double avgMs = convertPingToMs(avg, PacketHandler.PingInfo.TIME_UNIT);
+        if (!Double.isFinite(avgMs) || avgMs <= 0.0) {
+            return;
+        }
+        run.pingSampleCount++;
+        run.pingSumMs += avgMs;
+    }
+
+    private void resetPingStats(ActiveRun run) {
+        if (run == null) {
+            return;
+        }
+        run.pingSampleCount = 0L;
+        run.pingSumMs = 0.0;
+        run.nextPingSampleAtMs = 0L;
+    }
+
+    private void sendLagAccuracyMessage(ActiveRun run, Player player) {
+        if (player == null || run == null || run.pingSampleCount <= 0L) {
+            return;
+        }
+        long avgPingMs = Math.round(run.pingSumMs / (double) run.pingSampleCount);
+        Message message;
+        if (avgPingMs < PING_HIGH_THRESHOLD_MS) {
+            message = SystemMessageUtils.withParkourPrefix(
+                    Message.raw("Connection stable ").color(SystemMessageUtils.SUCCESS),
+                    Message.raw("(avg ").color(SystemMessageUtils.SECONDARY),
+                    Message.raw(avgPingMs + "ms").color(SystemMessageUtils.PRIMARY_TEXT),
+                    Message.raw("). ").color(SystemMessageUtils.SECONDARY),
+                    Message.raw("Timer is accurate and fair.").color(SystemMessageUtils.INFO)
+            );
+        } else {
+            message = SystemMessageUtils.withParkourPrefix(
+                    Message.raw("High latency ").color(SystemMessageUtils.WARN),
+                    Message.raw("(avg ").color(SystemMessageUtils.SECONDARY),
+                    Message.raw(avgPingMs + "ms").color(SystemMessageUtils.PRIMARY_TEXT),
+                    Message.raw("). ").color(SystemMessageUtils.SECONDARY),
+                    Message.raw("Timer may be less accurate due to lag.").color(SystemMessageUtils.WARN)
+            );
+        }
+        player.sendMessage(message);
+    }
+
+    private static double convertPingToMs(double value, TimeUnit unit) {
+        if (unit == null) {
+            return value;
+        }
+        double unitToMs = unit.toNanos(1L) / 1_000_000.0;
+        return value * unitToMs;
+    }
+
+
+    private void advanceRunTime(ActiveRun run, float deltaSeconds) {
+        if (run == null) {
+            return;
+        }
+        if (run.waitingForStart) {
+            run.elapsedMs = 0L;
+            run.elapsedRemainderMs = 0.0;
+            run.skipNextTimeIncrement = false;
+            return;
+        }
+        if (run.skipNextTimeIncrement) {
+            run.skipNextTimeIncrement = false;
+            return;
+        }
+        if (!Float.isFinite(deltaSeconds) || deltaSeconds <= 0f) {
+            run.elapsedMs = Math.max(0L, System.currentTimeMillis() - run.startTimeMs);
+            run.elapsedRemainderMs = 0.0;
+            return;
+        }
+        double deltaMs = Math.max(0.0, deltaSeconds * 1000.0);
+        long wholeMs = (long) deltaMs;
+        double fractionMs = deltaMs - wholeMs + run.elapsedRemainderMs;
+        long carryMs = (long) fractionMs;
+        run.elapsedRemainderMs = fractionMs - carryMs;
+        run.elapsedMs += wholeMs + carryMs;
+    }
+
+    private long getRunElapsedMs(ActiveRun run) {
+        if (run == null || run.waitingForStart) {
+            return 0L;
+        }
+        return Math.max(0L, run.elapsedMs);
     }
 }

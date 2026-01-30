@@ -13,6 +13,11 @@ public final class FormatUtils {
         return String.format(Locale.ROOT, "%.2fs", seconds);
     }
 
+    public static String formatDurationPrecise(long durationMs) {
+        double seconds = durationMs / 1000.0;
+        return String.format(Locale.ROOT, "%.3fs", seconds);
+    }
+
     public static String formatPlaytime(long durationMs) {
         long totalSeconds = Math.max(0L, durationMs / 1000L);
         long hours = totalSeconds / 3600L;
