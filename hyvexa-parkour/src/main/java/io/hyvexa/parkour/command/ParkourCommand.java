@@ -14,6 +14,7 @@ import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.HyvexaPlugin;
+import io.hyvexa.common.util.HylogramsBridge;
 import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.parkour.ParkourConstants;
@@ -28,6 +29,7 @@ import io.hyvexa.parkour.ui.LeaderboardMenuPage;
 import io.hyvexa.parkour.ui.StatsPage;
 import io.hyvexa.parkour.util.ParkourModeGate;
 import javax.annotation.Nonnull;
+import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -126,7 +128,11 @@ public class ParkourCommand extends AbstractAsyncCommand {
             giveItems(ctx, store, ref);
             return;
         }
-        ctx.sendMessage(Message.raw("Usage: /pk [leaderboard|stats|admin|items]"));
+        if (tokens[0].equalsIgnoreCase("holograms")) {
+            listHolograms(ctx);
+            return;
+        }
+        ctx.sendMessage(Message.raw("Usage: /pk [leaderboard|stats|admin|items|holograms]"));
     }
 
     private void openLeaderboardMenu(Player player, Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -327,6 +333,22 @@ public class ParkourCommand extends AbstractAsyncCommand {
         hotbar.setItemStackForSlot((short) 8, new ItemStack(ParkourConstants.ITEM_HUB_MENU, 1));
         player.sendMessage(Message.raw("Parkour items added to your inventory."));
     }
+
+    private void listHolograms(CommandContext ctx) {
+        try {
+            var names = HylogramsBridge.listHologramNames();
+            if (names.isEmpty()) {
+                ctx.sendMessage(SystemMessageUtils.serverInfo("No holograms found."));
+                return;
+            }
+            ctx.sendMessage(SystemMessageUtils.serverInfo("Holograms (" + names.size() + "): " + String.join(", ", names)));
+        } catch (IllegalStateException e) {
+            ctx.sendMessage(SystemMessageUtils.serverError(e.getMessage()));
+        } catch (Exception e) {
+            ctx.sendMessage(SystemMessageUtils.serverError("Failed to list holograms."));
+        }
+    }
+
     private static String[] tokenize(CommandContext ctx) {
         String input = ctx.getInputString();
         if (input == null || input.trim().isEmpty()) {

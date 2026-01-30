@@ -1,5 +1,11 @@
 # Changelog
 
+- Added /as holograms to list Hylograms names in Ascend admin commands.
+- Added Hylograms dependency to the Parkour Ascend plugin manifest so it can access the API at runtime.
+- Documented Hylograms API usage and classloader rules in AGENTS.
+- Route Hylograms API access through the Hylograms plugin classloader to avoid runtime class visibility issues.
+- Added /pk holograms to list Hylograms names via the mod API.
+- Declare Hylograms as a dependency for the Parkour plugin manifest to expose its API at runtime.
 - Refresh the run timer HUD every 10ms instead of 100ms.
 - Refresh the duel tick loop every 10ms instead of 100ms.
 - Preserve active parkour runs across disconnects, keeping timer and checkpoint progress.

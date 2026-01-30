@@ -6,4 +6,5 @@ dependencies {
     compileOnly files("$hytaleHome/install/$patchline/package/game/latest/Server/HytaleServer.jar")
     api 'com.zaxxer:HikariCP:5.1.0'
     api 'com.mysql:mysql-connector-j:8.2.0'
+    compileOnlyApi files("$rootDir/libs/hylograms-1.0.7.jar")
 }
