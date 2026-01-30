@@ -1,5 +1,13 @@
 # Changelog
 
+- Move parkour run detection to an ECS per-tick system instead of the 200ms poll.
+- Drive the parkour run timer from per-tick ECS updates to match HUD timing.
+- Use CommandBuffer-backed teleports during per-tick run checks to avoid store processing crashes.
+- Ensure per-tick run checks pass the ECS command buffer to teleport safely.
+- Show checkpoint split times and deltas with millisecond precision while keeping map times at 2 decimals.
+- Interpolate checkpoint and finish times within a tick using segment-sphere intersection.
+- Show a ping-based accuracy notice at the end of a run (stable vs high latency).
+- Document the per-tick ECS run tracking approach and require English documentation in AGENTS.
 - Add run elapsed time to checkpoint split diff messages.
 - XP is now calculated from completed maps instead of being awarded on completion.
 - Removed the XP input from the progress admin purge UI now that XP is recalculated.

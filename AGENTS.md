@@ -5,6 +5,7 @@ Instructions for AI agents working on this Hytale plugin codebase.
 ## Workflow
 
 - Update `CHANGELOG.md` with a short note describing each completed feature
+- Write all documentation in English
 - Follow existing code patterns before introducing new abstractions
 - Build/test runs are handled by the project owner (do not run `./gradlew build`)
 
