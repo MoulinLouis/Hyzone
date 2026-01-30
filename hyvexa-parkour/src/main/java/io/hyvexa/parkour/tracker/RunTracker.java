@@ -510,12 +510,15 @@ public class RunTracker {
         String deltaPrefix = deltaMs < 0L ? "-" : "+";
         String deltaColor = deltaMs <= 0L ? SystemMessageUtils.SUCCESS : SystemMessageUtils.ERROR;
         String deltaText = deltaPrefix + FormatUtils.formatDuration(absDeltaMs);
+        String checkpointTime = FormatUtils.formatDuration(Math.max(0L, elapsedMs));
 
         return SystemMessageUtils.withParkourPrefix(
                 Message.raw("Checkpoint ").color(SystemMessageUtils.SECONDARY),
                 Message.raw("#" + (checkpointIndex + 1)).color(SystemMessageUtils.PRIMARY_TEXT),
                 Message.raw(" split: ").color(SystemMessageUtils.SECONDARY),
-                Message.raw(deltaText).color(deltaColor)
+                Message.raw(deltaText).color(deltaColor),
+                Message.raw(" at ").color(SystemMessageUtils.SECONDARY),
+                Message.raw(checkpointTime).color(SystemMessageUtils.PRIMARY_TEXT)
         );
     }
 

@@ -1,5 +1,6 @@
 # Changelog
 
+- Add run elapsed time to checkpoint split diff messages.
 - XP is now calculated from completed maps instead of being awarded on completion.
 - Removed the XP input from the progress admin purge UI now that XP is recalculated.
 - Put mithril swords/daggers at the start of the run hotbar and shift other run items right.
