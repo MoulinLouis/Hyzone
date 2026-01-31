@@ -2,7 +2,7 @@ $C = "../Common.ui";
 
 Button {
   LayoutMode: Left;
-  Anchor: (Left: 2, Right: 2, Bottom: 6, Height: 36, Width: 460);
+  Anchor: (Left: 2, Right: 2, Bottom: 6, Height: 36, Width: 580);
   Background: $C.@InputBoxBackground;
   Padding: (Left: 10, Right: 10, Top: 6);
   Style: ButtonStyle(
@@ -10,7 +10,7 @@ Button {
   );
 
   Label #SampleTime {
-    Anchor: (Width: 120, Left: 0);
+    Anchor: (Width: 150, Left: 0);
     Style: (
       FontSize: 12,
       TextColor: #93844c,
@@ -20,11 +20,21 @@ Button {
   }
 
   Label #SampleBar {
-    Anchor: (Left: 130, Right: 0);
+    Anchor: (Left: 160, Right: 110);
     Style: (
       FontSize: 12,
       TextColor: #cfd7dc
     );
-    Text: "##########----------";
+    Text: "";
+  }
+
+  Label #SampleCount {
+    Anchor: (Width: 100, Right: 0);
+    Style: (
+      FontSize: 12,
+      TextColor: #cfd7dc,
+      RenderBold: true
+    );
+    Text: "0 (0-0)";
   }
 }

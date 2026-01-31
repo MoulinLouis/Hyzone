@@ -22,12 +22,16 @@ import io.hyvexa.parkour.data.Map;
 import io.hyvexa.parkour.data.TransformData;
 import javax.annotation.Nonnull;
 
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CompletableFuture;
 
 public class LeaveInteraction extends SimpleInteraction {
 
     public static final BuilderCodec<LeaveInteraction> CODEC =
             BuilderCodec.builder(LeaveInteraction.class, LeaveInteraction::new).build();
+    private static final long CONFIRM_WINDOW_MS = 10000L;
+    private static final ConcurrentHashMap<UUID, PendingLeave> PENDING_LEAVES = new ConcurrentHashMap<>();
 
     @Override
     public void handle(@Nonnull Ref<EntityStore> ref, boolean firstRun, float time,
@@ -46,6 +50,15 @@ public class LeaveInteraction extends SimpleInteraction {
         World world = store.getExternalData().getWorld();
         if (world == null) {
             player.sendMessage(Message.raw("World not available."));
+            return;
+        }
+        String mapId = plugin.getRunTracker().getActiveMapId(playerRef.getUuid());
+        if (mapId == null) {
+            PENDING_LEAVES.remove(playerRef.getUuid());
+            player.sendMessage(Message.raw("No active map to leave."));
+            return;
+        }
+        if (!confirmLeave(player, playerRef.getUuid(), mapId)) {
             return;
         }
         CompletableFuture.runAsync(() -> handleLeave(ref, store, player, playerRef, plugin), world);
@@ -79,5 +92,27 @@ public class LeaveInteraction extends SimpleInteraction {
                 Message.raw(mapName != null ? mapName : "Map").color(SystemMessageUtils.PRIMARY_TEXT),
                 Message.raw(".").color(SystemMessageUtils.SECONDARY)
         ));
+    }
+
+    private boolean confirmLeave(Player player, UUID playerId, String mapId) {
+        long now = System.currentTimeMillis();
+        PendingLeave pending = PENDING_LEAVES.get(playerId);
+        if (pending == null || !pending.mapId.equals(mapId) || now - pending.requestedAt > CONFIRM_WINDOW_MS) {
+            PENDING_LEAVES.put(playerId, new PendingLeave(mapId, now));
+            player.sendMessage(SystemMessageUtils.parkourWarn("Confirm leave: right-click again."));
+            return false;
+        }
+        PENDING_LEAVES.remove(playerId);
+        return true;
+    }
+
+    private static final class PendingLeave {
+        private final String mapId;
+        private final long requestedAt;
+
+        private PendingLeave(String mapId, long requestedAt) {
+            this.mapId = mapId;
+            this.requestedAt = requestedAt;
+        }
     }
 }

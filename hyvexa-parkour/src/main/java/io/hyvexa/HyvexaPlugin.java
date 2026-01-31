@@ -37,6 +37,7 @@ import com.hypixel.hytale.server.core.event.events.player.PlayerConnectEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerChatEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
+import com.hypixel.hytale.protocol.packets.interface_.HudComponent;
 import com.hypixel.hytale.server.core.event.events.player.AddPlayerToWorldEvent;
 import com.hypixel.hytale.server.core.modules.entity.hitboxcollision.HitboxCollision;
 import com.hypixel.hytale.server.core.event.events.entity.LivingEntityInventoryChangeEvent;
@@ -208,7 +209,7 @@ public class HyvexaPlugin extends JavaPlugin {
                 runTracker, PlayerVisibilityManager.get());
         this.playtimeManager.setOnlineCount(Universe.get().getPlayers().size());
         registerRunTrackerTickSystem();
-        hudUpdateTask = scheduleTick("hud updates", this::tickHudUpdates, 10, 10, TimeUnit.MILLISECONDS);
+        hudUpdateTask = scheduleTick("hud updates", this::tickHudUpdates, 100, 100, TimeUnit.MILLISECONDS);
         playtimeTask = scheduleTick("playtime", this::tickPlaytime, 60, 60, TimeUnit.SECONDS);
         collisionTask = scheduleTick("collision removal", this::tickCollisionRemoval, 1, 2, TimeUnit.SECONDS);
         playerCountTask = scheduleTick("player counts", this::tickPlayerCounts, 5, PLAYER_COUNT_SAMPLE_SECONDS,
@@ -217,7 +218,7 @@ public class HyvexaPlugin extends JavaPlugin {
                 STALE_PLAYER_SWEEP_SECONDS, TimeUnit.SECONDS);
         teleportDebugTask = scheduleTick("teleport debug", this::tickTeleportDebug, TELEPORT_DEBUG_INTERVAL_SECONDS,
                 TELEPORT_DEBUG_INTERVAL_SECONDS, TimeUnit.SECONDS);
-        duelTickTask = scheduleTick("duel tick", this::tickDuel, 10, 10, TimeUnit.MILLISECONDS);
+        duelTickTask = scheduleTick("duel tick", this::tickDuel, 100, 100, TimeUnit.MILLISECONDS);
         announcementManager.refreshChatAnnouncements();
         scheduleLeaderboardHologramRefresh();
 
@@ -314,7 +315,11 @@ public class HyvexaPlugin extends JavaPlugin {
                 Ref<EntityStore> ref = event.getPlayerRef();
                 if (ref != null && ref.isValid()) {
                     Store<EntityStore> store = ref.getStore();
+                    Player player = store.getComponent(ref, Player.getComponentType());
                     PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+                    if (player != null && playerRef != null) {
+                        player.getHudManager().hideHudComponents(playerRef, HudComponent.Compass);
+                    }
                     if (playerRef != null && shouldApplyParkourMode(playerRef, store)) {
                         hudManager.ensureRunHud(playerRef);
                     }

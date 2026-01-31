@@ -247,7 +247,6 @@ public class HyvexaHubPlugin extends JavaPlugin {
                     Player player = context.store.getComponent(context.ref, Player.getComponentType());
                     if (player != null) {
                         player.getHudManager().setCustomHud(context.playerRef, hud);
-                        player.getHudManager().hideHudComponents(context.playerRef, HudComponent.Compass);
                     }
                     long readyAt = hubHudReadyAt.getOrDefault(playerId, Long.MAX_VALUE);
                     if (System.currentTimeMillis() < readyAt) {

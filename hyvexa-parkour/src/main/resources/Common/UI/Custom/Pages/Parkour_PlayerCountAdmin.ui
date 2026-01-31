@@ -2,7 +2,7 @@ $C = "../Common.ui";
 
 $C.@PageOverlay {
   $C.@Container {
-    Anchor: (Width: 520, Height: 360);
+    Anchor: (Width: 640, Height: 440);
 
     #Title {
       Group {
@@ -53,7 +53,7 @@ $C.@PageOverlay {
         Text: "";
       }
 
-      Label {
+      Label #WindowText {
         Anchor: (Top: 4);
         Style: (
           FontSize: 13,
@@ -62,14 +62,14 @@ $C.@PageOverlay {
         Text: "Last 24 hours";
       }
 
-      Group #SampleList {
-        Anchor: (Width: 490, Top: 6, Height: 170);
-        LayoutMode: TopScrolling;
-        Padding: (Left: 6, Right: 6);
+      Group #GraphList {
+        Anchor: (Width: 610, Top: 6, Height: 240);
+        LayoutMode: LeftScrolling;
+        Padding: (Left: 6, Right: 6, Top: 6, Bottom: 6);
         ScrollbarStyle: $C.@DefaultScrollbarStyle;
 
-        Group #SampleCards {
-          LayoutMode: Top;
+        Group #GraphBars {
+          LayoutMode: Left;
         }
       }
 

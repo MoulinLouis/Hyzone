@@ -98,8 +98,9 @@ public class PlaytimeManager {
         if (playerCountStore == null) {
             return;
         }
-        int count = onlinePlayerCount.get();
-        playerCountStore.recordSample(System.currentTimeMillis(), count);
+        int actualCount = Universe.get().getPlayers().size();
+        onlinePlayerCount.set(Math.max(0, actualCount));
+        playerCountStore.recordSample(System.currentTimeMillis(), actualCount);
     }
 
     public void broadcastPresence(PlayerRef playerRef, boolean joined) {
