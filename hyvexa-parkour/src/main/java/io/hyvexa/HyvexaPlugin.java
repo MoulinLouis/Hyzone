@@ -39,7 +39,6 @@ import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
 import com.hypixel.hytale.protocol.packets.interface_.HudComponent;
 import com.hypixel.hytale.server.core.event.events.player.AddPlayerToWorldEvent;
-import com.hypixel.hytale.server.core.event.events.entity.LivingEntityInventoryChangeEvent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.event.events.ecs.DropItemEvent;
 import com.hypixel.hytale.server.core.event.events.ecs.BreakBlockEvent;
@@ -357,16 +356,6 @@ public class HyvexaPlugin extends JavaPlugin {
         for (PlayerRef playerRef : Universe.get().getPlayers()) {
             inventorySyncManager.syncRunInventoryOnConnect(playerRef);
         }
-
-        this.getEventRegistry().registerGlobal(LivingEntityInventoryChangeEvent.class, event -> {
-            try {
-                if (event.getEntity() instanceof Player player) {
-                    inventorySyncManager.updateDropProtection(player);
-                }
-            } catch (Exception e) {
-                LOGGER.at(Level.WARNING).withCause(e).log("Exception in LivingEntityInventoryChangeEvent");
-            }
-        });
 
         this.getEventRegistry().registerGlobal(PlayerChatEvent.class, event -> {
             try {
