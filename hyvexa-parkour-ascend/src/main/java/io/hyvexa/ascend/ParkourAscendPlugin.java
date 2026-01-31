@@ -9,6 +9,7 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -18,10 +19,14 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.command.AscendCommand;
 import io.hyvexa.ascend.command.AscendAdminCommand;
 import io.hyvexa.ascend.data.AscendDatabaseSetup;
+import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.hud.AscendHud;
 import io.hyvexa.ascend.holo.AscendHologramManager;
+import io.hyvexa.ascend.interaction.AscendDevCinderclothInteraction;
+import io.hyvexa.ascend.interaction.AscendDevCottonInteraction;
+import io.hyvexa.ascend.interaction.AscendDevStormsilkInteraction;
 import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
@@ -90,6 +95,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
         getCommandRegistry().registerCommand(new AscendCommand());
         getCommandRegistry().registerCommand(new AscendAdminCommand());
+        registerInteractionCodecs();
 
         this.getEventRegistry().registerGlobal(PlayerReadyEvent.class, event -> {
             try {
@@ -230,8 +236,10 @@ public class ParkourAscendPlugin extends JavaPlugin {
         hud.applyStaticText();
         if (playerStore != null) {
             long coins = playerStore.getCoins(playerId);
-            long pending = playerStore.getTotalPendingCoins(playerId);
-            hud.updateEconomy(coins, pending, "x1.00");
+            List<AscendMap> maps = mapStore != null ? mapStore.listMapsSorted() : List.of();
+            long product = playerStore.getMultiplierProduct(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
+            int[] digits = playerStore.getMultiplierDigits(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
+            hud.updateEconomy(coins, product, digits);
         }
     }
 
@@ -311,6 +319,9 @@ public class ParkourAscendPlugin extends JavaPlugin {
         if (hotbar.getCapacity() <= 0) {
             return;
         }
+        hotbar.setItemStackForSlot((short) 0, new ItemStack(AscendConstants.ITEM_DEV_CINDERCLOTH, 1), false);
+        hotbar.setItemStackForSlot((short) 1, new ItemStack(AscendConstants.ITEM_DEV_STORMSILK, 1), false);
+        hotbar.setItemStackForSlot((short) 2, new ItemStack(AscendConstants.ITEM_DEV_COTTON, 1), false);
         short slot = (short) (hotbar.getCapacity() - 1);
         hotbar.setItemStackForSlot(slot, new ItemStack("Hub_Server_Selector", 1), false);
     }
@@ -323,5 +334,15 @@ public class ParkourAscendPlugin extends JavaPlugin {
         for (short slot = 0; slot < capacity; slot++) {
             container.setItemStackForSlot(slot, ItemStack.EMPTY, false);
         }
+    }
+
+    private void registerInteractionCodecs() {
+        var registry = this.getCodecRegistry(Interaction.CODEC);
+        registry.register("Ascend_Dev_Cindercloth_Interaction",
+            AscendDevCinderclothInteraction.class, AscendDevCinderclothInteraction.CODEC);
+        registry.register("Ascend_Dev_Stormsilk_Interaction",
+            AscendDevStormsilkInteraction.class, AscendDevStormsilkInteraction.CODEC);
+        registry.register("Ascend_Dev_Cotton_Interaction",
+            AscendDevCottonInteraction.class, AscendDevCottonInteraction.CODEC);
     }
 }

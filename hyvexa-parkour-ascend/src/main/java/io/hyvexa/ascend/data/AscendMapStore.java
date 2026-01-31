@@ -10,6 +10,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -100,6 +101,19 @@ public class AscendMapStore {
         lock.readLock().lock();
         try {
             return Collections.unmodifiableList(new ArrayList<>(maps.values()));
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    public List<AscendMap> listMapsSorted() {
+        lock.readLock().lock();
+        try {
+            List<AscendMap> sorted = new ArrayList<>(maps.values());
+            sorted.sort(Comparator.comparingInt(AscendMap::getDisplayOrder)
+                .thenComparing(map -> map.getName() != null ? map.getName() : map.getId(),
+                    String.CASE_INSENSITIVE_ORDER));
+            return Collections.unmodifiableList(sorted);
         } finally {
             lock.readLock().unlock();
         }

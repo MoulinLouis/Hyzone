@@ -8,11 +8,17 @@ public final class AscendConstants {
     // Database
     public static final String TABLE_PREFIX = "ascend_";
 
+    // Items
+    public static final String ITEM_DEV_CINDERCLOTH = "Ingredient_Bolt_Cindercloth";
+    public static final String ITEM_DEV_STORMSILK = "Ingredient_Bolt_Stormsilk";
+    public static final String ITEM_DEV_COTTON = "Ingredient_Bolt_Cotton";
+
     // Economy
     public static final long DEFAULT_ROBOT_STORAGE = 100L;
     public static final double SPEED_UPGRADE_MULTIPLIER = 0.10; // +10% per level
     public static final double GAINS_UPGRADE_MULTIPLIER = 0.15; // +15% per level
     public static final int MAX_UPGRADE_LEVEL = 5;
+    public static final int MULTIPLIER_SLOTS = 5;
 
     // Robot
     public static final String ROBOT_ENTITY_TYPE = "Kweebec_Sapling";

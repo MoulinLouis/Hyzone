@@ -1,5 +1,8 @@
 # Changelog
 
+- Replace Ascend pending-coin rewards with per-map multiplier digits that pay out the digit product on completion, and refresh the HUD/map UI to match.
+- Add three Ascend dev items (Cindercloth/Stormsilk/Cotton) that are granted by default and send a message on right-click.
+- Scale up the Ascend top banner HUD bar for improved readability.
 - Add an Ascend top banner HUD bar with colored multiplier slots and separators.
 - Hide the default compass HUD component across Hub, Parkour, and Ascend.
 - Add Ascend hologram support for map info display in-world.

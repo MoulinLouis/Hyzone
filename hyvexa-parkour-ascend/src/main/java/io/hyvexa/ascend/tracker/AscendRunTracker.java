@@ -10,12 +10,14 @@ import com.hypixel.hytale.server.core.modules.entity.component.TransformComponen
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.common.util.SystemMessageUtils;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -88,18 +90,22 @@ public class AscendRunTracker {
 
         AscendPlayerProgress.MapProgress mapProgress = playerStore.getOrCreateMapProgress(playerId, run.mapId);
 
-        long reward = map.getBaseReward();
         boolean firstCompletion = !mapProgress.isCompletedManually();
 
         mapProgress.setCompletedManually(true);
         mapProgress.setUnlocked(true);
-        playerStore.addPendingCoins(playerId, run.mapId, reward);
+        playerStore.markDirty(playerId);
+
+        playerStore.incrementMapMultiplier(playerId, run.mapId);
+        List<AscendMap> multiplierMaps = mapStore.listMapsSorted();
+        long payout = playerStore.getMultiplierProduct(playerId, multiplierMaps, AscendConstants.MULTIPLIER_SLOTS);
+        playerStore.addCoins(playerId, payout);
 
         if (firstCompletion) {
             player.sendMessage(Message.raw("[Ascend] Map completed! You can now buy a robot for this map.")
                 .color(SystemMessageUtils.SUCCESS));
         }
-        player.sendMessage(Message.raw("[Ascend] +" + reward + " coins pending.")
+        player.sendMessage(Message.raw("[Ascend] +" + payout + " coins.")
             .color(SystemMessageUtils.PRIMARY_TEXT));
 
         Vector3d startPos = new Vector3d(map.getStartX(), map.getStartY(), map.getStartZ());
