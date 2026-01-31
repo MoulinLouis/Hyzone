@@ -9,6 +9,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -63,7 +64,7 @@ public class AscendPlayerStore {
     private void loadMapProgress() {
         String sql = """
             SELECT player_uuid, map_id, unlocked, completed_manually, has_robot, robot_count,
-                   robot_speed_level, robot_gains_level, multiplier_value
+                   robot_speed_level, robot_gains_level, multiplier_value, robot_multiplier_bonus
             FROM ascend_player_maps
             """;
         try (Connection conn = DatabaseManager.getInstance().getConnection();
@@ -86,6 +87,7 @@ public class AscendPlayerStore {
                     mapProgress.setRobotSpeedLevel(rs.getInt("robot_speed_level"));
                     mapProgress.setRobotGainsLevel(rs.getInt("robot_gains_level"));
                     mapProgress.setMultiplierValue(rs.getInt("multiplier_value"));
+                    mapProgress.setRobotMultiplierBonus(rs.getDouble("robot_multiplier_bonus"));
                     if (mapProgress.hasRobot() && mapProgress.getRobotCount() == 0) {
                         mapProgress.setRobotCount(1);
                         dirtyPlayers.add(uuid);
@@ -104,6 +106,10 @@ public class AscendPlayerStore {
         return players.get(playerId);
     }
 
+    public Map<UUID, AscendPlayerProgress> getPlayersSnapshot() {
+        return new HashMap<>(players);
+    }
+
     public AscendPlayerProgress getOrCreatePlayer(UUID playerId) {
         return players.computeIfAbsent(playerId, k -> {
             AscendPlayerProgress progress = new AscendPlayerProgress();
@@ -111,6 +117,14 @@ public class AscendPlayerStore {
             queueSave();
             return progress;
         });
+    }
+
+    public void resetPlayerProgress(UUID playerId) {
+        AscendPlayerProgress progress = getOrCreatePlayer(playerId);
+        progress.setCoins(0L);
+        progress.setRebirthMultiplier(1);
+        progress.getMapProgress().clear();
+        markDirty(playerId);
     }
 
     public void markDirty(UUID playerId) {
@@ -191,9 +205,24 @@ public class AscendPlayerStore {
         return Math.max(1, mapProgress.getMultiplierValue());
     }
 
+    public double getMapMultiplierDisplayValue(UUID playerId, String mapId) {
+        AscendPlayerProgress.MapProgress mapProgress = getMapProgress(playerId, mapId);
+        if (mapProgress == null) {
+            return 1.0;
+        }
+        return Math.max(1.0, mapProgress.getMultiplierValue() + mapProgress.getRobotMultiplierBonus());
+    }
+
     public int incrementMapMultiplier(UUID playerId, String mapId) {
         AscendPlayerProgress.MapProgress mapProgress = getOrCreateMapProgress(playerId, mapId);
         int value = mapProgress.incrementMultiplier();
+        markDirty(playerId);
+        return value;
+    }
+
+    public double addRobotMultiplierBonus(UUID playerId, String mapId, double amount) {
+        AscendPlayerProgress.MapProgress mapProgress = getOrCreateMapProgress(playerId, mapId);
+        double value = mapProgress.addRobotMultiplierBonus(amount);
         markDirty(playerId);
         return value;
     }
@@ -213,11 +242,11 @@ public class AscendPlayerStore {
         return value;
     }
 
-    public int[] getMultiplierDigits(UUID playerId, List<AscendMap> maps, int slotCount) {
+    public double[] getMultiplierDisplayValues(UUID playerId, List<AscendMap> maps, int slotCount) {
         int slots = Math.max(0, slotCount);
-        int[] digits = new int[slots];
+        double[] digits = new double[slots];
         for (int i = 0; i < slots; i++) {
-            digits[i] = 1;
+            digits[i] = 1.0;
         }
         if (maps == null || maps.isEmpty() || slots == 0) {
             return digits;
@@ -230,7 +259,7 @@ public class AscendPlayerStore {
             if (map == null || map.getId() == null) {
                 continue;
             }
-            digits[index] = getMapMultiplierValue(playerId, map.getId());
+            digits[index] = getMapMultiplierDisplayValue(playerId, map.getId());
             index++;
         }
         return digits;
@@ -240,7 +269,8 @@ public class AscendPlayerStore {
         long product = 1L;
         int slots = Math.max(0, slotCount);
         if (maps == null || maps.isEmpty() || slots == 0) {
-            return product;
+            int rebirth = Math.max(1, getRebirthMultiplier(playerId));
+            return safeMultiply(product, rebirth);
         }
         int index = 0;
         for (AscendMap map : maps) {
@@ -254,14 +284,16 @@ public class AscendPlayerStore {
             product *= Math.max(1, value);
             index++;
         }
-        return product;
+        int rebirth = Math.max(1, getRebirthMultiplier(playerId));
+        return safeMultiply(product, rebirth);
     }
 
     public long getCompletionPayout(UUID playerId, List<AscendMap> maps, int slotCount, String mapId) {
         long product = 1L;
         int slots = Math.max(0, slotCount);
         if (maps == null || maps.isEmpty() || slots == 0) {
-            return product;
+            int rebirth = Math.max(1, getRebirthMultiplier(playerId));
+            return safeMultiply(product, rebirth);
         }
         int index = 0;
         for (AscendMap map : maps) {
@@ -278,7 +310,16 @@ public class AscendPlayerStore {
             product *= Math.max(1, value);
             index++;
         }
-        return product;
+        int rebirth = Math.max(1, getRebirthMultiplier(playerId));
+        return safeMultiply(product, rebirth);
+    }
+
+    private long safeMultiply(long left, long right) {
+        try {
+            return Math.multiplyExact(left, right);
+        } catch (ArithmeticException e) {
+            return Long.MAX_VALUE;
+        }
     }
 
     public void flushPendingSave() {
@@ -323,13 +364,14 @@ public class AscendPlayerStore {
 
         String mapSql = """
             INSERT INTO ascend_player_maps (player_uuid, map_id, unlocked, completed_manually,
-                has_robot, robot_count, robot_speed_level, robot_gains_level, multiplier_value)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                has_robot, robot_count, robot_speed_level, robot_gains_level, multiplier_value,
+                robot_multiplier_bonus)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 unlocked = VALUES(unlocked), completed_manually = VALUES(completed_manually),
                 has_robot = VALUES(has_robot), robot_count = VALUES(robot_count),
                 robot_speed_level = VALUES(robot_speed_level), robot_gains_level = VALUES(robot_gains_level),
-                multiplier_value = VALUES(multiplier_value)
+                multiplier_value = VALUES(multiplier_value), robot_multiplier_bonus = VALUES(robot_multiplier_bonus)
             """;
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
@@ -360,6 +402,7 @@ public class AscendPlayerStore {
                     mapStmt.setInt(7, mapProgress.getRobotSpeedLevel());
                     mapStmt.setInt(8, mapProgress.getRobotGainsLevel());
                     mapStmt.setInt(9, mapProgress.getMultiplierValue());
+                    mapStmt.setDouble(10, mapProgress.getRobotMultiplierBonus());
                     mapStmt.addBatch();
                 }
             }

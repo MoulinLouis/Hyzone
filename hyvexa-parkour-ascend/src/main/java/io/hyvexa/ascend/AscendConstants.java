@@ -23,6 +23,7 @@ public final class AscendConstants {
     // Robot
     public static final String ROBOT_ENTITY_TYPE = "Kweebec_Sapling";
     public static final long ROBOT_TICK_INTERVAL_MS = 200L; // 5 ticks/second
+    public static final long ROBOT_REFRESH_INTERVAL_MS = 1000L;
     public static final double ROBOT_BASE_SPEED = 5.0;
     public static final double ROBOT_JUMP_FORCE = 8.0;
     public static final double WAYPOINT_REACH_DISTANCE = 1.5;

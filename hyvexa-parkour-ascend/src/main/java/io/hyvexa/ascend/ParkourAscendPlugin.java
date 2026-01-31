@@ -31,6 +31,7 @@ import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
+import com.hypixel.hytale.server.core.event.events.player.AddPlayerToWorldEvent;
 import io.hyvexa.common.util.HylogramsBridge;
 
 import javax.annotation.Nonnull;
@@ -118,10 +119,31 @@ public class ParkourAscendPlugin extends JavaPlugin {
                         return;
                     }
                     resetAscendInventory(player);
+                    ensureAscendItems(player);
                     attachAscendHud(playerRef, player);
                 }, world);
             } catch (Exception e) {
                 LOGGER.at(Level.WARNING).log("Exception in PlayerReadyEvent (ascend): " + e.getMessage());
+            }
+        });
+
+        this.getEventRegistry().registerGlobal(AddPlayerToWorldEvent.class, event -> {
+            try {
+                World world = event.getWorld();
+                if (world == null || !isAscendWorld(world)) {
+                    return;
+                }
+                var holder = event.getHolder();
+                if (holder == null) {
+                    return;
+                }
+                Player player = holder.getComponent(Player.getComponentType());
+                if (player == null) {
+                    return;
+                }
+                ensureAscendItems(player);
+            } catch (Exception e) {
+                LOGGER.at(Level.WARNING).log("Exception in AddPlayerToWorldEvent (ascend): " + e.getMessage());
             }
         });
 
@@ -228,7 +250,6 @@ public class ParkourAscendPlugin extends JavaPlugin {
         }
         // Always ensure HUD is set on player (in case they came from another world)
         player.getHudManager().setCustomHud(context.playerRef, hud);
-        player.getHudManager().hideHudComponents(context.playerRef, HudComponent.Compass);
         long readyAt = ascendHudReadyAt.getOrDefault(playerId, Long.MAX_VALUE);
         if (System.currentTimeMillis() < readyAt) {
             return;
@@ -238,8 +259,10 @@ public class ParkourAscendPlugin extends JavaPlugin {
             long coins = playerStore.getCoins(playerId);
             List<AscendMap> maps = mapStore != null ? mapStore.listMapsSorted() : List.of();
             long product = playerStore.getMultiplierProduct(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
-            int[] digits = playerStore.getMultiplierDigits(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
-            hud.updateEconomy(coins, product, digits);
+            double[] digits = playerStore.getMultiplierDisplayValues(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
+            int rebirthMultiplier = playerStore.getRebirthMultiplier(playerId);
+            boolean showRebirth = coins >= 1000L;
+            hud.updateEconomy(coins, product, digits, rebirthMultiplier, showRebirth);
         }
     }
 
@@ -324,6 +347,39 @@ public class ParkourAscendPlugin extends JavaPlugin {
         hotbar.setItemStackForSlot((short) 2, new ItemStack(AscendConstants.ITEM_DEV_COTTON, 1), false);
         short slot = (short) (hotbar.getCapacity() - 1);
         hotbar.setItemStackForSlot(slot, new ItemStack("Hub_Server_Selector", 1), false);
+    }
+
+    private static void ensureAscendItems(Player player) {
+        if (player == null) {
+            return;
+        }
+        Inventory inventory = player.getInventory();
+        if (inventory == null || inventory.getHotbar() == null) {
+            return;
+        }
+        ItemContainer hotbar = inventory.getHotbar();
+        short capacity = hotbar.getCapacity();
+        if (capacity <= 0) {
+            return;
+        }
+        setIfMissing(hotbar, (short) 0, AscendConstants.ITEM_DEV_CINDERCLOTH);
+        setIfMissing(hotbar, (short) 1, AscendConstants.ITEM_DEV_STORMSILK);
+        setIfMissing(hotbar, (short) 2, AscendConstants.ITEM_DEV_COTTON);
+        short slot = (short) (capacity - 1);
+        setIfMissing(hotbar, slot, "Hub_Server_Selector");
+    }
+
+    private static void setIfMissing(ItemContainer hotbar, short slot, String itemId) {
+        if (hotbar == null || itemId == null || itemId.isBlank()) {
+            return;
+        }
+        if (slot < 0 || slot >= hotbar.getCapacity()) {
+            return;
+        }
+        ItemStack existing = hotbar.getItemStack(slot);
+        if (existing == null || ItemStack.isEmpty(existing) || !itemId.equals(existing.getItemId())) {
+            hotbar.setItemStackForSlot(slot, new ItemStack(itemId, 1), false);
+        }
     }
 
     private static void clearContainer(ItemContainer container) {

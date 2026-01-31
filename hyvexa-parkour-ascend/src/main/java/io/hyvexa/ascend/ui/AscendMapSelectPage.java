@@ -4,12 +4,14 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
+import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.data.AscendMap;
@@ -21,8 +23,12 @@ import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.common.ui.ButtonEventData;
 
 import javax.annotation.Nonnull;
+import java.util.Locale;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 public class AscendMapSelectPage extends BaseAscendPage {
 
@@ -33,6 +39,9 @@ public class AscendMapSelectPage extends BaseAscendPage {
     private final AscendMapStore mapStore;
     private final AscendPlayerStore playerStore;
     private final AscendRunTracker runTracker;
+    private ScheduledFuture<?> refreshTask;
+    private volatile boolean active;
+    private int lastMapCount;
 
     public AscendMapSelectPage(@Nonnull PlayerRef playerRef, AscendMapStore mapStore,
                                AscendPlayerStore playerStore, AscendRunTracker runTracker) {
@@ -48,7 +57,9 @@ public class AscendMapSelectPage extends BaseAscendPage {
         uiCommandBuilder.append("Pages/Ascend_MapSelect.ui");
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CloseButton",
             EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE), false);
+        active = true;
         buildMapList(ref, store, uiCommandBuilder, uiEventBuilder);
+        startAutoRefresh(ref, store);
     }
 
     @Override
@@ -97,6 +108,13 @@ public class AscendMapSelectPage extends BaseAscendPage {
         this.close();
     }
 
+    @Override
+    public void close() {
+        active = false;
+        stopAutoRefresh();
+        super.close();
+    }
+
     private void buildMapList(Ref<EntityStore> ref, Store<EntityStore> store,
                               UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
         commandBuilder.clear("#MapCards");
@@ -106,10 +124,28 @@ public class AscendMapSelectPage extends BaseAscendPage {
         }
         List<AscendMap> maps = new ArrayList<>(mapStore.listMapsSorted());
         AscendPlayerProgress progress = playerStore.getOrCreatePlayer(playerRef.getUuid());
+        lastMapCount = maps.size();
         int index = 0;
         for (AscendMap map : maps) {
             commandBuilder.append("#MapCards", "Pages/Ascend_MapSelectEntry.ui");
+            String cardColor = resolveMapCardColor(index);
             String mapName = map.getName() != null && !map.getName().isBlank() ? map.getName() : map.getId();
+            String textColor = resolveMapTextColor(index);
+            String hoverColor = adjustColor(cardColor, 0.12);
+            String pressedColor = adjustColor(cardColor, -0.12);
+            commandBuilder.set("#MapCards[" + index + "] #SelectButton.Background", cardColor);
+            commandBuilder.set("#MapCards[" + index + "] #SelectButton.Style.Default.Background", cardColor);
+            commandBuilder.set("#MapCards[" + index + "] #SelectButton.Style.Hovered.Background", hoverColor);
+            commandBuilder.set("#MapCards[" + index + "] #SelectButton.Style.Pressed.Background", pressedColor);
+            commandBuilder.set("#MapCards[" + index + "] #RobotBuyButton.Background", cardColor);
+            commandBuilder.set("#MapCards[" + index + "] #RobotBuyButton.Style.Default.Background", cardColor);
+            commandBuilder.set("#MapCards[" + index + "] #RobotBuyButton.Style.Hovered.Background", hoverColor);
+            commandBuilder.set("#MapCards[" + index + "] #RobotBuyButton.Style.Pressed.Background", pressedColor);
+            commandBuilder.set("#MapCards[" + index + "] #MapName.Style.TextColor", textColor);
+            commandBuilder.set("#MapCards[" + index + "] #MapStatus.Style.TextColor", textColor);
+            commandBuilder.set("#MapCards[" + index + "] #RobotCountText.Style.TextColor", textColor);
+            commandBuilder.set("#MapCards[" + index + "] #RobotPriceText.Style.TextColor", textColor);
+            commandBuilder.set("#MapCards[" + index + "] #RobotBuyText.Style.TextColor", textColor);
             AscendPlayerProgress.MapProgress mapProgress = progress != null
                 ? progress.getMapProgress().get(map.getId())
                 : null;
@@ -126,13 +162,8 @@ public class AscendMapSelectPage extends BaseAscendPage {
             if (!unlocked) {
                 status = "Locked | Price: " + map.getPrice() + " coins";
             } else {
-                int digit = playerStore.getMapMultiplierValue(playerRef.getUuid(), map.getId());
-                long payout = playerStore.getCompletionPayout(playerRef.getUuid(), maps,
-                    AscendConstants.MULTIPLIER_SLOTS, map.getId());
-                status = "Digit: " + digit + " | Payout: " + payout + " coins";
-                if (mapProgress != null && mapProgress.isCompletedManually()) {
-                    status = "Completed | " + status;
-                }
+                int robotCount = mapProgress != null ? Math.max(0, mapProgress.getRobotCount()) : 0;
+                status = "Runs/sec: " + formatRunsPerSecond(map, robotCount);
             }
             int robotCount = mapProgress != null ? Math.max(0, mapProgress.getRobotCount()) : 0;
             long robotPrice = Math.max(0L, map.getRobotPrice());
@@ -149,6 +180,70 @@ public class AscendMapSelectPage extends BaseAscendPage {
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_BUY_ROBOT_PREFIX + map.getId()), false);
             index++;
         }
+    }
+
+    private String resolveMapCardColor(int index) {
+        return switch (index) {
+            case 0 -> "#c0392b";
+            case 1 -> "#d35400";
+            case 2 -> "#f1c40f";
+            case 3 -> "#27ae60";
+            default -> "#2980b9";
+        };
+    }
+
+    private String resolveMapTextColor(int index) {
+        return "#1b1b1b";
+    }
+
+    private String adjustColor(String hex, double factor) {
+        if (hex == null || !hex.startsWith("#") || (hex.length() != 7)) {
+            return "#000000";
+        }
+        try {
+            int r = Integer.parseInt(hex.substring(1, 3), 16);
+            int g = Integer.parseInt(hex.substring(3, 5), 16);
+            int b = Integer.parseInt(hex.substring(5, 7), 16);
+            r = adjustChannel(r, factor);
+            g = adjustChannel(g, factor);
+            b = adjustChannel(b, factor);
+            return String.format("#%02x%02x%02x", r, g, b);
+        } catch (NumberFormatException e) {
+            return "#000000";
+        }
+    }
+
+    private int adjustChannel(int value, double factor) {
+        double result;
+        if (factor >= 0) {
+            result = value + (255 - value) * factor;
+        } else {
+            result = value * (1.0 + factor);
+        }
+        int clamped = (int) Math.round(result);
+        return Math.max(0, Math.min(255, clamped));
+    }
+
+    private String formatRunsPerSecond(AscendMap map, int robotCount) {
+        if (map == null || robotCount <= 0) {
+            return "0";
+        }
+        long base = Math.max(0L, map.getBaseRunTimeMs());
+        long reduction = Math.max(0L, map.getRobotTimeReductionMs());
+        if (base <= 0L) {
+            return "0";
+        }
+        long interval = base - (reduction * Math.max(0, robotCount - 1));
+        interval = Math.max(1L, interval);
+        double perSecond = 1000.0 / interval;
+        String text = String.format(Locale.US, "%.2f", perSecond);
+        if (text.endsWith(".00")) {
+            return text.substring(0, text.length() - 3);
+        }
+        if (text.endsWith("0")) {
+            return text.substring(0, text.length() - 1);
+        }
+        return text;
     }
 
     private void handleBuyRobot(Ref<EntityStore> ref, Store<EntityStore> store, String mapId) {
@@ -178,27 +273,119 @@ public class AscendMapSelectPage extends BaseAscendPage {
         updateRobotRow(ref, store, mapId, newCount, price);
     }
 
+    private void startAutoRefresh(Ref<EntityStore> ref, Store<EntityStore> store) {
+        if (refreshTask != null) {
+            return;
+        }
+        World world = store.getExternalData().getWorld();
+        if (world == null) {
+            return;
+        }
+        refreshTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(() -> {
+            if (!active || ref == null || !ref.isValid()) {
+                stopAutoRefresh();
+                return;
+            }
+            CompletableFuture.runAsync(() -> refreshRunRates(ref, store), world);
+        }, 1000L, 1000L, TimeUnit.MILLISECONDS);
+    }
+
+    private void stopAutoRefresh() {
+        if (refreshTask != null) {
+            refreshTask.cancel(false);
+            refreshTask = null;
+        }
+    }
+
+    private void refreshRunRates(Ref<EntityStore> ref, Store<EntityStore> store) {
+        if (!active) {
+            return;
+        }
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        if (playerRef == null) {
+            return;
+        }
+        List<AscendMap> maps = new ArrayList<>(mapStore.listMapsSorted());
+        AscendPlayerProgress progress = playerStore.getOrCreatePlayer(playerRef.getUuid());
+        if (maps.size() != lastMapCount) {
+            UICommandBuilder rebuild = new UICommandBuilder();
+            UIEventBuilder events = new UIEventBuilder();
+            buildMapList(ref, store, rebuild, events);
+            sendUpdate(rebuild, events, false);
+            return;
+        }
+        UICommandBuilder commandBuilder = new UICommandBuilder();
+        for (int i = 0; i < maps.size(); i++) {
+            AscendMap map = maps.get(i);
+            if (map == null) {
+                continue;
+            }
+            AscendPlayerProgress.MapProgress mapProgress = progress != null
+                ? progress.getMapProgress().get(map.getId())
+                : null;
+            boolean unlocked = map.getPrice() <= 0;
+            if (mapProgress != null && mapProgress.isUnlocked()) {
+                unlocked = true;
+            }
+            if (map.getPrice() <= 0 && (mapProgress == null || !mapProgress.isUnlocked())) {
+                playerStore.setMapUnlocked(playerRef.getUuid(), map.getId(), true);
+                mapProgress = playerStore.getMapProgress(playerRef.getUuid(), map.getId());
+                unlocked = true;
+            }
+            int robotCount = mapProgress != null ? Math.max(0, mapProgress.getRobotCount()) : 0;
+            String status = unlocked
+                ? "Runs/sec: " + formatRunsPerSecond(map, robotCount)
+                : "Locked | Price: " + map.getPrice() + " coins";
+            commandBuilder.set("#MapCards[" + i + "] #MapStatus.Text", status);
+        }
+        sendUpdate(commandBuilder, null, false);
+    }
+
     private void updateRobotRow(Ref<EntityStore> ref, Store<EntityStore> store, String mapId, int robotCount, long price) {
         Player player = store.getComponent(ref, Player.getComponentType());
         if (player == null) {
             return;
         }
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        if (playerRef == null) {
+            return;
+        }
         List<AscendMap> maps = new ArrayList<>(mapStore.listMapsSorted());
         int index = -1;
+        AscendMap selectedMap = null;
         for (int i = 0; i < maps.size(); i++) {
             AscendMap map = maps.get(i);
             if (map != null && mapId.equals(map.getId())) {
                 index = i;
+                selectedMap = map;
                 break;
             }
         }
-        if (index < 0) {
+        if (index < 0 || selectedMap == null) {
             return;
+        }
+        AscendPlayerProgress progress = playerStore.getOrCreatePlayer(playerRef.getUuid());
+        AscendPlayerProgress.MapProgress mapProgress = progress.getMapProgress().get(mapId);
+        boolean unlocked = selectedMap.getPrice() <= 0;
+        if (mapProgress != null && mapProgress.isUnlocked()) {
+            unlocked = true;
+        }
+        if (selectedMap.getPrice() <= 0 && (mapProgress == null || !mapProgress.isUnlocked())) {
+            playerStore.setMapUnlocked(playerRef.getUuid(), mapId, true);
+            mapProgress = playerStore.getMapProgress(playerRef.getUuid(), mapId);
+            unlocked = true;
+        }
+        String status;
+        if (!unlocked) {
+            status = "Locked | Price: " + selectedMap.getPrice() + " coins";
+        } else {
+            status = "Runs/sec: " + formatRunsPerSecond(selectedMap, robotCount);
         }
         String robotPriceText = price > 0 ? (FormatUtils.formatCoinsForHud(price) + " coins") : "Free";
         UICommandBuilder commandBuilder = new UICommandBuilder();
         commandBuilder.set("#MapCards[" + index + "] #RobotCountText.Text", "Robots: " + Math.max(0, robotCount));
         commandBuilder.set("#MapCards[" + index + "] #RobotPriceText.Text", "Cost: " + robotPriceText);
+        commandBuilder.set("#MapCards[" + index + "] #MapStatus.Text", status);
         sendUpdate(commandBuilder, null, false);
     }
 

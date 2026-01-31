@@ -11,6 +11,7 @@ public class AscendMap {
     private long robotPrice;
     private long baseReward;
     private long baseRunTimeMs;
+    private long robotTimeReductionMs;
     private int storageCapacity;
     private String world;
     private double startX;
@@ -71,6 +72,14 @@ public class AscendMap {
 
     public void setBaseRunTimeMs(long baseRunTimeMs) {
         this.baseRunTimeMs = baseRunTimeMs;
+    }
+
+    public long getRobotTimeReductionMs() {
+        return robotTimeReductionMs;
+    }
+
+    public void setRobotTimeReductionMs(long robotTimeReductionMs) {
+        this.robotTimeReductionMs = robotTimeReductionMs;
     }
 
     public int getStorageCapacity() {

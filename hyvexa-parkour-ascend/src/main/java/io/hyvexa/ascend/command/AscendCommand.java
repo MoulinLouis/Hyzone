@@ -70,7 +70,8 @@ public class AscendCommand extends AbstractAsyncCommand {
             String subCommand = args[0].toLowerCase();
             switch (subCommand) {
                 case "stats" -> showStatus(player, playerRef);
-                default -> ctx.sendMessage(Message.raw("Unknown subcommand. Use: /ascend, /ascend stats"));
+                case "rebirth" -> handleRebirth(player, playerRef);
+                default -> ctx.sendMessage(Message.raw("Unknown subcommand. Use: /ascend, /ascend stats, /ascend rebirth"));
             }
         }, world);
     }
@@ -111,17 +112,38 @@ public class AscendCommand extends AbstractAsyncCommand {
         AscendMapStore mapStore = plugin.getMapStore();
         List<AscendMap> maps = mapStore != null ? mapStore.listMapsSorted() : List.of();
         long product = playerStore.getMultiplierProduct(playerRef.getUuid(), maps, AscendConstants.MULTIPLIER_SLOTS);
-        int[] digits = playerStore.getMultiplierDigits(playerRef.getUuid(), maps, AscendConstants.MULTIPLIER_SLOTS);
+        int rebirthMultiplier = playerStore.getRebirthMultiplier(playerRef.getUuid());
+        double[] digits = playerStore.getMultiplierDisplayValues(playerRef.getUuid(), maps, AscendConstants.MULTIPLIER_SLOTS);
         StringBuilder digitsText = new StringBuilder();
         for (int i = 0; i < digits.length; i++) {
             if (i > 0) {
                 digitsText.append('x');
             }
-            digitsText.append(digits[i]);
+            digitsText.append(String.format(java.util.Locale.US, "%.2f", Math.max(1.0, digits[i])));
         }
         player.sendMessage(Message.raw("[Ascend] Coins: " + coins + " | Product: " + product
-            + " | Digits: " + digitsText)
+            + " | Rebirth: x" + rebirthMultiplier + " | Digits: " + digitsText)
             .color(SystemMessageUtils.PRIMARY_TEXT));
+    }
+
+    private void handleRebirth(Player player, PlayerRef playerRef) {
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin == null || plugin.getPlayerStore() == null) {
+            player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading."));
+            return;
+        }
+        AscendPlayerStore playerStore = plugin.getPlayerStore();
+        long coins = playerStore.getCoins(playerRef.getUuid());
+        int gain = (int) (coins / 1000L);
+        if (gain <= 0) {
+            player.sendMessage(Message.raw("[Ascend] You need 1000 coins to rebirth.")
+                .color(SystemMessageUtils.SECONDARY));
+            return;
+        }
+        playerStore.setCoins(playerRef.getUuid(), 0L);
+        int newMultiplier = playerStore.addRebirthMultiplier(playerRef.getUuid(), gain);
+        player.sendMessage(Message.raw("[Ascend] Rebirth +" + gain + " (x" + newMultiplier + ").")
+            .color(SystemMessageUtils.SUCCESS));
     }
 
     private void openMapMenu(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {

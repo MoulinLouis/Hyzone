@@ -39,6 +39,8 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
     private String mapReward = "0";
     private String mapPrice = "0";
     private String mapOrder = "0";
+    private String mapRobotBaseTime = "30000";
+    private String mapRobotReduction = "0";
     private String mapSearch = "";
     private String selectedMapId = "";
 
@@ -76,6 +78,12 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
         if (data.mapOrder != null) {
             mapOrder = data.mapOrder.trim();
         }
+        if (data.mapRobotBaseTime != null) {
+            mapRobotBaseTime = data.mapRobotBaseTime.trim();
+        }
+        if (data.mapRobotReduction != null) {
+            mapRobotReduction = data.mapRobotReduction.trim();
+        }
         if (data.mapSearch != null) {
             mapSearch = data.mapSearch.trim();
         }
@@ -98,6 +106,8 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
                 mapReward = String.valueOf(map.getBaseReward());
                 mapPrice = String.valueOf(map.getPrice());
                 mapOrder = String.valueOf(map.getDisplayOrder());
+                mapRobotBaseTime = String.valueOf(map.getBaseRunTimeMs());
+                mapRobotReduction = String.valueOf(map.getRobotTimeReductionMs());
             }
             sendRefresh(ref, store);
             return;
@@ -126,16 +136,16 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
             handleClearWaypoints(ref, store);
             return;
         }
-        if (data.button.equals(MapData.BUTTON_SET_REWARD)) {
-            handleSetReward(ref, store);
-            return;
-        }
         if (data.button.equals(MapData.BUTTON_SET_PRICE)) {
             handleSetPrice(ref, store);
             return;
         }
         if (data.button.equals(MapData.BUTTON_SET_ORDER)) {
             handleSetOrder(ref, store);
+            return;
+        }
+        if (data.button.equals(MapData.BUTTON_SET_ROBOT_TIMING)) {
+            handleSetRobotTiming(ref, store);
             return;
         }
         if (data.button.equals(MapData.BUTTON_CREATE_MAP_HOLO)) {
@@ -170,6 +180,14 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
         if (price < 0) {
             return;
         }
+        long robotBaseTime = parseRobotBaseTime(player, 30000L);
+        if (robotBaseTime < 0) {
+            return;
+        }
+        long robotReduction = parseRobotReduction(player, 0L);
+        if (robotReduction < 0) {
+            return;
+        }
         int order = parseOrder(player, resolveNextOrder());
         AscendMap map = new AscendMap();
         map.setId(id);
@@ -177,7 +195,8 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
         map.setPrice(price);
         map.setRobotPrice(0L);
         map.setBaseReward(reward);
-        map.setBaseRunTimeMs(30000L);
+        map.setBaseRunTimeMs(robotBaseTime);
+        map.setRobotTimeReductionMs(robotReduction);
         map.setStorageCapacity((int) AscendConstants.DEFAULT_ROBOT_STORAGE);
         World world = store.getExternalData().getWorld();
         map.setWorld(world != null ? world.getName() : "Ascend");
@@ -207,11 +226,21 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
         if (price < 0) {
             return;
         }
+        long robotBaseTime = parseRobotBaseTime(player, map.getBaseRunTimeMs());
+        if (robotBaseTime < 0) {
+            return;
+        }
+        long robotReduction = parseRobotReduction(player, map.getRobotTimeReductionMs());
+        if (robotReduction < 0) {
+            return;
+        }
         int order = parseOrder(player, map.getDisplayOrder());
         map.setName(name);
         map.setBaseReward(reward);
         map.setPrice(price);
         map.setDisplayOrder(order);
+        map.setBaseRunTimeMs(robotBaseTime);
+        map.setRobotTimeReductionMs(robotReduction);
         mapStore.saveMap(map);
         refreshMapHolos(map, store);
         player.sendMessage(Message.raw("Map updated: " + map.getId()));
@@ -311,26 +340,6 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
         sendRefresh(ref, store);
     }
 
-    private void handleSetReward(Ref<EntityStore> ref, Store<EntityStore> store) {
-        Player player = store.getComponent(ref, Player.getComponentType());
-        if (player == null) {
-            return;
-        }
-        AscendMap map = resolveSelectedMap(player);
-        if (map == null) {
-            return;
-        }
-        long reward = parseReward(player);
-        if (reward < 0) {
-            return;
-        }
-        map.setBaseReward(reward);
-        mapStore.saveMap(map);
-        refreshMapHolos(map, store);
-        player.sendMessage(Message.raw("Reward updated for map: " + map.getId()));
-        sendRefresh(ref, store);
-    }
-
     private void handleSetPrice(Ref<EntityStore> ref, Store<EntityStore> store) {
         Player player = store.getComponent(ref, Player.getComponentType());
         if (player == null) {
@@ -365,6 +374,31 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
         mapStore.saveMap(map);
         refreshMapHolos(map, store);
         player.sendMessage(Message.raw("Display order updated for map: " + map.getId()));
+        sendRefresh(ref, store);
+    }
+
+    private void handleSetRobotTiming(Ref<EntityStore> ref, Store<EntityStore> store) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null) {
+            return;
+        }
+        AscendMap map = resolveSelectedMap(player);
+        if (map == null) {
+            return;
+        }
+        long robotBaseTime = parseRobotBaseTime(player, map.getBaseRunTimeMs());
+        if (robotBaseTime < 0) {
+            return;
+        }
+        long robotReduction = parseRobotReduction(player, map.getRobotTimeReductionMs());
+        if (robotReduction < 0) {
+            return;
+        }
+        map.setBaseRunTimeMs(robotBaseTime);
+        map.setRobotTimeReductionMs(robotReduction);
+        mapStore.saveMap(map);
+        refreshMapHolos(map, store);
+        player.sendMessage(Message.raw("Robot timing updated for map: " + map.getId()));
         sendRefresh(ref, store);
     }
 
@@ -477,6 +511,42 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
         }
     }
 
+    private long parseRobotBaseTime(Player player, long fallback) {
+        String raw = mapRobotBaseTime != null ? mapRobotBaseTime.trim() : "";
+        if (raw.isEmpty()) {
+            return fallback;
+        }
+        try {
+            long value = Long.parseLong(raw);
+            if (value <= 0L) {
+                player.sendMessage(Message.raw("Robot base time must be greater than 0."));
+                return -1L;
+            }
+            return value;
+        } catch (NumberFormatException e) {
+            player.sendMessage(Message.raw("Robot base time must be a number."));
+            return -1L;
+        }
+    }
+
+    private long parseRobotReduction(Player player, long fallback) {
+        String raw = mapRobotReduction != null ? mapRobotReduction.trim() : "";
+        if (raw.isEmpty()) {
+            return fallback;
+        }
+        try {
+            long value = Long.parseLong(raw);
+            if (value < 0L) {
+                player.sendMessage(Message.raw("Robot reduction must be 0 or higher."));
+                return -1L;
+            }
+            return value;
+        } catch (NumberFormatException e) {
+            player.sendMessage(Message.raw("Robot reduction must be a number."));
+            return -1L;
+        }
+    }
+
     private int resolveNextOrder() {
         int max = 0;
         for (AscendMap map : mapStore.listMaps()) {
@@ -496,6 +566,10 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
             EventData.of(MapData.KEY_MAP_PRICE, "#MapPriceField.Value"), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#MapOrderField",
             EventData.of(MapData.KEY_MAP_ORDER, "#MapOrderField.Value"), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#RobotBaseTimeField",
+            EventData.of(MapData.KEY_ROBOT_BASE_TIME, "#RobotBaseTimeField.Value"), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#RobotReductionField",
+            EventData.of(MapData.KEY_ROBOT_REDUCTION, "#RobotReductionField.Value"), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#MapSearchField",
             EventData.of(MapData.KEY_MAP_SEARCH, "#MapSearchField.Value"), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CreateButton",
@@ -510,12 +584,12 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
             EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_ADD_WAYPOINT), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ClearWaypointsButton",
             EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_CLEAR_WAYPOINTS), false);
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SetRewardButton",
-            EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_SET_REWARD), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SetPriceButton",
             EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_SET_PRICE), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SetOrderButton",
             EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_SET_ORDER), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SetRobotTimingButton",
+            EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_SET_ROBOT_TIMING), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CreateMapHoloButton",
             EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_CREATE_MAP_HOLO), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#DeleteMapHoloButton",
@@ -532,6 +606,8 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
         commandBuilder.set("#MapRewardField.Value", mapReward != null ? mapReward : "0");
         commandBuilder.set("#MapPriceField.Value", mapPrice != null ? mapPrice : "0");
         commandBuilder.set("#MapOrderField.Value", mapOrder != null ? mapOrder : "0");
+        commandBuilder.set("#RobotBaseTimeField.Value", mapRobotBaseTime != null ? mapRobotBaseTime : "30000");
+        commandBuilder.set("#RobotReductionField.Value", mapRobotReduction != null ? mapRobotReduction : "0");
         commandBuilder.set("#MapSearchField.Value", mapSearch != null ? mapSearch : "");
         String selectedText = selectedMapId != null && !selectedMapId.isBlank()
             ? "Selected: " + selectedMapId
@@ -589,6 +665,8 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
         static final String KEY_MAP_REWARD = "@MapReward";
         static final String KEY_MAP_PRICE = "@MapPrice";
         static final String KEY_MAP_ORDER = "@MapOrder";
+        static final String KEY_ROBOT_BASE_TIME = "@RobotBaseTime";
+        static final String KEY_ROBOT_REDUCTION = "@RobotReduction";
         static final String KEY_MAP_SEARCH = "@MapSearch";
         static final String BUTTON_SELECT_PREFIX = "Select:";
         static final String BUTTON_CREATE = "CreateMap";
@@ -597,9 +675,9 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
         static final String BUTTON_SET_FINISH = "SetFinish";
         static final String BUTTON_ADD_WAYPOINT = "AddWaypoint";
         static final String BUTTON_CLEAR_WAYPOINTS = "ClearWaypoints";
-        static final String BUTTON_SET_REWARD = "SetReward";
         static final String BUTTON_SET_PRICE = "SetPrice";
         static final String BUTTON_SET_ORDER = "SetOrder";
+        static final String BUTTON_SET_ROBOT_TIMING = "SetRobotTiming";
         static final String BUTTON_CREATE_MAP_HOLO = "CreateMapHolo";
         static final String BUTTON_DELETE_MAP_HOLO = "DeleteMapHolo";
         static final String BUTTON_REFRESH = "Refresh";
@@ -612,6 +690,8 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
             .addField(new KeyedCodec<>(KEY_MAP_REWARD, Codec.STRING), (data, value) -> data.mapReward = value, data -> data.mapReward)
             .addField(new KeyedCodec<>(KEY_MAP_PRICE, Codec.STRING), (data, value) -> data.mapPrice = value, data -> data.mapPrice)
             .addField(new KeyedCodec<>(KEY_MAP_ORDER, Codec.STRING), (data, value) -> data.mapOrder = value, data -> data.mapOrder)
+            .addField(new KeyedCodec<>(KEY_ROBOT_BASE_TIME, Codec.STRING), (data, value) -> data.mapRobotBaseTime = value, data -> data.mapRobotBaseTime)
+            .addField(new KeyedCodec<>(KEY_ROBOT_REDUCTION, Codec.STRING), (data, value) -> data.mapRobotReduction = value, data -> data.mapRobotReduction)
             .addField(new KeyedCodec<>(KEY_MAP_SEARCH, Codec.STRING), (data, value) -> data.mapSearch = value, data -> data.mapSearch)
             .build();
 
@@ -621,6 +701,8 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
         private String mapReward;
         private String mapPrice;
         private String mapOrder;
+        private String mapRobotBaseTime;
+        private String mapRobotReduction;
         private String mapSearch;
     }
 

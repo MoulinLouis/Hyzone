@@ -10,6 +10,7 @@ public class AscendHud extends CustomUIHud {
     private String lastStaticKey;
     private String lastCoinsText;
     private String lastDigitsKey;
+    private String lastRebirthValueText;
     private String lastRebirthText;
     private Boolean lastRebirthVisible;
 
@@ -33,31 +34,35 @@ public class AscendHud extends CustomUIHud {
         update(false, commandBuilder);
     }
 
-    public void updateEconomy(long coins, long product, int[] digits, int rebirthMultiplier, boolean showRebirth) {
+    public void updateEconomy(long coins, long product, double[] digits, int rebirthMultiplier, boolean showRebirth) {
         String coinsText = FormatUtils.formatCoinsForHud(coins);
         String digitsKey = buildDigitsKey(digits);
         int currentRebirth = Math.max(1, rebirthMultiplier);
         int rebirthGain = showRebirth ? (int) (Math.max(0L, coins) / 1000L) : 0;
         int nextRebirth = currentRebirth + rebirthGain;
         String rebirthText = showRebirth ? ("x" + currentRebirth + " -> x" + nextRebirth) : "";
+        String rebirthValueText = formatMultiplier(currentRebirth);
         if (coinsText.equals(lastCoinsText)
             && digitsKey.equals(lastDigitsKey)
+            && rebirthValueText.equals(lastRebirthValueText)
             && rebirthText.equals(lastRebirthText)
             && Boolean.valueOf(showRebirth).equals(lastRebirthVisible)) {
             return;
         }
         lastCoinsText = coinsText;
         lastDigitsKey = digitsKey;
+        lastRebirthValueText = rebirthValueText;
         lastRebirthText = rebirthText;
         lastRebirthVisible = showRebirth;
         UICommandBuilder commandBuilder = new UICommandBuilder();
         commandBuilder.set("#TopCoinsValue.Text", coinsText);
-        int[] safeDigits = normalizeDigits(digits);
-        commandBuilder.set("#TopRedValue.Text", String.valueOf(safeDigits[0]));
-        commandBuilder.set("#TopOrangeValue.Text", String.valueOf(safeDigits[1]));
-        commandBuilder.set("#TopYellowValue.Text", String.valueOf(safeDigits[2]));
-        commandBuilder.set("#TopGreenValue.Text", String.valueOf(safeDigits[3]));
-        commandBuilder.set("#TopBlueValue.Text", String.valueOf(safeDigits[4]));
+        double[] safeDigits = normalizeDigits(digits);
+        commandBuilder.set("#TopRedValue.Text", formatMultiplier(safeDigits[0]));
+        commandBuilder.set("#TopOrangeValue.Text", formatMultiplier(safeDigits[1]));
+        commandBuilder.set("#TopYellowValue.Text", formatMultiplier(safeDigits[2]));
+        commandBuilder.set("#TopGreenValue.Text", formatMultiplier(safeDigits[3]));
+        commandBuilder.set("#TopBlueValue.Text", formatMultiplier(safeDigits[4]));
+        commandBuilder.set("#TopRebirthValue.Text", rebirthValueText);
         commandBuilder.set("#RebirthHud.Visible", showRebirth);
         if (showRebirth) {
             commandBuilder.set("#RebirthStatusText.Text", "Current Multiplier " + rebirthText);
@@ -69,23 +74,24 @@ public class AscendHud extends CustomUIHud {
         lastStaticKey = null;
         lastCoinsText = null;
         lastDigitsKey = null;
+        lastRebirthValueText = null;
         lastRebirthText = null;
         lastRebirthVisible = null;
     }
 
-    private static int[] normalizeDigits(int[] digits) {
-        int[] normalized = new int[] {1, 1, 1, 1, 1};
+    private static double[] normalizeDigits(double[] digits) {
+        double[] normalized = new double[] {1, 1, 1, 1, 1};
         if (digits == null) {
             return normalized;
         }
         int limit = Math.min(digits.length, normalized.length);
         for (int i = 0; i < limit; i++) {
-            normalized[i] = Math.max(1, digits[i]);
+            normalized[i] = Math.max(1.0, digits[i]);
         }
         return normalized;
     }
 
-    private static String buildDigitsKey(int[] digits) {
+    private static String buildDigitsKey(double[] digits) {
         if (digits == null || digits.length == 0) {
             return "1|1|1|1|1";
         }
@@ -95,12 +101,17 @@ public class AscendHud extends CustomUIHud {
             if (i > 0) {
                 key.append('|');
             }
-            key.append(Math.max(1, digits[i]));
+            key.append(formatMultiplier(Math.max(1.0, digits[i])));
         }
         while (limit < 5) {
             key.append("|1");
             limit++;
         }
         return key.toString();
+    }
+
+    private static String formatMultiplier(double value) {
+        double safeValue = Math.max(1.0, value);
+        return String.format(java.util.Locale.US, "%.2f", safeValue);
     }
 }
