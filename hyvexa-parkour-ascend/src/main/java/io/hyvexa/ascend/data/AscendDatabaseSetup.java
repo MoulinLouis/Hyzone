@@ -28,10 +28,12 @@ public final class AscendDatabaseSetup {
                 CREATE TABLE IF NOT EXISTS ascend_players (
                     uuid VARCHAR(36) PRIMARY KEY,
                     coins BIGINT NOT NULL DEFAULT 0,
+                    rebirth_multiplier INT NOT NULL DEFAULT 1,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
                 ) ENGINE=InnoDB
                 """);
+            ensureRebirthColumn(conn);
 
             stmt.executeUpdate("""
                 CREATE TABLE IF NOT EXISTS ascend_maps (
@@ -65,6 +67,7 @@ public final class AscendDatabaseSetup {
                     unlocked BOOLEAN NOT NULL DEFAULT FALSE,
                     completed_manually BOOLEAN NOT NULL DEFAULT FALSE,
                     has_robot BOOLEAN NOT NULL DEFAULT FALSE,
+                    robot_count INT NOT NULL DEFAULT 0,
                     robot_speed_level INT NOT NULL DEFAULT 0,
                     robot_gains_level INT NOT NULL DEFAULT 0,
                     multiplier_value INT NOT NULL DEFAULT 1,
@@ -76,6 +79,7 @@ public final class AscendDatabaseSetup {
                 """);
 
             ensureMultiplierColumn(conn);
+            ensureRobotCountColumn(conn);
 
             stmt.executeUpdate("""
                 CREATE TABLE IF NOT EXISTS ascend_upgrade_costs (
@@ -93,6 +97,20 @@ public final class AscendDatabaseSetup {
         }
     }
 
+    private static void ensureRebirthColumn(Connection conn) {
+        if (conn == null) {
+            return;
+        }
+        if (columnExists(conn, "ascend_players", "rebirth_multiplier")) {
+            return;
+        }
+        try (Statement stmt = conn.createStatement()) {
+            stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN rebirth_multiplier INT NOT NULL DEFAULT 1");
+        } catch (SQLException e) {
+            LOGGER.at(Level.SEVERE).log("Failed to add rebirth_multiplier column: " + e.getMessage());
+        }
+    }
+
     private static void ensureMultiplierColumn(Connection conn) {
         if (conn == null) {
             return;
@@ -104,6 +122,20 @@ public final class AscendDatabaseSetup {
             stmt.executeUpdate("ALTER TABLE ascend_player_maps ADD COLUMN multiplier_value INT NOT NULL DEFAULT 1");
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Failed to add multiplier_value column: " + e.getMessage());
+        }
+    }
+
+    private static void ensureRobotCountColumn(Connection conn) {
+        if (conn == null) {
+            return;
+        }
+        if (columnExists(conn, "ascend_player_maps", "robot_count")) {
+            return;
+        }
+        try (Statement stmt = conn.createStatement()) {
+            stmt.executeUpdate("ALTER TABLE ascend_player_maps ADD COLUMN robot_count INT NOT NULL DEFAULT 0");
+        } catch (SQLException e) {
+            LOGGER.at(Level.SEVERE).log("Failed to add robot_count column: " + e.getMessage());
         }
     }
 

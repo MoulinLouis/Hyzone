@@ -17,6 +17,7 @@ import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
+import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.common.ui.ButtonEventData;
 
 import javax.annotation.Nonnull;
@@ -27,6 +28,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
 
     private static final String BUTTON_CLOSE = "Close";
     private static final String BUTTON_SELECT_PREFIX = "Select:";
+    private static final String BUTTON_BUY_ROBOT_PREFIX = "BuyRobot:";
 
     private final AscendMapStore mapStore;
     private final AscendPlayerStore playerStore;
@@ -58,6 +60,10 @@ public class AscendMapSelectPage extends BaseAscendPage {
         }
         if (BUTTON_CLOSE.equals(data.getButton())) {
             this.close();
+            return;
+        }
+        if (data.getButton().startsWith(BUTTON_BUY_ROBOT_PREFIX)) {
+            handleBuyRobot(ref, store, data.getButton().substring(BUTTON_BUY_ROBOT_PREFIX.length()));
             return;
         }
         if (!data.getButton().startsWith(BUTTON_SELECT_PREFIX)) {
@@ -128,13 +134,72 @@ public class AscendMapSelectPage extends BaseAscendPage {
                     status = "Completed | " + status;
                 }
             }
+            int robotCount = mapProgress != null ? Math.max(0, mapProgress.getRobotCount()) : 0;
+            long robotPrice = Math.max(0L, map.getRobotPrice());
+            String robotPriceText = robotPrice > 0 ? (FormatUtils.formatCoinsForHud(robotPrice) + " coins") : "Free";
             commandBuilder.set("#MapCards[" + index + "] #MapName.Text", mapName);
             commandBuilder.set("#MapCards[" + index + "] #MapStatus.Text", status);
+            commandBuilder.set("#MapCards[" + index + "] #RobotCountText.Text", "Robots: " + robotCount);
+            commandBuilder.set("#MapCards[" + index + "] #RobotPriceText.Text", "Cost: " + robotPriceText);
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
-                "#MapCards[" + index + "]",
+                "#MapCards[" + index + "] #SelectButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_SELECT_PREFIX + map.getId()), false);
+            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
+                "#MapCards[" + index + "] #RobotBuyButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_BUY_ROBOT_PREFIX + map.getId()), false);
             index++;
         }
+    }
+
+    private void handleBuyRobot(Ref<EntityStore> ref, Store<EntityStore> store, String mapId) {
+        AscendMap map = mapStore.getMap(mapId);
+        if (map == null) {
+            sendMessage(store, ref, "Map not found.");
+            return;
+        }
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        if (playerRef == null) {
+            return;
+        }
+        AscendPlayerProgress progress = playerStore.getOrCreatePlayer(playerRef.getUuid());
+        AscendPlayerProgress.MapProgress mapProgress = progress.getOrCreateMapProgress(mapId);
+        boolean unlocked = mapProgress.isUnlocked() || map.getPrice() <= 0;
+        if (!unlocked) {
+            sendMessage(store, ref, "[Ascend] Unlock the map before buying a robot.");
+            return;
+        }
+        long price = Math.max(0L, map.getRobotPrice());
+        if (price > 0 && !playerStore.spendCoins(playerRef.getUuid(), price)) {
+            sendMessage(store, ref, "[Ascend] Not enough coins to buy a robot.");
+            return;
+        }
+        int newCount = playerStore.addRobotCount(playerRef.getUuid(), mapId, 1);
+        sendMessage(store, ref, "[Ascend] Robot purchased for " + price + " coins. Robots: " + newCount);
+        updateRobotRow(ref, store, mapId, newCount, price);
+    }
+
+    private void updateRobotRow(Ref<EntityStore> ref, Store<EntityStore> store, String mapId, int robotCount, long price) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null) {
+            return;
+        }
+        List<AscendMap> maps = new ArrayList<>(mapStore.listMapsSorted());
+        int index = -1;
+        for (int i = 0; i < maps.size(); i++) {
+            AscendMap map = maps.get(i);
+            if (map != null && mapId.equals(map.getId())) {
+                index = i;
+                break;
+            }
+        }
+        if (index < 0) {
+            return;
+        }
+        String robotPriceText = price > 0 ? (FormatUtils.formatCoinsForHud(price) + " coins") : "Free";
+        UICommandBuilder commandBuilder = new UICommandBuilder();
+        commandBuilder.set("#MapCards[" + index + "] #RobotCountText.Text", "Robots: " + Math.max(0, robotCount));
+        commandBuilder.set("#MapCards[" + index + "] #RobotPriceText.Text", "Cost: " + robotPriceText);
+        sendUpdate(commandBuilder, null, false);
     }
 
     private void sendMessage(Store<EntityStore> store, Ref<EntityStore> ref, String text) {
