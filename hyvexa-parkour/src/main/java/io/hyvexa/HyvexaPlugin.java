@@ -39,22 +39,14 @@ import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
 import com.hypixel.hytale.protocol.packets.interface_.HudComponent;
 import com.hypixel.hytale.server.core.event.events.player.AddPlayerToWorldEvent;
-import com.hypixel.hytale.server.core.modules.entity.hitboxcollision.HitboxCollision;
 import com.hypixel.hytale.server.core.event.events.entity.LivingEntityInventoryChangeEvent;
-import com.hypixel.hytale.server.core.inventory.Inventory;
-import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
-import com.hypixel.hytale.server.core.inventory.container.filter.FilterActionType;
-import com.hypixel.hytale.server.core.inventory.container.filter.SlotFilter;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.event.events.ecs.DropItemEvent;
 import com.hypixel.hytale.server.core.event.events.ecs.BreakBlockEvent;
 import com.hypixel.hytale.server.core.event.events.ecs.UseBlockEvent;
 import com.hypixel.hytale.server.core.Message;
-import com.hypixel.hytale.server.core.universe.world.WorldMapTracker;
+import io.hyvexa.manager.WorldMapManager;
 import io.hyvexa.common.util.FormatUtils;
-import io.hyvexa.common.util.HylogramsBridge;
-import io.hyvexa.common.util.InventoryUtils;
-import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.parkour.command.CheckpointCommand;
 import io.hyvexa.parkour.command.DatabaseClearCommand;
 import io.hyvexa.parkour.command.DatabaseReloadCommand;
@@ -77,23 +69,24 @@ import io.hyvexa.parkour.system.NoPlayerKnockbackSystem;
 import io.hyvexa.parkour.system.NoWeaponDamageSystem;
 import io.hyvexa.parkour.system.PlayerVisibilityFilterSystem;
 import io.hyvexa.parkour.system.RunTrackerTickSystem;
-import io.hyvexa.parkour.ui.WelcomePage;
 import io.hyvexa.parkour.ui.PlayerMusicPage;
-import io.hyvexa.parkour.util.ParkourUtils;
 import io.hyvexa.parkour.visibility.PlayerVisibilityManager;
 import io.hyvexa.manager.AnnouncementManager;
+import io.hyvexa.manager.ChatFormatter;
+import io.hyvexa.manager.CollisionManager;
 import io.hyvexa.manager.HudManager;
+import io.hyvexa.manager.InventorySyncManager;
+import io.hyvexa.manager.LeaderboardHologramManager;
 import io.hyvexa.manager.PlaytimeManager;
 import io.hyvexa.manager.PlayerCleanupManager;
 import io.hyvexa.manager.PlayerPerksManager;
+import io.hyvexa.parkour.ParkourTimingConstants;
 
 import javax.annotation.Nonnull;
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -109,20 +102,8 @@ public class HyvexaPlugin extends JavaPlugin {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final long PLAYER_COUNT_SAMPLE_SECONDS = PlayerCountStore.DEFAULT_SAMPLE_INTERVAL_SECONDS;
-    private static final long STALE_PLAYER_SWEEP_SECONDS = 120L;
-    private static final long TELEPORT_DEBUG_INTERVAL_SECONDS = 120L;
     private static final boolean DISABLE_WORLD_MAP = true; // Parkour server doesn't need world map
     private static final String PARKOUR_WORLD_NAME = "Parkour";
-    private static final String LEADERBOARD_HOLOGRAM_NAME = "leaderboard";
-    private static final int LEADERBOARD_HOLOGRAM_ENTRIES = 10;
-    private static final int LEADERBOARD_NAME_MAX = 16;
-    private static final int LEADERBOARD_POSITION_WIDTH = 4;
-    private static final int LEADERBOARD_COUNT_WIDTH = 4;
-    private static final int MAP_HOLOGRAM_TOP_LIMIT = 5;
-    private static final int MAP_HOLOGRAM_NAME_MAX = 16;
-    private static final int MAP_HOLOGRAM_POS_WIDTH = 3;
-    private static final boolean DEBUG_MAP_HOLOGRAM = false;
-    private static final long LEADERBOARD_HOLOGRAM_REFRESH_DELAY_SECONDS = 2L;
     private static final String DISCORD_URL = "https://discord.gg/2PAygkyFnK";
     private static final String JOIN_LANGUAGE_NOTICE =
             "This is an English-speaking community server. Please use English only in the chat. "
@@ -143,8 +124,13 @@ public class HyvexaPlugin extends JavaPlugin {
     private HudManager hudManager;
     private AnnouncementManager announcementManager;
     private PlayerPerksManager perksManager;
+    private ChatFormatter chatFormatter;
     private PlaytimeManager playtimeManager;
     private PlayerCleanupManager cleanupManager;
+    private LeaderboardHologramManager leaderboardHologramManager;
+    private CollisionManager collisionManager;
+    private InventorySyncManager inventorySyncManager;
+    private WorldMapManager worldMapManager;
     private ScheduledFuture<?> mapDetectionTask;
     private ScheduledFuture<?> hudUpdateTask;
     private ScheduledFuture<?> playtimeTask;
@@ -178,8 +164,9 @@ public class HyvexaPlugin extends JavaPlugin {
             DatabaseManager.getInstance().initialize();
             LOGGER.atInfo().log("Database connection initialized");
         } catch (Exception e) {
-            LOGGER.at(Level.SEVERE).log("Failed to initialize database: " + e.getMessage());
+            LOGGER.at(Level.SEVERE).withCause(e).log("Failed to initialize database");
         }
+        this.collisionManager = new CollisionManager();
         this.mapStore = new MapStore();
         this.mapStore.syncLoad();
         this.mapStore.setOnChangeListener(this::onMapStoreChanged);
@@ -201,24 +188,38 @@ public class HyvexaPlugin extends JavaPlugin {
         this.duelQueue = new DuelQueue();
         this.duelTracker = new DuelTracker(duelQueue, duelMatchStore, duelStatsStore, duelPreferenceStore, mapStore);
         this.perksManager = new PlayerPerksManager(progressStore, mapStore);
+        this.chatFormatter = new ChatFormatter(progressStore, mapStore, perksManager);
         this.hudManager = new HudManager(progressStore, mapStore, runTracker, duelTracker, perksManager);
         this.announcementManager = new AnnouncementManager(globalMessageStore, hudManager,
                 this::scheduleTick, this::cancelScheduled);
         this.playtimeManager = new PlaytimeManager(progressStore, playerCountStore);
         this.cleanupManager = new PlayerCleanupManager(hudManager, announcementManager, perksManager, playtimeManager,
                 runTracker, PlayerVisibilityManager.get());
+        this.leaderboardHologramManager = new LeaderboardHologramManager(progressStore, mapStore, PARKOUR_WORLD_NAME);
+        this.inventorySyncManager = new InventorySyncManager(mapStore, progressStore, runTracker,
+                this::shouldApplyParkourMode, DISCORD_URL, JOIN_LANGUAGE_NOTICE, JOIN_LANGUAGE_NOTICE_SUFFIX);
+        this.worldMapManager = new WorldMapManager(DISABLE_WORLD_MAP);
         this.playtimeManager.setOnlineCount(Universe.get().getPlayers().size());
         registerRunTrackerTickSystem();
-        hudUpdateTask = scheduleTick("hud updates", this::tickHudUpdates, 100, 100, TimeUnit.MILLISECONDS);
-        playtimeTask = scheduleTick("playtime", this::tickPlaytime, 60, 60, TimeUnit.SECONDS);
-        collisionTask = scheduleTick("collision removal", this::tickCollisionRemoval, 1, 2, TimeUnit.SECONDS);
+        hudUpdateTask = scheduleTick("hud updates", this::tickHudUpdates,
+                ParkourTimingConstants.HUD_UPDATE_INTERVAL_MS, ParkourTimingConstants.HUD_UPDATE_INTERVAL_MS,
+                TimeUnit.MILLISECONDS);
+        playtimeTask = scheduleTick("playtime", this::tickPlaytime,
+                ParkourTimingConstants.PLAYTIME_TICK_INTERVAL_SECONDS, ParkourTimingConstants.PLAYTIME_TICK_INTERVAL_SECONDS,
+                TimeUnit.SECONDS);
+        collisionTask = scheduleTick("collision removal", this::tickCollisionRemoval, 1,
+                ParkourTimingConstants.COLLISION_REMOVAL_INTERVAL_SECONDS, TimeUnit.SECONDS);
         playerCountTask = scheduleTick("player counts", this::tickPlayerCounts, 5, PLAYER_COUNT_SAMPLE_SECONDS,
                 TimeUnit.SECONDS);
-        stalePlayerSweepTask = scheduleTick("stale player sweep", this::tickStalePlayerSweep, STALE_PLAYER_SWEEP_SECONDS,
-                STALE_PLAYER_SWEEP_SECONDS, TimeUnit.SECONDS);
-        teleportDebugTask = scheduleTick("teleport debug", this::tickTeleportDebug, TELEPORT_DEBUG_INTERVAL_SECONDS,
-                TELEPORT_DEBUG_INTERVAL_SECONDS, TimeUnit.SECONDS);
-        duelTickTask = scheduleTick("duel tick", this::tickDuel, 100, 100, TimeUnit.MILLISECONDS);
+        stalePlayerSweepTask = scheduleTick("stale player sweep", this::tickStalePlayerSweep,
+                ParkourTimingConstants.STALE_PLAYER_SWEEP_INTERVAL_SECONDS,
+                ParkourTimingConstants.STALE_PLAYER_SWEEP_INTERVAL_SECONDS, TimeUnit.SECONDS);
+        teleportDebugTask = scheduleTick("teleport debug", this::tickTeleportDebug,
+                ParkourTimingConstants.TELEPORT_DEBUG_INTERVAL_SECONDS,
+                ParkourTimingConstants.TELEPORT_DEBUG_INTERVAL_SECONDS, TimeUnit.SECONDS);
+        duelTickTask = scheduleTick("duel tick", this::tickDuel,
+                ParkourTimingConstants.DUEL_TICK_INTERVAL_MS, ParkourTimingConstants.DUEL_TICK_INTERVAL_MS,
+                TimeUnit.MILLISECONDS);
         announcementManager.refreshChatAnnouncements();
         scheduleLeaderboardHologramRefresh();
 
@@ -246,28 +247,26 @@ public class HyvexaPlugin extends JavaPlugin {
 
         this.getEventRegistry().registerGlobal(PlayerConnectEvent.class, event -> {
             try {
-                disablePlayerCollision(event.getPlayerRef());
+                collisionManager.disablePlayerCollision(event.getPlayerRef());
             } catch (Exception e) {
-                LOGGER.at(Level.WARNING).log("Exception in PlayerConnectEvent (collision): " + e.getMessage());
+                LOGGER.at(Level.WARNING).withCause(e).log("Exception in PlayerConnectEvent (collision)");
             }
         });
         this.getEventRegistry().registerGlobal(PlayerConnectEvent.class, event -> {
             try {
                 playtimeManager.incrementOnlineCount();
             } catch (Exception e) {
-                LOGGER.at(Level.WARNING).log("Exception in PlayerConnectEvent (count): " + e.getMessage());
+                LOGGER.at(Level.WARNING).withCause(e).log("Exception in PlayerConnectEvent (count)");
             }
         });
         this.getEventRegistry().registerGlobal(PlayerReadyEvent.class, event -> {
             try {
-                disablePlayerCollision(event.getPlayerRef());
+                collisionManager.disablePlayerCollision(event.getPlayerRef());
             } catch (Exception e) {
-                LOGGER.at(Level.WARNING).log("Exception in PlayerReadyEvent (collision): " + e.getMessage());
+                LOGGER.at(Level.WARNING).withCause(e).log("Exception in PlayerReadyEvent (collision)");
             }
         });
-        for (PlayerRef playerRef : Universe.get().getPlayers()) {
-            disablePlayerCollision(playerRef);
-        }
+        collisionManager.disableAllCollisions();
 
         this.getEventRegistry().registerGlobal(PlayerConnectEvent.class, event -> {
             try {
@@ -283,7 +282,7 @@ public class HyvexaPlugin extends JavaPlugin {
                 }
                 playtimeManager.startPlaytimeSession(event.getPlayerRef());
             } catch (Exception e) {
-                LOGGER.at(Level.WARNING).log("Exception in PlayerConnectEvent (hud/playtime): " + e.getMessage());
+                LOGGER.at(Level.WARNING).withCause(e).log("Exception in PlayerConnectEvent (hud/playtime)");
             }
         });
         for (PlayerRef playerRef : Universe.get().getPlayers()) {
@@ -306,12 +305,10 @@ public class HyvexaPlugin extends JavaPlugin {
                 if (runTracker != null) {
                     runTracker.markPlayerReady(event.getPlayerRef());
                 }
-                syncRunInventoryOnReady(event.getPlayerRef());
+                inventorySyncManager.syncRunInventoryOnReady(event.getPlayerRef());
                 PlayerMusicPage.applyStoredMusic(event.getPlayerRef());
                 // Disable world map generation to save memory (parkour server doesn't need it)
-                if (DISABLE_WORLD_MAP) {
-                    disableWorldMapForPlayer(event.getPlayerRef());
-                }
+                worldMapManager.disableWorldMapForPlayer(event.getPlayerRef());
                 Ref<EntityStore> ref = event.getPlayerRef();
                 if (ref != null && ref.isValid()) {
                     Store<EntityStore> store = ref.getStore();
@@ -325,21 +322,21 @@ public class HyvexaPlugin extends JavaPlugin {
                     }
                 }
             } catch (Exception e) {
-                LOGGER.at(Level.WARNING).log("Exception in PlayerReadyEvent (inventory): " + e.getMessage());
+                LOGGER.at(Level.WARNING).withCause(e).log("Exception in PlayerReadyEvent (inventory)");
             }
         });
         this.getEventRegistry().registerGlobal(AddPlayerToWorldEvent.class, event -> {
             try {
                 event.setBroadcastJoinMessage(false);
             } catch (Exception e) {
-                LOGGER.at(Level.WARNING).log("Exception in AddPlayerToWorldEvent: " + e.getMessage());
+                LOGGER.at(Level.WARNING).withCause(e).log("Exception in AddPlayerToWorldEvent");
             }
         });
         this.getEventRegistry().registerGlobal(PlayerConnectEvent.class, event -> {
             try {
                 playtimeManager.broadcastPresence(event.getPlayerRef(), true);
             } catch (Exception e) {
-                LOGGER.at(Level.WARNING).log("Exception in PlayerConnectEvent (broadcast): " + e.getMessage());
+                LOGGER.at(Level.WARNING).withCause(e).log("Exception in PlayerConnectEvent (broadcast)");
             }
         });
         this.getEventRegistry().registerGlobal(PlayerDisconnectEvent.class, event -> {
@@ -354,83 +351,28 @@ public class HyvexaPlugin extends JavaPlugin {
                 }
                 playtimeManager.decrementOnlineCount();
             } catch (Exception e) {
-                LOGGER.at(Level.WARNING).log("Exception in PlayerDisconnectEvent: " + e.getMessage());
+                LOGGER.at(Level.WARNING).withCause(e).log("Exception in PlayerDisconnectEvent");
             }
         });
         for (PlayerRef playerRef : Universe.get().getPlayers()) {
-            syncRunInventoryOnConnect(playerRef);
+            inventorySyncManager.syncRunInventoryOnConnect(playerRef);
         }
 
         this.getEventRegistry().registerGlobal(LivingEntityInventoryChangeEvent.class, event -> {
             try {
                 if (event.getEntity() instanceof Player player) {
-                    updateDropProtection(player);
+                    inventorySyncManager.updateDropProtection(player);
                 }
             } catch (Exception e) {
-                LOGGER.at(Level.WARNING).log("Exception in LivingEntityInventoryChangeEvent: " + e.getMessage());
+                LOGGER.at(Level.WARNING).withCause(e).log("Exception in LivingEntityInventoryChangeEvent");
             }
         });
 
         this.getEventRegistry().registerGlobal(PlayerChatEvent.class, event -> {
             try {
-                event.setFormatter((sender, content) -> {
-                    if (sender == null) {
-                        return Message.raw(content != null ? content : "");
-                    }
-                    String name = sender.getUsername();
-                    if (name == null || name.isBlank()) {
-                        name = "Player";
-                    }
-                    String safeContent = content != null ? content : "";
-                    // Check OP status directly via PermissionsModule (no store access needed)
-                    boolean isOp = false;
-                    UUID senderUuid = sender.getUuid();
-                    if (senderUuid != null) {
-                        var permissions = com.hypixel.hytale.server.core.permissions.PermissionsModule.get();
-                        if (permissions != null) {
-                            isOp = permissions.getGroupsForUser(senderUuid).contains("OP");
-                        }
-                    }
-                    if (isOp) {
-                        Message rankPart = Message.raw("Admin").color("#ff0000");
-                        return Message.join(
-                                Message.raw("["),
-                                rankPart,
-                                Message.raw("] "),
-                                Message.raw(name),
-                                Message.raw(": "),
-                                Message.raw(safeContent)
-                        );
-                    }
-                    String rank = progressStore != null ? progressStore.getRankName(sender.getUuid(), mapStore) : "Unranked";
-                    Message rankPart = FormatUtils.getRankMessage(rank);
-                    String badgeLabel = perksManager != null ? perksManager.getSpecialRankLabel(sender.getUuid()) : null;
-                    String badgeColor = perksManager != null ? perksManager.getSpecialRankColor(sender.getUuid()) : null;
-                    if (badgeLabel != null) {
-                        return Message.join(
-                                Message.raw("["),
-                                rankPart,
-                                Message.raw("] "),
-                                Message.raw("(").color("#ffffff"),
-                                Message.raw(badgeLabel).color(badgeColor != null ? badgeColor : "#b2c0c7"),
-                                Message.raw(")").color("#ffffff"),
-                                Message.raw(" "),
-                                Message.raw(name),
-                                Message.raw(": "),
-                                Message.raw(safeContent)
-                        );
-                    }
-                    return Message.join(
-                            Message.raw("["),
-                            rankPart,
-                            Message.raw("] "),
-                            Message.raw(name),
-                            Message.raw(": "),
-                            Message.raw(safeContent)
-                    );
-                });
+                event.setFormatter((sender, content) -> chatFormatter.formatChatMessage(sender, content));
             } catch (Exception e) {
-                LOGGER.at(Level.WARNING).log("Exception in PlayerChatEvent: " + e.getMessage());
+                LOGGER.at(Level.WARNING).withCause(e).log("Exception in PlayerChatEvent");
             }
         });
 
@@ -439,7 +381,7 @@ public class HyvexaPlugin extends JavaPlugin {
             if (ref != null && ref.isValid()) {
                 Player player = ref.getStore().getComponent(ref, Player.getComponentType());
                 if (player != null) {
-                    updateDropProtection(player);
+                    inventorySyncManager.updateDropProtection(player);
                 }
             }
         }
@@ -486,88 +428,14 @@ public class HyvexaPlugin extends JavaPlugin {
     }
 
     public void refreshLeaderboardHologram(Store<EntityStore> store) {
-        if (store == null) {
-            return;
-        }
-        World world = store.getExternalData().getWorld();
-        if (!isParkourWorld(world)) {
-            return;
-        }
-        if (world != null) {
-            world.execute(() -> updateLeaderboardHologram(store));
-        } else {
-            updateLeaderboardHologram(store);
+        if (leaderboardHologramManager != null) {
+            leaderboardHologramManager.refreshLeaderboardHologram(store);
         }
     }
 
     public void refreshMapLeaderboardHologram(String mapId, Store<EntityStore> store) {
-        if (mapId == null || mapId.isBlank() || store == null || progressStore == null) {
-            return;
-        }
-        if (DEBUG_MAP_HOLOGRAM) {
-            World storeWorld = store.getExternalData().getWorld();
-            String storeWorldName = storeWorld != null ? storeWorld.getName() : "unknown";
-            logMapHologramDebug("Map holo refresh requested for '" + mapId + "' from world '" + storeWorldName + "'.");
-        }
-        if (!HylogramsBridge.isAvailable()) {
-            if (DEBUG_MAP_HOLOGRAM) {
-                logMapHologramDebug("Map holo refresh skipped: Hylograms not available.");
-            }
-            return;
-        }
-        String holoName = mapId + "_holo";
-        if (!HylogramsBridge.exists(holoName)) {
-            if (DEBUG_MAP_HOLOGRAM) {
-                logMapHologramDebug("Map holo refresh skipped: '" + holoName + "' does not exist.");
-            }
-            return;
-        }
-        HylogramsBridge.Hologram holo = HylogramsBridge.get(holoName);
-        World targetWorld = null;
-        Store<EntityStore> targetStore = null;
-        if (holo != null && holo.getWorldName() != null) {
-            targetWorld = Universe.get().getWorld(holo.getWorldName());
-            if (targetWorld == null) {
-                for (World candidate : Universe.get().getWorlds().values()) {
-                    if (candidate != null && holo.getWorldName().equalsIgnoreCase(candidate.getName())) {
-                        targetWorld = candidate;
-                        break;
-                    }
-                }
-            }
-        }
-        if (targetWorld == null) {
-            targetWorld = store.getExternalData().getWorld();
-        }
-        if (targetWorld != null) {
-            if (DEBUG_MAP_HOLOGRAM) {
-                logMapHologramDebug("Map holo '" + holoName + "' target world resolved to '"
-                        + targetWorld.getName() + "'.");
-            }
-            targetStore = targetWorld.getEntityStore().getStore();
-            Store<EntityStore> finalStore = targetStore != null ? targetStore : store;
-            targetWorld.execute(() -> updateMapLeaderboardHologramLines(mapId, holoName, finalStore));
-            return;
-        }
-        updateMapLeaderboardHologramLines(mapId, holoName, store);
-    }
-
-    private void updateMapLeaderboardHologramLines(String mapId, String holoName, Store<EntityStore> store) {
-        if (store == null) {
-            return;
-        }
-        List<String> lines = buildMapLeaderboardHologramLines(mapId);
-        if (DEBUG_MAP_HOLOGRAM) {
-            logMapHologramDebug("Updating map holo '" + holoName + "' with " + lines.size() + " lines.");
-        }
-        try {
-            HylogramsBridge.Hologram existing = HylogramsBridge.get(holoName);
-            HylogramsBridge.updateHologramLines(holoName, lines, store);
-            if (existing != null) {
-                existing.respawn(store).save(store);
-            }
-        } catch (Exception e) {
-            LOGGER.at(Level.WARNING).log("Failed to update map leaderboard hologram: " + e.getMessage());
+        if (leaderboardHologramManager != null) {
+            leaderboardHologramManager.refreshMapLeaderboardHologram(mapId, store);
         }
     }
 
@@ -608,190 +476,17 @@ public class HyvexaPlugin extends JavaPlugin {
             try {
                 refreshLeaderboardHologram();
             } catch (Exception e) {
-                LOGGER.at(Level.WARNING).log("Failed to refresh leaderboard hologram: " + e.getMessage());
+                LOGGER.at(Level.WARNING).withCause(e).log("Failed to refresh leaderboard hologram");
             }
-        }, LEADERBOARD_HOLOGRAM_REFRESH_DELAY_SECONDS, TimeUnit.SECONDS);
+        }, ParkourTimingConstants.LEADERBOARD_HOLOGRAM_REFRESH_DELAY_SECONDS, TimeUnit.SECONDS);
     }
 
     private void refreshLeaderboardHologram() {
-        if (!HylogramsBridge.isAvailable()) {
-            return;
-        }
-        World world = resolveParkourWorld();
-        if (world == null) {
-            return;
-        }
-        world.execute(() -> updateLeaderboardHologram(world.getEntityStore().getStore()));
-    }
-
-    private void updateLeaderboardHologram(Store<EntityStore> store) {
-        if (store == null || progressStore == null || !HylogramsBridge.isAvailable()) {
-            return;
-        }
-        List<String> lines = buildLeaderboardHologramLines();
-        try {
-            HylogramsBridge.updateHologramLines(LEADERBOARD_HOLOGRAM_NAME, lines, store);
-            HylogramsBridge.delete("leaderboard_counts", store);
-        } catch (Exception e) {
-            LOGGER.at(Level.WARNING).log("Failed to update leaderboard hologram: " + e.getMessage());
+        if (leaderboardHologramManager != null) {
+            leaderboardHologramManager.refreshLeaderboardHologram();
         }
     }
 
-    private List<String> buildLeaderboardHologramLines() {
-        List<String> lines = new ArrayList<>();
-        lines.add(formatLeaderboardHeader());
-        if (progressStore == null) {
-            return lines;
-        }
-        Map<UUID, Integer> counts = progressStore.getMapCompletionCounts();
-        if (counts.isEmpty()) {
-            return lines;
-        }
-        List<CompletionRow> rows = buildLeaderboardRows(counts);
-        int entries = Math.min(rows.size(), LEADERBOARD_HOLOGRAM_ENTRIES);
-        for (int i = 0; i < entries; i++) {
-            CompletionRow row = rows.get(i);
-            String name = formatLeaderboardName(row.name);
-            String position = formatLeaderboardPosition(i + 1);
-            String count = formatLeaderboardCount(row.count);
-            lines.add(formatLeaderboardLine(position, name, count));
-        }
-        return lines;
-    }
-
-    private List<CompletionRow> buildLeaderboardRows(Map<UUID, Integer> counts) {
-        List<CompletionRow> rows = new ArrayList<>(counts.size());
-        for (Map.Entry<UUID, Integer> entry : counts.entrySet()) {
-            UUID playerId = entry.getKey();
-            if (playerId == null) {
-                continue;
-            }
-            int count = entry.getValue() != null ? entry.getValue() : 0;
-            String name = ParkourUtils.resolveName(playerId, progressStore);
-            rows.add(new CompletionRow(playerId, name, count));
-        }
-        rows.sort(CompletionRow.COMPARATOR);
-        return rows;
-    }
-
-    private static String formatLeaderboardHeader() {
-        return formatLeaderboardLine("Pos", "Name", "Maps");
-    }
-
-    private static String formatLeaderboardPosition(int position) {
-        if (position < 10) {
-            return position + ". ";
-        }
-        return position + ".";
-    }
-
-    private static String formatLeaderboardCount(int count) {
-        return String.format(Locale.ROOT, "%" + LEADERBOARD_COUNT_WIDTH + "d", count);
-    }
-
-    private static String formatLeaderboardLine(String position, String name, String count) {
-        String safePosition = clampToWidth(position, LEADERBOARD_POSITION_WIDTH);
-        String safeName = clampToWidth(name, LEADERBOARD_NAME_MAX);
-        String safeCount = clampToWidth(count, LEADERBOARD_COUNT_WIDTH);
-        return String.format(Locale.ROOT, "%-" + LEADERBOARD_POSITION_WIDTH + "s | %-"
-                        + LEADERBOARD_NAME_MAX + "s | %" + LEADERBOARD_COUNT_WIDTH + "s",
-                safePosition, safeName, safeCount);
-    }
-
-    private static String formatLeaderboardName(String name) {
-        if (name == null) {
-            return "";
-        }
-        String trimmed = name.trim();
-        if (trimmed.length() <= LEADERBOARD_NAME_MAX) {
-            return trimmed;
-        }
-        if (LEADERBOARD_NAME_MAX <= 3) {
-            return trimmed.substring(0, LEADERBOARD_NAME_MAX);
-        }
-        return trimmed.substring(0, LEADERBOARD_NAME_MAX - 3) + "...";
-    }
-
-    private static String clampToWidth(String value, int width) {
-        if (value == null || value.isBlank()) {
-            return "";
-        }
-        String trimmed = value.trim();
-        if (trimmed.length() <= width) {
-            return trimmed;
-        }
-        if (width <= 3) {
-            return trimmed.substring(0, width);
-        }
-        return trimmed.substring(0, width - 3) + "...";
-    }
-
-    public List<String> buildMapLeaderboardHologramLines(String mapId) {
-        List<String> lines = new ArrayList<>();
-        String mapName = mapId;
-        if (mapStore != null && mapId != null) {
-            io.hyvexa.parkour.data.Map map = mapStore.getMap(mapId);
-            if (map != null && map.getName() != null && !map.getName().isBlank()) {
-                mapName = map.getName().trim();
-            }
-        }
-        if (mapName != null && !mapName.isBlank()) {
-            lines.add(mapName);
-        }
-        lines.add(formatMapHologramHeader());
-        if (progressStore == null || mapId == null) {
-            return lines;
-        }
-        List<Map.Entry<UUID, Long>> entries = progressStore.getLeaderboardEntries(mapId);
-        int limit = Math.min(entries.size(), MAP_HOLOGRAM_TOP_LIMIT);
-        for (int i = 0; i < limit; i++) {
-            Map.Entry<UUID, Long> entry = entries.get(i);
-            String name = ParkourUtils.resolveName(entry.getKey(), progressStore);
-            String safeName = clampToWidth(name, MAP_HOLOGRAM_NAME_MAX);
-            String time = entry.getValue() != null ? FormatUtils.formatDuration(entry.getValue()) : "--";
-            String position = String.valueOf(i + 1) + ".";
-            lines.add(formatMapHologramLine(position, safeName, time));
-        }
-        if (lines.size() == 1) {
-            lines.add("No completions yet.");
-        }
-        return lines;
-    }
-
-    private static String formatMapHologramHeader() {
-        return formatMapHologramLine("Pos", "Name", "Time");
-    }
-
-    private static String formatMapHologramLine(String position, String name, String time) {
-        String safePosition = clampToWidth(position, MAP_HOLOGRAM_POS_WIDTH);
-        String safeName = clampToWidth(name, MAP_HOLOGRAM_NAME_MAX);
-        return String.format(Locale.ROOT, "%-" + MAP_HOLOGRAM_POS_WIDTH + "s | %-"
-                        + MAP_HOLOGRAM_NAME_MAX + "s | %s",
-                safePosition, safeName, time);
-    }
-
-    private World resolveParkourWorld() {
-        World world = Universe.get().getWorld(PARKOUR_WORLD_NAME);
-        if (world != null) {
-            return world;
-        }
-        for (World candidate : Universe.get().getWorlds().values()) {
-            if (candidate != null && PARKOUR_WORLD_NAME.equalsIgnoreCase(candidate.getName())) {
-                return candidate;
-            }
-        }
-        return null;
-    }
-
-    public void logMapHologramDebug(String message) {
-        if (!DEBUG_MAP_HOLOGRAM) {
-            return;
-        }
-        if (message == null || message.isBlank()) {
-            return;
-        }
-        LOGGER.atInfo().log(message);
-    }
     private void tickPlaytime() {
         if (playtimeManager != null) {
             playtimeManager.tickPlaytime();
@@ -842,7 +537,7 @@ public class HyvexaPlugin extends JavaPlugin {
             if (name == null || name.isBlank()) {
                 name = "Player";
             }
-            LOGGER.atInfo().log("Teleport debug (last " + TELEPORT_DEBUG_INTERVAL_SECONDS + "s): " + name + " "
+            LOGGER.atInfo().log("Teleport debug (last " + ParkourTimingConstants.TELEPORT_DEBUG_INTERVAL_SECONDS + "s): " + name + " "
                     + playerId + " start=" + snapshot.startTrigger
                     + " leave=" + snapshot.leaveTrigger
                     + " runRespawn=" + snapshot.runRespawn
@@ -867,25 +562,6 @@ public class HyvexaPlugin extends JavaPlugin {
             this.playerRef = playerRef;
             this.ref = ref;
             this.store = store;
-        }
-    }
-
-    private static final class CompletionRow {
-        private static final Comparator<CompletionRow> COMPARATOR = Comparator
-                .comparingInt((CompletionRow row) -> row.count).reversed()
-                .thenComparing(row -> row.sortName)
-                .thenComparing(row -> row.playerId.toString());
-
-        private final UUID playerId;
-        private final String name;
-        private final String sortName;
-        private final int count;
-
-        private CompletionRow(UUID playerId, String name, int count) {
-            this.playerId = playerId;
-            this.name = name != null ? name : "";
-            this.sortName = this.name.toLowerCase(Locale.ROOT);
-            this.count = count;
         }
     }
 
@@ -1020,43 +696,7 @@ public class HyvexaPlugin extends JavaPlugin {
     }
 
     private void tickCollisionRemoval() {
-        for (PlayerRef playerRef : Universe.get().getPlayers()) {
-            disablePlayerCollision(playerRef);
-        }
-    }
-
-
-    private void disablePlayerCollision(PlayerRef playerRef) {
-        if (playerRef == null) {
-            return;
-        }
-        disablePlayerCollision(playerRef.getReference());
-    }
-
-    private void disablePlayerCollision(Ref<EntityStore> ref) {
-        if (ref == null || !ref.isValid()) {
-            return;
-        }
-        Store<EntityStore> store = ref.getStore();
-        World world = store.getExternalData().getWorld();
-        if (world == null) {
-            return;
-        }
-        CompletableFuture.runAsync(() -> store.tryRemoveComponent(ref, HitboxCollision.getComponentType()), world);
-    }
-
-    private void updateDropProtection(Player player) {
-        Inventory inventory = player.getInventory();
-        if (inventory == null) {
-            return;
-        }
-        boolean allowDrop = PermissionUtils.isOp(player);
-        applyDropFilter(inventory.getHotbar(), allowDrop);
-        applyDropFilter(inventory.getStorage(), allowDrop);
-        applyDropFilter(inventory.getBackpack(), allowDrop);
-        applyDropFilter(inventory.getTools(), allowDrop);
-        applyDropFilter(inventory.getUtility(), allowDrop);
-        applyDropFilter(inventory.getArmor(), allowDrop);
+        collisionManager.disableAllCollisions();
     }
 
     public void hideRunHud(PlayerRef playerRef) {
@@ -1100,118 +740,6 @@ public class HyvexaPlugin extends JavaPlugin {
         return PARKOUR_WORLD_NAME.equalsIgnoreCase(world.getName());
     }
 
-    private void syncRunInventoryOnConnect(PlayerRef playerRef) {
-        if (playerRef == null) {
-            return;
-        }
-        var ref = playerRef.getReference();
-        if (ref == null || !ref.isValid()) {
-            return;
-        }
-        Store<EntityStore> store = ref.getStore();
-        if (!shouldApplyParkourMode(playerRef, store)) {
-            return;
-        }
-        syncRunInventoryOnConnect(ref, store, playerRef);
-    }
-
-    private void sendLanguageNotice(PlayerRef playerRef) {
-        if (playerRef == null) {
-            return;
-        }
-        Ref<EntityStore> ref = playerRef.getReference();
-        if (ref == null || !ref.isValid()) {
-            return;
-        }
-        Store<EntityStore> store = ref.getStore();
-        World world = store.getExternalData().getWorld();
-        if (world == null) {
-            return;
-        }
-        CompletableFuture.runAsync(() -> {
-            Player player = store.getComponent(ref, Player.getComponentType());
-            if (player == null) {
-                return;
-            }
-            Message link = Message.raw("Discord").color("#8ab4f8").link(DISCORD_URL);
-            Message message = Message.join(
-                    Message.raw(JOIN_LANGUAGE_NOTICE),
-                    link,
-                    Message.raw(JOIN_LANGUAGE_NOTICE_SUFFIX)
-            );
-            player.sendMessage(message);
-        }, world);
-    }
-
-    private void syncRunInventoryOnReady(Ref<EntityStore> ref) {
-        if (ref == null || !ref.isValid()) {
-            return;
-        }
-        Store<EntityStore> store = ref.getStore();
-        World world = store.getExternalData().getWorld();
-        if (world == null) {
-            return;
-        }
-        // Must dispatch to World thread before accessing components
-        CompletableFuture.runAsync(() -> {
-            if (!ref.isValid()) {
-                return;
-            }
-            PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-            if (playerRef == null) {
-                return;
-            }
-            if (!shouldApplyParkourMode(playerRef, store)) {
-                return;
-            }
-            syncRunInventoryOnConnect(ref, store, playerRef);
-            showWelcomeIfFirstJoin(ref, store, playerRef);
-            sendLanguageNotice(playerRef);
-        }, world);
-    }
-
-    private void syncRunInventoryOnConnect(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef) {
-        World world = store.getExternalData().getWorld();
-        if (world == null) {
-            return;
-        }
-        CompletableFuture.runAsync(() -> {
-            Player player = store.getComponent(ref, Player.getComponentType());
-            if (player == null) {
-                return;
-            }
-            if (!shouldApplyParkourMode(playerRef, store)) {
-                return;
-            }
-            String activeMap = runTracker.getActiveMapId(playerRef.getUuid());
-            if (activeMap == null) {
-                InventoryUtils.giveMenuItems(player);
-                return;
-            }
-            boolean practiceEnabled = runTracker.isPracticeEnabled(playerRef.getUuid());
-            InventoryUtils.giveRunItems(player, mapStore != null ? mapStore.getMap(activeMap) : null, practiceEnabled);
-        }, world);
-    }
-
-    private void showWelcomeIfFirstJoin(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef) {
-        if (progressStore == null || playerRef == null || !progressStore.shouldShowWelcome(playerRef.getUuid())) {
-            return;
-        }
-        World world = store.getExternalData().getWorld();
-        if (world == null) {
-            return;
-        }
-        CompletableFuture.runAsync(() -> {
-            Player player = store.getComponent(ref, Player.getComponentType());
-            if (player == null) {
-                return;
-            }
-            progressStore.markWelcomeShown(playerRef.getUuid(), playerRef.getUsername());
-            WelcomePage page = new WelcomePage(playerRef);
-            player.getPageManager().openCustomPage(ref, store, page);
-        }, world);
-    }
-
     private void cancelScheduled(ScheduledFuture<?> handle) {
         if (handle == null) {
             return;
@@ -1224,21 +752,9 @@ public class HyvexaPlugin extends JavaPlugin {
             try {
                 task.run();
             } catch (Throwable error) {
-                LOGGER.at(Level.SEVERE).log("Tick task failed (" + name + "): " + error.getMessage());
+                LOGGER.at(Level.SEVERE).withCause(error).log("Tick task failed (" + name + ")");
             }
         }, initialDelay, period, unit);
-    }
-
-    private void applyDropFilter(ItemContainer container, boolean allowDrop) {
-        if (container == null) {
-            return;
-        }
-        SlotFilter filter = allowDrop ? SlotFilter.ALLOW : SlotFilter.DENY;
-        short capacity = container.getCapacity();
-        for (short slot = 0; slot < capacity; slot++) {
-            container.setSlotFilter(FilterActionType.DROP, slot, filter);
-            container.setSlotFilter(FilterActionType.REMOVE, slot, filter);
-        }
     }
 
     private void registerNoDropSystem() {
@@ -1325,40 +841,6 @@ public class HyvexaPlugin extends JavaPlugin {
                     () -> settingsStore != null && settingsStore.isWeaponDamageDisabled()
             ));
         }
-    }
-
-    /**
-     * Disables world map generation for a player to save memory.
-     * On a parkour server with a static world, players don't need the world map feature.
-     */
-    private void disableWorldMapForPlayer(Ref<EntityStore> ref) {
-        if (ref == null || !ref.isValid()) {
-            return;
-        }
-        Store<EntityStore> store = ref.getStore();
-        World world = store.getExternalData().getWorld();
-        if (world == null) {
-            return;
-        }
-        CompletableFuture.runAsync(() -> {
-            if (!ref.isValid()) {
-                return;
-            }
-            Player player = store.getComponent(ref, Player.getComponentType());
-            PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-            if (player == null) {
-                return;
-            }
-            WorldMapTracker tracker = player.getWorldMapTracker();
-            if (tracker != null) {
-                // Set view radius to 0 to prevent map generation
-                tracker.setViewRadiusOverride(0);
-                // Clear any already loaded map data
-                tracker.clear();
-                String name = playerRef != null ? playerRef.getUsername() : "unknown";
-                LOGGER.atInfo().log("Disabled world map for player: " + name);
-            }
-        }, world);
     }
 
     private void registerInteractionCodecs() {

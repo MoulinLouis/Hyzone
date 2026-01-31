@@ -32,8 +32,10 @@ public class DatabaseManager {
             "duel_player_stats"
     );
     private static final DatabaseManager INSTANCE = new DatabaseManager();
-    private HikariDataSource dataSource;
-    private DatabaseConfig config;
+    private static final Object INIT_LOCK = new Object();
+    private volatile HikariDataSource dataSource;
+    private volatile DatabaseConfig config;
+    private volatile boolean initialized = false;
 
     private DatabaseManager() {
     }
@@ -46,53 +48,68 @@ public class DatabaseManager {
      * Initialize using credentials from config file (Parkour/database.json).
      */
     public void initialize() {
-        config = DatabaseConfig.load();
-        LOGGER.atInfo().log("DB config loaded. Host=" + config.getHost()
-                + " Port=" + config.getPort()
-                + " Database=" + config.getDatabase()
-                + " User=" + config.getUser());
-        initialize(config.getHost(), config.getPort(), config.getDatabase(),
-                   config.getUser(), config.getPassword());
+        synchronized (INIT_LOCK) {
+            if (initialized) {
+                LOGGER.atWarning().log("DatabaseManager already initialized, skipping");
+                return;
+            }
+            config = DatabaseConfig.load();
+            LOGGER.atInfo().log("DB config loaded. Host=" + config.getHost()
+                    + " Port=" + config.getPort()
+                    + " Database=" + config.getDatabase()
+                    + " User=" + config.getUser());
+            initialize(config.getHost(), config.getPort(), config.getDatabase(),
+                       config.getUser(), config.getPassword());
+            initialized = true;
+        }
     }
 
     /**
      * Initialize with custom credentials.
      */
     public void initialize(String host, int port, String database, String user, String password) {
-        HikariConfig config = new HikariConfig();
-        config.setJdbcUrl("jdbc:mysql://" + host + ":" + port + "/" + database);
-        config.setUsername(user);
-        config.setPassword(password);
-        config.setDriverClassName("com.mysql.cj.jdbc.Driver");
+        synchronized (INIT_LOCK) {
+            // Close existing dataSource if present before reinitializing
+            if (dataSource != null && !dataSource.isClosed()) {
+                LOGGER.atInfo().log("Closing existing database connection pool before reinitializing");
+                dataSource.close();
+            }
 
-        try {
-            Class.forName("com.mysql.cj.jdbc.Driver");
-        } catch (ClassNotFoundException e) {
-            LOGGER.at(Level.SEVERE).log("MySQL driver not found on classpath: " + e.getMessage());
-            throw new RuntimeException("MySQL driver missing", e);
-        }
+            HikariConfig config = new HikariConfig();
+            config.setJdbcUrl("jdbc:mysql://" + host + ":" + port + "/" + database);
+            config.setUsername(user);
+            config.setPassword(password);
+            config.setDriverClassName("com.mysql.cj.jdbc.Driver");
 
-        // Connection pool settings
-        config.setMaximumPoolSize(10);
-        config.setMinimumIdle(2);
-        config.setIdleTimeout(300000);       // 5 minutes
-        config.setConnectionTimeout(10000);  // 10 seconds
-        config.setMaxLifetime(1800000);      // 30 minutes
+            try {
+                Class.forName("com.mysql.cj.jdbc.Driver");
+            } catch (ClassNotFoundException e) {
+                LOGGER.at(Level.SEVERE).withCause(e).log("MySQL driver not found on classpath");
+                throw new RuntimeException("MySQL driver missing", e);
+            }
 
-        // MySQL optimizations
-        config.addDataSourceProperty("cachePrepStmts", "true");
-        config.addDataSourceProperty("prepStmtCacheSize", "250");
-        config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
-        config.addDataSourceProperty("useServerPrepStmts", "true");
+            // Connection pool settings
+            config.setMaximumPoolSize(10);
+            config.setMinimumIdle(2);
+            config.setIdleTimeout(300000);       // 5 minutes
+            config.setConnectionTimeout(10000);  // 10 seconds
+            config.setMaxLifetime(1800000);      // 30 minutes
 
-        try {
-            dataSource = new HikariDataSource(config);
-            LOGGER.atInfo().log("Database connection pool initialized successfully");
-            ensureCheckpointTimesTable();
-            ensureDuelEnabledColumn();
-        } catch (Exception e) {
-            LOGGER.at(Level.SEVERE).log("Failed to initialize database connection pool: " + e.getMessage());
-            throw new RuntimeException("Database initialization failed", e);
+            // MySQL optimizations
+            config.addDataSourceProperty("cachePrepStmts", "true");
+            config.addDataSourceProperty("prepStmtCacheSize", "250");
+            config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
+            config.addDataSourceProperty("useServerPrepStmts", "true");
+
+            try {
+                dataSource = new HikariDataSource(config);
+                LOGGER.atInfo().log("Database connection pool initialized successfully");
+                ensureCheckpointTimesTable();
+                ensureDuelEnabledColumn();
+            } catch (Exception e) {
+                LOGGER.at(Level.SEVERE).withCause(e).log("Failed to initialize database connection pool");
+                throw new RuntimeException("Database initialization failed", e);
+            }
         }
     }
 
@@ -197,7 +214,7 @@ public class DatabaseManager {
         try (Connection conn = getConnection()) {
             createPlayerCheckpointTimesTable(conn);
         } catch (SQLException e) {
-            LOGGER.at(Level.WARNING).log("Failed to ensure player_checkpoint_times table: " + e.getMessage());
+            LOGGER.at(Level.WARNING).withCause(e).log("Failed to ensure player_checkpoint_times table");
         }
     }
 
@@ -210,7 +227,7 @@ public class DatabaseManager {
                 stmt.executeUpdate("ALTER TABLE maps ADD COLUMN duel_enabled BOOLEAN DEFAULT FALSE");
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.WARNING).log("Failed to ensure maps.duel_enabled column: " + e.getMessage());
+            LOGGER.at(Level.WARNING).withCause(e).log("Failed to ensure maps.duel_enabled column");
         }
     }
 

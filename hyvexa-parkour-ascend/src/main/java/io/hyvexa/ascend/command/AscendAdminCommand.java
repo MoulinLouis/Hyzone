@@ -20,6 +20,7 @@ import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.ui.AscendAdminPage;
 import io.hyvexa.ascend.holo.AscendHologramManager;
+import io.hyvexa.common.util.CommandUtils;
 import io.hyvexa.common.util.HylogramsBridge;
 import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
@@ -59,7 +60,7 @@ public class AscendAdminCommand extends AbstractAsyncCommand {
     }
 
     private void handleCommand(CommandContext ctx, Player player, Ref<EntityStore> ref, Store<EntityStore> store) {
-        String[] args = getArgs(ctx);
+        String[] args = CommandUtils.getArgs(ctx);
         if (args.length >= 1 && "holograms".equalsIgnoreCase(args[0])) {
             listHolograms(ctx);
             return;
@@ -113,31 +114,6 @@ public class AscendAdminCommand extends AbstractAsyncCommand {
             case "list" -> handleListMaps(player, mapStore);
             default -> player.sendMessage(Message.raw("Unknown action. Use: /as admin map <create|setstart|setfinish|addwaypoint|clearwaypoints|setreward|setprice|setorder|list> ..."));
         }
-    }
-
-    private String[] getArgs(CommandContext ctx) {
-        String input = ctx.getInputString();
-        if (input == null || input.trim().isEmpty()) {
-            return new String[0];
-        }
-        String[] tokens = input.trim().split("\\s+");
-        if (tokens.length == 0) {
-            return tokens;
-        }
-        String first = tokens[0];
-        if (first.startsWith("/")) {
-            first = first.substring(1);
-        }
-        String commandName = ctx.getCalledCommand().getName();
-        if (first.equalsIgnoreCase(commandName)) {
-            if (tokens.length == 1) {
-                return new String[0];
-            }
-            String[] trimmed = new String[tokens.length - 1];
-            System.arraycopy(tokens, 1, trimmed, 0, trimmed.length);
-            return trimmed;
-        }
-        return tokens;
     }
 
     private void listHolograms(CommandContext ctx) {
