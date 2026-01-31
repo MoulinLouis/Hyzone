@@ -439,6 +439,19 @@ public class HyvexaPlugin extends JavaPlugin {
         }
     }
 
+    public void logMapHologramDebug(String message) {
+        if (leaderboardHologramManager != null) {
+            leaderboardHologramManager.logMapHologramDebug(message);
+        }
+    }
+
+    public List<String> buildMapLeaderboardHologramLines(String mapId) {
+        if (leaderboardHologramManager != null) {
+            return leaderboardHologramManager.buildMapLeaderboardHologramLines(mapId);
+        }
+        return new java.util.ArrayList<>();
+    }
+
     public float getVipSpeedMultiplier(UUID playerId) {
         if (perksManager == null) {
             return 1.0f;
