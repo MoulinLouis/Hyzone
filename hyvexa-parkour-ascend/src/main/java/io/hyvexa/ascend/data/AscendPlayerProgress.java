@@ -34,7 +34,7 @@ public class AscendPlayerProgress {
         private boolean hasRobot;
         private int robotSpeedLevel;
         private int robotGainsLevel;
-        private long pendingCoins;
+        private int multiplierValue = 1;
 
         public boolean isUnlocked() {
             return unlocked;
@@ -76,16 +76,17 @@ public class AscendPlayerProgress {
             this.robotGainsLevel = robotGainsLevel;
         }
 
-        public long getPendingCoins() {
-            return pendingCoins;
+        public int getMultiplierValue() {
+            return multiplierValue;
         }
 
-        public void setPendingCoins(long pendingCoins) {
-            this.pendingCoins = pendingCoins;
+        public void setMultiplierValue(int multiplierValue) {
+            this.multiplierValue = Math.max(1, multiplierValue);
         }
 
-        public void addPendingCoins(long amount) {
-            this.pendingCoins = Math.max(0, this.pendingCoins + amount);
+        public int incrementMultiplier() {
+            multiplierValue = Math.max(1, multiplierValue) + 1;
+            return multiplierValue;
         }
     }
 }

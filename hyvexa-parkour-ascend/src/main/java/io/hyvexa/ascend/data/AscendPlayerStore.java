@@ -9,6 +9,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -61,7 +62,7 @@ public class AscendPlayerStore {
     private void loadMapProgress() {
         String sql = """
             SELECT player_uuid, map_id, unlocked, completed_manually, has_robot,
-                   robot_speed_level, robot_gains_level, pending_coins
+                   robot_speed_level, robot_gains_level, multiplier_value
             FROM ascend_player_maps
             """;
         try (Connection conn = DatabaseManager.getInstance().getConnection();
@@ -82,7 +83,7 @@ public class AscendPlayerStore {
                     mapProgress.setHasRobot(rs.getBoolean("has_robot"));
                     mapProgress.setRobotSpeedLevel(rs.getInt("robot_speed_level"));
                     mapProgress.setRobotGainsLevel(rs.getInt("robot_gains_level"));
-                    mapProgress.setPendingCoins(rs.getLong("pending_coins"));
+                    mapProgress.setMultiplierValue(rs.getInt("multiplier_value"));
                 }
             }
         } catch (SQLException e) {
@@ -113,39 +114,6 @@ public class AscendPlayerStore {
         return progress != null ? progress.getCoins() : 0L;
     }
 
-    public long getTotalPendingCoins(UUID playerId) {
-        AscendPlayerProgress progress = players.get(playerId);
-        if (progress == null) {
-            return 0L;
-        }
-        long total = 0L;
-        for (AscendPlayerProgress.MapProgress mapProgress : progress.getMapProgress().values()) {
-            total += mapProgress.getPendingCoins();
-        }
-        return total;
-    }
-
-    public long collectPendingCoins(UUID playerId) {
-        AscendPlayerProgress progress = players.get(playerId);
-        if (progress == null) {
-            return 0L;
-        }
-        long total = 0L;
-        for (AscendPlayerProgress.MapProgress mapProgress : progress.getMapProgress().values()) {
-            long pending = mapProgress.getPendingCoins();
-            if (pending <= 0L) {
-                continue;
-            }
-            total += pending;
-            mapProgress.setPendingCoins(0L);
-        }
-        if (total > 0L) {
-            progress.addCoins(total);
-            markDirty(playerId);
-        }
-        return total;
-    }
-
     public AscendPlayerProgress.MapProgress getMapProgress(UUID playerId, String mapId) {
         AscendPlayerProgress progress = players.get(playerId);
         if (progress == null) {
@@ -169,15 +137,6 @@ public class AscendPlayerStore {
         return true;
     }
 
-    public void addPendingCoins(UUID playerId, String mapId, long amount) {
-        if (amount <= 0L) {
-            return;
-        }
-        AscendPlayerProgress.MapProgress mapProgress = getOrCreateMapProgress(playerId, mapId);
-        mapProgress.addPendingCoins(amount);
-        markDirty(playerId);
-    }
-
     public void addCoins(UUID playerId, long amount) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
         progress.addCoins(amount);
@@ -192,6 +151,89 @@ public class AscendPlayerStore {
         progress.addCoins(-amount);
         markDirty(playerId);
         return true;
+    }
+
+    public int getMapMultiplierValue(UUID playerId, String mapId) {
+        AscendPlayerProgress.MapProgress mapProgress = getMapProgress(playerId, mapId);
+        if (mapProgress == null) {
+            return 1;
+        }
+        return Math.max(1, mapProgress.getMultiplierValue());
+    }
+
+    public int incrementMapMultiplier(UUID playerId, String mapId) {
+        AscendPlayerProgress.MapProgress mapProgress = getOrCreateMapProgress(playerId, mapId);
+        int value = mapProgress.incrementMultiplier();
+        markDirty(playerId);
+        return value;
+    }
+
+    public int[] getMultiplierDigits(UUID playerId, List<AscendMap> maps, int slotCount) {
+        int slots = Math.max(0, slotCount);
+        int[] digits = new int[slots];
+        for (int i = 0; i < slots; i++) {
+            digits[i] = 1;
+        }
+        if (maps == null || maps.isEmpty() || slots == 0) {
+            return digits;
+        }
+        int index = 0;
+        for (AscendMap map : maps) {
+            if (index >= slots) {
+                break;
+            }
+            if (map == null || map.getId() == null) {
+                continue;
+            }
+            digits[index] = getMapMultiplierValue(playerId, map.getId());
+            index++;
+        }
+        return digits;
+    }
+
+    public long getMultiplierProduct(UUID playerId, List<AscendMap> maps, int slotCount) {
+        long product = 1L;
+        int slots = Math.max(0, slotCount);
+        if (maps == null || maps.isEmpty() || slots == 0) {
+            return product;
+        }
+        int index = 0;
+        for (AscendMap map : maps) {
+            if (index >= slots) {
+                break;
+            }
+            if (map == null || map.getId() == null) {
+                continue;
+            }
+            int value = getMapMultiplierValue(playerId, map.getId());
+            product *= Math.max(1, value);
+            index++;
+        }
+        return product;
+    }
+
+    public long getCompletionPayout(UUID playerId, List<AscendMap> maps, int slotCount, String mapId) {
+        long product = 1L;
+        int slots = Math.max(0, slotCount);
+        if (maps == null || maps.isEmpty() || slots == 0) {
+            return product;
+        }
+        int index = 0;
+        for (AscendMap map : maps) {
+            if (index >= slots) {
+                break;
+            }
+            if (map == null || map.getId() == null) {
+                continue;
+            }
+            int value = getMapMultiplierValue(playerId, map.getId());
+            if (map.getId().equals(mapId)) {
+                value += 1;
+            }
+            product *= Math.max(1, value);
+            index++;
+        }
+        return product;
     }
 
     public void flushPendingSave() {
@@ -236,12 +278,12 @@ public class AscendPlayerStore {
 
         String mapSql = """
             INSERT INTO ascend_player_maps (player_uuid, map_id, unlocked, completed_manually,
-                has_robot, robot_speed_level, robot_gains_level, pending_coins)
+                has_robot, robot_speed_level, robot_gains_level, multiplier_value)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 unlocked = VALUES(unlocked), completed_manually = VALUES(completed_manually),
                 has_robot = VALUES(has_robot), robot_speed_level = VALUES(robot_speed_level),
-                robot_gains_level = VALUES(robot_gains_level), pending_coins = VALUES(pending_coins)
+                robot_gains_level = VALUES(robot_gains_level), multiplier_value = VALUES(multiplier_value)
             """;
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
@@ -269,7 +311,7 @@ public class AscendPlayerStore {
                     mapStmt.setBoolean(5, mapProgress.hasRobot());
                     mapStmt.setInt(6, mapProgress.getRobotSpeedLevel());
                     mapStmt.setInt(7, mapProgress.getRobotGainsLevel());
-                    mapStmt.setLong(8, mapProgress.getPendingCoins());
+                    mapStmt.setInt(8, mapProgress.getMultiplierValue());
                     mapStmt.addBatch();
                 }
             }

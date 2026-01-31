@@ -20,15 +20,14 @@
 - Tables created: `ascend_players`, `ascend_maps`, `ascend_player_maps`, `ascend_upgrade_costs`.
 - `AscendMap` stores map metadata + start/finish coords + waypoint list + display order + price/reward.
 - `AscendMapStore` loads maps from MySQL, caches in memory, and saves updates.
-- `AscendPlayerProgress` stores coins and per-map progress (unlock, completion, robot upgrades, pending coins).
+- `AscendPlayerProgress` stores coins and per-map progress (unlock, completion, robot upgrades, multiplier digits).
 - `AscendPlayerStore` loads players + per-map progress, writes back with debounced saves and exposes helpers for
-  pending coin totals, map unlocks, and pending coin collection.
+  map unlocks, per-map multiplier digits, and digit-product payout calculations.
 
 ## Commands
 - `/ascend`:
   - No args: opens map select UI and teleports to map start on selection.
-  - `collect`: aggregates pending coins from all maps and adds to player balance.
-  - `stats`: shows current coin + pending balance.
+  - `stats`: shows current coin balance, digit product, and the current digit string.
   - All subcommands are gated to Ascend world via `AscendModeGate`.
 - `/as admin`:
   - Opens Ascend admin UI for map creation/updates.
@@ -40,21 +39,21 @@
 - `AscendRunTracker` starts runs when a player selects a map.
 - Run completion is a radius check around the map finish position.
 - Completion:
-  - Marks manual completion, unlocks the map, adds pending coins, persists progress.
+  - Marks manual completion, unlocks the map, increments that map's digit, and pays out the digit product.
   - Teleports the player back to map start using `Teleport`.
 
 ## HUD
 - `AscendHud` loads `Pages/Ascend_RunHud.ui` and overwrites the HUD label text with "HYVEXA ASCEND".
 - HUD reattaches on Ascend tick if needed and waits briefly before applying static text.
-- HUD now shows coins, pending coins, and a multiplier placeholder (text-only) updated from the player store.
-- A full-width top banner bar shows colored number slots with "x" separators for future multipliers.
+- HUD now shows coins, the digit product, and the 5 colored digit slots updated from the player store.
+- A full-width top banner bar shows colored number slots with "x" separators for future multipliers and is scaled up for visibility.
 - Run HUD UI is duplicated in multiple resource paths for lookup compatibility:
   - `Common/UI/Custom/Pages/Ascend_RunHud.ui`
   - `Pages/Ascend_RunHud.ui`
   - `Custom/Pages/Ascend_RunHud.ui`
 
 ## UI pages
-- `Ascend_MapSelect.ui` + `Ascend_MapSelectEntry.ui`: map selection list with reward, pending coins, and lock/price status.
+- `Ascend_MapSelect.ui` + `Ascend_MapSelectEntry.ui`: map selection list with digit value, payout, and lock/price status.
 - `Ascend_MapAdmin.ui` + `Ascend_MapAdminEntry.ui`: admin map management UI with price/order fields, selectable map list highlighting, and map holo controls.
 
 ## Holograms (Hylograms)

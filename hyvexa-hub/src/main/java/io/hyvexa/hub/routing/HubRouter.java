@@ -211,6 +211,9 @@ public class HubRouter {
         if (hotbar.getCapacity() <= 0) {
             return;
         }
+        hotbar.setItemStackForSlot((short) 0, new ItemStack("Ingredient_Bolt_Cindercloth", 1), false);
+        hotbar.setItemStackForSlot((short) 1, new ItemStack("Ingredient_Bolt_Stormsilk", 1), false);
+        hotbar.setItemStackForSlot((short) 2, new ItemStack("Ingredient_Bolt_Cotton", 1), false);
         short slot = (short) (hotbar.getCapacity() - 1);
         hotbar.setItemStackForSlot(slot, new ItemStack(HubConstants.ITEM_SERVER_SELECTOR, 1), false);
     }

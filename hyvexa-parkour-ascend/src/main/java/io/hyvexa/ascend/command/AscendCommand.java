@@ -11,7 +11,9 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.ParkourAscendPlugin;
+import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
@@ -20,6 +22,7 @@ import io.hyvexa.ascend.util.AscendModeGate;
 import io.hyvexa.common.util.SystemMessageUtils;
 
 import javax.annotation.Nonnull;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 public class AscendCommand extends AbstractAsyncCommand {
@@ -66,9 +69,8 @@ public class AscendCommand extends AbstractAsyncCommand {
 
             String subCommand = args[0].toLowerCase();
             switch (subCommand) {
-                case "collect" -> handleCollect(player, playerRef);
                 case "stats" -> showStatus(player, playerRef);
-                default -> ctx.sendMessage(Message.raw("Unknown subcommand. Use: /ascend, /ascend collect, /ascend stats"));
+                default -> ctx.sendMessage(Message.raw("Unknown subcommand. Use: /ascend, /ascend stats"));
             }
         }, world);
     }
@@ -99,10 +101,26 @@ public class AscendCommand extends AbstractAsyncCommand {
     }
 
     private void showStatus(Player player, PlayerRef playerRef) {
-        AscendPlayerStore playerStore = ParkourAscendPlugin.getInstance().getPlayerStore();
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin == null || plugin.getPlayerStore() == null) {
+            player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading."));
+            return;
+        }
+        AscendPlayerStore playerStore = plugin.getPlayerStore();
         long coins = playerStore.getCoins(playerRef.getUuid());
-        long pending = playerStore.getTotalPendingCoins(playerRef.getUuid());
-        player.sendMessage(Message.raw("[Ascend] Coins: " + coins + " | Pending: " + pending)
+        AscendMapStore mapStore = plugin.getMapStore();
+        List<AscendMap> maps = mapStore != null ? mapStore.listMapsSorted() : List.of();
+        long product = playerStore.getMultiplierProduct(playerRef.getUuid(), maps, AscendConstants.MULTIPLIER_SLOTS);
+        int[] digits = playerStore.getMultiplierDigits(playerRef.getUuid(), maps, AscendConstants.MULTIPLIER_SLOTS);
+        StringBuilder digitsText = new StringBuilder();
+        for (int i = 0; i < digits.length; i++) {
+            if (i > 0) {
+                digitsText.append('x');
+            }
+            digitsText.append(digits[i]);
+        }
+        player.sendMessage(Message.raw("[Ascend] Coins: " + coins + " | Product: " + product
+            + " | Digits: " + digitsText)
             .color(SystemMessageUtils.PRIMARY_TEXT));
     }
 
@@ -120,17 +138,6 @@ public class AscendCommand extends AbstractAsyncCommand {
         }
         player.getPageManager().openCustomPage(ref, store,
             new AscendMapSelectPage(playerRef, mapStore, playerStore, runTracker));
-    }
-
-    private void handleCollect(Player player, PlayerRef playerRef) {
-        AscendPlayerStore playerStore = ParkourAscendPlugin.getInstance().getPlayerStore();
-        long totalPending = playerStore.collectPendingCoins(playerRef.getUuid());
-        if (totalPending <= 0) {
-            player.sendMessage(Message.raw("[Ascend] No earnings to collect.").color(SystemMessageUtils.SECONDARY));
-            return;
-        }
-        player.sendMessage(Message.raw("[Ascend] Collected " + totalPending + " coins!")
-            .color(SystemMessageUtils.SUCCESS));
     }
 
 }

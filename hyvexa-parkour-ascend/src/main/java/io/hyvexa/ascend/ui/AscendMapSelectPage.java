@@ -11,6 +11,7 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
@@ -20,7 +21,6 @@ import io.hyvexa.common.ui.ButtonEventData;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
 public class AscendMapSelectPage extends BaseAscendPage {
@@ -98,10 +98,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
         if (playerRef == null) {
             return;
         }
-        List<AscendMap> maps = new ArrayList<>(mapStore.listMaps());
-        maps.sort(Comparator.comparingInt(AscendMap::getDisplayOrder)
-            .thenComparing(map -> map.getName() != null ? map.getName() : map.getId(),
-                String.CASE_INSENSITIVE_ORDER));
+        List<AscendMap> maps = new ArrayList<>(mapStore.listMapsSorted());
         AscendPlayerProgress progress = playerStore.getOrCreatePlayer(playerRef.getUuid());
         int index = 0;
         for (AscendMap map : maps) {
@@ -123,10 +120,10 @@ public class AscendMapSelectPage extends BaseAscendPage {
             if (!unlocked) {
                 status = "Locked | Price: " + map.getPrice() + " coins";
             } else {
-                status = "Reward: " + map.getBaseReward() + " coins";
-                if (mapProgress != null && mapProgress.getPendingCoins() > 0) {
-                    status += " | Pending: " + mapProgress.getPendingCoins();
-                }
+                int digit = playerStore.getMapMultiplierValue(playerRef.getUuid(), map.getId());
+                long payout = playerStore.getCompletionPayout(playerRef.getUuid(), maps,
+                    AscendConstants.MULTIPLIER_SLOTS, map.getId());
+                status = "Digit: " + digit + " | Payout: " + payout + " coins";
                 if (mapProgress != null && mapProgress.isCompletedManually()) {
                     status = "Completed | " + status;
                 }

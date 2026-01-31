@@ -101,7 +101,7 @@ public class RobotManager {
         // 2. Calculate direction to next waypoint
         // 3. Set velocity
         // 4. Check if waypoint reached
-        // 5. If at finish, add coins to pending, reset to start
+        // 5. If at finish, add coins directly, reset to start
     }
 
     private String robotKey(UUID ownerId, String mapId) {
