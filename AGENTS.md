@@ -70,9 +70,10 @@ Managers are instantiated in `HyvexaPlugin.setup()` and accessed via plugin help
 - `/ascend` opens Ascend map selector UI (manual runs).
 - `/ascend collect` collects pending Ascend coins.
 - `/ascend stats` shows current Ascend coin balance.
+- Ascend map selector shows per-map robot counts and includes a robot purchase button with cost.
 - Hub menu Ascend button is OP-only (non-OP players see "coming soon" message).
 - Ascend world clears inventory and gives the hub Server Selector in the last hotbar slot.
-- Ascend world shows a minimal HUD label: "HYVEXA ASCEND".
+- Ascend world shows the Ascend HUD with top digits, coins banner, and rebirth prompt (when eligible).
 
 ### Ascend Admin (OP only)
 - `/as admin` opens Ascend map admin UI.
