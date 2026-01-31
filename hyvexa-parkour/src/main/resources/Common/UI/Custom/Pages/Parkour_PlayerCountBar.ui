@@ -1,0 +1,82 @@
+$C = "../Common.ui";
+
+Group {
+  Anchor: (Width: 34, Height: 180);
+
+  Group #BarArea {
+    Anchor: (Left: 6, Right: 6, Top: 6, Height: 120);
+    Background: #000000(0.22);
+
+    Group #Seg1 {
+      Anchor: (Left: 0, Right: 0, Bottom: 0, Height: 10);
+      Background: #9fb0ba;
+      Visible: false;
+    }
+    Group #Seg2 {
+      Anchor: (Left: 0, Right: 0, Bottom: 12, Height: 10);
+      Background: #9fb0ba;
+      Visible: false;
+    }
+    Group #Seg3 {
+      Anchor: (Left: 0, Right: 0, Bottom: 24, Height: 10);
+      Background: #9fb0ba;
+      Visible: false;
+    }
+    Group #Seg4 {
+      Anchor: (Left: 0, Right: 0, Bottom: 36, Height: 10);
+      Background: #9fb0ba;
+      Visible: false;
+    }
+    Group #Seg5 {
+      Anchor: (Left: 0, Right: 0, Bottom: 48, Height: 10);
+      Background: #9fb0ba;
+      Visible: false;
+    }
+    Group #Seg6 {
+      Anchor: (Left: 0, Right: 0, Bottom: 60, Height: 10);
+      Background: #9fb0ba;
+      Visible: false;
+    }
+    Group #Seg7 {
+      Anchor: (Left: 0, Right: 0, Bottom: 72, Height: 10);
+      Background: #9fb0ba;
+      Visible: false;
+    }
+    Group #Seg8 {
+      Anchor: (Left: 0, Right: 0, Bottom: 84, Height: 10);
+      Background: #9fb0ba;
+      Visible: false;
+    }
+    Group #Seg9 {
+      Anchor: (Left: 0, Right: 0, Bottom: 96, Height: 10);
+      Background: #9fb0ba;
+      Visible: false;
+    }
+    Group #Seg10 {
+      Anchor: (Left: 0, Right: 0, Bottom: 108, Height: 10);
+      Background: #9fb0ba;
+      Visible: false;
+    }
+  }
+
+  Label #BarValue {
+    Anchor: (Left: 0, Right: 0, Top: 130, Height: 18);
+    Style: (
+      FontSize: 11,
+      TextColor: #cfd7dc,
+      RenderBold: true,
+      HorizontalAlignment: Center
+    );
+    Text: "0";
+  }
+
+  Label #BarTime {
+    Anchor: (Left: 0, Right: 0, Top: 150, Height: 16);
+    Style: (
+      FontSize: 10,
+      TextColor: #93844c,
+      HorizontalAlignment: Center
+    );
+    Text: "12:00";
+  }
+}

@@ -1,6 +1,7 @@
 {
   "TranslationProperties": {
-    "Name": "server.items.Ingredient_Bolt_Cindercloth.name"
+    "Name": "Open Ascend Menu",
+    "Description": "Right click to open the Ascend map selector."
   },
   "Categories": [
     "Items.Ingredients"
