@@ -137,6 +137,34 @@ $C.@PageOverlay {
         }
       }
 
+      Group {
+        FlexWeight: 1;
+        Label #TopSep5 {
+          Anchor: (Left: 0, Right: 0, Top: -1);
+          Style: (
+            FontSize: 30,
+            TextColor: #f2f5f7,
+            RenderBold: true,
+            HorizontalAlignment: Center
+          );
+          Text: "x";
+        }
+      }
+
+      Group {
+        FlexWeight: 1;
+        Label #TopRebirthValue {
+          Anchor: (Left: 0, Right: 0);
+          Style: (
+            FontSize: 30,
+            TextColor: #f2f5f7,
+            RenderBold: true,
+            HorizontalAlignment: Center
+          );
+          Text: "1.00";
+        }
+      }
+
     }
 
     Group #TopCoinsHud {

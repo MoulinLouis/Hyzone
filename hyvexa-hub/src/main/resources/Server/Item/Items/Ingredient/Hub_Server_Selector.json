@@ -7,8 +7,8 @@
   "Categories": [
     "Items.Tools"
   ],
-  "Model": "Items/Custom/golem.blockymodel",
-  "Texture": "Items/Custom/golem.png",
+  "Model": "Blocks/Miscellaneous/Kweebec_Plush.blockymodel",
+  "Texture": "Blocks/Miscellaneous/Kweebec_Plush_Texture.png",
   "PlayerAnimationsId": "Item",
   "ResourceTypes": [
     {
@@ -30,7 +30,7 @@
   "ItemEntity": {
     "ParticleSystemId": null
   },
-  "ItemSoundSetId": "ISS_Items_Foliage",
+  "ItemSoundSetId": "ISS_Blocks_Wood",
   "Quality": "Developer",
   "Interactions": {
     "Secondary": "Hub_Server_Selector"

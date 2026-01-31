@@ -15,6 +15,8 @@ public class RobotState {
     private long waypointReachedMs;
     private boolean waiting;
     private long runsCompleted;
+    private int robotCount;
+    private long lastCompletionMs;
 
     public RobotState(UUID ownerId, String mapId) {
         this.ownerId = ownerId;
@@ -83,6 +85,28 @@ public class RobotState {
 
     public void incrementRunsCompleted() {
         this.runsCompleted++;
+    }
+
+    public void addRunsCompleted(long amount) {
+        if (amount > 0L) {
+            this.runsCompleted += amount;
+        }
+    }
+
+    public int getRobotCount() {
+        return robotCount;
+    }
+
+    public void setRobotCount(int robotCount) {
+        this.robotCount = Math.max(0, robotCount);
+    }
+
+    public long getLastCompletionMs() {
+        return lastCompletionMs;
+    }
+
+    public void setLastCompletionMs(long lastCompletionMs) {
+        this.lastCompletionMs = lastCompletionMs;
     }
 
     public void resetForNewRun() {

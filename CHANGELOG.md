@@ -465,4 +465,25 @@
 - Aligned the Ascend map row buttons, added spacing, and matched robot button styling to the map entry.
 - Increased Ascend map selection container size to keep the robot button within bounds.
 - Recentered Ascend map selection entries within the expanded map list container.
+- Added Ascend robot automation with per-map base time and per-robot time reduction editable in the Ascend map admin UI.
+- Added a Reset Progress button on the Ascend Admin Coins page to wipe the clicking player's Ascend progress.
+- Removed the redundant Set Reward button from the Ascend map admin page (Update already handles it).
+- Updated Ascend map selection status to show robot completions per second on unlocked maps while keeping locked price text.
+- Updated robot-per-second display when buying robots to reflect the live timing formula.
+- Renamed the Ascend map selector status to Runs/sec to reflect map completion rate.
+- Added positional color progression for Ascend map selection cards (red → orange → yellow → green → blue).
+- Auto-refreshes Ascend map selector run-rate text so admin timing changes show without reopening.
+- Fixed Ascend map selection color frames to avoid missing-texture backgrounds.
+- Set Ascend map selection buttons to full-color fills with contrasting text per map position.
+- Unified Ascend map selection card text color to black for all positions.
+- Added hover/pressed tinting for Ascend map selection cards while preserving base colors.
+- Added explicit default/hover/pressed styles to Ascend map selector buttons to prevent null UI style references.
+- Robot completions now add +0.01 to the map's color multiplier in the Ascend top banner.
+- Added a rebirth multiplier slot to the Ascend top banner and included it in multiplier product calculations.
+- Styled the rebirth multiplier slot to match the other top-bar multipliers.
+- Matched the rebirth multiplier text color to the top banner separators.
+- Guarded Ascend map selector auto-refresh to avoid updates after close or when map counts change.
+- Updated the Hub Game Selector item to display the Kweebec plush model when held.
+- Matched the Game Selector held animation/sound to Deco_Kweebec_Plush for consistent rendering.
+- Added a double right-click confirmation before leaving a map via the leave item.
 

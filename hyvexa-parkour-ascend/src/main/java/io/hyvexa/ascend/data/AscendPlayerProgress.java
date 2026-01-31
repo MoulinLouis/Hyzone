@@ -50,6 +50,7 @@ public class AscendPlayerProgress {
         private int robotSpeedLevel;
         private int robotGainsLevel;
         private int multiplierValue = 1;
+        private double robotMultiplierBonus;
 
         public boolean isUnlocked() {
             return unlocked;
@@ -120,6 +121,22 @@ public class AscendPlayerProgress {
         public int incrementMultiplier() {
             multiplierValue = Math.max(1, multiplierValue) + 1;
             return multiplierValue;
+        }
+
+        public double getRobotMultiplierBonus() {
+            return robotMultiplierBonus;
+        }
+
+        public void setRobotMultiplierBonus(double robotMultiplierBonus) {
+            this.robotMultiplierBonus = Math.max(0.0, robotMultiplierBonus);
+        }
+
+        public double addRobotMultiplierBonus(double amount) {
+            if (amount <= 0.0) {
+                return robotMultiplierBonus;
+            }
+            robotMultiplierBonus = Math.max(0.0, robotMultiplierBonus + amount);
+            return robotMultiplierBonus;
         }
     }
 }

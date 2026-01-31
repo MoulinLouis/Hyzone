@@ -93,6 +93,28 @@ $C.@PageOverlay {
           Style: (FontSize: 14, TextColor: #ffffff(0.85));
         }
 
+        Label {
+          Text: "Robot Base Time (ms)";
+          Style: (FontSize: 13, TextColor: #cfd7dc);
+          Anchor: (Top: 6);
+        }
+
+        $C.@TextField #RobotBaseTimeField {
+          Anchor: (Height: 30);
+          Style: (FontSize: 14, TextColor: #ffffff(0.85));
+        }
+
+        Label {
+          Text: "Robot Time Reduction (ms)";
+          Style: (FontSize: 13, TextColor: #cfd7dc);
+          Anchor: (Top: 6);
+        }
+
+        $C.@TextField #RobotReductionField {
+          Anchor: (Height: 30);
+          Style: (FontSize: 14, TextColor: #ffffff(0.85));
+        }
+
         Label #SelectedMapText {
           Anchor: (Top: 6);
           Style: (FontSize: 13, TextColor: #9fb0ba);
@@ -118,16 +140,6 @@ $C.@PageOverlay {
           LayoutMode: Left;
           Anchor: (Top: 8, Height: 32);
 
-          $C.@TextButton #SetRewardButton {
-            Anchor: (Width: 200, Height: 32);
-            Text: "Set Reward";
-          }
-        }
-
-        Group {
-          LayoutMode: Left;
-          Anchor: (Top: 8, Height: 32);
-
           $C.@TextButton #SetPriceButton {
             Anchor: (Width: 200, Height: 32);
             Text: "Set Price";
@@ -136,6 +148,16 @@ $C.@PageOverlay {
           $C.@TextButton #SetOrderButton {
             Anchor: (Left: 10, Width: 200, Height: 32);
             Text: "Set Order";
+          }
+        }
+
+        Group {
+          LayoutMode: Left;
+          Anchor: (Top: 8, Height: 32);
+
+          $C.@TextButton #SetRobotTimingButton {
+            Anchor: (Width: 200, Height: 32);
+            Text: "Set Robot Timing";
           }
         }
 

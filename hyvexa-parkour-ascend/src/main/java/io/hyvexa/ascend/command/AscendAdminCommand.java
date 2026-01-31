@@ -69,10 +69,9 @@ public class AscendAdminCommand extends AbstractAsyncCommand {
             return;
         }
         if (args.length == 1) {
-            AscendMapStore mapStore = ParkourAscendPlugin.getInstance().getMapStore();
             PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-            if (mapStore != null && playerRef != null) {
-                player.getPageManager().openCustomPage(ref, store, new AscendAdminPage(playerRef, mapStore));
+            if (playerRef != null) {
+                player.getPageManager().openCustomPage(ref, store, new io.hyvexa.ascend.ui.AscendAdminPanelPage(playerRef));
             }
             return;
         }
@@ -186,6 +185,7 @@ public class AscendAdminCommand extends AbstractAsyncCommand {
         map.setRobotPrice(0L);
         map.setBaseReward(reward);
         map.setBaseRunTimeMs(30000L);
+        map.setRobotTimeReductionMs(0L);
         map.setStorageCapacity((int) AscendConstants.DEFAULT_ROBOT_STORAGE);
         World world = store.getExternalData().getWorld();
         map.setWorld(world != null ? world.getName() : "Ascend");

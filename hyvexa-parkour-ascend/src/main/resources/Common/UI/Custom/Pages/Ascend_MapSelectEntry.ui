@@ -11,8 +11,8 @@ Group {
     Padding: (Left: 12, Right: 12, Top: 6, Bottom: 6);
     Style: ButtonStyle(
       Default: (Background: $C.@InputBoxBackground),
-      Hovered: (Background: #2b343b(0.85)),
-      Pressed: (Background: #1f262b(0.9)),
+      Hovered: (Background: $C.@InputBoxBackground),
+      Pressed: (Background: $C.@InputBoxBackground),
       Sounds: $C.@ButtonSounds,
     );
 
@@ -64,12 +64,12 @@ Group {
     Background: $C.@InputBoxBackground;
     Style: ButtonStyle(
       Default: (Background: $C.@InputBoxBackground),
-      Hovered: (Background: #2b343b(0.85)),
-      Pressed: (Background: #1f262b(0.9)),
+      Hovered: (Background: $C.@InputBoxBackground),
+      Pressed: (Background: $C.@InputBoxBackground),
       Sounds: $C.@ButtonSounds,
     );
 
-    Label {
+    Label #RobotBuyText {
       Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
       Style: (
         FontSize: 14,

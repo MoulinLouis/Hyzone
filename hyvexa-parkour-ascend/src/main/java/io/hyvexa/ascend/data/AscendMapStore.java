@@ -34,7 +34,7 @@ public class AscendMapStore {
         }
 
         String sql = """
-            SELECT id, name, price, robot_price, base_reward, base_run_time_ms, storage_capacity,
+            SELECT id, name, price, robot_price, base_reward, base_run_time_ms, robot_time_reduction_ms, storage_capacity,
                    world, start_x, start_y, start_z, start_rot_x, start_rot_y, start_rot_z,
                    finish_x, finish_y, finish_z, waypoints_json, display_order
             FROM ascend_maps ORDER BY display_order, id
@@ -55,6 +55,7 @@ public class AscendMapStore {
                         map.setRobotPrice(rs.getLong("robot_price"));
                         map.setBaseReward(rs.getLong("base_reward"));
                         map.setBaseRunTimeMs(rs.getLong("base_run_time_ms"));
+                        map.setRobotTimeReductionMs(rs.getLong("robot_time_reduction_ms"));
                         map.setStorageCapacity(rs.getInt("storage_capacity"));
                         map.setWorld(rs.getString("world"));
                         map.setStartX(rs.getDouble("start_x"));
@@ -141,12 +142,14 @@ public class AscendMapStore {
 
         String sql = """
             INSERT INTO ascend_maps (id, name, price, robot_price, base_reward, base_run_time_ms,
-                storage_capacity, world, start_x, start_y, start_z, start_rot_x, start_rot_y, start_rot_z,
+                robot_time_reduction_ms, storage_capacity, world, start_x, start_y, start_z, start_rot_x, start_rot_y,
+                start_rot_z,
                 finish_x, finish_y, finish_z, waypoints_json, display_order)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 name = VALUES(name), price = VALUES(price), robot_price = VALUES(robot_price),
                 base_reward = VALUES(base_reward), base_run_time_ms = VALUES(base_run_time_ms),
+                robot_time_reduction_ms = VALUES(robot_time_reduction_ms),
                 storage_capacity = VALUES(storage_capacity), world = VALUES(world),
                 start_x = VALUES(start_x), start_y = VALUES(start_y), start_z = VALUES(start_z),
                 start_rot_x = VALUES(start_rot_x), start_rot_y = VALUES(start_rot_y), start_rot_z = VALUES(start_rot_z),
@@ -164,6 +167,7 @@ public class AscendMapStore {
             stmt.setLong(i++, map.getRobotPrice());
             stmt.setLong(i++, map.getBaseReward());
             stmt.setLong(i++, map.getBaseRunTimeMs());
+            stmt.setLong(i++, map.getRobotTimeReductionMs());
             stmt.setInt(i++, map.getStorageCapacity());
             stmt.setString(i++, map.getWorld());
             stmt.setDouble(i++, map.getStartX());

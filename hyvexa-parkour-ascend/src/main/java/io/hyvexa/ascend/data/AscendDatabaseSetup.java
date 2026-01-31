@@ -43,6 +43,7 @@ public final class AscendDatabaseSetup {
                     robot_price BIGINT NOT NULL,
                     base_reward BIGINT NOT NULL,
                     base_run_time_ms BIGINT NOT NULL,
+                    robot_time_reduction_ms BIGINT NOT NULL DEFAULT 0,
                     storage_capacity INT NOT NULL DEFAULT 100,
                     world VARCHAR(64) NOT NULL,
                     start_x DOUBLE NOT NULL,
@@ -71,6 +72,7 @@ public final class AscendDatabaseSetup {
                     robot_speed_level INT NOT NULL DEFAULT 0,
                     robot_gains_level INT NOT NULL DEFAULT 0,
                     multiplier_value INT NOT NULL DEFAULT 1,
+                    robot_multiplier_bonus DOUBLE NOT NULL DEFAULT 0,
                     last_collection_at TIMESTAMP NULL,
                     PRIMARY KEY (player_uuid, map_id),
                     FOREIGN KEY (player_uuid) REFERENCES ascend_players(uuid) ON DELETE CASCADE,
@@ -80,6 +82,8 @@ public final class AscendDatabaseSetup {
 
             ensureMultiplierColumn(conn);
             ensureRobotCountColumn(conn);
+            ensureRobotMultiplierBonusColumn(conn);
+            ensureRobotTimeReductionColumn(conn);
 
             stmt.executeUpdate("""
                 CREATE TABLE IF NOT EXISTS ascend_upgrade_costs (
@@ -136,6 +140,34 @@ public final class AscendDatabaseSetup {
             stmt.executeUpdate("ALTER TABLE ascend_player_maps ADD COLUMN robot_count INT NOT NULL DEFAULT 0");
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Failed to add robot_count column: " + e.getMessage());
+        }
+    }
+
+    private static void ensureRobotMultiplierBonusColumn(Connection conn) {
+        if (conn == null) {
+            return;
+        }
+        if (columnExists(conn, "ascend_player_maps", "robot_multiplier_bonus")) {
+            return;
+        }
+        try (Statement stmt = conn.createStatement()) {
+            stmt.executeUpdate("ALTER TABLE ascend_player_maps ADD COLUMN robot_multiplier_bonus DOUBLE NOT NULL DEFAULT 0");
+        } catch (SQLException e) {
+            LOGGER.at(Level.SEVERE).log("Failed to add robot_multiplier_bonus column: " + e.getMessage());
+        }
+    }
+
+    private static void ensureRobotTimeReductionColumn(Connection conn) {
+        if (conn == null) {
+            return;
+        }
+        if (columnExists(conn, "ascend_maps", "robot_time_reduction_ms")) {
+            return;
+        }
+        try (Statement stmt = conn.createStatement()) {
+            stmt.executeUpdate("ALTER TABLE ascend_maps ADD COLUMN robot_time_reduction_ms BIGINT NOT NULL DEFAULT 0");
+        } catch (SQLException e) {
+            LOGGER.at(Level.SEVERE).log("Failed to add robot_time_reduction_ms column: " + e.getMessage());
         }
     }
 
