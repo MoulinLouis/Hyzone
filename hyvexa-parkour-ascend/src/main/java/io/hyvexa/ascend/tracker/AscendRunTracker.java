@@ -86,21 +86,20 @@ public class AscendRunTracker {
         UUID playerId = playerRef.getUuid();
         activeRuns.remove(playerId);
 
-        AscendPlayerProgress progress = playerStore.getOrCreatePlayer(playerId);
-        AscendPlayerProgress.MapProgress mapProgress = progress.getOrCreateMapProgress(run.mapId);
+        AscendPlayerProgress.MapProgress mapProgress = playerStore.getOrCreateMapProgress(playerId, run.mapId);
 
         long reward = map.getBaseReward();
         boolean firstCompletion = !mapProgress.isCompletedManually();
 
         mapProgress.setCompletedManually(true);
-        progress.addCoins(reward);
-        playerStore.markDirty(playerId);
+        mapProgress.setUnlocked(true);
+        playerStore.addPendingCoins(playerId, run.mapId, reward);
 
         if (firstCompletion) {
             player.sendMessage(Message.raw("[Ascend] Map completed! You can now buy a robot for this map.")
                 .color(SystemMessageUtils.SUCCESS));
         }
-        player.sendMessage(Message.raw("[Ascend] +" + reward + " coins!")
+        player.sendMessage(Message.raw("[Ascend] +" + reward + " coins pending.")
             .color(SystemMessageUtils.PRIMARY_TEXT));
 
         Vector3d startPos = new Vector3d(map.getStartX(), map.getStartY(), map.getStartZ());

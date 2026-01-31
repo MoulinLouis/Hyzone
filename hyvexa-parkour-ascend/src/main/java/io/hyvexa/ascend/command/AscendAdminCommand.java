@@ -19,6 +19,7 @@ import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.ui.AscendAdminPage;
+import io.hyvexa.ascend.holo.AscendHologramManager;
 import io.hyvexa.common.util.HylogramsBridge;
 import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
@@ -64,7 +65,7 @@ public class AscendAdminCommand extends AbstractAsyncCommand {
             return;
         }
         if (args.length < 1 || !"admin".equalsIgnoreCase(args[0])) {
-            player.sendMessage(Message.raw("Usage: /as holograms | /as admin map <create|setstart|setfinish|addwaypoint|clearwaypoints|setreward|list> ..."));
+            player.sendMessage(Message.raw("Usage: /as holograms | /as admin map <create|setstart|setfinish|addwaypoint|clearwaypoints|setreward|setprice|setorder|list> ... | /as admin holo <map|delete> ..."));
             return;
         }
         if (args.length == 1) {
@@ -76,19 +77,14 @@ public class AscendAdminCommand extends AbstractAsyncCommand {
             return;
         }
         if (args.length < 2) {
-            player.sendMessage(Message.raw("Usage: /as admin map <create|setstart|setfinish|addwaypoint|clearwaypoints|setreward|list> ..."));
+            player.sendMessage(Message.raw("Usage: /as admin map <create|setstart|setfinish|addwaypoint|clearwaypoints|setreward|setprice|setorder|list> ... | /as admin holo <map|delete> ..."));
             return;
         }
         String category = args[1].toLowerCase();
-        if (!"map".equals(category)) {
-            player.sendMessage(Message.raw("Unknown admin category. Use: /as admin map ..."));
+        if (!"map".equals(category) && !"holo".equals(category)) {
+            player.sendMessage(Message.raw("Unknown admin category. Use: /as admin map ... or /as admin holo ..."));
             return;
         }
-        if (args.length < 3) {
-            player.sendMessage(Message.raw("Usage: /as admin map <create|setstart|setfinish|addwaypoint|clearwaypoints|setreward|list> ..."));
-            return;
-        }
-        String action = args[2].toLowerCase();
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         if (plugin == null) {
             return;
@@ -97,6 +93,15 @@ public class AscendAdminCommand extends AbstractAsyncCommand {
         if (mapStore == null) {
             return;
         }
+        if ("holo".equals(category)) {
+            handleHoloCommand(player, ref, store, mapStore, args);
+            return;
+        }
+        if (args.length < 3) {
+            player.sendMessage(Message.raw("Usage: /as admin map <create|setstart|setfinish|addwaypoint|clearwaypoints|setreward|setprice|setorder|list> ..."));
+            return;
+        }
+        String action = args[2].toLowerCase();
         switch (action) {
             case "create" -> handleCreateMap(player, store, mapStore, args);
             case "setstart" -> handleSetStart(player, ref, store, mapStore, args);
@@ -104,8 +109,10 @@ public class AscendAdminCommand extends AbstractAsyncCommand {
             case "addwaypoint" -> handleAddWaypoint(player, ref, store, mapStore, args);
             case "clearwaypoints" -> handleClearWaypoints(player, mapStore, args);
             case "setreward" -> handleSetReward(player, mapStore, args);
+            case "setprice" -> handleSetPrice(player, mapStore, args);
+            case "setorder" -> handleSetOrder(player, mapStore, args);
             case "list" -> handleListMaps(player, mapStore);
-            default -> player.sendMessage(Message.raw("Unknown action. Use: /as admin map <create|setstart|setfinish|addwaypoint|clearwaypoints|setreward|list> ..."));
+            default -> player.sendMessage(Message.raw("Unknown action. Use: /as admin map <create|setstart|setfinish|addwaypoint|clearwaypoints|setreward|setprice|setorder|list> ..."));
         }
     }
 
@@ -151,13 +158,21 @@ public class AscendAdminCommand extends AbstractAsyncCommand {
 
     private void handleCreateMap(Player player, Store<EntityStore> store, AscendMapStore mapStore, String[] args) {
         if (args.length < 5) {
-            player.sendMessage(Message.raw("Usage: /as admin map create <id> <name> <reward>"));
+            player.sendMessage(Message.raw("Usage: /as admin map create <id> <name> <reward> [price] [order]"));
             return;
         }
         String id = args[3];
         String name = args[4];
         long reward = parseLong(player, args, 5, 0L, "Reward");
         if (reward < 0) {
+            return;
+        }
+        long price = parseLong(player, args, 6, 0L, "Price");
+        if (price < 0) {
+            return;
+        }
+        int order = (int) parseLong(player, args, 7, resolveNextOrder(mapStore), "Order");
+        if (order < 0) {
             return;
         }
         if (mapStore.getMap(id) != null) {
@@ -167,14 +182,14 @@ public class AscendAdminCommand extends AbstractAsyncCommand {
         AscendMap map = new AscendMap();
         map.setId(id);
         map.setName(name);
-        map.setPrice(0L);
+        map.setPrice(price);
         map.setRobotPrice(0L);
         map.setBaseReward(reward);
         map.setBaseRunTimeMs(30000L);
         map.setStorageCapacity((int) AscendConstants.DEFAULT_ROBOT_STORAGE);
         World world = store.getExternalData().getWorld();
         map.setWorld(world != null ? world.getName() : "Ascend");
-        map.setDisplayOrder(resolveNextOrder(mapStore));
+        map.setDisplayOrder(order);
         mapStore.saveMap(map);
         player.sendMessage(Message.raw("Ascend map created: " + id));
     }
@@ -295,6 +310,44 @@ public class AscendAdminCommand extends AbstractAsyncCommand {
         player.sendMessage(Message.raw("Reward updated for map: " + map.getId()));
     }
 
+    private void handleSetPrice(Player player, AscendMapStore mapStore, String[] args) {
+        if (args.length < 5) {
+            player.sendMessage(Message.raw("Usage: /as admin map setprice <id> <price>"));
+            return;
+        }
+        AscendMap map = mapStore.getMap(args[3]);
+        if (map == null) {
+            player.sendMessage(Message.raw("Map not found: " + args[3]));
+            return;
+        }
+        long price = parseLong(player, args, 4, map.getPrice(), "Price");
+        if (price < 0) {
+            return;
+        }
+        map.setPrice(price);
+        mapStore.saveMap(map);
+        player.sendMessage(Message.raw("Price updated for map: " + map.getId()));
+    }
+
+    private void handleSetOrder(Player player, AscendMapStore mapStore, String[] args) {
+        if (args.length < 5) {
+            player.sendMessage(Message.raw("Usage: /as admin map setorder <id> <order>"));
+            return;
+        }
+        AscendMap map = mapStore.getMap(args[3]);
+        if (map == null) {
+            player.sendMessage(Message.raw("Map not found: " + args[3]));
+            return;
+        }
+        int order = (int) parseLong(player, args, 4, map.getDisplayOrder(), "Order");
+        if (order < 0) {
+            return;
+        }
+        map.setDisplayOrder(order);
+        mapStore.saveMap(map);
+        player.sendMessage(Message.raw("Order updated for map: " + map.getId()));
+    }
+
     private void handleListMaps(Player player, AscendMapStore mapStore) {
         List<AscendMap> maps = mapStore.listMaps();
         if (maps.isEmpty()) {
@@ -326,5 +379,91 @@ public class AscendAdminCommand extends AbstractAsyncCommand {
             max = Math.max(max, map.getDisplayOrder());
         }
         return max + 1;
+    }
+
+    private void handleHoloCommand(Player player, Ref<EntityStore> ref, Store<EntityStore> store,
+                                   AscendMapStore mapStore, String[] args) {
+        if (!HylogramsBridge.isAvailable()) {
+            player.sendMessage(Message.raw("Hylograms plugin not available."));
+            return;
+        }
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        AscendHologramManager manager = plugin != null ? plugin.getHologramManager() : null;
+        if (manager == null) {
+            player.sendMessage(Message.raw("Hologram manager not available."));
+            return;
+        }
+        if (args.length < 3) {
+            player.sendMessage(Message.raw("Usage: /as admin holo <map|delete> ..."));
+            return;
+        }
+        String action = args[2].toLowerCase();
+        switch (action) {
+            case "map" -> handleHoloMap(player, ref, store, mapStore, manager, args);
+            case "delete" -> handleHoloDelete(player, store, manager, args);
+            default -> player.sendMessage(Message.raw("Usage: /as admin holo <map|delete> ..."));
+        }
+    }
+
+    private void handleHoloMap(Player player, Ref<EntityStore> ref, Store<EntityStore> store,
+                               AscendMapStore mapStore, AscendHologramManager manager, String[] args) {
+        if (args.length < 4) {
+            player.sendMessage(Message.raw("Usage: /as admin holo map <id>"));
+            return;
+        }
+        AscendMap map = mapStore.getMap(args[3]);
+        if (map == null) {
+            player.sendMessage(Message.raw("Map not found: " + args[3]));
+            return;
+        }
+        Vector3d pos = resolvePlayerPosition(player, ref, store);
+        if (pos == null) {
+            return;
+        }
+        String worldName = resolveWorldName(store);
+        boolean updated = manager.createOrUpdateMapInfoHolo(map, store, pos, worldName);
+        if (updated) {
+            player.sendMessage(Message.raw("Map hologram saved for: " + map.getId()));
+        } else {
+            player.sendMessage(Message.raw("Failed to save map hologram."));
+        }
+    }
+
+    private void handleHoloDelete(Player player, Store<EntityStore> store,
+                                  AscendHologramManager manager, String[] args) {
+        if (args.length < 4) {
+            player.sendMessage(Message.raw("Usage: /as admin holo delete <map> <id>"));
+            return;
+        }
+        String type = args[3].toLowerCase();
+        switch (type) {
+            case "map" -> {
+                if (args.length < 5) {
+                    player.sendMessage(Message.raw("Usage: /as admin holo delete " + type + " <id>"));
+                    return;
+                }
+                boolean removed = manager.deleteMapInfoHolo(args[4], store);
+                if (removed) {
+                    player.sendMessage(Message.raw("Deleted map hologram for map: " + args[4]));
+                } else {
+                    player.sendMessage(Message.raw("No map hologram found for map: " + args[4]));
+                }
+            }
+            default -> player.sendMessage(Message.raw("Usage: /as admin holo delete <map> <id>"));
+        }
+    }
+
+    private Vector3d resolvePlayerPosition(Player player, Ref<EntityStore> ref, Store<EntityStore> store) {
+        TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
+        if (transform == null || transform.getPosition() == null) {
+            player.sendMessage(Message.raw("Could not read your position."));
+            return null;
+        }
+        return transform.getPosition();
+    }
+
+    private String resolveWorldName(Store<EntityStore> store) {
+        World world = store.getExternalData().getWorld();
+        return world != null ? world.getName() : null;
     }
 }

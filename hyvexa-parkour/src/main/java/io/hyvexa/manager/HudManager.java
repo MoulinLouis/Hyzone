@@ -2,6 +2,7 @@ package io.hyvexa.manager;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.protocol.packets.interface_.HudComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -199,6 +200,7 @@ public class HudManager {
     void attachHud(PlayerRef playerRef, Player player, RunHud hud, boolean records) {
         runHudIsRecords.put(playerRef.getUuid(), records);
         player.getHudManager().setCustomHud(playerRef, hud);
+        player.getHudManager().hideHudComponents(playerRef, HudComponent.Compass);
         hud.resetCache();
         hud.show();
     }
@@ -254,6 +256,7 @@ public class HudManager {
         }
         HiddenRunHud hud = getOrCreateHiddenHud(playerRef);
         player.getHudManager().setCustomHud(playerRef, hud);
+        player.getHudManager().hideHudComponents(playerRef, HudComponent.Compass);
     }
 
     private HiddenRunHud getOrCreateHiddenHud(PlayerRef playerRef) {

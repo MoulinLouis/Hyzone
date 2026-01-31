@@ -101,7 +101,9 @@ public class AscendCommand extends AbstractAsyncCommand {
     private void showStatus(Player player, PlayerRef playerRef) {
         AscendPlayerStore playerStore = ParkourAscendPlugin.getInstance().getPlayerStore();
         long coins = playerStore.getCoins(playerRef.getUuid());
-        player.sendMessage(Message.raw("[Ascend] Your coins: " + coins).color(SystemMessageUtils.PRIMARY_TEXT));
+        long pending = playerStore.getTotalPendingCoins(playerRef.getUuid());
+        player.sendMessage(Message.raw("[Ascend] Coins: " + coins + " | Pending: " + pending)
+            .color(SystemMessageUtils.PRIMARY_TEXT));
     }
 
     private void openMapMenu(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -122,27 +124,13 @@ public class AscendCommand extends AbstractAsyncCommand {
 
     private void handleCollect(Player player, PlayerRef playerRef) {
         AscendPlayerStore playerStore = ParkourAscendPlugin.getInstance().getPlayerStore();
-        var progress = playerStore.getPlayer(playerRef.getUuid());
-
-        if (progress == null) {
-            player.sendMessage(Message.raw("[Ascend] No earnings to collect.").color(SystemMessageUtils.SECONDARY));
-            return;
-        }
-
-        long totalPending = 0;
-        for (var mapProgress : progress.getMapProgress().values()) {
-            totalPending += mapProgress.getPendingCoins();
-            mapProgress.setPendingCoins(0);
-        }
-
+        long totalPending = playerStore.collectPendingCoins(playerRef.getUuid());
         if (totalPending <= 0) {
             player.sendMessage(Message.raw("[Ascend] No earnings to collect.").color(SystemMessageUtils.SECONDARY));
             return;
         }
-
-        progress.addCoins(totalPending);
-        playerStore.markDirty(playerRef.getUuid());
-
-        player.sendMessage(Message.raw("[Ascend] Collected " + totalPending + " coins!").color(SystemMessageUtils.SUCCESS));
+        player.sendMessage(Message.raw("[Ascend] Collected " + totalPending + " coins!")
+            .color(SystemMessageUtils.SUCCESS));
     }
+
 }

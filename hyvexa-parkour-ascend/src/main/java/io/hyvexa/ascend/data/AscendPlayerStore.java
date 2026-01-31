@@ -113,6 +113,71 @@ public class AscendPlayerStore {
         return progress != null ? progress.getCoins() : 0L;
     }
 
+    public long getTotalPendingCoins(UUID playerId) {
+        AscendPlayerProgress progress = players.get(playerId);
+        if (progress == null) {
+            return 0L;
+        }
+        long total = 0L;
+        for (AscendPlayerProgress.MapProgress mapProgress : progress.getMapProgress().values()) {
+            total += mapProgress.getPendingCoins();
+        }
+        return total;
+    }
+
+    public long collectPendingCoins(UUID playerId) {
+        AscendPlayerProgress progress = players.get(playerId);
+        if (progress == null) {
+            return 0L;
+        }
+        long total = 0L;
+        for (AscendPlayerProgress.MapProgress mapProgress : progress.getMapProgress().values()) {
+            long pending = mapProgress.getPendingCoins();
+            if (pending <= 0L) {
+                continue;
+            }
+            total += pending;
+            mapProgress.setPendingCoins(0L);
+        }
+        if (total > 0L) {
+            progress.addCoins(total);
+            markDirty(playerId);
+        }
+        return total;
+    }
+
+    public AscendPlayerProgress.MapProgress getMapProgress(UUID playerId, String mapId) {
+        AscendPlayerProgress progress = players.get(playerId);
+        if (progress == null) {
+            return null;
+        }
+        return progress.getMapProgress().get(mapId);
+    }
+
+    public AscendPlayerProgress.MapProgress getOrCreateMapProgress(UUID playerId, String mapId) {
+        AscendPlayerProgress progress = getOrCreatePlayer(playerId);
+        return progress.getOrCreateMapProgress(mapId);
+    }
+
+    public boolean setMapUnlocked(UUID playerId, String mapId, boolean unlocked) {
+        AscendPlayerProgress.MapProgress mapProgress = getOrCreateMapProgress(playerId, mapId);
+        if (mapProgress.isUnlocked() == unlocked) {
+            return false;
+        }
+        mapProgress.setUnlocked(unlocked);
+        markDirty(playerId);
+        return true;
+    }
+
+    public void addPendingCoins(UUID playerId, String mapId, long amount) {
+        if (amount <= 0L) {
+            return;
+        }
+        AscendPlayerProgress.MapProgress mapProgress = getOrCreateMapProgress(playerId, mapId);
+        mapProgress.addPendingCoins(amount);
+        markDirty(playerId);
+    }
+
     public void addCoins(UUID playerId, long amount) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
         progress.addCoins(amount);

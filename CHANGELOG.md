@@ -1,5 +1,10 @@
 # Changelog
 
+- Add an Ascend top banner HUD bar with colored multiplier slots and separators.
+- Hide the default compass HUD component across Hub, Parkour, and Ascend.
+- Add Ascend hologram support for map info display in-world.
+- Expand Ascend MVP with map price/order configuration, pending-coin collection, unlock gating, and HUD coin/pending display.
+- Refocused ASCEND_MODULE_SUMMARY.md to only cover the Ascend module contents.
 - Update the leaderboard hologram to show position, name, and maps completed.
 - Add /pk admin hologram refresh to manually update the leaderboard hologram.
 - Expose Hylograms API wrappers (builder, hologram, interactions) through HylogramsBridge.

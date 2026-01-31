@@ -4,6 +4,7 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.protocol.packets.interface_.HudComponent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
@@ -157,6 +158,7 @@ public class HyvexaHubPlugin extends JavaPlugin {
             }
             HubHud hud = hubHuds.computeIfAbsent(playerRef.getUuid(), ignored -> new HubHud(playerRef));
             player.getHudManager().setCustomHud(playerRef, hud);
+            player.getHudManager().hideHudComponents(playerRef, HudComponent.Compass);
             hud.resetCache();
             hud.show();
             hud.applyStaticText();
@@ -245,6 +247,7 @@ public class HyvexaHubPlugin extends JavaPlugin {
                     Player player = context.store.getComponent(context.ref, Player.getComponentType());
                     if (player != null) {
                         player.getHudManager().setCustomHud(context.playerRef, hud);
+                        player.getHudManager().hideHudComponents(context.playerRef, HudComponent.Compass);
                     }
                     long readyAt = hubHudReadyAt.getOrDefault(playerId, Long.MAX_VALUE);
                     if (System.currentTimeMillis() < readyAt) {
