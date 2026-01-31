@@ -19,6 +19,7 @@ import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 import io.hyvexa.ascend.ui.AscendMapSelectPage;
 import io.hyvexa.ascend.util.AscendModeGate;
+import io.hyvexa.common.util.CommandUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
 
 import javax.annotation.Nonnull;
@@ -60,7 +61,7 @@ public class AscendCommand extends AbstractAsyncCommand {
                 return;
             }
 
-            String[] args = getArgs(ctx);
+            String[] args = CommandUtils.getArgs(ctx);
 
             if (args.length == 0) {
                 openMapMenu(player, playerRef, ref, store);
@@ -74,31 +75,6 @@ public class AscendCommand extends AbstractAsyncCommand {
                 default -> ctx.sendMessage(Message.raw("Unknown subcommand. Use: /ascend, /ascend stats, /ascend rebirth"));
             }
         }, world);
-    }
-
-    private String[] getArgs(CommandContext ctx) {
-        String input = ctx.getInputString();
-        if (input == null || input.trim().isEmpty()) {
-            return new String[0];
-        }
-        String[] tokens = input.trim().split("\\s+");
-        if (tokens.length == 0) {
-            return tokens;
-        }
-        String first = tokens[0];
-        if (first.startsWith("/")) {
-            first = first.substring(1);
-        }
-        String commandName = ctx.getCalledCommand().getName();
-        if (first.equalsIgnoreCase(commandName)) {
-            if (tokens.length == 1) {
-                return new String[0];
-            }
-            String[] trimmed = new String[tokens.length - 1];
-            System.arraycopy(tokens, 1, trimmed, 0, trimmed.length);
-            return trimmed;
-        }
-        return tokens;
     }
 
     private void showStatus(Player player, PlayerRef playerRef) {

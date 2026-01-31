@@ -4,27 +4,25 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class RobotState {
 
     private final UUID ownerId;
     private final String mapId;
-    private Ref<EntityStore> entityRef;
-    private int currentWaypointIndex;
-    private long lastTickMs;
-    private long waypointReachedMs;
-    private boolean waiting;
-    private long runsCompleted;
-    private int robotCount;
-    private long lastCompletionMs;
+    private volatile Ref<EntityStore> entityRef;
+    private final AtomicInteger currentWaypointIndex = new AtomicInteger(0);
+    private final AtomicLong lastTickMs = new AtomicLong(System.currentTimeMillis());
+    private final AtomicLong waypointReachedMs = new AtomicLong(0);
+    private volatile boolean waiting;
+    private final AtomicLong runsCompleted = new AtomicLong(0);
+    private final AtomicInteger robotCount = new AtomicInteger(0);
+    private final AtomicLong lastCompletionMs = new AtomicLong(0);
 
     public RobotState(UUID ownerId, String mapId) {
         this.ownerId = ownerId;
         this.mapId = mapId;
-        this.currentWaypointIndex = 0;
-        this.lastTickMs = System.currentTimeMillis();
-        this.waiting = false;
-        this.runsCompleted = 0;
     }
 
     public UUID getOwnerId() {
@@ -44,31 +42,31 @@ public class RobotState {
     }
 
     public int getCurrentWaypointIndex() {
-        return currentWaypointIndex;
+        return currentWaypointIndex.get();
     }
 
     public void setCurrentWaypointIndex(int index) {
-        this.currentWaypointIndex = index;
+        this.currentWaypointIndex.set(index);
     }
 
     public void incrementWaypoint() {
-        this.currentWaypointIndex++;
+        this.currentWaypointIndex.incrementAndGet();
     }
 
     public long getLastTickMs() {
-        return lastTickMs;
+        return lastTickMs.get();
     }
 
     public void setLastTickMs(long lastTickMs) {
-        this.lastTickMs = lastTickMs;
+        this.lastTickMs.set(lastTickMs);
     }
 
     public long getWaypointReachedMs() {
-        return waypointReachedMs;
+        return waypointReachedMs.get();
     }
 
     public void setWaypointReachedMs(long ms) {
-        this.waypointReachedMs = ms;
+        this.waypointReachedMs.set(ms);
     }
 
     public boolean isWaiting() {
@@ -80,37 +78,37 @@ public class RobotState {
     }
 
     public long getRunsCompleted() {
-        return runsCompleted;
+        return runsCompleted.get();
     }
 
     public void incrementRunsCompleted() {
-        this.runsCompleted++;
+        this.runsCompleted.incrementAndGet();
     }
 
     public void addRunsCompleted(long amount) {
         if (amount > 0L) {
-            this.runsCompleted += amount;
+            this.runsCompleted.addAndGet(amount);
         }
     }
 
     public int getRobotCount() {
-        return robotCount;
+        return robotCount.get();
     }
 
     public void setRobotCount(int robotCount) {
-        this.robotCount = Math.max(0, robotCount);
+        this.robotCount.set(Math.max(0, robotCount));
     }
 
     public long getLastCompletionMs() {
-        return lastCompletionMs;
+        return lastCompletionMs.get();
     }
 
     public void setLastCompletionMs(long lastCompletionMs) {
-        this.lastCompletionMs = lastCompletionMs;
+        this.lastCompletionMs.set(lastCompletionMs);
     }
 
     public void resetForNewRun() {
-        this.currentWaypointIndex = 0;
-        this.waypointReachedMs = 0;
+        this.currentWaypointIndex.set(0);
+        this.waypointReachedMs.set(0);
     }
 }

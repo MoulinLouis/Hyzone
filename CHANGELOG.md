@@ -1,5 +1,15 @@
 # Changelog
 
+- Refactor HyvexaPlugin to extract manager classes: LeaderboardHologramManager, CollisionManager, InventorySyncManager, WorldMapManager, ChatFormatter.
+- Make DatabaseManager initialization thread-safe with synchronized block and volatile fields.
+- Make RobotState thread-safe using AtomicInteger and AtomicLong for concurrent field access.
+- Fix ProgressStore total XP cache race condition using AtomicLong.compareAndSet.
+- Add stack traces to all exception logging in HyvexaPlugin for better debugging.
+- Add DatabaseRetry utility for automatic retry of database operations with exponential backoff.
+- Extract CommandUtils to hyvexa-core for shared command argument parsing.
+- Extract MapUnlockHelper for consistent map unlock logic in Ascend UI.
+- Add method caching to HylogramsBridge for better reflection performance.
+- Create ParkourTimingConstants with documented timing and interval values.
 - Improve population history accuracy by sampling the live Universe count and bucket entries for clearer visualization.
 - Replace the population history list with a horizontal scrolling bar chart.
 - Restore HUD and duel tick intervals to 100ms to reduce client update load.

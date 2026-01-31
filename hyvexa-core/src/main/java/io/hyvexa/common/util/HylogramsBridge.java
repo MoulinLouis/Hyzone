@@ -13,13 +13,16 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class HylogramsBridge {
     private static final String HYLOGRAMS_GROUP = "ehko";
     private static final String HYLOGRAMS_NAME = "Hylograms";
     private static final String HYLOGRAMS_API_CLASS = "dev.ehko.hylograms.api.HologramsAPI";
     private static final String HYLOGRAMS_INTERACTION_CLASS = "dev.ehko.hylograms.api.HologramInteractionCallback";
+    private static final ConcurrentHashMap<String, Method> METHOD_CACHE = new ConcurrentHashMap<>();
 
     private HylogramsBridge() {
     }
@@ -368,7 +371,7 @@ public final class HylogramsBridge {
 
         private Object invoke(String methodName, Class<?>[] paramTypes, Object... args) {
             try {
-                Method method = handle.getClass().getMethod(methodName, paramTypes);
+                Method method = getCachedMethod(handle.getClass(), methodName, paramTypes);
                 return method.invoke(handle, args);
             } catch (ReflectiveOperationException e) {
                 throw new IllegalStateException("Failed to invoke Hylograms hologram method: " + methodName, e);
@@ -435,7 +438,7 @@ public final class HylogramsBridge {
 
         private Object invoke(String methodName, Class<?>[] paramTypes, Object... args) {
             try {
-                Method method = handle.getClass().getMethod(methodName, paramTypes);
+                Method method = getCachedMethod(handle.getClass(), methodName, paramTypes);
                 return method.invoke(handle, args);
             } catch (ReflectiveOperationException e) {
                 throw new IllegalStateException("Failed to invoke Hylograms builder method: " + methodName, e);
@@ -446,7 +449,7 @@ public final class HylogramsBridge {
     private static Object invokeStatic(String methodName, Class<?>[] paramTypes, Object... args) {
         Class<?> apiClass = resolveApiClass();
         try {
-            Method method = apiClass.getMethod(methodName, paramTypes);
+            Method method = getCachedMethod(apiClass, methodName, paramTypes);
             return method.invoke(null, args);
         } catch (ReflectiveOperationException e) {
             throw new IllegalStateException("Failed to invoke Hylograms API method: " + methodName, e);
@@ -475,6 +478,17 @@ public final class HylogramsBridge {
         } catch (ClassNotFoundException e) {
             throw new IllegalStateException("Hylograms API is not available at runtime.", e);
         }
+    }
+
+    private static Method getCachedMethod(Class<?> clazz, String methodName, Class<?>[] paramTypes) {
+        String cacheKey = clazz.getName() + "#" + methodName + "#" + Arrays.toString(paramTypes);
+        return METHOD_CACHE.computeIfAbsent(cacheKey, k -> {
+            try {
+                return clazz.getMethod(methodName, paramTypes);
+            } catch (NoSuchMethodException e) {
+                throw new IllegalStateException("Method not found: " + methodName, e);
+            }
+        });
     }
 
     private static ClassLoader resolveHylogramsClassLoader() {

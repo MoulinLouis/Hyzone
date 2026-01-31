@@ -2,6 +2,7 @@ package io.hyvexa.parkour.data;
 
 import com.hypixel.hytale.logger.HytaleLogger;
 import io.hyvexa.core.db.DatabaseManager;
+import io.hyvexa.core.db.DatabaseRetry;
 import com.hypixel.hytale.server.core.HytaleServer;
 import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.parkour.ParkourConstants;
@@ -21,6 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -40,7 +42,7 @@ public class ProgressStore {
     private final AtomicBoolean saveQueued = new AtomicBoolean(false);
     private final AtomicReference<ScheduledFuture<?>> saveFuture = new AtomicReference<>();
     private final ReadWriteLock fileLock = new ReentrantReadWriteLock();
-    private volatile long cachedTotalXp = -1L;
+    private final AtomicLong cachedTotalXp = new AtomicLong(-1L);
 
     public ProgressStore() {
     }
@@ -300,16 +302,20 @@ public class ProgressStore {
             ON DUPLICATE KEY UPDATE best_time_ms = LEAST(best_time_ms, VALUES(best_time_ms))
             """;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.setString(1, playerId.toString());
-            stmt.setString(2, mapId);
-            stmt.setLong(3, timeMs);
-            stmt.executeUpdate();
+        try {
+            DatabaseRetry.executeWithRetryVoid(() -> {
+                try (Connection conn = DatabaseManager.getInstance().getConnection();
+                     PreparedStatement stmt = conn.prepareStatement(sql)) {
+                    DatabaseManager.applyQueryTimeout(stmt);
+                    stmt.setString(1, playerId.toString());
+                    stmt.setString(2, mapId);
+                    stmt.setLong(3, timeMs);
+                    stmt.executeUpdate();
+                }
+            }, "save completion for " + playerId);
             return true;
         } catch (SQLException e) {
-            LOGGER.at(Level.WARNING).log("Failed to save completion: " + e.getMessage());
+            LOGGER.at(Level.SEVERE).withCause(e).log("Failed to save completion after retries");
             return false;
         }
     }
@@ -706,15 +712,17 @@ public class ProgressStore {
     }
 
     private long getCachedTotalXp(MapStore mapStore) {
-        long cached = cachedTotalXp;
-        if (cached >= 0L) return cached;
-        cached = getTotalPossibleXp(mapStore);
-        cachedTotalXp = cached;
-        return cached;
+        long cached = cachedTotalXp.get();
+        if (cached >= 0L) {
+            return cached;
+        }
+        long computed = getTotalPossibleXp(mapStore);
+        cachedTotalXp.compareAndSet(-1L, computed);
+        return cachedTotalXp.get();
     }
 
     public void invalidateTotalXpCache() {
-        cachedTotalXp = -1L;
+        cachedTotalXp.set(-1L);
     }
 
     private long getPlayerCompletionXp(UUID playerId, MapStore mapStore) {
