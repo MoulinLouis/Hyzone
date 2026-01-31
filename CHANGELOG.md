@@ -1,7 +1,19 @@
 # Changelog
 
+- Improve population history accuracy by sampling the live Universe count and bucket entries for clearer visualization.
+- Replace the population history list with a horizontal scrolling bar chart.
+- Restore HUD and duel tick intervals to 100ms to reduce client update load.
+- Hide the compass HUD once on player ready instead of every HUD tick.
 - Replace Ascend pending-coin rewards with per-map multiplier digits that pay out the digit product on completion, and refresh the HUD/map UI to match.
 - Add three Ascend dev items (Cindercloth/Stormsilk/Cotton) that are granted by default and send a message on right-click.
+- Restore Ascend dev items and the server selector on player ready and when entering the Ascend world.
+- Wire the Cindercloth Ascend dev item to open the /ascend map selector.
+- Rename the Cindercloth dev item to "Open Ascend Menu" with a descriptive tooltip.
+- Add Ascend rebirth tracking with a HUD hint at 1000+ coins and /ascend rebirth to convert coins into rebirth multiplier.
+- Show a dedicated rebirth HUD panel (black background) when players reach 1000+ coins.
+- Expand the rebirth HUD to show "REBIRTH", current->next multiplier, and a large rebirth command hint.
+- Move Ascend coin display to a large centered banner under the top multiplier bar.
+- Add an /as admin landing page with Maps and Admin Panel options, plus a coins admin page to add/remove your Ascend coins.
 - Scale up the Ascend top banner HUD bar for improved readability.
 - Add an Ascend top banner HUD bar with colored multiplier slots and separators.
 - Hide the default compass HUD component across Hub, Parkour, and Ascend.
@@ -439,4 +451,18 @@
 - Increased Support/Store icon sizes and row heights for better alignment.
 - Extended Run HUD background bottom padding/height for the footer.
 - Added /dbreload to reload Parkour/database.json and display sanitized connection settings, including the config path.
+- Added a reusable coin formatter that switches the Ascend HUD coin display to clear scientific notation over 1,000,000,000.
+- Replaced the Ascend HUD info box with the Hub HUD layout, using placeholder hint text and removing the product row.
+- Added a hover highlight on Ascend map selection entries for clearer focus feedback.
+- Added an Ascend map selection robot purchase row with cost display and per-map robot counts.
+- Adjusted Ascend map selection entry layout so map title and details render on separate lines.
+- Integrated the Ascend robot purchase button into the map selection entry with a dedicated side control.
+- Increased Ascend map selection entry text sizes for readability.
+- Increased Ascend map selection entry height to prevent text overflow.
+- Increased Ascend map selection robot button height for clearer label layout.
+- Widened Ascend map selection entries and robot button to prevent text overflow.
+- Rebalanced Ascend map entry widths to expand the robot purchase button for a single-line “+1 Robot” label.
+- Aligned the Ascend map row buttons, added spacing, and matched robot button styling to the map entry.
+- Increased Ascend map selection container size to keep the robot button within bounds.
+- Recentered Ascend map selection entries within the expanded map list container.
 

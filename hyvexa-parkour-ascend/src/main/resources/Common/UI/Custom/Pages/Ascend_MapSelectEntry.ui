@@ -1,30 +1,84 @@
 $C = "../Common.ui";
 
-Button {
-  LayoutMode: Top;
-  Anchor: (Left: 2, Right: 2, Bottom: 6, Height: 52, Width: 470);
-  Background: $C.@InputBoxBackground;
-  Padding: (Left: 10, Right: 10, Top: 6);
-  Style: ButtonStyle(
-    Sounds: $C.@ButtonSounds,
-  );
+Group {
+  LayoutMode: Left;
+  Anchor: (Left: 2, Right: 2, Bottom: 6, Height: 72, Width: 520);
+  Background: #000000(0.0);
 
-  Label #MapName {
-    Style: (
-      FontSize: 15,
-      RenderBold: true,
-      TextColor: #93844c
+  Button #SelectButton {
+    Anchor: (Left: 0, Top: 0, Width: 420, Height: 72);
+    Background: $C.@InputBoxBackground;
+    Padding: (Left: 12, Right: 12, Top: 6, Bottom: 6);
+    Style: ButtonStyle(
+      Default: (Background: $C.@InputBoxBackground),
+      Hovered: (Background: #2b343b(0.85)),
+      Pressed: (Background: #1f262b(0.9)),
+      Sounds: $C.@ButtonSounds,
     );
-    Text: "Map";
+
+    Label #MapName {
+      Style: (
+        FontSize: 18,
+        RenderBold: true,
+        TextColor: #93844c
+      );
+      Text: "Map";
+    }
+
+    Label #MapStatus {
+      Anchor: (Top: 22);
+      Style: (
+        FontSize: 14,
+        TextColor: #9fb0ba
+      );
+      Text: "Status";
+    }
+
+    Label #RobotCountText {
+      Anchor: (Top: 44);
+      Style: (
+        FontSize: 14,
+        TextColor: #e7f1f4,
+        RenderBold: true
+      );
+      Text: "Robots: 0";
+    }
+
+    Label #RobotPriceText {
+      Anchor: (Top: 44, Left: 120);
+      Style: (
+        FontSize: 14,
+        TextColor: #9fb0ba
+      );
+      Text: "Cost: 0 coins";
+    }
   }
 
-  Label #MapStatus {
-    Anchor: (Top: 2);
-    Style: (
-      FontSize: 12,
-      TextColor: #9fb0ba
-    );
-    Text: "Status";
+  Group {
+    Anchor: (Width: 8);
   }
 
+  Button #RobotBuyButton {
+    Anchor: (Top: 0, Width: 92, Height: 72);
+    Padding: (Left: 6, Right: 6, Top: 6, Bottom: 6);
+    Background: $C.@InputBoxBackground;
+    Style: ButtonStyle(
+      Default: (Background: $C.@InputBoxBackground),
+      Hovered: (Background: #2b343b(0.85)),
+      Pressed: (Background: #1f262b(0.9)),
+      Sounds: $C.@ButtonSounds,
+    );
+
+    Label {
+      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+      Style: (
+        FontSize: 14,
+        TextColor: #ffd166,
+        RenderBold: true,
+        HorizontalAlignment: Center,
+        VerticalAlignment: Center
+      );
+      Text: "+1 Robot";
+    }
+  }
 }

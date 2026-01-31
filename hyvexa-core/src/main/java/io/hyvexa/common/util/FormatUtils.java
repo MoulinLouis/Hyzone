@@ -32,6 +32,24 @@ public final class FormatUtils {
         return String.format(Locale.ROOT, "%ds", seconds);
     }
 
+    public static String formatCoinsForHud(long coins) {
+        long safeCoins = Math.max(0L, coins);
+        if (safeCoins <= 1_000_000_000L) {
+            return String.valueOf(safeCoins);
+        }
+        double value = safeCoins;
+        int exponent = (int) Math.floor(Math.log10(value));
+        double mantissa = value / Math.pow(10.0, exponent);
+        double rounded = Math.round(mantissa * 100.0) / 100.0;
+        if (rounded >= 10.0) {
+            rounded /= 10.0;
+            exponent += 1;
+        }
+        String mantissaText = String.format(Locale.ROOT, "%.2f", rounded);
+        mantissaText = mantissaText.replaceAll("\\.?0+$", "");
+        return mantissaText + "e" + exponent;
+    }
+
     public static String normalizeCategory(String category) {
         if (category == null || category.isBlank()) {
             return "Beginner";
