@@ -69,12 +69,15 @@ public class AscendMapSelectPage extends BaseAscendPage {
             sendMessage(store, ref, "Map not found.");
             return;
         }
-        if (map.getStartX() == 0 && map.getStartY() == 0 && map.getStartZ() == 0) {
-            sendMessage(store, ref, "Map '" + mapId + "' has no start set.");
-            return;
-        }
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (playerRef == null) {
+            return;
+        }
+        if (!ensureUnlocked(store, ref, playerRef, mapId, map)) {
+            return;
+        }
+        if (map.getStartX() == 0 && map.getStartY() == 0 && map.getStartZ() == 0) {
+            sendMessage(store, ref, "Map '" + mapId + "' has no start set.");
             return;
         }
         if (runTracker != null) {
@@ -99,14 +102,31 @@ public class AscendMapSelectPage extends BaseAscendPage {
         maps.sort(Comparator.comparingInt(AscendMap::getDisplayOrder)
             .thenComparing(map -> map.getName() != null ? map.getName() : map.getId(),
                 String.CASE_INSENSITIVE_ORDER));
-        AscendPlayerProgress progress = playerStore.getPlayer(playerRef.getUuid());
+        AscendPlayerProgress progress = playerStore.getOrCreatePlayer(playerRef.getUuid());
         int index = 0;
         for (AscendMap map : maps) {
             commandBuilder.append("#MapCards", "Pages/Ascend_MapSelectEntry.ui");
             String mapName = map.getName() != null && !map.getName().isBlank() ? map.getName() : map.getId();
-            String status = "Reward: " + map.getBaseReward() + " coins";
-            if (progress != null) {
-                AscendPlayerProgress.MapProgress mapProgress = progress.getMapProgress().get(map.getId());
+            AscendPlayerProgress.MapProgress mapProgress = progress != null
+                ? progress.getMapProgress().get(map.getId())
+                : null;
+            boolean unlocked = map.getPrice() <= 0;
+            if (mapProgress != null && mapProgress.isUnlocked()) {
+                unlocked = true;
+            }
+            if (map.getPrice() <= 0 && (mapProgress == null || !mapProgress.isUnlocked())) {
+                playerStore.setMapUnlocked(playerRef.getUuid(), map.getId(), true);
+                mapProgress = playerStore.getMapProgress(playerRef.getUuid(), map.getId());
+                unlocked = true;
+            }
+            String status;
+            if (!unlocked) {
+                status = "Locked | Price: " + map.getPrice() + " coins";
+            } else {
+                status = "Reward: " + map.getBaseReward() + " coins";
+                if (mapProgress != null && mapProgress.getPendingCoins() > 0) {
+                    status += " | Pending: " + mapProgress.getPendingCoins();
+                }
                 if (mapProgress != null && mapProgress.isCompletedManually()) {
                     status = "Completed | " + status;
                 }
@@ -125,5 +145,31 @@ public class AscendMapSelectPage extends BaseAscendPage {
         if (player != null) {
             player.sendMessage(Message.raw(text));
         }
+    }
+
+    private boolean ensureUnlocked(Store<EntityStore> store, Ref<EntityStore> ref, PlayerRef playerRef,
+                                   String mapId, AscendMap map) {
+        AscendPlayerProgress progress = playerStore.getOrCreatePlayer(playerRef.getUuid());
+        AscendPlayerProgress.MapProgress mapProgress = progress.getOrCreateMapProgress(mapId);
+        if (mapProgress.isUnlocked() || map.getPrice() <= 0) {
+            if (!mapProgress.isUnlocked()) {
+                mapProgress.setUnlocked(true);
+                playerStore.markDirty(playerRef.getUuid());
+            }
+            return true;
+        }
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (playerStore.spendCoins(playerRef.getUuid(), map.getPrice())) {
+            mapProgress.setUnlocked(true);
+            playerStore.markDirty(playerRef.getUuid());
+            if (player != null) {
+                player.sendMessage(Message.raw("[Ascend] Map unlocked for " + map.getPrice() + " coins."));
+            }
+            return true;
+        }
+        if (player != null) {
+            player.sendMessage(Message.raw("[Ascend] Map locked. Need " + map.getPrice() + " coins."));
+        }
+        return false;
     }
 }

@@ -5,14 +5,175 @@ $C.@PageOverlay {
   Group #HudLayer {
     Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
 
+    Group #TopBar {
+      Anchor: (Left: 0, Right: 0, Top: 0, Height: 38);
+      Background: #000000(0.35);
+      LayoutMode: Left;
+      Padding: (Left: 12, Right: 12, Top: 6, Bottom: 0);
+
+      Group {
+        FlexWeight: 1;
+        Label #TopRedValue {
+          Anchor: (Left: 0, Right: 0);
+          Style: (
+            FontSize: 20,
+            TextColor: #ff4d4d,
+            RenderBold: true,
+            HorizontalAlignment: Center
+          );
+          Text: "0";
+        }
+      }
+
+      Group {
+        FlexWeight: 1;
+        Label #TopSep1 {
+          Anchor: (Left: 0, Right: 0, Top: -1);
+          Style: (
+            FontSize: 20,
+            TextColor: #f2f5f7,
+            RenderBold: true,
+            HorizontalAlignment: Center
+          );
+          Text: "x";
+        }
+      }
+
+      Group {
+        FlexWeight: 1;
+        Label #TopOrangeValue {
+          Anchor: (Left: 0, Right: 0);
+          Style: (
+            FontSize: 20,
+            TextColor: #ff9f1c,
+            RenderBold: true,
+            HorizontalAlignment: Center
+          );
+          Text: "0";
+        }
+      }
+
+      Group {
+        FlexWeight: 1;
+        Label #TopSep2 {
+          Anchor: (Left: 0, Right: 0, Top: -1);
+          Style: (
+            FontSize: 20,
+            TextColor: #f2f5f7,
+            RenderBold: true,
+            HorizontalAlignment: Center
+          );
+          Text: "x";
+        }
+      }
+
+      Group {
+        FlexWeight: 1;
+        Label #TopYellowValue {
+          Anchor: (Left: 0, Right: 0);
+          Style: (
+            FontSize: 20,
+            TextColor: #ffd166,
+            RenderBold: true,
+            HorizontalAlignment: Center
+          );
+          Text: "0";
+        }
+      }
+
+      Group {
+        FlexWeight: 1;
+        Label #TopSep3 {
+          Anchor: (Left: 0, Right: 0, Top: -1);
+          Style: (
+            FontSize: 20,
+            TextColor: #f2f5f7,
+            RenderBold: true,
+            HorizontalAlignment: Center
+          );
+          Text: "x";
+        }
+      }
+
+      Group {
+        FlexWeight: 1;
+        Label #TopGreenValue {
+          Anchor: (Left: 0, Right: 0);
+          Style: (
+            FontSize: 20,
+            TextColor: #62d96b,
+            RenderBold: true,
+            HorizontalAlignment: Center
+          );
+          Text: "0";
+        }
+      }
+
+      Group {
+        FlexWeight: 1;
+        Label #TopSep4 {
+          Anchor: (Left: 0, Right: 0, Top: -1);
+          Style: (
+            FontSize: 20,
+            TextColor: #f2f5f7,
+            RenderBold: true,
+            HorizontalAlignment: Center
+          );
+          Text: "x";
+        }
+      }
+
+      Group {
+        FlexWeight: 1;
+        Label #TopBlueValue {
+          Anchor: (Left: 0, Right: 0);
+          Style: (
+            FontSize: 20,
+            TextColor: #5ac8fa,
+            RenderBold: true,
+            HorizontalAlignment: Center
+          );
+          Text: "0";
+        }
+      }
+
+      Group {
+        FlexWeight: 1;
+        Label #TopSep5 {
+          Anchor: (Left: 0, Right: 0, Top: -1);
+          Style: (
+            FontSize: 20,
+            TextColor: #f2f5f7,
+            RenderBold: true,
+            HorizontalAlignment: Center
+          );
+          Text: "x";
+        }
+      }
+
+      Group {
+        FlexWeight: 1;
+        Label #TopGreyValue {
+          Anchor: (Left: 0, Right: 0);
+          Style: (
+            FontSize: 20,
+            TextColor: #9fb0ba,
+            RenderBold: true,
+            HorizontalAlignment: Center
+          );
+          Text: "0";
+        }
+      }
+    }
+
     Group #RunHudRoot {
-      Anchor: (Right: 20, Top: 400, Width: 320, Height: 80);
+      Anchor: (Right: 20, Top: 400, Width: 320, Height: 140);
       Background: #000000(0.0);
       LayoutMode: Top;
       Padding: (Left: 12, Right: 12, Top: 10, Bottom: 10);
 
       Group #InfoBox {
-        Anchor: (Left: 0, Right: 0, Height: 60);
+        Anchor: (Left: 0, Right: 0, Height: 120);
         Background: #000000(0.4);
         Padding: (Left: 10, Right: 10, Top: 8, Bottom: 8);
         LayoutMode: Top;
@@ -26,6 +187,72 @@ $C.@PageOverlay {
             HorizontalAlignment: Center
           );
           Text: "HYVEXA ASCEND";
+        }
+
+        Group #CoinsRow {
+          Anchor: (Left: 0, Right: 0, Top: 6);
+          LayoutMode: Left;
+
+          Label #CoinsLabel {
+            Anchor: (Width: 80);
+            Style: (
+              FontSize: 16,
+              TextColor: #f2f5f7
+            );
+            Text: "Coins:";
+          }
+
+          Label #CoinsValue {
+            Style: (
+              FontSize: 16,
+              TextColor: #62d96b
+            );
+            Text: "0";
+          }
+        }
+
+        Group #PendingRow {
+          Anchor: (Left: 0, Right: 0, Top: 2);
+          LayoutMode: Left;
+
+          Label #PendingLabel {
+            Anchor: (Width: 80);
+            Style: (
+              FontSize: 16,
+              TextColor: #f2f5f7
+            );
+            Text: "Pending:";
+          }
+
+          Label #PendingValue {
+            Style: (
+              FontSize: 16,
+              TextColor: #ffd166
+            );
+            Text: "0";
+          }
+        }
+
+        Group #MultiplierRow {
+          Anchor: (Left: 0, Right: 0, Top: 2);
+          LayoutMode: Left;
+
+          Label #MultiplierLabel {
+            Anchor: (Width: 80);
+            Style: (
+              FontSize: 16,
+              TextColor: #f2f5f7
+            );
+            Text: "Multiplier:";
+          }
+
+          Label #MultiplierValue {
+            Style: (
+              FontSize: 16,
+              TextColor: #ff7fb0
+            );
+            Text: "x1.00";
+          }
         }
       }
     }

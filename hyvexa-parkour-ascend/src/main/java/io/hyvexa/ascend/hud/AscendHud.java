@@ -7,6 +7,9 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 public class AscendHud extends CustomUIHud {
 
     private String lastStaticKey;
+    private String lastCoinsText;
+    private String lastPendingText;
+    private String lastMultiplierText;
 
     public AscendHud(PlayerRef playerRef) {
         super(playerRef);
@@ -28,7 +31,29 @@ public class AscendHud extends CustomUIHud {
         update(false, commandBuilder);
     }
 
+    public void updateEconomy(long coins, long pending, String multiplierText) {
+        String coinsText = String.valueOf(Math.max(0L, coins));
+        String pendingText = String.valueOf(Math.max(0L, pending));
+        String safeMultiplier = multiplierText != null ? multiplierText : "x1.00";
+        if (coinsText.equals(lastCoinsText)
+            && pendingText.equals(lastPendingText)
+            && safeMultiplier.equals(lastMultiplierText)) {
+            return;
+        }
+        lastCoinsText = coinsText;
+        lastPendingText = pendingText;
+        lastMultiplierText = safeMultiplier;
+        UICommandBuilder commandBuilder = new UICommandBuilder();
+        commandBuilder.set("#CoinsValue.Text", coinsText);
+        commandBuilder.set("#PendingValue.Text", pendingText);
+        commandBuilder.set("#MultiplierValue.Text", safeMultiplier);
+        update(false, commandBuilder);
+    }
+
     public void resetCache() {
         lastStaticKey = null;
+        lastCoinsText = null;
+        lastPendingText = null;
+        lastMultiplierText = null;
     }
 }

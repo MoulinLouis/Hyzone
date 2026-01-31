@@ -20,8 +20,11 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants;
+import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
+import io.hyvexa.ascend.holo.AscendHologramManager;
+import io.hyvexa.common.util.HylogramsBridge;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
@@ -34,6 +37,8 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
     private String mapId = "";
     private String mapName = "";
     private String mapReward = "0";
+    private String mapPrice = "0";
+    private String mapOrder = "0";
     private String mapSearch = "";
     private String selectedMapId = "";
 
@@ -65,6 +70,12 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
         if (data.mapReward != null) {
             mapReward = data.mapReward.trim();
         }
+        if (data.mapPrice != null) {
+            mapPrice = data.mapPrice.trim();
+        }
+        if (data.mapOrder != null) {
+            mapOrder = data.mapOrder.trim();
+        }
         if (data.mapSearch != null) {
             mapSearch = data.mapSearch.trim();
         }
@@ -85,6 +96,8 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
                 mapId = map.getId();
                 mapName = map.getName() != null ? map.getName() : "";
                 mapReward = String.valueOf(map.getBaseReward());
+                mapPrice = String.valueOf(map.getPrice());
+                mapOrder = String.valueOf(map.getDisplayOrder());
             }
             sendRefresh(ref, store);
             return;
@@ -115,6 +128,22 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
         }
         if (data.button.equals(MapData.BUTTON_SET_REWARD)) {
             handleSetReward(ref, store);
+            return;
+        }
+        if (data.button.equals(MapData.BUTTON_SET_PRICE)) {
+            handleSetPrice(ref, store);
+            return;
+        }
+        if (data.button.equals(MapData.BUTTON_SET_ORDER)) {
+            handleSetOrder(ref, store);
+            return;
+        }
+        if (data.button.equals(MapData.BUTTON_CREATE_MAP_HOLO)) {
+            handleCreateMapHolo(ref, store);
+            return;
+        }
+        if (data.button.equals(MapData.BUTTON_DELETE_MAP_HOLO)) {
+            handleDeleteMapHolo(ref, store);
         }
     }
 
@@ -137,18 +166,24 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
         if (reward < 0) {
             return;
         }
+        long price = parsePrice(player);
+        if (price < 0) {
+            return;
+        }
+        int order = parseOrder(player, resolveNextOrder());
         AscendMap map = new AscendMap();
         map.setId(id);
         map.setName(name);
-        map.setPrice(0L);
+        map.setPrice(price);
         map.setRobotPrice(0L);
         map.setBaseReward(reward);
         map.setBaseRunTimeMs(30000L);
         map.setStorageCapacity((int) AscendConstants.DEFAULT_ROBOT_STORAGE);
         World world = store.getExternalData().getWorld();
         map.setWorld(world != null ? world.getName() : "Ascend");
-        map.setDisplayOrder(resolveNextOrder());
+        map.setDisplayOrder(order);
         mapStore.saveMap(map);
+        refreshMapHolos(map, store);
         selectedMapId = id;
         player.sendMessage(Message.raw("Ascend map created: " + id));
         sendRefresh(ref, store);
@@ -168,9 +203,17 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
         if (reward < 0) {
             return;
         }
+        long price = parsePrice(player);
+        if (price < 0) {
+            return;
+        }
+        int order = parseOrder(player, map.getDisplayOrder());
         map.setName(name);
         map.setBaseReward(reward);
+        map.setPrice(price);
+        map.setDisplayOrder(order);
         mapStore.saveMap(map);
+        refreshMapHolos(map, store);
         player.sendMessage(Message.raw("Map updated: " + map.getId()));
         sendRefresh(ref, store);
     }
@@ -200,6 +243,7 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
         World world = store.getExternalData().getWorld();
         map.setWorld(world != null ? world.getName() : map.getWorld());
         mapStore.saveMap(map);
+        refreshMapHolos(map, store);
         player.sendMessage(Message.raw("Start set for map: " + map.getId()));
         sendRefresh(ref, store);
     }
@@ -223,6 +267,7 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
         map.setFinishY(pos.getY());
         map.setFinishZ(pos.getZ());
         mapStore.saveMap(map);
+        refreshMapHolos(map, store);
         player.sendMessage(Message.raw("Finish set for map: " + map.getId()));
         sendRefresh(ref, store);
     }
@@ -245,6 +290,7 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
         AscendMap.Waypoint waypoint = new AscendMap.Waypoint(pos.getX(), pos.getY(), pos.getZ(), false, 0L);
         map.getWaypoints().add(waypoint);
         mapStore.saveMap(map);
+        refreshMapHolos(map, store);
         player.sendMessage(Message.raw("Waypoint added to map: " + map.getId()));
         sendRefresh(ref, store);
     }
@@ -260,6 +306,7 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
         }
         map.getWaypoints().clear();
         mapStore.saveMap(map);
+        refreshMapHolos(map, store);
         player.sendMessage(Message.raw("Cleared waypoints for map: " + map.getId()));
         sendRefresh(ref, store);
     }
@@ -279,8 +326,93 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
         }
         map.setBaseReward(reward);
         mapStore.saveMap(map);
+        refreshMapHolos(map, store);
         player.sendMessage(Message.raw("Reward updated for map: " + map.getId()));
         sendRefresh(ref, store);
+    }
+
+    private void handleSetPrice(Ref<EntityStore> ref, Store<EntityStore> store) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null) {
+            return;
+        }
+        AscendMap map = resolveSelectedMap(player);
+        if (map == null) {
+            return;
+        }
+        long price = parsePrice(player);
+        if (price < 0) {
+            return;
+        }
+        map.setPrice(price);
+        mapStore.saveMap(map);
+        refreshMapHolos(map, store);
+        player.sendMessage(Message.raw("Price updated for map: " + map.getId()));
+        sendRefresh(ref, store);
+    }
+
+    private void handleSetOrder(Ref<EntityStore> ref, Store<EntityStore> store) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null) {
+            return;
+        }
+        AscendMap map = resolveSelectedMap(player);
+        if (map == null) {
+            return;
+        }
+        int order = parseOrder(player, map.getDisplayOrder());
+        map.setDisplayOrder(order);
+        mapStore.saveMap(map);
+        refreshMapHolos(map, store);
+        player.sendMessage(Message.raw("Display order updated for map: " + map.getId()));
+        sendRefresh(ref, store);
+    }
+
+    private void handleCreateMapHolo(Ref<EntityStore> ref, Store<EntityStore> store) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null) {
+            return;
+        }
+        AscendMap map = resolveSelectedMap(player);
+        if (map == null) {
+            return;
+        }
+        AscendHologramManager manager = resolveHologramManager(player);
+        if (manager == null) {
+            return;
+        }
+        Vector3d pos = resolvePlayerPosition(ref, store, player);
+        if (pos == null) {
+            return;
+        }
+        String worldName = resolveWorldName(store);
+        boolean updated = manager.createOrUpdateMapInfoHolo(map, store, pos, worldName);
+        if (updated) {
+            player.sendMessage(Message.raw("Map info hologram saved for: " + map.getId()));
+        } else {
+            player.sendMessage(Message.raw("Failed to save map hologram."));
+        }
+    }
+
+    private void handleDeleteMapHolo(Ref<EntityStore> ref, Store<EntityStore> store) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null) {
+            return;
+        }
+        AscendMap map = resolveSelectedMap(player);
+        if (map == null) {
+            return;
+        }
+        AscendHologramManager manager = resolveHologramManager(player);
+        if (manager == null) {
+            return;
+        }
+        boolean removed = manager.deleteMapInfoHolo(map.getId(), store);
+        if (removed) {
+            player.sendMessage(Message.raw("Removed map hologram for map: " + map.getId()));
+        } else {
+            player.sendMessage(Message.raw("No map hologram found for map: " + map.getId()));
+        }
     }
 
     private AscendMap resolveSelectedMap(Player player) {
@@ -314,6 +446,37 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
         }
     }
 
+    private long parsePrice(Player player) {
+        String raw = mapPrice != null ? mapPrice.trim() : "";
+        if (raw.isEmpty()) {
+            return 0L;
+        }
+        try {
+            long value = Long.parseLong(raw);
+            if (value < 0L) {
+                player.sendMessage(Message.raw("Price must be 0 or higher."));
+                return -1L;
+            }
+            return value;
+        } catch (NumberFormatException e) {
+            player.sendMessage(Message.raw("Price must be a number."));
+            return -1L;
+        }
+    }
+
+    private int parseOrder(Player player, int fallback) {
+        String raw = mapOrder != null ? mapOrder.trim() : "";
+        if (raw.isEmpty()) {
+            return fallback;
+        }
+        try {
+            return Integer.parseInt(raw);
+        } catch (NumberFormatException e) {
+            player.sendMessage(Message.raw("Order must be a number."));
+            return fallback;
+        }
+    }
+
     private int resolveNextOrder() {
         int max = 0;
         for (AscendMap map : mapStore.listMaps()) {
@@ -329,6 +492,10 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
             EventData.of(MapData.KEY_MAP_NAME, "#MapNameField.Value"), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#MapRewardField",
             EventData.of(MapData.KEY_MAP_REWARD, "#MapRewardField.Value"), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#MapPriceField",
+            EventData.of(MapData.KEY_MAP_PRICE, "#MapPriceField.Value"), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#MapOrderField",
+            EventData.of(MapData.KEY_MAP_ORDER, "#MapOrderField.Value"), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#MapSearchField",
             EventData.of(MapData.KEY_MAP_SEARCH, "#MapSearchField.Value"), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CreateButton",
@@ -345,6 +512,14 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
             EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_CLEAR_WAYPOINTS), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SetRewardButton",
             EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_SET_REWARD), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SetPriceButton",
+            EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_SET_PRICE), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SetOrderButton",
+            EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_SET_ORDER), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CreateMapHoloButton",
+            EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_CREATE_MAP_HOLO), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#DeleteMapHoloButton",
+            EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_DELETE_MAP_HOLO), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#RefreshButton",
             EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_REFRESH), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CloseButton",
@@ -355,6 +530,8 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
         commandBuilder.set("#MapIdField.Value", mapId != null ? mapId : "");
         commandBuilder.set("#MapNameField.Value", mapName != null ? mapName : "");
         commandBuilder.set("#MapRewardField.Value", mapReward != null ? mapReward : "0");
+        commandBuilder.set("#MapPriceField.Value", mapPrice != null ? mapPrice : "0");
+        commandBuilder.set("#MapOrderField.Value", mapOrder != null ? mapOrder : "0");
         commandBuilder.set("#MapSearchField.Value", mapSearch != null ? mapSearch : "");
         String selectedText = selectedMapId != null && !selectedMapId.isBlank()
             ? "Selected: " + selectedMapId
@@ -379,10 +556,16 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
                 }
             }
             commandBuilder.append("#MapCards", "Pages/Ascend_MapAdminEntry.ui");
+            commandBuilder.set("#MapCards[" + index + "].Background", "$C.@InputBoxBackground");
             String mapNameLabel = map.getName() != null && !map.getName().isBlank() ? map.getName() : map.getId();
+            boolean isSelected = map.getId().equals(selectedMapId);
+            if (isSelected) {
+                mapNameLabel = ">> " + mapNameLabel;
+                commandBuilder.set("#MapCards[" + index + "].Background", "#253742");
+            }
             commandBuilder.set("#MapCards[" + index + "] #MapName.Text", mapNameLabel);
             commandBuilder.set("#MapCards[" + index + "] #MapStatus.Text",
-                "Reward: " + map.getBaseReward() + " coins");
+                "Reward: " + map.getBaseReward() + " | Price: " + map.getPrice() + " | Order: " + map.getDisplayOrder());
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
                 "#MapCards[" + index + "]",
                 EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_SELECT_PREFIX + map.getId()), false);
@@ -391,11 +574,12 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
     }
 
     private void sendRefresh(Ref<EntityStore> ref, Store<EntityStore> store) {
-        Player player = store.getComponent(ref, Player.getComponentType());
-        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-        if (player != null && playerRef != null) {
-            player.getPageManager().openCustomPage(ref, store, new AscendAdminPage(playerRef, mapStore));
-        }
+        UICommandBuilder commandBuilder = new UICommandBuilder();
+        UIEventBuilder eventBuilder = new UIEventBuilder();
+        populateFields(commandBuilder);
+        buildMapList(commandBuilder, eventBuilder);
+        bindEvents(eventBuilder);
+        this.sendUpdate(commandBuilder, eventBuilder, false);
     }
 
     public static class MapData {
@@ -403,6 +587,8 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
         static final String KEY_MAP_ID = "@MapId";
         static final String KEY_MAP_NAME = "@MapName";
         static final String KEY_MAP_REWARD = "@MapReward";
+        static final String KEY_MAP_PRICE = "@MapPrice";
+        static final String KEY_MAP_ORDER = "@MapOrder";
         static final String KEY_MAP_SEARCH = "@MapSearch";
         static final String BUTTON_SELECT_PREFIX = "Select:";
         static final String BUTTON_CREATE = "CreateMap";
@@ -412,6 +598,10 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
         static final String BUTTON_ADD_WAYPOINT = "AddWaypoint";
         static final String BUTTON_CLEAR_WAYPOINTS = "ClearWaypoints";
         static final String BUTTON_SET_REWARD = "SetReward";
+        static final String BUTTON_SET_PRICE = "SetPrice";
+        static final String BUTTON_SET_ORDER = "SetOrder";
+        static final String BUTTON_CREATE_MAP_HOLO = "CreateMapHolo";
+        static final String BUTTON_DELETE_MAP_HOLO = "DeleteMapHolo";
         static final String BUTTON_REFRESH = "Refresh";
         static final String BUTTON_CLOSE = "Close";
 
@@ -420,6 +610,8 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
             .addField(new KeyedCodec<>(KEY_MAP_ID, Codec.STRING), (data, value) -> data.mapId = value, data -> data.mapId)
             .addField(new KeyedCodec<>(KEY_MAP_NAME, Codec.STRING), (data, value) -> data.mapName = value, data -> data.mapName)
             .addField(new KeyedCodec<>(KEY_MAP_REWARD, Codec.STRING), (data, value) -> data.mapReward = value, data -> data.mapReward)
+            .addField(new KeyedCodec<>(KEY_MAP_PRICE, Codec.STRING), (data, value) -> data.mapPrice = value, data -> data.mapPrice)
+            .addField(new KeyedCodec<>(KEY_MAP_ORDER, Codec.STRING), (data, value) -> data.mapOrder = value, data -> data.mapOrder)
             .addField(new KeyedCodec<>(KEY_MAP_SEARCH, Codec.STRING), (data, value) -> data.mapSearch = value, data -> data.mapSearch)
             .build();
 
@@ -427,6 +619,50 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
         private String mapId;
         private String mapName;
         private String mapReward;
+        private String mapPrice;
+        private String mapOrder;
         private String mapSearch;
+    }
+
+    private AscendHologramManager resolveHologramManager(Player player) {
+        if (!HylogramsBridge.isAvailable()) {
+            if (player != null) {
+                player.sendMessage(Message.raw("Hylograms plugin not available."));
+            }
+            return null;
+        }
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        AscendHologramManager manager = plugin != null ? plugin.getHologramManager() : null;
+        if (manager == null && player != null) {
+            player.sendMessage(Message.raw("Hologram manager not available."));
+        }
+        return manager;
+    }
+
+    private Vector3d resolvePlayerPosition(Ref<EntityStore> ref, Store<EntityStore> store, Player player) {
+        TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
+        if (transform == null || transform.getPosition() == null) {
+            if (player != null) {
+                player.sendMessage(Message.raw("Could not read your position."));
+            }
+            return null;
+        }
+        return transform.getPosition();
+    }
+
+    private String resolveWorldName(Store<EntityStore> store) {
+        World world = store.getExternalData().getWorld();
+        return world != null ? world.getName() : null;
+    }
+
+    private void refreshMapHolos(AscendMap map, Store<EntityStore> store) {
+        if (!HylogramsBridge.isAvailable()) {
+            return;
+        }
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        AscendHologramManager manager = plugin != null ? plugin.getHologramManager() : null;
+        if (manager != null) {
+            manager.refreshMapHolosIfPresent(map, store);
+        }
     }
 }

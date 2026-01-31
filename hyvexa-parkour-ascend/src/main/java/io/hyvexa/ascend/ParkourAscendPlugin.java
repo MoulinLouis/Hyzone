@@ -4,6 +4,7 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.HytaleServer;
+import com.hypixel.hytale.protocol.packets.interface_.HudComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
@@ -20,10 +21,12 @@ import io.hyvexa.ascend.data.AscendDatabaseSetup;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.hud.AscendHud;
+import io.hyvexa.ascend.holo.AscendHologramManager;
 import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
+import io.hyvexa.common.util.HylogramsBridge;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
@@ -47,6 +50,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
     private AscendPlayerStore playerStore;
     private AscendRunTracker runTracker;
     private RobotManager robotManager;
+    private AscendHologramManager hologramManager;
     private ScheduledFuture<?> runTrackerTask;
     private final ConcurrentHashMap<UUID, AscendHud> ascendHuds = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Boolean> ascendHudAttached = new ConcurrentHashMap<>();
@@ -74,6 +78,15 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
         robotManager = new RobotManager(mapStore, playerStore);
         robotManager.start();
+
+        if (HylogramsBridge.isAvailable()) {
+            hologramManager = new AscendHologramManager();
+            if (mapStore != null) {
+                for (var map : mapStore.listMaps()) {
+                    hologramManager.refreshMapHolosIfPresent(map, null);
+                }
+            }
+        }
 
         getCommandRegistry().registerCommand(new AscendCommand());
         getCommandRegistry().registerCommand(new AscendAdminCommand());
@@ -145,7 +158,6 @@ public class ParkourAscendPlugin extends JavaPlugin {
         if (playerStore != null) {
             playerStore.flushPendingSave();
         }
-
         LOGGER.atInfo().log("Ascend plugin shutdown complete");
     }
 
@@ -167,6 +179,10 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
     public RobotManager getRobotManager() {
         return robotManager;
+    }
+
+    public AscendHologramManager getHologramManager() {
+        return hologramManager;
     }
 
     private void tickRunTracker() {
@@ -206,11 +222,17 @@ public class ParkourAscendPlugin extends JavaPlugin {
         }
         // Always ensure HUD is set on player (in case they came from another world)
         player.getHudManager().setCustomHud(context.playerRef, hud);
+        player.getHudManager().hideHudComponents(context.playerRef, HudComponent.Compass);
         long readyAt = ascendHudReadyAt.getOrDefault(playerId, Long.MAX_VALUE);
         if (System.currentTimeMillis() < readyAt) {
             return;
         }
         hud.applyStaticText();
+        if (playerStore != null) {
+            long coins = playerStore.getCoins(playerId);
+            long pending = playerStore.getTotalPendingCoins(playerId);
+            hud.updateEconomy(coins, pending, "x1.00");
+        }
     }
 
     private Map<World, List<PlayerTickContext>> collectPlayersByWorld() {
@@ -252,6 +274,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
         }
         AscendHud hud = ascendHuds.computeIfAbsent(playerRef.getUuid(), id -> new AscendHud(playerRef));
         player.getHudManager().setCustomHud(playerRef, hud);
+        player.getHudManager().hideHudComponents(playerRef, HudComponent.Compass);
         hud.resetCache();
         hud.show();
         hud.applyStaticText();
@@ -265,6 +288,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
         }
         return ASCEND_WORLD_NAME.equalsIgnoreCase(world.getName());
     }
+
 
     private static void resetAscendInventory(Player player) {
         if (player == null) {
