@@ -2,7 +2,7 @@ $C = "../Common.ui";
 
 $C.@PageOverlay {
   $C.@Container {
-    Anchor: (Width: 480, Height: 420);
+    Anchor: (Width: 620, Height: 520);
 
     #Title {
       Group {
@@ -26,15 +26,9 @@ $C.@PageOverlay {
       LayoutMode: Top;
       Padding: (Left: 20, Right: 20, Top: 6, Bottom: 12);
 
-      Label {
-        Anchor: (Top: 8);
-        Style: (FontSize: 14, TextColor: #b8c5cc);
-        Text: "Invest coins into permanent bonuses.";
-      }
-
       Group {
+        Anchor: (Top: 8);
         LayoutMode: Left;
-        Anchor: (Top: 16, Height: 32);
 
         Label {
           Anchor: (Width: 120);
@@ -49,127 +43,23 @@ $C.@PageOverlay {
       }
 
       Label {
-        Anchor: (Top: 16);
-        Style: (FontSize: 13, TextColor: #9fb0ba, RenderBold: true);
-        Text: "CATEGORIES";
+        Anchor: (Top: 8);
+        Style: (FontSize: 12, TextColor: #9fb0ba);
+        Text: "Invest coins into permanent category bonuses.";
       }
 
-      Group {
-        LayoutMode: Left;
-        Anchor: (Top: 12, Height: 40);
+      Group #CategoryList {
+        Anchor: (Left: 0, Right: 0, Top: 12);
+        FlexWeight: 1;
+        LayoutMode: Top;
 
-        Label {
-          Anchor: (Width: 140);
-          Style: (FontSize: 14, TextColor: #b8c5cc);
-          Text: "Coin Flow:";
-        }
-
-        Label #CoinFlowLevel {
-          Anchor: (Width: 80);
-          Style: (FontSize: 14, TextColor: #ffd166, RenderBold: true);
-          Text: "Lv.0";
-        }
-
-        TextButton #CoinFlowButton {
-          Anchor: (Width: 160, Height: 36);
-          Padding: (Left: 8, Right: 8, Top: 6, Bottom: 6);
-          Text: "Summit";
-          Style: TextButtonStyle(
-            Default: (
-              Background: #5a6b3d(0.85),
-              LabelStyle: (FontSize: 14, TextColor: #f4fce8, RenderBold: true, HorizontalAlignment: Center)
-            ),
-            Hovered: (
-              Background: #7a8f4d(0.92),
-              LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center)
-            ),
-            Pressed: (
-              Background: #94a860(0.95),
-              LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center)
-            ),
-            Sounds: $C.@ButtonSounds,
-          );
-        }
-      }
-
-      Group {
-        LayoutMode: Left;
-        Anchor: (Top: 8, Height: 40);
-
-        Label {
-          Anchor: (Width: 140);
-          Style: (FontSize: 14, TextColor: #b8c5cc);
-          Text: "Runner Speed:";
-        }
-
-        Label #RunnerSpeedLevel {
-          Anchor: (Width: 80);
-          Style: (FontSize: 14, TextColor: #3b82f6, RenderBold: true);
-          Text: "Lv.0";
-        }
-
-        TextButton #RunnerSpeedButton {
-          Anchor: (Width: 160, Height: 36);
-          Padding: (Left: 8, Right: 8, Top: 6, Bottom: 6);
-          Text: "Summit";
-          Style: TextButtonStyle(
-            Default: (
-              Background: #2d5a7b(0.85),
-              LabelStyle: (FontSize: 14, TextColor: #e8f4fc, RenderBold: true, HorizontalAlignment: Center)
-            ),
-            Hovered: (
-              Background: #3a7399(0.92),
-              LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center)
-            ),
-            Pressed: (
-              Background: #4a8ab3(0.95),
-              LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center)
-            ),
-            Sounds: $C.@ButtonSounds,
-          );
-        }
-      }
-
-      Group {
-        LayoutMode: Left;
-        Anchor: (Top: 8, Height: 40);
-
-        Label {
-          Anchor: (Width: 140);
-          Style: (FontSize: 14, TextColor: #b8c5cc);
-          Text: "Manual Mastery:";
-        }
-
-        Label #ManualMasteryLevel {
-          Anchor: (Width: 80);
-          Style: (FontSize: 14, TextColor: #a855f7, RenderBold: true);
-          Text: "Lv.0";
-        }
-
-        TextButton #ManualMasteryButton {
-          Anchor: (Width: 160, Height: 36);
-          Padding: (Left: 8, Right: 8, Top: 6, Bottom: 6);
-          Text: "Summit";
-          Style: TextButtonStyle(
-            Default: (
-              Background: #5a3d6b(0.85),
-              LabelStyle: (FontSize: 14, TextColor: #f4e8fc, RenderBold: true, HorizontalAlignment: Center)
-            ),
-            Hovered: (
-              Background: #7a4d8f(0.92),
-              LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center)
-            ),
-            Pressed: (
-              Background: #9460a8(0.95),
-              LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center)
-            ),
-            Sounds: $C.@ButtonSounds,
-          );
+        Group #CategoryCards {
+          LayoutMode: Top;
         }
       }
 
       Label #WarningText {
-        Anchor: (Top: 20);
+        Anchor: (Top: 12);
         Style: (FontSize: 12, TextColor: #fca5a5);
         Text: "Warning: Summit resets coins and elevation.";
       }

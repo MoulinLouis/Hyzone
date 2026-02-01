@@ -2,7 +2,7 @@ $C = "../Common.ui";
 
 $C.@PageOverlay {
   $C.@Container {
-    Anchor: (Width: 420, Height: 340);
+    Anchor: (Width: 620, Height: 420);
 
     #Title {
       Group {
@@ -26,18 +26,12 @@ $C.@PageOverlay {
       LayoutMode: Top;
       Padding: (Left: 20, Right: 20, Top: 6, Bottom: 12);
 
-      Label {
-        Anchor: (Top: 8);
-        Style: (FontSize: 14, TextColor: #b8c5cc);
-        Text: "Convert coins into a permanent multiplier.";
-      }
-
       Group {
+        Anchor: (Top: 8);
         LayoutMode: Left;
-        Anchor: (Top: 16, Height: 32);
 
         Label {
-          Anchor: (Width: 140);
+          Anchor: (Width: 120);
           Style: (FontSize: 14, TextColor: #9fb0ba);
           Text: "Your Coins:";
         }
@@ -48,82 +42,174 @@ $C.@PageOverlay {
         }
       }
 
-      Group {
-        LayoutMode: Left;
-        Anchor: (Top: 6, Height: 32);
-
-        Label {
-          Anchor: (Width: 140);
-          Style: (FontSize: 14, TextColor: #9fb0ba);
-          Text: "Current Elevation:";
-        }
-
-        Label #MultiplierValue {
-          Style: (FontSize: 14, TextColor: #06b6d4, RenderBold: true);
-          Text: "x1";
-        }
+      Label {
+        Anchor: (Top: 8);
+        Style: (FontSize: 12, TextColor: #9fb0ba);
+        Text: "Convert coins into a permanent multiplier that boosts all earnings.";
       }
 
-      Group {
-        LayoutMode: Left;
-        Anchor: (Top: 6, Height: 32);
-
-        Label {
-          Anchor: (Width: 140);
-          Style: (FontSize: 14, TextColor: #9fb0ba);
-          Text: "You will gain:";
-        }
-
-        Label #GainValue {
-          Style: (FontSize: 14, TextColor: #4ade80, RenderBold: true);
-          Text: "+0";
-        }
-      }
-
-      Group {
-        LayoutMode: Left;
-        Anchor: (Top: 6, Height: 32);
-
-        Label {
-          Anchor: (Width: 140);
-          Style: (FontSize: 14, TextColor: #9fb0ba);
-          Text: "New Elevation:";
-        }
-
-        Label #NewMultiplierValue {
-          Style: (FontSize: 14, TextColor: #4ade80, RenderBold: true);
-          Text: "x1";
-        }
-      }
-
-      Group #ActionButtons {
-        Anchor: (Left: 0, Right: 0, Top: 20, Height: 48);
+      Group #CardContainer {
+        Anchor: (Left: 0, Right: 0, Top: 12);
         LayoutMode: Left;
 
         Group { FlexWeight: 1; }
 
-        TextButton #ElevateButton {
-          Anchor: (Width: 200, Height: 48);
-          Padding: (Left: 8, Right: 8, Top: 8, Bottom: 8);
-          Text: "ELEVATE";
-          Style: TextButtonStyle(
-            Default: (
-              Background: #2d5a7b(0.85),
-              LabelStyle: (FontSize: 16, TextColor: #e8f4fc, RenderBold: true, HorizontalAlignment: Center)
-            ),
-            Hovered: (
-              Background: #3a7399(0.92),
-              LabelStyle: (FontSize: 16, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center)
-            ),
-            Pressed: (
-              Background: #4a8ab3(0.95),
-              LabelStyle: (FontSize: 16, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center)
-            ),
-            Sounds: $C.@ButtonSounds,
-          );
+        Group #ElevationCard {
+          Anchor: (Width: 420, Height: 260);
+          LayoutMode: Top;
+          Background: #1a2530(0.95);
+
+          Group #AccentBar {
+            Anchor: (Left: 0, Right: 0, Height: 4);
+            Background: #06b6d4;
+          }
+
+          Group #InfoSection {
+            Anchor: (Left: 0, Right: 0, Top: 0);
+            Padding: (Left: 20, Right: 20, Top: 18, Bottom: 12);
+            LayoutMode: Top;
+
+          Label {
+            Anchor: (Left: 0, Right: 0);
+            Style: (
+              FontSize: 18,
+              RenderBold: true,
+              TextColor: #f0f4f8,
+              HorizontalAlignment: Center
+            );
+            Text: "Elevation Multiplier";
+          }
+
+          Label #ConversionRate {
+            Anchor: (Left: 0, Right: 0, Top: 4);
+            Style: (
+              FontSize: 13,
+              TextColor: #9fb0ba,
+              HorizontalAlignment: Center
+            );
+            Text: "Conversion: 1000 coins = +1 elevation";
+          }
+
+          Group {
+            LayoutMode: Left;
+            Anchor: (Left: 0, Right: 0, Top: 12, Height: 28);
+
+            Label {
+              Anchor: (Width: 160);
+              Style: (FontSize: 14, TextColor: #9fb0ba);
+              Text: "Current Elevation:";
+            }
+
+            Label #MultiplierValue {
+              Style: (FontSize: 14, TextColor: #06b6d4, RenderBold: true);
+              Text: "x1";
+            }
+          }
+
+          Group {
+            LayoutMode: Left;
+            Anchor: (Left: 0, Right: 0, Top: 4, Height: 28);
+
+            Label {
+              Anchor: (Width: 160);
+              Style: (FontSize: 14, TextColor: #9fb0ba);
+              Text: "Multiplier Gain:";
+            }
+
+            Label #GainValue {
+              Style: (FontSize: 14, TextColor: #4ade80, RenderBold: true);
+              Text: "+0";
+            }
+          }
+        }
+
+          Group #ButtonZone {
+            Anchor: (Left: 0, Right: 0, Top: 0);
+            Padding: (Left: 20, Right: 20, Top: 0, Bottom: 18);
+            LayoutMode: Top;
+
+            Button #ElevateButton {
+              Anchor: (Left: 0, Right: 0, Height: 110);
+              Padding: (Left: 12, Right: 12, Top: 8, Bottom: 8);
+              Background: #000000(0.25);
+              Style: ButtonStyle(
+                Default: (Background: #000000(0.25)),
+                Hovered: (Background: #000000(0.4)),
+                Pressed: (Background: #000000(0.15)),
+                Sounds: $C.@ButtonSounds,
+              );
+              LayoutMode: Top;
+
+              Label #CurrentMultiplierLabel {
+                Anchor: (Left: 0, Right: 0, Top: 2);
+                Style: (
+                  FontSize: 15,
+                  RenderBold: true,
+                  TextColor: #06b6d4,
+                  HorizontalAlignment: Center
+                );
+                Text: "x1";
+              }
+
+              Label #ArrowLabel {
+                Anchor: (Left: 0, Right: 0, Top: 2);
+                Style: (
+                  FontSize: 18,
+                  TextColor: #9fb0ba,
+                  HorizontalAlignment: Center
+                );
+                Text: "↓";
+              }
+
+              Label #NewMultiplierLabel {
+                Anchor: (Left: 0, Right: 0, Top: 2);
+                Style: (
+                  FontSize: 15,
+                  RenderBold: true,
+                  TextColor: #4ade80,
+                  HorizontalAlignment: Center
+                );
+                Text: "x1";
+              }
+
+              Label #ButtonText {
+                Anchor: (Left: 0, Right: 0, Top: 6);
+                Style: (
+                  FontSize: 15,
+                  RenderBold: true,
+                  TextColor: #f0f4f8,
+                  HorizontalAlignment: Center
+                );
+                Text: "ELEVATE";
+              }
+
+              Label #GainPreview {
+                Anchor: (Left: 0, Right: 0, Top: 2);
+                Style: (
+                  FontSize: 10,
+                  TextColor: #4ade80,
+                  RenderBold: true,
+                  HorizontalAlignment: Center
+                );
+                Text: "";
+              }
+            }
+          }
         }
 
         Group { FlexWeight: 1; }
+      }
+
+      Label #WarningText {
+        Anchor: (Top: 12);
+        Style: (FontSize: 12, TextColor: #fca5a5);
+        Text: "Warning: Elevation resets coins to zero.";
+      }
+
+      Label #TipText {
+        Anchor: (Top: 4);
+        Style: (FontSize: 11, TextColor: #9fb0ba);
+        Text: "Tip: Higher elevation = more coins from all sources permanently.";
       }
     }
   }
