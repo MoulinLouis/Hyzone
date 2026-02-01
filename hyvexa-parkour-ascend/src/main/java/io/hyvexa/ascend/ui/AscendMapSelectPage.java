@@ -128,7 +128,17 @@ public class AscendMapSelectPage extends BaseAscendPage {
         if (playerRef == null) {
             return;
         }
-        List<AscendMap> maps = new ArrayList<>(mapStore.listMapsSorted());
+
+        // Filter maps to only include unlocked ones
+        List<AscendMap> allMaps = new ArrayList<>(mapStore.listMapsSorted());
+        List<AscendMap> maps = new ArrayList<>();
+        for (AscendMap map : allMaps) {
+            MapUnlockHelper.UnlockResult unlockResult = MapUnlockHelper.checkAndEnsureUnlock(
+                playerRef.getUuid(), map, playerStore, mapStore);
+            if (unlockResult.unlocked) {
+                maps.add(map);
+            }
+        }
         lastMapCount = maps.size();
         int index = 0;
         for (AscendMap map : maps) {
@@ -136,10 +146,8 @@ public class AscendMapSelectPage extends BaseAscendPage {
             String accentColor = resolveMapAccentColor(index);
             String mapName = map.getName() != null && !map.getName().isBlank() ? map.getName() : map.getId();
 
-            MapUnlockHelper.UnlockResult unlockResult = MapUnlockHelper.checkAndEnsureUnlock(
-                playerRef.getUuid(), map, playerStore, mapStore);
-            boolean unlocked = unlockResult.unlocked;
-            AscendPlayerProgress.MapProgress mapProgress = unlockResult.mapProgress;
+            // All maps in this list are already unlocked (filtered above)
+            AscendPlayerProgress.MapProgress mapProgress = playerStore.getMapProgress(playerRef.getUuid(), map.getId());
             boolean hasRobot = mapProgress != null && mapProgress.hasRobot();
             int speedLevel = mapProgress != null ? mapProgress.getRobotSpeedLevel() : 0;
             int stars = mapProgress != null ? mapProgress.getRobotStars() : 0;
@@ -162,13 +170,8 @@ public class AscendMapSelectPage extends BaseAscendPage {
             // Map name
             commandBuilder.set("#MapCards[" + index + "] #MapName.Text", mapName);
 
-            // Status text
-            String status;
-            if (!unlocked) {
-                status = "Locked | Price: " + map.getEffectivePrice() + " coins";
-            } else {
-                status = "Runs/sec: " + formatRunsPerSecond(map, hasRobot, speedLevel);
-            }
+            // Status text (all displayed maps are unlocked)
+            String status = "Runs/sec: " + formatRunsPerSecond(map, hasRobot, speedLevel);
             commandBuilder.set("#MapCards[" + index + "] #MapStatus.Text", status);
 
             // Runner status and button text
@@ -331,6 +334,24 @@ public class AscendMapSelectPage extends BaseAscendPage {
             int newLevel = playerStore.incrementRobotSpeedLevel(playerRef.getUuid(), mapId);
             int newSpeedPercent = newLevel * 10;
             sendMessage(store, ref, "[Ascend] Runner speed upgraded to +" + newSpeedPercent + "%!");
+
+            // Check if new level unlocks next map
+            if (newLevel == AscendConstants.MAP_UNLOCK_REQUIRED_RUNNER_LEVEL) {
+                List<String> unlockedMapIds = playerStore.checkAndUnlockEligibleMaps(playerRef.getUuid(), mapStore);
+                for (String unlockedMapId : unlockedMapIds) {
+                    AscendMap unlockedMap = mapStore.getMap(unlockedMapId);
+                    if (unlockedMap != null) {
+                        String mapName = unlockedMap.getName() != null && !unlockedMap.getName().isBlank()
+                            ? unlockedMap.getName()
+                            : unlockedMap.getId();
+                        Player player = store.getComponent(ref, Player.getComponentType());
+                        if (player != null) {
+                            player.sendMessage(Message.raw("🎉 New map unlocked: " + mapName + "!"));
+                        }
+                    }
+                }
+            }
+
             updateRobotRow(ref, store, mapId);
         }
     }
@@ -368,7 +389,18 @@ public class AscendMapSelectPage extends BaseAscendPage {
         if (playerRef == null) {
             return;
         }
-        List<AscendMap> maps = new ArrayList<>(mapStore.listMapsSorted());
+
+        // Filter maps to only include unlocked ones
+        List<AscendMap> allMaps = new ArrayList<>(mapStore.listMapsSorted());
+        List<AscendMap> maps = new ArrayList<>();
+        for (AscendMap map : allMaps) {
+            MapUnlockHelper.UnlockResult unlockResult = MapUnlockHelper.checkAndEnsureUnlock(
+                playerRef.getUuid(), map, playerStore, mapStore);
+            if (unlockResult.unlocked) {
+                maps.add(map);
+            }
+        }
+
         // Don't send updates if no maps exist (UI elements wouldn't exist)
         if (maps.isEmpty()) {
             return;
@@ -386,15 +418,11 @@ public class AscendMapSelectPage extends BaseAscendPage {
             if (map == null) {
                 continue;
             }
-            MapUnlockHelper.UnlockResult unlockResult = MapUnlockHelper.checkAndEnsureUnlock(
-                playerRef.getUuid(), map, playerStore, mapStore);
-            boolean unlocked = unlockResult.unlocked;
-            AscendPlayerProgress.MapProgress mapProgress = unlockResult.mapProgress;
+            // All displayed maps are unlocked (filtered above)
+            AscendPlayerProgress.MapProgress mapProgress = playerStore.getMapProgress(playerRef.getUuid(), map.getId());
             boolean hasRobot = mapProgress != null && mapProgress.hasRobot();
             int speedLevel = mapProgress != null ? mapProgress.getRobotSpeedLevel() : 0;
-            String status = unlocked
-                ? "Runs/sec: " + formatRunsPerSecond(map, hasRobot, speedLevel)
-                : "Locked | Price: " + map.getEffectivePrice() + " coins";
+            String status = "Runs/sec: " + formatRunsPerSecond(map, hasRobot, speedLevel);
             commandBuilder.set("#MapCards[" + i + "] #MapStatus.Text", status);
         }
         sendUpdate(commandBuilder, null, false);
@@ -422,20 +450,13 @@ public class AscendMapSelectPage extends BaseAscendPage {
         if (index < 0 || selectedMap == null) {
             return;
         }
-        MapUnlockHelper.UnlockResult unlockResult = MapUnlockHelper.checkAndEnsureUnlock(
-            playerRef.getUuid(), selectedMap, playerStore, mapStore);
-        boolean unlocked = unlockResult.unlocked;
-        AscendPlayerProgress.MapProgress mapProgress = unlockResult.mapProgress;
+        // All displayed maps are unlocked (filtered in buildMapList)
+        AscendPlayerProgress.MapProgress mapProgress = playerStore.getMapProgress(playerRef.getUuid(), selectedMap.getId());
         boolean hasRobot = mapProgress != null && mapProgress.hasRobot();
         int speedLevel = mapProgress != null ? mapProgress.getRobotSpeedLevel() : 0;
         int stars = mapProgress != null ? mapProgress.getRobotStars() : 0;
 
-        String status;
-        if (!unlocked) {
-            status = "Locked | Price: " + selectedMap.getEffectivePrice() + " coins";
-        } else {
-            status = "Runs/sec: " + formatRunsPerSecond(selectedMap, hasRobot, speedLevel);
-        }
+        String status = "Runs/sec: " + formatRunsPerSecond(selectedMap, hasRobot, speedLevel);
 
         String runnerStatusText;
         String runnerButtonText;
@@ -491,27 +512,15 @@ public class AscendMapSelectPage extends BaseAscendPage {
 
     private boolean ensureUnlocked(Store<EntityStore> store, Ref<EntityStore> ref, PlayerRef playerRef,
                                    String mapId, AscendMap map) {
+        // All displayed maps are already unlocked due to filtering in buildMapList
         AscendPlayerProgress progress = playerStore.getOrCreatePlayer(playerRef.getUuid());
         AscendPlayerProgress.MapProgress mapProgress = progress.getOrCreateMapProgress(mapId);
-        if (mapProgress.isUnlocked() || map.getEffectivePrice() <= 0) {
-            if (!mapProgress.isUnlocked()) {
-                mapProgress.setUnlocked(true);
-                playerStore.markDirty(playerRef.getUuid());
-            }
-            return true;
-        }
-        Player player = store.getComponent(ref, Player.getComponentType());
-        if (playerStore.spendCoins(playerRef.getUuid(), map.getEffectivePrice())) {
+
+        // Safety check: if not unlocked, mark as unlocked (should not happen)
+        if (!mapProgress.isUnlocked()) {
             mapProgress.setUnlocked(true);
             playerStore.markDirty(playerRef.getUuid());
-            if (player != null) {
-                player.sendMessage(Message.raw("[Ascend] Map unlocked for " + map.getEffectivePrice() + " coins."));
-            }
-            return true;
         }
-        if (player != null) {
-            player.sendMessage(Message.raw("[Ascend] Map locked. Need " + map.getEffectivePrice() + " coins."));
-        }
-        return false;
+        return true;
     }
 }

@@ -20,18 +20,18 @@
 ## Automatic balancing system
 All map balancing is calculated from `displayOrder` (0-4) using constants in `AscendConstants`:
 
-| Level | Color  | Unlock | Runner | Reward | Run Time |
-|-------|--------|--------|--------|--------|----------|
-| 0     | Rouge  | 0      | 50     | 1      | 5s       |
-| 1     | Orange | 100    | 200    | 5      | 15s      |
-| 2     | Jaune  | 500    | 1000   | 25     | 30s      |
-| 3     | Vert   | 2500   | 5000   | 100    | 1m       |
-| 4     | Bleu   | 10000  | 20000  | 500    | 2m       |
+| Level | Color  | Unlock Requirement | Runner | Reward | Run Time |
+|-------|--------|-------------------|--------|--------|----------|
+| 0     | Rouge  | Always unlocked   | 50     | 1      | 5s       |
+| 1     | Orange | Map 0 runner Lv.3 | 200    | 5      | 15s      |
+| 2     | Jaune  | Map 1 runner Lv.3 | 1000   | 25     | 30s      |
+| 3     | Vert   | Map 2 runner Lv.3 | 5000   | 100    | 1m       |
+| 4     | Bleu   | Map 3 runner Lv.3 | 20000  | 500    | 2m       |
 
-- `AscendMap.getEffectivePrice()` → unlock price from displayOrder
 - `AscendMap.getEffectiveRobotPrice()` → runner price from displayOrder
 - `AscendMap.getEffectiveBaseReward()` → coin reward from displayOrder
 - `AscendMap.getEffectiveBaseRunTimeMs()` → runner completion time from displayOrder
+- Maps unlock progressively based on previous map's runner level (not coin-based)
 
 ### Multiplier increments
 - Manual run: +0.1 multiplier per completion (`MANUAL_MULTIPLIER_INCREMENT`)
@@ -55,10 +55,17 @@ Runners can evolve up to 5 stars. When a runner reaches max speed level (20), th
 | 4 | Kweebec_Sapling (green) | +0.16 |
 | 5 | Kweebec_Sapling_Orange | +0.32 |
 
-### First map auto-unlock
-- Maps with price = 0 (displayOrder 0) are automatically unlocked
-- `MapUnlockHelper.checkAndEnsureUnlock()` handles auto-unlock for free maps and first map
-- Reset progress unlocks the first map (lowest displayOrder) automatically
+### Progressive map unlock system
+- Map 1 (displayOrder 0) is always unlocked for all players
+- Maps 2-5 unlock automatically when the runner on the previous map reaches level 3
+- Once unlocked, maps stay permanently unlocked (even if runner is evolved/reset to level 0)
+- Locked maps are completely hidden from the `/ascend` menu
+- Instant notification when reaching level 3: "🎉 New map unlocked: [Map Name]!"
+- `MapUnlockHelper.meetsUnlockRequirement()` checks if previous map's runner is level 3+
+- `MapUnlockHelper.checkAndEnsureUnlock()` handles auto-unlock for maps that meet requirements
+- `AscendPlayerStore.checkAndUnlockEligibleMaps()` batch checks all maps after runner upgrade
+- Retrocompatibility: Existing players auto-unlock eligible maps based on current runner levels
+- Reset progress unlocks only the first map (lowest displayOrder) automatically
 
 ## Prestige System (3 Tiers)
 

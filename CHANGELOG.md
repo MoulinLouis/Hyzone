@@ -1,5 +1,25 @@
 # Changelog
 
+- Replace coin-based map unlocking with progressive runner-level unlocking:
+  - Map 1 is unlocked by default for all players.
+  - Maps 2-5 unlock automatically when the runner on the previous map reaches level 3.
+  - Once unlocked, maps stay permanently unlocked (even if runner is evolved/reset to level 0).
+  - Locked maps are completely hidden from the `/ascend` menu.
+  - Instant notification when reaching level 3: "🎉 New map unlocked: [Map Name]!".
+  - Retrocompatibility: Existing players auto-unlock eligible maps based on current runner levels on next menu open.
+  - Map unlock prices are now obsolete but remain in constants for reference.
+- Fix admin reset progress button to completely reset all player data:
+  - Now resets Summit levels (all bonus categories).
+  - Now resets skill tree points and all unlocked skill nodes.
+  - Now resets all achievements and active title.
+  - Now resets all statistics (total coins earned, manual runs, consecutive runs).
+  - Database cleanup: deletes all entries from ascend_player_maps, ascend_player_summit, ascend_player_skills, and ascend_player_achievements tables.
+  - Previously only reset coins, elevation multiplier, and map progress, leaving Summit and skill tree data intact.
+- Rebalance Ascend runner speeds for more satisfying gameplay:
+  - Increase speed upgrade multiplier from +10% to +15% per level (max level now grants 4.0x speed vs 3.0x).
+  - Reduce base run times significantly: Map 1 (15s→10s), Map 2 (30s→16s), Map 3 (60s→26s), Map 4 (120s→42s).
+  - Smooth progression curve using Fibonacci-inspired multipliers (1.6x-1.625x between maps vs previous 2x jumps).
+  - Early game runners feel 1.5x-2.9x faster at base level, addressing "too slow" feedback on higher maps.
 - Add subtle visual flash to Ascend HUD multipliers when values increase:
   - Single-cycle flash (200ms): lighter color → restore on next HUD update.
   - Each multiplier has its own color pair (e.g., purple → light purple, blue → light blue).
