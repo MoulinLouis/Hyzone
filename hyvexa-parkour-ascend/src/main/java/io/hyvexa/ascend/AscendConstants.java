@@ -123,6 +123,21 @@ public final class AscendConstants {
     public static final long SAVE_DEBOUNCE_MS = 5000L;
 
     // ========================================
+    // HUD Visual Effects
+    // ========================================
+
+    // Multiplier flash colors - lighter versions of each multiplier color
+    // Single-cycle flash (200ms): flash → restore on next HUD update
+    // Format: [original, lighter] for each slot
+    public static final String[][] MULTIPLIER_COLORS = {
+        {"#7c3aed", "#b794f6"},  // Purple -> Light purple (Rouge/Red slot)
+        {"#3b82f6", "#93c5fd"},  // Blue -> Light blue (Orange slot)
+        {"#06b6d4", "#67e8f9"},  // Cyan -> Light cyan (Jaune/Yellow slot)
+        {"#f59e0b", "#fbbf24"},  // Amber -> Light amber (Vert/Green slot)
+        {"#ef4444", "#fca5a5"}   // Red -> Light red (Bleu/Blue slot)
+    };
+
+    // ========================================
     // Summit System (Middle Prestige)
     // ========================================
 
