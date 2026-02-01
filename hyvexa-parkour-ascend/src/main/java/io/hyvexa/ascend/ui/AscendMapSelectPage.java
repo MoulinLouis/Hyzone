@@ -303,13 +303,14 @@ public class AscendMapSelectPage extends BaseAscendPage {
         if (world == null) {
             return;
         }
+        // Initial delay of 2 seconds to let client fully build the UI before sending updates
         refreshTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(() -> {
             if (!active || ref == null || !ref.isValid()) {
                 stopAutoRefresh();
                 return;
             }
             CompletableFuture.runAsync(() -> refreshRunRates(ref, store), world);
-        }, 1000L, 1000L, TimeUnit.MILLISECONDS);
+        }, 2000L, 1000L, TimeUnit.MILLISECONDS);
     }
 
     private void stopAutoRefresh() {
@@ -328,6 +329,10 @@ public class AscendMapSelectPage extends BaseAscendPage {
             return;
         }
         List<AscendMap> maps = new ArrayList<>(mapStore.listMapsSorted());
+        // Don't send updates if no maps exist (UI elements wouldn't exist)
+        if (maps.isEmpty()) {
+            return;
+        }
         if (maps.size() != lastMapCount) {
             UICommandBuilder rebuild = new UICommandBuilder();
             UIEventBuilder events = new UIEventBuilder();
@@ -356,6 +361,9 @@ public class AscendMapSelectPage extends BaseAscendPage {
     }
 
     private void updateRobotRow(Ref<EntityStore> ref, Store<EntityStore> store, String mapId) {
+        if (!active) {
+            return;
+        }
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (playerRef == null) {
             return;
