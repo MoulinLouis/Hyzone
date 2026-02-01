@@ -1,12 +1,21 @@
 # Changelog
 
+- Add star evolution system for Ascend runners:
+  - When a runner reaches max level (20), players can evolve it to gain a star and reset level to 0.
+  - Each star doubles the multiplier increment per completion (0.01 -> 0.02 -> 0.04 -> 0.08 -> 0.16 -> 0.32).
+  - Maximum 5 stars per runner.
+  - Runner appearance alternates between green (Kweebec_Sapling) and orange (Kweebec_Sapling_Orange) per star level.
+  - Level display now shows stars before the level (e.g., "★★★ Lv.5").
+  - Button changes to "Evolve" when level 20 is reached and stars are below max.
+  - Evolution is free and resets speed level to 0 while increasing stars.
+- Increase max runner speed level from 10 to 20 for each map, adding 10 more progress bar segments.
 - Fix AscendMapSelectPage UI selector error by increasing initial refresh delay and adding empty map list guard.
 - Sync HUD multiplier colors with map selection colors (violet → blue → cyan → amber → red).
 - Redesigned Ascend map selection UI with modern indie game style:
   - Expanded menu container to 620x620px with "A S C E N D" header.
   - New card layout (580x90px) with colored accent bar on left edge.
   - Color palette: violet (#7c3aed) → blue (#3b82f6) → cyan (#06b6d4) → amber (#f59e0b) → red (#ef4444).
-  - 10-segment progress bar showing runner speed level (Lv.0 to MAX).
+  - 20-segment progress bar showing runner speed level (Lv.0 to MAX).
   - Integrated button zone with accent bar on top, showing level, speed, action, and price.
   - Runner level moved from progress bar area into the button zone for cleaner layout.
 - Refactor HyvexaPlugin to extract manager classes: LeaderboardHologramManager, CollisionManager, InventorySyncManager, WorldMapManager, ChatFormatter.

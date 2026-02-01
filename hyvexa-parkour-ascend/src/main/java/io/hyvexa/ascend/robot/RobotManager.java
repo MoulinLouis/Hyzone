@@ -34,7 +34,6 @@ import java.util.logging.Level;
 public class RobotManager {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final String NPC_ROLE_NAME = "Kweebec_Sapling";
     private static final double ROBOT_BASE_SPEED = 5.0;  // Blocks per second base speed
 
     /**
@@ -194,8 +193,9 @@ public class RobotManager {
             Vector3f rotation = new Vector3f(map.getStartRotX(), map.getStartRotY(), map.getStartRotZ());
             String displayName = "Runner";
 
-            LOGGER.atInfo().log("[RobotNPC] Calling NPCPlugin.spawnNPC at " + position + " with role " + NPC_ROLE_NAME);
-            Object result = npcPlugin.spawnNPC(store, NPC_ROLE_NAME, displayName, position, rotation);
+            String npcRoleName = AscendConstants.getRunnerEntityType(state.getStars());
+            LOGGER.atInfo().log("[RobotNPC] Calling NPCPlugin.spawnNPC at " + position + " with role " + npcRoleName);
+            Object result = npcPlugin.spawnNPC(store, npcRoleName, displayName, position, rotation);
             LOGGER.atInfo().log("[RobotNPC] spawnNPC returned: " + (result != null ? result.getClass().getName() : "null"));
             if (result != null) {
                 Ref<EntityStore> entityRef = extractEntityRef(result);
@@ -305,6 +305,26 @@ public class RobotManager {
 
     public RobotState getRobot(UUID ownerId, String mapId) {
         return robots.get(robotKey(ownerId, mapId));
+    }
+
+    public void respawnRobot(UUID ownerId, String mapId, int newStars) {
+        String key = robotKey(ownerId, mapId);
+        RobotState state = robots.get(key);
+        if (state == null) {
+            return;
+        }
+        // Update stars in the state
+        state.setStars(newStars);
+        state.setSpeedLevel(0);
+        // Despawn old NPC and spawn new one with updated entity type
+        despawnNpcForRobot(state);
+        if (npcPlugin != null && mapStore != null) {
+            AscendMap map = mapStore.getMap(mapId);
+            if (map != null) {
+                spawnNpcForRobot(state, map);
+            }
+        }
+        LOGGER.atInfo().log("[RobotNPC] Respawned robot for " + ownerId + " on map " + mapId + " with " + newStars + " stars");
     }
 
     private void tick() {
@@ -634,6 +654,7 @@ public class RobotManager {
                     LOGGER.atInfo().log("[RobotNPC] Creating new robot for key: " + key);
                     RobotState state = new RobotState(playerId, mapId);
                     state.setSpeedLevel(mapProgress.getRobotSpeedLevel());
+                    state.setStars(mapProgress.getRobotStars());
                     state.setLastCompletionMs(now);
                     robots.put(key, state);
                     // Spawn NPC for newly created robot
@@ -642,6 +663,7 @@ public class RobotManager {
                     }
                 } else {
                     existing.setSpeedLevel(mapProgress.getRobotSpeedLevel());
+                    existing.setStars(mapProgress.getRobotStars());
                     if (existing.getLastCompletionMs() <= 0L) {
                         existing.setLastCompletionMs(now);
                     }
@@ -704,11 +726,13 @@ public class RobotManager {
         }
         UUID ownerId = robot.getOwnerId();
         String mapId = robot.getMapId();
-        double totalMultiplierBonus = completions * AscendConstants.RUNNER_MULTIPLIER_INCREMENT;
+        int stars = robot.getStars();
+        double multiplierIncrement = AscendConstants.getRunnerMultiplierIncrement(stars);
+        double totalMultiplierBonus = completions * multiplierIncrement;
 
         // Calculate payout like manual completion: product of all multipliers * elevation
         List<AscendMap> maps = mapStore.listMapsSorted();
-        long payoutPerRun = playerStore.getCompletionPayout(ownerId, maps, AscendConstants.MULTIPLIER_SLOTS, mapId, AscendConstants.RUNNER_MULTIPLIER_INCREMENT);
+        long payoutPerRun = playerStore.getCompletionPayout(ownerId, maps, AscendConstants.MULTIPLIER_SLOTS, mapId, multiplierIncrement);
         long totalPayout = payoutPerRun * completions;
 
         playerStore.addMapMultiplier(ownerId, mapId, totalMultiplierBonus);

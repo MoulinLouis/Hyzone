@@ -47,6 +47,7 @@ public class AscendPlayerProgress {
         private boolean completedManually;
         private boolean hasRobot;
         private int robotSpeedLevel;
+        private int robotStars;
         private double multiplier = 1.0;
 
         public boolean isUnlocked() {
@@ -84,6 +85,19 @@ public class AscendPlayerProgress {
         public int incrementRobotSpeedLevel() {
             robotSpeedLevel = Math.max(0, robotSpeedLevel) + 1;
             return robotSpeedLevel;
+        }
+
+        public int getRobotStars() {
+            return robotStars;
+        }
+
+        public void setRobotStars(int robotStars) {
+            this.robotStars = Math.max(0, robotStars);
+        }
+
+        public int incrementRobotStars() {
+            robotStars = Math.max(0, robotStars) + 1;
+            return robotStars;
         }
 
         public double getMultiplier() {

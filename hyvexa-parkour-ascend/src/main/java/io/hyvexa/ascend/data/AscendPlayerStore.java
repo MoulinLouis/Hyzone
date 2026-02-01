@@ -64,7 +64,7 @@ public class AscendPlayerStore {
     private void loadMapProgress() {
         String sql = """
             SELECT player_uuid, map_id, unlocked, completed_manually, has_robot,
-                   robot_speed_level, multiplier
+                   robot_speed_level, robot_stars, multiplier
             FROM ascend_player_maps
             """;
         try (Connection conn = DatabaseManager.getInstance().getConnection();
@@ -84,6 +84,7 @@ public class AscendPlayerStore {
                     mapProgress.setCompletedManually(rs.getBoolean("completed_manually"));
                     mapProgress.setHasRobot(rs.getBoolean("has_robot"));
                     mapProgress.setRobotSpeedLevel(rs.getInt("robot_speed_level"));
+                    mapProgress.setRobotStars(rs.getInt("robot_stars"));
                     mapProgress.setMultiplier(rs.getDouble("multiplier"));
                 }
             }
@@ -228,6 +229,22 @@ public class AscendPlayerStore {
         return value;
     }
 
+    public int getRobotStars(UUID playerId, String mapId) {
+        AscendPlayerProgress.MapProgress mapProgress = getMapProgress(playerId, mapId);
+        if (mapProgress == null) {
+            return 0;
+        }
+        return Math.max(0, mapProgress.getRobotStars());
+    }
+
+    public int evolveRobot(UUID playerId, String mapId) {
+        AscendPlayerProgress.MapProgress mapProgress = getOrCreateMapProgress(playerId, mapId);
+        mapProgress.setRobotSpeedLevel(0);
+        int newStars = mapProgress.incrementRobotStars();
+        markDirty(playerId);
+        return newStars;
+    }
+
     public double[] getMultiplierDisplayValues(UUID playerId, List<AscendMap> maps, int slotCount) {
         int slots = Math.max(0, slotCount);
         double[] digits = new double[slots];
@@ -342,12 +359,12 @@ public class AscendPlayerStore {
 
         String mapSql = """
             INSERT INTO ascend_player_maps (player_uuid, map_id, unlocked, completed_manually,
-                has_robot, robot_speed_level, multiplier)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+                has_robot, robot_speed_level, robot_stars, multiplier)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 unlocked = VALUES(unlocked), completed_manually = VALUES(completed_manually),
                 has_robot = VALUES(has_robot), robot_speed_level = VALUES(robot_speed_level),
-                multiplier = VALUES(multiplier)
+                robot_stars = VALUES(robot_stars), multiplier = VALUES(multiplier)
             """;
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
@@ -375,7 +392,8 @@ public class AscendPlayerStore {
                     mapStmt.setBoolean(4, mapProgress.isCompletedManually());
                     mapStmt.setBoolean(5, mapProgress.hasRobot());
                     mapStmt.setInt(6, mapProgress.getRobotSpeedLevel());
-                    mapStmt.setDouble(7, mapProgress.getMultiplier());
+                    mapStmt.setInt(7, mapProgress.getRobotStars());
+                    mapStmt.setDouble(8, mapProgress.getMultiplier());
                     mapStmt.addBatch();
                 }
             }

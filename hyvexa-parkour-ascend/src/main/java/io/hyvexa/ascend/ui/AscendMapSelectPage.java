@@ -18,6 +18,7 @@ import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
+import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 import io.hyvexa.ascend.util.MapUnlockHelper;
 import io.hyvexa.common.util.FormatUtils;
@@ -36,21 +37,24 @@ public class AscendMapSelectPage extends BaseAscendPage {
     private static final String BUTTON_CLOSE = "Close";
     private static final String BUTTON_SELECT_PREFIX = "Select:";
     private static final String BUTTON_ROBOT_PREFIX = "Robot:";
-    private static final int MAX_SPEED_LEVEL = 10;
+    private static final int MAX_SPEED_LEVEL = 20;
 
     private final AscendMapStore mapStore;
     private final AscendPlayerStore playerStore;
     private final AscendRunTracker runTracker;
+    private final RobotManager robotManager;
     private ScheduledFuture<?> refreshTask;
     private volatile boolean active;
     private int lastMapCount;
 
     public AscendMapSelectPage(@Nonnull PlayerRef playerRef, AscendMapStore mapStore,
-                               AscendPlayerStore playerStore, AscendRunTracker runTracker) {
+                               AscendPlayerStore playerStore, AscendRunTracker runTracker,
+                               RobotManager robotManager) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
         this.mapStore = mapStore;
         this.playerStore = playerStore;
         this.runTracker = runTracker;
+        this.robotManager = robotManager;
     }
 
     @Override
@@ -138,6 +142,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
             AscendPlayerProgress.MapProgress mapProgress = unlockResult.mapProgress;
             boolean hasRobot = mapProgress != null && mapProgress.hasRobot();
             int speedLevel = mapProgress != null ? mapProgress.getRobotSpeedLevel() : 0;
+            int stars = mapProgress != null ? mapProgress.getRobotStars() : 0;
 
             // Apply accent color to accent bars (left and button top)
             commandBuilder.set("#MapCards[" + index + "] #AccentBar.Background", accentColor);
@@ -151,8 +156,8 @@ public class AscendMapSelectPage extends BaseAscendPage {
             // Update progress bar visibility based on speed level
             updateProgressBar(commandBuilder, index, speedLevel);
 
-            // Level text for button zone
-            String levelText = speedLevel >= MAX_SPEED_LEVEL ? "MAX" : "Lv." + speedLevel;
+            // Level text for button zone with star display
+            String levelText = buildStarDisplay(stars, speedLevel);
 
             // Map name
             commandBuilder.set("#MapCards[" + index + "] #MapName.Text", mapName);
@@ -177,16 +182,20 @@ public class AscendMapSelectPage extends BaseAscendPage {
             } else {
                 int speedPercent = speedLevel * 10;
                 runnerStatusText = "Speed: +" + speedPercent + "%";
-                if (speedLevel >= MAX_SPEED_LEVEL) {
+                if (speedLevel >= MAX_SPEED_LEVEL && stars < AscendConstants.MAX_ROBOT_STARS) {
+                    runnerButtonText = "Evolve";
+                    actionPrice = 0L;
+                } else if (stars >= AscendConstants.MAX_ROBOT_STARS && speedLevel >= MAX_SPEED_LEVEL) {
                     runnerButtonText = "Maxed!";
+                    actionPrice = 0L;
                 } else {
                     runnerButtonText = "Upgrade";
+                    actionPrice = computeUpgradeCost(speedLevel);
                 }
-                actionPrice = computeUpgradeCost(speedLevel);
             }
 
             String priceText = actionPrice > 0 ? (FormatUtils.formatCoinsForHud(actionPrice) + " coins") : "Free";
-            if (speedLevel >= MAX_SPEED_LEVEL && hasRobot) {
+            if ((speedLevel >= MAX_SPEED_LEVEL && hasRobot) || runnerButtonText.equals("Maxed!")) {
                 priceText = "";
             }
 
@@ -213,6 +222,21 @@ public class AscendMapSelectPage extends BaseAscendPage {
             boolean visible = seg <= filledSegments;
             cmd.set("#MapCards[" + cardIndex + "] #Seg" + seg + ".Visible", visible);
         }
+    }
+
+    private String buildStarDisplay(int stars, int speedLevel) {
+        if (stars >= AscendConstants.MAX_ROBOT_STARS && speedLevel >= MAX_SPEED_LEVEL) {
+            return "MAX";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < stars; i++) {
+            sb.append('\u2605');  // Unicode filled star
+        }
+        if (stars > 0) {
+            sb.append(' ');
+        }
+        sb.append("Lv.").append(speedLevel);
+        return sb.toString();
     }
 
     private String resolveMapAccentColor(int index) {
@@ -279,10 +303,26 @@ public class AscendMapSelectPage extends BaseAscendPage {
             updateRobotRow(ref, store, mapId);
         } else {
             int currentLevel = mapProgress.getRobotSpeedLevel();
-            if (currentLevel >= MAX_SPEED_LEVEL) {
-                sendMessage(store, ref, "[Ascend] Runner is already at maximum speed!");
+            int currentStars = mapProgress.getRobotStars();
+
+            // Check if fully maxed (max stars and max level)
+            if (currentStars >= AscendConstants.MAX_ROBOT_STARS && currentLevel >= MAX_SPEED_LEVEL) {
+                sendMessage(store, ref, "[Ascend] Runner is fully evolved and at maximum speed!");
                 return;
             }
+
+            // Check if at max level and can evolve
+            if (currentLevel >= MAX_SPEED_LEVEL && currentStars < AscendConstants.MAX_ROBOT_STARS) {
+                int newStars = playerStore.evolveRobot(playerRef.getUuid(), mapId);
+                if (robotManager != null) {
+                    robotManager.respawnRobot(playerRef.getUuid(), mapId, newStars);
+                }
+                sendMessage(store, ref, "[Ascend] Runner evolved! Now at " + newStars + " star" + (newStars > 1 ? "s" : "") + "!");
+                updateRobotRow(ref, store, mapId);
+                return;
+            }
+
+            // Normal speed upgrade
             long upgradeCost = computeUpgradeCost(currentLevel);
             if (!playerStore.spendCoins(playerRef.getUuid(), upgradeCost)) {
                 sendMessage(store, ref, "[Ascend] Not enough coins to upgrade speed.");
@@ -388,6 +428,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
         AscendPlayerProgress.MapProgress mapProgress = unlockResult.mapProgress;
         boolean hasRobot = mapProgress != null && mapProgress.hasRobot();
         int speedLevel = mapProgress != null ? mapProgress.getRobotSpeedLevel() : 0;
+        int stars = mapProgress != null ? mapProgress.getRobotStars() : 0;
 
         String status;
         if (!unlocked) {
@@ -406,16 +447,20 @@ public class AscendMapSelectPage extends BaseAscendPage {
         } else {
             int speedPercent = speedLevel * 10;
             runnerStatusText = "Speed: +" + speedPercent + "%";
-            if (speedLevel >= MAX_SPEED_LEVEL) {
+            if (speedLevel >= MAX_SPEED_LEVEL && stars < AscendConstants.MAX_ROBOT_STARS) {
+                runnerButtonText = "Evolve";
+                actionPrice = 0L;
+            } else if (stars >= AscendConstants.MAX_ROBOT_STARS && speedLevel >= MAX_SPEED_LEVEL) {
                 runnerButtonText = "Maxed!";
+                actionPrice = 0L;
             } else {
                 runnerButtonText = "Upgrade";
+                actionPrice = computeUpgradeCost(speedLevel);
             }
-            actionPrice = computeUpgradeCost(speedLevel);
         }
 
         String priceText = actionPrice > 0 ? (FormatUtils.formatCoinsForHud(actionPrice) + " coins") : "Free";
-        if (speedLevel >= MAX_SPEED_LEVEL && hasRobot) {
+        if ((speedLevel >= MAX_SPEED_LEVEL && hasRobot) || runnerButtonText.equals("Maxed!")) {
             priceText = "";
         }
 
@@ -424,8 +469,8 @@ public class AscendMapSelectPage extends BaseAscendPage {
         // Update progress bar
         updateProgressBar(commandBuilder, index, speedLevel);
 
-        // Update level text in button zone
-        String levelText = speedLevel >= MAX_SPEED_LEVEL ? "MAX" : "Lv." + speedLevel;
+        // Update level text in button zone with star display
+        String levelText = buildStarDisplay(stars, speedLevel);
         commandBuilder.set("#MapCards[" + index + "] #RunnerLevel.Text", levelText);
 
         // Update text fields
