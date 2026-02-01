@@ -51,15 +51,15 @@ Quick reference for AI agents working on this Hytale plugin project.
 
 ## Reference Files (in docs/)
 
-| For... | Read... |
-|--------|---------|
-| Code patterns | `docs/CODE_PATTERNS.md` |
-| Hytale API gotchas | `docs/HYTALE_API.md` |
-| Full instructions | `docs/AGENTS.md` |
-| System architecture | `docs/ARCHITECTURE.md` |
-| Database schema | `docs/DATABASE.md` |
+| For... | Read...                         |
+|--------|---------------------------------|
+| Code patterns | `docs/CODE_PATTERNS.md`         |
+| Hytale API gotchas | `docs/HYTALE_API.md`            |
+| Full instructions | `docs/codex/AGENTS.md`          |
+| System architecture | `docs/ARCHITECTURE.md`          |
+| Database schema | `docs/DATABASE.md`              |
 | Ascend mode details | `docs/ASCEND_MODULE_SUMMARY.md` |
-| Feature history | `CHANGELOG.md` |
+| Feature history | `CHANGELOG.md`                  |
 
 
 ## grepai - Semantic Code Search
