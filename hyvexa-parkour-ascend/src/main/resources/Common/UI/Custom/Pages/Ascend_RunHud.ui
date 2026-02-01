@@ -7,7 +7,7 @@ $C.@PageOverlay {
 
     Group #TopBar {
       Anchor: (Left: 0, Right: 0, Top: 0, Height: 57);
-      Background: #000000(0.35);
+      Background: #000000(0.60);
       LayoutMode: Left;
       Padding: (Left: 18, Right: 18, Top: 9, Bottom: 0);
 
@@ -191,6 +191,22 @@ $C.@PageOverlay {
             Text: "0";
           }
         }
+        Group { Anchor: (Width: 10); }
+        Group #TopCoinsPerRunFrame {
+          Anchor: (Width: 180, Height: 40);
+          Background: #000000(0.55);
+
+          Label #TopCoinsPerRunValue {
+            Anchor: (Left: 0, Right: 0, Top: 2, Height: 28);
+            Style: (
+              FontSize: 28,
+              TextColor: #FFFFFF,
+              RenderBold: true,
+              HorizontalAlignment: Center
+            );
+            Text: "0/run";
+          }
+        }
         Group { FlexWeight: 1; }
       }
     }
@@ -367,7 +383,7 @@ $C.@PageOverlay {
     }
 
     Group #PrestigeHud {
-      Anchor: (Left: 20, Top: 120, Width: 260, Height: 90);
+      Anchor: (Left: 20, Top: 120, Width: 400, Height: 110);
       Background: #000000(0.4);
       LayoutMode: Top;
       Padding: (Left: 10, Right: 10, Top: 8, Bottom: 8);
@@ -376,18 +392,18 @@ $C.@PageOverlay {
       Label #PrestigeTitle {
         Anchor: (Left: 0, Right: 0);
         Style: (
-          FontSize: 18,
+          FontSize: 22,
           TextColor: #ffd166,
           RenderBold: true,
           HorizontalAlignment: Center
         );
-        Text: "PRESTIGE";
+        Text: "SUMMIT";
       }
 
       Label #SummitText {
-        Anchor: (Left: 0, Right: 0, Top: 4);
+        Anchor: (Left: 0, Right: 0, Top: 6);
         Style: (
-          FontSize: 16,
+          FontSize: 18,
           TextColor: #06b6d4,
           RenderBold: true,
           HorizontalAlignment: Center
@@ -395,15 +411,15 @@ $C.@PageOverlay {
         Text: "Summit: Coin 0 | Speed 0 | Manual 0";
       }
 
-      Label #AscensionText {
-        Anchor: (Left: 0, Right: 0, Top: 4);
+      Label #SummitHint {
+        Anchor: (Left: 0, Right: 0, Top: 6);
         Style: (
           FontSize: 16,
-          TextColor: #f59e0b,
+          TextColor: #9fb0ba,
           RenderBold: true,
           HorizontalAlignment: Center
         );
-        Text: "Ascension: x0 | Points: 0";
+        Text: "Invest coins to upgrade categories (resets coins + elevation)";
       }
     }
   }
