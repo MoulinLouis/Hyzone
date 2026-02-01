@@ -39,6 +39,7 @@ CREATE TABLE maps (
   first_completion_xp BIGINT NOT NULL,
   mithril_sword_enabled BOOLEAN NOT NULL,
   mithril_daggers_enabled BOOLEAN NOT NULL,
+  glider_enabled BOOLEAN NOT NULL,
   free_fall_enabled BOOLEAN NOT NULL,
   dropper_enabled BOOLEAN NOT NULL,
   duel_enabled BOOLEAN NOT NULL,

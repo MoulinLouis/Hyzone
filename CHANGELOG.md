@@ -1,5 +1,6 @@
 # Changelog
 
+- Add a map admin glider toggle to grant the Glider run item per map.
 - Add star evolution system for Ascend runners:
   - When a runner reaches max level (20), players can evolve it to gain a star and reset level to 0.
   - Each star doubles the multiplier increment per completion (0.01 -> 0.02 -> 0.04 -> 0.08 -> 0.16 -> 0.32).

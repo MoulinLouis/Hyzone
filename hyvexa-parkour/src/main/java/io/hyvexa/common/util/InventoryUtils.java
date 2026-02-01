@@ -39,12 +39,16 @@ public final class InventoryUtils {
             clearContainer(inventory.getHotbar());
             boolean hasSword = map != null && map.isMithrilSwordEnabled();
             boolean hasDaggers = map != null && map.isMithrilDaggersEnabled();
+            boolean hasGlider = map != null && map.isGliderEnabled();
             int slotIndex = 0;
             if (hasSword) {
                 setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_RUN_MITHRIL_SWORD, 1));
             }
             if (hasDaggers) {
                 setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_RUN_MITHRIL_DAGGERS, 1));
+            }
+            if (hasGlider) {
+                setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_RUN_GLIDER, 1));
             }
             if (practiceEnabled) {
                 setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_PRACTICE_CHECKPOINT, 1));
@@ -64,12 +68,16 @@ public final class InventoryUtils {
         clearAllSections(inventory);
         boolean hasSword = map != null && map.isMithrilSwordEnabled();
         boolean hasDaggers = map != null && map.isMithrilDaggersEnabled();
+        boolean hasGlider = map != null && map.isGliderEnabled();
         int slotIndex = 0;
         if (hasSword) {
             setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_RUN_MITHRIL_SWORD, 1));
         }
         if (hasDaggers) {
             setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_RUN_MITHRIL_DAGGERS, 1));
+        }
+        if (hasGlider) {
+            setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_RUN_GLIDER, 1));
         }
         if (practiceEnabled) {
             setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_PRACTICE_CHECKPOINT, 1));
