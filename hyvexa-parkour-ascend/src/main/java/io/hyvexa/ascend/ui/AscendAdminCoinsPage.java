@@ -16,6 +16,8 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.ParkourAscendPlugin;
+import io.hyvexa.ascend.data.AscendMap;
+import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
@@ -79,13 +81,29 @@ public class AscendAdminCoinsPage extends InteractiveCustomUIPage<AscendAdminCoi
     }
 
     private void resetProgress(Player player, PlayerRef playerRef, Store<EntityStore> store) {
-        AscendPlayerStore playerStore = ParkourAscendPlugin.getInstance().getPlayerStore();
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        AscendPlayerStore playerStore = plugin != null ? plugin.getPlayerStore() : null;
+        AscendMapStore mapStore = plugin != null ? plugin.getMapStore() : null;
         if (playerStore == null) {
             player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading."));
             return;
         }
         playerStore.resetPlayerProgress(playerRef.getUuid());
-        player.sendMessage(Message.raw("[Ascend] Your Ascend progress has been reset.")
+
+        // Unlock the first map (lowest displayOrder) like a new player would have
+        if (mapStore != null) {
+            AscendMap firstMap = null;
+            for (AscendMap map : mapStore.listMaps()) {
+                if (firstMap == null || map.getDisplayOrder() < firstMap.getDisplayOrder()) {
+                    firstMap = map;
+                }
+            }
+            if (firstMap != null) {
+                playerStore.setMapUnlocked(playerRef.getUuid(), firstMap.getId(), true);
+            }
+        }
+
+        player.sendMessage(Message.raw("[Ascend] Your Ascend progress has been reset (first map unlocked).")
             .color(SystemMessageUtils.SECONDARY));
         UICommandBuilder commandBuilder = new UICommandBuilder();
         commandBuilder.set("#CurrentCoinsValue.Text", "0");

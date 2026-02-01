@@ -1,6 +1,7 @@
 package io.hyvexa.ascend.util;
 
 import io.hyvexa.ascend.data.AscendMap;
+import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 
@@ -36,25 +37,62 @@ public final class MapUnlockHelper {
      * @return UnlockResult with status and updated progress
      */
     public static UnlockResult checkAndEnsureUnlock(UUID playerId, AscendMap map, AscendPlayerStore playerStore) {
+        return checkAndEnsureUnlock(playerId, map, playerStore, null);
+    }
+
+    /**
+     * Check if a map is unlocked for a player, auto-unlocking free maps.
+     * If mapStore is provided, also auto-unlocks the first map (lowest displayOrder).
+     *
+     * @param playerId The player UUID
+     * @param map The map to check
+     * @param playerStore The player store
+     * @param mapStore The map store (optional, for first-map detection)
+     * @return UnlockResult with status and updated progress
+     */
+    public static UnlockResult checkAndEnsureUnlock(UUID playerId, AscendMap map,
+                                                     AscendPlayerStore playerStore,
+                                                     AscendMapStore mapStore) {
         if (playerId == null || map == null || playerStore == null) {
             return new UnlockResult(false, null);
         }
 
         AscendPlayerProgress.MapProgress mapProgress = playerStore.getMapProgress(playerId, map.getId());
-        boolean unlocked = map.getPrice() <= 0;
 
+        // Check if already unlocked
         if (mapProgress != null && mapProgress.isUnlocked()) {
-            unlocked = true;
+            return new UnlockResult(true, mapProgress);
+        }
+
+        // Check if this map should be free (price = 0 or first map)
+        boolean isFree = map.getEffectivePrice() <= 0;
+        if (!isFree && mapStore != null) {
+            isFree = isFirstMap(map, mapStore);
         }
 
         // Auto-unlock free maps
-        if (map.getPrice() <= 0 && (mapProgress == null || !mapProgress.isUnlocked())) {
+        if (isFree) {
             playerStore.setMapUnlocked(playerId, map.getId(), true);
             mapProgress = playerStore.getMapProgress(playerId, map.getId());
-            unlocked = true;
+            return new UnlockResult(true, mapProgress);
         }
 
-        return new UnlockResult(unlocked, mapProgress);
+        return new UnlockResult(false, mapProgress);
+    }
+
+    /**
+     * Check if a map is the first map (lowest displayOrder).
+     */
+    public static boolean isFirstMap(AscendMap map, AscendMapStore mapStore) {
+        if (map == null || mapStore == null) {
+            return false;
+        }
+        for (AscendMap other : mapStore.listMaps()) {
+            if (other.getDisplayOrder() < map.getDisplayOrder()) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
@@ -68,7 +106,7 @@ public final class MapUnlockHelper {
         if (map == null) {
             return false;
         }
-        if (map.getPrice() <= 0) {
+        if (map.getEffectivePrice() <= 0) {
             return true;
         }
         return mapProgress != null && mapProgress.isUnlocked();

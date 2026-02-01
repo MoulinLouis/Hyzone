@@ -113,6 +113,11 @@ public class ParkourAscendPlugin extends JavaPlugin {
                 if (playerRef == null) {
                     return;
                 }
+                // Register player as online for robot spawning
+                UUID playerId = playerRef.getUuid();
+                if (playerId != null && robotManager != null) {
+                    robotManager.onPlayerJoin(playerId);
+                }
                 CompletableFuture.runAsync(() -> {
                     Player player = store.getComponent(ref, Player.getComponentType());
                     if (player == null) {
@@ -161,6 +166,9 @@ public class ParkourAscendPlugin extends JavaPlugin {
             ascendHudReadyAt.remove(playerId);
             if (runTracker != null) {
                 runTracker.cancelRun(playerId);
+            }
+            if (robotManager != null) {
+                robotManager.onPlayerLeave(playerId);
             }
         });
 
@@ -260,9 +268,9 @@ public class ParkourAscendPlugin extends JavaPlugin {
             List<AscendMap> maps = mapStore != null ? mapStore.listMapsSorted() : List.of();
             long product = playerStore.getMultiplierProduct(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
             double[] digits = playerStore.getMultiplierDisplayValues(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
-            int rebirthMultiplier = playerStore.getRebirthMultiplier(playerId);
-            boolean showRebirth = coins >= 1000L;
-            hud.updateEconomy(coins, product, digits, rebirthMultiplier, showRebirth);
+            int elevationMultiplier = playerStore.getElevationMultiplier(playerId);
+            boolean showElevation = coins >= 1000L;
+            hud.updateEconomy(coins, product, digits, elevationMultiplier, showElevation);
         }
     }
 

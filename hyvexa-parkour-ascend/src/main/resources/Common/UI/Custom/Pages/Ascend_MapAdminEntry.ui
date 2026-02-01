@@ -1,15 +1,18 @@
 $C = "../Common.ui";
 
 Button {
-  LayoutMode: Top;
-  Anchor: (Left: 2, Right: 2, Bottom: 6, Height: 52, Width: 320);
+  Anchor: (Left: 2, Right: 2, Bottom: 6, Height: 68, Width: 520);
   Background: $C.@InputBoxBackground;
-  Padding: (Left: 10, Right: 10, Top: 6);
+  Padding: (Left: 12, Right: 12, Top: 8);
   Style: ButtonStyle(
+    Default: (Background: $C.@InputBoxBackground),
+    Hovered: (Background: #253742),
+    Pressed: (Background: #1a2830),
     Sounds: $C.@ButtonSounds,
   );
 
   Label #MapName {
+    Anchor: (Top: 0);
     Style: (
       FontSize: 15,
       RenderBold: true,
@@ -19,11 +22,20 @@ Button {
   }
 
   Label #MapStatus {
-    Anchor: (Top: 2);
+    Anchor: (Top: 20);
     Style: (
       FontSize: 12,
       TextColor: #9fb0ba
     );
     Text: "Status";
+  }
+
+  Label #MapBalance {
+    Anchor: (Top: 38);
+    Style: (
+      FontSize: 11,
+      TextColor: #7a9aa8
+    );
+    Text: "Balance";
   }
 }

@@ -16,9 +16,11 @@ public class RobotState {
     private final AtomicLong lastTickMs = new AtomicLong(System.currentTimeMillis());
     private final AtomicLong waypointReachedMs = new AtomicLong(0);
     private volatile boolean waiting;
+    private volatile boolean spawning;
     private final AtomicLong runsCompleted = new AtomicLong(0);
-    private final AtomicInteger robotCount = new AtomicInteger(0);
+    private final AtomicInteger speedLevel = new AtomicInteger(0);
     private final AtomicLong lastCompletionMs = new AtomicLong(0);
+    private volatile double[] previousPosition;  // For calculating movement direction/rotation [x, y, z]
 
     public RobotState(UUID ownerId, String mapId) {
         this.ownerId = ownerId;
@@ -77,6 +79,14 @@ public class RobotState {
         this.waiting = waiting;
     }
 
+    public boolean isSpawning() {
+        return spawning;
+    }
+
+    public void setSpawning(boolean spawning) {
+        this.spawning = spawning;
+    }
+
     public long getRunsCompleted() {
         return runsCompleted.get();
     }
@@ -91,12 +101,12 @@ public class RobotState {
         }
     }
 
-    public int getRobotCount() {
-        return robotCount.get();
+    public int getSpeedLevel() {
+        return speedLevel.get();
     }
 
-    public void setRobotCount(int robotCount) {
-        this.robotCount.set(Math.max(0, robotCount));
+    public void setSpeedLevel(int speedLevel) {
+        this.speedLevel.set(Math.max(0, speedLevel));
     }
 
     public long getLastCompletionMs() {
@@ -110,5 +120,14 @@ public class RobotState {
     public void resetForNewRun() {
         this.currentWaypointIndex.set(0);
         this.waypointReachedMs.set(0);
+        this.previousPosition = null;
+    }
+
+    public double[] getPreviousPosition() {
+        return previousPosition;
+    }
+
+    public void setPreviousPosition(double[] previousPosition) {
+        this.previousPosition = previousPosition;
     }
 }

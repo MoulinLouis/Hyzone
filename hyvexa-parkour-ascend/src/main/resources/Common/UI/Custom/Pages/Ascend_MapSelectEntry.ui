@@ -2,83 +2,169 @@ $C = "../Common.ui";
 
 Group {
   LayoutMode: Left;
-  Anchor: (Left: 2, Right: 2, Bottom: 6, Height: 72, Width: 520);
-  Background: #000000(0.0);
+  Anchor: (Left: 0, Right: 0, Bottom: 8, Height: 90);
+  Background: #1a2530(0.95);
+
+  Group #AccentBar {
+    Anchor: (Width: 8, Top: 0, Bottom: 0);
+    Background: #7c3aed;
+  }
 
   Button #SelectButton {
-    Anchor: (Left: 0, Top: 0, Width: 420, Height: 72);
-    Background: $C.@InputBoxBackground;
-    Padding: (Left: 12, Right: 12, Top: 6, Bottom: 6);
+    Anchor: (Width: 436, Top: 0, Bottom: 0);
+    Padding: (Left: 12, Top: 12, Bottom: 12);
+    Background: #00000000;
     Style: ButtonStyle(
-      Default: (Background: $C.@InputBoxBackground),
-      Hovered: (Background: $C.@InputBoxBackground),
-      Pressed: (Background: $C.@InputBoxBackground),
+      Default: (Background: #00000000),
+      Hovered: (Background: #ffffff(0.05)),
+      Pressed: (Background: #ffffff(0.02)),
       Sounds: $C.@ButtonSounds,
     );
+    LayoutMode: Top;
 
     Label #MapName {
       Style: (
-        FontSize: 18,
+        FontSize: 16,
         RenderBold: true,
-        TextColor: #93844c
+        TextColor: #f0f4f8
       );
-      Text: "Map";
+      Text: "Map Name";
+    }
+
+    Group #ProgressRow {
+      Anchor: (Height: 14, Top: 6);
+      LayoutMode: Left;
+
+      Group #ProgressBar {
+        Anchor: (Width: 200, Height: 8, Top: 3);
+        Background: #000000(0.3);
+
+        Group #Seg1 {
+          Anchor: (Left: 0, Width: 18, Top: 0, Bottom: 0);
+          Background: #7c3aed;
+          Visible: false;
+        }
+        Group #Seg2 {
+          Anchor: (Left: 20, Width: 18, Top: 0, Bottom: 0);
+          Background: #7c3aed;
+          Visible: false;
+        }
+        Group #Seg3 {
+          Anchor: (Left: 40, Width: 18, Top: 0, Bottom: 0);
+          Background: #7c3aed;
+          Visible: false;
+        }
+        Group #Seg4 {
+          Anchor: (Left: 60, Width: 18, Top: 0, Bottom: 0);
+          Background: #7c3aed;
+          Visible: false;
+        }
+        Group #Seg5 {
+          Anchor: (Left: 80, Width: 18, Top: 0, Bottom: 0);
+          Background: #7c3aed;
+          Visible: false;
+        }
+        Group #Seg6 {
+          Anchor: (Left: 100, Width: 18, Top: 0, Bottom: 0);
+          Background: #7c3aed;
+          Visible: false;
+        }
+        Group #Seg7 {
+          Anchor: (Left: 120, Width: 18, Top: 0, Bottom: 0);
+          Background: #7c3aed;
+          Visible: false;
+        }
+        Group #Seg8 {
+          Anchor: (Left: 140, Width: 18, Top: 0, Bottom: 0);
+          Background: #7c3aed;
+          Visible: false;
+        }
+        Group #Seg9 {
+          Anchor: (Left: 160, Width: 18, Top: 0, Bottom: 0);
+          Background: #7c3aed;
+          Visible: false;
+        }
+        Group #Seg10 {
+          Anchor: (Left: 180, Width: 18, Top: 0, Bottom: 0);
+          Background: #7c3aed;
+          Visible: false;
+        }
+      }
     }
 
     Label #MapStatus {
-      Anchor: (Top: 22);
+      Anchor: (Top: 6);
       Style: (
-        FontSize: 14,
+        FontSize: 13,
         TextColor: #9fb0ba
       );
-      Text: "Status";
-    }
-
-    Label #RobotCountText {
-      Anchor: (Top: 44);
-      Style: (
-        FontSize: 14,
-        TextColor: #e7f1f4,
-        RenderBold: true
-      );
-      Text: "Robots: 0";
-    }
-
-    Label #RobotPriceText {
-      Anchor: (Top: 44, Left: 120);
-      Style: (
-        FontSize: 14,
-        TextColor: #9fb0ba
-      );
-      Text: "Cost: 0 coins";
+      Text: "Runs/sec: 0";
     }
   }
 
-  Group {
-    Anchor: (Width: 8);
-  }
+  Group #ButtonZone {
+    Anchor: (Width: 128, Top: 0, Bottom: 0);
+    LayoutMode: Top;
 
-  Button #RobotBuyButton {
-    Anchor: (Top: 0, Width: 92, Height: 72);
-    Padding: (Left: 6, Right: 6, Top: 6, Bottom: 6);
-    Background: $C.@InputBoxBackground;
-    Style: ButtonStyle(
-      Default: (Background: $C.@InputBoxBackground),
-      Hovered: (Background: $C.@InputBoxBackground),
-      Pressed: (Background: $C.@InputBoxBackground),
-      Sounds: $C.@ButtonSounds,
-    );
+    Group #ButtonAccent {
+      Anchor: (Left: 0, Right: 0, Height: 3);
+      Background: #7c3aed;
+    }
 
-    Label #RobotBuyText {
+    Button #RobotBuyButton {
       Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-      Style: (
-        FontSize: 14,
-        TextColor: #ffd166,
-        RenderBold: true,
-        HorizontalAlignment: Center,
-        VerticalAlignment: Center
+      FlexWeight: 1;
+      Padding: (Left: 8, Right: 8, Top: 4, Bottom: 6);
+      Background: #000000(0.25);
+      Style: ButtonStyle(
+        Default: (Background: #000000(0.25)),
+        Hovered: (Background: #000000(0.4)),
+        Pressed: (Background: #000000(0.15)),
+        Sounds: $C.@ButtonSounds,
       );
-      Text: "+1 Robot";
+      LayoutMode: Top;
+
+      Label #RunnerLevel {
+        Anchor: (Left: 0, Right: 0);
+        Style: (
+          FontSize: 13,
+          RenderBold: true,
+          TextColor: #7c3aed,
+          HorizontalAlignment: Center
+        );
+        Text: "Lv.0";
+      }
+
+      Label #RunnerStatus {
+        Anchor: (Left: 0, Right: 0, Top: 1);
+        Style: (
+          FontSize: 11,
+          TextColor: #9fb0ba,
+          HorizontalAlignment: Center
+        );
+        Text: "No Runner";
+      }
+
+      Label #RobotBuyText {
+        Anchor: (Left: 0, Right: 0, Top: 3);
+        Style: (
+          FontSize: 13,
+          RenderBold: true,
+          TextColor: #f0f4f8,
+          HorizontalAlignment: Center
+        );
+        Text: "Buy Runner";
+      }
+
+      Label #RobotPriceText {
+        Anchor: (Left: 0, Right: 0, Top: 1);
+        Style: (
+          FontSize: 11,
+          TextColor: #9fb0ba,
+          HorizontalAlignment: Center
+        );
+        Text: "100 coins";
+      }
     }
   }
 }

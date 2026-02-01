@@ -35,7 +35,8 @@ public class AscendMapSelectPage extends BaseAscendPage {
 
     private static final String BUTTON_CLOSE = "Close";
     private static final String BUTTON_SELECT_PREFIX = "Select:";
-    private static final String BUTTON_BUY_ROBOT_PREFIX = "BuyRobot:";
+    private static final String BUTTON_ROBOT_PREFIX = "Robot:";
+    private static final int MAX_SPEED_LEVEL = 10;
 
     private final AscendMapStore mapStore;
     private final AscendPlayerStore playerStore;
@@ -74,8 +75,8 @@ public class AscendMapSelectPage extends BaseAscendPage {
             this.close();
             return;
         }
-        if (data.getButton().startsWith(BUTTON_BUY_ROBOT_PREFIX)) {
-            handleBuyRobot(ref, store, data.getButton().substring(BUTTON_BUY_ROBOT_PREFIX.length()));
+        if (data.getButton().startsWith(BUTTON_ROBOT_PREFIX)) {
+            handleRobotAction(ref, store, data.getButton().substring(BUTTON_ROBOT_PREFIX.length()));
             return;
         }
         if (!data.getButton().startsWith(BUTTON_SELECT_PREFIX)) {
@@ -128,104 +129,112 @@ public class AscendMapSelectPage extends BaseAscendPage {
         int index = 0;
         for (AscendMap map : maps) {
             commandBuilder.append("#MapCards", "Pages/Ascend_MapSelectEntry.ui");
-            String cardColor = resolveMapCardColor(index);
+            String accentColor = resolveMapAccentColor(index);
             String mapName = map.getName() != null && !map.getName().isBlank() ? map.getName() : map.getId();
-            String textColor = resolveMapTextColor(index);
-            String hoverColor = adjustColor(cardColor, 0.12);
-            String pressedColor = adjustColor(cardColor, -0.12);
-            commandBuilder.set("#MapCards[" + index + "] #SelectButton.Background", cardColor);
-            commandBuilder.set("#MapCards[" + index + "] #SelectButton.Style.Default.Background", cardColor);
-            commandBuilder.set("#MapCards[" + index + "] #SelectButton.Style.Hovered.Background", hoverColor);
-            commandBuilder.set("#MapCards[" + index + "] #SelectButton.Style.Pressed.Background", pressedColor);
-            commandBuilder.set("#MapCards[" + index + "] #RobotBuyButton.Background", cardColor);
-            commandBuilder.set("#MapCards[" + index + "] #RobotBuyButton.Style.Default.Background", cardColor);
-            commandBuilder.set("#MapCards[" + index + "] #RobotBuyButton.Style.Hovered.Background", hoverColor);
-            commandBuilder.set("#MapCards[" + index + "] #RobotBuyButton.Style.Pressed.Background", pressedColor);
-            commandBuilder.set("#MapCards[" + index + "] #MapName.Style.TextColor", textColor);
-            commandBuilder.set("#MapCards[" + index + "] #MapStatus.Style.TextColor", textColor);
-            commandBuilder.set("#MapCards[" + index + "] #RobotCountText.Style.TextColor", textColor);
-            commandBuilder.set("#MapCards[" + index + "] #RobotPriceText.Style.TextColor", textColor);
-            commandBuilder.set("#MapCards[" + index + "] #RobotBuyText.Style.TextColor", textColor);
+
             MapUnlockHelper.UnlockResult unlockResult = MapUnlockHelper.checkAndEnsureUnlock(
-                playerRef.getUuid(), map, playerStore);
+                playerRef.getUuid(), map, playerStore, mapStore);
             boolean unlocked = unlockResult.unlocked;
             AscendPlayerProgress.MapProgress mapProgress = unlockResult.mapProgress;
+            boolean hasRobot = mapProgress != null && mapProgress.hasRobot();
+            int speedLevel = mapProgress != null ? mapProgress.getRobotSpeedLevel() : 0;
+
+            // Apply accent color to accent bars (left and button top)
+            commandBuilder.set("#MapCards[" + index + "] #AccentBar.Background", accentColor);
+            commandBuilder.set("#MapCards[" + index + "] #ButtonAccent.Background", accentColor);
+
+            // Apply accent color to progress bar segments
+            for (int seg = 1; seg <= MAX_SPEED_LEVEL; seg++) {
+                commandBuilder.set("#MapCards[" + index + "] #Seg" + seg + ".Background", accentColor);
+            }
+
+            // Update progress bar visibility based on speed level
+            updateProgressBar(commandBuilder, index, speedLevel);
+
+            // Level text for button zone
+            String levelText = speedLevel >= MAX_SPEED_LEVEL ? "MAX" : "Lv." + speedLevel;
+
+            // Map name
+            commandBuilder.set("#MapCards[" + index + "] #MapName.Text", mapName);
+
+            // Status text
             String status;
             if (!unlocked) {
-                status = "Locked | Price: " + map.getPrice() + " coins";
+                status = "Locked | Price: " + map.getEffectivePrice() + " coins";
             } else {
-                int robotCount = mapProgress != null ? Math.max(0, mapProgress.getRobotCount()) : 0;
-                status = "Runs/sec: " + formatRunsPerSecond(map, robotCount);
+                status = "Runs/sec: " + formatRunsPerSecond(map, hasRobot, speedLevel);
             }
-            int robotCount = mapProgress != null ? Math.max(0, mapProgress.getRobotCount()) : 0;
-            long robotPrice = Math.max(0L, map.getRobotPrice());
-            String robotPriceText = robotPrice > 0 ? (FormatUtils.formatCoinsForHud(robotPrice) + " coins") : "Free";
-            commandBuilder.set("#MapCards[" + index + "] #MapName.Text", mapName);
             commandBuilder.set("#MapCards[" + index + "] #MapStatus.Text", status);
-            commandBuilder.set("#MapCards[" + index + "] #RobotCountText.Text", "Robots: " + robotCount);
-            commandBuilder.set("#MapCards[" + index + "] #RobotPriceText.Text", "Cost: " + robotPriceText);
+
+            // Runner status and button text
+            String runnerStatusText;
+            String runnerButtonText;
+            long actionPrice;
+            if (!hasRobot) {
+                runnerStatusText = "No Runner";
+                runnerButtonText = "Buy Runner";
+                actionPrice = Math.max(0L, map.getEffectiveRobotPrice());
+            } else {
+                int speedPercent = speedLevel * 10;
+                runnerStatusText = "Speed: +" + speedPercent + "%";
+                if (speedLevel >= MAX_SPEED_LEVEL) {
+                    runnerButtonText = "Maxed!";
+                } else {
+                    runnerButtonText = "Upgrade";
+                }
+                actionPrice = computeUpgradeCost(speedLevel);
+            }
+
+            String priceText = actionPrice > 0 ? (FormatUtils.formatCoinsForHud(actionPrice) + " coins") : "Free";
+            if (speedLevel >= MAX_SPEED_LEVEL && hasRobot) {
+                priceText = "";
+            }
+
+            commandBuilder.set("#MapCards[" + index + "] #RunnerLevel.Text", levelText);
+            commandBuilder.set("#MapCards[" + index + "] #RunnerLevel.Style.TextColor", accentColor);
+            commandBuilder.set("#MapCards[" + index + "] #RunnerStatus.Text", runnerStatusText);
+            commandBuilder.set("#MapCards[" + index + "] #RobotBuyText.Text", runnerButtonText);
+            commandBuilder.set("#MapCards[" + index + "] #RobotPriceText.Text", priceText);
+
+            // Event bindings
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
                 "#MapCards[" + index + "] #SelectButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_SELECT_PREFIX + map.getId()), false);
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
                 "#MapCards[" + index + "] #RobotBuyButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_BUY_ROBOT_PREFIX + map.getId()), false);
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_ROBOT_PREFIX + map.getId()), false);
             index++;
         }
     }
 
-    private String resolveMapCardColor(int index) {
+    private void updateProgressBar(UICommandBuilder cmd, int cardIndex, int speedLevel) {
+        int filledSegments = Math.min(speedLevel, MAX_SPEED_LEVEL);
+        for (int seg = 1; seg <= MAX_SPEED_LEVEL; seg++) {
+            boolean visible = seg <= filledSegments;
+            cmd.set("#MapCards[" + cardIndex + "] #Seg" + seg + ".Visible", visible);
+        }
+    }
+
+    private String resolveMapAccentColor(int index) {
         return switch (index) {
-            case 0 -> "#c0392b";
-            case 1 -> "#d35400";
-            case 2 -> "#f1c40f";
-            case 3 -> "#27ae60";
-            default -> "#2980b9";
+            case 0 -> "#7c3aed";  // Violet
+            case 1 -> "#3b82f6";  // Blue
+            case 2 -> "#06b6d4";  // Cyan
+            case 3 -> "#f59e0b";  // Amber
+            default -> "#ef4444"; // Red
         };
     }
 
-    private String resolveMapTextColor(int index) {
-        return "#1b1b1b";
-    }
-
-    private String adjustColor(String hex, double factor) {
-        if (hex == null || !hex.startsWith("#") || (hex.length() != 7)) {
-            return "#000000";
-        }
-        try {
-            int r = Integer.parseInt(hex.substring(1, 3), 16);
-            int g = Integer.parseInt(hex.substring(3, 5), 16);
-            int b = Integer.parseInt(hex.substring(5, 7), 16);
-            r = adjustChannel(r, factor);
-            g = adjustChannel(g, factor);
-            b = adjustChannel(b, factor);
-            return String.format("#%02x%02x%02x", r, g, b);
-        } catch (NumberFormatException e) {
-            return "#000000";
-        }
-    }
-
-    private int adjustChannel(int value, double factor) {
-        double result;
-        if (factor >= 0) {
-            result = value + (255 - value) * factor;
-        } else {
-            result = value * (1.0 + factor);
-        }
-        int clamped = (int) Math.round(result);
-        return Math.max(0, Math.min(255, clamped));
-    }
-
-    private String formatRunsPerSecond(AscendMap map, int robotCount) {
-        if (map == null || robotCount <= 0) {
+    private String formatRunsPerSecond(AscendMap map, boolean hasRobot, int speedLevel) {
+        if (map == null || !hasRobot) {
             return "0";
         }
-        long base = Math.max(0L, map.getBaseRunTimeMs());
-        long reduction = Math.max(0L, map.getRobotTimeReductionMs());
+        long base = Math.max(0L, map.getEffectiveBaseRunTimeMs());
         if (base <= 0L) {
             return "0";
         }
-        long interval = base - (reduction * Math.max(0, robotCount - 1));
+        double speedMultiplier = 1.0 + (speedLevel * AscendConstants.SPEED_UPGRADE_MULTIPLIER);
+        long interval = (long) (base / speedMultiplier);
         interval = Math.max(1L, interval);
         double perSecond = 1000.0 / interval;
         String text = String.format(Locale.US, "%.2f", perSecond);
@@ -238,7 +247,11 @@ public class AscendMapSelectPage extends BaseAscendPage {
         return text;
     }
 
-    private void handleBuyRobot(Ref<EntityStore> ref, Store<EntityStore> store, String mapId) {
+    private long computeUpgradeCost(int currentLevel) {
+        return 100L * (long) Math.pow(2, currentLevel);
+    }
+
+    private void handleRobotAction(Ref<EntityStore> ref, Store<EntityStore> store, String mapId) {
         AscendMap map = mapStore.getMap(mapId);
         if (map == null) {
             sendMessage(store, ref, "Map not found.");
@@ -250,19 +263,36 @@ public class AscendMapSelectPage extends BaseAscendPage {
         }
         AscendPlayerProgress progress = playerStore.getOrCreatePlayer(playerRef.getUuid());
         AscendPlayerProgress.MapProgress mapProgress = progress.getOrCreateMapProgress(mapId);
-        boolean unlocked = mapProgress.isUnlocked() || map.getPrice() <= 0;
+        boolean unlocked = mapProgress.isUnlocked() || map.getEffectivePrice() <= 0;
         if (!unlocked) {
-            sendMessage(store, ref, "[Ascend] Unlock the map before buying a robot.");
+            sendMessage(store, ref, "[Ascend] Unlock the map before buying a runner.");
             return;
         }
-        long price = Math.max(0L, map.getRobotPrice());
-        if (price > 0 && !playerStore.spendCoins(playerRef.getUuid(), price)) {
-            sendMessage(store, ref, "[Ascend] Not enough coins to buy a robot.");
-            return;
+        if (!mapProgress.hasRobot()) {
+            long price = Math.max(0L, map.getEffectiveRobotPrice());
+            if (price > 0 && !playerStore.spendCoins(playerRef.getUuid(), price)) {
+                sendMessage(store, ref, "[Ascend] Not enough coins to buy a runner.");
+                return;
+            }
+            playerStore.setHasRobot(playerRef.getUuid(), mapId, true);
+            sendMessage(store, ref, "[Ascend] Runner purchased for " + price + " coins!");
+            updateRobotRow(ref, store, mapId);
+        } else {
+            int currentLevel = mapProgress.getRobotSpeedLevel();
+            if (currentLevel >= MAX_SPEED_LEVEL) {
+                sendMessage(store, ref, "[Ascend] Runner is already at maximum speed!");
+                return;
+            }
+            long upgradeCost = computeUpgradeCost(currentLevel);
+            if (!playerStore.spendCoins(playerRef.getUuid(), upgradeCost)) {
+                sendMessage(store, ref, "[Ascend] Not enough coins to upgrade speed.");
+                return;
+            }
+            int newLevel = playerStore.incrementRobotSpeedLevel(playerRef.getUuid(), mapId);
+            int newSpeedPercent = newLevel * 10;
+            sendMessage(store, ref, "[Ascend] Runner speed upgraded to +" + newSpeedPercent + "%!");
+            updateRobotRow(ref, store, mapId);
         }
-        int newCount = playerStore.addRobotCount(playerRef.getUuid(), mapId, 1);
-        sendMessage(store, ref, "[Ascend] Robot purchased for " + price + " coins. Robots: " + newCount);
-        updateRobotRow(ref, store, mapId, newCount, price);
     }
 
     private void startAutoRefresh(Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -312,23 +342,20 @@ public class AscendMapSelectPage extends BaseAscendPage {
                 continue;
             }
             MapUnlockHelper.UnlockResult unlockResult = MapUnlockHelper.checkAndEnsureUnlock(
-                playerRef.getUuid(), map, playerStore);
+                playerRef.getUuid(), map, playerStore, mapStore);
             boolean unlocked = unlockResult.unlocked;
             AscendPlayerProgress.MapProgress mapProgress = unlockResult.mapProgress;
-            int robotCount = mapProgress != null ? Math.max(0, mapProgress.getRobotCount()) : 0;
+            boolean hasRobot = mapProgress != null && mapProgress.hasRobot();
+            int speedLevel = mapProgress != null ? mapProgress.getRobotSpeedLevel() : 0;
             String status = unlocked
-                ? "Runs/sec: " + formatRunsPerSecond(map, robotCount)
-                : "Locked | Price: " + map.getPrice() + " coins";
+                ? "Runs/sec: " + formatRunsPerSecond(map, hasRobot, speedLevel)
+                : "Locked | Price: " + map.getEffectivePrice() + " coins";
             commandBuilder.set("#MapCards[" + i + "] #MapStatus.Text", status);
         }
         sendUpdate(commandBuilder, null, false);
     }
 
-    private void updateRobotRow(Ref<EntityStore> ref, Store<EntityStore> store, String mapId, int robotCount, long price) {
-        Player player = store.getComponent(ref, Player.getComponentType());
-        if (player == null) {
-            return;
-        }
+    private void updateRobotRow(Ref<EntityStore> ref, Store<EntityStore> store, String mapId) {
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (playerRef == null) {
             return;
@@ -348,20 +375,57 @@ public class AscendMapSelectPage extends BaseAscendPage {
             return;
         }
         MapUnlockHelper.UnlockResult unlockResult = MapUnlockHelper.checkAndEnsureUnlock(
-            playerRef.getUuid(), selectedMap, playerStore);
+            playerRef.getUuid(), selectedMap, playerStore, mapStore);
         boolean unlocked = unlockResult.unlocked;
         AscendPlayerProgress.MapProgress mapProgress = unlockResult.mapProgress;
+        boolean hasRobot = mapProgress != null && mapProgress.hasRobot();
+        int speedLevel = mapProgress != null ? mapProgress.getRobotSpeedLevel() : 0;
+
         String status;
         if (!unlocked) {
-            status = "Locked | Price: " + selectedMap.getPrice() + " coins";
+            status = "Locked | Price: " + selectedMap.getEffectivePrice() + " coins";
         } else {
-            status = "Runs/sec: " + formatRunsPerSecond(selectedMap, robotCount);
+            status = "Runs/sec: " + formatRunsPerSecond(selectedMap, hasRobot, speedLevel);
         }
-        String robotPriceText = price > 0 ? (FormatUtils.formatCoinsForHud(price) + " coins") : "Free";
+
+        String runnerStatusText;
+        String runnerButtonText;
+        long actionPrice;
+        if (!hasRobot) {
+            runnerStatusText = "No Runner";
+            runnerButtonText = "Buy Runner";
+            actionPrice = Math.max(0L, selectedMap.getEffectiveRobotPrice());
+        } else {
+            int speedPercent = speedLevel * 10;
+            runnerStatusText = "Speed: +" + speedPercent + "%";
+            if (speedLevel >= MAX_SPEED_LEVEL) {
+                runnerButtonText = "Maxed!";
+            } else {
+                runnerButtonText = "Upgrade";
+            }
+            actionPrice = computeUpgradeCost(speedLevel);
+        }
+
+        String priceText = actionPrice > 0 ? (FormatUtils.formatCoinsForHud(actionPrice) + " coins") : "Free";
+        if (speedLevel >= MAX_SPEED_LEVEL && hasRobot) {
+            priceText = "";
+        }
+
         UICommandBuilder commandBuilder = new UICommandBuilder();
-        commandBuilder.set("#MapCards[" + index + "] #RobotCountText.Text", "Robots: " + Math.max(0, robotCount));
-        commandBuilder.set("#MapCards[" + index + "] #RobotPriceText.Text", "Cost: " + robotPriceText);
+
+        // Update progress bar
+        updateProgressBar(commandBuilder, index, speedLevel);
+
+        // Update level text in button zone
+        String levelText = speedLevel >= MAX_SPEED_LEVEL ? "MAX" : "Lv." + speedLevel;
+        commandBuilder.set("#MapCards[" + index + "] #RunnerLevel.Text", levelText);
+
+        // Update text fields
+        commandBuilder.set("#MapCards[" + index + "] #RunnerStatus.Text", runnerStatusText);
+        commandBuilder.set("#MapCards[" + index + "] #RobotBuyText.Text", runnerButtonText);
+        commandBuilder.set("#MapCards[" + index + "] #RobotPriceText.Text", priceText);
         commandBuilder.set("#MapCards[" + index + "] #MapStatus.Text", status);
+
         sendUpdate(commandBuilder, null, false);
     }
 
@@ -376,7 +440,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
                                    String mapId, AscendMap map) {
         AscendPlayerProgress progress = playerStore.getOrCreatePlayer(playerRef.getUuid());
         AscendPlayerProgress.MapProgress mapProgress = progress.getOrCreateMapProgress(mapId);
-        if (mapProgress.isUnlocked() || map.getPrice() <= 0) {
+        if (mapProgress.isUnlocked() || map.getEffectivePrice() <= 0) {
             if (!mapProgress.isUnlocked()) {
                 mapProgress.setUnlocked(true);
                 playerStore.markDirty(playerRef.getUuid());
@@ -384,16 +448,16 @@ public class AscendMapSelectPage extends BaseAscendPage {
             return true;
         }
         Player player = store.getComponent(ref, Player.getComponentType());
-        if (playerStore.spendCoins(playerRef.getUuid(), map.getPrice())) {
+        if (playerStore.spendCoins(playerRef.getUuid(), map.getEffectivePrice())) {
             mapProgress.setUnlocked(true);
             playerStore.markDirty(playerRef.getUuid());
             if (player != null) {
-                player.sendMessage(Message.raw("[Ascend] Map unlocked for " + map.getPrice() + " coins."));
+                player.sendMessage(Message.raw("[Ascend] Map unlocked for " + map.getEffectivePrice() + " coins."));
             }
             return true;
         }
         if (player != null) {
-            player.sendMessage(Message.raw("[Ascend] Map locked. Need " + map.getPrice() + " coins."));
+            player.sendMessage(Message.raw("[Ascend] Map locked. Need " + map.getEffectivePrice() + " coins."));
         }
         return false;
     }

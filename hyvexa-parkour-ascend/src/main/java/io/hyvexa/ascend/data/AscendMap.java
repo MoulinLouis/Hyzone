@@ -1,5 +1,7 @@
 package io.hyvexa.ascend.data;
 
+import io.hyvexa.ascend.AscendConstants;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -50,12 +52,20 @@ public class AscendMap {
         this.price = price;
     }
 
+    public long getEffectivePrice() {
+        return AscendConstants.getMapUnlockPrice(displayOrder);
+    }
+
     public long getRobotPrice() {
         return robotPrice;
     }
 
     public void setRobotPrice(long robotPrice) {
         this.robotPrice = robotPrice;
+    }
+
+    public long getEffectiveRobotPrice() {
+        return AscendConstants.getMapRunnerPrice(displayOrder);
     }
 
     public long getBaseReward() {
@@ -72,6 +82,14 @@ public class AscendMap {
 
     public void setBaseRunTimeMs(long baseRunTimeMs) {
         this.baseRunTimeMs = baseRunTimeMs;
+    }
+
+    public long getEffectiveBaseRunTimeMs() {
+        return AscendConstants.getMapBaseRunTimeMs(displayOrder);
+    }
+
+    public long getEffectiveBaseReward() {
+        return AscendConstants.getMapBaseReward(displayOrder);
     }
 
     public long getRobotTimeReductionMs() {
@@ -192,6 +210,7 @@ public class AscendMap {
         private double z;
         private boolean jump;
         private long delayMs;
+        private Double jumpHeight;  // null = auto-calculated, otherwise custom height
 
         public Waypoint() {
         }
@@ -202,6 +221,16 @@ public class AscendMap {
             this.z = z;
             this.jump = jump;
             this.delayMs = delayMs;
+            this.jumpHeight = null;
+        }
+
+        public Waypoint(double x, double y, double z, boolean jump, long delayMs, Double jumpHeight) {
+            this.x = x;
+            this.y = y;
+            this.z = z;
+            this.jump = jump;
+            this.delayMs = delayMs;
+            this.jumpHeight = jumpHeight;
         }
 
         public double getX() {
@@ -242,6 +271,14 @@ public class AscendMap {
 
         public void setDelayMs(long delayMs) {
             this.delayMs = delayMs;
+        }
+
+        public Double getJumpHeight() {
+            return jumpHeight;
+        }
+
+        public void setJumpHeight(Double jumpHeight) {
+            this.jumpHeight = jumpHeight;
         }
     }
 }

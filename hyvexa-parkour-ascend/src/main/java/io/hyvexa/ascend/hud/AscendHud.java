@@ -10,9 +10,9 @@ public class AscendHud extends CustomUIHud {
     private String lastStaticKey;
     private String lastCoinsText;
     private String lastDigitsKey;
-    private String lastRebirthValueText;
-    private String lastRebirthText;
-    private Boolean lastRebirthVisible;
+    private String lastElevationValueText;
+    private String lastElevationText;
+    private Boolean lastElevationVisible;
 
     public AscendHud(PlayerRef playerRef) {
         super(playerRef);
@@ -34,26 +34,26 @@ public class AscendHud extends CustomUIHud {
         update(false, commandBuilder);
     }
 
-    public void updateEconomy(long coins, long product, double[] digits, int rebirthMultiplier, boolean showRebirth) {
+    public void updateEconomy(long coins, long product, double[] digits, int elevationMultiplier, boolean showElevation) {
         String coinsText = FormatUtils.formatCoinsForHud(coins);
         String digitsKey = buildDigitsKey(digits);
-        int currentRebirth = Math.max(1, rebirthMultiplier);
-        int rebirthGain = showRebirth ? (int) (Math.max(0L, coins) / 1000L) : 0;
-        int nextRebirth = currentRebirth + rebirthGain;
-        String rebirthText = showRebirth ? ("x" + currentRebirth + " -> x" + nextRebirth) : "";
-        String rebirthValueText = formatMultiplier(currentRebirth);
+        int currentElevation = Math.max(1, elevationMultiplier);
+        int elevationGain = showElevation ? (int) (Math.max(0L, coins) / 1000L) : 0;
+        int nextElevation = currentElevation + elevationGain;
+        String elevationText = showElevation ? ("x" + currentElevation + " -> x" + nextElevation) : "";
+        String elevationValueText = formatMultiplier(currentElevation);
         if (coinsText.equals(lastCoinsText)
             && digitsKey.equals(lastDigitsKey)
-            && rebirthValueText.equals(lastRebirthValueText)
-            && rebirthText.equals(lastRebirthText)
-            && Boolean.valueOf(showRebirth).equals(lastRebirthVisible)) {
+            && elevationValueText.equals(lastElevationValueText)
+            && elevationText.equals(lastElevationText)
+            && Boolean.valueOf(showElevation).equals(lastElevationVisible)) {
             return;
         }
         lastCoinsText = coinsText;
         lastDigitsKey = digitsKey;
-        lastRebirthValueText = rebirthValueText;
-        lastRebirthText = rebirthText;
-        lastRebirthVisible = showRebirth;
+        lastElevationValueText = elevationValueText;
+        lastElevationText = elevationText;
+        lastElevationVisible = showElevation;
         UICommandBuilder commandBuilder = new UICommandBuilder();
         commandBuilder.set("#TopCoinsValue.Text", coinsText);
         double[] safeDigits = normalizeDigits(digits);
@@ -62,10 +62,10 @@ public class AscendHud extends CustomUIHud {
         commandBuilder.set("#TopYellowValue.Text", formatMultiplier(safeDigits[2]));
         commandBuilder.set("#TopGreenValue.Text", formatMultiplier(safeDigits[3]));
         commandBuilder.set("#TopBlueValue.Text", formatMultiplier(safeDigits[4]));
-        commandBuilder.set("#TopRebirthValue.Text", rebirthValueText);
-        commandBuilder.set("#RebirthHud.Visible", showRebirth);
-        if (showRebirth) {
-            commandBuilder.set("#RebirthStatusText.Text", "Current Multiplier " + rebirthText);
+        commandBuilder.set("#TopElevationValue.Text", elevationValueText);
+        commandBuilder.set("#ElevationHud.Visible", showElevation);
+        if (showElevation) {
+            commandBuilder.set("#ElevationStatusText.Text", "Current Multiplier " + elevationText);
         }
         update(false, commandBuilder);
     }
@@ -74,9 +74,9 @@ public class AscendHud extends CustomUIHud {
         lastStaticKey = null;
         lastCoinsText = null;
         lastDigitsKey = null;
-        lastRebirthValueText = null;
-        lastRebirthText = null;
-        lastRebirthVisible = null;
+        lastElevationValueText = null;
+        lastElevationText = null;
+        lastElevationVisible = null;
     }
 
     private static double[] normalizeDigits(double[] digits) {

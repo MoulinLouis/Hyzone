@@ -99,9 +99,9 @@ public class AscendHologramManager {
         String name = map.getName() != null && !map.getName().isBlank() ? map.getName() : map.getId();
         lines.add("ASCEND MAP");
         lines.add(name);
-        lines.add("Digit +1 on completion");
-        if (map.getPrice() > 0) {
-            lines.add("Unlock: " + map.getPrice() + " coins");
+        lines.add("+1.0 multiplier on completion");
+        if (map.getEffectivePrice() > 0) {
+            lines.add("Unlock: " + map.getEffectivePrice() + " coins");
         } else {
             lines.add("Unlocked");
         }
