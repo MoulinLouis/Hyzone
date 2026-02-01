@@ -91,6 +91,42 @@ public final class AscendDatabaseSetup {
                 ) ENGINE=InnoDB
                 """);
 
+            // Summit System table
+            stmt.executeUpdate("""
+                CREATE TABLE IF NOT EXISTS ascend_player_summit (
+                    player_uuid VARCHAR(36) NOT NULL,
+                    category VARCHAR(32) NOT NULL,
+                    level INT NOT NULL DEFAULT 0,
+                    PRIMARY KEY (player_uuid, category),
+                    FOREIGN KEY (player_uuid) REFERENCES ascend_players(uuid) ON DELETE CASCADE
+                ) ENGINE=InnoDB
+                """);
+
+            // Ascension System - skill tree unlocks
+            stmt.executeUpdate("""
+                CREATE TABLE IF NOT EXISTS ascend_player_skills (
+                    player_uuid VARCHAR(36) NOT NULL,
+                    skill_node VARCHAR(64) NOT NULL,
+                    unlocked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (player_uuid, skill_node),
+                    FOREIGN KEY (player_uuid) REFERENCES ascend_players(uuid) ON DELETE CASCADE
+                ) ENGINE=InnoDB
+                """);
+
+            // Achievement System
+            stmt.executeUpdate("""
+                CREATE TABLE IF NOT EXISTS ascend_player_achievements (
+                    player_uuid VARCHAR(36) NOT NULL,
+                    achievement VARCHAR(64) NOT NULL,
+                    unlocked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (player_uuid, achievement),
+                    FOREIGN KEY (player_uuid) REFERENCES ascend_players(uuid) ON DELETE CASCADE
+                ) ENGINE=InnoDB
+                """);
+
+            // Ensure new columns on ascend_players for extended progress tracking
+            ensureProgressColumns(conn);
+
             LOGGER.atInfo().log("Ascend database tables ensured");
 
         } catch (SQLException e) {
@@ -198,6 +234,62 @@ public final class AscendDatabaseSetup {
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Failed to check column " + column + ": " + e.getMessage());
             return false;
+        }
+    }
+
+    private static void ensureProgressColumns(Connection conn) {
+        if (conn == null) {
+            return;
+        }
+
+        // Ascension count
+        if (!columnExists(conn, "ascend_players", "ascension_count")) {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN ascension_count INT NOT NULL DEFAULT 0");
+                LOGGER.atInfo().log("Added ascension_count column to ascend_players");
+            } catch (SQLException e) {
+                LOGGER.at(Level.SEVERE).log("Failed to add ascension_count column: " + e.getMessage());
+            }
+        }
+
+        // Skill tree points
+        if (!columnExists(conn, "ascend_players", "skill_tree_points")) {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN skill_tree_points INT NOT NULL DEFAULT 0");
+                LOGGER.atInfo().log("Added skill_tree_points column to ascend_players");
+            } catch (SQLException e) {
+                LOGGER.at(Level.SEVERE).log("Failed to add skill_tree_points column: " + e.getMessage());
+            }
+        }
+
+        // Total coins earned (lifetime)
+        if (!columnExists(conn, "ascend_players", "total_coins_earned")) {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN total_coins_earned BIGINT NOT NULL DEFAULT 0");
+                LOGGER.atInfo().log("Added total_coins_earned column to ascend_players");
+            } catch (SQLException e) {
+                LOGGER.at(Level.SEVERE).log("Failed to add total_coins_earned column: " + e.getMessage());
+            }
+        }
+
+        // Total manual runs
+        if (!columnExists(conn, "ascend_players", "total_manual_runs")) {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN total_manual_runs INT NOT NULL DEFAULT 0");
+                LOGGER.atInfo().log("Added total_manual_runs column to ascend_players");
+            } catch (SQLException e) {
+                LOGGER.at(Level.SEVERE).log("Failed to add total_manual_runs column: " + e.getMessage());
+            }
+        }
+
+        // Active title
+        if (!columnExists(conn, "ascend_players", "active_title")) {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN active_title VARCHAR(64) DEFAULT NULL");
+                LOGGER.atInfo().log("Added active_title column to ascend_players");
+            } catch (SQLException e) {
+                LOGGER.at(Level.SEVERE).log("Failed to add active_title column: " + e.getMessage());
+            }
         }
     }
 }

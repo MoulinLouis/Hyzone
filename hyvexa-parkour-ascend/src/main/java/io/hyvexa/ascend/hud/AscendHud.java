@@ -3,7 +3,10 @@ package io.hyvexa.ascend.hud;
 import com.hypixel.hytale.server.core.entity.entities.player.hud.CustomUIHud;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import io.hyvexa.ascend.AscendConstants.SummitCategory;
 import io.hyvexa.common.util.FormatUtils;
+
+import java.util.Map;
 
 public class AscendHud extends CustomUIHud {
 
@@ -13,6 +16,8 @@ public class AscendHud extends CustomUIHud {
     private String lastElevationValueText;
     private String lastElevationText;
     private Boolean lastElevationVisible;
+    private String lastPrestigeKey;
+    private Boolean lastPrestigeVisible;
 
     public AscendHud(PlayerRef playerRef) {
         super(playerRef);
@@ -77,6 +82,56 @@ public class AscendHud extends CustomUIHud {
         lastElevationValueText = null;
         lastElevationText = null;
         lastElevationVisible = null;
+        lastPrestigeKey = null;
+        lastPrestigeVisible = null;
+    }
+
+    public void updatePrestige(Map<SummitCategory, Integer> summitLevels, int ascensionCount, int skillPoints) {
+        boolean showPrestige = ascensionCount > 0 || hasSummitLevels(summitLevels);
+        String prestigeKey = buildPrestigeKey(summitLevels, ascensionCount, skillPoints);
+
+        if (prestigeKey.equals(lastPrestigeKey) && Boolean.valueOf(showPrestige).equals(lastPrestigeVisible)) {
+            return;
+        }
+
+        lastPrestigeKey = prestigeKey;
+        lastPrestigeVisible = showPrestige;
+
+        UICommandBuilder commandBuilder = new UICommandBuilder();
+        commandBuilder.set("#PrestigeHud.Visible", showPrestige);
+
+        if (showPrestige) {
+            int coinLevel = summitLevels.getOrDefault(SummitCategory.COIN_FLOW, 0);
+            int speedLevel = summitLevels.getOrDefault(SummitCategory.RUNNER_SPEED, 0);
+            int manualLevel = summitLevels.getOrDefault(SummitCategory.MANUAL_MASTERY, 0);
+
+            String summitText = "Summit: Coin " + coinLevel + " | Speed " + speedLevel + " | Manual " + manualLevel;
+            String ascensionText = "Ascension: x" + ascensionCount + " | Points: " + skillPoints;
+
+            commandBuilder.set("#SummitText.Text", summitText);
+            commandBuilder.set("#AscensionText.Text", ascensionText);
+        }
+
+        update(false, commandBuilder);
+    }
+
+    private boolean hasSummitLevels(Map<SummitCategory, Integer> summitLevels) {
+        if (summitLevels == null || summitLevels.isEmpty()) {
+            return false;
+        }
+        for (Integer level : summitLevels.values()) {
+            if (level != null && level > 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private String buildPrestigeKey(Map<SummitCategory, Integer> summitLevels, int ascensionCount, int skillPoints) {
+        int coinLevel = summitLevels != null ? summitLevels.getOrDefault(SummitCategory.COIN_FLOW, 0) : 0;
+        int speedLevel = summitLevels != null ? summitLevels.getOrDefault(SummitCategory.RUNNER_SPEED, 0) : 0;
+        int manualLevel = summitLevels != null ? summitLevels.getOrDefault(SummitCategory.MANUAL_MASTERY, 0) : 0;
+        return coinLevel + "|" + speedLevel + "|" + manualLevel + "|" + ascensionCount + "|" + skillPoints;
     }
 
     private static double[] normalizeDigits(double[] digits) {

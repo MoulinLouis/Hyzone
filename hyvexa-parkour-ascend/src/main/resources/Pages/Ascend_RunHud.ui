@@ -17,7 +17,7 @@ $C.@PageOverlay {
           Anchor: (Left: 0, Right: 0);
           Style: (
             FontSize: 30,
-            TextColor: #ff4d4d,
+            TextColor: #7c3aed,
             RenderBold: true,
             HorizontalAlignment: Center
           );
@@ -45,7 +45,7 @@ $C.@PageOverlay {
           Anchor: (Left: 0, Right: 0);
           Style: (
             FontSize: 30,
-            TextColor: #ff9f1c,
+            TextColor: #3b82f6,
             RenderBold: true,
             HorizontalAlignment: Center
           );
@@ -73,7 +73,7 @@ $C.@PageOverlay {
           Anchor: (Left: 0, Right: 0);
           Style: (
             FontSize: 30,
-            TextColor: #ffd166,
+            TextColor: #06b6d4,
             RenderBold: true,
             HorizontalAlignment: Center
           );
@@ -101,7 +101,7 @@ $C.@PageOverlay {
           Anchor: (Left: 0, Right: 0);
           Style: (
             FontSize: 30,
-            TextColor: #62d96b,
+            TextColor: #f59e0b,
             RenderBold: true,
             HorizontalAlignment: Center
           );
@@ -129,7 +129,7 @@ $C.@PageOverlay {
           Anchor: (Left: 0, Right: 0);
           Style: (
             FontSize: 30,
-            TextColor: #5ac8fa,
+            TextColor: #ef4444,
             RenderBold: true,
             HorizontalAlignment: Center
           );
@@ -173,8 +173,9 @@ $C.@PageOverlay {
 
       Group #TopCoinsBox {
         Anchor: (Left: 0, Right: 0, Top: 0, Height: 40);
-        LayoutMode: Center;
+        LayoutMode: Left;
 
+        Group { FlexWeight: 1; }
         Group #TopCoinsFrame {
           Anchor: (Width: 180, Height: 40);
           Background: #000000(0.55);
@@ -190,6 +191,7 @@ $C.@PageOverlay {
             Text: "0";
           }
         }
+        Group { FlexWeight: 1; }
       }
     }
 
@@ -361,6 +363,47 @@ $C.@PageOverlay {
           HorizontalAlignment: Center
         );
         Text: "Type /ascend elevate to elevate";
+      }
+    }
+
+    Group #PrestigeHud {
+      Anchor: (Left: 20, Top: 120, Width: 260, Height: 90);
+      Background: #000000(0.4);
+      LayoutMode: Top;
+      Padding: (Left: 10, Right: 10, Top: 8, Bottom: 8);
+      Visible: false;
+
+      Label #PrestigeTitle {
+        Anchor: (Left: 0, Right: 0);
+        Style: (
+          FontSize: 18,
+          TextColor: #ffd166,
+          RenderBold: true,
+          HorizontalAlignment: Center
+        );
+        Text: "PRESTIGE";
+      }
+
+      Label #SummitText {
+        Anchor: (Left: 0, Right: 0, Top: 4);
+        Style: (
+          FontSize: 16,
+          TextColor: #06b6d4,
+          RenderBold: true,
+          HorizontalAlignment: Center
+        );
+        Text: "Summit: Coin 0 | Speed 0 | Manual 0";
+      }
+
+      Label #AscensionText {
+        Anchor: (Left: 0, Right: 0, Top: 4);
+        Style: (
+          FontSize: 16,
+          TextColor: #f59e0b,
+          RenderBold: true,
+          HorizontalAlignment: Center
+        );
+        Text: "Ascension: x0 | Points: 0";
       }
     }
   }

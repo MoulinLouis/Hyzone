@@ -26,6 +26,84 @@ public class MyPage extends InteractiveCustomUIPage {
 // Open: CustomUI.open(playerRef, new MyPage(playerRef));
 ```
 
+## UI Files (.ui)
+
+**File locations:** UI files must exist in BOTH locations:
+- `resources/Pages/` - Used by Java code path `Pages/MyPage.ui`
+- `resources/Common/UI/Custom/Pages/` - Keep in sync
+
+**Basic structure:**
+```
+$C = "../Common.ui";
+
+$C.@PageOverlay {
+  $C.@Container {
+    Anchor: (Width: 400, Height: 300);
+
+    #Title {
+      Group {
+        TextButton #CloseButton {
+          Anchor: (Left: 12, Top: 4, Width: 64, Height: 24);
+          Padding: (Left: 8, Top: 2);
+          Text: "Close";
+          Style: TextButtonStyle(
+            Default: (LabelStyle: (FontSize: 14, TextColor: #93844c, RenderBold: true)),
+            Sounds: $C.@ButtonSounds,
+          );
+          Background: #000000(0.13);
+        }
+        $C.@Title {
+          @Text = "Page Title";
+        }
+      }
+    }
+
+    #Content {
+      LayoutMode: Top;
+      Padding: (Left: 18, Right: 18, Top: 12, Bottom: 12);
+
+      Label {
+        Style: (FontSize: 14, TextColor: #cfd7dc);
+        Text: "Description text";
+      }
+
+      $C.@TextButton #MyButton {
+        Anchor: (Top: 12, Height: 36);
+        Text: "Click Me";
+      }
+    }
+  }
+}
+```
+
+**Valid LayoutMode values:**
+- `LayoutMode: Top` - Vertical stacking (most common)
+- `LayoutMode: Left` - Horizontal stacking
+- `LayoutMode: TopScrolling` - Vertical with scroll
+
+**INVALID:** `LayoutMode: Center` does NOT exist!
+
+**Centering content horizontally:**
+```
+Group {
+  LayoutMode: Left;
+
+  Group { FlexWeight: 1; }
+  Label #CenteredLabel {
+    Text: "I am centered";
+  }
+  Group { FlexWeight: 1; }
+}
+```
+
+**Common mistakes to avoid:**
+1. `LayoutMode: Center` - Does not exist, use FlexWeight pattern above
+2. Multiline text with `\n` - Use separate Labels instead
+3. Complex inline styles - Use `$C.@TextButton` template instead
+4. Forgetting to sync files between `Pages/` and `Common/UI/Custom/Pages/`
+
+**Keep UIs simple:** Start minimal, add complexity only when needed. Simple UIs are easier to debug.
+
 ## Data Stores
 
 ```java
