@@ -42,6 +42,7 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
     private String mapSearch = "";
     private boolean mapMithrilSwordEnabled = false;
     private boolean mapMithrilDaggersEnabled = false;
+    private boolean mapGliderEnabled = false;
     private boolean mapFreeFallEnabled = false;
     private boolean mapDuelEnabled = false;
     private String selectedMapId = "";
@@ -108,6 +109,7 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
                 mapOrder = String.valueOf(map.getOrder());
                 mapMithrilSwordEnabled = map.isMithrilSwordEnabled();
                 mapMithrilDaggersEnabled = map.isMithrilDaggersEnabled();
+                mapGliderEnabled = map.isGliderEnabled();
                 mapFreeFallEnabled = map.isFreeFallEnabled();
                 mapDuelEnabled = map.isDuelEnabled();
             }
@@ -168,6 +170,11 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
             sendRefresh(ref, store);
             return;
         }
+        if (data.button.equals(MapData.BUTTON_TOGGLE_GLIDER)) {
+            mapGliderEnabled = !mapGliderEnabled;
+            sendRefresh(ref, store);
+            return;
+        }
         if (data.button.equals(MapData.BUTTON_TOGGLE_FREE_FALL)) {
             mapFreeFallEnabled = !mapFreeFallEnabled;
             sendRefresh(ref, store);
@@ -220,6 +227,7 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
         map.setOrder(order);
         map.setMithrilSwordEnabled(mapMithrilSwordEnabled);
         map.setMithrilDaggersEnabled(mapMithrilDaggersEnabled);
+        map.setGliderEnabled(mapGliderEnabled);
         map.setFreeFallEnabled(mapFreeFallEnabled);
         map.setDuelEnabled(mapDuelEnabled);
         map.setStart(start);
@@ -386,6 +394,7 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
         map.setOrder(order);
         map.setMithrilSwordEnabled(mapMithrilSwordEnabled);
         map.setMithrilDaggersEnabled(mapMithrilDaggersEnabled);
+        map.setGliderEnabled(mapGliderEnabled);
         map.setFreeFallEnabled(mapFreeFallEnabled);
         map.setDuelEnabled(mapDuelEnabled);
         map.setUpdatedAt(System.currentTimeMillis());
@@ -511,6 +520,7 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
         commandBuilder.set("#MapSearchField.Value", mapSearch);
         commandBuilder.set("#MithrilSwordValue.Text", mapMithrilSwordEnabled ? "Enabled" : "Disabled");
         commandBuilder.set("#MithrilDaggersValue.Text", mapMithrilDaggersEnabled ? "Enabled" : "Disabled");
+        commandBuilder.set("#GliderValue.Text", mapGliderEnabled ? "Enabled" : "Disabled");
         commandBuilder.set("#FreeFallValue.Text", mapFreeFallEnabled ? "YES" : "NO");
         commandBuilder.set("#DuelEnabledValue.Text", mapDuelEnabled ? "YES" : "NO");
         String selectedText = "Selected: (none)";
@@ -593,6 +603,8 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
                 EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_TOGGLE_MITHRIL_SWORD), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#MithrilDaggersToggle",
                 EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_TOGGLE_MITHRIL_DAGGERS), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#GliderToggle",
+                EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_TOGGLE_GLIDER), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#FreeFallToggle",
                 EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_TOGGLE_FREE_FALL), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#DuelEnabledToggle",
@@ -705,6 +717,7 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
         static final String BUTTON_CREATE_HOLO = "CreateHolo";
         static final String BUTTON_TOGGLE_MITHRIL_SWORD = "ToggleMithrilSword";
         static final String BUTTON_TOGGLE_MITHRIL_DAGGERS = "ToggleMithrilDaggers";
+        static final String BUTTON_TOGGLE_GLIDER = "ToggleGlider";
         static final String BUTTON_TOGGLE_FREE_FALL = "ToggleFreeFall";
         static final String BUTTON_TOGGLE_DUEL_ENABLED = "ToggleDuelEnabled";
 

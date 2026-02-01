@@ -20,6 +20,7 @@ public class Map {
     private int order = ParkourConstants.DEFAULT_MAP_ORDER;
     private boolean mithrilSwordEnabled;
     private boolean mithrilDaggersEnabled;
+    private boolean gliderEnabled;
     private boolean freeFallEnabled;
     private boolean duelEnabled;
     private long createdAt;
@@ -139,6 +140,14 @@ public class Map {
 
     public void setMithrilDaggersEnabled(boolean mithrilDaggersEnabled) {
         this.mithrilDaggersEnabled = mithrilDaggersEnabled;
+    }
+
+    public boolean isGliderEnabled() {
+        return gliderEnabled;
+    }
+
+    public void setGliderEnabled(boolean gliderEnabled) {
+        this.gliderEnabled = gliderEnabled;
     }
 
     public boolean isFreeFallEnabled() {

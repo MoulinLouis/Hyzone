@@ -18,6 +18,7 @@ public final class ParkourConstants {
     public static final String ITEM_HUB_MENU = "Hub_Server_Selector";
     public static final String ITEM_RUN_MITHRIL_SWORD = "Weapon_Sword_Mithril";
     public static final String ITEM_RUN_MITHRIL_DAGGERS = "Weapon_Daggers_Mithril";
+    public static final String ITEM_RUN_GLIDER = "Glider";
 
 
     public static final String[] RANK_NAMES = {
