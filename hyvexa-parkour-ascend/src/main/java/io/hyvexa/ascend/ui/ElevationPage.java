@@ -128,6 +128,9 @@ public class ElevationPage extends BaseAscendPage {
         // Update coin display
         commandBuilder.set("#CoinsValue.Text", FormatUtils.formatCoinsForHud(coins));
 
+        // Update conversion rate display
+        commandBuilder.set("#ConversionRate.Text", "Conversion: " + elevationCost + " coins = +1 elevation");
+
         // Update current multiplier
         commandBuilder.set("#MultiplierValue.Text", "x" + currentMultiplier);
 
@@ -135,20 +138,30 @@ public class ElevationPage extends BaseAscendPage {
         if (gain > 0) {
             commandBuilder.set("#GainValue.Text", "+" + gain);
             commandBuilder.set("#GainValue.Style.TextColor", "#4ade80");
-            commandBuilder.set("#NewMultiplierValue.Text", "x" + newMultiplier);
-            commandBuilder.set("#NewMultiplierValue.Style.TextColor", "#4ade80");
         } else {
             commandBuilder.set("#GainValue.Text", "+0");
             commandBuilder.set("#GainValue.Style.TextColor", "#6b7280");
-            commandBuilder.set("#NewMultiplierValue.Text", "x" + currentMultiplier);
-            commandBuilder.set("#NewMultiplierValue.Style.TextColor", "#6b7280");
         }
 
-        // Update button state
+        // Update button zone labels
+        commandBuilder.set("#CurrentMultiplierLabel.Text", "x" + currentMultiplier);
+
         if (gain > 0) {
-            commandBuilder.set("#ElevateButton.Text", "ELEVATE (+" + gain + ")");
+            // Show the conversion and make it attractive
+            commandBuilder.set("#NewMultiplierLabel.Text", "x" + newMultiplier);
+            commandBuilder.set("#NewMultiplierLabel.Style.TextColor", "#4ade80");
+            commandBuilder.set("#ArrowLabel.Visible", true);
+            commandBuilder.set("#ArrowLabel.Style.TextColor", "#4ade80");
+            commandBuilder.set("#ButtonText.Text", "ELEVATE NOW");
+            commandBuilder.set("#ButtonText.Style.TextColor", "#4ade80");
+            commandBuilder.set("#GainPreview.Text", "(+" + gain + " boost!)");
+            commandBuilder.set("#GainPreview.Visible", true);
         } else {
-            commandBuilder.set("#ElevateButton.Text", "NEED " + elevationCost + " COINS");
+            commandBuilder.set("#NewMultiplierLabel.Text", "");
+            commandBuilder.set("#ArrowLabel.Visible", false);
+            commandBuilder.set("#ButtonText.Text", "NEED " + elevationCost);
+            commandBuilder.set("#ButtonText.Style.TextColor", "#9fb0ba");
+            commandBuilder.set("#GainPreview.Visible", false);
         }
     }
 }

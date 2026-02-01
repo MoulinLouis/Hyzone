@@ -11,7 +11,6 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.AscendConstants.SummitCategory;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendPlayerStore;
@@ -27,9 +26,7 @@ import java.util.UUID;
 public class SummitPage extends BaseAscendPage {
 
     private static final String BUTTON_CLOSE = "Close";
-    private static final String BUTTON_COIN_FLOW = "SummitCoinFlow";
-    private static final String BUTTON_RUNNER_SPEED = "SummitRunnerSpeed";
-    private static final String BUTTON_MANUAL_MASTERY = "SummitManualMastery";
+    private static final String BUTTON_SUMMIT_PREFIX = "Summit_";
 
     private final AscendPlayerStore playerStore;
     private final SummitManager summitManager;
@@ -47,14 +44,69 @@ public class SummitPage extends BaseAscendPage {
 
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CloseButton",
             EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE), false);
-        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CoinFlowButton",
-            EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_COIN_FLOW), false);
-        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#RunnerSpeedButton",
-            EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_RUNNER_SPEED), false);
-        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ManualMasteryButton",
-            EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_MANUAL_MASTERY), false);
 
-        updateDisplay(ref, store, commandBuilder);
+        buildCategoryCards(ref, store, commandBuilder, eventBuilder);
+    }
+
+    private void buildCategoryCards(Ref<EntityStore> ref, Store<EntityStore> store,
+                                     UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        if (playerRef == null) {
+            return;
+        }
+
+        UUID playerId = playerRef.getUuid();
+        long coins = playerStore.getCoins(playerId);
+
+        // Update coins display
+        commandBuilder.set("#CoinsValue.Text", FormatUtils.formatCoinsForHud(coins));
+
+        // Build 3 category cards
+        SummitCategory[] categories = {
+            SummitCategory.COIN_FLOW,
+            SummitCategory.RUNNER_SPEED,
+            SummitCategory.MANUAL_MASTERY
+        };
+
+        for (int i = 0; i < categories.length; i++) {
+            SummitCategory category = categories[i];
+            commandBuilder.append("#CategoryCards", "Pages/Ascend_SummitEntry.ui");
+
+            String accentColor = resolveCategoryAccentColor(i);
+            int currentLevel = playerStore.getSummitLevel(playerId, category);
+            SummitManager.SummitPreview preview = summitManager.previewSummit(playerId, category);
+
+            // Apply accent color to bars
+            commandBuilder.set("#CategoryCards[" + i + "] #AccentBar.Background", accentColor);
+            commandBuilder.set("#CategoryCards[" + i + "] #ButtonAccent.Background", accentColor);
+            commandBuilder.set("#CategoryCards[" + i + "] #CurrentLevel.Style.TextColor", accentColor);
+
+            // Category name
+            commandBuilder.set("#CategoryCards[" + i + "] #CategoryName.Text", category.getDisplayName());
+
+            // Category description based on type
+            String description = getCategoryDescription(category);
+            commandBuilder.set("#CategoryCards[" + i + "] #CategoryDesc.Text", description);
+
+            // Current bonus
+            double currentBonus = category.getBonusForLevel(currentLevel);
+            String bonusText = "Current Bonus: " + formatPercent(currentBonus);
+            commandBuilder.set("#CategoryCards[" + i + "] #CategoryBonus.Text", bonusText);
+
+            // Level and preview
+            commandBuilder.set("#CategoryCards[" + i + "] #CurrentLevel.Text", "Lv." + currentLevel);
+
+            if (preview.hasGain()) {
+                commandBuilder.set("#CategoryCards[" + i + "] #PreviewLevel.Text", "→ Lv." + preview.newLevel());
+            } else {
+                commandBuilder.set("#CategoryCards[" + i + "] #PreviewLevel.Text", "");
+            }
+
+            // Event binding
+            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
+                "#CategoryCards[" + i + "] #SummitButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_SUMMIT_PREFIX + category.name()), false);
+        }
     }
 
     @Override
@@ -70,15 +122,14 @@ public class SummitPage extends BaseAscendPage {
             return;
         }
 
-        SummitCategory category = switch (data.getButton()) {
-            case BUTTON_COIN_FLOW -> SummitCategory.COIN_FLOW;
-            case BUTTON_RUNNER_SPEED -> SummitCategory.RUNNER_SPEED;
-            case BUTTON_MANUAL_MASTERY -> SummitCategory.MANUAL_MASTERY;
-            default -> null;
-        };
-
-        if (category != null) {
-            handleSummit(ref, store, category);
+        if (data.getButton().startsWith(BUTTON_SUMMIT_PREFIX)) {
+            String categoryName = data.getButton().substring(BUTTON_SUMMIT_PREFIX.length());
+            try {
+                SummitCategory category = SummitCategory.valueOf(categoryName);
+                handleSummit(ref, store, category);
+            } catch (IllegalArgumentException e) {
+                // Invalid category name
+            }
         }
     }
 
@@ -93,7 +144,8 @@ public class SummitPage extends BaseAscendPage {
 
         if (!summitManager.canSummit(playerId)) {
             long coins = playerStore.getCoins(playerId);
-            player.sendMessage(Message.raw("[Summit] Need " + AscendConstants.SUMMIT_MIN_COINS
+            long minCoins = io.hyvexa.ascend.AscendConstants.SUMMIT_MIN_COINS;
+            player.sendMessage(Message.raw("[Summit] Need " + minCoins
                 + " coins to Summit. You have: " + coins)
                 .color(SystemMessageUtils.SECONDARY));
             return;
@@ -126,35 +178,34 @@ public class SummitPage extends BaseAscendPage {
             plugin.getAchievementManager().checkAndUnlockAchievements(playerId, player);
         }
 
-        // Refresh display
+        // Rebuild the entire page to refresh all category cards
         UICommandBuilder updateBuilder = new UICommandBuilder();
-        updateDisplay(ref, store, updateBuilder);
-        sendUpdate(updateBuilder, null, false);
+        UIEventBuilder updateEventBuilder = new UIEventBuilder();
+        buildCategoryCards(ref, store, updateBuilder, updateEventBuilder);
+        sendUpdate(updateBuilder, updateEventBuilder, false);
     }
 
-    private void updateDisplay(Ref<EntityStore> ref, Store<EntityStore> store, UICommandBuilder commandBuilder) {
-        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-        if (playerRef == null) {
-            return;
-        }
+    private String resolveCategoryAccentColor(int index) {
+        return switch (index) {
+            case 0 -> "#5a6b3d";  // Green for Coin Flow
+            case 1 -> "#2d5a7b";  // Blue for Runner Speed
+            default -> "#5a3d6b"; // Purple for Manual Mastery
+        };
+    }
 
-        UUID playerId = playerRef.getUuid();
-        long coins = playerStore.getCoins(playerId);
-
-        // Update coins display
-        commandBuilder.set("#CoinsValue.Text", FormatUtils.formatCoinsForHud(coins));
-
-        // Update each category level
-        int coinFlowLevel = playerStore.getSummitLevel(playerId, SummitCategory.COIN_FLOW);
-        int runnerSpeedLevel = playerStore.getSummitLevel(playerId, SummitCategory.RUNNER_SPEED);
-        int manualMasteryLevel = playerStore.getSummitLevel(playerId, SummitCategory.MANUAL_MASTERY);
-
-        commandBuilder.set("#CoinFlowLevel.Text", "Lv." + coinFlowLevel);
-        commandBuilder.set("#RunnerSpeedLevel.Text", "Lv." + runnerSpeedLevel);
-        commandBuilder.set("#ManualMasteryLevel.Text", "Lv." + manualMasteryLevel);
+    private String getCategoryDescription(SummitCategory category) {
+        return switch (category) {
+            case COIN_FLOW -> "Increases base coin earnings (" + formatBonusPerLevel(category) + " per level)";
+            case RUNNER_SPEED -> "Increases runner completion speed (" + formatBonusPerLevel(category) + " per level)";
+            case MANUAL_MASTERY -> "Increases manual run multiplier gain (" + formatBonusPerLevel(category) + " per level)";
+        };
     }
 
     private String formatPercent(double value) {
         return String.format(Locale.US, "+%.0f%%", value * 100);
+    }
+
+    private String formatBonusPerLevel(SummitCategory category) {
+        return String.format(Locale.US, "+%.0f%%", category.getBonusPerLevel() * 100);
     }
 }
