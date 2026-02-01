@@ -143,7 +143,7 @@
 - Resolve parkour mode gating without deprecated Player.getUuid() calls in commands.
 - Convert the plugin to a multi-module Gradle layout with core, parkour, parkour-ascend, and hub modules.
 - Update ARCHITECTURE.md and DATABASE.md for the multi-module layout and shared database.
-- Document ARCHITECTURE.md and DATABASE.md references in AGENTS.md.
+- Document ARCHITECTURE.md and DATABASE.md references in docs/codex/AGENTS.md.
 - Revise Hyvexa: Parkour Ascend integration plan to use a multi-module architecture from day one.
 - Clarify hub routing authority, world-thread rules, and shared MySQL continuity in the Parkour Ascend plan.
 - Tighten threading rules, add routing failsafes, and specify UUID-backed shared MySQL identity for split-server.
