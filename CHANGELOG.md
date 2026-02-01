@@ -1,5 +1,22 @@
 # Changelog
 
+- Implement ghost replay system for personalized runner movement:
+  - Runners now follow the player's exact path from their personal best manual completion.
+  - Player position and rotation are sampled every 50ms during manual runs (20 samples/sec).
+  - Sampling executes on world thread for proper entity component access.
+  - Ghost recordings are saved only when achieving a new personal best time.
+  - Smooth 60fps playback through linear interpolation between samples.
+  - Speed upgrades time-compress playback (10x speed = complete in ~10% of recorded time).
+  - Runner purchase gated behind manual completion (guarantees ghost exists).
+  - Personal best times tracked per map in new `best_time_ms` column.
+  - Personal best times displayed in `/ascend` menu (e.g., "PB: 12.34s").
+  - Database: New `ascend_ghost_recordings` table stores GZIP-compressed BLOB recordings (~5-10 KB per map).
+  - Completely replaced waypoint-based movement system (waypoints removed entirely).
+  - Automatic migration: Existing runners without ghosts are refunded and removed on first startup.
+- Optimize `/ascend` menu performance:
+  - Removed unnecessary 1-second refresh cycle for status text.
+  - UI only updates when runner is purchased/upgraded or on menu open.
+  - Eliminates text flickering and reduces server load.
 - Replace coin-based map unlocking with progressive runner-level unlocking:
   - Map 1 is unlocked by default for all players.
   - Maps 2-5 unlock automatically when the runner on the previous map reaches level 3.

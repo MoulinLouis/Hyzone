@@ -19,6 +19,7 @@ import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
+import io.hyvexa.ascend.ghost.GhostRecorder;
 import io.hyvexa.ascend.summit.SummitManager;
 import io.hyvexa.common.util.SystemMessageUtils;
 
@@ -34,11 +35,13 @@ public class AscendRunTracker {
 
     private final AscendMapStore mapStore;
     private final AscendPlayerStore playerStore;
+    private final GhostRecorder ghostRecorder;
     private final Map<UUID, ActiveRun> activeRuns = new ConcurrentHashMap<>();
 
-    public AscendRunTracker(AscendMapStore mapStore, AscendPlayerStore playerStore) {
+    public AscendRunTracker(AscendMapStore mapStore, AscendPlayerStore playerStore, GhostRecorder ghostRecorder) {
         this.mapStore = mapStore;
         this.playerStore = playerStore;
+        this.ghostRecorder = ghostRecorder;
     }
 
     public void startRun(UUID playerId, String mapId) {
@@ -48,10 +51,20 @@ public class AscendRunTracker {
         }
 
         activeRuns.put(playerId, new ActiveRun(mapId, System.currentTimeMillis()));
+
+        // Start ghost recording
+        if (ghostRecorder != null) {
+            ghostRecorder.startRecording(playerId, mapId);
+        }
     }
 
     public void cancelRun(UUID playerId) {
         activeRuns.remove(playerId);
+
+        // Cancel ghost recording
+        if (ghostRecorder != null) {
+            ghostRecorder.cancelRecording(playerId);
+        }
     }
 
     public String getActiveMapId(UUID playerId) {
@@ -152,8 +165,37 @@ public class AscendRunTracker {
             playerStore.setSessionFirstRunClaimed(playerId, true);
         }
 
+        // Calculate completion time and check for personal best
+        long completionTimeMs = System.currentTimeMillis() - run.startTimeMs;
+        Long previousBest = mapProgress.getBestTimeMs();
+        boolean isPersonalBest = previousBest == null || completionTimeMs < previousBest;
+
+        LOGGER.atInfo().log("[GhostDebug] Player " + playerId + " completed " + run.mapId
+            + " in " + completionTimeMs + "ms. Previous best: " + previousBest
+            + ". Is PB: " + isPersonalBest);
+
+        if (isPersonalBest) {
+            mapProgress.setBestTimeMs(completionTimeMs);
+            playerStore.markDirty(playerId);
+        }
+
+        // Stop ghost recording and save if personal best
+        if (ghostRecorder != null) {
+            ghostRecorder.stopRecording(playerId, completionTimeMs, isPersonalBest);
+        } else {
+            LOGGER.atWarning().log("[GhostDebug] GhostRecorder is null! Cannot save recording.");
+        }
+
         if (firstCompletion) {
             player.sendMessage(Message.raw("[Ascend] Map completed! You can now buy a runner for this map.")
+                .color(SystemMessageUtils.SUCCESS));
+        }
+
+        if (isPersonalBest && !firstCompletion) {
+            long seconds = completionTimeMs / 1000;
+            long millis = completionTimeMs % 1000;
+            String timeStr = String.format("%d.%03ds", seconds, millis);
+            player.sendMessage(Message.raw("[Ascend] New personal best! " + timeStr)
                 .color(SystemMessageUtils.SUCCESS));
         }
 

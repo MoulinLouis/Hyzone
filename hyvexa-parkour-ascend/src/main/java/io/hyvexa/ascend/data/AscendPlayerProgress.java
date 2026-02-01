@@ -242,6 +242,7 @@ public class AscendPlayerProgress {
         private int robotSpeedLevel;
         private int robotStars;
         private double multiplier = 1.0;
+        private Long bestTimeMs;
 
         public boolean isUnlocked() {
             return unlocked;
@@ -307,6 +308,14 @@ public class AscendPlayerProgress {
             }
             multiplier = Math.max(1.0, multiplier + amount);
             return multiplier;
+        }
+
+        public Long getBestTimeMs() {
+            return bestTimeMs;
+        }
+
+        public void setBestTimeMs(Long bestTimeMs) {
+            this.bestTimeMs = bestTimeMs;
         }
     }
 }

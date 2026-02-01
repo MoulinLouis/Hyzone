@@ -21,6 +21,9 @@ import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
+import io.hyvexa.ascend.ghost.GhostRecording;
+import io.hyvexa.ascend.ghost.GhostSample;
+import io.hyvexa.ascend.ghost.GhostStore;
 import io.hyvexa.ascend.summit.SummitManager;
 
 import java.util.ArrayList;
@@ -39,28 +42,19 @@ public class RobotManager {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final double ROBOT_BASE_SPEED = 5.0;  // Blocks per second base speed
 
-    /**
-     * Represents a segment of the path with metadata for jump interpolation.
-     */
-    private record PathSegment(
-        double[] start,
-        double[] end,
-        double length,
-        boolean isJump,
-        double jumpHeight
-    ) {}
-
     private final AscendMapStore mapStore;
     private final AscendPlayerStore playerStore;
+    private final GhostStore ghostStore;
     private final Map<String, RobotState> robots = new ConcurrentHashMap<>();
     private final Set<UUID> onlinePlayers = ConcurrentHashMap.newKeySet();
     private ScheduledFuture<?> tickTask;
     private long lastRefreshMs;
     private volatile NPCPlugin npcPlugin;
 
-    public RobotManager(AscendMapStore mapStore, AscendPlayerStore playerStore) {
+    public RobotManager(AscendMapStore mapStore, AscendPlayerStore playerStore, GhostStore ghostStore) {
         this.mapStore = mapStore;
         this.playerStore = playerStore;
+        this.ghostStore = ghostStore;
     }
 
     public void start() {
@@ -348,224 +342,56 @@ public class RobotManager {
         if (entityRef == null || !entityRef.isValid()) {
             return;
         }
+
+        // Get ghost recording
+        GhostRecording ghost = ghostStore.getRecording(robot.getOwnerId(), robot.getMapId());
+        if (ghost == null) {
+            return; // No ghost = no movement (player hasn't completed manually)
+        }
+
         AscendMap map = mapStore.getMap(robot.getMapId());
         if (map == null) {
             return;
         }
+
         String worldName = map.getWorld();
         if (worldName == null || worldName.isEmpty()) {
             return;
         }
+
         World world = Universe.get().getWorld(worldName);
         if (world == null) {
             return;
         }
 
-        // Calculate progress through the run
+        // Calculate progress through the run with speed multiplier
         long intervalMs = computeCompletionIntervalMs(map, robot.getSpeedLevel(), robot.getOwnerId());
         if (intervalMs <= 0L) {
             return;
         }
+
         long lastCompletionMs = robot.getLastCompletionMs();
         if (lastCompletionMs <= 0L) {
             return;
         }
+
         long elapsed = now - lastCompletionMs;
         double progress = Math.min(1.0, (double) elapsed / (double) intervalMs);
 
-        // Calculate position along the waypoint path (with jump interpolation)
-        double[] targetPos = calculatePositionAlongPathArray(map, progress);
+        // Calculate speed multiplier for time compression
+        double baseTime = ghost.getCompletionTimeMs();
+        double speedMultiplier = (double) baseTime / intervalMs;
 
-        // Get previous position for rotation calculation
-        double[] previousPos = robot.getPreviousPosition();
+        // Interpolate ghost position at current progress
+        GhostSample sample = ghost.interpolateAt(progress, speedMultiplier);
+        double[] targetPos = sample.toPositionArray();
+        float yaw = sample.getYaw();
 
-        // Teleport NPC to the interpolated position on world thread (with rotation)
-        world.execute(() -> teleportNpcWithRotation(entityRef, world, targetPos, previousPos));
+        // Teleport NPC to interpolated position with recorded rotation
+        world.execute(() -> teleportNpcWithRecordedRotation(entityRef, world, targetPos, yaw));
 
         // Update previous position for next tick
         robot.setPreviousPosition(targetPos);
-    }
-
-    /**
-     * Builds path segments with jump metadata from the map.
-     * Each segment knows if it's a jump and what height to use.
-     * Jumps are auto-detected based on height differences between points.
-     */
-    private List<PathSegment> buildPathSegments(AscendMap map) {
-        List<PathSegment> segments = new ArrayList<>();
-
-        // Start point
-        double[] currentPoint = new double[]{map.getStartX(), map.getStartY(), map.getStartZ()};
-
-        List<AscendMap.Waypoint> waypoints = map.getWaypoints();
-        if (waypoints != null && !waypoints.isEmpty()) {
-            for (AscendMap.Waypoint wp : waypoints) {
-                double[] nextPoint = new double[]{wp.getX(), wp.getY(), wp.getZ()};
-                double dx = nextPoint[0] - currentPoint[0];
-                double dy = nextPoint[1] - currentPoint[1];
-                double dz = nextPoint[2] - currentPoint[2];
-                double length = Math.sqrt(dx * dx + dy * dy + dz * dz);
-
-                // Auto-detect jump based on geometry, or use explicit flag
-                boolean isJump = wp.isJump() || shouldAutoJump(currentPoint, nextPoint);
-                double jumpHeight = 0.0;
-                if (isJump) {
-                    jumpHeight = calculateJumpHeight(currentPoint, nextPoint, wp.getJumpHeight());
-                }
-
-                segments.add(new PathSegment(currentPoint, nextPoint, length, isJump, jumpHeight));
-                currentPoint = nextPoint;
-            }
-        }
-
-        // Final segment to finish - also check for auto-jump
-        double[] finishPoint = new double[]{map.getFinishX(), map.getFinishY(), map.getFinishZ()};
-        double dx = finishPoint[0] - currentPoint[0];
-        double dy = finishPoint[1] - currentPoint[1];
-        double dz = finishPoint[2] - currentPoint[2];
-        double length = Math.sqrt(dx * dx + dy * dy + dz * dz);
-        boolean finalJump = shouldAutoJump(currentPoint, finishPoint);
-        double finalJumpHeight = finalJump ? calculateJumpHeight(currentPoint, finishPoint, null) : 0.0;
-        segments.add(new PathSegment(currentPoint, finishPoint, length, finalJump, finalJumpHeight));
-
-        return segments;
-    }
-
-    /**
-     * Determines if a segment should automatically be a jump based on geometry.
-     * Triggers jump if:
-     * - Going up more than threshold (climbing)
-     * - Going down more than threshold (gap/fall)
-     * - Horizontal distance is large (gap between platforms)
-     */
-    private boolean shouldAutoJump(double[] start, double[] end) {
-        double dy = end[1] - start[1];
-
-        // Jump if going up significantly
-        if (dy >= AscendConstants.RUNNER_JUMP_AUTO_UP_THRESHOLD) {
-            return true;
-        }
-
-        // Jump if going down significantly (gaps, falls)
-        if (dy <= -AscendConstants.RUNNER_JUMP_AUTO_DOWN_THRESHOLD) {
-            return true;
-        }
-
-        // Jump if horizontal distance is large (gap between platforms)
-        double dx = end[0] - start[0];
-        double dz = end[2] - start[2];
-        double horizDist = Math.sqrt(dx * dx + dz * dz);
-        if (horizDist >= AscendConstants.RUNNER_JUMP_AUTO_HORIZ_THRESHOLD) {
-            return true;
-        }
-
-        return false;
-    }
-
-    /**
-     * Calculates the jump height for a segment.
-     * If customHeight is provided, uses that. Otherwise, auto-calculates based on:
-     * - Minimum default height
-     * - Extra clearance for upward jumps
-     * - Scaling for long horizontal distances
-     */
-    private double calculateJumpHeight(double[] start, double[] end, Double customHeight) {
-        if (customHeight != null) {
-            return customHeight;
-        }
-
-        double height = AscendConstants.RUNNER_DEFAULT_JUMP_HEIGHT;
-
-        // Add clearance for upward jumps
-        double dy = end[1] - start[1];
-        if (dy > 0) {
-            height = Math.max(height, dy + AscendConstants.RUNNER_JUMP_CLEARANCE);
-        }
-
-        // Scale for long horizontal jumps
-        double dx = end[0] - start[0];
-        double dz = end[2] - start[2];
-        double horizDist = Math.sqrt(dx * dx + dz * dz);
-        if (horizDist > AscendConstants.RUNNER_JUMP_DISTANCE_THRESHOLD) {
-            height += (horizDist - AscendConstants.RUNNER_JUMP_DISTANCE_THRESHOLD)
-                      * AscendConstants.RUNNER_JUMP_DISTANCE_FACTOR;
-        }
-
-        return height;
-    }
-
-    /**
-     * Interpolates position within a segment, returning as array [x, y, z].
-     * X and Z are always linear. Y uses parabolic interpolation for jump segments.
-     *
-     * Parabolic formula: y = linearY + 4 * jumpHeight * t * (1 - t)
-     * This creates an arc: 0 at t=0, max at t=0.5, 0 at t=1
-     */
-    private double[] interpolateSegmentArray(PathSegment segment, double t) {
-        double[] start = segment.start();
-        double[] end = segment.end();
-
-        // X and Z are always linear
-        double x = start[0] + (end[0] - start[0]) * t;
-        double z = start[2] + (end[2] - start[2]) * t;
-
-        // Y: linear or parabolic
-        double linearY = start[1] + (end[1] - start[1]) * t;
-        double y;
-        if (segment.isJump() && segment.jumpHeight() > 0) {
-            double arcOffset = 4.0 * segment.jumpHeight() * t * (1.0 - t);
-            y = linearY + arcOffset;
-        } else {
-            y = linearY;
-        }
-
-        return new double[]{x, y, z};
-    }
-
-    /**
-     * Calculates the position along the full path as an array [x, y, z].
-     * Uses parabolic interpolation for jump segments to create realistic jump arcs.
-     */
-    private double[] calculatePositionAlongPathArray(AscendMap map, double progress) {
-        List<PathSegment> segments = buildPathSegments(map);
-
-        if (segments.isEmpty()) {
-            return new double[]{map.getStartX(), map.getStartY(), map.getStartZ()};
-        }
-
-        // Calculate total path length
-        double totalLength = 0.0;
-        for (PathSegment segment : segments) {
-            totalLength += segment.length();
-        }
-
-        if (totalLength <= 0.0) {
-            return new double[]{map.getStartX(), map.getStartY(), map.getStartZ()};
-        }
-
-        // Find which segment we're on based on progress
-        double targetDistance = progress * totalLength;
-        double accumulatedDistance = 0.0;
-
-        for (int i = 0; i < segments.size(); i++) {
-            PathSegment segment = segments.get(i);
-            double segmentLength = segment.length();
-
-            if (accumulatedDistance + segmentLength >= targetDistance || i == segments.size() - 1) {
-                // We're on this segment
-                double segmentProgress = 0.0;
-                if (segmentLength > 0.0) {
-                    segmentProgress = (targetDistance - accumulatedDistance) / segmentLength;
-                    segmentProgress = Math.max(0.0, Math.min(1.0, segmentProgress));
-                }
-
-                return interpolateSegmentArray(segment, segmentProgress);
-            }
-            accumulatedDistance += segmentLength;
-        }
-
-        // Fallback: return finish position
-        return new double[]{map.getFinishX(), map.getFinishY(), map.getFinishZ()};
     }
 
     private void teleportNpc(Ref<EntityStore> entityRef, World world, Vector3d targetPos, double[] previousPos) {
@@ -613,6 +439,27 @@ public class RobotManager {
             Vector3d targetVec = new Vector3d(targetPos[0], targetPos[1], targetPos[2]);
             Vector3f rotation = new Vector3f(0, yaw, 0);
             store.addComponent(entityRef, Teleport.getComponentType(), new Teleport(world, targetVec, rotation));
+        } catch (Exception e) {
+            // Silently ignore teleport errors
+        }
+    }
+
+    private void teleportNpcWithRecordedRotation(Ref<EntityStore> entityRef, World world,
+                                                  double[] targetPos, float yaw) {
+        if (entityRef == null || !entityRef.isValid()) {
+            return;
+        }
+
+        try {
+            Store<EntityStore> store = entityRef.getStore();
+            if (store == null) {
+                return;
+            }
+
+            Vector3d targetVec = new Vector3d(targetPos[0], targetPos[1], targetPos[2]);
+            Vector3f rotation = new Vector3f(0, yaw, 0);
+            store.addComponent(entityRef, Teleport.getComponentType(),
+                new Teleport(world, targetVec, rotation));
         } catch (Exception e) {
             // Silently ignore teleport errors
         }

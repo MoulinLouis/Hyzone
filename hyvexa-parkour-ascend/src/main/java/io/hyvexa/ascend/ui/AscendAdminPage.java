@@ -122,13 +122,14 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
             handleDeleteMapHolo(ref, store);
             return;
         }
-        if (data.button.equals(MapData.BUTTON_ADD_WAYPOINT)) {
-            handleAddWaypoint(ref, store);
-            return;
-        }
-        if (data.button.equals(MapData.BUTTON_CLEAR_WAYPOINTS)) {
-            handleClearWaypoints(ref, store);
-        }
+        // Waypoint system removed - ghost replay now uses recorded player paths
+        // if (data.button.equals(MapData.BUTTON_ADD_WAYPOINT)) {
+        //     handleAddWaypoint(ref, store);
+        //     return;
+        // }
+        // if (data.button.equals(MapData.BUTTON_CLEAR_WAYPOINTS)) {
+        //     handleClearWaypoints(ref, store);
+        // }
     }
 
     private void handleCreate(Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -323,6 +324,8 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
         }
     }
 
+    // Waypoint system removed - ghost replay now uses recorded player paths
+    /*
     private void handleAddWaypoint(Ref<EntityStore> ref, Store<EntityStore> store) {
         Player player = store.getComponent(ref, Player.getComponentType());
         if (player == null) {
@@ -372,6 +375,7 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
         player.sendMessage(Message.raw("Cleared " + count + " waypoint(s) for map: " + map.getId()));
         sendRefresh(ref, store);
     }
+    */
 
     private AscendMap resolveSelectedMap(Player player) {
         String id = mapId != null && !mapId.isBlank() ? mapId : selectedMapId;
@@ -430,10 +434,11 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
             EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_CREATE_MAP_HOLO), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#DeleteMapHoloButton",
             EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_DELETE_MAP_HOLO), false);
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#AddWaypointButton",
-            EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_ADD_WAYPOINT), false);
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ClearWaypointsButton",
-            EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_CLEAR_WAYPOINTS), false);
+        // Waypoint system removed - ghost replay now uses recorded player paths
+        // uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#AddWaypointButton",
+        //     EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_ADD_WAYPOINT), false);
+        // uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ClearWaypointsButton",
+        //     EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_CLEAR_WAYPOINTS), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CloseButton",
             EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_CLOSE), false);
     }
@@ -466,13 +471,15 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
                     + " | Runner: " + map.getEffectiveRobotPrice()
                     + " | Reward: " + map.getEffectiveBaseReward()
                     + " | Time: " + formatTimeShort(map.getEffectiveBaseRunTimeMs());
-                List<AscendMap.Waypoint> waypoints = map.getWaypoints();
-                int waypointCount = waypoints != null ? waypoints.size() : 0;
-                if (waypointCount == 0) {
-                    waypointInfo = "No waypoints (runner goes straight)";
-                } else {
-                    waypointInfo = waypointCount + " waypoint" + (waypointCount > 1 ? "s" : "") + " defined";
-                }
+                // Waypoint system removed - ghost replay now uses recorded player paths
+                waypointInfo = "Ghost Replay: Runners follow recorded player paths";
+                // List<AscendMap.Waypoint> waypoints = map.getWaypoints();
+                // int waypointCount = waypoints != null ? waypoints.size() : 0;
+                // if (waypointCount == 0) {
+                //     waypointInfo = "No waypoints (runner goes straight)";
+                // } else {
+                //     waypointInfo = waypointCount + " waypoint" + (waypointCount > 1 ? "s" : "") + " defined";
+                // }
             }
         }
         commandBuilder.set("#BalanceInfoText.Text", balanceInfo);
@@ -548,10 +555,11 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
             commandBuilder.set(entrySelector + " #MapName.Text", "[" + levelColor + "] " + mapNameLabel);
             boolean hasStart = map.getStartX() != 0 || map.getStartY() != 0 || map.getStartZ() != 0;
             boolean hasFinish = map.getFinishX() != 0 || map.getFinishY() != 0 || map.getFinishZ() != 0;
-            List<AscendMap.Waypoint> waypoints = map.getWaypoints();
-            int waypointCount = waypoints != null ? waypoints.size() : 0;
+            // Waypoint system removed - ghost replay now uses recorded player paths
+            // List<AscendMap.Waypoint> waypoints = map.getWaypoints();
+            // int waypointCount = waypoints != null ? waypoints.size() : 0;
             String status = "Start: " + (hasStart ? "OK" : "NO") + " | Finish: " + (hasFinish ? "OK" : "NO")
-                + " | WP: " + waypointCount;
+                + " | Ghost Replay";
             commandBuilder.set(entrySelector + " #MapStatus.Text", status);
 
             // Show balancing info for this map's level
