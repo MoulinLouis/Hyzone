@@ -94,10 +94,9 @@ src/main/resources/
 
 ## Documentation
 
-- [AGENTS.md](AGENTS.md) - AI agent instructions for development
-- [docs/ARCHITECTURE.md](ARCHITECTURE.md) - Technical design and edge cases
-- [docs/DATABASE.md](DATABASE.md) - MySQL schema reference
-- [CONTRIBUTING.md](CONTRIBUTING.md) - Contribution guidelines
+- [docs/AGENTS.md](docs/AGENTS.md) - AI agent instructions for development
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) - Technical design and edge cases
+- [docs/DATABASE.md](docs/DATABASE.md) - MySQL schema reference
 - [CHANGELOG.md](CHANGELOG.md) - Version history
 
 ## License
