@@ -19,6 +19,7 @@ public class RobotState {
     private volatile boolean spawning;
     private final AtomicLong runsCompleted = new AtomicLong(0);
     private final AtomicInteger speedLevel = new AtomicInteger(0);
+    private final AtomicInteger stars = new AtomicInteger(0);
     private final AtomicLong lastCompletionMs = new AtomicLong(0);
     private volatile double[] previousPosition;  // For calculating movement direction/rotation [x, y, z]
 
@@ -107,6 +108,14 @@ public class RobotState {
 
     public void setSpeedLevel(int speedLevel) {
         this.speedLevel.set(Math.max(0, speedLevel));
+    }
+
+    public int getStars() {
+        return stars.get();
+    }
+
+    public void setStars(int stars) {
+        this.stars.set(Math.max(0, stars));
     }
 
     public long getLastCompletionMs() {

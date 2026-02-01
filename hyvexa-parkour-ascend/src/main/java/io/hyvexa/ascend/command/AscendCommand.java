@@ -16,6 +16,7 @@ import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerStore;
+import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 import io.hyvexa.ascend.ui.AscendMapSelectPage;
 import io.hyvexa.ascend.util.AscendModeGate;
@@ -130,12 +131,13 @@ public class AscendCommand extends AbstractAsyncCommand {
         AscendMapStore mapStore = plugin.getMapStore();
         AscendPlayerStore playerStore = plugin.getPlayerStore();
         AscendRunTracker runTracker = plugin.getRunTracker();
+        RobotManager robotManager = plugin.getRobotManager();
         if (mapStore == null || playerStore == null || runTracker == null) {
             player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading."));
             return;
         }
         player.getPageManager().openCustomPage(ref, store,
-            new AscendMapSelectPage(playerRef, mapStore, playerStore, runTracker));
+            new AscendMapSelectPage(playerRef, mapStore, playerStore, runTracker, robotManager));
     }
 
 }

@@ -85,8 +85,24 @@ public final class AscendConstants {
         return MAP_BASE_REWARDS[displayOrder];
     }
 
+    // Runner star evolution
+    public static final int MAX_ROBOT_STARS = 5;
+    // Only Kweebec_Sapling and Kweebec_Sapling_Orange are valid entity types
+    public static final String RUNNER_ENTITY_BASE = "Kweebec_Sapling";
+    public static final String RUNNER_ENTITY_EVOLVED = "Kweebec_Sapling_Orange";
+
+    public static String getRunnerEntityType(int stars) {
+        // Alternate between base and evolved appearance
+        // 0, 2, 4 stars = base (green), 1, 3, 5 stars = evolved (orange)
+        return (stars % 2 == 0) ? RUNNER_ENTITY_BASE : RUNNER_ENTITY_EVOLVED;
+    }
+
+    public static double getRunnerMultiplierIncrement(int stars) {
+        // Base increment doubles with each star: 0.01, 0.02, 0.04, 0.08, 0.16, 0.32
+        return RUNNER_MULTIPLIER_INCREMENT * Math.pow(2, Math.max(0, stars));
+    }
+
     // Runner (internal tick system)
-    public static final String RUNNER_ENTITY_TYPE = "Kweebec_Sapling";
     public static final long RUNNER_TICK_INTERVAL_MS = 16L; // ~60 ticks/second for smooth movement
     public static final long RUNNER_REFRESH_INTERVAL_MS = 1000L;
     public static final double RUNNER_BASE_SPEED = 5.0;

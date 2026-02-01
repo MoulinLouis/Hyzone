@@ -80,6 +80,7 @@ public final class AscendDatabaseSetup {
 
             migrateToNewMultiplierSchema(conn);
             ensureRobotTimeReductionColumn(conn);
+            ensureRobotStarsColumn(conn);
 
             stmt.executeUpdate("""
                 CREATE TABLE IF NOT EXISTS ascend_upgrade_costs (
@@ -169,6 +170,21 @@ public final class AscendDatabaseSetup {
             stmt.executeUpdate("ALTER TABLE ascend_maps ADD COLUMN robot_time_reduction_ms BIGINT NOT NULL DEFAULT 0");
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Failed to add robot_time_reduction_ms column: " + e.getMessage());
+        }
+    }
+
+    private static void ensureRobotStarsColumn(Connection conn) {
+        if (conn == null) {
+            return;
+        }
+        if (columnExists(conn, "ascend_player_maps", "robot_stars")) {
+            return;
+        }
+        try (Statement stmt = conn.createStatement()) {
+            stmt.executeUpdate("ALTER TABLE ascend_player_maps ADD COLUMN robot_stars INT NOT NULL DEFAULT 0");
+            LOGGER.atInfo().log("Added robot_stars column to ascend_player_maps");
+        } catch (SQLException e) {
+            LOGGER.at(Level.SEVERE).log("Failed to add robot_stars column: " + e.getMessage());
         }
     }
 
