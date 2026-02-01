@@ -22,6 +22,8 @@ import io.hyvexa.ascend.data.AscendDatabaseSetup;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerStore;
+import io.hyvexa.ascend.ghost.GhostStore;
+import io.hyvexa.ascend.ghost.GhostRecorder;
 import io.hyvexa.ascend.achievement.AchievementManager;
 import io.hyvexa.ascend.ascension.AscensionManager;
 import io.hyvexa.ascend.holo.AscendHologramManager;
@@ -57,6 +59,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
     private AscendMapStore mapStore;
     private AscendPlayerStore playerStore;
+    private GhostStore ghostStore;
+    private GhostRecorder ghostRecorder;
     private AscendRunTracker runTracker;
     private RobotManager robotManager;
     private AscendHologramManager hologramManager;
@@ -86,9 +90,17 @@ public class ParkourAscendPlugin extends JavaPlugin {
         playerStore = new AscendPlayerStore();
         playerStore.syncLoad();
 
-        runTracker = new AscendRunTracker(mapStore, playerStore);
+        // Initialize ghost system
+        ghostStore = new GhostStore();
+        ghostStore.syncLoad();
 
-        robotManager = new RobotManager(mapStore, playerStore);
+        ghostRecorder = new GhostRecorder(ghostStore);
+        ghostRecorder.start();
+
+        // Pass ghost dependencies to managers
+        runTracker = new AscendRunTracker(mapStore, playerStore, ghostRecorder);
+
+        robotManager = new RobotManager(mapStore, playerStore, ghostStore);
         robotManager.start();
 
         summitManager = new SummitManager(playerStore);
@@ -203,6 +215,9 @@ public class ParkourAscendPlugin extends JavaPlugin {
             runTrackerTask.cancel(false);
             runTrackerTask = null;
         }
+        if (ghostRecorder != null) {
+            ghostRecorder.stop();
+        }
         if (robotManager != null) {
             robotManager.stop();
         }
@@ -222,6 +237,10 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
     public AscendPlayerStore getPlayerStore() {
         return playerStore;
+    }
+
+    public GhostStore getGhostStore() {
+        return ghostStore;
     }
 
     public AscendRunTracker getRunTracker() {

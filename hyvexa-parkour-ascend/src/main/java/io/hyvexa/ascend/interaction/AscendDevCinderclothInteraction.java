@@ -13,6 +13,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerStore;
+import io.hyvexa.ascend.ghost.GhostStore;
 import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 import io.hyvexa.ascend.ui.AscendMapSelectPage;
@@ -49,11 +50,12 @@ public class AscendDevCinderclothInteraction extends SimpleInteraction {
         AscendPlayerStore playerStore = plugin.getPlayerStore();
         AscendRunTracker runTracker = plugin.getRunTracker();
         RobotManager robotManager = plugin.getRobotManager();
-        if (mapStore == null || playerStore == null || runTracker == null) {
+        GhostStore ghostStore = plugin.getGhostStore();
+        if (mapStore == null || playerStore == null || runTracker == null || ghostStore == null) {
             player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading."));
             return;
         }
         player.getPageManager().openCustomPage(ref, store,
-            new AscendMapSelectPage(playerRef, mapStore, playerStore, runTracker, robotManager));
+            new AscendMapSelectPage(playerRef, mapStore, playerStore, runTracker, robotManager, ghostStore));
     }
 }

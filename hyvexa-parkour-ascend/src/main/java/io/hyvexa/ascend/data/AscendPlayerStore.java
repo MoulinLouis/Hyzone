@@ -86,7 +86,7 @@ public class AscendPlayerStore {
     private void loadMapProgress() {
         String sql = """
             SELECT player_uuid, map_id, unlocked, completed_manually, has_robot,
-                   robot_speed_level, robot_stars, multiplier
+                   robot_speed_level, robot_stars, multiplier, best_time_ms
             FROM ascend_player_maps
             """;
         try (Connection conn = DatabaseManager.getInstance().getConnection();
@@ -108,6 +108,10 @@ public class AscendPlayerStore {
                     mapProgress.setRobotSpeedLevel(rs.getInt("robot_speed_level"));
                     mapProgress.setRobotStars(rs.getInt("robot_stars"));
                     mapProgress.setMultiplier(rs.getDouble("multiplier"));
+                    long bestTime = rs.getLong("best_time_ms");
+                    if (!rs.wasNull()) {
+                        mapProgress.setBestTimeMs(bestTime);
+                    }
                 }
             }
         } catch (SQLException e) {
@@ -745,12 +749,13 @@ public class AscendPlayerStore {
 
         String mapSql = """
             INSERT INTO ascend_player_maps (player_uuid, map_id, unlocked, completed_manually,
-                has_robot, robot_speed_level, robot_stars, multiplier)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                has_robot, robot_speed_level, robot_stars, multiplier, best_time_ms)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 unlocked = VALUES(unlocked), completed_manually = VALUES(completed_manually),
                 has_robot = VALUES(has_robot), robot_speed_level = VALUES(robot_speed_level),
-                robot_stars = VALUES(robot_stars), multiplier = VALUES(multiplier)
+                robot_stars = VALUES(robot_stars), multiplier = VALUES(multiplier),
+                best_time_ms = VALUES(best_time_ms)
             """;
 
         String summitSql = """
@@ -809,6 +814,11 @@ public class AscendPlayerStore {
                     mapStmt.setInt(6, mapProgress.getRobotSpeedLevel());
                     mapStmt.setInt(7, mapProgress.getRobotStars());
                     mapStmt.setDouble(8, mapProgress.getMultiplier());
+                    if (mapProgress.getBestTimeMs() != null) {
+                        mapStmt.setLong(9, mapProgress.getBestTimeMs());
+                    } else {
+                        mapStmt.setNull(9, java.sql.Types.BIGINT);
+                    }
                     mapStmt.addBatch();
                 }
 

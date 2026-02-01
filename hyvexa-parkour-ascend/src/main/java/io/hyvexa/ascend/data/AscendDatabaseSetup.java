@@ -127,6 +127,10 @@ public final class AscendDatabaseSetup {
             // Ensure new columns on ascend_players for extended progress tracking
             ensureProgressColumns(conn);
 
+            // Ensure ghost recording table and best_time_ms column
+            ensureGhostRecordingTable(conn);
+            ensureBestTimeColumn(conn);
+
             LOGGER.atInfo().log("Ascend database tables ensured");
 
         } catch (SQLException e) {
@@ -290,6 +294,47 @@ public final class AscendDatabaseSetup {
             } catch (SQLException e) {
                 LOGGER.at(Level.SEVERE).log("Failed to add active_title column: " + e.getMessage());
             }
+        }
+    }
+
+    private static void ensureGhostRecordingTable(Connection conn) {
+        if (conn == null) {
+            return;
+        }
+
+        try (Statement stmt = conn.createStatement()) {
+            stmt.executeUpdate("""
+                CREATE TABLE IF NOT EXISTS ascend_ghost_recordings (
+                  player_uuid VARCHAR(36) NOT NULL,
+                  map_id VARCHAR(32) NOT NULL,
+                  recording_blob MEDIUMBLOB NOT NULL,
+                  completion_time_ms BIGINT NOT NULL,
+                  recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                  PRIMARY KEY (player_uuid, map_id),
+                  FOREIGN KEY (player_uuid) REFERENCES ascend_players(uuid) ON DELETE CASCADE,
+                  FOREIGN KEY (map_id) REFERENCES ascend_maps(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB
+                """);
+            LOGGER.atInfo().log("Ensured ascend_ghost_recordings table");
+        } catch (SQLException e) {
+            LOGGER.at(Level.SEVERE).log("Failed to create ghost recordings table: " + e.getMessage());
+        }
+    }
+
+    private static void ensureBestTimeColumn(Connection conn) {
+        if (conn == null) {
+            return;
+        }
+
+        if (columnExists(conn, "ascend_player_maps", "best_time_ms")) {
+            return;
+        }
+
+        try (Statement stmt = conn.createStatement()) {
+            stmt.executeUpdate("ALTER TABLE ascend_player_maps ADD COLUMN best_time_ms BIGINT DEFAULT NULL");
+            LOGGER.atInfo().log("Added best_time_ms column to ascend_player_maps");
+        } catch (SQLException e) {
+            LOGGER.at(Level.SEVERE).log("Failed to add best_time_ms column: " + e.getMessage());
         }
     }
 }

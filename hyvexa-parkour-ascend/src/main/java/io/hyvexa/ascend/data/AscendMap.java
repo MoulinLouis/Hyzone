@@ -2,9 +2,6 @@ package io.hyvexa.ascend.data;
 
 import io.hyvexa.ascend.AscendConstants;
 
-import java.util.ArrayList;
-import java.util.List;
-
 public class AscendMap {
 
     private String id;
@@ -25,7 +22,6 @@ public class AscendMap {
     private double finishX;
     private double finishY;
     private double finishZ;
-    private List<Waypoint> waypoints = new ArrayList<>();
     private int displayOrder;
 
     public String getId() {
@@ -188,97 +184,11 @@ public class AscendMap {
         this.finishZ = finishZ;
     }
 
-    public List<Waypoint> getWaypoints() {
-        return waypoints;
-    }
-
-    public void setWaypoints(List<Waypoint> waypoints) {
-        this.waypoints = waypoints;
-    }
-
     public int getDisplayOrder() {
         return displayOrder;
     }
 
     public void setDisplayOrder(int displayOrder) {
         this.displayOrder = displayOrder;
-    }
-
-    public static class Waypoint {
-        private double x;
-        private double y;
-        private double z;
-        private boolean jump;
-        private long delayMs;
-        private Double jumpHeight;  // null = auto-calculated, otherwise custom height
-
-        public Waypoint() {
-        }
-
-        public Waypoint(double x, double y, double z, boolean jump, long delayMs) {
-            this.x = x;
-            this.y = y;
-            this.z = z;
-            this.jump = jump;
-            this.delayMs = delayMs;
-            this.jumpHeight = null;
-        }
-
-        public Waypoint(double x, double y, double z, boolean jump, long delayMs, Double jumpHeight) {
-            this.x = x;
-            this.y = y;
-            this.z = z;
-            this.jump = jump;
-            this.delayMs = delayMs;
-            this.jumpHeight = jumpHeight;
-        }
-
-        public double getX() {
-            return x;
-        }
-
-        public void setX(double x) {
-            this.x = x;
-        }
-
-        public double getY() {
-            return y;
-        }
-
-        public void setY(double y) {
-            this.y = y;
-        }
-
-        public double getZ() {
-            return z;
-        }
-
-        public void setZ(double z) {
-            this.z = z;
-        }
-
-        public boolean isJump() {
-            return jump;
-        }
-
-        public void setJump(boolean jump) {
-            this.jump = jump;
-        }
-
-        public long getDelayMs() {
-            return delayMs;
-        }
-
-        public void setDelayMs(long delayMs) {
-            this.delayMs = delayMs;
-        }
-
-        public Double getJumpHeight() {
-            return jumpHeight;
-        }
-
-        public void setJumpHeight(Double jumpHeight) {
-            this.jumpHeight = jumpHeight;
-        }
     }
 }

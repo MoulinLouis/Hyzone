@@ -18,6 +18,8 @@ import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
+import io.hyvexa.ascend.ghost.GhostRecording;
+import io.hyvexa.ascend.ghost.GhostStore;
 import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 import io.hyvexa.ascend.util.MapUnlockHelper;
@@ -43,18 +45,20 @@ public class AscendMapSelectPage extends BaseAscendPage {
     private final AscendPlayerStore playerStore;
     private final AscendRunTracker runTracker;
     private final RobotManager robotManager;
+    private final GhostStore ghostStore;
     private ScheduledFuture<?> refreshTask;
     private volatile boolean active;
     private int lastMapCount;
 
     public AscendMapSelectPage(@Nonnull PlayerRef playerRef, AscendMapStore mapStore,
                                AscendPlayerStore playerStore, AscendRunTracker runTracker,
-                               RobotManager robotManager) {
+                               RobotManager robotManager, GhostStore ghostStore) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
         this.mapStore = mapStore;
         this.playerStore = playerStore;
         this.runTracker = runTracker;
         this.robotManager = robotManager;
+        this.ghostStore = ghostStore;
     }
 
     @Override
@@ -65,7 +69,8 @@ public class AscendMapSelectPage extends BaseAscendPage {
             EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE), false);
         active = true;
         buildMapList(ref, store, uiCommandBuilder, uiEventBuilder);
-        startAutoRefresh(ref, store);
+        // Refresh removed - status only changes when runner is upgraded or PB is achieved
+        // startAutoRefresh(ref, store);
     }
 
     @Override
@@ -149,6 +154,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
             // All maps in this list are already unlocked (filtered above)
             AscendPlayerProgress.MapProgress mapProgress = playerStore.getMapProgress(playerRef.getUuid(), map.getId());
             boolean hasRobot = mapProgress != null && mapProgress.hasRobot();
+            boolean completedManually = mapProgress != null && mapProgress.isCompletedManually();
             int speedLevel = mapProgress != null ? mapProgress.getRobotSpeedLevel() : 0;
             int stars = mapProgress != null ? mapProgress.getRobotStars() : 0;
 
@@ -172,6 +178,14 @@ public class AscendMapSelectPage extends BaseAscendPage {
 
             // Status text (all displayed maps are unlocked)
             String status = "Runs/sec: " + formatRunsPerSecond(map, hasRobot, speedLevel);
+
+            // Add personal best time if available
+            if (mapProgress != null && mapProgress.getBestTimeMs() != null) {
+                long bestTimeMs = mapProgress.getBestTimeMs();
+                double bestTimeSec = bestTimeMs / 1000.0;
+                status += " | PB: " + String.format("%.2fs", bestTimeSec);
+            }
+
             commandBuilder.set("#MapCards[" + index + "] #MapStatus.Text", status);
 
             // Runner status and button text
@@ -180,8 +194,13 @@ public class AscendMapSelectPage extends BaseAscendPage {
             long actionPrice;
             if (!hasRobot) {
                 runnerStatusText = "No Runner";
-                runnerButtonText = "Buy Runner";
-                actionPrice = Math.max(0L, map.getEffectiveRobotPrice());
+                if (!completedManually) {
+                    runnerButtonText = "Complete First";
+                    actionPrice = 0L;
+                } else {
+                    runnerButtonText = "Buy Runner";
+                    actionPrice = Math.max(0L, map.getEffectiveRobotPrice());
+                }
             } else {
                 int speedPercent = speedLevel * 10;
                 runnerStatusText = "Speed: +" + speedPercent + "%";
@@ -296,6 +315,19 @@ public class AscendMapSelectPage extends BaseAscendPage {
             return;
         }
         if (!mapProgress.hasRobot()) {
+            // Check if map has been completed manually
+            if (!mapProgress.isCompletedManually()) {
+                sendMessage(store, ref, "[Ascend] Complete the map manually before buying a runner!");
+                return;
+            }
+
+            // Check if ghost recording exists
+            GhostRecording ghost = ghostStore.getRecording(playerRef.getUuid(), mapId);
+            if (ghost == null) {
+                sendMessage(store, ref, "[Ascend] No ghost recording found. Complete the map again.");
+                return;
+            }
+
             long price = Math.max(0L, map.getEffectiveRobotPrice());
             if (price > 0 && !playerStore.spendCoins(playerRef.getUuid(), price)) {
                 sendMessage(store, ref, "[Ascend] Not enough coins to buy a runner.");
@@ -423,6 +455,14 @@ public class AscendMapSelectPage extends BaseAscendPage {
             boolean hasRobot = mapProgress != null && mapProgress.hasRobot();
             int speedLevel = mapProgress != null ? mapProgress.getRobotSpeedLevel() : 0;
             String status = "Runs/sec: " + formatRunsPerSecond(map, hasRobot, speedLevel);
+
+            // Add personal best time if available
+            if (mapProgress != null && mapProgress.getBestTimeMs() != null) {
+                long bestTimeMs = mapProgress.getBestTimeMs();
+                double bestTimeSec = bestTimeMs / 1000.0;
+                status += " | PB: " + String.format("%.2fs", bestTimeSec);
+            }
+
             commandBuilder.set("#MapCards[" + i + "] #MapStatus.Text", status);
         }
         sendUpdate(commandBuilder, null, false);
@@ -453,18 +493,31 @@ public class AscendMapSelectPage extends BaseAscendPage {
         // All displayed maps are unlocked (filtered in buildMapList)
         AscendPlayerProgress.MapProgress mapProgress = playerStore.getMapProgress(playerRef.getUuid(), selectedMap.getId());
         boolean hasRobot = mapProgress != null && mapProgress.hasRobot();
+        boolean completedManually = mapProgress != null && mapProgress.isCompletedManually();
         int speedLevel = mapProgress != null ? mapProgress.getRobotSpeedLevel() : 0;
         int stars = mapProgress != null ? mapProgress.getRobotStars() : 0;
 
         String status = "Runs/sec: " + formatRunsPerSecond(selectedMap, hasRobot, speedLevel);
+
+        // Add personal best time if available
+        if (mapProgress != null && mapProgress.getBestTimeMs() != null) {
+            long bestTimeMs = mapProgress.getBestTimeMs();
+            double bestTimeSec = bestTimeMs / 1000.0;
+            status += " | PB: " + String.format("%.2fs", bestTimeSec);
+        }
 
         String runnerStatusText;
         String runnerButtonText;
         long actionPrice;
         if (!hasRobot) {
             runnerStatusText = "No Runner";
-            runnerButtonText = "Buy Runner";
-            actionPrice = Math.max(0L, selectedMap.getEffectiveRobotPrice());
+            if (!completedManually) {
+                runnerButtonText = "Complete First";
+                actionPrice = 0L;
+            } else {
+                runnerButtonText = "Buy Runner";
+                actionPrice = Math.max(0L, selectedMap.getEffectiveRobotPrice());
+            }
         } else {
             int speedPercent = speedLevel * 10;
             runnerStatusText = "Speed: +" + speedPercent + "%";

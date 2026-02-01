@@ -36,7 +36,7 @@ public class AscendMapStore {
         String sql = """
             SELECT id, name, price, robot_price, base_reward, base_run_time_ms, robot_time_reduction_ms, storage_capacity,
                    world, start_x, start_y, start_z, start_rot_x, start_rot_y, start_rot_z,
-                   finish_x, finish_y, finish_z, waypoints_json, display_order
+                   finish_x, finish_y, finish_z, display_order
             FROM ascend_maps ORDER BY display_order, id
             """;
 
@@ -68,14 +68,6 @@ public class AscendMapStore {
                         map.setFinishY(rs.getDouble("finish_y"));
                         map.setFinishZ(rs.getDouble("finish_z"));
                         map.setDisplayOrder(rs.getInt("display_order"));
-
-                        String waypointsJson = rs.getString("waypoints_json");
-                        if (waypointsJson != null && !waypointsJson.isBlank()) {
-                            List<AscendMap.Waypoint> waypoints = GSON.fromJson(waypointsJson,
-                                new TypeToken<List<AscendMap.Waypoint>>() {
-                                }.getType());
-                            map.setWaypoints(waypoints != null ? waypoints : new ArrayList<>());
-                        }
 
                         maps.put(map.getId(), map);
                     }
@@ -144,8 +136,8 @@ public class AscendMapStore {
             INSERT INTO ascend_maps (id, name, price, robot_price, base_reward, base_run_time_ms,
                 robot_time_reduction_ms, storage_capacity, world, start_x, start_y, start_z, start_rot_x, start_rot_y,
                 start_rot_z,
-                finish_x, finish_y, finish_z, waypoints_json, display_order)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                finish_x, finish_y, finish_z, display_order)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 name = VALUES(name), price = VALUES(price), robot_price = VALUES(robot_price),
                 base_reward = VALUES(base_reward), base_run_time_ms = VALUES(base_run_time_ms),
@@ -154,7 +146,7 @@ public class AscendMapStore {
                 start_x = VALUES(start_x), start_y = VALUES(start_y), start_z = VALUES(start_z),
                 start_rot_x = VALUES(start_rot_x), start_rot_y = VALUES(start_rot_y), start_rot_z = VALUES(start_rot_z),
                 finish_x = VALUES(finish_x), finish_y = VALUES(finish_y), finish_z = VALUES(finish_z),
-                waypoints_json = VALUES(waypoints_json), display_order = VALUES(display_order)
+                display_order = VALUES(display_order)
             """;
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
@@ -179,7 +171,6 @@ public class AscendMapStore {
             stmt.setDouble(i++, map.getFinishX());
             stmt.setDouble(i++, map.getFinishY());
             stmt.setDouble(i++, map.getFinishZ());
-            stmt.setString(i++, GSON.toJson(map.getWaypoints()));
             stmt.setInt(i, map.getDisplayOrder());
             stmt.executeUpdate();
         } catch (SQLException e) {
