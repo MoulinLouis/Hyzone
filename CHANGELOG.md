@@ -1,6 +1,10 @@
 # Changelog
 
 - Add a map admin glider toggle to grant the Glider run item per map.
+- Reduce manual multiplier increment from +1.0 to +0.1 per completion for better progression balance.
+- Add coins-per-run display HUD next to total coins showing theoretical earnings per run.
+- Redesign Prestige HUD to focus on Summit stats only, removing Ascension display and adding explanatory hint.
+- Increase Ascend HUD top bar background opacity from 0.35 to 0.60 for better multiplier visibility.
 - Add star evolution system for Ascend runners:
   - When a runner reaches max level (20), players can evolve it to gain a star and reset level to 0.
   - Each star doubles the multiplier increment per completion (0.01 -> 0.02 -> 0.04 -> 0.08 -> 0.16 -> 0.32).

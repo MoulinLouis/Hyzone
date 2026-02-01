@@ -12,6 +12,7 @@ public class AscendHud extends CustomUIHud {
 
     private String lastStaticKey;
     private String lastCoinsText;
+    private String lastCoinsPerRunText;
     private String lastDigitsKey;
     private String lastElevationValueText;
     private String lastElevationText;
@@ -41,6 +42,7 @@ public class AscendHud extends CustomUIHud {
 
     public void updateEconomy(long coins, long product, double[] digits, int elevationMultiplier, boolean showElevation) {
         String coinsText = FormatUtils.formatCoinsForHud(coins);
+        String coinsPerRunText = FormatUtils.formatCoinsForHud(product) + "/run";
         String digitsKey = buildDigitsKey(digits);
         int currentElevation = Math.max(1, elevationMultiplier);
         int elevationGain = showElevation ? (int) (Math.max(0L, coins) / 1000L) : 0;
@@ -48,6 +50,7 @@ public class AscendHud extends CustomUIHud {
         String elevationText = showElevation ? ("x" + currentElevation + " -> x" + nextElevation) : "";
         String elevationValueText = formatMultiplier(currentElevation);
         if (coinsText.equals(lastCoinsText)
+            && coinsPerRunText.equals(lastCoinsPerRunText)
             && digitsKey.equals(lastDigitsKey)
             && elevationValueText.equals(lastElevationValueText)
             && elevationText.equals(lastElevationText)
@@ -55,12 +58,14 @@ public class AscendHud extends CustomUIHud {
             return;
         }
         lastCoinsText = coinsText;
+        lastCoinsPerRunText = coinsPerRunText;
         lastDigitsKey = digitsKey;
         lastElevationValueText = elevationValueText;
         lastElevationText = elevationText;
         lastElevationVisible = showElevation;
         UICommandBuilder commandBuilder = new UICommandBuilder();
         commandBuilder.set("#TopCoinsValue.Text", coinsText);
+        commandBuilder.set("#TopCoinsPerRunValue.Text", coinsPerRunText);
         double[] safeDigits = normalizeDigits(digits);
         commandBuilder.set("#TopRedValue.Text", formatMultiplier(safeDigits[0]));
         commandBuilder.set("#TopOrangeValue.Text", formatMultiplier(safeDigits[1]));
@@ -78,6 +83,7 @@ public class AscendHud extends CustomUIHud {
     public void resetCache() {
         lastStaticKey = null;
         lastCoinsText = null;
+        lastCoinsPerRunText = null;
         lastDigitsKey = null;
         lastElevationValueText = null;
         lastElevationText = null;
@@ -106,10 +112,8 @@ public class AscendHud extends CustomUIHud {
             int manualLevel = summitLevels.getOrDefault(SummitCategory.MANUAL_MASTERY, 0);
 
             String summitText = "Summit: Coin " + coinLevel + " | Speed " + speedLevel + " | Manual " + manualLevel;
-            String ascensionText = "Ascension: x" + ascensionCount + " | Points: " + skillPoints;
 
             commandBuilder.set("#SummitText.Text", summitText);
-            commandBuilder.set("#AscensionText.Text", ascensionText);
         }
 
         update(false, commandBuilder);
@@ -131,7 +135,7 @@ public class AscendHud extends CustomUIHud {
         int coinLevel = summitLevels != null ? summitLevels.getOrDefault(SummitCategory.COIN_FLOW, 0) : 0;
         int speedLevel = summitLevels != null ? summitLevels.getOrDefault(SummitCategory.RUNNER_SPEED, 0) : 0;
         int manualLevel = summitLevels != null ? summitLevels.getOrDefault(SummitCategory.MANUAL_MASTERY, 0) : 0;
-        return coinLevel + "|" + speedLevel + "|" + manualLevel + "|" + ascensionCount + "|" + skillPoints;
+        return coinLevel + "|" + speedLevel + "|" + manualLevel;
     }
 
     private static double[] normalizeDigits(double[] digits) {

@@ -34,7 +34,7 @@ All map balancing is calculated from `displayOrder` (0-4) using constants in `As
 - `AscendMap.getEffectiveBaseRunTimeMs()` → runner completion time from displayOrder
 
 ### Multiplier increments
-- Manual run: +1.0 multiplier per completion (`MANUAL_MULTIPLIER_INCREMENT`)
+- Manual run: +0.1 multiplier per completion (`MANUAL_MULTIPLIER_INCREMENT`)
 - Runner run: +0.01 × 2^stars multiplier per completion (see star evolution below)
 - Speed upgrade: +10% per level (`SPEED_UPGRADE_MULTIPLIER`)
 - Speed upgrade cost: 100 × 2^level

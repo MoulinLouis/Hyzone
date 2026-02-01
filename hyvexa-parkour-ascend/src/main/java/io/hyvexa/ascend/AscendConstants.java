@@ -15,7 +15,7 @@ public final class AscendConstants {
 
     // Economy
     public static final double SPEED_UPGRADE_MULTIPLIER = 0.10; // +10% speed per level
-    public static final double MANUAL_MULTIPLIER_INCREMENT = 1.0; // +1.0 per manual run
+    public static final double MANUAL_MULTIPLIER_INCREMENT = 0.1; // +0.1 per manual run
     public static final double RUNNER_MULTIPLIER_INCREMENT = 0.01; // +0.01 per runner completion
     public static final int MULTIPLIER_SLOTS = 5;
 
