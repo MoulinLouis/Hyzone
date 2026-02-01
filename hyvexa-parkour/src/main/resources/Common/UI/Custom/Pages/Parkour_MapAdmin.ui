@@ -2,7 +2,7 @@ $C = "../Common.ui";
 
 $C.@PageOverlay {
   $C.@Container {
-    Anchor: (Width: 920, Height: 760);
+    Anchor: (Width: 920, Height: 910);
 
     #Title {
       Group {
@@ -321,7 +321,7 @@ $C.@PageOverlay {
         }
 
         Group #MapList {
-          Anchor: (Width: 320, Top: 6, Height: 600);
+          Anchor: (Width: 320, Top: 6, Height: 750);
           FlexWeight: 1;
           LayoutMode: TopScrolling;
           Padding: (Left: 6, Right: 6);
