@@ -14,19 +14,20 @@ public final class AscendConstants {
     public static final String ITEM_DEV_COTTON = "Ingredient_Bolt_Cotton";
 
     // Economy
-    public static final double SPEED_UPGRADE_MULTIPLIER = 0.10; // +10% speed per level
+    public static final double SPEED_UPGRADE_MULTIPLIER = 0.15; // +15% speed per level
     public static final double MANUAL_MULTIPLIER_INCREMENT = 0.1; // +0.1 per manual run
     public static final double RUNNER_MULTIPLIER_INCREMENT = 0.01; // +0.01 per runner completion
     public static final int MULTIPLIER_SLOTS = 5;
+    public static final int MAP_UNLOCK_REQUIRED_RUNNER_LEVEL = 3; // Runner level required to unlock next map
 
     // Map Level Defaults (indexed by displayOrder 0-4)
     // Base run times: faster maps = faster multiplier growth
     public static final long[] MAP_BASE_RUN_TIMES_MS = {
         5000L,    // Level 0 (Rouge)  - 5 sec
-        15000L,   // Level 1 (Orange) - 15 sec
-        30000L,   // Level 2 (Jaune)  - 30 sec
-        60000L,   // Level 3 (Vert)   - 1 min
-        120000L   // Level 4 (Bleu)   - 2 min
+        10000L,   // Level 1 (Orange) - 10 sec
+        16000L,   // Level 2 (Jaune)  - 16 sec
+        26000L,   // Level 3 (Vert)   - 26 sec
+        42000L    // Level 4 (Bleu)   - 42 sec
     };
 
     // Base coin rewards per manual completion (before multiplier)

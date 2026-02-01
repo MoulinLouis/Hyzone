@@ -6,6 +6,7 @@ import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.AscendConstants.AchievementType;
 import io.hyvexa.ascend.AscendConstants.SkillTreeNode;
 import io.hyvexa.ascend.AscendConstants.SummitCategory;
+import io.hyvexa.ascend.util.MapUnlockHelper;
 import io.hyvexa.core.db.DatabaseManager;
 
 import java.sql.Connection;
@@ -212,10 +213,76 @@ public class AscendPlayerStore {
 
     public void resetPlayerProgress(UUID playerId) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
+        // Reset basic progression
         progress.setCoins(0L);
         progress.setElevationMultiplier(1);
         progress.getMapProgress().clear();
+
+        // Reset Summit system
+        progress.clearSummitLevels();
+        progress.setTotalCoinsEarned(0L);
+
+        // Reset Ascension/Skill Tree
+        progress.setAscensionCount(0);
+        progress.setSkillTreePoints(0);
+        progress.setUnlockedSkillNodes(null);
+
+        // Reset Achievements
+        progress.setUnlockedAchievements(null);
+        progress.setActiveTitle(null);
+
+        // Reset Statistics
+        progress.setTotalManualRuns(0);
+        progress.setConsecutiveManualRuns(0);
+        progress.setSessionFirstRunClaimed(false);
+
+        // Delete all database entries for this player
+        deletePlayerDataFromDatabase(playerId);
+
         markDirty(playerId);
+    }
+
+    private void deletePlayerDataFromDatabase(UUID playerId) {
+        if (!DatabaseManager.getInstance().isInitialized()) {
+            return;
+        }
+
+        String playerIdStr = playerId.toString();
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            // Delete map progress
+            try (PreparedStatement stmt = conn.prepareStatement(
+                "DELETE FROM ascend_player_maps WHERE player_uuid = ?")) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setString(1, playerIdStr);
+                stmt.executeUpdate();
+            }
+
+            // Delete summit levels
+            try (PreparedStatement stmt = conn.prepareStatement(
+                "DELETE FROM ascend_player_summit WHERE player_uuid = ?")) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setString(1, playerIdStr);
+                stmt.executeUpdate();
+            }
+
+            // Delete skill nodes
+            try (PreparedStatement stmt = conn.prepareStatement(
+                "DELETE FROM ascend_player_skills WHERE player_uuid = ?")) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setString(1, playerIdStr);
+                stmt.executeUpdate();
+            }
+
+            // Delete achievements
+            try (PreparedStatement stmt = conn.prepareStatement(
+                "DELETE FROM ascend_player_achievements WHERE player_uuid = ?")) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setString(1, playerIdStr);
+                stmt.executeUpdate();
+            }
+        } catch (SQLException e) {
+            LOGGER.at(Level.SEVERE).log("Failed to delete player data during reset: " + e.getMessage());
+        }
     }
 
     public void markDirty(UUID playerId) {
@@ -327,6 +394,42 @@ public class AscendPlayerStore {
         int value = mapProgress.incrementRobotSpeedLevel();
         markDirty(playerId);
         return value;
+    }
+
+    /**
+     * Check if any maps should be auto-unlocked based on runner levels.
+     * Called after incrementing runner speed level.
+     * Returns the list of newly unlocked map IDs for notification.
+     */
+    public List<String> checkAndUnlockEligibleMaps(UUID playerId, AscendMapStore mapStore) {
+        if (playerId == null || mapStore == null) {
+            return List.of();
+        }
+
+        List<String> newlyUnlockedMapIds = new java.util.ArrayList<>();
+        List<AscendMap> allMaps = new java.util.ArrayList<>(mapStore.listMapsSorted());
+
+        // Start from index 1 (skip first map which is always unlocked)
+        for (int i = 1; i < allMaps.size(); i++) {
+            AscendMap map = allMaps.get(i);
+            if (map == null) {
+                continue;
+            }
+
+            // Check if already unlocked
+            AscendPlayerProgress.MapProgress mapProgress = getMapProgress(playerId, map.getId());
+            if (mapProgress != null && mapProgress.isUnlocked()) {
+                continue;
+            }
+
+            // Check if meets unlock requirement
+            if (MapUnlockHelper.meetsUnlockRequirement(playerId, map, this, mapStore)) {
+                setMapUnlocked(playerId, map.getId(), true);
+                newlyUnlockedMapIds.add(map.getId());
+            }
+        }
+
+        return newlyUnlockedMapIds;
     }
 
     public int getRobotStars(UUID playerId, String mapId) {
