@@ -1,5 +1,12 @@
 # Changelog
 
+- Redesigned Ascend map selection UI with modern indie game style:
+  - Expanded menu container to 620x620px with "A S C E N D" header.
+  - New card layout (580x90px) with colored accent bar on left edge.
+  - Color palette: violet (#7c3aed) → blue (#3b82f6) → cyan (#06b6d4) → amber (#f59e0b) → red (#ef4444).
+  - 10-segment progress bar showing runner speed level (Lv.0 to MAX).
+  - Integrated button zone with accent bar on top, showing level, speed, action, and price.
+  - Runner level moved from progress bar area into the button zone for cleaner layout.
 - Refactor HyvexaPlugin to extract manager classes: LeaderboardHologramManager, CollisionManager, InventorySyncManager, WorldMapManager, ChatFormatter.
 - Make DatabaseManager initialization thread-safe with synchronized block and volatile fields.
 - Make RobotState thread-safe using AtomicInteger and AtomicLong for concurrent field access.
