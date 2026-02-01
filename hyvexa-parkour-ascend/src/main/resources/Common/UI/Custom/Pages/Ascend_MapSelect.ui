@@ -26,15 +26,6 @@ $C.@PageOverlay {
       LayoutMode: Top;
       Padding: (Left: 20, Right: 20, Top: 6, Bottom: 12);
 
-      Label {
-        Style: (
-          FontSize: 14,
-          TextColor: #9fb0ba,
-          HorizontalAlignment: Center
-        );
-        Text: "Select Your Challenge";
-      }
-
       Group #MapList {
         Anchor: (Left: 0, Right: 0, Top: 8);
         FlexWeight: 1;
@@ -43,6 +34,81 @@ $C.@PageOverlay {
 
         Group #MapCards {
           LayoutMode: Top;
+        }
+      }
+
+      Group #ActionButtons {
+        Anchor: (Left: 0, Right: 0, Top: 6, Height: 56);
+        LayoutMode: Left;
+
+        TextButton #ActionButton1 {
+          Anchor: (Height: 56);
+          FlexWeight: 1;
+          Padding: (Left: 8, Right: 8, Top: 8, Bottom: 8);
+          Text: "Placeholder 1";
+          Style: TextButtonStyle(
+            Default: (
+              Background: #2d5a7b(0.85),
+              LabelStyle: (FontSize: 14, TextColor: #e8f4fc, RenderBold: true, HorizontalAlignment: Center)
+            ),
+            Hovered: (
+              Background: #3a7399(0.92),
+              LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center)
+            ),
+            Pressed: (
+              Background: #4a8ab3(0.95),
+              LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center)
+            ),
+            Sounds: $C.@ButtonSounds,
+          );
+        }
+
+        Group { Anchor: (Width: 8); }
+
+        TextButton #ActionButton2 {
+          Anchor: (Height: 56);
+          FlexWeight: 1;
+          Padding: (Left: 8, Right: 8, Top: 8, Bottom: 8);
+          Text: "Placeholder 2";
+          Style: TextButtonStyle(
+            Default: (
+              Background: #5a3d6b(0.85),
+              LabelStyle: (FontSize: 14, TextColor: #f4e8fc, RenderBold: true, HorizontalAlignment: Center)
+            ),
+            Hovered: (
+              Background: #7a4d8f(0.92),
+              LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center)
+            ),
+            Pressed: (
+              Background: #9460a8(0.95),
+              LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center)
+            ),
+            Sounds: $C.@ButtonSounds,
+          );
+        }
+
+        Group { Anchor: (Width: 8); }
+
+        TextButton #ActionButton3 {
+          Anchor: (Height: 56);
+          FlexWeight: 1;
+          Padding: (Left: 8, Right: 8, Top: 8, Bottom: 8);
+          Text: "Placeholder 3";
+          Style: TextButtonStyle(
+            Default: (
+              Background: #5a6b3d(0.85),
+              LabelStyle: (FontSize: 14, TextColor: #f4fce8, RenderBold: true, HorizontalAlignment: Center)
+            ),
+            Hovered: (
+              Background: #7a8f4d(0.92),
+              LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center)
+            ),
+            Pressed: (
+              Background: #94a860(0.95),
+              LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center)
+            ),
+            Sounds: $C.@ButtonSounds,
+          );
         }
       }
     }
