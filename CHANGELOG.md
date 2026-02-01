@@ -1,5 +1,12 @@
 # Changelog
 
+- Add subtle visual flash to Ascend HUD multipliers when values increase:
+  - Single-cycle flash (200ms): lighter color → restore on next HUD update.
+  - Each multiplier has its own color pair (e.g., purple → light purple, blue → light blue).
+  - Synchronized with HUD update cycle for instant, consistent flash.
+  - Effect coalescing prevents spam from rapid robot completions.
+  - No effects on coin count (multipliers only).
+  - Fix: Process effects even when values unchanged, ensuring color restoration.
 - Add a map admin glider toggle to grant the Glider run item per map.
 - Reduce manual multiplier increment from +1.0 to +0.1 per completion for better progression balance.
 - Add coins-per-run display HUD next to total coins showing theoretical earnings per run.

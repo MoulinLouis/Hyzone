@@ -10,6 +10,8 @@ import java.util.Map;
 
 public class AscendHud extends CustomUIHud {
 
+    private final HudEffectManager effectManager = new HudEffectManager();
+
     private String lastStaticKey;
     private String lastCoinsText;
     private String lastCoinsPerRunText;
@@ -19,6 +21,10 @@ public class AscendHud extends CustomUIHud {
     private Boolean lastElevationVisible;
     private String lastPrestigeKey;
     private Boolean lastPrestigeVisible;
+
+    // Track previous values for effect triggering
+    private double[] lastDigits;
+    private long lastCoins;
 
     public AscendHud(PlayerRef playerRef) {
         super(playerRef);
@@ -49,34 +55,70 @@ public class AscendHud extends CustomUIHud {
         int nextElevation = currentElevation + elevationGain;
         String elevationText = showElevation ? ("x" + currentElevation + " -> x" + nextElevation) : "";
         String elevationValueText = formatMultiplier(currentElevation);
-        if (coinsText.equals(lastCoinsText)
-            && coinsPerRunText.equals(lastCoinsPerRunText)
-            && digitsKey.equals(lastDigitsKey)
-            && elevationValueText.equals(lastElevationValueText)
-            && elevationText.equals(lastElevationText)
-            && Boolean.valueOf(showElevation).equals(lastElevationVisible)) {
+        // Check if values changed OR if we have active effects to process
+        boolean valuesChanged = !coinsText.equals(lastCoinsText)
+            || !coinsPerRunText.equals(lastCoinsPerRunText)
+            || !digitsKey.equals(lastDigitsKey)
+            || !elevationValueText.equals(lastElevationValueText)
+            || !elevationText.equals(lastElevationText)
+            || !Boolean.valueOf(showElevation).equals(lastElevationVisible);
+
+        boolean hasActiveEffects = effectManager.hasActiveEffects();
+
+        // Only skip update if nothing changed AND no active effects
+        if (!valuesChanged && !hasActiveEffects) {
             return;
         }
-        lastCoinsText = coinsText;
-        lastCoinsPerRunText = coinsPerRunText;
-        lastDigitsKey = digitsKey;
-        lastElevationValueText = elevationValueText;
-        lastElevationText = elevationText;
-        lastElevationVisible = showElevation;
-        UICommandBuilder commandBuilder = new UICommandBuilder();
-        commandBuilder.set("#TopCoinsValue.Text", coinsText);
-        commandBuilder.set("#TopCoinsPerRunValue.Text", coinsPerRunText);
-        double[] safeDigits = normalizeDigits(digits);
-        commandBuilder.set("#TopRedValue.Text", formatMultiplier(safeDigits[0]));
-        commandBuilder.set("#TopOrangeValue.Text", formatMultiplier(safeDigits[1]));
-        commandBuilder.set("#TopYellowValue.Text", formatMultiplier(safeDigits[2]));
-        commandBuilder.set("#TopGreenValue.Text", formatMultiplier(safeDigits[3]));
-        commandBuilder.set("#TopBlueValue.Text", formatMultiplier(safeDigits[4]));
-        commandBuilder.set("#TopElevationValue.Text", elevationValueText);
-        commandBuilder.set("#ElevationHud.Visible", showElevation);
-        if (showElevation) {
-            commandBuilder.set("#ElevationStatusText.Text", "Current Multiplier " + elevationText);
+
+        // If values changed, detect increases and update cache
+        double[] safeDigits = null;
+        if (valuesChanged) {
+            safeDigits = normalizeDigits(digits);
+
+            // Detect value increases and trigger effects (multipliers only)
+            if (lastDigits != null) {
+                String[] elementIds = {"#TopRedValue", "#TopOrangeValue", "#TopYellowValue", "#TopGreenValue", "#TopBlueValue"};
+                for (int i = 0; i < Math.min(safeDigits.length, lastDigits.length); i++) {
+                    if (safeDigits[i] > lastDigits[i]) {
+                        effectManager.triggerMultiplierEffect(elementIds[i], i);
+                    }
+                }
+            }
+
+            // Update cached values
+            lastCoinsText = coinsText;
+            lastCoinsPerRunText = coinsPerRunText;
+            lastDigitsKey = digitsKey;
+            lastElevationValueText = elevationValueText;
+            lastElevationText = elevationText;
+            lastElevationVisible = showElevation;
+            lastDigits = safeDigits.clone();
+            lastCoins = coins;
         }
+
+        // Create command builder
+        UICommandBuilder commandBuilder = new UICommandBuilder();
+
+        // If values changed, set all UI text values
+        if (valuesChanged) {
+            commandBuilder.set("#TopCoinsValue.Text", coinsText);
+            commandBuilder.set("#TopCoinsPerRunValue.Text", coinsPerRunText);
+            commandBuilder.set("#TopRedValue.Text", formatMultiplier(safeDigits[0]));
+            commandBuilder.set("#TopOrangeValue.Text", formatMultiplier(safeDigits[1]));
+            commandBuilder.set("#TopYellowValue.Text", formatMultiplier(safeDigits[2]));
+            commandBuilder.set("#TopGreenValue.Text", formatMultiplier(safeDigits[3]));
+            commandBuilder.set("#TopBlueValue.Text", formatMultiplier(safeDigits[4]));
+            commandBuilder.set("#TopElevationValue.Text", elevationValueText);
+            commandBuilder.set("#ElevationHud.Visible", showElevation);
+            if (showElevation) {
+                commandBuilder.set("#ElevationStatusText.Text", "Current Multiplier " + elevationText);
+            }
+        }
+
+        // Always apply effects if we have any (whether values changed or not)
+        effectManager.update(commandBuilder);
+
+        // Send the update
         update(false, commandBuilder);
     }
 
@@ -90,6 +132,9 @@ public class AscendHud extends CustomUIHud {
         lastElevationVisible = null;
         lastPrestigeKey = null;
         lastPrestigeVisible = null;
+        lastDigits = null;
+        lastCoins = 0;
+        effectManager.clearEffects();
     }
 
     public void updatePrestige(Map<SummitCategory, Integer> summitLevels, int ascensionCount, int skillPoints) {
