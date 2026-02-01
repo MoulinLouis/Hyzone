@@ -210,11 +210,12 @@ public class GhostRecorder {
                     return;
                 }
 
-                // Get rotation (yaw from head rotation)
-                Vector3f headRotation = finalPlayerRef.getHeadRotation();
+                // Get rotation (yaw from body rotation, not head rotation)
+                // Body rotation creates smoother, more natural-looking NPC movement
+                Vector3f bodyRotation = transform.getRotation();
                 float yaw = 0f;
-                if (headRotation != null) {
-                    yaw = headRotation.getY(); // Y component is yaw in Hytale
+                if (bodyRotation != null) {
+                    yaw = bodyRotation.getY(); // Y component is yaw in Hytale
                 }
 
                 // Add sample (synchronized since this runs on world thread)
@@ -230,7 +231,7 @@ public class GhostRecorder {
                 }
             } catch (Exception e) {
                 LOGGER.at(Level.WARNING).withCause(e).log("Error sampling ghost position");
-            }
+                }
         });
     }
 
