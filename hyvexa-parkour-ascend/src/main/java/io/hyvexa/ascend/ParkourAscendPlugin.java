@@ -22,12 +22,15 @@ import io.hyvexa.ascend.data.AscendDatabaseSetup;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerStore;
-import io.hyvexa.ascend.hud.AscendHud;
+import io.hyvexa.ascend.achievement.AchievementManager;
+import io.hyvexa.ascend.ascension.AscensionManager;
 import io.hyvexa.ascend.holo.AscendHologramManager;
+import io.hyvexa.ascend.hud.AscendHud;
 import io.hyvexa.ascend.interaction.AscendDevCinderclothInteraction;
 import io.hyvexa.ascend.interaction.AscendDevCottonInteraction;
 import io.hyvexa.ascend.interaction.AscendDevStormsilkInteraction;
 import io.hyvexa.ascend.robot.RobotManager;
+import io.hyvexa.ascend.summit.SummitManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
@@ -57,6 +60,9 @@ public class ParkourAscendPlugin extends JavaPlugin {
     private AscendRunTracker runTracker;
     private RobotManager robotManager;
     private AscendHologramManager hologramManager;
+    private SummitManager summitManager;
+    private AscensionManager ascensionManager;
+    private AchievementManager achievementManager;
     private ScheduledFuture<?> runTrackerTask;
     private final ConcurrentHashMap<UUID, AscendHud> ascendHuds = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Boolean> ascendHudAttached = new ConcurrentHashMap<>();
@@ -84,6 +90,10 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
         robotManager = new RobotManager(mapStore, playerStore);
         robotManager.start();
+
+        summitManager = new SummitManager(playerStore);
+        ascensionManager = new AscensionManager(playerStore);
+        achievementManager = new AchievementManager(playerStore, mapStore);
 
         if (HylogramsBridge.isAvailable()) {
             hologramManager = new AscendHologramManager();
@@ -117,6 +127,11 @@ public class ParkourAscendPlugin extends JavaPlugin {
                 UUID playerId = playerRef.getUuid();
                 if (playerId != null && robotManager != null) {
                     robotManager.onPlayerJoin(playerId);
+                }
+                // Reset session-specific tracking
+                if (playerId != null && playerStore != null) {
+                    playerStore.setSessionFirstRunClaimed(playerId, false);
+                    playerStore.resetConsecutiveManualRuns(playerId);
                 }
                 CompletableFuture.runAsync(() -> {
                     Player player = store.getComponent(ref, Player.getComponentType());
@@ -221,6 +236,18 @@ public class ParkourAscendPlugin extends JavaPlugin {
         return hologramManager;
     }
 
+    public SummitManager getSummitManager() {
+        return summitManager;
+    }
+
+    public AscensionManager getAscensionManager() {
+        return ascensionManager;
+    }
+
+    public AchievementManager getAchievementManager() {
+        return achievementManager;
+    }
+
     private void tickRunTracker() {
         if (runTracker == null) {
             return;
@@ -271,6 +298,12 @@ public class ParkourAscendPlugin extends JavaPlugin {
             int elevationMultiplier = playerStore.getElevationMultiplier(playerId);
             boolean showElevation = coins >= 1000L;
             hud.updateEconomy(coins, product, digits, elevationMultiplier, showElevation);
+
+            // Update prestige HUD
+            var summitLevels = playerStore.getSummitLevels(playerId);
+            int ascensionCount = playerStore.getAscensionCount(playerId);
+            int skillPoints = playerStore.getAvailableSkillPoints(playerId);
+            hud.updatePrestige(summitLevels, ascensionCount, skillPoints);
         }
     }
 

@@ -60,25 +60,115 @@ Runners can evolve up to 5 stars. When a runner reaches max speed level (20), th
 - `MapUnlockHelper.checkAndEnsureUnlock()` handles auto-unlock for free maps and first map
 - Reset progress unlocks the first map (lowest displayOrder) automatically
 
+## Prestige System (3 Tiers)
+
+The Ascend mode has a layered prestige system with three tiers:
+
+```
+TIER 1: ELEVATION   - coins → multiplier, resets coins
+TIER 2: SUMMIT      - coins → category upgrades, resets coins + elevation
+TIER 3: ASCENSION   - coins → skill tree point, resets everything
+```
+
+### Tier 1: Elevation
+- Converts coins into permanent elevation multiplier
+- Cost: 1000 coins per +1 elevation (configurable via skill tree)
+- Resets: Coins only
+- Manager: Handled directly in `AscendCommand` / `ElevationPage`
+
+### Tier 2: Summit System
+Managed by `SummitManager`. Players invest coins into one of three categories:
+
+| Category | Effect per Level | Bonus Type |
+|----------|------------------|------------|
+| **Coin Flow** | +20% base coin earnings | Passive income |
+| **Runner Speed** | +15% runner completion speed | Automation |
+| **Manual Mastery** | +25% manual run multiplier | Active play |
+
+**Level thresholds** (cumulative coins required):
+| Level | Coins Required | Cumulative |
+|-------|----------------|------------|
+| 1 | 10K | 10K |
+| 2 | 50K | 60K |
+| 3 | 200K | 260K |
+| 4 | 1M | 1.26M |
+| 5 | 5M | 6.26M |
+| ... | exponential | up to 10 |
+
+**Resets**: Coins + Elevation → 0
+
+### Tier 3: Ascension System
+Managed by `AscensionManager`. The ultimate prestige at 1 trillion coins.
+
+**Requirements**: 1,000,000,000,000 (1T) coins
+
+**Rewards**: +1 skill tree point per Ascension
+
+**Resets**: Coins, Elevation, Summit levels, all map progress
+
+**Skill Tree**: 18 nodes across 5 paths:
+
+| Path | Nodes | Focus |
+|------|-------|-------|
+| **Coin** (5) | Starting coins, base reward +25%, elevation cost -20%, summit cost -15%, auto-elevation |
+| **Speed** (5) | Base speed +10%, max level +5, evolution cost -50%, double lap, instant evolution |
+| **Manual** (5) | Manual +50%, chain bonus, session bonus 3x, runner boost, personal best tracking |
+| **Hybrid** (2) | Offline earnings, Summit persistence (50% retained) |
+| **Ultimate** (1) | +100% to ALL systems |
+
+**Unlock rules**:
+- Nodes require prerequisite in same path
+- Hybrid nodes require 3+ points in multiple paths
+- Ultimate requires 12+ total points spent
+
+### Achievement System
+Managed by `AchievementManager`. Achievements grant titles for display.
+
+| Achievement | Requirement | Title |
+|-------------|-------------|-------|
+| First Steps | 1 manual run | "Beginner" |
+| Coin Hoarder | 100K total earned | "Collector" |
+| Millionaire | 1M total earned | "Millionaire" |
+| Dedicated | 100 manual runs | "Dedicated" |
+| Marathon | 1000 manual runs | "Marathoner" |
+| First Robot | Buy first runner | "Automator" |
+| Army | 5+ active runners | "Commander" |
+| Evolved | Evolve to 1+ stars | "Evolver" |
+| Summit Seeker | First Summit | "Summiter" |
+| Summit Master | Summit Lv.10 any category | "Summit Master" |
+| Ascended | First Ascension | "Ascended" |
+| Perfectionist | Max runner (5★ Lv.20) | "Perfectionist" |
+
+**Title management**: `/ascend title [name|clear]`
+
 ## Data model + persistence
-- Tables created: `ascend_players`, `ascend_maps`, `ascend_player_maps`, `ascend_upgrade_costs`.
+- Tables created: `ascend_players`, `ascend_maps`, `ascend_player_maps`, `ascend_upgrade_costs`, `ascend_player_summit`, `ascend_player_skills`, `ascend_player_achievements`.
 - `AscendMap` stores map metadata + start/finish coords + waypoint list + display order.
   - Price/reward/timing are calculated from displayOrder, not stored per-map.
 - `AscendMapStore` loads maps from MySQL, caches in memory, and saves updates.
-- `AscendPlayerProgress` stores coins, rebirth multiplier, and per-map progress:
+- `AscendPlayerProgress` stores coins, elevation multiplier, and per-map progress:
   - `unlocked`: boolean
   - `completedManually`: boolean
   - `hasRobot`: boolean (single runner per map)
   - `robotSpeedLevel`: int (speed upgrade level, 0-20)
   - `robotStars`: int (evolution level, 0-5)
   - `multiplier`: double (accumulates from manual/runner completions)
-- `AscendPlayerStore` loads players + per-map progress, writes back with debounced saves.
+  - Summit levels per category (Map<SummitCategory, Integer>)
+  - Ascension count, skill tree points, unlocked skill nodes
+  - Achievement unlocks, active title
+  - Lifetime stats: totalCoinsEarned, totalManualRuns
+- `AscendPlayerStore` loads players + per-map progress + Summit/Ascension/Achievement data, writes back with debounced saves.
 
 ## Commands
 - `/ascend`:
   - No args: opens map select UI and teleports to map start on selection.
-  - `stats`: shows current coin balance, digit product, rebirth multiplier, and the current digit string.
-  - `rebirth`: converts all coins into rebirth multiplier (+1 per 1000 coins) and resets coins to 0.
+  - `stats`: shows current coin balance, digit product, elevation multiplier, Summit levels, Ascension count, and lifetime stats.
+  - `elevate`: opens Elevation UI to convert coins into elevation multiplier (+1 per 1000 coins, resets coins to 0).
+  - `summit [category]`: opens Summit UI to invest coins into category bonuses. Categories: `coin`, `speed`, `manual`.
+  - `ascension`: opens Ascension UI to perform ultimate prestige (requires 1 trillion coins).
+  - `skills`: shows skill tree status and available nodes to unlock.
+  - `achievements`: shows achievement progress and unlocked titles.
+  - `title [name|clear]`: shows or sets active title from unlocked achievements.
   - All subcommands are gated to Ascend world via `AscendModeGate`.
 - `/as admin`:
   - Opens Ascend admin landing page with Maps and Admin Panel buttons.
@@ -107,10 +197,13 @@ Runners can evolve up to 5 stars. When a runner reaches max speed level (20), th
 - HUD reattaches on Ascend tick if needed and waits briefly before applying static text.
 - HUD now shows a centered coins banner under the top bar and the 5 colored digit slots updated from the player store.
 - Coin display uses compact scientific notation over 1,000,000,000 to prevent HUD cropping.
-- When coins >= 1000, a rebirth panel appears with current->next multiplier and a `/ascend rebirth` prompt.
-- A full-width top banner bar shows colored number slots with "x" separators for future multipliers and is scaled up for visibility.
+- When coins >= 1000, an elevation panel appears with current->next multiplier and a `/ascend elevate` prompt.
+- A full-width top banner bar shows colored number slots with "x" separators for multipliers and is scaled up for visibility.
 - Ascend run HUD layout now mirrors the Hub HUD info box (placeholder hint text + store info), with the product row removed.
-- Rebirth panel is positioned under the top banner on the upper-right.
+- Elevation panel is positioned under the top banner on the upper-right.
+- **Prestige HUD panel** (upper-left): Shows Summit levels per category and Ascension count when player has prestige progress.
+  - Updates via `AscendHud.updatePrestige()` with caching to avoid redundant updates.
+  - Hidden when player has no Summit levels and no Ascensions.
 - Run HUD UI is duplicated in multiple resource paths for lookup compatibility:
   - `Common/UI/Custom/Pages/Ascend_RunHud.ui`
   - `Pages/Ascend_RunHud.ui`
@@ -127,6 +220,25 @@ Runners can evolve up to 5 stars. When a runner reaches max speed level (20), th
   - Progress bar: 20 segments showing speed level (Lv.0 to Lv.20)
   - Level display shows stars: "★★★ Lv.5" format
   - Button states: "Buy Runner" → "Upgrade" → "Evolve" (at Lv.20) → "Maxed!" (5 stars + Lv.20)
+- `Ascend_Elevation.ui` + `ElevationPage.java`: Elevation prestige UI:
+  - Shows current coins and elevation multiplier
+  - Displays projected gain (+X) and new multiplier after elevating
+  - Dynamic colors: green for gain, grey for no gain
+  - Button text updates based on affordability
+- `Ascend_Summit.ui` + `SummitPage.java`: Summit prestige UI:
+  - Displays coins at top with warning about reset
+  - 3 category cards (Coin Flow, Runner Speed, Manual Mastery):
+    - Colored accent bars (yellow, blue, purple)
+    - Current level and bonus percentage
+    - Projected new level if Summit performed
+    - Per-category Summit button
+  - Warning box about resetting coins + elevation
+- `Ascend_Ascension.ui` + `AscensionPage.java`: Ascension prestige UI:
+  - Progress bar showing coins vs 1T requirement
+  - Current Ascension count and available skill points
+  - Reward display (+1 SKILL POINT)
+  - Red warning section listing all resets
+  - Ascend button or locked message based on coin balance
 - `Ascend_MapAdmin.ui` + `Ascend_MapAdminEntry.ui`: simplified admin map management:
   - Only configure: id, name, level (0-4), start, finish
   - Shows automatic balancing info (unlock/runner/reward/time) from code

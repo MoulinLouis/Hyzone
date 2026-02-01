@@ -514,4 +514,20 @@
 - Updated the Hub Game Selector item to display the Kweebec plush model when held.
 - Matched the Game Selector held animation/sound to Deco_Kweebec_Plush for consistent rendering.
 - Added a double right-click confirmation before leaving a map via the leave item.
+- Implemented enhanced Ascend progression system with three prestige tiers:
+  - **Summit System (Tier 2)**: Converts coins into permanent category upgrades (Coin Flow, Runner Speed, Manual Mastery). Resets coins and elevation.
+  - **Ascension System (Tier 3)**: At 1 trillion coins, converts progress into skill tree points. Resets everything including Summit levels (with optional partial persistence via skill).
+  - **Skill Tree**: 18 unlockable skills across 5 paths (Coin, Speed, Manual, Hybrid, Ultimate) with prerequisites and path requirements.
+  - **Achievement System**: 12 achievements tracking milestones, runners, and prestige with unlockable titles.
+- Added new commands: `/ascend summit <category>`, `/ascend ascension`, `/ascend skills`, `/ascend achievements`, `/ascend title`.
+- Added prestige HUD panel showing Summit levels and Ascension count.
+- Summit bonuses now apply to coin earnings (Coin Flow), runner speed (Runner Speed), and manual run rewards (Manual Mastery).
+- Skill tree bonuses include: starting coins, base reward bonus, reduced elevation/summit costs, auto-elevation, runner speed/level bonuses, instant evolution, manual run chain bonuses, session first-run multiplier, and more.
+- Track total coins earned and total manual runs for achievement progress.
+- Updated database schema with tables for Summit levels, skill tree unlocks, and achievements.
+- Added dedicated UI pages for Elevation, Summit, and Ascension with visual previews:
+  - **Elevation UI**: Shows current coins, current multiplier, projected gain, and new multiplier after elevating.
+  - **Summit UI**: Displays all 3 categories with current levels, projected gains, and per-category Summit buttons.
+  - **Ascension UI**: Progress bar to 1T coins, current ascension count, skill points, reset warnings, and Ascend button.
+- Commands `/ascend elevate`, `/ascend summit`, and `/ascend ascension` now open their respective UI pages instead of chat-only interactions.
 

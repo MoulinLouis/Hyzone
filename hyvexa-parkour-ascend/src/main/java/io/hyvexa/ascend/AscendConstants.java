@@ -121,4 +121,231 @@ public final class AscendConstants {
 
     // Timing
     public static final long SAVE_DEBOUNCE_MS = 5000L;
+
+    // ========================================
+    // Summit System (Middle Prestige)
+    // ========================================
+
+    public enum SummitCategory {
+        COIN_FLOW("Coin Flow", 0.20),      // +20% base coin earnings per level
+        RUNNER_SPEED("Runner Speed", 0.15), // +15% runner completion speed per level
+        MANUAL_MASTERY("Manual Mastery", 0.25); // +25% manual run multiplier per level
+
+        private final String displayName;
+        private final double bonusPerLevel;
+
+        SummitCategory(String displayName, double bonusPerLevel) {
+            this.displayName = displayName;
+            this.bonusPerLevel = bonusPerLevel;
+        }
+
+        public String getDisplayName() {
+            return displayName;
+        }
+
+        public double getBonusPerLevel() {
+            return bonusPerLevel;
+        }
+
+        public double getBonusForLevel(int level) {
+            return bonusPerLevel * Math.max(0, level);
+        }
+    }
+
+    // Summit level thresholds (coins required for each level)
+    // Level calculation: find highest level where cumulative <= coins spent
+    public static final long[] SUMMIT_LEVEL_THRESHOLDS = {
+        10_000L,        // Level 1
+        50_000L,        // Level 2 (cumulative: 60K)
+        200_000L,       // Level 3 (cumulative: 260K)
+        1_000_000L,     // Level 4 (cumulative: 1.26M)
+        5_000_000L,     // Level 5 (cumulative: 6.26M)
+        20_000_000L,    // Level 6 (cumulative: 26.26M)
+        80_000_000L,    // Level 7 (cumulative: 106.26M)
+        300_000_000L,   // Level 8 (cumulative: 406.26M)
+        1_000_000_000L, // Level 9 (cumulative: 1.406B)
+        5_000_000_000L  // Level 10 (cumulative: 6.406B)
+    };
+
+    public static final int SUMMIT_MAX_LEVEL = SUMMIT_LEVEL_THRESHOLDS.length;
+    public static final long SUMMIT_MIN_COINS = SUMMIT_LEVEL_THRESHOLDS[0];
+
+    public static int calculateSummitLevel(long coinsSpent) {
+        if (coinsSpent < SUMMIT_LEVEL_THRESHOLDS[0]) {
+            return 0;
+        }
+        long cumulative = 0;
+        for (int i = 0; i < SUMMIT_LEVEL_THRESHOLDS.length; i++) {
+            cumulative += SUMMIT_LEVEL_THRESHOLDS[i];
+            if (coinsSpent < cumulative) {
+                return i;
+            }
+        }
+        return SUMMIT_LEVEL_THRESHOLDS.length;
+    }
+
+    public static long getCoinsForSummitLevel(int level) {
+        if (level <= 0) {
+            return 0;
+        }
+        long cumulative = 0;
+        for (int i = 0; i < Math.min(level, SUMMIT_LEVEL_THRESHOLDS.length); i++) {
+            cumulative += SUMMIT_LEVEL_THRESHOLDS[i];
+        }
+        return cumulative;
+    }
+
+    public static long getCoinsForNextSummitLevel(int currentLevel) {
+        if (currentLevel >= SUMMIT_MAX_LEVEL) {
+            return Long.MAX_VALUE;
+        }
+        return getCoinsForSummitLevel(currentLevel + 1);
+    }
+
+    // ========================================
+    // Ascension System (Ultimate Prestige)
+    // ========================================
+
+    public static final long ASCENSION_COIN_THRESHOLD = 1_000_000_000_000L; // 1 trillion coins
+
+    public enum SkillTreeNode {
+        // Coin Path (5 nodes)
+        COIN_T1_STARTING_COINS("Starting Coins", "Start with 1,000 coins after Ascension", SkillTreePath.COIN, 1, null),
+        COIN_T2_BASE_REWARD("Base Reward +25%", "+25% base coin rewards", SkillTreePath.COIN, 2, "COIN_T1_STARTING_COINS"),
+        COIN_T3_ELEVATION_COST("Elevation Cost -20%", "Elevate at 800 coins instead of 1,000", SkillTreePath.COIN, 3, "COIN_T2_BASE_REWARD"),
+        COIN_T4_SUMMIT_COST("Summit Cost -15%", "Summit category upgrades cost 15% less", SkillTreePath.COIN, 4, "COIN_T3_ELEVATION_COST"),
+        COIN_T5_AUTO_ELEVATION("Auto Elevation", "Automatically elevate when threshold reached", SkillTreePath.COIN, 5, "COIN_T4_SUMMIT_COST"),
+
+        // Speed Path (5 nodes)
+        SPEED_T1_BASE_SPEED("Base Speed +10%", "Runners move 10% faster baseline", SkillTreePath.SPEED, 1, null),
+        SPEED_T2_MAX_LEVEL("Max Level +5", "Speed upgrades can reach level 25", SkillTreePath.SPEED, 2, "SPEED_T1_BASE_SPEED"),
+        SPEED_T3_EVOLUTION_COST("Evolution Cost -50%", "Runner evolution costs 50% less", SkillTreePath.SPEED, 3, "SPEED_T2_MAX_LEVEL"),
+        SPEED_T4_DOUBLE_LAP("Double Lap", "Runners complete 2 laps per cycle", SkillTreePath.SPEED, 4, "SPEED_T3_EVOLUTION_COST"),
+        SPEED_T5_INSTANT_EVOLVE("Instant Evolution", "Evolution doesn't reset speed level", SkillTreePath.SPEED, 5, "SPEED_T4_DOUBLE_LAP"),
+
+        // Manual Path (5 nodes)
+        MANUAL_T1_MULTIPLIER("Manual +50%", "+50% manual run multiplier", SkillTreePath.MANUAL, 1, null),
+        MANUAL_T2_CHAIN_BONUS("Chain Bonus", "+10% per consecutive run (max +100%)", SkillTreePath.MANUAL, 2, "MANUAL_T1_MULTIPLIER"),
+        MANUAL_T3_SESSION_BONUS("Session Bonus", "First run of session: 3x multiplier", SkillTreePath.MANUAL, 3, "MANUAL_T2_CHAIN_BONUS"),
+        MANUAL_T4_RUNNER_BOOST("Runner Boost", "Manual runs boost runner speed temporarily", SkillTreePath.MANUAL, 4, "MANUAL_T3_SESSION_BONUS"),
+        MANUAL_T5_PERSONAL_BEST("Personal Best", "Bonus for beating personal best time", SkillTreePath.MANUAL, 5, "MANUAL_T4_RUNNER_BOOST"),
+
+        // Hybrid Nodes (requires points in multiple paths)
+        HYBRID_OFFLINE_EARNINGS("Offline Earnings", "Earn coins while offline (capped)", SkillTreePath.HYBRID, 1, null),
+        HYBRID_SUMMIT_PERSIST("Summit Persistence", "Summit levels partially persist on Ascension", SkillTreePath.HYBRID, 2, null),
+
+        // Ultimate Node
+        ULTIMATE_GLOBAL_BOOST("Global Boost", "+100% to ALL systems", SkillTreePath.ULTIMATE, 1, null);
+
+        private final String name;
+        private final String description;
+        private final SkillTreePath path;
+        private final int tier;
+        private final String prerequisiteId;
+
+        SkillTreeNode(String name, String description, SkillTreePath path, int tier, String prerequisiteId) {
+            this.name = name;
+            this.description = description;
+            this.path = path;
+            this.tier = tier;
+            this.prerequisiteId = prerequisiteId;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public String getDescription() {
+            return description;
+        }
+
+        public SkillTreePath getPath() {
+            return path;
+        }
+
+        public int getTier() {
+            return tier;
+        }
+
+        public String getPrerequisiteId() {
+            return prerequisiteId;
+        }
+
+        public SkillTreeNode getPrerequisite() {
+            if (prerequisiteId == null) {
+                return null;
+            }
+            try {
+                return SkillTreeNode.valueOf(prerequisiteId);
+            } catch (IllegalArgumentException e) {
+                return null;
+            }
+        }
+    }
+
+    public enum SkillTreePath {
+        COIN, SPEED, MANUAL, HYBRID, ULTIMATE
+    }
+
+    // Hybrid node requirements: points in specific paths
+    public static final int HYBRID_PATH_REQUIREMENT = 3; // 3 points in each required path
+    public static final int ULTIMATE_TOTAL_REQUIREMENT = 12; // 12 total points to unlock ultimate
+
+    // ========================================
+    // Achievement System
+    // ========================================
+
+    public enum AchievementType {
+        // Milestones
+        FIRST_STEPS("First Steps", "Complete first manual run", "Beginner"),
+        COIN_HOARDER("Coin Hoarder", "Earn 100K coins total", "Collector"),
+        MILLIONAIRE("Millionaire", "Earn 1M coins total", "Millionaire"),
+        DEDICATED("Dedicated", "Complete 100 manual runs", "Dedicated"),
+        MARATHON("Marathon", "Complete 1000 manual runs", "Marathoner"),
+
+        // Runners
+        FIRST_ROBOT("First Robot", "Buy your first runner", "Automator"),
+        ARMY("Army", "Have 5+ active runners", "Commander"),
+        EVOLVED("Evolved", "Evolve a runner to 1+ stars", "Evolver"),
+
+        // Prestige
+        SUMMIT_SEEKER("Summit Seeker", "Complete first Summit", "Summiter"),
+        SUMMIT_MASTER("Summit Master", "Reach Summit Lv.10 in any category", "Summit Master"),
+        ASCENDED("Ascended", "Complete first Ascension", "Ascended"),
+
+        // Challenge
+        PERFECTIONIST("Perfectionist", "Max a runner (5★ Lv.20)", "Perfectionist");
+
+        private final String name;
+        private final String description;
+        private final String title;
+
+        AchievementType(String name, String description, String title) {
+            this.name = name;
+            this.description = description;
+            this.title = title;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public String getDescription() {
+            return description;
+        }
+
+        public String getTitle() {
+            return title;
+        }
+    }
+
+    // Achievement thresholds
+    public static final long ACHIEVEMENT_COINS_100K = 100_000L;
+    public static final long ACHIEVEMENT_COINS_1M = 1_000_000L;
+    public static final int ACHIEVEMENT_MANUAL_RUNS_100 = 100;
+    public static final int ACHIEVEMENT_MANUAL_RUNS_1000 = 1000;
+    public static final int ACHIEVEMENT_RUNNER_COUNT = 5;
+    public static final int ACHIEVEMENT_SUMMIT_MAX_LEVEL = 10;
+    public static final int ACHIEVEMENT_RUNNER_MAX_STARS = 5;
+    public static final int ACHIEVEMENT_RUNNER_MAX_SPEED = 20;
 }

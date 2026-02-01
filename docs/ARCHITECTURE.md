@@ -25,7 +25,7 @@ Technical design documentation for the Hyvexa multi-module plugin suite.
                              ▼
 ┌─────────────────────────────────────────────────────────────────────┐
 │                         MySQL Database                              │
-│  parkour_* tables + future ascend_* tables (shared DB)              │
+│  parkour_* tables + ascend_* tables (shared DB)                     │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -33,7 +33,7 @@ Technical design documentation for the Hyvexa multi-module plugin suite.
 
 - `hyvexa-core`: shared APIs/utilities, shared DB connection, mode events/state, shared mode gating/messages
 - `hyvexa-parkour`: current Parkour gameplay plugin
-- `hyvexa-parkour-ascend`: placeholder for Parkour Ascend mode (to be implemented)
+- `hyvexa-parkour-ascend`: Parkour Ascend idle mode with prestige progression
 - `hyvexa-hub`: hub routing + UI (mode switching, teleport routing)
 - Hub routing targets the capitalized world names: `Hub`, `Parkour`, `Ascend`
 
@@ -226,6 +226,12 @@ Credentials stored in `mods/Parkour/database.json` (gitignored, relative to serv
 | `global_messages` | Broadcast messages |
 | `global_message_settings` | Message interval (single row) |
 | `player_count_samples` | Analytics time-series data |
+| `ascend_players` | Ascend player state + prestige progress |
+| `ascend_maps` | Ascend map definitions |
+| `ascend_player_maps` | Per-player map progress (unlocks, runners, multipliers) |
+| `ascend_player_summit` | Summit levels per category per player |
+| `ascend_player_skills` | Skill tree unlocks per player |
+| `ascend_player_achievements` | Achievement unlocks per player |
 
 #### Data Flow Pattern
 

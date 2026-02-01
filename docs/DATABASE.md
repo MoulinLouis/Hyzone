@@ -227,7 +227,7 @@ Parkour and Parkour Ascend will share the same MySQL database. Each module owns 
 # Ascend Tables
 
 ## ascend_players
-Stores Ascend player state.
+Stores Ascend player state including prestige progress.
 
 Suggested schema:
 ```sql
@@ -235,10 +235,22 @@ CREATE TABLE ascend_players (
   uuid VARCHAR(36) PRIMARY KEY,
   coins BIGINT NOT NULL DEFAULT 0,
   elevation_multiplier INT NOT NULL DEFAULT 1,
+  ascension_count INT NOT NULL DEFAULT 0,
+  skill_tree_points INT NOT NULL DEFAULT 0,
+  total_coins_earned BIGINT NOT NULL DEFAULT 0,
+  total_manual_runs INT NOT NULL DEFAULT 0,
+  active_title VARCHAR(64) DEFAULT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 ```
+
+Notes:
+- `ascension_count` tracks how many times the player has Ascended.
+- `skill_tree_points` is the total points earned (ascension_count, may differ if points are granted by other means).
+- `total_coins_earned` is lifetime coins for achievement tracking (never resets).
+- `total_manual_runs` is lifetime manual completions for achievement tracking.
+- `active_title` is the currently selected title from achievements.
 
 ## ascend_maps
 Stores Ascend map definitions.
@@ -307,3 +319,60 @@ CREATE TABLE ascend_upgrade_costs (
   PRIMARY KEY (upgrade_type, level)
 ) ENGINE=InnoDB;
 ```
+
+## ascend_player_summit
+Stores Summit level per category per player.
+
+Suggested schema:
+```sql
+CREATE TABLE ascend_player_summit (
+  player_uuid VARCHAR(36) NOT NULL,
+  category VARCHAR(32) NOT NULL,
+  level INT NOT NULL DEFAULT 0,
+  PRIMARY KEY (player_uuid, category),
+  FOREIGN KEY (player_uuid) REFERENCES ascend_players(uuid) ON DELETE CASCADE
+) ENGINE=InnoDB;
+```
+
+Notes:
+- `category` values: `COIN_FLOW`, `RUNNER_SPEED`, `MANUAL_MASTERY`
+- `level` is the Summit level in that category (0+)
+- Summit levels reset on Ascension (unless Summit Persistence skill is unlocked)
+
+## ascend_player_skills
+Stores unlocked skill tree nodes per player.
+
+Suggested schema:
+```sql
+CREATE TABLE ascend_player_skills (
+  player_uuid VARCHAR(36) NOT NULL,
+  skill_node VARCHAR(64) NOT NULL,
+  unlocked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (player_uuid, skill_node),
+  FOREIGN KEY (player_uuid) REFERENCES ascend_players(uuid) ON DELETE CASCADE
+) ENGINE=InnoDB;
+```
+
+Notes:
+- `skill_node` is the enum name from `AscendConstants.SkillTreeNode`
+- Skill unlocks are permanent (never reset)
+- Skill nodes: COIN_T1_*, SPEED_T1_*, MANUAL_T1_*, HYBRID_*, ULTIMATE_*
+
+## ascend_player_achievements
+Stores unlocked achievements per player.
+
+Suggested schema:
+```sql
+CREATE TABLE ascend_player_achievements (
+  player_uuid VARCHAR(36) NOT NULL,
+  achievement VARCHAR(64) NOT NULL,
+  unlocked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (player_uuid, achievement),
+  FOREIGN KEY (player_uuid) REFERENCES ascend_players(uuid) ON DELETE CASCADE
+) ENGINE=InnoDB;
+```
+
+Notes:
+- `achievement` is the enum name from `AscendConstants.AchievementType`
+- Achievement unlocks are permanent (never reset)
+- Each achievement grants a title that can be selected via `/ascend title`
