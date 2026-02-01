@@ -2,7 +2,7 @@ $C = "../Common.ui";
 
 $C.@PageOverlay {
   $C.@Container {
-    Anchor: (Width: 860, Height: 740);
+    Anchor: (Width: 920, Height: 780);
 
     #Title {
       Group {
@@ -27,98 +27,57 @@ $C.@PageOverlay {
       Padding: (Left: 12, Right: 12, Top: 6, Bottom: 12);
 
       Group #FormColumn {
-        Anchor: (Width: 440);
+        Anchor: (Width: 300);
         LayoutMode: Top;
 
         Label {
-          Style: (
-            FontSize: 16,
-            TextColor: #93844c,
-            RenderBold: true
-          );
-          Text: "Create / Update";
+          Style: (FontSize: 16, TextColor: #93844c, RenderBold: true);
+          Text: "Create / Edit Map";
         }
 
         Label {
           Text: "Map Id";
           Style: (FontSize: 13, TextColor: #cfd7dc);
+          Anchor: (Top: 4);
         }
 
         $C.@TextField #MapIdField {
-          Anchor: (Height: 30);
+          Anchor: (Height: 28);
           Style: (FontSize: 14, TextColor: #ffffff(0.85));
         }
 
         Label {
           Text: "Map Name";
           Style: (FontSize: 13, TextColor: #cfd7dc);
-          Anchor: (Top: 6);
+          Anchor: (Top: 4);
         }
 
         $C.@TextField #MapNameField {
-          Anchor: (Height: 30);
+          Anchor: (Height: 28);
           Style: (FontSize: 14, TextColor: #ffffff(0.85));
         }
 
         Label {
-          Text: "Base Reward (coins)";
+          Text: "Level (0-4)";
           Style: (FontSize: 13, TextColor: #cfd7dc);
-          Anchor: (Top: 6);
-        }
-
-        $C.@TextField #MapRewardField {
-          Anchor: (Height: 30);
-          Style: (FontSize: 14, TextColor: #ffffff(0.85));
-        }
-
-        Label {
-          Text: "Map Price (coins)";
-          Style: (FontSize: 13, TextColor: #cfd7dc);
-          Anchor: (Top: 6);
-        }
-
-        $C.@TextField #MapPriceField {
-          Anchor: (Height: 30);
-          Style: (FontSize: 14, TextColor: #ffffff(0.85));
-        }
-
-        Label {
-          Text: "Display Order";
-          Style: (FontSize: 13, TextColor: #cfd7dc);
-          Anchor: (Top: 6);
+          Anchor: (Top: 4);
         }
 
         $C.@TextField #MapOrderField {
-          Anchor: (Height: 30);
-          Style: (FontSize: 14, TextColor: #ffffff(0.85));
-        }
-
-        Label {
-          Text: "Robot Base Time (ms)";
-          Style: (FontSize: 13, TextColor: #cfd7dc);
-          Anchor: (Top: 6);
-        }
-
-        $C.@TextField #RobotBaseTimeField {
-          Anchor: (Height: 30);
-          Style: (FontSize: 14, TextColor: #ffffff(0.85));
-        }
-
-        Label {
-          Text: "Robot Time Reduction (ms)";
-          Style: (FontSize: 13, TextColor: #cfd7dc);
-          Anchor: (Top: 6);
-        }
-
-        $C.@TextField #RobotReductionField {
-          Anchor: (Height: 30);
+          Anchor: (Height: 28);
           Style: (FontSize: 14, TextColor: #ffffff(0.85));
         }
 
         Label #SelectedMapText {
-          Anchor: (Top: 6);
-          Style: (FontSize: 13, TextColor: #9fb0ba);
+          Anchor: (Top: 8);
+          Style: (FontSize: 13, TextColor: #9fb0ba, RenderBold: true);
           Text: "Selected: (none)";
+        }
+
+        Label #BalanceInfoText {
+          Anchor: (Top: 2);
+          Style: (FontSize: 12, TextColor: #7a9aa8);
+          Text: "";
         }
 
         Group {
@@ -126,79 +85,78 @@ $C.@PageOverlay {
           Anchor: (Top: 8, Height: 32);
 
           $C.@TextButton #CreateButton {
-            Anchor: (Width: 200, Height: 32);
+            Anchor: (Width: 140, Height: 30);
             Text: "Create";
           }
 
-          $C.@TextButton #UpdateButton {
-            Anchor: (Left: 10, Width: 200, Height: 32);
-            Text: "Update";
+          $C.@TextButton #SetNameButton {
+            Anchor: (Left: 8, Width: 140, Height: 30);
+            Text: "Set Name";
           }
         }
 
         Group {
           LayoutMode: Left;
-          Anchor: (Top: 8, Height: 32);
-
-          $C.@TextButton #SetPriceButton {
-            Anchor: (Width: 200, Height: 32);
-            Text: "Set Price";
-          }
+          Anchor: (Top: 6, Height: 32);
 
           $C.@TextButton #SetOrderButton {
-            Anchor: (Left: 10, Width: 200, Height: 32);
-            Text: "Set Order";
+            Anchor: (Width: 140, Height: 30);
+            Text: "Set Level";
           }
+        }
+
+        Label {
+          Text: "Position (at your location)";
+          Style: (FontSize: 14, TextColor: #93844c, RenderBold: true);
+          Anchor: (Top: 12);
         }
 
         Group {
           LayoutMode: Left;
-          Anchor: (Top: 8, Height: 32);
-
-          $C.@TextButton #SetRobotTimingButton {
-            Anchor: (Width: 200, Height: 32);
-            Text: "Set Robot Timing";
-          }
-        }
-
-        Group {
-          LayoutMode: Left;
-          Anchor: (Top: 8, Height: 32);
+          Anchor: (Top: 6, Height: 32);
 
           $C.@TextButton #SetStartButton {
-            Anchor: (Width: 200, Height: 32);
+            Anchor: (Width: 140, Height: 30);
             Text: "Set Start";
           }
 
           $C.@TextButton #SetFinishButton {
-            Anchor: (Left: 10, Width: 200, Height: 32);
+            Anchor: (Left: 8, Width: 140, Height: 30);
             Text: "Set Finish";
           }
         }
 
+        Label {
+          Text: "Waypoints (runner path)";
+          Style: (FontSize: 14, TextColor: #93844c, RenderBold: true);
+          Anchor: (Top: 12);
+        }
+
+        Label #WaypointCountText {
+          Anchor: (Top: 2);
+          Style: (FontSize: 12, TextColor: #9fb0ba);
+          Text: "No waypoints";
+        }
+
         Group {
           LayoutMode: Left;
-          Anchor: (Top: 8, Height: 32);
+          Anchor: (Top: 6, Height: 32);
 
           $C.@TextButton #AddWaypointButton {
-            Anchor: (Width: 200, Height: 32);
+            Anchor: (Width: 140, Height: 30);
             Text: "Add Waypoint";
           }
 
           $C.@TextButton #ClearWaypointsButton {
-            Anchor: (Left: 10, Width: 200, Height: 32);
-            Text: "Clear Waypoints";
+            Anchor: (Left: 8, Width: 140, Height: 30);
+            Text: "Clear All";
           }
         }
 
         Label {
           Text: "Holograms";
-          Style: (
-            FontSize: 16,
-            TextColor: #93844c,
-            RenderBold: true
-          );
-          Anchor: (Top: 10);
+          Style: (FontSize: 14, TextColor: #93844c, RenderBold: true);
+          Anchor: (Top: 12);
         }
 
         Group {
@@ -206,27 +164,47 @@ $C.@PageOverlay {
           Anchor: (Top: 6, Height: 32);
 
           $C.@TextButton #CreateMapHoloButton {
-            Anchor: (Width: 200, Height: 32);
-            Text: "Map Holo";
+            Anchor: (Width: 140, Height: 30);
+            Text: "Create Holo";
           }
 
           $C.@TextButton #DeleteMapHoloButton {
-            Anchor: (Left: 10, Width: 200, Height: 32);
-            Text: "Delete Map Holo";
+            Anchor: (Left: 8, Width: 140, Height: 30);
+            Text: "Delete Holo";
           }
+        }
+
+        Label {
+          Text: "Balancing (from code)";
+          Style: (FontSize: 14, TextColor: #93844c, RenderBold: true);
+          Anchor: (Top: 16);
+        }
+
+        Label #BalancingTableText {
+          Anchor: (Top: 4);
+          Style: (FontSize: 11, TextColor: #8fa8b4);
+          Text: "Loading...";
+        }
+
+        Label {
+          Text: "Multipliers";
+          Style: (FontSize: 12, TextColor: #7a9aa8);
+          Anchor: (Top: 8);
+        }
+
+        Label #MultiplierInfoText {
+          Anchor: (Top: 2);
+          Style: (FontSize: 11, TextColor: #8fa8b4);
+          Text: "";
         }
       }
 
       Group #ListColumn {
-        Anchor: (Left: 20, Width: 360);
+        Anchor: (Left: 16, Width: 560);
         LayoutMode: Top;
 
         Label {
-          Style: (
-            FontSize: 16,
-            TextColor: #93844c,
-            RenderBold: true
-          );
+          Style: (FontSize: 16, TextColor: #93844c, RenderBold: true);
           Text: "Maps";
         }
 
@@ -236,7 +214,7 @@ $C.@PageOverlay {
         }
 
         Group #MapList {
-          Anchor: (Top: 6, Width: 340, Height: 560);
+          Anchor: (Top: 6, Width: 540, Height: 620);
           LayoutMode: TopScrolling;
           Padding: (Left: 6, Right: 6);
           ScrollbarStyle: $C.@DefaultScrollbarStyle;
@@ -244,11 +222,6 @@ $C.@PageOverlay {
           Group #MapCards {
             LayoutMode: Top;
           }
-        }
-
-        $C.@TextButton #RefreshButton {
-          Anchor: (Top: 6, Width: 160, Height: 30);
-          Text: "Refresh";
         }
       }
     }

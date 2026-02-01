@@ -153,7 +153,7 @@ $C.@PageOverlay {
 
       Group {
         FlexWeight: 1;
-        Label #TopRebirthValue {
+        Label #TopElevationValue {
           Anchor: (Left: 0, Right: 0);
           Style: (
             FontSize: 30,
@@ -323,14 +323,14 @@ $C.@PageOverlay {
       }
     }
 
-    Group #RebirthHud {
+    Group #ElevationHud {
       Anchor: (Right: 20, Top: 120, Width: 340, Height: 110);
       Background: #000000(0.4);
       LayoutMode: Top;
       Padding: (Left: 10, Right: 10, Top: 8, Bottom: 8);
       Visible: false;
 
-      Label #RebirthTitle {
+      Label #ElevationTitle {
         Anchor: (Left: 0, Right: 0);
         Style: (
           FontSize: 22,
@@ -338,10 +338,10 @@ $C.@PageOverlay {
           RenderBold: true,
           HorizontalAlignment: Center
         );
-        Text: "REBIRTH";
+        Text: "ELEVATION";
       }
 
-      Label #RebirthStatusText {
+      Label #ElevationStatusText {
         Anchor: (Left: 0, Right: 0, Top: 6);
         Style: (
           FontSize: 18,
@@ -352,7 +352,7 @@ $C.@PageOverlay {
         Text: "Current Multiplier x1 -> x2";
       }
 
-      Label #RebirthHint {
+      Label #ElevationHint {
         Anchor: (Left: 0, Right: 0, Top: 6);
         Style: (
           FontSize: 16,
@@ -360,7 +360,7 @@ $C.@PageOverlay {
           RenderBold: true,
           HorizontalAlignment: Center
         );
-        Text: "Type /ascend rebirth to rebirth";
+        Text: "Type /ascend elevate to elevate";
       }
     }
   }

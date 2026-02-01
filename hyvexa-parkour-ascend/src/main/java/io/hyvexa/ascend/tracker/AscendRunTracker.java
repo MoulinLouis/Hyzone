@@ -2,6 +2,7 @@ package io.hyvexa.ascend.tracker;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.Message;
@@ -24,6 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class AscendRunTracker {
 
+    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final double FINISH_RADIUS_SQ = 2.25; // 1.5^2
 
     private final AscendMapStore mapStore;
@@ -96,13 +98,13 @@ public class AscendRunTracker {
         mapProgress.setUnlocked(true);
         playerStore.markDirty(playerId);
 
-        playerStore.incrementMapMultiplier(playerId, run.mapId);
         List<AscendMap> multiplierMaps = mapStore.listMapsSorted();
-        long payout = playerStore.getMultiplierProduct(playerId, multiplierMaps, AscendConstants.MULTIPLIER_SLOTS);
+        long payout = playerStore.getCompletionPayout(playerId, multiplierMaps, AscendConstants.MULTIPLIER_SLOTS, run.mapId, AscendConstants.MANUAL_MULTIPLIER_INCREMENT);
+        playerStore.addMapMultiplier(playerId, run.mapId, AscendConstants.MANUAL_MULTIPLIER_INCREMENT);
         playerStore.addCoins(playerId, payout);
 
         if (firstCompletion) {
-            player.sendMessage(Message.raw("[Ascend] Map completed! You can now buy a robot for this map.")
+            player.sendMessage(Message.raw("[Ascend] Map completed! You can now buy a runner for this map.")
                 .color(SystemMessageUtils.SUCCESS));
         }
         player.sendMessage(Message.raw("[Ascend] +" + payout + " coins.")
@@ -123,6 +125,10 @@ public class AscendRunTracker {
 
         Vector3d pos = new Vector3d(map.getStartX(), map.getStartY(), map.getStartZ());
         Vector3f rot = new Vector3f(map.getStartRotX(), map.getStartRotY(), map.getStartRotZ());
+
+        // Debug: log rotation being used for teleport
+        LOGGER.atInfo().log("Teleport to " + mapId + " rot: " + rot.getX() + ", " + rot.getY() + ", " + rot.getZ());
+
         store.addComponent(ref, Teleport.getComponentType(),
             new Teleport(store.getExternalData().getWorld(), pos, rot));
 

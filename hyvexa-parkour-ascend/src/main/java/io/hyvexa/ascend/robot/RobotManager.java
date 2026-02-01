@@ -1,14 +1,28 @@
 package io.hyvexa.ascend.robot;
 
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.RemoveReason;
+import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
+import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.HytaleServer;
+import com.hypixel.hytale.server.core.entity.Frozen;
+import com.hypixel.hytale.server.core.modules.entity.component.Invulnerable;
+import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
+import com.hypixel.hytale.server.core.universe.Universe;
+import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.server.npc.NPCPlugin;
 import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -20,12 +34,27 @@ import java.util.logging.Level;
 public class RobotManager {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
+    private static final String NPC_ROLE_NAME = "Kweebec_Sapling";
+    private static final double ROBOT_BASE_SPEED = 5.0;  // Blocks per second base speed
+
+    /**
+     * Represents a segment of the path with metadata for jump interpolation.
+     */
+    private record PathSegment(
+        double[] start,
+        double[] end,
+        double length,
+        boolean isJump,
+        double jumpHeight
+    ) {}
 
     private final AscendMapStore mapStore;
     private final AscendPlayerStore playerStore;
     private final Map<String, RobotState> robots = new ConcurrentHashMap<>();
+    private final Set<UUID> onlinePlayers = ConcurrentHashMap.newKeySet();
     private ScheduledFuture<?> tickTask;
     private long lastRefreshMs;
+    private volatile NPCPlugin npcPlugin;
 
     public RobotManager(AscendMapStore mapStore, AscendPlayerStore playerStore) {
         this.mapStore = mapStore;
@@ -33,10 +62,24 @@ public class RobotManager {
     }
 
     public void start() {
+        try {
+            npcPlugin = NPCPlugin.get();
+            LOGGER.atInfo().log("NPCPlugin initialized for robot spawning");
+            // Log available NPC roles for debugging
+            try {
+                java.util.List<String> roles = npcPlugin.getRoleTemplateNames(true);
+                LOGGER.atInfo().log("[RobotNPC] Available NPC roles: " + roles);
+            } catch (Exception e) {
+                LOGGER.atWarning().log("[RobotNPC] Could not list NPC roles: " + e.getMessage());
+            }
+        } catch (Exception e) {
+            LOGGER.atWarning().log("NPCPlugin not available, robots will be invisible: " + e.getMessage());
+            npcPlugin = null;
+        }
         tickTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(
             this::tick,
-            AscendConstants.ROBOT_TICK_INTERVAL_MS,
-            AscendConstants.ROBOT_TICK_INTERVAL_MS,
+            AscendConstants.RUNNER_TICK_INTERVAL_MS,
+            AscendConstants.RUNNER_TICK_INTERVAL_MS,
             TimeUnit.MILLISECONDS
         );
         LOGGER.atInfo().log("RobotManager started");
@@ -48,7 +91,35 @@ public class RobotManager {
             tickTask = null;
         }
         despawnAllRobots();
+        onlinePlayers.clear();
         LOGGER.atInfo().log("RobotManager stopped");
+    }
+
+    public void onPlayerJoin(UUID playerId) {
+        if (playerId != null) {
+            onlinePlayers.add(playerId);
+            LOGGER.atInfo().log("[RobotNPC] Player joined: " + playerId);
+        }
+    }
+
+    public void onPlayerLeave(UUID playerId) {
+        if (playerId != null) {
+            onlinePlayers.remove(playerId);
+            LOGGER.atInfo().log("[RobotNPC] Player left: " + playerId);
+            // Despawn all robots for this player
+            despawnRobotsForPlayer(playerId);
+        }
+    }
+
+    private void despawnRobotsForPlayer(UUID playerId) {
+        for (String key : List.copyOf(robots.keySet())) {
+            if (key.startsWith(playerId.toString() + ":")) {
+                RobotState removed = robots.remove(key);
+                if (removed != null) {
+                    despawnNpcForRobot(removed);
+                }
+            }
+        }
     }
 
     public void spawnRobot(UUID ownerId, String mapId) {
@@ -61,23 +132,173 @@ public class RobotManager {
         RobotState state = new RobotState(ownerId, mapId);
         robots.put(key, state);
 
-        // TODO: Actually spawn the entity in the world
+        // Spawn NPC entity if NPCPlugin is available
+        if (npcPlugin != null && mapStore != null) {
+            AscendMap map = mapStore.getMap(mapId);
+            if (map != null) {
+                spawnNpcForRobot(state, map);
+            }
+        }
+
         LOGGER.atInfo().log("Robot spawned for " + ownerId + " on map " + mapId);
+    }
+
+    private void spawnNpcForRobot(RobotState state, AscendMap map) {
+        LOGGER.atInfo().log("[RobotNPC] Attempting to spawn NPC for map: " + (map != null ? map.getId() : "null"));
+        if (npcPlugin == null) {
+            LOGGER.atWarning().log("[RobotNPC] NPCPlugin is null, cannot spawn");
+            return;
+        }
+        if (map == null) {
+            LOGGER.atWarning().log("[RobotNPC] Map is null, cannot spawn");
+            return;
+        }
+        // Prevent duplicate spawns
+        if (state.isSpawning()) {
+            LOGGER.atInfo().log("[RobotNPC] Already spawning for this robot, skipping");
+            return;
+        }
+        // Check if we already have a valid entity
+        Ref<EntityStore> existingRef = state.getEntityRef();
+        if (existingRef != null && existingRef.isValid()) {
+            LOGGER.atInfo().log("[RobotNPC] Robot already has valid NPC entity, skipping spawn");
+            return;
+        }
+        state.setSpawning(true);
+        String worldName = map.getWorld();
+        if (worldName == null || worldName.isEmpty()) {
+            LOGGER.atWarning().log("[RobotNPC] World name is null/empty for map: " + map.getId());
+            state.setSpawning(false);
+            return;
+        }
+        LOGGER.atInfo().log("[RobotNPC] Looking for world: " + worldName);
+        World world = Universe.get().getWorld(worldName);
+        if (world == null) {
+            LOGGER.atWarning().log("[RobotNPC] World not found: " + worldName);
+            state.setSpawning(false);
+            return;
+        }
+
+        // Must run on World thread for entity operations
+        world.execute(() -> spawnNpcOnWorldThread(state, map, world));
+    }
+
+    private void spawnNpcOnWorldThread(RobotState state, AscendMap map, World world) {
+        try {
+            Store<EntityStore> store = world.getEntityStore().getStore();
+            if (store == null) {
+                LOGGER.atWarning().log("[RobotNPC] Store is null for world: " + map.getWorld());
+                return;
+            }
+            Vector3d position = new Vector3d(map.getStartX(), map.getStartY(), map.getStartZ());
+            Vector3f rotation = new Vector3f(map.getStartRotX(), map.getStartRotY(), map.getStartRotZ());
+            String displayName = "Runner";
+
+            LOGGER.atInfo().log("[RobotNPC] Calling NPCPlugin.spawnNPC at " + position + " with role " + NPC_ROLE_NAME);
+            Object result = npcPlugin.spawnNPC(store, NPC_ROLE_NAME, displayName, position, rotation);
+            LOGGER.atInfo().log("[RobotNPC] spawnNPC returned: " + (result != null ? result.getClass().getName() : "null"));
+            if (result != null) {
+                Ref<EntityStore> entityRef = extractEntityRef(result);
+                LOGGER.atInfo().log("[RobotNPC] Extracted entityRef: " + (entityRef != null ? "valid" : "null"));
+                if (entityRef != null) {
+                    state.setEntityRef(entityRef);
+                    // Make NPC invulnerable so players can't kill it
+                    try {
+                        store.addComponent(entityRef, Invulnerable.getComponentType(), Invulnerable.INSTANCE);
+                        LOGGER.atInfo().log("[RobotNPC] NPC made invulnerable");
+                    } catch (Exception e) {
+                        LOGGER.atWarning().log("[RobotNPC] Failed to make NPC invulnerable: " + e.getMessage());
+                    }
+                    // Freeze NPC to disable AI movement (we control it via teleport)
+                    try {
+                        store.addComponent(entityRef, Frozen.getComponentType(), Frozen.get());
+                        LOGGER.atInfo().log("[RobotNPC] NPC frozen (AI disabled)");
+                    } catch (Exception e) {
+                        LOGGER.atWarning().log("[RobotNPC] Failed to freeze NPC: " + e.getMessage());
+                    }
+                    LOGGER.atInfo().log("[RobotNPC] NPC spawned successfully at " + position);
+                }
+            } else {
+                LOGGER.atWarning().log("[RobotNPC] spawnNPC returned null");
+            }
+        } catch (Exception e) {
+            LOGGER.atWarning().log("[RobotNPC] Failed to spawn NPC: " + e.getMessage());
+            e.printStackTrace();
+        } finally {
+            state.setSpawning(false);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private Ref<EntityStore> extractEntityRef(Object pairResult) {
+        if (pairResult == null) {
+            return null;
+        }
+        try {
+            // Try common Pair accessor methods
+            for (String methodName : List.of("getFirst", "getLeft", "getKey", "first", "left")) {
+                try {
+                    java.lang.reflect.Method method = pairResult.getClass().getMethod(methodName);
+                    Object value = method.invoke(pairResult);
+                    if (value instanceof Ref<?> ref) {
+                        return (Ref<EntityStore>) ref;
+                    }
+                } catch (NoSuchMethodException ignored) {
+                    // Try next method
+                }
+            }
+        } catch (Exception e) {
+            LOGGER.atWarning().log("Failed to extract entity ref from NPC result: " + e.getMessage());
+        }
+        return null;
     }
 
     public void despawnRobot(UUID ownerId, String mapId) {
         String key = robotKey(ownerId, mapId);
         RobotState state = robots.remove(key);
-        if (state != null && state.getEntityRef() != null && state.getEntityRef().isValid()) {
-            // TODO: Remove entity from world
+        if (state != null) {
+            despawnNpcForRobot(state);
         }
+    }
+
+    private void despawnNpcForRobot(RobotState state) {
+        if (state == null) {
+            return;
+        }
+        Ref<EntityStore> entityRef = state.getEntityRef();
+        if (entityRef == null || !entityRef.isValid()) {
+            state.setEntityRef(null);
+            return;
+        }
+        // Get world from map to run on world thread
+        AscendMap map = mapStore != null ? mapStore.getMap(state.getMapId()) : null;
+        if (map != null && map.getWorld() != null) {
+            World world = Universe.get().getWorld(map.getWorld());
+            if (world != null) {
+                world.execute(() -> despawnNpcOnWorldThread(state, entityRef));
+                return;
+            }
+        }
+        // Fallback: try without world thread (may fail)
+        despawnNpcOnWorldThread(state, entityRef);
+    }
+
+    private void despawnNpcOnWorldThread(RobotState state, Ref<EntityStore> entityRef) {
+        try {
+            Store<EntityStore> store = entityRef.getStore();
+            if (store != null) {
+                store.removeEntity(entityRef, RemoveReason.REMOVE);
+                LOGGER.atInfo().log("[RobotNPC] NPC despawned for robot");
+            }
+        } catch (Exception e) {
+            LOGGER.atWarning().log("[RobotNPC] Failed to despawn NPC: " + e.getMessage());
+        }
+        state.setEntityRef(null);
     }
 
     public void despawnAllRobots() {
         for (RobotState state : robots.values()) {
-            if (state.getEntityRef() != null && state.getEntityRef().isValid()) {
-                // TODO: Remove entity from world
-            }
+            despawnNpcForRobot(state);
         }
         robots.clear();
     }
@@ -92,9 +313,285 @@ public class RobotManager {
             refreshRobots(now);
             for (RobotState robot : robots.values()) {
                 tickRobot(robot, now);
+                tickRobotMovement(robot, now);
             }
         } catch (Exception e) {
             LOGGER.at(Level.WARNING).log("Error in robot tick: " + e.getMessage());
+        }
+    }
+
+    private void tickRobotMovement(RobotState robot, long now) {
+        Ref<EntityStore> entityRef = robot.getEntityRef();
+        if (entityRef == null || !entityRef.isValid()) {
+            return;
+        }
+        AscendMap map = mapStore.getMap(robot.getMapId());
+        if (map == null) {
+            return;
+        }
+        String worldName = map.getWorld();
+        if (worldName == null || worldName.isEmpty()) {
+            return;
+        }
+        World world = Universe.get().getWorld(worldName);
+        if (world == null) {
+            return;
+        }
+
+        // Calculate progress through the run
+        long intervalMs = computeCompletionIntervalMs(map, robot.getSpeedLevel());
+        if (intervalMs <= 0L) {
+            return;
+        }
+        long lastCompletionMs = robot.getLastCompletionMs();
+        if (lastCompletionMs <= 0L) {
+            return;
+        }
+        long elapsed = now - lastCompletionMs;
+        double progress = Math.min(1.0, (double) elapsed / (double) intervalMs);
+
+        // Calculate position along the waypoint path (with jump interpolation)
+        double[] targetPos = calculatePositionAlongPathArray(map, progress);
+
+        // Get previous position for rotation calculation
+        double[] previousPos = robot.getPreviousPosition();
+
+        // Teleport NPC to the interpolated position on world thread (with rotation)
+        world.execute(() -> teleportNpcWithRotation(entityRef, world, targetPos, previousPos));
+
+        // Update previous position for next tick
+        robot.setPreviousPosition(targetPos);
+    }
+
+    /**
+     * Builds path segments with jump metadata from the map.
+     * Each segment knows if it's a jump and what height to use.
+     * Jumps are auto-detected based on height differences between points.
+     */
+    private List<PathSegment> buildPathSegments(AscendMap map) {
+        List<PathSegment> segments = new ArrayList<>();
+
+        // Start point
+        double[] currentPoint = new double[]{map.getStartX(), map.getStartY(), map.getStartZ()};
+
+        List<AscendMap.Waypoint> waypoints = map.getWaypoints();
+        if (waypoints != null && !waypoints.isEmpty()) {
+            for (AscendMap.Waypoint wp : waypoints) {
+                double[] nextPoint = new double[]{wp.getX(), wp.getY(), wp.getZ()};
+                double dx = nextPoint[0] - currentPoint[0];
+                double dy = nextPoint[1] - currentPoint[1];
+                double dz = nextPoint[2] - currentPoint[2];
+                double length = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+                // Auto-detect jump based on geometry, or use explicit flag
+                boolean isJump = wp.isJump() || shouldAutoJump(currentPoint, nextPoint);
+                double jumpHeight = 0.0;
+                if (isJump) {
+                    jumpHeight = calculateJumpHeight(currentPoint, nextPoint, wp.getJumpHeight());
+                }
+
+                segments.add(new PathSegment(currentPoint, nextPoint, length, isJump, jumpHeight));
+                currentPoint = nextPoint;
+            }
+        }
+
+        // Final segment to finish - also check for auto-jump
+        double[] finishPoint = new double[]{map.getFinishX(), map.getFinishY(), map.getFinishZ()};
+        double dx = finishPoint[0] - currentPoint[0];
+        double dy = finishPoint[1] - currentPoint[1];
+        double dz = finishPoint[2] - currentPoint[2];
+        double length = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        boolean finalJump = shouldAutoJump(currentPoint, finishPoint);
+        double finalJumpHeight = finalJump ? calculateJumpHeight(currentPoint, finishPoint, null) : 0.0;
+        segments.add(new PathSegment(currentPoint, finishPoint, length, finalJump, finalJumpHeight));
+
+        return segments;
+    }
+
+    /**
+     * Determines if a segment should automatically be a jump based on geometry.
+     * Triggers jump if:
+     * - Going up more than threshold (climbing)
+     * - Going down more than threshold (gap/fall)
+     * - Horizontal distance is large (gap between platforms)
+     */
+    private boolean shouldAutoJump(double[] start, double[] end) {
+        double dy = end[1] - start[1];
+
+        // Jump if going up significantly
+        if (dy >= AscendConstants.RUNNER_JUMP_AUTO_UP_THRESHOLD) {
+            return true;
+        }
+
+        // Jump if going down significantly (gaps, falls)
+        if (dy <= -AscendConstants.RUNNER_JUMP_AUTO_DOWN_THRESHOLD) {
+            return true;
+        }
+
+        // Jump if horizontal distance is large (gap between platforms)
+        double dx = end[0] - start[0];
+        double dz = end[2] - start[2];
+        double horizDist = Math.sqrt(dx * dx + dz * dz);
+        if (horizDist >= AscendConstants.RUNNER_JUMP_AUTO_HORIZ_THRESHOLD) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Calculates the jump height for a segment.
+     * If customHeight is provided, uses that. Otherwise, auto-calculates based on:
+     * - Minimum default height
+     * - Extra clearance for upward jumps
+     * - Scaling for long horizontal distances
+     */
+    private double calculateJumpHeight(double[] start, double[] end, Double customHeight) {
+        if (customHeight != null) {
+            return customHeight;
+        }
+
+        double height = AscendConstants.RUNNER_DEFAULT_JUMP_HEIGHT;
+
+        // Add clearance for upward jumps
+        double dy = end[1] - start[1];
+        if (dy > 0) {
+            height = Math.max(height, dy + AscendConstants.RUNNER_JUMP_CLEARANCE);
+        }
+
+        // Scale for long horizontal jumps
+        double dx = end[0] - start[0];
+        double dz = end[2] - start[2];
+        double horizDist = Math.sqrt(dx * dx + dz * dz);
+        if (horizDist > AscendConstants.RUNNER_JUMP_DISTANCE_THRESHOLD) {
+            height += (horizDist - AscendConstants.RUNNER_JUMP_DISTANCE_THRESHOLD)
+                      * AscendConstants.RUNNER_JUMP_DISTANCE_FACTOR;
+        }
+
+        return height;
+    }
+
+    /**
+     * Interpolates position within a segment, returning as array [x, y, z].
+     * X and Z are always linear. Y uses parabolic interpolation for jump segments.
+     *
+     * Parabolic formula: y = linearY + 4 * jumpHeight * t * (1 - t)
+     * This creates an arc: 0 at t=0, max at t=0.5, 0 at t=1
+     */
+    private double[] interpolateSegmentArray(PathSegment segment, double t) {
+        double[] start = segment.start();
+        double[] end = segment.end();
+
+        // X and Z are always linear
+        double x = start[0] + (end[0] - start[0]) * t;
+        double z = start[2] + (end[2] - start[2]) * t;
+
+        // Y: linear or parabolic
+        double linearY = start[1] + (end[1] - start[1]) * t;
+        double y;
+        if (segment.isJump() && segment.jumpHeight() > 0) {
+            double arcOffset = 4.0 * segment.jumpHeight() * t * (1.0 - t);
+            y = linearY + arcOffset;
+        } else {
+            y = linearY;
+        }
+
+        return new double[]{x, y, z};
+    }
+
+    /**
+     * Calculates the position along the full path as an array [x, y, z].
+     * Uses parabolic interpolation for jump segments to create realistic jump arcs.
+     */
+    private double[] calculatePositionAlongPathArray(AscendMap map, double progress) {
+        List<PathSegment> segments = buildPathSegments(map);
+
+        if (segments.isEmpty()) {
+            return new double[]{map.getStartX(), map.getStartY(), map.getStartZ()};
+        }
+
+        // Calculate total path length
+        double totalLength = 0.0;
+        for (PathSegment segment : segments) {
+            totalLength += segment.length();
+        }
+
+        if (totalLength <= 0.0) {
+            return new double[]{map.getStartX(), map.getStartY(), map.getStartZ()};
+        }
+
+        // Find which segment we're on based on progress
+        double targetDistance = progress * totalLength;
+        double accumulatedDistance = 0.0;
+
+        for (int i = 0; i < segments.size(); i++) {
+            PathSegment segment = segments.get(i);
+            double segmentLength = segment.length();
+
+            if (accumulatedDistance + segmentLength >= targetDistance || i == segments.size() - 1) {
+                // We're on this segment
+                double segmentProgress = 0.0;
+                if (segmentLength > 0.0) {
+                    segmentProgress = (targetDistance - accumulatedDistance) / segmentLength;
+                    segmentProgress = Math.max(0.0, Math.min(1.0, segmentProgress));
+                }
+
+                return interpolateSegmentArray(segment, segmentProgress);
+            }
+            accumulatedDistance += segmentLength;
+        }
+
+        // Fallback: return finish position
+        return new double[]{map.getFinishX(), map.getFinishY(), map.getFinishZ()};
+    }
+
+    private void teleportNpc(Ref<EntityStore> entityRef, World world, Vector3d targetPos, double[] previousPos) {
+        if (entityRef == null || !entityRef.isValid()) {
+            return;
+        }
+        try {
+            Store<EntityStore> store = entityRef.getStore();
+            if (store == null) {
+                return;
+            }
+
+            // Calculate yaw based on movement direction
+            // We need to extract target coordinates for comparison
+            // Since Vector3d doesn't have x(), y(), z() accessors, we pass the raw coordinates
+            Vector3f rotation = new Vector3f(0, 0, 0);
+            store.addComponent(entityRef, Teleport.getComponentType(), new Teleport(world, targetPos, rotation));
+        } catch (Exception e) {
+            // Silently ignore teleport errors
+        }
+    }
+
+    private void teleportNpcWithRotation(Ref<EntityStore> entityRef, World world, double[] targetPos, double[] previousPos) {
+        if (entityRef == null || !entityRef.isValid()) {
+            return;
+        }
+        try {
+            Store<EntityStore> store = entityRef.getStore();
+            if (store == null) {
+                return;
+            }
+
+            // Calculate yaw based on movement direction
+            float yaw = 0;
+            if (previousPos != null) {
+                double dx = targetPos[0] - previousPos[0];
+                double dz = targetPos[2] - previousPos[2];
+                // Only update rotation if there's meaningful horizontal movement
+                if (dx != 0 || dz != 0) {
+                    // atan2(dx, dz) gives angle from Z+ axis, add 180 to face forward
+                    yaw = (float) (Math.toDegrees(Math.atan2(dx, dz)) + 180.0);
+                }
+            }
+
+            Vector3d targetVec = new Vector3d(targetPos[0], targetPos[1], targetPos[2]);
+            Vector3f rotation = new Vector3f(0, yaw, 0);
+            store.addComponent(entityRef, Teleport.getComponentType(), new Teleport(world, targetVec, rotation));
+        } catch (Exception e) {
+            // Silently ignore teleport errors
         }
     }
 
@@ -102,7 +599,7 @@ public class RobotManager {
         if (playerStore == null || mapStore == null) {
             return;
         }
-        if (now - lastRefreshMs < AscendConstants.ROBOT_REFRESH_INTERVAL_MS) {
+        if (now - lastRefreshMs < AscendConstants.RUNNER_REFRESH_INTERVAL_MS) {
             return;
         }
         lastRefreshMs = now;
@@ -114,14 +611,17 @@ public class RobotManager {
             if (playerId == null || progress == null) {
                 continue;
             }
+            // Only spawn robots for online players
+            if (!onlinePlayers.contains(playerId)) {
+                continue;
+            }
             for (Map.Entry<String, AscendPlayerProgress.MapProgress> mapEntry : progress.getMapProgress().entrySet()) {
                 String mapId = mapEntry.getKey();
                 AscendPlayerProgress.MapProgress mapProgress = mapEntry.getValue();
                 if (mapId == null || mapProgress == null) {
                     continue;
                 }
-                int robotCount = Math.max(0, mapProgress.getRobotCount());
-                if (robotCount <= 0) {
+                if (!mapProgress.hasRobot()) {
                     continue;
                 }
                 AscendMap map = mapStore.getMap(mapId);
@@ -129,21 +629,49 @@ public class RobotManager {
                     continue;
                 }
                 String key = robotKey(playerId, mapId);
-                RobotState state = robots.computeIfAbsent(key, k -> new RobotState(playerId, mapId));
-                state.setRobotCount(robotCount);
-                if (state.getLastCompletionMs() <= 0L) {
+                RobotState existing = robots.get(key);
+                if (existing == null) {
+                    LOGGER.atInfo().log("[RobotNPC] Creating new robot for key: " + key);
+                    RobotState state = new RobotState(playerId, mapId);
+                    state.setSpeedLevel(mapProgress.getRobotSpeedLevel());
                     state.setLastCompletionMs(now);
+                    robots.put(key, state);
+                    // Spawn NPC for newly created robot
+                    if (npcPlugin != null) {
+                        spawnNpcForRobot(state, map);
+                    }
+                } else {
+                    existing.setSpeedLevel(mapProgress.getRobotSpeedLevel());
+                    if (existing.getLastCompletionMs() <= 0L) {
+                        existing.setLastCompletionMs(now);
+                    }
+                    // Respawn NPC if entity was destroyed - but despawn old one first
+                    // Skip if already spawning to prevent duplicates
+                    if (existing.isSpawning()) {
+                        continue;
+                    }
+                    Ref<EntityStore> existingRef = existing.getEntityRef();
+                    if (npcPlugin != null && (existingRef == null || !existingRef.isValid())) {
+                        // Despawn old NPC first to avoid duplicates
+                        if (existingRef != null) {
+                            despawnNpcForRobot(existing);
+                        }
+                        spawnNpcForRobot(existing, map);
+                    }
                 }
                 activeKeys.add(key);
             }
         }
         if (activeKeys.isEmpty()) {
-            robots.clear();
+            despawnAllRobots();
             return;
         }
-        for (String key : robots.keySet()) {
+        for (String key : List.copyOf(robots.keySet())) {
             if (!activeKeys.contains(key)) {
-                robots.remove(key);
+                RobotState removed = robots.remove(key);
+                if (removed != null) {
+                    despawnNpcForRobot(removed);
+                }
             }
         }
     }
@@ -156,11 +684,8 @@ public class RobotManager {
         if (map == null) {
             return;
         }
-        int robotCount = robot.getRobotCount();
-        if (robotCount <= 0) {
-            return;
-        }
-        long intervalMs = computeCompletionIntervalMs(map, robotCount);
+        int speedLevel = robot.getSpeedLevel();
+        long intervalMs = computeCompletionIntervalMs(map, speedLevel);
         if (intervalMs <= 0L) {
             return;
         }
@@ -177,31 +702,46 @@ public class RobotManager {
         if (completions <= 0L) {
             return;
         }
-        long reward = Math.max(0L, map.getBaseReward());
-        if (reward > 0L) {
-            long total;
-            try {
-                total = Math.multiplyExact(reward, completions);
-            } catch (ArithmeticException e) {
-                total = Long.MAX_VALUE;
-            }
-            playerStore.addCoins(robot.getOwnerId(), total);
-        }
-        playerStore.addRobotMultiplierBonus(robot.getOwnerId(), robot.getMapId(), completions * 0.01);
+        UUID ownerId = robot.getOwnerId();
+        String mapId = robot.getMapId();
+        double totalMultiplierBonus = completions * AscendConstants.RUNNER_MULTIPLIER_INCREMENT;
+
+        // Calculate payout like manual completion: product of all multipliers * elevation
+        List<AscendMap> maps = mapStore.listMapsSorted();
+        long payoutPerRun = playerStore.getCompletionPayout(ownerId, maps, AscendConstants.MULTIPLIER_SLOTS, mapId, AscendConstants.RUNNER_MULTIPLIER_INCREMENT);
+        long totalPayout = payoutPerRun * completions;
+
+        playerStore.addMapMultiplier(ownerId, mapId, totalMultiplierBonus);
+        playerStore.addCoins(ownerId, totalPayout);
+
         robot.setLastCompletionMs(lastCompletionMs + (intervalMs * completions));
         robot.addRunsCompleted(completions);
+
+        // Teleport NPC back to start after completion and reset previous position
+        Ref<EntityStore> entityRef = robot.getEntityRef();
+        if (entityRef != null && entityRef.isValid()) {
+            String worldName = map.getWorld();
+            if (worldName != null && !worldName.isEmpty()) {
+                World world = Universe.get().getWorld(worldName);
+                if (world != null) {
+                    Vector3d startPos = new Vector3d(map.getStartX(), map.getStartY(), map.getStartZ());
+                    world.execute(() -> teleportNpc(entityRef, world, startPos, null));
+                    robot.setPreviousPosition(null);  // Reset for new run
+                }
+            }
+        }
     }
 
-    private long computeCompletionIntervalMs(AscendMap map, int robotCount) {
-        if (map == null || robotCount <= 0) {
+    private long computeCompletionIntervalMs(AscendMap map, int speedLevel) {
+        if (map == null) {
             return -1L;
         }
-        long base = Math.max(0L, map.getBaseRunTimeMs());
-        long reduction = Math.max(0L, map.getRobotTimeReductionMs());
+        long base = Math.max(0L, map.getEffectiveBaseRunTimeMs());
         if (base <= 0L) {
             return -1L;
         }
-        long interval = base - (reduction * Math.max(0, robotCount - 1));
+        double speedMultiplier = 1.0 + (speedLevel * AscendConstants.SPEED_UPGRADE_MULTIPLIER);
+        long interval = (long) (base / speedMultiplier);
         return Math.max(1L, interval);
     }
 

@@ -6,7 +6,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class AscendPlayerProgress {
 
     private long coins;
-    private int rebirthMultiplier = 1;
+    private int elevationMultiplier = 1;
     private final Map<String, MapProgress> mapProgress = new ConcurrentHashMap<>();
 
     public long getCoins() {
@@ -21,17 +21,17 @@ public class AscendPlayerProgress {
         this.coins = Math.max(0, this.coins + amount);
     }
 
-    public int getRebirthMultiplier() {
-        return rebirthMultiplier;
+    public int getElevationMultiplier() {
+        return elevationMultiplier;
     }
 
-    public void setRebirthMultiplier(int rebirthMultiplier) {
-        this.rebirthMultiplier = Math.max(1, rebirthMultiplier);
+    public void setElevationMultiplier(int elevationMultiplier) {
+        this.elevationMultiplier = Math.max(1, elevationMultiplier);
     }
 
-    public int addRebirthMultiplier(int amount) {
-        rebirthMultiplier = Math.max(1, rebirthMultiplier + amount);
-        return rebirthMultiplier;
+    public int addElevationMultiplier(int amount) {
+        elevationMultiplier = Math.max(1, elevationMultiplier + amount);
+        return elevationMultiplier;
     }
 
     public Map<String, MapProgress> getMapProgress() {
@@ -46,11 +46,8 @@ public class AscendPlayerProgress {
         private boolean unlocked;
         private boolean completedManually;
         private boolean hasRobot;
-        private int robotCount;
         private int robotSpeedLevel;
-        private int robotGainsLevel;
-        private int multiplierValue = 1;
-        private double robotMultiplierBonus;
+        private double multiplier = 1.0;
 
         public boolean isUnlocked() {
             return unlocked;
@@ -74,24 +71,6 @@ public class AscendPlayerProgress {
 
         public void setHasRobot(boolean hasRobot) {
             this.hasRobot = hasRobot;
-            if (hasRobot && robotCount <= 0) {
-                robotCount = 1;
-            }
-        }
-
-        public int getRobotCount() {
-            return robotCount;
-        }
-
-        public void setRobotCount(int robotCount) {
-            this.robotCount = Math.max(0, robotCount);
-            this.hasRobot = this.robotCount > 0;
-        }
-
-        public int addRobotCount(int amount) {
-            robotCount = Math.max(0, robotCount + amount);
-            hasRobot = robotCount > 0;
-            return robotCount;
         }
 
         public int getRobotSpeedLevel() {
@@ -99,44 +78,28 @@ public class AscendPlayerProgress {
         }
 
         public void setRobotSpeedLevel(int robotSpeedLevel) {
-            this.robotSpeedLevel = robotSpeedLevel;
+            this.robotSpeedLevel = Math.max(0, robotSpeedLevel);
         }
 
-        public int getRobotGainsLevel() {
-            return robotGainsLevel;
+        public int incrementRobotSpeedLevel() {
+            robotSpeedLevel = Math.max(0, robotSpeedLevel) + 1;
+            return robotSpeedLevel;
         }
 
-        public void setRobotGainsLevel(int robotGainsLevel) {
-            this.robotGainsLevel = robotGainsLevel;
+        public double getMultiplier() {
+            return multiplier;
         }
 
-        public int getMultiplierValue() {
-            return multiplierValue;
+        public void setMultiplier(double multiplier) {
+            this.multiplier = Math.max(1.0, multiplier);
         }
 
-        public void setMultiplierValue(int multiplierValue) {
-            this.multiplierValue = Math.max(1, multiplierValue);
-        }
-
-        public int incrementMultiplier() {
-            multiplierValue = Math.max(1, multiplierValue) + 1;
-            return multiplierValue;
-        }
-
-        public double getRobotMultiplierBonus() {
-            return robotMultiplierBonus;
-        }
-
-        public void setRobotMultiplierBonus(double robotMultiplierBonus) {
-            this.robotMultiplierBonus = Math.max(0.0, robotMultiplierBonus);
-        }
-
-        public double addRobotMultiplierBonus(double amount) {
+        public double addMultiplier(double amount) {
             if (amount <= 0.0) {
-                return robotMultiplierBonus;
+                return multiplier;
             }
-            robotMultiplierBonus = Math.max(0.0, robotMultiplierBonus + amount);
-            return robotMultiplierBonus;
+            multiplier = Math.max(1.0, multiplier + amount);
+            return multiplier;
         }
     }
 }

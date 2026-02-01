@@ -28,12 +28,13 @@ public final class AscendDatabaseSetup {
                 CREATE TABLE IF NOT EXISTS ascend_players (
                     uuid VARCHAR(36) PRIMARY KEY,
                     coins BIGINT NOT NULL DEFAULT 0,
-                    rebirth_multiplier INT NOT NULL DEFAULT 1,
+                    elevation_multiplier INT NOT NULL DEFAULT 1,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
                 ) ENGINE=InnoDB
                 """);
-            ensureRebirthColumn(conn);
+            migrateRebirthToElevation(conn);
+            ensureElevationColumn(conn);
 
             stmt.executeUpdate("""
                 CREATE TABLE IF NOT EXISTS ascend_maps (
@@ -68,11 +69,8 @@ public final class AscendDatabaseSetup {
                     unlocked BOOLEAN NOT NULL DEFAULT FALSE,
                     completed_manually BOOLEAN NOT NULL DEFAULT FALSE,
                     has_robot BOOLEAN NOT NULL DEFAULT FALSE,
-                    robot_count INT NOT NULL DEFAULT 0,
                     robot_speed_level INT NOT NULL DEFAULT 0,
-                    robot_gains_level INT NOT NULL DEFAULT 0,
-                    multiplier_value INT NOT NULL DEFAULT 1,
-                    robot_multiplier_bonus DOUBLE NOT NULL DEFAULT 0,
+                    multiplier DOUBLE NOT NULL DEFAULT 1.0,
                     last_collection_at TIMESTAMP NULL,
                     PRIMARY KEY (player_uuid, map_id),
                     FOREIGN KEY (player_uuid) REFERENCES ascend_players(uuid) ON DELETE CASCADE,
@@ -80,9 +78,7 @@ public final class AscendDatabaseSetup {
                 ) ENGINE=InnoDB
                 """);
 
-            ensureMultiplierColumn(conn);
-            ensureRobotCountColumn(conn);
-            ensureRobotMultiplierBonusColumn(conn);
+            migrateToNewMultiplierSchema(conn);
             ensureRobotTimeReductionColumn(conn);
 
             stmt.executeUpdate("""
@@ -101,59 +97,64 @@ public final class AscendDatabaseSetup {
         }
     }
 
-    private static void ensureRebirthColumn(Connection conn) {
+    private static void migrateRebirthToElevation(Connection conn) {
         if (conn == null) {
             return;
         }
-        if (columnExists(conn, "ascend_players", "rebirth_multiplier")) {
+        if (!columnExists(conn, "ascend_players", "rebirth_multiplier")) {
+            return;
+        }
+        if (columnExists(conn, "ascend_players", "elevation_multiplier")) {
             return;
         }
         try (Statement stmt = conn.createStatement()) {
-            stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN rebirth_multiplier INT NOT NULL DEFAULT 1");
+            stmt.executeUpdate("ALTER TABLE ascend_players CHANGE COLUMN rebirth_multiplier elevation_multiplier INT NOT NULL DEFAULT 1");
+            LOGGER.atInfo().log("Migrated rebirth_multiplier to elevation_multiplier");
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to add rebirth_multiplier column: " + e.getMessage());
+            LOGGER.at(Level.SEVERE).log("Failed to rename rebirth_multiplier column: " + e.getMessage());
         }
     }
 
-    private static void ensureMultiplierColumn(Connection conn) {
+    private static void ensureElevationColumn(Connection conn) {
         if (conn == null) {
             return;
         }
-        if (columnExists(conn, "ascend_player_maps", "multiplier_value")) {
+        if (columnExists(conn, "ascend_players", "elevation_multiplier")) {
             return;
         }
         try (Statement stmt = conn.createStatement()) {
-            stmt.executeUpdate("ALTER TABLE ascend_player_maps ADD COLUMN multiplier_value INT NOT NULL DEFAULT 1");
+            stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN elevation_multiplier INT NOT NULL DEFAULT 1");
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to add multiplier_value column: " + e.getMessage());
+            LOGGER.at(Level.SEVERE).log("Failed to add elevation_multiplier column: " + e.getMessage());
         }
     }
 
-    private static void ensureRobotCountColumn(Connection conn) {
+    private static void migrateToNewMultiplierSchema(Connection conn) {
         if (conn == null) {
             return;
         }
-        if (columnExists(conn, "ascend_player_maps", "robot_count")) {
+        if (columnExists(conn, "ascend_player_maps", "multiplier")) {
             return;
         }
         try (Statement stmt = conn.createStatement()) {
-            stmt.executeUpdate("ALTER TABLE ascend_player_maps ADD COLUMN robot_count INT NOT NULL DEFAULT 0");
+            stmt.executeUpdate("ALTER TABLE ascend_player_maps ADD COLUMN multiplier DOUBLE NOT NULL DEFAULT 1.0");
+            if (columnExists(conn, "ascend_player_maps", "multiplier_value")
+                && columnExists(conn, "ascend_player_maps", "robot_multiplier_bonus")) {
+                stmt.executeUpdate("""
+                    UPDATE ascend_player_maps
+                    SET multiplier = GREATEST(1.0, multiplier_value + robot_multiplier_bonus)
+                    """);
+                LOGGER.atInfo().log("Migrated multiplier data to new schema");
+            }
+            if (columnExists(conn, "ascend_player_maps", "robot_count")) {
+                stmt.executeUpdate("""
+                    UPDATE ascend_player_maps
+                    SET has_robot = (robot_count > 0)
+                    WHERE robot_count > 0 AND has_robot = FALSE
+                    """);
+            }
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to add robot_count column: " + e.getMessage());
-        }
-    }
-
-    private static void ensureRobotMultiplierBonusColumn(Connection conn) {
-        if (conn == null) {
-            return;
-        }
-        if (columnExists(conn, "ascend_player_maps", "robot_multiplier_bonus")) {
-            return;
-        }
-        try (Statement stmt = conn.createStatement()) {
-            stmt.executeUpdate("ALTER TABLE ascend_player_maps ADD COLUMN robot_multiplier_bonus DOUBLE NOT NULL DEFAULT 0");
-        } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to add robot_multiplier_bonus column: " + e.getMessage());
+            LOGGER.at(Level.SEVERE).log("Failed to migrate multiplier schema: " + e.getMessage());
         }
     }
 
