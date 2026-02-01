@@ -1,5 +1,6 @@
 # Changelog
 
+- Sync HUD multiplier colors with map selection colors (violet → blue → cyan → amber → red).
 - Redesigned Ascend map selection UI with modern indie game style:
   - Expanded menu container to 620x620px with "A S C E N D" header.
   - New card layout (580x90px) with colored accent bar on left edge.
