@@ -36,7 +36,7 @@ Group {
       LayoutMode: Left;
 
       Group #ProgressBar {
-        Anchor: (Width: 200, Height: 8, Top: 3);
+        Anchor: (Width: 400, Height: 8, Top: 3);
         Background: #000000(0.3);
 
         Group #Seg1 {
@@ -86,6 +86,56 @@ Group {
         }
         Group #Seg10 {
           Anchor: (Left: 180, Width: 18, Top: 0, Bottom: 0);
+          Background: #7c3aed;
+          Visible: false;
+        }
+        Group #Seg11 {
+          Anchor: (Left: 200, Width: 18, Top: 0, Bottom: 0);
+          Background: #7c3aed;
+          Visible: false;
+        }
+        Group #Seg12 {
+          Anchor: (Left: 220, Width: 18, Top: 0, Bottom: 0);
+          Background: #7c3aed;
+          Visible: false;
+        }
+        Group #Seg13 {
+          Anchor: (Left: 240, Width: 18, Top: 0, Bottom: 0);
+          Background: #7c3aed;
+          Visible: false;
+        }
+        Group #Seg14 {
+          Anchor: (Left: 260, Width: 18, Top: 0, Bottom: 0);
+          Background: #7c3aed;
+          Visible: false;
+        }
+        Group #Seg15 {
+          Anchor: (Left: 280, Width: 18, Top: 0, Bottom: 0);
+          Background: #7c3aed;
+          Visible: false;
+        }
+        Group #Seg16 {
+          Anchor: (Left: 300, Width: 18, Top: 0, Bottom: 0);
+          Background: #7c3aed;
+          Visible: false;
+        }
+        Group #Seg17 {
+          Anchor: (Left: 320, Width: 18, Top: 0, Bottom: 0);
+          Background: #7c3aed;
+          Visible: false;
+        }
+        Group #Seg18 {
+          Anchor: (Left: 340, Width: 18, Top: 0, Bottom: 0);
+          Background: #7c3aed;
+          Visible: false;
+        }
+        Group #Seg19 {
+          Anchor: (Left: 360, Width: 18, Top: 0, Bottom: 0);
+          Background: #7c3aed;
+          Visible: false;
+        }
+        Group #Seg20 {
+          Anchor: (Left: 380, Width: 18, Top: 0, Bottom: 0);
           Background: #7c3aed;
           Visible: false;
         }
