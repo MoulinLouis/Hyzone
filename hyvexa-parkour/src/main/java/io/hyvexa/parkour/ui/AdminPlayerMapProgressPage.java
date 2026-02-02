@@ -100,7 +100,7 @@ public class AdminPlayerMapProgressPage extends BaseParkourPage {
             boolean completed = progressStore.isMapCompleted(targetId, map.getId());
             commandBuilder.set("#MapCards[" + index + "] #MapStatus.Text", completed ? "Completed" : "Not completed");
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
-                    "#MapCards[" + index + "]",
+                    "#MapCards[" + index + "] #SelectButton",
                     EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_SELECT_PREFIX + map.getId()), false);
             index++;
         }

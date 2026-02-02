@@ -11,10 +11,16 @@ $C.@PageOverlay {
           Padding: (Left: 8, Top: 2);
           Text: "< Back";
           Style: TextButtonStyle(
-            Default: (LabelStyle: (FontSize: 14, TextColor: #93844c, RenderBold: true)),
+            Default: (
+              Background: #000000(0.13),
+              LabelStyle: (FontSize: 14, TextColor: #93844c, RenderBold: true)
+            ),
+            Hovered: (
+              Background: #000000(0.22),
+              LabelStyle: (FontSize: 14, TextColor: #93844c, RenderBold: true)
+            ),
             Sounds: $C.@ButtonSounds,
           );
-          Background: #000000(0.13);
         }
         $C.@Title {
           @Text = "Parkour Leaderboard";

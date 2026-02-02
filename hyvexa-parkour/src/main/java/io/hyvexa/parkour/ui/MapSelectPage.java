@@ -141,7 +141,7 @@ public class MapSelectPage extends BaseParkourPage {
             }
             commandBuilder.set("#MapCards[" + index + "] #MapName.Text", mapName);
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
-                    "#MapCards[" + index + "]",
+                    "#MapCards[" + index + "] #SelectButton",
                     EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_SELECT_PREFIX + map.getId()), false);
             index++;
         }

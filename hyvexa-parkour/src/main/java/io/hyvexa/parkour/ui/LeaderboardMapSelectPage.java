@@ -115,7 +115,7 @@ public class LeaderboardMapSelectPage extends BaseParkourPage {
                 commandBuilder.set("#MapCards[" + index + "] #MapStatus.Text", "");
             }
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
-                    "#MapCards[" + index + "]",
+                    "#MapCards[" + index + "] #SelectButton",
                     EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_SELECT_PREFIX + map.getId()), false);
             index++;
         }
