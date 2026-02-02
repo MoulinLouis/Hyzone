@@ -72,7 +72,7 @@ public class ProgressStore {
     }
 
     private void loadPlayers() {
-        String sql = "SELECT uuid, name, xp, level, welcome_shown, playtime_ms, vip, founder FROM players";
+        String sql = "SELECT uuid, name, xp, level, welcome_shown, playtime_ms, vip, founder, teleport_item_use_count FROM players";
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -87,6 +87,7 @@ public class ProgressStore {
                     playerProgress.playtimeMs = rs.getLong("playtime_ms");
                     playerProgress.vip = rs.getBoolean("vip");
                     playerProgress.founder = rs.getBoolean("founder");
+                    playerProgress.teleportItemUseCount = rs.getInt("teleport_item_use_count");
 
                     progress.put(uuid, playerProgress);
 
@@ -173,6 +174,35 @@ public class ProgressStore {
             PlayerProgress playerProgress = progress.computeIfAbsent(playerId, ignored -> new PlayerProgress());
             storePlayerName(playerId, playerName);
             playerProgress.welcomeShown = true;
+            dirtyPlayers.add(playerId);
+        } finally {
+            fileLock.writeLock().unlock();
+        }
+        queueSave();
+    }
+
+    public int getTeleportItemUseCount(UUID playerId) {
+        if (playerId == null) {
+            return 0;
+        }
+        fileLock.readLock().lock();
+        try {
+            PlayerProgress playerProgress = progress.get(playerId);
+            return playerProgress != null ? playerProgress.teleportItemUseCount : 0;
+        } finally {
+            fileLock.readLock().unlock();
+        }
+    }
+
+    public void incrementTeleportItemUseCount(UUID playerId, String playerName) {
+        if (playerId == null) {
+            return;
+        }
+        fileLock.writeLock().lock();
+        try {
+            PlayerProgress playerProgress = progress.computeIfAbsent(playerId, ignored -> new PlayerProgress());
+            storePlayerName(playerId, playerName);
+            playerProgress.teleportItemUseCount++;
             dirtyPlayers.add(playerId);
         } finally {
             fileLock.writeLock().unlock();
@@ -802,12 +832,12 @@ public class ProgressStore {
         if (toSave.isEmpty()) return;
 
         String sql = """
-            INSERT INTO players (uuid, name, xp, level, welcome_shown, playtime_ms, vip, founder)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO players (uuid, name, xp, level, welcome_shown, playtime_ms, vip, founder, teleport_item_use_count)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 name = VALUES(name), xp = VALUES(xp), level = VALUES(level),
                 welcome_shown = VALUES(welcome_shown), playtime_ms = VALUES(playtime_ms),
-                vip = VALUES(vip), founder = VALUES(founder)
+                vip = VALUES(vip), founder = VALUES(founder), teleport_item_use_count = VALUES(teleport_item_use_count)
             """;
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
@@ -826,6 +856,7 @@ public class ProgressStore {
                 stmt.setLong(6, playerProgress.playtimeMs);
                 stmt.setBoolean(7, playerProgress.vip);
                 stmt.setBoolean(8, playerProgress.founder);
+                stmt.setInt(9, playerProgress.teleportItemUseCount);
                 stmt.addBatch();
             }
             stmt.executeBatch();
@@ -884,6 +915,7 @@ public class ProgressStore {
         long playtimeMs;
         boolean vip;
         boolean founder;
+        int teleportItemUseCount = 0;
     }
 
     private static class LeaderboardCache {

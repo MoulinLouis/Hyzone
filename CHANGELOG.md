@@ -1,5 +1,37 @@
 # Changelog
 
+- Implement 5 retention features to improve new player onboarding and reduce early churn:
+  - **Mandatory 3-screen tutorial** replaces command-heavy welcome page:
+    - Screen 1: Welcome message with Continue button.
+    - Screen 2: Explains Map Selector in hotbar slot 1, "Show Me Maps" button opens CategorySelectPage and marks tutorial complete.
+    - Screen 3: Introduces Practice Mode with "Got It" button to close.
+    - Tutorial only shows once per player (welcome_shown flag).
+  - **Smart map recommendations** after 5+ failures with no checkpoint progress:
+    - Clean popup: "Having trouble with [MapName]?" with 3 options: Try Different Map (opens map selector filtered to same category), Practice Mode, Continue.
+    - Only shows once per map per session to prevent spam.
+    - Prevents accidental jumps to harder categories.
+  - **Attempt counter** normalizes failure on map completion:
+    - New completion messages: "MAP COMPLETED: [MapName]", "Time: X.Xs", "Attempts: N" (only if > 1), "Keep practicing - you got this! 🔥".
+    - Tracks attempts per map in session-only SessionStats (non-persistent).
+  - **Practice mode awareness**:
+    - Tutorial Screen 3 introduces Practice Mode.
+    - Proactive suggestion popup after 3 failures: "Try Practice Mode - Set checkpoints to restart from any point! [Enable Practice] [Not Now]".
+    - Only shows once per map per session if not already in practice mode.
+  - **TeleportHintManager** for first-time users:
+    - Shows "💡 Map Selector" hint for first 5 teleport item uses.
+    - Corridor walking hint: "💡 Tip: Use Map Selector to find easier maps!" (stub for future corridor detection).
+    - New database column: `teleport_item_use_count` in `players` table.
+  - **Session-only tracking** prevents memory leaks and database bloat:
+    - SessionStats class in RunTracker tracks per-map failures, attempts, and popup flags per player.
+    - Clears on disconnect/clearPlayer, no persistence.
+  - UI changes:
+    - 3 new tutorial pages: Parkour_WelcomeTutorial_Screen1/2/3.ui and corresponding Page classes.
+    - 2 new popup pages: Parkour_MapRecommendation.ui, Parkour_PracticeModeHint.ui and Page classes.
+    - InventorySyncManager.showWelcomeIfFirstJoin() now opens WelcomeTutorialScreen1Page instead of WelcomePage.
+  - Database changes:
+    - New column: `teleport_item_use_count INT NOT NULL DEFAULT 0` in `players` table.
+    - ProgressStore methods: getTeleportItemUseCount(), incrementTeleportItemUseCount().
+  - All features designed to guide weak players to Easy-1 and prevent rage-quit spiral from walking into random hard maps.
 - Implement ghost replay system for personalized runner movement:
   - Runners now follow the player's exact path from their personal best manual completion.
   - Player position and rotation are sampled every 50ms during manual runs (20 samples/sec).

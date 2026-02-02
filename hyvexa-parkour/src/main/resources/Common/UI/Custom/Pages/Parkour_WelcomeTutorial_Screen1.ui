@@ -1,0 +1,64 @@
+$C = "../Common.ui";
+
+$C.@PageOverlay {
+  $C.@Container {
+    Anchor: (Width: 420, Height: 330);
+
+    #Title {
+      Group {
+        $C.@Title {
+          @Text = "Welcome to Parkour!";
+        }
+      }
+    }
+
+    #Content {
+      LayoutMode: Top;
+      Padding: (Left: 20, Right: 20, Top: 12, Bottom: 12);
+
+      Group {
+        Anchor: (Height: 128, Top: 8, Left: 0, Right: 0);
+        LayoutMode: Left;
+
+        Group {
+          FlexWeight: 1;
+        }
+
+        Group {
+          Anchor: (Width: 192, Height: 128);
+          Background: (TexturePath: "../Textures/logo_hyvexa.png");
+        }
+
+        Group {
+          FlexWeight: 1;
+        }
+      }
+
+      Label {
+        Anchor: (Top: 12);
+        Style: (FontSize: 16, TextColor: #cfd7dc);
+        Text: "Thanks for joining Hyvexa!";
+      }
+
+      Label {
+        Anchor: (Top: 12);
+        Style: (FontSize: 14, TextColor: #9fb0ba);
+        Text: "We'll show you the basics in just a few screens.";
+      }
+
+      Group {
+        Anchor: (Height: 28, Top: 20, Left: 0, Right: 0);
+        LayoutMode: Left;
+
+        Group {
+          Anchor: (Width: 120);
+        }
+
+        $C.@TextButton #ContinueButton {
+          Anchor: (Height: 28, Width: 140);
+          Text: "Continue";
+        }
+      }
+    }
+  }
+}

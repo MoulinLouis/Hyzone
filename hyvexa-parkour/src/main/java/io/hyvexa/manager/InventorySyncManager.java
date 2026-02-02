@@ -16,7 +16,7 @@ import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.data.ProgressStore;
 import io.hyvexa.parkour.tracker.RunTracker;
-import io.hyvexa.parkour.ui.WelcomePage;
+import io.hyvexa.parkour.ui.WelcomeTutorialScreen1Page;
 
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -165,8 +165,7 @@ public class InventorySyncManager {
             if (player == null) {
                 return;
             }
-            progressStore.markWelcomeShown(playerRef.getUuid(), playerRef.getUsername());
-            WelcomePage page = new WelcomePage(playerRef);
+            WelcomeTutorialScreen1Page page = new WelcomeTutorialScreen1Page(playerRef);
             player.getPageManager().openCustomPage(ref, store, page);
         }, world);
     }
