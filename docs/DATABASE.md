@@ -20,9 +20,15 @@ CREATE TABLE players (
   xp BIGINT NOT NULL,
   level INT NOT NULL,
   welcome_shown BOOLEAN NOT NULL,
-  playtime_ms BIGINT NOT NULL
+  playtime_ms BIGINT NOT NULL,
+  vip BOOLEAN NOT NULL DEFAULT FALSE,
+  founder BOOLEAN NOT NULL DEFAULT FALSE,
+  teleport_item_use_count INT NOT NULL DEFAULT 0
 ) ENGINE=InnoDB;
 ```
+
+Notes:
+- `teleport_item_use_count` tracks how many times the player has used the Map Selector teleport item (for showing hints during first 5 uses)
 
 ## maps
 Stores map definitions and primary transforms.
