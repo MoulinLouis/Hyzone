@@ -143,11 +143,15 @@ public class GhostRecorder {
 
     /**
      * Sample all active recordings (called every 50ms).
+     * Takes a snapshot of active recordings to avoid concurrent modification issues
+     * when recordings are started/stopped during iteration.
      */
     private void sampleActiveRecordings() {
         long now = System.currentTimeMillis();
 
-        for (ActiveRecording recording : activeRecordings.values()) {
+        // Take a snapshot to avoid race conditions during iteration
+        List<ActiveRecording> snapshot = new ArrayList<>(activeRecordings.values());
+        for (ActiveRecording recording : snapshot) {
             try {
                 samplePlayer(recording, now);
             } catch (Exception e) {

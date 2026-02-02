@@ -36,7 +36,7 @@ All map balancing is calculated from `displayOrder` (0-4) using constants in `As
 ### Multiplier increments
 - Manual run: +0.1 multiplier per completion (`MANUAL_MULTIPLIER_INCREMENT`)
 - Runner run: +0.01 × 2^stars multiplier per completion (see star evolution below)
-- Speed upgrade: +10% per level (`SPEED_UPGRADE_MULTIPLIER`)
+- Speed upgrade: +15% per level (`SPEED_UPGRADE_MULTIPLIER`)
 - Speed upgrade cost: 100 × 2^level
 
 ### Star evolution system
@@ -222,10 +222,8 @@ Managed by `AchievementManager`. Achievements grant titles for display.
 - **Prestige HUD panel** (upper-left): Shows Summit levels per category and Ascension count when player has prestige progress.
   - Updates via `AscendHud.updatePrestige()` with caching to avoid redundant updates.
   - Hidden when player has no Summit levels and no Ascensions.
-- Run HUD UI is duplicated in multiple resource paths for lookup compatibility:
-  - `Common/UI/Custom/Pages/Ascend_RunHud.ui`
-  - `Pages/Ascend_RunHud.ui`
-  - `Custom/Pages/Ascend_RunHud.ui`
+- Ascend UI files are in `Common/UI/Custom/Pages/` (single source of truth).
+- Code references `Pages/Ascend_*.ui` (Hytale resolves this to `Common/UI/Custom/Pages/`).
 
 ## UI pages
 - `Ascend_MapSelect.ui` + `Ascend_MapSelectEntry.ui`: modern map selection with:

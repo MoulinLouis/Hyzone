@@ -146,7 +146,13 @@ public final class AscendConstants {
      * @param costMultiplier Cost modifier (1.0 = full cost, 0.8 = 20% discount)
      */
     public static long getElevationLevelUpCost(int currentLevel, double costMultiplier) {
-        double baseCost = ELEVATION_BASE_COST * Math.pow(ELEVATION_COST_GROWTH, Math.max(0, currentLevel));
+        // Cap level to prevent overflow (1.08^1000 would overflow)
+        int cappedLevel = Math.min(Math.max(0, currentLevel), 1000);
+        double baseCost = ELEVATION_BASE_COST * Math.pow(ELEVATION_COST_GROWTH, cappedLevel);
+        // Guard against overflow - if cost exceeds Long.MAX_VALUE, cap it
+        if (baseCost > Long.MAX_VALUE || Double.isInfinite(baseCost) || Double.isNaN(baseCost)) {
+            return Long.MAX_VALUE;
+        }
         return Math.round(baseCost * Math.max(0.1, costMultiplier));
     }
 

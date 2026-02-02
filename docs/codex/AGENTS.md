@@ -208,13 +208,17 @@ getCommandRegistry().registerCommand(new MyCommand());
 
 ### UI Pages
 ```java
-public class MyPage extends InteractiveCustomUIPage {
-    public MyPage(PlayerRef playerRef) {
-        super("Common/UI/Custom/Pages/MyPage.ui");  // Forward slashes required
+public class MyPage extends InteractiveCustomUIPage<MyPage.Data> {
+    @Override
+    public void build(Ref<EntityStore> ref, UICommandBuilder commandBuilder,
+                      UIEventBuilder eventBuilder, Store<EntityStore> store) {
+        commandBuilder.append("Pages/MyPage.ui");  // Code uses Pages/ prefix
+        // Hytale resolves to: Common/UI/Custom/Pages/MyPage.ui
     }
 }
 // Open via:
 CustomUI.open(playerRef, new MyPage(playerRef));
+// File location: src/main/resources/Common/UI/Custom/Pages/MyPage.ui
 ```
 
 ### Interactions (Right-Click Items)
@@ -297,7 +301,7 @@ public class MyStore {
 
 1. **Entity refs expire** - Always check `ref.isValid()` before use
 2. **World thread required** - Use `CompletableFuture.runAsync(..., world)` for entity/world operations
-3. **UI paths** - Use forward slashes: `"Common/UI/Custom/Pages/MyPage.ui"`
+3. **UI paths** - Code uses `"Pages/MyPage.ui"`, files go in `Common/UI/Custom/Pages/`
 4. **Runtime data** - DB credentials live in `mods/Parkour/database.json`; parkour data is in MySQL
 5. **Inventory access** - Need `Player` component, not just `PlayerRef`
 6. **Event registration** - Use `getEventRegistry().registerGlobal(...)` in `setup()`

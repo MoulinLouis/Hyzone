@@ -18,9 +18,12 @@ public class MyCommand extends AbstractAsyncCommand {
 ## UI Pages
 
 ```java
-public class MyPage extends InteractiveCustomUIPage {
-    public MyPage(PlayerRef playerRef) {
-        super("Common/UI/Custom/Pages/MyPage.ui");  // Forward slashes
+public class MyPage extends InteractiveCustomUIPage<MyPage.Data> {
+    @Override
+    public void build(Ref<EntityStore> ref, UICommandBuilder commandBuilder,
+                      UIEventBuilder eventBuilder, Store<EntityStore> store) {
+        commandBuilder.append("Pages/MyPage.ui");  // Use Pages/ prefix
+        // ...
     }
 }
 // Open: CustomUI.open(playerRef, new MyPage(playerRef));
@@ -28,11 +31,42 @@ public class MyPage extends InteractiveCustomUIPage {
 
 ## UI Files (.ui)
 
-**File locations:** UI files must exist in BOTH locations:
-- `resources/Pages/` - Used by Java code path `Pages/MyPage.ui`
-- `resources/Common/UI/Custom/Pages/` - Keep in sync
+### Path Convention (IMPORTANT)
 
-**Basic structure:**
+Hytale resolves UI paths with an implicit `Common/UI/Custom/` prefix:
+- **Code path:** `Pages/MyPage.ui`
+- **File location:** `resources/Common/UI/Custom/Pages/MyPage.ui`
+
+**Rule:** Files go in `Common/UI/Custom/Pages/`, code uses `Pages/` prefix.
+
+```
+Code:   commandBuilder.append("Pages/Ascend_Menu.ui");
+                              ↓
+Hytale resolves to:           Common/UI/Custom/Pages/Ascend_Menu.ui
+                              ↓
+File:   src/main/resources/Common/UI/Custom/Pages/Ascend_Menu.ui
+```
+
+### File Organization
+
+```
+hyvexa-*/src/main/resources/
+└── Common/UI/Custom/Pages/     ← All UI files go here (single location)
+    ├── ModuleName_PageName.ui
+    ├── ModuleName_EntryName.ui
+    └── ...
+```
+
+**Naming convention:** `ModuleName_PageName.ui` (e.g., `Ascend_MapSelect.ui`, `Parkour_RunHud.ui`)
+
+### DO NOT
+
+- ❌ Create files in `resources/Pages/` directly
+- ❌ Create files in `resources/Custom/Pages/`
+- ❌ Duplicate files in multiple locations
+- ❌ Use full path `Common/UI/Custom/Pages/X.ui` in code
+
+### Basic UI Structure
 ```
 $C = "../Common.ui";
 
@@ -100,7 +134,8 @@ Group {
 1. `LayoutMode: Center` - Does not exist, use FlexWeight pattern above
 2. Multiline text with `\n` - Use separate Labels instead
 3. Complex inline styles - Use `$C.@TextButton` template instead
-4. Forgetting to sync files between `Pages/` and `Common/UI/Custom/Pages/`
+4. Putting UI files in wrong location (must be in `Common/UI/Custom/Pages/`)
+5. Using full path in code (use `Pages/X.ui`, not `Common/UI/Custom/Pages/X.ui`)
 
 **Keep UIs simple:** Start minimal, add complexity only when needed. Simple UIs are easier to debug.
 

@@ -29,6 +29,13 @@ public class GhostStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
 
+    /**
+     * Maximum number of samples allowed in a ghost recording.
+     * At 50ms per sample, 12000 samples = 10 minutes max recording.
+     * This prevents DoS via excessively large recordings.
+     */
+    public static final int MAX_SAMPLES = 12000;
+
     private final Map<String, GhostRecording> cache = new ConcurrentHashMap<>();
 
     /**
@@ -76,8 +83,16 @@ public class GhostStore {
 
     /**
      * Save a ghost recording to the database and cache.
+     * Rejects recordings that exceed MAX_SAMPLES to prevent DoS.
      */
     public void saveRecording(UUID playerId, String mapId, GhostRecording recording) {
+        // Validate sample count to prevent DoS via oversized recordings
+        if (recording.getSamples().size() > MAX_SAMPLES) {
+            LOGGER.atWarning().log("Rejecting ghost recording for " + playerId + "/" + mapId
+                + " - sample count " + recording.getSamples().size() + " exceeds max " + MAX_SAMPLES);
+            return;
+        }
+
         String key = makeKey(playerId, mapId);
         cache.put(key, recording);
 

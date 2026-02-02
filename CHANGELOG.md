@@ -1,5 +1,30 @@
 # Changelog
 
+- Architecture improvements (Phase 4):
+  - Add `ModeInventoryManager` to hyvexa-core for shared inventory utilities across all modes.
+    - Consolidates duplicate code from InventoryUtils, HubRouter, and ParkourAscendPlugin.
+    - Provides: clearAllInventory, clearHotbar, setHotbarItem, setLastHotbarItem, setIfMissing, applyDropFilters.
+  - Add `Mode` interface and `ModeType` enum to hyvexa-core for shared mode lifecycle contracts.
+    - Defines: onPlayerEnter, onPlayerLeave, attachHud, detachHud, setupInventory methods.
+    - Standardizes mode identification and world name resolution.
+  - Add `HudLifecycleManager<T>` to hyvexa-core for standardized HUD lifecycle management.
+    - Generic manager for any CustomHud subclass with attachment delay handling.
+    - Addresses timing inconsistencies between Hub and Ascend HUD attachment.
+    - Provides: attach, detach, ensureAttached, isReady, needsAttach utilities.
+  - Consolidate all UI files across modules: files in `Common/UI/Custom/Pages/`, code uses `Pages/` prefix.
+    - Hytale resolves `Pages/X.ui` to `Common/UI/Custom/Pages/X.ui`.
+    - Remove all duplicate UI files from `Pages/` and `Custom/Pages/` directories.
+    - Update CODE_PATTERNS.md, HYTALE_API.md, AGENTS.md, and CLAUDE.md with correct UI path convention.
+- Code review fixes for parkour-ascend module:
+  - Fix race condition in GhostRecorder by taking a snapshot of activeRecordings before iteration.
+  - Add null guards and exception handling to ParkourAscendPlugin manager access and HUD updates.
+  - Add bounds checking to AscendConstants.getElevationLevelUpCost() to prevent integer overflow at high levels.
+  - Add MAX_SAMPLES limit (12000) to GhostStore to prevent DoS via oversized ghost recordings.
+  - Add exception handlers to CompletableFuture.runAsync() calls in ParkourAscendPlugin.
+  - Fix ASCEND_MODULE_SUMMARY.md speed upgrade documentation (was 10%, now correctly shows 15%).
+  - Add ascend_ghost_recordings table documentation to DATABASE.md.
+  - Delete duplicate docs/AGENTS.md (keep docs/codex/AGENTS.md).
+  - Archive stale plan documents from docs/plans/.
 - Simplify elevation system: elevation IS the multiplier directly:
   - Removed "Lv." prefix from HUD and all displays.
   - Elevation value = multiplier value (e.g., elevation 200 = x200 multiplier).
