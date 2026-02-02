@@ -124,6 +124,89 @@ public final class AscendConstants {
     public static final long SAVE_DEBOUNCE_MS = 5000L;
 
     // ========================================
+    // Elevation System (First Prestige)
+    // ========================================
+
+    // Elevation uses a level-based system with exponential costs and diminishing returns
+    // Formula: cost(level) = BASE_COST * COST_GROWTH^level
+    // Formula: multiplier(level) = 1 + MULT_COEFFICIENT * level^MULT_EXPONENT
+    public static final long ELEVATION_BASE_COST = 1000L;
+    public static final double ELEVATION_COST_GROWTH = 1.08;  // +8% cost per level
+    public static final double ELEVATION_MULT_COEFFICIENT = 0.1;  // Base multiplier gain
+    public static final double ELEVATION_MULT_EXPONENT = 0.65;  // Diminishing returns exponent
+
+    /**
+     * Calculate the cost to reach the next elevation level.
+     * Cost grows exponentially: baseCost * 1.08^currentLevel
+     */
+    public static long getElevationLevelUpCost(int currentLevel) {
+        return getElevationLevelUpCost(currentLevel, 1.0);
+    }
+
+    /**
+     * Calculate the cost to reach the next elevation level with a cost multiplier.
+     * @param currentLevel The player's current elevation level
+     * @param costMultiplier Cost modifier (1.0 = full cost, 0.8 = 20% discount)
+     */
+    public static long getElevationLevelUpCost(int currentLevel, double costMultiplier) {
+        double baseCost = ELEVATION_BASE_COST * Math.pow(ELEVATION_COST_GROWTH, Math.max(0, currentLevel));
+        return Math.round(baseCost * Math.max(0.1, costMultiplier));
+    }
+
+    /**
+     * Calculate the actual multiplier value for a given elevation level.
+     * Multiplier = 1 + 0.1 * level^0.65 (diminishing returns)
+     */
+    public static double calculateElevationMultiplier(int level) {
+        if (level <= 0) {
+            return 1.0;
+        }
+        return 1.0 + ELEVATION_MULT_COEFFICIENT * Math.pow(level, ELEVATION_MULT_EXPONENT);
+    }
+
+    /**
+     * Calculate how many levels can be purchased with given coins at current level.
+     * Returns the number of levels affordable and the total cost.
+     */
+    public static ElevationPurchaseResult calculateElevationPurchase(int currentLevel, long availableCoins) {
+        return calculateElevationPurchase(currentLevel, availableCoins, 1.0);
+    }
+
+    /**
+     * Calculate how many levels can be purchased with given coins and cost multiplier.
+     * @param currentLevel The player's current elevation level
+     * @param availableCoins Coins available to spend
+     * @param costMultiplier Cost modifier (1.0 = full cost, 0.8 = 20% discount)
+     */
+    public static ElevationPurchaseResult calculateElevationPurchase(int currentLevel, long availableCoins, double costMultiplier) {
+        int levelsAffordable = 0;
+        long totalCost = 0;
+        int level = currentLevel;
+
+        while (true) {
+            long nextCost = getElevationLevelUpCost(level, costMultiplier);
+            if (totalCost + nextCost > availableCoins) {
+                break;
+            }
+            totalCost += nextCost;
+            levelsAffordable++;
+            level++;
+        }
+
+        return new ElevationPurchaseResult(levelsAffordable, totalCost);
+    }
+
+    public static class ElevationPurchaseResult {
+        public final int levels;
+        public final long cost;
+
+        public ElevationPurchaseResult(int levels, long cost) {
+            this.levels = levels;
+            this.cost = cost;
+        }
+    }
+
+    // ========================================
     // HUD Visual Effects
     // ========================================
 

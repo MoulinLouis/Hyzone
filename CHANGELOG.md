@@ -1,5 +1,25 @@
 # Changelog
 
+- Add teleport buttons to Ascend map select page:
+  - **Spawn button**: Teleports player to configurable spawn location.
+  - **NPC button**: Teleports player to configurable NPC location.
+  - Third button remains placeholder for future features.
+  - Both locations configurable via `/as admin` → "Admin Panel" → "Set Spawn/NPC Location".
+  - New `ascend_settings` table stores spawn and NPC positions with rotation.
+- Rework Elevation system with level-based prestige mechanics:
+  - **New progression curve**: Exponential costs with diminishing returns (like Revolution Idle prestige).
+    - Cost formula: `1000 × 1.08^level` (costs grow +8% per level).
+    - Multiplier formula: `1 + 0.1 × level^0.65` (soft cap, never linear).
+    - Example: Lv.10 costs ~2.2K for x1.45, Lv.50 costs ~47K for x2.45, Lv.100 costs ~2.2M for x3.27.
+  - **Level-based display**: Shows "Lv.N (x1.XX)" instead of just "xN".
+  - **Bulk purchasing**: Automatically calculates and purchases all affordable levels at once.
+  - **Skill tree integration**: COIN_T3_ELEVATION_COST now applies -20% to exponential costs.
+  - **Real-time updates**: Page auto-refreshes every second to reflect runner coin earnings.
+  - **UI improvements**:
+    - Compact container (340x380) for cleaner layout.
+    - Horizontal "Current -> New" level display with calculated multipliers.
+    - Dynamic gain indicator shows "+N levels" or "Need X more" coins.
+    - Cost display shows next level price with discount percentage if skill unlocked.
 - Add total jump count tracking for players:
   - Tracks every jump (onGround → airborne transition) per player, cumulative forever.
   - New `jump_count BIGINT` column in `players` table.

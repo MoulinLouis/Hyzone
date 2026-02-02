@@ -46,15 +46,12 @@ public class AscendHud extends CustomUIHud {
         update(false, commandBuilder);
     }
 
-    public void updateEconomy(long coins, long product, double[] digits, int elevationMultiplier, boolean showElevation) {
+    public void updateEconomy(long coins, long product, double[] digits, int elevationLevel, double elevationMultiplier, boolean showElevation) {
         String coinsText = FormatUtils.formatCoinsForHud(coins);
         String coinsPerRunText = FormatUtils.formatCoinsForHud(product) + "/run";
         String digitsKey = buildDigitsKey(digits);
-        int currentElevation = Math.max(1, elevationMultiplier);
-        int elevationGain = showElevation ? (int) (Math.max(0L, coins) / 1000L) : 0;
-        int nextElevation = currentElevation + elevationGain;
-        String elevationText = showElevation ? ("x" + currentElevation + " -> x" + nextElevation) : "";
-        String elevationValueText = formatMultiplier(currentElevation);
+        String elevationText = showElevation ? ("Lv." + elevationLevel + " (x" + formatMultiplier(elevationMultiplier) + ")") : "";
+        String elevationValueText = "Lv." + elevationLevel;
         // Check if values changed OR if we have active effects to process
         boolean valuesChanged = !coinsText.equals(lastCoinsText)
             || !coinsPerRunText.equals(lastCoinsPerRunText)

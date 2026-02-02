@@ -44,20 +44,19 @@ $C.@PageOverlay {
         TextButton #ActionButton1 {
           Anchor: (Height: 56);
           FlexWeight: 1;
-          Padding: (Left: 8, Right: 8, Top: 8, Bottom: 8);
-          Text: "Placeholder 1";
+          Text: "Spawn";
           Style: TextButtonStyle(
             Default: (
               Background: #2d5a7b(0.85),
-              LabelStyle: (FontSize: 14, TextColor: #e8f4fc, RenderBold: true, HorizontalAlignment: Center)
+              LabelStyle: (FontSize: 18, TextColor: #e8f4fc, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
             ),
             Hovered: (
               Background: #3a7399(0.92),
-              LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center)
+              LabelStyle: (FontSize: 18, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
             ),
             Pressed: (
               Background: #4a8ab3(0.95),
-              LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center)
+              LabelStyle: (FontSize: 18, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
             ),
             Sounds: $C.@ButtonSounds,
           );
@@ -68,20 +67,19 @@ $C.@PageOverlay {
         TextButton #ActionButton2 {
           Anchor: (Height: 56);
           FlexWeight: 1;
-          Padding: (Left: 8, Right: 8, Top: 8, Bottom: 8);
-          Text: "Placeholder 2";
+          Text: "NPC";
           Style: TextButtonStyle(
             Default: (
               Background: #5a3d6b(0.85),
-              LabelStyle: (FontSize: 14, TextColor: #f4e8fc, RenderBold: true, HorizontalAlignment: Center)
+              LabelStyle: (FontSize: 18, TextColor: #f4e8fc, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
             ),
             Hovered: (
               Background: #7a4d8f(0.92),
-              LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center)
+              LabelStyle: (FontSize: 18, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
             ),
             Pressed: (
               Background: #9460a8(0.95),
-              LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center)
+              LabelStyle: (FontSize: 18, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
             ),
             Sounds: $C.@ButtonSounds,
           );
@@ -92,20 +90,19 @@ $C.@PageOverlay {
         TextButton #ActionButton3 {
           Anchor: (Height: 56);
           FlexWeight: 1;
-          Padding: (Left: 8, Right: 8, Top: 8, Bottom: 8);
           Text: "Placeholder 3";
           Style: TextButtonStyle(
             Default: (
               Background: #5a6b3d(0.85),
-              LabelStyle: (FontSize: 14, TextColor: #f4fce8, RenderBold: true, HorizontalAlignment: Center)
+              LabelStyle: (FontSize: 18, TextColor: #f4fce8, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
             ),
             Hovered: (
               Background: #7a8f4d(0.92),
-              LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center)
+              LabelStyle: (FontSize: 18, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
             ),
             Pressed: (
               Background: #94a860(0.95),
-              LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center)
+              LabelStyle: (FontSize: 18, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
             ),
             Sounds: $C.@ButtonSounds,
           );

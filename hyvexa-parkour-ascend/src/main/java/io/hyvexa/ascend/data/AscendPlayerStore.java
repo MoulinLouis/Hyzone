@@ -305,19 +305,53 @@ public class AscendPlayerStore {
         markDirty(playerId);
     }
 
-    public int getElevationMultiplier(UUID playerId) {
+    /**
+     * Gets the raw elevation level (stored value).
+     * For the actual multiplier value, use {@link #getCalculatedElevationMultiplier(UUID)}.
+     */
+    public int getElevationLevel(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
-        return progress != null ? progress.getElevationMultiplier() : 1;
+        return progress != null ? progress.getElevationMultiplier() : 0;
     }
 
-    public int addElevationMultiplier(UUID playerId, int amount) {
+    /**
+     * @deprecated Use {@link #getElevationLevel(UUID)} for the level,
+     * or {@link #getCalculatedElevationMultiplier(UUID)} for the actual multiplier.
+     */
+    @Deprecated
+    public int getElevationMultiplier(UUID playerId) {
+        return getElevationLevel(playerId);
+    }
+
+    /**
+     * Calculate the actual elevation multiplier from the player's level.
+     * Uses diminishing returns formula: 1 + 0.1 * level^0.65
+     */
+    public double getCalculatedElevationMultiplier(UUID playerId) {
+        int level = getElevationLevel(playerId);
+        return AscendConstants.calculateElevationMultiplier(level);
+    }
+
+    /**
+     * Add elevation levels to a player.
+     * @return The new total elevation level
+     */
+    public int addElevationLevel(UUID playerId, int amount) {
         if (amount <= 0) {
-            return getElevationMultiplier(playerId);
+            return getElevationLevel(playerId);
         }
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
         int value = progress.addElevationMultiplier(amount);
         markDirty(playerId);
         return value;
+    }
+
+    /**
+     * @deprecated Use {@link #addElevationLevel(UUID, int)} instead.
+     */
+    @Deprecated
+    public int addElevationMultiplier(UUID playerId, int amount) {
+        return addElevationLevel(playerId, amount);
     }
 
     public AscendPlayerProgress.MapProgress getMapProgress(UUID playerId, String mapId) {
@@ -656,7 +690,7 @@ public class AscendPlayerStore {
         double product = 1.0;
         int slots = Math.max(0, slotCount);
         if (maps == null || maps.isEmpty() || slots == 0) {
-            int elevation = Math.max(1, getElevationMultiplier(playerId));
+            double elevation = getCalculatedElevationMultiplier(playerId);
             return (long) Math.floor(product * elevation);
         }
         int index = 0;
@@ -671,7 +705,7 @@ public class AscendPlayerStore {
             product *= Math.max(1.0, value);
             index++;
         }
-        int elevation = Math.max(1, getElevationMultiplier(playerId));
+        double elevation = getCalculatedElevationMultiplier(playerId);
         return (long) Math.floor(product * elevation);
     }
 
@@ -679,7 +713,7 @@ public class AscendPlayerStore {
         double product = 1.0;
         int slots = Math.max(0, slotCount);
         if (maps == null || maps.isEmpty() || slots == 0) {
-            int elevation = Math.max(1, getElevationMultiplier(playerId));
+            double elevation = getCalculatedElevationMultiplier(playerId);
             return (long) Math.floor(product * elevation);
         }
         int index = 0;
@@ -697,7 +731,7 @@ public class AscendPlayerStore {
             product *= Math.max(1.0, value);
             index++;
         }
-        int elevation = Math.max(1, getElevationMultiplier(playerId));
+        double elevation = getCalculatedElevationMultiplier(playerId);
         return (long) Math.floor(product * elevation);
     }
 

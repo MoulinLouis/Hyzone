@@ -22,6 +22,7 @@ import io.hyvexa.ascend.data.AscendDatabaseSetup;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerStore;
+import io.hyvexa.ascend.data.AscendSettingsStore;
 import io.hyvexa.ascend.ghost.GhostStore;
 import io.hyvexa.ascend.ghost.GhostRecorder;
 import io.hyvexa.ascend.achievement.AchievementManager;
@@ -59,6 +60,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
     private AscendMapStore mapStore;
     private AscendPlayerStore playerStore;
+    private AscendSettingsStore settingsStore;
     private GhostStore ghostStore;
     private GhostRecorder ghostRecorder;
     private AscendRunTracker runTracker;
@@ -89,6 +91,9 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
         playerStore = new AscendPlayerStore();
         playerStore.syncLoad();
+
+        settingsStore = new AscendSettingsStore();
+        settingsStore.syncLoad();
 
         // Initialize ghost system
         ghostStore = new GhostStore();
@@ -239,6 +244,10 @@ public class ParkourAscendPlugin extends JavaPlugin {
         return playerStore;
     }
 
+    public AscendSettingsStore getSettingsStore() {
+        return settingsStore;
+    }
+
     public GhostStore getGhostStore() {
         return ghostStore;
     }
@@ -314,9 +323,11 @@ public class ParkourAscendPlugin extends JavaPlugin {
             List<AscendMap> maps = mapStore != null ? mapStore.listMapsSorted() : List.of();
             long product = playerStore.getMultiplierProduct(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
             double[] digits = playerStore.getMultiplierDisplayValues(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
-            int elevationMultiplier = playerStore.getElevationMultiplier(playerId);
-            boolean showElevation = coins >= 1000L;
-            hud.updateEconomy(coins, product, digits, elevationMultiplier, showElevation);
+            int elevationLevel = playerStore.getElevationLevel(playerId);
+            double elevationMultiplier = playerStore.getCalculatedElevationMultiplier(playerId);
+            long nextLevelCost = AscendConstants.getElevationLevelUpCost(elevationLevel);
+            boolean showElevation = coins >= nextLevelCost;
+            hud.updateEconomy(coins, product, digits, elevationLevel, elevationMultiplier, showElevation);
 
             // Update prestige HUD
             var summitLevels = playerStore.getSummitLevels(playerId);

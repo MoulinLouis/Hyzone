@@ -131,6 +131,26 @@ public final class AscendDatabaseSetup {
             ensureGhostRecordingTable(conn);
             ensureBestTimeColumn(conn);
 
+            // Global settings table (spawn and NPC positions)
+            stmt.executeUpdate("""
+                CREATE TABLE IF NOT EXISTS ascend_settings (
+                    id INT NOT NULL PRIMARY KEY,
+                    spawn_x DOUBLE NOT NULL DEFAULT 0,
+                    spawn_y DOUBLE NOT NULL DEFAULT 0,
+                    spawn_z DOUBLE NOT NULL DEFAULT 0,
+                    spawn_rot_x FLOAT NOT NULL DEFAULT 0,
+                    spawn_rot_y FLOAT NOT NULL DEFAULT 0,
+                    spawn_rot_z FLOAT NOT NULL DEFAULT 0,
+                    npc_x DOUBLE NOT NULL DEFAULT 0,
+                    npc_y DOUBLE NOT NULL DEFAULT 0,
+                    npc_z DOUBLE NOT NULL DEFAULT 0,
+                    npc_rot_x FLOAT NOT NULL DEFAULT 0,
+                    npc_rot_y FLOAT NOT NULL DEFAULT 0,
+                    npc_rot_z FLOAT NOT NULL DEFAULT 0
+                ) ENGINE=InnoDB
+                """);
+            ensureSpawnColumns(conn);
+
             LOGGER.atInfo().log("Ascend database tables ensured");
 
         } catch (SQLException e) {
@@ -335,6 +355,27 @@ public final class AscendDatabaseSetup {
             LOGGER.atInfo().log("Added best_time_ms column to ascend_player_maps");
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Failed to add best_time_ms column: " + e.getMessage());
+        }
+    }
+
+    private static void ensureSpawnColumns(Connection conn) {
+        if (conn == null) {
+            return;
+        }
+
+        // Add spawn columns if they don't exist (for existing databases)
+        if (!columnExists(conn, "ascend_settings", "spawn_x")) {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("ALTER TABLE ascend_settings ADD COLUMN spawn_x DOUBLE NOT NULL DEFAULT 0");
+                stmt.executeUpdate("ALTER TABLE ascend_settings ADD COLUMN spawn_y DOUBLE NOT NULL DEFAULT 0");
+                stmt.executeUpdate("ALTER TABLE ascend_settings ADD COLUMN spawn_z DOUBLE NOT NULL DEFAULT 0");
+                stmt.executeUpdate("ALTER TABLE ascend_settings ADD COLUMN spawn_rot_x FLOAT NOT NULL DEFAULT 0");
+                stmt.executeUpdate("ALTER TABLE ascend_settings ADD COLUMN spawn_rot_y FLOAT NOT NULL DEFAULT 0");
+                stmt.executeUpdate("ALTER TABLE ascend_settings ADD COLUMN spawn_rot_z FLOAT NOT NULL DEFAULT 0");
+                LOGGER.atInfo().log("Added spawn columns to ascend_settings");
+            } catch (SQLException e) {
+                LOGGER.at(Level.SEVERE).log("Failed to add spawn columns: " + e.getMessage());
+            }
         }
     }
 }
