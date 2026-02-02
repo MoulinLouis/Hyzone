@@ -50,6 +50,64 @@ public final class FormatUtils {
         return mantissaText + "e" + exponent;
     }
 
+    public static String formatCoinsForHudDecimal(double coins) {
+        double safeCoins = Math.max(0.0, coins);
+        // Below 1 million: show full number
+        if (safeCoins < 1e6) {
+            return String.format(Locale.ROOT, "%.2f", safeCoins);
+        }
+        // Million (10^6)
+        if (safeCoins < 1e9) {
+            return String.format(Locale.ROOT, "%.2fM", safeCoins / 1e6);
+        }
+        // Billion (10^9)
+        if (safeCoins < 1e12) {
+            return String.format(Locale.ROOT, "%.2fB", safeCoins / 1e9);
+        }
+        // Trillion (10^12)
+        if (safeCoins < 1e15) {
+            return String.format(Locale.ROOT, "%.2fT", safeCoins / 1e12);
+        }
+        // Quadrillion (10^15)
+        if (safeCoins < 1e18) {
+            return String.format(Locale.ROOT, "%.2fQa", safeCoins / 1e15);
+        }
+        // Quintillion (10^18)
+        if (safeCoins < 1e21) {
+            return String.format(Locale.ROOT, "%.2fQi", safeCoins / 1e18);
+        }
+        // Sextillion (10^21)
+        if (safeCoins < 1e24) {
+            return String.format(Locale.ROOT, "%.2fSx", safeCoins / 1e21);
+        }
+        // Septillion (10^24)
+        if (safeCoins < 1e27) {
+            return String.format(Locale.ROOT, "%.2fSp", safeCoins / 1e24);
+        }
+        // Octillion (10^27)
+        if (safeCoins < 1e30) {
+            return String.format(Locale.ROOT, "%.2fOc", safeCoins / 1e27);
+        }
+        // Nonillion (10^30)
+        if (safeCoins < 1e33) {
+            return String.format(Locale.ROOT, "%.2fNo", safeCoins / 1e30);
+        }
+        // Decillion (10^33)
+        if (safeCoins < 1e36) {
+            return String.format(Locale.ROOT, "%.2fDc", safeCoins / 1e33);
+        }
+        // Beyond Decillion: scientific notation
+        double value = safeCoins;
+        int exponent = (int) Math.floor(Math.log10(value));
+        double mantissa = value / Math.pow(10.0, exponent);
+        double rounded = Math.round(mantissa * 100.0) / 100.0;
+        if (rounded >= 10.0) {
+            rounded /= 10.0;
+            exponent += 1;
+        }
+        return String.format(Locale.ROOT, "%.2fe%d", rounded, exponent);
+    }
+
     public static String normalizeCategory(String category) {
         if (category == null || category.isBlank()) {
             return "Beginner";

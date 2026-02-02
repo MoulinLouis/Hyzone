@@ -78,7 +78,7 @@ public class AscensionPage extends BaseAscendPage {
         UUID playerId = playerRef.getUuid();
 
         if (!ascensionManager.canAscend(playerId)) {
-            long coins = playerStore.getCoins(playerId);
+            double coins = playerStore.getCoins(playerId);
             player.sendMessage(Message.raw("[Ascension] Need " + formatLargeNumber(AscendConstants.ASCENSION_COIN_THRESHOLD)
                 + " coins to Ascend. You have: " + formatLargeNumber(coins))
                 .color(SystemMessageUtils.SECONDARY));
@@ -118,7 +118,7 @@ public class AscensionPage extends BaseAscendPage {
         }
 
         UUID playerId = playerRef.getUuid();
-        long coins = playerStore.getCoins(playerId);
+        double coins = playerStore.getCoins(playerId);
         int ascensionCount = playerStore.getAscensionCount(playerId);
         int availablePoints = playerStore.getAvailableSkillPoints(playerId);
         boolean canAscend = ascensionManager.canAscend(playerId);
@@ -135,21 +135,25 @@ public class AscensionPage extends BaseAscendPage {
         if (canAscend) {
             commandBuilder.set("#AscendButton.Text", "ASCEND");
         } else {
-            long needed = AscendConstants.ASCENSION_COIN_THRESHOLD - coins;
+            double needed = AscendConstants.ASCENSION_COIN_THRESHOLD - coins;
             commandBuilder.set("#AscendButton.Text", "NEED " + formatLargeNumber(needed) + " MORE");
         }
     }
 
-    private static String formatLargeNumber(long number) {
-        if (number >= 1_000_000_000_000L) {
+    private static String formatLargeNumber(double number) {
+        if (number >= 1_000_000_000_000.0) {
             return String.format(Locale.US, "%.2fT", number / 1_000_000_000_000.0);
-        } else if (number >= 1_000_000_000L) {
+        } else if (number >= 1_000_000_000.0) {
             return String.format(Locale.US, "%.2fB", number / 1_000_000_000.0);
-        } else if (number >= 1_000_000L) {
+        } else if (number >= 1_000_000.0) {
             return String.format(Locale.US, "%.2fM", number / 1_000_000.0);
-        } else if (number >= 1_000L) {
+        } else if (number >= 1_000.0) {
             return String.format(Locale.US, "%.2fK", number / 1_000.0);
         }
-        return String.valueOf(number);
+        if (number == Math.floor(number)) {
+            return String.valueOf((long) number);
+        }
+        String formatted = String.format(Locale.US, "%.2f", number);
+        return formatted.replaceAll("0+$", "").replaceAll("\\.$", "");
     }
 }

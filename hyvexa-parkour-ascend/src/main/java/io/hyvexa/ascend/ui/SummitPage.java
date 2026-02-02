@@ -56,10 +56,10 @@ public class SummitPage extends BaseAscendPage {
         }
 
         UUID playerId = playerRef.getUuid();
-        long coins = playerStore.getCoins(playerId);
+        double coins = playerStore.getCoins(playerId);
 
         // Update coins display
-        commandBuilder.set("#CoinsValue.Text", FormatUtils.formatCoinsForHud(coins));
+        commandBuilder.set("#CoinsValue.Text", FormatUtils.formatCoinsForHudDecimal(coins));
 
         // Build 3 category cards
         SummitCategory[] categories = {
@@ -143,7 +143,7 @@ public class SummitPage extends BaseAscendPage {
         UUID playerId = playerRef.getUuid();
 
         if (!summitManager.canSummit(playerId)) {
-            long coins = playerStore.getCoins(playerId);
+            double coins = playerStore.getCoins(playerId);
             long minCoins = io.hyvexa.ascend.AscendConstants.SUMMIT_MIN_COINS;
             player.sendMessage(Message.raw("[Summit] Need " + minCoins
                 + " coins to Summit. You have: " + coins)

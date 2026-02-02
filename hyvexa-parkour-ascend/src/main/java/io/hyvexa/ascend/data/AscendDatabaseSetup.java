@@ -4,6 +4,7 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import io.hyvexa.core.db.DatabaseManager;
 
 import java.sql.Connection;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.logging.Level;
@@ -27,7 +28,7 @@ public final class AscendDatabaseSetup {
             stmt.executeUpdate("""
                 CREATE TABLE IF NOT EXISTS ascend_players (
                     uuid VARCHAR(36) PRIMARY KEY,
-                    coins BIGINT NOT NULL DEFAULT 0,
+                    coins DOUBLE NOT NULL DEFAULT 0,
                     elevation_multiplier INT NOT NULL DEFAULT 1,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -289,12 +290,15 @@ public final class AscendDatabaseSetup {
         // Total coins earned (lifetime)
         if (!columnExists(conn, "ascend_players", "total_coins_earned")) {
             try (Statement stmt = conn.createStatement()) {
-                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN total_coins_earned BIGINT NOT NULL DEFAULT 0");
+                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN total_coins_earned DOUBLE NOT NULL DEFAULT 0");
                 LOGGER.atInfo().log("Added total_coins_earned column to ascend_players");
             } catch (SQLException e) {
                 LOGGER.at(Level.SEVERE).log("Failed to add total_coins_earned column: " + e.getMessage());
             }
         }
+
+        // Migrate coins columns from BIGINT to DOUBLE for decimal precision
+        migrateCoinsToDouble(conn);
 
         // Total manual runs
         if (!columnExists(conn, "ascend_players", "total_manual_runs")) {
@@ -376,6 +380,39 @@ public final class AscendDatabaseSetup {
             } catch (SQLException e) {
                 LOGGER.at(Level.SEVERE).log("Failed to add spawn columns: " + e.getMessage());
             }
+        }
+    }
+
+    private static void migrateCoinsToDouble(Connection conn) {
+        if (conn == null) {
+            return;
+        }
+        // Check if coins column is BIGINT and migrate to DOUBLE
+        try (Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SHOW COLUMNS FROM ascend_players LIKE 'coins'")) {
+            if (rs.next()) {
+                String type = rs.getString("Type").toUpperCase();
+                if (type.contains("BIGINT")) {
+                    stmt.executeUpdate("ALTER TABLE ascend_players MODIFY COLUMN coins DOUBLE NOT NULL DEFAULT 0");
+                    LOGGER.atInfo().log("Migrated coins column from BIGINT to DOUBLE");
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.at(Level.SEVERE).log("Failed to migrate coins column: " + e.getMessage());
+        }
+
+        // Check if total_coins_earned column is BIGINT and migrate to DOUBLE
+        try (Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SHOW COLUMNS FROM ascend_players LIKE 'total_coins_earned'")) {
+            if (rs.next()) {
+                String type = rs.getString("Type").toUpperCase();
+                if (type.contains("BIGINT")) {
+                    stmt.executeUpdate("ALTER TABLE ascend_players MODIFY COLUMN total_coins_earned DOUBLE NOT NULL DEFAULT 0");
+                    LOGGER.atInfo().log("Migrated total_coins_earned column from BIGINT to DOUBLE");
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.at(Level.SEVERE).log("Failed to migrate total_coins_earned column: " + e.getMessage());
         }
     }
 }

@@ -145,18 +145,18 @@ public class AscendRunTracker {
         double totalMultiplierBonus = 1.0 + summitManualBonus + ascensionBonus + chainBonus;
         double finalMultiplierIncrement = baseMultiplierIncrement * totalMultiplierBonus;
 
+        // Calculate payout BEFORE adding multiplier (use current multiplier, not the new one)
         List<AscendMap> multiplierMaps = mapStore.listMapsSorted();
-        long basePayout = playerStore.getCompletionPayout(playerId, multiplierMaps, AscendConstants.MULTIPLIER_SLOTS, run.mapId, finalMultiplierIncrement);
+        double basePayout = playerStore.getCompletionPayout(playerId, multiplierMaps, AscendConstants.MULTIPLIER_SLOTS, run.mapId, 0.0);
 
         // Apply coin flow bonus and session bonus
         double coinMultiplier = (1.0 + summitCoinBonus) * sessionBonus;
-        long payout = (long) Math.floor(basePayout * coinMultiplier);
+        double payout = basePayout * coinMultiplier;
 
-        playerStore.addMapMultiplier(playerId, run.mapId, finalMultiplierIncrement);
+        // Add coins first, then increase multiplier
         playerStore.addCoins(playerId, payout);
-
-        // Track for achievements
         playerStore.addTotalCoinsEarned(playerId, payout);
+        playerStore.addMapMultiplier(playerId, run.mapId, finalMultiplierIncrement);
         playerStore.incrementTotalManualRuns(playerId);
         playerStore.incrementConsecutiveManualRuns(playerId);
 

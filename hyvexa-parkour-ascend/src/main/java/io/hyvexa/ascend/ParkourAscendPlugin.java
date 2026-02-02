@@ -319,15 +319,14 @@ public class ParkourAscendPlugin extends JavaPlugin {
         }
         hud.applyStaticText();
         if (playerStore != null) {
-            long coins = playerStore.getCoins(playerId);
+            double coins = playerStore.getCoins(playerId);
             List<AscendMap> maps = mapStore != null ? mapStore.listMapsSorted() : List.of();
-            long product = playerStore.getMultiplierProduct(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
+            double product = playerStore.getMultiplierProductDecimal(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
             double[] digits = playerStore.getMultiplierDisplayValues(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
-            int elevationLevel = playerStore.getElevationLevel(playerId);
-            double elevationMultiplier = playerStore.getCalculatedElevationMultiplier(playerId);
-            long nextLevelCost = AscendConstants.getElevationLevelUpCost(elevationLevel);
-            boolean showElevation = coins >= nextLevelCost;
-            hud.updateEconomy(coins, product, digits, elevationLevel, elevationMultiplier, showElevation);
+            double elevation = playerStore.getCalculatedElevationMultiplier(playerId);
+            long nextElevationCost = AscendConstants.getElevationLevelUpCost((int) elevation);
+            boolean showElevation = coins >= nextElevationCost;
+            hud.updateEconomy(coins, product, digits, elevation, showElevation);
 
             // Update prestige HUD
             var summitLevels = playerStore.getSummitLevels(playerId);

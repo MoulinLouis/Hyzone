@@ -590,22 +590,21 @@ public class RobotManager {
 
         double totalMultiplierBonus = completions * multiplierIncrement;
 
-        // Calculate payout with Summit coin flow bonus
+        // Calculate payout BEFORE adding multiplier (use current multiplier, not the new one)
         List<AscendMap> maps = mapStore.listMapsSorted();
-        long payoutPerRun = playerStore.getCompletionPayout(ownerId, maps, AscendConstants.MULTIPLIER_SLOTS, mapId, multiplierIncrement);
+        double payoutPerRun = playerStore.getCompletionPayout(ownerId, maps, AscendConstants.MULTIPLIER_SLOTS, mapId, 0.0);
 
         // Apply Summit coin flow bonus
         double coinFlowBonus = 0.0;
         if (plugin != null && plugin.getSummitManager() != null) {
             coinFlowBonus = plugin.getSummitManager().getCoinFlowBonus(ownerId);
         }
-        long totalPayout = (long) Math.floor(payoutPerRun * completions * (1.0 + coinFlowBonus));
+        double totalPayout = payoutPerRun * completions * (1.0 + coinFlowBonus);
 
-        playerStore.addMapMultiplier(ownerId, mapId, totalMultiplierBonus);
+        // Add coins first, then increase multiplier
         playerStore.addCoins(ownerId, totalPayout);
-
-        // Track for achievements
         playerStore.addTotalCoinsEarned(ownerId, totalPayout);
+        playerStore.addMapMultiplier(ownerId, mapId, totalMultiplierBonus);
 
         robot.setLastCompletionMs(lastCompletionMs + (intervalMs * completions));
         robot.addRunsCompleted(completions);
