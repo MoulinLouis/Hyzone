@@ -2,11 +2,14 @@ package io.hyvexa.ascend.ui;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
@@ -14,10 +17,12 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants;
+import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
+import io.hyvexa.ascend.data.AscendSettingsStore;
 import io.hyvexa.ascend.ghost.GhostRecording;
 import io.hyvexa.ascend.ghost.GhostStore;
 import io.hyvexa.ascend.robot.RobotManager;
@@ -39,6 +44,8 @@ public class AscendMapSelectPage extends BaseAscendPage {
     private static final String BUTTON_CLOSE = "Close";
     private static final String BUTTON_SELECT_PREFIX = "Select:";
     private static final String BUTTON_ROBOT_PREFIX = "Robot:";
+    private static final String BUTTON_SPAWN = "Spawn";
+    private static final String BUTTON_NPC = "Npc";
     private static final int MAX_SPEED_LEVEL = 20;
 
     private final AscendMapStore mapStore;
@@ -67,6 +74,10 @@ public class AscendMapSelectPage extends BaseAscendPage {
         uiCommandBuilder.append("Pages/Ascend_MapSelect.ui");
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CloseButton",
             EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ActionButton1",
+            EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_SPAWN), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ActionButton2",
+            EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_NPC), false);
         active = true;
         buildMapList(ref, store, uiCommandBuilder, uiEventBuilder);
         // Refresh removed - status only changes when runner is upgraded or PB is achieved
@@ -82,6 +93,14 @@ public class AscendMapSelectPage extends BaseAscendPage {
         }
         if (BUTTON_CLOSE.equals(data.getButton())) {
             this.close();
+            return;
+        }
+        if (BUTTON_SPAWN.equals(data.getButton())) {
+            handleTeleportToSpawn(ref, store);
+            return;
+        }
+        if (BUTTON_NPC.equals(data.getButton())) {
+            handleTeleportToNpc(ref, store);
             return;
         }
         if (data.getButton().startsWith(BUTTON_ROBOT_PREFIX)) {
@@ -561,6 +580,62 @@ public class AscendMapSelectPage extends BaseAscendPage {
         if (player != null) {
             player.sendMessage(Message.raw(text));
         }
+    }
+
+    private void handleTeleportToSpawn(Ref<EntityStore> ref, Store<EntityStore> store) {
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        AscendSettingsStore settingsStore = plugin != null ? plugin.getSettingsStore() : null;
+
+        if (settingsStore == null || !settingsStore.hasSpawnPosition()) {
+            sendMessage(store, ref, "[Ascend] Spawn position not configured.");
+            return;
+        }
+
+        World world = store.getExternalData().getWorld();
+        if (world == null) {
+            return;
+        }
+
+        Vector3d pos = settingsStore.getSpawnPosition();
+        Vector3f rot = settingsStore.getSpawnRotation();
+
+        store.addComponent(ref, Teleport.getComponentType(), new Teleport(world, pos, rot));
+
+        // Cancel any active run
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        if (playerRef != null && runTracker != null) {
+            runTracker.cancelRun(playerRef.getUuid());
+        }
+
+        this.close();
+    }
+
+    private void handleTeleportToNpc(Ref<EntityStore> ref, Store<EntityStore> store) {
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        AscendSettingsStore settingsStore = plugin != null ? plugin.getSettingsStore() : null;
+
+        if (settingsStore == null || !settingsStore.hasNpcPosition()) {
+            sendMessage(store, ref, "[Ascend] NPC location not configured.");
+            return;
+        }
+
+        World world = store.getExternalData().getWorld();
+        if (world == null) {
+            return;
+        }
+
+        Vector3d pos = settingsStore.getNpcPosition();
+        Vector3f rot = settingsStore.getNpcRotation();
+
+        store.addComponent(ref, Teleport.getComponentType(), new Teleport(world, pos, rot));
+
+        // Cancel any active run
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        if (playerRef != null && runTracker != null) {
+            runTracker.cancelRun(playerRef.getUuid());
+        }
+
+        this.close();
     }
 
     private boolean ensureUnlocked(Store<EntityStore> store, Ref<EntityStore> ref, PlayerRef playerRef,

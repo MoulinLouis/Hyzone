@@ -83,6 +83,44 @@ $C.@PageOverlay {
         }
       }
 
+      Label {
+        Anchor: (Top: 16);
+        Style: (FontSize: 16, TextColor: #93844c, RenderBold: true);
+        Text: "World Settings";
+      }
+
+      Group {
+        LayoutMode: Left;
+        Anchor: (Top: 8, Height: 36);
+
+        $C.@TextButton #SetSpawnLocationButton {
+          Anchor: (Width: 200, Height: 36);
+          Text: "Set Spawn Location";
+        }
+
+        Label #SpawnLocationStatus {
+          Anchor: (Left: 12);
+          Style: (FontSize: 13, TextColor: #cfd7dc, VerticalAlignment: Center);
+          Text: "Not set";
+        }
+      }
+
+      Group {
+        LayoutMode: Left;
+        Anchor: (Top: 8, Height: 36);
+
+        $C.@TextButton #SetNpcLocationButton {
+          Anchor: (Width: 200, Height: 36);
+          Text: "Set NPC Location";
+        }
+
+        Label #NpcLocationStatus {
+          Anchor: (Left: 12);
+          Style: (FontSize: 13, TextColor: #cfd7dc, VerticalAlignment: Center);
+          Text: "Not set";
+        }
+      }
+
       Group {
         LayoutMode: Left;
         Anchor: (Top: 10, Height: 32);

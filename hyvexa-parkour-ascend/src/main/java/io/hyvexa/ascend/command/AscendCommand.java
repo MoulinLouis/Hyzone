@@ -106,7 +106,8 @@ public class AscendCommand extends AbstractAsyncCommand {
         AscendMapStore mapStore = plugin.getMapStore();
         List<AscendMap> maps = mapStore != null ? mapStore.listMapsSorted() : List.of();
         long product = playerStore.getMultiplierProduct(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
-        int elevationMultiplier = playerStore.getElevationMultiplier(playerId);
+        int elevationLevel = playerStore.getElevationLevel(playerId);
+        double elevationMultiplier = playerStore.getCalculatedElevationMultiplier(playerId);
         double[] digits = playerStore.getMultiplierDisplayValues(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
         StringBuilder digitsText = new StringBuilder();
         for (int i = 0; i < digits.length; i++) {
@@ -117,7 +118,7 @@ public class AscendCommand extends AbstractAsyncCommand {
         }
 
         player.sendMessage(Message.raw("[Ascend] Coins: " + formatLargeNumber(coins) + " | Product: " + product
-            + " | Elevation: x" + elevationMultiplier)
+            + " | Elevation: Lv." + elevationLevel + " (x" + String.format(Locale.US, "%.2f", elevationMultiplier) + ")")
             .color(SystemMessageUtils.PRIMARY_TEXT));
         player.sendMessage(Message.raw("[Ascend] Digits: " + digitsText)
             .color(SystemMessageUtils.SECONDARY));

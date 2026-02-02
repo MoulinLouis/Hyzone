@@ -385,3 +385,30 @@ Notes:
 - `achievement` is the enum name from `AscendConstants.AchievementType`
 - Achievement unlocks are permanent (never reset)
 - Each achievement grants a title that can be selected via `/ascend title`
+
+## ascend_settings
+Stores global Ascend settings (single row, id = 1).
+
+Suggested schema:
+```sql
+CREATE TABLE ascend_settings (
+  id INT NOT NULL PRIMARY KEY,
+  spawn_x DOUBLE NOT NULL DEFAULT 0,
+  spawn_y DOUBLE NOT NULL DEFAULT 0,
+  spawn_z DOUBLE NOT NULL DEFAULT 0,
+  spawn_rot_x FLOAT NOT NULL DEFAULT 0,
+  spawn_rot_y FLOAT NOT NULL DEFAULT 0,
+  spawn_rot_z FLOAT NOT NULL DEFAULT 0,
+  npc_x DOUBLE NOT NULL DEFAULT 0,
+  npc_y DOUBLE NOT NULL DEFAULT 0,
+  npc_z DOUBLE NOT NULL DEFAULT 0,
+  npc_rot_x FLOAT NOT NULL DEFAULT 0,
+  npc_rot_y FLOAT NOT NULL DEFAULT 0,
+  npc_rot_z FLOAT NOT NULL DEFAULT 0
+) ENGINE=InnoDB;
+```
+
+Notes:
+- Single row with `id = 1`
+- `spawn_*` fields store the spawn teleport location (configurable via `/as admin` panel)
+- `npc_*` fields store the NPC teleport location (configurable via `/as admin` panel)

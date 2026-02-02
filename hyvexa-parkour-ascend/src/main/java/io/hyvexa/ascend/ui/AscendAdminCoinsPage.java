@@ -13,12 +13,16 @@ import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCu
 import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
+import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerStore;
+import io.hyvexa.ascend.data.AscendSettingsStore;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
 
@@ -60,6 +64,8 @@ public class AscendAdminCoinsPage extends InteractiveCustomUIPage<AscendAdminCoi
             case CoinsData.BUTTON_ADD -> applyCoins(player, playerRef, store, true);
             case CoinsData.BUTTON_REMOVE -> applyCoins(player, playerRef, store, false);
             case CoinsData.BUTTON_RESET_PROGRESS -> resetProgress(player, playerRef, store);
+            case CoinsData.BUTTON_SET_SPAWN_LOCATION -> setSpawnLocation(ref, store, player);
+            case CoinsData.BUTTON_SET_NPC_LOCATION -> setNpcLocation(ref, store, player);
             default -> {
             }
         }
@@ -74,6 +80,10 @@ public class AscendAdminCoinsPage extends InteractiveCustomUIPage<AscendAdminCoi
             EventData.of(CoinsData.KEY_BUTTON, CoinsData.BUTTON_REMOVE), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ResetProgressButton",
             EventData.of(CoinsData.KEY_BUTTON, CoinsData.BUTTON_RESET_PROGRESS), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SetSpawnLocationButton",
+            EventData.of(CoinsData.KEY_BUTTON, CoinsData.BUTTON_SET_SPAWN_LOCATION), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SetNpcLocationButton",
+            EventData.of(CoinsData.KEY_BUTTON, CoinsData.BUTTON_SET_NPC_LOCATION), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton",
             EventData.of(CoinsData.KEY_BUTTON, CoinsData.BUTTON_BACK), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CloseButton",
@@ -117,6 +127,23 @@ public class AscendAdminCoinsPage extends InteractiveCustomUIPage<AscendAdminCoi
             AscendPlayerStore playerStore = ParkourAscendPlugin.getInstance().getPlayerStore();
             long coins = playerStore != null ? playerStore.getCoins(playerRef.getUuid()) : 0L;
             commandBuilder.set("#CurrentCoinsValue.Text", FormatUtils.formatCoinsForHud(coins));
+        }
+
+        // Location statuses
+        AscendSettingsStore settingsStore = ParkourAscendPlugin.getInstance().getSettingsStore();
+        if (settingsStore != null && settingsStore.hasSpawnPosition()) {
+            Vector3d pos = settingsStore.getSpawnPosition();
+            String status = String.format("%.1f, %.1f, %.1f", pos.getX(), pos.getY(), pos.getZ());
+            commandBuilder.set("#SpawnLocationStatus.Text", status);
+        } else {
+            commandBuilder.set("#SpawnLocationStatus.Text", "Not set");
+        }
+        if (settingsStore != null && settingsStore.hasNpcPosition()) {
+            Vector3d pos = settingsStore.getNpcPosition();
+            String status = String.format("%.1f, %.1f, %.1f", pos.getX(), pos.getY(), pos.getZ());
+            commandBuilder.set("#NpcLocationStatus.Text", status);
+        } else {
+            commandBuilder.set("#NpcLocationStatus.Text", "Not set");
         }
     }
 
@@ -164,12 +191,78 @@ public class AscendAdminCoinsPage extends InteractiveCustomUIPage<AscendAdminCoi
         }
     }
 
+    private void setSpawnLocation(Ref<EntityStore> ref, Store<EntityStore> store, Player player) {
+        AscendSettingsStore settingsStore = ParkourAscendPlugin.getInstance().getSettingsStore();
+        if (settingsStore == null) {
+            player.sendMessage(Message.raw("[Ascend] Settings store not available."));
+            return;
+        }
+
+        TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
+        if (transform == null) {
+            player.sendMessage(Message.raw("[Ascend] Unable to read player position."));
+            return;
+        }
+
+        Vector3d pos = transform.getPosition();
+        Vector3f bodyRot = transform.getRotation();
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        Vector3f headRot = playerRef != null ? playerRef.getHeadRotation() : null;
+        Vector3f rot = headRot != null ? headRot : bodyRot;
+
+        settingsStore.setSpawnPosition(pos.getX(), pos.getY(), pos.getZ(), rot.getX(), rot.getY(), rot.getZ());
+
+        player.sendMessage(Message.raw("[Ascend] Spawn location set!")
+            .color(SystemMessageUtils.SUCCESS));
+        player.sendMessage(Message.raw("  Pos: " + String.format("%.2f, %.2f, %.2f", pos.getX(), pos.getY(), pos.getZ())));
+
+        // Update UI
+        UICommandBuilder commandBuilder = new UICommandBuilder();
+        String status = String.format("%.1f, %.1f, %.1f", pos.getX(), pos.getY(), pos.getZ());
+        commandBuilder.set("#SpawnLocationStatus.Text", status);
+        sendUpdate(commandBuilder, null, false);
+    }
+
+    private void setNpcLocation(Ref<EntityStore> ref, Store<EntityStore> store, Player player) {
+        AscendSettingsStore settingsStore = ParkourAscendPlugin.getInstance().getSettingsStore();
+        if (settingsStore == null) {
+            player.sendMessage(Message.raw("[Ascend] Settings store not available."));
+            return;
+        }
+
+        TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
+        if (transform == null) {
+            player.sendMessage(Message.raw("[Ascend] Unable to read player position."));
+            return;
+        }
+
+        Vector3d pos = transform.getPosition();
+        Vector3f bodyRot = transform.getRotation();
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        Vector3f headRot = playerRef != null ? playerRef.getHeadRotation() : null;
+        Vector3f rot = headRot != null ? headRot : bodyRot;
+
+        settingsStore.setNpcPosition(pos.getX(), pos.getY(), pos.getZ(), rot.getX(), rot.getY(), rot.getZ());
+
+        player.sendMessage(Message.raw("[Ascend] NPC location set!")
+            .color(SystemMessageUtils.SUCCESS));
+        player.sendMessage(Message.raw("  Pos: " + String.format("%.2f, %.2f, %.2f", pos.getX(), pos.getY(), pos.getZ())));
+
+        // Update UI
+        UICommandBuilder commandBuilder = new UICommandBuilder();
+        String status = String.format("%.1f, %.1f, %.1f", pos.getX(), pos.getY(), pos.getZ());
+        commandBuilder.set("#NpcLocationStatus.Text", status);
+        sendUpdate(commandBuilder, null, false);
+    }
+
     public static class CoinsData {
         static final String KEY_BUTTON = "Button";
         static final String KEY_AMOUNT = "@CoinsAmount";
         static final String BUTTON_ADD = "AddCoins";
         static final String BUTTON_REMOVE = "RemoveCoins";
         static final String BUTTON_RESET_PROGRESS = "ResetProgress";
+        static final String BUTTON_SET_SPAWN_LOCATION = "SetSpawnLocation";
+        static final String BUTTON_SET_NPC_LOCATION = "SetNpcLocation";
         static final String BUTTON_BACK = "Back";
         static final String BUTTON_CLOSE = "Close";
 

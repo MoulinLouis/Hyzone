@@ -233,14 +233,23 @@ public class AscensionManager {
     }
 
     /**
-     * Gets the modified elevation cost (coins needed per elevation point).
+     * Gets the elevation cost multiplier (1.0 = full cost, 0.8 = 20% discount).
+     * Used with the new level-based elevation system.
      */
-    public int getElevationCost(UUID playerId) {
+    public double getElevationCostMultiplier(UUID playerId) {
         AscendPlayerProgress progress = playerStore.getPlayer(playerId);
         if (progress != null && progress.hasSkillNode(SkillTreeNode.COIN_T3_ELEVATION_COST)) {
-            return 800; // -20%
+            return 0.8; // -20%
         }
-        return 1000;
+        return 1.0;
+    }
+
+    /**
+     * @deprecated Use {@link #getElevationCostMultiplier(UUID)} with the new level-based system.
+     */
+    @Deprecated
+    public int getElevationCost(UUID playerId) {
+        return (int) (1000 * getElevationCostMultiplier(playerId));
     }
 
     /**
