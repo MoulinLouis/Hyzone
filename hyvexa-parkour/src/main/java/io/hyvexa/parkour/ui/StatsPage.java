@@ -80,6 +80,8 @@ public class StatsPage extends BaseParkourPage {
         long totalXp = ProgressStore.getTotalPossibleXp(mapStore);
         commandBuilder.set("#StatsXpValue.Text", xp + " XP / " + totalXp + " XP");
         commandBuilder.set("#StatsMapsValue.Text", completed + "/" + totalMaps);
+        long jumpCount = progressStore.getJumpCount(playerRef.getUuid());
+        commandBuilder.set("#StatsJumpsValue.Text", String.valueOf(jumpCount));
     }
 
     private static String formatList(Set<String> values) {

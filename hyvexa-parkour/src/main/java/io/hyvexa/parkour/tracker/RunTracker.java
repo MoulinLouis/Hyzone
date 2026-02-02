@@ -65,6 +65,8 @@ public class RunTracker {
     private final Set<UUID> readyPlayers = ConcurrentHashMap.newKeySet();
     private final ConcurrentHashMap<UUID, Long> lastSeenAt = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, SessionStats> sessionStats = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, Boolean> previousOnGround = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, Integer> pendingJumps = new ConcurrentHashMap<>();
 
     public RunTracker(MapStore mapStore, ProgressStore progressStore,
                              SettingsStore settingsStore) {
@@ -96,6 +98,8 @@ public class RunTracker {
         readyPlayers.remove(playerId);
         lastSeenAt.remove(playerId);
         sessionStats.remove(playerId);
+        previousOnGround.remove(playerId);
+        pendingJumps.remove(playerId);
     }
 
     public void handleDisconnect(UUID playerId) {
@@ -114,6 +118,8 @@ public class RunTracker {
         readyPlayers.remove(playerId);
         lastSeenAt.put(playerId, System.currentTimeMillis());
         sessionStats.remove(playerId);
+        previousOnGround.remove(playerId);
+        pendingJumps.remove(playerId);
     }
 
     public java.util.Map<UUID, TeleportStatsSnapshot> drainTeleportStats() {
@@ -290,6 +296,7 @@ public class RunTracker {
         if (!isPlayerReady(playerRef.getUuid())) {
             return;
         }
+        trackJump(playerRef, movementStates);
         lastSeenAt.put(playerRef.getUuid(), System.currentTimeMillis());
         HyvexaPlugin plugin = HyvexaPlugin.getInstance();
         if (plugin != null && plugin.getDuelTracker() != null
@@ -739,9 +746,6 @@ public class RunTracker {
                 ));
             }
 
-            player.sendMessage(SystemMessageUtils.withParkourPrefix(
-                    Message.raw("Keep practicing - you got this! 🔥").color(SystemMessageUtils.INFO)
-            ));
             if (result.xpAwarded > 0L) {
                 player.sendMessage(SystemMessageUtils.parkourSuccess("You earned " + result.xpAwarded + " XP."));
             }
@@ -1439,6 +1443,36 @@ public class RunTracker {
         return value * unitToMs;
     }
 
+    private void trackJump(PlayerRef playerRef, MovementStates movementStates) {
+        if (playerRef == null) {
+            return;
+        }
+        UUID playerId = playerRef.getUuid();
+        if (playerId == null) {
+            return;
+        }
+        boolean currentOnGround = movementStates != null && movementStates.onGround;
+        Boolean wasOnGround = previousOnGround.put(playerId, currentOnGround);
+        if (wasOnGround != null && wasOnGround && !currentOnGround) {
+            pendingJumps.merge(playerId, 1, Integer::sum);
+        }
+    }
+
+    public void flushPendingJumps() {
+        if (pendingJumps.isEmpty() || progressStore == null) {
+            return;
+        }
+        for (java.util.Map.Entry<UUID, Integer> entry : pendingJumps.entrySet()) {
+            UUID playerId = entry.getKey();
+            Integer count = entry.getValue();
+            if (playerId == null || count == null || count <= 0) {
+                continue;
+            }
+            String playerName = progressStore.getPlayerName(playerId);
+            progressStore.addJumps(playerId, playerName, count);
+        }
+        pendingJumps.clear();
+    }
 
     private void advanceRunTime(ActiveRun run, float deltaSeconds) {
         if (run == null) {

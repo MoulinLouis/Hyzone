@@ -493,6 +493,9 @@ public class HyvexaPlugin extends JavaPlugin {
         if (playtimeManager != null) {
             playtimeManager.tickPlaytime();
         }
+        if (runTracker != null) {
+            runTracker.flushPendingJumps();
+        }
     }
 
     private void tickPlayerCounts() {
