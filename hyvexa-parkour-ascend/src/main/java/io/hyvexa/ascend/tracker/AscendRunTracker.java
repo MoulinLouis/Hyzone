@@ -15,6 +15,7 @@ import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.achievement.AchievementManager;
 import io.hyvexa.ascend.ascension.AscensionManager;
+import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
@@ -260,7 +261,7 @@ public class AscendRunTracker {
         } else if (chainBonus > 0) {
             bonusInfo.append(" (Chain +" + (int)(chainBonus * 100) + "%)");
         }
-        player.sendMessage(Message.raw("[Ascend] +" + payout + " coins." + bonusInfo)
+        player.sendMessage(Message.raw("[Ascend] +" + FormatUtils.formatCoinsForHudDecimal(payout) + " coins." + bonusInfo)
             .color(SystemMessageUtils.PRIMARY_TEXT));
 
         // Check achievements
