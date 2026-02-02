@@ -628,7 +628,13 @@ public class RobotManager {
         if (map == null) {
             return -1L;
         }
-        long base = Math.max(0L, map.getEffectiveBaseRunTimeMs());
+
+        // Use player's PB time as base (from ghost recording)
+        GhostRecording ghost = ghostStore.getRecording(ownerId, map.getId());
+        if (ghost == null) {
+            return -1L;
+        }
+        long base = ghost.getCompletionTimeMs();
         if (base <= 0L) {
             return -1L;
         }

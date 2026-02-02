@@ -196,7 +196,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
             commandBuilder.set("#MapCards[" + index + "] #MapName.Text", mapName);
 
             // Status text (all displayed maps are unlocked)
-            String status = "Runs/sec: " + formatRunsPerSecond(map, hasRobot, speedLevel);
+            String status = "Runs/sec: " + formatRunsPerSecond(map, hasRobot, speedLevel, playerRef.getUuid());
 
             // Add personal best time if available
             if (mapProgress != null && mapProgress.getBestTimeMs() != null) {
@@ -290,11 +290,16 @@ public class AscendMapSelectPage extends BaseAscendPage {
         };
     }
 
-    private String formatRunsPerSecond(AscendMap map, boolean hasRobot, int speedLevel) {
-        if (map == null || !hasRobot) {
+    private String formatRunsPerSecond(AscendMap map, boolean hasRobot, int speedLevel, java.util.UUID playerId) {
+        if (map == null || !hasRobot || playerId == null) {
             return "0";
         }
-        long base = Math.max(0L, map.getEffectiveBaseRunTimeMs());
+        // Use player's PB time as base (from ghost recording)
+        GhostRecording ghost = ghostStore.getRecording(playerId, map.getId());
+        if (ghost == null) {
+            return "0";
+        }
+        long base = ghost.getCompletionTimeMs();
         if (base <= 0L) {
             return "0";
         }
@@ -489,7 +494,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
             AscendPlayerProgress.MapProgress mapProgress = playerStore.getMapProgress(playerRef.getUuid(), map.getId());
             boolean hasRobot = mapProgress != null && mapProgress.hasRobot();
             int speedLevel = mapProgress != null ? mapProgress.getRobotSpeedLevel() : 0;
-            String status = "Runs/sec: " + formatRunsPerSecond(map, hasRobot, speedLevel);
+            String status = "Runs/sec: " + formatRunsPerSecond(map, hasRobot, speedLevel, playerRef.getUuid());
 
             // Add personal best time if available
             if (mapProgress != null && mapProgress.getBestTimeMs() != null) {
@@ -532,7 +537,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
         int speedLevel = mapProgress != null ? mapProgress.getRobotSpeedLevel() : 0;
         int stars = mapProgress != null ? mapProgress.getRobotStars() : 0;
 
-        String status = "Runs/sec: " + formatRunsPerSecond(selectedMap, hasRobot, speedLevel);
+        String status = "Runs/sec: " + formatRunsPerSecond(selectedMap, hasRobot, speedLevel, playerRef.getUuid());
 
         // Add personal best time if available
         if (mapProgress != null && mapProgress.getBestTimeMs() != null) {
