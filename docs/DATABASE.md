@@ -255,6 +255,7 @@ CREATE TABLE ascend_players (
 ```
 
 Notes:
+- `elevation_multiplier` stores the elevation **level** (not the actual multiplier). The actual multiplier is calculated as `1 + 0.1 × level^0.65`. Column name kept for backwards compatibility.
 - `ascension_count` tracks how many times the player has Ascended.
 - `skill_tree_points` is the total points earned (ascension_count, may differ if points are granted by other means).
 - `total_coins_earned` is lifetime coins for achievement tracking (never resets).

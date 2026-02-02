@@ -78,10 +78,21 @@ TIER 3: ASCENSION   - coins → skill tree point, resets everything
 ```
 
 ### Tier 1: Elevation
-- Converts coins into permanent elevation multiplier
-- Cost: 1000 coins per +1 elevation (configurable via skill tree)
+- Converts coins into permanent elevation multiplier using a **level-based prestige system**.
+- **Cost formula**: `1000 × 1.08^level` (exponential growth, +8% per level)
+- **Multiplier formula**: `1 + 0.1 × level^0.65` (diminishing returns)
+- Skill tree node `COIN_T3_ELEVATION_COST` applies -20% discount to all level costs.
+- **Bulk purchasing**: Automatically purchases all affordable levels at once.
 - Resets: Coins only
-- Manager: Handled directly in `AscendCommand` / `ElevationPage`
+- Manager: `ElevationPage` with real-time UI updates (1s refresh)
+
+| Level | Cost | Multiplier |
+|-------|------|------------|
+| 1 | 1,000 | x1.10 |
+| 10 | ~2.2K | x1.45 |
+| 20 | ~4.7K | x1.73 |
+| 50 | ~47K | x2.45 |
+| 100 | ~2.2M | x3.27 |
 
 ### Tier 2: Summit System
 Managed by `SummitManager`. Players invest coins into one of three categories:
@@ -153,7 +164,7 @@ Managed by `AchievementManager`. Achievements grant titles for display.
 - `AscendMap` stores map metadata + start/finish coords + waypoint list + display order.
   - Price/reward/timing are calculated from displayOrder, not stored per-map.
 - `AscendMapStore` loads maps from MySQL, caches in memory, and saves updates.
-- `AscendPlayerProgress` stores coins, elevation multiplier, and per-map progress:
+- `AscendPlayerProgress` stores coins, elevation level (multiplier calculated via formula), and per-map progress:
   - `unlocked`: boolean
   - `completedManually`: boolean
   - `hasRobot`: boolean (single runner per map)
@@ -169,8 +180,8 @@ Managed by `AchievementManager`. Achievements grant titles for display.
 ## Commands
 - `/ascend`:
   - No args: opens map select UI and teleports to map start on selection.
-  - `stats`: shows current coin balance, digit product, elevation multiplier, Summit levels, Ascension count, and lifetime stats.
-  - `elevate`: opens Elevation UI to convert coins into elevation multiplier (+1 per 1000 coins, resets coins to 0).
+  - `stats`: shows current coin balance, digit product, elevation level + multiplier, Summit levels, Ascension count, and lifetime stats.
+  - `elevate`: opens Elevation UI with level-based prestige (exponential costs, diminishing multiplier returns).
   - `summit [category]`: opens Summit UI to invest coins into category bonuses. Categories: `coin`, `speed`, `manual`.
   - `ascension`: opens Ascension UI to perform ultimate prestige (requires 1 trillion coins).
   - `skills`: shows skill tree status and available nodes to unlock.
@@ -204,7 +215,7 @@ Managed by `AchievementManager`. Achievements grant titles for display.
 - HUD reattaches on Ascend tick if needed and waits briefly before applying static text.
 - HUD now shows a centered coins banner under the top bar and the 5 colored digit slots updated from the player store.
 - Coin display uses compact scientific notation over 1,000,000,000 to prevent HUD cropping.
-- When coins >= 1000, an elevation panel appears with current->next multiplier and a `/ascend elevate` prompt.
+- When coins >= next level cost, an elevation panel appears showing `Lv.N (xM.MM)` and prompting `/ascend elevate`.
 - A full-width top banner bar shows colored number slots with "x" separators for multipliers and is scaled up for visibility.
 - Ascend run HUD layout now mirrors the Hub HUD info box (placeholder hint text + store info), with the product row removed.
 - Elevation panel is positioned under the top banner on the upper-right.
@@ -228,10 +239,12 @@ Managed by `AchievementManager`. Achievements grant titles for display.
   - Level display shows stars: "★★★ Lv.5" format
   - Button states: "Buy Runner" → "Upgrade" → "Evolve" (at Lv.20) → "Maxed!" (5 stars + Lv.20)
 - `Ascend_Elevation.ui` + `ElevationPage.java`: Elevation prestige UI:
-  - Shows current coins and elevation multiplier
-  - Displays projected gain (+X) and new multiplier after elevating
-  - Dynamic colors: green for gain, grey for no gain
-  - Button text updates based on affordability
+  - Compact 340x380 container with real-time updates (1s refresh interval)
+  - Shows coins, next level cost, and skill tree discount if active
+  - Horizontal "Current -> New" display: `Lv.N (xM.MM) -> Lv.N+K (xM.MM)`
+  - Gain indicator shows "+K levels" or "Need X more" coins
+  - Dynamic colors: green for purchasable, grey for insufficient funds
+  - Bulk purchasing: one click buys all affordable levels
 - `Ascend_Summit.ui` + `SummitPage.java`: Summit prestige UI:
   - Displays coins at top with warning about reset
   - 3 category cards (Coin Flow, Runner Speed, Manual Mastery):
