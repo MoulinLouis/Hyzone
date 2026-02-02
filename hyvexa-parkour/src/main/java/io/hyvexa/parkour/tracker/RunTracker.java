@@ -32,6 +32,8 @@ import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.data.ProgressStore;
 import io.hyvexa.parkour.data.SettingsStore;
 import io.hyvexa.parkour.data.TransformData;
+import io.hyvexa.parkour.ui.MapRecommendationPage;
+import io.hyvexa.parkour.ui.PracticeModeHintPage;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -62,6 +64,7 @@ public class RunTracker {
     private final ConcurrentHashMap<UUID, TeleportStats> teleportStats = new ConcurrentHashMap<>();
     private final Set<UUID> readyPlayers = ConcurrentHashMap.newKeySet();
     private final ConcurrentHashMap<UUID, Long> lastSeenAt = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, SessionStats> sessionStats = new ConcurrentHashMap<>();
 
     public RunTracker(MapStore mapStore, ProgressStore progressStore,
                              SettingsStore settingsStore) {
@@ -92,6 +95,7 @@ public class RunTracker {
         teleportStats.remove(playerId);
         readyPlayers.remove(playerId);
         lastSeenAt.remove(playerId);
+        sessionStats.remove(playerId);
     }
 
     public void handleDisconnect(UUID playerId) {
@@ -109,6 +113,7 @@ public class RunTracker {
         teleportStats.remove(playerId);
         readyPlayers.remove(playerId);
         lastSeenAt.put(playerId, System.currentTimeMillis());
+        sessionStats.remove(playerId);
     }
 
     public java.util.Map<UUID, TeleportStatsSnapshot> drainTeleportStats() {
@@ -356,6 +361,46 @@ public class RunTracker {
             }
             teleportToRespawn(ref, store, run, map, buffer);
             recordTeleport(playerRef.getUuid(), TeleportCause.RUN_RESPAWN);
+
+            SessionStats stats = sessionStats.computeIfAbsent(playerRef.getUuid(), k -> new SessionStats());
+            stats.recordFailure(run.mapId);
+
+            SessionStats.MapSessionData mapData = stats.getStats(run.mapId);
+            if (mapData.failureCount >= 5 && !mapData.recommendationShown && run.lastCheckpointIndex < 0 && !run.practiceEnabled) {
+                mapData.recommendationShown = true;
+
+                World world = store.getExternalData().getWorld();
+                CompletableFuture.runAsync(() -> {
+                    if (ref == null || !ref.isValid()) {
+                        return;
+                    }
+                    Player p = store.getComponent(ref, Player.getComponentType());
+                    if (p == null) {
+                        return;
+                    }
+                    String category = map.getCategory() != null ? map.getCategory() : "Easy";
+                    p.getPageManager().openCustomPage(ref, store,
+                            new MapRecommendationPage(playerRef, mapStore, progressStore, this, run.mapId, category));
+                }, world);
+            }
+
+            if (mapData.failureCount == 3 && !mapData.practiceHintShown && !run.practiceEnabled) {
+                mapData.practiceHintShown = true;
+
+                World world = store.getExternalData().getWorld();
+                CompletableFuture.runAsync(() -> {
+                    if (ref == null || !ref.isValid()) {
+                        return;
+                    }
+                    Player p = store.getComponent(ref, Player.getComponentType());
+                    if (p == null) {
+                        return;
+                    }
+                    p.getPageManager().openCustomPage(ref, store,
+                            new PracticeModeHintPage(playerRef, this));
+                }, world);
+            }
+
             return;
         }
         checkFinish(run, playerRef, player, position, map, transform, ref, store, buffer, previousPosition,
@@ -666,14 +711,37 @@ public class RunTracker {
                 plugin.logMapHologramDebug("Map holo refresh fired for '" + map.getId()
                         + "' (player " + playerName + ").");
             }
+            SessionStats stats = sessionStats.get(playerId);
+            int attempts = 1;
+            if (stats != null) {
+                SessionStats.MapSessionData mapData = stats.getStats(map.getId());
+                attempts = mapData.attemptCount + 1;
+                stats.recordAttempt(map.getId());
+            }
+
+            String mapName = getMapDisplayName(map);
+            player.sendMessage(SystemMessageUtils.withParkourPrefix(
+                    Message.raw("MAP COMPLETED: ").color(SystemMessageUtils.SUCCESS).bold(true),
+                    Message.raw(mapName).color(SystemMessageUtils.PRIMARY_TEXT)
+            ));
+
             Message finishSplitPart = buildFinishSplitPart(durationMs, previousBestMs);
-            Message completionMessage = SystemMessageUtils.withParkourPrefix(
-                    Message.raw("Map completed in ").color(SystemMessageUtils.SECONDARY),
-                    Message.raw(FormatUtils.formatDuration(durationMs)).color(SystemMessageUtils.SUCCESS),
-                    finishSplitPart != null ? finishSplitPart : Message.raw(""),
-                    Message.raw(".").color(SystemMessageUtils.SECONDARY)
-            );
-            player.sendMessage(completionMessage);
+            player.sendMessage(SystemMessageUtils.withParkourPrefix(
+                    Message.raw("Time: ").color(SystemMessageUtils.SECONDARY),
+                    Message.raw(FormatUtils.formatDuration(durationMs)).color(SystemMessageUtils.PRIMARY_TEXT),
+                    finishSplitPart != null ? finishSplitPart : Message.raw("")
+            ));
+
+            if (attempts > 1) {
+                player.sendMessage(SystemMessageUtils.withParkourPrefix(
+                        Message.raw("Attempts: ").color(SystemMessageUtils.SECONDARY),
+                        Message.raw(String.valueOf(attempts)).color(SystemMessageUtils.PRIMARY_TEXT)
+                ));
+            }
+
+            player.sendMessage(SystemMessageUtils.withParkourPrefix(
+                    Message.raw("Keep practicing - you got this! 🔥").color(SystemMessageUtils.INFO)
+            ));
             if (result.xpAwarded > 0L) {
                 player.sendMessage(SystemMessageUtils.parkourSuccess("You earned " + result.xpAwarded + " XP."));
             }
@@ -1100,6 +1168,35 @@ public class RunTracker {
                     finish.getAndSet(0),
                     checkpoint.getAndSet(0)
             );
+        }
+    }
+
+    private static class SessionStats {
+        private final ConcurrentHashMap<String, MapSessionData> mapStats = new ConcurrentHashMap<>();
+
+        public MapSessionData getStats(String mapId) {
+            return mapStats.computeIfAbsent(mapId, k -> new MapSessionData());
+        }
+
+        public void recordFailure(String mapId) {
+            MapSessionData data = getStats(mapId);
+            data.failureCount++;
+            if (data.firstFailureTimestamp == 0) {
+                data.firstFailureTimestamp = System.currentTimeMillis();
+            }
+        }
+
+        public void recordAttempt(String mapId) {
+            MapSessionData data = getStats(mapId);
+            data.attemptCount++;
+        }
+
+        static class MapSessionData {
+            int failureCount = 0;
+            int attemptCount = 0;
+            long firstFailureTimestamp = 0;
+            boolean recommendationShown = false;
+            boolean practiceHintShown = false;
         }
     }
 

@@ -157,131 +157,16 @@ $C.@PageOverlay {
       Label {
         Anchor: (Top: 10);
         Style: (FontSize: 13, TextColor: #cfd7dc);
-        Text: "Rank thresholds";
+        Text: "Tutorial";
       }
 
-      Label #RankThresholds {
-        Anchor: (Top: 4);
-        Style: (FontSize: 12, TextColor: #9fb0ba);
-        Text: "";
-      }
-
-      Label #RankUnranked {
-        Anchor: (Top: 4);
-        Style: (FontSize: 12, TextColor: #b2c0c7);
-        Text: "";
-      }
-
-      Label #RankIron {
-        Anchor: (Top: 2);
-        Style: (FontSize: 12, TextColor: #8d8f94);
-        Text: "";
-      }
-
-      Label #RankBronze {
-        Anchor: (Top: 4);
-        Style: (FontSize: 12, TextColor: #cd7f32);
-        Text: "";
-      }
-
-      Label #RankSilver {
-        Anchor: (Top: 2);
-        Style: (FontSize: 12, TextColor: #c0c0c0);
-        Text: "";
-      }
-
-      Label #RankGold {
-        Anchor: (Top: 2);
-        Style: (FontSize: 12, TextColor: #ffd700);
-        Text: "";
-      }
-
-      Label #RankPlatinum {
-        Anchor: (Top: 2);
-        Style: (FontSize: 12, TextColor: #9fd3c7);
-        Text: "";
-      }
-
-      Label #RankEmerald {
-        Anchor: (Top: 2);
-        Style: (FontSize: 12, TextColor: #39c97a);
-        Text: "";
-      }
-
-      Label #RankDiamond {
-        Anchor: (Top: 2);
-        Style: (FontSize: 12, TextColor: #4dd7ff);
-        Text: "";
-      }
-
-      Label #RankMaster {
-        Anchor: (Top: 2);
-        Style: (FontSize: 12, TextColor: #9b5de5);
-        Text: "";
-      }
-
-      Label #RankGrandmaster {
-        Anchor: (Top: 2);
-        Style: (FontSize: 12, TextColor: #ff7a7a);
-        Text: "";
-      }
-
-      Label #RankChallenger {
-        Anchor: (Top: 2);
-        Style: (FontSize: 12, TextColor: #1f4aa8);
-        Text: "";
-      }
-
-      Group #RankVexaGodRow {
-        Anchor: (Top: 2, Left: 0, Right: 0, Height: 16);
+      Group {
+        Anchor: (Top: 4, Height: 22);
         LayoutMode: Left;
 
-        Label #RankVexaGodV {
-          Anchor: (Width: 8);
-          Style: (FontSize: 12, TextColor: #ff4d4d);
-          Text: "";
-        }
-
-        Label #RankVexaGode {
-          Anchor: (Width: 8);
-          Style: (FontSize: 12, TextColor: #ffa94d);
-          Text: "";
-        }
-
-        Label #RankVexaGodx {
-          Anchor: (Width: 8);
-          Style: (FontSize: 12, TextColor: #ffe66d);
-          Text: "";
-        }
-
-        Label #RankVexaGoda {
-          Anchor: (Width: 8);
-          Style: (FontSize: 12, TextColor: #4cd964);
-          Text: "";
-        }
-
-        Label #RankVexaGodG {
-          Anchor: (Width: 8);
-          Style: (FontSize: 12, TextColor: #5ac8fa);
-          Text: "";
-        }
-
-        Label #RankVexaGodo {
-          Anchor: (Width: 8);
-          Style: (FontSize: 12, TextColor: #5e5ce6);
-          Text: "";
-        }
-
-        Label #RankVexaGodd {
-          Anchor: (Width: 8);
-          Style: (FontSize: 12, TextColor: #b76cff);
-          Text: "";
-        }
-
-        Label #RankVexaGodSuffix {
-          FlexWeight: 1;
-          Style: (FontSize: 12, TextColor: #ffb347);
-          Text: "";
+        $C.@TextButton #WelcomeButton {
+          Anchor: (Width: 140, Height: 22);
+          Text: "Show Welcome";
         }
       }
     }

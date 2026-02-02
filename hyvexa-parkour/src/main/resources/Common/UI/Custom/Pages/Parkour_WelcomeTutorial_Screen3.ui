@@ -1,0 +1,81 @@
+$C = "../Common.ui";
+
+$C.@PageOverlay {
+  $C.@Container {
+    Anchor: (Width: 460, Height: 300);
+
+    #Title {
+      Group {
+        $C.@Title {
+          @Text = "Practice Mode";
+        }
+      }
+    }
+
+    #Content {
+      LayoutMode: Top;
+      Padding: (Left: 20, Right: 20, Top: 12, Bottom: 12);
+
+      Label {
+        Anchor: (Top: 8);
+        Style: (FontSize: 14, TextColor: #cfd7dc);
+        Text: "Struggling? Practice Mode lets you set custom checkpoints!";
+      }
+
+      Label {
+        Anchor: (Top: 12);
+        Style: (FontSize: 14, TextColor: #9fb0ba);
+        Text: "When enabled, you can:";
+      }
+
+      Group {
+        LayoutMode: Top;
+        Anchor: (Top: 8);
+
+        Label {
+          Style: (FontSize: 14, TextColor: #54d28e);
+          Text: "- Set checkpoints anywhere";
+        }
+        Label {
+          Anchor: (Top: 4);
+          Style: (FontSize: 14, TextColor: #54d28e);
+          Text: "- Teleport back to your checkpoint anytime";
+        }
+        Label {
+          Anchor: (Top: 4);
+          Style: (FontSize: 14, TextColor: #54d28e);
+          Text: "- Practice difficult sections";
+        }
+      }
+
+      Label {
+        Anchor: (Top: 12);
+        Style: (FontSize: 13, TextColor: #9fb0ba);
+        Text: "Note: Times don't count in Practice Mode.";
+      }
+
+      Group {
+        Anchor: (Height: 28, Top: 16, Left: 0, Right: 0);
+        LayoutMode: Left;
+
+        Group {
+          Anchor: (Width: 20);
+        }
+
+        $C.@TextButton #BackButton {
+          Anchor: (Height: 28, Width: 70);
+          Text: "Back";
+        }
+
+        Group {
+          Anchor: (Width: 12);
+        }
+
+        $C.@TextButton #GotItButton {
+          Anchor: (Height: 28, Width: 120);
+          Text: "Got It!";
+        }
+      }
+    }
+  }
+}

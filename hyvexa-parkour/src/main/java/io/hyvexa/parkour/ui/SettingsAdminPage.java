@@ -32,6 +32,7 @@ public class SettingsAdminPage extends InteractiveCustomUIPage<SettingsAdminPage
     private static final String BUTTON_TOGGLE_IDLE_FALL_OP = "ToggleIdleFallOp";
     private static final String BUTTON_TOGGLE_WEAPON_DAMAGE = "ToggleWeaponDamage";
     private static final String BUTTON_TOGGLE_TELEPORT_DEBUG = "ToggleTeleportDebug";
+    private static final String BUTTON_WELCOME = "ShowWelcome";
     private static final String LABEL_CURRENT_VALUE = "#CurrentValue.Text";
     private static final String LABEL_FAILSAFE_VALUE = "#FallFailSafeValue.Text";
 
@@ -91,6 +92,10 @@ public class SettingsAdminPage extends InteractiveCustomUIPage<SettingsAdminPage
         }
         if (BUTTON_SAVE_FAILSAFE.equals(data.button)) {
             handleSaveFailsafeVoid(ref, store);
+            return;
+        }
+        if (BUTTON_WELCOME.equals(data.button)) {
+            showWelcomeTutorial(ref, store);
         }
     }
 
@@ -163,7 +168,6 @@ public class SettingsAdminPage extends InteractiveCustomUIPage<SettingsAdminPage
         commandBuilder.set("#IdleFallOpValue.Text", getIdleFallOpLabel());
         commandBuilder.set("#WeaponDamageValue.Text", getWeaponDamageLabel());
         commandBuilder.set("#TeleportDebugValue.Text", getTeleportDebugLabel());
-        applyRankThresholds(commandBuilder);
     }
 
     private void sendRefresh() {
@@ -191,6 +195,8 @@ public class SettingsAdminPage extends InteractiveCustomUIPage<SettingsAdminPage
                 EventData.of(SettingsData.KEY_BUTTON, BUTTON_SAVE), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SaveFailSafeButton",
                 EventData.of(SettingsData.KEY_BUTTON, BUTTON_SAVE_FAILSAFE), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#WelcomeButton",
+                EventData.of(SettingsData.KEY_BUTTON, BUTTON_WELCOME), false);
     }
 
     private double getCurrentSeconds() {
@@ -261,51 +267,13 @@ public class SettingsAdminPage extends InteractiveCustomUIPage<SettingsAdminPage
         sendRefresh();
     }
 
-    private void applyRankThresholds(UICommandBuilder commandBuilder) {
-        long totalXp = ProgressStore.getTotalPossibleXp(mapStore);
-        if (totalXp <= 0L) {
-            commandBuilder.set("#RankThresholds.Text", "No maps available to calculate rank thresholds.");
-            commandBuilder.set("#RankUnranked.Text", "");
-            commandBuilder.set("#RankIron.Text", "");
-            commandBuilder.set("#RankBronze.Text", "");
-            commandBuilder.set("#RankSilver.Text", "");
-            commandBuilder.set("#RankGold.Text", "");
-            commandBuilder.set("#RankPlatinum.Text", "");
-            commandBuilder.set("#RankEmerald.Text", "");
-            commandBuilder.set("#RankDiamond.Text", "");
-            commandBuilder.set("#RankMaster.Text", "");
-            commandBuilder.set("#RankGrandmaster.Text", "");
-            commandBuilder.set("#RankChallenger.Text", "");
-            commandBuilder.set("#RankVexaGodV.Text", "");
-            commandBuilder.set("#RankVexaGode.Text", "");
-            commandBuilder.set("#RankVexaGodx.Text", "");
-            commandBuilder.set("#RankVexaGoda.Text", "");
-            commandBuilder.set("#RankVexaGodG.Text", "");
-            commandBuilder.set("#RankVexaGodo.Text", "");
-            commandBuilder.set("#RankVexaGodd.Text", "");
-            commandBuilder.set("#RankVexaGodSuffix.Text", "");
+    private void showWelcomeTutorial(Ref<EntityStore> ref, Store<EntityStore> store) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        if (player == null || playerRef == null) {
             return;
         }
-        commandBuilder.set("#RankThresholds.Text", "Total XP: " + totalXp);
-        commandBuilder.set("#RankUnranked.Text", "Unranked: 0%");
-        commandBuilder.set("#RankIron.Text", "Iron: 0.01% - 9.99%");
-        commandBuilder.set("#RankBronze.Text", "Bronze: 10.00% - 19.99%");
-        commandBuilder.set("#RankSilver.Text", "Silver: 20.00% - 29.99%");
-        commandBuilder.set("#RankGold.Text", "Gold: 30.00% - 39.99%");
-        commandBuilder.set("#RankPlatinum.Text", "Platinum: 40.00% - 49.99%");
-        commandBuilder.set("#RankEmerald.Text", "Emerald: 50.00% - 59.99%");
-        commandBuilder.set("#RankDiamond.Text", "Diamond: 60.00% - 69.99%");
-        commandBuilder.set("#RankMaster.Text", "Master: 70.00% - 79.99%");
-        commandBuilder.set("#RankGrandmaster.Text", "Grandmaster: 80.00% - 89.99%");
-        commandBuilder.set("#RankChallenger.Text", "Challenger: 90.00% - 99.99%");
-        commandBuilder.set("#RankVexaGodV.Text", "V");
-        commandBuilder.set("#RankVexaGode.Text", "e");
-        commandBuilder.set("#RankVexaGodx.Text", "x");
-        commandBuilder.set("#RankVexaGoda.Text", "a");
-        commandBuilder.set("#RankVexaGodG.Text", "G");
-        commandBuilder.set("#RankVexaGodo.Text", "o");
-        commandBuilder.set("#RankVexaGodd.Text", "d");
-        commandBuilder.set("#RankVexaGodSuffix.Text", ": 100.00%");
+        player.getPageManager().openCustomPage(ref, store, new WelcomeTutorialScreen1Page(playerRef));
     }
 
     public static class SettingsData {
