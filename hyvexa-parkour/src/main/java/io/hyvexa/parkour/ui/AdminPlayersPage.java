@@ -186,7 +186,7 @@ public class AdminPlayersPage extends InteractiveCustomUIPage<AdminPlayersPage.A
             commandBuilder.set("#PlayerCards[" + index + "] #PlayerProgress.Text",
                     row.completed + "/" + totalMaps + " maps");
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
-                    "#PlayerCards[" + index + "]",
+                    "#PlayerCards[" + index + "] #SelectButton",
                     EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_SELECT_PREFIX + row.playerId), false);
             index++;
         }

@@ -1,30 +1,39 @@
 $C = "../Common.ui";
 
-Button {
+Group {
   LayoutMode: Left;
   Anchor: (Left: 2, Right: 2, Bottom: 6, Height: 46, Width: 470);
   Background: $C.@InputBoxBackground;
-  Padding: (Left: 10, Right: 10, Top: 8);
-  Style: ButtonStyle(
-    Sounds: $C.@ButtonSounds,
-  );
 
-  Label #PlayerName {
-    FlexWeight: 1;
-    Style: (
-      FontSize: 14,
-      TextColor: #cfd7dc
+  Button #SelectButton {
+    Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+    Padding: (Left: 10, Right: 10, Top: 8, Bottom: 8);
+    Background: #00000000;
+    LayoutMode: Left;
+    Style: ButtonStyle(
+      Default: (Background: #00000000),
+      Hovered: (Background: #ffffff(0.08)),
+      Pressed: (Background: #ffffff(0.03)),
+      Sounds: $C.@ButtonSounds,
     );
-    Text: "Player";
-  }
 
-  Label #PlayerProgress {
-    Anchor: (Width: 110, Right: 0);
-    Style: (
-      FontSize: 13,
-      RenderBold: true,
-      TextColor: #9fb0ba
-    );
-    Text: "0/0 maps";
+    Label #PlayerName {
+      FlexWeight: 1;
+      Style: (
+        FontSize: 14,
+        TextColor: #cfd7dc
+      );
+      Text: "Player";
+    }
+
+    Label #PlayerProgress {
+      Anchor: (Width: 110, Right: 0);
+      Style: (
+        FontSize: 13,
+        RenderBold: true,
+        TextColor: #9fb0ba
+      );
+      Text: "0/0 maps";
+    }
   }
 }

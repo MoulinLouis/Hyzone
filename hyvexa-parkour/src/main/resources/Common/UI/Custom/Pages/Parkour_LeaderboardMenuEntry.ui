@@ -1,20 +1,30 @@
 $C = "../Common.ui";
 
-Button {
-  LayoutMode: Left;
+Group {
+  LayoutMode: Top;
   Anchor: (Left: 2, Right: 2, Bottom: 6, Height: 46, Width: 470);
   Background: $C.@InputBoxBackground;
-  Padding: (Left: 10, Right: 10, Top: 8);
-  Style: ButtonStyle(
-    Sounds: $C.@ButtonSounds,
-  );
 
-  Label #EntryName {
-    Style: (
-      FontSize: 16,
-      RenderBold: true,
-      TextColor: #93844c
+  Button #SelectButton {
+    Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+    FlexWeight: 1;
+    Padding: (Left: 10, Right: 10, Top: 8, Bottom: 8);
+    Background: #00000000;
+    LayoutMode: Top;
+    Style: ButtonStyle(
+      Default: (Background: #00000000),
+      Hovered: (Background: #ffffff(0.08)),
+      Pressed: (Background: #ffffff(0.03)),
+      Sounds: $C.@ButtonSounds,
     );
-    Text: "Global";
+
+    Label #EntryName {
+      Style: (
+        FontSize: 16,
+        RenderBold: true,
+        TextColor: #93844c
+      );
+      Text: "Global";
+    }
   }
 }

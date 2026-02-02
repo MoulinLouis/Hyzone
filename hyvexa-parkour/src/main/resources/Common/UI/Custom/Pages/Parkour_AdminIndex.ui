@@ -24,136 +24,192 @@ $C.@PageOverlay {
         Text: "Manage maps, progress, and settings.";
       }
 
-      Button #MapsButton {
-        LayoutMode: Left;
+      Group {
         Anchor: (Left: 2, Right: 2, Top: 10, Height: 46, Width: 390);
         Background: $C.@InputBoxBackground;
-        Padding: (Left: 10, Right: 10, Top: 8);
-        Style: ButtonStyle(
-          Sounds: $C.@ButtonSounds,
-        );
 
-        Label #MapsLabel {
-          Style: (
-            FontSize: 16,
-            RenderBold: true,
-            TextColor: #93844c
+        Button #MapsButton {
+          Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+          LayoutMode: Left;
+          Padding: (Left: 10, Right: 10, Top: 8, Bottom: 8);
+          Background: #00000000;
+          Style: ButtonStyle(
+            Default: (Background: #00000000),
+            Hovered: (Background: #ffffff(0.08)),
+            Pressed: (Background: #ffffff(0.03)),
+            Sounds: $C.@ButtonSounds,
           );
-          Text: "Maps";
+
+          Label #MapsLabel {
+            Style: (
+              FontSize: 16,
+              RenderBold: true,
+              TextColor: #93844c
+            );
+            Text: "Maps";
+          }
         }
       }
 
-      Button #ProgressButton {
-        LayoutMode: Left;
+      Group {
         Anchor: (Left: 2, Right: 2, Top: 8, Height: 46, Width: 390);
         Background: $C.@InputBoxBackground;
-        Padding: (Left: 10, Right: 10, Top: 8);
-        Style: ButtonStyle(
-          Sounds: $C.@ButtonSounds,
-        );
 
-        Label #ProgressLabel {
-          Style: (
-            FontSize: 16,
-            RenderBold: true,
-            TextColor: #93844c
+        Button #ProgressButton {
+          Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+          LayoutMode: Left;
+          Padding: (Left: 10, Right: 10, Top: 8, Bottom: 8);
+          Background: #00000000;
+          Style: ButtonStyle(
+            Default: (Background: #00000000),
+            Hovered: (Background: #ffffff(0.08)),
+            Pressed: (Background: #ffffff(0.03)),
+            Sounds: $C.@ButtonSounds,
           );
-          Text: "Player Progress";
+
+          Label #ProgressLabel {
+            Style: (
+              FontSize: 16,
+              RenderBold: true,
+              TextColor: #93844c
+            );
+            Text: "Player Progress";
+          }
         }
       }
 
-      Button #PlayersButton {
-        LayoutMode: Left;
+      Group {
         Anchor: (Left: 2, Right: 2, Top: 8, Height: 46, Width: 390);
         Background: $C.@InputBoxBackground;
-        Padding: (Left: 10, Right: 10, Top: 8);
-        Style: ButtonStyle(
-          Sounds: $C.@ButtonSounds,
-        );
 
-        Label #PlayersLabel {
-          Style: (
-            FontSize: 16,
-            RenderBold: true,
-            TextColor: #93844c
+        Button #PlayersButton {
+          Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+          LayoutMode: Left;
+          Padding: (Left: 10, Right: 10, Top: 8, Bottom: 8);
+          Background: #00000000;
+          Style: ButtonStyle(
+            Default: (Background: #00000000),
+            Hovered: (Background: #ffffff(0.08)),
+            Pressed: (Background: #ffffff(0.03)),
+            Sounds: $C.@ButtonSounds,
           );
-          Text: "Players";
+
+          Label #PlayersLabel {
+            Style: (
+              FontSize: 16,
+              RenderBold: true,
+              TextColor: #93844c
+            );
+            Text: "Players";
+          }
         }
       }
 
-      Button #SettingsButton {
-        LayoutMode: Left;
+      Group {
         Anchor: (Left: 2, Right: 2, Top: 8, Height: 46, Width: 390);
         Background: $C.@InputBoxBackground;
-        Padding: (Left: 10, Right: 10, Top: 8);
-        Style: ButtonStyle(
-          Sounds: $C.@ButtonSounds,
-        );
 
-        Label #SettingsLabel {
-          Style: (
-            FontSize: 16,
-            RenderBold: true,
-            TextColor: #93844c
+        Button #SettingsButton {
+          Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+          LayoutMode: Left;
+          Padding: (Left: 10, Right: 10, Top: 8, Bottom: 8);
+          Background: #00000000;
+          Style: ButtonStyle(
+            Default: (Background: #00000000),
+            Hovered: (Background: #ffffff(0.08)),
+            Pressed: (Background: #ffffff(0.03)),
+            Sounds: $C.@ButtonSounds,
           );
-          Text: "Settings";
+
+          Label #SettingsLabel {
+            Style: (
+              FontSize: 16,
+              RenderBold: true,
+              TextColor: #93844c
+            );
+            Text: "Settings";
+          }
         }
       }
 
-      Button #PlaytimeButton {
-        LayoutMode: Left;
+      Group {
         Anchor: (Left: 2, Right: 2, Top: 8, Height: 46, Width: 390);
         Background: $C.@InputBoxBackground;
-        Padding: (Left: 10, Right: 10, Top: 8);
-        Style: ButtonStyle(
-          Sounds: $C.@ButtonSounds,
-        );
 
-        Label #PlaytimeLabel {
-          Style: (
-            FontSize: 16,
-            RenderBold: true,
-            TextColor: #93844c
+        Button #PlaytimeButton {
+          Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+          LayoutMode: Left;
+          Padding: (Left: 10, Right: 10, Top: 8, Bottom: 8);
+          Background: #00000000;
+          Style: ButtonStyle(
+            Default: (Background: #00000000),
+            Hovered: (Background: #ffffff(0.08)),
+            Pressed: (Background: #ffffff(0.03)),
+            Sounds: $C.@ButtonSounds,
           );
-          Text: "Playtime";
+
+          Label #PlaytimeLabel {
+            Style: (
+              FontSize: 16,
+              RenderBold: true,
+              TextColor: #93844c
+            );
+            Text: "Playtime";
+          }
         }
       }
 
-      Button #PopulationButton {
-        LayoutMode: Left;
+      Group {
         Anchor: (Left: 2, Right: 2, Top: 8, Height: 46, Width: 390);
         Background: $C.@InputBoxBackground;
-        Padding: (Left: 10, Right: 10, Top: 8);
-        Style: ButtonStyle(
-          Sounds: $C.@ButtonSounds,
-        );
 
-        Label #PopulationLabel {
-          Style: (
-            FontSize: 16,
-            RenderBold: true,
-            TextColor: #93844c
+        Button #PopulationButton {
+          Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+          LayoutMode: Left;
+          Padding: (Left: 10, Right: 10, Top: 8, Bottom: 8);
+          Background: #00000000;
+          Style: ButtonStyle(
+            Default: (Background: #00000000),
+            Hovered: (Background: #ffffff(0.08)),
+            Pressed: (Background: #ffffff(0.03)),
+            Sounds: $C.@ButtonSounds,
           );
-          Text: "Population History";
+
+          Label #PopulationLabel {
+            Style: (
+              FontSize: 16,
+              RenderBold: true,
+              TextColor: #93844c
+            );
+            Text: "Population History";
+          }
         }
       }
 
-      Button #GlobalMessageButton {
-        LayoutMode: Left;
+      Group {
         Anchor: (Left: 2, Right: 2, Top: 8, Height: 46, Width: 390);
         Background: $C.@InputBoxBackground;
-        Padding: (Left: 10, Right: 10, Top: 8);
-        Style: ButtonStyle(
-          Sounds: $C.@ButtonSounds,
-        );
 
-        Label #GlobalMessageLabel {
-          Style: (
-            FontSize: 16,
-            RenderBold: true,
-            TextColor: #93844c
+        Button #GlobalMessageButton {
+          Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+          LayoutMode: Left;
+          Padding: (Left: 10, Right: 10, Top: 8, Bottom: 8);
+          Background: #00000000;
+          Style: ButtonStyle(
+            Default: (Background: #00000000),
+            Hovered: (Background: #ffffff(0.08)),
+            Pressed: (Background: #ffffff(0.03)),
+            Sounds: $C.@ButtonSounds,
           );
-          Text: "Global Messages";
+
+          Label #GlobalMessageLabel {
+            Style: (
+              FontSize: 16,
+              RenderBold: true,
+              TextColor: #93844c
+            );
+            Text: "Global Messages";
+          }
         }
       }
 
@@ -171,9 +227,21 @@ $C.@PageOverlay {
         Style: (FontSize: 14, TextColor: #ffffff(0.85));
       }
 
-      $C.@TextButton #AnnouncementSendButton {
+      TextButton #AnnouncementSendButton {
         Anchor: (Height: 22, Width: 140, Top: 6);
+        Padding: (Left: 8, Top: 2);
         Text: "Broadcast";
+        Style: TextButtonStyle(
+          Default: (
+            Background: #000000(0.13),
+            LabelStyle: (FontSize: 14, TextColor: #93844c, RenderBold: true)
+          ),
+          Hovered: (
+            Background: #000000(0.22),
+            LabelStyle: (FontSize: 14, TextColor: #93844c, RenderBold: true)
+          ),
+          Sounds: $C.@ButtonSounds,
+        );
       }
 
     }

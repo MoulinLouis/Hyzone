@@ -85,7 +85,7 @@ public class LeaderboardMenuPage extends BaseParkourPage {
         commandBuilder.append("#MenuCards", "Pages/Parkour_LeaderboardMenuEntry.ui");
         commandBuilder.set("#MenuCards[0] #EntryName.Text", "Global");
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
-                "#MenuCards[0]",
+                "#MenuCards[0] #SelectButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_GLOBAL), false);
 
         Set<String> categories = new LinkedHashSet<>();
@@ -99,7 +99,7 @@ public class LeaderboardMenuPage extends BaseParkourPage {
             commandBuilder.append("#MenuCards", "Pages/Parkour_LeaderboardMenuEntry.ui");
             commandBuilder.set("#MenuCards[" + index + "] #EntryName.Text", category);
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
-                    "#MenuCards[" + index + "]",
+                    "#MenuCards[" + index + "] #SelectButton",
                     EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CATEGORY_PREFIX + category), false);
             index++;
         }

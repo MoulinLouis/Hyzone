@@ -108,7 +108,7 @@ public class CategorySelectPage extends BaseParkourPage {
             commandBuilder.set("#CategoryCards[" + index + "] #CategoryProgress.Text",
                     completed + "/" + total + " Completed");
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
-                    "#CategoryCards[" + index + "]",
+                    "#CategoryCards[" + index + "] #SelectButton",
                     EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_SELECT_PREFIX + category), false);
             index++;
         }
