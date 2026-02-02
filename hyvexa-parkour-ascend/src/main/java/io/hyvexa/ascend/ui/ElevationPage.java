@@ -91,28 +91,27 @@ public class ElevationPage extends BaseAscendPage {
         }
 
         UUID playerId = playerRef.getUuid();
-        long coins = playerStore.getCoins(playerId);
-        int currentLevel = playerStore.getElevationLevel(playerId);
+        double coins = playerStore.getCoins(playerId);
+        int currentElevation = playerStore.getElevationLevel(playerId);
 
         // Get cost multiplier from skill tree
         double costMultiplier = getCostMultiplier(playerId);
 
         // Calculate how many levels can be purchased
-        ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(currentLevel, coins, costMultiplier);
+        ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(currentElevation, coins, costMultiplier);
 
         if (purchase.levels <= 0) {
-            long nextCost = AscendConstants.getElevationLevelUpCost(currentLevel, costMultiplier);
+            long nextCost = AscendConstants.getElevationLevelUpCost(currentElevation, costMultiplier);
             player.sendMessage(Message.raw("[Ascend] You need " + FormatUtils.formatCoinsForHud(nextCost) + " coins to elevate.")
                 .color(SystemMessageUtils.SECONDARY));
             return;
         }
 
-        // Deduct the cost and add levels
+        // Deduct the cost and add elevation
         playerStore.setCoins(playerId, coins - purchase.cost);
-        int newLevel = playerStore.addElevationLevel(playerId, purchase.levels);
-        double newMultiplier = AscendConstants.calculateElevationMultiplier(newLevel);
+        int newElevation = playerStore.addElevationLevel(playerId, purchase.levels);
 
-        player.sendMessage(Message.raw("[Ascend] Elevation +" + purchase.levels + " (Lv." + newLevel + " = x" + formatMultiplier(newMultiplier) + ")!")
+        player.sendMessage(Message.raw("[Ascend] Elevation +" + purchase.levels + " (x" + newElevation + ")!")
             .color(SystemMessageUtils.SUCCESS));
 
         // Check achievements
@@ -140,7 +139,12 @@ public class ElevationPage extends BaseAscendPage {
                 stopAutoRefresh();
                 return;
             }
-            CompletableFuture.runAsync(() -> refreshDisplay(ref, store), world);
+            try {
+                CompletableFuture.runAsync(() -> refreshDisplay(ref, store), world);
+            } catch (Exception e) {
+                active = false;
+                stopAutoRefresh();
+            }
         }, REFRESH_INTERVAL_MS, REFRESH_INTERVAL_MS, TimeUnit.MILLISECONDS);
     }
 
@@ -153,11 +157,18 @@ public class ElevationPage extends BaseAscendPage {
 
     private void refreshDisplay(Ref<EntityStore> ref, Store<EntityStore> store) {
         if (!active) {
+            stopAutoRefresh();
             return;
         }
-        UICommandBuilder commandBuilder = new UICommandBuilder();
-        updateDisplay(ref, store, commandBuilder);
-        sendUpdate(commandBuilder, null, false);
+        try {
+            UICommandBuilder commandBuilder = new UICommandBuilder();
+            updateDisplay(ref, store, commandBuilder);
+            sendUpdate(commandBuilder, null, false);
+        } catch (Exception e) {
+            // Page was replaced, stop refreshing
+            active = false;
+            stopAutoRefresh();
+        }
     }
 
     private void updateDisplay(Ref<EntityStore> ref, Store<EntityStore> store, UICommandBuilder commandBuilder) {
@@ -167,44 +178,42 @@ public class ElevationPage extends BaseAscendPage {
         }
 
         UUID playerId = playerRef.getUuid();
-        long coins = playerStore.getCoins(playerId);
-        int currentLevel = playerStore.getElevationLevel(playerId);
-        double currentMultiplier = AscendConstants.calculateElevationMultiplier(currentLevel);
+        double coins = playerStore.getCoins(playerId);
+        int currentElevation = playerStore.getElevationLevel(playerId);
 
         // Get cost multiplier from skill tree
         double costMultiplier = getCostMultiplier(playerId);
 
         // Calculate purchase info
-        ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(currentLevel, coins, costMultiplier);
-        int newLevel = currentLevel + purchase.levels;
-        double newMultiplier = AscendConstants.calculateElevationMultiplier(newLevel);
-        long nextLevelCost = AscendConstants.getElevationLevelUpCost(currentLevel, costMultiplier);
+        ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(currentElevation, coins, costMultiplier);
+        int newElevation = currentElevation + purchase.levels;
+        long nextCost = AscendConstants.getElevationLevelUpCost(currentElevation, costMultiplier);
 
         // Update coin display
-        commandBuilder.set("#CoinsValue.Text", FormatUtils.formatCoinsForHud(coins));
+        commandBuilder.set("#CoinsValue.Text", FormatUtils.formatCoinsForHudDecimal(coins));
 
-        // Update conversion rate display (show cost for next level)
-        String costText = "Next level: " + FormatUtils.formatCoinsForHud(nextLevelCost) + " coins";
+        // Update conversion rate display (show cost for next elevation)
+        String costText = "Next: " + FormatUtils.formatCoinsForHud(nextCost) + " coins";
         if (costMultiplier < 1.0) {
             costText += " (-" + Math.round((1.0 - costMultiplier) * 100) + "%)";
         }
         commandBuilder.set("#ConversionRate.Text", costText);
 
-        // Update current multiplier display (show level and multiplier)
-        commandBuilder.set("#MultiplierValue.Text", "Lv." + currentLevel + " (x" + formatMultiplier(currentMultiplier) + ")");
+        // Update current elevation display
+        commandBuilder.set("#MultiplierValue.Text", "x" + currentElevation);
 
-        // Update new multiplier display and gain
+        // Update new elevation display and gain
         if (purchase.levels > 0) {
-            commandBuilder.set("#NewMultiplierValue.Text", "Lv." + newLevel + " (x" + formatMultiplier(newMultiplier) + ")");
+            commandBuilder.set("#NewMultiplierValue.Text", "x" + newElevation);
             commandBuilder.set("#NewMultiplierValue.Style.TextColor", "#4ade80");
-            commandBuilder.set("#GainValue.Text", "+" + purchase.levels + " level" + (purchase.levels > 1 ? "s" : ""));
+            commandBuilder.set("#GainValue.Text", "+" + purchase.levels);
             commandBuilder.set("#GainValue.Style.TextColor", "#4ade80");
             commandBuilder.set("#ArrowLabel.Style.TextColor", "#4ade80");
             commandBuilder.set("#ElevateButton.Text", "ELEVATE NOW");
         } else {
-            commandBuilder.set("#NewMultiplierValue.Text", "Lv." + currentLevel);
+            commandBuilder.set("#NewMultiplierValue.Text", "x" + currentElevation);
             commandBuilder.set("#NewMultiplierValue.Style.TextColor", "#6b7280");
-            commandBuilder.set("#GainValue.Text", "Need " + FormatUtils.formatCoinsForHud(nextLevelCost - coins) + " more");
+            commandBuilder.set("#GainValue.Text", "Need " + FormatUtils.formatCoinsForHudDecimal(nextCost - coins) + " more");
             commandBuilder.set("#GainValue.Style.TextColor", "#6b7280");
             commandBuilder.set("#ArrowLabel.Style.TextColor", "#6b7280");
             commandBuilder.set("#ElevateButton.Text", "NEED MORE COINS");

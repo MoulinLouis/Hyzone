@@ -1,5 +1,19 @@
 # Changelog
 
+- Simplify elevation system: elevation IS the multiplier directly:
+  - Removed "Lv." prefix from HUD and all displays.
+  - Elevation value = multiplier value (e.g., elevation 200 = x200 multiplier).
+  - No more level-to-multiplier conversion formula.
+  - Removed `calculateElevationMultiplier()` function.
+  - HUD shows elevation as a standard multiplier (e.g., "x200.00").
+- Display coins and gain per run with 2 decimal places in Ascend:
+  - Changed coin storage from `long` to `double` throughout the codebase for fractional precision.
+  - Database columns `coins` and `total_coins_earned` automatically migrated from BIGINT to DOUBLE on startup.
+  - Coin payouts (manual runs, robots) now preserve decimal precision instead of using `Math.floor`.
+  - `getCompletionPayout()` returns `double` instead of `long`.
+  - All coin displays now show exactly 2 decimal places (e.g., "1234.00", "1.50").
+  - Affects HUD display, `/ascend` command output, Elevation page, Summit page, Ascension page, and admin panel.
+  - Fixed payout calculation order: coins are now awarded BEFORE the multiplier increases, so players get the payout based on their current multiplier, not the new one.
 - Add teleport buttons to Ascend map select page:
   - **Spawn button**: Teleports player to configurable spawn location.
   - **NPC button**: Teleports player to configurable NPC location.

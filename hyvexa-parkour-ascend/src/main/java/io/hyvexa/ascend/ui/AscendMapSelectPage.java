@@ -421,7 +421,12 @@ public class AscendMapSelectPage extends BaseAscendPage {
                 stopAutoRefresh();
                 return;
             }
-            CompletableFuture.runAsync(() -> refreshRunRates(ref, store), world);
+            try {
+                CompletableFuture.runAsync(() -> refreshRunRates(ref, store), world);
+            } catch (Exception e) {
+                active = false;
+                stopAutoRefresh();
+            }
         }, 2000L, 1000L, TimeUnit.MILLISECONDS);
     }
 
@@ -434,8 +439,19 @@ public class AscendMapSelectPage extends BaseAscendPage {
 
     private void refreshRunRates(Ref<EntityStore> ref, Store<EntityStore> store) {
         if (!active) {
+            stopAutoRefresh();
             return;
         }
+        try {
+            doRefreshRunRates(ref, store);
+        } catch (Exception e) {
+            // Page was replaced, stop refreshing
+            active = false;
+            stopAutoRefresh();
+        }
+    }
+
+    private void doRefreshRunRates(Ref<EntityStore> ref, Store<EntityStore> store) {
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (playerRef == null) {
             return;

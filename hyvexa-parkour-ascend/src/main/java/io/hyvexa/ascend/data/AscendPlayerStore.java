@@ -63,13 +63,13 @@ public class AscendPlayerStore {
                 while (rs.next()) {
                     UUID uuid = UUID.fromString(rs.getString("uuid"));
                     AscendPlayerProgress progress = new AscendPlayerProgress();
-                    progress.setCoins(rs.getLong("coins"));
+                    progress.setCoins(rs.getDouble("coins"));
                     progress.setElevationMultiplier(rs.getInt("elevation_multiplier"));
                     // Load new fields (with fallback for older schema)
                     try {
                         progress.setAscensionCount(rs.getInt("ascension_count"));
                         progress.setSkillTreePoints(rs.getInt("skill_tree_points"));
-                        progress.setTotalCoinsEarned(rs.getLong("total_coins_earned"));
+                        progress.setTotalCoinsEarned(rs.getDouble("total_coins_earned"));
                         progress.setTotalManualRuns(rs.getInt("total_manual_runs"));
                         progress.setActiveTitle(rs.getString("active_title"));
                     } catch (SQLException ignored) {
@@ -218,13 +218,13 @@ public class AscendPlayerStore {
     public void resetPlayerProgress(UUID playerId) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
         // Reset basic progression
-        progress.setCoins(0L);
+        progress.setCoins(0.0);
         progress.setElevationMultiplier(1);
         progress.getMapProgress().clear();
 
         // Reset Summit system
         progress.clearSummitLevels();
-        progress.setTotalCoinsEarned(0L);
+        progress.setTotalCoinsEarned(0.0);
 
         // Reset Ascension/Skill Tree
         progress.setAscensionCount(0);
@@ -294,14 +294,14 @@ public class AscendPlayerStore {
         queueSave();
     }
 
-    public long getCoins(UUID playerId) {
+    public double getCoins(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
-        return progress != null ? progress.getCoins() : 0L;
+        return progress != null ? progress.getCoins() : 0.0;
     }
 
-    public void setCoins(UUID playerId, long coins) {
+    public void setCoins(UUID playerId, double coins) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        progress.setCoins(Math.max(0L, coins));
+        progress.setCoins(Math.max(0.0, coins));
         markDirty(playerId);
     }
 
@@ -324,12 +324,11 @@ public class AscendPlayerStore {
     }
 
     /**
-     * Calculate the actual elevation multiplier from the player's level.
-     * Uses diminishing returns formula: 1 + 0.1 * level^0.65
+     * Get the player's elevation multiplier.
+     * The stored value IS the multiplier directly (no conversion).
      */
     public double getCalculatedElevationMultiplier(UUID playerId) {
-        int level = getElevationLevel(playerId);
-        return AscendConstants.calculateElevationMultiplier(level);
+        return getElevationLevel(playerId);
     }
 
     /**
@@ -377,13 +376,13 @@ public class AscendPlayerStore {
         return true;
     }
 
-    public void addCoins(UUID playerId, long amount) {
+    public void addCoins(UUID playerId, double amount) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
         progress.addCoins(amount);
         markDirty(playerId);
     }
 
-    public boolean spendCoins(UUID playerId, long amount) {
+    public boolean spendCoins(UUID playerId, double amount) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
         if (progress.getCoins() < amount) {
             return false;
@@ -518,13 +517,13 @@ public class AscendPlayerStore {
         return category.getBonusForLevel(level);
     }
 
-    public long getTotalCoinsEarned(UUID playerId) {
+    public double getTotalCoinsEarned(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
-        return progress != null ? progress.getTotalCoinsEarned() : 0L;
+        return progress != null ? progress.getTotalCoinsEarned() : 0.0;
     }
 
-    public void addTotalCoinsEarned(UUID playerId, long amount) {
-        if (amount <= 0) {
+    public void addTotalCoinsEarned(UUID playerId, double amount) {
+        if (amount <= 0.0) {
             return;
         }
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
@@ -687,11 +686,15 @@ public class AscendPlayerStore {
     }
 
     public long getMultiplierProduct(UUID playerId, List<AscendMap> maps, int slotCount) {
+        return (long) Math.floor(getMultiplierProductDecimal(playerId, maps, slotCount));
+    }
+
+    public double getMultiplierProductDecimal(UUID playerId, List<AscendMap> maps, int slotCount) {
         double product = 1.0;
         int slots = Math.max(0, slotCount);
         if (maps == null || maps.isEmpty() || slots == 0) {
             double elevation = getCalculatedElevationMultiplier(playerId);
-            return (long) Math.floor(product * elevation);
+            return product * elevation;
         }
         int index = 0;
         for (AscendMap map : maps) {
@@ -706,15 +709,15 @@ public class AscendPlayerStore {
             index++;
         }
         double elevation = getCalculatedElevationMultiplier(playerId);
-        return (long) Math.floor(product * elevation);
+        return product * elevation;
     }
 
-    public long getCompletionPayout(UUID playerId, List<AscendMap> maps, int slotCount, String mapId, double bonusAmount) {
+    public double getCompletionPayout(UUID playerId, List<AscendMap> maps, int slotCount, String mapId, double bonusAmount) {
         double product = 1.0;
         int slots = Math.max(0, slotCount);
         if (maps == null || maps.isEmpty() || slots == 0) {
             double elevation = getCalculatedElevationMultiplier(playerId);
-            return (long) Math.floor(product * elevation);
+            return product * elevation;
         }
         int index = 0;
         for (AscendMap map : maps) {
@@ -732,7 +735,7 @@ public class AscendPlayerStore {
             index++;
         }
         double elevation = getCalculatedElevationMultiplier(playerId);
-        return (long) Math.floor(product * elevation);
+        return product * elevation;
     }
 
     public void flushPendingSave() {
@@ -828,11 +831,11 @@ public class AscendPlayerStore {
 
                 // Save player base data
                 playerStmt.setString(1, playerId.toString());
-                playerStmt.setLong(2, progress.getCoins());
+                playerStmt.setDouble(2, progress.getCoins());
                 playerStmt.setInt(3, progress.getElevationMultiplier());
                 playerStmt.setInt(4, progress.getAscensionCount());
                 playerStmt.setInt(5, progress.getSkillTreePoints());
-                playerStmt.setLong(6, progress.getTotalCoinsEarned());
+                playerStmt.setDouble(6, progress.getTotalCoinsEarned());
                 playerStmt.setInt(7, progress.getTotalManualRuns());
                 playerStmt.setString(8, progress.getActiveTitle());
                 playerStmt.addBatch();

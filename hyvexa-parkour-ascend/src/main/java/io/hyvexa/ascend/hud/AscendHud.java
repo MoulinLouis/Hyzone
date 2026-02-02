@@ -24,7 +24,7 @@ public class AscendHud extends CustomUIHud {
 
     // Track previous values for effect triggering
     private double[] lastDigits;
-    private long lastCoins;
+    private double lastCoins;
 
     public AscendHud(PlayerRef playerRef) {
         super(playerRef);
@@ -46,12 +46,12 @@ public class AscendHud extends CustomUIHud {
         update(false, commandBuilder);
     }
 
-    public void updateEconomy(long coins, long product, double[] digits, int elevationLevel, double elevationMultiplier, boolean showElevation) {
-        String coinsText = FormatUtils.formatCoinsForHud(coins);
-        String coinsPerRunText = FormatUtils.formatCoinsForHud(product) + "/run";
+    public void updateEconomy(double coins, double product, double[] digits, double elevation, boolean showElevation) {
+        String coinsText = FormatUtils.formatCoinsForHudDecimal(coins);
+        String coinsPerRunText = FormatUtils.formatCoinsForHudDecimal(product) + "/run";
         String digitsKey = buildDigitsKey(digits);
-        String elevationText = showElevation ? ("Lv." + elevationLevel + " (x" + formatMultiplier(elevationMultiplier) + ")") : "";
-        String elevationValueText = "Lv." + elevationLevel;
+        String elevationText = showElevation ? ("x" + formatMultiplier(elevation)) : "";
+        String elevationValueText = formatMultiplier(elevation);
         // Check if values changed OR if we have active effects to process
         boolean valuesChanged = !coinsText.equals(lastCoinsText)
             || !coinsPerRunText.equals(lastCoinsPerRunText)
@@ -108,7 +108,7 @@ public class AscendHud extends CustomUIHud {
             commandBuilder.set("#TopElevationValue.Text", elevationValueText);
             commandBuilder.set("#ElevationHud.Visible", showElevation);
             if (showElevation) {
-                commandBuilder.set("#ElevationStatusText.Text", "Current Multiplier " + elevationText);
+                commandBuilder.set("#ElevationStatusText.Text", "Elevation " + elevationText);
             }
         }
 

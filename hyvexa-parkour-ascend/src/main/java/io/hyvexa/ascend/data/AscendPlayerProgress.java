@@ -10,13 +10,13 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class AscendPlayerProgress {
 
-    private long coins;
+    private double coins;
     private int elevationMultiplier = 1;
     private final Map<String, MapProgress> mapProgress = new ConcurrentHashMap<>();
 
     // Summit System - levels per category
     private final Map<AscendConstants.SummitCategory, Integer> summitLevels = new ConcurrentHashMap<>();
-    private long totalCoinsEarned; // Lifetime coins for achievements
+    private double totalCoinsEarned; // Lifetime coins for achievements
 
     // Ascension System
     private int ascensionCount;
@@ -30,16 +30,16 @@ public class AscendPlayerProgress {
     private int consecutiveManualRuns; // For chain bonus tracking
     private boolean sessionFirstRunClaimed;
 
-    public long getCoins() {
+    public double getCoins() {
         return coins;
     }
 
-    public void setCoins(long coins) {
+    public void setCoins(double coins) {
         this.coins = coins;
     }
 
-    public void addCoins(long amount) {
-        this.coins = Math.max(0, this.coins + amount);
+    public void addCoins(double amount) {
+        this.coins = Math.max(0.0, this.coins + amount);
     }
 
     public int getElevationMultiplier() {
@@ -94,17 +94,17 @@ public class AscendPlayerProgress {
         summitLevels.clear();
     }
 
-    public long getTotalCoinsEarned() {
+    public double getTotalCoinsEarned() {
         return totalCoinsEarned;
     }
 
-    public void setTotalCoinsEarned(long totalCoinsEarned) {
-        this.totalCoinsEarned = Math.max(0, totalCoinsEarned);
+    public void setTotalCoinsEarned(double totalCoinsEarned) {
+        this.totalCoinsEarned = Math.max(0.0, totalCoinsEarned);
     }
 
-    public void addTotalCoinsEarned(long amount) {
-        if (amount > 0) {
-            this.totalCoinsEarned = Math.max(0, this.totalCoinsEarned + amount);
+    public void addTotalCoinsEarned(double amount) {
+        if (amount > 0.0) {
+            this.totalCoinsEarned = Math.max(0.0, this.totalCoinsEarned + amount);
         }
     }
 

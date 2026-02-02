@@ -125,8 +125,8 @@ public class AscendAdminCoinsPage extends InteractiveCustomUIPage<AscendAdminCoi
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (playerRef != null) {
             AscendPlayerStore playerStore = ParkourAscendPlugin.getInstance().getPlayerStore();
-            long coins = playerStore != null ? playerStore.getCoins(playerRef.getUuid()) : 0L;
-            commandBuilder.set("#CurrentCoinsValue.Text", FormatUtils.formatCoinsForHud(coins));
+            double coins = playerStore != null ? playerStore.getCoins(playerRef.getUuid()) : 0.0;
+            commandBuilder.set("#CurrentCoinsValue.Text", FormatUtils.formatCoinsForHudDecimal(coins));
         }
 
         // Location statuses
@@ -167,8 +167,8 @@ public class AscendAdminCoinsPage extends InteractiveCustomUIPage<AscendAdminCoi
                 .color(SystemMessageUtils.SECONDARY));
         }
         UICommandBuilder commandBuilder = new UICommandBuilder();
-        long coins = playerStore.getCoins(playerRef.getUuid());
-        commandBuilder.set("#CurrentCoinsValue.Text", FormatUtils.formatCoinsForHud(coins));
+        double coins = playerStore.getCoins(playerRef.getUuid());
+        commandBuilder.set("#CurrentCoinsValue.Text", FormatUtils.formatCoinsForHudDecimal(coins));
         sendUpdate(commandBuilder, null, false);
     }
 

@@ -102,12 +102,11 @@ public class AscendCommand extends AbstractAsyncCommand {
         }
         AscendPlayerStore playerStore = plugin.getPlayerStore();
         UUID playerId = playerRef.getUuid();
-        long coins = playerStore.getCoins(playerId);
+        double coins = playerStore.getCoins(playerId);
         AscendMapStore mapStore = plugin.getMapStore();
         List<AscendMap> maps = mapStore != null ? mapStore.listMapsSorted() : List.of();
-        long product = playerStore.getMultiplierProduct(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
-        int elevationLevel = playerStore.getElevationLevel(playerId);
-        double elevationMultiplier = playerStore.getCalculatedElevationMultiplier(playerId);
+        double product = playerStore.getMultiplierProductDecimal(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
+        double elevation = playerStore.getCalculatedElevationMultiplier(playerId);
         double[] digits = playerStore.getMultiplierDisplayValues(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
         StringBuilder digitsText = new StringBuilder();
         for (int i = 0; i < digits.length; i++) {
@@ -117,8 +116,9 @@ public class AscendCommand extends AbstractAsyncCommand {
             digitsText.append(String.format(Locale.US, "%.2f", Math.max(1.0, digits[i])));
         }
 
-        player.sendMessage(Message.raw("[Ascend] Coins: " + formatLargeNumber(coins) + " | Product: " + product
-            + " | Elevation: Lv." + elevationLevel + " (x" + String.format(Locale.US, "%.2f", elevationMultiplier) + ")")
+        String productText = product == Math.floor(product) ? String.valueOf((long) product) : String.format(Locale.US, "%.2f", product);
+        player.sendMessage(Message.raw("[Ascend] Coins: " + formatLargeNumber(coins) + " | Product: " + productText
+            + " | Elevation: x" + String.format(Locale.US, "%.2f", elevation))
             .color(SystemMessageUtils.PRIMARY_TEXT));
         player.sendMessage(Message.raw("[Ascend] Digits: " + digitsText)
             .color(SystemMessageUtils.SECONDARY));
@@ -148,7 +148,7 @@ public class AscendCommand extends AbstractAsyncCommand {
         }
 
         // Show lifetime stats
-        long totalEarned = playerStore.getTotalCoinsEarned(playerId);
+        double totalEarned = playerStore.getTotalCoinsEarned(playerId);
         int totalRuns = playerStore.getTotalManualRuns(playerId);
         player.sendMessage(Message.raw("[Stats] Total Earned: " + formatLargeNumber(totalEarned)
             + " | Manual Runs: " + totalRuns)
@@ -294,17 +294,21 @@ public class AscendCommand extends AbstractAsyncCommand {
         }
     }
 
-    private static String formatLargeNumber(long number) {
-        if (number >= 1_000_000_000_000L) {
+    private static String formatLargeNumber(double number) {
+        if (number >= 1_000_000_000_000.0) {
             return String.format(Locale.US, "%.2fT", number / 1_000_000_000_000.0);
-        } else if (number >= 1_000_000_000L) {
+        } else if (number >= 1_000_000_000.0) {
             return String.format(Locale.US, "%.2fB", number / 1_000_000_000.0);
-        } else if (number >= 1_000_000L) {
+        } else if (number >= 1_000_000.0) {
             return String.format(Locale.US, "%.2fM", number / 1_000_000.0);
-        } else if (number >= 1_000L) {
+        } else if (number >= 1_000.0) {
             return String.format(Locale.US, "%.2fK", number / 1_000.0);
         }
-        return String.valueOf(number);
+        if (number == Math.floor(number)) {
+            return String.valueOf((long) number);
+        }
+        String formatted = String.format(Locale.US, "%.2f", number);
+        return formatted.replaceAll("0+$", "").replaceAll("\\.$", "");
     }
 
     private void openMapMenu(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {

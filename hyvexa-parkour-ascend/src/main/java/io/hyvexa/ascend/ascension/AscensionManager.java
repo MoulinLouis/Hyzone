@@ -31,7 +31,7 @@ public class AscensionManager {
      * Checks if a player can perform an Ascension.
      */
     public boolean canAscend(UUID playerId) {
-        long coins = playerStore.getCoins(playerId);
+        double coins = playerStore.getCoins(playerId);
         return coins >= AscendConstants.ASCENSION_COIN_THRESHOLD;
     }
 
@@ -41,7 +41,7 @@ public class AscensionManager {
      * @return the new Ascension count, or -1 if insufficient coins
      */
     public int performAscension(UUID playerId) {
-        long coins = playerStore.getCoins(playerId);
+        double coins = playerStore.getCoins(playerId);
         if (coins < AscendConstants.ASCENSION_COIN_THRESHOLD) {
             LOGGER.atInfo().log("[Ascension] Player " + playerId + " has insufficient coins: " + coins);
             return -1;
@@ -66,7 +66,7 @@ public class AscensionManager {
         }
 
         // Reset progress
-        progress.setCoins(0L);
+        progress.setCoins(0.0);
         progress.setElevationMultiplier(1);
         progress.clearSummitLevels();
 
@@ -84,7 +84,7 @@ public class AscensionManager {
 
         // Apply starting coins skill
         if (progress.hasSkillNode(SkillTreeNode.COIN_T1_STARTING_COINS)) {
-            progress.setCoins(1000L);
+            progress.setCoins(1000.0);
         }
 
         playerStore.markDirty(playerId);

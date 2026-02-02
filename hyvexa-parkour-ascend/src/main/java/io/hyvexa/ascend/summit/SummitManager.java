@@ -25,7 +25,7 @@ public class SummitManager {
      * Checks if a player can perform a Summit in any category.
      */
     public boolean canSummit(UUID playerId) {
-        long coins = playerStore.getCoins(playerId);
+        double coins = playerStore.getCoins(playerId);
         return coins >= AscendConstants.SUMMIT_MIN_COINS;
     }
 
@@ -34,7 +34,7 @@ public class SummitManager {
      * if they spent all their coins.
      */
     public SummitPreview previewSummit(UUID playerId, SummitCategory category) {
-        long coins = playerStore.getCoins(playerId);
+        double coins = playerStore.getCoins(playerId);
         int currentLevel = playerStore.getSummitLevel(playerId, category);
         int newLevel = AscendConstants.calculateSummitLevel(
             AscendConstants.getCoinsForSummitLevel(currentLevel) + coins
@@ -61,7 +61,7 @@ public class SummitManager {
      * @return the new Summit level, or -1 if insufficient coins
      */
     public int performSummit(UUID playerId, SummitCategory category) {
-        long coins = playerStore.getCoins(playerId);
+        double coins = playerStore.getCoins(playerId);
         if (coins < AscendConstants.SUMMIT_MIN_COINS) {
             LOGGER.atInfo().log("[Summit] Player " + playerId + " has insufficient coins: " + coins);
             return -1;
@@ -79,7 +79,7 @@ public class SummitManager {
 
         // Apply Summit: set new level, reset coins and elevation
         playerStore.addSummitLevel(playerId, category, levelGain);
-        playerStore.setCoins(playerId, 0L);
+        playerStore.setCoins(playerId, 0.0);
 
         // Reset elevation to 1
         var progress = playerStore.getPlayer(playerId);
@@ -129,7 +129,7 @@ public class SummitManager {
         int levelGain,
         double currentBonus,
         double newBonus,
-        long coinsToSpend
+        double coinsToSpend
     ) {
         public double bonusGain() {
             return newBonus - currentBonus;

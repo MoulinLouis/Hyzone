@@ -127,13 +127,10 @@ public final class AscendConstants {
     // Elevation System (First Prestige)
     // ========================================
 
-    // Elevation uses a level-based system with exponential costs and diminishing returns
-    // Formula: cost(level) = BASE_COST * COST_GROWTH^level
-    // Formula: multiplier(level) = 1 + MULT_COEFFICIENT * level^MULT_EXPONENT
+    // Elevation is a direct multiplier (elevation value = multiplier value)
+    // Cost formula: BASE_COST * COST_GROWTH^currentElevation
     public static final long ELEVATION_BASE_COST = 1000L;
-    public static final double ELEVATION_COST_GROWTH = 1.08;  // +8% cost per level
-    public static final double ELEVATION_MULT_COEFFICIENT = 0.1;  // Base multiplier gain
-    public static final double ELEVATION_MULT_EXPONENT = 0.65;  // Diminishing returns exponent
+    public static final double ELEVATION_COST_GROWTH = 1.08;  // +8% cost per elevation
 
     /**
      * Calculate the cost to reach the next elevation level.
@@ -154,21 +151,10 @@ public final class AscendConstants {
     }
 
     /**
-     * Calculate the actual multiplier value for a given elevation level.
-     * Multiplier = 1 + 0.1 * level^0.65 (diminishing returns)
-     */
-    public static double calculateElevationMultiplier(int level) {
-        if (level <= 0) {
-            return 1.0;
-        }
-        return 1.0 + ELEVATION_MULT_COEFFICIENT * Math.pow(level, ELEVATION_MULT_EXPONENT);
-    }
-
-    /**
      * Calculate how many levels can be purchased with given coins at current level.
      * Returns the number of levels affordable and the total cost.
      */
-    public static ElevationPurchaseResult calculateElevationPurchase(int currentLevel, long availableCoins) {
+    public static ElevationPurchaseResult calculateElevationPurchase(int currentLevel, double availableCoins) {
         return calculateElevationPurchase(currentLevel, availableCoins, 1.0);
     }
 
@@ -178,9 +164,9 @@ public final class AscendConstants {
      * @param availableCoins Coins available to spend
      * @param costMultiplier Cost modifier (1.0 = full cost, 0.8 = 20% discount)
      */
-    public static ElevationPurchaseResult calculateElevationPurchase(int currentLevel, long availableCoins, double costMultiplier) {
+    public static ElevationPurchaseResult calculateElevationPurchase(int currentLevel, double availableCoins, double costMultiplier) {
         int levelsAffordable = 0;
-        long totalCost = 0;
+        double totalCost = 0.0;
         int level = currentLevel;
 
         while (true) {
@@ -198,9 +184,9 @@ public final class AscendConstants {
 
     public static class ElevationPurchaseResult {
         public final int levels;
-        public final long cost;
+        public final double cost;
 
-        public ElevationPurchaseResult(int levels, long cost) {
+        public ElevationPurchaseResult(int levels, double cost) {
             this.levels = levels;
             this.cost = cost;
         }
@@ -269,7 +255,7 @@ public final class AscendConstants {
     public static final int SUMMIT_MAX_LEVEL = SUMMIT_LEVEL_THRESHOLDS.length;
     public static final long SUMMIT_MIN_COINS = SUMMIT_LEVEL_THRESHOLDS[0];
 
-    public static int calculateSummitLevel(long coinsSpent) {
+    public static int calculateSummitLevel(double coinsSpent) {
         if (coinsSpent < SUMMIT_LEVEL_THRESHOLDS[0]) {
             return 0;
         }
