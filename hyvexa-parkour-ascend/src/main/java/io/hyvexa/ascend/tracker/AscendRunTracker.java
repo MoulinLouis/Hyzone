@@ -32,11 +32,13 @@ public class AscendRunTracker {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final double FINISH_RADIUS_SQ = 2.25; // 1.5^2
+    private static final double MOVEMENT_THRESHOLD_SQ = 0.01; // 0.1^2 - minimum movement to start run
 
     private final AscendMapStore mapStore;
     private final AscendPlayerStore playerStore;
     private final GhostRecorder ghostRecorder;
     private final Map<UUID, ActiveRun> activeRuns = new ConcurrentHashMap<>();
+    private final Map<UUID, PendingRun> pendingRuns = new ConcurrentHashMap<>();
 
     public AscendRunTracker(AscendMapStore mapStore, AscendPlayerStore playerStore, GhostRecorder ghostRecorder) {
         this.mapStore = mapStore;
@@ -50,6 +52,7 @@ public class AscendRunTracker {
             return;
         }
 
+        pendingRuns.remove(playerId);
         activeRuns.put(playerId, new ActiveRun(mapId, System.currentTimeMillis()));
 
         // Start ghost recording
@@ -58,8 +61,22 @@ public class AscendRunTracker {
         }
     }
 
+    public void setPendingRun(UUID playerId, String mapId, Vector3d startPos) {
+        // Cancel any existing active run first
+        activeRuns.remove(playerId);
+        pendingRuns.remove(playerId);
+
+        // Cancel ghost recording if there was an active run
+        if (ghostRecorder != null) {
+            ghostRecorder.cancelRecording(playerId);
+        }
+
+        pendingRuns.put(playerId, new PendingRun(mapId, startPos));
+    }
+
     public void cancelRun(UUID playerId) {
         activeRuns.remove(playerId);
+        pendingRuns.remove(playerId);
 
         // Cancel ghost recording
         if (ghostRecorder != null) {
@@ -69,7 +86,27 @@ public class AscendRunTracker {
 
     public String getActiveMapId(UUID playerId) {
         ActiveRun run = activeRuns.get(playerId);
-        return run != null ? run.mapId : null;
+        if (run != null) {
+            return run.mapId;
+        }
+        PendingRun pending = pendingRuns.get(playerId);
+        return pending != null ? pending.mapId : null;
+    }
+
+    public Long getElapsedTimeMs(UUID playerId) {
+        ActiveRun run = activeRuns.get(playerId);
+        if (run == null) {
+            return null;
+        }
+        return System.currentTimeMillis() - run.startTimeMs;
+    }
+
+    public boolean isRunActive(UUID playerId) {
+        return activeRuns.containsKey(playerId);
+    }
+
+    public boolean isPendingRun(UUID playerId) {
+        return pendingRuns.containsKey(playerId);
     }
 
     public void checkPlayer(Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -81,18 +118,35 @@ public class AscendRunTracker {
             return;
         }
 
-        ActiveRun run = activeRuns.get(playerRef.getUuid());
+        UUID playerId = playerRef.getUuid();
+        Vector3d pos = transform.getPosition();
+
+        // Check for pending run - start timer when player moves from start position
+        PendingRun pendingRun = pendingRuns.get(playerId);
+        if (pendingRun != null) {
+            double dx = pos.getX() - pendingRun.startPos.getX();
+            double dy = pos.getY() - pendingRun.startPos.getY();
+            double dz = pos.getZ() - pendingRun.startPos.getZ();
+
+            if (dx * dx + dy * dy + dz * dz > MOVEMENT_THRESHOLD_SQ) {
+                // Player has moved - start the actual run
+                startRun(playerId, pendingRun.mapId);
+                player.sendMessage(Message.raw("[Ascend] Timer started!").color(SystemMessageUtils.SUCCESS));
+            }
+            return;
+        }
+
+        ActiveRun run = activeRuns.get(playerId);
         if (run == null) {
             return;
         }
 
         AscendMap map = mapStore.getMap(run.mapId);
         if (map == null) {
-            activeRuns.remove(playerRef.getUuid());
+            activeRuns.remove(playerId);
             return;
         }
 
-        Vector3d pos = transform.getPosition();
         double dx = pos.getX() - map.getFinishX();
         double dy = pos.getY() - map.getFinishY();
         double dz = pos.getZ() - map.getFinishZ();
@@ -214,6 +268,11 @@ public class AscendRunTracker {
             plugin.getAchievementManager().checkAndUnlockAchievements(playerId, player);
         }
 
+        // Give back menu items
+        if (plugin != null) {
+            plugin.giveMenuItems(player);
+        }
+
         Vector3d startPos = new Vector3d(map.getStartX(), map.getStartY(), map.getStartZ());
         Vector3f startRot = new Vector3f(map.getStartRotX(), map.getStartRotY(), map.getStartRotZ());
         store.addComponent(ref, Teleport.getComponentType(),
@@ -236,7 +295,8 @@ public class AscendRunTracker {
         store.addComponent(ref, Teleport.getComponentType(),
             new Teleport(store.getExternalData().getWorld(), pos, rot));
 
-        startRun(playerRef.getUuid(), mapId);
+        // Set pending run - timer will start when player moves
+        setPendingRun(playerRef.getUuid(), mapId, pos);
     }
 
     private static class ActiveRun {
@@ -246,6 +306,16 @@ public class AscendRunTracker {
         ActiveRun(String mapId, long startTimeMs) {
             this.mapId = mapId;
             this.startTimeMs = startTimeMs;
+        }
+    }
+
+    private static class PendingRun {
+        final String mapId;
+        final Vector3d startPos;
+
+        PendingRun(String mapId, Vector3d startPos) {
+            this.mapId = mapId;
+            this.startPos = startPos;
         }
     }
 }

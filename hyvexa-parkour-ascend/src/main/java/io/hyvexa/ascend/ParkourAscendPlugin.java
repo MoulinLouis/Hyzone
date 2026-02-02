@@ -32,6 +32,8 @@ import io.hyvexa.ascend.hud.AscendHud;
 import io.hyvexa.ascend.interaction.AscendDevCinderclothInteraction;
 import io.hyvexa.ascend.interaction.AscendDevCottonInteraction;
 import io.hyvexa.ascend.interaction.AscendDevStormsilkInteraction;
+import io.hyvexa.ascend.interaction.AscendResetInteraction;
+import io.hyvexa.ascend.interaction.AscendLeaveInteraction;
 import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.summit.SummitManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
@@ -344,6 +346,15 @@ public class ParkourAscendPlugin extends JavaPlugin {
             int ascensionCount = store.getAscensionCount(playerId);
             int skillPoints = store.getAvailableSkillPoints(playerId);
             hud.updatePrestige(summitLevels, ascensionCount, skillPoints);
+
+            // Update run timer HUD
+            if (runTracker != null) {
+                boolean isRunning = runTracker.isRunActive(playerId);
+                boolean isPending = runTracker.isPendingRun(playerId);
+                boolean showTimer = isRunning || isPending;
+                Long elapsedMs = isRunning ? runTracker.getElapsedTimeMs(playerId) : 0L;
+                hud.updateTimer(elapsedMs, showTimer);
+            }
         } catch (Exception e) {
             LOGGER.at(Level.WARNING).withCause(e).log("Failed to update Ascend HUD for player " + playerId);
         }
@@ -483,5 +494,56 @@ public class ParkourAscendPlugin extends JavaPlugin {
             AscendDevStormsilkInteraction.class, AscendDevStormsilkInteraction.CODEC);
         registry.register("Ascend_Dev_Cotton_Interaction",
             AscendDevCottonInteraction.class, AscendDevCottonInteraction.CODEC);
+        registry.register("Ascend_Reset_Interaction",
+            AscendResetInteraction.class, AscendResetInteraction.CODEC);
+        registry.register("Ascend_Leave_Interaction",
+            AscendLeaveInteraction.class, AscendLeaveInteraction.CODEC);
+    }
+
+    public void giveRunItems(Player player) {
+        if (player == null) {
+            return;
+        }
+        Inventory inventory = player.getInventory();
+        if (inventory == null) {
+            return;
+        }
+        clearContainer(inventory.getHotbar());
+        clearContainer(inventory.getStorage());
+        clearContainer(inventory.getBackpack());
+        clearContainer(inventory.getTools());
+        clearContainer(inventory.getUtility());
+        clearContainer(inventory.getArmor());
+        ItemContainer hotbar = inventory.getHotbar();
+        if (hotbar == null || hotbar.getCapacity() <= 0) {
+            return;
+        }
+        hotbar.setItemStackForSlot((short) 0, new ItemStack(AscendConstants.ITEM_RESET, 1), false);
+        hotbar.setItemStackForSlot((short) 1, new ItemStack(AscendConstants.ITEM_LEAVE, 1), false);
+    }
+
+    public void giveMenuItems(Player player) {
+        if (player == null) {
+            return;
+        }
+        Inventory inventory = player.getInventory();
+        if (inventory == null) {
+            return;
+        }
+        clearContainer(inventory.getHotbar());
+        clearContainer(inventory.getStorage());
+        clearContainer(inventory.getBackpack());
+        clearContainer(inventory.getTools());
+        clearContainer(inventory.getUtility());
+        clearContainer(inventory.getArmor());
+        ItemContainer hotbar = inventory.getHotbar();
+        if (hotbar == null || hotbar.getCapacity() <= 0) {
+            return;
+        }
+        hotbar.setItemStackForSlot((short) 0, new ItemStack(AscendConstants.ITEM_DEV_CINDERCLOTH, 1), false);
+        hotbar.setItemStackForSlot((short) 1, new ItemStack(AscendConstants.ITEM_DEV_STORMSILK, 1), false);
+        hotbar.setItemStackForSlot((short) 2, new ItemStack(AscendConstants.ITEM_DEV_COTTON, 1), false);
+        short slot = (short) (hotbar.getCapacity() - 1);
+        hotbar.setItemStackForSlot(slot, new ItemStack("Hub_Server_Selector", 1), false);
     }
 }

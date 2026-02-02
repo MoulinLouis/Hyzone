@@ -21,6 +21,8 @@ public class AscendHud extends CustomUIHud {
     private Boolean lastElevationVisible;
     private String lastPrestigeKey;
     private Boolean lastPrestigeVisible;
+    private String lastTimerText;
+    private Boolean lastTimerVisible;
 
     // Track previous values for effect triggering
     private double[] lastDigits;
@@ -119,6 +121,30 @@ public class AscendHud extends CustomUIHud {
         update(false, commandBuilder);
     }
 
+    public void updateTimer(Long elapsedMs, boolean visible) {
+        String timerText = elapsedMs != null ? formatTimer(elapsedMs) : "0.000";
+
+        if (timerText.equals(lastTimerText) && Boolean.valueOf(visible).equals(lastTimerVisible)) {
+            return;
+        }
+
+        lastTimerText = timerText;
+        lastTimerVisible = visible;
+
+        UICommandBuilder commandBuilder = new UICommandBuilder();
+        commandBuilder.set("#RunTimerHud.Visible", visible);
+        if (visible) {
+            commandBuilder.set("#RunTimerValue.Text", timerText);
+        }
+        update(false, commandBuilder);
+    }
+
+    private static String formatTimer(long elapsedMs) {
+        long seconds = elapsedMs / 1000;
+        long millis = elapsedMs % 1000;
+        return String.format(java.util.Locale.US, "%d.%03d", seconds, millis);
+    }
+
     public void resetCache() {
         lastStaticKey = null;
         lastCoinsText = null;
@@ -129,6 +155,8 @@ public class AscendHud extends CustomUIHud {
         lastElevationVisible = null;
         lastPrestigeKey = null;
         lastPrestigeVisible = null;
+        lastTimerText = null;
+        lastTimerVisible = null;
         lastDigits = null;
         lastCoins = 0;
         effectManager.clearEffects();

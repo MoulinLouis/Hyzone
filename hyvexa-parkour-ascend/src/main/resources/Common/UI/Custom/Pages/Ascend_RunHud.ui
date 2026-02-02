@@ -211,6 +211,35 @@ $C.@PageOverlay {
       }
     }
 
+    Group #RunTimerHud {
+      Anchor: (Left: 0, Right: 0, Top: 118, Height: 36);
+      Background: #000000(0.0);
+      Visible: false;
+
+      Group #RunTimerBox {
+        Anchor: (Left: 0, Right: 0, Top: 0, Height: 36);
+        LayoutMode: Left;
+
+        Group { FlexWeight: 1; }
+        Group #RunTimerFrame {
+          Anchor: (Width: 160, Height: 36);
+          Background: #000000(0.55);
+
+          Label #RunTimerValue {
+            Anchor: (Left: 0, Right: 0, Top: 2, Height: 26);
+            Style: (
+              FontSize: 26,
+              TextColor: #00FF00,
+              RenderBold: true,
+              HorizontalAlignment: Center
+            );
+            Text: "0.000";
+          }
+        }
+        Group { FlexWeight: 1; }
+      }
+    }
+
     Group #RunHudRoot {
       Anchor: (Right: 20, Top: 400, Width: 320, Height: 280);
       Background: #000000(0.0);

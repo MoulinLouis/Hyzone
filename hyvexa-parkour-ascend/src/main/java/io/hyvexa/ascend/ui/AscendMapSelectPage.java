@@ -133,7 +133,12 @@ public class AscendMapSelectPage extends BaseAscendPage {
         Player player = store.getComponent(ref, Player.getComponentType());
         if (player != null) {
             String mapName = map.getName() != null && !map.getName().isBlank() ? map.getName() : map.getId();
-            player.sendMessage(Message.raw("[Ascend] Run started: " + mapName));
+            player.sendMessage(Message.raw("[Ascend] Ready: " + mapName + " - Move to start!"));
+            // Give run items (reset + leave)
+            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+            if (plugin != null) {
+                plugin.giveRunItems(player);
+            }
         }
         this.close();
     }
@@ -622,10 +627,14 @@ public class AscendMapSelectPage extends BaseAscendPage {
 
         store.addComponent(ref, Teleport.getComponentType(), new Teleport(world, pos, rot));
 
-        // Cancel any active run
+        // Cancel any active run and give menu items
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (playerRef != null && runTracker != null) {
             runTracker.cancelRun(playerRef.getUuid());
+        }
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player != null && plugin != null) {
+            plugin.giveMenuItems(player);
         }
 
         this.close();
@@ -650,10 +659,14 @@ public class AscendMapSelectPage extends BaseAscendPage {
 
         store.addComponent(ref, Teleport.getComponentType(), new Teleport(world, pos, rot));
 
-        // Cancel any active run
+        // Cancel any active run and give menu items
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (playerRef != null && runTracker != null) {
             runTracker.cancelRun(playerRef.getUuid());
+        }
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player != null && plugin != null) {
+            plugin.giveMenuItems(player);
         }
 
         this.close();

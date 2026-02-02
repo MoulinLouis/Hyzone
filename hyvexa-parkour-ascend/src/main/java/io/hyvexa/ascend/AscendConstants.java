@@ -8,10 +8,14 @@ public final class AscendConstants {
     // Database
     public static final String TABLE_PREFIX = "ascend_";
 
-    // Items
+    // Items - Menu
     public static final String ITEM_DEV_CINDERCLOTH = "Ingredient_Bolt_Cindercloth";
     public static final String ITEM_DEV_STORMSILK = "Ingredient_Bolt_Stormsilk";
     public static final String ITEM_DEV_COTTON = "Ingredient_Bolt_Cotton";
+
+    // Items - In-Run
+    public static final String ITEM_RESET = "Ascend_Reset_Block";
+    public static final String ITEM_LEAVE = "Ascend_Leave_Block";
 
     // Economy
     public static final double SPEED_UPGRADE_MULTIPLIER = 0.15; // +15% speed per level
