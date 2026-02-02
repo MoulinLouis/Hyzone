@@ -1,5 +1,11 @@
 # Changelog
 
+- Add total jump count tracking for players:
+  - Tracks every jump (onGround → airborne transition) per player, cumulative forever.
+  - New `jump_count BIGINT` column in `players` table.
+  - Jumps are batched in memory and flushed to database via existing queueSave() debounce (5s).
+  - Displayed in the Stats page ("Total Jumps: X").
+  - Minimal performance impact: single boolean comparison per tick per player, periodic batch save.
 - Implement 5 retention features to improve new player onboarding and reduce early churn:
   - **Mandatory 3-screen tutorial** replaces command-heavy welcome page:
     - Screen 1: Welcome message with Continue button.

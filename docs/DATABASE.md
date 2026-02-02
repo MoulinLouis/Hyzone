@@ -23,12 +23,14 @@ CREATE TABLE players (
   playtime_ms BIGINT NOT NULL,
   vip BOOLEAN NOT NULL DEFAULT FALSE,
   founder BOOLEAN NOT NULL DEFAULT FALSE,
-  teleport_item_use_count INT NOT NULL DEFAULT 0
+  teleport_item_use_count INT NOT NULL DEFAULT 0,
+  jump_count BIGINT NOT NULL DEFAULT 0
 ) ENGINE=InnoDB;
 ```
 
 Notes:
 - `teleport_item_use_count` tracks how many times the player has used the Map Selector teleport item (for showing hints during first 5 uses)
+- `jump_count` tracks the total number of jumps the player has ever made (cumulative)
 
 ## maps
 Stores map definitions and primary transforms.

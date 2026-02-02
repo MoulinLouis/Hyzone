@@ -72,7 +72,7 @@ public class ProgressStore {
     }
 
     private void loadPlayers() {
-        String sql = "SELECT uuid, name, xp, level, welcome_shown, playtime_ms, vip, founder, teleport_item_use_count FROM players";
+        String sql = "SELECT uuid, name, xp, level, welcome_shown, playtime_ms, vip, founder, teleport_item_use_count, jump_count FROM players";
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -88,6 +88,7 @@ public class ProgressStore {
                     playerProgress.vip = rs.getBoolean("vip");
                     playerProgress.founder = rs.getBoolean("founder");
                     playerProgress.teleportItemUseCount = rs.getInt("teleport_item_use_count");
+                    playerProgress.jumpCount = rs.getLong("jump_count");
 
                     progress.put(uuid, playerProgress);
 
@@ -706,6 +707,26 @@ public class ProgressStore {
         return playerProgress != null ? playerProgress.playtimeMs : 0L;
     }
 
+    public long getJumpCount(UUID playerId) {
+        PlayerProgress playerProgress = progress.get(playerId);
+        return playerProgress != null ? playerProgress.jumpCount : 0L;
+    }
+
+    public void addJumps(UUID playerId, String playerName, int count) {
+        if (playerId == null || count <= 0) return;
+
+        fileLock.writeLock().lock();
+        try {
+            PlayerProgress playerProgress = progress.computeIfAbsent(playerId, ignored -> new PlayerProgress());
+            storePlayerName(playerId, playerName);
+            playerProgress.jumpCount = Math.max(0L, playerProgress.jumpCount + count);
+            dirtyPlayers.add(playerId);
+        } finally {
+            fileLock.writeLock().unlock();
+        }
+        queueSave();
+    }
+
     private static int calculateLevel(long xp) {
         long[] thresholds = ParkourConstants.RANK_XP_REQUIREMENTS;
         int rankCount = Math.min(ParkourConstants.RANK_NAMES.length, thresholds.length);
@@ -832,12 +853,13 @@ public class ProgressStore {
         if (toSave.isEmpty()) return;
 
         String sql = """
-            INSERT INTO players (uuid, name, xp, level, welcome_shown, playtime_ms, vip, founder, teleport_item_use_count)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO players (uuid, name, xp, level, welcome_shown, playtime_ms, vip, founder, teleport_item_use_count, jump_count)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 name = VALUES(name), xp = VALUES(xp), level = VALUES(level),
                 welcome_shown = VALUES(welcome_shown), playtime_ms = VALUES(playtime_ms),
-                vip = VALUES(vip), founder = VALUES(founder), teleport_item_use_count = VALUES(teleport_item_use_count)
+                vip = VALUES(vip), founder = VALUES(founder), teleport_item_use_count = VALUES(teleport_item_use_count),
+                jump_count = VALUES(jump_count)
             """;
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
@@ -857,6 +879,7 @@ public class ProgressStore {
                 stmt.setBoolean(7, playerProgress.vip);
                 stmt.setBoolean(8, playerProgress.founder);
                 stmt.setInt(9, playerProgress.teleportItemUseCount);
+                stmt.setLong(10, playerProgress.jumpCount);
                 stmt.addBatch();
             }
             stmt.executeBatch();
@@ -916,6 +939,7 @@ public class ProgressStore {
         boolean vip;
         boolean founder;
         int teleportItemUseCount = 0;
+        long jumpCount = 0L;
     }
 
     private static class LeaderboardCache {
