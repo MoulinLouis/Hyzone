@@ -35,7 +35,7 @@ Quick reference for AI agents working on this Hytale plugin project.
 1. **Update CHANGELOG.md** after completing each feature
 2. **Follow existing patterns** - check similar files before implementing
 3. **No build runs** - owner handles `./gradlew build`
-4. **UI paths use forward slashes** - `"Common/UI/Custom/Pages/X.ui"`
+4. **UI paths** - Code uses `"Pages/X.ui"`, files go in `Common/UI/Custom/Pages/`
 5. **Check ref validity** - `if (ref == null || !ref.isValid()) return;`
 6. **World thread for entity ops** - use `world.execute(() -> ...)` or `CompletableFuture.runAsync(..., world)`
 7. **Entity removal** - use `store.removeEntity(ref, RemoveReason.REMOVE)`

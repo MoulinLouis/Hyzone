@@ -114,7 +114,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
         if (HylogramsBridge.isAvailable()) {
             hologramManager = new AscendHologramManager();
-            if (mapStore != null) {
+            if (mapStore != null && hologramManager != null) {
                 for (var map : mapStore.listMaps()) {
                     hologramManager.refreshMapHolosIfPresent(map, null);
                 }
@@ -158,7 +158,10 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     resetAscendInventory(player);
                     ensureAscendItems(player);
                     attachAscendHud(playerRef, player);
-                }, world);
+                }, world).exceptionally(ex -> {
+                    LOGGER.at(Level.WARNING).withCause(ex).log("Exception in PlayerReadyEvent async task");
+                    return null;
+                });
             } catch (Exception e) {
                 LOGGER.at(Level.WARNING).log("Exception in PlayerReadyEvent (ascend): " + e.getMessage());
             }
@@ -295,7 +298,10 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     runTracker.checkPlayer(context.ref, context.store);
                     updateAscendHud(context);
                 }
-            }, world);
+            }, world).exceptionally(ex -> {
+                LOGGER.at(Level.WARNING).withCause(ex).log("Exception in tickRunTracker async task");
+                return null;
+            });
         }
     }
 
@@ -318,21 +324,28 @@ public class ParkourAscendPlugin extends JavaPlugin {
             return;
         }
         hud.applyStaticText();
-        if (playerStore != null) {
-            double coins = playerStore.getCoins(playerId);
-            List<AscendMap> maps = mapStore != null ? mapStore.listMapsSorted() : List.of();
-            double product = playerStore.getMultiplierProductDecimal(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
-            double[] digits = playerStore.getMultiplierDisplayValues(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
-            double elevation = playerStore.getCalculatedElevationMultiplier(playerId);
+        AscendPlayerStore store = playerStore;
+        AscendMapStore maps = mapStore;
+        if (store == null) {
+            return;
+        }
+        try {
+            double coins = store.getCoins(playerId);
+            List<AscendMap> mapList = maps != null ? maps.listMapsSorted() : List.of();
+            double product = store.getMultiplierProductDecimal(playerId, mapList, AscendConstants.MULTIPLIER_SLOTS);
+            double[] digits = store.getMultiplierDisplayValues(playerId, mapList, AscendConstants.MULTIPLIER_SLOTS);
+            double elevation = store.getCalculatedElevationMultiplier(playerId);
             long nextElevationCost = AscendConstants.getElevationLevelUpCost((int) elevation);
             boolean showElevation = coins >= nextElevationCost;
             hud.updateEconomy(coins, product, digits, elevation, showElevation);
 
             // Update prestige HUD
-            var summitLevels = playerStore.getSummitLevels(playerId);
-            int ascensionCount = playerStore.getAscensionCount(playerId);
-            int skillPoints = playerStore.getAvailableSkillPoints(playerId);
+            var summitLevels = store.getSummitLevels(playerId);
+            int ascensionCount = store.getAscensionCount(playerId);
+            int skillPoints = store.getAvailableSkillPoints(playerId);
             hud.updatePrestige(summitLevels, ascensionCount, skillPoints);
+        } catch (Exception e) {
+            LOGGER.at(Level.WARNING).withCause(e).log("Failed to update Ascend HUD for player " + playerId);
         }
     }
 

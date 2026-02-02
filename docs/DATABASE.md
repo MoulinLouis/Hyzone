@@ -413,3 +413,26 @@ Notes:
 - Single row with `id = 1`
 - `spawn_*` fields store the spawn teleport location (configurable via `/as admin` panel)
 - `npc_*` fields store the NPC teleport location (configurable via `/as admin` panel)
+
+## ascend_ghost_recordings
+Stores ghost recordings for runner replay (personal best movement paths).
+
+Suggested schema:
+```sql
+CREATE TABLE ascend_ghost_recordings (
+  player_uuid VARCHAR(36) NOT NULL,
+  map_id VARCHAR(32) NOT NULL,
+  recording_blob MEDIUMBLOB NOT NULL,
+  completion_time_ms BIGINT NOT NULL,
+  recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (player_uuid, map_id)
+) ENGINE=InnoDB;
+```
+
+Notes:
+- `recording_blob` contains GZIP-compressed binary data with position/rotation samples at 50ms intervals
+- Maximum ~12,000 samples allowed (10 minutes max recording) to prevent DoS
+- Typical recording size: 5-10 KB per map after compression
+- `completion_time_ms` stores the player's personal best time for this recording
+- Recordings are only saved when achieving a new personal best
+- Table is created automatically by `GhostStore.ensureGhostTableExists()` on startup

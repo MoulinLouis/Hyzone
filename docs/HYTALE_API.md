@@ -86,7 +86,7 @@ world.execute(() -> {
 
 1. **Entity refs expire** - Always check `ref.isValid()` before use
 2. **World thread required** - Use `CompletableFuture.runAsync(..., world)` for entity/world ops
-3. **UI paths** - Use forward slashes: `"Common/UI/Custom/Pages/MyPage.ui"`
+3. **UI paths** - Code uses `"Pages/MyPage.ui"`, files go in `Common/UI/Custom/Pages/`
 4. **Inventory access** - Need `Player` component, not just `PlayerRef`
 5. **Event registration** - Use `getEventRegistry().registerGlobal(...)` in `setup()`
 
