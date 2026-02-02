@@ -3,35 +3,38 @@
     "Name": "Game Selector",
     "Description": "Server selection item."
   },
-  "Icon": "Icons/ItemsGenerated/golem.png",
+  "Icon": "Icons/ItemsGenerated/Golem_Hyvexa.png",
   "Categories": [
     "Items.Tools"
   ],
-  "Model": "Blocks/Miscellaneous/Kweebec_Plush.blockymodel",
-  "Texture": "Blocks/Miscellaneous/Kweebec_Plush_Texture.png",
-  "PlayerAnimationsId": "Item",
-  "ResourceTypes": [
-    {
-      "Id": "Fuel"
-    }
-  ],
+  "Model": "Items/Tools/Golem/Golem Hyvexa.blockymodel",
+  "Texture": "Items/Tools/Golem/Golem Hyvexa.png",
+  "PlayerAnimationsId": "Block",
   "IconProperties": {
-    "Scale": 1.21,
+    "Scale": 0.9,
     "Rotation": [
-      67.0,
-      330.0,
-      0.0
+      0,
+      179,
+      0
     ],
     "Translation": [
-      1.3,
-      -1.0
+      0,
+      -15
     ]
   },
   "ItemEntity": {
     "ParticleSystemId": null
   },
-  "ItemSoundSetId": "ISS_Blocks_Wood",
+  "MaxStack": 1,
+  "ItemSoundSetId": "ISS_Blocks_Stone",
   "Quality": "Developer",
+  "Scale": 1.5,
+  "Particles": [
+    {
+      "Color": "#63f479",
+      "SystemId": "GreenOrbTrail"
+    }
+  ],
   "Interactions": {
     "Secondary": "Hub_Server_Selector"
   }
