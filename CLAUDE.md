@@ -87,6 +87,11 @@ Use `grepai search` INSTEAD OF Grep/Glob/find for:
 
 ### When to Use Standard Tools
 
+**CRITICAL: DO NOT use grepai to search HytaleServer.jar (the Hytale API).**
+- grepai is configured ONLY for the plugin code, NOT HytaleServer.jar
+- To understand Hytale API classes/methods → Read **docs/HYTALE_API.md**
+- To find plugin code → grepai is OK
+
 Only use Grep/Glob when you need:
 - Exact text matching (variable names, imports, specific strings)
 - File path patterns (e.g., `**/*.go`)
@@ -98,6 +103,18 @@ Only use Grep/Glob when you need:
 ✅ grepai search "UI page selection logic" --json --compact
 ✅ grepai search "parkour checkpoint saving" --json --compact
 ✅ grepai search "player teleportation between modes" --json --compact
+```
+
+**Use grepai for plugin code, NOT for Hytale API:**
+```bash
+✅ grepai search "parkour checkpoint logic" --json --compact  # Plugin code - OK
+✅ grepai search "elevation menu handling" --json --compact   # Plugin code - OK
+
+❌ grepai search "how EntityRef works"  # Hytale API - NOT indexed
+✅ Read docs/HYTALE_API.md  # To learn about Hytale API
+
+❌ grepai search "World execute method"  # Hytale API - NOT indexed
+✅ Read docs/HYTALE_API.md  # To learn about Hytale API
 ```
 
 **Use grep for exact matches:**
