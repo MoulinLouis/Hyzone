@@ -53,6 +53,19 @@ public class AscensionManager {
         int newPoints = progress.addSkillTreePoints(1);
         int newAscensionCount = progress.incrementAscensionCount();
 
+        // Update ascension timer stats
+        Long startedAt = progress.getAscensionStartedAt();
+        if (startedAt != null) {
+            long elapsed = System.currentTimeMillis() - startedAt;
+            Long fastest = progress.getFastestAscensionMs();
+            if (fastest == null || elapsed < fastest) {
+                progress.setFastestAscensionMs(elapsed);
+                LOGGER.atInfo().log("[Ascension] Player " + playerId + " new fastest ascension: " + elapsed + "ms");
+            }
+        }
+        // Reset timer for next ascension
+        progress.setAscensionStartedAt(System.currentTimeMillis());
+
         // Check for Summit Persistence skill
         boolean hasSummitPersist = progress.hasSkillNode(SkillTreeNode.HYBRID_SUMMIT_PERSIST);
         Map<SummitCategory, Integer> preservedLevels = null;

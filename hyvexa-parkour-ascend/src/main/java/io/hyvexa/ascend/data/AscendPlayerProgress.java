@@ -30,6 +30,10 @@ public class AscendPlayerProgress {
     private int consecutiveManualRuns; // For chain bonus tracking
     private boolean sessionFirstRunClaimed;
 
+    // Ascension Timer (for stats tracking)
+    private Long ascensionStartedAt; // Timestamp when current ascension run started
+    private Long fastestAscensionMs; // Best ascension time in milliseconds
+
     public double getCoins() {
         return coins;
     }
@@ -233,6 +237,26 @@ public class AscendPlayerProgress {
 
     public void setSessionFirstRunClaimed(boolean sessionFirstRunClaimed) {
         this.sessionFirstRunClaimed = sessionFirstRunClaimed;
+    }
+
+    // ========================================
+    // Ascension Timer (Stats)
+    // ========================================
+
+    public Long getAscensionStartedAt() {
+        return ascensionStartedAt;
+    }
+
+    public void setAscensionStartedAt(Long ascensionStartedAt) {
+        this.ascensionStartedAt = ascensionStartedAt;
+    }
+
+    public Long getFastestAscensionMs() {
+        return fastestAscensionMs;
+    }
+
+    public void setFastestAscensionMs(Long fastestAscensionMs) {
+        this.fastestAscensionMs = fastestAscensionMs;
     }
 
     public static class MapProgress {

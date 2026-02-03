@@ -319,6 +319,25 @@ public final class AscendDatabaseSetup {
                 LOGGER.at(Level.SEVERE).log("Failed to add active_title column: " + e.getMessage());
             }
         }
+
+        // Ascension timer columns (for stats tracking)
+        if (!columnExists(conn, "ascend_players", "ascension_started_at")) {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN ascension_started_at BIGINT DEFAULT NULL");
+                LOGGER.atInfo().log("Added ascension_started_at column to ascend_players");
+            } catch (SQLException e) {
+                LOGGER.at(Level.SEVERE).log("Failed to add ascension_started_at column: " + e.getMessage());
+            }
+        }
+
+        if (!columnExists(conn, "ascend_players", "fastest_ascension_ms")) {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN fastest_ascension_ms BIGINT DEFAULT NULL");
+                LOGGER.atInfo().log("Added fastest_ascension_ms column to ascend_players");
+            } catch (SQLException e) {
+                LOGGER.at(Level.SEVERE).log("Failed to add fastest_ascension_ms column: " + e.getMessage());
+            }
+        }
     }
 
     private static void ensureGhostRecordingTable(Connection conn) {
