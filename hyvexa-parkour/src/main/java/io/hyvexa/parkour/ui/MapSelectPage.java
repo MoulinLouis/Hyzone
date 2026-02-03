@@ -121,12 +121,14 @@ public class MapSelectPage extends BaseParkourPage {
                 })
                 .thenComparing(map -> map.getName() != null ? map.getName() : map.getId(),
                         String.CASE_INSENSITIVE_ORDER));
+        String accentColor = UIColorUtils.getCategoryAccentColor(category);
         int index = 0;
         for (Map map : maps) {
             if (!FormatUtils.normalizeCategory(map.getCategory()).equalsIgnoreCase(category)) {
                 continue;
             }
             commandBuilder.append("#MapCards", "Pages/Parkour_MapSelectEntry.ui");
+            commandBuilder.set("#MapCards[" + index + "] #AccentBar.Background", accentColor);
             boolean completed = progressStore.isMapCompleted(playerRef.getUuid(), map.getId());
             Long bestTime = progressStore.getBestTimeMs(playerRef.getUuid(), map.getId());
             String status = completed ? "Completed" : "Not completed";

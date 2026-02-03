@@ -1,20 +1,24 @@
 $C = "../Common.ui";
 
 Group {
-  LayoutMode: Top;
-  Anchor: (Left: 2, Right: 2, Bottom: 6, Height: 52, Width: 470);
-  Background: $C.@InputBoxBackground;
+  LayoutMode: Left;
+  Anchor: (Left: 0, Right: 0, Bottom: 8, Height: 60);
+  Background: #1a2530(0.95);
+
+  Group #AccentBar {
+    Anchor: (Width: 8, Top: 0, Bottom: 0);
+    Background: #10b981;
+  }
 
   Button #SelectButton {
-    Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
     FlexWeight: 1;
-    Padding: (Left: 10, Right: 10, Top: 6, Bottom: 6);
+    Padding: (Left: 12, Top: 10, Bottom: 10);
     Background: #00000000;
     LayoutMode: Top;
     Style: ButtonStyle(
       Default: (Background: #00000000),
-      Hovered: (Background: #ffffff(0.08)),
-      Pressed: (Background: #ffffff(0.03)),
+      Hovered: (Background: #ffffff(0.05)),
+      Pressed: (Background: #ffffff(0.02)),
       Sounds: $C.@ButtonSounds,
     );
 
@@ -22,7 +26,7 @@ Group {
       Style: (
         FontSize: 15,
         RenderBold: true,
-        TextColor: #93844c
+        TextColor: #f0f4f8
       );
       Text: "Map";
     }

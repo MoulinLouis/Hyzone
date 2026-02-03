@@ -2,36 +2,46 @@ $C = "../Common.ui";
 
 Group {
   LayoutMode: Left;
-  Anchor: (Left: 2, Right: 2, Bottom: 6, Height: 46, Width: 470);
-  Background: $C.@InputBoxBackground;
-  Padding: (Left: 10, Right: 10, Top: 8);
+  Anchor: (Left: 0, Right: 0, Bottom: 6, Height: 44);
+  Background: #1a2530(0.95);
 
-  Label #Rank {
-    Anchor: (Width: 46);
-    Style: (
-      FontSize: 14,
-      RenderBold: true,
-      TextColor: #93844c
-    );
-    Text: "1";
+  Group #AccentBar {
+    Anchor: (Width: 8, Top: 0, Bottom: 0);
+    Background: #9fb0ba;
   }
 
-  Label #PlayerName {
+  Group #ContentRow {
     FlexWeight: 1;
-    Style: (
-      FontSize: 14,
-      TextColor: #cfd7dc
-    );
-    Text: "Player";
-  }
+    Padding: (Left: 12, Right: 12, Top: 12);
+    LayoutMode: Left;
 
-  Label #Time {
-    Anchor: (Width: 74, Right: 0);
-    Style: (
-      FontSize: 13,
-      RenderBold: true,
-      TextColor: #9fb0ba
-    );
-    Text: "0.00s";
+    Label #Rank {
+      Anchor: (Width: 46);
+      Style: (
+        FontSize: 14,
+        RenderBold: true,
+        TextColor: #f0f4f8
+      );
+      Text: "1";
+    }
+
+    Label #PlayerName {
+      FlexWeight: 1;
+      Style: (
+        FontSize: 14,
+        TextColor: #cfd7dc
+      );
+      Text: "Player";
+    }
+
+    Label #Time {
+      Anchor: (Width: 74, Right: 0);
+      Style: (
+        FontSize: 13,
+        RenderBold: true,
+        TextColor: #9fb0ba
+      );
+      Text: "0.00s";
+    }
   }
 }

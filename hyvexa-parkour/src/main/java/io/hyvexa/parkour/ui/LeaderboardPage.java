@@ -151,6 +151,8 @@ public class LeaderboardPage extends InteractiveCustomUIPage<LeaderboardPage.Lea
         for (int i = start; i < end; i++) {
             LeaderboardRow row = filtered.get(i);
             commandBuilder.append("#LeaderboardCards", "Pages/Parkour_LeaderboardEntry.ui");
+            String accentColor = UIColorUtils.getRankAccentColor(row.rank);
+            commandBuilder.set("#LeaderboardCards[" + index + "] #AccentBar.Background", accentColor);
             commandBuilder.set("#LeaderboardCards[" + index + "] #Rank.Text", String.valueOf(row.rank));
             commandBuilder.set("#LeaderboardCards[" + index + "] #PlayerName.Text", row.name);
             commandBuilder.set("#LeaderboardCards[" + index + "] #Completion.Text",
