@@ -194,8 +194,11 @@ public class AscendMapSelectPage extends BaseAscendPage {
             // Update progress bar visibility based on speed level
             updateProgressBar(commandBuilder, index, speedLevel);
 
-            // Level text for button zone with star display
-            String levelText = buildStarDisplay(stars, speedLevel);
+            // Update star visibility
+            updateStarDisplay(commandBuilder, index, stars);
+
+            // Level text for button zone
+            String levelText = buildLevelText(stars, speedLevel);
 
             // Map name
             commandBuilder.set("#MapCards[" + index + "] #MapName.Text", mapName);
@@ -240,16 +243,25 @@ public class AscendMapSelectPage extends BaseAscendPage {
                 }
             }
 
-            String priceText = actionPrice > 0 ? (FormatUtils.formatCoinsForHud(actionPrice) + " coins") : "Free";
-            if ((speedLevel >= MAX_SPEED_LEVEL && hasRobot) || runnerButtonText.equals("Maxed!")) {
-                priceText = "";
+            // Combine button text and price for "Upgrade" case to save vertical space
+            String displayButtonText;
+            String displayPriceText;
+            if (runnerButtonText.equals("Upgrade") && actionPrice > 0) {
+                displayButtonText = "Cost:";
+                displayPriceText = FormatUtils.formatCoinsForHudDecimal(actionPrice) + " coins";
+            } else {
+                displayButtonText = runnerButtonText;
+                displayPriceText = actionPrice > 0 ? (FormatUtils.formatCoinsForHudDecimal(actionPrice) + " coins") : "Free";
+                if ((speedLevel >= MAX_SPEED_LEVEL && hasRobot) || runnerButtonText.equals("Maxed!") || runnerButtonText.equals("Evolve")) {
+                    displayPriceText = "";
+                }
             }
 
             commandBuilder.set("#MapCards[" + index + "] #RunnerLevel.Text", levelText);
             commandBuilder.set("#MapCards[" + index + "] #RunnerLevel.Style.TextColor", accentColor);
             commandBuilder.set("#MapCards[" + index + "] #RunnerStatus.Text", runnerStatusText);
-            commandBuilder.set("#MapCards[" + index + "] #RobotBuyText.Text", runnerButtonText);
-            commandBuilder.set("#MapCards[" + index + "] #RobotPriceText.Text", priceText);
+            commandBuilder.set("#MapCards[" + index + "] #RobotBuyText.Text", displayButtonText);
+            commandBuilder.set("#MapCards[" + index + "] #RobotPriceText.Text", displayPriceText);
 
             // Event bindings
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
@@ -270,19 +282,19 @@ public class AscendMapSelectPage extends BaseAscendPage {
         }
     }
 
-    private String buildStarDisplay(int stars, int speedLevel) {
+    private void updateStarDisplay(UICommandBuilder cmd, int cardIndex, int stars) {
+        // Show/hide star images based on evolution level (max 5 stars)
+        for (int i = 1; i <= AscendConstants.MAX_ROBOT_STARS; i++) {
+            boolean visible = i <= stars;
+            cmd.set("#MapCards[" + cardIndex + "] #Star" + i + ".Visible", visible);
+        }
+    }
+
+    private String buildLevelText(int stars, int speedLevel) {
         if (stars >= AscendConstants.MAX_ROBOT_STARS && speedLevel >= MAX_SPEED_LEVEL) {
             return "MAX";
         }
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < stars; i++) {
-            sb.append('\u2605');  // Unicode filled star
-        }
-        if (stars > 0) {
-            sb.append(' ');
-        }
-        sb.append("Lv.").append(speedLevel);
-        return sb.toString();
+        return "Lv." + speedLevel;
     }
 
     private String resolveMapAccentColor(int index) {
@@ -591,9 +603,18 @@ public class AscendMapSelectPage extends BaseAscendPage {
             }
         }
 
-        String priceText = actionPrice > 0 ? (FormatUtils.formatCoinsForHud(actionPrice) + " coins") : "Free";
-        if ((speedLevel >= MAX_SPEED_LEVEL && hasRobot) || runnerButtonText.equals("Maxed!")) {
-            priceText = "";
+        // Combine button text and price for "Upgrade" case to save vertical space
+        String displayButtonText;
+        String displayPriceText;
+        if (runnerButtonText.equals("Upgrade") && actionPrice > 0) {
+            displayButtonText = "Cost:";
+            displayPriceText = FormatUtils.formatCoinsForHudDecimal(actionPrice) + " coins";
+        } else {
+            displayButtonText = runnerButtonText;
+            displayPriceText = actionPrice > 0 ? (FormatUtils.formatCoinsForHudDecimal(actionPrice) + " coins") : "Free";
+            if ((speedLevel >= MAX_SPEED_LEVEL && hasRobot) || runnerButtonText.equals("Maxed!") || runnerButtonText.equals("Evolve")) {
+                displayPriceText = "";
+            }
         }
 
         UICommandBuilder commandBuilder = new UICommandBuilder();
@@ -601,14 +622,17 @@ public class AscendMapSelectPage extends BaseAscendPage {
         // Update progress bar
         updateProgressBar(commandBuilder, index, speedLevel);
 
-        // Update level text in button zone with star display
-        String levelText = buildStarDisplay(stars, speedLevel);
+        // Update star visibility
+        updateStarDisplay(commandBuilder, index, stars);
+
+        // Update level text in button zone
+        String levelText = buildLevelText(stars, speedLevel);
         commandBuilder.set("#MapCards[" + index + "] #RunnerLevel.Text", levelText);
 
         // Update text fields
         commandBuilder.set("#MapCards[" + index + "] #RunnerStatus.Text", runnerStatusText);
-        commandBuilder.set("#MapCards[" + index + "] #RobotBuyText.Text", runnerButtonText);
-        commandBuilder.set("#MapCards[" + index + "] #RobotPriceText.Text", priceText);
+        commandBuilder.set("#MapCards[" + index + "] #RobotBuyText.Text", displayButtonText);
+        commandBuilder.set("#MapCards[" + index + "] #RobotPriceText.Text", displayPriceText);
         commandBuilder.set("#MapCards[" + index + "] #MapStatus.Text", status);
 
         if (!isCurrentPage()) {
@@ -657,8 +681,11 @@ public class AscendMapSelectPage extends BaseAscendPage {
         // Update progress bar visibility
         updateProgressBar(commandBuilder, index, speedLevel);
 
-        // Level text for button zone with star display
-        String levelText = buildStarDisplay(stars, speedLevel);
+        // Update star visibility
+        updateStarDisplay(commandBuilder, index, stars);
+
+        // Level text for button zone
+        String levelText = buildLevelText(stars, speedLevel);
 
         // Map name
         commandBuilder.set("#MapCards[" + index + "] #MapName.Text", mapName);
@@ -700,16 +727,25 @@ public class AscendMapSelectPage extends BaseAscendPage {
             }
         }
 
-        String priceText = actionPrice > 0 ? (FormatUtils.formatCoinsForHud(actionPrice) + " coins") : "Free";
-        if ((speedLevel >= MAX_SPEED_LEVEL && hasRobot) || runnerButtonText.equals("Maxed!")) {
-            priceText = "";
+        // Combine button text and price for "Upgrade" case to save vertical space
+        String displayButtonText;
+        String displayPriceText;
+        if (runnerButtonText.equals("Upgrade") && actionPrice > 0) {
+            displayButtonText = "Cost:";
+            displayPriceText = FormatUtils.formatCoinsForHudDecimal(actionPrice) + " coins";
+        } else {
+            displayButtonText = runnerButtonText;
+            displayPriceText = actionPrice > 0 ? (FormatUtils.formatCoinsForHudDecimal(actionPrice) + " coins") : "Free";
+            if ((speedLevel >= MAX_SPEED_LEVEL && hasRobot) || runnerButtonText.equals("Maxed!") || runnerButtonText.equals("Evolve")) {
+                displayPriceText = "";
+            }
         }
 
         commandBuilder.set("#MapCards[" + index + "] #RunnerLevel.Text", levelText);
         commandBuilder.set("#MapCards[" + index + "] #RunnerLevel.Style.TextColor", accentColor);
         commandBuilder.set("#MapCards[" + index + "] #RunnerStatus.Text", runnerStatusText);
-        commandBuilder.set("#MapCards[" + index + "] #RobotBuyText.Text", runnerButtonText);
-        commandBuilder.set("#MapCards[" + index + "] #RobotPriceText.Text", priceText);
+        commandBuilder.set("#MapCards[" + index + "] #RobotBuyText.Text", displayButtonText);
+        commandBuilder.set("#MapCards[" + index + "] #RobotPriceText.Text", displayPriceText);
 
         // Event bindings
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
