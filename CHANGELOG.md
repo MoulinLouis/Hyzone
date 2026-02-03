@@ -1,5 +1,13 @@
 # Changelog
 
+- Add skill points management to admin panel in parkour-ascend:
+  - Added "Skill Tree Points" section to Admin Coins page (via `/as admin` -> Admin Panel).
+  - Display current skill points with Add/Remove buttons (same pattern as coins).
+  - Text field allows specifying any amount to add or remove.
+  - Reset Progress button already resets skill points (confirmed existing behavior).
+  - UI updated to show skill points value after Reset Progress.
+  - Enlarged Admin Coins panel height (360 -> 520) to fit all elements without overflow.
+  - Added `addSkillTreePoints()` method to AscendPlayerStore for direct point manipulation.
 - Fix runner lifecycle and orphan cleanup in parkour-ascend:
   - **Root cause fix:** RunnerCleanupSystem was calling `store.removeEntity()` during ECS tick,
     which fails because the store is processing. Replaced with deferred removal pattern.

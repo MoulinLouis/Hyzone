@@ -2,7 +2,7 @@ $C = "../Common.ui";
 
 $C.@PageOverlay {
   $C.@Container {
-    Anchor: (Width: 520, Height: 360);
+    Anchor: (Width: 650, Height: 600);
 
     #Title {
       Group {
@@ -63,7 +63,7 @@ $C.@PageOverlay {
         Anchor: (Top: 12, Height: 36);
 
         $C.@TextButton #AddButton {
-          Anchor: (Width: 200, Height: 36);
+          Anchor: (Width: 250, Height: 36);
           Text: "Add Coins";
         }
 
@@ -78,8 +78,56 @@ $C.@PageOverlay {
         Anchor: (Top: 8, Height: 36);
 
         $C.@TextButton #ResetProgressButton {
-          Anchor: (Width: 200, Height: 36);
+          Anchor: (Width: 250, Height: 36);
           Text: "Reset Progress";
+        }
+      }
+
+      Label {
+        Anchor: (Top: 16);
+        Style: (FontSize: 16, TextColor: #93844c, RenderBold: true);
+        Text: "Skill Tree Points";
+      }
+
+      Group {
+        LayoutMode: Left;
+        Anchor: (Top: 10, Height: 30);
+
+        Label {
+          Anchor: (Width: 140);
+          Style: (FontSize: 14, TextColor: #cfd7dc);
+          Text: "Current Points:";
+        }
+
+        Label #CurrentSkillPointsValue {
+          Style: (FontSize: 14, TextColor: #ffffff(0.9));
+          Text: "0";
+        }
+      }
+
+      Label {
+        Anchor: (Top: 10);
+        Style: (FontSize: 13, TextColor: #cfd7dc);
+        Text: "Skill Points Amount";
+      }
+
+      $C.@TextField #SkillPointsAmountField {
+        Anchor: (Height: 30);
+        Style: (FontSize: 14, TextColor: #ffffff(0.85));
+      }
+
+      Group {
+        LayoutMode: Left;
+        Anchor: (Top: 12, Height: 36);
+
+        $C.@TextButton #AddSkillPointsButton {
+          Anchor: (Width: 250, Height: 36);
+          Text: "Add Skill Points";
+        }
+
+        $C.@TextButton #RemoveSkillPointsButton {
+          Anchor: (Left: 10, Width: 200, Height: 36);
+          Text: "Remove Skill Points";
         }
       }
 
@@ -94,7 +142,7 @@ $C.@PageOverlay {
         Anchor: (Top: 8, Height: 36);
 
         $C.@TextButton #SetSpawnLocationButton {
-          Anchor: (Width: 200, Height: 36);
+          Anchor: (Width: 250, Height: 36);
           Text: "Set Spawn Location";
         }
 
@@ -110,7 +158,7 @@ $C.@PageOverlay {
         Anchor: (Top: 8, Height: 36);
 
         $C.@TextButton #SetNpcLocationButton {
-          Anchor: (Width: 200, Height: 36);
+          Anchor: (Width: 250, Height: 36);
           Text: "Set NPC Location";
         }
 
