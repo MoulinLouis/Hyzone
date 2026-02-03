@@ -1,5 +1,15 @@
 # Changelog
 
+- Add visual evolution progression for runners in parkour-ascend:
+  - Runners now display 6 distinct models based on their evolution level (stars).
+  - **Star 0**: Kweebec_Seedling (petit truc cool)
+  - **Star 1**: Kweebec_Sapling (bonhomme vert standard)
+  - **Star 2**: Kweebec_Sproutling (petit bonhomme vert)
+  - **Star 3**: Kweebec_Sapling_Pink (petite fille avec fleur rose)
+  - **Star 4**: Kweebec_Razorleaf (soldat avec casque + lance)
+  - **Star 5**: Kweebec_Rootling (adulte, le plus grand)
+  - Replaced old alternating 2-model system with varied character progression.
+  - Provides clear visual feedback as players upgrade their runners.
 - Fix UI refresh race condition in parkour-ascend:
   - Added page ID tracking in BaseAscendPage - each page gets a unique ID, stored per-player.
   - New `isCurrentPage()` method checks if this page instance is still the active one for the player.
