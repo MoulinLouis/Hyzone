@@ -551,7 +551,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
             }
 
             // This map has an upgrade button, check affordability
-            long upgradeCost = computeUpgradeCost(speedLevel);
+            long upgradeCost = computeUpgradeCost(speedLevel, map.getDisplayOrder());
             boolean canAfford = currentCoins >= upgradeCost;
             String levelColor = canAfford ? accentColor : "#ffffff";
 
