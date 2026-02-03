@@ -451,5 +451,96 @@ $C.@PageOverlay {
         Text: "Invest coins to upgrade categories (resets coins + elevation)";
       }
     }
+
+    Group #AscensionQuestHud {
+      Anchor: (Bottom: 135, Width: 500, Height: 48);
+      LayoutMode: Left;
+
+      Group #AscensionAccentLeft {
+        Anchor: (Width: 6, Top: 0, Bottom: 0);
+        Background: #7c3aed;
+      }
+
+      Group #AscensionQuestContent {
+        Anchor: (Top: 0, Bottom: 0);
+        FlexWeight: 1;
+        Background: #1a2530(0.95);
+        LayoutMode: Top;
+        Padding: (Left: 14, Right: 14, Top: 6, Bottom: 8);
+
+        Group #AscensionQuestHeader {
+          Anchor: (Left: 0, Right: 0, Height: 18);
+          LayoutMode: Left;
+
+          Label #AscensionQuestTitle {
+            Style: (
+              FontSize: 14,
+              TextColor: #c084fc,
+              RenderBold: true
+            );
+            Text: "ASCENSION";
+          }
+
+          Group { FlexWeight: 1; }
+
+          Label #AscensionQuestPercent {
+            Style: (
+              FontSize: 14,
+              TextColor: #f0f4f8,
+              RenderBold: true
+            );
+            Text: "0%";
+          }
+        }
+
+        Group #AscensionQuestBarContainer {
+          Anchor: (Left: 0, Right: 0, Top: 4, Height: 12);
+          Background: #0f1419(0.8);
+
+          Group #Seg1 { Anchor: (Left: 0, Width: 23, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg2 { Anchor: (Left: 23, Width: 23, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg3 { Anchor: (Left: 46, Width: 23, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg4 { Anchor: (Left: 69, Width: 23, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg5 { Anchor: (Left: 92, Width: 23, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg6 { Anchor: (Left: 115, Width: 23, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg7 { Anchor: (Left: 138, Width: 23, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg8 { Anchor: (Left: 161, Width: 23, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg9 { Anchor: (Left: 184, Width: 23, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg10 { Anchor: (Left: 207, Width: 23, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg11 { Anchor: (Left: 230, Width: 23, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg12 { Anchor: (Left: 253, Width: 23, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg13 { Anchor: (Left: 276, Width: 23, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg14 { Anchor: (Left: 299, Width: 23, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg15 { Anchor: (Left: 322, Width: 23, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg16 { Anchor: (Left: 345, Width: 23, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg17 { Anchor: (Left: 368, Width: 23, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg18 { Anchor: (Left: 391, Width: 23, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg19 { Anchor: (Left: 414, Width: 23, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg20 { Anchor: (Left: 437, Width: 23, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+        }
+      }
+
+      Group #AscensionAccentRight {
+        Anchor: (Width: 6, Top: 0, Bottom: 0);
+        Background: #1a2530(0.95);
+
+        Group #AccentSeg1 { Anchor: (Left: 0, Right: 0, Bottom: 0, Height: 3); Background: #7c3aed; Visible: false; }
+        Group #AccentSeg2 { Anchor: (Left: 0, Right: 0, Bottom: 3, Height: 3); Background: #7c3aed; Visible: false; }
+        Group #AccentSeg3 { Anchor: (Left: 0, Right: 0, Bottom: 6, Height: 3); Background: #7c3aed; Visible: false; }
+        Group #AccentSeg4 { Anchor: (Left: 0, Right: 0, Bottom: 9, Height: 3); Background: #7c3aed; Visible: false; }
+        Group #AccentSeg5 { Anchor: (Left: 0, Right: 0, Bottom: 12, Height: 3); Background: #7c3aed; Visible: false; }
+        Group #AccentSeg6 { Anchor: (Left: 0, Right: 0, Bottom: 15, Height: 3); Background: #7c3aed; Visible: false; }
+        Group #AccentSeg7 { Anchor: (Left: 0, Right: 0, Bottom: 18, Height: 3); Background: #7c3aed; Visible: false; }
+        Group #AccentSeg8 { Anchor: (Left: 0, Right: 0, Bottom: 21, Height: 3); Background: #7c3aed; Visible: false; }
+        Group #AccentSeg9 { Anchor: (Left: 0, Right: 0, Bottom: 24, Height: 3); Background: #7c3aed; Visible: false; }
+        Group #AccentSeg10 { Anchor: (Left: 0, Right: 0, Bottom: 27, Height: 3); Background: #7c3aed; Visible: false; }
+        Group #AccentSeg11 { Anchor: (Left: 0, Right: 0, Bottom: 30, Height: 3); Background: #7c3aed; Visible: false; }
+        Group #AccentSeg12 { Anchor: (Left: 0, Right: 0, Bottom: 33, Height: 3); Background: #7c3aed; Visible: false; }
+        Group #AccentSeg13 { Anchor: (Left: 0, Right: 0, Bottom: 36, Height: 3); Background: #7c3aed; Visible: false; }
+        Group #AccentSeg14 { Anchor: (Left: 0, Right: 0, Bottom: 39, Height: 3); Background: #7c3aed; Visible: false; }
+        Group #AccentSeg15 { Anchor: (Left: 0, Right: 0, Bottom: 42, Height: 3); Background: #7c3aed; Visible: false; }
+        Group #AccentSeg16 { Anchor: (Left: 0, Right: 0, Bottom: 45, Height: 3); Background: #7c3aed; Visible: false; }
+      }
+    }
   }
 }

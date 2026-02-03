@@ -354,6 +354,9 @@ public class ParkourAscendPlugin extends JavaPlugin {
             int skillPoints = store.getAvailableSkillPoints(playerId);
             hud.updatePrestige(summitLevels, ascensionCount, skillPoints);
 
+            // Update ascension quest progress bar
+            hud.updateAscensionQuest(coins);
+
             // Update run timer HUD
             if (runTracker != null) {
                 boolean isRunning = runTracker.isRunActive(playerId);
@@ -406,7 +409,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
         }
         AscendHud hud = ascendHuds.computeIfAbsent(playerRef.getUuid(), id -> new AscendHud(playerRef));
         player.getHudManager().setCustomHud(playerRef, hud);
-        player.getHudManager().hideHudComponents(playerRef, HudComponent.Compass);
+        player.getHudManager().hideHudComponents(playerRef, HudComponent.Compass, HudComponent.Health, HudComponent.Stamina);
         hud.resetCache();
         hud.show();
         hud.applyStaticText();

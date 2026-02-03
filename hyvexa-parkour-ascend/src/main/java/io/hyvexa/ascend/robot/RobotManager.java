@@ -827,9 +827,10 @@ public class RobotManager {
             if (transform == null) {
                 continue;
             }
-            double px = transform.getPosition().x();
-            double py = transform.getPosition().y();
-            double pz = transform.getPosition().z();
+            Vector3d pos = transform.getPosition();
+            double px = pos.getX();
+            double py = pos.getY();
+            double pz = pos.getZ();
             double distSq = (px - mapX) * (px - mapX) + (py - mapY) * (py - mapY) + (pz - mapZ) * (pz - mapZ);
             return distSq <= CHUNK_LOAD_DISTANCE * CHUNK_LOAD_DISTANCE;
         }
