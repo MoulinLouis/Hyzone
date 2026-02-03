@@ -89,6 +89,75 @@ world.execute(() -> {
 3. **UI paths** - Code uses `"Pages/MyPage.ui"`, files go in `Common/UI/Custom/Pages/`
 4. **Inventory access** - Need `Player` component, not just `PlayerRef`
 5. **Event registration** - Use `getEventRegistry().registerGlobal(...)` in `setup()`
+6. **UI page lifecycle** - Override `onDismiss()` for cleanup, never call `close()` from it (see below)
+
+### UI Page Lifecycle
+
+Understanding the CustomUIPage lifecycle is critical for pages with background tasks (scheduled refreshes, animations, etc.).
+
+**Lifecycle callbacks:**
+
+```java
+public abstract class CustomUIPage {
+    // Called once when page is first opened
+    public abstract void build(Ref<EntityStore> ref, UICommandBuilder cmd,
+                               UIEventBuilder evt, Store<EntityStore> store);
+
+    // Called when user manually closes the page OR when replaced by another page
+    protected void close();
+
+    // Called when page is dismissed/replaced (including by external UIs like NPCDialog)
+    public void onDismiss(Ref<EntityStore> ref, Store<EntityStore> store);
+}
+```
+
+**Call sequences:**
+
+| Scenario | Methods Called (in order) |
+|----------|--------------------------|
+| User closes page manually | `onDismiss()` → `close()` |
+| Your plugin opens new page | `onDismiss()` (old page) → `close()` (old page) → `build()` (new page) |
+| External UI opens (NPCDialog) | `onDismiss()` only (your page) |
+| External UI closes | (your page is NOT restored) |
+
+**CRITICAL - Recursion trap:**
+
+```java
+// ❌ WRONG - causes StackOverflowError:
+@Override
+public void onDismiss(Ref<EntityStore> ref, Store<EntityStore> store) {
+    this.close();  // close() calls PageManager.setPage()
+                   // which calls onDismiss() again → infinite loop!
+}
+
+// ✅ CORRECT - separate cleanup method:
+@Override
+public void onDismiss(Ref<EntityStore> ref, Store<EntityStore> store) {
+    stopBackgroundTasks();  // Clean up without calling close()
+    super.onDismiss(ref, store);
+}
+
+@Override
+public void close() {
+    stopBackgroundTasks();  // Same cleanup for manual close
+    super.close();
+}
+
+protected void stopBackgroundTasks() {
+    if (refreshTask != null) {
+        refreshTask.cancel(false);
+        refreshTask = null;
+    }
+}
+```
+
+**Why both callbacks exist:**
+- `close()` - For manual cleanup when you explicitly close the page
+- `onDismiss()` - For automatic cleanup when Hytale closes/replaces your page (including external UIs)
+
+**Best practice:** Implement cleanup logic in a separate method (`stopBackgroundTasks()`) called by both `close()` and `onDismiss()`.
+
+**See `CODE_PATTERNS.md`** for complete example with base page pattern.
 
 ## API Discovery
 

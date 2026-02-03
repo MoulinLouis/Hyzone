@@ -75,6 +75,11 @@ public class StatsPage extends BaseAscendPage {
     }
 
     @Override
+    protected void stopBackgroundTasks() {
+        stopAutoRefresh();
+    }
+
+    @Override
     public void handleDataEvent(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store,
                                 @Nonnull ButtonEventData data) {
         super.handleDataEvent(ref, store, data);
@@ -308,6 +313,11 @@ public class StatsPage extends BaseAscendPage {
         if (!isCurrentPage()) {
             return;
         }
-        sendUpdate(commandBuilder, null, false);
+        try {
+            sendUpdate(commandBuilder, null, false);
+        } catch (Exception e) {
+            // UI was replaced by external dialog (e.g., NPCDialog) - stop refreshing
+            stopAutoRefresh();
+        }
     }
 }

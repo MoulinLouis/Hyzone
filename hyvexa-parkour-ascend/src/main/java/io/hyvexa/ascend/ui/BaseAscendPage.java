@@ -1,8 +1,11 @@
 package io.hyvexa.ascend.ui;
 
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.ui.ButtonEventData;
 
 import javax.annotation.Nonnull;
@@ -43,5 +46,29 @@ public abstract class BaseAscendPage extends InteractiveCustomUIPage<ButtonEvent
      */
     public void shutdown() {
         this.close();
+    }
+
+    /**
+     * Called automatically by Hytale when the page is dismissed or replaced
+     * (including when external UIs like NPCDialog open).
+     * This is the proper lifecycle hook to clean up background tasks.
+     * NOTE: Do NOT call close() here to avoid recursion - Hytale calls both onDismiss() and close()
+     */
+    @Override
+    public void onDismiss(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store) {
+        // Unregister this page from tracking
+        currentPageIds.remove(playerId);
+        // Subclasses should override this to stop their scheduled tasks
+        stopBackgroundTasks();
+        // Call parent implementation
+        super.onDismiss(ref, store);
+    }
+
+    /**
+     * Override this method in subclasses to stop scheduled tasks.
+     * Called both from close() and onDismiss() to ensure cleanup.
+     */
+    protected void stopBackgroundTasks() {
+        // Default: no background tasks to stop
     }
 }

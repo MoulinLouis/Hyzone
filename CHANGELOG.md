@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Fixed
+- **Ascend: Fixed UI crash when interacting with external NPCs after opening menus**
+  - Fixed "Selected element in CustomUI command was not found" crash when opening `/ascend` or `/ascend elevate` menus then interacting with NPCDialog NPCs
+  - Implemented proper `onDismiss()` lifecycle callback in `BaseAscendPage` to detect when UI is replaced by external systems
+  - Background UI refresh tasks now stop immediately when page is dismissed or replaced
+  - Added defensive try-catch blocks around all `sendUpdate()` calls as fallback protection
+  - Affected pages: ElevationPage, AscendMapSelectPage, StatsPage
+
 ### Changed
 - **Ascend: Simplify elevation menu to show multiplier progression**
   - Removed redundant coin balance display from `/ascend elevate` menu (already visible on main HUD)

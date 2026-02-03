@@ -29,6 +29,98 @@ public class MyPage extends InteractiveCustomUIPage<MyPage.Data> {
 // Open: CustomUI.open(playerRef, new MyPage(playerRef));
 ```
 
+### UI Pages with Background Tasks
+
+When a page has scheduled tasks (auto-refresh, animations, etc.), you **must** implement proper cleanup to avoid crashes when the UI is replaced by external systems (e.g., NPCDialog).
+
+**CRITICAL:** Hytale calls `onDismiss()` when any UI replaces your page - even external UIs. Use this for cleanup, **not** `close()` alone.
+
+```java
+public class MyAutoRefreshPage extends BaseAscendPage {
+    private ScheduledFuture<?> refreshTask;
+
+    @Override
+    public void build(Ref<EntityStore> ref, UICommandBuilder cmd,
+                      UIEventBuilder evt, Store<EntityStore> store) {
+        commandBuilder.append("Pages/MyPage.ui");
+        startAutoRefresh(ref, store);  // Start background task
+    }
+
+    @Override
+    public void close() {
+        stopAutoRefresh();  // Clean up when user closes
+        super.close();
+    }
+
+    @Override
+    protected void stopBackgroundTasks() {
+        stopAutoRefresh();  // Clean up when replaced by external UI
+    }
+
+    private void startAutoRefresh(Ref<EntityStore> ref, Store<EntityStore> store) {
+        World world = store.getExternalData().getWorld();
+        refreshTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(() -> {
+            if (!isCurrentPage()) {  // Check if still active
+                stopAutoRefresh();
+                return;
+            }
+            // Update UI...
+            try {
+                sendUpdate(commandBuilder, null, false);
+            } catch (Exception e) {
+                // UI was replaced - stop refreshing
+                stopAutoRefresh();
+            }
+        }, 1000L, 1000L, TimeUnit.MILLISECONDS);
+    }
+
+    private void stopAutoRefresh() {
+        if (refreshTask != null) {
+            refreshTask.cancel(false);
+            refreshTask = null;
+        }
+    }
+}
+```
+
+**Base page pattern with `onDismiss()` hook:**
+
+```java
+public abstract class BaseMyModulePage extends InteractiveCustomUIPage<ButtonEventData> {
+
+    protected BaseMyModulePage(@Nonnull PlayerRef playerRef,
+                               @Nonnull CustomPageLifetime lifetime) {
+        super(playerRef, lifetime, ButtonEventData.CODEC);
+    }
+
+    /**
+     * Called automatically by Hytale when page is dismissed or replaced.
+     * Override stopBackgroundTasks() in subclasses to clean up scheduled tasks.
+     * NOTE: Do NOT call close() here - causes StackOverflowError recursion!
+     */
+    @Override
+    public void onDismiss(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store) {
+        stopBackgroundTasks();  // Clean up before dismissal
+        super.onDismiss(ref, store);
+    }
+
+    /**
+     * Override this in subclasses to stop scheduled tasks.
+     * Called from both close() and onDismiss() to ensure cleanup.
+     */
+    protected void stopBackgroundTasks() {
+        // Default: no background tasks to stop
+    }
+}
+```
+
+**Key points:**
+1. **Never call `close()` from `onDismiss()`** - causes infinite recursion (StackOverflowError)
+2. Use `stopBackgroundTasks()` pattern for cleanup logic shared between `close()` and `onDismiss()`
+3. Always wrap `sendUpdate()` in try-catch when called from scheduled tasks
+4. Check `isCurrentPage()` before sending updates in long-running tasks
+5. Cancel `ScheduledFuture` tasks in `stopBackgroundTasks()` to prevent memory leaks
+
 ## UI Files (.ui)
 
 ### Path Convention (IMPORTANT)

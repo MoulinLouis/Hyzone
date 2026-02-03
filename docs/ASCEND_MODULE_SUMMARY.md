@@ -84,7 +84,7 @@ TIER 3: ASCENSION   - coins → skill tree point, resets everything
 - Skill tree node `COIN_T3_ELEVATION_COST` applies -20% discount to all level costs.
 - **Bulk purchasing**: Automatically purchases all affordable levels at once.
 - Resets: Coins only
-- Manager: `ElevationPage` with real-time UI updates (1s refresh)
+- Manager: `ElevationPage` with real-time UI updates (1s refresh, auto-cleanup via `onDismiss()` lifecycle)
 
 | Level | Cost | Multiplier |
 |-------|------|------------|
@@ -243,6 +243,9 @@ During manual runs, players receive run-specific hotbar items:
 - Run timer HUD shows elapsed time during manual runs
 
 ## UI pages
+
+**Technical note:** Pages with background tasks (`ElevationPage`, `AscendMapSelectPage`, `StatsPage`) implement `onDismiss()` lifecycle callback for proper cleanup when replaced by external UIs (e.g., NPCDialog). See `CODE_PATTERNS.md` and `HYTALE_API.md` for implementation details.
+
 - `Ascend_MapSelect.ui` + `Ascend_MapSelectEntry.ui`: modern map selection with:
   - 620x620px container with "A S C E N D" header
   - Card layout (580x90px) with 3 zones:
