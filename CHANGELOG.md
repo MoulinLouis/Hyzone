@@ -3,6 +3,14 @@
 ## [Unreleased]
 
 ### Changed
+- **Ascend: Elevation system rebalanced for slower progression**
+  - Increased base elevation cost from 1,000 to 5,000 coins (5x harder)
+  - Increased cost growth rate from 1.08 to 1.15 (steeper curve)
+  - First elevation now requires proper runner setup and time investment
+  - Mid-game progression (levels 10-20) significantly slower but still achievable
+  - Late-game (30+) requires substantial coin generation infrastructure
+  - Multiplier formula unchanged (level = multiplier) to preserve linear feel
+
 - **Ascend: Early-game progression rebalance**
   - Reduced first runner upgrade cost from 100 to ~10 coins (~10 manual runs)
   - Implemented obscure quick-ramp formula for upgrade costs (no longer simple doubling)
