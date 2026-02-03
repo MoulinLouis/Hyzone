@@ -1,5 +1,41 @@
 # Changelog
 
+- Add visual affordability indicator for runner button in parkour-ascend:
+  - Level text ("Lv.X" or "MAX") and button top accent bar change color based on upgrade affordability.
+  - When player has enough coins for upgrade: uses map accent color (violet, blue, cyan, etc.).
+  - When player cannot afford upgrade: changes to white (#ffffff).
+  - Progress bar segments (showing runner level) always keep their accent color.
+  - Color updates automatically every 500ms while menu is open to reflect passive coin earnings.
+  - Scheduled task starts when menu opens and stops when menu closes.
+  - Applied in buildMapList, updateRobotRow, addMapToUI, and periodic affordability updates.
+  - Only applies to "Upgrade" action - other states (Buy Runner, Evolve, Maxed, Complete First) always use accent color.
+- Make runner purchases free and simplify button text in parkour-ascend:
+  - Buying a runner is now completely free (no coins required).
+  - Removed "Free" text from button display - "Buy Runner" now shows with no cost text.
+  - "Complete First" button now shows with no cost text (previously showed "Free").
+  - Simplified button text logic: only "Upgrade" actions show cost, all other actions show no price.
+  - Updated purchase logic in handleRobotAction and handleBuyAll to not charge for runner purchases.
+  - Success message changed from "Runner purchased for X coins!" to "Runner purchased!".
+- Remove unnecessary decimals from coin cost display in parkour-ascend:
+  - Modified `FormatUtils.formatCoinsForHudDecimal()` to display whole numbers without ".00" suffix.
+  - Small amounts (< 1M): Show as integers when applicable (e.g., "1500" instead of "1500.00").
+  - Large amounts with suffixes: Strip trailing zeros (e.g., "2M" instead of "2.00M", but keep "2.5M").
+  - Applies to all runner upgrade costs, robot purchases, and other coin displays using this formatter.
+  - Reduces visual clutter since upgrade costs are always fixed whole amounts.
+- Add visual affordability indicator for Runner upgrade button in parkour-ascend:
+  - Runner upgrade button changes background and accent color based on player's coin balance.
+  - Restructured button to use transparent ButtonStyle with controllable `#ButtonBackground` Group.
+  - **Active state** (enough coins):
+    - Background: Normal dark (#000000 with 0.25 alpha)
+    - Accent bar: Map's accent color (violet, blue, cyan, etc.)
+    - Button hover adds subtle white overlay
+  - **Disabled state** (insufficient coins):
+    - Background: Darker with red tint (#2a1515 with 0.6 alpha)
+    - Accent bar: Red (#dc2626)
+    - Button hover still functional with white overlay
+  - Modified `updateButtonAffordability()` to check coin balance and update both background and accent.
+  - Applied to all three UI update methods: buildMapList, updateRobotRow, and addMapToUI.
+  - Provides immediate visual feedback on upgrade affordability without needing to attempt purchase.
 - Fix star display in parkour-ascend /ascend menu:
   - Replaced Unicode star character (U+2605) with star.png image in UI.
   - Unicode character was not supported by the font, causing "?" to display.
