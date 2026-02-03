@@ -78,7 +78,7 @@ public class GhostRecording {
         double y = lerp(lower.y(), upper.y(), t);
         double z = lerp(lower.z(), upper.z(), t);
 
-        // Angular interpolation for yaw (handle 0-360 wrapping)
+        // Angular interpolation for yaw (handle -180/+180 wrapping with shortest path)
         float yaw = lerpAngle(lower.yaw(), upper.yaw(), (float) t);
 
         return new GhostSample(x, y, z, yaw, targetTimestamp);
@@ -93,32 +93,47 @@ public class GhostRecording {
 
     /**
      * Angular interpolation with wrapping for yaw rotation.
-     * Handles the 0-360 degree boundary correctly.
+     * Handles the -180 to +180 degree boundary correctly.
+     * Uses shortest path interpolation to avoid spinning through 360 degrees.
      */
     private float lerpAngle(float a, float b, float t) {
-        // Normalize angles to 0-360 range
+        // Normalize angles to -180 to +180 range (Hytale's native format)
         a = normalizeAngle(a);
         b = normalizeAngle(b);
 
-        // Calculate shortest path
+        // Calculate shortest angular path
         float diff = b - a;
-        if (diff > 180) {
-            diff -= 360;
-        } else if (diff < -180) {
-            diff += 360;
+
+        // If difference is greater than 180°, we're going the long way around
+        // Adjust to take the shorter path by wrapping
+        if (diff > 180.0f) {
+            diff -= 360.0f;
+        } else if (diff < -180.0f) {
+            diff += 360.0f;
         }
 
-        return normalizeAngle(a + diff * t);
+        // Interpolate along the shortest path
+        float result = a + diff * t;
+
+        // Normalize result back to -180 to +180 range
+        return normalizeAngle(result);
     }
 
     /**
-     * Normalize angle to 0-360 range.
+     * Normalize angle to -180 to +180 range (Hytale's yaw convention).
+     * This prevents discontinuities when interpolating across the ±180° boundary.
      */
     private float normalizeAngle(float angle) {
-        angle = angle % 360;
-        if (angle < 0) {
-            angle += 360;
+        // Reduce to -360 to +360 range first
+        angle = angle % 360.0f;
+
+        // Map to -180 to +180 range
+        if (angle > 180.0f) {
+            angle -= 360.0f;
+        } else if (angle < -180.0f) {
+            angle += 360.0f;
         }
+
         return angle;
     }
 }

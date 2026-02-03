@@ -1,5 +1,10 @@
 # Changelog
 
+- Fix erratic ghost NPC rotations in parkour-ascend:
+  - Changed angle normalization from 0-360° to -180/+180° to match Hytale's native yaw convention.
+  - Improved `lerpAngle()` interpolation to use shortest angular path consistently.
+  - Prevents sudden 180° rotation jumps when ghost NPCs cross the ±180° boundary.
+  - Ghost NPCs now smoothly follow the player's recorded rotation without erratic left/right snaps.
 - Add visual evolution progression for runners in parkour-ascend:
   - Runners now display 6 distinct models based on their evolution level (stars).
   - **Star 0**: Kweebec_Seedling (petit truc cool)
