@@ -47,7 +47,14 @@ $C.@PageOverlay {
           Padding: (Left: 24, Right: 24, Top: 20, Bottom: 20);
           LayoutMode: Top;
 
+          Label #GlobalMultiplierTitle {
+            Anchor: (Left: 0, Right: 0);
+            Style: (FontSize: 16, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center);
+            Text: "GLOBAL MULTIPLIER";
+          }
+
           Group #MultiplierDisplay {
+            Anchor: (Left: 0, Right: 0, Top: 12, Height: 48);
             Anchor: (Left: 0, Right: 0, Height: 48);
             LayoutMode: Left;
 
