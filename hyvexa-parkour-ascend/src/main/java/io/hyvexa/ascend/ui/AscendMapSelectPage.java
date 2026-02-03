@@ -769,7 +769,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
                 actionPrice = 0L;
             } else {
                 runnerButtonText = "Upgrade";
-                actionPrice = computeUpgradeCost(speedLevel);
+                actionPrice = computeUpgradeCost(speedLevel, map.getDisplayOrder());
             }
         }
 
