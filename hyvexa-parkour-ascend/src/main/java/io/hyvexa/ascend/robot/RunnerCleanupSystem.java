@@ -4,7 +4,6 @@ import com.hypixel.hytale.component.Archetype;
 import com.hypixel.hytale.component.ArchetypeChunk;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.SystemGroup;
 import com.hypixel.hytale.component.query.Query;
@@ -19,14 +18,17 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.UUID;
 
 /**
- * System that cleans up orphaned runner entities after server restart.
+ * System that detects orphaned runner entities after server restart.
  *
  * When the server shuts down, runner NPCs may persist in the world.
- * On restart, this system removes those orphaned entities to prevent
- * duplicates (frozen runners stuck in place alongside new active runners).
+ * On restart, this system identifies those orphaned entities and queues
+ * them for deferred removal via RobotManager (outside the ECS tick).
  *
  * Detection strategy: Runners are NPCs with Frozen + Invulnerable components.
  * If such an entity's UUID is not in the active robots list, it's orphaned.
+ *
+ * IMPORTANT: Entity removal cannot happen during a system tick (store is
+ * processing). Detected orphans are queued and removed via world.execute().
  */
 public class RunnerCleanupSystem extends EntityTickingSystem<EntityStore> {
 
@@ -73,18 +75,14 @@ public class RunnerCleanupSystem extends EntityTickingSystem<EntityStore> {
         }
 
         // This is an orphaned runner (Frozen + Invulnerable but not in active list)
+        // Queue for deferred removal - we cannot call store.removeEntity() during tick
         Ref<EntityStore> ref = chunk.getReferenceTo(entityId);
         if (ref == null || !ref.isValid()) {
             return;
         }
 
-        try {
-            store.removeEntity(ref, RemoveReason.REMOVE);
-            robotManager.markOrphanCleaned(entityUuid);
-            LOGGER.atInfo().log("[RunnerCleanup] Removed orphaned runner: " + entityUuid);
-        } catch (Exception e) {
-            LOGGER.atWarning().log("[RunnerCleanup] Failed to remove orphaned runner " + entityUuid + ": " + e.getMessage());
-        }
+        // Queue the orphan for deferred removal (outside ECS processing)
+        robotManager.queueOrphanForRemoval(entityUuid, ref);
     }
 
     @Override

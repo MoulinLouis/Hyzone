@@ -1,5 +1,21 @@
 # Changelog
 
+- Fix runner lifecycle and orphan cleanup in parkour-ascend:
+  - **Root cause fix:** RunnerCleanupSystem was calling `store.removeEntity()` during ECS tick,
+    which fails because the store is processing. Replaced with deferred removal pattern.
+  - RunnerCleanupSystem now only detects orphans during tick and queues them via
+    `RobotManager.queueOrphanForRemoval()` for removal outside ECS processing.
+  - Added `pendingRemovals` map to track entities queued for removal.
+  - Added `processPendingRemovals()` method that runs in RobotManager tick (outside ECS),
+    executing actual removal via `world.execute()` for safe world-thread execution.
+  - **Hard cap enforcement:** Added check in `spawnNpcForRobot()` to prevent spawning if
+    `entityUuid` is already set (entity may exist in unloaded chunk).
+  - **Cross-world cleanup:** When removing RobotState from map, if despawn fails, the entity
+    UUID is added to `orphanedRunnerUuids` for cleanup system detection.
+  - **Force respawn safety:** When forcing respawn (entity invalid too long + player nearby),
+    the old entity UUID is now marked for orphan cleanup before spawning new entity.
+  - Updated `isActiveRunnerUuid()` to also check `pendingRemovals` to avoid re-queueing.
+  - Updated `isCleanupPending()` to consider both `orphanedRunnerUuids` and `pendingRemovals`.
 - Add Ascension quest progress bar to parkour-ascend HUD:
   - Modern card-style horizontal bar positioned above the player inventory.
   - Left and right accent bars in violet (#7c3aed) matching the Ascension theme.
@@ -706,4 +722,14 @@
   - **Summit UI**: Displays all 3 categories with current levels, projected gains, and per-category Summit buttons.
   - **Ascension UI**: Progress bar to 1T coins, current ascension count, skill points, reset warnings, and Ascend button.
 - Commands `/ascend elevate`, `/ascend summit`, and `/ascend ascension` now open their respective UI pages instead of chat-only interactions.
+- Added graphical skill tree UI for the Ascension prestige system:
+  - **Visual tree layout**: 18 skill nodes positioned in branching tree pattern with 3 main paths.
+  - **Color-coded paths**: COIN (gold), SPEED (blue), MANUAL (purple), HYBRID (teal), ULTIMATE (rose).
+  - **Connection lines**: Vertical and horizontal lines connect nodes, colored when prerequisites are unlocked.
+  - **Node states**: Locked (gray border), Available (path color border, "AVAILABLE"), Unlocked (path color border, "UNLOCKED").
+  - **Click to unlock**: Clicking available nodes spends 1 skill point and unlocks the skill.
+  - **Requirement messages**: Clicking locked nodes shows prerequisite requirements in chat.
+  - **Tree structure**: T1-T5 tiers per path, HYBRID nodes bridge paths, ULTIMATE at the apex.
+  - **Points display**: Header shows available and total skill points.
+  - `/ascend skills` now opens the graphical skill tree UI instead of text output.
 
