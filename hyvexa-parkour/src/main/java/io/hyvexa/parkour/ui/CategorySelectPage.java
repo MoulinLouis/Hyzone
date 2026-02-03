@@ -107,6 +107,8 @@ public class CategorySelectPage extends BaseParkourPage {
             int completed = completedByCategory.getOrDefault(category, 0);
             commandBuilder.set("#CategoryCards[" + index + "] #CategoryProgress.Text",
                     completed + "/" + total + " Completed");
+            String accentColor = UIColorUtils.getCategoryAccentColor(category);
+            commandBuilder.set("#CategoryCards[" + index + "] #AccentBar.Background", accentColor);
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
                     "#CategoryCards[" + index + "] #SelectButton",
                     EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_SELECT_PREFIX + category), false);

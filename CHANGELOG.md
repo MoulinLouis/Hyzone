@@ -1,5 +1,18 @@
 # Changelog
 
+- Unify horizontal card UI design across parkour module:
+  - Apply ascend-style horizontal card design to Categories, Maps, and Leaderboard interfaces.
+  - Add 8px colored accent bar on the left of each card, dynamically colored by category/rank.
+  - Update background to `#1a2530(0.95)` with subtle hover (`#ffffff(0.05)`) and pressed (`#ffffff(0.02)`) states.
+  - Update text colors: primary `#f0f4f8`, secondary `#9fb0ba`.
+  - Category colors: Easy (green), Medium (blue), Hard (orange), Insane (red).
+  - Leaderboard rank colors: 1st (gold), 2nd (silver), 3rd (bronze), 4th+ (gray).
+  - Global leaderboard menu: purple accent color.
+  - New `UIColorUtils.java` utility class for shared accent color resolution.
+  - Update Back/Close buttons to match the new design: `#1a2530(0.95)` background, `#f0f4f8` text, subtle hover/pressed states.
+  - Modified entry UI files: `Parkour_CategoryEntry.ui`, `Parkour_MapSelectEntry.ui`, `Parkour_LeaderboardEntry.ui`, `Parkour_LeaderboardMapEntry.ui`, `Parkour_LeaderboardMenuEntry.ui`, `Parkour_MapLeaderboardEntry.ui`.
+  - Modified page UI files (Back/Close buttons): `Parkour_CategorySelect.ui`, `Parkour_MapSelect.ui`, `Parkour_LeaderboardMenu.ui`, `Parkour_Leaderboard.ui`, `Parkour_LeaderboardMapSelect.ui`, `Parkour_MapLeaderboard.ui`, `Parkour_Stats.ui`, `Parkour_PlayerSettings.ui`, `Parkour_PlayerMusic.ui`.
+  - Modified Java pages: `CategorySelectPage`, `MapSelectPage`, `LeaderboardPage`, `LeaderboardMapSelectPage`, `LeaderboardMenuPage`, `MapLeaderboardPage`.
 - Architecture improvements (Phase 4):
   - Add `ModeInventoryManager` to hyvexa-core for shared inventory utilities across all modes.
     - Consolidates duplicate code from InventoryUtils, HubRouter, and ParkourAscendPlugin.

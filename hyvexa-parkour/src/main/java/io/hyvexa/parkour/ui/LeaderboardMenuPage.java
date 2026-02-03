@@ -84,6 +84,7 @@ public class LeaderboardMenuPage extends BaseParkourPage {
         commandBuilder.clear("#MenuCards");
         commandBuilder.append("#MenuCards", "Pages/Parkour_LeaderboardMenuEntry.ui");
         commandBuilder.set("#MenuCards[0] #EntryName.Text", "Global");
+        commandBuilder.set("#MenuCards[0] #AccentBar.Background", UIColorUtils.COLOR_GLOBAL);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
                 "#MenuCards[0] #SelectButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_GLOBAL), false);
@@ -98,6 +99,8 @@ public class LeaderboardMenuPage extends BaseParkourPage {
         for (String category : orderedCategories) {
             commandBuilder.append("#MenuCards", "Pages/Parkour_LeaderboardMenuEntry.ui");
             commandBuilder.set("#MenuCards[" + index + "] #EntryName.Text", category);
+            commandBuilder.set("#MenuCards[" + index + "] #AccentBar.Background",
+                    UIColorUtils.getCategoryAccentColor(category));
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
                     "#MenuCards[" + index + "] #SelectButton",
                     EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CATEGORY_PREFIX + category), false);

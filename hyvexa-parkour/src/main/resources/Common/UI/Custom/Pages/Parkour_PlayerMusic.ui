@@ -7,14 +7,24 @@ $C.@PageOverlay {
     #Title {
       Group {
         TextButton #BackButton {
-          Anchor: (Left: 12, Top: 4, Width: 64, Height: 24);
-          Padding: (Left: 8, Top: 2);
+          Anchor: (Left: 12, Top: 4, Width: 64, Height: 26);
+          Padding: (Left: 8, Top: 3);
           Text: "< Back";
           Style: TextButtonStyle(
-            Default: (LabelStyle: (FontSize: 14, TextColor: #93844c, RenderBold: true)),
+            Default: (
+              Background: #1a2530(0.95),
+              LabelStyle: (FontSize: 14, TextColor: #f0f4f8, RenderBold: true)
+            ),
+            Hovered: (
+              Background: #263545,
+              LabelStyle: (FontSize: 14, TextColor: #f0f4f8, RenderBold: true)
+            ),
+            Pressed: (
+              Background: #1e2d3a,
+              LabelStyle: (FontSize: 14, TextColor: #f0f4f8, RenderBold: true)
+            ),
             Sounds: $C.@ButtonSounds,
           );
-          Background: #000000(0.13);
         }
         $C.@Title {
           @Text = "Music Settings";
