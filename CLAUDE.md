@@ -43,6 +43,17 @@ Quick reference for AI agents working on this Hytale plugin project.
 9. **Track online players** - only spawn per-player entities for connected players
 10. **Disable NPC AI** - use `Frozen` component to prevent autonomous movement
 
+## UI File Rules (.ui)
+
+**CRITICAL - These cause parsing errors:**
+- **No underscores in element IDs** - Use `#StatLabel` not `#Stat_Label`
+- **No HorizontalAlignment in Label styles** - Causes UI crash. Use `Anchor` positioning instead
+
+```
+❌ Label { Style: (HorizontalAlignment: Right); }  // CRASHES
+✅ Label { Anchor: (Right: 16); }                   // Use positioning instead
+```
+
 ## Database
 
 - Config: `run/mods/Parkour/database.json` (gitignored)

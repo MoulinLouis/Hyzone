@@ -1,5 +1,26 @@
 # Changelog
 
+- Add Stats page to parkour-ascend /ascend menu:
+  - New "Stats" button (blue) in the action bar opens a dedicated stats page.
+  - **Combined Income**: Total coins/sec from all runners with multipliers applied.
+  - **Multiplier Breakdown**: Shows digits × elevation × summit = total multiplier.
+  - **Lifetime Earnings**: Total coins earned across all time (persists after resets).
+  - **Manual Runs**: Total count of manual parkour completions.
+  - **Ascensions**: Number of prestige resets performed.
+  - **Fastest Ascension**: Best time + live current timer with auto-refresh.
+  - New database fields: `ascension_started_at` and `fastest_ascension_ms` in ascend_players.
+  - Timer starts on first join, records best time on each ascension.
+  - UI files: Ascend_Stats.ui, Ascend_StatsEntry.ui, Ascend_StatsTimerEntry.ui.
+- Replace Spawn/NPC buttons with Buy All/Evolve All in parkour-ascend /ascend menu:
+  - **Buy All button** (green, replaces Spawn): Purchases all affordable runner upgrades in one click.
+    - Handles: buying new runners and speed upgrades only (not evolutions).
+    - Logic: collects all purchasable upgrades, sorts by price (cheapest first), buys as many as affordable.
+    - If player can afford upgrades for maps 1, 2, but not 3, only maps 1 and 2 are purchased.
+  - **Evolve All button** (purple, replaces NPC): Evolves all runners that are ready.
+    - Only affects runners at max speed level (Lv.20) that haven't reached max stars.
+    - Evolution is free, processes all eligible runners in one click.
+  - Both buttons update all affected map cards after action.
+  - Removed unused teleport functionality (Vector3d, Vector3f, Teleport, AscendSettingsStore imports).
 - Add skill points management to admin panel in parkour-ascend:
   - Added "Skill Tree Points" section to Admin Coins page (via `/as admin` -> Admin Panel).
   - Display current skill points with Add/Remove buttons (same pattern as coins).
