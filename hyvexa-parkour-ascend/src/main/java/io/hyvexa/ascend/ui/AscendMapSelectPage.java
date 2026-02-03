@@ -421,7 +421,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
             }
 
             // Normal speed upgrade
-            long upgradeCost = computeUpgradeCost(currentLevel);
+            long upgradeCost = computeUpgradeCost(currentLevel, map.getDisplayOrder());
             if (!playerStore.spendCoins(playerRef.getUuid(), upgradeCost)) {
                 sendMessage(store, ref, "[Ascend] Not enough coins to upgrade speed.");
                 return;
