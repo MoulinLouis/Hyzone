@@ -12,7 +12,6 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants;
-import io.hyvexa.ascend.AscendConstants.SummitCategory;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
@@ -48,7 +47,6 @@ public class StatsPage extends BaseAscendPage {
     private final AscendMapStore mapStore;
     private final GhostStore ghostStore;
     private ScheduledFuture<?> refreshTask;
-    private volatile boolean active;
 
     public StatsPage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore,
                      AscendMapStore mapStore, GhostStore ghostStore) {
@@ -66,14 +64,12 @@ public class StatsPage extends BaseAscendPage {
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CloseButton",
             EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE), false);
 
-        active = true;
         buildStatCards(ref, store, commandBuilder, eventBuilder);
         startAutoRefresh(ref, store);
     }
 
     @Override
     public void close() {
-        active = false;
         stopAutoRefresh();
         super.close();
     }
@@ -274,14 +270,17 @@ public class StatsPage extends BaseAscendPage {
             return;
         }
         refreshTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(() -> {
-            if (!active || ref == null || !ref.isValid()) {
+            if (!isCurrentPage()) {
+                stopAutoRefresh();
+                return;
+            }
+            if (ref == null || !ref.isValid()) {
                 stopAutoRefresh();
                 return;
             }
             try {
                 CompletableFuture.runAsync(() -> refreshTimer(ref, store), world);
             } catch (Exception e) {
-                active = false;
                 stopAutoRefresh();
             }
         }, 1000L, 1000L, TimeUnit.MILLISECONDS);
@@ -295,7 +294,7 @@ public class StatsPage extends BaseAscendPage {
     }
 
     private void refreshTimer(Ref<EntityStore> ref, Store<EntityStore> store) {
-        if (!active) {
+        if (!isCurrentPage()) {
             stopAutoRefresh();
             return;
         }
@@ -306,6 +305,9 @@ public class StatsPage extends BaseAscendPage {
 
         UICommandBuilder commandBuilder = new UICommandBuilder();
         updateFastestAscension(commandBuilder, playerRef.getUuid());
+        if (!isCurrentPage()) {
+            return;
+        }
         sendUpdate(commandBuilder, null, false);
     }
 }

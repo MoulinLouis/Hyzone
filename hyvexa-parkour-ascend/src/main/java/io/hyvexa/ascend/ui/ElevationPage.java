@@ -17,12 +17,16 @@ import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.AscendConstants.ElevationPurchaseResult;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.ascension.AscensionManager;
+import io.hyvexa.ascend.data.AscendMap;
+import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerStore;
+import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
 
 import javax.annotation.Nonnull;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
@@ -36,7 +40,6 @@ public class ElevationPage extends BaseAscendPage {
 
     private final AscendPlayerStore playerStore;
     private ScheduledFuture<?> refreshTask;
-    private volatile boolean active;
 
     public ElevationPage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
@@ -53,14 +56,12 @@ public class ElevationPage extends BaseAscendPage {
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ElevateButton",
             EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_ELEVATE), false);
 
-        active = true;
         updateDisplay(ref, store, commandBuilder);
         startAutoRefresh(ref, store);
     }
 
     @Override
     public void close() {
-        active = false;
         stopAutoRefresh();
         super.close();
     }
@@ -114,13 +115,41 @@ public class ElevationPage extends BaseAscendPage {
         player.sendMessage(Message.raw("[Ascend] Elevation +" + purchase.levels + " (x" + newElevation + ")!")
             .color(SystemMessageUtils.SUCCESS));
 
-        // Check achievements
+        // Reset all progress (coins, map unlocks, best times, runners)
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin != null && plugin.getAchievementManager() != null) {
-            plugin.getAchievementManager().checkAndUnlockAchievements(playerId, player);
+        if (plugin != null) {
+            AscendMapStore mapStore = plugin.getMapStore();
+            RobotManager robotManager = plugin.getRobotManager();
+
+            // Get first map ID
+            String firstMapId = null;
+            if (mapStore != null) {
+                List<AscendMap> maps = mapStore.listMapsSorted();
+                if (!maps.isEmpty()) {
+                    firstMapId = maps.get(0).getId();
+                }
+            }
+
+            // Reset progress and get list of maps with runners for despawn
+            List<String> mapsWithRunners = playerStore.resetProgressForElevation(playerId, firstMapId);
+
+            // Despawn all runners (player loses them on elevation)
+            if (robotManager != null && !mapsWithRunners.isEmpty()) {
+                for (String mapId : mapsWithRunners) {
+                    robotManager.despawnRobot(playerId, mapId);
+                }
+            }
+
+            // Check achievements
+            if (plugin.getAchievementManager() != null) {
+                plugin.getAchievementManager().checkAndUnlockAchievements(playerId, player);
+            }
         }
 
-        // Refresh display
+        // Refresh display only if still current page
+        if (!isCurrentPage()) {
+            return;
+        }
         UICommandBuilder updateBuilder = new UICommandBuilder();
         updateDisplay(ref, store, updateBuilder);
         sendUpdate(updateBuilder, null, false);
@@ -135,14 +164,18 @@ public class ElevationPage extends BaseAscendPage {
             return;
         }
         refreshTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(() -> {
-            if (!active || ref == null || !ref.isValid()) {
+            // Quick check - if not current page, stop refreshing
+            if (!isCurrentPage()) {
+                stopAutoRefresh();
+                return;
+            }
+            if (ref == null || !ref.isValid()) {
                 stopAutoRefresh();
                 return;
             }
             try {
                 CompletableFuture.runAsync(() -> refreshDisplay(ref, store), world);
             } catch (Exception e) {
-                active = false;
                 stopAutoRefresh();
             }
         }, REFRESH_INTERVAL_MS, REFRESH_INTERVAL_MS, TimeUnit.MILLISECONDS);
@@ -156,19 +189,18 @@ public class ElevationPage extends BaseAscendPage {
     }
 
     private void refreshDisplay(Ref<EntityStore> ref, Store<EntityStore> store) {
-        if (!active) {
+        // Don't send updates if this page is no longer current
+        if (!isCurrentPage()) {
             stopAutoRefresh();
             return;
         }
-        try {
-            UICommandBuilder commandBuilder = new UICommandBuilder();
-            updateDisplay(ref, store, commandBuilder);
-            sendUpdate(commandBuilder, null, false);
-        } catch (Exception e) {
-            // Page was replaced, stop refreshing
-            active = false;
-            stopAutoRefresh();
+        UICommandBuilder commandBuilder = new UICommandBuilder();
+        updateDisplay(ref, store, commandBuilder);
+        // Final check before sending
+        if (!isCurrentPage()) {
+            return;
         }
+        sendUpdate(commandBuilder, null, false);
     }
 
     private void updateDisplay(Ref<EntityStore> ref, Store<EntityStore> store, UICommandBuilder commandBuilder) {
@@ -224,12 +256,5 @@ public class ElevationPage extends BaseAscendPage {
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         AscensionManager ascensionManager = plugin != null ? plugin.getAscensionManager() : null;
         return ascensionManager != null ? ascensionManager.getElevationCostMultiplier(playerId) : 1.0;
-    }
-
-    private String formatMultiplier(double multiplier) {
-        if (multiplier >= 10.0) {
-            return String.format("%.1f", multiplier);
-        }
-        return String.format("%.2f", multiplier);
     }
 }

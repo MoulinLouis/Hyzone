@@ -21,6 +21,7 @@ import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 import io.hyvexa.ascend.ui.AscendMapSelectPage;
 import io.hyvexa.ascend.ui.AscensionPage;
+import io.hyvexa.ascend.ui.BaseAscendPage;
 import io.hyvexa.ascend.ui.ElevationPage;
 import io.hyvexa.ascend.ui.SkillTreePage;
 import io.hyvexa.ascend.ui.StatsPage;
@@ -30,9 +31,40 @@ import io.hyvexa.common.util.CommandUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
 
 import javax.annotation.Nonnull;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class AscendCommand extends AbstractAsyncCommand {
+
+    // Track active pages per player to ensure proper cleanup when switching pages
+    private static final Map<UUID, BaseAscendPage> activePages = new ConcurrentHashMap<>();
+
+    /**
+     * Close any existing page for the player before opening a new one.
+     * This ensures auto-refresh tasks are stopped properly.
+     */
+    private static void closeActivePage(UUID playerId) {
+        BaseAscendPage oldPage = activePages.remove(playerId);
+        if (oldPage != null) {
+            oldPage.shutdown();
+        }
+    }
+
+    /**
+     * Register a new page as active for the player.
+     */
+    private static void registerActivePage(UUID playerId, BaseAscendPage page) {
+        activePages.put(playerId, page);
+    }
+
+    /**
+     * Called when a player disconnects to clean up their page.
+     */
+    public static void onPlayerDisconnect(UUID playerId) {
+        closeActivePage(playerId);
+    }
 
     public AscendCommand() {
         super("ascend", "Open the Ascend menu");
@@ -94,8 +126,11 @@ public class AscendCommand extends AbstractAsyncCommand {
             player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading."));
             return;
         }
-        player.getPageManager().openCustomPage(ref, store,
-            new StatsPage(playerRef, plugin.getPlayerStore(), plugin.getMapStore(), plugin.getGhostStore()));
+        UUID playerId = playerRef.getUuid();
+        closeActivePage(playerId);
+        StatsPage page = new StatsPage(playerRef, plugin.getPlayerStore(), plugin.getMapStore(), plugin.getGhostStore());
+        registerActivePage(playerId, page);
+        player.getPageManager().openCustomPage(ref, store, page);
     }
 
     private void openElevationPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -104,8 +139,11 @@ public class AscendCommand extends AbstractAsyncCommand {
             player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading."));
             return;
         }
-        player.getPageManager().openCustomPage(ref, store,
-            new ElevationPage(playerRef, plugin.getPlayerStore()));
+        UUID playerId = playerRef.getUuid();
+        closeActivePage(playerId);
+        ElevationPage page = new ElevationPage(playerRef, plugin.getPlayerStore());
+        registerActivePage(playerId, page);
+        player.getPageManager().openCustomPage(ref, store, page);
     }
 
     private void openSummitPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store, String[] args) {
@@ -114,8 +152,11 @@ public class AscendCommand extends AbstractAsyncCommand {
             player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading."));
             return;
         }
-        player.getPageManager().openCustomPage(ref, store,
-            new SummitPage(playerRef, plugin.getPlayerStore(), plugin.getSummitManager()));
+        UUID playerId = playerRef.getUuid();
+        closeActivePage(playerId);
+        SummitPage page = new SummitPage(playerRef, plugin.getPlayerStore(), plugin.getSummitManager());
+        registerActivePage(playerId, page);
+        player.getPageManager().openCustomPage(ref, store, page);
     }
 
     private void openAscensionPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -124,8 +165,11 @@ public class AscendCommand extends AbstractAsyncCommand {
             player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading."));
             return;
         }
-        player.getPageManager().openCustomPage(ref, store,
-            new AscensionPage(playerRef, plugin.getPlayerStore(), plugin.getAscensionManager()));
+        UUID playerId = playerRef.getUuid();
+        closeActivePage(playerId);
+        AscensionPage page = new AscensionPage(playerRef, plugin.getPlayerStore(), plugin.getAscensionManager());
+        registerActivePage(playerId, page);
+        player.getPageManager().openCustomPage(ref, store, page);
     }
 
     private void openSkillTreePage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -134,8 +178,11 @@ public class AscendCommand extends AbstractAsyncCommand {
             player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading."));
             return;
         }
-        player.getPageManager().openCustomPage(ref, store,
-            new SkillTreePage(playerRef, plugin.getPlayerStore(), plugin.getAscensionManager()));
+        UUID playerId = playerRef.getUuid();
+        closeActivePage(playerId);
+        SkillTreePage page = new SkillTreePage(playerRef, plugin.getPlayerStore(), plugin.getAscensionManager());
+        registerActivePage(playerId, page);
+        player.getPageManager().openCustomPage(ref, store, page);
     }
 
     private void showAchievements(Player player, PlayerRef playerRef) {
@@ -222,8 +269,11 @@ public class AscendCommand extends AbstractAsyncCommand {
             player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading."));
             return;
         }
-        player.getPageManager().openCustomPage(ref, store,
-            new AscendMapSelectPage(playerRef, mapStore, playerStore, runTracker, robotManager, ghostStore));
+        UUID playerId = playerRef.getUuid();
+        closeActivePage(playerId);
+        AscendMapSelectPage page = new AscendMapSelectPage(playerRef, mapStore, playerStore, runTracker, robotManager, ghostStore);
+        registerActivePage(playerId, page);
+        player.getPageManager().openCustomPage(ref, store, page);
     }
 
 }
