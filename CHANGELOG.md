@@ -1,5 +1,15 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+- **Ascend: Early-game progression rebalance**
+  - Reduced first runner upgrade cost from 100 to ~10 coins (~10 manual runs)
+  - Implemented obscure quick-ramp formula for upgrade costs (no longer simple doubling)
+  - Added map-based pricing: higher-level map runners cost significantly more to upgrade
+  - Rouge (map 0): 1.0x cost multiplier, Bleu (map 4): 3.5x cost multiplier
+  - Example: Rouge runner level 0→1 costs 10 coins, Bleu runner level 0→1 costs 1,452 coins
+
 - Add visual affordability indicator for runner button in parkour-ascend:
   - Level text ("Lv.X" or "MAX") and button top accent bar change color based on upgrade affordability.
   - When player has enough coins for upgrade: uses map accent color (violet, blue, cyan, etc.).
