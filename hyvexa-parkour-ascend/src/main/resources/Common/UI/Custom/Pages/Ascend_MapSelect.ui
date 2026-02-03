@@ -44,18 +44,18 @@ $C.@PageOverlay {
         TextButton #ActionButton1 {
           Anchor: (Height: 56);
           FlexWeight: 1;
-          Text: "Spawn";
+          Text: "Buy All";
           Style: TextButtonStyle(
             Default: (
-              Background: #2d5a7b(0.85),
-              LabelStyle: (FontSize: 18, TextColor: #e8f4fc, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+              Background: #3d6b5a(0.85),
+              LabelStyle: (FontSize: 18, TextColor: #e8fcf4, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
             ),
             Hovered: (
-              Background: #3a7399(0.92),
+              Background: #4d8f7a(0.92),
               LabelStyle: (FontSize: 18, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
             ),
             Pressed: (
-              Background: #4a8ab3(0.95),
+              Background: #60a894(0.95),
               LabelStyle: (FontSize: 18, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
             ),
             Sounds: $C.@ButtonSounds,
@@ -67,7 +67,7 @@ $C.@PageOverlay {
         TextButton #ActionButton2 {
           Anchor: (Height: 56);
           FlexWeight: 1;
-          Text: "NPC";
+          Text: "Evolve All";
           Style: TextButtonStyle(
             Default: (
               Background: #5a3d6b(0.85),
@@ -90,18 +90,18 @@ $C.@PageOverlay {
         TextButton #ActionButton3 {
           Anchor: (Height: 56);
           FlexWeight: 1;
-          Text: "Placeholder 3";
+          Text: "Stats";
           Style: TextButtonStyle(
             Default: (
-              Background: #5a6b3d(0.85),
-              LabelStyle: (FontSize: 18, TextColor: #f4fce8, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+              Background: #2d5a7b(0.85),
+              LabelStyle: (FontSize: 18, TextColor: #e8f4fc, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
             ),
             Hovered: (
-              Background: #7a8f4d(0.92),
+              Background: #3a7399(0.92),
               LabelStyle: (FontSize: 18, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
             ),
             Pressed: (
-              Background: #94a860(0.95),
+              Background: #4a8ab3(0.95),
               LabelStyle: (FontSize: 18, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
             ),
             Sounds: $C.@ButtonSounds,

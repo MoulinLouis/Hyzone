@@ -2,14 +2,11 @@ package io.hyvexa.ascend.ui;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
@@ -22,7 +19,6 @@ import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
-import io.hyvexa.ascend.data.AscendSettingsStore;
 import io.hyvexa.ascend.ghost.GhostRecording;
 import io.hyvexa.ascend.ghost.GhostStore;
 import io.hyvexa.ascend.robot.RobotManager;
@@ -44,8 +40,9 @@ public class AscendMapSelectPage extends BaseAscendPage {
     private static final String BUTTON_CLOSE = "Close";
     private static final String BUTTON_SELECT_PREFIX = "Select:";
     private static final String BUTTON_ROBOT_PREFIX = "Robot:";
-    private static final String BUTTON_SPAWN = "Spawn";
-    private static final String BUTTON_NPC = "Npc";
+    private static final String BUTTON_BUY_ALL = "BuyAll";
+    private static final String BUTTON_EVOLVE_ALL = "EvolveAll";
+    private static final String BUTTON_STATS = "Stats";
     private static final int MAX_SPEED_LEVEL = 20;
 
     private final AscendMapStore mapStore;
@@ -75,9 +72,11 @@ public class AscendMapSelectPage extends BaseAscendPage {
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CloseButton",
             EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ActionButton1",
-            EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_SPAWN), false);
+            EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_BUY_ALL), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ActionButton2",
-            EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_NPC), false);
+            EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_EVOLVE_ALL), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ActionButton3",
+            EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_STATS), false);
         active = true;
         buildMapList(ref, store, uiCommandBuilder, uiEventBuilder);
         // Refresh removed - status only changes when runner is upgraded or PB is achieved
@@ -95,12 +94,16 @@ public class AscendMapSelectPage extends BaseAscendPage {
             this.close();
             return;
         }
-        if (BUTTON_SPAWN.equals(data.getButton())) {
-            handleTeleportToSpawn(ref, store);
+        if (BUTTON_BUY_ALL.equals(data.getButton())) {
+            handleBuyAll(ref, store);
             return;
         }
-        if (BUTTON_NPC.equals(data.getButton())) {
-            handleTeleportToNpc(ref, store);
+        if (BUTTON_EVOLVE_ALL.equals(data.getButton())) {
+            handleEvolveAll(ref, store);
+            return;
+        }
+        if (BUTTON_STATS.equals(data.getButton())) {
+            handleOpenStats(ref, store);
             return;
         }
         if (data.getButton().startsWith(BUTTON_ROBOT_PREFIX)) {
@@ -608,68 +611,183 @@ public class AscendMapSelectPage extends BaseAscendPage {
         }
     }
 
-    private void handleTeleportToSpawn(Ref<EntityStore> ref, Store<EntityStore> store) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        AscendSettingsStore settingsStore = plugin != null ? plugin.getSettingsStore() : null;
-
-        if (settingsStore == null || !settingsStore.hasSpawnPosition()) {
-            sendMessage(store, ref, "[Ascend] Spawn position not configured.");
-            return;
-        }
-
-        World world = store.getExternalData().getWorld();
-        if (world == null) {
-            return;
-        }
-
-        Vector3d pos = settingsStore.getSpawnPosition();
-        Vector3f rot = settingsStore.getSpawnRotation();
-
-        store.addComponent(ref, Teleport.getComponentType(), new Teleport(world, pos, rot));
-
-        // Cancel any active run and give menu items
+    private void handleBuyAll(Ref<EntityStore> ref, Store<EntityStore> store) {
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-        if (playerRef != null && runTracker != null) {
-            runTracker.cancelRun(playerRef.getUuid());
-        }
-        Player player = store.getComponent(ref, Player.getComponentType());
-        if (player != null && plugin != null) {
-            plugin.giveMenuItems(player);
+        if (playerRef == null) {
+            return;
         }
 
-        this.close();
+        // Collect all affordable purchases sorted by price (cheapest first)
+        List<PurchaseOption> options = new ArrayList<>();
+        List<AscendMap> maps = mapStore.listMapsSorted();
+
+        for (AscendMap map : maps) {
+            MapUnlockHelper.UnlockResult unlockResult = MapUnlockHelper.checkAndEnsureUnlock(
+                playerRef.getUuid(), map, playerStore, mapStore);
+            if (!unlockResult.unlocked) {
+                continue;
+            }
+
+            AscendPlayerProgress.MapProgress mapProgress = playerStore.getMapProgress(playerRef.getUuid(), map.getId());
+            boolean hasRobot = mapProgress != null && mapProgress.hasRobot();
+            boolean completedManually = mapProgress != null && mapProgress.isCompletedManually();
+            int speedLevel = mapProgress != null ? mapProgress.getRobotSpeedLevel() : 0;
+            int stars = mapProgress != null ? mapProgress.getRobotStars() : 0;
+
+            if (!hasRobot) {
+                // Can buy robot if completed manually and has ghost
+                if (completedManually) {
+                    GhostRecording ghost = ghostStore.getRecording(playerRef.getUuid(), map.getId());
+                    if (ghost != null) {
+                        long price = Math.max(0L, map.getEffectiveRobotPrice());
+                        options.add(new PurchaseOption(map.getId(), PurchaseType.BUY_ROBOT, price));
+                    }
+                }
+            } else {
+                // Can upgrade speed if not at max level
+                if (speedLevel >= MAX_SPEED_LEVEL) {
+                    // At max speed level, skip (evolution handled by Evolve All)
+                    continue;
+                }
+                long upgradeCost = computeUpgradeCost(speedLevel);
+                options.add(new PurchaseOption(map.getId(), PurchaseType.UPGRADE_SPEED, upgradeCost));
+            }
+        }
+
+        if (options.isEmpty()) {
+            sendMessage(store, ref, "[Ascend] No upgrades available.");
+            return;
+        }
+
+        // Sort by price (cheapest first) to maximize number of purchases
+        options.sort((a, b) -> Long.compare(a.price, b.price));
+
+        // Process purchases
+        int purchased = 0;
+        long totalSpent = 0;
+        List<String> updatedMapIds = new ArrayList<>();
+
+        for (PurchaseOption option : options) {
+            double currentCoins = playerStore.getCoins(playerRef.getUuid());
+            if (option.price > currentCoins) {
+                continue;
+            }
+
+            boolean success = false;
+            switch (option.type) {
+                case BUY_ROBOT -> {
+                    if (option.price > 0) {
+                        if (!playerStore.spendCoins(playerRef.getUuid(), option.price)) {
+                            continue;
+                        }
+                    }
+                    playerStore.setHasRobot(playerRef.getUuid(), option.mapId, true);
+                    success = true;
+                }
+                case UPGRADE_SPEED -> {
+                    if (!playerStore.spendCoins(playerRef.getUuid(), option.price)) {
+                        continue;
+                    }
+                    int newLevel = playerStore.incrementRobotSpeedLevel(playerRef.getUuid(), option.mapId);
+                    // Check if new level unlocks next map
+                    if (newLevel == AscendConstants.MAP_UNLOCK_REQUIRED_RUNNER_LEVEL) {
+                        playerStore.checkAndUnlockEligibleMaps(playerRef.getUuid(), mapStore);
+                    }
+                    success = true;
+                }
+            }
+
+            if (success) {
+                purchased++;
+                totalSpent += option.price;
+                if (!updatedMapIds.contains(option.mapId)) {
+                    updatedMapIds.add(option.mapId);
+                }
+            }
+        }
+
+        if (purchased == 0) {
+            sendMessage(store, ref, "[Ascend] Not enough coins for any upgrade.");
+            return;
+        }
+
+        String costText = totalSpent > 0 ? " for " + FormatUtils.formatCoinsForHud(totalSpent) + " coins" : "";
+        sendMessage(store, ref, "[Ascend] Purchased " + purchased + " upgrade" + (purchased > 1 ? "s" : "") + costText + "!");
+
+        // Update UI for all affected maps
+        for (String mapId : updatedMapIds) {
+            updateRobotRow(ref, store, mapId);
+        }
     }
 
-    private void handleTeleportToNpc(Ref<EntityStore> ref, Store<EntityStore> store) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        AscendSettingsStore settingsStore = plugin != null ? plugin.getSettingsStore() : null;
+    private enum PurchaseType {
+        BUY_ROBOT,
+        UPGRADE_SPEED
+    }
 
-        if (settingsStore == null || !settingsStore.hasNpcPosition()) {
-            sendMessage(store, ref, "[Ascend] NPC location not configured.");
-            return;
-        }
+    private record PurchaseOption(String mapId, PurchaseType type, long price) {}
 
-        World world = store.getExternalData().getWorld();
-        if (world == null) {
-            return;
-        }
-
-        Vector3d pos = settingsStore.getNpcPosition();
-        Vector3f rot = settingsStore.getNpcRotation();
-
-        store.addComponent(ref, Teleport.getComponentType(), new Teleport(world, pos, rot));
-
-        // Cancel any active run and give menu items
+    private void handleEvolveAll(Ref<EntityStore> ref, Store<EntityStore> store) {
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-        if (playerRef != null && runTracker != null) {
-            runTracker.cancelRun(playerRef.getUuid());
+        if (playerRef == null) {
+            return;
+        }
+
+        // Find all runners that can be evolved (max speed level but not max stars)
+        List<String> eligibleMapIds = new ArrayList<>();
+        List<AscendMap> maps = mapStore.listMapsSorted();
+
+        for (AscendMap map : maps) {
+            MapUnlockHelper.UnlockResult unlockResult = MapUnlockHelper.checkAndEnsureUnlock(
+                playerRef.getUuid(), map, playerStore, mapStore);
+            if (!unlockResult.unlocked) {
+                continue;
+            }
+
+            AscendPlayerProgress.MapProgress mapProgress = playerStore.getMapProgress(playerRef.getUuid(), map.getId());
+            if (mapProgress == null || !mapProgress.hasRobot()) {
+                continue;
+            }
+
+            int speedLevel = mapProgress.getRobotSpeedLevel();
+            int stars = mapProgress.getRobotStars();
+
+            // Can evolve if at max speed level but not at max stars
+            if (speedLevel >= MAX_SPEED_LEVEL && stars < AscendConstants.MAX_ROBOT_STARS) {
+                eligibleMapIds.add(map.getId());
+            }
+        }
+
+        if (eligibleMapIds.isEmpty()) {
+            sendMessage(store, ref, "[Ascend] No runners ready for evolution.");
+            return;
+        }
+
+        // Evolve all eligible runners
+        int evolved = 0;
+        for (String mapId : eligibleMapIds) {
+            int newStars = playerStore.evolveRobot(playerRef.getUuid(), mapId);
+            if (robotManager != null) {
+                robotManager.respawnRobot(playerRef.getUuid(), mapId, newStars);
+            }
+            evolved++;
+            updateRobotRow(ref, store, mapId);
+        }
+
+        sendMessage(store, ref, "[Ascend] Evolved " + evolved + " runner" + (evolved > 1 ? "s" : "") + "!");
+    }
+
+    private void handleOpenStats(Ref<EntityStore> ref, Store<EntityStore> store) {
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        if (playerRef == null) {
+            return;
         }
         Player player = store.getComponent(ref, Player.getComponentType());
-        if (player != null && plugin != null) {
-            plugin.giveMenuItems(player);
+        if (player == null) {
+            return;
         }
-
-        this.close();
+        player.getPageManager().openCustomPage(ref, store,
+            new StatsPage(playerRef, playerStore, mapStore, ghostStore));
     }
 
     private boolean ensureUnlocked(Store<EntityStore> store, Ref<EntityStore> ref, PlayerRef playerRef,
