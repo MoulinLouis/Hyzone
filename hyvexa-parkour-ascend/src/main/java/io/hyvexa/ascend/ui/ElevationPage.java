@@ -67,6 +67,11 @@ public class ElevationPage extends BaseAscendPage {
     }
 
     @Override
+    protected void stopBackgroundTasks() {
+        stopAutoRefresh();
+    }
+
+    @Override
     public void handleDataEvent(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store,
                                 @Nonnull ButtonEventData data) {
         super.handleDataEvent(ref, store, data);
@@ -152,7 +157,11 @@ public class ElevationPage extends BaseAscendPage {
         }
         UICommandBuilder updateBuilder = new UICommandBuilder();
         updateDisplay(ref, store, updateBuilder);
-        sendUpdate(updateBuilder, null, false);
+        try {
+            sendUpdate(updateBuilder, null, false);
+        } catch (Exception e) {
+            // UI was replaced - ignore silently
+        }
     }
 
     private void startAutoRefresh(Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -200,7 +209,12 @@ public class ElevationPage extends BaseAscendPage {
         if (!isCurrentPage()) {
             return;
         }
-        sendUpdate(commandBuilder, null, false);
+        try {
+            sendUpdate(commandBuilder, null, false);
+        } catch (Exception e) {
+            // UI was replaced by external dialog (e.g., NPCDialog) - stop refreshing
+            stopAutoRefresh();
+        }
     }
 
     private void updateDisplay(Ref<EntityStore> ref, Store<EntityStore> store, UICommandBuilder commandBuilder) {

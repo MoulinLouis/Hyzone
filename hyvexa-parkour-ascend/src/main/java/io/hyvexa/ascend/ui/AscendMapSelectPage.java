@@ -150,6 +150,11 @@ public class AscendMapSelectPage extends BaseAscendPage {
         super.close();
     }
 
+    @Override
+    protected void stopBackgroundTasks() {
+        stopAffordabilityUpdates();
+    }
+
     private void buildMapList(Ref<EntityStore> ref, Store<EntityStore> store,
                               UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
         commandBuilder.clear("#MapCards");
@@ -563,7 +568,12 @@ public class AscendMapSelectPage extends BaseAscendPage {
         if (!isCurrentPage()) {
             return;
         }
-        sendUpdate(commandBuilder, null, false);
+        try {
+            sendUpdate(commandBuilder, null, false);
+        } catch (Exception e) {
+            // UI was replaced by external dialog (e.g., NPCDialog) - stop refreshing
+            stopAffordabilityUpdates();
+        }
     }
 
     private void updateRobotRow(Ref<EntityStore> ref, Store<EntityStore> store, String mapId) {
@@ -685,7 +695,11 @@ public class AscendMapSelectPage extends BaseAscendPage {
         if (!isCurrentPage()) {
             return;
         }
-        sendUpdate(commandBuilder, null, false);
+        try {
+            sendUpdate(commandBuilder, null, false);
+        } catch (Exception e) {
+            // UI was replaced - ignore silently
+        }
     }
 
     /**
@@ -817,7 +831,11 @@ public class AscendMapSelectPage extends BaseAscendPage {
 
         // Send update to client
         if (isCurrentPage()) {
-            sendUpdate(commandBuilder, eventBuilder, false);
+            try {
+                sendUpdate(commandBuilder, eventBuilder, false);
+            } catch (Exception e) {
+                // UI was replaced - ignore silently
+            }
         }
     }
 
