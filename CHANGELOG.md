@@ -8,6 +8,8 @@
   - Display now shows dynamic progression toward next multiplier (e.g., "Progress to x2: 3,200 / 5,000 coins")
   - Current coins update in real-time as player earns from runners and manual completions
   - Added "GLOBAL MULTIPLIER" title above multiplier display card for clarity
+  - Increased font sizes across the menu to match main ascend UI (14px for labels, 16px for gain text)
+  - Fixed duplicate Anchor declaration in multiplier display
   - Discount percentage still displayed if player has elevation cost reduction from skill tree
 
 - **Ascend: Elevation system rebalanced for slower progression**

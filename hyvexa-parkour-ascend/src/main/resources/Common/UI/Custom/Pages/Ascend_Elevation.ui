@@ -28,7 +28,7 @@ $C.@PageOverlay {
 
       Label #ConversionRate {
         Anchor: (Left: 0, Right: 0, Top: 4);
-        Style: (FontSize: 12, TextColor: #9fb0ba);
+        Style: (FontSize: 14, TextColor: #9fb0ba);
         Text: "1000 coins = +1 elevation";
       }
 
@@ -55,7 +55,6 @@ $C.@PageOverlay {
 
           Group #MultiplierDisplay {
             Anchor: (Left: 0, Right: 0, Top: 12, Height: 48);
-            Anchor: (Left: 0, Right: 0, Height: 48);
             LayoutMode: Left;
 
             Group { FlexWeight: 1; }
@@ -64,7 +63,7 @@ $C.@PageOverlay {
               LayoutMode: Top;
 
               Label {
-                Style: (FontSize: 11, TextColor: #9fb0ba, HorizontalAlignment: Center);
+                Style: (FontSize: 14, TextColor: #9fb0ba, HorizontalAlignment: Center);
                 Text: "Current";
               }
 
@@ -85,7 +84,7 @@ $C.@PageOverlay {
               LayoutMode: Top;
 
               Label {
-                Style: (FontSize: 11, TextColor: #9fb0ba, HorizontalAlignment: Center);
+                Style: (FontSize: 14, TextColor: #9fb0ba, HorizontalAlignment: Center);
                 Text: "New";
               }
 
@@ -101,7 +100,7 @@ $C.@PageOverlay {
 
           Label #GainValue {
             Anchor: (Left: 0, Right: 0, Top: 12);
-            Style: (FontSize: 13, TextColor: #4ade80, RenderBold: true, HorizontalAlignment: Center);
+            Style: (FontSize: 16, TextColor: #4ade80, RenderBold: true, HorizontalAlignment: Center);
             Text: "+0 elevation";
           }
 
@@ -139,13 +138,13 @@ $C.@PageOverlay {
 
       Label #WarningText {
         Anchor: (Left: 0, Right: 0, Top: 16);
-        Style: (FontSize: 12, TextColor: #fca5a5, HorizontalAlignment: Center);
+        Style: (FontSize: 14, TextColor: #fca5a5, HorizontalAlignment: Center);
         Text: "Warning: Elevation resets coins to zero.";
       }
 
       Label #TipText {
         Anchor: (Left: 0, Right: 0, Top: 6);
-        Style: (FontSize: 11, TextColor: #9fb0ba, HorizontalAlignment: Center);
+        Style: (FontSize: 14, TextColor: #9fb0ba, HorizontalAlignment: Center);
         Text: "Higher elevation = more coins from all sources.";
       }
     }
