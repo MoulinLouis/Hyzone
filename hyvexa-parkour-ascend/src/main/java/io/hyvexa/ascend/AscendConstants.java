@@ -173,8 +173,8 @@ public final class AscendConstants {
 
     // Elevation is a direct multiplier (elevation value = multiplier value)
     // Cost formula: BASE_COST * COST_GROWTH^currentElevation
-    public static final long ELEVATION_BASE_COST = 1000L;
-    public static final double ELEVATION_COST_GROWTH = 1.08;  // +8% cost per elevation
+    public static final long ELEVATION_BASE_COST = 5000L;
+    public static final double ELEVATION_COST_GROWTH = 1.15;  // +15% cost per elevation
 
     /**
      * Calculate the cost to reach the next elevation level.
