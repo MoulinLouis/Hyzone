@@ -409,6 +409,11 @@ public class AscendMapSelectPage extends BaseAscendPage {
                         if (player != null) {
                             player.sendMessage(Message.raw("🎉 New map unlocked: " + mapName + "!"));
                         }
+
+                        // Add map to UI immediately
+                        if (isCurrentPage() && ref.isValid()) {
+                            addMapToUI(ref, store, unlockedMap);
+                        }
                     }
                 }
             }
@@ -610,6 +615,117 @@ public class AscendMapSelectPage extends BaseAscendPage {
             return;
         }
         sendUpdate(commandBuilder, null, false);
+    }
+
+    /**
+     * Adds a newly unlocked map to the UI dynamically.
+     * This method is called when a runner reaches level 3 and unlocks the next map.
+     */
+    private void addMapToUI(Ref<EntityStore> ref, Store<EntityStore> store, AscendMap map) {
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        if (playerRef == null) {
+            return;
+        }
+
+        UICommandBuilder commandBuilder = new UICommandBuilder();
+        UIEventBuilder eventBuilder = new UIEventBuilder();
+
+        // Use current lastMapCount as the index for the new map
+        int index = lastMapCount;
+        String mapName = map.getName() != null && !map.getName().isBlank() ? map.getName() : map.getId();
+        String accentColor = resolveMapAccentColor(index);
+
+        // Get map progress (newly unlocked, so might be minimal data)
+        AscendPlayerProgress.MapProgress mapProgress = playerStore.getMapProgress(playerRef.getUuid(), map.getId());
+        boolean hasRobot = mapProgress != null && mapProgress.hasRobot();
+        boolean completedManually = mapProgress != null && mapProgress.isCompletedManually();
+        int speedLevel = mapProgress != null ? mapProgress.getRobotSpeedLevel() : 0;
+        int stars = mapProgress != null ? mapProgress.getRobotStars() : 0;
+
+        // Append new map card
+        commandBuilder.append("#MapCards", "Pages/Ascend_MapSelectEntry.ui");
+
+        // Apply accent color to accent bars
+        commandBuilder.set("#MapCards[" + index + "] #AccentBar.Background", accentColor);
+        commandBuilder.set("#MapCards[" + index + "] #ButtonAccent.Background", accentColor);
+
+        // Apply accent color to progress bar segments
+        for (int seg = 1; seg <= MAX_SPEED_LEVEL; seg++) {
+            commandBuilder.set("#MapCards[" + index + "] #Seg" + seg + ".Background", accentColor);
+        }
+
+        // Update progress bar visibility
+        updateProgressBar(commandBuilder, index, speedLevel);
+
+        // Level text for button zone with star display
+        String levelText = buildStarDisplay(stars, speedLevel);
+
+        // Map name
+        commandBuilder.set("#MapCards[" + index + "] #MapName.Text", mapName);
+
+        // Status text
+        String status = "Runs/sec: " + formatRunsPerSecond(map, hasRobot, speedLevel, playerRef.getUuid());
+        if (mapProgress != null && mapProgress.getBestTimeMs() != null) {
+            long bestTimeMs = mapProgress.getBestTimeMs();
+            double bestTimeSec = bestTimeMs / 1000.0;
+            status += " | PB: " + String.format("%.2fs", bestTimeSec);
+        }
+        commandBuilder.set("#MapCards[" + index + "] #MapStatus.Text", status);
+
+        // Runner status and button text
+        String runnerStatusText;
+        String runnerButtonText;
+        long actionPrice;
+        if (!hasRobot) {
+            runnerStatusText = "No Runner";
+            if (!completedManually) {
+                runnerButtonText = "Complete First";
+                actionPrice = 0L;
+            } else {
+                runnerButtonText = "Buy Runner";
+                actionPrice = Math.max(0L, map.getEffectiveRobotPrice());
+            }
+        } else {
+            int speedPercent = speedLevel * 10;
+            runnerStatusText = "Speed: +" + speedPercent + "%";
+            if (speedLevel >= MAX_SPEED_LEVEL && stars < AscendConstants.MAX_ROBOT_STARS) {
+                runnerButtonText = "Evolve";
+                actionPrice = 0L;
+            } else if (stars >= AscendConstants.MAX_ROBOT_STARS && speedLevel >= MAX_SPEED_LEVEL) {
+                runnerButtonText = "Maxed!";
+                actionPrice = 0L;
+            } else {
+                runnerButtonText = "Upgrade";
+                actionPrice = computeUpgradeCost(speedLevel);
+            }
+        }
+
+        String priceText = actionPrice > 0 ? (FormatUtils.formatCoinsForHud(actionPrice) + " coins") : "Free";
+        if ((speedLevel >= MAX_SPEED_LEVEL && hasRobot) || runnerButtonText.equals("Maxed!")) {
+            priceText = "";
+        }
+
+        commandBuilder.set("#MapCards[" + index + "] #RunnerLevel.Text", levelText);
+        commandBuilder.set("#MapCards[" + index + "] #RunnerLevel.Style.TextColor", accentColor);
+        commandBuilder.set("#MapCards[" + index + "] #RunnerStatus.Text", runnerStatusText);
+        commandBuilder.set("#MapCards[" + index + "] #RobotBuyText.Text", runnerButtonText);
+        commandBuilder.set("#MapCards[" + index + "] #RobotPriceText.Text", priceText);
+
+        // Event bindings
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
+            "#MapCards[" + index + "] #SelectButton",
+            EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_SELECT_PREFIX + map.getId()), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
+            "#MapCards[" + index + "] #RobotBuyButton",
+            EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_ROBOT_PREFIX + map.getId()), false);
+
+        // Increment map count
+        lastMapCount++;
+
+        // Send update to client
+        if (isCurrentPage()) {
+            sendUpdate(commandBuilder, eventBuilder, false);
+        }
     }
 
     private void sendMessage(Store<EntityStore> store, Ref<EntityStore> ref, String text) {
