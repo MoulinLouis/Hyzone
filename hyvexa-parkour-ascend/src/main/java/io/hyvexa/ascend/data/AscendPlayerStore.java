@@ -675,6 +675,62 @@ public class AscendPlayerStore {
         }
     }
 
+    /**
+     * Resets player progress for elevation: clears coins, map unlocks (except first map),
+     * best times, multipliers, and removes all runners.
+     * Used when a player performs an elevation.
+     *
+     * @param playerId the player's UUID
+     * @param firstMapId the ID of the first map (stays unlocked)
+     * @return list of map IDs that had runners (for despawn handling)
+     */
+    public List<String> resetProgressForElevation(UUID playerId, String firstMapId) {
+        AscendPlayerProgress progress = players.get(playerId);
+        if (progress == null) {
+            return List.of();
+        }
+
+        List<String> mapsWithRunners = new java.util.ArrayList<>();
+
+        // Reset coins to 0
+        progress.setCoins(0.0);
+
+        // Process each map progress
+        for (Map.Entry<String, AscendPlayerProgress.MapProgress> entry : progress.getMapProgress().entrySet()) {
+            String mapId = entry.getKey();
+            AscendPlayerProgress.MapProgress mapProgress = entry.getValue();
+
+            // Reset unlocked status (only first map stays unlocked)
+            mapProgress.setUnlocked(mapId.equals(firstMapId));
+
+            // Clear best time
+            mapProgress.setBestTimeMs(null);
+
+            // Reset multiplier
+            mapProgress.setMultiplier(1.0);
+
+            // Reset completed manually
+            mapProgress.setCompletedManually(false);
+
+            // Remove runner if player had one
+            if (mapProgress.hasRobot()) {
+                mapsWithRunners.add(mapId);
+                mapProgress.setHasRobot(false);
+                mapProgress.setRobotSpeedLevel(0);
+                mapProgress.setRobotStars(0);
+            }
+        }
+
+        // Ensure first map has progress entry and is unlocked
+        if (firstMapId != null && !firstMapId.isEmpty()) {
+            AscendPlayerProgress.MapProgress firstMapProgress = progress.getOrCreateMapProgress(firstMapId);
+            firstMapProgress.setUnlocked(true);
+        }
+
+        markDirty(playerId);
+        return mapsWithRunners;
+    }
+
     public boolean isSessionFirstRunClaimed(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
         return progress != null && progress.isSessionFirstRunClaimed();

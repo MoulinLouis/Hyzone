@@ -1,5 +1,24 @@
 # Changelog
 
+- Fix UI refresh race condition in parkour-ascend:
+  - Added page ID tracking in BaseAscendPage - each page gets a unique ID, stored per-player.
+  - New `isCurrentPage()` method checks if this page instance is still the active one for the player.
+  - All UI pages now check `isCurrentPage()` before sending any updates.
+  - When a new page is created, it automatically becomes the current page for that player.
+  - Old pages' refresh tasks detect they're no longer current and stop automatically.
+  - Removed complex locking/synchronization in favor of simple ID comparison.
+  - Prevents "Selected element in CustomUI command was not found" errors when switching pages.
+- Add elevation reset feature in parkour-ascend:
+  - When a player elevates, all progression is reset except elevation level.
+  - **Coins**: Reset to 0 after elevation purchase.
+  - **Map unlocks**: Only map 1 remains unlocked (like fresh start).
+  - **Best times**: Cleared for all maps.
+  - **Map multipliers**: Reset to 1.0 for all maps.
+  - **Runners**: Completely removed - player must buy runners again.
+  - **Completed manually**: Reset to false for all maps.
+  - Runner NPCs are despawned when elevation occurs.
+  - Ghost recordings are preserved for future manual runs.
+  - Added `resetProgressForElevation()` method to AscendPlayerStore.
 - Wire `/ascend stats` command to open StatsPage UI instead of chat messages:
   - `/ascend stats` now opens the visual Stats page with all player statistics.
   - Removed text-based chat output in favor of the rich UI experience.

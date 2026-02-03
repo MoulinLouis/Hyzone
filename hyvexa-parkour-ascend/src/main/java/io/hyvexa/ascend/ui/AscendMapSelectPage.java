@@ -51,7 +51,6 @@ public class AscendMapSelectPage extends BaseAscendPage {
     private final RobotManager robotManager;
     private final GhostStore ghostStore;
     private ScheduledFuture<?> refreshTask;
-    private volatile boolean active;
     private int lastMapCount;
 
     public AscendMapSelectPage(@Nonnull PlayerRef playerRef, AscendMapStore mapStore,
@@ -77,7 +76,6 @@ public class AscendMapSelectPage extends BaseAscendPage {
             EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_EVOLVE_ALL), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ActionButton3",
             EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_STATS), false);
-        active = true;
         buildMapList(ref, store, uiCommandBuilder, uiEventBuilder);
         // Refresh removed - status only changes when runner is upgraded or PB is achieved
         // startAutoRefresh(ref, store);
@@ -148,7 +146,6 @@ public class AscendMapSelectPage extends BaseAscendPage {
 
     @Override
     public void close() {
-        active = false;
         stopAutoRefresh();
         super.close();
     }
@@ -430,14 +427,17 @@ public class AscendMapSelectPage extends BaseAscendPage {
         }
         // Initial delay of 2 seconds to let client fully build the UI before sending updates
         refreshTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(() -> {
-            if (!active || ref == null || !ref.isValid()) {
+            if (!isCurrentPage()) {
+                stopAutoRefresh();
+                return;
+            }
+            if (ref == null || !ref.isValid()) {
                 stopAutoRefresh();
                 return;
             }
             try {
                 CompletableFuture.runAsync(() -> refreshRunRates(ref, store), world);
             } catch (Exception e) {
-                active = false;
                 stopAutoRefresh();
             }
         }, 2000L, 1000L, TimeUnit.MILLISECONDS);
@@ -451,7 +451,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
     }
 
     private void refreshRunRates(Ref<EntityStore> ref, Store<EntityStore> store) {
-        if (!active) {
+        if (!isCurrentPage()) {
             stopAutoRefresh();
             return;
         }
@@ -459,7 +459,6 @@ public class AscendMapSelectPage extends BaseAscendPage {
             doRefreshRunRates(ref, store);
         } catch (Exception e) {
             // Page was replaced, stop refreshing
-            active = false;
             stopAutoRefresh();
         }
     }
@@ -489,6 +488,9 @@ public class AscendMapSelectPage extends BaseAscendPage {
             UICommandBuilder rebuild = new UICommandBuilder();
             UIEventBuilder events = new UIEventBuilder();
             buildMapList(ref, store, rebuild, events);
+            if (!isCurrentPage()) {
+                return;
+            }
             sendUpdate(rebuild, events, false);
             return;
         }
@@ -513,11 +515,14 @@ public class AscendMapSelectPage extends BaseAscendPage {
 
             commandBuilder.set("#MapCards[" + i + "] #MapStatus.Text", status);
         }
+        if (!isCurrentPage()) {
+            return;
+        }
         sendUpdate(commandBuilder, null, false);
     }
 
     private void updateRobotRow(Ref<EntityStore> ref, Store<EntityStore> store, String mapId) {
-        if (!active) {
+        if (!isCurrentPage()) {
             return;
         }
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
@@ -601,6 +606,9 @@ public class AscendMapSelectPage extends BaseAscendPage {
         commandBuilder.set("#MapCards[" + index + "] #RobotPriceText.Text", priceText);
         commandBuilder.set("#MapCards[" + index + "] #MapStatus.Text", status);
 
+        if (!isCurrentPage()) {
+            return;
+        }
         sendUpdate(commandBuilder, null, false);
     }
 
