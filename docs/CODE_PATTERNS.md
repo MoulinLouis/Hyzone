@@ -139,6 +139,15 @@ Group {
 
 **Keep UIs simple:** Start minimal, add complexity only when needed. Simple UIs are easier to debug.
 
+**CRITICAL - No underscores in element IDs:**
+```
+❌ #Path_Label_COIN    - Will cause UI parsing error
+❌ #Node_COIN_T1       - Will cause UI parsing error
+✅ #PathLabelCoin      - Use camelCase instead
+✅ #NodeCoinT1         - Use camelCase instead
+```
+Hytale UI does NOT support underscores in element IDs. Always use camelCase for IDs.
+
 ## Data Stores
 
 ```java
