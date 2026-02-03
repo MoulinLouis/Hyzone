@@ -77,8 +77,8 @@ public class AscendMapSelectPage extends BaseAscendPage {
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ActionButton3",
             EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_STATS), false);
         buildMapList(ref, store, uiCommandBuilder, uiEventBuilder);
-        // Refresh removed - status only changes when runner is upgraded or PB is achieved
-        // startAutoRefresh(ref, store);
+        // Start affordability color updates (coins change frequently from passive income)
+        startAffordabilityUpdates(ref, store);
     }
 
     @Override
@@ -146,7 +146,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
 
     @Override
     public void close() {
-        stopAutoRefresh();
+        stopAffordabilityUpdates();
         super.close();
     }
 
@@ -182,11 +182,10 @@ public class AscendMapSelectPage extends BaseAscendPage {
             int speedLevel = mapProgress != null ? mapProgress.getRobotSpeedLevel() : 0;
             int stars = mapProgress != null ? mapProgress.getRobotStars() : 0;
 
-            // Apply accent color to accent bars (left and button top)
+            // Apply accent color to left accent bar
             commandBuilder.set("#MapCards[" + index + "] #AccentBar.Background", accentColor);
-            commandBuilder.set("#MapCards[" + index + "] #ButtonAccent.Background", accentColor);
 
-            // Apply accent color to progress bar segments
+            // Apply accent color to progress bar segments (always use accent color)
             for (int seg = 1; seg <= MAX_SPEED_LEVEL; seg++) {
                 commandBuilder.set("#MapCards[" + index + "] #Seg" + seg + ".Background", accentColor);
             }
@@ -226,7 +225,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
                     actionPrice = 0L;
                 } else {
                     runnerButtonText = "Buy Runner";
-                    actionPrice = Math.max(0L, map.getEffectiveRobotPrice());
+                    actionPrice = 0L; // Buying a runner is now free
                 }
             } else {
                 int speedPercent = speedLevel * 10;
@@ -251,14 +250,25 @@ public class AscendMapSelectPage extends BaseAscendPage {
                 displayPriceText = FormatUtils.formatCoinsForHudDecimal(actionPrice) + " coins";
             } else {
                 displayButtonText = runnerButtonText;
-                displayPriceText = actionPrice > 0 ? (FormatUtils.formatCoinsForHudDecimal(actionPrice) + " coins") : "Free";
-                if ((speedLevel >= MAX_SPEED_LEVEL && hasRobot) || runnerButtonText.equals("Maxed!") || runnerButtonText.equals("Evolve")) {
-                    displayPriceText = "";
-                }
+                // No price text for Buy Runner, Complete First, Maxed, or Evolve
+                displayPriceText = "";
             }
 
+            // Determine color for level text and button accent bar based on affordability
+            String levelColor;
+            boolean isUpgrade = runnerButtonText.equals("Upgrade") && actionPrice > 0;
+            if (isUpgrade) {
+                double currentCoins = playerStore.getCoins(playerRef.getUuid());
+                boolean canAfford = currentCoins >= actionPrice;
+                levelColor = canAfford ? accentColor : "#ffffff";
+            } else {
+                levelColor = accentColor;
+            }
+
+            // Apply color to button accent bar and level text
+            commandBuilder.set("#MapCards[" + index + "] #ButtonAccent.Background", levelColor);
             commandBuilder.set("#MapCards[" + index + "] #RunnerLevel.Text", levelText);
-            commandBuilder.set("#MapCards[" + index + "] #RunnerLevel.Style.TextColor", accentColor);
+            commandBuilder.set("#MapCards[" + index + "] #RunnerLevel.Style.TextColor", levelColor);
             commandBuilder.set("#MapCards[" + index + "] #RunnerStatus.Text", runnerStatusText);
             commandBuilder.set("#MapCards[" + index + "] #RobotBuyText.Text", displayButtonText);
             commandBuilder.set("#MapCards[" + index + "] #RobotPriceText.Text", displayPriceText);
@@ -369,13 +379,9 @@ public class AscendMapSelectPage extends BaseAscendPage {
                 return;
             }
 
-            long price = Math.max(0L, map.getEffectiveRobotPrice());
-            if (price > 0 && !playerStore.spendCoins(playerRef.getUuid(), price)) {
-                sendMessage(store, ref, "[Ascend] Not enough coins to buy a runner.");
-                return;
-            }
+            // Buying a runner is now free
             playerStore.setHasRobot(playerRef.getUuid(), mapId, true);
-            sendMessage(store, ref, "[Ascend] Runner purchased for " + price + " coins!");
+            sendMessage(store, ref, "[Ascend] Runner purchased!");
             updateRobotRow(ref, store, mapId);
         } else {
             int currentLevel = mapProgress.getRobotSpeedLevel();
@@ -434,7 +440,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
         }
     }
 
-    private void startAutoRefresh(Ref<EntityStore> ref, Store<EntityStore> store) {
+    private void startAffordabilityUpdates(Ref<EntityStore> ref, Store<EntityStore> store) {
         if (refreshTask != null) {
             return;
         }
@@ -442,45 +448,45 @@ public class AscendMapSelectPage extends BaseAscendPage {
         if (world == null) {
             return;
         }
-        // Initial delay of 2 seconds to let client fully build the UI before sending updates
+        // Update affordability colors every 500ms to reflect coin changes
         refreshTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(() -> {
             if (!isCurrentPage()) {
-                stopAutoRefresh();
+                stopAffordabilityUpdates();
                 return;
             }
             if (ref == null || !ref.isValid()) {
-                stopAutoRefresh();
+                stopAffordabilityUpdates();
                 return;
             }
             try {
-                CompletableFuture.runAsync(() -> refreshRunRates(ref, store), world);
+                CompletableFuture.runAsync(() -> updateAffordabilityColors(ref, store), world);
             } catch (Exception e) {
-                stopAutoRefresh();
+                stopAffordabilityUpdates();
             }
-        }, 2000L, 1000L, TimeUnit.MILLISECONDS);
+        }, 500L, 500L, TimeUnit.MILLISECONDS);
     }
 
-    private void stopAutoRefresh() {
+    private void stopAffordabilityUpdates() {
         if (refreshTask != null) {
             refreshTask.cancel(false);
             refreshTask = null;
         }
     }
 
-    private void refreshRunRates(Ref<EntityStore> ref, Store<EntityStore> store) {
+    private void updateAffordabilityColors(Ref<EntityStore> ref, Store<EntityStore> store) {
         if (!isCurrentPage()) {
-            stopAutoRefresh();
+            stopAffordabilityUpdates();
             return;
         }
         try {
-            doRefreshRunRates(ref, store);
+            doUpdateAffordabilityColors(ref, store);
         } catch (Exception e) {
             // Page was replaced, stop refreshing
-            stopAutoRefresh();
+            stopAffordabilityUpdates();
         }
     }
 
-    private void doRefreshRunRates(Ref<EntityStore> ref, Store<EntityStore> store) {
+    private void doUpdateAffordabilityColors(Ref<EntityStore> ref, Store<EntityStore> store) {
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (playerRef == null) {
             return;
@@ -498,40 +504,46 @@ public class AscendMapSelectPage extends BaseAscendPage {
         }
 
         // Don't send updates if no maps exist (UI elements wouldn't exist)
-        if (maps.isEmpty()) {
+        if (maps.isEmpty() || maps.size() != lastMapCount) {
             return;
         }
-        if (maps.size() != lastMapCount) {
-            UICommandBuilder rebuild = new UICommandBuilder();
-            UIEventBuilder events = new UIEventBuilder();
-            buildMapList(ref, store, rebuild, events);
-            if (!isCurrentPage()) {
-                return;
-            }
-            sendUpdate(rebuild, events, false);
-            return;
-        }
+
+        double currentCoins = playerStore.getCoins(playerRef.getUuid());
         UICommandBuilder commandBuilder = new UICommandBuilder();
+
         for (int i = 0; i < maps.size(); i++) {
             AscendMap map = maps.get(i);
             if (map == null) {
                 continue;
             }
-            // All displayed maps are unlocked (filtered above)
+
+            String accentColor = resolveMapAccentColor(i);
             AscendPlayerProgress.MapProgress mapProgress = playerStore.getMapProgress(playerRef.getUuid(), map.getId());
             boolean hasRobot = mapProgress != null && mapProgress.hasRobot();
             int speedLevel = mapProgress != null ? mapProgress.getRobotSpeedLevel() : 0;
-            String status = "Runs/sec: " + formatRunsPerSecond(map, hasRobot, speedLevel, playerRef.getUuid());
+            int stars = mapProgress != null ? mapProgress.getRobotStars() : 0;
 
-            // Add personal best time if available
-            if (mapProgress != null && mapProgress.getBestTimeMs() != null) {
-                long bestTimeMs = mapProgress.getBestTimeMs();
-                double bestTimeSec = bestTimeMs / 1000.0;
-                status += " | PB: " + String.format("%.2fs", bestTimeSec);
+            // Only update affordability for maps with runners that can be upgraded
+            if (!hasRobot) {
+                continue; // No runner = no upgrade button
+            }
+            if (speedLevel >= MAX_SPEED_LEVEL && stars >= AscendConstants.MAX_ROBOT_STARS) {
+                continue; // Maxed out = no upgrade button
+            }
+            if (speedLevel >= MAX_SPEED_LEVEL) {
+                continue; // At max speed but not max stars = evolve button, not upgrade
             }
 
-            commandBuilder.set("#MapCards[" + i + "] #MapStatus.Text", status);
+            // This map has an upgrade button, check affordability
+            long upgradeCost = computeUpgradeCost(speedLevel);
+            boolean canAfford = currentCoins >= upgradeCost;
+            String levelColor = canAfford ? accentColor : "#ffffff";
+
+            // Update only the color properties
+            commandBuilder.set("#MapCards[" + i + "] #ButtonAccent.Background", levelColor);
+            commandBuilder.set("#MapCards[" + i + "] #RunnerLevel.Style.TextColor", levelColor);
         }
+
         if (!isCurrentPage()) {
             return;
         }
@@ -586,7 +598,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
                 actionPrice = 0L;
             } else {
                 runnerButtonText = "Buy Runner";
-                actionPrice = Math.max(0L, selectedMap.getEffectiveRobotPrice());
+                actionPrice = 0L; // Buying a runner is now free
             }
         } else {
             int speedPercent = speedLevel * 10;
@@ -611,10 +623,8 @@ public class AscendMapSelectPage extends BaseAscendPage {
             displayPriceText = FormatUtils.formatCoinsForHudDecimal(actionPrice) + " coins";
         } else {
             displayButtonText = runnerButtonText;
-            displayPriceText = actionPrice > 0 ? (FormatUtils.formatCoinsForHudDecimal(actionPrice) + " coins") : "Free";
-            if ((speedLevel >= MAX_SPEED_LEVEL && hasRobot) || runnerButtonText.equals("Maxed!") || runnerButtonText.equals("Evolve")) {
-                displayPriceText = "";
-            }
+            // No price text for Buy Runner, Complete First, Maxed, or Evolve
+            displayPriceText = "";
         }
 
         UICommandBuilder commandBuilder = new UICommandBuilder();
@@ -627,7 +637,28 @@ public class AscendMapSelectPage extends BaseAscendPage {
 
         // Update level text in button zone
         String levelText = buildLevelText(stars, speedLevel);
+
+        // Determine color for level text and button accent bar based on affordability
+        String accentColor = resolveMapAccentColor(index);
+        String levelColor;
+        boolean isUpgrade = runnerButtonText.equals("Upgrade") && actionPrice > 0;
+        if (isUpgrade) {
+            double currentCoins = playerStore.getCoins(playerRef.getUuid());
+            boolean canAfford = currentCoins >= actionPrice;
+            levelColor = canAfford ? accentColor : "#ffffff";
+        } else {
+            levelColor = accentColor;
+        }
+
+        // Apply accent color to progress bar segments (always use accent color)
+        for (int seg = 1; seg <= MAX_SPEED_LEVEL; seg++) {
+            commandBuilder.set("#MapCards[" + index + "] #Seg" + seg + ".Background", accentColor);
+        }
+
+        // Apply color to button accent bar and level text
+        commandBuilder.set("#MapCards[" + index + "] #ButtonAccent.Background", levelColor);
         commandBuilder.set("#MapCards[" + index + "] #RunnerLevel.Text", levelText);
+        commandBuilder.set("#MapCards[" + index + "] #RunnerLevel.Style.TextColor", levelColor);
 
         // Update text fields
         commandBuilder.set("#MapCards[" + index + "] #RunnerStatus.Text", runnerStatusText);
@@ -669,11 +700,10 @@ public class AscendMapSelectPage extends BaseAscendPage {
         // Append new map card
         commandBuilder.append("#MapCards", "Pages/Ascend_MapSelectEntry.ui");
 
-        // Apply accent color to accent bars
+        // Apply accent color to left accent bar
         commandBuilder.set("#MapCards[" + index + "] #AccentBar.Background", accentColor);
-        commandBuilder.set("#MapCards[" + index + "] #ButtonAccent.Background", accentColor);
 
-        // Apply accent color to progress bar segments
+        // Apply accent color to progress bar segments (always use accent color)
         for (int seg = 1; seg <= MAX_SPEED_LEVEL; seg++) {
             commandBuilder.set("#MapCards[" + index + "] #Seg" + seg + ".Background", accentColor);
         }
@@ -710,7 +740,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
                 actionPrice = 0L;
             } else {
                 runnerButtonText = "Buy Runner";
-                actionPrice = Math.max(0L, map.getEffectiveRobotPrice());
+                actionPrice = 0L; // Buying a runner is now free
             }
         } else {
             int speedPercent = speedLevel * 10;
@@ -735,14 +765,25 @@ public class AscendMapSelectPage extends BaseAscendPage {
             displayPriceText = FormatUtils.formatCoinsForHudDecimal(actionPrice) + " coins";
         } else {
             displayButtonText = runnerButtonText;
-            displayPriceText = actionPrice > 0 ? (FormatUtils.formatCoinsForHudDecimal(actionPrice) + " coins") : "Free";
-            if ((speedLevel >= MAX_SPEED_LEVEL && hasRobot) || runnerButtonText.equals("Maxed!") || runnerButtonText.equals("Evolve")) {
-                displayPriceText = "";
-            }
+            // No price text for Buy Runner, Complete First, Maxed, or Evolve
+            displayPriceText = "";
         }
 
+        // Determine color for level text and button accent bar based on affordability
+        String levelColor;
+        boolean isUpgrade = runnerButtonText.equals("Upgrade") && actionPrice > 0;
+        if (isUpgrade) {
+            double currentCoins = playerStore.getCoins(playerRef.getUuid());
+            boolean canAfford = currentCoins >= actionPrice;
+            levelColor = canAfford ? accentColor : "#ffffff";
+        } else {
+            levelColor = accentColor;
+        }
+
+        // Apply color to button accent bar and level text
+        commandBuilder.set("#MapCards[" + index + "] #ButtonAccent.Background", levelColor);
         commandBuilder.set("#MapCards[" + index + "] #RunnerLevel.Text", levelText);
-        commandBuilder.set("#MapCards[" + index + "] #RunnerLevel.Style.TextColor", accentColor);
+        commandBuilder.set("#MapCards[" + index + "] #RunnerLevel.Style.TextColor", levelColor);
         commandBuilder.set("#MapCards[" + index + "] #RunnerStatus.Text", runnerStatusText);
         commandBuilder.set("#MapCards[" + index + "] #RobotBuyText.Text", displayButtonText);
         commandBuilder.set("#MapCards[" + index + "] #RobotPriceText.Text", displayPriceText);
@@ -799,8 +840,8 @@ public class AscendMapSelectPage extends BaseAscendPage {
                 if (completedManually) {
                     GhostRecording ghost = ghostStore.getRecording(playerRef.getUuid(), map.getId());
                     if (ghost != null) {
-                        long price = Math.max(0L, map.getEffectiveRobotPrice());
-                        options.add(new PurchaseOption(map.getId(), PurchaseType.BUY_ROBOT, price));
+                        // Buying a runner is now free
+                        options.add(new PurchaseOption(map.getId(), PurchaseType.BUY_ROBOT, 0L));
                     }
                 }
             } else {
