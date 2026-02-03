@@ -31,7 +31,7 @@ public class AscendHud extends CustomUIHud {
 
     // Ascension quest bar constants
     private static final double ASCENSION_COST = 1_000_000_000_000.0; // 1 trillion
-    private static final int QUEST_BAR_SEGMENTS = 20; // Number of segments in the progress bar
+    private static final int QUEST_BAR_SEGMENTS = 100; // Number of segments in the progress bar (1% each)
     private static final int QUEST_ACCENT_SEGMENTS = 16; // Number of segments in the right accent bar
 
     public AscendHud(PlayerRef playerRef) {
@@ -205,12 +205,14 @@ public class AscendHud extends CustomUIHud {
             progress = Math.min(1.0, Math.max(0.0, progress)); // Clamp between 0 and 1
         }
 
-        // Calculate filled segments
+        // Calculate filled segments (visual bar updates every 1%)
         int filledBarSegments = (int) (progress * QUEST_BAR_SEGMENTS);
         int filledAccentSegments = (int) (progress * QUEST_ACCENT_SEGMENTS);
-        int percentDisplay = (int) (progress * 100);
+        // Precise percentage with 2 decimals for display
+        double percentPrecise = progress * 100;
+        String percentText = String.format(java.util.Locale.US, "%.2f%%", percentPrecise);
 
-        String progressKey = filledBarSegments + "|" + filledAccentSegments + "|" + percentDisplay;
+        String progressKey = filledBarSegments + "|" + filledAccentSegments + "|" + percentText;
 
         if (progressKey.equals(lastAscensionProgressKey)) {
             return;
@@ -219,8 +221,8 @@ public class AscendHud extends CustomUIHud {
 
         UICommandBuilder commandBuilder = new UICommandBuilder();
 
-        // Update percentage text
-        commandBuilder.set("#AscensionQuestPercent.Text", percentDisplay + "%");
+        // Update percentage text (precise to 2 decimals)
+        commandBuilder.set("#AscensionQuestPercent.Text", percentText);
 
         // Update main progress bar segments
         for (int i = 1; i <= QUEST_BAR_SEGMENTS; i++) {

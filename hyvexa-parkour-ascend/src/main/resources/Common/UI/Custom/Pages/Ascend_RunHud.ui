@@ -453,7 +453,7 @@ $C.@PageOverlay {
     }
 
     Group #AscensionQuestHud {
-      Anchor: (Bottom: 135, Width: 500, Height: 48);
+      Anchor: (Bottom: 115, Width: 700, Height: 48);
       LayoutMode: Left;
 
       Group #AscensionAccentLeft {
@@ -497,26 +497,106 @@ $C.@PageOverlay {
           Anchor: (Left: 0, Right: 0, Top: 4, Height: 12);
           Background: #0f1419(0.8);
 
-          Group #Seg1 { Anchor: (Left: 0, Width: 23, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
-          Group #Seg2 { Anchor: (Left: 23, Width: 23, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
-          Group #Seg3 { Anchor: (Left: 46, Width: 23, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
-          Group #Seg4 { Anchor: (Left: 69, Width: 23, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
-          Group #Seg5 { Anchor: (Left: 92, Width: 23, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
-          Group #Seg6 { Anchor: (Left: 115, Width: 23, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
-          Group #Seg7 { Anchor: (Left: 138, Width: 23, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
-          Group #Seg8 { Anchor: (Left: 161, Width: 23, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
-          Group #Seg9 { Anchor: (Left: 184, Width: 23, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
-          Group #Seg10 { Anchor: (Left: 207, Width: 23, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
-          Group #Seg11 { Anchor: (Left: 230, Width: 23, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
-          Group #Seg12 { Anchor: (Left: 253, Width: 23, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
-          Group #Seg13 { Anchor: (Left: 276, Width: 23, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
-          Group #Seg14 { Anchor: (Left: 299, Width: 23, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
-          Group #Seg15 { Anchor: (Left: 322, Width: 23, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
-          Group #Seg16 { Anchor: (Left: 345, Width: 23, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
-          Group #Seg17 { Anchor: (Left: 368, Width: 23, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
-          Group #Seg18 { Anchor: (Left: 391, Width: 23, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
-          Group #Seg19 { Anchor: (Left: 414, Width: 23, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
-          Group #Seg20 { Anchor: (Left: 437, Width: 23, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg1 { Anchor: (Left: 0, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg2 { Anchor: (Left: 7, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg3 { Anchor: (Left: 13, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg4 { Anchor: (Left: 20, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg5 { Anchor: (Left: 26, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg6 { Anchor: (Left: 33, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg7 { Anchor: (Left: 40, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg8 { Anchor: (Left: 46, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg9 { Anchor: (Left: 53, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg10 { Anchor: (Left: 59, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg11 { Anchor: (Left: 66, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg12 { Anchor: (Left: 73, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg13 { Anchor: (Left: 79, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg14 { Anchor: (Left: 86, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg15 { Anchor: (Left: 92, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg16 { Anchor: (Left: 99, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg17 { Anchor: (Left: 106, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg18 { Anchor: (Left: 112, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg19 { Anchor: (Left: 119, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg20 { Anchor: (Left: 125, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg21 { Anchor: (Left: 132, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg22 { Anchor: (Left: 139, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg23 { Anchor: (Left: 145, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg24 { Anchor: (Left: 152, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg25 { Anchor: (Left: 158, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg26 { Anchor: (Left: 165, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg27 { Anchor: (Left: 172, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg28 { Anchor: (Left: 178, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg29 { Anchor: (Left: 185, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg30 { Anchor: (Left: 191, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg31 { Anchor: (Left: 198, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg32 { Anchor: (Left: 205, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg33 { Anchor: (Left: 211, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg34 { Anchor: (Left: 218, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg35 { Anchor: (Left: 224, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg36 { Anchor: (Left: 231, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg37 { Anchor: (Left: 238, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg38 { Anchor: (Left: 244, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg39 { Anchor: (Left: 251, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg40 { Anchor: (Left: 257, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg41 { Anchor: (Left: 264, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg42 { Anchor: (Left: 271, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg43 { Anchor: (Left: 277, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg44 { Anchor: (Left: 284, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg45 { Anchor: (Left: 290, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg46 { Anchor: (Left: 297, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg47 { Anchor: (Left: 304, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg48 { Anchor: (Left: 310, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg49 { Anchor: (Left: 317, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg50 { Anchor: (Left: 323, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg51 { Anchor: (Left: 330, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg52 { Anchor: (Left: 337, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg53 { Anchor: (Left: 343, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg54 { Anchor: (Left: 350, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg55 { Anchor: (Left: 356, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg56 { Anchor: (Left: 363, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg57 { Anchor: (Left: 370, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg58 { Anchor: (Left: 376, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg59 { Anchor: (Left: 383, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg60 { Anchor: (Left: 389, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg61 { Anchor: (Left: 396, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg62 { Anchor: (Left: 403, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg63 { Anchor: (Left: 409, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg64 { Anchor: (Left: 416, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg65 { Anchor: (Left: 422, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg66 { Anchor: (Left: 429, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg67 { Anchor: (Left: 436, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg68 { Anchor: (Left: 442, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg69 { Anchor: (Left: 449, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg70 { Anchor: (Left: 455, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg71 { Anchor: (Left: 462, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg72 { Anchor: (Left: 469, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg73 { Anchor: (Left: 475, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg74 { Anchor: (Left: 482, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg75 { Anchor: (Left: 488, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg76 { Anchor: (Left: 495, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg77 { Anchor: (Left: 502, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg78 { Anchor: (Left: 508, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg79 { Anchor: (Left: 515, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg80 { Anchor: (Left: 521, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg81 { Anchor: (Left: 528, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg82 { Anchor: (Left: 535, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg83 { Anchor: (Left: 541, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg84 { Anchor: (Left: 548, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg85 { Anchor: (Left: 554, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg86 { Anchor: (Left: 561, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg87 { Anchor: (Left: 568, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg88 { Anchor: (Left: 574, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg89 { Anchor: (Left: 581, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg90 { Anchor: (Left: 587, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg91 { Anchor: (Left: 594, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg92 { Anchor: (Left: 601, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg93 { Anchor: (Left: 607, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg94 { Anchor: (Left: 614, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg95 { Anchor: (Left: 620, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg96 { Anchor: (Left: 627, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg97 { Anchor: (Left: 634, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg98 { Anchor: (Left: 640, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg99 { Anchor: (Left: 647, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
+          Group #Seg100 { Anchor: (Left: 653, Width: 7, Top: 0, Bottom: 0); Background: #7c3aed; Visible: false; }
         }
       }
 
