@@ -9,6 +9,7 @@
   - Current coins update in real-time as player earns from runners and manual completions
   - Added "GLOBAL MULTIPLIER" title above multiplier display card for clarity
   - Increased font sizes across the menu to match main ascend UI (14px for labels, 16px for gain text)
+  - Increased page height from 380 to 420 pixels to accommodate larger text
   - Fixed duplicate Anchor declaration in multiplier display
   - Discount percentage still displayed if player has elevation cost reduction from skill tree
 
