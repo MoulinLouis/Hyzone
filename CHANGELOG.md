@@ -1,5 +1,15 @@
 # Changelog
 
+- Fix star display in parkour-ascend /ascend menu:
+  - Replaced Unicode star character (U+2605) with star.png image in UI.
+  - Unicode character was not supported by the font, causing "?" to display.
+  - Added star.png to parkour-ascend resources (copied from parkour module).
+  - Updated Ascend_MapSelectEntry.ui to display up to 5 star images above level text.
+  - Modified AscendMapSelectPage.java to control star visibility instead of building text.
+  - Stars now display as golden star icons matching evolution level (0-5 stars).
+  - Reduced button zone to 3 lines max by combining "Upgrade" and cost into single line.
+  - "Cost:" displays in bold, followed by coin amount in regular weight on same line.
+  - Upgrade costs now use abbreviated format (100K, 1.5M, etc.) matching player coin display.
 - Fix erratic ghost NPC rotations in parkour-ascend:
   - Changed angle normalization from 0-360° to -180/+180° to match Hytale's native yaw convention.
   - Improved `lerpAngle()` interpolation to use shortest angular path consistently.
