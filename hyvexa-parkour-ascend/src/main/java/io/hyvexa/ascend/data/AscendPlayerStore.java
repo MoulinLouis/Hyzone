@@ -53,7 +53,8 @@ public class AscendPlayerStore {
     private void loadPlayers() {
         String sql = """
             SELECT uuid, coins, elevation_multiplier, ascension_count, skill_tree_points,
-                   total_coins_earned, total_manual_runs, active_title
+                   total_coins_earned, total_manual_runs, active_title,
+                   ascension_started_at, fastest_ascension_ms
             FROM ascend_players
             """;
         try (Connection conn = DatabaseManager.getInstance().getConnection();
@@ -72,6 +73,14 @@ public class AscendPlayerStore {
                         progress.setTotalCoinsEarned(rs.getDouble("total_coins_earned"));
                         progress.setTotalManualRuns(rs.getInt("total_manual_runs"));
                         progress.setActiveTitle(rs.getString("active_title"));
+                        long ascensionStartedAt = rs.getLong("ascension_started_at");
+                        if (!rs.wasNull()) {
+                            progress.setAscensionStartedAt(ascensionStartedAt);
+                        }
+                        long fastestAscensionMs = rs.getLong("fastest_ascension_ms");
+                        if (!rs.wasNull()) {
+                            progress.setFastestAscensionMs(fastestAscensionMs);
+                        }
                     } catch (SQLException ignored) {
                         // Columns may not exist yet
                     }
@@ -207,12 +216,20 @@ public class AscendPlayerStore {
     }
 
     public AscendPlayerProgress getOrCreatePlayer(UUID playerId) {
-        return players.computeIfAbsent(playerId, k -> {
-            AscendPlayerProgress progress = new AscendPlayerProgress();
+        AscendPlayerProgress progress = players.computeIfAbsent(playerId, k -> {
+            AscendPlayerProgress newProgress = new AscendPlayerProgress();
+            // Initialize ascension timer for new players
+            newProgress.setAscensionStartedAt(System.currentTimeMillis());
             dirtyPlayers.add(playerId);
             queueSave();
-            return progress;
+            return newProgress;
         });
+        // Ensure existing players have ascension timer initialized (migration)
+        if (progress.getAscensionStartedAt() == null) {
+            progress.setAscensionStartedAt(System.currentTimeMillis());
+            markDirty(playerId);
+        }
+        return progress;
     }
 
     public void resetPlayerProgress(UUID playerId) {
@@ -782,13 +799,15 @@ public class AscendPlayerStore {
 
         String playerSql = """
             INSERT INTO ascend_players (uuid, coins, elevation_multiplier, ascension_count,
-                skill_tree_points, total_coins_earned, total_manual_runs, active_title)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                skill_tree_points, total_coins_earned, total_manual_runs, active_title,
+                ascension_started_at, fastest_ascension_ms)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 coins = VALUES(coins), elevation_multiplier = VALUES(elevation_multiplier),
                 ascension_count = VALUES(ascension_count), skill_tree_points = VALUES(skill_tree_points),
                 total_coins_earned = VALUES(total_coins_earned), total_manual_runs = VALUES(total_manual_runs),
-                active_title = VALUES(active_title)
+                active_title = VALUES(active_title), ascension_started_at = VALUES(ascension_started_at),
+                fastest_ascension_ms = VALUES(fastest_ascension_ms)
             """;
 
         String mapSql = """
@@ -845,6 +864,16 @@ public class AscendPlayerStore {
                 playerStmt.setDouble(6, progress.getTotalCoinsEarned());
                 playerStmt.setInt(7, progress.getTotalManualRuns());
                 playerStmt.setString(8, progress.getActiveTitle());
+                if (progress.getAscensionStartedAt() != null) {
+                    playerStmt.setLong(9, progress.getAscensionStartedAt());
+                } else {
+                    playerStmt.setNull(9, java.sql.Types.BIGINT);
+                }
+                if (progress.getFastestAscensionMs() != null) {
+                    playerStmt.setLong(10, progress.getFastestAscensionMs());
+                } else {
+                    playerStmt.setNull(10, java.sql.Types.BIGINT);
+                }
                 playerStmt.addBatch();
 
                 // Save map progress

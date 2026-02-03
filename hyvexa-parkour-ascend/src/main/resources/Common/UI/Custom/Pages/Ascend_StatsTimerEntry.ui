@@ -1,0 +1,36 @@
+$C = "../Common.ui";
+
+Group {
+  LayoutMode: Left;
+  Anchor: (Left: 0, Right: 0, Bottom: 8, Height: 72);
+  Background: #1a2530(0.95);
+
+  Group #AccentBar {
+    Anchor: (Width: 6, Top: 0, Bottom: 0);
+    Background: #f59e0b;
+  }
+
+  Label #StatLabel {
+    Anchor: (Left: 22, Width: 200, Top: 14);
+    Style: (FontSize: 15, TextColor: #9fb0ba);
+    Text: "Fastest Ascension";
+  }
+
+  Label #BestValue {
+    Anchor: (Left: 222, Right: 16, Top: 14);
+    Style: (FontSize: 16, RenderBold: true, TextColor: #f0f4f8);
+    Text: "—";
+  }
+
+  Label #CurrentLabel {
+    Anchor: (Left: 22, Width: 200, Top: 40);
+    Style: (FontSize: 13, TextColor: #6b7c8a);
+    Text: "Current";
+  }
+
+  Label #CurrentValue {
+    Anchor: (Left: 222, Right: 16, Top: 40);
+    Style: (FontSize: 14, TextColor: #9fb0ba);
+    Text: "0s";
+  }
+}
