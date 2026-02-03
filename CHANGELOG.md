@@ -3,6 +3,12 @@
 ## [Unreleased]
 
 ### Changed
+- **Ascend: Simplify elevation menu to show multiplier progression**
+  - Removed redundant coin balance display from `/ascend elevate` menu (already visible on main HUD)
+  - Conversion rate label now shows only the cost to reach next multiplier (e.g., "5,000 coins")
+  - Removed "Next:" prefix from cost display for cleaner presentation
+  - Discount percentage still displayed if player has elevation cost reduction from skill tree
+
 - **Ascend: Elevation system rebalanced for slower progression**
   - Increased base elevation cost from 1,000 to 5,000 coins (5x harder)
   - Increased cost growth rate from 1.08 to 1.15 (steeper curve)

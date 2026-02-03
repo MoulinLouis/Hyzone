@@ -26,22 +26,6 @@ $C.@PageOverlay {
       LayoutMode: Top;
       Padding: (Left: 24, Right: 24, Top: 10, Bottom: 16);
 
-      Group #CoinsRow {
-        Anchor: (Left: 0, Right: 0, Top: 0, Height: 32);
-        LayoutMode: Left;
-
-        Label {
-          Anchor: (Width: 100);
-          Style: (FontSize: 14, TextColor: #9fb0ba);
-          Text: "Your Coins:";
-        }
-
-        Label #CoinsValue {
-          Style: (FontSize: 14, TextColor: #ffd166, RenderBold: true);
-          Text: "0";
-        }
-      }
-
       Label #ConversionRate {
         Anchor: (Left: 0, Right: 0, Top: 4);
         Style: (FontSize: 12, TextColor: #9fb0ba);
