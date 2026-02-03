@@ -92,14 +92,21 @@ public final class AscendConstants {
 
     // Runner star evolution
     public static final int MAX_ROBOT_STARS = 5;
-    // Only Kweebec_Sapling and Kweebec_Sapling_Orange are valid entity types
-    public static final String RUNNER_ENTITY_BASE = "Kweebec_Sapling";
-    public static final String RUNNER_ENTITY_EVOLVED = "Kweebec_Sapling_Orange";
 
+    /**
+     * Returns the NPC entity type for a runner based on its evolution level (stars).
+     * Visual progression: Seedling -> Sapling -> Sproutling -> Pink Sapling -> Razorleaf -> Rootling (adulte)
+     */
     public static String getRunnerEntityType(int stars) {
-        // Alternate between base and evolved appearance
-        // 0, 2, 4 stars = base (green), 1, 3, 5 stars = evolved (orange)
-        return (stars % 2 == 0) ? RUNNER_ENTITY_BASE : RUNNER_ENTITY_EVOLVED;
+        return switch (stars) {
+            case 0 -> "Kweebec_Seedling";      // Petit truc cool
+            case 1 -> "Kweebec_Sapling";       // Bonhomme vert standard
+            case 2 -> "Kweebec_Sproutling";    // Petit bonhomme vert
+            case 3 -> "Kweebec_Sapling_Pink";  // Petite fille avec fleur rose
+            case 4 -> "Kweebec_Razorleaf";     // Soldat avec casque + lance
+            case 5 -> "Kweebec_Rootling";      // Adulte (le plus grand)
+            default -> "Kweebec_Sapling";      // Fallback
+        };
     }
 
     public static double getRunnerMultiplierIncrement(int stars) {
