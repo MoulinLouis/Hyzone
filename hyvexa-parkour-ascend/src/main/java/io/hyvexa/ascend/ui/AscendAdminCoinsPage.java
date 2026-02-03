@@ -31,6 +31,7 @@ import javax.annotation.Nonnull;
 public class AscendAdminCoinsPage extends InteractiveCustomUIPage<AscendAdminCoinsPage.CoinsData> {
 
     private String amountInput = "";
+    private String skillPointsInput = "";
 
     public AscendAdminCoinsPage(@Nonnull PlayerRef playerRef) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, CoinsData.CODEC);
@@ -50,6 +51,9 @@ public class AscendAdminCoinsPage extends InteractiveCustomUIPage<AscendAdminCoi
         if (data.amount != null) {
             amountInput = data.amount;
         }
+        if (data.skillPointsAmount != null) {
+            skillPointsInput = data.skillPointsAmount;
+        }
         if (data.button == null) {
             return;
         }
@@ -66,6 +70,8 @@ public class AscendAdminCoinsPage extends InteractiveCustomUIPage<AscendAdminCoi
             case CoinsData.BUTTON_RESET_PROGRESS -> resetProgress(player, playerRef, store);
             case CoinsData.BUTTON_SET_SPAWN_LOCATION -> setSpawnLocation(ref, store, player);
             case CoinsData.BUTTON_SET_NPC_LOCATION -> setNpcLocation(ref, store, player);
+            case CoinsData.BUTTON_ADD_SKILL_POINTS -> applySkillPoints(player, playerRef, true);
+            case CoinsData.BUTTON_REMOVE_SKILL_POINTS -> applySkillPoints(player, playerRef, false);
             default -> {
             }
         }
@@ -88,6 +94,13 @@ public class AscendAdminCoinsPage extends InteractiveCustomUIPage<AscendAdminCoi
             EventData.of(CoinsData.KEY_BUTTON, CoinsData.BUTTON_BACK), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CloseButton",
             EventData.of(CoinsData.KEY_BUTTON, CoinsData.BUTTON_CLOSE), false);
+        // Skill points bindings
+        eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#SkillPointsAmountField",
+            EventData.of(CoinsData.KEY_SKILL_POINTS_AMOUNT, "#SkillPointsAmountField.Value"), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#AddSkillPointsButton",
+            EventData.of(CoinsData.KEY_BUTTON, CoinsData.BUTTON_ADD_SKILL_POINTS), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#RemoveSkillPointsButton",
+            EventData.of(CoinsData.KEY_BUTTON, CoinsData.BUTTON_REMOVE_SKILL_POINTS), false);
     }
 
     private void resetProgress(Player player, PlayerRef playerRef, Store<EntityStore> store) {
@@ -117,16 +130,20 @@ public class AscendAdminCoinsPage extends InteractiveCustomUIPage<AscendAdminCoi
             .color(SystemMessageUtils.SECONDARY));
         UICommandBuilder commandBuilder = new UICommandBuilder();
         commandBuilder.set("#CurrentCoinsValue.Text", "0");
+        commandBuilder.set("#CurrentSkillPointsValue.Text", "0");
         sendUpdate(commandBuilder, null, false);
     }
 
     private void populateFields(UICommandBuilder commandBuilder, Store<EntityStore> store, Ref<EntityStore> ref) {
         commandBuilder.set("#CoinsAmountField.Value", amountInput != null ? amountInput : "");
+        commandBuilder.set("#SkillPointsAmountField.Value", skillPointsInput != null ? skillPointsInput : "");
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (playerRef != null) {
             AscendPlayerStore playerStore = ParkourAscendPlugin.getInstance().getPlayerStore();
             double coins = playerStore != null ? playerStore.getCoins(playerRef.getUuid()) : 0.0;
+            int skillPoints = playerStore != null ? playerStore.getSkillTreePoints(playerRef.getUuid()) : 0;
             commandBuilder.set("#CurrentCoinsValue.Text", FormatUtils.formatCoinsForHudDecimal(coins));
+            commandBuilder.set("#CurrentSkillPointsValue.Text", String.valueOf(skillPoints));
         }
 
         // Location statuses
@@ -170,6 +187,50 @@ public class AscendAdminCoinsPage extends InteractiveCustomUIPage<AscendAdminCoi
         double coins = playerStore.getCoins(playerRef.getUuid());
         commandBuilder.set("#CurrentCoinsValue.Text", FormatUtils.formatCoinsForHudDecimal(coins));
         sendUpdate(commandBuilder, null, false);
+    }
+
+    private void applySkillPoints(Player player, PlayerRef playerRef, boolean add) {
+        int amount = parseSkillPointsAmount(player);
+        if (amount <= 0) {
+            return;
+        }
+        AscendPlayerStore playerStore = ParkourAscendPlugin.getInstance().getPlayerStore();
+        if (playerStore == null) {
+            player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading."));
+            return;
+        }
+        if (add) {
+            playerStore.addSkillTreePoints(playerRef.getUuid(), amount);
+            player.sendMessage(Message.raw("[Ascend] Added " + amount + " skill points.")
+                .color(SystemMessageUtils.SUCCESS));
+        } else {
+            playerStore.addSkillTreePoints(playerRef.getUuid(), -amount);
+            player.sendMessage(Message.raw("[Ascend] Removed " + amount + " skill points.")
+                .color(SystemMessageUtils.SECONDARY));
+        }
+        UICommandBuilder commandBuilder = new UICommandBuilder();
+        int skillPoints = playerStore.getSkillTreePoints(playerRef.getUuid());
+        commandBuilder.set("#CurrentSkillPointsValue.Text", String.valueOf(skillPoints));
+        sendUpdate(commandBuilder, null, false);
+    }
+
+    private int parseSkillPointsAmount(Player player) {
+        String raw = skillPointsInput != null ? skillPointsInput.trim() : "";
+        if (raw.isEmpty()) {
+            player.sendMessage(Message.raw("Enter a skill points amount."));
+            return -1;
+        }
+        try {
+            int value = Integer.parseInt(raw);
+            if (value <= 0) {
+                player.sendMessage(Message.raw("Amount must be positive."));
+                return -1;
+            }
+            return value;
+        } catch (NumberFormatException e) {
+            player.sendMessage(Message.raw("Amount must be a number."));
+            return -1;
+        }
     }
 
     private long parseAmount(Player player) {
@@ -258,20 +319,25 @@ public class AscendAdminCoinsPage extends InteractiveCustomUIPage<AscendAdminCoi
     public static class CoinsData {
         static final String KEY_BUTTON = "Button";
         static final String KEY_AMOUNT = "@CoinsAmount";
+        static final String KEY_SKILL_POINTS_AMOUNT = "@SkillPointsAmount";
         static final String BUTTON_ADD = "AddCoins";
         static final String BUTTON_REMOVE = "RemoveCoins";
         static final String BUTTON_RESET_PROGRESS = "ResetProgress";
         static final String BUTTON_SET_SPAWN_LOCATION = "SetSpawnLocation";
         static final String BUTTON_SET_NPC_LOCATION = "SetNpcLocation";
+        static final String BUTTON_ADD_SKILL_POINTS = "AddSkillPoints";
+        static final String BUTTON_REMOVE_SKILL_POINTS = "RemoveSkillPoints";
         static final String BUTTON_BACK = "Back";
         static final String BUTTON_CLOSE = "Close";
 
         public static final BuilderCodec<CoinsData> CODEC = BuilderCodec.<CoinsData>builder(CoinsData.class, CoinsData::new)
             .addField(new KeyedCodec<>(KEY_BUTTON, Codec.STRING), (data, value) -> data.button = value, data -> data.button)
             .addField(new KeyedCodec<>(KEY_AMOUNT, Codec.STRING), (data, value) -> data.amount = value, data -> data.amount)
+            .addField(new KeyedCodec<>(KEY_SKILL_POINTS_AMOUNT, Codec.STRING), (data, value) -> data.skillPointsAmount = value, data -> data.skillPointsAmount)
             .build();
 
         private String button;
         private String amount;
+        private String skillPointsAmount;
     }
 }

@@ -545,6 +545,13 @@ public class AscendPlayerStore {
         return progress != null ? progress.getSkillTreePoints() : 0;
     }
 
+    public int addSkillTreePoints(UUID playerId, int amount) {
+        AscendPlayerProgress progress = getOrCreatePlayer(playerId);
+        int newPoints = progress.addSkillTreePoints(amount);
+        markDirty(playerId);
+        return newPoints;
+    }
+
     public int getAvailableSkillPoints(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
         return progress != null ? progress.getAvailableSkillPoints() : 0;
