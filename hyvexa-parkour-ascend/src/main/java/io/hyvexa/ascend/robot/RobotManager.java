@@ -58,6 +58,8 @@ public class RobotManager {
     private final Map<String, RobotState> robots = new ConcurrentHashMap<>();
     private final Set<UUID> onlinePlayers = ConcurrentHashMap.newKeySet();
     private final Set<UUID> orphanedRunnerUuids = ConcurrentHashMap.newKeySet();
+    // Pending removals: entityUuid -> entityRef (queued during ECS tick, processed outside)
+    private final Map<UUID, Ref<EntityStore>> pendingRemovals = new ConcurrentHashMap<>();
     private ScheduledFuture<?> tickTask;
     private long lastRefreshMs;
     private volatile NPCPlugin npcPlugin;
@@ -181,6 +183,13 @@ public class RobotManager {
         Ref<EntityStore> existingRef = state.getEntityRef();
         if (existingRef != null && existingRef.isValid()) {
             LOGGER.atInfo().log("[RobotNPC] Robot already has valid NPC entity, skipping spawn");
+            return;
+        }
+        // HARD CAP: If entityUuid is set, an entity may still exist in world
+        // (e.g., in unloaded chunk). Don't spawn another one.
+        UUID existingUuid = state.getEntityUuid();
+        if (existingUuid != null) {
+            LOGGER.atInfo().log("[RobotNPC] Robot has existing UUID " + existingUuid + ", entity may exist in unloaded chunk - skipping spawn");
             return;
         }
         state.setSpawning(true);
@@ -392,6 +401,8 @@ public class RobotManager {
     private void tick() {
         try {
             long now = System.currentTimeMillis();
+            // Process any pending orphan removals first (queued from ECS tick)
+            processPendingRemovals();
             refreshRobots(now);
             for (RobotState robot : robots.values()) {
                 tickRobot(robot, now);
@@ -604,6 +615,12 @@ public class RobotManager {
                         if (existing.isInvalidForTooLong(now, AscendConstants.RUNNER_INVALID_RECOVERY_MS)) {
                             if (isPlayerNearMapSpawn(playerId, map)) {
                                 LOGGER.atInfo().log("[RobotNPC] Entity invalid but player nearby, forcing respawn for " + key);
+                                // Mark old entity for orphan cleanup before spawning new one
+                                UUID oldUuid = existing.getEntityUuid();
+                                if (oldUuid != null) {
+                                    orphanedRunnerUuids.add(oldUuid);
+                                    cleanupPending = true;
+                                }
                                 existing.setEntityRef(null);
                                 existing.setEntityUuid(null);
                                 existing.clearInvalid();
@@ -629,7 +646,15 @@ public class RobotManager {
             if (!activeKeys.contains(key)) {
                 RobotState removed = robots.remove(key);
                 if (removed != null) {
+                    UUID entityUuid = removed.getEntityUuid();
                     despawnNpcForRobot(removed);
+                    // If entity UUID still exists after despawn attempt, it may have
+                    // failed (chunk unloaded, etc). Mark for orphan cleanup.
+                    if (entityUuid != null && removed.getEntityUuid() != null) {
+                        orphanedRunnerUuids.add(entityUuid);
+                        cleanupPending = true;
+                        LOGGER.atInfo().log("[RobotNPC] Despawn may have failed, marked for cleanup: " + entityUuid);
+                    }
                 }
             }
         }
@@ -957,6 +982,10 @@ public class RobotManager {
         if (entityUuid == null) {
             return false;
         }
+        // Also skip if already pending removal (avoid re-queueing)
+        if (pendingRemovals.containsKey(entityUuid)) {
+            return true;
+        }
         for (RobotState state : robots.values()) {
             if (entityUuid.equals(state.getEntityUuid())) {
                 return true;
@@ -966,11 +995,106 @@ public class RobotManager {
     }
 
     /**
+     * Queue an orphaned runner for deferred removal.
+     * Called from RunnerCleanupSystem during ECS tick - actual removal
+     * happens in processPendingRemovals() which runs outside the tick.
+     */
+    public void queueOrphanForRemoval(UUID entityUuid, Ref<EntityStore> entityRef) {
+        if (entityUuid == null || entityRef == null) {
+            return;
+        }
+        // Only queue if not already pending
+        if (pendingRemovals.putIfAbsent(entityUuid, entityRef) == null) {
+            LOGGER.atInfo().log("[RunnerCleanup] Queued orphaned runner for removal: " + entityUuid);
+        }
+    }
+
+    /**
+     * Process pending orphan removals. Called from tick() which runs
+     * outside ECS processing, so store mutations are safe.
+     */
+    private void processPendingRemovals() {
+        if (pendingRemovals.isEmpty()) {
+            return;
+        }
+
+        // Copy keys to avoid concurrent modification
+        for (UUID entityUuid : List.copyOf(pendingRemovals.keySet())) {
+            Ref<EntityStore> ref = pendingRemovals.remove(entityUuid);
+            if (ref == null) {
+                continue;
+            }
+
+            // Get world from ref's store for world-thread execution
+            if (!ref.isValid()) {
+                // Ref became invalid - entity might already be gone
+                markOrphanCleaned(entityUuid);
+                LOGGER.atInfo().log("[RunnerCleanup] Orphan ref invalid, marking cleaned: " + entityUuid);
+                continue;
+            }
+
+            Store<EntityStore> store = ref.getStore();
+            if (store == null) {
+                markOrphanCleaned(entityUuid);
+                continue;
+            }
+
+            World world = store.getExternalData().getWorld();
+            if (world == null) {
+                // Try direct removal as fallback
+                removeOrphanDirect(entityUuid, ref, store);
+                continue;
+            }
+
+            // Execute removal on world thread
+            world.execute(() -> removeOrphanOnWorldThread(entityUuid, ref));
+        }
+    }
+
+    private void removeOrphanOnWorldThread(UUID entityUuid, Ref<EntityStore> ref) {
+        try {
+            if (ref == null || !ref.isValid()) {
+                markOrphanCleaned(entityUuid);
+                return;
+            }
+            Store<EntityStore> store = ref.getStore();
+            if (store == null) {
+                markOrphanCleaned(entityUuid);
+                return;
+            }
+            store.removeEntity(ref, RemoveReason.REMOVE);
+            markOrphanCleaned(entityUuid);
+            LOGGER.atInfo().log("[RunnerCleanup] Removed orphaned runner: " + entityUuid);
+        } catch (Exception e) {
+            LOGGER.atWarning().log("[RunnerCleanup] Failed to remove orphaned runner " + entityUuid + ": " + e.getMessage());
+            // Re-queue for retry on next tick
+            if (ref != null && ref.isValid()) {
+                pendingRemovals.put(entityUuid, ref);
+            } else {
+                // Ref is invalid, consider it cleaned
+                markOrphanCleaned(entityUuid);
+            }
+        }
+    }
+
+    private void removeOrphanDirect(UUID entityUuid, Ref<EntityStore> ref, Store<EntityStore> store) {
+        try {
+            store.removeEntity(ref, RemoveReason.REMOVE);
+            markOrphanCleaned(entityUuid);
+            LOGGER.atInfo().log("[RunnerCleanup] Removed orphaned runner (direct): " + entityUuid);
+        } catch (Exception e) {
+            LOGGER.atWarning().log("[RunnerCleanup] Failed to remove orphaned runner " + entityUuid + ": " + e.getMessage());
+            markOrphanCleaned(entityUuid); // Don't retry direct removals
+        }
+    }
+
+    /**
      * Mark an orphaned runner as cleaned up.
      */
     public void markOrphanCleaned(UUID entityUuid) {
         orphanedRunnerUuids.remove(entityUuid);
-        if (orphanedRunnerUuids.isEmpty()) {
+        pendingRemovals.remove(entityUuid);
+        if (orphanedRunnerUuids.isEmpty() && pendingRemovals.isEmpty()) {
             cleanupPending = false;
             LOGGER.atInfo().log("[RobotNPC] All orphaned runners cleaned up");
         }
@@ -980,6 +1104,6 @@ public class RobotManager {
      * Check if cleanup is still pending.
      */
     public boolean isCleanupPending() {
-        return cleanupPending;
+        return cleanupPending || !pendingRemovals.isEmpty();
     }
 }
