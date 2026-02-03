@@ -31,6 +31,9 @@ import io.hyvexa.ascend.summit.SummitManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 import io.hyvexa.common.visibility.EntityVisibilityManager;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -41,20 +44,24 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
+import java.util.stream.Collectors;
 
 public class RobotManager {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final double ROBOT_BASE_SPEED = 5.0;  // Blocks per second base speed
+    private static final String RUNNER_UUIDS_FILE = "runner_uuids.txt";
 
     private final AscendMapStore mapStore;
     private final AscendPlayerStore playerStore;
     private final GhostStore ghostStore;
     private final Map<String, RobotState> robots = new ConcurrentHashMap<>();
     private final Set<UUID> onlinePlayers = ConcurrentHashMap.newKeySet();
+    private final Set<UUID> orphanedRunnerUuids = ConcurrentHashMap.newKeySet();
     private ScheduledFuture<?> tickTask;
     private long lastRefreshMs;
     private volatile NPCPlugin npcPlugin;
+    private volatile boolean cleanupPending = false;
 
     public RobotManager(AscendMapStore mapStore, AscendPlayerStore playerStore, GhostStore ghostStore) {
         this.mapStore = mapStore;
@@ -63,6 +70,9 @@ public class RobotManager {
     }
 
     public void start() {
+        // Load orphaned runner UUIDs from previous shutdown for cleanup
+        loadOrphanedRunnerUuids();
+
         try {
             npcPlugin = NPCPlugin.get();
             LOGGER.atInfo().log("NPCPlugin initialized for robot spawning");
@@ -77,6 +87,12 @@ public class RobotManager {
             LOGGER.atWarning().log("NPCPlugin not available, robots will be invisible: " + e.getMessage());
             npcPlugin = null;
         }
+
+        // Always register cleanup system - it detects orphans by checking
+        // for Frozen+Invulnerable entities not in active robots list
+        cleanupPending = true;
+        registerCleanupSystem();
+
         tickTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(
             this::tick,
             AscendConstants.RUNNER_TICK_INTERVAL_MS,
@@ -91,6 +107,8 @@ public class RobotManager {
             tickTask.cancel(false);
             tickTask = null;
         }
+        // Save current runner UUIDs before despawning (in case despawn fails)
+        saveRunnerUuidsForCleanup();
         despawnAllRobots();
         onlinePlayers.clear();
         LOGGER.atInfo().log("RobotManager stopped");
@@ -835,5 +853,133 @@ public class RobotManager {
             return distSq <= CHUNK_LOAD_DISTANCE * CHUNK_LOAD_DISTANCE;
         }
         return false;
+    }
+
+    // ========================================
+    // Runner Cleanup (Server Restart Handling)
+    // ========================================
+
+    private Path getRunnerUuidsPath() {
+        return Path.of("mods", "Parkour", RUNNER_UUIDS_FILE);
+    }
+
+    /**
+     * Save current runner entity UUIDs to a file.
+     * Called at shutdown so we can clean them up on next startup.
+     */
+    private void saveRunnerUuidsForCleanup() {
+        Set<UUID> uuids = new HashSet<>();
+        for (RobotState state : robots.values()) {
+            UUID entityUuid = state.getEntityUuid();
+            if (entityUuid != null) {
+                uuids.add(entityUuid);
+            }
+        }
+        if (uuids.isEmpty()) {
+            // No runners to save, delete file if exists
+            try {
+                Files.deleteIfExists(getRunnerUuidsPath());
+            } catch (IOException e) {
+                // Ignore
+            }
+            return;
+        }
+        try {
+            Path path = getRunnerUuidsPath();
+            Files.createDirectories(path.getParent());
+            List<String> lines = uuids.stream()
+                .map(UUID::toString)
+                .collect(Collectors.toList());
+            Files.write(path, lines);
+            LOGGER.atInfo().log("[RobotNPC] Saved " + uuids.size() + " runner UUIDs for cleanup on next startup");
+        } catch (IOException e) {
+            LOGGER.atWarning().log("[RobotNPC] Failed to save runner UUIDs: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Load orphaned runner UUIDs from previous shutdown.
+     */
+    private void loadOrphanedRunnerUuids() {
+        Path path = getRunnerUuidsPath();
+        if (!Files.exists(path)) {
+            return;
+        }
+        try {
+            List<String> lines = Files.readAllLines(path);
+            for (String line : lines) {
+                String trimmed = line.trim();
+                if (trimmed.isEmpty()) {
+                    continue;
+                }
+                try {
+                    UUID uuid = UUID.fromString(trimmed);
+                    orphanedRunnerUuids.add(uuid);
+                } catch (IllegalArgumentException e) {
+                    // Invalid UUID, skip
+                }
+            }
+            // Delete file after loading
+            Files.delete(path);
+            if (!orphanedRunnerUuids.isEmpty()) {
+                LOGGER.atInfo().log("[RobotNPC] Loaded " + orphanedRunnerUuids.size() + " orphaned runner UUIDs for cleanup");
+            }
+        } catch (IOException e) {
+            LOGGER.atWarning().log("[RobotNPC] Failed to load orphaned runner UUIDs: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Register the cleanup system to remove orphaned runners.
+     * This is called once at startup if there are UUIDs to clean.
+     */
+    private void registerCleanupSystem() {
+        var registry = EntityStore.REGISTRY;
+        if (!registry.hasSystemClass(RunnerCleanupSystem.class)) {
+            registry.registerSystem(new RunnerCleanupSystem(this));
+            LOGGER.atInfo().log("[RobotNPC] Registered RunnerCleanupSystem for orphan cleanup");
+        }
+    }
+
+    /**
+     * Check if a UUID is an orphaned runner that should be removed.
+     * Called by RunnerCleanupSystem.
+     */
+    public boolean isOrphanedRunner(UUID entityUuid) {
+        return orphanedRunnerUuids.contains(entityUuid);
+    }
+
+    /**
+     * Check if a UUID belongs to an active runner managed by this RobotManager.
+     * Used by cleanup system to avoid removing valid runners.
+     */
+    public boolean isActiveRunnerUuid(UUID entityUuid) {
+        if (entityUuid == null) {
+            return false;
+        }
+        for (RobotState state : robots.values()) {
+            if (entityUuid.equals(state.getEntityUuid())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Mark an orphaned runner as cleaned up.
+     */
+    public void markOrphanCleaned(UUID entityUuid) {
+        orphanedRunnerUuids.remove(entityUuid);
+        if (orphanedRunnerUuids.isEmpty()) {
+            cleanupPending = false;
+            LOGGER.atInfo().log("[RobotNPC] All orphaned runners cleaned up");
+        }
+    }
+
+    /**
+     * Check if cleanup is still pending.
+     */
+    public boolean isCleanupPending() {
+        return cleanupPending;
     }
 }
