@@ -62,6 +62,38 @@ public final class AscendConstants {
         20000L    // Level 4 (Bleu)
     };
 
+    // Runner upgrade cost scaling by map level
+    // Higher maps have both cost offset (start further in formula) and multiplier (scale up all costs)
+    public static final int[] MAP_UPGRADE_OFFSET = {
+        0,    // Level 0 (Rouge)  - no offset
+        1,    // Level 1 (Orange) - +1 level offset
+        2,    // Level 2 (Jaune)  - +2 level offset
+        3,    // Level 3 (Vert)   - +3 level offset
+        4     // Level 4 (Bleu)   - +4 level offset
+    };
+
+    public static final double[] MAP_UPGRADE_MULTIPLIER = {
+        1.0,  // Level 0 (Rouge)  - 1.0x cost
+        1.4,  // Level 1 (Orange) - 1.4x cost
+        1.9,  // Level 2 (Jaune)  - 1.9x cost
+        2.6,  // Level 3 (Vert)   - 2.6x cost
+        3.5   // Level 4 (Bleu)   - 3.5x cost
+    };
+
+    public static int getMapUpgradeOffset(int displayOrder) {
+        if (displayOrder < 0 || displayOrder >= MAP_UPGRADE_OFFSET.length) {
+            return MAP_UPGRADE_OFFSET[MAP_UPGRADE_OFFSET.length - 1];
+        }
+        return MAP_UPGRADE_OFFSET[displayOrder];
+    }
+
+    public static double getMapUpgradeMultiplier(int displayOrder) {
+        if (displayOrder < 0 || displayOrder >= MAP_UPGRADE_MULTIPLIER.length) {
+            return MAP_UPGRADE_MULTIPLIER[MAP_UPGRADE_MULTIPLIER.length - 1];
+        }
+        return MAP_UPGRADE_MULTIPLIER[displayOrder];
+    }
+
     public static long getMapBaseRunTimeMs(int displayOrder) {
         if (displayOrder < 0 || displayOrder >= MAP_BASE_RUN_TIMES_MS.length) {
             return MAP_BASE_RUN_TIMES_MS[MAP_BASE_RUN_TIMES_MS.length - 1];
