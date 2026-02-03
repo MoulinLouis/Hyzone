@@ -1,5 +1,13 @@
 # Changelog
 
+- Hide runners during manual runs in parkour-ascend:
+  - When a player starts a run on a map, all runners on that map are hidden from the player.
+  - Runners are shown again when the run completes or is cancelled.
+  - New runners spawning during an active run are automatically hidden from players on that map.
+  - Move `PlayerVisibilityManager` to `EntityVisibilityManager` in hyvexa-core for shared visibility filtering.
+  - Create `EntityVisibilityFilterSystem` in hyvexa-core for entity visibility filtering across modules.
+  - Add `entityUuid` field to `RobotState` to track runner entity UUIDs for visibility control.
+  - Add `getRunnerUuidsForMap()` method to `RobotManager` for retrieving all runner UUIDs on a map.
 - Unify horizontal card UI design across parkour module:
   - Apply ascend-style horizontal card design to Categories, Maps, and Leaderboard interfaces.
   - Add 8px colored accent bar on the left of each card, dynamically colored by category/rank.

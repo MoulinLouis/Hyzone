@@ -12,6 +12,7 @@ public class RobotState {
     private final UUID ownerId;
     private final String mapId;
     private volatile Ref<EntityStore> entityRef;
+    private volatile UUID entityUuid;
     private final AtomicInteger currentWaypointIndex = new AtomicInteger(0);
     private final AtomicLong lastTickMs = new AtomicLong(System.currentTimeMillis());
     private final AtomicLong waypointReachedMs = new AtomicLong(0);
@@ -42,6 +43,14 @@ public class RobotState {
 
     public void setEntityRef(Ref<EntityStore> entityRef) {
         this.entityRef = entityRef;
+    }
+
+    public UUID getEntityUuid() {
+        return entityUuid;
+    }
+
+    public void setEntityUuid(UUID entityUuid) {
+        this.entityUuid = entityUuid;
     }
 
     public int getCurrentWaypointIndex() {
