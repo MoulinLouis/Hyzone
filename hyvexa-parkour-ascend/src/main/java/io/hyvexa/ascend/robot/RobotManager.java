@@ -3,6 +3,7 @@ package io.hyvexa.ascend.robot;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
@@ -25,6 +26,8 @@ import io.hyvexa.ascend.ghost.GhostRecording;
 import io.hyvexa.ascend.ghost.GhostSample;
 import io.hyvexa.ascend.ghost.GhostStore;
 import io.hyvexa.ascend.summit.SummitManager;
+import io.hyvexa.ascend.tracker.AscendRunTracker;
+import io.hyvexa.common.visibility.EntityVisibilityManager;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -199,6 +202,20 @@ public class RobotManager {
                 LOGGER.atInfo().log("[RobotNPC] Extracted entityRef: " + (entityRef != null ? "valid" : "null"));
                 if (entityRef != null) {
                     state.setEntityRef(entityRef);
+                    // Extract and store entity UUID for visibility filtering
+                    try {
+                        UUIDComponent uuidComponent = store.getComponent(entityRef, UUIDComponent.getComponentType());
+                        if (uuidComponent != null) {
+                            UUID entityUuid = uuidComponent.getUuid();
+                            state.setEntityUuid(entityUuid);
+                            LOGGER.atInfo().log("[RobotNPC] NPC UUID: " + entityUuid);
+
+                            // Hide from players currently running on this map
+                            hideFromActiveRunners(state.getMapId(), entityUuid);
+                        }
+                    } catch (Exception e) {
+                        LOGGER.atWarning().log("[RobotNPC] Failed to get NPC UUID: " + e.getMessage());
+                    }
                     // Make NPC invulnerable so players can't kill it
                     try {
                         store.addComponent(entityRef, Invulnerable.getComponentType(), Invulnerable.INSTANCE);
@@ -302,6 +319,23 @@ public class RobotManager {
 
     public RobotState getRobot(UUID ownerId, String mapId) {
         return robots.get(robotKey(ownerId, mapId));
+    }
+
+    /**
+     * Get all runner entity UUIDs for a specific map.
+     * Used for visibility filtering during runs.
+     */
+    public List<UUID> getRunnerUuidsForMap(String mapId) {
+        List<UUID> uuids = new ArrayList<>();
+        for (RobotState state : robots.values()) {
+            if (state.getMapId().equals(mapId)) {
+                UUID entityUuid = state.getEntityUuid();
+                if (entityUuid != null) {
+                    uuids.add(entityUuid);
+                }
+            }
+        }
+        return uuids;
     }
 
     public void respawnRobot(UUID ownerId, String mapId, int newStars) {
@@ -663,5 +697,26 @@ public class RobotManager {
 
     private String robotKey(UUID ownerId, String mapId) {
         return ownerId.toString() + ":" + mapId;
+    }
+
+    /**
+     * Hide a newly spawned runner from all players currently running on the same map.
+     */
+    private void hideFromActiveRunners(String mapId, UUID runnerUuid) {
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin == null) {
+            return;
+        }
+        AscendRunTracker runTracker = plugin.getRunTracker();
+        if (runTracker == null) {
+            return;
+        }
+        EntityVisibilityManager visibilityManager = EntityVisibilityManager.get();
+        for (UUID playerId : onlinePlayers) {
+            String activeMapId = runTracker.getActiveMapId(playerId);
+            if (mapId.equals(activeMapId)) {
+                visibilityManager.hideEntity(playerId, runnerUuid);
+            }
+        }
     }
 }

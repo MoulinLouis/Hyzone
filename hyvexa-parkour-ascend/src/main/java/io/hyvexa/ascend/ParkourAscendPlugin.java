@@ -41,6 +41,7 @@ import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
 import com.hypixel.hytale.server.core.event.events.player.AddPlayerToWorldEvent;
 import io.hyvexa.common.util.HylogramsBridge;
+import io.hyvexa.common.visibility.EntityVisibilityFilterSystem;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
@@ -126,6 +127,12 @@ public class ParkourAscendPlugin extends JavaPlugin {
         getCommandRegistry().registerCommand(new AscendCommand());
         getCommandRegistry().registerCommand(new AscendAdminCommand());
         registerInteractionCodecs();
+
+        // Register entity visibility filter system if not already registered
+        var registry = EntityStore.REGISTRY;
+        if (!registry.hasSystemClass(EntityVisibilityFilterSystem.class)) {
+            registry.registerSystem(new EntityVisibilityFilterSystem());
+        }
 
         this.getEventRegistry().registerGlobal(PlayerReadyEvent.class, event -> {
             try {

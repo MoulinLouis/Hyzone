@@ -21,8 +21,10 @@ import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.ghost.GhostRecorder;
+import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.summit.SummitManager;
 import io.hyvexa.common.util.SystemMessageUtils;
+import io.hyvexa.common.visibility.EntityVisibilityManager;
 
 import java.util.List;
 import java.util.Map;
@@ -63,9 +65,15 @@ public class AscendRunTracker {
     }
 
     public void setPendingRun(UUID playerId, String mapId, Vector3d startPos) {
-        // Cancel any existing active run first
-        activeRuns.remove(playerId);
-        pendingRuns.remove(playerId);
+        // Cancel any existing active run first (and show runners from old map)
+        PendingRun oldPending = pendingRuns.remove(playerId);
+        ActiveRun oldActive = activeRuns.remove(playerId);
+        if (oldPending != null) {
+            showRunnersForMap(playerId, oldPending.mapId);
+        }
+        if (oldActive != null) {
+            showRunnersForMap(playerId, oldActive.mapId);
+        }
 
         // Cancel ghost recording if there was an active run
         if (ghostRecorder != null) {
@@ -73,11 +81,22 @@ public class AscendRunTracker {
         }
 
         pendingRuns.put(playerId, new PendingRun(mapId, startPos));
+
+        // Hide all runners on this map from the player
+        hideRunnersForMap(playerId, mapId);
     }
 
     public void cancelRun(UUID playerId) {
-        activeRuns.remove(playerId);
-        pendingRuns.remove(playerId);
+        PendingRun pending = pendingRuns.remove(playerId);
+        ActiveRun active = activeRuns.remove(playerId);
+
+        // Show runners from the cancelled run's map
+        if (pending != null) {
+            showRunnersForMap(playerId, pending.mapId);
+        }
+        if (active != null) {
+            showRunnersForMap(playerId, active.mapId);
+        }
 
         // Cancel ghost recording
         if (ghostRecorder != null) {
@@ -161,6 +180,9 @@ public class AscendRunTracker {
                              AscendMap map, Ref<EntityStore> ref, Store<EntityStore> store) {
         UUID playerId = playerRef.getUuid();
         activeRuns.remove(playerId);
+
+        // Show runners again after completing the run
+        showRunnersForMap(playerId, run.mapId);
 
         AscendPlayerProgress.MapProgress mapProgress = playerStore.getOrCreateMapProgress(playerId, run.mapId);
 
@@ -317,6 +339,36 @@ public class AscendRunTracker {
         PendingRun(String mapId, Vector3d startPos) {
             this.mapId = mapId;
             this.startPos = startPos;
+        }
+    }
+
+    private void hideRunnersForMap(UUID viewerId, String mapId) {
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin == null) {
+            return;
+        }
+        RobotManager robotManager = plugin.getRobotManager();
+        if (robotManager == null) {
+            return;
+        }
+        EntityVisibilityManager visibilityManager = EntityVisibilityManager.get();
+        for (UUID runnerUuid : robotManager.getRunnerUuidsForMap(mapId)) {
+            visibilityManager.hideEntity(viewerId, runnerUuid);
+        }
+    }
+
+    private void showRunnersForMap(UUID viewerId, String mapId) {
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin == null) {
+            return;
+        }
+        RobotManager robotManager = plugin.getRobotManager();
+        if (robotManager == null) {
+            return;
+        }
+        EntityVisibilityManager visibilityManager = EntityVisibilityManager.get();
+        for (UUID runnerUuid : robotManager.getRunnerUuidsForMap(mapId)) {
+            visibilityManager.showEntity(viewerId, runnerUuid);
         }
     }
 }
