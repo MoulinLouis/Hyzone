@@ -221,8 +221,11 @@ public class ElevationPage extends BaseAscendPage {
         int newElevation = currentElevation + purchase.levels;
         long nextCost = AscendConstants.getElevationLevelUpCost(currentElevation, costMultiplier);
 
-        // Update conversion rate display (show cost for next elevation)
-        String costText = FormatUtils.formatCoinsForHud(nextCost) + " coins";
+        // Update progression display (show progress toward next multiplier)
+        int nextElevation = currentElevation + 1;
+        String costText = "Progress to x" + nextElevation + ": " +
+                         FormatUtils.formatCoinsForHudDecimal(coins) + " / " +
+                         FormatUtils.formatCoinsForHud(nextCost) + " coins";
         if (costMultiplier < 1.0) {
             costText += " (-" + Math.round((1.0 - costMultiplier) * 100) + "%)";
         }

@@ -5,8 +5,8 @@
 ### Changed
 - **Ascend: Simplify elevation menu to show multiplier progression**
   - Removed redundant coin balance display from `/ascend elevate` menu (already visible on main HUD)
-  - Conversion rate label now shows only the cost to reach next multiplier (e.g., "5,000 coins")
-  - Removed "Next:" prefix from cost display for cleaner presentation
+  - Display now shows dynamic progression toward next multiplier (e.g., "Progress to x2: 3,200 / 5,000 coins")
+  - Current coins update in real-time as player earns from runners and manual completions
   - Discount percentage still displayed if player has elevation cost reduction from skill tree
 
 - **Ascend: Elevation system rebalanced for slower progression**
