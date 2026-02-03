@@ -31,8 +31,8 @@
   "Scale": 1.5,
   "Particles": [
     {
-      "Color": "#63f479",
-      "SystemId": "GreenOrbTrail"
+      "Color": "#20f941",
+      "SystemId": "Temple_Light_Lantern"
     }
   ],
   "Interactions": {
