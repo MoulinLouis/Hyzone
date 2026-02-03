@@ -247,10 +247,6 @@ public class AscendRunTracker {
         Long previousBest = mapProgress.getBestTimeMs();
         boolean isPersonalBest = previousBest == null || completionTimeMs < previousBest;
 
-        LOGGER.atInfo().log("[GhostDebug] Player " + playerId + " completed " + run.mapId
-            + " in " + completionTimeMs + "ms. Previous best: " + previousBest
-            + ". Is PB: " + isPersonalBest);
-
         if (isPersonalBest) {
             mapProgress.setBestTimeMs(completionTimeMs);
             playerStore.markDirty(playerId);
@@ -260,7 +256,7 @@ public class AscendRunTracker {
         if (ghostRecorder != null) {
             ghostRecorder.stopRecording(playerId, completionTimeMs, isPersonalBest);
         } else {
-            LOGGER.atWarning().log("[GhostDebug] GhostRecorder is null! Cannot save recording.");
+            LOGGER.atWarning().log("GhostRecorder is null - cannot save recording");
         }
 
         if (firstCompletion) {
@@ -311,9 +307,6 @@ public class AscendRunTracker {
 
         Vector3d pos = new Vector3d(map.getStartX(), map.getStartY(), map.getStartZ());
         Vector3f rot = new Vector3f(map.getStartRotX(), map.getStartRotY(), map.getStartRotZ());
-
-        // Debug: log rotation being used for teleport
-        LOGGER.atInfo().log("Teleport to " + mapId + " rot: " + rot.getX() + ", " + rot.getY() + ", " + rot.getZ());
 
         store.addComponent(ref, Teleport.getComponentType(),
             new Teleport(store.getExternalData().getWorld(), pos, rot));

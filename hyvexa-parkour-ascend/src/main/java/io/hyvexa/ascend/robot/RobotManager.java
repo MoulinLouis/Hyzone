@@ -77,14 +77,6 @@ public class RobotManager {
 
         try {
             npcPlugin = NPCPlugin.get();
-            LOGGER.atInfo().log("NPCPlugin initialized for robot spawning");
-            // Log available NPC roles for debugging
-            try {
-                java.util.List<String> roles = npcPlugin.getRoleTemplateNames(true);
-                LOGGER.atInfo().log("[RobotNPC] Available NPC roles: " + roles);
-            } catch (Exception e) {
-                LOGGER.atWarning().log("[RobotNPC] Could not list NPC roles: " + e.getMessage());
-            }
         } catch (Exception e) {
             LOGGER.atWarning().log("NPCPlugin not available, robots will be invisible: " + e.getMessage());
             npcPlugin = null;
@@ -101,7 +93,6 @@ public class RobotManager {
             AscendConstants.RUNNER_TICK_INTERVAL_MS,
             TimeUnit.MILLISECONDS
         );
-        LOGGER.atInfo().log("RobotManager started");
     }
 
     public void stop() {
@@ -113,20 +104,17 @@ public class RobotManager {
         saveRunnerUuidsForCleanup();
         despawnAllRobots();
         onlinePlayers.clear();
-        LOGGER.atInfo().log("RobotManager stopped");
     }
 
     public void onPlayerJoin(UUID playerId) {
         if (playerId != null) {
             onlinePlayers.add(playerId);
-            LOGGER.atInfo().log("[RobotNPC] Player joined: " + playerId);
         }
     }
 
     public void onPlayerLeave(UUID playerId) {
         if (playerId != null) {
             onlinePlayers.remove(playerId);
-            LOGGER.atInfo().log("[RobotNPC] Player left: " + playerId);
             // Despawn all robots for this player
             despawnRobotsForPlayer(playerId);
         }
@@ -146,7 +134,6 @@ public class RobotManager {
     public void spawnRobot(UUID ownerId, String mapId) {
         String key = robotKey(ownerId, mapId);
         if (robots.containsKey(key)) {
-            LOGGER.atWarning().log("Robot already exists for " + key);
             return;
         }
 
@@ -160,49 +147,35 @@ public class RobotManager {
                 spawnNpcForRobot(state, map);
             }
         }
-
-        LOGGER.atInfo().log("Robot spawned for " + ownerId + " on map " + mapId);
     }
 
     private void spawnNpcForRobot(RobotState state, AscendMap map) {
-        LOGGER.atInfo().log("[RobotNPC] Attempting to spawn NPC for map: " + (map != null ? map.getId() : "null"));
-        if (npcPlugin == null) {
-            LOGGER.atWarning().log("[RobotNPC] NPCPlugin is null, cannot spawn");
-            return;
-        }
-        if (map == null) {
-            LOGGER.atWarning().log("[RobotNPC] Map is null, cannot spawn");
+        if (npcPlugin == null || map == null) {
             return;
         }
         // Prevent duplicate spawns
         if (state.isSpawning()) {
-            LOGGER.atInfo().log("[RobotNPC] Already spawning for this robot, skipping");
             return;
         }
         // Check if we already have a valid entity
         Ref<EntityStore> existingRef = state.getEntityRef();
         if (existingRef != null && existingRef.isValid()) {
-            LOGGER.atInfo().log("[RobotNPC] Robot already has valid NPC entity, skipping spawn");
             return;
         }
         // HARD CAP: If entityUuid is set, an entity may still exist in world
         // (e.g., in unloaded chunk). Don't spawn another one.
         UUID existingUuid = state.getEntityUuid();
         if (existingUuid != null) {
-            LOGGER.atInfo().log("[RobotNPC] Robot has existing UUID " + existingUuid + ", entity may exist in unloaded chunk - skipping spawn");
             return;
         }
         state.setSpawning(true);
         String worldName = map.getWorld();
         if (worldName == null || worldName.isEmpty()) {
-            LOGGER.atWarning().log("[RobotNPC] World name is null/empty for map: " + map.getId());
             state.setSpawning(false);
             return;
         }
-        LOGGER.atInfo().log("[RobotNPC] Looking for world: " + worldName);
         World world = Universe.get().getWorld(worldName);
         if (world == null) {
-            LOGGER.atWarning().log("[RobotNPC] World not found: " + worldName);
             state.setSpawning(false);
             return;
         }
@@ -215,7 +188,6 @@ public class RobotManager {
         try {
             Store<EntityStore> store = world.getEntityStore().getStore();
             if (store == null) {
-                LOGGER.atWarning().log("[RobotNPC] Store is null for world: " + map.getWorld());
                 return;
             }
             Vector3d position = new Vector3d(map.getStartX(), map.getStartY(), map.getStartZ());
@@ -223,12 +195,9 @@ public class RobotManager {
             String displayName = "Runner";
 
             String npcRoleName = AscendConstants.getRunnerEntityType(state.getStars());
-            LOGGER.atInfo().log("[RobotNPC] Calling NPCPlugin.spawnNPC at " + position + " with role " + npcRoleName);
             Object result = npcPlugin.spawnNPC(store, npcRoleName, displayName, position, rotation);
-            LOGGER.atInfo().log("[RobotNPC] spawnNPC returned: " + (result != null ? result.getClass().getName() : "null"));
             if (result != null) {
                 Ref<EntityStore> entityRef = extractEntityRef(result);
-                LOGGER.atInfo().log("[RobotNPC] Extracted entityRef: " + (entityRef != null ? "valid" : "null"));
                 if (entityRef != null) {
                     state.setEntityRef(entityRef);
                     // Extract and store entity UUID for visibility filtering
@@ -237,36 +206,29 @@ public class RobotManager {
                         if (uuidComponent != null) {
                             UUID entityUuid = uuidComponent.getUuid();
                             state.setEntityUuid(entityUuid);
-                            LOGGER.atInfo().log("[RobotNPC] NPC UUID: " + entityUuid);
 
                             // Hide from players currently running on this map
                             hideFromActiveRunners(state.getMapId(), entityUuid);
                         }
                     } catch (Exception e) {
-                        LOGGER.atWarning().log("[RobotNPC] Failed to get NPC UUID: " + e.getMessage());
+                        LOGGER.atWarning().log("Failed to get NPC UUID: " + e.getMessage());
                     }
                     // Make NPC invulnerable so players can't kill it
                     try {
                         store.addComponent(entityRef, Invulnerable.getComponentType(), Invulnerable.INSTANCE);
-                        LOGGER.atInfo().log("[RobotNPC] NPC made invulnerable");
                     } catch (Exception e) {
-                        LOGGER.atWarning().log("[RobotNPC] Failed to make NPC invulnerable: " + e.getMessage());
+                        LOGGER.atWarning().log("Failed to make NPC invulnerable: " + e.getMessage());
                     }
                     // Freeze NPC to disable AI movement (we control it via teleport)
                     try {
                         store.addComponent(entityRef, Frozen.getComponentType(), Frozen.get());
-                        LOGGER.atInfo().log("[RobotNPC] NPC frozen (AI disabled)");
                     } catch (Exception e) {
-                        LOGGER.atWarning().log("[RobotNPC] Failed to freeze NPC: " + e.getMessage());
+                        LOGGER.atWarning().log("Failed to freeze NPC: " + e.getMessage());
                     }
-                    LOGGER.atInfo().log("[RobotNPC] NPC spawned successfully at " + position);
                 }
-            } else {
-                LOGGER.atWarning().log("[RobotNPC] spawnNPC returned null");
             }
         } catch (Exception e) {
-            LOGGER.atWarning().log("[RobotNPC] Failed to spawn NPC: " + e.getMessage());
-            e.printStackTrace();
+            LOGGER.atWarning().log("Failed to spawn NPC: " + e.getMessage());
         } finally {
             state.setSpawning(false);
         }
@@ -336,10 +298,9 @@ public class RobotManager {
             if (store != null) {
                 store.removeEntity(entityRef, RemoveReason.REMOVE);
                 despawnSuccess = true;
-                LOGGER.atInfo().log("[RobotNPC] NPC despawned for robot");
             }
         } catch (Exception e) {
-            LOGGER.atWarning().log("[RobotNPC] Failed to despawn NPC: " + e.getMessage());
+            LOGGER.atWarning().log("Failed to despawn NPC: " + e.getMessage());
         }
         state.setEntityRef(null);
         // Only clear entityUuid if despawn was successful.
@@ -395,7 +356,6 @@ public class RobotManager {
                 spawnNpcForRobot(state, map);
             }
         }
-        LOGGER.atInfo().log("[RobotNPC] Respawned robot for " + ownerId + " on map " + mapId + " with " + newStars + " stars");
     }
 
     private void tick() {
@@ -578,7 +538,6 @@ public class RobotManager {
                 String key = robotKey(playerId, mapId);
                 RobotState existing = robots.get(key);
                 if (existing == null) {
-                    LOGGER.atInfo().log("[RobotNPC] Creating new robot for key: " + key);
                     RobotState state = new RobotState(playerId, mapId);
                     state.setSpeedLevel(mapProgress.getRobotSpeedLevel());
                     state.setStars(mapProgress.getRobotStars());
@@ -614,7 +573,6 @@ public class RobotManager {
                         // This prevents respawning while the entity is just in an unloaded chunk
                         if (existing.isInvalidForTooLong(now, AscendConstants.RUNNER_INVALID_RECOVERY_MS)) {
                             if (isPlayerNearMapSpawn(playerId, map)) {
-                                LOGGER.atInfo().log("[RobotNPC] Entity invalid but player nearby, forcing respawn for " + key);
                                 // Mark old entity for orphan cleanup before spawning new one
                                 UUID oldUuid = existing.getEntityUuid();
                                 if (oldUuid != null) {
@@ -653,7 +611,6 @@ public class RobotManager {
                     if (entityUuid != null && removed.getEntityUuid() != null) {
                         orphanedRunnerUuids.add(entityUuid);
                         cleanupPending = true;
-                        LOGGER.atInfo().log("[RobotNPC] Despawn may have failed, marked for cleanup: " + entityUuid);
                     }
                 }
             }
@@ -916,9 +873,8 @@ public class RobotManager {
                 .map(UUID::toString)
                 .collect(Collectors.toList());
             Files.write(path, lines);
-            LOGGER.atInfo().log("[RobotNPC] Saved " + uuids.size() + " runner UUIDs for cleanup on next startup");
         } catch (IOException e) {
-            LOGGER.atWarning().log("[RobotNPC] Failed to save runner UUIDs: " + e.getMessage());
+            LOGGER.atWarning().log("Failed to save runner UUIDs: " + e.getMessage());
         }
     }
 
@@ -946,11 +902,8 @@ public class RobotManager {
             }
             // Delete file after loading
             Files.delete(path);
-            if (!orphanedRunnerUuids.isEmpty()) {
-                LOGGER.atInfo().log("[RobotNPC] Loaded " + orphanedRunnerUuids.size() + " orphaned runner UUIDs for cleanup");
-            }
         } catch (IOException e) {
-            LOGGER.atWarning().log("[RobotNPC] Failed to load orphaned runner UUIDs: " + e.getMessage());
+            LOGGER.atWarning().log("Failed to load orphaned runner UUIDs: " + e.getMessage());
         }
     }
 
@@ -962,7 +915,6 @@ public class RobotManager {
         var registry = EntityStore.REGISTRY;
         if (!registry.hasSystemClass(RunnerCleanupSystem.class)) {
             registry.registerSystem(new RunnerCleanupSystem(this));
-            LOGGER.atInfo().log("[RobotNPC] Registered RunnerCleanupSystem for orphan cleanup");
         }
     }
 
@@ -1004,9 +956,7 @@ public class RobotManager {
             return;
         }
         // Only queue if not already pending
-        if (pendingRemovals.putIfAbsent(entityUuid, entityRef) == null) {
-            LOGGER.atInfo().log("[RunnerCleanup] Queued orphaned runner for removal: " + entityUuid);
-        }
+        pendingRemovals.putIfAbsent(entityUuid, entityRef);
     }
 
     /**
@@ -1029,7 +979,6 @@ public class RobotManager {
             if (!ref.isValid()) {
                 // Ref became invalid - entity might already be gone
                 markOrphanCleaned(entityUuid);
-                LOGGER.atInfo().log("[RunnerCleanup] Orphan ref invalid, marking cleaned: " + entityUuid);
                 continue;
             }
 
@@ -1064,9 +1013,8 @@ public class RobotManager {
             }
             store.removeEntity(ref, RemoveReason.REMOVE);
             markOrphanCleaned(entityUuid);
-            LOGGER.atInfo().log("[RunnerCleanup] Removed orphaned runner: " + entityUuid);
         } catch (Exception e) {
-            LOGGER.atWarning().log("[RunnerCleanup] Failed to remove orphaned runner " + entityUuid + ": " + e.getMessage());
+            LOGGER.atWarning().log("Failed to remove orphaned runner " + entityUuid + ": " + e.getMessage());
             // Re-queue for retry on next tick
             if (ref != null && ref.isValid()) {
                 pendingRemovals.put(entityUuid, ref);
@@ -1081,9 +1029,8 @@ public class RobotManager {
         try {
             store.removeEntity(ref, RemoveReason.REMOVE);
             markOrphanCleaned(entityUuid);
-            LOGGER.atInfo().log("[RunnerCleanup] Removed orphaned runner (direct): " + entityUuid);
         } catch (Exception e) {
-            LOGGER.atWarning().log("[RunnerCleanup] Failed to remove orphaned runner " + entityUuid + ": " + e.getMessage());
+            LOGGER.atWarning().log("Failed to remove orphaned runner " + entityUuid + ": " + e.getMessage());
             markOrphanCleaned(entityUuid); // Don't retry direct removals
         }
     }
@@ -1096,7 +1043,6 @@ public class RobotManager {
         pendingRemovals.remove(entityUuid);
         if (orphanedRunnerUuids.isEmpty() && pendingRemovals.isEmpty()) {
             cleanupPending = false;
-            LOGGER.atInfo().log("[RobotNPC] All orphaned runners cleaned up");
         }
     }
 

@@ -43,7 +43,6 @@ public class AscensionManager {
     public int performAscension(UUID playerId) {
         double coins = playerStore.getCoins(playerId);
         if (coins < AscendConstants.ASCENSION_COIN_THRESHOLD) {
-            LOGGER.atInfo().log("[Ascension] Player " + playerId + " has insufficient coins: " + coins);
             return -1;
         }
 

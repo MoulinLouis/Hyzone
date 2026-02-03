@@ -63,7 +63,6 @@ public class SummitManager {
     public int performSummit(UUID playerId, SummitCategory category) {
         double coins = playerStore.getCoins(playerId);
         if (coins < AscendConstants.SUMMIT_MIN_COINS) {
-            LOGGER.atInfo().log("[Summit] Player " + playerId + " has insufficient coins: " + coins);
             return -1;
         }
 
@@ -73,7 +72,6 @@ public class SummitManager {
         int levelGain = newLevel - currentLevel;
 
         if (levelGain <= 0) {
-            LOGGER.atInfo().log("[Summit] Player " + playerId + " would gain no levels with " + coins + " coins");
             return currentLevel;
         }
 

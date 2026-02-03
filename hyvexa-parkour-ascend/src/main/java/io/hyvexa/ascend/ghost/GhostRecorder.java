@@ -54,7 +54,6 @@ public class GhostRecorder {
             SAMPLE_INTERVAL_MS,
             TimeUnit.MILLISECONDS
         );
-        LOGGER.atInfo().log("GhostRecorder started (sampling every " + SAMPLE_INTERVAL_MS + "ms)");
     }
 
     /**
@@ -66,7 +65,6 @@ public class GhostRecorder {
             samplingTask = null;
         }
         activeRecordings.clear();
-        LOGGER.atInfo().log("GhostRecorder stopped");
     }
 
     /**
@@ -76,8 +74,6 @@ public class GhostRecorder {
         long startTime = System.currentTimeMillis();
         ActiveRecording recording = new ActiveRecording(playerId, mapId, startTime);
         activeRecordings.put(playerId, recording);
-        LOGGER.atInfo().log("[GhostDebug] Started ghost recording for player " + playerId
-            + " on map " + mapId + ". Active recordings: " + activeRecordings.size());
     }
 
     /**
@@ -86,12 +82,7 @@ public class GhostRecorder {
     public void stopRecording(UUID playerId, long completionTimeMs, boolean isPersonalBest) {
         ActiveRecording recording = activeRecordings.remove(playerId);
 
-        LOGGER.atInfo().log("[GhostDebug] stopRecording called for player " + playerId
-            + ". Recording exists: " + (recording != null)
-            + ". Is PB: " + isPersonalBest);
-
         if (recording == null) {
-            LOGGER.atWarning().log("[GhostDebug] No active recording found for player " + playerId);
             return;
         }
 
@@ -101,16 +92,13 @@ public class GhostRecorder {
             sampleCount = recording.samples.size();
         }
 
-        LOGGER.atInfo().log("[GhostDebug] Recording has " + sampleCount + " samples");
-
         if (!isPersonalBest) {
-            LOGGER.atInfo().log("Ghost recording discarded (not a personal best) for player " + playerId);
             return;
         }
 
         if (sampleCount == 0) {
-            LOGGER.atWarning().log("[GhostDebug] Ghost recording has no samples for player " + playerId
-                + ". This means sampling failed - check if player entity was accessible during the run.");
+            LOGGER.atWarning().log("Ghost recording has no samples for player " + playerId
+                + " - sampling may have failed");
             return;
         }
 
@@ -123,8 +111,6 @@ public class GhostRecorder {
 
             GhostRecording ghost = new GhostRecording(samplesCopy, completionTimeMs);
             ghostStore.saveRecording(playerId, recording.mapId, ghost);
-            LOGGER.atInfo().log("Saved ghost recording for player " + playerId + " on map " + recording.mapId
-                + " (" + samplesCopy.size() + " samples, " + completionTimeMs + "ms)");
         } catch (Exception e) {
             LOGGER.at(Level.SEVERE).withCause(e)
                 .log("Failed to save ghost recording for player " + playerId);
@@ -135,10 +121,7 @@ public class GhostRecorder {
      * Cancel an active recording without saving.
      */
     public void cancelRecording(UUID playerId) {
-        ActiveRecording recording = activeRecordings.remove(playerId);
-        if (recording != null) {
-            LOGGER.atInfo().log("Cancelled ghost recording for player " + playerId);
-        }
+        activeRecordings.remove(playerId);
     }
 
     /**

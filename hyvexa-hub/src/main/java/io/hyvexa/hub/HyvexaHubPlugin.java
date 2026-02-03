@@ -55,7 +55,6 @@ public class HyvexaHubPlugin extends JavaPlugin {
     public HyvexaHubPlugin(@Nonnull JavaPluginInit init) {
         super(init);
         INSTANCE = this;
-        LOGGER.atInfo().log("Hello from " + this.getName() + " version " + this.getManifest().getVersion().toString());
     }
 
     public static HyvexaHubPlugin getInstance() {
@@ -64,7 +63,6 @@ public class HyvexaHubPlugin extends JavaPlugin {
 
     @Override
     protected void setup() {
-        LOGGER.atInfo().log("Setting up plugin " + this.getName());
         var folder = new File("mods/Hub");
         if (!folder.exists()) {
             folder.mkdirs();
@@ -72,7 +70,6 @@ public class HyvexaHubPlugin extends JavaPlugin {
         if (!DatabaseManager.getInstance().isInitialized()) {
             try {
                 DatabaseManager.getInstance().initialize();
-                LOGGER.atInfo().log("Database connection initialized");
             } catch (Exception e) {
                 LOGGER.at(Level.SEVERE).log("Failed to initialize database: " + e.getMessage());
             }

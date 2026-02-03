@@ -80,13 +80,10 @@ public class ParkourAscendPlugin extends JavaPlugin {
     public ParkourAscendPlugin(@Nonnull JavaPluginInit init) {
         super(init);
         INSTANCE = this;
-        LOGGER.atInfo().log("Hello from " + this.getName() + " version " + this.getManifest().getVersion().toString());
     }
 
     @Override
     protected void setup() {
-        LOGGER.atInfo().log("Setting up Ascend plugin...");
-
         AscendDatabaseSetup.ensureTables();
 
         mapStore = new AscendMapStore();
@@ -216,8 +213,6 @@ public class ParkourAscendPlugin extends JavaPlugin {
             }
         });
 
-        LOGGER.atInfo().log("Ascend plugin setup complete");
-
         runTrackerTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(
             this::tickRunTracker,
             200, 200, TimeUnit.MILLISECONDS
@@ -226,8 +221,6 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
     @Override
     protected void shutdown() {
-        LOGGER.atInfo().log("Shutting down Ascend plugin...");
-
         if (runTrackerTask != null) {
             runTrackerTask.cancel(false);
             runTrackerTask = null;
@@ -241,7 +234,6 @@ public class ParkourAscendPlugin extends JavaPlugin {
         if (playerStore != null) {
             playerStore.flushPendingSave();
         }
-        LOGGER.atInfo().log("Ascend plugin shutdown complete");
     }
 
     public static ParkourAscendPlugin getInstance() {
