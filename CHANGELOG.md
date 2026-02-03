@@ -1,5 +1,9 @@
 # Changelog
 
+- Wire `/ascend stats` command to open StatsPage UI instead of chat messages:
+  - `/ascend stats` now opens the visual Stats page with all player statistics.
+  - Removed text-based chat output in favor of the rich UI experience.
+  - Cleaned up unused imports and formatLargeNumber method from AscendCommand.
 - Add Stats page to parkour-ascend /ascend menu:
   - New "Stats" button (blue) in the action bar opens a dedicated stats page.
   - **Combined Income**: Total coins/sec from all runners with multipliers applied.

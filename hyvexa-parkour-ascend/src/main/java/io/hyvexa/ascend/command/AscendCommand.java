@@ -12,30 +12,24 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants;
-import io.hyvexa.ascend.AscendConstants.SummitCategory;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.achievement.AchievementManager;
-import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.ghost.GhostStore;
 import io.hyvexa.ascend.robot.RobotManager;
-import io.hyvexa.ascend.summit.SummitManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 import io.hyvexa.ascend.ui.AscendMapSelectPage;
 import io.hyvexa.ascend.ui.AscensionPage;
 import io.hyvexa.ascend.ui.ElevationPage;
 import io.hyvexa.ascend.ui.SkillTreePage;
+import io.hyvexa.ascend.ui.StatsPage;
 import io.hyvexa.ascend.ui.SummitPage;
 import io.hyvexa.ascend.util.AscendModeGate;
 import io.hyvexa.common.util.CommandUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
 
 import javax.annotation.Nonnull;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 public class AscendCommand extends AbstractAsyncCommand {
@@ -82,7 +76,7 @@ public class AscendCommand extends AbstractAsyncCommand {
 
             String subCommand = args[0].toLowerCase();
             switch (subCommand) {
-                case "stats" -> showStatus(player, playerRef);
+                case "stats" -> openStatsPage(player, playerRef, ref, store);
                 case "elevate" -> openElevationPage(player, playerRef, ref, store);
                 case "summit" -> openSummitPage(player, playerRef, ref, store, args);
                 case "ascension", "ascend" -> openAscensionPage(player, playerRef, ref, store);
@@ -94,65 +88,14 @@ public class AscendCommand extends AbstractAsyncCommand {
         }, world);
     }
 
-    private void showStatus(Player player, PlayerRef playerRef) {
+    private void openStatsPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         if (plugin == null || plugin.getPlayerStore() == null) {
             player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading."));
             return;
         }
-        AscendPlayerStore playerStore = plugin.getPlayerStore();
-        UUID playerId = playerRef.getUuid();
-        double coins = playerStore.getCoins(playerId);
-        AscendMapStore mapStore = plugin.getMapStore();
-        List<AscendMap> maps = mapStore != null ? mapStore.listMapsSorted() : List.of();
-        double product = playerStore.getMultiplierProductDecimal(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
-        double elevation = playerStore.getCalculatedElevationMultiplier(playerId);
-        double[] digits = playerStore.getMultiplierDisplayValues(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
-        StringBuilder digitsText = new StringBuilder();
-        for (int i = 0; i < digits.length; i++) {
-            if (i > 0) {
-                digitsText.append('x');
-            }
-            digitsText.append(String.format(Locale.US, "%.2f", Math.max(1.0, digits[i])));
-        }
-
-        String productText = product == Math.floor(product) ? String.valueOf((long) product) : String.format(Locale.US, "%.2f", product);
-        player.sendMessage(Message.raw("[Ascend] Coins: " + formatLargeNumber(coins) + " | Product: " + productText
-            + " | Elevation: x" + String.format(Locale.US, "%.2f", elevation))
-            .color(SystemMessageUtils.PRIMARY_TEXT));
-        player.sendMessage(Message.raw("[Ascend] Digits: " + digitsText)
-            .color(SystemMessageUtils.SECONDARY));
-
-        // Show Summit levels
-        Map<SummitCategory, Integer> summitLevels = playerStore.getSummitLevels(playerId);
-        StringBuilder summitText = new StringBuilder("[Summit]");
-        for (SummitCategory cat : SummitCategory.values()) {
-            int level = summitLevels.getOrDefault(cat, 0);
-            if (level > 0) {
-                summitText.append(" ").append(cat.getDisplayName()).append(": Lv.").append(level);
-            }
-        }
-        if (summitText.length() > 8) {
-            player.sendMessage(Message.raw(summitText.toString())
-                .color(SystemMessageUtils.SECONDARY));
-        }
-
-        // Show Ascension info
-        int ascensionCount = playerStore.getAscensionCount(playerId);
-        int skillPoints = playerStore.getSkillTreePoints(playerId);
-        int availablePoints = playerStore.getAvailableSkillPoints(playerId);
-        if (ascensionCount > 0 || skillPoints > 0) {
-            player.sendMessage(Message.raw("[Ascension] Count: " + ascensionCount
-                + " | Skill Points: " + availablePoints + "/" + skillPoints)
-                .color(SystemMessageUtils.SECONDARY));
-        }
-
-        // Show lifetime stats
-        double totalEarned = playerStore.getTotalCoinsEarned(playerId);
-        int totalRuns = playerStore.getTotalManualRuns(playerId);
-        player.sendMessage(Message.raw("[Stats] Total Earned: " + formatLargeNumber(totalEarned)
-            + " | Manual Runs: " + totalRuns)
-            .color(SystemMessageUtils.SECONDARY));
+        player.getPageManager().openCustomPage(ref, store,
+            new StatsPage(playerRef, plugin.getPlayerStore(), plugin.getMapStore(), plugin.getGhostStore()));
     }
 
     private void openElevationPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -263,23 +206,6 @@ public class AscendCommand extends AbstractAsyncCommand {
             player.sendMessage(Message.raw("[Title] You haven't unlocked that title.")
                 .color(SystemMessageUtils.SECONDARY));
         }
-    }
-
-    private static String formatLargeNumber(double number) {
-        if (number >= 1_000_000_000_000.0) {
-            return String.format(Locale.US, "%.2fT", number / 1_000_000_000_000.0);
-        } else if (number >= 1_000_000_000.0) {
-            return String.format(Locale.US, "%.2fB", number / 1_000_000_000.0);
-        } else if (number >= 1_000_000.0) {
-            return String.format(Locale.US, "%.2fM", number / 1_000_000.0);
-        } else if (number >= 1_000.0) {
-            return String.format(Locale.US, "%.2fK", number / 1_000.0);
-        }
-        if (number == Math.floor(number)) {
-            return String.valueOf((long) number);
-        }
-        String formatted = String.format(Locale.US, "%.2f", number);
-        return formatted.replaceAll("0+$", "").replaceAll("\\.$", "");
     }
 
     private void openMapMenu(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
