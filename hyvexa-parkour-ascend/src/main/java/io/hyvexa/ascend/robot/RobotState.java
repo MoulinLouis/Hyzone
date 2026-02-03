@@ -23,6 +23,7 @@ public class RobotState {
     private final AtomicInteger stars = new AtomicInteger(0);
     private final AtomicLong lastCompletionMs = new AtomicLong(0);
     private volatile double[] previousPosition;  // For calculating movement direction/rotation [x, y, z]
+    private final AtomicLong invalidSinceMs = new AtomicLong(0);  // When entityRef became invalid (0 = valid)
 
     public RobotState(UUID ownerId, String mapId) {
         this.ownerId = ownerId;
@@ -147,5 +148,36 @@ public class RobotState {
 
     public void setPreviousPosition(double[] previousPosition) {
         this.previousPosition = previousPosition;
+    }
+
+    public long getInvalidSinceMs() {
+        return invalidSinceMs.get();
+    }
+
+    public void setInvalidSinceMs(long ms) {
+        this.invalidSinceMs.set(ms);
+    }
+
+    /**
+     * Mark the entity reference as invalid starting now.
+     * Call this when entityRef.isValid() becomes false.
+     */
+    public void markInvalid(long nowMs) {
+        invalidSinceMs.compareAndSet(0, nowMs);
+    }
+
+    /**
+     * Clear the invalid timestamp (entity is valid again).
+     */
+    public void clearInvalid() {
+        invalidSinceMs.set(0);
+    }
+
+    /**
+     * Check if the entity has been invalid for longer than the given threshold.
+     */
+    public boolean isInvalidForTooLong(long nowMs, long thresholdMs) {
+        long since = invalidSinceMs.get();
+        return since > 0 && (nowMs - since) > thresholdMs;
     }
 }

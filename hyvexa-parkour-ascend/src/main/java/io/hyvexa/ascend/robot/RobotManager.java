@@ -10,7 +10,9 @@ import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.entity.Frozen;
 import com.hypixel.hytale.server.core.modules.entity.component.Invulnerable;
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -282,6 +284,9 @@ public class RobotManager {
         Ref<EntityStore> entityRef = state.getEntityRef();
         if (entityRef == null || !entityRef.isValid()) {
             state.setEntityRef(null);
+            // Note: We intentionally do NOT clear entityUuid here.
+            // If isValid() is false due to chunk unload, the entity still exists
+            // and will reappear when chunks reload. Only clear UUID on successful despawn.
             return;
         }
         // Get world from map to run on world thread
@@ -298,16 +303,24 @@ public class RobotManager {
     }
 
     private void despawnNpcOnWorldThread(RobotState state, Ref<EntityStore> entityRef) {
+        boolean despawnSuccess = false;
         try {
             Store<EntityStore> store = entityRef.getStore();
             if (store != null) {
                 store.removeEntity(entityRef, RemoveReason.REMOVE);
+                despawnSuccess = true;
                 LOGGER.atInfo().log("[RobotNPC] NPC despawned for robot");
             }
         } catch (Exception e) {
             LOGGER.atWarning().log("[RobotNPC] Failed to despawn NPC: " + e.getMessage());
         }
         state.setEntityRef(null);
+        // Only clear entityUuid if despawn was successful.
+        // If despawn failed, the entity may still exist (e.g., in unloaded chunk)
+        // and we don't want to spawn a duplicate when it reloads.
+        if (despawnSuccess) {
+            state.setEntityUuid(null);
+        }
     }
 
     public void despawnAllRobots() {
@@ -515,8 +528,9 @@ public class RobotManager {
             if (playerId == null || progress == null) {
                 continue;
             }
-            // Only spawn robots for online players
-            if (!onlinePlayers.contains(playerId)) {
+            // Only spawn robots for players currently in the Ascend world.
+            // This handles world transitions correctly (e.g., player went to Hub).
+            if (!isPlayerInAscendWorld(playerId)) {
                 continue;
             }
             for (Map.Entry<String, AscendPlayerProgress.MapProgress> mapEntry : progress.getMapProgress().entrySet()) {
@@ -551,17 +565,38 @@ public class RobotManager {
                     if (existing.getLastCompletionMs() <= 0L) {
                         existing.setLastCompletionMs(now);
                     }
-                    // Respawn NPC if entity was destroyed - but despawn old one first
                     // Skip if already spawning to prevent duplicates
                     if (existing.isSpawning()) {
                         continue;
                     }
                     Ref<EntityStore> existingRef = existing.getEntityRef();
-                    if (npcPlugin != null && (existingRef == null || !existingRef.isValid())) {
-                        // Despawn old NPC first to avoid duplicates
-                        if (existingRef != null) {
-                            despawnNpcForRobot(existing);
+                    boolean refIsValid = existingRef != null && existingRef.isValid();
+                    boolean hasExistingEntity = existing.getEntityUuid() != null;
+
+                    if (refIsValid) {
+                        // Entity is healthy, clear any invalid timestamp
+                        existing.clearInvalid();
+                    } else if (hasExistingEntity) {
+                        // Entity was spawned but ref is now invalid (chunk unloaded?)
+                        existing.markInvalid(now);
+                        // Only force respawn if:
+                        // 1. Invalid for long enough (chunk had time to reload)
+                        // 2. Player is close to spawn point (chunk should be loaded)
+                        // This prevents respawning while the entity is just in an unloaded chunk
+                        if (existing.isInvalidForTooLong(now, AscendConstants.RUNNER_INVALID_RECOVERY_MS)) {
+                            if (isPlayerNearMapSpawn(playerId, map)) {
+                                LOGGER.atInfo().log("[RobotNPC] Entity invalid but player nearby, forcing respawn for " + key);
+                                existing.setEntityRef(null);
+                                existing.setEntityUuid(null);
+                                existing.clearInvalid();
+                                if (npcPlugin != null) {
+                                    spawnNpcForRobot(existing, map);
+                                }
+                            }
+                            // If player is far, don't respawn - entity might still be in unloaded chunk
                         }
+                    } else if (npcPlugin != null && existingRef == null) {
+                        // Never spawned, spawn now
                         spawnNpcForRobot(existing, map);
                     }
                 }
@@ -712,11 +747,92 @@ public class RobotManager {
             return;
         }
         EntityVisibilityManager visibilityManager = EntityVisibilityManager.get();
-        for (UUID playerId : onlinePlayers) {
+        // Iterate over all online players in the Ascend world
+        for (PlayerRef playerRef : Universe.get().getPlayers()) {
+            if (playerRef == null) {
+                continue;
+            }
+            UUID playerId = playerRef.getUuid();
+            if (playerId == null || !isPlayerInAscendWorld(playerId)) {
+                continue;
+            }
             String activeMapId = runTracker.getActiveMapId(playerId);
             if (mapId.equals(activeMapId)) {
                 visibilityManager.hideEntity(playerId, runnerUuid);
             }
         }
+    }
+
+    private static final String ASCEND_WORLD_NAME = "Ascend";
+
+    /**
+     * Check if a player is currently in the Ascend world.
+     * This is more reliable than tracking join/leave events because it checks
+     * the actual world the player is in, handling world transitions correctly.
+     */
+    private boolean isPlayerInAscendWorld(UUID playerId) {
+        if (playerId == null) {
+            return false;
+        }
+        for (PlayerRef playerRef : Universe.get().getPlayers()) {
+            if (playerRef == null || !playerId.equals(playerRef.getUuid())) {
+                continue;
+            }
+            Ref<EntityStore> ref = playerRef.getReference();
+            if (ref == null || !ref.isValid()) {
+                continue;
+            }
+            Store<EntityStore> store = ref.getStore();
+            if (store == null) {
+                continue;
+            }
+            World world = store.getExternalData().getWorld();
+            if (world == null || world.getName() == null) {
+                continue;
+            }
+            return ASCEND_WORLD_NAME.equalsIgnoreCase(world.getName());
+        }
+        return false;
+    }
+
+    /**
+     * Check if a player is close enough to a map's spawn point that the chunk should be loaded.
+     * This is used to determine if we can safely respawn a robot entity.
+     * If the player is far away, the chunk might still be unloaded and the entity might
+     * reappear when it reloads - so we don't want to spawn a duplicate.
+     */
+    private static final double CHUNK_LOAD_DISTANCE = 128.0; // Chunks typically load within render distance
+
+    private boolean isPlayerNearMapSpawn(UUID playerId, AscendMap map) {
+        if (playerId == null || map == null) {
+            return false;
+        }
+        double mapX = map.getStartX();
+        double mapY = map.getStartY();
+        double mapZ = map.getStartZ();
+
+        for (PlayerRef playerRef : Universe.get().getPlayers()) {
+            if (playerRef == null || !playerId.equals(playerRef.getUuid())) {
+                continue;
+            }
+            Ref<EntityStore> ref = playerRef.getReference();
+            if (ref == null || !ref.isValid()) {
+                continue;
+            }
+            Store<EntityStore> store = ref.getStore();
+            if (store == null) {
+                continue;
+            }
+            TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
+            if (transform == null) {
+                continue;
+            }
+            double px = transform.getPosition().x();
+            double py = transform.getPosition().y();
+            double pz = transform.getPosition().z();
+            double distSq = (px - mapX) * (px - mapX) + (py - mapY) * (py - mapY) + (pz - mapZ) * (pz - mapZ);
+            return distSq <= CHUNK_LOAD_DISTANCE * CHUNK_LOAD_DISTANCE;
+        }
+        return false;
     }
 }
