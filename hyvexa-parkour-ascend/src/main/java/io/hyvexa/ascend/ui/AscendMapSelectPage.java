@@ -866,7 +866,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
                     // At max speed level, skip (evolution handled by Evolve All)
                     continue;
                 }
-                long upgradeCost = computeUpgradeCost(speedLevel);
+                long upgradeCost = computeUpgradeCost(speedLevel, map.getDisplayOrder());
                 options.add(new PurchaseOption(map.getId(), PurchaseType.UPGRADE_SPEED, upgradeCost));
             }
         }
