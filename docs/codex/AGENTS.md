@@ -71,9 +71,11 @@ Managers are instantiated in `HyvexaPlugin.setup()` and accessed via plugin help
 - `/ascend collect` collects pending Ascend coins.
 - `/ascend stats` shows current Ascend coin balance.
 - Ascend map selector shows per-map robot counts and includes a robot purchase button with cost.
-- Hub menu Ascend button is OP-only (non-OP players see "coming soon" message).
 - Ascend world clears inventory and gives the hub Server Selector in the last hotbar slot.
 - Ascend world shows the Ascend HUD with top digits, coins banner, and rebirth prompt (when eligible).
+- Runners use ghost replay system: they follow the player's personal best path (recorded during manual runs).
+- Runners are hidden from players during their active manual runs to avoid visual clutter.
+- Ascension quest progress bar shows progress toward 1T coins for Ascension prestige.
 
 ### Ascend Admin (OP only)
 - `/as admin` opens Ascend map admin UI.

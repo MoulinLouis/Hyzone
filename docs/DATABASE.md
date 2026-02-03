@@ -242,11 +242,11 @@ Suggested schema:
 ```sql
 CREATE TABLE ascend_players (
   uuid VARCHAR(36) PRIMARY KEY,
-  coins BIGINT NOT NULL DEFAULT 0,
+  coins DOUBLE NOT NULL DEFAULT 0,
   elevation_multiplier INT NOT NULL DEFAULT 1,
   ascension_count INT NOT NULL DEFAULT 0,
   skill_tree_points INT NOT NULL DEFAULT 0,
-  total_coins_earned BIGINT NOT NULL DEFAULT 0,
+  total_coins_earned DOUBLE NOT NULL DEFAULT 0,
   total_manual_runs INT NOT NULL DEFAULT 0,
   active_title VARCHAR(64) DEFAULT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -255,6 +255,7 @@ CREATE TABLE ascend_players (
 ```
 
 Notes:
+- `coins` and `total_coins_earned` use DOUBLE for fractional precision (automatically migrated from BIGINT on startup).
 - `elevation_multiplier` stores the elevation **level** (not the actual multiplier). The actual multiplier is calculated as `1 + 0.1 × level^0.65`. Column name kept for backwards compatibility.
 - `ascension_count` tracks how many times the player has Ascended.
 - `skill_tree_points` is the total points earned (ascension_count, may differ if points are granted by other means).
@@ -306,6 +307,7 @@ CREATE TABLE ascend_player_maps (
   robot_speed_level INT NOT NULL DEFAULT 0,
   robot_stars INT NOT NULL DEFAULT 0,
   multiplier DOUBLE NOT NULL DEFAULT 1.0,
+  best_time_ms BIGINT NULL,
   last_collection_at TIMESTAMP NULL,
   PRIMARY KEY (player_uuid, map_id),
   FOREIGN KEY (player_uuid) REFERENCES ascend_players(uuid) ON DELETE CASCADE,
@@ -316,6 +318,7 @@ CREATE TABLE ascend_player_maps (
 Notes:
 - `robot_stars` tracks evolution level (0-5). Each star doubles the multiplier increment per completion.
 - `robot_speed_level` resets to 0 when evolving to a new star level.
+- `best_time_ms` stores the player's personal best time for this map (used for ghost recordings and PB display).
 
 ## ascend_upgrade_costs
 Stores upgrade cost tiers (optional, can use calculated values instead).

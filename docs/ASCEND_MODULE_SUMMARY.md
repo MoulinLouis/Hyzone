@@ -22,11 +22,11 @@ All map balancing is calculated from `displayOrder` (0-4) using constants in `As
 
 | Level | Color  | Unlock Requirement | Runner | Reward | Run Time |
 |-------|--------|-------------------|--------|--------|----------|
-| 0     | Rouge  | Always unlocked   | 50     | 1      | 5s       |
-| 1     | Orange | Map 0 runner Lv.3 | 200    | 5      | 15s      |
-| 2     | Jaune  | Map 1 runner Lv.3 | 1000   | 25     | 30s      |
-| 3     | Vert   | Map 2 runner Lv.3 | 5000   | 100    | 1m       |
-| 4     | Bleu   | Map 3 runner Lv.3 | 20000  | 500    | 2m       |
+| 0     | Violet | Always unlocked   | 50     | 1      | 10s      |
+| 1     | Blue   | Map 0 runner Lv.3 | 200    | 5      | 16s      |
+| 2     | Cyan   | Map 1 runner Lv.3 | 1000   | 25     | 26s      |
+| 3     | Amber  | Map 2 runner Lv.3 | 5000   | 100    | 42s      |
+| 4     | Red    | Map 3 runner Lv.3 | 20000  | 500    | 68s      |
 
 - `AscendMap.getEffectiveRobotPrice()` → runner price from displayOrder
 - `AscendMap.getEffectiveBaseReward()` → coin reward from displayOrder
@@ -160,17 +160,18 @@ Managed by `AchievementManager`. Achievements grant titles for display.
 **Title management**: `/ascend title [name|clear]`
 
 ## Data model + persistence
-- Tables created: `ascend_players`, `ascend_maps`, `ascend_player_maps`, `ascend_upgrade_costs`, `ascend_player_summit`, `ascend_player_skills`, `ascend_player_achievements`.
-- `AscendMap` stores map metadata + start/finish coords + waypoint list + display order.
+- Tables created: `ascend_players`, `ascend_maps`, `ascend_player_maps`, `ascend_upgrade_costs`, `ascend_player_summit`, `ascend_player_skills`, `ascend_player_achievements`, `ascend_ghost_recordings`, `ascend_settings`.
+- `AscendMap` stores map metadata + start/finish coords + display order.
   - Price/reward/timing are calculated from displayOrder, not stored per-map.
 - `AscendMapStore` loads maps from MySQL, caches in memory, and saves updates.
-- `AscendPlayerProgress` stores coins, elevation level (multiplier calculated via formula), and per-map progress:
+- `AscendPlayerProgress` stores coins (as double for fractional precision), elevation level (multiplier calculated via formula), and per-map progress:
   - `unlocked`: boolean
   - `completedManually`: boolean
   - `hasRobot`: boolean (single runner per map)
   - `robotSpeedLevel`: int (speed upgrade level, 0-20)
   - `robotStars`: int (evolution level, 0-5)
   - `multiplier`: double (accumulates from manual/runner completions)
+  - `bestTimeMs`: long (personal best time for ghost recording)
   - Summit levels per category (Map<SummitCategory, Integer>)
   - Ascension count, skill tree points, unlocked skill nodes
   - Achievement unlocks, active title
@@ -222,8 +223,24 @@ Managed by `AchievementManager`. Achievements grant titles for display.
 - **Prestige HUD panel** (upper-left): Shows Summit levels per category and Ascension count when player has prestige progress.
   - Updates via `AscendHud.updatePrestige()` with caching to avoid redundant updates.
   - Hidden when player has no Summit levels and no Ascensions.
+- **Ascension quest progress bar**: Modern card-style horizontal bar positioned above player inventory.
+  - Left and right accent bars in violet (#7c3aed) matching the Ascension theme.
+  - Dark glass container (#1a2530 at 95% opacity) for a clean, modern look.
+  - Logarithmic scale progression (log10) so early progress feels meaningful.
+  - Progress bar fill with subtle glow layer effect.
+  - Right accent bar fills vertically to mirror horizontal progress.
+  - Displays "ASCENSION" label and percentage (minimalist design).
+  - Updates in real-time with other HUD elements via `updateAscensionQuest()`.
+- **Health/stamina HUD hidden**: Default health and stamina bars are hidden in Ascend mode for cleaner UI.
 - Ascend UI files are in `Common/UI/Custom/Pages/` (single source of truth).
 - Code references `Pages/Ascend_*.ui` (Hytale resolves this to `Common/UI/Custom/Pages/`).
+
+## Run items system
+During manual runs, players receive run-specific hotbar items:
+- **Reset item**: Restart the current map from the beginning
+- **Leave item**: Exit the map and return to spawn
+- Items are given when starting a manual run and removed on completion/cancel
+- Run timer HUD shows elapsed time during manual runs
 
 ## UI pages
 - `Ascend_MapSelect.ui` + `Ascend_MapSelectEntry.ui`: modern map selection with:
@@ -273,42 +290,46 @@ Managed by `AchievementManager`. Achievements grant titles for display.
 Runners are auto-completers that passively earn multiplier for a map.
 
 - One runner per map (not multiple)
-- Runner completes map at intervals based on `getEffectiveBaseRunTimeMs()`
+- Runner follows the player's ghost recording (personal best path)
 - Each completion adds multiplier based on star level (0.01 × 2^stars)
-- Speed upgrades reduce completion time by +10% per level (max level 20)
+- Speed upgrades compress playback time by +15% per level (max level 20)
 - Speed upgrade cost: 100 × 2^level coins
 - At max speed level (20), runner can evolve to gain a star (max 5 stars)
 - Evolution is free, resets speed to 0, and changes runner appearance
+- Runner purchase gated behind manual completion (guarantees ghost exists)
+
+### Ghost replay system
+Runners follow the player's exact path from their personal best manual completion:
+
+- Player position and rotation sampled every 50ms during manual runs (20 samples/sec)
+- Sampling executes on world thread for proper entity component access
+- Ghost recordings saved only when achieving a new personal best time
+- Smooth 60fps playback through linear interpolation between samples
+- Speed upgrades time-compress playback (e.g., 10x speed = complete in ~10% of recorded time)
+- Recordings stored as GZIP-compressed BLOB in `ascend_ghost_recordings` table (~5-10 KB per map)
+- Maximum ~12,000 samples allowed (10 minutes max recording) to prevent DoS
+- `GhostRecorder` handles recording during manual runs
+- `GhostStore` manages persistence and retrieval of ghost data
+
+### Runner visibility
+- Runners are hidden from players during their active manual runs
+- When a player starts a run, all runners on that map are hidden from that player
+- Runners are shown again when the run completes or is cancelled
+- New runners spawning during an active run are automatically hidden
+- Managed by `EntityVisibilityManager` and `EntityVisibilityFilterSystem` in hyvexa-core
 
 ### Implementation
 - `RobotManager` manages runner state and schedules a tick loop (16ms interval for ~60fps movement).
-- `RobotState` tracks owner/map, speed level, stars, last completion time, run count, and previous position.
-- `computeCompletionIntervalMs()` calculates time based on map level and speed upgrades.
+- `RobotState` tracks owner/map, speed level, stars, entity UUID, and ghost playback state.
+- `computeCompletionIntervalMs()` calculates time based on ghost duration and speed upgrades.
 - Runners only spawn for online players and despawn when player disconnects.
 - `respawnRobot()` despawns and respawns runner with new entity type after evolution.
+- Orphaned runners (from server restart) are automatically cleaned up.
+- Runner duplication on chunk unload/reload is prevented via entity tracking.
 
 ### Visual NPC system
 - Runners spawn as Kweebec NPCs via `NPCPlugin.spawnNPC()`.
 - Entity type alternates between `Kweebec_Sapling` (green) and `Kweebec_Sapling_Orange` by star level.
 - NPCs are made `Invulnerable` (can't be killed) and `Frozen` (AI disabled).
 - Movement is controlled via `Teleport` component at 60fps for smooth animation.
-- NPC rotation is calculated from movement direction: `yaw = atan2(dx, dz) + 180`.
-
-### Jump animation system
-Runners automatically jump when moving between waypoints based on geometry detection:
-
-| Condition | Threshold | Triggers Jump |
-|-----------|-----------|---------------|
-| Climbing (Y increase) | ≥ 0.5 blocks | Yes |
-| Falling (Y decrease) | ≥ 1.0 blocks | Yes |
-| Horizontal gap | ≥ 2.0 blocks | Yes |
-
-Jump interpolation uses parabolic formula: `y = linearY + 4 * jumpHeight * t * (1-t)`
-- Creates smooth arc: 0 at start, max at midpoint (t=0.5), 0 at end
-- Jump height auto-calculated based on vertical distance and clearance
-
-### Path segments
-- `PathSegment` record stores: start, end, length, isJump, jumpHeight
-- `buildPathSegments()` constructs path from start → waypoints → finish
-- `shouldAutoJump()` detects jumps from geometry
-- `interpolateSegmentArray()` handles linear or parabolic interpolation
+- NPC rotation is calculated from ghost recording data for natural-looking movement.
