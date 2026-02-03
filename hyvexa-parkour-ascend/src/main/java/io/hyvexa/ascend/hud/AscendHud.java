@@ -23,10 +23,16 @@ public class AscendHud extends CustomUIHud {
     private Boolean lastPrestigeVisible;
     private String lastTimerText;
     private Boolean lastTimerVisible;
+    private String lastAscensionProgressKey;
 
     // Track previous values for effect triggering
     private double[] lastDigits;
     private double lastCoins;
+
+    // Ascension quest bar constants
+    private static final double ASCENSION_COST = 1_000_000_000_000.0; // 1 trillion
+    private static final int QUEST_BAR_SEGMENTS = 20; // Number of segments in the progress bar
+    private static final int QUEST_ACCENT_SEGMENTS = 16; // Number of segments in the right accent bar
 
     public AscendHud(PlayerRef playerRef) {
         super(playerRef);
@@ -157,6 +163,7 @@ public class AscendHud extends CustomUIHud {
         lastPrestigeVisible = null;
         lastTimerText = null;
         lastTimerVisible = null;
+        lastAscensionProgressKey = null;
         lastDigits = null;
         lastCoins = 0;
         effectManager.clearEffects();
@@ -184,6 +191,45 @@ public class AscendHud extends CustomUIHud {
             String summitText = "Summit: Coin " + coinLevel + " | Speed " + speedLevel + " | Manual " + manualLevel;
 
             commandBuilder.set("#SummitText.Text", summitText);
+        }
+
+        update(false, commandBuilder);
+    }
+
+    public void updateAscensionQuest(double coins) {
+        // Calculate logarithmic progress (0 to 1)
+        // Using log10 scale: log10(coins + 1) / log10(1T + 1) ≈ log10(coins + 1) / 12
+        double progress = 0.0;
+        if (coins > 0) {
+            progress = Math.log10(coins + 1) / Math.log10(ASCENSION_COST + 1);
+            progress = Math.min(1.0, Math.max(0.0, progress)); // Clamp between 0 and 1
+        }
+
+        // Calculate filled segments
+        int filledBarSegments = (int) (progress * QUEST_BAR_SEGMENTS);
+        int filledAccentSegments = (int) (progress * QUEST_ACCENT_SEGMENTS);
+        int percentDisplay = (int) (progress * 100);
+
+        String progressKey = filledBarSegments + "|" + filledAccentSegments + "|" + percentDisplay;
+
+        if (progressKey.equals(lastAscensionProgressKey)) {
+            return;
+        }
+        lastAscensionProgressKey = progressKey;
+
+        UICommandBuilder commandBuilder = new UICommandBuilder();
+
+        // Update percentage text
+        commandBuilder.set("#AscensionQuestPercent.Text", percentDisplay + "%");
+
+        // Update main progress bar segments
+        for (int i = 1; i <= QUEST_BAR_SEGMENTS; i++) {
+            commandBuilder.set("#AscensionQuestBarContainer #Seg" + i + ".Visible", i <= filledBarSegments);
+        }
+
+        // Update right accent bar segments
+        for (int i = 1; i <= QUEST_ACCENT_SEGMENTS; i++) {
+            commandBuilder.set("#AscensionAccentRight #AccentSeg" + i + ".Visible", i <= filledAccentSegments);
         }
 
         update(false, commandBuilder);

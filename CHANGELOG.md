@@ -1,5 +1,14 @@
 # Changelog
 
+- Add Ascension quest progress bar to parkour-ascend HUD:
+  - Modern card-style horizontal bar positioned above the player inventory.
+  - Left and right accent bars in violet (#7c3aed) matching the Ascension theme.
+  - Dark glass container (#1a2530 at 95% opacity) for a clean, modern look.
+  - Logarithmic scale progression (log10) so early progress feels meaningful.
+  - Progress bar fill with subtle glow layer effect.
+  - Right accent bar fills vertically to mirror horizontal progress.
+  - Displays "ASCENSION" label and percentage (minimalist design).
+  - Updates in real-time with other HUD elements via updateAscensionQuest().
 - Hide runners during manual runs in parkour-ascend:
   - When a player starts a run on a map, all runners on that map are hidden from the player.
   - Runners are shown again when the run completes or is cancelled.
