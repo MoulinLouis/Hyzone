@@ -110,6 +110,7 @@ public final class AscendConstants {
     // Runner (internal tick system)
     public static final long RUNNER_TICK_INTERVAL_MS = 16L; // ~60 ticks/second for smooth movement
     public static final long RUNNER_REFRESH_INTERVAL_MS = 1000L;
+    public static final long RUNNER_INVALID_RECOVERY_MS = 3000L; // Force respawn after entity invalid for 3s
     public static final double RUNNER_BASE_SPEED = 5.0;
     public static final double RUNNER_JUMP_FORCE = 8.0;
     public static final double WAYPOINT_REACH_DISTANCE = 1.5;
