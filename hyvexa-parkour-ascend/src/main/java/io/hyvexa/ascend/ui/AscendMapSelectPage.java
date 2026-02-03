@@ -344,8 +344,24 @@ public class AscendMapSelectPage extends BaseAscendPage {
         return text;
     }
 
-    private long computeUpgradeCost(int currentLevel) {
-        return 100L * (long) Math.pow(2, currentLevel);
+    /**
+     * Compute runner speed upgrade cost using obscure quick-ramp formula with map-based scaling.
+     * Formula: baseCost(level + mapOffset) × mapMultiplier
+     * Where baseCost(L) = round(10 × 2.4^L + L × 6)
+     */
+    private long computeUpgradeCost(int currentLevel, int mapDisplayOrder) {
+        // Get map-specific scaling parameters
+        int offset = AscendConstants.getMapUpgradeOffset(mapDisplayOrder);
+        double multiplier = AscendConstants.getMapUpgradeMultiplier(mapDisplayOrder);
+
+        // Apply offset to level for base cost calculation
+        int effectiveLevel = currentLevel + offset;
+
+        // Obscure quick-ramp formula: 10 × 2.4^level + level × 6
+        double baseCost = 10.0 * Math.pow(2.4, effectiveLevel) + (effectiveLevel * 6);
+
+        // Apply map multiplier and round to long
+        return Math.round(baseCost * multiplier);
     }
 
     private void handleRobotAction(Ref<EntityStore> ref, Store<EntityStore> store, String mapId) {
