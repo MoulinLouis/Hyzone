@@ -1,0 +1,400 @@
+$C = "../Common.ui";
+
+$C.@PageOverlay {
+  $C.@Container {
+    Anchor: (Width: 700, Height: 620);
+
+    #Title {
+      Group {
+        TextButton #CloseButton {
+          Anchor: (Left: 12, Top: 4, Width: 64, Height: 24);
+          Padding: (Left: 8, Top: 2);
+          Text: "Close";
+          Style: TextButtonStyle(
+            Default: (LabelStyle: (FontSize: 14, TextColor: #9fb0ba, RenderBold: true)),
+            Sounds: $C.@ButtonSounds,
+          );
+          Background: #000000(0.3);
+        }
+        $C.@Title {
+          @Text = "S K I L L   T R E E";
+        }
+      }
+    }
+
+    #Content {
+      LayoutMode: Top;
+      Padding: (Left: 16, Right: 16, Top: 6, Bottom: 12);
+
+      Group #PointsRow {
+        Anchor: (Left: 0, Right: 0, Height: 28);
+        LayoutMode: Left;
+
+        Label {
+          Anchor: (Width: 100);
+          Style: (FontSize: 14, TextColor: #9fb0ba);
+          Text: "Skill Points:";
+        }
+
+        Label #AvailablePoints {
+          Anchor: (Width: 30);
+          Style: (FontSize: 14, TextColor: #4ade80, RenderBold: true);
+          Text: "0";
+        }
+
+        Label {
+          Anchor: (Width: 70);
+          Style: (FontSize: 14, TextColor: #9fb0ba);
+          Text: "available /";
+        }
+
+        Label #TotalPoints {
+          Style: (FontSize: 14, TextColor: #f59e0b, RenderBold: true);
+          Text: "0 total";
+        }
+      }
+
+      Group #TreeCanvas {
+        Anchor: (Left: 0, Right: 0, Top: 8);
+        FlexWeight: 1;
+        LayoutMode: TopScrolling;
+        ScrollbarStyle: $C.@DefaultScrollbarStyle;
+
+        Group #TreeContent {
+          Anchor: (Width: 660, Height: 560);
+
+          Group #LineCoinT1T2 { Anchor: (Left: 88, Top: 88, Width: 4, Height: 52); Background: #4b5563; }
+          Group #LineCoinT2T3 { Anchor: (Left: 88, Top: 168, Width: 4, Height: 52); Background: #4b5563; }
+          Group #LineCoinT3T4 { Anchor: (Left: 88, Top: 248, Width: 4, Height: 52); Background: #4b5563; }
+          Group #LineCoinT4T5 { Anchor: (Left: 88, Top: 328, Width: 4, Height: 52); Background: #4b5563; }
+
+          Group #LineSpeedT1T2 { Anchor: (Left: 328, Top: 88, Width: 4, Height: 52); Background: #4b5563; }
+          Group #LineSpeedT2T3 { Anchor: (Left: 328, Top: 168, Width: 4, Height: 52); Background: #4b5563; }
+          Group #LineSpeedT3T4 { Anchor: (Left: 328, Top: 248, Width: 4, Height: 52); Background: #4b5563; }
+          Group #LineSpeedT4T5 { Anchor: (Left: 328, Top: 328, Width: 4, Height: 52); Background: #4b5563; }
+
+          Group #LineManualT1T2 { Anchor: (Left: 568, Top: 88, Width: 4, Height: 52); Background: #4b5563; }
+          Group #LineManualT2T3 { Anchor: (Left: 568, Top: 168, Width: 4, Height: 52); Background: #4b5563; }
+          Group #LineManualT3T4 { Anchor: (Left: 568, Top: 248, Width: 4, Height: 52); Background: #4b5563; }
+          Group #LineManualT4T5 { Anchor: (Left: 568, Top: 328, Width: 4, Height: 52); Background: #4b5563; }
+
+          Group #LineCoinHybrid1 { Anchor: (Left: 108, Top: 400, Width: 100, Height: 4); Background: #4b5563; }
+          Group #LineSpeedHybrid1 { Anchor: (Left: 210, Top: 400, Width: 100, Height: 4); Background: #4b5563; }
+          Group #LineSpeedHybrid2 { Anchor: (Left: 348, Top: 400, Width: 100, Height: 4); Background: #4b5563; }
+          Group #LineManualHybrid2 { Anchor: (Left: 450, Top: 400, Width: 100, Height: 4); Background: #4b5563; }
+
+          Group #LineHybrid1Ult { Anchor: (Left: 208, Top: 468, Width: 4, Height: 32); Background: #4b5563; }
+          Group #LineHybrid2Ult { Anchor: (Left: 448, Top: 468, Width: 4, Height: 32); Background: #4b5563; }
+          Group #LineUltH { Anchor: (Left: 210, Top: 498, Width: 240, Height: 4); Background: #4b5563; }
+          Group #LineUltV { Anchor: (Left: 328, Top: 500, Width: 4, Height: 32); Background: #4b5563; }
+
+          Button #NodeCoinT1 {
+            Anchor: (Left: 50, Top: 20, Width: 80, Height: 66);
+            Background: #1a2530;
+            Style: ButtonStyle(
+              Default: (Background: #1a2530),
+              Hovered: (Background: #243342),
+              Pressed: (Background: #1e2b38),
+              Sounds: $C.@ButtonSounds,
+            );
+            LayoutMode: Top;
+            Group #BorderCoinT1 { Anchor: (Left: 0, Right: 0, Top: 0, Height: 4); Background: #4b5563; }
+            Label #NameCoinT1 { Anchor: (Top: 8); Style: (FontSize: 10, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Starting"; }
+            Label #DescCoinT1 { Anchor: (Top: 2); Style: (FontSize: 9, TextColor: #9fb0ba, HorizontalAlignment: Center); Text: "Coins"; }
+            Label #StatusCoinT1 { Anchor: (Top: 4); Style: (FontSize: 8, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
+          }
+
+          Button #NodeSpeedT1 {
+            Anchor: (Left: 290, Top: 20, Width: 80, Height: 66);
+            Background: #1a2530;
+            Style: ButtonStyle(
+              Default: (Background: #1a2530),
+              Hovered: (Background: #243342),
+              Pressed: (Background: #1e2b38),
+              Sounds: $C.@ButtonSounds,
+            );
+            LayoutMode: Top;
+            Group #BorderSpeedT1 { Anchor: (Left: 0, Right: 0, Top: 0, Height: 4); Background: #4b5563; }
+            Label #NameSpeedT1 { Anchor: (Top: 8); Style: (FontSize: 10, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Base"; }
+            Label #DescSpeedT1 { Anchor: (Top: 2); Style: (FontSize: 9, TextColor: #9fb0ba, HorizontalAlignment: Center); Text: "Speed +10%"; }
+            Label #StatusSpeedT1 { Anchor: (Top: 4); Style: (FontSize: 8, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
+          }
+
+          Button #NodeManualT1 {
+            Anchor: (Left: 530, Top: 20, Width: 80, Height: 66);
+            Background: #1a2530;
+            Style: ButtonStyle(
+              Default: (Background: #1a2530),
+              Hovered: (Background: #243342),
+              Pressed: (Background: #1e2b38),
+              Sounds: $C.@ButtonSounds,
+            );
+            LayoutMode: Top;
+            Group #BorderManualT1 { Anchor: (Left: 0, Right: 0, Top: 0, Height: 4); Background: #4b5563; }
+            Label #NameManualT1 { Anchor: (Top: 8); Style: (FontSize: 10, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Manual"; }
+            Label #DescManualT1 { Anchor: (Top: 2); Style: (FontSize: 9, TextColor: #9fb0ba, HorizontalAlignment: Center); Text: "+50%"; }
+            Label #StatusManualT1 { Anchor: (Top: 4); Style: (FontSize: 8, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
+          }
+
+          Button #NodeCoinT2 {
+            Anchor: (Left: 50, Top: 100, Width: 80, Height: 66);
+            Background: #1a2530;
+            Style: ButtonStyle(
+              Default: (Background: #1a2530),
+              Hovered: (Background: #243342),
+              Pressed: (Background: #1e2b38),
+              Sounds: $C.@ButtonSounds,
+            );
+            LayoutMode: Top;
+            Group #BorderCoinT2 { Anchor: (Left: 0, Right: 0, Top: 0, Height: 4); Background: #4b5563; }
+            Label #NameCoinT2 { Anchor: (Top: 8); Style: (FontSize: 10, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Base"; }
+            Label #DescCoinT2 { Anchor: (Top: 2); Style: (FontSize: 9, TextColor: #9fb0ba, HorizontalAlignment: Center); Text: "Reward +25%"; }
+            Label #StatusCoinT2 { Anchor: (Top: 4); Style: (FontSize: 8, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
+          }
+
+          Button #NodeSpeedT2 {
+            Anchor: (Left: 290, Top: 100, Width: 80, Height: 66);
+            Background: #1a2530;
+            Style: ButtonStyle(
+              Default: (Background: #1a2530),
+              Hovered: (Background: #243342),
+              Pressed: (Background: #1e2b38),
+              Sounds: $C.@ButtonSounds,
+            );
+            LayoutMode: Top;
+            Group #BorderSpeedT2 { Anchor: (Left: 0, Right: 0, Top: 0, Height: 4); Background: #4b5563; }
+            Label #NameSpeedT2 { Anchor: (Top: 8); Style: (FontSize: 10, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Max Lv"; }
+            Label #DescSpeedT2 { Anchor: (Top: 2); Style: (FontSize: 9, TextColor: #9fb0ba, HorizontalAlignment: Center); Text: "+5"; }
+            Label #StatusSpeedT2 { Anchor: (Top: 4); Style: (FontSize: 8, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
+          }
+
+          Button #NodeManualT2 {
+            Anchor: (Left: 530, Top: 100, Width: 80, Height: 66);
+            Background: #1a2530;
+            Style: ButtonStyle(
+              Default: (Background: #1a2530),
+              Hovered: (Background: #243342),
+              Pressed: (Background: #1e2b38),
+              Sounds: $C.@ButtonSounds,
+            );
+            LayoutMode: Top;
+            Group #BorderManualT2 { Anchor: (Left: 0, Right: 0, Top: 0, Height: 4); Background: #4b5563; }
+            Label #NameManualT2 { Anchor: (Top: 8); Style: (FontSize: 10, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Chain"; }
+            Label #DescManualT2 { Anchor: (Top: 2); Style: (FontSize: 9, TextColor: #9fb0ba, HorizontalAlignment: Center); Text: "Bonus"; }
+            Label #StatusManualT2 { Anchor: (Top: 4); Style: (FontSize: 8, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
+          }
+
+          Button #NodeCoinT3 {
+            Anchor: (Left: 50, Top: 180, Width: 80, Height: 66);
+            Background: #1a2530;
+            Style: ButtonStyle(
+              Default: (Background: #1a2530),
+              Hovered: (Background: #243342),
+              Pressed: (Background: #1e2b38),
+              Sounds: $C.@ButtonSounds,
+            );
+            LayoutMode: Top;
+            Group #BorderCoinT3 { Anchor: (Left: 0, Right: 0, Top: 0, Height: 4); Background: #4b5563; }
+            Label #NameCoinT3 { Anchor: (Top: 8); Style: (FontSize: 10, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Elevation"; }
+            Label #DescCoinT3 { Anchor: (Top: 2); Style: (FontSize: 9, TextColor: #9fb0ba, HorizontalAlignment: Center); Text: "Cost -20%"; }
+            Label #StatusCoinT3 { Anchor: (Top: 4); Style: (FontSize: 8, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
+          }
+
+          Button #NodeSpeedT3 {
+            Anchor: (Left: 290, Top: 180, Width: 80, Height: 66);
+            Background: #1a2530;
+            Style: ButtonStyle(
+              Default: (Background: #1a2530),
+              Hovered: (Background: #243342),
+              Pressed: (Background: #1e2b38),
+              Sounds: $C.@ButtonSounds,
+            );
+            LayoutMode: Top;
+            Group #BorderSpeedT3 { Anchor: (Left: 0, Right: 0, Top: 0, Height: 4); Background: #4b5563; }
+            Label #NameSpeedT3 { Anchor: (Top: 8); Style: (FontSize: 10, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Evolution"; }
+            Label #DescSpeedT3 { Anchor: (Top: 2); Style: (FontSize: 9, TextColor: #9fb0ba, HorizontalAlignment: Center); Text: "Cost -50%"; }
+            Label #StatusSpeedT3 { Anchor: (Top: 4); Style: (FontSize: 8, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
+          }
+
+          Button #NodeManualT3 {
+            Anchor: (Left: 530, Top: 180, Width: 80, Height: 66);
+            Background: #1a2530;
+            Style: ButtonStyle(
+              Default: (Background: #1a2530),
+              Hovered: (Background: #243342),
+              Pressed: (Background: #1e2b38),
+              Sounds: $C.@ButtonSounds,
+            );
+            LayoutMode: Top;
+            Group #BorderManualT3 { Anchor: (Left: 0, Right: 0, Top: 0, Height: 4); Background: #4b5563; }
+            Label #NameManualT3 { Anchor: (Top: 8); Style: (FontSize: 10, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Session"; }
+            Label #DescManualT3 { Anchor: (Top: 2); Style: (FontSize: 9, TextColor: #9fb0ba, HorizontalAlignment: Center); Text: "Bonus 3x"; }
+            Label #StatusManualT3 { Anchor: (Top: 4); Style: (FontSize: 8, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
+          }
+
+          Button #NodeCoinT4 {
+            Anchor: (Left: 50, Top: 260, Width: 80, Height: 66);
+            Background: #1a2530;
+            Style: ButtonStyle(
+              Default: (Background: #1a2530),
+              Hovered: (Background: #243342),
+              Pressed: (Background: #1e2b38),
+              Sounds: $C.@ButtonSounds,
+            );
+            LayoutMode: Top;
+            Group #BorderCoinT4 { Anchor: (Left: 0, Right: 0, Top: 0, Height: 4); Background: #4b5563; }
+            Label #NameCoinT4 { Anchor: (Top: 8); Style: (FontSize: 10, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Summit"; }
+            Label #DescCoinT4 { Anchor: (Top: 2); Style: (FontSize: 9, TextColor: #9fb0ba, HorizontalAlignment: Center); Text: "Cost -15%"; }
+            Label #StatusCoinT4 { Anchor: (Top: 4); Style: (FontSize: 8, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
+          }
+
+          Button #NodeSpeedT4 {
+            Anchor: (Left: 290, Top: 260, Width: 80, Height: 66);
+            Background: #1a2530;
+            Style: ButtonStyle(
+              Default: (Background: #1a2530),
+              Hovered: (Background: #243342),
+              Pressed: (Background: #1e2b38),
+              Sounds: $C.@ButtonSounds,
+            );
+            LayoutMode: Top;
+            Group #BorderSpeedT4 { Anchor: (Left: 0, Right: 0, Top: 0, Height: 4); Background: #4b5563; }
+            Label #NameSpeedT4 { Anchor: (Top: 8); Style: (FontSize: 10, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Double"; }
+            Label #DescSpeedT4 { Anchor: (Top: 2); Style: (FontSize: 9, TextColor: #9fb0ba, HorizontalAlignment: Center); Text: "Lap"; }
+            Label #StatusSpeedT4 { Anchor: (Top: 4); Style: (FontSize: 8, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
+          }
+
+          Button #NodeManualT4 {
+            Anchor: (Left: 530, Top: 260, Width: 80, Height: 66);
+            Background: #1a2530;
+            Style: ButtonStyle(
+              Default: (Background: #1a2530),
+              Hovered: (Background: #243342),
+              Pressed: (Background: #1e2b38),
+              Sounds: $C.@ButtonSounds,
+            );
+            LayoutMode: Top;
+            Group #BorderManualT4 { Anchor: (Left: 0, Right: 0, Top: 0, Height: 4); Background: #4b5563; }
+            Label #NameManualT4 { Anchor: (Top: 8); Style: (FontSize: 10, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Runner"; }
+            Label #DescManualT4 { Anchor: (Top: 2); Style: (FontSize: 9, TextColor: #9fb0ba, HorizontalAlignment: Center); Text: "Boost"; }
+            Label #StatusManualT4 { Anchor: (Top: 4); Style: (FontSize: 8, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
+          }
+
+          Button #NodeCoinT5 {
+            Anchor: (Left: 50, Top: 340, Width: 80, Height: 66);
+            Background: #1a2530;
+            Style: ButtonStyle(
+              Default: (Background: #1a2530),
+              Hovered: (Background: #243342),
+              Pressed: (Background: #1e2b38),
+              Sounds: $C.@ButtonSounds,
+            );
+            LayoutMode: Top;
+            Group #BorderCoinT5 { Anchor: (Left: 0, Right: 0, Top: 0, Height: 4); Background: #4b5563; }
+            Label #NameCoinT5 { Anchor: (Top: 8); Style: (FontSize: 10, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Auto"; }
+            Label #DescCoinT5 { Anchor: (Top: 2); Style: (FontSize: 9, TextColor: #9fb0ba, HorizontalAlignment: Center); Text: "Elevation"; }
+            Label #StatusCoinT5 { Anchor: (Top: 4); Style: (FontSize: 8, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
+          }
+
+          Button #NodeSpeedT5 {
+            Anchor: (Left: 290, Top: 340, Width: 80, Height: 66);
+            Background: #1a2530;
+            Style: ButtonStyle(
+              Default: (Background: #1a2530),
+              Hovered: (Background: #243342),
+              Pressed: (Background: #1e2b38),
+              Sounds: $C.@ButtonSounds,
+            );
+            LayoutMode: Top;
+            Group #BorderSpeedT5 { Anchor: (Left: 0, Right: 0, Top: 0, Height: 4); Background: #4b5563; }
+            Label #NameSpeedT5 { Anchor: (Top: 8); Style: (FontSize: 10, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Instant"; }
+            Label #DescSpeedT5 { Anchor: (Top: 2); Style: (FontSize: 9, TextColor: #9fb0ba, HorizontalAlignment: Center); Text: "Evolution"; }
+            Label #StatusSpeedT5 { Anchor: (Top: 4); Style: (FontSize: 8, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
+          }
+
+          Button #NodeManualT5 {
+            Anchor: (Left: 530, Top: 340, Width: 80, Height: 66);
+            Background: #1a2530;
+            Style: ButtonStyle(
+              Default: (Background: #1a2530),
+              Hovered: (Background: #243342),
+              Pressed: (Background: #1e2b38),
+              Sounds: $C.@ButtonSounds,
+            );
+            LayoutMode: Top;
+            Group #BorderManualT5 { Anchor: (Left: 0, Right: 0, Top: 0, Height: 4); Background: #4b5563; }
+            Label #NameManualT5 { Anchor: (Top: 8); Style: (FontSize: 10, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Personal"; }
+            Label #DescManualT5 { Anchor: (Top: 2); Style: (FontSize: 9, TextColor: #9fb0ba, HorizontalAlignment: Center); Text: "Best"; }
+            Label #StatusManualT5 { Anchor: (Top: 4); Style: (FontSize: 8, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
+          }
+
+          Button #NodeHybrid1 {
+            Anchor: (Left: 170, Top: 420, Width: 80, Height: 66);
+            Background: #1a2530;
+            Style: ButtonStyle(
+              Default: (Background: #1a2530),
+              Hovered: (Background: #243342),
+              Pressed: (Background: #1e2b38),
+              Sounds: $C.@ButtonSounds,
+            );
+            LayoutMode: Top;
+            Group #BorderHybrid1 { Anchor: (Left: 0, Right: 0, Top: 0, Height: 4); Background: #4b5563; }
+            Label #NameHybrid1 { Anchor: (Top: 8); Style: (FontSize: 10, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Offline"; }
+            Label #DescHybrid1 { Anchor: (Top: 2); Style: (FontSize: 9, TextColor: #9fb0ba, HorizontalAlignment: Center); Text: "Earnings"; }
+            Label #StatusHybrid1 { Anchor: (Top: 4); Style: (FontSize: 8, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
+          }
+
+          Button #NodeHybrid2 {
+            Anchor: (Left: 410, Top: 420, Width: 80, Height: 66);
+            Background: #1a2530;
+            Style: ButtonStyle(
+              Default: (Background: #1a2530),
+              Hovered: (Background: #243342),
+              Pressed: (Background: #1e2b38),
+              Sounds: $C.@ButtonSounds,
+            );
+            LayoutMode: Top;
+            Group #BorderHybrid2 { Anchor: (Left: 0, Right: 0, Top: 0, Height: 4); Background: #4b5563; }
+            Label #NameHybrid2 { Anchor: (Top: 8); Style: (FontSize: 10, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Summit"; }
+            Label #DescHybrid2 { Anchor: (Top: 2); Style: (FontSize: 9, TextColor: #9fb0ba, HorizontalAlignment: Center); Text: "Persist"; }
+            Label #StatusHybrid2 { Anchor: (Top: 4); Style: (FontSize: 8, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
+          }
+
+          Button #NodeUltimate {
+            Anchor: (Left: 290, Top: 500, Width: 80, Height: 66);
+            Background: #1a2530;
+            Style: ButtonStyle(
+              Default: (Background: #1a2530),
+              Hovered: (Background: #243342),
+              Pressed: (Background: #1e2b38),
+              Sounds: $C.@ButtonSounds,
+            );
+            LayoutMode: Top;
+            Group #BorderUltimate { Anchor: (Left: 0, Right: 0, Top: 0, Height: 4); Background: #4b5563; }
+            Label #NameUltimate { Anchor: (Top: 8); Style: (FontSize: 10, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "GLOBAL"; }
+            Label #DescUltimate { Anchor: (Top: 2); Style: (FontSize: 9, TextColor: #9fb0ba, HorizontalAlignment: Center); Text: "BOOST"; }
+            Label #StatusUltimate { Anchor: (Top: 4); Style: (FontSize: 8, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
+          }
+
+          Label #PathLabelCoin {
+            Anchor: (Left: 50, Top: 0, Width: 80);
+            Style: (FontSize: 11, RenderBold: true, TextColor: #ffd166, HorizontalAlignment: Center);
+            Text: "COIN";
+          }
+
+          Label #PathLabelSpeed {
+            Anchor: (Left: 290, Top: 0, Width: 80);
+            Style: (FontSize: 11, RenderBold: true, TextColor: #3b82f6, HorizontalAlignment: Center);
+            Text: "SPEED";
+          }
+
+          Label #PathLabelManual {
+            Anchor: (Left: 530, Top: 0, Width: 80);
+            Style: (FontSize: 11, RenderBold: true, TextColor: #7c3aed, HorizontalAlignment: Center);
+            Text: "MANUAL";
+          }
+        }
+      }
+    }
+  }
+}

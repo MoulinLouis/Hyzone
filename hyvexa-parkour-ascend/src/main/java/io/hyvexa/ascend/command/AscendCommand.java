@@ -15,7 +15,6 @@ import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.AscendConstants.SummitCategory;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.achievement.AchievementManager;
-import io.hyvexa.ascend.ascension.AscensionManager;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerStore;
@@ -26,6 +25,7 @@ import io.hyvexa.ascend.tracker.AscendRunTracker;
 import io.hyvexa.ascend.ui.AscendMapSelectPage;
 import io.hyvexa.ascend.ui.AscensionPage;
 import io.hyvexa.ascend.ui.ElevationPage;
+import io.hyvexa.ascend.ui.SkillTreePage;
 import io.hyvexa.ascend.ui.SummitPage;
 import io.hyvexa.ascend.util.AscendModeGate;
 import io.hyvexa.common.util.CommandUtils;
@@ -86,7 +86,7 @@ public class AscendCommand extends AbstractAsyncCommand {
                 case "elevate" -> openElevationPage(player, playerRef, ref, store);
                 case "summit" -> openSummitPage(player, playerRef, ref, store, args);
                 case "ascension", "ascend" -> openAscensionPage(player, playerRef, ref, store);
-                case "skills" -> showSkillTree(player, playerRef);
+                case "skills" -> openSkillTreePage(player, playerRef, ref, store);
                 case "achievements" -> showAchievements(player, playerRef);
                 case "title" -> handleTitle(player, playerRef, args);
                 default -> ctx.sendMessage(Message.raw("Unknown subcommand. Use: /ascend, /ascend stats, /ascend elevate, /ascend summit, /ascend ascension, /ascend skills, /ascend achievements, /ascend title"));
@@ -185,43 +185,14 @@ public class AscendCommand extends AbstractAsyncCommand {
             new AscensionPage(playerRef, plugin.getPlayerStore(), plugin.getAscensionManager()));
     }
 
-    private void showSkillTree(Player player, PlayerRef playerRef) {
+    private void openSkillTreePage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         if (plugin == null || plugin.getAscensionManager() == null) {
             player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading."));
             return;
         }
-
-        AscensionManager ascensionManager = plugin.getAscensionManager();
-        var summary = ascensionManager.getSkillTreeSummary(playerRef.getUuid());
-
-        player.sendMessage(Message.raw("[Skill Tree] Points: " + summary.availablePoints() + " available / "
-            + summary.totalPoints() + " total")
-            .color(SystemMessageUtils.PRIMARY_TEXT));
-
-        if (summary.unlockedNodes().isEmpty()) {
-            player.sendMessage(Message.raw("[Skill Tree] No skills unlocked yet. Ascend to earn points!")
-                .color(SystemMessageUtils.SECONDARY));
-        } else {
-            player.sendMessage(Message.raw("[Skill Tree] Unlocked:")
-                .color(SystemMessageUtils.SECONDARY));
-            for (var node : summary.unlockedNodes()) {
-                player.sendMessage(Message.raw("  - " + node.getName() + ": " + node.getDescription())
-                    .color(SystemMessageUtils.SECONDARY));
-            }
-        }
-
-        // Show available nodes to unlock
-        if (summary.availablePoints() > 0) {
-            player.sendMessage(Message.raw("[Skill Tree] Available to unlock:")
-                .color(SystemMessageUtils.SECONDARY));
-            for (var node : AscendConstants.SkillTreeNode.values()) {
-                if (ascensionManager.canUnlockSkillNode(playerRef.getUuid(), node)) {
-                    player.sendMessage(Message.raw("  * " + node.getName() + " (" + node.getPath().name() + ")")
-                        .color(SystemMessageUtils.SECONDARY));
-                }
-            }
-        }
+        player.getPageManager().openCustomPage(ref, store,
+            new SkillTreePage(playerRef, plugin.getPlayerStore(), plugin.getAscensionManager()));
     }
 
     private void showAchievements(Player player, PlayerRef playerRef) {
