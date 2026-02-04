@@ -111,10 +111,13 @@ public class PassiveEarningsManager {
                 evolutionBonus = plugin.getSummitManager().getEvolutionPowerBonus(playerId).doubleValue();
             }
 
-            // Multiplier gain per run (with Evolution Power bonus)
+            // Multiplier gain per run (with Evolution Power bonus) - at offline rate
             BigDecimal multiplierIncrement = AscendConstants.getRunnerMultiplierIncrement(stars, evolutionBonus);
             BigDecimal mapMultiplierGain = multiplierIncrement
-                .multiply(BigDecimal.valueOf(theoreticalRuns), ctx);
+                .multiply(BigDecimal.valueOf(theoreticalRuns), ctx)
+                .multiply(BigDecimal.valueOf(OFFLINE_RATE_PERCENT).divide(
+                    BigDecimal.valueOf(100), ctx
+                ), ctx); // Apply 25% offline rate to multiplier gains
 
             // Coins per run (same logic as RobotManager)
             BigDecimal payoutPerRun = playerStore.getCompletionPayout(
@@ -141,20 +144,13 @@ public class PassiveEarningsManager {
                 map.getName(),
                 (int) theoreticalRuns,
                 mapCoins,
-                mapMultiplierGain.multiply(BigDecimal.valueOf(OFFLINE_RATE_PERCENT).divide(
-                    BigDecimal.valueOf(100), ctx
-                ), ctx), // 25% of multiplier gain too
+                mapMultiplierGain,
                 speedLevel,
                 stars
             ));
 
             totalCoins = totalCoins.add(mapCoins, ctx);
-            totalMultiplierGain = totalMultiplierGain.add(
-                mapMultiplierGain.multiply(BigDecimal.valueOf(OFFLINE_RATE_PERCENT).divide(
-                    BigDecimal.valueOf(100), ctx
-                ), ctx),
-                ctx
-            );
+            totalMultiplierGain = totalMultiplierGain.add(mapMultiplierGain, ctx);
         }
 
         if (totalCoins.compareTo(BigDecimal.ZERO) <= 0) {
@@ -165,7 +161,7 @@ public class PassiveEarningsManager {
         playerStore.atomicAddCoins(playerId, totalCoins);
         playerStore.atomicAddTotalCoinsEarned(playerId, totalCoins);
 
-        // Apply multiplier gains to each map
+        // Apply multiplier gains to each map (at offline rate)
         for (Map.Entry<String, PassiveRunnerEarnings> entry : runnerEarnings.entrySet()) {
             playerStore.atomicAddMapMultiplier(
                 playerId,
@@ -176,7 +172,7 @@ public class PassiveEarningsManager {
 
         LOGGER.at(Level.INFO).log(
             "Passive earnings for " + playerId + ": " +
-            totalCoins + " coins over " + (timeAwayMs / 1000 / 60) + " minutes"
+            totalCoins + " coins, +" + totalMultiplierGain + " multiplier over " + (timeAwayMs / 1000 / 60) + " minutes"
         );
 
         return new PassiveEarningsResult(
