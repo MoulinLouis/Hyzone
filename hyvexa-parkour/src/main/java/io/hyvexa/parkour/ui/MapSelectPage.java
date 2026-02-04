@@ -36,24 +36,38 @@ public class MapSelectPage extends BaseParkourPage {
     private final ProgressStore progressStore;
     private final RunTracker runTracker;
     private final String category;
+    private final boolean hideCompleted;
     private static final String BUTTON_BACK = "Back";
+    private static final String BUTTON_TOGGLE_HIDE_COMPLETED = "ToggleHideCompleted";
     private static final String BUTTON_SELECT_PREFIX = "Select:";
+    private static final String HIDE_COMPLETED_BUTTON_SELECTOR = "#HideCompletedToggle";
+    private static final String HIDE_COMPLETED_CHECK_SELECTOR = "#HideCompletedCheckboxMark";
 
     public MapSelectPage(@Nonnull PlayerRef playerRef, MapStore mapStore,
                                    ProgressStore progressStore, RunTracker runTracker, String category) {
+        this(playerRef, mapStore, progressStore, runTracker, category, false);
+    }
+
+    public MapSelectPage(@Nonnull PlayerRef playerRef, MapStore mapStore,
+                                   ProgressStore progressStore, RunTracker runTracker, String category,
+                                   boolean hideCompleted) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
         this.mapStore = mapStore;
         this.progressStore = progressStore;
         this.runTracker = runTracker;
         this.category = category;
+        this.hideCompleted = hideCompleted;
     }
 
     @Override
     public void build(@Nonnull Ref<EntityStore> ref, @Nonnull UICommandBuilder uiCommandBuilder,
                       @Nonnull UIEventBuilder uiEventBuilder, @Nonnull Store<EntityStore> store) {
         uiCommandBuilder.append("Pages/Parkour_MapSelect.ui");
+        uiCommandBuilder.set(HIDE_COMPLETED_CHECK_SELECTOR + ".Visible", hideCompleted);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_BACK), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, HIDE_COMPLETED_BUTTON_SELECTOR,
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TOGGLE_HIDE_COMPLETED), false);
         buildMapList(ref, store, uiCommandBuilder, uiEventBuilder);
     }
 
@@ -70,6 +84,15 @@ public class MapSelectPage extends BaseParkourPage {
             if (player != null && playerRef != null) {
                 player.getPageManager().openCustomPage(ref, store,
                         new CategorySelectPage(playerRef, mapStore, progressStore, runTracker));
+            }
+            return;
+        }
+        if (BUTTON_TOGGLE_HIDE_COMPLETED.equals(data.getButton())) {
+            Player player = store.getComponent(ref, Player.getComponentType());
+            PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+            if (player != null && playerRef != null) {
+                player.getPageManager().openCustomPage(ref, store,
+                        new MapSelectPage(playerRef, mapStore, progressStore, runTracker, category, !hideCompleted));
             }
             return;
         }
@@ -127,9 +150,12 @@ public class MapSelectPage extends BaseParkourPage {
             if (!FormatUtils.normalizeCategory(map.getCategory()).equalsIgnoreCase(category)) {
                 continue;
             }
+            boolean completed = progressStore.isMapCompleted(playerRef.getUuid(), map.getId());
+            if (hideCompleted && completed) {
+                continue;
+            }
             commandBuilder.append("#MapCards", "Pages/Parkour_MapSelectEntry.ui");
             commandBuilder.set("#MapCards[" + index + "] #AccentBar.Background", accentColor);
-            boolean completed = progressStore.isMapCompleted(playerRef.getUuid(), map.getId());
             Long bestTime = progressStore.getBestTimeMs(playerRef.getUuid(), map.getId());
             String status = completed ? "Completed" : "Not completed";
             if (bestTime != null) {

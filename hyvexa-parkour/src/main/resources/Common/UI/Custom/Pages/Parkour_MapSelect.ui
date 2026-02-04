@@ -44,6 +44,58 @@ $C.@PageOverlay {
         Text: "Select a map to teleport to its start.";
       }
 
+      Label {
+        Anchor: (Top: 10);
+        Style: (
+          FontSize: 14,
+          TextColor: #9fb0ba
+        );
+        Text: "Filters.";
+      }
+
+      Group {
+        Anchor: (Top: 6, Left: 0, Right: 0, Height: 30);
+        LayoutMode: Left;
+
+        Button #HideCompletedToggle {
+          Anchor: (Height: 30, Width: 220);
+          Padding: (Left: 8, Right: 8, Top: 4, Bottom: 4);
+          LayoutMode: Left;
+          Style: ButtonStyle(
+            Default: (Background: #1a2530(0.95)),
+            Hovered: (Background: #263545),
+            Pressed: (Background: #1e2d3a),
+            Sounds: $C.@ButtonSounds,
+          );
+
+          Group #HideCompletedCheckbox {
+            Anchor: (Width: 18, Height: 18, Top: 2);
+            Background: #3b4b57;
+
+            Group {
+              Anchor: (Left: 2, Top: 2, Right: 2, Bottom: 2);
+              Background: #1a2530(0.95);
+            }
+
+            Group #HideCompletedCheckboxMark {
+              Anchor: (Left: 4, Top: 4, Width: 10, Height: 10);
+              Background: #10b981;
+            }
+          }
+
+          Group { Anchor: (Width: 8); }
+
+          Label #HideCompletedLabel {
+            Style: (
+              FontSize: 17,
+              TextColor: #f0f4f8,
+              RenderBold: true
+            );
+            Text: "Hide completed maps";
+          }
+        }
+      }
+
       Group #MapList {
         Anchor: (Width: 490, Top: 6);
         FlexWeight: 1;
