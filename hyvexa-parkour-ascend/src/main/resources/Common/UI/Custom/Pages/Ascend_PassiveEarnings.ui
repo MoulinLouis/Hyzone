@@ -43,12 +43,12 @@ $C.@PageOverlay {
         Label #TotalCoinsLabel {
           Anchor: (Top: 4);
           Style: (FontSize: 20, TextColor: #ffd166, RenderBold: true);
-          Text: "🪙 0 COINS";
+          Text: "0 COINS";
         }
 
         Label #OfflineRateLabel {
           Anchor: (Top: 4);
-          Style: (FontSize: 12, TextColor: #94a3b8);
+          Style: (FontSize: 14, TextColor: #94a3b8);
           Text: "Earned at 25% offline rate";
         }
 
@@ -62,7 +62,7 @@ $C.@PageOverlay {
       // Breakdown header
       Label {
         Anchor: (Top: 12);
-        Style: (FontSize: 12, TextColor: #94a3b8);
+        Style: (FontSize: 14, TextColor: #94a3b8);
         Text: "Runner breakdown:";
       }
 
