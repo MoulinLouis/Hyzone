@@ -54,12 +54,17 @@ public class AscendHud extends CustomUIHud {
         update(false, commandBuilder);
     }
 
-    public void updateEconomy(java.math.BigDecimal coins, java.math.BigDecimal product, java.math.BigDecimal[] digits, double elevation, boolean showElevation) {
+    public void updateEconomy(java.math.BigDecimal coins, java.math.BigDecimal product, java.math.BigDecimal[] digits, int currentElevation, int potentialElevation, boolean showElevation) {
         String coinsText = FormatUtils.formatCoinsForHudDecimal(coins);
         String coinsPerRunText = FormatUtils.formatCoinsForHudDecimal(product) + "/run";
         String digitsKey = buildDigitsKey(digits);
-        String elevationText = showElevation ? ("x" + formatMultiplier(elevation)) : "";
-        String elevationValueText = formatMultiplier(elevation);
+        String elevationText;
+        if (showElevation && potentialElevation > currentElevation) {
+            elevationText = "x" + currentElevation + " -> x" + potentialElevation;
+        } else {
+            elevationText = "x" + currentElevation;
+        }
+        String elevationValueText = formatMultiplier(currentElevation);
         // Check if values changed OR if we have active effects to process
         boolean valuesChanged = !coinsText.equals(lastCoinsText)
             || !coinsPerRunText.equals(lastCoinsPerRunText)
@@ -186,9 +191,9 @@ public class AscendHud extends CustomUIHud {
         if (showPrestige) {
             int coinLevel = summitLevels.getOrDefault(SummitCategory.COIN_FLOW, 0);
             int speedLevel = summitLevels.getOrDefault(SummitCategory.RUNNER_SPEED, 0);
-            int manualLevel = summitLevels.getOrDefault(SummitCategory.MANUAL_MASTERY, 0);
+            int evolveLevel = summitLevels.getOrDefault(SummitCategory.EVOLUTION_POWER, 0);
 
-            String summitText = "Summit: Coin " + coinLevel + " | Speed " + speedLevel + " | Manual " + manualLevel;
+            String summitText = "Summit: Coin " + coinLevel + " | Speed " + speedLevel + " | Evolve " + evolveLevel;
 
             commandBuilder.set("#SummitText.Text", summitText);
         }
@@ -254,8 +259,8 @@ public class AscendHud extends CustomUIHud {
     private String buildPrestigeKey(Map<SummitCategory, Integer> summitLevels, int ascensionCount, int skillPoints) {
         int coinLevel = summitLevels != null ? summitLevels.getOrDefault(SummitCategory.COIN_FLOW, 0) : 0;
         int speedLevel = summitLevels != null ? summitLevels.getOrDefault(SummitCategory.RUNNER_SPEED, 0) : 0;
-        int manualLevel = summitLevels != null ? summitLevels.getOrDefault(SummitCategory.MANUAL_MASTERY, 0) : 0;
-        return coinLevel + "|" + speedLevel + "|" + manualLevel;
+        int evolveLevel = summitLevels != null ? summitLevels.getOrDefault(SummitCategory.EVOLUTION_POWER, 0) : 0;
+        return coinLevel + "|" + speedLevel + "|" + evolveLevel;
     }
 
     private static double[] normalizeDigits(java.math.BigDecimal[] digits) {
