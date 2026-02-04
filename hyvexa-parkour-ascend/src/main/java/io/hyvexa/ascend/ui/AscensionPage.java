@@ -78,9 +78,9 @@ public class AscensionPage extends BaseAscendPage {
         UUID playerId = playerRef.getUuid();
 
         if (!ascensionManager.canAscend(playerId)) {
-            double coins = playerStore.getCoins(playerId);
+            java.math.BigDecimal coins = playerStore.getCoins(playerId);
             player.sendMessage(Message.raw("[Ascension] Need " + formatLargeNumber(AscendConstants.ASCENSION_COIN_THRESHOLD)
-                + " coins to Ascend. You have: " + formatLargeNumber(coins))
+                + " coins to Ascend. You have: " + formatLargeNumber(coins.doubleValue()))
                 .color(SystemMessageUtils.SECONDARY));
             return;
         }
@@ -118,13 +118,13 @@ public class AscensionPage extends BaseAscendPage {
         }
 
         UUID playerId = playerRef.getUuid();
-        double coins = playerStore.getCoins(playerId);
+        java.math.BigDecimal coins = playerStore.getCoins(playerId);
         int ascensionCount = playerStore.getAscensionCount(playerId);
         int availablePoints = playerStore.getAvailableSkillPoints(playerId);
         boolean canAscend = ascensionManager.canAscend(playerId);
 
         // Update coin values
-        commandBuilder.set("#CurrentCoins.Text", formatLargeNumber(coins));
+        commandBuilder.set("#CurrentCoins.Text", formatLargeNumber(coins.doubleValue()));
         commandBuilder.set("#RequiredCoins.Text", formatLargeNumber(AscendConstants.ASCENSION_COIN_THRESHOLD));
 
         // Update current stats
@@ -135,7 +135,7 @@ public class AscensionPage extends BaseAscendPage {
         if (canAscend) {
             commandBuilder.set("#AscendButton.Text", "ASCEND");
         } else {
-            double needed = AscendConstants.ASCENSION_COIN_THRESHOLD - coins;
+            double needed = AscendConstants.ASCENSION_COIN_THRESHOLD - coins.doubleValue();
             commandBuilder.set("#AscendButton.Text", "NEED " + formatLargeNumber(needed) + " MORE");
         }
     }

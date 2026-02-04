@@ -31,8 +31,9 @@ public class AscensionManager {
      * Checks if a player can perform an Ascension.
      */
     public boolean canAscend(UUID playerId) {
-        double coins = playerStore.getCoins(playerId);
-        return coins >= AscendConstants.ASCENSION_COIN_THRESHOLD;
+        java.math.BigDecimal coins = playerStore.getCoins(playerId);
+        java.math.BigDecimal threshold = java.math.BigDecimal.valueOf(AscendConstants.ASCENSION_COIN_THRESHOLD);
+        return coins.compareTo(threshold) >= 0;
     }
 
     /**
@@ -41,8 +42,9 @@ public class AscensionManager {
      * @return the new Ascension count, or -1 if insufficient coins
      */
     public int performAscension(UUID playerId) {
-        double coins = playerStore.getCoins(playerId);
-        if (coins < AscendConstants.ASCENSION_COIN_THRESHOLD) {
+        java.math.BigDecimal coins = playerStore.getCoins(playerId);
+        java.math.BigDecimal threshold = java.math.BigDecimal.valueOf(AscendConstants.ASCENSION_COIN_THRESHOLD);
+        if (coins.compareTo(threshold) < 0) {
             return -1;
         }
 
@@ -78,7 +80,7 @@ public class AscensionManager {
         }
 
         // Reset progress
-        progress.setCoins(0.0);
+        progress.setCoins(java.math.BigDecimal.ZERO);
         progress.setElevationMultiplier(1);
         progress.clearSummitLevels();
 
@@ -96,7 +98,7 @@ public class AscensionManager {
 
         // Apply starting coins skill
         if (progress.hasSkillNode(SkillTreeNode.COIN_T1_STARTING_COINS)) {
-            progress.setCoins(1000.0);
+            progress.setCoins(java.math.BigDecimal.valueOf(1000));
         }
 
         playerStore.markDirty(playerId);

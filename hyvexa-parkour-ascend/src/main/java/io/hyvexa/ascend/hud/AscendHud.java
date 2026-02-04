@@ -25,9 +25,9 @@ public class AscendHud extends CustomUIHud {
     private Boolean lastTimerVisible;
     private String lastAscensionProgressKey;
 
-    // Track previous values for effect triggering
+    // Track previous values for effect triggering (converted to double for comparison)
     private double[] lastDigits;
-    private double lastCoins;
+    private java.math.BigDecimal lastCoins;
 
     // Ascension quest bar constants
     private static final double ASCENSION_COST = 1_000_000_000_000.0; // 1 trillion
@@ -54,7 +54,7 @@ public class AscendHud extends CustomUIHud {
         update(false, commandBuilder);
     }
 
-    public void updateEconomy(double coins, double product, double[] digits, double elevation, boolean showElevation) {
+    public void updateEconomy(java.math.BigDecimal coins, java.math.BigDecimal product, java.math.BigDecimal[] digits, double elevation, boolean showElevation) {
         String coinsText = FormatUtils.formatCoinsForHudDecimal(coins);
         String coinsPerRunText = FormatUtils.formatCoinsForHudDecimal(product) + "/run";
         String digitsKey = buildDigitsKey(digits);
@@ -165,7 +165,7 @@ public class AscendHud extends CustomUIHud {
         lastTimerVisible = null;
         lastAscensionProgressKey = null;
         lastDigits = null;
-        lastCoins = 0;
+        lastCoins = null;
         effectManager.clearEffects();
     }
 
@@ -196,12 +196,14 @@ public class AscendHud extends CustomUIHud {
         update(false, commandBuilder);
     }
 
-    public void updateAscensionQuest(double coins) {
+    public void updateAscensionQuest(java.math.BigDecimal coins) {
         // Calculate logarithmic progress (0 to 1)
         // Using log10 scale: log10(coins + 1) / log10(1T + 1) ≈ log10(coins + 1) / 12
         double progress = 0.0;
-        if (coins > 0) {
-            progress = Math.log10(coins + 1) / Math.log10(ASCENSION_COST + 1);
+        if (coins.compareTo(java.math.BigDecimal.ZERO) > 0) {
+            // Convert BigDecimal to double for logarithmic calculation
+            double coinsDouble = coins.doubleValue();
+            progress = Math.log10(coinsDouble + 1) / Math.log10(ASCENSION_COST + 1);
             progress = Math.min(1.0, Math.max(0.0, progress)); // Clamp between 0 and 1
         }
 
@@ -256,19 +258,20 @@ public class AscendHud extends CustomUIHud {
         return coinLevel + "|" + speedLevel + "|" + manualLevel;
     }
 
-    private static double[] normalizeDigits(double[] digits) {
+    private static double[] normalizeDigits(java.math.BigDecimal[] digits) {
         double[] normalized = new double[] {1, 1, 1, 1, 1};
         if (digits == null) {
             return normalized;
         }
         int limit = Math.min(digits.length, normalized.length);
         for (int i = 0; i < limit; i++) {
-            normalized[i] = Math.max(1.0, digits[i]);
+            // Convert BigDecimal to double for display
+            normalized[i] = Math.max(1.0, digits[i].doubleValue());
         }
         return normalized;
     }
 
-    private static String buildDigitsKey(double[] digits) {
+    private static String buildDigitsKey(java.math.BigDecimal[] digits) {
         if (digits == null || digits.length == 0) {
             return "1|1|1|1|1";
         }
@@ -278,7 +281,8 @@ public class AscendHud extends CustomUIHud {
             if (i > 0) {
                 key.append('|');
             }
-            key.append(formatMultiplier(Math.max(1.0, digits[i])));
+            java.math.BigDecimal value = digits[i].max(java.math.BigDecimal.ONE);
+            key.append(formatMultiplier(value.doubleValue()));
         }
         while (limit < 5) {
             key.append("|1");

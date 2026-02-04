@@ -140,7 +140,7 @@ public class AscendAdminCoinsPage extends InteractiveCustomUIPage<AscendAdminCoi
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (playerRef != null) {
             AscendPlayerStore playerStore = ParkourAscendPlugin.getInstance().getPlayerStore();
-            double coins = playerStore != null ? playerStore.getCoins(playerRef.getUuid()) : 0.0;
+            java.math.BigDecimal coins = playerStore != null ? playerStore.getCoins(playerRef.getUuid()) : java.math.BigDecimal.ZERO;
             int skillPoints = playerStore != null ? playerStore.getSkillTreePoints(playerRef.getUuid()) : 0;
             commandBuilder.set("#CurrentCoinsValue.Text", FormatUtils.formatCoinsForHudDecimal(coins));
             commandBuilder.set("#CurrentSkillPointsValue.Text", String.valueOf(skillPoints));
@@ -175,16 +175,16 @@ public class AscendAdminCoinsPage extends InteractiveCustomUIPage<AscendAdminCoi
             return;
         }
         if (add) {
-            playerStore.addCoins(playerRef.getUuid(), amount);
+            playerStore.addCoins(playerRef.getUuid(), java.math.BigDecimal.valueOf(amount));
             player.sendMessage(Message.raw("[Ascend] Added " + amount + " coins.")
                 .color(SystemMessageUtils.SUCCESS));
         } else {
-            playerStore.addCoins(playerRef.getUuid(), -amount);
+            playerStore.addCoins(playerRef.getUuid(), java.math.BigDecimal.valueOf(-amount));
             player.sendMessage(Message.raw("[Ascend] Removed " + amount + " coins.")
                 .color(SystemMessageUtils.SECONDARY));
         }
         UICommandBuilder commandBuilder = new UICommandBuilder();
-        double coins = playerStore.getCoins(playerRef.getUuid());
+        java.math.BigDecimal coins = playerStore.getCoins(playerRef.getUuid());
         commandBuilder.set("#CurrentCoinsValue.Text", FormatUtils.formatCoinsForHudDecimal(coins));
         sendUpdate(commandBuilder, null, false);
     }

@@ -97,25 +97,26 @@ public class ElevationPage extends BaseAscendPage {
         }
 
         UUID playerId = playerRef.getUuid();
-        double coins = playerStore.getCoins(playerId);
+        java.math.BigDecimal coins = playerStore.getCoins(playerId);
         int currentElevation = playerStore.getElevationLevel(playerId);
 
         // Get cost multiplier from skill tree
         double costMultiplier = getCostMultiplier(playerId);
 
         // Calculate how many levels can be purchased
-        ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(currentElevation, coins, costMultiplier);
+        java.math.BigDecimal costMultiplierBD = java.math.BigDecimal.valueOf(costMultiplier);
+        ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(currentElevation, coins, costMultiplierBD);
 
         if (purchase.levels <= 0) {
-            long nextCost = AscendConstants.getElevationLevelUpCost(currentElevation, costMultiplier);
-            player.sendMessage(Message.raw("[Ascend] You need " + FormatUtils.formatCoinsForHud(nextCost) + " coins to elevate.")
+            java.math.BigDecimal nextCost = AscendConstants.getElevationLevelUpCost(currentElevation, java.math.BigDecimal.valueOf(costMultiplier));
+            player.sendMessage(Message.raw("[Ascend] You need " + FormatUtils.formatCoinsForHudDecimal(nextCost) + " coins to elevate.")
                 .color(SystemMessageUtils.SECONDARY));
             return;
         }
 
-        // Deduct the cost and add elevation
-        playerStore.setCoins(playerId, coins - purchase.cost);
-        int newElevation = playerStore.addElevationLevel(playerId, purchase.levels);
+        // Deduct the cost and add elevation atomically (this resets coins to 0 as part of elevation mechanic)
+        int newElevation = currentElevation + purchase.levels;
+        playerStore.atomicSetElevationAndResetCoins(playerId, newElevation);
 
         player.sendMessage(Message.raw("[Ascend] Elevation +" + purchase.levels + " (x" + newElevation + ")!")
             .color(SystemMessageUtils.SUCCESS));
@@ -224,22 +225,23 @@ public class ElevationPage extends BaseAscendPage {
         }
 
         UUID playerId = playerRef.getUuid();
-        double coins = playerStore.getCoins(playerId);
+        java.math.BigDecimal coins = playerStore.getCoins(playerId);
         int currentElevation = playerStore.getElevationLevel(playerId);
 
         // Get cost multiplier from skill tree
         double costMultiplier = getCostMultiplier(playerId);
 
         // Calculate purchase info
-        ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(currentElevation, coins, costMultiplier);
+        java.math.BigDecimal costMultiplierBD = java.math.BigDecimal.valueOf(costMultiplier);
+        ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(currentElevation, coins, costMultiplierBD);
         int newElevation = currentElevation + purchase.levels;
-        long nextCost = AscendConstants.getElevationLevelUpCost(currentElevation, costMultiplier);
+        java.math.BigDecimal nextCost = AscendConstants.getElevationLevelUpCost(currentElevation, costMultiplierBD);
 
         // Update progression display (show progress toward next multiplier)
         int nextElevation = currentElevation + 1;
         String costText = "Progress to x" + nextElevation + ": " +
                          FormatUtils.formatCoinsForHudDecimal(coins) + " / " +
-                         FormatUtils.formatCoinsForHud(nextCost) + " coins";
+                         FormatUtils.formatCoinsForHudDecimal(nextCost) + " coins";
         if (costMultiplier < 1.0) {
             costText += " (-" + Math.round((1.0 - costMultiplier) * 100) + "%)";
         }
@@ -259,7 +261,7 @@ public class ElevationPage extends BaseAscendPage {
         } else {
             commandBuilder.set("#NewMultiplierValue.Text", "x" + currentElevation);
             commandBuilder.set("#NewMultiplierValue.Style.TextColor", "#6b7280");
-            commandBuilder.set("#GainValue.Text", "Need " + FormatUtils.formatCoinsForHudDecimal(nextCost - coins) + " more");
+            commandBuilder.set("#GainValue.Text", "Need " + FormatUtils.formatCoinsForHudDecimal(nextCost.subtract(coins)) + " more");
             commandBuilder.set("#GainValue.Style.TextColor", "#6b7280");
             commandBuilder.set("#ArrowLabel.Style.TextColor", "#6b7280");
             commandBuilder.set("#ElevateButton.Text", "NEED MORE COINS");

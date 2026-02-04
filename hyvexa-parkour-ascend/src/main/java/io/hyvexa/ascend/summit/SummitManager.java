@@ -25,8 +25,9 @@ public class SummitManager {
      * Checks if a player can perform a Summit in any category.
      */
     public boolean canSummit(UUID playerId) {
-        double coins = playerStore.getCoins(playerId);
-        return coins >= AscendConstants.SUMMIT_MIN_COINS;
+        java.math.BigDecimal coins = playerStore.getCoins(playerId);
+        java.math.BigDecimal threshold = java.math.BigDecimal.valueOf(AscendConstants.SUMMIT_MIN_COINS);
+        return coins.compareTo(threshold) >= 0;
     }
 
     /**
@@ -34,11 +35,10 @@ public class SummitManager {
      * if they spent all their coins.
      */
     public SummitPreview previewSummit(UUID playerId, SummitCategory category) {
-        double coins = playerStore.getCoins(playerId);
+        java.math.BigDecimal coins = playerStore.getCoins(playerId);
         int currentLevel = playerStore.getSummitLevel(playerId, category);
-        int newLevel = AscendConstants.calculateSummitLevel(
-            AscendConstants.getCoinsForSummitLevel(currentLevel) + coins
-        );
+        java.math.BigDecimal alreadySpent = java.math.BigDecimal.valueOf(AscendConstants.getCoinsForSummitLevel(currentLevel));
+        int newLevel = AscendConstants.calculateSummitLevel(alreadySpent.add(coins));
         int levelGain = newLevel - currentLevel;
         double currentBonus = category.getBonusForLevel(currentLevel);
         double newBonus = category.getBonusForLevel(newLevel);
@@ -50,7 +50,7 @@ public class SummitManager {
             levelGain,
             currentBonus,
             newBonus,
-            coins
+            coins.doubleValue() // Convert for display in record
         );
     }
 
@@ -61,14 +61,15 @@ public class SummitManager {
      * @return the new Summit level, or -1 if insufficient coins
      */
     public int performSummit(UUID playerId, SummitCategory category) {
-        double coins = playerStore.getCoins(playerId);
-        if (coins < AscendConstants.SUMMIT_MIN_COINS) {
+        java.math.BigDecimal coins = playerStore.getCoins(playerId);
+        java.math.BigDecimal threshold = java.math.BigDecimal.valueOf(AscendConstants.SUMMIT_MIN_COINS);
+        if (coins.compareTo(threshold) < 0) {
             return -1;
         }
 
         int currentLevel = playerStore.getSummitLevel(playerId, category);
-        long alreadySpent = AscendConstants.getCoinsForSummitLevel(currentLevel);
-        int newLevel = AscendConstants.calculateSummitLevel(alreadySpent + coins);
+        java.math.BigDecimal alreadySpent = java.math.BigDecimal.valueOf(AscendConstants.getCoinsForSummitLevel(currentLevel));
+        int newLevel = AscendConstants.calculateSummitLevel(alreadySpent.add(coins));
         int levelGain = newLevel - currentLevel;
 
         if (levelGain <= 0) {
@@ -77,7 +78,7 @@ public class SummitManager {
 
         // Apply Summit: set new level, reset coins and elevation
         playerStore.addSummitLevel(playerId, category, levelGain);
-        playerStore.setCoins(playerId, 0.0);
+        playerStore.setCoins(playerId, java.math.BigDecimal.ZERO);
 
         // Reset elevation to 1
         var progress = playerStore.getPlayer(playerId);
@@ -97,7 +98,7 @@ public class SummitManager {
      * Gets the total Summit bonus for coin earnings.
      * Used to modify base coin rewards.
      */
-    public double getCoinFlowBonus(UUID playerId) {
+    public java.math.BigDecimal getCoinFlowBonus(UUID playerId) {
         return playerStore.getSummitBonus(playerId, SummitCategory.COIN_FLOW);
     }
 
@@ -105,7 +106,7 @@ public class SummitManager {
      * Gets the total Summit bonus for runner speed.
      * Used to modify runner completion time.
      */
-    public double getRunnerSpeedBonus(UUID playerId) {
+    public java.math.BigDecimal getRunnerSpeedBonus(UUID playerId) {
         return playerStore.getSummitBonus(playerId, SummitCategory.RUNNER_SPEED);
     }
 
@@ -113,7 +114,7 @@ public class SummitManager {
      * Gets the total Summit bonus for manual run multiplier.
      * Used to modify manual run rewards.
      */
-    public double getManualMasteryBonus(UUID playerId) {
+    public java.math.BigDecimal getManualMasteryBonus(UUID playerId) {
         return playerStore.getSummitBonus(playerId, SummitCategory.MANUAL_MASTERY);
     }
 
