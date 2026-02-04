@@ -37,6 +37,7 @@ import io.hyvexa.ascend.interaction.AscendLeaveInteraction;
 import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.summit.SummitManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
+import io.hyvexa.ascend.passive.PassiveEarningsManager;
 import io.hyvexa.common.whitelist.AscendWhitelistManager;
 import io.hyvexa.common.whitelist.WhitelistRegistry;
 import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
@@ -75,6 +76,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
     private SummitManager summitManager;
     private AscensionManager ascensionManager;
     private AchievementManager achievementManager;
+    private PassiveEarningsManager passiveEarningsManager;
     private AscendWhitelistManager whitelistManager;
     private ScheduledFuture<?> runTrackerTask;
     private final ConcurrentHashMap<UUID, AscendHud> ascendHuds = new ConcurrentHashMap<>();
@@ -125,6 +127,11 @@ public class ParkourAscendPlugin extends JavaPlugin {
         ascensionManager = new AscensionManager(playerStore);
         achievementManager = new AchievementManager(playerStore, mapStore);
 
+        // Initialize passive earnings manager
+        passiveEarningsManager = new PassiveEarningsManager(
+            playerStore, mapStore, ghostStore
+        );
+
         if (HylogramsBridge.isAvailable()) {
             hologramManager = new AscendHologramManager();
             if (mapStore != null && hologramManager != null) {
@@ -168,6 +175,11 @@ public class ParkourAscendPlugin extends JavaPlugin {
                 if (playerId != null && playerStore != null) {
                     playerStore.setSessionFirstRunClaimed(playerId, false);
                     playerStore.resetConsecutiveManualRuns(playerId);
+
+                    // Check for passive earnings
+                    if (passiveEarningsManager != null) {
+                        passiveEarningsManager.checkPassiveEarningsOnJoin(playerId);
+                    }
                 }
                 CompletableFuture.runAsync(() -> {
                     Player player = store.getComponent(ref, Player.getComponentType());
@@ -189,18 +201,31 @@ public class ParkourAscendPlugin extends JavaPlugin {
         this.getEventRegistry().registerGlobal(AddPlayerToWorldEvent.class, event -> {
             try {
                 World world = event.getWorld();
-                if (world == null || !isAscendWorld(world)) {
+                if (world == null) {
                     return;
                 }
                 var holder = event.getHolder();
                 if (holder == null) {
                     return;
                 }
-                Player player = holder.getComponent(Player.getComponentType());
-                if (player == null) {
-                    return;
+
+                // If joining Ascend world, ensure items are present
+                if (isAscendWorld(world)) {
+                    Player player = holder.getComponent(Player.getComponentType());
+                    if (player == null) {
+                        return;
+                    }
+                    ensureAscendItems(player);
+                } else {
+                    // If joining a NON-Ascend world, mark as leaving Ascend for passive earnings
+                    PlayerRef playerRef = holder.getComponent(PlayerRef.getComponentType());
+                    if (playerRef != null) {
+                        UUID playerId = playerRef.getUuid();
+                        if (playerId != null && passiveEarningsManager != null) {
+                            passiveEarningsManager.onPlayerLeaveAscend(playerId);
+                        }
+                    }
                 }
-                ensureAscendItems(player);
             } catch (Exception e) {
                 LOGGER.at(Level.WARNING).log("Exception in AddPlayerToWorldEvent (ascend): " + e.getMessage());
             }
@@ -215,6 +240,14 @@ public class ParkourAscendPlugin extends JavaPlugin {
             if (playerId == null) {
                 return;
             }
+
+            // Mark player as left for passive earnings tracking
+            // Note: This tracks full disconnects. World changes (Ascend -> Hub) are not tracked
+            // separately, but passive earnings still work since timestamp is checked on rejoin
+            if (passiveEarningsManager != null) {
+                passiveEarningsManager.onPlayerLeaveAscend(playerId);
+            }
+
             ascendHuds.remove(playerId);
             ascendHudAttached.remove(playerId);
             ascendHudReadyAt.remove(playerId);
@@ -298,6 +331,26 @@ public class ParkourAscendPlugin extends JavaPlugin {
         return whitelistManager;
     }
 
+    public PassiveEarningsManager getPassiveEarningsManager() {
+        return passiveEarningsManager;
+    }
+
+    /**
+     * Get a PlayerRef for a given player UUID.
+     * Searches all online players.
+     */
+    public PlayerRef getPlayerRef(UUID playerId) {
+        if (playerId == null) {
+            return null;
+        }
+        for (PlayerRef playerRef : Universe.get().getPlayers()) {
+            if (playerRef != null && playerId.equals(playerRef.getUuid())) {
+                return playerRef;
+            }
+        }
+        return null;
+    }
+
     private void tickRunTracker() {
         if (runTracker == null) {
             return;
@@ -349,13 +402,13 @@ public class ParkourAscendPlugin extends JavaPlugin {
             return;
         }
         try {
-            double coins = store.getCoins(playerId);
+            java.math.BigDecimal coins = store.getCoins(playerId);
             List<AscendMap> mapList = maps != null ? maps.listMapsSorted() : List.of();
-            double product = store.getMultiplierProductDecimal(playerId, mapList, AscendConstants.MULTIPLIER_SLOTS);
-            double[] digits = store.getMultiplierDisplayValues(playerId, mapList, AscendConstants.MULTIPLIER_SLOTS);
+            java.math.BigDecimal product = store.getMultiplierProductDecimal(playerId, mapList, AscendConstants.MULTIPLIER_SLOTS);
+            java.math.BigDecimal[] digits = store.getMultiplierDisplayValues(playerId, mapList, AscendConstants.MULTIPLIER_SLOTS);
             double elevation = store.getCalculatedElevationMultiplier(playerId);
-            long nextElevationCost = AscendConstants.getElevationLevelUpCost((int) elevation);
-            boolean showElevation = coins >= nextElevationCost;
+            java.math.BigDecimal nextElevationCost = AscendConstants.getElevationLevelUpCost((int) elevation);
+            boolean showElevation = coins.compareTo(nextElevationCost) >= 0;
             hud.updateEconomy(coins, product, digits, elevation, showElevation);
 
             // Update prestige HUD

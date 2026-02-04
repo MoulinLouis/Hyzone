@@ -2,6 +2,7 @@ package io.hyvexa.ascend.data;
 
 import io.hyvexa.ascend.AscendConstants;
 
+import java.math.BigDecimal;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.Map;
@@ -10,13 +11,13 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class AscendPlayerProgress {
 
-    private double coins;
+    private BigDecimal coins = BigDecimal.ZERO;
     private int elevationMultiplier = 1;
     private final Map<String, MapProgress> mapProgress = new ConcurrentHashMap<>();
 
     // Summit System - levels per category
     private final Map<AscendConstants.SummitCategory, Integer> summitLevels = new ConcurrentHashMap<>();
-    private double totalCoinsEarned; // Lifetime coins for achievements
+    private BigDecimal totalCoinsEarned = BigDecimal.ZERO; // Lifetime coins for achievements
 
     // Ascension System
     private int ascensionCount;
@@ -34,16 +35,20 @@ public class AscendPlayerProgress {
     private Long ascensionStartedAt; // Timestamp when current ascension run started
     private Long fastestAscensionMs; // Best ascension time in milliseconds
 
-    public double getCoins() {
+    // Passive earnings tracking
+    private Long lastActiveTimestamp;
+    private boolean hasUnclaimedPassive;
+
+    public BigDecimal getCoins() {
         return coins;
     }
 
-    public void setCoins(double coins) {
+    public void setCoins(BigDecimal coins) {
         this.coins = coins;
     }
 
-    public void addCoins(double amount) {
-        this.coins = Math.max(0.0, this.coins + amount);
+    public void addCoins(BigDecimal amount) {
+        this.coins = this.coins.add(amount).max(BigDecimal.ZERO);
     }
 
     public int getElevationMultiplier() {
@@ -98,17 +103,17 @@ public class AscendPlayerProgress {
         summitLevels.clear();
     }
 
-    public double getTotalCoinsEarned() {
+    public BigDecimal getTotalCoinsEarned() {
         return totalCoinsEarned;
     }
 
-    public void setTotalCoinsEarned(double totalCoinsEarned) {
-        this.totalCoinsEarned = Math.max(0.0, totalCoinsEarned);
+    public void setTotalCoinsEarned(BigDecimal totalCoinsEarned) {
+        this.totalCoinsEarned = totalCoinsEarned.max(BigDecimal.ZERO);
     }
 
-    public void addTotalCoinsEarned(double amount) {
-        if (amount > 0.0) {
-            this.totalCoinsEarned = Math.max(0.0, this.totalCoinsEarned + amount);
+    public void addTotalCoinsEarned(BigDecimal amount) {
+        if (amount.compareTo(BigDecimal.ZERO) > 0) {
+            this.totalCoinsEarned = this.totalCoinsEarned.add(amount).max(BigDecimal.ZERO);
         }
     }
 
@@ -259,13 +264,33 @@ public class AscendPlayerProgress {
         this.fastestAscensionMs = fastestAscensionMs;
     }
 
+    // ========================================
+    // Passive Earnings
+    // ========================================
+
+    public Long getLastActiveTimestamp() {
+        return lastActiveTimestamp;
+    }
+
+    public void setLastActiveTimestamp(Long timestamp) {
+        this.lastActiveTimestamp = timestamp;
+    }
+
+    public boolean hasUnclaimedPassive() {
+        return hasUnclaimedPassive;
+    }
+
+    public void setHasUnclaimedPassive(boolean hasUnclaimed) {
+        this.hasUnclaimedPassive = hasUnclaimed;
+    }
+
     public static class MapProgress {
         private boolean unlocked;
         private boolean completedManually;
         private boolean hasRobot;
         private int robotSpeedLevel;
         private int robotStars;
-        private double multiplier = 1.0;
+        private BigDecimal multiplier = BigDecimal.ONE;
         private Long bestTimeMs;
 
         public boolean isUnlocked() {
@@ -318,19 +343,19 @@ public class AscendPlayerProgress {
             return robotStars;
         }
 
-        public double getMultiplier() {
+        public BigDecimal getMultiplier() {
             return multiplier;
         }
 
-        public void setMultiplier(double multiplier) {
-            this.multiplier = Math.max(1.0, multiplier);
+        public void setMultiplier(BigDecimal multiplier) {
+            this.multiplier = multiplier.max(BigDecimal.ONE);
         }
 
-        public double addMultiplier(double amount) {
-            if (amount <= 0.0) {
+        public BigDecimal addMultiplier(BigDecimal amount) {
+            if (amount.compareTo(BigDecimal.ZERO) <= 0) {
                 return multiplier;
             }
-            multiplier = Math.max(1.0, multiplier + amount);
+            multiplier = multiplier.add(amount).max(BigDecimal.ONE);
             return multiplier;
         }
 

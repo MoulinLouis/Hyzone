@@ -300,6 +300,9 @@ public final class AscendDatabaseSetup {
         // Migrate coins columns from BIGINT to DOUBLE for decimal precision
         migrateCoinsToDouble(conn);
 
+        // Migrate coins columns from DOUBLE to DECIMAL for exact precision
+        migrateCoinsToDecimal(conn);
+
         // Total manual runs
         if (!columnExists(conn, "ascend_players", "total_manual_runs")) {
             try (Statement stmt = conn.createStatement()) {
@@ -336,6 +339,26 @@ public final class AscendDatabaseSetup {
                 LOGGER.atInfo().log("Added fastest_ascension_ms column to ascend_players");
             } catch (SQLException e) {
                 LOGGER.at(Level.SEVERE).log("Failed to add fastest_ascension_ms column: " + e.getMessage());
+            }
+        }
+
+        // Last active timestamp for passive earnings
+        if (!columnExists(conn, "ascend_players", "last_active_timestamp")) {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN last_active_timestamp BIGINT DEFAULT NULL");
+                LOGGER.atInfo().log("Added last_active_timestamp column");
+            } catch (SQLException e) {
+                LOGGER.at(Level.SEVERE).log("Failed to add last_active_timestamp: " + e.getMessage());
+            }
+        }
+
+        // Has unclaimed passive flag
+        if (!columnExists(conn, "ascend_players", "has_unclaimed_passive")) {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN has_unclaimed_passive BOOLEAN NOT NULL DEFAULT FALSE");
+                LOGGER.atInfo().log("Added has_unclaimed_passive column");
+            } catch (SQLException e) {
+                LOGGER.at(Level.SEVERE).log("Failed to add has_unclaimed_passive: " + e.getMessage());
             }
         }
     }
@@ -432,6 +455,54 @@ public final class AscendDatabaseSetup {
             }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Failed to migrate total_coins_earned column: " + e.getMessage());
+        }
+    }
+
+    private static void migrateCoinsToDecimal(Connection conn) {
+        if (conn == null) {
+            return;
+        }
+
+        // Migrate coins column from DOUBLE to DECIMAL(65,2)
+        try (Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SHOW COLUMNS FROM ascend_players LIKE 'coins'")) {
+            if (rs.next()) {
+                String type = rs.getString("Type").toUpperCase();
+                if (type.contains("DOUBLE")) {
+                    stmt.executeUpdate("ALTER TABLE ascend_players MODIFY COLUMN coins DECIMAL(65,2) NOT NULL DEFAULT 0");
+                    LOGGER.atInfo().log("Migrated coins column from DOUBLE to DECIMAL(65,2)");
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.at(Level.SEVERE).log("Failed to migrate coins column to DECIMAL: " + e.getMessage());
+        }
+
+        // Migrate total_coins_earned column from DOUBLE to DECIMAL(65,2)
+        try (Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SHOW COLUMNS FROM ascend_players LIKE 'total_coins_earned'")) {
+            if (rs.next()) {
+                String type = rs.getString("Type").toUpperCase();
+                if (type.contains("DOUBLE")) {
+                    stmt.executeUpdate("ALTER TABLE ascend_players MODIFY COLUMN total_coins_earned DECIMAL(65,2) NOT NULL DEFAULT 0");
+                    LOGGER.atInfo().log("Migrated total_coins_earned column from DOUBLE to DECIMAL(65,2)");
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.at(Level.SEVERE).log("Failed to migrate total_coins_earned column to DECIMAL: " + e.getMessage());
+        }
+
+        // Migrate multiplier column in ascend_player_maps from DOUBLE to DECIMAL(65,20)
+        try (Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SHOW COLUMNS FROM ascend_player_maps LIKE 'multiplier'")) {
+            if (rs.next()) {
+                String type = rs.getString("Type").toUpperCase();
+                if (type.contains("DOUBLE")) {
+                    stmt.executeUpdate("ALTER TABLE ascend_player_maps MODIFY COLUMN multiplier DECIMAL(65,20) NOT NULL DEFAULT 1.0");
+                    LOGGER.atInfo().log("Migrated multiplier column from DOUBLE to DECIMAL(65,20)");
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.at(Level.SEVERE).log("Failed to migrate multiplier column to DECIMAL: " + e.getMessage());
         }
     }
 }
