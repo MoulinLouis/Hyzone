@@ -198,8 +198,7 @@ public class AscendRunTracker {
 
         // Calculate bonuses from Summit and Ascension
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        BigDecimal summitCoinBonus = BigDecimal.ZERO;
-        BigDecimal summitManualBonus = BigDecimal.ZERO;
+        BigDecimal summitCoinFlowMultiplier = BigDecimal.ONE;
         BigDecimal ascensionBonus = BigDecimal.ZERO;
         BigDecimal chainBonus = BigDecimal.ZERO;
         BigDecimal sessionBonus = BigDecimal.ONE;
@@ -211,8 +210,8 @@ public class AscendRunTracker {
             AscensionManager ascensionManager = plugin.getAscensionManager();
 
             if (summitManager != null) {
-                summitCoinBonus = summitManager.getCoinFlowBonus(playerId);
-                summitManualBonus = summitManager.getManualMasteryBonus(playerId);
+                // COIN_FLOW is now multiplicative: 1.20^level
+                summitCoinFlowMultiplier = summitManager.getCoinFlowMultiplier(playerId);
             }
 
             if (ascensionManager != null) {
@@ -223,10 +222,10 @@ public class AscendRunTracker {
             }
         }
 
-        // Calculate multiplier increment with bonuses
+        // Calculate multiplier increment with Ascension bonuses only
+        // (Manual Mastery removed, Evolution Power only affects runners)
         BigDecimal baseMultiplierIncrement = new BigDecimal("0.1"); // MANUAL_MULTIPLIER_INCREMENT
-        BigDecimal totalMultiplierBonus = BigDecimal.ONE.add(summitManualBonus, ctx)
-                                                        .add(ascensionBonus, ctx)
+        BigDecimal totalMultiplierBonus = BigDecimal.ONE.add(ascensionBonus, ctx)
                                                         .add(chainBonus, ctx);
         BigDecimal finalMultiplierIncrement = baseMultiplierIncrement.multiply(totalMultiplierBonus, ctx);
 
@@ -234,8 +233,8 @@ public class AscendRunTracker {
         List<AscendMap> multiplierMaps = mapStore.listMapsSorted();
         BigDecimal basePayout = playerStore.getCompletionPayout(playerId, multiplierMaps, AscendConstants.MULTIPLIER_SLOTS, run.mapId, BigDecimal.ZERO);
 
-        // Apply coin flow bonus and session bonus
-        BigDecimal coinMultiplier = BigDecimal.ONE.add(summitCoinBonus, ctx).multiply(sessionBonus, ctx);
+        // Apply coin flow multiplier (multiplicative) and session bonus
+        BigDecimal coinMultiplier = summitCoinFlowMultiplier.multiply(sessionBonus, ctx);
         BigDecimal payout = basePayout.multiply(coinMultiplier, ctx).setScale(2, RoundingMode.HALF_UP);
 
         // Use atomic operations to prevent race conditions

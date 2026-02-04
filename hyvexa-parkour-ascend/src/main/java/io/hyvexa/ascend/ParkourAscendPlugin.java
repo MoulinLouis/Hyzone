@@ -123,7 +123,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
         robotManager = new RobotManager(mapStore, playerStore, ghostStore);
         robotManager.start();
 
-        summitManager = new SummitManager(playerStore);
+        summitManager = new SummitManager(playerStore, mapStore);
         ascensionManager = new AscensionManager(playerStore);
         achievementManager = new AchievementManager(playerStore, mapStore);
 
@@ -406,10 +406,11 @@ public class ParkourAscendPlugin extends JavaPlugin {
             List<AscendMap> mapList = maps != null ? maps.listMapsSorted() : List.of();
             java.math.BigDecimal product = store.getMultiplierProductDecimal(playerId, mapList, AscendConstants.MULTIPLIER_SLOTS);
             java.math.BigDecimal[] digits = store.getMultiplierDisplayValues(playerId, mapList, AscendConstants.MULTIPLIER_SLOTS);
-            double elevation = store.getCalculatedElevationMultiplier(playerId);
-            java.math.BigDecimal nextElevationCost = AscendConstants.getElevationLevelUpCost((int) elevation);
-            boolean showElevation = coins.compareTo(nextElevationCost) >= 0;
-            hud.updateEconomy(coins, product, digits, elevation, showElevation);
+            int elevationLevel = store.getElevationLevel(playerId);
+            AscendConstants.ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(elevationLevel, coins);
+            int potentialElevation = elevationLevel + purchase.levels;
+            boolean showElevation = purchase.levels > 0;
+            hud.updateEconomy(coins, product, digits, elevationLevel, potentialElevation, showElevation);
 
             // Update prestige HUD
             var summitLevels = store.getSummitLevels(playerId);

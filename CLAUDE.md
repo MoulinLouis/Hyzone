@@ -32,8 +32,9 @@ Quick reference for AI agents working on this Hytale plugin project.
 
 ## Workflow Reminders
 
-1. **Update CHANGELOG.md** after completing each feature
-2. **Follow existing patterns** - check similar files before implementing
+1. **Update CHANGELOG.md** for significant changes only (new features, balance changes, bug fixes) - keep entries brief (1-2 lines), no implementation details
+2. **Update docs/ECONOMY_BALANCE.md** when modifying game economy (costs, rewards, multipliers, formulas)
+3. **Follow existing patterns** - check similar files before implementing
 3. **No build runs** - owner handles `./gradlew build`
 4. **UI paths** - Code uses `"Pages/X.ui"`, files go in `Common/UI/Custom/Pages/`
 5. **Check ref validity** - `if (ref == null || !ref.isValid()) return;`

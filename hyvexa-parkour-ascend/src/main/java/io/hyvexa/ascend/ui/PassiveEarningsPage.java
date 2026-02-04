@@ -66,7 +66,7 @@ public class PassiveEarningsPage extends BaseAscendPage {
 
         // Total coins
         String coinsStr = FormatUtils.formatCoinsForHudDecimal(result.totalCoins());
-        commandBuilder.set("#TotalCoinsLabel.Text", "🪙 " + coinsStr + " COINS");
+        commandBuilder.set("#TotalCoinsLabel.Text", coinsStr + " COINS");
 
         // Total multiplier
         String multStr = FormatUtils.formatCoinsForHudDecimal(result.totalMultiplier());
@@ -76,9 +76,13 @@ public class PassiveEarningsPage extends BaseAscendPage {
     private void buildRunnerEntries(UICommandBuilder commandBuilder) {
         commandBuilder.clear("#RunnerEntries");
 
+        // Sort entries by map ID (parkour1, parkour2, etc.)
+        var sortedEntries = result.runnerBreakdown().entrySet().stream()
+            .sorted(Map.Entry.comparingByKey())
+            .toList();
+
         int index = 0;
-        for (Map.Entry<String, PassiveEarningsManager.PassiveRunnerEarnings> entry :
-             result.runnerBreakdown().entrySet()) {
+        for (Map.Entry<String, PassiveEarningsManager.PassiveRunnerEarnings> entry : sortedEntries) {
             PassiveEarningsManager.PassiveRunnerEarnings earnings = entry.getValue();
 
             // Append new entry
@@ -94,10 +98,11 @@ public class PassiveEarningsPage extends BaseAscendPage {
             // Map name
             commandBuilder.set(selector + " #MapName.Text", earnings.mapName());
 
-            // Stars
+            // Stars (show star images)
             int stars = earnings.stars();
-            String starStr = stars > 0 ? "★".repeat(stars) : "";
-            commandBuilder.set(selector + " #Stars.Text", starStr);
+            for (int i = 1; i <= 5; i++) {
+                commandBuilder.set(selector + " #Star" + i + ".Visible", i <= stars);
+            }
 
             // Speed level
             commandBuilder.set(selector + " #SpeedLevel.Text", "Lv." + earnings.speedLevel());
@@ -111,7 +116,7 @@ public class PassiveEarningsPage extends BaseAscendPage {
 
             // Coins earned
             String coinsStr = FormatUtils.formatCoinsForHudDecimal(earnings.coinsEarned());
-            commandBuilder.set(selector + " #Coins.Text", "🪙 " + coinsStr);
+            commandBuilder.set(selector + " #Coins.Text", coinsStr);
 
             index++;
         }

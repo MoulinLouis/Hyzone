@@ -651,10 +651,16 @@ public class RobotManager {
 
         String mapId = robot.getMapId();
         int stars = robot.getStars();
-        BigDecimal multiplierIncrement = AscendConstants.getRunnerMultiplierIncrement(stars);
+
+        // Get Evolution Power bonus from Summit
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        double evolutionBonus = 0.0;
+        if (plugin != null && plugin.getSummitManager() != null) {
+            evolutionBonus = plugin.getSummitManager().getEvolutionPowerBonus(ownerId).doubleValue();
+        }
+        BigDecimal multiplierIncrement = AscendConstants.getRunnerMultiplierIncrement(stars, evolutionBonus);
 
         // Apply double lap skill if available
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         if (plugin != null && plugin.getAscensionManager() != null) {
             if (plugin.getAscensionManager().hasDoubleLap(ownerId)) {
                 completions *= 2; // Double completions per cycle
@@ -668,13 +674,13 @@ public class RobotManager {
         List<AscendMap> maps = mapStore.listMapsSorted();
         BigDecimal payoutPerRun = playerStore.getCompletionPayout(ownerId, maps, AscendConstants.MULTIPLIER_SLOTS, mapId, BigDecimal.ZERO);
 
-        // Apply Summit coin flow bonus
-        BigDecimal coinFlowBonus = BigDecimal.ZERO;
+        // Apply Summit coin flow multiplier (multiplicative: 1.20^level)
+        BigDecimal coinFlowMultiplier = BigDecimal.ONE;
         if (plugin != null && plugin.getSummitManager() != null) {
-            coinFlowBonus = plugin.getSummitManager().getCoinFlowBonus(ownerId);
+            coinFlowMultiplier = plugin.getSummitManager().getCoinFlowMultiplier(ownerId);
         }
         BigDecimal totalPayout = payoutPerRun.multiply(BigDecimal.valueOf(completions), ctx)
-                                             .multiply(BigDecimal.ONE.add(coinFlowBonus, ctx), ctx)
+                                             .multiply(coinFlowMultiplier, ctx)
                                              .setScale(2, RoundingMode.HALF_UP);
 
         // Use atomic operations to prevent race conditions

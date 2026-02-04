@@ -185,7 +185,8 @@ public class AscendMapSelectPage extends BaseAscendPage {
             // All maps in this list are already unlocked (filtered above)
             AscendPlayerProgress.MapProgress mapProgress = playerStore.getMapProgress(playerRef.getUuid(), map.getId());
             boolean hasRobot = mapProgress != null && mapProgress.hasRobot();
-            boolean completedManually = mapProgress != null && mapProgress.isCompletedManually();
+            // Check ghost recording existence (preserves PB across progress reset)
+            boolean hasGhostRecording = ghostStore.getRecording(playerRef.getUuid(), map.getId()) != null;
             int speedLevel = mapProgress != null ? mapProgress.getRobotSpeedLevel() : 0;
             int stars = mapProgress != null ? mapProgress.getRobotStars() : 0;
 
@@ -212,9 +213,10 @@ public class AscendMapSelectPage extends BaseAscendPage {
             // Status text (all displayed maps are unlocked)
             String status = "Runs/sec: " + formatRunsPerSecond(map, hasRobot, speedLevel, playerRef.getUuid());
 
-            // Add personal best time if available
-            if (mapProgress != null && mapProgress.getBestTimeMs() != null) {
-                long bestTimeMs = mapProgress.getBestTimeMs();
+            // Add personal best time from ghost recording (preserves PB across progress reset)
+            GhostRecording ghostForPb = ghostStore.getRecording(playerRef.getUuid(), map.getId());
+            if (ghostForPb != null && ghostForPb.getCompletionTimeMs() > 0) {
+                long bestTimeMs = ghostForPb.getCompletionTimeMs();
                 double bestTimeSec = bestTimeMs / 1000.0;
                 status += " | PB: " + String.format("%.2fs", bestTimeSec);
             }
@@ -227,7 +229,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
             BigDecimal actionPrice;
             if (!hasRobot) {
                 runnerStatusText = "No Runner";
-                if (!completedManually) {
+                if (!hasGhostRecording) {
                     runnerButtonText = "Complete First";
                     actionPrice = BigDecimal.ZERO;
                 } else {
@@ -381,16 +383,10 @@ public class AscendMapSelectPage extends BaseAscendPage {
             return;
         }
         if (!mapProgress.hasRobot()) {
-            // Check if map has been completed manually
-            if (!mapProgress.isCompletedManually()) {
-                sendMessage(store, ref, "[Ascend] Complete the map manually before buying a runner!");
-                return;
-            }
-
-            // Check if ghost recording exists
+            // Check if ghost recording exists (preserves PB across progress reset)
             GhostRecording ghost = ghostStore.getRecording(playerRef.getUuid(), mapId);
             if (ghost == null) {
-                sendMessage(store, ref, "[Ascend] No ghost recording found. Complete the map again.");
+                sendMessage(store, ref, "[Ascend] Complete the map manually before buying a runner!");
                 return;
             }
 
@@ -595,15 +591,17 @@ public class AscendMapSelectPage extends BaseAscendPage {
         // All displayed maps are unlocked (filtered in buildMapList)
         AscendPlayerProgress.MapProgress mapProgress = playerStore.getMapProgress(playerRef.getUuid(), selectedMap.getId());
         boolean hasRobot = mapProgress != null && mapProgress.hasRobot();
-        boolean completedManually = mapProgress != null && mapProgress.isCompletedManually();
+        // Check ghost recording existence (preserves PB across progress reset)
+        boolean hasGhostRecording = ghostStore.getRecording(playerRef.getUuid(), selectedMap.getId()) != null;
         int speedLevel = mapProgress != null ? mapProgress.getRobotSpeedLevel() : 0;
         int stars = mapProgress != null ? mapProgress.getRobotStars() : 0;
 
         String status = "Runs/sec: " + formatRunsPerSecond(selectedMap, hasRobot, speedLevel, playerRef.getUuid());
 
-        // Add personal best time if available
-        if (mapProgress != null && mapProgress.getBestTimeMs() != null) {
-            long bestTimeMs = mapProgress.getBestTimeMs();
+        // Add personal best time if available (from ghost recording)
+        GhostRecording ghostForPb = ghostStore.getRecording(playerRef.getUuid(), selectedMap.getId());
+        if (ghostForPb != null && ghostForPb.getCompletionTimeMs() > 0) {
+            long bestTimeMs = ghostForPb.getCompletionTimeMs();
             double bestTimeSec = bestTimeMs / 1000.0;
             status += " | PB: " + String.format("%.2fs", bestTimeSec);
         }
@@ -613,7 +611,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
         BigDecimal actionPrice;
         if (!hasRobot) {
             runnerStatusText = "No Runner";
-            if (!completedManually) {
+            if (!hasGhostRecording) {
                 runnerButtonText = "Complete First";
                 actionPrice = BigDecimal.ZERO;
             } else {
@@ -717,7 +715,8 @@ public class AscendMapSelectPage extends BaseAscendPage {
         // Get map progress (newly unlocked, so might be minimal data)
         AscendPlayerProgress.MapProgress mapProgress = playerStore.getMapProgress(playerRef.getUuid(), map.getId());
         boolean hasRobot = mapProgress != null && mapProgress.hasRobot();
-        boolean completedManually = mapProgress != null && mapProgress.isCompletedManually();
+        // Check ghost recording existence (preserves PB across progress reset)
+        boolean hasGhostRecording = ghostStore.getRecording(playerRef.getUuid(), map.getId()) != null;
         int speedLevel = mapProgress != null ? mapProgress.getRobotSpeedLevel() : 0;
         int stars = mapProgress != null ? mapProgress.getRobotStars() : 0;
 
@@ -746,8 +745,10 @@ public class AscendMapSelectPage extends BaseAscendPage {
 
         // Status text
         String status = "Runs/sec: " + formatRunsPerSecond(map, hasRobot, speedLevel, playerRef.getUuid());
-        if (mapProgress != null && mapProgress.getBestTimeMs() != null) {
-            long bestTimeMs = mapProgress.getBestTimeMs();
+        // Add personal best time from ghost recording
+        GhostRecording ghostForPb = ghostStore.getRecording(playerRef.getUuid(), map.getId());
+        if (ghostForPb != null && ghostForPb.getCompletionTimeMs() > 0) {
+            long bestTimeMs = ghostForPb.getCompletionTimeMs();
             double bestTimeSec = bestTimeMs / 1000.0;
             status += " | PB: " + String.format("%.2fs", bestTimeSec);
         }
@@ -759,7 +760,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
         BigDecimal actionPrice;
         if (!hasRobot) {
             runnerStatusText = "No Runner";
-            if (!completedManually) {
+            if (!hasGhostRecording) {
                 runnerButtonText = "Complete First";
                 actionPrice = BigDecimal.ZERO;
             } else {
@@ -859,18 +860,15 @@ public class AscendMapSelectPage extends BaseAscendPage {
 
             AscendPlayerProgress.MapProgress mapProgress = playerStore.getMapProgress(playerRef.getUuid(), map.getId());
             boolean hasRobot = mapProgress != null && mapProgress.hasRobot();
-            boolean completedManually = mapProgress != null && mapProgress.isCompletedManually();
             int speedLevel = mapProgress != null ? mapProgress.getRobotSpeedLevel() : 0;
             int stars = mapProgress != null ? mapProgress.getRobotStars() : 0;
 
             if (!hasRobot) {
-                // Can buy robot if completed manually and has ghost
-                if (completedManually) {
-                    GhostRecording ghost = ghostStore.getRecording(playerRef.getUuid(), map.getId());
-                    if (ghost != null) {
-                        // Buying a runner is now free
-                        options.add(new PurchaseOption(map.getId(), PurchaseType.BUY_ROBOT, BigDecimal.ZERO));
-                    }
+                // Can buy robot if ghost recording exists (preserves PB across progress reset)
+                GhostRecording ghost = ghostStore.getRecording(playerRef.getUuid(), map.getId());
+                if (ghost != null) {
+                    // Buying a runner is now free
+                    options.add(new PurchaseOption(map.getId(), PurchaseType.BUY_ROBOT, BigDecimal.ZERO));
                 }
             } else {
                 // Can upgrade speed if not at max level
