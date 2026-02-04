@@ -37,6 +37,8 @@ import io.hyvexa.ascend.interaction.AscendLeaveInteraction;
 import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.summit.SummitManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
+import io.hyvexa.common.whitelist.AscendWhitelistManager;
+import io.hyvexa.common.whitelist.WhitelistRegistry;
 import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
 import com.hypixel.hytale.server.core.event.events.player.AddPlayerToWorldEvent;
@@ -44,6 +46,7 @@ import io.hyvexa.common.util.HylogramsBridge;
 import io.hyvexa.common.visibility.EntityVisibilityFilterSystem;
 
 import javax.annotation.Nonnull;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -72,6 +75,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
     private SummitManager summitManager;
     private AscensionManager ascensionManager;
     private AchievementManager achievementManager;
+    private AscendWhitelistManager whitelistManager;
     private ScheduledFuture<?> runTrackerTask;
     private final ConcurrentHashMap<UUID, AscendHud> ascendHuds = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Boolean> ascendHudAttached = new ConcurrentHashMap<>();
@@ -85,6 +89,15 @@ public class ParkourAscendPlugin extends JavaPlugin {
     @Override
     protected void setup() {
         AscendDatabaseSetup.ensureTables();
+
+        // Initialize whitelist manager
+        File modsFolder = new File("run/mods/Parkour");
+        if (!modsFolder.exists()) {
+            modsFolder.mkdirs();
+        }
+        File whitelistFile = new File(modsFolder, "ascend_whitelist.json");
+        whitelistManager = new AscendWhitelistManager(whitelistFile);
+        WhitelistRegistry.register(whitelistManager);
 
         mapStore = new AscendMapStore();
         mapStore.syncLoad();
@@ -234,6 +247,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
         if (playerStore != null) {
             playerStore.flushPendingSave();
         }
+        WhitelistRegistry.unregister();
     }
 
     public static ParkourAscendPlugin getInstance() {
@@ -278,6 +292,10 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
     public AchievementManager getAchievementManager() {
         return achievementManager;
+    }
+
+    public AscendWhitelistManager getWhitelistManager() {
+        return whitelistManager;
     }
 
     private void tickRunTracker() {

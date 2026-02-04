@@ -36,13 +36,18 @@ $C.@PageOverlay {
         Anchor: (Top: 12, Height: 38);
 
         $C.@TextButton #MapsButton {
-          Anchor: (Width: 200, Height: 36);
+          Anchor: (Width: 130, Height: 36);
           Text: "Maps";
         }
 
         $C.@TextButton #AdminButton {
-          Anchor: (Left: 10, Width: 200, Height: 36);
+          Anchor: (Left: 10, Width: 130, Height: 36);
           Text: "Admin Panel";
+        }
+
+        $C.@TextButton #WhitelistButton {
+          Anchor: (Left: 10, Width: 130, Height: 36);
+          Text: "Whitelist";
         }
       }
     }
