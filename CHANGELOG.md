@@ -46,6 +46,7 @@
   - **Net result**: ~50% faster progression with much bigger numbers (thousands by 5-10 min, millions by 15-20 min)
 
 ### Added
+- Added a "Hide completed maps" toggle to the parkour map selector (default off).
 - **Ascend: Passive Earnings System**
   - Runners continue to generate coins (at 25% rate) when player is not on Ascend world
   - Accumulates up to 24 hours of offline time (minimum 1 minute away)
