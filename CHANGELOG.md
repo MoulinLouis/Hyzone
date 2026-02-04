@@ -3,7 +3,7 @@
 ## [Unreleased]
 
 ### Added
-- **Ascend: Passive earnings** - Runners generate coins at 25% rate while offline (up to 24h)
+- **Ascend: Passive earnings** - Runners generate coins and multipliers at 25% rate while offline (up to 24h)
 - **Ascend: Access whitelist** - Control who can access Ascend mode via Hub (`/as admin whitelist`)
 
 ### Changed
