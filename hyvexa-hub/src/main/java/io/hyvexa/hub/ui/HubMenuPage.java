@@ -13,6 +13,8 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.util.PermissionUtils;
+import io.hyvexa.common.whitelist.AscendWhitelistManager;
+import io.hyvexa.common.whitelist.WhitelistRegistry;
 import io.hyvexa.hub.routing.HubRouter;
 
 import javax.annotation.Nonnull;
@@ -83,7 +85,20 @@ public class HubMenuPage extends BaseHubPage {
             return;
         }
         if (BUTTON_ASCEND.equals(data.getButton())) {
-            if (player != null && !PermissionUtils.isOp(player)) {
+            // Check if player is allowed to access Ascend mode
+            AscendWhitelistManager whitelistManager = WhitelistRegistry.getInstance();
+            boolean isAllowed = PermissionUtils.isOp(player);
+
+            // If whitelist is enabled AND player is not OP, check if player is whitelisted
+            if (!isAllowed && playerRef != null && whitelistManager != null && whitelistManager.isEnabled()) {
+                String username = playerRef.getUsername();
+                if (username != null && whitelistManager.contains(username)) {
+                    isAllowed = true;
+                }
+            }
+            // If whitelist is disabled, only OPs can access (default behavior)
+
+            if (player != null && !isAllowed) {
                 player.sendMessage(MESSAGE_ASCEND_COMING_SOON);
                 this.close();
                 return;

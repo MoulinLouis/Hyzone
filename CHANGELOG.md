@@ -2,6 +2,21 @@
 
 ## [Unreleased]
 
+### Added
+- **Ascend: Access whitelist system**
+  - Added whitelist system to control access to Ascend mode via the Hub menu
+  - Admin commands remain OP-only; whitelist only affects Hub menu access
+  - Whitelist stored in `run/mods/Parkour/ascend_whitelist.json` (JSON format with enabled flag)
+  - Admin UI accessible via `/as admin` > "Whitelist" button
+  - Full UI with text field to add players and list of whitelisted players with remove buttons
+  - **Toggle button to enable/disable whitelist:**
+    - **ENABLED**: Whitelisted players + OPs can access Ascend mode
+    - **DISABLED** (default): Only OPs can access (secure default behavior)
+  - Button displays current status: "ENABLED" or "DISABLED"
+  - Command-line interface: `/as admin whitelist <add|remove|list|enable|disable|status> [username]`
+  - Case-insensitive username comparison for consistent behavior
+  - Whitelist status persisted in JSON file (`enabled: true/false`, defaults to `false`)
+
 ### Fixed
 - **Ascend: Fixed UI crash when interacting with external NPCs after opening menus**
   - Fixed "Selected element in CustomUI command was not found" crash when opening `/ascend` or `/ascend elevate` menus then interacting with NPCDialog NPCs

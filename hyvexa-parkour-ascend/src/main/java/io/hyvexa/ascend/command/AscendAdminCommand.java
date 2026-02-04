@@ -19,6 +19,7 @@ import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.holo.AscendHologramManager;
+import io.hyvexa.common.whitelist.AscendWhitelistManager;
 import io.hyvexa.common.util.CommandUtils;
 import io.hyvexa.common.util.HylogramsBridge;
 import io.hyvexa.common.util.PermissionUtils;
@@ -65,7 +66,7 @@ public class AscendAdminCommand extends AbstractAsyncCommand {
             return;
         }
         if (args.length < 1 || !"admin".equalsIgnoreCase(args[0])) {
-            player.sendMessage(Message.raw("Usage: /as holograms | /as admin map <create|setstart|setfinish|setorder|setname|list> ... | /as admin holo <map|delete> ..."));
+            player.sendMessage(Message.raw("Usage: /as holograms | /as admin map <create|setstart|setfinish|setorder|setname|list> ... | /as admin holo <map|delete> ... | /as admin whitelist <add|remove|list> ..."));
             return;
         }
         if (args.length == 1) {
@@ -76,16 +77,20 @@ public class AscendAdminCommand extends AbstractAsyncCommand {
             return;
         }
         if (args.length < 2) {
-            player.sendMessage(Message.raw("Usage: /as admin map <create|setstart|setfinish|setorder|setname|list> ... | /as admin holo <map|delete> ..."));
+            player.sendMessage(Message.raw("Usage: /as admin map <create|setstart|setfinish|setorder|setname|list> ... | /as admin holo <map|delete> ... | /as admin whitelist <add|remove|list> ..."));
             return;
         }
         String category = args[1].toLowerCase();
-        if (!"map".equals(category) && !"holo".equals(category)) {
-            player.sendMessage(Message.raw("Unknown admin category. Use: /as admin map ... or /as admin holo ..."));
+        if (!"map".equals(category) && !"holo".equals(category) && !"whitelist".equals(category)) {
+            player.sendMessage(Message.raw("Unknown admin category. Use: /as admin map ..., /as admin holo ..., or /as admin whitelist ..."));
             return;
         }
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         if (plugin == null) {
+            return;
+        }
+        if ("whitelist".equals(category)) {
+            handleWhitelistCommand(player, plugin.getWhitelistManager(), args);
             return;
         }
         AscendMapStore mapStore = plugin.getMapStore();
@@ -413,5 +418,95 @@ public class AscendAdminCommand extends AbstractAsyncCommand {
     private String resolveWorldName(Store<EntityStore> store) {
         World world = store.getExternalData().getWorld();
         return world != null ? world.getName() : null;
+    }
+
+    private void handleWhitelistCommand(Player player, AscendWhitelistManager whitelistManager, String[] args) {
+        if (whitelistManager == null) {
+            player.sendMessage(Message.raw("Whitelist manager not available."));
+            return;
+        }
+        if (args.length < 3) {
+            player.sendMessage(Message.raw("Usage: /as admin whitelist <add|remove|list|enable|disable|status> [username]"));
+            return;
+        }
+        String action = args[2].toLowerCase();
+        switch (action) {
+            case "add" -> handleWhitelistAdd(player, whitelistManager, args);
+            case "remove" -> handleWhitelistRemove(player, whitelistManager, args);
+            case "list" -> handleWhitelistList(player, whitelistManager);
+            case "enable" -> handleWhitelistEnable(player, whitelistManager);
+            case "disable" -> handleWhitelistDisable(player, whitelistManager);
+            case "status" -> handleWhitelistStatus(player, whitelistManager);
+            default -> player.sendMessage(Message.raw("Usage: /as admin whitelist <add|remove|list|enable|disable|status> [username]"));
+        }
+    }
+
+    private void handleWhitelistAdd(Player player, AscendWhitelistManager whitelistManager, String[] args) {
+        if (args.length < 4) {
+            player.sendMessage(Message.raw("Usage: /as admin whitelist add <username>"));
+            return;
+        }
+        String username = args[3];
+        if (whitelistManager.add(username)) {
+            player.sendMessage(Message.raw("Added \"" + username + "\" to the Ascend whitelist."));
+        } else {
+            player.sendMessage(Message.raw("Player \"" + username + "\" is already whitelisted."));
+        }
+    }
+
+    private void handleWhitelistRemove(Player player, AscendWhitelistManager whitelistManager, String[] args) {
+        if (args.length < 4) {
+            player.sendMessage(Message.raw("Usage: /as admin whitelist remove <username>"));
+            return;
+        }
+        String username = args[3];
+        if (whitelistManager.remove(username)) {
+            player.sendMessage(Message.raw("Removed \"" + username + "\" from the Ascend whitelist."));
+        } else {
+            player.sendMessage(Message.raw("Player \"" + username + "\" was not found in the whitelist."));
+        }
+    }
+
+    private void handleWhitelistList(Player player, AscendWhitelistManager whitelistManager) {
+        List<String> whitelisted = whitelistManager.list();
+        if (whitelisted.isEmpty()) {
+            player.sendMessage(Message.raw("No players whitelisted for Ascend mode."));
+            return;
+        }
+        player.sendMessage(Message.raw("Whitelisted players (" + whitelisted.size() + "):"));
+        for (String username : whitelisted) {
+            player.sendMessage(Message.raw("  - " + username));
+        }
+    }
+
+    private void handleWhitelistEnable(Player player, AscendWhitelistManager whitelistManager) {
+        if (whitelistManager.isEnabled()) {
+            player.sendMessage(Message.raw("Whitelist is already enabled."));
+            return;
+        }
+        whitelistManager.setEnabled(true);
+        player.sendMessage(Message.raw("Whitelist enabled. Whitelisted players and OPs can access Ascend mode."));
+    }
+
+    private void handleWhitelistDisable(Player player, AscendWhitelistManager whitelistManager) {
+        if (!whitelistManager.isEnabled()) {
+            player.sendMessage(Message.raw("Whitelist is already disabled."));
+            return;
+        }
+        whitelistManager.setEnabled(false);
+        player.sendMessage(Message.raw("Whitelist disabled. Only OPs can access Ascend mode."));
+    }
+
+    private void handleWhitelistStatus(Player player, AscendWhitelistManager whitelistManager) {
+        boolean enabled = whitelistManager.isEnabled();
+        String status = enabled ? "ENABLED" : "DISABLED";
+        int count = whitelistManager.list().size();
+        player.sendMessage(Message.raw("Whitelist status: " + status));
+        player.sendMessage(Message.raw("Whitelisted players: " + count));
+        if (enabled) {
+            player.sendMessage(Message.raw("Whitelisted players and OPs can access Ascend mode."));
+        } else {
+            player.sendMessage(Message.raw("Only OPs can access Ascend mode."));
+        }
     }
 }
