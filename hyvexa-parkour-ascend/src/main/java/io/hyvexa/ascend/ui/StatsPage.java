@@ -115,7 +115,7 @@ public class StatsPage extends BaseAscendPage {
         commandBuilder.append("#StatsCards", "Pages/Ascend_StatsEntry.ui");
         commandBuilder.set("#StatsCards[2] #AccentBar.Background", COLOR_LIFETIME);
         commandBuilder.set("#StatsCards[2] #StatLabel.Text", "Lifetime Earnings");
-        double totalEarned = playerStore.getTotalCoinsEarned(playerId);
+        java.math.BigDecimal totalEarned = playerStore.getTotalCoinsEarned(playerId);
         commandBuilder.set("#StatsCards[2] #StatValue.Text", FormatUtils.formatCoinsForHudDecimal(totalEarned) + " coins");
 
         // 4. Manual Runs
@@ -173,11 +173,11 @@ public class StatsPage extends BaseAscendPage {
         double totalCoinsPerSec = 0.0;
 
         // Get multipliers
-        double digitsProduct = playerStore.getMultiplierProductDecimal(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
+        java.math.BigDecimal digitsProduct = playerStore.getMultiplierProductDecimal(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
         double elevation = playerStore.getCalculatedElevationMultiplier(playerId);
 
         // Get summit coin flow bonus
-        double coinFlowBonus = 0.0;
+        java.math.BigDecimal coinFlowBonus = java.math.BigDecimal.ZERO;
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         if (plugin != null) {
             SummitManager summitManager = plugin.getSummitManager();
@@ -199,13 +199,13 @@ public class StatsPage extends BaseAscendPage {
             }
 
             int speedLevel = mapProgress.getRobotSpeedLevel();
-            double speedMultiplier = 1.0 + (speedLevel * AscendConstants.SPEED_UPGRADE_MULTIPLIER);
+            double speedMultiplier = 1.0 + (speedLevel * AscendConstants.getMapSpeedMultiplier(map.getDisplayOrder()));
 
             // Add summit runner speed bonus
             if (plugin != null) {
                 SummitManager summitManager = plugin.getSummitManager();
                 if (summitManager != null) {
-                    speedMultiplier += summitManager.getRunnerSpeedBonus(playerId);
+                    speedMultiplier += summitManager.getRunnerSpeedBonus(playerId).doubleValue();
                 }
             }
 
@@ -213,9 +213,9 @@ public class StatsPage extends BaseAscendPage {
             intervalMs = Math.max(1L, intervalMs);
             double runsPerSec = 1000.0 / intervalMs;
 
-            // Base reward with multipliers
+            // Base reward with multipliers (convert BigDecimal to double for display calculation)
             long baseReward = map.getEffectiveBaseReward();
-            double coinsPerRun = baseReward * digitsProduct * elevation * (1.0 + coinFlowBonus);
+            double coinsPerRun = baseReward * digitsProduct.doubleValue() * elevation * (1.0 + coinFlowBonus.doubleValue());
 
             totalCoinsPerSec += runsPerSec * coinsPerRun;
         }
@@ -223,25 +223,25 @@ public class StatsPage extends BaseAscendPage {
         if (totalCoinsPerSec < 0.01) {
             return "0 coins/sec";
         }
-        return FormatUtils.formatCoinsForHudDecimal(totalCoinsPerSec) + " coins/sec";
+        return FormatUtils.formatCoinsForHudDecimal(java.math.BigDecimal.valueOf(totalCoinsPerSec)) + " coins/sec";
     }
 
     private String formatMultiplierBreakdown(UUID playerId) {
         List<AscendMap> maps = mapStore != null ? mapStore.listMapsSorted() : List.of();
-        double[] digits = playerStore.getMultiplierDisplayValues(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
+        java.math.BigDecimal[] digits = playerStore.getMultiplierDisplayValues(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
         double elevation = playerStore.getCalculatedElevationMultiplier(playerId);
 
         // Get summit coin flow bonus
         double coinFlowBonus = 0.0;
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         if (plugin != null && plugin.getSummitManager() != null) {
-            coinFlowBonus = plugin.getSummitManager().getCoinFlowBonus(playerId);
+            coinFlowBonus = plugin.getSummitManager().getCoinFlowBonus(playerId).doubleValue();
         }
 
-        // Calculate digits product
+        // Calculate digits product (convert BigDecimal to double for display)
         double digitsProduct = 1.0;
-        for (double d : digits) {
-            digitsProduct *= Math.max(1.0, d);
+        for (java.math.BigDecimal d : digits) {
+            digitsProduct *= Math.max(1.0, d.doubleValue());
         }
 
         double summitMultiplier = 1.0 + coinFlowBonus;

@@ -1,5 +1,7 @@
 package io.hyvexa.ascend.ui;
 
+import java.math.BigDecimal;
+
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
@@ -222,35 +224,35 @@ public class AscendMapSelectPage extends BaseAscendPage {
             // Runner status and button text
             String runnerStatusText;
             String runnerButtonText;
-            long actionPrice;
+            BigDecimal actionPrice;
             if (!hasRobot) {
                 runnerStatusText = "No Runner";
                 if (!completedManually) {
                     runnerButtonText = "Complete First";
-                    actionPrice = 0L;
+                    actionPrice = BigDecimal.ZERO;
                 } else {
                     runnerButtonText = "Buy Runner";
-                    actionPrice = 0L; // Buying a runner is now free
+                    actionPrice = BigDecimal.ZERO; // Buying a runner is now free
                 }
             } else {
-                int speedPercent = speedLevel * 10;
+                int speedPercent = (int)(speedLevel * AscendConstants.getMapSpeedMultiplier(map.getDisplayOrder()) * 100);
                 runnerStatusText = "Speed: +" + speedPercent + "%";
                 if (speedLevel >= MAX_SPEED_LEVEL && stars < AscendConstants.MAX_ROBOT_STARS) {
                     runnerButtonText = "Evolve";
-                    actionPrice = 0L;
+                    actionPrice = BigDecimal.ZERO;
                 } else if (stars >= AscendConstants.MAX_ROBOT_STARS && speedLevel >= MAX_SPEED_LEVEL) {
                     runnerButtonText = "Maxed!";
-                    actionPrice = 0L;
+                    actionPrice = BigDecimal.ZERO;
                 } else {
                     runnerButtonText = "Upgrade";
-                    actionPrice = computeUpgradeCost(speedLevel, map.getDisplayOrder());
+                    actionPrice = computeUpgradeCost(speedLevel, map.getDisplayOrder(), stars);
                 }
             }
 
             // Combine button text and price for "Upgrade" case to save vertical space
             String displayButtonText;
             String displayPriceText;
-            if (runnerButtonText.equals("Upgrade") && actionPrice > 0) {
+            if (runnerButtonText.equals("Upgrade") && actionPrice.compareTo(BigDecimal.ZERO) > 0) {
                 displayButtonText = "Cost:";
                 displayPriceText = FormatUtils.formatCoinsForHudDecimal(actionPrice) + " coins";
             } else {
@@ -261,10 +263,10 @@ public class AscendMapSelectPage extends BaseAscendPage {
 
             // Determine color for level text and button accent bar based on affordability
             String levelColor;
-            boolean isUpgrade = runnerButtonText.equals("Upgrade") && actionPrice > 0;
+            boolean isUpgrade = runnerButtonText.equals("Upgrade") && actionPrice.compareTo(BigDecimal.ZERO) > 0;
             if (isUpgrade) {
-                double currentCoins = playerStore.getCoins(playerRef.getUuid());
-                boolean canAfford = currentCoins >= actionPrice;
+                BigDecimal currentCoins = playerStore.getCoins(playerRef.getUuid());
+                boolean canAfford = currentCoins.compareTo(actionPrice) >= 0;
                 levelColor = canAfford ? accentColor : "#ffffff";
             } else {
                 levelColor = accentColor;
@@ -335,7 +337,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
         if (base <= 0L) {
             return "0";
         }
-        double speedMultiplier = 1.0 + (speedLevel * AscendConstants.SPEED_UPGRADE_MULTIPLIER);
+        double speedMultiplier = 1.0 + (speedLevel * AscendConstants.getMapSpeedMultiplier(map.getDisplayOrder()));
         long interval = (long) (base / speedMultiplier);
         interval = Math.max(1L, interval);
         double perSecond = 1000.0 / interval;
@@ -351,22 +353,14 @@ public class AscendMapSelectPage extends BaseAscendPage {
 
     /**
      * Compute runner speed upgrade cost using obscure quick-ramp formula with map-based scaling.
-     * Formula: baseCost(level + mapOffset) × mapMultiplier
-     * Where baseCost(L) = round(10 × 2.4^L + L × 6)
+     * Formula: baseCost(level + mapOffset) × mapMultiplier × starMultiplier
+     * Where baseCost(L) = round(20 × 2.4^L + L × 12) [×2 base inflation]
+     * Star multiplier: ×2.2 per star (slightly inefficient evolution, ratio 1.1→1.6)
+     * Early game boost: levels 0-4 cost ÷4 for smooth first 2-3 minutes
      */
-    private long computeUpgradeCost(int currentLevel, int mapDisplayOrder) {
-        // Get map-specific scaling parameters
-        int offset = AscendConstants.getMapUpgradeOffset(mapDisplayOrder);
-        double multiplier = AscendConstants.getMapUpgradeMultiplier(mapDisplayOrder);
-
-        // Apply offset to level for base cost calculation
-        int effectiveLevel = currentLevel + offset;
-
-        // Obscure quick-ramp formula: 10 × 2.4^level + level × 6
-        double baseCost = 10.0 * Math.pow(2.4, effectiveLevel) + (effectiveLevel * 6);
-
-        // Apply map multiplier and round to long
-        return Math.round(baseCost * multiplier);
+    private BigDecimal computeUpgradeCost(int currentLevel, int mapDisplayOrder, int stars) {
+        // Use the BigDecimal helper method from AscendConstants
+        return AscendConstants.getRunnerUpgradeCost(currentLevel, mapDisplayOrder, stars);
     }
 
     private void handleRobotAction(Ref<EntityStore> ref, Store<EntityStore> store, String mapId) {
@@ -426,8 +420,8 @@ public class AscendMapSelectPage extends BaseAscendPage {
             }
 
             // Normal speed upgrade
-            long upgradeCost = computeUpgradeCost(currentLevel, map.getDisplayOrder());
-            if (!playerStore.spendCoins(playerRef.getUuid(), upgradeCost)) {
+            BigDecimal upgradeCost = computeUpgradeCost(currentLevel, map.getDisplayOrder(), currentStars);
+            if (!playerStore.atomicSpendCoins(playerRef.getUuid(), upgradeCost)) {
                 sendMessage(store, ref, "[Ascend] Not enough coins to upgrade speed.");
                 return;
             }
@@ -529,7 +523,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
             return;
         }
 
-        double currentCoins = playerStore.getCoins(playerRef.getUuid());
+        BigDecimal currentCoins = playerStore.getCoins(playerRef.getUuid());
         UICommandBuilder commandBuilder = new UICommandBuilder();
 
         for (int i = 0; i < maps.size(); i++) {
@@ -556,8 +550,8 @@ public class AscendMapSelectPage extends BaseAscendPage {
             }
 
             // This map has an upgrade button, check affordability
-            long upgradeCost = computeUpgradeCost(speedLevel, map.getDisplayOrder());
-            boolean canAfford = currentCoins >= upgradeCost;
+            BigDecimal upgradeCost = computeUpgradeCost(speedLevel, map.getDisplayOrder(), stars);
+            boolean canAfford = currentCoins.compareTo(upgradeCost) >= 0;
             String levelColor = canAfford ? accentColor : "#ffffff";
 
             // Update only the color properties
@@ -616,35 +610,35 @@ public class AscendMapSelectPage extends BaseAscendPage {
 
         String runnerStatusText;
         String runnerButtonText;
-        long actionPrice;
+        BigDecimal actionPrice;
         if (!hasRobot) {
             runnerStatusText = "No Runner";
             if (!completedManually) {
                 runnerButtonText = "Complete First";
-                actionPrice = 0L;
+                actionPrice = BigDecimal.ZERO;
             } else {
                 runnerButtonText = "Buy Runner";
-                actionPrice = 0L; // Buying a runner is now free
+                actionPrice = BigDecimal.ZERO; // Buying a runner is now free
             }
         } else {
-            int speedPercent = speedLevel * 10;
+            int speedPercent = (int)(speedLevel * AscendConstants.getMapSpeedMultiplier(selectedMap.getDisplayOrder()) * 100);
             runnerStatusText = "Speed: +" + speedPercent + "%";
             if (speedLevel >= MAX_SPEED_LEVEL && stars < AscendConstants.MAX_ROBOT_STARS) {
                 runnerButtonText = "Evolve";
-                actionPrice = 0L;
+                actionPrice = BigDecimal.ZERO;
             } else if (stars >= AscendConstants.MAX_ROBOT_STARS && speedLevel >= MAX_SPEED_LEVEL) {
                 runnerButtonText = "Maxed!";
-                actionPrice = 0L;
+                actionPrice = BigDecimal.ZERO;
             } else {
                 runnerButtonText = "Upgrade";
-                actionPrice = computeUpgradeCost(speedLevel, selectedMap.getDisplayOrder());
+                actionPrice = computeUpgradeCost(speedLevel, selectedMap.getDisplayOrder(), stars);
             }
         }
 
         // Combine button text and price for "Upgrade" case to save vertical space
         String displayButtonText;
         String displayPriceText;
-        if (runnerButtonText.equals("Upgrade") && actionPrice > 0) {
+        if (runnerButtonText.equals("Upgrade") && actionPrice.compareTo(BigDecimal.ZERO) > 0) {
             displayButtonText = "Cost:";
             displayPriceText = FormatUtils.formatCoinsForHudDecimal(actionPrice) + " coins";
         } else {
@@ -667,10 +661,10 @@ public class AscendMapSelectPage extends BaseAscendPage {
         // Determine color for level text and button accent bar based on affordability
         String accentColor = resolveMapAccentColor(index);
         String levelColor;
-        boolean isUpgrade = runnerButtonText.equals("Upgrade") && actionPrice > 0;
+        boolean isUpgrade = runnerButtonText.equals("Upgrade") && actionPrice.compareTo(BigDecimal.ZERO) > 0;
         if (isUpgrade) {
-            double currentCoins = playerStore.getCoins(playerRef.getUuid());
-            boolean canAfford = currentCoins >= actionPrice;
+            BigDecimal currentCoins = playerStore.getCoins(playerRef.getUuid());
+            boolean canAfford = currentCoins.compareTo(actionPrice) >= 0;
             levelColor = canAfford ? accentColor : "#ffffff";
         } else {
             levelColor = accentColor;
@@ -762,35 +756,35 @@ public class AscendMapSelectPage extends BaseAscendPage {
         // Runner status and button text
         String runnerStatusText;
         String runnerButtonText;
-        long actionPrice;
+        BigDecimal actionPrice;
         if (!hasRobot) {
             runnerStatusText = "No Runner";
             if (!completedManually) {
                 runnerButtonText = "Complete First";
-                actionPrice = 0L;
+                actionPrice = BigDecimal.ZERO;
             } else {
                 runnerButtonText = "Buy Runner";
-                actionPrice = 0L; // Buying a runner is now free
+                actionPrice = BigDecimal.ZERO; // Buying a runner is now free
             }
         } else {
-            int speedPercent = speedLevel * 10;
+            int speedPercent = (int)(speedLevel * AscendConstants.getMapSpeedMultiplier(map.getDisplayOrder()) * 100);
             runnerStatusText = "Speed: +" + speedPercent + "%";
             if (speedLevel >= MAX_SPEED_LEVEL && stars < AscendConstants.MAX_ROBOT_STARS) {
                 runnerButtonText = "Evolve";
-                actionPrice = 0L;
+                actionPrice = BigDecimal.ZERO;
             } else if (stars >= AscendConstants.MAX_ROBOT_STARS && speedLevel >= MAX_SPEED_LEVEL) {
                 runnerButtonText = "Maxed!";
-                actionPrice = 0L;
+                actionPrice = BigDecimal.ZERO;
             } else {
                 runnerButtonText = "Upgrade";
-                actionPrice = computeUpgradeCost(speedLevel, map.getDisplayOrder());
+                actionPrice = computeUpgradeCost(speedLevel, map.getDisplayOrder(), stars);
             }
         }
 
         // Combine button text and price for "Upgrade" case to save vertical space
         String displayButtonText;
         String displayPriceText;
-        if (runnerButtonText.equals("Upgrade") && actionPrice > 0) {
+        if (runnerButtonText.equals("Upgrade") && actionPrice.compareTo(BigDecimal.ZERO) > 0) {
             displayButtonText = "Cost:";
             displayPriceText = FormatUtils.formatCoinsForHudDecimal(actionPrice) + " coins";
         } else {
@@ -801,10 +795,10 @@ public class AscendMapSelectPage extends BaseAscendPage {
 
         // Determine color for level text and button accent bar based on affordability
         String levelColor;
-        boolean isUpgrade = runnerButtonText.equals("Upgrade") && actionPrice > 0;
+        boolean isUpgrade = runnerButtonText.equals("Upgrade") && actionPrice.compareTo(BigDecimal.ZERO) > 0;
         if (isUpgrade) {
-            double currentCoins = playerStore.getCoins(playerRef.getUuid());
-            boolean canAfford = currentCoins >= actionPrice;
+            BigDecimal currentCoins = playerStore.getCoins(playerRef.getUuid());
+            boolean canAfford = currentCoins.compareTo(actionPrice) >= 0;
             levelColor = canAfford ? accentColor : "#ffffff";
         } else {
             levelColor = accentColor;
@@ -875,7 +869,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
                     GhostRecording ghost = ghostStore.getRecording(playerRef.getUuid(), map.getId());
                     if (ghost != null) {
                         // Buying a runner is now free
-                        options.add(new PurchaseOption(map.getId(), PurchaseType.BUY_ROBOT, 0L));
+                        options.add(new PurchaseOption(map.getId(), PurchaseType.BUY_ROBOT, BigDecimal.ZERO));
                     }
                 }
             } else {
@@ -884,7 +878,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
                     // At max speed level, skip (evolution handled by Evolve All)
                     continue;
                 }
-                long upgradeCost = computeUpgradeCost(speedLevel, map.getDisplayOrder());
+                BigDecimal upgradeCost = computeUpgradeCost(speedLevel, map.getDisplayOrder(), stars);
                 options.add(new PurchaseOption(map.getId(), PurchaseType.UPGRADE_SPEED, upgradeCost));
             }
         }
@@ -895,24 +889,24 @@ public class AscendMapSelectPage extends BaseAscendPage {
         }
 
         // Sort by price (cheapest first) to maximize number of purchases
-        options.sort((a, b) -> Long.compare(a.price, b.price));
+        options.sort((a, b) -> a.price.compareTo(b.price));
 
         // Process purchases
         int purchased = 0;
-        long totalSpent = 0;
+        BigDecimal totalSpent = BigDecimal.ZERO;
         List<String> updatedMapIds = new ArrayList<>();
 
         for (PurchaseOption option : options) {
-            double currentCoins = playerStore.getCoins(playerRef.getUuid());
-            if (option.price > currentCoins) {
+            BigDecimal currentCoins = playerStore.getCoins(playerRef.getUuid());
+            if (option.price.compareTo(currentCoins) > 0) {
                 continue;
             }
 
             boolean success = false;
             switch (option.type) {
                 case BUY_ROBOT -> {
-                    if (option.price > 0) {
-                        if (!playerStore.spendCoins(playerRef.getUuid(), option.price)) {
+                    if (option.price.compareTo(BigDecimal.ZERO) > 0) {
+                        if (!playerStore.atomicSpendCoins(playerRef.getUuid(), option.price)) {
                             continue;
                         }
                     }
@@ -920,7 +914,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
                     success = true;
                 }
                 case UPGRADE_SPEED -> {
-                    if (!playerStore.spendCoins(playerRef.getUuid(), option.price)) {
+                    if (!playerStore.atomicSpendCoins(playerRef.getUuid(), option.price)) {
                         continue;
                     }
                     int newLevel = playerStore.incrementRobotSpeedLevel(playerRef.getUuid(), option.mapId);
@@ -934,7 +928,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
 
             if (success) {
                 purchased++;
-                totalSpent += option.price;
+                totalSpent = totalSpent.add(option.price);
                 if (!updatedMapIds.contains(option.mapId)) {
                     updatedMapIds.add(option.mapId);
                 }
@@ -946,7 +940,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
             return;
         }
 
-        String costText = totalSpent > 0 ? " for " + FormatUtils.formatCoinsForHud(totalSpent) + " coins" : "";
+        String costText = totalSpent.compareTo(BigDecimal.ZERO) > 0 ? " for " + FormatUtils.formatCoinsForHudDecimal(totalSpent) + " coins" : "";
         sendMessage(store, ref, "[Ascend] Purchased " + purchased + " upgrade" + (purchased > 1 ? "s" : "") + costText + "!");
 
         // Update UI for all affected maps
@@ -960,7 +954,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
         UPGRADE_SPEED
     }
 
-    private record PurchaseOption(String mapId, PurchaseType type, long price) {}
+    private record PurchaseOption(String mapId, PurchaseType type, BigDecimal price) {}
 
     private void handleEvolveAll(Ref<EntityStore> ref, Store<EntityStore> store) {
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());

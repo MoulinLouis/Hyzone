@@ -50,8 +50,9 @@ public final class FormatUtils {
         return mantissaText + "e" + exponent;
     }
 
-    public static String formatCoinsForHudDecimal(double coins) {
-        double safeCoins = Math.max(0.0, coins);
+    public static String formatCoinsForHudDecimal(java.math.BigDecimal coins) {
+        // Convert to double for formatting (sufficient precision for display)
+        double safeCoins = Math.max(0.0, coins.doubleValue());
         // Below 1 million: show full number without decimals if it's a whole number
         if (safeCoins < 1e6) {
             if (safeCoins == Math.floor(safeCoins)) {

@@ -15,6 +15,10 @@ import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.achievement.AchievementManager;
 import io.hyvexa.ascend.ascension.AscensionManager;
+
+import java.math.BigDecimal;
+import java.math.MathContext;
+import java.math.RoundingMode;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
@@ -194,11 +198,13 @@ public class AscendRunTracker {
 
         // Calculate bonuses from Summit and Ascension
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        double summitCoinBonus = 0.0;
-        double summitManualBonus = 0.0;
-        double ascensionBonus = 0.0;
-        double chainBonus = 0.0;
-        double sessionBonus = 1.0;
+        BigDecimal summitCoinBonus = BigDecimal.ZERO;
+        BigDecimal summitManualBonus = BigDecimal.ZERO;
+        BigDecimal ascensionBonus = BigDecimal.ZERO;
+        BigDecimal chainBonus = BigDecimal.ZERO;
+        BigDecimal sessionBonus = BigDecimal.ONE;
+
+        MathContext ctx = new MathContext(30, RoundingMode.HALF_UP);
 
         if (plugin != null) {
             SummitManager summitManager = plugin.getSummitManager();
@@ -210,35 +216,37 @@ public class AscendRunTracker {
             }
 
             if (ascensionManager != null) {
-                ascensionBonus = ascensionManager.getManualMultiplierBonus(playerId);
+                ascensionBonus = BigDecimal.valueOf(ascensionManager.getManualMultiplierBonus(playerId));
                 int consecutive = playerStore.getConsecutiveManualRuns(playerId);
-                chainBonus = ascensionManager.getChainBonus(playerId, consecutive);
-                sessionBonus = ascensionManager.getSessionFirstRunMultiplier(playerId);
+                chainBonus = BigDecimal.valueOf(ascensionManager.getChainBonus(playerId, consecutive));
+                sessionBonus = BigDecimal.valueOf(ascensionManager.getSessionFirstRunMultiplier(playerId));
             }
         }
 
         // Calculate multiplier increment with bonuses
-        double baseMultiplierIncrement = AscendConstants.MANUAL_MULTIPLIER_INCREMENT;
-        double totalMultiplierBonus = 1.0 + summitManualBonus + ascensionBonus + chainBonus;
-        double finalMultiplierIncrement = baseMultiplierIncrement * totalMultiplierBonus;
+        BigDecimal baseMultiplierIncrement = new BigDecimal("0.1"); // MANUAL_MULTIPLIER_INCREMENT
+        BigDecimal totalMultiplierBonus = BigDecimal.ONE.add(summitManualBonus, ctx)
+                                                        .add(ascensionBonus, ctx)
+                                                        .add(chainBonus, ctx);
+        BigDecimal finalMultiplierIncrement = baseMultiplierIncrement.multiply(totalMultiplierBonus, ctx);
 
         // Calculate payout BEFORE adding multiplier (use current multiplier, not the new one)
         List<AscendMap> multiplierMaps = mapStore.listMapsSorted();
-        double basePayout = playerStore.getCompletionPayout(playerId, multiplierMaps, AscendConstants.MULTIPLIER_SLOTS, run.mapId, 0.0);
+        BigDecimal basePayout = playerStore.getCompletionPayout(playerId, multiplierMaps, AscendConstants.MULTIPLIER_SLOTS, run.mapId, BigDecimal.ZERO);
 
         // Apply coin flow bonus and session bonus
-        double coinMultiplier = (1.0 + summitCoinBonus) * sessionBonus;
-        double payout = basePayout * coinMultiplier;
+        BigDecimal coinMultiplier = BigDecimal.ONE.add(summitCoinBonus, ctx).multiply(sessionBonus, ctx);
+        BigDecimal payout = basePayout.multiply(coinMultiplier, ctx).setScale(2, RoundingMode.HALF_UP);
 
-        // Add coins first, then increase multiplier
-        playerStore.addCoins(playerId, payout);
-        playerStore.addTotalCoinsEarned(playerId, payout);
-        playerStore.addMapMultiplier(playerId, run.mapId, finalMultiplierIncrement);
+        // Use atomic operations to prevent race conditions
+        playerStore.atomicAddCoins(playerId, payout);
+        playerStore.atomicAddTotalCoinsEarned(playerId, payout);
+        playerStore.atomicAddMapMultiplier(playerId, run.mapId, finalMultiplierIncrement);
         playerStore.incrementTotalManualRuns(playerId);
         playerStore.incrementConsecutiveManualRuns(playerId);
 
         // Mark session first run as claimed if applicable
-        if (sessionBonus > 1.0) {
+        if (sessionBonus.compareTo(BigDecimal.ONE) > 0) {
             playerStore.setSessionFirstRunClaimed(playerId, true);
         }
 
@@ -274,10 +282,10 @@ public class AscendRunTracker {
 
         // Show payout with bonus info
         StringBuilder bonusInfo = new StringBuilder();
-        if (sessionBonus > 1.0) {
+        if (sessionBonus.compareTo(BigDecimal.ONE) > 0) {
             bonusInfo.append(" (Session Bonus x3!)");
-        } else if (chainBonus > 0) {
-            bonusInfo.append(" (Chain +" + (int)(chainBonus * 100) + "%)");
+        } else if (chainBonus.compareTo(BigDecimal.ZERO) > 0) {
+            bonusInfo.append(" (Chain +" + (int)(chainBonus.doubleValue() * 100) + "%)");
         }
         player.sendMessage(Message.raw("[Ascend] +" + FormatUtils.formatCoinsForHudDecimal(payout) + " coins." + bonusInfo)
             .color(SystemMessageUtils.PRIMARY_TEXT));
