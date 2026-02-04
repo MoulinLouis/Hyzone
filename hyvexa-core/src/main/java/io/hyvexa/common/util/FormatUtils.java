@@ -53,12 +53,16 @@ public final class FormatUtils {
     public static String formatCoinsForHudDecimal(java.math.BigDecimal coins) {
         // Convert to double for formatting (sufficient precision for display)
         double safeCoins = Math.max(0.0, coins.doubleValue());
-        // Below 1 million: show full number without decimals if it's a whole number
-        if (safeCoins < 1e6) {
+        // Below 1 thousand: show full number without decimals if it's a whole number
+        if (safeCoins < 1e3) {
             if (safeCoins == Math.floor(safeCoins)) {
                 return String.valueOf((long) safeCoins);
             }
             return String.format(Locale.ROOT, "%.2f", safeCoins);
+        }
+        // Thousand (10^3)
+        if (safeCoins < 1e6) {
+            return stripTrailingZeros(String.format(Locale.ROOT, "%.2fK", safeCoins / 1e3));
         }
         // Million (10^6)
         if (safeCoins < 1e9) {
