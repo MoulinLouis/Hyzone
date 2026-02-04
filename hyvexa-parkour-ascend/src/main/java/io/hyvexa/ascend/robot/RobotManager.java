@@ -1,5 +1,9 @@
 package io.hyvexa.ascend.robot;
 
+import java.math.BigDecimal;
+import java.math.MathContext;
+import java.math.RoundingMode;
+
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
@@ -647,7 +651,7 @@ public class RobotManager {
 
         String mapId = robot.getMapId();
         int stars = robot.getStars();
-        double multiplierIncrement = AscendConstants.getRunnerMultiplierIncrement(stars);
+        BigDecimal multiplierIncrement = AscendConstants.getRunnerMultiplierIncrement(stars);
 
         // Apply double lap skill if available
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
@@ -657,23 +661,26 @@ public class RobotManager {
             }
         }
 
-        double totalMultiplierBonus = completions * multiplierIncrement;
+        MathContext ctx = new MathContext(30, RoundingMode.HALF_UP);
+        BigDecimal totalMultiplierBonus = multiplierIncrement.multiply(BigDecimal.valueOf(completions), ctx);
 
         // Calculate payout BEFORE adding multiplier (use current multiplier, not the new one)
         List<AscendMap> maps = mapStore.listMapsSorted();
-        double payoutPerRun = playerStore.getCompletionPayout(ownerId, maps, AscendConstants.MULTIPLIER_SLOTS, mapId, 0.0);
+        BigDecimal payoutPerRun = playerStore.getCompletionPayout(ownerId, maps, AscendConstants.MULTIPLIER_SLOTS, mapId, BigDecimal.ZERO);
 
         // Apply Summit coin flow bonus
-        double coinFlowBonus = 0.0;
+        BigDecimal coinFlowBonus = BigDecimal.ZERO;
         if (plugin != null && plugin.getSummitManager() != null) {
             coinFlowBonus = plugin.getSummitManager().getCoinFlowBonus(ownerId);
         }
-        double totalPayout = payoutPerRun * completions * (1.0 + coinFlowBonus);
+        BigDecimal totalPayout = payoutPerRun.multiply(BigDecimal.valueOf(completions), ctx)
+                                             .multiply(BigDecimal.ONE.add(coinFlowBonus, ctx), ctx)
+                                             .setScale(2, RoundingMode.HALF_UP);
 
-        // Add coins first, then increase multiplier
-        playerStore.addCoins(ownerId, totalPayout);
-        playerStore.addTotalCoinsEarned(ownerId, totalPayout);
-        playerStore.addMapMultiplier(ownerId, mapId, totalMultiplierBonus);
+        // Use atomic operations to prevent race conditions
+        playerStore.atomicAddCoins(ownerId, totalPayout);
+        playerStore.atomicAddTotalCoinsEarned(ownerId, totalPayout);
+        playerStore.atomicAddMapMultiplier(ownerId, mapId, totalMultiplierBonus);
 
         robot.setLastCompletionMs(lastCompletionMs + (intervalMs * completions));
         robot.addRunsCompleted(completions);
@@ -693,6 +700,31 @@ public class RobotManager {
         }
     }
 
+    /**
+     * Calculate speed multiplier for a runner (public for passive earnings)
+     */
+    public static double calculateSpeedMultiplier(AscendMap map, int speedLevel, UUID ownerId) {
+        // Base speed multiplier from upgrades (varies by map)
+        double speedMultiplier = 1.0 + (speedLevel * AscendConstants.getMapSpeedMultiplier(map.getDisplayOrder()));
+
+        // Add Summit runner speed bonus
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin != null) {
+            SummitManager summitManager = plugin.getSummitManager();
+            AscensionManager ascensionManager = plugin.getAscensionManager();
+
+            if (summitManager != null) {
+                speedMultiplier += summitManager.getRunnerSpeedBonus(ownerId).doubleValue();
+            }
+
+            if (ascensionManager != null) {
+                speedMultiplier += ascensionManager.getRunnerSpeedBonus(ownerId);
+            }
+        }
+
+        return speedMultiplier;
+    }
+
     private long computeCompletionIntervalMs(AscendMap map, int speedLevel, UUID ownerId) {
         if (map == null) {
             return -1L;
@@ -708,23 +740,8 @@ public class RobotManager {
             return -1L;
         }
 
-        // Base speed multiplier from upgrades
-        double speedMultiplier = 1.0 + (speedLevel * AscendConstants.SPEED_UPGRADE_MULTIPLIER);
-
-        // Add Summit runner speed bonus
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin != null) {
-            SummitManager summitManager = plugin.getSummitManager();
-            AscensionManager ascensionManager = plugin.getAscensionManager();
-
-            if (summitManager != null) {
-                speedMultiplier += summitManager.getRunnerSpeedBonus(ownerId);
-            }
-
-            if (ascensionManager != null) {
-                speedMultiplier += ascensionManager.getRunnerSpeedBonus(ownerId);
-            }
-        }
+        // Calculate speed multiplier
+        double speedMultiplier = calculateSpeedMultiplier(map, speedLevel, ownerId);
 
         long interval = (long) (base / speedMultiplier);
         return Math.max(1L, interval);

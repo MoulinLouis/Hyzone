@@ -1,9 +1,17 @@
 package io.hyvexa.ascend;
 
+import java.math.BigDecimal;
+import java.math.MathContext;
+import java.math.RoundingMode;
+
 public final class AscendConstants {
 
     private AscendConstants() {
     }
+
+    // Math contexts for precision calculations
+    private static final MathContext CALC_CTX = new MathContext(30, RoundingMode.HALF_UP);
+    private static final MathContext MULTIPLIER_CTX = new MathContext(30, RoundingMode.HALF_UP);
 
     // Database
     public static final String TABLE_PREFIX = "ascend_";
@@ -18,11 +26,32 @@ public final class AscendConstants {
     public static final String ITEM_LEAVE = "Ascend_Leave_Block";
 
     // Economy
-    public static final double SPEED_UPGRADE_MULTIPLIER = 0.15; // +15% speed per level
     public static final double MANUAL_MULTIPLIER_INCREMENT = 0.1; // +0.1 per manual run
-    public static final double RUNNER_MULTIPLIER_INCREMENT = 0.01; // +0.01 per runner completion
+    public static final double RUNNER_MULTIPLIER_INCREMENT = 0.1; // +0.1 per runner completion (×10 inflation)
     public static final int MULTIPLIER_SLOTS = 5;
-    public static final int MAP_UNLOCK_REQUIRED_RUNNER_LEVEL = 3; // Runner level required to unlock next map
+    public static final int MAP_UNLOCK_REQUIRED_RUNNER_LEVEL = 5; // Runner level required to unlock next map
+
+    // Passive Earnings
+    public static final long PASSIVE_OFFLINE_RATE_PERCENT = 25L; // 25% of normal production
+    public static final long PASSIVE_MAX_TIME_MS = 24 * 60 * 60 * 1000L; // 24 hours
+    public static final long PASSIVE_MIN_TIME_MS = 60 * 1000L; // 1 minute
+
+    // Speed upgrade multipliers by map (indexed by displayOrder 0-4)
+    // Higher level maps = faster speed gains per upgrade
+    public static final double[] MAP_SPEED_MULTIPLIERS = {
+        0.10,  // Map 0 (Rouge)  - +10% per level
+        0.15,  // Map 1 (Orange) - +15% per level
+        0.20,  // Map 2 (Jaune)  - +20% per level
+        0.25,  // Map 3 (Vert)   - +25% per level
+        0.30   // Map 4 (Bleu)   - +30% per level
+    };
+
+    public static double getMapSpeedMultiplier(int displayOrder) {
+        if (displayOrder < 0 || displayOrder >= MAP_SPEED_MULTIPLIERS.length) {
+            return MAP_SPEED_MULTIPLIERS[MAP_SPEED_MULTIPLIERS.length - 1];
+        }
+        return MAP_SPEED_MULTIPLIERS[displayOrder];
+    }
 
     // Map Level Defaults (indexed by displayOrder 0-4)
     // Base run times: faster maps = faster multiplier growth
@@ -141,9 +170,56 @@ public final class AscendConstants {
         };
     }
 
-    public static double getRunnerMultiplierIncrement(int stars) {
+    public static BigDecimal getRunnerMultiplierIncrement(int stars) {
         // Base increment doubles with each star: 0.01, 0.02, 0.04, 0.08, 0.16, 0.32
-        return RUNNER_MULTIPLIER_INCREMENT * Math.pow(2, Math.max(0, stars));
+        BigDecimal baseIncrement = new BigDecimal("0.1");  // RUNNER_MULTIPLIER_INCREMENT
+
+        // 2^stars using BigDecimal.pow()
+        BigDecimal twoToStars = new BigDecimal("2").pow(Math.max(0, stars), MULTIPLIER_CTX);
+
+        return baseIncrement.multiply(twoToStars, MULTIPLIER_CTX)
+                           .setScale(20, RoundingMode.HALF_UP); // 20 decimals for multipliers
+    }
+
+    /**
+     * Calculate runner speed upgrade cost.
+     * Formula: baseCost(level + mapOffset) × mapMultiplier × starMultiplier
+     * Where baseCost(L) = round(20 × 2.4^L + L × 12)
+     */
+    public static BigDecimal getRunnerUpgradeCost(int speedLevel, int mapDisplayOrder, int stars) {
+        // Get map-specific scaling parameters
+        int offset = getMapUpgradeOffset(mapDisplayOrder);
+        BigDecimal mapMultiplier = BigDecimal.valueOf(getMapUpgradeMultiplier(mapDisplayOrder));
+
+        // Apply offset to level for base cost calculation
+        int effectiveLevel = speedLevel + offset;
+
+        // Base formula: 20 × 2.4^level + level × 12 (pure BigDecimal)
+        BigDecimal twenty = new BigDecimal("20");
+        BigDecimal twoPointFour = new BigDecimal("2.4");
+        BigDecimal twelve = new BigDecimal("12");
+
+        BigDecimal exponentialPart = twoPointFour.pow(effectiveLevel, CALC_CTX);
+        BigDecimal linearPart = BigDecimal.valueOf(effectiveLevel).multiply(twelve, CALC_CTX);
+
+        BigDecimal baseCost = twenty.multiply(exponentialPart, CALC_CTX).add(linearPart, CALC_CTX);
+
+        // Apply map multiplier
+        baseCost = baseCost.multiply(mapMultiplier, CALC_CTX);
+
+        // Star multiplier: ×2.2 per star
+        if (stars > 0) {
+            BigDecimal twoPointTwo = new BigDecimal("2.2");
+            BigDecimal starMultiplier = twoPointTwo.pow(stars, CALC_CTX);
+            baseCost = baseCost.multiply(starMultiplier, CALC_CTX);
+        }
+
+        // Early game boost: levels 0-4 cost ÷4
+        if (speedLevel <= 4) {
+            baseCost = baseCost.divide(new BigDecimal("4"), CALC_CTX);
+        }
+
+        return baseCost.setScale(0, RoundingMode.CEILING);
     }
 
     // Runner (internal tick system)
@@ -173,15 +249,15 @@ public final class AscendConstants {
 
     // Elevation is a direct multiplier (elevation value = multiplier value)
     // Cost formula: BASE_COST * COST_GROWTH^currentElevation
-    public static final long ELEVATION_BASE_COST = 5000L;
+    public static final long ELEVATION_BASE_COST = 30000L; // ×6 inflation from 5000
     public static final double ELEVATION_COST_GROWTH = 1.15;  // +15% cost per elevation
 
     /**
      * Calculate the cost to reach the next elevation level.
-     * Cost grows exponentially: baseCost * 1.08^currentLevel
+     * Cost grows exponentially: baseCost * 1.15^currentLevel
      */
-    public static long getElevationLevelUpCost(int currentLevel) {
-        return getElevationLevelUpCost(currentLevel, 1.0);
+    public static BigDecimal getElevationLevelUpCost(int currentLevel) {
+        return getElevationLevelUpCost(currentLevel, BigDecimal.ONE);
     }
 
     /**
@@ -189,23 +265,32 @@ public final class AscendConstants {
      * @param currentLevel The player's current elevation level
      * @param costMultiplier Cost modifier (1.0 = full cost, 0.8 = 20% discount)
      */
-    public static long getElevationLevelUpCost(int currentLevel, double costMultiplier) {
-        // Cap level to prevent overflow (1.08^1000 would overflow)
+    public static BigDecimal getElevationLevelUpCost(int currentLevel, BigDecimal costMultiplier) {
+        // Cap level to prevent overflow
         int cappedLevel = Math.min(Math.max(0, currentLevel), 1000);
-        double baseCost = ELEVATION_BASE_COST * Math.pow(ELEVATION_COST_GROWTH, cappedLevel);
-        // Guard against overflow - if cost exceeds Long.MAX_VALUE, cap it
-        if (baseCost > Long.MAX_VALUE || Double.isInfinite(baseCost) || Double.isNaN(baseCost)) {
-            return Long.MAX_VALUE;
+
+        // Pure BigDecimal calculation
+        BigDecimal base = BigDecimal.valueOf(ELEVATION_BASE_COST);
+        BigDecimal growth = new BigDecimal("1.15"); // ELEVATION_COST_GROWTH
+
+        // Calculate growth^level using BigDecimal (no double intermediate)
+        BigDecimal growthPower = growth.pow(cappedLevel, CALC_CTX);
+        BigDecimal cost = base.multiply(growthPower, CALC_CTX);
+
+        // Apply cost multiplier (skill discount) - NO double conversion
+        if (costMultiplier.compareTo(BigDecimal.ONE) != 0) {
+            cost = cost.multiply(costMultiplier, CALC_CTX);
         }
-        return Math.round(baseCost * Math.max(0.1, costMultiplier));
+
+        return cost.setScale(2, RoundingMode.CEILING);
     }
 
     /**
      * Calculate how many levels can be purchased with given coins at current level.
      * Returns the number of levels affordable and the total cost.
      */
-    public static ElevationPurchaseResult calculateElevationPurchase(int currentLevel, double availableCoins) {
-        return calculateElevationPurchase(currentLevel, availableCoins, 1.0);
+    public static ElevationPurchaseResult calculateElevationPurchase(int currentLevel, BigDecimal availableCoins) {
+        return calculateElevationPurchase(currentLevel, availableCoins, BigDecimal.ONE);
     }
 
     /**
@@ -214,17 +299,21 @@ public final class AscendConstants {
      * @param availableCoins Coins available to spend
      * @param costMultiplier Cost modifier (1.0 = full cost, 0.8 = 20% discount)
      */
-    public static ElevationPurchaseResult calculateElevationPurchase(int currentLevel, double availableCoins, double costMultiplier) {
+    public static ElevationPurchaseResult calculateElevationPurchase(int currentLevel, BigDecimal availableCoins, BigDecimal costMultiplier) {
         int levelsAffordable = 0;
-        double totalCost = 0.0;
+        BigDecimal totalCost = BigDecimal.ZERO;
         int level = currentLevel;
 
         while (true) {
-            long nextCost = getElevationLevelUpCost(level, costMultiplier);
-            if (totalCost + nextCost > availableCoins) {
+            BigDecimal nextCost = getElevationLevelUpCost(level, costMultiplier);
+            BigDecimal newTotal = totalCost.add(nextCost, CALC_CTX);
+
+            // Pure BigDecimal comparison (no double)
+            if (newTotal.compareTo(availableCoins) > 0) {
                 break;
             }
-            totalCost += nextCost;
+
+            totalCost = newTotal;
             levelsAffordable++;
             level++;
         }
@@ -234,9 +323,9 @@ public final class AscendConstants {
 
     public static class ElevationPurchaseResult {
         public final int levels;
-        public final double cost;
+        public final BigDecimal cost;
 
-        public ElevationPurchaseResult(int levels, double cost) {
+        public ElevationPurchaseResult(int levels, BigDecimal cost) {
             this.levels = levels;
             this.cost = cost;
         }
@@ -305,17 +394,23 @@ public final class AscendConstants {
     public static final int SUMMIT_MAX_LEVEL = SUMMIT_LEVEL_THRESHOLDS.length;
     public static final long SUMMIT_MIN_COINS = SUMMIT_LEVEL_THRESHOLDS[0];
 
-    public static int calculateSummitLevel(double coinsSpent) {
-        if (coinsSpent < SUMMIT_LEVEL_THRESHOLDS[0]) {
+    public static int calculateSummitLevel(BigDecimal coinsSpent) {
+        BigDecimal firstThreshold = BigDecimal.valueOf(SUMMIT_LEVEL_THRESHOLDS[0]);
+        if (coinsSpent.compareTo(firstThreshold) < 0) {
             return 0;
         }
-        long cumulative = 0;
+
+        BigDecimal cumulative = BigDecimal.ZERO;
         for (int i = 0; i < SUMMIT_LEVEL_THRESHOLDS.length; i++) {
-            cumulative += SUMMIT_LEVEL_THRESHOLDS[i];
-            if (coinsSpent < cumulative) {
+            BigDecimal threshold = BigDecimal.valueOf(SUMMIT_LEVEL_THRESHOLDS[i]);
+            cumulative = cumulative.add(threshold, CALC_CTX);
+
+            // Pure BigDecimal comparison
+            if (coinsSpent.compareTo(cumulative) < 0) {
                 return i;
             }
         }
+
         return SUMMIT_LEVEL_THRESHOLDS.length;
     }
 

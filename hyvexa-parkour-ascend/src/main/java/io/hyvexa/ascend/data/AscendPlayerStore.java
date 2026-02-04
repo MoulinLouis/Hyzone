@@ -9,6 +9,9 @@ import io.hyvexa.ascend.AscendConstants.SummitCategory;
 import io.hyvexa.ascend.util.MapUnlockHelper;
 import io.hyvexa.core.db.DatabaseManager;
 
+import java.math.BigDecimal;
+import java.math.MathContext;
+import java.math.RoundingMode;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -29,6 +32,7 @@ import java.util.logging.Level;
 public class AscendPlayerStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
+    private static final MathContext CALC_CTX = new MathContext(30, RoundingMode.HALF_UP);
 
     private final Map<UUID, AscendPlayerProgress> players = new ConcurrentHashMap<>();
     private final Set<UUID> dirtyPlayers = ConcurrentHashMap.newKeySet();
@@ -54,7 +58,8 @@ public class AscendPlayerStore {
         String sql = """
             SELECT uuid, coins, elevation_multiplier, ascension_count, skill_tree_points,
                    total_coins_earned, total_manual_runs, active_title,
-                   ascension_started_at, fastest_ascension_ms
+                   ascension_started_at, fastest_ascension_ms,
+                   last_active_timestamp, has_unclaimed_passive
             FROM ascend_players
             """;
         try (Connection conn = DatabaseManager.getInstance().getConnection();
@@ -64,13 +69,13 @@ public class AscendPlayerStore {
                 while (rs.next()) {
                     UUID uuid = UUID.fromString(rs.getString("uuid"));
                     AscendPlayerProgress progress = new AscendPlayerProgress();
-                    progress.setCoins(rs.getDouble("coins"));
+                    progress.setCoins(rs.getBigDecimal("coins"));
                     progress.setElevationMultiplier(rs.getInt("elevation_multiplier"));
                     // Load new fields (with fallback for older schema)
                     try {
                         progress.setAscensionCount(rs.getInt("ascension_count"));
                         progress.setSkillTreePoints(rs.getInt("skill_tree_points"));
-                        progress.setTotalCoinsEarned(rs.getDouble("total_coins_earned"));
+                        progress.setTotalCoinsEarned(rs.getBigDecimal("total_coins_earned"));
                         progress.setTotalManualRuns(rs.getInt("total_manual_runs"));
                         progress.setActiveTitle(rs.getString("active_title"));
                         long ascensionStartedAt = rs.getLong("ascension_started_at");
@@ -81,6 +86,12 @@ public class AscendPlayerStore {
                         if (!rs.wasNull()) {
                             progress.setFastestAscensionMs(fastestAscensionMs);
                         }
+                        // Load passive earnings fields
+                        long timestamp = rs.getLong("last_active_timestamp");
+                        if (!rs.wasNull()) {
+                            progress.setLastActiveTimestamp(timestamp);
+                        }
+                        progress.setHasUnclaimedPassive(rs.getBoolean("has_unclaimed_passive"));
                     } catch (SQLException ignored) {
                         // Columns may not exist yet
                     }
@@ -116,7 +127,7 @@ public class AscendPlayerStore {
                     mapProgress.setHasRobot(rs.getBoolean("has_robot"));
                     mapProgress.setRobotSpeedLevel(rs.getInt("robot_speed_level"));
                     mapProgress.setRobotStars(rs.getInt("robot_stars"));
-                    mapProgress.setMultiplier(rs.getDouble("multiplier"));
+                    mapProgress.setMultiplier(rs.getBigDecimal("multiplier"));
                     long bestTime = rs.getLong("best_time_ms");
                     if (!rs.wasNull()) {
                         mapProgress.setBestTimeMs(bestTime);
@@ -235,13 +246,13 @@ public class AscendPlayerStore {
     public void resetPlayerProgress(UUID playerId) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
         // Reset basic progression
-        progress.setCoins(0.0);
+        progress.setCoins(BigDecimal.ZERO);
         progress.setElevationMultiplier(1);
         progress.getMapProgress().clear();
 
         // Reset Summit system
         progress.clearSummitLevels();
-        progress.setTotalCoinsEarned(0.0);
+        progress.setTotalCoinsEarned(BigDecimal.ZERO);
 
         // Reset Ascension/Skill Tree
         progress.setAscensionCount(0);
@@ -311,14 +322,14 @@ public class AscendPlayerStore {
         queueSave();
     }
 
-    public double getCoins(UUID playerId) {
+    public BigDecimal getCoins(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
-        return progress != null ? progress.getCoins() : 0.0;
+        return progress != null ? progress.getCoins() : BigDecimal.ZERO;
     }
 
-    public void setCoins(UUID playerId, double coins) {
+    public void setCoins(UUID playerId, BigDecimal coins) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        progress.setCoins(Math.max(0.0, coins));
+        progress.setCoins(coins.max(BigDecimal.ZERO));
         markDirty(playerId);
     }
 
@@ -393,33 +404,228 @@ public class AscendPlayerStore {
         return true;
     }
 
-    public void addCoins(UUID playerId, double amount) {
+    public void addCoins(UUID playerId, BigDecimal amount) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
         progress.addCoins(amount);
         markDirty(playerId);
     }
 
-    public boolean spendCoins(UUID playerId, double amount) {
+    public boolean spendCoins(UUID playerId, BigDecimal amount) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        if (progress.getCoins() < amount) {
+        if (progress.getCoins().compareTo(amount) < 0) {
             return false;
         }
-        progress.addCoins(-amount);
+        progress.addCoins(amount.negate());
         markDirty(playerId);
         return true;
     }
 
-    public double getMapMultiplier(UUID playerId, String mapId) {
-        AscendPlayerProgress.MapProgress mapProgress = getMapProgress(playerId, mapId);
-        if (mapProgress == null) {
-            return 1.0;
+    // ========================================
+    // Atomic SQL Operations (Prevent Race Conditions)
+    // ========================================
+
+    /**
+     * Atomically add coins to a player directly in the database.
+     * Prevents race conditions with concurrent operations.
+     *
+     * @param playerId the player's UUID
+     * @param amount the amount to add (can be negative to subtract)
+     * @return true if the operation succeeded
+     */
+    public boolean atomicAddCoins(UUID playerId, BigDecimal amount) {
+        if (!DatabaseManager.getInstance().isInitialized()) {
+            // Fallback to in-memory operation
+            addCoins(playerId, amount);
+            return true;
         }
-        return Math.max(1.0, mapProgress.getMultiplier());
+
+        String sql = "UPDATE ascend_players SET coins = coins + ? WHERE uuid = ?";
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            stmt.setBigDecimal(1, amount);
+            stmt.setString(2, playerId.toString());
+            int rowsUpdated = stmt.executeUpdate();
+
+            // Update in-memory cache
+            if (rowsUpdated > 0) {
+                AscendPlayerProgress progress = players.get(playerId);
+                if (progress != null) {
+                    progress.addCoins(amount);
+                }
+            }
+
+            return rowsUpdated > 0;
+        } catch (SQLException e) {
+            LOGGER.at(Level.SEVERE).log("Failed to atomically add coins: " + e.getMessage());
+            return false;
+        }
     }
 
-    public double addMapMultiplier(UUID playerId, String mapId, double amount) {
+    /**
+     * Atomically spend coins with balance check (prevents negative balance).
+     * Returns false if insufficient funds.
+     *
+     * @param playerId the player's UUID
+     * @param amount the amount to spend (must be positive)
+     * @return true if the purchase succeeded (sufficient balance)
+     */
+    public boolean atomicSpendCoins(UUID playerId, BigDecimal amount) {
+        if (!DatabaseManager.getInstance().isInitialized()) {
+            // Fallback to in-memory operation
+            return spendCoins(playerId, amount);
+        }
+
+        String sql = "UPDATE ascend_players SET coins = coins - ? WHERE uuid = ? AND coins >= ?";
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            stmt.setBigDecimal(1, amount);
+            stmt.setString(2, playerId.toString());
+            stmt.setBigDecimal(3, amount);
+            int rowsUpdated = stmt.executeUpdate();
+
+            // Update in-memory cache if successful
+            if (rowsUpdated > 0) {
+                AscendPlayerProgress progress = players.get(playerId);
+                if (progress != null) {
+                    progress.addCoins(amount.negate());
+                }
+            }
+
+            return rowsUpdated > 0;
+        } catch (SQLException e) {
+            LOGGER.at(Level.SEVERE).log("Failed to atomically spend coins: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Atomically add to total coins earned (lifetime stat).
+     *
+     * @param playerId the player's UUID
+     * @param amount the amount to add
+     * @return true if the operation succeeded
+     */
+    public boolean atomicAddTotalCoinsEarned(UUID playerId, BigDecimal amount) {
+        if (!DatabaseManager.getInstance().isInitialized()) {
+            // Fallback to in-memory operation
+            addTotalCoinsEarned(playerId, amount);
+            return true;
+        }
+
+        String sql = "UPDATE ascend_players SET total_coins_earned = total_coins_earned + ? WHERE uuid = ?";
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            stmt.setBigDecimal(1, amount);
+            stmt.setString(2, playerId.toString());
+            int rowsUpdated = stmt.executeUpdate();
+
+            // Update in-memory cache
+            if (rowsUpdated > 0) {
+                AscendPlayerProgress progress = players.get(playerId);
+                if (progress != null) {
+                    progress.addTotalCoinsEarned(amount);
+                }
+            }
+
+            return rowsUpdated > 0;
+        } catch (SQLException e) {
+            LOGGER.at(Level.SEVERE).log("Failed to atomically add total coins earned: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Atomically add to map multiplier.
+     *
+     * @param playerId the player's UUID
+     * @param mapId the map ID
+     * @param amount the amount to add
+     * @return true if the operation succeeded
+     */
+    public boolean atomicAddMapMultiplier(UUID playerId, String mapId, BigDecimal amount) {
+        if (!DatabaseManager.getInstance().isInitialized()) {
+            // Fallback to in-memory operation
+            addMapMultiplier(playerId, mapId, amount);
+            return true;
+        }
+
+        String sql = "UPDATE ascend_player_maps SET multiplier = multiplier + ? WHERE player_uuid = ? AND map_id = ?";
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            stmt.setBigDecimal(1, amount);
+            stmt.setString(2, playerId.toString());
+            stmt.setString(3, mapId);
+            int rowsUpdated = stmt.executeUpdate();
+
+            // Update in-memory cache
+            if (rowsUpdated > 0) {
+                AscendPlayerProgress.MapProgress mapProgress = getMapProgress(playerId, mapId);
+                if (mapProgress != null) {
+                    mapProgress.addMultiplier(amount);
+                }
+            }
+
+            return rowsUpdated > 0;
+        } catch (SQLException e) {
+            LOGGER.at(Level.SEVERE).log("Failed to atomically add map multiplier: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Atomically set elevation level and reset coins to 0 (for elevation purchase).
+     *
+     * @param playerId the player's UUID
+     * @param newElevation the new elevation level
+     * @return true if the operation succeeded
+     */
+    public boolean atomicSetElevationAndResetCoins(UUID playerId, int newElevation) {
+        if (!DatabaseManager.getInstance().isInitialized()) {
+            // Fallback to in-memory operation
+            AscendPlayerProgress progress = getOrCreatePlayer(playerId);
+            progress.setElevationMultiplier(newElevation);
+            progress.setCoins(BigDecimal.ZERO);
+            markDirty(playerId);
+            return true;
+        }
+
+        String sql = "UPDATE ascend_players SET elevation_multiplier = ?, coins = 0 WHERE uuid = ?";
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            stmt.setInt(1, newElevation);
+            stmt.setString(2, playerId.toString());
+            int rowsUpdated = stmt.executeUpdate();
+
+            // Update in-memory cache
+            if (rowsUpdated > 0) {
+                AscendPlayerProgress progress = getOrCreatePlayer(playerId);
+                progress.setElevationMultiplier(newElevation);
+                progress.setCoins(BigDecimal.ZERO);
+            }
+
+            return rowsUpdated > 0;
+        } catch (SQLException e) {
+            LOGGER.at(Level.SEVERE).log("Failed to atomically set elevation and reset coins: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public BigDecimal getMapMultiplier(UUID playerId, String mapId) {
+        AscendPlayerProgress.MapProgress mapProgress = getMapProgress(playerId, mapId);
+        if (mapProgress == null) {
+            return BigDecimal.ONE;
+        }
+        return mapProgress.getMultiplier().max(BigDecimal.ONE);
+    }
+
+    public BigDecimal addMapMultiplier(UUID playerId, String mapId, BigDecimal amount) {
         AscendPlayerProgress.MapProgress mapProgress = getOrCreateMapProgress(playerId, mapId);
-        double value = mapProgress.addMultiplier(amount);
+        BigDecimal value = mapProgress.addMultiplier(amount);
         markDirty(playerId);
         return value;
     }
@@ -529,18 +735,19 @@ public class AscendPlayerStore {
         return progress.getSummitLevels();
     }
 
-    public double getSummitBonus(UUID playerId, SummitCategory category) {
+    public BigDecimal getSummitBonus(UUID playerId, SummitCategory category) {
         int level = getSummitLevel(playerId, category);
-        return category.getBonusForLevel(level);
+        // Convert double bonus to BigDecimal
+        return BigDecimal.valueOf(category.getBonusForLevel(level));
     }
 
-    public double getTotalCoinsEarned(UUID playerId) {
+    public BigDecimal getTotalCoinsEarned(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
-        return progress != null ? progress.getTotalCoinsEarned() : 0.0;
+        return progress != null ? progress.getTotalCoinsEarned() : BigDecimal.ZERO;
     }
 
-    public void addTotalCoinsEarned(UUID playerId, double amount) {
-        if (amount <= 0.0) {
+    public void addTotalCoinsEarned(UUID playerId, BigDecimal amount) {
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
             return;
         }
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
@@ -693,7 +900,7 @@ public class AscendPlayerStore {
         List<String> mapsWithRunners = new java.util.ArrayList<>();
 
         // Reset coins to 0
-        progress.setCoins(0.0);
+        progress.setCoins(BigDecimal.ZERO);
 
         // Process each map progress
         for (Map.Entry<String, AscendPlayerProgress.MapProgress> entry : progress.getMapProgress().entrySet()) {
@@ -707,7 +914,7 @@ public class AscendPlayerStore {
             mapProgress.setBestTimeMs(null);
 
             // Reset multiplier
-            mapProgress.setMultiplier(1.0);
+            mapProgress.setMultiplier(BigDecimal.ONE);
 
             // Reset completed manually
             mapProgress.setCompletedManually(false);
@@ -742,11 +949,11 @@ public class AscendPlayerStore {
         // Don't persist - this is session-only
     }
 
-    public double[] getMultiplierDisplayValues(UUID playerId, List<AscendMap> maps, int slotCount) {
+    public BigDecimal[] getMultiplierDisplayValues(UUID playerId, List<AscendMap> maps, int slotCount) {
         int slots = Math.max(0, slotCount);
-        double[] digits = new double[slots];
+        BigDecimal[] digits = new BigDecimal[slots];
         for (int i = 0; i < slots; i++) {
-            digits[i] = 1.0;
+            digits[i] = BigDecimal.ONE;
         }
         if (maps == null || maps.isEmpty() || slots == 0) {
             return digits;
@@ -766,15 +973,15 @@ public class AscendPlayerStore {
     }
 
     public long getMultiplierProduct(UUID playerId, List<AscendMap> maps, int slotCount) {
-        return (long) Math.floor(getMultiplierProductDecimal(playerId, maps, slotCount));
+        return getMultiplierProductDecimal(playerId, maps, slotCount).longValue();
     }
 
-    public double getMultiplierProductDecimal(UUID playerId, List<AscendMap> maps, int slotCount) {
-        double product = 1.0;
+    public BigDecimal getMultiplierProductDecimal(UUID playerId, List<AscendMap> maps, int slotCount) {
+        BigDecimal product = BigDecimal.ONE;
         int slots = Math.max(0, slotCount);
         if (maps == null || maps.isEmpty() || slots == 0) {
-            double elevation = getCalculatedElevationMultiplier(playerId);
-            return product * elevation;
+            BigDecimal elevation = BigDecimal.valueOf(getCalculatedElevationMultiplier(playerId));
+            return product.multiply(elevation, CALC_CTX);
         }
         int index = 0;
         for (AscendMap map : maps) {
@@ -784,20 +991,20 @@ public class AscendPlayerStore {
             if (map == null || map.getId() == null) {
                 continue;
             }
-            double value = getMapMultiplier(playerId, map.getId());
-            product *= Math.max(1.0, value);
+            BigDecimal value = getMapMultiplier(playerId, map.getId());
+            product = product.multiply(value.max(BigDecimal.ONE), CALC_CTX);
             index++;
         }
-        double elevation = getCalculatedElevationMultiplier(playerId);
-        return product * elevation;
+        BigDecimal elevation = BigDecimal.valueOf(getCalculatedElevationMultiplier(playerId));
+        return product.multiply(elevation, CALC_CTX);
     }
 
-    public double getCompletionPayout(UUID playerId, List<AscendMap> maps, int slotCount, String mapId, double bonusAmount) {
-        double product = 1.0;
+    public BigDecimal getCompletionPayout(UUID playerId, List<AscendMap> maps, int slotCount, String mapId, BigDecimal bonusAmount) {
+        BigDecimal product = BigDecimal.ONE;
         int slots = Math.max(0, slotCount);
         if (maps == null || maps.isEmpty() || slots == 0) {
-            double elevation = getCalculatedElevationMultiplier(playerId);
-            return product * elevation;
+            BigDecimal elevation = BigDecimal.valueOf(getCalculatedElevationMultiplier(playerId));
+            return product.multiply(elevation, CALC_CTX);
         }
         int index = 0;
         for (AscendMap map : maps) {
@@ -807,15 +1014,15 @@ public class AscendPlayerStore {
             if (map == null || map.getId() == null) {
                 continue;
             }
-            double value = getMapMultiplier(playerId, map.getId());
+            BigDecimal value = getMapMultiplier(playerId, map.getId());
             if (map.getId().equals(mapId)) {
-                value += bonusAmount;
+                value = value.add(bonusAmount, CALC_CTX);
             }
-            product *= Math.max(1.0, value);
+            product = product.multiply(value.max(BigDecimal.ONE), CALC_CTX);
             index++;
         }
-        double elevation = getCalculatedElevationMultiplier(playerId);
-        return product * elevation;
+        BigDecimal elevation = BigDecimal.valueOf(getCalculatedElevationMultiplier(playerId));
+        return product.multiply(elevation, CALC_CTX);
     }
 
     public void flushPendingSave() {
@@ -856,14 +1063,16 @@ public class AscendPlayerStore {
         String playerSql = """
             INSERT INTO ascend_players (uuid, coins, elevation_multiplier, ascension_count,
                 skill_tree_points, total_coins_earned, total_manual_runs, active_title,
-                ascension_started_at, fastest_ascension_ms)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ascension_started_at, fastest_ascension_ms, last_active_timestamp, has_unclaimed_passive)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 coins = VALUES(coins), elevation_multiplier = VALUES(elevation_multiplier),
                 ascension_count = VALUES(ascension_count), skill_tree_points = VALUES(skill_tree_points),
                 total_coins_earned = VALUES(total_coins_earned), total_manual_runs = VALUES(total_manual_runs),
                 active_title = VALUES(active_title), ascension_started_at = VALUES(ascension_started_at),
-                fastest_ascension_ms = VALUES(fastest_ascension_ms)
+                fastest_ascension_ms = VALUES(fastest_ascension_ms),
+                last_active_timestamp = VALUES(last_active_timestamp),
+                has_unclaimed_passive = VALUES(has_unclaimed_passive)
             """;
 
         String mapSql = """
@@ -913,11 +1122,11 @@ public class AscendPlayerStore {
 
                 // Save player base data
                 playerStmt.setString(1, playerId.toString());
-                playerStmt.setDouble(2, progress.getCoins());
+                playerStmt.setBigDecimal(2, progress.getCoins());
                 playerStmt.setInt(3, progress.getElevationMultiplier());
                 playerStmt.setInt(4, progress.getAscensionCount());
                 playerStmt.setInt(5, progress.getSkillTreePoints());
-                playerStmt.setDouble(6, progress.getTotalCoinsEarned());
+                playerStmt.setBigDecimal(6, progress.getTotalCoinsEarned());
                 playerStmt.setInt(7, progress.getTotalManualRuns());
                 playerStmt.setString(8, progress.getActiveTitle());
                 if (progress.getAscensionStartedAt() != null) {
@@ -930,6 +1139,13 @@ public class AscendPlayerStore {
                 } else {
                     playerStmt.setNull(10, java.sql.Types.BIGINT);
                 }
+                // Set passive earnings fields (positions 11, 12)
+                if (progress.getLastActiveTimestamp() != null) {
+                    playerStmt.setLong(11, progress.getLastActiveTimestamp());
+                } else {
+                    playerStmt.setNull(11, java.sql.Types.BIGINT);
+                }
+                playerStmt.setBoolean(12, progress.hasUnclaimedPassive());
                 playerStmt.addBatch();
 
                 // Save map progress
@@ -942,7 +1158,7 @@ public class AscendPlayerStore {
                     mapStmt.setBoolean(5, mapProgress.hasRobot());
                     mapStmt.setInt(6, mapProgress.getRobotSpeedLevel());
                     mapStmt.setInt(7, mapProgress.getRobotStars());
-                    mapStmt.setDouble(8, mapProgress.getMultiplier());
+                    mapStmt.setBigDecimal(8, mapProgress.getMultiplier());
                     if (mapProgress.getBestTimeMs() != null) {
                         mapStmt.setLong(9, mapProgress.getBestTimeMs());
                     } else {
@@ -983,5 +1199,31 @@ public class AscendPlayerStore {
             LOGGER.at(Level.SEVERE).log("Failed to save ascend players: " + e.getMessage());
             dirtyPlayers.addAll(toSave);
         }
+    }
+
+    // ========================================
+    // Passive Earnings
+    // ========================================
+
+    public Long getLastActiveTimestamp(UUID playerId) {
+        AscendPlayerProgress progress = players.get(playerId);
+        return progress != null ? progress.getLastActiveTimestamp() : null;
+    }
+
+    public void setLastActiveTimestamp(UUID playerId, Long timestamp) {
+        AscendPlayerProgress progress = getOrCreatePlayer(playerId);
+        progress.setLastActiveTimestamp(timestamp);
+        markDirty(playerId);
+    }
+
+    public boolean hasUnclaimedPassive(UUID playerId) {
+        AscendPlayerProgress progress = players.get(playerId);
+        return progress != null && progress.hasUnclaimedPassive();
+    }
+
+    public void setHasUnclaimedPassive(UUID playerId, boolean hasUnclaimed) {
+        AscendPlayerProgress progress = getOrCreatePlayer(playerId);
+        progress.setHasUnclaimedPassive(hasUnclaimed);
+        markDirty(playerId);
     }
 }
