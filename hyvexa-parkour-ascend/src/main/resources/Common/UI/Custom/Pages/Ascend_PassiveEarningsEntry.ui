@@ -11,7 +11,8 @@ Group {
 
   // Content
   Group {
-    Anchor: (Left: 12, Right: 0, Top: 0, Bottom: 0);
+    Anchor: (Top: 0, Bottom: 0);
+    FlexWeight: 1;
     LayoutMode: Top;
     Padding: (Left: 8, Right: 8, Top: 6, Bottom: 6);
     Background: #1a2530(0.6);
@@ -22,19 +23,44 @@ Group {
       LayoutMode: Left;
 
       Label #MapName {
-        Style: (FontSize: 14, TextColor: #e2e8f0, RenderBold: true);
+        Style: (FontSize: 16, TextColor: #e2e8f0, RenderBold: true);
         Text: "Map Name";
       }
 
-      Label #Stars {
-        Anchor: (Left: 8);
-        Style: (FontSize: 12, TextColor: #ffd166);
-        Text: "★★★";
+      Group #StarContainer {
+        Anchor: (Left: 8, Height: 14);
+        LayoutMode: Left;
+
+        Group #Star1 {
+          Anchor: (Width: 14, Height: 14);
+          Background: (TexturePath: "../Textures/star.png");
+          Visible: false;
+        }
+        Group #Star2 {
+          Anchor: (Left: 2, Width: 14, Height: 14);
+          Background: (TexturePath: "../Textures/star.png");
+          Visible: false;
+        }
+        Group #Star3 {
+          Anchor: (Left: 2, Width: 14, Height: 14);
+          Background: (TexturePath: "../Textures/star.png");
+          Visible: false;
+        }
+        Group #Star4 {
+          Anchor: (Left: 2, Width: 14, Height: 14);
+          Background: (TexturePath: "../Textures/star.png");
+          Visible: false;
+        }
+        Group #Star5 {
+          Anchor: (Left: 2, Width: 14, Height: 14);
+          Background: (TexturePath: "../Textures/star.png");
+          Visible: false;
+        }
       }
 
       Label #SpeedLevel {
         Anchor: (Left: 8);
-        Style: (FontSize: 11, TextColor: #94a3b8);
+        Style: (FontSize: 13, TextColor: #94a3b8);
         Text: "Lv.10";
       }
     }
@@ -45,20 +71,20 @@ Group {
       LayoutMode: Left;
 
       Label #Runs {
-        Style: (FontSize: 12, TextColor: #9fb0ba);
+        Style: (FontSize: 14, TextColor: #9fb0ba);
         Text: "0 runs";
       }
 
       Label #Multiplier {
         Anchor: (Left: 12);
-        Style: (FontSize: 12, TextColor: #7c3aed);
+        Style: (FontSize: 14, TextColor: #7c3aed);
         Text: "+0.0 mult";
       }
 
       Label #Coins {
         Anchor: (Left: 12);
-        Style: (FontSize: 12, TextColor: #10b981, RenderBold: true);
-        Text: "🪙 0";
+        Style: (FontSize: 14, TextColor: #10b981, RenderBold: true);
+        Text: "0";
       }
     }
   }
