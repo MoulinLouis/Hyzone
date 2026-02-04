@@ -28,22 +28,33 @@ This document provides a factual overview of the economy balancing in Ascend mod
 
 ### Runner Multiplier (Automatic)
 - **Base gain per completion:** +0.1
-- **Star scaling:** Gain doubles with each star evolution
-  - 0★: +0.1 per completion
-  - 1★: +0.2 per completion
-  - 2★: +0.4 per completion
-  - 3★: +0.8 per completion
-  - 4★: +1.6 per completion
-  - 5★: +3.2 per completion
+- **Evolution formula:** `0.1 × (2 + evolutionBonus)^stars`
+- **Base star scaling (without Summit Evolution Power):**
+  - 0★: +0.1 per completion (base)
+  - 1★: +0.2 per completion (2^1 = 2)
+  - 2★: +0.4 per completion (2^2 = 4)
+  - 3★: +0.8 per completion (2^3 = 8)
+  - 4★: +1.6 per completion (2^4 = 16)
+  - 5★: +3.2 per completion (2^5 = 32)
+- **With Summit Evolution Power (level 10, +2.0 bonus):**
+  - Evolution base becomes 4 (2 + 2.0)
+  - 5★: +102.4 per completion (4^5 = 1024)
 
 ### Multiplier Slots
 - **Total slots:** 5 (one per map)
 - **Product formula:** Total multiplier = slot₁ × slot₂ × slot₃ × slot₄ × slot₅
 
-### Elevation Multiplier
-- **Direct multiplier:** Elevation level = multiplier value
-- **Example:** Elevation ×100 = 100× coin multiplier
+### Elevation Multiplier (Exponential)
+- **Formula:** `level × 1.02^level`
+- **Scaling:**
+  - Level 1 → ×1.02
+  - Level 10 → ×12.2
+  - Level 50 → ×134
+  - Level 100 → ×724
+  - Level 200 → ×10,500
+  - Level 500 → ×9.6M
 - **Applied after:** Map multipliers (multiplicative)
+- **Design intent:** Explosive late-game scaling rewards prestige investment
 
 ---
 
@@ -76,11 +87,13 @@ Speed upgrade effectiveness varies by map difficulty:
 ```
 totalLevel = stars × 20 + speedLevel
 effectiveLevel = totalLevel + mapOffset
-baseCost = 20 × 2.4^effectiveLevel + effectiveLevel × 12
+baseCost = 5 × 2^effectiveLevel + effectiveLevel × 10
 finalCost = baseCost × mapMultiplier
 ```
 
 **Key concept:** Costs are based on **total levels purchased** across all evolutions, not just current speed level. This prevents cost resets after evolution.
+
+**Growth rate:** ~2× per level (smooth, consistent progression with no artificial jumps).
 
 ### Map-Specific Scaling
 
@@ -94,35 +107,31 @@ Each map has an offset and multiplier applied to upgrade costs:
 | Vert | 3 | +3 | ×2.6 |
 | Bleu | 4 | +4 | ×3.5 |
 
-### Early-Game Boost
+### Cost Progression Table (Map 0, Rouge)
 
-**0★ Levels 0-4 only:** Cost divided by 4
+Smooth ~2× growth per level, no artificial boosts or jumps:
 
-This ensures smooth onboarding during the first 2-3 minutes of gameplay. The boost does NOT apply after evolution.
-
-### Continuous Cost Progression Table (Map 0, Rouge)
-
-Costs continue to increase after evolution - no reset:
-
-| Stars | Speed Level | Total Level | Upgrade Cost |
-|-------|-------------|-------------|--------------|
-| 0★ | 0 | 0 | **5** (÷4 early boost) |
-| 0★ | 5 | 5 | **1,653** |
-| 0★ | 10 | 10 | **127K** |
-| 0★ | 15 | 15 | **10.1M** |
-| 0★ | 19 | 19 | **318M** |
-| 1★ | 0 | 20 | **804M** |
-| 1★ | 10 | 30 | **5.1T** |
-| 1★ | 19 | 39 | **160T** |
-| 2★ | 0 | 40 | **405T** |
-| 2★ | 10 | 50 | **2.6 Quadrillion** |
-| 3★ | 0 | 60 | **1.0 Quintillion** |
-| 4★ | 0 | 80 | **260 Quintillion** |
-| 5★ | 0 | 100 | **66 Sextillion** |
+| Stars | Speed Level | Total Level | Upgrade Cost | Ratio |
+|-------|-------------|-------------|--------------|-------|
+| 0★ | 0 | 0 | **5** | - |
+| 0★ | 1 | 1 | **20** | 4× |
+| 0★ | 2 | 2 | **40** | 2× |
+| 0★ | 3 | 3 | **70** | 1.75× |
+| 0★ | 4 | 4 | **120** | 1.7× |
+| 0★ | 5 | 5 | **210** | 1.75× |
+| 0★ | 10 | 10 | **5,220** | ~2× |
+| 0★ | 15 | 15 | **164K** | ~2× |
+| 0★ | 19 | 19 | **2.6M** | ~2× |
+| 1★ | 0 | 20 | **5.2M** | 2× |
+| 1★ | 10 | 30 | **5.4B** | ~2× |
+| 2★ | 0 | 40 | **5.5T** | ~2× |
+| 3★ | 0 | 60 | **5.8 Quadrillion** | ~2× |
+| 5★ | 0 | 100 | **6.3 Nonillion** | ~2× |
 
 **Design rationale:**
 - **No cost reset after evolution:** At 1★ Lv.0, the cost is what 0★ Lv.20 would have cost
-- **Pure exponential growth:** Each level adds ×2.4 to the cost regardless of stars
+- **Smooth ~2× growth:** Each level roughly doubles the cost (consistent, predictable)
+- **No artificial boosts or jumps:** The formula is clean with no special cases
 - **Evolution value comes from multiplier gains:** Stars double the multiplier gain (0.1 → 0.2 → 0.4...) without affecting cost progression
 
 ---
@@ -262,6 +271,59 @@ Where:
 
 ---
 
+## Summit System
+
+Summit converts coins into permanent category bonuses, resetting coins and elevation.
+
+### Categories
+
+| Category | Bonus Type | Per Level | Max Level (10) |
+|----------|-----------|-----------|----------------|
+| **Coin Flow** | Multiplicative | ×1.20 | ×6.19 |
+| **Runner Speed** | Additive | +15% | +150% |
+| **Evolution Power** | Evolution base | +0.20 | +2.0 base |
+
+### Coin Flow (Multiplicative)
+
+**Formula:** `1.20^level`
+
+| Level | Multiplier |
+|-------|------------|
+| 0 | ×1.00 |
+| 1 | ×1.20 |
+| 5 | ×2.49 |
+| 10 | ×6.19 |
+
+**Applied to:** All coin earnings (runners, manual, passive)
+
+### Evolution Power
+
+**Formula:** Evolution base = `2 + (0.20 × level)`
+
+Increases the base of the runner evolution formula:
+- `0.1 × (evolutionBase)^stars`
+
+| Summit Level | Evolution Base | 5★ Multiplier Gain |
+|--------------|---------------|-------------------|
+| 0 | 2.0 | +3.2/run |
+| 5 | 3.0 | +24.3/run |
+| 10 | 4.0 | +102.4/run |
+
+**Applied to:** Runner multiplier gains only (not manual runs)
+
+### Level Thresholds
+
+| Level | Coins Required (Cumulative) |
+|-------|---------------------------|
+| 1 | 10K |
+| 2 | 60K |
+| 3 | 260K |
+| 4 | 1.26M |
+| 5 | 6.26M |
+| 10 | 6.406B |
+
+---
+
 ## Strategic Evolution System
 
 Evolution provides a clear benefit with continuous cost progression.
@@ -378,8 +440,9 @@ Evolution provides a clear benefit with continuous cost progression.
 ### Formula Consistency
 
 All exponential formulas use consistent growth rates:
-- **Elevation:** 1.15^level (15% growth)
-- **Upgrades:** 2.4^totalLevel (140% growth per level, continuous across evolutions)
+- **Elevation multiplier:** level × 1.02^level (exponential late-game scaling)
+- **Elevation cost:** 1.15^level (15% growth)
+- **Upgrades:** 2^totalLevel (100% growth per level, smooth and predictable)
 - **Star gain:** 2^stars (100% growth per evolution)
 
 Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure continuous progression after evolution.
@@ -387,6 +450,13 @@ Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure conti
 ---
 
 ## Version History
+
+- **2026-02-04 (v3):** Exponential elevation and Summit refactoring
+  - Elevation multiplier changed from `level` to `level × 1.02^level`
+  - Summit Coin Flow changed from additive (+20%/level) to multiplicative (×1.20/level)
+  - Summit Manual Mastery renamed to Evolution Power (+0.20 evolution base/level)
+  - Evolution Power affects runner multiplier gains via formula: `0.1 × (2 + bonus)^stars`
+  - Simplified upgrade cost formula to `5 × 2^level + level × 10` (smooth ~2× growth, no boosts)
 
 - **2026-02-04 (v2):** Continuous cost progression after evolution
   - **Cost formula now uses total levels:** `totalLevel = stars × 20 + speedLevel`

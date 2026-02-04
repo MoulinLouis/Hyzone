@@ -176,13 +176,13 @@ public class StatsPage extends BaseAscendPage {
         java.math.BigDecimal digitsProduct = playerStore.getMultiplierProductDecimal(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
         double elevation = playerStore.getCalculatedElevationMultiplier(playerId);
 
-        // Get summit coin flow bonus
-        java.math.BigDecimal coinFlowBonus = java.math.BigDecimal.ZERO;
+        // Get summit coin flow multiplier (multiplicative: 1.20^level)
+        java.math.BigDecimal coinFlowMultiplier = java.math.BigDecimal.ONE;
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         if (plugin != null) {
             SummitManager summitManager = plugin.getSummitManager();
             if (summitManager != null) {
-                coinFlowBonus = summitManager.getCoinFlowBonus(playerId);
+                coinFlowMultiplier = summitManager.getCoinFlowMultiplier(playerId);
             }
         }
 
@@ -215,7 +215,7 @@ public class StatsPage extends BaseAscendPage {
 
             // Base reward with multipliers (convert BigDecimal to double for display calculation)
             long baseReward = map.getEffectiveBaseReward();
-            double coinsPerRun = baseReward * digitsProduct.doubleValue() * elevation * (1.0 + coinFlowBonus.doubleValue());
+            double coinsPerRun = baseReward * digitsProduct.doubleValue() * elevation * coinFlowMultiplier.doubleValue();
 
             totalCoinsPerSec += runsPerSec * coinsPerRun;
         }
@@ -231,11 +231,11 @@ public class StatsPage extends BaseAscendPage {
         java.math.BigDecimal[] digits = playerStore.getMultiplierDisplayValues(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
         double elevation = playerStore.getCalculatedElevationMultiplier(playerId);
 
-        // Get summit coin flow bonus
-        double coinFlowBonus = 0.0;
+        // Get summit coin flow multiplier (multiplicative: 1.20^level)
+        double coinFlowMultiplier = 1.0;
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         if (plugin != null && plugin.getSummitManager() != null) {
-            coinFlowBonus = plugin.getSummitManager().getCoinFlowBonus(playerId).doubleValue();
+            coinFlowMultiplier = plugin.getSummitManager().getCoinFlowMultiplier(playerId).doubleValue();
         }
 
         // Calculate digits product (convert BigDecimal to double for display)
@@ -244,11 +244,10 @@ public class StatsPage extends BaseAscendPage {
             digitsProduct *= Math.max(1.0, d.doubleValue());
         }
 
-        double summitMultiplier = 1.0 + coinFlowBonus;
-        double total = digitsProduct * elevation * summitMultiplier;
+        double total = digitsProduct * elevation * coinFlowMultiplier;
 
         return String.format(Locale.US, "%.1fx \u00d7 %.1fx \u00d7 %.1fx = %.1fx",
-            digitsProduct, elevation, summitMultiplier, total);
+            digitsProduct, elevation, coinFlowMultiplier, total);
     }
 
     private String formatDuration(long ms) {

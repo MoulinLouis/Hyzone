@@ -170,15 +170,45 @@ public final class AscendConstants {
         };
     }
 
+    /**
+     * Get the multiplier increment for a runner based on its stars (evolution level).
+     * Base formula: 0.1 × 2^stars
+     * With Evolution Power: 0.1 × (2 + evolutionBonus)^stars
+     * @param stars Runner's evolution level (0-5)
+     * @return Multiplier increment per completion
+     */
     public static BigDecimal getRunnerMultiplierIncrement(int stars) {
-        // Base increment doubles with each star: 0.01, 0.02, 0.04, 0.08, 0.16, 0.32
+        return getRunnerMultiplierIncrement(stars, 0.0);
+    }
+
+    /**
+     * Get the multiplier increment for a runner with Evolution Power bonus.
+     * Formula: 0.1 × (2 + evolutionBonus)^stars
+     * At Summit Evolution Power level 10: base becomes 4, so 4^5 = 1024 instead of 32
+     * @param stars Runner's evolution level (0-5)
+     * @param evolutionBonus Bonus from Summit Evolution Power (0.20 per level)
+     * @return Multiplier increment per completion
+     */
+    public static BigDecimal getRunnerMultiplierIncrement(int stars, double evolutionBonus) {
         BigDecimal baseIncrement = new BigDecimal("0.1");  // RUNNER_MULTIPLIER_INCREMENT
 
-        // 2^stars using BigDecimal.pow()
-        BigDecimal twoToStars = new BigDecimal("2").pow(Math.max(0, stars), MULTIPLIER_CTX);
+        // Evolution base: 2 + evolutionBonus
+        // At Summit level 10 with +0.20/level: 2 + 2.0 = 4
+        BigDecimal evolutionBase = new BigDecimal("2").add(
+            BigDecimal.valueOf(evolutionBonus), MULTIPLIER_CTX);
 
-        return baseIncrement.multiply(twoToStars, MULTIPLIER_CTX)
-                           .setScale(20, RoundingMode.HALF_UP); // 20 decimals for multipliers
+        // (evolutionBase)^stars
+        BigDecimal starPower;
+        int safeStars = Math.max(0, stars);
+        if (safeStars == 0) {
+            starPower = BigDecimal.ONE;
+        } else {
+            // Use double for pow since BigDecimal.pow only works with integers
+            starPower = BigDecimal.valueOf(Math.pow(evolutionBase.doubleValue(), safeStars));
+        }
+
+        return baseIncrement.multiply(starPower, MULTIPLIER_CTX)
+                           .setScale(20, RoundingMode.HALF_UP);
     }
 
     // Max speed level per evolution cycle (used for total level calculation)
@@ -188,7 +218,9 @@ public final class AscendConstants {
      * Calculate runner speed upgrade cost.
      * Formula: baseCost(totalLevel + mapOffset) × mapMultiplier
      * Where totalLevel = stars × MAX_SPEED_LEVEL + speedLevel (accumulates across evolutions)
-     * and baseCost(L) = round(20 × 2.4^L + L × 12)
+     * and baseCost(L) = 5 × 2^L + L × 10
+     *
+     * This gives a smooth ~2x growth per level with no artificial jumps.
      */
     public static BigDecimal getRunnerUpgradeCost(int speedLevel, int mapDisplayOrder, int stars) {
         // Get map-specific scaling parameters
@@ -202,23 +234,19 @@ public final class AscendConstants {
         // Apply offset to total level for base cost calculation
         int effectiveLevel = totalLevelsBought + offset;
 
-        // Base formula: 20 × 2.4^level + level × 12 (pure BigDecimal)
-        BigDecimal twenty = new BigDecimal("20");
-        BigDecimal twoPointFour = new BigDecimal("2.4");
-        BigDecimal twelve = new BigDecimal("12");
+        // Base formula: 5 × 2^level + level × 10
+        // Smooth ~2x growth per level, no artificial boosts or jumps
+        BigDecimal five = new BigDecimal("5");
+        BigDecimal two = new BigDecimal("2");
+        BigDecimal ten = new BigDecimal("10");
 
-        BigDecimal exponentialPart = twoPointFour.pow(effectiveLevel, CALC_CTX);
-        BigDecimal linearPart = BigDecimal.valueOf(effectiveLevel).multiply(twelve, CALC_CTX);
+        BigDecimal exponentialPart = two.pow(effectiveLevel, CALC_CTX);
+        BigDecimal linearPart = BigDecimal.valueOf(effectiveLevel).multiply(ten, CALC_CTX);
 
-        BigDecimal baseCost = twenty.multiply(exponentialPart, CALC_CTX).add(linearPart, CALC_CTX);
+        BigDecimal baseCost = five.multiply(exponentialPart, CALC_CTX).add(linearPart, CALC_CTX);
 
         // Apply map multiplier
         baseCost = baseCost.multiply(mapMultiplier, CALC_CTX);
-
-        // Early game boost: first 5 levels cost ÷4 (only for first evolution cycle)
-        if (stars == 0 && speedLevel <= 4) {
-            baseCost = baseCost.divide(new BigDecimal("4"), CALC_CTX);
-        }
 
         return baseCost.setScale(0, RoundingMode.CEILING);
     }
@@ -352,9 +380,9 @@ public final class AscendConstants {
     // ========================================
 
     public enum SummitCategory {
-        COIN_FLOW("Coin Flow", 0.20),      // +20% base coin earnings per level
-        RUNNER_SPEED("Runner Speed", 0.15), // +15% runner completion speed per level
-        MANUAL_MASTERY("Manual Mastery", 0.25); // +25% manual run multiplier per level
+        COIN_FLOW("Coin Flow", 0.20),       // ×1.20^level multiplicative coin earnings
+        RUNNER_SPEED("Runner Speed", 0.15), // +15% runner completion speed per level (additive)
+        EVOLUTION_POWER("Evolution Power", 0.20); // +0.20 evolution base per level
 
         private final String displayName;
         private final double bonusPerLevel;
@@ -372,8 +400,21 @@ public final class AscendConstants {
             return bonusPerLevel;
         }
 
+        /**
+         * Get the bonus for a given level.
+         * - COIN_FLOW: Returns the multiplicative factor (1.20^level), e.g., level 5 → 2.49
+         * - RUNNER_SPEED: Returns additive bonus (0.15 × level)
+         * - EVOLUTION_POWER: Returns evolution base bonus (0.20 × level)
+         */
         public double getBonusForLevel(int level) {
-            return bonusPerLevel * Math.max(0, level);
+            int safeLevel = Math.max(0, level);
+            if (this == COIN_FLOW) {
+                // Multiplicative: 1.20^level
+                // Returns the multiplier directly (e.g., 1.0 at level 0, 2.49 at level 5)
+                return Math.pow(1.0 + bonusPerLevel, safeLevel);
+            }
+            // Additive: bonusPerLevel × level
+            return bonusPerLevel * safeLevel;
         }
     }
 
