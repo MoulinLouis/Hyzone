@@ -181,18 +181,26 @@ public final class AscendConstants {
                            .setScale(20, RoundingMode.HALF_UP); // 20 decimals for multipliers
     }
 
+    // Max speed level per evolution cycle (used for total level calculation)
+    public static final int MAX_SPEED_LEVEL = 20;
+
     /**
      * Calculate runner speed upgrade cost.
-     * Formula: baseCost(level + mapOffset) × mapMultiplier × starMultiplier
-     * Where baseCost(L) = round(20 × 2.4^L + L × 12)
+     * Formula: baseCost(totalLevel + mapOffset) × mapMultiplier
+     * Where totalLevel = stars × MAX_SPEED_LEVEL + speedLevel (accumulates across evolutions)
+     * and baseCost(L) = round(20 × 2.4^L + L × 12)
      */
     public static BigDecimal getRunnerUpgradeCost(int speedLevel, int mapDisplayOrder, int stars) {
         // Get map-specific scaling parameters
         int offset = getMapUpgradeOffset(mapDisplayOrder);
         BigDecimal mapMultiplier = BigDecimal.valueOf(getMapUpgradeMultiplier(mapDisplayOrder));
 
-        // Apply offset to level for base cost calculation
-        int effectiveLevel = speedLevel + offset;
+        // Calculate total levels bought across all evolutions
+        // Each evolution represents MAX_SPEED_LEVEL levels already purchased
+        int totalLevelsBought = stars * MAX_SPEED_LEVEL + speedLevel;
+
+        // Apply offset to total level for base cost calculation
+        int effectiveLevel = totalLevelsBought + offset;
 
         // Base formula: 20 × 2.4^level + level × 12 (pure BigDecimal)
         BigDecimal twenty = new BigDecimal("20");
@@ -207,15 +215,8 @@ public final class AscendConstants {
         // Apply map multiplier
         baseCost = baseCost.multiply(mapMultiplier, CALC_CTX);
 
-        // Star multiplier: ×2.2 per star
-        if (stars > 0) {
-            BigDecimal twoPointTwo = new BigDecimal("2.2");
-            BigDecimal starMultiplier = twoPointTwo.pow(stars, CALC_CTX);
-            baseCost = baseCost.multiply(starMultiplier, CALC_CTX);
-        }
-
-        // Early game boost: levels 0-4 cost ÷4
-        if (speedLevel <= 4) {
+        // Early game boost: first 5 levels cost ÷4 (only for first evolution cycle)
+        if (stars == 0 && speedLevel <= 4) {
             baseCost = baseCost.divide(new BigDecimal("4"), CALC_CTX);
         }
 
