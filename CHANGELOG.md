@@ -7,6 +7,13 @@
 - **Ascend: Access whitelist** - Control who can access Ascend mode via Hub (`/as admin whitelist`)
 
 ### Changed
+- **Ascend: Summit now resets progress like elevation** - Summit resets coins, elevation, multipliers, map unlocks, and runners (keeps Summit bonus)
+- **Ascend: Exponential elevation multiplier** - Formula changed from `level` to `level × 1.02^level` for explosive late-game scaling
+- **Ascend: Summit Coin Flow is multiplicative** - Now ×1.20 per level (compounds) instead of +20% additive
+- **Ascend: Manual Mastery → Evolution Power** - Increases runner evolution base (+0.20/level), affects runner multiplier gains instead of manual runs
+- **Ascend: Simplified runner upgrade costs** - New formula `5 × 2^level` gives smooth ~2× growth per level with no artificial boosts
+
+### Changed
 - **Ascend: Runner upgrade costs continue after evolution** - No more cost reset when evolving
 - **Ascend: Economy uses BigDecimal** - Supports values beyond 1 trillion without precision loss
 - **Ascend: Map unlock at runner level 5** (was 3)
@@ -14,6 +21,7 @@
 - **Ascend: Elevation menu simplified** - Shows progression toward next multiplier
 
 ### Fixed
+- **Ascend: PB preserved on progress reset** - Ghost recordings (PB times) now persist when using "Clear Progress", allowing runners to be rebought with original PB
 - **Ascend: UI crash with external NPCs** - Menus no longer crash when interacting with NPCDialog after opening
   - Mid-game progression (levels 10-20) significantly slower but still achievable
   - Late-game (30+) requires substantial coin generation infrastructure

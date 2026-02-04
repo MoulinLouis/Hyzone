@@ -14,6 +14,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants.SummitCategory;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendPlayerStore;
+import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.summit.SummitManager;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.util.FormatUtils;
@@ -65,7 +66,7 @@ public class SummitPage extends BaseAscendPage {
         SummitCategory[] categories = {
             SummitCategory.COIN_FLOW,
             SummitCategory.RUNNER_SPEED,
-            SummitCategory.MANUAL_MASTERY
+            SummitCategory.EVOLUTION_POWER
         };
 
         for (int i = 0; i < categories.length; i++) {
@@ -90,7 +91,7 @@ public class SummitPage extends BaseAscendPage {
 
             // Current bonus
             double currentBonus = category.getBonusForLevel(currentLevel);
-            String bonusText = "Current Bonus: " + formatPercent(currentBonus);
+            String bonusText = "Current Bonus: " + formatBonus(category, currentBonus);
             commandBuilder.set("#CategoryCards[" + i + "] #CategoryBonus.Text", bonusText);
 
             // Level and preview
@@ -158,22 +159,34 @@ public class SummitPage extends BaseAscendPage {
             return;
         }
 
-        int newLevel = summitManager.performSummit(playerId, category);
-        if (newLevel < 0) {
+        SummitManager.SummitResult result = summitManager.performSummit(playerId, category);
+        if (!result.succeeded()) {
             player.sendMessage(Message.raw("[Summit] Summit failed.")
                 .color(SystemMessageUtils.SECONDARY));
             return;
         }
 
+        // Despawn all runners (player loses them on Summit, like elevation)
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin != null) {
+            RobotManager robotManager = plugin.getRobotManager();
+            if (robotManager != null && !result.mapsWithRunners().isEmpty()) {
+                for (String mapId : result.mapsWithRunners()) {
+                    robotManager.despawnRobot(playerId, mapId);
+                }
+            }
+        }
+
         player.sendMessage(Message.raw("[Summit] " + category.getDisplayName() + " Lv." + preview.currentLevel()
-            + " → Lv." + newLevel + " (+" + preview.levelGain() + ")")
+            + " → Lv." + result.newLevel() + " (+" + preview.levelGain() + ")")
             .color(SystemMessageUtils.SUCCESS));
-        player.sendMessage(Message.raw("[Summit] Bonus: " + formatPercent(preview.currentBonus())
-            + " → " + formatPercent(preview.newBonus()))
+        player.sendMessage(Message.raw("[Summit] Bonus: " + formatBonus(category, preview.currentBonus())
+            + " → " + formatBonus(category, preview.newBonus()))
             .color(SystemMessageUtils.SUCCESS));
+        player.sendMessage(Message.raw("[Summit] Progress reset: elevation, multipliers, unlocks, runners")
+            .color(SystemMessageUtils.SECONDARY));
 
         // Check achievements
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         if (plugin != null && plugin.getAchievementManager() != null) {
             plugin.getAchievementManager().checkAndUnlockAchievements(playerId, player);
         }
@@ -195,10 +208,26 @@ public class SummitPage extends BaseAscendPage {
 
     private String getCategoryDescription(SummitCategory category) {
         return switch (category) {
-            case COIN_FLOW -> "Increases base coin earnings (" + formatBonusPerLevel(category) + " per level)";
-            case RUNNER_SPEED -> "Increases runner completion speed (" + formatBonusPerLevel(category) + " per level)";
-            case MANUAL_MASTERY -> "Increases manual run multiplier gain (" + formatBonusPerLevel(category) + " per level)";
+            case COIN_FLOW -> "Multiplies coin earnings (×1.20 per level)";
+            case RUNNER_SPEED -> "Increases runner completion speed (+15% per level)";
+            case EVOLUTION_POWER -> "Increases runner evolution power (+0.20 base per level)";
         };
+    }
+
+    /**
+     * Format a bonus value for display based on category type.
+     * COIN_FLOW shows as multiplier (×2.49), others show as percent (+150%)
+     */
+    private String formatBonus(SummitCategory category, double value) {
+        if (category == SummitCategory.COIN_FLOW) {
+            // Show as multiplier
+            return String.format(Locale.US, "×%.2f", value);
+        } else if (category == SummitCategory.EVOLUTION_POWER) {
+            // Show as evolution base bonus
+            return String.format(Locale.US, "+%.2f base", value);
+        }
+        // Default: show as percent (for RUNNER_SPEED)
+        return String.format(Locale.US, "+%.0f%%", value * 100);
     }
 
     private String formatPercent(double value) {
