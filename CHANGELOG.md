@@ -2,97 +2,19 @@
 
 ## [Unreleased]
 
-### Changed
-- **Ascend: Migrated economy from double to BigDecimal for exact precision**
-  - All coin values now use `BigDecimal` for exact arithmetic (no floating-point errors)
-  - Database schema updated: `DOUBLE` columns migrated to `DECIMAL(65,2)` for coins, `DECIMAL(65,20)` for multipliers
-  - Supports values beyond 1 trillion (10^12) without precision loss
-  - All economy formulas use pure BigDecimal arithmetic (no `Math.pow()` or double intermediates)
-  - Added atomic SQL operations to prevent race conditions with concurrent player operations
-    - `atomicAddCoins()`, `atomicSpendCoins()`, `atomicAddTotalCoinsEarned()`, `atomicAddMapMultiplier()`, `atomicSetElevationAndResetCoins()`
-  - All UI purchase operations now use atomic database updates for transaction safety
-  - Formula methods updated: `getElevationLevelUpCost()`, `calculateElevationPurchase()`, `calculateSummitLevel()`, `getRunnerMultiplierIncrement()`, `getRunnerUpgradeCost()`
-  - Bonus methods now return `BigDecimal`: `getCoinFlowBonus()`, `getRunnerSpeedBonus()`, `getManualMasteryBonus()`
-  - **All compilation errors fixed**: Core implementation and all UI files updated
-    - Data layer: `AscendPlayerProgress`, `AscendPlayerStore`, `AscendDatabaseSetup`
-    - Business logic: `AscendRunTracker`, `RobotManager`, `SummitManager`, `AscensionManager`
-    - Display layer: `AscendHud` (including `updateEconomy`, `updateAscensionQuest`), `AchievementManager`, `FormatUtils`
-    - UI pages: `AscendMapSelectPage`, `ElevationPage`, `SummitPage`, `AscensionPage`, `StatsPage`, `AscendAdminCoinsPage`
-    - Plugin integration: `ParkourAscendPlugin`
-    - Fixed all type mismatches: `double` → `BigDecimal`, `long` → `BigDecimal` where needed
-    - Fixed all comparisons: primitive operators → `.compareTo()`
-    - Fixed all arithmetic: primitive operators → `.add()`, `.subtract()`, `.multiply()`
-    - Fixed display conversions: added `.doubleValue()` for UI calculations
-    - Fixed bonus method handling: `SummitManager` returns `BigDecimal`, `AscensionManager.getRunnerSpeedBonus()` returns `double`
-  - Migration pattern documented in `docs/BIGDECIMAL_MIGRATION_STATUS.md` for future reference
-- **Ascend: Map unlock requirement increased from 3 to 5 runner upgrades** - Next map unlocks after upgrading runner 5 times instead of 3
-- **Ascend: Major economy rebalance for exponential progression feel**
-  - **Runner multiplier gains increased 10×**: 0.01 → 0.1 per completion (scales with stars: 0.1/0.2/0.4/0.8/1.6/3.2)
-  - **Elevation costs increased 6×**: Base cost 5,000 → 30,000 coins (maintains progression curve)
-  - **Runner upgrade costs rebalanced**: Base formula reduced from 60× to 20× (×2 inflation instead of ×6)
-  - **Strategic evolution system**: Desynchronized cost and gain scaling to make evolution a meaningful choice
-    - **Gain scaling**: ×2 per star (0.1 → 0.2 → 0.4 → 0.8 → 1.6 → 3.2)
-    - **Cost scaling**: ×2.2 per star (1 → 2.2 → 4.84 → 10.65 → 23.43 → 51.54)
-    - **Cost/gain ratio**: 1.10 → 1.61 across all star levels (slightly inefficient but never punitive)
-    - Evolution remains profitable long-term (~10-15 completions to break-even) but requires strategic timing
-    - Creates meaningful choice: evolve now (patience) vs. max current level (immediate gains)
-  - **Early-game boost**: First 5 levels (0-4) cost ÷4 for smooth 2-3 minute onboarding
-    - 0★ Lv 0→1: ~5 coins, Lv 1→2: ~15 coins, Lv 2→3: ~35 coins
-  - **Speed upgrades scale by map difficulty**: Higher-level maps gain more speed per upgrade
-    - Map 0 (Rouge): +10% per level | Map 1 (Orange): +15% per level
-    - Map 2 (Jaune): +20% per level | Map 3 (Vert): +25% per level
-    - Map 4 (Bleu): +30% per level
-    - Rewards investing in harder maps with faster runner completion times
-  - **Net result**: ~50% faster progression with much bigger numbers (thousands by 5-10 min, millions by 15-20 min)
-
 ### Added
-- **Ascend: Passive Earnings System**
-  - Runners continue to generate coins (at 25% rate) when player is not on Ascend world
-  - Accumulates up to 24 hours of offline time (minimum 1 minute away)
-  - All multipliers (elevation, summit, map) apply to passive earnings
-  - Timestamp tracking in database (`last_active_timestamp`, `has_unclaimed_passive`)
-  - Welcome back popup UI showing detailed breakdown per runner
-  - Coins and multipliers automatically applied on return
-  - Tracks when players leave Ascend world (to hub, other world, or disconnect)
-  - Shows runner-by-runner breakdown: runs completed, coins earned, multiplier gained
-  - Visual feedback with color-coded accent bars and star indicators per runner
-- **Ascend: Access whitelist system**
-  - Added whitelist system to control access to Ascend mode via the Hub menu
-  - Admin commands remain OP-only; whitelist only affects Hub menu access
-  - Whitelist stored in `run/mods/Parkour/ascend_whitelist.json` (JSON format with enabled flag)
-  - Admin UI accessible via `/as admin` > "Whitelist" button
-  - Full UI with text field to add players and list of whitelisted players with remove buttons
-  - **Toggle button to enable/disable whitelist:**
-    - **ENABLED**: Whitelisted players + OPs can access Ascend mode
-    - **DISABLED** (default): Only OPs can access (secure default behavior)
-  - Button displays current status: "ENABLED" or "DISABLED"
-  - Command-line interface: `/as admin whitelist <add|remove|list|enable|disable|status> [username]`
-  - Case-insensitive username comparison for consistent behavior
-  - Whitelist status persisted in JSON file (`enabled: true/false`, defaults to `false`)
+- **Ascend: Passive earnings** - Runners generate coins at 25% rate while offline (up to 24h)
+- **Ascend: Access whitelist** - Control who can access Ascend mode via Hub (`/as admin whitelist`)
+
+### Changed
+- **Ascend: Runner upgrade costs continue after evolution** - No more cost reset when evolving
+- **Ascend: Economy uses BigDecimal** - Supports values beyond 1 trillion without precision loss
+- **Ascend: Map unlock at runner level 5** (was 3)
+- **Ascend: Major economy rebalance** - 10× multiplier gains, 6× elevation costs, speed scales by map difficulty
+- **Ascend: Elevation menu simplified** - Shows progression toward next multiplier
 
 ### Fixed
-- **Ascend: Fixed UI crash when interacting with external NPCs after opening menus**
-  - Fixed "Selected element in CustomUI command was not found" crash when opening `/ascend` or `/ascend elevate` menus then interacting with NPCDialog NPCs
-  - Implemented proper `onDismiss()` lifecycle callback in `BaseAscendPage` to detect when UI is replaced by external systems
-  - Background UI refresh tasks now stop immediately when page is dismissed or replaced
-  - Added defensive try-catch blocks around all `sendUpdate()` calls as fallback protection
-  - Affected pages: ElevationPage, AscendMapSelectPage, StatsPage
-
-### Changed
-- **Ascend: Simplify elevation menu to show multiplier progression**
-  - Removed redundant coin balance display from `/ascend elevate` menu (already visible on main HUD)
-  - Display now shows dynamic progression toward next multiplier (e.g., "Progress to x2: 3,200 / 5,000 coins")
-  - Current coins update in real-time as player earns from runners and manual completions
-  - Added "GLOBAL MULTIPLIER" title above multiplier display card for clarity
-  - Increased font sizes across the menu to match main ascend UI (14px for labels, 16px for gain text)
-  - Increased page height from 380 to 420 pixels to accommodate larger text
-  - Fixed duplicate Anchor declaration in multiplier display
-  - Discount percentage still displayed if player has elevation cost reduction from skill tree
-
-- **Ascend: Elevation system rebalanced for slower progression**
-  - Increased base elevation cost from 1,000 to 5,000 coins (5x harder)
-  - Increased cost growth rate from 1.08 to 1.15 (steeper curve)
-  - First elevation now requires proper runner setup and time investment
+- **Ascend: UI crash with external NPCs** - Menus no longer crash when interacting with NPCDialog after opening
   - Mid-game progression (levels 10-20) significantly slower but still achievable
   - Late-game (30+) requires substantial coin generation infrastructure
   - Multiplier formula unchanged (level = multiplier) to preserve linear feel

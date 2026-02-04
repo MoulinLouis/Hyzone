@@ -71,11 +71,16 @@ Speed upgrade effectiveness varies by map difficulty:
 
 ## Runner Upgrade Costs
 
-### Base Formula
+### Base Formula (Continuous Progression)
 
 ```
-baseCost = 20 × 2.4^(level + mapOffset) + (level + mapOffset) × 12
+totalLevel = stars × 20 + speedLevel
+effectiveLevel = totalLevel + mapOffset
+baseCost = 20 × 2.4^effectiveLevel + effectiveLevel × 12
+finalCost = baseCost × mapMultiplier
 ```
+
+**Key concept:** Costs are based on **total levels purchased** across all evolutions, not just current speed level. This prevents cost resets after evolution.
 
 ### Map-Specific Scaling
 
@@ -91,56 +96,34 @@ Each map has an offset and multiplier applied to upgrade costs:
 
 ### Early-Game Boost
 
-**Levels 0-4:** Cost divided by 4
+**0★ Levels 0-4 only:** Cost divided by 4
 
-This ensures smooth onboarding during the first 2-3 minutes of gameplay.
+This ensures smooth onboarding during the first 2-3 minutes of gameplay. The boost does NOT apply after evolution.
 
-### Star-Based Progression
+### Continuous Cost Progression Table (Map 0, Rouge)
 
-Upgrade costs scale with evolution level:
+Costs continue to increase after evolution - no reset:
 
-**Star multiplier:** `×2.2^stars`
+| Stars | Speed Level | Total Level | Upgrade Cost |
+|-------|-------------|-------------|--------------|
+| 0★ | 0 | 0 | **5** (÷4 early boost) |
+| 0★ | 5 | 5 | **1,653** |
+| 0★ | 10 | 10 | **127K** |
+| 0★ | 15 | 15 | **10.1M** |
+| 0★ | 19 | 19 | **318M** |
+| 1★ | 0 | 20 | **804M** |
+| 1★ | 10 | 30 | **5.1T** |
+| 1★ | 19 | 39 | **160T** |
+| 2★ | 0 | 40 | **405T** |
+| 2★ | 10 | 50 | **2.6 Quadrillion** |
+| 3★ | 0 | 60 | **1.0 Quintillion** |
+| 4★ | 0 | 80 | **260 Quintillion** |
+| 5★ | 0 | 100 | **66 Sextillion** |
 
-| Stars | Cost Multiplier | Gain Multiplier | Cost/Gain Ratio |
-|-------|-----------------|-----------------|-----------------|
-| 0★ | ×1.00 | ×1 (0.1 base) | 1.00 |
-| 1★ | ×2.20 | ×2 (0.2) | 1.10 |
-| 2★ | ×4.84 | ×4 (0.4) | 1.21 |
-| 3★ | ×10.65 | ×8 (0.8) | 1.33 |
-| 4★ | ×23.43 | ×16 (1.6) | 1.46 |
-| 5★ | ×51.54 | ×32 (3.2) | 1.61 |
-
-**Design rationale:** Evolution is **strategically inefficient** but never punitive:
-- **Cost scales faster than gain** (×2.2 vs ×2), creating a 10-61% premium per evolution
-- **Break-even:** ~10-15 completions to recoup investment (2-5 minutes depending on map)
-- **Long-term profitable:** Higher gain rate always compensates over time
-- **Strategic depth:** Players choose between evolving (patience) vs. maxing current level (immediate gains)
-
-### Example Costs (Map 0, Rouge)
-
-**0★ Progression:**
-- Level 0→1: ~5 coins
-- Level 1→2: ~15 coins
-- Level 2→3: ~35 coins
-- Level 3→4: ~77 coins (early-game boost ends)
-- Level 4→5: ~168 coins
-- Level 5→6: ~738 coins (normal formula)
-- Level 10→11: ~49,000 coins
-
-**1★ Progression (same levels, ×2.2 cost):**
-- Level 0→1: ~11 coins (+10% vs 0★)
-- Level 5→6: ~1,624 coins (+120% vs 0★)
-- Level 10→11: ~108,000 coins (+120% vs 0★)
-
-**3★ Progression (×10.65 cost):**
-- Level 0→1: ~53 coins
-- Level 10→11: ~522,000 coins
-
-**5★ Progression (×51.54 cost):**
-- Level 0→1: ~258 coins
-- Level 10→11: ~2.5M coins
-
-**Evolution Reset:** Speed level resets to 0 when evolving, but costs continue scaling with star count.
+**Design rationale:**
+- **No cost reset after evolution:** At 1★ Lv.0, the cost is what 0★ Lv.20 would have cost
+- **Pure exponential growth:** Each level adds ×2.4 to the cost regardless of stars
+- **Evolution value comes from multiplier gains:** Stars double the multiplier gain (0.1 → 0.2 → 0.4...) without affecting cost progression
 
 ---
 
@@ -281,84 +264,73 @@ Where:
 
 ## Strategic Evolution System
 
-Evolution creates meaningful decisions rather than being an automatic upgrade path.
+Evolution provides a clear benefit with continuous cost progression.
 
-### The Evolution Tradeoff
+### The Evolution Benefit
 
 **When you evolve a runner:**
 - ✅ **Multiplier gain doubles** (0.1 → 0.2 → 0.4 → 0.8 → 1.6 → 3.2)
-- ✅ **Speed level resets to 0** (must rebuild from scratch)
-- ⚠️ **Upgrade costs increase ×2.2** (not ×2, creating 10-61% inefficiency)
+- ✅ **Speed level resets to 0** (visual reset, but costs continue)
+- ✅ **Costs continue from total level** (no reset, no penalty)
 
-### Cost/Gain Analysis
+### Evolution Value Analysis
 
-| Evolution | Gain Increase | Cost Increase | Efficiency | Break-Even |
-|-----------|---------------|---------------|------------|------------|
-| 0★ → 1★ | ×2 (0.1→0.2) | ×2.2 | 90.9% | ~10 runs |
-| 1★ → 2★ | ×2 (0.2→0.4) | ×2.2 | 82.6% | ~12 runs |
-| 2★ → 3★ | ×2 (0.4→0.8) | ×2.2 | 75.2% | ~14 runs |
-| 3★ → 4★ | ×2 (0.8→1.6) | ×2.2 | 68.5% | ~15 runs |
-| 4★ → 5★ | ×2 (1.6→3.2) | ×2.2 | 62.1% | ~15 runs |
+| Stars | Multiplier Gain | Cumulative Gain | Total Levels |
+|-------|-----------------|-----------------|--------------|
+| 0★ | +0.1/run | +0.1/run | 0-19 |
+| 1★ | +0.2/run | +0.3/run total | 20-39 |
+| 2★ | +0.4/run | +0.7/run total | 40-59 |
+| 3★ | +0.8/run | +1.5/run total | 60-79 |
+| 4★ | +1.6/run | +3.1/run total | 80-99 |
+| 5★ | +3.2/run | +6.3/run total | 100-119 |
 
-**Efficiency formula:** `gainIncrease / costIncrease = 2.0 / 2.2 = 0.909` (decreasing as stars increase)
+**Key insight:** Evolution is always beneficial - you get double the multiplier gains for the same cost progression you would have had anyway.
 
 ### Strategic Decisions
 
-**Early Stars (0★ → 2★):**
-- **Low inefficiency** (~10-20%)
-- **Fast break-even** (~10-12 completions)
-- **Optimal strategy:** Evolve as soon as possible
-- **No meaningful choice:** Evolution is clearly superior
+**The core choice is not "whether to evolve" but "which runner to prioritize":**
 
-**Mid Stars (2★ → 3★):**
-- **Moderate inefficiency** (~33%)
-- **Medium break-even** (~14 completions)
-- **Meaningful choice emerges:**
-  - **Evolve now:** Higher long-term gain, requires patience
-  - **Max 2★ first:** Immediate power, delays long-term scaling
-- **Strategy matters:** Different maps at different star levels
+**Focus Strategy:**
+- Push one runner to 5★ as fast as possible
+- Maximizes multiplier growth on that map
+- Higher star runners earn more per completion
+- Best for maps with fast completion times
 
-**Late Stars (3★ → 5★):**
-- **High inefficiency** (~46-61%)
-- **Longer break-even** (~15 completions, 5-10 minutes)
-- **Deep strategic choice:**
-  - **Focus evolution:** Push one map to 5★ for maximum multiplier
-  - **Spread investment:** Multiple maps at 3-4★ for balanced income
-  - **Map priority:** Which map deserves 5★ first?
+**Spread Strategy:**
+- Evolve multiple runners evenly
+- Balanced income across all maps
+- More visual variety (different NPC types)
+- Better if you manually play different maps
 
 ### Example Scenario
 
-**Situation:** You have 1M coins, Map 0 at 2★ Lv.20
+**Situation:** You have massive coins, multiple runners at different levels
 
-**Option A: Evolve to 3★**
-- Cost to reach 3★ Lv.5: ~150K coins
-- Multiplier gain after 20 runs: +16 (0.8 × 20)
-- Time to break-even: ~3-5 minutes
-- **Long-term:** Best multiplier growth
+**Option A: Focus on Map 0 (Rouge)**
+- Fast completion time = more runs = more multiplier gains
+- Push to 5★ for +3.2 multiplier per run
+- **Best for:** Pure idle optimization
 
-**Option B: Stay at 2★, upgrade other maps**
-- Use 1M to level up Maps 1-4
-- Immediate multiplier gains across board
-- No waiting for break-even
-- **Short-term:** More immediate power
-
-**Verdict:** No clear winner - depends on current elevation, other maps' levels, and player patience.
+**Option B: Spread across all maps**
+- Each map at 2-3★
+- More balanced income sources
+- Different visual NPCs running around
+- **Best for:** Visual variety and engagement
 
 ### Design Goals Achieved
 
-✅ **Evolution is strategic, not automatic**
-- Early game: still mostly straightforward (ratio ~1.1)
-- Mid/late game: meaningful choices with tradeoffs
+✅ **Evolution is always worthwhile**
+- Double multiplier gains with no cost penalty
+- Continuous progression feels natural
 
-✅ **Never punitive**
-- Break-even always achievable within minutes
-- Long-term profitability guaranteed
-- No "trap" upgrades
+✅ **Strategic depth from map choice**
+- Which map to prioritize?
+- Focus vs. spread investment
 
-✅ **Adds depth without complexity**
-- Simple rule: cost grows faster than gain
-- Players naturally discover optimal strategies
-- No hidden mechanics or confusing interactions
+✅ **No complexity or traps**
+- Simple rule: evolve when you can
+- Costs just keep growing naturally
+- No hidden penalties or inefficiencies
 
 ---
 
@@ -375,12 +347,11 @@ Evolution creates meaningful decisions rather than being an automatic upgrade pa
 ### Balance Constraints
 
 - **Minimum coin generation:** Even idle players make progress
-- **Maximum speed:** Runners capped at level 20 to prevent overflow
-- **Cost scaling:** Exponential but predictable, no sudden walls
-- **Evolution tradeoff:** Reset speed level but double multiplier gain at 10-61% cost premium
-  - Short-term inefficiency creates strategic decision points
-  - Long-term profitability ensures evolution is never a trap
-  - Break-even occurs within 10-15 completions (2-5 minutes)
+- **Maximum speed:** Runners capped at level 20 per evolution cycle
+- **Cost scaling:** Exponential but continuous - no resets, no surprises
+- **Evolution benefit:** Double multiplier gain with no cost penalty
+  - Costs continue from total levels purchased (stars × 20 + speedLevel)
+  - Evolution is always beneficial - strategic choice is which map to prioritize
 
 ### Inflation Strategy
 
@@ -408,23 +379,27 @@ Evolution creates meaningful decisions rather than being an automatic upgrade pa
 
 All exponential formulas use consistent growth rates:
 - **Elevation:** 1.15^level (15% growth)
-- **Upgrades:** 2.4^level (140% growth)
+- **Upgrades:** 2.4^totalLevel (140% growth per level, continuous across evolutions)
 - **Star gain:** 2^stars (100% growth per evolution)
-- **Star cost:** 2.2^stars (120% growth per evolution)
 
-The intentional desynchronization (2.2 vs 2.0) creates strategic depth while maintaining predictable scaling.
+Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure continuous progression after evolution.
 
 ---
 
 ## Version History
 
-- **2026-02-04:** Major economy rebalance
+- **2026-02-04 (v2):** Continuous cost progression after evolution
+  - **Cost formula now uses total levels:** `totalLevel = stars × 20 + speedLevel`
+  - Costs no longer reset after evolution (1★ Lv.0 costs same as what 0★ Lv.20 would cost)
+  - Removed star multiplier (×2.2 per star) - progression is now inherent to total level
+  - Early-game boost (÷4) now only applies to first evolution cycle (0★ levels 0-4)
+  - Evolution is now always beneficial: double gains with no cost penalty
+
+- **2026-02-04 (v1):** Major economy rebalance
   - Runner multiplier gains: 0.01 → 0.1 (×10)
   - Elevation base cost: 5,000 → 30,000 (×6)
   - Upgrade base formula: 60× → 20× (reduced from ×6 to ×2 inflation)
-  - Added star-based cost progression (×2.2 per star, desynchronized from ×2 gain)
   - Added map-specific speed multipliers (10-30% per level)
   - Early-game boost: ÷4 for levels 0-4
-  - **Strategic evolution system:** Cost/gain ratio 1.10→1.61 makes evolution a meaningful choice
 
 - **Previous:** Original balance (slower progression, smaller numbers)
