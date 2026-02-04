@@ -57,11 +57,11 @@ Runners can evolve up to 5 stars. When a runner reaches max speed level (20), th
 
 ### Progressive map unlock system
 - Map 1 (displayOrder 0) is always unlocked for all players
-- Maps 2-5 unlock automatically when the runner on the previous map reaches level 3
+- Maps 2-5 unlock automatically when the runner on the previous map reaches level 5
 - Once unlocked, maps stay permanently unlocked (even if runner is evolved/reset to level 0)
 - Locked maps are completely hidden from the `/ascend` menu
-- Instant notification when reaching level 3: "🎉 New map unlocked: [Map Name]!"
-- `MapUnlockHelper.meetsUnlockRequirement()` checks if previous map's runner is level 3+
+- Instant notification when reaching level 5: "🎉 New map unlocked: [Map Name]!"
+- `MapUnlockHelper.meetsUnlockRequirement()` checks if previous map's runner is level 5+
 - `MapUnlockHelper.checkAndEnsureUnlock()` handles auto-unlock for maps that meet requirements
 - `AscendPlayerStore.checkAndUnlockEligibleMaps()` batch checks all maps after runner upgrade
 - Retrocompatibility: Existing players auto-unlock eligible maps based on current runner levels
