@@ -250,22 +250,27 @@ public class ElevationPage extends BaseAscendPage {
         // Update current elevation display
         commandBuilder.set("#MultiplierValue.Text", "x" + currentElevation);
 
+        // Calculate how much more is needed for the next level beyond current affordable amount
+        java.math.BigDecimal nextLevelAfterPurchaseCost = AscendConstants.getElevationLevelUpCost(newElevation, costMultiplierBD);
+        java.math.BigDecimal leftoverCoins = coins.subtract(purchase.cost);
+        java.math.BigDecimal amountNeededForNextLevel = nextLevelAfterPurchaseCost.subtract(leftoverCoins);
+
         // Update new elevation display and gain
         if (purchase.levels > 0) {
             commandBuilder.set("#NewMultiplierValue.Text", "x" + newElevation);
             commandBuilder.set("#NewMultiplierValue.Style.TextColor", "#4ade80");
-            commandBuilder.set("#GainValue.Text", "+" + purchase.levels);
-            commandBuilder.set("#GainValue.Style.TextColor", "#4ade80");
             commandBuilder.set("#ArrowLabel.Style.TextColor", "#4ade80");
             commandBuilder.set("#ElevateButton.Text", "ELEVATE NOW");
         } else {
             commandBuilder.set("#NewMultiplierValue.Text", "x" + currentElevation);
             commandBuilder.set("#NewMultiplierValue.Style.TextColor", "#6b7280");
-            commandBuilder.set("#GainValue.Text", "Need " + FormatUtils.formatCoinsForHudDecimal(nextCost.subtract(coins)) + " more");
-            commandBuilder.set("#GainValue.Style.TextColor", "#6b7280");
             commandBuilder.set("#ArrowLabel.Style.TextColor", "#6b7280");
             commandBuilder.set("#ElevateButton.Text", "NEED MORE COINS");
         }
+
+        // Always show how much more is needed for the next level
+        commandBuilder.set("#GainValue.Text", "Need " + FormatUtils.formatCoinsForHudDecimal(amountNeededForNextLevel) + " more");
+        commandBuilder.set("#GainValue.Style.TextColor", "#9ca3af");
     }
 
     private double getCostMultiplier(UUID playerId) {

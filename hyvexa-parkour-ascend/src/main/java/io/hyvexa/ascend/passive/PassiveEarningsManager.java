@@ -104,8 +104,15 @@ public class PassiveEarningsManager {
             // Calculate number of theoretical runs
             double theoreticalRuns = (double) timeAwayMs / completionTimeMs;
 
-            // Multiplier gain per run
-            BigDecimal multiplierIncrement = AscendConstants.getRunnerMultiplierIncrement(stars);
+            // Get Evolution Power bonus from Summit
+            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+            double evolutionBonus = 0.0;
+            if (plugin != null && plugin.getSummitManager() != null) {
+                evolutionBonus = plugin.getSummitManager().getEvolutionPowerBonus(playerId).doubleValue();
+            }
+
+            // Multiplier gain per run (with Evolution Power bonus)
+            BigDecimal multiplierIncrement = AscendConstants.getRunnerMultiplierIncrement(stars, evolutionBonus);
             BigDecimal mapMultiplierGain = multiplierIncrement
                 .multiply(BigDecimal.valueOf(theoreticalRuns), ctx);
 
@@ -114,17 +121,16 @@ public class PassiveEarningsManager {
                 playerId, allMaps, AscendConstants.MULTIPLIER_SLOTS, mapId, BigDecimal.ZERO
             );
 
-            // Apply Summit coin flow bonus
-            BigDecimal coinFlowBonus = BigDecimal.ZERO;
-            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+            // Apply Summit coin flow multiplier (multiplicative: 1.20^level)
+            BigDecimal coinFlowMultiplier = BigDecimal.ONE;
             if (plugin != null && plugin.getSummitManager() != null) {
-                coinFlowBonus = plugin.getSummitManager().getCoinFlowBonus(playerId);
+                coinFlowMultiplier = plugin.getSummitManager().getCoinFlowMultiplier(playerId);
             }
 
             // Calculate total coins for this runner
             BigDecimal mapCoins = payoutPerRun
                 .multiply(BigDecimal.valueOf(theoreticalRuns), ctx)
-                .multiply(BigDecimal.ONE.add(coinFlowBonus, ctx), ctx)
+                .multiply(coinFlowMultiplier, ctx)
                 .multiply(BigDecimal.valueOf(OFFLINE_RATE_PERCENT).divide(
                     BigDecimal.valueOf(100), ctx
                 ), ctx) // Apply 25% offline rate
