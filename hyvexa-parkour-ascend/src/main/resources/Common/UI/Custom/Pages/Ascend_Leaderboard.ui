@@ -40,20 +40,30 @@ $C.@PageOverlay {
         Anchor: (Height: 36);
         LayoutMode: Left;
 
-        TextButton #TabCoins {
+        Group #TabCoinsWrap {
           Anchor: (Width: 120, Height: 32);
           Background: #2d3f50;
-          LayoutMode: Top;
 
           Group #TabCoinsAccent {
             Anchor: (Left: 0, Right: 0, Top: 0, Height: 3);
             Background: #f59e0b;
           }
 
-          Label {
-            Anchor: (Left: 0, Right: 0, Top: 8, Bottom: 0);
+          Label #TabCoinsLabel {
+            Anchor: (Left: 0, Right: 0, Top: 10, Bottom: 0);
             Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8);
             Text: "Coins";
+          }
+
+          TextButton #TabCoins {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Text: "";
+            Style: TextButtonStyle(
+              Default: (Background: #000000(0)),
+              Hovered: (Background: #ffffff(0.05)),
+              Pressed: (Background: #ffffff(0.1)),
+              Sounds: $C.@ButtonSounds,
+            );
           }
         }
 
@@ -61,20 +71,30 @@ $C.@PageOverlay {
           Anchor: (Width: 8);
         }
 
-        TextButton #TabAscensions {
+        Group #TabAscensionsWrap {
           Anchor: (Width: 120, Height: 32);
           Background: #1a2530(0.6);
-          LayoutMode: Top;
 
           Group #TabAscensionsAccent {
             Anchor: (Left: 0, Right: 0, Top: 0, Height: 3);
             Background: #1a2530(0.6);
           }
 
-          Label {
-            Anchor: (Left: 0, Right: 0, Top: 8, Bottom: 0);
+          Label #TabAscensionsLabel {
+            Anchor: (Left: 0, Right: 0, Top: 10, Bottom: 0);
             Style: (FontSize: 13, RenderBold: true, TextColor: #9fb0ba);
             Text: "Ascensions";
+          }
+
+          TextButton #TabAscensions {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Text: "";
+            Style: TextButtonStyle(
+              Default: (Background: #000000(0)),
+              Hovered: (Background: #ffffff(0.05)),
+              Pressed: (Background: #ffffff(0.1)),
+              Sounds: $C.@ButtonSounds,
+            );
           }
         }
 
@@ -82,20 +102,30 @@ $C.@PageOverlay {
           Anchor: (Width: 8);
         }
 
-        TextButton #TabRuns {
+        Group #TabRunsWrap {
           Anchor: (Width: 120, Height: 32);
           Background: #1a2530(0.6);
-          LayoutMode: Top;
 
           Group #TabRunsAccent {
             Anchor: (Left: 0, Right: 0, Top: 0, Height: 3);
             Background: #1a2530(0.6);
           }
 
-          Label {
-            Anchor: (Left: 0, Right: 0, Top: 8, Bottom: 0);
+          Label #TabRunsLabel {
+            Anchor: (Left: 0, Right: 0, Top: 10, Bottom: 0);
             Style: (FontSize: 13, RenderBold: true, TextColor: #9fb0ba);
             Text: "Manual Runs";
+          }
+
+          TextButton #TabRuns {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Text: "";
+            Style: TextButtonStyle(
+              Default: (Background: #000000(0)),
+              Hovered: (Background: #ffffff(0.05)),
+              Pressed: (Background: #ffffff(0.1)),
+              Sounds: $C.@ButtonSounds,
+            );
           }
         }
       }
