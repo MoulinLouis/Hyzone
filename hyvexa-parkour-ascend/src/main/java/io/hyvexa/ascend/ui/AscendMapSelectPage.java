@@ -396,16 +396,16 @@ public class AscendMapSelectPage extends BaseAscendPage {
     }
 
     private String formatMultiplierGain(int stars, java.util.UUID playerId) {
-        // Get Evolution Power bonus from Summit
-        double evolutionBonus = 0.0;
+        // Get Multiplier Gain bonus from Summit (affects per-run increment)
+        double multiplierGainBonus = 1.0;
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         if (plugin != null) {
             SummitManager summitManager = plugin.getSummitManager();
             if (summitManager != null && playerId != null) {
-                evolutionBonus = summitManager.getEvolutionPowerBonus(playerId).doubleValue();
+                multiplierGainBonus = summitManager.getMultiplierGainBonus(playerId).doubleValue();
             }
         }
-        BigDecimal increment = AscendConstants.getRunnerMultiplierIncrement(stars, evolutionBonus);
+        BigDecimal increment = AscendConstants.getRunnerMultiplierIncrement(stars, multiplierGainBonus);
         // Format: show 1 decimal for small values, more for larger
         double val = increment.doubleValue();
         if (val < 1.0) {

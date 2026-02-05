@@ -209,44 +209,28 @@ public final class AscendConstants {
     }
 
     /**
-     * Get the multiplier increment for a runner based on its stars (evolution level).
-     * Base formula: 0.1 × 2^stars
-     * With Evolution Power: 0.1 × (2 + evolutionBonus)^stars
-     * @param stars Runner's evolution level (0-5)
-     * @return Multiplier increment per completion
+     * Get the multiplier increment for a runner.
+     * Base: 0.1 per completion
+     * @param stars Ignored in new system (kept for API compatibility)
+     * @return Multiplier increment per completion (base 0.1)
      */
     public static BigDecimal getRunnerMultiplierIncrement(int stars) {
-        return getRunnerMultiplierIncrement(stars, 0.0);
+        return getRunnerMultiplierIncrement(stars, 1.0);
     }
 
     /**
-     * Get the multiplier increment for a runner with Evolution Power bonus.
-     * Formula: 0.1 × (2 + evolutionBonus)^stars
-     * At Summit Evolution Power level 10: base becomes 4, so 4^5 = 1024 instead of 32
-     * @param stars Runner's evolution level (0-5)
-     * @param evolutionBonus Bonus from Summit Evolution Power (0.20 per level)
+     * Get the multiplier increment for a runner with Multiplier Gain bonus.
+     * Base: 0.1 per completion
+     * With Multiplier Gain Summit bonus: 0.1 × multiplierGainBonus
+     * Stars no longer affect per-run increment (evolution now multiplies map multiplier instead)
+     * @param stars Ignored in new system (kept for API compatibility)
+     * @param multiplierGainBonus Bonus from Summit Multiplier Gain (1.0 at level 0, higher with levels)
      * @return Multiplier increment per completion
      */
-    public static BigDecimal getRunnerMultiplierIncrement(int stars, double evolutionBonus) {
-        BigDecimal baseIncrement = new BigDecimal("0.1");  // RUNNER_MULTIPLIER_INCREMENT
-
-        // Evolution base: 2 + evolutionBonus
-        // At Summit level 10 with +0.20/level: 2 + 2.0 = 4
-        BigDecimal evolutionBase = new BigDecimal("2").add(
-            BigDecimal.valueOf(evolutionBonus), MULTIPLIER_CTX);
-
-        // (evolutionBase)^stars
-        BigDecimal starPower;
-        int safeStars = Math.max(0, stars);
-        if (safeStars == 0) {
-            starPower = BigDecimal.ONE;
-        } else {
-            // Use double for pow since BigDecimal.pow only works with integers
-            starPower = BigDecimal.valueOf(Math.pow(evolutionBase.doubleValue(), safeStars));
-        }
-
-        return baseIncrement.multiply(starPower, MULTIPLIER_CTX)
-                           .setScale(20, RoundingMode.HALF_UP);
+    public static BigDecimal getRunnerMultiplierIncrement(int stars, double multiplierGainBonus) {
+        BigDecimal base = new BigDecimal("0.1");  // RUNNER_MULTIPLIER_INCREMENT
+        return base.multiply(BigDecimal.valueOf(multiplierGainBonus), MULTIPLIER_CTX)
+                   .setScale(20, RoundingMode.HALF_UP);
     }
 
     // Max speed level per evolution cycle (used for total level calculation)

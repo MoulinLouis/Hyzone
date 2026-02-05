@@ -652,13 +652,13 @@ public class RobotManager {
         String mapId = robot.getMapId();
         int stars = robot.getStars();
 
-        // Get Evolution Power bonus from Summit
+        // Get Multiplier Gain bonus from Summit (affects per-run increment)
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        double evolutionBonus = 0.0;
+        double multiplierGainBonus = 1.0;
         if (plugin != null && plugin.getSummitManager() != null) {
-            evolutionBonus = plugin.getSummitManager().getEvolutionPowerBonus(ownerId).doubleValue();
+            multiplierGainBonus = plugin.getSummitManager().getMultiplierGainBonus(ownerId).doubleValue();
         }
-        BigDecimal multiplierIncrement = AscendConstants.getRunnerMultiplierIncrement(stars, evolutionBonus);
+        BigDecimal multiplierIncrement = AscendConstants.getRunnerMultiplierIncrement(stars, multiplierGainBonus);
 
         // Apply double lap skill if available
         if (plugin != null && plugin.getAscensionManager() != null) {

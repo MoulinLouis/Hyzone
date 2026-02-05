@@ -104,15 +104,15 @@ public class PassiveEarningsManager {
             // Calculate number of theoretical runs
             double theoreticalRuns = (double) timeAwayMs / completionTimeMs;
 
-            // Get Evolution Power bonus from Summit
+            // Get Multiplier Gain bonus from Summit (affects per-run increment)
             ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-            double evolutionBonus = 0.0;
+            double multiplierGainBonus = 1.0;
             if (plugin != null && plugin.getSummitManager() != null) {
-                evolutionBonus = plugin.getSummitManager().getEvolutionPowerBonus(playerId).doubleValue();
+                multiplierGainBonus = plugin.getSummitManager().getMultiplierGainBonus(playerId).doubleValue();
             }
 
-            // Multiplier gain per run (with Evolution Power bonus) - at offline rate
-            BigDecimal multiplierIncrement = AscendConstants.getRunnerMultiplierIncrement(stars, evolutionBonus);
+            // Multiplier gain per run (with Multiplier Gain bonus) - at offline rate
+            BigDecimal multiplierIncrement = AscendConstants.getRunnerMultiplierIncrement(stars, multiplierGainBonus);
             BigDecimal mapMultiplierGain = multiplierIncrement
                 .multiply(BigDecimal.valueOf(theoreticalRuns), ctx)
                 .multiply(BigDecimal.valueOf(OFFLINE_RATE_PERCENT).divide(
