@@ -287,19 +287,6 @@ public final class AscendConstants {
     public static final long RUNNER_TICK_INTERVAL_MS = 16L; // ~60 ticks/second for smooth movement
     public static final long RUNNER_REFRESH_INTERVAL_MS = 1000L;
     public static final long RUNNER_INVALID_RECOVERY_MS = 3000L; // Force respawn after entity invalid for 3s
-    public static final double RUNNER_BASE_SPEED = 5.0;
-    public static final double RUNNER_JUMP_FORCE = 8.0;
-    public static final double WAYPOINT_REACH_DISTANCE = 1.5;
-
-    // Runner jump animation
-    public static final double RUNNER_DEFAULT_JUMP_HEIGHT = 1.5;      // Minimum arc height in blocks
-    public static final double RUNNER_JUMP_CLEARANCE = 1.0;           // Extra height above landing point
-    public static final double RUNNER_JUMP_DISTANCE_FACTOR = 0.2;     // Height increase per block beyond threshold
-    public static final double RUNNER_JUMP_DISTANCE_THRESHOLD = 3.0;  // Horizontal distance before scaling
-    // Auto-detection thresholds
-    public static final double RUNNER_JUMP_AUTO_UP_THRESHOLD = 0.5;   // Min Y increase to trigger jump
-    public static final double RUNNER_JUMP_AUTO_DOWN_THRESHOLD = 1.0; // Min Y decrease to trigger jump (gaps/falls)
-    public static final double RUNNER_JUMP_AUTO_HORIZ_THRESHOLD = 2.0; // Min horizontal distance to trigger jump (gaps)
 
     // Timing
     public static final long SAVE_DEBOUNCE_MS = 5000L;
@@ -327,15 +314,14 @@ public final class AscendConstants {
      * @param costMultiplier Cost modifier (1.0 = full cost, 0.8 = 20% discount)
      */
     public static BigDecimal getElevationLevelUpCost(int currentLevel, BigDecimal costMultiplier) {
-        // Cap level to prevent overflow
-        int cappedLevel = Math.min(Math.max(0, currentLevel), 1000);
+        int safeLevel = Math.max(0, currentLevel);
 
         // Pure BigDecimal calculation
         BigDecimal base = BigDecimal.valueOf(ELEVATION_BASE_COST);
         BigDecimal growth = new BigDecimal("1.15"); // ELEVATION_COST_GROWTH
 
         // Calculate growth^level using BigDecimal (no double intermediate)
-        BigDecimal growthPower = growth.pow(cappedLevel, CALC_CTX);
+        BigDecimal growthPower = growth.pow(safeLevel, CALC_CTX);
         BigDecimal cost = base.multiply(growthPower, CALC_CTX);
 
         // Apply cost multiplier (skill discount) - NO double conversion
@@ -360,16 +346,22 @@ public final class AscendConstants {
      * @param availableCoins Coins available to spend
      * @param costMultiplier Cost modifier (1.0 = full cost, 0.8 = 20% discount)
      */
+    private static final int MAX_ELEVATION_PURCHASE_ITERATIONS = 100_000;
+
     public static ElevationPurchaseResult calculateElevationPurchase(int currentLevel, BigDecimal availableCoins, BigDecimal costMultiplier) {
+        if (availableCoins.compareTo(BigDecimal.ZERO) <= 0
+                || costMultiplier.compareTo(BigDecimal.ZERO) <= 0) {
+            return new ElevationPurchaseResult(0, BigDecimal.ZERO);
+        }
+
         int levelsAffordable = 0;
         BigDecimal totalCost = BigDecimal.ZERO;
         int level = currentLevel;
 
-        while (true) {
+        while (levelsAffordable < MAX_ELEVATION_PURCHASE_ITERATIONS) {
             BigDecimal nextCost = getElevationLevelUpCost(level, costMultiplier);
             BigDecimal newTotal = totalCost.add(nextCost, CALC_CTX);
 
-            // Pure BigDecimal comparison (no double)
             if (newTotal.compareTo(availableCoins) > 0) {
                 break;
             }
@@ -452,15 +444,16 @@ public final class AscendConstants {
 
     /**
      * Convert coins to XP.
-     * Formula: sqrt(coins) / 100
-     * Provides diminishing returns at high coin amounts.
+     * Formula: sqrt(coins) / 1,000,000
+     * Uses BigDecimal sqrt to preserve precision beyond double range (~2^53).
      */
     public static long coinsToXp(BigDecimal coins) {
         if (coins.compareTo(BigDecimal.ZERO) <= 0) {
             return 0;
         }
-        double sqrtCoins = Math.sqrt(coins.doubleValue());
-        return (long) Math.floor(sqrtCoins / SUMMIT_XP_COIN_DIVISOR);
+        BigDecimal sqrtCoins = coins.sqrt(CALC_CTX);
+        BigDecimal xp = sqrtCoins.divide(BigDecimal.valueOf((long) SUMMIT_XP_COIN_DIVISOR), CALC_CTX);
+        return xp.longValue();
     }
 
     /**
@@ -537,8 +530,8 @@ public final class AscendConstants {
         MANUAL_T1_MULTIPLIER("Manual +50%", "+50% manual run multiplier", SkillTreePath.MANUAL, 1, null),
         MANUAL_T2_CHAIN_BONUS("Chain Bonus", "+10% per consecutive run (max +100%)", SkillTreePath.MANUAL, 2, "MANUAL_T1_MULTIPLIER"),
         MANUAL_T3_SESSION_BONUS("Session Bonus", "First run of session: 3x multiplier", SkillTreePath.MANUAL, 3, "MANUAL_T2_CHAIN_BONUS"),
-        MANUAL_T4_RUNNER_BOOST("Runner Boost", "Manual runs boost runner speed temporarily", SkillTreePath.MANUAL, 4, "MANUAL_T3_SESSION_BONUS"),
-        MANUAL_T5_PERSONAL_BEST("Personal Best", "Bonus for beating personal best time", SkillTreePath.MANUAL, 5, "MANUAL_T4_RUNNER_BOOST"),
+        MANUAL_T4_RUNNER_BOOST("Runner Boost", "Coming soon", SkillTreePath.MANUAL, 4, "MANUAL_T3_SESSION_BONUS"),
+        MANUAL_T5_PERSONAL_BEST("Personal Best", "Coming soon", SkillTreePath.MANUAL, 5, "MANUAL_T4_RUNNER_BOOST"),
 
         // Hybrid Nodes (requires points in multiple paths)
         HYBRID_OFFLINE_EARNINGS("Offline Earnings", "Earn coins while offline (capped)", SkillTreePath.HYBRID, 1, null),
