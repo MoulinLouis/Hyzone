@@ -704,7 +704,7 @@ public class RobotManager {
      * Calculate speed multiplier for a runner (public for passive earnings)
      */
     public static double calculateSpeedMultiplier(AscendMap map, int speedLevel, UUID ownerId) {
-        // Base speed multiplier from upgrades (varies by map)
+        // Base speed multiplier from upgrades
         double speedMultiplier = 1.0 + (speedLevel * AscendConstants.getMapSpeedMultiplier(map.getDisplayOrder()));
 
         // Add Summit runner speed bonus

@@ -37,13 +37,13 @@ public final class AscendConstants {
     public static final long PASSIVE_MIN_TIME_MS = 60 * 1000L; // 1 minute
 
     // Speed upgrade multipliers by map (indexed by displayOrder 0-4)
-    // Higher level maps = faster speed gains per upgrade
+    // Uniform speed gain: all maps use +10% per level
     public static final double[] MAP_SPEED_MULTIPLIERS = {
         0.10,  // Map 0 (Rouge)  - +10% per level
-        0.15,  // Map 1 (Orange) - +15% per level
-        0.20,  // Map 2 (Jaune)  - +20% per level
-        0.25,  // Map 3 (Vert)   - +25% per level
-        0.30   // Map 4 (Bleu)   - +30% per level
+        0.10,  // Map 1 (Orange) - +10% per level
+        0.10,  // Map 2 (Jaune)  - +10% per level
+        0.10,  // Map 3 (Vert)   - +10% per level
+        0.10   // Map 4 (Bleu)   - +10% per level
     };
 
     public static double getMapSpeedMultiplier(int displayOrder) {
