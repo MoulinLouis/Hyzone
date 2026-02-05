@@ -189,11 +189,11 @@ public class AscendHud extends CustomUIHud {
         commandBuilder.set("#PrestigeHud.Visible", showPrestige);
 
         if (showPrestige) {
-            int coinLevel = summitLevels.getOrDefault(SummitCategory.COIN_FLOW, 0);
             int speedLevel = summitLevels.getOrDefault(SummitCategory.RUNNER_SPEED, 0);
+            int multLevel = summitLevels.getOrDefault(SummitCategory.MULTIPLIER_GAIN, 0);
             int evolveLevel = summitLevels.getOrDefault(SummitCategory.EVOLUTION_POWER, 0);
 
-            String summitText = "Summit: Coin " + coinLevel + " | Speed " + speedLevel + " | Evolve " + evolveLevel;
+            String summitText = "Summit: Speed " + speedLevel + " | Mult " + multLevel + " | Evolve " + evolveLevel;
 
             commandBuilder.set("#SummitText.Text", summitText);
         }
@@ -257,10 +257,10 @@ public class AscendHud extends CustomUIHud {
     }
 
     private String buildPrestigeKey(Map<SummitCategory, Integer> summitLevels, int ascensionCount, int skillPoints) {
-        int coinLevel = summitLevels != null ? summitLevels.getOrDefault(SummitCategory.COIN_FLOW, 0) : 0;
         int speedLevel = summitLevels != null ? summitLevels.getOrDefault(SummitCategory.RUNNER_SPEED, 0) : 0;
+        int multLevel = summitLevels != null ? summitLevels.getOrDefault(SummitCategory.MULTIPLIER_GAIN, 0) : 0;
         int evolveLevel = summitLevels != null ? summitLevels.getOrDefault(SummitCategory.EVOLUTION_POWER, 0) : 0;
-        return coinLevel + "|" + speedLevel + "|" + evolveLevel;
+        return speedLevel + "|" + multLevel + "|" + evolveLevel;
     }
 
     private static double[] normalizeDigits(java.math.BigDecimal[] digits) {

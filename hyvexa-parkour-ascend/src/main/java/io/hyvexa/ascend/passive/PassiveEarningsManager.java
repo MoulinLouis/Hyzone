@@ -124,16 +124,9 @@ public class PassiveEarningsManager {
                 playerId, allMaps, AscendConstants.MULTIPLIER_SLOTS, mapId, BigDecimal.ZERO
             );
 
-            // Apply Summit coin flow multiplier (multiplicative: 1.20^level)
-            BigDecimal coinFlowMultiplier = BigDecimal.ONE;
-            if (plugin != null && plugin.getSummitManager() != null) {
-                coinFlowMultiplier = plugin.getSummitManager().getCoinFlowMultiplier(playerId);
-            }
-
             // Calculate total coins for this runner
             BigDecimal mapCoins = payoutPerRun
                 .multiply(BigDecimal.valueOf(theoreticalRuns), ctx)
-                .multiply(coinFlowMultiplier, ctx)
                 .multiply(BigDecimal.valueOf(OFFLINE_RATE_PERCENT).divide(
                     BigDecimal.valueOf(100), ctx
                 ), ctx) // Apply 25% offline rate

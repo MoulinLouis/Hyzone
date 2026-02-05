@@ -271,7 +271,7 @@ $C.@PageOverlay {
             RenderBold: true,
             HorizontalAlignment: Center
           );
-          Text: "Placeholder text line 1";
+          Text: "Right Click the red";
         }
 
         Label #ServerSelectorHintLine2 {
@@ -282,7 +282,7 @@ $C.@PageOverlay {
             RenderBold: true,
             HorizontalAlignment: Center
           );
-          Text: "Placeholder text line 2";
+          Text: "book in your inventory";
         }
 
         Group {

@@ -30,7 +30,6 @@ import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.util.MapUnlockHelper;
 import io.hyvexa.ascend.ghost.GhostRecorder;
 import io.hyvexa.ascend.robot.RobotManager;
-import io.hyvexa.ascend.summit.SummitManager;
 import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.common.visibility.EntityVisibilityManager;
 
@@ -226,9 +225,8 @@ public class AscendRunTracker {
         mapProgress.setUnlocked(true);
         playerStore.markDirty(playerId);
 
-        // Calculate bonuses from Summit and Ascension
+        // Calculate bonuses from Ascension skills
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        BigDecimal summitCoinFlowMultiplier = BigDecimal.ONE;
         BigDecimal ascensionBonus = BigDecimal.ZERO;
         BigDecimal chainBonus = BigDecimal.ZERO;
         BigDecimal sessionBonus = BigDecimal.ONE;
@@ -236,13 +234,7 @@ public class AscendRunTracker {
         MathContext ctx = new MathContext(30, RoundingMode.HALF_UP);
 
         if (plugin != null) {
-            SummitManager summitManager = plugin.getSummitManager();
             AscensionManager ascensionManager = plugin.getAscensionManager();
-
-            if (summitManager != null) {
-                // COIN_FLOW is now multiplicative: 1.20^level
-                summitCoinFlowMultiplier = summitManager.getCoinFlowMultiplier(playerId);
-            }
 
             if (ascensionManager != null) {
                 ascensionBonus = BigDecimal.valueOf(ascensionManager.getManualMultiplierBonus(playerId));
@@ -263,9 +255,8 @@ public class AscendRunTracker {
         List<AscendMap> multiplierMaps = mapStore.listMapsSorted();
         BigDecimal basePayout = playerStore.getCompletionPayout(playerId, multiplierMaps, AscendConstants.MULTIPLIER_SLOTS, run.mapId, BigDecimal.ZERO);
 
-        // Apply coin flow multiplier (multiplicative) and session bonus
-        BigDecimal coinMultiplier = summitCoinFlowMultiplier.multiply(sessionBonus, ctx);
-        BigDecimal payout = basePayout.multiply(coinMultiplier, ctx).setScale(2, RoundingMode.HALF_UP);
+        // Apply session bonus if applicable
+        BigDecimal payout = basePayout.multiply(sessionBonus, ctx).setScale(2, RoundingMode.HALF_UP);
 
         // Use atomic operations to prevent race conditions
         playerStore.atomicAddCoins(playerId, payout);
