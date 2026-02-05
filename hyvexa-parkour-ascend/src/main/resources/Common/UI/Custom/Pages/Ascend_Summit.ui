@@ -2,7 +2,7 @@ $C = "../Common.ui";
 
 $C.@PageOverlay {
   $C.@Container {
-    Anchor: (Width: 620, Height: 520);
+    Anchor: (Width: 480, Height: 480);
 
     #Title {
       Group {
@@ -26,26 +26,10 @@ $C.@PageOverlay {
       LayoutMode: Top;
       Padding: (Left: 20, Right: 20, Top: 6, Bottom: 12);
 
-      Group {
-        Anchor: (Top: 8);
-        LayoutMode: Left;
-
-        Label {
-          Anchor: (Width: 120);
-          Style: (FontSize: 14, TextColor: #9fb0ba);
-          Text: "Your Coins:";
-        }
-
-        Label #CoinsValue {
-          Style: (FontSize: 14, TextColor: #ffd166, RenderBold: true);
-          Text: "0";
-        }
-      }
-
       Label {
         Anchor: (Top: 8);
-        Style: (FontSize: 12, TextColor: #9fb0ba);
-        Text: "Invest coins into permanent category bonuses.";
+        Style: (FontSize: 14, TextColor: #9fb0ba);
+        Text: "Invest XP into specific bonuses.";
       }
 
       Group #CategoryList {

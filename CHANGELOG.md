@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Added
+- **Ascend: Leaderboard system** - New `/ascend leaderboard` command with tabbed rankings for Coins, Ascensions, and Manual Runs. Includes pagination (50 per page) and player search. Accessible via the Bolt of Stormsilk item.
+
 ### Changed
 - **Ascend: Summit system rebalanced for late-game** - Summit now requires 1T coins minimum for first level (was 10K), and resets multipliers/runners like elevation
 - **Ascend: Map selector shows run time and multiplier gain** - Displays actual runner completion time and multiplier gain per run (e.g., "Run: 2.34s (+0.1x) | PB: 5.00s")
