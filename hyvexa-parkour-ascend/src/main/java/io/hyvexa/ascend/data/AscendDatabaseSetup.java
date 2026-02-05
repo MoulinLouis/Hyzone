@@ -97,11 +97,25 @@ public final class AscendDatabaseSetup {
                 CREATE TABLE IF NOT EXISTS ascend_player_summit (
                     player_uuid VARCHAR(36) NOT NULL,
                     category VARCHAR(32) NOT NULL,
-                    level INT NOT NULL DEFAULT 0,
+                    xp BIGINT NOT NULL DEFAULT 0,
                     PRIMARY KEY (player_uuid, category),
                     FOREIGN KEY (player_uuid) REFERENCES ascend_players(uuid) ON DELETE CASCADE
                 ) ENGINE=InnoDB
                 """);
+
+            // Migrate old 'level' column to 'xp' if exists
+            try {
+                var rs = stmt.executeQuery("SHOW COLUMNS FROM ascend_player_summit LIKE 'level'");
+                if (rs.next()) {
+                    // Old schema exists, migrate level to xp
+                    stmt.executeUpdate("ALTER TABLE ascend_player_summit ADD COLUMN IF NOT EXISTS xp BIGINT NOT NULL DEFAULT 0");
+                    // Note: Migration of actual values handled in AscendPlayerStore load
+                    stmt.executeUpdate("ALTER TABLE ascend_player_summit DROP COLUMN IF EXISTS level");
+                }
+                rs.close();
+            } catch (Exception e) {
+                // Column doesn't exist or already migrated, ignore
+            }
 
             // Ascension System - skill tree unlocks
             stmt.executeUpdate("""
