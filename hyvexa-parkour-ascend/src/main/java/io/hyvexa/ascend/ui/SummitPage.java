@@ -11,6 +11,7 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.AscendConstants.SummitCategory;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendPlayerStore;
@@ -60,13 +61,15 @@ public class SummitPage extends BaseAscendPage {
         UUID playerId = playerRef.getUuid();
         java.math.BigDecimal coins = playerStore.getCoins(playerId);
 
-        // Update coins display
-        commandBuilder.set("#CoinsValue.Text", FormatUtils.formatCoinsForHudDecimal(coins));
+        // Update coins display with XP conversion preview
+        long potentialXp = AscendConstants.coinsToXp(coins);
+        String coinsText = FormatUtils.formatCoinsForHudDecimal(coins) + " → +" + potentialXp + " XP";
+        commandBuilder.set("#CoinsValue.Text", coinsText);
 
         // Build 3 category cards
         SummitCategory[] categories = {
-            SummitCategory.COIN_FLOW,
             SummitCategory.RUNNER_SPEED,
+            SummitCategory.MULTIPLIER_GAIN,
             SummitCategory.EVOLUTION_POWER
         };
 
@@ -75,7 +78,6 @@ public class SummitPage extends BaseAscendPage {
             commandBuilder.append("#CategoryCards", "Pages/Ascend_SummitEntry.ui");
 
             String accentColor = resolveCategoryAccentColor(i);
-            int currentLevel = playerStore.getSummitLevel(playerId, category);
             SummitManager.SummitPreview preview = summitManager.previewSummit(playerId, category);
 
             // Apply accent color to bars
@@ -91,18 +93,33 @@ public class SummitPage extends BaseAscendPage {
             commandBuilder.set("#CategoryCards[" + i + "] #CategoryDesc.Text", description);
 
             // Current bonus
-            double currentBonus = category.getBonusForLevel(currentLevel);
-            String bonusText = "Current Bonus: " + formatBonus(category, currentBonus);
+            String bonusText = "Current Bonus: " + formatBonus(category, preview.currentBonus());
             commandBuilder.set("#CategoryCards[" + i + "] #CategoryBonus.Text", bonusText);
 
-            // Level and preview
-            commandBuilder.set("#CategoryCards[" + i + "] #CurrentLevel.Text", "Lv." + currentLevel);
+            // Level and bonus display
+            String levelText = "[Lv. " + preview.currentLevel() + "] " + formatBonus(category, preview.currentBonus());
+            commandBuilder.set("#CategoryCards[" + i + "] #CurrentLevel.Text", levelText);
 
             if (preview.hasGain()) {
-                commandBuilder.set("#CategoryCards[" + i + "] #PreviewLevel.Text", "→ Lv." + preview.newLevel());
+                String previewText = "→ [Lv. " + preview.newLevel() + "] " + formatBonus(category, preview.newBonus());
+                commandBuilder.set("#CategoryCards[" + i + "] #PreviewLevel.Text", previewText);
             } else {
                 commandBuilder.set("#CategoryCards[" + i + "] #PreviewLevel.Text", "");
             }
+
+            // XP progress text
+            String xpText = String.format("Exp %d/%d (+%d)",
+                preview.currentXpInLevel(),
+                preview.currentXpRequired(),
+                preview.xpToGain());
+            commandBuilder.set("#CategoryCards[" + i + "] #XpProgress.Text", xpText);
+
+            // XP progress bar fill percentage
+            double progressPercent = preview.currentXpRequired() > 0
+                ? (double) preview.currentXpInLevel() / preview.currentXpRequired()
+                : 0;
+            int widthPercent = (int)(progressPercent * 100);
+            commandBuilder.set("#CategoryCards[" + i + "] #XpBarFill.Anchor.Width", widthPercent + "%");
 
             // Event binding
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
@@ -201,41 +218,24 @@ public class SummitPage extends BaseAscendPage {
 
     private String resolveCategoryAccentColor(int index) {
         return switch (index) {
-            case 0 -> "#5a6b3d";  // Green for Coin Flow
-            case 1 -> "#2d5a7b";  // Blue for Runner Speed
-            default -> "#5a3d6b"; // Purple for Manual Mastery
+            case 0 -> "#2d5a7b";  // Blue for Runner Speed
+            case 1 -> "#5a6b3d";  // Green for Multiplier Gain
+            default -> "#5a3d6b"; // Purple for Evolution Power
         };
     }
 
     private String getCategoryDescription(SummitCategory category) {
         return switch (category) {
-            case COIN_FLOW -> "Multiplies coin earnings (×1.20 per level)";
-            case RUNNER_SPEED -> "Increases runner completion speed (+15% per level)";
-            case EVOLUTION_POWER -> "Increases runner evolution power (+0.20 base per level)";
+            case RUNNER_SPEED -> "Multiplies runner completion speed";
+            case MULTIPLIER_GAIN -> "Multiplies multiplier gain per run";
+            case EVOLUTION_POWER -> "Multiplies map multiplier on evolution";
         };
     }
 
     /**
-     * Format a bonus value for display based on category type.
-     * COIN_FLOW shows as multiplier (×2.49), others show as percent (+150%)
+     * Format a bonus value for display - all categories show as multipliers.
      */
     private String formatBonus(SummitCategory category, double value) {
-        if (category == SummitCategory.COIN_FLOW) {
-            // Show as multiplier
-            return String.format(Locale.US, "×%.2f", value);
-        } else if (category == SummitCategory.EVOLUTION_POWER) {
-            // Show as evolution base bonus
-            return String.format(Locale.US, "+%.2f base", value);
-        }
-        // Default: show as percent (for RUNNER_SPEED)
-        return String.format(Locale.US, "+%.0f%%", value * 100);
-    }
-
-    private String formatPercent(double value) {
-        return String.format(Locale.US, "+%.0f%%", value * 100);
-    }
-
-    private String formatBonusPerLevel(SummitCategory category) {
-        return String.format(Locale.US, "+%.0f%%", category.getBonusPerLevel() * 100);
+        return String.format(Locale.US, "×%.2f", value);
     }
 }
