@@ -33,7 +33,7 @@ This document provides a factual overview of the economy balancing in Ascend mod
   - 0★: +0.1 per completion (base)
   - 1★+: +0.2 per completion (×2 after evolution)
 - **With Summit Multiplier Gain bonus:** Base increment × bonus
-  - Example at level 10 (×40.7 bonus): 0★ = +4.07/run, 1★+ = +8.14/run
+  - Example at level 10 (×4.16 bonus): 0★ = +0.42/run, 1★+ = +0.83/run
 
 ### Multiplier Slots
 - **Total slots:** 5 (one per map)
@@ -365,7 +365,7 @@ Summit performs a full reset similar to Elevation:
 | Category | Formula | Level 0 | Level 10 |
 |----------|---------|---------|----------|
 | **Runner Speed** | 1 + 0.45 × √level | ×1.00 | ×2.42 |
-| **Multiplier Gain** | 1 + 5 × level^0.9 | ×1.00 | ×40.7 |
+| **Multiplier Gain** | 1 + 0.5 × level^0.8 | ×1.00 | ×4.16 |
 | **Evolution Power** | *(unused)* | - | - |
 
 ### Runner Speed
@@ -383,15 +383,15 @@ Multiplies runner completion speed (inversely affects run time).
 
 ### Multiplier Gain
 
-**Formula:** `1 + 5 × level^0.9`
+**Formula:** `1 + 0.5 × level^0.8`
 
 Multiplies the per-run multiplier increment for runners.
 
 | Level | Gain Multiplier | 0★ Increment | 1★+ Increment |
 |-------|-----------------|--------------|---------------|
 | 0 | ×1.00 | +0.1/run | +0.2/run |
-| 5 | ×19.5 | +1.95/run | +3.9/run |
-| 10 | ×40.7 | +4.07/run | +8.14/run |
+| 5 | ×2.81 | +0.28/run | +0.56/run |
+| 10 | ×4.16 | +0.42/run | +0.83/run |
 
 ### Evolution Power
 
@@ -547,7 +547,7 @@ Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure conti
 - **2026-02-05 (v5):** XP-based Summit system
   - Summit now uses XP instead of coin thresholds (1000 coins = 1 XP)
   - XP per level: 100 × level^1.5 (gradual scaling)
-  - Replaced Coin Flow with Multiplier Gain (1 + 5 × level^0.9)
+  - Replaced Coin Flow with Multiplier Gain (1 + 0.5 × level^0.8)
   - Runner Speed: 1 + 0.45 × sqrt(level) (diminishing returns)
   - Evolution Power: 2 + 0.5 × level^0.8 (applied on runner evolution, multiplies map multiplier)
   - Summit no longer resets multipliers, runners, or map unlocks (only coins and elevation)

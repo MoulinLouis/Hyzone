@@ -265,7 +265,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
                 }
             } else {
                 int speedGainPercent = (int)(AscendConstants.getMapSpeedMultiplier(map.getDisplayOrder()) * 100);
-                runnerStatusText = "+" + speedGainPercent + "%/lvl";
+                runnerStatusText = "+" + speedGainPercent + "% speed/lvl";
                 if (speedLevel >= MAX_SPEED_LEVEL && stars < AscendConstants.MAX_ROBOT_STARS) {
                     runnerButtonText = "Evolve";
                     actionPrice = BigDecimal.ZERO;
@@ -487,7 +487,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
             }
             int newLevel = playerStore.incrementRobotSpeedLevel(playerRef.getUuid(), mapId);
             int speedGainPercent = (int)(AscendConstants.getMapSpeedMultiplier(map.getDisplayOrder()) * 100);
-            sendMessage(store, ref, "[Ascend] Runner speed upgraded! (+" + speedGainPercent + "%/lvl)");
+            sendMessage(store, ref, "[Ascend] Runner speed upgraded! (+" + speedGainPercent + "% speed/lvl)");
 
             // Check if new level unlocks next map
             if (newLevel == AscendConstants.MAP_UNLOCK_REQUIRED_RUNNER_LEVEL) {
@@ -694,7 +694,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
             }
         } else {
             int speedGainPercent = (int)(AscendConstants.getMapSpeedMultiplier(selectedMap.getDisplayOrder()) * 100);
-            runnerStatusText = "+" + speedGainPercent + "%/lvl";
+            runnerStatusText = "+" + speedGainPercent + "% speed/lvl";
             if (speedLevel >= MAX_SPEED_LEVEL && stars < AscendConstants.MAX_ROBOT_STARS) {
                 runnerButtonText = "Evolve";
                 actionPrice = BigDecimal.ZERO;
@@ -855,7 +855,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
             }
         } else {
             int speedGainPercent = (int)(AscendConstants.getMapSpeedMultiplier(map.getDisplayOrder()) * 100);
-            runnerStatusText = "+" + speedGainPercent + "%/lvl";
+            runnerStatusText = "+" + speedGainPercent + "% speed/lvl";
             if (speedLevel >= MAX_SPEED_LEVEL && stars < AscendConstants.MAX_ROBOT_STARS) {
                 runnerButtonText = "Evolve";
                 actionPrice = BigDecimal.ZERO;
