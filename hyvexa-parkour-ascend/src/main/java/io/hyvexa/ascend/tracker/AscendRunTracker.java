@@ -259,9 +259,15 @@ public class AscendRunTracker {
         BigDecimal payout = basePayout.multiply(sessionBonus, ctx).setScale(2, RoundingMode.HALF_UP);
 
         // Use atomic operations to prevent race conditions
-        playerStore.atomicAddCoins(playerId, payout);
-        playerStore.atomicAddTotalCoinsEarned(playerId, payout);
-        playerStore.atomicAddMapMultiplier(playerId, run.mapId, finalMultiplierIncrement);
+        if (!playerStore.atomicAddCoins(playerId, payout)) {
+            LOGGER.atWarning().log("Failed to add coins for manual run: " + playerId);
+        }
+        if (!playerStore.atomicAddTotalCoinsEarned(playerId, payout)) {
+            LOGGER.atWarning().log("Failed to add total coins earned for manual run: " + playerId);
+        }
+        if (!playerStore.atomicAddMapMultiplier(playerId, run.mapId, finalMultiplierIncrement)) {
+            LOGGER.atWarning().log("Failed to add map multiplier for manual run: " + playerId);
+        }
         playerStore.incrementTotalManualRuns(playerId);
         playerStore.incrementConsecutiveManualRuns(playerId);
 

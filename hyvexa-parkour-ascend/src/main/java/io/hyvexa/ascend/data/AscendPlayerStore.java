@@ -280,37 +280,31 @@ public class AscendPlayerStore {
         }
 
         String playerIdStr = playerId.toString();
+        String[] tables = {
+            "ascend_player_maps",
+            "ascend_player_summit",
+            "ascend_player_skills",
+            "ascend_player_achievements",
+            "ascend_ghost_recordings"
+        };
+
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
-            // Delete map progress
-            try (PreparedStatement stmt = conn.prepareStatement(
-                "DELETE FROM ascend_player_maps WHERE player_uuid = ?")) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.setString(1, playerIdStr);
-                stmt.executeUpdate();
-            }
-
-            // Delete summit levels
-            try (PreparedStatement stmt = conn.prepareStatement(
-                "DELETE FROM ascend_player_summit WHERE player_uuid = ?")) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.setString(1, playerIdStr);
-                stmt.executeUpdate();
-            }
-
-            // Delete skill nodes
-            try (PreparedStatement stmt = conn.prepareStatement(
-                "DELETE FROM ascend_player_skills WHERE player_uuid = ?")) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.setString(1, playerIdStr);
-                stmt.executeUpdate();
-            }
-
-            // Delete achievements
-            try (PreparedStatement stmt = conn.prepareStatement(
-                "DELETE FROM ascend_player_achievements WHERE player_uuid = ?")) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.setString(1, playerIdStr);
-                stmt.executeUpdate();
+            conn.setAutoCommit(false);
+            try {
+                for (String table : tables) {
+                    try (PreparedStatement stmt = conn.prepareStatement(
+                        "DELETE FROM " + table + " WHERE player_uuid = ?")) {
+                        DatabaseManager.applyQueryTimeout(stmt);
+                        stmt.setString(1, playerIdStr);
+                        stmt.executeUpdate();
+                    }
+                }
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
             }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Failed to delete player data during reset: " + e.getMessage());
@@ -438,9 +432,15 @@ public class AscendPlayerStore {
      */
     public boolean atomicAddCoins(UUID playerId, BigDecimal amount) {
         if (!DatabaseManager.getInstance().isInitialized()) {
-            // Fallback to in-memory operation
             addCoins(playerId, amount);
             return true;
+        }
+
+        // Update memory FIRST so the in-memory value is never behind the DB value.
+        // If the DB write fails, we revert the memory update.
+        AscendPlayerProgress progress = players.get(playerId);
+        if (progress != null) {
+            progress.addCoins(amount);
         }
 
         String sql = "UPDATE ascend_players SET coins = coins + ? WHERE uuid = ?";
@@ -451,17 +451,16 @@ public class AscendPlayerStore {
             stmt.setString(2, playerId.toString());
             int rowsUpdated = stmt.executeUpdate();
 
-            // Update in-memory cache
-            if (rowsUpdated > 0) {
-                AscendPlayerProgress progress = players.get(playerId);
-                if (progress != null) {
-                    progress.addCoins(amount);
-                }
+            if (rowsUpdated == 0 && progress != null) {
+                progress.addCoins(amount.negate()); // Revert memory update
             }
 
             return rowsUpdated > 0;
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Failed to atomically add coins: " + e.getMessage());
+            if (progress != null) {
+                progress.addCoins(amount.negate()); // Revert memory update
+            }
             return false;
         }
     }
@@ -513,9 +512,13 @@ public class AscendPlayerStore {
      */
     public boolean atomicAddTotalCoinsEarned(UUID playerId, BigDecimal amount) {
         if (!DatabaseManager.getInstance().isInitialized()) {
-            // Fallback to in-memory operation
             addTotalCoinsEarned(playerId, amount);
             return true;
+        }
+
+        AscendPlayerProgress progress = players.get(playerId);
+        if (progress != null) {
+            progress.addTotalCoinsEarned(amount);
         }
 
         String sql = "UPDATE ascend_players SET total_coins_earned = total_coins_earned + ? WHERE uuid = ?";
@@ -526,17 +529,16 @@ public class AscendPlayerStore {
             stmt.setString(2, playerId.toString());
             int rowsUpdated = stmt.executeUpdate();
 
-            // Update in-memory cache
-            if (rowsUpdated > 0) {
-                AscendPlayerProgress progress = players.get(playerId);
-                if (progress != null) {
-                    progress.addTotalCoinsEarned(amount);
-                }
+            if (rowsUpdated == 0 && progress != null) {
+                progress.addTotalCoinsEarned(amount.negate());
             }
 
             return rowsUpdated > 0;
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Failed to atomically add total coins earned: " + e.getMessage());
+            if (progress != null) {
+                progress.addTotalCoinsEarned(amount.negate());
+            }
             return false;
         }
     }
@@ -551,9 +553,13 @@ public class AscendPlayerStore {
      */
     public boolean atomicAddMapMultiplier(UUID playerId, String mapId, BigDecimal amount) {
         if (!DatabaseManager.getInstance().isInitialized()) {
-            // Fallback to in-memory operation
             addMapMultiplier(playerId, mapId, amount);
             return true;
+        }
+
+        AscendPlayerProgress.MapProgress mapProgress = getMapProgress(playerId, mapId);
+        if (mapProgress != null) {
+            mapProgress.addMultiplier(amount);
         }
 
         String sql = "UPDATE ascend_player_maps SET multiplier = multiplier + ? WHERE player_uuid = ? AND map_id = ?";
@@ -565,17 +571,16 @@ public class AscendPlayerStore {
             stmt.setString(3, mapId);
             int rowsUpdated = stmt.executeUpdate();
 
-            // Update in-memory cache
-            if (rowsUpdated > 0) {
-                AscendPlayerProgress.MapProgress mapProgress = getMapProgress(playerId, mapId);
-                if (mapProgress != null) {
-                    mapProgress.addMultiplier(amount);
-                }
+            if (rowsUpdated == 0 && mapProgress != null) {
+                mapProgress.addMultiplier(amount.negate());
             }
 
             return rowsUpdated > 0;
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Failed to atomically add map multiplier: " + e.getMessage());
+            if (mapProgress != null) {
+                mapProgress.addMultiplier(amount.negate());
+            }
             return false;
         }
     }
@@ -916,9 +921,47 @@ public class AscendPlayerStore {
     }
 
     /**
+     * Shared reset logic for prestige operations.
+     * Resets coins, map unlocks (except first), multipliers, manual completion, and runners.
+     * @param clearBestTimes whether to also clear best times (elevation does, summit doesn't)
+     * @return list of map IDs that had runners (for despawn handling)
+     */
+    private List<String> resetMapProgress(AscendPlayerProgress progress, String firstMapId, boolean clearBestTimes) {
+        List<String> mapsWithRunners = new java.util.ArrayList<>();
+
+        progress.setCoins(BigDecimal.ZERO);
+
+        for (Map.Entry<String, AscendPlayerProgress.MapProgress> entry : progress.getMapProgress().entrySet()) {
+            String mapId = entry.getKey();
+            AscendPlayerProgress.MapProgress mapProgress = entry.getValue();
+
+            mapProgress.setUnlocked(mapId.equals(firstMapId));
+            mapProgress.setMultiplier(BigDecimal.ONE);
+            mapProgress.setCompletedManually(false);
+
+            if (clearBestTimes) {
+                mapProgress.setBestTimeMs(null);
+            }
+
+            if (mapProgress.hasRobot()) {
+                mapsWithRunners.add(mapId);
+                mapProgress.setHasRobot(false);
+                mapProgress.setRobotSpeedLevel(0);
+                mapProgress.setRobotStars(0);
+            }
+        }
+
+        if (firstMapId != null && !firstMapId.isEmpty()) {
+            AscendPlayerProgress.MapProgress firstMapProgress = progress.getOrCreateMapProgress(firstMapId);
+            firstMapProgress.setUnlocked(true);
+        }
+
+        return mapsWithRunners;
+    }
+
+    /**
      * Resets player progress for elevation: clears coins, map unlocks (except first map),
      * best times, multipliers, and removes all runners.
-     * Used when a player performs an elevation.
      *
      * @param playerId the player's UUID
      * @param firstMapId the ID of the first map (stays unlocked)
@@ -930,43 +973,7 @@ public class AscendPlayerStore {
             return List.of();
         }
 
-        List<String> mapsWithRunners = new java.util.ArrayList<>();
-
-        // Reset coins to 0
-        progress.setCoins(BigDecimal.ZERO);
-
-        // Process each map progress
-        for (Map.Entry<String, AscendPlayerProgress.MapProgress> entry : progress.getMapProgress().entrySet()) {
-            String mapId = entry.getKey();
-            AscendPlayerProgress.MapProgress mapProgress = entry.getValue();
-
-            // Reset unlocked status (only first map stays unlocked)
-            mapProgress.setUnlocked(mapId.equals(firstMapId));
-
-            // Clear best time
-            mapProgress.setBestTimeMs(null);
-
-            // Reset multiplier
-            mapProgress.setMultiplier(BigDecimal.ONE);
-
-            // Reset completed manually
-            mapProgress.setCompletedManually(false);
-
-            // Remove runner if player had one
-            if (mapProgress.hasRobot()) {
-                mapsWithRunners.add(mapId);
-                mapProgress.setHasRobot(false);
-                mapProgress.setRobotSpeedLevel(0);
-                mapProgress.setRobotStars(0);
-            }
-        }
-
-        // Ensure first map has progress entry and is unlocked
-        if (firstMapId != null && !firstMapId.isEmpty()) {
-            AscendPlayerProgress.MapProgress firstMapProgress = progress.getOrCreateMapProgress(firstMapId);
-            firstMapProgress.setUnlocked(true);
-        }
-
+        List<String> mapsWithRunners = resetMapProgress(progress, firstMapId, true);
         markDirty(playerId);
         return mapsWithRunners;
     }
@@ -977,50 +984,14 @@ public class AscendPlayerStore {
      * @return list of map IDs that had runners (for despawn handling)
      */
     public List<String> resetProgressForSummit(UUID playerId, String firstMapId) {
-        var progress = getPlayer(playerId);
+        AscendPlayerProgress progress = getPlayer(playerId);
         if (progress == null) {
             return List.of();
         }
 
-        List<String> mapsWithRunners = new java.util.ArrayList<>();
-
-        // Reset coins
-        progress.setCoins(BigDecimal.ZERO);
-
-        // Reset elevation to level 1
         progress.setElevationMultiplier(1);
-
-        // Process each map progress - reset multipliers, runners, and unlocks
-        for (Map.Entry<String, AscendPlayerProgress.MapProgress> entry : progress.getMapProgress().entrySet()) {
-            String mapId = entry.getKey();
-            AscendPlayerProgress.MapProgress mapProgress = entry.getValue();
-
-            // Reset unlocked status (only first map stays unlocked)
-            mapProgress.setUnlocked(mapId.equals(firstMapId));
-
-            // Reset multiplier to 1
-            mapProgress.setMultiplier(BigDecimal.ONE);
-
-            // Reset completed manually
-            mapProgress.setCompletedManually(false);
-
-            // Remove runner if player had one
-            if (mapProgress.hasRobot()) {
-                mapsWithRunners.add(mapId);
-                mapProgress.setHasRobot(false);
-                mapProgress.setRobotSpeedLevel(0);
-                mapProgress.setRobotStars(0);
-            }
-        }
-
-        // Ensure first map has progress entry and is unlocked
-        if (firstMapId != null && !firstMapId.isEmpty()) {
-            AscendPlayerProgress.MapProgress firstMapProgress = progress.getOrCreateMapProgress(firstMapId);
-            firstMapProgress.setUnlocked(true);
-        }
-
+        List<String> mapsWithRunners = resetMapProgress(progress, firstMapId, false);
         markDirty(playerId);
-
         return mapsWithRunners;
     }
 
@@ -1140,8 +1111,10 @@ public class AscendPlayerStore {
             return;
         }
 
+        // Take a snapshot of dirty players but do NOT clear yet.
+        // We only remove successfully saved IDs after the save completes,
+        // so any markDirty() calls during the save window are preserved.
         Set<UUID> toSave = Set.copyOf(dirtyPlayers);
-        dirtyPlayers.clear();
         if (toSave.isEmpty()) {
             return;
         }
@@ -1281,9 +1254,12 @@ public class AscendPlayerStore {
             summitStmt.executeBatch();
             skillStmt.executeBatch();
             achievementStmt.executeBatch();
+
+            // Save succeeded - remove only the IDs we just saved
+            dirtyPlayers.removeAll(toSave);
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Failed to save ascend players: " + e.getMessage());
-            dirtyPlayers.addAll(toSave);
+            // On failure, IDs stay in dirtyPlayers for the next save cycle
         }
     }
 
