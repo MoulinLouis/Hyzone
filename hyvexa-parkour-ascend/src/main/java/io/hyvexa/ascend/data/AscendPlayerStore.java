@@ -353,16 +353,14 @@ public class AscendPlayerStore {
 
     /**
      * Get the player's elevation multiplier.
-     * Uses exponential formula: level × 1.02^level for explosive late-game scaling.
+     * Returns the level directly as a multiplier.
      */
     public double getCalculatedElevationMultiplier(UUID playerId) {
         int level = getElevationLevel(playerId);
         if (level <= 0) {
             return 1.0;
         }
-        // Exponential formula: level × 1.02^level
-        // Level 1 → 1.02, Level 10 → 12.2, Level 100 → 724, Level 200 → 10,500
-        return level * Math.pow(1.02, level);
+        return level;
     }
 
     /**
