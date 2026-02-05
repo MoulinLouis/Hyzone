@@ -53,7 +53,6 @@ import java.util.stream.Collectors;
 public class RobotManager {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final double ROBOT_BASE_SPEED = 5.0;  // Blocks per second base speed
     private static final String RUNNER_UUIDS_FILE = "runner_uuids.txt";
 
     private final AscendMapStore mapStore;
@@ -137,12 +136,10 @@ public class RobotManager {
 
     public void spawnRobot(UUID ownerId, String mapId) {
         String key = robotKey(ownerId, mapId);
-        if (robots.containsKey(key)) {
-            return;
-        }
-
         RobotState state = new RobotState(ownerId, mapId);
-        robots.put(key, state);
+        if (robots.putIfAbsent(key, state) != null) {
+            return; // Already existed
+        }
 
         // Spawn NPC entity if NPCPlugin is available
         if (npcPlugin != null && mapStore != null) {
@@ -434,56 +431,6 @@ public class RobotManager {
         robot.setPreviousPosition(targetPos);
     }
 
-    private void teleportNpc(Ref<EntityStore> entityRef, World world, Vector3d targetPos, double[] previousPos) {
-        if (entityRef == null || !entityRef.isValid()) {
-            return;
-        }
-        try {
-            Store<EntityStore> store = entityRef.getStore();
-            if (store == null) {
-                return;
-            }
-
-            // Calculate yaw based on movement direction
-            // We need to extract target coordinates for comparison
-            // Since Vector3d doesn't have x(), y(), z() accessors, we pass the raw coordinates
-            Vector3f rotation = new Vector3f(0, 0, 0);
-            store.addComponent(entityRef, Teleport.getComponentType(), new Teleport(world, targetPos, rotation));
-        } catch (Exception e) {
-            // Silently ignore teleport errors
-        }
-    }
-
-    private void teleportNpcWithRotation(Ref<EntityStore> entityRef, World world, double[] targetPos, double[] previousPos) {
-        if (entityRef == null || !entityRef.isValid()) {
-            return;
-        }
-        try {
-            Store<EntityStore> store = entityRef.getStore();
-            if (store == null) {
-                return;
-            }
-
-            // Calculate yaw based on movement direction
-            float yaw = 0;
-            if (previousPos != null) {
-                double dx = targetPos[0] - previousPos[0];
-                double dz = targetPos[2] - previousPos[2];
-                // Only update rotation if there's meaningful horizontal movement
-                if (dx != 0 || dz != 0) {
-                    // atan2(dx, dz) gives angle from Z+ axis, add 180 to face forward
-                    yaw = (float) (Math.toDegrees(Math.atan2(dx, dz)) + 180.0);
-                }
-            }
-
-            Vector3d targetVec = new Vector3d(targetPos[0], targetPos[1], targetPos[2]);
-            Vector3f rotation = new Vector3f(0, yaw, 0);
-            store.addComponent(entityRef, Teleport.getComponentType(), new Teleport(world, targetVec, rotation));
-        } catch (Exception e) {
-            // Silently ignore teleport errors
-        }
-    }
-
     private void teleportNpcWithRecordedRotation(Ref<EntityStore> entityRef, World world,
                                                   double[] targetPos, float yaw) {
         if (entityRef == null || !entityRef.isValid()) {
@@ -678,9 +625,15 @@ public class RobotManager {
                                              .setScale(2, RoundingMode.HALF_UP);
 
         // Use atomic operations to prevent race conditions
-        playerStore.atomicAddCoins(ownerId, totalPayout);
-        playerStore.atomicAddTotalCoinsEarned(ownerId, totalPayout);
-        playerStore.atomicAddMapMultiplier(ownerId, mapId, totalMultiplierBonus);
+        if (!playerStore.atomicAddCoins(ownerId, totalPayout)) {
+            LOGGER.atWarning().log("Failed to add runner coins for " + ownerId + " on map " + mapId);
+        }
+        if (!playerStore.atomicAddTotalCoinsEarned(ownerId, totalPayout)) {
+            LOGGER.atWarning().log("Failed to add total coins earned for " + ownerId);
+        }
+        if (!playerStore.atomicAddMapMultiplier(ownerId, mapId, totalMultiplierBonus)) {
+            LOGGER.atWarning().log("Failed to add map multiplier for " + ownerId + " on map " + mapId);
+        }
 
         robot.setLastCompletionMs(lastCompletionMs + (intervalMs * completions));
         robot.addRunsCompleted(completions);
@@ -693,7 +646,8 @@ public class RobotManager {
                 World world = Universe.get().getWorld(worldName);
                 if (world != null) {
                     Vector3d startPos = new Vector3d(map.getStartX(), map.getStartY(), map.getStartZ());
-                    world.execute(() -> teleportNpc(entityRef, world, startPos, null));
+                    double[] startPosArr = {map.getStartX(), map.getStartY(), map.getStartZ()};
+                    world.execute(() -> teleportNpcWithRecordedRotation(entityRef, world, startPosArr, map.getStartRotY()));
                     robot.setPreviousPosition(null);  // Reset for new run
                 }
             }
