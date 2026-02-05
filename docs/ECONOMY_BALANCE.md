@@ -88,12 +88,51 @@ Speed upgrade effectiveness varies by map difficulty:
 totalLevel = stars × 20 + speedLevel
 effectiveLevel = totalLevel + mapOffset
 baseCost = 5 × 2^effectiveLevel + effectiveLevel × 10
-finalCost = baseCost × mapMultiplier
+finalCost = baseCost × mapMultiplier × earlyLevelBoost
 ```
 
 **Key concept:** Costs are based on **total levels purchased** across all evolutions, not just current speed level. This prevents cost resets after evolution.
 
 **Growth rate:** ~2× per level (smooth, consistent progression with no artificial jumps).
+
+### Early-Level Boost (Unlock Pacing)
+
+To create more time between map unlocks without affecting late-game, a decaying cost boost applies to levels 0-9 on maps 2+ during the first evolution cycle (0★):
+
+| Map | Max Boost (Level 0) | Threshold |
+|-----|---------------------|-----------|
+| Rouge | ×1.0 (no boost) | - |
+| Orange | ×1.5 | Level 10 |
+| Jaune | ×2.0 | Level 10 |
+| Vert | ×2.5 | Level 10 |
+| Bleu | ×3.0 | Level 10 |
+
+**Decay formula:**
+```
+if stars == 0 and speedLevel < 10:
+    decayFactor = (10 - speedLevel) / 10
+    earlyLevelBoost = 1 + (maxBoost - 1) × decayFactor
+else:
+    earlyLevelBoost = 1.0
+```
+
+**Example (Map 2 - Orange, maxBoost = 1.5):**
+
+| Level | Decay Factor | Boost | Base Cost | Final Cost |
+|-------|--------------|-------|-----------|------------|
+| 0 | 1.0 | ×1.50 | 28 | 42 |
+| 1 | 0.9 | ×1.45 | 56 | 81 |
+| 2 | 0.8 | ×1.40 | 98 | 137 |
+| 3 | 0.7 | ×1.35 | 168 | 227 |
+| 4 | 0.6 | ×1.30 | 294 | 382 |
+| 5 | 0.5 | ×1.25 | 518 | 648 |
+| 9 | 0.1 | ×1.05 | 2968 | 3116 |
+| 10+ | 0.0 | ×1.00 | normal | normal |
+
+**Design goals:**
+- More time between early map unlocks (feels better in first 10 minutes)
+- Costs always increase with level (no jarring drops)
+- Late-game unaffected (boost is 1.0 after level 10 or any evolution)
 
 ### Map-Specific Scaling
 
@@ -450,6 +489,12 @@ Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure conti
 ---
 
 ## Version History
+
+- **2026-02-05 (v4):** Early-game unlock pacing
+  - Added decaying cost boost for levels 0-9 on maps 2+ (first evolution only)
+  - Boost scales by map: Orange ×1.5, Jaune ×2.0, Vert ×2.5, Bleu ×3.0
+  - Creates more time between early map unlocks without affecting late-game
+  - Smooth decay ensures costs always increase (no jarring price drops)
 
 - **2026-02-04 (v3):** Exponential elevation and Summit refactoring
   - Elevation multiplier changed from `level` to `level × 1.02^level`
