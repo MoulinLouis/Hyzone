@@ -12,14 +12,13 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants;
-import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.ghost.GhostRecording;
 import io.hyvexa.ascend.ghost.GhostStore;
-import io.hyvexa.ascend.summit.SummitManager;
+import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.util.FormatUtils;
 
@@ -176,8 +175,6 @@ public class StatsPage extends BaseAscendPage {
         java.math.BigDecimal digitsProduct = playerStore.getMultiplierProductDecimal(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
         double elevation = playerStore.getCalculatedElevationMultiplier(playerId);
 
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-
         for (AscendMap map : maps) {
             AscendPlayerProgress.MapProgress mapProgress = playerStore.getMapProgress(playerId, map.getId());
             if (mapProgress == null || !mapProgress.hasRobot()) {
@@ -191,15 +188,8 @@ public class StatsPage extends BaseAscendPage {
             }
 
             int speedLevel = mapProgress.getRobotSpeedLevel();
-            double speedMultiplier = 1.0 + (speedLevel * AscendConstants.getMapSpeedMultiplier(map.getDisplayOrder()));
-
-            // Add summit runner speed bonus
-            if (plugin != null) {
-                SummitManager summitManager = plugin.getSummitManager();
-                if (summitManager != null) {
-                    speedMultiplier += summitManager.getRunnerSpeedBonus(playerId).doubleValue();
-                }
-            }
+            // Use the centralized speed multiplier calculation
+            double speedMultiplier = RobotManager.calculateSpeedMultiplier(map, speedLevel, playerId);
 
             long intervalMs = (long) (ghost.getCompletionTimeMs() / speedMultiplier);
             intervalMs = Math.max(1L, intervalMs);
