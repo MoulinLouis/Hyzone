@@ -140,7 +140,7 @@ public class AscendPlayerStore {
     }
 
     private void loadSummitLevels() {
-        String sql = "SELECT player_uuid, category, level FROM ascend_player_summit";
+        String sql = "SELECT player_uuid, category, xp FROM ascend_player_summit";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
@@ -152,10 +152,10 @@ public class AscendPlayerStore {
                         continue;
                     }
                     String categoryName = rs.getString("category");
-                    int level = rs.getInt("level");
+                    long xp = rs.getLong("xp");
                     try {
                         SummitCategory category = SummitCategory.valueOf(categoryName);
-                        player.setSummitLevel(category, level);
+                        player.setSummitXp(category, xp);
                     } catch (IllegalArgumentException ignored) {
                         // Unknown category, skip
                     }
@@ -726,11 +726,39 @@ public class AscendPlayerStore {
         return progress.getSummitLevel(category);
     }
 
+    /**
+     * @deprecated Use {@link #addSummitXp(UUID, SummitCategory, long)} instead.
+     */
+    @Deprecated
     public int addSummitLevel(UUID playerId, SummitCategory category, int amount) {
+        // Convert level to XP (add XP needed to gain that many levels from current position)
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        int newLevel = progress.addSummitLevel(category, amount);
+        int currentLevel = progress.getSummitLevel(category);
+        long xpNeeded = 0;
+        for (int i = 0; i < amount; i++) {
+            xpNeeded += category.getXpForLevel(currentLevel + i + 1);
+        }
+        progress.addSummitXp(category, xpNeeded);
         markDirty(playerId);
-        return newLevel;
+        return progress.getSummitLevel(category);
+    }
+
+    public long getSummitXp(UUID playerId, SummitCategory category) {
+        AscendPlayerProgress progress = players.get(playerId);
+        if (progress == null) {
+            return 0L;
+        }
+        return progress.getSummitXp(category);
+    }
+
+    public long addSummitXp(UUID playerId, SummitCategory category, long amount) {
+        AscendPlayerProgress progress = getOrCreatePlayer(playerId);
+        if (progress == null) {
+            return 0L;
+        }
+        long newXp = progress.addSummitXp(category, amount);
+        markDirty(playerId);
+        return newXp;
     }
 
     public Map<SummitCategory, Integer> getSummitLevels(UUID playerId) {
@@ -1093,9 +1121,9 @@ public class AscendPlayerStore {
             """;
 
         String summitSql = """
-            INSERT INTO ascend_player_summit (player_uuid, category, level)
+            INSERT INTO ascend_player_summit (player_uuid, category, xp)
             VALUES (?, ?, ?)
-            ON DUPLICATE KEY UPDATE level = VALUES(level)
+            ON DUPLICATE KEY UPDATE xp = VALUES(xp)
             """;
 
         String skillSql = """
@@ -1173,12 +1201,12 @@ public class AscendPlayerStore {
                     mapStmt.addBatch();
                 }
 
-                // Save summit levels
+                // Save summit XP
                 for (SummitCategory category : SummitCategory.values()) {
-                    int level = progress.getSummitLevel(category);
+                    long xp = progress.getSummitXp(category);
                     summitStmt.setString(1, playerId.toString());
                     summitStmt.setString(2, category.name());
-                    summitStmt.setInt(3, level);
+                    summitStmt.setLong(3, xp);
                     summitStmt.addBatch();
                 }
 
