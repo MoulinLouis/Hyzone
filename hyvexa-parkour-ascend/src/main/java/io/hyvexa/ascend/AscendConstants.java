@@ -220,15 +220,18 @@ public final class AscendConstants {
 
     /**
      * Get the multiplier increment for a runner with Multiplier Gain bonus.
-     * Base: 0.1 per completion
-     * With Multiplier Gain Summit bonus: 0.1 × multiplierGainBonus
-     * Stars no longer affect per-run increment (evolution now multiplies map multiplier instead)
-     * @param stars Ignored in new system (kept for API compatibility)
+     * Base: 0.1 per completion, ×10 when evolved (stars > 0)
+     * With Multiplier Gain Summit bonus: base × multiplierGainBonus
+     * @param stars Evolution level - applies ×10 multiplier when > 0
      * @param multiplierGainBonus Bonus from Summit Multiplier Gain (1.0 at level 0, higher with levels)
      * @return Multiplier increment per completion
      */
     public static BigDecimal getRunnerMultiplierIncrement(int stars, double multiplierGainBonus) {
         BigDecimal base = new BigDecimal("0.1");  // RUNNER_MULTIPLIER_INCREMENT
+        // Apply ×10 multiplier when evolved (stars > 0)
+        if (stars > 0) {
+            base = base.multiply(BigDecimal.TEN);
+        }
         return base.multiply(BigDecimal.valueOf(multiplierGainBonus), MULTIPLIER_CTX)
                    .setScale(20, RoundingMode.HALF_UP);
     }
@@ -443,26 +446,30 @@ public final class AscendConstants {
     // Summit XP System
     // ========================================
 
-    public static final long SUMMIT_COINS_TO_XP_RATIO = 1000L; // 1000 coins = 1 XP
-    public static final double SUMMIT_XP_LEVEL_BASE = 100.0;   // Base XP for level formula
-    public static final double SUMMIT_XP_LEVEL_EXPONENT = 1.5; // Exponent for level formula
-    public static final long SUMMIT_MIN_COINS = SUMMIT_COINS_TO_XP_RATIO; // Minimum coins for 1 XP
+    public static final double SUMMIT_XP_LEVEL_EXPONENT = 4.0; // Exponent for level formula
+    public static final double SUMMIT_XP_COIN_DIVISOR = 100.0; // Divisor for sqrt(coins) conversion
+    public static final long SUMMIT_MIN_COINS = 10_000L; // Minimum coins for 1 XP (100^2)
 
     /**
      * Convert coins to XP.
-     * Formula: coins / 1000
+     * Formula: sqrt(coins) / 100
+     * Provides diminishing returns at high coin amounts.
      */
     public static long coinsToXp(BigDecimal coins) {
-        return coins.divide(BigDecimal.valueOf(SUMMIT_COINS_TO_XP_RATIO), 0, RoundingMode.FLOOR).longValue();
+        if (coins.compareTo(BigDecimal.ZERO) <= 0) {
+            return 0;
+        }
+        double sqrtCoins = Math.sqrt(coins.doubleValue());
+        return (long) Math.floor(sqrtCoins / SUMMIT_XP_COIN_DIVISOR);
     }
 
     /**
      * Calculate XP required to reach a specific level (from level-1).
-     * Formula: 100 × level^1.5
+     * Formula: level^4
      */
     public static long getXpForLevel(int level) {
         if (level <= 0) return 0;
-        return (long) Math.ceil(SUMMIT_XP_LEVEL_BASE * Math.pow(level, SUMMIT_XP_LEVEL_EXPONENT));
+        return (long) Math.pow(level, SUMMIT_XP_LEVEL_EXPONENT);
     }
 
     /**

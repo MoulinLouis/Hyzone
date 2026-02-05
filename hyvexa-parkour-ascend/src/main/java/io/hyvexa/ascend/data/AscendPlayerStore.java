@@ -710,17 +710,7 @@ public class AscendPlayerStore {
         AscendPlayerProgress.MapProgress mapProgress = getOrCreateMapProgress(playerId, mapId);
         mapProgress.setRobotSpeedLevel(0);
         int newStars = mapProgress.incrementRobotStars();
-
-        // Apply Evolution Power bonus to map multiplier on evolution
-        // Formula: current multiplier × evolution power bonus (10 + 0.5 × level^0.8)
-        io.hyvexa.ascend.ParkourAscendPlugin plugin = io.hyvexa.ascend.ParkourAscendPlugin.getInstance();
-        if (plugin != null && plugin.getSummitManager() != null) {
-            BigDecimal evolutionPower = plugin.getSummitManager().getEvolutionPowerBonus(playerId);
-            BigDecimal currentMultiplier = mapProgress.getMultiplier();
-            BigDecimal newMultiplier = currentMultiplier.multiply(evolutionPower, CALC_CTX);
-            mapProgress.setMultiplier(newMultiplier);
-        }
-
+        // Evolution now grants ×10 multiplier gain per-run (handled in AscendConstants.getRunnerMultiplierIncrement)
         markDirty(playerId);
         return newStars;
     }
