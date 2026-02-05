@@ -51,6 +51,7 @@ public class SummitPage extends BaseAscendPage {
 
     private void buildCategoryCards(Ref<EntityStore> ref, Store<EntityStore> store,
                                      UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
+        commandBuilder.clear("#CategoryCards");
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (playerRef == null) {
             return;
