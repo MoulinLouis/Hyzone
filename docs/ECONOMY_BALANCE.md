@@ -549,7 +549,7 @@ Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure conti
   - XP per level: 100 × level^1.5 (gradual scaling)
   - Replaced Coin Flow with Multiplier Gain (1 + 5 × level^0.9)
   - Runner Speed: 1 + 0.45 × sqrt(level) (diminishing returns)
-  - Evolution Power: 10 + 0.5 × level^0.8 (applied on runner evolution, multiplies map multiplier)
+  - Evolution Power: 2 + 0.5 × level^0.8 (applied on runner evolution, multiplies map multiplier)
   - Summit no longer resets multipliers, runners, or map unlocks (only coins and elevation)
 
 - **2026-02-05 (v4):** Early-game unlock pacing
