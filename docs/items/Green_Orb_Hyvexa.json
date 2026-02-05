@@ -1,0 +1,62 @@
+{
+  "TranslationProperties": {
+    "Name": "server.items.Ore_Adamantite.name",
+    "Description": "server.items.Ore_Adamantite.description"
+  },
+  "Categories": [
+    "Blocks.Ores"
+  ],
+  "Recipe": {
+    "Input": [
+      {
+        "ResourceTypeId": "Salvage_Adamantite",
+        "Quantity": 1
+      }
+    ],
+    "BenchRequirement": [
+      {
+        "Type": "Processing",
+        "Id": "Salvagebench"
+      }
+    ],
+    "TimeSeconds": 4
+  },
+  "Model": "Items/Tools/Red ORb/Orb Hyvexa.blockymodel",
+  "Texture": "Items/Tools/Red ORb/Orb Texture Green.png",
+  "ItemLevel": 10,
+  "PlayerAnimationsId": "Block",
+  "IconProperties": {
+    "Scale": 0.9,
+    "Rotation": [
+      0,
+      196,
+      0
+    ],
+    "Translation": [
+      0,
+      -19
+    ]
+  },
+  "Icon": "Icons/ItemsGenerated/Green_Orb_Hyvexa.png",
+  "Tags": {
+    "Type": [
+      "Ore"
+    ]
+  },
+  "ItemEntity": {
+    "ParticleSystemId": null
+  },
+  "MaxStack": 1,
+  "ItemSoundSetId": "ISS_Blocks_Stone",
+  "DropOnDeath": true,
+  "Scale": 1.6,
+  "Light": {
+    "Color": "#3d6"
+  },
+  "Particles": [
+    {
+      "Color": "#2aff11",
+      "SystemId": "Temple_Light_Lantern"
+    }
+  ]
+}
