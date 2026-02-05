@@ -15,8 +15,8 @@ public class AscendPlayerProgress {
     private int elevationMultiplier = 1;
     private final Map<String, MapProgress> mapProgress = new ConcurrentHashMap<>();
 
-    // Summit System - levels per category
-    private final Map<AscendConstants.SummitCategory, Integer> summitLevels = new ConcurrentHashMap<>();
+    // Summit System - XP per category (level calculated from XP)
+    private final Map<AscendConstants.SummitCategory, Long> summitXp = new ConcurrentHashMap<>();
     private BigDecimal totalCoinsEarned = BigDecimal.ZERO; // Lifetime coins for achievements
 
     // Ascension System
@@ -73,34 +73,38 @@ public class AscendPlayerProgress {
     }
 
     // ========================================
-    // Summit System
+    // Summit System (XP-based)
     // ========================================
 
+    public long getSummitXp(AscendConstants.SummitCategory category) {
+        return summitXp.getOrDefault(category, 0L);
+    }
+
+    public void setSummitXp(AscendConstants.SummitCategory category, long xp) {
+        summitXp.put(category, Math.max(0, xp));
+    }
+
+    public long addSummitXp(AscendConstants.SummitCategory category, long amount) {
+        long current = getSummitXp(category);
+        long newXp = Math.max(0, current + amount);
+        summitXp.put(category, newXp);
+        return newXp;
+    }
+
     public int getSummitLevel(AscendConstants.SummitCategory category) {
-        return summitLevels.getOrDefault(category, 0);
+        return AscendConstants.calculateLevelFromXp(getSummitXp(category));
     }
 
-    public void setSummitLevel(AscendConstants.SummitCategory category, int level) {
-        summitLevels.put(category, Math.max(0, level));
-    }
-
-    public int addSummitLevel(AscendConstants.SummitCategory category, int amount) {
-        int current = getSummitLevel(category);
-        int newLevel = Math.max(0, current + amount);
-        summitLevels.put(category, newLevel);
-        return newLevel;
-    }
-
-    public Map<AscendConstants.SummitCategory, Integer> getSummitLevels() {
+    public Map<AscendConstants.SummitCategory, Long> getSummitXpMap() {
         return new EnumMap<>(AscendConstants.SummitCategory.class) {{
             for (AscendConstants.SummitCategory cat : AscendConstants.SummitCategory.values()) {
-                put(cat, getSummitLevel(cat));
+                put(cat, getSummitXp(cat));
             }
         }};
     }
 
-    public void clearSummitLevels() {
-        summitLevels.clear();
+    public void clearSummitXp() {
+        summitXp.clear();
     }
 
     public BigDecimal getTotalCoinsEarned() {
