@@ -250,7 +250,7 @@ During manual runs, players receive run-specific hotbar items:
   - 620x620px container with "A S C E N D" header
   - Card layout (580x90px) with 3 zones:
     - Left accent bar (8px): colored per map position
-    - Info zone (~436px): map name, 10-segment progress bar, runs/sec status
+    - Info zone (~436px): map name, 10-segment progress bar, run time status
     - Button zone (128px): accent bar + level/speed/action/price
   - Color palette by position: violet → blue → cyan → amber → red
   - Progress bar: 20 segments showing speed level (Lv.0 to Lv.20)

@@ -3,6 +3,8 @@
 ## [Unreleased]
 
 ### Changed
+- **Ascend: Map selector shows run time and multiplier gain** - Displays actual runner completion time and multiplier gain per run (e.g., "Run: 2.34s (+0.1x) | PB: 5.00s")
+- **Ascend: Runner upgrade button shows speed gain per level** - Displays "+10%/lvl" to "+30%/lvl" depending on map instead of total accumulated speed
 - **Ascend: Early-game unlock pacing** - Added decaying cost boost for levels 0-9 on maps 2+ to create more gap between map unlocks without affecting late-game
   - Map 2 (Orange): up to ×1.5 boost, Map 3 (Jaune): ×2.0, Map 4 (Vert): ×2.5, Map 5 (Bleu): ×3.0
   - Boost decays linearly from level 0 (full) to level 10 (none), ensuring costs always increase
