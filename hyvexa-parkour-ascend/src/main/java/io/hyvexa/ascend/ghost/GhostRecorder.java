@@ -30,6 +30,7 @@ public class GhostRecorder {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final long SAMPLE_INTERVAL_MS = 50;
+    private static final int MAX_SAMPLES = 12000; // Cap at ~10 minutes of recording
 
     private final GhostStore ghostStore;
     private final Map<UUID, ActiveRecording> activeRecordings = new ConcurrentHashMap<>();
@@ -148,6 +149,13 @@ public class GhostRecorder {
      * Sample a single player's position and rotation.
      */
     private void samplePlayer(ActiveRecording recording, long now) {
+        // Check if recording has reached sample limit
+        synchronized (recording.samples) {
+            if (recording.samples.size() >= MAX_SAMPLES) {
+                return;
+            }
+        }
+
         // Find the player in the universe
         PlayerRef playerRef = null;
         for (PlayerRef pr : Universe.get().getPlayers()) {
