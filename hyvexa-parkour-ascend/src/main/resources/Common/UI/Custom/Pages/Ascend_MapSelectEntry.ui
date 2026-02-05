@@ -154,21 +154,50 @@ Group {
 
   Group #ButtonZone {
     Anchor: (Width: 128, Top: 0, Bottom: 0);
-    LayoutMode: Top;
 
-    Group #ButtonAccent {
-      Anchor: (Left: 0, Right: 0, Height: 3);
-      Background: #7c3aed;
+    Group #ButtonBgViolet {
+      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+      Background: #7c3aed(0.85);
+      Visible: false;
+    }
+
+    Group #ButtonBgRed {
+      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+      Background: #ef4444(0.85);
+      Visible: false;
+    }
+
+    Group #ButtonBgOrange {
+      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+      Background: #f59e0b(0.85);
+      Visible: false;
+    }
+
+    Group #ButtonBgGreen {
+      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+      Background: #10b981(0.85);
+      Visible: false;
+    }
+
+    Group #ButtonBgBlue {
+      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+      Background: #3b82f6(0.85);
+      Visible: false;
+    }
+
+    Group #ButtonDisabledOverlay {
+      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+      Background: #000000(0.7);
+      Visible: false;
     }
 
     Button #RobotBuyButton {
       Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-      FlexWeight: 1;
       Padding: (Left: 8, Right: 8, Top: 4, Bottom: 6);
-      Background: #000000(0.25);
+      Background: #00000000;
       Style: ButtonStyle(
-        Default: (Background: #000000(0.25)),
-        Hovered: (Background: #000000(0.4)),
+        Default: (Background: #00000000),
+        Hovered: (Background: #ffffff(0.15)),
         Pressed: (Background: #000000(0.15)),
         Sounds: $C.@ButtonSounds,
       );

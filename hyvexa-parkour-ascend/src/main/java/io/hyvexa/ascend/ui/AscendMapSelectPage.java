@@ -43,7 +43,9 @@ public class AscendMapSelectPage extends BaseAscendPage {
     private static final String BUTTON_SELECT_PREFIX = "Select:";
     private static final String BUTTON_ROBOT_PREFIX = "Robot:";
     private static final String BUTTON_BUY_ALL = "BuyAll";
+    private static final String BUTTON_BUY_ALL_DISABLED = "BuyAllDisabled";
     private static final String BUTTON_EVOLVE_ALL = "EvolveAll";
+    private static final String BUTTON_EVOLVE_ALL_DISABLED = "EvolveAllDisabled";
     private static final String BUTTON_STATS = "Stats";
     private static final int MAX_SPEED_LEVEL = 20;
 
@@ -54,6 +56,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
     private final GhostStore ghostStore;
     private ScheduledFuture<?> refreshTask;
     private int lastMapCount;
+
 
     public AscendMapSelectPage(@Nonnull PlayerRef playerRef, AscendMapStore mapStore,
                                AscendPlayerStore playerStore, AscendRunTracker runTracker,
@@ -74,11 +77,23 @@ public class AscendMapSelectPage extends BaseAscendPage {
             EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ActionButton1",
             EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_BUY_ALL), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BuyAllOverlay",
+            EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_BUY_ALL_DISABLED), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ActionButton2",
             EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_EVOLVE_ALL), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#EvolveAllOverlay",
+            EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_EVOLVE_ALL_DISABLED), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ActionButton3",
             EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_STATS), false);
         buildMapList(ref, store, uiCommandBuilder, uiEventBuilder);
+
+        // Set initial button states
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        if (playerRef != null) {
+            updateBuyAllButtonState(uiCommandBuilder, playerRef.getUuid());
+            updateEvolveAllButtonState(uiCommandBuilder, playerRef.getUuid());
+        }
+
         // Start affordability color updates (coins change frequently from passive income)
         startAffordabilityUpdates(ref, store);
     }
@@ -98,8 +113,16 @@ public class AscendMapSelectPage extends BaseAscendPage {
             handleBuyAll(ref, store);
             return;
         }
+        if (BUTTON_BUY_ALL_DISABLED.equals(data.getButton())) {
+            sendMessage(store, ref, "[Ascend] No upgrades available.");
+            return;
+        }
         if (BUTTON_EVOLVE_ALL.equals(data.getButton())) {
             handleEvolveAll(ref, store);
+            return;
+        }
+        if (BUTTON_EVOLVE_ALL_DISABLED.equals(data.getButton())) {
+            sendMessage(store, ref, "[Ascend] No runners ready for evolution.");
             return;
         }
         if (BUTTON_STATS.equals(data.getButton())) {
@@ -263,24 +286,35 @@ public class AscendMapSelectPage extends BaseAscendPage {
                 displayPriceText = "";
             }
 
-            // Determine color for level text and button accent bar based on affordability
-            String levelColor;
+            // Show the correct colored background for this map
+            commandBuilder.set("#MapCards[" + index + "] " + resolveButtonBgElementId(index) + ".Visible", true);
+
+            // Determine if disabled overlay should be shown based on affordability
+            boolean showDisabledOverlay;
+            String secondaryTextColor;
             boolean isUpgrade = runnerButtonText.equals("Upgrade") && actionPrice.compareTo(BigDecimal.ZERO) > 0;
             if (isUpgrade) {
                 BigDecimal currentCoins = playerStore.getCoins(playerRef.getUuid());
                 boolean canAfford = currentCoins.compareTo(actionPrice) >= 0;
-                levelColor = canAfford ? accentColor : "#ffffff";
+                showDisabledOverlay = !canAfford;
+                secondaryTextColor = canAfford ? "#ffffff" : "#9fb0ba";
             } else {
-                levelColor = accentColor;
+                // Non-upgrade actions (Buy Runner, Evolve, Complete First, Maxed) - always enabled
+                showDisabledOverlay = false;
+                secondaryTextColor = "#ffffff";
             }
 
-            // Apply color to button accent bar and level text
-            commandBuilder.set("#MapCards[" + index + "] #ButtonAccent.Background", levelColor);
+            // Apply disabled overlay visibility and text colors
+            // Level text always white for visibility
+            commandBuilder.set("#MapCards[" + index + "] #ButtonDisabledOverlay.Visible", showDisabledOverlay);
             commandBuilder.set("#MapCards[" + index + "] #RunnerLevel.Text", levelText);
-            commandBuilder.set("#MapCards[" + index + "] #RunnerLevel.Style.TextColor", levelColor);
+            commandBuilder.set("#MapCards[" + index + "] #RunnerLevel.Style.TextColor", "#ffffff");
             commandBuilder.set("#MapCards[" + index + "] #RunnerStatus.Text", runnerStatusText);
+            commandBuilder.set("#MapCards[" + index + "] #RunnerStatus.Style.TextColor", secondaryTextColor);
             commandBuilder.set("#MapCards[" + index + "] #RobotBuyText.Text", displayButtonText);
+            commandBuilder.set("#MapCards[" + index + "] #RobotBuyText.Style.TextColor", secondaryTextColor);
             commandBuilder.set("#MapCards[" + index + "] #RobotPriceText.Text", displayPriceText);
+            commandBuilder.set("#MapCards[" + index + "] #RobotPriceText.Style.TextColor", secondaryTextColor);
 
             // Event bindings
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
@@ -323,6 +357,16 @@ public class AscendMapSelectPage extends BaseAscendPage {
             case 2 -> "#f59e0b";  // Orange
             case 3 -> "#10b981";  // Green
             default -> "#3b82f6"; // Blue
+        };
+    }
+
+    private String resolveButtonBgElementId(int index) {
+        return switch (index) {
+            case 0 -> "#ButtonBgViolet";
+            case 1 -> "#ButtonBgRed";
+            case 2 -> "#ButtonBgOrange";
+            case 3 -> "#ButtonBgGreen";
+            default -> "#ButtonBgBlue";
         };
     }
 
@@ -548,12 +592,19 @@ public class AscendMapSelectPage extends BaseAscendPage {
             // This map has an upgrade button, check affordability
             BigDecimal upgradeCost = computeUpgradeCost(speedLevel, map.getDisplayOrder(), stars);
             boolean canAfford = currentCoins.compareTo(upgradeCost) >= 0;
-            String levelColor = canAfford ? accentColor : "#ffffff";
+            String secondaryTextColor = canAfford ? "#ffffff" : "#9fb0ba";
 
-            // Update only the color properties
-            commandBuilder.set("#MapCards[" + i + "] #ButtonAccent.Background", levelColor);
-            commandBuilder.set("#MapCards[" + i + "] #RunnerLevel.Style.TextColor", levelColor);
+            // Update overlay visibility and text colors
+            commandBuilder.set("#MapCards[" + i + "] #ButtonDisabledOverlay.Visible", !canAfford);
+            commandBuilder.set("#MapCards[" + i + "] #RunnerLevel.Style.TextColor", "#ffffff");
+            commandBuilder.set("#MapCards[" + i + "] #RunnerStatus.Style.TextColor", secondaryTextColor);
+            commandBuilder.set("#MapCards[" + i + "] #RobotBuyText.Style.TextColor", secondaryTextColor);
+            commandBuilder.set("#MapCards[" + i + "] #RobotPriceText.Style.TextColor", secondaryTextColor);
         }
+
+        // Also update action button states
+        updateBuyAllButtonState(commandBuilder, playerRef.getUuid());
+        updateEvolveAllButtonState(commandBuilder, playerRef.getUuid());
 
         if (!isCurrentPage()) {
             return;
@@ -656,16 +707,20 @@ public class AscendMapSelectPage extends BaseAscendPage {
         // Update level text in button zone
         String levelText = buildLevelText(stars, speedLevel);
 
-        // Determine color for level text and button accent bar based on affordability
+        // Determine if disabled overlay should be shown based on affordability
         String accentColor = resolveMapAccentColor(index);
-        String levelColor;
+        boolean showDisabledOverlay;
+        String secondaryTextColor;
         boolean isUpgrade = runnerButtonText.equals("Upgrade") && actionPrice.compareTo(BigDecimal.ZERO) > 0;
         if (isUpgrade) {
             BigDecimal currentCoins = playerStore.getCoins(playerRef.getUuid());
             boolean canAfford = currentCoins.compareTo(actionPrice) >= 0;
-            levelColor = canAfford ? accentColor : "#ffffff";
+            showDisabledOverlay = !canAfford;
+            secondaryTextColor = canAfford ? "#ffffff" : "#9fb0ba";
         } else {
-            levelColor = accentColor;
+            // Non-upgrade actions (Buy Runner, Evolve, Complete First, Maxed) - always enabled
+            showDisabledOverlay = false;
+            secondaryTextColor = "#ffffff";
         }
 
         // Apply accent color to progress bar segments (always use accent color)
@@ -673,16 +728,21 @@ public class AscendMapSelectPage extends BaseAscendPage {
             commandBuilder.set("#MapCards[" + index + "] #Seg" + seg + ".Background", accentColor);
         }
 
-        // Apply color to button accent bar and level text
-        commandBuilder.set("#MapCards[" + index + "] #ButtonAccent.Background", levelColor);
+        // Apply disabled overlay visibility and text colors
+        commandBuilder.set("#MapCards[" + index + "] #ButtonDisabledOverlay.Visible", showDisabledOverlay);
         commandBuilder.set("#MapCards[" + index + "] #RunnerLevel.Text", levelText);
-        commandBuilder.set("#MapCards[" + index + "] #RunnerLevel.Style.TextColor", levelColor);
-
-        // Update text fields
+        commandBuilder.set("#MapCards[" + index + "] #RunnerLevel.Style.TextColor", "#ffffff");
         commandBuilder.set("#MapCards[" + index + "] #RunnerStatus.Text", runnerStatusText);
+        commandBuilder.set("#MapCards[" + index + "] #RunnerStatus.Style.TextColor", secondaryTextColor);
         commandBuilder.set("#MapCards[" + index + "] #RobotBuyText.Text", displayButtonText);
+        commandBuilder.set("#MapCards[" + index + "] #RobotBuyText.Style.TextColor", secondaryTextColor);
         commandBuilder.set("#MapCards[" + index + "] #RobotPriceText.Text", displayPriceText);
+        commandBuilder.set("#MapCards[" + index + "] #RobotPriceText.Style.TextColor", secondaryTextColor);
         commandBuilder.set("#MapCards[" + index + "] #MapStatus.Text", status);
+
+        // Also update action button states (runner state may have changed)
+        updateBuyAllButtonState(commandBuilder, playerRef.getUuid());
+        updateEvolveAllButtonState(commandBuilder, playerRef.getUuid());
 
         if (!isCurrentPage()) {
             return;
@@ -794,24 +854,34 @@ public class AscendMapSelectPage extends BaseAscendPage {
             displayPriceText = "";
         }
 
-        // Determine color for level text and button accent bar based on affordability
-        String levelColor;
+        // Show the correct colored background for this map
+        commandBuilder.set("#MapCards[" + index + "] " + resolveButtonBgElementId(index) + ".Visible", true);
+
+        // Determine if disabled overlay should be shown based on affordability
+        boolean showDisabledOverlay;
+        String secondaryTextColor;
         boolean isUpgrade = runnerButtonText.equals("Upgrade") && actionPrice.compareTo(BigDecimal.ZERO) > 0;
         if (isUpgrade) {
             BigDecimal currentCoins = playerStore.getCoins(playerRef.getUuid());
             boolean canAfford = currentCoins.compareTo(actionPrice) >= 0;
-            levelColor = canAfford ? accentColor : "#ffffff";
+            showDisabledOverlay = !canAfford;
+            secondaryTextColor = canAfford ? "#ffffff" : "#9fb0ba";
         } else {
-            levelColor = accentColor;
+            // Non-upgrade actions (Buy Runner, Evolve, Complete First, Maxed) - always enabled
+            showDisabledOverlay = false;
+            secondaryTextColor = "#ffffff";
         }
 
-        // Apply color to button accent bar and level text
-        commandBuilder.set("#MapCards[" + index + "] #ButtonAccent.Background", levelColor);
+        // Apply disabled overlay visibility and text colors
+        commandBuilder.set("#MapCards[" + index + "] #ButtonDisabledOverlay.Visible", showDisabledOverlay);
         commandBuilder.set("#MapCards[" + index + "] #RunnerLevel.Text", levelText);
-        commandBuilder.set("#MapCards[" + index + "] #RunnerLevel.Style.TextColor", levelColor);
+        commandBuilder.set("#MapCards[" + index + "] #RunnerLevel.Style.TextColor", "#ffffff");
         commandBuilder.set("#MapCards[" + index + "] #RunnerStatus.Text", runnerStatusText);
+        commandBuilder.set("#MapCards[" + index + "] #RunnerStatus.Style.TextColor", secondaryTextColor);
         commandBuilder.set("#MapCards[" + index + "] #RobotBuyText.Text", displayButtonText);
+        commandBuilder.set("#MapCards[" + index + "] #RobotBuyText.Style.TextColor", secondaryTextColor);
         commandBuilder.set("#MapCards[" + index + "] #RobotPriceText.Text", displayPriceText);
+        commandBuilder.set("#MapCards[" + index + "] #RobotPriceText.Style.TextColor", secondaryTextColor);
 
         // Event bindings
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
@@ -1002,6 +1072,18 @@ public class AscendMapSelectPage extends BaseAscendPage {
         }
 
         sendMessage(store, ref, "[Ascend] Evolved " + evolved + " runner" + (evolved > 1 ? "s" : "") + "!");
+
+        // Update action button states (may now be grayed out if no more eligible actions)
+        UICommandBuilder buttonUpdateCmd = new UICommandBuilder();
+        updateBuyAllButtonState(buttonUpdateCmd, playerRef.getUuid());
+        updateEvolveAllButtonState(buttonUpdateCmd, playerRef.getUuid());
+        if (isCurrentPage()) {
+            try {
+                sendUpdate(buttonUpdateCmd, null, false);
+            } catch (Exception e) {
+                // UI was replaced - ignore
+            }
+        }
     }
 
     private void handleOpenStats(Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -1015,6 +1097,90 @@ public class AscendMapSelectPage extends BaseAscendPage {
         }
         player.getPageManager().openCustomPage(ref, store,
             new StatsPage(playerRef, playerStore, mapStore, ghostStore));
+    }
+
+    /**
+     * Checks if any upgrade is available AND affordable for Buy All (robot purchase or speed upgrade).
+     */
+    private boolean hasAvailableUpgradeForBuyAll(java.util.UUID playerId) {
+        BigDecimal currentCoins = playerStore.getCoins(playerId);
+        List<AscendMap> maps = mapStore.listMapsSorted();
+        for (AscendMap map : maps) {
+            MapUnlockHelper.UnlockResult unlockResult = MapUnlockHelper.checkAndEnsureUnlock(
+                playerId, map, playerStore, mapStore);
+            if (!unlockResult.unlocked) {
+                continue;
+            }
+
+            AscendPlayerProgress.MapProgress mapProgress = playerStore.getMapProgress(playerId, map.getId());
+            boolean hasRobot = mapProgress != null && mapProgress.hasRobot();
+
+            if (!hasRobot) {
+                // Can buy robot if ghost recording exists (buying is free)
+                GhostRecording ghost = ghostStore.getRecording(playerId, map.getId());
+                if (ghost != null) {
+                    return true;
+                }
+            } else {
+                // Can upgrade speed if not at max level AND can afford it
+                int speedLevel = mapProgress.getRobotSpeedLevel();
+                int stars = mapProgress.getRobotStars();
+                if (speedLevel < MAX_SPEED_LEVEL) {
+                    BigDecimal upgradeCost = computeUpgradeCost(speedLevel, map.getDisplayOrder(), stars);
+                    if (currentCoins.compareTo(upgradeCost) >= 0) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Updates the Buy All button appearance based on whether any upgrade is available.
+     */
+    private void updateBuyAllButtonState(UICommandBuilder commandBuilder, java.util.UUID playerId) {
+        boolean hasAvailable = hasAvailableUpgradeForBuyAll(playerId);
+        // Show overlay when no upgrades available (grayed out), hide when upgrades exist
+        commandBuilder.set("#BuyAllOverlay.Visible", !hasAvailable);
+    }
+
+    /**
+     * Checks if any runner is eligible for evolution (at max speed level but not max stars).
+     */
+    private boolean hasEligibleRunnerForEvolution(java.util.UUID playerId) {
+        List<AscendMap> maps = mapStore.listMapsSorted();
+        for (AscendMap map : maps) {
+            MapUnlockHelper.UnlockResult unlockResult = MapUnlockHelper.checkAndEnsureUnlock(
+                playerId, map, playerStore, mapStore);
+            if (!unlockResult.unlocked) {
+                continue;
+            }
+
+            AscendPlayerProgress.MapProgress mapProgress = playerStore.getMapProgress(playerId, map.getId());
+            if (mapProgress == null || !mapProgress.hasRobot()) {
+                continue;
+            }
+
+            int speedLevel = mapProgress.getRobotSpeedLevel();
+            int stars = mapProgress.getRobotStars();
+
+            // Can evolve if at max speed level but not at max stars
+            if (speedLevel >= MAX_SPEED_LEVEL && stars < AscendConstants.MAX_ROBOT_STARS) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Updates the Evolve All button appearance based on whether any runner can be evolved.
+     * Shows/hides the gray overlay on the button.
+     */
+    private void updateEvolveAllButtonState(UICommandBuilder commandBuilder, java.util.UUID playerId) {
+        boolean hasEligible = hasEligibleRunnerForEvolution(playerId);
+        // Show overlay when no eligible runners (grayed out), hide when there are eligible runners
+        commandBuilder.set("#EvolveAllOverlay.Visible", !hasEligible);
     }
 
     private boolean ensureUnlocked(Store<EntityStore> store, Ref<EntityStore> ref, PlayerRef playerRef,

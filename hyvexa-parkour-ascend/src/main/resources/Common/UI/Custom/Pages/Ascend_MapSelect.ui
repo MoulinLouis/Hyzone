@@ -41,48 +41,78 @@ $C.@PageOverlay {
         Anchor: (Left: 0, Right: 0, Top: 6, Height: 56);
         LayoutMode: Left;
 
-        TextButton #ActionButton1 {
+        Group #BuyAllWrapper {
           Anchor: (Height: 56);
           FlexWeight: 1;
-          Text: "Buy All";
-          Style: TextButtonStyle(
-            Default: (
-              Background: #3d6b5a(0.85),
-              LabelStyle: (FontSize: 18, TextColor: #e8fcf4, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
-            ),
-            Hovered: (
-              Background: #4d8f7a(0.92),
-              LabelStyle: (FontSize: 18, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
-            ),
-            Pressed: (
-              Background: #60a894(0.95),
-              LabelStyle: (FontSize: 18, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
-            ),
-            Sounds: $C.@ButtonSounds,
-          );
+
+          TextButton #ActionButton1 {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Text: "Buy All";
+            Style: TextButtonStyle(
+              Default: (
+                Background: #3d6b5a(0.85),
+                LabelStyle: (FontSize: 18, TextColor: #e8fcf4, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Hovered: (
+                Background: #4d8f7a(0.92),
+                LabelStyle: (FontSize: 18, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Pressed: (
+                Background: #60a894(0.95),
+                LabelStyle: (FontSize: 18, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Sounds: $C.@ButtonSounds,
+            );
+          }
+
+          TextButton #BuyAllOverlay {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Text: "";
+            Style: TextButtonStyle(
+              Default: (Background: #1a1a2a(0.6)),
+              Hovered: (Background: #1a1a2a(0.6)),
+              Pressed: (Background: #1a1a2a(0.7)),
+            );
+            Visible: false;
+          }
         }
 
         Group { Anchor: (Width: 8); }
 
-        TextButton #ActionButton2 {
+        Group #EvolveAllWrapper {
           Anchor: (Height: 56);
           FlexWeight: 1;
-          Text: "Evolve All";
-          Style: TextButtonStyle(
-            Default: (
-              Background: #5a3d6b(0.85),
-              LabelStyle: (FontSize: 18, TextColor: #f4e8fc, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
-            ),
-            Hovered: (
-              Background: #7a4d8f(0.92),
-              LabelStyle: (FontSize: 18, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
-            ),
-            Pressed: (
-              Background: #9460a8(0.95),
-              LabelStyle: (FontSize: 18, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
-            ),
-            Sounds: $C.@ButtonSounds,
-          );
+
+          TextButton #ActionButton2 {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Text: "Evolve All";
+            Style: TextButtonStyle(
+              Default: (
+                Background: #5a3d6b(0.85),
+                LabelStyle: (FontSize: 18, TextColor: #f4e8fc, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Hovered: (
+                Background: #7a4d8f(0.92),
+                LabelStyle: (FontSize: 18, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Pressed: (
+                Background: #9460a8(0.95),
+                LabelStyle: (FontSize: 18, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Sounds: $C.@ButtonSounds,
+            );
+          }
+
+          TextButton #EvolveAllOverlay {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Text: "";
+            Style: TextButtonStyle(
+              Default: (Background: #1a1a2a(0.6)),
+              Hovered: (Background: #1a1a2a(0.6)),
+              Pressed: (Background: #1a1a2a(0.7)),
+            );
+            Visible: false;
+          }
         }
 
         Group { Anchor: (Width: 8); }
