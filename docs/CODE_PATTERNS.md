@@ -240,6 +240,74 @@ Group {
 ```
 Hytale UI does NOT support underscores in element IDs. Always use camelCase for IDs.
 
+### Disabled Button with Overlay Pattern
+
+Hytale doesn't support dynamic style changes on TextButtons (e.g., changing `Style.Default.Background` at runtime). To create a "disabled" or "grayed out" button effect, use an overlay pattern:
+
+**UI file (.ui):**
+```
+Group #MyButtonWrapper {
+  Anchor: (Height: 56);
+  FlexWeight: 1;
+
+  TextButton #MyButton {
+    Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+    Text: "Click Me";
+    Style: TextButtonStyle(
+      Default: (Background: #5a3d6b(0.85), LabelStyle: (...)),
+      Hovered: (Background: #7a4d8f(0.92), LabelStyle: (...)),
+      Pressed: (Background: #9460a8(0.95), LabelStyle: (...)),
+      Sounds: $C.@ButtonSounds,
+    );
+  }
+
+  TextButton #MyButtonOverlay {
+    Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+    Text: "";
+    Style: TextButtonStyle(
+      Default: (Background: #1a1a2a(0.6)),
+      Hovered: (Background: #1a1a2a(0.6)),
+      Pressed: (Background: #1a1a2a(0.7)),
+    );
+    Visible: false;
+  }
+}
+```
+
+**Key points:**
+1. Wrap the button in a Group container
+2. Add a `TextButton` overlay (not `Group` - Groups don't support `Activating` events)
+3. Overlay has empty text and same color for Default/Hovered (no visible hover effect)
+4. Overlay starts hidden (`Visible: false`)
+
+**Java - Event bindings:**
+```java
+// Bind both the real button and the overlay
+eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#MyButton",
+    EventData.of(ButtonEventData.KEY_BUTTON, "MyAction"), false);
+eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#MyButtonOverlay",
+    EventData.of(ButtonEventData.KEY_BUTTON, "MyActionDisabled"), false);
+```
+
+**Java - Toggle disabled state:**
+```java
+// Show overlay = button appears grayed out and blocks hover/clicks
+commandBuilder.set("#MyButtonOverlay.Visible", isDisabled);
+```
+
+**Java - Handle disabled click:**
+```java
+if ("MyActionDisabled".equals(data.getButton())) {
+    sendMessage(store, ref, "Action not available.");
+    return;
+}
+```
+
+**Why TextButton for overlay (not Group):**
+- `Group` elements don't support `Activating` events
+- Error: "Target element in CustomUI event binding has no compatible Activating event"
+- `TextButton` with empty text acts as an invisible interactive overlay
+
 ## Data Stores
 
 ```java
