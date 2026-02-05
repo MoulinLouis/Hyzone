@@ -39,17 +39,16 @@ This document provides a factual overview of the economy balancing in Ascend mod
 - **Total slots:** 5 (one per map)
 - **Product formula:** Total multiplier = slot₁ × slot₂ × slot₃ × slot₄ × slot₅
 
-### Elevation Multiplier (Exponential)
-- **Formula:** `level × 1.02^level`
+### Elevation Multiplier (Linear)
+- **Formula:** `level` (direct multiplier)
 - **Scaling:**
-  - Level 1 → ×1.02
-  - Level 10 → ×12.2
-  - Level 50 → ×134
-  - Level 100 → ×724
-  - Level 200 → ×10,500
-  - Level 500 → ×9.6M
+  - Level 0 → ×1
+  - Level 1 → ×1
+  - Level 10 → ×10
+  - Level 100 → ×100
+  - Level 500 → ×500
 - **Applied after:** Map multipliers (multiplicative)
-- **Design intent:** Explosive late-game scaling rewards prestige investment
+- **Design intent:** Simple, predictable multiplier that scales linearly with investment
 
 ---
 
@@ -501,8 +500,8 @@ Evolution provides a clear benefit with continuous cost progression.
 
 ### Formula Consistency
 
-All exponential formulas use consistent growth rates:
-- **Elevation multiplier:** level × 1.02^level (exponential late-game scaling)
+All formulas use consistent growth rates:
+- **Elevation multiplier:** level (direct linear multiplier)
 - **Elevation cost:** 1.15^level (15% growth)
 - **Upgrades:** 2^totalLevel (100% growth per level, smooth and predictable)
 - **Evolution gain:** ×10 per-run multiplier gain (flat boost when evolved)
@@ -514,6 +513,10 @@ Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure conti
 ---
 
 ## Version History
+
+- **2026-02-05 (v7):** Linear elevation multiplier
+  - Reverted elevation from exponential (`level × 1.02^level`) to linear (`level`)
+  - Level now equals multiplier directly (level 210 = ×210)
 
 - **2026-02-05 (v6):** Evolution and Summit XP rebalance
   - Evolution now grants ×10 per-run multiplier gain (instead of one-time map multiplier boost)
@@ -538,7 +541,7 @@ Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure conti
   - Smooth decay ensures costs always increase (no jarring price drops)
 
 - **2026-02-04 (v3):** Exponential elevation and Summit refactoring
-  - Elevation multiplier changed from `level` to `level × 1.02^level`
+  - Elevation multiplier changed from `level` to `level × 1.02^level` *(reverted in v7)*
   - Summit Coin Flow changed from additive (+20%/level) to multiplicative (×1.20/level)
   - Summit Manual Mastery renamed to Evolution Power (+0.20 evolution base/level)
   - Evolution Power affects runner multiplier gains via formula: `0.1 × (2 + bonus)^stars`
