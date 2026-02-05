@@ -368,11 +368,11 @@ public final class AscendConstants {
     // Single-cycle flash (200ms): flash → restore on next HUD update
     // Format: [original, lighter] for each slot
     public static final String[][] MULTIPLIER_COLORS = {
-        {"#7c3aed", "#b794f6"},  // Purple -> Light purple (Rouge/Red slot)
-        {"#3b82f6", "#93c5fd"},  // Blue -> Light blue (Orange slot)
-        {"#06b6d4", "#67e8f9"},  // Cyan -> Light cyan (Jaune/Yellow slot)
-        {"#f59e0b", "#fbbf24"},  // Amber -> Light amber (Vert/Green slot)
-        {"#ef4444", "#fca5a5"}   // Red -> Light red (Bleu/Blue slot)
+        {"#7c3aed", "#b794f6"},  // Violet -> Light violet (Parkour 1)
+        {"#ef4444", "#fca5a5"},  // Red -> Light red (Parkour 2)
+        {"#f59e0b", "#fbbf24"},  // Orange -> Light orange (Parkour 3)
+        {"#10b981", "#34d399"},  // Green -> Light green (Parkour 4)
+        {"#3b82f6", "#93c5fd"}   // Blue -> Light blue (Parkour 5)
     };
 
     // ========================================

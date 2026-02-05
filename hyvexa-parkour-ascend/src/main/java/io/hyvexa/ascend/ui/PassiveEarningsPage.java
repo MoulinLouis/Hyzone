@@ -20,7 +20,7 @@ public class PassiveEarningsPage extends BaseAscendPage {
 
     private static final String BUTTON_CLAIM = "Claim";
     private static final String[] MAP_COLORS = {
-        "#ef4444", "#f97316", "#fbbf24", "#10b981", "#3b82f6"
+        "#7c3aed", "#ef4444", "#f59e0b", "#10b981", "#3b82f6"
     };
 
     private final PassiveEarningsManager.PassiveEarningsResult result;
