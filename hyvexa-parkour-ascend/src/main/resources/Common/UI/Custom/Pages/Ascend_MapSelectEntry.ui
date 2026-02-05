@@ -148,7 +148,7 @@ Group {
         FontSize: 13,
         TextColor: #9fb0ba
       );
-      Text: "Runs/sec: 0";
+      Text: "Run: -";
     }
   }
 
@@ -261,7 +261,7 @@ Group {
       Label #RunnerLevel {
         Anchor: (Left: 0, Right: 0);
         Style: (
-          FontSize: 13,
+          FontSize: 16,
           RenderBold: true,
           TextColor: #7c3aed,
           HorizontalAlignment: Center
@@ -272,7 +272,7 @@ Group {
       Label #RunnerStatus {
         Anchor: (Left: 0, Right: 0, Top: 1);
         Style: (
-          FontSize: 11,
+          FontSize: 14,
           TextColor: #9fb0ba,
           HorizontalAlignment: Center
         );

@@ -24,6 +24,7 @@ import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.ghost.GhostRecording;
 import io.hyvexa.ascend.ghost.GhostStore;
 import io.hyvexa.ascend.robot.RobotManager;
+import io.hyvexa.ascend.summit.SummitManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 import io.hyvexa.ascend.util.MapUnlockHelper;
 import io.hyvexa.common.util.FormatUtils;
@@ -234,7 +235,10 @@ public class AscendMapSelectPage extends BaseAscendPage {
             commandBuilder.set("#MapCards[" + index + "] #MapName.Text", mapName);
 
             // Status text (all displayed maps are unlocked)
-            String status = "Runs/sec: " + formatRunsPerSecond(map, hasRobot, speedLevel, playerRef.getUuid());
+            String status = "Run: " + formatRunTime(map, hasRobot, speedLevel, playerRef.getUuid());
+            if (hasRobot) {
+                status += " (" + formatMultiplierGain(stars, playerRef.getUuid()) + ")";
+            }
 
             // Add personal best time from ghost recording (preserves PB across progress reset)
             GhostRecording ghostForPb = ghostStore.getRecording(playerRef.getUuid(), map.getId());
@@ -260,8 +264,8 @@ public class AscendMapSelectPage extends BaseAscendPage {
                     actionPrice = BigDecimal.ZERO; // Buying a runner is now free
                 }
             } else {
-                int speedPercent = (int)(speedLevel * AscendConstants.getMapSpeedMultiplier(map.getDisplayOrder()) * 100);
-                runnerStatusText = "Speed: +" + speedPercent + "%";
+                int speedGainPercent = (int)(AscendConstants.getMapSpeedMultiplier(map.getDisplayOrder()) * 100);
+                runnerStatusText = "+" + speedGainPercent + "%/lvl";
                 if (speedLevel >= MAX_SPEED_LEVEL && stars < AscendConstants.MAX_ROBOT_STARS) {
                     runnerButtonText = "Evolve";
                     actionPrice = BigDecimal.ZERO;
@@ -370,31 +374,47 @@ public class AscendMapSelectPage extends BaseAscendPage {
         };
     }
 
-    private String formatRunsPerSecond(AscendMap map, boolean hasRobot, int speedLevel, java.util.UUID playerId) {
+    private String formatRunTime(AscendMap map, boolean hasRobot, int speedLevel, java.util.UUID playerId) {
         if (map == null || !hasRobot || playerId == null) {
-            return "0";
+            return "-";
         }
         // Use player's PB time as base (from ghost recording)
         GhostRecording ghost = ghostStore.getRecording(playerId, map.getId());
         if (ghost == null) {
-            return "0";
+            return "-";
         }
         long base = ghost.getCompletionTimeMs();
         if (base <= 0L) {
-            return "0";
+            return "-";
         }
-        double speedMultiplier = 1.0 + (speedLevel * AscendConstants.getMapSpeedMultiplier(map.getDisplayOrder()));
-        long interval = (long) (base / speedMultiplier);
-        interval = Math.max(1L, interval);
-        double perSecond = 1000.0 / interval;
-        String text = String.format(Locale.US, "%.2f", perSecond);
-        if (text.endsWith(".00")) {
-            return text.substring(0, text.length() - 3);
+        // Use full speed multiplier calculation (includes Summit and Ascension bonuses)
+        double speedMultiplier = RobotManager.calculateSpeedMultiplier(map, speedLevel, playerId);
+        long intervalMs = (long) (base / speedMultiplier);
+        intervalMs = Math.max(1L, intervalMs);
+        double seconds = intervalMs / 1000.0;
+        return String.format(Locale.US, "%.2fs", seconds);
+    }
+
+    private String formatMultiplierGain(int stars, java.util.UUID playerId) {
+        // Get Evolution Power bonus from Summit
+        double evolutionBonus = 0.0;
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin != null) {
+            SummitManager summitManager = plugin.getSummitManager();
+            if (summitManager != null && playerId != null) {
+                evolutionBonus = summitManager.getEvolutionPowerBonus(playerId).doubleValue();
+            }
         }
-        if (text.endsWith("0")) {
-            return text.substring(0, text.length() - 1);
+        BigDecimal increment = AscendConstants.getRunnerMultiplierIncrement(stars, evolutionBonus);
+        // Format: show 1 decimal for small values, more for larger
+        double val = increment.doubleValue();
+        if (val < 1.0) {
+            return String.format(Locale.US, "+%.1fx", val);
+        } else if (val < 10.0) {
+            return String.format(Locale.US, "+%.1fx", val);
+        } else {
+            return String.format(Locale.US, "+%.0fx", val);
         }
-        return text;
     }
 
     /**
@@ -466,8 +486,8 @@ public class AscendMapSelectPage extends BaseAscendPage {
                 return;
             }
             int newLevel = playerStore.incrementRobotSpeedLevel(playerRef.getUuid(), mapId);
-            int newSpeedPercent = newLevel * 10;
-            sendMessage(store, ref, "[Ascend] Runner speed upgraded to +" + newSpeedPercent + "%!");
+            int speedGainPercent = (int)(AscendConstants.getMapSpeedMultiplier(map.getDisplayOrder()) * 100);
+            sendMessage(store, ref, "[Ascend] Runner speed upgraded! (+" + speedGainPercent + "%/lvl)");
 
             // Check if new level unlocks next map
             if (newLevel == AscendConstants.MAP_UNLOCK_REQUIRED_RUNNER_LEVEL) {
@@ -647,7 +667,10 @@ public class AscendMapSelectPage extends BaseAscendPage {
         int speedLevel = mapProgress != null ? mapProgress.getRobotSpeedLevel() : 0;
         int stars = mapProgress != null ? mapProgress.getRobotStars() : 0;
 
-        String status = "Runs/sec: " + formatRunsPerSecond(selectedMap, hasRobot, speedLevel, playerRef.getUuid());
+        String status = "Run: " + formatRunTime(selectedMap, hasRobot, speedLevel, playerRef.getUuid());
+        if (hasRobot) {
+            status += " (" + formatMultiplierGain(stars, playerRef.getUuid()) + ")";
+        }
 
         // Add personal best time if available (from ghost recording)
         GhostRecording ghostForPb = ghostStore.getRecording(playerRef.getUuid(), selectedMap.getId());
@@ -670,8 +693,8 @@ public class AscendMapSelectPage extends BaseAscendPage {
                 actionPrice = BigDecimal.ZERO; // Buying a runner is now free
             }
         } else {
-            int speedPercent = (int)(speedLevel * AscendConstants.getMapSpeedMultiplier(selectedMap.getDisplayOrder()) * 100);
-            runnerStatusText = "Speed: +" + speedPercent + "%";
+            int speedGainPercent = (int)(AscendConstants.getMapSpeedMultiplier(selectedMap.getDisplayOrder()) * 100);
+            runnerStatusText = "+" + speedGainPercent + "%/lvl";
             if (speedLevel >= MAX_SPEED_LEVEL && stars < AscendConstants.MAX_ROBOT_STARS) {
                 runnerButtonText = "Evolve";
                 actionPrice = BigDecimal.ZERO;
@@ -804,7 +827,10 @@ public class AscendMapSelectPage extends BaseAscendPage {
         commandBuilder.set("#MapCards[" + index + "] #MapName.Text", mapName);
 
         // Status text
-        String status = "Runs/sec: " + formatRunsPerSecond(map, hasRobot, speedLevel, playerRef.getUuid());
+        String status = "Run: " + formatRunTime(map, hasRobot, speedLevel, playerRef.getUuid());
+        if (hasRobot) {
+            status += " (" + formatMultiplierGain(stars, playerRef.getUuid()) + ")";
+        }
         // Add personal best time from ghost recording
         GhostRecording ghostForPb = ghostStore.getRecording(playerRef.getUuid(), map.getId());
         if (ghostForPb != null && ghostForPb.getCompletionTimeMs() > 0) {
@@ -828,8 +854,8 @@ public class AscendMapSelectPage extends BaseAscendPage {
                 actionPrice = BigDecimal.ZERO; // Buying a runner is now free
             }
         } else {
-            int speedPercent = (int)(speedLevel * AscendConstants.getMapSpeedMultiplier(map.getDisplayOrder()) * 100);
-            runnerStatusText = "Speed: +" + speedPercent + "%";
+            int speedGainPercent = (int)(AscendConstants.getMapSpeedMultiplier(map.getDisplayOrder()) * 100);
+            runnerStatusText = "+" + speedGainPercent + "%/lvl";
             if (speedLevel >= MAX_SPEED_LEVEL && stars < AscendConstants.MAX_ROBOT_STARS) {
                 runnerButtonText = "Evolve";
                 actionPrice = BigDecimal.ZERO;
