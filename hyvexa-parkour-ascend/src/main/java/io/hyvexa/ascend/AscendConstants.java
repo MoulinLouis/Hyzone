@@ -455,60 +455,70 @@ public final class AscendConstants {
         }
     }
 
-    // Summit level thresholds (coins required for each level)
-    // Level calculation: find highest level where cumulative <= coins spent
-    public static final long[] SUMMIT_LEVEL_THRESHOLDS = {
-        10_000L,        // Level 1
-        50_000L,        // Level 2 (cumulative: 60K)
-        200_000L,       // Level 3 (cumulative: 260K)
-        1_000_000L,     // Level 4 (cumulative: 1.26M)
-        5_000_000L,     // Level 5 (cumulative: 6.26M)
-        20_000_000L,    // Level 6 (cumulative: 26.26M)
-        80_000_000L,    // Level 7 (cumulative: 106.26M)
-        300_000_000L,   // Level 8 (cumulative: 406.26M)
-        1_000_000_000L, // Level 9 (cumulative: 1.406B)
-        5_000_000_000L  // Level 10 (cumulative: 6.406B)
-    };
+    // ========================================
+    // Summit XP System
+    // ========================================
 
-    public static final int SUMMIT_MAX_LEVEL = SUMMIT_LEVEL_THRESHOLDS.length;
-    public static final long SUMMIT_MIN_COINS = SUMMIT_LEVEL_THRESHOLDS[0];
+    public static final long SUMMIT_COINS_TO_XP_RATIO = 1000L; // 1000 coins = 1 XP
+    public static final double SUMMIT_XP_LEVEL_BASE = 100.0;   // Base XP for level formula
+    public static final double SUMMIT_XP_LEVEL_EXPONENT = 1.5; // Exponent for level formula
+    public static final long SUMMIT_MIN_COINS = SUMMIT_COINS_TO_XP_RATIO; // Minimum coins for 1 XP
 
-    public static int calculateSummitLevel(BigDecimal coinsSpent) {
-        BigDecimal firstThreshold = BigDecimal.valueOf(SUMMIT_LEVEL_THRESHOLDS[0]);
-        if (coinsSpent.compareTo(firstThreshold) < 0) {
-            return 0;
-        }
-
-        BigDecimal cumulative = BigDecimal.ZERO;
-        for (int i = 0; i < SUMMIT_LEVEL_THRESHOLDS.length; i++) {
-            BigDecimal threshold = BigDecimal.valueOf(SUMMIT_LEVEL_THRESHOLDS[i]);
-            cumulative = cumulative.add(threshold, CALC_CTX);
-
-            // Pure BigDecimal comparison
-            if (coinsSpent.compareTo(cumulative) < 0) {
-                return i;
-            }
-        }
-
-        return SUMMIT_LEVEL_THRESHOLDS.length;
+    /**
+     * Convert coins to XP.
+     * Formula: coins / 1000
+     */
+    public static long coinsToXp(BigDecimal coins) {
+        return coins.divide(BigDecimal.valueOf(SUMMIT_COINS_TO_XP_RATIO), 0, RoundingMode.FLOOR).longValue();
     }
 
-    public static long getCoinsForSummitLevel(int level) {
-        if (level <= 0) {
-            return 0;
+    /**
+     * Calculate XP required to reach a specific level (from level-1).
+     * Formula: 100 × level^1.5
+     */
+    public static long getXpForLevel(int level) {
+        if (level <= 0) return 0;
+        return (long) Math.ceil(SUMMIT_XP_LEVEL_BASE * Math.pow(level, SUMMIT_XP_LEVEL_EXPONENT));
+    }
+
+    /**
+     * Calculate cumulative XP required to reach a level (total from 0).
+     */
+    public static long getCumulativeXpForLevel(int level) {
+        long total = 0;
+        for (int i = 1; i <= level; i++) {
+            total += getXpForLevel(i);
         }
+        return total;
+    }
+
+    /**
+     * Calculate the level achieved with given cumulative XP.
+     */
+    public static int calculateLevelFromXp(long xp) {
+        int level = 0;
         long cumulative = 0;
-        for (int i = 0; i < Math.min(level, SUMMIT_LEVEL_THRESHOLDS.length); i++) {
-            cumulative += SUMMIT_LEVEL_THRESHOLDS[i];
+        while (true) {
+            long nextLevelXp = getXpForLevel(level + 1);
+            if (cumulative + nextLevelXp > xp) {
+                break;
+            }
+            cumulative += nextLevelXp;
+            level++;
         }
-        return cumulative;
+        return level;
     }
 
-    public static long getCoinsForNextSummitLevel(int currentLevel) {
-        if (currentLevel >= SUMMIT_MAX_LEVEL) {
-            return Long.MAX_VALUE;
-        }
-        return getCoinsForSummitLevel(currentLevel + 1);
+    /**
+     * Calculate XP progress within current level.
+     * Returns [currentXpInLevel, xpRequiredForNextLevel]
+     */
+    public static long[] getXpProgress(long totalXp) {
+        int level = calculateLevelFromXp(totalXp);
+        long xpForCurrentLevel = getCumulativeXpForLevel(level);
+        long xpInLevel = totalXp - xpForCurrentLevel;
+        long xpForNextLevel = getXpForLevel(level + 1);
+        return new long[]{xpInLevel, xpForNextLevel};
     }
 
     // ========================================
