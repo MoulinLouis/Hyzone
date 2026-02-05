@@ -19,6 +19,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.command.AscendCommand;
 import io.hyvexa.ascend.command.AscendAdminCommand;
 import io.hyvexa.ascend.data.AscendDatabaseSetup;
+import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerStore;
@@ -90,6 +91,13 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
     @Override
     protected void setup() {
+        // Ensure database is initialized (may already be done by main plugin, but order is not guaranteed)
+        try {
+            DatabaseManager.getInstance().initialize();
+        } catch (Exception e) {
+            LOGGER.at(Level.WARNING).withCause(e).log("Failed to initialize database for Ascend");
+        }
+
         AscendDatabaseSetup.ensureTables();
 
         // Initialize whitelist manager
