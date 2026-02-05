@@ -390,6 +390,7 @@ public class AscensionManager {
 
     /**
      * Checks if manual runs boost runner speed.
+     * TODO: Effect not yet implemented - skill can be unlocked but has no gameplay effect.
      */
     public boolean hasRunnerBoost(UUID playerId) {
         AscendPlayerProgress progress = playerStore.getPlayer(playerId);
@@ -398,6 +399,7 @@ public class AscensionManager {
 
     /**
      * Checks if personal best tracking is enabled.
+     * TODO: Effect not yet implemented - skill can be unlocked but has no gameplay effect.
      */
     public boolean hasPersonalBestTracking(UUID playerId) {
         AscendPlayerProgress progress = playerStore.getPlayer(playerId);

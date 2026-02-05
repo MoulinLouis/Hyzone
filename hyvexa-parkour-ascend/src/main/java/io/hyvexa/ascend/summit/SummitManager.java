@@ -152,6 +152,7 @@ public class SummitManager {
      * Gets the Evolution Power bonus for runner evolution.
      * Formula: 10 + 0.5 * level^0.8
      * Increases the evolution base multiplier.
+     * TODO: Effect not yet applied anywhere - XP can be invested but has no gameplay effect.
      * @return Evolution bonus (10.0 at level 0, ~13.15 at level 10)
      */
     public BigDecimal getEvolutionPowerBonus(UUID playerId) {
