@@ -27,10 +27,7 @@
     "ParticleSystemId": null
   },
   "MaxStack": 1,
-  "Scale": 1.6,
-  "Light": {
-    "Color": "#3d6"
-  },
+  "Scale": 1.3,
   "Particles": [
     {
       "Color": "#7b11ff",
