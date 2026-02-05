@@ -2,7 +2,7 @@ $C = "../Common.ui";
 
 Group {
   LayoutMode: Left;
-  Anchor: (Left: 0, Right: 0, Bottom: 8, Height: 90);
+  Anchor: (Left: 0, Right: 0, Bottom: 8, Height: 110);
   Background: #1a2530(0.95);
 
   Group #AccentBar {
@@ -48,6 +48,25 @@ Group {
         RenderBold: true
       );
       Text: "Current Bonus: +0%";
+    }
+
+    Group #XpBarContainer {
+      Anchor: (Left: 0, Right: 0, Top: 6, Height: 16);
+      Background: #000000(0.3);
+
+      Group #XpBarFill {
+        Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 0%);
+        Background: #7c3aed(0.6);
+      }
+
+      Label #XpProgress {
+        Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+        Style: (
+          FontSize: 11,
+          TextColor: #f0f4f8
+        );
+        Text: "Exp 0/100 (+0)";
+      }
     }
   }
 
