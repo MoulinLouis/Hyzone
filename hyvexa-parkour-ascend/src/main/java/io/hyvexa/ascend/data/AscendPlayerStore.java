@@ -708,7 +708,7 @@ public class AscendPlayerStore {
         AscendPlayerProgress.MapProgress mapProgress = getOrCreateMapProgress(playerId, mapId);
         mapProgress.setRobotSpeedLevel(0);
         int newStars = mapProgress.incrementRobotStars();
-        // Evolution now grants ×10 multiplier gain per-run (handled in AscendConstants.getRunnerMultiplierIncrement)
+        // Evolution now grants ×2 multiplier gain per-run (handled in AscendConstants.getRunnerMultiplierIncrement)
         markDirty(playerId);
         return newStars;
     }

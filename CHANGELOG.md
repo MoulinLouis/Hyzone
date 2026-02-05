@@ -6,6 +6,7 @@
 - **Ascend: Leaderboard system** - New `/ascend leaderboard` command with tabbed rankings for Coins, Ascensions, and Manual Runs. Includes pagination (50 per page) and player search. Accessible via the Bolt of Stormsilk item.
 
 ### Changed
+- **Ascend: Evolution default multiplier bonus adjusted** - Evolved runners now apply ×2 multiplier gain per run instead of ×10
 - **Ascend: Summit system rebalanced for late-game** - Summit now requires 1T coins minimum for first level (was 10K), and resets multipliers/runners like elevation
 - **Ascend: Map selector shows run time and multiplier gain** - Displays actual runner completion time and multiplier gain per run (e.g., "Run: 2.34s (+0.1x) | PB: 5.00s")
 - **Ascend: Runner upgrade button shows speed gain per level** - Displays "+10%/lvl" to "+30%/lvl" depending on map instead of total accumulated speed
@@ -959,4 +960,3 @@
   - **Tree structure**: T1-T5 tiers per path, HYBRID nodes bridge paths, ULTIMATE at the apex.
   - **Points display**: Header shows available and total skill points.
   - `/ascend skills` now opens the graphical skill tree UI instead of text output.
-

@@ -220,17 +220,17 @@ public final class AscendConstants {
 
     /**
      * Get the multiplier increment for a runner with Multiplier Gain bonus.
-     * Base: 0.1 per completion, ×10 when evolved (stars > 0)
+     * Base: 0.1 per completion, ×2 when evolved (stars > 0)
      * With Multiplier Gain Summit bonus: base × multiplierGainBonus
-     * @param stars Evolution level - applies ×10 multiplier when > 0
+     * @param stars Evolution level - applies ×2 multiplier when > 0
      * @param multiplierGainBonus Bonus from Summit Multiplier Gain (1.0 at level 0, higher with levels)
      * @return Multiplier increment per completion
      */
     public static BigDecimal getRunnerMultiplierIncrement(int stars, double multiplierGainBonus) {
         BigDecimal base = new BigDecimal("0.1");  // RUNNER_MULTIPLIER_INCREMENT
-        // Apply ×10 multiplier when evolved (stars > 0)
+        // Apply ×2 multiplier when evolved (stars > 0)
         if (stars > 0) {
-            base = base.multiply(BigDecimal.TEN);
+            base = base.multiply(BigDecimal.valueOf(2));
         }
         return base.multiply(BigDecimal.valueOf(multiplierGainBonus), MULTIPLIER_CTX)
                    .setScale(20, RoundingMode.HALF_UP);

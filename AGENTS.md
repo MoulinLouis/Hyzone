@@ -11,3 +11,7 @@
 - Database patterns
 - Code patterns and Hytale API references
 - Links to all documentation in `docs/`
+
+## grepai (this environment)
+- `grepai search`/`trace` may fail in sandbox because embeddings use local Ollama (`127.0.0.1:11434`).
+- If that happens, run `grepai` outside sandbox (escalated); otherwise fallback to `rg`/`grep`.
