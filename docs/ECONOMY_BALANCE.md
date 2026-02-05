@@ -54,17 +54,17 @@ This document provides a factual overview of the economy balancing in Ascend mod
 
 ## Runner Speed Upgrades
 
-### Speed Bonus Per Level (Map-Dependent)
+### Speed Bonus Per Level (Uniform)
 
-Speed upgrade effectiveness varies by map difficulty:
+Speed upgrade effectiveness is the same for all maps:
 
 | Map | Display Order | Speed Bonus per Level | Level 20 Total |
 |-----|---------------|----------------------|----------------|
 | Rouge (Red) | 0 | +10% | +200% |
-| Orange | 1 | +15% | +300% |
-| Jaune (Yellow) | 2 | +20% | +400% |
-| Vert (Green) | 3 | +25% | +500% |
-| Bleu (Blue) | 4 | +30% | +600% |
+| Orange | 1 | +10% | +200% |
+| Jaune (Yellow) | 2 | +10% | +200% |
+| Vert (Green) | 3 | +10% | +200% |
+| Bleu (Blue) | 4 | +10% | +200% |
 
 **Formula:** `speedMultiplier = 1.0 + (speedLevel × mapSpeedBonus)`
 

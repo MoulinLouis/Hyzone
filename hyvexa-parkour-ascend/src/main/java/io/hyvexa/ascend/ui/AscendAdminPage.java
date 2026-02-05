@@ -507,7 +507,7 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
         // Multiplier info
         String multiplierInfo = "Manual: +" + formatDouble(AscendConstants.MANUAL_MULTIPLIER_INCREMENT) + "/run\n"
             + "Runner: +" + formatDouble(AscendConstants.RUNNER_MULTIPLIER_INCREMENT) + "/run\n"
-            + "Speed upgrade: +10-30%/level (varies by map)";
+            + "Speed upgrade: +10%/level";
         commandBuilder.set("#MultiplierInfoText.Text", multiplierInfo);
     }
 

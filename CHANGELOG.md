@@ -9,7 +9,7 @@
 - **Ascend: Evolution default multiplier bonus adjusted** - Evolved runners now apply ×2 multiplier gain per run instead of ×10
 - **Ascend: Summit system rebalanced for late-game** - Summit now requires 1T coins minimum for first level (was 10K), and resets multipliers/runners like elevation
 - **Ascend: Map selector shows run time and multiplier gain** - Displays actual runner completion time and multiplier gain per run (e.g., "Run: 2.34s (+0.1x) | PB: 5.00s")
-- **Ascend: Runner upgrade button shows speed gain per level** - Displays "+10%/lvl" to "+30%/lvl" depending on map instead of total accumulated speed
+- **Ascend: Runner speed gain per level standardized** - All maps now use +10%/level for runner speed upgrades
 - **Ascend: Early-game unlock pacing** - Added decaying cost boost for levels 0-9 on maps 2+ to create more gap between map unlocks without affecting late-game
   - Map 2 (Orange): up to ×1.5 boost, Map 3 (Jaune): ×2.0, Map 4 (Vert): ×2.5, Map 5 (Bleu): ×3.0
   - Boost decays linearly from level 0 (full) to level 10 (none), ensuring costs always increase
