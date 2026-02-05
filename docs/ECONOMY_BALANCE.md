@@ -1,6 +1,6 @@
 # Ascend Mode - Economy Balance Documentation
 
-Last updated: 2026-02-04
+Last updated: 2026-02-05
 
 This document provides a factual overview of the economy balancing in Ascend mode, including all costs, multipliers, and progression formulas.
 
@@ -27,18 +27,13 @@ This document provides a factual overview of the economy balancing in Ascend mod
 - **Not affected by:** Stars, map level
 
 ### Runner Multiplier (Automatic)
-- **Base gain per completion:** +0.1
-- **Evolution formula:** `0.1 × (2 + evolutionBonus)^stars`
-- **Base star scaling (without Summit Evolution Power):**
+- **Base gain per completion:** +0.1 (0★), +1.0 (1★+)
+- **Evolution bonus:** ×10 multiplier gain when evolved (stars > 0)
+- **Star scaling:**
   - 0★: +0.1 per completion (base)
-  - 1★: +0.2 per completion (2^1 = 2)
-  - 2★: +0.4 per completion (2^2 = 4)
-  - 3★: +0.8 per completion (2^3 = 8)
-  - 4★: +1.6 per completion (2^4 = 16)
-  - 5★: +3.2 per completion (2^5 = 32)
-- **With Summit Evolution Power (level 10, +2.0 bonus):**
-  - Evolution base becomes 4 (2 + 2.0)
-  - 5★: +102.4 per completion (4^5 = 1024)
+  - 1★+: +1.0 per completion (×10 after evolution)
+- **With Summit Multiplier Gain bonus:** Base increment × bonus
+  - Example at level 10 (×40.7 bonus): 0★ = +4.07/run, 1★+ = +40.7/run
 
 ### Multiplier Slots
 - **Total slots:** 5 (one per map)
@@ -316,18 +311,43 @@ Summit converts coins into XP for permanent category bonuses, resetting coins an
 
 ### XP System
 
-**Coin to XP conversion:** 1000 coins = 1 XP
+**Coin to XP conversion:** `sqrt(coins) / 100` (diminishing returns)
 
-**XP per level formula:** `100 × level^1.5`
+| Coins | XP Gained |
+|-------|-----------|
+| 10K | 1 |
+| 100K | 3 |
+| 1M | 10 |
+| 10M | 32 |
+| 100M | 100 |
+| 1B | 316 |
+| 10B | 1,000 |
+| 100B | 3,162 |
+| 1T | 10,000 |
+| 2T | 14,142 |
+
+**Minimum coins for 1 XP:** 10,000 coins
+
+**XP per level formula:** `level^4`
 
 | Level | XP Required | Cumulative XP |
 |-------|-------------|---------------|
-| 1 | 100 | 100 |
-| 2 | 283 | 383 |
-| 3 | 520 | 903 |
-| 5 | 1,118 | 2,854 |
-| 10 | 3,162 | 14,772 |
-| 20 | 8,944 | 58,989 |
+| 1 | 1 | 1 |
+| 2 | 16 | 17 |
+| 3 | 81 | 98 |
+| 4 | 256 | 354 |
+| 5 | 625 | 979 |
+| 10 | 10,000 | ~25,333 |
+
+**Expected level gains by coins:**
+
+| Coins | XP | Levels Gained |
+|-------|-----|---------------|
+| 10K | 1 | ~1 |
+| 1M | 10 | ~2 |
+| 100M | 100 | ~4 |
+| 10B | 1,000 | ~6 |
+| 2T | 14,142 | ~9 |
 
 ### Categories
 
@@ -335,7 +355,7 @@ Summit converts coins into XP for permanent category bonuses, resetting coins an
 |----------|---------|---------|----------|
 | **Runner Speed** | 1 + 0.45 × √level | ×1.00 | ×2.42 |
 | **Multiplier Gain** | 1 + 5 × level^0.9 | ×1.00 | ×40.7 |
-| **Evolution Power** | 10 + 0.5 × level^0.8 | ×10.0 | ×13.15 |
+| **Evolution Power** | *(unused)* | - | - |
 
 ### Runner Speed
 
@@ -356,28 +376,17 @@ Multiplies runner completion speed (inversely affects run time).
 
 Multiplies the per-run multiplier increment for runners.
 
-| Level | Gain Multiplier | 5★ Runner Increment |
-|-------|-----------------|---------------------|
-| 0 | ×1.00 | +0.1/run |
-| 5 | ×19.5 | +1.95/run |
-| 10 | ×40.7 | +4.07/run |
+| Level | Gain Multiplier | 0★ Increment | 1★+ Increment |
+|-------|-----------------|--------------|---------------|
+| 0 | ×1.00 | +0.1/run | +1.0/run |
+| 5 | ×19.5 | +1.95/run | +19.5/run |
+| 10 | ×40.7 | +4.07/run | +40.7/run |
 
 ### Evolution Power
 
-**Formula:** `10 + 0.5 × level^0.8`
+**Status:** Currently unused (kept for future use)
 
-When a runner evolves, the map multiplier is multiplied by this value.
-
-| Level | Evolution Multiplier |
-|-------|---------------------|
-| 0 | ×10.0 |
-| 5 | ×11.7 |
-| 10 | ×13.15 |
-| 20 | ×15.3 |
-
-**Applied when:** Runner evolves (gains a star). Current map multiplier × evolution power.
-
-**Example:** At Evolution Power level 10, evolving a runner on a map with ×50 multiplier gives ×50 × 13.15 = ×658.
+Evolution now provides a flat ×10 multiplier gain per-run (see Runner Multiplier section).
 
 ---
 
@@ -388,22 +397,18 @@ Evolution provides a clear benefit with continuous cost progression.
 ### The Evolution Benefit
 
 **When you evolve a runner:**
-- ✅ **Multiplier gain doubles** (0.1 → 0.2 → 0.4 → 0.8 → 1.6 → 3.2)
+- ✅ **Multiplier gain ×10** (0.1 → 1.0 per run)
 - ✅ **Speed level resets to 0** (visual reset, but costs continue)
 - ✅ **Costs continue from total level** (no reset, no penalty)
 
 ### Evolution Value Analysis
 
-| Stars | Multiplier Gain | Cumulative Gain | Total Levels |
-|-------|-----------------|-----------------|--------------|
-| 0★ | +0.1/run | +0.1/run | 0-19 |
-| 1★ | +0.2/run | +0.3/run total | 20-39 |
-| 2★ | +0.4/run | +0.7/run total | 40-59 |
-| 3★ | +0.8/run | +1.5/run total | 60-79 |
-| 4★ | +1.6/run | +3.1/run total | 80-99 |
-| 5★ | +3.2/run | +6.3/run total | 100-119 |
+| Stars | Multiplier Gain | Total Levels |
+|-------|-----------------|--------------|
+| 0★ | +0.1/run | 0-19 |
+| 1★+ | +1.0/run (×10) | 20+ |
 
-**Key insight:** Evolution is always beneficial - you get double the multiplier gains for the same cost progression you would have had anyway.
+**Key insight:** Evolution is always beneficial - you get ×10 multiplier gains for the same cost progression you would have had anyway. All evolved runners (1★ to 5★) earn the same per-run increment.
 
 ### Strategic Decisions
 
@@ -427,11 +432,11 @@ Evolution provides a clear benefit with continuous cost progression.
 
 **Option A: Focus on Map 0 (Rouge)**
 - Fast completion time = more runs = more multiplier gains
-- Push to 5★ for +3.2 multiplier per run
+- Evolve to 1★ for +1.0 multiplier per run (×10 boost)
 - **Best for:** Pure idle optimization
 
 **Option B: Spread across all maps**
-- Each map at 2-3★
+- Evolve each runner to at least 1★ for the ×10 boost
 - More balanced income sources
 - Different visual NPCs running around
 - **Best for:** Visual variety and engagement
@@ -439,7 +444,7 @@ Evolution provides a clear benefit with continuous cost progression.
 ### Design Goals Achieved
 
 ✅ **Evolution is always worthwhile**
-- Double multiplier gains with no cost penalty
+- ×10 multiplier gains with no cost penalty
 - Continuous progression feels natural
 
 ✅ **Strategic depth from map choice**
@@ -468,7 +473,7 @@ Evolution provides a clear benefit with continuous cost progression.
 - **Minimum coin generation:** Even idle players make progress
 - **Maximum speed:** Runners capped at level 20 per evolution cycle
 - **Cost scaling:** Exponential but continuous - no resets, no surprises
-- **Evolution benefit:** Double multiplier gain with no cost penalty
+- **Evolution benefit:** ×10 multiplier gain with no cost penalty
   - Costs continue from total levels purchased (stars × 20 + speedLevel)
   - Evolution is always beneficial - strategic choice is which map to prioritize
 
@@ -500,13 +505,23 @@ All exponential formulas use consistent growth rates:
 - **Elevation multiplier:** level × 1.02^level (exponential late-game scaling)
 - **Elevation cost:** 1.15^level (15% growth)
 - **Upgrades:** 2^totalLevel (100% growth per level, smooth and predictable)
-- **Star gain:** 2^stars (100% growth per evolution)
+- **Evolution gain:** ×10 per-run multiplier gain (flat boost when evolved)
+- **Summit XP:** sqrt(coins) / 100 (diminishing returns at high amounts)
+- **Summit levels:** level^4 (steep late-game scaling)
 
 Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure continuous progression after evolution.
 
 ---
 
 ## Version History
+
+- **2026-02-05 (v6):** Evolution and Summit XP rebalance
+  - Evolution now grants ×10 per-run multiplier gain (instead of one-time map multiplier boost)
+  - Removed Evolution Power one-shot bonus (category kept for future use)
+  - Summit XP conversion: `sqrt(coins) / 100` (diminishing returns, was linear)
+  - Summit XP per level: `level^4` (steep scaling, was `100 × level^1.5`)
+  - Minimum coins for Summit: 10,000 (for 1 XP)
+  - Late-game Summit scaling: 2T coins → ~9 levels (was ~1,500+ levels)
 
 - **2026-02-05 (v5):** XP-based Summit system
   - Summit now uses XP instead of coin thresholds (1000 coins = 1 XP)
