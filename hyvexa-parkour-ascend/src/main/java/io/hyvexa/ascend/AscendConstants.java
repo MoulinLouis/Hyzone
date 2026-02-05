@@ -425,41 +425,33 @@ public final class AscendConstants {
     // ========================================
 
     public enum SummitCategory {
-        COIN_FLOW("Coin Flow", 0.20),       // ×1.20^level multiplicative coin earnings
-        RUNNER_SPEED("Runner Speed", 0.15), // +15% runner completion speed per level (additive)
-        EVOLUTION_POWER("Evolution Power", 0.20); // +0.20 evolution base per level
+        RUNNER_SPEED("Runner Speed"),      // 1 + 0.45 × √niveau
+        MULTIPLIER_GAIN("Multiplier Gain"), // 1 + 5 × niveau^0.9
+        EVOLUTION_POWER("Evolution Power"); // 10 + 0.5 × niveau^0.8
 
         private final String displayName;
-        private final double bonusPerLevel;
 
-        SummitCategory(String displayName, double bonusPerLevel) {
+        SummitCategory(String displayName) {
             this.displayName = displayName;
-            this.bonusPerLevel = bonusPerLevel;
         }
 
         public String getDisplayName() {
             return displayName;
         }
 
-        public double getBonusPerLevel() {
-            return bonusPerLevel;
-        }
-
         /**
-         * Get the bonus for a given level.
-         * - COIN_FLOW: Returns the multiplicative factor (1.20^level), e.g., level 5 → 2.49
-         * - RUNNER_SPEED: Returns additive bonus (0.15 × level)
-         * - EVOLUTION_POWER: Returns evolution base bonus (0.20 × level)
+         * Get the bonus multiplier for a given level.
+         * - RUNNER_SPEED: 1 + 0.45 × √niveau
+         * - MULTIPLIER_GAIN: 1 + 5 × niveau^0.9
+         * - EVOLUTION_POWER: 10 + 0.5 × niveau^0.8
          */
         public double getBonusForLevel(int level) {
             int safeLevel = Math.max(0, level);
-            if (this == COIN_FLOW) {
-                // Multiplicative: 1.20^level
-                // Returns the multiplier directly (e.g., 1.0 at level 0, 2.49 at level 5)
-                return Math.pow(1.0 + bonusPerLevel, safeLevel);
-            }
-            // Additive: bonusPerLevel × level
-            return bonusPerLevel * safeLevel;
+            return switch (this) {
+                case RUNNER_SPEED -> 1.0 + 0.45 * Math.sqrt(safeLevel);
+                case MULTIPLIER_GAIN -> 1.0 + 5.0 * Math.pow(safeLevel, 0.9);
+                case EVOLUTION_POWER -> 10.0 + 0.5 * Math.pow(safeLevel, 0.8);
+            };
         }
     }
 
