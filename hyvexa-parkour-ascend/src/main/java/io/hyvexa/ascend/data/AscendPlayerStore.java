@@ -983,6 +983,27 @@ public class AscendPlayerStore {
         return mapsWithRunners;
     }
 
+    /**
+     * Reset progress for Summit: coins and elevation only.
+     * Does NOT reset map multipliers, runners, unlocks, or summit XP.
+     */
+    public List<String> resetProgressForSummit(UUID playerId, String firstMapId) {
+        var progress = getPlayer(playerId);
+        if (progress == null) {
+            return List.of();
+        }
+
+        // Reset coins
+        progress.setCoins(BigDecimal.ZERO);
+
+        // Reset elevation to level 1
+        progress.setElevationMultiplier(1);
+
+        markDirty(playerId);
+
+        return List.of(); // No runners to despawn for Summit
+    }
+
     public boolean isSessionFirstRunClaimed(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
         return progress != null && progress.isSessionFirstRunClaimed();

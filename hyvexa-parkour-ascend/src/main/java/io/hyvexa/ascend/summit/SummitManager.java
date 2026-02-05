@@ -105,14 +105,7 @@ public class SummitManager {
         }
 
         // Reset coins and elevation only (NOT multipliers, runners, unlocks)
-        // Note: resetProgressForSummit is Task 10, for now use direct reset
-        playerStore.setCoins(playerId, BigDecimal.ZERO);
-        var progress = playerStore.getPlayer(playerId);
-        if (progress != null) {
-            progress.setElevationMultiplier(1);
-        }
-
-        playerStore.markDirty(playerId);
+        playerStore.resetProgressForSummit(playerId, firstMapId);
 
         LOGGER.atInfo().log("[Summit] Player " + playerId + " summited " + category.name()
             + " +" + xpToGain + " XP, Lv." + previousLevel + " -> Lv." + newLevel);
