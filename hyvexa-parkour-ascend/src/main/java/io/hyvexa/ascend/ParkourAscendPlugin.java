@@ -101,7 +101,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
         AscendDatabaseSetup.ensureTables();
 
         // Initialize whitelist manager
-        File modsFolder = new File("run/mods/Parkour");
+        File modsFolder = new File("mods/Parkour");
         if (!modsFolder.exists()) {
             modsFolder.mkdirs();
         }
