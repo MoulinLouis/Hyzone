@@ -109,6 +109,44 @@ public final class AscendConstants {
         3.5   // Level 4 (Bleu)   - 3.5x cost
     };
 
+    // Early-game unlock pacing: decaying boost for levels 0-9 on maps 2+
+    // Creates more time between map unlocks without affecting late-game progression
+    // Boost decays linearly: level 0 = full boost, level 9 = 10% of boost, level 10+ = no boost
+    public static final int EARLY_LEVEL_BOOST_THRESHOLD = 10;
+    public static final double[] MAP_EARLY_LEVEL_BOOST = {
+        1.0,  // Map 0 (Rouge)  - no boost (starting map)
+        1.5,  // Map 1 (Orange) - 1.5x max boost at level 0
+        2.0,  // Map 2 (Jaune)  - 2.0x max boost at level 0
+        2.5,  // Map 3 (Vert)   - 2.5x max boost at level 0
+        3.0   // Map 4 (Bleu)   - 3.0x max boost at level 0
+    };
+
+    public static double getMapEarlyLevelBoost(int displayOrder) {
+        if (displayOrder < 0 || displayOrder >= MAP_EARLY_LEVEL_BOOST.length) {
+            return MAP_EARLY_LEVEL_BOOST[MAP_EARLY_LEVEL_BOOST.length - 1];
+        }
+        return MAP_EARLY_LEVEL_BOOST[displayOrder];
+    }
+
+    /**
+     * Calculate the early-level boost multiplier for a given speed level and map.
+     * Boost decays linearly from max at level 0 to 1.0 at EARLY_LEVEL_BOOST_THRESHOLD.
+     * Only applies during the first evolution cycle (0 stars).
+     */
+    public static double calculateEarlyLevelBoost(int speedLevel, int mapDisplayOrder, int stars) {
+        // Only apply boost during first evolution cycle
+        if (stars > 0 || speedLevel >= EARLY_LEVEL_BOOST_THRESHOLD) {
+            return 1.0;
+        }
+        double maxBoost = getMapEarlyLevelBoost(mapDisplayOrder);
+        if (maxBoost <= 1.0) {
+            return 1.0;
+        }
+        // Linear decay: factor goes from 1.0 at level 0 to 0.0 at threshold
+        double decayFactor = (double) (EARLY_LEVEL_BOOST_THRESHOLD - speedLevel) / EARLY_LEVEL_BOOST_THRESHOLD;
+        return 1.0 + (maxBoost - 1.0) * decayFactor;
+    }
+
     public static int getMapUpgradeOffset(int displayOrder) {
         if (displayOrder < 0 || displayOrder >= MAP_UPGRADE_OFFSET.length) {
             return MAP_UPGRADE_OFFSET[MAP_UPGRADE_OFFSET.length - 1];
@@ -216,11 +254,12 @@ public final class AscendConstants {
 
     /**
      * Calculate runner speed upgrade cost.
-     * Formula: baseCost(totalLevel + mapOffset) × mapMultiplier
+     * Formula: baseCost(totalLevel + mapOffset) × mapMultiplier × earlyLevelBoost
      * Where totalLevel = stars × MAX_SPEED_LEVEL + speedLevel (accumulates across evolutions)
      * and baseCost(L) = 5 × 2^L + L × 10
      *
-     * This gives a smooth ~2x growth per level with no artificial jumps.
+     * Early-level boost applies a decaying multiplier for levels 0-9 on maps 2+ during first evolution.
+     * This creates more time between early map unlocks without affecting late-game progression.
      */
     public static BigDecimal getRunnerUpgradeCost(int speedLevel, int mapDisplayOrder, int stars) {
         // Get map-specific scaling parameters
@@ -247,6 +286,12 @@ public final class AscendConstants {
 
         // Apply map multiplier
         baseCost = baseCost.multiply(mapMultiplier, CALC_CTX);
+
+        // Apply early-level boost (decaying multiplier for levels 0-9 on maps 2+ during first evolution)
+        double earlyBoost = calculateEarlyLevelBoost(speedLevel, mapDisplayOrder, stars);
+        if (earlyBoost > 1.0) {
+            baseCost = baseCost.multiply(BigDecimal.valueOf(earlyBoost), CALC_CTX);
+        }
 
         return baseCost.setScale(0, RoundingMode.CEILING);
     }

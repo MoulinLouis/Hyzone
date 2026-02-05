@@ -3,6 +3,9 @@
 ## [Unreleased]
 
 ### Changed
+- **Ascend: Early-game unlock pacing** - Added decaying cost boost for levels 0-9 on maps 2+ to create more gap between map unlocks without affecting late-game
+  - Map 2 (Orange): up to ×1.5 boost, Map 3 (Jaune): ×2.0, Map 4 (Vert): ×2.5, Map 5 (Bleu): ×3.0
+  - Boost decays linearly from level 0 (full) to level 10 (none), ensuring costs always increase
 - **Ascend: Migrated economy from double to BigDecimal for exact precision**
   - All coin values now use `BigDecimal` for exact arithmetic (no floating-point errors)
   - Database schema updated: `DOUBLE` columns migrated to `DECIMAL(65,2)` for coins, `DECIMAL(65,20)` for multipliers
