@@ -319,10 +319,10 @@ public class AscendMapSelectPage extends BaseAscendPage {
     private String resolveMapAccentColor(int index) {
         return switch (index) {
             case 0 -> "#7c3aed";  // Violet
-            case 1 -> "#3b82f6";  // Blue
-            case 2 -> "#06b6d4";  // Cyan
-            case 3 -> "#f59e0b";  // Amber
-            default -> "#ef4444"; // Red
+            case 1 -> "#ef4444";  // Red
+            case 2 -> "#f59e0b";  // Orange
+            case 3 -> "#10b981";  // Green
+            default -> "#3b82f6"; // Blue
         };
     }
 

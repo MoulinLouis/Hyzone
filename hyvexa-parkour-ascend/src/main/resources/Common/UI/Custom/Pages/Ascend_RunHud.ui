@@ -45,7 +45,7 @@ $C.@PageOverlay {
           Anchor: (Left: 0, Right: 0);
           Style: (
             FontSize: 30,
-            TextColor: #3b82f6,
+            TextColor: #ef4444,
             RenderBold: true,
             HorizontalAlignment: Center
           );
@@ -73,7 +73,7 @@ $C.@PageOverlay {
           Anchor: (Left: 0, Right: 0);
           Style: (
             FontSize: 30,
-            TextColor: #06b6d4,
+            TextColor: #f59e0b,
             RenderBold: true,
             HorizontalAlignment: Center
           );
@@ -101,7 +101,7 @@ $C.@PageOverlay {
           Anchor: (Left: 0, Right: 0);
           Style: (
             FontSize: 30,
-            TextColor: #f59e0b,
+            TextColor: #10b981,
             RenderBold: true,
             HorizontalAlignment: Center
           );
@@ -129,7 +129,7 @@ $C.@PageOverlay {
           Anchor: (Left: 0, Right: 0);
           Style: (
             FontSize: 30,
-            TextColor: #ef4444,
+            TextColor: #3b82f6,
             RenderBold: true,
             HorizontalAlignment: Center
           );
