@@ -334,7 +334,7 @@ public class SummitPage extends BaseAscendPage {
         return switch (category) {
             case RUNNER_SPEED -> "Multiplies runner completion speed";
             case MULTIPLIER_GAIN -> "Multiplies multiplier gain per run";
-            case EVOLUTION_POWER -> "Multiplies map multiplier on evolution";
+            case EVOLUTION_POWER -> "Coming soon";
         };
     }
 
