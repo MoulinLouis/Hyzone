@@ -191,11 +191,11 @@ public class AscendLeaderboardPage extends InteractiveCustomUIPage<AscendLeaderb
     }
 
     private void updateTabStyles(UICommandBuilder commandBuilder) {
-        commandBuilder.set("#TabCoins.Background",
+        commandBuilder.set("#TabCoinsWrap.Background",
                 currentCategory == LeaderboardCategory.COINS ? COLOR_TAB_ACTIVE : COLOR_TAB_INACTIVE);
-        commandBuilder.set("#TabAscensions.Background",
+        commandBuilder.set("#TabAscensionsWrap.Background",
                 currentCategory == LeaderboardCategory.ASCENSIONS ? COLOR_TAB_ACTIVE : COLOR_TAB_INACTIVE);
-        commandBuilder.set("#TabRuns.Background",
+        commandBuilder.set("#TabRunsWrap.Background",
                 currentCategory == LeaderboardCategory.MANUAL_RUNS ? COLOR_TAB_ACTIVE : COLOR_TAB_INACTIVE);
 
         commandBuilder.set("#TabCoinsAccent.Background",

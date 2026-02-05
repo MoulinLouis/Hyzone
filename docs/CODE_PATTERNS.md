@@ -240,6 +240,37 @@ Group {
 ```
 Hytale UI does NOT support underscores in element IDs. Always use camelCase for IDs.
 
+**CRITICAL - TextButton cannot have children:**
+
+TextButton is an **atomic** element. It does NOT support child elements (Group, Label, etc.) or `LayoutMode`. Placing children inside a TextButton causes a silent UI parsing error.
+
+```
+❌ TextButton #MyTab {
+     LayoutMode: Top;
+     Background: #2d3f50;
+     Group #Accent { ... }   // CRASHES - TextButton can't have children
+     Label { Text: "Tab"; }  // CRASHES
+   }
+
+✅ Group #MyTabWrap {
+     Background: #2d3f50;
+     Group #Accent { ... }
+     Label { Text: "Tab"; }
+     TextButton #MyTab {                          // Transparent overlay for click
+       Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+       Text: "";
+       Style: TextButtonStyle(
+         Default: (Background: #000000(0)),
+         Hovered: (Background: #ffffff(0.05)),
+         Pressed: (Background: #ffffff(0.1)),
+         Sounds: $C.@ButtonSounds,
+       );
+     }
+   }
+```
+
+Use the **Group wrapper + TextButton overlay** pattern for any clickable element that needs custom visual content.
+
 ### Disabled Button with Overlay Pattern
 
 Hytale doesn't support dynamic style changes on TextButtons (e.g., changing `Style.Default.Background` at runtime). To create a "disabled" or "grayed out" button effect, use an overlay pattern:
