@@ -87,11 +87,12 @@ public class AscensionManager {
         // Reset all map progress (multipliers, unlocks, robots)
         progress.getMapProgress().clear();
 
-        // Restore preserved Summit levels if applicable
+        // Restore preserved Summit levels if applicable (convert level to XP)
         if (preservedLevels != null) {
             for (Map.Entry<SummitCategory, Integer> entry : preservedLevels.entrySet()) {
                 if (entry.getValue() > 0) {
-                    progress.setSummitLevel(entry.getKey(), entry.getValue());
+                    long xp = AscendConstants.getCumulativeXpForLevel(entry.getValue());
+                    progress.setSummitXp(entry.getKey(), xp);
                 }
             }
         }

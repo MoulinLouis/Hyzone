@@ -51,11 +51,11 @@ Group {
     }
 
     Group #XpBarContainer {
-      Anchor: (Left: 0, Right: 0, Top: 6, Height: 16);
+      Anchor: (Left: 0, Right: 12, Top: 6, Height: 16);
       Background: #000000(0.3);
 
       Group #XpBarFill {
-        Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 0%);
+        Anchor: (Left: 0, Top: 0, Bottom: 0, Right: 400);
         Background: #7c3aed(0.6);
       }
 
@@ -97,8 +97,7 @@ Group {
         Style: (
           FontSize: 13,
           RenderBold: true,
-          TextColor: #7c3aed,
-          HorizontalAlignment: Center
+          TextColor: #7c3aed
         );
         Text: "Lv.0";
       }
@@ -107,8 +106,7 @@ Group {
         Anchor: (Left: 0, Right: 0, Top: 1);
         Style: (
           FontSize: 11,
-          TextColor: #9fb0ba,
-          HorizontalAlignment: Center
+          TextColor: #9fb0ba
         );
         Text: "→ Lv.0";
       }
@@ -118,8 +116,7 @@ Group {
         Style: (
           FontSize: 13,
           RenderBold: true,
-          TextColor: #f0f4f8,
-          HorizontalAlignment: Center
+          TextColor: #f0f4f8
         );
         Text: "Summit";
       }
@@ -128,8 +125,7 @@ Group {
         Anchor: (Left: 0, Right: 0, Top: 1);
         Style: (
           FontSize: 10,
-          TextColor: #fca5a5,
-          HorizontalAlignment: Center
+          TextColor: #fca5a5
         );
         Text: "Resets coins";
       }

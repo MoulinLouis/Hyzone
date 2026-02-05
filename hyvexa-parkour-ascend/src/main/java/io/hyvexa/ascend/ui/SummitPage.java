@@ -68,8 +68,8 @@ public class SummitPage extends BaseAscendPage {
 
         // Build 3 category cards
         SummitCategory[] categories = {
-            SummitCategory.RUNNER_SPEED,
             SummitCategory.MULTIPLIER_GAIN,
+            SummitCategory.RUNNER_SPEED,
             SummitCategory.EVOLUTION_POWER
         };
 
@@ -114,12 +114,12 @@ public class SummitPage extends BaseAscendPage {
                 preview.xpToGain());
             commandBuilder.set("#CategoryCards[" + i + "] #XpProgress.Text", xpText);
 
-            // XP progress bar fill percentage
+            // XP progress bar fill - use Right anchor (0 = full, ~390 = empty)
             double progressPercent = preview.currentXpRequired() > 0
                 ? (double) preview.currentXpInLevel() / preview.currentXpRequired()
                 : 0;
-            int widthPercent = (int)(progressPercent * 100);
-            commandBuilder.set("#CategoryCards[" + i + "] #XpBarFill.Anchor.Width", widthPercent + "%");
+            int rightOffset = (int)((1.0 - progressPercent) * 390);
+            commandBuilder.set("#CategoryCards[" + i + "] #XpBarFill.Anchor.Right", rightOffset);
 
             // Event binding
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
@@ -218,8 +218,8 @@ public class SummitPage extends BaseAscendPage {
 
     private String resolveCategoryAccentColor(int index) {
         return switch (index) {
-            case 0 -> "#2d5a7b";  // Blue for Runner Speed
-            case 1 -> "#5a6b3d";  // Green for Multiplier Gain
+            case 0 -> "#5a6b3d";  // Green for Multiplier Gain
+            case 1 -> "#2d5a7b";  // Blue for Runner Speed
             default -> "#5a3d6b"; // Purple for Evolution Power
         };
     }
