@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Changed
+- **Ascend: Summit system rebalanced for late-game** - Summit now requires 1T coins minimum for first level (was 10K), and resets multipliers/runners like elevation
 - **Ascend: Map selector shows run time and multiplier gain** - Displays actual runner completion time and multiplier gain per run (e.g., "Run: 2.34s (+0.1x) | PB: 5.00s")
 - **Ascend: Runner upgrade button shows speed gain per level** - Displays "+10%/lvl" to "+30%/lvl" depending on map instead of total accumulated speed
 - **Ascend: Early-game unlock pacing** - Added decaying cost boost for levels 0-9 on maps 2+ to create more gap between map unlocks without affecting late-game

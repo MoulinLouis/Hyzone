@@ -13,8 +13,8 @@ import java.util.UUID;
 
 /**
  * Manages the Summit prestige system.
- * Summit converts coins into XP-based category upgrades, resetting coins and elevation
- * but preserving multipliers, map unlocks, and runners.
+ * Summit converts coins into XP-based category upgrades, resetting coins, elevation,
+ * multipliers, runners, and map unlocks (preserves best times only).
  */
 public class SummitManager {
 
@@ -30,7 +30,7 @@ public class SummitManager {
 
     /**
      * Checks if a player can perform a Summit in any category.
-     * Requires at least 1 XP worth of coins (1000 coins = 1 XP).
+     * Requires at least 1 XP worth of coins (1T coins = 1 XP).
      */
     public boolean canSummit(UUID playerId) {
         BigDecimal coins = playerStore.getCoins(playerId);
@@ -76,15 +76,21 @@ public class SummitManager {
 
     /**
      * Performs a Summit: converts coins to XP in the specified category,
-     * resets coins to 0 and elevation to 1 (keeping multipliers, runners, unlocks).
+     * resets coins, elevation, multipliers, runners, and map unlocks (keeps best times only).
      *
-     * @return SummitResult containing the new level, list of maps with runners (empty), and XP gained
+     * @return SummitResult containing the new level, list of maps with runners (for despawn), and XP gained
      */
     public SummitResult performSummit(UUID playerId, SummitCategory category) {
         BigDecimal coins = playerStore.getCoins(playerId);
         long xpToGain = AscendConstants.coinsToXp(coins);
 
         if (xpToGain < 1) {
+            return new SummitResult(-1, List.of(), 0);
+        }
+
+        // Verify level gain before performing summit
+        SummitPreview preview = previewSummit(playerId, category);
+        if (!preview.hasGain()) {
             return new SummitResult(-1, List.of(), 0);
         }
 
@@ -104,13 +110,13 @@ public class SummitManager {
             }
         }
 
-        // Reset coins and elevation only (NOT multipliers, runners, unlocks)
-        playerStore.resetProgressForSummit(playerId, firstMapId);
+        // Reset coins, elevation, multipliers, and runners (keeps unlocks)
+        List<String> mapsWithRunners = playerStore.resetProgressForSummit(playerId, firstMapId);
 
         LOGGER.atInfo().log("[Summit] Player " + playerId + " summited " + category.name()
             + " +" + xpToGain + " XP, Lv." + previousLevel + " -> Lv." + newLevel);
 
-        return new SummitResult(newLevel, List.of(), xpToGain);
+        return new SummitResult(newLevel, mapsWithRunners, xpToGain);
     }
 
     /**
@@ -174,7 +180,7 @@ public class SummitManager {
         }
 
         public boolean hasGain() {
-            return xpToGain > 0;
+            return levelGain > 0;
         }
     }
 }

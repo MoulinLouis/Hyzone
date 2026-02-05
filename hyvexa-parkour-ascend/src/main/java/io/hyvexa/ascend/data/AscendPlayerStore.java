@@ -972,8 +972,9 @@ public class AscendPlayerStore {
     }
 
     /**
-     * Reset progress for Summit: coins and elevation only.
-     * Does NOT reset map multipliers, runners, unlocks, or summit XP.
+     * Reset progress for Summit: coins, elevation, multipliers, runners, and map unlocks.
+     * Keeps best times and summit XP.
+     * @return list of map IDs that had runners (for despawn handling)
      */
     public List<String> resetProgressForSummit(UUID playerId, String firstMapId) {
         var progress = getPlayer(playerId);
@@ -981,15 +982,46 @@ public class AscendPlayerStore {
             return List.of();
         }
 
+        List<String> mapsWithRunners = new java.util.ArrayList<>();
+
         // Reset coins
         progress.setCoins(BigDecimal.ZERO);
 
         // Reset elevation to level 1
         progress.setElevationMultiplier(1);
 
+        // Process each map progress - reset multipliers, runners, and unlocks
+        for (Map.Entry<String, AscendPlayerProgress.MapProgress> entry : progress.getMapProgress().entrySet()) {
+            String mapId = entry.getKey();
+            AscendPlayerProgress.MapProgress mapProgress = entry.getValue();
+
+            // Reset unlocked status (only first map stays unlocked)
+            mapProgress.setUnlocked(mapId.equals(firstMapId));
+
+            // Reset multiplier to 1
+            mapProgress.setMultiplier(BigDecimal.ONE);
+
+            // Reset completed manually
+            mapProgress.setCompletedManually(false);
+
+            // Remove runner if player had one
+            if (mapProgress.hasRobot()) {
+                mapsWithRunners.add(mapId);
+                mapProgress.setHasRobot(false);
+                mapProgress.setRobotSpeedLevel(0);
+                mapProgress.setRobotStars(0);
+            }
+        }
+
+        // Ensure first map has progress entry and is unlocked
+        if (firstMapId != null && !firstMapId.isEmpty()) {
+            AscendPlayerProgress.MapProgress firstMapProgress = progress.getOrCreateMapProgress(firstMapId);
+            firstMapProgress.setUnlocked(true);
+        }
+
         markDirty(playerId);
 
-        return List.of(); // No runners to despawn for Summit
+        return mapsWithRunners;
     }
 
     public boolean isSessionFirstRunClaimed(UUID playerId) {

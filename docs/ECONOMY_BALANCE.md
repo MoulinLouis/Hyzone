@@ -293,11 +293,11 @@ Where:
 
 **Design goal:** Full exponential idle game experience, satisfying number growth.
 
-### Summit/Ascension (30+ minutes)
+### Summit/Ascension (Late game)
 
 **Phase:** Prestige systems and meta progression
 
-- Summit thresholds: 10K, 50K, 200K, 1M, 5M... coins spent
+- Summit threshold: 1 trillion coins minimum for first level
 - Ascension threshold: 1 trillion total coins
 - Permanent bonuses and skill trees
 - Long-term progression hooks
@@ -306,26 +306,22 @@ Where:
 
 ## Summit System
 
-Summit converts coins into XP for permanent category bonuses, resetting coins and elevation but preserving multipliers, runners, and map unlocks.
+Summit converts coins into XP for permanent category bonuses, resetting coins, elevation, multipliers, runners, and map unlocks (preserves best times only).
 
 ### XP System
 
-**Coin to XP conversion:** `sqrt(coins) / 100` (diminishing returns)
+**Coin to XP conversion:** `sqrt(coins) / 1,000,000` (diminishing returns)
 
 | Coins | XP Gained |
 |-------|-----------|
-| 10K | 1 |
-| 100K | 3 |
-| 1M | 10 |
-| 10M | 32 |
-| 100M | 100 |
-| 1B | 316 |
-| 10B | 1,000 |
-| 100B | 3,162 |
-| 1T | 10,000 |
-| 2T | 14,142 |
+| 1T | 1 |
+| 2T | 1 |
+| 10T | 3 |
+| 100T | 10 |
+| 1 Quadrillion | 32 |
+| 10 Quadrillion | 100 |
 
-**Minimum coins for 1 XP:** 10,000 coins
+**Minimum coins for 1 XP:** 1 trillion coins (1T)
 
 **XP per level formula:** `level^4`
 
@@ -342,11 +338,27 @@ Summit converts coins into XP for permanent category bonuses, resetting coins an
 
 | Coins | XP | Levels Gained |
 |-------|-----|---------------|
-| 10K | 1 | ~1 |
-| 1M | 10 | ~2 |
-| 100M | 100 | ~4 |
-| 10B | 1,000 | ~6 |
-| 2T | 14,142 | ~9 |
+| 1T | 1 | 1 |
+| 10T | 3 | 1 |
+| 100T | 10 | 2 |
+| 1 Quadrillion | 32 | 2 |
+| 100 Quadrillion | 316 | 4 |
+
+### What Summit Resets
+
+Summit performs a full reset similar to Elevation:
+
+**Reset (lost):**
+- Coins → 0
+- Elevation → 1
+- Map multipliers → 1
+- Runners → removed
+- Map unlocks → only first map stays unlocked
+- Completed manually flags → reset
+
+**Preserved:**
+- Best times (ghost recordings)
+- Summit XP (permanent progression)
 
 ### Categories
 
@@ -505,7 +517,7 @@ All formulas use consistent growth rates:
 - **Elevation cost:** 1.15^level (15% growth)
 - **Upgrades:** 2^totalLevel (100% growth per level, smooth and predictable)
 - **Evolution gain:** ×10 per-run multiplier gain (flat boost when evolved)
-- **Summit XP:** sqrt(coins) / 100 (diminishing returns at high amounts)
+- **Summit XP:** sqrt(coins) / 1,000,000 (very late-game, requires 1T coins for 1 XP)
 - **Summit levels:** level^4 (steep late-game scaling)
 
 Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure continuous progression after evolution.
@@ -513,6 +525,12 @@ Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure conti
 ---
 
 ## Version History
+
+- **2026-02-05 (v8):** Summit late-game rebalance
+  - Summit XP conversion: `sqrt(coins) / 1,000,000` (was `/ 100`)
+  - Minimum coins for Summit: 1T (was 10K)
+  - Summit is now a true late-game system (requires 1T coins for level 1)
+  - Summit now resets everything like elevation (multipliers, runners, map unlocks), keeps only best times
 
 - **2026-02-05 (v7):** Linear elevation multiplier
   - Reverted elevation from exponential (`level × 1.02^level`) to linear (`level`)
