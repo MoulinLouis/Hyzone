@@ -176,15 +176,7 @@ public class StatsPage extends BaseAscendPage {
         java.math.BigDecimal digitsProduct = playerStore.getMultiplierProductDecimal(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
         double elevation = playerStore.getCalculatedElevationMultiplier(playerId);
 
-        // Get summit coin flow multiplier (multiplicative: 1.20^level)
-        java.math.BigDecimal coinFlowMultiplier = java.math.BigDecimal.ONE;
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin != null) {
-            SummitManager summitManager = plugin.getSummitManager();
-            if (summitManager != null) {
-                coinFlowMultiplier = summitManager.getCoinFlowMultiplier(playerId);
-            }
-        }
 
         for (AscendMap map : maps) {
             AscendPlayerProgress.MapProgress mapProgress = playerStore.getMapProgress(playerId, map.getId());
@@ -215,7 +207,7 @@ public class StatsPage extends BaseAscendPage {
 
             // Base reward with multipliers (convert BigDecimal to double for display calculation)
             long baseReward = map.getEffectiveBaseReward();
-            double coinsPerRun = baseReward * digitsProduct.doubleValue() * elevation * coinFlowMultiplier.doubleValue();
+            double coinsPerRun = baseReward * digitsProduct.doubleValue() * elevation;
 
             totalCoinsPerSec += runsPerSec * coinsPerRun;
         }
@@ -231,23 +223,16 @@ public class StatsPage extends BaseAscendPage {
         java.math.BigDecimal[] digits = playerStore.getMultiplierDisplayValues(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
         double elevation = playerStore.getCalculatedElevationMultiplier(playerId);
 
-        // Get summit coin flow multiplier (multiplicative: 1.20^level)
-        double coinFlowMultiplier = 1.0;
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin != null && plugin.getSummitManager() != null) {
-            coinFlowMultiplier = plugin.getSummitManager().getCoinFlowMultiplier(playerId).doubleValue();
-        }
-
         // Calculate digits product (convert BigDecimal to double for display)
         double digitsProduct = 1.0;
         for (java.math.BigDecimal d : digits) {
             digitsProduct *= Math.max(1.0, d.doubleValue());
         }
 
-        double total = digitsProduct * elevation * coinFlowMultiplier;
+        double total = digitsProduct * elevation;
 
-        return String.format(Locale.US, "%.1fx \u00d7 %.1fx \u00d7 %.1fx = %.1fx",
-            digitsProduct, elevation, coinFlowMultiplier, total);
+        return String.format(Locale.US, "%.1fx \u00d7 %.1fx = %.1fx",
+            digitsProduct, elevation, total);
     }
 
     private String formatDuration(long ms) {

@@ -674,13 +674,7 @@ public class RobotManager {
         List<AscendMap> maps = mapStore.listMapsSorted();
         BigDecimal payoutPerRun = playerStore.getCompletionPayout(ownerId, maps, AscendConstants.MULTIPLIER_SLOTS, mapId, BigDecimal.ZERO);
 
-        // Apply Summit coin flow multiplier (multiplicative: 1.20^level)
-        BigDecimal coinFlowMultiplier = BigDecimal.ONE;
-        if (plugin != null && plugin.getSummitManager() != null) {
-            coinFlowMultiplier = plugin.getSummitManager().getCoinFlowMultiplier(ownerId);
-        }
         BigDecimal totalPayout = payoutPerRun.multiply(BigDecimal.valueOf(completions), ctx)
-                                             .multiply(coinFlowMultiplier, ctx)
                                              .setScale(2, RoundingMode.HALF_UP);
 
         // Use atomic operations to prevent race conditions

@@ -312,54 +312,72 @@ Where:
 
 ## Summit System
 
-Summit converts coins into permanent category bonuses, resetting coins and elevation.
+Summit converts coins into XP for permanent category bonuses, resetting coins and elevation but preserving multipliers, runners, and map unlocks.
+
+### XP System
+
+**Coin to XP conversion:** 1000 coins = 1 XP
+
+**XP per level formula:** `100 × level^1.5`
+
+| Level | XP Required | Cumulative XP |
+|-------|-------------|---------------|
+| 1 | 100 | 100 |
+| 2 | 283 | 383 |
+| 3 | 520 | 903 |
+| 5 | 1,118 | 2,854 |
+| 10 | 3,162 | 14,772 |
+| 20 | 8,944 | 58,989 |
 
 ### Categories
 
-| Category | Bonus Type | Per Level | Max Level (10) |
-|----------|-----------|-----------|----------------|
-| **Coin Flow** | Multiplicative | ×1.20 | ×6.19 |
-| **Runner Speed** | Additive | +15% | +150% |
-| **Evolution Power** | Evolution base | +0.20 | +2.0 base |
+| Category | Formula | Level 0 | Level 10 |
+|----------|---------|---------|----------|
+| **Runner Speed** | 1 + 0.45 × √level | ×1.00 | ×2.42 |
+| **Multiplier Gain** | 1 + 5 × level^0.9 | ×1.00 | ×40.7 |
+| **Evolution Power** | 10 + 0.5 × level^0.8 | ×10.0 | ×13.15 |
 
-### Coin Flow (Multiplicative)
+### Runner Speed
 
-**Formula:** `1.20^level`
+**Formula:** `1 + 0.45 × sqrt(level)`
 
-| Level | Multiplier |
-|-------|------------|
+Multiplies runner completion speed (inversely affects run time).
+
+| Level | Speed Multiplier |
+|-------|------------------|
 | 0 | ×1.00 |
-| 1 | ×1.20 |
-| 5 | ×2.49 |
-| 10 | ×6.19 |
+| 5 | ×2.01 |
+| 10 | ×2.42 |
+| 20 | ×3.01 |
 
-**Applied to:** All coin earnings (runners, manual, passive)
+### Multiplier Gain
+
+**Formula:** `1 + 5 × level^0.9`
+
+Multiplies the per-run multiplier increment for runners.
+
+| Level | Gain Multiplier | 5★ Runner Increment |
+|-------|-----------------|---------------------|
+| 0 | ×1.00 | +0.1/run |
+| 5 | ×19.5 | +1.95/run |
+| 10 | ×40.7 | +4.07/run |
 
 ### Evolution Power
 
-**Formula:** Evolution base = `2 + (0.20 × level)`
+**Formula:** `10 + 0.5 × level^0.8`
 
-Increases the base of the runner evolution formula:
-- `0.1 × (evolutionBase)^stars`
+When a runner evolves, the map multiplier is multiplied by this value.
 
-| Summit Level | Evolution Base | 5★ Multiplier Gain |
-|--------------|---------------|-------------------|
-| 0 | 2.0 | +3.2/run |
-| 5 | 3.0 | +24.3/run |
-| 10 | 4.0 | +102.4/run |
+| Level | Evolution Multiplier |
+|-------|---------------------|
+| 0 | ×10.0 |
+| 5 | ×11.7 |
+| 10 | ×13.15 |
+| 20 | ×15.3 |
 
-**Applied to:** Runner multiplier gains only (not manual runs)
+**Applied when:** Runner evolves (gains a star). Current map multiplier × evolution power.
 
-### Level Thresholds
-
-| Level | Coins Required (Cumulative) |
-|-------|---------------------------|
-| 1 | 10K |
-| 2 | 60K |
-| 3 | 260K |
-| 4 | 1.26M |
-| 5 | 6.26M |
-| 10 | 6.406B |
+**Example:** At Evolution Power level 10, evolving a runner on a map with ×50 multiplier gives ×50 × 13.15 = ×658.
 
 ---
 
@@ -489,6 +507,14 @@ Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure conti
 ---
 
 ## Version History
+
+- **2026-02-05 (v5):** XP-based Summit system
+  - Summit now uses XP instead of coin thresholds (1000 coins = 1 XP)
+  - XP per level: 100 × level^1.5 (gradual scaling)
+  - Replaced Coin Flow with Multiplier Gain (1 + 5 × level^0.9)
+  - Runner Speed: 1 + 0.45 × sqrt(level) (diminishing returns)
+  - Evolution Power: 10 + 0.5 × level^0.8 (applied on runner evolution, multiplies map multiplier)
+  - Summit no longer resets multipliers, runners, or map unlocks (only coins and elevation)
 
 - **2026-02-05 (v4):** Early-game unlock pacing
   - Added decaying cost boost for levels 0-9 on maps 2+ (first evolution only)

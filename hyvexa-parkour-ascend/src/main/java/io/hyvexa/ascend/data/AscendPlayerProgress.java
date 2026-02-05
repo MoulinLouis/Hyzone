@@ -107,6 +107,25 @@ public class AscendPlayerProgress {
         summitXp.clear();
     }
 
+    /**
+     * @deprecated Use {@link #clearSummitXp()} instead.
+     */
+    @Deprecated
+    public void clearSummitLevels() {
+        clearSummitXp();
+    }
+
+    /**
+     * Get all summit levels as a map.
+     */
+    public Map<AscendConstants.SummitCategory, Integer> getSummitLevels() {
+        Map<AscendConstants.SummitCategory, Integer> levels = new EnumMap<>(AscendConstants.SummitCategory.class);
+        for (AscendConstants.SummitCategory cat : AscendConstants.SummitCategory.values()) {
+            levels.put(cat, getSummitLevel(cat));
+        }
+        return levels;
+    }
+
     public BigDecimal getTotalCoinsEarned() {
         return totalCoinsEarned;
     }

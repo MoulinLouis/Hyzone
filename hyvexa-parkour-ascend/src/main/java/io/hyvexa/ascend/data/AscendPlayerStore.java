@@ -747,7 +747,7 @@ public class AscendPlayerStore {
         int currentLevel = progress.getSummitLevel(category);
         long xpNeeded = 0;
         for (int i = 0; i < amount; i++) {
-            xpNeeded += category.getXpForLevel(currentLevel + i + 1);
+            xpNeeded += AscendConstants.getXpForLevel(currentLevel + i + 1);
         }
         progress.addSummitXp(category, xpNeeded);
         markDirty(playerId);
