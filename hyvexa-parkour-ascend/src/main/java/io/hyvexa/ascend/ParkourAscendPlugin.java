@@ -33,8 +33,8 @@ import io.hyvexa.ascend.hud.AscendHud;
 import io.hyvexa.ascend.interaction.AscendDevCinderclothInteraction;
 import io.hyvexa.ascend.interaction.AscendDevCottonInteraction;
 import io.hyvexa.ascend.interaction.AscendDevStormsilkInteraction;
-import io.hyvexa.ascend.interaction.AscendResetInteraction;
 import io.hyvexa.ascend.interaction.AscendLeaveInteraction;
+import io.hyvexa.ascend.interaction.AscendResetInteraction;
 import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.summit.SummitManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
@@ -602,6 +602,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
         }
         hotbar.setItemStackForSlot((short) 0, new ItemStack(AscendConstants.ITEM_RESET, 1), false);
         hotbar.setItemStackForSlot((short) 1, new ItemStack(AscendConstants.ITEM_LEAVE, 1), false);
+        hotbar.setItemStackForSlot((short) 2, new ItemStack(AscendConstants.ITEM_DEV_CINDERCLOTH, 1), false);
     }
 
     public void giveMenuItems(Player player) {
