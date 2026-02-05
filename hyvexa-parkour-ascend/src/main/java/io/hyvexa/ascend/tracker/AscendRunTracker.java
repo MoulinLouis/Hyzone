@@ -5,11 +5,14 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.protocol.SoundCategory;
 import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.ParkourAscendPlugin;
@@ -24,6 +27,7 @@ import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
+import io.hyvexa.ascend.util.MapUnlockHelper;
 import io.hyvexa.ascend.ghost.GhostRecorder;
 import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.summit.SummitManager;
@@ -39,13 +43,16 @@ public class AscendRunTracker {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final double FINISH_RADIUS_SQ = 2.25; // 1.5^2
+    private static final double START_DETECTION_RADIUS_SQ = 1.0; // 1.0^2 - radius for walk-on start detection
     private static final double MOVEMENT_THRESHOLD_SQ = 0.01; // 0.1^2 - minimum movement to start run
+    private static final long COMPLETION_COOLDOWN_MS = 500; // 0.5s cooldown after completing a run
 
     private final AscendMapStore mapStore;
     private final AscendPlayerStore playerStore;
     private final GhostRecorder ghostRecorder;
     private final Map<UUID, ActiveRun> activeRuns = new ConcurrentHashMap<>();
     private final Map<UUID, PendingRun> pendingRuns = new ConcurrentHashMap<>();
+    private final Map<UUID, Long> completionCooldowns = new ConcurrentHashMap<>();
 
     public AscendRunTracker(AscendMapStore mapStore, AscendPlayerStore playerStore, GhostRecorder ghostRecorder) {
         this.mapStore = mapStore;
@@ -161,7 +168,10 @@ public class AscendRunTracker {
         }
 
         ActiveRun run = activeRuns.get(playerId);
+
+        // If not in any run, check if player walked onto a map start
         if (run == null) {
+            checkWalkOnStart(ref, store, playerRef, player, playerId, pos);
             return;
         }
 
@@ -187,6 +197,12 @@ public class AscendRunTracker {
 
         // Show runners again after completing the run
         showRunnersForMap(playerId, run.mapId);
+
+        // Play victory sound
+        int soundIndex = SoundEvent.getAssetMap().getIndex("SFX_Parkour_Victory");
+        if (soundIndex > SoundEvent.EMPTY_ID) {
+            SoundUtil.playSoundEvent2dToPlayer(playerRef, soundIndex, SoundCategory.SFX);
+        }
 
         AscendPlayerProgress.MapProgress mapProgress = playerStore.getOrCreateMapProgress(playerId, run.mapId);
 
@@ -303,6 +319,9 @@ public class AscendRunTracker {
         Vector3f startRot = new Vector3f(map.getStartRotX(), map.getStartRotY(), map.getStartRotZ());
         store.addComponent(ref, Teleport.getComponentType(),
             new Teleport(store.getExternalData().getWorld(), startPos, startRot));
+
+        // Set cooldown to prevent walk-on-start from triggering immediately
+        completionCooldowns.put(playerId, System.currentTimeMillis());
     }
 
     public void teleportToMapStart(Ref<EntityStore> ref, Store<EntityStore> store,
@@ -320,6 +339,59 @@ public class AscendRunTracker {
 
         // Set pending run - timer will start when player moves
         setPendingRun(playerRef.getUuid(), mapId, pos);
+    }
+
+    private void checkWalkOnStart(Ref<EntityStore> ref, Store<EntityStore> store,
+                                   PlayerRef playerRef, Player player, UUID playerId, Vector3d pos) {
+        // Check if player is in cooldown after completing a run
+        Long cooldownTime = completionCooldowns.get(playerId);
+        if (cooldownTime != null) {
+            if (System.currentTimeMillis() - cooldownTime < COMPLETION_COOLDOWN_MS) {
+                return; // Still in cooldown, skip walk-on-start detection
+            }
+            completionCooldowns.remove(playerId); // Cooldown expired, clean up
+        }
+
+        // Find if player is standing on any map's start position
+        for (AscendMap map : mapStore.listMaps()) {
+            if (map == null) {
+                continue;
+            }
+            // Skip maps with no start set
+            if (map.getStartX() == 0 && map.getStartY() == 0 && map.getStartZ() == 0) {
+                continue;
+            }
+
+            double dx = pos.getX() - map.getStartX();
+            double dy = pos.getY() - map.getStartY();
+            double dz = pos.getZ() - map.getStartZ();
+
+            if (dx * dx + dy * dy + dz * dz <= START_DETECTION_RADIUS_SQ) {
+                // Player is on this map's start - check if unlocked
+                MapUnlockHelper.UnlockResult unlockResult = MapUnlockHelper.checkAndEnsureUnlock(
+                    playerId, map, playerStore, mapStore);
+                if (!unlockResult.unlocked) {
+                    // Map not unlocked, ignore
+                    continue;
+                }
+
+                // Start the run for this map
+                Vector3d startPos = new Vector3d(map.getStartX(), map.getStartY(), map.getStartZ());
+                setPendingRun(playerId, map.getId(), startPos);
+
+                String mapName = map.getName() != null && !map.getName().isBlank() ? map.getName() : map.getId();
+                player.sendMessage(Message.raw("[Ascend] Ready: " + mapName + " - Move to start!"));
+
+                // Give run items (reset + leave)
+                ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+                if (plugin != null) {
+                    plugin.giveRunItems(player);
+                }
+
+                // Only trigger for the first matching map
+                return;
+            }
+        }
     }
 
     private static class ActiveRun {
