@@ -447,8 +447,8 @@ public final class AscendConstants {
     // ========================================
 
     public static final double SUMMIT_XP_LEVEL_EXPONENT = 4.0; // Exponent for level formula
-    public static final double SUMMIT_XP_COIN_DIVISOR = 100.0; // Divisor for sqrt(coins) conversion
-    public static final long SUMMIT_MIN_COINS = 10_000L; // Minimum coins for 1 XP (100^2)
+    public static final double SUMMIT_XP_COIN_DIVISOR = 1_000_000.0; // Divisor for sqrt(coins) conversion
+    public static final long SUMMIT_MIN_COINS = 1_000_000_000_000L; // Minimum coins for 1 XP (1T)
 
     /**
      * Convert coins to XP.

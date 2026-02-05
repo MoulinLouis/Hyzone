@@ -4,12 +4,14 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
+import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.AscendConstants.SummitCategory;
@@ -24,14 +26,19 @@ import io.hyvexa.common.util.SystemMessageUtils;
 import javax.annotation.Nonnull;
 import java.util.Locale;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 public class SummitPage extends BaseAscendPage {
 
     private static final String BUTTON_CLOSE = "Close";
     private static final String BUTTON_SUMMIT_PREFIX = "Summit_";
+    private static final long REFRESH_INTERVAL_MS = 1000L;
 
     private final AscendPlayerStore playerStore;
     private final SummitManager summitManager;
+    private ScheduledFuture<?> refreshTask;
 
     public SummitPage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore, SummitManager summitManager) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
@@ -48,6 +55,18 @@ public class SummitPage extends BaseAscendPage {
             EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE), false);
 
         buildCategoryCards(ref, store, commandBuilder, eventBuilder);
+        startAutoRefresh(ref, store);
+    }
+
+    @Override
+    public void close() {
+        stopAutoRefresh();
+        super.close();
+    }
+
+    @Override
+    protected void stopBackgroundTasks() {
+        stopAutoRefresh();
     }
 
     private void buildCategoryCards(Ref<EntityStore> ref, Store<EntityStore> store,
@@ -59,12 +78,6 @@ public class SummitPage extends BaseAscendPage {
         }
 
         UUID playerId = playerRef.getUuid();
-        java.math.BigDecimal coins = playerStore.getCoins(playerId);
-
-        // Update coins display with XP conversion preview
-        long potentialXp = AscendConstants.coinsToXp(coins);
-        String coinsText = FormatUtils.formatCoinsForHudDecimal(coins) + " → +" + potentialXp + " XP";
-        commandBuilder.set("#CoinsValue.Text", coinsText);
 
         // Build 3 category cards
         SummitCategory[] categories = {
@@ -78,34 +91,60 @@ public class SummitPage extends BaseAscendPage {
             commandBuilder.append("#CategoryCards", "Pages/Ascend_SummitEntry.ui");
 
             String accentColor = resolveCategoryAccentColor(i);
-            SummitManager.SummitPreview preview = summitManager.previewSummit(playerId, category);
 
-            // Apply accent color to bars
+            // Apply accent color to accent bar and XP segments
             commandBuilder.set("#CategoryCards[" + i + "] #AccentBar.Background", accentColor);
-            commandBuilder.set("#CategoryCards[" + i + "] #ButtonAccent.Background", accentColor);
-            commandBuilder.set("#CategoryCards[" + i + "] #CurrentLevel.Style.TextColor", accentColor);
+            for (int seg = 1; seg <= 20; seg++) {
+                commandBuilder.set("#CategoryCards[" + i + "] #XpSeg" + seg + ".Background", accentColor);
+            }
 
-            // Category name
-            commandBuilder.set("#CategoryCards[" + i + "] #CategoryName.Text", category.getDisplayName());
-
-            // Category description based on type
+            // Category description (static)
             String description = getCategoryDescription(category);
             commandBuilder.set("#CategoryCards[" + i + "] #CategoryDesc.Text", description);
 
-            // Current bonus
-            String bonusText = "Current Bonus: " + formatBonus(category, preview.currentBonus());
-            commandBuilder.set("#CategoryCards[" + i + "] #CategoryBonus.Text", bonusText);
+            // Event binding
+            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
+                "#CategoryCards[" + i + "] #SummitButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_SUMMIT_PREFIX + category.name()), false);
+        }
 
-            // Level and bonus display
-            String levelText = "[Lv. " + preview.currentLevel() + "] " + formatBonus(category, preview.currentBonus());
-            commandBuilder.set("#CategoryCards[" + i + "] #CurrentLevel.Text", levelText);
+        // Update dynamic content
+        updateCategoryCards(ref, store, commandBuilder);
+    }
 
+    private void updateCategoryCards(Ref<EntityStore> ref, Store<EntityStore> store, UICommandBuilder commandBuilder) {
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        if (playerRef == null) {
+            return;
+        }
+
+        UUID playerId = playerRef.getUuid();
+
+        SummitCategory[] categories = {
+            SummitCategory.MULTIPLIER_GAIN,
+            SummitCategory.RUNNER_SPEED,
+            SummitCategory.EVOLUTION_POWER
+        };
+
+        for (int i = 0; i < categories.length; i++) {
+            SummitCategory category = categories[i];
+            SummitManager.SummitPreview preview = summitManager.previewSummit(playerId, category);
+
+            // Category name with level progression
+            String levelText = preview.hasGain()
+                ? String.format(" (Lv.%d -> Lv.%d)", preview.currentLevel(), preview.newLevel())
+                : String.format(" (Lv.%d)", preview.currentLevel());
+            commandBuilder.set("#CategoryCards[" + i + "] #CategoryName.Text", category.getDisplayName() + levelText);
+
+            // Bonus text: "Current: x1.00 -> Next: x1.10" or just current if no gain
+            String bonusText;
             if (preview.hasGain()) {
-                String previewText = "→ [Lv. " + preview.newLevel() + "] " + formatBonus(category, preview.newBonus());
-                commandBuilder.set("#CategoryCards[" + i + "] #PreviewLevel.Text", previewText);
+                bonusText = "Current: " + formatBonus(category, preview.currentBonus())
+                    + " -> Next: " + formatBonus(category, preview.newBonus());
             } else {
-                commandBuilder.set("#CategoryCards[" + i + "] #PreviewLevel.Text", "");
+                bonusText = "Current: " + formatBonus(category, preview.currentBonus());
             }
+            commandBuilder.set("#CategoryCards[" + i + "] #CategoryBonus.Text", bonusText);
 
             // XP progress text
             String xpText = String.format("Exp %d/%d (+%d)",
@@ -114,17 +153,68 @@ public class SummitPage extends BaseAscendPage {
                 preview.xpToGain());
             commandBuilder.set("#CategoryCards[" + i + "] #XpProgress.Text", xpText);
 
-            // XP progress bar fill - use Right anchor (0 = full, ~390 = empty)
+            // XP progress bar segments (20 segments = 5% each)
             double progressPercent = preview.currentXpRequired() > 0
                 ? (double) preview.currentXpInLevel() / preview.currentXpRequired()
                 : 0;
-            int rightOffset = (int)((1.0 - progressPercent) * 390);
-            commandBuilder.set("#CategoryCards[" + i + "] #XpBarFill.Anchor.Right", rightOffset);
+            int filledSegments = (int)(progressPercent * 20);
+            for (int seg = 1; seg <= 20; seg++) {
+                commandBuilder.set("#CategoryCards[" + i + "] #XpSeg" + seg + ".Visible", seg <= filledSegments);
+            }
 
-            // Event binding
-            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
-                "#CategoryCards[" + i + "] #SummitButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_SUMMIT_PREFIX + category.name()), false);
+            // Show colored background if summit is possible, lock icon if not
+            boolean canSummit = preview.hasGain() && summitManager.canSummit(playerId);
+            commandBuilder.set("#CategoryCards[" + i + "] " + resolveCardBgElementId(i) + ".Visible", canSummit);
+            commandBuilder.set("#CategoryCards[" + i + "] #LockIcon.Visible", !canSummit);
+        }
+    }
+
+    private void startAutoRefresh(Ref<EntityStore> ref, Store<EntityStore> store) {
+        if (refreshTask != null) {
+            return;
+        }
+        World world = store.getExternalData().getWorld();
+        if (world == null) {
+            return;
+        }
+        refreshTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(() -> {
+            if (!isCurrentPage()) {
+                stopAutoRefresh();
+                return;
+            }
+            if (ref == null || !ref.isValid()) {
+                stopAutoRefresh();
+                return;
+            }
+            try {
+                CompletableFuture.runAsync(() -> refreshDisplay(ref, store), world);
+            } catch (Exception e) {
+                stopAutoRefresh();
+            }
+        }, REFRESH_INTERVAL_MS, REFRESH_INTERVAL_MS, TimeUnit.MILLISECONDS);
+    }
+
+    private void stopAutoRefresh() {
+        if (refreshTask != null) {
+            refreshTask.cancel(false);
+            refreshTask = null;
+        }
+    }
+
+    private void refreshDisplay(Ref<EntityStore> ref, Store<EntityStore> store) {
+        if (!isCurrentPage()) {
+            stopAutoRefresh();
+            return;
+        }
+        UICommandBuilder commandBuilder = new UICommandBuilder();
+        updateCategoryCards(ref, store, commandBuilder);
+        if (!isCurrentPage()) {
+            return;
+        }
+        try {
+            sendUpdate(commandBuilder, null, false);
+        } catch (Exception e) {
+            stopAutoRefresh();
         }
     }
 
@@ -163,9 +253,11 @@ public class SummitPage extends BaseAscendPage {
 
         if (!summitManager.canSummit(playerId)) {
             java.math.BigDecimal coins = playerStore.getCoins(playerId);
-            long minCoins = io.hyvexa.ascend.AscendConstants.SUMMIT_MIN_COINS;
+            String minCoins = FormatUtils.formatCoinsForHudDecimal(
+                java.math.BigDecimal.valueOf(AscendConstants.SUMMIT_MIN_COINS));
+            String currentCoins = FormatUtils.formatCoinsForHudDecimal(coins);
             player.sendMessage(Message.raw("[Summit] Need " + minCoins
-                + " coins to Summit. You have: " + coins)
+                + " coins to Summit. You have: " + currentCoins)
                 .color(SystemMessageUtils.SECONDARY));
             return;
         }
@@ -201,7 +293,7 @@ public class SummitPage extends BaseAscendPage {
         player.sendMessage(Message.raw("[Summit] Bonus: " + formatBonus(category, preview.currentBonus())
             + " → " + formatBonus(category, preview.newBonus()))
             .color(SystemMessageUtils.SUCCESS));
-        player.sendMessage(Message.raw("[Summit] Progress reset: elevation, multipliers, unlocks, runners")
+        player.sendMessage(Message.raw("[Summit] Progress reset: coins, elevation, multipliers, runners, map unlocks")
             .color(SystemMessageUtils.SECONDARY));
 
         // Check achievements
@@ -209,18 +301,32 @@ public class SummitPage extends BaseAscendPage {
             plugin.getAchievementManager().checkAndUnlockAchievements(playerId, player);
         }
 
-        // Rebuild the entire page to refresh all category cards
+        // Refresh display (auto-refresh will handle subsequent updates)
+        if (!isCurrentPage()) {
+            return;
+        }
         UICommandBuilder updateBuilder = new UICommandBuilder();
-        UIEventBuilder updateEventBuilder = new UIEventBuilder();
-        buildCategoryCards(ref, store, updateBuilder, updateEventBuilder);
-        sendUpdate(updateBuilder, updateEventBuilder, false);
+        updateCategoryCards(ref, store, updateBuilder);
+        try {
+            sendUpdate(updateBuilder, null, false);
+        } catch (Exception e) {
+            // UI was replaced - ignore
+        }
     }
 
     private String resolveCategoryAccentColor(int index) {
         return switch (index) {
-            case 0 -> "#5a6b3d";  // Green for Multiplier Gain
-            case 1 -> "#2d5a7b";  // Blue for Runner Speed
-            default -> "#5a3d6b"; // Purple for Evolution Power
+            case 0 -> "#10b981";  // Green for Multiplier Gain
+            case 1 -> "#3b82f6";  // Blue for Runner Speed
+            default -> "#8b5cf6"; // Purple for Evolution Power
+        };
+    }
+
+    private String resolveCardBgElementId(int index) {
+        return switch (index) {
+            case 0 -> "#CardBgGreen";
+            case 1 -> "#CardBgBlue";
+            default -> "#CardBgPurple";
         };
     }
 
