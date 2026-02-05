@@ -43,16 +43,16 @@ public class AscendRunTracker {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final double FINISH_RADIUS_SQ = 2.25; // 1.5^2
-    private static final double START_DETECTION_RADIUS_SQ = 1.0; // 1.0^2 - radius for walk-on start detection
+    private static final double START_DETECTION_RADIUS_SQ = 2.25; // 1.5^2 - radius for walk-on start detection
     private static final double MOVEMENT_THRESHOLD_SQ = 0.01; // 0.1^2 - minimum movement to start run
-    private static final long COMPLETION_COOLDOWN_MS = 500; // 0.5s cooldown after completing a run
+    private static final long POST_COMPLETION_FREEZE_MS = 500; // 0.5s freeze after completing a run
 
     private final AscendMapStore mapStore;
     private final AscendPlayerStore playerStore;
     private final GhostRecorder ghostRecorder;
     private final Map<UUID, ActiveRun> activeRuns = new ConcurrentHashMap<>();
     private final Map<UUID, PendingRun> pendingRuns = new ConcurrentHashMap<>();
-    private final Map<UUID, Long> completionCooldowns = new ConcurrentHashMap<>();
+    private final Map<UUID, FreezeData> frozenPlayers = new ConcurrentHashMap<>();
 
     public AscendRunTracker(AscendMapStore mapStore, AscendPlayerStore playerStore, GhostRecorder ghostRecorder) {
         this.mapStore = mapStore;
@@ -100,6 +100,7 @@ public class AscendRunTracker {
     public void cancelRun(UUID playerId) {
         PendingRun pending = pendingRuns.remove(playerId);
         ActiveRun active = activeRuns.remove(playerId);
+        frozenPlayers.remove(playerId);
 
         // Show runners from the cancelled run's map
         if (pending != null) {
@@ -151,6 +152,19 @@ public class AscendRunTracker {
 
         UUID playerId = playerRef.getUuid();
         Vector3d pos = transform.getPosition();
+
+        // Check if player is frozen (post-completion freeze) - teleport back to position
+        FreezeData freezeData = frozenPlayers.get(playerId);
+        if (freezeData != null) {
+            if (System.currentTimeMillis() < freezeData.endTime) {
+                // Still frozen - teleport player back to freeze position
+                store.addComponent(ref, Teleport.getComponentType(),
+                    new Teleport(store.getExternalData().getWorld(), freezeData.position, freezeData.rotation));
+                return;
+            }
+            // Freeze expired - remove and continue
+            frozenPlayers.remove(playerId);
+        }
 
         // Check for pending run - start timer when player moves from start position
         PendingRun pendingRun = pendingRuns.get(playerId);
@@ -287,32 +301,34 @@ public class AscendRunTracker {
                 .color(SystemMessageUtils.SUCCESS));
         }
 
-        if (isPersonalBest && !firstCompletion) {
-            long seconds = completionTimeMs / 1000;
-            long millis = completionTimeMs % 1000;
-            String timeStr = String.format("%d.%03ds", seconds, millis);
-            player.sendMessage(Message.raw("[Ascend] New personal best! " + timeStr)
-                .color(SystemMessageUtils.SUCCESS));
+        // Format completion time
+        long seconds = completionTimeMs / 1000;
+        long millis = completionTimeMs % 1000;
+        String timeStr = String.format("%d.%03ds", seconds, millis);
+
+        // Build payout message with time and optional PB/bonus info
+        StringBuilder payoutMsg = new StringBuilder();
+        payoutMsg.append("[Ascend] +")
+                 .append(FormatUtils.formatCoinsForHudDecimal(payout))
+                 .append(" coins | ")
+                 .append(timeStr);
+
+        if (isPersonalBest) {
+            payoutMsg.append(" | PB!");
         }
 
-        // Show payout with bonus info
-        StringBuilder bonusInfo = new StringBuilder();
         if (sessionBonus.compareTo(BigDecimal.ONE) > 0) {
-            bonusInfo.append(" (Session Bonus x3!)");
+            payoutMsg.append(" (Session Bonus x3!)");
         } else if (chainBonus.compareTo(BigDecimal.ZERO) > 0) {
-            bonusInfo.append(" (Chain +" + (int)(chainBonus.doubleValue() * 100) + "%)");
+            payoutMsg.append(" (Chain +").append((int)(chainBonus.doubleValue() * 100)).append("%)");
         }
-        player.sendMessage(Message.raw("[Ascend] +" + FormatUtils.formatCoinsForHudDecimal(payout) + " coins." + bonusInfo)
-            .color(SystemMessageUtils.PRIMARY_TEXT));
+
+        player.sendMessage(Message.raw(payoutMsg.toString())
+            .color(isPersonalBest ? SystemMessageUtils.SUCCESS : SystemMessageUtils.PRIMARY_TEXT));
 
         // Check achievements
         if (plugin != null && plugin.getAchievementManager() != null) {
             plugin.getAchievementManager().checkAndUnlockAchievements(playerId, player);
-        }
-
-        // Give back menu items
-        if (plugin != null) {
-            plugin.giveMenuItems(player);
         }
 
         Vector3d startPos = new Vector3d(map.getStartX(), map.getStartY(), map.getStartZ());
@@ -320,8 +336,17 @@ public class AscendRunTracker {
         store.addComponent(ref, Teleport.getComponentType(),
             new Teleport(store.getExternalData().getWorld(), startPos, startRot));
 
-        // Set cooldown to prevent walk-on-start from triggering immediately
-        completionCooldowns.put(playerId, System.currentTimeMillis());
+        // Freeze player briefly after completion (teleport-based freeze)
+        frozenPlayers.put(playerId, new FreezeData(
+            startPos, startRot, System.currentTimeMillis() + POST_COMPLETION_FREEZE_MS));
+
+        // Set pending run immediately so player is ready to go after freeze
+        setPendingRun(playerId, map.getId(), startPos);
+
+        // Give run items (reset + leave) since player is now in a pending run
+        if (plugin != null) {
+            plugin.giveRunItems(player);
+        }
     }
 
     public void teleportToMapStart(Ref<EntityStore> ref, Store<EntityStore> store,
@@ -343,15 +368,6 @@ public class AscendRunTracker {
 
     private void checkWalkOnStart(Ref<EntityStore> ref, Store<EntityStore> store,
                                    PlayerRef playerRef, Player player, UUID playerId, Vector3d pos) {
-        // Check if player is in cooldown after completing a run
-        Long cooldownTime = completionCooldowns.get(playerId);
-        if (cooldownTime != null) {
-            if (System.currentTimeMillis() - cooldownTime < COMPLETION_COOLDOWN_MS) {
-                return; // Still in cooldown, skip walk-on-start detection
-            }
-            completionCooldowns.remove(playerId); // Cooldown expired, clean up
-        }
-
         // Find if player is standing on any map's start position
         for (AscendMap map : mapStore.listMaps()) {
             if (map == null) {
@@ -411,6 +427,18 @@ public class AscendRunTracker {
         PendingRun(String mapId, Vector3d startPos) {
             this.mapId = mapId;
             this.startPos = startPos;
+        }
+    }
+
+    private static class FreezeData {
+        final Vector3d position;
+        final Vector3f rotation;
+        final long endTime;
+
+        FreezeData(Vector3d position, Vector3f rotation, long endTime) {
+            this.position = position;
+            this.rotation = rotation;
+            this.endTime = endTime;
         }
     }
 
