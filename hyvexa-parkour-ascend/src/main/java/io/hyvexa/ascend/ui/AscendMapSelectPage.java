@@ -1014,7 +1014,23 @@ public class AscendMapSelectPage extends BaseAscendPage {
                     int newLevel = playerStore.incrementRobotSpeedLevel(playerRef.getUuid(), option.mapId);
                     // Check if new level unlocks next map
                     if (newLevel == AscendConstants.MAP_UNLOCK_REQUIRED_RUNNER_LEVEL) {
-                        playerStore.checkAndUnlockEligibleMaps(playerRef.getUuid(), mapStore);
+                        List<String> unlockedMapIds = playerStore.checkAndUnlockEligibleMaps(playerRef.getUuid(), mapStore);
+                        for (String unlockedMapId : unlockedMapIds) {
+                            AscendMap unlockedMap = mapStore.getMap(unlockedMapId);
+                            if (unlockedMap != null) {
+                                String mapName = unlockedMap.getName() != null && !unlockedMap.getName().isBlank()
+                                    ? unlockedMap.getName()
+                                    : unlockedMap.getId();
+                                Player player = store.getComponent(ref, Player.getComponentType());
+                                if (player != null) {
+                                    player.sendMessage(Message.raw("🎉 New map unlocked: " + mapName + "!"));
+                                }
+                                // Add map to UI immediately to prevent crash when updating non-existent elements
+                                if (isCurrentPage() && ref.isValid()) {
+                                    addMapToUI(ref, store, unlockedMap);
+                                }
+                            }
+                        }
                     }
                     success = true;
                 }
