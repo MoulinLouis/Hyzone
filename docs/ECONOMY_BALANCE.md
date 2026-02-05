@@ -27,13 +27,13 @@ This document provides a factual overview of the economy balancing in Ascend mod
 - **Not affected by:** Stars, map level
 
 ### Runner Multiplier (Automatic)
-- **Base gain per completion:** +0.1 (0★), +1.0 (1★+)
-- **Evolution bonus:** ×10 multiplier gain when evolved (stars > 0)
+- **Base gain per completion:** +0.1 (0★), +0.2 (1★+)
+- **Evolution bonus:** ×2 multiplier gain when evolved (stars > 0)
 - **Star scaling:**
   - 0★: +0.1 per completion (base)
-  - 1★+: +1.0 per completion (×10 after evolution)
+  - 1★+: +0.2 per completion (×2 after evolution)
 - **With Summit Multiplier Gain bonus:** Base increment × bonus
-  - Example at level 10 (×40.7 bonus): 0★ = +4.07/run, 1★+ = +40.7/run
+  - Example at level 10 (×40.7 bonus): 0★ = +4.07/run, 1★+ = +8.14/run
 
 ### Multiplier Slots
 - **Total slots:** 5 (one per map)
@@ -389,15 +389,15 @@ Multiplies the per-run multiplier increment for runners.
 
 | Level | Gain Multiplier | 0★ Increment | 1★+ Increment |
 |-------|-----------------|--------------|---------------|
-| 0 | ×1.00 | +0.1/run | +1.0/run |
-| 5 | ×19.5 | +1.95/run | +19.5/run |
-| 10 | ×40.7 | +4.07/run | +40.7/run |
+| 0 | ×1.00 | +0.1/run | +0.2/run |
+| 5 | ×19.5 | +1.95/run | +3.9/run |
+| 10 | ×40.7 | +4.07/run | +8.14/run |
 
 ### Evolution Power
 
 **Status:** Currently unused (kept for future use)
 
-Evolution now provides a flat ×10 multiplier gain per-run (see Runner Multiplier section).
+Evolution now provides a flat ×2 multiplier gain per-run (see Runner Multiplier section).
 
 ---
 
@@ -408,7 +408,7 @@ Evolution provides a clear benefit with continuous cost progression.
 ### The Evolution Benefit
 
 **When you evolve a runner:**
-- ✅ **Multiplier gain ×10** (0.1 → 1.0 per run)
+- ✅ **Multiplier gain ×2** (0.1 → 0.2 per run)
 - ✅ **Speed level resets to 0** (visual reset, but costs continue)
 - ✅ **Costs continue from total level** (no reset, no penalty)
 
@@ -417,9 +417,9 @@ Evolution provides a clear benefit with continuous cost progression.
 | Stars | Multiplier Gain | Total Levels |
 |-------|-----------------|--------------|
 | 0★ | +0.1/run | 0-19 |
-| 1★+ | +1.0/run (×10) | 20+ |
+| 1★+ | +0.2/run (×2) | 20+ |
 
-**Key insight:** Evolution is always beneficial - you get ×10 multiplier gains for the same cost progression you would have had anyway. All evolved runners (1★ to 5★) earn the same per-run increment.
+**Key insight:** Evolution is always beneficial - you get ×2 multiplier gains for the same cost progression you would have had anyway. All evolved runners (1★ to 5★) earn the same per-run increment.
 
 ### Strategic Decisions
 
@@ -443,11 +443,11 @@ Evolution provides a clear benefit with continuous cost progression.
 
 **Option A: Focus on Map 0 (Rouge)**
 - Fast completion time = more runs = more multiplier gains
-- Evolve to 1★ for +1.0 multiplier per run (×10 boost)
+- Evolve to 1★ for +0.2 multiplier per run (×2 boost)
 - **Best for:** Pure idle optimization
 
 **Option B: Spread across all maps**
-- Evolve each runner to at least 1★ for the ×10 boost
+- Evolve each runner to at least 1★ for the ×2 boost
 - More balanced income sources
 - Different visual NPCs running around
 - **Best for:** Visual variety and engagement
@@ -455,7 +455,7 @@ Evolution provides a clear benefit with continuous cost progression.
 ### Design Goals Achieved
 
 ✅ **Evolution is always worthwhile**
-- ×10 multiplier gains with no cost penalty
+- ×2 multiplier gains with no cost penalty
 - Continuous progression feels natural
 
 ✅ **Strategic depth from map choice**
@@ -484,7 +484,7 @@ Evolution provides a clear benefit with continuous cost progression.
 - **Minimum coin generation:** Even idle players make progress
 - **Maximum speed:** Runners capped at level 20 per evolution cycle
 - **Cost scaling:** Exponential but continuous - no resets, no surprises
-- **Evolution benefit:** ×10 multiplier gain with no cost penalty
+- **Evolution benefit:** ×2 multiplier gain with no cost penalty
   - Costs continue from total levels purchased (stars × 20 + speedLevel)
   - Evolution is always beneficial - strategic choice is which map to prioritize
 
@@ -516,7 +516,7 @@ All formulas use consistent growth rates:
 - **Elevation multiplier:** level (direct linear multiplier)
 - **Elevation cost:** 1.15^level (15% growth)
 - **Upgrades:** 2^totalLevel (100% growth per level, smooth and predictable)
-- **Evolution gain:** ×10 per-run multiplier gain (flat boost when evolved)
+- **Evolution gain:** ×2 per-run multiplier gain (flat boost when evolved)
 - **Summit XP:** sqrt(coins) / 1,000,000 (very late-game, requires 1T coins for 1 XP)
 - **Summit levels:** level^4 (steep late-game scaling)
 
