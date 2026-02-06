@@ -369,7 +369,7 @@ Summit performs a full reset similar to Elevation:
 |----------|---------|---------|----------|
 | **Runner Speed** | 1 + 0.45 × √level | ×1.00 | ×2.42 |
 | **Multiplier Gain** | 1 + 0.5 × level^0.8 | ×1.00 | ×4.16 |
-| **Evolution Power** | 2 + 1.5 × level/(level+10) | ×2.00 | ×2.75 |
+| **Evolution Power** | 3 + 1.5 × level/(level+10) | ×3.00 | ×3.75 |
 
 ### Runner Speed
 
@@ -392,25 +392,25 @@ Multiplies the per-run multiplier increment for runners.
 
 | Level | Gain Multiplier | 0★ Increment | 1★ Increment | 2★ Increment |
 |-------|-----------------|--------------|---------------|---------------|
-| 0 | ×1.00 | +0.10/run | +0.20/run | +0.40/run |
-| 5 | ×2.81 | +0.28/run | +0.56/run | +1.12/run |
-| 10 | ×4.16 | +0.42/run | +0.83/run | +1.66/run |
+| 0 | ×1.00 | +0.10/run | +0.30/run | +0.90/run |
+| 5 | ×2.81 | +0.28/run | +0.84/run | +2.53/run |
+| 10 | ×4.16 | +0.42/run | +1.25/run | +3.74/run |
 
-*Note: 1★+ increments shown assume base Evolution Power (×2). Higher Evolution Power increases per star.*
+*Note: 1★+ increments shown assume base Evolution Power (×3). Higher Evolution Power increases per star.*
 
 ### Evolution Power
 
-**Formula:** `2 + 1.5 × level / (level + 10)` — asymptotic growth toward ~3.5
+**Formula:** `3 + 1.5 × level / (level + 10)` — asymptotic growth toward ~4.5
 
 Each Summit level always improves EP, but gains naturally diminish. No hard cap.
 
 | Level | Evolution Power | 0★ | 1★ | 2★ | 3★ | 5★ |
 |-------|-----------------|------|------|------|------|------|
-| 0 | ×2.00 | 0.10 | 0.20 | 0.40 | 0.80 | 3.20 |
-| 5 | ×2.50 | 0.10 | 0.25 | 0.63 | 1.56 | 9.77 |
-| 10 | ×2.75 | 0.10 | 0.28 | 0.76 | 2.08 | 15.2 |
-| 20 | ×3.00 | 0.10 | 0.30 | 0.90 | 2.70 | 24.3 |
-| 50 | ×3.25 | 0.10 | 0.33 | 1.06 | 3.43 | 36.3 |
+| 0 | ×3.00 | 0.10 | 0.30 | 0.90 | 2.70 | 24.3 |
+| 5 | ×3.50 | 0.10 | 0.35 | 1.23 | 4.29 | 52.5 |
+| 10 | ×3.75 | 0.10 | 0.38 | 1.41 | 5.27 | 74.1 |
+| 20 | ×4.00 | 0.10 | 0.40 | 1.60 | 6.40 | 102.4 |
+| 50 | ×4.25 | 0.10 | 0.43 | 1.81 | 7.67 | 138.6 |
 
 **Formula:** `increment = 0.1 × evolutionPower^stars × multiplierGainBonus`
 
@@ -427,18 +427,18 @@ Evolution provides a clear benefit with continuous cost progression.
 - ✅ **Speed level resets to 0** (visual reset, but costs continue)
 - ✅ **Costs continue from total level** (no reset, no penalty)
 
-### Evolution Value Analysis (base Evolution Power ×2)
+### Evolution Value Analysis (base Evolution Power ×3)
 
 | Stars | Multiplier Gain | Total Levels |
 |-------|-----------------|--------------|
 | 0★ | +0.10/run | 0-19 |
-| 1★ | +0.20/run (×2) | 20-39 |
-| 2★ | +0.40/run (×4) | 40-59 |
-| 3★ | +0.80/run (×8) | 60-79 |
-| 4★ | +1.60/run (×16) | 80-99 |
-| 5★ | +3.20/run (×32) | 100+ |
+| 1★ | +0.30/run (×3) | 20-39 |
+| 2★ | +0.90/run (×9) | 40-59 |
+| 3★ | +2.70/run (×27) | 60-79 |
+| 4★ | +8.10/run (×81) | 80-99 |
+| 5★ | +24.3/run (×243) | 100+ |
 
-**Key insight:** Each evolution multiplies the multiplier gain by the Evolution Power value. The EP formula uses asymptotic growth (`2 + 1.5 × level / (level + 10)`) so it always improves but naturally plateaus around ×3.5, keeping high-star combos under control.
+**Key insight:** Each evolution multiplies the multiplier gain by the Evolution Power value. The EP formula uses asymptotic growth (`3 + 1.5 × level / (level + 10)`) so it always improves but naturally plateaus around ×4.5, keeping high-star combos under control.
 
 ### Strategic Decisions
 

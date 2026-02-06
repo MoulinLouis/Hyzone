@@ -269,6 +269,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
                 if (speedLevel >= MAX_SPEED_LEVEL && stars < AscendConstants.MAX_ROBOT_STARS) {
                     runnerButtonText = "Evolve";
                     actionPrice = BigDecimal.ZERO;
+                    runnerStatusText = formatEvolveGain(stars, playerRef.getUuid());
                 } else if (stars >= AscendConstants.MAX_ROBOT_STARS && speedLevel >= MAX_SPEED_LEVEL) {
                     runnerButtonText = "Maxed!";
                     actionPrice = BigDecimal.ZERO;
@@ -398,7 +399,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
     private String formatMultiplierGain(int stars, java.util.UUID playerId) {
         // Get Summit bonuses (Multiplier Gain + Evolution Power)
         double multiplierGainBonus = 1.0;
-        double evolutionPowerBonus = 2.0;
+        double evolutionPowerBonus = 3.0;
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         if (plugin != null) {
             SummitManager summitManager = plugin.getSummitManager();
@@ -417,6 +418,34 @@ public class AscendMapSelectPage extends BaseAscendPage {
         } else {
             return String.format(Locale.US, "+%.0fx", val);
         }
+    }
+
+    /**
+     * Format the evolve multiplier gain to show what the runner will earn after evolving.
+     * Shows current → next multiplier increment per run.
+     */
+    private String formatEvolveGain(int stars, java.util.UUID playerId) {
+        double multiplierGainBonus = 1.0;
+        double evolutionPowerBonus = 3.0;
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin != null) {
+            SummitManager summitManager = plugin.getSummitManager();
+            if (summitManager != null && playerId != null) {
+                multiplierGainBonus = summitManager.getMultiplierGainBonus(playerId).doubleValue();
+                evolutionPowerBonus = summitManager.getEvolutionPowerBonus(playerId).doubleValue();
+            }
+        }
+        BigDecimal nextIncrement = AscendConstants.getRunnerMultiplierIncrement(stars + 1, multiplierGainBonus, evolutionPowerBonus);
+        double val = nextIncrement.doubleValue();
+        String formatted;
+        if (val < 1.0) {
+            formatted = String.format(Locale.US, "%.2fx", val);
+        } else if (val < 10.0) {
+            formatted = String.format(Locale.US, "%.1fx", val);
+        } else {
+            formatted = String.format(Locale.US, "%.0fx", val);
+        }
+        return "→ +" + formatted + "/run";
     }
 
     /**
@@ -488,8 +517,6 @@ public class AscendMapSelectPage extends BaseAscendPage {
                 return;
             }
             int newLevel = playerStore.incrementRobotSpeedLevel(playerRef.getUuid(), mapId);
-            int speedGainPercent = (int)(AscendConstants.getMapSpeedMultiplier(map.getDisplayOrder()) * 100);
-            sendMessage(store, ref, "[Ascend] Runner speed upgraded! (+" + speedGainPercent + "% speed/lvl)");
 
             // Check if new level unlocks next map
             if (newLevel == AscendConstants.MAP_UNLOCK_REQUIRED_RUNNER_LEVEL) {
@@ -700,6 +727,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
             if (speedLevel >= MAX_SPEED_LEVEL && stars < AscendConstants.MAX_ROBOT_STARS) {
                 runnerButtonText = "Evolve";
                 actionPrice = BigDecimal.ZERO;
+                runnerStatusText = formatEvolveGain(stars, playerRef.getUuid());
             } else if (stars >= AscendConstants.MAX_ROBOT_STARS && speedLevel >= MAX_SPEED_LEVEL) {
                 runnerButtonText = "Maxed!";
                 actionPrice = BigDecimal.ZERO;
@@ -861,6 +889,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
             if (speedLevel >= MAX_SPEED_LEVEL && stars < AscendConstants.MAX_ROBOT_STARS) {
                 runnerButtonText = "Evolve";
                 actionPrice = BigDecimal.ZERO;
+                runnerStatusText = formatEvolveGain(stars, playerRef.getUuid());
             } else if (stars >= AscendConstants.MAX_ROBOT_STARS && speedLevel >= MAX_SPEED_LEVEL) {
                 runnerButtonText = "Maxed!";
                 actionPrice = BigDecimal.ZERO;

@@ -186,8 +186,8 @@ public class AscendAdminCoinsPage extends InteractiveCustomUIPage<AscendAdminCoi
     }
 
     private void applyCoins(Player player, PlayerRef playerRef, Store<EntityStore> store, boolean add) {
-        long amount = parseAmount(player);
-        if (amount <= 0L) {
+        java.math.BigDecimal amount = parseAmount(player);
+        if (amount == null) {
             return;
         }
         AscendPlayerStore playerStore = ParkourAscendPlugin.getInstance().getPlayerStore();
@@ -195,15 +195,15 @@ public class AscendAdminCoinsPage extends InteractiveCustomUIPage<AscendAdminCoi
             player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading."));
             return;
         }
+        String formatted = FormatUtils.formatCoinsForHudDecimal(amount);
         if (add) {
-            java.math.BigDecimal bdAmount = java.math.BigDecimal.valueOf(amount);
-            playerStore.addCoins(playerRef.getUuid(), bdAmount);
-            playerStore.addSummitAccumulatedCoins(playerRef.getUuid(), bdAmount);
-            player.sendMessage(Message.raw("[Ascend] Added " + amount + " coins (counts toward Summit).")
+            playerStore.addCoins(playerRef.getUuid(), amount);
+            playerStore.addSummitAccumulatedCoins(playerRef.getUuid(), amount);
+            player.sendMessage(Message.raw("[Ascend] Added " + formatted + " coins (counts toward Summit).")
                 .color(SystemMessageUtils.SUCCESS));
         } else {
-            playerStore.addCoins(playerRef.getUuid(), java.math.BigDecimal.valueOf(-amount));
-            player.sendMessage(Message.raw("[Ascend] Removed " + amount + " coins.")
+            playerStore.addCoins(playerRef.getUuid(), amount.negate());
+            player.sendMessage(Message.raw("[Ascend] Removed " + formatted + " coins.")
                 .color(SystemMessageUtils.SECONDARY));
         }
         UICommandBuilder commandBuilder = new UICommandBuilder();
@@ -256,22 +256,22 @@ public class AscendAdminCoinsPage extends InteractiveCustomUIPage<AscendAdminCoi
         }
     }
 
-    private long parseAmount(Player player) {
+    private java.math.BigDecimal parseAmount(Player player) {
         String raw = amountInput != null ? amountInput.trim() : "";
         if (raw.isEmpty()) {
             player.sendMessage(Message.raw("Enter a coin amount."));
-            return -1L;
+            return null;
         }
         try {
-            long value = Long.parseLong(raw);
-            if (value <= 0) {
+            java.math.BigDecimal value = new java.math.BigDecimal(raw);
+            if (value.compareTo(java.math.BigDecimal.ZERO) <= 0) {
                 player.sendMessage(Message.raw("Amount must be positive."));
-                return -1L;
+                return null;
             }
             return value;
         } catch (NumberFormatException e) {
             player.sendMessage(Message.raw("Amount must be a number."));
-            return -1L;
+            return null;
         }
     }
 
