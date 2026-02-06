@@ -44,7 +44,11 @@ Quick reference for AI agents working on this Hytale plugin project.
 9. **Track online players** - only spawn per-player entities for connected players
 10. **Disable NPC AI** - use `Frozen` component to prevent autonomous movement
 
-## UI File Rules (.ui)
+## UI Patterns
+- Never use dynamic Background property changes on UI elements — they don't work in Hytale's UI system
+- Use overlay/visibility toggle pattern for disabled states and visual changes
+- Never use CSS-like syntax (opacity, Width percentages, Anchor.Width) — use segment-based visibility or Group wrapper + overlay patterns
+- For tabs, use Group wrapper + TextButton overlay, NOT TextButton-as-tab pattern
 
 **CRITICAL - These cause parsing errors:**
 - **No underscores in element IDs** - Use `#StatLabel` not `#Stat_Label`
