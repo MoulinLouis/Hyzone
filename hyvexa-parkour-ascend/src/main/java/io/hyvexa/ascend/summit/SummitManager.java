@@ -141,9 +141,9 @@ public class SummitManager {
 
     /**
      * Gets the multiplier gain bonus.
-     * Formula: 1.5 + 0.5 * level^0.8
+     * Formula: 1 + 0.5 * level^0.8
      * Used to boost multiplier gains from runs.
-     * @return Multiplier value (1.5 at level 0, ~4.66 at level 10)
+     * @return Multiplier value (1.0 at level 0, ~4.16 at level 10)
      */
     public BigDecimal getMultiplierGainBonus(UUID playerId) {
         return playerStore.getSummitBonus(playerId, SummitCategory.MULTIPLIER_GAIN);

@@ -421,7 +421,7 @@ public final class AscendConstants {
 
     public enum SummitCategory {
         RUNNER_SPEED("Runner Speed"),      // 1 + 0.45 × √niveau
-        MULTIPLIER_GAIN("Multiplier Gain"), // 1.5 + 0.5 × niveau^0.8
+        MULTIPLIER_GAIN("Multiplier Gain"), // 1 + 0.5 × niveau^0.8
         EVOLUTION_POWER("Evolution Power"); // 2 + 1.5 × niveau / (niveau + 10), asymptote ~3.5
 
         private final String displayName;
@@ -437,14 +437,14 @@ public final class AscendConstants {
         /**
          * Get the bonus multiplier for a given level.
          * - RUNNER_SPEED: 1 + 0.45 × √niveau
-         * - MULTIPLIER_GAIN: 1.5 + 0.5 × niveau^0.8
+         * - MULTIPLIER_GAIN: 1 + 0.5 × niveau^0.8
          * - EVOLUTION_POWER: 3 + 1.5 × niveau / (niveau + 10) — asymptote ~4.5
          */
         public double getBonusForLevel(int level) {
             int safeLevel = Math.max(0, level);
             return switch (this) {
                 case RUNNER_SPEED -> 1.0 + 0.45 * Math.sqrt(safeLevel);
-                case MULTIPLIER_GAIN -> 1.5 + 0.5 * Math.pow(safeLevel, 0.8);
+                case MULTIPLIER_GAIN -> 1.0 + 0.5 * Math.pow(safeLevel, 0.8);
                 case EVOLUTION_POWER -> 3.0 + 1.5 * safeLevel / (safeLevel + 10.0);
             };
         }
