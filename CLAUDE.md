@@ -71,12 +71,20 @@ Quick reference for AI agents working on this Hytale plugin project.
 |--------|---------------------------------|
 | Code patterns | `docs/CODE_PATTERNS.md`         |
 | Hytale API gotchas | `docs/HYTALE_API.md`            |
+| **Hytale Custom UI docs** | `docs/hytale-custom-ui/` (official reference) |
 | Full instructions | `docs/codex/AGENTS.md`          |
 | System architecture | `docs/ARCHITECTURE.md`          |
 | Database schema | `docs/DATABASE.md`              |
 | Ascend mode details | `docs/ASCEND_MODULE_SUMMARY.md` |
 | Game balancing | `docs/ECONOMY_BALANCE.md`       |
 | Feature history | `CHANGELOG.md`                  |
+
+### Hytale Custom UI Reference (`docs/hytale-custom-ui/`)
+Official Hytale UI documentation. **Consult this BEFORE writing any .ui file.**
+- `index.mdx` / `common-styling.mdx` / `layout.mdx` / `markup.mdx` — Core concepts
+- `type-documentation/elements/` — All UI elements (group, label, textbutton, panel, etc.)
+- `type-documentation/property-types/` — All property types (anchor, buttonstyle, labelstyle, etc.)
+- `type-documentation/enums/` — All enums (layoutmode, labelalignment, etc.)
 
 
 ## grepai - Semantic Code Search
