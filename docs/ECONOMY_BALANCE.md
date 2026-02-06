@@ -369,7 +369,7 @@ Summit performs a full reset similar to Elevation:
 |----------|---------|---------|----------|
 | **Runner Speed** | 1 + 0.45 × √level | ×1.00 | ×2.42 |
 | **Multiplier Gain** | 1 + 0.5 × level^0.8 | ×1.00 | ×4.16 |
-| **Evolution Power** | 2 + 0.5 × level^0.8 | ×2.00 | ×5.15 |
+| **Evolution Power** | 2 + 1.5 × level/(level+10) | ×2.00 | ×2.75 |
 
 ### Runner Speed
 
@@ -396,19 +396,21 @@ Multiplies the per-run multiplier increment for runners.
 | 5 | ×2.81 | +0.28/run | +0.56/run | +1.12/run |
 | 10 | ×4.16 | +0.42/run | +0.83/run | +1.66/run |
 
-*Note: 1★+ increments shown assume base Evolution Power (×2). Higher Evolution Power increases exponentially per star.*
+*Note: 1★+ increments shown assume base Evolution Power (×2). Higher Evolution Power increases per star.*
 
 ### Evolution Power
 
-**Formula:** `2 + 0.5 × level^0.8`
+**Formula:** `2 + 1.5 × level / (level + 10)` — asymptotic growth toward ~3.5
 
-Applied exponentially per star to the per-run multiplier increment.
+Each Summit level always improves EP, but gains naturally diminish. No hard cap.
 
-| Level | Evolution Power | 0★ | 1★ | 2★ | 3★ |
-|-------|-----------------|------|------|------|------|
-| 0 | ×2.00 | 0.10 | 0.20 | 0.40 | 0.80 |
-| 5 | ×3.57 | 0.10 | 0.36 | 1.28 | 4.55 |
-| 10 | ×5.15 | 0.10 | 0.52 | 2.66 | 13.68 |
+| Level | Evolution Power | 0★ | 1★ | 2★ | 3★ | 5★ |
+|-------|-----------------|------|------|------|------|------|
+| 0 | ×2.00 | 0.10 | 0.20 | 0.40 | 0.80 | 3.20 |
+| 5 | ×2.50 | 0.10 | 0.25 | 0.63 | 1.56 | 9.77 |
+| 10 | ×2.75 | 0.10 | 0.28 | 0.76 | 2.08 | 15.2 |
+| 20 | ×3.00 | 0.10 | 0.30 | 0.90 | 2.70 | 24.3 |
+| 50 | ×3.25 | 0.10 | 0.33 | 1.06 | 3.43 | 36.3 |
 
 **Formula:** `increment = 0.1 × evolutionPower^stars × multiplierGainBonus`
 
@@ -421,7 +423,7 @@ Evolution provides a clear benefit with continuous cost progression.
 ### The Evolution Benefit
 
 **When you evolve a runner:**
-- ✅ **Multiplier gain ×evolutionPower** per star (compounds exponentially)
+- ✅ **Multiplier gain ×evolutionPower** per star (EP applied cleanly per evolution)
 - ✅ **Speed level resets to 0** (visual reset, but costs continue)
 - ✅ **Costs continue from total level** (no reset, no penalty)
 
@@ -436,7 +438,7 @@ Evolution provides a clear benefit with continuous cost progression.
 | 4★ | +1.60/run (×16) | 80-99 |
 | 5★ | +3.20/run (×32) | 100+ |
 
-**Key insight:** Each evolution multiplies the multiplier gain by the Evolution Power value. With higher Summit Evolution Power, later stars become exponentially more powerful.
+**Key insight:** Each evolution multiplies the multiplier gain by the Evolution Power value. The EP formula uses asymptotic growth (`2 + 1.5 × level / (level + 10)`) so it always improves but naturally plateaus around ×3.5, keeping high-star combos under control.
 
 ### Strategic Decisions
 
@@ -533,7 +535,7 @@ All formulas use consistent growth rates:
 - **Elevation multiplier:** level (direct linear multiplier)
 - **Elevation cost:** 1.15^(level^0.77) for level<=300, then 1.15^(300^0.77 + (level-300)^0.63) (soft cap at 300)
 - **Upgrades:** 2^totalLevel (100% growth per level, smooth and predictable)
-- **Evolution gain:** ×2 per-run multiplier gain (flat boost when evolved)
+- **Evolution gain:** EP^stars, where EP = 2 + 1.5 × level / (level + 10), asymptote ~3.5
 - **Summit XP:** sqrt(accumulatedCoins / 1B) (based on coins earned since last Summit/Elevation)
 - **Summit levels:** level^2.5 (late-game scaling)
 
@@ -542,6 +544,12 @@ Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure conti
 ---
 
 ## Version History
+
+- **2026-02-06 (v13):** Evolution Power asymptotic growth
+  - EP formula changed from `2 + 0.5 × level^0.8` to `2 + 1.5 × level / (level + 10)`
+  - Asymptotic growth toward ~3.5 (was unbounded, reached ×5.15 at level 10, ×21.5 at level 100)
+  - EP^stars kept clean (no star dampening) — player sees EP value, each evolution multiplies by it
+  - 5★ at Summit 10: ×152 (was ×3,627), at Summit 50: ×354 (was ×448K)
 
 - **2026-02-06 (v12):** Elevation soft cap at level 300
   - Below 300: identical cost curve (1.15^(level^0.77))
