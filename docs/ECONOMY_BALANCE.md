@@ -517,11 +517,11 @@ Evolution provides a clear benefit with continuous cost progression.
 
 All formulas use consistent growth rates:
 - **Elevation multiplier:** level (direct linear multiplier)
-- **Elevation cost:** 1.15^(level^0.77) (flattened exponential, stays attractive at high levels)
+- **Elevation cost:** 1.15^(level^0.77) for level<=300, then 1.15^(300^0.77 + (level-300)^0.63) (soft cap at 300)
 - **Upgrades:** 2^totalLevel (100% growth per level, smooth and predictable)
 - **Evolution gain:** ×2 per-run multiplier gain (flat boost when evolved)
 - **Summit XP:** sqrt(accumulatedCoins / 1B) (based on coins earned since last Summit/Elevation)
-- **Summit levels:** level^3 (late-game scaling)
+- **Summit levels:** level^2.5 (late-game scaling)
 
 Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure continuous progression after evolution.
 
@@ -529,11 +529,16 @@ Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure conti
 
 ## Version History
 
+- **2026-02-06 (v12):** Elevation soft cap at level 300
+  - Below 300: identical cost curve (1.15^(level^0.77))
+  - Above 300: flatter late-game curve (exponent 0.63 instead of 0.77)
+  - Removes glass ceiling at high elevation — 100T coins from level 600 gives +127 levels instead of +12
+
 - **2026-02-06 (v11):** Summit XP based on accumulated coins + reduced level cost
   - Summit XP now based on coins accumulated since last Summit/Elevation, not current balance
   - Runner upgrades no longer reduce Summit XP potential (only earning matters)
   - Elevation resets the accumulator (strategic choice preserved)
-  - Summit level cost: `level^3` (was `level^4`) — reduces gap between levels
+  - Summit level cost: `level^2.5` (was `level^4`) — reduces gap between levels
 
 - **2026-02-06 (v10):** Flattened elevation cost curve
   - Elevation cost: `30000 × 1.15^(level^0.77)` (was `30000 × 1.15^level`)
