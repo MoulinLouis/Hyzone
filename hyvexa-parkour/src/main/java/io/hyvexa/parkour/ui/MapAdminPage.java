@@ -185,6 +185,18 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
             sendRefresh(ref, store);
             return;
         }
+        if (data.button.equals(MapData.BUTTON_SET_FLY_ZONE_1)) {
+            handleSetFlyZoneCorner1(ref, store);
+            return;
+        }
+        if (data.button.equals(MapData.BUTTON_SET_FLY_ZONE_2)) {
+            handleSetFlyZoneCorner2(ref, store);
+            return;
+        }
+        if (data.button.equals(MapData.BUTTON_CLEAR_FLY_ZONE)) {
+            handleClearFlyZone(ref, store);
+            return;
+        }
     }
 
     private void handleCreate(Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -489,6 +501,113 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
         player.sendMessage(Message.raw("Created hologram '" + holoName + "'."));
     }
 
+    private void handleSetFlyZoneCorner1(Ref<EntityStore> ref, Store<EntityStore> store) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null) {
+            return;
+        }
+        if (selectedMapId.isEmpty()) {
+            player.sendMessage(Message.raw("Select a map first."));
+            return;
+        }
+        Map map = mapStore.getMap(selectedMapId);
+        if (map == null) {
+            player.sendMessage(Message.raw("Map '" + selectedMapId + "' not found."));
+            return;
+        }
+        TransformData pos = readTransform(ref, store);
+        if (pos == null) {
+            player.sendMessage(Message.raw("Could not read your position."));
+            return;
+        }
+        map.setFlyZoneMinX(pos.getX());
+        map.setFlyZoneMinY(pos.getY());
+        map.setFlyZoneMinZ(pos.getZ());
+        map.setFlyZoneMaxX(null);
+        map.setFlyZoneMaxY(null);
+        map.setFlyZoneMaxZ(null);
+        map.setUpdatedAt(System.currentTimeMillis());
+        try {
+            mapStore.updateMap(map);
+            player.sendMessage(Message.raw("Fly zone corner 1 saved. Move to corner 2 and set it."));
+        } catch (IllegalArgumentException exception) {
+            player.sendMessage(Message.raw(exception.getMessage()));
+        }
+        sendRefresh(ref, store);
+    }
+
+    private void handleSetFlyZoneCorner2(Ref<EntityStore> ref, Store<EntityStore> store) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null) {
+            return;
+        }
+        if (selectedMapId.isEmpty()) {
+            player.sendMessage(Message.raw("Select a map first."));
+            return;
+        }
+        Map map = mapStore.getMap(selectedMapId);
+        if (map == null) {
+            player.sendMessage(Message.raw("Map '" + selectedMapId + "' not found."));
+            return;
+        }
+        if (map.getFlyZoneMinX() == null || map.getFlyZoneMinY() == null || map.getFlyZoneMinZ() == null) {
+            player.sendMessage(Message.raw("Set corner 1 first."));
+            return;
+        }
+        TransformData pos = readTransform(ref, store);
+        if (pos == null) {
+            player.sendMessage(Message.raw("Could not read your position."));
+            return;
+        }
+        double c1x = map.getFlyZoneMinX();
+        double c1y = map.getFlyZoneMinY();
+        double c1z = map.getFlyZoneMinZ();
+        map.setFlyZoneMinX(Math.min(c1x, pos.getX()));
+        map.setFlyZoneMinY(Math.min(c1y, pos.getY()));
+        map.setFlyZoneMinZ(Math.min(c1z, pos.getZ()));
+        map.setFlyZoneMaxX(Math.max(c1x, pos.getX()));
+        map.setFlyZoneMaxY(Math.max(c1y, pos.getY()));
+        map.setFlyZoneMaxZ(Math.max(c1z, pos.getZ()));
+        map.setUpdatedAt(System.currentTimeMillis());
+        try {
+            mapStore.updateMap(map);
+            player.sendMessage(Message.raw("Fly zone set for '" + map.getId() + "'."));
+        } catch (IllegalArgumentException exception) {
+            player.sendMessage(Message.raw(exception.getMessage()));
+        }
+        sendRefresh(ref, store);
+    }
+
+    private void handleClearFlyZone(Ref<EntityStore> ref, Store<EntityStore> store) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null) {
+            return;
+        }
+        if (selectedMapId.isEmpty()) {
+            player.sendMessage(Message.raw("Select a map first."));
+            return;
+        }
+        Map map = mapStore.getMap(selectedMapId);
+        if (map == null) {
+            player.sendMessage(Message.raw("Map '" + selectedMapId + "' not found."));
+            return;
+        }
+        map.setFlyZoneMinX(null);
+        map.setFlyZoneMinY(null);
+        map.setFlyZoneMinZ(null);
+        map.setFlyZoneMaxX(null);
+        map.setFlyZoneMaxY(null);
+        map.setFlyZoneMaxZ(null);
+        map.setUpdatedAt(System.currentTimeMillis());
+        try {
+            mapStore.updateMap(map);
+            player.sendMessage(Message.raw("Fly zone cleared for '" + map.getId() + "'."));
+        } catch (IllegalArgumentException exception) {
+            player.sendMessage(Message.raw(exception.getMessage()));
+        }
+        sendRefresh(ref, store);
+    }
+
     private void openIndex(Ref<EntityStore> ref, Store<EntityStore> store) {
         Player player = store.getComponent(ref, Player.getComponentType());
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
@@ -523,6 +642,14 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
         commandBuilder.set("#GliderValue.Text", mapGliderEnabled ? "Enabled" : "Disabled");
         commandBuilder.set("#FreeFallValue.Text", mapFreeFallEnabled ? "YES" : "NO");
         commandBuilder.set("#DuelEnabledValue.Text", mapDuelEnabled ? "YES" : "NO");
+        String flyZoneText = "(none)";
+        if (!selectedMapId.isEmpty()) {
+            Map selectedMap = mapStore.getMap(selectedMapId);
+            if (selectedMap != null && selectedMap.hasFlyZone()) {
+                flyZoneText = "(set)";
+            }
+        }
+        commandBuilder.set("#FlyZoneValue.Text", "Fly Zone: " + flyZoneText);
         String selectedText = "Selected: (none)";
         if (!selectedMapId.isEmpty()) {
             Map map = mapStore.getMap(selectedMapId);
@@ -609,6 +736,12 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
                 EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_TOGGLE_FREE_FALL), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#DuelEnabledToggle",
                 EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_TOGGLE_DUEL_ENABLED), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SetFlyZone1Button",
+                EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_SET_FLY_ZONE_1), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SetFlyZone2Button",
+                EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_SET_FLY_ZONE_2), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ClearFlyZoneButton",
+                EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_CLEAR_FLY_ZONE), false);
     }
 
     private static TransformData readTransform(Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -720,6 +853,9 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
         static final String BUTTON_TOGGLE_GLIDER = "ToggleGlider";
         static final String BUTTON_TOGGLE_FREE_FALL = "ToggleFreeFall";
         static final String BUTTON_TOGGLE_DUEL_ENABLED = "ToggleDuelEnabled";
+        static final String BUTTON_SET_FLY_ZONE_1 = "SetFlyZone1";
+        static final String BUTTON_SET_FLY_ZONE_2 = "SetFlyZone2";
+        static final String BUTTON_CLEAR_FLY_ZONE = "ClearFlyZone";
 
         public static final BuilderCodec<MapData> CODEC = BuilderCodec.<MapData>builder(MapData.class, MapData::new)
                 .addField(new KeyedCodec<>(KEY_BUTTON, Codec.STRING), (data, value) -> data.button = value, data -> data.button)

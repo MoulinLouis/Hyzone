@@ -81,6 +81,12 @@ CREATE TABLE maps (
   leave_teleport_rot_x FLOAT NULL,
   leave_teleport_rot_y FLOAT NULL,
   leave_teleport_rot_z FLOAT NULL,
+  fly_zone_min_x DOUBLE NULL,
+  fly_zone_min_y DOUBLE NULL,
+  fly_zone_min_z DOUBLE NULL,
+  fly_zone_max_x DOUBLE NULL,
+  fly_zone_max_y DOUBLE NULL,
+  fly_zone_max_z DOUBLE NULL,
   created_at TIMESTAMP NULL,
   updated_at TIMESTAMP NULL
 ) ENGINE=InnoDB;
