@@ -34,7 +34,7 @@ public class SummitPage extends BaseAscendPage {
 
     private static final String BUTTON_CLOSE = "Close";
     private static final String BUTTON_SUMMIT_PREFIX = "Summit_";
-    private static final long REFRESH_INTERVAL_MS = 1000L;
+    private static final long REFRESH_INTERVAL_MS = 200L;
 
     private final AscendPlayerStore playerStore;
     private final SummitManager summitManager;
@@ -127,7 +127,7 @@ public class SummitPage extends BaseAscendPage {
         // Inverse of coinsToXp: xp = sqrt(coins / MIN_COINS) => coins = xp^2 * MIN_COINS
         java.math.BigDecimal coinsForNextXp = java.math.BigDecimal.valueOf(nextXp)
             .pow(2).multiply(java.math.BigDecimal.valueOf(AscendConstants.SUMMIT_MIN_COINS));
-        String progressText = "Progress to " + nextXp + " Exp: " +
+        String progressText = "Progress to next EXP: " +
             FormatUtils.formatCoinsForHudDecimal(accumulatedCoins) + " / " +
             FormatUtils.formatCoinsForHudDecimal(coinsForNextXp) + " accumulated coins";
         commandBuilder.set("#ProgressText.Text", progressText);

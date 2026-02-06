@@ -45,6 +45,7 @@ import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
 import com.hypixel.hytale.server.core.event.events.player.AddPlayerToWorldEvent;
 import io.hyvexa.common.util.HylogramsBridge;
+import io.hyvexa.ascend.system.AscendFinishDetectionSystem;
 import io.hyvexa.common.visibility.EntityVisibilityFilterSystem;
 
 import javax.annotation.Nonnull;
@@ -80,6 +81,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
     private PassiveEarningsManager passiveEarningsManager;
     private AscendWhitelistManager whitelistManager;
     private ScheduledFuture<?> runTrackerTask;
+    private ScheduledFuture<?> timerUpdateTask;
     private final ConcurrentHashMap<UUID, AscendHud> ascendHuds = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Boolean> ascendHudAttached = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Long> ascendHudReadyAt = new ConcurrentHashMap<>();
@@ -157,6 +159,11 @@ public class ParkourAscendPlugin extends JavaPlugin {
         var registry = EntityStore.REGISTRY;
         if (!registry.hasSystemClass(EntityVisibilityFilterSystem.class)) {
             registry.registerSystem(new EntityVisibilityFilterSystem());
+        }
+
+        // Per-tick finish line detection (defers store work to world thread)
+        if (!registry.hasSystemClass(AscendFinishDetectionSystem.class)) {
+            registry.registerSystem(new AscendFinishDetectionSystem(this, runTracker));
         }
 
         this.getEventRegistry().registerGlobal(PlayerReadyEvent.class, event -> {
@@ -271,6 +278,11 @@ public class ParkourAscendPlugin extends JavaPlugin {
             this::tickRunTracker,
             200, 200, TimeUnit.MILLISECONDS
         );
+
+        timerUpdateTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(
+            this::tickTimerUpdate,
+            50, 50, TimeUnit.MILLISECONDS
+        );
     }
 
     @Override
@@ -278,6 +290,10 @@ public class ParkourAscendPlugin extends JavaPlugin {
         if (runTrackerTask != null) {
             runTrackerTask.cancel(false);
             runTrackerTask = null;
+        }
+        if (timerUpdateTask != null) {
+            timerUpdateTask.cancel(false);
+            timerUpdateTask = null;
         }
         if (ghostRecorder != null) {
             ghostRecorder.stop();
@@ -385,6 +401,31 @@ public class ParkourAscendPlugin extends JavaPlugin {
         }
     }
 
+    private void tickTimerUpdate() {
+        if (runTracker == null) {
+            return;
+        }
+        Map<World, List<PlayerTickContext>> playersByWorld = collectPlayersByWorld();
+        for (Map.Entry<World, List<PlayerTickContext>> entry : playersByWorld.entrySet()) {
+            World world = entry.getKey();
+            if (!isAscendWorld(world)) {
+                continue;
+            }
+            List<PlayerTickContext> players = entry.getValue();
+            CompletableFuture.runAsync(() -> {
+                for (PlayerTickContext context : players) {
+                    if (context.ref == null || !context.ref.isValid()) {
+                        continue;
+                    }
+                    updateTimerOnly(context);
+                }
+            }, world).exceptionally(ex -> {
+                LOGGER.at(Level.WARNING).withCause(ex).log("Exception in tickTimerUpdate async task");
+                return null;
+            });
+        }
+    }
+
     private void updateAscendHud(PlayerTickContext context) {
         Player player = context.store.getComponent(context.ref, Player.getComponentType());
         if (player == null || context.playerRef == null) {
@@ -428,17 +469,32 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
             // Update ascension quest progress bar
             hud.updateAscensionQuest(coins);
-
-            // Update run timer HUD
-            if (runTracker != null) {
-                boolean isRunning = runTracker.isRunActive(playerId);
-                boolean isPending = runTracker.isPendingRun(playerId);
-                boolean showTimer = isRunning || isPending;
-                Long elapsedMs = isRunning ? runTracker.getElapsedTimeMs(playerId) : 0L;
-                hud.updateTimer(elapsedMs, showTimer);
-            }
         } catch (Exception e) {
             LOGGER.at(Level.WARNING).withCause(e).log("Failed to update Ascend HUD for player " + playerId);
+        }
+    }
+
+    private void updateTimerOnly(PlayerTickContext context) {
+        if (context.playerRef == null || runTracker == null) {
+            return;
+        }
+        UUID playerId = context.playerRef.getUuid();
+        AscendHud hud = ascendHuds.get(playerId);
+        if (hud == null) {
+            return;
+        }
+        long readyAt = ascendHudReadyAt.getOrDefault(playerId, Long.MAX_VALUE);
+        if (System.currentTimeMillis() < readyAt) {
+            return;
+        }
+        try {
+            boolean isRunning = runTracker.isRunActive(playerId);
+            boolean isPending = runTracker.isPendingRun(playerId);
+            boolean showTimer = isRunning || isPending;
+            Long elapsedMs = isRunning ? runTracker.getElapsedTimeMs(playerId) : 0L;
+            hud.updateTimer(elapsedMs, showTimer);
+        } catch (Exception e) {
+            LOGGER.at(Level.WARNING).withCause(e).log("Failed to update timer for player " + playerId);
         }
     }
 
@@ -489,7 +545,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
         ascendHudReadyAt.put(playerRef.getUuid(), System.currentTimeMillis() + 250L);
     }
 
-    private boolean isAscendWorld(World world) {
+    public boolean isAscendWorld(World world) {
         if (world == null || world.getName() == null) {
             return false;
         }
