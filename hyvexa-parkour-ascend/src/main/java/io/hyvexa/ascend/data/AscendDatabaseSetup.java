@@ -165,6 +165,7 @@ public final class AscendDatabaseSetup {
                 ) ENGINE=InnoDB
                 """);
             ensureSpawnColumns(conn);
+            ensureVoidYThresholdColumn(conn);
 
             LOGGER.atInfo().log("Ascend database tables ensured");
 
@@ -446,6 +447,21 @@ public final class AscendDatabaseSetup {
             } catch (SQLException e) {
                 LOGGER.at(Level.SEVERE).log("Failed to add spawn columns: " + e.getMessage());
             }
+        }
+    }
+
+    private static void ensureVoidYThresholdColumn(Connection conn) {
+        if (conn == null) {
+            return;
+        }
+        if (columnExists(conn, "ascend_settings", "void_y_threshold")) {
+            return;
+        }
+        try (Statement stmt = conn.createStatement()) {
+            stmt.executeUpdate("ALTER TABLE ascend_settings ADD COLUMN void_y_threshold DOUBLE DEFAULT NULL");
+            LOGGER.atInfo().log("Added void_y_threshold column to ascend_settings");
+        } catch (SQLException e) {
+            LOGGER.at(Level.SEVERE).log("Failed to add void_y_threshold column: " + e.getMessage());
         }
     }
 

@@ -36,6 +36,9 @@ public class AscendSettingsStore {
     private float npcRotY;
     private float npcRotZ;
 
+    // Void Y threshold (null = disabled)
+    private Double voidYThreshold;
+
     public void syncLoad() {
         if (!DatabaseManager.getInstance().isInitialized()) {
             LOGGER.atWarning().log("Database not initialized, AscendSettingsStore will use defaults");
@@ -44,7 +47,8 @@ public class AscendSettingsStore {
 
         String sql = """
             SELECT spawn_x, spawn_y, spawn_z, spawn_rot_x, spawn_rot_y, spawn_rot_z,
-                   npc_x, npc_y, npc_z, npc_rot_x, npc_rot_y, npc_rot_z
+                   npc_x, npc_y, npc_z, npc_rot_x, npc_rot_y, npc_rot_z,
+                   void_y_threshold
             FROM ascend_settings WHERE id = ?
             """;
 
@@ -66,6 +70,8 @@ public class AscendSettingsStore {
                     npcRotX = rs.getFloat("npc_rot_x");
                     npcRotY = rs.getFloat("npc_rot_y");
                     npcRotZ = rs.getFloat("npc_rot_z");
+                    double voidY = rs.getDouble("void_y_threshold");
+                    voidYThreshold = rs.wasNull() ? null : voidY;
                     LOGGER.atInfo().log("AscendSettingsStore loaded");
                 } else {
                     LOGGER.atInfo().log("No settings row found, inserting default");
@@ -126,13 +132,14 @@ public class AscendSettingsStore {
 
         String sql = """
             INSERT INTO ascend_settings (id, spawn_x, spawn_y, spawn_z, spawn_rot_x, spawn_rot_y, spawn_rot_z,
-                                         npc_x, npc_y, npc_z, npc_rot_x, npc_rot_y, npc_rot_z)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                         npc_x, npc_y, npc_z, npc_rot_x, npc_rot_y, npc_rot_z, void_y_threshold)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 spawn_x = VALUES(spawn_x), spawn_y = VALUES(spawn_y), spawn_z = VALUES(spawn_z),
                 spawn_rot_x = VALUES(spawn_rot_x), spawn_rot_y = VALUES(spawn_rot_y), spawn_rot_z = VALUES(spawn_rot_z),
                 npc_x = VALUES(npc_x), npc_y = VALUES(npc_y), npc_z = VALUES(npc_z),
-                npc_rot_x = VALUES(npc_rot_x), npc_rot_y = VALUES(npc_rot_y), npc_rot_z = VALUES(npc_rot_z)
+                npc_rot_x = VALUES(npc_rot_x), npc_rot_y = VALUES(npc_rot_y), npc_rot_z = VALUES(npc_rot_z),
+                void_y_threshold = VALUES(void_y_threshold)
             """;
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
@@ -151,7 +158,12 @@ public class AscendSettingsStore {
             stmt.setDouble(i++, npcZ);
             stmt.setFloat(i++, npcRotX);
             stmt.setFloat(i++, npcRotY);
-            stmt.setFloat(i, npcRotZ);
+            stmt.setFloat(i++, npcRotZ);
+            if (voidYThreshold != null) {
+                stmt.setDouble(i, voidYThreshold);
+            } else {
+                stmt.setNull(i, java.sql.Types.DOUBLE);
+            }
             stmt.executeUpdate();
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Failed to save settings: " + e.getMessage());
@@ -180,5 +192,14 @@ public class AscendSettingsStore {
 
     public boolean hasNpcPosition() {
         return npcX != 0 || npcY != 0 || npcZ != 0;
+    }
+
+    public Double getVoidYThreshold() {
+        return voidYThreshold;
+    }
+
+    public void setVoidYThreshold(Double voidYThreshold) {
+        this.voidYThreshold = voidYThreshold;
+        saveToDatabase();
     }
 }
