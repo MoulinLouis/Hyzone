@@ -44,6 +44,7 @@ public class MapStore {
                    start_trigger_x, start_trigger_y, start_trigger_z, start_trigger_rot_x, start_trigger_rot_y, start_trigger_rot_z,
                    leave_trigger_x, leave_trigger_y, leave_trigger_z, leave_trigger_rot_x, leave_trigger_rot_y, leave_trigger_rot_z,
                    leave_teleport_x, leave_teleport_y, leave_teleport_z, leave_teleport_rot_x, leave_teleport_rot_y, leave_teleport_rot_z,
+                   fly_zone_min_x, fly_zone_min_y, fly_zone_min_z, fly_zone_max_x, fly_zone_max_y, fly_zone_max_z,
                    created_at, updated_at
             FROM maps ORDER BY display_order, id
             """;
@@ -82,6 +83,13 @@ public class MapStore {
                             map.setStartTrigger(readTransform(rs, "start_trigger_"));
                             map.setLeaveTrigger(readTransform(rs, "leave_trigger_"));
                             map.setLeaveTeleport(readTransform(rs, "leave_teleport_"));
+
+                            map.setFlyZoneMinX(rs.getObject("fly_zone_min_x", Double.class));
+                            map.setFlyZoneMinY(rs.getObject("fly_zone_min_y", Double.class));
+                            map.setFlyZoneMinZ(rs.getObject("fly_zone_min_z", Double.class));
+                            map.setFlyZoneMaxX(rs.getObject("fly_zone_max_x", Double.class));
+                            map.setFlyZoneMaxY(rs.getObject("fly_zone_max_y", Double.class));
+                            map.setFlyZoneMaxZ(rs.getObject("fly_zone_max_z", Double.class));
 
                             java.sql.Timestamp createdAt = rs.getTimestamp("created_at");
                             java.sql.Timestamp updatedAt = rs.getTimestamp("updated_at");
@@ -292,8 +300,9 @@ public class MapStore {
                 start_trigger_x, start_trigger_y, start_trigger_z, start_trigger_rot_x, start_trigger_rot_y, start_trigger_rot_z,
                 leave_trigger_x, leave_trigger_y, leave_trigger_z, leave_trigger_rot_x, leave_trigger_rot_y, leave_trigger_rot_z,
                 leave_teleport_x, leave_teleport_y, leave_teleport_z, leave_teleport_rot_x, leave_teleport_rot_y, leave_teleport_rot_z,
+                fly_zone_min_x, fly_zone_min_y, fly_zone_min_z, fly_zone_max_x, fly_zone_max_y, fly_zone_max_z,
                 created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 name = VALUES(name), category = VALUES(category), world = VALUES(world),
                 difficulty = VALUES(difficulty), display_order = VALUES(display_order),
@@ -311,6 +320,8 @@ public class MapStore {
                 leave_trigger_rot_x = VALUES(leave_trigger_rot_x), leave_trigger_rot_y = VALUES(leave_trigger_rot_y), leave_trigger_rot_z = VALUES(leave_trigger_rot_z),
                 leave_teleport_x = VALUES(leave_teleport_x), leave_teleport_y = VALUES(leave_teleport_y), leave_teleport_z = VALUES(leave_teleport_z),
                 leave_teleport_rot_x = VALUES(leave_teleport_rot_x), leave_teleport_rot_y = VALUES(leave_teleport_rot_y), leave_teleport_rot_z = VALUES(leave_teleport_rot_z),
+                fly_zone_min_x = VALUES(fly_zone_min_x), fly_zone_min_y = VALUES(fly_zone_min_y), fly_zone_min_z = VALUES(fly_zone_min_z),
+                fly_zone_max_x = VALUES(fly_zone_max_x), fly_zone_max_y = VALUES(fly_zone_max_y), fly_zone_max_z = VALUES(fly_zone_max_z),
                 updated_at = VALUES(updated_at)
             """;
 
@@ -350,6 +361,13 @@ public class MapStore {
                 idx = setTransform(mapStmt, idx, map.getStartTrigger());
                 idx = setTransform(mapStmt, idx, map.getLeaveTrigger());
                 idx = setTransform(mapStmt, idx, map.getLeaveTeleport());
+
+                mapStmt.setObject(idx++, map.getFlyZoneMinX(), java.sql.Types.DOUBLE);
+                mapStmt.setObject(idx++, map.getFlyZoneMinY(), java.sql.Types.DOUBLE);
+                mapStmt.setObject(idx++, map.getFlyZoneMinZ(), java.sql.Types.DOUBLE);
+                mapStmt.setObject(idx++, map.getFlyZoneMaxX(), java.sql.Types.DOUBLE);
+                mapStmt.setObject(idx++, map.getFlyZoneMaxY(), java.sql.Types.DOUBLE);
+                mapStmt.setObject(idx++, map.getFlyZoneMaxZ(), java.sql.Types.DOUBLE);
 
                 mapStmt.setTimestamp(idx++, new java.sql.Timestamp(map.getCreatedAt()));
                 mapStmt.setTimestamp(idx, new java.sql.Timestamp(map.getUpdatedAt()));
@@ -503,6 +521,12 @@ public class MapStore {
         copy.setGliderEnabled(source.isGliderEnabled());
         copy.setFreeFallEnabled(source.isFreeFallEnabled());
         copy.setDuelEnabled(source.isDuelEnabled());
+        copy.setFlyZoneMinX(source.getFlyZoneMinX());
+        copy.setFlyZoneMinY(source.getFlyZoneMinY());
+        copy.setFlyZoneMinZ(source.getFlyZoneMinZ());
+        copy.setFlyZoneMaxX(source.getFlyZoneMaxX());
+        copy.setFlyZoneMaxY(source.getFlyZoneMaxY());
+        copy.setFlyZoneMaxZ(source.getFlyZoneMaxZ());
         copy.setCreatedAt(source.getCreatedAt());
         copy.setUpdatedAt(source.getUpdatedAt());
         if (source.getCheckpoints() != null) {

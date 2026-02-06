@@ -23,6 +23,12 @@ public class Map {
     private boolean gliderEnabled;
     private boolean freeFallEnabled;
     private boolean duelEnabled;
+    private Double flyZoneMinX;
+    private Double flyZoneMinY;
+    private Double flyZoneMinZ;
+    private Double flyZoneMaxX;
+    private Double flyZoneMaxY;
+    private Double flyZoneMaxZ;
     private long createdAt;
     private long updatedAt;
 
@@ -164,6 +170,59 @@ public class Map {
 
     public void setDuelEnabled(boolean duelEnabled) {
         this.duelEnabled = duelEnabled;
+    }
+
+    public Double getFlyZoneMinX() {
+        return flyZoneMinX;
+    }
+
+    public void setFlyZoneMinX(Double flyZoneMinX) {
+        this.flyZoneMinX = flyZoneMinX;
+    }
+
+    public Double getFlyZoneMinY() {
+        return flyZoneMinY;
+    }
+
+    public void setFlyZoneMinY(Double flyZoneMinY) {
+        this.flyZoneMinY = flyZoneMinY;
+    }
+
+    public Double getFlyZoneMinZ() {
+        return flyZoneMinZ;
+    }
+
+    public void setFlyZoneMinZ(Double flyZoneMinZ) {
+        this.flyZoneMinZ = flyZoneMinZ;
+    }
+
+    public Double getFlyZoneMaxX() {
+        return flyZoneMaxX;
+    }
+
+    public void setFlyZoneMaxX(Double flyZoneMaxX) {
+        this.flyZoneMaxX = flyZoneMaxX;
+    }
+
+    public Double getFlyZoneMaxY() {
+        return flyZoneMaxY;
+    }
+
+    public void setFlyZoneMaxY(Double flyZoneMaxY) {
+        this.flyZoneMaxY = flyZoneMaxY;
+    }
+
+    public Double getFlyZoneMaxZ() {
+        return flyZoneMaxZ;
+    }
+
+    public void setFlyZoneMaxZ(Double flyZoneMaxZ) {
+        this.flyZoneMaxZ = flyZoneMaxZ;
+    }
+
+    public boolean hasFlyZone() {
+        return flyZoneMinX != null && flyZoneMinY != null && flyZoneMinZ != null
+            && flyZoneMaxX != null && flyZoneMaxY != null && flyZoneMaxZ != null;
     }
 
     public long getCreatedAt() {

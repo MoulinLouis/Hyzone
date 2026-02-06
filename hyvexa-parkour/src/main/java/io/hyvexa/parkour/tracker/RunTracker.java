@@ -10,6 +10,8 @@ import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
 import com.hypixel.hytale.server.core.entity.movement.MovementStatesComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.entity.entities.player.movement.MovementManager;
+import com.hypixel.hytale.protocol.MovementSettings;
 import com.hypixel.hytale.server.core.io.PacketHandler;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
@@ -19,6 +21,8 @@ import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.protocol.MovementStates;
+import com.hypixel.hytale.protocol.SavedMovementStates;
+import com.hypixel.hytale.protocol.packets.player.SetMovementStates;
 import com.hypixel.hytale.protocol.packets.connection.PongType;
 import com.hypixel.hytale.metrics.metric.HistoricMetric;
 import io.hyvexa.common.util.FormatUtils;
@@ -88,7 +92,10 @@ public class RunTracker {
     }
 
     public void clearActiveMap(UUID playerId) {
-        activeRuns.remove(playerId);
+        ActiveRun run = activeRuns.remove(playerId);
+        if (run != null && run.practiceEnabled) {
+            setFly(playerId, false);
+        }
     }
 
     public void clearPlayer(UUID playerId) {
@@ -228,7 +235,57 @@ public class RunTracker {
         run.checkpointTouchTimes.clear();
         run.lastCheckpointIndex = -1;
         run.finishTouched = false;
+        if (run.lastPosition != null) {
+            run.lastValidFlyPosition = new double[]{run.lastPosition.getX(), run.lastPosition.getY(), run.lastPosition.getZ()};
+        } else {
+            Map map = mapStore.getMap(run.mapId);
+            if (map != null && map.getStart() != null) {
+                run.lastValidFlyPosition = new double[]{map.getStart().getX(), map.getStart().getY(), map.getStart().getZ()};
+            }
+        }
+        setFly(playerId, true);
         return true;
+    }
+
+    public static void setFly(UUID playerId, boolean enabled) {
+        PlayerRef playerRef = Universe.get().getPlayer(playerId);
+        if (playerRef == null) {
+            return;
+        }
+        Ref<EntityStore> entityRef = playerRef.getReference();
+        if (entityRef == null || !entityRef.isValid()) {
+            return;
+        }
+        Store<EntityStore> store = entityRef.getStore();
+        MovementManager movementManager = store.getComponent(entityRef, MovementManager.getComponentType());
+        if (movementManager == null) {
+            return;
+        }
+        if (enabled) {
+            movementManager.refreshDefaultSettings(entityRef, store);
+            movementManager.applyDefaultSettings();
+            MovementSettings settings = movementManager.getSettings();
+            if (settings == null) {
+                return;
+            }
+            settings.canFly = true;
+            var packetHandler = playerRef.getPacketHandler();
+            if (packetHandler != null) {
+                movementManager.update(packetHandler);
+            }
+        } else {
+            movementManager.resetDefaultsAndUpdate(entityRef, store);
+            MovementStatesComponent movementStates = store.getComponent(entityRef,
+                    MovementStatesComponent.getComponentType());
+            if (movementStates != null && movementStates.getMovementStates() != null) {
+                movementStates.getMovementStates().flying = false;
+            }
+            var packetHandler = playerRef.getPacketHandler();
+            if (packetHandler != null) {
+                packetHandler.writeNoCache(
+                        new SetMovementStates(new SavedMovementStates(false)));
+            }
+        }
     }
 
     public boolean setPracticeCheckpoint(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef) {
@@ -352,6 +409,31 @@ public class RunTracker {
         double deltaMs = Math.max(0.0, currentElapsedMs - previousElapsedMs);
         if (checkLeaveTrigger(ref, store, player, playerRef, position, map, buffer)) {
             return;
+        }
+        if (run.practiceEnabled && map.hasFlyZone()) {
+            if (!isInsideFlyZone(position, map)) {
+                long now = System.currentTimeMillis();
+                if (now - run.lastFlyZoneRollbackMs >= 500L) {
+                    run.lastFlyZoneRollbackMs = now;
+                    // DEBUG: temporary message to confirm fly zone detection
+                    player.sendMessage(SystemMessageUtils.parkourWarn("[Debug] Outside fly zone — rolling back."));
+                    double[] rollback = run.lastValidFlyPosition;
+                    if (rollback != null) {
+                        Vector3d rollbackPos = new Vector3d(rollback[0], rollback[1], rollback[2]);
+                        Vector3f headRot = playerRef.getHeadRotation();
+                        Vector3f bodyRot = headRot != null ? headRot : transform.getRotation();
+                        Teleport tp = Teleport.createForPlayer(
+                                store.getExternalData().getWorld(),
+                                new com.hypixel.hytale.math.vector.Transform(rollbackPos, bodyRot));
+                        if (headRot != null) {
+                            tp.setHeadRotation(headRot.clone());
+                        }
+                        addTeleport(ref, store, buffer, tp);
+                    }
+                }
+                return;
+            }
+            run.lastValidFlyPosition = new double[]{position.getX(), position.getY(), position.getZ()};
         }
         checkCheckpoints(run, playerRef, player, position, map, previousPosition, previousElapsedMs, deltaMs);
         long fallTimeoutMs = getFallRespawnTimeoutMs();
@@ -819,6 +901,12 @@ public class RunTracker {
         return dx * dx + dy * dy + dz * dz;
     }
 
+    private static boolean isInsideFlyZone(Vector3d pos, Map map) {
+        return pos.getX() >= map.getFlyZoneMinX() && pos.getX() <= map.getFlyZoneMaxX()
+            && pos.getY() >= map.getFlyZoneMinY() && pos.getY() <= map.getFlyZoneMaxY()
+            && pos.getZ() >= map.getFlyZoneMinZ() && pos.getZ() <= map.getFlyZoneMaxZ();
+    }
+
     private void armStartOnMovement(ActiveRun run, TransformData start) {
         if (run == null) {
             return;
@@ -1119,6 +1207,8 @@ public class RunTracker {
         private boolean skipNextTimeIncrement;
         private Long startPingMs;
         private Long finishPingMs;
+        private double[] lastValidFlyPosition;
+        private long lastFlyZoneRollbackMs;
 
         private ActiveRun(String mapId, long startTimeMs) {
             this.mapId = mapId;

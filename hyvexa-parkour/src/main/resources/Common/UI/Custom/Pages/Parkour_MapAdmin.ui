@@ -214,6 +214,12 @@ $C.@PageOverlay {
           }
         }
 
+        Label #FlyZoneValue {
+          Anchor: (Top: 6);
+          Style: (FontSize: 13, TextColor: #9fb0ba);
+          Text: "Fly Zone: (none)";
+        }
+
         Label #SelectedMapText {
           Anchor: (Top: 6);
           Style: (FontSize: 13, TextColor: #9fb0ba);
@@ -252,6 +258,16 @@ $C.@PageOverlay {
               Anchor: (Height: 22, Width: 260, Top: 6);
               Text: "Start Trigger";
             }
+
+            $C.@TextButton #SetFlyZone1Button {
+              Anchor: (Height: 22, Width: 260, Top: 6);
+              Text: "Set Fly Corner 1";
+            }
+
+            $C.@TextButton #SetFlyZone2Button {
+              Anchor: (Height: 22, Width: 260, Top: 6);
+              Text: "Set Fly Corner 2";
+            }
           }
 
           Group {
@@ -286,6 +302,11 @@ $C.@PageOverlay {
             $C.@TextButton #CreateHoloButton {
               Anchor: (Height: 22, Width: 260, Top: 6);
               Text: "Create Holo";
+            }
+
+            $C.@TextButton #ClearFlyZoneButton {
+              Anchor: (Height: 22, Width: 260, Top: 6);
+              Text: "Clear Fly Zone";
             }
           }
         }
