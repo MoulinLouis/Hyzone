@@ -3,13 +3,13 @@
     "Name": "Toggle fly",
     "Description": "Right click to toggle fly."
   },
-  "Icon": "Icons/ItemsGenerated/Purple_Orb_Hyvexa.png",
+  "Icon": "Icons/ItemsGenerated/Ingredient_Fire_Essence.png",
   "Quality": "Developer",
   "Categories": [
     "Items.Ingredients"
   ],
   "Model": "Resources/Ingredients/Essence.blockymodel",
-  "Texture": "Resources/Ingredients/Essence_Textures/Ice_Essence_Texture.png",
+  "Texture": "Resources/Ingredients/Essence_Textures/Fire_Essence_Texture.png",
   "PlayerAnimationsId": "Block",
   "IconProperties": {
     "Scale": 0.9,
