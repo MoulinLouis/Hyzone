@@ -14,10 +14,10 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.common.whitelist.AscendWhitelistManager;
-import io.hyvexa.common.whitelist.WhitelistRegistry;
 import io.hyvexa.hub.routing.HubRouter;
 
 import javax.annotation.Nonnull;
+import java.io.File;
 
 public class HubMenuPage extends BaseHubPage {
 
@@ -86,7 +86,12 @@ public class HubMenuPage extends BaseHubPage {
         }
         if (BUTTON_ASCEND.equals(data.getButton())) {
             // Check if player is allowed to access Ascend mode
-            AscendWhitelistManager whitelistManager = WhitelistRegistry.getInstance();
+            // Read whitelist file directly — static registry doesn't work across plugin classloaders
+            AscendWhitelistManager whitelistManager = null;
+            File whitelistFile = new File("mods/Parkour", "ascend_whitelist.json");
+            if (whitelistFile.exists()) {
+                whitelistManager = new AscendWhitelistManager(whitelistFile);
+            }
             boolean isAllowed = PermissionUtils.isOp(player);
 
             // If whitelist is enabled AND player is not OP, check if player is whitelisted
