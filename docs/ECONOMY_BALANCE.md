@@ -369,7 +369,7 @@ Summit performs a full reset similar to Elevation:
 |----------|---------|---------|----------|
 | **Runner Speed** | 1 + 0.45 × √level | ×1.00 | ×2.42 |
 | **Multiplier Gain** | 1 + 0.5 × level^0.8 | ×1.00 | ×4.16 |
-| **Evolution Power** | *(unused)* | - | - |
+| **Evolution Power** | 2 + 0.5 × level^0.8 | ×2.00 | ×5.15 |
 
 ### Runner Speed
 
@@ -390,17 +390,27 @@ Multiplies runner completion speed (inversely affects run time).
 
 Multiplies the per-run multiplier increment for runners.
 
-| Level | Gain Multiplier | 0★ Increment | 1★+ Increment |
-|-------|-----------------|--------------|---------------|
-| 0 | ×1.00 | +0.1/run | +0.2/run |
-| 5 | ×2.81 | +0.28/run | +0.56/run |
-| 10 | ×4.16 | +0.42/run | +0.83/run |
+| Level | Gain Multiplier | 0★ Increment | 1★ Increment | 2★ Increment |
+|-------|-----------------|--------------|---------------|---------------|
+| 0 | ×1.00 | +0.10/run | +0.20/run | +0.40/run |
+| 5 | ×2.81 | +0.28/run | +0.56/run | +1.12/run |
+| 10 | ×4.16 | +0.42/run | +0.83/run | +1.66/run |
+
+*Note: 1★+ increments shown assume base Evolution Power (×2). Higher Evolution Power increases exponentially per star.*
 
 ### Evolution Power
 
-**Status:** Currently unused (kept for future use)
+**Formula:** `2 + 0.5 × level^0.8`
 
-Evolution now provides a flat ×2 multiplier gain per-run (see Runner Multiplier section).
+Applied exponentially per star to the per-run multiplier increment.
+
+| Level | Evolution Power | 0★ | 1★ | 2★ | 3★ |
+|-------|-----------------|------|------|------|------|
+| 0 | ×2.00 | 0.10 | 0.20 | 0.40 | 0.80 |
+| 5 | ×3.57 | 0.10 | 0.36 | 1.28 | 4.55 |
+| 10 | ×5.15 | 0.10 | 0.52 | 2.66 | 13.68 |
+
+**Formula:** `increment = 0.1 × evolutionPower^stars × multiplierGainBonus`
 
 ---
 
@@ -411,18 +421,22 @@ Evolution provides a clear benefit with continuous cost progression.
 ### The Evolution Benefit
 
 **When you evolve a runner:**
-- ✅ **Multiplier gain ×2** (0.1 → 0.2 per run)
+- ✅ **Multiplier gain ×evolutionPower** per star (compounds exponentially)
 - ✅ **Speed level resets to 0** (visual reset, but costs continue)
 - ✅ **Costs continue from total level** (no reset, no penalty)
 
-### Evolution Value Analysis
+### Evolution Value Analysis (base Evolution Power ×2)
 
 | Stars | Multiplier Gain | Total Levels |
 |-------|-----------------|--------------|
-| 0★ | +0.1/run | 0-19 |
-| 1★+ | +0.2/run (×2) | 20+ |
+| 0★ | +0.10/run | 0-19 |
+| 1★ | +0.20/run (×2) | 20-39 |
+| 2★ | +0.40/run (×4) | 40-59 |
+| 3★ | +0.80/run (×8) | 60-79 |
+| 4★ | +1.60/run (×16) | 80-99 |
+| 5★ | +3.20/run (×32) | 100+ |
 
-**Key insight:** Evolution is always beneficial - you get ×2 multiplier gains for the same cost progression you would have had anyway. All evolved runners (1★ to 5★) earn the same per-run increment.
+**Key insight:** Each evolution multiplies the multiplier gain by the Evolution Power value. With higher Summit Evolution Power, later stars become exponentially more powerful.
 
 ### Strategic Decisions
 
@@ -446,20 +460,20 @@ Evolution provides a clear benefit with continuous cost progression.
 
 **Option A: Focus on Map 0 (Rouge)**
 - Fast completion time = more runs = more multiplier gains
-- Evolve to 1★ for +0.2 multiplier per run (×2 boost)
+- Push to higher stars for exponential multiplier growth
 - **Best for:** Pure idle optimization
 
 **Option B: Spread across all maps**
-- Evolve each runner to at least 1★ for the ×2 boost
+- Evolve each runner to at least 1★ for the initial boost
 - More balanced income sources
 - Different visual NPCs running around
 - **Best for:** Visual variety and engagement
 
 ### Design Goals Achieved
 
-✅ **Evolution is always worthwhile**
-- ×2 multiplier gains with no cost penalty
-- Continuous progression feels natural
+✅ **Evolution scales exponentially**
+- Each star multiplies gains by Evolution Power
+- Higher Summit Evolution Power makes later stars dramatically stronger
 
 ✅ **Strategic depth from map choice**
 - Which map to prioritize?

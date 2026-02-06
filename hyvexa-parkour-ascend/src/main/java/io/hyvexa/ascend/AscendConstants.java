@@ -209,28 +209,30 @@ public final class AscendConstants {
     }
 
     /**
-     * Get the multiplier increment for a runner.
+     * Get the multiplier increment for a runner (no Summit bonuses).
      * Base: 0.1 per completion
-     * @param stars Ignored in new system (kept for API compatibility)
+     * @param stars Evolution level
      * @return Multiplier increment per completion (base 0.1)
      */
     public static BigDecimal getRunnerMultiplierIncrement(int stars) {
-        return getRunnerMultiplierIncrement(stars, 1.0);
+        return getRunnerMultiplierIncrement(stars, 1.0, 2.0);
     }
 
     /**
-     * Get the multiplier increment for a runner with Multiplier Gain bonus.
-     * Base: 0.1 per completion, ×2 when evolved (stars > 0)
-     * With Multiplier Gain Summit bonus: base × multiplierGainBonus
-     * @param stars Evolution level - applies ×2 multiplier when > 0
-     * @param multiplierGainBonus Bonus from Summit Multiplier Gain (1.0 at level 0, higher with levels)
+     * Get the multiplier increment for a runner with Summit bonuses.
+     * Base: 0.1 per completion, raised by Evolution Power per star.
+     * Formula: base × evolutionPower^stars × multiplierGainBonus
+     * Example with evolutionPower=2: 0 stars=0.1, 1 star=0.2, 2 stars=0.4, 3 stars=0.8
+     * @param stars Evolution level - each star multiplies by evolutionPower
+     * @param multiplierGainBonus Bonus from Summit Multiplier Gain (1.0 = no bonus)
+     * @param evolutionPowerBonus Bonus from Summit Evolution Power (2.0 at level 0, higher with levels)
      * @return Multiplier increment per completion
      */
-    public static BigDecimal getRunnerMultiplierIncrement(int stars, double multiplierGainBonus) {
+    public static BigDecimal getRunnerMultiplierIncrement(int stars, double multiplierGainBonus, double evolutionPowerBonus) {
         BigDecimal base = new BigDecimal("0.1");  // RUNNER_MULTIPLIER_INCREMENT
-        // Apply ×2 multiplier when evolved (stars > 0)
+        // Apply Evolution Power exponentially per star
         if (stars > 0) {
-            base = base.multiply(BigDecimal.valueOf(2));
+            base = base.multiply(BigDecimal.valueOf(Math.pow(evolutionPowerBonus, stars)), MULTIPLIER_CTX);
         }
         return base.multiply(BigDecimal.valueOf(multiplierGainBonus), MULTIPLIER_CTX)
                    .setScale(20, RoundingMode.HALF_UP);
