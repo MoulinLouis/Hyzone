@@ -36,7 +36,7 @@ public class ElevationPage extends BaseAscendPage {
 
     private static final String BUTTON_CLOSE = "Close";
     private static final String BUTTON_ELEVATE = "Elevate";
-    private static final long REFRESH_INTERVAL_MS = 1000L;
+    private static final long REFRESH_INTERVAL_MS = 200L;
 
     private final AscendPlayerStore playerStore;
     private ScheduledFuture<?> refreshTask;

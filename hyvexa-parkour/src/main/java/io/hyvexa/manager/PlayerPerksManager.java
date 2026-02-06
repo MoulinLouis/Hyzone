@@ -151,6 +151,10 @@ public class PlayerPerksManager {
         if (playerRef == null) {
             return;
         }
+        UUID playerId = playerRef.getUuid();
+        if (playerId == null || getVipSpeedMultiplier(playerId) <= VIP_SPEED_MIN_MULTIPLIER) {
+            return;
+        }
         applyVipSpeedMultiplier(ref, store, playerRef, VIP_SPEED_MIN_MULTIPLIER, false);
     }
 

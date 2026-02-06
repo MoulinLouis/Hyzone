@@ -143,6 +143,21 @@ public class AscendRunTracker {
         return pendingRuns.containsKey(playerId);
     }
 
+    public boolean isNearFinish(UUID playerId, Vector3d pos) {
+        ActiveRun run = activeRuns.get(playerId);
+        if (run == null) {
+            return false;
+        }
+        AscendMap map = mapStore.getMap(run.mapId);
+        if (map == null) {
+            return false;
+        }
+        double dx = pos.getX() - map.getFinishX();
+        double dy = pos.getY() - map.getFinishY();
+        double dz = pos.getZ() - map.getFinishZ();
+        return dx * dx + dz * dz <= FINISH_RADIUS_SQ && Math.abs(dy) <= FINISH_VERTICAL_RANGE;
+    }
+
     public void checkPlayer(Ref<EntityStore> ref, Store<EntityStore> store) {
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         Player player = store.getComponent(ref, Player.getComponentType());
