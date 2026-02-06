@@ -295,14 +295,19 @@ public final class AscendConstants {
     // Elevation System (First Prestige)
     // ========================================
 
-    // Elevation is a direct multiplier (elevation value = multiplier value)
-    // Cost formula: BASE_COST * COST_GROWTH^currentElevation
-    public static final long ELEVATION_BASE_COST = 30000L; // ×6 inflation from 5000
-    public static final double ELEVATION_COST_GROWTH = 1.15;  // +15% cost per elevation
+    // Elevation: level = multiplier (1:1), cost curve flattened at high levels.
+    // Cost formula: BASE_COST * COST_GROWTH^(level^COST_CURVE)
+    // COST_CURVE < 1 makes each subsequent level proportionally cheaper,
+    // keeping elevation attractive even at high levels.
+    public static final long ELEVATION_BASE_COST = 30000L;
+    public static final double ELEVATION_COST_GROWTH = 1.15;
+    public static final double ELEVATION_COST_CURVE = 0.77; // ~1/1.3 - flattens exponential at high levels
 
     /**
      * Calculate the cost to reach the next elevation level.
-     * Cost grows exponentially: baseCost * 1.15^currentLevel
+     * Cost grows as: baseCost * 1.15^(level^0.77)
+     * At low levels this is nearly the same as 1.15^level.
+     * At high levels the curve flattens, so elevation stays attractive.
      */
     public static BigDecimal getElevationLevelUpCost(int currentLevel) {
         return getElevationLevelUpCost(currentLevel, BigDecimal.ONE);
@@ -316,12 +321,11 @@ public final class AscendConstants {
     public static BigDecimal getElevationLevelUpCost(int currentLevel, BigDecimal costMultiplier) {
         int safeLevel = Math.max(0, currentLevel);
 
-        // Pure BigDecimal calculation
         BigDecimal base = BigDecimal.valueOf(ELEVATION_BASE_COST);
-        BigDecimal growth = new BigDecimal("1.15"); // ELEVATION_COST_GROWTH
 
-        // Calculate growth^level using BigDecimal (no double intermediate)
-        BigDecimal growthPower = growth.pow(safeLevel, CALC_CTX);
+        // Non-linear cost: 1.15^(level^0.77) — flattens at high levels
+        double effectiveLevel = Math.pow(safeLevel, ELEVATION_COST_CURVE);
+        BigDecimal growthPower = BigDecimal.valueOf(Math.pow(ELEVATION_COST_GROWTH, effectiveLevel));
         BigDecimal cost = base.multiply(growthPower, CALC_CTX);
 
         // Apply cost multiplier (skill discount) - NO double conversion
@@ -439,20 +443,19 @@ public final class AscendConstants {
     // ========================================
 
     public static final double SUMMIT_XP_LEVEL_EXPONENT = 4.0; // Exponent for level formula
-    public static final double SUMMIT_XP_COIN_DIVISOR = 1_000_000.0; // Divisor for sqrt(coins) conversion
-    public static final long SUMMIT_MIN_COINS = 1_000_000_000_000L; // Minimum coins for 1 XP (1T)
+    public static final long SUMMIT_MIN_COINS = 1_000_000_000L; // Minimum coins for 1 XP (1B)
 
     /**
      * Convert coins to XP.
-     * Formula: sqrt(coins) / 1,000,000
-     * Uses BigDecimal sqrt to preserve precision beyond double range (~2^53).
+     * Formula: sqrt(coins / SUMMIT_MIN_COINS)
+     * At 1B = 1 XP, at 10B ≈ 3 XP, at 1T ≈ 31 XP.
      */
     public static long coinsToXp(BigDecimal coins) {
         if (coins.compareTo(BigDecimal.ZERO) <= 0) {
             return 0;
         }
-        BigDecimal sqrtCoins = coins.sqrt(CALC_CTX);
-        BigDecimal xp = sqrtCoins.divide(BigDecimal.valueOf((long) SUMMIT_XP_COIN_DIVISOR), CALC_CTX);
+        BigDecimal ratio = coins.divide(BigDecimal.valueOf(SUMMIT_MIN_COINS), CALC_CTX);
+        BigDecimal xp = ratio.sqrt(CALC_CTX);
         return xp.longValue();
     }
 
@@ -509,7 +512,7 @@ public final class AscendConstants {
     // Ascension System (Ultimate Prestige)
     // ========================================
 
-    public static final long ASCENSION_COIN_THRESHOLD = 1_000_000_000_000L; // 1 trillion coins
+    public static final long ASCENSION_COIN_THRESHOLD = 10_000_000_000_000_000L; // 10 quadrillion coins
 
     public enum SkillTreeNode {
         // Coin Path (5 nodes)

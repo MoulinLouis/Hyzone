@@ -174,25 +174,26 @@ Smooth ~2× growth per level, no artificial boosts or jumps:
 ### Cost Formula
 
 ```
-cost = 30,000 × 1.15^currentLevel
+cost = 30,000 × 1.15^(currentLevel^0.77)
 ```
 
 **Base cost:** 30,000 coins
-**Growth rate:** +15% per level (1.15 exponent)
+**Growth rate:** Non-linear — `1.15^(level^0.77)` flattens the curve at high levels
+**Cost curve exponent:** 0.77 (~1/1.3)
+
+At low levels this behaves almost identically to `1.15^level`. At high levels the effective exponent grows much slower, so each subsequent level is proportionally cheaper. This keeps elevation attractive throughout the game.
 
 ### Example Costs
 
-| Current Level | Next Level Cost | Cumulative Total |
-|--------------|-----------------|------------------|
-| 0 | 34,500 | 34,500 |
-| 1 | 39,675 | 74,175 |
-| 5 | 60,341 | ~235K |
-| 10 | 121,364 | ~810K |
-| 20 | 491,652 | ~6.1M |
-| 50 | 33.0M | ~2.2B |
-| 100 | 3.55B | ~2.4T |
-
-**Overflow protection:** Costs capped at `Long.MAX_VALUE` to prevent integer overflow.
+| Current Level | Next Level Cost | vs Old (1.15^level) |
+|--------------|-----------------|---------------------|
+| 1 | 34,500 | 1.00× (same) |
+| 5 | 48,600 | 0.81× |
+| 10 | 68,300 | 0.56× |
+| 20 | 122,000 | 0.25× |
+| 50 | 514,000 | 0.02× |
+| 100 | 3.8M | ~0× |
+| 200 | 116M | ~0× |
 
 **Discount support:** Formula accepts a `costMultiplier` parameter for Summit/Ascension skill tree discounts.
 
@@ -297,8 +298,8 @@ Where:
 
 **Phase:** Prestige systems and meta progression
 
-- Summit threshold: 1 trillion coins minimum for first level
-- Ascension threshold: 1 trillion total coins
+- Summit threshold: 1 billion coins minimum for first level
+- Ascension threshold: 10 quadrillion (10Q) coins
 - Permanent bonuses and skill trees
 - Long-term progression hooks
 
@@ -310,18 +311,19 @@ Summit converts coins into XP for permanent category bonuses, resetting coins, e
 
 ### XP System
 
-**Coin to XP conversion:** `sqrt(coins) / 1,000,000` (diminishing returns)
+**Coin to XP conversion:** `sqrt(coins / 1B)` (diminishing returns)
 
 | Coins | XP Gained |
 |-------|-----------|
-| 1T | 1 |
-| 2T | 1 |
-| 10T | 3 |
-| 100T | 10 |
-| 1 Quadrillion | 32 |
-| 10 Quadrillion | 100 |
+| 1B | 1 |
+| 10B | 3 |
+| 100B | 10 |
+| 1T | 31 |
+| 10T | 100 |
+| 1Q | 1,000 |
+| 10Q | 3,162 |
 
-**Minimum coins for 1 XP:** 1 trillion coins (1T)
+**Minimum coins for 1 XP:** 1 billion coins (1B)
 
 **XP per level formula:** `level^4`
 
@@ -338,11 +340,12 @@ Summit converts coins into XP for permanent category bonuses, resetting coins, e
 
 | Coins | XP | Levels Gained |
 |-------|-----|---------------|
-| 1T | 1 | 1 |
-| 10T | 3 | 1 |
-| 100T | 10 | 2 |
-| 1 Quadrillion | 32 | 2 |
-| 100 Quadrillion | 316 | 4 |
+| 1B | 1 | 1 |
+| 10B | 3 | 1 |
+| 100B | 10 | 2 |
+| 1T | 31 | 2 |
+| 10T | 100 | 3 |
+| 10Q | 3,162 | 7 |
 
 ### What Summit Resets
 
@@ -514,10 +517,10 @@ Evolution provides a clear benefit with continuous cost progression.
 
 All formulas use consistent growth rates:
 - **Elevation multiplier:** level (direct linear multiplier)
-- **Elevation cost:** 1.15^level (15% growth)
+- **Elevation cost:** 1.15^(level^0.77) (flattened exponential, stays attractive at high levels)
 - **Upgrades:** 2^totalLevel (100% growth per level, smooth and predictable)
 - **Evolution gain:** ×2 per-run multiplier gain (flat boost when evolved)
-- **Summit XP:** sqrt(coins) / 1,000,000 (very late-game, requires 1T coins for 1 XP)
+- **Summit XP:** sqrt(coins / 1B) (mid-game onwards, requires 1B coins for 1 XP)
 - **Summit levels:** level^4 (steep late-game scaling)
 
 Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure continuous progression after evolution.
@@ -525,6 +528,17 @@ Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure conti
 ---
 
 ## Version History
+
+- **2026-02-06 (v10):** Flattened elevation cost curve
+  - Elevation cost: `30000 × 1.15^(level^0.77)` (was `30000 × 1.15^level`)
+  - Cost curve exponent 0.77 (~1/1.3) makes high-level elevation proportionally cheaper
+  - Elevation stays attractive throughout the game (~30% gain per elevation consistently)
+  - Level = multiplier (1:1) unchanged — only the cost formula changed
+
+- **2026-02-06 (v9):** Summit and Ascension threshold rebalance
+  - Summit XP conversion: `sqrt(coins / 1B)` (was `sqrt(coins) / 1M`)
+  - Minimum coins for Summit: 1B (was 1T)
+  - Ascension threshold: 10Q (was 1T)
 
 - **2026-02-05 (v8):** Summit late-game rebalance
   - Summit XP conversion: `sqrt(coins) / 1,000,000` (was `/ 100`)

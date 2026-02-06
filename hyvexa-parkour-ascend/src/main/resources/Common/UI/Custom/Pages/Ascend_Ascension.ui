@@ -60,7 +60,7 @@ $C.@PageOverlay {
 
         Label #RequiredCoins {
           Style: (FontSize: 14, TextColor: #f59e0b, RenderBold: true);
-          Text: "1T";
+          Text: "10Q";
         }
       }
 
