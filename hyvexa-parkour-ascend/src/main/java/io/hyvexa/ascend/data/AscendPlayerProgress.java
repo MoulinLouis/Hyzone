@@ -18,6 +18,7 @@ public class AscendPlayerProgress {
     // Summit System - XP per category (level calculated from XP)
     private final Map<AscendConstants.SummitCategory, Long> summitXp = new ConcurrentHashMap<>();
     private BigDecimal totalCoinsEarned = BigDecimal.ZERO; // Lifetime coins for achievements
+    private BigDecimal summitAccumulatedCoins = BigDecimal.ZERO; // Coins earned since last Summit/Elevation
 
     // Ascension System
     private int ascensionCount;
@@ -137,6 +138,20 @@ public class AscendPlayerProgress {
     public void addTotalCoinsEarned(BigDecimal amount) {
         if (amount.compareTo(BigDecimal.ZERO) > 0) {
             this.totalCoinsEarned = this.totalCoinsEarned.add(amount).max(BigDecimal.ZERO);
+        }
+    }
+
+    public BigDecimal getSummitAccumulatedCoins() {
+        return summitAccumulatedCoins;
+    }
+
+    public void setSummitAccumulatedCoins(BigDecimal summitAccumulatedCoins) {
+        this.summitAccumulatedCoins = summitAccumulatedCoins.max(BigDecimal.ZERO);
+    }
+
+    public void addSummitAccumulatedCoins(BigDecimal amount) {
+        if (amount.compareTo(BigDecimal.ZERO) > 0) {
+            this.summitAccumulatedCoins = this.summitAccumulatedCoins.add(amount).max(BigDecimal.ZERO);
         }
     }
 

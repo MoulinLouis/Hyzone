@@ -237,11 +237,15 @@ public class ElevationPage extends BaseAscendPage {
         int newElevation = currentElevation + purchase.levels;
         java.math.BigDecimal nextCost = AscendConstants.getElevationLevelUpCost(currentElevation, costMultiplierBD);
 
-        // Update progression display (show progress toward next multiplier)
-        int nextElevation = currentElevation + 1;
-        String costText = "Progress to x" + nextElevation + ": " +
+        // Calculate cost for the next level beyond current affordable amount
+        java.math.BigDecimal nextLevelAfterPurchaseCost = AscendConstants.getElevationLevelUpCost(newElevation, costMultiplierBD);
+
+        // Update progression display (show progress toward next level after potential elevation)
+        int targetElevation = newElevation + 1;
+        java.math.BigDecimal targetCost = purchase.cost.add(nextLevelAfterPurchaseCost);
+        String costText = "Progress to x" + targetElevation + ": " +
                          FormatUtils.formatCoinsForHudDecimal(coins) + " / " +
-                         FormatUtils.formatCoinsForHudDecimal(nextCost) + " coins";
+                         FormatUtils.formatCoinsForHudDecimal(targetCost) + " coins";
         if (costMultiplier < 1.0) {
             costText += " (-" + Math.round((1.0 - costMultiplier) * 100) + "%)";
         }
@@ -249,9 +253,6 @@ public class ElevationPage extends BaseAscendPage {
 
         // Update current elevation display
         commandBuilder.set("#MultiplierValue.Text", "x" + currentElevation);
-
-        // Calculate how much more is needed for the next level beyond current affordable amount
-        java.math.BigDecimal nextLevelAfterPurchaseCost = AscendConstants.getElevationLevelUpCost(newElevation, costMultiplierBD);
         java.math.BigDecimal leftoverCoins = coins.subtract(purchase.cost);
         java.math.BigDecimal amountNeededForNextLevel = nextLevelAfterPurchaseCost.subtract(leftoverCoins);
 

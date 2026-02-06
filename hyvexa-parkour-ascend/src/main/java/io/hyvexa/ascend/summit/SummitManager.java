@@ -33,17 +33,18 @@ public class SummitManager {
      * Requires at least 1 XP worth of coins (1B coins = 1 XP).
      */
     public boolean canSummit(UUID playerId) {
-        BigDecimal coins = playerStore.getCoins(playerId);
-        long potentialXp = AscendConstants.coinsToXp(coins);
+        BigDecimal accumulatedCoins = playerStore.getSummitAccumulatedCoins(playerId);
+        long potentialXp = AscendConstants.coinsToXp(accumulatedCoins);
         return potentialXp >= 1;
     }
 
     /**
      * Calculates the XP-based preview for a Summit in the given category.
      * Shows current level, projected level, XP gain, and bonus changes.
+     * XP is based on accumulated coins since last Summit/Elevation.
      */
     public SummitPreview previewSummit(UUID playerId, SummitCategory category) {
-        BigDecimal coins = playerStore.getCoins(playerId);
+        BigDecimal coins = playerStore.getSummitAccumulatedCoins(playerId);
         long xpToGain = AscendConstants.coinsToXp(coins);
 
         long currentXp = playerStore.getSummitXp(playerId, category);
@@ -81,7 +82,7 @@ public class SummitManager {
      * @return SummitResult containing the new level, list of maps with runners (for despawn), and XP gained
      */
     public SummitResult performSummit(UUID playerId, SummitCategory category) {
-        BigDecimal coins = playerStore.getCoins(playerId);
+        BigDecimal coins = playerStore.getSummitAccumulatedCoins(playerId);
         long xpToGain = AscendConstants.coinsToXp(coins);
 
         if (xpToGain < 1) {

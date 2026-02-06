@@ -520,14 +520,20 @@ All formulas use consistent growth rates:
 - **Elevation cost:** 1.15^(level^0.77) (flattened exponential, stays attractive at high levels)
 - **Upgrades:** 2^totalLevel (100% growth per level, smooth and predictable)
 - **Evolution gain:** ×2 per-run multiplier gain (flat boost when evolved)
-- **Summit XP:** sqrt(coins / 1B) (mid-game onwards, requires 1B coins for 1 XP)
-- **Summit levels:** level^4 (steep late-game scaling)
+- **Summit XP:** sqrt(accumulatedCoins / 1B) (based on coins earned since last Summit/Elevation)
+- **Summit levels:** level^3 (late-game scaling)
 
 Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure continuous progression after evolution.
 
 ---
 
 ## Version History
+
+- **2026-02-06 (v11):** Summit XP based on accumulated coins + reduced level cost
+  - Summit XP now based on coins accumulated since last Summit/Elevation, not current balance
+  - Runner upgrades no longer reduce Summit XP potential (only earning matters)
+  - Elevation resets the accumulator (strategic choice preserved)
+  - Summit level cost: `level^3` (was `level^4`) — reduces gap between levels
 
 - **2026-02-06 (v10):** Flattened elevation cost curve
   - Elevation cost: `30000 × 1.15^(level^0.77)` (was `30000 × 1.15^level`)

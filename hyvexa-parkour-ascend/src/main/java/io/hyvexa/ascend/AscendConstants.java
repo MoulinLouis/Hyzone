@@ -442,7 +442,7 @@ public final class AscendConstants {
     // Summit XP System
     // ========================================
 
-    public static final double SUMMIT_XP_LEVEL_EXPONENT = 4.0; // Exponent for level formula
+    public static final double SUMMIT_XP_LEVEL_EXPONENT = 3.0; // Exponent for level formula
     public static final long SUMMIT_MIN_COINS = 1_000_000_000L; // Minimum coins for 1 XP (1B)
 
     /**
@@ -461,7 +461,7 @@ public final class AscendConstants {
 
     /**
      * Calculate XP required to reach a specific level (from level-1).
-     * Formula: level^4
+     * Formula: level^3
      */
     public static long getXpForLevel(int level) {
         if (level <= 0) return 0;
