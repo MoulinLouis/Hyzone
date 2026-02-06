@@ -7,8 +7,13 @@ import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.SimpleInteraction;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.common.util.SystemMessageUtils;
+import io.hyvexa.ascend.ParkourAscendPlugin;
+import io.hyvexa.ascend.ui.AutomationPage;
+import io.hyvexa.ascend.util.AscendModeGate;
+import io.hyvexa.core.state.ModeMessages;
 
 import javax.annotation.Nonnull;
 
@@ -21,10 +26,26 @@ public class AscendDevCottonInteraction extends SimpleInteraction {
     public void handle(@Nonnull Ref<EntityStore> ref, boolean firstRun, float time,
                        @Nonnull InteractionType type, @Nonnull InteractionContext interactionContext) {
         super.handle(ref, firstRun, time, type, interactionContext);
-        Player player = ref.getStore().getComponent(ref, Player.getComponentType());
-        if (player == null) {
+        var store = ref.getStore();
+        Player player = store.getComponent(ref, Player.getComponentType());
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        if (player == null || playerRef == null) {
             return;
         }
-        player.sendMessage(Message.raw("[Ascend] Dev item: Cotton").color(SystemMessageUtils.PRIMARY_TEXT));
+        World world = store.getExternalData().getWorld();
+        if (!AscendModeGate.isAscendWorld(world)) {
+            player.sendMessage(ModeMessages.MESSAGE_ENTER_ASCEND);
+            return;
+        }
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin == null) {
+            return;
+        }
+        if (plugin.getPlayerStore() == null || plugin.getAscensionManager() == null) {
+            player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading."));
+            return;
+        }
+        player.getPageManager().openCustomPage(ref, store,
+            new AutomationPage(playerRef, plugin.getPlayerStore(), plugin.getAscensionManager()));
     }
 }

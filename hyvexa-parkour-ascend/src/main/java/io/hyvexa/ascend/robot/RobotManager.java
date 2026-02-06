@@ -54,6 +54,7 @@ public class RobotManager {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final String RUNNER_UUIDS_FILE = "runner_uuids.txt";
+    private static final long AUTO_UPGRADE_INTERVAL_MS = 400L;
 
     private final AscendMapStore mapStore;
     private final AscendPlayerStore playerStore;
@@ -67,6 +68,7 @@ public class RobotManager {
     private long lastRefreshMs;
     private volatile NPCPlugin npcPlugin;
     private volatile boolean cleanupPending = false;
+    private long lastAutoUpgradeMs = 0;
 
     public RobotManager(AscendMapStore mapStore, AscendPlayerStore playerStore, GhostStore ghostStore) {
         this.mapStore = mapStore;
@@ -369,6 +371,11 @@ public class RobotManager {
                 tickRobot(robot, now);
                 tickRobotMovement(robot, now);
             }
+            // Auto-upgrade runners for players with the skill (throttled)
+            if (now - lastAutoUpgradeMs >= AUTO_UPGRADE_INTERVAL_MS) {
+                lastAutoUpgradeMs = now;
+                performAutoRunnerUpgrades();
+            }
         } catch (Exception e) {
             LOGGER.at(Level.WARNING).log("Error in robot tick: " + e.getMessage());
         }
@@ -654,6 +661,71 @@ public class RobotManager {
                 }
             }
         }
+    }
+
+    // ========================================
+    // Auto Runner Upgrades (Skill Tree)
+    // ========================================
+
+    private void performAutoRunnerUpgrades() {
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin == null) return;
+        AscensionManager ascensionManager = plugin.getAscensionManager();
+        if (ascensionManager == null) return;
+
+        for (UUID playerId : onlinePlayers) {
+            if (!ascensionManager.hasAutoRunners(playerId)) continue;
+            autoUpgradeRunners(playerId);
+        }
+    }
+
+    private void autoUpgradeRunners(UUID playerId) {
+        AscendPlayerProgress progress = playerStore.getPlayer(playerId);
+        if (progress == null) return;
+        if (!progress.isAutoUpgradeEnabled()) return;
+
+        List<AscendMap> maps = mapStore.listMapsSorted();
+
+        // First priority: buy runners on unlocked maps that have a ghost recording (free)
+        for (AscendMap map : maps) {
+            AscendPlayerProgress.MapProgress mp = progress.getMapProgress().get(map.getId());
+            if (mp == null || !mp.isUnlocked() || mp.hasRobot()) continue;
+
+            GhostRecording ghost = ghostStore.getRecording(playerId, map.getId());
+            if (ghost == null) continue;
+
+            playerStore.setHasRobot(playerId, map.getId(), true);
+            return; // One action per call for smooth visual
+        }
+
+        // Second priority: find cheapest speed upgrade (one per call for smooth visual)
+        BigDecimal coins = progress.getCoins();
+        String cheapestMapId = null;
+        BigDecimal cheapestCost = null;
+
+        for (AscendMap map : maps) {
+            AscendPlayerProgress.MapProgress mp = progress.getMapProgress().get(map.getId());
+            if (mp == null || !mp.hasRobot()) continue;
+
+            int speedLevel = mp.getRobotSpeedLevel();
+            if (speedLevel >= AscendConstants.MAX_SPEED_LEVEL) continue;
+
+            BigDecimal cost = AscendConstants.getRunnerUpgradeCost(
+                speedLevel, map.getDisplayOrder(), mp.getRobotStars());
+
+            if (cheapestCost == null || cost.compareTo(cheapestCost) < 0) {
+                cheapestCost = cost;
+                cheapestMapId = map.getId();
+            }
+        }
+
+        if (cheapestMapId == null || cheapestCost == null) return;
+        if (coins.compareTo(cheapestCost) < 0) return;
+
+        // Perform single upgrade
+        if (!playerStore.atomicSpendCoins(playerId, cheapestCost)) return;
+        playerStore.incrementRobotSpeedLevel(playerId, cheapestMapId);
+        playerStore.checkAndUnlockEligibleMaps(playerId, mapStore);
     }
 
     /**

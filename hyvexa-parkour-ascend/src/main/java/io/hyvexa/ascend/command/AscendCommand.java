@@ -24,6 +24,7 @@ import io.hyvexa.ascend.ui.AscendMapSelectPage;
 import io.hyvexa.ascend.ui.AscensionPage;
 import io.hyvexa.ascend.ui.BaseAscendPage;
 import io.hyvexa.ascend.ui.ElevationPage;
+import io.hyvexa.ascend.ui.AutomationPage;
 import io.hyvexa.ascend.ui.SkillTreePage;
 import io.hyvexa.ascend.ui.StatsPage;
 import io.hyvexa.ascend.ui.SummitPage;
@@ -114,10 +115,11 @@ public class AscendCommand extends AbstractAsyncCommand {
                 case "summit" -> openSummitPage(player, playerRef, ref, store, args);
                 case "ascension", "ascend" -> openAscensionPage(player, playerRef, ref, store);
                 case "skills" -> openSkillTreePage(player, playerRef, ref, store);
+                case "automation" -> openAutomationPage(player, playerRef, ref, store);
                 case "achievements" -> showAchievements(player, playerRef);
                 case "title" -> handleTitle(player, playerRef, args);
                 case "leaderboard" -> openLeaderboardPage(player, playerRef, ref, store);
-                default -> ctx.sendMessage(Message.raw("Unknown subcommand. Use: /ascend, /ascend stats, /ascend elevate, /ascend summit, /ascend ascension, /ascend skills, /ascend achievements, /ascend title, /ascend leaderboard"));
+                default -> ctx.sendMessage(Message.raw("Unknown subcommand. Use: /ascend, /ascend stats, /ascend elevate, /ascend summit, /ascend ascension, /ascend skills, /ascend automation, /ascend achievements, /ascend title, /ascend leaderboard"));
             }
         }, world);
     }
@@ -183,6 +185,19 @@ public class AscendCommand extends AbstractAsyncCommand {
         UUID playerId = playerRef.getUuid();
         closeActivePage(playerId);
         SkillTreePage page = new SkillTreePage(playerRef, plugin.getPlayerStore(), plugin.getAscensionManager());
+        registerActivePage(playerId, page);
+        player.getPageManager().openCustomPage(ref, store, page);
+    }
+
+    private void openAutomationPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin == null || plugin.getAscensionManager() == null) {
+            player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading."));
+            return;
+        }
+        UUID playerId = playerRef.getUuid();
+        closeActivePage(playerId);
+        AutomationPage page = new AutomationPage(playerRef, plugin.getPlayerStore(), plugin.getAscensionManager());
         registerActivePage(playerId, page);
         player.getPageManager().openCustomPage(ref, store, page);
     }

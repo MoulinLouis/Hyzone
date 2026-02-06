@@ -40,6 +40,9 @@ public class AscendPlayerProgress {
     private Long lastActiveTimestamp;
     private boolean hasUnclaimedPassive;
 
+    // Automation toggle
+    private boolean autoUpgradeEnabled;
+
     public BigDecimal getCoins() {
         return coins;
     }
@@ -320,6 +323,14 @@ public class AscendPlayerProgress {
 
     public void setHasUnclaimedPassive(boolean hasUnclaimed) {
         this.hasUnclaimedPassive = hasUnclaimed;
+    }
+
+    public boolean isAutoUpgradeEnabled() {
+        return autoUpgradeEnabled;
+    }
+
+    public void setAutoUpgradeEnabled(boolean enabled) {
+        this.autoUpgradeEnabled = enabled;
     }
 
     public static class MapProgress {
