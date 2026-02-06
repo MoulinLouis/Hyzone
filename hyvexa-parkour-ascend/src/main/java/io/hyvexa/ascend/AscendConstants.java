@@ -296,18 +296,21 @@ public final class AscendConstants {
     // ========================================
 
     // Elevation: level = multiplier (1:1), cost curve flattened at high levels.
-    // Cost formula: BASE_COST * COST_GROWTH^(level^COST_CURVE)
-    // COST_CURVE < 1 makes each subsequent level proportionally cheaper,
-    // keeping elevation attractive even at high levels.
+    // Cost formula: BASE_COST * COST_GROWTH^(effectiveLevel)
+    // For level <= SOFT_CAP: effectiveLevel = level^COST_CURVE
+    // For level > SOFT_CAP:  effectiveLevel = SOFT_CAP^COST_CURVE + (level-SOFT_CAP)^COST_CURVE_LATE
+    // This keeps the same early game curve but makes late-game elevation much more accessible.
     public static final long ELEVATION_BASE_COST = 30000L;
     public static final double ELEVATION_COST_GROWTH = 1.15;
-    public static final double ELEVATION_COST_CURVE = 0.77; // ~1/1.3 - flattens exponential at high levels
+    public static final double ELEVATION_COST_CURVE = 0.77; // Early game exponent (level <= SOFT_CAP)
+    public static final double ELEVATION_COST_CURVE_LATE = 0.63; // Late game exponent (level > SOFT_CAP)
+    public static final int ELEVATION_SOFT_CAP = 300; // Level where late-game curve kicks in
 
     /**
      * Calculate the cost to reach the next elevation level.
-     * Cost grows as: baseCost * 1.15^(level^0.77)
-     * At low levels this is nearly the same as 1.15^level.
-     * At high levels the curve flattens, so elevation stays attractive.
+     * Below SOFT_CAP: baseCost * 1.15^(level^0.77)
+     * Above SOFT_CAP: baseCost * 1.15^(300^0.77 + (level-300)^0.63)
+     * Keeps identical early game, much flatter late game.
      */
     public static BigDecimal getElevationLevelUpCost(int currentLevel) {
         return getElevationLevelUpCost(currentLevel, BigDecimal.ONE);
@@ -323,8 +326,15 @@ public final class AscendConstants {
 
         BigDecimal base = BigDecimal.valueOf(ELEVATION_BASE_COST);
 
-        // Non-linear cost: 1.15^(level^0.77) — flattens at high levels
-        double effectiveLevel = Math.pow(safeLevel, ELEVATION_COST_CURVE);
+        // Two-phase cost curve: identical early game, flatter late game
+        double effectiveLevel;
+        if (safeLevel <= ELEVATION_SOFT_CAP) {
+            effectiveLevel = Math.pow(safeLevel, ELEVATION_COST_CURVE);
+        } else {
+            double basePart = Math.pow(ELEVATION_SOFT_CAP, ELEVATION_COST_CURVE);
+            double latePart = Math.pow(safeLevel - ELEVATION_SOFT_CAP, ELEVATION_COST_CURVE_LATE);
+            effectiveLevel = basePart + latePart;
+        }
         BigDecimal growthPower = BigDecimal.valueOf(Math.pow(ELEVATION_COST_GROWTH, effectiveLevel));
         BigDecimal cost = base.multiply(growthPower, CALC_CTX);
 
@@ -409,7 +419,7 @@ public final class AscendConstants {
 
     public enum SummitCategory {
         RUNNER_SPEED("Runner Speed"),      // 1 + 0.45 × √niveau
-        MULTIPLIER_GAIN("Multiplier Gain"), // 1 + 0.5 × niveau^0.8
+        MULTIPLIER_GAIN("Multiplier Gain"), // 1.5 + 0.5 × niveau^0.8
         EVOLUTION_POWER("Evolution Power"); // 2 + 0.5 × niveau^0.8
 
         private final String displayName;
@@ -425,14 +435,14 @@ public final class AscendConstants {
         /**
          * Get the bonus multiplier for a given level.
          * - RUNNER_SPEED: 1 + 0.45 × √niveau
-         * - MULTIPLIER_GAIN: 1 + 0.5 × niveau^0.8
+         * - MULTIPLIER_GAIN: 1.5 + 0.5 × niveau^0.8
          * - EVOLUTION_POWER: 2 + 0.5 × niveau^0.8
          */
         public double getBonusForLevel(int level) {
             int safeLevel = Math.max(0, level);
             return switch (this) {
                 case RUNNER_SPEED -> 1.0 + 0.45 * Math.sqrt(safeLevel);
-                case MULTIPLIER_GAIN -> 1.0 + 0.5 * Math.pow(safeLevel, 0.8);
+                case MULTIPLIER_GAIN -> 1.5 + 0.5 * Math.pow(safeLevel, 0.8);
                 case EVOLUTION_POWER -> 2.0 + 0.5 * Math.pow(safeLevel, 0.8);
             };
         }
@@ -442,7 +452,7 @@ public final class AscendConstants {
     // Summit XP System
     // ========================================
 
-    public static final double SUMMIT_XP_LEVEL_EXPONENT = 3.0; // Exponent for level formula
+    public static final double SUMMIT_XP_LEVEL_EXPONENT = 2.5; // Exponent for level formula
     public static final long SUMMIT_MIN_COINS = 1_000_000_000L; // Minimum coins for 1 XP (1B)
 
     /**
@@ -461,7 +471,7 @@ public final class AscendConstants {
 
     /**
      * Calculate XP required to reach a specific level (from level-1).
-     * Formula: level^3
+     * Formula: level^2.5
      */
     public static long getXpForLevel(int level) {
         if (level <= 0) return 0;
