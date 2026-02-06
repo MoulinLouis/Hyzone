@@ -298,6 +298,9 @@ public class AscendHud extends CustomUIHud {
 
     private static String formatMultiplier(double value) {
         double safeValue = Math.max(1.0, value);
-        return String.format(java.util.Locale.US, "%.2f", safeValue);
+        if (safeValue < 1e6) {
+            return String.format(java.util.Locale.US, "%.2f", safeValue);
+        }
+        return FormatUtils.formatCoinsForHudDecimal(java.math.BigDecimal.valueOf(safeValue));
     }
 }
