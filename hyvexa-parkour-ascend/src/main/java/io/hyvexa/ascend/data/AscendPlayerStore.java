@@ -59,7 +59,8 @@ public class AscendPlayerStore {
             SELECT uuid, coins, elevation_multiplier, ascension_count, skill_tree_points,
                    total_coins_earned, total_manual_runs, active_title,
                    ascension_started_at, fastest_ascension_ms,
-                   last_active_timestamp, has_unclaimed_passive
+                   last_active_timestamp, has_unclaimed_passive,
+                   summit_accumulated_coins
             FROM ascend_players
             """;
         try (Connection conn = DatabaseManager.getInstance().getConnection();
@@ -92,6 +93,10 @@ public class AscendPlayerStore {
                             progress.setLastActiveTimestamp(timestamp);
                         }
                         progress.setHasUnclaimedPassive(rs.getBoolean("has_unclaimed_passive"));
+                        BigDecimal summitAccumulated = rs.getBigDecimal("summit_accumulated_coins");
+                        if (summitAccumulated != null) {
+                            progress.setSummitAccumulatedCoins(summitAccumulated);
+                        }
                     } catch (SQLException ignored) {
                         // Columns may not exist yet
                     }
@@ -253,6 +258,7 @@ public class AscendPlayerStore {
         // Reset Summit system
         progress.clearSummitLevels();
         progress.setTotalCoinsEarned(BigDecimal.ZERO);
+        progress.setSummitAccumulatedCoins(BigDecimal.ZERO);
 
         // Reset Ascension/Skill Tree
         progress.setAscensionCount(0);
@@ -519,18 +525,21 @@ public class AscendPlayerStore {
         AscendPlayerProgress progress = players.get(playerId);
         if (progress != null) {
             progress.addTotalCoinsEarned(amount);
+            progress.addSummitAccumulatedCoins(amount);
         }
 
-        String sql = "UPDATE ascend_players SET total_coins_earned = total_coins_earned + ? WHERE uuid = ?";
+        String sql = "UPDATE ascend_players SET total_coins_earned = total_coins_earned + ?, summit_accumulated_coins = summit_accumulated_coins + ? WHERE uuid = ?";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             stmt.setBigDecimal(1, amount);
-            stmt.setString(2, playerId.toString());
+            stmt.setBigDecimal(2, amount);
+            stmt.setString(3, playerId.toString());
             int rowsUpdated = stmt.executeUpdate();
 
             if (rowsUpdated == 0 && progress != null) {
                 progress.addTotalCoinsEarned(amount.negate());
+                progress.setSummitAccumulatedCoins(progress.getSummitAccumulatedCoins().subtract(amount).max(BigDecimal.ZERO));
             }
 
             return rowsUpdated > 0;
@@ -538,6 +547,7 @@ public class AscendPlayerStore {
             LOGGER.at(Level.SEVERE).log("Failed to atomically add total coins earned: " + e.getMessage());
             if (progress != null) {
                 progress.addTotalCoinsEarned(amount.negate());
+                progress.setSummitAccumulatedCoins(progress.getSummitAccumulatedCoins().subtract(amount).max(BigDecimal.ZERO));
             }
             return false;
         }
@@ -598,11 +608,12 @@ public class AscendPlayerStore {
             AscendPlayerProgress progress = getOrCreatePlayer(playerId);
             progress.setElevationMultiplier(newElevation);
             progress.setCoins(BigDecimal.ZERO);
+            progress.setSummitAccumulatedCoins(BigDecimal.ZERO);
             markDirty(playerId);
             return true;
         }
 
-        String sql = "UPDATE ascend_players SET elevation_multiplier = ?, coins = 0 WHERE uuid = ?";
+        String sql = "UPDATE ascend_players SET elevation_multiplier = ?, coins = 0, summit_accumulated_coins = 0 WHERE uuid = ?";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
@@ -615,6 +626,7 @@ public class AscendPlayerStore {
                 AscendPlayerProgress progress = getOrCreatePlayer(playerId);
                 progress.setElevationMultiplier(newElevation);
                 progress.setCoins(BigDecimal.ZERO);
+                progress.setSummitAccumulatedCoins(BigDecimal.ZERO);
             }
 
             return rowsUpdated > 0;
@@ -784,12 +796,18 @@ public class AscendPlayerStore {
         return progress != null ? progress.getTotalCoinsEarned() : BigDecimal.ZERO;
     }
 
+    public BigDecimal getSummitAccumulatedCoins(UUID playerId) {
+        AscendPlayerProgress progress = players.get(playerId);
+        return progress != null ? progress.getSummitAccumulatedCoins() : BigDecimal.ZERO;
+    }
+
     public void addTotalCoinsEarned(UUID playerId, BigDecimal amount) {
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
             return;
         }
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
         progress.addTotalCoinsEarned(amount);
+        progress.addSummitAccumulatedCoins(amount);
         markDirty(playerId);
     }
 
@@ -930,6 +948,7 @@ public class AscendPlayerStore {
         List<String> mapsWithRunners = new java.util.ArrayList<>();
 
         progress.setCoins(BigDecimal.ZERO);
+        progress.setSummitAccumulatedCoins(BigDecimal.ZERO);
 
         for (Map.Entry<String, AscendPlayerProgress.MapProgress> entry : progress.getMapProgress().entrySet()) {
             String mapId = entry.getKey();
@@ -1122,8 +1141,9 @@ public class AscendPlayerStore {
         String playerSql = """
             INSERT INTO ascend_players (uuid, coins, elevation_multiplier, ascension_count,
                 skill_tree_points, total_coins_earned, total_manual_runs, active_title,
-                ascension_started_at, fastest_ascension_ms, last_active_timestamp, has_unclaimed_passive)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ascension_started_at, fastest_ascension_ms, last_active_timestamp, has_unclaimed_passive,
+                summit_accumulated_coins)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 coins = VALUES(coins), elevation_multiplier = VALUES(elevation_multiplier),
                 ascension_count = VALUES(ascension_count), skill_tree_points = VALUES(skill_tree_points),
@@ -1131,7 +1151,8 @@ public class AscendPlayerStore {
                 active_title = VALUES(active_title), ascension_started_at = VALUES(ascension_started_at),
                 fastest_ascension_ms = VALUES(fastest_ascension_ms),
                 last_active_timestamp = VALUES(last_active_timestamp),
-                has_unclaimed_passive = VALUES(has_unclaimed_passive)
+                has_unclaimed_passive = VALUES(has_unclaimed_passive),
+                summit_accumulated_coins = VALUES(summit_accumulated_coins)
             """;
 
         String mapSql = """
@@ -1205,6 +1226,7 @@ public class AscendPlayerStore {
                     playerStmt.setNull(11, java.sql.Types.BIGINT);
                 }
                 playerStmt.setBoolean(12, progress.hasUnclaimedPassive());
+                playerStmt.setBigDecimal(13, progress.getSummitAccumulatedCoins());
                 playerStmt.addBatch();
 
                 // Save map progress

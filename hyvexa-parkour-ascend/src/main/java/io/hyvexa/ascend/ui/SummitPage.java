@@ -120,6 +120,18 @@ public class SummitPage extends BaseAscendPage {
 
         UUID playerId = playerRef.getUuid();
 
+        // Update progress text (shared across all categories)
+        java.math.BigDecimal accumulatedCoins = playerStore.getSummitAccumulatedCoins(playerId);
+        long currentXp = AscendConstants.coinsToXp(accumulatedCoins);
+        long nextXp = currentXp + 1;
+        // Inverse of coinsToXp: xp = sqrt(coins / MIN_COINS) => coins = xp^2 * MIN_COINS
+        java.math.BigDecimal coinsForNextXp = java.math.BigDecimal.valueOf(nextXp)
+            .pow(2).multiply(java.math.BigDecimal.valueOf(AscendConstants.SUMMIT_MIN_COINS));
+        String progressText = "Progress to " + nextXp + " Exp: " +
+            FormatUtils.formatCoinsForHudDecimal(accumulatedCoins) + " / " +
+            FormatUtils.formatCoinsForHudDecimal(coinsForNextXp) + " accumulated coins";
+        commandBuilder.set("#ProgressText.Text", progressText);
+
         SummitCategory[] categories = {
             SummitCategory.MULTIPLIER_GAIN,
             SummitCategory.RUNNER_SPEED,
@@ -334,7 +346,7 @@ public class SummitPage extends BaseAscendPage {
         return switch (category) {
             case RUNNER_SPEED -> "Multiplies runner completion speed";
             case MULTIPLIER_GAIN -> "Multiplies multiplier gain per run";
-            case EVOLUTION_POWER -> "Coming soon";
+            case EVOLUTION_POWER -> "Increases evolution base multiplier";
         };
     }
 

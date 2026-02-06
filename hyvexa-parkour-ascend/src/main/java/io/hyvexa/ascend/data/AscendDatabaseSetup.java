@@ -366,6 +366,16 @@ public final class AscendDatabaseSetup {
             }
         }
 
+        // Summit accumulated coins (coins earned since last Summit/Elevation)
+        if (!columnExists(conn, "ascend_players", "summit_accumulated_coins")) {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN summit_accumulated_coins DECIMAL(65,2) NOT NULL DEFAULT 0");
+                LOGGER.atInfo().log("Added summit_accumulated_coins column to ascend_players");
+            } catch (SQLException e) {
+                LOGGER.at(Level.SEVERE).log("Failed to add summit_accumulated_coins column: " + e.getMessage());
+            }
+        }
+
         // Has unclaimed passive flag
         if (!columnExists(conn, "ascend_players", "has_unclaimed_passive")) {
             try (Statement stmt = conn.createStatement()) {
