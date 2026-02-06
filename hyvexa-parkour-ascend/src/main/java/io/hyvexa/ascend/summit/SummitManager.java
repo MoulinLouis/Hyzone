@@ -30,7 +30,7 @@ public class SummitManager {
 
     /**
      * Checks if a player can perform a Summit in any category.
-     * Requires at least 1 XP worth of coins (1T coins = 1 XP).
+     * Requires at least 1 XP worth of coins (1B coins = 1 XP).
      */
     public boolean canSummit(UUID playerId) {
         BigDecimal coins = playerStore.getCoins(playerId);

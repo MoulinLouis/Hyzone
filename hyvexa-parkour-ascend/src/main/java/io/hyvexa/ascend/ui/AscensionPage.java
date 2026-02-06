@@ -141,7 +141,9 @@ public class AscensionPage extends BaseAscendPage {
     }
 
     private static String formatLargeNumber(double number) {
-        if (number >= 1_000_000_000_000.0) {
+        if (number >= 1_000_000_000_000_000.0) {
+            return String.format(Locale.US, "%.2fQ", number / 1_000_000_000_000_000.0);
+        } else if (number >= 1_000_000_000_000.0) {
             return String.format(Locale.US, "%.2fT", number / 1_000_000_000_000.0);
         } else if (number >= 1_000_000_000.0) {
             return String.format(Locale.US, "%.2fB", number / 1_000_000_000.0);
