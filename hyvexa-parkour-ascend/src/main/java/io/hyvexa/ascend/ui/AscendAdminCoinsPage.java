@@ -32,6 +32,7 @@ public class AscendAdminCoinsPage extends InteractiveCustomUIPage<AscendAdminCoi
 
     private String amountInput = "";
     private String skillPointsInput = "";
+    private String voidYThresholdInput = "";
 
     public AscendAdminCoinsPage(@Nonnull PlayerRef playerRef) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, CoinsData.CODEC);
@@ -54,6 +55,9 @@ public class AscendAdminCoinsPage extends InteractiveCustomUIPage<AscendAdminCoi
         if (data.skillPointsAmount != null) {
             skillPointsInput = data.skillPointsAmount;
         }
+        if (data.voidYThreshold != null) {
+            voidYThresholdInput = data.voidYThreshold;
+        }
         if (data.button == null) {
             return;
         }
@@ -72,6 +76,8 @@ public class AscendAdminCoinsPage extends InteractiveCustomUIPage<AscendAdminCoi
             case CoinsData.BUTTON_SET_NPC_LOCATION -> setNpcLocation(ref, store, player);
             case CoinsData.BUTTON_ADD_SKILL_POINTS -> applySkillPoints(player, playerRef, true);
             case CoinsData.BUTTON_REMOVE_SKILL_POINTS -> applySkillPoints(player, playerRef, false);
+            case CoinsData.BUTTON_SAVE_VOID_Y -> saveVoidYThreshold(player);
+            case CoinsData.BUTTON_CLEAR_VOID_Y -> clearVoidYThreshold(player);
             default -> {
             }
         }
@@ -101,6 +107,13 @@ public class AscendAdminCoinsPage extends InteractiveCustomUIPage<AscendAdminCoi
             EventData.of(CoinsData.KEY_BUTTON, CoinsData.BUTTON_ADD_SKILL_POINTS), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#RemoveSkillPointsButton",
             EventData.of(CoinsData.KEY_BUTTON, CoinsData.BUTTON_REMOVE_SKILL_POINTS), false);
+        // Void Y threshold bindings
+        eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#VoidYThresholdField",
+            EventData.of(CoinsData.KEY_VOID_Y_THRESHOLD, "#VoidYThresholdField.Value"), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SaveVoidYButton",
+            EventData.of(CoinsData.KEY_BUTTON, CoinsData.BUTTON_SAVE_VOID_Y), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ClearVoidYButton",
+            EventData.of(CoinsData.KEY_BUTTON, CoinsData.BUTTON_CLEAR_VOID_Y), false);
     }
 
     private void resetProgress(Player player, PlayerRef playerRef, Store<EntityStore> store) {
@@ -146,8 +159,16 @@ public class AscendAdminCoinsPage extends InteractiveCustomUIPage<AscendAdminCoi
             commandBuilder.set("#CurrentSkillPointsValue.Text", String.valueOf(skillPoints));
         }
 
-        // Location statuses
+        // Void Y threshold
         AscendSettingsStore settingsStore = ParkourAscendPlugin.getInstance().getSettingsStore();
+        if (settingsStore != null) {
+            Double voidY = settingsStore.getVoidYThreshold();
+            String voidLabel = voidY != null ? String.format("%.2f", voidY) : "Not set";
+            commandBuilder.set("#VoidYThresholdValue.Text", voidLabel);
+            commandBuilder.set("#VoidYThresholdField.Value", voidYThresholdInput);
+        }
+
+        // Location statuses
         if (settingsStore != null && settingsStore.hasSpawnPosition()) {
             Vector3d pos = settingsStore.getSpawnPosition();
             String status = String.format("%.1f, %.1f, %.1f", pos.getX(), pos.getY(), pos.getZ());
@@ -252,6 +273,52 @@ public class AscendAdminCoinsPage extends InteractiveCustomUIPage<AscendAdminCoi
         }
     }
 
+    private void saveVoidYThreshold(Player player) {
+        AscendSettingsStore settingsStore = ParkourAscendPlugin.getInstance().getSettingsStore();
+        if (settingsStore == null) {
+            player.sendMessage(Message.raw("[Ascend] Settings store not available."));
+            return;
+        }
+        String raw = voidYThresholdInput != null ? voidYThresholdInput.trim() : "";
+        if (raw.isEmpty()) {
+            player.sendMessage(Message.raw("[Ascend] Enter a Y value."));
+            return;
+        }
+        double value;
+        try {
+            value = Double.parseDouble(raw);
+        } catch (NumberFormatException e) {
+            player.sendMessage(Message.raw("[Ascend] Enter a valid number."));
+            return;
+        }
+        if (!Double.isFinite(value)) {
+            player.sendMessage(Message.raw("[Ascend] Enter a finite number."));
+            return;
+        }
+        settingsStore.setVoidYThreshold(value);
+        player.sendMessage(Message.raw("[Ascend] Void Y threshold set to " + String.format("%.2f", value) + ".")
+            .color(SystemMessageUtils.SUCCESS));
+
+        UICommandBuilder commandBuilder = new UICommandBuilder();
+        commandBuilder.set("#VoidYThresholdValue.Text", String.format("%.2f", value));
+        sendUpdate(commandBuilder, null, false);
+    }
+
+    private void clearVoidYThreshold(Player player) {
+        AscendSettingsStore settingsStore = ParkourAscendPlugin.getInstance().getSettingsStore();
+        if (settingsStore == null) {
+            player.sendMessage(Message.raw("[Ascend] Settings store not available."));
+            return;
+        }
+        settingsStore.setVoidYThreshold(null);
+        player.sendMessage(Message.raw("[Ascend] Void Y threshold disabled.")
+            .color(SystemMessageUtils.SECONDARY));
+
+        UICommandBuilder commandBuilder = new UICommandBuilder();
+        commandBuilder.set("#VoidYThresholdValue.Text", "Not set");
+        sendUpdate(commandBuilder, null, false);
+    }
+
     private void setSpawnLocation(Ref<EntityStore> ref, Store<EntityStore> store, Player player) {
         AscendSettingsStore settingsStore = ParkourAscendPlugin.getInstance().getSettingsStore();
         if (settingsStore == null) {
@@ -320,6 +387,7 @@ public class AscendAdminCoinsPage extends InteractiveCustomUIPage<AscendAdminCoi
         static final String KEY_BUTTON = "Button";
         static final String KEY_AMOUNT = "@CoinsAmount";
         static final String KEY_SKILL_POINTS_AMOUNT = "@SkillPointsAmount";
+        static final String KEY_VOID_Y_THRESHOLD = "@VoidYThreshold";
         static final String BUTTON_ADD = "AddCoins";
         static final String BUTTON_REMOVE = "RemoveCoins";
         static final String BUTTON_RESET_PROGRESS = "ResetProgress";
@@ -327,6 +395,8 @@ public class AscendAdminCoinsPage extends InteractiveCustomUIPage<AscendAdminCoi
         static final String BUTTON_SET_NPC_LOCATION = "SetNpcLocation";
         static final String BUTTON_ADD_SKILL_POINTS = "AddSkillPoints";
         static final String BUTTON_REMOVE_SKILL_POINTS = "RemoveSkillPoints";
+        static final String BUTTON_SAVE_VOID_Y = "SaveVoidY";
+        static final String BUTTON_CLEAR_VOID_Y = "ClearVoidY";
         static final String BUTTON_BACK = "Back";
         static final String BUTTON_CLOSE = "Close";
 
@@ -334,10 +404,12 @@ public class AscendAdminCoinsPage extends InteractiveCustomUIPage<AscendAdminCoi
             .addField(new KeyedCodec<>(KEY_BUTTON, Codec.STRING), (data, value) -> data.button = value, data -> data.button)
             .addField(new KeyedCodec<>(KEY_AMOUNT, Codec.STRING), (data, value) -> data.amount = value, data -> data.amount)
             .addField(new KeyedCodec<>(KEY_SKILL_POINTS_AMOUNT, Codec.STRING), (data, value) -> data.skillPointsAmount = value, data -> data.skillPointsAmount)
+            .addField(new KeyedCodec<>(KEY_VOID_Y_THRESHOLD, Codec.STRING), (data, value) -> data.voidYThreshold = value, data -> data.voidYThreshold)
             .build();
 
         private String button;
         private String amount;
         private String skillPointsAmount;
+        private String voidYThreshold;
     }
 }

@@ -2,7 +2,7 @@ $C = "../Common.ui";
 
 $C.@PageOverlay {
   $C.@Container {
-    Anchor: (Width: 650, Height: 600);
+    Anchor: (Width: 650, Height: 780);
 
     #Title {
       Group {
@@ -166,6 +166,54 @@ $C.@PageOverlay {
           Anchor: (Left: 12);
           Style: (FontSize: 13, TextColor: #cfd7dc, VerticalAlignment: Center);
           Text: "Not set";
+        }
+      }
+
+      Label {
+        Anchor: (Top: 16);
+        Style: (FontSize: 16, TextColor: #93844c, RenderBold: true);
+        Text: "Void Y Threshold";
+      }
+
+      Group {
+        LayoutMode: Left;
+        Anchor: (Top: 8, Height: 30);
+
+        Label {
+          Anchor: (Width: 140);
+          Style: (FontSize: 14, TextColor: #cfd7dc);
+          Text: "Current Value:";
+        }
+
+        Label #VoidYThresholdValue {
+          Style: (FontSize: 14, TextColor: #ffffff(0.9));
+          Text: "Not set";
+        }
+      }
+
+      Label {
+        Anchor: (Top: 6);
+        Style: (FontSize: 12, TextColor: #cfd7dc(0.6));
+        Text: "Players below this Y are teleported to spawn";
+      }
+
+      $C.@TextField #VoidYThresholdField {
+        Anchor: (Top: 6, Height: 30);
+        Style: (FontSize: 14, TextColor: #ffffff(0.85));
+      }
+
+      Group {
+        LayoutMode: Left;
+        Anchor: (Top: 8, Height: 36);
+
+        $C.@TextButton #SaveVoidYButton {
+          Anchor: (Width: 200, Height: 36);
+          Text: "Save Threshold";
+        }
+
+        $C.@TextButton #ClearVoidYButton {
+          Anchor: (Left: 10, Width: 200, Height: 36);
+          Text: "Disable Threshold";
         }
       }
 

@@ -155,6 +155,17 @@ public class AscendRunTracker {
         UUID playerId = playerRef.getUuid();
         Vector3d pos = transform.getPosition();
 
+        // Check void Y threshold - reset to map start if in a run, else teleport to spawn
+        if (isPlayerBelowVoidThreshold(pos.getY())) {
+            String mapId = getActiveMapId(playerId);
+            if (mapId != null) {
+                teleportToMapStart(ref, store, playerRef, mapId);
+            } else {
+                teleportToSpawn(ref, store);
+            }
+            return;
+        }
+
         // Check if player is frozen (post-completion freeze) - teleport back to position
         FreezeData freezeData = frozenPlayers.get(playerId);
         if (freezeData != null) {
@@ -458,6 +469,34 @@ public class AscendRunTracker {
             this.rotation = rotation;
             this.endTime = endTime;
         }
+    }
+
+    private boolean isPlayerBelowVoidThreshold(double currentY) {
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin == null) {
+            return false;
+        }
+        AscendSettingsStore settingsStore = plugin.getSettingsStore();
+        if (settingsStore == null) {
+            return false;
+        }
+        Double threshold = settingsStore.getVoidYThreshold();
+        return threshold != null && Double.isFinite(threshold) && currentY <= threshold;
+    }
+
+    private void teleportToSpawn(Ref<EntityStore> ref, Store<EntityStore> store) {
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin == null) {
+            return;
+        }
+        AscendSettingsStore settingsStore = plugin.getSettingsStore();
+        if (settingsStore == null || !settingsStore.hasSpawnPosition()) {
+            return;
+        }
+        Vector3d spawnPos = settingsStore.getSpawnPosition();
+        Vector3f spawnRot = settingsStore.getSpawnRotation();
+        store.addComponent(ref, Teleport.getComponentType(),
+            new Teleport(store.getExternalData().getWorld(), spawnPos, spawnRot));
     }
 
     private void hideRunnersForMap(UUID viewerId, String mapId) {
