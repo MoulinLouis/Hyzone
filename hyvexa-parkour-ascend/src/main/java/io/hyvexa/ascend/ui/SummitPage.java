@@ -124,9 +124,7 @@ public class SummitPage extends BaseAscendPage {
         java.math.BigDecimal accumulatedCoins = playerStore.getSummitAccumulatedCoins(playerId);
         long currentXp = AscendConstants.coinsToXp(accumulatedCoins);
         long nextXp = currentXp + 1;
-        // Inverse of coinsToXp: xp = sqrt(coins / MIN_COINS) => coins = xp^2 * MIN_COINS
-        java.math.BigDecimal coinsForNextXp = java.math.BigDecimal.valueOf(nextXp)
-            .pow(2).multiply(java.math.BigDecimal.valueOf(AscendConstants.SUMMIT_MIN_COINS));
+        java.math.BigDecimal coinsForNextXp = AscendConstants.xpToCoins(nextXp);
         String progressText = "Progress to next EXP: " +
             FormatUtils.formatCoinsForHudDecimal(accumulatedCoins) + " / " +
             FormatUtils.formatCoinsForHudDecimal(coinsForNextXp) + " accumulated coins";

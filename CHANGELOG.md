@@ -11,6 +11,7 @@
 - **Ascend: Multiplier gain display now shows 2 decimal places** - Values like +0.15x now display correctly instead of rounding to +0.2x
 
 ### Changed
+- **Ascend: Summit XP numbers compressed** - Level exponent reduced from 2.5 to 2.0, coins→XP uses power 3/7 instead of sqrt. Same coins reach same levels but XP displays are much smaller (level 50: 17,678 → 2,500 XP)
 - **Ascend: Evolution default multiplier bonus adjusted** - Evolved runners now apply ×2 multiplier gain per run instead of ×10
 - **Ascend: Summit system rebalanced for late-game** - Summit now requires 1T coins minimum for first level (was 10K), and resets multipliers/runners like elevation
 - **Ascend: Map selector shows run time and multiplier gain** - Displays actual runner completion time and multiplier gain per run (e.g., "Run: 2.34s (+0.1x) | PB: 5.00s")

@@ -139,6 +139,9 @@ public final class AscendDatabaseSetup {
                 ) ENGINE=InnoDB
                 """);
 
+            // Migrate Summit XP from old scale (level^2.5) to new scale (level^2.0)
+            migrateSummitXpScale(conn);
+
             // Ensure new columns on ascend_players for extended progress tracking
             ensureProgressColumns(conn);
 
@@ -274,6 +277,30 @@ public final class AscendDatabaseSetup {
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Failed to check column " + column + ": " + e.getMessage());
             return false;
+        }
+    }
+
+    /**
+     * One-time migration: convert Summit XP from old scale (level^2.5 + sqrt coins)
+     * to new scale (level^2.0 + coins^(3/7)).
+     * Conversion: new_xp = round(old_xp^(6/7)) preserves the same level for each player.
+     * Uses marker column 'xp_scale_v2' to ensure migration runs only once.
+     */
+    private static void migrateSummitXpScale(Connection conn) {
+        if (conn == null) {
+            return;
+        }
+        if (columnExists(conn, "ascend_player_summit", "xp_scale_v2")) {
+            return; // Already migrated
+        }
+        try (Statement stmt = conn.createStatement()) {
+            // Convert all existing XP: new_xp = round(old_xp^(6/7))
+            stmt.executeUpdate("UPDATE ascend_player_summit SET xp = ROUND(POW(GREATEST(xp, 1), 0.857143)) WHERE xp > 0");
+            // Add marker column to prevent re-migration
+            stmt.executeUpdate("ALTER TABLE ascend_player_summit ADD COLUMN xp_scale_v2 TINYINT NOT NULL DEFAULT 1");
+            LOGGER.atInfo().log("Migrated Summit XP to new scale (exponent 2.5 -> 2.0)");
+        } catch (SQLException e) {
+            LOGGER.at(Level.SEVERE).log("Failed to migrate Summit XP scale: " + e.getMessage());
         }
     }
 
