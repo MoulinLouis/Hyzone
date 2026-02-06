@@ -223,6 +223,21 @@ public class RunTracker {
         return run != null && run.practiceEnabled;
     }
 
+    public boolean isFlyActive(UUID playerId) {
+        ActiveRun run = activeRuns.get(playerId);
+        return run != null && run.flyActive;
+    }
+
+    public boolean toggleFly(UUID playerId) {
+        ActiveRun run = activeRuns.get(playerId);
+        if (run == null || !run.practiceEnabled) {
+            return false;
+        }
+        run.flyActive = !run.flyActive;
+        setFly(playerId, run.flyActive);
+        return run.flyActive;
+    }
+
     public boolean enablePractice(UUID playerId) {
         ActiveRun run = activeRuns.get(playerId);
         if (run == null) {
@@ -243,7 +258,7 @@ public class RunTracker {
                 run.lastValidFlyPosition = new double[]{map.getStart().getX(), map.getStart().getY(), map.getStart().getZ()};
             }
         }
-        setFly(playerId, true);
+        run.flyActive = false;
         return true;
     }
 
@@ -262,19 +277,27 @@ public class RunTracker {
             return;
         }
         if (enabled) {
-            movementManager.refreshDefaultSettings(entityRef, store);
-            movementManager.applyDefaultSettings();
             MovementSettings settings = movementManager.getSettings();
             if (settings == null) {
                 return;
             }
             settings.canFly = true;
+            MovementStatesComponent movementStates = store.getComponent(entityRef,
+                    MovementStatesComponent.getComponentType());
+            if (movementStates != null && movementStates.getMovementStates() != null) {
+                movementStates.getMovementStates().flying = true;
+            }
             var packetHandler = playerRef.getPacketHandler();
             if (packetHandler != null) {
                 movementManager.update(packetHandler);
+                packetHandler.writeNoCache(
+                        new SetMovementStates(new SavedMovementStates(true)));
             }
         } else {
-            movementManager.resetDefaultsAndUpdate(entityRef, store);
+            MovementSettings settings = movementManager.getSettings();
+            if (settings != null) {
+                settings.canFly = false;
+            }
             MovementStatesComponent movementStates = store.getComponent(entityRef,
                     MovementStatesComponent.getComponentType());
             if (movementStates != null && movementStates.getMovementStates() != null) {
@@ -282,6 +305,7 @@ public class RunTracker {
             }
             var packetHandler = playerRef.getPacketHandler();
             if (packetHandler != null) {
+                movementManager.update(packetHandler);
                 packetHandler.writeNoCache(
                         new SetMovementStates(new SavedMovementStates(false)));
             }
@@ -415,8 +439,7 @@ public class RunTracker {
                 long now = System.currentTimeMillis();
                 if (now - run.lastFlyZoneRollbackMs >= 500L) {
                     run.lastFlyZoneRollbackMs = now;
-                    // DEBUG: temporary message to confirm fly zone detection
-                    player.sendMessage(SystemMessageUtils.parkourWarn("[Debug] Outside fly zone — rolling back."));
+                    player.sendMessage(SystemMessageUtils.parkourWarn("You don't have the right to go there."));
                     double[] rollback = run.lastValidFlyPosition;
                     if (rollback != null) {
                         Vector3d rollbackPos = new Vector3d(rollback[0], rollback[1], rollback[2]);
@@ -1067,11 +1090,13 @@ public class RunTracker {
         }
         ActiveRun previous = activeRuns.get(playerRef.getUuid());
         boolean practiceEnabled = previous != null && previous.practiceEnabled;
+        boolean flyActive = previous != null && previous.flyActive;
         TransformData practiceCheckpoint = previous != null ? previous.practiceCheckpoint : null;
         Vector3f practiceHeadRotation = previous != null ? previous.practiceHeadRotation : null;
         ActiveRun run = setActiveMap(playerRef.getUuid(), mapId, map.getStart());
         if (run != null) {
             run.practiceEnabled = practiceEnabled;
+            run.flyActive = flyActive;
             run.practiceCheckpoint = practiceCheckpoint;
             run.practiceHeadRotation = practiceHeadRotation;
         }
@@ -1197,6 +1222,7 @@ public class RunTracker {
         private boolean finishTouched;
         private int lastCheckpointIndex = -1;
         private boolean practiceEnabled;
+        private boolean flyActive;
         private TransformData practiceCheckpoint;
         private Vector3f practiceHeadRotation;
         private Long fallStartTime;

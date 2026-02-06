@@ -33,6 +33,7 @@ import io.hyvexa.parkour.interaction.PracticeInteraction;
 import io.hyvexa.parkour.interaction.ResetInteraction;
 import io.hyvexa.parkour.interaction.RestartCheckpointInteraction;
 import io.hyvexa.parkour.interaction.StatsInteraction;
+import io.hyvexa.parkour.interaction.ToggleFlyInteraction;
 import com.hypixel.hytale.server.core.event.events.player.PlayerConnectEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerChatEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
@@ -864,6 +865,7 @@ public class HyvexaPlugin extends JavaPlugin {
                 PlayerSettingsInteraction.class, PlayerSettingsInteraction.CODEC);
         registry.register("Forfeit_Interaction", ForfeitInteraction.class, ForfeitInteraction.CODEC);
         registry.register("Duel_Menu_Interaction", DuelMenuInteraction.class, DuelMenuInteraction.CODEC);
+        registry.register("Parkour_Toggle_Fly_Interaction", ToggleFlyInteraction.class, ToggleFlyInteraction.CODEC);
     }
 
     @Override

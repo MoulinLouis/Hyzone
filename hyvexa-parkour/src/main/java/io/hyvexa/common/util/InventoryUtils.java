@@ -52,6 +52,7 @@ public final class InventoryUtils {
             }
             if (practiceEnabled) {
                 setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_PRACTICE_CHECKPOINT, 1));
+                setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_TOGGLE_FLY, 1));
             } else if (PlayerSettingsStore.isResetItemEnabled(resolvePlayerUuid(player))) {
                 setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_RESET, 1));
             }
@@ -81,6 +82,7 @@ public final class InventoryUtils {
         }
         if (practiceEnabled) {
             setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_PRACTICE_CHECKPOINT, 1));
+            setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_TOGGLE_FLY, 1));
         } else if (PlayerSettingsStore.isResetItemEnabled(resolvePlayerUuid(player))) {
             setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_RESET, 1));
         }
