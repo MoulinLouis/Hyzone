@@ -148,14 +148,9 @@ public class SummitPage extends BaseAscendPage {
                 : String.format(" (Lv.%d)", preview.currentLevel());
             commandBuilder.set("#CategoryCards[" + i + "] #CategoryName.Text", category.getDisplayName() + levelText);
 
-            // Bonus text: "Current: x1.00 -> Next: x1.10" or just current if no gain
-            String bonusText;
-            if (preview.hasGain()) {
-                bonusText = "Current: " + formatBonus(category, preview.currentBonus())
-                    + " -> Next: " + formatBonus(category, preview.newBonus());
-            } else {
-                bonusText = "Current: " + formatBonus(category, preview.currentBonus());
-            }
+            // Bonus text: always show "Current: x1.00 -> Next: x1.10"
+            String bonusText = "Current: " + formatBonus(category, preview.currentBonus())
+                + " -> Next: " + formatBonus(category, preview.newBonus());
             commandBuilder.set("#CategoryCards[" + i + "] #CategoryBonus.Text", bonusText);
 
             // XP progress text
