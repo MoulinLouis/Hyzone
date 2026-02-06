@@ -196,8 +196,10 @@ public class AscendAdminCoinsPage extends InteractiveCustomUIPage<AscendAdminCoi
             return;
         }
         if (add) {
-            playerStore.addCoins(playerRef.getUuid(), java.math.BigDecimal.valueOf(amount));
-            player.sendMessage(Message.raw("[Ascend] Added " + amount + " coins.")
+            java.math.BigDecimal bdAmount = java.math.BigDecimal.valueOf(amount);
+            playerStore.addCoins(playerRef.getUuid(), bdAmount);
+            playerStore.addSummitAccumulatedCoins(playerRef.getUuid(), bdAmount);
+            player.sendMessage(Message.raw("[Ascend] Added " + amount + " coins (counts toward Summit).")
                 .color(SystemMessageUtils.SUCCESS));
         } else {
             playerStore.addCoins(playerRef.getUuid(), java.math.BigDecimal.valueOf(-amount));

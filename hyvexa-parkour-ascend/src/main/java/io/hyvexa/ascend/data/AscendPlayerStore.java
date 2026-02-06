@@ -725,7 +725,7 @@ public class AscendPlayerStore {
         AscendPlayerProgress.MapProgress mapProgress = getOrCreateMapProgress(playerId, mapId);
         mapProgress.setRobotSpeedLevel(0);
         int newStars = mapProgress.incrementRobotStars();
-        // Evolution Power applied exponentially per star (handled in AscendConstants.getRunnerMultiplierIncrement)
+        // Evolution Power applied per star (handled in AscendConstants.getRunnerMultiplierIncrement)
         markDirty(playerId);
         return newStars;
     }
@@ -799,6 +799,15 @@ public class AscendPlayerStore {
     public BigDecimal getSummitAccumulatedCoins(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
         return progress != null ? progress.getSummitAccumulatedCoins() : BigDecimal.ZERO;
+    }
+
+    public void addSummitAccumulatedCoins(UUID playerId, BigDecimal amount) {
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+        AscendPlayerProgress progress = getOrCreatePlayer(playerId);
+        progress.addSummitAccumulatedCoins(amount);
+        markDirty(playerId);
     }
 
     public void addTotalCoinsEarned(UUID playerId, BigDecimal amount) {
