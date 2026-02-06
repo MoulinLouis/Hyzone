@@ -311,41 +311,43 @@ Summit converts coins into XP for permanent category bonuses, resetting coins, e
 
 ### XP System
 
-**Coin to XP conversion:** `sqrt(coins / 1B)` (diminishing returns)
+**Coin to XP conversion:** `(coins / 1B)^(3/7)` (compressed diminishing returns)
 
 | Coins | XP Gained |
 |-------|-----------|
 | 1B | 1 |
-| 10B | 3 |
-| 100B | 10 |
-| 1T | 31 |
-| 10T | 100 |
-| 1Q | 1,000 |
-| 10Q | 3,162 |
+| 10B | 2 |
+| 100B | 5 |
+| 1T | 19 |
+| 10T | 51 |
+| 100T | 139 |
+| 1Q | 372 |
 
 **Minimum coins for 1 XP:** 1 billion coins (1B)
 
-**XP per level formula:** `level^4`
+**XP per level formula:** `level^2`
 
 | Level | XP Required | Cumulative XP |
 |-------|-------------|---------------|
 | 1 | 1 | 1 |
-| 2 | 16 | 17 |
-| 3 | 81 | 98 |
-| 4 | 256 | 354 |
-| 5 | 625 | 979 |
-| 10 | 10,000 | ~25,333 |
+| 2 | 4 | 5 |
+| 3 | 9 | 14 |
+| 5 | 25 | 55 |
+| 10 | 100 | 385 |
+| 20 | 400 | 2,870 |
+| 50 | 2,500 | 42,925 |
 
-**Expected level gains by coins:**
+**Expected level gains by coins (from level 0):**
 
-| Coins | XP | Levels Gained |
-|-------|-----|---------------|
+| Coins | XP | Approx Level |
+|-------|-----|--------------|
 | 1B | 1 | 1 |
-| 10B | 3 | 1 |
-| 100B | 10 | 2 |
-| 1T | 31 | 2 |
-| 10T | 100 | 3 |
-| 10Q | 3,162 | 7 |
+| 10B | 2 | 1 |
+| 100B | 5 | 2 |
+| 1T | 19 | 3 |
+| 10T | 51 | 4 |
+| 100T | 139 | 6 |
+| 1Q | 372 | 9 |
 
 ### What Summit Resets
 
@@ -536,14 +538,20 @@ All formulas use consistent growth rates:
 - **Elevation cost:** 1.15^(level^0.77) for level<=300, then 1.15^(300^0.77 + (level-300)^0.63) (soft cap at 300)
 - **Upgrades:** 2^totalLevel (100% growth per level, smooth and predictable)
 - **Evolution gain:** EP^stars, where EP = 2 + 1.5 × level / (level + 10), asymptote ~3.5
-- **Summit XP:** sqrt(accumulatedCoins / 1B) (based on coins earned since last Summit/Elevation)
-- **Summit levels:** level^2.5 (late-game scaling)
+- **Summit XP:** (accumulatedCoins / 1B)^(3/7) (compressed diminishing returns)
+- **Summit levels:** level^2 (manageable numbers at all levels)
 
 Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure continuous progression after evolution.
 
 ---
 
 ## Version History
+
+- **2026-02-06 (v14):** Summit XP number compression
+  - Level exponent: 2.5 → 2.0 (level 50: 17,678 → 2,500 XP per level)
+  - Coins→XP: sqrt → power 3/7 (compensates to preserve same coin→level mapping)
+  - Same coins still reach the same levels (within ~5%)
+  - DB migration: existing XP converted via `old_xp^(6/7)`
 
 - **2026-02-06 (v13):** Evolution Power asymptotic growth
   - EP formula changed from `2 + 0.5 × level^0.8` to `2 + 1.5 × level / (level + 10)`

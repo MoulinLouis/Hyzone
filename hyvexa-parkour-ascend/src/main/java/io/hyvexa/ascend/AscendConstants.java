@@ -454,26 +454,43 @@ public final class AscendConstants {
     // Summit XP System
     // ========================================
 
-    public static final double SUMMIT_XP_LEVEL_EXPONENT = 2.5; // Exponent for level formula
+    public static final double SUMMIT_XP_LEVEL_EXPONENT = 2.0; // Exponent for level formula
+    public static final double SUMMIT_XP_COIN_POWER = 3.0 / 7.0; // ~0.4286, compression for coins → XP
     public static final long SUMMIT_MIN_COINS = 1_000_000_000L; // Minimum coins for 1 XP (1B)
 
     /**
      * Convert coins to XP.
-     * Formula: sqrt(coins / SUMMIT_MIN_COINS)
-     * At 1B = 1 XP, at 10B ≈ 3 XP, at 1T ≈ 31 XP.
+     * Formula: (coins / SUMMIT_MIN_COINS)^(3/7)
+     * At 1B = 1 XP, at 10B ≈ 2 XP, at 1T ≈ 19 XP, at 1Q ≈ 372 XP.
+     * Uses power 3/7 (paired with level^2.0) to preserve the same coin→level mapping
+     * as the old system (sqrt + level^2.5) while producing smaller XP numbers.
      */
     public static long coinsToXp(BigDecimal coins) {
         if (coins.compareTo(BigDecimal.ZERO) <= 0) {
             return 0;
         }
-        BigDecimal ratio = coins.divide(BigDecimal.valueOf(SUMMIT_MIN_COINS), CALC_CTX);
-        BigDecimal xp = ratio.sqrt(CALC_CTX);
-        return xp.longValue();
+        double ratio = coins.divide(BigDecimal.valueOf(SUMMIT_MIN_COINS), CALC_CTX).doubleValue();
+        if (ratio < 1.0) {
+            return 0;
+        }
+        return (long) Math.pow(ratio, SUMMIT_XP_COIN_POWER);
+    }
+
+    /**
+     * Calculate coins needed to reach a given XP amount.
+     * Inverse of coinsToXp: coins = xp^(7/3) × SUMMIT_MIN_COINS
+     */
+    public static BigDecimal xpToCoins(long xp) {
+        if (xp <= 0) {
+            return BigDecimal.ZERO;
+        }
+        double coins = Math.pow(xp, 7.0 / 3.0) * SUMMIT_MIN_COINS;
+        return BigDecimal.valueOf(coins);
     }
 
     /**
      * Calculate XP required to reach a specific level (from level-1).
-     * Formula: level^2.5
+     * Formula: level^2.0
      */
     public static long getXpForLevel(int level) {
         if (level <= 0) return 0;
@@ -527,46 +544,14 @@ public final class AscendConstants {
     public static final long ASCENSION_COIN_THRESHOLD = 10_000_000_000_000_000L; // 10 quadrillion coins
 
     public enum SkillTreeNode {
-        // Coin Path (5 nodes)
-        COIN_T1_STARTING_COINS("Starting Coins", "Start with 1,000 coins after Ascension", SkillTreePath.COIN, 1, null),
-        COIN_T2_BASE_REWARD("Base Reward +25%", "+25% base coin rewards", SkillTreePath.COIN, 2, "COIN_T1_STARTING_COINS"),
-        COIN_T3_ELEVATION_COST("Elevation Cost -20%", "Elevate at 800 coins instead of 1,000", SkillTreePath.COIN, 3, "COIN_T2_BASE_REWARD"),
-        COIN_T4_SUMMIT_COST("Summit Cost -15%", "Summit category upgrades cost 15% less", SkillTreePath.COIN, 4, "COIN_T3_ELEVATION_COST"),
-        COIN_T5_AUTO_ELEVATION("Auto Elevation", "Automatically elevate when threshold reached", SkillTreePath.COIN, 5, "COIN_T4_SUMMIT_COST"),
-
-        // Speed Path (5 nodes)
-        SPEED_T1_BASE_SPEED("Base Speed +10%", "Runners move 10% faster baseline", SkillTreePath.SPEED, 1, null),
-        SPEED_T2_MAX_LEVEL("Max Level +5", "Speed upgrades can reach level 25", SkillTreePath.SPEED, 2, "SPEED_T1_BASE_SPEED"),
-        SPEED_T3_EVOLUTION_COST("Evolution Cost -50%", "Runner evolution costs 50% less", SkillTreePath.SPEED, 3, "SPEED_T2_MAX_LEVEL"),
-        SPEED_T4_DOUBLE_LAP("Double Lap", "Runners complete 2 laps per cycle", SkillTreePath.SPEED, 4, "SPEED_T3_EVOLUTION_COST"),
-        SPEED_T5_INSTANT_EVOLVE("Instant Evolution", "Evolution doesn't reset speed level", SkillTreePath.SPEED, 5, "SPEED_T4_DOUBLE_LAP"),
-
-        // Manual Path (5 nodes)
-        MANUAL_T1_MULTIPLIER("Manual +50%", "+50% manual run multiplier", SkillTreePath.MANUAL, 1, null),
-        MANUAL_T2_CHAIN_BONUS("Chain Bonus", "+10% per consecutive run (max +100%)", SkillTreePath.MANUAL, 2, "MANUAL_T1_MULTIPLIER"),
-        MANUAL_T3_SESSION_BONUS("Session Bonus", "First run of session: 3x multiplier", SkillTreePath.MANUAL, 3, "MANUAL_T2_CHAIN_BONUS"),
-        MANUAL_T4_RUNNER_BOOST("Runner Boost", "Coming soon", SkillTreePath.MANUAL, 4, "MANUAL_T3_SESSION_BONUS"),
-        MANUAL_T5_PERSONAL_BEST("Personal Best", "Coming soon", SkillTreePath.MANUAL, 5, "MANUAL_T4_RUNNER_BOOST"),
-
-        // Hybrid Nodes (requires points in multiple paths)
-        HYBRID_OFFLINE_EARNINGS("Offline Earnings", "Earn coins while offline (capped)", SkillTreePath.HYBRID, 1, null),
-        HYBRID_SUMMIT_PERSIST("Summit Persistence", "Summit levels partially persist on Ascension", SkillTreePath.HYBRID, 2, null),
-
-        // Ultimate Node
-        ULTIMATE_GLOBAL_BOOST("Global Boost", "+100% to ALL systems", SkillTreePath.ULTIMATE, 1, null);
+        AUTO_RUNNERS("Automate Runners", "Auto-upgrade runners (cheapest first, no evolution)");
 
         private final String name;
         private final String description;
-        private final SkillTreePath path;
-        private final int tier;
-        private final String prerequisiteId;
 
-        SkillTreeNode(String name, String description, SkillTreePath path, int tier, String prerequisiteId) {
+        SkillTreeNode(String name, String description) {
             this.name = name;
             this.description = description;
-            this.path = path;
-            this.tier = tier;
-            this.prerequisiteId = prerequisiteId;
         }
 
         public String getName() {
@@ -576,38 +561,7 @@ public final class AscendConstants {
         public String getDescription() {
             return description;
         }
-
-        public SkillTreePath getPath() {
-            return path;
-        }
-
-        public int getTier() {
-            return tier;
-        }
-
-        public String getPrerequisiteId() {
-            return prerequisiteId;
-        }
-
-        public SkillTreeNode getPrerequisite() {
-            if (prerequisiteId == null) {
-                return null;
-            }
-            try {
-                return SkillTreeNode.valueOf(prerequisiteId);
-            } catch (IllegalArgumentException e) {
-                return null;
-            }
-        }
     }
-
-    public enum SkillTreePath {
-        COIN, SPEED, MANUAL, HYBRID, ULTIMATE
-    }
-
-    // Hybrid node requirements: points in specific paths
-    public static final int HYBRID_PATH_REQUIREMENT = 3; // 3 points in each required path
-    public static final int ULTIMATE_TOTAL_REQUIREMENT = 12; // 12 total points to unlock ultimate
 
     // ========================================
     // Achievement System
