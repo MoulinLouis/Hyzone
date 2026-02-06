@@ -27,6 +27,7 @@ import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
+import io.hyvexa.ascend.data.AscendSettingsStore;
 import io.hyvexa.ascend.util.MapUnlockHelper;
 import io.hyvexa.ascend.ghost.GhostRecorder;
 import io.hyvexa.ascend.robot.RobotManager;
@@ -41,8 +42,10 @@ import java.util.concurrent.ConcurrentHashMap;
 public class AscendRunTracker {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final double FINISH_RADIUS_SQ = 2.25; // 1.5^2
-    private static final double START_DETECTION_RADIUS_SQ = 2.25; // 1.5^2 - radius for walk-on start detection
+    private static final double FINISH_RADIUS_SQ = 2.25; // 1.5^2 (horizontal XZ)
+    private static final double FINISH_VERTICAL_RANGE = 3.0; // vertical tolerance for finish detection
+    private static final double START_DETECTION_RADIUS_SQ = 2.25; // 1.5^2 (horizontal XZ)
+    private static final double START_VERTICAL_RANGE = 3.0; // vertical tolerance for walk-on start detection
     private static final double MOVEMENT_THRESHOLD_SQ = 0.01; // 0.1^2 - minimum movement to start run
     private static final long POST_COMPLETION_FREEZE_MS = 500; // 0.5s freeze after completing a run
 
@@ -198,7 +201,7 @@ public class AscendRunTracker {
         double dy = pos.getY() - map.getFinishY();
         double dz = pos.getZ() - map.getFinishZ();
 
-        if (dx * dx + dy * dy + dz * dz <= FINISH_RADIUS_SQ) {
+        if (dx * dx + dz * dz <= FINISH_RADIUS_SQ && Math.abs(dy) <= FINISH_VERTICAL_RANGE) {
             completeRun(playerRef, player, run, map, ref, store);
         }
     }
@@ -379,13 +382,31 @@ public class AscendRunTracker {
             double dy = pos.getY() - map.getStartY();
             double dz = pos.getZ() - map.getStartZ();
 
-            if (dx * dx + dy * dy + dz * dz <= START_DETECTION_RADIUS_SQ) {
+            if (dx * dx + dz * dz <= START_DETECTION_RADIUS_SQ && Math.abs(dy) <= START_VERTICAL_RANGE) {
                 // Player is on this map's start - check if unlocked
                 MapUnlockHelper.UnlockResult unlockResult = MapUnlockHelper.checkAndEnsureUnlock(
                     playerId, map, playerStore, mapStore);
                 if (!unlockResult.unlocked) {
-                    // Map not unlocked, ignore
-                    continue;
+                    // Map not unlocked - teleport player back to spawn
+                    ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+                    if (plugin != null) {
+                        AscendSettingsStore settingsStore = plugin.getSettingsStore();
+                        if (settingsStore != null && settingsStore.hasSpawnPosition()) {
+                            Vector3d spawnPos = settingsStore.getSpawnPosition();
+                            Vector3f spawnRot = settingsStore.getSpawnRotation();
+                            store.addComponent(ref, Teleport.getComponentType(),
+                                new Teleport(store.getExternalData().getWorld(), spawnPos, spawnRot));
+                        }
+                    }
+
+                    // Build message with previous map requirement info
+                    AscendMap previousMap = MapUnlockHelper.getPreviousMap(map, mapStore);
+                    String prevName = previousMap != null && previousMap.getName() != null && !previousMap.getName().isBlank()
+                        ? previousMap.getName() : "previous map";
+                    player.sendMessage(Message.raw("[Ascend] This map is locked! Level the runner on " + prevName
+                        + " to " + AscendConstants.MAP_UNLOCK_REQUIRED_RUNNER_LEVEL + " to unlock it.")
+                        .color(SystemMessageUtils.ERROR));
+                    return;
                 }
 
                 // Start the run for this map
