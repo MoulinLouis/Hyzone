@@ -92,9 +92,6 @@ public class AscendLeaveInteraction extends SimpleInteraction {
 
         // Give back menu items
         plugin.giveMenuItems(player);
-
-        player.sendMessage(Message.raw("[Ascend] Run ended.")
-            .color(SystemMessageUtils.SECONDARY));
     }
 
     private boolean confirmLeave(Player player, UUID playerId, String mapId) {

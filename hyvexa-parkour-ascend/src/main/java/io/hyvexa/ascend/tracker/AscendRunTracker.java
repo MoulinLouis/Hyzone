@@ -42,8 +42,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class AscendRunTracker {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final double FINISH_RADIUS_SQ = 2.25; // 1.5^2 (horizontal XZ)
-    private static final double FINISH_VERTICAL_RANGE = 3.0; // vertical tolerance for finish detection
+    private static final double FINISH_RADIUS_SQ = 1.0; // 1.0^2 (horizontal XZ)
+    private static final double FINISH_VERTICAL_RANGE = 1.5; // vertical tolerance for finish detection
     private static final double START_DETECTION_RADIUS_SQ = 2.25; // 1.5^2 (horizontal XZ)
     private static final double START_VERTICAL_RANGE = 3.0; // vertical tolerance for walk-on start detection
     private static final double MOVEMENT_THRESHOLD_SQ = 0.01; // 0.1^2 - minimum movement to start run
@@ -204,7 +204,6 @@ public class AscendRunTracker {
             if (dx * dx + dy * dy + dz * dz > MOVEMENT_THRESHOLD_SQ) {
                 // Player has moved - start the actual run
                 startRun(playerId, pendingRun.mapId);
-                player.sendMessage(Message.raw("[Ascend] Timer started!").color(SystemMessageUtils.SUCCESS));
             }
             return;
         }
@@ -322,11 +321,6 @@ public class AscendRunTracker {
             LOGGER.atWarning().log("GhostRecorder is null - cannot save recording");
         }
 
-        if (firstCompletion) {
-            player.sendMessage(Message.raw("[Ascend] Map completed! You can now buy a runner for this map.")
-                .color(SystemMessageUtils.SUCCESS));
-        }
-
         // Format completion time
         long seconds = completionTimeMs / 1000;
         long millis = completionTimeMs % 1000;
@@ -438,9 +432,6 @@ public class AscendRunTracker {
                 // Start the run for this map
                 Vector3d startPos = new Vector3d(map.getStartX(), map.getStartY(), map.getStartZ());
                 setPendingRun(playerId, map.getId(), startPos);
-
-                String mapName = map.getName() != null && !map.getName().isBlank() ? map.getName() : map.getId();
-                player.sendMessage(Message.raw("[Ascend] Ready: " + mapName + " - Move to start!"));
 
                 // Give run items (reset + leave)
                 ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();

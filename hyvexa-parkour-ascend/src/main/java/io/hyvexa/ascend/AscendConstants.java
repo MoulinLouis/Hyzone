@@ -215,17 +215,17 @@ public final class AscendConstants {
      * @return Multiplier increment per completion (base 0.1)
      */
     public static BigDecimal getRunnerMultiplierIncrement(int stars) {
-        return getRunnerMultiplierIncrement(stars, 1.0, 2.0);
+        return getRunnerMultiplierIncrement(stars, 1.0, 3.0);
     }
 
     /**
      * Get the multiplier increment for a runner with Summit bonuses.
      * Base: 0.1 per completion, raised by Evolution Power per star.
      * Formula: base × evolutionPower^stars × multiplierGainBonus
-     * Example with evolutionPower=2: 0★=0.1, 1★=0.2, 2★=0.4, 3★=0.8, 5★=3.2
+     * Example with evolutionPower=3: 0★=0.1, 1★=0.3, 2★=0.9, 3★=2.7, 5★=24.3
      * @param stars Evolution level - each star multiplies by evolutionPower
      * @param multiplierGainBonus Bonus from Summit Multiplier Gain (1.0 = no bonus)
-     * @param evolutionPowerBonus Bonus from Summit Evolution Power (2.0 at level 0, asymptote ~3.5)
+     * @param evolutionPowerBonus Bonus from Summit Evolution Power (3.0 at level 0, asymptote ~4.5)
      * @return Multiplier increment per completion
      */
     public static BigDecimal getRunnerMultiplierIncrement(int stars, double multiplierGainBonus, double evolutionPowerBonus) {
@@ -438,14 +438,14 @@ public final class AscendConstants {
          * Get the bonus multiplier for a given level.
          * - RUNNER_SPEED: 1 + 0.45 × √niveau
          * - MULTIPLIER_GAIN: 1.5 + 0.5 × niveau^0.8
-         * - EVOLUTION_POWER: 2 + 1.5 × niveau / (niveau + 10) — asymptote ~3.5
+         * - EVOLUTION_POWER: 3 + 1.5 × niveau / (niveau + 10) — asymptote ~4.5
          */
         public double getBonusForLevel(int level) {
             int safeLevel = Math.max(0, level);
             return switch (this) {
                 case RUNNER_SPEED -> 1.0 + 0.45 * Math.sqrt(safeLevel);
                 case MULTIPLIER_GAIN -> 1.5 + 0.5 * Math.pow(safeLevel, 0.8);
-                case EVOLUTION_POWER -> 2.0 + 1.5 * safeLevel / (safeLevel + 10.0);
+                case EVOLUTION_POWER -> 3.0 + 1.5 * safeLevel / (safeLevel + 10.0);
             };
         }
     }

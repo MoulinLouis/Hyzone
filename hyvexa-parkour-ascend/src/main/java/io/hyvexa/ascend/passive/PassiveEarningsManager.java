@@ -107,7 +107,7 @@ public class PassiveEarningsManager {
             // Get Summit bonuses (Multiplier Gain + Evolution Power)
             ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
             double multiplierGainBonus = 1.0;
-            double evolutionPowerBonus = 2.0;
+            double evolutionPowerBonus = 3.0;
             if (plugin != null && plugin.getSummitManager() != null) {
                 multiplierGainBonus = plugin.getSummitManager().getMultiplierGainBonus(playerId).doubleValue();
                 evolutionPowerBonus = plugin.getSummitManager().getEvolutionPowerBonus(playerId).doubleValue();
