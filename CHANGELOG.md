@@ -5,6 +5,10 @@
 ### Added
 - **Ascend: Leaderboard system** - New `/ascend leaderboard` command with tabbed rankings for Coins, Ascensions, and Manual Runs. Includes pagination (50 per page) and player search. Accessible via the Bolt of Stormsilk item.
 
+### Fixed
+- **Ascend: Evolution Power now applies to runner evolution** - Each star multiplies the multiplier gain by the Evolution Power value (e.g., ×2 base: 0★=0.10, 1★=0.20, 2★=0.40, 3★=0.80). Higher Summit Evolution Power makes each star exponentially stronger.
+- **Ascend: Multiplier gain display now shows 2 decimal places** - Values like +0.15x now display correctly instead of rounding to +0.2x
+
 ### Changed
 - **Ascend: Evolution default multiplier bonus adjusted** - Evolved runners now apply ×2 multiplier gain per run instead of ×10
 - **Ascend: Summit system rebalanced for late-game** - Summit now requires 1T coins minimum for first level (was 10K), and resets multipliers/runners like elevation
