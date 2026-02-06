@@ -60,7 +60,7 @@ public class AscendPlayerStore {
                    total_coins_earned, total_manual_runs, active_title,
                    ascension_started_at, fastest_ascension_ms,
                    last_active_timestamp, has_unclaimed_passive,
-                   summit_accumulated_coins
+                   summit_accumulated_coins, auto_upgrade_enabled
             FROM ascend_players
             """;
         try (Connection conn = DatabaseManager.getInstance().getConnection();
@@ -97,6 +97,7 @@ public class AscendPlayerStore {
                         if (summitAccumulated != null) {
                             progress.setSummitAccumulatedCoins(summitAccumulated);
                         }
+                        progress.setAutoUpgradeEnabled(rs.getBoolean("auto_upgrade_enabled"));
                     } catch (SQLException ignored) {
                         // Columns may not exist yet
                     }
@@ -859,11 +860,6 @@ public class AscendPlayerStore {
         if (progress.getAvailableSkillPoints() <= 0) {
             return false;
         }
-        // Check prerequisite
-        SkillTreeNode prereq = node.getPrerequisite();
-        if (prereq != null && !progress.hasSkillNode(prereq)) {
-            return false;
-        }
         progress.unlockSkillNode(node);
         markDirty(playerId);
         return true;
@@ -1151,8 +1147,8 @@ public class AscendPlayerStore {
             INSERT INTO ascend_players (uuid, coins, elevation_multiplier, ascension_count,
                 skill_tree_points, total_coins_earned, total_manual_runs, active_title,
                 ascension_started_at, fastest_ascension_ms, last_active_timestamp, has_unclaimed_passive,
-                summit_accumulated_coins)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                summit_accumulated_coins, auto_upgrade_enabled)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 coins = VALUES(coins), elevation_multiplier = VALUES(elevation_multiplier),
                 ascension_count = VALUES(ascension_count), skill_tree_points = VALUES(skill_tree_points),
@@ -1161,7 +1157,8 @@ public class AscendPlayerStore {
                 fastest_ascension_ms = VALUES(fastest_ascension_ms),
                 last_active_timestamp = VALUES(last_active_timestamp),
                 has_unclaimed_passive = VALUES(has_unclaimed_passive),
-                summit_accumulated_coins = VALUES(summit_accumulated_coins)
+                summit_accumulated_coins = VALUES(summit_accumulated_coins),
+                auto_upgrade_enabled = VALUES(auto_upgrade_enabled)
             """;
 
         String mapSql = """
@@ -1236,6 +1233,7 @@ public class AscendPlayerStore {
                 }
                 playerStmt.setBoolean(12, progress.hasUnclaimedPassive());
                 playerStmt.setBigDecimal(13, progress.getSummitAccumulatedCoins());
+                playerStmt.setBoolean(14, progress.isAutoUpgradeEnabled());
                 playerStmt.addBatch();
 
                 // Save map progress
@@ -1317,6 +1315,17 @@ public class AscendPlayerStore {
     public void setHasUnclaimedPassive(UUID playerId, boolean hasUnclaimed) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
         progress.setHasUnclaimedPassive(hasUnclaimed);
+        markDirty(playerId);
+    }
+
+    public boolean isAutoUpgradeEnabled(UUID playerId) {
+        AscendPlayerProgress progress = players.get(playerId);
+        return progress != null && progress.isAutoUpgradeEnabled();
+    }
+
+    public void setAutoUpgradeEnabled(UUID playerId, boolean enabled) {
+        AscendPlayerProgress progress = getOrCreatePlayer(playerId);
+        progress.setAutoUpgradeEnabled(enabled);
         markDirty(playerId);
     }
 }

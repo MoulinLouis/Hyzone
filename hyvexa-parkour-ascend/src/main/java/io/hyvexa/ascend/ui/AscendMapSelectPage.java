@@ -31,9 +31,11 @@ import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.common.ui.ButtonEventData;
 
 import javax.annotation.Nonnull;
+import java.util.HashMap;
 import java.util.Locale;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -57,6 +59,8 @@ public class AscendMapSelectPage extends BaseAscendPage {
     private final GhostStore ghostStore;
     private ScheduledFuture<?> refreshTask;
     private int lastMapCount;
+    private final List<String> displayedMapIds = new ArrayList<>();
+    private final Map<String, int[]> cachedMapState = new HashMap<>(); // mapId -> [speedLevel, stars]
 
 
     public AscendMapSelectPage(@Nonnull PlayerRef playerRef, AscendMapStore mapStore,
@@ -184,6 +188,8 @@ public class AscendMapSelectPage extends BaseAscendPage {
     private void buildMapList(Ref<EntityStore> ref, Store<EntityStore> store,
                               UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
         commandBuilder.clear("#MapCards");
+        displayedMapIds.clear();
+        cachedMapState.clear();
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (playerRef == null) {
             return;
@@ -328,6 +334,9 @@ public class AscendMapSelectPage extends BaseAscendPage {
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
                 "#MapCards[" + index + "] #RobotBuyButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_ROBOT_PREFIX + map.getId()), false);
+
+            displayedMapIds.add(map.getId());
+            cachedMapState.put(map.getId(), new int[]{speedLevel, stars});
             index++;
         }
     }
@@ -608,47 +617,147 @@ public class AscendMapSelectPage extends BaseAscendPage {
         }
 
         // Don't send updates if no maps exist (UI elements wouldn't exist)
-        if (maps.isEmpty() || maps.size() != lastMapCount) {
+        if (maps.isEmpty()) {
             return;
+        }
+
+        // Detect new map unlocks (auto-upgrade hit level 3 and unlocked new maps)
+        if (maps.size() > lastMapCount) {
+            for (int i = lastMapCount; i < maps.size(); i++) {
+                AscendMap newMap = maps.get(i);
+                if (newMap != null) {
+                    addMapToUI(ref, store, newMap);
+                }
+            }
+            // addMapToUI sends its own update; continue with regular updates for existing maps
         }
 
         BigDecimal currentCoins = playerStore.getCoins(playerRef.getUuid());
         UICommandBuilder commandBuilder = new UICommandBuilder();
 
-        for (int i = 0; i < maps.size(); i++) {
+        int displayCount = Math.min(displayedMapIds.size(), maps.size());
+        for (int i = 0; i < displayCount; i++) {
             AscendMap map = maps.get(i);
             if (map == null) {
                 continue;
             }
 
-            String accentColor = resolveMapAccentColor(i);
             AscendPlayerProgress.MapProgress mapProgress = playerStore.getMapProgress(playerRef.getUuid(), map.getId());
             boolean hasRobot = mapProgress != null && mapProgress.hasRobot();
             int speedLevel = mapProgress != null ? mapProgress.getRobotSpeedLevel() : 0;
             int stars = mapProgress != null ? mapProgress.getRobotStars() : 0;
 
-            // Only update affordability for maps with runners that can be upgraded
-            if (!hasRobot) {
-                continue; // No runner = no upgrade button
-            }
-            if (speedLevel >= MAX_SPEED_LEVEL && stars >= AscendConstants.MAX_ROBOT_STARS) {
-                continue; // Maxed out = no upgrade button
-            }
-            if (speedLevel >= MAX_SPEED_LEVEL) {
-                continue; // At max speed but not max stars = evolve button, not upgrade
-            }
+            // Check if data changed since last refresh (auto-upgrade happened)
+            int[] cached = cachedMapState.get(map.getId());
+            boolean dataChanged = cached == null || cached[0] != speedLevel || cached[1] != stars;
 
-            // This map has an upgrade button, check affordability
-            BigDecimal upgradeCost = computeUpgradeCost(speedLevel, map.getDisplayOrder(), stars);
-            boolean canAfford = currentCoins.compareTo(upgradeCost) >= 0;
-            String secondaryTextColor = canAfford ? "#ffffff" : "#9fb0ba";
+            if (dataChanged) {
+                // Full row update — progress bar, stars, level, button, price, status, affordability
+                String accentColor = resolveMapAccentColor(i);
 
-            // Update overlay visibility and text colors
-            commandBuilder.set("#MapCards[" + i + "] #ButtonDisabledOverlay.Visible", !canAfford);
-            commandBuilder.set("#MapCards[" + i + "] #RunnerLevel.Style.TextColor", "#ffffff");
-            commandBuilder.set("#MapCards[" + i + "] #RunnerStatus.Style.TextColor", secondaryTextColor);
-            commandBuilder.set("#MapCards[" + i + "] #RobotBuyText.Style.TextColor", secondaryTextColor);
-            commandBuilder.set("#MapCards[" + i + "] #RobotPriceText.Style.TextColor", secondaryTextColor);
+                // Progress bar segments
+                updateProgressBar(commandBuilder, i, speedLevel);
+                for (int seg = 1; seg <= MAX_SPEED_LEVEL; seg++) {
+                    commandBuilder.set("#MapCards[" + i + "] #Seg" + seg + ".Background", accentColor);
+                }
+
+                // Star display
+                updateStarDisplay(commandBuilder, i, stars);
+
+                // Level text
+                String levelText = buildLevelText(stars, speedLevel);
+                commandBuilder.set("#MapCards[" + i + "] #RunnerLevel.Text", levelText);
+
+                // Status text
+                String status = "Run: " + formatRunTime(map, hasRobot, speedLevel, playerRef.getUuid());
+                if (hasRobot) {
+                    status += " (" + formatMultiplierGain(stars, playerRef.getUuid()) + ")";
+                }
+                GhostRecording ghostForPb = ghostStore.getRecording(playerRef.getUuid(), map.getId());
+                if (ghostForPb != null && ghostForPb.getCompletionTimeMs() > 0) {
+                    long bestTimeMs = ghostForPb.getCompletionTimeMs();
+                    double bestTimeSec = bestTimeMs / 1000.0;
+                    status += " | PB: " + String.format("%.2fs", bestTimeSec);
+                }
+                commandBuilder.set("#MapCards[" + i + "] #MapStatus.Text", status);
+
+                // Runner status and button text
+                boolean hasGhostRecording = ghostStore.getRecording(playerRef.getUuid(), map.getId()) != null;
+                String runnerStatusText;
+                String runnerButtonText;
+                BigDecimal actionPrice;
+                if (!hasRobot) {
+                    runnerStatusText = "No Runner";
+                    if (!hasGhostRecording) {
+                        runnerButtonText = "Complete First";
+                        actionPrice = BigDecimal.ZERO;
+                    } else {
+                        runnerButtonText = "Buy Runner";
+                        actionPrice = BigDecimal.ZERO;
+                    }
+                } else {
+                    int speedGainPercent = (int)(AscendConstants.getMapSpeedMultiplier(map.getDisplayOrder()) * 100);
+                    runnerStatusText = "+" + speedGainPercent + "% speed/lvl";
+                    if (speedLevel >= MAX_SPEED_LEVEL && stars < AscendConstants.MAX_ROBOT_STARS) {
+                        runnerButtonText = "Evolve";
+                        actionPrice = BigDecimal.ZERO;
+                        runnerStatusText = formatEvolveGain(stars, playerRef.getUuid());
+                    } else if (stars >= AscendConstants.MAX_ROBOT_STARS && speedLevel >= MAX_SPEED_LEVEL) {
+                        runnerButtonText = "Maxed!";
+                        actionPrice = BigDecimal.ZERO;
+                    } else {
+                        runnerButtonText = "Upgrade";
+                        actionPrice = computeUpgradeCost(speedLevel, map.getDisplayOrder(), stars);
+                    }
+                }
+
+                // Button/price display text
+                String displayButtonText;
+                String displayPriceText;
+                if (runnerButtonText.equals("Upgrade") && actionPrice.compareTo(BigDecimal.ZERO) > 0) {
+                    displayButtonText = "Cost:";
+                    displayPriceText = FormatUtils.formatCoinsForHudDecimal(actionPrice) + " coins";
+                } else {
+                    displayButtonText = runnerButtonText;
+                    displayPriceText = "";
+                }
+
+                // Affordability
+                boolean showDisabledOverlay;
+                String secondaryTextColor;
+                boolean isUpgrade = runnerButtonText.equals("Upgrade") && actionPrice.compareTo(BigDecimal.ZERO) > 0;
+                if (isUpgrade) {
+                    boolean canAfford = currentCoins.compareTo(actionPrice) >= 0;
+                    showDisabledOverlay = !canAfford;
+                    secondaryTextColor = canAfford ? "#ffffff" : "#9fb0ba";
+                } else {
+                    showDisabledOverlay = false;
+                    secondaryTextColor = "#ffffff";
+                }
+
+                commandBuilder.set("#MapCards[" + i + "] #ButtonDisabledOverlay.Visible", showDisabledOverlay);
+                commandBuilder.set("#MapCards[" + i + "] #RunnerLevel.Style.TextColor", "#ffffff");
+                commandBuilder.set("#MapCards[" + i + "] #RunnerStatus.Text", runnerStatusText);
+                commandBuilder.set("#MapCards[" + i + "] #RunnerStatus.Style.TextColor", secondaryTextColor);
+                commandBuilder.set("#MapCards[" + i + "] #RobotBuyText.Text", displayButtonText);
+                commandBuilder.set("#MapCards[" + i + "] #RobotBuyText.Style.TextColor", secondaryTextColor);
+                commandBuilder.set("#MapCards[" + i + "] #RobotPriceText.Text", displayPriceText);
+                commandBuilder.set("#MapCards[" + i + "] #RobotPriceText.Style.TextColor", secondaryTextColor);
+
+                // Update cache
+                cachedMapState.put(map.getId(), new int[]{speedLevel, stars});
+            } else if (hasRobot && speedLevel < MAX_SPEED_LEVEL) {
+                // No data change — affordability-only update for maps with upgrade buttons
+                BigDecimal upgradeCost = computeUpgradeCost(speedLevel, map.getDisplayOrder(), stars);
+                boolean canAfford = currentCoins.compareTo(upgradeCost) >= 0;
+                String secondaryTextColor = canAfford ? "#ffffff" : "#9fb0ba";
+
+                commandBuilder.set("#MapCards[" + i + "] #ButtonDisabledOverlay.Visible", !canAfford);
+                commandBuilder.set("#MapCards[" + i + "] #RunnerLevel.Style.TextColor", "#ffffff");
+                commandBuilder.set("#MapCards[" + i + "] #RunnerStatus.Style.TextColor", secondaryTextColor);
+                commandBuilder.set("#MapCards[" + i + "] #RobotBuyText.Style.TextColor", secondaryTextColor);
+                commandBuilder.set("#MapCards[" + i + "] #RobotPriceText.Style.TextColor", secondaryTextColor);
+            }
         }
 
         // Also update action button states
@@ -792,6 +901,9 @@ public class AscendMapSelectPage extends BaseAscendPage {
         commandBuilder.set("#MapCards[" + index + "] #RobotPriceText.Text", displayPriceText);
         commandBuilder.set("#MapCards[" + index + "] #RobotPriceText.Style.TextColor", secondaryTextColor);
         commandBuilder.set("#MapCards[" + index + "] #MapStatus.Text", status);
+
+        // Keep cache in sync so the periodic refresh doesn't see a stale diff
+        cachedMapState.put(mapId, new int[]{speedLevel, stars});
 
         // Also update action button states (runner state may have changed)
         updateBuyAllButtonState(commandBuilder, playerRef.getUuid());
@@ -948,7 +1060,9 @@ public class AscendMapSelectPage extends BaseAscendPage {
             "#MapCards[" + index + "] #RobotBuyButton",
             EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_ROBOT_PREFIX + map.getId()), false);
 
-        // Increment map count
+        // Track new map in cache
+        displayedMapIds.add(map.getId());
+        cachedMapState.put(map.getId(), new int[]{speedLevel, stars});
         lastMapCount++;
 
         // Send update to client

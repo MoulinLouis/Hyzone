@@ -413,6 +413,16 @@ public final class AscendDatabaseSetup {
                 LOGGER.at(Level.SEVERE).log("Failed to add has_unclaimed_passive: " + e.getMessage());
             }
         }
+
+        // Auto-upgrade toggle
+        if (!columnExists(conn, "ascend_players", "auto_upgrade_enabled")) {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN auto_upgrade_enabled BOOLEAN NOT NULL DEFAULT FALSE");
+                LOGGER.atInfo().log("Added auto_upgrade_enabled column");
+            } catch (SQLException e) {
+                LOGGER.at(Level.SEVERE).log("Failed to add auto_upgrade_enabled: " + e.getMessage());
+            }
+        }
     }
 
     private static void ensureGhostRecordingTable(Connection conn) {
