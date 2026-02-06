@@ -151,9 +151,9 @@ public class SummitManager {
 
     /**
      * Gets the Evolution Power bonus for runner evolution.
-     * Formula: 2 + 0.5 * level^0.8
-     * Applied exponentially per star: multiplier_increment = 0.1 × evolutionPower^stars
-     * @return Evolution bonus (2.0 at level 0, ~5.15 at level 10)
+     * Formula: 2 + 1.5 × level / (level + 10) — asymptote ~3.5
+     * Applied per star: multiplier_increment = 0.1 × evolutionPower^stars
+     * @return Evolution bonus (2.0 at level 0, ~2.75 at level 10)
      */
     public BigDecimal getEvolutionPowerBonus(UUID playerId) {
         return playerStore.getSummitBonus(playerId, SummitCategory.EVOLUTION_POWER);
