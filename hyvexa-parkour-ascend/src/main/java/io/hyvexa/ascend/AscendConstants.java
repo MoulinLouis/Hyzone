@@ -82,15 +82,6 @@ public final class AscendConstants {
         10000L    // Level 4 (Bleu)
     };
 
-    // Runner purchase prices
-    public static final long[] MAP_RUNNER_PRICES = {
-        50L,      // Level 0 (Rouge)
-        200L,     // Level 1 (Orange)
-        1000L,    // Level 2 (Jaune)
-        5000L,    // Level 3 (Vert)
-        20000L    // Level 4 (Bleu)
-    };
-
     // Runner upgrade cost scaling by map level
     // Higher maps have both cost offset (start further in formula) and multiplier (scale up all costs)
     public static final int[] MAP_UPGRADE_OFFSET = {
@@ -173,13 +164,6 @@ public final class AscendConstants {
             return MAP_UNLOCK_PRICES[MAP_UNLOCK_PRICES.length - 1];
         }
         return MAP_UNLOCK_PRICES[displayOrder];
-    }
-
-    public static long getMapRunnerPrice(int displayOrder) {
-        if (displayOrder < 0 || displayOrder >= MAP_RUNNER_PRICES.length) {
-            return MAP_RUNNER_PRICES[MAP_RUNNER_PRICES.length - 1];
-        }
-        return MAP_RUNNER_PRICES[displayOrder];
     }
 
     public static long getMapBaseReward(int displayOrder) {

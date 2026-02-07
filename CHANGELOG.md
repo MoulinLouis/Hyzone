@@ -8,6 +8,12 @@
 
 ### Fixed
 - **Ascend: Evolution Power now applies to runner evolution** - Each star multiplies the multiplier gain by the Evolution Power value (e.g., ×2 base: 0★=0.10, 1★=0.20, 2★=0.40, 3★=0.80). Higher Summit Evolution Power makes each star exponentially stronger.
+- **Ascend: Added error handling for atomic database operations** - Passive earnings now logs failures when atomic coin/multiplier updates fail
+- **Ascend: Added transaction support for multi-table saves** - Player save operations now use database transactions with rollback on failure
+- **Ascend: Standardized file path construction** - Unified path handling for config files using Path.of() approach
+
+### Removed
+- **Ascend: Removed unused MAP_RUNNER_PRICES constant** - Dead code cleanup (runners are free after map unlock)
 - **Ascend: Multiplier gain display now shows 2 decimal places** - Values like +0.15x now display correctly instead of rounding to +0.2x
 
 ### Changed

@@ -248,12 +248,13 @@ Suggested schema:
 ```sql
 CREATE TABLE ascend_players (
   uuid VARCHAR(36) PRIMARY KEY,
-  coins DOUBLE NOT NULL DEFAULT 0,
+  coins DECIMAL(65,2) NOT NULL DEFAULT 0,
   elevation_multiplier INT NOT NULL DEFAULT 1,
   ascension_count INT NOT NULL DEFAULT 0,
   skill_tree_points INT NOT NULL DEFAULT 0,
-  total_coins_earned DOUBLE NOT NULL DEFAULT 0,
+  total_coins_earned DECIMAL(65,2) NOT NULL DEFAULT 0,
   total_manual_runs INT NOT NULL DEFAULT 0,
+  summit_accumulated_coins DECIMAL(65,2) NOT NULL DEFAULT 0,
   active_title VARCHAR(64) DEFAULT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -261,7 +262,8 @@ CREATE TABLE ascend_players (
 ```
 
 Notes:
-- `coins` and `total_coins_earned` use DOUBLE for fractional precision (automatically migrated from BIGINT on startup).
+- `coins`, `total_coins_earned`, and `summit_accumulated_coins` use DECIMAL(65,2) for precise fractional values (BigDecimal in code).
+- `summit_accumulated_coins` tracks total coins earned during the current Summit progress cycle (used for COIN_FLOW progression).
 - `elevation_multiplier` stores the elevation **level** (not the actual multiplier). The actual multiplier is calculated as `1 + 0.1 × level^0.65`. Column name kept for backwards compatibility.
 - `ascension_count` tracks how many times the player has Ascended.
 - `skill_tree_points` is the total points earned (ascension_count, may differ if points are granted by other means).
@@ -312,7 +314,7 @@ CREATE TABLE ascend_player_maps (
   has_robot BOOLEAN NOT NULL DEFAULT FALSE,
   robot_speed_level INT NOT NULL DEFAULT 0,
   robot_stars INT NOT NULL DEFAULT 0,
-  multiplier DOUBLE NOT NULL DEFAULT 1.0,
+  multiplier DECIMAL(65,20) NOT NULL DEFAULT 1.0,
   best_time_ms BIGINT NULL,
   last_collection_at TIMESTAMP NULL,
   PRIMARY KEY (player_uuid, map_id),
@@ -414,7 +416,8 @@ CREATE TABLE ascend_settings (
   npc_z DOUBLE NOT NULL DEFAULT 0,
   npc_rot_x FLOAT NOT NULL DEFAULT 0,
   npc_rot_y FLOAT NOT NULL DEFAULT 0,
-  npc_rot_z FLOAT NOT NULL DEFAULT 0
+  npc_rot_z FLOAT NOT NULL DEFAULT 0,
+  void_y_threshold DOUBLE DEFAULT NULL
 ) ENGINE=InnoDB;
 ```
 
@@ -422,6 +425,7 @@ Notes:
 - Single row with `id = 1`
 - `spawn_*` fields store the spawn teleport location (configurable via `/as admin` panel)
 - `npc_*` fields store the NPC teleport location (configurable via `/as admin` panel)
+- `void_y_threshold` stores the Y coordinate below which players are teleported back to spawn (NULL = disabled)
 
 ## ascend_ghost_recordings
 Stores ghost recordings for runner replay (personal best movement paths).

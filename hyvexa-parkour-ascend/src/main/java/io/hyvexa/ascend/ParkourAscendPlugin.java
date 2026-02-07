@@ -103,11 +103,12 @@ public class ParkourAscendPlugin extends JavaPlugin {
         AscendDatabaseSetup.ensureTables();
 
         // Initialize whitelist manager
-        File modsFolder = new File("mods/Parkour");
+        java.nio.file.Path modsFolderPath = java.nio.file.Path.of("mods", "Parkour");
+        java.io.File modsFolder = modsFolderPath.toFile();
         if (!modsFolder.exists()) {
             modsFolder.mkdirs();
         }
-        File whitelistFile = new File(modsFolder, "ascend_whitelist.json");
+        java.io.File whitelistFile = modsFolderPath.resolve("ascend_whitelist.json").toFile();
         whitelistManager = new AscendWhitelistManager(whitelistFile);
         WhitelistRegistry.register(whitelistManager);
 

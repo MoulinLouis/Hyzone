@@ -61,7 +61,7 @@ public class AscendMap {
     }
 
     public long getEffectiveRobotPrice() {
-        return AscendConstants.getMapRunnerPrice(displayOrder);
+        return 0L; // Runners are free
     }
 
     public long getBaseReward() {

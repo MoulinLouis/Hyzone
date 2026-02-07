@@ -492,7 +492,7 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
         for (int i = 0; i < 5; i++) {
             String color = i < LEVEL_COLORS.length ? LEVEL_COLORS[i] : "Lv" + i;
             long unlock = AscendConstants.getMapUnlockPrice(i);
-            long runner = AscendConstants.getMapRunnerPrice(i);
+            long runner = 0L; // Runners are free
             long reward = AscendConstants.getMapBaseReward(i);
             long timeMs = AscendConstants.getMapBaseRunTimeMs(i);
             String timeStr = formatTimeShort(timeMs);
