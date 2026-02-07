@@ -7,6 +7,7 @@ public final class PlayerSettingsStore {
 
     private static final ConcurrentHashMap<UUID, Boolean> RESET_ITEM_ENABLED = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<UUID, Boolean> DUEL_HIDE_OPPONENT = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<UUID, Boolean> GHOST_VISIBLE = new ConcurrentHashMap<>();
 
     private PlayerSettingsStore() {
     }
@@ -53,6 +54,20 @@ public final class PlayerSettingsStore {
         return newValue;
     }
 
+    public static boolean isGhostVisible(UUID playerId) {
+        return playerId == null || GHOST_VISIBLE.getOrDefault(playerId, true);
+    }
+
+    public static boolean toggleGhostVisible(UUID playerId) {
+        if (playerId == null) {
+            return true;
+        }
+        boolean visible = GHOST_VISIBLE.getOrDefault(playerId, true);
+        boolean newValue = !visible;
+        GHOST_VISIBLE.put(playerId, newValue);
+        return newValue;
+    }
+
     public static void clearSession(UUID playerId) {
         if (playerId == null) {
             return;
@@ -66,5 +81,6 @@ public final class PlayerSettingsStore {
         }
         RESET_ITEM_ENABLED.remove(playerId);
         DUEL_HIDE_OPPONENT.remove(playerId);
+        GHOST_VISIBLE.remove(playerId);
     }
 }
