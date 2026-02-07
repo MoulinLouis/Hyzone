@@ -47,6 +47,9 @@ import com.hypixel.hytale.server.core.event.events.ecs.UseBlockEvent;
 import com.hypixel.hytale.server.core.Message;
 import io.hyvexa.manager.WorldMapManager;
 import io.hyvexa.common.util.FormatUtils;
+import io.hyvexa.parkour.ghost.GhostNpcManager;
+import io.hyvexa.parkour.ghost.GhostRecorder;
+import io.hyvexa.parkour.ghost.GhostStore;
 import io.hyvexa.parkour.command.CheckpointCommand;
 import io.hyvexa.parkour.command.DatabaseClearCommand;
 import io.hyvexa.parkour.command.DatabaseReloadCommand;
@@ -139,6 +142,9 @@ public class HyvexaPlugin extends JavaPlugin {
     private ScheduledFuture<?> stalePlayerSweepTask;
     private ScheduledFuture<?> teleportDebugTask;
     private ScheduledFuture<?> duelTickTask;
+    private GhostStore ghostStore;
+    private GhostRecorder ghostRecorder;
+    private GhostNpcManager ghostNpcManager;
 
     public HyvexaPlugin(@Nonnull JavaPluginInit init) {
         super(init);
@@ -179,6 +185,14 @@ public class HyvexaPlugin extends JavaPlugin {
         this.globalMessageStore = new GlobalMessageStore();
         this.globalMessageStore.syncLoad();
         this.runTracker = new RunTracker(this.mapStore, this.progressStore, this.settingsStore);
+        this.ghostStore = new GhostStore();
+        this.ghostStore.syncLoad();
+        this.ghostRecorder = new GhostRecorder(this.ghostStore);
+        this.ghostRecorder.start();
+        this.ghostNpcManager = new GhostNpcManager(this.ghostStore, this.mapStore);
+        this.ghostNpcManager.start();
+        this.runTracker.setGhostRecorder(this.ghostRecorder);
+        this.runTracker.setGhostNpcManager(this.ghostNpcManager);
         this.duelStatsStore = new DuelStatsStore();
         this.duelStatsStore.syncLoad();
         this.duelMatchStore = new DuelMatchStore();
@@ -319,6 +333,10 @@ public class HyvexaPlugin extends JavaPlugin {
                     }
                     if (playerRef != null && shouldApplyParkourMode(playerRef, store)) {
                         hudManager.ensureRunHud(playerRef);
+                    }
+                    // Hide all existing ghost NPCs from the newly connected player
+                    if (ghostNpcManager != null && playerRef != null) {
+                        ghostNpcManager.hideGhostsFromPlayer(playerRef.getUuid());
                     }
                 }
             } catch (Exception e) {
@@ -878,6 +896,12 @@ public class HyvexaPlugin extends JavaPlugin {
         cancelScheduled(stalePlayerSweepTask);
         cancelScheduled(teleportDebugTask);
         cancelScheduled(duelTickTask);
+        if (ghostRecorder != null) {
+            ghostRecorder.stop();
+        }
+        if (ghostNpcManager != null) {
+            ghostNpcManager.stop();
+        }
         if (announcementManager != null) {
             announcementManager.shutdown();
         }

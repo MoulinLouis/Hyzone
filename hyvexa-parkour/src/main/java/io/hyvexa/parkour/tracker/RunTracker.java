@@ -36,6 +36,8 @@ import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.data.ProgressStore;
 import io.hyvexa.parkour.data.SettingsStore;
 import io.hyvexa.parkour.data.TransformData;
+import io.hyvexa.parkour.ghost.GhostNpcManager;
+import io.hyvexa.parkour.ghost.GhostRecorder;
 import io.hyvexa.parkour.ui.MapRecommendationPage;
 import io.hyvexa.parkour.ui.PracticeModeHintPage;
 import java.util.ArrayList;
@@ -71,6 +73,8 @@ public class RunTracker {
     private final ConcurrentHashMap<UUID, SessionStats> sessionStats = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Boolean> previousOnGround = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Integer> pendingJumps = new ConcurrentHashMap<>();
+    private GhostRecorder ghostRecorder;
+    private GhostNpcManager ghostNpcManager;
 
     public RunTracker(MapStore mapStore, ProgressStore progressStore,
                              SettingsStore settingsStore) {
@@ -79,15 +83,32 @@ public class RunTracker {
         this.settingsStore = settingsStore;
     }
 
+    public void setGhostRecorder(GhostRecorder ghostRecorder) {
+        this.ghostRecorder = ghostRecorder;
+    }
+
+    public void setGhostNpcManager(GhostNpcManager ghostNpcManager) {
+        this.ghostNpcManager = ghostNpcManager;
+    }
+
     public ActiveRun setActiveMap(UUID playerId, String mapId) {
         return setActiveMap(playerId, mapId, null);
     }
 
     public ActiveRun setActiveMap(UUID playerId, String mapId, TransformData start) {
+        if (ghostRecorder != null) {
+            ghostRecorder.cancelRecording(playerId);
+        }
+        if (ghostNpcManager != null) {
+            ghostNpcManager.despawnGhost(playerId);
+        }
         ActiveRun run = new ActiveRun(mapId, System.currentTimeMillis());
         activeRuns.put(playerId, run);
         idleFalls.remove(playerId);
         armStartOnMovement(run, start);
+        if (ghostNpcManager != null) {
+            ghostNpcManager.spawnGhost(playerId, mapId);
+        }
         return run;
     }
 
@@ -95,6 +116,12 @@ public class RunTracker {
         ActiveRun run = activeRuns.remove(playerId);
         if (run != null && run.practiceEnabled) {
             setFly(playerId, false);
+        }
+        if (ghostRecorder != null) {
+            ghostRecorder.cancelRecording(playerId);
+        }
+        if (ghostNpcManager != null) {
+            ghostNpcManager.despawnGhost(playerId);
         }
     }
 
@@ -112,6 +139,12 @@ public class RunTracker {
     public void handleDisconnect(UUID playerId) {
         if (playerId == null) {
             return;
+        }
+        if (ghostRecorder != null) {
+            ghostRecorder.cancelRecording(playerId);
+        }
+        if (ghostNpcManager != null) {
+            ghostNpcManager.despawnGhost(playerId);
         }
         ActiveRun run = activeRuns.get(playerId);
         if (run != null) {
@@ -803,6 +836,12 @@ public class RunTracker {
             int oldRank = progressStore.getCompletionRank(playerId, mapStore);
             ProgressStore.ProgressionResult result = progressStore.recordMapCompletion(playerId, playerName,
                     map.getId(), durationMs, mapStore, checkpointTimes);
+            if (ghostRecorder != null) {
+                ghostRecorder.stopRecording(playerId, durationMs, result.firstCompletion || result.newBest);
+            }
+            if (ghostNpcManager != null) {
+                ghostNpcManager.despawnGhost(playerId);
+            }
             if (!result.completionSaved) {
                 player.sendMessage(SystemMessageUtils.parkourWarn(
                         "Warning: Your time might not have been saved. Please report this."));
@@ -960,6 +999,12 @@ public class RunTracker {
             run.skipNextTimeIncrement = true;
             resetPingSnapshots(run);
             recordStartPing(run, playerRef);
+            if (ghostRecorder != null && !run.practiceEnabled) {
+                ghostRecorder.startRecording(playerRef.getUuid(), run.mapId);
+            }
+            if (ghostNpcManager != null) {
+                ghostNpcManager.startPlayback(playerRef.getUuid());
+            }
         }
     }
 
