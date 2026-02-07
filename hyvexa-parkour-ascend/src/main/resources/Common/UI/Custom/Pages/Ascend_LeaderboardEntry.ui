@@ -2,17 +2,19 @@ $C = "../Common.ui";
 
 Group {
   LayoutMode: Left;
-  Anchor: (Left: 0, Right: 0, Bottom: 6, Height: 44);
+  Anchor: (Left: 0, Right: 0, Bottom: 4, Height: 44);
   Background: #1a2530(0.95);
+  OutlineColor: #ffffff(0.03);
+  OutlineSize: 1;
 
   Group #AccentBar {
-    Anchor: (Width: 8, Top: 0, Bottom: 0);
+    Anchor: (Width: 4, Top: 0, Bottom: 0);
     Background: #9fb0ba;
   }
 
   Group #ContentRow {
     FlexWeight: 1;
-    Padding: (Left: 12, Right: 12, Top: 12);
+    Padding: (Left: 14, Right: 14, Top: 12);
     LayoutMode: Left;
 
     Label #Rank {
@@ -39,7 +41,7 @@ Group {
       Style: (
         FontSize: 13,
         RenderBold: true,
-        TextColor: #9fb0ba
+        TextColor: #f59e0b
       );
       Text: "0";
     }
