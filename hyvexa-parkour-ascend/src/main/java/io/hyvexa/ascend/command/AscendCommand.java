@@ -24,6 +24,7 @@ import io.hyvexa.ascend.ui.AscendMapSelectPage;
 import io.hyvexa.ascend.ui.AscensionPage;
 import io.hyvexa.ascend.ui.BaseAscendPage;
 import io.hyvexa.ascend.ui.ElevationPage;
+import io.hyvexa.ascend.ui.AscendHelpPage;
 import io.hyvexa.ascend.ui.AutomationPage;
 import io.hyvexa.ascend.ui.SkillTreePage;
 import io.hyvexa.ascend.ui.StatsPage;
@@ -119,7 +120,8 @@ public class AscendCommand extends AbstractAsyncCommand {
                 case "achievements" -> showAchievements(player, playerRef);
                 case "title" -> handleTitle(player, playerRef, args);
                 case "leaderboard" -> openLeaderboardPage(player, playerRef, ref, store);
-                default -> ctx.sendMessage(Message.raw("Unknown subcommand. Use: /ascend, /ascend stats, /ascend elevate, /ascend summit, /ascend ascension, /ascend skills, /ascend automation, /ascend achievements, /ascend title, /ascend leaderboard"));
+                case "help" -> openHelpPage(player, playerRef, ref, store);
+                default -> ctx.sendMessage(Message.raw("Unknown subcommand. Use: /ascend, /ascend stats, /ascend elevate, /ascend summit, /ascend ascension, /ascend skills, /ascend automation, /ascend achievements, /ascend title, /ascend leaderboard, /ascend help"));
             }
         }, world);
     }
@@ -200,6 +202,10 @@ public class AscendCommand extends AbstractAsyncCommand {
         AutomationPage page = new AutomationPage(playerRef, plugin.getPlayerStore(), plugin.getAscensionManager());
         registerActivePage(playerId, page);
         player.getPageManager().openCustomPage(ref, store, page);
+    }
+
+    private void openHelpPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
+        player.getPageManager().openCustomPage(ref, store, new AscendHelpPage(playerRef));
     }
 
     private void openLeaderboardPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
