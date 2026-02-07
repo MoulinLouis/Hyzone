@@ -36,9 +36,13 @@ public class PlayerSettingsPage extends BaseParkourPage {
     private static final String BUTTON_SPEED_X2 = "SpeedX2";
     private static final String BUTTON_SPEED_X4 = "SpeedX4";
     private static final String BUTTON_TOGGLE_RESET_ITEM = "ToggleResetItem";
+    private static final String BUTTON_TOGGLE_GHOST = "ToggleGhost";
     private static final String RESET_ITEM_BUTTON_SELECTOR = "#ResetItemButton";
     private static final String RESET_ITEM_LABEL_DISABLE = "No reset item: Off";
     private static final String RESET_ITEM_LABEL_ENABLE = "No reset item: On";
+    private static final String GHOST_BUTTON_SELECTOR = "#GhostButton";
+    private static final String GHOST_LABEL_ON = "PB Ghost: On";
+    private static final String GHOST_LABEL_OFF = "PB Ghost: Off";
 
     public PlayerSettingsPage(@Nonnull PlayerRef playerRef) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
@@ -61,6 +65,7 @@ public class PlayerSettingsPage extends BaseParkourPage {
         uiCommandBuilder.set("#VipSpeedLabel.Visible", showSpeedBoost);
         uiCommandBuilder.set("#VipSpeedRow.Visible", showSpeedBoost);
         uiCommandBuilder.set(RESET_ITEM_BUTTON_SELECTOR + ".Text", getResetItemLabel(playerRef.getUuid()));
+        uiCommandBuilder.set(GHOST_BUTTON_SELECTOR + ".Text", getGhostLabel(playerRef.getUuid()));
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#HideAllButton",
@@ -81,6 +86,8 @@ public class PlayerSettingsPage extends BaseParkourPage {
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_SPEED_X4), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ResetItemButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TOGGLE_RESET_ITEM), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#GhostButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TOGGLE_GHOST), false);
     }
 
     @Override
@@ -140,6 +147,31 @@ public class PlayerSettingsPage extends BaseParkourPage {
                 }
             }
             player.sendMessage(Message.raw(enabled ? "Reset item enabled." : "Reset item disabled."));
+            player.getPageManager().openCustomPage(ref, store, new PlayerSettingsPage(playerRef));
+            return;
+        }
+        if (BUTTON_TOGGLE_GHOST.equals(data.getButton())) {
+            boolean visible = PlayerSettingsStore.toggleGhostVisible(playerRef.getUuid());
+            HyvexaPlugin plugin = HyvexaPlugin.getInstance();
+            if (plugin != null && plugin.getRunTracker() != null) {
+                String mapId = plugin.getRunTracker().getActiveMapId(playerRef.getUuid());
+                if (!visible && mapId != null) {
+                    // Ghost turned off while in a run — despawn it
+                    io.hyvexa.parkour.ghost.GhostNpcManager ghostNpcManager =
+                            plugin.getGhostNpcManager();
+                    if (ghostNpcManager != null) {
+                        ghostNpcManager.despawnGhost(playerRef.getUuid());
+                    }
+                } else if (visible && mapId != null) {
+                    // Ghost turned on while in a run — spawn it
+                    io.hyvexa.parkour.ghost.GhostNpcManager ghostNpcManager =
+                            plugin.getGhostNpcManager();
+                    if (ghostNpcManager != null) {
+                        ghostNpcManager.spawnGhost(playerRef.getUuid(), mapId);
+                    }
+                }
+            }
+            player.sendMessage(Message.raw(visible ? "PB ghost enabled." : "PB ghost disabled."));
             player.getPageManager().openCustomPage(ref, store, new PlayerSettingsPage(playerRef));
             return;
         }
@@ -224,6 +256,10 @@ public class PlayerSettingsPage extends BaseParkourPage {
 
     private static String getResetItemLabel(UUID playerId) {
         return PlayerSettingsStore.isResetItemEnabled(playerId) ? RESET_ITEM_LABEL_DISABLE : RESET_ITEM_LABEL_ENABLE;
+    }
+
+    private static String getGhostLabel(UUID playerId) {
+        return PlayerSettingsStore.isGhostVisible(playerId) ? GHOST_LABEL_ON : GHOST_LABEL_OFF;
     }
 
 }

@@ -593,6 +593,10 @@ public class HyvexaPlugin extends JavaPlugin {
         return runTracker;
     }
 
+    public GhostNpcManager getGhostNpcManager() {
+        return ghostNpcManager;
+    }
+
     public DuelTracker getDuelTracker() {
         return duelTracker;
     }

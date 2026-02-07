@@ -19,6 +19,7 @@ import com.hypixel.hytale.server.npc.NPCPlugin;
 import io.hyvexa.common.visibility.EntityVisibilityManager;
 import io.hyvexa.parkour.data.Map;
 import io.hyvexa.parkour.data.MapStore;
+import io.hyvexa.parkour.util.PlayerSettingsStore;
 
 import java.util.List;
 import java.util.UUID;
@@ -88,6 +89,10 @@ public class GhostNpcManager {
      */
     public void spawnGhost(UUID playerId, String mapId) {
         if (npcPlugin == null || playerId == null || mapId == null) {
+            return;
+        }
+
+        if (!PlayerSettingsStore.isGhostVisible(playerId)) {
             return;
         }
 
