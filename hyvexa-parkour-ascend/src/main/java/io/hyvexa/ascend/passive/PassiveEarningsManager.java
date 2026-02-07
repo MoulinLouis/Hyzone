@@ -153,16 +153,22 @@ public class PassiveEarningsManager {
         }
 
         // Apply earnings to player account
-        playerStore.atomicAddCoins(playerId, totalCoins);
-        playerStore.atomicAddTotalCoinsEarned(playerId, totalCoins);
+        if (!playerStore.atomicAddCoins(playerId, totalCoins)) {
+            LOGGER.at(Level.SEVERE).log("Failed to add passive coins for " + playerId + " (amount: " + totalCoins + ")");
+        }
+        if (!playerStore.atomicAddTotalCoinsEarned(playerId, totalCoins)) {
+            LOGGER.at(Level.SEVERE).log("Failed to add total coins earned for " + playerId + " (amount: " + totalCoins + ")");
+        }
 
         // Apply multiplier gains to each map (at offline rate)
         for (Map.Entry<String, PassiveRunnerEarnings> entry : runnerEarnings.entrySet()) {
-            playerStore.atomicAddMapMultiplier(
+            if (!playerStore.atomicAddMapMultiplier(
                 playerId,
                 entry.getKey(),
                 entry.getValue().multiplierGain()
-            );
+            )) {
+                LOGGER.at(Level.SEVERE).log("Failed to add passive map multiplier for " + playerId + " on map " + entry.getKey());
+            }
         }
 
         LOGGER.at(Level.INFO).log(

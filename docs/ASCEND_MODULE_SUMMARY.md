@@ -48,16 +48,17 @@ Runners can evolve up to 5 stars. When a runner reaches max speed level (20), th
 
 | Stars | Entity Type | Multiplier/Run |
 |-------|-------------|----------------|
-| 0 | Kweebec_Sapling (green) | +0.01 |
-| 1 | Kweebec_Sapling_Orange | +0.02 |
-| 2 | Kweebec_Sapling (green) | +0.04 |
-| 3 | Kweebec_Sapling_Orange | +0.08 |
-| 4 | Kweebec_Sapling (green) | +0.16 |
-| 5 | Kweebec_Sapling_Orange | +0.32 |
+| 0 | Kweebec_Seedling | +0.01 |
+| 1 | Kweebec_Sapling | +0.02 |
+| 2 | Kweebec_Sproutling | +0.04 |
+| 3 | Kweebec_Sapling_Pink | +0.08 |
+| 4 | Kweebec_Razorleaf | +0.16 |
+| 5 | Kweebec_Rootling | +0.32 |
 
 ### Progressive map unlock system
 - Map 1 (displayOrder 0) is always unlocked for all players
 - Maps 2-5 unlock automatically when the runner on the previous map reaches level 5
+- Runners are **FREE to purchase** after map unlock (no coin cost)
 - Once unlocked, maps stay permanently unlocked (even if runner is evolved/reset to level 0)
 - Locked maps are completely hidden from the `/ascend` menu
 - Instant notification when reaching level 5: "🎉 New map unlocked: [Map Name]!"
@@ -66,6 +67,7 @@ Runners can evolve up to 5 stars. When a runner reaches max speed level (20), th
 - `AscendPlayerStore.checkAndUnlockEligibleMaps()` batch checks all maps after runner upgrade
 - Retrocompatibility: Existing players auto-unlock eligible maps based on current runner levels
 - Reset progress unlocks only the first map (lowest displayOrder) automatically
+- **Constant:** `MAP_UNLOCK_REQUIRED_RUNNER_LEVEL = 5`
 
 ## Prestige System (3 Tiers)
 
@@ -181,11 +183,13 @@ Managed by `AchievementManager`. Achievements grant titles for display.
 ## Commands
 - `/ascend`:
   - No args: opens map select UI and teleports to map start on selection.
-  - `stats`: shows current coin balance, digit product, elevation level + multiplier, Summit levels, Ascension count, and lifetime stats.
+  - `stats`: opens Stats page showing detailed player statistics (coins/sec, multipliers, lifetime earnings, runs, ascensions, fastest ascension timer).
+  - `leaderboard`: opens Leaderboard UI with rankings by coins, ascensions, and manual runs.
   - `elevate`: opens Elevation UI with level-based prestige (exponential costs, diminishing multiplier returns).
   - `summit [category]`: opens Summit UI to invest coins into category bonuses. Categories: `coin`, `speed`, `manual`.
   - `ascension`: opens Ascension UI to perform ultimate prestige (requires 1 trillion coins).
   - `skills`: shows skill tree status and available nodes to unlock.
+  - `automation`: opens Automation UI for skill tree automation nodes.
   - `achievements`: shows achievement progress and unlocked titles.
   - `title [name|clear]`: shows or sets active title from unlocked achievements.
   - All subcommands are gated to Ascend world via `AscendModeGate`.
@@ -200,6 +204,7 @@ Managed by `AchievementManager`. Achievements grant titles for display.
   - `/as admin map setname <id> <name>` - rename map
   - `/as admin map list` - list all maps with balancing info
   - `/as admin holo map <id>` and `/as admin holo delete map <id>` to place/remove map info holograms.
+  - `/as admin whitelist <add|remove|list|enable|disable|status> [username]` - manage Ascend mode access whitelist
   - OP-only (via `PermissionUtils.isOp`).
 
 ## Run tracking
@@ -284,6 +289,115 @@ During manual runs, players receive run-specific hotbar items:
   - Map list shows level color, start/finish status, and balancing per map
 - `Ascend_AdminPanel.ui`: admin landing page with Maps/Admin Panel navigation.
 - `Ascend_AdminCoins.ui`: admin coins page to add/remove coins and reset progress (unlocks first map).
+- `Ascend_Leaderboard.ui` + `Ascend_LeaderboardEntry.ui`: leaderboard system with:
+  - Three tab categories: Coins, Ascensions, Manual Runs
+  - Pagination: 50 entries per page
+  - Search field: filter by player name (prefix search)
+  - Rank colors: gold (#1), silver (#2), bronze (#3), grey (default)
+  - Tab accent colors: orange (coins), violet (ascensions), green (runs)
+  - Dynamic sorting by selected category
+- `Ascend_Stats.ui` + `Ascend_StatsEntry.ui` + `Ascend_StatsTimerEntry.ui`: comprehensive stats page with:
+  - Six stat cards with colored accent bars
+  - Combined Income (coins/sec calculation from all runners)
+  - Multiplier Breakdown (digits product × elevation)
+  - Lifetime Earnings (total coins earned)
+  - Manual Runs (total run count)
+  - Ascensions (total ascension count)
+  - Fastest Ascension (personal best + live timer)
+  - Auto-refresh at 1s intervals for live timer
+- `Ascend_PassiveEarnings.ui` + `Ascend_PassiveEarningsEntry.ui`: passive earnings summary popup showing:
+  - Time away (formatted as days/hours/minutes, capped at 24 hours)
+  - Total coins earned while offline
+  - Total multiplier gained while offline
+  - Per-runner breakdown with stars, speed level, runs completed, coins, and multiplier
+  - Displays on rejoin to Ascend world if unclaimed earnings exist
+- `Ascend_Whitelist.ui` + `Ascend_WhitelistEntry.ui`: admin whitelist management UI:
+  - Add/remove players by username
+  - List all whitelisted players (sorted alphabetically)
+  - Enable/disable whitelist toggle
+  - Real-time status display (enabled/disabled + player count)
+  - Accessed via admin panel
+
+## Passive Earnings System
+Managed by `PassiveEarningsManager`. Players earn coins and multiplier from their active runners while offline.
+
+**Offline Rate**: 25% of normal production (`PASSIVE_OFFLINE_RATE_PERCENT`)
+**Max Offline Time**: 24 hours (`PASSIVE_MAX_TIME_MS`)
+**Minimum Away Time**: 1 minute (`MIN_AWAY_TIME_MS`)
+
+### How it works
+- Timestamp saved when player leaves Ascend world (`onPlayerLeaveAscend`)
+- On rejoin, calculates time away (capped at 24 hours)
+- For each active runner:
+  - Calculates theoretical runs based on runner completion time and time away
+  - Applies 25% offline rate to both coins and multiplier gains
+  - Uses same formulas as online runners (speed upgrades, elevation, Summit bonuses)
+- Earnings applied atomically to player account
+- Passive earnings popup displays breakdown per runner
+- Flag `hasUnclaimedPassive` prevents duplicate claims
+
+**Database**: Uses existing `ascend_settings` table to track `lastActiveTimestamp` and `hasUnclaimedPassive` per player.
+
+## Whitelist System
+Managed by `AscendWhitelistManager` (hyvexa-core). Controls access to Ascend mode via Hub menu.
+
+**Config File**: `run/mods/Parkour/ascend_whitelist.json` (gitignored)
+
+**Access Logic**:
+- **Whitelist disabled** (default): Only OPs can access Ascend mode
+- **Whitelist enabled**: Whitelisted players + OPs can access Ascend mode
+- Admin commands remain OP-only regardless of whitelist state
+
+**Features**:
+- Add/remove players by username (case-insensitive)
+- Enable/disable whitelist toggle
+- List all whitelisted players (sorted alphabetically)
+- Status command shows enabled/disabled state and player count
+- Persistent JSON storage with auto-reload
+
+**Admin Commands**: `/as admin whitelist <add|remove|list|enable|disable|status> [username]`
+
+**UI Access**: Admin panel includes Whitelist page for GUI-based management
+
+## Leaderboard System
+Managed by `AscendLeaderboardPage`. Players can view global rankings across three categories.
+
+**Categories**:
+- **Coins**: Total lifetime coins earned (`totalCoinsEarned`)
+- **Ascensions**: Total ascension count (`ascensionCount`)
+- **Manual Runs**: Total manual run count (`totalManualRuns`)
+
+**Features**:
+- Tab navigation between categories
+- Search field: filter by player name (prefix search, case-insensitive)
+- Pagination: 50 entries per page
+- Rank colors: gold (#1), silver (#2), bronze (#3), grey (default)
+- Real-time sorting based on category
+- Username resolution via `Universe.get().getPlayer(uuid)`
+
+**UI Files**: `Ascend_Leaderboard.ui` + `Ascend_LeaderboardEntry.ui`
+
+**Command**: `/ascend leaderboard`
+
+## Stats Page
+Managed by `StatsPage`. Shows comprehensive player statistics with live updates.
+
+**Stat Cards** (with colored accent bars):
+1. **Combined Income** (green): Total coins/sec from all active runners
+2. **Multiplier Breakdown** (violet): Digits product × elevation = total multiplier
+3. **Lifetime Earnings** (gold): Total coins earned across all time
+4. **Manual Runs** (blue): Total manual run count
+5. **Ascensions** (cyan): Total ascension count
+6. **Fastest Ascension** (orange): Personal best time + live timer
+
+**Auto-Refresh**:
+- Background task refreshes fastest ascension timer every 1 second
+- Implements `onDismiss()` lifecycle for cleanup when UI replaced
+- Task automatically stops when page is no longer active
+
+**UI Files**: `Ascend_Stats.ui` + `Ascend_StatsEntry.ui` + `Ascend_StatsTimerEntry.ui`
+
+**Command**: `/ascend stats`
 
 ## Holograms (Hylograms)
 - Map info holograms only (in-world text for map name, reward, price, and a prompt).

@@ -65,7 +65,7 @@ public class AutomationPage extends BaseAscendPage {
         if (!hasSkill) {
             // Skill not unlocked — show locked state
             commandBuilder.set("#ToggleButton.Disabled", true);
-            commandBuilder.set("#ToggleBorder.Background", LOCKED_BORDER);
+            commandBuilder.set("#ToggleBorder.Background", COLOR_LOCKED_BORDER);
             commandBuilder.set("#ToggleText.Text", "Locked");
             commandBuilder.set("#ToggleText.Style.TextColor", COLOR_OFF);
             commandBuilder.set("#StatusLabel.Text", "Status: LOCKED");
@@ -142,6 +142,4 @@ public class AutomationPage extends BaseAscendPage {
         updateState(ref, store, updateBuilder);
         sendUpdate(updateBuilder, null, false);
     }
-
-    private static final String LOCKED_BORDER = "#4b5563";
 }

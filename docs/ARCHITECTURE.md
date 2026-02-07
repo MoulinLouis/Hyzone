@@ -77,6 +77,8 @@ Module boundaries:
 
 ### Scheduled Tasks
 
+#### Parkour Module
+
 | Task | Interval | Purpose |
 |------|----------|---------|
 | `tickMapDetection` | 200ms | Check player positions for triggers |
@@ -84,6 +86,13 @@ Module boundaries:
 | `tickPlaytime` | 60s | Accumulate player session time |
 | `tickCollisionRemoval` | 2s | Re-disable player collision |
 | `tickPlayerCounts` | 600s | Sample online player count |
+
+#### Ascend Module
+
+| Task | Interval | Purpose |
+|------|----------|---------|
+| `RUNNER_TICK_INTERVAL_MS` | 16ms | Ghost replay tick system (~60fps for smooth movement) |
+| `RUNNER_REFRESH_INTERVAL_MS` | 1000ms | Runner state refresh and validation |
 
 ## Data Flow
 
@@ -203,6 +212,9 @@ All data is stored in MySQL with in-memory caching for performance.
 
 #### Database Configuration
 Credentials stored in `mods/Parkour/database.json` (gitignored, relative to server working dir):
+
+**Note**: Code references use both `mods/Parkour/` and `run/mods/Parkour/` inconsistently. The runtime path is `run/mods/Parkour/` (relative to project root), but production servers use `mods/Parkour/` (relative to server working directory). This inconsistency should be standardized in future refactoring.
+
 ```json
 {
   "host": "localhost",
@@ -329,6 +341,54 @@ Server Stop: flushPendingSave() + connection pool shutdown
 - Connection pool sized for 10 concurrent connections (configurable)
 
 **Note**: Database latency affects write operations but reads are always from memory.
+
+## User Interface
+
+### Parkour UI Pages
+
+UI files are located in `hyvexa-parkour/src/main/resources/Common/UI/Custom/Pages/`. Code references use the path prefix `Pages/X.ui`.
+
+#### Core Navigation
+| Page | Description |
+|------|-------------|
+| `Parkour_MapSelect.ui` | Main map selection menu with category filtering |
+| `Parkour_CategorySelect.ui` | Category browser for map filtering |
+| `Parkour_PlayerSettings.ui` | Player preferences (music, ghost visibility, etc.) |
+| `Parkour_Stats.ui` | Player statistics overview |
+| `Parkour_Welcome.ui` | Welcome screen for new players |
+
+#### In-Run HUD
+| Page | Description |
+|------|-------------|
+| `Parkour_RunHud.ui` | Active run timer and checkpoint display |
+| `Parkour_RunHudHidden.ui` | Minimized HUD for clean screenshots |
+| `Parkour_RunCheckpointHud.ui` | Checkpoint notification overlay |
+| `Parkour_RunRecordsHud.ui` | Personal best comparison during runs |
+
+#### Leaderboards
+| Page | Description |
+|------|-------------|
+| `Parkour_Leaderboard.ui` | Global leaderboard across all maps |
+| `Parkour_MapLeaderboard.ui` | Per-map leaderboard with time rankings |
+| `Parkour_LeaderboardMenu.ui` | Leaderboard navigation and filters |
+
+#### Admin Tools
+| Page | Description |
+|------|-------------|
+| `Parkour_AdminIndex.ui` | Admin dashboard and navigation |
+| `Parkour_MapAdmin.ui` | Map creation and configuration |
+| `Parkour_AdminPlayers.ui` | Player management and lookup |
+| `Parkour_SettingsAdmin.ui` | Server-wide settings control |
+| `Parkour_GlobalMessageAdmin.ui` | Global message broadcast system |
+
+#### Tutorial
+| Page | Description |
+|------|-------------|
+| `Parkour_WelcomeTutorial_Screen1.ui` | Tutorial page 1 (basics) |
+| `Parkour_WelcomeTutorial_Screen2.ui` | Tutorial page 2 (features) |
+| `Parkour_WelcomeTutorial_Screen3.ui` | Tutorial page 3 (Ascend intro) |
+
+**Note**: See `docs/hytale-custom-ui/` for official Hytale UI element documentation.
 
 ## Configuration
 

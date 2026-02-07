@@ -1188,17 +1188,18 @@ public class AscendPlayerStore {
             VALUES (?, ?)
             """;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement playerStmt = conn.prepareStatement(playerSql);
-             PreparedStatement mapStmt = conn.prepareStatement(mapSql);
-             PreparedStatement summitStmt = conn.prepareStatement(summitSql);
-             PreparedStatement skillStmt = conn.prepareStatement(skillSql);
-             PreparedStatement achievementStmt = conn.prepareStatement(achievementSql)) {
-            DatabaseManager.applyQueryTimeout(playerStmt);
-            DatabaseManager.applyQueryTimeout(mapStmt);
-            DatabaseManager.applyQueryTimeout(summitStmt);
-            DatabaseManager.applyQueryTimeout(skillStmt);
-            DatabaseManager.applyQueryTimeout(achievementStmt);
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            conn.setAutoCommit(false); // Begin transaction
+            try (PreparedStatement playerStmt = conn.prepareStatement(playerSql);
+                 PreparedStatement mapStmt = conn.prepareStatement(mapSql);
+                 PreparedStatement summitStmt = conn.prepareStatement(summitSql);
+                 PreparedStatement skillStmt = conn.prepareStatement(skillSql);
+                 PreparedStatement achievementStmt = conn.prepareStatement(achievementSql)) {
+                DatabaseManager.applyQueryTimeout(playerStmt);
+                DatabaseManager.applyQueryTimeout(mapStmt);
+                DatabaseManager.applyQueryTimeout(summitStmt);
+                DatabaseManager.applyQueryTimeout(skillStmt);
+                DatabaseManager.applyQueryTimeout(achievementStmt);
 
             for (UUID playerId : toSave) {
                 AscendPlayerProgress progress = players.get(playerId);
@@ -1278,17 +1279,25 @@ public class AscendPlayerStore {
                     achievementStmt.addBatch();
                 }
             }
-            playerStmt.executeBatch();
-            mapStmt.executeBatch();
-            summitStmt.executeBatch();
-            skillStmt.executeBatch();
-            achievementStmt.executeBatch();
+                playerStmt.executeBatch();
+                mapStmt.executeBatch();
+                summitStmt.executeBatch();
+                skillStmt.executeBatch();
+                achievementStmt.executeBatch();
 
-            // Save succeeded - remove only the IDs we just saved
-            dirtyPlayers.removeAll(toSave);
+                conn.commit(); // Commit transaction
+
+                // Save succeeded - remove only the IDs we just saved
+                dirtyPlayers.removeAll(toSave);
+            } catch (SQLException e) {
+                conn.rollback(); // Rollback transaction on error
+                LOGGER.at(Level.SEVERE).log("Failed to save ascend players (rolled back): " + e.getMessage());
+                // On failure, IDs stay in dirtyPlayers for the next save cycle
+                throw e; // Re-throw to trigger outer catch
+            }
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to save ascend players: " + e.getMessage());
-            // On failure, IDs stay in dirtyPlayers for the next save cycle
+            // Outer catch for connection/transaction setup errors
+            LOGGER.at(Level.SEVERE).log("Failed to initialize transaction for ascend player save: " + e.getMessage());
         }
     }
 

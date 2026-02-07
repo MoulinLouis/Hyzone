@@ -171,6 +171,18 @@ Smooth ~2× growth per level, no artificial boosts or jumps:
 
 ## Elevation System
 
+### Multiplier Formula
+
+**Elevation multiplier = level** (direct 1:1 mapping)
+
+Elevation uses a level-based prestige system where each level directly equals the multiplier:
+- Level 1 → ×1 multiplier
+- Level 10 → ×10 multiplier
+- Level 100 → ×100 multiplier
+- Level 500 → ×500 multiplier
+
+**Note:** This is different from the cost formula below. The multiplier is simply the level number itself.
+
 ### Cost Formula
 
 ```
@@ -221,26 +233,32 @@ Where:
 - `elevation` = Current elevation multiplier
 - `coinFlowBonus` = Summit/Ascension bonuses
 
-### Map Unlock Prices
+### Map Unlock System
 
-| Map | Display Order | Unlock Cost |
-|-----|---------------|-------------|
-| Rouge | 0 | Free (starting map) |
-| Orange | 1 | 100 coins |
-| Jaune | 2 | 500 coins |
-| Vert | 3 | 2,500 coins |
-| Bleu | 4 | 10,000 coins |
+Maps unlock progressively based on runner level, not coin price.
 
-**Auto-unlock condition:** Maps unlock automatically when any runner reaches level 5.
+**Unlock condition:** Maps unlock automatically when the runner on the **previous map** reaches level 5.
+
+| Map | Display Order | Unlock Requirement |
+|-----|---------------|--------------------|
+| Rouge | 0 | Free (starting map, always unlocked) |
+| Orange | 1 | Map 0 runner reaches level 5 |
+| Jaune | 2 | Map 1 runner reaches level 5 |
+| Vert | 3 | Map 2 runner reaches level 5 |
+| Bleu | 4 | Map 3 runner reaches level 5 |
+
+**Constant:** `MAP_UNLOCK_REQUIRED_RUNNER_LEVEL = 5`
+
+**Once unlocked:** Maps stay permanently unlocked (even if runner is evolved/reset to level 0)
 
 ### Runner Purchase Prices
 
 **All maps:** Free (0 coins)
 
-**Requirements:**
-- Map must be unlocked
-- Map must be completed manually at least once
-- Ghost recording must exist (player's personal best time)
+Runners have no coin cost after map unlock. They can be purchased for free once:
+- Map is unlocked (via runner level requirement)
+- Map has been completed manually at least once
+- Ghost recording exists (player's personal best time)
 
 ### Base Run Times (For Runner AI)
 
