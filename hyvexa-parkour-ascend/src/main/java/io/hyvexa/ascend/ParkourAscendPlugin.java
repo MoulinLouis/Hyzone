@@ -32,6 +32,7 @@ import io.hyvexa.ascend.holo.AscendHologramManager;
 import io.hyvexa.ascend.hud.AscendHud;
 import io.hyvexa.ascend.interaction.AscendDevCinderclothInteraction;
 import io.hyvexa.ascend.interaction.AscendDevCottonInteraction;
+import io.hyvexa.ascend.interaction.AscendDevShadoweaveInteraction;
 import io.hyvexa.ascend.interaction.AscendDevStormsilkInteraction;
 import io.hyvexa.ascend.interaction.AscendLeaveInteraction;
 import io.hyvexa.ascend.interaction.AscendResetInteraction;
@@ -578,6 +579,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
         hotbar.setItemStackForSlot((short) 0, new ItemStack(AscendConstants.ITEM_DEV_CINDERCLOTH, 1), false);
         hotbar.setItemStackForSlot((short) 1, new ItemStack(AscendConstants.ITEM_DEV_STORMSILK, 1), false);
         hotbar.setItemStackForSlot((short) 2, new ItemStack(AscendConstants.ITEM_DEV_COTTON, 1), false);
+        hotbar.setItemStackForSlot((short) 3, new ItemStack(AscendConstants.ITEM_DEV_SHADOWEAVE, 1), false);
         short slot = (short) (hotbar.getCapacity() - 1);
         hotbar.setItemStackForSlot(slot, new ItemStack("Hub_Server_Selector", 1), false);
     }
@@ -598,6 +600,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
         setIfMissing(hotbar, (short) 0, AscendConstants.ITEM_DEV_CINDERCLOTH);
         setIfMissing(hotbar, (short) 1, AscendConstants.ITEM_DEV_STORMSILK);
         setIfMissing(hotbar, (short) 2, AscendConstants.ITEM_DEV_COTTON);
+        setIfMissing(hotbar, (short) 3, AscendConstants.ITEM_DEV_SHADOWEAVE);
         short slot = (short) (capacity - 1);
         setIfMissing(hotbar, slot, "Hub_Server_Selector");
     }
@@ -633,6 +636,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
             AscendDevStormsilkInteraction.class, AscendDevStormsilkInteraction.CODEC);
         registry.register("Ascend_Dev_Cotton_Interaction",
             AscendDevCottonInteraction.class, AscendDevCottonInteraction.CODEC);
+        registry.register("Ascend_Dev_Shadoweave_Interaction",
+            AscendDevShadoweaveInteraction.class, AscendDevShadoweaveInteraction.CODEC);
         registry.register("Ascend_Reset_Interaction",
             AscendResetInteraction.class, AscendResetInteraction.CODEC);
         registry.register("Ascend_Leave_Interaction",
@@ -683,6 +688,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
         hotbar.setItemStackForSlot((short) 0, new ItemStack(AscendConstants.ITEM_DEV_CINDERCLOTH, 1), false);
         hotbar.setItemStackForSlot((short) 1, new ItemStack(AscendConstants.ITEM_DEV_STORMSILK, 1), false);
         hotbar.setItemStackForSlot((short) 2, new ItemStack(AscendConstants.ITEM_DEV_COTTON, 1), false);
+        hotbar.setItemStackForSlot((short) 3, new ItemStack(AscendConstants.ITEM_DEV_SHADOWEAVE, 1), false);
         short slot = (short) (hotbar.getCapacity() - 1);
         hotbar.setItemStackForSlot(slot, new ItemStack("Hub_Server_Selector", 1), false);
     }
