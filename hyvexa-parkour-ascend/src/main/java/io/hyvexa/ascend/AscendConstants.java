@@ -20,6 +20,7 @@ public final class AscendConstants {
     public static final String ITEM_DEV_CINDERCLOTH = "Ingredient_Bolt_Cindercloth";
     public static final String ITEM_DEV_STORMSILK = "Ingredient_Bolt_Stormsilk";
     public static final String ITEM_DEV_COTTON = "Ingredient_Bolt_Cotton";
+    public static final String ITEM_DEV_SHADOWEAVE = "Ingredient_Bolt_Shadoweave";
 
     // Items - In-Run
     public static final String ITEM_RESET = "Ascend_Reset_Block";
