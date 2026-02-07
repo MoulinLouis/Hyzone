@@ -34,6 +34,7 @@ public class AscendLeaderboardPage extends InteractiveCustomUIPage<AscendLeaderb
     private static final String BUTTON_TAB_COINS = "TabCoins";
     private static final String BUTTON_TAB_ASCENSIONS = "TabAscensions";
     private static final String BUTTON_TAB_RUNS = "TabRuns";
+    private static final String BUTTON_TAB_FASTEST = "TabFastest";
 
     private static final String COLOR_RANK_1 = "#ffd700";
     private static final String COLOR_RANK_2 = "#c0c0c0";
@@ -41,10 +42,11 @@ public class AscendLeaderboardPage extends InteractiveCustomUIPage<AscendLeaderb
     private static final String COLOR_RANK_DEFAULT = "#9fb0ba";
 
     private static final String COLOR_TAB_ACTIVE = "#2d3f50";
-    private static final String COLOR_TAB_INACTIVE = "#1a2530(0.6)";
+    private static final String COLOR_TAB_INACTIVE = "#142029";
     private static final String COLOR_TAB_COINS = "#f59e0b";
     private static final String COLOR_TAB_ASCENSIONS = "#8b5cf6";
     private static final String COLOR_TAB_RUNS = "#10b981";
+    private static final String COLOR_TAB_FASTEST = "#ef4444";
 
     private final AscendPlayerStore playerStore;
     private final PaginationState pagination = new PaginationState(50);
@@ -95,6 +97,7 @@ public class AscendLeaderboardPage extends InteractiveCustomUIPage<AscendLeaderb
             case BUTTON_TAB_COINS -> switchCategory(LeaderboardCategory.COINS);
             case BUTTON_TAB_ASCENSIONS -> switchCategory(LeaderboardCategory.ASCENSIONS);
             case BUTTON_TAB_RUNS -> switchCategory(LeaderboardCategory.MANUAL_RUNS);
+            case BUTTON_TAB_FASTEST -> switchCategory(LeaderboardCategory.FASTEST_ASCENSION);
         }
     }
 
@@ -130,6 +133,8 @@ public class AscendLeaderboardPage extends InteractiveCustomUIPage<AscendLeaderb
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TAB_ASCENSIONS), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#TabRuns",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TAB_RUNS), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#TabFastest",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TAB_FASTEST), false);
     }
 
     private void buildLeaderboard(UICommandBuilder commandBuilder) {
@@ -197,6 +202,8 @@ public class AscendLeaderboardPage extends InteractiveCustomUIPage<AscendLeaderb
                 currentCategory == LeaderboardCategory.ASCENSIONS ? COLOR_TAB_ACTIVE : COLOR_TAB_INACTIVE);
         commandBuilder.set("#TabRunsWrap.Background",
                 currentCategory == LeaderboardCategory.MANUAL_RUNS ? COLOR_TAB_ACTIVE : COLOR_TAB_INACTIVE);
+        commandBuilder.set("#TabFastestWrap.Background",
+                currentCategory == LeaderboardCategory.FASTEST_ASCENSION ? COLOR_TAB_ACTIVE : COLOR_TAB_INACTIVE);
 
         commandBuilder.set("#TabCoinsAccent.Background",
                 currentCategory == LeaderboardCategory.COINS ? COLOR_TAB_COINS : COLOR_TAB_INACTIVE);
@@ -204,6 +211,8 @@ public class AscendLeaderboardPage extends InteractiveCustomUIPage<AscendLeaderb
                 currentCategory == LeaderboardCategory.ASCENSIONS ? COLOR_TAB_ASCENSIONS : COLOR_TAB_INACTIVE);
         commandBuilder.set("#TabRunsAccent.Background",
                 currentCategory == LeaderboardCategory.MANUAL_RUNS ? COLOR_TAB_RUNS : COLOR_TAB_INACTIVE);
+        commandBuilder.set("#TabFastestAccent.Background",
+                currentCategory == LeaderboardCategory.FASTEST_ASCENSION ? COLOR_TAB_FASTEST : COLOR_TAB_INACTIVE);
     }
 
     private List<LeaderboardRow> getSortedEntries(Map<UUID, AscendPlayerProgress> players) {
@@ -218,6 +227,11 @@ public class AscendLeaderboardPage extends InteractiveCustomUIPage<AscendLeaderb
                     Integer.compare(b.getValue().getAscensionCount(), a.getValue().getAscensionCount()));
             case MANUAL_RUNS -> entries.sort((a, b) ->
                     Integer.compare(b.getValue().getTotalManualRuns(), a.getValue().getTotalManualRuns()));
+            case FASTEST_ASCENSION -> {
+                entries.removeIf(e -> e.getValue().getFastestAscensionMs() == null);
+                entries.sort((a, b) ->
+                        Long.compare(a.getValue().getFastestAscensionMs(), b.getValue().getFastestAscensionMs()));
+            }
         }
 
         int rank = 1;
@@ -248,6 +262,7 @@ public class AscendLeaderboardPage extends InteractiveCustomUIPage<AscendLeaderb
             case COINS -> formatCoins(progress.getTotalCoinsEarned());
             case ASCENSIONS -> String.valueOf(progress.getAscensionCount());
             case MANUAL_RUNS -> String.valueOf(progress.getTotalManualRuns());
+            case FASTEST_ASCENSION -> formatDuration(progress.getFastestAscensionMs());
         };
     }
 
@@ -269,6 +284,24 @@ public class AscendLeaderboardPage extends InteractiveCustomUIPage<AscendLeaderb
         }
     }
 
+    private String formatDuration(Long ms) {
+        if (ms == null) {
+            return "-";
+        }
+        long totalSeconds = ms / 1000;
+        long hours = totalSeconds / 3600;
+        long minutes = (totalSeconds % 3600) / 60;
+        long seconds = totalSeconds % 60;
+
+        if (hours > 0) {
+            return String.format("%dh %02dm %02ds", hours, minutes, seconds);
+        } else if (minutes > 0) {
+            return String.format("%dm %02ds", minutes, seconds);
+        } else {
+            return seconds + "s";
+        }
+    }
+
     private String getRankAccentColor(int rank) {
         return switch (rank) {
             case 1 -> COLOR_RANK_1;
@@ -281,7 +314,8 @@ public class AscendLeaderboardPage extends InteractiveCustomUIPage<AscendLeaderb
     public enum LeaderboardCategory {
         COINS("Coins", "#f59e0b"),
         ASCENSIONS("Ascensions", "#8b5cf6"),
-        MANUAL_RUNS("Manual Runs", "#10b981");
+        MANUAL_RUNS("Manual Runs", "#10b981"),
+        FASTEST_ASCENSION("Fastest Ascension", "#ef4444");
 
         private final String label;
         private final String color;
