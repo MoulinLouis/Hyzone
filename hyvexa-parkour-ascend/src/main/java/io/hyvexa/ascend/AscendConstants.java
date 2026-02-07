@@ -210,7 +210,7 @@ public final class AscendConstants {
      * Example with evolutionPower=3: 0★=0.1, 1★=0.3, 2★=0.9, 3★=2.7, 5★=24.3
      * @param stars Evolution level - each star multiplies by evolutionPower
      * @param multiplierGainBonus Bonus from Summit Multiplier Gain (1.0 = no bonus)
-     * @param evolutionPowerBonus Bonus from Summit Evolution Power (3.0 at level 0, asymptote ~4.5)
+     * @param evolutionPowerBonus Bonus from Summit Evolution Power (3.0 + 0.10 per level)
      * @return Multiplier increment per completion
      */
     public static BigDecimal getRunnerMultiplierIncrement(int stars, double multiplierGainBonus, double evolutionPowerBonus) {
@@ -404,15 +404,22 @@ public final class AscendConstants {
     // Summit System (Middle Prestige)
     // ========================================
 
+    // Summit soft cap: linear growth below, sqrt growth above (no ceiling, just slower)
+    public static final int SUMMIT_SOFT_CAP = 25;
+
     public enum SummitCategory {
-        RUNNER_SPEED("Runner Speed"),      // 1 + 0.45 × √niveau
-        MULTIPLIER_GAIN("Multiplier Gain"), // 1 + 0.5 × niveau^0.8
-        EVOLUTION_POWER("Evolution Power"); // 2 + 1.5 × niveau / (niveau + 10), asymptote ~3.5
+        RUNNER_SPEED("Runner Speed", 1.0, 0.15),        // 1 + 0.15/level
+        MULTIPLIER_GAIN("Multiplier Gain", 1.0, 0.30),  // 1 + 0.30/level
+        EVOLUTION_POWER("Evolution Power", 3.0, 0.10);   // 3 + 0.10/level
 
         private final String displayName;
+        private final double base;
+        private final double increment;
 
-        SummitCategory(String displayName) {
+        SummitCategory(String displayName, double base, double increment) {
             this.displayName = displayName;
+            this.base = base;
+            this.increment = increment;
         }
 
         public String getDisplayName() {
@@ -421,17 +428,19 @@ public final class AscendConstants {
 
         /**
          * Get the bonus multiplier for a given level.
-         * - RUNNER_SPEED: 1 + 0.45 × √niveau
-         * - MULTIPLIER_GAIN: 1 + 0.5 × niveau^0.8
-         * - EVOLUTION_POWER: 3 + 1.5 × niveau / (niveau + 10) — asymptote ~4.5
+         * Linear up to SUMMIT_SOFT_CAP, then sqrt growth on excess.
+         * Below soft cap: base + increment × level
+         * Above soft cap: base + increment × softCap + increment × √(level - softCap)
+         * No ceiling — growth continues forever, just slower past the soft cap.
          */
         public double getBonusForLevel(int level) {
             int safeLevel = Math.max(0, level);
-            return switch (this) {
-                case RUNNER_SPEED -> 1.0 + 0.45 * Math.sqrt(safeLevel);
-                case MULTIPLIER_GAIN -> 1.0 + 0.5 * Math.pow(safeLevel, 0.8);
-                case EVOLUTION_POWER -> 3.0 + 1.5 * safeLevel / (safeLevel + 10.0);
-            };
+            if (safeLevel <= SUMMIT_SOFT_CAP) {
+                return base + increment * safeLevel;
+            }
+            double linearPart = increment * SUMMIT_SOFT_CAP;
+            double sqrtPart = increment * Math.sqrt(safeLevel - SUMMIT_SOFT_CAP);
+            return base + linearPart + sqrtPart;
         }
     }
 
@@ -526,7 +535,7 @@ public final class AscendConstants {
     // Ascension System (Ultimate Prestige)
     // ========================================
 
-    public static final long ASCENSION_COIN_THRESHOLD = 10_000_000_000_000_000L; // 10 quadrillion coins
+    public static final java.math.BigDecimal ASCENSION_COIN_THRESHOLD = new java.math.BigDecimal("1000000000000000000000000000000000"); // 1 Decillion (10^33)
 
     public enum SkillTreeNode {
         AUTO_RUNNERS("Automate Runners", "Auto-upgrade runners (cheapest first, no evolution)");

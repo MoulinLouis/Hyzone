@@ -317,7 +317,7 @@ Runners have no coin cost after map unlock. They can be purchased for free once:
 **Phase:** Prestige systems and meta progression
 
 - Summit threshold: 1 billion coins minimum for first level
-- Ascension threshold: 10 quadrillion (10Q) coins
+- Ascension threshold: 1 Decillion (1Dc) coins
 - Permanent bonuses and skill trees
 - Long-term progression hooks
 
@@ -385,52 +385,57 @@ Summit performs a full reset similar to Elevation:
 
 ### Categories
 
-| Category | Formula | Level 0 | Level 10 |
-|----------|---------|---------|----------|
-| **Runner Speed** | 1 + 0.45 × √level | ×1.00 | ×2.42 |
-| **Multiplier Gain** | 1 + 0.5 × level^0.8 | ×1.00 | ×4.16 |
-| **Evolution Power** | 3 + 1.5 × level/(level+10) | ×3.00 | ×3.75 |
+| Category | Formula | Per Level | Level 0 | Level 10 | Level 25 |
+|----------|---------|-----------|---------|----------|----------|
+| **Runner Speed** | 1 + 0.15 × level | +0.15 | ×1.00 | ×2.50 | ×4.75 |
+| **Multiplier Gain** | 1 + 0.30 × level | +0.30 | ×1.00 | ×4.00 | ×8.50 |
+| **Evolution Power** | 3 + 0.10 × level | +0.10 | ×3.00 | ×4.00 | ×5.50 |
+
+**Soft cap at level 25:** All categories are linear up to level 25, then transition to √(level) growth. No ceiling — progression continues forever, just slower past the soft cap. This prevents extreme values at very high levels while keeping normal play (level 0-25) fully linear.
 
 ### Runner Speed
 
-**Formula:** `1 + 0.45 × sqrt(level)`
+**Formula:** `1 + 0.15 × level` (linear up to soft cap 25, then √ growth)
 
 Multiplies runner completion speed (inversely affects run time).
 
-| Level | Speed Multiplier |
-|-------|------------------|
-| 0 | ×1.00 |
-| 5 | ×2.01 |
-| 10 | ×2.42 |
-| 20 | ×3.01 |
+| Level | Speed Multiplier | Zone |
+|-------|------------------|------|
+| 0 | ×1.00 | linear |
+| 10 | ×2.50 | linear |
+| 25 | ×4.75 | soft cap |
+| 50 | ×5.50 | √ growth |
+| 100 | ×6.05 | √ growth |
 
 ### Multiplier Gain
 
-**Formula:** `1 + 0.5 × level^0.8`
+**Formula:** `1 + 0.30 × level` (linear up to soft cap 25, then √ growth)
 
 Multiplies the per-run multiplier increment for runners.
 
-| Level | Gain Multiplier | 0★ Increment | 1★ Increment | 2★ Increment |
-|-------|-----------------|--------------|---------------|---------------|
-| 0 | ×1.00 | +0.10/run | +0.30/run | +0.90/run |
-| 5 | ×2.81 | +0.28/run | +0.84/run | +2.53/run |
-| 10 | ×4.16 | +0.42/run | +1.25/run | +3.74/run |
+| Level | Gain Multiplier | 0★ Increment | 1★ Increment | Zone |
+|-------|-----------------|--------------|---------------|------|
+| 0 | ×1.00 | +0.10/run | +0.30/run | linear |
+| 10 | ×4.00 | +0.40/run | +1.20/run | linear |
+| 25 | ×8.50 | +0.85/run | +2.55/run | soft cap |
+| 50 | ×10.00 | +1.00/run | +3.00/run | √ growth |
+| 100 | ×11.10 | +1.11/run | +3.33/run | √ growth |
 
 *Note: 1★+ increments shown assume base Evolution Power (×3). Higher Evolution Power increases per star.*
 
 ### Evolution Power
 
-**Formula:** `3 + 1.5 × level / (level + 10)` — asymptotic growth toward ~4.5
+**Formula:** `3 + 0.10 × level` (linear up to soft cap 25, then √ growth)
 
-Each Summit level always improves EP, but gains naturally diminish. No hard cap.
+Each Summit level gives a flat EP boost up to level 25, then transitions to slower √ growth. No ceiling.
 
-| Level | Evolution Power | 0★ | 1★ | 2★ | 3★ | 5★ |
-|-------|-----------------|------|------|------|------|------|
-| 0 | ×3.00 | 0.10 | 0.30 | 0.90 | 2.70 | 24.3 |
-| 5 | ×3.50 | 0.10 | 0.35 | 1.23 | 4.29 | 52.5 |
-| 10 | ×3.75 | 0.10 | 0.38 | 1.41 | 5.27 | 74.1 |
-| 20 | ×4.00 | 0.10 | 0.40 | 1.60 | 6.40 | 102.4 |
-| 50 | ×4.25 | 0.10 | 0.43 | 1.81 | 7.67 | 138.6 |
+| Level | Evolution Power | 0★ | 3★ | 5★ | Zone |
+|-------|-----------------|------|------|------|------|
+| 0 | ×3.00 | 0.10 | 2.70 | 24.3 | linear |
+| 10 | ×4.00 | 0.10 | 6.40 | 102.4 | linear |
+| 25 | ×5.50 | 0.10 | 16.64 | 503.3 | soft cap |
+| 50 | ×6.00 | 0.10 | 21.60 | 777.6 | √ growth |
+| 100 | ×6.37 | 0.10 | 25.82 | 1,047.5 | √ growth |
 
 **Formula:** `increment = 0.1 × evolutionPower^stars × multiplierGainBonus`
 
@@ -458,9 +463,11 @@ Evolution provides a clear benefit with continuous cost progression.
 | 4★ | +8.10/run (×81) | 80-99 |
 | 5★ | +24.3/run (×243) | 100+ |
 
-**Key insight:** Each evolution multiplies the multiplier gain by the Evolution Power value. The EP formula uses asymptotic growth (`3 + 1.5 × level / (level + 10)`) so it always improves but naturally plateaus around ×4.5, keeping high-star combos under control.
+**Key insight:** Each evolution multiplies the multiplier gain by the Evolution Power value. EP is linear up to level 25, then √ growth — always progressing, never capped.
 
 ### Strategic Decisions
+
+**Key insight:** Each evolution multiplies the multiplier gain by the Evolution Power value. EP is linear up to level 25 (+0.10/level), then transitions to √ growth — always progressing, never capped.
 
 **The core choice is not "whether to evolve" but "which runner to prioritize":**
 
@@ -555,7 +562,7 @@ All formulas use consistent growth rates:
 - **Elevation multiplier:** level (direct linear multiplier)
 - **Elevation cost:** 1.15^(level^0.77) for level<=300, then 1.15^(300^0.77 + (level-300)^0.63) (soft cap at 300)
 - **Upgrades:** 2^totalLevel (100% growth per level, smooth and predictable)
-- **Evolution gain:** EP^stars, where EP = 2 + 1.5 × level / (level + 10), asymptote ~3.5
+- **Evolution gain:** EP^stars, where EP = 3 + 0.10 × level (linear, no ceiling)
 - **Summit XP:** (accumulatedCoins / 1B)^(3/7) (compressed diminishing returns)
 - **Summit levels:** level^2 (manageable numbers at all levels)
 
@@ -564,6 +571,15 @@ Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure conti
 ---
 
 ## Version History
+
+- **2026-02-07 (v15):** Linear Summit formulas with soft cap
+  - All categories: linear up to level 25, then √(excess) growth — no ceiling, just slower
+  - Runner Speed: `1 + 0.45 × √level` → `1 + 0.15 × level` (+0.15/level, √ after 25)
+  - Multiplier Gain: `1 + 0.5 × level^0.8` → `1 + 0.30 × level` (+0.30/level, √ after 25)
+  - Evolution Power: `3 + 1.5 × level/(level+10)` → `3 + 0.10 × level` (+0.10/level, √ after 25)
+  - Normal play (level 0-25) fully linear: each level gives exactly the same bonus
+  - Past soft cap: growth continues but can't reach absurd values at extreme levels
+  - Categories much more balanced: marginal gains within ~25% of each other
 
 - **2026-02-06 (v14):** Summit XP number compression
   - Level exponent: 2.5 → 2.0 (level 50: 17,678 → 2,500 XP per level)
@@ -597,7 +613,7 @@ Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure conti
 - **2026-02-06 (v9):** Summit and Ascension threshold rebalance
   - Summit XP conversion: `sqrt(coins / 1B)` (was `sqrt(coins) / 1M`)
   - Minimum coins for Summit: 1B (was 1T)
-  - Ascension threshold: 10Q (was 1T)
+  - Ascension threshold: 1Dc (was 10Q)
 
 - **2026-02-05 (v8):** Summit late-game rebalance
   - Summit XP conversion: `sqrt(coins) / 1,000,000` (was `/ 100`)
