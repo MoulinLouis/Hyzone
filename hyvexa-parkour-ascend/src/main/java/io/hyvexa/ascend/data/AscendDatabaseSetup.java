@@ -28,7 +28,8 @@ public final class AscendDatabaseSetup {
             stmt.executeUpdate("""
                 CREATE TABLE IF NOT EXISTS ascend_players (
                     uuid VARCHAR(36) PRIMARY KEY,
-                    coins DOUBLE NOT NULL DEFAULT 0,
+                    coins_mantissa DOUBLE NOT NULL DEFAULT 0,
+                    coins_exp10 INT NOT NULL DEFAULT 0,
                     elevation_multiplier INT NOT NULL DEFAULT 1,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -71,7 +72,8 @@ public final class AscendDatabaseSetup {
                     completed_manually BOOLEAN NOT NULL DEFAULT FALSE,
                     has_robot BOOLEAN NOT NULL DEFAULT FALSE,
                     robot_speed_level INT NOT NULL DEFAULT 0,
-                    multiplier DOUBLE NOT NULL DEFAULT 1.0,
+                    multiplier_mantissa DOUBLE NOT NULL DEFAULT 1.0,
+                    multiplier_exp10 INT NOT NULL DEFAULT 0,
                     last_collection_at TIMESTAMP NULL,
                     PRIMARY KEY (player_uuid, map_id),
                     FOREIGN KEY (player_uuid) REFERENCES ascend_players(uuid) ON DELETE CASCADE,
@@ -145,6 +147,9 @@ public final class AscendDatabaseSetup {
             // Ensure new columns on ascend_players for extended progress tracking
             ensureProgressColumns(conn);
             ensureTutorialColumn(conn);
+
+            // Migrate coins/multiplier columns from DECIMAL to scientific notation (mantissa + exponent)
+            migrateToScientificNotation(conn);
 
             // Ensure ghost recording table and best_time_ms column
             ensureGhostRecordingTable(conn);
@@ -606,6 +611,96 @@ public final class AscendDatabaseSetup {
             }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Failed to migrate multiplier column to DECIMAL: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Migrate coin/multiplier columns from DECIMAL/DOUBLE to scientific notation (mantissa + exponent).
+     * For each column: add _mantissa DOUBLE + _exp10 INT, populate from old values, drop old column.
+     * Idempotent: checks for coins_mantissa to determine if already migrated.
+     */
+    private static void migrateToScientificNotation(Connection conn) {
+        if (conn == null) {
+            return;
+        }
+
+        // Already migrated if coins_mantissa exists
+        if (columnExists(conn, "ascend_players", "coins_mantissa")) {
+            return;
+        }
+
+        LOGGER.atInfo().log("Starting migration to scientific notation (BigNumber)...");
+
+        // Migrate ascend_players: coins, total_coins_earned, summit_accumulated_coins, elevation_accumulated_coins
+        String[][] playerColumns = {
+            {"coins", "coins_mantissa", "coins_exp10", "0"},
+            {"total_coins_earned", "total_coins_earned_mantissa", "total_coins_earned_exp10", "0"},
+            {"summit_accumulated_coins", "summit_accumulated_coins_mantissa", "summit_accumulated_coins_exp10", "0"},
+            {"elevation_accumulated_coins", "elevation_accumulated_coins_mantissa", "elevation_accumulated_coins_exp10", "0"}
+        };
+
+        try (Statement stmt = conn.createStatement()) {
+            // Add new columns for ascend_players
+            for (String[] col : playerColumns) {
+                String oldCol = col[0];
+                String mantissaCol = col[1];
+                String exp10Col = col[2];
+
+                if (!columnExists(conn, "ascend_players", oldCol)) {
+                    // Column doesn't exist yet (fresh install or already dropped) — ensure new columns exist
+                    if (!columnExists(conn, "ascend_players", mantissaCol)) {
+                        stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN " + mantissaCol + " DOUBLE NOT NULL DEFAULT 0");
+                        stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN " + exp10Col + " INT NOT NULL DEFAULT 0");
+                    }
+                    continue;
+                }
+
+                // Add new columns
+                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN " + mantissaCol + " DOUBLE NOT NULL DEFAULT 0");
+                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN " + exp10Col + " INT NOT NULL DEFAULT 0");
+
+                // Populate from old values
+                stmt.executeUpdate(
+                    "UPDATE ascend_players SET " +
+                    mantissaCol + " = CASE WHEN " + oldCol + " = 0 THEN 0 ELSE " + oldCol + " / POW(10, FLOOR(LOG10(ABS(" + oldCol + ")))) END, " +
+                    exp10Col + " = CASE WHEN " + oldCol + " = 0 THEN 0 ELSE FLOOR(LOG10(ABS(" + oldCol + "))) END " +
+                    "WHERE " + oldCol + " IS NOT NULL AND " + oldCol + " != 0"
+                );
+
+                // Drop old column
+                stmt.executeUpdate("ALTER TABLE ascend_players DROP COLUMN " + oldCol);
+                LOGGER.atInfo().log("Migrated " + oldCol + " to " + mantissaCol + " + " + exp10Col);
+            }
+
+            // Migrate ascend_player_maps: multiplier
+            if (columnExists(conn, "ascend_player_maps", "multiplier")
+                && !columnExists(conn, "ascend_player_maps", "multiplier_mantissa")) {
+
+                stmt.executeUpdate("ALTER TABLE ascend_player_maps ADD COLUMN multiplier_mantissa DOUBLE NOT NULL DEFAULT 1.0");
+                stmt.executeUpdate("ALTER TABLE ascend_player_maps ADD COLUMN multiplier_exp10 INT NOT NULL DEFAULT 0");
+
+                // Populate: multiplier is always >= 1.0
+                stmt.executeUpdate(
+                    "UPDATE ascend_player_maps SET " +
+                    "multiplier_mantissa = CASE WHEN multiplier <= 0 THEN 1.0 " +
+                        "WHEN multiplier < 10 THEN multiplier " +
+                        "ELSE multiplier / POW(10, FLOOR(LOG10(ABS(multiplier)))) END, " +
+                    "multiplier_exp10 = CASE WHEN multiplier < 10 THEN 0 " +
+                        "ELSE FLOOR(LOG10(ABS(multiplier))) END " +
+                    "WHERE multiplier IS NOT NULL"
+                );
+
+                stmt.executeUpdate("ALTER TABLE ascend_player_maps DROP COLUMN multiplier");
+                LOGGER.atInfo().log("Migrated multiplier to multiplier_mantissa + multiplier_exp10");
+            } else if (!columnExists(conn, "ascend_player_maps", "multiplier_mantissa")) {
+                // Fresh install, no old multiplier column — ensure new columns
+                stmt.executeUpdate("ALTER TABLE ascend_player_maps ADD COLUMN multiplier_mantissa DOUBLE NOT NULL DEFAULT 1.0");
+                stmt.executeUpdate("ALTER TABLE ascend_player_maps ADD COLUMN multiplier_exp10 INT NOT NULL DEFAULT 0");
+            }
+
+            LOGGER.atInfo().log("Scientific notation migration complete");
+        } catch (SQLException e) {
+            LOGGER.at(Level.SEVERE).log("Failed to migrate to scientific notation: " + e.getMessage());
         }
     }
 }
