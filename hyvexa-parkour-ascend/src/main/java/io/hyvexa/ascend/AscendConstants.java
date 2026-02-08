@@ -23,8 +23,7 @@ public final class AscendConstants {
     public static final String ITEM_LEAVE = "Ascend_Leave_Block";
 
     // Economy
-    public static final double MANUAL_MULTIPLIER_INCREMENT = 0.1; // +0.1 per manual run
-    public static final double RUNNER_MULTIPLIER_INCREMENT = 0.1; // +0.1 per runner completion (×10 inflation)
+    public static final double RUNNER_MULTIPLIER_INCREMENT = 0.1; // +0.1 per runner completion (base, scaled by stars+summit)
     public static final int MULTIPLIER_SLOTS = 5;
     public static final int MAP_UNLOCK_REQUIRED_RUNNER_LEVEL = 5; // Runner level required to unlock next map
 

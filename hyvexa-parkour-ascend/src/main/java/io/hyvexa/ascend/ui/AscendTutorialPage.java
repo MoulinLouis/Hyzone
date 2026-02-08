@@ -25,11 +25,11 @@ public class AscendTutorialPage extends BaseAscendPage {
             "Pages/Ascend_Tutorial_FirstCompletion.ui",
             new String[]{"Nice Run!", "Automate It"},
             new String[]{
-                "You earned coins and your map multiplier went up by +0.1. The higher your multiplier, the more you earn.",
+                "You earned coins and your map multiplier went up! Manual runs give 2x the runner's multiplier gain.",
                 "Open /ascend and click Buy Runner. It replays the map automatically, earning multiplier while you're away."
             },
             new String[][]{
-                {"Coins earned on every manual completion", "Map multiplier increases by +0.1 per run", "Higher multiplier means bigger rewards"},
+                {"Coins earned on every manual completion", "Multiplier gain = 2x the runner's gain", "Higher multiplier means bigger rewards"},
                 {"Runners replay maps automatically for you", "They earn multiplier even while you're offline", "Buy runners from the map select menu"}
             },
             new String[][]{
@@ -71,11 +71,11 @@ public class AscendTutorialPage extends BaseAscendPage {
             new String[]{"Elevation", "Elevate Often"},
             new String[]{
                 "Spend your coins to gain elevation levels. Your level is your multiplier: level 10 = x10, level 100 = x100. Open with /ascend elevate.",
-                "Only your coins are spent - runners, multipliers, and map progress are kept. Elevate whenever you can afford it."
+                "Elevation resets coins, runners, multipliers, and map unlocks. You keep your best times and your new elevation level. Elevate often to grow faster."
             },
             new String[][]{
                 {"Spend coins to gain elevation levels", "Your level equals your global multiplier", "Level 10 = x10, level 100 = x100"},
-                {"Only coins are spent on elevation", "Runners and multipliers are kept", "Elevate wisely to maximize your earnings!"}
+                {"Resets coins, runners, and multipliers", "Keeps best times and elevation level", "Elevate often to grow faster"}
             },
             new String[][]{
                 {"#10b981", "#f59e0b", "#3b82f6"},
@@ -103,11 +103,11 @@ public class AscendTutorialPage extends BaseAscendPage {
             new String[]{"Ascension", "Skill Tree"},
             new String[]{
                 "The ultimate prestige. Resets everything including Summit - but grants a Skill Tree point for powerful permanent abilities. Open with /ascend ascension.",
-                "Coin | Speed | Manual | Hybrid | Ultimate - 18 nodes across 5 paths. Skill points are permanent across all future Ascensions."
+                "8 skill nodes to unlock: Auto-Runners, Auto-Evolution, Persistence, Runner Speed, Offline Boost, Summit Memory, Evolution Power, and more. Skill points are permanent across all future Ascensions."
             },
             new String[][]{
                 {"Resets everything including Summit", "Grants a Skill Tree point each time", "Unlocks powerful permanent abilities"},
-                {"18 skill nodes across 5 paths", "Coin, Speed, Manual, Hybrid, Ultimate", "Skill points persist across Ascensions"}
+                {"8 skill nodes to unlock", "Auto-Runners, Speed, Persistence, and more", "Skill points persist across Ascensions"}
             },
             new String[][]{
                 {"#ef4444", "#a855f7", "#f59e0b"},
@@ -180,6 +180,12 @@ public class AscendTutorialPage extends BaseAscendPage {
 
         // Set button text
         cmd.set("#NextButton.Text", step == tutorial.totalSteps - 1 ? "Got It!" : "Next");
+
+        // Elevation tip box (only on step 1)
+        if (tutorial == Tutorial.ELEVATION) {
+            cmd.set("#TipBox.Visible", step == 0);
+            cmd.set("#TipText.Text", "Don't elevate right away! Let your runners build up multipliers first - you'll earn much more when you do.");
+        }
     }
 
     @Override

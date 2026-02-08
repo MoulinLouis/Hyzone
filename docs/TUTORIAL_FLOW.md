@@ -142,7 +142,7 @@ _Idea: Before/after multiplier comparison._
 **Title:** Elevate Often
 
 **Text:**
-> Only your coins are spent — runners, multipliers, and map progress are kept. Elevate whenever you can afford it.
+> Elevation resets coins, runners, multipliers, and map unlocks. You keep your **best times** and your new elevation level. Elevate often to grow faster.
 
 ---
 
@@ -198,9 +198,9 @@ _Idea: Skill tree overview with the 5 paths._
 **Title:** Skill Tree
 
 **Text:**
-> **Coin** · **Speed** · **Manual** · **Hybrid** · **Ultimate**
+> 8 skill nodes to unlock: **Auto-Runners**, **Auto-Evolution**, **Persistence**, **Runner Speed**, **Offline Boost**, **Summit Memory**, **Evolution Power**, and more.
 >
-> 18 nodes across 5 paths. Skill points are permanent across all future Ascensions.
+> Skill points are permanent across all future Ascensions.
 
 ---
 

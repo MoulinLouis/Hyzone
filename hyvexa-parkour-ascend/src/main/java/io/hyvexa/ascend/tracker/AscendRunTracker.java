@@ -238,8 +238,8 @@ public class AscendRunTracker {
         // Show runners again after completing the run
         showRunnersForMap(playerId, run.mapId);
 
-        // Play victory sound
-        int soundIndex = SoundEvent.getAssetMap().getIndex("SFX_Parkour_Victory");
+        // Play checkpoint sound on map completion
+        int soundIndex = SoundEvent.getAssetMap().getIndex("SFX_Parkour_Checkpoint");
         if (soundIndex > SoundEvent.EMPTY_ID) {
             SoundUtil.playSoundEvent2dToPlayer(playerRef, soundIndex, SoundCategory.SFX);
         }
@@ -254,8 +254,16 @@ public class AscendRunTracker {
 
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
 
-        // Base multiplier increment per manual run
-        BigNumber multiplierIncrement = BigNumber.fromDouble(AscendConstants.MANUAL_MULTIPLIER_INCREMENT);
+        // Manual multiplier increment = runner's multiplier increment for this map × 2
+        int runnerStars = playerStore.getRobotStars(playerId, run.mapId);
+        double multiplierGainBonus = 1.0;
+        double evolutionPowerBonus = 3.0;
+        if (plugin != null && plugin.getSummitManager() != null) {
+            multiplierGainBonus = plugin.getSummitManager().getMultiplierGainBonus(playerId);
+            evolutionPowerBonus = plugin.getSummitManager().getEvolutionPowerBonus(playerId);
+        }
+        BigNumber runnerIncrement = AscendConstants.getRunnerMultiplierIncrement(runnerStars, multiplierGainBonus, evolutionPowerBonus);
+        BigNumber multiplierIncrement = runnerIncrement.multiply(BigNumber.fromDouble(2.0));
 
         // Calculate payout BEFORE adding multiplier (use current multiplier, not the new one)
         List<AscendMap> multiplierMaps = mapStore.listMapsSorted();
