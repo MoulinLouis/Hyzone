@@ -39,6 +39,7 @@ import io.hyvexa.ascend.interaction.AscendResetInteraction;
 import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.summit.SummitManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
+import io.hyvexa.ascend.tutorial.TutorialTriggerService;
 import io.hyvexa.ascend.passive.PassiveEarningsManager;
 import io.hyvexa.common.whitelist.AscendWhitelistManager;
 import io.hyvexa.common.whitelist.WhitelistRegistry;
@@ -80,6 +81,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
     private AscensionManager ascensionManager;
     private AchievementManager achievementManager;
     private PassiveEarningsManager passiveEarningsManager;
+    private TutorialTriggerService tutorialTriggerService;
     private AscendWhitelistManager whitelistManager;
     private ScheduledFuture<?> runTrackerTask;
     private ScheduledFuture<?> timerUpdateTask;
@@ -136,13 +138,16 @@ public class ParkourAscendPlugin extends JavaPlugin {
         robotManager.start();
 
         summitManager = new SummitManager(playerStore, mapStore);
-        ascensionManager = new AscensionManager(playerStore);
+        ascensionManager = new AscensionManager(playerStore, runTracker);
         achievementManager = new AchievementManager(playerStore, mapStore);
 
         // Initialize passive earnings manager
         passiveEarningsManager = new PassiveEarningsManager(
             playerStore, mapStore, ghostStore
         );
+
+        // Initialize tutorial trigger service
+        tutorialTriggerService = new TutorialTriggerService(playerStore);
 
         if (HylogramsBridge.isAvailable()) {
             hologramManager = new AscendHologramManager();
@@ -196,6 +201,11 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     // Check for passive earnings
                     if (passiveEarningsManager != null) {
                         passiveEarningsManager.checkPassiveEarningsOnJoin(playerId);
+                    }
+
+                    // Trigger welcome tutorial for new players
+                    if (tutorialTriggerService != null) {
+                        tutorialTriggerService.checkWelcome(playerId, ref);
                     }
                 }
                 CompletableFuture.runAsync(() -> {
@@ -359,6 +369,10 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
     public PassiveEarningsManager getPassiveEarningsManager() {
         return passiveEarningsManager;
+    }
+
+    public TutorialTriggerService getTutorialTriggerService() {
+        return tutorialTriggerService;
     }
 
     /**
