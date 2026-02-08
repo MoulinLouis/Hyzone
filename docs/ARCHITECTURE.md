@@ -37,6 +37,17 @@ Technical design documentation for the Hyvexa multi-module plugin suite.
 - `hyvexa-hub`: hub routing + UI (mode switching, teleport routing)
 - Hub routing targets the capitalized world names: `Hub`, `Parkour`, `Ascend`
 
+### Ascend Plugin Lifecycle
+- Ensures Ascend DB tables on startup (`AscendDatabaseSetup`).
+- Loads map store and player store into memory (`AscendMapStore`, `AscendPlayerStore`).
+- Starts `AscendRunTracker` for manual completion detection.
+- Starts `RobotManager` for runner ghost replay.
+- Registers `/ascend` and `/as` commands.
+- PlayerReady: if in Ascend world, clears inventory, gives Ascend dev items + hub selector, attaches Ascend HUD.
+- AddPlayerToWorld: re-ensures Ascend dev items + hub selector when entering the Ascend world (e.g., respawn).
+- PlayerDisconnect: clears HUD caches and cancels active run.
+- Schedules a 200ms tick that runs run tracking + HUD updates on the Ascend world thread.
+
 Module boundaries:
 - Parkour/Ascend/Hub depend on Core only
 - No dependencies between Parkour and Parkour Ascend
