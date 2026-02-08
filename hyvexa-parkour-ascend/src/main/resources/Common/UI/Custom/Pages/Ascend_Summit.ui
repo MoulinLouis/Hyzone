@@ -2,7 +2,7 @@ $C = "../Common.ui";
 
 $C.@PageOverlay {
   $C.@Container {
-    Anchor: (Width: 480, Height: 480);
+    Anchor: (Width: 480, Height: 530);
 
     #Title {
       Group {
@@ -34,7 +34,6 @@ $C.@PageOverlay {
 
       Group #CategoryList {
         Anchor: (Left: 0, Right: 0, Top: 12);
-        FlexWeight: 1;
         LayoutMode: Top;
 
         Group #CategoryCards {
@@ -42,10 +41,23 @@ $C.@PageOverlay {
         }
       }
 
-      Label #WarningText {
-        Anchor: (Top: 12);
-        Style: (FontSize: 12, TextColor: #fca5a5);
-        Text: "Warning: Summit resets coins and elevation.";
+      Group #WarningCard {
+        Anchor: (Left: 0, Right: 0, Top: 12);
+        LayoutMode: Left;
+        Background: #3b1418(0.6);
+        Padding: (Left: 14, Right: 14, Top: 10, Bottom: 10);
+
+        Label {
+          Anchor: (Width: 10);
+          Style: (FontSize: 14, TextColor: #ef4444, RenderBold: true);
+          Text: "!";
+        }
+
+        Label {
+          Anchor: (Left: 6);
+          Style: (FontSize: 13, TextColor: #fca5a5, Wrap: true);
+          Text: "Warning: Summit resets coins and elevation.";
+        }
       }
     }
   }

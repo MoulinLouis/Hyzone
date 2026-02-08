@@ -163,8 +163,8 @@ $C.@PageOverlay {
 
         Label {
           Anchor: (Width: 10);
-          Style: (FontSize: 14, TextColor: #ef4444);
-          Text: "●";
+          Style: (FontSize: 14, TextColor: #ef4444, RenderBold: true);
+          Text: "!";
         }
 
         Label {

@@ -6,7 +6,7 @@ $C.@PageOverlay {
     Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
 
     Group #RunHudRoot {
-      Anchor: (Right: 20, Top: 400, Width: 284, Height: 355);
+      Anchor: (Right: 20, Top: 400, Width: 284, Height: 370);
       LayoutMode: Left;
 
       Group #InfoAccentBar {

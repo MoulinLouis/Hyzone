@@ -2,7 +2,7 @@ $C = "../Common.ui";
 
 $C.@PageOverlay {
   $C.@Container {
-    Anchor: (Width: 420, Height: 400);
+    Anchor: (Width: 420, Height: 415);
 
     #Title {
       Group {
@@ -136,10 +136,23 @@ $C.@PageOverlay {
         }
       }
 
-      Label #WarningText {
+      Group #WarningCard {
         Anchor: (Left: 0, Right: 0, Top: 16);
-        Style: (FontSize: 14, TextColor: #fca5a5, HorizontalAlignment: Center);
-        Text: "Warning: Elevation resets coins to zero.";
+        LayoutMode: Left;
+        Background: #3b1418(0.6);
+        Padding: (Left: 14, Right: 14, Top: 10, Bottom: 10);
+
+        Label {
+          Anchor: (Width: 10);
+          Style: (FontSize: 14, TextColor: #ef4444, RenderBold: true);
+          Text: "!";
+        }
+
+        Label {
+          Anchor: (Left: 6);
+          Style: (FontSize: 13, TextColor: #fca5a5, Wrap: true);
+          Text: "Warning: Elevation resets coins to zero.";
+        }
       }
 
       Label #TipText {

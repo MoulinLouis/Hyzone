@@ -134,8 +134,7 @@ public class AscensionPage extends BaseAscendPage {
         if (canAscend) {
             commandBuilder.set("#AscendButton.Text", "ASCEND");
         } else {
-            java.math.BigDecimal needed = AscendConstants.ASCENSION_COIN_THRESHOLD.subtract(coins).max(java.math.BigDecimal.ZERO);
-            commandBuilder.set("#AscendButton.Text", "NEED " + FormatUtils.formatCoinsForHudDecimal(needed) + " MORE");
+            commandBuilder.set("#AscendButton.Text", "NEED " + FormatUtils.formatCoinsForHudDecimal(AscendConstants.ASCENSION_COIN_THRESHOLD));
         }
     }
 }

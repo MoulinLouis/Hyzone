@@ -451,7 +451,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
         } else {
             formatted = String.format(Locale.US, "%.0fx", val);
         }
-        return "→ +" + formatted + "/run";
+        return "-> +" + formatted + "/run";
     }
 
     /**
