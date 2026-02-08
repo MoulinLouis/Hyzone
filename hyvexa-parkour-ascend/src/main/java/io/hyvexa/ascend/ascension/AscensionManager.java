@@ -70,6 +70,8 @@ public class AscensionManager {
         // Reset progress
         progress.setCoins(java.math.BigDecimal.ZERO);
         progress.setElevationMultiplier(1);
+        progress.setSummitAccumulatedCoins(java.math.BigDecimal.ZERO);
+        progress.setElevationAccumulatedCoins(java.math.BigDecimal.ZERO);
         progress.clearSummitXp();
 
         // Reset all map progress (multipliers, unlocks, robots)

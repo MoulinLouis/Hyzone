@@ -121,7 +121,6 @@ public class AscendMapSelectPage extends BaseAscendPage {
             return;
         }
         if (BUTTON_BUY_ALL_DISABLED.equals(data.getButton())) {
-            sendMessage(store, ref, "[Ascend] No upgrades available.");
             return;
         }
         if (BUTTON_EVOLVE_ALL.equals(data.getButton())) {
@@ -129,7 +128,6 @@ public class AscendMapSelectPage extends BaseAscendPage {
             return;
         }
         if (BUTTON_EVOLVE_ALL_DISABLED.equals(data.getButton())) {
-            sendMessage(store, ref, "[Ascend] No runners ready for evolution.");
             return;
         }
         if (BUTTON_STATS.equals(data.getButton())) {
@@ -528,7 +526,6 @@ public class AscendMapSelectPage extends BaseAscendPage {
             // Normal speed upgrade
             BigDecimal upgradeCost = computeUpgradeCost(currentLevel, map.getDisplayOrder(), currentStars);
             if (!playerStore.atomicSpendCoins(playerRef.getUuid(), upgradeCost)) {
-                sendMessage(store, ref, "[Ascend] Not enough coins to upgrade speed.");
                 return;
             }
             int newLevel = playerStore.incrementRobotSpeedLevel(playerRef.getUuid(), mapId);
@@ -1136,7 +1133,6 @@ public class AscendMapSelectPage extends BaseAscendPage {
         }
 
         if (options.isEmpty()) {
-            sendMessage(store, ref, "[Ascend] No upgrades available.");
             return;
         }
 
@@ -1262,7 +1258,6 @@ public class AscendMapSelectPage extends BaseAscendPage {
         }
 
         if (eligibleMapIds.isEmpty()) {
-            sendMessage(store, ref, "[Ascend] No runners ready for evolution.");
             return;
         }
 

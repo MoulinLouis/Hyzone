@@ -9,7 +9,7 @@ Key mechanics modeled:
 - Evolution: stars track per runner, resets speedLevel but not cost progression
 - totalLevel = stars * 20 + speedLevel (continuous cost curve)
 - Multiplier gain: +0.1/run at 0 stars, +0.2/run at 1+ stars
-- Elevation: cost 30000 * 1.15^(level^0.77), multiplier = level
+- Elevation: cost 30000 * 1.15^(level^0.72), multiplier = level
 - Elevation resets: coins, map unlocks, multipliers, runners, stars, speed levels (NOT ghosts)
 
 Strategy:
@@ -41,7 +41,7 @@ EARLY_BOOST_THRESHOLD = 10                 # Boost applies for speedLevel 0-9
 
 ELEVATION_BASE_COST = 30000
 ELEVATION_COST_GROWTH = 1.15
-ELEVATION_COST_CURVE = 0.77                # flattens exponential at high levels
+ELEVATION_COST_CURVE = 0.72                # flattens exponential at high levels
 
 MANUAL_MULT_INCREMENT = 0.1               # +0.1 per manual completion
 RUNNER_MULT_BASE = 0.1                    # +0.1 at 0 stars

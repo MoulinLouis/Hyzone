@@ -18,6 +18,8 @@
 - **Ascend: Multiplier gain display now shows 2 decimal places** - Values like +0.15x now display correctly instead of rounding to +0.2x
 
 ### Changed
+- **Ascend: Elevation now uses accumulated coins** - Elevation levels are based on total coins earned since last reset, not current balance. Spending on upgrades no longer reduces elevation potential. Resets on elevation, summit, or ascension.
+- **Ascend: Elevation costs reduced at mid/high levels** - Cost curve exponent 0.77 → 0.72 (early), 0.63 → 0.58 (late). Level 1 unchanged, level 100 is 63% cheaper, level 200 is 85% cheaper
 - **Ascend: Player data now uses lazy loading** - Players are loaded from database on-demand when they connect and evicted on disconnect, reducing memory usage for large player counts
 - **Ascend: Summit XP numbers compressed** - Level exponent reduced from 2.5 to 2.0, coins→XP uses power 3/7 instead of sqrt. Same coins reach same levels but XP displays are much smaller (level 50: 17,678 → 2,500 XP)
 - **Ascend: Evolution default multiplier bonus adjusted** - Evolved runners now apply ×2 multiplier gain per run instead of ×10

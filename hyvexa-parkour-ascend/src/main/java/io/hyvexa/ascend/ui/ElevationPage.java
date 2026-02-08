@@ -96,24 +96,24 @@ public class ElevationPage extends BaseAscendPage {
         }
 
         UUID playerId = playerRef.getUuid();
-        java.math.BigDecimal coins = playerStore.getCoins(playerId);
+        java.math.BigDecimal accumulatedCoins = playerStore.getElevationAccumulatedCoins(playerId);
         int currentElevation = playerStore.getElevationLevel(playerId);
 
         // Get cost multiplier from skill tree
         double costMultiplier = getCostMultiplier(playerId);
 
-        // Calculate how many levels can be purchased
+        // Calculate how many levels can be purchased based on accumulated coins
         java.math.BigDecimal costMultiplierBD = java.math.BigDecimal.valueOf(costMultiplier);
-        ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(currentElevation, coins, costMultiplierBD);
+        ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(currentElevation, accumulatedCoins, costMultiplierBD);
 
         if (purchase.levels <= 0) {
             java.math.BigDecimal nextCost = AscendConstants.getElevationLevelUpCost(currentElevation, java.math.BigDecimal.valueOf(costMultiplier));
-            player.sendMessage(Message.raw("[Ascend] You need " + FormatUtils.formatCoinsForHudDecimal(nextCost) + " coins to elevate.")
+            player.sendMessage(Message.raw("[Ascend] You need " + FormatUtils.formatCoinsForHudDecimal(nextCost) + " accumulated coins to elevate.")
                 .color(SystemMessageUtils.SECONDARY));
             return;
         }
 
-        // Deduct the cost and add elevation atomically (this resets coins to 0 as part of elevation mechanic)
+        // Set new elevation and reset coins/accumulators atomically
         int newElevation = currentElevation + purchase.levels;
         playerStore.atomicSetElevationAndResetCoins(playerId, newElevation);
 
@@ -224,15 +224,15 @@ public class ElevationPage extends BaseAscendPage {
         }
 
         UUID playerId = playerRef.getUuid();
-        java.math.BigDecimal coins = playerStore.getCoins(playerId);
+        java.math.BigDecimal accumulatedCoins = playerStore.getElevationAccumulatedCoins(playerId);
         int currentElevation = playerStore.getElevationLevel(playerId);
 
         // Get cost multiplier from skill tree
         double costMultiplier = getCostMultiplier(playerId);
 
-        // Calculate purchase info
+        // Calculate purchase info based on accumulated coins
         java.math.BigDecimal costMultiplierBD = java.math.BigDecimal.valueOf(costMultiplier);
-        ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(currentElevation, coins, costMultiplierBD);
+        ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(currentElevation, accumulatedCoins, costMultiplierBD);
         int newElevation = currentElevation + purchase.levels;
         java.math.BigDecimal nextCost = AscendConstants.getElevationLevelUpCost(currentElevation, costMultiplierBD);
 
@@ -243,8 +243,8 @@ public class ElevationPage extends BaseAscendPage {
         int targetElevation = newElevation + 1;
         java.math.BigDecimal targetCost = purchase.cost.add(nextLevelAfterPurchaseCost);
         String costText = "Progress to x" + targetElevation + ": " +
-                         FormatUtils.formatCoinsForHudDecimal(coins) + " / " +
-                         FormatUtils.formatCoinsForHudDecimal(targetCost) + " coins";
+                         FormatUtils.formatCoinsForHudDecimal(accumulatedCoins) + " / " +
+                         FormatUtils.formatCoinsForHudDecimal(targetCost) + " accumulated coins";
         if (costMultiplier < 1.0) {
             costText += " (-" + Math.round((1.0 - costMultiplier) * 100) + "%)";
         }
@@ -252,7 +252,7 @@ public class ElevationPage extends BaseAscendPage {
 
         // Update current elevation display
         commandBuilder.set("#MultiplierValue.Text", "x" + currentElevation);
-        java.math.BigDecimal leftoverCoins = coins.subtract(purchase.cost);
+        java.math.BigDecimal leftoverCoins = accumulatedCoins.subtract(purchase.cost);
         java.math.BigDecimal amountNeededForNextLevel = nextLevelAfterPurchaseCost.subtract(leftoverCoins);
 
         // Update new elevation display and gain
