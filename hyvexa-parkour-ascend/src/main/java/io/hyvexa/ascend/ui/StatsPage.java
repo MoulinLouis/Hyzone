@@ -1,5 +1,14 @@
 package io.hyvexa.ascend.ui;
 
+import java.util.List;
+import java.util.Locale;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+
+import javax.annotation.Nonnull;
+
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
@@ -11,6 +20,7 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+
 import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
@@ -22,25 +32,9 @@ import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.util.FormatUtils;
 
-import javax.annotation.Nonnull;
-import java.util.List;
-import java.util.Locale;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
-
 public class StatsPage extends BaseAscendPage {
 
     private static final String BUTTON_CLOSE = "Close";
-
-    // Accent colors for each stat
-    private static final String COLOR_INCOME = "#10b981";      // Green
-    private static final String COLOR_MULTIPLIER = "#7c3aed";  // Violet
-    private static final String COLOR_LIFETIME = "#ffd166";    // Gold
-    private static final String COLOR_RUNS = "#3b82f6";        // Blue
-    private static final String COLOR_ASCENSIONS = "#06b6d4";  // Cyan
-    private static final String COLOR_FASTEST = "#f59e0b";     // Orange
 
     private final AscendPlayerStore playerStore;
     private final AscendMapStore mapStore;
@@ -63,7 +57,11 @@ public class StatsPage extends BaseAscendPage {
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CloseButton",
             EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE), false);
 
-        buildStatCards(ref, store, commandBuilder, eventBuilder);
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        if (playerRef != null) {
+            updateAllStats(commandBuilder, playerRef.getUuid());
+        }
+
         startAutoRefresh(ref, store);
     }
 
@@ -87,79 +85,58 @@ public class StatsPage extends BaseAscendPage {
         }
     }
 
-    private void buildStatCards(Ref<EntityStore> ref, Store<EntityStore> store,
-                                 UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
-        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-        if (playerRef == null) {
-            return;
-        }
-        UUID playerId = playerRef.getUuid();
-
-        // Clear existing cards
-        commandBuilder.clear("#StatsCards");
-
+    private void updateAllStats(UICommandBuilder commandBuilder, UUID playerId) {
         // 1. Combined Income
-        commandBuilder.append("#StatsCards", "Pages/Ascend_StatsEntry.ui");
-        commandBuilder.set("#StatsCards[0] #AccentBar.Background", COLOR_INCOME);
-        commandBuilder.set("#StatsCards[0] #StatLabel.Text", "Combined Income");
-        commandBuilder.set("#StatsCards[0] #StatValue.Text", formatCombinedIncome(playerId));
+        commandBuilder.set("#IncomeValue.Text", formatCombinedIncome(playerId));
 
         // 2. Multiplier Breakdown
-        commandBuilder.append("#StatsCards", "Pages/Ascend_StatsEntry.ui");
-        commandBuilder.set("#StatsCards[1] #AccentBar.Background", COLOR_MULTIPLIER);
-        commandBuilder.set("#StatsCards[1] #StatLabel.Text", "Multiplier Breakdown");
-        commandBuilder.set("#StatsCards[1] #StatValue.Text", formatMultiplierBreakdown(playerId));
+        List<AscendMap> maps = mapStore != null ? mapStore.listMapsSorted() : List.of();
+        java.math.BigDecimal[] digits = playerStore.getMultiplierDisplayValues(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
+        double elevation = playerStore.getCalculatedElevationMultiplier(playerId);
+
+        double digitsProduct = 1.0;
+        for (java.math.BigDecimal d : digits) {
+            digitsProduct *= Math.max(1.0, d.doubleValue());
+        }
+        double total = digitsProduct * elevation;
+
+        commandBuilder.set("#MultiplierValue.Text", formatMultiplier(total));
+        commandBuilder.set("#MultiplierDetail.Text",
+            "Digits: " + formatMultiplier(digitsProduct) + "  |  Elevation: " + formatMultiplier(elevation));
 
         // 3. Lifetime Earnings
-        commandBuilder.append("#StatsCards", "Pages/Ascend_StatsEntry.ui");
-        commandBuilder.set("#StatsCards[2] #AccentBar.Background", COLOR_LIFETIME);
-        commandBuilder.set("#StatsCards[2] #StatLabel.Text", "Lifetime Earnings");
         java.math.BigDecimal totalEarned = playerStore.getTotalCoinsEarned(playerId);
-        commandBuilder.set("#StatsCards[2] #StatValue.Text", FormatUtils.formatCoinsForHudDecimal(totalEarned) + " coins");
+        commandBuilder.set("#LifetimeValue.Text", FormatUtils.formatCoinsForHudDecimal(totalEarned) + " coins");
 
         // 4. Manual Runs
-        commandBuilder.append("#StatsCards", "Pages/Ascend_StatsEntry.ui");
-        commandBuilder.set("#StatsCards[3] #AccentBar.Background", COLOR_RUNS);
-        commandBuilder.set("#StatsCards[3] #StatLabel.Text", "Manual Runs");
         int manualRuns = playerStore.getTotalManualRuns(playerId);
-        commandBuilder.set("#StatsCards[3] #StatValue.Text", manualRuns + " runs");
+        commandBuilder.set("#RunsValue.Text", String.format(Locale.US, "%,d runs", manualRuns));
 
         // 5. Ascensions
-        commandBuilder.append("#StatsCards", "Pages/Ascend_StatsEntry.ui");
-        commandBuilder.set("#StatsCards[4] #AccentBar.Background", COLOR_ASCENSIONS);
-        commandBuilder.set("#StatsCards[4] #StatLabel.Text", "Ascensions");
         int ascensions = playerStore.getAscensionCount(playerId);
-        commandBuilder.set("#StatsCards[4] #StatValue.Text", String.valueOf(ascensions));
+        commandBuilder.set("#AscensionsValue.Text", String.format(Locale.US, "%,d", ascensions));
 
-        // 6. Fastest Ascension (special card with timer)
-        commandBuilder.append("#StatsCards", "Pages/Ascend_StatsTimerEntry.ui");
-        commandBuilder.set("#StatsCards[5] #AccentBar.Background", COLOR_FASTEST);
+        // 6. Fastest Ascension
         updateFastestAscension(commandBuilder, playerId);
     }
 
     private void updateFastestAscension(UICommandBuilder commandBuilder, UUID playerId) {
         AscendPlayerProgress progress = playerStore.getPlayer(playerId);
         if (progress == null) {
-            commandBuilder.set("#StatsCards[5] #BestValue.Text", "\u2014");
-            commandBuilder.set("#StatsCards[5] #CurrentValue.Text", "0s");
+            commandBuilder.set("#BestValue.Text", "-");
+            commandBuilder.set("#CurrentValue.Text", "0s");
             return;
         }
 
-        // Best time
         Long fastestMs = progress.getFastestAscensionMs();
-        if (fastestMs != null) {
-            commandBuilder.set("#StatsCards[5] #BestValue.Text", formatDuration(fastestMs));
-        } else {
-            commandBuilder.set("#StatsCards[5] #BestValue.Text", "\u2014");
-        }
+        commandBuilder.set("#BestValue.Text", fastestMs != null ? formatDuration(fastestMs) : "-");
 
-        // Current time
         Long startedAt = progress.getAscensionStartedAt();
         if (startedAt != null) {
             long current = System.currentTimeMillis() - startedAt;
-            commandBuilder.set("#StatsCards[5] #CurrentValue.Text", formatDuration(current));
+            commandBuilder.set("#CurrentValue.Text", formatDuration(current));
         } else {
-            commandBuilder.set("#StatsCards[5] #CurrentValue.Text", "0s");
+            commandBuilder.set("#CurrentValue.Text", "0s");
         }
     }
 
@@ -171,7 +148,6 @@ public class StatsPage extends BaseAscendPage {
         List<AscendMap> maps = mapStore.listMapsSorted();
         double totalCoinsPerSec = 0.0;
 
-        // Get multipliers
         java.math.BigDecimal digitsProduct = playerStore.getMultiplierProductDecimal(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
         double elevation = playerStore.getCalculatedElevationMultiplier(playerId);
 
@@ -181,21 +157,18 @@ public class StatsPage extends BaseAscendPage {
                 continue;
             }
 
-            // Get ghost for PB time
             GhostRecording ghost = ghostStore.getRecording(playerId, map.getId());
             if (ghost == null || ghost.getCompletionTimeMs() <= 0) {
                 continue;
             }
 
             int speedLevel = mapProgress.getRobotSpeedLevel();
-            // Use the centralized speed multiplier calculation
             double speedMultiplier = RobotManager.calculateSpeedMultiplier(map, speedLevel, playerId);
 
             long intervalMs = (long) (ghost.getCompletionTimeMs() / speedMultiplier);
             intervalMs = Math.max(1L, intervalMs);
             double runsPerSec = 1000.0 / intervalMs;
 
-            // Base reward with multipliers (convert BigDecimal to double for display calculation)
             long baseReward = map.getEffectiveBaseReward();
             double coinsPerRun = baseReward * digitsProduct.doubleValue() * elevation;
 
@@ -205,24 +178,19 @@ public class StatsPage extends BaseAscendPage {
         if (totalCoinsPerSec < 0.01) {
             return "0 coins/sec";
         }
-        return FormatUtils.formatCoinsForHudDecimal(java.math.BigDecimal.valueOf(totalCoinsPerSec)) + " coins/sec";
+        return FormatUtils.formatCoinsForHudDecimal(java.math.BigDecimal.valueOf(totalCoinsPerSec)) + "/sec";
     }
 
-    private String formatMultiplierBreakdown(UUID playerId) {
-        List<AscendMap> maps = mapStore != null ? mapStore.listMapsSorted() : List.of();
-        java.math.BigDecimal[] digits = playerStore.getMultiplierDisplayValues(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
-        double elevation = playerStore.getCalculatedElevationMultiplier(playerId);
-
-        // Calculate digits product (convert BigDecimal to double for display)
-        double digitsProduct = 1.0;
-        for (java.math.BigDecimal d : digits) {
-            digitsProduct *= Math.max(1.0, d.doubleValue());
+    private String formatMultiplier(double value) {
+        if (value < 10) {
+            return String.format(Locale.US, "%.1fx", value);
+        } else if (value < 1_000) {
+            return String.format(Locale.US, "%.0fx", value);
+        } else if (value < 1_000_000) {
+            return String.format(Locale.US, "%,.0fx", value);
+        } else {
+            return FormatUtils.formatCoinsForHudDecimal(java.math.BigDecimal.valueOf(value)) + "x";
         }
-
-        double total = digitsProduct * elevation;
-
-        return String.format(Locale.US, "%.1fx \u00d7 %.1fx = %.1fx",
-            digitsProduct, elevation, total);
     }
 
     private String formatDuration(long ms) {
@@ -258,11 +226,11 @@ public class StatsPage extends BaseAscendPage {
                 return;
             }
             try {
-                CompletableFuture.runAsync(() -> refreshTimer(ref, store), world);
+                CompletableFuture.runAsync(() -> refreshStats(ref, store), world);
             } catch (Exception e) {
                 stopAutoRefresh();
             }
-        }, 1000L, 1000L, TimeUnit.MILLISECONDS);
+        }, 500L, 500L, TimeUnit.MILLISECONDS);
     }
 
     private void stopAutoRefresh() {
@@ -272,7 +240,7 @@ public class StatsPage extends BaseAscendPage {
         }
     }
 
-    private void refreshTimer(Ref<EntityStore> ref, Store<EntityStore> store) {
+    private void refreshStats(Ref<EntityStore> ref, Store<EntityStore> store) {
         if (!isCurrentPage()) {
             stopAutoRefresh();
             return;
@@ -283,14 +251,13 @@ public class StatsPage extends BaseAscendPage {
         }
 
         UICommandBuilder commandBuilder = new UICommandBuilder();
-        updateFastestAscension(commandBuilder, playerRef.getUuid());
+        updateAllStats(commandBuilder, playerRef.getUuid());
         if (!isCurrentPage()) {
             return;
         }
         try {
             sendUpdate(commandBuilder, null, false);
         } catch (Exception e) {
-            // UI was replaced by external dialog (e.g., NPCDialog) - stop refreshing
             stopAutoRefresh();
         }
     }
