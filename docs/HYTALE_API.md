@@ -205,3 +205,142 @@ HylogramsBridge.Hologram holo = HylogramsBridge.create("example", store)
 
 HylogramsBridge.updateHologramLines("example", List.of("Title", "1. Player"), store);
 ```
+
+## Game Assets
+
+Location: `/mnt/c/Users/User/AppData/Roaming/Hytale/install/release/package/game/latest/Assets.zip`
+
+Use `unzip -l Assets.zip | grep <pattern>` to list, `unzip -p Assets.zip <path>` to read contents.
+
+### Camera System (via packets)
+
+Control player camera via `SetServerCamera` packet:
+
+```java
+import com.hypixel.hytale.protocol.*;
+import com.hypixel.hytale.protocol.packets.camera.*;
+
+// Switch to 3rd person
+ServerCameraSettings s = new ServerCameraSettings();
+s.positionLerpSpeed = 0.15f;    // smooth position transition
+s.rotationLerpSpeed = 0.15f;    // smooth rotation transition
+s.distance = 8f;                 // distance from player
+s.isFirstPerson = false;
+s.eyeOffset = true;
+s.positionDistanceOffsetType = PositionDistanceOffsetType.DistanceOffsetRaycast;
+packetHandler.writeNoCache(new SetServerCamera(ClientCameraView.Custom, false, s));
+
+// Lock camera (disable mouse look + movement)
+s.applyLookType = ApplyLookType.Rotation;
+s.lookMultiplier = new Vector2f(0f, 0f);
+s.skipCharacterPhysics = true;
+s.rotationType = RotationType.Custom;
+s.rotation = new Direction(yawRadians, pitchRadians, 0f);
+packetHandler.writeNoCache(new SetServerCamera(ClientCameraView.Custom, true, s));
+
+// Reset camera
+CameraManager camMgr = store.getComponent(ref, CameraManager.getComponentType());
+camMgr.resetCamera(playerRef);
+
+// Camera shake
+packetHandler.writeNoCache(new CameraShakeEffect(0, intensity, AccumulationMode.Set));
+```
+
+Key enums: `ClientCameraView` (FirstPerson, ThirdPerson, Custom), `RotationType` (AttachedToPlusOffset, Custom), `PositionDistanceOffsetType` (DistanceOffset, DistanceOffsetRaycast, None), `AttachedToType` (LocalPlayer, EntityId, None).
+
+### Particles (via packets)
+
+Spawn particles at a world position:
+
+```java
+import com.hypixel.hytale.protocol.packets.world.SpawnParticleSystem;
+
+packetHandler.writeNoCache(new SpawnParticleSystem(
+    "Spell/Fireworks/Firework_GS",  // particleSystemId (path under Server/Particles/, without .particlesystem)
+    new Position(x, y, z),
+    new Direction(0f, 0f, 0f),
+    1.0f,  // scale
+    new Color((byte)255, (byte)255, (byte)255)
+));
+```
+
+#### Interesting Particle IDs (for cinematic use)
+
+| Category | ID | Description |
+|----------|----|-------------|
+| **Cinematic** | `_Test/Cinematic/Cinematic/Cinematic_Fireworks_Red_XL` | Large red fireworks |
+| **Cinematic** | `_Test/Cinematic/Cinematic/Cinematic_Portal_Appear` | Portal appearing |
+| **Cinematic** | `_Test/Cinematic/Cinematic/Cinematic_Portal_Appear_XXL` | Large portal |
+| **Cinematic** | `_Test/Cinematic/Cinematic/Cinematic_Pink_Smoke` | Pink smoke |
+| **Spells** | `Spell/Fireworks/Firework_GS` | Firework burst |
+| **Spells** | `Spell/Fireworks/Firework_Mix2` | Multi-color fireworks |
+| **Spells** | `Spell/Azure_Spiral/Azure_Spiral` | Blue spiral |
+| **Spells** | `Spell/Teleport/Teleport` | Teleport effect |
+| **Spells** | `Spell/Portal/MagicPortal` | Magic portal |
+| **Spells** | `Spell/Portal/PlayerSpawn_Spawn` | Player spawn effect |
+| **Spells** | `Spell/Beam/Beam_Lightning2` | Lightning beam |
+| **Spells** | `Spell/Rings/Rings_Rings` | Magic rings |
+| **Status** | `Status_Effect/Heal/Aura_Heal` | Healing aura |
+| **Status** | `Status_Effect/Heal/Aura_Sphere` | Healing sphere |
+| **Status** | `Status_Effect/Heal/Effect_Heal` | Heal effect |
+| **Status** | `Status_Effect/Crown_Gold/Effect_Crown_Gold` | Golden crown |
+| **Status** | `Status_Effect/Shield/E_Sphere` | Shield sphere |
+| **Status** | `Status_Effect/Fire/Effect_Fire` | Fire status |
+| **Weather** | `Weather/Firefly/Fireflies_GS` | Fireflies |
+| **Weather** | `Weather/Magic_Sparks/Magic_Sparks_GS` | Magic sparks |
+| **Weather** | `Weather/Magic_Sparks/Magic_Sparks_Heavy_GS` | Heavy magic sparks |
+| **Items** | `Item/Torch/Torch_Fire` | Torch flame |
+| **Items** | `Item/Fire_Green/Fire_Green` | Green fire |
+| **Items** | `Item/Fire_Teal/Fire_Teal` | Teal fire |
+| **Drops** | `Drop/Legendary/Drop_Legendary` | Legendary drop glow |
+| **Drops** | `Drop/Epic/Drop_Epic` | Epic drop glow |
+| **Combat** | `Combat/Impact/Critical/Impact_Critical` | Critical hit |
+| **Test** | `_Example/Example_Vertical_Buff` | Vertical buff effect |
+| **Test** | `_Example/Example_Spiral` | Spiral |
+| **Test** | `_Test/MagicRnD/Buff/Test_Cast_Buff` | Buff cast |
+| **Test** | `_Test/Sticks/Nature_Buff` | Nature buff |
+| **Test** | `_Test/Sticks/Nature_Buff_Spawn` | Nature buff spawn |
+| **Memories** | `Memories/MemoryUnlock` | Memory unlock effect |
+
+### Sounds (via packets)
+
+Play sounds at a position or as 2D (global):
+
+```java
+import com.hypixel.hytale.protocol.packets.world.*;
+
+// Look up index from string ID
+int index = SoundEvent.getAssetMap().getIndex("SFX_Divine_Respawn");
+
+// Play at position
+packetHandler.writeNoCache(new PlaySoundEvent3D(index, SoundCategory.SFX, new Position(x, y, z), 1.0f, 1.0f));
+
+// Play as 2D (no position, global to player)
+packetHandler.writeNoCache(new PlaySoundEvent2D(index, SoundCategory.SFX, 1.0f, 1.0f));
+```
+
+#### Interesting Sound IDs
+
+| ID | Description |
+|----|-------------|
+| `SFX_Divine_Respawn` | Divine respawn (epic) |
+| `SFX_Avatar_Powers_Enable` | Avatar powers activate |
+| `SFX_Avatar_Powers_Disable` | Avatar powers deactivate |
+| `SFX_Portal_Neutral_Open` | Portal opening |
+| `SFX_Portal_Neutral_Teleport_Local` | Teleport through portal |
+| `SFX_Memories_Unlock_Local` | Memory unlock |
+| `SFX_Chest_Legendary_FirstOpen_Player` | Legendary chest open |
+| `SFX_Stamina_Potion_Success` | Potion success |
+
+Sound categories: `Music`, `Ambient`, `SFX`, `UI`.
+
+### Entity Light (via packet, deprecated)
+
+```java
+import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolSetEntityLight;
+
+int networkId = player.getNetworkId(); // deprecated but only option
+packetHandler.writeNoCache(new BuilderToolSetEntityLight(networkId, new ColorLight((byte)radius, (byte)r, (byte)g, (byte)b)));
+```
+
+Note: `getNetworkId()` is deprecated. Entity light may only work for builder tool entities, not players.
