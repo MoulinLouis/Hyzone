@@ -20,6 +20,7 @@ import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.robot.RobotManager;
+import io.hyvexa.common.math.BigNumber;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
@@ -96,19 +97,19 @@ public class ElevationPage extends BaseAscendPage {
         }
 
         UUID playerId = playerRef.getUuid();
-        java.math.BigDecimal accumulatedCoins = playerStore.getElevationAccumulatedCoins(playerId);
+        BigNumber accumulatedCoins = playerStore.getElevationAccumulatedCoins(playerId);
         int currentElevation = playerStore.getElevationLevel(playerId);
 
         // Get cost multiplier from skill tree
         double costMultiplier = getCostMultiplier(playerId);
 
         // Calculate how many levels can be purchased based on accumulated coins
-        java.math.BigDecimal costMultiplierBD = java.math.BigDecimal.valueOf(costMultiplier);
-        ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(currentElevation, accumulatedCoins, costMultiplierBD);
+        BigNumber costMultiplierBN = BigNumber.fromDouble(costMultiplier);
+        ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(currentElevation, accumulatedCoins, costMultiplierBN);
 
         if (purchase.levels <= 0) {
-            java.math.BigDecimal nextCost = AscendConstants.getElevationLevelUpCost(currentElevation, java.math.BigDecimal.valueOf(costMultiplier));
-            player.sendMessage(Message.raw("[Ascend] You need " + FormatUtils.formatCoinsForHudDecimal(nextCost) + " accumulated coins to elevate.")
+            BigNumber nextCost = AscendConstants.getElevationLevelUpCost(currentElevation, BigNumber.fromDouble(costMultiplier));
+            player.sendMessage(Message.raw("[Ascend] You need " + FormatUtils.formatBigNumber(nextCost) + " accumulated coins to elevate.")
                 .color(SystemMessageUtils.SECONDARY));
             return;
         }
@@ -224,27 +225,27 @@ public class ElevationPage extends BaseAscendPage {
         }
 
         UUID playerId = playerRef.getUuid();
-        java.math.BigDecimal accumulatedCoins = playerStore.getElevationAccumulatedCoins(playerId);
+        BigNumber accumulatedCoins = playerStore.getElevationAccumulatedCoins(playerId);
         int currentElevation = playerStore.getElevationLevel(playerId);
 
         // Get cost multiplier from skill tree
         double costMultiplier = getCostMultiplier(playerId);
 
         // Calculate purchase info based on accumulated coins
-        java.math.BigDecimal costMultiplierBD = java.math.BigDecimal.valueOf(costMultiplier);
-        ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(currentElevation, accumulatedCoins, costMultiplierBD);
+        BigNumber costMultiplierBN = BigNumber.fromDouble(costMultiplier);
+        ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(currentElevation, accumulatedCoins, costMultiplierBN);
         int newElevation = currentElevation + purchase.levels;
-        java.math.BigDecimal nextCost = AscendConstants.getElevationLevelUpCost(currentElevation, costMultiplierBD);
+        BigNumber nextCost = AscendConstants.getElevationLevelUpCost(currentElevation, costMultiplierBN);
 
         // Calculate cost for the next level beyond current affordable amount
-        java.math.BigDecimal nextLevelAfterPurchaseCost = AscendConstants.getElevationLevelUpCost(newElevation, costMultiplierBD);
+        BigNumber nextLevelAfterPurchaseCost = AscendConstants.getElevationLevelUpCost(newElevation, costMultiplierBN);
 
         // Update progression display (show progress toward next level after potential elevation)
         int targetElevation = newElevation + 1;
-        java.math.BigDecimal targetCost = purchase.cost.add(nextLevelAfterPurchaseCost);
+        BigNumber targetCost = purchase.cost.add(nextLevelAfterPurchaseCost);
         String costText = "Progress to x" + targetElevation + ": " +
-                         FormatUtils.formatCoinsForHudDecimal(accumulatedCoins) + " / " +
-                         FormatUtils.formatCoinsForHudDecimal(targetCost) + " accumulated coins";
+                         FormatUtils.formatBigNumber(accumulatedCoins) + " / " +
+                         FormatUtils.formatBigNumber(targetCost) + " accumulated coins";
         if (costMultiplier < 1.0) {
             costText += " (-" + Math.round((1.0 - costMultiplier) * 100) + "%)";
         }
@@ -252,8 +253,8 @@ public class ElevationPage extends BaseAscendPage {
 
         // Update current elevation display
         commandBuilder.set("#MultiplierValue.Text", "x" + currentElevation);
-        java.math.BigDecimal leftoverCoins = accumulatedCoins.subtract(purchase.cost);
-        java.math.BigDecimal amountNeededForNextLevel = nextLevelAfterPurchaseCost.subtract(leftoverCoins);
+        BigNumber leftoverCoins = accumulatedCoins.subtract(purchase.cost);
+        BigNumber amountNeededForNextLevel = nextLevelAfterPurchaseCost.subtract(leftoverCoins).max(BigNumber.ZERO);
 
         // Update new elevation display and gain
         if (purchase.levels > 0) {
@@ -269,7 +270,7 @@ public class ElevationPage extends BaseAscendPage {
         }
 
         // Always show how much more is needed for the next level
-        commandBuilder.set("#GainValue.Text", "Need " + FormatUtils.formatCoinsForHudDecimal(amountNeededForNextLevel) + " more");
+        commandBuilder.set("#GainValue.Text", "Need " + FormatUtils.formatBigNumber(amountNeededForNextLevel) + " more");
         commandBuilder.set("#GainValue.Style.TextColor", "#9ca3af");
     }
 
