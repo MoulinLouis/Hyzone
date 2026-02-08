@@ -18,6 +18,7 @@
 - **Ascend: Multiplier gain display now shows 2 decimal places** - Values like +0.15x now display correctly instead of rounding to +0.2x
 
 ### Changed
+- **Ascend: BigNumber migration** - Replaced BigDecimal with lightweight `BigNumber(mantissa, exponent)` for all coin/multiplier values. Removes 10^63 DB ceiling, simplifies arithmetic. One-time DB migration converts DECIMAL columns to mantissa+exp10 pairs. Atomic SQL operations replaced with in-memory CAS + debounced save.
 - **Ascend: Elevation now uses accumulated coins** - Elevation levels are based on total coins earned since last reset, not current balance. Spending on upgrades no longer reduces elevation potential. Resets on elevation, summit, or ascension.
 - **Ascend: Elevation costs reduced at mid/high levels** - Cost curve exponent 0.77 → 0.72 (early), 0.63 → 0.58 (late). Level 1 unchanged, level 100 is 63% cheaper, level 200 is 85% cheaper
 - **Ascend: Player data now uses lazy loading** - Players are loaded from database on-demand when they connect and evicted on disconnect, reducing memory usage for large player counts
