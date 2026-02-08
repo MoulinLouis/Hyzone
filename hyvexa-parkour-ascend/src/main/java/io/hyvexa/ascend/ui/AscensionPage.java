@@ -20,7 +20,6 @@ import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
 
 import javax.annotation.Nonnull;
-import java.util.Locale;
 import java.util.UUID;
 
 public class AscensionPage extends BaseAscendPage {
@@ -79,8 +78,8 @@ public class AscensionPage extends BaseAscendPage {
 
         if (!ascensionManager.canAscend(playerId)) {
             java.math.BigDecimal coins = playerStore.getCoins(playerId);
-            player.sendMessage(Message.raw("[Ascension] Need " + formatLargeNumber(AscendConstants.ASCENSION_COIN_THRESHOLD)
-                + " coins to Ascend. You have: " + formatLargeNumber(coins.doubleValue()))
+            player.sendMessage(Message.raw("[Ascension] Need " + FormatUtils.formatCoinsForHudDecimal(AscendConstants.ASCENSION_COIN_THRESHOLD)
+                + " coins to Ascend. You have: " + FormatUtils.formatCoinsForHudDecimal(coins))
                 .color(SystemMessageUtils.SECONDARY));
             return;
         }
@@ -124,8 +123,8 @@ public class AscensionPage extends BaseAscendPage {
         boolean canAscend = ascensionManager.canAscend(playerId);
 
         // Update coin values
-        commandBuilder.set("#CurrentCoins.Text", formatLargeNumber(coins.doubleValue()));
-        commandBuilder.set("#RequiredCoins.Text", formatLargeNumber(AscendConstants.ASCENSION_COIN_THRESHOLD));
+        commandBuilder.set("#CurrentCoins.Text", FormatUtils.formatCoinsForHudDecimal(coins));
+        commandBuilder.set("#RequiredCoins.Text", FormatUtils.formatCoinsForHudDecimal(AscendConstants.ASCENSION_COIN_THRESHOLD));
 
         // Update current stats
         commandBuilder.set("#AscensionCountValue.Text", "x" + ascensionCount);
@@ -135,27 +134,8 @@ public class AscensionPage extends BaseAscendPage {
         if (canAscend) {
             commandBuilder.set("#AscendButton.Text", "ASCEND");
         } else {
-            double needed = AscendConstants.ASCENSION_COIN_THRESHOLD - coins.doubleValue();
-            commandBuilder.set("#AscendButton.Text", "NEED " + formatLargeNumber(needed) + " MORE");
+            java.math.BigDecimal needed = AscendConstants.ASCENSION_COIN_THRESHOLD.subtract(coins).max(java.math.BigDecimal.ZERO);
+            commandBuilder.set("#AscendButton.Text", "NEED " + FormatUtils.formatCoinsForHudDecimal(needed) + " MORE");
         }
-    }
-
-    private static String formatLargeNumber(double number) {
-        if (number >= 1_000_000_000_000_000.0) {
-            return String.format(Locale.US, "%.2fQ", number / 1_000_000_000_000_000.0);
-        } else if (number >= 1_000_000_000_000.0) {
-            return String.format(Locale.US, "%.2fT", number / 1_000_000_000_000.0);
-        } else if (number >= 1_000_000_000.0) {
-            return String.format(Locale.US, "%.2fB", number / 1_000_000_000.0);
-        } else if (number >= 1_000_000.0) {
-            return String.format(Locale.US, "%.2fM", number / 1_000_000.0);
-        } else if (number >= 1_000.0) {
-            return String.format(Locale.US, "%.2fK", number / 1_000.0);
-        }
-        if (number == Math.floor(number)) {
-            return String.valueOf((long) number);
-        }
-        String formatted = String.format(Locale.US, "%.2f", number);
-        return formatted.replaceAll("0+$", "").replaceAll("\\.$", "");
     }
 }
