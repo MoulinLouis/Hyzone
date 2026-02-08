@@ -5,6 +5,7 @@ import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.AscendConstants.SkillTreeNode;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
+import io.hyvexa.ascend.tracker.AscendRunTracker;
 
 import java.util.Set;
 import java.util.UUID;
@@ -18,9 +19,11 @@ public class AscensionManager {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
 
     private final AscendPlayerStore playerStore;
+    private final AscendRunTracker runTracker;
 
-    public AscensionManager(AscendPlayerStore playerStore) {
+    public AscensionManager(AscendPlayerStore playerStore, AscendRunTracker runTracker) {
         this.playerStore = playerStore;
+        this.runTracker = runTracker;
     }
 
     /**
@@ -28,8 +31,7 @@ public class AscensionManager {
      */
     public boolean canAscend(UUID playerId) {
         java.math.BigDecimal coins = playerStore.getCoins(playerId);
-        java.math.BigDecimal threshold = java.math.BigDecimal.valueOf(AscendConstants.ASCENSION_COIN_THRESHOLD);
-        return coins.compareTo(threshold) >= 0;
+        return coins.compareTo(AscendConstants.ASCENSION_COIN_THRESHOLD) >= 0;
     }
 
     /**
@@ -39,8 +41,7 @@ public class AscensionManager {
      */
     public int performAscension(UUID playerId) {
         java.math.BigDecimal coins = playerStore.getCoins(playerId);
-        java.math.BigDecimal threshold = java.math.BigDecimal.valueOf(AscendConstants.ASCENSION_COIN_THRESHOLD);
-        if (coins.compareTo(threshold) < 0) {
+        if (coins.compareTo(AscendConstants.ASCENSION_COIN_THRESHOLD) < 0) {
             return -1;
         }
 
@@ -62,6 +63,9 @@ public class AscensionManager {
         }
         // Reset timer for next ascension
         progress.setAscensionStartedAt(System.currentTimeMillis());
+
+        // Cancel any active run to prevent stale completion on reset state
+        runTracker.cancelRun(playerId);
 
         // Reset progress
         progress.setCoins(java.math.BigDecimal.ZERO);
