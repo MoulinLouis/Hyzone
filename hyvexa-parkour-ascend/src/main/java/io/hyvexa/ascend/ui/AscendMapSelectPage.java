@@ -252,6 +252,10 @@ public class AscendMapSelectPage extends BaseAscendPage {
 
             commandBuilder.set("#MapCards[" + index + "] #MapStatus.Text", status);
 
+            // Momentum indicator
+            boolean momentumActive = mapProgress != null && mapProgress.isMomentumActive();
+            commandBuilder.set("#MapCards[" + index + "] #MomentumLabel.Visible", momentumActive);
+
             // Runner status and button text
             String runnerStatusText;
             String runnerButtonText;
@@ -655,6 +659,10 @@ public class AscendMapSelectPage extends BaseAscendPage {
             int speedLevel = mapProgress != null ? mapProgress.getRobotSpeedLevel() : 0;
             int stars = mapProgress != null ? mapProgress.getRobotStars() : 0;
 
+            // Update momentum indicator (can expire independently of other data changes)
+            boolean momentumActive = mapProgress != null && mapProgress.isMomentumActive();
+            commandBuilder.set("#MapCards[" + i + "] #MomentumLabel.Visible", momentumActive);
+
             // Check if data changed since last refresh (auto-upgrade happened)
             int[] cached = cachedMapState.get(map.getId());
             boolean dataChanged = cached == null || cached[0] != speedLevel || cached[1] != stars;
@@ -874,6 +882,10 @@ public class AscendMapSelectPage extends BaseAscendPage {
         // Update star visibility
         updateStarDisplay(commandBuilder, index, stars);
 
+        // Update momentum indicator
+        boolean momentumActive = mapProgress != null && mapProgress.isMomentumActive();
+        commandBuilder.set("#MapCards[" + index + "] #MomentumLabel.Visible", momentumActive);
+
         // Update level text in button zone
         String levelText = buildLevelText(stars, speedLevel);
 
@@ -989,6 +1001,10 @@ public class AscendMapSelectPage extends BaseAscendPage {
             status += " | PB: " + String.format("%.2fs", bestTimeSec);
         }
         commandBuilder.set("#MapCards[" + index + "] #MapStatus.Text", status);
+
+        // Momentum indicator
+        boolean momentumActive = mapProgress != null && mapProgress.isMomentumActive();
+        commandBuilder.set("#MapCards[" + index + "] #MomentumLabel.Visible", momentumActive);
 
         // Runner status and button text
         String runnerStatusText;

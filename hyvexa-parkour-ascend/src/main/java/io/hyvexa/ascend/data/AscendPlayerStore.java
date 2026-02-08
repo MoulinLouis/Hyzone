@@ -116,7 +116,7 @@ public class AscendPlayerStore {
                    last_active_timestamp, has_unclaimed_passive,
                    summit_accumulated_coins_mantissa, summit_accumulated_coins_exp10,
                    elevation_accumulated_coins_mantissa, elevation_accumulated_coins_exp10,
-                   auto_upgrade_enabled, seen_tutorials
+                   auto_upgrade_enabled, auto_evolution_enabled, seen_tutorials
             FROM ascend_players
             WHERE uuid = ?
             """;
@@ -165,6 +165,7 @@ public class AscendPlayerStore {
                     }
 
                     progress.setAutoUpgradeEnabled(safeGetBoolean(rs, "auto_upgrade_enabled", false));
+                    progress.setAutoEvolutionEnabled(safeGetBoolean(rs, "auto_evolution_enabled", false));
                     progress.setSeenTutorials(safeGetInt(rs, "seen_tutorials", 0));
                 }
             }
@@ -912,11 +913,11 @@ public class AscendPlayerStore {
     private List<String> resetMapProgress(AscendPlayerProgress progress, String firstMapId, boolean clearBestTimes, UUID playerId) {
         List<String> mapsWithRunners = new java.util.ArrayList<>();
 
-        // Check Momentum skill: keep 10% of map multipliers after reset
-        boolean hasMomentum = false;
+        // Check Persistence skill: keep 10% of map multipliers after reset
+        boolean hasPersistence = false;
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         if (plugin != null && plugin.getAscensionManager() != null) {
-            hasMomentum = plugin.getAscensionManager().hasMomentum(playerId);
+            hasPersistence = plugin.getAscensionManager().hasPersistence(playerId);
         }
 
         progress.setCoins(BigNumber.ZERO);
@@ -929,8 +930,8 @@ public class AscendPlayerStore {
 
             mapProgress.setUnlocked(mapId.equals(firstMapId));
 
-            // Momentum: keep 10% of multiplier (minimum 1.0)
-            if (hasMomentum) {
+            // Persistence: keep 10% of multiplier (minimum 1.0)
+            if (hasPersistence) {
                 BigNumber retained = mapProgress.getMultiplier()
                     .multiply(BigNumber.fromDouble(0.10))
                     .max(BigNumber.ONE);
@@ -1173,8 +1174,8 @@ public class AscendPlayerStore {
                 ascension_started_at, fastest_ascension_ms, last_active_timestamp, has_unclaimed_passive,
                 summit_accumulated_coins_mantissa, summit_accumulated_coins_exp10,
                 elevation_accumulated_coins_mantissa, elevation_accumulated_coins_exp10,
-                auto_upgrade_enabled, seen_tutorials)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                auto_upgrade_enabled, auto_evolution_enabled, seen_tutorials)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 coins_mantissa = VALUES(coins_mantissa), coins_exp10 = VALUES(coins_exp10),
                 elevation_multiplier = VALUES(elevation_multiplier),
@@ -1191,6 +1192,7 @@ public class AscendPlayerStore {
                 elevation_accumulated_coins_mantissa = VALUES(elevation_accumulated_coins_mantissa),
                 elevation_accumulated_coins_exp10 = VALUES(elevation_accumulated_coins_exp10),
                 auto_upgrade_enabled = VALUES(auto_upgrade_enabled),
+                auto_evolution_enabled = VALUES(auto_evolution_enabled),
                 seen_tutorials = VALUES(seen_tutorials)
             """;
 
@@ -1289,7 +1291,8 @@ public class AscendPlayerStore {
                 playerStmt.setDouble(17, progress.getElevationAccumulatedCoins().getMantissa());
                 playerStmt.setInt(18, progress.getElevationAccumulatedCoins().getExponent());
                 playerStmt.setBoolean(19, progress.isAutoUpgradeEnabled());
-                playerStmt.setInt(20, progress.getSeenTutorials());
+                playerStmt.setBoolean(20, progress.isAutoEvolutionEnabled());
+                playerStmt.setInt(21, progress.getSeenTutorials());
                 playerStmt.addBatch();
 
                 // Save map progress
@@ -1391,6 +1394,17 @@ public class AscendPlayerStore {
     public void setAutoUpgradeEnabled(UUID playerId, boolean enabled) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
         progress.setAutoUpgradeEnabled(enabled);
+        markDirty(playerId);
+    }
+
+    public boolean isAutoEvolutionEnabled(UUID playerId) {
+        AscendPlayerProgress progress = players.get(playerId);
+        return progress != null && progress.isAutoEvolutionEnabled();
+    }
+
+    public void setAutoEvolutionEnabled(UUID playerId, boolean enabled) {
+        AscendPlayerProgress progress = getOrCreatePlayer(playerId);
+        progress.setAutoEvolutionEnabled(enabled);
         markDirty(playerId);
     }
 

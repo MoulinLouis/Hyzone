@@ -23,6 +23,7 @@ public class AutomationPage extends BaseAscendPage {
 
     private static final String BUTTON_CLOSE = "Close";
     private static final String BUTTON_TOGGLE = "Toggle";
+    private static final String BUTTON_TOGGLE_EVOLUTION = "ToggleEvolution";
 
     private static final String COLOR_ON = "#4ade80";
     private static final String COLOR_OFF = "#6b7280";
@@ -48,6 +49,9 @@ public class AutomationPage extends BaseAscendPage {
 
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ToggleButton",
             EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TOGGLE), false);
+
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#EvoToggleButton",
+            EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TOGGLE_EVOLUTION), false);
 
         updateState(ref, store, commandBuilder);
     }
@@ -90,6 +94,37 @@ public class AutomationPage extends BaseAscendPage {
                 commandBuilder.set("#StatusLabel.Style.TextColor", COLOR_OFF);
             }
         }
+
+        // Auto-Evolution toggle
+        boolean hasEvoSkill = ascensionManager.hasAutoEvolution(playerId);
+        boolean isEvoEnabled = playerStore.isAutoEvolutionEnabled(playerId);
+
+        if (!hasEvoSkill) {
+            commandBuilder.set("#EvoToggleButton.Disabled", true);
+            commandBuilder.set("#EvoToggleBorder.Background", COLOR_LOCKED_BORDER);
+            commandBuilder.set("#EvoToggleText.Text", "Locked");
+            commandBuilder.set("#EvoToggleText.Style.TextColor", COLOR_OFF);
+            commandBuilder.set("#EvoStatusLabel.Text", "Status: LOCKED");
+            commandBuilder.set("#EvoStatusLabel.Style.TextColor", COLOR_OFF);
+            commandBuilder.set("#EvoLockedOverlay.Visible", true);
+        } else {
+            commandBuilder.set("#EvoToggleButton.Disabled", false);
+            commandBuilder.set("#EvoLockedOverlay.Visible", false);
+
+            if (isEvoEnabled) {
+                commandBuilder.set("#EvoToggleBorder.Background", COLOR_ON);
+                commandBuilder.set("#EvoToggleText.Text", "Disable");
+                commandBuilder.set("#EvoToggleText.Style.TextColor", COLOR_ON);
+                commandBuilder.set("#EvoStatusLabel.Text", "Status: ON");
+                commandBuilder.set("#EvoStatusLabel.Style.TextColor", COLOR_ON);
+            } else {
+                commandBuilder.set("#EvoToggleBorder.Background", COLOR_ACCENT);
+                commandBuilder.set("#EvoToggleText.Text", "Enable");
+                commandBuilder.set("#EvoToggleText.Style.TextColor", COLOR_ACCENT);
+                commandBuilder.set("#EvoStatusLabel.Text", "Status: OFF");
+                commandBuilder.set("#EvoStatusLabel.Style.TextColor", COLOR_OFF);
+            }
+        }
     }
 
     @Override
@@ -107,6 +142,11 @@ public class AutomationPage extends BaseAscendPage {
 
         if (BUTTON_TOGGLE.equals(data.getButton())) {
             handleToggle(ref, store);
+            return;
+        }
+
+        if (BUTTON_TOGGLE_EVOLUTION.equals(data.getButton())) {
+            handleToggleEvolution(ref, store);
         }
     }
 
@@ -120,7 +160,7 @@ public class AutomationPage extends BaseAscendPage {
         UUID playerId = playerRef.getUuid();
 
         if (!ascensionManager.hasAutoRunners(playerId)) {
-            player.sendMessage(Message.raw("[Automation] Unlock 'Automate Runners' in the Skill Tree first.")
+            player.sendMessage(Message.raw("[Automation] Unlock 'Auto-Upgrade + Momentum' in the Skill Tree first.")
                 .color(SystemMessageUtils.SECONDARY));
             return;
         }
@@ -134,6 +174,39 @@ public class AutomationPage extends BaseAscendPage {
                 .color(SystemMessageUtils.SUCCESS));
         } else {
             player.sendMessage(Message.raw("[Automation] Auto-upgrade disabled.")
+                .color(SystemMessageUtils.SECONDARY));
+        }
+
+        // Refresh UI
+        UICommandBuilder updateBuilder = new UICommandBuilder();
+        updateState(ref, store, updateBuilder);
+        sendUpdate(updateBuilder, null, false);
+    }
+
+    private void handleToggleEvolution(Ref<EntityStore> ref, Store<EntityStore> store) {
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (playerRef == null || player == null) {
+            return;
+        }
+
+        UUID playerId = playerRef.getUuid();
+
+        if (!ascensionManager.hasAutoEvolution(playerId)) {
+            player.sendMessage(Message.raw("[Automation] Unlock 'Auto-Evolution' in the Skill Tree first.")
+                .color(SystemMessageUtils.SECONDARY));
+            return;
+        }
+
+        boolean current = playerStore.isAutoEvolutionEnabled(playerId);
+        boolean newState = !current;
+        playerStore.setAutoEvolutionEnabled(playerId, newState);
+
+        if (newState) {
+            player.sendMessage(Message.raw("[Automation] Auto-evolution enabled.")
+                .color(SystemMessageUtils.SUCCESS));
+        } else {
+            player.sendMessage(Message.raw("[Automation] Auto-evolution disabled.")
                 .color(SystemMessageUtils.SECONDARY));
         }
 

@@ -170,6 +170,10 @@ public final class AscendConstants {
         return MAP_BASE_REWARDS[displayOrder];
     }
 
+    // Momentum System (temporary speed boost from manual runs)
+    public static final double MOMENTUM_SPEED_MULTIPLIER = 2.0;
+    public static final long MOMENTUM_DURATION_MS = 60_000L;
+
     // Runner star evolution
     public static final int MAX_ROBOT_STARS = 5;
 
@@ -550,11 +554,11 @@ public final class AscendConstants {
     public static final BigNumber ASCENSION_COIN_THRESHOLD = BigNumber.of(1, 33); // 1 Decillion (10^33)
 
     public enum SkillTreeNode {
-        AUTO_RUNNERS("Automate Runners", "Auto-upgrade runners (cheapest first, no evolution)"),
+        AUTO_RUNNERS("Auto-Upgrade + Momentum", "Auto-upgrade runners & momentum speed boost on manual runs"),
         AUTO_EVOLUTION("Auto-Evolution", "Runners auto-evolve at max speed level", AUTO_RUNNERS),
-        MOMENTUM("Momentum", "Keep 10% of map multipliers after Elevation", AUTO_EVOLUTION),
+        PERSISTENCE("Persistence", "Keep 10% of map multipliers after Elevation", AUTO_EVOLUTION),
         RUNNER_SPEED("Runner Speed Boost", "\u00d71.5 global runner speed", AUTO_EVOLUTION),
-        OFFLINE_BOOST("Offline Boost", "Offline earnings: 25% \u2192 40%", MOMENTUM, RUNNER_SPEED),
+        OFFLINE_BOOST("Offline Boost", "Offline earnings: 25% \u2192 40%", PERSISTENCE, RUNNER_SPEED),
         SUMMIT_MEMORY("Summit Memory", "Keep 10% of Elevation after Summit", OFFLINE_BOOST),
         EVOLUTION_POWER("Evolution Power+", "+1 base evolution power", OFFLINE_BOOST),
         ASCENSION_CHALLENGES("Ascension Challenges", "Coming Soon", SUMMIT_MEMORY, EVOLUTION_POWER);

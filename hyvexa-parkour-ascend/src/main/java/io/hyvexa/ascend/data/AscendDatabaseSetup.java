@@ -439,6 +439,16 @@ public final class AscendDatabaseSetup {
                 LOGGER.at(Level.SEVERE).log("Failed to add auto_upgrade_enabled: " + e.getMessage());
             }
         }
+
+        // Auto-evolution toggle
+        if (!columnExists(conn, "ascend_players", "auto_evolution_enabled")) {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN auto_evolution_enabled BOOLEAN NOT NULL DEFAULT FALSE");
+                LOGGER.atInfo().log("Added auto_evolution_enabled column");
+            } catch (SQLException e) {
+                LOGGER.at(Level.SEVERE).log("Failed to add auto_evolution_enabled: " + e.getMessage());
+            }
+        }
     }
 
     private static void ensureGhostRecordingTable(Connection conn) {

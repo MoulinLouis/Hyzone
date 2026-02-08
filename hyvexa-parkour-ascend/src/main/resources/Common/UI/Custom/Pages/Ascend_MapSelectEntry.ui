@@ -22,13 +22,31 @@ Group {
     );
     LayoutMode: Top;
 
-    Label #MapName {
-      Style: (
-        FontSize: 16,
-        RenderBold: true,
-        TextColor: #f0f4f8
-      );
-      Text: "Map Name";
+    Group #MapNameRow {
+      Anchor: (Left: 0, Right: 0);
+      LayoutMode: Left;
+
+      Label #MapName {
+        Style: (
+          FontSize: 16,
+          RenderBold: true,
+          TextColor: #f0f4f8
+        );
+        Text: "Map Name";
+      }
+
+      Group { Anchor: (Width: 8); }
+
+      Label #MomentumLabel {
+        Padding: (Top: 5);
+        Style: (
+          FontSize: 11,
+          RenderBold: true,
+          TextColor: #fbbf24
+        );
+        Text: "MOMENTUM x2";
+        Visible: false;
+      }
     }
 
     Group #ProgressRow {

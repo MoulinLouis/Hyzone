@@ -26,6 +26,7 @@ public class AscendHud extends CustomUIHud {
     private String lastTimerText;
     private Boolean lastTimerVisible;
     private String lastAscensionProgressKey;
+    private String lastMomentumKey;
 
     // Track previous values for effect triggering (converted to double for comparison)
     private double[] lastDigits;
@@ -158,6 +159,31 @@ public class AscendHud extends CustomUIHud {
         return String.format(java.util.Locale.US, "%d.%03d", seconds, millis);
     }
 
+    public void updateMomentum(double[] progress) {
+        StringBuilder keyBuilder = new StringBuilder();
+        for (int i = 0; i < progress.length; i++) {
+            // Quantize to 1% steps to avoid excessive updates
+            int quantized = (int) (progress[i] * 100);
+            if (i > 0) keyBuilder.append('|');
+            keyBuilder.append(quantized);
+        }
+        String momentumKey = keyBuilder.toString();
+        if (momentumKey.equals(lastMomentumKey)) {
+            return;
+        }
+        lastMomentumKey = momentumKey;
+
+        UICommandBuilder commandBuilder = new UICommandBuilder();
+        for (int i = 0; i < progress.length; i++) {
+            boolean active = progress[i] > 0;
+            commandBuilder.set("#MomentumBar" + i + ".Visible", active);
+            if (active) {
+                commandBuilder.set("#MomentumBar" + i + ".Value", (float) progress[i]);
+            }
+        }
+        update(false, commandBuilder);
+    }
+
     public void resetCache() {
         lastStaticKey = null;
         lastCoinsText = null;
@@ -171,6 +197,7 @@ public class AscendHud extends CustomUIHud {
         lastTimerText = null;
         lastTimerVisible = null;
         lastAscensionProgressKey = null;
+        lastMomentumKey = null;
         lastDigits = null;
         lastCoins = null;
         effectManager.clearEffects();

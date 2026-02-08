@@ -75,7 +75,7 @@ public class AscendTutorialPage extends BaseAscendPage {
             },
             new String[][]{
                 {"Spend coins to gain elevation levels", "Your level equals your global multiplier", "Level 10 = x10, level 100 = x100"},
-                {"Only coins are spent on elevation", "Runners and multipliers are kept", "Elevate as often as you can afford"}
+                {"Only coins are spent on elevation", "Runners and multipliers are kept", "Elevate wisely to maximize your earnings!"}
             },
             new String[][]{
                 {"#10b981", "#f59e0b", "#3b82f6"},

@@ -685,7 +685,26 @@ public class RobotManager {
             return; // One action per call for smooth visual
         }
 
-        // Second priority: find cheapest speed upgrade (one per call for smooth visual)
+        // Auto-evolve eligible maps (free, all at once — each map independent of others)
+        // Runs before speed upgrades so a map at max level evolves immediately,
+        // even while other maps still have affordable speed upgrades.
+        if (progress.isAutoEvolutionEnabled()) {
+            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+            AscensionManager am = plugin != null ? plugin.getAscensionManager() : null;
+            if (am != null && am.hasAutoEvolution(playerId)) {
+                for (AscendMap map : maps) {
+                    AscendPlayerProgress.MapProgress mp = progress.getMapProgress().get(map.getId());
+                    if (mp == null || !mp.hasRobot()) continue;
+                    if (mp.getRobotSpeedLevel() >= AscendConstants.MAX_SPEED_LEVEL
+                            && mp.getRobotStars() < AscendConstants.MAX_ROBOT_STARS) {
+                        int newStars = playerStore.evolveRobot(playerId, map.getId());
+                        respawnRobot(playerId, map.getId(), newStars);
+                    }
+                }
+            }
+        }
+
+        // Speed upgrade: find cheapest across all maps (one per call for smooth visual)
         BigNumber coins = progress.getCoins();
         String cheapestMapId = null;
         BigNumber cheapestCost = null;
@@ -707,30 +726,9 @@ public class RobotManager {
         }
 
         if (cheapestMapId != null && cheapestCost != null && coins.gte(cheapestCost)) {
-            // Perform single speed upgrade
             if (!playerStore.atomicSpendCoins(playerId, cheapestCost)) return;
             playerStore.incrementRobotSpeedLevel(playerId, cheapestMapId);
             playerStore.checkAndUnlockEligibleMaps(playerId, mapStore);
-            return;
-        }
-
-        // Third priority: auto-evolve a runner at max speed level (requires AUTO_EVOLUTION skill)
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) return;
-        AscensionManager ascensionManager = plugin.getAscensionManager();
-        if (ascensionManager == null || !ascensionManager.hasAutoEvolution(playerId)) return;
-
-        for (AscendMap map : maps) {
-            AscendPlayerProgress.MapProgress mp = progress.getMapProgress().get(map.getId());
-            if (mp == null || !mp.hasRobot()) continue;
-
-            int speedLevel = mp.getRobotSpeedLevel();
-            int stars = mp.getRobotStars();
-            if (speedLevel >= AscendConstants.MAX_SPEED_LEVEL && stars < AscendConstants.MAX_ROBOT_STARS) {
-                int newStars = playerStore.evolveRobot(playerId, map.getId());
-                respawnRobot(playerId, map.getId(), newStars);
-                return; // One action per call
-            }
         }
     }
 
@@ -753,6 +751,18 @@ public class RobotManager {
             AscensionManager ascensionManager = plugin.getAscensionManager();
             if (ascensionManager != null && ascensionManager.hasRunnerSpeedBoost(ownerId)) {
                 speedMultiplier *= 1.5;
+            }
+
+            // Momentum: temporary ×2.0 speed boost from manual run (per-map)
+            AscendPlayerStore ps = plugin.getPlayerStore();
+            if (ps != null) {
+                AscendPlayerProgress progress = ps.getPlayer(ownerId);
+                if (progress != null) {
+                    AscendPlayerProgress.MapProgress mapProgress = progress.getMapProgress().get(map.getId());
+                    if (mapProgress != null && mapProgress.isMomentumActive()) {
+                        speedMultiplier *= AscendConstants.MOMENTUM_SPEED_MULTIPLIER;
+                    }
+                }
             }
         }
 
