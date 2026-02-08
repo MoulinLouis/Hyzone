@@ -38,100 +38,178 @@ public class AscendPlayerStore {
 
     private final Map<UUID, AscendPlayerProgress> players = new ConcurrentHashMap<>();
     private final Set<UUID> dirtyPlayers = ConcurrentHashMap.newKeySet();
+    private final Set<UUID> resetPendingPlayers = ConcurrentHashMap.newKeySet();
     private final AtomicBoolean saveQueued = new AtomicBoolean(false);
     private final AtomicReference<ScheduledFuture<?>> saveFuture = new AtomicReference<>();
 
+    /**
+     * Initialize the store. With lazy loading, we don't load all players upfront.
+     * Players are loaded on-demand when they connect.
+     */
     public void syncLoad() {
         if (!DatabaseManager.getInstance().isInitialized()) {
-            LOGGER.atWarning().log("Database not initialized, AscendPlayerStore will be empty");
+            LOGGER.atWarning().log("Database not initialized, AscendPlayerStore will use in-memory mode");
             return;
         }
 
         players.clear();
-        loadPlayers();
-        loadMapProgress();
-        loadSummitLevels();
-        loadSkillNodes();
-        loadAchievements();
-        LOGGER.atInfo().log("AscendPlayerStore loaded " + players.size() + " players");
+        dirtyPlayers.clear();
+        resetPendingPlayers.clear();
+        LOGGER.atInfo().log("AscendPlayerStore initialized with lazy loading");
     }
 
-    private void loadPlayers() {
-        String sql = """
-            SELECT uuid, coins, elevation_multiplier, ascension_count, skill_tree_points,
+    public AscendPlayerProgress getPlayer(UUID playerId) {
+        return players.get(playerId);
+    }
+
+    public Map<UUID, AscendPlayerProgress> getPlayersSnapshot() {
+        return new HashMap<>(players);
+    }
+
+    public AscendPlayerProgress getOrCreatePlayer(UUID playerId) {
+        // Check cache first
+        AscendPlayerProgress progress = players.get(playerId);
+        if (progress != null) {
+            // Ensure existing players have ascension timer initialized (migration)
+            if (progress.getAscensionStartedAt() == null) {
+                progress.setAscensionStartedAt(System.currentTimeMillis());
+                markDirty(playerId);
+            }
+            return progress;
+        }
+
+        // Lazy load from database
+        progress = loadPlayerFromDatabase(playerId);
+        if (progress != null) {
+            players.put(playerId, progress);
+            // Ensure loaded players have ascension timer initialized (migration)
+            if (progress.getAscensionStartedAt() == null) {
+                progress.setAscensionStartedAt(System.currentTimeMillis());
+                markDirty(playerId);
+            }
+            return progress;
+        }
+
+        // Create new player
+        AscendPlayerProgress newProgress = new AscendPlayerProgress();
+        newProgress.setAscensionStartedAt(System.currentTimeMillis());
+        players.put(playerId, newProgress);
+        dirtyPlayers.add(playerId);
+        queueSave();
+        return newProgress;
+    }
+
+    /**
+     * Load a single player's data from the database (lazy loading).
+     * Returns null if player doesn't exist in database.
+     */
+    private AscendPlayerProgress loadPlayerFromDatabase(UUID playerId) {
+        if (!DatabaseManager.getInstance().isInitialized()) {
+            return null;
+        }
+
+        AscendPlayerProgress progress = null;
+        String playerIdStr = playerId.toString();
+
+        // Load base player data
+        String playerSql = """
+            SELECT coins, elevation_multiplier, ascension_count, skill_tree_points,
                    total_coins_earned, total_manual_runs, active_title,
                    ascension_started_at, fastest_ascension_ms,
                    last_active_timestamp, has_unclaimed_passive,
                    summit_accumulated_coins, auto_upgrade_enabled,
                    seen_tutorials
             FROM ascend_players
+            WHERE uuid = ?
             """;
+
         try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+             PreparedStatement stmt = conn.prepareStatement(playerSql)) {
             DatabaseManager.applyQueryTimeout(stmt);
+            stmt.setString(1, playerIdStr);
             try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    UUID uuid = UUID.fromString(rs.getString("uuid"));
-                    AscendPlayerProgress progress = new AscendPlayerProgress();
+                if (rs.next()) {
+                    progress = new AscendPlayerProgress();
                     progress.setCoins(rs.getBigDecimal("coins"));
                     progress.setElevationMultiplier(rs.getInt("elevation_multiplier"));
-                    // Load new fields (with fallback for older schema)
+
                     try {
                         progress.setAscensionCount(rs.getInt("ascension_count"));
                         progress.setSkillTreePoints(rs.getInt("skill_tree_points"));
                         progress.setTotalCoinsEarned(rs.getBigDecimal("total_coins_earned"));
                         progress.setTotalManualRuns(rs.getInt("total_manual_runs"));
                         progress.setActiveTitle(rs.getString("active_title"));
+
                         long ascensionStartedAt = rs.getLong("ascension_started_at");
                         if (!rs.wasNull()) {
                             progress.setAscensionStartedAt(ascensionStartedAt);
                         }
+
                         long fastestAscensionMs = rs.getLong("fastest_ascension_ms");
                         if (!rs.wasNull()) {
                             progress.setFastestAscensionMs(fastestAscensionMs);
                         }
-                        // Load passive earnings fields
+
                         long timestamp = rs.getLong("last_active_timestamp");
                         if (!rs.wasNull()) {
                             progress.setLastActiveTimestamp(timestamp);
                         }
+
                         progress.setHasUnclaimedPassive(rs.getBoolean("has_unclaimed_passive"));
+
                         BigDecimal summitAccumulated = rs.getBigDecimal("summit_accumulated_coins");
                         if (summitAccumulated != null) {
                             progress.setSummitAccumulatedCoins(summitAccumulated);
                         }
+
                         progress.setAutoUpgradeEnabled(rs.getBoolean("auto_upgrade_enabled"));
                         progress.setSeenTutorials(rs.getInt("seen_tutorials"));
                     } catch (SQLException ignored) {
-                        // Columns may not exist yet
+                        // Columns may not exist yet (old schema)
                     }
-                    players.put(uuid, progress);
                 }
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to load ascend players: " + e.getMessage());
+            LOGGER.at(Level.SEVERE).log("Failed to load player " + playerId + ": " + e.getMessage());
+            return null;
         }
+
+        // If player doesn't exist in database, return null
+        if (progress == null) {
+            return null;
+        }
+
+        // Load map progress
+        loadMapProgressForPlayer(playerId, progress);
+
+        // Load summit levels
+        loadSummitLevelsForPlayer(playerId, progress);
+
+        // Load skill nodes
+        loadSkillNodesForPlayer(playerId, progress);
+
+        // Load achievements
+        loadAchievementsForPlayer(playerId, progress);
+
+        return progress;
     }
 
-    private void loadMapProgress() {
+    private void loadMapProgressForPlayer(UUID playerId, AscendPlayerProgress progress) {
         String sql = """
-            SELECT player_uuid, map_id, unlocked, completed_manually, has_robot,
+            SELECT map_id, unlocked, completed_manually, has_robot,
                    robot_speed_level, robot_stars, multiplier, best_time_ms
             FROM ascend_player_maps
+            WHERE player_uuid = ?
             """;
+
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
+            stmt.setString(1, playerId.toString());
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
-                    UUID uuid = UUID.fromString(rs.getString("player_uuid"));
-                    AscendPlayerProgress player = players.get(uuid);
-                    if (player == null) {
-                        continue;
-                    }
-
                     String mapId = rs.getString("map_id");
-                    AscendPlayerProgress.MapProgress mapProgress = player.getOrCreateMapProgress(mapId);
+                    AscendPlayerProgress.MapProgress mapProgress = progress.getOrCreateMapProgress(mapId);
                     mapProgress.setUnlocked(rs.getBoolean("unlocked"));
                     mapProgress.setCompletedManually(rs.getBoolean("completed_manually"));
                     mapProgress.setHasRobot(rs.getBoolean("has_robot"));
@@ -145,115 +223,93 @@ public class AscendPlayerStore {
                 }
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to load ascend map progress: " + e.getMessage());
+            LOGGER.at(Level.SEVERE).log("Failed to load map progress for player " + playerId + ": " + e.getMessage());
         }
     }
 
-    private void loadSummitLevels() {
-        String sql = "SELECT player_uuid, category, xp FROM ascend_player_summit";
+    private void loadSummitLevelsForPlayer(UUID playerId, AscendPlayerProgress progress) {
+        String sql = "SELECT category, xp FROM ascend_player_summit WHERE player_uuid = ?";
+
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
+            stmt.setString(1, playerId.toString());
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
-                    UUID uuid = UUID.fromString(rs.getString("player_uuid"));
-                    AscendPlayerProgress player = players.get(uuid);
-                    if (player == null) {
-                        continue;
-                    }
                     String categoryName = rs.getString("category");
                     long xp = rs.getLong("xp");
                     try {
                         SummitCategory category = SummitCategory.valueOf(categoryName);
-                        player.setSummitXp(category, xp);
+                        progress.setSummitXp(category, xp);
                     } catch (IllegalArgumentException ignored) {
-                        // Unknown category, skip
+                        // Unknown category
                     }
                 }
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to load summit levels: " + e.getMessage());
+            LOGGER.at(Level.SEVERE).log("Failed to load summit levels for player " + playerId + ": " + e.getMessage());
         }
     }
 
-    private void loadSkillNodes() {
-        String sql = "SELECT player_uuid, skill_node FROM ascend_player_skills";
+    private void loadSkillNodesForPlayer(UUID playerId, AscendPlayerProgress progress) {
+        String sql = "SELECT skill_node FROM ascend_player_skills WHERE player_uuid = ?";
+
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
+            stmt.setString(1, playerId.toString());
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
-                    UUID uuid = UUID.fromString(rs.getString("player_uuid"));
-                    AscendPlayerProgress player = players.get(uuid);
-                    if (player == null) {
-                        continue;
-                    }
                     String nodeName = rs.getString("skill_node");
                     try {
                         SkillTreeNode node = SkillTreeNode.valueOf(nodeName);
-                        player.unlockSkillNode(node);
+                        progress.unlockSkillNode(node);
                     } catch (IllegalArgumentException ignored) {
-                        // Unknown node, skip
+                        // Unknown node
                     }
                 }
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to load skill nodes: " + e.getMessage());
+            LOGGER.at(Level.SEVERE).log("Failed to load skill nodes for player " + playerId + ": " + e.getMessage());
         }
     }
 
-    private void loadAchievements() {
-        String sql = "SELECT player_uuid, achievement FROM ascend_player_achievements";
+    private void loadAchievementsForPlayer(UUID playerId, AscendPlayerProgress progress) {
+        String sql = "SELECT achievement FROM ascend_player_achievements WHERE player_uuid = ?";
+
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
+            stmt.setString(1, playerId.toString());
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
-                    UUID uuid = UUID.fromString(rs.getString("player_uuid"));
-                    AscendPlayerProgress player = players.get(uuid);
-                    if (player == null) {
-                        continue;
-                    }
                     String achievementName = rs.getString("achievement");
                     try {
                         AchievementType achievement = AchievementType.valueOf(achievementName);
-                        player.unlockAchievement(achievement);
+                        progress.unlockAchievement(achievement);
                     } catch (IllegalArgumentException ignored) {
-                        // Unknown achievement, skip
+                        // Unknown achievement
                     }
                 }
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to load achievements: " + e.getMessage());
+            LOGGER.at(Level.SEVERE).log("Failed to load achievements for player " + playerId + ": " + e.getMessage());
         }
-    }
-
-    public AscendPlayerProgress getPlayer(UUID playerId) {
-        return players.get(playerId);
-    }
-
-    public Map<UUID, AscendPlayerProgress> getPlayersSnapshot() {
-        return new HashMap<>(players);
-    }
-
-    public AscendPlayerProgress getOrCreatePlayer(UUID playerId) {
-        AscendPlayerProgress progress = players.computeIfAbsent(playerId, k -> {
-            AscendPlayerProgress newProgress = new AscendPlayerProgress();
-            // Initialize ascension timer for new players
-            newProgress.setAscensionStartedAt(System.currentTimeMillis());
-            dirtyPlayers.add(playerId);
-            queueSave();
-            return newProgress;
-        });
-        // Ensure existing players have ascension timer initialized (migration)
-        if (progress.getAscensionStartedAt() == null) {
-            progress.setAscensionStartedAt(System.currentTimeMillis());
-            markDirty(playerId);
-        }
-        return progress;
     }
 
     public void resetPlayerProgress(UUID playerId) {
+        // Mark as reset so any concurrent/pending syncSave() will
+        // DELETE child rows before re-inserting (prevents stale upserts)
+        resetPendingPlayers.add(playerId);
+
+        // Cancel any pending debounced save to prevent stale data from
+        // being written after our DELETE
+        ScheduledFuture<?> pending = saveFuture.getAndSet(null);
+        if (pending != null) {
+            pending.cancel(false);
+        }
+        saveQueued.set(false);
+
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
         // Reset basic progression
         progress.setCoins(BigDecimal.ZERO);
@@ -1144,6 +1200,28 @@ public class AscendPlayerStore {
         markDirty(playerId);
     }
 
+    /**
+     * Remove a player from the cache (called on disconnect).
+     * Flushes any pending changes to database before evicting.
+     *
+     * @param playerId the player's UUID
+     */
+    public void removePlayer(UUID playerId) {
+        if (playerId == null) {
+            return;
+        }
+
+        // Flush this player's data if dirty
+        if (dirtyPlayers.contains(playerId)) {
+            flushPendingSave();
+        }
+
+        // Remove from cache
+        players.remove(playerId);
+        dirtyPlayers.remove(playerId);
+        resetPendingPlayers.remove(playerId);
+    }
+
     public void flushPendingSave() {
         ScheduledFuture<?> pending = saveFuture.getAndSet(null);
         if (pending != null) {
@@ -1227,13 +1305,19 @@ public class AscendPlayerStore {
             VALUES (?, ?)
             """;
 
+        String deleteChildSql = "DELETE FROM %s WHERE player_uuid = ?";
+
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
             conn.setAutoCommit(false); // Begin transaction
             try (PreparedStatement playerStmt = conn.prepareStatement(playerSql);
                  PreparedStatement mapStmt = conn.prepareStatement(mapSql);
                  PreparedStatement summitStmt = conn.prepareStatement(summitSql);
                  PreparedStatement skillStmt = conn.prepareStatement(skillSql);
-                 PreparedStatement achievementStmt = conn.prepareStatement(achievementSql)) {
+                 PreparedStatement achievementStmt = conn.prepareStatement(achievementSql);
+                 PreparedStatement delMaps = conn.prepareStatement(String.format(deleteChildSql, "ascend_player_maps"));
+                 PreparedStatement delSummit = conn.prepareStatement(String.format(deleteChildSql, "ascend_player_summit"));
+                 PreparedStatement delSkills = conn.prepareStatement(String.format(deleteChildSql, "ascend_player_skills"));
+                 PreparedStatement delAchievements = conn.prepareStatement(String.format(deleteChildSql, "ascend_player_achievements"))) {
                 DatabaseManager.applyQueryTimeout(playerStmt);
                 DatabaseManager.applyQueryTimeout(mapStmt);
                 DatabaseManager.applyQueryTimeout(summitStmt);
@@ -1244,6 +1328,16 @@ public class AscendPlayerStore {
                 AscendPlayerProgress progress = players.get(playerId);
                 if (progress == null) {
                     continue;
+                }
+
+                // If this player was recently reset, delete all child rows first
+                // to prevent stale upserts from re-inserting deleted data
+                if (resetPendingPlayers.remove(playerId)) {
+                    String pid = playerId.toString();
+                    for (PreparedStatement delStmt : new PreparedStatement[]{delMaps, delSummit, delSkills, delAchievements}) {
+                        delStmt.setString(1, pid);
+                        delStmt.executeUpdate();
+                    }
                 }
 
                 // Save player base data
