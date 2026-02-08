@@ -75,7 +75,6 @@ Quick reference for AI agents working on this Hytale plugin project.
 | Full instructions | `docs/codex/AGENTS.md`          |
 | System architecture | `docs/ARCHITECTURE.md`          |
 | Database schema | `docs/DATABASE.md`              |
-| Ascend mode details | `docs/ASCEND_MODULE_SUMMARY.md` |
 | Game balancing | `docs/ECONOMY_BALANCE.md`       |
 | Help & tutorial system | `docs/HELP_TUTORIAL_SYSTEM.md` |
 | Feature history | `CHANGELOG.md`                  |
