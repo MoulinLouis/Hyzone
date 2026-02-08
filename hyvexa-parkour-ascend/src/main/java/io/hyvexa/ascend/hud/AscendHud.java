@@ -31,7 +31,7 @@ public class AscendHud extends CustomUIHud {
     private java.math.BigDecimal lastCoins;
 
     // Ascension quest bar constants
-    private static final double ASCENSION_COST = 10_000_000_000_000_000.0; // 10 quadrillion (10Q)
+    private static final double ASCENSION_COST = 1e33; // 1 Decillion (1Dc)
     private static final int QUEST_BAR_SEGMENTS = 100; // Number of segments in the progress bar (1% each)
     private static final int QUEST_ACCENT_SEGMENTS = 16; // Number of segments in the right accent bar
 
@@ -191,9 +191,9 @@ public class AscendHud extends CustomUIHud {
         commandBuilder.set("#PrestigeHud.Visible", showPrestige);
 
         if (showPrestige) {
-            commandBuilder.set("#SummitMultText.Text", formatSummitLine("Mult", multPreview));
-            commandBuilder.set("#SummitSpeedText.Text", formatSummitLine("Speed", speedPreview));
-            commandBuilder.set("#SummitEvoText.Text", formatSummitLine("Evo Power", evoPreview));
+            commandBuilder.set("#SummitMultText.Text", formatSummitLine("Multiplier Gain", multPreview));
+            commandBuilder.set("#SummitSpeedText.Text", formatSummitLine("Runner Speed", speedPreview));
+            commandBuilder.set("#SummitEvoText.Text", formatSummitLine("Evolution Power", evoPreview));
         }
 
         update(false, commandBuilder);
@@ -211,7 +211,7 @@ public class AscendHud extends CustomUIHud {
 
     public void updateAscensionQuest(java.math.BigDecimal coins) {
         // Calculate logarithmic progress (0 to 1)
-        // Using log10 scale: log10(coins + 1) / log10(10Q + 1) ≈ log10(coins + 1) / 16
+        // Using log10 scale: log10(coins + 1) / log10(1Dc + 1) ≈ log10(coins + 1) / 33
         double progress = 0.0;
         if (coins.compareTo(java.math.BigDecimal.ZERO) > 0) {
             // Convert BigDecimal to double for logarithmic calculation
