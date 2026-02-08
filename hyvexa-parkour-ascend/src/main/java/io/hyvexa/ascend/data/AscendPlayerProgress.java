@@ -13,7 +13,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class AscendPlayerProgress {
 
     private final AtomicReference<BigDecimal> coins = new AtomicReference<>(BigDecimal.ZERO);
-    private int elevationMultiplier = 1;
+    private volatile int elevationMultiplier = 1;
     private final Map<String, MapProgress> mapProgress = new ConcurrentHashMap<>();
 
     // Summit System - XP per category (level calculated from XP)
@@ -22,30 +22,30 @@ public class AscendPlayerProgress {
     private final AtomicReference<BigDecimal> summitAccumulatedCoins = new AtomicReference<>(BigDecimal.ZERO);
 
     // Ascension System
-    private int ascensionCount;
-    private int skillTreePoints;
+    private volatile int ascensionCount;
+    private volatile int skillTreePoints;
     private final Set<AscendConstants.SkillTreeNode> unlockedSkillNodes = ConcurrentHashMap.newKeySet();
 
     // Achievement System
     private final Set<AscendConstants.AchievementType> unlockedAchievements = ConcurrentHashMap.newKeySet();
-    private String activeTitle;
-    private int totalManualRuns;
-    private int consecutiveManualRuns; // For chain bonus tracking
-    private boolean sessionFirstRunClaimed;
+    private volatile String activeTitle;
+    private volatile int totalManualRuns;
+    private volatile int consecutiveManualRuns; // For chain bonus tracking
+    private volatile boolean sessionFirstRunClaimed;
 
     // Ascension Timer (for stats tracking)
-    private Long ascensionStartedAt; // Timestamp when current ascension run started
-    private Long fastestAscensionMs; // Best ascension time in milliseconds
+    private volatile Long ascensionStartedAt; // Timestamp when current ascension run started
+    private volatile Long fastestAscensionMs; // Best ascension time in milliseconds
 
     // Passive earnings tracking
-    private Long lastActiveTimestamp;
-    private boolean hasUnclaimedPassive;
+    private volatile Long lastActiveTimestamp;
+    private volatile boolean hasUnclaimedPassive;
 
     // Automation toggle
-    private boolean autoUpgradeEnabled;
+    private volatile boolean autoUpgradeEnabled;
 
     // Tutorial tracking (bitmask)
-    private int seenTutorials;
+    private volatile int seenTutorials;
 
     public BigDecimal getCoins() {
         return coins.get();
@@ -358,13 +358,13 @@ public class AscendPlayerProgress {
     }
 
     public static class MapProgress {
-        private boolean unlocked;
-        private boolean completedManually;
-        private boolean hasRobot;
-        private int robotSpeedLevel;
-        private int robotStars;
+        private volatile boolean unlocked;
+        private volatile boolean completedManually;
+        private volatile boolean hasRobot;
+        private volatile int robotSpeedLevel;
+        private volatile int robotStars;
         private final AtomicReference<BigDecimal> multiplier = new AtomicReference<>(BigDecimal.ONE);
-        private Long bestTimeMs;
+        private volatile Long bestTimeMs;
 
         public boolean isUnlocked() {
             return unlocked;

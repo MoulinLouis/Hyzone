@@ -24,7 +24,7 @@ import java.util.UUID;
 public class SkillTreePage extends BaseAscendPage {
 
     private static final String BUTTON_CLOSE = "Close";
-    private static final String BUTTON_NODE = "Node_AUTO_RUNNERS";
+    private static final String BUTTON_NODE_PREFIX = "Node_";
 
     private static final String COLOR_ACCENT = "#f59e0b";
     private static final String COLOR_LOCKED = "#4b5563";
@@ -49,13 +49,18 @@ public class SkillTreePage extends BaseAscendPage {
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CloseButton",
             EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE), false);
 
-        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#NodeAutoRunners",
-            EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_NODE), false);
+        // Bind all node buttons dynamically
+        for (SkillTreeNode node : SkillTreeNode.values()) {
+            String uiId = "#Node" + toPascalCase(node.name());
+            String buttonData = BUTTON_NODE_PREFIX + node.name();
+            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, uiId,
+                EventData.of(ButtonEventData.KEY_BUTTON, buttonData), false);
+        }
 
-        updateNodeState(ref, store, commandBuilder);
+        updateAllNodeStates(ref, store, commandBuilder);
     }
 
-    private void updateNodeState(Ref<EntityStore> ref, Store<EntityStore> store, UICommandBuilder commandBuilder) {
+    private void updateAllNodeStates(Ref<EntityStore> ref, Store<EntityStore> store, UICommandBuilder commandBuilder) {
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (playerRef == null) {
             return;
@@ -69,23 +74,35 @@ public class SkillTreePage extends BaseAscendPage {
         commandBuilder.set("#AvailablePoints.Text", String.valueOf(summary.availablePoints()));
         commandBuilder.set("#TotalPoints.Text", summary.totalPoints() + " total");
 
-        boolean isUnlocked = unlockedNodes.contains(SkillTreeNode.AUTO_RUNNERS);
-        boolean canUnlock = ascensionManager.canUnlockSkillNode(playerId, SkillTreeNode.AUTO_RUNNERS);
+        // Update each node
+        for (SkillTreeNode node : SkillTreeNode.values()) {
+            String pascalName = toPascalCase(node.name());
+            boolean isUnlocked = unlockedNodes.contains(node);
+            boolean prereqsMet = node.hasPrerequisitesSatisfied(unlockedNodes);
+            boolean canUnlock = ascensionManager.canUnlockSkillNode(playerId, node);
 
-        // Update border color
-        String borderColor = (isUnlocked || canUnlock) ? COLOR_ACCENT : COLOR_LOCKED;
-        commandBuilder.set("#BorderAutoRunners.Background", borderColor);
+            // Toggle revealed/locked content
+            commandBuilder.set("#Revealed" + pascalName + ".Visible", prereqsMet);
+            commandBuilder.set("#Locked" + pascalName + ".Visible", !prereqsMet);
 
-        // Update status text and color
-        if (isUnlocked) {
-            commandBuilder.set("#StatusAutoRunners.Text", "UNLOCKED");
-            commandBuilder.set("#StatusAutoRunners.Style.TextColor", COLOR_UNLOCKED_TEXT);
-        } else if (canUnlock) {
-            commandBuilder.set("#StatusAutoRunners.Text", "AVAILABLE");
-            commandBuilder.set("#StatusAutoRunners.Style.TextColor", COLOR_AVAILABLE_TEXT);
-        } else {
-            commandBuilder.set("#StatusAutoRunners.Text", "LOCKED");
-            commandBuilder.set("#StatusAutoRunners.Style.TextColor", COLOR_LOCKED_TEXT);
+            // Border color (locked nodes stay gray)
+            String borderColor = !prereqsMet ? COLOR_LOCKED
+                : (isUnlocked || canUnlock) ? COLOR_ACCENT : COLOR_LOCKED;
+            commandBuilder.set("#Border" + pascalName + ".Background", borderColor);
+
+            // Status text and color (only meaningful when revealed)
+            if (prereqsMet) {
+                if (isUnlocked) {
+                    commandBuilder.set("#Status" + pascalName + ".Text", "UNLOCKED");
+                    commandBuilder.set("#Status" + pascalName + ".Style.TextColor", COLOR_UNLOCKED_TEXT);
+                } else if (canUnlock) {
+                    commandBuilder.set("#Status" + pascalName + ".Text", "AVAILABLE");
+                    commandBuilder.set("#Status" + pascalName + ".Style.TextColor", COLOR_AVAILABLE_TEXT);
+                } else {
+                    commandBuilder.set("#Status" + pascalName + ".Text", "LOCKED");
+                    commandBuilder.set("#Status" + pascalName + ".Style.TextColor", COLOR_LOCKED_TEXT);
+                }
+            }
         }
     }
 
@@ -102,12 +119,18 @@ public class SkillTreePage extends BaseAscendPage {
             return;
         }
 
-        if (BUTTON_NODE.equals(data.getButton())) {
-            handleNodeClick(ref, store);
+        if (data.getButton().startsWith(BUTTON_NODE_PREFIX)) {
+            String nodeName = data.getButton().substring(BUTTON_NODE_PREFIX.length());
+            try {
+                SkillTreeNode node = SkillTreeNode.valueOf(nodeName);
+                handleNodeClick(ref, store, node);
+            } catch (IllegalArgumentException ignored) {
+                // Unknown node
+            }
         }
     }
 
-    private void handleNodeClick(Ref<EntityStore> ref, Store<EntityStore> store) {
+    private void handleNodeClick(Ref<EntityStore> ref, Store<EntityStore> store, SkillTreeNode node) {
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         Player player = store.getComponent(ref, Player.getComponentType());
         if (playerRef == null || player == null) {
@@ -116,13 +139,36 @@ public class SkillTreePage extends BaseAscendPage {
 
         UUID playerId = playerRef.getUuid();
         var summary = ascensionManager.getSkillTreeSummary(playerId);
-        SkillTreeNode node = SkillTreeNode.AUTO_RUNNERS;
+
+        // Special handling for ASCENSION_CHALLENGES (teaser)
+        if (node == SkillTreeNode.ASCENSION_CHALLENGES) {
+            player.sendMessage(Message.raw("[Skill Tree] Ascension Challenges")
+                .color(SystemMessageUtils.PRIMARY_TEXT));
+            player.sendMessage(Message.raw("  Coming in a future update!")
+                .color(SystemMessageUtils.SECONDARY));
+            return;
+        }
 
         // Already unlocked - show info
         if (summary.unlockedNodes().contains(node)) {
             player.sendMessage(Message.raw("[Skill Tree] " + node.getName())
                 .color(SystemMessageUtils.PRIMARY_TEXT));
             player.sendMessage(Message.raw("  " + node.getDescription())
+                .color(SystemMessageUtils.SECONDARY));
+            return;
+        }
+
+        // Check prerequisites
+        if (!node.hasPrerequisitesSatisfied(summary.unlockedNodes())) {
+            player.sendMessage(Message.raw("[Skill Tree] " + node.getName() + " - LOCKED")
+                .color(SystemMessageUtils.SECONDARY));
+            StringBuilder reqMsg = new StringBuilder("  Requires: ");
+            SkillTreeNode[] prereqs = node.getPrerequisites();
+            for (int i = 0; i < prereqs.length; i++) {
+                if (i > 0) reqMsg.append(" or ");
+                reqMsg.append(prereqs[i].getName());
+            }
+            player.sendMessage(Message.raw(reqMsg.toString())
                 .color(SystemMessageUtils.SECONDARY));
             return;
         }
@@ -137,7 +183,7 @@ public class SkillTreePage extends BaseAscendPage {
                     .color(SystemMessageUtils.SECONDARY));
 
                 // Refresh the page
-                refreshNodeState(ref, store);
+                refreshNodeStates(ref, store);
             } else {
                 player.sendMessage(Message.raw("[Skill Tree] Failed to unlock skill.")
                     .color(SystemMessageUtils.SECONDARY));
@@ -145,7 +191,7 @@ public class SkillTreePage extends BaseAscendPage {
             return;
         }
 
-        // Cannot unlock - show requirements
+        // Cannot unlock - no points
         if (summary.availablePoints() <= 0) {
             player.sendMessage(Message.raw("[Skill Tree] " + node.getName() + " - LOCKED")
                 .color(SystemMessageUtils.SECONDARY));
@@ -154,9 +200,28 @@ public class SkillTreePage extends BaseAscendPage {
         }
     }
 
-    private void refreshNodeState(Ref<EntityStore> ref, Store<EntityStore> store) {
+    private void refreshNodeStates(Ref<EntityStore> ref, Store<EntityStore> store) {
         UICommandBuilder updateBuilder = new UICommandBuilder();
-        updateNodeState(ref, store, updateBuilder);
+        updateAllNodeStates(ref, store, updateBuilder);
         sendUpdate(updateBuilder, null, false);
+    }
+
+    /**
+     * Converts ENUM_NAME to PascalCase (e.g. AUTO_RUNNERS → AutoRunners).
+     */
+    private static String toPascalCase(String enumName) {
+        StringBuilder sb = new StringBuilder();
+        boolean capitalizeNext = true;
+        for (char c : enumName.toCharArray()) {
+            if (c == '_') {
+                capitalizeNext = true;
+            } else if (capitalizeNext) {
+                sb.append(Character.toUpperCase(c));
+                capitalizeNext = false;
+            } else {
+                sb.append(Character.toLowerCase(c));
+            }
+        }
+        return sb.toString();
     }
 }

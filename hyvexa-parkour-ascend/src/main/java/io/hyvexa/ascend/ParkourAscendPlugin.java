@@ -578,21 +578,13 @@ public class ParkourAscendPlugin extends JavaPlugin {
         if (player == null) {
             return;
         }
+        clearAllContainers(player);
         Inventory inventory = player.getInventory();
         if (inventory == null) {
             return;
         }
-        clearContainer(inventory.getHotbar());
-        clearContainer(inventory.getStorage());
-        clearContainer(inventory.getBackpack());
-        clearContainer(inventory.getTools());
-        clearContainer(inventory.getUtility());
-        clearContainer(inventory.getArmor());
         ItemContainer hotbar = inventory.getHotbar();
-        if (hotbar == null) {
-            return;
-        }
-        if (hotbar.getCapacity() <= 0) {
+        if (hotbar == null || hotbar.getCapacity() <= 0) {
             return;
         }
         hotbar.setItemStackForSlot((short) 0, new ItemStack(AscendConstants.ITEM_DEV_CINDERCLOTH, 1), false);
@@ -637,6 +629,19 @@ public class ParkourAscendPlugin extends JavaPlugin {
         }
     }
 
+    private static void clearAllContainers(Player player) {
+        Inventory inventory = player.getInventory();
+        if (inventory == null) {
+            return;
+        }
+        clearContainer(inventory.getHotbar());
+        clearContainer(inventory.getStorage());
+        clearContainer(inventory.getBackpack());
+        clearContainer(inventory.getTools());
+        clearContainer(inventory.getUtility());
+        clearContainer(inventory.getArmor());
+    }
+
     private static void clearContainer(ItemContainer container) {
         if (container == null) {
             return;
@@ -667,16 +672,11 @@ public class ParkourAscendPlugin extends JavaPlugin {
         if (player == null) {
             return;
         }
+        clearAllContainers(player);
         Inventory inventory = player.getInventory();
         if (inventory == null) {
             return;
         }
-        clearContainer(inventory.getHotbar());
-        clearContainer(inventory.getStorage());
-        clearContainer(inventory.getBackpack());
-        clearContainer(inventory.getTools());
-        clearContainer(inventory.getUtility());
-        clearContainer(inventory.getArmor());
         ItemContainer hotbar = inventory.getHotbar();
         if (hotbar == null || hotbar.getCapacity() <= 0) {
             return;
@@ -687,28 +687,6 @@ public class ParkourAscendPlugin extends JavaPlugin {
     }
 
     public void giveMenuItems(Player player) {
-        if (player == null) {
-            return;
-        }
-        Inventory inventory = player.getInventory();
-        if (inventory == null) {
-            return;
-        }
-        clearContainer(inventory.getHotbar());
-        clearContainer(inventory.getStorage());
-        clearContainer(inventory.getBackpack());
-        clearContainer(inventory.getTools());
-        clearContainer(inventory.getUtility());
-        clearContainer(inventory.getArmor());
-        ItemContainer hotbar = inventory.getHotbar();
-        if (hotbar == null || hotbar.getCapacity() <= 0) {
-            return;
-        }
-        hotbar.setItemStackForSlot((short) 0, new ItemStack(AscendConstants.ITEM_DEV_CINDERCLOTH, 1), false);
-        hotbar.setItemStackForSlot((short) 1, new ItemStack(AscendConstants.ITEM_DEV_STORMSILK, 1), false);
-        hotbar.setItemStackForSlot((short) 2, new ItemStack(AscendConstants.ITEM_DEV_COTTON, 1), false);
-        hotbar.setItemStackForSlot((short) 3, new ItemStack(AscendConstants.ITEM_DEV_SHADOWEAVE, 1), false);
-        short slot = (short) (hotbar.getCapacity() - 1);
-        hotbar.setItemStackForSlot(slot, new ItemStack("Hub_Server_Selector", 1), false);
+        resetAscendInventory(player);
     }
 }

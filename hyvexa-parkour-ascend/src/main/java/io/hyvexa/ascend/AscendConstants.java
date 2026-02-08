@@ -10,8 +10,7 @@ public final class AscendConstants {
     }
 
     // Math contexts for precision calculations
-    private static final MathContext CALC_CTX = new MathContext(30, RoundingMode.HALF_UP);
-    private static final MathContext MULTIPLIER_CTX = new MathContext(30, RoundingMode.HALF_UP);
+    public static final MathContext CALC_CTX = new MathContext(30, RoundingMode.HALF_UP);
 
     // Database
     public static final String TABLE_PREFIX = "ascend_";
@@ -217,9 +216,9 @@ public final class AscendConstants {
         BigDecimal base = new BigDecimal("0.1");  // RUNNER_MULTIPLIER_INCREMENT
         // Apply Evolution Power exponentially per star
         if (stars > 0) {
-            base = base.multiply(BigDecimal.valueOf(Math.pow(evolutionPowerBonus, stars)), MULTIPLIER_CTX);
+            base = base.multiply(BigDecimal.valueOf(Math.pow(evolutionPowerBonus, stars)), CALC_CTX);
         }
-        return base.multiply(BigDecimal.valueOf(multiplierGainBonus), MULTIPLIER_CTX)
+        return base.multiply(BigDecimal.valueOf(multiplierGainBonus), CALC_CTX)
                    .setScale(20, RoundingMode.HALF_UP);
     }
 
@@ -493,30 +492,32 @@ public final class AscendConstants {
 
     /**
      * Calculate cumulative XP required to reach a level (total from 0).
+     * Closed-form formula: sum(i^2, i=1..n) = n*(n+1)*(2n+1)/6
      */
     public static long getCumulativeXpForLevel(int level) {
-        long total = 0;
-        for (int i = 1; i <= level; i++) {
-            total += getXpForLevel(i);
-        }
-        return total;
+        if (level <= 0) return 0;
+        long n = level;
+        return n * (n + 1) * (2 * n + 1) / 6;
     }
 
     /**
      * Calculate the level achieved with given cumulative XP.
+     * Uses binary search to find highest level where getCumulativeXpForLevel(level) <= xp.
      */
     public static int calculateLevelFromXp(long xp) {
-        int level = 0;
-        long cumulative = 0;
-        while (true) {
-            long nextLevelXp = getXpForLevel(level + 1);
-            if (cumulative + nextLevelXp > xp) {
-                break;
+        if (xp <= 0) return 0;
+        // Binary search: find highest level where getCumulativeXpForLevel(level) <= xp
+        int lo = 0;
+        int hi = 100_000;
+        while (lo < hi) {
+            int mid = lo + (hi - lo + 1) / 2;
+            if (getCumulativeXpForLevel(mid) <= xp) {
+                lo = mid;
+            } else {
+                hi = mid - 1;
             }
-            cumulative += nextLevelXp;
-            level++;
         }
-        return level;
+        return lo;
     }
 
     /**
@@ -538,14 +539,23 @@ public final class AscendConstants {
     public static final java.math.BigDecimal ASCENSION_COIN_THRESHOLD = new java.math.BigDecimal("1000000000000000000000000000000000"); // 1 Decillion (10^33)
 
     public enum SkillTreeNode {
-        AUTO_RUNNERS("Automate Runners", "Auto-upgrade runners (cheapest first, no evolution)");
+        AUTO_RUNNERS("Automate Runners", "Auto-upgrade runners (cheapest first, no evolution)"),
+        AUTO_EVOLUTION("Auto-Evolution", "Runners auto-evolve at max speed level", AUTO_RUNNERS),
+        MOMENTUM("Momentum", "Keep 10% of map multipliers after Elevation", AUTO_EVOLUTION),
+        RUNNER_SPEED("Runner Speed Boost", "\u00d71.5 global runner speed", AUTO_EVOLUTION),
+        OFFLINE_BOOST("Offline Boost", "Offline earnings: 25% \u2192 40%", MOMENTUM, RUNNER_SPEED),
+        SUMMIT_MEMORY("Summit Memory", "Keep 10% of Elevation after Summit", OFFLINE_BOOST),
+        EVOLUTION_POWER("Evolution Power+", "+1 base evolution power", OFFLINE_BOOST),
+        ASCENSION_CHALLENGES("Ascension Challenges", "Coming Soon", SUMMIT_MEMORY, EVOLUTION_POWER);
 
         private final String name;
         private final String description;
+        private final SkillTreeNode[] prerequisites;
 
-        SkillTreeNode(String name, String description) {
+        SkillTreeNode(String name, String description, SkillTreeNode... prerequisites) {
             this.name = name;
             this.description = description;
+            this.prerequisites = prerequisites;
         }
 
         public String getName() {
@@ -554,6 +564,26 @@ public final class AscendConstants {
 
         public String getDescription() {
             return description;
+        }
+
+        public SkillTreeNode[] getPrerequisites() {
+            return prerequisites;
+        }
+
+        /**
+         * Checks if prerequisites are satisfied (OR logic: at least one prerequisite must be unlocked).
+         * Nodes with no prerequisites are always satisfiable.
+         */
+        public boolean hasPrerequisitesSatisfied(java.util.Set<SkillTreeNode> unlocked) {
+            if (prerequisites.length == 0) {
+                return true;
+            }
+            for (SkillTreeNode prereq : prerequisites) {
+                if (unlocked.contains(prereq)) {
+                    return true;
+                }
+            }
+            return false;
         }
     }
 

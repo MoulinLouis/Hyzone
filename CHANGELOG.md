@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Added
+- **Ascend: Expanded skill tree (1 → 8 nodes)** - Tree now has Auto Runners, Auto-Evolution, Momentum, Runner Speed, Offline Boost, Summit Memory, Evolution Power+, and Ascension Challenges (teaser). Branch/converge structure with OR-logic prerequisites.
 - **Parkour: Fly zone per map** - Admins can define an AABB fly zone per map; players in practice mode are rolled back to their last valid position if they fly outside the zone
 - **Ascend: Leaderboard system** - New `/ascend leaderboard` command with tabbed rankings for Coins, Ascensions, and Manual Runs. Includes pagination (50 per page) and player search. Accessible via the Bolt of Stormsilk item.
 

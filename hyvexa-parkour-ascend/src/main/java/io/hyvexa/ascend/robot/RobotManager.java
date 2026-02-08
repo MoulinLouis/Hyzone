@@ -616,13 +616,6 @@ public class RobotManager {
         }
         BigDecimal multiplierIncrement = AscendConstants.getRunnerMultiplierIncrement(stars, multiplierGainBonus, evolutionPowerBonus);
 
-        // Apply double lap skill if available
-        if (plugin != null && plugin.getAscensionManager() != null) {
-            if (plugin.getAscensionManager().hasDoubleLap(ownerId)) {
-                completions *= 2; // Double completions per cycle
-            }
-        }
-
         MathContext ctx = new MathContext(30, RoundingMode.HALF_UP);
         BigDecimal totalMultiplierBonus = multiplierIncrement.multiply(BigDecimal.valueOf(completions), ctx);
 
@@ -654,7 +647,6 @@ public class RobotManager {
             if (worldName != null && !worldName.isEmpty()) {
                 World world = Universe.get().getWorld(worldName);
                 if (world != null) {
-                    Vector3d startPos = new Vector3d(map.getStartX(), map.getStartY(), map.getStartZ());
                     double[] startPosArr = {map.getStartX(), map.getStartY(), map.getStartZ()};
                     world.execute(() -> teleportNpcWithRecordedRotation(entityRef, world, startPosArr, map.getStartRotY()));
                     robot.setPreviousPosition(null);  // Reset for new run
@@ -719,13 +711,32 @@ public class RobotManager {
             }
         }
 
-        if (cheapestMapId == null || cheapestCost == null) return;
-        if (coins.compareTo(cheapestCost) < 0) return;
+        if (cheapestMapId != null && cheapestCost != null && coins.compareTo(cheapestCost) >= 0) {
+            // Perform single speed upgrade
+            if (!playerStore.atomicSpendCoins(playerId, cheapestCost)) return;
+            playerStore.incrementRobotSpeedLevel(playerId, cheapestMapId);
+            playerStore.checkAndUnlockEligibleMaps(playerId, mapStore);
+            return;
+        }
 
-        // Perform single upgrade
-        if (!playerStore.atomicSpendCoins(playerId, cheapestCost)) return;
-        playerStore.incrementRobotSpeedLevel(playerId, cheapestMapId);
-        playerStore.checkAndUnlockEligibleMaps(playerId, mapStore);
+        // Third priority: auto-evolve a runner at max speed level (requires AUTO_EVOLUTION skill)
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin == null) return;
+        AscensionManager ascensionManager = plugin.getAscensionManager();
+        if (ascensionManager == null || !ascensionManager.hasAutoEvolution(playerId)) return;
+
+        for (AscendMap map : maps) {
+            AscendPlayerProgress.MapProgress mp = progress.getMapProgress().get(map.getId());
+            if (mp == null || !mp.hasRobot()) continue;
+
+            int speedLevel = mp.getRobotSpeedLevel();
+            int stars = mp.getRobotStars();
+            if (speedLevel >= AscendConstants.MAX_SPEED_LEVEL && stars < AscendConstants.MAX_ROBOT_STARS) {
+                int newStars = playerStore.evolveRobot(playerId, map.getId());
+                respawnRobot(playerId, map.getId(), newStars);
+                return; // One action per call
+            }
+        }
     }
 
     /**
@@ -737,17 +748,16 @@ public class RobotManager {
 
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         if (plugin != null) {
-            SummitManager summitManager = plugin.getSummitManager();
-            AscensionManager ascensionManager = plugin.getAscensionManager();
-
-            // Ascension skill tree bonuses are additive (+10%, +100%)
-            if (ascensionManager != null) {
-                speedMultiplier += ascensionManager.getRunnerSpeedBonus(ownerId);
-            }
-
             // Summit runner speed is a multiplier (×1.0 at level 0, ×1.45 at level 1, etc.)
+            SummitManager summitManager = plugin.getSummitManager();
             if (summitManager != null) {
                 speedMultiplier *= summitManager.getRunnerSpeedBonus(ownerId).doubleValue();
+            }
+
+            // Skill tree: Runner Speed Boost (×1.5 global runner speed)
+            AscensionManager ascensionManager = plugin.getAscensionManager();
+            if (ascensionManager != null && ascensionManager.hasRunnerSpeedBoost(ownerId)) {
+                speedMultiplier *= 1.5;
             }
         }
 

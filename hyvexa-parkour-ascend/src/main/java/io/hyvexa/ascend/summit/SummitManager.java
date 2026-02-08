@@ -5,6 +5,7 @@ import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.AscendConstants.SummitCategory;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
+import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 
 import java.math.BigDecimal;
@@ -66,7 +67,7 @@ public class SummitManager {
             newLevel - currentLevel,
             currentBonus,
             newBonus,
-            coins.doubleValue(),
+            coins,
             xpToGain,
             currentProgress[0],
             currentProgress[1],
@@ -131,9 +132,8 @@ public class SummitManager {
 
     /**
      * Gets the runner speed bonus multiplier.
-     * Formula: 1 + 0.45 * sqrt(level)
-     * Used to multiply runner movement speed.
-     * @return Multiplier value (1.0 at level 0, ~2.42 at level 10)
+     * Formula: 1.0 + 0.15 * level (linear below soft cap, sqrt growth above).
+     * @return Multiplier value (1.0 at level 0, 2.5 at level 10)
      */
     public BigDecimal getRunnerSpeedBonus(UUID playerId) {
         return playerStore.getSummitBonus(playerId, SummitCategory.RUNNER_SPEED);
@@ -141,9 +141,8 @@ public class SummitManager {
 
     /**
      * Gets the multiplier gain bonus.
-     * Formula: 1 + 0.5 * level^0.8
-     * Used to boost multiplier gains from runs.
-     * @return Multiplier value (1.0 at level 0, ~4.16 at level 10)
+     * Formula: 1.0 + 0.30 * level (linear below soft cap, sqrt growth above).
+     * @return Multiplier value (1.0 at level 0, 4.0 at level 10)
      */
     public BigDecimal getMultiplierGainBonus(UUID playerId) {
         return playerStore.getSummitBonus(playerId, SummitCategory.MULTIPLIER_GAIN);
@@ -151,12 +150,19 @@ public class SummitManager {
 
     /**
      * Gets the Evolution Power bonus for runner evolution.
-     * Formula: 2 + 1.5 × level / (level + 10) — asymptote ~3.5
-     * Applied per star: multiplier_increment = 0.1 × evolutionPower^stars
-     * @return Evolution bonus (2.0 at level 0, ~2.75 at level 10)
+     * Formula: 3.0 + 0.10 * level (linear below soft cap, sqrt growth above).
+     * Applied per star: multiplier_increment = 0.1 * evolutionPower^stars
+     * @return Evolution bonus (3.0 at level 0, 4.0 at level 10)
      */
     public BigDecimal getEvolutionPowerBonus(UUID playerId) {
-        return playerStore.getSummitBonus(playerId, SummitCategory.EVOLUTION_POWER);
+        BigDecimal base = playerStore.getSummitBonus(playerId, SummitCategory.EVOLUTION_POWER);
+        // Skill tree: Evolution Power+ adds +1.0 to base evolution power
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin != null && plugin.getAscensionManager() != null
+                && plugin.getAscensionManager().hasEvolutionPowerBoost(playerId)) {
+            base = base.add(BigDecimal.ONE);
+        }
+        return base;
     }
 
     /**
@@ -169,7 +175,7 @@ public class SummitManager {
         int levelGain,
         double currentBonus,
         double newBonus,
-        double coinsToSpend,
+        BigDecimal coinsToSpend,
         long xpToGain,
         long currentXpInLevel,
         long currentXpRequired,
