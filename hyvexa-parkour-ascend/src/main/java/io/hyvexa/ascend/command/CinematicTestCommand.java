@@ -22,6 +22,7 @@ import com.hypixel.hytale.server.core.modules.entity.component.TransformComponen
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.server.core.entity.entities.player.movement.MovementManager;
 import io.hyvexa.common.util.CommandUtils;
 
 import javax.annotation.Nonnull;
@@ -142,6 +143,11 @@ public class CinematicTestCommand extends AbstractAsyncCommand {
     // ── Test: Camera reset ───────────────────────────────────────────────
 
     private void testCameraReset(Player player, PlayerRef playerRef, Store<EntityStore> store, Ref<EntityStore> ref) {
+        // Restore movement in case cinematic was interrupted
+        MovementManager mm = store.getComponent(ref, MovementManager.getComponentType());
+        if (mm != null) {
+            mm.resetDefaultsAndUpdate(ref, store);
+        }
         resetCamera(playerRef, store, ref);
         player.sendMessage(Message.raw("[CTest] Camera reset to default."));
     }
@@ -396,6 +402,20 @@ public class CinematicTestCommand extends AbstractAsyncCommand {
 
         long ms = 0;
 
+        // ── Freeze player movement for the entire cinematic ──
+        MovementManager movementManager = store.getComponent(ref, MovementManager.getComponentType());
+        if (movementManager != null) {
+            MovementSettings settings = movementManager.getSettings();
+            if (settings != null) {
+                settings.baseSpeed = 0f;
+                settings.jumpForce = 0f;
+                settings.acceleration = 0f;
+                settings.horizontalFlySpeed = 0f;
+                settings.verticalFlySpeed = 0f;
+                movementManager.update(ph);
+            }
+        }
+
         // ── Phase 1: Lock camera in natural 3rd person + effects ──
         scheduler.schedule(() -> {
             try {
@@ -559,8 +579,13 @@ public class CinematicTestCommand extends AbstractAsyncCommand {
             try {
                 world.execute(() -> {
                     if (!ref.isValid()) return;
+                    // Restore player movement
+                    MovementManager mm = store.getComponent(ref, MovementManager.getComponentType());
+                    if (mm != null) {
+                        mm.resetDefaultsAndUpdate(ref, store);
+                    }
                     resetCamera(playerRef, store, ref);
-                    player.sendMessage(Message.raw("✦ You have Ascended ✦").color("#FFD700"));
+                    player.sendMessage(Message.raw("You are now ready to Ascend!").color("#FFD700"));
                 });
             } catch (Exception ignored) {}
         }, resetTime, TimeUnit.MILLISECONDS);
