@@ -4,7 +4,7 @@ $C.@PageOverlay {
   SceneBlur {}
 
   Group #TutorialWindow {
-    Anchor: (Width: 600, Height: 400);
+    Anchor: (Width: 600, Height: 472);
     LayoutMode: Left;
     Background: #0d1620(0.95);
     OutlineColor: #ffffff(0.06);
@@ -19,17 +19,17 @@ $C.@PageOverlay {
       // Step images - one per step, toggled via Visible
       Group #StepImage1 {
         Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 80);
-        Background: (TexturePath: "../Textures/help/welcome_step1.png");
+        Background: (TexturePath: "../Textures/ascend.png");
         Visible: true;
       }
       Group #StepImage2 {
         Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 80);
-        Background: (TexturePath: "../Textures/help/welcome_step2.png");
+        Background: (TexturePath: "../Textures/ascend.png");
         Visible: false;
       }
       Group #StepImage3 {
         Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 80);
-        Background: (TexturePath: "../Textures/help/welcome_step3.png");
+        Background: (TexturePath: "../Textures/ascend.png");
         Visible: false;
       }
 
@@ -133,6 +133,33 @@ $C.@PageOverlay {
           Group #Feature3Dot { Anchor: (Width: 8, Height: 8, Top: 6); Background: #a855f7; }
           Group { Anchor: (Width: 10); }
           Label #Feature3Label { Style: (FontSize: 13, TextColor: #cfd7dc); Text: "Evolve runners to unlock powerful bonuses"; }
+        }
+
+        // Feature 4 (hidden by default, shown on shortcuts step)
+        Group #Feature4Row {
+          Anchor: (Left: 0, Right: 0, Height: 28, Top: 2);
+          LayoutMode: Left;
+          Visible: false;
+
+          Group #Feature4Dot { Anchor: (Width: 8, Height: 8, Top: 6); Background: #a855f7; }
+          Group { Anchor: (Width: 10); }
+          Label #Feature4Label { Style: (FontSize: 13, TextColor: #cfd7dc); Text: "Feature 4"; }
+        }
+      }
+
+      // Tip card (hidden by default, shown on step 2)
+      Group #TipCard {
+        Anchor: (Left: 0, Right: 0, Top: 16);
+        LayoutMode: Left;
+        Background: #f59e0b(0.08);
+        OutlineColor: #f59e0b(0.2);
+        OutlineSize: 1;
+        Padding: (Left: 12, Right: 12, Top: 10, Bottom: 10);
+        Visible: false;
+
+        Label #TipLabel {
+          Style: (FontSize: 12, TextColor: #f5d590, Wrap: true);
+          Text: "Tip: You don't need to type the command! Use the first item in your inventory to open the menu.";
         }
       }
 
