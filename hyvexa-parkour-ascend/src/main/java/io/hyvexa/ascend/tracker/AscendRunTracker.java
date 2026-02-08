@@ -18,6 +18,7 @@ import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.achievement.AchievementManager;
 import io.hyvexa.ascend.ascension.AscensionManager;
+import io.hyvexa.ascend.tutorial.TutorialTriggerService;
 
 import java.math.BigDecimal;
 import java.math.MathContext;
@@ -349,6 +350,11 @@ public class AscendRunTracker {
         // Check achievements
         if (plugin != null && plugin.getAchievementManager() != null) {
             plugin.getAchievementManager().checkAndUnlockAchievements(playerId, player);
+        }
+
+        // Trigger first completion tutorial
+        if (firstCompletion && plugin != null && plugin.getTutorialTriggerService() != null) {
+            plugin.getTutorialTriggerService().checkFirstCompletion(playerId, ref);
         }
 
         Vector3d startPos = new Vector3d(map.getStartX(), map.getStartY(), map.getStartZ());

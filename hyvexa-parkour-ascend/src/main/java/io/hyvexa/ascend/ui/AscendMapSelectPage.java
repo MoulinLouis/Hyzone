@@ -26,6 +26,7 @@ import io.hyvexa.ascend.ghost.GhostStore;
 import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.summit.SummitManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
+import io.hyvexa.ascend.tutorial.TutorialTriggerService;
 import io.hyvexa.ascend.util.MapUnlockHelper;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.common.ui.ButtonEventData;
@@ -514,6 +515,13 @@ public class AscendMapSelectPage extends BaseAscendPage {
                 if (robotManager != null) {
                     robotManager.respawnRobot(playerRef.getUuid(), mapId, newStars);
                 }
+                // Trigger evolution tutorial on first evolution (newStars == 1)
+                if (newStars == 1) {
+                    ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+                    if (plugin != null && plugin.getTutorialTriggerService() != null) {
+                        plugin.getTutorialTriggerService().checkEvolution(playerRef.getUuid(), ref);
+                    }
+                }
                 sendMessage(store, ref, "[Ascend] Runner evolved! Now at " + newStars + " star" + (newStars > 1 ? "s" : "") + "!");
                 updateRobotRow(ref, store, mapId);
                 return;
@@ -530,6 +538,13 @@ public class AscendMapSelectPage extends BaseAscendPage {
             // Check if new level unlocks next map
             if (newLevel == AscendConstants.MAP_UNLOCK_REQUIRED_RUNNER_LEVEL) {
                 List<String> unlockedMapIds = playerStore.checkAndUnlockEligibleMaps(playerRef.getUuid(), mapStore);
+                if (!unlockedMapIds.isEmpty()) {
+                    // Trigger map unlock tutorial
+                    ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+                    if (plugin != null && plugin.getTutorialTriggerService() != null) {
+                        plugin.getTutorialTriggerService().checkMapUnlock(playerRef.getUuid(), ref);
+                    }
+                }
                 for (String unlockedMapId : unlockedMapIds) {
                     AscendMap unlockedMap = mapStore.getMap(unlockedMapId);
                     if (unlockedMap != null) {
@@ -1160,6 +1175,12 @@ public class AscendMapSelectPage extends BaseAscendPage {
                     // Check if new level unlocks next map
                     if (newLevel == AscendConstants.MAP_UNLOCK_REQUIRED_RUNNER_LEVEL) {
                         List<String> unlockedMapIds = playerStore.checkAndUnlockEligibleMaps(playerRef.getUuid(), mapStore);
+                        if (!unlockedMapIds.isEmpty()) {
+                            ParkourAscendPlugin p = ParkourAscendPlugin.getInstance();
+                            if (p != null && p.getTutorialTriggerService() != null) {
+                                p.getTutorialTriggerService().checkMapUnlock(playerRef.getUuid(), ref);
+                            }
+                        }
                         for (String unlockedMapId : unlockedMapIds) {
                             AscendMap unlockedMap = mapStore.getMap(unlockedMapId);
                             if (unlockedMap != null) {
