@@ -13,6 +13,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.command.AscendCommand;
 import io.hyvexa.ascend.command.AscendAdminCommand;
+import io.hyvexa.ascend.command.CinematicTestCommand;
 import io.hyvexa.ascend.data.AscendDatabaseSetup;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.ascend.data.AscendMapStore;
@@ -137,7 +138,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
         // Pass ghost dependencies to managers
         runTracker = new AscendRunTracker(mapStore, playerStore, ghostRecorder);
-        hudManager = new AscendHudManager(playerStore, mapStore, runTracker);
+        summitManager = new SummitManager(playerStore, mapStore);
+        hudManager = new AscendHudManager(playerStore, mapStore, runTracker, summitManager);
 
         try {
             robotManager = new RobotManager(mapStore, playerStore, ghostStore);
@@ -145,8 +147,6 @@ public class ParkourAscendPlugin extends JavaPlugin {
         } catch (Exception e) {
             LOGGER.at(Level.WARNING).withCause(e).log("Failed to initialize robot manager");
         }
-
-        summitManager = new SummitManager(playerStore, mapStore);
         ascensionManager = new AscensionManager(playerStore, runTracker);
         achievementManager = new AchievementManager(playerStore, mapStore);
 
@@ -173,6 +173,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
         getCommandRegistry().registerCommand(new AscendCommand());
         getCommandRegistry().registerCommand(new AscendAdminCommand());
+        getCommandRegistry().registerCommand(new CinematicTestCommand());
         registerInteractionCodecs();
 
         // Register entity visibility filter system if not already registered

@@ -4,6 +4,7 @@ import com.hypixel.hytale.server.core.entity.entities.player.hud.CustomUIHud;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import io.hyvexa.ascend.AscendConstants.SummitCategory;
+import io.hyvexa.ascend.summit.SummitManager;
 import io.hyvexa.common.util.FormatUtils;
 
 import java.util.Map;
@@ -121,7 +122,7 @@ public class AscendHud extends CustomUIHud {
             commandBuilder.set("#TopElevationValue.Text", elevationValueText);
             commandBuilder.set("#ElevationHud.Visible", showElevation);
             if (showElevation) {
-                commandBuilder.set("#ElevationStatusText.Text", "Elevation " + elevationText);
+                commandBuilder.set("#ElevationStatusText.Text", elevationText);
             }
         }
 
@@ -174,9 +175,10 @@ public class AscendHud extends CustomUIHud {
         effectManager.clearEffects();
     }
 
-    public void updatePrestige(Map<SummitCategory, Integer> summitLevels, int ascensionCount, int skillPoints) {
+    public void updatePrestige(Map<SummitCategory, Integer> summitLevels, int ascensionCount, int skillPoints,
+                               SummitManager.SummitPreview multPreview, SummitManager.SummitPreview speedPreview, SummitManager.SummitPreview evoPreview) {
         boolean showPrestige = ascensionCount > 0 || hasSummitLevels(summitLevels);
-        String prestigeKey = buildPrestigeKey(summitLevels, ascensionCount, skillPoints);
+        String prestigeKey = buildPrestigeKey(summitLevels, ascensionCount, skillPoints, multPreview, speedPreview, evoPreview);
 
         if (prestigeKey.equals(lastPrestigeKey) && Boolean.valueOf(showPrestige).equals(lastPrestigeVisible)) {
             return;
@@ -189,16 +191,22 @@ public class AscendHud extends CustomUIHud {
         commandBuilder.set("#PrestigeHud.Visible", showPrestige);
 
         if (showPrestige) {
-            int speedLevel = summitLevels.getOrDefault(SummitCategory.RUNNER_SPEED, 0);
-            int multLevel = summitLevels.getOrDefault(SummitCategory.MULTIPLIER_GAIN, 0);
-            int evolveLevel = summitLevels.getOrDefault(SummitCategory.EVOLUTION_POWER, 0);
-
-            String summitText = "Summit: Speed " + speedLevel + " | Mult " + multLevel + " | Evolve " + evolveLevel;
-
-            commandBuilder.set("#SummitText.Text", summitText);
+            commandBuilder.set("#SummitMultText.Text", formatSummitLine("Mult", multPreview));
+            commandBuilder.set("#SummitSpeedText.Text", formatSummitLine("Speed", speedPreview));
+            commandBuilder.set("#SummitEvoText.Text", formatSummitLine("Evo Power", evoPreview));
         }
 
         update(false, commandBuilder);
+    }
+
+    private static String formatSummitLine(String name, SummitManager.SummitPreview preview) {
+        if (preview == null) {
+            return name + " Lv.0";
+        }
+        if (preview.hasGain()) {
+            return name + " Lv." + preview.currentLevel() + " -> Lv." + preview.newLevel();
+        }
+        return name + " Lv." + preview.currentLevel();
     }
 
     public void updateAscensionQuest(java.math.BigDecimal coins) {
@@ -256,11 +264,15 @@ public class AscendHud extends CustomUIHud {
         return false;
     }
 
-    private String buildPrestigeKey(Map<SummitCategory, Integer> summitLevels, int ascensionCount, int skillPoints) {
+    private String buildPrestigeKey(Map<SummitCategory, Integer> summitLevels, int ascensionCount, int skillPoints,
+                                    SummitManager.SummitPreview multPreview, SummitManager.SummitPreview speedPreview, SummitManager.SummitPreview evoPreview) {
         int speedLevel = summitLevels != null ? summitLevels.getOrDefault(SummitCategory.RUNNER_SPEED, 0) : 0;
         int multLevel = summitLevels != null ? summitLevels.getOrDefault(SummitCategory.MULTIPLIER_GAIN, 0) : 0;
         int evolveLevel = summitLevels != null ? summitLevels.getOrDefault(SummitCategory.EVOLUTION_POWER, 0) : 0;
-        return speedLevel + "|" + multLevel + "|" + evolveLevel;
+        int multNew = multPreview != null ? multPreview.newLevel() : multLevel;
+        int speedNew = speedPreview != null ? speedPreview.newLevel() : speedLevel;
+        int evoNew = evoPreview != null ? evoPreview.newLevel() : evolveLevel;
+        return multLevel + ">" + multNew + "|" + speedLevel + ">" + speedNew + "|" + evolveLevel + ">" + evoNew;
     }
 
     private static double[] normalizeDigits(java.math.BigDecimal[] digits) {

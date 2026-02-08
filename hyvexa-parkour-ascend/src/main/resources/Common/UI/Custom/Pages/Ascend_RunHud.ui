@@ -371,84 +371,100 @@ $C.@PageOverlay {
     }
 
     Group #ElevationHud {
-      Anchor: (Right: 20, Top: 120, Width: 340, Height: 110);
-      Background: #000000(0.4);
-      LayoutMode: Top;
-      Padding: (Left: 10, Right: 10, Top: 8, Bottom: 8);
+      Anchor: (Right: 20, Top: 80, Width: 340, Height: 116);
+      LayoutMode: Left;
       Visible: false;
 
-      Label #ElevationTitle {
-        Anchor: (Left: 0, Right: 0);
-        Style: (
-          FontSize: 22,
-          TextColor: #ff7fb0,
-          RenderBold: true,
-          HorizontalAlignment: Center
-        );
-        Text: "ELEVATION";
+      Group {
+        Anchor: (Width: 4, Top: 0, Bottom: 0);
+        Background: #f59e0b;
       }
 
-      Label #ElevationStatusText {
-        Anchor: (Left: 0, Right: 0, Top: 6);
-        Style: (
-          FontSize: 18,
-          TextColor: #f2f5f7,
-          RenderBold: true,
-          HorizontalAlignment: Center
-        );
-        Text: "Current Multiplier x1 -> x2";
-      }
+      Group {
+        FlexWeight: 1;
+        Anchor: (Top: 0, Bottom: 0);
+        Background: #0d1620(0.95);
+        OutlineColor: #ffffff(0.06);
+        OutlineSize: 1;
+        LayoutMode: Top;
+        Padding: (Left: 16, Right: 16, Top: 12, Bottom: 12);
 
-      Label #ElevationHint {
-        Anchor: (Left: 0, Right: 0, Top: 6);
-        Style: (
-          FontSize: 16,
-          TextColor: #9fb0ba,
-          RenderBold: true,
-          HorizontalAlignment: Center
-        );
-        Text: "Type /ascend elevate to elevate";
+        Label #ElevationTitle {
+          Style: (FontSize: 12, TextColor: #f59e0b(0.7), RenderUppercase: true, LetterSpacing: 2, RenderBold: true);
+          Text: "Elevation";
+        }
+
+        Group {
+          Anchor: (Left: 0, Width: 30, Height: 2, Top: 8);
+          Background: #f59e0b;
+        }
+
+        Label #ElevationStatusText {
+          Anchor: (Top: 10);
+          Style: (FontSize: 22, TextColor: #f0f4f8, RenderBold: true);
+          Text: "x1";
+        }
+
+        Label #ElevationHint {
+          Anchor: (Top: 8);
+          Style: (FontSize: 13, TextColor: #f59e0b(0.5), RenderBold: true);
+          Text: "/ascend elevate";
+        }
       }
     }
 
     Group #PrestigeHud {
-      Anchor: (Left: 20, Top: 120, Width: 400, Height: 110);
-      Background: #000000(0.4);
-      LayoutMode: Top;
-      Padding: (Left: 10, Right: 10, Top: 8, Bottom: 8);
+      Anchor: (Right: 20, Top: 202, Width: 340, Height: 156);
+      LayoutMode: Left;
       Visible: false;
 
-      Label #PrestigeTitle {
-        Anchor: (Left: 0, Right: 0);
-        Style: (
-          FontSize: 22,
-          TextColor: #ffd166,
-          RenderBold: true,
-          HorizontalAlignment: Center
-        );
-        Text: "SUMMIT";
+      Group {
+        Anchor: (Width: 4, Top: 0, Bottom: 0);
+        Background: #a855f7;
       }
 
-      Label #SummitText {
-        Anchor: (Left: 0, Right: 0, Top: 6);
-        Style: (
-          FontSize: 18,
-          TextColor: #06b6d4,
-          RenderBold: true,
-          HorizontalAlignment: Center
-        );
-        Text: "Summit: Coin 0 | Speed 0 | Manual 0";
-      }
+      Group {
+        FlexWeight: 1;
+        Anchor: (Top: 0, Bottom: 0);
+        Background: #0d1620(0.95);
+        OutlineColor: #ffffff(0.06);
+        OutlineSize: 1;
+        LayoutMode: Top;
+        Padding: (Left: 16, Right: 16, Top: 12, Bottom: 12);
 
-      Label #SummitHint {
-        Anchor: (Left: 0, Right: 0, Top: 6);
-        Style: (
-          FontSize: 16,
-          TextColor: #9fb0ba,
-          RenderBold: true,
-          HorizontalAlignment: Center
-        );
-        Text: "Invest coins to upgrade categories (resets coins + elevation)";
+        Label #PrestigeTitle {
+          Style: (FontSize: 12, TextColor: #a855f7(0.7), RenderUppercase: true, LetterSpacing: 2, RenderBold: true);
+          Text: "Summit";
+        }
+
+        Group {
+          Anchor: (Left: 0, Width: 30, Height: 2, Top: 8);
+          Background: #a855f7;
+        }
+
+        Label #SummitMultText {
+          Anchor: (Top: 10);
+          Style: (FontSize: 15, TextColor: #f0f4f8, RenderBold: true);
+          Text: "Mult Lv.0";
+        }
+
+        Label #SummitSpeedText {
+          Anchor: (Top: 4);
+          Style: (FontSize: 15, TextColor: #f0f4f8, RenderBold: true);
+          Text: "Speed Lv.0";
+        }
+
+        Label #SummitEvoText {
+          Anchor: (Top: 4);
+          Style: (FontSize: 15, TextColor: #f0f4f8, RenderBold: true);
+          Text: "Evo Power Lv.0";
+        }
+
+        Label #SummitHint {
+          Anchor: (Top: 8);
+          Style: (FontSize: 13, TextColor: #a855f7(0.5), RenderBold: true);
+          Text: "/ascend summit";
+        }
       }
     }
 
