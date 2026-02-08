@@ -1,8 +1,8 @@
 package io.hyvexa.ascend.data;
 
 import io.hyvexa.ascend.AscendConstants;
+import io.hyvexa.common.math.BigNumber;
 
-import java.math.BigDecimal;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.Map;
@@ -12,15 +12,15 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class AscendPlayerProgress {
 
-    private final AtomicReference<BigDecimal> coins = new AtomicReference<>(BigDecimal.ZERO);
+    private final AtomicReference<BigNumber> coins = new AtomicReference<>(BigNumber.ZERO);
     private volatile int elevationMultiplier = 1;
     private final Map<String, MapProgress> mapProgress = new ConcurrentHashMap<>();
 
     // Summit System - XP per category (level calculated from XP)
     private final Map<AscendConstants.SummitCategory, Long> summitXp = new ConcurrentHashMap<>();
-    private final AtomicReference<BigDecimal> totalCoinsEarned = new AtomicReference<>(BigDecimal.ZERO);
-    private final AtomicReference<BigDecimal> summitAccumulatedCoins = new AtomicReference<>(BigDecimal.ZERO);
-    private final AtomicReference<BigDecimal> elevationAccumulatedCoins = new AtomicReference<>(BigDecimal.ZERO);
+    private final AtomicReference<BigNumber> totalCoinsEarned = new AtomicReference<>(BigNumber.ZERO);
+    private final AtomicReference<BigNumber> summitAccumulatedCoins = new AtomicReference<>(BigNumber.ZERO);
+    private final AtomicReference<BigNumber> elevationAccumulatedCoins = new AtomicReference<>(BigNumber.ZERO);
 
     // Ascension System
     private volatile int ascensionCount;
@@ -48,16 +48,16 @@ public class AscendPlayerProgress {
     // Tutorial tracking (bitmask)
     private volatile int seenTutorials;
 
-    public BigDecimal getCoins() {
+    public BigNumber getCoins() {
         return coins.get();
     }
 
-    public void setCoins(BigDecimal value) {
+    public void setCoins(BigNumber value) {
         this.coins.set(value);
     }
 
-    public void addCoins(BigDecimal amount) {
-        coins.updateAndGet(c -> c.add(amount).max(BigDecimal.ZERO));
+    public void addCoins(BigNumber amount) {
+        coins.updateAndGet(c -> c.add(amount).max(BigNumber.ZERO));
     }
 
     public int getElevationMultiplier() {
@@ -95,7 +95,7 @@ public class AscendPlayerProgress {
 
     public long addSummitXp(AscendConstants.SummitCategory category, long amount) {
         long current = getSummitXp(category);
-        long newXp = Math.max(0, current + amount);
+        long newXp = Math.max(0, AscendConstants.saturatingAdd(current, amount));
         summitXp.put(category, newXp);
         return newXp;
     }
@@ -127,45 +127,45 @@ public class AscendPlayerProgress {
         return levels;
     }
 
-    public BigDecimal getTotalCoinsEarned() {
+    public BigNumber getTotalCoinsEarned() {
         return totalCoinsEarned.get();
     }
 
-    public void setTotalCoinsEarned(BigDecimal value) {
-        this.totalCoinsEarned.set(value.max(BigDecimal.ZERO));
+    public void setTotalCoinsEarned(BigNumber value) {
+        this.totalCoinsEarned.set(value.max(BigNumber.ZERO));
     }
 
-    public void addTotalCoinsEarned(BigDecimal amount) {
-        if (amount.compareTo(BigDecimal.ZERO) > 0) {
-            totalCoinsEarned.updateAndGet(c -> c.add(amount).max(BigDecimal.ZERO));
+    public void addTotalCoinsEarned(BigNumber amount) {
+        if (amount.gt(BigNumber.ZERO)) {
+            totalCoinsEarned.updateAndGet(c -> c.add(amount).max(BigNumber.ZERO));
         }
     }
 
-    public BigDecimal getSummitAccumulatedCoins() {
+    public BigNumber getSummitAccumulatedCoins() {
         return summitAccumulatedCoins.get();
     }
 
-    public void setSummitAccumulatedCoins(BigDecimal value) {
-        this.summitAccumulatedCoins.set(value.max(BigDecimal.ZERO));
+    public void setSummitAccumulatedCoins(BigNumber value) {
+        this.summitAccumulatedCoins.set(value.max(BigNumber.ZERO));
     }
 
-    public void addSummitAccumulatedCoins(BigDecimal amount) {
-        if (amount.compareTo(BigDecimal.ZERO) > 0) {
-            summitAccumulatedCoins.updateAndGet(c -> c.add(amount).max(BigDecimal.ZERO));
+    public void addSummitAccumulatedCoins(BigNumber amount) {
+        if (amount.gt(BigNumber.ZERO)) {
+            summitAccumulatedCoins.updateAndGet(c -> c.add(amount).max(BigNumber.ZERO));
         }
     }
 
-    public BigDecimal getElevationAccumulatedCoins() {
+    public BigNumber getElevationAccumulatedCoins() {
         return elevationAccumulatedCoins.get();
     }
 
-    public void setElevationAccumulatedCoins(BigDecimal value) {
-        this.elevationAccumulatedCoins.set(value.max(BigDecimal.ZERO));
+    public void setElevationAccumulatedCoins(BigNumber value) {
+        this.elevationAccumulatedCoins.set(value.max(BigNumber.ZERO));
     }
 
-    public void addElevationAccumulatedCoins(BigDecimal amount) {
-        if (amount.compareTo(BigDecimal.ZERO) > 0) {
-            elevationAccumulatedCoins.updateAndGet(c -> c.add(amount).max(BigDecimal.ZERO));
+    public void addElevationAccumulatedCoins(BigNumber amount) {
+        if (amount.gt(BigNumber.ZERO)) {
+            elevationAccumulatedCoins.updateAndGet(c -> c.add(amount).max(BigNumber.ZERO));
         }
     }
 
@@ -370,7 +370,7 @@ public class AscendPlayerProgress {
         private volatile boolean hasRobot;
         private volatile int robotSpeedLevel;
         private volatile int robotStars;
-        private final AtomicReference<BigDecimal> multiplier = new AtomicReference<>(BigDecimal.ONE);
+        private final AtomicReference<BigNumber> multiplier = new AtomicReference<>(BigNumber.ONE);
         private volatile Long bestTimeMs;
 
         public boolean isUnlocked() {
@@ -423,19 +423,19 @@ public class AscendPlayerProgress {
             return robotStars;
         }
 
-        public BigDecimal getMultiplier() {
+        public BigNumber getMultiplier() {
             return multiplier.get();
         }
 
-        public void setMultiplier(BigDecimal value) {
-            this.multiplier.set(value.max(BigDecimal.ONE));
+        public void setMultiplier(BigNumber value) {
+            this.multiplier.set(value.max(BigNumber.ONE));
         }
 
-        public BigDecimal addMultiplier(BigDecimal amount) {
-            if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+        public BigNumber addMultiplier(BigNumber amount) {
+            if (amount.lte(BigNumber.ZERO)) {
                 return multiplier.get();
             }
-            return multiplier.updateAndGet(m -> m.add(amount).max(BigDecimal.ONE));
+            return multiplier.updateAndGet(m -> m.add(amount).max(BigNumber.ONE));
         }
 
         public Long getBestTimeMs() {

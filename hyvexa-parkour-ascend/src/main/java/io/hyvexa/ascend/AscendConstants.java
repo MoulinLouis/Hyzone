@@ -1,16 +1,13 @@
 package io.hyvexa.ascend;
 
-import java.math.BigDecimal;
-import java.math.MathContext;
-import java.math.RoundingMode;
+import io.hyvexa.common.math.BigNumber;
 
 public final class AscendConstants {
 
     private AscendConstants() {
     }
 
-    // Math contexts for precision calculations
-    public static final MathContext CALC_CTX = new MathContext(30, RoundingMode.HALF_UP);
+    // (CALC_CTX removed — BigNumber handles precision internally)
 
     // Database
     public static final String TABLE_PREFIX = "ascend_";
@@ -198,7 +195,7 @@ public final class AscendConstants {
      * @param stars Evolution level
      * @return Multiplier increment per completion (base 0.1)
      */
-    public static BigDecimal getRunnerMultiplierIncrement(int stars) {
+    public static BigNumber getRunnerMultiplierIncrement(int stars) {
         return getRunnerMultiplierIncrement(stars, 1.0, 3.0);
     }
 
@@ -212,14 +209,13 @@ public final class AscendConstants {
      * @param evolutionPowerBonus Bonus from Summit Evolution Power (3.0 + 0.10 per level)
      * @return Multiplier increment per completion
      */
-    public static BigDecimal getRunnerMultiplierIncrement(int stars, double multiplierGainBonus, double evolutionPowerBonus) {
-        BigDecimal base = new BigDecimal("0.1");  // RUNNER_MULTIPLIER_INCREMENT
-        // Apply Evolution Power exponentially per star
+    public static BigNumber getRunnerMultiplierIncrement(int stars, double multiplierGainBonus, double evolutionPowerBonus) {
+        double base = RUNNER_MULTIPLIER_INCREMENT; // 0.1
         if (stars > 0) {
-            base = base.multiply(BigDecimal.valueOf(Math.pow(evolutionPowerBonus, stars)), CALC_CTX);
+            base *= Math.pow(evolutionPowerBonus, stars);
         }
-        return base.multiply(BigDecimal.valueOf(multiplierGainBonus), CALC_CTX)
-                   .setScale(20, RoundingMode.HALF_UP);
+        base *= multiplierGainBonus;
+        return BigNumber.fromDouble(base);
     }
 
     // Max speed level per evolution cycle (used for total level calculation)
@@ -234,39 +230,32 @@ public final class AscendConstants {
      * Early-level boost applies a decaying multiplier for levels 0-9 on maps 2+ during first evolution.
      * This creates more time between early map unlocks without affecting late-game progression.
      */
-    public static BigDecimal getRunnerUpgradeCost(int speedLevel, int mapDisplayOrder, int stars) {
+    public static BigNumber getRunnerUpgradeCost(int speedLevel, int mapDisplayOrder, int stars) {
         // Get map-specific scaling parameters
         int offset = getMapUpgradeOffset(mapDisplayOrder);
-        BigDecimal mapMultiplier = BigDecimal.valueOf(getMapUpgradeMultiplier(mapDisplayOrder));
+        double mapMult = getMapUpgradeMultiplier(mapDisplayOrder);
 
         // Calculate total levels bought across all evolutions
-        // Each evolution represents MAX_SPEED_LEVEL levels already purchased
         int totalLevelsBought = stars * MAX_SPEED_LEVEL + speedLevel;
-
-        // Apply offset to total level for base cost calculation
         int effectiveLevel = totalLevelsBought + offset;
 
         // Base formula: 5 × 2^level + level × 10
-        // Smooth ~2x growth per level, no artificial boosts or jumps
-        BigDecimal five = new BigDecimal("5");
-        BigDecimal two = new BigDecimal("2");
-        BigDecimal ten = new BigDecimal("10");
+        // Use BigNumber pow for 2^level to handle large values
+        BigNumber exponentialPart = BigNumber.of(2, 0).pow(effectiveLevel);
+        BigNumber linearPart = BigNumber.fromLong((long) effectiveLevel * 10);
 
-        BigDecimal exponentialPart = two.pow(effectiveLevel, CALC_CTX);
-        BigDecimal linearPart = BigDecimal.valueOf(effectiveLevel).multiply(ten, CALC_CTX);
-
-        BigDecimal baseCost = five.multiply(exponentialPart, CALC_CTX).add(linearPart, CALC_CTX);
+        BigNumber baseCost = BigNumber.of(5, 0).multiply(exponentialPart).add(linearPart);
 
         // Apply map multiplier
-        baseCost = baseCost.multiply(mapMultiplier, CALC_CTX);
+        baseCost = baseCost.multiply(BigNumber.fromDouble(mapMult));
 
-        // Apply early-level boost (decaying multiplier for levels 0-9 on maps 2+ during first evolution)
+        // Apply early-level boost
         double earlyBoost = calculateEarlyLevelBoost(speedLevel, mapDisplayOrder, stars);
         if (earlyBoost > 1.0) {
-            baseCost = baseCost.multiply(BigDecimal.valueOf(earlyBoost), CALC_CTX);
+            baseCost = baseCost.multiply(BigNumber.fromDouble(earlyBoost));
         }
 
-        return baseCost.setScale(0, RoundingMode.CEILING);
+        return baseCost;
     }
 
     // Runner (internal tick system)
@@ -298,8 +287,8 @@ public final class AscendConstants {
      * Above SOFT_CAP: baseCost * 1.15^(300^0.77 + (level-300)^0.63)
      * Keeps identical early game, much flatter late game.
      */
-    public static BigDecimal getElevationLevelUpCost(int currentLevel) {
-        return getElevationLevelUpCost(currentLevel, BigDecimal.ONE);
+    public static BigNumber getElevationLevelUpCost(int currentLevel) {
+        return getElevationLevelUpCost(currentLevel, BigNumber.ONE);
     }
 
     /**
@@ -307,10 +296,8 @@ public final class AscendConstants {
      * @param currentLevel The player's current elevation level
      * @param costMultiplier Cost modifier (1.0 = full cost, 0.8 = 20% discount)
      */
-    public static BigDecimal getElevationLevelUpCost(int currentLevel, BigDecimal costMultiplier) {
+    public static BigNumber getElevationLevelUpCost(int currentLevel, BigNumber costMultiplier) {
         int safeLevel = Math.max(0, currentLevel);
-
-        BigDecimal base = BigDecimal.valueOf(ELEVATION_BASE_COST);
 
         // Two-phase cost curve: identical early game, flatter late game
         double effectiveLevel;
@@ -321,23 +308,28 @@ public final class AscendConstants {
             double latePart = Math.pow(safeLevel - ELEVATION_SOFT_CAP, ELEVATION_COST_CURVE_LATE);
             effectiveLevel = basePart + latePart;
         }
-        BigDecimal growthPower = BigDecimal.valueOf(Math.pow(ELEVATION_COST_GROWTH, effectiveLevel));
-        BigDecimal cost = base.multiply(growthPower, CALC_CTX);
 
-        // Apply cost multiplier (skill discount) - NO double conversion
-        if (costMultiplier.compareTo(BigDecimal.ONE) != 0) {
-            cost = cost.multiply(costMultiplier, CALC_CTX);
+        // cost = baseCost * growth^effectiveLevel
+        // Compute in log10 space to avoid double overflow for large effectiveLevel
+        double log10Cost = Math.log10(ELEVATION_BASE_COST) + effectiveLevel * Math.log10(ELEVATION_COST_GROWTH);
+        int resultExp = (int) Math.floor(log10Cost);
+        double resultMantissa = Math.pow(10.0, log10Cost - resultExp);
+        BigNumber cost = BigNumber.of(resultMantissa, resultExp);
+
+        // Apply cost multiplier (skill discount)
+        if (!costMultiplier.equals(BigNumber.ONE)) {
+            cost = cost.multiply(costMultiplier);
         }
 
-        return cost.setScale(2, RoundingMode.CEILING);
+        return cost;
     }
 
     /**
      * Calculate how many levels can be purchased with given coins at current level.
      * Returns the number of levels affordable and the total cost.
      */
-    public static ElevationPurchaseResult calculateElevationPurchase(int currentLevel, BigDecimal availableCoins) {
-        return calculateElevationPurchase(currentLevel, availableCoins, BigDecimal.ONE);
+    public static ElevationPurchaseResult calculateElevationPurchase(int currentLevel, BigNumber availableCoins) {
+        return calculateElevationPurchase(currentLevel, availableCoins, BigNumber.ONE);
     }
 
     /**
@@ -348,21 +340,21 @@ public final class AscendConstants {
      */
     private static final int MAX_ELEVATION_PURCHASE_ITERATIONS = 100_000;
 
-    public static ElevationPurchaseResult calculateElevationPurchase(int currentLevel, BigDecimal availableCoins, BigDecimal costMultiplier) {
-        if (availableCoins.compareTo(BigDecimal.ZERO) <= 0
-                || costMultiplier.compareTo(BigDecimal.ZERO) <= 0) {
-            return new ElevationPurchaseResult(0, BigDecimal.ZERO);
+    public static ElevationPurchaseResult calculateElevationPurchase(int currentLevel, BigNumber availableCoins, BigNumber costMultiplier) {
+        if (availableCoins.lte(BigNumber.ZERO)
+                || costMultiplier.lte(BigNumber.ZERO)) {
+            return new ElevationPurchaseResult(0, BigNumber.ZERO);
         }
 
         int levelsAffordable = 0;
-        BigDecimal totalCost = BigDecimal.ZERO;
+        BigNumber totalCost = BigNumber.ZERO;
         int level = currentLevel;
 
         while (levelsAffordable < MAX_ELEVATION_PURCHASE_ITERATIONS) {
-            BigDecimal nextCost = getElevationLevelUpCost(level, costMultiplier);
-            BigDecimal newTotal = totalCost.add(nextCost, CALC_CTX);
+            BigNumber nextCost = getElevationLevelUpCost(level, costMultiplier);
+            BigNumber newTotal = totalCost.add(nextCost);
 
-            if (newTotal.compareTo(availableCoins) > 0) {
+            if (newTotal.gt(availableCoins)) {
                 break;
             }
 
@@ -376,9 +368,9 @@ public final class AscendConstants {
 
     public static class ElevationPurchaseResult {
         public final int levels;
-        public final BigDecimal cost;
+        public final BigNumber cost;
 
-        public ElevationPurchaseResult(int levels, BigDecimal cost) {
+        public ElevationPurchaseResult(int levels, BigNumber cost) {
             this.levels = levels;
             this.cost = cost;
         }
@@ -458,27 +450,46 @@ public final class AscendConstants {
      * Uses power 3/7 (paired with level^2.0) to preserve the same coin→level mapping
      * as the old system (sqrt + level^2.5) while producing smaller XP numbers.
      */
-    public static long coinsToXp(BigDecimal coins) {
-        if (coins.compareTo(BigDecimal.ZERO) <= 0) {
+    public static long coinsToXp(BigNumber coins) {
+        if (coins.lte(BigNumber.ZERO)) {
             return 0;
         }
-        double ratio = coins.divide(BigDecimal.valueOf(SUMMIT_MIN_COINS), CALC_CTX).doubleValue();
+        double ratio = coins.divide(BigNumber.fromLong(SUMMIT_MIN_COINS)).toDouble();
         if (ratio < 1.0) {
             return 0;
         }
-        return (long) Math.pow(ratio, SUMMIT_XP_COIN_POWER);
+        double xp = Math.pow(ratio, SUMMIT_XP_COIN_POWER);
+        if (xp >= (double) Long.MAX_VALUE) {
+            return Long.MAX_VALUE;
+        }
+        return (long) xp;
+    }
+
+    /**
+     * Saturating addition for longs — clamps to Long.MAX_VALUE instead of wrapping.
+     */
+    public static long saturatingAdd(long a, long b) {
+        long result = a + b;
+        // Overflow: both positive but result negative, or both negative but result positive
+        if (b > 0 && result < a) {
+            return Long.MAX_VALUE;
+        }
+        if (b < 0 && result > a) {
+            return Long.MIN_VALUE;
+        }
+        return result;
     }
 
     /**
      * Calculate coins needed to reach a given XP amount.
      * Inverse of coinsToXp: coins = xp^(7/3) × SUMMIT_MIN_COINS
      */
-    public static BigDecimal xpToCoins(long xp) {
+    public static BigNumber xpToCoins(long xp) {
         if (xp <= 0) {
-            return BigDecimal.ZERO;
+            return BigNumber.ZERO;
         }
         double coins = Math.pow(xp, 7.0 / 3.0) * SUMMIT_MIN_COINS;
-        return BigDecimal.valueOf(coins);
+        return BigNumber.fromDouble(coins);
     }
 
     /**
@@ -536,7 +547,7 @@ public final class AscendConstants {
     // Ascension System (Ultimate Prestige)
     // ========================================
 
-    public static final java.math.BigDecimal ASCENSION_COIN_THRESHOLD = new java.math.BigDecimal("1000000000000000000000000000000000"); // 1 Decillion (10^33)
+    public static final BigNumber ASCENSION_COIN_THRESHOLD = BigNumber.of(1, 33); // 1 Decillion (10^33)
 
     public enum SkillTreeNode {
         AUTO_RUNNERS("Automate Runners", "Auto-upgrade runners (cheapest first, no evolution)"),

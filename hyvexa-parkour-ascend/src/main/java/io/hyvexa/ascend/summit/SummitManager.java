@@ -7,8 +7,8 @@ import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendPlayerStore;
+import io.hyvexa.common.math.BigNumber;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -34,7 +34,7 @@ public class SummitManager {
      * Requires at least 1 XP worth of coins (1B coins = 1 XP).
      */
     public boolean canSummit(UUID playerId) {
-        BigDecimal accumulatedCoins = playerStore.getSummitAccumulatedCoins(playerId);
+        BigNumber accumulatedCoins = playerStore.getSummitAccumulatedCoins(playerId);
         long potentialXp = AscendConstants.coinsToXp(accumulatedCoins);
         return potentialXp >= 1;
     }
@@ -45,13 +45,13 @@ public class SummitManager {
      * XP is based on accumulated coins since last Summit/Elevation.
      */
     public SummitPreview previewSummit(UUID playerId, SummitCategory category) {
-        BigDecimal coins = playerStore.getSummitAccumulatedCoins(playerId);
+        BigNumber coins = playerStore.getSummitAccumulatedCoins(playerId);
         long xpToGain = AscendConstants.coinsToXp(coins);
 
         long currentXp = playerStore.getSummitXp(playerId, category);
         int currentLevel = AscendConstants.calculateLevelFromXp(currentXp);
 
-        long newXp = currentXp + xpToGain;
+        long newXp = AscendConstants.saturatingAdd(currentXp, xpToGain);
         int newLevel = AscendConstants.calculateLevelFromXp(newXp);
 
         double currentBonus = category.getBonusForLevel(currentLevel);
@@ -83,7 +83,7 @@ public class SummitManager {
      * @return SummitResult containing the new level, list of maps with runners (for despawn), and XP gained
      */
     public SummitResult performSummit(UUID playerId, SummitCategory category) {
-        BigDecimal coins = playerStore.getSummitAccumulatedCoins(playerId);
+        BigNumber coins = playerStore.getSummitAccumulatedCoins(playerId);
         long xpToGain = AscendConstants.coinsToXp(coins);
 
         if (xpToGain < 1) {
@@ -135,8 +135,8 @@ public class SummitManager {
      * Formula: 1.0 + 0.15 * level (linear below soft cap, sqrt growth above).
      * @return Multiplier value (1.0 at level 0, 2.5 at level 10)
      */
-    public BigDecimal getRunnerSpeedBonus(UUID playerId) {
-        return playerStore.getSummitBonus(playerId, SummitCategory.RUNNER_SPEED);
+    public double getRunnerSpeedBonus(UUID playerId) {
+        return playerStore.getSummitBonusDouble(playerId, SummitCategory.RUNNER_SPEED);
     }
 
     /**
@@ -144,8 +144,8 @@ public class SummitManager {
      * Formula: 1.0 + 0.30 * level (linear below soft cap, sqrt growth above).
      * @return Multiplier value (1.0 at level 0, 4.0 at level 10)
      */
-    public BigDecimal getMultiplierGainBonus(UUID playerId) {
-        return playerStore.getSummitBonus(playerId, SummitCategory.MULTIPLIER_GAIN);
+    public double getMultiplierGainBonus(UUID playerId) {
+        return playerStore.getSummitBonusDouble(playerId, SummitCategory.MULTIPLIER_GAIN);
     }
 
     /**
@@ -154,13 +154,13 @@ public class SummitManager {
      * Applied per star: multiplier_increment = 0.1 * evolutionPower^stars
      * @return Evolution bonus (3.0 at level 0, 4.0 at level 10)
      */
-    public BigDecimal getEvolutionPowerBonus(UUID playerId) {
-        BigDecimal base = playerStore.getSummitBonus(playerId, SummitCategory.EVOLUTION_POWER);
+    public double getEvolutionPowerBonus(UUID playerId) {
+        double base = playerStore.getSummitBonusDouble(playerId, SummitCategory.EVOLUTION_POWER);
         // Skill tree: Evolution Power+ adds +1.0 to base evolution power
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         if (plugin != null && plugin.getAscensionManager() != null
                 && plugin.getAscensionManager().hasEvolutionPowerBoost(playerId)) {
-            base = base.add(BigDecimal.ONE);
+            base += 1.0;
         }
         return base;
     }
@@ -175,7 +175,7 @@ public class SummitManager {
         int levelGain,
         double currentBonus,
         double newBonus,
-        BigDecimal coinsToSpend,
+        BigNumber coinsToSpend,
         long xpToGain,
         long currentXpInLevel,
         long currentXpRequired,
