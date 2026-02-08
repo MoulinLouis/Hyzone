@@ -42,8 +42,9 @@ public class AscendPlayerProgress {
     private volatile Long lastActiveTimestamp;
     private volatile boolean hasUnclaimedPassive;
 
-    // Automation toggle
+    // Automation toggles
     private volatile boolean autoUpgradeEnabled;
+    private volatile boolean autoEvolutionEnabled;
 
     // Tutorial tracking (bitmask)
     private volatile int seenTutorials;
@@ -344,6 +345,14 @@ public class AscendPlayerProgress {
         this.autoUpgradeEnabled = enabled;
     }
 
+    public boolean isAutoEvolutionEnabled() {
+        return autoEvolutionEnabled;
+    }
+
+    public void setAutoEvolutionEnabled(boolean enabled) {
+        this.autoEvolutionEnabled = enabled;
+    }
+
     // ========================================
     // Tutorial Tracking
     // ========================================
@@ -372,6 +381,25 @@ public class AscendPlayerProgress {
         private volatile int robotStars;
         private final AtomicReference<BigNumber> multiplier = new AtomicReference<>(BigNumber.ONE);
         private volatile Long bestTimeMs;
+        private volatile long momentumExpireTimeMs; // 0 = inactive (ephemeral, not persisted)
+
+        public boolean isMomentumActive() {
+            return System.currentTimeMillis() < momentumExpireTimeMs;
+        }
+
+        public void activateMomentum() {
+            this.momentumExpireTimeMs = System.currentTimeMillis() + AscendConstants.MOMENTUM_DURATION_MS;
+        }
+
+        public long getMomentumExpireTimeMs() {
+            return momentumExpireTimeMs;
+        }
+
+        public double getMomentumProgress() {
+            long remaining = momentumExpireTimeMs - System.currentTimeMillis();
+            if (remaining <= 0) return 0.0;
+            return Math.min(1.0, remaining / (double) AscendConstants.MOMENTUM_DURATION_MS);
+        }
 
         public boolean isUnlocked() {
             return unlocked;

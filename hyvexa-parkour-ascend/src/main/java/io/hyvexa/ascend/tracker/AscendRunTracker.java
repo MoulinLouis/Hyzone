@@ -315,6 +315,19 @@ public class AscendRunTracker {
             plugin.getAchievementManager().checkAndUnlockAchievements(playerId, player);
         }
 
+        // Activate Momentum boost if player has AUTO_RUNNERS skill
+        if (plugin != null && plugin.getAscensionManager() != null
+                && plugin.getAscensionManager().hasAutoRunners(playerId)) {
+            boolean wasActive = mapProgress.isMomentumActive();
+            mapProgress.activateMomentum();
+            if (!wasActive) {
+                String mapName = map.getName() != null && !map.getName().isBlank() ? map.getName() : map.getId();
+                long durationSec = AscendConstants.MOMENTUM_DURATION_MS / 1000;
+                player.sendMessage(Message.raw("[Momentum] x2 runner speed on " + mapName + " for " + durationSec + "s!")
+                    .color(SystemMessageUtils.WARN));
+            }
+        }
+
         // Trigger first completion tutorial
         if (firstCompletion && plugin != null && plugin.getTutorialTriggerService() != null) {
             plugin.getTutorialTriggerService().checkFirstCompletion(playerId, ref);

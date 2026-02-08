@@ -104,8 +104,8 @@ $C.@PageOverlay {
               Anchor: (Left: 0, Right: 0);
               FlexWeight: 1;
               LayoutMode: Top;
-              Label #NameAutoRunners { Anchor: (Top: 14); Style: (FontSize: 14, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Auto Runners"; }
-              Label #DescAutoRunners { Anchor: (Top: 4); Style: (FontSize: 11, TextColor: #9fb0ba, HorizontalAlignment: Center); Text: "Cheapest upgrade first"; }
+              Label #NameAutoRunners { Anchor: (Top: 14); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Auto-Upgrade"; }
+              Label #DescAutoRunners { Anchor: (Top: 4); Style: (FontSize: 11, TextColor: #9fb0ba, HorizontalAlignment: Center); Text: "+ Momentum"; }
               Label #StatusAutoRunners { Anchor: (Top: 10); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
             }
             Group #LockedAutoRunners {
@@ -141,23 +141,23 @@ $C.@PageOverlay {
             }
           }
 
-          // Tier 2: MOMENTUM
-          Button #NodeMomentum {
+          // Tier 2: PERSISTENCE
+          Button #NodePersistence {
             Anchor: (Left: 80, Top: 280, Width: 160, Height: 110);
             Background: @NodeBg;
             Style: @NodeStyle;
             LayoutMode: Top;
-            Group #BorderMomentum { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Background: #4b5563; }
-            Group #RevealedMomentum {
+            Group #BorderPersistence { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Background: #4b5563; }
+            Group #RevealedPersistence {
               Visible: false;
               Anchor: (Left: 0, Right: 0);
               FlexWeight: 1;
               LayoutMode: Top;
-              Label #NameMomentum { Anchor: (Top: 14); Style: (FontSize: 14, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Momentum"; }
-              Label #DescMomentum { Anchor: (Top: 4); Style: (FontSize: 11, TextColor: #9fb0ba, HorizontalAlignment: Center); Text: "Keep 10% multipliers"; }
-              Label #StatusMomentum { Anchor: (Top: 10); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
+              Label #NamePersistence { Anchor: (Top: 14); Style: (FontSize: 14, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Persistence"; }
+              Label #DescPersistence { Anchor: (Top: 4); Style: (FontSize: 11, TextColor: #9fb0ba, HorizontalAlignment: Center); Text: "Keep 10% multipliers"; }
+              Label #StatusPersistence { Anchor: (Top: 10); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
             }
-            Group #LockedMomentum {
+            Group #LockedPersistence {
               Anchor: (Left: 0, Right: 0);
               FlexWeight: 1;
               Group { Anchor: (Left: 64, Top: 12, Width: 32, Height: 32); Background: @LockIcon; }

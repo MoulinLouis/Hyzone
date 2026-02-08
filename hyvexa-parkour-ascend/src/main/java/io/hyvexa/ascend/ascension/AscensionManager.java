@@ -158,8 +158,8 @@ public class AscensionManager {
         return hasSkillNode(playerId, SkillTreeNode.AUTO_EVOLUTION);
     }
 
-    public boolean hasMomentum(UUID playerId) {
-        return hasSkillNode(playerId, SkillTreeNode.MOMENTUM);
+    public boolean hasPersistence(UUID playerId) {
+        return hasSkillNode(playerId, SkillTreeNode.PERSISTENCE);
     }
 
     public boolean hasRunnerSpeedBoost(UUID playerId) {

@@ -10,6 +10,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
+import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.summit.SummitManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
@@ -88,6 +89,18 @@ public class AscendHudManager {
 
             // Update ascension quest progress bar
             hud.updateAscensionQuest(coins);
+
+            // Update momentum progress bars (per-map temporary speed boost)
+            AscendPlayerProgress progress = playerStore.getPlayer(playerId);
+            if (progress != null) {
+                List<AscendMap> momentumMaps = mapList;
+                double[] momentumProgress = new double[AscendConstants.MULTIPLIER_SLOTS];
+                for (int i = 0; i < momentumMaps.size() && i < momentumProgress.length; i++) {
+                    AscendPlayerProgress.MapProgress mp = progress.getMapProgress().get(momentumMaps.get(i).getId());
+                    momentumProgress[i] = mp != null ? mp.getMomentumProgress() : 0.0;
+                }
+                hud.updateMomentum(momentumProgress);
+            }
         } catch (Exception e) {
             LOGGER.at(Level.WARNING).withCause(e).log("Failed to update Ascend HUD for player " + playerId);
         }

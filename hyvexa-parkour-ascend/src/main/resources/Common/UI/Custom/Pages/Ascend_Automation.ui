@@ -2,7 +2,7 @@ $C = "../Common.ui";
 
 $C.@PageOverlay {
   $C.@Container {
-    Anchor: (Width: 460, Height: 340);
+    Anchor: (Width: 460, Height: 530);
 
     #Title {
       Group {
@@ -85,7 +85,73 @@ $C.@PageOverlay {
 
           Label #LockedLabel {
             Style: (FontSize: 12, TextColor: #f59e0b);
-            Text: "Unlock 'Automate Runners' in the Skill Tree first.";
+            Text: "Unlock 'Auto-Upgrade + Momentum' in the Skill Tree first.";
+          }
+        }
+      }
+
+      Group { Anchor: (Height: 16); }
+
+      Group #AutoEvolutionSection {
+        Anchor: (Left: 0, Right: 0);
+        LayoutMode: Top;
+
+        Label {
+          Anchor: (Left: 0, Right: 0, Height: 22);
+          Style: (FontSize: 14, RenderBold: true, TextColor: #f0f4f8);
+          Text: "Auto-Evolution";
+        }
+
+        Label {
+          Anchor: (Left: 0, Right: 0, Height: 18);
+          Style: (FontSize: 11, TextColor: #6b7280);
+          Text: "Runners auto-evolve at max speed level.";
+        }
+
+        Label {
+          Anchor: (Left: 0, Right: 0, Height: 18);
+          Style: (FontSize: 11, TextColor: #6b7280);
+          Text: "Requires the Auto-Evolution skill tree node.";
+        }
+
+        Group { Anchor: (Height: 10); }
+
+        Group #EvoToggleRow {
+          Anchor: (Left: 0, Right: 0, Height: 44);
+          LayoutMode: Left;
+
+          Label #EvoStatusLabel {
+            Anchor: (Width: 240, Height: 44);
+            Padding: (Top: 12);
+            Style: (FontSize: 13, TextColor: #9fb0ba);
+            Text: "Status: OFF";
+          }
+
+          Button #EvoToggleButton {
+            Anchor: (Width: 120, Height: 40);
+            Background: #1a2530;
+            Style: ButtonStyle(
+              Default: (Background: #1a2530),
+              Hovered: (Background: #243342),
+              Pressed: (Background: #1e2b38),
+              Sounds: $C.@ButtonSounds,
+            );
+            LayoutMode: Top;
+            Group #EvoToggleBorder { Anchor: (Left: 0, Right: 0, Top: 0, Height: 3); Background: #4b5563; }
+            Label #EvoToggleText { Anchor: (Top: 10); Style: (FontSize: 13, RenderBold: true, TextColor: #9fb0ba, HorizontalAlignment: Center); Text: "Enable"; }
+          }
+        }
+
+        Group { Anchor: (Height: 12); }
+
+        Group #EvoLockedOverlay {
+          Anchor: (Left: 0, Right: 0, Height: 36);
+          Background: #1a2530;
+          Padding: (Left: 12, Top: 8);
+
+          Label #EvoLockedLabel {
+            Style: (FontSize: 12, TextColor: #f59e0b);
+            Text: "Unlock 'Auto-Evolution' in the Skill Tree first.";
           }
         }
       }
