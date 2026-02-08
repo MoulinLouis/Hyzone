@@ -2,7 +2,7 @@ $C = "../Common.ui";
 
 $C.@PageOverlay {
   $C.@Container {
-    Anchor: (Width: 440, Height: 380);
+    Anchor: (Width: 460, Height: 460);
 
     #Title {
       Group {
@@ -24,112 +24,160 @@ $C.@PageOverlay {
 
     #Content {
       LayoutMode: Top;
-      Padding: (Left: 20, Right: 20, Top: 6, Bottom: 12);
+      Padding: (Left: 24, Right: 24, Top: 8, Bottom: 16);
 
       Label {
-        Anchor: (Top: 8);
-        Style: (FontSize: 14, TextColor: #b8c5cc);
-        Text: "The ultimate prestige. Gain skill points.";
+        Anchor: (Left: 0, Right: 0, Top: 4);
+        Style: (FontSize: 11, TextColor: #ec4899, RenderBold: true, RenderUppercase: true, LetterSpacing: 2);
+        Text: "Ultimate Prestige";
       }
 
-      Group {
-        LayoutMode: Left;
-        Anchor: (Top: 16, Height: 32);
+      Group #AscensionCard {
+        Anchor: (Left: 0, Right: 0, Top: 12);
+        LayoutMode: Top;
+        Background: #1a2530(0.95);
 
-        Label {
-          Anchor: (Width: 160);
-          Style: (FontSize: 14, TextColor: #9fb0ba);
-          Text: "Your Coins:";
+        Group #AccentBar {
+          Anchor: (Left: 0, Right: 0, Height: 4);
+          Background: #ec4899;
         }
 
-        Label #CurrentCoins {
-          Style: (FontSize: 14, TextColor: #ffd166, RenderBold: true);
-          Text: "0";
+        Group #CardContent {
+          Anchor: (Left: 0, Right: 0, Top: 0);
+          Padding: (Left: 24, Right: 24, Top: 16, Bottom: 20);
+          LayoutMode: Top;
+
+          Label {
+            Anchor: (Left: 0, Right: 0);
+            Style: (FontSize: 12, TextColor: #9fb0ba, RenderUppercase: true, LetterSpacing: 1, HorizontalAlignment: Center);
+            Text: "Ascension Count";
+          }
+
+          Label #AscensionCountValue {
+            Anchor: (Left: 0, Right: 0, Top: 4);
+            Style: (FontSize: 28, TextColor: #ec4899, RenderBold: true, HorizontalAlignment: Center);
+            Text: "x0";
+          }
+
+          Group #Divider {
+            Anchor: (Left: 40, Right: 40, Top: 14, Height: 1);
+            Background: #9fb0ba(0.2);
+          }
+
+          Group #StatRows {
+            Anchor: (Left: 0, Right: 0, Top: 14);
+            LayoutMode: Top;
+
+            Group {
+              LayoutMode: Left;
+              Anchor: (Left: 0, Right: 0, Height: 26);
+
+              Label {
+                Anchor: (Width: 180);
+                Style: (FontSize: 14, TextColor: #9fb0ba);
+                Text: "Your Coins";
+              }
+
+              Group { FlexWeight: 1; }
+
+              Label #CurrentCoins {
+                Style: (FontSize: 14, TextColor: #ffd166, RenderBold: true);
+                Text: "0";
+              }
+            }
+
+            Group {
+              LayoutMode: Left;
+              Anchor: (Left: 0, Right: 0, Top: 4, Height: 26);
+
+              Label {
+                Anchor: (Width: 180);
+                Style: (FontSize: 14, TextColor: #9fb0ba);
+                Text: "Required";
+              }
+
+              Group { FlexWeight: 1; }
+
+              Label #RequiredCoins {
+                Style: (FontSize: 14, TextColor: #f59e0b, RenderBold: true);
+                Text: "1.00D";
+              }
+            }
+
+            Group {
+              LayoutMode: Left;
+              Anchor: (Left: 0, Right: 0, Top: 4, Height: 26);
+
+              Label {
+                Anchor: (Width: 180);
+                Style: (FontSize: 14, TextColor: #9fb0ba);
+                Text: "Skill Points";
+              }
+
+              Group { FlexWeight: 1; }
+
+              Label #SkillPointsValue {
+                Style: (FontSize: 14, TextColor: #4ade80, RenderBold: true);
+                Text: "0";
+              }
+            }
+          }
+
+          Group #ButtonRow {
+            Anchor: (Left: 0, Right: 0, Top: 18, Height: 48);
+            LayoutMode: Left;
+
+            Group { FlexWeight: 1; }
+
+            TextButton #AscendButton {
+              Anchor: (Width: 200, Height: 48);
+              Padding: (Left: 16, Right: 16, Top: 12, Bottom: 8);
+              Text: "ASCEND";
+              Style: TextButtonStyle(
+                Default: (
+                  Background: #7a2d5a(0.85),
+                  LabelStyle: (FontSize: 16, TextColor: #fce8f4, RenderBold: true, HorizontalAlignment: Center)
+                ),
+                Hovered: (
+                  Background: #9e3d74(0.92),
+                  LabelStyle: (FontSize: 16, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center)
+                ),
+                Pressed: (
+                  Background: #b84d8a(0.95),
+                  LabelStyle: (FontSize: 16, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center)
+                ),
+                Sounds: $C.@ButtonSounds,
+              );
+            }
+
+            Group { FlexWeight: 1; }
+          }
         }
       }
 
-      Group {
+      Group #WarningCard {
+        Anchor: (Left: 0, Right: 0, Top: 14);
         LayoutMode: Left;
-        Anchor: (Top: 6, Height: 32);
+        Background: #3b1418(0.6);
+        Padding: (Left: 14, Right: 14, Top: 10, Bottom: 10);
 
         Label {
-          Anchor: (Width: 160);
-          Style: (FontSize: 14, TextColor: #9fb0ba);
-          Text: "Required:";
+          Anchor: (Width: 10);
+          Style: (FontSize: 14, TextColor: #ef4444);
+          Text: "●";
         }
-
-        Label #RequiredCoins {
-          Style: (FontSize: 14, TextColor: #f59e0b, RenderBold: true);
-          Text: "10Q";
-        }
-      }
-
-      Group {
-        LayoutMode: Left;
-        Anchor: (Top: 6, Height: 32);
 
         Label {
-          Anchor: (Width: 160);
-          Style: (FontSize: 14, TextColor: #9fb0ba);
-          Text: "Ascension Count:";
-        }
-
-        Label #AscensionCountValue {
-          Style: (FontSize: 14, TextColor: #f59e0b, RenderBold: true);
-          Text: "x0";
-        }
-      }
-
-      Group {
-        LayoutMode: Left;
-        Anchor: (Top: 6, Height: 32);
-
-        Label {
-          Anchor: (Width: 160);
-          Style: (FontSize: 14, TextColor: #9fb0ba);
-          Text: "Skill Points:";
-        }
-
-        Label #SkillPointsValue {
-          Style: (FontSize: 14, TextColor: #4ade80, RenderBold: true);
-          Text: "0";
+          Anchor: (Left: 6);
+          Style: (FontSize: 13, TextColor: #fca5a5, Wrap: true);
+          Text: "Resets coins, elevation, and summit progress.";
         }
       }
 
       Label {
-        Anchor: (Top: 16);
-        Style: (FontSize: 12, TextColor: #fca5a5);
-        Text: "Warning: Resets coins, elevation, and summit.";
-      }
-
-      Group #ActionButtons {
-        Anchor: (Left: 0, Right: 0, Top: 20, Height: 48);
-        LayoutMode: Left;
-
-        Group { FlexWeight: 1; }
-
-        TextButton #AscendButton {
-          Anchor: (Width: 200, Height: 48);
-          Padding: (Left: 8, Right: 8, Top: 8, Bottom: 8);
-          Text: "ASCEND";
-          Style: TextButtonStyle(
-            Default: (
-              Background: #6b3d5a(0.85),
-              LabelStyle: (FontSize: 16, TextColor: #fce8f4, RenderBold: true, HorizontalAlignment: Center)
-            ),
-            Hovered: (
-              Background: #8f4d7a(0.92),
-              LabelStyle: (FontSize: 16, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center)
-            ),
-            Pressed: (
-              Background: #a86094(0.95),
-              LabelStyle: (FontSize: 16, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center)
-            ),
-            Sounds: $C.@ButtonSounds,
-          );
-        }
-
-        Group { FlexWeight: 1; }
+        Anchor: (Left: 0, Right: 0, Top: 10);
+        Style: (FontSize: 13, TextColor: #9fb0ba, HorizontalAlignment: Center, Wrap: true);
+        Text: "Each ascension grants +1 Skill Point for your Skill Tree.";
       }
     }
   }
