@@ -1,6 +1,7 @@
 package io.hyvexa.common.util;
 
 import com.hypixel.hytale.server.core.Message;
+import io.hyvexa.common.math.BigNumber;
 
 import java.util.Locale;
 
@@ -50,6 +51,54 @@ public final class FormatUtils {
         return mantissaText + "e" + exponent;
     }
 
+    /**
+     * Format a BigNumber for HUD display with suffix notation.
+     * Uses mantissa/exponent directly — no double overflow for large values.
+     */
+    public static String formatBigNumber(BigNumber value) {
+        if (value == null || value.isZero()) {
+            return "0";
+        }
+
+        BigNumber safe = value.isNegative() ? BigNumber.ZERO : value;
+        if (safe.isZero()) {
+            return "0";
+        }
+
+        int exp = safe.getExponent();
+        double mantissa = safe.getMantissa();
+
+        // Below 1 thousand: show full number
+        if (exp < 3) {
+            double num = safe.toDouble();
+            if (num == Math.floor(num) && num < 1e15) {
+                return String.valueOf((long) num);
+            }
+            return String.format(Locale.ROOT, "%.2f", num);
+        }
+
+        // Suffix table: [minExponent, suffix]
+        String[][] suffixes = {
+            {"3", "K"}, {"6", "M"}, {"9", "B"}, {"12", "T"},
+            {"15", "Qa"}, {"18", "Qi"}, {"21", "Sx"}, {"24", "Sp"},
+            {"27", "Oc"}, {"30", "No"}, {"33", "Dc"}
+        };
+
+        for (int i = suffixes.length - 1; i >= 0; i--) {
+            int suffixExp = Integer.parseInt(suffixes[i][0]);
+            if (exp >= suffixExp && exp < suffixExp + 3) {
+                // Calculate display value: mantissa * 10^(exp - suffixExp)
+                int shift = exp - suffixExp;
+                double display = mantissa * Math.pow(10.0, shift);
+                return stripTrailingZeros(String.format(Locale.ROOT, "%.2f%s", display, suffixes[i][1]));
+            }
+        }
+
+        // Beyond Decillion (exp >= 36): scientific notation
+        return String.format(Locale.ROOT, "%.2fe%d", mantissa, exp);
+    }
+
+    @Deprecated
     public static String formatCoinsForHudDecimal(java.math.BigDecimal coins) {
         // Convert to double for formatting (sufficient precision for display)
         double safeCoins = Math.max(0.0, coins.doubleValue());
