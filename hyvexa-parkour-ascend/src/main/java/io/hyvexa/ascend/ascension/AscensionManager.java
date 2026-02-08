@@ -77,6 +77,9 @@ public class AscensionManager {
 
         playerStore.markDirty(playerId);
 
+        // Flush immediately to prevent data loss on crash
+        playerStore.flushPendingSave();
+
         LOGGER.atInfo().log("[Ascension] Player " + playerId + " ascended! Count: " + newAscensionCount
             + ", Skill Points: " + newPoints);
 
@@ -101,6 +104,11 @@ public class AscensionManager {
 
         // Has available points?
         if (progress.getAvailableSkillPoints() <= 0) {
+            return false;
+        }
+
+        // Check prerequisites (OR logic)
+        if (!node.hasPrerequisitesSatisfied(progress.getUnlockedSkillNodes())) {
             return false;
         }
 
@@ -129,84 +137,52 @@ public class AscensionManager {
             return false;
         }
 
+        if (!node.hasPrerequisitesSatisfied(progress.getUnlockedSkillNodes())) {
+            return false;
+        }
+
         return true;
     }
 
     // ========================================
-    // Skill Effect Getters (all removed — return defaults)
+    // Skill Node Accessors
     // ========================================
 
-    public double getBaseRewardBonus(UUID playerId) {
-        return 0.0;
-    }
-
-    public double getElevationCostMultiplier(UUID playerId) {
-        return 1.0;
-    }
-
-    @Deprecated
-    public int getElevationCost(UUID playerId) {
-        return 1000;
-    }
-
-    public double getSummitCostMultiplier(UUID playerId) {
-        return 1.0;
-    }
-
-    public boolean hasAutoElevation(UUID playerId) {
-        return false;
-    }
-
-    public double getRunnerSpeedBonus(UUID playerId) {
-        return 0.0;
-    }
-
-    public int getMaxSpeedLevel(UUID playerId) {
-        return 20;
-    }
-
-    public double getEvolutionCostMultiplier(UUID playerId) {
-        return 1.0;
-    }
-
-    public boolean hasDoubleLap(UUID playerId) {
-        return false;
-    }
-
-    public boolean hasInstantEvolution(UUID playerId) {
-        return false;
-    }
-
-    public double getManualMultiplierBonus(UUID playerId) {
-        return 0.0;
-    }
-
-    public double getChainBonus(UUID playerId, int consecutiveRuns) {
-        return 0.0;
-    }
-
-    public double getSessionFirstRunMultiplier(UUID playerId) {
-        return 1.0;
-    }
-
-    public boolean hasRunnerBoost(UUID playerId) {
-        return false;
-    }
-
-    public boolean hasPersonalBestTracking(UUID playerId) {
-        return false;
-    }
-
-    // ========================================
-    // New Skill: Auto Runners
-    // ========================================
-
-    /**
-     * Checks if the player has the Auto Runners skill unlocked.
-     */
     public boolean hasAutoRunners(UUID playerId) {
+        return hasSkillNode(playerId, SkillTreeNode.AUTO_RUNNERS);
+    }
+
+    public boolean hasAutoEvolution(UUID playerId) {
+        return hasSkillNode(playerId, SkillTreeNode.AUTO_EVOLUTION);
+    }
+
+    public boolean hasMomentum(UUID playerId) {
+        return hasSkillNode(playerId, SkillTreeNode.MOMENTUM);
+    }
+
+    public boolean hasRunnerSpeedBoost(UUID playerId) {
+        return hasSkillNode(playerId, SkillTreeNode.RUNNER_SPEED);
+    }
+
+    public boolean hasOfflineBoost(UUID playerId) {
+        return hasSkillNode(playerId, SkillTreeNode.OFFLINE_BOOST);
+    }
+
+    public boolean hasSummitMemory(UUID playerId) {
+        return hasSkillNode(playerId, SkillTreeNode.SUMMIT_MEMORY);
+    }
+
+    public boolean hasEvolutionPowerBoost(UUID playerId) {
+        return hasSkillNode(playerId, SkillTreeNode.EVOLUTION_POWER);
+    }
+
+    public boolean hasAscensionChallenges(UUID playerId) {
+        return hasSkillNode(playerId, SkillTreeNode.ASCENSION_CHALLENGES);
+    }
+
+    private boolean hasSkillNode(UUID playerId, SkillTreeNode node) {
         AscendPlayerProgress progress = playerStore.getPlayer(playerId);
-        return progress != null && progress.hasSkillNode(SkillTreeNode.AUTO_RUNNERS);
+        return progress != null && progress.hasSkillNode(node);
     }
 
     // ========================================

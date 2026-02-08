@@ -28,9 +28,9 @@ import java.util.logging.Level;
 
 public class PassiveEarningsManager {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final long OFFLINE_RATE_PERCENT = 25; // 25% of normal production
-    private static final long MAX_OFFLINE_TIME_MS = 24 * 60 * 60 * 1000L; // 24 hours
-    private static final long MIN_AWAY_TIME_MS = 60 * 1000L; // 1 minute minimum
+    private static final long OFFLINE_RATE_PERCENT = AscendConstants.PASSIVE_OFFLINE_RATE_PERCENT;
+    private static final long MAX_OFFLINE_TIME_MS = AscendConstants.PASSIVE_MAX_TIME_MS;
+    private static final long MIN_AWAY_TIME_MS = AscendConstants.PASSIVE_MIN_TIME_MS;
 
     private final AscendPlayerStore playerStore;
     private final AscendMapStore mapStore;
@@ -113,13 +113,21 @@ public class PassiveEarningsManager {
                 evolutionPowerBonus = plugin.getSummitManager().getEvolutionPowerBonus(playerId).doubleValue();
             }
 
+            // Determine offline rate (skill tree boost: 25% → 40%)
+            long effectiveOfflineRate = OFFLINE_RATE_PERCENT;
+            ParkourAscendPlugin ascendPlugin = ParkourAscendPlugin.getInstance();
+            if (ascendPlugin != null && ascendPlugin.getAscensionManager() != null
+                    && ascendPlugin.getAscensionManager().hasOfflineBoost(playerId)) {
+                effectiveOfflineRate = 40L;
+            }
+
             // Multiplier gain per run (with Summit bonuses) - at offline rate
             BigDecimal multiplierIncrement = AscendConstants.getRunnerMultiplierIncrement(stars, multiplierGainBonus, evolutionPowerBonus);
             BigDecimal mapMultiplierGain = multiplierIncrement
                 .multiply(BigDecimal.valueOf(theoreticalRuns), ctx)
-                .multiply(BigDecimal.valueOf(OFFLINE_RATE_PERCENT).divide(
+                .multiply(BigDecimal.valueOf(effectiveOfflineRate).divide(
                     BigDecimal.valueOf(100), ctx
-                ), ctx); // Apply 25% offline rate to multiplier gains
+                ), ctx); // Apply offline rate to multiplier gains
 
             // Coins per run (same logic as RobotManager)
             BigDecimal payoutPerRun = playerStore.getCompletionPayout(
@@ -129,9 +137,9 @@ public class PassiveEarningsManager {
             // Calculate total coins for this runner
             BigDecimal mapCoins = payoutPerRun
                 .multiply(BigDecimal.valueOf(theoreticalRuns), ctx)
-                .multiply(BigDecimal.valueOf(OFFLINE_RATE_PERCENT).divide(
+                .multiply(BigDecimal.valueOf(effectiveOfflineRate).divide(
                     BigDecimal.valueOf(100), ctx
-                ), ctx) // Apply 25% offline rate
+                ), ctx) // Apply offline rate
                 .setScale(2, RoundingMode.HALF_UP);
 
             // Store runner earnings

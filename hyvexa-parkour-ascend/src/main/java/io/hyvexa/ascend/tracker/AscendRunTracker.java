@@ -17,11 +17,9 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.achievement.AchievementManager;
-import io.hyvexa.ascend.ascension.AscensionManager;
 import io.hyvexa.ascend.tutorial.TutorialTriggerService;
 
 import java.math.BigDecimal;
-import java.math.MathContext;
 import java.math.RoundingMode;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.ascend.data.AscendMap;
@@ -254,38 +252,15 @@ public class AscendRunTracker {
         mapProgress.setUnlocked(true);
         playerStore.markDirty(playerId);
 
-        // Calculate bonuses from Ascension skills
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        BigDecimal ascensionBonus = BigDecimal.ZERO;
-        BigDecimal chainBonus = BigDecimal.ZERO;
-        BigDecimal sessionBonus = BigDecimal.ONE;
 
-        MathContext ctx = new MathContext(30, RoundingMode.HALF_UP);
-
-        if (plugin != null) {
-            AscensionManager ascensionManager = plugin.getAscensionManager();
-
-            if (ascensionManager != null) {
-                ascensionBonus = BigDecimal.valueOf(ascensionManager.getManualMultiplierBonus(playerId));
-                int consecutive = playerStore.getConsecutiveManualRuns(playerId);
-                chainBonus = BigDecimal.valueOf(ascensionManager.getChainBonus(playerId, consecutive));
-                sessionBonus = BigDecimal.valueOf(ascensionManager.getSessionFirstRunMultiplier(playerId));
-            }
-        }
-
-        // Calculate multiplier increment with Ascension bonuses only
-        // (Manual Mastery removed, Evolution Power only affects runners)
-        BigDecimal baseMultiplierIncrement = new BigDecimal("0.1"); // MANUAL_MULTIPLIER_INCREMENT
-        BigDecimal totalMultiplierBonus = BigDecimal.ONE.add(ascensionBonus, ctx)
-                                                        .add(chainBonus, ctx);
-        BigDecimal finalMultiplierIncrement = baseMultiplierIncrement.multiply(totalMultiplierBonus, ctx);
+        // Base multiplier increment per manual run
+        BigDecimal multiplierIncrement = new BigDecimal("0.1"); // MANUAL_MULTIPLIER_INCREMENT
 
         // Calculate payout BEFORE adding multiplier (use current multiplier, not the new one)
         List<AscendMap> multiplierMaps = mapStore.listMapsSorted();
-        BigDecimal basePayout = playerStore.getCompletionPayout(playerId, multiplierMaps, AscendConstants.MULTIPLIER_SLOTS, run.mapId, BigDecimal.ZERO);
-
-        // Apply session bonus if applicable
-        BigDecimal payout = basePayout.multiply(sessionBonus, ctx).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal payout = playerStore.getCompletionPayout(playerId, multiplierMaps, AscendConstants.MULTIPLIER_SLOTS, run.mapId, BigDecimal.ZERO)
+            .setScale(2, RoundingMode.HALF_UP);
 
         // Use atomic operations to prevent race conditions
         if (!playerStore.atomicAddCoins(playerId, payout)) {
@@ -294,16 +269,11 @@ public class AscendRunTracker {
         if (!playerStore.atomicAddTotalCoinsEarned(playerId, payout)) {
             LOGGER.atWarning().log("Failed to add total coins earned for manual run: " + playerId);
         }
-        if (!playerStore.atomicAddMapMultiplier(playerId, run.mapId, finalMultiplierIncrement)) {
+        if (!playerStore.atomicAddMapMultiplier(playerId, run.mapId, multiplierIncrement)) {
             LOGGER.atWarning().log("Failed to add map multiplier for manual run: " + playerId);
         }
         playerStore.incrementTotalManualRuns(playerId);
         playerStore.incrementConsecutiveManualRuns(playerId);
-
-        // Mark session first run as claimed if applicable
-        if (sessionBonus.compareTo(BigDecimal.ONE) > 0) {
-            playerStore.setSessionFirstRunClaimed(playerId, true);
-        }
 
         // Calculate completion time and check for personal best
         long completionTimeMs = System.currentTimeMillis() - run.startTimeMs;
@@ -336,12 +306,6 @@ public class AscendRunTracker {
 
         if (isPersonalBest) {
             payoutMsg.append(" | PB!");
-        }
-
-        if (sessionBonus.compareTo(BigDecimal.ONE) > 0) {
-            payoutMsg.append(" (Session Bonus x3!)");
-        } else if (chainBonus.compareTo(BigDecimal.ZERO) > 0) {
-            payoutMsg.append(" (Chain +").append((int)(chainBonus.doubleValue() * 100)).append("%)");
         }
 
         player.sendMessage(Message.raw(payoutMsg.toString())

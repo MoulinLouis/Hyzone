@@ -34,7 +34,7 @@ import java.util.logging.Level;
 public class AscendPlayerStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final MathContext CALC_CTX = new MathContext(30, RoundingMode.HALF_UP);
+    private static final MathContext CALC_CTX = AscendConstants.CALC_CTX;
 
     private final Map<UUID, AscendPlayerProgress> players = new ConcurrentHashMap<>();
     private final Set<UUID> dirtyPlayers = ConcurrentHashMap.newKeySet();
@@ -133,40 +133,36 @@ public class AscendPlayerStore {
                     progress.setCoins(rs.getBigDecimal("coins"));
                     progress.setElevationMultiplier(rs.getInt("elevation_multiplier"));
 
-                    try {
-                        progress.setAscensionCount(rs.getInt("ascension_count"));
-                        progress.setSkillTreePoints(rs.getInt("skill_tree_points"));
-                        progress.setTotalCoinsEarned(rs.getBigDecimal("total_coins_earned"));
-                        progress.setTotalManualRuns(rs.getInt("total_manual_runs"));
-                        progress.setActiveTitle(rs.getString("active_title"));
+                    progress.setAscensionCount(safeGetInt(rs, "ascension_count", 0));
+                    progress.setSkillTreePoints(safeGetInt(rs, "skill_tree_points", 0));
+                    progress.setTotalCoinsEarned(safeGetBigDecimal(rs, "total_coins_earned", BigDecimal.ZERO));
+                    progress.setTotalManualRuns(safeGetInt(rs, "total_manual_runs", 0));
+                    progress.setActiveTitle(safeGetString(rs, "active_title", null));
 
-                        long ascensionStartedAt = rs.getLong("ascension_started_at");
-                        if (!rs.wasNull()) {
-                            progress.setAscensionStartedAt(ascensionStartedAt);
-                        }
-
-                        long fastestAscensionMs = rs.getLong("fastest_ascension_ms");
-                        if (!rs.wasNull()) {
-                            progress.setFastestAscensionMs(fastestAscensionMs);
-                        }
-
-                        long timestamp = rs.getLong("last_active_timestamp");
-                        if (!rs.wasNull()) {
-                            progress.setLastActiveTimestamp(timestamp);
-                        }
-
-                        progress.setHasUnclaimedPassive(rs.getBoolean("has_unclaimed_passive"));
-
-                        BigDecimal summitAccumulated = rs.getBigDecimal("summit_accumulated_coins");
-                        if (summitAccumulated != null) {
-                            progress.setSummitAccumulatedCoins(summitAccumulated);
-                        }
-
-                        progress.setAutoUpgradeEnabled(rs.getBoolean("auto_upgrade_enabled"));
-                        progress.setSeenTutorials(rs.getInt("seen_tutorials"));
-                    } catch (SQLException ignored) {
-                        // Columns may not exist yet (old schema)
+                    Long ascensionStartedAt = safeGetLong(rs, "ascension_started_at");
+                    if (ascensionStartedAt != null) {
+                        progress.setAscensionStartedAt(ascensionStartedAt);
                     }
+
+                    Long fastestAscensionMs = safeGetLong(rs, "fastest_ascension_ms");
+                    if (fastestAscensionMs != null) {
+                        progress.setFastestAscensionMs(fastestAscensionMs);
+                    }
+
+                    Long timestamp = safeGetLong(rs, "last_active_timestamp");
+                    if (timestamp != null) {
+                        progress.setLastActiveTimestamp(timestamp);
+                    }
+
+                    progress.setHasUnclaimedPassive(safeGetBoolean(rs, "has_unclaimed_passive", false));
+
+                    BigDecimal summitAccumulated = safeGetBigDecimal(rs, "summit_accumulated_coins", null);
+                    if (summitAccumulated != null) {
+                        progress.setSummitAccumulatedCoins(summitAccumulated);
+                    }
+
+                    progress.setAutoUpgradeEnabled(safeGetBoolean(rs, "auto_upgrade_enabled", false));
+                    progress.setSeenTutorials(safeGetInt(rs, "seen_tutorials", 0));
                 }
             }
         } catch (SQLException e) {
@@ -1028,8 +1024,15 @@ public class AscendPlayerStore {
      * @param clearBestTimes whether to also clear best times (elevation does, summit doesn't)
      * @return list of map IDs that had runners (for despawn handling)
      */
-    private List<String> resetMapProgress(AscendPlayerProgress progress, String firstMapId, boolean clearBestTimes) {
+    private List<String> resetMapProgress(AscendPlayerProgress progress, String firstMapId, boolean clearBestTimes, UUID playerId) {
         List<String> mapsWithRunners = new java.util.ArrayList<>();
+
+        // Check Momentum skill: keep 10% of map multipliers after reset
+        boolean hasMomentum = false;
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin != null && plugin.getAscensionManager() != null) {
+            hasMomentum = plugin.getAscensionManager().hasMomentum(playerId);
+        }
 
         progress.setCoins(BigDecimal.ZERO);
         progress.setSummitAccumulatedCoins(BigDecimal.ZERO);
@@ -1039,7 +1042,17 @@ public class AscendPlayerStore {
             AscendPlayerProgress.MapProgress mapProgress = entry.getValue();
 
             mapProgress.setUnlocked(mapId.equals(firstMapId));
-            mapProgress.setMultiplier(BigDecimal.ONE);
+
+            // Momentum: keep 10% of multiplier (minimum 1.0)
+            if (hasMomentum) {
+                BigDecimal retained = mapProgress.getMultiplier()
+                    .multiply(new BigDecimal("0.10"), AscendConstants.CALC_CTX)
+                    .max(BigDecimal.ONE);
+                mapProgress.setMultiplier(retained);
+            } else {
+                mapProgress.setMultiplier(BigDecimal.ONE);
+            }
+
             mapProgress.setCompletedManually(false);
 
             if (clearBestTimes) {
@@ -1076,7 +1089,7 @@ public class AscendPlayerStore {
             return List.of();
         }
 
-        List<String> mapsWithRunners = resetMapProgress(progress, firstMapId, true);
+        List<String> mapsWithRunners = resetMapProgress(progress, firstMapId, true, playerId);
         markDirty(playerId);
         return mapsWithRunners;
     }
@@ -1092,8 +1105,21 @@ public class AscendPlayerStore {
             return List.of();
         }
 
-        progress.setElevationMultiplier(1);
-        List<String> mapsWithRunners = resetMapProgress(progress, firstMapId, false);
+        // Summit Memory skill: keep 10% of elevation multiplier (minimum 1)
+        boolean hasSummitMemory = false;
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin != null && plugin.getAscensionManager() != null) {
+            hasSummitMemory = plugin.getAscensionManager().hasSummitMemory(playerId);
+        }
+
+        if (hasSummitMemory) {
+            int retained = Math.max(1, (int) (progress.getElevationMultiplier() * 0.10));
+            progress.setElevationMultiplier(retained);
+        } else {
+            progress.setElevationMultiplier(1);
+        }
+
+        List<String> mapsWithRunners = resetMapProgress(progress, firstMapId, false, playerId);
         markDirty(playerId);
         return mapsWithRunners;
     }
@@ -1470,5 +1496,52 @@ public class AscendPlayerStore {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
         progress.setAutoUpgradeEnabled(enabled);
         markDirty(playerId);
+    }
+
+    private static int safeGetInt(ResultSet rs, String column, int defaultValue) {
+        try {
+            return rs.getInt(column);
+        } catch (SQLException e) {
+            LOGGER.atWarning().log("Column '" + column + "' not available: " + e.getMessage());
+            return defaultValue;
+        }
+    }
+
+    private static boolean safeGetBoolean(ResultSet rs, String column, boolean defaultValue) {
+        try {
+            return rs.getBoolean(column);
+        } catch (SQLException e) {
+            LOGGER.atWarning().log("Column '" + column + "' not available: " + e.getMessage());
+            return defaultValue;
+        }
+    }
+
+    private static String safeGetString(ResultSet rs, String column, String defaultValue) {
+        try {
+            return rs.getString(column);
+        } catch (SQLException e) {
+            LOGGER.atWarning().log("Column '" + column + "' not available: " + e.getMessage());
+            return defaultValue;
+        }
+    }
+
+    private static Long safeGetLong(ResultSet rs, String column) {
+        try {
+            long value = rs.getLong(column);
+            return rs.wasNull() ? null : value;
+        } catch (SQLException e) {
+            LOGGER.atWarning().log("Column '" + column + "' not available: " + e.getMessage());
+            return null;
+        }
+    }
+
+    private static BigDecimal safeGetBigDecimal(ResultSet rs, String column, BigDecimal defaultValue) {
+        try {
+            BigDecimal value = rs.getBigDecimal(column);
+            return value != null ? value : defaultValue;
+        } catch (SQLException e) {
+            LOGGER.atWarning().log("Column '" + column + "' not available: " + e.getMessage());
+            return defaultValue;
+        }
     }
 }

@@ -16,7 +16,6 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.AscendConstants.ElevationPurchaseResult;
 import io.hyvexa.ascend.ParkourAscendPlugin;
-import io.hyvexa.ascend.ascension.AscensionManager;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerStore;
@@ -275,8 +274,6 @@ public class ElevationPage extends BaseAscendPage {
     }
 
     private double getCostMultiplier(UUID playerId) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        AscensionManager ascensionManager = plugin != null ? plugin.getAscensionManager() : null;
-        return ascensionManager != null ? ascensionManager.getElevationCostMultiplier(playerId) : 1.0;
+        return 1.0;
     }
 }
