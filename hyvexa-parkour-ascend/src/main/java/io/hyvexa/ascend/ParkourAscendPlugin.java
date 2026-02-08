@@ -4,11 +4,7 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.HytaleServer;
-import com.hypixel.hytale.protocol.packets.interface_.HudComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.inventory.Inventory;
-import com.hypixel.hytale.server.core.inventory.ItemStack;
-import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
@@ -19,7 +15,6 @@ import io.hyvexa.ascend.command.AscendCommand;
 import io.hyvexa.ascend.command.AscendAdminCommand;
 import io.hyvexa.ascend.data.AscendDatabaseSetup;
 import io.hyvexa.core.db.DatabaseManager;
-import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.data.AscendSettingsStore;
@@ -28,7 +23,7 @@ import io.hyvexa.ascend.ghost.GhostRecorder;
 import io.hyvexa.ascend.achievement.AchievementManager;
 import io.hyvexa.ascend.ascension.AscensionManager;
 import io.hyvexa.ascend.holo.AscendHologramManager;
-import io.hyvexa.ascend.hud.AscendHud;
+import io.hyvexa.ascend.hud.AscendHudManager;
 import io.hyvexa.ascend.interaction.AscendDevCinderclothInteraction;
 import io.hyvexa.ascend.interaction.AscendDevCottonInteraction;
 import io.hyvexa.ascend.interaction.AscendDevShadoweaveInteraction;
@@ -40,6 +35,7 @@ import io.hyvexa.ascend.summit.SummitManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 import io.hyvexa.ascend.tutorial.TutorialTriggerService;
 import io.hyvexa.ascend.passive.PassiveEarningsManager;
+import io.hyvexa.ascend.util.AscendInventoryUtils;
 import io.hyvexa.common.whitelist.AscendWhitelistManager;
 import io.hyvexa.common.whitelist.WhitelistRegistry;
 import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
@@ -50,7 +46,6 @@ import io.hyvexa.ascend.system.AscendFinishDetectionSystem;
 import io.hyvexa.common.visibility.EntityVisibilityFilterSystem;
 
 import javax.annotation.Nonnull;
-import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -66,6 +61,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final String ASCEND_WORLD_NAME = "Ascend";
+    private static final int FULL_TICK_INTERVAL = 4; // every 4th tick = 200ms at 50ms interval
     private static ParkourAscendPlugin INSTANCE;
 
     private AscendMapStore mapStore;
@@ -74,6 +70,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
     private GhostStore ghostStore;
     private GhostRecorder ghostRecorder;
     private AscendRunTracker runTracker;
+    private AscendHudManager hudManager;
     private RobotManager robotManager;
     private AscendHologramManager hologramManager;
     private SummitManager summitManager;
@@ -82,11 +79,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
     private PassiveEarningsManager passiveEarningsManager;
     private TutorialTriggerService tutorialTriggerService;
     private AscendWhitelistManager whitelistManager;
-    private ScheduledFuture<?> runTrackerTask;
-    private ScheduledFuture<?> timerUpdateTask;
-    private final ConcurrentHashMap<UUID, AscendHud> ascendHuds = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<UUID, Boolean> ascendHudAttached = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<UUID, Long> ascendHudReadyAt = new ConcurrentHashMap<>();
+    private ScheduledFuture<?> tickTask;
+    private int tickCounter;
     private final ConcurrentHashMap<UUID, PlayerRef> playerRefCache = new ConcurrentHashMap<>();
 
     public ParkourAscendPlugin(@Nonnull JavaPluginInit init) {
@@ -115,27 +109,42 @@ public class ParkourAscendPlugin extends JavaPlugin {
         whitelistManager = new AscendWhitelistManager(whitelistFile);
         WhitelistRegistry.register(whitelistManager);
 
-        mapStore = new AscendMapStore();
-        mapStore.syncLoad();
+        // Core stores — fail fast if any fails
+        try {
+            mapStore = new AscendMapStore();
+            mapStore.syncLoad();
 
-        playerStore = new AscendPlayerStore();
-        playerStore.syncLoad();
+            playerStore = new AscendPlayerStore();
+            playerStore.syncLoad();
 
-        settingsStore = new AscendSettingsStore();
-        settingsStore.syncLoad();
+            settingsStore = new AscendSettingsStore();
+            settingsStore.syncLoad();
+        } catch (Exception e) {
+            LOGGER.at(Level.SEVERE).withCause(e).log("Failed to initialize core stores for Ascend — plugin will not function");
+            return;
+        }
 
-        // Initialize ghost system
-        ghostStore = new GhostStore();
-        ghostStore.syncLoad();
+        // Ghost system
+        try {
+            ghostStore = new GhostStore();
+            ghostStore.syncLoad();
 
-        ghostRecorder = new GhostRecorder(ghostStore);
-        ghostRecorder.start();
+            ghostRecorder = new GhostRecorder(ghostStore);
+            ghostRecorder.start();
+        } catch (Exception e) {
+            LOGGER.at(Level.WARNING).withCause(e).log("Failed to initialize ghost system");
+        }
 
         // Pass ghost dependencies to managers
         runTracker = new AscendRunTracker(mapStore, playerStore, ghostRecorder);
+        hudManager = new AscendHudManager(playerStore, mapStore, runTracker);
 
-        robotManager = new RobotManager(mapStore, playerStore, ghostStore);
-        robotManager.start();
+        try {
+            robotManager = new RobotManager(mapStore, playerStore, ghostStore);
+            robotManager.start();
+        } catch (Exception e) {
+            LOGGER.at(Level.WARNING).withCause(e).log("Failed to initialize robot manager");
+        }
 
         summitManager = new SummitManager(playerStore, mapStore);
         ascensionManager = new AscensionManager(playerStore, runTracker);
@@ -149,13 +158,17 @@ public class ParkourAscendPlugin extends JavaPlugin {
         // Initialize tutorial trigger service
         tutorialTriggerService = new TutorialTriggerService(playerStore);
 
-        if (HylogramsBridge.isAvailable()) {
-            hologramManager = new AscendHologramManager();
-            if (mapStore != null && hologramManager != null) {
-                for (var map : mapStore.listMaps()) {
-                    hologramManager.refreshMapHolosIfPresent(map, null);
+        try {
+            if (HylogramsBridge.isAvailable()) {
+                hologramManager = new AscendHologramManager();
+                if (hologramManager != null) {
+                    for (var map : mapStore.listMaps()) {
+                        hologramManager.refreshMapHolosIfPresent(map, null);
+                    }
                 }
             }
+        } catch (Exception e) {
+            LOGGER.at(Level.WARNING).withCause(e).log("Failed to initialize holograms");
         }
 
         getCommandRegistry().registerCommand(new AscendCommand());
@@ -217,9 +230,9 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     if (player == null) {
                         return;
                     }
-                    resetAscendInventory(player);
-                    ensureAscendItems(player);
-                    attachAscendHud(playerRef, player);
+                    AscendInventoryUtils.giveMenuItems(player);
+                    AscendInventoryUtils.ensureMenuItems(player);
+                    hudManager.attach(playerRef, player);
                 }, world).exceptionally(ex -> {
                     LOGGER.at(Level.WARNING).withCause(ex).log("Exception in PlayerReadyEvent async task");
                     return null;
@@ -246,7 +259,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     if (player == null) {
                         return;
                     }
-                    ensureAscendItems(player);
+                    AscendInventoryUtils.ensureMenuItems(player);
                 } else {
                     // If joining a NON-Ascend world, mark as leaving Ascend for passive earnings
                     PlayerRef playerRef = holder.getComponent(PlayerRef.getComponentType());
@@ -273,16 +286,12 @@ public class ParkourAscendPlugin extends JavaPlugin {
             }
 
             // Mark player as left for passive earnings tracking
-            // Note: This tracks full disconnects. World changes (Ascend -> Hub) are not tracked
-            // separately, but passive earnings still work since timestamp is checked on rejoin
             if (passiveEarningsManager != null) {
                 passiveEarningsManager.onPlayerLeaveAscend(playerId);
             }
 
             playerRefCache.remove(playerId);
-            ascendHuds.remove(playerId);
-            ascendHudAttached.remove(playerId);
-            ascendHudReadyAt.remove(playerId);
+            hudManager.removePlayer(playerId);
             if (runTracker != null) {
                 runTracker.cancelRun(playerId);
             }
@@ -296,26 +305,17 @@ public class ParkourAscendPlugin extends JavaPlugin {
             }
         });
 
-        runTrackerTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(
-            this::tickRunTracker,
-            200, 200, TimeUnit.MILLISECONDS
-        );
-
-        timerUpdateTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(
-            this::tickTimerUpdate,
+        tickTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(
+            this::tick,
             50, 50, TimeUnit.MILLISECONDS
         );
     }
 
     @Override
     protected void shutdown() {
-        if (runTrackerTask != null) {
-            runTrackerTask.cancel(false);
-            runTrackerTask = null;
-        }
-        if (timerUpdateTask != null) {
-            timerUpdateTask.cancel(false);
-            timerUpdateTask = null;
+        if (tickTask != null) {
+            tickTask.cancel(false);
+            tickTask = null;
         }
         if (ghostRecorder != null) {
             ghostRecorder.stop();
@@ -351,6 +351,10 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
     public AscendRunTracker getRunTracker() {
         return runTracker;
+    }
+
+    public AscendHudManager getHudManager() {
+        return hudManager;
     }
 
     public RobotManager getRobotManager() {
@@ -396,10 +400,13 @@ public class ParkourAscendPlugin extends JavaPlugin {
         return playerRefCache.get(playerId);
     }
 
-    private void tickRunTracker() {
+    private void tick() {
         if (runTracker == null) {
             return;
         }
+        tickCounter++;
+        boolean fullTick = tickCounter % FULL_TICK_INTERVAL == 0;
+
         Map<World, List<PlayerTickContext>> playersByWorld = collectPlayersByWorld();
         for (Map.Entry<World, List<PlayerTickContext>> entry : playersByWorld.entrySet()) {
             World world = entry.getKey();
@@ -412,110 +419,16 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     if (context.ref == null || !context.ref.isValid()) {
                         continue;
                     }
-                    runTracker.checkPlayer(context.ref, context.store);
-                    updateAscendHud(context);
-                }
-            }, world).exceptionally(ex -> {
-                LOGGER.at(Level.WARNING).withCause(ex).log("Exception in tickRunTracker async task");
-                return null;
-            });
-        }
-    }
-
-    private void tickTimerUpdate() {
-        if (runTracker == null) {
-            return;
-        }
-        Map<World, List<PlayerTickContext>> playersByWorld = collectPlayersByWorld();
-        for (Map.Entry<World, List<PlayerTickContext>> entry : playersByWorld.entrySet()) {
-            World world = entry.getKey();
-            if (!isAscendWorld(world)) {
-                continue;
-            }
-            List<PlayerTickContext> players = entry.getValue();
-            CompletableFuture.runAsync(() -> {
-                for (PlayerTickContext context : players) {
-                    if (context.ref == null || !context.ref.isValid()) {
-                        continue;
+                    if (fullTick) {
+                        runTracker.checkPlayer(context.ref, context.store);
+                        hudManager.updateFull(context.ref, context.store, context.playerRef);
                     }
-                    updateTimerOnly(context);
+                    hudManager.updateTimer(context.playerRef);
                 }
             }, world).exceptionally(ex -> {
-                LOGGER.at(Level.WARNING).withCause(ex).log("Exception in tickTimerUpdate async task");
+                LOGGER.at(Level.WARNING).withCause(ex).log("Exception in tick async task");
                 return null;
             });
-        }
-    }
-
-    private void updateAscendHud(PlayerTickContext context) {
-        Player player = context.store.getComponent(context.ref, Player.getComponentType());
-        if (player == null || context.playerRef == null) {
-            return;
-        }
-        UUID playerId = context.playerRef.getUuid();
-        AscendHud hud = ascendHuds.get(playerId);
-        boolean needsAttach = !Boolean.TRUE.equals(ascendHudAttached.get(playerId));
-        if (needsAttach || hud == null) {
-            attachAscendHud(context.playerRef, player);
-            return;
-        }
-        // Always ensure HUD is set on player (in case they came from another world)
-        player.getHudManager().setCustomHud(context.playerRef, hud);
-        long readyAt = ascendHudReadyAt.getOrDefault(playerId, Long.MAX_VALUE);
-        if (System.currentTimeMillis() < readyAt) {
-            return;
-        }
-        hud.applyStaticText();
-        AscendPlayerStore store = playerStore;
-        AscendMapStore maps = mapStore;
-        if (store == null) {
-            return;
-        }
-        try {
-            java.math.BigDecimal coins = store.getCoins(playerId);
-            List<AscendMap> mapList = maps != null ? maps.listMapsSorted() : List.of();
-            java.math.BigDecimal product = store.getMultiplierProductDecimal(playerId, mapList, AscendConstants.MULTIPLIER_SLOTS);
-            java.math.BigDecimal[] digits = store.getMultiplierDisplayValues(playerId, mapList, AscendConstants.MULTIPLIER_SLOTS);
-            int elevationLevel = store.getElevationLevel(playerId);
-            AscendConstants.ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(elevationLevel, coins);
-            int potentialElevation = elevationLevel + purchase.levels;
-            boolean showElevation = purchase.levels > 0;
-            hud.updateEconomy(coins, product, digits, elevationLevel, potentialElevation, showElevation);
-
-            // Update prestige HUD
-            var summitLevels = store.getSummitLevels(playerId);
-            int ascensionCount = store.getAscensionCount(playerId);
-            int skillPoints = store.getAvailableSkillPoints(playerId);
-            hud.updatePrestige(summitLevels, ascensionCount, skillPoints);
-
-            // Update ascension quest progress bar
-            hud.updateAscensionQuest(coins);
-        } catch (Exception e) {
-            LOGGER.at(Level.WARNING).withCause(e).log("Failed to update Ascend HUD for player " + playerId);
-        }
-    }
-
-    private void updateTimerOnly(PlayerTickContext context) {
-        if (context.playerRef == null || runTracker == null) {
-            return;
-        }
-        UUID playerId = context.playerRef.getUuid();
-        AscendHud hud = ascendHuds.get(playerId);
-        if (hud == null) {
-            return;
-        }
-        long readyAt = ascendHudReadyAt.getOrDefault(playerId, Long.MAX_VALUE);
-        if (System.currentTimeMillis() < readyAt) {
-            return;
-        }
-        try {
-            boolean isRunning = runTracker.isRunActive(playerId);
-            boolean isPending = runTracker.isPendingRun(playerId);
-            boolean showTimer = isRunning || isPending;
-            Long elapsedMs = isRunning ? runTracker.getElapsedTimeMs(playerId) : 0L;
-            hud.updateTimer(elapsedMs, showTimer);
-        } catch (Exception e) {
-            LOGGER.at(Level.WARNING).withCause(e).log("Failed to update timer for player " + playerId);
         }
     }
 
@@ -552,104 +465,11 @@ public class ParkourAscendPlugin extends JavaPlugin {
         }
     }
 
-    private void attachAscendHud(PlayerRef playerRef, Player player) {
-        if (playerRef == null || player == null) {
-            return;
-        }
-        AscendHud hud = ascendHuds.computeIfAbsent(playerRef.getUuid(), id -> new AscendHud(playerRef));
-        player.getHudManager().setCustomHud(playerRef, hud);
-        player.getHudManager().hideHudComponents(playerRef, HudComponent.Compass, HudComponent.Health, HudComponent.Stamina);
-        hud.resetCache();
-        hud.show();
-        hud.applyStaticText();
-        ascendHudAttached.put(playerRef.getUuid(), true);
-        ascendHudReadyAt.put(playerRef.getUuid(), System.currentTimeMillis() + 250L);
-    }
-
     public boolean isAscendWorld(World world) {
         if (world == null || world.getName() == null) {
             return false;
         }
         return ASCEND_WORLD_NAME.equalsIgnoreCase(world.getName());
-    }
-
-
-    private static void resetAscendInventory(Player player) {
-        if (player == null) {
-            return;
-        }
-        clearAllContainers(player);
-        Inventory inventory = player.getInventory();
-        if (inventory == null) {
-            return;
-        }
-        ItemContainer hotbar = inventory.getHotbar();
-        if (hotbar == null || hotbar.getCapacity() <= 0) {
-            return;
-        }
-        hotbar.setItemStackForSlot((short) 0, new ItemStack(AscendConstants.ITEM_DEV_CINDERCLOTH, 1), false);
-        hotbar.setItemStackForSlot((short) 1, new ItemStack(AscendConstants.ITEM_DEV_STORMSILK, 1), false);
-        hotbar.setItemStackForSlot((short) 2, new ItemStack(AscendConstants.ITEM_DEV_COTTON, 1), false);
-        hotbar.setItemStackForSlot((short) 3, new ItemStack(AscendConstants.ITEM_DEV_SHADOWEAVE, 1), false);
-        short slot = (short) (hotbar.getCapacity() - 1);
-        hotbar.setItemStackForSlot(slot, new ItemStack("Hub_Server_Selector", 1), false);
-    }
-
-    private static void ensureAscendItems(Player player) {
-        if (player == null) {
-            return;
-        }
-        Inventory inventory = player.getInventory();
-        if (inventory == null || inventory.getHotbar() == null) {
-            return;
-        }
-        ItemContainer hotbar = inventory.getHotbar();
-        short capacity = hotbar.getCapacity();
-        if (capacity <= 0) {
-            return;
-        }
-        setIfMissing(hotbar, (short) 0, AscendConstants.ITEM_DEV_CINDERCLOTH);
-        setIfMissing(hotbar, (short) 1, AscendConstants.ITEM_DEV_STORMSILK);
-        setIfMissing(hotbar, (short) 2, AscendConstants.ITEM_DEV_COTTON);
-        setIfMissing(hotbar, (short) 3, AscendConstants.ITEM_DEV_SHADOWEAVE);
-        short slot = (short) (capacity - 1);
-        setIfMissing(hotbar, slot, "Hub_Server_Selector");
-    }
-
-    private static void setIfMissing(ItemContainer hotbar, short slot, String itemId) {
-        if (hotbar == null || itemId == null || itemId.isBlank()) {
-            return;
-        }
-        if (slot < 0 || slot >= hotbar.getCapacity()) {
-            return;
-        }
-        ItemStack existing = hotbar.getItemStack(slot);
-        if (existing == null || ItemStack.isEmpty(existing) || !itemId.equals(existing.getItemId())) {
-            hotbar.setItemStackForSlot(slot, new ItemStack(itemId, 1), false);
-        }
-    }
-
-    private static void clearAllContainers(Player player) {
-        Inventory inventory = player.getInventory();
-        if (inventory == null) {
-            return;
-        }
-        clearContainer(inventory.getHotbar());
-        clearContainer(inventory.getStorage());
-        clearContainer(inventory.getBackpack());
-        clearContainer(inventory.getTools());
-        clearContainer(inventory.getUtility());
-        clearContainer(inventory.getArmor());
-    }
-
-    private static void clearContainer(ItemContainer container) {
-        if (container == null) {
-            return;
-        }
-        short capacity = container.getCapacity();
-        for (short slot = 0; slot < capacity; slot++) {
-            container.setItemStackForSlot(slot, ItemStack.EMPTY, false);
-        }
     }
 
     private void registerInteractionCodecs() {
@@ -666,27 +486,5 @@ public class ParkourAscendPlugin extends JavaPlugin {
             AscendResetInteraction.class, AscendResetInteraction.CODEC);
         registry.register("Ascend_Leave_Interaction",
             AscendLeaveInteraction.class, AscendLeaveInteraction.CODEC);
-    }
-
-    public void giveRunItems(Player player) {
-        if (player == null) {
-            return;
-        }
-        clearAllContainers(player);
-        Inventory inventory = player.getInventory();
-        if (inventory == null) {
-            return;
-        }
-        ItemContainer hotbar = inventory.getHotbar();
-        if (hotbar == null || hotbar.getCapacity() <= 0) {
-            return;
-        }
-        hotbar.setItemStackForSlot((short) 0, new ItemStack(AscendConstants.ITEM_RESET, 1), false);
-        hotbar.setItemStackForSlot((short) 1, new ItemStack(AscendConstants.ITEM_LEAVE, 1), false);
-        hotbar.setItemStackForSlot((short) 2, new ItemStack(AscendConstants.ITEM_DEV_CINDERCLOTH, 1), false);
-    }
-
-    public void giveMenuItems(Player player) {
-        resetAscendInventory(player);
     }
 }

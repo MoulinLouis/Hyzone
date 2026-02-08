@@ -16,6 +16,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendSettingsStore;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
+import io.hyvexa.ascend.util.AscendInventoryUtils;
 import io.hyvexa.ascend.util.AscendModeGate;
 import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.core.state.ModeMessages;
@@ -91,7 +92,7 @@ public class AscendLeaveInteraction extends SimpleInteraction {
         }
 
         // Give back menu items
-        plugin.giveMenuItems(player);
+        AscendInventoryUtils.giveMenuItems(player);
     }
 
     private boolean confirmLeave(Player player, UUID playerId, String mapId) {

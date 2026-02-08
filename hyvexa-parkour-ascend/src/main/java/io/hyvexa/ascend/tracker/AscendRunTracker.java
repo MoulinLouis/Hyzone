@@ -27,6 +27,7 @@ import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.data.AscendSettingsStore;
+import io.hyvexa.ascend.util.AscendInventoryUtils;
 import io.hyvexa.ascend.util.MapUnlockHelper;
 import io.hyvexa.ascend.ghost.GhostRecorder;
 import io.hyvexa.ascend.robot.RobotManager;
@@ -334,9 +335,7 @@ public class AscendRunTracker {
         setPendingRun(playerId, map.getId(), startPos);
 
         // Give run items (reset + leave) since player is now in a pending run
-        if (plugin != null) {
-            plugin.giveRunItems(player);
-        }
+        AscendInventoryUtils.giveRunItems(player);
     }
 
     public void teleportToMapStart(Ref<EntityStore> ref, Store<EntityStore> store,
@@ -404,10 +403,7 @@ public class AscendRunTracker {
                 setPendingRun(playerId, map.getId(), startPos);
 
                 // Give run items (reset + leave)
-                ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-                if (plugin != null) {
-                    plugin.giveRunItems(player);
-                }
+                AscendInventoryUtils.giveRunItems(player);
 
                 // Only trigger for the first matching map
                 return;
