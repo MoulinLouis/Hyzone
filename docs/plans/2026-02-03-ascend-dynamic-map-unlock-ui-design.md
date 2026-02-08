@@ -13,7 +13,7 @@ When a player upgrades their runner from level 2 to level 3 (0 stars) in Ascend 
 1. Player upgrades runner level 2→3 in `handleRobotAction()` (line ~395)
 2. System detects unlock condition (line ~400)
 3. Database unlocks next map via `playerStore.checkAndUnlockEligibleMaps()`
-4. Success message sent to player: "🎉 New map unlocked: [name]!"
+4. Success message sent to player: "New map unlocked: [name]!"
 5. **UI remains unchanged** - map not visible
 6. Player must close/reopen menu to see the unlocked map
 
@@ -45,7 +45,7 @@ if (newLevel == AscendConstants.MAP_UNLOCK_REQUIRED_RUNNER_LEVEL) {
                 : unlockedMap.getId();
             Player player = store.getComponent(ref, Player.getComponentType());
             if (player != null) {
-                player.sendMessage(Message.raw("🎉 New map unlocked: " + mapName + "!"));
+                player.sendMessage(Message.raw("New map unlocked: " + mapName + "!"));
             }
 
             // NEW: Add map to UI immediately
@@ -113,7 +113,7 @@ private void addMapToUI(Ref<EntityStore> ref, Store<EntityStore> store, AscendMa
 2. Open `/ascend` menu
 3. Click "Upgrade" to reach level 3
 4. **Expected**: New map appears immediately in the list below
-5. **Expected**: Success message displayed: "🎉 New map unlocked: [name]!"
+5. **Expected**: Success message displayed: "New map unlocked: [name]!"
 
 ## Files Modified
 
