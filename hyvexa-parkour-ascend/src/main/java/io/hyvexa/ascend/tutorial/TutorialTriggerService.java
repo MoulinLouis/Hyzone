@@ -13,7 +13,8 @@ import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.ui.AscendTutorialPage;
 import io.hyvexa.ascend.ui.AscendWelcomePage;
 
-import java.math.BigDecimal;
+import io.hyvexa.common.math.BigNumber;
+
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -60,10 +61,10 @@ public class TutorialTriggerService {
                 new AscendTutorialPage(playerRef, AscendTutorialPage.Tutorial.EVOLUTION)));
     }
 
-    public void checkCoinThresholds(UUID playerId, BigDecimal oldBalance, BigDecimal newBalance) {
-        BigDecimal elevationThreshold = BigDecimal.valueOf(AscendConstants.ELEVATION_BASE_COST);
-        BigDecimal summitThreshold = BigDecimal.valueOf(AscendConstants.SUMMIT_MIN_COINS);
-        BigDecimal ascensionThreshold = AscendConstants.ASCENSION_COIN_THRESHOLD;
+    public void checkCoinThresholds(UUID playerId, BigNumber oldBalance, BigNumber newBalance) {
+        BigNumber elevationThreshold = BigNumber.fromLong(AscendConstants.ELEVATION_BASE_COST);
+        BigNumber summitThreshold = BigNumber.fromLong(AscendConstants.SUMMIT_MIN_COINS);
+        BigNumber ascensionThreshold = AscendConstants.ASCENSION_COIN_THRESHOLD;
 
         if (crossedThreshold(oldBalance, newBalance, elevationThreshold)) {
             triggerFromUuid(playerId, ELEVATION, (playerRef, ref, store, player) ->
@@ -82,8 +83,8 @@ public class TutorialTriggerService {
         }
     }
 
-    private boolean crossedThreshold(BigDecimal oldBalance, BigDecimal newBalance, BigDecimal threshold) {
-        return oldBalance.compareTo(threshold) < 0 && newBalance.compareTo(threshold) >= 0;
+    private boolean crossedThreshold(BigNumber oldBalance, BigNumber newBalance, BigNumber threshold) {
+        return oldBalance.lt(threshold) && newBalance.gte(threshold);
     }
 
     private void triggerIfUnseen(UUID playerId, Ref<EntityStore> entityRef, int bit, TutorialOpener opener) {

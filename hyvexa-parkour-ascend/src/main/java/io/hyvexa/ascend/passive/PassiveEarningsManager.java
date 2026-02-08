@@ -16,10 +16,8 @@ import io.hyvexa.ascend.ghost.GhostRecording;
 import io.hyvexa.ascend.ghost.GhostStore;
 import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.ui.PassiveEarningsPage;
+import io.hyvexa.common.math.BigNumber;
 
-import java.math.BigDecimal;
-import java.math.MathContext;
-import java.math.RoundingMode;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -72,9 +70,8 @@ public class PassiveEarningsManager {
         List<AscendMap> allMaps = mapStore.listMapsSorted();
         Map<String, PassiveRunnerEarnings> runnerEarnings = new HashMap<>();
 
-        BigDecimal totalCoins = BigDecimal.ZERO;
-        BigDecimal totalMultiplierGain = BigDecimal.ZERO;
-        MathContext ctx = new MathContext(30, RoundingMode.HALF_UP);
+        BigNumber totalCoins = BigNumber.ZERO;
+        BigNumber totalMultiplierGain = BigNumber.ZERO;
 
         // Calculate for each map with an active runner
         for (AscendMap map : allMaps) {
@@ -109,8 +106,8 @@ public class PassiveEarningsManager {
             double multiplierGainBonus = 1.0;
             double evolutionPowerBonus = 3.0;
             if (plugin != null && plugin.getSummitManager() != null) {
-                multiplierGainBonus = plugin.getSummitManager().getMultiplierGainBonus(playerId).doubleValue();
-                evolutionPowerBonus = plugin.getSummitManager().getEvolutionPowerBonus(playerId).doubleValue();
+                multiplierGainBonus = plugin.getSummitManager().getMultiplierGainBonus(playerId);
+                evolutionPowerBonus = plugin.getSummitManager().getEvolutionPowerBonus(playerId);
             }
 
             // Determine offline rate (skill tree boost: 25% → 40%)
@@ -122,25 +119,20 @@ public class PassiveEarningsManager {
             }
 
             // Multiplier gain per run (with Summit bonuses) - at offline rate
-            BigDecimal multiplierIncrement = AscendConstants.getRunnerMultiplierIncrement(stars, multiplierGainBonus, evolutionPowerBonus);
-            BigDecimal mapMultiplierGain = multiplierIncrement
-                .multiply(BigDecimal.valueOf(theoreticalRuns), ctx)
-                .multiply(BigDecimal.valueOf(effectiveOfflineRate).divide(
-                    BigDecimal.valueOf(100), ctx
-                ), ctx); // Apply offline rate to multiplier gains
+            BigNumber multiplierIncrement = AscendConstants.getRunnerMultiplierIncrement(stars, multiplierGainBonus, evolutionPowerBonus);
+            BigNumber mapMultiplierGain = multiplierIncrement
+                .multiply(BigNumber.fromDouble(theoreticalRuns))
+                .multiply(BigNumber.fromDouble(effectiveOfflineRate / 100.0));
 
             // Coins per run (same logic as RobotManager)
-            BigDecimal payoutPerRun = playerStore.getCompletionPayout(
-                playerId, allMaps, AscendConstants.MULTIPLIER_SLOTS, mapId, BigDecimal.ZERO
+            BigNumber payoutPerRun = playerStore.getCompletionPayout(
+                playerId, allMaps, AscendConstants.MULTIPLIER_SLOTS, mapId, BigNumber.ZERO
             );
 
             // Calculate total coins for this runner
-            BigDecimal mapCoins = payoutPerRun
-                .multiply(BigDecimal.valueOf(theoreticalRuns), ctx)
-                .multiply(BigDecimal.valueOf(effectiveOfflineRate).divide(
-                    BigDecimal.valueOf(100), ctx
-                ), ctx) // Apply offline rate
-                .setScale(2, RoundingMode.HALF_UP);
+            BigNumber mapCoins = payoutPerRun
+                .multiply(BigNumber.fromDouble(theoreticalRuns))
+                .multiply(BigNumber.fromDouble(effectiveOfflineRate / 100.0));
 
             // Store runner earnings
             runnerEarnings.put(mapId, new PassiveRunnerEarnings(
@@ -152,11 +144,11 @@ public class PassiveEarningsManager {
                 stars
             ));
 
-            totalCoins = totalCoins.add(mapCoins, ctx);
-            totalMultiplierGain = totalMultiplierGain.add(mapMultiplierGain, ctx);
+            totalCoins = totalCoins.add(mapCoins);
+            totalMultiplierGain = totalMultiplierGain.add(mapMultiplierGain);
         }
 
-        if (totalCoins.compareTo(BigDecimal.ZERO) <= 0) {
+        if (totalCoins.lte(BigNumber.ZERO)) {
             return null; // No earnings (no runners)
         }
 
@@ -237,16 +229,16 @@ public class PassiveEarningsManager {
     // Data classes
     public record PassiveEarningsResult(
         long timeAwayMs,
-        BigDecimal totalCoins,
-        BigDecimal totalMultiplier,
+        BigNumber totalCoins,
+        BigNumber totalMultiplier,
         Map<String, PassiveRunnerEarnings> runnerBreakdown
     ) {}
 
     public record PassiveRunnerEarnings(
         String mapName,
         int runsCompleted,
-        BigDecimal coinsEarned,
-        BigDecimal multiplierGain,
+        BigNumber coinsEarned,
+        BigNumber multiplierGain,
         int speedLevel,
         int stars
     ) {}
