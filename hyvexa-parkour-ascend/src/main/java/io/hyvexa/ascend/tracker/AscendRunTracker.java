@@ -181,13 +181,11 @@ public class AscendRunTracker {
             return;
         }
 
-        // Check if player is frozen (post-completion freeze) - teleport back to position
+        // Check if player is frozen (post-completion freeze) - skip processing without re-teleporting
         FreezeData freezeData = frozenPlayers.get(playerId);
         if (freezeData != null) {
             if (System.currentTimeMillis() < freezeData.endTime) {
-                // Still frozen - teleport player back to freeze position
-                store.addComponent(ref, Teleport.getComponentType(),
-                    new Teleport(store.getExternalData().getWorld(), freezeData.position, freezeData.rotation));
+                // Still frozen - just skip processing (initial teleport already positioned the player)
                 return;
             }
             // Freeze expired - remove and continue
@@ -234,7 +232,9 @@ public class AscendRunTracker {
     private void completeRun(PlayerRef playerRef, Player player, ActiveRun run,
                              AscendMap map, Ref<EntityStore> ref, Store<EntityStore> store) {
         UUID playerId = playerRef.getUuid();
-        activeRuns.remove(playerId);
+        if (activeRuns.remove(playerId) == null) {
+            return; // Already completed by a concurrent call
+        }
 
         // Show runners again after completing the run
         showRunnersForMap(playerId, run.mapId);
@@ -327,9 +327,9 @@ public class AscendRunTracker {
         store.addComponent(ref, Teleport.getComponentType(),
             new Teleport(store.getExternalData().getWorld(), startPos, startRot));
 
-        // Freeze player briefly after completion (teleport-based freeze)
+        // Freeze player briefly after completion (skip processing during this window)
         frozenPlayers.put(playerId, new FreezeData(
-            startPos, startRot, System.currentTimeMillis() + POST_COMPLETION_FREEZE_MS));
+            System.currentTimeMillis() + POST_COMPLETION_FREEZE_MS));
 
         // Set pending run immediately so player is ready to go after freeze
         setPendingRun(playerId, map.getId(), startPos);
@@ -432,13 +432,9 @@ public class AscendRunTracker {
     }
 
     private static class FreezeData {
-        final Vector3d position;
-        final Vector3f rotation;
         final long endTime;
 
-        FreezeData(Vector3d position, Vector3f rotation, long endTime) {
-            this.position = position;
-            this.rotation = rotation;
+        FreezeData(long endTime) {
             this.endTime = endTime;
         }
     }
