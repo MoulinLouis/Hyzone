@@ -284,6 +284,11 @@ public class ParkourAscendPlugin extends JavaPlugin {
             if (robotManager != null) {
                 robotManager.onPlayerLeave(playerId);
             }
+
+            // Evict player from cache (lazy loading - saves memory)
+            if (playerStore != null) {
+                playerStore.removePlayer(playerId);
+            }
         });
 
         runTrackerTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(
