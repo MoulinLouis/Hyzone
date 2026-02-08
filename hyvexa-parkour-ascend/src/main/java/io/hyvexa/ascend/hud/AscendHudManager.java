@@ -11,6 +11,7 @@ import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerStore;
+import io.hyvexa.ascend.summit.SummitManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 
 import java.util.List;
@@ -25,14 +26,16 @@ public class AscendHudManager {
     private final AscendPlayerStore playerStore;
     private final AscendMapStore mapStore;
     private final AscendRunTracker runTracker;
+    private final SummitManager summitManager;
     private final ConcurrentHashMap<UUID, AscendHud> ascendHuds = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Boolean> ascendHudAttached = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Long> ascendHudReadyAt = new ConcurrentHashMap<>();
 
-    public AscendHudManager(AscendPlayerStore playerStore, AscendMapStore mapStore, AscendRunTracker runTracker) {
+    public AscendHudManager(AscendPlayerStore playerStore, AscendMapStore mapStore, AscendRunTracker runTracker, SummitManager summitManager) {
         this.playerStore = playerStore;
         this.mapStore = mapStore;
         this.runTracker = runTracker;
+        this.summitManager = summitManager;
     }
 
     public void updateFull(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef) {
@@ -63,16 +66,20 @@ public class AscendHudManager {
             java.math.BigDecimal product = playerStore.getMultiplierProductDecimal(playerId, mapList, AscendConstants.MULTIPLIER_SLOTS);
             java.math.BigDecimal[] digits = playerStore.getMultiplierDisplayValues(playerId, mapList, AscendConstants.MULTIPLIER_SLOTS);
             int elevationLevel = playerStore.getElevationLevel(playerId);
-            AscendConstants.ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(elevationLevel, coins);
+            java.math.BigDecimal accumulatedCoins = playerStore.getElevationAccumulatedCoins(playerId);
+            AscendConstants.ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(elevationLevel, accumulatedCoins);
             int potentialElevation = elevationLevel + purchase.levels;
-            boolean showElevation = purchase.levels > 0;
+            boolean showElevation = elevationLevel > 0 || purchase.levels > 0;
             hud.updateEconomy(coins, product, digits, elevationLevel, potentialElevation, showElevation);
 
             // Update prestige HUD
             var summitLevels = playerStore.getSummitLevels(playerId);
             int ascensionCount = playerStore.getAscensionCount(playerId);
             int skillPoints = playerStore.getAvailableSkillPoints(playerId);
-            hud.updatePrestige(summitLevels, ascensionCount, skillPoints);
+            SummitManager.SummitPreview multPreview = summitManager != null ? summitManager.previewSummit(playerId, AscendConstants.SummitCategory.MULTIPLIER_GAIN) : null;
+            SummitManager.SummitPreview speedPreview = summitManager != null ? summitManager.previewSummit(playerId, AscendConstants.SummitCategory.RUNNER_SPEED) : null;
+            SummitManager.SummitPreview evoPreview = summitManager != null ? summitManager.previewSummit(playerId, AscendConstants.SummitCategory.EVOLUTION_POWER) : null;
+            hud.updatePrestige(summitLevels, ascensionCount, skillPoints, multPreview, speedPreview, evoPreview);
 
             // Update ascension quest progress bar
             hud.updateAscensionQuest(coins);
