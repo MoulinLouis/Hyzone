@@ -144,6 +144,7 @@ public final class AscendDatabaseSetup {
 
             // Ensure new columns on ascend_players for extended progress tracking
             ensureProgressColumns(conn);
+            ensureTutorialColumn(conn);
 
             // Ensure ghost recording table and best_time_ms column
             ensureGhostRecordingTable(conn);
@@ -532,6 +533,21 @@ public final class AscendDatabaseSetup {
             }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Failed to migrate total_coins_earned column: " + e.getMessage());
+        }
+    }
+
+    private static void ensureTutorialColumn(Connection conn) {
+        if (conn == null) {
+            return;
+        }
+        if (columnExists(conn, "ascend_players", "seen_tutorials")) {
+            return;
+        }
+        try (Statement stmt = conn.createStatement()) {
+            stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN seen_tutorials INT NOT NULL DEFAULT 0");
+            LOGGER.atInfo().log("Added seen_tutorials column to ascend_players");
+        } catch (SQLException e) {
+            LOGGER.at(Level.SEVERE).log("Failed to add seen_tutorials column: " + e.getMessage());
         }
     }
 
