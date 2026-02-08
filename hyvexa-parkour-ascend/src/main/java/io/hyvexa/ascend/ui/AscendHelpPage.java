@@ -17,6 +17,12 @@ import javax.annotation.Nonnull;
 public class AscendHelpPage extends BaseAscendPage {
 
     private static final String BUTTON_WELCOME = "Welcome";
+    private static final String BUTTON_FIRST_COMPLETION = "FirstCompletion";
+    private static final String BUTTON_MAP_UNLOCK = "MapUnlock";
+    private static final String BUTTON_EVOLUTION = "Evolution";
+    private static final String BUTTON_ELEVATION = "Elevation";
+    private static final String BUTTON_SUMMIT = "Summit";
+    private static final String BUTTON_ASCENSION = "Ascension";
     private static final String BUTTON_CLOSE = "Close";
 
     public AscendHelpPage(@Nonnull PlayerRef playerRef) {
@@ -29,6 +35,18 @@ public class AscendHelpPage extends BaseAscendPage {
         uiCommandBuilder.append("Pages/Ascend_Help.ui");
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#WelcomeButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_WELCOME), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#FirstCompletionButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_FIRST_COMPLETION), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#MapUnlockButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_MAP_UNLOCK), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#EvolutionButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_EVOLUTION), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ElevationButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_ELEVATION), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SummitButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_SUMMIT), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#AscensionButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_ASCENSION), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CloseButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE), false);
     }
@@ -42,10 +60,38 @@ public class AscendHelpPage extends BaseAscendPage {
         if (player == null || playerRef == null) {
             return;
         }
-        if (BUTTON_WELCOME.equals(data.getButton())) {
-            player.getPageManager().openCustomPage(ref, store, new AscendWelcomePage(playerRef));
-        } else if (BUTTON_CLOSE.equals(data.getButton())) {
-            this.close();
+
+        switch (data.getButton()) {
+            case BUTTON_WELCOME:
+                player.getPageManager().openCustomPage(ref, store, new AscendWelcomePage(playerRef));
+                break;
+            case BUTTON_FIRST_COMPLETION:
+                player.getPageManager().openCustomPage(ref, store,
+                        new AscendTutorialPage(playerRef, AscendTutorialPage.Tutorial.FIRST_COMPLETION));
+                break;
+            case BUTTON_MAP_UNLOCK:
+                player.getPageManager().openCustomPage(ref, store,
+                        new AscendTutorialPage(playerRef, AscendTutorialPage.Tutorial.MAP_UNLOCK));
+                break;
+            case BUTTON_EVOLUTION:
+                player.getPageManager().openCustomPage(ref, store,
+                        new AscendTutorialPage(playerRef, AscendTutorialPage.Tutorial.EVOLUTION));
+                break;
+            case BUTTON_ELEVATION:
+                player.getPageManager().openCustomPage(ref, store,
+                        new AscendTutorialPage(playerRef, AscendTutorialPage.Tutorial.ELEVATION));
+                break;
+            case BUTTON_SUMMIT:
+                player.getPageManager().openCustomPage(ref, store,
+                        new AscendTutorialPage(playerRef, AscendTutorialPage.Tutorial.SUMMIT));
+                break;
+            case BUTTON_ASCENSION:
+                player.getPageManager().openCustomPage(ref, store,
+                        new AscendTutorialPage(playerRef, AscendTutorialPage.Tutorial.ASCENSION));
+                break;
+            case BUTTON_CLOSE:
+                this.close();
+                break;
         }
     }
 }

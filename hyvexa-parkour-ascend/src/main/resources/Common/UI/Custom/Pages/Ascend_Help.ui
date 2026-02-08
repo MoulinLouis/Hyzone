@@ -4,7 +4,7 @@ $C.@PageOverlay {
   SceneBlur {}
 
   Group #HelpWindow {
-    Anchor: (Width: 460, Height: 380);
+    Anchor: (Width: 460, Height: 620);
     LayoutMode: Top;
     Background: #0d1620(0.95);
     OutlineColor: #ffffff(0.06);
@@ -42,7 +42,7 @@ $C.@PageOverlay {
       LayoutMode: Top;
       Padding: (Left: 16, Right: 16, Top: 16, Bottom: 16);
 
-      // --- Welcome Tutorial entry ---
+      // --- Welcome Tutorial ---
       Group #WelcomeEntry {
         Anchor: (Left: 0, Right: 0, Height: 64);
         LayoutMode: Full;
@@ -50,19 +50,16 @@ $C.@PageOverlay {
         OutlineColor: #ffffff(0.06);
         OutlineSize: 1;
 
-        // Accent bar
         Group {
           Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
           Background: #f59e0b;
         }
 
-        // Icon area
         Group {
           Anchor: (Left: 16, Top: 12, Width: 40, Height: 40);
-          Background: (TexturePath: "../Textures/help/welcome_icon.png");
+          Background: (TexturePath: "../Textures/golem_icon.png");
         }
 
-        // Text
         Group {
           Anchor: (Left: 68, Top: 14, Right: 16);
           LayoutMode: Top;
@@ -79,14 +76,12 @@ $C.@PageOverlay {
           }
         }
 
-        // Arrow indicator
         Label {
           Anchor: (Right: 16, Top: 22);
           Style: (FontSize: 16, TextColor: #f59e0b);
           Text: ">";
         }
 
-        // Clickable overlay
         TextButton #WelcomeButton {
           Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
           Text: "";
@@ -99,35 +94,315 @@ $C.@PageOverlay {
         }
       }
 
-      // --- Placeholder for future tutorials ---
-      Group #PlaceholderEntry {
+      // --- First Completion ---
+      Group #FirstCompletionEntry {
         Anchor: (Left: 0, Right: 0, Height: 64, Top: 8);
         LayoutMode: Full;
-        Background: #ffffff(0.015);
-        OutlineColor: #ffffff(0.04);
+        Background: #ffffff(0.03);
+        OutlineColor: #ffffff(0.06);
         OutlineSize: 1;
 
-        // Accent bar (muted)
         Group {
           Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
-          Background: #6b7c8a(0.3);
+          Background: #10b981;
         }
 
-        // Text
+        Group {
+          Anchor: (Left: 16, Top: 12, Width: 40, Height: 40);
+          Background: (TexturePath: "../Textures/golem_icon.png");
+        }
+
         Group {
           Anchor: (Left: 68, Top: 14, Right: 16);
           LayoutMode: Top;
 
           Label {
-            Style: (FontSize: 15, TextColor: #6b7c8a);
-            Text: "More coming soon...";
+            Style: (FontSize: 15, TextColor: #f0f4f8, RenderBold: true);
+            Text: "First Completion";
           }
 
           Label {
             Anchor: (Top: 4);
-            Style: (FontSize: 12, TextColor: #4a5568);
-            Text: "Additional guides will appear here";
+            Style: (FontSize: 12, TextColor: #9fb0ba);
+            Text: "Coins, multipliers, and buying runners";
           }
+        }
+
+        Label {
+          Anchor: (Right: 16, Top: 22);
+          Style: (FontSize: 16, TextColor: #10b981);
+          Text: ">";
+        }
+
+        TextButton #FirstCompletionButton {
+          Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+          Text: "";
+          Style: TextButtonStyle(
+            Default: (Background: #ffffff(0.0)),
+            Hovered: (Background: #ffffff(0.04)),
+            Pressed: (Background: #ffffff(0.02)),
+            Sounds: $C.@ButtonSounds,
+          );
+        }
+      }
+
+      // --- Map Unlock ---
+      Group #MapUnlockEntry {
+        Anchor: (Left: 0, Right: 0, Height: 64, Top: 8);
+        LayoutMode: Full;
+        Background: #ffffff(0.03);
+        OutlineColor: #ffffff(0.06);
+        OutlineSize: 1;
+
+        Group {
+          Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
+          Background: #3b82f6;
+        }
+
+        Group {
+          Anchor: (Left: 16, Top: 12, Width: 40, Height: 40);
+          Background: (TexturePath: "../Textures/golem_icon.png");
+        }
+
+        Group {
+          Anchor: (Left: 68, Top: 14, Right: 16);
+          LayoutMode: Top;
+
+          Label {
+            Style: (FontSize: 15, TextColor: #f0f4f8, RenderBold: true);
+            Text: "New Map Unlocked";
+          }
+
+          Label {
+            Anchor: (Top: 4);
+            Style: (FontSize: 12, TextColor: #9fb0ba);
+            Text: "How new maps unlock and stack";
+          }
+        }
+
+        Label {
+          Anchor: (Right: 16, Top: 22);
+          Style: (FontSize: 16, TextColor: #3b82f6);
+          Text: ">";
+        }
+
+        TextButton #MapUnlockButton {
+          Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+          Text: "";
+          Style: TextButtonStyle(
+            Default: (Background: #ffffff(0.0)),
+            Hovered: (Background: #ffffff(0.04)),
+            Pressed: (Background: #ffffff(0.02)),
+            Sounds: $C.@ButtonSounds,
+          );
+        }
+      }
+
+      // --- Evolution ---
+      Group #EvolutionEntry {
+        Anchor: (Left: 0, Right: 0, Height: 64, Top: 8);
+        LayoutMode: Full;
+        Background: #ffffff(0.03);
+        OutlineColor: #ffffff(0.06);
+        OutlineSize: 1;
+
+        Group {
+          Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
+          Background: #a855f7;
+        }
+
+        Group {
+          Anchor: (Left: 16, Top: 12, Width: 40, Height: 40);
+          Background: (TexturePath: "../Textures/golem_icon.png");
+        }
+
+        Group {
+          Anchor: (Left: 68, Top: 14, Right: 16);
+          LayoutMode: Top;
+
+          Label {
+            Style: (FontSize: 15, TextColor: #f0f4f8, RenderBold: true);
+            Text: "Evolution";
+          }
+
+          Label {
+            Anchor: (Top: 4);
+            Style: (FontSize: 12, TextColor: #9fb0ba);
+            Text: "Evolve runners for star multipliers";
+          }
+        }
+
+        Label {
+          Anchor: (Right: 16, Top: 22);
+          Style: (FontSize: 16, TextColor: #a855f7);
+          Text: ">";
+        }
+
+        TextButton #EvolutionButton {
+          Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+          Text: "";
+          Style: TextButtonStyle(
+            Default: (Background: #ffffff(0.0)),
+            Hovered: (Background: #ffffff(0.04)),
+            Pressed: (Background: #ffffff(0.02)),
+            Sounds: $C.@ButtonSounds,
+          );
+        }
+      }
+
+      // --- Elevation ---
+      Group #ElevationEntry {
+        Anchor: (Left: 0, Right: 0, Height: 64, Top: 8);
+        LayoutMode: Full;
+        Background: #ffffff(0.03);
+        OutlineColor: #ffffff(0.06);
+        OutlineSize: 1;
+
+        Group {
+          Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
+          Background: #f59e0b;
+        }
+
+        Group {
+          Anchor: (Left: 16, Top: 12, Width: 40, Height: 40);
+          Background: (TexturePath: "../Textures/golem_icon.png");
+        }
+
+        Group {
+          Anchor: (Left: 68, Top: 14, Right: 16);
+          LayoutMode: Top;
+
+          Label {
+            Style: (FontSize: 15, TextColor: #f0f4f8, RenderBold: true);
+            Text: "Elevation";
+          }
+
+          Label {
+            Anchor: (Top: 4);
+            Style: (FontSize: 12, TextColor: #9fb0ba);
+            Text: "Spend coins for a global multiplier";
+          }
+        }
+
+        Label {
+          Anchor: (Right: 16, Top: 22);
+          Style: (FontSize: 16, TextColor: #f59e0b);
+          Text: ">";
+        }
+
+        TextButton #ElevationButton {
+          Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+          Text: "";
+          Style: TextButtonStyle(
+            Default: (Background: #ffffff(0.0)),
+            Hovered: (Background: #ffffff(0.04)),
+            Pressed: (Background: #ffffff(0.02)),
+            Sounds: $C.@ButtonSounds,
+          );
+        }
+      }
+
+      // --- Summit ---
+      Group #SummitEntry {
+        Anchor: (Left: 0, Right: 0, Height: 64, Top: 8);
+        LayoutMode: Full;
+        Background: #ffffff(0.03);
+        OutlineColor: #ffffff(0.06);
+        OutlineSize: 1;
+
+        Group {
+          Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
+          Background: #ef4444;
+        }
+
+        Group {
+          Anchor: (Left: 16, Top: 12, Width: 40, Height: 40);
+          Background: (TexturePath: "../Textures/golem_icon.png");
+        }
+
+        Group {
+          Anchor: (Left: 68, Top: 14, Right: 16);
+          LayoutMode: Top;
+
+          Label {
+            Style: (FontSize: 15, TextColor: #f0f4f8, RenderBold: true);
+            Text: "Summit";
+          }
+
+          Label {
+            Anchor: (Top: 4);
+            Style: (FontSize: 12, TextColor: #9fb0ba);
+            Text: "Reset for permanent upgrades";
+          }
+        }
+
+        Label {
+          Anchor: (Right: 16, Top: 22);
+          Style: (FontSize: 16, TextColor: #ef4444);
+          Text: ">";
+        }
+
+        TextButton #SummitButton {
+          Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+          Text: "";
+          Style: TextButtonStyle(
+            Default: (Background: #ffffff(0.0)),
+            Hovered: (Background: #ffffff(0.04)),
+            Pressed: (Background: #ffffff(0.02)),
+            Sounds: $C.@ButtonSounds,
+          );
+        }
+      }
+
+      // --- Ascension ---
+      Group #AscensionEntry {
+        Anchor: (Left: 0, Right: 0, Height: 64, Top: 8);
+        LayoutMode: Full;
+        Background: #ffffff(0.03);
+        OutlineColor: #ffffff(0.06);
+        OutlineSize: 1;
+
+        Group {
+          Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
+          Background: #ec4899;
+        }
+
+        Group {
+          Anchor: (Left: 16, Top: 12, Width: 40, Height: 40);
+          Background: (TexturePath: "../Textures/golem_icon.png");
+        }
+
+        Group {
+          Anchor: (Left: 68, Top: 14, Right: 16);
+          LayoutMode: Top;
+
+          Label {
+            Style: (FontSize: 15, TextColor: #f0f4f8, RenderBold: true);
+            Text: "Ascension";
+          }
+
+          Label {
+            Anchor: (Top: 4);
+            Style: (FontSize: 12, TextColor: #9fb0ba);
+            Text: "Ultimate prestige and Skill Tree";
+          }
+        }
+
+        Label {
+          Anchor: (Right: 16, Top: 22);
+          Style: (FontSize: 16, TextColor: #ec4899);
+          Text: ">";
+        }
+
+        TextButton #AscensionButton {
+          Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+          Text: "";
+          Style: TextButtonStyle(
+            Default: (Background: #ffffff(0.0)),
+            Hovered: (Background: #ffffff(0.04)),
+            Pressed: (Background: #ffffff(0.02)),
+            Sounds: $C.@ButtonSounds,
+          );
         }
       }
     }

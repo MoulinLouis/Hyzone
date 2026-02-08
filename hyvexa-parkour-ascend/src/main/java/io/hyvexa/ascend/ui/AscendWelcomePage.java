@@ -1,5 +1,7 @@
 package io.hyvexa.ascend.ui;
 
+import javax.annotation.Nonnull;
+
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
@@ -10,9 +12,8 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.common.ui.ButtonEventData;
 
-import javax.annotation.Nonnull;
+import io.hyvexa.common.ui.ButtonEventData;
 
 public class AscendWelcomePage extends BaseAscendPage {
 
@@ -21,46 +22,43 @@ public class AscendWelcomePage extends BaseAscendPage {
 
     private static final int TOTAL_STEPS = 3;
 
-    private static final String[] STEP_IMAGES = {
-        "../Textures/help/welcome_step1.png",
-        "../Textures/help/welcome_step2.png",
-        "../Textures/help/welcome_step3.png"
-    };
-
     private static final String[] STEP_TITLES = {
         "Welcome to Ascend",
-        "Coins & Elevation",
-        "Prestige & Beyond"
+        "Your Shortcuts",
+        "Play Your First Map"
     };
 
     private static final String[] STEP_DESCRIPTIONS = {
-        "Ascend is an idle parkour mode where you buy runners that complete maps for you. Each runner earns coins based on their speed and the map difficulty.",
-        "Coins are your main currency. Spend them to buy new runners, upgrade their speed, or invest in Elevation which boosts ALL your earnings with a global multiplier.",
-        "Once you've grown powerful enough, you can Summit to reset your progress in exchange for permanent bonuses. Unlock the Skill Tree and climb the leaderboards!"
+        "Ascend is a parkour idle game. Run maps, earn coins, and build up an army of automated runners that play for you - even while you're offline.",
+        "You have 4 items in your inventory that open menus instantly - no need to type commands. Here's what each one does:",
+        "Open the map menu and pick a map. Complete it to earn your first coins and unlock new features along the way!"
     };
 
     private static final String[][] STEP_FEATURES = {
         {
-            "Buy runners to automatically complete maps",
-            "Upgrade runner speed for faster coin earnings",
-            "Evolve runners to unlock multiplier bonuses"
+            "Run parkour maps to earn coins",
+            "Buy runners that replay maps for you",
+            "Progress and unlock new content over time"
         },
         {
-            "Coins accumulate even while you're offline",
-            "Elevation multiplies all your coin income",
-            "Stack multipliers for exponential growth"
+            "/ascend - Map menu, runners, and upgrades",
+            "/ascend leaderboard - Rankings and stats",
+            "/ascend automation - Runner speed controls"
         },
         {
-            "Summit resets progress for permanent power",
-            "Spend ascension points in the Skill Tree",
-            "Compete for the highest rank on leaderboards"
+            "Use the first item in your inventory",
+            "Pick any map and complete the parkour",
+            "Your first completion unlocks runners"
         }
     };
 
+    private static final String STEP2_FEATURE4_TEXT = "/ascend help - Tutorials and guides";
+    private static final String STEP2_FEATURE4_COLOR = "#a855f7";
+
     private static final String[][] STEP_FEATURE_COLORS = {
-        {"#10b981", "#3b82f6", "#a855f7"},
-        {"#f59e0b", "#10b981", "#3b82f6"},
-        {"#ef4444", "#a855f7", "#f59e0b"}
+        {"#10b981", "#3b82f6", "#f59e0b"},
+        {"#f59e0b", "#3b82f6", "#10b981"},
+        {"#f59e0b", "#10b981", "#a855f7"}
     };
 
     private final int step;
@@ -106,6 +104,17 @@ public class AscendWelcomePage extends BaseAscendPage {
             cmd.set("#Feature" + (i + 1) + "Label.Text", STEP_FEATURES[step][i]);
             cmd.set("#Feature" + (i + 1) + "Dot.Background", STEP_FEATURE_COLORS[step][i]);
         }
+
+        // Show 4th feature on shortcuts step (step 2)
+        boolean isShortcutsStep = step == 1;
+        cmd.set("#Feature4Row.Visible", isShortcutsStep);
+        if (isShortcutsStep) {
+            cmd.set("#Feature4Label.Text", STEP2_FEATURE4_TEXT);
+            cmd.set("#Feature4Dot.Background", STEP2_FEATURE4_COLOR);
+        }
+
+        // Show tip card on last step
+        cmd.set("#TipCard.Visible", step == 2);
 
         // Set button text
         cmd.set("#NextButton.Text", step == TOTAL_STEPS - 1 ? "Got It!" : "Next");
