@@ -116,14 +116,6 @@ public class AscendPlayerProgress {
     }
 
     /**
-     * @deprecated Use {@link #clearSummitXp()} instead.
-     */
-    @Deprecated
-    public void clearSummitLevels() {
-        clearSummitXp();
-    }
-
-    /**
      * Get all summit levels as a map.
      */
     public Map<AscendConstants.SummitCategory, Integer> getSummitLevels() {

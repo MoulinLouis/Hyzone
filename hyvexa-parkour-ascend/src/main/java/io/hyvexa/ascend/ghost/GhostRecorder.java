@@ -7,7 +7,6 @@ import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
-import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.component.Ref;
@@ -156,15 +155,12 @@ public class GhostRecorder {
             }
         }
 
-        // Find the player in the universe
-        PlayerRef playerRef = null;
-        for (PlayerRef pr : Universe.get().getPlayers()) {
-            if (pr.getUuid().equals(recording.playerId)) {
-                playerRef = pr;
-                break;
-            }
+        // Find the player via cached ref (O(1) lookup)
+        io.hyvexa.ascend.ParkourAscendPlugin plugin = io.hyvexa.ascend.ParkourAscendPlugin.getInstance();
+        if (plugin == null) {
+            return;
         }
-
+        PlayerRef playerRef = plugin.getPlayerRef(recording.playerId);
         if (playerRef == null) {
             return; // Player not online
         }

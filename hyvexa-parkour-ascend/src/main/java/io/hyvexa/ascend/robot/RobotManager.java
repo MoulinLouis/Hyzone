@@ -823,32 +823,30 @@ public class RobotManager {
 
     /**
      * Check if a player is currently in the Ascend world.
-     * This is more reliable than tracking join/leave events because it checks
-     * the actual world the player is in, handling world transitions correctly.
+     * Uses the plugin's PlayerRef cache for O(1) lookup instead of scanning all players.
      */
     private boolean isPlayerInAscendWorld(UUID playerId) {
         if (playerId == null) {
             return false;
         }
-        for (PlayerRef playerRef : Universe.get().getPlayers()) {
-            if (playerRef == null || !playerId.equals(playerRef.getUuid())) {
-                continue;
-            }
-            Ref<EntityStore> ref = playerRef.getReference();
-            if (ref == null || !ref.isValid()) {
-                continue;
-            }
-            Store<EntityStore> store = ref.getStore();
-            if (store == null) {
-                continue;
-            }
-            World world = store.getExternalData().getWorld();
-            if (world == null || world.getName() == null) {
-                continue;
-            }
-            return ASCEND_WORLD_NAME.equalsIgnoreCase(world.getName());
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin == null) {
+            return false;
         }
-        return false;
+        PlayerRef playerRef = plugin.getPlayerRef(playerId);
+        if (playerRef == null) {
+            return false;
+        }
+        Ref<EntityStore> ref = playerRef.getReference();
+        if (ref == null || !ref.isValid()) {
+            return false;
+        }
+        Store<EntityStore> store = ref.getStore();
+        if (store == null) {
+            return false;
+        }
+        World world = store.getExternalData().getWorld();
+        return world != null && ASCEND_WORLD_NAME.equalsIgnoreCase(world.getName());
     }
 
     /**
@@ -863,34 +861,35 @@ public class RobotManager {
         if (playerId == null || map == null) {
             return false;
         }
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin == null) {
+            return false;
+        }
+        PlayerRef playerRef = plugin.getPlayerRef(playerId);
+        if (playerRef == null) {
+            return false;
+        }
+        Ref<EntityStore> ref = playerRef.getReference();
+        if (ref == null || !ref.isValid()) {
+            return false;
+        }
+        Store<EntityStore> store = ref.getStore();
+        if (store == null) {
+            return false;
+        }
+        TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
+        if (transform == null) {
+            return false;
+        }
+        Vector3d pos = transform.getPosition();
         double mapX = map.getStartX();
         double mapY = map.getStartY();
         double mapZ = map.getStartZ();
-
-        for (PlayerRef playerRef : Universe.get().getPlayers()) {
-            if (playerRef == null || !playerId.equals(playerRef.getUuid())) {
-                continue;
-            }
-            Ref<EntityStore> ref = playerRef.getReference();
-            if (ref == null || !ref.isValid()) {
-                continue;
-            }
-            Store<EntityStore> store = ref.getStore();
-            if (store == null) {
-                continue;
-            }
-            TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
-            if (transform == null) {
-                continue;
-            }
-            Vector3d pos = transform.getPosition();
-            double px = pos.getX();
-            double py = pos.getY();
-            double pz = pos.getZ();
-            double distSq = (px - mapX) * (px - mapX) + (py - mapY) * (py - mapY) + (pz - mapZ) * (pz - mapZ);
-            return distSq <= CHUNK_LOAD_DISTANCE * CHUNK_LOAD_DISTANCE;
-        }
-        return false;
+        double px = pos.getX();
+        double py = pos.getY();
+        double pz = pos.getZ();
+        double distSq = (px - mapX) * (px - mapX) + (py - mapY) * (py - mapY) + (pz - mapZ) * (pz - mapZ);
+        return distSq <= CHUNK_LOAD_DISTANCE * CHUNK_LOAD_DISTANCE;
     }
 
     // ========================================
