@@ -19,8 +19,7 @@ import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.achievement.AchievementManager;
 import io.hyvexa.ascend.tutorial.TutorialTriggerService;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
+import io.hyvexa.common.math.BigNumber;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
@@ -256,12 +255,11 @@ public class AscendRunTracker {
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
 
         // Base multiplier increment per manual run
-        BigDecimal multiplierIncrement = new BigDecimal("0.1"); // MANUAL_MULTIPLIER_INCREMENT
+        BigNumber multiplierIncrement = BigNumber.fromDouble(AscendConstants.MANUAL_MULTIPLIER_INCREMENT);
 
         // Calculate payout BEFORE adding multiplier (use current multiplier, not the new one)
         List<AscendMap> multiplierMaps = mapStore.listMapsSorted();
-        BigDecimal payout = playerStore.getCompletionPayout(playerId, multiplierMaps, AscendConstants.MULTIPLIER_SLOTS, run.mapId, BigDecimal.ZERO)
-            .setScale(2, RoundingMode.HALF_UP);
+        BigNumber payout = playerStore.getCompletionPayout(playerId, multiplierMaps, AscendConstants.MULTIPLIER_SLOTS, run.mapId, BigNumber.ZERO);
 
         // Use atomic operations to prevent race conditions
         if (!playerStore.atomicAddCoins(playerId, payout)) {
@@ -301,7 +299,7 @@ public class AscendRunTracker {
         // Build payout message with time and optional PB/bonus info
         StringBuilder payoutMsg = new StringBuilder();
         payoutMsg.append("[Ascend] +")
-                 .append(FormatUtils.formatCoinsForHudDecimal(payout))
+                 .append(FormatUtils.formatBigNumber(payout))
                  .append(" coins | ")
                  .append(timeStr);
 

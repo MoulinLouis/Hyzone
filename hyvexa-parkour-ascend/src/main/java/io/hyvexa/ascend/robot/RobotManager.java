@@ -1,9 +1,5 @@
 package io.hyvexa.ascend.robot;
 
-import java.math.BigDecimal;
-import java.math.MathContext;
-import java.math.RoundingMode;
-
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
@@ -33,6 +29,7 @@ import io.hyvexa.ascend.ghost.GhostSample;
 import io.hyvexa.ascend.ghost.GhostStore;
 import io.hyvexa.ascend.summit.SummitManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
+import io.hyvexa.common.math.BigNumber;
 import io.hyvexa.common.visibility.EntityVisibilityManager;
 
 import java.io.IOException;
@@ -611,20 +608,18 @@ public class RobotManager {
         double multiplierGainBonus = 1.0;
         double evolutionPowerBonus = 3.0;
         if (plugin != null && plugin.getSummitManager() != null) {
-            multiplierGainBonus = plugin.getSummitManager().getMultiplierGainBonus(ownerId).doubleValue();
-            evolutionPowerBonus = plugin.getSummitManager().getEvolutionPowerBonus(ownerId).doubleValue();
+            multiplierGainBonus = plugin.getSummitManager().getMultiplierGainBonus(ownerId);
+            evolutionPowerBonus = plugin.getSummitManager().getEvolutionPowerBonus(ownerId);
         }
-        BigDecimal multiplierIncrement = AscendConstants.getRunnerMultiplierIncrement(stars, multiplierGainBonus, evolutionPowerBonus);
+        BigNumber multiplierIncrement = AscendConstants.getRunnerMultiplierIncrement(stars, multiplierGainBonus, evolutionPowerBonus);
 
-        MathContext ctx = new MathContext(30, RoundingMode.HALF_UP);
-        BigDecimal totalMultiplierBonus = multiplierIncrement.multiply(BigDecimal.valueOf(completions), ctx);
+        BigNumber totalMultiplierBonus = multiplierIncrement.multiply(BigNumber.fromLong(completions));
 
         // Calculate payout BEFORE adding multiplier (use current multiplier, not the new one)
         List<AscendMap> maps = mapStore.listMapsSorted();
-        BigDecimal payoutPerRun = playerStore.getCompletionPayout(ownerId, maps, AscendConstants.MULTIPLIER_SLOTS, mapId, BigDecimal.ZERO);
+        BigNumber payoutPerRun = playerStore.getCompletionPayout(ownerId, maps, AscendConstants.MULTIPLIER_SLOTS, mapId, BigNumber.ZERO);
 
-        BigDecimal totalPayout = payoutPerRun.multiply(BigDecimal.valueOf(completions), ctx)
-                                             .setScale(2, RoundingMode.HALF_UP);
+        BigNumber totalPayout = payoutPerRun.multiply(BigNumber.fromLong(completions));
 
         // Use atomic operations to prevent race conditions
         if (!playerStore.atomicAddCoins(ownerId, totalPayout)) {
@@ -691,9 +686,9 @@ public class RobotManager {
         }
 
         // Second priority: find cheapest speed upgrade (one per call for smooth visual)
-        BigDecimal coins = progress.getCoins();
+        BigNumber coins = progress.getCoins();
         String cheapestMapId = null;
-        BigDecimal cheapestCost = null;
+        BigNumber cheapestCost = null;
 
         for (AscendMap map : maps) {
             AscendPlayerProgress.MapProgress mp = progress.getMapProgress().get(map.getId());
@@ -702,16 +697,16 @@ public class RobotManager {
             int speedLevel = mp.getRobotSpeedLevel();
             if (speedLevel >= AscendConstants.MAX_SPEED_LEVEL) continue;
 
-            BigDecimal cost = AscendConstants.getRunnerUpgradeCost(
+            BigNumber cost = AscendConstants.getRunnerUpgradeCost(
                 speedLevel, map.getDisplayOrder(), mp.getRobotStars());
 
-            if (cheapestCost == null || cost.compareTo(cheapestCost) < 0) {
+            if (cheapestCost == null || cost.lt(cheapestCost)) {
                 cheapestCost = cost;
                 cheapestMapId = map.getId();
             }
         }
 
-        if (cheapestMapId != null && cheapestCost != null && coins.compareTo(cheapestCost) >= 0) {
+        if (cheapestMapId != null && cheapestCost != null && coins.gte(cheapestCost)) {
             // Perform single speed upgrade
             if (!playerStore.atomicSpendCoins(playerId, cheapestCost)) return;
             playerStore.incrementRobotSpeedLevel(playerId, cheapestMapId);
@@ -751,7 +746,7 @@ public class RobotManager {
             // Summit runner speed is a multiplier (×1.0 at level 0, ×1.45 at level 1, etc.)
             SummitManager summitManager = plugin.getSummitManager();
             if (summitManager != null) {
-                speedMultiplier *= summitManager.getRunnerSpeedBonus(ownerId).doubleValue();
+                speedMultiplier *= summitManager.getRunnerSpeedBonus(ownerId);
             }
 
             // Skill tree: Runner Speed Boost (×1.5 global runner speed)

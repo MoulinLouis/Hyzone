@@ -30,8 +30,8 @@ public class AscensionManager {
      * Checks if a player can perform an Ascension.
      */
     public boolean canAscend(UUID playerId) {
-        java.math.BigDecimal coins = playerStore.getCoins(playerId);
-        return coins.compareTo(AscendConstants.ASCENSION_COIN_THRESHOLD) >= 0;
+        io.hyvexa.common.math.BigNumber coins = playerStore.getCoins(playerId);
+        return coins.gte(AscendConstants.ASCENSION_COIN_THRESHOLD);
     }
 
     /**
@@ -40,8 +40,8 @@ public class AscensionManager {
      * @return the new Ascension count, or -1 if insufficient coins
      */
     public int performAscension(UUID playerId) {
-        java.math.BigDecimal coins = playerStore.getCoins(playerId);
-        if (coins.compareTo(AscendConstants.ASCENSION_COIN_THRESHOLD) < 0) {
+        io.hyvexa.common.math.BigNumber coins = playerStore.getCoins(playerId);
+        if (coins.lt(AscendConstants.ASCENSION_COIN_THRESHOLD)) {
             return -1;
         }
 
@@ -68,10 +68,10 @@ public class AscensionManager {
         runTracker.cancelRun(playerId);
 
         // Reset progress
-        progress.setCoins(java.math.BigDecimal.ZERO);
+        progress.setCoins(io.hyvexa.common.math.BigNumber.ZERO);
         progress.setElevationMultiplier(1);
-        progress.setSummitAccumulatedCoins(java.math.BigDecimal.ZERO);
-        progress.setElevationAccumulatedCoins(java.math.BigDecimal.ZERO);
+        progress.setSummitAccumulatedCoins(io.hyvexa.common.math.BigNumber.ZERO);
+        progress.setElevationAccumulatedCoins(io.hyvexa.common.math.BigNumber.ZERO);
         progress.clearSummitXp();
 
         // Reset all map progress (multipliers, unlocks, robots)
