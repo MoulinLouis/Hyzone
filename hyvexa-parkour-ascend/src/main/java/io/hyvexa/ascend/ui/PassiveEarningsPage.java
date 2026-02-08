@@ -65,11 +65,11 @@ public class PassiveEarningsPage extends BaseAscendPage {
         commandBuilder.set("#AwayTimeLabel.Text", awayText);
 
         // Total coins
-        String coinsStr = FormatUtils.formatCoinsForHudDecimal(result.totalCoins());
+        String coinsStr = FormatUtils.formatBigNumber(result.totalCoins());
         commandBuilder.set("#TotalCoinsLabel.Text", coinsStr + " COINS");
 
         // Total multiplier
-        String multStr = FormatUtils.formatCoinsForHudDecimal(result.totalMultiplier());
+        String multStr = FormatUtils.formatBigNumber(result.totalMultiplier());
         commandBuilder.set("#MultiplierLabel.Text", "+" + multStr + " total multiplier");
     }
 
@@ -111,11 +111,11 @@ public class PassiveEarningsPage extends BaseAscendPage {
             commandBuilder.set(selector + " #Runs.Text", earnings.runsCompleted() + " runs");
 
             // Multiplier gain
-            String multStr = FormatUtils.formatCoinsForHudDecimal(earnings.multiplierGain());
+            String multStr = FormatUtils.formatBigNumber(earnings.multiplierGain());
             commandBuilder.set(selector + " #Multiplier.Text", "+" + multStr + " mult");
 
             // Coins earned
-            String coinsStr = FormatUtils.formatCoinsForHudDecimal(earnings.coinsEarned());
+            String coinsStr = FormatUtils.formatBigNumber(earnings.coinsEarned());
             commandBuilder.set(selector + " #Coins.Text", coinsStr);
 
             index++;

@@ -15,6 +15,7 @@ import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.ascension.AscensionManager;
 import io.hyvexa.ascend.data.AscendPlayerStore;
+import io.hyvexa.common.math.BigNumber;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
@@ -77,9 +78,9 @@ public class AscensionPage extends BaseAscendPage {
         UUID playerId = playerRef.getUuid();
 
         if (!ascensionManager.canAscend(playerId)) {
-            java.math.BigDecimal coins = playerStore.getCoins(playerId);
-            player.sendMessage(Message.raw("[Ascension] Need " + FormatUtils.formatCoinsForHudDecimal(AscendConstants.ASCENSION_COIN_THRESHOLD)
-                + " coins to Ascend. You have: " + FormatUtils.formatCoinsForHudDecimal(coins))
+            BigNumber coins = playerStore.getCoins(playerId);
+            player.sendMessage(Message.raw("[Ascension] Need " + FormatUtils.formatBigNumber(AscendConstants.ASCENSION_COIN_THRESHOLD)
+                + " coins to Ascend. You have: " + FormatUtils.formatBigNumber(coins))
                 .color(SystemMessageUtils.SECONDARY));
             return;
         }
@@ -117,14 +118,14 @@ public class AscensionPage extends BaseAscendPage {
         }
 
         UUID playerId = playerRef.getUuid();
-        java.math.BigDecimal coins = playerStore.getCoins(playerId);
+        BigNumber coins = playerStore.getCoins(playerId);
         int ascensionCount = playerStore.getAscensionCount(playerId);
         int availablePoints = playerStore.getAvailableSkillPoints(playerId);
         boolean canAscend = ascensionManager.canAscend(playerId);
 
         // Update coin values
-        commandBuilder.set("#CurrentCoins.Text", FormatUtils.formatCoinsForHudDecimal(coins));
-        commandBuilder.set("#RequiredCoins.Text", FormatUtils.formatCoinsForHudDecimal(AscendConstants.ASCENSION_COIN_THRESHOLD));
+        commandBuilder.set("#CurrentCoins.Text", FormatUtils.formatBigNumber(coins));
+        commandBuilder.set("#RequiredCoins.Text", FormatUtils.formatBigNumber(AscendConstants.ASCENSION_COIN_THRESHOLD));
 
         // Update current stats
         commandBuilder.set("#AscensionCountValue.Text", "x" + ascensionCount);
@@ -134,7 +135,7 @@ public class AscensionPage extends BaseAscendPage {
         if (canAscend) {
             commandBuilder.set("#AscendButton.Text", "ASCEND");
         } else {
-            commandBuilder.set("#AscendButton.Text", "NEED " + FormatUtils.formatCoinsForHudDecimal(AscendConstants.ASCENSION_COIN_THRESHOLD));
+            commandBuilder.set("#AscendButton.Text", "NEED " + FormatUtils.formatBigNumber(AscendConstants.ASCENSION_COIN_THRESHOLD));
         }
     }
 }

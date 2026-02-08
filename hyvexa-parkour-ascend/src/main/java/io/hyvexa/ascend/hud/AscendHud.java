@@ -5,6 +5,7 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import io.hyvexa.ascend.AscendConstants.SummitCategory;
 import io.hyvexa.ascend.summit.SummitManager;
+import io.hyvexa.common.math.BigNumber;
 import io.hyvexa.common.util.FormatUtils;
 
 import java.util.Map;
@@ -28,7 +29,7 @@ public class AscendHud extends CustomUIHud {
 
     // Track previous values for effect triggering (converted to double for comparison)
     private double[] lastDigits;
-    private java.math.BigDecimal lastCoins;
+    private BigNumber lastCoins;
 
     // Ascension quest bar constants
     private static final double ASCENSION_COST = 1e33; // 1 Decillion (1Dc)
@@ -55,9 +56,9 @@ public class AscendHud extends CustomUIHud {
         update(false, commandBuilder);
     }
 
-    public void updateEconomy(java.math.BigDecimal coins, java.math.BigDecimal product, java.math.BigDecimal[] digits, int currentElevation, int potentialElevation, boolean showElevation) {
-        String coinsText = FormatUtils.formatCoinsForHudDecimal(coins);
-        String coinsPerRunText = FormatUtils.formatCoinsForHudDecimal(product) + "/run";
+    public void updateEconomy(BigNumber coins, BigNumber product, BigNumber[] digits, int currentElevation, int potentialElevation, boolean showElevation) {
+        String coinsText = FormatUtils.formatBigNumber(coins);
+        String coinsPerRunText = FormatUtils.formatBigNumber(product) + "/run";
         String digitsKey = buildDigitsKey(digits);
         String elevationText;
         if (showElevation && potentialElevation > currentElevation) {
@@ -209,13 +210,13 @@ public class AscendHud extends CustomUIHud {
         return name + " Lv." + preview.currentLevel();
     }
 
-    public void updateAscensionQuest(java.math.BigDecimal coins) {
+    public void updateAscensionQuest(BigNumber coins) {
         // Calculate logarithmic progress (0 to 1)
         // Using log10 scale: log10(coins + 1) / log10(1Dc + 1) ≈ log10(coins + 1) / 33
         double progress = 0.0;
-        if (coins.compareTo(java.math.BigDecimal.ZERO) > 0) {
-            // Convert BigDecimal to double for logarithmic calculation
-            double coinsDouble = coins.doubleValue();
+        if (coins.gt(BigNumber.ZERO)) {
+            // Convert BigNumber to double for logarithmic calculation
+            double coinsDouble = coins.toDouble();
             progress = Math.log10(coinsDouble + 1) / Math.log10(ASCENSION_COST + 1);
             progress = Math.min(1.0, Math.max(0.0, progress)); // Clamp between 0 and 1
         }
@@ -275,20 +276,20 @@ public class AscendHud extends CustomUIHud {
         return multLevel + ">" + multNew + "|" + speedLevel + ">" + speedNew + "|" + evolveLevel + ">" + evoNew;
     }
 
-    private static double[] normalizeDigits(java.math.BigDecimal[] digits) {
+    private static double[] normalizeDigits(BigNumber[] digits) {
         double[] normalized = new double[] {1, 1, 1, 1, 1};
         if (digits == null) {
             return normalized;
         }
         int limit = Math.min(digits.length, normalized.length);
         for (int i = 0; i < limit; i++) {
-            // Convert BigDecimal to double for display
-            normalized[i] = Math.max(1.0, digits[i].doubleValue());
+            // Convert BigNumber to double for display
+            normalized[i] = Math.max(1.0, digits[i].toDouble());
         }
         return normalized;
     }
 
-    private static String buildDigitsKey(java.math.BigDecimal[] digits) {
+    private static String buildDigitsKey(BigNumber[] digits) {
         if (digits == null || digits.length == 0) {
             return "1|1|1|1|1";
         }
@@ -298,8 +299,8 @@ public class AscendHud extends CustomUIHud {
             if (i > 0) {
                 key.append('|');
             }
-            java.math.BigDecimal value = digits[i].max(java.math.BigDecimal.ONE);
-            key.append(formatMultiplier(value.doubleValue()));
+            BigNumber value = digits[i].max(BigNumber.ONE);
+            key.append(formatMultiplier(value.toDouble()));
         }
         while (limit < 5) {
             key.append("|1");
@@ -313,6 +314,6 @@ public class AscendHud extends CustomUIHud {
         if (safeValue < 1e6) {
             return String.format(java.util.Locale.US, "%.2f", safeValue);
         }
-        return FormatUtils.formatCoinsForHudDecimal(java.math.BigDecimal.valueOf(safeValue));
+        return FormatUtils.formatBigNumber(BigNumber.fromDouble(safeValue));
     }
 }

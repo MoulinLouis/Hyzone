@@ -29,6 +29,7 @@ import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.ghost.GhostRecording;
 import io.hyvexa.ascend.ghost.GhostStore;
 import io.hyvexa.ascend.robot.RobotManager;
+import io.hyvexa.common.math.BigNumber;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.util.FormatUtils;
 
@@ -91,12 +92,12 @@ public class StatsPage extends BaseAscendPage {
 
         // 2. Multiplier Breakdown
         List<AscendMap> maps = mapStore != null ? mapStore.listMapsSorted() : List.of();
-        java.math.BigDecimal[] digits = playerStore.getMultiplierDisplayValues(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
+        BigNumber[] digits = playerStore.getMultiplierDisplayValues(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
         double elevation = playerStore.getCalculatedElevationMultiplier(playerId);
 
         double digitsProduct = 1.0;
-        for (java.math.BigDecimal d : digits) {
-            digitsProduct *= Math.max(1.0, d.doubleValue());
+        for (BigNumber d : digits) {
+            digitsProduct *= Math.max(1.0, d.toDouble());
         }
         double total = digitsProduct * elevation;
 
@@ -105,8 +106,8 @@ public class StatsPage extends BaseAscendPage {
             "Digits: " + formatMultiplier(digitsProduct) + "  |  Elevation: " + formatMultiplier(elevation));
 
         // 3. Lifetime Earnings
-        java.math.BigDecimal totalEarned = playerStore.getTotalCoinsEarned(playerId);
-        commandBuilder.set("#LifetimeValue.Text", FormatUtils.formatCoinsForHudDecimal(totalEarned) + " coins");
+        BigNumber totalEarned = playerStore.getTotalCoinsEarned(playerId);
+        commandBuilder.set("#LifetimeValue.Text", FormatUtils.formatBigNumber(totalEarned) + " coins");
 
         // 4. Manual Runs
         int manualRuns = playerStore.getTotalManualRuns(playerId);
@@ -148,7 +149,7 @@ public class StatsPage extends BaseAscendPage {
         List<AscendMap> maps = mapStore.listMapsSorted();
         double totalCoinsPerSec = 0.0;
 
-        java.math.BigDecimal digitsProduct = playerStore.getMultiplierProductDecimal(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
+        BigNumber digitsProduct = playerStore.getMultiplierProduct(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
         double elevation = playerStore.getCalculatedElevationMultiplier(playerId);
 
         for (AscendMap map : maps) {
@@ -170,7 +171,7 @@ public class StatsPage extends BaseAscendPage {
             double runsPerSec = 1000.0 / intervalMs;
 
             long baseReward = map.getEffectiveBaseReward();
-            double coinsPerRun = baseReward * digitsProduct.doubleValue() * elevation;
+            double coinsPerRun = baseReward * digitsProduct.toDouble() * elevation;
 
             totalCoinsPerSec += runsPerSec * coinsPerRun;
         }
@@ -178,7 +179,7 @@ public class StatsPage extends BaseAscendPage {
         if (totalCoinsPerSec < 0.01) {
             return "0 coins/sec";
         }
-        return FormatUtils.formatCoinsForHudDecimal(java.math.BigDecimal.valueOf(totalCoinsPerSec)) + "/sec";
+        return FormatUtils.formatBigNumber(BigNumber.fromDouble(totalCoinsPerSec)) + "/sec";
     }
 
     private String formatMultiplier(double value) {
@@ -189,7 +190,7 @@ public class StatsPage extends BaseAscendPage {
         } else if (value < 1_000_000) {
             return String.format(Locale.US, "%,.0fx", value);
         } else {
-            return FormatUtils.formatCoinsForHudDecimal(java.math.BigDecimal.valueOf(value)) + "x";
+            return FormatUtils.formatBigNumber(BigNumber.fromDouble(value)) + "x";
         }
     }
 

@@ -19,7 +19,8 @@ import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.common.ui.ButtonEventData;
 
 import javax.annotation.Nonnull;
-import java.math.BigDecimal;
+import io.hyvexa.common.math.BigNumber;
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -266,11 +267,11 @@ public class AscendLeaderboardPage extends InteractiveCustomUIPage<AscendLeaderb
         };
     }
 
-    private String formatCoins(BigDecimal coins) {
+    private String formatCoins(BigNumber coins) {
         if (coins == null) {
             return "0";
         }
-        double value = coins.doubleValue();
+        double value = coins.toDouble();
         if (value >= 1_000_000_000_000L) {
             return String.format("%.1fT", value / 1_000_000_000_000.0);
         } else if (value >= 1_000_000_000L) {
