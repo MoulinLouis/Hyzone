@@ -313,7 +313,7 @@ public class AscendPlayerStore {
         progress.getMapProgress().clear();
 
         // Reset Summit system
-        progress.clearSummitLevels();
+        progress.clearSummitXp();
         progress.setTotalCoinsEarned(BigDecimal.ZERO);
         progress.setSummitAccumulatedCoins(BigDecimal.ZERO);
 
@@ -400,15 +400,6 @@ public class AscendPlayerStore {
     }
 
     /**
-     * @deprecated Use {@link #getElevationLevel(UUID)} for the level,
-     * or {@link #getCalculatedElevationMultiplier(UUID)} for the actual multiplier.
-     */
-    @Deprecated
-    public int getElevationMultiplier(UUID playerId) {
-        return getElevationLevel(playerId);
-    }
-
-    /**
      * Get the player's elevation multiplier.
      * Returns the level directly as a multiplier.
      */
@@ -432,14 +423,6 @@ public class AscendPlayerStore {
         int value = progress.addElevationMultiplier(amount);
         markDirty(playerId);
         return value;
-    }
-
-    /**
-     * @deprecated Use {@link #addElevationLevel(UUID, int)} instead.
-     */
-    @Deprecated
-    public int addElevationMultiplier(UUID playerId, int amount) {
-        return addElevationLevel(playerId, amount);
     }
 
     public AscendPlayerProgress.MapProgress getMapProgress(UUID playerId, String mapId) {
@@ -815,23 +798,6 @@ public class AscendPlayerStore {
         if (progress == null) {
             return 0;
         }
-        return progress.getSummitLevel(category);
-    }
-
-    /**
-     * @deprecated Use {@link #addSummitXp(UUID, SummitCategory, long)} instead.
-     */
-    @Deprecated
-    public int addSummitLevel(UUID playerId, SummitCategory category, int amount) {
-        // Convert level to XP (add XP needed to gain that many levels from current position)
-        AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        int currentLevel = progress.getSummitLevel(category);
-        long xpNeeded = 0;
-        for (int i = 0; i < amount; i++) {
-            xpNeeded += AscendConstants.getXpForLevel(currentLevel + i + 1);
-        }
-        progress.addSummitXp(category, xpNeeded);
-        markDirty(playerId);
         return progress.getSummitLevel(category);
     }
 

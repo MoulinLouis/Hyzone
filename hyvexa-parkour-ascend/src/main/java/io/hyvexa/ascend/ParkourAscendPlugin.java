@@ -13,7 +13,6 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Int
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
-import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.command.AscendCommand;
@@ -88,6 +87,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
     private final ConcurrentHashMap<UUID, AscendHud> ascendHuds = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Boolean> ascendHudAttached = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Long> ascendHudReadyAt = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, PlayerRef> playerRefCache = new ConcurrentHashMap<>();
 
     public ParkourAscendPlugin(@Nonnull JavaPluginInit init) {
         super(init);
@@ -188,8 +188,12 @@ public class ParkourAscendPlugin extends JavaPlugin {
                 if (playerRef == null) {
                     return;
                 }
-                // Register player as online for robot spawning
+                // Cache PlayerRef for O(1) lookups
                 UUID playerId = playerRef.getUuid();
+                if (playerId != null) {
+                    playerRefCache.put(playerId, playerRef);
+                }
+                // Register player as online for robot spawning
                 if (playerId != null && robotManager != null) {
                     robotManager.onPlayerJoin(playerId);
                 }
@@ -275,6 +279,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
                 passiveEarningsManager.onPlayerLeaveAscend(playerId);
             }
 
+            playerRefCache.remove(playerId);
             ascendHuds.remove(playerId);
             ascendHudAttached.remove(playerId);
             ascendHudReadyAt.remove(playerId);
@@ -382,18 +387,13 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
     /**
      * Get a PlayerRef for a given player UUID.
-     * Searches all online players.
+     * Uses a cache populated on PlayerReadyEvent for O(1) lookup.
      */
     public PlayerRef getPlayerRef(UUID playerId) {
         if (playerId == null) {
             return null;
         }
-        for (PlayerRef playerRef : Universe.get().getPlayers()) {
-            if (playerRef != null && playerId.equals(playerRef.getUuid())) {
-                return playerRef;
-            }
-        }
-        return null;
+        return playerRefCache.get(playerId);
     }
 
     private void tickRunTracker() {
@@ -521,7 +521,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
     private Map<World, List<PlayerTickContext>> collectPlayersByWorld() {
         Map<World, List<PlayerTickContext>> playersByWorld = new HashMap<>();
-        for (PlayerRef playerRef : Universe.get().getPlayers()) {
+        for (PlayerRef playerRef : playerRefCache.values()) {
             Ref<EntityStore> ref = playerRef != null ? playerRef.getReference() : null;
             if (ref == null || !ref.isValid()) {
                 continue;
