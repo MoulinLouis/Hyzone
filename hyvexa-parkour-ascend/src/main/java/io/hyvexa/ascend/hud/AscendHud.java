@@ -51,7 +51,7 @@ public class AscendHud extends CustomUIHud {
         }
         lastStaticKey = key;
         UICommandBuilder commandBuilder = new UICommandBuilder();
-        commandBuilder.set("#PlayerNameText.Text", "HYVEXA ASCEND");
+        commandBuilder.set("#PlayerNameText.Text", "Ascend");
         update(false, commandBuilder);
     }
 

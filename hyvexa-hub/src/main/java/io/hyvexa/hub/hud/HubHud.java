@@ -23,7 +23,7 @@ public class HubHud extends CustomUIHud {
         }
         applied = true;
         UICommandBuilder commandBuilder = new UICommandBuilder();
-        commandBuilder.set("#PlayerNameText.Text", "HYVEXA HUB");
+        commandBuilder.set("#PlayerNameText.Text", "Hub");
         update(false, commandBuilder);
     }
 

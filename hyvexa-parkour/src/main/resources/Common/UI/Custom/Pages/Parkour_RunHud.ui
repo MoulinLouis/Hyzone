@@ -6,213 +6,194 @@ $C.@PageOverlay {
     Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
 
     Group #RunHudRoot {
-      Anchor: (Right: 20, Top: 400, Width: 320, Height: 320);
-      Background: #000000(0.0);
-      LayoutMode: Top;
-      Padding: (Left: 12, Right: 12, Top: 10, Bottom: 20);
+      Anchor: (Right: 20, Top: 400, Width: 284, Height: 430);
+      LayoutMode: Left;
 
-      Group #InfoBox {
-        Anchor: (Left: 0, Right: 0, Height: 320);
-        Background: #000000(0.4);
-        Padding: (Left: 10, Right: 10, Top: 8, Bottom: 8);
-        LayoutMode: Top;
-
-        Label #PlayerNameText {
-          Anchor: (Left: 50, Right: 0);
-          Style: (
-            FontSize: 18,
-            TextColor: #ff7fb0,
-            RenderBold: true
-          );
-          Text: "PARKOUR";
-        }
-
-        Group #PlayerXpRow {
-          Anchor: (Left: 0, Right: 0, Top: 2);
-          LayoutMode: Left;
-
-          Label #PlayerXpLabel {
-            Anchor: (Width: 70);
-            Style: (
-              FontSize: 18,
-              TextColor: #f2f5f7
-            );
-            Text: "Rank:";
-          }
-
-          Label #PlayerXpValue {
-            Style: (
-              FontSize: 18,
-              TextColor: #62d96b
-            );
-            Text: "0";
-          }
-
-          Group #PlayerRankRainbowRow {
-            LayoutMode: Left;
-
-            Label #PlayerRankV {
-              Anchor: (Width: 10);
-              Style: (FontSize: 18, TextColor: #ff4d4d);
-              Text: "";
-            }
-            Label #PlayerRankE {
-              Anchor: (Width: 10);
-              Style: (FontSize: 18, TextColor: #ffa94d);
-              Text: "";
-            }
-            Label #PlayerRankX {
-              Anchor: (Width: 10);
-              Style: (FontSize: 18, TextColor: #ffe66d);
-              Text: "";
-            }
-            Label #PlayerRankA {
-              Anchor: (Width: 10);
-              Style: (FontSize: 18, TextColor: #4cd964);
-              Text: "";
-            }
-            Label #PlayerRankG {
-              Anchor: (Width: 10);
-              Style: (FontSize: 18, TextColor: #5ac8fa);
-              Text: "";
-            }
-            Label #PlayerRankO {
-              Anchor: (Width: 10);
-              Style: (FontSize: 18, TextColor: #5e5ce6);
-              Text: "";
-            }
-            Label #PlayerRankD {
-              Anchor: (Width: 10);
-              Style: (FontSize: 18, TextColor: #b76cff);
-              Text: "";
-            }
-          }
-        }
-
-        Group #PlayerMapsRow {
-          Anchor: (Left: 0, Right: 0, Top: 2);
-          LayoutMode: Left;
-
-          Label #PlayerMapsLabel {
-            Anchor: (Width: 70);
-            Style: (
-              FontSize: 18,
-              TextColor: #f2f5f7
-            );
-            Text: "Maps:";
-          }
-
-          Label #PlayerMapsValue {
-            FlexWeight: 1;
-            Style: (
-              FontSize: 18,
-              TextColor: #62d96b
-            );
-            Text: "0/0";
-          }
-        }
-
-        Group {
-          Anchor: (Height: 8, Top: 18);
-        }
-
-        Label #ServerDateText {
-          Anchor: (Left: 0, Right: 0, Top: 0);
-          Style: (
-            FontSize: 17,
-            TextColor: #b2c0c7
-          );
-          Text: "Date: -";
-        }
-
-        Label #ServerIpText {
-          Anchor: (Left: 0, Right: 0, Top: 2);
-          Style: (
-            FontSize: 17,
-            TextColor: #ff7fb0
-          );
-          Text: "IP: play.hyvexa.com";
-        }
-
-        Label #ServerDiscordText {
-          Anchor: (Left: 0, Right: 0, Top: 2);
-          Style: (
-            FontSize: 17,
-            TextColor: #ff7fb0
-          );
-          Text: "Discord: discord.hyvexa.com";
-        }
-
-        Group {
-          Anchor: (Height: 8, Top: 14);
-        }
-
-        Label #SupportUsTitle {
-          Anchor: (Left: 0, Right: 0, Top: 0);
-          Style: (
-            FontSize: 18,
-            TextColor: #ffd166,
-            RenderBold: true
-          );
-          Text: "Support Hyvexa ( /store )";
-        }
-
-        Group #SupportUsLine1Row {
-          Anchor: (Left: 0, Right: 0, Top: 2, Height: 20);
-          LayoutMode: Left;
-
-          Group {
-            Anchor: (Width: 18, Height: 18);
-            Background: (TexturePath: "../Textures/star.png");
-          }
-
-          Group {
-            Anchor: (Width: 6);
-          }
-
-          Label #SupportUsLine1Text {
-            Style: (
-              FontSize: 17,
-              TextColor: #e7f1f4
-            );
-            Text: "Exclusive Ranks";
-          }
-        }
-
-        Group #SupportUsLine2Row {
-          Anchor: (Left: 0, Right: 0, Top: 2, Height: 20);
-          LayoutMode: Left;
-
-          Group {
-            Anchor: (Width: 18, Height: 18);
-            Background: (TexturePath: "../Textures/storm.png");
-          }
-
-          Group {
-            Anchor: (Width: 6);
-          }
-
-          Label #SupportUsLine2Text {
-            Style: (
-              FontSize: 17,
-              TextColor: #e7f1f4
-            );
-            Text: "Speed Boost (not for maps)";
-          }
-        }
-
-        Label #SupportUsStoreLink {
-          Anchor: (Left: 0, Right: 0, Top: 10);
-          Style: (
-            FontSize: 18,
-            TextColor: #ffd166,
-            RenderBold: true,
-            HorizontalAlignment: Center
-          );
-          Text: "store.hyvexa.com";
-        }
+      Group #InfoAccentBar {
+        Anchor: (Width: 4, Top: 0, Bottom: 0);
+        Background: #ec4899;
       }
 
+      Group #InfoBox {
+        FlexWeight: 1;
+        Anchor: (Top: 0, Bottom: 0);
+        Background: #0d1620(0.95);
+        OutlineColor: #ffffff(0.06);
+        OutlineSize: 1;
+        LayoutMode: Top;
+
+        Group #InfoImageBanner {
+          Anchor: (Width: 200, Height: 93, Top: 8);
+          Background: (TexturePath: "../Textures/parkour.png");
+        }
+
+        Group #InfoContent {
+          Anchor: (Left: 0, Right: 0);
+          LayoutMode: Top;
+          Padding: (Left: 14, Right: 14, Top: 12, Bottom: 14);
+
+          Label #PlayerNameText {
+            Style: (
+              FontSize: 13,
+              TextColor: #ec4899(0.7),
+              RenderUppercase: true,
+              LetterSpacing: 2,
+              RenderBold: true
+            );
+            Text: "Parkour";
+          }
+
+          Group #InfoSep {
+            Anchor: (Left: 0, Width: 30, Height: 2, Top: 6);
+            Background: #ec4899;
+          }
+
+          Group #PlayerXpRow {
+            Anchor: (Left: 0, Right: 0, Top: 10, Height: 20);
+            LayoutMode: Left;
+
+            Label #PlayerXpLabel {
+              Anchor: (Width: 60);
+              Style: (FontSize: 16, TextColor: #9fb0ba);
+              Text: "Rank:";
+            }
+
+            Label #PlayerXpValue {
+              Style: (FontSize: 16, TextColor: #62d96b);
+              Text: "0";
+            }
+
+            Group #PlayerRankRainbowRow {
+              LayoutMode: Left;
+
+              Label #PlayerRankV {
+                Anchor: (Width: 10);
+                Style: (FontSize: 16, TextColor: #ff4d4d);
+                Text: "";
+              }
+              Label #PlayerRankE {
+                Anchor: (Width: 10);
+                Style: (FontSize: 16, TextColor: #ffa94d);
+                Text: "";
+              }
+              Label #PlayerRankX {
+                Anchor: (Width: 10);
+                Style: (FontSize: 16, TextColor: #ffe66d);
+                Text: "";
+              }
+              Label #PlayerRankA {
+                Anchor: (Width: 10);
+                Style: (FontSize: 16, TextColor: #4cd964);
+                Text: "";
+              }
+              Label #PlayerRankG {
+                Anchor: (Width: 10);
+                Style: (FontSize: 16, TextColor: #5ac8fa);
+                Text: "";
+              }
+              Label #PlayerRankO {
+                Anchor: (Width: 10);
+                Style: (FontSize: 16, TextColor: #5e5ce6);
+                Text: "";
+              }
+              Label #PlayerRankD {
+                Anchor: (Width: 10);
+                Style: (FontSize: 16, TextColor: #b76cff);
+                Text: "";
+              }
+            }
+          }
+
+          Group #PlayerMapsRow {
+            Anchor: (Left: 0, Right: 0, Top: 4, Height: 20);
+            LayoutMode: Left;
+
+            Label #PlayerMapsLabel {
+              Anchor: (Width: 60);
+              Style: (FontSize: 16, TextColor: #9fb0ba);
+              Text: "Maps:";
+            }
+
+            Label #PlayerMapsValue {
+              FlexWeight: 1;
+              Style: (FontSize: 16, TextColor: #62d96b);
+              Text: "0/0";
+            }
+          }
+
+          Label #ServerDateText {
+            Anchor: (Left: 0, Right: 0, Top: 6);
+            Style: (FontSize: 16, TextColor: #b2c0c7);
+            Text: "Music: -";
+          }
+
+          Label #ServerIpText {
+            Anchor: (Left: 0, Right: 0, Top: 4);
+            Style: (
+              FontSize: 16,
+              TextColor: #ec4899(0.8),
+              RenderBold: true
+            );
+            Text: "IP: play.hyvexa.com";
+          }
+
+          Group #InfoDivider {
+            Anchor: (Left: 0, Right: 0, Height: 1, Top: 10);
+            Background: #ffffff(0.06);
+          }
+
+          Label #InfoSupportTitle {
+            Anchor: (Top: 10);
+            Style: (
+              FontSize: 15,
+              TextColor: #ffd166,
+              RenderBold: true
+            );
+            Text: "Support Hyvexa (/store)";
+          }
+
+          Group #InfoSupportRow1 {
+            Anchor: (Left: 0, Right: 0, Top: 6, Height: 20);
+            LayoutMode: Left;
+
+            Group {
+              Anchor: (Width: 18, Height: 18);
+              Background: (TexturePath: "../Textures/star.png");
+            }
+            Group { Anchor: (Width: 6); }
+            Label {
+              Style: (FontSize: 16, TextColor: #e7f1f4);
+              Text: "Exclusive Ranks";
+            }
+          }
+
+          Group #InfoSupportRow2 {
+            Anchor: (Left: 0, Right: 0, Top: 4, Height: 20);
+            LayoutMode: Left;
+
+            Group {
+              Anchor: (Width: 18, Height: 18);
+              Background: (TexturePath: "../Textures/storm.png");
+            }
+            Group { Anchor: (Width: 6); }
+            Label {
+              Style: (FontSize: 16, TextColor: #e7f1f4);
+              Text: "Speed Boost";
+            }
+          }
+
+          Label #InfoStoreLink {
+            Anchor: (Top: 8, Left: 0, Right: 0);
+            Style: (
+              FontSize: 16,
+              TextColor: #ffd166,
+              RenderBold: true,
+              HorizontalAlignment: Center
+            );
+            Text: "store.hyvexa.com";
+          }
+        }
+      }
     }
 
     Group #AnnouncementBox {

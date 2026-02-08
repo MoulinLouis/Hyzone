@@ -1,0 +1,131 @@
+$C = "../Common.ui";
+
+$C.@PageOverlay {
+  Background: #000000(0.0);
+
+  Group #PreviewWrap {
+    Anchor: (Width: 320, Height: 320, Top: 250);
+
+    Group #PreviewCard {
+      Anchor: (Left: 0, Width: 284, Top: 0, Bottom: 0);
+      LayoutMode: Left;
+
+      Group #AccentBar {
+        Anchor: (Width: 4, Top: 0, Bottom: 0);
+        Background: #ec4899;
+      }
+
+      Group #CardBody {
+        FlexWeight: 1;
+        Anchor: (Top: 0, Bottom: 0);
+        Background: #0d1620(0.95);
+        OutlineColor: #ffffff(0.06);
+        OutlineSize: 1;
+        LayoutMode: Top;
+
+        Group #ImageBanner {
+          Anchor: (Width: 200, Height: 111, Top: 8);
+          Background: (TexturePath: "../Textures/ascend.png");
+        }
+
+        Group #Content {
+          Anchor: (Left: 0, Right: 0);
+          LayoutMode: Top;
+          Padding: (Left: 14, Right: 14, Top: 12, Bottom: 14);
+
+          Label #SectionLabel {
+            Style: (
+              FontSize: 11,
+              TextColor: #ec4899(0.7),
+              RenderUppercase: true,
+              LetterSpacing: 2,
+              RenderBold: true
+            );
+            Text: "Ascend";
+          }
+
+          Group #Sep {
+            Anchor: (Left: 0, Width: 30, Height: 2, Top: 6);
+            Background: #ec4899;
+          }
+
+          Label #HintText {
+            Anchor: (Top: 10, Left: 0, Right: 0);
+            Style: (
+              FontSize: 13,
+              TextColor: #cfd7dc,
+              Wrap: true
+            );
+            Text: "Right click the red book in your inventory";
+          }
+
+          Label #IpText {
+            Anchor: (Top: 6);
+            Style: (
+              FontSize: 13,
+              TextColor: #ec4899(0.8),
+              RenderBold: true
+            );
+            Text: "play.hyvexa.com";
+          }
+
+          Group #Divider {
+            Anchor: (Left: 0, Right: 0, Height: 1, Top: 10);
+            Background: #ffffff(0.06);
+          }
+
+          Label #SupportTitle {
+            Anchor: (Top: 10);
+            Style: (
+              FontSize: 12,
+              TextColor: #ffd166,
+              RenderBold: true
+            );
+            Text: "Support Hyvexa (/store)";
+          }
+
+          Group #SupportRow1 {
+            Anchor: (Left: 0, Right: 0, Top: 6, Height: 18);
+            LayoutMode: Left;
+
+            Group {
+              Anchor: (Width: 16, Height: 16);
+              Background: (TexturePath: "../Textures/star.png");
+            }
+            Group { Anchor: (Width: 6); }
+            Label {
+              Style: (FontSize: 13, TextColor: #e7f1f4);
+              Text: "Exclusive Ranks";
+            }
+          }
+
+          Group #SupportRow2 {
+            Anchor: (Left: 0, Right: 0, Top: 4, Height: 18);
+            LayoutMode: Left;
+
+            Group {
+              Anchor: (Width: 16, Height: 16);
+              Background: (TexturePath: "../Textures/star.png");
+            }
+            Group { Anchor: (Width: 6); }
+            Label {
+              Style: (FontSize: 13, TextColor: #e7f1f4);
+              Text: "Speed Boost";
+            }
+          }
+
+          Label #StoreLink {
+            Anchor: (Top: 8, Left: 0, Right: 0);
+            Style: (
+              FontSize: 13,
+              TextColor: #ffd166,
+              RenderBold: true,
+              HorizontalAlignment: Center
+            );
+            Text: "store.hyvexa.com";
+          }
+        }
+      }
+    }
+  }
+}

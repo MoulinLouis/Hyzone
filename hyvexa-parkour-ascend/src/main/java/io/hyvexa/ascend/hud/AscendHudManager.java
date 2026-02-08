@@ -30,6 +30,7 @@ public class AscendHudManager {
     private final ConcurrentHashMap<UUID, AscendHud> ascendHuds = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Boolean> ascendHudAttached = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Long> ascendHudReadyAt = new ConcurrentHashMap<>();
+    private final java.util.Set<UUID> previewPlayers = ConcurrentHashMap.newKeySet();
 
     public AscendHudManager(AscendPlayerStore playerStore, AscendMapStore mapStore, AscendRunTracker runTracker, SummitManager summitManager) {
         this.playerStore = playerStore;
@@ -44,6 +45,9 @@ public class AscendHudManager {
             return;
         }
         UUID playerId = playerRef.getUuid();
+        if (previewPlayers.contains(playerId)) {
+            return;
+        }
         AscendHud hud = ascendHuds.get(playerId);
         boolean needsAttach = !Boolean.TRUE.equals(ascendHudAttached.get(playerId));
         if (needsAttach || hud == null) {
@@ -93,6 +97,9 @@ public class AscendHudManager {
             return;
         }
         UUID playerId = playerRef.getUuid();
+        if (previewPlayers.contains(playerId)) {
+            return;
+        }
         AscendHud hud = ascendHuds.get(playerId);
         if (hud == null) {
             return;
@@ -126,10 +133,19 @@ public class AscendHudManager {
         ascendHudReadyAt.put(playerRef.getUuid(), System.currentTimeMillis() + 250L);
     }
 
+    public void setPreviewMode(UUID playerId, boolean enabled) {
+        if (enabled) {
+            previewPlayers.add(playerId);
+        } else {
+            previewPlayers.remove(playerId);
+        }
+    }
+
     public void removePlayer(UUID playerId) {
         ascendHuds.remove(playerId);
         ascendHudAttached.remove(playerId);
         ascendHudReadyAt.remove(playerId);
+        previewPlayers.remove(playerId);
     }
 
     public AscendHud getHud(UUID playerId) {
