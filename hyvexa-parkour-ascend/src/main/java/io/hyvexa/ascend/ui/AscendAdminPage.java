@@ -505,8 +505,8 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
         commandBuilder.set("#BalancingTableText.Text", balanceTable.toString());
 
         // Multiplier info
-        String multiplierInfo = "Manual: +" + formatDouble(AscendConstants.MANUAL_MULTIPLIER_INCREMENT) + "/run\n"
-            + "Runner: +" + formatDouble(AscendConstants.RUNNER_MULTIPLIER_INCREMENT) + "/run\n"
+        String multiplierInfo = "Manual: 2x runner gain/run\n"
+            + "Runner: +" + formatDouble(AscendConstants.RUNNER_MULTIPLIER_INCREMENT) + "/run (base)\n"
             + "Speed upgrade: +10%/level";
         commandBuilder.set("#MultiplierInfoText.Text", multiplierInfo);
     }

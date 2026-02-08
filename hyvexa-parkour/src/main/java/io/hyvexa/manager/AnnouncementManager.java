@@ -106,8 +106,9 @@ public class AnnouncementManager {
             }
             RunHud hud = hudManager.getActiveHud(playerRef);
             if (hud == null) {
-                hud = hudManager.getOrCreateHud(playerRef, false);
-                hudManager.attachHud(playerRef, player, hud, false);
+                // Player is not in parkour world (e.g. in ascend) — skip HUD update
+                // to avoid replacing their active HUD and causing missing-element errors.
+                return;
             }
             hud.updateAnnouncements(getAnnouncementLines(playerRef.getUuid()));
         }, world);

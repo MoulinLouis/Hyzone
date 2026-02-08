@@ -30,7 +30,7 @@ public class TutorialTriggerService {
     public static final int SUMMIT = 32;
     public static final int ASCENSION = 64;
 
-    private static final long TRIGGER_DELAY_MS = 1500L;
+    private static final long TRIGGER_DELAY_MS = 500L;
 
     private final AscendPlayerStore playerStore;
 
