@@ -186,28 +186,39 @@ Elevation uses a level-based prestige system where each level directly equals th
 ### Cost Formula
 
 ```
-cost = 30,000 × 1.15^(currentLevel^0.77)
+cost = 30,000 × 1.15^(currentLevel^0.72)
 ```
 
 **Base cost:** 30,000 coins
-**Growth rate:** Non-linear — `1.15^(level^0.77)` flattens the curve at high levels
-**Cost curve exponent:** 0.77 (~1/1.3)
+**Growth rate:** Non-linear — `1.15^(level^0.72)` flattens the curve at high levels
+**Cost curve exponent:** 0.72
 
 At low levels this behaves almost identically to `1.15^level`. At high levels the effective exponent grows much slower, so each subsequent level is proportionally cheaper. This keeps elevation attractive throughout the game.
 
 ### Example Costs
 
-| Current Level | Next Level Cost | vs Old (1.15^level) |
-|--------------|-----------------|---------------------|
+| Current Level | Next Level Cost | vs Pure Exponential (1.15^level) |
+|--------------|-----------------|----------------------------------|
 | 1 | 34,500 | 1.00× (same) |
-| 5 | 48,600 | 0.81× |
-| 10 | 68,300 | 0.56× |
-| 20 | 122,000 | 0.25× |
-| 50 | 514,000 | 0.02× |
-| 100 | 3.8M | ~0× |
-| 200 | 116M | ~0× |
+| 5 | 46,800 | 0.78× |
+| 10 | 62,500 | 0.51× |
+| 20 | 100,400 | 0.20× |
+| 50 | 310,500 | 0.01× |
+| 100 | 1.4M | ~0× |
+| 200 | 17M | ~0× |
 
 **Discount support:** Formula accepts a `costMultiplier` parameter for Summit/Ascension skill tree discounts.
+
+### Accumulated Coins
+
+Elevation uses **accumulated coins** (total coins earned since last reset) instead of the player's current coin balance. This means spending coins on runner upgrades does NOT reduce your elevation potential — only earning matters.
+
+**Increment:** Every time coins are earned (manual runs, runner completions, passive earnings, admin adds), the accumulated counter increases.
+
+**Reset to 0 on:**
+- Elevation (after purchasing levels)
+- Summit (full reset)
+- Ascension (full reset)
 
 ---
 
@@ -560,7 +571,7 @@ Evolution provides a clear benefit with continuous cost progression.
 
 All formulas use consistent growth rates:
 - **Elevation multiplier:** level (direct linear multiplier)
-- **Elevation cost:** 1.15^(level^0.77) for level<=300, then 1.15^(300^0.77 + (level-300)^0.63) (soft cap at 300)
+- **Elevation cost:** 1.15^(level^0.72) for level<=300, then 1.15^(300^0.72 + (level-300)^0.58) (soft cap at 300)
 - **Upgrades:** 2^totalLevel (100% growth per level, smooth and predictable)
 - **Evolution gain:** EP^stars, where EP = 3 + 0.10 × level (linear, no ceiling)
 - **Summit XP:** (accumulatedCoins / 1B)^(3/7) (compressed diminishing returns)
@@ -571,6 +582,18 @@ Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure conti
 ---
 
 ## Version History
+
+- **2026-02-08 (v17):** Elevation accumulated coins system
+  - Elevation now uses accumulated coins (total earned since last reset) instead of current balance
+  - Spending coins on upgrades no longer reduces elevation potential
+  - Accumulated coins reset on: Elevation, Summit, Ascension
+  - Same pattern as Summit accumulated coins (parallel tracking)
+
+- **2026-02-08 (v16):** Elevation cost reduction
+  - Cost curve exponent: 0.77 → 0.72 (early), 0.63 → 0.58 (late, above level 300)
+  - Level 1 cost unchanged (34.5K), progressively cheaper at higher levels
+  - Level 50: 514K → 311K (-40%), Level 100: 3.8M → 1.4M (-63%), Level 200: 116M → 17M (-85%)
+  - Same early game pacing, more accessible mid/late elevation
 
 - **2026-02-07 (v15):** Linear Summit formulas with soft cap
   - All categories: linear up to level 25, then √(excess) growth — no ceiling, just slower

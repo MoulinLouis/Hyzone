@@ -199,7 +199,8 @@ public class AscendAdminCoinsPage extends InteractiveCustomUIPage<AscendAdminCoi
         if (add) {
             playerStore.addCoins(playerRef.getUuid(), amount);
             playerStore.addSummitAccumulatedCoins(playerRef.getUuid(), amount);
-            player.sendMessage(Message.raw("[Ascend] Added " + formatted + " coins (counts toward Summit).")
+            playerStore.addElevationAccumulatedCoins(playerRef.getUuid(), amount);
+            player.sendMessage(Message.raw("[Ascend] Added " + formatted + " coins (counts toward Summit & Elevation).")
                 .color(SystemMessageUtils.SUCCESS));
         } else {
             playerStore.addCoins(playerRef.getUuid(), amount.negate());

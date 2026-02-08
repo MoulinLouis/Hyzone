@@ -20,6 +20,7 @@ public class AscendPlayerProgress {
     private final Map<AscendConstants.SummitCategory, Long> summitXp = new ConcurrentHashMap<>();
     private final AtomicReference<BigDecimal> totalCoinsEarned = new AtomicReference<>(BigDecimal.ZERO);
     private final AtomicReference<BigDecimal> summitAccumulatedCoins = new AtomicReference<>(BigDecimal.ZERO);
+    private final AtomicReference<BigDecimal> elevationAccumulatedCoins = new AtomicReference<>(BigDecimal.ZERO);
 
     // Ascension System
     private volatile int ascensionCount;
@@ -151,6 +152,20 @@ public class AscendPlayerProgress {
     public void addSummitAccumulatedCoins(BigDecimal amount) {
         if (amount.compareTo(BigDecimal.ZERO) > 0) {
             summitAccumulatedCoins.updateAndGet(c -> c.add(amount).max(BigDecimal.ZERO));
+        }
+    }
+
+    public BigDecimal getElevationAccumulatedCoins() {
+        return elevationAccumulatedCoins.get();
+    }
+
+    public void setElevationAccumulatedCoins(BigDecimal value) {
+        this.elevationAccumulatedCoins.set(value.max(BigDecimal.ZERO));
+    }
+
+    public void addElevationAccumulatedCoins(BigDecimal amount) {
+        if (amount.compareTo(BigDecimal.ZERO) > 0) {
+            elevationAccumulatedCoins.updateAndGet(c -> c.add(amount).max(BigDecimal.ZERO));
         }
     }
 

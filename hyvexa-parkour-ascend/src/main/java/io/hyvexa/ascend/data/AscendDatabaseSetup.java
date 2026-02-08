@@ -415,6 +415,16 @@ public final class AscendDatabaseSetup {
             }
         }
 
+        // Elevation accumulated coins (coins earned since last Elevation/Summit/Ascension)
+        if (!columnExists(conn, "ascend_players", "elevation_accumulated_coins")) {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN elevation_accumulated_coins DECIMAL(65,2) NOT NULL DEFAULT 0");
+                LOGGER.atInfo().log("Added elevation_accumulated_coins column to ascend_players");
+            } catch (SQLException e) {
+                LOGGER.at(Level.SEVERE).log("Failed to add elevation_accumulated_coins column: " + e.getMessage());
+            }
+        }
+
         // Auto-upgrade toggle
         if (!columnExists(conn, "ascend_players", "auto_upgrade_enabled")) {
             try (Statement stmt = conn.createStatement()) {

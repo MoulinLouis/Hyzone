@@ -283,13 +283,13 @@ public final class AscendConstants {
 
     // Elevation: level = multiplier (1:1), cost curve flattened at high levels.
     // Cost formula: BASE_COST * COST_GROWTH^(effectiveLevel)
-    // For level <= SOFT_CAP: effectiveLevel = level^COST_CURVE
-    // For level > SOFT_CAP:  effectiveLevel = SOFT_CAP^COST_CURVE + (level-SOFT_CAP)^COST_CURVE_LATE
-    // This keeps the same early game curve but makes late-game elevation much more accessible.
+    // For level <= SOFT_CAP: effectiveLevel = level^0.72
+    // For level > SOFT_CAP:  effectiveLevel = SOFT_CAP^0.72 + (level-SOFT_CAP)^0.58
+    // Keeps identical level 1 cost, progressively cheaper at higher levels.
     public static final long ELEVATION_BASE_COST = 30000L;
     public static final double ELEVATION_COST_GROWTH = 1.15;
-    public static final double ELEVATION_COST_CURVE = 0.77; // Early game exponent (level <= SOFT_CAP)
-    public static final double ELEVATION_COST_CURVE_LATE = 0.63; // Late game exponent (level > SOFT_CAP)
+    public static final double ELEVATION_COST_CURVE = 0.72; // Early game exponent (level <= SOFT_CAP)
+    public static final double ELEVATION_COST_CURVE_LATE = 0.58; // Late game exponent (level > SOFT_CAP)
     public static final int ELEVATION_SOFT_CAP = 300; // Level where late-game curve kicks in
 
     /**
