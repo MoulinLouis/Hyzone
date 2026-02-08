@@ -491,15 +491,57 @@ public class AscendPlayerStore {
     }
 
     private void checkCoinTutorialThresholds(UUID playerId, BigNumber oldBalance, BigNumber newBalance) {
+        boolean crossedAscension = oldBalance.lt(AscendConstants.ASCENSION_COIN_THRESHOLD)
+                && newBalance.gte(AscendConstants.ASCENSION_COIN_THRESHOLD);
+
+        // Mark the ascension tutorial as seen BEFORE the tutorial check,
+        // so the tutorial popup is suppressed in favor of the cinematic
+        if (crossedAscension) {
+            markTutorialSeen(playerId, TutorialTriggerService.ASCENSION);
+        }
+
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         if (plugin == null) {
             return;
         }
         TutorialTriggerService triggerService = plugin.getTutorialTriggerService();
-        if (triggerService == null) {
-            return;
+        if (triggerService != null) {
+            triggerService.checkCoinThresholds(playerId, oldBalance, newBalance);
         }
-        triggerService.checkCoinThresholds(playerId, oldBalance, newBalance);
+
+        // Trigger ascension cinematic every time the threshold is crossed
+        if (crossedAscension) {
+            triggerAscensionCinematic(playerId);
+        }
+    }
+
+    private void triggerAscensionCinematic(UUID playerId) {
+        HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
+            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+            if (plugin == null) return;
+
+            com.hypixel.hytale.server.core.universe.PlayerRef playerRef = plugin.getPlayerRef(playerId);
+            if (playerRef == null) return;
+
+            com.hypixel.hytale.component.Ref<com.hypixel.hytale.server.core.universe.world.storage.EntityStore> ref =
+                playerRef.getReference();
+            if (ref == null || !ref.isValid()) return;
+
+            com.hypixel.hytale.component.Store<com.hypixel.hytale.server.core.universe.world.storage.EntityStore> store =
+                ref.getStore();
+            com.hypixel.hytale.server.core.universe.world.World world = store.getExternalData().getWorld();
+            if (world == null) return;
+
+            java.util.concurrent.CompletableFuture.runAsync(() -> {
+                if (!ref.isValid()) return;
+                com.hypixel.hytale.server.core.entity.entities.Player player =
+                    store.getComponent(ref, com.hypixel.hytale.server.core.entity.entities.Player.getComponentType());
+                com.hypixel.hytale.server.core.io.PacketHandler ph = playerRef.getPacketHandler();
+                if (player == null || ph == null) return;
+
+                io.hyvexa.ascend.ascension.AscensionCinematic.play(player, ph, playerRef, store, ref, world);
+            }, world);
+        }, 1500, TimeUnit.MILLISECONDS);
     }
 
     /**
