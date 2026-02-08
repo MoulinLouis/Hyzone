@@ -56,8 +56,8 @@ public abstract class BaseAscendPage extends InteractiveCustomUIPage<ButtonEvent
      */
     @Override
     public void onDismiss(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store) {
-        // Unregister this page from tracking
-        currentPageIds.remove(playerId);
+        // Only unregister if this is still the current page (avoid removing a newer page's entry)
+        currentPageIds.remove(playerId, pageId);
         // Subclasses should override this to stop their scheduled tasks
         stopBackgroundTasks();
         // Call parent implementation

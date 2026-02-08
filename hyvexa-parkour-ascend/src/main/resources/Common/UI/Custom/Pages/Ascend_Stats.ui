@@ -1,46 +1,249 @@
 $C = "../Common.ui";
 
 $C.@PageOverlay {
-  $C.@Container {
-    Anchor: (Width: 620, Height: 520);
+  SceneBlur {}
 
-    #Title {
+  Group #StatsWindow {
+    Anchor: (Width: 480, Height: 500);
+    LayoutMode: Top;
+    Background: #0d1620(0.95);
+    OutlineColor: #ffffff(0.06);
+    OutlineSize: 1;
+
+    // === HEADER ===
+    Group #Header {
+      Anchor: (Left: 0, Right: 0, Height: 52);
+      LayoutMode: Full;
+      Background: #0a1018;
+
+      // Top accent line
       Group {
-        TextButton #CloseButton {
-          Anchor: (Left: 12, Top: 4, Width: 64, Height: 24);
-          Padding: (Left: 8, Top: 2);
-          Text: "Close";
-          Style: TextButtonStyle(
-            Default: (LabelStyle: (FontSize: 14, TextColor: #9fb0ba, RenderBold: true)),
-            Sounds: $C.@ButtonSounds,
-          );
-          Background: #000000(0.3);
+        Anchor: (Left: 0, Right: 0, Top: 0, Height: 2);
+        Background: #06b6d4;
+      }
+
+      Label {
+        Anchor: (Left: 20, Top: 16, Width: 100, Height: 24);
+        Style: (FontSize: 18, TextColor: #f0f4f8, RenderBold: true);
+        Text: "Stats";
+      }
+
+      Label {
+        Anchor: (Right: 20, Top: 20, Width: 220, Height: 20);
+        Style: (FontSize: 11, TextColor: #6b7c8a);
+        Text: "Your progression at a glance";
+      }
+    }
+
+    // === CONTENT ===
+    Group #Content {
+      Anchor: (Left: 0, Right: 0);
+      FlexWeight: 1;
+      LayoutMode: Top;
+      Padding: (Left: 16, Right: 16, Top: 12, Bottom: 12);
+
+      // --- Combined Income ---
+      Group #CardIncome {
+        Anchor: (Left: 0, Right: 0, Height: 46);
+        LayoutMode: Full;
+        Background: #ffffff(0.03);
+        OutlineColor: #ffffff(0.04);
+        OutlineSize: 1;
+
+        Group {
+          Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
+          Background: #10b981;
         }
-        $C.@Title {
-          @Text = "S T A T S";
+
+        Label {
+          Anchor: (Left: 16, Top: 0, Bottom: 0, Width: 160);
+          Style: (FontSize: 13, TextColor: #9fb0ba, VerticalAlignment: Center);
+          Text: "Combined Income";
+        }
+
+        Label #IncomeValue {
+          Anchor: (Left: 180, Right: 16, Top: 0, Bottom: 0);
+          Style: (FontSize: 15, TextColor: #10b981, RenderBold: true, VerticalAlignment: Center);
+          Text: "0 coins/sec";
+        }
+      }
+
+      // --- Multiplier Breakdown ---
+      Group #CardMultiplier {
+        Anchor: (Left: 0, Right: 0, Height: 62, Top: 6);
+        LayoutMode: Full;
+        Background: #ffffff(0.03);
+        OutlineColor: #ffffff(0.04);
+        OutlineSize: 1;
+
+        Group {
+          Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
+          Background: #7c3aed;
+        }
+
+        Label {
+          Anchor: (Left: 16, Top: 10, Width: 160);
+          Style: (FontSize: 13, TextColor: #9fb0ba);
+          Text: "Total Multiplier";
+        }
+
+        Label #MultiplierValue {
+          Anchor: (Left: 180, Right: 16, Top: 8);
+          Style: (FontSize: 16, TextColor: #7c3aed, RenderBold: true);
+          Text: "1x";
+        }
+
+        Label #MultiplierDetail {
+          Anchor: (Left: 16, Right: 16, Top: 34);
+          Style: (FontSize: 11, TextColor: #6b7c8a);
+          Text: "Digits: 1x  |  Elevation: 1x";
+        }
+      }
+
+      // --- Lifetime Earnings ---
+      Group #CardLifetime {
+        Anchor: (Left: 0, Right: 0, Height: 46, Top: 6);
+        LayoutMode: Full;
+        Background: #ffffff(0.03);
+        OutlineColor: #ffffff(0.04);
+        OutlineSize: 1;
+
+        Group {
+          Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
+          Background: #ffd166;
+        }
+
+        Label {
+          Anchor: (Left: 16, Top: 0, Bottom: 0, Width: 160);
+          Style: (FontSize: 13, TextColor: #9fb0ba, VerticalAlignment: Center);
+          Text: "Lifetime Earnings";
+        }
+
+        Label #LifetimeValue {
+          Anchor: (Left: 180, Right: 16, Top: 0, Bottom: 0);
+          Style: (FontSize: 15, TextColor: #ffd166, RenderBold: true, VerticalAlignment: Center);
+          Text: "0 coins";
+        }
+      }
+
+      // --- Manual Runs ---
+      Group #CardRuns {
+        Anchor: (Left: 0, Right: 0, Height: 46, Top: 6);
+        LayoutMode: Full;
+        Background: #ffffff(0.03);
+        OutlineColor: #ffffff(0.04);
+        OutlineSize: 1;
+
+        Group {
+          Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
+          Background: #3b82f6;
+        }
+
+        Label {
+          Anchor: (Left: 16, Top: 0, Bottom: 0, Width: 160);
+          Style: (FontSize: 13, TextColor: #9fb0ba, VerticalAlignment: Center);
+          Text: "Manual Runs";
+        }
+
+        Label #RunsValue {
+          Anchor: (Left: 180, Right: 16, Top: 0, Bottom: 0);
+          Style: (FontSize: 15, TextColor: #3b82f6, RenderBold: true, VerticalAlignment: Center);
+          Text: "0";
+        }
+      }
+
+      // --- Ascensions ---
+      Group #CardAscensions {
+        Anchor: (Left: 0, Right: 0, Height: 46, Top: 6);
+        LayoutMode: Full;
+        Background: #ffffff(0.03);
+        OutlineColor: #ffffff(0.04);
+        OutlineSize: 1;
+
+        Group {
+          Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
+          Background: #06b6d4;
+        }
+
+        Label {
+          Anchor: (Left: 16, Top: 0, Bottom: 0, Width: 160);
+          Style: (FontSize: 13, TextColor: #9fb0ba, VerticalAlignment: Center);
+          Text: "Ascensions";
+        }
+
+        Label #AscensionsValue {
+          Anchor: (Left: 180, Right: 16, Top: 0, Bottom: 0);
+          Style: (FontSize: 15, TextColor: #06b6d4, RenderBold: true, VerticalAlignment: Center);
+          Text: "0";
+        }
+      }
+
+      // --- Fastest Ascension ---
+      Group #CardFastest {
+        Anchor: (Left: 0, Right: 0, Height: 68, Top: 6);
+        LayoutMode: Full;
+        Background: #ffffff(0.03);
+        OutlineColor: #ffffff(0.04);
+        OutlineSize: 1;
+
+        Group {
+          Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
+          Background: #f59e0b;
+        }
+
+        Label {
+          Anchor: (Left: 16, Top: 10, Width: 160);
+          Style: (FontSize: 13, TextColor: #9fb0ba);
+          Text: "Best Ascension";
+        }
+
+        Label #BestValue {
+          Anchor: (Left: 180, Right: 16, Top: 8);
+          Style: (FontSize: 16, TextColor: #f59e0b, RenderBold: true);
+          Text: "-";
+        }
+
+        Label {
+          Anchor: (Left: 16, Top: 38, Width: 160);
+          Style: (FontSize: 12, TextColor: #6b7c8a);
+          Text: "Current Run";
+        }
+
+        Label #CurrentValue {
+          Anchor: (Left: 180, Right: 16, Top: 38);
+          Style: (FontSize: 14, TextColor: #9fb0ba);
+          Text: "0s";
         }
       }
     }
 
-    #Content {
-      LayoutMode: Top;
-      Padding: (Left: 20, Right: 20, Top: 6, Bottom: 12);
+    // === FOOTER ===
+    Group #Footer {
+      Anchor: (Left: 0, Right: 0, Height: 52);
+      LayoutMode: Left;
+      Padding: (Left: 16, Right: 16, Top: 8, Bottom: 8);
+      Background: #0a1018(0.5);
 
-      Label {
-        Anchor: (Top: 8);
-        Style: (FontSize: 12, TextColor: #9fb0ba);
-        Text: "Your progression at a glance.";
-      }
+      Group { FlexWeight: 1; }
 
-      Group #StatsList {
-        Anchor: (Left: 0, Right: 0, Top: 12);
-        FlexWeight: 1;
-        LayoutMode: TopScrolling;
-        ScrollbarStyle: $C.@DefaultScrollbarStyle;
-
-        Group #StatsCards {
-          LayoutMode: Top;
-        }
+      TextButton #CloseButton {
+        Anchor: (Width: 100, Height: 36);
+        Text: "Close";
+        Style: TextButtonStyle(
+          Default: (
+            Background: #ffffff(0.06),
+            LabelStyle: (FontSize: 14, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
+          ),
+          Hovered: (
+            Background: #ffffff(0.1),
+            LabelStyle: (FontSize: 14, TextColor: #f0f4f8, HorizontalAlignment: Center, VerticalAlignment: Center)
+          ),
+          Pressed: (
+            Background: #ffffff(0.04),
+            LabelStyle: (FontSize: 14, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
+          ),
+          Sounds: $C.@ButtonSounds,
+        );
       }
     }
   }
