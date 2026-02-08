@@ -27,6 +27,7 @@ import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.summit.SummitManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 import io.hyvexa.ascend.tutorial.TutorialTriggerService;
+import io.hyvexa.ascend.util.AscendInventoryUtils;
 import io.hyvexa.ascend.util.MapUnlockHelper;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.common.ui.ButtonEventData;
@@ -167,10 +168,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
             String mapName = map.getName() != null && !map.getName().isBlank() ? map.getName() : map.getId();
             player.sendMessage(Message.raw("[Ascend] Ready: " + mapName + " - Move to start!"));
             // Give run items (reset + leave)
-            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-            if (plugin != null) {
-                plugin.giveRunItems(player);
-            }
+            AscendInventoryUtils.giveRunItems(player);
         }
         this.close();
     }
