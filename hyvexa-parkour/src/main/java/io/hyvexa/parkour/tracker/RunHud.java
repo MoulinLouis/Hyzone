@@ -79,7 +79,7 @@ public class RunHud extends CustomUIHud {
         }
         lastInfoKey = infoKey;
         UICommandBuilder commandBuilder = new UICommandBuilder();
-        commandBuilder.set("#PlayerNameText.Text", "HYVEXA PARKOUR");
+        commandBuilder.set("#PlayerNameText.Text", "Parkour");
         String rankColor = io.hyvexa.common.util.FormatUtils.getRankColor(safeRankName);
         commandBuilder.set("#PlayerXpValue.Style.TextColor", rankColor);
         boolean isVexaGod = "VexaGod".equals(safeRankName);

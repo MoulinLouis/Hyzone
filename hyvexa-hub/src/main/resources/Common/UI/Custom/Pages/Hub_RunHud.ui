@@ -6,131 +6,123 @@ $C.@PageOverlay {
     Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
 
     Group #RunHudRoot {
-      Anchor: (Right: 20, Top: 400, Width: 320, Height: 280);
-      Background: #000000(0.0);
-      LayoutMode: Top;
-      Padding: (Left: 12, Right: 12, Top: 10, Bottom: 10);
+      Anchor: (Right: 20, Top: 400, Width: 284, Height: 370);
+      LayoutMode: Left;
+
+      Group #InfoAccentBar {
+        Anchor: (Width: 4, Top: 0, Bottom: 0);
+        Background: #ec4899;
+      }
 
       Group #InfoBox {
-        Anchor: (Left: 0, Right: 0, Height: 260);
-        Background: #000000(0.4);
-        Padding: (Left: 10, Right: 10, Top: 8, Bottom: 24);
+        FlexWeight: 1;
+        Anchor: (Top: 0, Bottom: 0);
+        Background: #0d1620(0.95);
+        OutlineColor: #ffffff(0.06);
+        OutlineSize: 1;
         LayoutMode: Top;
 
-        Label #PlayerNameText {
+        Group #InfoImageBanner {
+          Anchor: (Width: 200, Height: 94, Top: 8);
+          Background: (TexturePath: "../Textures/logo_hyvexa.png");
+        }
+
+        Group #InfoContent {
           Anchor: (Left: 0, Right: 0);
-          Style: (
-            FontSize: 18,
-            TextColor: #ff7fb0,
-            RenderBold: true,
-            HorizontalAlignment: Center
-          );
-          Text: "HYVEXA HUB";
-        }
+          LayoutMode: Top;
+          Padding: (Left: 14, Right: 14, Top: 12, Bottom: 14);
 
-        Label #ServerSelectorHintLine1 {
-          Anchor: (Left: 0, Right: 0, Top: 6);
-          Style: (
-            FontSize: 17,
-            TextColor: #ffffff,
-            RenderBold: true,
-            HorizontalAlignment: Center
-          );
-          Text: "Right click on the Game Selector";
-        }
-
-        Label #ServerSelectorHintLine2 {
-          Anchor: (Left: 0, Right: 0, Top: 2);
-          Style: (
-            FontSize: 17,
-            TextColor: #ffffff,
-            RenderBold: true,
-            HorizontalAlignment: Center
-          );
-          Text: "item to choose your mode.";
-        }
-
-        Group {
-          Anchor: (Height: 8, Top: 6);
-        }
-
-        Label #ServerIpText {
-          Anchor: (Left: 0, Right: 0, Top: 0);
-          Style: (
-            FontSize: 17,
-            TextColor: #ff7fb0,
-            HorizontalAlignment: Center
-          );
-          Text: "IP: play.hyvexa.com";
-        }
-
-        Group {
-          Anchor: (Height: 8, Top: 14);
-        }
-
-        Label #SupportUsTitle {
-          Anchor: (Left: 0, Right: 0, Top: 0);
-          Style: (
-            FontSize: 18,
-            TextColor: #ffd166,
-            RenderBold: true
-          );
-          Text: "Support Hyvexa ( /store )";
-        }
-
-        Group #SupportUsLine1Row {
-          Anchor: (Left: 0, Right: 0, Top: 2, Height: 20);
-          LayoutMode: Left;
-
-          Group {
-            Anchor: (Width: 18, Height: 18);
-            Background: (TexturePath: "../Textures/star.png");
-          }
-
-          Group {
-            Anchor: (Width: 6);
-          }
-
-          Label #SupportUsLine1Text {
+          Label #PlayerNameText {
             Style: (
-              FontSize: 17,
-              TextColor: #e7f1f4
+              FontSize: 13,
+              TextColor: #ec4899(0.7),
+              RenderUppercase: true,
+              LetterSpacing: 2,
+              RenderBold: true
             );
-            Text: "Exclusive Ranks";
-          }
-        }
-
-        Group #SupportUsLine2Row {
-          Anchor: (Left: 0, Right: 0, Top: 2, Height: 20);
-          LayoutMode: Left;
-
-          Group {
-            Anchor: (Width: 18, Height: 18);
-            Background: (TexturePath: "../Textures/storm.png");
+            Text: "Hub";
           }
 
-          Group {
-            Anchor: (Width: 6);
+          Group #InfoSep {
+            Anchor: (Left: 0, Width: 30, Height: 2, Top: 6);
+            Background: #ec4899;
           }
 
-          Label #SupportUsLine2Text {
+          Label #InfoHintText {
+            Anchor: (Top: 10, Left: 0, Right: 0);
             Style: (
-              FontSize: 17,
-              TextColor: #e7f1f4
+              FontSize: 16,
+              TextColor: #cfd7dc,
+              Wrap: true
             );
-            Text: "Speed Boost (not for maps)";
+            Text: "Right click on the Game Selector item to choose your mode.";
           }
-        }
 
-        Label #SupportUsStoreLink {
-          Anchor: (Left: 0, Right: 0, Top: 10);
-          Style: (
-            FontSize: 18,
-            TextColor: #ffd166,
-            RenderBold: true,
-            HorizontalAlignment: Center
-          );
-          Text: "store.hyvexa.com";
+          Label #InfoIpText {
+            Anchor: (Top: 6);
+            Style: (
+              FontSize: 16,
+              TextColor: #ec4899(0.8),
+              RenderBold: true
+            );
+            Text: "play.hyvexa.com";
+          }
+
+          Group #InfoDivider {
+            Anchor: (Left: 0, Right: 0, Height: 1, Top: 10);
+            Background: #ffffff(0.06);
+          }
+
+          Label #InfoSupportTitle {
+            Anchor: (Top: 10);
+            Style: (
+              FontSize: 15,
+              TextColor: #ffd166,
+              RenderBold: true
+            );
+            Text: "Support Hyvexa (/store)";
+          }
+
+          Group #InfoSupportRow1 {
+            Anchor: (Left: 0, Right: 0, Top: 6, Height: 20);
+            LayoutMode: Left;
+
+            Group {
+              Anchor: (Width: 18, Height: 18);
+              Background: (TexturePath: "../Textures/star.png");
+            }
+            Group { Anchor: (Width: 6); }
+            Label {
+              Style: (FontSize: 16, TextColor: #e7f1f4);
+              Text: "Exclusive Ranks";
+            }
+          }
+
+          Group #InfoSupportRow2 {
+            Anchor: (Left: 0, Right: 0, Top: 4, Height: 20);
+            LayoutMode: Left;
+
+            Group {
+              Anchor: (Width: 18, Height: 18);
+              Background: (TexturePath: "../Textures/storm.png");
+            }
+            Group { Anchor: (Width: 6); }
+            Label {
+              Style: (FontSize: 16, TextColor: #e7f1f4);
+              Text: "Speed Boost";
+            }
+          }
+
+          Label #InfoStoreLink {
+            Anchor: (Top: 8, Left: 0, Right: 0);
+            Style: (
+              FontSize: 16,
+              TextColor: #ffd166,
+              RenderBold: true,
+              HorizontalAlignment: Center
+            );
+            Text: "store.hyvexa.com";
+          }
         }
       }
     }

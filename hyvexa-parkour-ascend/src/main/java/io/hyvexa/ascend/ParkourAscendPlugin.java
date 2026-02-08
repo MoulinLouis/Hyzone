@@ -14,6 +14,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.command.AscendCommand;
 import io.hyvexa.ascend.command.AscendAdminCommand;
 import io.hyvexa.ascend.command.CinematicTestCommand;
+import io.hyvexa.ascend.command.HudPreviewCommand;
 import io.hyvexa.ascend.data.AscendDatabaseSetup;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.ascend.data.AscendMapStore;
@@ -174,6 +175,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
         getCommandRegistry().registerCommand(new AscendCommand());
         getCommandRegistry().registerCommand(new AscendAdminCommand());
         getCommandRegistry().registerCommand(new CinematicTestCommand());
+        getCommandRegistry().registerCommand(new HudPreviewCommand());
         registerInteractionCodecs();
 
         // Register entity visibility filter system if not already registered
