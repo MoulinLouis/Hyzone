@@ -410,7 +410,7 @@
   - Maps 2-5 unlock automatically when the runner on the previous map reaches level 3.
   - Once unlocked, maps stay permanently unlocked (even if runner is evolved/reset to level 0).
   - Locked maps are completely hidden from the `/ascend` menu.
-  - Instant notification when reaching level 3: "🎉 New map unlocked: [Map Name]!".
+  - Instant notification when reaching level 3: "New map unlocked: [Map Name]!".
   - Retrocompatibility: Existing players auto-unlock eligible maps based on current runner levels on next menu open.
   - Map unlock prices are now obsolete but remain in constants for reference.
 - Fix admin reset progress button to completely reset all player data:

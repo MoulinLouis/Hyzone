@@ -1,5 +1,16 @@
 package io.hyvexa.ascend.ui;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+
+import javax.annotation.Nonnull;
+
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
@@ -13,6 +24,7 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+
 import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendMap;
@@ -24,22 +36,11 @@ import io.hyvexa.ascend.ghost.GhostStore;
 import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.summit.SummitManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
-import io.hyvexa.ascend.tutorial.TutorialTriggerService;
 import io.hyvexa.ascend.util.AscendInventoryUtils;
 import io.hyvexa.ascend.util.MapUnlockHelper;
 import io.hyvexa.common.math.BigNumber;
-import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.common.ui.ButtonEventData;
-
-import javax.annotation.Nonnull;
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
+import io.hyvexa.common.util.FormatUtils;
 
 public class AscendMapSelectPage extends BaseAscendPage {
 
@@ -550,7 +551,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
                             : unlockedMap.getId();
                         Player player = store.getComponent(ref, Player.getComponentType());
                         if (player != null) {
-                            player.sendMessage(Message.raw("🎉 New map unlocked: " + mapName + "!"));
+                            player.sendMessage(Message.raw("New map unlocked: " + mapName + "!"));
                         }
 
                         // Add map to UI immediately
@@ -1197,7 +1198,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
                                     : unlockedMap.getId();
                                 Player player = store.getComponent(ref, Player.getComponentType());
                                 if (player != null) {
-                                    player.sendMessage(Message.raw("🎉 New map unlocked: " + mapName + "!"));
+                                    player.sendMessage(Message.raw("New map unlocked: " + mapName + "!"));
                                 }
                                 // Add map to UI immediately to prevent crash when updating non-existent elements
                                 if (isCurrentPage() && ref.isValid()) {
