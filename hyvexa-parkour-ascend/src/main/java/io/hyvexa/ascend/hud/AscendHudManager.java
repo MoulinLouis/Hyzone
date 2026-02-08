@@ -13,6 +13,7 @@ import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.summit.SummitManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
+import io.hyvexa.common.math.BigNumber;
 
 import java.util.List;
 import java.util.UUID;
@@ -65,12 +66,12 @@ public class AscendHudManager {
             return;
         }
         try {
-            java.math.BigDecimal coins = playerStore.getCoins(playerId);
+            BigNumber coins = playerStore.getCoins(playerId);
             List<AscendMap> mapList = mapStore != null ? mapStore.listMapsSorted() : List.of();
-            java.math.BigDecimal product = playerStore.getMultiplierProductDecimal(playerId, mapList, AscendConstants.MULTIPLIER_SLOTS);
-            java.math.BigDecimal[] digits = playerStore.getMultiplierDisplayValues(playerId, mapList, AscendConstants.MULTIPLIER_SLOTS);
+            BigNumber product = playerStore.getMultiplierProduct(playerId, mapList, AscendConstants.MULTIPLIER_SLOTS);
+            BigNumber[] digits = playerStore.getMultiplierDisplayValues(playerId, mapList, AscendConstants.MULTIPLIER_SLOTS);
             int elevationLevel = playerStore.getElevationLevel(playerId);
-            java.math.BigDecimal accumulatedCoins = playerStore.getElevationAccumulatedCoins(playerId);
+            BigNumber accumulatedCoins = playerStore.getElevationAccumulatedCoins(playerId);
             AscendConstants.ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(elevationLevel, accumulatedCoins);
             int potentialElevation = elevationLevel + purchase.levels;
             boolean showElevation = elevationLevel > 0 || purchase.levels > 0;

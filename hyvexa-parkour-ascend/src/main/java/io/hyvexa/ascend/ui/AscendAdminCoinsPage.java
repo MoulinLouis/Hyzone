@@ -23,6 +23,7 @@ import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.data.AscendSettingsStore;
+import io.hyvexa.common.math.BigNumber;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
 
@@ -153,9 +154,9 @@ public class AscendAdminCoinsPage extends InteractiveCustomUIPage<AscendAdminCoi
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (playerRef != null) {
             AscendPlayerStore playerStore = ParkourAscendPlugin.getInstance().getPlayerStore();
-            java.math.BigDecimal coins = playerStore != null ? playerStore.getCoins(playerRef.getUuid()) : java.math.BigDecimal.ZERO;
+            BigNumber coins = playerStore != null ? playerStore.getCoins(playerRef.getUuid()) : BigNumber.ZERO;
             int skillPoints = playerStore != null ? playerStore.getSkillTreePoints(playerRef.getUuid()) : 0;
-            commandBuilder.set("#CurrentCoinsValue.Text", FormatUtils.formatCoinsForHudDecimal(coins));
+            commandBuilder.set("#CurrentCoinsValue.Text", FormatUtils.formatBigNumber(coins));
             commandBuilder.set("#CurrentSkillPointsValue.Text", String.valueOf(skillPoints));
         }
 
@@ -186,7 +187,7 @@ public class AscendAdminCoinsPage extends InteractiveCustomUIPage<AscendAdminCoi
     }
 
     private void applyCoins(Player player, PlayerRef playerRef, Store<EntityStore> store, boolean add) {
-        java.math.BigDecimal amount = parseAmount(player);
+        BigNumber amount = parseAmount(player);
         if (amount == null) {
             return;
         }
@@ -195,7 +196,7 @@ public class AscendAdminCoinsPage extends InteractiveCustomUIPage<AscendAdminCoi
             player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading."));
             return;
         }
-        String formatted = FormatUtils.formatCoinsForHudDecimal(amount);
+        String formatted = FormatUtils.formatBigNumber(amount);
         if (add) {
             playerStore.addCoins(playerRef.getUuid(), amount);
             playerStore.addSummitAccumulatedCoins(playerRef.getUuid(), amount);
@@ -208,8 +209,8 @@ public class AscendAdminCoinsPage extends InteractiveCustomUIPage<AscendAdminCoi
                 .color(SystemMessageUtils.SECONDARY));
         }
         UICommandBuilder commandBuilder = new UICommandBuilder();
-        java.math.BigDecimal coins = playerStore.getCoins(playerRef.getUuid());
-        commandBuilder.set("#CurrentCoinsValue.Text", FormatUtils.formatCoinsForHudDecimal(coins));
+        BigNumber coins = playerStore.getCoins(playerRef.getUuid());
+        commandBuilder.set("#CurrentCoinsValue.Text", FormatUtils.formatBigNumber(coins));
         sendUpdate(commandBuilder, null, false);
     }
 
@@ -257,15 +258,15 @@ public class AscendAdminCoinsPage extends InteractiveCustomUIPage<AscendAdminCoi
         }
     }
 
-    private java.math.BigDecimal parseAmount(Player player) {
+    private BigNumber parseAmount(Player player) {
         String raw = amountInput != null ? amountInput.trim() : "";
         if (raw.isEmpty()) {
             player.sendMessage(Message.raw("Enter a coin amount."));
             return null;
         }
         try {
-            java.math.BigDecimal value = new java.math.BigDecimal(raw);
-            if (value.compareTo(java.math.BigDecimal.ZERO) <= 0) {
+            BigNumber value = BigNumber.fromBigDecimal(new java.math.BigDecimal(raw));
+            if (!value.gt(BigNumber.ZERO)) {
                 player.sendMessage(Message.raw("Amount must be positive."));
                 return null;
             }

@@ -19,6 +19,7 @@ import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.summit.SummitManager;
+import io.hyvexa.common.math.BigNumber;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
@@ -121,13 +122,13 @@ public class SummitPage extends BaseAscendPage {
         UUID playerId = playerRef.getUuid();
 
         // Update progress text (shared across all categories)
-        java.math.BigDecimal accumulatedCoins = playerStore.getSummitAccumulatedCoins(playerId);
+        BigNumber accumulatedCoins = playerStore.getSummitAccumulatedCoins(playerId);
         long currentXp = AscendConstants.coinsToXp(accumulatedCoins);
         long nextXp = currentXp + 1;
-        java.math.BigDecimal coinsForNextXp = AscendConstants.xpToCoins(nextXp);
+        BigNumber coinsForNextXp = AscendConstants.xpToCoins(nextXp);
         String progressText = "Progress to next EXP: " +
-            FormatUtils.formatCoinsForHudDecimal(accumulatedCoins) + " / " +
-            FormatUtils.formatCoinsForHudDecimal(coinsForNextXp) + " accumulated coins";
+            FormatUtils.formatBigNumber(accumulatedCoins) + " / " +
+            FormatUtils.formatBigNumber(coinsForNextXp) + " accumulated coins";
         commandBuilder.set("#ProgressText.Text", progressText);
 
         SummitCategory[] categories = {
@@ -257,10 +258,10 @@ public class SummitPage extends BaseAscendPage {
         UUID playerId = playerRef.getUuid();
 
         if (!summitManager.canSummit(playerId)) {
-            java.math.BigDecimal coins = playerStore.getCoins(playerId);
-            String minCoins = FormatUtils.formatCoinsForHudDecimal(
-                java.math.BigDecimal.valueOf(AscendConstants.SUMMIT_MIN_COINS));
-            String currentCoins = FormatUtils.formatCoinsForHudDecimal(coins);
+            BigNumber coins = playerStore.getCoins(playerId);
+            String minCoins = FormatUtils.formatBigNumber(
+                BigNumber.fromLong(AscendConstants.SUMMIT_MIN_COINS));
+            String currentCoins = FormatUtils.formatBigNumber(coins);
             player.sendMessage(Message.raw("[Summit] Need " + minCoins
                 + " coins to Summit. You have: " + currentCoins)
                 .color(SystemMessageUtils.SECONDARY));
