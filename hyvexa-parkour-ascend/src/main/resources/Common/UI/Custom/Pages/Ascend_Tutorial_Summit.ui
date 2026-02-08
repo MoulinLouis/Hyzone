@@ -1,0 +1,188 @@
+$C = "../Common.ui";
+
+$C.@PageOverlay {
+  SceneBlur {}
+
+  Group #TutorialWindow {
+    Anchor: (Width: 600, Height: 472);
+    LayoutMode: Left;
+    Background: #0d1620(0.95);
+    OutlineColor: #ffffff(0.06);
+    OutlineSize: 1;
+
+    // === LEFT PANEL - Image + visual ===
+    Group #LeftPanel {
+      Anchor: (Width: 220, Top: 0, Bottom: 0);
+      LayoutMode: Full;
+      Background: #0a1018;
+
+      // Step images - one per step, toggled via Visible
+      Group #StepImage1 {
+        Anchor: (Left: 0, Right: 0, Top: 135, Height: 122);
+        Background: (TexturePath: "../Textures/ascend.png");
+        Visible: true;
+      }
+      Group #StepImage2 {
+        Anchor: (Left: 0, Right: 0, Top: 135, Height: 122);
+        Background: (TexturePath: "../Textures/ascend.png");
+        Visible: false;
+      }
+
+      // Bottom info on left panel
+      Group #LeftFooter {
+        Anchor: (Left: 0, Right: 0, Bottom: 0, Height: 80);
+        LayoutMode: Top;
+        Padding: (Left: 16, Right: 16, Top: 12);
+        Background: #0d1620;
+
+        Label {
+          Style: (FontSize: 11, TextColor: #f59e0b, RenderBold: true, RenderUppercase: true);
+          Text: "Tutorial";
+        }
+
+        Label {
+          Anchor: (Top: 4);
+          Style: (FontSize: 16, TextColor: #f0f4f8, RenderBold: true);
+          Text: "Summit";
+        }
+
+        // Progress bar
+        ProgressBar #StepProgress {
+          Anchor: (Left: 0, Right: 0, Top: 10, Height: 4);
+          Value: 0.5;
+          Bar: #f59e0b;
+          Background: #ffffff(0.08);
+        }
+      }
+
+      // Vertical accent line on right edge
+      Group {
+        Anchor: (Right: 0, Top: 0, Bottom: 0, Width: 2);
+        Background: #f59e0b(0.3);
+      }
+    }
+
+    // === RIGHT PANEL - Content ===
+    Group #RightPanel {
+      Anchor: (Top: 0, Bottom: 0);
+      FlexWeight: 1;
+      LayoutMode: Top;
+      Padding: (Left: 24, Right: 24, Top: 24, Bottom: 16);
+
+      // Step indicator
+      Label #StepIndicator {
+        Style: (FontSize: 11, TextColor: #f59e0b(0.7), RenderUppercase: true, LetterSpacing: 2);
+        Text: "Step 1 of 2";
+      }
+
+      // Main title
+      Label #MainTitle {
+        Anchor: (Top: 10);
+        Style: (FontSize: 22, TextColor: #f0f4f8, RenderBold: true);
+        Text: "Title";
+      }
+
+      // Separator
+      Group {
+        Anchor: (Left: 0, Width: 40, Height: 2, Top: 12);
+        Background: #f59e0b;
+      }
+
+      // Description
+      Label #Description {
+        Anchor: (Top: 14, Left: 0, Right: 0);
+        Style: (FontSize: 14, TextColor: #b2c0c7, Wrap: true);
+        Text: "Description placeholder";
+      }
+
+      // Feature list with accent dots
+      Group #FeatureList {
+        Anchor: (Left: 0, Right: 0, Top: 16);
+        LayoutMode: Top;
+
+        // Feature 1
+        Group {
+          Anchor: (Left: 0, Right: 0, Height: 28);
+          LayoutMode: Left;
+
+          Group #Feature1Dot { Anchor: (Width: 8, Height: 8, Top: 6); Background: #10b981; }
+          Group { Anchor: (Width: 10); }
+          Label #Feature1Label { Style: (FontSize: 13, TextColor: #cfd7dc); Text: "Feature 1"; }
+        }
+
+        // Feature 2
+        Group {
+          Anchor: (Left: 0, Right: 0, Height: 28, Top: 2);
+          LayoutMode: Left;
+
+          Group #Feature2Dot { Anchor: (Width: 8, Height: 8, Top: 6); Background: #3b82f6; }
+          Group { Anchor: (Width: 10); }
+          Label #Feature2Label { Style: (FontSize: 13, TextColor: #cfd7dc); Text: "Feature 2"; }
+        }
+
+        // Feature 3
+        Group {
+          Anchor: (Left: 0, Right: 0, Height: 28, Top: 2);
+          LayoutMode: Left;
+
+          Group #Feature3Dot { Anchor: (Width: 8, Height: 8, Top: 6); Background: #a855f7; }
+          Group { Anchor: (Width: 10); }
+          Label #Feature3Label { Style: (FontSize: 13, TextColor: #cfd7dc); Text: "Feature 3"; }
+        }
+      }
+
+      // Spacer
+      Group { FlexWeight: 1; }
+
+      // Bottom buttons
+      Group #BottomButtons {
+        Anchor: (Left: 0, Right: 0, Height: 40);
+        LayoutMode: Left;
+
+        Group { FlexWeight: 1; }
+
+        TextButton #BackButton {
+          Anchor: (Width: 90, Height: 36);
+          Text: "Back";
+          Style: TextButtonStyle(
+            Default: (
+              Background: #ffffff(0.06),
+              LabelStyle: (FontSize: 14, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Hovered: (
+              Background: #ffffff(0.1),
+              LabelStyle: (FontSize: 14, TextColor: #f0f4f8, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Pressed: (
+              Background: #ffffff(0.04),
+              LabelStyle: (FontSize: 14, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Sounds: $C.@ButtonSounds,
+          );
+        }
+
+        Group { Anchor: (Width: 8); }
+
+        TextButton #NextButton {
+          Anchor: (Width: 120, Height: 36);
+          Text: "Next";
+          Style: TextButtonStyle(
+            Default: (
+              Background: #f59e0b,
+              LabelStyle: (FontSize: 14, TextColor: #1a1a2a, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Hovered: (
+              Background: #fbbf24,
+              LabelStyle: (FontSize: 14, TextColor: #1a1a2a, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Pressed: (
+              Background: #d97706,
+              LabelStyle: (FontSize: 14, TextColor: #1a1a2a, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Sounds: $C.@ButtonSounds,
+          );
+        }
+      }
+    }
+  }
+}
