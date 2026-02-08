@@ -6,7 +6,7 @@ $C.@PageOverlay {
     Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
 
     Group #RunHudRoot {
-      Anchor: (Right: 20, Top: 400, Width: 284, Height: 430);
+      Anchor: (Right: 20, Top: 400, Width: 284, Height: 390);
       LayoutMode: Left;
 
       Group #InfoAccentBar {
@@ -23,7 +23,7 @@ $C.@PageOverlay {
         LayoutMode: Top;
 
         Group #InfoImageBanner {
-          Anchor: (Width: 200, Height: 93, Top: 8);
+          Anchor: (Width: 200, Height: 93, Top: 18);
           Background: (TexturePath: "../Textures/parkour.png");
         }
 
