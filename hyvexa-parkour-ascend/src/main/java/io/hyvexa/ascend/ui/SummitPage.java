@@ -153,10 +153,19 @@ public class SummitPage extends BaseAscendPage {
             commandBuilder.set("#CategoryCards[" + i + "] #CategoryBonus.Text", bonusText);
 
             // XP progress text
-            String xpText = String.format("Exp %d/%d (+%d)",
-                preview.currentXpInLevel(),
-                preview.currentXpRequired(),
-                preview.xpToGain());
+            long xpRemaining = preview.currentXpRequired() - preview.currentXpInLevel();
+            long xpAfterSummit = xpRemaining - preview.xpToGain();
+            String xpText;
+            if (preview.xpToGain() > 0 && xpAfterSummit <= 0) {
+                // Player will level up - show what the NEXT level requires
+                long nextLevelXpReq = AscendConstants.getXpForLevel(preview.newLevel() + 1);
+                xpText = String.format("Exp %d/%d (+%d) | Needs %d XP to get Lv.%d",
+                    preview.currentXpInLevel(), preview.currentXpRequired(), preview.xpToGain(),
+                    nextLevelXpReq, preview.newLevel() + 1);
+            } else {
+                xpText = String.format("Exp %d/%d (+%d)",
+                    preview.currentXpInLevel(), preview.currentXpRequired(), preview.xpToGain());
+            }
             commandBuilder.set("#CategoryCards[" + i + "] #XpProgress.Text", xpText);
 
             // XP progress bar segments (20 segments = 5% each)
@@ -294,10 +303,8 @@ public class SummitPage extends BaseAscendPage {
         }
 
         player.sendMessage(Message.raw("[Summit] " + category.getDisplayName() + " Lv." + preview.currentLevel()
-            + " → Lv." + result.newLevel() + " (+" + preview.levelGain() + ")")
-            .color(SystemMessageUtils.SUCCESS));
-        player.sendMessage(Message.raw("[Summit] Bonus: " + formatBonus(category, preview.currentBonus())
-            + " → " + formatBonus(category, preview.newBonus()))
+            + " -> Lv." + result.newLevel() + " | " + formatBonus(category, preview.currentBonus())
+            + " -> " + formatBonus(category, preview.newBonus()))
             .color(SystemMessageUtils.SUCCESS));
         player.sendMessage(Message.raw("[Summit] Progress reset: coins, elevation, multipliers, runners, map unlocks")
             .color(SystemMessageUtils.SECONDARY));
@@ -348,6 +355,6 @@ public class SummitPage extends BaseAscendPage {
      * Format a bonus value for display - all categories show as multipliers.
      */
     private String formatBonus(SummitCategory category, double value) {
-        return String.format(Locale.US, "×%.2f", value);
+        return String.format(Locale.US, "x%.2f", value);
     }
 }

@@ -121,7 +121,7 @@ public class ElevationPage extends BaseAscendPage {
         player.sendMessage(Message.raw("[Ascend] Elevation +" + purchase.levels + " (x" + newElevation + ")!")
             .color(SystemMessageUtils.SUCCESS));
 
-        // Reset all progress (coins, map unlocks, best times, runners)
+        // Reset all progress (coins, map unlocks, runners). Best times are preserved.
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         if (plugin != null) {
             AscendMapStore mapStore = plugin.getMapStore();
