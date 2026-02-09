@@ -17,6 +17,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.data.AscendPlayerStore.LeaderboardEntry;
 import io.hyvexa.common.ui.ButtonEventData;
+import io.hyvexa.common.util.FormatUtils;
 
 import javax.annotation.Nonnull;
 import io.hyvexa.common.math.BigNumber;
@@ -269,21 +270,7 @@ public class AscendLeaderboardPage extends InteractiveCustomUIPage<AscendLeaderb
     }
 
     private String formatCoins(BigNumber coins) {
-        if (coins == null) {
-            return "0";
-        }
-        double value = coins.toDouble();
-        if (value >= 1_000_000_000_000L) {
-            return String.format("%.1fT", value / 1_000_000_000_000.0);
-        } else if (value >= 1_000_000_000L) {
-            return String.format("%.1fB", value / 1_000_000_000.0);
-        } else if (value >= 1_000_000L) {
-            return String.format("%.1fM", value / 1_000_000.0);
-        } else if (value >= 1_000L) {
-            return String.format("%.1fK", value / 1_000.0);
-        } else {
-            return String.format("%.0f", value);
-        }
+        return FormatUtils.formatBigNumber(coins);
     }
 
     private String formatDuration(Long ms) {
