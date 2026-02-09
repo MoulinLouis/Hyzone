@@ -7,7 +7,7 @@ public final class AscendConstants {
     private AscendConstants() {
     }
 
-    // (CALC_CTX removed — BigNumber handles precision internally)
+
 
     // Database
     public static final String TABLE_PREFIX = "ascend_";
@@ -287,8 +287,8 @@ public final class AscendConstants {
 
     /**
      * Calculate the cost to reach the next elevation level.
-     * Below SOFT_CAP: baseCost * 1.15^(level^0.77)
-     * Above SOFT_CAP: baseCost * 1.15^(300^0.77 + (level-300)^0.63)
+     * Below SOFT_CAP: baseCost * 1.15^(level^0.72)
+     * Above SOFT_CAP: baseCost * 1.15^(300^0.72 + (level-300)^0.58)
      * Keeps identical early game, much flatter late game.
      */
     public static BigNumber getElevationLevelUpCost(int currentLevel) {
@@ -557,8 +557,8 @@ public final class AscendConstants {
         AUTO_RUNNERS("Auto-Upgrade + Momentum", "Auto-upgrade runners & momentum speed boost on manual runs"),
         AUTO_EVOLUTION("Auto-Evolution", "Runners auto-evolve at max speed level", AUTO_RUNNERS),
         PERSISTENCE("Persistence", "Keep 10% of map multipliers after Elevation", AUTO_EVOLUTION),
-        RUNNER_SPEED("Runner Speed Boost", "\u00d71.5 global runner speed", AUTO_EVOLUTION),
-        OFFLINE_BOOST("Offline Boost", "Offline earnings: 10% \u2192 25%", PERSISTENCE, RUNNER_SPEED),
+        RUNNER_SPEED("Runner Speed Boost", "x1.5 global runner speed", AUTO_EVOLUTION),
+        OFFLINE_BOOST("Offline Boost", "Offline earnings: 10% -> 25%", PERSISTENCE, RUNNER_SPEED),
         SUMMIT_MEMORY("Summit Memory", "Keep 10% of Elevation after Summit", OFFLINE_BOOST),
         EVOLUTION_POWER("Evolution Power+", "+1 base evolution power", OFFLINE_BOOST),
         ASCENSION_CHALLENGES("Ascension Challenges", "Coming Soon", SUMMIT_MEMORY, EVOLUTION_POWER);
