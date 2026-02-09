@@ -63,16 +63,16 @@ Active bugs, memory leaks, and crash risks. Grouped by file/system for single-pa
 ### Cluster: AscendCommand.java — Leak + page tracking + boilerplate
 > Fix #32 first (extract helper), then #3 and #33 are cleaner to add.
 
-- [ ] **#32 — Repeated plugin-instance-fetch pattern (12 times)**
+- [x] **#32 — Repeated plugin-instance-fetch pattern (12 times)**
   - **File:** `AscendCommand.java`
   - **Fix:** Extract `requirePlugin(Player)` helper. Replace 12 occurrences.
 
-- [ ] **#3 — `onPlayerDisconnect()` is never called**
+- [x] **#3 — `onPlayerDisconnect()` is never called**
   - **File:** `AscendCommand.java:70-72`
   - `activePages` map entries leak on disconnect.
   - **Fix:** Add `AscendCommand.onPlayerDisconnect(playerId);` in `ParkourAscendPlugin.java` disconnect handler (~line 310).
 
-- [ ] **#33 — `openHelpPage()` doesn't close active page**
+- [x] **#33 — `openHelpPage()` doesn't close active page**
   - **File:** `AscendCommand.java:223-225`
   - Breaks page-tracking convention (no `closeActivePage` / `registerActivePage`).
   - **Fix:** Add both calls, matching all other open methods.
