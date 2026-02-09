@@ -6,7 +6,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 
 public class HubHud extends CustomUIHud {
 
-    private boolean applied;
+    private volatile boolean applied;
 
     public HubHud(PlayerRef playerRef) {
         super(playerRef);

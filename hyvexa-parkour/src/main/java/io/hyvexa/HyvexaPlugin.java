@@ -134,7 +134,6 @@ public class HyvexaPlugin extends JavaPlugin {
     private CollisionManager collisionManager;
     private InventorySyncManager inventorySyncManager;
     private WorldMapManager worldMapManager;
-    private ScheduledFuture<?> mapDetectionTask;
     private ScheduledFuture<?> hudUpdateTask;
     private ScheduledFuture<?> playtimeTask;
     private ScheduledFuture<?> collisionTask;
@@ -629,45 +628,6 @@ public class HyvexaPlugin extends JavaPlugin {
         return cleanupManager;
     }
 
-    private void tickMapDetection() {
-        Map<World, List<PlayerTickContext>> playersByWorld = collectPlayersByWorld();
-        for (Map.Entry<World, List<PlayerTickContext>> entry : playersByWorld.entrySet()) {
-            World world = entry.getKey();
-            if (!isParkourWorld(world)) {
-                continue;
-            }
-            List<PlayerTickContext> players = entry.getValue();
-            CompletableFuture.runAsync(() -> {
-                for (PlayerTickContext context : players) {
-                    if (context.ref == null || !context.ref.isValid()) {
-                        continue;
-                    }
-                    UUID playerId = context.playerRef != null ? context.playerRef.getUuid() : null;
-                    if (!shouldApplyParkourMode(playerId, world)) {
-                        continue;
-                    }
-                    if (runTracker != null) {
-                        boolean inDuel = duelTracker != null && duelTracker.isInMatch(playerId);
-                        if (!inDuel && perksManager != null) {
-                            String activeMapId = runTracker.getActiveMapId(playerId);
-                            if (activeMapId != null) {
-                                perksManager.disableVipSpeedBoost(context.ref, context.store, context.playerRef);
-                            } else if (perksManager.shouldDisableVipSpeedForStartTrigger(context.store, context.ref,
-                                    context.playerRef)) {
-                                perksManager.disableVipSpeedBoost(context.ref, context.store, context.playerRef);
-                            }
-                        }
-                    }
-                    runTracker.checkPlayer(context.ref, context.store);
-                    if (hudManager != null) {
-                        hudManager.ensureRunHudNow(context.ref, context.store, context.playerRef);
-                        hudManager.updateRunHud(context.ref, context.store);
-                    }
-                }
-            }, world);
-        }
-    }
-
     private void tickHudUpdates() {
         Map<World, List<PlayerTickContext>> playersByWorld = collectPlayersByWorld();
         for (Map.Entry<World, List<PlayerTickContext>> entry : playersByWorld.entrySet()) {
@@ -892,7 +852,6 @@ public class HyvexaPlugin extends JavaPlugin {
 
     @Override
     protected void shutdown() {
-        cancelScheduled(mapDetectionTask);
         cancelScheduled(hudUpdateTask);
         cancelScheduled(playtimeTask);
         cancelScheduled(collisionTask);
