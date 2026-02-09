@@ -81,6 +81,17 @@ $C.@PageOverlay {
           Anchor: (Width: 250, Height: 36);
           Text: "Reset Progress";
         }
+
+        TextButton #ResetAllPlayersButton {
+          Anchor: (Left: 10, Width: 250, Height: 36);
+          Padding: (Left: 8, Top: 2);
+          Text: "Reset ALL Players";
+          Style: TextButtonStyle(
+            Default: (LabelStyle: (FontSize: 14, TextColor: #ff4444, RenderBold: true)),
+            Sounds: $C.@ButtonSounds,
+          );
+          Background: #330000(0.4);
+        }
       }
 
       Label {

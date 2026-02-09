@@ -73,6 +73,7 @@ public class AscendAdminCoinsPage extends InteractiveCustomUIPage<AscendAdminCoi
             case CoinsData.BUTTON_ADD -> applyCoins(player, playerRef, store, true);
             case CoinsData.BUTTON_REMOVE -> applyCoins(player, playerRef, store, false);
             case CoinsData.BUTTON_RESET_PROGRESS -> resetProgress(player, playerRef, store);
+            case CoinsData.BUTTON_RESET_ALL -> resetAllPlayers(player);
             case CoinsData.BUTTON_SET_SPAWN_LOCATION -> setSpawnLocation(ref, store, player);
             case CoinsData.BUTTON_SET_NPC_LOCATION -> setNpcLocation(ref, store, player);
             case CoinsData.BUTTON_ADD_SKILL_POINTS -> applySkillPoints(player, playerRef, true);
@@ -93,6 +94,8 @@ public class AscendAdminCoinsPage extends InteractiveCustomUIPage<AscendAdminCoi
             EventData.of(CoinsData.KEY_BUTTON, CoinsData.BUTTON_REMOVE), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ResetProgressButton",
             EventData.of(CoinsData.KEY_BUTTON, CoinsData.BUTTON_RESET_PROGRESS), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ResetAllPlayersButton",
+            EventData.of(CoinsData.KEY_BUTTON, CoinsData.BUTTON_RESET_ALL), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SetSpawnLocationButton",
             EventData.of(CoinsData.KEY_BUTTON, CoinsData.BUTTON_SET_SPAWN_LOCATION), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SetNpcLocationButton",
@@ -142,6 +145,23 @@ public class AscendAdminCoinsPage extends InteractiveCustomUIPage<AscendAdminCoi
 
         player.sendMessage(Message.raw("[Ascend] Your Ascend progress has been reset (first map unlocked).")
             .color(SystemMessageUtils.SECONDARY));
+        UICommandBuilder commandBuilder = new UICommandBuilder();
+        commandBuilder.set("#CurrentCoinsValue.Text", "0");
+        commandBuilder.set("#CurrentSkillPointsValue.Text", "0");
+        sendUpdate(commandBuilder, null, false);
+    }
+
+    private void resetAllPlayers(Player player) {
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        AscendPlayerStore playerStore = plugin != null ? plugin.getPlayerStore() : null;
+        if (playerStore == null) {
+            player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading."));
+            return;
+        }
+        playerStore.resetAllPlayersProgress();
+        player.sendMessage(Message.raw("[Ascend] ALL player progress has been wiped. Reconnecting players will start fresh.")
+            .color(SystemMessageUtils.SECONDARY));
+
         UICommandBuilder commandBuilder = new UICommandBuilder();
         commandBuilder.set("#CurrentCoinsValue.Text", "0");
         commandBuilder.set("#CurrentSkillPointsValue.Text", "0");
@@ -401,6 +421,7 @@ public class AscendAdminCoinsPage extends InteractiveCustomUIPage<AscendAdminCoi
         static final String BUTTON_REMOVE_SKILL_POINTS = "RemoveSkillPoints";
         static final String BUTTON_SAVE_VOID_Y = "SaveVoidY";
         static final String BUTTON_CLEAR_VOID_Y = "ClearVoidY";
+        static final String BUTTON_RESET_ALL = "ResetAllPlayers";
         static final String BUTTON_BACK = "Back";
         static final String BUTTON_CLOSE = "Close";
 
