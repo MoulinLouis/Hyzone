@@ -109,11 +109,5 @@ public final class SystemMessageUtils {
         );
     }
 
-    public static Message ggPrompt(String contextLabel) {
-        return withServerPrefix(
-                raw("GG! ", SUCCESS).bold(true),
-                raw(contextLabel, PRIMARY_TEXT).bold(true)
-        );
-    }
 }
 

@@ -4,14 +4,11 @@ import com.hypixel.hytale.common.plugin.PluginIdentifier;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.plugin.PluginBase;
 import com.hypixel.hytale.server.core.plugin.PluginManager;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
-import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -21,7 +18,6 @@ public final class HylogramsBridge {
     private static final String HYLOGRAMS_GROUP = "ehko";
     private static final String HYLOGRAMS_NAME = "Hylograms";
     private static final String HYLOGRAMS_API_CLASS = "dev.ehko.hylograms.api.HologramsAPI";
-    private static final String HYLOGRAMS_INTERACTION_CLASS = "dev.ehko.hylograms.api.HologramInteractionCallback";
     private static final ConcurrentHashMap<String, Method> METHOD_CACHE = new ConcurrentHashMap<>();
 
     private HylogramsBridge() {
@@ -71,90 +67,6 @@ public final class HylogramsBridge {
         return result instanceof Boolean value && value;
     }
 
-    public static List<String> list() {
-        return listHologramNames();
-    }
-
-    public static List<Hologram> getAll() {
-        Object result = invokeStatic("getAll", new Class<?>[]{});
-        if (!(result instanceof List<?> rawList)) {
-            return List.of();
-        }
-        List<Hologram> holograms = new ArrayList<>(rawList.size());
-        for (Object entry : rawList) {
-            if (entry != null) {
-                holograms.add(new Hologram(entry));
-            }
-        }
-        return holograms;
-    }
-
-    public static void spawnAll(Store<EntityStore> store) {
-        invokeStatic("spawnAll", new Class<?>[]{Store.class}, store);
-    }
-
-    public static void saveAll(Store<EntityStore> store) {
-        invokeStatic("saveAll", new Class<?>[]{Store.class}, store);
-    }
-
-    public static void registerInteractionCallback(Object callback) {
-        if (callback == null) {
-            return;
-        }
-        Class<?> callbackClass = resolveHylogramsClass(HYLOGRAMS_INTERACTION_CLASS);
-        invokeStatic("registerInteractionCallback", new Class<?>[]{callbackClass}, callback);
-    }
-
-    public static void unregisterInteractionCallback(Object callback) {
-        if (callback == null) {
-            return;
-        }
-        Class<?> callbackClass = resolveHylogramsClass(HYLOGRAMS_INTERACTION_CLASS);
-        invokeStatic("unregisterInteractionCallback", new Class<?>[]{callbackClass}, callback);
-    }
-
-    public static Object createInteractionCallback(HylogramsInteractionHandler handler) {
-        if (handler == null) {
-            return null;
-        }
-        Class<?> callbackClass = resolveHylogramsClass(HYLOGRAMS_INTERACTION_CLASS);
-        ClassLoader classLoader = callbackClass.getClassLoader();
-        InvocationHandler proxyHandler = (proxy, method, args) -> {
-            if ("onInteract".equals(method.getName()) && args != null && args.length >= 4) {
-                Player player = (Player) args[0];
-                String hologramName = (String) args[1];
-                int lineIndex = ((Number) args[2]).intValue();
-                String action = (String) args[3];
-                handler.onInteract(player, hologramName, lineIndex, action);
-            }
-            return null;
-        };
-        return Proxy.newProxyInstance(classLoader, new Class<?>[]{callbackClass}, proxyHandler);
-    }
-
-    public static void fireInteraction(Player player, String hologramName, int lineIndex, String action) {
-        invokeStatic("fireInteraction", new Class<?>[]{Player.class, String.class, int.class, String.class},
-                player, hologramName, lineIndex, action);
-    }
-
-    public static List<String> listAnimations() {
-        Object result = invokeStatic("listAnimations", new Class<?>[]{});
-        if (!(result instanceof List<?> rawList)) {
-            return List.of();
-        }
-        List<String> names = new ArrayList<>(rawList.size());
-        for (Object entry : rawList) {
-            if (entry != null) {
-                names.add(entry.toString());
-            }
-        }
-        return names;
-    }
-
-    public static Object getAnimation(String name) {
-        return invokeStatic("getAnimation", new Class<?>[]{String.class}, name);
-    }
-
     public static boolean updateHologramLines(String name, List<String> lines, Store<EntityStore> store) {
         if (name == null || name.isBlank()) {
             return false;
@@ -202,10 +114,6 @@ public final class HylogramsBridge {
         } catch (ReflectiveOperationException e) {
             throw new IllegalStateException("Failed to update Hylograms hologram lines.", e);
         }
-    }
-
-    public interface HylogramsInteractionHandler {
-        void onInteract(Player player, String hologramName, int lineIndex, String action);
     }
 
     public static final class Hologram {
@@ -453,18 +361,6 @@ public final class HylogramsBridge {
             return method.invoke(null, args);
         } catch (ReflectiveOperationException e) {
             throw new IllegalStateException("Failed to invoke Hylograms API method: " + methodName, e);
-        }
-    }
-
-    private static Class<?> resolveHylogramsClass(String className) {
-        ClassLoader classLoader = resolveHylogramsClassLoader();
-        if (classLoader == null) {
-            throw new IllegalStateException("Hylograms plugin is not loaded.");
-        }
-        try {
-            return Class.forName(className, true, classLoader);
-        } catch (ClassNotFoundException e) {
-            throw new IllegalStateException("Hylograms API class not available: " + className, e);
         }
     }
 

@@ -6,6 +6,10 @@ import io.hyvexa.common.math.BigNumber;
 import java.util.Locale;
 
 public final class FormatUtils {
+    /** Pre-parsed suffix table: {exponent, suffix} ordered ascending by exponent. */
+    private static final int[] SUFFIX_EXPONENTS = {3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33};
+    private static final String[] SUFFIX_LABELS = {"K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Dc"};
+
     private FormatUtils() {
     }
 
@@ -31,24 +35,6 @@ public final class FormatUtils {
             return String.format(Locale.ROOT, "%dm %ds", minutes, seconds);
         }
         return String.format(Locale.ROOT, "%ds", seconds);
-    }
-
-    public static String formatVexaForHud(long vexa) {
-        long safeVexa = Math.max(0L, vexa);
-        if (safeVexa <= 1_000_000_000L) {
-            return String.valueOf(safeVexa);
-        }
-        double value = safeVexa;
-        int exponent = (int) Math.floor(Math.log10(value));
-        double mantissa = value / Math.pow(10.0, exponent);
-        double rounded = Math.round(mantissa * 100.0) / 100.0;
-        if (rounded >= 10.0) {
-            rounded /= 10.0;
-            exponent += 1;
-        }
-        String mantissaText = String.format(Locale.ROOT, "%.2f", rounded);
-        mantissaText = mantissaText.replaceAll("\\.?0+$", "");
-        return mantissaText + "e" + exponent;
     }
 
     /**
@@ -77,92 +63,17 @@ public final class FormatUtils {
             return String.format(Locale.ROOT, "%.2f", num);
         }
 
-        // Suffix table: [minExponent, suffix]
-        String[][] suffixes = {
-            {"3", "K"}, {"6", "M"}, {"9", "B"}, {"12", "T"},
-            {"15", "Qa"}, {"18", "Qi"}, {"21", "Sx"}, {"24", "Sp"},
-            {"27", "Oc"}, {"30", "No"}, {"33", "Dc"}
-        };
-
-        for (int i = suffixes.length - 1; i >= 0; i--) {
-            int suffixExp = Integer.parseInt(suffixes[i][0]);
+        for (int i = SUFFIX_EXPONENTS.length - 1; i >= 0; i--) {
+            int suffixExp = SUFFIX_EXPONENTS[i];
             if (exp >= suffixExp && exp < suffixExp + 3) {
-                // Calculate display value: mantissa * 10^(exp - suffixExp)
                 int shift = exp - suffixExp;
                 double display = mantissa * Math.pow(10.0, shift);
-                return stripTrailingZeros(String.format(Locale.ROOT, "%.2f%s", display, suffixes[i][1]));
+                return stripTrailingZeros(String.format(Locale.ROOT, "%.2f%s", display, SUFFIX_LABELS[i]));
             }
         }
 
         // Beyond Decillion (exp >= 36): scientific notation
         return String.format(Locale.ROOT, "%.2fe%d", mantissa, exp);
-    }
-
-    @Deprecated
-    public static String formatVexaForHudDecimal(java.math.BigDecimal vexa) {
-        // Convert to double for formatting (sufficient precision for display)
-        double safeVexa = Math.max(0.0, vexa.doubleValue());
-        // Below 1 thousand: show full number without decimals if it's a whole number
-        if (safeVexa < 1e3) {
-            if (safeVexa == Math.floor(safeVexa)) {
-                return String.valueOf((long) safeVexa);
-            }
-            return String.format(Locale.ROOT, "%.2f", safeVexa);
-        }
-        // Thousand (10^3)
-        if (safeVexa < 1e6) {
-            return stripTrailingZeros(String.format(Locale.ROOT, "%.2fK", safeVexa / 1e3));
-        }
-        // Million (10^6)
-        if (safeVexa < 1e9) {
-            return stripTrailingZeros(String.format(Locale.ROOT, "%.2fM", safeVexa / 1e6));
-        }
-        // Billion (10^9)
-        if (safeVexa < 1e12) {
-            return stripTrailingZeros(String.format(Locale.ROOT, "%.2fB", safeVexa / 1e9));
-        }
-        // Trillion (10^12)
-        if (safeVexa < 1e15) {
-            return stripTrailingZeros(String.format(Locale.ROOT, "%.2fT", safeVexa / 1e12));
-        }
-        // Quadrillion (10^15)
-        if (safeVexa < 1e18) {
-            return stripTrailingZeros(String.format(Locale.ROOT, "%.2fQa", safeVexa / 1e15));
-        }
-        // Quintillion (10^18)
-        if (safeVexa < 1e21) {
-            return stripTrailingZeros(String.format(Locale.ROOT, "%.2fQi", safeVexa / 1e18));
-        }
-        // Sextillion (10^21)
-        if (safeVexa < 1e24) {
-            return stripTrailingZeros(String.format(Locale.ROOT, "%.2fSx", safeVexa / 1e21));
-        }
-        // Septillion (10^24)
-        if (safeVexa < 1e27) {
-            return stripTrailingZeros(String.format(Locale.ROOT, "%.2fSp", safeVexa / 1e24));
-        }
-        // Octillion (10^27)
-        if (safeVexa < 1e30) {
-            return stripTrailingZeros(String.format(Locale.ROOT, "%.2fOc", safeVexa / 1e27));
-        }
-        // Nonillion (10^30)
-        if (safeVexa < 1e33) {
-            return stripTrailingZeros(String.format(Locale.ROOT, "%.2fNo", safeVexa / 1e30));
-        }
-        // Decillion (10^33)
-        if (safeVexa < 1e36) {
-            return stripTrailingZeros(String.format(Locale.ROOT, "%.2fDc", safeVexa / 1e33));
-        }
-        // Beyond Decillion: scientific notation
-        double value = safeVexa;
-        int exponent = (int) Math.floor(Math.log10(value));
-        double mantissa = value / Math.pow(10.0, exponent);
-        double rounded = Math.round(mantissa * 100.0) / 100.0;
-        if (rounded >= 10.0) {
-            rounded /= 10.0;
-            exponent += 1;
-        }
-        return String.format(Locale.ROOT, "%.2fe%d", rounded, exponent);
     }
 
     public static String normalizeCategory(String category) {
