@@ -82,9 +82,23 @@ public class AscendRunTracker {
         ActiveRun oldActive = activeRuns.remove(playerId);
         if (oldPending != null) {
             showRunnersForMap(playerId, oldPending.mapId);
+            // Re-apply "hide other runners" setting
+            {
+                ParkourAscendPlugin p = ParkourAscendPlugin.getInstance();
+                if (p != null && p.getRobotManager() != null) {
+                    p.getRobotManager().applyRunnerVisibility(playerId);
+                }
+            }
         }
         if (oldActive != null) {
             showRunnersForMap(playerId, oldActive.mapId);
+            // Re-apply "hide other runners" setting
+            {
+                ParkourAscendPlugin p = ParkourAscendPlugin.getInstance();
+                if (p != null && p.getRobotManager() != null) {
+                    p.getRobotManager().applyRunnerVisibility(playerId);
+                }
+            }
         }
 
         // Cancel ghost recording if there was an active run
@@ -106,9 +120,23 @@ public class AscendRunTracker {
         // Show runners from the cancelled run's map
         if (pending != null) {
             showRunnersForMap(playerId, pending.mapId);
+            // Re-apply "hide other runners" setting
+            {
+                ParkourAscendPlugin p = ParkourAscendPlugin.getInstance();
+                if (p != null && p.getRobotManager() != null) {
+                    p.getRobotManager().applyRunnerVisibility(playerId);
+                }
+            }
         }
         if (active != null) {
             showRunnersForMap(playerId, active.mapId);
+            // Re-apply "hide other runners" setting
+            {
+                ParkourAscendPlugin p = ParkourAscendPlugin.getInstance();
+                if (p != null && p.getRobotManager() != null) {
+                    p.getRobotManager().applyRunnerVisibility(playerId);
+                }
+            }
         }
 
         // Cancel ghost recording
@@ -237,6 +265,13 @@ public class AscendRunTracker {
 
         // Show runners again after completing the run
         showRunnersForMap(playerId, run.mapId);
+        // Re-apply "hide other runners" setting
+        {
+            ParkourAscendPlugin p = ParkourAscendPlugin.getInstance();
+            if (p != null && p.getRobotManager() != null) {
+                p.getRobotManager().applyRunnerVisibility(playerId);
+            }
+        }
 
         // Play checkpoint sound on map completion
         int soundIndex = SoundEvent.getAssetMap().getIndex("SFX_Parkour_Checkpoint");

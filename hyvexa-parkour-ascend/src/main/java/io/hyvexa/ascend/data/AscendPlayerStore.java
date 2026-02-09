@@ -76,9 +76,9 @@ public class AscendPlayerStore {
         // Check cache first
         AscendPlayerProgress progress = players.get(playerId);
         if (progress != null) {
-            // Ensure existing players have ascension timer initialized (migration)
-            if (progress.getAscensionStartedAt() == null) {
-                progress.setAscensionStartedAt(System.currentTimeMillis());
+            // Migration: fix incorrect timer for players who haven't ascended yet
+            if (progress.getAscensionCount() == 0 && progress.getAscensionStartedAt() != null) {
+                progress.setAscensionStartedAt(null);
                 markDirty(playerId);
             }
             return progress;
@@ -88,17 +88,16 @@ public class AscendPlayerStore {
         progress = loadPlayerFromDatabase(playerId);
         if (progress != null) {
             players.put(playerId, progress);
-            // Ensure loaded players have ascension timer initialized (migration)
-            if (progress.getAscensionStartedAt() == null) {
-                progress.setAscensionStartedAt(System.currentTimeMillis());
+            // Migration: fix incorrect timer for players who haven't ascended yet
+            if (progress.getAscensionCount() == 0 && progress.getAscensionStartedAt() != null) {
+                progress.setAscensionStartedAt(null);
                 markDirty(playerId);
             }
             return progress;
         }
 
-        // Create new player
+        // Create new player - don't initialize timer yet (starts on first ascension)
         AscendPlayerProgress newProgress = new AscendPlayerProgress();
-        newProgress.setAscensionStartedAt(System.currentTimeMillis());
         players.put(playerId, newProgress);
         dirtyPlayers.add(playerId);
         queueSave();
@@ -137,7 +136,7 @@ public class AscendPlayerStore {
                    last_active_timestamp, has_unclaimed_passive,
                    summit_accumulated_coins_mantissa, summit_accumulated_coins_exp10,
                    elevation_accumulated_coins_mantissa, elevation_accumulated_coins_exp10,
-                   auto_upgrade_enabled, auto_evolution_enabled, seen_tutorials
+                   auto_upgrade_enabled, auto_evolution_enabled, seen_tutorials, hide_other_runners
             FROM ascend_players
             WHERE uuid = ?
             """;
@@ -192,6 +191,7 @@ public class AscendPlayerStore {
                     progress.setAutoUpgradeEnabled(safeGetBoolean(rs, "auto_upgrade_enabled", false));
                     progress.setAutoEvolutionEnabled(safeGetBoolean(rs, "auto_evolution_enabled", false));
                     progress.setSeenTutorials(safeGetInt(rs, "seen_tutorials", 0));
+                    progress.setHideOtherRunners(safeGetBoolean(rs, "hide_other_runners", false));
                 }
             }
         } catch (SQLException e) {
@@ -989,7 +989,7 @@ public class AscendPlayerStore {
 
     /**
      * Resets player progress for elevation: clears coins, map unlocks (except first map),
-     * best times, multipliers, and removes all runners.
+     * multipliers, and removes all runners. Best times are preserved.
      *
      * @param playerId the player's UUID
      * @param firstMapId the ID of the first map (stays unlocked)
@@ -1001,7 +1001,7 @@ public class AscendPlayerStore {
             return List.of();
         }
 
-        List<String> mapsWithRunners = resetMapProgress(progress, firstMapId, true, playerId);
+        List<String> mapsWithRunners = resetMapProgress(progress, firstMapId, false, playerId);
         markDirty(playerId);
         return mapsWithRunners;
     }
@@ -1199,8 +1199,8 @@ public class AscendPlayerStore {
                 ascension_started_at, fastest_ascension_ms, last_active_timestamp, has_unclaimed_passive,
                 summit_accumulated_coins_mantissa, summit_accumulated_coins_exp10,
                 elevation_accumulated_coins_mantissa, elevation_accumulated_coins_exp10,
-                auto_upgrade_enabled, auto_evolution_enabled, seen_tutorials)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                auto_upgrade_enabled, auto_evolution_enabled, seen_tutorials, hide_other_runners)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 player_name = VALUES(player_name),
                 coins_mantissa = VALUES(coins_mantissa), coins_exp10 = VALUES(coins_exp10),
@@ -1219,6 +1219,7 @@ public class AscendPlayerStore {
                 elevation_accumulated_coins_exp10 = VALUES(elevation_accumulated_coins_exp10),
                 auto_upgrade_enabled = VALUES(auto_upgrade_enabled),
                 auto_evolution_enabled = VALUES(auto_evolution_enabled),
+                hide_other_runners = VALUES(hide_other_runners),
                 seen_tutorials = VALUES(seen_tutorials)
             """;
 
@@ -1319,7 +1320,8 @@ public class AscendPlayerStore {
                 playerStmt.setInt(19, progress.getElevationAccumulatedCoins().getExponent());
                 playerStmt.setBoolean(20, progress.isAutoUpgradeEnabled());
                 playerStmt.setBoolean(21, progress.isAutoEvolutionEnabled());
-                playerStmt.setInt(22, progress.getSeenTutorials());
+                playerStmt.setBoolean(22, progress.isHideOtherRunners());
+                playerStmt.setInt(23, progress.getSeenTutorials());
                 playerStmt.addBatch();
 
                 // Save map progress
@@ -1504,6 +1506,17 @@ public class AscendPlayerStore {
     public void setAutoEvolutionEnabled(UUID playerId, boolean enabled) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
         progress.setAutoEvolutionEnabled(enabled);
+        markDirty(playerId);
+    }
+
+    public boolean isHideOtherRunners(UUID playerId) {
+        AscendPlayerProgress progress = players.get(playerId);
+        return progress != null && progress.isHideOtherRunners();
+    }
+
+    public void setHideOtherRunners(UUID playerId, boolean enabled) {
+        AscendPlayerProgress progress = getOrCreatePlayer(playerId);
+        progress.setHideOtherRunners(enabled);
         markDirty(playerId);
     }
 
