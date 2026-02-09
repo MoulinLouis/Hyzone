@@ -176,6 +176,7 @@ public final class AscendDatabaseSetup {
             ensureSpawnColumns(conn);
             ensureVoidYThresholdColumn(conn);
             ensurePlayerNameColumn(conn);
+            ensureMapLeaderboardIndex(conn);
 
             LOGGER.atInfo().log("Ascend database tables ensured");
 
@@ -551,6 +552,19 @@ public final class AscendDatabaseSetup {
             LOGGER.atInfo().log("Added void_y_threshold column to ascend_settings");
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Failed to add void_y_threshold column: " + e.getMessage());
+        }
+    }
+
+    private static void ensureMapLeaderboardIndex(Connection conn) {
+        if (conn == null) {
+            return;
+        }
+        try (Statement stmt = conn.createStatement()) {
+            stmt.executeUpdate("CREATE INDEX IF NOT EXISTS idx_map_best_time ON ascend_player_maps(map_id, best_time_ms)");
+            LOGGER.atInfo().log("Ensured idx_map_best_time index on ascend_player_maps");
+        } catch (SQLException e) {
+            // Index may already exist under a different name or CREATE INDEX IF NOT EXISTS not supported
+            LOGGER.atWarning().log("Could not create idx_map_best_time index (may already exist): " + e.getMessage());
         }
     }
 
