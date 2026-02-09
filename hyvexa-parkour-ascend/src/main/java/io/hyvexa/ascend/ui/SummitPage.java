@@ -17,6 +17,8 @@ import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.AscendConstants.SummitCategory;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendPlayerStore;
+import io.hyvexa.ascend.hud.AscendHudManager;
+import io.hyvexa.ascend.hud.ToastType;
 import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.summit.SummitManager;
 import io.hyvexa.common.math.BigNumber;
@@ -306,6 +308,10 @@ public class SummitPage extends BaseAscendPage {
             + " -> Lv." + result.newLevel() + " | " + formatBonus(category, preview.currentBonus())
             + " -> " + formatBonus(category, preview.newBonus()))
             .color(SystemMessageUtils.SUCCESS));
+        showToast(playerId, ToastType.EVOLUTION,
+            category.getDisplayName() + " Lv." + preview.currentLevel()
+            + " -> Lv." + result.newLevel() + " | " + formatBonus(category, preview.currentBonus())
+            + " -> " + formatBonus(category, preview.newBonus()));
         player.sendMessage(Message.raw("[Summit] Progress reset: vexa, elevation, multipliers, runners, map unlocks")
             .color(SystemMessageUtils.SECONDARY));
 
@@ -356,5 +362,15 @@ public class SummitPage extends BaseAscendPage {
      */
     private String formatBonus(SummitCategory category, double value) {
         return String.format(Locale.US, "x%.2f", value);
+    }
+
+    private void showToast(UUID playerId, ToastType type, String message) {
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin != null) {
+            AscendHudManager hm = plugin.getHudManager();
+            if (hm != null) {
+                hm.showToast(playerId, type, message);
+            }
+        }
     }
 }

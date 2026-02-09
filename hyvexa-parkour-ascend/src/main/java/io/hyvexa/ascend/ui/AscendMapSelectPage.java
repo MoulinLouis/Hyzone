@@ -40,6 +40,8 @@ import io.hyvexa.ascend.summit.SummitManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 import io.hyvexa.ascend.util.AscendInventoryUtils;
 import io.hyvexa.ascend.util.MapUnlockHelper;
+import io.hyvexa.ascend.hud.AscendHudManager;
+import io.hyvexa.ascend.hud.ToastType;
 import io.hyvexa.common.math.BigNumber;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.util.FormatUtils;
@@ -174,6 +176,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
         if (player != null) {
             String mapName = map.getName() != null && !map.getName().isBlank() ? map.getName() : map.getId();
             player.sendMessage(Message.raw("[Ascend] Ready: " + mapName + " - Move to start!"));
+            showToast(playerRef.getUuid(), ToastType.INFO, "Ready: " + mapName + " - Move to start!");
             // Give run items (reset + leave)
             AscendInventoryUtils.giveRunItems(player);
         }
@@ -506,6 +509,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
             // Buying a runner is now free
             playerStore.setHasRobot(playerRef.getUuid(), mapId, true);
             sendMessage(store, ref, "[Ascend] Runner purchased!");
+            showToast(playerRef.getUuid(), ToastType.SUCCESS, "Runner purchased!");
             updateRobotRow(ref, store, mapId);
         } else {
             int currentLevel = mapProgress.getRobotSpeedLevel();
@@ -514,6 +518,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
             // Check if fully maxed (max stars and max level)
             if (currentStars >= AscendConstants.MAX_ROBOT_STARS && currentLevel >= MAX_SPEED_LEVEL) {
                 sendMessage(store, ref, "[Ascend] Runner is fully evolved and at maximum speed!");
+                showToast(playerRef.getUuid(), ToastType.INFO, "Runner already maxed!");
                 return;
             }
 
@@ -530,7 +535,9 @@ public class AscendMapSelectPage extends BaseAscendPage {
                         plugin.getTutorialTriggerService().checkEvolution(playerRef.getUuid(), ref);
                     }
                 }
-                sendMessage(store, ref, "[Ascend] Runner evolved! Now at " + newStars + " star" + (newStars > 1 ? "s" : "") + "!");
+                String evoMsg = "Runner evolved! Now at " + newStars + " star" + (newStars > 1 ? "s" : "") + "!";
+                sendMessage(store, ref, "[Ascend] " + evoMsg);
+                showToast(playerRef.getUuid(), ToastType.EVOLUTION, evoMsg);
                 updateRobotRow(ref, store, mapId);
                 return;
             }
@@ -1116,6 +1123,16 @@ public class AscendMapSelectPage extends BaseAscendPage {
         }
     }
 
+    private void showToast(UUID playerId, ToastType type, String message) {
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin != null) {
+            AscendHudManager hm = plugin.getHudManager();
+            if (hm != null) {
+                hm.showToast(playerId, type, message);
+            }
+        }
+    }
+
     private void handleBuyAll(Ref<EntityStore> ref, Store<EntityStore> store) {
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (playerRef == null) {
@@ -1240,11 +1257,14 @@ public class AscendMapSelectPage extends BaseAscendPage {
 
         if (purchased == 0) {
             sendMessage(store, ref, "[Ascend] Not enough vexa for any upgrade.");
+            showToast(playerRef.getUuid(), ToastType.ERROR, "Not enough vexa");
             return;
         }
 
         String costText = totalSpent.gt(BigNumber.ZERO) ? " for " + FormatUtils.formatBigNumber(totalSpent) + " vexa" : "";
+        String buyAllMsg = "Buy All: " + purchased + " upgrade" + (purchased > 1 ? "s" : "");
         sendMessage(store, ref, "[Ascend] Purchased " + purchased + " upgrade" + (purchased > 1 ? "s" : "") + costText + "!");
+        showToast(playerRef.getUuid(), ToastType.BATCH, buyAllMsg);
 
         // Update UI for all affected maps
         for (String mapId : updatedMapIds) {
@@ -1305,7 +1325,9 @@ public class AscendMapSelectPage extends BaseAscendPage {
             updateRobotRow(ref, store, mapId);
         }
 
+        String evolveAllMsg = "Evolve All: " + evolved + " runner" + (evolved > 1 ? "s" : "");
         sendMessage(store, ref, "[Ascend] Evolved " + evolved + " runner" + (evolved > 1 ? "s" : "") + "!");
+        showToast(playerRef.getUuid(), ToastType.EVOLUTION, evolveAllMsg);
 
         // Update action button states (may now be grayed out if no more eligible actions)
         UICommandBuilder buttonUpdateCmd = new UICommandBuilder();
