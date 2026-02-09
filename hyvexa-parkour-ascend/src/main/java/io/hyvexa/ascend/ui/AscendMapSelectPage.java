@@ -5,7 +5,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -51,8 +53,15 @@ public class AscendMapSelectPage extends BaseAscendPage {
     private static final String BUTTON_BUY_ALL_DISABLED = "BuyAllDisabled";
     private static final String BUTTON_EVOLVE_ALL = "EvolveAll";
     private static final String BUTTON_EVOLVE_ALL_DISABLED = "EvolveAllDisabled";
-    private static final String BUTTON_STATS = "Stats";
+    private static final String BUTTON_LEADERBOARD = "Leaderboard";
     private static final int MAX_SPEED_LEVEL = 20;
+    private static final long BUY_ALL_COOLDOWN_MS = 100L; // 100ms cooldown to prevent race conditions while allowing satisfying spam clicks
+
+    private static final Map<UUID, Long> lastBuyAllClick = new ConcurrentHashMap<>();
+
+    public static void clearBuyAllCooldown(UUID playerId) {
+        lastBuyAllClick.remove(playerId);
+    }
 
     private final AscendMapStore mapStore;
     private final AscendPlayerStore playerStore;
@@ -91,7 +100,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#EvolveAllOverlay",
             EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_EVOLVE_ALL_DISABLED), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ActionButton3",
-            EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_STATS), false);
+            EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_LEADERBOARD), false);
         buildMapList(ref, store, uiCommandBuilder, uiEventBuilder);
 
         // Set initial button states
@@ -130,8 +139,8 @@ public class AscendMapSelectPage extends BaseAscendPage {
         if (BUTTON_EVOLVE_ALL_DISABLED.equals(data.getButton())) {
             return;
         }
-        if (BUTTON_STATS.equals(data.getButton())) {
-            handleOpenStats(ref, store);
+        if (BUTTON_LEADERBOARD.equals(data.getButton())) {
+            handleOpenLeaderboard(ref, store);
             return;
         }
         if (data.getButton().startsWith(BUTTON_ROBOT_PREFIX)) {
@@ -1113,6 +1122,15 @@ public class AscendMapSelectPage extends BaseAscendPage {
             return;
         }
 
+        // Debounce: prevent spam clicking and race conditions with auto-upgrade
+        UUID playerId = playerRef.getUuid();
+        long now = System.currentTimeMillis();
+        Long lastClick = lastBuyAllClick.get(playerId);
+        if (lastClick != null && (now - lastClick) < BUY_ALL_COOLDOWN_MS) {
+            return; // Silently ignore rapid clicks
+        }
+        lastBuyAllClick.put(playerId, now);
+
         // Collect all affordable purchases sorted by price (cheapest first)
         List<PurchaseOption> options = new ArrayList<>();
         List<AscendMap> maps = mapStore.listMapsSorted();
@@ -1302,7 +1320,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
         }
     }
 
-    private void handleOpenStats(Ref<EntityStore> ref, Store<EntityStore> store) {
+    private void handleOpenLeaderboard(Ref<EntityStore> ref, Store<EntityStore> store) {
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (playerRef == null) {
             return;
@@ -1312,7 +1330,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
             return;
         }
         player.getPageManager().openCustomPage(ref, store,
-            new StatsPage(playerRef, playerStore, mapStore, ghostStore));
+            new AscendMapLeaderboardPage(playerRef, playerStore, mapStore));
     }
 
     /**

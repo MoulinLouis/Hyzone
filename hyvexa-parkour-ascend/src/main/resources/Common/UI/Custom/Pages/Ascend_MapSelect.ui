@@ -120,7 +120,7 @@ $C.@PageOverlay {
         TextButton #ActionButton3 {
           Anchor: (Height: 56);
           FlexWeight: 1;
-          Text: "Stats";
+          Text: "Leaderboard";
           Style: TextButtonStyle(
             Default: (
               Background: #2d5a7b(0.85),

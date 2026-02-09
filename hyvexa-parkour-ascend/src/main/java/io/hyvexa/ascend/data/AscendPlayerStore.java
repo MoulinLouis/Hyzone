@@ -44,9 +44,15 @@ public class AscendPlayerStore {
     private volatile List<LeaderboardEntry> leaderboardCache = List.of();
     private volatile long leaderboardCacheTimestamp = 0;
 
+    // Per-map leaderboard cache
+    private final Map<String, List<MapLeaderboardEntry>> mapLeaderboardCache = new ConcurrentHashMap<>();
+    private final Map<String, Long> mapLeaderboardCacheTimestamps = new ConcurrentHashMap<>();
+
     public record LeaderboardEntry(UUID playerId, String playerName,
             double totalCoinsEarnedMantissa, int totalCoinsEarnedExp10,
             int ascensionCount, int totalManualRuns, Long fastestAscensionMs) {}
+
+    public record MapLeaderboardEntry(String playerName, long bestTimeMs) {}
 
     /**
      * Initialize the store. With lazy loading, we don't load all players upfront.
@@ -1320,8 +1326,8 @@ public class AscendPlayerStore {
                 playerStmt.setInt(19, progress.getElevationAccumulatedCoins().getExponent());
                 playerStmt.setBoolean(20, progress.isAutoUpgradeEnabled());
                 playerStmt.setBoolean(21, progress.isAutoEvolutionEnabled());
-                playerStmt.setBoolean(22, progress.isHideOtherRunners());
-                playerStmt.setInt(23, progress.getSeenTutorials());
+                playerStmt.setInt(22, progress.getSeenTutorials());
+                playerStmt.setBoolean(23, progress.isHideOtherRunners());
                 playerStmt.addBatch();
 
                 // Save map progress
@@ -1459,6 +1465,91 @@ public class AscendPlayerStore {
 
     public void invalidateLeaderboardCache() {
         leaderboardCacheTimestamp = 0;
+    }
+
+    // ========================================
+    // Per-Map Leaderboard (DB-backed with cache)
+    // ========================================
+
+    public List<MapLeaderboardEntry> getMapLeaderboard(String mapId) {
+        if (mapId == null) {
+            return List.of();
+        }
+
+        long now = System.currentTimeMillis();
+        Long cacheTs = mapLeaderboardCacheTimestamps.get(mapId);
+        List<MapLeaderboardEntry> cached = mapLeaderboardCache.get(mapId);
+
+        if (cacheTs == null || cached == null || (now - cacheTs) > LEADERBOARD_CACHE_TTL_MS) {
+            List<MapLeaderboardEntry> dbEntries = fetchMapLeaderboardFromDatabase(mapId);
+            if (dbEntries != null) {
+                cached = dbEntries;
+                mapLeaderboardCache.put(mapId, cached);
+                mapLeaderboardCacheTimestamps.put(mapId, now);
+            } else if (cached == null) {
+                cached = List.of();
+            }
+        }
+
+        // Merge online players' best times on top of the DB snapshot
+        java.util.Map<String, MapLeaderboardEntry> merged = new java.util.LinkedHashMap<>();
+        for (MapLeaderboardEntry entry : cached) {
+            merged.put(entry.playerName() != null ? entry.playerName().toLowerCase() : "", entry);
+        }
+        for (java.util.Map.Entry<UUID, AscendPlayerProgress> e : players.entrySet()) {
+            UUID id = e.getKey();
+            AscendPlayerProgress p = e.getValue();
+            AscendPlayerProgress.MapProgress mapProgress = p.getMapProgress().get(mapId);
+            if (mapProgress == null || mapProgress.getBestTimeMs() == null) {
+                continue;
+            }
+            String name = playerNames.get(id);
+            if (name == null) {
+                name = id.toString().substring(0, 8) + "...";
+            }
+            String key = name.toLowerCase();
+            MapLeaderboardEntry existing = merged.get(key);
+            if (existing == null || mapProgress.getBestTimeMs() < existing.bestTimeMs()) {
+                merged.put(key, new MapLeaderboardEntry(name, mapProgress.getBestTimeMs()));
+            }
+        }
+
+        List<MapLeaderboardEntry> result = new java.util.ArrayList<>(merged.values());
+        result.sort((a, b) -> Long.compare(a.bestTimeMs(), b.bestTimeMs()));
+        return result;
+    }
+
+    private List<MapLeaderboardEntry> fetchMapLeaderboardFromDatabase(String mapId) {
+        if (!DatabaseManager.getInstance().isInitialized()) {
+            return List.of();
+        }
+
+        String sql = """
+            SELECT p.player_name, m.best_time_ms
+            FROM ascend_player_maps m
+            JOIN ascend_players p ON p.uuid = m.player_uuid
+            WHERE m.map_id = ? AND m.best_time_ms IS NOT NULL
+            ORDER BY m.best_time_ms ASC
+            LIMIT 50
+            """;
+
+        List<MapLeaderboardEntry> entries = new java.util.ArrayList<>();
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            stmt.setString(1, mapId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    String name = rs.getString("player_name");
+                    long bestTimeMs = rs.getLong("best_time_ms");
+                    entries.add(new MapLeaderboardEntry(name, bestTimeMs));
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.at(Level.SEVERE).log("Failed to fetch map leaderboard for " + mapId + ": " + e.getMessage());
+            return null;
+        }
+        return entries;
     }
 
     // ========================================

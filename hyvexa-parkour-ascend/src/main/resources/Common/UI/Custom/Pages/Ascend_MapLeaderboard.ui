@@ -1,0 +1,358 @@
+$C = "../Common.ui";
+
+$C.@PageOverlay {
+  SceneBlur {}
+
+  Group #MapLeaderboardWindow {
+    Anchor: (Width: 560, Height: 580);
+    LayoutMode: Top;
+    Background: #0d1620(0.95);
+    OutlineColor: #ffffff(0.06);
+    OutlineSize: 1;
+
+    // === HEADER ===
+    Group #Header {
+      Anchor: (Left: 0, Right: 0, Height: 80);
+      Padding: (Left: 20, Right: 20, Top: 16);
+      LayoutMode: Left;
+
+      // Left side: title block
+      Group #TitleBlock {
+        FlexWeight: 1;
+        LayoutMode: Top;
+
+        Label {
+          Style: (FontSize: 11, TextColor: #3b82f6(0.7), RenderUppercase: true, LetterSpacing: 2, RenderBold: true);
+          Text: "Map Rankings";
+        }
+
+        Label {
+          Anchor: (Top: 6);
+          Style: (FontSize: 20, TextColor: #f0f4f8, RenderBold: true);
+          Text: "Best Times";
+        }
+
+        // Blue separator
+        Group {
+          Anchor: (Left: 0, Width: 40, Height: 2, Top: 10);
+          Background: #3b82f6;
+        }
+      }
+
+      // Right side: close button
+      Group {
+        Anchor: (Width: 72, Height: 32, Top: 4);
+
+        TextButton #CloseButton {
+          Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+          Text: "Close";
+          Style: TextButtonStyle(
+            Default: (
+              Background: #ffffff(0.06),
+              LabelStyle: (FontSize: 13, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Hovered: (
+              Background: #ffffff(0.1),
+              LabelStyle: (FontSize: 13, TextColor: #f0f4f8, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Pressed: (
+              Background: #ffffff(0.04),
+              LabelStyle: (FontSize: 13, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Sounds: $C.@ButtonSounds,
+          );
+        }
+      }
+    }
+
+    // === CONTENT ===
+    Group #Content {
+      Anchor: (Left: 0, Right: 0, Top: 0);
+      FlexWeight: 1;
+      LayoutMode: Top;
+      Padding: (Left: 20, Right: 20, Top: 0, Bottom: 16);
+
+      // --- Map Tabs ---
+      Group #TabsRow {
+        Anchor: (Height: 38);
+        LayoutMode: Left;
+
+        Group #Tab0Wrap {
+          Anchor: (Width: 100, Height: 34);
+          Background: #2d3f50;
+          OutlineColor: #ffffff(0.04);
+          OutlineSize: 1;
+
+          Group #Tab0Accent {
+            Anchor: (Left: 0, Right: 0, Top: 0, Height: 3);
+            Background: #ef4444;
+          }
+
+          Label #Tab0Label {
+            Anchor: (Left: 0, Right: 0, Top: 6, Bottom: 0);
+            Style: (FontSize: 12, RenderBold: true, TextColor: #f0f4f8, Alignment: Center);
+            Text: "Map 1";
+          }
+
+          TextButton #Tab0 {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Text: "";
+            Style: TextButtonStyle(
+              Default: (Background: #000000(0)),
+              Hovered: (Background: #ffffff(0.05)),
+              Pressed: (Background: #ffffff(0.1)),
+              Sounds: $C.@ButtonSounds,
+            );
+          }
+        }
+
+        Group { Anchor: (Width: 4); }
+
+        Group #Tab1Wrap {
+          Anchor: (Width: 100, Height: 34);
+          Background: #142029;
+          OutlineColor: #ffffff(0.04);
+          OutlineSize: 1;
+
+          Group #Tab1Accent {
+            Anchor: (Left: 0, Right: 0, Top: 0, Height: 3);
+            Background: #142029;
+          }
+
+          Label #Tab1Label {
+            Anchor: (Left: 0, Right: 0, Top: 6, Bottom: 0);
+            Style: (FontSize: 12, RenderBold: true, TextColor: #9fb0ba, Alignment: Center);
+            Text: "Map 2";
+          }
+
+          TextButton #Tab1 {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Text: "";
+            Style: TextButtonStyle(
+              Default: (Background: #000000(0)),
+              Hovered: (Background: #ffffff(0.05)),
+              Pressed: (Background: #ffffff(0.1)),
+              Sounds: $C.@ButtonSounds,
+            );
+          }
+        }
+
+        Group { Anchor: (Width: 4); }
+
+        Group #Tab2Wrap {
+          Anchor: (Width: 100, Height: 34);
+          Background: #142029;
+          OutlineColor: #ffffff(0.04);
+          OutlineSize: 1;
+
+          Group #Tab2Accent {
+            Anchor: (Left: 0, Right: 0, Top: 0, Height: 3);
+            Background: #142029;
+          }
+
+          Label #Tab2Label {
+            Anchor: (Left: 0, Right: 0, Top: 6, Bottom: 0);
+            Style: (FontSize: 12, RenderBold: true, TextColor: #9fb0ba, Alignment: Center);
+            Text: "Map 3";
+          }
+
+          TextButton #Tab2 {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Text: "";
+            Style: TextButtonStyle(
+              Default: (Background: #000000(0)),
+              Hovered: (Background: #ffffff(0.05)),
+              Pressed: (Background: #ffffff(0.1)),
+              Sounds: $C.@ButtonSounds,
+            );
+          }
+        }
+
+        Group { Anchor: (Width: 4); }
+
+        Group #Tab3Wrap {
+          Anchor: (Width: 100, Height: 34);
+          Background: #142029;
+          OutlineColor: #ffffff(0.04);
+          OutlineSize: 1;
+
+          Group #Tab3Accent {
+            Anchor: (Left: 0, Right: 0, Top: 0, Height: 3);
+            Background: #142029;
+          }
+
+          Label #Tab3Label {
+            Anchor: (Left: 0, Right: 0, Top: 6, Bottom: 0);
+            Style: (FontSize: 12, RenderBold: true, TextColor: #9fb0ba, Alignment: Center);
+            Text: "Map 4";
+          }
+
+          TextButton #Tab3 {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Text: "";
+            Style: TextButtonStyle(
+              Default: (Background: #000000(0)),
+              Hovered: (Background: #ffffff(0.05)),
+              Pressed: (Background: #ffffff(0.1)),
+              Sounds: $C.@ButtonSounds,
+            );
+          }
+        }
+
+        Group { Anchor: (Width: 4); }
+
+        Group #Tab4Wrap {
+          Anchor: (Width: 100, Height: 34);
+          Background: #142029;
+          OutlineColor: #ffffff(0.04);
+          OutlineSize: 1;
+
+          Group #Tab4Accent {
+            Anchor: (Left: 0, Right: 0, Top: 0, Height: 3);
+            Background: #142029;
+          }
+
+          Label #Tab4Label {
+            Anchor: (Left: 0, Right: 0, Top: 6, Bottom: 0);
+            Style: (FontSize: 12, RenderBold: true, TextColor: #9fb0ba, Alignment: Center);
+            Text: "Map 5";
+          }
+
+          TextButton #Tab4 {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Text: "";
+            Style: TextButtonStyle(
+              Default: (Background: #000000(0)),
+              Hovered: (Background: #ffffff(0.05)),
+              Pressed: (Background: #ffffff(0.1)),
+              Sounds: $C.@ButtonSounds,
+            );
+          }
+        }
+      }
+
+      // --- Search ---
+      Group #SearchArea {
+        Anchor: (Left: 0, Right: 0, Height: 52, Top: 10);
+        LayoutMode: Top;
+
+        Label {
+          Style: (FontSize: 10, TextColor: #9fb0ba(0.6), RenderUppercase: true, LetterSpacing: 2);
+          Text: "Search Player";
+        }
+
+        $C.@TextField #SearchField {
+          Anchor: (Height: 26, Top: 4);
+          Style: (FontSize: 13, TextColor: #ffffff(0.85));
+        }
+      }
+
+      // --- Column Headers ---
+      Group #ColumnHeaders {
+        Anchor: (Left: 6, Right: 6, Height: 24, Top: 6);
+        LayoutMode: Left;
+        Padding: (Left: 16, Right: 12);
+
+        Label {
+          Anchor: (Width: 50);
+          Style: (FontSize: 10, TextColor: #9fb0ba(0.5), RenderUppercase: true, LetterSpacing: 1, RenderBold: true);
+          Text: "Rank";
+        }
+
+        Label {
+          FlexWeight: 1;
+          Style: (FontSize: 10, TextColor: #9fb0ba(0.5), RenderUppercase: true, LetterSpacing: 1, RenderBold: true);
+          Text: "Player";
+        }
+
+        Label {
+          Anchor: (Width: 90);
+          Style: (FontSize: 10, TextColor: #9fb0ba(0.5), RenderUppercase: true, LetterSpacing: 1, RenderBold: true);
+          Text: "Time";
+        }
+      }
+
+      // --- Empty State ---
+      Label #EmptyText {
+        Anchor: (Top: 8);
+        Style: (FontSize: 14, TextColor: #9fb0ba);
+        Text: "";
+      }
+
+      // --- Leaderboard List ---
+      Group #LeaderboardList {
+        Anchor: (Left: 0, Right: 0, Top: 4);
+        FlexWeight: 1;
+        LayoutMode: TopScrolling;
+        Padding: (Left: 2, Right: 2);
+        ScrollbarStyle: $C.@DefaultScrollbarStyle;
+
+        Group #LeaderboardCards {
+          LayoutMode: Top;
+        }
+      }
+
+      // --- Pagination ---
+      Group #Pagination {
+        Anchor: (Top: 8, Height: 36, Left: 0, Right: 0);
+        LayoutMode: Left;
+
+        Group { FlexWeight: 1; }
+
+        TextButton #PrevPageButton {
+          Anchor: (Width: 100, Height: 32);
+          Text: "< Prev";
+          Style: TextButtonStyle(
+            Default: (
+              Background: #ffffff(0.06),
+              LabelStyle: (FontSize: 13, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Hovered: (
+              Background: #ffffff(0.1),
+              LabelStyle: (FontSize: 13, TextColor: #f0f4f8, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Pressed: (
+              Background: #ffffff(0.04),
+              LabelStyle: (FontSize: 13, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Sounds: $C.@ButtonSounds,
+          );
+        }
+
+        Group { Anchor: (Width: 12); }
+
+        Label #PageLabel {
+          Anchor: (Width: 80, Top: 8);
+          Style: (FontSize: 12, TextColor: #9fb0ba);
+          Text: "";
+        }
+
+        Group { Anchor: (Width: 12); }
+
+        TextButton #NextPageButton {
+          Anchor: (Width: 100, Height: 32);
+          Text: "Next >";
+          Style: TextButtonStyle(
+            Default: (
+              Background: #3b82f6,
+              LabelStyle: (FontSize: 13, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Hovered: (
+              Background: #60a5fa,
+              LabelStyle: (FontSize: 13, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Pressed: (
+              Background: #2563eb,
+              LabelStyle: (FontSize: 13, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Sounds: $C.@ButtonSounds,
+          );
+        }
+
+        Group { FlexWeight: 1; }
+      }
+    }
+  }
+}
+
+$C.@BackButton {}
