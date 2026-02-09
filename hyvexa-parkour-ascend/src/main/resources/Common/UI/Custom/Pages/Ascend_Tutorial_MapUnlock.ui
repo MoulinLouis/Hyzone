@@ -126,6 +126,27 @@ $C.@PageOverlay {
         }
       }
 
+      // Tip box (step 2 only)
+      Group #TipBox {
+        Anchor: (Left: 0, Right: 0, Top: 14);
+        LayoutMode: Left;
+        Padding: (Left: 10, Right: 10, Top: 8, Bottom: 8);
+        Background: #f59e0b(0.1);
+        OutlineColor: #f59e0b(0.25);
+        OutlineSize: 1;
+        Visible: false;
+
+        Label {
+          Style: (FontSize: 12, TextColor: #f59e0b, RenderBold: true);
+          Text: "TIP";
+        }
+        Group { Anchor: (Width: 8); }
+        Label #TipText {
+          Style: (FontSize: 12, TextColor: #d4a04a, Wrap: true);
+          Text: "Tip text";
+        }
+      }
+
       // Spacer
       Group { FlexWeight: 1; }
 

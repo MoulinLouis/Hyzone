@@ -165,10 +165,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
         try {
             if (HylogramsBridge.isAvailable()) {
                 hologramManager = new AscendHologramManager();
-                if (hologramManager != null) {
-                    for (var map : mapStore.listMaps()) {
-                        hologramManager.refreshMapHolosIfPresent(map, null);
-                    }
+                for (var map : mapStore.listMaps()) {
+                    hologramManager.refreshMapHolosIfPresent(map, null);
                 }
             }
         } catch (Exception e) {

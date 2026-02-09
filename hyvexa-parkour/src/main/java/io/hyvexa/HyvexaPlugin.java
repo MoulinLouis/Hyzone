@@ -70,7 +70,7 @@ import io.hyvexa.parkour.system.NoLaunchpadEditSystem;
 import io.hyvexa.parkour.system.NoPlayerDamageSystem;
 import io.hyvexa.parkour.system.NoPlayerKnockbackSystem;
 import io.hyvexa.parkour.system.NoWeaponDamageSystem;
-import io.hyvexa.parkour.system.PlayerVisibilityFilterSystem;
+import io.hyvexa.common.visibility.EntityVisibilityFilterSystem;
 import io.hyvexa.parkour.system.RunTrackerTickSystem;
 import io.hyvexa.parkour.ui.PlayerMusicPage;
 import io.hyvexa.parkour.visibility.PlayerVisibilityManager;
@@ -788,8 +788,8 @@ public class HyvexaPlugin extends JavaPlugin {
 
     private void registerPlayerVisibilitySystem() {
         var registry = EntityStore.REGISTRY;
-        if (!registry.hasSystemClass(PlayerVisibilityFilterSystem.class)) {
-            registry.registerSystem(new PlayerVisibilityFilterSystem());
+        if (!registry.hasSystemClass(EntityVisibilityFilterSystem.class)) {
+            registry.registerSystem(new EntityVisibilityFilterSystem());
         }
     }
 
