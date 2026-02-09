@@ -7,7 +7,6 @@ import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.protocol.MovementStates;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.Message;
-import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.movement.MovementStatesComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
@@ -15,7 +14,6 @@ import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
-import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.common.util.InventoryUtils;
@@ -25,8 +23,8 @@ import io.hyvexa.parkour.data.Map;
 import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.data.SettingsStore;
 import io.hyvexa.parkour.data.TransformData;
-import io.hyvexa.parkour.ui.PlayerMusicPage;
 import io.hyvexa.parkour.tracker.RunTracker;
+import io.hyvexa.parkour.tracker.TrackerUtils;
 import io.hyvexa.parkour.visibility.PlayerVisibilityManager;
 import io.hyvexa.duel.data.DuelMatchStore;
 import io.hyvexa.duel.data.DuelPreferenceStore;
@@ -249,8 +247,8 @@ public class DuelTracker {
         activeMatches.put(matchId, match);
         matchByPlayer.put(player1, matchId);
         matchByPlayer.put(player2, matchId);
-        playerStates.put(player1, new DuelPlayerState(player1, matchId, map.getId()));
-        playerStates.put(player2, new DuelPlayerState(player2, matchId, map.getId()));
+        playerStates.put(player1, new DuelPlayerState(map.getId()));
+        playerStates.put(player2, new DuelPlayerState(map.getId()));
 
         applyDuelVisibility(player1, player2);
 
@@ -419,7 +417,7 @@ public class DuelTracker {
         Vector3d position = new Vector3d(checkpoint.getX(), checkpoint.getY(), checkpoint.getZ());
         Vector3f rotation = new Vector3f(checkpoint.getRotX(), checkpoint.getRotY(), checkpoint.getRotZ());
         store.addComponent(ref, Teleport.getComponentType(), new Teleport(world, position, rotation));
-        state.resetFallTracking();
+        state.fallState.reset();
         return true;
     }
 
@@ -454,18 +452,18 @@ public class DuelTracker {
         Vector3d position = transform.getPosition();
         if (shouldTeleportFromVoid(position.getY())) {
             teleportToRespawn(context.ref, context.store, state, map);
-            state.resetFallTracking();
+            state.fallState.reset();
             return;
         }
         checkCheckpoints(state, context.playerRef, player, position, map);
         long fallTimeoutMs = getFallRespawnTimeoutMs();
         if (map.isFreeFallEnabled()) {
-            state.resetFallTracking();
+            state.fallState.reset();
             fallTimeoutMs = 0L;
         }
         if (fallTimeoutMs > 0 && shouldRespawnFromFall(state, position.getY(), movementStates, fallTimeoutMs)) {
             teleportToRespawn(context.ref, context.store, state, map);
-            state.resetFallTracking();
+            state.fallState.reset();
             return;
         }
         checkFinish(state, context.playerRef, player, position, map, match, now);
@@ -543,25 +541,11 @@ public class DuelTracker {
     }
 
     private void playFinishSound(PlayerRef playerRef) {
-        if (playerRef == null || !PlayerMusicPage.isVictorySfxEnabled(playerRef.getUuid())) {
-            return;
-        }
-        int soundIndex = SoundEvent.getAssetMap().getIndex("SFX_Parkour_Victory");
-        if (soundIndex <= SoundEvent.EMPTY_ID) {
-            return;
-        }
-        SoundUtil.playSoundEvent2dToPlayer(playerRef, soundIndex, com.hypixel.hytale.protocol.SoundCategory.SFX);
+        TrackerUtils.playFinishSound(playerRef);
     }
 
     private void playCheckpointSound(PlayerRef playerRef) {
-        if (playerRef == null || !PlayerMusicPage.isCheckpointSfxEnabled(playerRef.getUuid())) {
-            return;
-        }
-        int soundIndex = SoundEvent.getAssetMap().getIndex("SFX_Parkour_Checkpoint");
-        if (soundIndex <= SoundEvent.EMPTY_ID) {
-            return;
-        }
-        SoundUtil.playSoundEvent2dToPlayer(playerRef, soundIndex, com.hypixel.hytale.protocol.SoundCategory.SFX);
+        TrackerUtils.playCheckpointSound(playerRef);
     }
 
     private void teleportToRespawn(Ref<EntityStore> ref, Store<EntityStore> store, DuelPlayerState state, Map map) {
@@ -947,26 +931,7 @@ public class DuelTracker {
     }
 
     private void teleportToSpawn(Ref<EntityStore> ref, Store<EntityStore> store, TransformComponent transform) {
-        World world = store.getExternalData().getWorld();
-        if (world == null) {
-            return;
-        }
-        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-        if (playerRef == null) {
-            return;
-        }
-        com.hypixel.hytale.math.vector.Transform spawnTransform = null;
-        var worldConfig = world.getWorldConfig();
-        if (worldConfig != null && worldConfig.getSpawnProvider() != null) {
-            spawnTransform = worldConfig.getSpawnProvider().getSpawnPoint(world, playerRef.getUuid());
-        }
-        Vector3d position = spawnTransform != null
-                ? spawnTransform.getPosition()
-                : (transform != null ? transform.getPosition() : new Vector3d(0.0, 0.0, 0.0));
-        Vector3f rotation = spawnTransform != null
-                ? spawnTransform.getRotation()
-                : (transform != null ? transform.getRotation() : new Vector3f(0f, 0f, 0f));
-        store.addComponent(ref, Teleport.getComponentType(), new Teleport(world, position, rotation));
+        TrackerUtils.teleportToSpawn(ref, store, transform, null);
     }
 
     private double getVoidY() {
@@ -997,78 +962,31 @@ public class DuelTracker {
         if (state == null || fallTimeoutMs <= 0L) {
             return false;
         }
-        if (movementStates != null && (movementStates.climbing || movementStates.onGround)) {
-            state.fallStartTime = null;
-            state.lastY = currentY;
-            return false;
-        }
-        Double lastY = state.lastY;
-        long now = System.currentTimeMillis();
-        if (lastY == null) {
-            state.lastY = currentY;
-            return false;
-        }
-        if (currentY < lastY) {
-            if (state.fallStartTime == null) {
-                state.fallStartTime = now;
-            }
-            if (now - state.fallStartTime >= fallTimeoutMs) {
-                state.fallStartTime = null;
-                state.lastY = currentY;
-                return true;
-            }
-        } else {
-            state.fallStartTime = null;
-        }
-        state.lastY = currentY;
-        return false;
+        return TrackerUtils.shouldRespawnFromFall(state.fallState, currentY,
+                TrackerUtils.isFallTrackingBlocked(movementStates), fallTimeoutMs);
     }
 
     private int resolveCheckpointIndex(DuelPlayerState state, Map map) {
         if (state == null || map == null) {
             return -1;
         }
-        int index = state.lastCheckpointIndex;
-        if (index >= 0 && index < map.getCheckpoints().size()) {
-            return index;
-        }
-        int best = -1;
-        for (Integer touched : state.touchedCheckpoints) {
-            if (touched == null) {
-                continue;
-            }
-            int candidate = touched;
-            if (candidate >= 0 && candidate < map.getCheckpoints().size()) {
-                best = Math.max(best, candidate);
-            }
-        }
-        return best;
+        return TrackerUtils.resolveCheckpointIndex(state.lastCheckpointIndex, state.touchedCheckpoints,
+                map.getCheckpoints());
     }
 
     private static double distanceSqWithVerticalBonus(Vector3d position, TransformData target) {
-        double dx = position.getX() - target.getX();
-        double dy = position.getY() - target.getY();
-        if (dy > 0) {
-            dy = Math.max(0.0, dy - DuelConstants.TOUCH_VERTICAL_BONUS);
-        }
-        double dz = position.getZ() - target.getZ();
-        return dx * dx + dy * dy + dz * dz;
+        return TrackerUtils.distanceSqWithVerticalBonus(position, target, DuelConstants.TOUCH_VERTICAL_BONUS);
     }
 
     private static final class DuelPlayerState {
-        private final UUID playerId;
-        private final String matchId;
         private final String mapId;
         private final Set<Integer> touchedCheckpoints = new HashSet<>();
+        private final TrackerUtils.FallState fallState = new TrackerUtils.FallState();
         private int lastCheckpointIndex = -1;
         private boolean finishTouched;
-        private Long fallStartTime;
-        private Double lastY;
         private long lastFinishWarningMs;
 
-        private DuelPlayerState(UUID playerId, String matchId, String mapId) {
-            this.playerId = playerId;
-            this.matchId = matchId;
+        private DuelPlayerState(String mapId) {
             this.mapId = mapId;
         }
 
@@ -1076,12 +994,7 @@ public class DuelTracker {
             touchedCheckpoints.clear();
             lastCheckpointIndex = -1;
             finishTouched = false;
-            resetFallTracking();
-        }
-
-        private void resetFallTracking() {
-            fallStartTime = null;
-            lastY = null;
+            fallState.reset();
         }
     }
 

@@ -56,11 +56,11 @@ Code duplication, per-tick allocations, and consistency improvements. Grouped by
 
 ### Cluster: FormatUtils.java — Dead code + optimization
 
-- [ ] **#9 — Dead code in `FormatUtils` (+ `HylogramsBridge`, `CommandUtils`, `SystemMessageUtils`)**
+- [x] **#9 — Dead code in `FormatUtils` (+ `HylogramsBridge`, `CommandUtils`, `SystemMessageUtils`)**
   - `formatVexaForHud`, `formatVexaForHudDecimal` zero callers. ~10 `HylogramsBridge` methods unused. `getArgOrDefault`, `ggPrompt` unused.
   - **Fix:** Delete all dead methods.
 
-- [ ] **#10 — `formatBigNumber` suffix table re-allocated every call**
+- [x] **#10 — `formatBigNumber` suffix table re-allocated every call**
   - Fresh `String[][]` + `Integer.parseInt` in loop on every HUD update.
   - **Fix:** Make `private static final` with pre-parsed exponents.
 
@@ -68,11 +68,11 @@ Code duplication, per-tick allocations, and consistency improvements. Grouped by
 
 ### Cluster: DuelTracker.java — Duplication + unused fields
 
-- [ ] **#17 — Duplicated utility methods between `RunTracker` and `DuelTracker`**
+- [x] **#17 — Duplicated utility methods between `RunTracker` and `DuelTracker`**
   - 6 methods duplicated (~200 lines): `distanceSqWithVerticalBonus`, `teleportToSpawn`, `resolveCheckpointIndex`, `shouldRespawnFromFall`, sound methods.
   - **Fix:** Extract into `TrackerUtils`. Both trackers call shared implementations.
 
-- [ ] **#20 — `DuelPlayerState` has unused fields**
+- [x] **#20 — `DuelPlayerState` has unused fields**
   - `playerId` and `matchId` stored but never read.
   - **Fix:** Remove unused fields and constructor assignments.
 

@@ -7,7 +7,6 @@ import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.Message;
-import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
 import com.hypixel.hytale.server.core.entity.movement.MovementStatesComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.movement.MovementManager;
@@ -15,7 +14,6 @@ import com.hypixel.hytale.protocol.MovementSettings;
 import com.hypixel.hytale.server.core.io.PacketHandler;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
-import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -66,7 +64,7 @@ public class RunTracker {
     private final ProgressStore progressStore;
     private final SettingsStore settingsStore;
     private final ConcurrentHashMap<UUID, ActiveRun> activeRuns = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<UUID, FallState> idleFalls = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, TrackerUtils.FallState> idleFalls = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, TeleportStats> teleportStats = new ConcurrentHashMap<>();
     private final Set<UUID> readyPlayers = ConcurrentHashMap.newKeySet();
     private final ConcurrentHashMap<UUID, Long> lastSeenAt = new ConcurrentHashMap<>();
@@ -149,8 +147,8 @@ public class RunTracker {
         ActiveRun run = activeRuns.get(playerId);
         if (run != null) {
             run.lastPosition = null;
-            run.fallStartTime = null;
-            run.lastY = null;
+            run.fallState.fallStartTime = null;
+            run.fallState.lastY = null;
             run.skipNextTimeIncrement = true;
         }
         idleFalls.remove(playerId);
@@ -428,8 +426,8 @@ public class RunTracker {
             Map map = mapStore.getMap(run.mapId);
             if (map != null) {
                 teleportToRespawn(ref, store, run, map, buffer);
-                run.fallStartTime = null;
-                run.lastY = null;
+                run.fallState.fallStartTime = null;
+                run.fallState.lastY = null;
                 recordTeleport(playerRef.getUuid(), TeleportCause.RUN_RESPAWN);
             } else {
                 teleportToSpawn(ref, store, transform, buffer);
@@ -494,13 +492,13 @@ public class RunTracker {
         checkCheckpoints(run, playerRef, player, position, map, previousPosition, previousElapsedMs, deltaMs);
         long fallTimeoutMs = getFallRespawnTimeoutMs();
         if (map.isFreeFallEnabled()) {
-            run.fallStartTime = null;
-            run.lastY = position.getY();
+            run.fallState.fallStartTime = null;
+            run.fallState.lastY = position.getY();
             fallTimeoutMs = 0L;
         }
         if (fallTimeoutMs > 0 && shouldRespawnFromFall(run, position.getY(), movementStates, fallTimeoutMs)) {
-            run.fallStartTime = null;
-            run.lastY = null;
+            run.fallState.fallStartTime = null;
+            run.fallState.lastY = null;
             if (run.lastCheckpointIndex < 0) {
                 armStartOnMovement(run, map.getStart());
             }
@@ -649,58 +647,14 @@ public class RunTracker {
 
     private boolean shouldRespawnFromFall(ActiveRun run, double currentY, MovementStates movementStates,
                                           long fallTimeoutMs) {
-        if (isFallTrackingBlocked(movementStates)) {
-            run.fallStartTime = null;
-            run.lastY = currentY;
-            return false;
-        }
-        if (run.lastY == null) {
-            run.lastY = currentY;
-            run.fallStartTime = null;
-            return false;
-        }
-        long now = System.currentTimeMillis();
-        if (currentY < run.lastY) {
-            if (run.fallStartTime == null) {
-                run.fallStartTime = now;
-            }
-            if (now - run.fallStartTime >= fallTimeoutMs) {
-                return true;
-            }
-        } else {
-            run.fallStartTime = null;
-        }
-        run.lastY = currentY;
-        return false;
+        return TrackerUtils.shouldRespawnFromFall(run.fallState, currentY,
+                TrackerUtils.isFallTrackingBlocked(movementStates), fallTimeoutMs);
     }
 
-    private boolean shouldRespawnFromFall(FallState fallState, double currentY, MovementStates movementStates,
-                                          long fallTimeoutMs) {
-        if (isFallTrackingBlocked(movementStates)) {
-            fallState.fallStartTime = null;
-            fallState.lastY = currentY;
-            return false;
-        }
-        if (fallState.lastY == null) {
-            fallState.lastY = currentY;
-            fallState.fallStartTime = null;
-            return false;
-        }
-        long now = System.currentTimeMillis();
-        if (currentY < fallState.lastY) {
-            if (fallState.fallStartTime == null) {
-                fallState.fallStartTime = now;
-            }
-            if (now - fallState.fallStartTime >= fallTimeoutMs) {
-                fallState.fallStartTime = null;
-                fallState.lastY = currentY;
-                return true;
-            }
-        } else {
-            fallState.fallStartTime = null;
-        }
-        fallState.lastY = currentY;
-        return false;
+    private boolean shouldRespawnFromFall(TrackerUtils.FallState fallState, double currentY,
+                                          MovementStates movementStates, long fallTimeoutMs) {
+        return TrackerUtils.shouldRespawnFromFall(fallState, currentY,
+                TrackerUtils.isFallTrackingBlocked(movementStates), fallTimeoutMs);
     }
 
     private void checkCheckpoints(ActiveRun run, PlayerRef playerRef, Player player, Vector3d position, Map map,
@@ -918,25 +872,11 @@ public class RunTracker {
     }
 
     private void playFinishSound(PlayerRef playerRef) {
-        if (playerRef == null || !io.hyvexa.parkour.ui.PlayerMusicPage.isVictorySfxEnabled(playerRef.getUuid())) {
-            return;
-        }
-        int soundIndex = SoundEvent.getAssetMap().getIndex("SFX_Parkour_Victory");
-        if (soundIndex <= SoundEvent.EMPTY_ID) {
-            return;
-        }
-        SoundUtil.playSoundEvent2dToPlayer(playerRef, soundIndex, com.hypixel.hytale.protocol.SoundCategory.SFX);
+        TrackerUtils.playFinishSound(playerRef);
     }
 
     private void playCheckpointSound(PlayerRef playerRef) {
-        if (playerRef == null || !io.hyvexa.parkour.ui.PlayerMusicPage.isCheckpointSfxEnabled(playerRef.getUuid())) {
-            return;
-        }
-        int soundIndex = SoundEvent.getAssetMap().getIndex("SFX_Parkour_Checkpoint");
-        if (soundIndex <= SoundEvent.EMPTY_ID) {
-            return;
-        }
-        SoundUtil.playSoundEvent2dToPlayer(playerRef, soundIndex, com.hypixel.hytale.protocol.SoundCategory.SFX);
+        TrackerUtils.playCheckpointSound(playerRef);
     }
 
     private static double distanceSq(Vector3d position, TransformData target) {
@@ -947,13 +887,7 @@ public class RunTracker {
     }
 
     private static double distanceSqWithVerticalBonus(Vector3d position, TransformData target) {
-        double dx = position.getX() - target.getX();
-        double dy = position.getY() - target.getY();
-        if (dy > 0) {
-            dy = Math.max(0.0, dy - ParkourConstants.TOUCH_VERTICAL_BONUS);
-        }
-        double dz = position.getZ() - target.getZ();
-        return dx * dx + dy * dy + dz * dz;
+        return TrackerUtils.distanceSqWithVerticalBonus(position, target, ParkourConstants.TOUCH_VERTICAL_BONUS);
     }
 
     private static double distanceSq(Vector3d position, Vector3d target) {
@@ -1060,8 +994,8 @@ public class RunTracker {
         store.addComponent(ref, Teleport.getComponentType(),
                 new Teleport(store.getExternalData().getWorld(), position, rotation));
         recordTeleport(playerRef.getUuid(), TeleportCause.CHECKPOINT);
-        run.fallStartTime = null;
-        run.lastY = null;
+        run.fallState.fallStartTime = null;
+        run.fallState.lastY = null;
         run.lastPosition = null;
         return true;
     }
@@ -1087,8 +1021,8 @@ public class RunTracker {
         }
         store.addComponent(ref, Teleport.getComponentType(), teleport);
         recordTeleport(playerRef.getUuid(), TeleportCause.CHECKPOINT);
-        run.fallStartTime = null;
-        run.lastY = null;
+        run.fallState.fallStartTime = null;
+        run.fallState.lastY = null;
         run.lastPosition = null;
         return true;
     }
@@ -1097,21 +1031,8 @@ public class RunTracker {
         if (run == null || map == null) {
             return -1;
         }
-        int index = run.lastCheckpointIndex;
-        if (index >= 0 && index < map.getCheckpoints().size()) {
-            return index;
-        }
-        int best = -1;
-        for (Integer touched : run.touchedCheckpoints) {
-            if (touched == null) {
-                continue;
-            }
-            int candidate = touched;
-            if (candidate >= 0 && candidate < map.getCheckpoints().size()) {
-                best = Math.max(best, candidate);
-            }
-        }
-        return best;
+        return TrackerUtils.resolveCheckpointIndex(run.lastCheckpointIndex, run.touchedCheckpoints,
+                map.getCheckpoints());
     }
 
     public boolean resetRunToStart(Ref<EntityStore> ref, Store<EntityStore> store, Player player, PlayerRef playerRef) {
@@ -1229,35 +1150,17 @@ public class RunTracker {
     }
 
     public void teleportToSpawn(Ref<EntityStore> ref, Store<EntityStore> store, TransformComponent transform) {
-        teleportToSpawn(ref, store, transform, null);
+        TrackerUtils.teleportToSpawn(ref, store, transform, null);
     }
 
     private void teleportToSpawn(Ref<EntityStore> ref, Store<EntityStore> store, TransformComponent transform,
                                  CommandBuffer<EntityStore> buffer) {
-        World world = store.getExternalData().getWorld();
-        if (world == null) {
-            return;
-        }
-        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-        if (playerRef == null) {
-            return;
-        }
-        com.hypixel.hytale.math.vector.Transform spawnTransform = null;
-        var worldConfig = world.getWorldConfig();
-        if (worldConfig != null && worldConfig.getSpawnProvider() != null) {
-            spawnTransform = worldConfig.getSpawnProvider().getSpawnPoint(world, playerRef.getUuid());
-        }
-        Vector3d position = spawnTransform != null
-                ? spawnTransform.getPosition()
-                : (transform != null ? transform.getPosition() : new Vector3d(0.0, 0.0, 0.0));
-        Vector3f rotation = spawnTransform != null
-                ? spawnTransform.getRotation()
-                : (transform != null ? transform.getRotation() : new Vector3f(0f, 0f, 0f));
-        addTeleport(ref, store, buffer, new Teleport(world, position, rotation));
+        TrackerUtils.teleportToSpawn(ref, store, transform, buffer);
     }
 
     private static class ActiveRun {
         private final String mapId;
+        private final TrackerUtils.FallState fallState = new TrackerUtils.FallState();
         private long startTimeMs;
         private boolean waitingForStart;
         private Vector3d startPosition;
@@ -1270,8 +1173,6 @@ public class RunTracker {
         private boolean flyActive;
         private TransformData practiceCheckpoint;
         private Vector3f practiceHeadRotation;
-        private Long fallStartTime;
-        private Double lastY;
         private long lastFinishWarningMs;
         private long elapsedMs;
         private double elapsedRemainderMs;
@@ -1286,11 +1187,6 @@ public class RunTracker {
             this.startTimeMs = startTimeMs;
             this.elapsedMs = 0L;
         }
-    }
-
-    private static class FallState {
-        private Long fallStartTime;
-        private Double lastY;
     }
 
     private enum TeleportCause {
@@ -1385,12 +1281,8 @@ public class RunTracker {
         }
     }
 
-    private boolean isFallTrackingBlocked(MovementStates movementStates) {
-        return movementStates != null && (movementStates.climbing || movementStates.onGround);
-    }
-
-    private FallState getIdleFallState(UUID playerId) {
-        return idleFalls.computeIfAbsent(playerId, ignored -> new FallState());
+    private TrackerUtils.FallState getIdleFallState(UUID playerId) {
+        return idleFalls.computeIfAbsent(playerId, ignored -> new TrackerUtils.FallState());
     }
 
     private boolean shouldTeleportFromVoid(double currentY) {
