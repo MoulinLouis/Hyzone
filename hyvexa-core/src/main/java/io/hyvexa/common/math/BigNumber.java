@@ -81,17 +81,11 @@ public final class BigNumber implements Comparable<BigNumber> {
 
         double abs = Math.abs(mantissa);
 
-        // Shift mantissa into [1, 10)
-        if (abs >= 10.0) {
-            while (abs >= 10.0) {
-                abs /= 10.0;
-                exponent++;
-            }
-        } else if (abs < 1.0) {
-            while (abs < 1.0 && abs > 0.0) {
-                abs *= 10.0;
-                exponent--;
-            }
+        // Shift mantissa into [1, 10) using O(1) log10
+        int shift = (int) Math.floor(Math.log10(abs));
+        if (shift != 0) {
+            abs /= Math.pow(10.0, shift);
+            exponent += shift;
         }
 
         // Restore sign

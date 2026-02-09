@@ -33,7 +33,6 @@ public final class DuelConstants {
             "Complete %d maps to unlock duels. You need %d more. Progress: %d/%d.";
     public static final String MSG_MATCH_FOUND = "Match found! Opponent: %s - Map: %s.";
     public static final String MSG_WIN = "Victory! Time: %s - Opponent: %s.";
-    public static final String MSG_WIN_VS = "Victory! Time: %s - Opponent: %s.";
     public static final String MSG_LOSE = "Defeat. Opponent time: %s - Opponent: %s.";
     public static final String MSG_WIN_FORFEIT = "Victory! %s forfeited.";
     public static final String MSG_WIN_DISCONNECT = "Victory! %s disconnected.";
