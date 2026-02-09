@@ -82,16 +82,16 @@ Active bugs, memory leaks, and crash risks. Grouped by file/system for single-pa
 ### Cluster: AscendConstants.java — Unicode + stale docs
 > All quick text fixes in the same file.
 
-- [ ] **#5 — Unicode characters display as `?` in Hytale chat**
+- [x] **#5 — Unicode characters display as `?` in Hytale chat**
   - **File:** `AscendConstants.java:560-561`
   - **Fix:** Replace `\u00d7` with `x`, `\u2192` with `->`.
 
-- [ ] **#49 — Javadoc exponents don't match constants**
+- [x] **#49 — Javadoc exponents don't match constants**
   - **File:** `AscendConstants.java:284-293`
   - Javadoc says `0.77`/`0.63`, actual constants are `0.72`/`0.58`.
   - **Fix:** Update Javadoc to match.
 
-- [ ] **#51 — Stale removal comment**
+- [x] **#51 — Stale removal comment**
   - **File:** `AscendConstants.java:10`
   - **Fix:** Delete line.
 
