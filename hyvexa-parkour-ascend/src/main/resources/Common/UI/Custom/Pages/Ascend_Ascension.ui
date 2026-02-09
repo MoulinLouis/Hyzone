@@ -11,10 +11,16 @@ $C.@PageOverlay {
           Padding: (Left: 8, Top: 2);
           Text: "Close";
           Style: TextButtonStyle(
-            Default: (LabelStyle: (FontSize: 14, TextColor: #9fb0ba, RenderBold: true)),
+            Default: (
+              Background: #000000(0.3),
+              LabelStyle: (FontSize: 14, TextColor: #9fb0ba, RenderBold: true)
+            ),
+            Hovered: (
+              Background: #000000(0.4),
+              LabelStyle: (FontSize: 14, TextColor: #9fb0ba, RenderBold: true)
+            ),
             Sounds: $C.@ButtonSounds,
           );
-          Background: #000000(0.3);
         }
         $C.@Title {
           @Text = "A S C E N S I O N";

@@ -35,38 +35,9 @@ public final class InventoryUtils {
         if (inventory == null) {
             return;
         }
-        if (PermissionUtils.isOp(player)) {
-            clearContainer(inventory.getHotbar());
-            boolean hasSword = map != null && map.isMithrilSwordEnabled();
-            boolean hasDaggers = map != null && map.isMithrilDaggersEnabled();
-            boolean hasGlider = map != null && map.isGliderEnabled();
-            int slotIndex = 0;
-            if (hasSword) {
-                setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_RUN_MITHRIL_SWORD, 1));
-            }
-            if (hasDaggers) {
-                setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_RUN_MITHRIL_DAGGERS, 1));
-            }
-            if (hasGlider) {
-                setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_RUN_GLIDER, 1));
-            }
-            if (practiceEnabled) {
-                setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_PRACTICE_CHECKPOINT, 1));
-                setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_TOGGLE_FLY, 1));
-            } else if (PlayerSettingsStore.isResetItemEnabled(resolvePlayerUuid(player))) {
-                setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_RESET, 1));
-            }
-            setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_RESTART_CHECKPOINT, 1));
-            setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_LEAVE, 1));
-            if (!practiceEnabled) {
-                setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_PRACTICE, 1));
-            }
-            setHotbarItem(inventory, slotIndex, new ItemStack(ParkourConstants.ITEM_ADMIN_REMOTE, 1));
-            applyDropFilter(inventory.getHotbar(), false);
-            return;
-        }
-        applyDropFilters(inventory, false);
-        clearAllSections(inventory);
+        boolean isOp = PermissionUtils.isOp(player);
+        prepareInventory(inventory, isOp);
+
         boolean hasSword = map != null && map.isMithrilSwordEnabled();
         boolean hasDaggers = map != null && map.isMithrilDaggersEnabled();
         boolean hasGlider = map != null && map.isGliderEnabled();
@@ -92,7 +63,7 @@ public final class InventoryUtils {
             setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_PRACTICE, 1));
         }
         setHotbarItem(inventory, slotIndex, new ItemStack(ParkourConstants.ITEM_ADMIN_REMOTE, 1));
-        applyDropFilters(inventory, false);
+        finalizeInventory(inventory, isOp);
     }
 
     public static void giveDuelItems(Player player, Map map) {
@@ -117,25 +88,32 @@ public final class InventoryUtils {
         if (inventory == null) {
             return;
         }
-        if (PermissionUtils.isOp(player)) {
-            clearContainer(inventory.getHotbar());
-            setHotbarItem(inventory, 0, new ItemStack(ParkourConstants.ITEM_MENU, 1));
-            setHotbarItem(inventory, 1, new ItemStack(DuelConstants.ITEM_MENU, 1));
-            setHotbarItem(inventory, 2, new ItemStack(ParkourConstants.ITEM_LEADERBOARD, 1));
-            setHotbarItem(inventory, 3, new ItemStack(ParkourConstants.ITEM_STATS, 1));
-            setHotbarItem(inventory, 4, new ItemStack(ParkourConstants.ITEM_ADMIN_REMOTE, 1));
-            setHotbarItem(inventory, 8, new ItemStack(ParkourConstants.ITEM_HUB_MENU, 1));
-            return;
-        }
-        applyDropFilters(inventory, false);
-        clearAllSections(inventory);
+        boolean isOp = PermissionUtils.isOp(player);
+        prepareInventory(inventory, isOp);
         setHotbarItem(inventory, 0, new ItemStack(ParkourConstants.ITEM_MENU, 1));
         setHotbarItem(inventory, 1, new ItemStack(DuelConstants.ITEM_MENU, 1));
         setHotbarItem(inventory, 2, new ItemStack(ParkourConstants.ITEM_LEADERBOARD, 1));
         setHotbarItem(inventory, 3, new ItemStack(ParkourConstants.ITEM_STATS, 1));
         setHotbarItem(inventory, 4, new ItemStack(ParkourConstants.ITEM_ADMIN_REMOTE, 1));
         setHotbarItem(inventory, 8, new ItemStack(ParkourConstants.ITEM_HUB_MENU, 1));
-        applyDropFilters(inventory, false);
+        finalizeInventory(inventory, isOp);
+    }
+
+    private static void prepareInventory(Inventory inventory, boolean isOp) {
+        if (isOp) {
+            clearContainer(inventory.getHotbar());
+        } else {
+            applyDropFilters(inventory, false);
+            clearAllSections(inventory);
+        }
+    }
+
+    private static void finalizeInventory(Inventory inventory, boolean isOp) {
+        if (isOp) {
+            applyDropFilter(inventory.getHotbar(), false);
+        } else {
+            applyDropFilters(inventory, false);
+        }
     }
 
     public static void clearAllItems(Player player) {
