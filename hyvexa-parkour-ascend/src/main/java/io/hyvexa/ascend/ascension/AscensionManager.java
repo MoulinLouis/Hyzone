@@ -116,6 +116,14 @@ public class AscensionManager {
 
         // Unlock the node
         progress.unlockSkillNode(node);
+
+        // Auto-enable automation toggles when their skills are unlocked
+        if (node == SkillTreeNode.AUTO_RUNNERS) {
+            playerStore.setAutoUpgradeEnabled(playerId, true);
+        } else if (node == SkillTreeNode.AUTO_EVOLUTION) {
+            playerStore.setAutoEvolutionEnabled(playerId, true);
+        }
+
         playerStore.markDirty(playerId);
 
         LOGGER.atInfo().log("[Ascension] Player " + playerId + " unlocked skill: " + node.name());
