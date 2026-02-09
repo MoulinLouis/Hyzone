@@ -18,7 +18,7 @@ import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.duel.data.DuelStats;
 import io.hyvexa.duel.data.DuelStatsStore;
-import io.hyvexa.parkour.ui.PaginationState;
+import io.hyvexa.common.ui.PaginationState;
 
 import javax.annotation.Nonnull;
 import java.util.Comparator;

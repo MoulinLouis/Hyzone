@@ -81,13 +81,6 @@ public class DatabaseManager {
             config.setPassword(password);
             config.setDriverClassName("com.mysql.cj.jdbc.Driver");
 
-            try {
-                Class.forName("com.mysql.cj.jdbc.Driver");
-            } catch (ClassNotFoundException e) {
-                LOGGER.at(Level.SEVERE).withCause(e).log("MySQL driver not found on classpath");
-                throw new RuntimeException("MySQL driver missing", e);
-            }
-
             // Connection pool settings
             config.setMaximumPoolSize(10);
             config.setMinimumIdle(2);

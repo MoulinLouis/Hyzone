@@ -80,22 +80,22 @@ Code duplication, per-tick allocations, and consistency improvements. Grouped by
 
 ### Standalone items
 
-- [ ] **#12 — `BigNumber.normalize` uses O(n) loop instead of O(1) log10**
+- [x] **#12 — `BigNumber.normalize` uses O(n) loop instead of O(1) log10**
   - **File:** `hyvexa-core/.../math/BigNumber.java:85-95`
   - **Fix:** Replace with `Math.floor(Math.log10(abs))`.
 
-- [ ] **#13 — `DatabaseManager` redundant `Class.forName`**
+- [x] **#13 — `DatabaseManager` redundant `Class.forName`**
   - **File:** `hyvexa-core/.../db/DatabaseManager.java:84-89`
   - **Fix:** Remove the try-catch block.
 
-- [ ] **#16 — `PaginationState` duplicated verbatim between modules**
+- [x] **#16 — `PaginationState` duplicated verbatim between modules**
   - **Files:** `hyvexa-parkour/.../ui/PaginationState.java`, `hyvexa-parkour-ascend/.../ui/PaginationState.java`
   - **Fix:** Move to `hyvexa-core` and update imports.
 
-- [ ] **#18 — Duplicated `applyDropFilter`**
+- [x] **#18 — Duplicated `applyDropFilter`**
   - **Files:** `InventoryUtils.java:191-201`, `InventorySyncManager.java:232-242`
   - **Fix:** `InventorySyncManager` delegates to `InventoryUtils`. Remove duplicates.
 
-- [ ] **#19 — `DuelConstants.MSG_WIN_VS` unused duplicate**
+- [x] **#19 — `DuelConstants.MSG_WIN_VS` unused duplicate**
   - **File:** `DuelConstants.java:36`
   - **Fix:** Delete line.

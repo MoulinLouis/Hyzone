@@ -15,6 +15,7 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.ui.ButtonEventData;
+import io.hyvexa.common.ui.PaginationState;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.data.ProgressStore;

@@ -1,4 +1,4 @@
-package io.hyvexa.ascend.ui;
+package io.hyvexa.common.ui;
 
 public class PaginationState {
 

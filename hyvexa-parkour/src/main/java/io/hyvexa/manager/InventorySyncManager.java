@@ -5,9 +5,6 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.Inventory;
-import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
-import com.hypixel.hytale.server.core.inventory.container.filter.FilterActionType;
-import com.hypixel.hytale.server.core.inventory.container.filter.SlotFilter;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -215,30 +212,12 @@ public class InventorySyncManager {
             return;
         }
         boolean allowDrop = PermissionUtils.isOp(player);
-        applyDropFilter(inventory.getHotbar(), allowDrop);
-        applyDropFilter(inventory.getStorage(), allowDrop);
-        applyDropFilter(inventory.getBackpack(), allowDrop);
-        applyDropFilter(inventory.getTools(), allowDrop);
-        applyDropFilter(inventory.getUtility(), allowDrop);
-        applyDropFilter(inventory.getArmor(), allowDrop);
-    }
-
-    /**
-     * Applies drop and remove filters to an item container.
-     *
-     * @param container the container to apply filters to
-     * @param allowDrop whether to allow dropping items
-     */
-    public void applyDropFilter(ItemContainer container, boolean allowDrop) {
-        if (container == null) {
-            return;
-        }
-        SlotFilter filter = allowDrop ? SlotFilter.ALLOW : SlotFilter.DENY;
-        short capacity = container.getCapacity();
-        for (short slot = 0; slot < capacity; slot++) {
-            container.setSlotFilter(FilterActionType.DROP, slot, filter);
-            container.setSlotFilter(FilterActionType.REMOVE, slot, filter);
-        }
+        InventoryUtils.applyDropFilter(inventory.getHotbar(), allowDrop);
+        InventoryUtils.applyDropFilter(inventory.getStorage(), allowDrop);
+        InventoryUtils.applyDropFilter(inventory.getBackpack(), allowDrop);
+        InventoryUtils.applyDropFilter(inventory.getTools(), allowDrop);
+        InventoryUtils.applyDropFilter(inventory.getUtility(), allowDrop);
+        InventoryUtils.applyDropFilter(inventory.getArmor(), allowDrop);
     }
 
     private boolean shouldApplyParkourMode(PlayerRef playerRef, Store<EntityStore> store) {

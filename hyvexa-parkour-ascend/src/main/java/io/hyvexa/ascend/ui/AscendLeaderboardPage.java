@@ -17,6 +17,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.data.AscendPlayerStore.LeaderboardEntry;
 import io.hyvexa.common.ui.ButtonEventData;
+import io.hyvexa.common.ui.PaginationState;
 import io.hyvexa.common.util.FormatUtils;
 
 import javax.annotation.Nonnull;

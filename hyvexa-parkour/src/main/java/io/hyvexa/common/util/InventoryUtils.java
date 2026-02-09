@@ -188,7 +188,7 @@ public final class InventoryUtils {
         applyDropFilter(inventory.getArmor(), allowDrop);
     }
 
-    private static void applyDropFilter(ItemContainer container, boolean allowDrop) {
+    public static void applyDropFilter(ItemContainer container, boolean allowDrop) {
         if (container == null) {
             return;
         }
