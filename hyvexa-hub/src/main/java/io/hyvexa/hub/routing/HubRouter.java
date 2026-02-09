@@ -6,11 +6,15 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+
+import io.hyvexa.hub.HubConstants;
+import io.hyvexa.hub.ui.HubMenuPage;
 
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -19,20 +23,29 @@ import java.util.logging.Level;
 public class HubRouter {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final String HUB_WORLD_NAME = "Hub";
-    private static final String PARKOUR_WORLD_NAME = "Parkour";
-    private static final String ASCEND_WORLD_NAME = "Ascend";
+
+    public void openMenuOrRoute(Ref<EntityStore> ref, Store<EntityStore> store,
+                                PlayerRef playerRef, World world) {
+        if (world != null && HubConstants.WORLD_HUB.equalsIgnoreCase(world.getName())) {
+            Player player = store.getComponent(ref, Player.getComponentType());
+            if (player != null) {
+                player.getPageManager().openCustomPage(ref, store, new HubMenuPage(playerRef, this));
+            }
+            return;
+        }
+        routeToHub(playerRef);
+    }
 
     public void routeToHub(PlayerRef playerRef) {
-        routeToWorld(playerRef, HUB_WORLD_NAME);
+        routeToWorld(playerRef, HubConstants.WORLD_HUB);
     }
 
     public void routeToParkour(PlayerRef playerRef) {
-        routeToWorld(playerRef, PARKOUR_WORLD_NAME);
+        routeToWorld(playerRef, HubConstants.WORLD_PARKOUR);
     }
 
     public void routeToAscend(PlayerRef playerRef) {
-        routeToWorld(playerRef, ASCEND_WORLD_NAME);
+        routeToWorld(playerRef, HubConstants.WORLD_ASCEND);
     }
 
     private void routeToWorld(PlayerRef playerRef, String targetWorldName) {

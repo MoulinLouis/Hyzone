@@ -5,18 +5,14 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.hub.HyvexaHubPlugin;
-import io.hyvexa.hub.ui.HubMenuPage;
 
 import javax.annotation.Nonnull;
 
 public class HubCommand extends AbstractPlayerCommand {
-
-    private static final String HUB_WORLD_NAME = "Hub";
 
     private final HyvexaHubPlugin plugin;
 
@@ -32,13 +28,6 @@ public class HubCommand extends AbstractPlayerCommand {
         if (plugin == null || plugin.getRouter() == null) {
             return;
         }
-        if (HUB_WORLD_NAME.equalsIgnoreCase(world.getName())) {
-            Player player = store.getComponent(ref, Player.getComponentType());
-            if (player != null) {
-                player.getPageManager().openCustomPage(ref, store, new HubMenuPage(playerRef, plugin.getRouter()));
-            }
-            return;
-        }
-        plugin.getRouter().routeToHub(playerRef);
+        plugin.getRouter().openMenuOrRoute(ref, store, playerRef, world);
     }
 }
