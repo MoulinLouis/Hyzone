@@ -217,6 +217,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
                 if (playerId != null && playerStore != null) {
                     playerStore.setSessionFirstRunClaimed(playerId, false);
                     playerStore.resetConsecutiveManualRuns(playerId);
+                    playerStore.storePlayerName(playerId, playerRef.getUsername());
+                    playerStore.markDirty(playerId);
 
                     // Check for passive earnings
                     if (passiveEarningsManager != null) {

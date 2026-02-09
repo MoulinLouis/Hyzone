@@ -175,6 +175,7 @@ public final class AscendDatabaseSetup {
                 """);
             ensureSpawnColumns(conn);
             ensureVoidYThresholdColumn(conn);
+            ensurePlayerNameColumn(conn);
 
             LOGGER.atInfo().log("Ascend database tables ensured");
 
@@ -510,6 +511,21 @@ public final class AscendDatabaseSetup {
             } catch (SQLException e) {
                 LOGGER.at(Level.SEVERE).log("Failed to add spawn columns: " + e.getMessage());
             }
+        }
+    }
+
+    private static void ensurePlayerNameColumn(Connection conn) {
+        if (conn == null) {
+            return;
+        }
+        if (columnExists(conn, "ascend_players", "player_name")) {
+            return;
+        }
+        try (Statement stmt = conn.createStatement()) {
+            stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN player_name VARCHAR(32) DEFAULT NULL");
+            LOGGER.atInfo().log("Added player_name column to ascend_players");
+        } catch (SQLException e) {
+            LOGGER.at(Level.SEVERE).log("Failed to add player_name column: " + e.getMessage());
         }
     }
 
