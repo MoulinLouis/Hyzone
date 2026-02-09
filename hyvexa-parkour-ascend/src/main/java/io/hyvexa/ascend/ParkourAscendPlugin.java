@@ -306,6 +306,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
                 passiveEarningsManager.onPlayerLeaveAscend(playerId);
             }
 
+            AscendCommand.onPlayerDisconnect(playerId);
             playerRefCache.remove(playerId);
             AscendMapSelectPage.clearBuyAllCooldown(playerId);
             hudManager.removePlayer(playerId);

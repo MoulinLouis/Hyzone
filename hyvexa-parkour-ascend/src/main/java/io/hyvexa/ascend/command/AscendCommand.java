@@ -71,6 +71,19 @@ public class AscendCommand extends AbstractAsyncCommand {
         closeActivePage(playerId);
     }
 
+    /**
+     * Get the plugin instance, sending an error message to the player if unavailable.
+     * Returns null if the plugin or its core systems are not ready.
+     */
+    private static ParkourAscendPlugin requirePlugin(Player player) {
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin == null) {
+            player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading."));
+            return null;
+        }
+        return plugin;
+    }
+
     public AscendCommand() {
         super("ascend", "Open the Ascend menu");
         this.setPermissionGroup(GameMode.Adventure);
@@ -131,11 +144,8 @@ public class AscendCommand extends AbstractAsyncCommand {
     }
 
     private void openStatsPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null || plugin.getPlayerStore() == null) {
-            player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading."));
-            return;
-        }
+        ParkourAscendPlugin plugin = requirePlugin(player);
+        if (plugin == null || plugin.getPlayerStore() == null) return;
         UUID playerId = playerRef.getUuid();
         closeActivePage(playerId);
         StatsPage page = new StatsPage(playerRef, plugin.getPlayerStore(), plugin.getMapStore(), plugin.getGhostStore());
@@ -144,11 +154,8 @@ public class AscendCommand extends AbstractAsyncCommand {
     }
 
     private void openElevationPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null || plugin.getPlayerStore() == null) {
-            player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading."));
-            return;
-        }
+        ParkourAscendPlugin plugin = requirePlugin(player);
+        if (plugin == null || plugin.getPlayerStore() == null) return;
         UUID playerId = playerRef.getUuid();
         closeActivePage(playerId);
         ElevationPage page = new ElevationPage(playerRef, plugin.getPlayerStore());
@@ -157,11 +164,8 @@ public class AscendCommand extends AbstractAsyncCommand {
     }
 
     private void openSummitPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store, String[] args) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null || plugin.getSummitManager() == null) {
-            player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading."));
-            return;
-        }
+        ParkourAscendPlugin plugin = requirePlugin(player);
+        if (plugin == null || plugin.getSummitManager() == null) return;
         UUID playerId = playerRef.getUuid();
         closeActivePage(playerId);
         SummitPage page = new SummitPage(playerRef, plugin.getPlayerStore(), plugin.getSummitManager());
@@ -170,11 +174,8 @@ public class AscendCommand extends AbstractAsyncCommand {
     }
 
     private void openAscensionPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null || plugin.getAscensionManager() == null) {
-            player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading."));
-            return;
-        }
+        ParkourAscendPlugin plugin = requirePlugin(player);
+        if (plugin == null || plugin.getAscensionManager() == null) return;
         UUID playerId = playerRef.getUuid();
         closeActivePage(playerId);
         AscensionPage page = new AscensionPage(playerRef, plugin.getPlayerStore(), plugin.getAscensionManager());
@@ -183,11 +184,8 @@ public class AscendCommand extends AbstractAsyncCommand {
     }
 
     private void openSkillTreePage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null || plugin.getAscensionManager() == null) {
-            player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading."));
-            return;
-        }
+        ParkourAscendPlugin plugin = requirePlugin(player);
+        if (plugin == null || plugin.getAscensionManager() == null) return;
         UUID playerId = playerRef.getUuid();
         closeActivePage(playerId);
         SkillTreePage page = new SkillTreePage(playerRef, plugin.getPlayerStore(), plugin.getAscensionManager());
@@ -196,11 +194,8 @@ public class AscendCommand extends AbstractAsyncCommand {
     }
 
     private void openAutomationPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null || plugin.getAscensionManager() == null) {
-            player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading."));
-            return;
-        }
+        ParkourAscendPlugin plugin = requirePlugin(player);
+        if (plugin == null || plugin.getAscensionManager() == null) return;
         UUID playerId = playerRef.getUuid();
         closeActivePage(playerId);
         AutomationPage page = new AutomationPage(playerRef, plugin.getPlayerStore(), plugin.getAscensionManager());
@@ -209,27 +204,26 @@ public class AscendCommand extends AbstractAsyncCommand {
     }
 
     private void openSettingsPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null || plugin.getPlayerStore() == null || plugin.getRobotManager() == null) {
-            player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading."));
-            return;
-        }
+        ParkourAscendPlugin plugin = requirePlugin(player);
+        if (plugin == null || plugin.getPlayerStore() == null || plugin.getRobotManager() == null) return;
         UUID playerId = playerRef.getUuid();
         closeActivePage(playerId);
         AscendSettingsPage page = new AscendSettingsPage(playerRef, plugin.getPlayerStore(), plugin.getRobotManager());
+        registerActivePage(playerId, page);
         player.getPageManager().openCustomPage(ref, store, page);
     }
 
     private void openHelpPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
-        player.getPageManager().openCustomPage(ref, store, new AscendHelpPage(playerRef));
+        UUID playerId = playerRef.getUuid();
+        closeActivePage(playerId);
+        AscendHelpPage page = new AscendHelpPage(playerRef);
+        registerActivePage(playerId, page);
+        player.getPageManager().openCustomPage(ref, store, page);
     }
 
     private void openLeaderboardPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null || plugin.getPlayerStore() == null) {
-            player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading."));
-            return;
-        }
+        ParkourAscendPlugin plugin = requirePlugin(player);
+        if (plugin == null || plugin.getPlayerStore() == null) return;
         UUID playerId = playerRef.getUuid();
         closeActivePage(playerId);
         AscendLeaderboardPage page = new AscendLeaderboardPage(playerRef, plugin.getPlayerStore());
@@ -237,11 +231,8 @@ public class AscendCommand extends AbstractAsyncCommand {
     }
 
     private void openMapLeaderboardPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null || plugin.getPlayerStore() == null || plugin.getMapStore() == null) {
-            player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading."));
-            return;
-        }
+        ParkourAscendPlugin plugin = requirePlugin(player);
+        if (plugin == null || plugin.getPlayerStore() == null || plugin.getMapStore() == null) return;
         UUID playerId = playerRef.getUuid();
         closeActivePage(playerId);
         AscendMapLeaderboardPage page = new AscendMapLeaderboardPage(playerRef, plugin.getPlayerStore(), plugin.getMapStore());
@@ -249,11 +240,8 @@ public class AscendCommand extends AbstractAsyncCommand {
     }
 
     private void showAchievements(Player player, PlayerRef playerRef) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null || plugin.getAchievementManager() == null) {
-            player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading."));
-            return;
-        }
+        ParkourAscendPlugin plugin = requirePlugin(player);
+        if (plugin == null || plugin.getAchievementManager() == null) return;
 
         AchievementManager achievementManager = plugin.getAchievementManager();
         var unlocked = plugin.getPlayerStore().getUnlockedAchievements(playerRef.getUuid());
@@ -271,11 +259,8 @@ public class AscendCommand extends AbstractAsyncCommand {
     }
 
     private void handleTitle(Player player, PlayerRef playerRef, String[] args) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null || plugin.getAchievementManager() == null) {
-            player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading."));
-            return;
-        }
+        ParkourAscendPlugin plugin = requirePlugin(player);
+        if (plugin == null || plugin.getAchievementManager() == null) return;
 
         AchievementManager achievementManager = plugin.getAchievementManager();
 
@@ -319,10 +304,8 @@ public class AscendCommand extends AbstractAsyncCommand {
     }
 
     private void openMapMenu(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) {
-            return;
-        }
+        ParkourAscendPlugin plugin = requirePlugin(player);
+        if (plugin == null) return;
         AscendMapStore mapStore = plugin.getMapStore();
         AscendPlayerStore playerStore = plugin.getPlayerStore();
         AscendRunTracker runTracker = plugin.getRunTracker();
