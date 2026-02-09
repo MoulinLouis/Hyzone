@@ -117,6 +117,12 @@ public class AscendRunTracker {
         ActiveRun active = activeRuns.remove(playerId);
         frozenPlayers.remove(playerId);
 
+        // Flush deferred tutorials now that the player is out of the run loop
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin != null && plugin.getTutorialTriggerService() != null) {
+            plugin.getTutorialTriggerService().flushPendingTutorials(playerId);
+        }
+
         // Show runners from the cancelled run's map
         if (pending != null) {
             showRunnersForMap(playerId, pending.mapId);
@@ -446,8 +452,8 @@ public class AscendRunTracker {
                     AscendMap previousMap = MapUnlockHelper.getPreviousMap(map, mapStore);
                     String prevName = previousMap != null && previousMap.getName() != null && !previousMap.getName().isBlank()
                         ? previousMap.getName() : "previous map";
-                    player.sendMessage(Message.raw("[Ascend] This map is locked! Level the runner on " + prevName
-                        + " to " + AscendConstants.MAP_UNLOCK_REQUIRED_RUNNER_LEVEL + " to unlock it.")
+                    player.sendMessage(Message.raw("[Ascend] This map is locked! Upgrade the runner on " + prevName
+                        + " to speed level " + AscendConstants.MAP_UNLOCK_REQUIRED_RUNNER_LEVEL + " first. Open /ascend to manage runners.")
                         .color(SystemMessageUtils.ERROR));
                     return;
                 }
