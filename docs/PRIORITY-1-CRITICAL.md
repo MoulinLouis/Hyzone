@@ -100,15 +100,15 @@ Active bugs, memory leaks, and crash risks. Grouped by file/system for single-pa
 ### Cluster: AscendPlayerStore.java — Unbounded query + cleanup
 > Fix #48 first (the real issue), then clean up #52 and #53 in the same pass.
 
-- [ ] **#48 — Leaderboard query fetches ALL players without LIMIT**
+- [x] **#48 — Leaderboard query fetches ALL players without LIMIT**
   - **File:** `AscendPlayerStore.java:1497-1501`
   - **Fix:** Add `ORDER BY ... LIMIT 100`.
 
-- [ ] **#52 — Orphaned Javadoc**
+- [x] **#52 — Orphaned Javadoc**
   - **File:** `AscendPlayerStore.java:1149-1153`
   - **Fix:** Delete orphaned doc block.
 
-- [ ] **#53 — Unreachable null check after `getOrCreatePlayer`**
+- [x] **#53 — Unreachable null check after `getOrCreatePlayer`**
   - **File:** `AscendPlayerStore.java:750-752`
   - **Fix:** Remove null check.
 

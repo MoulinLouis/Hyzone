@@ -749,9 +749,6 @@ public class AscendPlayerStore {
 
     public long addSummitXp(UUID playerId, SummitCategory category, long amount) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        if (progress == null) {
-            return 0L;
-        }
         long newXp = progress.addSummitXp(category, amount);
         markDirty(playerId);
         return newXp;
@@ -1142,12 +1139,6 @@ public class AscendPlayerStore {
     }
 
     /**
-     * Remove a player from the cache (called on disconnect).
-     * Flushes any pending changes to database before evicting.
-     *
-     * @param playerId the player's UUID
-     */
-    /**
      * Delete ALL player data from the database and clear all in-memory caches.
      * This is a server-wide wipe for launching in a fresh state.
      */
@@ -1507,6 +1498,8 @@ public class AscendPlayerStore {
             SELECT uuid, player_name, total_vexa_earned_mantissa, total_vexa_earned_exp10,
                    ascension_count, total_manual_runs, fastest_ascension_ms
             FROM ascend_players
+            ORDER BY total_vexa_earned_exp10 DESC, total_vexa_earned_mantissa DESC
+            LIMIT 100
             """;
 
         List<LeaderboardEntry> entries = new java.util.ArrayList<>();
