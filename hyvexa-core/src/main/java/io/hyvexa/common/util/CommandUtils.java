@@ -55,16 +55,4 @@ public final class CommandUtils {
         return args[index];
     }
 
-    /**
-     * Get a specific argument by index, or a default value if not present.
-     *
-     * @param args Arguments array
-     * @param index Index to retrieve
-     * @param defaultValue Default value if not present
-     * @return The argument or default value
-     */
-    public static String getArgOrDefault(String[] args, int index, String defaultValue) {
-        String arg = getArg(args, index);
-        return arg != null ? arg : defaultValue;
-    }
 }
