@@ -78,9 +78,9 @@ public class AscensionPage extends BaseAscendPage {
         UUID playerId = playerRef.getUuid();
 
         if (!ascensionManager.canAscend(playerId)) {
-            BigNumber coins = playerStore.getCoins(playerId);
-            player.sendMessage(Message.raw("[Ascension] Need " + FormatUtils.formatBigNumber(AscendConstants.ASCENSION_COIN_THRESHOLD)
-                + " vexa to Ascend. You have: " + FormatUtils.formatBigNumber(coins))
+            BigNumber vexa = playerStore.getVexa(playerId);
+            player.sendMessage(Message.raw("[Ascension] Need " + FormatUtils.formatBigNumber(AscendConstants.ASCENSION_VEXA_THRESHOLD)
+                + " vexa to Ascend. You have: " + FormatUtils.formatBigNumber(vexa))
                 .color(SystemMessageUtils.SECONDARY));
             return;
         }
@@ -118,14 +118,14 @@ public class AscensionPage extends BaseAscendPage {
         }
 
         UUID playerId = playerRef.getUuid();
-        BigNumber coins = playerStore.getCoins(playerId);
+        BigNumber vexa = playerStore.getVexa(playerId);
         int ascensionCount = playerStore.getAscensionCount(playerId);
         int availablePoints = playerStore.getAvailableSkillPoints(playerId);
         boolean canAscend = ascensionManager.canAscend(playerId);
 
-        // Update coin values
-        commandBuilder.set("#CurrentCoins.Text", FormatUtils.formatBigNumber(coins));
-        commandBuilder.set("#RequiredCoins.Text", FormatUtils.formatBigNumber(AscendConstants.ASCENSION_COIN_THRESHOLD));
+        // Update vexa values
+        commandBuilder.set("#CurrentVexa.Text", FormatUtils.formatBigNumber(vexa));
+        commandBuilder.set("#RequiredVexa.Text", FormatUtils.formatBigNumber(AscendConstants.ASCENSION_VEXA_THRESHOLD));
 
         // Update current stats
         commandBuilder.set("#AscensionCountValue.Text", "x" + ascensionCount);
@@ -135,7 +135,7 @@ public class AscensionPage extends BaseAscendPage {
         if (canAscend) {
             commandBuilder.set("#AscendButton.Text", "ASCEND");
         } else {
-            commandBuilder.set("#AscendButton.Text", "NEED " + FormatUtils.formatBigNumber(AscendConstants.ASCENSION_COIN_THRESHOLD));
+            commandBuilder.set("#AscendButton.Text", "NEED " + FormatUtils.formatBigNumber(AscendConstants.ASCENSION_VEXA_THRESHOLD));
         }
     }
 }

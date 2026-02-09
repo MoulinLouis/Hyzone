@@ -248,13 +248,13 @@ Suggested schema:
 ```sql
 CREATE TABLE ascend_players (
   uuid VARCHAR(36) PRIMARY KEY,
-  coins DECIMAL(65,2) NOT NULL DEFAULT 0,
+  vexa DECIMAL(65,2) NOT NULL DEFAULT 0,
   elevation_multiplier INT NOT NULL DEFAULT 1,
   ascension_count INT NOT NULL DEFAULT 0,
   skill_tree_points INT NOT NULL DEFAULT 0,
-  total_coins_earned DECIMAL(65,2) NOT NULL DEFAULT 0,
+  total_vexa_earned DECIMAL(65,2) NOT NULL DEFAULT 0,
   total_manual_runs INT NOT NULL DEFAULT 0,
-  summit_accumulated_coins DECIMAL(65,2) NOT NULL DEFAULT 0,
+  summit_accumulated_vexa DECIMAL(65,2) NOT NULL DEFAULT 0,
   active_title VARCHAR(64) DEFAULT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -262,12 +262,12 @@ CREATE TABLE ascend_players (
 ```
 
 Notes:
-- `coins`, `total_coins_earned`, and `summit_accumulated_coins` use DECIMAL(65,2) for precise fractional values (BigDecimal in code).
-- `summit_accumulated_coins` tracks total coins earned during the current Summit progress cycle (used for COIN_FLOW progression).
+- `vexa`, `total_vexa_earned`, and `summit_accumulated_vexa` use DECIMAL(65,2) for precise fractional values (BigDecimal in code).
+- `summit_accumulated_vexa` tracks total vexa earned during the current Summit progress cycle (used for VEXA_FLOW progression).
 - `elevation_multiplier` stores the elevation **level** (not the actual multiplier). The actual multiplier is calculated as `1 + 0.1 × level^0.65`. Column name kept for backwards compatibility.
 - `ascension_count` tracks how many times the player has Ascended.
 - `skill_tree_points` is the total points earned (ascension_count, may differ if points are granted by other means).
-- `total_coins_earned` is lifetime coins for achievement tracking (never resets).
+- `total_vexa_earned` is lifetime vexa for achievement tracking (never resets).
 - `total_manual_runs` is lifetime manual completions for achievement tracking.
 - `active_title` is the currently selected title from achievements.
 
@@ -356,7 +356,7 @@ CREATE TABLE ascend_player_summit (
 ```
 
 Notes:
-- `category` values: `COIN_FLOW`, `RUNNER_SPEED`, `MANUAL_MASTERY`
+- `category` values: `VEXA_FLOW`, `RUNNER_SPEED`, `MANUAL_MASTERY`
 - `level` is the Summit level in that category (0+)
 - Summit levels reset on Ascension (unless Summit Persistence skill is unlocked)
 
@@ -377,7 +377,7 @@ CREATE TABLE ascend_player_skills (
 Notes:
 - `skill_node` is the enum name from `AscendConstants.SkillTreeNode`
 - Skill unlocks are permanent (never reset)
-- Skill nodes: COIN_T1_*, SPEED_T1_*, MANUAL_T1_*, HYBRID_*, ULTIMATE_*
+- Skill nodes: VEXA_T1_*, SPEED_T1_*, MANUAL_T1_*, HYBRID_*, ULTIMATE_*
 
 ## ascend_player_achievements
 Stores unlocked achievements per player.

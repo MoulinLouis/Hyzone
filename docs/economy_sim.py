@@ -10,15 +10,15 @@ Key mechanics modeled:
 - totalLevel = stars * 20 + speedLevel (continuous cost curve)
 - Multiplier gain: +0.1/run at 0 stars, +0.2/run at 1+ stars
 - Elevation: cost 30000 * 1.15^(level^0.72), multiplier = level
-- Elevation resets: coins, map unlocks, multipliers, runners, stars, speed levels (NOT ghosts)
+- Elevation resets: vexa, map unlocks, multipliers, runners, stars, speed levels (NOT ghosts)
 
 Strategy:
 - Elevation timing: mini forward simulation (60s) models compound multiplier growth
-  to project future coins. Elevate only when waiting barely improves the payoff
+  to project future vexa. Elevate only when waiting barely improves the payoff
   AND the gain is meaningful (>= 30% of current elevation).
   No sticky ACCUM flag — always re-evaluate.
 - Upgrade purchasing: ROI-based (best payback time first) instead of cheapest-first.
-  Prioritizes upgrades that increase income the most per coin spent.
+  Prioritizes upgrades that increase income the most per vexa spent.
 """
 
 import math
@@ -26,7 +26,7 @@ import math
 # === CONSTANTS (from AscendConstants.java / ECONOMY_BALANCE.md) ===
 
 BASE_TIMES = [5, 10, 16, 26, 42]           # Runner base run times (seconds)
-BASE_REWARDS = [1, 5, 25, 100, 500]        # Coins per completion
+BASE_REWARDS = [1, 5, 25, 100, 500]        # Vexa per completion
 MAP_UNLOCK_PRICES = [0, 100, 500, 2500, 10000]
 
 SPEED_PER_LEVEL = 0.10                     # +10% per speed level (uniform all maps)
@@ -47,7 +47,7 @@ MANUAL_MULT_INCREMENT = 0.1               # +0.1 per manual completion
 RUNNER_MULT_BASE = 0.1                    # +0.1 at 0 stars
 RUNNER_MULT_EVOLVED = 0.2                 # +0.2 at 1+ stars
 
-MANUAL_RUN_OVERHEAD = 2.0                 # Seconds overhead per manual run
+MANUAL_RUN_OVERHEAD = 2.0                  # Seconds overhead per manual run
 
 ASCENSION_THRESHOLD = 10_000_000_000_000_000  # 10Q
 
@@ -61,7 +61,7 @@ MARGINAL_THRESHOLD = 0.10  # Elevate when waiting 60s gains < 10% more levels
 MIN_ELEV_GAIN_PCT = 0.30   # Only elevate if gain >= 30% of current elevation
 ELEV_COOLDOWN = 30         # Seconds after elevation before re-evaluating
 MAX_UPGRADE_PAYBACK = 60   # Only buy upgrades that pay back within 60s
-MAX_UPGRADE_SPEND = 0.70   # Don't spend more than 70% of coins on one upgrade
+MAX_UPGRADE_SPEND = 0.70   # Don't spend more than 70% of vexa on one upgrade
 
 
 def early_level_boost(speed_level, map_idx, stars):
@@ -90,13 +90,13 @@ def elevation_cost(level):
     return ELEVATION_BASE_COST * (ELEVATION_COST_GROWTH ** effective)
 
 
-def calc_elevation_purchase(current_level, coins):
+def calc_elevation_purchase(current_level, vexa):
     levels = 0
     total_cost = 0.0
     lvl = current_level
     while True:
         c = elevation_cost(lvl)
-        if total_cost + c > coins:
+        if total_cost + c > vexa:
             break
         total_cost += c
         lvl += 1
@@ -111,15 +111,15 @@ def runner_mult_increment(stars):
     return RUNNER_MULT_EVOLVED if stars > 0 else RUNNER_MULT_BASE
 
 
-def project_coins_forward(coins, multipliers, speed_levels, stars, has_runner,
-                          maps_unlocked, has_ghost, elev_mult):
-    """Mini forward simulation projecting coins FORWARD_HORIZON seconds ahead.
+def project_vexa_forward(vexa, multipliers, speed_levels, stars, has_runner,
+                         maps_unlocked, has_ghost, elev_mult):
+    """Mini forward simulation projecting vexa FORWARD_HORIZON seconds ahead.
 
     Models compound multiplier growth from runners + manual play, giving a much
-    more accurate projection than the linear `coins + rate * time` approach.
+    more accurate projection than the linear `vexa + rate * time` approach.
     """
     sim_mults = list(multipliers)
-    sim_coins = coins
+    sim_vexa = vexa
 
     # Determine manual play target (same logic as main loop)
     manual_map = -1
@@ -144,18 +144,18 @@ def project_coins_forward(coins, multipliers, speed_levels, stars, has_runner,
                 continue
             sm = 1.0 + speed_levels[i] * SPEED_PER_LEVEL
             cr = sm / BASE_TIMES[i]
-            sim_coins += BASE_REWARDS[i] * mp * elev_mult * cr * FORWARD_STEP
+            sim_vexa += BASE_REWARDS[i] * mp * elev_mult * cr * FORWARD_STEP
             mi = runner_mult_increment(stars[i])
             sim_mults[i] += cr * mi * FORWARD_STEP
 
         if manual_map >= 0:
             rps = 1.0 / (BASE_TIMES[manual_map] + MANUAL_RUN_OVERHEAD)
-            sim_coins += BASE_REWARDS[manual_map] * mp * elev_mult * rps * FORWARD_STEP
+            sim_vexa += BASE_REWARDS[manual_map] * mp * elev_mult * rps * FORWARD_STEP
             sim_mults[manual_map] += rps * MANUAL_MULT_INCREMENT * FORWARD_STEP
 
         t += FORWARD_STEP
 
-    return sim_coins
+    return sim_vexa
 
 
 def fmt(n):
@@ -170,7 +170,7 @@ def fmt(n):
 def simulate():
     # --- Per-map state ---
     elevation = 0
-    coins = 0.0
+    vexa = 0.0
     multipliers = [1.0] * 5
     speed_levels = [0] * 5
     stars = [0] * 5
@@ -238,15 +238,15 @@ def simulate():
                 has_ghost[manual_map] = True
 
         total_income = runner_income + manual_income
-        coins += total_income
+        vexa += total_income
         last_income_rate = total_income / DT if DT > 0 else 0
 
         # === SPENDING ===
 
-        # Map unlocks via coins
+        # Map unlocks via vexa
         for i in range(5):
-            if not maps_unlocked[i] and coins >= MAP_UNLOCK_PRICES[i]:
-                coins -= MAP_UNLOCK_PRICES[i]
+            if not maps_unlocked[i] and vexa >= MAP_UNLOCK_PRICES[i]:
+                vexa -= MAP_UNLOCK_PRICES[i]
                 maps_unlocked[i] = True
 
         # Auto-unlock: runner on map i reaching level 5 unlocks map i+1 (once per elevation)
@@ -270,7 +270,7 @@ def simulate():
             for i in range(5):
                 if has_runner[i] and speed_levels[i] < MAX_SPEED_LEVEL:
                     c = speed_upgrade_cost(speed_levels[i], i, stars[i])
-                    if c > coins * MAX_UPGRADE_SPEND:
+                    if c > vexa * MAX_UPGRADE_SPEND:
                         continue
                     # Income delta: +1 speed level gives +SPEED_PER_LEVEL more completions/sec
                     delta_income = BASE_REWARDS[i] * mult_product * elev_mult * SPEED_PER_LEVEL / BASE_TIMES[i]
@@ -282,7 +282,7 @@ def simulate():
                         best_i = i
                         best_cost = c
             if best_i >= 0 and best_payback < MAX_UPGRADE_PAYBACK:
-                coins -= best_cost
+                vexa -= best_cost
                 speed_levels[best_i] += 1
             else:
                 break
@@ -294,19 +294,19 @@ def simulate():
                 speed_levels[i] = 0  # Reset speed level (cost continues from totalLevel)
 
         # === ELEVATION DECISION ===
-        # Forward sim lookahead: project coins 60s ahead with compound multiplier growth.
+        # Forward sim lookahead: project vexa 60s ahead with compound multiplier growth.
         # Elevate when: (1) waiting barely improves payoff (marginal < 10%)
         #           AND (2) gain is meaningful (>= 30% of current elevation).
         # No sticky ACCUM flag — always re-evaluate.
         time_since_elevation += DT
 
         if time_since_elevation > ELEV_COOLDOWN and has_runner[0]:
-            levels_now, _ = calc_elevation_purchase(elevation, coins)
+            levels_now, _ = calc_elevation_purchase(elevation, vexa)
             if levels_now >= 3:
                 gain_pct = levels_now / max(1, elevation)
                 if gain_pct >= MIN_ELEV_GAIN_PCT:
-                    projected = project_coins_forward(
-                        coins, multipliers, speed_levels, stars,
+                    projected = project_vexa_forward(
+                        vexa, multipliers, speed_levels, stars,
                         has_runner, maps_unlocked, has_ghost, elev_mult)
                     levels_later, _ = calc_elevation_purchase(elevation, projected)
                     marginal = (levels_later - levels_now) / max(1, levels_now)
@@ -315,11 +315,11 @@ def simulate():
                         elevation += levels_now
                         elevation_count += 1
                         elev_log.append((time/60, old_elev, elevation, levels_now, gain_pct*100))
-                        # Elevation resets: coins, map unlocks (except first),
+                        # Elevation resets: vexa, map unlocks (except first),
                         # multipliers, runners, stars, speed levels.
                         # Ghosts are permanent — runners respawn as soon as
                         # their map is re-unlocked (no manual replay needed).
-                        coins = 0.0
+                        vexa = 0.0
                         multipliers = [1.0] * 5
                         speed_levels = [0] * 5
                         stars = [0] * 5
@@ -329,14 +329,14 @@ def simulate():
                         # has_ghost is permanent — NOT touched by elevation
                         time_since_elevation = 0.0
 
-        if ascension_time is None and coins >= ASCENSION_THRESHOLD:
+        if ascension_time is None and vexa >= ASCENSION_THRESHOLD:
             ascension_time = time
 
         # === SNAPSHOT ===
         if time >= next_snapshot:
             n_runners = sum(1 for r in has_runner if r)
             n_maps = sum(1 for u in maps_unlocked if u)
-            # Coins per run on best map (highest unlocked runner)
+            # Vexa per run on best map (highest unlocked runner)
             best_run_reward = 0.0
             for i in range(4, -1, -1):
                 if has_runner[i]:
@@ -348,7 +348,7 @@ def simulate():
 
             rows.append({
                 'time': next_snapshot / 60,
-                'coins': coins,
+                'vexa': vexa,
                 'rate': last_income_rate,
                 'elevation': elevation,
                 'elev_count': elevation_count,
@@ -366,7 +366,7 @@ def simulate():
             break
 
     # === OUTPUT ===
-    hdr = (f"{'Time':>6s} | {'Coins':>10s} | {'Coin/sec':>10s} | {'Coin/run':>10s} "
+    hdr = (f"{'Time':>6s} | {'Vexa':>10s} | {'Vexa/sec':>10s} | {'Vexa/run':>10s} "
            f"| {'Elev':>6s} | {'Mult':>10s} | {'R':>1s} | {'M':>1s} | {'Speeds':<12s} | {'Stars':<14s}")
     print(hdr)
     print("-" * len(hdr))
@@ -374,7 +374,7 @@ def simulate():
         marker = ""
         if ascension_time and abs(r['time'] - ascension_time/60) < 5:
             marker = " <<10Q"
-        print(f"{r['time']:5.0f}m | {fmt(r['coins']):>10s} | {fmt(r['rate']):>10s}/s | {fmt(r['best_run']):>10s} "
+        print(f"{r['time']:5.0f}m | {fmt(r['vexa']):>10s} | {fmt(r['rate']):>10s}/s | {fmt(r['best_run']):>10s} "
               f"| x{r['elevation']:<5d} | {fmt(r['mult_product']):>10s} | {r['runners']:>1d} | {r['maps']:>1d} "
               f"| {r['speeds']:<12s} | {r['stars']:<14s}{marker}")
 
@@ -385,6 +385,6 @@ def simulate():
     if ascension_time is not None:
         print(f"\n>> ASCENSION (10Q) reached at {ascension_time/60:.1f} min")
     else:
-        print(f"\n>> NOT reached in {SIM_TIME/60:.0f} min. Final: {fmt(coins)}, x{elevation}")
+        print(f"\n>> NOT reached in {SIM_TIME/60:.0f} min. Final: {fmt(vexa)}, x{elevation}")
 
 simulate()

@@ -70,10 +70,10 @@ public class TutorialTriggerService {
                 new AscendTutorialPage(playerRef, AscendTutorialPage.Tutorial.EVOLUTION)));
     }
 
-    public void checkCoinThresholds(UUID playerId, BigNumber oldBalance, BigNumber newBalance) {
+    public void checkVexaThresholds(UUID playerId, BigNumber oldBalance, BigNumber newBalance) {
         BigNumber elevationThreshold = BigNumber.fromLong(AscendConstants.ELEVATION_BASE_COST);
-        BigNumber summitThreshold = BigNumber.fromLong(AscendConstants.SUMMIT_MIN_COINS);
-        BigNumber ascensionThreshold = AscendConstants.ASCENSION_COIN_THRESHOLD;
+        BigNumber summitThreshold = BigNumber.fromLong(AscendConstants.SUMMIT_MIN_VEXA);
+        BigNumber ascensionThreshold = AscendConstants.ASCENSION_VEXA_THRESHOLD;
 
         if (crossedThreshold(oldBalance, newBalance, elevationThreshold)) {
             triggerFromUuid(playerId, ELEVATION, (playerRef, ref, store, player) ->

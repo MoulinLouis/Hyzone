@@ -189,7 +189,7 @@ Elevation uses a level-based prestige system where each level directly equals th
 cost = 30,000 × 1.15^(currentLevel^0.72)
 ```
 
-**Base cost:** 30,000 coins
+**Base cost:** 30,000 vexa
 **Growth rate:** Non-linear — `1.15^(level^0.72)` flattens the curve at high levels
 **Cost curve exponent:** 0.72
 
@@ -209,11 +209,11 @@ At low levels this behaves almost identically to `1.15^level`. At high levels th
 
 **Discount support:** Formula accepts a `costMultiplier` parameter for Summit/Ascension skill tree discounts.
 
-### Accumulated Coins
+### Accumulated Vexa
 
-Elevation uses **accumulated coins** (total coins earned since last reset) instead of the player's current coin balance. This means spending coins on runner upgrades does NOT reduce your elevation potential — only earning matters.
+Elevation uses **accumulated vexa** (total vexa earned since last reset) instead of the player's current vexa balance. This means spending vexa on runner upgrades does NOT reduce your elevation potential — only earning matters.
 
-**Increment:** Every time coins are earned (manual runs, runner completions, passive earnings, admin adds), the accumulated counter increases.
+**Increment:** Every time vexa is earned (manual runs, runner completions, passive earnings, admin adds), the accumulated counter increases.
 
 **Reset to 0 on:**
 - Elevation (after purchasing levels)
@@ -224,29 +224,29 @@ Elevation uses **accumulated coins** (total coins earned since last reset) inste
 
 ## Map Economics
 
-### Base Coin Rewards (Per Manual Completion)
+### Base Vexa Rewards (Per Manual Completion)
 
 | Map | Display Order | Base Reward | With ×100 Multiplier |
 |-----|---------------|-------------|---------------------|
-| Rouge | 0 | 1 coin | 100 coins |
-| Orange | 1 | 5 coins | 500 coins |
-| Jaune | 2 | 25 coins | 2,500 coins |
-| Vert | 3 | 100 coins | 10,000 coins |
-| Bleu | 4 | 500 coins | 50,000 coins |
+| Rouge | 0 | 1 vexa | 100 vexa |
+| Orange | 1 | 5 vexa | 500 vexa |
+| Jaune | 2 | 25 vexa | 2,500 vexa |
+| Vert | 3 | 100 vexa | 10,000 vexa |
+| Bleu | 4 | 500 vexa | 50,000 vexa |
 
 **Actual reward formula:**
 ```
-reward = baseReward × digitsProduct × elevation × (1 + coinFlowBonus)
+reward = baseReward × digitsProduct × elevation × (1 + vexaFlowBonus)
 ```
 
 Where:
 - `digitsProduct` = Product of all 5 map multipliers
 - `elevation` = Current elevation multiplier
-- `coinFlowBonus` = Summit/Ascension bonuses
+- `vexaFlowBonus` = Summit/Ascension bonuses
 
 ### Map Unlock System
 
-Maps unlock progressively based on runner level, not coin price.
+Maps unlock progressively based on runner level, not vexa price.
 
 **Unlock condition:** Maps unlock automatically when the runner on the **previous map** reaches level 5.
 
@@ -264,9 +264,9 @@ Maps unlock progressively based on runner level, not coin price.
 
 ### Runner Purchase Prices
 
-**All maps:** Free (0 coins)
+**All maps:** Free (0 vexa)
 
-Runners have no coin cost after map unlock. They can be purchased for free once:
+Runners have no vexa cost after map unlock. They can be purchased for free once:
 - Map is unlocked (via runner level requirement)
 - Map has been completed manually at least once
 - Ghost recording exists (player's personal best time)
@@ -289,7 +289,7 @@ Runners have no coin cost after map unlock. They can be purchased for free once:
 
 ### Offline Production
 
-When a player disconnects or switches worlds, their runners continue to earn coins at a reduced rate.
+When a player disconnects or switches worlds, their runners continue to earn vexa at a reduced rate.
 
 **Base offline rate:** 10% of normal production
 **Boosted rate (OFFLINE_BOOST skill):** 25% of normal production
@@ -298,7 +298,7 @@ When a player disconnects or switches worlds, their runners continue to earn coi
 
 **How it works:**
 - Passive earnings are calculated based on runner production rates at the time of disconnect
-- Coins and map multiplier gains accumulate at the reduced rate
+- Vexa and map multiplier gains accumulate at the reduced rate
 - Players receive a summary popup on reconnect showing total passive earnings
 - The OFFLINE_BOOST skill (Ascension skill tree) increases the rate from 10% to 25%
 
@@ -317,8 +317,8 @@ When a player disconnects or switches worlds, their runners continue to earn coi
 
 - Complete Rouge map manually (~30 seconds)
 - Buy first runner (free)
-- Earn ~50-100 coins from automatic completions
-- Purchase first 3 speed upgrades (~5 + 15 + 35 = 55 coins)
+- Earn ~50-100 vexa from automatic completions
+- Purchase first 3 speed upgrades (~5 + 15 + 35 = 55 vexa)
 - Multiplier reaches ~2-4×
 
 **Design goal:** Smooth onboarding, visible progress every 30-60 seconds.
@@ -341,7 +341,7 @@ When a player disconnects or switches worlds, their runners continue to earn coi
 
 - Numbers reach millions (15-20 min mark)
 - Elevation ×100-500 range
-- Payouts per run: 1M-10M+ coins
+- Payouts per run: 1M-10M+ vexa
 - Upgrade costs: hundreds of thousands to millions
 - Multiple map multipliers at 50-100+
 
@@ -351,8 +351,8 @@ When a player disconnects or switches worlds, their runners continue to earn coi
 
 **Phase:** Prestige systems and meta progression
 
-- Summit threshold: 1 billion coins minimum for first level
-- Ascension threshold: 1 Decillion (1Dc) coins
+- Summit threshold: 1 billion vexa minimum for first level
+- Ascension threshold: 1 Decillion (1Dc) vexa
 - Permanent bonuses and skill trees
 - Long-term progression hooks
 
@@ -360,13 +360,13 @@ When a player disconnects or switches worlds, their runners continue to earn coi
 
 ## Summit System
 
-Summit converts coins into XP for permanent category bonuses, resetting coins, elevation, multipliers, runners, and map unlocks (preserves best times only).
+Summit converts vexa into XP for permanent category bonuses, resetting vexa, elevation, multipliers, runners, and map unlocks (preserves best times only).
 
 ### XP System
 
-**Coin to XP conversion:** `(coins / 1B)^(3/7)` (compressed diminishing returns)
+**Vexa to XP conversion:** `(vexa / 1B)^(3/7)` (compressed diminishing returns)
 
-| Coins | XP Gained |
+| Vexa | XP Gained |
 |-------|-----------|
 | 1B | 1 |
 | 10B | 2 |
@@ -376,7 +376,7 @@ Summit converts coins into XP for permanent category bonuses, resetting coins, e
 | 100T | 139 |
 | 1Q | 372 |
 
-**Minimum coins for 1 XP:** 1 billion coins (1B)
+**Minimum vexa for 1 XP:** 1 billion vexa (1B)
 
 **XP per level formula:** `level^2`
 
@@ -390,9 +390,9 @@ Summit converts coins into XP for permanent category bonuses, resetting coins, e
 | 20 | 400 | 2,870 |
 | 50 | 2,500 | 42,925 |
 
-**Expected level gains by coins (from level 0):**
+**Expected level gains by vexa (from level 0):**
 
-| Coins | XP | Approx Level |
+| Vexa | XP | Approx Level |
 |-------|-----|--------------|
 | 1B | 1 | 1 |
 | 10B | 2 | 1 |
@@ -407,7 +407,7 @@ Summit converts coins into XP for permanent category bonuses, resetting coins, e
 Summit performs a full reset similar to Elevation:
 
 **Reset (lost):**
-- Coins → 0
+- Vexa → 0
 - Elevation → 1
 - Map multipliers → 1
 - Runners → removed
@@ -520,7 +520,7 @@ Evolution provides a clear benefit with continuous cost progression.
 
 ### Example Scenario
 
-**Situation:** You have massive coins, multiple runners at different levels
+**Situation:** You have massive vexa, multiple runners at different levels
 
 **Option A: Focus on Map 0 (Rouge)**
 - Fast completion time = more runs = more multiplier gains
@@ -562,7 +562,7 @@ Evolution provides a clear benefit with continuous cost progression.
 
 ### Balance Constraints
 
-- **Minimum coin generation:** Even idle players make progress
+- **Minimum vexa generation:** Even idle players make progress
 - **Maximum speed:** Runners capped at level 20 per evolution cycle
 - **Cost scaling:** Exponential but continuous - no resets, no surprises
 - **Evolution benefit:** ×2 multiplier gain with no cost penalty
@@ -582,7 +582,7 @@ Evolution provides a clear benefit with continuous cost progression.
 ### Overflow Protection
 
 - Elevation costs capped at `Long.MAX_VALUE`
-- Coin balances stored as `double` for high precision
+- Vexa balances stored as `double` for high precision
 - All UI displays use abbreviated notation (K, M, B, T)
 
 ### Precision
@@ -598,7 +598,7 @@ All formulas use consistent growth rates:
 - **Elevation cost:** 1.15^(level^0.72) for level<=300, then 1.15^(300^0.72 + (level-300)^0.58) (soft cap at 300)
 - **Upgrades:** 2^totalLevel (100% growth per level, smooth and predictable)
 - **Evolution gain:** EP^stars, where EP = 3 + 0.10 × level (linear, no ceiling)
-- **Summit XP:** (accumulatedCoins / 1B)^(3/7) (compressed diminishing returns)
+- **Summit XP:** (accumulatedVexa / 1B)^(3/7) (compressed diminishing returns)
 - **Summit levels:** level^2 (manageable numbers at all levels)
 
 Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure continuous progression after evolution.
@@ -612,11 +612,11 @@ Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure conti
   - OFFLINE_BOOST skill: 25% → 40% becomes 10% → 25%
   - More balanced offline vs. active play incentives
 
-- **2026-02-08 (v17):** Elevation accumulated coins system
-  - Elevation now uses accumulated coins (total earned since last reset) instead of current balance
-  - Spending coins on upgrades no longer reduces elevation potential
-  - Accumulated coins reset on: Elevation, Summit, Ascension
-  - Same pattern as Summit accumulated coins (parallel tracking)
+- **2026-02-08 (v17):** Elevation accumulated vexa system
+  - Elevation now uses accumulated vexa (total earned since last reset) instead of current balance
+  - Spending vexa on upgrades no longer reduces elevation potential
+  - Accumulated vexa reset on: Elevation, Summit, Ascension
+  - Same pattern as Summit accumulated vexa (parallel tracking)
 
 - **2026-02-08 (v16):** Elevation cost reduction
   - Cost curve exponent: 0.77 → 0.72 (early), 0.63 → 0.58 (late, above level 300)
@@ -635,8 +635,8 @@ Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure conti
 
 - **2026-02-06 (v14):** Summit XP number compression
   - Level exponent: 2.5 → 2.0 (level 50: 17,678 → 2,500 XP per level)
-  - Coins→XP: sqrt → power 3/7 (compensates to preserve same coin→level mapping)
-  - Same coins still reach the same levels (within ~5%)
+  - Vexa→XP: sqrt → power 3/7 (compensates to preserve same vexa→level mapping)
+  - Same vexa still reach the same levels (within ~5%)
   - DB migration: existing XP converted via `old_xp^(6/7)`
 
 - **2026-02-06 (v13):** Evolution Power asymptotic growth
@@ -648,10 +648,10 @@ Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure conti
 - **2026-02-06 (v12):** Elevation soft cap at level 300
   - Below 300: identical cost curve (1.15^(level^0.77))
   - Above 300: flatter late-game curve (exponent 0.63 instead of 0.77)
-  - Removes glass ceiling at high elevation — 100T coins from level 600 gives +127 levels instead of +12
+  - Removes glass ceiling at high elevation — 100T vexa from level 600 gives +127 levels instead of +12
 
-- **2026-02-06 (v11):** Summit XP based on accumulated coins + reduced level cost
-  - Summit XP now based on coins accumulated since last Summit/Elevation, not current balance
+- **2026-02-06 (v11):** Summit XP based on accumulated vexa + reduced level cost
+  - Summit XP now based on vexa accumulated since last Summit/Elevation, not current balance
   - Runner upgrades no longer reduce Summit XP potential (only earning matters)
   - Elevation resets the accumulator (strategic choice preserved)
   - Summit level cost: `level^2.5` (was `level^4`) — reduces gap between levels
@@ -663,14 +663,14 @@ Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure conti
   - Level = multiplier (1:1) unchanged — only the cost formula changed
 
 - **2026-02-06 (v9):** Summit and Ascension threshold rebalance
-  - Summit XP conversion: `sqrt(coins / 1B)` (was `sqrt(coins) / 1M`)
-  - Minimum coins for Summit: 1B (was 1T)
+  - Summit XP conversion: `sqrt(vexa / 1B)` (was `sqrt(vexa) / 1M`)
+  - Minimum vexa for Summit: 1B (was 1T)
   - Ascension threshold: 1Dc (was 10Q)
 
 - **2026-02-05 (v8):** Summit late-game rebalance
-  - Summit XP conversion: `sqrt(coins) / 1,000,000` (was `/ 100`)
-  - Minimum coins for Summit: 1T (was 10K)
-  - Summit is now a true late-game system (requires 1T coins for level 1)
+  - Summit XP conversion: `sqrt(vexa) / 1,000,000` (was `/ 100`)
+  - Minimum vexa for Summit: 1T (was 10K)
+  - Summit is now a true late-game system (requires 1T vexa for level 1)
   - Summit now resets everything like elevation (multipliers, runners, map unlocks), keeps only best times
 
 - **2026-02-05 (v7):** Linear elevation multiplier
@@ -680,18 +680,18 @@ Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure conti
 - **2026-02-05 (v6):** Evolution and Summit XP rebalance
   - Evolution now grants ×10 per-run multiplier gain (instead of one-time map multiplier boost)
   - Removed Evolution Power one-shot bonus (category kept for future use)
-  - Summit XP conversion: `sqrt(coins) / 100` (diminishing returns, was linear)
+  - Summit XP conversion: `sqrt(vexa) / 100` (diminishing returns, was linear)
   - Summit XP per level: `level^4` (steep scaling, was `100 × level^1.5`)
-  - Minimum coins for Summit: 10,000 (for 1 XP)
-  - Late-game Summit scaling: 2T coins → ~9 levels (was ~1,500+ levels)
+  - Minimum vexa for Summit: 10,000 (for 1 XP)
+  - Late-game Summit scaling: 2T vexa → ~9 levels (was ~1,500+ levels)
 
 - **2026-02-05 (v5):** XP-based Summit system
-  - Summit now uses XP instead of coin thresholds (1000 coins = 1 XP)
+  - Summit now uses XP instead of vexa thresholds (1000 vexa = 1 XP)
   - XP per level: 100 × level^1.5 (gradual scaling)
-  - Replaced Coin Flow with Multiplier Gain (1 + 0.5 × level^0.8)
+  - Replaced Vexa Flow with Multiplier Gain (1 + 0.5 × level^0.8)
   - Runner Speed: 1 + 0.45 × sqrt(level) (diminishing returns)
   - Evolution Power: 2 + 0.5 × level^0.8 (applied on runner evolution, multiplies map multiplier)
-  - Summit no longer resets multipliers, runners, or map unlocks (only coins and elevation)
+  - Summit no longer resets multipliers, runners, or map unlocks (only vexa and elevation)
 
 - **2026-02-05 (v4):** Early-game unlock pacing
   - Added decaying cost boost for levels 0-9 on maps 2+ (first evolution only)
@@ -701,7 +701,7 @@ Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure conti
 
 - **2026-02-04 (v3):** Exponential elevation and Summit refactoring
   - Elevation multiplier changed from `level` to `level × 1.02^level` *(reverted in v7)*
-  - Summit Coin Flow changed from additive (+20%/level) to multiplicative (×1.20/level)
+  - Summit Vexa Flow changed from additive (+20%/level) to multiplicative (×1.20/level)
   - Summit Manual Mastery renamed to Evolution Power (+0.20 evolution base/level)
   - Evolution Power affects runner multiplier gains via formula: `0.1 × (2 + bonus)^stars`
   - Simplified upgrade cost formula to `5 × 2^level + level × 10` (smooth ~2× growth, no boosts)
@@ -709,7 +709,7 @@ Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure conti
 - **2026-02-04 (v2):** Continuous cost progression after evolution
   - **Cost formula now uses total levels:** `totalLevel = stars × 20 + speedLevel`
   - Costs no longer reset after evolution (1★ Lv.0 costs same as what 0★ Lv.20 would cost)
-  - Removed star multiplier (×2.2 per star) - progression is now inherent to total level
+  - Removed star multiplier (×2.2 per star) — progression is now inherent to total level
   - Early-game boost (÷4) now only applies to first evolution cycle (0★ levels 0-4)
   - Evolution is now always beneficial: double gains with no cost penalty
 

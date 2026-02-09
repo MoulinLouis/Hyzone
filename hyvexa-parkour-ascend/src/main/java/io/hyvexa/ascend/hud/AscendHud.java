@@ -15,8 +15,8 @@ public class AscendHud extends CustomUIHud {
     private final HudEffectManager effectManager = new HudEffectManager();
 
     private String lastStaticKey;
-    private String lastCoinsText;
-    private String lastCoinsPerRunText;
+    private String lastVexaText;
+    private String lastVexaPerRunText;
     private String lastDigitsKey;
     private String lastElevationValueText;
     private String lastElevationText;
@@ -30,7 +30,7 @@ public class AscendHud extends CustomUIHud {
 
     // Track previous values for effect triggering (converted to double for comparison)
     private double[] lastDigits;
-    private BigNumber lastCoins;
+    private BigNumber lastVexa;
 
     // Ascension quest bar constants
     private static final double ASCENSION_COST = 1e33; // 1 Decillion (1Dc)
@@ -57,9 +57,9 @@ public class AscendHud extends CustomUIHud {
         update(false, commandBuilder);
     }
 
-    public void updateEconomy(BigNumber coins, BigNumber product, BigNumber[] digits, int currentElevation, int potentialElevation, boolean showElevation) {
-        String coinsText = FormatUtils.formatBigNumber(coins);
-        String coinsPerRunText = FormatUtils.formatBigNumber(product) + "/run";
+    public void updateEconomy(BigNumber vexa, BigNumber product, BigNumber[] digits, int currentElevation, int potentialElevation, boolean showElevation) {
+        String vexaText = FormatUtils.formatBigNumber(vexa);
+        String vexaPerRunText = FormatUtils.formatBigNumber(product) + "/run";
         String digitsKey = buildDigitsKey(digits);
         String elevationText;
         if (showElevation && potentialElevation > currentElevation) {
@@ -69,8 +69,8 @@ public class AscendHud extends CustomUIHud {
         }
         String elevationValueText = formatMultiplier(currentElevation);
         // Check if values changed OR if we have active effects to process
-        boolean valuesChanged = !coinsText.equals(lastCoinsText)
-            || !coinsPerRunText.equals(lastCoinsPerRunText)
+        boolean valuesChanged = !vexaText.equals(lastVexaText)
+            || !vexaPerRunText.equals(lastVexaPerRunText)
             || !digitsKey.equals(lastDigitsKey)
             || !elevationValueText.equals(lastElevationValueText)
             || !elevationText.equals(lastElevationText)
@@ -99,14 +99,14 @@ public class AscendHud extends CustomUIHud {
             }
 
             // Update cached values
-            lastCoinsText = coinsText;
-            lastCoinsPerRunText = coinsPerRunText;
+            lastVexaText = vexaText;
+            lastVexaPerRunText = vexaPerRunText;
             lastDigitsKey = digitsKey;
             lastElevationValueText = elevationValueText;
             lastElevationText = elevationText;
             lastElevationVisible = showElevation;
             lastDigits = safeDigits.clone();
-            lastCoins = coins;
+            lastVexa = vexa;
         }
 
         // Create command builder
@@ -114,8 +114,8 @@ public class AscendHud extends CustomUIHud {
 
         // If values changed, set all UI text values
         if (valuesChanged) {
-            commandBuilder.set("#TopCoinsValue.Text", coinsText);
-            commandBuilder.set("#TopCoinsPerRunValue.Text", coinsPerRunText);
+            commandBuilder.set("#TopVexaValue.Text", vexaText);
+            commandBuilder.set("#TopVexaPerRunValue.Text", vexaPerRunText);
             commandBuilder.set("#TopRedValue.Text", formatMultiplier(safeDigits[0]));
             commandBuilder.set("#TopOrangeValue.Text", formatMultiplier(safeDigits[1]));
             commandBuilder.set("#TopYellowValue.Text", formatMultiplier(safeDigits[2]));
@@ -186,8 +186,8 @@ public class AscendHud extends CustomUIHud {
 
     public void resetCache() {
         lastStaticKey = null;
-        lastCoinsText = null;
-        lastCoinsPerRunText = null;
+        lastVexaText = null;
+        lastVexaPerRunText = null;
         lastDigitsKey = null;
         lastElevationValueText = null;
         lastElevationText = null;
@@ -199,7 +199,7 @@ public class AscendHud extends CustomUIHud {
         lastAscensionProgressKey = null;
         lastMomentumKey = null;
         lastDigits = null;
-        lastCoins = null;
+        lastVexa = null;
         effectManager.clearEffects();
     }
 
@@ -237,14 +237,14 @@ public class AscendHud extends CustomUIHud {
         return name + " Lv." + preview.currentLevel();
     }
 
-    public void updateAscensionQuest(BigNumber coins) {
+    public void updateAscensionQuest(BigNumber vexa) {
         // Calculate logarithmic progress (0 to 1)
-        // Using log10 scale: log10(coins + 1) / log10(1Dc + 1) ≈ log10(coins + 1) / 33
+        // Using log10 scale: log10(vexa + 1) / log10(1Dc + 1) ≈ log10(vexa + 1) / 33
         double progress = 0.0;
-        if (coins.gt(BigNumber.ZERO)) {
+        if (vexa.gt(BigNumber.ZERO)) {
             // Convert BigNumber to double for logarithmic calculation
-            double coinsDouble = coins.toDouble();
-            progress = Math.log10(coinsDouble + 1) / Math.log10(ASCENSION_COST + 1);
+            double vexaDouble = vexa.toDouble();
+            progress = Math.log10(vexaDouble + 1) / Math.log10(ASCENSION_COST + 1);
             progress = Math.min(1.0, Math.max(0.0, progress)); // Clamp between 0 and 1
         }
 

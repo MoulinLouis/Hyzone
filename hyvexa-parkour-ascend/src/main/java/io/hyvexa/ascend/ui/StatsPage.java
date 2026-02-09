@@ -106,7 +106,7 @@ public class StatsPage extends BaseAscendPage {
             "Digits: " + formatMultiplier(digitsProduct) + "  |  Elevation: " + formatMultiplier(elevation));
 
         // 3. Lifetime Earnings
-        BigNumber totalEarned = playerStore.getTotalCoinsEarned(playerId);
+        BigNumber totalEarned = playerStore.getTotalVexaEarned(playerId);
         commandBuilder.set("#LifetimeValue.Text", FormatUtils.formatBigNumber(totalEarned) + " vexa");
 
         // 4. Manual Runs
@@ -147,7 +147,7 @@ public class StatsPage extends BaseAscendPage {
         }
 
         List<AscendMap> maps = mapStore.listMapsSorted();
-        double totalCoinsPerSec = 0.0;
+        double totalVexaPerSec = 0.0;
 
         BigNumber digitsProduct = playerStore.getMultiplierProduct(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
         double elevation = playerStore.getCalculatedElevationMultiplier(playerId);
@@ -171,15 +171,15 @@ public class StatsPage extends BaseAscendPage {
             double runsPerSec = 1000.0 / intervalMs;
 
             long baseReward = map.getEffectiveBaseReward();
-            double coinsPerRun = baseReward * digitsProduct.toDouble() * elevation;
+            double vexaPerRun = baseReward * digitsProduct.toDouble() * elevation;
 
-            totalCoinsPerSec += runsPerSec * coinsPerRun;
+            totalVexaPerSec += runsPerSec * vexaPerRun;
         }
 
-        if (totalCoinsPerSec < 0.01) {
+        if (totalVexaPerSec < 0.01) {
             return "0 vexa/sec";
         }
-        return FormatUtils.formatBigNumber(BigNumber.fromDouble(totalCoinsPerSec)) + "/sec";
+        return FormatUtils.formatBigNumber(BigNumber.fromDouble(totalVexaPerSec)) + "/sec";
     }
 
     private String formatMultiplier(double value) {

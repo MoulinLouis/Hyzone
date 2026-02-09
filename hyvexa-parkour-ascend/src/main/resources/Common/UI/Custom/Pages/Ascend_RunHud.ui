@@ -172,20 +172,20 @@ $C.@PageOverlay {
 
     }
 
-    Group #TopCoinsHud {
+    Group #TopVexaHud {
       Anchor: (Left: 0, Right: 0, Top: 77, Height: 40);
       Background: #000000(0.0);
 
-      Group #TopCoinsBox {
+      Group #TopVexaBox {
         Anchor: (Left: 0, Right: 0, Top: 0, Height: 40);
         LayoutMode: Left;
 
         Group { FlexWeight: 1; }
-        Group #TopCoinsFrame {
+        Group #TopVexaFrame {
           Anchor: (Width: 180, Height: 40);
           Background: #000000(0.55);
 
-          Label #TopCoinsValue {
+          Label #TopVexaValue {
             Anchor: (Left: 0, Right: 0, Top: 2, Height: 28);
             Style: (
               FontSize: 28,
@@ -197,11 +197,11 @@ $C.@PageOverlay {
           }
         }
         Group { Anchor: (Width: 10); }
-        Group #TopCoinsPerRunFrame {
+        Group #TopVexaPerRunFrame {
           Anchor: (Width: 180, Height: 40);
           Background: #000000(0.55);
 
-          Label #TopCoinsPerRunValue {
+          Label #TopVexaPerRunValue {
             Anchor: (Left: 0, Right: 0, Top: 2, Height: 28);
             Style: (
               FontSize: 28,

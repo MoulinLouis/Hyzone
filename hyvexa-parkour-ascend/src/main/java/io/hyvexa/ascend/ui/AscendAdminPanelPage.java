@@ -84,7 +84,7 @@ public class AscendAdminPanelPage extends BaseAscendPage {
         if (playerRef == null || player == null) {
             return;
         }
-        player.getPageManager().openCustomPage(ref, store, new AscendAdminCoinsPage(playerRef));
+        player.getPageManager().openCustomPage(ref, store, new AscendAdminVexaPage(playerRef));
     }
 
     private void openWhitelist(Ref<EntityStore> ref, Store<EntityStore> store) {

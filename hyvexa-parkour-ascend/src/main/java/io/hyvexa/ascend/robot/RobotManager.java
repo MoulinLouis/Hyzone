@@ -625,11 +625,11 @@ public class RobotManager {
         BigNumber totalPayout = payoutPerRun.multiply(BigNumber.fromLong(completions));
 
         // Use atomic operations to prevent race conditions
-        if (!playerStore.atomicAddCoins(ownerId, totalPayout)) {
-            LOGGER.atWarning().log("Failed to add runner coins for " + ownerId + " on map " + mapId);
+        if (!playerStore.atomicAddVexa(ownerId, totalPayout)) {
+            LOGGER.atWarning().log("Failed to add runner vexa for " + ownerId + " on map " + mapId);
         }
-        if (!playerStore.atomicAddTotalCoinsEarned(ownerId, totalPayout)) {
-            LOGGER.atWarning().log("Failed to add total coins earned for " + ownerId);
+        if (!playerStore.atomicAddTotalVexaEarned(ownerId, totalPayout)) {
+            LOGGER.atWarning().log("Failed to add total vexa earned for " + ownerId);
         }
         if (!playerStore.atomicAddMapMultiplier(ownerId, mapId, totalMultiplierBonus)) {
             LOGGER.atWarning().log("Failed to add map multiplier for " + ownerId + " on map " + mapId);
@@ -708,7 +708,7 @@ public class RobotManager {
         }
 
         // Speed upgrade: find cheapest across all maps (one per call for smooth visual)
-        BigNumber coins = progress.getCoins();
+        BigNumber vexa = progress.getVexa();
         String cheapestMapId = null;
         BigNumber cheapestCost = null;
 
@@ -728,8 +728,8 @@ public class RobotManager {
             }
         }
 
-        if (cheapestMapId != null && cheapestCost != null && coins.gte(cheapestCost)) {
-            if (!playerStore.atomicSpendCoins(playerId, cheapestCost)) return;
+        if (cheapestMapId != null && cheapestCost != null && vexa.gte(cheapestCost)) {
+            if (!playerStore.atomicSpendVexa(playerId, cheapestCost)) return;
             playerStore.incrementRobotSpeedLevel(playerId, cheapestMapId);
             playerStore.checkAndUnlockEligibleMaps(playerId, mapStore);
         }

@@ -97,15 +97,15 @@ public class ElevationPage extends BaseAscendPage {
         }
 
         UUID playerId = playerRef.getUuid();
-        BigNumber accumulatedCoins = playerStore.getElevationAccumulatedCoins(playerId);
+        BigNumber accumulatedVexa = playerStore.getElevationAccumulatedVexa(playerId);
         int currentElevation = playerStore.getElevationLevel(playerId);
 
         // Get cost multiplier from skill tree
         double costMultiplier = getCostMultiplier(playerId);
 
-        // Calculate how many levels can be purchased based on accumulated coins
+        // Calculate how many levels can be purchased based on accumulated vexa
         BigNumber costMultiplierBN = BigNumber.fromDouble(costMultiplier);
-        ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(currentElevation, accumulatedCoins, costMultiplierBN);
+        ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(currentElevation, accumulatedVexa, costMultiplierBN);
 
         if (purchase.levels <= 0) {
             BigNumber nextCost = AscendConstants.getElevationLevelUpCost(currentElevation, BigNumber.fromDouble(costMultiplier));
@@ -114,14 +114,14 @@ public class ElevationPage extends BaseAscendPage {
             return;
         }
 
-        // Set new elevation and reset coins/accumulators atomically
+        // Set new elevation and reset vexa/accumulators atomically
         int newElevation = currentElevation + purchase.levels;
-        playerStore.atomicSetElevationAndResetCoins(playerId, newElevation);
+        playerStore.atomicSetElevationAndResetVexa(playerId, newElevation);
 
         player.sendMessage(Message.raw("[Ascend] Elevation +" + purchase.levels + " (x" + newElevation + ")!")
             .color(SystemMessageUtils.SUCCESS));
 
-        // Reset all progress (coins, map unlocks, runners). Best times are preserved.
+        // Reset all progress (vexa, map unlocks, runners). Best times are preserved.
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         if (plugin != null) {
             AscendMapStore mapStore = plugin.getMapStore();
@@ -225,15 +225,15 @@ public class ElevationPage extends BaseAscendPage {
         }
 
         UUID playerId = playerRef.getUuid();
-        BigNumber accumulatedCoins = playerStore.getElevationAccumulatedCoins(playerId);
+        BigNumber accumulatedVexa = playerStore.getElevationAccumulatedVexa(playerId);
         int currentElevation = playerStore.getElevationLevel(playerId);
 
         // Get cost multiplier from skill tree
         double costMultiplier = getCostMultiplier(playerId);
 
-        // Calculate purchase info based on accumulated coins
+        // Calculate purchase info based on accumulated vexa
         BigNumber costMultiplierBN = BigNumber.fromDouble(costMultiplier);
-        ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(currentElevation, accumulatedCoins, costMultiplierBN);
+        ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(currentElevation, accumulatedVexa, costMultiplierBN);
         int newElevation = currentElevation + purchase.levels;
         BigNumber nextCost = AscendConstants.getElevationLevelUpCost(currentElevation, costMultiplierBN);
 
@@ -244,7 +244,7 @@ public class ElevationPage extends BaseAscendPage {
         int targetElevation = newElevation + 1;
         BigNumber targetCost = purchase.cost.add(nextLevelAfterPurchaseCost);
         String costText = "Progress to x" + targetElevation + ": " +
-                         FormatUtils.formatBigNumber(accumulatedCoins) + " / " +
+                         FormatUtils.formatBigNumber(accumulatedVexa) + " / " +
                          FormatUtils.formatBigNumber(targetCost) + " accumulated vexa";
         if (costMultiplier < 1.0) {
             costText += " (-" + Math.round((1.0 - costMultiplier) * 100) + "%)";
@@ -253,8 +253,8 @@ public class ElevationPage extends BaseAscendPage {
 
         // Update current elevation display
         commandBuilder.set("#MultiplierValue.Text", "x" + currentElevation);
-        BigNumber leftoverCoins = accumulatedCoins.subtract(purchase.cost);
-        BigNumber amountNeededForNextLevel = nextLevelAfterPurchaseCost.subtract(leftoverCoins).max(BigNumber.ZERO);
+        BigNumber leftoverVexa = accumulatedVexa.subtract(purchase.cost);
+        BigNumber amountNeededForNextLevel = nextLevelAfterPurchaseCost.subtract(leftoverVexa).max(BigNumber.ZERO);
 
         // Update new elevation display and gain
         if (purchase.levels > 0) {
@@ -266,7 +266,7 @@ public class ElevationPage extends BaseAscendPage {
             commandBuilder.set("#NewMultiplierValue.Text", "x" + currentElevation);
             commandBuilder.set("#NewMultiplierValue.Style.TextColor", "#6b7280");
             commandBuilder.set("#ArrowLabel.Style.TextColor", "#6b7280");
-            commandBuilder.set("#ElevateButton.Text", "NEED MORE COINS");
+            commandBuilder.set("#ElevateButton.Text", "NEED MORE VEXA");
         }
 
         // Always show how much more is needed for the next level

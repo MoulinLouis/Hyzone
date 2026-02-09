@@ -28,8 +28,8 @@ public final class AscendDatabaseSetup {
             stmt.executeUpdate("""
                 CREATE TABLE IF NOT EXISTS ascend_players (
                     uuid VARCHAR(36) PRIMARY KEY,
-                    coins_mantissa DOUBLE NOT NULL DEFAULT 0,
-                    coins_exp10 INT NOT NULL DEFAULT 0,
+                    vexa_mantissa DOUBLE NOT NULL DEFAULT 0,
+                    vexa_exp10 INT NOT NULL DEFAULT 0,
                     elevation_multiplier INT NOT NULL DEFAULT 1,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -148,8 +148,11 @@ public final class AscendDatabaseSetup {
             ensureProgressColumns(conn);
             ensureTutorialColumn(conn);
 
-            // Migrate coins/multiplier columns from DECIMAL to scientific notation (mantissa + exponent)
+            // Migrate vexa/multiplier columns from DECIMAL to scientific notation (mantissa + exponent)
             migrateToScientificNotation(conn);
+
+            // Rename coins_* columns to vexa_* (cosmetic DB rename)
+            migrateCoinsColumnsToVexa(conn);
 
             // Ensure ghost recording table and best_time_ms column
             ensureGhostRecordingTable(conn);
@@ -289,8 +292,8 @@ public final class AscendDatabaseSetup {
     }
 
     /**
-     * One-time migration: convert Summit XP from old scale (level^2.5 + sqrt coins)
-     * to new scale (level^2.0 + coins^(3/7)).
+     * One-time migration: convert Summit XP from old scale (level^2.5 + sqrt vexa)
+     * to new scale (level^2.0 + vexa^(3/7)).
      * Conversion: new_xp = round(old_xp^(6/7)) preserves the same level for each player.
      * Uses marker column 'xp_scale_v2' to ensure migration runs only once.
      */
@@ -337,8 +340,10 @@ public final class AscendDatabaseSetup {
             }
         }
 
-        // Total coins earned (lifetime)
-        if (!columnExists(conn, "ascend_players", "total_coins_earned")) {
+        // Total vexa earned (lifetime) — legacy column for pre-scientific-notation DBs
+        if (!columnExists(conn, "ascend_players", "total_coins_earned")
+                && !columnExists(conn, "ascend_players", "total_coins_earned_mantissa")
+                && !columnExists(conn, "ascend_players", "total_vexa_earned_mantissa")) {
             try (Statement stmt = conn.createStatement()) {
                 stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN total_coins_earned DOUBLE NOT NULL DEFAULT 0");
                 LOGGER.atInfo().log("Added total_coins_earned column to ascend_players");
@@ -347,10 +352,10 @@ public final class AscendDatabaseSetup {
             }
         }
 
-        // Migrate coins columns from BIGINT to DOUBLE for decimal precision
+        // Migrate vexa columns from BIGINT to DOUBLE for decimal precision
         migrateCoinsToDouble(conn);
 
-        // Migrate coins columns from DOUBLE to DECIMAL for exact precision
+        // Migrate vexa columns from DOUBLE to DECIMAL for exact precision
         migrateCoinsToDecimal(conn);
 
         // Total manual runs
@@ -402,8 +407,10 @@ public final class AscendDatabaseSetup {
             }
         }
 
-        // Summit accumulated coins (coins earned since last Summit/Elevation)
-        if (!columnExists(conn, "ascend_players", "summit_accumulated_coins")) {
+        // Summit accumulated vexa (vexa earned since last Summit/Elevation)
+        if (!columnExists(conn, "ascend_players", "summit_accumulated_coins")
+                && !columnExists(conn, "ascend_players", "summit_accumulated_coins_mantissa")
+                && !columnExists(conn, "ascend_players", "summit_accumulated_vexa_mantissa")) {
             try (Statement stmt = conn.createStatement()) {
                 stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN summit_accumulated_coins DECIMAL(65,2) NOT NULL DEFAULT 0");
                 LOGGER.atInfo().log("Added summit_accumulated_coins column to ascend_players");
@@ -422,8 +429,10 @@ public final class AscendDatabaseSetup {
             }
         }
 
-        // Elevation accumulated coins (coins earned since last Elevation/Summit/Ascension)
-        if (!columnExists(conn, "ascend_players", "elevation_accumulated_coins")) {
+        // Elevation accumulated vexa (vexa earned since last Elevation/Summit/Ascension)
+        if (!columnExists(conn, "ascend_players", "elevation_accumulated_coins")
+                && !columnExists(conn, "ascend_players", "elevation_accumulated_coins_mantissa")
+                && !columnExists(conn, "ascend_players", "elevation_accumulated_vexa_mantissa")) {
             try (Statement stmt = conn.createStatement()) {
                 stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN elevation_accumulated_coins DECIMAL(65,2) NOT NULL DEFAULT 0");
                 LOGGER.atInfo().log("Added elevation_accumulated_coins column to ascend_players");
@@ -665,28 +674,30 @@ public final class AscendDatabaseSetup {
     }
 
     /**
-     * Migrate coin/multiplier columns from DECIMAL/DOUBLE to scientific notation (mantissa + exponent).
+     * Migrate vexa/multiplier columns from DECIMAL/DOUBLE to scientific notation (mantissa + exponent).
      * For each column: add _mantissa DOUBLE + _exp10 INT, populate from old values, drop old column.
-     * Idempotent: checks for coins_mantissa to determine if already migrated.
+     * Idempotent: checks for vexa_mantissa to determine if already migrated.
      */
     private static void migrateToScientificNotation(Connection conn) {
         if (conn == null) {
             return;
         }
 
-        // Already migrated if coins_mantissa exists
-        if (columnExists(conn, "ascend_players", "coins_mantissa")) {
+        // Already migrated if vexa_mantissa (or legacy coins_mantissa) exists
+        if (columnExists(conn, "ascend_players", "vexa_mantissa")
+                || columnExists(conn, "ascend_players", "coins_mantissa")) {
             return;
         }
 
         LOGGER.atInfo().log("Starting migration to scientific notation (BigNumber)...");
 
         // Migrate ascend_players: coins, total_coins_earned, summit_accumulated_coins, elevation_accumulated_coins
+        // Source columns use old names; target columns use new vexa_* names
         String[][] playerColumns = {
-            {"coins", "coins_mantissa", "coins_exp10", "0"},
-            {"total_coins_earned", "total_coins_earned_mantissa", "total_coins_earned_exp10", "0"},
-            {"summit_accumulated_coins", "summit_accumulated_coins_mantissa", "summit_accumulated_coins_exp10", "0"},
-            {"elevation_accumulated_coins", "elevation_accumulated_coins_mantissa", "elevation_accumulated_coins_exp10", "0"}
+            {"coins", "vexa_mantissa", "vexa_exp10", "0"},
+            {"total_coins_earned", "total_vexa_earned_mantissa", "total_vexa_earned_exp10", "0"},
+            {"summit_accumulated_coins", "summit_accumulated_vexa_mantissa", "summit_accumulated_vexa_exp10", "0"},
+            {"elevation_accumulated_coins", "elevation_accumulated_vexa_mantissa", "elevation_accumulated_vexa_exp10", "0"}
         };
 
         try (Statement stmt = conn.createStatement()) {
@@ -751,6 +762,43 @@ public final class AscendDatabaseSetup {
             LOGGER.atInfo().log("Scientific notation migration complete");
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Failed to migrate to scientific notation: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Rename coins_* columns to vexa_* in ascend_players.
+     * Idempotent: only runs if old coins_mantissa column still exists.
+     */
+    private static void migrateCoinsColumnsToVexa(Connection conn) {
+        if (conn == null) {
+            return;
+        }
+
+        // Already renamed if coins_mantissa doesn't exist
+        if (!columnExists(conn, "ascend_players", "coins_mantissa")) {
+            return;
+        }
+
+        String[][] renames = {
+            {"coins_mantissa", "vexa_mantissa"},
+            {"coins_exp10", "vexa_exp10"},
+            {"total_coins_earned_mantissa", "total_vexa_earned_mantissa"},
+            {"total_coins_earned_exp10", "total_vexa_earned_exp10"},
+            {"summit_accumulated_coins_mantissa", "summit_accumulated_vexa_mantissa"},
+            {"summit_accumulated_coins_exp10", "summit_accumulated_vexa_exp10"},
+            {"elevation_accumulated_coins_mantissa", "elevation_accumulated_vexa_mantissa"},
+            {"elevation_accumulated_coins_exp10", "elevation_accumulated_vexa_exp10"}
+        };
+
+        try (Statement stmt = conn.createStatement()) {
+            for (String[] rename : renames) {
+                if (columnExists(conn, "ascend_players", rename[0])) {
+                    stmt.executeUpdate("ALTER TABLE ascend_players RENAME COLUMN " + rename[0] + " TO " + rename[1]);
+                }
+            }
+            LOGGER.atInfo().log("Renamed coins columns to vexa in ascend_players");
+        } catch (SQLException e) {
+            LOGGER.at(Level.SEVERE).log("Failed to rename coins columns to vexa: " + e.getMessage());
         }
     }
 }

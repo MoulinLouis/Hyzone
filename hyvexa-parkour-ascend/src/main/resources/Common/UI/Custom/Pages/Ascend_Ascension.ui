@@ -80,7 +80,7 @@ $C.@PageOverlay {
 
               Group { FlexWeight: 1; }
 
-              Label #CurrentCoins {
+              Label #CurrentVexa {
                 Style: (FontSize: 14, TextColor: #ffd166, RenderBold: true);
                 Text: "0";
               }
@@ -98,7 +98,7 @@ $C.@PageOverlay {
 
               Group { FlexWeight: 1; }
 
-              Label #RequiredCoins {
+              Label #RequiredVexa {
                 Style: (FontSize: 14, TextColor: #f59e0b, RenderBold: true);
                 Text: "1.00D";
               }
