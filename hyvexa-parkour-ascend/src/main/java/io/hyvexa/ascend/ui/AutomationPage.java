@@ -12,6 +12,7 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.ascension.AscensionManager;
+import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.util.SystemMessageUtils;
@@ -63,6 +64,13 @@ public class AutomationPage extends BaseAscendPage {
         }
 
         UUID playerId = playerRef.getUuid();
+
+        // Show disclaimer if player hasn't ascended yet
+        AscendPlayerProgress progress = playerStore.getOrCreatePlayer(playerId);
+        boolean showDisclaimer = progress.getAscensionCount() == 0;
+        commandBuilder.set("#AscensionDisclaimer.Visible", showDisclaimer);
+        commandBuilder.set("#DisclaimerSpacer.Visible", showDisclaimer);
+
         boolean hasSkill = ascensionManager.hasAutoRunners(playerId);
         boolean isEnabled = playerStore.isAutoUpgradeEnabled(playerId);
 

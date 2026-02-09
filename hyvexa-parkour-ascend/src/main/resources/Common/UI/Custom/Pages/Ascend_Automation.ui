@@ -26,6 +26,23 @@ $C.@PageOverlay {
       LayoutMode: Top;
       Padding: (Left: 24, Right: 24, Top: 12, Bottom: 16);
 
+      // Disclaimer for players who haven't ascended yet
+      Group #AscensionDisclaimer {
+        Anchor: (Left: 0, Right: 0);
+        Padding: (Left: 12, Right: 12, Top: 10, Bottom: 10);
+        Background: #1a2530;
+        OutlineColor: #f59e0b(0.4);
+        OutlineSize: 1;
+        Visible: false;
+
+        Label #DisclaimerText {
+          Style: (FontSize: 12, TextColor: #f59e0b, Wrap: true);
+          Text: "Automation skills unlock after your first Ascension.";
+        }
+      }
+
+      Group #DisclaimerSpacer { Anchor: (Height: 12); Visible: false; }
+
       Group #AutoUpgradeSection {
         Anchor: (Left: 0, Right: 0);
         LayoutMode: Top;
