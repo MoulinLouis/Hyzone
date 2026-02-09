@@ -5,26 +5,29 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.hypixel.hytale.logger.HytaleLogger;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
 
 /**
  * Manages the whitelist of players allowed to access Ascend mode via the Hub menu.
  * Admin commands remain OP-only.
  */
 public class AscendWhitelistManager {
-    private static final Logger LOGGER = LoggerFactory.getLogger(AscendWhitelistManager.class);
+    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
 
     private final File whitelistFile;
-    private final Set<String> whitelistedPlayers = new HashSet<>();
+    private final Set<String> whitelistedPlayers = ConcurrentHashMap.newKeySet();
     private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
-    private boolean enabled = false; // Disabled by default - everyone can access until explicitly enabled
+    private volatile boolean enabled = false; // Disabled by default - everyone can access until explicitly enabled
 
     public AscendWhitelistManager(File whitelistFile) {
         this.whitelistFile = whitelistFile;
@@ -114,15 +117,15 @@ public class AscendWhitelistManager {
 
     private void load() {
         if (!whitelistFile.exists()) {
-            LOGGER.info("Whitelist file not found, creating new one: {}", whitelistFile.getPath());
+            LOGGER.atInfo().log("Whitelist file not found, creating new one: " + whitelistFile.getPath());
             save();
             return;
         }
 
-        try (FileReader reader = new FileReader(whitelistFile)) {
+        try (BufferedReader reader = Files.newBufferedReader(whitelistFile.toPath(), StandardCharsets.UTF_8)) {
             JsonObject json = gson.fromJson(reader, JsonObject.class);
             if (json == null) {
-                LOGGER.warn("Whitelist file is empty, resetting");
+                LOGGER.at(Level.WARNING).log("Whitelist file is empty, resetting");
                 save();
                 return;
             }
@@ -141,10 +144,10 @@ public class AscendWhitelistManager {
                         whitelistedPlayers.add(username.toLowerCase());
                     }
                 }
-                LOGGER.info("Loaded {} whitelisted players (enabled: {})", whitelistedPlayers.size(), enabled);
+                LOGGER.atInfo().log("Loaded " + whitelistedPlayers.size() + " whitelisted players (enabled: " + enabled + ")");
             }
         } catch (IOException | com.google.gson.JsonSyntaxException e) {
-            LOGGER.error("Failed to load whitelist file, resetting: {}", e.getMessage());
+            LOGGER.at(Level.SEVERE).withCause(e).log("Failed to load whitelist file, resetting");
             whitelistedPlayers.clear();
             enabled = true;
             save();
@@ -172,13 +175,11 @@ public class AscendWhitelistManager {
 
             json.add("whitelisted", whitelisted);
 
-            try (FileWriter writer = new FileWriter(whitelistFile)) {
+            try (BufferedWriter writer = Files.newBufferedWriter(whitelistFile.toPath(), StandardCharsets.UTF_8)) {
                 gson.toJson(json, writer);
             }
-
-            LOGGER.debug("Saved whitelist with {} players (enabled: {})", whitelistedPlayers.size(), enabled);
         } catch (IOException e) {
-            LOGGER.error("Failed to save whitelist file: {}", e.getMessage());
+            LOGGER.at(Level.SEVERE).withCause(e).log("Failed to save whitelist file");
         }
     }
 }
