@@ -19,7 +19,6 @@ import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.core.db.DatabaseManager;
-import io.hyvexa.hub.HubConstants;
 import io.hyvexa.hub.command.HubCommand;
 import io.hyvexa.hub.hud.HubHud;
 import io.hyvexa.hub.interaction.HubMenuInteraction;
@@ -27,10 +26,7 @@ import io.hyvexa.hub.routing.HubRouter;
 
 import javax.annotation.Nonnull;
 import java.io.File;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -41,14 +37,13 @@ import java.util.logging.Level;
 public class HyvexaHubPlugin extends JavaPlugin {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final String HUB_WORLD_NAME = "Hub";
-    private static final String PARKOUR_WORLD_NAME = "Parkour";
-    private static final String ASCEND_WORLD_NAME = "Ascend";
+    /** Delay before first HUD update after attach, to allow the client to load the UI. */
+    private static final long HUD_READY_DELAY_MS = 250L;
     private static HyvexaHubPlugin INSTANCE;
 
     private HubRouter router;
     private final ConcurrentHashMap<UUID, HubHud> hubHuds = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<UUID, Boolean> hubHudAttached = new ConcurrentHashMap<>();
+    private final Set<UUID> hubHudAttached = ConcurrentHashMap.newKeySet();
     private final ConcurrentHashMap<UUID, Long> hubHudReadyAt = new ConcurrentHashMap<>();
     private ScheduledFuture<?> hubHudTask;
 
@@ -145,11 +140,11 @@ public class HyvexaHubPlugin extends JavaPlugin {
         if (world == null) {
             return;
         }
-        java.util.concurrent.CompletableFuture.runAsync(() -> {
+        CompletableFuture.runAsync(() -> {
             if (!ref.isValid() || !playerRef.isValid()) {
                 return;
             }
-            var player = store.getComponent(ref, com.hypixel.hytale.server.core.entity.entities.Player.getComponentType());
+            Player player = store.getComponent(ref, Player.getComponentType());
             if (player == null) {
                 return;
             }
@@ -159,8 +154,8 @@ public class HyvexaHubPlugin extends JavaPlugin {
             hud.resetCache();
             hud.show();
             hud.applyStaticText();
-            hubHudAttached.put(playerRef.getUuid(), true);
-            hubHudReadyAt.put(playerRef.getUuid(), System.currentTimeMillis() + 250L);
+            hubHudAttached.add(playerRef.getUuid());
+            hubHudReadyAt.put(playerRef.getUuid(), System.currentTimeMillis() + HUD_READY_DELAY_MS);
         }, world);
     }
 
@@ -171,9 +166,9 @@ public class HyvexaHubPlugin extends JavaPlugin {
 
     private void preloadWorlds() {
         try {
-            Universe.get().loadWorld(HUB_WORLD_NAME);
-            Universe.get().loadWorld(PARKOUR_WORLD_NAME);
-            Universe.get().loadWorld(ASCEND_WORLD_NAME);
+            Universe.get().loadWorld(HubConstants.WORLD_HUB);
+            Universe.get().loadWorld(HubConstants.WORLD_PARKOUR);
+            Universe.get().loadWorld(HubConstants.WORLD_ASCEND);
         } catch (Exception e) {
             LOGGER.at(Level.WARNING).log("Failed to preload hub worlds: " + e.getMessage());
         }
@@ -218,45 +213,6 @@ public class HyvexaHubPlugin extends JavaPlugin {
     }
 
     private void tickHubHud() {
-        Map<World, List<PlayerTickContext>> playersByWorld = collectPlayersByWorld();
-        for (Map.Entry<World, List<PlayerTickContext>> entry : playersByWorld.entrySet()) {
-            World world = entry.getKey();
-            if (!isHubWorld(world)) {
-                continue;
-            }
-            List<PlayerTickContext> players = entry.getValue();
-            CompletableFuture.runAsync(() -> {
-                for (PlayerTickContext context : players) {
-                    if (context.ref == null || !context.ref.isValid()) {
-                        continue;
-                    }
-                    UUID playerId = context.playerRef != null ? context.playerRef.getUuid() : null;
-                    if (playerId == null) {
-                        continue;
-                    }
-                    HubHud hud = hubHuds.get(playerId);
-                    boolean needsAttach = !Boolean.TRUE.equals(hubHudAttached.get(playerId));
-                    if (needsAttach || hud == null) {
-                        attachHubHud(context.ref, context.store, context.playerRef);
-                        continue;
-                    }
-                    // Always ensure HUD is set on player (in case they came from another world)
-                    Player player = context.store.getComponent(context.ref, Player.getComponentType());
-                    if (player != null) {
-                        player.getHudManager().setCustomHud(context.playerRef, hud);
-                    }
-                    long readyAt = hubHudReadyAt.getOrDefault(playerId, Long.MAX_VALUE);
-                    if (System.currentTimeMillis() < readyAt) {
-                        continue;
-                    }
-                    hud.applyStaticText();
-                }
-            }, world);
-        }
-    }
-
-    private Map<World, List<PlayerTickContext>> collectPlayersByWorld() {
-        Map<World, List<PlayerTickContext>> playersByWorld = new HashMap<>();
         for (PlayerRef playerRef : Universe.get().getPlayers()) {
             Ref<EntityStore> ref = playerRef != null ? playerRef.getReference() : null;
             if (ref == null || !ref.isValid()) {
@@ -267,24 +223,29 @@ public class HyvexaHubPlugin extends JavaPlugin {
                 continue;
             }
             World world = store.getExternalData().getWorld();
-            if (world == null) {
+            if (world == null || !isHubWorld(world)) {
                 continue;
             }
-            playersByWorld.computeIfAbsent(world, ignored -> new ArrayList<>())
-                    .add(new PlayerTickContext(ref, store, playerRef));
-        }
-        return playersByWorld;
-    }
-
-    private static final class PlayerTickContext {
-        private final Ref<EntityStore> ref;
-        private final Store<EntityStore> store;
-        private final PlayerRef playerRef;
-
-        private PlayerTickContext(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef) {
-            this.ref = ref;
-            this.store = store;
-            this.playerRef = playerRef;
+            UUID playerId = playerRef.getUuid();
+            if (playerId == null) {
+                continue;
+            }
+            HubHud hud = hubHuds.get(playerId);
+            boolean needsAttach = !hubHudAttached.contains(playerId);
+            if (needsAttach || hud == null) {
+                attachHubHud(ref, store, playerRef);
+                continue;
+            }
+            long readyAt = hubHudReadyAt.getOrDefault(playerId, Long.MAX_VALUE);
+            if (System.currentTimeMillis() < readyAt) {
+                continue;
+            }
+            CompletableFuture.runAsync(() -> {
+                if (!ref.isValid()) {
+                    return;
+                }
+                hud.applyStaticText();
+            }, world);
         }
     }
 
@@ -292,18 +253,14 @@ public class HyvexaHubPlugin extends JavaPlugin {
         if (world == null || world.getName() == null) {
             return false;
         }
-        return HUB_WORLD_NAME.equalsIgnoreCase(world.getName());
+        return HubConstants.WORLD_HUB.equalsIgnoreCase(world.getName());
     }
 
     private boolean isHubWorld(Store<EntityStore> store) {
         if (store == null || store.getExternalData() == null) {
             return false;
         }
-        var world = store.getExternalData().getWorld();
-        if (world == null || world.getName() == null) {
-            return false;
-        }
-        return HUB_WORLD_NAME.equalsIgnoreCase(world.getName());
+        return isHubWorld(store.getExternalData().getWorld());
     }
 
     @Override
