@@ -253,6 +253,11 @@ public class AscendLeaderboardPage extends InteractiveCustomUIPage<AscendLeaderb
         if (entry.playerName() != null && !entry.playerName().isEmpty()) {
             return entry.playerName();
         }
+        // Try in-memory name cache (survives disconnect within same session)
+        String cachedName = playerStore.getPlayerName(entry.playerId());
+        if (cachedName != null) {
+            return cachedName;
+        }
         PlayerRef playerRef = Universe.get().getPlayer(entry.playerId());
         if (playerRef != null) {
             return playerRef.getUsername();
