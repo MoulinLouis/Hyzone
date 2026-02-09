@@ -1474,6 +1474,15 @@ public class AscendPlayerStore {
         // Merge online players' fresh data on top of the DB snapshot
         Map<UUID, LeaderboardEntry> merged = new java.util.LinkedHashMap<>();
         for (LeaderboardEntry entry : leaderboardCache) {
+            // Enrich null names from in-memory cache (survives disconnect)
+            if (entry.playerName() == null || entry.playerName().isEmpty()) {
+                String cachedName = playerNames.get(entry.playerId());
+                if (cachedName != null) {
+                    entry = new LeaderboardEntry(entry.playerId(), cachedName,
+                            entry.totalVexaEarnedMantissa(), entry.totalVexaEarnedExp10(),
+                            entry.ascensionCount(), entry.totalManualRuns(), entry.fastestAscensionMs());
+                }
+            }
             merged.put(entry.playerId(), entry);
         }
         for (Map.Entry<UUID, AscendPlayerProgress> e : players.entrySet()) {
@@ -1587,7 +1596,7 @@ public class AscendPlayerStore {
         }
 
         String sql = """
-            SELECT p.player_name, m.best_time_ms
+            SELECT p.uuid AS player_uuid, p.player_name, m.best_time_ms
             FROM ascend_player_maps m
             JOIN ascend_players p ON p.uuid = m.player_uuid
             WHERE m.map_id = ? AND m.best_time_ms IS NOT NULL
@@ -1604,6 +1613,14 @@ public class AscendPlayerStore {
                 while (rs.next()) {
                     String name = rs.getString("player_name");
                     long bestTimeMs = rs.getLong("best_time_ms");
+                    // Enrich null names from in-memory cache
+                    if (name == null || name.isEmpty()) {
+                        try {
+                            UUID pid = UUID.fromString(rs.getString("player_uuid"));
+                            name = playerNames.get(pid);
+                        } catch (IllegalArgumentException ignored) {
+                        }
+                    }
                     entries.add(new MapLeaderboardEntry(name, bestTimeMs));
                 }
             }
