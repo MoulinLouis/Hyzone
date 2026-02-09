@@ -339,6 +339,22 @@ if ("MyActionDisabled".equals(data.getButton())) {
 - Error: "Target element in CustomUI event binding has no compatible Activating event"
 - `TextButton` with empty text acts as an invisible interactive overlay
 
+### Off-Screen Labels as Data Carriers (Known Workaround)
+
+Hytale UI has no dedicated data-binding element. To store and read values from Java
+without displaying them, we position Labels off-screen with zero dimensions:
+
+```
+Label #RunPbText {
+  Anchor: (Left: 0, Top: -200, Width: 0, Height: 0);
+  Style: (FontSize: 1, TextColor: #000000);
+  Text: "";
+}
+```
+
+Java sets/reads the value via `commandBuilder.set("#RunPbText", "Text", value)`.
+This is an intentional workaround, not dead code.
+
 ## Data Stores
 
 ```java
