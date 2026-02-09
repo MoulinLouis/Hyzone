@@ -137,6 +137,9 @@ $C.@PageOverlay {
       }
     }
 
+    // Off-screen invisible labels used as data carriers (known workaround —
+    // Hytale UI has no dedicated data-binding element, so we position labels
+    // off-screen and read their Text values from Java via commandBuilder.set)
     Label #RunPbText {
       Anchor: (Left: 0, Top: -200, Width: 0, Height: 0);
       Style: (FontSize: 1, TextColor: #000000);

@@ -1,7 +1,5 @@
 package io.hyvexa.ascend.data;
 
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 import com.hypixel.hytale.logger.HytaleLogger;
 import io.hyvexa.core.db.DatabaseManager;
 
@@ -22,7 +20,6 @@ import java.util.logging.Level;
 public class AscendMapStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final Gson GSON = new Gson();
 
     private final Map<String, AscendMap> maps = new LinkedHashMap<>();
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
