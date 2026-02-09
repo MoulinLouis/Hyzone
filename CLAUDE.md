@@ -43,6 +43,7 @@ Quick reference for AI agents working on this Hytale plugin project.
 8. **Singleton components** - check for `INSTANCE` or `get()` (e.g., `Invulnerable.INSTANCE`)
 9. **Track online players** - only spawn per-player entities for connected players
 10. **Disable NPC AI** - use `Frozen` component to prevent autonomous movement
+11. **Avoid Unicode in chat messages** - Hytale client displays many Unicode characters as `?`. Use ASCII alternatives: `->` instead of `→`, `x` instead of `×`, `-` instead of `–`/`—`
 
 ## UI Patterns
 - Never use dynamic Background property changes on UI elements — they don't work in Hytale's UI system
