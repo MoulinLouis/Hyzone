@@ -7,7 +7,7 @@ import javax.annotation.Nullable;
  * Allows modules to access the whitelist without creating circular dependencies.
  */
 public class WhitelistRegistry {
-    private static AscendWhitelistManager instance;
+    private static volatile AscendWhitelistManager instance;
 
     private WhitelistRegistry() {
         // Utility class
