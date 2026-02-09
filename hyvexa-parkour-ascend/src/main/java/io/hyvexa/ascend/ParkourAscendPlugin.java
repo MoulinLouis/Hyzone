@@ -38,6 +38,8 @@ import io.hyvexa.ascend.summit.SummitManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 import io.hyvexa.ascend.tutorial.TutorialTriggerService;
 import io.hyvexa.ascend.passive.PassiveEarningsManager;
+import io.hyvexa.ascend.data.AscendPlayerProgress;
+import io.hyvexa.ascend.ui.AscendMapSelectPage;
 import io.hyvexa.ascend.util.AscendInventoryUtils;
 import io.hyvexa.common.whitelist.AscendWhitelistManager;
 import io.hyvexa.common.whitelist.WhitelistRegistry;
@@ -158,7 +160,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
         );
 
         // Initialize tutorial trigger service
-        tutorialTriggerService = new TutorialTriggerService(playerStore);
+        tutorialTriggerService = new TutorialTriggerService(playerStore, runTracker);
 
         try {
             if (HylogramsBridge.isAvailable()) {
@@ -199,24 +201,10 @@ public class ParkourAscendPlugin extends JavaPlugin {
                 Store<EntityStore> store = ref.getStore();
                 World world = store.getExternalData().getWorld();
 
-                // Handle world switch: if player enters a non-Ascend world, trigger passive earnings
-                PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-                if (playerRef != null && world != null && !isAscendWorld(world)) {
-                    UUID playerId = playerRef.getUuid();
-                    // If player was previously in Ascend (cached), they're now leaving
-                    if (playerId != null && playerRefCache.containsKey(playerId)) {
-                        if (passiveEarningsManager != null) {
-                            passiveEarningsManager.onPlayerLeaveAscend(playerId);
-                        }
-                        // Don't remove from cache yet - PlayerDisconnectEvent will handle full cleanup
-                    }
-                    return;
-                }
-
                 if (world == null || !isAscendWorld(world)) {
                     return;
                 }
-                // playerRef already retrieved above
+                PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
                 if (playerRef == null) {
                     return;
                 }
@@ -236,8 +224,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     playerStore.storePlayerName(playerId, playerRef.getUsername());
 
                     // Initialize ascension timer on first join (if not already set)
-                    AscendPlayerProgress progress = playerStore.getPlayer(playerId);
-                    if (progress != null && progress.getAscensionStartedAt() == null) {
+                    AscendPlayerProgress progress = playerStore.getOrCreatePlayer(playerId);
+                    if (progress.getAscensionStartedAt() == null) {
                         progress.setAscensionStartedAt(System.currentTimeMillis());
                     }
 
@@ -289,11 +277,11 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     }
                     AscendInventoryUtils.ensureMenuItems(player);
                 } else {
-                    // If joining a NON-Ascend world, mark as leaving Ascend for passive earnings
+                    // If joining a NON-Ascend world and player was previously in Ascend, trigger passive earnings
                     PlayerRef playerRef = holder.getComponent(PlayerRef.getComponentType());
                     if (playerRef != null) {
                         UUID playerId = playerRef.getUuid();
-                        if (playerId != null && passiveEarningsManager != null) {
+                        if (playerId != null && playerRefCache.containsKey(playerId) && passiveEarningsManager != null) {
                             passiveEarningsManager.onPlayerLeaveAscend(playerId);
                         }
                     }
@@ -319,6 +307,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
             }
 
             playerRefCache.remove(playerId);
+            AscendMapSelectPage.clearBuyAllCooldown(playerId);
             hudManager.removePlayer(playerId);
             if (runTracker != null) {
                 runTracker.cancelRun(playerId);

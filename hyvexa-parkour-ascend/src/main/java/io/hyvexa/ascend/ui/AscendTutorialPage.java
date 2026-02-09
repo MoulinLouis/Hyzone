@@ -181,10 +181,13 @@ public class AscendTutorialPage extends BaseAscendPage {
         // Set button text
         cmd.set("#NextButton.Text", step == tutorial.totalSteps - 1 ? "Got It!" : "Next");
 
-        // Elevation tip box (only on step 1)
+        // Tip boxes
         if (tutorial == Tutorial.ELEVATION) {
             cmd.set("#TipBox.Visible", step == 0);
             cmd.set("#TipText.Text", "Don't elevate right away! Let your runners build up multipliers first - you'll earn much more when you do.");
+        } else if (tutorial == Tutorial.FIRST_COMPLETION) {
+            cmd.set("#TipBox.Visible", step == 1);
+            cmd.set("#TipText.Text", "Use the item in slot 1 to open /ascend anytime!");
         }
     }
 
