@@ -285,6 +285,30 @@ Runners have no coin cost after map unlock. They can be purchased for free once:
 
 ---
 
+## Passive Earnings
+
+### Offline Production
+
+When a player disconnects or switches worlds, their runners continue to earn coins at a reduced rate.
+
+**Base offline rate:** 10% of normal production
+**Boosted rate (OFFLINE_BOOST skill):** 25% of normal production
+**Maximum accumulation time:** 24 hours
+**Minimum offline time:** 1 minute
+
+**How it works:**
+- Passive earnings are calculated based on runner production rates at the time of disconnect
+- Coins and map multiplier gains accumulate at the reduced rate
+- Players receive a summary popup on reconnect showing total passive earnings
+- The OFFLINE_BOOST skill (Ascension skill tree) increases the rate from 10% to 25%
+
+**Design rationale:**
+- Rewards consistent play without punishing casual players
+- 10% base rate is generous enough to feel worthwhile but not so high that it competes with active play
+- 24-hour cap prevents extreme accumulation from long absences
+
+---
+
 ## Expected Progression Timeline
 
 ### Early Game (0-5 minutes)
@@ -582,6 +606,11 @@ Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure conti
 ---
 
 ## Version History
+
+- **2026-02-09 (v18):** Passive offline rate reduction
+  - Offline earnings rate: 25% → 10% (base rate)
+  - OFFLINE_BOOST skill: 25% → 40% becomes 10% → 25%
+  - More balanced offline vs. active play incentives
 
 - **2026-02-08 (v17):** Elevation accumulated coins system
   - Elevation now uses accumulated coins (total earned since last reset) instead of current balance
