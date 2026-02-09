@@ -609,8 +609,8 @@ public final class AscendConstants {
     public enum AchievementType {
         // Milestones
         FIRST_STEPS("First Steps", "Complete first manual run", "Beginner"),
-        COIN_HOARDER("Coin Hoarder", "Earn 100K coins total", "Collector"),
-        MILLIONAIRE("Millionaire", "Earn 1M coins total", "Millionaire"),
+        COIN_HOARDER("Vexa Hoarder", "Earn 100K vexa total", "Collector"),
+        MILLIONAIRE("Millionaire", "Earn 1M vexa total", "Millionaire"),
         DEDICATED("Dedicated", "Complete 100 manual runs", "Dedicated"),
         MARATHON("Marathon", "Complete 1000 manual runs", "Marathoner"),
 

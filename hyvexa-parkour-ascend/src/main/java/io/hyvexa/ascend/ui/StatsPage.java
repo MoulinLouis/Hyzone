@@ -107,7 +107,7 @@ public class StatsPage extends BaseAscendPage {
 
         // 3. Lifetime Earnings
         BigNumber totalEarned = playerStore.getTotalCoinsEarned(playerId);
-        commandBuilder.set("#LifetimeValue.Text", FormatUtils.formatBigNumber(totalEarned) + " coins");
+        commandBuilder.set("#LifetimeValue.Text", FormatUtils.formatBigNumber(totalEarned) + " vexa");
 
         // 4. Manual Runs
         int manualRuns = playerStore.getTotalManualRuns(playerId);
@@ -143,7 +143,7 @@ public class StatsPage extends BaseAscendPage {
 
     private String formatCombinedIncome(UUID playerId) {
         if (mapStore == null || ghostStore == null) {
-            return "0 coins/sec";
+            return "0 vexa/sec";
         }
 
         List<AscendMap> maps = mapStore.listMapsSorted();
@@ -177,7 +177,7 @@ public class StatsPage extends BaseAscendPage {
         }
 
         if (totalCoinsPerSec < 0.01) {
-            return "0 coins/sec";
+            return "0 vexa/sec";
         }
         return FormatUtils.formatBigNumber(BigNumber.fromDouble(totalCoinsPerSec)) + "/sec";
     }

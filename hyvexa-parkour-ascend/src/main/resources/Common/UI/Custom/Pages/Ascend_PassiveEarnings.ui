@@ -43,7 +43,7 @@ $C.@PageOverlay {
         Label #TotalCoinsLabel {
           Anchor: (Top: 4);
           Style: (FontSize: 20, TextColor: #ffd166, RenderBold: true);
-          Text: "0 COINS";
+          Text: "0 VEXA";
         }
 
         Label #OfflineRateLabel {

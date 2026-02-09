@@ -29,7 +29,7 @@ $C.@PageOverlay {
       Label #ConversionRate {
         Anchor: (Left: 0, Right: 0, Top: 4);
         Style: (FontSize: 14, TextColor: #9fb0ba);
-        Text: "1000 coins = +1 elevation";
+        Text: "1000 vexa = +1 elevation";
       }
 
       Group #ElevationCard {
@@ -151,14 +151,14 @@ $C.@PageOverlay {
         Label {
           Anchor: (Left: 6);
           Style: (FontSize: 13, TextColor: #fca5a5, Wrap: true);
-          Text: "Warning: Elevation resets coins to zero.";
+          Text: "Warning: Elevation resets vexa to zero.";
         }
       }
 
       Label #TipText {
         Anchor: (Left: 0, Right: 0, Top: 6);
         Style: (FontSize: 14, TextColor: #9fb0ba, HorizontalAlignment: Center);
-        Text: "Higher elevation = more coins from all sources.";
+        Text: "Higher elevation = more vexa from all sources.";
       }
     }
   }

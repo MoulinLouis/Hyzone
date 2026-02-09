@@ -158,9 +158,9 @@ public class AscendAdminCommand extends AbstractAsyncCommand {
         // Show created map with automatic balancing
         String levelColor = getLevelColor(order);
         player.sendMessage(Message.raw("Ascend map created: " + id + " (" + levelColor + ")"));
-        player.sendMessage(Message.raw("  Unlock: " + AscendConstants.getMapUnlockPrice(order) + " coins"));
-        player.sendMessage(Message.raw("  Runner: 0 coins (free)"));
-        player.sendMessage(Message.raw("  Reward: " + AscendConstants.getMapBaseReward(order) + " coins/run"));
+        player.sendMessage(Message.raw("  Unlock: " + AscendConstants.getMapUnlockPrice(order) + " vexa"));
+        player.sendMessage(Message.raw("  Runner: 0 vexa (free)"));
+        player.sendMessage(Message.raw("  Reward: " + AscendConstants.getMapBaseReward(order) + " vexa/run"));
         player.sendMessage(Message.raw("  Run time: " + formatTime(AscendConstants.getMapBaseRunTimeMs(order))));
         player.sendMessage(Message.raw("Use /as admin map setstart " + id + " to set spawn point."));
     }
@@ -241,9 +241,9 @@ public class AscendAdminCommand extends AbstractAsyncCommand {
 
         String levelColor = getLevelColor(order);
         player.sendMessage(Message.raw("Order updated for " + map.getId() + " -> Level " + order + " (" + levelColor + ")"));
-        player.sendMessage(Message.raw("  Unlock: " + AscendConstants.getMapUnlockPrice(order) + " coins"));
-        player.sendMessage(Message.raw("  Runner: 0 coins (free)"));
-        player.sendMessage(Message.raw("  Reward: " + AscendConstants.getMapBaseReward(order) + " coins/run"));
+        player.sendMessage(Message.raw("  Unlock: " + AscendConstants.getMapUnlockPrice(order) + " vexa"));
+        player.sendMessage(Message.raw("  Runner: 0 vexa (free)"));
+        player.sendMessage(Message.raw("  Reward: " + AscendConstants.getMapBaseReward(order) + " vexa/run"));
         player.sendMessage(Message.raw("  Run time: " + formatTime(AscendConstants.getMapBaseRunTimeMs(order))));
     }
 

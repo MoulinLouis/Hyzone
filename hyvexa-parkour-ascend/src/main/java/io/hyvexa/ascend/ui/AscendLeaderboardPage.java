@@ -301,7 +301,7 @@ public class AscendLeaderboardPage extends InteractiveCustomUIPage<AscendLeaderb
     }
 
     public enum LeaderboardCategory {
-        COINS("Coins", "#f59e0b"),
+        COINS("Vexa", "#f59e0b"),
         ASCENSIONS("Ascensions", "#8b5cf6"),
         MANUAL_RUNS("Manual Runs", "#10b981"),
         FASTEST_ASCENSION("Fastest Ascension", "#ef4444");

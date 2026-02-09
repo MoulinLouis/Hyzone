@@ -128,7 +128,7 @@ public class SummitPage extends BaseAscendPage {
         BigNumber coinsForNextXp = AscendConstants.xpToCoins(nextXp);
         String progressText = "Progress to next EXP: " +
             FormatUtils.formatBigNumber(accumulatedCoins) + " / " +
-            FormatUtils.formatBigNumber(coinsForNextXp) + " accumulated coins";
+            FormatUtils.formatBigNumber(coinsForNextXp) + " accumulated vexa";
         commandBuilder.set("#ProgressText.Text", progressText);
 
         SummitCategory[] categories = {
@@ -272,14 +272,14 @@ public class SummitPage extends BaseAscendPage {
                 BigNumber.fromLong(AscendConstants.SUMMIT_MIN_COINS));
             String currentCoins = FormatUtils.formatBigNumber(coins);
             player.sendMessage(Message.raw("[Summit] Need " + minCoins
-                + " coins to Summit. You have: " + currentCoins)
+                + " vexa to Summit. You have: " + currentCoins)
                 .color(SystemMessageUtils.SECONDARY));
             return;
         }
 
         SummitManager.SummitPreview preview = summitManager.previewSummit(playerId, category);
         if (!preview.hasGain()) {
-            player.sendMessage(Message.raw("[Summit] Insufficient coins for level gain.")
+            player.sendMessage(Message.raw("[Summit] Insufficient vexa for level gain.")
                 .color(SystemMessageUtils.SECONDARY));
             return;
         }
@@ -306,7 +306,7 @@ public class SummitPage extends BaseAscendPage {
             + " -> Lv." + result.newLevel() + " | " + formatBonus(category, preview.currentBonus())
             + " -> " + formatBonus(category, preview.newBonus()))
             .color(SystemMessageUtils.SUCCESS));
-        player.sendMessage(Message.raw("[Summit] Progress reset: coins, elevation, multipliers, runners, map unlocks")
+        player.sendMessage(Message.raw("[Summit] Progress reset: vexa, elevation, multipliers, runners, map unlocks")
             .color(SystemMessageUtils.SECONDARY));
 
         // Check achievements

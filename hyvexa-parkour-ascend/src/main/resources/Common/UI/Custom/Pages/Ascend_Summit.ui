@@ -56,7 +56,7 @@ $C.@PageOverlay {
         Label {
           Anchor: (Left: 6);
           Style: (FontSize: 13, TextColor: #fca5a5, Wrap: true);
-          Text: "Warning: Summit resets coins and elevation.";
+          Text: "Warning: Summit resets vexa and elevation.";
         }
       }
     }

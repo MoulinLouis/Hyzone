@@ -349,7 +349,7 @@ public class AscendRunTracker {
         StringBuilder payoutMsg = new StringBuilder();
         payoutMsg.append("[Ascend] +")
                  .append(FormatUtils.formatBigNumber(payout))
-                 .append(" coins | ")
+                 .append(" vexa | ")
                  .append(timeStr);
 
         if (isPersonalBest) {
