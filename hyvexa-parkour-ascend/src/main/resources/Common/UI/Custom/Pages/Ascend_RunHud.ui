@@ -15,12 +15,7 @@ $C.@PageOverlay {
         FlexWeight: 1;
         Label #TopRedValue {
           Anchor: (Left: 0, Right: 0);
-          Style: (
-            FontSize: 30,
-            TextColor: #7c3aed,
-            RenderBold: true,
-            HorizontalAlignment: Center
-          );
+          Style: (FontSize: 30, TextColor: #7c3aed, RenderBold: true, HorizontalAlignment: Center);
           Text: "1";
         }
         ProgressBar #MomentumBar0 { Anchor: (Left: 25, Right: 25, Bottom: 2, Height: 4); Value: 0; Bar: #7c3aed; Background: #7c3aed(0.15); Visible: false; }
@@ -30,12 +25,7 @@ $C.@PageOverlay {
         FlexWeight: 1;
         Label #TopSep1 {
           Anchor: (Left: 0, Right: 0, Top: -1);
-          Style: (
-            FontSize: 30,
-            TextColor: #f2f5f7,
-            RenderBold: true,
-            HorizontalAlignment: Center
-          );
+          Style: (FontSize: 30, TextColor: #f2f5f7, RenderBold: true, HorizontalAlignment: Center);
           Text: "x";
         }
       }
@@ -44,12 +34,7 @@ $C.@PageOverlay {
         FlexWeight: 1;
         Label #TopOrangeValue {
           Anchor: (Left: 0, Right: 0);
-          Style: (
-            FontSize: 30,
-            TextColor: #ef4444,
-            RenderBold: true,
-            HorizontalAlignment: Center
-          );
+          Style: (FontSize: 30, TextColor: #ef4444, RenderBold: true, HorizontalAlignment: Center);
           Text: "1";
         }
         ProgressBar #MomentumBar1 { Anchor: (Left: 25, Right: 25, Bottom: 2, Height: 4); Value: 0; Bar: #ef4444; Background: #ef4444(0.15); Visible: false; }
@@ -59,12 +44,7 @@ $C.@PageOverlay {
         FlexWeight: 1;
         Label #TopSep2 {
           Anchor: (Left: 0, Right: 0, Top: -1);
-          Style: (
-            FontSize: 30,
-            TextColor: #f2f5f7,
-            RenderBold: true,
-            HorizontalAlignment: Center
-          );
+          Style: (FontSize: 30, TextColor: #f2f5f7, RenderBold: true, HorizontalAlignment: Center);
           Text: "x";
         }
       }
@@ -73,12 +53,7 @@ $C.@PageOverlay {
         FlexWeight: 1;
         Label #TopYellowValue {
           Anchor: (Left: 0, Right: 0);
-          Style: (
-            FontSize: 30,
-            TextColor: #f59e0b,
-            RenderBold: true,
-            HorizontalAlignment: Center
-          );
+          Style: (FontSize: 30, TextColor: #f59e0b, RenderBold: true, HorizontalAlignment: Center);
           Text: "1";
         }
         ProgressBar #MomentumBar2 { Anchor: (Left: 25, Right: 25, Bottom: 2, Height: 4); Value: 0; Bar: #f59e0b; Background: #f59e0b(0.15); Visible: false; }
@@ -88,12 +63,7 @@ $C.@PageOverlay {
         FlexWeight: 1;
         Label #TopSep3 {
           Anchor: (Left: 0, Right: 0, Top: -1);
-          Style: (
-            FontSize: 30,
-            TextColor: #f2f5f7,
-            RenderBold: true,
-            HorizontalAlignment: Center
-          );
+          Style: (FontSize: 30, TextColor: #f2f5f7, RenderBold: true, HorizontalAlignment: Center);
           Text: "x";
         }
       }
@@ -102,12 +72,7 @@ $C.@PageOverlay {
         FlexWeight: 1;
         Label #TopGreenValue {
           Anchor: (Left: 0, Right: 0);
-          Style: (
-            FontSize: 30,
-            TextColor: #10b981,
-            RenderBold: true,
-            HorizontalAlignment: Center
-          );
+          Style: (FontSize: 30, TextColor: #10b981, RenderBold: true, HorizontalAlignment: Center);
           Text: "1";
         }
         ProgressBar #MomentumBar3 { Anchor: (Left: 25, Right: 25, Bottom: 2, Height: 4); Value: 0; Bar: #10b981; Background: #10b981(0.15); Visible: false; }
@@ -117,12 +82,7 @@ $C.@PageOverlay {
         FlexWeight: 1;
         Label #TopSep4 {
           Anchor: (Left: 0, Right: 0, Top: -1);
-          Style: (
-            FontSize: 30,
-            TextColor: #f2f5f7,
-            RenderBold: true,
-            HorizontalAlignment: Center
-          );
+          Style: (FontSize: 30, TextColor: #f2f5f7, RenderBold: true, HorizontalAlignment: Center);
           Text: "x";
         }
       }
@@ -131,12 +91,7 @@ $C.@PageOverlay {
         FlexWeight: 1;
         Label #TopBlueValue {
           Anchor: (Left: 0, Right: 0);
-          Style: (
-            FontSize: 30,
-            TextColor: #3b82f6,
-            RenderBold: true,
-            HorizontalAlignment: Center
-          );
+          Style: (FontSize: 30, TextColor: #3b82f6, RenderBold: true, HorizontalAlignment: Center);
           Text: "1";
         }
         ProgressBar #MomentumBar4 { Anchor: (Left: 25, Right: 25, Bottom: 2, Height: 4); Value: 0; Bar: #3b82f6; Background: #3b82f6(0.15); Visible: false; }
@@ -146,12 +101,7 @@ $C.@PageOverlay {
         FlexWeight: 1;
         Label #TopSep5 {
           Anchor: (Left: 0, Right: 0, Top: -1);
-          Style: (
-            FontSize: 30,
-            TextColor: #f2f5f7,
-            RenderBold: true,
-            HorizontalAlignment: Center
-          );
+          Style: (FontSize: 30, TextColor: #f2f5f7, RenderBold: true, HorizontalAlignment: Center);
           Text: "x";
         }
       }
@@ -160,88 +110,87 @@ $C.@PageOverlay {
         FlexWeight: 1;
         Label #TopElevationValue {
           Anchor: (Left: 0, Right: 0);
-          Style: (
-            FontSize: 30,
-            TextColor: #f2f5f7,
-            RenderBold: true,
-            HorizontalAlignment: Center
-          );
+          Style: (FontSize: 30, TextColor: #f2f5f7, RenderBold: true, HorizontalAlignment: Center);
           Text: "1.00";
         }
       }
-
     }
 
     Group #TopVexaHud {
-      Anchor: (Left: 0, Right: 0, Top: 77, Height: 40);
-      Background: #000000(0.0);
+      Anchor: (Left: 0, Right: 0, Top: 68, Height: 34);
 
-      Group #TopVexaBox {
-        Anchor: (Left: 0, Right: 0, Top: 0, Height: 40);
-        LayoutMode: Left;
+      Group #VexaBar {
+        Anchor: (Width: 420, Height: 46);
+        Background: #000000(0.60);
+        LayoutMode: Top;
 
-        Group { FlexWeight: 1; }
-        Group #TopVexaFrame {
-          Anchor: (Width: 180, Height: 40);
-          Background: #000000(0.55);
+        Group #VexaAccent {
+          Anchor: (Left: 0, Right: 0, Height: 3);
+          Background: #22d3ee;
+        }
+
+        Group #VexaContent {
+          FlexWeight: 1;
+          Anchor: (Left: 0, Right: 0);
+          LayoutMode: Left;
+
+          Group { FlexWeight: 1; }
 
           Label #TopVexaValue {
-            Anchor: (Left: 0, Right: 0, Top: 2, Height: 28);
+            Anchor: (Top: 0, Bottom: 0);
             Style: (
-              FontSize: 28,
-              TextColor: #FFFFFF,
+              FontSize: 30,
+              TextColor: #22d3ee,
               RenderBold: true,
-              HorizontalAlignment: Center
+              VerticalAlignment: Center
             );
             Text: "0";
           }
-        }
-        Group { Anchor: (Width: 10); }
-        Group #TopVexaPerRunFrame {
-          Anchor: (Width: 180, Height: 40);
-          Background: #000000(0.55);
+
+          Group { Anchor: (Width: 16); }
+
+          Group #VexaIcon {
+            Anchor: (Width: 28, Height: 28, Top: 8);
+            Background: (TexturePath: "../Textures/vexa.png");
+          }
+
+          Group { Anchor: (Width: 16); }
 
           Label #TopVexaPerRunValue {
-            Anchor: (Left: 0, Right: 0, Top: 2, Height: 28);
+            Anchor: (Top: 0, Bottom: 0);
             Style: (
-              FontSize: 28,
-              TextColor: #FFFFFF,
+              FontSize: 30,
+              TextColor: #9fb0ba,
               RenderBold: true,
-              HorizontalAlignment: Center
+              VerticalAlignment: Center
             );
             Text: "0/run";
           }
+
+          Group { FlexWeight: 1; }
         }
-        Group { FlexWeight: 1; }
       }
     }
 
     Group #RunTimerHud {
-      Anchor: (Left: 0, Right: 0, Top: 123, Height: 36);
-      Background: #000000(0.0);
+      Anchor: (Left: 0, Right: 0, Top: 100, Height: 32);
       Visible: false;
 
-      Group #RunTimerBox {
-        Anchor: (Left: 0, Right: 0, Top: 0, Height: 36);
-        LayoutMode: Left;
+      Group {
+        Anchor: (Width: 160, Height: 28, Top: 2);
+        Background: #000000(0.45);
 
-        Group { FlexWeight: 1; }
-        Group #RunTimerFrame {
-          Anchor: (Width: 160, Height: 36);
-          Background: #000000(0.55);
-
-          Label #RunTimerValue {
-            Anchor: (Left: 0, Right: 0, Top: 2, Height: 26);
-            Style: (
-              FontSize: 26,
-              TextColor: #00FF00,
-              RenderBold: true,
-              HorizontalAlignment: Center
-            );
-            Text: "0.000";
-          }
+        Label #RunTimerValue {
+          Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+          Style: (
+            FontSize: 22,
+            TextColor: #10b981,
+            RenderBold: true,
+            HorizontalAlignment: Center,
+            VerticalAlignment: Center
+          );
+          Text: "0.000";
         }
-        Group { FlexWeight: 1; }
       }
     }
 
