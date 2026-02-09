@@ -82,9 +82,9 @@ public class AscendPlayerStore {
         // Check cache first
         AscendPlayerProgress progress = players.get(playerId);
         if (progress != null) {
-            // Migration: fix incorrect timer for players who haven't ascended yet
-            if (progress.getAscensionCount() == 0 && progress.getAscensionStartedAt() != null) {
-                progress.setAscensionStartedAt(null);
+            // Migration: start ascension timer for players who don't have one yet
+            if (progress.getAscensionStartedAt() == null) {
+                progress.setAscensionStartedAt(System.currentTimeMillis());
                 markDirty(playerId);
             }
             return progress;
@@ -94,16 +94,17 @@ public class AscendPlayerStore {
         progress = loadPlayerFromDatabase(playerId);
         if (progress != null) {
             players.put(playerId, progress);
-            // Migration: fix incorrect timer for players who haven't ascended yet
-            if (progress.getAscensionCount() == 0 && progress.getAscensionStartedAt() != null) {
-                progress.setAscensionStartedAt(null);
+            // Migration: start ascension timer for players who don't have one yet
+            if (progress.getAscensionStartedAt() == null) {
+                progress.setAscensionStartedAt(System.currentTimeMillis());
                 markDirty(playerId);
             }
             return progress;
         }
 
-        // Create new player - don't initialize timer yet (starts on first ascension)
+        // Create new player — timer starts now (first run toward first ascension)
         AscendPlayerProgress newProgress = new AscendPlayerProgress();
+        newProgress.setAscensionStartedAt(System.currentTimeMillis());
         players.put(playerId, newProgress);
         dirtyPlayers.add(playerId);
         queueSave();
