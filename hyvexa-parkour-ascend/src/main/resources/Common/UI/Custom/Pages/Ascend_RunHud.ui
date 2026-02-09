@@ -584,5 +584,157 @@ $C.@PageOverlay {
         Group #AccentSeg16 { Anchor: (Left: 0, Right: 0, Bottom: 45, Height: 3); Background: #7c3aed; Visible: false; }
       }
     }
+
+    Group #ToastContainer {
+      Anchor: (Left: 0, Bottom: 0, Width: 360, Height: 340);
+
+      Group #Toast0 {
+        Anchor: (Left: 20, Bottom: 170, Width: 320, Height: 36);
+        Visible: false;
+        LayoutMode: Left;
+
+        Group #Toast0AccentSuccess { Anchor: (Width: 3, Top: 0, Bottom: 0); Background: #10b981; Visible: false; }
+        Group #Toast0AccentEvolution { Anchor: (Width: 3, Top: 0, Bottom: 0); Background: #a855f7; Visible: false; }
+        Group #Toast0AccentBatch { Anchor: (Width: 3, Top: 0, Bottom: 0); Background: #f59e0b; Visible: false; }
+        Group #Toast0AccentEconomy { Anchor: (Width: 3, Top: 0, Bottom: 0); Background: #22d3ee; Visible: false; }
+        Group #Toast0AccentError { Anchor: (Width: 3, Top: 0, Bottom: 0); Background: #ef4444; Visible: false; }
+        Group #Toast0AccentInfo { Anchor: (Width: 3, Top: 0, Bottom: 0); Background: #9fb0ba; Visible: false; }
+
+        Group #Toast0Content {
+          FlexWeight: 1;
+          Background: #0d1620(0.92);
+          OutlineColor: #ffffff(0.06);
+          OutlineSize: 1;
+          LayoutMode: Top;
+
+          Label #Toast0Text {
+            Padding: (Left: 10, Right: 10, Top: 8, Bottom: 0);
+            Style: (FontSize: 13, TextColor: #f0f4f8, RenderBold: true);
+            Text: "";
+          }
+
+          Group #Toast0BarWrap {
+            Anchor: (Left: 0, Right: 0, Height: 2);
+            ProgressBar #Toast0BarSuccess { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Bar: #10b981; Background: #10b981(0.15); Value: 1; Visible: false; }
+            ProgressBar #Toast0BarEvolution { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Bar: #a855f7; Background: #a855f7(0.15); Value: 1; Visible: false; }
+            ProgressBar #Toast0BarBatch { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Bar: #f59e0b; Background: #f59e0b(0.15); Value: 1; Visible: false; }
+            ProgressBar #Toast0BarEconomy { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Bar: #22d3ee; Background: #22d3ee(0.15); Value: 1; Visible: false; }
+            ProgressBar #Toast0BarError { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Bar: #ef4444; Background: #ef4444(0.15); Value: 1; Visible: false; }
+            ProgressBar #Toast0BarInfo { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Bar: #9fb0ba; Background: #9fb0ba(0.15); Value: 1; Visible: false; }
+          }
+        }
+      }
+
+      Group #Toast1 {
+        Anchor: (Left: 20, Bottom: 210, Width: 320, Height: 36);
+        Visible: false;
+        LayoutMode: Left;
+
+        Group #Toast1AccentSuccess { Anchor: (Width: 3, Top: 0, Bottom: 0); Background: #10b981; Visible: false; }
+        Group #Toast1AccentEvolution { Anchor: (Width: 3, Top: 0, Bottom: 0); Background: #a855f7; Visible: false; }
+        Group #Toast1AccentBatch { Anchor: (Width: 3, Top: 0, Bottom: 0); Background: #f59e0b; Visible: false; }
+        Group #Toast1AccentEconomy { Anchor: (Width: 3, Top: 0, Bottom: 0); Background: #22d3ee; Visible: false; }
+        Group #Toast1AccentError { Anchor: (Width: 3, Top: 0, Bottom: 0); Background: #ef4444; Visible: false; }
+        Group #Toast1AccentInfo { Anchor: (Width: 3, Top: 0, Bottom: 0); Background: #9fb0ba; Visible: false; }
+
+        Group #Toast1Content {
+          FlexWeight: 1;
+          Background: #0d1620(0.92);
+          OutlineColor: #ffffff(0.06);
+          OutlineSize: 1;
+          LayoutMode: Top;
+
+          Label #Toast1Text {
+            Padding: (Left: 10, Right: 10, Top: 8, Bottom: 0);
+            Style: (FontSize: 13, TextColor: #f0f4f8, RenderBold: true);
+            Text: "";
+          }
+
+          Group #Toast1BarWrap {
+            Anchor: (Left: 0, Right: 0, Height: 2);
+            ProgressBar #Toast1BarSuccess { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Bar: #10b981; Background: #10b981(0.15); Value: 1; Visible: false; }
+            ProgressBar #Toast1BarEvolution { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Bar: #a855f7; Background: #a855f7(0.15); Value: 1; Visible: false; }
+            ProgressBar #Toast1BarBatch { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Bar: #f59e0b; Background: #f59e0b(0.15); Value: 1; Visible: false; }
+            ProgressBar #Toast1BarEconomy { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Bar: #22d3ee; Background: #22d3ee(0.15); Value: 1; Visible: false; }
+            ProgressBar #Toast1BarError { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Bar: #ef4444; Background: #ef4444(0.15); Value: 1; Visible: false; }
+            ProgressBar #Toast1BarInfo { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Bar: #9fb0ba; Background: #9fb0ba(0.15); Value: 1; Visible: false; }
+          }
+        }
+      }
+
+      Group #Toast2 {
+        Anchor: (Left: 20, Bottom: 250, Width: 320, Height: 36);
+        Visible: false;
+        LayoutMode: Left;
+
+        Group #Toast2AccentSuccess { Anchor: (Width: 3, Top: 0, Bottom: 0); Background: #10b981; Visible: false; }
+        Group #Toast2AccentEvolution { Anchor: (Width: 3, Top: 0, Bottom: 0); Background: #a855f7; Visible: false; }
+        Group #Toast2AccentBatch { Anchor: (Width: 3, Top: 0, Bottom: 0); Background: #f59e0b; Visible: false; }
+        Group #Toast2AccentEconomy { Anchor: (Width: 3, Top: 0, Bottom: 0); Background: #22d3ee; Visible: false; }
+        Group #Toast2AccentError { Anchor: (Width: 3, Top: 0, Bottom: 0); Background: #ef4444; Visible: false; }
+        Group #Toast2AccentInfo { Anchor: (Width: 3, Top: 0, Bottom: 0); Background: #9fb0ba; Visible: false; }
+
+        Group #Toast2Content {
+          FlexWeight: 1;
+          Background: #0d1620(0.92);
+          OutlineColor: #ffffff(0.06);
+          OutlineSize: 1;
+          LayoutMode: Top;
+
+          Label #Toast2Text {
+            Padding: (Left: 10, Right: 10, Top: 8, Bottom: 0);
+            Style: (FontSize: 13, TextColor: #f0f4f8, RenderBold: true);
+            Text: "";
+          }
+
+          Group #Toast2BarWrap {
+            Anchor: (Left: 0, Right: 0, Height: 2);
+            ProgressBar #Toast2BarSuccess { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Bar: #10b981; Background: #10b981(0.15); Value: 1; Visible: false; }
+            ProgressBar #Toast2BarEvolution { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Bar: #a855f7; Background: #a855f7(0.15); Value: 1; Visible: false; }
+            ProgressBar #Toast2BarBatch { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Bar: #f59e0b; Background: #f59e0b(0.15); Value: 1; Visible: false; }
+            ProgressBar #Toast2BarEconomy { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Bar: #22d3ee; Background: #22d3ee(0.15); Value: 1; Visible: false; }
+            ProgressBar #Toast2BarError { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Bar: #ef4444; Background: #ef4444(0.15); Value: 1; Visible: false; }
+            ProgressBar #Toast2BarInfo { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Bar: #9fb0ba; Background: #9fb0ba(0.15); Value: 1; Visible: false; }
+          }
+        }
+      }
+
+      Group #Toast3 {
+        Anchor: (Left: 20, Bottom: 290, Width: 320, Height: 36);
+        Visible: false;
+        LayoutMode: Left;
+
+        Group #Toast3AccentSuccess { Anchor: (Width: 3, Top: 0, Bottom: 0); Background: #10b981; Visible: false; }
+        Group #Toast3AccentEvolution { Anchor: (Width: 3, Top: 0, Bottom: 0); Background: #a855f7; Visible: false; }
+        Group #Toast3AccentBatch { Anchor: (Width: 3, Top: 0, Bottom: 0); Background: #f59e0b; Visible: false; }
+        Group #Toast3AccentEconomy { Anchor: (Width: 3, Top: 0, Bottom: 0); Background: #22d3ee; Visible: false; }
+        Group #Toast3AccentError { Anchor: (Width: 3, Top: 0, Bottom: 0); Background: #ef4444; Visible: false; }
+        Group #Toast3AccentInfo { Anchor: (Width: 3, Top: 0, Bottom: 0); Background: #9fb0ba; Visible: false; }
+
+        Group #Toast3Content {
+          FlexWeight: 1;
+          Background: #0d1620(0.92);
+          OutlineColor: #ffffff(0.06);
+          OutlineSize: 1;
+          LayoutMode: Top;
+
+          Label #Toast3Text {
+            Padding: (Left: 10, Right: 10, Top: 8, Bottom: 0);
+            Style: (FontSize: 13, TextColor: #f0f4f8, RenderBold: true);
+            Text: "";
+          }
+
+          Group #Toast3BarWrap {
+            Anchor: (Left: 0, Right: 0, Height: 2);
+            ProgressBar #Toast3BarSuccess { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Bar: #10b981; Background: #10b981(0.15); Value: 1; Visible: false; }
+            ProgressBar #Toast3BarEvolution { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Bar: #a855f7; Background: #a855f7(0.15); Value: 1; Visible: false; }
+            ProgressBar #Toast3BarBatch { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Bar: #f59e0b; Background: #f59e0b(0.15); Value: 1; Visible: false; }
+            ProgressBar #Toast3BarEconomy { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Bar: #22d3ee; Background: #22d3ee(0.15); Value: 1; Visible: false; }
+            ProgressBar #Toast3BarError { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Bar: #ef4444; Background: #ef4444(0.15); Value: 1; Visible: false; }
+            ProgressBar #Toast3BarInfo { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Bar: #9fb0ba; Background: #9fb0ba(0.15); Value: 1; Visible: false; }
+          }
+        }
+      }
+    }
   }
 }

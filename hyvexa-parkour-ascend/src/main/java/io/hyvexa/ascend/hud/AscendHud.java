@@ -13,6 +13,7 @@ import java.util.Map;
 public class AscendHud extends CustomUIHud {
 
     private final HudEffectManager effectManager = new HudEffectManager();
+    private final ToastManager toastManager = new ToastManager();
 
     private String lastStaticKey;
     private String lastVexaText;
@@ -184,6 +185,19 @@ public class AscendHud extends CustomUIHud {
         update(false, commandBuilder);
     }
 
+    public void showToast(ToastType type, String message) {
+        toastManager.showToast(type, message);
+    }
+
+    public void updateToasts() {
+        if (!toastManager.hasActiveToasts()) {
+            return;
+        }
+        UICommandBuilder commandBuilder = new UICommandBuilder();
+        toastManager.update(commandBuilder);
+        update(false, commandBuilder);
+    }
+
     public void resetCache() {
         lastStaticKey = null;
         lastVexaText = null;
@@ -201,6 +215,7 @@ public class AscendHud extends CustomUIHud {
         lastDigits = null;
         lastVexa = null;
         effectManager.clearEffects();
+        toastManager.clear();
     }
 
     public void updatePrestige(Map<SummitCategory, Integer> summitLevels, int ascensionCount, int skillPoints,

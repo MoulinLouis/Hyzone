@@ -162,6 +162,29 @@ public class AscendHudManager {
         previewPlayers.remove(playerId);
     }
 
+    public void showToast(UUID playerId, ToastType type, String message) {
+        AscendHud hud = ascendHuds.get(playerId);
+        if (hud == null) {
+            return;
+        }
+        hud.showToast(type, message);
+    }
+
+    public void updateToasts(UUID playerId) {
+        if (previewPlayers.contains(playerId)) {
+            return;
+        }
+        AscendHud hud = ascendHuds.get(playerId);
+        if (hud == null) {
+            return;
+        }
+        long readyAt = ascendHudReadyAt.getOrDefault(playerId, Long.MAX_VALUE);
+        if (System.currentTimeMillis() < readyAt) {
+            return;
+        }
+        hud.updateToasts();
+    }
+
     public AscendHud getHud(UUID playerId) {
         return ascendHuds.get(playerId);
     }

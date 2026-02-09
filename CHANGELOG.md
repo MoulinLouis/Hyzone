@@ -6,6 +6,7 @@
 - **Ascend: Renamed "Coins" to "Vexa"** - All player-facing text, Java identifiers, UI element IDs, database columns, and documentation updated to use "Vexa" as the currency name
 
 ### Added
+- **Ascend: Toast notification system** - HUD-based toast notifications at bottom-left for upgrades, evolutions, purchases, and economy events. 4 stacked slots with category-colored accent bars and countdown progress bars. Consolidates rapid-fire actions. Displays alongside existing chat messages.
 - **Ascend: Per-map leaderboard** - "Stats" button in map select replaced with "Leaderboard" showing best times per map with map tabs, search, and pagination. Also accessible via `/ascend maplb`.
 - **Ascend: Expanded skill tree (1 → 8 nodes)** - Tree now has Auto Runners, Auto-Evolution, Momentum, Runner Speed, Offline Boost, Summit Memory, Evolution Power+, and Ascension Challenges (teaser). Branch/converge structure with OR-logic prerequisites.
 - **Parkour: Fly zone per map** - Admins can define an AABB fly zone per map; players in practice mode are rolled back to their last valid position if they fly outside the zone

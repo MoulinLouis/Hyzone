@@ -19,6 +19,8 @@ import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerStore;
+import io.hyvexa.ascend.hud.AscendHudManager;
+import io.hyvexa.ascend.hud.ToastType;
 import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.common.math.BigNumber;
 import io.hyvexa.common.ui.ButtonEventData;
@@ -111,6 +113,7 @@ public class ElevationPage extends BaseAscendPage {
             BigNumber nextCost = AscendConstants.getElevationLevelUpCost(currentElevation, BigNumber.fromDouble(costMultiplier));
             player.sendMessage(Message.raw("[Ascend] You need " + FormatUtils.formatBigNumber(nextCost) + " accumulated vexa to elevate.")
                 .color(SystemMessageUtils.SECONDARY));
+            showToast(playerId, ToastType.ERROR, "Need " + FormatUtils.formatBigNumber(nextCost) + " accumulated vexa");
             return;
         }
 
@@ -120,6 +123,7 @@ public class ElevationPage extends BaseAscendPage {
 
         player.sendMessage(Message.raw("[Ascend] Elevation +" + purchase.levels + " (x" + newElevation + ")!")
             .color(SystemMessageUtils.SUCCESS));
+        showToast(playerId, ToastType.ECONOMY, "Elevation: x" + currentElevation + " -> x" + newElevation);
 
         // Reset all progress (vexa, map unlocks, runners). Best times are preserved.
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
@@ -276,5 +280,15 @@ public class ElevationPage extends BaseAscendPage {
 
     private double getCostMultiplier(UUID playerId) {
         return 1.0;
+    }
+
+    private void showToast(UUID playerId, ToastType type, String message) {
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin != null) {
+            AscendHudManager hm = plugin.getHudManager();
+            if (hm != null) {
+                hm.showToast(playerId, type, message);
+            }
+        }
     }
 }
