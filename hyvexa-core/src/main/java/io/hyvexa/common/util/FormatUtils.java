@@ -33,12 +33,12 @@ public final class FormatUtils {
         return String.format(Locale.ROOT, "%ds", seconds);
     }
 
-    public static String formatCoinsForHud(long coins) {
-        long safeCoins = Math.max(0L, coins);
-        if (safeCoins <= 1_000_000_000L) {
-            return String.valueOf(safeCoins);
+    public static String formatVexaForHud(long vexa) {
+        long safeVexa = Math.max(0L, vexa);
+        if (safeVexa <= 1_000_000_000L) {
+            return String.valueOf(safeVexa);
         }
-        double value = safeCoins;
+        double value = safeVexa;
         int exponent = (int) Math.floor(Math.log10(value));
         double mantissa = value / Math.pow(10.0, exponent);
         double rounded = Math.round(mantissa * 100.0) / 100.0;
@@ -99,62 +99,62 @@ public final class FormatUtils {
     }
 
     @Deprecated
-    public static String formatCoinsForHudDecimal(java.math.BigDecimal coins) {
+    public static String formatVexaForHudDecimal(java.math.BigDecimal vexa) {
         // Convert to double for formatting (sufficient precision for display)
-        double safeCoins = Math.max(0.0, coins.doubleValue());
+        double safeVexa = Math.max(0.0, vexa.doubleValue());
         // Below 1 thousand: show full number without decimals if it's a whole number
-        if (safeCoins < 1e3) {
-            if (safeCoins == Math.floor(safeCoins)) {
-                return String.valueOf((long) safeCoins);
+        if (safeVexa < 1e3) {
+            if (safeVexa == Math.floor(safeVexa)) {
+                return String.valueOf((long) safeVexa);
             }
-            return String.format(Locale.ROOT, "%.2f", safeCoins);
+            return String.format(Locale.ROOT, "%.2f", safeVexa);
         }
         // Thousand (10^3)
-        if (safeCoins < 1e6) {
-            return stripTrailingZeros(String.format(Locale.ROOT, "%.2fK", safeCoins / 1e3));
+        if (safeVexa < 1e6) {
+            return stripTrailingZeros(String.format(Locale.ROOT, "%.2fK", safeVexa / 1e3));
         }
         // Million (10^6)
-        if (safeCoins < 1e9) {
-            return stripTrailingZeros(String.format(Locale.ROOT, "%.2fM", safeCoins / 1e6));
+        if (safeVexa < 1e9) {
+            return stripTrailingZeros(String.format(Locale.ROOT, "%.2fM", safeVexa / 1e6));
         }
         // Billion (10^9)
-        if (safeCoins < 1e12) {
-            return stripTrailingZeros(String.format(Locale.ROOT, "%.2fB", safeCoins / 1e9));
+        if (safeVexa < 1e12) {
+            return stripTrailingZeros(String.format(Locale.ROOT, "%.2fB", safeVexa / 1e9));
         }
         // Trillion (10^12)
-        if (safeCoins < 1e15) {
-            return stripTrailingZeros(String.format(Locale.ROOT, "%.2fT", safeCoins / 1e12));
+        if (safeVexa < 1e15) {
+            return stripTrailingZeros(String.format(Locale.ROOT, "%.2fT", safeVexa / 1e12));
         }
         // Quadrillion (10^15)
-        if (safeCoins < 1e18) {
-            return stripTrailingZeros(String.format(Locale.ROOT, "%.2fQa", safeCoins / 1e15));
+        if (safeVexa < 1e18) {
+            return stripTrailingZeros(String.format(Locale.ROOT, "%.2fQa", safeVexa / 1e15));
         }
         // Quintillion (10^18)
-        if (safeCoins < 1e21) {
-            return stripTrailingZeros(String.format(Locale.ROOT, "%.2fQi", safeCoins / 1e18));
+        if (safeVexa < 1e21) {
+            return stripTrailingZeros(String.format(Locale.ROOT, "%.2fQi", safeVexa / 1e18));
         }
         // Sextillion (10^21)
-        if (safeCoins < 1e24) {
-            return stripTrailingZeros(String.format(Locale.ROOT, "%.2fSx", safeCoins / 1e21));
+        if (safeVexa < 1e24) {
+            return stripTrailingZeros(String.format(Locale.ROOT, "%.2fSx", safeVexa / 1e21));
         }
         // Septillion (10^24)
-        if (safeCoins < 1e27) {
-            return stripTrailingZeros(String.format(Locale.ROOT, "%.2fSp", safeCoins / 1e24));
+        if (safeVexa < 1e27) {
+            return stripTrailingZeros(String.format(Locale.ROOT, "%.2fSp", safeVexa / 1e24));
         }
         // Octillion (10^27)
-        if (safeCoins < 1e30) {
-            return stripTrailingZeros(String.format(Locale.ROOT, "%.2fOc", safeCoins / 1e27));
+        if (safeVexa < 1e30) {
+            return stripTrailingZeros(String.format(Locale.ROOT, "%.2fOc", safeVexa / 1e27));
         }
         // Nonillion (10^30)
-        if (safeCoins < 1e33) {
-            return stripTrailingZeros(String.format(Locale.ROOT, "%.2fNo", safeCoins / 1e30));
+        if (safeVexa < 1e33) {
+            return stripTrailingZeros(String.format(Locale.ROOT, "%.2fNo", safeVexa / 1e30));
         }
         // Decillion (10^33)
-        if (safeCoins < 1e36) {
-            return stripTrailingZeros(String.format(Locale.ROOT, "%.2fDc", safeCoins / 1e33));
+        if (safeVexa < 1e36) {
+            return stripTrailingZeros(String.format(Locale.ROOT, "%.2fDc", safeVexa / 1e33));
         }
         // Beyond Decillion: scientific notation
-        double value = safeCoins;
+        double value = safeVexa;
         int exponent = (int) Math.floor(Math.log10(value));
         double mantissa = value / Math.pow(10.0, exponent);
         double rounded = Math.round(mantissa * 100.0) / 100.0;

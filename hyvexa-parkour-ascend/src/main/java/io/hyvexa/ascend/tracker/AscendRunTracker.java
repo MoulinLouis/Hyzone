@@ -311,11 +311,11 @@ public class AscendRunTracker {
         BigNumber payout = playerStore.getCompletionPayout(playerId, multiplierMaps, AscendConstants.MULTIPLIER_SLOTS, run.mapId, BigNumber.ZERO);
 
         // Use atomic operations to prevent race conditions
-        if (!playerStore.atomicAddCoins(playerId, payout)) {
-            LOGGER.atWarning().log("Failed to add coins for manual run: " + playerId);
+        if (!playerStore.atomicAddVexa(playerId, payout)) {
+            LOGGER.atWarning().log("Failed to add vexa for manual run: " + playerId);
         }
-        if (!playerStore.atomicAddTotalCoinsEarned(playerId, payout)) {
-            LOGGER.atWarning().log("Failed to add total coins earned for manual run: " + playerId);
+        if (!playerStore.atomicAddTotalVexaEarned(playerId, payout)) {
+            LOGGER.atWarning().log("Failed to add total vexa earned for manual run: " + playerId);
         }
         if (!playerStore.atomicAddMapMultiplier(playerId, run.mapId, multiplierIncrement)) {
             LOGGER.atWarning().log("Failed to add map multiplier for manual run: " + playerId);

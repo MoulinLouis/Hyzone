@@ -122,13 +122,13 @@ public class SummitPage extends BaseAscendPage {
         UUID playerId = playerRef.getUuid();
 
         // Update progress text (shared across all categories)
-        BigNumber accumulatedCoins = playerStore.getSummitAccumulatedCoins(playerId);
-        long currentXp = AscendConstants.coinsToXp(accumulatedCoins);
+        BigNumber accumulatedVexa = playerStore.getSummitAccumulatedVexa(playerId);
+        long currentXp = AscendConstants.vexaToXp(accumulatedVexa);
         long nextXp = currentXp + 1;
-        BigNumber coinsForNextXp = AscendConstants.xpToCoins(nextXp);
+        BigNumber vexaForNextXp = AscendConstants.xpToVexa(nextXp);
         String progressText = "Progress to next EXP: " +
-            FormatUtils.formatBigNumber(accumulatedCoins) + " / " +
-            FormatUtils.formatBigNumber(coinsForNextXp) + " accumulated vexa";
+            FormatUtils.formatBigNumber(accumulatedVexa) + " / " +
+            FormatUtils.formatBigNumber(vexaForNextXp) + " accumulated vexa";
         commandBuilder.set("#ProgressText.Text", progressText);
 
         SummitCategory[] categories = {
@@ -267,12 +267,12 @@ public class SummitPage extends BaseAscendPage {
         UUID playerId = playerRef.getUuid();
 
         if (!summitManager.canSummit(playerId)) {
-            BigNumber coins = playerStore.getCoins(playerId);
-            String minCoins = FormatUtils.formatBigNumber(
-                BigNumber.fromLong(AscendConstants.SUMMIT_MIN_COINS));
-            String currentCoins = FormatUtils.formatBigNumber(coins);
-            player.sendMessage(Message.raw("[Summit] Need " + minCoins
-                + " vexa to Summit. You have: " + currentCoins)
+            BigNumber vexa = playerStore.getVexa(playerId);
+            String minVexa = FormatUtils.formatBigNumber(
+                BigNumber.fromLong(AscendConstants.SUMMIT_MIN_VEXA));
+            String currentVexa = FormatUtils.formatBigNumber(vexa);
+            player.sendMessage(Message.raw("[Summit] Need " + minVexa
+                + " vexa to Summit. You have: " + currentVexa)
                 .color(SystemMessageUtils.SECONDARY));
             return;
         }

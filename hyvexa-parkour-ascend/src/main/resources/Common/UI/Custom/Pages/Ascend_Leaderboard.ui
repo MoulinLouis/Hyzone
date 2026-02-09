@@ -77,24 +77,24 @@ $C.@PageOverlay {
         Anchor: (Height: 38);
         LayoutMode: Left;
 
-        Group #TabCoinsWrap {
+        Group #TabVexaWrap {
           Anchor: (Width: 120, Height: 34);
           Background: #2d3f50;
           OutlineColor: #ffffff(0.04);
           OutlineSize: 1;
 
-          Group #TabCoinsAccent {
+          Group #TabVexaAccent {
             Anchor: (Left: 0, Right: 0, Top: 0, Height: 3);
             Background: #f59e0b;
           }
 
-          Label #TabCoinsLabel {
+          Label #TabVexaLabel {
             Anchor: (Left: 0, Right: 0, Top: 6, Bottom: 0);
             Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, Alignment: Center);
             Text: "Vexa";
           }
 
-          TextButton #TabCoins {
+          TextButton #TabVexa {
             Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
             Text: "";
             Style: TextButtonStyle(

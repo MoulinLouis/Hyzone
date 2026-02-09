@@ -12,7 +12,7 @@ import java.util.UUID;
 
 /**
  * Manages the Ascension prestige system.
- * Ascension grants skill tree points and resets ALL progress (coins, elevation, Summit levels).
+ * Ascension grants skill tree points and resets ALL progress (vexa, elevation, Summit levels).
  */
 public class AscensionManager {
 
@@ -30,18 +30,18 @@ public class AscensionManager {
      * Checks if a player can perform an Ascension.
      */
     public boolean canAscend(UUID playerId) {
-        io.hyvexa.common.math.BigNumber coins = playerStore.getCoins(playerId);
-        return coins.gte(AscendConstants.ASCENSION_COIN_THRESHOLD);
+        io.hyvexa.common.math.BigNumber vexa = playerStore.getVexa(playerId);
+        return vexa.gte(AscendConstants.ASCENSION_VEXA_THRESHOLD);
     }
 
     /**
      * Performs an Ascension: grants 1 skill tree point, resets all progress.
      *
-     * @return the new Ascension count, or -1 if insufficient coins
+     * @return the new Ascension count, or -1 if insufficient vexa
      */
     public int performAscension(UUID playerId) {
-        io.hyvexa.common.math.BigNumber coins = playerStore.getCoins(playerId);
-        if (coins.lt(AscendConstants.ASCENSION_COIN_THRESHOLD)) {
+        io.hyvexa.common.math.BigNumber vexa = playerStore.getVexa(playerId);
+        if (vexa.lt(AscendConstants.ASCENSION_VEXA_THRESHOLD)) {
             return -1;
         }
 
@@ -68,10 +68,10 @@ public class AscensionManager {
         runTracker.cancelRun(playerId);
 
         // Reset progress
-        progress.setCoins(io.hyvexa.common.math.BigNumber.ZERO);
+        progress.setVexa(io.hyvexa.common.math.BigNumber.ZERO);
         progress.setElevationMultiplier(1);
-        progress.setSummitAccumulatedCoins(io.hyvexa.common.math.BigNumber.ZERO);
-        progress.setElevationAccumulatedCoins(io.hyvexa.common.math.BigNumber.ZERO);
+        progress.setSummitAccumulatedVexa(io.hyvexa.common.math.BigNumber.ZERO);
+        progress.setElevationAccumulatedVexa(io.hyvexa.common.math.BigNumber.ZERO);
         progress.clearSummitXp();
 
         // Reset all map progress (multipliers, unlocks, robots)

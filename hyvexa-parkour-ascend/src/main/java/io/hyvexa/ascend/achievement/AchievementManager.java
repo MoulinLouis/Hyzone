@@ -74,8 +74,8 @@ public class AchievementManager {
         return switch (achievement) {
             // Milestones
             case FIRST_STEPS -> progress.getTotalManualRuns() >= 1;
-            case COIN_HOARDER -> progress.getTotalCoinsEarned().gte(io.hyvexa.common.math.BigNumber.fromLong(AscendConstants.ACHIEVEMENT_COINS_100K));
-            case MILLIONAIRE -> progress.getTotalCoinsEarned().gte(io.hyvexa.common.math.BigNumber.fromLong(AscendConstants.ACHIEVEMENT_COINS_1M));
+            case VEXA_HOARDER -> progress.getTotalVexaEarned().gte(io.hyvexa.common.math.BigNumber.fromLong(AscendConstants.ACHIEVEMENT_VEXA_100K));
+            case MILLIONAIRE -> progress.getTotalVexaEarned().gte(io.hyvexa.common.math.BigNumber.fromLong(AscendConstants.ACHIEVEMENT_VEXA_1M));
             case DEDICATED -> progress.getTotalManualRuns() >= AscendConstants.ACHIEVEMENT_MANUAL_RUNS_100;
             case MARATHON -> progress.getTotalManualRuns() >= AscendConstants.ACHIEVEMENT_MANUAL_RUNS_1000;
 
@@ -230,17 +230,17 @@ public class AchievementManager {
                 current = Math.min(1, progress.getTotalManualRuns());
                 required = 1;
             }
-            case COIN_HOARDER -> {
-                io.hyvexa.common.math.BigNumber totalCoins = progress.getTotalCoinsEarned();
-                io.hyvexa.common.math.BigNumber threshold = io.hyvexa.common.math.BigNumber.fromLong(AscendConstants.ACHIEVEMENT_COINS_100K);
-                current = (int) totalCoins.min(threshold).toLong();
-                required = (int) AscendConstants.ACHIEVEMENT_COINS_100K;
+            case VEXA_HOARDER -> {
+                io.hyvexa.common.math.BigNumber totalVexa = progress.getTotalVexaEarned();
+                io.hyvexa.common.math.BigNumber threshold = io.hyvexa.common.math.BigNumber.fromLong(AscendConstants.ACHIEVEMENT_VEXA_100K);
+                current = (int) totalVexa.min(threshold).toLong();
+                required = (int) AscendConstants.ACHIEVEMENT_VEXA_100K;
             }
             case MILLIONAIRE -> {
-                io.hyvexa.common.math.BigNumber totalCoins = progress.getTotalCoinsEarned();
-                io.hyvexa.common.math.BigNumber threshold = io.hyvexa.common.math.BigNumber.fromLong(AscendConstants.ACHIEVEMENT_COINS_1M);
-                current = (int) totalCoins.min(threshold).toLong();
-                required = (int) AscendConstants.ACHIEVEMENT_COINS_1M;
+                io.hyvexa.common.math.BigNumber totalVexa = progress.getTotalVexaEarned();
+                io.hyvexa.common.math.BigNumber threshold = io.hyvexa.common.math.BigNumber.fromLong(AscendConstants.ACHIEVEMENT_VEXA_1M);
+                current = (int) totalVexa.min(threshold).toLong();
+                required = (int) AscendConstants.ACHIEVEMENT_VEXA_1M;
             }
             case DEDICATED -> {
                 current = Math.min(progress.getTotalManualRuns(), AscendConstants.ACHIEVEMENT_MANUAL_RUNS_100);

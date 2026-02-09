@@ -67,16 +67,16 @@ public class AscendHudManager {
             return;
         }
         try {
-            BigNumber coins = playerStore.getCoins(playerId);
+            BigNumber vexa = playerStore.getVexa(playerId);
             List<AscendMap> mapList = mapStore != null ? mapStore.listMapsSorted() : List.of();
             BigNumber product = playerStore.getMultiplierProduct(playerId, mapList, AscendConstants.MULTIPLIER_SLOTS);
             BigNumber[] digits = playerStore.getMultiplierDisplayValues(playerId, mapList, AscendConstants.MULTIPLIER_SLOTS);
             int elevationLevel = playerStore.getElevationLevel(playerId);
-            BigNumber accumulatedCoins = playerStore.getElevationAccumulatedCoins(playerId);
-            AscendConstants.ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(elevationLevel, accumulatedCoins);
+            BigNumber accumulatedVexa = playerStore.getElevationAccumulatedVexa(playerId);
+            AscendConstants.ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(elevationLevel, accumulatedVexa);
             int potentialElevation = elevationLevel + purchase.levels;
             boolean showElevation = elevationLevel > 0 || purchase.levels > 0;
-            hud.updateEconomy(coins, product, digits, elevationLevel, potentialElevation, showElevation);
+            hud.updateEconomy(vexa, product, digits, elevationLevel, potentialElevation, showElevation);
 
             // Update prestige HUD
             var summitLevels = playerStore.getSummitLevels(playerId);
@@ -88,7 +88,7 @@ public class AscendHudManager {
             hud.updatePrestige(summitLevels, ascensionCount, skillPoints, multPreview, speedPreview, evoPreview);
 
             // Update ascension quest progress bar
-            hud.updateAscensionQuest(coins);
+            hud.updateAscensionQuest(vexa);
 
             // Update momentum progress bars (per-map temporary speed boost)
             AscendPlayerProgress progress = playerStore.getPlayer(playerId);

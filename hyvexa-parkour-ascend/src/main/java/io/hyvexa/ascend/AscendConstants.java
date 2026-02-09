@@ -60,14 +60,14 @@ public final class AscendConstants {
         42000L    // Level 4 (Bleu)   - 42 sec
     };
 
-    // Base coin rewards per manual completion (before multiplier)
+    // Base vexa rewards per manual completion (before multiplier)
     // Actual reward = baseReward * totalMultiplier
     public static final long[] MAP_BASE_REWARDS = {
-        1L,       // Level 0 (Rouge)  - 1 coin/run base
-        5L,       // Level 1 (Orange) - 5 coins/run base
-        25L,      // Level 2 (Jaune)  - 25 coins/run base
-        100L,     // Level 3 (Vert)   - 100 coins/run base
-        500L      // Level 4 (Bleu)   - 500 coins/run base
+        1L,       // Level 0 (Rouge)  - 1 vexa/run base
+        5L,       // Level 1 (Orange) - 5 vexa/run base
+        25L,      // Level 2 (Jaune)  - 25 vexa/run base
+        100L,     // Level 3 (Vert)   - 100 vexa/run base
+        500L      // Level 4 (Bleu)   - 500 vexa/run base
     };
 
     // Map unlock prices: first map free, then increasing
@@ -329,23 +329,23 @@ public final class AscendConstants {
     }
 
     /**
-     * Calculate how many levels can be purchased with given coins at current level.
+     * Calculate how many levels can be purchased with given vexa at current level.
      * Returns the number of levels affordable and the total cost.
      */
-    public static ElevationPurchaseResult calculateElevationPurchase(int currentLevel, BigNumber availableCoins) {
-        return calculateElevationPurchase(currentLevel, availableCoins, BigNumber.ONE);
+    public static ElevationPurchaseResult calculateElevationPurchase(int currentLevel, BigNumber availableVexa) {
+        return calculateElevationPurchase(currentLevel, availableVexa, BigNumber.ONE);
     }
 
     /**
-     * Calculate how many levels can be purchased with given coins and cost multiplier.
+     * Calculate how many levels can be purchased with given vexa and cost multiplier.
      * @param currentLevel The player's current elevation level
-     * @param availableCoins Coins available to spend
+     * @param availableVexa Vexa available to spend
      * @param costMultiplier Cost modifier (1.0 = full cost, 0.8 = 20% discount)
      */
     private static final int MAX_ELEVATION_PURCHASE_ITERATIONS = 100_000;
 
-    public static ElevationPurchaseResult calculateElevationPurchase(int currentLevel, BigNumber availableCoins, BigNumber costMultiplier) {
-        if (availableCoins.lte(BigNumber.ZERO)
+    public static ElevationPurchaseResult calculateElevationPurchase(int currentLevel, BigNumber availableVexa, BigNumber costMultiplier) {
+        if (availableVexa.lte(BigNumber.ZERO)
                 || costMultiplier.lte(BigNumber.ZERO)) {
             return new ElevationPurchaseResult(0, BigNumber.ZERO);
         }
@@ -358,7 +358,7 @@ public final class AscendConstants {
             BigNumber nextCost = getElevationLevelUpCost(level, costMultiplier);
             BigNumber newTotal = totalCost.add(nextCost);
 
-            if (newTotal.gt(availableCoins)) {
+            if (newTotal.gt(availableVexa)) {
                 break;
             }
 
@@ -444,25 +444,25 @@ public final class AscendConstants {
     // ========================================
 
     public static final double SUMMIT_XP_LEVEL_EXPONENT = 2.0; // Exponent for level formula
-    public static final double SUMMIT_XP_COIN_POWER = 3.0 / 7.0; // ~0.4286, compression for coins → XP
-    public static final long SUMMIT_MIN_COINS = 1_000_000_000L; // Minimum coins for 1 XP (1B)
+    public static final double SUMMIT_XP_VEXA_POWER = 3.0 / 7.0; // ~0.4286, compression for vexa → XP
+    public static final long SUMMIT_MIN_VEXA = 1_000_000_000L; // Minimum vexa for 1 XP (1B)
 
     /**
-     * Convert coins to XP.
-     * Formula: (coins / SUMMIT_MIN_COINS)^(3/7)
+     * Convert vexa to XP.
+     * Formula: (vexa / SUMMIT_MIN_VEXA)^(3/7)
      * At 1B = 1 XP, at 10B ≈ 2 XP, at 1T ≈ 19 XP, at 1Q ≈ 372 XP.
-     * Uses power 3/7 (paired with level^2.0) to preserve the same coin→level mapping
+     * Uses power 3/7 (paired with level^2.0) to preserve the same vexa→level mapping
      * as the old system (sqrt + level^2.5) while producing smaller XP numbers.
      */
-    public static long coinsToXp(BigNumber coins) {
-        if (coins.lte(BigNumber.ZERO)) {
+    public static long vexaToXp(BigNumber vexa) {
+        if (vexa.lte(BigNumber.ZERO)) {
             return 0;
         }
-        double ratio = coins.divide(BigNumber.fromLong(SUMMIT_MIN_COINS)).toDouble();
+        double ratio = vexa.divide(BigNumber.fromLong(SUMMIT_MIN_VEXA)).toDouble();
         if (ratio < 1.0) {
             return 0;
         }
-        double xp = Math.pow(ratio, SUMMIT_XP_COIN_POWER);
+        double xp = Math.pow(ratio, SUMMIT_XP_VEXA_POWER);
         if (xp >= (double) Long.MAX_VALUE) {
             return Long.MAX_VALUE;
         }
@@ -485,15 +485,15 @@ public final class AscendConstants {
     }
 
     /**
-     * Calculate coins needed to reach a given XP amount.
-     * Inverse of coinsToXp: coins = xp^(7/3) × SUMMIT_MIN_COINS
+     * Calculate vexa needed to reach a given XP amount.
+     * Inverse of vexaToXp: vexa = xp^(7/3) × SUMMIT_MIN_VEXA
      */
-    public static BigNumber xpToCoins(long xp) {
+    public static BigNumber xpToVexa(long xp) {
         if (xp <= 0) {
             return BigNumber.ZERO;
         }
-        double coins = Math.pow(xp, 7.0 / 3.0) * SUMMIT_MIN_COINS;
-        return BigNumber.fromDouble(coins);
+        double vexa = Math.pow(xp, 7.0 / 3.0) * SUMMIT_MIN_VEXA;
+        return BigNumber.fromDouble(vexa);
     }
 
     /**
@@ -551,7 +551,7 @@ public final class AscendConstants {
     // Ascension System (Ultimate Prestige)
     // ========================================
 
-    public static final BigNumber ASCENSION_COIN_THRESHOLD = BigNumber.of(1, 33); // 1 Decillion (10^33)
+    public static final BigNumber ASCENSION_VEXA_THRESHOLD = BigNumber.of(1, 33); // 1 Decillion (10^33)
 
     public enum SkillTreeNode {
         AUTO_RUNNERS("Auto-Upgrade + Momentum", "Auto-upgrade runners & momentum speed boost on manual runs"),
@@ -609,7 +609,7 @@ public final class AscendConstants {
     public enum AchievementType {
         // Milestones
         FIRST_STEPS("First Steps", "Complete first manual run", "Beginner"),
-        COIN_HOARDER("Vexa Hoarder", "Earn 100K vexa total", "Collector"),
+        VEXA_HOARDER("Vexa Hoarder", "Earn 100K vexa total", "Collector"),
         MILLIONAIRE("Millionaire", "Earn 1M vexa total", "Millionaire"),
         DEDICATED("Dedicated", "Complete 100 manual runs", "Dedicated"),
         MARATHON("Marathon", "Complete 1000 manual runs", "Marathoner"),
@@ -651,8 +651,8 @@ public final class AscendConstants {
     }
 
     // Achievement thresholds
-    public static final long ACHIEVEMENT_COINS_100K = 100_000L;
-    public static final long ACHIEVEMENT_COINS_1M = 1_000_000L;
+    public static final long ACHIEVEMENT_VEXA_100K = 100_000L;
+    public static final long ACHIEVEMENT_VEXA_1M = 1_000_000L;
     public static final int ACHIEVEMENT_MANUAL_RUNS_100 = 100;
     public static final int ACHIEVEMENT_MANUAL_RUNS_1000 = 1000;
     public static final int ACHIEVEMENT_RUNNER_COUNT = 5;

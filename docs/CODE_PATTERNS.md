@@ -233,10 +233,10 @@ Group {
 
 **CRITICAL - No underscores in element IDs:**
 ```
-❌ #Path_Label_COIN    - Will cause UI parsing error
-❌ #Node_COIN_T1       - Will cause UI parsing error
-✅ #PathLabelCoin      - Use camelCase instead
-✅ #NodeCoinT1         - Use camelCase instead
+❌ #Path_Label_VEXA    - Will cause UI parsing error
+❌ #Node_VEXA_T1       - Will cause UI parsing error
+✅ #PathLabelVexa      - Use camelCase instead
+✅ #NodeVexaT1         - Use camelCase instead
 ```
 Hytale UI does NOT support underscores in element IDs. Always use camelCase for IDs.
 

@@ -110,7 +110,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
             updateEvolveAllButtonState(uiCommandBuilder, playerRef.getUuid());
         }
 
-        // Start affordability color updates (coins change frequently from passive income)
+        // Start affordability color updates (vexa changes frequently from passive income)
         startAffordabilityUpdates(ref, store);
     }
 
@@ -315,8 +315,8 @@ public class AscendMapSelectPage extends BaseAscendPage {
             String secondaryTextColor;
             boolean isUpgrade = runnerButtonText.equals("Upgrade") && actionPrice.gt(BigNumber.ZERO);
             if (isUpgrade) {
-                BigNumber currentCoins = playerStore.getCoins(playerRef.getUuid());
-                boolean canAfford = currentCoins.gte(actionPrice);
+                BigNumber currentVexa = playerStore.getVexa(playerRef.getUuid());
+                boolean canAfford = currentVexa.gte(actionPrice);
                 showDisabledOverlay = !canAfford;
                 secondaryTextColor = canAfford ? "#ffffff" : "#9fb0ba";
             } else {
@@ -537,7 +537,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
 
             // Normal speed upgrade
             BigNumber upgradeCost = computeUpgradeCost(currentLevel, map.getDisplayOrder(), currentStars);
-            if (!playerStore.atomicSpendCoins(playerRef.getUuid(), upgradeCost)) {
+            if (!playerStore.atomicSpendVexa(playerRef.getUuid(), upgradeCost)) {
                 return;
             }
             int newLevel = playerStore.incrementRobotSpeedLevel(playerRef.getUuid(), mapId);
@@ -583,7 +583,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
         if (world == null) {
             return;
         }
-        // Update affordability colors every 500ms to reflect coin changes
+        // Update affordability colors every 500ms to reflect vexa changes
         refreshTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(() -> {
             if (!isCurrentPage()) {
                 stopAffordabilityUpdates();
@@ -654,7 +654,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
             // addMapToUI sends its own update; continue with regular updates for existing maps
         }
 
-        BigNumber currentCoins = playerStore.getCoins(playerRef.getUuid());
+        BigNumber currentVexa = playerStore.getVexa(playerRef.getUuid());
         UICommandBuilder commandBuilder = new UICommandBuilder();
 
         int displayCount = Math.min(displayedMapIds.size(), maps.size());
@@ -753,7 +753,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
                 String secondaryTextColor;
                 boolean isUpgrade = runnerButtonText.equals("Upgrade") && actionPrice.gt(BigNumber.ZERO);
                 if (isUpgrade) {
-                    boolean canAfford = currentCoins.gte(actionPrice);
+                    boolean canAfford = currentVexa.gte(actionPrice);
                     showDisabledOverlay = !canAfford;
                     secondaryTextColor = canAfford ? "#ffffff" : "#9fb0ba";
                 } else {
@@ -775,7 +775,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
             } else if (hasRobot && speedLevel < MAX_SPEED_LEVEL) {
                 // No data change — affordability-only update for maps with upgrade buttons
                 BigNumber upgradeCost = computeUpgradeCost(speedLevel, map.getDisplayOrder(), stars);
-                boolean canAfford = currentCoins.gte(upgradeCost);
+                boolean canAfford = currentVexa.gte(upgradeCost);
                 String secondaryTextColor = canAfford ? "#ffffff" : "#9fb0ba";
 
                 commandBuilder.set("#MapCards[" + i + "] #ButtonDisabledOverlay.Visible", !canAfford);
@@ -905,8 +905,8 @@ public class AscendMapSelectPage extends BaseAscendPage {
         String secondaryTextColor;
         boolean isUpgrade = runnerButtonText.equals("Upgrade") && actionPrice.gt(BigNumber.ZERO);
         if (isUpgrade) {
-            BigNumber currentCoins = playerStore.getCoins(playerRef.getUuid());
-            boolean canAfford = currentCoins.gte(actionPrice);
+            BigNumber currentVexa = playerStore.getVexa(playerRef.getUuid());
+            boolean canAfford = currentVexa.gte(actionPrice);
             showDisabledOverlay = !canAfford;
             secondaryTextColor = canAfford ? "#ffffff" : "#9fb0ba";
         } else {
@@ -1065,8 +1065,8 @@ public class AscendMapSelectPage extends BaseAscendPage {
         String secondaryTextColor;
         boolean isUpgrade = runnerButtonText.equals("Upgrade") && actionPrice.gt(BigNumber.ZERO);
         if (isUpgrade) {
-            BigNumber currentCoins = playerStore.getCoins(playerRef.getUuid());
-            boolean canAfford = currentCoins.gte(actionPrice);
+            BigNumber currentVexa = playerStore.getVexa(playerRef.getUuid());
+            boolean canAfford = currentVexa.gte(actionPrice);
             showDisabledOverlay = !canAfford;
             secondaryTextColor = canAfford ? "#ffffff" : "#9fb0ba";
         } else {
@@ -1178,8 +1178,8 @@ public class AscendMapSelectPage extends BaseAscendPage {
         List<String> updatedMapIds = new ArrayList<>();
 
         for (PurchaseOption option : options) {
-            BigNumber currentCoins = playerStore.getCoins(playerRef.getUuid());
-            if (option.price.gt(currentCoins)) {
+            BigNumber currentVexa = playerStore.getVexa(playerRef.getUuid());
+            if (option.price.gt(currentVexa)) {
                 continue;
             }
 
@@ -1187,7 +1187,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
             switch (option.type) {
                 case BUY_ROBOT -> {
                     if (option.price.gt(BigNumber.ZERO)) {
-                        if (!playerStore.atomicSpendCoins(playerRef.getUuid(), option.price)) {
+                        if (!playerStore.atomicSpendVexa(playerRef.getUuid(), option.price)) {
                             continue;
                         }
                     }
@@ -1195,7 +1195,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
                     success = true;
                 }
                 case UPGRADE_SPEED -> {
-                    if (!playerStore.atomicSpendCoins(playerRef.getUuid(), option.price)) {
+                    if (!playerStore.atomicSpendVexa(playerRef.getUuid(), option.price)) {
                         continue;
                     }
                     int newLevel = playerStore.incrementRobotSpeedLevel(playerRef.getUuid(), option.mapId);
@@ -1337,7 +1337,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
      * Checks if any upgrade is available AND affordable for Buy All (robot purchase or speed upgrade).
      */
     private boolean hasAvailableUpgradeForBuyAll(java.util.UUID playerId) {
-        BigNumber currentCoins = playerStore.getCoins(playerId);
+        BigNumber currentVexa = playerStore.getVexa(playerId);
         List<AscendMap> maps = mapStore.listMapsSorted();
         for (AscendMap map : maps) {
             MapUnlockHelper.UnlockResult unlockResult = MapUnlockHelper.checkAndEnsureUnlock(
@@ -1361,7 +1361,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
                 int stars = mapProgress.getRobotStars();
                 if (speedLevel < MAX_SPEED_LEVEL) {
                     BigNumber upgradeCost = computeUpgradeCost(speedLevel, map.getDisplayOrder(), stars);
-                    if (currentCoins.gte(upgradeCost)) {
+                    if (currentVexa.gte(upgradeCost)) {
                         return true;
                     }
                 }

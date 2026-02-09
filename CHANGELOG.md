@@ -2,11 +2,14 @@
 
 ## [Unreleased]
 
+### Changed
+- **Ascend: Renamed "Coins" to "Vexa"** - All player-facing text, Java identifiers, UI element IDs, database columns, and documentation updated to use "Vexa" as the currency name
+
 ### Added
 - **Ascend: Per-map leaderboard** - "Stats" button in map select replaced with "Leaderboard" showing best times per map with map tabs, search, and pagination. Also accessible via `/ascend maplb`.
 - **Ascend: Expanded skill tree (1 → 8 nodes)** - Tree now has Auto Runners, Auto-Evolution, Momentum, Runner Speed, Offline Boost, Summit Memory, Evolution Power+, and Ascension Challenges (teaser). Branch/converge structure with OR-logic prerequisites.
 - **Parkour: Fly zone per map** - Admins can define an AABB fly zone per map; players in practice mode are rolled back to their last valid position if they fly outside the zone
-- **Ascend: Leaderboard system** - New `/ascend leaderboard` command with tabbed rankings for Coins, Ascensions, and Manual Runs. Includes pagination (50 per page) and player search. Accessible via the Bolt of Stormsilk item.
+- **Ascend: Leaderboard system** - New `/ascend leaderboard` command with tabbed rankings for Vexa, Ascensions, and Manual Runs. Includes pagination (50 per page) and player search. Accessible via the Bolt of Stormsilk item.
 
 ### Fixed
 - **Ascend: Evolution Power now applies to runner evolution** - Each star multiplies the multiplier gain by the Evolution Power value (e.g., ×2 base: 0★=0.10, 1★=0.20, 2★=0.40, 3★=0.80). Higher Summit Evolution Power makes each star exponentially stronger.

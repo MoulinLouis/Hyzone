@@ -12,15 +12,15 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class AscendPlayerProgress {
 
-    private final AtomicReference<BigNumber> coins = new AtomicReference<>(BigNumber.ZERO);
+    private final AtomicReference<BigNumber> vexa = new AtomicReference<>(BigNumber.ZERO);
     private volatile int elevationMultiplier = 1;
     private final Map<String, MapProgress> mapProgress = new ConcurrentHashMap<>();
 
     // Summit System - XP per category (level calculated from XP)
     private final Map<AscendConstants.SummitCategory, Long> summitXp = new ConcurrentHashMap<>();
-    private final AtomicReference<BigNumber> totalCoinsEarned = new AtomicReference<>(BigNumber.ZERO);
-    private final AtomicReference<BigNumber> summitAccumulatedCoins = new AtomicReference<>(BigNumber.ZERO);
-    private final AtomicReference<BigNumber> elevationAccumulatedCoins = new AtomicReference<>(BigNumber.ZERO);
+    private final AtomicReference<BigNumber> totalVexaEarned = new AtomicReference<>(BigNumber.ZERO);
+    private final AtomicReference<BigNumber> summitAccumulatedVexa = new AtomicReference<>(BigNumber.ZERO);
+    private final AtomicReference<BigNumber> elevationAccumulatedVexa = new AtomicReference<>(BigNumber.ZERO);
 
     // Ascension System
     private volatile int ascensionCount;
@@ -50,16 +50,16 @@ public class AscendPlayerProgress {
     // Tutorial tracking (bitmask)
     private volatile int seenTutorials;
 
-    public BigNumber getCoins() {
-        return coins.get();
+    public BigNumber getVexa() {
+        return vexa.get();
     }
 
-    public void setCoins(BigNumber value) {
-        this.coins.set(value);
+    public void setVexa(BigNumber value) {
+        this.vexa.set(value);
     }
 
-    public void addCoins(BigNumber amount) {
-        coins.updateAndGet(c -> c.add(amount).max(BigNumber.ZERO));
+    public void addVexa(BigNumber amount) {
+        vexa.updateAndGet(c -> c.add(amount).max(BigNumber.ZERO));
     }
 
     public int getElevationMultiplier() {
@@ -129,45 +129,45 @@ public class AscendPlayerProgress {
         return levels;
     }
 
-    public BigNumber getTotalCoinsEarned() {
-        return totalCoinsEarned.get();
+    public BigNumber getTotalVexaEarned() {
+        return totalVexaEarned.get();
     }
 
-    public void setTotalCoinsEarned(BigNumber value) {
-        this.totalCoinsEarned.set(value.max(BigNumber.ZERO));
+    public void setTotalVexaEarned(BigNumber value) {
+        this.totalVexaEarned.set(value.max(BigNumber.ZERO));
     }
 
-    public void addTotalCoinsEarned(BigNumber amount) {
+    public void addTotalVexaEarned(BigNumber amount) {
         if (amount.gt(BigNumber.ZERO)) {
-            totalCoinsEarned.updateAndGet(c -> c.add(amount).max(BigNumber.ZERO));
+            totalVexaEarned.updateAndGet(c -> c.add(amount).max(BigNumber.ZERO));
         }
     }
 
-    public BigNumber getSummitAccumulatedCoins() {
-        return summitAccumulatedCoins.get();
+    public BigNumber getSummitAccumulatedVexa() {
+        return summitAccumulatedVexa.get();
     }
 
-    public void setSummitAccumulatedCoins(BigNumber value) {
-        this.summitAccumulatedCoins.set(value.max(BigNumber.ZERO));
+    public void setSummitAccumulatedVexa(BigNumber value) {
+        this.summitAccumulatedVexa.set(value.max(BigNumber.ZERO));
     }
 
-    public void addSummitAccumulatedCoins(BigNumber amount) {
+    public void addSummitAccumulatedVexa(BigNumber amount) {
         if (amount.gt(BigNumber.ZERO)) {
-            summitAccumulatedCoins.updateAndGet(c -> c.add(amount).max(BigNumber.ZERO));
+            summitAccumulatedVexa.updateAndGet(c -> c.add(amount).max(BigNumber.ZERO));
         }
     }
 
-    public BigNumber getElevationAccumulatedCoins() {
-        return elevationAccumulatedCoins.get();
+    public BigNumber getElevationAccumulatedVexa() {
+        return elevationAccumulatedVexa.get();
     }
 
-    public void setElevationAccumulatedCoins(BigNumber value) {
-        this.elevationAccumulatedCoins.set(value.max(BigNumber.ZERO));
+    public void setElevationAccumulatedVexa(BigNumber value) {
+        this.elevationAccumulatedVexa.set(value.max(BigNumber.ZERO));
     }
 
-    public void addElevationAccumulatedCoins(BigNumber amount) {
+    public void addElevationAccumulatedVexa(BigNumber amount) {
         if (amount.gt(BigNumber.ZERO)) {
-            elevationAccumulatedCoins.updateAndGet(c -> c.add(amount).max(BigNumber.ZERO));
+            elevationAccumulatedVexa.updateAndGet(c -> c.add(amount).max(BigNumber.ZERO));
         }
     }
 

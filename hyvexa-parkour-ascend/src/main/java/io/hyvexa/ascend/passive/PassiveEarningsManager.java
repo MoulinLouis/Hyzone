@@ -70,7 +70,7 @@ public class PassiveEarningsManager {
         List<AscendMap> allMaps = mapStore.listMapsSorted();
         Map<String, PassiveRunnerEarnings> runnerEarnings = new HashMap<>();
 
-        BigNumber totalCoins = BigNumber.ZERO;
+        BigNumber totalVexa = BigNumber.ZERO;
         BigNumber totalMultiplierGain = BigNumber.ZERO;
 
         // Calculate for each map with an active runner
@@ -124,13 +124,13 @@ public class PassiveEarningsManager {
                 .multiply(BigNumber.fromDouble(theoreticalRuns))
                 .multiply(BigNumber.fromDouble(effectiveOfflineRate / 100.0));
 
-            // Coins per run (same logic as RobotManager)
+            // Vexa per run (same logic as RobotManager)
             BigNumber payoutPerRun = playerStore.getCompletionPayout(
                 playerId, allMaps, AscendConstants.MULTIPLIER_SLOTS, mapId, BigNumber.ZERO
             );
 
-            // Calculate total coins for this runner
-            BigNumber mapCoins = payoutPerRun
+            // Calculate total vexa for this runner
+            BigNumber mapVexa = payoutPerRun
                 .multiply(BigNumber.fromDouble(theoreticalRuns))
                 .multiply(BigNumber.fromDouble(effectiveOfflineRate / 100.0));
 
@@ -138,26 +138,26 @@ public class PassiveEarningsManager {
             runnerEarnings.put(mapId, new PassiveRunnerEarnings(
                 map.getName(),
                 (int) theoreticalRuns,
-                mapCoins,
+                mapVexa,
                 mapMultiplierGain,
                 speedLevel,
                 stars
             ));
 
-            totalCoins = totalCoins.add(mapCoins);
+            totalVexa = totalVexa.add(mapVexa);
             totalMultiplierGain = totalMultiplierGain.add(mapMultiplierGain);
         }
 
-        if (totalCoins.lte(BigNumber.ZERO)) {
+        if (totalVexa.lte(BigNumber.ZERO)) {
             return null; // No earnings (no runners)
         }
 
         // Apply earnings to player account
-        if (!playerStore.atomicAddCoins(playerId, totalCoins)) {
-            LOGGER.at(Level.SEVERE).log("Failed to add passive coins for " + playerId + " (amount: " + totalCoins + ")");
+        if (!playerStore.atomicAddVexa(playerId, totalVexa)) {
+            LOGGER.at(Level.SEVERE).log("Failed to add passive vexa for " + playerId + " (amount: " + totalVexa + ")");
         }
-        if (!playerStore.atomicAddTotalCoinsEarned(playerId, totalCoins)) {
-            LOGGER.at(Level.SEVERE).log("Failed to add total coins earned for " + playerId + " (amount: " + totalCoins + ")");
+        if (!playerStore.atomicAddTotalVexaEarned(playerId, totalVexa)) {
+            LOGGER.at(Level.SEVERE).log("Failed to add total vexa earned for " + playerId + " (amount: " + totalVexa + ")");
         }
 
         // Apply multiplier gains to each map (at offline rate)
@@ -173,12 +173,12 @@ public class PassiveEarningsManager {
 
         LOGGER.at(Level.INFO).log(
             "Passive earnings for " + playerId + ": " +
-            totalCoins + " coins, +" + totalMultiplierGain + " multiplier over " + (timeAwayMs / 1000 / 60) + " minutes"
+            totalVexa + " vexa, +" + totalMultiplierGain + " multiplier over " + (timeAwayMs / 1000 / 60) + " minutes"
         );
 
         return new PassiveEarningsResult(
             timeAwayMs,
-            totalCoins,
+            totalVexa,
             totalMultiplierGain,
             runnerEarnings
         );
@@ -229,7 +229,7 @@ public class PassiveEarningsManager {
     // Data classes
     public record PassiveEarningsResult(
         long timeAwayMs,
-        BigNumber totalCoins,
+        BigNumber totalVexa,
         BigNumber totalMultiplier,
         Map<String, PassiveRunnerEarnings> runnerBreakdown
     ) {}
@@ -237,7 +237,7 @@ public class PassiveEarningsManager {
     public record PassiveRunnerEarnings(
         String mapName,
         int runsCompleted,
-        BigNumber coinsEarned,
+        BigNumber vexaEarned,
         BigNumber multiplierGain,
         int speedLevel,
         int stars

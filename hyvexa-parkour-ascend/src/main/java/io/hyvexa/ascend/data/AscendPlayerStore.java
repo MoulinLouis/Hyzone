@@ -49,7 +49,7 @@ public class AscendPlayerStore {
     private final Map<String, Long> mapLeaderboardCacheTimestamps = new ConcurrentHashMap<>();
 
     public record LeaderboardEntry(UUID playerId, String playerName,
-            double totalCoinsEarnedMantissa, int totalCoinsEarnedExp10,
+            double totalVexaEarnedMantissa, int totalVexaEarnedExp10,
             int ascensionCount, int totalManualRuns, Long fastestAscensionMs) {}
 
     public record MapLeaderboardEntry(String playerName, long bestTimeMs) {}
@@ -137,12 +137,12 @@ public class AscendPlayerStore {
 
         // Load base player data
         String playerSql = """
-            SELECT player_name, coins_mantissa, coins_exp10, elevation_multiplier, ascension_count, skill_tree_points,
-                   total_coins_earned_mantissa, total_coins_earned_exp10, total_manual_runs, active_title,
+            SELECT player_name, vexa_mantissa, vexa_exp10, elevation_multiplier, ascension_count, skill_tree_points,
+                   total_vexa_earned_mantissa, total_vexa_earned_exp10, total_manual_runs, active_title,
                    ascension_started_at, fastest_ascension_ms,
                    last_active_timestamp, has_unclaimed_passive,
-                   summit_accumulated_coins_mantissa, summit_accumulated_coins_exp10,
-                   elevation_accumulated_coins_mantissa, elevation_accumulated_coins_exp10,
+                   summit_accumulated_vexa_mantissa, summit_accumulated_vexa_exp10,
+                   elevation_accumulated_vexa_mantissa, elevation_accumulated_vexa_exp10,
                    auto_upgrade_enabled, auto_evolution_enabled, seen_tutorials, hide_other_runners
             FROM ascend_players
             WHERE uuid = ?
@@ -159,12 +159,12 @@ public class AscendPlayerStore {
                         playerNames.put(playerId, dbName);
                     }
                     progress = new AscendPlayerProgress();
-                    progress.setCoins(BigNumber.of(rs.getDouble("coins_mantissa"), rs.getInt("coins_exp10")));
+                    progress.setVexa(BigNumber.of(rs.getDouble("vexa_mantissa"), rs.getInt("vexa_exp10")));
                     progress.setElevationMultiplier(rs.getInt("elevation_multiplier"));
 
                     progress.setAscensionCount(safeGetInt(rs, "ascension_count", 0));
                     progress.setSkillTreePoints(safeGetInt(rs, "skill_tree_points", 0));
-                    progress.setTotalCoinsEarned(safeGetBigNumber(rs, "total_coins_earned_mantissa", "total_coins_earned_exp10"));
+                    progress.setTotalVexaEarned(safeGetBigNumber(rs, "total_vexa_earned_mantissa", "total_vexa_earned_exp10"));
                     progress.setTotalManualRuns(safeGetInt(rs, "total_manual_runs", 0));
                     progress.setActiveTitle(safeGetString(rs, "active_title", null));
 
@@ -185,14 +185,14 @@ public class AscendPlayerStore {
 
                     progress.setHasUnclaimedPassive(safeGetBoolean(rs, "has_unclaimed_passive", false));
 
-                    BigNumber summitAccumulated = safeGetBigNumber(rs, "summit_accumulated_coins_mantissa", "summit_accumulated_coins_exp10");
+                    BigNumber summitAccumulated = safeGetBigNumber(rs, "summit_accumulated_vexa_mantissa", "summit_accumulated_vexa_exp10");
                     if (!summitAccumulated.isZero()) {
-                        progress.setSummitAccumulatedCoins(summitAccumulated);
+                        progress.setSummitAccumulatedVexa(summitAccumulated);
                     }
 
-                    BigNumber elevationAccumulated = safeGetBigNumber(rs, "elevation_accumulated_coins_mantissa", "elevation_accumulated_coins_exp10");
+                    BigNumber elevationAccumulated = safeGetBigNumber(rs, "elevation_accumulated_vexa_mantissa", "elevation_accumulated_vexa_exp10");
                     if (!elevationAccumulated.isZero()) {
-                        progress.setElevationAccumulatedCoins(elevationAccumulated);
+                        progress.setElevationAccumulatedVexa(elevationAccumulated);
                     }
 
                     progress.setAutoUpgradeEnabled(safeGetBoolean(rs, "auto_upgrade_enabled", false));
@@ -344,15 +344,15 @@ public class AscendPlayerStore {
 
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
         // Reset basic progression
-        progress.setCoins(BigNumber.ZERO);
+        progress.setVexa(BigNumber.ZERO);
         progress.setElevationMultiplier(1);
         progress.getMapProgress().clear();
 
         // Reset Summit system
         progress.clearSummitXp();
-        progress.setTotalCoinsEarned(BigNumber.ZERO);
-        progress.setSummitAccumulatedCoins(BigNumber.ZERO);
-        progress.setElevationAccumulatedCoins(BigNumber.ZERO);
+        progress.setTotalVexaEarned(BigNumber.ZERO);
+        progress.setSummitAccumulatedVexa(BigNumber.ZERO);
+        progress.setElevationAccumulatedVexa(BigNumber.ZERO);
 
         // Reset Ascension/Skill Tree
         progress.setAscensionCount(0);
@@ -416,14 +416,14 @@ public class AscendPlayerStore {
         queueSave();
     }
 
-    public BigNumber getCoins(UUID playerId) {
+    public BigNumber getVexa(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
-        return progress != null ? progress.getCoins() : BigNumber.ZERO;
+        return progress != null ? progress.getVexa() : BigNumber.ZERO;
     }
 
-    public void setCoins(UUID playerId, BigNumber coins) {
+    public void setVexa(UUID playerId, BigNumber vexa) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        progress.setCoins(coins.max(BigNumber.ZERO));
+        progress.setVexa(vexa.max(BigNumber.ZERO));
         markDirty(playerId);
     }
 
@@ -485,47 +485,47 @@ public class AscendPlayerStore {
         return true;
     }
 
-    public void addCoins(UUID playerId, BigNumber amount) {
+    public void addVexa(UUID playerId, BigNumber amount) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        progress.addCoins(amount);
+        progress.addVexa(amount);
         markDirty(playerId);
     }
 
-    public boolean spendCoins(UUID playerId, BigNumber amount) {
+    public boolean spendVexa(UUID playerId, BigNumber amount) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        if (progress.getCoins().lt(amount)) {
+        if (progress.getVexa().lt(amount)) {
             return false;
         }
-        progress.addCoins(amount.negate());
+        progress.addVexa(amount.negate());
         markDirty(playerId);
         return true;
     }
 
     // ========================================
-    // Coin Operations (In-memory CAS + debounced save)
+    // Vexa Operations (In-memory CAS + debounced save)
     // ========================================
 
     /**
-     * Add coins to a player. Updates in-memory state atomically
+     * Add vexa to a player. Updates in-memory state atomically
      * and marks dirty for debounced DB save.
      *
      * @param playerId the player's UUID
      * @param amount the amount to add (can be negative to subtract)
      * @return true if the operation succeeded
      */
-    public boolean atomicAddCoins(UUID playerId, BigNumber amount) {
+    public boolean atomicAddVexa(UUID playerId, BigNumber amount) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        BigNumber oldBalance = progress.getCoins();
-        progress.addCoins(amount);
-        BigNumber newBalance = progress.getCoins();
+        BigNumber oldBalance = progress.getVexa();
+        progress.addVexa(amount);
+        BigNumber newBalance = progress.getVexa();
         markDirty(playerId);
-        checkCoinTutorialThresholds(playerId, oldBalance, newBalance);
+        checkVexaTutorialThresholds(playerId, oldBalance, newBalance);
         return true;
     }
 
-    private void checkCoinTutorialThresholds(UUID playerId, BigNumber oldBalance, BigNumber newBalance) {
-        boolean crossedAscension = oldBalance.lt(AscendConstants.ASCENSION_COIN_THRESHOLD)
-                && newBalance.gte(AscendConstants.ASCENSION_COIN_THRESHOLD);
+    private void checkVexaTutorialThresholds(UUID playerId, BigNumber oldBalance, BigNumber newBalance) {
+        boolean crossedAscension = oldBalance.lt(AscendConstants.ASCENSION_VEXA_THRESHOLD)
+                && newBalance.gte(AscendConstants.ASCENSION_VEXA_THRESHOLD);
 
         // Mark the ascension tutorial as seen BEFORE the tutorial check,
         // so the tutorial popup is suppressed in favor of the cinematic
@@ -539,7 +539,7 @@ public class AscendPlayerStore {
         }
         TutorialTriggerService triggerService = plugin.getTutorialTriggerService();
         if (triggerService != null) {
-            triggerService.checkCoinThresholds(playerId, oldBalance, newBalance);
+            triggerService.checkVexaThresholds(playerId, oldBalance, newBalance);
         }
 
         // Trigger ascension cinematic every time the threshold is crossed
@@ -578,27 +578,27 @@ public class AscendPlayerStore {
     }
 
     /**
-     * Spend coins with balance check (prevents negative balance).
+     * Spend vexa with balance check (prevents negative balance).
      * Uses in-memory CAS loop. Returns false if insufficient funds.
      *
      * @param playerId the player's UUID
      * @param amount the amount to spend (must be positive)
      * @return true if the purchase succeeded (sufficient balance)
      */
-    public boolean atomicSpendCoins(UUID playerId, BigNumber amount) {
-        return spendCoins(playerId, amount);
+    public boolean atomicSpendVexa(UUID playerId, BigNumber amount) {
+        return spendVexa(playerId, amount);
     }
 
     /**
-     * Add to total coins earned (lifetime stat) + accumulated coin trackers.
+     * Add to total vexa earned (lifetime stat) + accumulated vexa trackers.
      * In-memory update + debounced save.
      *
      * @param playerId the player's UUID
      * @param amount the amount to add
      * @return true if the operation succeeded
      */
-    public boolean atomicAddTotalCoinsEarned(UUID playerId, BigNumber amount) {
-        addTotalCoinsEarned(playerId, amount);
+    public boolean atomicAddTotalVexaEarned(UUID playerId, BigNumber amount) {
+        addTotalVexaEarned(playerId, amount);
         return true;
     }
 
@@ -616,19 +616,19 @@ public class AscendPlayerStore {
     }
 
     /**
-     * Set elevation level and reset coins to 0 (for elevation purchase).
+     * Set elevation level and reset vexa to 0 (for elevation purchase).
      * In-memory update + debounced save.
      *
      * @param playerId the player's UUID
      * @param newElevation the new elevation level
      * @return true if the operation succeeded
      */
-    public boolean atomicSetElevationAndResetCoins(UUID playerId, int newElevation) {
+    public boolean atomicSetElevationAndResetVexa(UUID playerId, int newElevation) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
         progress.setElevationMultiplier(newElevation);
-        progress.setCoins(BigNumber.ZERO);
-        progress.setSummitAccumulatedCoins(BigNumber.ZERO);
-        progress.setElevationAccumulatedCoins(BigNumber.ZERO);
+        progress.setVexa(BigNumber.ZERO);
+        progress.setSummitAccumulatedVexa(BigNumber.ZERO);
+        progress.setElevationAccumulatedVexa(BigNumber.ZERO);
         markDirty(playerId);
         return true;
     }
@@ -770,48 +770,48 @@ public class AscendPlayerStore {
         return category.getBonusForLevel(level);
     }
 
-    public BigNumber getTotalCoinsEarned(UUID playerId) {
+    public BigNumber getTotalVexaEarned(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
-        return progress != null ? progress.getTotalCoinsEarned() : BigNumber.ZERO;
+        return progress != null ? progress.getTotalVexaEarned() : BigNumber.ZERO;
     }
 
-    public BigNumber getSummitAccumulatedCoins(UUID playerId) {
+    public BigNumber getSummitAccumulatedVexa(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
-        return progress != null ? progress.getSummitAccumulatedCoins() : BigNumber.ZERO;
+        return progress != null ? progress.getSummitAccumulatedVexa() : BigNumber.ZERO;
     }
 
-    public void addSummitAccumulatedCoins(UUID playerId, BigNumber amount) {
+    public void addSummitAccumulatedVexa(UUID playerId, BigNumber amount) {
         if (amount.lte(BigNumber.ZERO)) {
             return;
         }
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        progress.addSummitAccumulatedCoins(amount);
+        progress.addSummitAccumulatedVexa(amount);
         markDirty(playerId);
     }
 
-    public void addElevationAccumulatedCoins(UUID playerId, BigNumber amount) {
+    public void addElevationAccumulatedVexa(UUID playerId, BigNumber amount) {
         if (amount.lte(BigNumber.ZERO)) {
             return;
         }
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        progress.addElevationAccumulatedCoins(amount);
+        progress.addElevationAccumulatedVexa(amount);
         markDirty(playerId);
     }
 
-    public void addTotalCoinsEarned(UUID playerId, BigNumber amount) {
+    public void addTotalVexaEarned(UUID playerId, BigNumber amount) {
         if (amount.lte(BigNumber.ZERO)) {
             return;
         }
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        progress.addTotalCoinsEarned(amount);
-        progress.addSummitAccumulatedCoins(amount);
-        progress.addElevationAccumulatedCoins(amount);
+        progress.addTotalVexaEarned(amount);
+        progress.addSummitAccumulatedVexa(amount);
+        progress.addElevationAccumulatedVexa(amount);
         markDirty(playerId);
     }
 
-    public BigNumber getElevationAccumulatedCoins(UUID playerId) {
+    public BigNumber getElevationAccumulatedVexa(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
-        return progress != null ? progress.getElevationAccumulatedCoins() : BigNumber.ZERO;
+        return progress != null ? progress.getElevationAccumulatedVexa() : BigNumber.ZERO;
     }
 
     // ========================================
@@ -938,7 +938,7 @@ public class AscendPlayerStore {
 
     /**
      * Shared reset logic for prestige operations.
-     * Resets coins, map unlocks (except first), multipliers, manual completion, and runners.
+     * Resets vexa, map unlocks (except first), multipliers, manual completion, and runners.
      * @param clearBestTimes whether to also clear best times (elevation does, summit doesn't)
      * @return list of map IDs that had runners (for despawn handling)
      */
@@ -952,9 +952,9 @@ public class AscendPlayerStore {
             hasPersistence = plugin.getAscensionManager().hasPersistence(playerId);
         }
 
-        progress.setCoins(BigNumber.ZERO);
-        progress.setSummitAccumulatedCoins(BigNumber.ZERO);
-        progress.setElevationAccumulatedCoins(BigNumber.ZERO);
+        progress.setVexa(BigNumber.ZERO);
+        progress.setSummitAccumulatedVexa(BigNumber.ZERO);
+        progress.setElevationAccumulatedVexa(BigNumber.ZERO);
 
         for (Map.Entry<String, AscendPlayerProgress.MapProgress> entry : progress.getMapProgress().entrySet()) {
             String mapId = entry.getKey();
@@ -995,7 +995,7 @@ public class AscendPlayerStore {
     }
 
     /**
-     * Resets player progress for elevation: clears coins, map unlocks (except first map),
+     * Resets player progress for elevation: clears vexa, map unlocks (except first map),
      * multipliers, and removes all runners. Best times are preserved.
      *
      * @param playerId the player's UUID
@@ -1014,7 +1014,7 @@ public class AscendPlayerStore {
     }
 
     /**
-     * Reset progress for Summit: coins, elevation, multipliers, runners, and map unlocks.
+     * Reset progress for Summit: vexa, elevation, multipliers, runners, and map unlocks.
      * Keeps best times and summit XP.
      * @return list of map IDs that had runners (for despawn handling)
      */
@@ -1262,29 +1262,29 @@ public class AscendPlayerStore {
         }
 
         String playerSql = """
-            INSERT INTO ascend_players (uuid, player_name, coins_mantissa, coins_exp10, elevation_multiplier, ascension_count,
-                skill_tree_points, total_coins_earned_mantissa, total_coins_earned_exp10, total_manual_runs, active_title,
+            INSERT INTO ascend_players (uuid, player_name, vexa_mantissa, vexa_exp10, elevation_multiplier, ascension_count,
+                skill_tree_points, total_vexa_earned_mantissa, total_vexa_earned_exp10, total_manual_runs, active_title,
                 ascension_started_at, fastest_ascension_ms, last_active_timestamp, has_unclaimed_passive,
-                summit_accumulated_coins_mantissa, summit_accumulated_coins_exp10,
-                elevation_accumulated_coins_mantissa, elevation_accumulated_coins_exp10,
+                summit_accumulated_vexa_mantissa, summit_accumulated_vexa_exp10,
+                elevation_accumulated_vexa_mantissa, elevation_accumulated_vexa_exp10,
                 auto_upgrade_enabled, auto_evolution_enabled, seen_tutorials, hide_other_runners)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 player_name = VALUES(player_name),
-                coins_mantissa = VALUES(coins_mantissa), coins_exp10 = VALUES(coins_exp10),
+                vexa_mantissa = VALUES(vexa_mantissa), vexa_exp10 = VALUES(vexa_exp10),
                 elevation_multiplier = VALUES(elevation_multiplier),
                 ascension_count = VALUES(ascension_count), skill_tree_points = VALUES(skill_tree_points),
-                total_coins_earned_mantissa = VALUES(total_coins_earned_mantissa),
-                total_coins_earned_exp10 = VALUES(total_coins_earned_exp10),
+                total_vexa_earned_mantissa = VALUES(total_vexa_earned_mantissa),
+                total_vexa_earned_exp10 = VALUES(total_vexa_earned_exp10),
                 total_manual_runs = VALUES(total_manual_runs),
                 active_title = VALUES(active_title), ascension_started_at = VALUES(ascension_started_at),
                 fastest_ascension_ms = VALUES(fastest_ascension_ms),
                 last_active_timestamp = VALUES(last_active_timestamp),
                 has_unclaimed_passive = VALUES(has_unclaimed_passive),
-                summit_accumulated_coins_mantissa = VALUES(summit_accumulated_coins_mantissa),
-                summit_accumulated_coins_exp10 = VALUES(summit_accumulated_coins_exp10),
-                elevation_accumulated_coins_mantissa = VALUES(elevation_accumulated_coins_mantissa),
-                elevation_accumulated_coins_exp10 = VALUES(elevation_accumulated_coins_exp10),
+                summit_accumulated_vexa_mantissa = VALUES(summit_accumulated_vexa_mantissa),
+                summit_accumulated_vexa_exp10 = VALUES(summit_accumulated_vexa_exp10),
+                elevation_accumulated_vexa_mantissa = VALUES(elevation_accumulated_vexa_mantissa),
+                elevation_accumulated_vexa_exp10 = VALUES(elevation_accumulated_vexa_exp10),
                 auto_upgrade_enabled = VALUES(auto_upgrade_enabled),
                 auto_evolution_enabled = VALUES(auto_evolution_enabled),
                 hide_other_runners = VALUES(hide_other_runners),
@@ -1357,13 +1357,13 @@ public class AscendPlayerStore {
                 // Save player base data
                 playerStmt.setString(1, playerId.toString());
                 playerStmt.setString(2, playerNames.get(playerId));
-                playerStmt.setDouble(3, progress.getCoins().getMantissa());
-                playerStmt.setInt(4, progress.getCoins().getExponent());
+                playerStmt.setDouble(3, progress.getVexa().getMantissa());
+                playerStmt.setInt(4, progress.getVexa().getExponent());
                 playerStmt.setInt(5, progress.getElevationMultiplier());
                 playerStmt.setInt(6, progress.getAscensionCount());
                 playerStmt.setInt(7, progress.getSkillTreePoints());
-                playerStmt.setDouble(8, progress.getTotalCoinsEarned().getMantissa());
-                playerStmt.setInt(9, progress.getTotalCoinsEarned().getExponent());
+                playerStmt.setDouble(8, progress.getTotalVexaEarned().getMantissa());
+                playerStmt.setInt(9, progress.getTotalVexaEarned().getExponent());
                 playerStmt.setInt(10, progress.getTotalManualRuns());
                 playerStmt.setString(11, progress.getActiveTitle());
                 if (progress.getAscensionStartedAt() != null) {
@@ -1382,10 +1382,10 @@ public class AscendPlayerStore {
                     playerStmt.setNull(14, java.sql.Types.BIGINT);
                 }
                 playerStmt.setBoolean(15, progress.hasUnclaimedPassive());
-                playerStmt.setDouble(16, progress.getSummitAccumulatedCoins().getMantissa());
-                playerStmt.setInt(17, progress.getSummitAccumulatedCoins().getExponent());
-                playerStmt.setDouble(18, progress.getElevationAccumulatedCoins().getMantissa());
-                playerStmt.setInt(19, progress.getElevationAccumulatedCoins().getExponent());
+                playerStmt.setDouble(16, progress.getSummitAccumulatedVexa().getMantissa());
+                playerStmt.setInt(17, progress.getSummitAccumulatedVexa().getExponent());
+                playerStmt.setDouble(18, progress.getElevationAccumulatedVexa().getMantissa());
+                playerStmt.setInt(19, progress.getElevationAccumulatedVexa().getExponent());
                 playerStmt.setBoolean(20, progress.isAutoUpgradeEnabled());
                 playerStmt.setBoolean(21, progress.isAutoEvolutionEnabled());
                 playerStmt.setInt(22, progress.getSeenTutorials());
@@ -1482,7 +1482,7 @@ public class AscendPlayerStore {
             String name = playerNames.get(id);
             merged.put(id, new LeaderboardEntry(
                 id, name,
-                p.getTotalCoinsEarned().getMantissa(), p.getTotalCoinsEarned().getExponent(),
+                p.getTotalVexaEarned().getMantissa(), p.getTotalVexaEarned().getExponent(),
                 p.getAscensionCount(), p.getTotalManualRuns(), p.getFastestAscensionMs()
             ));
         }
@@ -1495,7 +1495,7 @@ public class AscendPlayerStore {
         }
 
         String sql = """
-            SELECT uuid, player_name, total_coins_earned_mantissa, total_coins_earned_exp10,
+            SELECT uuid, player_name, total_vexa_earned_mantissa, total_vexa_earned_exp10,
                    ascension_count, total_manual_runs, fastest_ascension_ms
             FROM ascend_players
             """;
@@ -1508,8 +1508,8 @@ public class AscendPlayerStore {
                 while (rs.next()) {
                     UUID playerId = UUID.fromString(rs.getString("uuid"));
                     String name = rs.getString("player_name");
-                    double mantissa = rs.getDouble("total_coins_earned_mantissa");
-                    int exp10 = rs.getInt("total_coins_earned_exp10");
+                    double mantissa = rs.getDouble("total_vexa_earned_mantissa");
+                    int exp10 = rs.getInt("total_vexa_earned_exp10");
                     int ascensions = rs.getInt("ascension_count");
                     int manualRuns = rs.getInt("total_manual_runs");
                     long fastest = rs.getLong("fastest_ascension_ms");

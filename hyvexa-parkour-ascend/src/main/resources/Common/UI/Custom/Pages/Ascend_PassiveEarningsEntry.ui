@@ -81,7 +81,7 @@ Group {
         Text: "+0.0 mult";
       }
 
-      Label #Coins {
+      Label #Vexa {
         Anchor: (Left: 12);
         Style: (FontSize: 14, TextColor: #10b981, RenderBold: true);
         Text: "0";

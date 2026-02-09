@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Plays the ascension cinematic (~10 seconds) with camera orbit, particles, and sounds.
- * Triggered automatically when a player crosses the ascension coin threshold,
+ * Triggered automatically when a player crosses the ascension vexa threshold,
  * and available via /ctest ascension for testing.
  */
 public class AscensionCinematic {
