@@ -112,7 +112,7 @@ $C.@PageOverlay {
 
           Group #Feature1Dot { Anchor: (Width: 8, Height: 8, Top: 6); Background: #10b981; }
           Group { Anchor: (Width: 10); }
-          Label #Feature1Label { Style: (FontSize: 13, TextColor: #cfd7dc); Text: "Purchase and upgrade runners to earn coins"; }
+          Label #Feature1Label { Style: (FontSize: 13, TextColor: #cfd7dc); Text: "Purchase and upgrade runners to earn vexa"; }
         }
 
         // Feature 2

@@ -91,7 +91,7 @@ $C.@PageOverlay {
           Label #TabCoinsLabel {
             Anchor: (Left: 0, Right: 0, Top: 6, Bottom: 0);
             Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, Alignment: Center);
-            Text: "Coins";
+            Text: "Vexa";
           }
 
           TextButton #TabCoins {

@@ -25,11 +25,11 @@ public class AscendTutorialPage extends BaseAscendPage {
             "Pages/Ascend_Tutorial_FirstCompletion.ui",
             new String[]{"Nice Run!", "Automate It"},
             new String[]{
-                "You earned coins and your map multiplier went up! Manual runs give 2x the runner's multiplier gain.",
+                "You earned vexa and your map multiplier went up! Manual runs give 2x the runner's multiplier gain.",
                 "Open /ascend and click Buy Runner. It replays the map automatically, earning multiplier while you're away."
             },
             new String[][]{
-                {"Coins earned on every manual completion", "Multiplier gain = 2x the runner's gain", "Higher multiplier means bigger rewards"},
+                {"Vexa earned on every manual completion", "Multiplier gain = 2x the runner's gain", "Higher multiplier means bigger rewards"},
                 {"Runners replay maps automatically for you", "They earn multiplier even while you're offline", "Buy runners from the map select menu"}
             },
             new String[][]{
@@ -41,10 +41,10 @@ public class AscendTutorialPage extends BaseAscendPage {
             "Pages/Ascend_Tutorial_MapUnlock.ui",
             new String[]{"New Map Unlocked!"},
             new String[]{
-                "Runner level 5 unlocks the next map. All map multipliers are multiplied together - more maps = way more coins."
+                "Runner level 5 unlocks the next map. All map multipliers are multiplied together - more maps = way more vexa."
             },
             new String[][]{
-                {"Runner level 5 unlocks new maps", "Map multipliers multiply together", "More maps means exponential coin growth"}
+                {"Runner level 5 unlocks new maps", "Map multipliers multiply together", "More maps means exponential vexa growth"}
             },
             new String[][]{
                 {"#10b981", "#3b82f6", "#a855f7"}
@@ -70,12 +70,12 @@ public class AscendTutorialPage extends BaseAscendPage {
             "Pages/Ascend_Tutorial_Elevation.ui",
             new String[]{"Elevation", "Elevate Often"},
             new String[]{
-                "Spend your coins to gain elevation levels. Your level is your multiplier: level 10 = x10, level 100 = x100. Open with /ascend elevate.",
-                "Elevation resets coins, runners, multipliers, and map unlocks. You keep your best times and your new elevation level. Elevate often to grow faster."
+                "Spend your vexa to gain elevation levels. Your level is your multiplier: level 10 = x10, level 100 = x100. Open with /ascend elevate.",
+                "Elevation resets vexa, runners, multipliers, and map unlocks. You keep your best times and your new elevation level. Elevate often to grow faster."
             },
             new String[][]{
-                {"Spend coins to gain elevation levels", "Your level equals your global multiplier", "Level 10 = x10, level 100 = x100"},
-                {"Resets coins, runners, and multipliers", "Keeps best times and elevation level", "Elevate often to grow faster"}
+                {"Spend vexa to gain elevation levels", "Your level equals your global multiplier", "Level 10 = x10, level 100 = x100"},
+                {"Resets vexa, runners, and multipliers", "Keeps best times and elevation level", "Elevate often to grow faster"}
             },
             new String[][]{
                 {"#10b981", "#f59e0b", "#3b82f6"},
@@ -86,12 +86,12 @@ public class AscendTutorialPage extends BaseAscendPage {
             "Pages/Ascend_Tutorial_Summit.ui",
             new String[]{"Summit", "The Reset"},
             new String[]{
-                "Convert coins into permanent upgrades: Runner Speed, Multiplier Gain, and Evolution Power. These stay forever. Open with /ascend summit.",
-                "Summit resets coins, elevation, runners, and maps. You keep your best times and Summit upgrades. Each cycle you'll progress faster."
+                "Convert vexa into permanent upgrades: Runner Speed, Multiplier Gain, and Evolution Power. These stay forever. Open with /ascend summit.",
+                "Summit resets vexa, elevation, runners, and maps. You keep your best times and Summit upgrades. Each cycle you'll progress faster."
             },
             new String[][]{
                 {"Permanent Runner Speed upgrades", "Permanent Multiplier Gain boosts", "Permanent Evolution Power bonuses"},
-                {"Resets coins, elevation, and runners", "Keeps best times and Summit upgrades", "Each cycle you progress faster"}
+                {"Resets vexa, elevation, and runners", "Keeps best times and Summit upgrades", "Each cycle you progress faster"}
             },
             new String[][]{
                 {"#ef4444", "#f59e0b", "#a855f7"},

@@ -320,7 +320,7 @@ Group {
             FontSize: 13,
             TextColor: #f0f4f8
           );
-          Text: "100 coins";
+          Text: "100 vexa";
         }
 
         Group {

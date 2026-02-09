@@ -109,7 +109,7 @@ public class ElevationPage extends BaseAscendPage {
 
         if (purchase.levels <= 0) {
             BigNumber nextCost = AscendConstants.getElevationLevelUpCost(currentElevation, BigNumber.fromDouble(costMultiplier));
-            player.sendMessage(Message.raw("[Ascend] You need " + FormatUtils.formatBigNumber(nextCost) + " accumulated coins to elevate.")
+            player.sendMessage(Message.raw("[Ascend] You need " + FormatUtils.formatBigNumber(nextCost) + " accumulated vexa to elevate.")
                 .color(SystemMessageUtils.SECONDARY));
             return;
         }
@@ -245,7 +245,7 @@ public class ElevationPage extends BaseAscendPage {
         BigNumber targetCost = purchase.cost.add(nextLevelAfterPurchaseCost);
         String costText = "Progress to x" + targetElevation + ": " +
                          FormatUtils.formatBigNumber(accumulatedCoins) + " / " +
-                         FormatUtils.formatBigNumber(targetCost) + " accumulated coins";
+                         FormatUtils.formatBigNumber(targetCost) + " accumulated vexa";
         if (costMultiplier < 1.0) {
             costText += " (-" + Math.round((1.0 - costMultiplier) * 100) + "%)";
         }

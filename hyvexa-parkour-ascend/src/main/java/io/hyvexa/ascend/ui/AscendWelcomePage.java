@@ -29,14 +29,14 @@ public class AscendWelcomePage extends BaseAscendPage {
     };
 
     private static final String[] STEP_DESCRIPTIONS = {
-        "Ascend is a parkour idle game. Run maps, earn coins, and build up an army of automated runners that play for you - even while you're offline.",
+        "Ascend is a parkour idle game. Run maps, earn vexa, and build up an army of automated runners that play for you - even while you're offline.",
         "You have 4 items in your inventory that open menus instantly - no need to type commands. Here's what each one does:",
-        "Open the map menu and pick a map. Complete it to earn your first coins and unlock new features along the way!"
+        "Open the map menu and pick a map. Complete it to earn your first vexa and unlock new features along the way!"
     };
 
     private static final String[][] STEP_FEATURES = {
         {
-            "Run parkour maps to earn coins",
+            "Run parkour maps to earn vexa",
             "Buy runners that replay maps for you",
             "Progress and unlock new content over time"
         },

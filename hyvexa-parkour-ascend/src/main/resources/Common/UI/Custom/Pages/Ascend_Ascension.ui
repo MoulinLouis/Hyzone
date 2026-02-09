@@ -75,7 +75,7 @@ $C.@PageOverlay {
               Label {
                 Anchor: (Width: 180);
                 Style: (FontSize: 14, TextColor: #9fb0ba);
-                Text: "Your Coins";
+                Text: "Your Vexa";
               }
 
               Group { FlexWeight: 1; }
@@ -170,7 +170,7 @@ $C.@PageOverlay {
         Label {
           Anchor: (Left: 6);
           Style: (FontSize: 13, TextColor: #fca5a5, Wrap: true);
-          Text: "Resets coins, elevation, and summit progress.";
+          Text: "Resets vexa, elevation, and summit progress.";
         }
       }
 

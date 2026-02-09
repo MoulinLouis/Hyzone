@@ -17,7 +17,7 @@ $C.@PageOverlay {
           Background: #000000(0.13);
         }
         $C.@Title {
-          @Text = "Ascend Admin Coins";
+          @Text = "Ascend Admin Vexa";
         }
       }
     }
@@ -28,7 +28,7 @@ $C.@PageOverlay {
 
       Label {
         Style: (FontSize: 16, TextColor: #93844c, RenderBold: true);
-        Text: "Adjust Coins";
+        Text: "Adjust Vexa";
       }
 
       Group {
@@ -38,7 +38,7 @@ $C.@PageOverlay {
         Label {
           Anchor: (Width: 140);
           Style: (FontSize: 14, TextColor: #cfd7dc);
-          Text: "Current Coins:";
+          Text: "Current Vexa:";
         }
 
         Label #CurrentCoinsValue {
@@ -50,7 +50,7 @@ $C.@PageOverlay {
       Label {
         Anchor: (Top: 10);
         Style: (FontSize: 13, TextColor: #cfd7dc);
-        Text: "Coin Amount";
+        Text: "Vexa Amount";
       }
 
       $C.@TextField #CoinsAmountField {
@@ -64,12 +64,12 @@ $C.@PageOverlay {
 
         $C.@TextButton #AddButton {
           Anchor: (Width: 250, Height: 36);
-          Text: "Add Coins";
+          Text: "Add Vexa";
         }
 
         $C.@TextButton #RemoveButton {
           Anchor: (Left: 10, Width: 200, Height: 36);
-          Text: "Remove Coins";
+          Text: "Remove Vexa";
         }
       }
 

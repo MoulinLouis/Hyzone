@@ -101,7 +101,7 @@ public class AscendHologramManager {
         lines.add(name);
         lines.add("+1.0 multiplier on completion");
         if (map.getEffectivePrice() > 0) {
-            lines.add("Unlock: " + map.getEffectivePrice() + " coins");
+            lines.add("Unlock: " + map.getEffectivePrice() + " vexa");
         } else {
             lines.add("Unlocked");
         }

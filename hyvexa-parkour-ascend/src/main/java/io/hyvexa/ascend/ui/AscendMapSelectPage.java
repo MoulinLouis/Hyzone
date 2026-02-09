@@ -300,7 +300,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
             String displayPriceText;
             if (runnerButtonText.equals("Upgrade") && actionPrice.gt(BigNumber.ZERO)) {
                 displayButtonText = "Cost:";
-                displayPriceText = FormatUtils.formatBigNumber(actionPrice) + " coins";
+                displayPriceText = FormatUtils.formatBigNumber(actionPrice) + " vexa";
             } else {
                 displayButtonText = runnerButtonText;
                 // No price text for Buy Runner, Complete First, Maxed, or Evolve
@@ -742,7 +742,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
                 String displayPriceText;
                 if (runnerButtonText.equals("Upgrade") && actionPrice.gt(BigNumber.ZERO)) {
                     displayButtonText = "Cost:";
-                    displayPriceText = FormatUtils.formatBigNumber(actionPrice) + " coins";
+                    displayPriceText = FormatUtils.formatBigNumber(actionPrice) + " vexa";
                 } else {
                     displayButtonText = runnerButtonText;
                     displayPriceText = "";
@@ -877,7 +877,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
         String displayPriceText;
         if (runnerButtonText.equals("Upgrade") && actionPrice.gt(BigNumber.ZERO)) {
             displayButtonText = "Cost:";
-            displayPriceText = FormatUtils.formatBigNumber(actionPrice) + " coins";
+            displayPriceText = FormatUtils.formatBigNumber(actionPrice) + " vexa";
         } else {
             displayButtonText = runnerButtonText;
             // No price text for Buy Runner, Complete First, Maxed, or Evolve
@@ -1050,7 +1050,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
         String displayPriceText;
         if (runnerButtonText.equals("Upgrade") && actionPrice.gt(BigNumber.ZERO)) {
             displayButtonText = "Cost:";
-            displayPriceText = FormatUtils.formatBigNumber(actionPrice) + " coins";
+            displayPriceText = FormatUtils.formatBigNumber(actionPrice) + " vexa";
         } else {
             displayButtonText = runnerButtonText;
             // No price text for Buy Runner, Complete First, Maxed, or Evolve
@@ -1239,11 +1239,11 @@ public class AscendMapSelectPage extends BaseAscendPage {
         }
 
         if (purchased == 0) {
-            sendMessage(store, ref, "[Ascend] Not enough coins for any upgrade.");
+            sendMessage(store, ref, "[Ascend] Not enough vexa for any upgrade.");
             return;
         }
 
-        String costText = totalSpent.gt(BigNumber.ZERO) ? " for " + FormatUtils.formatBigNumber(totalSpent) + " coins" : "";
+        String costText = totalSpent.gt(BigNumber.ZERO) ? " for " + FormatUtils.formatBigNumber(totalSpent) + " vexa" : "";
         sendMessage(store, ref, "[Ascend] Purchased " + purchased + " upgrade" + (purchased > 1 ? "s" : "") + costText + "!");
 
         // Update UI for all affected maps

@@ -66,7 +66,7 @@ public class PassiveEarningsPage extends BaseAscendPage {
 
         // Total coins
         String coinsStr = FormatUtils.formatBigNumber(result.totalCoins());
-        commandBuilder.set("#TotalCoinsLabel.Text", coinsStr + " COINS");
+        commandBuilder.set("#TotalCoinsLabel.Text", coinsStr + " VEXA");
 
         // Total multiplier
         String multStr = FormatUtils.formatBigNumber(result.totalMultiplier());

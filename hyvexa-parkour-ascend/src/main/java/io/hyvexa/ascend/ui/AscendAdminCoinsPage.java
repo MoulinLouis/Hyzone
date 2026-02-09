@@ -221,11 +221,11 @@ public class AscendAdminCoinsPage extends InteractiveCustomUIPage<AscendAdminCoi
             playerStore.addCoins(playerRef.getUuid(), amount);
             playerStore.addSummitAccumulatedCoins(playerRef.getUuid(), amount);
             playerStore.addElevationAccumulatedCoins(playerRef.getUuid(), amount);
-            player.sendMessage(Message.raw("[Ascend] Added " + formatted + " coins (counts toward Summit & Elevation).")
+            player.sendMessage(Message.raw("[Ascend] Added " + formatted + " vexa (counts toward Summit & Elevation).")
                 .color(SystemMessageUtils.SUCCESS));
         } else {
             playerStore.addCoins(playerRef.getUuid(), amount.negate());
-            player.sendMessage(Message.raw("[Ascend] Removed " + formatted + " coins.")
+            player.sendMessage(Message.raw("[Ascend] Removed " + formatted + " vexa.")
                 .color(SystemMessageUtils.SECONDARY));
         }
         UICommandBuilder commandBuilder = new UICommandBuilder();
@@ -281,7 +281,7 @@ public class AscendAdminCoinsPage extends InteractiveCustomUIPage<AscendAdminCoi
     private BigNumber parseAmount(Player player) {
         String raw = amountInput != null ? amountInput.trim() : "";
         if (raw.isEmpty()) {
-            player.sendMessage(Message.raw("Enter a coin amount."));
+            player.sendMessage(Message.raw("Enter a vexa amount."));
             return null;
         }
         try {

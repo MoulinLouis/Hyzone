@@ -80,7 +80,7 @@ public class AscensionPage extends BaseAscendPage {
         if (!ascensionManager.canAscend(playerId)) {
             BigNumber coins = playerStore.getCoins(playerId);
             player.sendMessage(Message.raw("[Ascension] Need " + FormatUtils.formatBigNumber(AscendConstants.ASCENSION_COIN_THRESHOLD)
-                + " coins to Ascend. You have: " + FormatUtils.formatBigNumber(coins))
+                + " vexa to Ascend. You have: " + FormatUtils.formatBigNumber(coins))
                 .color(SystemMessageUtils.SECONDARY));
             return;
         }
