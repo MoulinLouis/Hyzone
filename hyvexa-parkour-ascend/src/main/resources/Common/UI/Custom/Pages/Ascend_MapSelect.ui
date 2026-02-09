@@ -4,7 +4,7 @@ $C.@PageOverlay {
   SceneBlur {}
 
   Group #MapSelectWindow {
-    Anchor: (Width: 620, Height: 635);
+    Anchor: (Width: 620, Height: 675);
     LayoutMode: Top;
     Background: #0d1620(0.95);
     OutlineColor: #ffffff(0.06);
@@ -59,6 +59,136 @@ $C.@PageOverlay {
       FlexWeight: 1;
       LayoutMode: Top;
       Padding: (Left: 20, Right: 20, Top: 6, Bottom: 12);
+
+      // --- Mode Tabs ---
+      Group #ModeTabsRow {
+        Anchor: (Left: 0, Right: 0, Height: 40);
+        LayoutMode: Left;
+
+        // Tab 1: Vexa (active)
+        Group #TabVexaWrap {
+          Anchor: (Height: 36);
+          FlexWeight: 1;
+          Background: #2d3f50;
+          OutlineColor: #ffffff(0.06);
+          OutlineSize: 1;
+
+          Label #TabVexaLabel {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Style: (FontSize: 14, RenderBold: true, TextColor: #f0f4f8, Alignment: Center, VerticalAlignment: Center);
+            Text: "Vexa";
+          }
+
+          TextButton #TabVexa {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Text: "";
+            Style: TextButtonStyle(
+              Default: (Background: #000000(0)),
+              Hovered: (Background: #ffffff(0.05)),
+              Pressed: (Background: #ffffff(0.1)),
+              Sounds: $C.@ButtonSounds,
+            );
+          }
+        }
+
+        Group { Anchor: (Width: 6); }
+
+        // Tab 2: Locked
+        Group #TabLockedAWrap {
+          Anchor: (Height: 36);
+          FlexWeight: 1;
+          Background: #0f1820;
+          OutlineColor: #ffffff(0.03);
+          OutlineSize: 1;
+
+          // Lock icon + label layout
+          Group {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            LayoutMode: Left;
+
+            // Centering spacer
+            Group { FlexWeight: 1; }
+
+            // Lock icon
+            Group {
+              Anchor: (Width: 12, Height: 12, Top: 12);
+              Background: (TexturePath: "../Textures/lock.png");
+            }
+
+            Group { Anchor: (Width: 5); }
+
+            Label {
+              Anchor: (Width: 30, Top: 0, Bottom: 0);
+              Style: (FontSize: 13, TextColor: #4a5568, RenderBold: true, VerticalAlignment: Center);
+              Text: "???";
+            }
+
+            // Centering spacer
+            Group { FlexWeight: 1; }
+          }
+
+          // Disabled overlay
+          TextButton #TabLockedA {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Text: "";
+            Style: TextButtonStyle(
+              Default: (Background: #000000(0)),
+              Hovered: (Background: #ffffff(0.02)),
+              Pressed: (Background: #ffffff(0.02)),
+              Sounds: $C.@ButtonSounds,
+            );
+          }
+        }
+
+        Group { Anchor: (Width: 6); }
+
+        // Tab 3: Locked
+        Group #TabLockedBWrap {
+          Anchor: (Height: 36);
+          FlexWeight: 1;
+          Background: #0f1820;
+          OutlineColor: #ffffff(0.03);
+          OutlineSize: 1;
+
+          // Lock icon + label layout
+          Group {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            LayoutMode: Left;
+
+            // Centering spacer
+            Group { FlexWeight: 1; }
+
+            // Lock icon
+            Group {
+              Anchor: (Width: 12, Height: 12, Top: 12);
+              Background: (TexturePath: "../Textures/lock.png");
+            }
+
+            Group { Anchor: (Width: 5); }
+
+            Label {
+              Anchor: (Width: 30, Top: 0, Bottom: 0);
+              Style: (FontSize: 13, TextColor: #4a5568, RenderBold: true, VerticalAlignment: Center);
+              Text: "???";
+            }
+
+            // Centering spacer
+            Group { FlexWeight: 1; }
+          }
+
+          // Disabled overlay
+          TextButton #TabLockedB {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Text: "";
+            Style: TextButtonStyle(
+              Default: (Background: #000000(0)),
+              Hovered: (Background: #ffffff(0.02)),
+              Pressed: (Background: #ffffff(0.02)),
+              Sounds: $C.@ButtonSounds,
+            );
+          }
+        }
+      }
 
       Group #MapList {
         Anchor: (Left: 0, Right: 0, Top: 8);
