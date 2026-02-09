@@ -14,17 +14,15 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
+import io.hyvexa.ascend.data.AscendPlayerStore.LeaderboardEntry;
 import io.hyvexa.common.ui.ButtonEventData;
 
 import javax.annotation.Nonnull;
 import io.hyvexa.common.math.BigNumber;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 public class AscendLeaderboardPage extends InteractiveCustomUIPage<AscendLeaderboardPage.LeaderboardData> {
@@ -144,14 +142,14 @@ public class AscendLeaderboardPage extends InteractiveCustomUIPage<AscendLeaderb
 
         updateTabStyles(commandBuilder);
 
-        Map<UUID, AscendPlayerProgress> playersSnapshot = playerStore.getPlayersSnapshot();
-        if (playersSnapshot.isEmpty()) {
+        List<LeaderboardEntry> entries = playerStore.getLeaderboardEntries();
+        if (entries.isEmpty()) {
             commandBuilder.set("#EmptyText.Text", "No players yet.");
             commandBuilder.set("#PageLabel.Text", "");
             return;
         }
 
-        List<LeaderboardRow> sorted = getSortedEntries(playersSnapshot);
+        List<LeaderboardRow> sorted = getSortedEntries(entries);
         if (sorted.isEmpty()) {
             commandBuilder.set("#EmptyText.Text", "No data available.");
             commandBuilder.set("#PageLabel.Text", "");
@@ -216,54 +214,57 @@ public class AscendLeaderboardPage extends InteractiveCustomUIPage<AscendLeaderb
                 currentCategory == LeaderboardCategory.FASTEST_ASCENSION ? COLOR_TAB_FASTEST : COLOR_TAB_INACTIVE);
     }
 
-    private List<LeaderboardRow> getSortedEntries(Map<UUID, AscendPlayerProgress> players) {
+    private List<LeaderboardRow> getSortedEntries(List<LeaderboardEntry> entries) {
         List<LeaderboardRow> rows = new ArrayList<>();
 
-        List<Map.Entry<UUID, AscendPlayerProgress>> entries = new ArrayList<>(players.entrySet());
+        List<LeaderboardEntry> sorted = new ArrayList<>(entries);
 
         switch (currentCategory) {
-            case COINS -> entries.sort((a, b) ->
-                    b.getValue().getTotalCoinsEarned().compareTo(a.getValue().getTotalCoinsEarned()));
-            case ASCENSIONS -> entries.sort((a, b) ->
-                    Integer.compare(b.getValue().getAscensionCount(), a.getValue().getAscensionCount()));
-            case MANUAL_RUNS -> entries.sort((a, b) ->
-                    Integer.compare(b.getValue().getTotalManualRuns(), a.getValue().getTotalManualRuns()));
+            case COINS -> sorted.sort((a, b) -> {
+                int cmp = Integer.compare(b.totalCoinsEarnedExp10(), a.totalCoinsEarnedExp10());
+                if (cmp != 0) return cmp;
+                return Double.compare(b.totalCoinsEarnedMantissa(), a.totalCoinsEarnedMantissa());
+            });
+            case ASCENSIONS -> sorted.sort((a, b) ->
+                    Integer.compare(b.ascensionCount(), a.ascensionCount()));
+            case MANUAL_RUNS -> sorted.sort((a, b) ->
+                    Integer.compare(b.totalManualRuns(), a.totalManualRuns()));
             case FASTEST_ASCENSION -> {
-                entries.removeIf(e -> e.getValue().getFastestAscensionMs() == null);
-                entries.sort((a, b) ->
-                        Long.compare(a.getValue().getFastestAscensionMs(), b.getValue().getFastestAscensionMs()));
+                sorted.removeIf(e -> e.fastestAscensionMs() == null);
+                sorted.sort((a, b) ->
+                        Long.compare(a.fastestAscensionMs(), b.fastestAscensionMs()));
             }
         }
 
         int rank = 1;
-        for (Map.Entry<UUID, AscendPlayerProgress> entry : entries) {
-            UUID playerId = entry.getKey();
-            AscendPlayerProgress progress = entry.getValue();
+        for (LeaderboardEntry entry : sorted) {
+            String name = resolveName(entry);
+            String formattedValue = formatValue(entry);
 
-            String name = resolveName(playerId);
-            String formattedValue = formatValue(progress);
-
-            rows.add(new LeaderboardRow(rank, playerId, name, formattedValue));
+            rows.add(new LeaderboardRow(rank, entry.playerId(), name, formattedValue));
             rank++;
         }
 
         return rows;
     }
 
-    private String resolveName(UUID uuid) {
-        PlayerRef playerRef = Universe.get().getPlayer(uuid);
+    private String resolveName(LeaderboardEntry entry) {
+        if (entry.playerName() != null && !entry.playerName().isEmpty()) {
+            return entry.playerName();
+        }
+        PlayerRef playerRef = Universe.get().getPlayer(entry.playerId());
         if (playerRef != null) {
             return playerRef.getUsername();
         }
-        return uuid.toString().substring(0, 8) + "...";
+        return entry.playerId().toString().substring(0, 8) + "...";
     }
 
-    private String formatValue(AscendPlayerProgress progress) {
+    private String formatValue(LeaderboardEntry entry) {
         return switch (currentCategory) {
-            case COINS -> formatCoins(progress.getTotalCoinsEarned());
-            case ASCENSIONS -> String.valueOf(progress.getAscensionCount());
-            case MANUAL_RUNS -> String.valueOf(progress.getTotalManualRuns());
-            case FASTEST_ASCENSION -> formatDuration(progress.getFastestAscensionMs());
+            case COINS -> formatCoins(BigNumber.of(entry.totalCoinsEarnedMantissa(), entry.totalCoinsEarnedExp10()));
+            case ASCENSIONS -> String.valueOf(entry.ascensionCount());
+            case MANUAL_RUNS -> String.valueOf(entry.totalManualRuns());
+            case FASTEST_ASCENSION -> formatDuration(entry.fastestAscensionMs());
         };
     }
 

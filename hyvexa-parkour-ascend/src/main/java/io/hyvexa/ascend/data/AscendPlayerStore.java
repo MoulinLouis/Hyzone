@@ -32,12 +32,21 @@ import java.util.logging.Level;
 public class AscendPlayerStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
+    private static final long LEADERBOARD_CACHE_TTL_MS = 30_000;
 
     private final Map<UUID, AscendPlayerProgress> players = new ConcurrentHashMap<>();
+    private final Map<UUID, String> playerNames = new ConcurrentHashMap<>();
     private final Set<UUID> dirtyPlayers = ConcurrentHashMap.newKeySet();
     private final Set<UUID> resetPendingPlayers = ConcurrentHashMap.newKeySet();
     private final AtomicBoolean saveQueued = new AtomicBoolean(false);
     private final AtomicReference<ScheduledFuture<?>> saveFuture = new AtomicReference<>();
+
+    private volatile List<LeaderboardEntry> leaderboardCache = List.of();
+    private volatile long leaderboardCacheTimestamp = 0;
+
+    public record LeaderboardEntry(UUID playerId, String playerName,
+            double totalCoinsEarnedMantissa, int totalCoinsEarnedExp10,
+            int ascensionCount, int totalManualRuns, Long fastestAscensionMs) {}
 
     /**
      * Initialize the store. With lazy loading, we don't load all players upfront.
@@ -96,6 +105,18 @@ public class AscendPlayerStore {
         return newProgress;
     }
 
+    public void storePlayerName(UUID playerId, String name) {
+        if (playerId == null || name == null) {
+            return;
+        }
+        String trimmed = name.length() > 32 ? name.substring(0, 32) : name;
+        playerNames.put(playerId, trimmed);
+    }
+
+    public String getPlayerName(UUID playerId) {
+        return playerNames.get(playerId);
+    }
+
     /**
      * Load a single player's data from the database (lazy loading).
      * Returns null if player doesn't exist in database.
@@ -110,7 +131,7 @@ public class AscendPlayerStore {
 
         // Load base player data
         String playerSql = """
-            SELECT coins_mantissa, coins_exp10, elevation_multiplier, ascension_count, skill_tree_points,
+            SELECT player_name, coins_mantissa, coins_exp10, elevation_multiplier, ascension_count, skill_tree_points,
                    total_coins_earned_mantissa, total_coins_earned_exp10, total_manual_runs, active_title,
                    ascension_started_at, fastest_ascension_ms,
                    last_active_timestamp, has_unclaimed_passive,
@@ -127,6 +148,10 @@ public class AscendPlayerStore {
             stmt.setString(1, playerIdStr);
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
+                    String dbName = safeGetString(rs, "player_name", null);
+                    if (dbName != null) {
+                        playerNames.put(playerId, dbName);
+                    }
                     progress = new AscendPlayerProgress();
                     progress.setCoins(BigNumber.of(rs.getDouble("coins_mantissa"), rs.getInt("coins_exp10")));
                     progress.setElevationMultiplier(rs.getInt("elevation_multiplier"));
@@ -1169,14 +1194,15 @@ public class AscendPlayerStore {
         }
 
         String playerSql = """
-            INSERT INTO ascend_players (uuid, coins_mantissa, coins_exp10, elevation_multiplier, ascension_count,
+            INSERT INTO ascend_players (uuid, player_name, coins_mantissa, coins_exp10, elevation_multiplier, ascension_count,
                 skill_tree_points, total_coins_earned_mantissa, total_coins_earned_exp10, total_manual_runs, active_title,
                 ascension_started_at, fastest_ascension_ms, last_active_timestamp, has_unclaimed_passive,
                 summit_accumulated_coins_mantissa, summit_accumulated_coins_exp10,
                 elevation_accumulated_coins_mantissa, elevation_accumulated_coins_exp10,
                 auto_upgrade_enabled, auto_evolution_enabled, seen_tutorials)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
+                player_name = VALUES(player_name),
                 coins_mantissa = VALUES(coins_mantissa), coins_exp10 = VALUES(coins_exp10),
                 elevation_multiplier = VALUES(elevation_multiplier),
                 ascension_count = VALUES(ascension_count), skill_tree_points = VALUES(skill_tree_points),
@@ -1261,38 +1287,39 @@ public class AscendPlayerStore {
 
                 // Save player base data
                 playerStmt.setString(1, playerId.toString());
-                playerStmt.setDouble(2, progress.getCoins().getMantissa());
-                playerStmt.setInt(3, progress.getCoins().getExponent());
-                playerStmt.setInt(4, progress.getElevationMultiplier());
-                playerStmt.setInt(5, progress.getAscensionCount());
-                playerStmt.setInt(6, progress.getSkillTreePoints());
-                playerStmt.setDouble(7, progress.getTotalCoinsEarned().getMantissa());
-                playerStmt.setInt(8, progress.getTotalCoinsEarned().getExponent());
-                playerStmt.setInt(9, progress.getTotalManualRuns());
-                playerStmt.setString(10, progress.getActiveTitle());
+                playerStmt.setString(2, playerNames.get(playerId));
+                playerStmt.setDouble(3, progress.getCoins().getMantissa());
+                playerStmt.setInt(4, progress.getCoins().getExponent());
+                playerStmt.setInt(5, progress.getElevationMultiplier());
+                playerStmt.setInt(6, progress.getAscensionCount());
+                playerStmt.setInt(7, progress.getSkillTreePoints());
+                playerStmt.setDouble(8, progress.getTotalCoinsEarned().getMantissa());
+                playerStmt.setInt(9, progress.getTotalCoinsEarned().getExponent());
+                playerStmt.setInt(10, progress.getTotalManualRuns());
+                playerStmt.setString(11, progress.getActiveTitle());
                 if (progress.getAscensionStartedAt() != null) {
-                    playerStmt.setLong(11, progress.getAscensionStartedAt());
-                } else {
-                    playerStmt.setNull(11, java.sql.Types.BIGINT);
-                }
-                if (progress.getFastestAscensionMs() != null) {
-                    playerStmt.setLong(12, progress.getFastestAscensionMs());
+                    playerStmt.setLong(12, progress.getAscensionStartedAt());
                 } else {
                     playerStmt.setNull(12, java.sql.Types.BIGINT);
                 }
-                if (progress.getLastActiveTimestamp() != null) {
-                    playerStmt.setLong(13, progress.getLastActiveTimestamp());
+                if (progress.getFastestAscensionMs() != null) {
+                    playerStmt.setLong(13, progress.getFastestAscensionMs());
                 } else {
                     playerStmt.setNull(13, java.sql.Types.BIGINT);
                 }
-                playerStmt.setBoolean(14, progress.hasUnclaimedPassive());
-                playerStmt.setDouble(15, progress.getSummitAccumulatedCoins().getMantissa());
-                playerStmt.setInt(16, progress.getSummitAccumulatedCoins().getExponent());
-                playerStmt.setDouble(17, progress.getElevationAccumulatedCoins().getMantissa());
-                playerStmt.setInt(18, progress.getElevationAccumulatedCoins().getExponent());
-                playerStmt.setBoolean(19, progress.isAutoUpgradeEnabled());
-                playerStmt.setBoolean(20, progress.isAutoEvolutionEnabled());
-                playerStmt.setInt(21, progress.getSeenTutorials());
+                if (progress.getLastActiveTimestamp() != null) {
+                    playerStmt.setLong(14, progress.getLastActiveTimestamp());
+                } else {
+                    playerStmt.setNull(14, java.sql.Types.BIGINT);
+                }
+                playerStmt.setBoolean(15, progress.hasUnclaimedPassive());
+                playerStmt.setDouble(16, progress.getSummitAccumulatedCoins().getMantissa());
+                playerStmt.setInt(17, progress.getSummitAccumulatedCoins().getExponent());
+                playerStmt.setDouble(18, progress.getElevationAccumulatedCoins().getMantissa());
+                playerStmt.setInt(19, progress.getElevationAccumulatedCoins().getExponent());
+                playerStmt.setBoolean(20, progress.isAutoUpgradeEnabled());
+                playerStmt.setBoolean(21, progress.isAutoEvolutionEnabled());
+                playerStmt.setInt(22, progress.getSeenTutorials());
                 playerStmt.addBatch();
 
                 // Save map progress
@@ -1358,6 +1385,78 @@ public class AscendPlayerStore {
             // Outer catch for connection/transaction setup errors
             LOGGER.at(Level.SEVERE).log("Failed to initialize transaction for ascend player save: " + e.getMessage());
         }
+    }
+
+    // ========================================
+    // Leaderboard (DB-backed with cache)
+    // ========================================
+
+    public List<LeaderboardEntry> getLeaderboardEntries() {
+        long now = System.currentTimeMillis();
+        if (now - leaderboardCacheTimestamp > LEADERBOARD_CACHE_TTL_MS) {
+            List<LeaderboardEntry> dbEntries = fetchLeaderboardFromDatabase();
+            if (dbEntries != null) {
+                leaderboardCache = dbEntries;
+                leaderboardCacheTimestamp = now;
+            }
+        }
+
+        // Merge online players' fresh data on top of the DB snapshot
+        Map<UUID, LeaderboardEntry> merged = new java.util.LinkedHashMap<>();
+        for (LeaderboardEntry entry : leaderboardCache) {
+            merged.put(entry.playerId(), entry);
+        }
+        for (Map.Entry<UUID, AscendPlayerProgress> e : players.entrySet()) {
+            UUID id = e.getKey();
+            AscendPlayerProgress p = e.getValue();
+            String name = playerNames.get(id);
+            merged.put(id, new LeaderboardEntry(
+                id, name,
+                p.getTotalCoinsEarned().getMantissa(), p.getTotalCoinsEarned().getExponent(),
+                p.getAscensionCount(), p.getTotalManualRuns(), p.getFastestAscensionMs()
+            ));
+        }
+        return new java.util.ArrayList<>(merged.values());
+    }
+
+    private List<LeaderboardEntry> fetchLeaderboardFromDatabase() {
+        if (!DatabaseManager.getInstance().isInitialized()) {
+            return List.of();
+        }
+
+        String sql = """
+            SELECT uuid, player_name, total_coins_earned_mantissa, total_coins_earned_exp10,
+                   ascension_count, total_manual_runs, fastest_ascension_ms
+            FROM ascend_players
+            """;
+
+        List<LeaderboardEntry> entries = new java.util.ArrayList<>();
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    UUID playerId = UUID.fromString(rs.getString("uuid"));
+                    String name = rs.getString("player_name");
+                    double mantissa = rs.getDouble("total_coins_earned_mantissa");
+                    int exp10 = rs.getInt("total_coins_earned_exp10");
+                    int ascensions = rs.getInt("ascension_count");
+                    int manualRuns = rs.getInt("total_manual_runs");
+                    long fastest = rs.getLong("fastest_ascension_ms");
+                    Long fastestMs = rs.wasNull() ? null : fastest;
+
+                    entries.add(new LeaderboardEntry(playerId, name, mantissa, exp10, ascensions, manualRuns, fastestMs));
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.at(Level.SEVERE).log("Failed to fetch leaderboard from database: " + e.getMessage());
+            return null;
+        }
+        return entries;
+    }
+
+    public void invalidateLeaderboardCache() {
+        leaderboardCacheTimestamp = 0;
     }
 
     // ========================================
