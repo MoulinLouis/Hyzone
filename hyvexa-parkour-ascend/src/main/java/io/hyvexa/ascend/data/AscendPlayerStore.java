@@ -1146,6 +1146,67 @@ public class AscendPlayerStore {
      *
      * @param playerId the player's UUID
      */
+    /**
+     * Delete ALL player data from the database and clear all in-memory caches.
+     * This is a server-wide wipe for launching in a fresh state.
+     */
+    public void resetAllPlayersProgress() {
+        // Cancel any pending debounced save to prevent stale data re-insertion
+        ScheduledFuture<?> pending = saveFuture.getAndSet(null);
+        if (pending != null) {
+            pending.cancel(false);
+        }
+        saveQueued.set(false);
+
+        // Wipe DB FIRST — if we clear in-memory caches first, another thread
+        // (passive earnings, run tracker) can call getOrCreatePlayer() which
+        // re-loads old data from the not-yet-wiped DB back into memory.
+        if (DatabaseManager.getInstance().isInitialized()) {
+            String[] tables = {
+                "ascend_player_maps",
+                "ascend_player_summit",
+                "ascend_player_skills",
+                "ascend_player_achievements",
+                "ascend_ghost_recordings",
+                "ascend_players"
+            };
+
+            try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+                conn.setAutoCommit(false);
+                try {
+                    for (String table : tables) {
+                        try (PreparedStatement stmt = conn.prepareStatement("DELETE FROM " + table)) {
+                            DatabaseManager.applyQueryTimeout(stmt);
+                            stmt.executeUpdate();
+                        }
+                    }
+                    conn.commit();
+                    LOGGER.atInfo().log("All player progress wiped from database (%d tables cleared)", tables.length);
+                } catch (SQLException e) {
+                    conn.rollback();
+                    throw e;
+                } finally {
+                    conn.setAutoCommit(true);
+                }
+            } catch (SQLException e) {
+                LOGGER.at(Level.SEVERE).log("Failed to wipe all player data: " + e.getMessage());
+            }
+        }
+
+        // Now clear in-memory caches — any subsequent getOrCreatePlayer() will
+        // find an empty DB and create fresh default progress
+        players.clear();
+        playerNames.clear();
+        dirtyPlayers.clear();
+        resetPendingPlayers.clear();
+
+        // Invalidate leaderboard caches
+        leaderboardCache = List.of();
+        leaderboardCacheTimestamp = 0;
+        mapLeaderboardCache.clear();
+        mapLeaderboardCacheTimestamps.clear();
+    }
+
     public void removePlayer(UUID playerId) {
         if (playerId == null) {
             return;
