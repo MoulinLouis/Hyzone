@@ -29,6 +29,7 @@ import io.hyvexa.ascend.hud.AscendHudManager;
 import io.hyvexa.ascend.interaction.AscendDevCinderclothInteraction;
 import io.hyvexa.ascend.interaction.AscendDevCottonInteraction;
 import io.hyvexa.ascend.interaction.AscendDevShadoweaveInteraction;
+import io.hyvexa.ascend.interaction.AscendDevSilkInteraction;
 import io.hyvexa.ascend.interaction.AscendDevStormsilkInteraction;
 import io.hyvexa.ascend.interaction.AscendLeaveInteraction;
 import io.hyvexa.ascend.interaction.AscendResetInteraction;
@@ -197,10 +198,25 @@ public class ParkourAscendPlugin extends JavaPlugin {
                 }
                 Store<EntityStore> store = ref.getStore();
                 World world = store.getExternalData().getWorld();
+
+                // Handle world switch: if player enters a non-Ascend world, trigger passive earnings
+                PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+                if (playerRef != null && world != null && !isAscendWorld(world)) {
+                    UUID playerId = playerRef.getUuid();
+                    // If player was previously in Ascend (cached), they're now leaving
+                    if (playerId != null && playerRefCache.containsKey(playerId)) {
+                        if (passiveEarningsManager != null) {
+                            passiveEarningsManager.onPlayerLeaveAscend(playerId);
+                        }
+                        // Don't remove from cache yet - PlayerDisconnectEvent will handle full cleanup
+                    }
+                    return;
+                }
+
                 if (world == null || !isAscendWorld(world)) {
                     return;
                 }
-                PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+                // playerRef already retrieved above
                 if (playerRef == null) {
                     return;
                 }
@@ -218,6 +234,13 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     playerStore.setSessionFirstRunClaimed(playerId, false);
                     playerStore.resetConsecutiveManualRuns(playerId);
                     playerStore.storePlayerName(playerId, playerRef.getUsername());
+
+                    // Initialize ascension timer on first join (if not already set)
+                    AscendPlayerProgress progress = playerStore.getPlayer(playerId);
+                    if (progress != null && progress.getAscensionStartedAt() == null) {
+                        progress.setAscensionStartedAt(System.currentTimeMillis());
+                    }
+
                     playerStore.markDirty(playerId);
 
                     // Check for passive earnings
@@ -491,5 +514,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
             AscendResetInteraction.class, AscendResetInteraction.CODEC);
         registry.register("Ascend_Leave_Interaction",
             AscendLeaveInteraction.class, AscendLeaveInteraction.CODEC);
+        registry.register("Ascend_Dev_Silk_Interaction",
+            AscendDevSilkInteraction.class, AscendDevSilkInteraction.CODEC);
     }
 }

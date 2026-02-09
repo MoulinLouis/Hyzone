@@ -27,6 +27,7 @@ public final class AscendInventoryUtils {
         hotbar.setItemStackForSlot((short) 1, new ItemStack(AscendConstants.ITEM_DEV_STORMSILK, 1), false);
         hotbar.setItemStackForSlot((short) 2, new ItemStack(AscendConstants.ITEM_DEV_COTTON, 1), false);
         hotbar.setItemStackForSlot((short) 3, new ItemStack(AscendConstants.ITEM_DEV_SHADOWEAVE, 1), false);
+        hotbar.setItemStackForSlot((short) 4, new ItemStack(AscendConstants.ITEM_DEV_SILK, 1), false);
         short slot = (short) (hotbar.getCapacity() - 1);
         hotbar.setItemStackForSlot(slot, new ItemStack("Hub_Server_Selector", 1), false);
     }
@@ -48,6 +49,7 @@ public final class AscendInventoryUtils {
         setIfMissing(hotbar, (short) 1, AscendConstants.ITEM_DEV_STORMSILK);
         setIfMissing(hotbar, (short) 2, AscendConstants.ITEM_DEV_COTTON);
         setIfMissing(hotbar, (short) 3, AscendConstants.ITEM_DEV_SHADOWEAVE);
+        setIfMissing(hotbar, (short) 4, AscendConstants.ITEM_DEV_SILK);
         short slot = (short) (capacity - 1);
         setIfMissing(hotbar, slot, "Hub_Server_Selector");
     }

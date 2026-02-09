@@ -45,6 +45,7 @@ public class AscendPlayerProgress {
     // Automation toggles
     private volatile boolean autoUpgradeEnabled;
     private volatile boolean autoEvolutionEnabled;
+    private volatile boolean hideOtherRunners;
 
     // Tutorial tracking (bitmask)
     private volatile int seenTutorials;
@@ -351,6 +352,14 @@ public class AscendPlayerProgress {
 
     public void setAutoEvolutionEnabled(boolean enabled) {
         this.autoEvolutionEnabled = enabled;
+    }
+
+    public boolean isHideOtherRunners() {
+        return hideOtherRunners;
+    }
+
+    public void setHideOtherRunners(boolean hideOtherRunners) {
+        this.hideOtherRunners = hideOtherRunners;
     }
 
     // ========================================

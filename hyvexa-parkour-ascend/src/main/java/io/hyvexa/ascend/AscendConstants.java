@@ -17,6 +17,7 @@ public final class AscendConstants {
     public static final String ITEM_DEV_STORMSILK = "Ingredient_Bolt_Stormsilk";
     public static final String ITEM_DEV_COTTON = "Ingredient_Bolt_Cotton";
     public static final String ITEM_DEV_SHADOWEAVE = "Ingredient_Bolt_Shadoweave";
+    public static final String ITEM_DEV_SILK = "Ingredient_Bolt_Silk";
 
     // Items - In-Run
     public static final String ITEM_RESET = "Ascend_Reset_Block";
@@ -28,7 +29,7 @@ public final class AscendConstants {
     public static final int MAP_UNLOCK_REQUIRED_RUNNER_LEVEL = 5; // Runner level required to unlock next map
 
     // Passive Earnings
-    public static final long PASSIVE_OFFLINE_RATE_PERCENT = 25L; // 25% of normal production
+    public static final long PASSIVE_OFFLINE_RATE_PERCENT = 10L; // 10% of normal production
     public static final long PASSIVE_MAX_TIME_MS = 24 * 60 * 60 * 1000L; // 24 hours
     public static final long PASSIVE_MIN_TIME_MS = 60 * 1000L; // 1 minute
 
@@ -557,7 +558,7 @@ public final class AscendConstants {
         AUTO_EVOLUTION("Auto-Evolution", "Runners auto-evolve at max speed level", AUTO_RUNNERS),
         PERSISTENCE("Persistence", "Keep 10% of map multipliers after Elevation", AUTO_EVOLUTION),
         RUNNER_SPEED("Runner Speed Boost", "\u00d71.5 global runner speed", AUTO_EVOLUTION),
-        OFFLINE_BOOST("Offline Boost", "Offline earnings: 25% \u2192 40%", PERSISTENCE, RUNNER_SPEED),
+        OFFLINE_BOOST("Offline Boost", "Offline earnings: 10% \u2192 25%", PERSISTENCE, RUNNER_SPEED),
         SUMMIT_MEMORY("Summit Memory", "Keep 10% of Elevation after Summit", OFFLINE_BOOST),
         EVOLUTION_POWER("Evolution Power+", "+1 base evolution power", OFFLINE_BOOST),
         ASCENSION_CHALLENGES("Ascension Challenges", "Coming Soon", SUMMIT_MEMORY, EVOLUTION_POWER);

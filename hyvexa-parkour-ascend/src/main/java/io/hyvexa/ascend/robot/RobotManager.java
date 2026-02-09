@@ -111,6 +111,7 @@ public class RobotManager {
     public void onPlayerJoin(UUID playerId) {
         if (playerId != null) {
             onlinePlayers.add(playerId);
+            applyRunnerVisibility(playerId);
         }
     }
 
@@ -209,6 +210,8 @@ public class RobotManager {
 
                             // Hide from players currently running on this map
                             hideFromActiveRunners(state.getMapId(), entityUuid);
+                            // Hide from players with "hide other runners" setting
+                            hideFromViewersWithSetting(state.getOwnerId(), entityUuid);
                         }
                     } catch (Exception e) {
                         LOGGER.atWarning().log("Failed to get NPC UUID: " + e.getMessage());
@@ -1111,5 +1114,51 @@ public class RobotManager {
      */
     public boolean isCleanupPending() {
         return cleanupPending || !pendingRemovals.isEmpty();
+    }
+
+    /**
+     * Apply the "hide other runners" setting for a viewer.
+     * If enabled, hides all runners not owned by the viewer.
+     * If disabled, shows all runners not owned by the viewer.
+     */
+    public void applyRunnerVisibility(UUID viewerId) {
+        if (viewerId == null) {
+            return;
+        }
+        boolean hide = playerStore.isHideOtherRunners(viewerId);
+        EntityVisibilityManager visibilityManager = EntityVisibilityManager.get();
+        for (RobotState state : robots.values()) {
+            if (state.getOwnerId().equals(viewerId)) {
+                continue; // Skip own runners
+            }
+            UUID entityUuid = state.getEntityUuid();
+            if (entityUuid == null) {
+                continue;
+            }
+            if (hide) {
+                visibilityManager.hideEntity(viewerId, entityUuid);
+            } else {
+                visibilityManager.showEntity(viewerId, entityUuid);
+            }
+        }
+    }
+
+    /**
+     * After spawning a new runner, hide it from all online viewers who have the "hide other runners" setting ON.
+     * Skips the owner of the runner (they should always see their own).
+     */
+    private void hideFromViewersWithSetting(UUID runnerOwnerId, UUID entityUuid) {
+        if (entityUuid == null) {
+            return;
+        }
+        EntityVisibilityManager visibilityManager = EntityVisibilityManager.get();
+        for (UUID viewerId : onlinePlayers) {
+            if (viewerId.equals(runnerOwnerId)) {
+                continue; // Owner always sees their own runners
+            }
+            if (playerStore.isHideOtherRunners(viewerId)) {
+                visibilityManager.hideEntity(viewerId, entityUuid);
+            }
+        }
     }
 }

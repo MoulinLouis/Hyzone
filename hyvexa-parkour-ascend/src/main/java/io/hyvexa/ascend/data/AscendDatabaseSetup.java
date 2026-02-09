@@ -450,6 +450,16 @@ public final class AscendDatabaseSetup {
                 LOGGER.at(Level.SEVERE).log("Failed to add auto_evolution_enabled: " + e.getMessage());
             }
         }
+
+        // Hide other runners toggle
+        if (!columnExists(conn, "ascend_players", "hide_other_runners")) {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN hide_other_runners BOOLEAN NOT NULL DEFAULT FALSE");
+                LOGGER.atInfo().log("Added hide_other_runners column");
+            } catch (SQLException e) {
+                LOGGER.at(Level.SEVERE).log("Failed to add hide_other_runners: " + e.getMessage());
+            }
+        }
     }
 
     private static void ensureGhostRecordingTable(Connection conn) {
