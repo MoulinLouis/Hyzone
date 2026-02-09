@@ -25,11 +25,11 @@ public class AscendTutorialPage extends BaseAscendPage {
             "Pages/Ascend_Tutorial_FirstCompletion.ui",
             new String[]{"Nice Run!", "Automate It"},
             new String[]{
-                "You earned vexa and your map multiplier went up! Manual runs give 2x the runner's multiplier gain.",
+                "You earned vexa and your map multiplier went up! Manual runs give 5x the runner's multiplier gain.",
                 "Open /ascend and click Buy Runner. It replays the map automatically, earning multiplier while you're away."
             },
             new String[][]{
-                {"Vexa earned on every manual completion", "Multiplier gain = 2x the runner's gain", "Higher multiplier means bigger rewards"},
+                {"Vexa earned on every manual completion", "Multiplier gain = 5x the runner's gain", "Higher multiplier means bigger rewards"},
                 {"Runners replay maps automatically for you", "They earn multiplier even while you're offline", "Buy runners from the map select menu"}
             },
             new String[][]{

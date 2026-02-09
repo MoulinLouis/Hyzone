@@ -19,6 +19,8 @@ import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.achievement.AchievementManager;
 import io.hyvexa.ascend.tutorial.TutorialTriggerService;
 
+import io.hyvexa.ascend.hud.AscendHudManager;
+import io.hyvexa.ascend.hud.ToastType;
 import io.hyvexa.common.math.BigNumber;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.ascend.data.AscendMap;
@@ -295,7 +297,7 @@ public class AscendRunTracker {
 
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
 
-        // Manual multiplier increment = runner's multiplier increment for this map × 2
+        // Manual multiplier increment = runner's multiplier increment for this map × 5
         int runnerStars = playerStore.getRobotStars(playerId, run.mapId);
         double multiplierGainBonus = 1.0;
         double evolutionPowerBonus = 3.0;
@@ -304,7 +306,7 @@ public class AscendRunTracker {
             evolutionPowerBonus = plugin.getSummitManager().getEvolutionPowerBonus(playerId);
         }
         BigNumber runnerIncrement = AscendConstants.getRunnerMultiplierIncrement(runnerStars, multiplierGainBonus, evolutionPowerBonus);
-        BigNumber multiplierIncrement = runnerIncrement.multiply(BigNumber.fromDouble(2.0));
+        BigNumber multiplierIncrement = runnerIncrement.multiply(BigNumber.fromDouble(5.0));
 
         // Calculate payout BEFORE adding multiplier (use current multiplier, not the new one)
         List<AscendMap> multiplierMaps = mapStore.listMapsSorted();
@@ -349,7 +351,9 @@ public class AscendRunTracker {
         StringBuilder payoutMsg = new StringBuilder();
         payoutMsg.append("[Ascend] +")
                  .append(FormatUtils.formatBigNumber(payout))
-                 .append(" vexa | ")
+                 .append(" vexa | x5 multi (+" )
+                 .append(FormatUtils.formatBigNumber(multiplierIncrement))
+                 .append(") | ")
                  .append(timeStr);
 
         if (isPersonalBest) {
@@ -358,6 +362,13 @@ public class AscendRunTracker {
 
         player.sendMessage(Message.raw(payoutMsg.toString())
             .color(isPersonalBest ? SystemMessageUtils.SUCCESS : SystemMessageUtils.PRIMARY_TEXT));
+
+        // Toast for run completion
+        String toastMsg = "+" + FormatUtils.formatBigNumber(payout) + " vexa | " + timeStr;
+        if (isPersonalBest) {
+            toastMsg += " | PB!";
+        }
+        showToast(playerId, ToastType.SUCCESS, toastMsg);
 
         // Check achievements
         if (plugin != null && plugin.getAchievementManager() != null) {
@@ -374,6 +385,7 @@ public class AscendRunTracker {
                 long durationSec = AscendConstants.MOMENTUM_DURATION_MS / 1000;
                 player.sendMessage(Message.raw("[Momentum] x2 runner speed on " + mapName + " for " + durationSec + "s!")
                     .color(SystemMessageUtils.WARN));
+                showToast(playerId, ToastType.ECONOMY, "Momentum: x2 speed on " + mapName);
             }
         }
 
@@ -525,6 +537,16 @@ public class AscendRunTracker {
         Vector3f spawnRot = settingsStore.getSpawnRotation();
         store.addComponent(ref, Teleport.getComponentType(),
             new Teleport(store.getExternalData().getWorld(), spawnPos, spawnRot));
+    }
+
+    private void showToast(UUID playerId, ToastType type, String message) {
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin != null) {
+            AscendHudManager hm = plugin.getHudManager();
+            if (hm != null) {
+                hm.showToast(playerId, type, message);
+            }
+        }
     }
 
     private void hideRunnersForMap(UUID viewerId, String mapId) {
