@@ -20,19 +20,22 @@ $C.@PageOverlay {
         Background: #0d1620(0.95);
         OutlineColor: #ffffff(0.06);
         OutlineSize: 1;
-        LayoutMode: Top;
 
-        Group #InfoImageBanner {
-          Anchor: (Width: 200, Height: 93, Top: 18);
-          Background: (TexturePath: "../Textures/parkour.png");
-        }
-
-        Group #InfoContent {
-          Anchor: (Left: 0, Right: 0);
+        Group #InfoBoxFlow {
+          Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
           LayoutMode: Top;
-          Padding: (Left: 14, Right: 14, Top: 12, Bottom: 14);
 
-          Label #PlayerNameText {
+          Group #InfoImageBanner {
+            Anchor: (Width: 200, Height: 93, Top: 18);
+            Background: (TexturePath: "../Textures/parkour.png");
+          }
+
+          Group #InfoContent {
+            Anchor: (Left: 0, Right: 0);
+            LayoutMode: Top;
+            Padding: (Left: 14, Right: 14, Top: 12, Bottom: 14);
+
+            Label #PlayerNameText {
             Style: (
               FontSize: 13,
               TextColor: #ec4899(0.7),
@@ -191,6 +194,27 @@ $C.@PageOverlay {
               HorizontalAlignment: Center
             );
             Text: "store.hyvexa.com";
+          }
+        }
+        }
+
+        Group #PlayerCountRow {
+          Anchor: (Left: 0, Right: 0, Top: 8, Height: 20);
+          LayoutMode: Right;
+          Padding: (Right: 12);
+
+          Label #PlayerCountText {
+            Style: (
+              FontSize: 14,
+              TextColor: #8b9db0,
+              RenderBold: true
+            );
+            Text: "0";
+          }
+          Group { Anchor: (Width: 4); }
+          Group #PlayerCountIcon {
+            Anchor: (Width: 14, Height: 14);
+            Background: (TexturePath: "../Textures/user.png");
           }
         }
       }

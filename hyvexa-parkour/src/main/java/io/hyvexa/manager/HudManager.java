@@ -130,6 +130,7 @@ public class HudManager {
         int completedMaps = progressStore.getCompletedMapCount(playerRef.getUuid());
         int totalMaps = mapStore.getMapCount();
         hud.updateInfo(playerRef.getUsername(), rankName, completedMaps, totalMaps, SERVER_IP_DISPLAY);
+        hud.updatePlayerCount();
         if (!running) {
             if (wasRunning) {
                 hud.updateText("");
