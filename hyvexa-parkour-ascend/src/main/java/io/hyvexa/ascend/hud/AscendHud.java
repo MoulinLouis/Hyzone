@@ -3,6 +3,7 @@ package io.hyvexa.ascend.hud;
 import com.hypixel.hytale.server.core.entity.entities.player.hud.CustomUIHud;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.Universe;
 import io.hyvexa.ascend.AscendConstants.SummitCategory;
 import io.hyvexa.ascend.summit.SummitManager;
 import io.hyvexa.common.math.BigNumber;
@@ -24,10 +25,13 @@ public class AscendHud extends CustomUIHud {
     private Boolean lastElevationVisible;
     private String lastPrestigeKey;
     private Boolean lastPrestigeVisible;
+    private String lastAscensionKey;
+    private Boolean lastAscensionVisible;
     private String lastTimerText;
     private Boolean lastTimerVisible;
     private String lastAscensionProgressKey;
     private String lastMomentumKey;
+    private int lastPlayerCount = -1;
 
     // Track previous values for effect triggering (converted to double for comparison)
     private double[] lastDigits;
@@ -55,6 +59,17 @@ public class AscendHud extends CustomUIHud {
         lastStaticKey = key;
         UICommandBuilder commandBuilder = new UICommandBuilder();
         commandBuilder.set("#PlayerNameText.Text", "Ascend");
+        update(false, commandBuilder);
+    }
+
+    public void updatePlayerCount() {
+        int count = Universe.get().getPlayers().size();
+        if (count == lastPlayerCount) {
+            return;
+        }
+        lastPlayerCount = count;
+        UICommandBuilder commandBuilder = new UICommandBuilder();
+        commandBuilder.set("#PlayerCountText.Text", String.valueOf(count));
         update(false, commandBuilder);
     }
 
@@ -208,6 +223,8 @@ public class AscendHud extends CustomUIHud {
         lastElevationVisible = null;
         lastPrestigeKey = null;
         lastPrestigeVisible = null;
+        lastAscensionKey = null;
+        lastAscensionVisible = null;
         lastTimerText = null;
         lastTimerVisible = null;
         lastAscensionProgressKey = null;
@@ -220,7 +237,7 @@ public class AscendHud extends CustomUIHud {
 
     public void updatePrestige(Map<SummitCategory, Integer> summitLevels, int ascensionCount, int skillPoints,
                                SummitManager.SummitPreview multPreview, SummitManager.SummitPreview speedPreview, SummitManager.SummitPreview evoPreview) {
-        boolean showPrestige = ascensionCount > 0 || hasSummitLevels(summitLevels);
+        boolean showPrestige = hasSummitLevels(summitLevels) || hasAnyPreviewGain(multPreview, speedPreview, evoPreview);
         String prestigeKey = buildPrestigeKey(summitLevels, ascensionCount, skillPoints, multPreview, speedPreview, evoPreview);
 
         if (prestigeKey.equals(lastPrestigeKey) && Boolean.valueOf(showPrestige).equals(lastPrestigeVisible)) {
@@ -250,6 +267,28 @@ public class AscendHud extends CustomUIHud {
             return name + " Lv." + preview.currentLevel() + " -> Lv." + preview.newLevel();
         }
         return name + " Lv." + preview.currentLevel();
+    }
+
+    public void updateAscension(int ascensionCount, int availableAP) {
+        boolean show = ascensionCount > 0;
+        String key = ascensionCount + "|" + availableAP;
+
+        if (key.equals(lastAscensionKey) && Boolean.valueOf(show).equals(lastAscensionVisible)) {
+            return;
+        }
+
+        lastAscensionKey = key;
+        lastAscensionVisible = show;
+
+        UICommandBuilder commandBuilder = new UICommandBuilder();
+        commandBuilder.set("#AscensionHud.Visible", show);
+
+        if (show) {
+            commandBuilder.set("#AscensionApText.Text", "AP: " + availableAP + " available");
+            commandBuilder.set("#AscensionCountText.Text", "Ascendance: " + ascensionCount);
+        }
+
+        update(false, commandBuilder);
     }
 
     public void updateAscensionQuest(BigNumber vexa) {
@@ -301,6 +340,15 @@ public class AscendHud extends CustomUIHud {
         }
         for (Integer level : summitLevels.values()) {
             if (level != null && level > 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean hasAnyPreviewGain(SummitManager.SummitPreview... previews) {
+        for (SummitManager.SummitPreview p : previews) {
+            if (p != null && p.hasGain()) {
                 return true;
             }
         }

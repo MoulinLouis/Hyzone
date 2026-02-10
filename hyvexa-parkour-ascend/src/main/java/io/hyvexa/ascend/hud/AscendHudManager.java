@@ -69,6 +69,7 @@ public class AscendHudManager {
             return;
         }
         hud.applyStaticText();
+        hud.updatePlayerCount();
         if (playerStore == null) {
             return;
         }
@@ -92,6 +93,9 @@ public class AscendHudManager {
             SummitManager.SummitPreview speedPreview = summitManager != null ? summitManager.previewSummit(playerId, AscendConstants.SummitCategory.RUNNER_SPEED) : null;
             SummitManager.SummitPreview evoPreview = summitManager != null ? summitManager.previewSummit(playerId, AscendConstants.SummitCategory.EVOLUTION_POWER) : null;
             hud.updatePrestige(summitLevels, ascensionCount, skillPoints, multPreview, speedPreview, evoPreview);
+
+            // Update ascension HUD card
+            hud.updateAscension(ascensionCount, skillPoints);
 
             // Update ascension quest progress bar
             hud.updateAscensionQuest(vexa);
