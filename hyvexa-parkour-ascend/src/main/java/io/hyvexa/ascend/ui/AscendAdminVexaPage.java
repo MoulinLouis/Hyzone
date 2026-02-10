@@ -34,6 +34,7 @@ public class AscendAdminVexaPage extends InteractiveCustomUIPage<AscendAdminVexa
     private String amountInput = "";
     private String skillPointsInput = "";
     private String voidYThresholdInput = "";
+    private int resetAllClickCount = 0;
 
     public AscendAdminVexaPage(@Nonnull PlayerRef playerRef) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, VexaData.CODEC);
@@ -152,6 +153,17 @@ public class AscendAdminVexaPage extends InteractiveCustomUIPage<AscendAdminVexa
     }
 
     private void resetAllPlayers(Player player) {
+        resetAllClickCount++;
+        int remaining = 3 - resetAllClickCount;
+
+        if (remaining > 0) {
+            player.sendMessage(Message.raw("[Ascend] Click " + remaining + " more time" + (remaining > 1 ? "s" : "") + " to confirm reset ALL players.")
+                .color(SystemMessageUtils.WARN));
+            return;
+        }
+
+        resetAllClickCount = 0;
+
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         AscendPlayerStore playerStore = plugin != null ? plugin.getPlayerStore() : null;
         if (playerStore == null) {
@@ -246,11 +258,11 @@ public class AscendAdminVexaPage extends InteractiveCustomUIPage<AscendAdminVexa
         }
         if (add) {
             playerStore.addSkillTreePoints(playerRef.getUuid(), amount);
-            player.sendMessage(Message.raw("[Ascend] Added " + amount + " skill points.")
+            player.sendMessage(Message.raw("[Ascend] Added " + amount + " AP.")
                 .color(SystemMessageUtils.SUCCESS));
         } else {
             playerStore.addSkillTreePoints(playerRef.getUuid(), -amount);
-            player.sendMessage(Message.raw("[Ascend] Removed " + amount + " skill points.")
+            player.sendMessage(Message.raw("[Ascend] Removed " + amount + " AP.")
                 .color(SystemMessageUtils.SECONDARY));
         }
         UICommandBuilder commandBuilder = new UICommandBuilder();
@@ -262,7 +274,7 @@ public class AscendAdminVexaPage extends InteractiveCustomUIPage<AscendAdminVexa
     private int parseSkillPointsAmount(Player player) {
         String raw = skillPointsInput != null ? skillPointsInput.trim() : "";
         if (raw.isEmpty()) {
-            player.sendMessage(Message.raw("Enter a skill points amount."));
+            player.sendMessage(Message.raw("Enter an AP amount."));
             return -1;
         }
         try {
