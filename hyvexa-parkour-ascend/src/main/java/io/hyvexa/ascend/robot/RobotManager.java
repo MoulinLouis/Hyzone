@@ -676,7 +676,7 @@ public class RobotManager {
                 World world = Universe.get().getWorld(worldName);
                 if (world != null) {
                     double[] startPosArr = {map.getStartX(), map.getStartY(), map.getStartZ()};
-                    world.execute(() -> teleportNpcWithRecordedRotation(entityRef, world, startPosArr, map.getStartRotY()));
+                    world.execute(() -> teleportNpcWithRecordedRotation(robot, entityRef, world, startPosArr, map.getStartRotY()));
                     robot.setPreviousPosition(null);  // Reset for new run
                 }
             }
