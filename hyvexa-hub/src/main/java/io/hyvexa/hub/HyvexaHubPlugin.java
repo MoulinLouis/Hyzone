@@ -5,6 +5,7 @@ import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.packets.interface_.HudComponent;
+import com.hypixel.hytale.server.core.event.events.player.AddPlayerToWorldEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
@@ -39,13 +40,15 @@ public class HyvexaHubPlugin extends JavaPlugin {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     /** Delay before first HUD update after attach, to allow the client to load the UI. */
     private static final long HUD_READY_DELAY_MS = 250L;
-    private static final long HUD_TICK_INTERVAL_MS = 200L;
+    /** Fallback recovery cadence for players that still need HUD attach/reattach. */
+    private static final long HUD_RECOVERY_INTERVAL_MS = 1000L;
     public static final short SLOT_SERVER_SELECTOR = 0;
     private static HyvexaHubPlugin INSTANCE;
 
     private HubRouter router;
     private final ConcurrentHashMap<UUID, HubHudState> hubHudStates = new ConcurrentHashMap<>();
     private final Set<UUID> hubHudAttachInFlight = ConcurrentHashMap.newKeySet();
+    private final Set<UUID> hubHudPendingStabilization = ConcurrentHashMap.newKeySet();
     private ScheduledFuture<?> hubHudTask;
 
     private record HubHudState(HubHud hud, long readyAt) {
@@ -109,6 +112,38 @@ public class HyvexaHubPlugin extends JavaPlugin {
                 requestHubHudAttach(ref, store, playerRef);
             }, world);
         });
+        this.getEventRegistry().registerGlobal(AddPlayerToWorldEvent.class, event -> {
+            try {
+                World world = event.getWorld();
+                if (world == null) {
+                    return;
+                }
+                var holder = event.getHolder();
+                if (holder == null) {
+                    return;
+                }
+                PlayerRef playerRef = holder.getComponent(PlayerRef.getComponentType());
+                if (playerRef == null) {
+                    return;
+                }
+                UUID playerId = playerRef.getUuid();
+                if (playerId == null) {
+                    return;
+                }
+                if (!isHubWorld(world)) {
+                    clearHubHudState(playerId);
+                    return;
+                }
+                hubHudPendingStabilization.add(playerId);
+                Ref<EntityStore> ref = playerRef.getReference();
+                if (ref == null || !ref.isValid()) {
+                    return;
+                }
+                requestHubHudAttach(ref, ref.getStore(), playerRef);
+            } catch (Exception e) {
+                LOGGER.at(Level.WARNING).withCause(e).log("Exception in AddPlayerToWorldEvent (hub HUD)");
+            }
+        });
         this.getEventRegistry().registerGlobal(PlayerDisconnectEvent.class, event -> {
             PlayerRef playerRef = event.getPlayerRef();
             if (playerRef == null) {
@@ -118,8 +153,7 @@ public class HyvexaHubPlugin extends JavaPlugin {
             if (playerId == null) {
                 return;
             }
-            hubHudStates.remove(playerId);
-            hubHudAttachInFlight.remove(playerId);
+            clearHubHudState(playerId);
         });
 
         for (PlayerRef playerRef : Universe.get().getPlayers()) {
@@ -134,13 +168,17 @@ public class HyvexaHubPlugin extends JavaPlugin {
         }
 
         hubHudTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(
-                this::tickHubHud, HUD_TICK_INTERVAL_MS, HUD_TICK_INTERVAL_MS, TimeUnit.MILLISECONDS
+                this::tickHubHudRecovery, HUD_RECOVERY_INTERVAL_MS, HUD_RECOVERY_INTERVAL_MS, TimeUnit.MILLISECONDS
         );
     }
 
     private void requestHubHudAttach(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef) {
         UUID playerId = playerRef != null ? playerRef.getUuid() : null;
-        if (playerId == null || !hubHudAttachInFlight.add(playerId)) {
+        if (playerId == null) {
+            return;
+        }
+        hubHudPendingStabilization.add(playerId);
+        if (!hubHudAttachInFlight.add(playerId)) {
             return;
         }
         attachHubHud(ref, store, playerRef, playerId);
@@ -161,7 +199,7 @@ public class HyvexaHubPlugin extends JavaPlugin {
                 if (player == null) {
                     return;
                 }
-                HubHudState state = hubHudStates.compute(playerRef.getUuid(), (ignored, existing) -> {
+                HubHudState state = hubHudStates.compute(playerId, (ignored, existing) -> {
                     HubHud hud = existing != null ? existing.hud() : new HubHud(playerRef);
                     return new HubHudState(hud, System.currentTimeMillis() + HUD_READY_DELAY_MS);
                 });
@@ -202,33 +240,48 @@ public class HyvexaHubPlugin extends JavaPlugin {
         inventory.getHotbar().setItemStackForSlot(SLOT_SERVER_SELECTOR, new ItemStack(HubConstants.ITEM_SERVER_SELECTOR, 1), false);
     }
 
-    private void tickHubHud() {
-        for (PlayerRef playerRef : Universe.get().getPlayers()) {
-            Ref<EntityStore> ref = playerRef != null ? playerRef.getReference() : null;
+    private void tickHubHudRecovery() {
+        long now = System.currentTimeMillis();
+        for (UUID playerId : hubHudPendingStabilization) {
+            if (hubHudAttachInFlight.contains(playerId)) {
+                continue;
+            }
+
+            HubHudState state = hubHudStates.get(playerId);
+            if (state != null && state.hud() != null) {
+                if (now < state.readyAt()) {
+                    continue;
+                }
+                hubHudPendingStabilization.remove(playerId);
+                continue;
+            }
+
+            PlayerRef playerRef = Universe.get().getPlayer(playerId);
+            if (playerRef == null || !playerRef.isValid()) {
+                clearHubHudState(playerId);
+                continue;
+            }
+            Ref<EntityStore> ref = playerRef.getReference();
             if (ref == null || !ref.isValid()) {
+                clearHubHudState(playerId);
                 continue;
             }
             Store<EntityStore> store = ref.getStore();
-            if (store == null) {
+            if (!isHubWorld(store)) {
+                clearHubHudState(playerId);
                 continue;
             }
-            World world = store.getExternalData().getWorld();
-            if (world == null || !isHubWorld(world)) {
-                continue;
-            }
-            UUID playerId = playerRef.getUuid();
-            if (playerId == null) {
-                continue;
-            }
-            HubHudState state = hubHudStates.get(playerId);
-            if (state == null || state.hud() == null) {
-                requestHubHudAttach(ref, store, playerRef);
-                continue;
-            }
-            if (System.currentTimeMillis() < state.readyAt()) {
-                continue;
-            }
+            requestHubHudAttach(ref, store, playerRef);
         }
+    }
+
+    private void clearHubHudState(UUID playerId) {
+        if (playerId == null) {
+            return;
+        }
+        hubHudStates.remove(playerId);
+        hubHudAttachInFlight.remove(playerId);
+        hubHudPendingStabilization.remove(playerId);
     }
 
     private boolean isHubWorld(World world) {
@@ -251,5 +304,8 @@ public class HyvexaHubPlugin extends JavaPlugin {
             hubHudTask.cancel(false);
             hubHudTask = null;
         }
+        hubHudStates.clear();
+        hubHudAttachInFlight.clear();
+        hubHudPendingStabilization.clear();
     }
 }
