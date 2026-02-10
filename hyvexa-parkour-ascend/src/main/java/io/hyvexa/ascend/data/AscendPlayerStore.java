@@ -41,6 +41,7 @@ public class AscendPlayerStore {
     private final Map<UUID, AscendPlayerProgress> detachedDirtyPlayers = new ConcurrentHashMap<>();
     private final AtomicBoolean saveQueued = new AtomicBoolean(false);
     private final AtomicReference<ScheduledFuture<?>> saveFuture = new AtomicReference<>();
+    private final Set<UUID> ascensionCinematicActive = ConcurrentHashMap.newKeySet();
 
     private volatile List<LeaderboardEntry> leaderboardCache = List.of();
     private volatile long leaderboardCacheTimestamp = 0;
@@ -384,7 +385,9 @@ public class AscendPlayerStore {
             "ascend_player_summit",
             "ascend_player_skills",
             "ascend_player_achievements",
-            "ascend_ghost_recordings"
+            "ascend_ghost_recordings",
+            "ascend_challenges",
+            "ascend_challenge_records"
         };
 
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
@@ -551,6 +554,9 @@ public class AscendPlayerStore {
     }
 
     private void triggerAscensionCinematic(UUID playerId) {
+        if (!ascensionCinematicActive.add(playerId)) {
+            return; // Cinematic already in progress for this player
+        }
         HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
             ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
             if (plugin == null) return;
@@ -574,9 +580,84 @@ public class AscendPlayerStore {
                 com.hypixel.hytale.server.core.io.PacketHandler ph = playerRef.getPacketHandler();
                 if (player == null || ph == null) return;
 
-                io.hyvexa.ascend.ascension.AscensionCinematic.play(player, ph, playerRef, store, ref, world);
+                // Auto-ascend after cinematic completes
+                Runnable onComplete = () -> {
+                    performAutoAscension(playerId, player, playerRef, ref, store);
+                };
+
+                io.hyvexa.ascend.ascension.AscensionCinematic.play(player, ph, playerRef, store, ref, world, onComplete);
             }, world);
         }, 1500, TimeUnit.MILLISECONDS);
+    }
+
+    private void performAutoAscension(UUID playerId,
+                                      com.hypixel.hytale.server.core.entity.entities.Player player,
+                                      com.hypixel.hytale.server.core.universe.PlayerRef playerRef,
+                                      com.hypixel.hytale.component.Ref<com.hypixel.hytale.server.core.universe.world.storage.EntityStore> ref,
+                                      com.hypixel.hytale.component.Store<com.hypixel.hytale.server.core.universe.world.storage.EntityStore> store) {
+        try {
+            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+            if (plugin == null) return;
+
+            io.hyvexa.ascend.ascension.AscensionManager ascensionManager = plugin.getAscensionManager();
+            if (ascensionManager == null) return;
+
+            if (!ascensionManager.canAscend(playerId)) return;
+
+            // Route to challenge completion if in a challenge
+            io.hyvexa.ascend.ascension.ChallengeManager challengeManager = plugin.getChallengeManager();
+            if (challengeManager != null && challengeManager.isInChallenge(playerId)) {
+                AscendConstants.ChallengeType type = challengeManager.getActiveChallenge(playerId);
+                long elapsedMs = challengeManager.completeChallenge(playerId);
+                if (elapsedMs >= 0) {
+                    String timeStr = io.hyvexa.common.util.FormatUtils.formatDurationLong(elapsedMs);
+                    player.sendMessage(com.hypixel.hytale.server.core.Message.raw(
+                        "[Challenge] " + (type != null ? type.getDisplayName() : "Challenge") + " completed in " + timeStr + "!")
+                        .color(io.hyvexa.common.util.SystemMessageUtils.SUCCESS));
+                    player.sendMessage(com.hypixel.hytale.server.core.Message.raw(
+                        "[Challenge] Your progress has been restored. Reward XP applied!")
+                        .color(io.hyvexa.common.util.SystemMessageUtils.SUCCESS));
+                }
+                return;
+            }
+
+            int newCount = ascensionManager.performAscension(playerId);
+            if (newCount < 0) return;
+
+            // Chat messages
+            player.sendMessage(com.hypixel.hytale.server.core.Message.raw(
+                "[Ascension] You have Ascended! (x" + newCount + ")")
+                .color(io.hyvexa.common.util.SystemMessageUtils.SUCCESS));
+            player.sendMessage(com.hypixel.hytale.server.core.Message.raw(
+                "[Ascension] +1 AP. All progress has been reset.")
+                .color(io.hyvexa.common.util.SystemMessageUtils.SUCCESS));
+            player.sendMessage(com.hypixel.hytale.server.core.Message.raw(
+                "[Ascension] Use /ascend skills to unlock abilities.")
+                .color(io.hyvexa.common.util.SystemMessageUtils.SECONDARY));
+
+            // Check achievements
+            if (plugin.getAchievementManager() != null) {
+                plugin.getAchievementManager().checkAndUnlockAchievements(playerId, player);
+            }
+
+            // Show ascension tutorial page after a short delay
+            HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
+                if (ref == null || !ref.isValid()) return;
+                com.hypixel.hytale.server.core.universe.world.World world = store.getExternalData().getWorld();
+                if (world == null) return;
+                java.util.concurrent.CompletableFuture.runAsync(() -> {
+                    if (!ref.isValid()) return;
+                    com.hypixel.hytale.server.core.entity.entities.Player p =
+                        store.getComponent(ref, com.hypixel.hytale.server.core.entity.entities.Player.getComponentType());
+                    if (p == null) return;
+                    p.getPageManager().openCustomPage(ref, store,
+                        new io.hyvexa.ascend.ui.AscendTutorialPage(playerRef,
+                            io.hyvexa.ascend.ui.AscendTutorialPage.Tutorial.ASCENSION));
+                }, world);
+            }, 500, TimeUnit.MILLISECONDS);
+        } finally {
+            ascensionCinematicActive.remove(playerId);
+        }
     }
 
     /**
@@ -1013,6 +1094,26 @@ public class AscendPlayerStore {
         return mapsWithRunners;
     }
 
+    /**
+     * Reset progress for a challenge: same as summit reset.
+     * Resets vexa, elevation, multipliers, runners, and map unlocks.
+     * Keeps best times.
+     * @return list of map IDs that had runners (for despawn handling)
+     */
+    public List<String> resetProgressForChallenge(UUID playerId, String firstMapId) {
+        AscendPlayerProgress progress = getPlayer(playerId);
+        if (progress == null) {
+            return List.of();
+        }
+
+        progress.setElevationMultiplier(1);
+        progress.clearSummitXp();
+
+        List<String> mapsWithRunners = resetMapProgress(progress, firstMapId, false, playerId);
+        markDirty(playerId);
+        return mapsWithRunners;
+    }
+
     public boolean isSessionFirstRunClaimed(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
         return progress != null && progress.isSessionFirstRunClaimed();
@@ -1133,6 +1234,8 @@ public class AscendPlayerStore {
                 "ascend_player_skills",
                 "ascend_player_achievements",
                 "ascend_ghost_recordings",
+                "ascend_challenges",
+                "ascend_challenge_records",
                 "ascend_players"
             };
 
@@ -1184,6 +1287,7 @@ public class AscendPlayerStore {
         // Remove from cache
         players.remove(playerId);
         resetPendingPlayers.remove(playerId);
+        ascensionCinematicActive.remove(playerId);
         if (!dirtyPlayerVersions.containsKey(playerId)) {
             detachedDirtyPlayers.remove(playerId);
         }

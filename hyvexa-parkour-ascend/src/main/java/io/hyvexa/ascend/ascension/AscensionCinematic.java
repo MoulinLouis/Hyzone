@@ -9,7 +9,6 @@ import com.hypixel.hytale.protocol.packets.camera.SetServerCamera;
 import com.hypixel.hytale.protocol.packets.world.PlaySoundEvent2D;
 import com.hypixel.hytale.protocol.packets.world.SpawnParticleSystem;
 import com.hypixel.hytale.server.core.HytaleServer;
-import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.CameraManager;
@@ -49,6 +48,16 @@ public class AscensionCinematic {
      */
     public static void play(Player player, PacketHandler ph, PlayerRef playerRef,
                             Store<EntityStore> store, Ref<EntityStore> ref, World world) {
+        play(player, ph, playerRef, store, ref, world, null);
+    }
+
+    /**
+     * Plays the full ascension cinematic with an optional completion callback.
+     * The onComplete runnable is invoked on the world thread after movement/camera are restored.
+     */
+    public static void play(Player player, PacketHandler ph, PlayerRef playerRef,
+                            Store<EntityStore> store, Ref<EntityStore> ref, World world,
+                            Runnable onComplete) {
         if (player == null || ph == null || playerRef == null || store == null || ref == null || world == null) {
             return;
         }
@@ -190,7 +199,7 @@ public class AscensionCinematic {
         } catch (Exception e) {
             logPhaseWarning(playerRef, "pipeline-build", e);
         } finally {
-            scheduleFinalizer(finalizerDelayMs, finalized, player, playerRef, store, ref, world);
+            scheduleFinalizer(finalizerDelayMs, finalized, player, playerRef, store, ref, world, onComplete);
         }
     }
 
@@ -239,21 +248,22 @@ public class AscensionCinematic {
 
     private static void scheduleFinalizer(long delayMs, AtomicBoolean finalized, Player player,
                                           PlayerRef playerRef, Store<EntityStore> store,
-                                          Ref<EntityStore> ref, World world) {
+                                          Ref<EntityStore> ref, World world,
+                                          Runnable onComplete) {
         String phaseId = "phase5-finalizer";
         try {
             HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
-                runFinalizer(finalized, player, playerRef, store, ref, world, phaseId);
+                runFinalizer(finalized, player, playerRef, store, ref, world, phaseId, onComplete);
             }, Math.max(0L, delayMs), TimeUnit.MILLISECONDS);
         } catch (Exception e) {
             logPhaseWarning(playerRef, phaseId + "-schedule", e);
-            runFinalizer(finalized, player, playerRef, store, ref, world, phaseId + "-fallback");
+            runFinalizer(finalized, player, playerRef, store, ref, world, phaseId + "-fallback", onComplete);
         }
     }
 
     private static void runFinalizer(AtomicBoolean finalized, Player player, PlayerRef playerRef,
                                      Store<EntityStore> store, Ref<EntityStore> ref,
-                                     World world, String phaseId) {
+                                     World world, String phaseId, Runnable onComplete) {
         if (!finalized.compareAndSet(false, true)) {
             return;
         }
@@ -261,6 +271,9 @@ public class AscensionCinematic {
             world.execute(() -> {
                 try {
                     restoreMovementAndCamera(player, playerRef, store, ref);
+                    if (onComplete != null) {
+                        onComplete.run();
+                    }
                 } catch (Exception e) {
                     logPhaseWarning(playerRef, phaseId, e);
                 }
@@ -282,9 +295,6 @@ public class AscensionCinematic {
         CameraManager cameraManager = store.getComponent(ref, CameraManager.getComponentType());
         if (cameraManager != null) {
             cameraManager.resetCamera(playerRef);
-        }
-        if (player != null) {
-            player.sendMessage(Message.raw("You are now ready to Ascend!").color("#FFD700"));
         }
     }
 
