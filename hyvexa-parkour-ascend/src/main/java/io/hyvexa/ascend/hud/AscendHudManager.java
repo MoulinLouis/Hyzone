@@ -32,6 +32,8 @@ public class AscendHudManager {
     private final ConcurrentHashMap<UUID, AscendHud> ascendHuds = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Boolean> ascendHudAttached = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Long> ascendHudReadyAt = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, HiddenAscendHud> hiddenHuds = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, Boolean> hudHidden = new ConcurrentHashMap<>();
     private final java.util.Set<UUID> previewPlayers = ConcurrentHashMap.newKeySet();
 
     public AscendHudManager(AscendPlayerStore playerStore, AscendMapStore mapStore, AscendRunTracker runTracker, SummitManager summitManager) {
@@ -48,6 +50,10 @@ public class AscendHudManager {
         }
         UUID playerId = playerRef.getUuid();
         if (previewPlayers.contains(playerId)) {
+            return;
+        }
+        if (isHudHidden(playerId)) {
+            attachHiddenHud(playerRef, player);
             return;
         }
         AscendHud hud = ascendHuds.get(playerId);
@@ -111,7 +117,7 @@ public class AscendHudManager {
             return;
         }
         UUID playerId = playerRef.getUuid();
-        if (previewPlayers.contains(playerId)) {
+        if (previewPlayers.contains(playerId) || isHudHidden(playerId)) {
             return;
         }
         AscendHud hud = ascendHuds.get(playerId);
@@ -137,6 +143,10 @@ public class AscendHudManager {
         if (playerRef == null || player == null) {
             return;
         }
+        if (isHudHidden(playerRef.getUuid())) {
+            attachHiddenHud(playerRef, player);
+            return;
+        }
         AscendHud hud = ascendHuds.computeIfAbsent(playerRef.getUuid(), id -> new AscendHud(playerRef));
         player.getHudManager().setCustomHud(playerRef, hud);
         player.getHudManager().hideHudComponents(playerRef, HudComponent.Compass, HudComponent.Health, HudComponent.Stamina);
@@ -145,6 +155,29 @@ public class AscendHudManager {
         hud.applyStaticText();
         ascendHudAttached.put(playerRef.getUuid(), true);
         ascendHudReadyAt.put(playerRef.getUuid(), System.currentTimeMillis() + 250L);
+    }
+
+    public void hideHud(UUID playerId) {
+        hudHidden.put(playerId, true);
+        ascendHudAttached.remove(playerId);
+    }
+
+    public void showHud(UUID playerId) {
+        hudHidden.remove(playerId);
+        ascendHudAttached.remove(playerId);
+    }
+
+    public boolean isHudHidden(UUID playerId) {
+        return playerId != null && Boolean.TRUE.equals(hudHidden.get(playerId));
+    }
+
+    private void attachHiddenHud(PlayerRef playerRef, Player player) {
+        if (playerRef == null || player == null) {
+            return;
+        }
+        HiddenAscendHud hud = hiddenHuds.computeIfAbsent(playerRef.getUuid(), id -> new HiddenAscendHud(playerRef));
+        player.getHudManager().setCustomHud(playerRef, hud);
+        player.getHudManager().hideHudComponents(playerRef, HudComponent.Compass, HudComponent.Health, HudComponent.Stamina);
     }
 
     public void setPreviewMode(UUID playerId, boolean enabled) {
@@ -159,6 +192,8 @@ public class AscendHudManager {
         ascendHuds.remove(playerId);
         ascendHudAttached.remove(playerId);
         ascendHudReadyAt.remove(playerId);
+        hiddenHuds.remove(playerId);
+        hudHidden.remove(playerId);
         previewPlayers.remove(playerId);
     }
 
@@ -171,7 +206,7 @@ public class AscendHudManager {
     }
 
     public void updateToasts(UUID playerId) {
-        if (previewPlayers.contains(playerId)) {
+        if (previewPlayers.contains(playerId) || isHudHidden(playerId)) {
             return;
         }
         AscendHud hud = ascendHuds.get(playerId);

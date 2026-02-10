@@ -27,12 +27,10 @@ public class SkillTreePage extends BaseAscendPage {
     static {
         NODE_COORDINATES.put(SkillTreeNode.AUTO_RUNNERS, "1:1");
         NODE_COORDINATES.put(SkillTreeNode.AUTO_EVOLUTION, "2:1");
-        NODE_COORDINATES.put(SkillTreeNode.PERSISTENCE, "3:1");
-        NODE_COORDINATES.put(SkillTreeNode.RUNNER_SPEED, "3:2");
-        NODE_COORDINATES.put(SkillTreeNode.OFFLINE_BOOST, "4:1");
-        NODE_COORDINATES.put(SkillTreeNode.SUMMIT_MEMORY, "5:1");
-        NODE_COORDINATES.put(SkillTreeNode.EVOLUTION_POWER, "5:2");
-        NODE_COORDINATES.put(SkillTreeNode.ASCENSION_CHALLENGES, "6:1");
+        NODE_COORDINATES.put(SkillTreeNode.RUNNER_SPEED, "3:1");
+        NODE_COORDINATES.put(SkillTreeNode.EVOLUTION_POWER, "3:2");
+        NODE_COORDINATES.put(SkillTreeNode.RUNNER_SPEED_2, "4:1");
+        NODE_COORDINATES.put(SkillTreeNode.ASCENSION_CHALLENGES, "5:1");
     }
 
     private static final String BUTTON_CLOSE = "Close";
@@ -93,7 +91,10 @@ public class SkillTreePage extends BaseAscendPage {
 
         // Update points display
         commandBuilder.set("#AvailablePoints.Text", String.valueOf(summary.availablePoints()));
-        commandBuilder.set("#TotalPoints.Text", summary.totalPoints() + " total");
+
+        // Update Ascendance display
+        int ascendanceCount = playerStore.getAscensionCount(playerId);
+        commandBuilder.set("#AscendanceValue.Text", String.valueOf(ascendanceCount));
 
         // Update each node
         for (SkillTreeNode node : SkillTreeNode.values()) {

@@ -795,10 +795,16 @@ public class RobotManager {
                 speedMultiplier *= summitManager.getRunnerSpeedBonus(ownerId);
             }
 
-            // Skill tree: Runner Speed Boost (×1.5 global runner speed)
+            // Skill tree: Runner Speed Boost (×1.1 global runner speed)
             AscensionManager ascensionManager = plugin.getAscensionManager();
-            if (ascensionManager != null && ascensionManager.hasRunnerSpeedBoost(ownerId)) {
-                speedMultiplier *= 1.5;
+            if (ascensionManager != null) {
+                if (ascensionManager.hasRunnerSpeedBoost(ownerId)) {
+                    speedMultiplier *= 1.1;
+                }
+                // Skill tree: Runner Speed II (×1.2 global runner speed)
+                if (ascensionManager.hasRunnerSpeedBoost2(ownerId)) {
+                    speedMultiplier *= 1.2;
+                }
             }
 
             // Momentum: temporary ×2.0 speed boost from manual run (per-map)

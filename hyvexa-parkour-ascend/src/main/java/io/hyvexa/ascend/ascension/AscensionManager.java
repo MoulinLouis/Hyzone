@@ -164,20 +164,12 @@ public class AscensionManager {
         return hasSkillNode(playerId, SkillTreeNode.AUTO_EVOLUTION);
     }
 
-    public boolean hasPersistence(UUID playerId) {
-        return hasSkillNode(playerId, SkillTreeNode.PERSISTENCE);
-    }
-
     public boolean hasRunnerSpeedBoost(UUID playerId) {
         return hasSkillNode(playerId, SkillTreeNode.RUNNER_SPEED);
     }
 
-    public boolean hasOfflineBoost(UUID playerId) {
-        return hasSkillNode(playerId, SkillTreeNode.OFFLINE_BOOST);
-    }
-
-    public boolean hasSummitMemory(UUID playerId) {
-        return hasSkillNode(playerId, SkillTreeNode.SUMMIT_MEMORY);
+    public boolean hasRunnerSpeedBoost2(UUID playerId) {
+        return hasSkillNode(playerId, SkillTreeNode.RUNNER_SPEED_2);
     }
 
     public boolean hasEvolutionPowerBoost(UUID playerId) {

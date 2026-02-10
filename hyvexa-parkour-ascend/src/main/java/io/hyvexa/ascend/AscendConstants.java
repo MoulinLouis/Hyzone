@@ -556,12 +556,10 @@ public final class AscendConstants {
     public enum SkillTreeNode {
         AUTO_RUNNERS("Auto-Upgrade + Momentum", "Auto-upgrade runners & momentum speed boost on manual runs"),
         AUTO_EVOLUTION("Auto-Evolution", "Runners auto-evolve at max speed level", AUTO_RUNNERS),
-        PERSISTENCE("Persistence", "Keep 10% of map multipliers after Elevation", AUTO_EVOLUTION),
-        RUNNER_SPEED("Runner Speed Boost", "x1.5 global runner speed", AUTO_EVOLUTION),
-        OFFLINE_BOOST("Offline Boost", "Offline earnings: 10% -> 25%", PERSISTENCE, RUNNER_SPEED),
-        SUMMIT_MEMORY("Summit Memory", "Keep 10% of Elevation after Summit", OFFLINE_BOOST),
-        EVOLUTION_POWER("Evolution Power+", "+1 base evolution power", OFFLINE_BOOST),
-        ASCENSION_CHALLENGES("Ascension Challenges", "Coming Soon", SUMMIT_MEMORY, EVOLUTION_POWER);
+        RUNNER_SPEED("Runner Speed Boost", "x1.1 global runner speed", AUTO_EVOLUTION),
+        EVOLUTION_POWER("Evolution Power+", "+1 base evolution power", AUTO_EVOLUTION),
+        RUNNER_SPEED_2("Runner Speed II", "x1.2 global runner speed", RUNNER_SPEED, EVOLUTION_POWER),
+        ASCENSION_CHALLENGES("Ascension Challenges", "Coming Soon", RUNNER_SPEED_2);
 
         private final String name;
         private final String description;
@@ -609,8 +607,6 @@ public final class AscendConstants {
     public enum AchievementType {
         // Milestones
         FIRST_STEPS("First Steps", "Complete first manual run", "Beginner"),
-        VEXA_HOARDER("Vexa Hoarder", "Earn 100K vexa total", "Collector"),
-        MILLIONAIRE("Millionaire", "Earn 1M vexa total", "Millionaire"),
         DEDICATED("Dedicated", "Complete 100 manual runs", "Dedicated"),
         MARATHON("Marathon", "Complete 1000 manual runs", "Marathoner"),
 
@@ -620,12 +616,9 @@ public final class AscendConstants {
         EVOLVED("Evolved", "Evolve a runner to 1+ stars", "Evolver"),
 
         // Prestige
+        FIRST_ELEVATION("First Elevation", "Complete first Elevation", "Elevated"),
         SUMMIT_SEEKER("Summit Seeker", "Complete first Summit", "Summiter"),
-        SUMMIT_MASTER("Summit Master", "Reach Summit Lv.10 in any category", "Summit Master"),
-        ASCENDED("Ascended", "Complete first Ascension", "Ascended"),
-
-        // Challenge
-        PERFECTIONIST("Perfectionist", "Max a runner (5★ Lv.20)", "Perfectionist");
+        ASCENDED("Ascended", "Complete first Ascension", "Ascended");
 
         private final String name;
         private final String description;
@@ -651,12 +644,7 @@ public final class AscendConstants {
     }
 
     // Achievement thresholds
-    public static final long ACHIEVEMENT_VEXA_100K = 100_000L;
-    public static final long ACHIEVEMENT_VEXA_1M = 1_000_000L;
     public static final int ACHIEVEMENT_MANUAL_RUNS_100 = 100;
     public static final int ACHIEVEMENT_MANUAL_RUNS_1000 = 1000;
     public static final int ACHIEVEMENT_RUNNER_COUNT = 5;
-    public static final int ACHIEVEMENT_SUMMIT_MAX_LEVEL = 10;
-    public static final int ACHIEVEMENT_RUNNER_MAX_STARS = 5;
-    public static final int ACHIEVEMENT_RUNNER_MAX_SPEED = 20;
 }

@@ -110,13 +110,8 @@ public class PassiveEarningsManager {
                 evolutionPowerBonus = plugin.getSummitManager().getEvolutionPowerBonus(playerId);
             }
 
-            // Determine offline rate (skill tree boost: 10% → 25%)
+            // Offline rate: always base 10%
             long effectiveOfflineRate = OFFLINE_RATE_PERCENT;
-            ParkourAscendPlugin ascendPlugin = ParkourAscendPlugin.getInstance();
-            if (ascendPlugin != null && ascendPlugin.getAscensionManager() != null
-                    && ascendPlugin.getAscensionManager().hasOfflineBoost(playerId)) {
-                effectiveOfflineRate = 25L;
-            }
 
             // Multiplier gain per run (with Summit bonuses) - at offline rate
             BigNumber multiplierIncrement = AscendConstants.getRunnerMultiplierIncrement(stars, multiplierGainBonus, evolutionPowerBonus);

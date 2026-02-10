@@ -40,6 +40,8 @@ import io.hyvexa.ascend.tutorial.TutorialTriggerService;
 import io.hyvexa.ascend.passive.PassiveEarningsManager;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.ui.AscendMapSelectPage;
+import io.hyvexa.ascend.ui.AscendMusicPage;
+import io.hyvexa.ascend.ui.AscendSettingsPage;
 import io.hyvexa.ascend.ui.BaseAscendPage;
 import io.hyvexa.ascend.util.AscendInventoryUtils;
 import io.hyvexa.ascend.util.AscendModeGate;
@@ -162,7 +164,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
             LOGGER.at(Level.WARNING).withCause(e).log("Failed to initialize robot manager");
         }
         ascensionManager = new AscensionManager(playerStore, runTracker);
-        achievementManager = new AchievementManager(playerStore, mapStore);
+        achievementManager = new AchievementManager(playerStore);
 
         // Initialize passive earnings manager
         passiveEarningsManager = new PassiveEarningsManager(
@@ -259,6 +261,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     }
                     AscendInventoryUtils.giveMenuItems(player);
                     hudManager.attach(playerRef, player);
+                    AscendMusicPage.applyStoredMusic(playerRef);
                 }, world).exceptionally(ex -> {
                     LOGGER.at(Level.WARNING).withCause(ex).log("Exception in PlayerReadyEvent async task");
                     return null;
@@ -323,6 +326,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
             AscendMapSelectPage.clearBuyAllCooldown(playerId);
             BaseAscendPage.removeCurrentPage(playerId);
             AscendLeaveInteraction.clearPendingLeave(playerId);
+            AscendSettingsPage.clearPlayer(playerId);
+            AscendMusicPage.clearPlayer(playerId);
             hudManager.removePlayer(playerId);
             if (runTracker != null) {
                 runTracker.cancelRun(playerId);

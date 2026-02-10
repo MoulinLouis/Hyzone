@@ -6,8 +6,6 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.AscendConstants.AchievementType;
 import io.hyvexa.ascend.AscendConstants.SummitCategory;
-import io.hyvexa.ascend.data.AscendMap;
-import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.common.util.SystemMessageUtils;
@@ -25,11 +23,9 @@ public class AchievementManager {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
 
     private final AscendPlayerStore playerStore;
-    private final AscendMapStore mapStore;
 
-    public AchievementManager(AscendPlayerStore playerStore, AscendMapStore mapStore) {
+    public AchievementManager(AscendPlayerStore playerStore) {
         this.playerStore = playerStore;
-        this.mapStore = mapStore;
     }
 
     /**
@@ -74,8 +70,6 @@ public class AchievementManager {
         return switch (achievement) {
             // Milestones
             case FIRST_STEPS -> progress.getTotalManualRuns() >= 1;
-            case VEXA_HOARDER -> progress.getTotalVexaEarned().gte(io.hyvexa.common.math.BigNumber.fromLong(AscendConstants.ACHIEVEMENT_VEXA_100K));
-            case MILLIONAIRE -> progress.getTotalVexaEarned().gte(io.hyvexa.common.math.BigNumber.fromLong(AscendConstants.ACHIEVEMENT_VEXA_1M));
             case DEDICATED -> progress.getTotalManualRuns() >= AscendConstants.ACHIEVEMENT_MANUAL_RUNS_100;
             case MARATHON -> progress.getTotalManualRuns() >= AscendConstants.ACHIEVEMENT_MANUAL_RUNS_1000;
 
@@ -85,12 +79,9 @@ public class AchievementManager {
             case EVOLVED -> hasEvolvedRobot(progress);
 
             // Prestige
+            case FIRST_ELEVATION -> progress.getElevationMultiplier() >= 1;
             case SUMMIT_SEEKER -> hasAnySummitLevel(progress);
-            case SUMMIT_MASTER -> hasSummitMaxLevel(progress);
             case ASCENDED -> progress.getAscensionCount() >= 1;
-
-            // Challenge
-            case PERFECTIONIST -> hasPerfectRunner(progress);
         };
     }
 
@@ -125,26 +116,6 @@ public class AchievementManager {
     private boolean hasAnySummitLevel(AscendPlayerProgress progress) {
         for (SummitCategory category : SummitCategory.values()) {
             if (progress.getSummitLevel(category) >= 1) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean hasSummitMaxLevel(AscendPlayerProgress progress) {
-        for (SummitCategory category : SummitCategory.values()) {
-            if (progress.getSummitLevel(category) >= AscendConstants.ACHIEVEMENT_SUMMIT_MAX_LEVEL) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean hasPerfectRunner(AscendPlayerProgress progress) {
-        for (var mapProgress : progress.getMapProgress().values()) {
-            if (mapProgress.hasRobot()
-                && mapProgress.getRobotStars() >= AscendConstants.ACHIEVEMENT_RUNNER_MAX_STARS
-                && mapProgress.getRobotSpeedLevel() >= AscendConstants.ACHIEVEMENT_RUNNER_MAX_SPEED) {
                 return true;
             }
         }
@@ -230,18 +201,6 @@ public class AchievementManager {
                 current = Math.min(1, progress.getTotalManualRuns());
                 required = 1;
             }
-            case VEXA_HOARDER -> {
-                io.hyvexa.common.math.BigNumber totalVexa = progress.getTotalVexaEarned();
-                io.hyvexa.common.math.BigNumber threshold = io.hyvexa.common.math.BigNumber.fromLong(AscendConstants.ACHIEVEMENT_VEXA_100K);
-                current = (int) totalVexa.min(threshold).toLong();
-                required = (int) AscendConstants.ACHIEVEMENT_VEXA_100K;
-            }
-            case MILLIONAIRE -> {
-                io.hyvexa.common.math.BigNumber totalVexa = progress.getTotalVexaEarned();
-                io.hyvexa.common.math.BigNumber threshold = io.hyvexa.common.math.BigNumber.fromLong(AscendConstants.ACHIEVEMENT_VEXA_1M);
-                current = (int) totalVexa.min(threshold).toLong();
-                required = (int) AscendConstants.ACHIEVEMENT_VEXA_1M;
-            }
             case DEDICATED -> {
                 current = Math.min(progress.getTotalManualRuns(), AscendConstants.ACHIEVEMENT_MANUAL_RUNS_100);
                 required = AscendConstants.ACHIEVEMENT_MANUAL_RUNS_100;
@@ -262,24 +221,16 @@ public class AchievementManager {
                 current = hasEvolvedRobot(progress) ? 1 : 0;
                 required = 1;
             }
+            case FIRST_ELEVATION -> {
+                current = Math.min(progress.getElevationMultiplier(), 1);
+                required = 1;
+            }
             case SUMMIT_SEEKER -> {
                 current = hasAnySummitLevel(progress) ? 1 : 0;
                 required = 1;
             }
-            case SUMMIT_MASTER -> {
-                int maxLevel = 0;
-                for (SummitCategory cat : SummitCategory.values()) {
-                    maxLevel = Math.max(maxLevel, progress.getSummitLevel(cat));
-                }
-                current = Math.min(maxLevel, AscendConstants.ACHIEVEMENT_SUMMIT_MAX_LEVEL);
-                required = AscendConstants.ACHIEVEMENT_SUMMIT_MAX_LEVEL;
-            }
             case ASCENDED -> {
                 current = Math.min(progress.getAscensionCount(), 1);
-                required = 1;
-            }
-            case PERFECTIONIST -> {
-                current = hasPerfectRunner(progress) ? 1 : 0;
                 required = 1;
             }
         }

@@ -1,0 +1,5 @@
+$C = "../Common.ui";
+
+$C.@PageOverlay {
+  Background: #000000(0.0);
+}
