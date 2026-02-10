@@ -2,6 +2,11 @@ package io.hyvexa.ascend.data;
 
 import io.hyvexa.ascend.AscendConstants;
 
+/**
+ * Runtime balance source-of-truth:
+ * - Computed from AscendConstants using displayOrder
+ * - Not loaded from legacy ascend_maps balance/storage columns
+ */
 public class AscendMap {
 
     private String id;

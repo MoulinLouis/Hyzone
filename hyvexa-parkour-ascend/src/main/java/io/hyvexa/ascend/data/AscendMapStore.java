@@ -20,6 +20,8 @@ import java.util.logging.Level;
 public class AscendMapStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
+    private static final long LEGACY_ROBOT_TIME_REDUCTION_MS = 0L;
+    private static final int LEGACY_STORAGE_CAPACITY = 100;
 
     private final Map<String, AscendMap> maps = new LinkedHashMap<>();
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
@@ -31,9 +33,10 @@ public class AscendMapStore {
             return;
         }
 
+        // Runtime balance values are computed from display_order in AscendConstants.
+        // Legacy balance/storage columns stay write-compatible for migration rollout.
         String sql = """
-            SELECT id, name, price, robot_price, base_reward, base_run_time_ms, robot_time_reduction_ms, storage_capacity,
-                   world, start_x, start_y, start_z, start_rot_x, start_rot_y, start_rot_z,
+            SELECT id, name, world, start_x, start_y, start_z, start_rot_x, start_rot_y, start_rot_z,
                    finish_x, finish_y, finish_z, display_order
             FROM ascend_maps ORDER BY display_order, id
             """;
@@ -137,6 +140,8 @@ public class AscendMapStore {
             return;
         }
 
+        // Compatibility write path: keep legacy columns populated for existing schemas/tools.
+        // Runtime logic reads effective values from AscendConstants via display_order.
         String sql = """
             INSERT INTO ascend_maps (id, name, price, robot_price, base_reward, base_run_time_ms,
                 robot_time_reduction_ms, storage_capacity, world, start_x, start_y, start_z, start_rot_x, start_rot_y,
@@ -164,8 +169,8 @@ public class AscendMapStore {
             stmt.setLong(i++, map.getEffectiveRobotPrice());
             stmt.setLong(i++, map.getEffectiveBaseReward());
             stmt.setLong(i++, map.getEffectiveBaseRunTimeMs());
-            stmt.setLong(i++, 0L); // robot_time_reduction_ms deprecated in runtime balancing
-            stmt.setInt(i++, 100); // storage_capacity deprecated in runtime balancing
+            stmt.setLong(i++, LEGACY_ROBOT_TIME_REDUCTION_MS);
+            stmt.setInt(i++, LEGACY_STORAGE_CAPACITY);
             stmt.setString(i++, map.getWorld());
             stmt.setDouble(i++, map.getStartX());
             stmt.setDouble(i++, map.getStartY());
