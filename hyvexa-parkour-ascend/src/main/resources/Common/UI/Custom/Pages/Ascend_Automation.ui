@@ -136,7 +136,7 @@ $C.@PageOverlay {
 
           Label #LockedLabel {
             Style: (FontSize: 12, TextColor: #f59e0b);
-            Text: "Unlock 'Auto-Upgrade + Momentum' in the Skill Tree first.";
+            Text: "Unlock 'Auto-Upgrade + Momentum' in the Ascendancy Tree first.";
           }
         }
       }
@@ -162,7 +162,7 @@ $C.@PageOverlay {
         Label {
           Anchor: (Left: 0, Right: 0, Height: 18);
           Style: (FontSize: 11, TextColor: #6b7280);
-          Text: "Requires the Auto-Evolution skill tree node.";
+          Text: "Requires the Auto-Evolution ascendancy node.";
         }
 
         Group { Anchor: (Height: 10); }
@@ -202,7 +202,7 @@ $C.@PageOverlay {
 
           Label #EvoLockedLabel {
             Style: (FontSize: 12, TextColor: #f59e0b);
-            Text: "Unlock 'Auto-Evolution' in the Skill Tree first.";
+            Text: "Unlock 'Auto-Evolution' in the Ascendancy Tree first.";
           }
         }
       }

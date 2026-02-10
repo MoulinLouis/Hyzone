@@ -168,7 +168,7 @@ public class AutomationPage extends BaseAscendPage {
         UUID playerId = playerRef.getUuid();
 
         if (!ascensionManager.hasAutoRunners(playerId)) {
-            player.sendMessage(Message.raw("[Automation] Unlock 'Auto-Upgrade + Momentum' in the Skill Tree first.")
+            player.sendMessage(Message.raw("[Automation] Unlock 'Auto-Upgrade + Momentum' in the Ascendancy Tree first.")
                 .color(SystemMessageUtils.SECONDARY));
             return;
         }
@@ -201,7 +201,7 @@ public class AutomationPage extends BaseAscendPage {
         UUID playerId = playerRef.getUuid();
 
         if (!ascensionManager.hasAutoEvolution(playerId)) {
-            player.sendMessage(Message.raw("[Automation] Unlock 'Auto-Evolution' in the Skill Tree first.")
+            player.sendMessage(Message.raw("[Automation] Unlock 'Auto-Evolution' in the Ascendancy Tree first.")
                 .color(SystemMessageUtils.SECONDARY));
             return;
         }

@@ -4,7 +4,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
-import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
@@ -15,16 +14,31 @@ import io.hyvexa.ascend.AscendConstants.SkillTreeNode;
 import io.hyvexa.ascend.ascension.AscensionManager;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.common.ui.ButtonEventData;
-import io.hyvexa.common.util.SystemMessageUtils;
 
 import javax.annotation.Nonnull;
 import java.util.Set;
+import java.util.EnumMap;
+import java.util.Map;
 import java.util.UUID;
 
 public class SkillTreePage extends BaseAscendPage {
 
+    private static final Map<SkillTreeNode, String> NODE_COORDINATES = new EnumMap<>(SkillTreeNode.class);
+    static {
+        NODE_COORDINATES.put(SkillTreeNode.AUTO_RUNNERS, "1:1");
+        NODE_COORDINATES.put(SkillTreeNode.AUTO_EVOLUTION, "2:1");
+        NODE_COORDINATES.put(SkillTreeNode.PERSISTENCE, "3:1");
+        NODE_COORDINATES.put(SkillTreeNode.RUNNER_SPEED, "3:2");
+        NODE_COORDINATES.put(SkillTreeNode.OFFLINE_BOOST, "4:1");
+        NODE_COORDINATES.put(SkillTreeNode.SUMMIT_MEMORY, "5:1");
+        NODE_COORDINATES.put(SkillTreeNode.EVOLUTION_POWER, "5:2");
+        NODE_COORDINATES.put(SkillTreeNode.ASCENSION_CHALLENGES, "6:1");
+    }
+
     private static final String BUTTON_CLOSE = "Close";
     private static final String BUTTON_NODE_PREFIX = "Node_";
+    private static final String BUTTON_UNLOCK = "Unlock";
+    private static final String BUTTON_DETAIL_CLOSE = "DetailClose";
 
     private static final String COLOR_ACCENT = "#f59e0b";
     private static final String COLOR_LOCKED = "#4b5563";
@@ -34,6 +48,7 @@ public class SkillTreePage extends BaseAscendPage {
 
     private final AscendPlayerStore playerStore;
     private final AscensionManager ascensionManager;
+    private SkillTreeNode selectedNode;
 
     public SkillTreePage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore, AscensionManager ascensionManager) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
@@ -48,6 +63,12 @@ public class SkillTreePage extends BaseAscendPage {
 
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CloseButton",
             EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE), false);
+
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#UnlockButton",
+            EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_UNLOCK), false);
+
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#DetailCloseBtn",
+            EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_DETAIL_CLOSE), false);
 
         // Bind all node buttons dynamically
         for (SkillTreeNode node : SkillTreeNode.values()) {
@@ -119,6 +140,17 @@ public class SkillTreePage extends BaseAscendPage {
             return;
         }
 
+        if (BUTTON_DETAIL_CLOSE.equals(data.getButton())) {
+            selectedNode = null;
+            hideDetailPanel();
+            return;
+        }
+
+        if (BUTTON_UNLOCK.equals(data.getButton())) {
+            handleUnlockClick(ref, store);
+            return;
+        }
+
         if (data.getButton().startsWith(BUTTON_NODE_PREFIX)) {
             String nodeName = data.getButton().substring(BUTTON_NODE_PREFIX.length());
             try {
@@ -132,71 +164,97 @@ public class SkillTreePage extends BaseAscendPage {
 
     private void handleNodeClick(Ref<EntityStore> ref, Store<EntityStore> store, SkillTreeNode node) {
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        if (playerRef == null) {
+            return;
+        }
+
+        // Clicking the same node again closes the panel
+        if (node == selectedNode) {
+            selectedNode = null;
+            hideDetailPanel();
+            return;
+        }
+
+        selectedNode = node;
+        showDetailPanel(playerRef.getUuid(), node);
+    }
+
+    private void showDetailPanel(UUID playerId, SkillTreeNode node) {
+        UICommandBuilder builder = new UICommandBuilder();
+        var summary = ascensionManager.getSkillTreeSummary(playerId);
+        boolean isUnlocked = summary.unlockedNodes().contains(node);
+        boolean prereqsMet = node.hasPrerequisitesSatisfied(summary.unlockedNodes());
+        boolean canUnlock = ascensionManager.canUnlockSkillNode(playerId, node);
+
+        builder.set("#DetailCoord.Text", NODE_COORDINATES.getOrDefault(node, ""));
+
+        // Determine status and button visibility
+        if (!prereqsMet) {
+            // Locked: hide real info behind mystery
+            builder.set("#DetailTitle.Text", "???");
+            builder.set("#DetailDesc.Text", "");
+            builder.set("#DetailStatus.Text", "");
+            builder.set("#DetailStatus.Style.TextColor", COLOR_LOCKED_TEXT);
+            builder.set("#UnlockBtnActive.Visible", false);
+            builder.set("#UnlockBtnDisabled.Visible", false);
+        } else if (isUnlocked) {
+            builder.set("#DetailTitle.Text", node.getName());
+            builder.set("#DetailDesc.Text", node.getDescription());
+            builder.set("#DetailStatus.Text", "Already unlocked");
+            builder.set("#DetailStatus.Style.TextColor", COLOR_UNLOCKED_TEXT);
+            builder.set("#UnlockBtnActive.Visible", false);
+            builder.set("#UnlockBtnDisabled.Visible", false);
+        } else {
+            // Prerequisites met, not yet unlocked
+            builder.set("#DetailTitle.Text", node.getName());
+            builder.set("#DetailDesc.Text", node.getDescription());
+            if (canUnlock) {
+                builder.set("#DetailStatus.Text", "");
+                builder.set("#UnlockBtnActive.Visible", true);
+                builder.set("#UnlockBtnDisabled.Visible", false);
+            } else {
+                builder.set("#DetailStatus.Text", "Not enough AP");
+                builder.set("#DetailStatus.Style.TextColor", COLOR_LOCKED_TEXT);
+                builder.set("#UnlockBtnActive.Visible", false);
+                builder.set("#UnlockBtnDisabled.Visible", true);
+            }
+        }
+
+        builder.set("#DetailPanel.Visible", true);
+        sendUpdate(builder, null, false);
+    }
+
+    private void hideDetailPanel() {
+        UICommandBuilder builder = new UICommandBuilder();
+        builder.set("#DetailPanel.Visible", false);
+        sendUpdate(builder, null, false);
+    }
+
+    private void handleUnlockClick(Ref<EntityStore> ref, Store<EntityStore> store) {
+        if (selectedNode == null) {
+            return;
+        }
+
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         Player player = store.getComponent(ref, Player.getComponentType());
         if (playerRef == null || player == null) {
             return;
         }
 
         UUID playerId = playerRef.getUuid();
-        var summary = ascensionManager.getSkillTreeSummary(playerId);
+        SkillTreeNode node = selectedNode;
 
-        // Special handling for ASCENSION_CHALLENGES (teaser)
-        if (node == SkillTreeNode.ASCENSION_CHALLENGES) {
-            player.sendMessage(Message.raw("[Skill Tree] Ascension Challenges")
-                .color(SystemMessageUtils.PRIMARY_TEXT));
-            player.sendMessage(Message.raw("  Coming in a future update!")
-                .color(SystemMessageUtils.SECONDARY));
-            return;
-        }
-
-        // Already unlocked - show info
-        if (summary.unlockedNodes().contains(node)) {
-            player.sendMessage(Message.raw("[Skill Tree] " + node.getName())
-                .color(SystemMessageUtils.PRIMARY_TEXT));
-            player.sendMessage(Message.raw("  " + node.getDescription())
-                .color(SystemMessageUtils.SECONDARY));
-            return;
-        }
-
-        // Check prerequisites
-        if (!node.hasPrerequisitesSatisfied(summary.unlockedNodes())) {
-            player.sendMessage(Message.raw("[Skill Tree] " + node.getName() + " - LOCKED")
-                .color(SystemMessageUtils.SECONDARY));
-            StringBuilder reqMsg = new StringBuilder("  Requires: ");
-            SkillTreeNode[] prereqs = node.getPrerequisites();
-            for (int i = 0; i < prereqs.length; i++) {
-                if (i > 0) reqMsg.append(" or ");
-                reqMsg.append(prereqs[i].getName());
-            }
-            player.sendMessage(Message.raw(reqMsg.toString())
-                .color(SystemMessageUtils.SECONDARY));
-            return;
-        }
-
-        // Can unlock - attempt to unlock
         if (ascensionManager.canUnlockSkillNode(playerId, node)) {
             boolean success = ascensionManager.tryUnlockSkillNode(playerId, node);
             if (success) {
-                player.sendMessage(Message.raw("[Skill Tree] Unlocked: " + node.getName() + "!")
-                    .color(SystemMessageUtils.SUCCESS));
-                player.sendMessage(Message.raw("  " + node.getDescription())
-                    .color(SystemMessageUtils.SECONDARY));
+                // Refresh tree states and update detail panel to show unlocked state
+                UICommandBuilder builder = new UICommandBuilder();
+                updateAllNodeStates(ref, store, builder);
+                sendUpdate(builder, null, false);
 
-                // Refresh the page
-                refreshNodeStates(ref, store);
-            } else {
-                player.sendMessage(Message.raw("[Skill Tree] Failed to unlock skill.")
-                    .color(SystemMessageUtils.SECONDARY));
+                // Re-show the detail panel with updated state
+                showDetailPanel(playerId, node);
             }
-            return;
-        }
-
-        // Cannot unlock - no points
-        if (summary.availablePoints() <= 0) {
-            player.sendMessage(Message.raw("[Skill Tree] " + node.getName() + " - LOCKED")
-                .color(SystemMessageUtils.SECONDARY));
-            player.sendMessage(Message.raw("  No skill points. Ascend to earn more!")
-                .color(SystemMessageUtils.SECONDARY));
         }
     }
 
@@ -207,7 +265,7 @@ public class SkillTreePage extends BaseAscendPage {
     }
 
     /**
-     * Converts ENUM_NAME to PascalCase (e.g. AUTO_RUNNERS → AutoRunners).
+     * Converts ENUM_NAME to PascalCase (e.g. AUTO_RUNNERS -> AutoRunners).
      */
     private static String toPascalCase(String enumName) {
         StringBuilder sb = new StringBuilder();

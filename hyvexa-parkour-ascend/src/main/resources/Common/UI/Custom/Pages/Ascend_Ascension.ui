@@ -152,7 +152,7 @@ $C.@PageOverlay {
               Label {
                 Anchor: (Width: 180, Top: 0, Bottom: 0);
                 Style: (FontSize: 13, TextColor: #9fb0ba, VerticalAlignment: Center);
-                Text: "Skill Points";
+                Text: "Ascendancy Points";
               }
 
               Group { FlexWeight: 1; }
@@ -222,7 +222,7 @@ $C.@PageOverlay {
       Label {
         Anchor: (Left: 0, Right: 0, Top: 8);
         Style: (FontSize: 12, TextColor: #6b7280, HorizontalAlignment: Center, Wrap: true);
-        Text: "Each ascension grants +1 Skill Point for your Skill Tree.";
+        Text: "Each ascension grants +1 AP for your Ascendancy Tree.";
       }
     }
   }

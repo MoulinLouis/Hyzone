@@ -402,7 +402,7 @@ $C.@PageOverlay {
           Label {
             Anchor: (Top: 4);
             Style: (FontSize: 12, TextColor: #9fb0ba);
-            Text: "Ultimate prestige and Skill Tree";
+            Text: "Ultimate prestige and Ascendancy Tree";
           }
         }
 
