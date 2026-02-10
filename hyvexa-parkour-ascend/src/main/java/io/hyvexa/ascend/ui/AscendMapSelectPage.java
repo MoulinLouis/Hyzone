@@ -6,10 +6,10 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.annotation.Nonnull;
 
@@ -71,6 +71,8 @@ public class AscendMapSelectPage extends BaseAscendPage {
     private final RobotManager robotManager;
     private final GhostStore ghostStore;
     private ScheduledFuture<?> refreshTask;
+    private final AtomicBoolean refreshInFlight = new AtomicBoolean(false);
+    private final AtomicBoolean refreshRequested = new AtomicBoolean(false);
     private int lastMapCount;
     private final List<String> displayedMapIds = new ArrayList<>();
     private final Map<String, int[]> cachedMapState = new HashMap<>(); // mapId -> [speedLevel, stars]
@@ -588,11 +590,14 @@ public class AscendMapSelectPage extends BaseAscendPage {
                 stopAffordabilityUpdates();
                 return;
             }
-            try {
-                CompletableFuture.runAsync(() -> updateAffordabilityColors(ref, store), world);
-            } catch (Exception e) {
-                stopAffordabilityUpdates();
-            }
+            PageRefreshScheduler.requestRefresh(
+                world,
+                refreshInFlight,
+                refreshRequested,
+                () -> updateAffordabilityColors(ref, store),
+                this::stopAffordabilityUpdates,
+                "AscendMapSelectPage"
+            );
         }, 500L, 500L, TimeUnit.MILLISECONDS);
     }
 
@@ -601,6 +606,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
             refreshTask.cancel(false);
             refreshTask = null;
         }
+        refreshRequested.set(false);
     }
 
     private void updateAffordabilityColors(Ref<EntityStore> ref, Store<EntityStore> store) {

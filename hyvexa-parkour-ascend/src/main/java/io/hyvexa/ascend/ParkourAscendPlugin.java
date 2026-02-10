@@ -57,11 +57,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 
 public class ParkourAscendPlugin extends JavaPlugin {
@@ -87,9 +89,12 @@ public class ParkourAscendPlugin extends JavaPlugin {
     private PassiveEarningsManager passiveEarningsManager;
     private TutorialTriggerService tutorialTriggerService;
     private AscendWhitelistManager whitelistManager;
+    private AscendRuntimeConfig runtimeConfig;
     private ScheduledFuture<?> tickTask;
     private int tickCounter;
     private final ConcurrentHashMap<UUID, PlayerRef> playerRefCache = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<World, AtomicBoolean> worldTickInFlight = new ConcurrentHashMap<>();
+    private final Set<UUID> playersInAscendWorld = ConcurrentHashMap.newKeySet();
 
     public ParkourAscendPlugin(@Nonnull JavaPluginInit init) {
         super(init);
@@ -116,6 +121,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
         java.io.File whitelistFile = modsFolderPath.resolve("ascend_whitelist.json").toFile();
         whitelistManager = new AscendWhitelistManager(whitelistFile);
         WhitelistRegistry.register(whitelistManager);
+        runtimeConfig = AscendRuntimeConfig.load();
 
         // Core stores — fail fast if any fails
         try {
@@ -179,8 +185,10 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
         getCommandRegistry().registerCommand(new AscendCommand());
         getCommandRegistry().registerCommand(new AscendAdminCommand());
-        getCommandRegistry().registerCommand(new CinematicTestCommand());
-        getCommandRegistry().registerCommand(new HudPreviewCommand());
+        if (runtimeConfig.isEnableTestCommands()) {
+            getCommandRegistry().registerCommand(new CinematicTestCommand());
+            getCommandRegistry().registerCommand(new HudPreviewCommand());
+        }
         registerInteractionCodecs();
 
         // Register entity visibility filter system if not already registered
@@ -213,6 +221,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
                 // Cache PlayerRef for O(1) lookups
                 UUID playerId = playerRef.getUuid();
                 if (playerId != null) {
+                    playersInAscendWorld.add(playerId);
                     playerRefCache.put(playerId, playerRef);
                 }
                 // Register player as online for robot spawning
@@ -270,22 +279,24 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     return;
                 }
 
-                // If joining Ascend world, ensure items are present
+                PlayerRef playerRef = holder.getComponent(PlayerRef.getComponentType());
+                UUID playerId = playerRef != null ? playerRef.getUuid() : null;
                 if (isAscendWorld(world)) {
+                    if (playerId != null) {
+                        playersInAscendWorld.add(playerId);
+                    }
+                    // If joining Ascend world, ensure items are present
                     Player player = holder.getComponent(Player.getComponentType());
                     if (player == null) {
                         return;
                     }
                     ensureMenuItemsWhenReady(player, world, MENU_SYNC_MAX_ATTEMPTS);
-                } else {
-                    // If joining a NON-Ascend world and player was previously in Ascend, trigger passive earnings
-                    PlayerRef playerRef = holder.getComponent(PlayerRef.getComponentType());
-                    if (playerRef != null) {
-                        UUID playerId = playerRef.getUuid();
-                        if (playerId != null && playerRefCache.containsKey(playerId) && passiveEarningsManager != null) {
-                            passiveEarningsManager.onPlayerLeaveAscend(playerId);
-                        }
-                    }
+                    return;
+                }
+
+                // Only trigger passive-leave on true Ascend -> non-Ascend transitions
+                if (playerId != null && playersInAscendWorld.remove(playerId) && passiveEarningsManager != null) {
+                    passiveEarningsManager.onPlayerLeaveAscend(playerId);
                 }
             } catch (Exception e) {
                 LOGGER.at(Level.WARNING).log("Exception in AddPlayerToWorldEvent (ascend): " + e.getMessage());
@@ -302,8 +313,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
                 return;
             }
 
-            // Mark player as left for passive earnings tracking
-            if (passiveEarningsManager != null) {
+            // Mark player as left only when disconnecting from Ascend state
+            if (passiveEarningsManager != null && playersInAscendWorld.remove(playerId)) {
                 passiveEarningsManager.onPlayerLeaveAscend(playerId);
             }
 
@@ -338,6 +349,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
             tickTask.cancel(false);
             tickTask = null;
         }
+        worldTickInFlight.clear();
+        playersInAscendWorld.clear();
         if (ghostRecorder != null) {
             ghostRecorder.stop();
         }
@@ -435,17 +448,25 @@ public class ParkourAscendPlugin extends JavaPlugin {
                 continue;
             }
             List<PlayerTickContext> players = entry.getValue();
+            AtomicBoolean inFlight = worldTickInFlight.computeIfAbsent(world, key -> new AtomicBoolean(false));
+            if (!inFlight.compareAndSet(false, true)) {
+                continue;
+            }
             CompletableFuture.runAsync(() -> {
-                for (PlayerTickContext context : players) {
-                    if (context.ref == null || !context.ref.isValid()) {
-                        continue;
+                try {
+                    for (PlayerTickContext context : players) {
+                        if (context.ref == null || !context.ref.isValid()) {
+                            continue;
+                        }
+                        if (fullTick) {
+                            runTracker.checkPlayer(context.ref, context.store);
+                            hudManager.updateFull(context.ref, context.store, context.playerRef);
+                        }
+                        hudManager.updateTimer(context.playerRef);
+                        hudManager.updateToasts(context.playerRef.getUuid());
                     }
-                    if (fullTick) {
-                        runTracker.checkPlayer(context.ref, context.store);
-                        hudManager.updateFull(context.ref, context.store, context.playerRef);
-                    }
-                    hudManager.updateTimer(context.playerRef);
-                    hudManager.updateToasts(context.playerRef.getUuid());
+                } finally {
+                    inFlight.set(false);
                 }
             }, world).exceptionally(ex -> {
                 LOGGER.at(Level.WARNING).withCause(ex).log("Exception in tick async task");

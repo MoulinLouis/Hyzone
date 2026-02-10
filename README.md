@@ -89,6 +89,7 @@ src/main/resources/
 - All runtime data is stored in MySQL and loaded into memory on startup
 - Working directory is `run/`, so runtime config lives in `mods/Parkour/`
 - DB config: `mods/Parkour/database.json` (gitignored)
+- Ascend runtime flags: `mods/Parkour/ascend.properties` (`ascend.enableTestCommands=false` by default)
 - JSON files are only used by `/dbmigrate` and must all exist:
   `Settings.json`, `GlobalMessages.json`, `PlayerCounts.json`, `Progress.json`, `Maps.json`
 

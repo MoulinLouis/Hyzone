@@ -29,9 +29,9 @@ import io.hyvexa.common.util.SystemMessageUtils;
 import javax.annotation.Nonnull;
 import java.util.Locale;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class SummitPage extends BaseAscendPage {
 
@@ -42,6 +42,8 @@ public class SummitPage extends BaseAscendPage {
     private final AscendPlayerStore playerStore;
     private final SummitManager summitManager;
     private ScheduledFuture<?> refreshTask;
+    private final AtomicBoolean refreshInFlight = new AtomicBoolean(false);
+    private final AtomicBoolean refreshRequested = new AtomicBoolean(false);
 
     public SummitPage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore, SummitManager summitManager) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
@@ -203,11 +205,14 @@ public class SummitPage extends BaseAscendPage {
                 stopAutoRefresh();
                 return;
             }
-            try {
-                CompletableFuture.runAsync(() -> refreshDisplay(ref, store), world);
-            } catch (Exception e) {
-                stopAutoRefresh();
-            }
+            PageRefreshScheduler.requestRefresh(
+                world,
+                refreshInFlight,
+                refreshRequested,
+                () -> refreshDisplay(ref, store),
+                this::stopAutoRefresh,
+                "SummitPage"
+            );
         }, REFRESH_INTERVAL_MS, REFRESH_INTERVAL_MS, TimeUnit.MILLISECONDS);
     }
 
@@ -216,6 +221,7 @@ public class SummitPage extends BaseAscendPage {
             refreshTask.cancel(false);
             refreshTask = null;
         }
+        refreshRequested.set(false);
     }
 
     private void refreshDisplay(Ref<EntityStore> ref, Store<EntityStore> store) {
