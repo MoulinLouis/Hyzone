@@ -26,6 +26,7 @@ import io.hyvexa.hub.routing.HubRouter;
 
 import javax.annotation.Nonnull;
 import java.io.File;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -44,6 +45,7 @@ public class HyvexaHubPlugin extends JavaPlugin {
 
     private HubRouter router;
     private final ConcurrentHashMap<UUID, HubHudState> hubHudStates = new ConcurrentHashMap<>();
+    private final Set<UUID> hubHudAttachInFlight = ConcurrentHashMap.newKeySet();
     private ScheduledFuture<?> hubHudTask;
 
     private record HubHudState(HubHud hud, long readyAt) {
@@ -104,7 +106,7 @@ public class HyvexaHubPlugin extends JavaPlugin {
                 }
                 InventoryUtils.clearAllContainers(player);
                 giveHubItems(player);
-                attachHubHud(ref, store, playerRef);
+                requestHubHudAttach(ref, store, playerRef);
             }, world);
         });
         this.getEventRegistry().registerGlobal(PlayerDisconnectEvent.class, event -> {
@@ -117,6 +119,7 @@ public class HyvexaHubPlugin extends JavaPlugin {
                 return;
             }
             hubHudStates.remove(playerId);
+            hubHudAttachInFlight.remove(playerId);
         });
 
         for (PlayerRef playerRef : Universe.get().getPlayers()) {
@@ -126,7 +129,7 @@ public class HyvexaHubPlugin extends JavaPlugin {
             }
             Store<EntityStore> store = ref.getStore();
             if (isHubWorld(store)) {
-                attachHubHud(ref, store, playerRef);
+                requestHubHudAttach(ref, store, playerRef);
             }
         }
 
@@ -135,27 +138,40 @@ public class HyvexaHubPlugin extends JavaPlugin {
         );
     }
 
-    private void attachHubHud(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef) {
+    private void requestHubHudAttach(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef) {
+        UUID playerId = playerRef != null ? playerRef.getUuid() : null;
+        if (playerId == null || !hubHudAttachInFlight.add(playerId)) {
+            return;
+        }
+        attachHubHud(ref, store, playerRef, playerId);
+    }
+
+    private void attachHubHud(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef, UUID playerId) {
         var world = store.getExternalData().getWorld();
         if (world == null) {
+            hubHudAttachInFlight.remove(playerId);
             return;
         }
         CompletableFuture.runAsync(() -> {
-            if (!ref.isValid() || !playerRef.isValid()) {
-                return;
+            try {
+                if (!ref.isValid() || !playerRef.isValid()) {
+                    return;
+                }
+                Player player = store.getComponent(ref, Player.getComponentType());
+                if (player == null) {
+                    return;
+                }
+                HubHudState state = hubHudStates.compute(playerRef.getUuid(), (ignored, existing) -> {
+                    HubHud hud = existing != null ? existing.hud() : new HubHud(playerRef);
+                    return new HubHudState(hud, System.currentTimeMillis() + HUD_READY_DELAY_MS);
+                });
+                HubHud hud = state.hud();
+                player.getHudManager().setCustomHud(playerRef, hud);
+                player.getHudManager().hideHudComponents(playerRef, HudComponent.Compass);
+                hud.show();
+            } finally {
+                hubHudAttachInFlight.remove(playerId);
             }
-            Player player = store.getComponent(ref, Player.getComponentType());
-            if (player == null) {
-                return;
-            }
-            HubHudState state = hubHudStates.compute(playerRef.getUuid(), (ignored, existing) -> {
-                HubHud hud = existing != null ? existing.hud() : new HubHud(playerRef);
-                return new HubHudState(hud, System.currentTimeMillis() + HUD_READY_DELAY_MS);
-            });
-            HubHud hud = state.hud();
-            player.getHudManager().setCustomHud(playerRef, hud);
-            player.getHudManager().hideHudComponents(playerRef, HudComponent.Compass);
-            hud.show();
         }, world);
     }
 
@@ -206,7 +222,7 @@ public class HyvexaHubPlugin extends JavaPlugin {
             }
             HubHudState state = hubHudStates.get(playerId);
             if (state == null || state.hud() == null) {
-                attachHubHud(ref, store, playerRef);
+                requestHubHudAttach(ref, store, playerRef);
                 continue;
             }
             if (System.currentTimeMillis() < state.readyAt()) {

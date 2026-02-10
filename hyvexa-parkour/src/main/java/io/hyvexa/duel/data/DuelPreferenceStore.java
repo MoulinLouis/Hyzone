@@ -135,7 +135,10 @@ public class DuelPreferenceStore {
 
     public boolean isEnabled(@Nonnull UUID playerId, @Nonnull DuelCategory category) {
         EnumSet<DuelCategory> enabled = enabledByPlayer.get(playerId);
-        return enabled == null || enabled.contains(category);
+        if (enabled == null) {
+            return defaultEnabled().contains(category);
+        }
+        return enabled.contains(category);
     }
 
     public void setEnabled(@Nonnull UUID playerId, @Nonnull DuelCategory category, boolean enabled) {

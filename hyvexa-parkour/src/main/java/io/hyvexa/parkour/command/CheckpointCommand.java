@@ -29,15 +29,22 @@ public class CheckpointCommand extends AbstractPlayerCommand {
     private static final Message MESSAGE_CHECKPOINT_MISSING = Message.raw("No checkpoint set.");
     private static final Message MESSAGE_TELEPORTED = Message.raw("Teleported to checkpoint.");
     private static final Message MESSAGE_USAGE = Message.raw("Usage: /cp [set|clear]");
+    private static final Map<UUID, Checkpoint> CHECKPOINTS = new ConcurrentHashMap<>();
 
     private final OptionalArg<String> actionArg;
-    private final Map<UUID, Checkpoint> checkpoints = new ConcurrentHashMap<>();
 
     public CheckpointCommand() {
         super("cp", "Save or return to your checkpoint.");
         this.setPermissionGroup(GameMode.Adventure);
         this.setAllowsExtraArguments(true);
         this.actionArg = this.withOptionalArg("action", "set|clear", ArgTypes.STRING);
+    }
+
+    public static void clearCheckpoint(UUID playerId) {
+        if (playerId == null) {
+            return;
+        }
+        CHECKPOINTS.remove(playerId);
     }
 
     @Override
@@ -81,13 +88,13 @@ public class CheckpointCommand extends AbstractPlayerCommand {
         Transform transform = player.getTransform().clone();
         Vector3f headRotation = player.getHeadRotation();
         Vector3f headRotationCopy = headRotation == null ? null : headRotation.clone();
-        this.checkpoints.put(player.getUuid(), new Checkpoint(transform, headRotationCopy));
+        CHECKPOINTS.put(player.getUuid(), new Checkpoint(transform, headRotationCopy));
         ctx.sendMessage(MESSAGE_CHECKPOINT_SET);
     }
 
     private void teleportToCheckpoint(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store,
                                       @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef player, @Nonnull World world) {
-        Checkpoint checkpoint = this.checkpoints.get(player.getUuid());
+        Checkpoint checkpoint = CHECKPOINTS.get(player.getUuid());
         if (checkpoint == null) {
             ctx.sendMessage(MESSAGE_CHECKPOINT_MISSING);
             return;
@@ -103,7 +110,7 @@ public class CheckpointCommand extends AbstractPlayerCommand {
     }
 
     private void clearCheckpoint(@Nonnull CommandContext ctx, @Nonnull PlayerRef player) {
-        if (this.checkpoints.remove(player.getUuid()) == null) {
+        if (CHECKPOINTS.remove(player.getUuid()) == null) {
             ctx.sendMessage(MESSAGE_CHECKPOINT_MISSING);
             return;
         }

@@ -3,6 +3,8 @@ package io.hyvexa.manager;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import io.hyvexa.common.visibility.EntityVisibilityManager;
+import io.hyvexa.parkour.command.CheckpointCommand;
+import io.hyvexa.parkour.interaction.LeaveInteraction;
 import io.hyvexa.parkour.tracker.RunTracker;
 import io.hyvexa.parkour.util.PlayerSettingsStore;
 
@@ -52,6 +54,8 @@ public class PlayerCleanupManager {
             playtimeManager.finishPlaytimeSession(playerRef);
         }
         PlayerSettingsStore.clearSession(playerId);
+        LeaveInteraction.clearPendingLeave(playerId);
+        CheckpointCommand.clearCheckpoint(playerId);
         EntityVisibilityManager.get().clearHidden(playerId);
         if (runTracker != null) {
             runTracker.handleDisconnect(playerId);

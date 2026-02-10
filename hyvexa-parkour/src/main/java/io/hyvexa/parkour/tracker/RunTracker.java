@@ -939,7 +939,7 @@ public class RunTracker {
             run.lastPosition = null;
         }
         TransformData spawn = null;
-        if (run.practiceEnabled && run.practiceCheckpoint != null) {
+        if (run != null && run.practiceEnabled && run.practiceCheckpoint != null) {
             spawn = run.practiceCheckpoint;
         }
         int checkpointIndex = resolveCheckpointIndex(run, map);

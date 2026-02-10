@@ -33,6 +33,13 @@ public class LeaveInteraction extends SimpleInteraction {
     private static final long CONFIRM_WINDOW_MS = 10000L;
     private static final ConcurrentHashMap<UUID, PendingLeave> PENDING_LEAVES = new ConcurrentHashMap<>();
 
+    public static void clearPendingLeave(UUID playerId) {
+        if (playerId == null) {
+            return;
+        }
+        PENDING_LEAVES.remove(playerId);
+    }
+
     @Override
     public void handle(@Nonnull Ref<EntityStore> ref, boolean firstRun, float time,
                        @Nonnull InteractionType type, @Nonnull InteractionContext interactionContext) {
