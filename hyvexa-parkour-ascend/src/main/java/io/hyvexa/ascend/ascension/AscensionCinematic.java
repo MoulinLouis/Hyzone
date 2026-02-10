@@ -7,6 +7,7 @@ import com.hypixel.hytale.protocol.packets.camera.CameraShakeEffect;
 import com.hypixel.hytale.protocol.packets.camera.SetServerCamera;
 import com.hypixel.hytale.protocol.packets.world.PlaySoundEvent2D;
 import com.hypixel.hytale.protocol.packets.world.SpawnParticleSystem;
+import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
@@ -18,8 +19,6 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.entity.entities.player.movement.MovementManager;
 
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -28,12 +27,6 @@ import java.util.concurrent.TimeUnit;
  * and available via /ctest ascension for testing.
  */
 public class AscensionCinematic {
-
-    private static final ScheduledExecutorService SCHEDULER = Executors.newSingleThreadScheduledExecutor(r -> {
-        Thread t = new Thread(r, "AscensionCinematic");
-        t.setDaemon(true);
-        return t;
-    });
 
     /**
      * Plays the full ascension cinematic for a player.
@@ -69,7 +62,7 @@ public class AscensionCinematic {
         }
 
         // Phase 1: Lock camera in natural 3rd person + effects
-        SCHEDULER.schedule(() -> {
+        HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
             try {
                 world.execute(() -> {
                     if (!ref.isValid()) return;
@@ -91,7 +84,7 @@ public class AscensionCinematic {
         for (int i = 0; i < orbitSteps; i++) {
             final int step = i;
             final long delay = ms + i * orbitInterval;
-            SCHEDULER.schedule(() -> {
+            HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
                 try {
                     world.execute(() -> {
                         if (!ref.isValid()) return;
@@ -134,7 +127,7 @@ public class AscensionCinematic {
 
         // Phase 3: Hold in front of player, particles intensify
         final long intensifyTime = ms;
-        SCHEDULER.schedule(() -> {
+        HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
             try {
                 world.execute(() -> {
                     if (!ref.isValid()) return;
@@ -161,7 +154,7 @@ public class AscensionCinematic {
         for (int i = 0; i <= zoomSteps; i++) {
             final int step = i;
             final long delay = ms + i * zoomInterval;
-            SCHEDULER.schedule(() -> {
+            HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
                 try {
                     world.execute(() -> {
                         if (!ref.isValid()) return;
@@ -182,7 +175,7 @@ public class AscensionCinematic {
             }, delay, TimeUnit.MILLISECONDS);
         }
         final long impactTime = ms + zoomSteps * zoomInterval;
-        SCHEDULER.schedule(() -> {
+        HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
             try {
                 world.execute(() -> {
                     if (!ref.isValid()) return;
@@ -197,7 +190,7 @@ public class AscensionCinematic {
 
         // Phase 5: Hold, then reset
         final long resetTime = ms + 1500;
-        SCHEDULER.schedule(() -> {
+        HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
             try {
                 world.execute(() -> {
                     if (!ref.isValid()) return;

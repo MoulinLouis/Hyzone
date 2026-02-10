@@ -1,14 +1,11 @@
 package io.hyvexa.parkour.util;
 
-import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
-import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.world.World;
-import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.core.state.ModeMessages;
 import io.hyvexa.HyvexaPlugin;
+import io.hyvexa.common.util.PlayerUtils;
 
 import java.util.UUID;
 
@@ -35,15 +32,6 @@ public final class ParkourModeGate {
     }
 
     public static UUID resolvePlayerId(Player player) {
-        if (player == null) {
-            return null;
-        }
-        Ref<EntityStore> ref = player.getReference();
-        if (ref == null || !ref.isValid()) {
-            return null;
-        }
-        Store<EntityStore> store = ref.getStore();
-        UUIDComponent uuidComponent = store.getComponent(ref, UUIDComponent.getComponentType());
-        return uuidComponent != null ? uuidComponent.getUuid() : null;
+        return PlayerUtils.resolvePlayerId(player);
     }
 }

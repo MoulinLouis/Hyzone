@@ -127,15 +127,8 @@ public class GhostRecorder {
             }
         }
 
-        // Find the player in the universe
-        PlayerRef playerRef = null;
-        for (PlayerRef pr : Universe.get().getPlayers()) {
-            if (pr.getUuid().equals(recording.playerId)) {
-                playerRef = pr;
-                break;
-            }
-        }
-
+        // Resolve online player directly by UUID
+        PlayerRef playerRef = Universe.get().getPlayer(recording.playerId);
         if (playerRef == null) {
             return; // Player not online
         }

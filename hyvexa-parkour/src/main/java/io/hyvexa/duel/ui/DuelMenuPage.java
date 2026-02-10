@@ -297,7 +297,10 @@ public class DuelMenuPage extends BaseParkourPage {
         if (playerRef == null || player == null) {
             return;
         }
-        DuelCategory category = parseCategory(button);
+        if (button == null || !button.startsWith(BUTTON_CATEGORY_PREFIX)) {
+            return;
+        }
+        DuelCategory category = DuelCategory.fromKey(button.substring(BUTTON_CATEGORY_PREFIX.length()));
         if (category == null) {
             return;
         }
@@ -313,30 +316,7 @@ public class DuelMenuPage extends BaseParkourPage {
         }
         refreshQueueState(ref, store);
         boolean enabled = plugin.getDuelPreferenceStore().isEnabled(playerId, category);
-        player.sendMessage(SystemMessageUtils.duelInfo(categoryLabel(category) + ": " + (enabled ? "ON" : "OFF")));
-    }
-
-    private DuelCategory parseCategory(String button) {
-        if (button == null || !button.startsWith(BUTTON_CATEGORY_PREFIX)) {
-            return null;
-        }
-        String key = button.substring(BUTTON_CATEGORY_PREFIX.length()).toLowerCase();
-        return switch (key) {
-            case "easy" -> DuelCategory.EASY;
-            case "medium" -> DuelCategory.MEDIUM;
-            case "hard" -> DuelCategory.HARD;
-            case "insane" -> DuelCategory.INSANE;
-            default -> null;
-        };
-    }
-
-    private String categoryLabel(DuelCategory category) {
-        return switch (category) {
-            case EASY -> "Easy";
-            case MEDIUM -> "Medium";
-            case HARD -> "Hard";
-            case INSANE -> "Insane";
-        };
+        player.sendMessage(SystemMessageUtils.duelInfo(DuelCategory.labelFor(category) + ": " + (enabled ? "ON" : "OFF")));
     }
 
     private void handleActiveMatches(Ref<EntityStore> ref, Store<EntityStore> store) {

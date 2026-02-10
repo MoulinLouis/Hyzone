@@ -11,6 +11,7 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.EnumMap;
 import java.util.EnumSet;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -28,6 +29,32 @@ public class DuelPreferenceStore {
 
         public String key() {
             return name().toLowerCase();
+        }
+
+        public static String labelFor(DuelCategory category) {
+            if (category == null) {
+                return "";
+            }
+            return switch (category) {
+                case EASY -> "Easy";
+                case MEDIUM -> "Medium";
+                case HARD -> "Hard";
+                case INSANE -> "Insane";
+            };
+        }
+
+        public static DuelCategory fromKey(String key) {
+            if (key == null || key.isBlank()) {
+                return null;
+            }
+            String normalized = key.trim().toLowerCase(Locale.ROOT);
+            return switch (normalized) {
+                case "easy" -> EASY;
+                case "medium" -> MEDIUM;
+                case "hard" -> HARD;
+                case "insane" -> INSANE;
+                default -> null;
+            };
         }
     }
 
@@ -146,17 +173,8 @@ public class DuelPreferenceStore {
             return "Easy/Medium/Hard/Insane";
         }
         return enabled.stream()
-                .map(this::labelFor)
+                .map(DuelCategory::labelFor)
                 .collect(Collectors.joining("/"));
-    }
-
-    private String labelFor(DuelCategory category) {
-        return switch (category) {
-            case EASY -> "Easy";
-            case MEDIUM -> "Medium";
-            case HARD -> "Hard";
-            case INSANE -> "Insane";
-        };
     }
 
     private void save(@Nonnull UUID playerId, @Nonnull Set<DuelCategory> enabled) {

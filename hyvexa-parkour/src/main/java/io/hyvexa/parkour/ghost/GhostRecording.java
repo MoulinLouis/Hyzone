@@ -36,18 +36,22 @@ public class GhostRecording {
         // Calculate target timestamp
         long targetTimestamp = (long) (progress * completionTimeMs);
 
-        // Find the two nearest samples surrounding the target timestamp
-        int lowerIndex = 0;
-        int upperIndex = samples.size() - 1;
-
-        for (int i = 0; i < samples.size() - 1; i++) {
-            if (samples.get(i).timestampMs() <= targetTimestamp &&
-                samples.get(i + 1).timestampMs() >= targetTimestamp) {
-                lowerIndex = i;
-                upperIndex = i + 1;
-                break;
+        // Binary search nearest samples around target timestamp.
+        int low = 0;
+        int high = samples.size() - 1;
+        while (low <= high) {
+            int mid = (low + high) >>> 1;
+            long timestamp = samples.get(mid).timestampMs();
+            if (timestamp < targetTimestamp) {
+                low = mid + 1;
+            } else if (timestamp > targetTimestamp) {
+                high = mid - 1;
+            } else {
+                return samples.get(mid);
             }
         }
+        int upperIndex = Math.min(samples.size() - 1, Math.max(0, low));
+        int lowerIndex = Math.max(0, upperIndex - 1);
 
         GhostSample lower = samples.get(lowerIndex);
         GhostSample upper = samples.get(upperIndex);

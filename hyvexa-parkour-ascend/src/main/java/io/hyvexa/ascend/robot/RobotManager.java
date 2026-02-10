@@ -429,7 +429,7 @@ public class RobotManager {
         // Interpolate ghost position at current progress
         GhostSample sample = ghost.interpolateAt(progress, speedMultiplier);
         double[] targetPos = sample.toPositionArray();
-        float yaw = sample.getYaw();
+        float yaw = sample.yaw();
 
         // Teleport NPC to interpolated position with recorded rotation
         world.execute(() -> teleportNpcWithRecordedRotation(entityRef, world, targetPos, yaw));
