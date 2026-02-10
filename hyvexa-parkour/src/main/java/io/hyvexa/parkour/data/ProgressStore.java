@@ -312,16 +312,17 @@ public class ProgressStore {
             long recalculatedXp = mapStore != null ? calculateCompletionXp(playerProgress, mapStore) : oldXp;
             playerProgress.xp = Math.max(0L, recalculatedXp);
             playerProgress.level = calculateLevel(playerProgress.xp);
+            long xpAwarded = Math.max(0L, playerProgress.xp - oldXp);
 
             markDirty(playerId);
             List<Long> checkpointSnapshot = newBest && checkpointTimes != null && !checkpointTimes.isEmpty()
                     ? List.copyOf(checkpointTimes)
                     : List.of();
             completionPersistenceRequest = new CompletionPersistenceRequest(playerId, mapId, timeMs, checkpointSnapshot);
-            boolean completionSaved = DatabaseManager.getInstance().isInitialized();
+            boolean completionSaveQueued = DatabaseManager.getInstance().isInitialized();
 
-            result = new ProgressionResult(firstCompletionForMap, newBest, personalBest, 0L,
-                    oldLevel, playerProgress.level, completionSaved);
+            result = new ProgressionResult(firstCompletionForMap, newBest, personalBest, xpAwarded,
+                    oldLevel, playerProgress.level, completionSaveQueued);
         } finally {
             fileLock.writeLock().unlock();
         }
@@ -1047,6 +1048,10 @@ public class ProgressStore {
         public final long xpAwarded;
         public final int oldLevel;
         public final int newLevel;
+        /**
+         * True when completion persistence was queued/attempted.
+         * This is not a confirmation of durable DB success.
+         */
         public final boolean completionSaved;
 
         public ProgressionResult(boolean firstCompletion, boolean newBest, boolean personalBest, long xpAwarded,

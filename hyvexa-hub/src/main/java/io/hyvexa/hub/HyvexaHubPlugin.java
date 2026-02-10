@@ -18,6 +18,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.common.util.AsyncExecutionHelper;
 import io.hyvexa.common.util.InventoryUtils;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.hub.command.HubCommand;
@@ -29,7 +30,6 @@ import javax.annotation.Nonnull;
 import java.io.File;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -99,7 +99,9 @@ public class HyvexaHubPlugin extends JavaPlugin {
             if (world == null) {
                 return;
             }
-            CompletableFuture.runAsync(() -> {
+            String playerIdText = playerRef.getUuid() != null ? playerRef.getUuid().toString() : "unknown";
+            String worldName = world.getName() != null ? world.getName() : "unknown";
+            AsyncExecutionHelper.runBestEffort(world, () -> {
                 if (!ref.isValid()) {
                     return;
                 }
@@ -110,7 +112,8 @@ public class HyvexaHubPlugin extends JavaPlugin {
                 InventoryUtils.clearAllContainers(player);
                 giveHubItems(player);
                 requestHubHudAttach(ref, store, playerRef);
-            }, world);
+            }, "hub.player_ready.setup", "hub player ready setup",
+                    "player=" + playerIdText + ", world=" + worldName);
         });
         this.getEventRegistry().registerGlobal(AddPlayerToWorldEvent.class, event -> {
             try {
@@ -190,7 +193,9 @@ public class HyvexaHubPlugin extends JavaPlugin {
             hubHudAttachInFlight.remove(playerId);
             return;
         }
-        CompletableFuture.runAsync(() -> {
+        String worldName = world.getName() != null ? world.getName() : "unknown";
+        String playerIdText = playerId != null ? playerId.toString() : "unknown";
+        AsyncExecutionHelper.runBestEffort(world, () -> {
             try {
                 if (!ref.isValid() || !playerRef.isValid()) {
                     return;
@@ -210,7 +215,8 @@ public class HyvexaHubPlugin extends JavaPlugin {
             } finally {
                 hubHudAttachInFlight.remove(playerId);
             }
-        }, world);
+        }, "hub.hud.attach", "hub HUD attach",
+                "player=" + playerIdText + ", world=" + worldName);
     }
 
     private void registerInteractionCodecs() {

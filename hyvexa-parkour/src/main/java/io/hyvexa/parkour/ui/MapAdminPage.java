@@ -28,7 +28,9 @@ import io.hyvexa.parkour.data.ProgressStore;
 import io.hyvexa.parkour.data.TransformData;
 
 import javax.annotation.Nonnull;
+import java.util.HashMap;
 import java.util.List;
+import java.util.function.BiConsumer;
 
 public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> {
 
@@ -46,6 +48,8 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
     private boolean mapFreeFallEnabled = false;
     private boolean mapDuelEnabled = false;
     private String selectedMapId = "";
+    private final java.util.Map<String, BiConsumer<Ref<EntityStore>, Store<EntityStore>>> buttonHandlers =
+            createButtonHandlers();
 
     public MapAdminPage(@Nonnull PlayerRef playerRef, MapStore mapStore) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, MapData.CODEC);
@@ -93,110 +97,87 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
             }
             return;
         }
-        if (data.button.equals(MapData.BUTTON_BACK)) {
-            openIndex(ref, store);
-            return;
-        }
         if (data.button.startsWith(MapData.BUTTON_SELECT_PREFIX)) {
-            selectedMapId = data.button.substring(MapData.BUTTON_SELECT_PREFIX.length());
-            Map map = mapStore.getMap(selectedMapId);
-            if (map != null) {
-                mapId = map.getId();
-                mapName = map.getName() != null ? map.getName() : "";
-                mapCategory = map.getCategory() != null ? map.getCategory() : "";
-                mapFirstCompletionXp = String.valueOf(map.getFirstCompletionXp());
-                mapDifficulty = String.valueOf(map.getDifficulty());
-                mapOrder = String.valueOf(map.getOrder());
-                mapMithrilSwordEnabled = map.isMithrilSwordEnabled();
-                mapMithrilDaggersEnabled = map.isMithrilDaggersEnabled();
-                mapGliderEnabled = map.isGliderEnabled();
-                mapFreeFallEnabled = map.isFreeFallEnabled();
-                mapDuelEnabled = map.isDuelEnabled();
-            }
-            sendRefresh(ref, store);
+            handleSelectMap(ref, store, data.button.substring(MapData.BUTTON_SELECT_PREFIX.length()));
             return;
         }
-        if (data.button.equals(MapData.BUTTON_CREATE)) {
-            handleCreate(ref, store);
-            return;
+        dispatchButtonAction(ref, store, data.button);
+    }
+
+    private java.util.Map<String, BiConsumer<Ref<EntityStore>, Store<EntityStore>>> createButtonHandlers() {
+        java.util.Map<String, BiConsumer<Ref<EntityStore>, Store<EntityStore>>> handlers = new HashMap<>();
+        handlers.put(MapData.BUTTON_BACK, this::openIndex);
+        handlers.put(MapData.BUTTON_CREATE, this::handleCreate);
+        handlers.put(MapData.BUTTON_SET_START, (ref, store) -> handleMarker(ref, store, true));
+        handlers.put(MapData.BUTTON_SET_FINISH, (ref, store) -> handleMarker(ref, store, false));
+        handlers.put(MapData.BUTTON_SET_START_TRIGGER, (ref, store) -> handleTrigger(ref, store, true));
+        handlers.put(MapData.BUTTON_SET_LEAVE_TRIGGER, (ref, store) -> handleTrigger(ref, store, false));
+        handlers.put(MapData.BUTTON_SET_LEAVE_TELEPORT, this::handleLeaveTeleport);
+        handlers.put(MapData.BUTTON_ADD_CHECKPOINT, this::handleCheckpoint);
+        handlers.put(MapData.BUTTON_UPDATE, this::handleUpdate);
+        handlers.put(MapData.BUTTON_DELETE, this::handleDelete);
+        handlers.put(MapData.BUTTON_REFRESH, this::sendRefresh);
+        handlers.put(MapData.BUTTON_CREATE_HOLO, this::handleCreateHologram);
+        handlers.put(MapData.BUTTON_TOGGLE_MITHRIL_SWORD, this::handleToggleMithrilSword);
+        handlers.put(MapData.BUTTON_TOGGLE_MITHRIL_DAGGERS, this::handleToggleMithrilDaggers);
+        handlers.put(MapData.BUTTON_TOGGLE_GLIDER, this::handleToggleGlider);
+        handlers.put(MapData.BUTTON_TOGGLE_FREE_FALL, this::handleToggleFreeFall);
+        handlers.put(MapData.BUTTON_TOGGLE_DUEL_ENABLED, this::handleToggleDuelEnabled);
+        handlers.put(MapData.BUTTON_SET_FLY_ZONE_1, this::handleSetFlyZoneCorner1);
+        handlers.put(MapData.BUTTON_SET_FLY_ZONE_2, this::handleSetFlyZoneCorner2);
+        handlers.put(MapData.BUTTON_CLEAR_FLY_ZONE, this::handleClearFlyZone);
+        return java.util.Map.copyOf(handlers);
+    }
+
+    private void dispatchButtonAction(Ref<EntityStore> ref, Store<EntityStore> store, String button) {
+        BiConsumer<Ref<EntityStore>, Store<EntityStore>> handler = buttonHandlers.get(button);
+        if (handler != null) {
+            handler.accept(ref, store);
         }
-        if (data.button.equals(MapData.BUTTON_SET_START)) {
-            handleMarker(ref, store, true);
-            return;
+    }
+
+    private void handleSelectMap(Ref<EntityStore> ref, Store<EntityStore> store, String mapSelectionId) {
+        selectedMapId = mapSelectionId;
+        Map map = mapStore.getMap(selectedMapId);
+        if (map != null) {
+            mapId = map.getId();
+            mapName = map.getName() != null ? map.getName() : "";
+            mapCategory = map.getCategory() != null ? map.getCategory() : "";
+            mapFirstCompletionXp = String.valueOf(map.getFirstCompletionXp());
+            mapDifficulty = String.valueOf(map.getDifficulty());
+            mapOrder = String.valueOf(map.getOrder());
+            mapMithrilSwordEnabled = map.isMithrilSwordEnabled();
+            mapMithrilDaggersEnabled = map.isMithrilDaggersEnabled();
+            mapGliderEnabled = map.isGliderEnabled();
+            mapFreeFallEnabled = map.isFreeFallEnabled();
+            mapDuelEnabled = map.isDuelEnabled();
         }
-        if (data.button.equals(MapData.BUTTON_SET_FINISH)) {
-            handleMarker(ref, store, false);
-            return;
-        }
-        if (data.button.equals(MapData.BUTTON_SET_START_TRIGGER)) {
-            handleTrigger(ref, store, true);
-            return;
-        }
-        if (data.button.equals(MapData.BUTTON_SET_LEAVE_TRIGGER)) {
-            handleTrigger(ref, store, false);
-            return;
-        }
-        if (data.button.equals(MapData.BUTTON_SET_LEAVE_TELEPORT)) {
-            handleLeaveTeleport(ref, store);
-            return;
-        }
-        if (data.button.equals(MapData.BUTTON_ADD_CHECKPOINT)) {
-            handleCheckpoint(ref, store);
-            return;
-        }
-        if (data.button.equals(MapData.BUTTON_UPDATE)) {
-            handleUpdate(ref, store);
-            return;
-        }
-        if (data.button.equals(MapData.BUTTON_DELETE)) {
-            handleDelete(ref, store);
-            return;
-        }
-        if (data.button.equals(MapData.BUTTON_REFRESH)) {
-            sendRefresh(ref, store);
-            return;
-        }
-        if (data.button.equals(MapData.BUTTON_CREATE_HOLO)) {
-            handleCreateHologram(ref, store);
-            return;
-        }
-        if (data.button.equals(MapData.BUTTON_TOGGLE_MITHRIL_SWORD)) {
-            mapMithrilSwordEnabled = !mapMithrilSwordEnabled;
-            sendRefresh(ref, store);
-            return;
-        }
-        if (data.button.equals(MapData.BUTTON_TOGGLE_MITHRIL_DAGGERS)) {
-            mapMithrilDaggersEnabled = !mapMithrilDaggersEnabled;
-            sendRefresh(ref, store);
-            return;
-        }
-        if (data.button.equals(MapData.BUTTON_TOGGLE_GLIDER)) {
-            mapGliderEnabled = !mapGliderEnabled;
-            sendRefresh(ref, store);
-            return;
-        }
-        if (data.button.equals(MapData.BUTTON_TOGGLE_FREE_FALL)) {
-            mapFreeFallEnabled = !mapFreeFallEnabled;
-            sendRefresh(ref, store);
-            return;
-        }
-        if (data.button.equals(MapData.BUTTON_TOGGLE_DUEL_ENABLED)) {
-            mapDuelEnabled = !mapDuelEnabled;
-            sendRefresh(ref, store);
-            return;
-        }
-        if (data.button.equals(MapData.BUTTON_SET_FLY_ZONE_1)) {
-            handleSetFlyZoneCorner1(ref, store);
-            return;
-        }
-        if (data.button.equals(MapData.BUTTON_SET_FLY_ZONE_2)) {
-            handleSetFlyZoneCorner2(ref, store);
-            return;
-        }
-        if (data.button.equals(MapData.BUTTON_CLEAR_FLY_ZONE)) {
-            handleClearFlyZone(ref, store);
-            return;
-        }
+        sendRefresh(ref, store);
+    }
+
+    private void handleToggleMithrilSword(Ref<EntityStore> ref, Store<EntityStore> store) {
+        mapMithrilSwordEnabled = !mapMithrilSwordEnabled;
+        sendRefresh(ref, store);
+    }
+
+    private void handleToggleMithrilDaggers(Ref<EntityStore> ref, Store<EntityStore> store) {
+        mapMithrilDaggersEnabled = !mapMithrilDaggersEnabled;
+        sendRefresh(ref, store);
+    }
+
+    private void handleToggleGlider(Ref<EntityStore> ref, Store<EntityStore> store) {
+        mapGliderEnabled = !mapGliderEnabled;
+        sendRefresh(ref, store);
+    }
+
+    private void handleToggleFreeFall(Ref<EntityStore> ref, Store<EntityStore> store) {
+        mapFreeFallEnabled = !mapFreeFallEnabled;
+        sendRefresh(ref, store);
+    }
+
+    private void handleToggleDuelEnabled(Ref<EntityStore> ref, Store<EntityStore> store) {
+        mapDuelEnabled = !mapDuelEnabled;
+        sendRefresh(ref, store);
     }
 
     private void handleCreate(Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -749,10 +730,16 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
             return null;
         }
         Vector3d position = transform.getPosition();
+        if (position == null) {
+            return null;
+        }
         Vector3f rotation = transform.getRotation();
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         Vector3f headRotation = playerRef != null ? playerRef.getHeadRotation() : null;
         Vector3f useRotation = headRotation != null ? headRotation : rotation;
+        if (useRotation == null) {
+            return null;
+        }
         TransformData data = new TransformData();
         data.setX(position.getX());
         data.setY(position.getY());
