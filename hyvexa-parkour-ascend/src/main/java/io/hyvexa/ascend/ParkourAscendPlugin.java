@@ -68,6 +68,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final int FULL_TICK_INTERVAL = 4; // every 4th tick = 200ms at 50ms interval
+    private static final long MENU_SYNC_RETRY_DELAY_MS = 50L;
+    private static final int MENU_SYNC_MAX_ATTEMPTS = 5;
     private static ParkourAscendPlugin INSTANCE;
 
     private AscendMapStore mapStore;
@@ -274,7 +276,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     if (player == null) {
                         return;
                     }
-                    AscendInventoryUtils.ensureMenuItems(player);
+                    ensureMenuItemsWhenReady(player, world, MENU_SYNC_MAX_ATTEMPTS);
                 } else {
                     // If joining a NON-Ascend world and player was previously in Ascend, trigger passive earnings
                     PlayerRef playerRef = holder.getComponent(PlayerRef.getComponentType());
@@ -487,6 +489,30 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
     public boolean isAscendWorld(World world) {
         return AscendModeGate.isAscendWorld(world);
+    }
+
+    private void ensureMenuItemsWhenReady(Player player, World expectedWorld, int attemptsRemaining) {
+        if (player == null || expectedWorld == null) {
+            return;
+        }
+        CompletableFuture.runAsync(() -> {
+            World playerWorld = player.getWorld();
+            if (isAscendWorld(playerWorld)) {
+                AscendInventoryUtils.ensureMenuItems(player);
+                return;
+            }
+            if (playerWorld != null || attemptsRemaining <= 0) {
+                return;
+            }
+            HytaleServer.SCHEDULED_EXECUTOR.schedule(
+                () -> ensureMenuItemsWhenReady(player, expectedWorld, attemptsRemaining - 1),
+                MENU_SYNC_RETRY_DELAY_MS,
+                TimeUnit.MILLISECONDS
+            );
+        }, expectedWorld).exceptionally(ex -> {
+            LOGGER.at(Level.WARNING).withCause(ex).log("Exception while syncing Ascend inventory after world switch");
+            return null;
+        });
     }
 
     private void registerInteractionCodecs() {
