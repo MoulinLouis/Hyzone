@@ -330,14 +330,10 @@ $C.@PageOverlay {
         }
 
         Group #PlayerCountRow {
-          Anchor: (Right: 12, Top: 8, Height: 20);
-          LayoutMode: Left;
+          Anchor: (Left: 0, Right: 0, Top: 8, Height: 20);
+          LayoutMode: Right;
+          Padding: (Right: 12);
 
-          Group #PlayerCountIcon {
-            Anchor: (Width: 14, Height: 14);
-            Background: (TexturePath: "../Textures/user.png");
-          }
-          Group { Anchor: (Width: 4); }
           Label #PlayerCountText {
             Style: (
               FontSize: 14,
@@ -345,6 +341,11 @@ $C.@PageOverlay {
               RenderBold: true
             );
             Text: "0";
+          }
+          Group { Anchor: (Width: 4); }
+          Group #PlayerCountIcon {
+            Anchor: (Width: 14, Height: 14);
+            Background: (TexturePath: "../Textures/user.png");
           }
         }
       }

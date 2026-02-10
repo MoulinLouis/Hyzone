@@ -3,6 +3,7 @@ package io.hyvexa.parkour.tracker;
 import com.hypixel.hytale.server.core.entity.entities.player.hud.CustomUIHud;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.Universe;
 import io.hyvexa.parkour.ui.PlayerMusicPage;
 
 import java.util.List;
@@ -16,6 +17,7 @@ public class RunHud extends CustomUIHud {
     private Boolean lastCheckpointSplitVisible;
     private String lastInfoKey;
     private String lastAnnouncementKey;
+    private int lastPlayerCount = -1;
 
     public RunHud(PlayerRef playerRef) {
         super(playerRef);
@@ -136,6 +138,17 @@ public class RunHud extends CustomUIHud {
         update(false, commandBuilder);
     }
 
+    public void updatePlayerCount() {
+        int count = Universe.get().getPlayers().size();
+        if (count == lastPlayerCount) {
+            return;
+        }
+        lastPlayerCount = count;
+        UICommandBuilder commandBuilder = new UICommandBuilder();
+        commandBuilder.set("#PlayerCountText.Text", String.valueOf(count));
+        update(false, commandBuilder);
+    }
+
     public void resetCache() {
         lastTimeText = null;
         lastCheckpointText = null;
@@ -144,5 +157,6 @@ public class RunHud extends CustomUIHud {
         lastCheckpointSplitVisible = null;
         lastInfoKey = null;
         lastAnnouncementKey = null;
+        lastPlayerCount = -1;
     }
 }

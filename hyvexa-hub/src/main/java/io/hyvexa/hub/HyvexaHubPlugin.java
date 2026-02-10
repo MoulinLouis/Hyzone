@@ -50,6 +50,7 @@ public class HyvexaHubPlugin extends JavaPlugin {
     private final Set<UUID> hubHudAttachInFlight = ConcurrentHashMap.newKeySet();
     private final Set<UUID> hubHudPendingStabilization = ConcurrentHashMap.newKeySet();
     private ScheduledFuture<?> hubHudTask;
+    private ScheduledFuture<?> playerCountTask;
 
     private record HubHudState(HubHud hud, long readyAt) {
     }
@@ -173,6 +174,17 @@ public class HyvexaHubPlugin extends JavaPlugin {
         hubHudTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(
                 this::tickHubHudRecovery, HUD_RECOVERY_INTERVAL_MS, HUD_RECOVERY_INTERVAL_MS, TimeUnit.MILLISECONDS
         );
+        playerCountTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(
+                this::tickPlayerCount, 5000L, 5000L, TimeUnit.MILLISECONDS
+        );
+    }
+
+    private void tickPlayerCount() {
+        for (HubHudState state : hubHudStates.values()) {
+            if (state.hud() != null) {
+                state.hud().updatePlayerCount();
+            }
+        }
     }
 
     private void requestHubHudAttach(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef) {
@@ -309,6 +321,10 @@ public class HyvexaHubPlugin extends JavaPlugin {
         if (hubHudTask != null) {
             hubHudTask.cancel(false);
             hubHudTask = null;
+        }
+        if (playerCountTask != null) {
+            playerCountTask.cancel(false);
+            playerCountTask = null;
         }
         hubHudStates.clear();
         hubHudAttachInFlight.clear();

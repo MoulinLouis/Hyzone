@@ -229,6 +229,7 @@ public class AscendHud extends CustomUIHud {
         lastTimerVisible = null;
         lastAscensionProgressKey = null;
         lastMomentumKey = null;
+        lastPlayerCount = -1;
         lastDigits = null;
         lastVexa = null;
         effectManager.clearEffects();
