@@ -74,6 +74,9 @@ public class AscensionManager {
         progress.setElevationAccumulatedVexa(io.hyvexa.common.math.BigNumber.ZERO);
         progress.clearSummitXp();
 
+        // Mark for full child-row deletion so stale DB rows are purged
+        playerStore.markResetPending(playerId);
+
         // Reset all map progress (multipliers, unlocks, robots)
         progress.getMapProgress().clear();
 
