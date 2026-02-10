@@ -552,7 +552,8 @@ public class AscendRunTracker {
             return;
         }
         EntityVisibilityManager visibilityManager = EntityVisibilityManager.get();
-        for (UUID runnerUuid : robotManager.getRunnerUuidsForMap(mapId)) {
+        // Only hide other players' runners - the viewer should still see their own
+        for (UUID runnerUuid : robotManager.getRunnerUuidsForMapExcludingOwner(mapId, viewerId)) {
             visibilityManager.hideEntity(viewerId, runnerUuid);
         }
     }

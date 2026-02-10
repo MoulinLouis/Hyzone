@@ -344,6 +344,23 @@ public class RobotManager {
         return uuids;
     }
 
+    /**
+     * Get runner entity UUIDs for a specific map, excluding runners owned by a specific player.
+     * Used so a player can still see their own runners while playing a map.
+     */
+    public List<UUID> getRunnerUuidsForMapExcludingOwner(String mapId, UUID excludeOwner) {
+        List<UUID> uuids = new ArrayList<>();
+        for (RobotState state : robots.values()) {
+            if (state.getMapId().equals(mapId) && !state.getOwnerId().equals(excludeOwner)) {
+                UUID entityUuid = state.getEntityUuid();
+                if (entityUuid != null) {
+                    uuids.add(entityUuid);
+                }
+            }
+        }
+        return uuids;
+    }
+
     public void respawnRobot(UUID ownerId, String mapId, int newStars) {
         String key = robotKey(ownerId, mapId);
         RobotState state = robots.get(key);
@@ -828,6 +845,7 @@ public class RobotManager {
 
     /**
      * Hide a newly spawned runner from all players currently running on the same map.
+     * Skips the runner's owner so they can still see their own runner while playing.
      */
     private void hideFromActiveRunners(String mapId, UUID runnerUuid) {
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
@@ -838,6 +856,14 @@ public class RobotManager {
         if (runTracker == null) {
             return;
         }
+        // Find the owner of this runner to skip them
+        UUID runnerOwnerId = null;
+        for (RobotState state : robots.values()) {
+            if (runnerUuid.equals(state.getEntityUuid())) {
+                runnerOwnerId = state.getOwnerId();
+                break;
+            }
+        }
         EntityVisibilityManager visibilityManager = EntityVisibilityManager.get();
         // Iterate over all online players in the Ascend world
         for (PlayerRef playerRef : Universe.get().getPlayers()) {
@@ -846,6 +872,10 @@ public class RobotManager {
             }
             UUID playerId = playerRef.getUuid();
             if (playerId == null || !isPlayerInAscendWorld(playerId)) {
+                continue;
+            }
+            // Don't hide a runner from its owner - they should see their own runner
+            if (playerId.equals(runnerOwnerId)) {
                 continue;
             }
             String activeMapId = runTracker.getActiveMapId(playerId);
