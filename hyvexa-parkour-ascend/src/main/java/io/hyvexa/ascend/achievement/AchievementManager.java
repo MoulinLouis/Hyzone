@@ -52,7 +52,7 @@ public class AchievementManager {
 
                 // Notify player
                 if (player != null) {
-                    player.sendMessage(Message.raw("[Achievement] " + achievement.getName() + " - Title: \"" + achievement.getTitle() + "\"")
+                    player.sendMessage(Message.raw("[Achievement] " + achievement.getName() + " unlocked!")
                         .color(SystemMessageUtils.SUCCESS));
                 }
 
@@ -120,67 +120,6 @@ public class AchievementManager {
             }
         }
         return false;
-    }
-
-    /**
-     * Gets the list of available titles for a player (from unlocked achievements).
-     */
-    public List<String> getAvailableTitles(UUID playerId) {
-        List<String> titles = new ArrayList<>();
-        AscendPlayerProgress progress = playerStore.getPlayer(playerId);
-        if (progress == null) {
-            return titles;
-        }
-
-        for (AchievementType achievement : progress.getUnlockedAchievements()) {
-            titles.add(achievement.getTitle());
-        }
-        return titles;
-    }
-
-    /**
-     * Gets the player's active title.
-     */
-    public String getActiveTitle(UUID playerId) {
-        return playerStore.getActiveTitle(playerId);
-    }
-
-    /**
-     * Sets the player's active title.
-     *
-     * @return true if the title was set, false if the player doesn't have that title
-     */
-    public boolean setActiveTitle(UUID playerId, String title) {
-        if (title == null || title.isEmpty()) {
-            playerStore.setActiveTitle(playerId, null);
-            return true;
-        }
-
-        // Verify the player has earned this title
-        AscendPlayerProgress progress = playerStore.getPlayer(playerId);
-        if (progress == null) {
-            return false;
-        }
-
-        for (AchievementType achievement : progress.getUnlockedAchievements()) {
-            if (achievement.getTitle().equalsIgnoreCase(title)) {
-                playerStore.setActiveTitle(playerId, title);
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * Gets the formatted display name with title for a player.
-     */
-    public String getDisplayNameWithTitle(UUID playerId, String playerName) {
-        String title = getActiveTitle(playerId);
-        if (title == null || title.isEmpty()) {
-            return playerName;
-        }
-        return "[" + title + "] " + playerName;
     }
 
     /**

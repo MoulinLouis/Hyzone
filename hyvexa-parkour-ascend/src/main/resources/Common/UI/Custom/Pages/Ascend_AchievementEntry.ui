@@ -1,0 +1,63 @@
+$C = "../Common.ui";
+
+// Achievement entry card - appended into #AchievementCards
+Group {
+  Anchor: (Left: 0, Right: 0, Height: 100, Top: 6);
+  LayoutMode: Full;
+  Background: #ffffff(0.03);
+  OutlineColor: #ffffff(0.04);
+  OutlineSize: 1;
+
+  // Unlocked green tint overlay (hidden by default)
+  Group #UnlockedTint {
+    Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+    Background: #0d2818;
+    Visible: false;
+  }
+
+  // Left accent bar
+  Group #AccentBar {
+    Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
+    Background: #4b5563;
+  }
+
+  // Icon area
+  Group {
+    Anchor: (Left: 16, Top: 18, Width: 64, Height: 64);
+    LayoutMode: Full;
+    Background: #1e293b;
+
+    // Unlocked: golem icon (hidden by default)
+    Group #UnlockedIcon {
+      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+      Background: (TexturePath: "../Textures/golem_icon.png");
+      Visible: false;
+    }
+
+    // Locked: lock icon centered (visible by default)
+    Group #LockIcon {
+      Anchor: (Width: 32, Height: 32);
+      Background: (TexturePath: "../Textures/lock.png");
+    }
+  }
+
+  // Right content area
+  Group #ContentArea {
+    Anchor: (Left: 92, Right: 16, Top: 14, Bottom: 14);
+    LayoutMode: Top;
+
+    // Achievement name
+    Label #Name {
+      Anchor: (Left: 0, Right: 0, Height: 20);
+      Style: (FontSize: 15, TextColor: #6b7280, RenderBold: true);
+      Text: "Achievement Name";
+    }
+
+    // Description
+    Label #Description {
+      Anchor: (Left: 0, Right: 0, Height: 18, Top: 2);
+      Style: (FontSize: 12, TextColor: #6b7280);
+      Text: "Achievement description";
+    }
+  }
+}

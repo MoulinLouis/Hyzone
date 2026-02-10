@@ -606,28 +606,26 @@ public final class AscendConstants {
 
     public enum AchievementType {
         // Milestones
-        FIRST_STEPS("First Steps", "Complete first manual run", "Beginner"),
-        DEDICATED("Dedicated", "Complete 100 manual runs", "Dedicated"),
-        MARATHON("Marathon", "Complete 1000 manual runs", "Marathoner"),
+        FIRST_STEPS("First Steps", "Complete first manual run"),
+        DEDICATED("Dedicated", "Complete 100 manual runs"),
+        MARATHON("Marathon", "Complete 1000 manual runs"),
 
         // Runners
-        FIRST_ROBOT("First Robot", "Buy your first runner", "Automator"),
-        ARMY("Army", "Have 5+ active runners", "Commander"),
-        EVOLVED("Evolved", "Evolve a runner to 1+ stars", "Evolver"),
+        FIRST_ROBOT("First Robot", "Buy your first runner"),
+        ARMY("Army", "Have 5+ active runners"),
+        EVOLVED("Evolved", "Evolve a runner to 1+ stars"),
 
         // Prestige
-        FIRST_ELEVATION("First Elevation", "Complete first Elevation", "Elevated"),
-        SUMMIT_SEEKER("Summit Seeker", "Complete first Summit", "Summiter"),
-        ASCENDED("Ascended", "Complete first Ascension", "Ascended");
+        FIRST_ELEVATION("First Elevation", "Complete first Elevation"),
+        SUMMIT_SEEKER("Summit Seeker", "Complete first Summit"),
+        ASCENDED("Ascended", "Complete first Ascension");
 
         private final String name;
         private final String description;
-        private final String title;
 
-        AchievementType(String name, String description, String title) {
+        AchievementType(String name, String description) {
             this.name = name;
             this.description = description;
-            this.title = title;
         }
 
         public String getName() {
@@ -636,10 +634,6 @@ public final class AscendConstants {
 
         public String getDescription() {
             return description;
-        }
-
-        public String getTitle() {
-            return title;
         }
     }
 
