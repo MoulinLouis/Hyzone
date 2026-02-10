@@ -1,39 +1,45 @@
 $C = "../Common.ui";
 
 Group {
-  Anchor: (Left: 0, Right: 0, Bottom: 8, Height: 112);
-  Background: #1a2530(0.95);
+  Anchor: (Left: 0, Right: 0, Bottom: 6, Height: 112);
+  LayoutMode: Full;
+  Background: #ffffff(0.03);
+  OutlineColor: #ffffff(0.04);
+  OutlineSize: 1;
 
+  // Left accent bar
   Group #AccentBar {
-    Anchor: (Width: 8, Top: 0, Bottom: 0, Left: 0);
+    Anchor: (Width: 4, Top: 0, Bottom: 0, Left: 0);
     Background: #10b981;
   }
 
+  // Colored background overlays (shown when summit is available)
   Group #CardBgGreen {
-    Anchor: (Left: 8, Right: 0, Top: 0, Bottom: 0);
-    Background: #10b981(0.35);
+    Anchor: (Left: 4, Right: 0, Top: 0, Bottom: 0);
+    Background: #10b981(0.12);
     Visible: false;
   }
 
   Group #CardBgBlue {
-    Anchor: (Left: 8, Right: 0, Top: 0, Bottom: 0);
-    Background: #3b82f6(0.35);
+    Anchor: (Left: 4, Right: 0, Top: 0, Bottom: 0);
+    Background: #3b82f6(0.12);
     Visible: false;
   }
 
   Group #CardBgPurple {
-    Anchor: (Left: 8, Right: 0, Top: 0, Bottom: 0);
-    Background: #8b5cf6(0.35);
+    Anchor: (Left: 4, Right: 0, Top: 0, Bottom: 0);
+    Background: #8b5cf6(0.12);
     Visible: false;
   }
 
+  // Clickable button overlay
   Button #SummitButton {
-    Anchor: (Left: 8, Right: 0, Top: 0, Bottom: 0);
-    Padding: (Left: 12, Top: 12, Bottom: 12);
+    Anchor: (Left: 4, Right: 0, Top: 0, Bottom: 0);
+    Padding: (Left: 14, Top: 10, Bottom: 10);
     Background: #00000000;
     Style: ButtonStyle(
       Default: (Background: #00000000),
-      Hovered: (Background: #ffffff(0.05)),
+      Hovered: (Background: #ffffff(0.04)),
       Pressed: (Background: #ffffff(0.02)),
       Sounds: $C.@ButtonSounds,
     );
@@ -44,42 +50,31 @@ Group {
       LayoutMode: Left;
 
       Label #CategoryName {
-        Style: (
-          FontSize: 16,
-          RenderBold: true,
-          TextColor: #f0f4f8
-        );
+        Style: (FontSize: 15, RenderBold: true, TextColor: #f0f4f8);
         Text: "Category Name";
       }
 
       Group #LockIcon {
-        Anchor: (Width: 16, Height: 16, Left: 8, Top: 2);
+        Anchor: (Width: 14, Height: 14, Left: 8, Top: 3);
         Background: (TexturePath: "../Textures/lock.png");
         Visible: false;
       }
     }
 
     Label #CategoryDesc {
-      Anchor: (Top: 4);
-      Style: (
-        FontSize: 13,
-        TextColor: #9fb0ba
-      );
+      Anchor: (Top: 2);
+      Style: (FontSize: 12, TextColor: #6b7280);
       Text: "Category description";
     }
 
     Label #CategoryBonus {
       Anchor: (Top: 4);
-      Style: (
-        FontSize: 14,
-        TextColor: #ffd166,
-        RenderBold: true
-      );
+      Style: (FontSize: 13, TextColor: #ffd166, RenderBold: true);
       Text: "Current: x1.00 -> Next: x1.10";
     }
 
     Group #XpBarContainer {
-      Anchor: (Left: 0, Right: 12, Top: 6, Height: 22);
+      Anchor: (Left: 0, Right: 14, Top: 6, Height: 20);
       Background: #000000(0.3);
 
       Group #XpSeg1 { Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 20); Background: #10b981; Visible: false; }
@@ -105,11 +100,7 @@ Group {
 
       Label #XpProgress {
         Anchor: (Left: 8, Right: 0, Top: 0, Bottom: 0);
-        Style: (
-          FontSize: 13,
-          TextColor: #f0f4f8,
-          RenderBold: true
-        );
+        Style: (FontSize: 12, TextColor: #f0f4f8, RenderBold: true, VerticalAlignment: Center);
         Text: "Exp 0/100 (+0)";
       }
     }
