@@ -6,7 +6,7 @@ This project stores parkour data in MySQL. The tables below reflect the current 
 Runtime notes:
 - Server working directory is `run/`, so runtime config lives in `mods/Parkour/`
 - `mods/Parkour/database.json` holds MySQL credentials (gitignored)
-- MySQL is the source of truth; in-memory caches load from MySQL on startup
+- MySQL is the source of truth for persisted state; some runtime values are intentionally computed from constants (for example Ascend map balance values from `display_order`)
 - `DatabaseManager` lives in `hyvexa-core` and is shared across modules
 
 ## players
@@ -300,6 +300,12 @@ CREATE TABLE ascend_maps (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 ```
+
+Notes:
+- Runtime source of truth for Ascend map balance is `display_order` + `AscendConstants` (unlock price, runner price, base reward, and base run time are computed at runtime).
+- `price`, `robot_price`, `base_reward`, `base_run_time_ms`, `robot_time_reduction_ms`, and `storage_capacity` are legacy compatibility columns retained for older schemas/tools.
+- `AscendMapStore` no longer reads legacy balance/storage columns; this is the backward-compatible read stage for migration.
+- Legacy column writes are still preserved during rollout. Remove legacy writes/columns only after a compatibility window confirms safe migration.
 
 ## ascend_player_maps
 Stores per-player progress on each Ascend map.

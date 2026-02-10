@@ -36,10 +36,11 @@ public class HubMenuPage extends InteractiveCustomUIPage<ButtonEventData> {
             Message.raw("Store: "),
             Message.raw("store.hyvexa.com").color(LINK_COLOR).link("https://store.hyvexa.com")
     );
-    private static final Message MESSAGE_ASCEND_COMING_SOON = Message.join(
+    private static final Message MESSAGE_ASCEND_RESTRICTED = Message.join(
             Message.raw("Hyvexa: ").color("#ff8a3d"),
-            Message.raw("Parkour Ascend is coming soon. More infos on "),
-            Message.raw("/discord").color(LINK_COLOR)
+            Message.raw("Parkour Ascend access is currently restricted to staff and whitelisted players. See "),
+            Message.raw("/discord").color(LINK_COLOR),
+            Message.raw(" for updates.")
     );
 
     private final HubRouter router;
@@ -95,7 +96,7 @@ public class HubMenuPage extends InteractiveCustomUIPage<ButtonEventData> {
                 }
             }
             if (player != null && !isAllowed) {
-                player.sendMessage(MESSAGE_ASCEND_COMING_SOON);
+                player.sendMessage(MESSAGE_ASCEND_RESTRICTED);
                 this.close();
                 return;
             }
