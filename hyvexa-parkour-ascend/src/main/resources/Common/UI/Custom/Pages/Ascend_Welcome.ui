@@ -18,17 +18,17 @@ $C.@PageOverlay {
 
       // Step images - one per step, toggled via Visible
       Group #StepImage1 {
-        Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 80);
+        Anchor: (Left: 0, Right: 0, Top: 135, Height: 122);
         Background: (TexturePath: "../Textures/ascend.png");
         Visible: true;
       }
       Group #StepImage2 {
-        Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 80);
+        Anchor: (Left: 0, Right: 0, Top: 135, Height: 122);
         Background: (TexturePath: "../Textures/ascend.png");
         Visible: false;
       }
       Group #StepImage3 {
-        Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 80);
+        Anchor: (Left: 0, Right: 0, Top: 135, Height: 122);
         Background: (TexturePath: "../Textures/ascend.png");
         Visible: false;
       }
