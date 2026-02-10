@@ -27,7 +27,7 @@ public class AscendWhitelistManager {
     private final File whitelistFile;
     private final Set<String> whitelistedPlayers = ConcurrentHashMap.newKeySet();
     private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
-    private volatile boolean enabled = false; // Disabled by default - everyone can access until explicitly enabled
+    private volatile boolean enabled = false; // Disabled by default - only OPs can access until whitelist is enabled
 
     public AscendWhitelistManager(File whitelistFile) {
         this.whitelistFile = whitelistFile;
@@ -126,7 +126,7 @@ public class AscendWhitelistManager {
                 return;
             }
 
-            // Load enabled flag (default to true if not present)
+            // Load enabled flag (default remains false if not present)
             if (json.has("enabled")) {
                 enabled = json.get("enabled").getAsBoolean();
             }

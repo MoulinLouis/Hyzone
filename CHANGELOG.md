@@ -14,6 +14,7 @@
 - **Ascend: Leaderboard system** - New `/ascend leaderboard` command with tabbed rankings for Vexa, Ascensions, and Manual Runs. Includes pagination (50 per page) and player search. Accessible via the Bolt of Stormsilk item.
 
 ### Fixed
+- **Core reliability: fixed high-priority race/leak issues** - Ascend counter/spend paths now use atomic CAS patterns, disconnect handlers clear lingering per-player caches, and hub/respawn null-race edge cases were closed
 - **Ascend: Evolution Power now applies to runner evolution** - Each star multiplies the multiplier gain by the Evolution Power value (e.g., ×2 base: 0★=0.10, 1★=0.20, 2★=0.40, 3★=0.80). Higher Summit Evolution Power makes each star exponentially stronger.
 - **Ascend: Added error handling for atomic database operations** - Passive earnings now logs failures when atomic coin/multiplier updates fail
 - **Ascend: Added transaction support for multi-table saves** - Player save operations now use database transactions with rollback on failure

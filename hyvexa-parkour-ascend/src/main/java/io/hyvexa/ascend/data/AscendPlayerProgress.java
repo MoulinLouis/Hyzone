@@ -8,6 +8,7 @@ import java.util.EnumSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class AscendPlayerProgress {
@@ -23,15 +24,15 @@ public class AscendPlayerProgress {
     private final AtomicReference<BigNumber> elevationAccumulatedVexa = new AtomicReference<>(BigNumber.ZERO);
 
     // Ascension System
-    private volatile int ascensionCount;
+    private final AtomicInteger ascensionCount = new AtomicInteger(0);
     private volatile int skillTreePoints;
     private final Set<AscendConstants.SkillTreeNode> unlockedSkillNodes = ConcurrentHashMap.newKeySet();
 
     // Achievement System
     private final Set<AscendConstants.AchievementType> unlockedAchievements = ConcurrentHashMap.newKeySet();
     private volatile String activeTitle;
-    private volatile int totalManualRuns;
-    private volatile int consecutiveManualRuns; // For chain bonus tracking
+    private final AtomicInteger totalManualRuns = new AtomicInteger(0);
+    private final AtomicInteger consecutiveManualRuns = new AtomicInteger(0); // For chain bonus tracking
     private volatile boolean sessionFirstRunClaimed;
 
     // Ascension Timer (for stats tracking)
@@ -56,6 +57,10 @@ public class AscendPlayerProgress {
 
     public void setVexa(BigNumber value) {
         this.vexa.set(value);
+    }
+
+    public boolean casVexa(BigNumber expect, BigNumber update) {
+        return this.vexa.compareAndSet(expect, update);
     }
 
     public void addVexa(BigNumber amount) {
@@ -176,15 +181,15 @@ public class AscendPlayerProgress {
     // ========================================
 
     public int getAscensionCount() {
-        return ascensionCount;
+        return ascensionCount.get();
     }
 
     public void setAscensionCount(int ascensionCount) {
-        this.ascensionCount = Math.max(0, ascensionCount);
+        this.ascensionCount.set(Math.max(0, ascensionCount));
     }
 
     public int incrementAscensionCount() {
-        return ++ascensionCount;
+        return ascensionCount.incrementAndGet();
     }
 
     public int getSkillTreePoints() {
@@ -263,31 +268,31 @@ public class AscendPlayerProgress {
     }
 
     public int getTotalManualRuns() {
-        return totalManualRuns;
+        return totalManualRuns.get();
     }
 
     public void setTotalManualRuns(int totalManualRuns) {
-        this.totalManualRuns = Math.max(0, totalManualRuns);
+        this.totalManualRuns.set(Math.max(0, totalManualRuns));
     }
 
     public int incrementTotalManualRuns() {
-        return ++totalManualRuns;
+        return totalManualRuns.incrementAndGet();
     }
 
     public int getConsecutiveManualRuns() {
-        return consecutiveManualRuns;
+        return consecutiveManualRuns.get();
     }
 
     public void setConsecutiveManualRuns(int consecutiveManualRuns) {
-        this.consecutiveManualRuns = Math.max(0, consecutiveManualRuns);
+        this.consecutiveManualRuns.set(Math.max(0, consecutiveManualRuns));
     }
 
     public int incrementConsecutiveManualRuns() {
-        return ++consecutiveManualRuns;
+        return consecutiveManualRuns.incrementAndGet();
     }
 
     public void resetConsecutiveManualRuns() {
-        this.consecutiveManualRuns = 0;
+        this.consecutiveManualRuns.set(0);
     }
 
     public boolean isSessionFirstRunClaimed() {
@@ -386,8 +391,8 @@ public class AscendPlayerProgress {
         private volatile boolean unlocked;
         private volatile boolean completedManually;
         private volatile boolean hasRobot;
-        private volatile int robotSpeedLevel;
-        private volatile int robotStars;
+        private final AtomicInteger robotSpeedLevel = new AtomicInteger(0);
+        private final AtomicInteger robotStars = new AtomicInteger(0);
         private final AtomicReference<BigNumber> multiplier = new AtomicReference<>(BigNumber.ONE);
         private volatile Long bestTimeMs;
         private volatile long momentumExpireTimeMs; // 0 = inactive (ephemeral, not persisted)
@@ -435,29 +440,27 @@ public class AscendPlayerProgress {
         }
 
         public int getRobotSpeedLevel() {
-            return robotSpeedLevel;
+            return robotSpeedLevel.get();
         }
 
         public void setRobotSpeedLevel(int robotSpeedLevel) {
-            this.robotSpeedLevel = Math.max(0, robotSpeedLevel);
+            this.robotSpeedLevel.set(Math.max(0, robotSpeedLevel));
         }
 
         public int incrementRobotSpeedLevel() {
-            robotSpeedLevel = Math.max(0, robotSpeedLevel) + 1;
-            return robotSpeedLevel;
+            return robotSpeedLevel.incrementAndGet();
         }
 
         public int getRobotStars() {
-            return robotStars;
+            return robotStars.get();
         }
 
         public void setRobotStars(int robotStars) {
-            this.robotStars = Math.max(0, robotStars);
+            this.robotStars.set(Math.max(0, robotStars));
         }
 
         public int incrementRobotStars() {
-            robotStars = Math.max(0, robotStars) + 1;
-            return robotStars;
+            return robotStars.incrementAndGet();
         }
 
         public BigNumber getMultiplier() {

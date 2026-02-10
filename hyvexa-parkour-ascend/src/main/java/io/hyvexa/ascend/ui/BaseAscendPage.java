@@ -34,6 +34,13 @@ public abstract class BaseAscendPage extends InteractiveCustomUIPage<ButtonEvent
         return current != null && current == pageId;
     }
 
+    public static void removeCurrentPage(UUID playerId) {
+        if (playerId == null) {
+            return;
+        }
+        currentPageIds.remove(playerId);
+    }
+
     public void shutdown() {
         this.close();
     }

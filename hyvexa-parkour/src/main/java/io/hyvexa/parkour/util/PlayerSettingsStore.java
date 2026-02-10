@@ -73,6 +73,8 @@ public final class PlayerSettingsStore {
             return;
         }
         RESET_ITEM_ENABLED.remove(playerId);
+        DUEL_HIDE_OPPONENT.remove(playerId);
+        GHOST_VISIBLE.remove(playerId);
     }
 
     public static void clear(UUID playerId) {

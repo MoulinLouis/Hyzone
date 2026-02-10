@@ -40,6 +40,7 @@ import io.hyvexa.ascend.tutorial.TutorialTriggerService;
 import io.hyvexa.ascend.passive.PassiveEarningsManager;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.ui.AscendMapSelectPage;
+import io.hyvexa.ascend.ui.BaseAscendPage;
 import io.hyvexa.ascend.util.AscendInventoryUtils;
 import io.hyvexa.ascend.util.AscendModeGate;
 import io.hyvexa.common.whitelist.AscendWhitelistManager;
@@ -307,6 +308,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
             AscendCommand.onPlayerDisconnect(playerId);
             playerRefCache.remove(playerId);
             AscendMapSelectPage.clearBuyAllCooldown(playerId);
+            BaseAscendPage.removeCurrentPage(playerId);
+            AscendLeaveInteraction.clearPendingLeave(playerId);
             hudManager.removePlayer(playerId);
             if (runTracker != null) {
                 runTracker.cancelRun(playerId);

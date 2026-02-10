@@ -586,7 +586,18 @@ public class AscendPlayerStore {
      * @return true if the purchase succeeded (sufficient balance)
      */
     public boolean atomicSpendVexa(UUID playerId, BigNumber amount) {
-        return spendVexa(playerId, amount);
+        AscendPlayerProgress progress = getOrCreatePlayer(playerId);
+        BigNumber current;
+        BigNumber updated;
+        do {
+            current = progress.getVexa();
+            if (current.lt(amount)) {
+                return false;
+            }
+            updated = current.subtract(amount);
+        } while (!progress.casVexa(current, updated));
+        markDirty(playerId);
+        return true;
     }
 
     /**
