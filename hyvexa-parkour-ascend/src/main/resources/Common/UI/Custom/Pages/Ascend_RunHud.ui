@@ -173,23 +173,34 @@ $C.@PageOverlay {
     }
 
     Group #RunTimerHud {
-      Anchor: (Left: 0, Right: 0, Top: 100, Height: 32);
+      Anchor: (Left: 0, Right: 0, Top: 120, Height: 34);
       Visible: false;
 
-      Group {
-        Anchor: (Width: 160, Height: 28, Top: 2);
-        Background: #000000(0.45);
+      Group #TimerBar {
+        Anchor: (Width: 200, Height: 46);
+        Background: #000000(0.60);
+        LayoutMode: Top;
 
-        Label #RunTimerValue {
-          Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-          Style: (
-            FontSize: 22,
-            TextColor: #10b981,
-            RenderBold: true,
-            HorizontalAlignment: Center,
-            VerticalAlignment: Center
-          );
-          Text: "0.000";
+        Group #TimerAccent {
+          Anchor: (Left: 0, Right: 0, Height: 3);
+          Background: #10b981;
+        }
+
+        Group #TimerContent {
+          FlexWeight: 1;
+          Anchor: (Left: 0, Right: 0);
+
+          Label #RunTimerValue {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Style: (
+              FontSize: 30,
+              TextColor: #10b981,
+              RenderBold: true,
+              HorizontalAlignment: Center,
+              VerticalAlignment: Center
+            );
+            Text: "0.000";
+          }
         }
       }
     }
