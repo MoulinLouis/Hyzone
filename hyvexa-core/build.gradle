@@ -7,4 +7,9 @@ dependencies {
     api 'com.zaxxer:HikariCP:5.1.0'
     api 'com.mysql:mysql-connector-j:8.2.0'
     compileOnlyApi files("$rootDir/libs/hylograms-1.0.7.jar")
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
 }

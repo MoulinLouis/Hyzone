@@ -1538,16 +1538,22 @@ public class RunTracker {
         if (pendingJumps.isEmpty() || progressStore == null) {
             return;
         }
-        for (java.util.Map.Entry<UUID, Integer> entry : pendingJumps.entrySet()) {
+        // Snapshot + compare-and-remove drain to avoid losing increments that arrive mid-flush.
+        for (java.util.Map.Entry<UUID, Integer> entry : new ArrayList<>(pendingJumps.entrySet())) {
             UUID playerId = entry.getKey();
             Integer count = entry.getValue();
-            if (playerId == null || count == null || count <= 0) {
+            if (playerId == null || count == null) {
+                continue;
+            }
+            if (!pendingJumps.remove(playerId, count)) {
+                continue;
+            }
+            if (count <= 0) {
                 continue;
             }
             String playerName = progressStore.getPlayerName(playerId);
             progressStore.addJumps(playerId, playerName, count);
         }
-        pendingJumps.clear();
     }
 
     private void advanceRunTime(ActiveRun run, float deltaSeconds) {

@@ -12,6 +12,7 @@ import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.parkour.ParkourConstants;
 import io.hyvexa.parkour.util.ParkourModeGate;
 
@@ -22,8 +23,10 @@ import static com.hypixel.hytale.server.core.command.commands.player.inventory.I
 
 public class ParkourAdminItemCommand extends AbstractAsyncCommand {
 
+    private static final Message MESSAGE_OP_REQUIRED = Message.raw("You must be OP to use /pkadminitem.");
+
     public ParkourAdminItemCommand() {
-        super("pkadminitem", "Give the admin player settings item.");
+        super("pkadminitem", "Staff-only: give the admin player settings item.");
         this.setPermissionGroup(GameMode.Adventure);
     }
 
@@ -32,6 +35,10 @@ public class ParkourAdminItemCommand extends AbstractAsyncCommand {
     protected CompletableFuture<Void> executeAsync(CommandContext commandContext) {
         CommandSender sender = commandContext.sender();
         if (!(sender instanceof Player player)) {
+            return CompletableFuture.completedFuture(null);
+        }
+        if (!PermissionUtils.isOp(player)) {
+            commandContext.sendMessage(MESSAGE_OP_REQUIRED);
             return CompletableFuture.completedFuture(null);
         }
         Ref<EntityStore> ref = player.getReference();

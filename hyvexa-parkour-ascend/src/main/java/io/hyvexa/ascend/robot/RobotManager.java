@@ -52,6 +52,7 @@ public class RobotManager {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final String RUNNER_UUIDS_FILE = "runner_uuids.txt";
     private static final long AUTO_UPGRADE_INTERVAL_MS = 400L;
+    private static final long TELEPORT_WARNING_THROTTLE_MS = 10_000L;
 
     private final AscendMapStore mapStore;
     private final AscendPlayerStore playerStore;
@@ -59,6 +60,7 @@ public class RobotManager {
     private final Map<String, RobotState> robots = new ConcurrentHashMap<>();
     private final Set<UUID> onlinePlayers = ConcurrentHashMap.newKeySet();
     private final Set<UUID> orphanedRunnerUuids = ConcurrentHashMap.newKeySet();
+    private final Map<String, Long> teleportWarningByRobot = new ConcurrentHashMap<>();
     // Pending removals: entityUuid -> entityRef (queued during ECS tick, processed outside)
     private final Map<UUID, Ref<EntityStore>> pendingRemovals = new ConcurrentHashMap<>();
     private ScheduledFuture<?> tickTask;
@@ -432,13 +434,13 @@ public class RobotManager {
         float yaw = sample.yaw();
 
         // Teleport NPC to interpolated position with recorded rotation
-        world.execute(() -> teleportNpcWithRecordedRotation(entityRef, world, targetPos, yaw));
+        world.execute(() -> teleportNpcWithRecordedRotation(robot, entityRef, world, targetPos, yaw));
 
         // Update previous position for next tick
         robot.setPreviousPosition(targetPos);
     }
 
-    private void teleportNpcWithRecordedRotation(Ref<EntityStore> entityRef, World world,
+    private void teleportNpcWithRecordedRotation(RobotState robot, Ref<EntityStore> entityRef, World world,
                                                   double[] targetPos, float yaw) {
         if (entityRef == null || !entityRef.isValid()) {
             return;
@@ -455,8 +457,36 @@ public class RobotManager {
             store.addComponent(entityRef, Teleport.getComponentType(),
                 new Teleport(world, targetVec, rotation));
         } catch (Exception e) {
-            // Silently ignore teleport errors
+            logTeleportWarning(robot, world, targetPos, yaw, e);
         }
+    }
+
+    private void logTeleportWarning(RobotState robot, World world, double[] targetPos, float yaw, Exception error) {
+        UUID ownerId = robot != null ? robot.getOwnerId() : null;
+        String mapId = robot != null ? robot.getMapId() : null;
+        String key = (ownerId != null ? ownerId.toString() : "unknown-owner")
+                + ":" + (mapId != null ? mapId : "unknown-map");
+        long now = System.currentTimeMillis();
+        Long lastLogged = teleportWarningByRobot.get(key);
+        if (lastLogged != null && now - lastLogged < TELEPORT_WARNING_THROTTLE_MS) {
+            return;
+        }
+        teleportWarningByRobot.put(key, now);
+        String worldName = world != null ? world.getName() : "unknown";
+        LOGGER.at(Level.WARNING).withCause(error).log(
+                "Runner teleport failed owner=" + ownerId
+                        + " map=" + mapId
+                        + " world=" + worldName
+                        + " target=" + formatPosition(targetPos)
+                        + " yaw=" + yaw
+        );
+    }
+
+    private String formatPosition(double[] position) {
+        if (position == null || position.length < 3) {
+            return "n/a";
+        }
+        return String.format("(%.2f, %.2f, %.2f)", position[0], position[1], position[2]);
     }
 
     private void refreshRobots(long now) {
