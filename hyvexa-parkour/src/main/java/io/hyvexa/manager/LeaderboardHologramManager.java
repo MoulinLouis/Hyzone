@@ -24,7 +24,6 @@ public class LeaderboardHologramManager {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final String LEADERBOARD_HOLOGRAM_NAME = "leaderboard";
-    private static final boolean DEBUG_MAP_HOLOGRAM = false;
 
     private final ProgressStore progressStore;
     private final MapStore mapStore;
@@ -69,33 +68,23 @@ public class LeaderboardHologramManager {
         if (!isParkourWorld(world)) {
             return;
         }
-        if (world != null) {
-            world.execute(() -> updateLeaderboardHologram(store));
-        } else {
-            updateLeaderboardHologram(store);
-        }
+        world.execute(() -> updateLeaderboardHologram(store));
     }
 
     public void refreshMapLeaderboardHologram(String mapId, Store<EntityStore> store) {
         if (mapId == null || mapId.isBlank() || store == null || progressStore == null) {
             return;
         }
-        if (DEBUG_MAP_HOLOGRAM) {
-            World storeWorld = store.getExternalData().getWorld();
-            String storeWorldName = storeWorld != null ? storeWorld.getName() : "unknown";
-            logMapHologramDebug("Map holo refresh requested for '" + mapId + "' from world '" + storeWorldName + "'.");
-        }
+        World storeWorld = store.getExternalData().getWorld();
+        String storeWorldName = storeWorld != null ? storeWorld.getName() : "unknown";
+        logMapHologramDebug("Map holo refresh requested for '" + mapId + "' from world '" + storeWorldName + "'.");
         if (!HylogramsBridge.isAvailable()) {
-            if (DEBUG_MAP_HOLOGRAM) {
-                logMapHologramDebug("Map holo refresh skipped: Hylograms not available.");
-            }
+            logMapHologramDebug("Map holo refresh skipped: Hylograms not available.");
             return;
         }
         String holoName = mapId + "_holo";
         if (!HylogramsBridge.exists(holoName)) {
-            if (DEBUG_MAP_HOLOGRAM) {
-                logMapHologramDebug("Map holo refresh skipped: '" + holoName + "' does not exist.");
-            }
+            logMapHologramDebug("Map holo refresh skipped: '" + holoName + "' does not exist.");
             return;
         }
         HylogramsBridge.Hologram holo = HylogramsBridge.get(holoName);
@@ -116,10 +105,8 @@ public class LeaderboardHologramManager {
             targetWorld = store.getExternalData().getWorld();
         }
         if (targetWorld != null) {
-            if (DEBUG_MAP_HOLOGRAM) {
-                logMapHologramDebug("Map holo '" + holoName + "' target world resolved to '"
-                        + targetWorld.getName() + "'.");
-            }
+            logMapHologramDebug("Map holo '" + holoName + "' target world resolved to '"
+                    + targetWorld.getName() + "'.");
             targetStore = targetWorld.getEntityStore().getStore();
             Store<EntityStore> finalStore = targetStore != null ? targetStore : store;
             targetWorld.execute(() -> updateMapLeaderboardHologramLines(mapId, holoName, finalStore));
@@ -146,9 +133,7 @@ public class LeaderboardHologramManager {
             return;
         }
         List<String> lines = buildMapLeaderboardHologramLines(mapId);
-        if (DEBUG_MAP_HOLOGRAM) {
-            logMapHologramDebug("Updating map holo '" + holoName + "' with " + lines.size() + " lines.");
-        }
+        logMapHologramDebug("Updating map holo '" + holoName + "' with " + lines.size() + " lines.");
         try {
             HylogramsBridge.Hologram existing = HylogramsBridge.get(holoName);
             HylogramsBridge.updateHologramLines(holoName, lines, store);
@@ -223,7 +208,7 @@ public class LeaderboardHologramManager {
             String position = String.valueOf(i + 1) + ".";
             lines.add(formatMapHologramLine(position, safeName, time));
         }
-        if (lines.size() == 1) {
+        if (lines.size() == 2) {
             lines.add("No completions yet.");
         }
         return lines;
@@ -250,13 +235,10 @@ public class LeaderboardHologramManager {
     }
 
     public void logMapHologramDebug(String message) {
-        if (!DEBUG_MAP_HOLOGRAM) {
-            return;
-        }
         if (message == null || message.isBlank()) {
             return;
         }
-        LOGGER.atInfo().log(message);
+        LOGGER.atFine().log(message);
     }
 
     private static String formatLeaderboardHeader() {

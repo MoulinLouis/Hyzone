@@ -17,10 +17,4 @@ public record GhostSample(
     public double[] toPositionArray() {
         return new double[]{x, y, z};
     }
-
-    public double getX() { return x; }
-    public double getY() { return y; }
-    public double getZ() { return z; }
-    public float getYaw() { return yaw; }
-    public long getTimestampMs() { return timestampMs; }
 }

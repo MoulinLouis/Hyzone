@@ -4,6 +4,7 @@
 
 ### Changed
 - **Ascend: Renamed "Coins" to "Vexa"** - All player-facing text, Java identifiers, UI element IDs, database columns, and documentation updated to use "Vexa" as the currency name
+- **Parkour/Ascend: Tick-path performance cleanup** - Optimized ghost playback sampling/interpolation and reduced per-tick map scanning overhead in run tracking
 
 ### Added
 - **Ascend: Toast notification system** - HUD-based toast notifications at bottom-left for upgrades, evolutions, purchases, and economy events. 4 stacked slots with category-colored accent bars and countdown progress bars. Consolidates rapid-fire actions. Displays alongside existing chat messages.
@@ -17,10 +18,12 @@
 - **Ascend: Added error handling for atomic database operations** - Passive earnings now logs failures when atomic coin/multiplier updates fail
 - **Ascend: Added transaction support for multi-table saves** - Player save operations now use database transactions with rollback on failure
 - **Ascend: Standardized file path construction** - Unified path handling for config files using Path.of() approach
+- **Parkour: Leaderboard map hologram placeholder** - "No completions yet." now appears correctly when a map has no times
 
 ### Removed
 - **Ascend: Removed unused MAP_RUNNER_PRICES constant** - Dead code cleanup (runners are free after map unlock)
 - **Ascend: Multiplier gain display now shows 2 decimal places** - Values like +0.15x now display correctly instead of rounding to +0.2x
+- **Parkour/Core: Removed unused legacy classes** - Deleted unused command classes, old HUD/teleport helpers, and the parkour-only visibility wrapper
 
 ### Changed
 - **Ascend: BigNumber migration** - Replaced BigDecimal with lightweight `BigNumber(mantissa, exponent)` for all coin/multiplier values. Removes 10^63 DB ceiling, simplifies arithmetic. One-time DB migration converts DECIMAL columns to mantissa+exp10 pairs. Atomic SQL operations replaced with in-memory CAS + debounced save.

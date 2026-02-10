@@ -335,7 +335,7 @@ public class GhostNpcManager {
 
         GhostSample sample = recording.interpolateAt(progress);
         double[] targetPos = sample.toPositionArray();
-        float yaw = sample.getYaw();
+        float yaw = sample.yaw();
 
         world.execute(() -> teleportNpc(entityRef, world, targetPos, yaw));
     }

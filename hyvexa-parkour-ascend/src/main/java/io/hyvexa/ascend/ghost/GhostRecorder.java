@@ -4,7 +4,6 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.HytaleServer;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -150,14 +149,13 @@ public class GhostRecorder {
         }
 
         // Get the world to execute on the correct thread
-        com.hypixel.hytale.server.core.universe.world.World world = store.getExternalData().getWorld();
+        World world = store.getExternalData().getWorld();
         if (world == null) {
             return;
         }
 
         // Calculate timestamp offset from run start (before world execute)
         final long timestampMs = now - recording.startTimeMs;
-        final PlayerRef finalPlayerRef = playerRef;
 
         // Execute on world thread to access components
         world.execute(() -> {

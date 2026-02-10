@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.regex.Pattern;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.logging.Level;
@@ -21,6 +22,7 @@ public class MapStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final String MAP_ID_PATTERN = "^[a-zA-Z0-9_-]+$";
+    private static final Pattern MAP_ID_RE = Pattern.compile(MAP_ID_PATTERN);
     private static final double MAX_COORDINATE = 30000000.0;
 
     private final java.util.Map<String, Map> maps = new LinkedHashMap<>();
@@ -454,7 +456,7 @@ public class MapStore {
         if (trimmedId.length() > 32) {
             throw new IllegalArgumentException("Map ID too long.");
         }
-        if (!trimmedId.matches(MAP_ID_PATTERN)) {
+        if (!MAP_ID_RE.matcher(trimmedId).matches()) {
             throw new IllegalArgumentException("Map ID can only contain letters, numbers, underscores, and hyphens.");
         }
         map.setId(trimmedId);

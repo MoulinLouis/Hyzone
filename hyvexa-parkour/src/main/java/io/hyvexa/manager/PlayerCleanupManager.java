@@ -2,9 +2,9 @@ package io.hyvexa.manager;
 
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
+import io.hyvexa.common.visibility.EntityVisibilityManager;
 import io.hyvexa.parkour.tracker.RunTracker;
 import io.hyvexa.parkour.util.PlayerSettingsStore;
-import io.hyvexa.parkour.visibility.PlayerVisibilityManager;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -18,20 +18,17 @@ public class PlayerCleanupManager {
     private final PlayerPerksManager perksManager;
     private final PlaytimeManager playtimeManager;
     private final RunTracker runTracker;
-    private final PlayerVisibilityManager visibilityManager;
 
     public PlayerCleanupManager(HudManager hudManager,
                                 AnnouncementManager announcementManager,
                                 PlayerPerksManager perksManager,
                                 PlaytimeManager playtimeManager,
-                                RunTracker runTracker,
-                                PlayerVisibilityManager visibilityManager) {
+                                RunTracker runTracker) {
         this.hudManager = hudManager;
         this.announcementManager = announcementManager;
         this.perksManager = perksManager;
         this.playtimeManager = playtimeManager;
         this.runTracker = runTracker;
-        this.visibilityManager = visibilityManager;
     }
 
     public void handleDisconnect(PlayerRef playerRef) {
@@ -55,9 +52,7 @@ public class PlayerCleanupManager {
             playtimeManager.finishPlaytimeSession(playerRef);
         }
         PlayerSettingsStore.clearSession(playerId);
-        if (visibilityManager != null) {
-            visibilityManager.clearHidden(playerId);
-        }
+        EntityVisibilityManager.get().clearHidden(playerId);
         if (runTracker != null) {
             runTracker.handleDisconnect(playerId);
         }
@@ -98,8 +93,6 @@ public class PlayerCleanupManager {
         if (runTracker != null) {
             runTracker.sweepStalePlayers(onlinePlayers);
         }
-        if (visibilityManager != null) {
-            visibilityManager.sweepStalePlayers(onlinePlayers);
-        }
+        EntityVisibilityManager.get().sweepStaleViewers(onlinePlayers);
     }
 }
