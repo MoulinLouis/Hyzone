@@ -11,12 +11,12 @@ public final class CommandUtils {
     }
 
     /**
-     * Parse command arguments from a CommandContext, stripping the command name.
+     * Tokenize command input and strip the called command name.
      *
      * @param ctx The command context
      * @return Array of arguments (empty if none)
      */
-    public static String[] getArgs(CommandContext ctx) {
+    public static String[] tokenize(CommandContext ctx) {
         String input = ctx.getInputString();
         if (input == null || input.trim().isEmpty()) {
             return new String[0];
@@ -42,17 +42,13 @@ public final class CommandUtils {
     }
 
     /**
-     * Get a specific argument by index, or null if not present.
+     * Parse command arguments from a CommandContext, stripping the command name.
      *
-     * @param args Arguments array
-     * @param index Index to retrieve
-     * @return The argument or null
+     * @param ctx The command context
+     * @return Array of arguments (empty if none)
      */
-    public static String getArg(String[] args, int index) {
-        if (args == null || index < 0 || index >= args.length) {
-            return null;
-        }
-        return args[index];
+    public static String[] getArgs(CommandContext ctx) {
+        return tokenize(ctx);
     }
 
 }

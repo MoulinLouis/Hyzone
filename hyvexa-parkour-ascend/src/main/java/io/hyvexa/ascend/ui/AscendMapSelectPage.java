@@ -215,6 +215,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
             }
         }
         lastMapCount = maps.size();
+        BigNumber currentVexa = playerStore.getVexa(playerRef.getUuid());
         int index = 0;
         for (AscendMap map : maps) {
             commandBuilder.append("#MapCards", "Pages/Ascend_MapSelectEntry.ui");
@@ -223,122 +224,15 @@ public class AscendMapSelectPage extends BaseAscendPage {
 
             // All maps in this list are already unlocked (filtered above)
             AscendPlayerProgress.MapProgress mapProgress = playerStore.getMapProgress(playerRef.getUuid(), map.getId());
-            boolean hasRobot = mapProgress != null && mapProgress.hasRobot();
-            // Check ghost recording existence (preserves PB across progress reset)
-            boolean hasGhostRecording = ghostStore.getRecording(playerRef.getUuid(), map.getId()) != null;
-            int speedLevel = mapProgress != null ? mapProgress.getRobotSpeedLevel() : 0;
-            int stars = mapProgress != null ? mapProgress.getRobotStars() : 0;
 
             // Apply accent color to left accent bar
             commandBuilder.set("#MapCards[" + index + "] #AccentBar.Background", accentColor);
 
-            // Apply accent color to progress bar segments (always use accent color)
-            for (int seg = 1; seg <= MAX_SPEED_LEVEL; seg++) {
-                commandBuilder.set("#MapCards[" + index + "] #Seg" + seg + ".Background", accentColor);
-            }
-
-            // Update progress bar visibility based on speed level
-            updateProgressBar(commandBuilder, index, speedLevel);
-
-            // Update star visibility
-            updateStarDisplay(commandBuilder, index, stars);
-
-            // Level text for button zone
-            String levelText = buildLevelText(stars, speedLevel);
-
             // Map name
             commandBuilder.set("#MapCards[" + index + "] #MapName.Text", mapName);
 
-            // Status text (all displayed maps are unlocked)
-            String status = "Run: " + formatRunTime(map, hasRobot, speedLevel, playerRef.getUuid());
-            if (hasRobot) {
-                status += " (" + formatMultiplierGain(stars, playerRef.getUuid()) + ")";
-            }
-
-            // Add personal best time from ghost recording (preserves PB across progress reset)
-            GhostRecording ghostForPb = ghostStore.getRecording(playerRef.getUuid(), map.getId());
-            if (ghostForPb != null && ghostForPb.getCompletionTimeMs() > 0) {
-                long bestTimeMs = ghostForPb.getCompletionTimeMs();
-                double bestTimeSec = bestTimeMs / 1000.0;
-                status += " | PB: " + String.format("%.2fs", bestTimeSec);
-            }
-
-            commandBuilder.set("#MapCards[" + index + "] #MapStatus.Text", status);
-
-            // Momentum indicator
-            boolean momentumActive = mapProgress != null && mapProgress.isMomentumActive();
-            commandBuilder.set("#MapCards[" + index + "] #MomentumLabel.Visible", momentumActive);
-
-            // Runner status and button text
-            String runnerStatusText;
-            String runnerButtonText;
-            BigNumber actionPrice;
-            if (!hasRobot) {
-                runnerStatusText = "No Runner";
-                if (!hasGhostRecording) {
-                    runnerButtonText = "Complete First";
-                    actionPrice = BigNumber.ZERO;
-                } else {
-                    runnerButtonText = "Buy Runner";
-                    actionPrice = BigNumber.ZERO; // Buying a runner is now free
-                }
-            } else {
-                int speedGainPercent = (int)(AscendConstants.getMapSpeedMultiplier(map.getDisplayOrder()) * 100);
-                runnerStatusText = "+" + speedGainPercent + "% speed/lvl";
-                if (speedLevel >= MAX_SPEED_LEVEL && stars < AscendConstants.MAX_ROBOT_STARS) {
-                    runnerButtonText = "Evolve";
-                    actionPrice = BigNumber.ZERO;
-                    runnerStatusText = formatEvolveGain(stars, playerRef.getUuid());
-                } else if (stars >= AscendConstants.MAX_ROBOT_STARS && speedLevel >= MAX_SPEED_LEVEL) {
-                    runnerButtonText = "Maxed!";
-                    actionPrice = BigNumber.ZERO;
-                } else {
-                    runnerButtonText = "Upgrade";
-                    actionPrice = computeUpgradeCost(speedLevel, map.getDisplayOrder(), stars);
-                }
-            }
-
-            // Combine button text and price for "Upgrade" case to save vertical space
-            String displayButtonText;
-            String displayPriceText;
-            if (runnerButtonText.equals("Upgrade") && actionPrice.gt(BigNumber.ZERO)) {
-                displayButtonText = "Cost:";
-                displayPriceText = FormatUtils.formatBigNumber(actionPrice) + " vexa";
-            } else {
-                displayButtonText = runnerButtonText;
-                // No price text for Buy Runner, Complete First, Maxed, or Evolve
-                displayPriceText = "";
-            }
-
-            // Show the correct colored background for this map
-            commandBuilder.set("#MapCards[" + index + "] " + resolveButtonBgElementId(index) + ".Visible", true);
-
-            // Determine if disabled overlay should be shown based on affordability
-            boolean showDisabledOverlay;
-            String secondaryTextColor;
-            boolean isUpgrade = runnerButtonText.equals("Upgrade") && actionPrice.gt(BigNumber.ZERO);
-            if (isUpgrade) {
-                BigNumber currentVexa = playerStore.getVexa(playerRef.getUuid());
-                boolean canAfford = currentVexa.gte(actionPrice);
-                showDisabledOverlay = !canAfford;
-                secondaryTextColor = canAfford ? "#ffffff" : "#9fb0ba";
-            } else {
-                // Non-upgrade actions (Buy Runner, Evolve, Complete First, Maxed) - always enabled
-                showDisabledOverlay = false;
-                secondaryTextColor = "#ffffff";
-            }
-
-            // Apply disabled overlay visibility and text colors
-            // Level text always white for visibility
-            commandBuilder.set("#MapCards[" + index + "] #ButtonDisabledOverlay.Visible", showDisabledOverlay);
-            commandBuilder.set("#MapCards[" + index + "] #RunnerLevel.Text", levelText);
-            commandBuilder.set("#MapCards[" + index + "] #RunnerLevel.Style.TextColor", "#ffffff");
-            commandBuilder.set("#MapCards[" + index + "] #RunnerStatus.Text", runnerStatusText);
-            commandBuilder.set("#MapCards[" + index + "] #RunnerStatus.Style.TextColor", secondaryTextColor);
-            commandBuilder.set("#MapCards[" + index + "] #RobotBuyText.Text", displayButtonText);
-            commandBuilder.set("#MapCards[" + index + "] #RobotBuyText.Style.TextColor", secondaryTextColor);
-            commandBuilder.set("#MapCards[" + index + "] #RobotPriceText.Text", displayPriceText);
-            commandBuilder.set("#MapCards[" + index + "] #RobotPriceText.Style.TextColor", secondaryTextColor);
+            RunnerCardSnapshot snapshot = renderRunnerButton(
+                commandBuilder, index, map, mapProgress, playerRef.getUuid(), currentVexa);
 
             // Event bindings
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
@@ -349,7 +243,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_ROBOT_PREFIX + map.getId()), false);
 
             displayedMapIds.add(map.getId());
-            cachedMapState.put(map.getId(), new int[]{speedLevel, stars});
+            cachedMapState.put(map.getId(), new int[]{snapshot.speedLevel(), snapshot.stars()});
             index++;
         }
     }
@@ -395,6 +289,100 @@ public class AscendMapSelectPage extends BaseAscendPage {
             case 3 -> "#ButtonBgGreen";
             default -> "#ButtonBgBlue";
         };
+    }
+
+    private RunnerCardSnapshot renderRunnerButton(UICommandBuilder commandBuilder, int index, AscendMap map,
+                                                  AscendPlayerProgress.MapProgress mapProgress, UUID playerId,
+                                                  BigNumber currentVexa) {
+        boolean hasRobot = mapProgress != null && mapProgress.hasRobot();
+        boolean hasGhostRecording = ghostStore.getRecording(playerId, map.getId()) != null;
+        int speedLevel = mapProgress != null ? mapProgress.getRobotSpeedLevel() : 0;
+        int stars = mapProgress != null ? mapProgress.getRobotStars() : 0;
+
+        String accentColor = resolveMapAccentColor(index);
+        for (int seg = 1; seg <= MAX_SPEED_LEVEL; seg++) {
+            commandBuilder.set("#MapCards[" + index + "] #Seg" + seg + ".Background", accentColor);
+        }
+        updateProgressBar(commandBuilder, index, speedLevel);
+        updateStarDisplay(commandBuilder, index, stars);
+
+        commandBuilder.set("#MapCards[" + index + "] #MomentumLabel.Visible",
+            mapProgress != null && mapProgress.isMomentumActive());
+        commandBuilder.set("#MapCards[" + index + "] " + resolveButtonBgElementId(index) + ".Visible", true);
+        commandBuilder.set("#MapCards[" + index + "] #MapStatus.Text",
+            buildMapStatusText(map, hasRobot, speedLevel, stars, playerId));
+
+        String levelText = buildLevelText(stars, speedLevel);
+        commandBuilder.set("#MapCards[" + index + "] #RunnerLevel.Text", levelText);
+        commandBuilder.set("#MapCards[" + index + "] #RunnerLevel.Style.TextColor", "#ffffff");
+
+        RunnerStatusData runnerStatus = resolveRunnerStatusData(map, hasRobot, hasGhostRecording, speedLevel, stars, playerId);
+        BigNumber vexa = currentVexa != null
+            ? currentVexa
+            : (playerId != null ? playerStore.getVexa(playerId) : BigNumber.ZERO);
+        boolean canAfford = !runnerStatus.isUpgrade() || vexa.gte(runnerStatus.actionPrice());
+        boolean showDisabledOverlay = runnerStatus.isUpgrade() && !canAfford;
+        String secondaryTextColor = canAfford ? "#ffffff" : "#9fb0ba";
+
+        commandBuilder.set("#MapCards[" + index + "] #ButtonDisabledOverlay.Visible", showDisabledOverlay);
+        commandBuilder.set("#MapCards[" + index + "] #RunnerStatus.Text", runnerStatus.runnerStatusText());
+        commandBuilder.set("#MapCards[" + index + "] #RunnerStatus.Style.TextColor", secondaryTextColor);
+        commandBuilder.set("#MapCards[" + index + "] #RobotBuyText.Text", runnerStatus.displayButtonText());
+        commandBuilder.set("#MapCards[" + index + "] #RobotBuyText.Style.TextColor", secondaryTextColor);
+        commandBuilder.set("#MapCards[" + index + "] #RobotPriceText.Text", runnerStatus.displayPriceText());
+        commandBuilder.set("#MapCards[" + index + "] #RobotPriceText.Style.TextColor", secondaryTextColor);
+
+        return new RunnerCardSnapshot(speedLevel, stars);
+    }
+
+    private RunnerStatusData resolveRunnerStatusData(AscendMap map, boolean hasRobot, boolean hasGhostRecording,
+                                                     int speedLevel, int stars, UUID playerId) {
+        String runnerStatusText;
+        String runnerButtonText;
+        BigNumber actionPrice;
+        if (!hasRobot) {
+            runnerStatusText = "No Runner";
+            if (!hasGhostRecording) {
+                runnerButtonText = "Complete First";
+                actionPrice = BigNumber.ZERO;
+            } else {
+                runnerButtonText = "Buy Runner";
+                actionPrice = BigNumber.ZERO;
+            }
+        } else {
+            int speedGainPercent = (int) (AscendConstants.getMapSpeedMultiplier(map.getDisplayOrder()) * 100);
+            runnerStatusText = "+" + speedGainPercent + "% speed/lvl";
+            if (speedLevel >= MAX_SPEED_LEVEL && stars < AscendConstants.MAX_ROBOT_STARS) {
+                runnerButtonText = "Evolve";
+                actionPrice = BigNumber.ZERO;
+                runnerStatusText = formatEvolveGain(stars, playerId);
+            } else if (stars >= AscendConstants.MAX_ROBOT_STARS && speedLevel >= MAX_SPEED_LEVEL) {
+                runnerButtonText = "Maxed!";
+                actionPrice = BigNumber.ZERO;
+            } else {
+                runnerButtonText = "Upgrade";
+                actionPrice = computeUpgradeCost(speedLevel, map.getDisplayOrder(), stars);
+            }
+        }
+
+        boolean isUpgrade = "Upgrade".equals(runnerButtonText) && actionPrice.gt(BigNumber.ZERO);
+        String displayButtonText = isUpgrade ? "Cost:" : runnerButtonText;
+        String displayPriceText = isUpgrade ? FormatUtils.formatBigNumber(actionPrice) + " vexa" : "";
+        return new RunnerStatusData(runnerStatusText, displayButtonText, displayPriceText, actionPrice, isUpgrade);
+    }
+
+    private String buildMapStatusText(AscendMap map, boolean hasRobot, int speedLevel, int stars, UUID playerId) {
+        String status = "Run: " + formatRunTime(map, hasRobot, speedLevel, playerId);
+        if (hasRobot) {
+            status += " (" + formatMultiplierGain(stars, playerId) + ")";
+        }
+        GhostRecording ghostForPb = ghostStore.getRecording(playerId, map.getId());
+        if (ghostForPb != null && ghostForPb.getCompletionTimeMs() > 0) {
+            long bestTimeMs = ghostForPb.getCompletionTimeMs();
+            double bestTimeSec = bestTimeMs / 1000.0;
+            status += " | PB: " + String.format("%.2fs", bestTimeSec);
+        }
+        return status;
     }
 
     private String formatRunTime(AscendMap map, boolean hasRobot, int speedLevel, java.util.UUID playerId) {
@@ -685,100 +673,9 @@ public class AscendMapSelectPage extends BaseAscendPage {
             boolean dataChanged = cached == null || cached[0] != speedLevel || cached[1] != stars;
 
             if (dataChanged) {
-                // Full row update — progress bar, stars, level, button, price, status, affordability
-                String accentColor = resolveMapAccentColor(i);
-
-                // Progress bar segments
-                updateProgressBar(commandBuilder, i, speedLevel);
-                for (int seg = 1; seg <= MAX_SPEED_LEVEL; seg++) {
-                    commandBuilder.set("#MapCards[" + i + "] #Seg" + seg + ".Background", accentColor);
-                }
-
-                // Star display
-                updateStarDisplay(commandBuilder, i, stars);
-
-                // Level text
-                String levelText = buildLevelText(stars, speedLevel);
-                commandBuilder.set("#MapCards[" + i + "] #RunnerLevel.Text", levelText);
-
-                // Status text
-                String status = "Run: " + formatRunTime(map, hasRobot, speedLevel, playerRef.getUuid());
-                if (hasRobot) {
-                    status += " (" + formatMultiplierGain(stars, playerRef.getUuid()) + ")";
-                }
-                GhostRecording ghostForPb = ghostStore.getRecording(playerRef.getUuid(), map.getId());
-                if (ghostForPb != null && ghostForPb.getCompletionTimeMs() > 0) {
-                    long bestTimeMs = ghostForPb.getCompletionTimeMs();
-                    double bestTimeSec = bestTimeMs / 1000.0;
-                    status += " | PB: " + String.format("%.2fs", bestTimeSec);
-                }
-                commandBuilder.set("#MapCards[" + i + "] #MapStatus.Text", status);
-
-                // Runner status and button text
-                boolean hasGhostRecording = ghostStore.getRecording(playerRef.getUuid(), map.getId()) != null;
-                String runnerStatusText;
-                String runnerButtonText;
-                BigNumber actionPrice;
-                if (!hasRobot) {
-                    runnerStatusText = "No Runner";
-                    if (!hasGhostRecording) {
-                        runnerButtonText = "Complete First";
-                        actionPrice = BigNumber.ZERO;
-                    } else {
-                        runnerButtonText = "Buy Runner";
-                        actionPrice = BigNumber.ZERO;
-                    }
-                } else {
-                    int speedGainPercent = (int)(AscendConstants.getMapSpeedMultiplier(map.getDisplayOrder()) * 100);
-                    runnerStatusText = "+" + speedGainPercent + "% speed/lvl";
-                    if (speedLevel >= MAX_SPEED_LEVEL && stars < AscendConstants.MAX_ROBOT_STARS) {
-                        runnerButtonText = "Evolve";
-                        actionPrice = BigNumber.ZERO;
-                        runnerStatusText = formatEvolveGain(stars, playerRef.getUuid());
-                    } else if (stars >= AscendConstants.MAX_ROBOT_STARS && speedLevel >= MAX_SPEED_LEVEL) {
-                        runnerButtonText = "Maxed!";
-                        actionPrice = BigNumber.ZERO;
-                    } else {
-                        runnerButtonText = "Upgrade";
-                        actionPrice = computeUpgradeCost(speedLevel, map.getDisplayOrder(), stars);
-                    }
-                }
-
-                // Button/price display text
-                String displayButtonText;
-                String displayPriceText;
-                if (runnerButtonText.equals("Upgrade") && actionPrice.gt(BigNumber.ZERO)) {
-                    displayButtonText = "Cost:";
-                    displayPriceText = FormatUtils.formatBigNumber(actionPrice) + " vexa";
-                } else {
-                    displayButtonText = runnerButtonText;
-                    displayPriceText = "";
-                }
-
-                // Affordability
-                boolean showDisabledOverlay;
-                String secondaryTextColor;
-                boolean isUpgrade = runnerButtonText.equals("Upgrade") && actionPrice.gt(BigNumber.ZERO);
-                if (isUpgrade) {
-                    boolean canAfford = currentVexa.gte(actionPrice);
-                    showDisabledOverlay = !canAfford;
-                    secondaryTextColor = canAfford ? "#ffffff" : "#9fb0ba";
-                } else {
-                    showDisabledOverlay = false;
-                    secondaryTextColor = "#ffffff";
-                }
-
-                commandBuilder.set("#MapCards[" + i + "] #ButtonDisabledOverlay.Visible", showDisabledOverlay);
-                commandBuilder.set("#MapCards[" + i + "] #RunnerLevel.Style.TextColor", "#ffffff");
-                commandBuilder.set("#MapCards[" + i + "] #RunnerStatus.Text", runnerStatusText);
-                commandBuilder.set("#MapCards[" + i + "] #RunnerStatus.Style.TextColor", secondaryTextColor);
-                commandBuilder.set("#MapCards[" + i + "] #RobotBuyText.Text", displayButtonText);
-                commandBuilder.set("#MapCards[" + i + "] #RobotBuyText.Style.TextColor", secondaryTextColor);
-                commandBuilder.set("#MapCards[" + i + "] #RobotPriceText.Text", displayPriceText);
-                commandBuilder.set("#MapCards[" + i + "] #RobotPriceText.Style.TextColor", secondaryTextColor);
-
-                // Update cache
-                cachedMapState.put(map.getId(), new int[]{speedLevel, stars});
+                RunnerCardSnapshot snapshot = renderRunnerButton(
+                    commandBuilder, i, map, mapProgress, playerRef.getUuid(), currentVexa);
+                cachedMapState.put(map.getId(), new int[]{snapshot.speedLevel(), snapshot.stars()});
             } else if (hasRobot && speedLevel < MAX_SPEED_LEVEL) {
                 // No data change — affordability-only update for maps with upgrade buttons
                 BigNumber upgradeCost = computeUpgradeCost(speedLevel, map.getDisplayOrder(), stars);
@@ -830,117 +727,19 @@ public class AscendMapSelectPage extends BaseAscendPage {
         if (index < 0 || selectedMap == null) {
             return;
         }
-        // All displayed maps are unlocked (filtered in buildMapList)
         AscendPlayerProgress.MapProgress mapProgress = playerStore.getMapProgress(playerRef.getUuid(), selectedMap.getId());
-        boolean hasRobot = mapProgress != null && mapProgress.hasRobot();
-        // Check ghost recording existence (preserves PB across progress reset)
-        boolean hasGhostRecording = ghostStore.getRecording(playerRef.getUuid(), selectedMap.getId()) != null;
-        int speedLevel = mapProgress != null ? mapProgress.getRobotSpeedLevel() : 0;
-        int stars = mapProgress != null ? mapProgress.getRobotStars() : 0;
-
-        String status = "Run: " + formatRunTime(selectedMap, hasRobot, speedLevel, playerRef.getUuid());
-        if (hasRobot) {
-            status += " (" + formatMultiplierGain(stars, playerRef.getUuid()) + ")";
-        }
-
-        // Add personal best time if available (from ghost recording)
-        GhostRecording ghostForPb = ghostStore.getRecording(playerRef.getUuid(), selectedMap.getId());
-        if (ghostForPb != null && ghostForPb.getCompletionTimeMs() > 0) {
-            long bestTimeMs = ghostForPb.getCompletionTimeMs();
-            double bestTimeSec = bestTimeMs / 1000.0;
-            status += " | PB: " + String.format("%.2fs", bestTimeSec);
-        }
-
-        String runnerStatusText;
-        String runnerButtonText;
-        BigNumber actionPrice;
-        if (!hasRobot) {
-            runnerStatusText = "No Runner";
-            if (!hasGhostRecording) {
-                runnerButtonText = "Complete First";
-                actionPrice = BigNumber.ZERO;
-            } else {
-                runnerButtonText = "Buy Runner";
-                actionPrice = BigNumber.ZERO; // Buying a runner is now free
-            }
-        } else {
-            int speedGainPercent = (int)(AscendConstants.getMapSpeedMultiplier(selectedMap.getDisplayOrder()) * 100);
-            runnerStatusText = "+" + speedGainPercent + "% speed/lvl";
-            if (speedLevel >= MAX_SPEED_LEVEL && stars < AscendConstants.MAX_ROBOT_STARS) {
-                runnerButtonText = "Evolve";
-                actionPrice = BigNumber.ZERO;
-                runnerStatusText = formatEvolveGain(stars, playerRef.getUuid());
-            } else if (stars >= AscendConstants.MAX_ROBOT_STARS && speedLevel >= MAX_SPEED_LEVEL) {
-                runnerButtonText = "Maxed!";
-                actionPrice = BigNumber.ZERO;
-            } else {
-                runnerButtonText = "Upgrade";
-                actionPrice = computeUpgradeCost(speedLevel, selectedMap.getDisplayOrder(), stars);
-            }
-        }
-
-        // Combine button text and price for "Upgrade" case to save vertical space
-        String displayButtonText;
-        String displayPriceText;
-        if (runnerButtonText.equals("Upgrade") && actionPrice.gt(BigNumber.ZERO)) {
-            displayButtonText = "Cost:";
-            displayPriceText = FormatUtils.formatBigNumber(actionPrice) + " vexa";
-        } else {
-            displayButtonText = runnerButtonText;
-            // No price text for Buy Runner, Complete First, Maxed, or Evolve
-            displayPriceText = "";
-        }
-
         UICommandBuilder commandBuilder = new UICommandBuilder();
-
-        // Update progress bar
-        updateProgressBar(commandBuilder, index, speedLevel);
-
-        // Update star visibility
-        updateStarDisplay(commandBuilder, index, stars);
-
-        // Update momentum indicator
-        boolean momentumActive = mapProgress != null && mapProgress.isMomentumActive();
-        commandBuilder.set("#MapCards[" + index + "] #MomentumLabel.Visible", momentumActive);
-
-        // Update level text in button zone
-        String levelText = buildLevelText(stars, speedLevel);
-
-        // Determine if disabled overlay should be shown based on affordability
-        String accentColor = resolveMapAccentColor(index);
-        boolean showDisabledOverlay;
-        String secondaryTextColor;
-        boolean isUpgrade = runnerButtonText.equals("Upgrade") && actionPrice.gt(BigNumber.ZERO);
-        if (isUpgrade) {
-            BigNumber currentVexa = playerStore.getVexa(playerRef.getUuid());
-            boolean canAfford = currentVexa.gte(actionPrice);
-            showDisabledOverlay = !canAfford;
-            secondaryTextColor = canAfford ? "#ffffff" : "#9fb0ba";
-        } else {
-            // Non-upgrade actions (Buy Runner, Evolve, Complete First, Maxed) - always enabled
-            showDisabledOverlay = false;
-            secondaryTextColor = "#ffffff";
-        }
-
-        // Apply accent color to progress bar segments (always use accent color)
-        for (int seg = 1; seg <= MAX_SPEED_LEVEL; seg++) {
-            commandBuilder.set("#MapCards[" + index + "] #Seg" + seg + ".Background", accentColor);
-        }
-
-        // Apply disabled overlay visibility and text colors
-        commandBuilder.set("#MapCards[" + index + "] #ButtonDisabledOverlay.Visible", showDisabledOverlay);
-        commandBuilder.set("#MapCards[" + index + "] #RunnerLevel.Text", levelText);
-        commandBuilder.set("#MapCards[" + index + "] #RunnerLevel.Style.TextColor", "#ffffff");
-        commandBuilder.set("#MapCards[" + index + "] #RunnerStatus.Text", runnerStatusText);
-        commandBuilder.set("#MapCards[" + index + "] #RunnerStatus.Style.TextColor", secondaryTextColor);
-        commandBuilder.set("#MapCards[" + index + "] #RobotBuyText.Text", displayButtonText);
-        commandBuilder.set("#MapCards[" + index + "] #RobotBuyText.Style.TextColor", secondaryTextColor);
-        commandBuilder.set("#MapCards[" + index + "] #RobotPriceText.Text", displayPriceText);
-        commandBuilder.set("#MapCards[" + index + "] #RobotPriceText.Style.TextColor", secondaryTextColor);
-        commandBuilder.set("#MapCards[" + index + "] #MapStatus.Text", status);
+        RunnerCardSnapshot snapshot = renderRunnerButton(
+            commandBuilder,
+            index,
+            selectedMap,
+            mapProgress,
+            playerRef.getUuid(),
+            playerStore.getVexa(playerRef.getUuid())
+        );
 
         // Keep cache in sync so the periodic refresh doesn't see a stale diff
-        cachedMapState.put(mapId, new int[]{speedLevel, stars});
+        cachedMapState.put(mapId, new int[]{snapshot.speedLevel(), snapshot.stars()});
 
         // Also update action button states (runner state may have changed)
         updateBuyAllButtonState(commandBuilder, playerRef.getUuid());
@@ -976,11 +775,6 @@ public class AscendMapSelectPage extends BaseAscendPage {
 
         // Get map progress (newly unlocked, so might be minimal data)
         AscendPlayerProgress.MapProgress mapProgress = playerStore.getMapProgress(playerRef.getUuid(), map.getId());
-        boolean hasRobot = mapProgress != null && mapProgress.hasRobot();
-        // Check ghost recording existence (preserves PB across progress reset)
-        boolean hasGhostRecording = ghostStore.getRecording(playerRef.getUuid(), map.getId()) != null;
-        int speedLevel = mapProgress != null ? mapProgress.getRobotSpeedLevel() : 0;
-        int stars = mapProgress != null ? mapProgress.getRobotStars() : 0;
 
         // Append new map card
         commandBuilder.append("#MapCards", "Pages/Ascend_MapSelectEntry.ui");
@@ -988,110 +782,17 @@ public class AscendMapSelectPage extends BaseAscendPage {
         // Apply accent color to left accent bar
         commandBuilder.set("#MapCards[" + index + "] #AccentBar.Background", accentColor);
 
-        // Apply accent color to progress bar segments (always use accent color)
-        for (int seg = 1; seg <= MAX_SPEED_LEVEL; seg++) {
-            commandBuilder.set("#MapCards[" + index + "] #Seg" + seg + ".Background", accentColor);
-        }
-
-        // Update progress bar visibility
-        updateProgressBar(commandBuilder, index, speedLevel);
-
-        // Update star visibility
-        updateStarDisplay(commandBuilder, index, stars);
-
-        // Level text for button zone
-        String levelText = buildLevelText(stars, speedLevel);
-
         // Map name
         commandBuilder.set("#MapCards[" + index + "] #MapName.Text", mapName);
 
-        // Status text
-        String status = "Run: " + formatRunTime(map, hasRobot, speedLevel, playerRef.getUuid());
-        if (hasRobot) {
-            status += " (" + formatMultiplierGain(stars, playerRef.getUuid()) + ")";
-        }
-        // Add personal best time from ghost recording
-        GhostRecording ghostForPb = ghostStore.getRecording(playerRef.getUuid(), map.getId());
-        if (ghostForPb != null && ghostForPb.getCompletionTimeMs() > 0) {
-            long bestTimeMs = ghostForPb.getCompletionTimeMs();
-            double bestTimeSec = bestTimeMs / 1000.0;
-            status += " | PB: " + String.format("%.2fs", bestTimeSec);
-        }
-        commandBuilder.set("#MapCards[" + index + "] #MapStatus.Text", status);
-
-        // Momentum indicator
-        boolean momentumActive = mapProgress != null && mapProgress.isMomentumActive();
-        commandBuilder.set("#MapCards[" + index + "] #MomentumLabel.Visible", momentumActive);
-
-        // Runner status and button text
-        String runnerStatusText;
-        String runnerButtonText;
-        BigNumber actionPrice;
-        if (!hasRobot) {
-            runnerStatusText = "No Runner";
-            if (!hasGhostRecording) {
-                runnerButtonText = "Complete First";
-                actionPrice = BigNumber.ZERO;
-            } else {
-                runnerButtonText = "Buy Runner";
-                actionPrice = BigNumber.ZERO; // Buying a runner is now free
-            }
-        } else {
-            int speedGainPercent = (int)(AscendConstants.getMapSpeedMultiplier(map.getDisplayOrder()) * 100);
-            runnerStatusText = "+" + speedGainPercent + "% speed/lvl";
-            if (speedLevel >= MAX_SPEED_LEVEL && stars < AscendConstants.MAX_ROBOT_STARS) {
-                runnerButtonText = "Evolve";
-                actionPrice = BigNumber.ZERO;
-                runnerStatusText = formatEvolveGain(stars, playerRef.getUuid());
-            } else if (stars >= AscendConstants.MAX_ROBOT_STARS && speedLevel >= MAX_SPEED_LEVEL) {
-                runnerButtonText = "Maxed!";
-                actionPrice = BigNumber.ZERO;
-            } else {
-                runnerButtonText = "Upgrade";
-                actionPrice = computeUpgradeCost(speedLevel, map.getDisplayOrder(), stars);
-            }
-        }
-
-        // Combine button text and price for "Upgrade" case to save vertical space
-        String displayButtonText;
-        String displayPriceText;
-        if (runnerButtonText.equals("Upgrade") && actionPrice.gt(BigNumber.ZERO)) {
-            displayButtonText = "Cost:";
-            displayPriceText = FormatUtils.formatBigNumber(actionPrice) + " vexa";
-        } else {
-            displayButtonText = runnerButtonText;
-            // No price text for Buy Runner, Complete First, Maxed, or Evolve
-            displayPriceText = "";
-        }
-
-        // Show the correct colored background for this map
-        commandBuilder.set("#MapCards[" + index + "] " + resolveButtonBgElementId(index) + ".Visible", true);
-
-        // Determine if disabled overlay should be shown based on affordability
-        boolean showDisabledOverlay;
-        String secondaryTextColor;
-        boolean isUpgrade = runnerButtonText.equals("Upgrade") && actionPrice.gt(BigNumber.ZERO);
-        if (isUpgrade) {
-            BigNumber currentVexa = playerStore.getVexa(playerRef.getUuid());
-            boolean canAfford = currentVexa.gte(actionPrice);
-            showDisabledOverlay = !canAfford;
-            secondaryTextColor = canAfford ? "#ffffff" : "#9fb0ba";
-        } else {
-            // Non-upgrade actions (Buy Runner, Evolve, Complete First, Maxed) - always enabled
-            showDisabledOverlay = false;
-            secondaryTextColor = "#ffffff";
-        }
-
-        // Apply disabled overlay visibility and text colors
-        commandBuilder.set("#MapCards[" + index + "] #ButtonDisabledOverlay.Visible", showDisabledOverlay);
-        commandBuilder.set("#MapCards[" + index + "] #RunnerLevel.Text", levelText);
-        commandBuilder.set("#MapCards[" + index + "] #RunnerLevel.Style.TextColor", "#ffffff");
-        commandBuilder.set("#MapCards[" + index + "] #RunnerStatus.Text", runnerStatusText);
-        commandBuilder.set("#MapCards[" + index + "] #RunnerStatus.Style.TextColor", secondaryTextColor);
-        commandBuilder.set("#MapCards[" + index + "] #RobotBuyText.Text", displayButtonText);
-        commandBuilder.set("#MapCards[" + index + "] #RobotBuyText.Style.TextColor", secondaryTextColor);
-        commandBuilder.set("#MapCards[" + index + "] #RobotPriceText.Text", displayPriceText);
-        commandBuilder.set("#MapCards[" + index + "] #RobotPriceText.Style.TextColor", secondaryTextColor);
+        RunnerCardSnapshot snapshot = renderRunnerButton(
+            commandBuilder,
+            index,
+            map,
+            mapProgress,
+            playerRef.getUuid(),
+            playerStore.getVexa(playerRef.getUuid())
+        );
 
         // Event bindings
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
@@ -1103,7 +804,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
 
         // Track new map in cache
         displayedMapIds.add(map.getId());
-        cachedMapState.put(map.getId(), new int[]{speedLevel, stars});
+        cachedMapState.put(map.getId(), new int[]{snapshot.speedLevel(), snapshot.stars()});
         lastMapCount++;
 
         // Send update to client
@@ -1276,6 +977,11 @@ public class AscendMapSelectPage extends BaseAscendPage {
         BUY_ROBOT,
         UPGRADE_SPEED
     }
+
+    private record RunnerCardSnapshot(int speedLevel, int stars) {}
+
+    private record RunnerStatusData(String runnerStatusText, String displayButtonText, String displayPriceText,
+                                    BigNumber actionPrice, boolean isUpgrade) {}
 
     private record PurchaseOption(String mapId, PurchaseType type, BigNumber price) {}
 

@@ -41,6 +41,7 @@ import io.hyvexa.ascend.passive.PassiveEarningsManager;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.ui.AscendMapSelectPage;
 import io.hyvexa.ascend.util.AscendInventoryUtils;
+import io.hyvexa.ascend.util.AscendModeGate;
 import io.hyvexa.common.whitelist.AscendWhitelistManager;
 import io.hyvexa.common.whitelist.WhitelistRegistry;
 import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
@@ -65,7 +66,6 @@ import java.util.logging.Level;
 public class ParkourAscendPlugin extends JavaPlugin {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final String ASCEND_WORLD_NAME = "Ascend";
     private static final int FULL_TICK_INTERVAL = 4; // every 4th tick = 200ms at 50ms interval
     private static ParkourAscendPlugin INSTANCE;
 
@@ -142,6 +142,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
         // Pass ghost dependencies to managers
         runTracker = new AscendRunTracker(mapStore, playerStore, ghostRecorder);
+        mapStore.setOnChangeListener(runTracker::onMapStoreChanged);
         summitManager = new SummitManager(playerStore, mapStore);
         hudManager = new AscendHudManager(playerStore, mapStore, runTracker, summitManager);
 
@@ -245,7 +246,6 @@ public class ParkourAscendPlugin extends JavaPlugin {
                         return;
                     }
                     AscendInventoryUtils.giveMenuItems(player);
-                    AscendInventoryUtils.ensureMenuItems(player);
                     hudManager.attach(playerRef, player);
                 }, world).exceptionally(ex -> {
                     LOGGER.at(Level.WARNING).withCause(ex).log("Exception in PlayerReadyEvent async task");
@@ -483,10 +483,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
     }
 
     public boolean isAscendWorld(World world) {
-        if (world == null || world.getName() == null) {
-            return false;
-        }
-        return ASCEND_WORLD_NAME.equalsIgnoreCase(world.getName());
+        return AscendModeGate.isAscendWorld(world);
     }
 
     private void registerInteractionCodecs() {

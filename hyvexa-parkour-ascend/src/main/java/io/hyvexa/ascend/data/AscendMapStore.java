@@ -23,6 +23,7 @@ public class AscendMapStore {
 
     private final Map<String, AscendMap> maps = new LinkedHashMap<>();
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
+    private volatile Runnable onChangeListener;
 
     public void syncLoad() {
         if (!DatabaseManager.getInstance().isInitialized()) {
@@ -48,12 +49,6 @@ public class AscendMapStore {
                         AscendMap map = new AscendMap();
                         map.setId(rs.getString("id"));
                         map.setName(rs.getString("name"));
-                        map.setPrice(rs.getLong("price"));
-                        map.setRobotPrice(rs.getLong("robot_price"));
-                        map.setBaseReward(rs.getLong("base_reward"));
-                        map.setBaseRunTimeMs(rs.getLong("base_run_time_ms"));
-                        map.setRobotTimeReductionMs(rs.getLong("robot_time_reduction_ms"));
-                        map.setStorageCapacity(rs.getInt("storage_capacity"));
                         map.setWorld(rs.getString("world"));
                         map.setStartX(rs.getDouble("start_x"));
                         map.setStartY(rs.getDouble("start_y"));
@@ -75,6 +70,18 @@ public class AscendMapStore {
             }
         } finally {
             lock.writeLock().unlock();
+        }
+        notifyChange();
+    }
+
+    public void setOnChangeListener(Runnable listener) {
+        this.onChangeListener = listener;
+    }
+
+    private void notifyChange() {
+        Runnable listener = this.onChangeListener;
+        if (listener != null) {
+            listener.run();
         }
     }
 
@@ -122,6 +129,7 @@ public class AscendMapStore {
         }
 
         saveMapToDatabase(map);
+        notifyChange();
     }
 
     private void saveMapToDatabase(AscendMap map) {
@@ -152,12 +160,12 @@ public class AscendMapStore {
             int i = 1;
             stmt.setString(i++, map.getId());
             stmt.setString(i++, map.getName());
-            stmt.setLong(i++, map.getPrice());
-            stmt.setLong(i++, map.getRobotPrice());
-            stmt.setLong(i++, map.getBaseReward());
-            stmt.setLong(i++, map.getBaseRunTimeMs());
-            stmt.setLong(i++, map.getRobotTimeReductionMs());
-            stmt.setInt(i++, map.getStorageCapacity());
+            stmt.setLong(i++, map.getEffectivePrice());
+            stmt.setLong(i++, map.getEffectiveRobotPrice());
+            stmt.setLong(i++, map.getEffectiveBaseReward());
+            stmt.setLong(i++, map.getEffectiveBaseRunTimeMs());
+            stmt.setLong(i++, 0L); // robot_time_reduction_ms deprecated in runtime balancing
+            stmt.setInt(i++, 100); // storage_capacity deprecated in runtime balancing
             stmt.setString(i++, map.getWorld());
             stmt.setDouble(i++, map.getStartX());
             stmt.setDouble(i++, map.getStartY());
@@ -186,6 +194,7 @@ public class AscendMapStore {
 
         if (removed) {
             deleteMapFromDatabase(id);
+            notifyChange();
         }
         return removed;
     }

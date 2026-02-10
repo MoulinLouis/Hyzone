@@ -8,7 +8,6 @@ public final class DuelConstants {
     // Timing
     public static final int COUNTDOWN_SECONDS = 3;
     public static final long POST_MATCH_DELAY_MS = 2500L;
-    public static final long MATCH_TICK_INTERVAL_MS = 100L;
 
     // Detection
     public static final double TOUCH_RADIUS = 1.5;

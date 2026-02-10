@@ -6,8 +6,6 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 
 public class HubHud extends CustomUIHud {
 
-    private volatile boolean applied;
-
     public HubHud(PlayerRef playerRef) {
         super(playerRef);
     }
@@ -15,19 +13,5 @@ public class HubHud extends CustomUIHud {
     @Override
     protected void build(UICommandBuilder commandBuilder) {
         commandBuilder.append("Pages/Hub_RunHud.ui");
-    }
-
-    public void applyStaticText() {
-        if (applied) {
-            return;
-        }
-        applied = true;
-        UICommandBuilder commandBuilder = new UICommandBuilder();
-        commandBuilder.set("#PlayerNameText.Text", "Hub");
-        update(false, commandBuilder);
-    }
-
-    public void resetCache() {
-        applied = false;
     }
 }

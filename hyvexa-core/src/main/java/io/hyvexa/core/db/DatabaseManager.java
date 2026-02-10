@@ -34,8 +34,6 @@ public class DatabaseManager {
     private static final DatabaseManager INSTANCE = new DatabaseManager();
     private static final Object INIT_LOCK = new Object();
     private volatile HikariDataSource dataSource;
-    private volatile DatabaseConfig config;
-    private volatile boolean initialized = false;
 
     private DatabaseManager() {
     }
@@ -49,18 +47,17 @@ public class DatabaseManager {
      */
     public void initialize() {
         synchronized (INIT_LOCK) {
-            if (initialized) {
+            if (isInitialized()) {
                 LOGGER.atWarning().log("DatabaseManager already initialized, skipping");
                 return;
             }
-            config = DatabaseConfig.load();
+            DatabaseConfig config = DatabaseConfig.load();
             LOGGER.atInfo().log("DB config loaded. Host=" + config.getHost()
                     + " Port=" + config.getPort()
                     + " Database=" + config.getDatabase()
                     + " User=" + config.getUser());
-            initialize(config.getHost(), config.getPort(), config.getDatabase(),
-                       config.getUser(), config.getPassword());
-            initialized = true;
+            initPool(config.getHost(), config.getPort(), config.getDatabase(),
+                    config.getUser(), config.getPassword());
         }
     }
 
@@ -70,58 +67,69 @@ public class DatabaseManager {
     public void initialize(String host, int port, String database, String user, String password) {
         synchronized (INIT_LOCK) {
             // Close existing dataSource if present before reinitializing
-            if (dataSource != null && !dataSource.isClosed()) {
-                LOGGER.atInfo().log("Closing existing database connection pool before reinitializing");
-                dataSource.close();
-            }
-
-            HikariConfig config = new HikariConfig();
-            config.setJdbcUrl("jdbc:mysql://" + host + ":" + port + "/" + database);
-            config.setUsername(user);
-            config.setPassword(password);
-            config.setDriverClassName("com.mysql.cj.jdbc.Driver");
-
-            // Connection pool settings
-            config.setMaximumPoolSize(10);
-            config.setMinimumIdle(2);
-            config.setIdleTimeout(300000);       // 5 minutes
-            config.setConnectionTimeout(10000);  // 10 seconds
-            config.setMaxLifetime(1800000);      // 30 minutes
-
-            // MySQL optimizations
-            config.addDataSourceProperty("cachePrepStmts", "true");
-            config.addDataSourceProperty("prepStmtCacheSize", "250");
-            config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
-            config.addDataSourceProperty("useServerPrepStmts", "true");
-
-            try {
-                dataSource = new HikariDataSource(config);
-                LOGGER.atInfo().log("Database connection pool initialized successfully");
-                ensureCheckpointTimesTable();
-                ensureDuelEnabledColumn();
-            } catch (Exception e) {
-                LOGGER.at(Level.SEVERE).withCause(e).log("Failed to initialize database connection pool");
-                throw new RuntimeException("Database initialization failed", e);
-            }
+            closePool("reinitializing");
+            initPool(host, port, database, user, password);
         }
     }
 
     public Connection getConnection() throws SQLException {
-        if (dataSource == null) {
+        HikariDataSource source = dataSource;
+        if (source == null || source.isClosed()) {
             throw new SQLException("Database not initialized");
         }
-        return dataSource.getConnection();
+        return source.getConnection();
     }
 
     public void shutdown() {
-        if (dataSource != null && !dataSource.isClosed()) {
-            dataSource.close();
-            LOGGER.atInfo().log("Database connection pool closed");
+        synchronized (INIT_LOCK) {
+            closePool("shutdown");
         }
     }
 
     public boolean isInitialized() {
-        return dataSource != null && !dataSource.isClosed();
+        HikariDataSource source = dataSource;
+        return source != null && !source.isClosed();
+    }
+
+    private void initPool(String host, int port, String database, String user, String password) {
+        HikariConfig hikariConfig = new HikariConfig();
+        hikariConfig.setJdbcUrl("jdbc:mysql://" + host + ":" + port + "/" + database);
+        hikariConfig.setUsername(user);
+        hikariConfig.setPassword(password);
+        hikariConfig.setDriverClassName("com.mysql.cj.jdbc.Driver");
+
+        // Connection pool settings
+        hikariConfig.setMaximumPoolSize(10);
+        hikariConfig.setMinimumIdle(2);
+        hikariConfig.setIdleTimeout(300000);       // 5 minutes
+        hikariConfig.setConnectionTimeout(10000);  // 10 seconds
+        hikariConfig.setMaxLifetime(1800000);      // 30 minutes
+
+        // MySQL optimizations
+        hikariConfig.addDataSourceProperty("cachePrepStmts", "true");
+        hikariConfig.addDataSourceProperty("prepStmtCacheSize", "250");
+        hikariConfig.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
+        hikariConfig.addDataSourceProperty("useServerPrepStmts", "true");
+
+        try {
+            dataSource = new HikariDataSource(hikariConfig);
+            LOGGER.atInfo().log("Database connection pool initialized successfully");
+            ensureCheckpointTimesTable();
+            ensureDuelEnabledColumn();
+        } catch (Exception e) {
+            LOGGER.at(Level.SEVERE).withCause(e).log("Failed to initialize database connection pool");
+            throw new RuntimeException("Database initialization failed", e);
+        }
+    }
+
+    private void closePool(String reason) {
+        HikariDataSource source = dataSource;
+        if (source == null || source.isClosed()) {
+            return;
+        }
+        LOGGER.atInfo().log("Closing database connection pool (" + reason + ")");
+        source.close();
+        dataSource = null;
     }
 
     /**
@@ -129,7 +137,7 @@ public class DatabaseManager {
      * @return TestResult with success status and message
      */
     public TestResult testConnection() {
-        if (dataSource == null) {
+        if (!isInitialized()) {
             return new TestResult(false, "Database not initialized");
         }
 
@@ -154,12 +162,12 @@ public class DatabaseManager {
                     "settings"};
             StringBuilder missingTables = new StringBuilder();
 
-            for (String table : tables) {
-                try (PreparedStatement stmt = conn.prepareStatement(
-                        "SELECT 1 FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?")) {
-                    applyQueryTimeout(stmt);
-                    stmt.setString(1, table);
-                    try (ResultSet rs = stmt.executeQuery()) {
+            String tableCheckSql = "SELECT 1 FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?";
+            try (PreparedStatement tableStmt = conn.prepareStatement(tableCheckSql)) {
+                applyQueryTimeout(tableStmt);
+                for (String table : tables) {
+                    tableStmt.setString(1, table);
+                    try (ResultSet rs = tableStmt.executeQuery()) {
                         if (!rs.next()) {
                             if (missingTables.length() > 0) {
                                 missingTables.append(", ");

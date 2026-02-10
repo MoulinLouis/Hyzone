@@ -5,11 +5,10 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 public class DuelQueue {
 
-    private final CopyOnWriteArrayList<UUID> waitingPlayers = new CopyOnWriteArrayList<>();
+    private final List<UUID> waitingPlayers = new ArrayList<>();
     private final Object lock = new Object();
 
     public boolean join(@Nonnull UUID playerId) {

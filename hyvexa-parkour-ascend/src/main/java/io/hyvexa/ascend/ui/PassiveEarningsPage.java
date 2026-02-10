@@ -55,7 +55,7 @@ public class PassiveEarningsPage extends BaseAscendPage {
     private void updateSummary(UICommandBuilder commandBuilder) {
         // Format away time
         long timeAwayMs = result.timeAwayMs();
-        String timeStr = formatDuration(timeAwayMs);
+        String timeStr = FormatUtils.formatDurationLong(timeAwayMs);
         String awayText = "You were away for " + timeStr;
 
         // Cap indicator
@@ -122,20 +122,4 @@ public class PassiveEarningsPage extends BaseAscendPage {
         }
     }
 
-    private String formatDuration(long ms) {
-        long seconds = ms / 1000;
-        long minutes = seconds / 60;
-        long hours = minutes / 60;
-        long days = hours / 24;
-
-        if (days > 0) {
-            return days + "d " + (hours % 24) + "h";
-        } else if (hours > 0) {
-            return hours + "h " + (minutes % 60) + "m";
-        } else if (minutes > 0) {
-            return minutes + "m";
-        } else {
-            return seconds + "s";
-        }
-    }
 }

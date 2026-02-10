@@ -19,11 +19,11 @@ import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.data.AscendPlayerStore.MapLeaderboardEntry;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.ui.PaginationState;
+import io.hyvexa.common.util.FormatUtils;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 public class AscendMapLeaderboardPage extends InteractiveCustomUIPage<AscendMapLeaderboardPage.MapLeaderboardData> {
 
@@ -234,30 +234,12 @@ public class AscendMapLeaderboardPage extends InteractiveCustomUIPage<AscendMapL
             commandBuilder.set("#LeaderboardCards[" + index + "] #Rank.Text", "#" + rank);
             commandBuilder.set("#LeaderboardCards[" + index + "] #PlayerName.Text",
                     entry.playerName() != null ? entry.playerName() : "Unknown");
-            commandBuilder.set("#LeaderboardCards[" + index + "] #Value.Text", formatBestTime(entry.bestTimeMs()));
+            commandBuilder.set("#LeaderboardCards[" + index + "] #Value.Text",
+                    FormatUtils.formatDurationLong(entry.bestTimeMs()));
             index++;
         }
 
         commandBuilder.set("#PageLabel.Text", slice.getLabel());
-    }
-
-    private String formatBestTime(long ms) {
-        long totalSeconds = ms / 1000;
-        long remainderMs = ms % 1000;
-
-        if (totalSeconds < 60) {
-            double seconds = ms / 1000.0;
-            return String.format(Locale.US, "%.2fs", seconds);
-        } else if (totalSeconds < 3600) {
-            long minutes = totalSeconds / 60;
-            long seconds = totalSeconds % 60;
-            return String.format(Locale.US, "%dm %02ds", minutes, seconds);
-        } else {
-            long hours = totalSeconds / 3600;
-            long minutes = (totalSeconds % 3600) / 60;
-            long seconds = totalSeconds % 60;
-            return String.format(Locale.US, "%dh %02dm %02ds", hours, minutes, seconds);
-        }
     }
 
     private String getRankAccentColor(int rank) {

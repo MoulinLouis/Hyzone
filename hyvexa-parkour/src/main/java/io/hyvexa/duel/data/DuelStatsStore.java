@@ -71,9 +71,10 @@ public class DuelStatsStore {
 
     @Nullable
     public DuelStats getStatsByName(@Nonnull String playerName) {
-        String target = playerName.toLowerCase();
+        String target = playerName.trim();
         for (DuelStats stats : cache.values()) {
-            if (stats.getPlayerName() != null && stats.getPlayerName().toLowerCase().equals(target)) {
+            String statsName = stats.getPlayerName();
+            if (statsName != null && statsName.equalsIgnoreCase(target)) {
                 return stats;
             }
         }

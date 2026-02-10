@@ -253,10 +253,10 @@ public class ProgressStore {
         if (playerName == null || playerName.isBlank()) {
             return null;
         }
-        String target = playerName.trim().toLowerCase(Locale.ROOT);
+        String target = playerName.trim();
         for (java.util.Map.Entry<UUID, String> entry : lastKnownNames.entrySet()) {
             String name = entry.getValue();
-            if (name != null && name.toLowerCase(Locale.ROOT).equals(target)) {
+            if (name != null && name.equalsIgnoreCase(target)) {
                 return entry.getKey();
             }
         }
@@ -729,7 +729,7 @@ public class ProgressStore {
 
     private static int calculateLevel(long xp) {
         long[] thresholds = ParkourConstants.RANK_XP_REQUIREMENTS;
-        int rankCount = Math.min(ParkourConstants.RANK_NAMES.length, thresholds.length);
+        int rankCount = thresholds.length;
         if (rankCount <= 0) return 1;
         int level = 1;
         for (int i = 0; i < rankCount; i++) {
@@ -740,17 +740,6 @@ public class ProgressStore {
             }
         }
         return level;
-    }
-
-    public static String getRankNameForLevel(int level) {
-        int rankCount = Math.min(ParkourConstants.RANK_NAMES.length, ParkourConstants.RANK_XP_REQUIREMENTS.length);
-        if (rankCount <= 0) return "Unranked";
-        int index = Math.max(1, Math.min(level, rankCount)) - 1;
-        return ParkourConstants.RANK_NAMES[index];
-    }
-
-    public static String getRankNameForXp(long xp) {
-        return getRankNameForLevel(calculateLevel(xp));
     }
 
     public static long getTotalPossibleXp(MapStore mapStore) {

@@ -35,6 +35,7 @@ import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.common.visibility.EntityVisibilityManager;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -56,11 +57,17 @@ public class AscendRunTracker {
     private final Map<UUID, ActiveRun> activeRuns = new ConcurrentHashMap<>();
     private final Map<UUID, PendingRun> pendingRuns = new ConcurrentHashMap<>();
     private final Map<UUID, FreezeData> frozenPlayers = new ConcurrentHashMap<>();
+    private volatile List<StartMapEntry> startMapEntries = List.of();
 
     public AscendRunTracker(AscendMapStore mapStore, AscendPlayerStore playerStore, GhostRecorder ghostRecorder) {
         this.mapStore = mapStore;
         this.playerStore = playerStore;
         this.ghostRecorder = ghostRecorder;
+        rebuildStartMapCache();
+    }
+
+    public void onMapStoreChanged() {
+        rebuildStartMapCache();
     }
 
     public void startRun(UUID playerId, String mapId) {
@@ -83,24 +90,10 @@ public class AscendRunTracker {
         PendingRun oldPending = pendingRuns.remove(playerId);
         ActiveRun oldActive = activeRuns.remove(playerId);
         if (oldPending != null) {
-            showRunnersForMap(playerId, oldPending.mapId);
-            // Re-apply "hide other runners" setting
-            {
-                ParkourAscendPlugin p = ParkourAscendPlugin.getInstance();
-                if (p != null && p.getRobotManager() != null) {
-                    p.getRobotManager().applyRunnerVisibility(playerId);
-                }
-            }
+            showRunnersAndReapplyVisibility(playerId, oldPending.mapId);
         }
         if (oldActive != null) {
-            showRunnersForMap(playerId, oldActive.mapId);
-            // Re-apply "hide other runners" setting
-            {
-                ParkourAscendPlugin p = ParkourAscendPlugin.getInstance();
-                if (p != null && p.getRobotManager() != null) {
-                    p.getRobotManager().applyRunnerVisibility(playerId);
-                }
-            }
+            showRunnersAndReapplyVisibility(playerId, oldActive.mapId);
         }
 
         // Cancel ghost recording if there was an active run
@@ -127,24 +120,10 @@ public class AscendRunTracker {
 
         // Show runners from the cancelled run's map
         if (pending != null) {
-            showRunnersForMap(playerId, pending.mapId);
-            // Re-apply "hide other runners" setting
-            {
-                ParkourAscendPlugin p = ParkourAscendPlugin.getInstance();
-                if (p != null && p.getRobotManager() != null) {
-                    p.getRobotManager().applyRunnerVisibility(playerId);
-                }
-            }
+            showRunnersAndReapplyVisibility(playerId, pending.mapId);
         }
         if (active != null) {
-            showRunnersForMap(playerId, active.mapId);
-            // Re-apply "hide other runners" setting
-            {
-                ParkourAscendPlugin p = ParkourAscendPlugin.getInstance();
-                if (p != null && p.getRobotManager() != null) {
-                    p.getRobotManager().applyRunnerVisibility(playerId);
-                }
-            }
+            showRunnersAndReapplyVisibility(playerId, active.mapId);
         }
 
         // Cancel ghost recording
@@ -272,14 +251,7 @@ public class AscendRunTracker {
         }
 
         // Show runners again after completing the run
-        showRunnersForMap(playerId, run.mapId);
-        // Re-apply "hide other runners" setting
-        {
-            ParkourAscendPlugin p = ParkourAscendPlugin.getInstance();
-            if (p != null && p.getRobotManager() != null) {
-                p.getRobotManager().applyRunnerVisibility(playerId);
-            }
-        }
+        showRunnersAndReapplyVisibility(playerId, run.mapId);
 
         // Play checkpoint sound on map completion
         int soundIndex = SoundEvent.getAssetMap().getIndex("SFX_Parkour_Checkpoint");
@@ -429,19 +401,12 @@ public class AscendRunTracker {
 
     private void checkWalkOnStart(Ref<EntityStore> ref, Store<EntityStore> store,
                                    PlayerRef playerRef, Player player, UUID playerId, Vector3d pos) {
-        // Find if player is standing on any map's start position
-        for (AscendMap map : mapStore.listMaps()) {
-            if (map == null) {
-                continue;
-            }
-            // Skip maps with no start set
-            if (map.getStartX() == 0 && map.getStartY() == 0 && map.getStartZ() == 0) {
-                continue;
-            }
-
-            double dx = pos.getX() - map.getStartX();
-            double dy = pos.getY() - map.getStartY();
-            double dz = pos.getZ() - map.getStartZ();
+        // Find if player is standing on any cached map start position.
+        for (StartMapEntry entry : startMapEntries) {
+            AscendMap map = entry.map;
+            double dx = pos.getX() - entry.startX;
+            double dy = pos.getY() - entry.startY;
+            double dz = pos.getZ() - entry.startZ;
 
             if (dx * dx + dz * dz <= START_DETECTION_RADIUS_SQ && Math.abs(dy) <= START_VERTICAL_RANGE) {
                 // Player is on this map's start - check if unlocked
@@ -483,6 +448,20 @@ public class AscendRunTracker {
         }
     }
 
+    private void rebuildStartMapCache() {
+        List<StartMapEntry> entries = new ArrayList<>();
+        for (AscendMap map : mapStore.listMaps()) {
+            if (map == null) {
+                continue;
+            }
+            if (map.getStartX() == 0 && map.getStartY() == 0 && map.getStartZ() == 0) {
+                continue;
+            }
+            entries.add(new StartMapEntry(map));
+        }
+        startMapEntries = entries;
+    }
+
     private static class ActiveRun {
         final String mapId;
         final long startTimeMs;
@@ -508,6 +487,20 @@ public class AscendRunTracker {
 
         FreezeData(long endTime) {
             this.endTime = endTime;
+        }
+    }
+
+    private static class StartMapEntry {
+        final AscendMap map;
+        final double startX;
+        final double startY;
+        final double startZ;
+
+        StartMapEntry(AscendMap map) {
+            this.map = map;
+            this.startX = map.getStartX();
+            this.startY = map.getStartY();
+            this.startZ = map.getStartZ();
         }
     }
 
@@ -561,6 +554,14 @@ public class AscendRunTracker {
         EntityVisibilityManager visibilityManager = EntityVisibilityManager.get();
         for (UUID runnerUuid : robotManager.getRunnerUuidsForMap(mapId)) {
             visibilityManager.hideEntity(viewerId, runnerUuid);
+        }
+    }
+
+    private void showRunnersAndReapplyVisibility(UUID playerId, String mapId) {
+        showRunnersForMap(playerId, mapId);
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin != null && plugin.getRobotManager() != null) {
+            plugin.getRobotManager().applyRunnerVisibility(playerId);
         }
     }
 

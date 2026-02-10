@@ -1,4 +1,4 @@
-package io.hyvexa.common.util;
+package io.hyvexa.parkour.util;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
@@ -10,10 +10,10 @@ import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.inventory.container.filter.FilterActionType;
 import com.hypixel.hytale.server.core.inventory.container.filter.SlotFilter;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.duel.DuelConstants;
 import io.hyvexa.parkour.ParkourConstants;
 import io.hyvexa.parkour.data.Map;
-import io.hyvexa.parkour.util.PlayerSettingsStore;
 
 import java.util.UUID;
 
@@ -101,10 +101,10 @@ public final class InventoryUtils {
 
     private static void prepareInventory(Inventory inventory, boolean isOp) {
         if (isOp) {
-            clearContainer(inventory.getHotbar());
+            io.hyvexa.common.util.InventoryUtils.clearContainer(inventory.getHotbar());
         } else {
             applyDropFilters(inventory, false);
-            clearAllSections(inventory);
+            io.hyvexa.common.util.InventoryUtils.clearAllContainers(inventory);
         }
     }
 
@@ -117,33 +117,7 @@ public final class InventoryUtils {
     }
 
     public static void clearAllItems(Player player) {
-        if (player == null) {
-            return;
-        }
-        Inventory inventory = player.getInventory();
-        if (inventory == null) {
-            return;
-        }
-        clearAllSections(inventory);
-    }
-
-    private static void clearAllSections(Inventory inventory) {
-        clearContainer(inventory.getHotbar());
-        clearContainer(inventory.getStorage());
-        clearContainer(inventory.getBackpack());
-        clearContainer(inventory.getTools());
-        clearContainer(inventory.getUtility());
-        clearContainer(inventory.getArmor());
-    }
-
-    private static void clearContainer(ItemContainer container) {
-        if (container == null) {
-            return;
-        }
-        short capacity = container.getCapacity();
-        for (short slot = 0; slot < capacity; slot++) {
-            container.setItemStackForSlot(slot, ItemStack.EMPTY, false);
-        }
+        io.hyvexa.common.util.InventoryUtils.clearAllContainers(player);
     }
 
     private static void setHotbarItem(Inventory inventory, int slotIndex, ItemStack itemStack) {

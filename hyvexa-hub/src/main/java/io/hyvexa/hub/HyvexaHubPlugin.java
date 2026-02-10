@@ -10,7 +10,6 @@ import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
-import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
@@ -18,6 +17,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.common.util.InventoryUtils;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.hub.command.HubCommand;
 import io.hyvexa.hub.hud.HubHud;
@@ -26,7 +26,6 @@ import io.hyvexa.hub.routing.HubRouter;
 
 import javax.annotation.Nonnull;
 import java.io.File;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -44,10 +43,11 @@ public class HyvexaHubPlugin extends JavaPlugin {
     private static HyvexaHubPlugin INSTANCE;
 
     private HubRouter router;
-    private final ConcurrentHashMap<UUID, HubHud> hubHuds = new ConcurrentHashMap<>();
-    private final Set<UUID> hubHudAttached = ConcurrentHashMap.newKeySet();
-    private final ConcurrentHashMap<UUID, Long> hubHudReadyAt = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, HubHudState> hubHudStates = new ConcurrentHashMap<>();
     private ScheduledFuture<?> hubHudTask;
+
+    private record HubHudState(HubHud hud, long readyAt) {
+    }
 
     public HyvexaHubPlugin(@Nonnull JavaPluginInit init) {
         super(init);
@@ -102,7 +102,7 @@ public class HyvexaHubPlugin extends JavaPlugin {
                 if (player == null) {
                     return;
                 }
-                clearInventory(player);
+                InventoryUtils.clearAllContainers(player);
                 giveHubItems(player);
                 attachHubHud(ref, store, playerRef);
             }, world);
@@ -116,9 +116,7 @@ public class HyvexaHubPlugin extends JavaPlugin {
             if (playerId == null) {
                 return;
             }
-            hubHuds.remove(playerId);
-            hubHudAttached.remove(playerId);
-            hubHudReadyAt.remove(playerId);
+            hubHudStates.remove(playerId);
         });
 
         for (PlayerRef playerRef : Universe.get().getPlayers()) {
@@ -150,14 +148,14 @@ public class HyvexaHubPlugin extends JavaPlugin {
             if (player == null) {
                 return;
             }
-            HubHud hud = hubHuds.computeIfAbsent(playerRef.getUuid(), ignored -> new HubHud(playerRef));
+            HubHudState state = hubHudStates.compute(playerRef.getUuid(), (ignored, existing) -> {
+                HubHud hud = existing != null ? existing.hud() : new HubHud(playerRef);
+                return new HubHudState(hud, System.currentTimeMillis() + HUD_READY_DELAY_MS);
+            });
+            HubHud hud = state.hud();
             player.getHudManager().setCustomHud(playerRef, hud);
             player.getHudManager().hideHudComponents(playerRef, HudComponent.Compass);
-            hud.resetCache();
             hud.show();
-            hud.applyStaticText();
-            hubHudAttached.add(playerRef.getUuid());
-            hubHudReadyAt.put(playerRef.getUuid(), System.currentTimeMillis() + HUD_READY_DELAY_MS);
         }, world);
     }
 
@@ -188,29 +186,6 @@ public class HyvexaHubPlugin extends JavaPlugin {
         inventory.getHotbar().setItemStackForSlot(SLOT_SERVER_SELECTOR, new ItemStack(HubConstants.ITEM_SERVER_SELECTOR, 1), false);
     }
 
-    private static void clearInventory(Player player) {
-        if (player == null) {
-            return;
-        }
-        Inventory inventory = player.getInventory();
-        if (inventory == null) {
-            return;
-        }
-        clearContainer(inventory.getHotbar());
-        clearContainer(inventory.getStorage());
-        clearContainer(inventory.getBackpack());
-        clearContainer(inventory.getTools());
-        clearContainer(inventory.getUtility());
-        clearContainer(inventory.getArmor());
-    }
-
-    private static void clearContainer(ItemContainer container) {
-        if (container == null) {
-            return;
-        }
-        container.clear();
-    }
-
     private void tickHubHud() {
         for (PlayerRef playerRef : Universe.get().getPlayers()) {
             Ref<EntityStore> ref = playerRef != null ? playerRef.getReference() : null;
@@ -229,22 +204,14 @@ public class HyvexaHubPlugin extends JavaPlugin {
             if (playerId == null) {
                 continue;
             }
-            HubHud hud = hubHuds.get(playerId);
-            boolean needsAttach = !hubHudAttached.contains(playerId);
-            if (needsAttach || hud == null) {
+            HubHudState state = hubHudStates.get(playerId);
+            if (state == null || state.hud() == null) {
                 attachHubHud(ref, store, playerRef);
                 continue;
             }
-            long readyAt = hubHudReadyAt.getOrDefault(playerId, Long.MAX_VALUE);
-            if (System.currentTimeMillis() < readyAt) {
+            if (System.currentTimeMillis() < state.readyAt()) {
                 continue;
             }
-            CompletableFuture.runAsync(() -> {
-                if (!ref.isValid()) {
-                    return;
-                }
-                hud.applyStaticText();
-            }, world);
         }
     }
 

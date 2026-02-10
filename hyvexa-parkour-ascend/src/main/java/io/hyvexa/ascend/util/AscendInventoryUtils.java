@@ -5,6 +5,7 @@ import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import io.hyvexa.ascend.AscendConstants;
+import io.hyvexa.common.util.InventoryUtils;
 
 public final class AscendInventoryUtils {
 
@@ -14,7 +15,7 @@ public final class AscendInventoryUtils {
         if (player == null) {
             return;
         }
-        clearAllContainers(player);
+        InventoryUtils.clearAllContainers(player);
         Inventory inventory = player.getInventory();
         if (inventory == null) {
             return;
@@ -58,7 +59,7 @@ public final class AscendInventoryUtils {
         if (player == null) {
             return;
         }
-        clearAllContainers(player);
+        InventoryUtils.clearAllContainers(player);
         Inventory inventory = player.getInventory();
         if (inventory == null) {
             return;
@@ -70,29 +71,6 @@ public final class AscendInventoryUtils {
         hotbar.setItemStackForSlot((short) 0, new ItemStack(AscendConstants.ITEM_RESET, 1), false);
         hotbar.setItemStackForSlot((short) 1, new ItemStack(AscendConstants.ITEM_LEAVE, 1), false);
         hotbar.setItemStackForSlot((short) 2, new ItemStack(AscendConstants.ITEM_DEV_CINDERCLOTH, 1), false);
-    }
-
-    private static void clearAllContainers(Player player) {
-        Inventory inventory = player.getInventory();
-        if (inventory == null) {
-            return;
-        }
-        clearContainer(inventory.getHotbar());
-        clearContainer(inventory.getStorage());
-        clearContainer(inventory.getBackpack());
-        clearContainer(inventory.getTools());
-        clearContainer(inventory.getUtility());
-        clearContainer(inventory.getArmor());
-    }
-
-    private static void clearContainer(ItemContainer container) {
-        if (container == null) {
-            return;
-        }
-        short capacity = container.getCapacity();
-        for (short slot = 0; slot < capacity; slot++) {
-            container.setItemStackForSlot(slot, ItemStack.EMPTY, false);
-        }
     }
 
     private static void setIfMissing(ItemContainer hotbar, short slot, String itemId) {

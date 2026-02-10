@@ -300,16 +300,8 @@ public class SettingsStore {
         syncSave();
     }
 
-    public boolean isDebugEnabled() {
-        return teleportDebugEnabled;
-    }
-
     public boolean isFallRespawnEnabled() {
         return fallRespawnSeconds > 0;
-    }
-
-    public double getVoidYFailsafe() {
-        return fallFailsafeVoidY;
     }
 
     private static TransformData defaultSpawn() {

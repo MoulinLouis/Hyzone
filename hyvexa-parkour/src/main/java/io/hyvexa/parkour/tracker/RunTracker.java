@@ -24,7 +24,7 @@ import com.hypixel.hytale.protocol.packets.player.SetMovementStates;
 import com.hypixel.hytale.protocol.packets.connection.PongType;
 import com.hypixel.hytale.metrics.metric.HistoricMetric;
 import io.hyvexa.common.util.FormatUtils;
-import io.hyvexa.common.util.InventoryUtils;
+import io.hyvexa.parkour.util.InventoryUtils;
 import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.HyvexaPlugin;
@@ -554,16 +554,15 @@ public class RunTracker {
     }
 
     private Map findStartTriggerMap(Vector3d position) {
-        for (Map map : mapStore.listMaps()) {
-            TransformData trigger = map.getStartTrigger();
-            if (trigger == null) {
-                continue;
-            }
-            if (distanceSq(position, trigger) <= TOUCH_RADIUS_SQ) {
-                return map;
-            }
+        if (position == null) {
+            return null;
         }
-        return null;
+        return mapStore.findMapByStartTrigger(
+                position.getX(),
+                position.getY(),
+                position.getZ(),
+                TOUCH_RADIUS_SQ
+        );
     }
 
     private void startRunFromTrigger(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef,

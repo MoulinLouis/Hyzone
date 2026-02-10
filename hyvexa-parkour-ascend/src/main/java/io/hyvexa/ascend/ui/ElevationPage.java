@@ -102,8 +102,7 @@ public class ElevationPage extends BaseAscendPage {
         BigNumber accumulatedVexa = playerStore.getElevationAccumulatedVexa(playerId);
         int currentElevation = playerStore.getElevationLevel(playerId);
 
-        // Get cost multiplier from skill tree
-        double costMultiplier = getCostMultiplier(playerId);
+        double costMultiplier = 1.0;
 
         // Calculate how many levels can be purchased based on accumulated vexa
         BigNumber costMultiplierBN = BigNumber.fromDouble(costMultiplier);
@@ -232,8 +231,7 @@ public class ElevationPage extends BaseAscendPage {
         BigNumber accumulatedVexa = playerStore.getElevationAccumulatedVexa(playerId);
         int currentElevation = playerStore.getElevationLevel(playerId);
 
-        // Get cost multiplier from skill tree
-        double costMultiplier = getCostMultiplier(playerId);
+        double costMultiplier = 1.0;
 
         // Calculate purchase info based on accumulated vexa
         BigNumber costMultiplierBN = BigNumber.fromDouble(costMultiplier);
@@ -276,10 +274,6 @@ public class ElevationPage extends BaseAscendPage {
         // Always show how much more is needed for the next level
         commandBuilder.set("#GainValue.Text", "Need " + FormatUtils.formatBigNumber(amountNeededForNextLevel) + " more");
         commandBuilder.set("#GainValue.Style.TextColor", "#9ca3af");
-    }
-
-    private double getCostMultiplier(UUID playerId) {
-        return 1.0;
     }
 
     private void showToast(UUID playerId, ToastType type, String message) {
