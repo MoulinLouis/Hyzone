@@ -352,7 +352,7 @@ $C.@PageOverlay {
     }
 
     Group #ElevationHud {
-      Anchor: (Right: 20, Top: 80, Width: 340, Height: 116);
+      Anchor: (Right: 20, Top: 80, Width: 340, Height: 94);
       LayoutMode: Left;
       Visible: false;
 
@@ -386,16 +386,11 @@ $C.@PageOverlay {
           Text: "x1";
         }
 
-        Label #ElevationHint {
-          Anchor: (Top: 8);
-          Style: (FontSize: 13, TextColor: #f59e0b(0.5), RenderBold: true);
-          Text: "/ascend elevate";
-        }
       }
     }
 
     Group #PrestigeHud {
-      Anchor: (Right: 20, Top: 202, Width: 340, Height: 156);
+      Anchor: (Right: 20, Top: 180, Width: 340, Height: 134);
       LayoutMode: Left;
       Visible: false;
 
@@ -441,16 +436,11 @@ $C.@PageOverlay {
           Text: "Evo Power Lv.0";
         }
 
-        Label #SummitHint {
-          Anchor: (Top: 8);
-          Style: (FontSize: 13, TextColor: #a855f7(0.5), RenderBold: true);
-          Text: "/ascend summit";
-        }
       }
     }
 
     Group #AscensionHud {
-      Anchor: (Left: 20, Top: 80, Width: 340, Height: 130);
+      Anchor: (Left: 20, Top: 80, Width: 340, Height: 108);
       LayoutMode: Left;
       Visible: false;
 
@@ -490,11 +480,6 @@ $C.@PageOverlay {
           Text: "Ascendance: 0";
         }
 
-        Label #AscensionHint {
-          Anchor: (Top: 8);
-          Style: (FontSize: 13, TextColor: #c084fc(0.5), RenderBold: true);
-          Text: "/ascend tree";
-        }
       }
     }
 
