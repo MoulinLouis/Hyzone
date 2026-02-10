@@ -271,30 +271,14 @@ public class AscendLeaderboardPage extends InteractiveCustomUIPage<AscendLeaderb
             case VEXA -> formatVexa(BigNumber.of(entry.totalVexaEarnedMantissa(), entry.totalVexaEarnedExp10()));
             case ASCENSIONS -> String.valueOf(entry.ascensionCount());
             case MANUAL_RUNS -> String.valueOf(entry.totalManualRuns());
-            case FASTEST_ASCENSION -> formatDuration(entry.fastestAscensionMs());
+            case FASTEST_ASCENSION -> entry.fastestAscensionMs() != null
+                    ? FormatUtils.formatDurationLong(entry.fastestAscensionMs())
+                    : "-";
         };
     }
 
     private String formatVexa(BigNumber vexa) {
         return FormatUtils.formatBigNumber(vexa);
-    }
-
-    private String formatDuration(Long ms) {
-        if (ms == null) {
-            return "-";
-        }
-        long totalSeconds = ms / 1000;
-        long hours = totalSeconds / 3600;
-        long minutes = (totalSeconds % 3600) / 60;
-        long seconds = totalSeconds % 60;
-
-        if (hours > 0) {
-            return String.format("%dh %02dm %02ds", hours, minutes, seconds);
-        } else if (minutes > 0) {
-            return String.format("%dm %02ds", minutes, seconds);
-        } else {
-            return seconds + "s";
-        }
     }
 
     private String getRankAccentColor(int rank) {

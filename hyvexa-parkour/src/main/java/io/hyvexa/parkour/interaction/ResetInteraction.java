@@ -12,7 +12,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.HyvexaPlugin;
-import io.hyvexa.common.util.InventoryUtils;
+import io.hyvexa.parkour.util.InventoryUtils;
 import io.hyvexa.parkour.data.Map;
 import io.hyvexa.parkour.util.PlayerSettingsStore;
 

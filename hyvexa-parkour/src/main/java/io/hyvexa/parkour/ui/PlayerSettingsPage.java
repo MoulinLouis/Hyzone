@@ -16,10 +16,10 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.HyvexaPlugin;
-import io.hyvexa.common.util.InventoryUtils;
+import io.hyvexa.common.visibility.EntityVisibilityManager;
+import io.hyvexa.parkour.util.InventoryUtils;
 import io.hyvexa.parkour.data.Map;
 import io.hyvexa.parkour.util.PlayerSettingsStore;
-import io.hyvexa.parkour.visibility.PlayerVisibilityManager;
 
 import javax.annotation.Nonnull;
 import java.util.UUID;
@@ -226,7 +226,7 @@ public class PlayerSettingsPage extends BaseParkourPage {
     }
 
     private void showAllPlayers(@Nonnull PlayerRef viewerRef) {
-        PlayerVisibilityManager.get().clearHidden(viewerRef.getUuid());
+        EntityVisibilityManager.get().clearHidden(viewerRef.getUuid());
     }
 
     private void applyHiddenState(@Nonnull PlayerRef viewerRef, @Nonnull World world, boolean hide) {
@@ -247,9 +247,9 @@ public class PlayerSettingsPage extends BaseParkourPage {
                 continue;
             }
             if (hide) {
-                PlayerVisibilityManager.get().hidePlayer(viewerRef.getUuid(), uuidComponent.getUuid());
+                EntityVisibilityManager.get().hideEntity(viewerRef.getUuid(), uuidComponent.getUuid());
             } else {
-                PlayerVisibilityManager.get().showPlayer(viewerRef.getUuid(), uuidComponent.getUuid());
+                EntityVisibilityManager.get().showEntity(viewerRef.getUuid(), uuidComponent.getUuid());
             }
         }
     }

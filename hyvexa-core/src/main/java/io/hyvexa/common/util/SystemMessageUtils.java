@@ -90,18 +90,6 @@ public final class SystemMessageUtils {
         return withParkourPrefix(raw(text, ERROR));
     }
 
-    public static Message presence(Message rankPart, String playerName, boolean joined) {
-        String verb = joined ? "joined" : "left";
-        String verbColor = joined ? SUCCESS : WARN;
-        return withServerPrefix(
-                raw("[", SECONDARY),
-                rankPart,
-                raw("] ", SECONDARY),
-                raw(playerName, PRIMARY_TEXT),
-                raw(" " + verb + " the server.", verbColor)
-        );
-    }
-
     public static Message adminAnnouncement(String text) {
         return withServerPrefix(
                 raw("Admin: ", WARN),
@@ -110,4 +98,3 @@ public final class SystemMessageUtils {
     }
 
 }
-

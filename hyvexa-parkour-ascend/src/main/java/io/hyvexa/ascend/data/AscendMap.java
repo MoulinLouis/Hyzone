@@ -6,12 +6,6 @@ public class AscendMap {
 
     private String id;
     private String name;
-    private long price;
-    private long robotPrice;
-    private long baseReward;
-    private long baseRunTimeMs;
-    private long robotTimeReductionMs;
-    private int storageCapacity;
     private String world;
     private double startX;
     private double startY;
@@ -40,44 +34,12 @@ public class AscendMap {
         this.name = name;
     }
 
-    public long getPrice() {
-        return price;
-    }
-
-    public void setPrice(long price) {
-        this.price = price;
-    }
-
     public long getEffectivePrice() {
         return AscendConstants.getMapUnlockPrice(displayOrder);
     }
 
-    public long getRobotPrice() {
-        return robotPrice;
-    }
-
-    public void setRobotPrice(long robotPrice) {
-        this.robotPrice = robotPrice;
-    }
-
     public long getEffectiveRobotPrice() {
         return 0L; // Runners are free
-    }
-
-    public long getBaseReward() {
-        return baseReward;
-    }
-
-    public void setBaseReward(long baseReward) {
-        this.baseReward = baseReward;
-    }
-
-    public long getBaseRunTimeMs() {
-        return baseRunTimeMs;
-    }
-
-    public void setBaseRunTimeMs(long baseRunTimeMs) {
-        this.baseRunTimeMs = baseRunTimeMs;
     }
 
     public long getEffectiveBaseRunTimeMs() {
@@ -86,22 +48,6 @@ public class AscendMap {
 
     public long getEffectiveBaseReward() {
         return AscendConstants.getMapBaseReward(displayOrder);
-    }
-
-    public long getRobotTimeReductionMs() {
-        return robotTimeReductionMs;
-    }
-
-    public void setRobotTimeReductionMs(long robotTimeReductionMs) {
-        this.robotTimeReductionMs = robotTimeReductionMs;
-    }
-
-    public int getStorageCapacity() {
-        return storageCapacity;
-    }
-
-    public void setStorageCapacity(int storageCapacity) {
-        this.storageCapacity = storageCapacity;
     }
 
     public String getWorld() {

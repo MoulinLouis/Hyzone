@@ -130,12 +130,12 @@ public class StatsPage extends BaseAscendPage {
         }
 
         Long fastestMs = progress.getFastestAscensionMs();
-        commandBuilder.set("#BestValue.Text", fastestMs != null ? formatDuration(fastestMs) : "-");
+        commandBuilder.set("#BestValue.Text", fastestMs != null ? FormatUtils.formatDurationLong(fastestMs) : "-");
 
         Long startedAt = progress.getAscensionStartedAt();
         if (startedAt != null) {
             long current = System.currentTimeMillis() - startedAt;
-            commandBuilder.set("#CurrentValue.Text", formatDuration(current));
+            commandBuilder.set("#CurrentValue.Text", FormatUtils.formatDurationLong(current));
         } else {
             commandBuilder.set("#CurrentValue.Text", "0s");
         }
@@ -191,21 +191,6 @@ public class StatsPage extends BaseAscendPage {
             return String.format(Locale.US, "%,.0fx", value);
         } else {
             return FormatUtils.formatBigNumber(BigNumber.fromDouble(value)) + "x";
-        }
-    }
-
-    private String formatDuration(long ms) {
-        long totalSeconds = ms / 1000;
-        long hours = totalSeconds / 3600;
-        long minutes = (totalSeconds % 3600) / 60;
-        long seconds = totalSeconds % 60;
-
-        if (hours > 0) {
-            return String.format(Locale.US, "%dh %02dm %02ds", hours, minutes, seconds);
-        } else if (minutes > 0) {
-            return String.format(Locale.US, "%dm %02ds", minutes, seconds);
-        } else {
-            return seconds + "s";
         }
     }
 

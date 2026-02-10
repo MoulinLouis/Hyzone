@@ -103,19 +103,17 @@ public class PlaytimeManager {
         playerCountStore.recordSample(System.currentTimeMillis(), actualCount);
     }
 
-    public void broadcastPresence(PlayerRef playerRef, boolean joined) {
-        if (playerRef == null || !joined) {
+    public void broadcastPresence(PlayerRef playerRef) {
+        if (playerRef == null) {
             return;
         }
         String name = playerRef.getUsername();
         if (name == null || name.isBlank()) {
             name = ParkourUtils.resolveName(playerRef.getUuid(), progressStore);
         }
-        String sign = joined ? "+" : "-";
-        String signColor = joined ? SystemMessageUtils.SUCCESS : SystemMessageUtils.ERROR;
         Message message = Message.join(
                 Message.raw("[").color(SystemMessageUtils.SECONDARY),
-                Message.raw(sign).color(signColor),
+                Message.raw("+").color(SystemMessageUtils.SUCCESS),
                 Message.raw("] ").color(SystemMessageUtils.SECONDARY),
                 Message.raw(name).color(SystemMessageUtils.PRIMARY_TEXT)
         );

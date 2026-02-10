@@ -24,7 +24,7 @@ import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.util.FormatUtils;
-import io.hyvexa.common.util.InventoryUtils;
+import io.hyvexa.parkour.util.InventoryUtils;
 import io.hyvexa.parkour.data.Map;
 import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.data.ProgressStore;

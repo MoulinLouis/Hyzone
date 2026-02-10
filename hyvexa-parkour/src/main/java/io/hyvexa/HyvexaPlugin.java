@@ -56,10 +56,8 @@ import io.hyvexa.parkour.command.DatabaseReloadCommand;
 import io.hyvexa.parkour.command.DatabaseTestCommand;
 import io.hyvexa.parkour.command.DiscordCommand;
 import io.hyvexa.parkour.command.MessageTestCommand;
-import io.hyvexa.parkour.command.ParkourAdminCommand;
 import io.hyvexa.parkour.command.ParkourAdminItemCommand;
 import io.hyvexa.parkour.command.ParkourCommand;
-import io.hyvexa.parkour.command.ParkourItemCommand;
 import io.hyvexa.parkour.command.ParkourMusicDebugCommand;
 import io.hyvexa.parkour.command.RulesCommand;
 import io.hyvexa.parkour.command.StoreCommand;
@@ -73,7 +71,6 @@ import io.hyvexa.parkour.system.NoWeaponDamageSystem;
 import io.hyvexa.common.visibility.EntityVisibilityFilterSystem;
 import io.hyvexa.parkour.system.RunTrackerTickSystem;
 import io.hyvexa.parkour.ui.PlayerMusicPage;
-import io.hyvexa.parkour.visibility.PlayerVisibilityManager;
 import io.hyvexa.manager.AnnouncementManager;
 import io.hyvexa.manager.ChatFormatter;
 import io.hyvexa.manager.CollisionManager;
@@ -202,7 +199,7 @@ public class HyvexaPlugin extends JavaPlugin {
                 this::scheduleTick, this::cancelScheduled);
         this.playtimeManager = new PlaytimeManager(progressStore, playerCountStore);
         this.cleanupManager = new PlayerCleanupManager(hudManager, announcementManager, perksManager, playtimeManager,
-                runTracker, PlayerVisibilityManager.get());
+                runTracker);
         this.leaderboardHologramManager = new LeaderboardHologramManager(progressStore, mapStore, PARKOUR_WORLD_NAME);
         this.inventorySyncManager = new InventorySyncManager(mapStore, progressStore, runTracker,
                 this::shouldApplyParkourMode, DISCORD_URL, JOIN_LANGUAGE_NOTICE, JOIN_LANGUAGE_NOTICE_SUFFIX);
@@ -318,7 +315,6 @@ public class HyvexaPlugin extends JavaPlugin {
             try {
                 if (event.getPlayerRef() != null) {
                     UUID playerId = event.getPlayerRef().getUuid();
-                    playtimeManager.broadcastPresence(event.getPlayerRef(), false);
                     if (duelTracker != null) {
                         duelTracker.handleDisconnect(playerId);
                     }
@@ -647,7 +643,7 @@ public class HyvexaPlugin extends JavaPlugin {
             LOGGER.at(Level.WARNING).withCause(e).log("Exception in PlayerConnectEvent (hud/playtime)");
         }
         try {
-            playtimeManager.broadcastPresence(playerRef, true);
+            playtimeManager.broadcastPresence(playerRef);
         } catch (Exception e) {
             LOGGER.at(Level.WARNING).withCause(e).log("Exception in PlayerConnectEvent (broadcast)");
         }

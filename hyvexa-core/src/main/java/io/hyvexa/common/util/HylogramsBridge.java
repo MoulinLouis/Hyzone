@@ -77,43 +77,31 @@ public final class HylogramsBridge {
                 safeLines.add(line != null ? line : "");
             }
         }
-        Class<?> apiClass = resolveApiClass();
-        try {
-            Method getMethod = apiClass.getMethod("get", String.class);
-            Object hologram = getMethod.invoke(null, name);
-            if (hologram == null) {
-                return false;
-            }
-            Method getLineCount = hologram.getClass().getMethod("getLineCount");
-            Method setLine = hologram.getClass().getMethod("setLine", int.class, String.class);
-            Method addLine = hologram.getClass().getMethod("addLine", String.class);
-            Method removeLine = hologram.getClass().getMethod("removeLine", int.class);
-            Method respawn = hologram.getClass().getMethod("respawn", Store.class);
-            Method save = hologram.getClass().getMethod("save", Store.class);
-
-            int currentCount = ((Number) getLineCount.invoke(hologram)).intValue();
-            int targetCount = safeLines.size();
-            int setCount = Math.min(currentCount, targetCount);
-            for (int i = 0; i < setCount; i++) {
-                setLine.invoke(hologram, i + 1, safeLines.get(i));
-            }
-            if (targetCount > currentCount) {
-                for (int i = currentCount; i < targetCount; i++) {
-                    addLine.invoke(hologram, safeLines.get(i));
-                }
-            } else if (currentCount > targetCount) {
-                for (int i = currentCount; i > targetCount; i--) {
-                    removeLine.invoke(hologram, i);
-                }
-            }
-            if (store != null) {
-                respawn.invoke(hologram, store);
-                save.invoke(hologram, store);
-            }
-            return true;
-        } catch (ReflectiveOperationException e) {
-            throw new IllegalStateException("Failed to update Hylograms hologram lines.", e);
+        Hologram hologram = get(name);
+        if (hologram == null) {
+            return false;
         }
+
+        int currentCount = hologram.getLineCount();
+        int targetCount = safeLines.size();
+        int setCount = Math.min(currentCount, targetCount);
+        for (int i = 0; i < setCount; i++) {
+            hologram.setLine(i + 1, safeLines.get(i));
+        }
+        if (targetCount > currentCount) {
+            for (int i = currentCount; i < targetCount; i++) {
+                hologram.addLine(safeLines.get(i));
+            }
+        } else if (currentCount > targetCount) {
+            for (int i = currentCount; i > targetCount; i--) {
+                hologram.removeLine(i);
+            }
+        }
+        if (store != null) {
+            hologram.respawn(store);
+            hologram.save(store);
+        }
+        return true;
     }
 
     public static final class Hologram {
@@ -121,10 +109,6 @@ public final class HylogramsBridge {
 
         private Hologram(Object handle) {
             this.handle = handle;
-        }
-
-        public Object getHandle() {
-            return handle;
         }
 
         public String getName() {
@@ -292,10 +276,6 @@ public final class HylogramsBridge {
 
         private HologramBuilder(Object handle) {
             this.handle = handle;
-        }
-
-        public Object getHandle() {
-            return handle;
         }
 
         public HologramBuilder at(Vector3d position) {

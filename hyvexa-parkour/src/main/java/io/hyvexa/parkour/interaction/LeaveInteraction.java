@@ -16,7 +16,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import io.hyvexa.HyvexaPlugin;
-import io.hyvexa.common.util.InventoryUtils;
+import io.hyvexa.parkour.util.InventoryUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.parkour.data.Map;
 import io.hyvexa.parkour.data.TransformData;

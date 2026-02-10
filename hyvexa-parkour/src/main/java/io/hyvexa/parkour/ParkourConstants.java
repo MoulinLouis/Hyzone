@@ -21,15 +21,6 @@ public final class ParkourConstants {
     public static final String ITEM_RUN_MITHRIL_DAGGERS = "Weapon_Daggers_Mithril";
     public static final String ITEM_RUN_GLIDER = "Glider";
 
-
-    public static final String[] RANK_NAMES = {
-            "Bronze",
-            "Silver",
-            "Gold",
-            "Platinum",
-            "Diamond"
-    };
-
     public static final String[] COMPLETION_RANK_NAMES = {
             "Unranked",
             "Iron",
@@ -44,7 +35,8 @@ public final class ParkourConstants {
             "Challenger",
             "VexaGod"
     };
-    // XP required to reach each rank, aligned by index with RANK_NAMES.
+
+    // XP required per level threshold.
     public static final long[] RANK_XP_REQUIREMENTS = {
             0L,
             100L,

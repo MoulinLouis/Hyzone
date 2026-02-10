@@ -45,11 +45,9 @@ public class AscendWhitelistManager {
         }
 
         String normalized = username.toLowerCase();
-        if (whitelistedPlayers.contains(normalized)) {
+        if (!whitelistedPlayers.add(normalized)) {
             return false;
         }
-
-        whitelistedPlayers.add(normalized);
         save();
         return true;
     }
@@ -65,11 +63,9 @@ public class AscendWhitelistManager {
         }
 
         String normalized = username.toLowerCase();
-        if (!whitelistedPlayers.contains(normalized)) {
+        if (!whitelistedPlayers.remove(normalized)) {
             return false;
         }
-
-        whitelistedPlayers.remove(normalized);
         save();
         return true;
     }

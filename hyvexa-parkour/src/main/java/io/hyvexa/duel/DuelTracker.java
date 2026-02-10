@@ -16,8 +16,9 @@ import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.HyvexaPlugin;
+import io.hyvexa.common.visibility.EntityVisibilityManager;
 import io.hyvexa.common.util.FormatUtils;
-import io.hyvexa.common.util.InventoryUtils;
+import io.hyvexa.parkour.util.InventoryUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.parkour.ParkourConstants;
 import io.hyvexa.parkour.data.Map;
@@ -27,7 +28,6 @@ import io.hyvexa.parkour.data.TransformData;
 import io.hyvexa.parkour.tracker.RunTracker;
 import io.hyvexa.parkour.tracker.TrackerUtils;
 import io.hyvexa.parkour.util.PlayerSettingsStore;
-import io.hyvexa.parkour.visibility.PlayerVisibilityManager;
 import io.hyvexa.duel.data.DuelMatchStore;
 import io.hyvexa.duel.data.DuelPreferenceStore;
 import io.hyvexa.duel.data.DuelPreferenceStore.DuelCategory;
@@ -40,7 +40,6 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
@@ -201,7 +200,7 @@ public class DuelTracker {
         if (opponentId == null) {
             return;
         }
-        PlayerVisibilityManager visibility = PlayerVisibilityManager.get();
+        EntityVisibilityManager visibility = EntityVisibilityManager.get();
         applyOpponentVisibility(playerId, opponentId, visibility);
     }
 
@@ -640,23 +639,8 @@ public class DuelTracker {
     }
 
     private boolean categoryMatches(@Nonnull Map map, @Nonnull EnumSet<DuelCategory> allowedCategories) {
-        DuelCategory category = toDuelCategory(map.getCategory());
+        DuelCategory category = DuelCategory.fromKey(map.getCategory());
         return category != null && allowedCategories.contains(category);
-    }
-
-    @Nullable
-    private DuelCategory toDuelCategory(@Nullable String category) {
-        if (category == null || category.isBlank()) {
-            return null;
-        }
-        String normalized = category.trim().toLowerCase(Locale.ROOT);
-        return switch (normalized) {
-            case "easy" -> DuelCategory.EASY;
-            case "medium" -> DuelCategory.MEDIUM;
-            case "hard" -> DuelCategory.HARD;
-            case "insane" -> DuelCategory.INSANE;
-            default -> null;
-        };
     }
 
     private java.util.Map<World, List<DuelPlayerContext>> collectMatchPlayersByWorld() {
@@ -859,7 +843,7 @@ public class DuelTracker {
     }
 
     private void applyDuelVisibility(@Nonnull UUID player1, @Nonnull UUID player2) {
-        PlayerVisibilityManager visibility = PlayerVisibilityManager.get();
+        EntityVisibilityManager visibility = EntityVisibilityManager.get();
         saveHiddenState(player1, visibility);
         saveHiddenState(player2, visibility);
         hideAllExcept(player1, player2, visibility);
@@ -868,7 +852,7 @@ public class DuelTracker {
         applyOpponentVisibility(player2, player1, visibility);
     }
 
-    private void saveHiddenState(@Nonnull UUID viewerId, @Nonnull PlayerVisibilityManager visibility) {
+    private void saveHiddenState(@Nonnull UUID viewerId, @Nonnull EntityVisibilityManager visibility) {
         Set<UUID> currentHidden = visibility.getHiddenTargets(viewerId);
         if (currentHidden.isEmpty()) {
             hiddenBeforeDuel.put(viewerId, Set.of());
@@ -878,7 +862,7 @@ public class DuelTracker {
     }
 
     private void hideAllExcept(@Nonnull UUID viewerId, @Nonnull UUID opponentId,
-                               @Nonnull PlayerVisibilityManager visibility) {
+                               @Nonnull EntityVisibilityManager visibility) {
         visibility.clearHidden(viewerId);
         for (PlayerRef ref : Universe.get().getPlayers()) {
             if (ref == null) {
@@ -888,22 +872,22 @@ public class DuelTracker {
             if (targetId == null || targetId.equals(viewerId) || targetId.equals(opponentId)) {
                 continue;
             }
-            visibility.hidePlayer(viewerId, targetId);
+            visibility.hideEntity(viewerId, targetId);
         }
     }
 
     private void applyOpponentVisibility(@Nonnull UUID viewerId, @Nonnull UUID opponentId,
-                                         @Nonnull PlayerVisibilityManager visibility) {
+                                         @Nonnull EntityVisibilityManager visibility) {
         boolean hideOpponent = PlayerSettingsStore.isDuelOpponentHidden(viewerId);
         if (hideOpponent) {
-            visibility.hidePlayer(viewerId, opponentId);
+            visibility.hideEntity(viewerId, opponentId);
         } else {
-            visibility.showPlayer(viewerId, opponentId);
+            visibility.showEntity(viewerId, opponentId);
         }
     }
 
     private void restoreVisibility(@Nonnull UUID viewerId) {
-        PlayerVisibilityManager visibility = PlayerVisibilityManager.get();
+        EntityVisibilityManager visibility = EntityVisibilityManager.get();
         Set<UUID> saved = hiddenBeforeDuel.remove(viewerId);
         visibility.clearHidden(viewerId);
         if (saved == null || saved.isEmpty()) {
@@ -916,7 +900,7 @@ public class DuelTracker {
             if (targetId.equals(viewerId)) {
                 continue;
             }
-            visibility.hidePlayer(viewerId, targetId);
+            visibility.hideEntity(viewerId, targetId);
         }
     }
 
