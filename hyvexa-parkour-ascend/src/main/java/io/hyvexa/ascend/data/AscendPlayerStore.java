@@ -36,7 +36,7 @@ public class AscendPlayerStore {
 
     private final Map<UUID, AscendPlayerProgress> players = new ConcurrentHashMap<>();
     private final Map<UUID, String> playerNames = new ConcurrentHashMap<>();
-    private final Set<UUID> dirtyPlayers = ConcurrentHashMap.newKeySet();
+    private final Map<UUID, Long> dirtyPlayerVersions = new ConcurrentHashMap<>();
     private final Set<UUID> resetPendingPlayers = ConcurrentHashMap.newKeySet();
     private final AtomicBoolean saveQueued = new AtomicBoolean(false);
     private final AtomicReference<ScheduledFuture<?>> saveFuture = new AtomicReference<>();
@@ -65,7 +65,7 @@ public class AscendPlayerStore {
         }
 
         players.clear();
-        dirtyPlayers.clear();
+        dirtyPlayerVersions.clear();
         resetPendingPlayers.clear();
         LOGGER.atInfo().log("AscendPlayerStore initialized with lazy loading");
     }
@@ -106,8 +106,7 @@ public class AscendPlayerStore {
         AscendPlayerProgress newProgress = new AscendPlayerProgress();
         newProgress.setAscensionStartedAt(System.currentTimeMillis());
         players.put(playerId, newProgress);
-        dirtyPlayers.add(playerId);
-        queueSave();
+        markDirty(playerId);
         return newProgress;
     }
 
@@ -412,7 +411,10 @@ public class AscendPlayerStore {
     }
 
     public void markDirty(UUID playerId) {
-        dirtyPlayers.add(playerId);
+        if (playerId == null) {
+            return;
+        }
+        dirtyPlayerVersions.compute(playerId, (ignored, version) -> version == null ? 1L : version + 1L);
         queueSave();
     }
 
@@ -1200,7 +1202,7 @@ public class AscendPlayerStore {
         // find an empty DB and create fresh default progress
         players.clear();
         playerNames.clear();
-        dirtyPlayers.clear();
+        dirtyPlayerVersions.clear();
         resetPendingPlayers.clear();
 
         // Invalidate leaderboard caches
@@ -1216,13 +1218,13 @@ public class AscendPlayerStore {
         }
 
         // Flush this player's data if dirty
-        if (dirtyPlayers.contains(playerId)) {
+        if (dirtyPlayerVersions.containsKey(playerId)) {
             flushPendingSave();
         }
 
         // Remove from cache
         players.remove(playerId);
-        dirtyPlayers.remove(playerId);
+        dirtyPlayerVersions.remove(playerId);
         resetPendingPlayers.remove(playerId);
     }
 
@@ -1236,6 +1238,10 @@ public class AscendPlayerStore {
     }
 
     private void queueSave() {
+        queueSave(AscendConstants.SAVE_DEBOUNCE_MS);
+    }
+
+    private void queueSave(long delayMs) {
         if (!saveQueued.compareAndSet(false, true)) {
             return;
         }
@@ -1243,10 +1249,16 @@ public class AscendPlayerStore {
             try {
                 syncSave();
             } finally {
-                saveQueued.set(false);
                 saveFuture.set(null);
+                saveQueued.set(false);
+                if (!dirtyPlayerVersions.isEmpty()) {
+                    long followUpDelay = DatabaseManager.getInstance().isInitialized()
+                            ? 0L
+                            : AscendConstants.SAVE_DEBOUNCE_MS;
+                    queueSave(followUpDelay);
+                }
             }
-        }, AscendConstants.SAVE_DEBOUNCE_MS, TimeUnit.MILLISECONDS);
+        }, Math.max(0L, delayMs), TimeUnit.MILLISECONDS);
         saveFuture.set(future);
     }
 
@@ -1255,10 +1267,7 @@ public class AscendPlayerStore {
             return;
         }
 
-        // Take a snapshot of dirty players but do NOT clear yet.
-        // We only remove successfully saved IDs after the save completes,
-        // so any markDirty() calls during the save window are preserved.
-        Set<UUID> toSave = Set.copyOf(dirtyPlayers);
+        Map<UUID, Long> toSave = Map.copyOf(dirtyPlayerVersions);
         if (toSave.isEmpty()) {
             return;
         }
@@ -1340,103 +1349,104 @@ public class AscendPlayerStore {
                 DatabaseManager.applyQueryTimeout(skillStmt);
                 DatabaseManager.applyQueryTimeout(achievementStmt);
 
-            for (UUID playerId : toSave) {
-                AscendPlayerProgress progress = players.get(playerId);
-                if (progress == null) {
-                    continue;
-                }
-
-                // If this player was recently reset, delete all child rows first
-                // to prevent stale upserts from re-inserting deleted data
-                if (resetPendingPlayers.remove(playerId)) {
-                    String pid = playerId.toString();
-                    for (PreparedStatement delStmt : new PreparedStatement[]{delMaps, delSummit, delSkills, delAchievements}) {
-                        delStmt.setString(1, pid);
-                        delStmt.executeUpdate();
+                for (Map.Entry<UUID, Long> dirtyEntry : toSave.entrySet()) {
+                    UUID playerId = dirtyEntry.getKey();
+                    AscendPlayerProgress progress = players.get(playerId);
+                    if (progress == null) {
+                        continue;
                     }
-                }
 
-                // Save player base data
-                playerStmt.setString(1, playerId.toString());
-                playerStmt.setString(2, playerNames.get(playerId));
-                playerStmt.setDouble(3, progress.getVexa().getMantissa());
-                playerStmt.setInt(4, progress.getVexa().getExponent());
-                playerStmt.setInt(5, progress.getElevationMultiplier());
-                playerStmt.setInt(6, progress.getAscensionCount());
-                playerStmt.setInt(7, progress.getSkillTreePoints());
-                playerStmt.setDouble(8, progress.getTotalVexaEarned().getMantissa());
-                playerStmt.setInt(9, progress.getTotalVexaEarned().getExponent());
-                playerStmt.setInt(10, progress.getTotalManualRuns());
-                playerStmt.setString(11, progress.getActiveTitle());
-                if (progress.getAscensionStartedAt() != null) {
-                    playerStmt.setLong(12, progress.getAscensionStartedAt());
-                } else {
-                    playerStmt.setNull(12, java.sql.Types.BIGINT);
-                }
-                if (progress.getFastestAscensionMs() != null) {
-                    playerStmt.setLong(13, progress.getFastestAscensionMs());
-                } else {
-                    playerStmt.setNull(13, java.sql.Types.BIGINT);
-                }
-                if (progress.getLastActiveTimestamp() != null) {
-                    playerStmt.setLong(14, progress.getLastActiveTimestamp());
-                } else {
-                    playerStmt.setNull(14, java.sql.Types.BIGINT);
-                }
-                playerStmt.setBoolean(15, progress.hasUnclaimedPassive());
-                playerStmt.setDouble(16, progress.getSummitAccumulatedVexa().getMantissa());
-                playerStmt.setInt(17, progress.getSummitAccumulatedVexa().getExponent());
-                playerStmt.setDouble(18, progress.getElevationAccumulatedVexa().getMantissa());
-                playerStmt.setInt(19, progress.getElevationAccumulatedVexa().getExponent());
-                playerStmt.setBoolean(20, progress.isAutoUpgradeEnabled());
-                playerStmt.setBoolean(21, progress.isAutoEvolutionEnabled());
-                playerStmt.setInt(22, progress.getSeenTutorials());
-                playerStmt.setBoolean(23, progress.isHideOtherRunners());
-                playerStmt.addBatch();
+                    // If this player was recently reset, delete all child rows first
+                    // to prevent stale upserts from re-inserting deleted data
+                    if (resetPendingPlayers.remove(playerId)) {
+                        String pid = playerId.toString();
+                        for (PreparedStatement delStmt : new PreparedStatement[]{delMaps, delSummit, delSkills, delAchievements}) {
+                            delStmt.setString(1, pid);
+                            delStmt.executeUpdate();
+                        }
+                    }
 
-                // Save map progress
-                for (Map.Entry<String, AscendPlayerProgress.MapProgress> entry : progress.getMapProgress().entrySet()) {
-                    AscendPlayerProgress.MapProgress mapProgress = entry.getValue();
-                    mapStmt.setString(1, playerId.toString());
-                    mapStmt.setString(2, entry.getKey());
-                    mapStmt.setBoolean(3, mapProgress.isUnlocked());
-                    mapStmt.setBoolean(4, mapProgress.isCompletedManually());
-                    mapStmt.setBoolean(5, mapProgress.hasRobot());
-                    mapStmt.setInt(6, mapProgress.getRobotSpeedLevel());
-                    mapStmt.setInt(7, mapProgress.getRobotStars());
-                    mapStmt.setDouble(8, mapProgress.getMultiplier().getMantissa());
-                    mapStmt.setInt(9, mapProgress.getMultiplier().getExponent());
-                    if (mapProgress.getBestTimeMs() != null) {
-                        mapStmt.setLong(10, mapProgress.getBestTimeMs());
+                    // Save player base data
+                    playerStmt.setString(1, playerId.toString());
+                    playerStmt.setString(2, playerNames.get(playerId));
+                    playerStmt.setDouble(3, progress.getVexa().getMantissa());
+                    playerStmt.setInt(4, progress.getVexa().getExponent());
+                    playerStmt.setInt(5, progress.getElevationMultiplier());
+                    playerStmt.setInt(6, progress.getAscensionCount());
+                    playerStmt.setInt(7, progress.getSkillTreePoints());
+                    playerStmt.setDouble(8, progress.getTotalVexaEarned().getMantissa());
+                    playerStmt.setInt(9, progress.getTotalVexaEarned().getExponent());
+                    playerStmt.setInt(10, progress.getTotalManualRuns());
+                    playerStmt.setString(11, progress.getActiveTitle());
+                    if (progress.getAscensionStartedAt() != null) {
+                        playerStmt.setLong(12, progress.getAscensionStartedAt());
                     } else {
-                        mapStmt.setNull(10, java.sql.Types.BIGINT);
+                        playerStmt.setNull(12, java.sql.Types.BIGINT);
                     }
-                    mapStmt.addBatch();
-                }
+                    if (progress.getFastestAscensionMs() != null) {
+                        playerStmt.setLong(13, progress.getFastestAscensionMs());
+                    } else {
+                        playerStmt.setNull(13, java.sql.Types.BIGINT);
+                    }
+                    if (progress.getLastActiveTimestamp() != null) {
+                        playerStmt.setLong(14, progress.getLastActiveTimestamp());
+                    } else {
+                        playerStmt.setNull(14, java.sql.Types.BIGINT);
+                    }
+                    playerStmt.setBoolean(15, progress.hasUnclaimedPassive());
+                    playerStmt.setDouble(16, progress.getSummitAccumulatedVexa().getMantissa());
+                    playerStmt.setInt(17, progress.getSummitAccumulatedVexa().getExponent());
+                    playerStmt.setDouble(18, progress.getElevationAccumulatedVexa().getMantissa());
+                    playerStmt.setInt(19, progress.getElevationAccumulatedVexa().getExponent());
+                    playerStmt.setBoolean(20, progress.isAutoUpgradeEnabled());
+                    playerStmt.setBoolean(21, progress.isAutoEvolutionEnabled());
+                    playerStmt.setInt(22, progress.getSeenTutorials());
+                    playerStmt.setBoolean(23, progress.isHideOtherRunners());
+                    playerStmt.addBatch();
 
-                // Save summit XP
-                for (SummitCategory category : SummitCategory.values()) {
-                    long xp = progress.getSummitXp(category);
-                    summitStmt.setString(1, playerId.toString());
-                    summitStmt.setString(2, category.name());
-                    summitStmt.setLong(3, xp);
-                    summitStmt.addBatch();
-                }
+                    // Save map progress
+                    for (Map.Entry<String, AscendPlayerProgress.MapProgress> entry : progress.getMapProgress().entrySet()) {
+                        AscendPlayerProgress.MapProgress mapProgress = entry.getValue();
+                        mapStmt.setString(1, playerId.toString());
+                        mapStmt.setString(2, entry.getKey());
+                        mapStmt.setBoolean(3, mapProgress.isUnlocked());
+                        mapStmt.setBoolean(4, mapProgress.isCompletedManually());
+                        mapStmt.setBoolean(5, mapProgress.hasRobot());
+                        mapStmt.setInt(6, mapProgress.getRobotSpeedLevel());
+                        mapStmt.setInt(7, mapProgress.getRobotStars());
+                        mapStmt.setDouble(8, mapProgress.getMultiplier().getMantissa());
+                        mapStmt.setInt(9, mapProgress.getMultiplier().getExponent());
+                        if (mapProgress.getBestTimeMs() != null) {
+                            mapStmt.setLong(10, mapProgress.getBestTimeMs());
+                        } else {
+                            mapStmt.setNull(10, java.sql.Types.BIGINT);
+                        }
+                        mapStmt.addBatch();
+                    }
 
-                // Save skill nodes
-                for (SkillTreeNode node : progress.getUnlockedSkillNodes()) {
-                    skillStmt.setString(1, playerId.toString());
-                    skillStmt.setString(2, node.name());
-                    skillStmt.addBatch();
-                }
+                    // Save summit XP
+                    for (SummitCategory category : SummitCategory.values()) {
+                        long xp = progress.getSummitXp(category);
+                        summitStmt.setString(1, playerId.toString());
+                        summitStmt.setString(2, category.name());
+                        summitStmt.setLong(3, xp);
+                        summitStmt.addBatch();
+                    }
 
-                // Save achievements
-                for (AchievementType achievement : progress.getUnlockedAchievements()) {
-                    achievementStmt.setString(1, playerId.toString());
-                    achievementStmt.setString(2, achievement.name());
-                    achievementStmt.addBatch();
+                    // Save skill nodes
+                    for (SkillTreeNode node : progress.getUnlockedSkillNodes()) {
+                        skillStmt.setString(1, playerId.toString());
+                        skillStmt.setString(2, node.name());
+                        skillStmt.addBatch();
+                    }
+
+                    // Save achievements
+                    for (AchievementType achievement : progress.getUnlockedAchievements()) {
+                        achievementStmt.setString(1, playerId.toString());
+                        achievementStmt.setString(2, achievement.name());
+                        achievementStmt.addBatch();
+                    }
                 }
-            }
                 playerStmt.executeBatch();
                 mapStmt.executeBatch();
                 summitStmt.executeBatch();
@@ -1445,12 +1455,21 @@ public class AscendPlayerStore {
 
                 conn.commit(); // Commit transaction
 
-                // Save succeeded - remove only the IDs we just saved
-                dirtyPlayers.removeAll(toSave);
+                // Save succeeded - remove only IDs that were not marked dirty again mid-save.
+                for (Map.Entry<UUID, Long> entry : toSave.entrySet()) {
+                    UUID playerId = entry.getKey();
+                    Long savedVersion = entry.getValue();
+                    dirtyPlayerVersions.compute(playerId, (ignored, currentVersion) -> {
+                        if (currentVersion == null) {
+                            return null;
+                        }
+                        return currentVersion.equals(savedVersion) ? null : currentVersion;
+                    });
+                }
             } catch (SQLException e) {
                 conn.rollback(); // Rollback transaction on error
                 LOGGER.at(Level.SEVERE).log("Failed to save ascend players (rolled back): " + e.getMessage());
-                // On failure, IDs stay in dirtyPlayers for the next save cycle
+                // On failure, versions remain dirty for the next save cycle
                 throw e; // Re-throw to trigger outer catch
             }
         } catch (SQLException e) {

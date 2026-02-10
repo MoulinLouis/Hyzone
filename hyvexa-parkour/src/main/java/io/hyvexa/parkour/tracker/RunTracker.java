@@ -788,16 +788,17 @@ public class RunTracker {
             Long previousBestMs = progressStore.getBestTimeMs(playerId, map.getId());
             int oldRank = progressStore.getCompletionRank(playerId, mapStore);
             ProgressStore.ProgressionResult result = progressStore.recordMapCompletion(playerId, playerName,
-                    map.getId(), durationMs, mapStore, checkpointTimes);
+                    map.getId(), durationMs, mapStore, checkpointTimes,
+                    completionSaved -> {
+                        if (!completionSaved) {
+                            warnCompletionSaveFailure(playerId, ref, store);
+                        }
+                    });
             if (ghostRecorder != null) {
                 ghostRecorder.stopRecording(playerId, durationMs, result.firstCompletion || result.newBest);
             }
             if (ghostNpcManager != null) {
                 ghostNpcManager.despawnGhost(playerId);
-            }
-            if (!result.completionSaved) {
-                player.sendMessage(SystemMessageUtils.parkourWarn(
-                        "Warning: Your time might not have been saved. Please report this."));
             }
             if (result.firstCompletion) {
                 HyvexaPlugin plugin = HyvexaPlugin.getInstance();
@@ -868,6 +869,37 @@ public class RunTracker {
             clearActiveMap(playerId);
             InventoryUtils.giveMenuItems(player);
         }
+    }
+
+    private void warnCompletionSaveFailure(UUID playerId, Ref<EntityStore> ref, Store<EntityStore> store) {
+        if (playerId == null || store == null) {
+            return;
+        }
+        World world = store.getExternalData().getWorld();
+        if (world == null) {
+            return;
+        }
+        CompletableFuture.runAsync(() -> {
+            Ref<EntityStore> targetRef = ref;
+            Store<EntityStore> targetStore = store;
+            if (targetRef == null || !targetRef.isValid()) {
+                PlayerRef livePlayerRef = Universe.get().getPlayer(playerId);
+                if (livePlayerRef == null) {
+                    return;
+                }
+                targetRef = livePlayerRef.getReference();
+                if (targetRef == null || !targetRef.isValid()) {
+                    return;
+                }
+                targetStore = targetRef.getStore();
+            }
+            Player targetPlayer = targetStore.getComponent(targetRef, Player.getComponentType());
+            if (targetPlayer == null) {
+                return;
+            }
+            targetPlayer.sendMessage(SystemMessageUtils.parkourWarn(
+                    "Warning: Your time might not have been saved. Please report this."));
+        }, world);
     }
 
     private static double distanceSq(Vector3d position, TransformData target) {

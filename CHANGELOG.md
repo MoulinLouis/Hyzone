@@ -14,6 +14,9 @@
 - **Ascend: Leaderboard system** - New `/ascend leaderboard` command with tabbed rankings for Vexa, Ascensions, and Manual Runs. Includes pagination (50 per page) and player search. Accessible via the Bolt of Stormsilk item.
 
 ### Fixed
+- **Parkour: Completion writes no longer block world ticks** - Map completion DB writes/retries now run asynchronously with post-save warning signaling for failures
+- **Parkour: Debounced progress saves no longer drop dirty updates** - Save cycles now snapshot dirty IDs, clear only successful writes, and immediately requeue when dirty state remains
+- **Ascend: Same-player dirty updates are preserved across save windows** - Dirty tracking now uses per-player versions so in-flight saves cannot erase newer updates
 - **Ascend: Fixed Hub -> Ascend inventory sync race** - Menu-item hotbar sync now waits for player world attachment before writing inventory, preventing null-world `ItemContainerChangeEvent` spam during world transfer
 - **Core reliability: fixed high-priority race/leak issues** - Ascend counter/spend paths now use atomic CAS patterns, disconnect handlers clear lingering per-player caches, and hub/respawn null-race edge cases were closed
 - **Ascend: Evolution Power now applies to runner evolution** - Each star multiplies the multiplier gain by the Evolution Power value (e.g., ×2 base: 0★=0.10, 1★=0.20, 2★=0.40, 3★=0.80). Higher Summit Evolution Power makes each star exponentially stronger.
