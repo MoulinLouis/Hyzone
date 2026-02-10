@@ -100,14 +100,14 @@ public class AscendTutorialPage extends BaseAscendPage {
         ),
         ASCENSION(
             "Pages/Ascend_Tutorial_Ascension.ui",
-            new String[]{"Ascension", "Skill Tree"},
+            new String[]{"Ascension", "Ascendancy Tree"},
             new String[]{
-                "The ultimate prestige. Resets everything including Summit - but grants a Skill Tree point for powerful permanent abilities. Open with /ascend ascension.",
-                "8 skill nodes to unlock: Auto-Runners, Auto-Evolution, Persistence, Runner Speed, Offline Boost, Summit Memory, Evolution Power, and more. Skill points are permanent across all future Ascensions."
+                "The ultimate prestige. Resets everything including Summit - but grants an AP for powerful permanent abilities. Open with /ascend ascension.",
+                "8 ascendancy nodes to unlock: Auto-Runners, Auto-Evolution, Persistence, Runner Speed, Offline Boost, Summit Memory, Evolution Power, and more. AP are permanent across all future Ascensions."
             },
             new String[][]{
-                {"Resets everything including Summit", "Grants a Skill Tree point each time", "Unlocks powerful permanent abilities"},
-                {"8 skill nodes to unlock", "Auto-Runners, Speed, Persistence, and more", "Skill points persist across Ascensions"}
+                {"Resets everything including Summit", "Grants 1 AP each time", "Unlocks powerful permanent abilities"},
+                {"8 ascendancy nodes to unlock", "Auto-Runners, Speed, Persistence, and more", "AP persist across Ascensions"}
             },
             new String[][]{
                 {"#ef4444", "#a855f7", "#f59e0b"},

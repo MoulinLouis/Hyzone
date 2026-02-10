@@ -94,7 +94,7 @@ public class AscensionPage extends BaseAscendPage {
 
         player.sendMessage(Message.raw("[Ascension] You have Ascended! (x" + newCount + ")")
             .color(SystemMessageUtils.SUCCESS));
-        player.sendMessage(Message.raw("[Ascension] +1 Skill Tree Point. All progress has been reset.")
+        player.sendMessage(Message.raw("[Ascension] +1 AP. All progress has been reset.")
             .color(SystemMessageUtils.SUCCESS));
         player.sendMessage(Message.raw("[Ascension] Use /ascend skills to unlock abilities.")
             .color(SystemMessageUtils.SECONDARY));

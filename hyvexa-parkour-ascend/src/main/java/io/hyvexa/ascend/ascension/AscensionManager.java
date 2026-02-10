@@ -83,7 +83,7 @@ public class AscensionManager {
         playerStore.flushPendingSave();
 
         LOGGER.atInfo().log("[Ascension] Player " + playerId + " ascended! Count: " + newAscensionCount
-            + ", Skill Points: " + newPoints);
+            + ", AP: " + newPoints);
 
         return newAscensionCount;
     }

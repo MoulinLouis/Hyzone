@@ -13,10 +13,15 @@ $C.@PageOverlay {
 
   Group #SkillTreeWindow {
     Anchor: (Width: 700, Height: 900);
-    LayoutMode: Top;
+    LayoutMode: Full;
     Background: #0d1620(0.95);
     OutlineColor: #ffffff(0.06);
     OutlineSize: 1;
+
+    // === MAIN LAYOUT (flex container for header + content) ===
+    Group {
+      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+      LayoutMode: Top;
 
     // === HEADER ===
     Group #Header {
@@ -33,7 +38,7 @@ $C.@PageOverlay {
       Label {
         Anchor: (Left: 20, Top: 16, Width: 200, Height: 24);
         Style: (FontSize: 18, TextColor: #f0f4f8, RenderBold: true);
-        Text: "Skill Tree";
+        Text: "Ascendancy Tree";
       }
 
       Group {
@@ -86,9 +91,9 @@ $C.@PageOverlay {
           LayoutMode: Left;
 
           Label {
-            Anchor: (Width: 100, Top: 0, Bottom: 0);
+            Anchor: (Width: 140, Top: 0, Bottom: 0);
             Style: (FontSize: 13, TextColor: #9fb0ba, VerticalAlignment: Center);
-            Text: "Skill Points:";
+            Text: "Ascendancy Points:";
           }
 
           Label #AvailablePoints {
@@ -153,16 +158,18 @@ $C.@PageOverlay {
               Anchor: (Left: 0, Right: 0);
               FlexWeight: 1;
               LayoutMode: Top;
-              Label #NameAutoRunners { Anchor: (Top: 14); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Auto-Upgrade"; }
+              Label { Anchor: (Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "1:1"; }
+              Label #NameAutoRunners { Anchor: (Top: 2); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Auto-Upgrade"; }
               Label #DescAutoRunners { Anchor: (Top: 4); Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center); Text: "+ Momentum"; }
-              Label #StatusAutoRunners { Anchor: (Top: 10); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
+              Label #StatusAutoRunners { Anchor: (Top: 6); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
             }
             Group #LockedAutoRunners {
               Visible: false;
               Anchor: (Left: 0, Right: 0);
               FlexWeight: 1;
-              Group { Anchor: (Left: 64, Top: 12, Width: 32, Height: 32); Background: @LockIcon; }
-              Label { Anchor: (Left: 0, Right: 0, Top: 52); Style: (FontSize: 12, RenderBold: true, TextColor: #4b5563, HorizontalAlignment: Center); Text: "LOCKED"; }
+              Label { Anchor: (Left: 0, Right: 0, Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "1:1"; }
+              Group { Anchor: (Left: 64, Top: 18, Width: 32, Height: 32); Background: @LockIcon; }
+              Label { Anchor: (Left: 0, Right: 0, Top: 56); Style: (FontSize: 12, RenderBold: true, TextColor: #4b5563, HorizontalAlignment: Center); Text: "LOCKED"; }
             }
           }
 
@@ -178,15 +185,17 @@ $C.@PageOverlay {
               Anchor: (Left: 0, Right: 0);
               FlexWeight: 1;
               LayoutMode: Top;
-              Label #NameAutoEvolution { Anchor: (Top: 14); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Auto-Evolution"; }
+              Label { Anchor: (Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "2:1"; }
+              Label #NameAutoEvolution { Anchor: (Top: 2); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Auto-Evolution"; }
               Label #DescAutoEvolution { Anchor: (Top: 4); Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center); Text: "Auto-evolve at max level"; }
-              Label #StatusAutoEvolution { Anchor: (Top: 10); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
+              Label #StatusAutoEvolution { Anchor: (Top: 6); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
             }
             Group #LockedAutoEvolution {
               Anchor: (Left: 0, Right: 0);
               FlexWeight: 1;
-              Group { Anchor: (Left: 64, Top: 12, Width: 32, Height: 32); Background: @LockIcon; }
-              Label { Anchor: (Left: 0, Right: 0, Top: 52); Style: (FontSize: 12, RenderBold: true, TextColor: #4b5563, HorizontalAlignment: Center); Text: "LOCKED"; }
+              Label { Anchor: (Left: 0, Right: 0, Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "2:1"; }
+              Group { Anchor: (Left: 64, Top: 18, Width: 32, Height: 32); Background: @LockIcon; }
+              Label { Anchor: (Left: 0, Right: 0, Top: 56); Style: (FontSize: 12, RenderBold: true, TextColor: #4b5563, HorizontalAlignment: Center); Text: "LOCKED"; }
             }
           }
 
@@ -202,15 +211,17 @@ $C.@PageOverlay {
               Anchor: (Left: 0, Right: 0);
               FlexWeight: 1;
               LayoutMode: Top;
-              Label #NamePersistence { Anchor: (Top: 14); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Persistence"; }
+              Label { Anchor: (Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "3:1"; }
+              Label #NamePersistence { Anchor: (Top: 2); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Persistence"; }
               Label #DescPersistence { Anchor: (Top: 4); Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center); Text: "Keep 10% multipliers"; }
-              Label #StatusPersistence { Anchor: (Top: 10); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
+              Label #StatusPersistence { Anchor: (Top: 6); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
             }
             Group #LockedPersistence {
               Anchor: (Left: 0, Right: 0);
               FlexWeight: 1;
-              Group { Anchor: (Left: 64, Top: 12, Width: 32, Height: 32); Background: @LockIcon; }
-              Label { Anchor: (Left: 0, Right: 0, Top: 52); Style: (FontSize: 12, RenderBold: true, TextColor: #4b5563, HorizontalAlignment: Center); Text: "LOCKED"; }
+              Label { Anchor: (Left: 0, Right: 0, Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "3:1"; }
+              Group { Anchor: (Left: 64, Top: 18, Width: 32, Height: 32); Background: @LockIcon; }
+              Label { Anchor: (Left: 0, Right: 0, Top: 56); Style: (FontSize: 12, RenderBold: true, TextColor: #4b5563, HorizontalAlignment: Center); Text: "LOCKED"; }
             }
           }
 
@@ -226,15 +237,17 @@ $C.@PageOverlay {
               Anchor: (Left: 0, Right: 0);
               FlexWeight: 1;
               LayoutMode: Top;
-              Label #NameRunnerSpeed { Anchor: (Top: 14); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Runner Speed"; }
+              Label { Anchor: (Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "3:2"; }
+              Label #NameRunnerSpeed { Anchor: (Top: 2); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Runner Speed"; }
               Label #DescRunnerSpeed { Anchor: (Top: 4); Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center); Text: "x1.5 global speed"; }
-              Label #StatusRunnerSpeed { Anchor: (Top: 10); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
+              Label #StatusRunnerSpeed { Anchor: (Top: 6); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
             }
             Group #LockedRunnerSpeed {
               Anchor: (Left: 0, Right: 0);
               FlexWeight: 1;
-              Group { Anchor: (Left: 64, Top: 12, Width: 32, Height: 32); Background: @LockIcon; }
-              Label { Anchor: (Left: 0, Right: 0, Top: 52); Style: (FontSize: 12, RenderBold: true, TextColor: #4b5563, HorizontalAlignment: Center); Text: "LOCKED"; }
+              Label { Anchor: (Left: 0, Right: 0, Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "3:2"; }
+              Group { Anchor: (Left: 64, Top: 18, Width: 32, Height: 32); Background: @LockIcon; }
+              Label { Anchor: (Left: 0, Right: 0, Top: 56); Style: (FontSize: 12, RenderBold: true, TextColor: #4b5563, HorizontalAlignment: Center); Text: "LOCKED"; }
             }
           }
 
@@ -250,15 +263,17 @@ $C.@PageOverlay {
               Anchor: (Left: 0, Right: 0);
               FlexWeight: 1;
               LayoutMode: Top;
-              Label #NameOfflineBoost { Anchor: (Top: 14); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Offline Boost"; }
+              Label { Anchor: (Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "4:1"; }
+              Label #NameOfflineBoost { Anchor: (Top: 2); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Offline Boost"; }
               Label #DescOfflineBoost { Anchor: (Top: 4); Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center); Text: "25% to 40% offline rate"; }
-              Label #StatusOfflineBoost { Anchor: (Top: 10); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
+              Label #StatusOfflineBoost { Anchor: (Top: 6); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
             }
             Group #LockedOfflineBoost {
               Anchor: (Left: 0, Right: 0);
               FlexWeight: 1;
-              Group { Anchor: (Left: 64, Top: 12, Width: 32, Height: 32); Background: @LockIcon; }
-              Label { Anchor: (Left: 0, Right: 0, Top: 52); Style: (FontSize: 12, RenderBold: true, TextColor: #4b5563, HorizontalAlignment: Center); Text: "LOCKED"; }
+              Label { Anchor: (Left: 0, Right: 0, Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "4:1"; }
+              Group { Anchor: (Left: 64, Top: 18, Width: 32, Height: 32); Background: @LockIcon; }
+              Label { Anchor: (Left: 0, Right: 0, Top: 56); Style: (FontSize: 12, RenderBold: true, TextColor: #4b5563, HorizontalAlignment: Center); Text: "LOCKED"; }
             }
           }
 
@@ -274,15 +289,17 @@ $C.@PageOverlay {
               Anchor: (Left: 0, Right: 0);
               FlexWeight: 1;
               LayoutMode: Top;
-              Label #NameSummitMemory { Anchor: (Top: 14); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Summit Memory"; }
+              Label { Anchor: (Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "5:1"; }
+              Label #NameSummitMemory { Anchor: (Top: 2); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Summit Memory"; }
               Label #DescSummitMemory { Anchor: (Top: 4); Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center); Text: "Keep 10% Elevation"; }
-              Label #StatusSummitMemory { Anchor: (Top: 10); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
+              Label #StatusSummitMemory { Anchor: (Top: 6); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
             }
             Group #LockedSummitMemory {
               Anchor: (Left: 0, Right: 0);
               FlexWeight: 1;
-              Group { Anchor: (Left: 64, Top: 12, Width: 32, Height: 32); Background: @LockIcon; }
-              Label { Anchor: (Left: 0, Right: 0, Top: 52); Style: (FontSize: 12, RenderBold: true, TextColor: #4b5563, HorizontalAlignment: Center); Text: "LOCKED"; }
+              Label { Anchor: (Left: 0, Right: 0, Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "5:1"; }
+              Group { Anchor: (Left: 64, Top: 18, Width: 32, Height: 32); Background: @LockIcon; }
+              Label { Anchor: (Left: 0, Right: 0, Top: 56); Style: (FontSize: 12, RenderBold: true, TextColor: #4b5563, HorizontalAlignment: Center); Text: "LOCKED"; }
             }
           }
 
@@ -298,15 +315,17 @@ $C.@PageOverlay {
               Anchor: (Left: 0, Right: 0);
               FlexWeight: 1;
               LayoutMode: Top;
-              Label #NameEvolutionPower { Anchor: (Top: 14); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Evolution Power+"; }
+              Label { Anchor: (Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "5:2"; }
+              Label #NameEvolutionPower { Anchor: (Top: 2); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Evolution Power+"; }
               Label #DescEvolutionPower { Anchor: (Top: 4); Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center); Text: "+1 base evo power"; }
-              Label #StatusEvolutionPower { Anchor: (Top: 10); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
+              Label #StatusEvolutionPower { Anchor: (Top: 6); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
             }
             Group #LockedEvolutionPower {
               Anchor: (Left: 0, Right: 0);
               FlexWeight: 1;
-              Group { Anchor: (Left: 64, Top: 12, Width: 32, Height: 32); Background: @LockIcon; }
-              Label { Anchor: (Left: 0, Right: 0, Top: 52); Style: (FontSize: 12, RenderBold: true, TextColor: #4b5563, HorizontalAlignment: Center); Text: "LOCKED"; }
+              Label { Anchor: (Left: 0, Right: 0, Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "5:2"; }
+              Group { Anchor: (Left: 64, Top: 18, Width: 32, Height: 32); Background: @LockIcon; }
+              Label { Anchor: (Left: 0, Right: 0, Top: 56); Style: (FontSize: 12, RenderBold: true, TextColor: #4b5563, HorizontalAlignment: Center); Text: "LOCKED"; }
             }
           }
 
@@ -322,15 +341,162 @@ $C.@PageOverlay {
               Anchor: (Left: 0, Right: 0);
               FlexWeight: 1;
               LayoutMode: Top;
-              Label #NameAscensionChallenges { Anchor: (Top: 14); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Challenges"; }
+              Label { Anchor: (Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "6:1"; }
+              Label #NameAscensionChallenges { Anchor: (Top: 2); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Challenges"; }
               Label #DescAscensionChallenges { Anchor: (Top: 4); Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center); Text: "Coming Soon"; }
-              Label #StatusAscensionChallenges { Anchor: (Top: 10); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
+              Label #StatusAscensionChallenges { Anchor: (Top: 6); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
             }
             Group #LockedAscensionChallenges {
               Anchor: (Left: 0, Right: 0);
               FlexWeight: 1;
-              Group { Anchor: (Left: 64, Top: 12, Width: 32, Height: 32); Background: @LockIcon; }
-              Label { Anchor: (Left: 0, Right: 0, Top: 52); Style: (FontSize: 12, RenderBold: true, TextColor: #4b5563, HorizontalAlignment: Center); Text: "LOCKED"; }
+              Label { Anchor: (Left: 0, Right: 0, Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "6:1"; }
+              Group { Anchor: (Left: 64, Top: 18, Width: 32, Height: 32); Background: @LockIcon; }
+              Label { Anchor: (Left: 0, Right: 0, Top: 56); Style: (FontSize: 12, RenderBold: true, TextColor: #4b5563, HorizontalAlignment: Center); Text: "LOCKED"; }
+            }
+          }
+        }
+      }
+    }
+    } // end main flex layout
+
+    // === NODE DETAIL PANEL (overlay at bottom) ===
+    Group #DetailPanel {
+      Visible: false;
+      Anchor: (Left: 0, Right: 0, Bottom: 0, Height: 200);
+      Background: #0a1018;
+      OutlineColor: #ffffff(0.08);
+      OutlineSize: 1;
+
+      // Top accent line
+      Group {
+        Anchor: (Left: 0, Right: 0, Top: 0, Height: 2);
+        Background: #f59e0b;
+      }
+
+      Group {
+        Anchor: (Left: 0, Right: 0, Top: 2, Bottom: 0);
+        LayoutMode: Full;
+
+        // Icon square (left side)
+        Group #DetailIconArea {
+          Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 198);
+          Background: #0f1923;
+
+          Label #DetailCoord {
+            Anchor: (Left: 8, Top: 6, Width: 40, Height: 18);
+            Style: (FontSize: 12, TextColor: #4b5563);
+            Text: "";
+          }
+
+          Group #DetailIcon {
+            Anchor: (Left: 39, Top: 39, Width: 120, Height: 120);
+            Background: "../Textures/golem_icon.png";
+          }
+        }
+
+        // Vertical separator
+        Group {
+          Anchor: (Left: 198, Top: 8, Bottom: 8, Width: 1);
+          Background: #ffffff(0.08);
+        }
+
+        // Text content (right side)
+        Group {
+          Anchor: (Left: 199, Top: 0, Bottom: 0, Right: 0);
+          LayoutMode: Top;
+          Padding: (Left: 20, Right: 20, Top: 14, Bottom: 14);
+
+          // Title row
+          Group {
+            Anchor: (Left: 0, Right: 0, Height: 32);
+            LayoutMode: Full;
+
+            Label #DetailTitle {
+              Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 350);
+              Style: (FontSize: 22, RenderBold: true, TextColor: #f0f4f8, VerticalAlignment: Center);
+              Text: "";
+            }
+
+            // Close detail panel button
+            Group {
+              Anchor: (Right: 0, Top: 0, Bottom: 0, Width: 60);
+
+              TextButton #DetailCloseBtn {
+                Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+                Text: "Close";
+                Style: TextButtonStyle(
+                  Default: (
+                    Background: #ffffff(0.06),
+                    LabelStyle: (FontSize: 12, TextColor: #9fb0ba, HorizontalAlignment: Center, VerticalAlignment: Center)
+                  ),
+                  Hovered: (
+                    Background: #ffffff(0.1),
+                    LabelStyle: (FontSize: 12, TextColor: #f0f4f8, HorizontalAlignment: Center, VerticalAlignment: Center)
+                  ),
+                  Pressed: (
+                    Background: #ffffff(0.04),
+                    LabelStyle: (FontSize: 12, TextColor: #9fb0ba, HorizontalAlignment: Center, VerticalAlignment: Center)
+                  ),
+                  Sounds: $C.@ButtonSounds,
+                );
+              }
+            }
+          }
+
+          // Description
+          Label #DetailDesc {
+            Anchor: (Left: 0, Right: 0, Top: 10, Height: 50);
+            Style: (FontSize: 16, TextColor: #9fb0ba, Wrap: true);
+            Text: "";
+          }
+
+          // Bottom row: status + unlock button
+          Group {
+            Anchor: (Left: 0, Right: 0, Top: 10, Height: 36);
+            LayoutMode: Full;
+
+            Label #DetailStatus {
+              Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 300);
+              Style: (FontSize: 12, TextColor: #6b7280, VerticalAlignment: Center);
+              Text: "";
+            }
+
+            // Active unlock button (enough AP)
+            Group #UnlockBtnActive {
+              Anchor: (Right: 0, Top: 0, Bottom: 0, Width: 150);
+
+              TextButton #UnlockButton {
+                Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+                Text: "1 AP";
+                Style: TextButtonStyle(
+                  Default: (
+                    Background: #f59e0b,
+                    LabelStyle: (FontSize: 13, TextColor: #0d1620, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+                  ),
+                  Hovered: (
+                    Background: #fbbf24,
+                    LabelStyle: (FontSize: 13, TextColor: #0d1620, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+                  ),
+                  Pressed: (
+                    Background: #d97706,
+                    LabelStyle: (FontSize: 13, TextColor: #0d1620, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+                  ),
+                  Sounds: $C.@ButtonSounds,
+                );
+              }
+            }
+
+            // Dimmed unlock button (not enough AP)
+            Group #UnlockBtnDisabled {
+              Visible: false;
+              Anchor: (Right: 0, Top: 0, Bottom: 0, Width: 150);
+              Background: #3b3a2e;
+
+              Label {
+                Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+                Style: (FontSize: 13, TextColor: #7a7560, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center);
+                Text: "1 AP";
+              }
             }
           }
         }

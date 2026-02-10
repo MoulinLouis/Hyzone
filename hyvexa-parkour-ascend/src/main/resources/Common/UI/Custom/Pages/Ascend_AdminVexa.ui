@@ -103,7 +103,7 @@ $C.@PageOverlay {
       Label {
         Anchor: (Top: 16);
         Style: (FontSize: 16, TextColor: #93844c, RenderBold: true);
-        Text: "Skill Tree Points";
+        Text: "Ascendancy Points";
       }
 
       Group {
@@ -125,7 +125,7 @@ $C.@PageOverlay {
       Label {
         Anchor: (Top: 10);
         Style: (FontSize: 13, TextColor: #cfd7dc);
-        Text: "Skill Points Amount";
+        Text: "AP Amount";
       }
 
       $C.@TextField #SkillPointsAmountField {
@@ -139,12 +139,12 @@ $C.@PageOverlay {
 
         $C.@TextButton #AddSkillPointsButton {
           Anchor: (Width: 250, Height: 36);
-          Text: "Add Skill Points";
+          Text: "Add AP";
         }
 
         $C.@TextButton #RemoveSkillPointsButton {
           Anchor: (Left: 10, Width: 200, Height: 36);
-          Text: "Remove Skill Points";
+          Text: "Remove AP";
         }
       }
 
