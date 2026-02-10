@@ -59,6 +59,7 @@ public class PlayerMusicPage extends BaseParkourPage {
                 "Now Playing: " + getStoredMusicLabel(playerRef.getUuid()));
         uiCommandBuilder.set(CHECKPOINT_SFX_LABEL_SELECTOR, getCheckpointSfxLabel(playerRef.getUuid()));
         uiCommandBuilder.set(VICTORY_SFX_LABEL_SELECTOR, getVictorySfxLabel(playerRef.getUuid()));
+        applySfxIndicators(uiCommandBuilder, playerRef.getUuid());
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#PlayZeldaMusicButton",
@@ -311,6 +312,13 @@ public class PlayerMusicPage extends BaseParkourPage {
         }
         boolean enabled = VICTORY_SFX_ENABLED.getOrDefault(playerId, true);
         VICTORY_SFX_ENABLED.put(playerId, !enabled);
+    }
+
+    private static void applySfxIndicators(UICommandBuilder cmd, UUID playerId) {
+        boolean checkpointEnabled = isCheckpointSfxEnabled(playerId);
+        cmd.set("#CheckpointSfxIndicator.Visible", checkpointEnabled);
+        boolean victoryEnabled = isVictorySfxEnabled(playerId);
+        cmd.set("#VictorySfxIndicator.Visible", victoryEnabled);
     }
 
     private static String getCheckpointSfxLabel(UUID playerId) {

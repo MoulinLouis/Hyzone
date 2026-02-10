@@ -8,6 +8,7 @@ public final class PlayerSettingsStore {
     private static final ConcurrentHashMap<UUID, Boolean> RESET_ITEM_ENABLED = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<UUID, Boolean> DUEL_HIDE_OPPONENT = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<UUID, Boolean> GHOST_VISIBLE = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<UUID, Boolean> PLAYERS_HIDDEN = new ConcurrentHashMap<>();
 
     private PlayerSettingsStore() {
     }
@@ -31,6 +32,17 @@ public final class PlayerSettingsStore {
         boolean newValue = !enabled;
         RESET_ITEM_ENABLED.put(playerId, newValue);
         return newValue;
+    }
+
+    public static boolean isPlayersHidden(UUID playerId) {
+        return playerId != null && PLAYERS_HIDDEN.getOrDefault(playerId, false);
+    }
+
+    public static void setPlayersHidden(UUID playerId, boolean hidden) {
+        if (playerId == null) {
+            return;
+        }
+        PLAYERS_HIDDEN.put(playerId, hidden);
     }
 
     public static boolean isDuelOpponentHidden(UUID playerId) {
@@ -75,6 +87,7 @@ public final class PlayerSettingsStore {
         RESET_ITEM_ENABLED.remove(playerId);
         DUEL_HIDE_OPPONENT.remove(playerId);
         GHOST_VISIBLE.remove(playerId);
+        PLAYERS_HIDDEN.remove(playerId);
     }
 
     public static void clear(UUID playerId) {
@@ -84,5 +97,6 @@ public final class PlayerSettingsStore {
         RESET_ITEM_ENABLED.remove(playerId);
         DUEL_HIDE_OPPONENT.remove(playerId);
         GHOST_VISIBLE.remove(playerId);
+        PLAYERS_HIDDEN.remove(playerId);
     }
 }

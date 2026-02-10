@@ -17,6 +17,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.common.visibility.EntityVisibilityManager;
+import io.hyvexa.manager.HudManager;
 import io.hyvexa.parkour.util.InventoryUtils;
 import io.hyvexa.parkour.data.Map;
 import io.hyvexa.parkour.util.PlayerSettingsStore;
@@ -66,6 +67,7 @@ public class PlayerSettingsPage extends BaseParkourPage {
         uiCommandBuilder.set("#VipSpeedRow.Visible", showSpeedBoost);
         uiCommandBuilder.set(RESET_ITEM_BUTTON_SELECTOR + ".Text", getResetItemLabel(playerRef.getUuid()));
         uiCommandBuilder.set(GHOST_BUTTON_SELECTOR + ".Text", getGhostLabel(playerRef.getUuid()));
+        applyToggleIndicators(uiCommandBuilder, playerRef.getUuid(), plugin);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#HideAllButton",
@@ -108,18 +110,24 @@ public class PlayerSettingsPage extends BaseParkourPage {
         }
         if (BUTTON_HIDE_ALL.equals(data.getButton())) {
             hideAllPlayers(playerRef);
+            PlayerSettingsStore.setPlayersHidden(playerRef.getUuid(), true);
             player.sendMessage(Message.raw("All players hidden."));
+            player.getPageManager().openCustomPage(ref, store, new PlayerSettingsPage(playerRef));
             return;
         }
         if (BUTTON_SHOW_ALL.equals(data.getButton())) {
             showAllPlayers(playerRef);
+            PlayerSettingsStore.setPlayersHidden(playerRef.getUuid(), false);
             player.sendMessage(Message.raw("All players shown."));
+            player.getPageManager().openCustomPage(ref, store, new PlayerSettingsPage(playerRef));
+            return;
         }
         if (BUTTON_HIDE_HUD.equals(data.getButton())) {
             HyvexaPlugin plugin = HyvexaPlugin.getInstance();
             if (plugin != null) {
                 plugin.hideRunHud(playerRef);
                 player.sendMessage(Message.raw("Server HUD hidden."));
+                player.getPageManager().openCustomPage(ref, store, new PlayerSettingsPage(playerRef));
             }
             return;
         }
@@ -128,6 +136,7 @@ public class PlayerSettingsPage extends BaseParkourPage {
             if (plugin != null) {
                 plugin.showRunHud(playerRef);
                 player.sendMessage(Message.raw("Server HUD shown."));
+                player.getPageManager().openCustomPage(ref, store, new PlayerSettingsPage(playerRef));
             }
             return;
         }
@@ -252,6 +261,17 @@ public class PlayerSettingsPage extends BaseParkourPage {
                 EntityVisibilityManager.get().showEntity(viewerRef.getUuid(), uuidComponent.getUuid());
             }
         }
+    }
+
+    private static void applyToggleIndicators(UICommandBuilder cmd, UUID playerId, HyvexaPlugin plugin) {
+        boolean playersHidden = PlayerSettingsStore.isPlayersHidden(playerId);
+        cmd.set("#HidePlayersIndicator.Visible", playersHidden);
+        cmd.set("#ShowPlayersIndicator.Visible", !playersHidden);
+
+        boolean hudHidden = plugin != null && plugin.getHudManager() != null
+                && plugin.getHudManager().isRunHudHidden(playerId);
+        cmd.set("#HideHudIndicator.Visible", hudHidden);
+        cmd.set("#ShowHudIndicator.Visible", !hudHidden);
     }
 
     private static String getResetItemLabel(UUID playerId) {
