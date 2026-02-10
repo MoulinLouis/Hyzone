@@ -12,7 +12,7 @@ public final class AscendInventoryUtils {
     private AscendInventoryUtils() {}
 
     public static void giveMenuItems(Player player) {
-        if (player == null) {
+        if (!isInventoryWriteSafe(player)) {
             return;
         }
         InventoryUtils.clearAllContainers(player);
@@ -34,7 +34,7 @@ public final class AscendInventoryUtils {
     }
 
     public static void ensureMenuItems(Player player) {
-        if (player == null) {
+        if (!isInventoryWriteSafe(player)) {
             return;
         }
         Inventory inventory = player.getInventory();
@@ -56,7 +56,7 @@ public final class AscendInventoryUtils {
     }
 
     public static void giveRunItems(Player player) {
-        if (player == null) {
+        if (!isInventoryWriteSafe(player)) {
             return;
         }
         InventoryUtils.clearAllContainers(player);
@@ -84,5 +84,9 @@ public final class AscendInventoryUtils {
         if (existing == null || ItemStack.isEmpty(existing) || !itemId.equals(existing.getItemId())) {
             hotbar.setItemStackForSlot(slot, new ItemStack(itemId, 1), false);
         }
+    }
+
+    private static boolean isInventoryWriteSafe(Player player) {
+        return player != null && player.getWorld() != null;
     }
 }
