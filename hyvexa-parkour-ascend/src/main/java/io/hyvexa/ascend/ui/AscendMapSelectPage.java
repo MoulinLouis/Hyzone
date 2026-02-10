@@ -105,13 +105,12 @@ public class AscendMapSelectPage extends BaseAscendPage {
             EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_EVOLVE_ALL_DISABLED), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ActionButton3",
             EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_LEADERBOARD), false);
-        buildMapList(ref, store, uiCommandBuilder, uiEventBuilder);
+        RefreshSnapshot refreshSnapshot = buildMapList(ref, store, uiCommandBuilder, uiEventBuilder);
 
         // Set initial button states
-        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-        if (playerRef != null) {
-            updateBuyAllButtonState(uiCommandBuilder, playerRef.getUuid());
-            updateEvolveAllButtonState(uiCommandBuilder, playerRef.getUuid());
+        if (refreshSnapshot != null) {
+            updateBuyAllButtonState(uiCommandBuilder, refreshSnapshot);
+            updateEvolveAllButtonState(uiCommandBuilder, refreshSnapshot);
         }
 
         // Start affordability color updates (vexa changes frequently from passive income)
@@ -200,35 +199,27 @@ public class AscendMapSelectPage extends BaseAscendPage {
         stopAffordabilityUpdates();
     }
 
-    private void buildMapList(Ref<EntityStore> ref, Store<EntityStore> store,
-                              UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
+    private RefreshSnapshot buildMapList(Ref<EntityStore> ref, Store<EntityStore> store,
+                                         UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
         commandBuilder.clear("#MapCards");
         displayedMapIds.clear();
         cachedMapState.clear();
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (playerRef == null) {
-            return;
+            return null;
         }
 
-        // Filter maps to only include unlocked ones
-        List<AscendMap> allMaps = new ArrayList<>(mapStore.listMapsSorted());
-        List<AscendMap> maps = new ArrayList<>();
-        for (AscendMap map : allMaps) {
-            MapUnlockHelper.UnlockResult unlockResult = MapUnlockHelper.checkAndEnsureUnlock(
-                playerRef.getUuid(), map, playerStore, mapStore);
-            if (unlockResult.unlocked) {
-                maps.add(map);
-            }
-        }
+        RefreshSnapshot refreshSnapshot = buildRefreshSnapshot(playerRef.getUuid());
+        List<MapRefreshState> maps = refreshSnapshot.mapStates();
         lastMapCount = maps.size();
-        BigNumber currentVexa = playerStore.getVexa(playerRef.getUuid());
+        BigNumber currentVexa = refreshSnapshot.currentVexa();
         int index = 0;
-        for (AscendMap map : maps) {
+        for (MapRefreshState mapState : maps) {
+            AscendMap map = mapState.map();
             commandBuilder.append("#MapCards", "Pages/Ascend_MapSelectEntry.ui");
             String mapName = map.getName() != null && !map.getName().isBlank() ? map.getName() : map.getId();
 
-            // All maps in this list are already unlocked (filtered above)
-            AscendPlayerProgress.MapProgress mapProgress = playerStore.getMapProgress(playerRef.getUuid(), map.getId());
+            AscendPlayerProgress.MapProgress mapProgress = mapState.mapProgress();
 
             // Apply accent color to left accent bar
             applyAccentBarVariant(commandBuilder, index, index);
@@ -251,6 +242,62 @@ public class AscendMapSelectPage extends BaseAscendPage {
             cachedMapState.put(map.getId(), new int[]{snapshot.speedLevel(), snapshot.stars()});
             index++;
         }
+        return refreshSnapshot;
+    }
+
+    private RefreshSnapshot buildRefreshSnapshot(UUID playerId) {
+        BigNumber currentVexa = playerStore.getVexa(playerId);
+        List<MapRefreshState> mapStates = new ArrayList<>();
+        boolean hasAvailableBuyAll = false;
+        boolean hasEligibleEvolution = false;
+
+        for (AscendMap map : mapStore.listMapsSorted()) {
+            if (map == null) {
+                continue;
+            }
+            AscendPlayerProgress.MapProgress mapProgress = playerStore.getMapProgress(playerId, map.getId());
+            if (!isMapUnlockedForDisplay(playerId, map, mapProgress)) {
+                continue;
+            }
+            boolean hasRobot = mapProgress != null && mapProgress.hasRobot();
+            int speedLevel = mapProgress != null ? mapProgress.getRobotSpeedLevel() : 0;
+            int stars = mapProgress != null ? mapProgress.getRobotStars() : 0;
+            boolean momentumActive = mapProgress != null && mapProgress.isMomentumActive();
+            boolean canAffordUpgrade = false;
+
+            if (hasRobot && speedLevel < MAX_SPEED_LEVEL) {
+                BigNumber upgradeCost = computeUpgradeCost(speedLevel, map.getDisplayOrder(), stars);
+                canAffordUpgrade = currentVexa.gte(upgradeCost);
+            }
+
+            boolean canBuyAll = (!hasRobot && ghostStore.getRecording(playerId, map.getId()) != null)
+                    || (hasRobot && speedLevel < MAX_SPEED_LEVEL && canAffordUpgrade);
+            boolean canEvolve = hasRobot
+                    && speedLevel >= MAX_SPEED_LEVEL
+                    && stars < AscendConstants.MAX_ROBOT_STARS;
+
+            hasAvailableBuyAll |= canBuyAll;
+            hasEligibleEvolution |= canEvolve;
+
+            mapStates.add(new MapRefreshState(
+                    map,
+                    mapProgress,
+                    hasRobot,
+                    speedLevel,
+                    stars,
+                    momentumActive,
+                    canAffordUpgrade
+            ));
+        }
+
+        return new RefreshSnapshot(currentVexa, mapStates, hasAvailableBuyAll, hasEligibleEvolution);
+    }
+
+    private boolean isMapUnlockedForDisplay(UUID playerId, AscendMap map, AscendPlayerProgress.MapProgress mapProgress) {
+        if (MapUnlockHelper.isUnlocked(mapProgress, map)) {
+            return true;
+        }
+        return MapUnlockHelper.meetsUnlockRequirement(playerId, map, playerStore, mapStore);
     }
 
     private void updateProgressBar(UICommandBuilder cmd, int cardIndex, int speedLevel) {
@@ -506,13 +553,14 @@ public class AscendMapSelectPage extends BaseAscendPage {
         if (playerRef == null) {
             return;
         }
-        AscendPlayerProgress progress = playerStore.getOrCreatePlayer(playerRef.getUuid());
-        AscendPlayerProgress.MapProgress mapProgress = progress.getOrCreateMapProgress(mapId);
-        boolean unlocked = mapProgress.isUnlocked() || map.getEffectivePrice() <= 0;
-        if (!unlocked) {
+        MapUnlockHelper.UnlockResult unlockResult = MapUnlockHelper.checkAndEnsureUnlock(
+            playerRef.getUuid(), map, playerStore, mapStore);
+        if (!unlockResult.unlocked) {
             sendMessage(store, ref, "[Ascend] Unlock the map before buying a runner.");
             return;
         }
+        AscendPlayerProgress progress = playerStore.getOrCreatePlayer(playerRef.getUuid());
+        AscendPlayerProgress.MapProgress mapProgress = progress.getOrCreateMapProgress(mapId);
         if (!mapProgress.hasRobot()) {
             // Check if ghost recording exists (preserves PB across progress reset)
             GhostRecording ghost = ghostStore.getRecording(playerRef.getUuid(), mapId);
@@ -653,16 +701,8 @@ public class AscendMapSelectPage extends BaseAscendPage {
             return;
         }
 
-        // Filter maps to only include unlocked ones
-        List<AscendMap> allMaps = new ArrayList<>(mapStore.listMapsSorted());
-        List<AscendMap> maps = new ArrayList<>();
-        for (AscendMap map : allMaps) {
-            MapUnlockHelper.UnlockResult unlockResult = MapUnlockHelper.checkAndEnsureUnlock(
-                playerRef.getUuid(), map, playerStore, mapStore);
-            if (unlockResult.unlocked) {
-                maps.add(map);
-            }
-        }
+        RefreshSnapshot refreshSnapshot = buildRefreshSnapshot(playerRef.getUuid());
+        List<MapRefreshState> maps = refreshSnapshot.mapStates();
 
         // Don't send updates if no maps exist (UI elements wouldn't exist)
         if (maps.isEmpty()) {
@@ -672,7 +712,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
         // Detect new map unlocks (auto-upgrade hit level 3 and unlocked new maps)
         if (maps.size() > lastMapCount) {
             for (int i = lastMapCount; i < maps.size(); i++) {
-                AscendMap newMap = maps.get(i);
+                AscendMap newMap = maps.get(i).map();
                 if (newMap != null) {
                     addMapToUI(ref, store, newMap);
                 }
@@ -680,24 +720,19 @@ public class AscendMapSelectPage extends BaseAscendPage {
             // addMapToUI sends its own update; continue with regular updates for existing maps
         }
 
-        BigNumber currentVexa = playerStore.getVexa(playerRef.getUuid());
+        BigNumber currentVexa = refreshSnapshot.currentVexa();
         UICommandBuilder commandBuilder = new UICommandBuilder();
 
         int displayCount = Math.min(displayedMapIds.size(), maps.size());
         for (int i = 0; i < displayCount; i++) {
-            AscendMap map = maps.get(i);
-            if (map == null) {
-                continue;
-            }
-
-            AscendPlayerProgress.MapProgress mapProgress = playerStore.getMapProgress(playerRef.getUuid(), map.getId());
-            boolean hasRobot = mapProgress != null && mapProgress.hasRobot();
-            int speedLevel = mapProgress != null ? mapProgress.getRobotSpeedLevel() : 0;
-            int stars = mapProgress != null ? mapProgress.getRobotStars() : 0;
+            MapRefreshState mapState = maps.get(i);
+            AscendMap map = mapState.map();
+            AscendPlayerProgress.MapProgress mapProgress = mapState.mapProgress();
+            int speedLevel = mapState.speedLevel();
+            int stars = mapState.stars();
 
             // Update momentum indicator (can expire independently of other data changes)
-            boolean momentumActive = mapProgress != null && mapProgress.isMomentumActive();
-            commandBuilder.set("#MapCards[" + i + "] #MomentumLabel.Visible", momentumActive);
+            commandBuilder.set("#MapCards[" + i + "] #MomentumLabel.Visible", mapState.momentumActive());
 
             // Check if data changed since last refresh (auto-upgrade happened)
             int[] cached = cachedMapState.get(map.getId());
@@ -707,10 +742,9 @@ public class AscendMapSelectPage extends BaseAscendPage {
                 RunnerCardSnapshot snapshot = renderRunnerButton(
                     commandBuilder, i, map, mapProgress, playerRef.getUuid(), currentVexa);
                 cachedMapState.put(map.getId(), new int[]{snapshot.speedLevel(), snapshot.stars()});
-            } else if (hasRobot && speedLevel < MAX_SPEED_LEVEL) {
+            } else if (mapState.hasRobot() && speedLevel < MAX_SPEED_LEVEL) {
                 // No data change — affordability-only update for maps with upgrade buttons
-                BigNumber upgradeCost = computeUpgradeCost(speedLevel, map.getDisplayOrder(), stars);
-                boolean canAfford = currentVexa.gte(upgradeCost);
+                boolean canAfford = mapState.canAffordUpgrade();
                 String secondaryTextColor = canAfford ? "#ffffff" : "#9fb0ba";
 
                 commandBuilder.set("#MapCards[" + i + "] #ButtonDisabledOverlay.Visible", !canAfford);
@@ -722,8 +756,8 @@ public class AscendMapSelectPage extends BaseAscendPage {
         }
 
         // Also update action button states
-        updateBuyAllButtonState(commandBuilder, playerRef.getUuid());
-        updateEvolveAllButtonState(commandBuilder, playerRef.getUuid());
+        updateBuyAllButtonState(commandBuilder, refreshSnapshot);
+        updateEvolveAllButtonState(commandBuilder, refreshSnapshot);
 
         if (!isCurrentPage()) {
             return;
@@ -1008,6 +1042,13 @@ public class AscendMapSelectPage extends BaseAscendPage {
         UPGRADE_SPEED
     }
 
+    private record MapRefreshState(AscendMap map, AscendPlayerProgress.MapProgress mapProgress,
+                                   boolean hasRobot, int speedLevel, int stars, boolean momentumActive,
+                                   boolean canAffordUpgrade) {}
+
+    private record RefreshSnapshot(BigNumber currentVexa, List<MapRefreshState> mapStates,
+                                   boolean hasAvailableBuyAll, boolean hasEligibleEvolution) {}
+
     private record RunnerCardSnapshot(int speedLevel, int stars) {}
 
     private record RunnerStatusData(String runnerStatusText, String displayButtonText, String displayPriceText,
@@ -1092,77 +1133,15 @@ public class AscendMapSelectPage extends BaseAscendPage {
     }
 
     /**
-     * Checks if any upgrade is available AND affordable for Buy All (robot purchase or speed upgrade).
-     */
-    private boolean hasAvailableUpgradeForBuyAll(java.util.UUID playerId) {
-        BigNumber currentVexa = playerStore.getVexa(playerId);
-        List<AscendMap> maps = mapStore.listMapsSorted();
-        for (AscendMap map : maps) {
-            MapUnlockHelper.UnlockResult unlockResult = MapUnlockHelper.checkAndEnsureUnlock(
-                playerId, map, playerStore, mapStore);
-            if (!unlockResult.unlocked) {
-                continue;
-            }
-
-            AscendPlayerProgress.MapProgress mapProgress = playerStore.getMapProgress(playerId, map.getId());
-            boolean hasRobot = mapProgress != null && mapProgress.hasRobot();
-
-            if (!hasRobot) {
-                // Can buy robot if ghost recording exists (buying is free)
-                GhostRecording ghost = ghostStore.getRecording(playerId, map.getId());
-                if (ghost != null) {
-                    return true;
-                }
-            } else {
-                // Can upgrade speed if not at max level AND can afford it
-                int speedLevel = mapProgress.getRobotSpeedLevel();
-                int stars = mapProgress.getRobotStars();
-                if (speedLevel < MAX_SPEED_LEVEL) {
-                    BigNumber upgradeCost = computeUpgradeCost(speedLevel, map.getDisplayOrder(), stars);
-                    if (currentVexa.gte(upgradeCost)) {
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
-    }
-
-    /**
      * Updates the Buy All button appearance based on whether any upgrade is available.
      */
     private void updateBuyAllButtonState(UICommandBuilder commandBuilder, java.util.UUID playerId) {
-        boolean hasAvailable = hasAvailableUpgradeForBuyAll(playerId);
-        // Show overlay when no upgrades available (grayed out), hide when upgrades exist
-        commandBuilder.set("#BuyAllOverlay.Visible", !hasAvailable);
+        updateBuyAllButtonState(commandBuilder, buildRefreshSnapshot(playerId));
     }
 
-    /**
-     * Checks if any runner is eligible for evolution (at max speed level but not max stars).
-     */
-    private boolean hasEligibleRunnerForEvolution(java.util.UUID playerId) {
-        List<AscendMap> maps = mapStore.listMapsSorted();
-        for (AscendMap map : maps) {
-            MapUnlockHelper.UnlockResult unlockResult = MapUnlockHelper.checkAndEnsureUnlock(
-                playerId, map, playerStore, mapStore);
-            if (!unlockResult.unlocked) {
-                continue;
-            }
-
-            AscendPlayerProgress.MapProgress mapProgress = playerStore.getMapProgress(playerId, map.getId());
-            if (mapProgress == null || !mapProgress.hasRobot()) {
-                continue;
-            }
-
-            int speedLevel = mapProgress.getRobotSpeedLevel();
-            int stars = mapProgress.getRobotStars();
-
-            // Can evolve if at max speed level but not at max stars
-            if (speedLevel >= MAX_SPEED_LEVEL && stars < AscendConstants.MAX_ROBOT_STARS) {
-                return true;
-            }
-        }
-        return false;
+    private void updateBuyAllButtonState(UICommandBuilder commandBuilder, RefreshSnapshot refreshSnapshot) {
+        boolean hasAvailable = refreshSnapshot != null && refreshSnapshot.hasAvailableBuyAll();
+        commandBuilder.set("#BuyAllOverlay.Visible", !hasAvailable);
     }
 
     /**
@@ -1170,8 +1149,11 @@ public class AscendMapSelectPage extends BaseAscendPage {
      * Shows/hides the gray overlay on the button.
      */
     private void updateEvolveAllButtonState(UICommandBuilder commandBuilder, java.util.UUID playerId) {
-        boolean hasEligible = hasEligibleRunnerForEvolution(playerId);
-        // Show overlay when no eligible runners (grayed out), hide when there are eligible runners
+        updateEvolveAllButtonState(commandBuilder, buildRefreshSnapshot(playerId));
+    }
+
+    private void updateEvolveAllButtonState(UICommandBuilder commandBuilder, RefreshSnapshot refreshSnapshot) {
+        boolean hasEligible = refreshSnapshot != null && refreshSnapshot.hasEligibleEvolution();
         commandBuilder.set("#EvolveAllOverlay.Visible", !hasEligible);
     }
 

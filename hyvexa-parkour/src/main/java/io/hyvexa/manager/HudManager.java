@@ -6,6 +6,7 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.common.util.AsyncExecutionHelper;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.parkour.tracker.HiddenRunHud;
 import io.hyvexa.parkour.tracker.RunHud;
@@ -21,7 +22,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 /** Manages player run HUDs: timer display, checkpoint progress, leaderboard overlay. */
@@ -70,7 +70,11 @@ public class HudManager {
         if (world == null) {
             return;
         }
-        CompletableFuture.runAsync(() -> ensureRunHudNow(ref, store, playerRef), world);
+        String worldName = world.getName() != null ? world.getName() : "unknown";
+        String playerIdText = playerId != null ? playerId.toString() : "unknown";
+        AsyncExecutionHelper.runBestEffort(world, () -> ensureRunHudNow(ref, store, playerRef),
+                "parkour.hud.ensure", "ensure run HUD",
+                "player=" + playerIdText + ", world=" + worldName);
     }
 
     public void ensureRunHudNow(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef) {
@@ -229,7 +233,9 @@ public class HudManager {
         if (world == null) {
             return;
         }
-        CompletableFuture.runAsync(() -> {
+        String worldName = world.getName() != null ? world.getName() : "unknown";
+        String playerIdText = playerId.toString();
+        AsyncExecutionHelper.runBestEffort(world, () -> {
             if (!ref.isValid() || !playerRef.isValid()) {
                 return;
             }
@@ -242,7 +248,8 @@ public class HudManager {
                 return;
             }
             ensureRunHudNow(ref, store, playerRef);
-        }, world);
+        }, "parkour.hud.toggle", "toggle run HUD visibility",
+                "player=" + playerIdText + ", hidden=" + hidden + ", world=" + worldName);
     }
 
     private void attachHiddenHud(PlayerRef playerRef, Player player) {

@@ -22,6 +22,7 @@ import com.hypixel.hytale.server.core.modules.entity.component.TransformComponen
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.common.util.AsyncExecutionHelper;
 import com.hypixel.hytale.server.core.entity.entities.player.movement.MovementManager;
 import io.hyvexa.common.util.CommandUtils;
 import io.hyvexa.common.util.PermissionUtils;
@@ -105,7 +106,11 @@ public class CinematicTestCommand extends AbstractAsyncCommand {
                 case "help" -> showHelp(player);
                 default -> player.sendMessage(Message.raw("[CTest] Unknown: " + args[0] + ". Use /ctest help"));
             }
-        }, world);
+        }, world).exceptionally(ex -> {
+            AsyncExecutionHelper.logThrottledWarning("ctest.execute", "ctest command execution",
+                    "player=" + player.getNetworkId(), ex);
+            return null;
+        });
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────
@@ -175,35 +180,28 @@ public class CinematicTestCommand extends AbstractAsyncCommand {
         int totalSteps = (int) (durationSec * 1000 / intervalMs);
 
         player.sendMessage(Message.raw("[CTest] Orbit (dist=" + orbitDist + ", " + durationSec + "s)..."));
+        String context = "player=" + playerRef.getUuid() + ", mode=orbit";
 
         for (int i = 0; i < totalSteps; i++) {
             final int step = i;
-            scheduler.schedule(() -> {
-                try {
-                    world.execute(() -> {
-                        if (!ref.isValid()) return;
-                        float angle = (float) (step * 2.0 * Math.PI / totalSteps);
+            scheduleWorldAction(world, i * intervalMs, "ctest.orbit.step", "ctest orbit step", context, () -> {
+                if (!ref.isValid()) return;
+                float angle = (float) (step * 2.0 * Math.PI / totalSteps);
 
-                        ServerCameraSettings s = base3p(orbitDist);
-                        s.positionLerpSpeed = 0.3f;
-                        s.rotationLerpSpeed = 0.3f;
-                        s.rotationType = RotationType.Custom;
-                        s.rotation = new Direction(angle, deg(-15), 0f);
-                        ph.writeNoCache(new SetServerCamera(ClientCameraView.Custom, true, s));
-                    });
-                } catch (Exception ignored) {}
-            }, i * intervalMs, TimeUnit.MILLISECONDS);
+                ServerCameraSettings s = base3p(orbitDist);
+                s.positionLerpSpeed = 0.3f;
+                s.rotationLerpSpeed = 0.3f;
+                s.rotationType = RotationType.Custom;
+                s.rotation = new Direction(angle, deg(-15), 0f);
+                ph.writeNoCache(new SetServerCamera(ClientCameraView.Custom, true, s));
+            });
         }
 
-        scheduler.schedule(() -> {
-            try {
-                world.execute(() -> {
-                    if (!ref.isValid()) return;
-                    resetCamera(playerRef, store, ref);
-                    player.sendMessage(Message.raw("[CTest] Orbit done."));
-                });
-            } catch (Exception ignored) {}
-        }, totalSteps * intervalMs + 200, TimeUnit.MILLISECONDS);
+        scheduleWorldAction(world, totalSteps * intervalMs + 200, "ctest.orbit.reset", "ctest orbit reset", context, () -> {
+            if (!ref.isValid()) return;
+            resetCamera(playerRef, store, ref);
+            player.sendMessage(Message.raw("[CTest] Orbit done."));
+        });
     }
 
     // ── Test: Locked camera (mouse look disabled) ────────────────────────
@@ -277,41 +275,35 @@ public class CinematicTestCommand extends AbstractAsyncCommand {
         int totalSteps = 40; // 2 seconds
 
         player.sendMessage(Message.raw("[CTest] Zoom out " + startDist + " -> " + endDist + "..."));
+        String context = "player=" + playerRef.getUuid() + ", mode=zoomout";
 
         for (int i = 0; i <= totalSteps; i++) {
             final int step = i;
             final float finalEnd = endDist;
-            scheduler.schedule(() -> {
-                try {
-                    world.execute(() -> {
-                        if (!ref.isValid()) return;
-                        float t = (float) step / totalSteps;
-                        // Ease-out quad: decelerate
-                        float eased = 1f - (1f - t) * (1f - t);
-                        float dist = startDist + (finalEnd - startDist) * eased;
+            scheduleWorldAction(world, step * intervalMs, "ctest.zoomout.step", "ctest zoomout step", context, () -> {
+                if (!ref.isValid()) return;
+                float t = (float) step / totalSteps;
+                // Ease-out quad: decelerate
+                float eased = 1f - (1f - t) * (1f - t);
+                float dist = startDist + (finalEnd - startDist) * eased;
 
-                        ServerCameraSettings s = base3p(dist);
-                        s.positionLerpSpeed = 0.5f;
-                        s.rotationLerpSpeed = 0.5f;
-                        // Slight upward tilt as we zoom out
-                        float pitchDeg = -5f - 25f * eased;
-                        s.rotationType = RotationType.Custom;
-                        s.rotation = new Direction(0f, deg(pitchDeg), 0f);
-                        ph.writeNoCache(new SetServerCamera(ClientCameraView.Custom, true, s));
-                    });
-                } catch (Exception ignored) {}
-            }, step * intervalMs, TimeUnit.MILLISECONDS);
+                ServerCameraSettings s = base3p(dist);
+                s.positionLerpSpeed = 0.5f;
+                s.rotationLerpSpeed = 0.5f;
+                // Slight upward tilt as we zoom out
+                float pitchDeg = -5f - 25f * eased;
+                s.rotationType = RotationType.Custom;
+                s.rotation = new Direction(0f, deg(pitchDeg), 0f);
+                ph.writeNoCache(new SetServerCamera(ClientCameraView.Custom, true, s));
+            });
         }
 
-        scheduler.schedule(() -> {
-            try {
-                world.execute(() -> {
+        scheduleWorldAction(world, (totalSteps + 1) * intervalMs + 500,
+                "ctest.zoomout.reset", "ctest zoomout reset", context, () -> {
                     if (!ref.isValid()) return;
                     resetCamera(playerRef, store, ref);
                     player.sendMessage(Message.raw("[CTest] Zoom out done."));
                 });
-            } catch (Exception ignored) {}
-        }, (totalSteps + 1) * intervalMs + 500, TimeUnit.MILLISECONDS);
     }
 
     // ── Test: Full mini-sequence ─────────────────────────────────────────
@@ -337,55 +329,44 @@ public class CinematicTestCommand extends AbstractAsyncCommand {
         // Phase 2: Slow orbit + zoom out (500ms - 3500ms)
         int orbitSteps = 60;
         long orbitInterval = 50;
+        String context = "player=" + playerRef.getUuid() + ", mode=sequence";
         for (int i = 0; i < orbitSteps; i++) {
             final int step = i;
             final long delay = ms + i * orbitInterval;
-            scheduler.schedule(() -> {
-                try {
-                    world.execute(() -> {
-                        if (!ref.isValid()) return;
-                        float t = (float) step / orbitSteps;
-                        float angle = (float) (t * 2.0 * Math.PI);
-                        float dist = 4f + 8f * t; // 4 -> 12
+            scheduleWorldAction(world, delay, "ctest.sequence.orbit", "ctest sequence orbit step", context, () -> {
+                if (!ref.isValid()) return;
+                float t = (float) step / orbitSteps;
+                float angle = (float) (t * 2.0 * Math.PI);
+                float dist = 4f + 8f * t; // 4 -> 12
 
-                        ServerCameraSettings s = base3p(dist);
-                        s.positionLerpSpeed = 0.3f;
-                        s.rotationLerpSpeed = 0.3f;
-                        s.applyLookType = ApplyLookType.Rotation;
-                        s.lookMultiplier = new Vector2f(0f, 0f);
-                        s.skipCharacterPhysics = true;
-                        s.rotationType = RotationType.Custom;
-                        s.rotation = new Direction(angle, deg(-15f - 15f * t), 0f);
-                        ph.writeNoCache(new SetServerCamera(ClientCameraView.Custom, true, s));
-                    });
-                } catch (Exception ignored) {}
-            }, delay, TimeUnit.MILLISECONDS);
+                ServerCameraSettings s = base3p(dist);
+                s.positionLerpSpeed = 0.3f;
+                s.rotationLerpSpeed = 0.3f;
+                s.applyLookType = ApplyLookType.Rotation;
+                s.lookMultiplier = new Vector2f(0f, 0f);
+                s.skipCharacterPhysics = true;
+                s.rotationType = RotationType.Custom;
+                s.rotation = new Direction(angle, deg(-15f - 15f * t), 0f);
+                ph.writeNoCache(new SetServerCamera(ClientCameraView.Custom, true, s));
+            });
         }
         ms += orbitSteps * orbitInterval;
 
         // Phase 3: Camera shake (3500ms)
         final long shakeTime = ms;
-        scheduler.schedule(() -> {
-            try {
-                world.execute(() -> {
-                    if (!ref.isValid()) return;
-                    ph.writeNoCache(new CameraShakeEffect(0, 0.3f, AccumulationMode.Set));
-                });
-            } catch (Exception ignored) {}
-        }, shakeTime, TimeUnit.MILLISECONDS);
+        scheduleWorldAction(world, shakeTime, "ctest.sequence.shake", "ctest sequence shake", context, () -> {
+            if (!ref.isValid()) return;
+            ph.writeNoCache(new CameraShakeEffect(0, 0.3f, AccumulationMode.Set));
+        });
         ms += 1000;
 
         // Phase 4: Reset (4500ms)
         final long resetTime = ms;
-        scheduler.schedule(() -> {
-            try {
-                world.execute(() -> {
-                    if (!ref.isValid()) return;
-                    resetCamera(playerRef, store, ref);
-                    player.sendMessage(Message.raw("[CTest] Sequence done!").color("#FFD700"));
-                });
-            } catch (Exception ignored) {}
-        }, resetTime, TimeUnit.MILLISECONDS);
+        scheduleWorldAction(world, resetTime, "ctest.sequence.reset", "ctest sequence reset", context, () -> {
+            if (!ref.isValid()) return;
+            resetCamera(playerRef, store, ref);
+            player.sendMessage(Message.raw("[CTest] Sequence done!").color("#FFD700"));
+        });
     }
 
     // ── Test: Ascension Cinematic ─────────────────────────────────────────
@@ -417,7 +398,10 @@ public class CinematicTestCommand extends AbstractAsyncCommand {
             if (index >= 0) {
                 ph.writeNoCache(new PlaySoundEvent2D(index, SoundCategory.SFX, volume, pitch));
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            AsyncExecutionHelper.logThrottledWarning("ctest.sound.2d", "ctest play 2D sound",
+                    "sound=" + soundId, e);
+        }
     }
 
     // ── Test: Particle ──────────────────────────────────────────────────
@@ -593,14 +577,26 @@ public class CinematicTestCommand extends AbstractAsyncCommand {
 
     private void scheduleCamera(PacketHandler ph, World world, Ref<EntityStore> ref,
                                 long delayMs, java.util.function.Supplier<ServerCameraSettings> settingsFactory) {
-        scheduler.schedule(() -> {
-            try {
-                world.execute(() -> {
+        scheduleWorldAction(world, delayMs, "ctest.schedule.camera", "ctest schedule camera",
+                "delayMs=" + delayMs, () -> {
                     if (!ref.isValid()) return;
                     ph.writeNoCache(new SetServerCamera(ClientCameraView.Custom, true, settingsFactory.get()));
                 });
-            } catch (Exception ignored) {}
-        }, delayMs, TimeUnit.MILLISECONDS);
+    }
+
+    private void scheduleWorldAction(World world, long delayMs, String warningKey,
+                                     String actionName, String context, Runnable action) {
+        scheduler.schedule(() -> executeOnWorldThread(world, warningKey, actionName, context, action),
+                delayMs, TimeUnit.MILLISECONDS);
+    }
+
+    private void executeOnWorldThread(World world, String warningKey, String actionName, String context,
+                                      Runnable action) {
+        try {
+            world.execute(action);
+        } catch (Exception e) {
+            AsyncExecutionHelper.logThrottledWarning(warningKey, actionName, context, e);
+        }
     }
 
     // ── Help ─────────────────────────────────────────────────────────────

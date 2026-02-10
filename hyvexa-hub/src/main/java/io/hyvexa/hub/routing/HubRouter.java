@@ -13,11 +13,11 @@ import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
+import io.hyvexa.common.util.AsyncExecutionHelper;
 import io.hyvexa.hub.HubConstants;
 import io.hyvexa.hub.ui.HubMenuPage;
 
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
 
 public class HubRouter {
@@ -59,7 +59,9 @@ public class HubRouter {
         if (currentWorld == null) {
             return;
         }
-        CompletableFuture.runAsync(() -> {
+        String playerIdText = playerRef.getUuid() != null ? playerRef.getUuid().toString() : "unknown";
+        String sourceWorldName = currentWorld.getName() != null ? currentWorld.getName() : "unknown";
+        AsyncExecutionHelper.runBestEffort(currentWorld, () -> {
             if (!ref.isValid()) {
                 return;
             }
@@ -67,13 +69,13 @@ public class HubRouter {
             if (targetWorld == null) {
                 return;
             }
-            String currentWorldName = currentWorld.getName();
-            if (currentWorldName != null && currentWorldName.equalsIgnoreCase(targetWorldName)) {
+            if (sourceWorldName.equalsIgnoreCase(targetWorldName)) {
                 return;
             }
             Teleport teleport = createTeleport(targetWorld, playerRef.getUuid());
             store.addComponent(ref, Teleport.getComponentType(), teleport);
-        }, currentWorld);
+        }, "hub.route.world", "hub route to world",
+                "player=" + playerIdText + ", from=" + sourceWorldName + ", target=" + targetWorldName);
     }
 
     private Teleport createTeleport(World targetWorld, UUID playerId) {

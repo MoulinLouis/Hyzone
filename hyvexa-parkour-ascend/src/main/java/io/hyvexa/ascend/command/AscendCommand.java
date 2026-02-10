@@ -8,6 +8,7 @@ import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractAsyncCommand;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -36,6 +37,7 @@ import io.hyvexa.common.util.CommandUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
 
 import javax.annotation.Nonnull;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -45,6 +47,10 @@ public class AscendCommand extends AbstractAsyncCommand {
 
     // Track active pages per player to ensure proper cleanup when switching pages
     private static final Map<UUID, BaseAscendPage> activePages = new ConcurrentHashMap<>();
+    private static final String UNKNOWN_SUBCOMMAND_MESSAGE =
+            "Unknown subcommand. Use: /ascend, /ascend stats, /ascend elevate, /ascend summit, "
+                    + "/ascend ascension, /ascend skills, /ascend automation, /ascend settings, "
+                    + "/ascend achievements, /ascend title, /ascend leaderboard, /ascend maplb, /ascend help";
 
     /**
      * Close any existing page for the player before opening a new one.
@@ -125,118 +131,120 @@ public class AscendCommand extends AbstractAsyncCommand {
             }
 
             String subCommand = args[0].toLowerCase();
-            switch (subCommand) {
-                case "stats" -> openStatsPage(player, playerRef, ref, store);
-                case "elevate" -> openElevationPage(player, playerRef, ref, store);
-                case "summit" -> openSummitPage(player, playerRef, ref, store, args);
-                case "ascension", "ascend" -> openAscensionPage(player, playerRef, ref, store);
-                case "skills" -> openSkillTreePage(player, playerRef, ref, store);
-                case "automation" -> openAutomationPage(player, playerRef, ref, store);
-                case "achievements" -> showAchievements(player, playerRef);
-                case "title" -> handleTitle(player, playerRef, args);
-                case "leaderboard" -> openLeaderboardPage(player, playerRef, ref, store);
-                case "maplb" -> openMapLeaderboardPage(player, playerRef, ref, store);
-                case "settings" -> openSettingsPage(player, playerRef, ref, store);
-                case "help" -> openHelpPage(player, playerRef, ref, store);
-                default -> ctx.sendMessage(Message.raw("Unknown subcommand. Use: /ascend, /ascend stats, /ascend elevate, /ascend summit, /ascend ascension, /ascend skills, /ascend automation, /ascend settings, /ascend achievements, /ascend title, /ascend leaderboard, /ascend maplb, /ascend help"));
+            Runnable handler = buildSubCommandHandlers(player, playerRef, ref, store, args).get(subCommand);
+            if (handler != null) {
+                handler.run();
+                return;
             }
+            ctx.sendMessage(Message.raw(UNKNOWN_SUBCOMMAND_MESSAGE));
         }, world);
+    }
+
+    private Map<String, Runnable> buildSubCommandHandlers(Player player, PlayerRef playerRef,
+                                                          Ref<EntityStore> ref, Store<EntityStore> store,
+                                                          String[] args) {
+        Map<String, Runnable> handlers = new HashMap<>();
+        handlers.put("stats", () -> openStatsPage(player, playerRef, ref, store));
+        handlers.put("elevate", () -> openElevationPage(player, playerRef, ref, store));
+        handlers.put("summit", () -> openSummitPage(player, playerRef, ref, store, args));
+        handlers.put("ascension", () -> openAscensionPage(player, playerRef, ref, store));
+        handlers.put("ascend", () -> openAscensionPage(player, playerRef, ref, store));
+        handlers.put("skills", () -> openSkillTreePage(player, playerRef, ref, store));
+        handlers.put("automation", () -> openAutomationPage(player, playerRef, ref, store));
+        handlers.put("achievements", () -> showAchievements(player, playerRef));
+        handlers.put("title", () -> handleTitle(player, playerRef, args));
+        handlers.put("leaderboard", () -> openLeaderboardPage(player, playerRef, ref, store));
+        handlers.put("maplb", () -> openMapLeaderboardPage(player, playerRef, ref, store));
+        handlers.put("settings", () -> openSettingsPage(player, playerRef, ref, store));
+        handlers.put("help", () -> openHelpPage(player, playerRef, ref, store));
+        return handlers;
+    }
+
+    private void openTrackedPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store,
+                                 BaseAscendPage page) {
+        openPage(player, playerRef.getUuid(), ref, store, page, true);
+    }
+
+    private void openUntrackedPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store,
+                                   InteractiveCustomUIPage<?> page) {
+        openPage(player, playerRef.getUuid(), ref, store, page, false);
+    }
+
+    private void openPage(Player player, UUID playerId, Ref<EntityStore> ref, Store<EntityStore> store,
+                          InteractiveCustomUIPage<?> page, boolean trackActivePage) {
+        closeActivePage(playerId);
+        if (trackActivePage && page instanceof BaseAscendPage basePage) {
+            registerActivePage(playerId, basePage);
+        }
+        player.getPageManager().openCustomPage(ref, store, page);
     }
 
     private void openStatsPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
         ParkourAscendPlugin plugin = requirePlugin(player);
         if (plugin == null || plugin.getPlayerStore() == null) return;
-        UUID playerId = playerRef.getUuid();
-        closeActivePage(playerId);
         StatsPage page = new StatsPage(playerRef, plugin.getPlayerStore(), plugin.getMapStore(), plugin.getGhostStore());
-        registerActivePage(playerId, page);
-        player.getPageManager().openCustomPage(ref, store, page);
+        openTrackedPage(player, playerRef, ref, store, page);
     }
 
     private void openElevationPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
         ParkourAscendPlugin plugin = requirePlugin(player);
         if (plugin == null || plugin.getPlayerStore() == null) return;
-        UUID playerId = playerRef.getUuid();
-        closeActivePage(playerId);
         ElevationPage page = new ElevationPage(playerRef, plugin.getPlayerStore());
-        registerActivePage(playerId, page);
-        player.getPageManager().openCustomPage(ref, store, page);
+        openTrackedPage(player, playerRef, ref, store, page);
     }
 
     private void openSummitPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store, String[] args) {
         ParkourAscendPlugin plugin = requirePlugin(player);
         if (plugin == null || plugin.getSummitManager() == null) return;
-        UUID playerId = playerRef.getUuid();
-        closeActivePage(playerId);
         SummitPage page = new SummitPage(playerRef, plugin.getPlayerStore(), plugin.getSummitManager());
-        registerActivePage(playerId, page);
-        player.getPageManager().openCustomPage(ref, store, page);
+        openTrackedPage(player, playerRef, ref, store, page);
     }
 
     private void openAscensionPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
         ParkourAscendPlugin plugin = requirePlugin(player);
         if (plugin == null || plugin.getAscensionManager() == null) return;
-        UUID playerId = playerRef.getUuid();
-        closeActivePage(playerId);
         AscensionPage page = new AscensionPage(playerRef, plugin.getPlayerStore(), plugin.getAscensionManager());
-        registerActivePage(playerId, page);
-        player.getPageManager().openCustomPage(ref, store, page);
+        openTrackedPage(player, playerRef, ref, store, page);
     }
 
     private void openSkillTreePage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
         ParkourAscendPlugin plugin = requirePlugin(player);
         if (plugin == null || plugin.getAscensionManager() == null) return;
-        UUID playerId = playerRef.getUuid();
-        closeActivePage(playerId);
         SkillTreePage page = new SkillTreePage(playerRef, plugin.getPlayerStore(), plugin.getAscensionManager());
-        registerActivePage(playerId, page);
-        player.getPageManager().openCustomPage(ref, store, page);
+        openTrackedPage(player, playerRef, ref, store, page);
     }
 
     private void openAutomationPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
         ParkourAscendPlugin plugin = requirePlugin(player);
         if (plugin == null || plugin.getAscensionManager() == null) return;
-        UUID playerId = playerRef.getUuid();
-        closeActivePage(playerId);
         AutomationPage page = new AutomationPage(playerRef, plugin.getPlayerStore(), plugin.getAscensionManager());
-        registerActivePage(playerId, page);
-        player.getPageManager().openCustomPage(ref, store, page);
+        openTrackedPage(player, playerRef, ref, store, page);
     }
 
     private void openSettingsPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
         ParkourAscendPlugin plugin = requirePlugin(player);
         if (plugin == null || plugin.getPlayerStore() == null || plugin.getRobotManager() == null) return;
-        UUID playerId = playerRef.getUuid();
-        closeActivePage(playerId);
         AscendSettingsPage page = new AscendSettingsPage(playerRef, plugin.getPlayerStore(), plugin.getRobotManager());
-        registerActivePage(playerId, page);
-        player.getPageManager().openCustomPage(ref, store, page);
+        openTrackedPage(player, playerRef, ref, store, page);
     }
 
     private void openHelpPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
-        UUID playerId = playerRef.getUuid();
-        closeActivePage(playerId);
         AscendHelpPage page = new AscendHelpPage(playerRef);
-        registerActivePage(playerId, page);
-        player.getPageManager().openCustomPage(ref, store, page);
+        openTrackedPage(player, playerRef, ref, store, page);
     }
 
     private void openLeaderboardPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
         ParkourAscendPlugin plugin = requirePlugin(player);
         if (plugin == null || plugin.getPlayerStore() == null) return;
-        UUID playerId = playerRef.getUuid();
-        closeActivePage(playerId);
         AscendLeaderboardPage page = new AscendLeaderboardPage(playerRef, plugin.getPlayerStore());
-        player.getPageManager().openCustomPage(ref, store, page);
+        openUntrackedPage(player, playerRef, ref, store, page);
     }
 
     private void openMapLeaderboardPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
         ParkourAscendPlugin plugin = requirePlugin(player);
         if (plugin == null || plugin.getPlayerStore() == null || plugin.getMapStore() == null) return;
-        UUID playerId = playerRef.getUuid();
-        closeActivePage(playerId);
         AscendMapLeaderboardPage page = new AscendMapLeaderboardPage(playerRef, plugin.getPlayerStore(), plugin.getMapStore());
-        player.getPageManager().openCustomPage(ref, store, page);
+        openUntrackedPage(player, playerRef, ref, store, page);
     }
 
     private void showAchievements(Player player, PlayerRef playerRef) {
@@ -315,11 +323,8 @@ public class AscendCommand extends AbstractAsyncCommand {
             player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading."));
             return;
         }
-        UUID playerId = playerRef.getUuid();
-        closeActivePage(playerId);
         AscendMapSelectPage page = new AscendMapSelectPage(playerRef, mapStore, playerStore, runTracker, robotManager, ghostStore);
-        registerActivePage(playerId, page);
-        player.getPageManager().openCustomPage(ref, store, page);
+        openTrackedPage(player, playerRef, ref, store, page);
     }
 
 }

@@ -15,10 +15,10 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
+import io.hyvexa.common.util.AsyncExecutionHelper;
 
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class AscendFinishDetectionSystem extends EntityTickingSystem<EntityStore> {
@@ -59,17 +59,19 @@ public class AscendFinishDetectionSystem extends EntityTickingSystem<EntityStore
             // Defer store-modifying work to world thread outside system processing.
             // Guard with in-flight set so we only queue one completion check per player.
             Ref<EntityStore> ref = chunk.getReferenceTo(entityId);
-            try {
-                CompletableFuture.runAsync(() -> {
-                    try {
-                        if (ref != null && ref.isValid()) {
-                            runTracker.checkPlayer(ref, ref.getStore());
-                        }
-                    } finally {
-                        finishChecksInFlight.remove(playerId);
+            String playerIdText = playerId != null ? playerId.toString() : "unknown";
+            String worldName = world != null && world.getName() != null ? world.getName() : "unknown";
+            boolean queued = AsyncExecutionHelper.runBestEffort(world, () -> {
+                try {
+                    if (ref != null && ref.isValid()) {
+                        runTracker.checkPlayer(ref, ref.getStore());
                     }
-                }, world);
-            } catch (Exception ignored) {
+                } finally {
+                    finishChecksInFlight.remove(playerId);
+                }
+            }, "ascend.finish.check", "ascend finish detection check",
+                    "player=" + playerIdText + ", world=" + worldName);
+            if (!queued) {
                 finishChecksInFlight.remove(playerId);
             }
         }

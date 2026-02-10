@@ -47,6 +47,7 @@ import com.hypixel.hytale.server.core.event.events.ecs.UseBlockEvent;
 import com.hypixel.hytale.server.core.Message;
 import io.hyvexa.manager.WorldMapManager;
 import io.hyvexa.common.util.FormatUtils;
+import io.hyvexa.common.util.AsyncExecutionHelper;
 import io.hyvexa.parkour.ghost.GhostNpcManager;
 import io.hyvexa.parkour.ghost.GhostRecorder;
 import io.hyvexa.parkour.ghost.GhostStore;
@@ -590,7 +591,8 @@ public class HyvexaPlugin extends JavaPlugin {
                 continue;
             }
             List<PlayerTickContext> players = entry.getValue();
-            CompletableFuture.runAsync(() -> {
+            String worldName = world.getName() != null ? world.getName() : "unknown";
+            AsyncExecutionHelper.runBestEffort(world, () -> {
                 for (PlayerTickContext context : players) {
                     if (context.ref == null || !context.ref.isValid()) {
                         continue;
@@ -604,7 +606,8 @@ public class HyvexaPlugin extends JavaPlugin {
                         hudManager.updateRunHud(context.ref, context.store);
                     }
                 }
-            }, world);
+            }, "parkour.hud.tick", "parkour HUD tick update",
+                    "world=" + worldName + ", players=" + players.size());
         }
     }
 
