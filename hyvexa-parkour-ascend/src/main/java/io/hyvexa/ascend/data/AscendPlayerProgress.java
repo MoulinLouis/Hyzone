@@ -112,11 +112,11 @@ public class AscendPlayerProgress {
     }
 
     public Map<AscendConstants.SummitCategory, Long> getSummitXpMap() {
-        return new EnumMap<>(AscendConstants.SummitCategory.class) {{
-            for (AscendConstants.SummitCategory cat : AscendConstants.SummitCategory.values()) {
-                put(cat, getSummitXp(cat));
-            }
-        }};
+        Map<AscendConstants.SummitCategory, Long> xpMap = new EnumMap<>(AscendConstants.SummitCategory.class);
+        for (AscendConstants.SummitCategory cat : AscendConstants.SummitCategory.values()) {
+            xpMap.put(cat, getSummitXp(cat));
+        }
+        return xpMap;
     }
 
     public void clearSummitXp() {

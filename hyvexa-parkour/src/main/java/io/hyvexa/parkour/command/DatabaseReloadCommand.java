@@ -2,6 +2,7 @@ package io.hyvexa.parkour.command;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -17,9 +18,11 @@ import io.hyvexa.parkour.util.ParkourModeGate;
 
 import javax.annotation.Nonnull;
 import java.util.concurrent.CompletableFuture;
+import java.util.logging.Level;
 
 public class DatabaseReloadCommand extends AbstractAsyncCommand {
 
+    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final Message MESSAGE_OP_REQUIRED = Message.raw("You must be OP to use /dbreload.");
 
     public DatabaseReloadCommand() {
@@ -67,7 +70,7 @@ public class DatabaseReloadCommand extends AbstractAsyncCommand {
             commandContext.sendMessage(Message.raw("Password: (hidden)"));
         } catch (Exception e) {
             commandContext.sendMessage(Message.raw("Database reload failed: " + e.getMessage()).color("#ff4444"));
-            e.printStackTrace();
+            LOGGER.at(Level.WARNING).withCause(e).log("Failed to reload database config via /dbreload");
         }
 
         return CompletableFuture.completedFuture(null);

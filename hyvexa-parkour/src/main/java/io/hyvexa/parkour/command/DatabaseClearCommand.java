@@ -2,6 +2,7 @@ package io.hyvexa.parkour.command;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -19,9 +20,11 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.concurrent.CompletableFuture;
+import java.util.logging.Level;
 
 public class DatabaseClearCommand extends AbstractAsyncCommand {
 
+    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final Message MESSAGE_OP_REQUIRED = Message.raw("You must be OP to use /dbclear.");
 
     public DatabaseClearCommand() {
@@ -89,7 +92,7 @@ public class DatabaseClearCommand extends AbstractAsyncCommand {
             }
         } catch (SQLException e) {
             commandContext.sendMessage(Message.raw("Database clear failed: " + e.getMessage()).color("#ff4444"));
-            e.printStackTrace();
+            LOGGER.at(Level.SEVERE).withCause(e).log("Failed to clear parkour database via /dbclear");
             return CompletableFuture.completedFuture(null);
         }
 

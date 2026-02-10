@@ -2,6 +2,7 @@ package io.hyvexa.parkour.command;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -16,9 +17,11 @@ import io.hyvexa.parkour.util.ParkourModeGate;
 
 import javax.annotation.Nonnull;
 import java.util.concurrent.CompletableFuture;
+import java.util.logging.Level;
 
 public class DatabaseTestCommand extends AbstractAsyncCommand {
 
+    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final Message MESSAGE_OP_REQUIRED = Message.raw("You must be OP to use /dbtest.");
 
     public DatabaseTestCommand() {
@@ -58,7 +61,7 @@ public class DatabaseTestCommand extends AbstractAsyncCommand {
                 db.initialize();
             } catch (Exception e) {
                 commandContext.sendMessage(Message.raw("Failed to initialize: " + e.getMessage()).color("#ff4444"));
-                e.printStackTrace();
+                LOGGER.at(Level.WARNING).withCause(e).log("Failed to initialize database via /dbtest");
                 return CompletableFuture.completedFuture(null);
             }
         }
@@ -71,7 +74,8 @@ public class DatabaseTestCommand extends AbstractAsyncCommand {
         } else {
             commandContext.sendMessage(Message.raw(result.message()).color("#ff4444"));
             if (result.cause() != null) {
-                result.cause().printStackTrace();
+                LOGGER.at(Level.WARNING).withCause(result.cause())
+                        .log("Database connection test failed via /dbtest");
             }
         }
 
