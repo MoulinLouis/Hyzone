@@ -7,7 +7,36 @@ Group {
 
   Group #AccentBar {
     Anchor: (Width: 8, Top: 0, Bottom: 0);
-    Background: #7c3aed;
+
+    Group #AccentViolet {
+      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+      Background: #7c3aed;
+      Visible: true;
+    }
+
+    Group #AccentRed {
+      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+      Background: #ef4444;
+      Visible: false;
+    }
+
+    Group #AccentOrange {
+      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+      Background: #f59e0b;
+      Visible: false;
+    }
+
+    Group #AccentGreen {
+      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+      Background: #10b981;
+      Visible: false;
+    }
+
+    Group #AccentBlue {
+      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+      Background: #3b82f6;
+      Visible: false;
+    }
   }
 
   Button #SelectButton {

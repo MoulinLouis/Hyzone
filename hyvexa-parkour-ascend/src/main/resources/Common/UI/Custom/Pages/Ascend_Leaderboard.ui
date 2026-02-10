@@ -79,13 +79,35 @@ $C.@PageOverlay {
 
         Group #TabVexaWrap {
           Anchor: (Width: 120, Height: 34);
-          Background: #2d3f50;
           OutlineColor: #ffffff(0.04);
           OutlineSize: 1;
 
+          Group #TabVexaInactiveBg {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Background: #142029;
+            Visible: false;
+          }
+
+          Group #TabVexaActiveBg {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Background: #2d3f50;
+            Visible: true;
+          }
+
           Group #TabVexaAccent {
             Anchor: (Left: 0, Right: 0, Top: 0, Height: 3);
-            Background: #f59e0b;
+
+            Group #TabVexaAccentInactive {
+              Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+              Background: #142029;
+              Visible: false;
+            }
+
+            Group #TabVexaAccentActive {
+              Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+              Background: #f59e0b;
+              Visible: true;
+            }
           }
 
           Label #TabVexaLabel {
@@ -110,13 +132,35 @@ $C.@PageOverlay {
 
         Group #TabAscensionsWrap {
           Anchor: (Width: 120, Height: 34);
-          Background: #142029;
           OutlineColor: #ffffff(0.04);
           OutlineSize: 1;
 
+          Group #TabAscensionsInactiveBg {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Background: #142029;
+            Visible: true;
+          }
+
+          Group #TabAscensionsActiveBg {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Background: #2d3f50;
+            Visible: false;
+          }
+
           Group #TabAscensionsAccent {
             Anchor: (Left: 0, Right: 0, Top: 0, Height: 3);
-            Background: #142029;
+
+            Group #TabAscensionsAccentInactive {
+              Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+              Background: #142029;
+              Visible: true;
+            }
+
+            Group #TabAscensionsAccentActive {
+              Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+              Background: #8b5cf6;
+              Visible: false;
+            }
           }
 
           Label #TabAscensionsLabel {
@@ -141,13 +185,35 @@ $C.@PageOverlay {
 
         Group #TabRunsWrap {
           Anchor: (Width: 120, Height: 34);
-          Background: #142029;
           OutlineColor: #ffffff(0.04);
           OutlineSize: 1;
 
+          Group #TabRunsInactiveBg {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Background: #142029;
+            Visible: true;
+          }
+
+          Group #TabRunsActiveBg {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Background: #2d3f50;
+            Visible: false;
+          }
+
           Group #TabRunsAccent {
             Anchor: (Left: 0, Right: 0, Top: 0, Height: 3);
-            Background: #142029;
+
+            Group #TabRunsAccentInactive {
+              Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+              Background: #142029;
+              Visible: true;
+            }
+
+            Group #TabRunsAccentActive {
+              Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+              Background: #10b981;
+              Visible: false;
+            }
           }
 
           Label #TabRunsLabel {
@@ -172,13 +238,35 @@ $C.@PageOverlay {
 
         Group #TabFastestWrap {
           Anchor: (Width: 140, Height: 34);
-          Background: #142029;
           OutlineColor: #ffffff(0.04);
           OutlineSize: 1;
 
+          Group #TabFastestInactiveBg {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Background: #142029;
+            Visible: true;
+          }
+
+          Group #TabFastestActiveBg {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Background: #2d3f50;
+            Visible: false;
+          }
+
           Group #TabFastestAccent {
             Anchor: (Left: 0, Right: 0, Top: 0, Height: 3);
-            Background: #142029;
+
+            Group #TabFastestAccentInactive {
+              Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+              Background: #142029;
+              Visible: true;
+            }
+
+            Group #TabFastestAccentActive {
+              Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+              Background: #ef4444;
+              Visible: false;
+            }
           }
 
           Label #TabFastestLabel {

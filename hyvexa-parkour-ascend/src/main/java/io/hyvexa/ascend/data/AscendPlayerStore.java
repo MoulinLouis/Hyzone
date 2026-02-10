@@ -38,6 +38,7 @@ public class AscendPlayerStore {
     private final Map<UUID, String> playerNames = new ConcurrentHashMap<>();
     private final Map<UUID, Long> dirtyPlayerVersions = new ConcurrentHashMap<>();
     private final Set<UUID> resetPendingPlayers = ConcurrentHashMap.newKeySet();
+    private final Map<UUID, AscendPlayerProgress> detachedDirtyPlayers = new ConcurrentHashMap<>();
     private final AtomicBoolean saveQueued = new AtomicBoolean(false);
     private final AtomicReference<ScheduledFuture<?>> saveFuture = new AtomicReference<>();
 
@@ -67,6 +68,7 @@ public class AscendPlayerStore {
         players.clear();
         dirtyPlayerVersions.clear();
         resetPendingPlayers.clear();
+        detachedDirtyPlayers.clear();
         LOGGER.atInfo().log("AscendPlayerStore initialized with lazy loading");
     }
 
@@ -1204,6 +1206,7 @@ public class AscendPlayerStore {
         playerNames.clear();
         dirtyPlayerVersions.clear();
         resetPendingPlayers.clear();
+        detachedDirtyPlayers.clear();
 
         // Invalidate leaderboard caches
         leaderboardCache = List.of();
@@ -1217,15 +1220,34 @@ public class AscendPlayerStore {
             return;
         }
 
-        // Flush this player's data if dirty
-        if (dirtyPlayerVersions.containsKey(playerId)) {
-            flushPendingSave();
-        }
+        // Disconnect path: queue targeted async persistence and then evict cache.
+        savePlayerIfDirty(playerId);
 
         // Remove from cache
         players.remove(playerId);
-        dirtyPlayerVersions.remove(playerId);
         resetPendingPlayers.remove(playerId);
+        if (!dirtyPlayerVersions.containsKey(playerId)) {
+            detachedDirtyPlayers.remove(playerId);
+        }
+    }
+
+    public void savePlayerIfDirty(UUID playerId) {
+        if (playerId == null) {
+            return;
+        }
+        Long dirtyVersion = dirtyPlayerVersions.get(playerId);
+        if (dirtyVersion == null) {
+            detachedDirtyPlayers.remove(playerId);
+            return;
+        }
+        AscendPlayerProgress progress = players.get(playerId);
+        if (progress == null) {
+            dirtyPlayerVersions.remove(playerId, dirtyVersion);
+            detachedDirtyPlayers.remove(playerId);
+            return;
+        }
+        detachedDirtyPlayers.put(playerId, progress);
+        HytaleServer.SCHEDULED_EXECUTOR.execute(() -> syncSave(Map.of(playerId, dirtyVersion)));
     }
 
     public void flushPendingSave() {
@@ -1263,12 +1285,14 @@ public class AscendPlayerStore {
     }
 
     private void syncSave() {
+        syncSave(Map.copyOf(dirtyPlayerVersions));
+    }
+
+    private synchronized void syncSave(Map<UUID, Long> toSave) {
         if (!DatabaseManager.getInstance().isInitialized()) {
             return;
         }
-
-        Map<UUID, Long> toSave = Map.copyOf(dirtyPlayerVersions);
-        if (toSave.isEmpty()) {
+        if (toSave == null || toSave.isEmpty()) {
             return;
         }
 
@@ -1349,12 +1373,14 @@ public class AscendPlayerStore {
                 DatabaseManager.applyQueryTimeout(skillStmt);
                 DatabaseManager.applyQueryTimeout(achievementStmt);
 
+                Map<UUID, Long> persistedVersions = new HashMap<>();
                 for (Map.Entry<UUID, Long> dirtyEntry : toSave.entrySet()) {
                     UUID playerId = dirtyEntry.getKey();
-                    AscendPlayerProgress progress = players.get(playerId);
+                    AscendPlayerProgress progress = resolveProgressForSave(playerId);
                     if (progress == null) {
                         continue;
                     }
+                    persistedVersions.put(playerId, dirtyEntry.getValue());
 
                     // If this player was recently reset, delete all child rows first
                     // to prevent stale upserts from re-inserting deleted data
@@ -1447,6 +1473,11 @@ public class AscendPlayerStore {
                         achievementStmt.addBatch();
                     }
                 }
+
+                if (persistedVersions.isEmpty()) {
+                    conn.rollback();
+                    return;
+                }
                 playerStmt.executeBatch();
                 mapStmt.executeBatch();
                 summitStmt.executeBatch();
@@ -1456,14 +1487,19 @@ public class AscendPlayerStore {
                 conn.commit(); // Commit transaction
 
                 // Save succeeded - remove only IDs that were not marked dirty again mid-save.
-                for (Map.Entry<UUID, Long> entry : toSave.entrySet()) {
+                for (Map.Entry<UUID, Long> entry : persistedVersions.entrySet()) {
                     UUID playerId = entry.getKey();
                     Long savedVersion = entry.getValue();
                     dirtyPlayerVersions.compute(playerId, (ignored, currentVersion) -> {
                         if (currentVersion == null) {
+                            detachedDirtyPlayers.remove(playerId);
                             return null;
                         }
-                        return currentVersion.equals(savedVersion) ? null : currentVersion;
+                        if (currentVersion.equals(savedVersion)) {
+                            detachedDirtyPlayers.remove(playerId);
+                            return null;
+                        }
+                        return currentVersion;
                     });
                 }
             } catch (SQLException e) {
@@ -1476,6 +1512,14 @@ public class AscendPlayerStore {
             // Outer catch for connection/transaction setup errors
             LOGGER.at(Level.SEVERE).log("Failed to initialize transaction for ascend player save: " + e.getMessage());
         }
+    }
+
+    private AscendPlayerProgress resolveProgressForSave(UUID playerId) {
+        AscendPlayerProgress liveProgress = players.get(playerId);
+        if (liveProgress != null) {
+            return liveProgress;
+        }
+        return detachedDirtyPlayers.get(playerId);
     }
 
     // ========================================

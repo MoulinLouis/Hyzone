@@ -155,6 +155,10 @@ public class AscendMapSelectPage extends BaseAscendPage {
             return;
         }
         String mapId = data.getButton().substring(BUTTON_SELECT_PREFIX.length());
+        if (!isDisplayedMapId(mapId)) {
+            sendMessage(store, ref, "[Ascend] Invalid map selection.");
+            return;
+        }
         AscendMap map = mapStore.getMap(mapId);
         if (map == null) {
             sendMessage(store, ref, "Map not found.");
@@ -164,7 +168,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
         if (playerRef == null) {
             return;
         }
-        if (!ensureUnlocked(store, ref, playerRef, mapId, map)) {
+        if (!ensureUnlocked(store, ref, playerRef, map)) {
             return;
         }
         if (map.getStartX() == 0 && map.getStartY() == 0 && map.getStartZ() == 0) {
@@ -221,14 +225,13 @@ public class AscendMapSelectPage extends BaseAscendPage {
         int index = 0;
         for (AscendMap map : maps) {
             commandBuilder.append("#MapCards", "Pages/Ascend_MapSelectEntry.ui");
-            String accentColor = resolveMapAccentColor(index);
             String mapName = map.getName() != null && !map.getName().isBlank() ? map.getName() : map.getId();
 
             // All maps in this list are already unlocked (filtered above)
             AscendPlayerProgress.MapProgress mapProgress = playerStore.getMapProgress(playerRef.getUuid(), map.getId());
 
             // Apply accent color to left accent bar
-            commandBuilder.set("#MapCards[" + index + "] #AccentBar.Background", accentColor);
+            applyAccentBarVariant(commandBuilder, index, index);
 
             // Map name
             commandBuilder.set("#MapCards[" + index + "] #MapName.Text", mapName);
@@ -281,6 +284,24 @@ public class AscendMapSelectPage extends BaseAscendPage {
             case 3 -> "#10b981";  // Green
             default -> "#3b82f6"; // Blue
         };
+    }
+
+    private void applyAccentBarVariant(UICommandBuilder commandBuilder, int cardIndex, int mapIndex) {
+        boolean violet = mapIndex == 0;
+        boolean red = mapIndex == 1;
+        boolean orange = mapIndex == 2;
+        boolean green = mapIndex == 3;
+        boolean blue = mapIndex >= 4;
+        String basePath = "#MapCards[" + cardIndex + "] #AccentBar";
+        commandBuilder.set(basePath + " #AccentViolet.Visible", violet);
+        commandBuilder.set(basePath + " #AccentRed.Visible", red);
+        commandBuilder.set(basePath + " #AccentOrange.Visible", orange);
+        commandBuilder.set(basePath + " #AccentGreen.Visible", green);
+        commandBuilder.set(basePath + " #AccentBlue.Visible", blue);
+    }
+
+    private boolean isDisplayedMapId(String mapId) {
+        return mapId != null && displayedMapIds.contains(mapId);
     }
 
     private String resolveButtonBgElementId(int index) {
@@ -472,6 +493,10 @@ public class AscendMapSelectPage extends BaseAscendPage {
     }
 
     private void handleRobotAction(Ref<EntityStore> ref, Store<EntityStore> store, String mapId) {
+        if (!isDisplayedMapId(mapId)) {
+            sendMessage(store, ref, "[Ascend] Invalid map selection.");
+            return;
+        }
         AscendMap map = mapStore.getMap(mapId);
         if (map == null) {
             sendMessage(store, ref, "Map not found.");
@@ -777,7 +802,6 @@ public class AscendMapSelectPage extends BaseAscendPage {
         // Use current lastMapCount as the index for the new map
         int index = lastMapCount;
         String mapName = map.getName() != null && !map.getName().isBlank() ? map.getName() : map.getId();
-        String accentColor = resolveMapAccentColor(index);
 
         // Get map progress (newly unlocked, so might be minimal data)
         AscendPlayerProgress.MapProgress mapProgress = playerStore.getMapProgress(playerRef.getUuid(), map.getId());
@@ -786,7 +810,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
         commandBuilder.append("#MapCards", "Pages/Ascend_MapSelectEntry.ui");
 
         // Apply accent color to left accent bar
-        commandBuilder.set("#MapCards[" + index + "] #AccentBar.Background", accentColor);
+        applyAccentBarVariant(commandBuilder, index, index);
 
         // Map name
         commandBuilder.set("#MapCards[" + index + "] #MapName.Text", mapName);
@@ -1152,15 +1176,12 @@ public class AscendMapSelectPage extends BaseAscendPage {
     }
 
     private boolean ensureUnlocked(Store<EntityStore> store, Ref<EntityStore> ref, PlayerRef playerRef,
-                                   String mapId, AscendMap map) {
-        // All displayed maps are already unlocked due to filtering in buildMapList
-        AscendPlayerProgress progress = playerStore.getOrCreatePlayer(playerRef.getUuid());
-        AscendPlayerProgress.MapProgress mapProgress = progress.getOrCreateMapProgress(mapId);
-
-        // Safety check: if not unlocked, mark as unlocked (should not happen)
-        if (!mapProgress.isUnlocked()) {
-            mapProgress.setUnlocked(true);
-            playerStore.markDirty(playerRef.getUuid());
+                                   AscendMap map) {
+        MapUnlockHelper.UnlockResult unlockResult = MapUnlockHelper.checkAndEnsureUnlock(
+            playerRef.getUuid(), map, playerStore, mapStore);
+        if (!unlockResult.unlocked) {
+            sendMessage(store, ref, "[Ascend] Unlock this map first.");
+            return false;
         }
         return true;
     }

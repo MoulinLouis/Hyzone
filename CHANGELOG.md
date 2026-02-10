@@ -15,6 +15,9 @@
 - **Ascend: Leaderboard system** - New `/ascend leaderboard` command with tabbed rankings for Vexa, Ascensions, and Manual Runs. Includes pagination (50 per page) and player search. Accessible via the Bolt of Stormsilk item.
 
 ### Fixed
+- **Ascend: Closed crafted map-selection unlock bypass** - Map select now validates payload map IDs against displayed entries and enforces unlock requirements instead of force-unlocking.
+- **Ascend/Parkour UI: Replaced fragile runtime tab/card background state writes** - Selected/active visuals now use dedicated overlay visibility toggles for more reliable rendering.
+- **Ascend: Disconnect persistence no longer triggers full-store flush** - Disconnect path now queues targeted per-player async saves while preserving shutdown full flush behavior.
 - **Parkour: Hardened debug/admin command access** - `/pkadminitem` and `/pkmusic` now require OP and clearly label staff-only usage
 - **Ascend: Cinematic/runner failures are now observable and recoverable** - Silent catches were replaced with throttled phase/context warning logs, and the cinematic now always schedules a movement/camera restore finalizer
 - **Parkour/Ascend: Closed two completion/stat races** - Jump flush now uses remove-drain semantics and near-finish checks now enforce one in-flight completion check per player

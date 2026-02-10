@@ -42,13 +42,6 @@ public class AscendLeaderboardPage extends InteractiveCustomUIPage<AscendLeaderb
     private static final String COLOR_RANK_3 = "#cd7f32";
     private static final String COLOR_RANK_DEFAULT = "#9fb0ba";
 
-    private static final String COLOR_TAB_ACTIVE = "#2d3f50";
-    private static final String COLOR_TAB_INACTIVE = "#142029";
-    private static final String COLOR_TAB_VEXA = "#f59e0b";
-    private static final String COLOR_TAB_ASCENSIONS = "#8b5cf6";
-    private static final String COLOR_TAB_RUNS = "#10b981";
-    private static final String COLOR_TAB_FASTEST = "#ef4444";
-
     private final AscendPlayerStore playerStore;
     private final PaginationState pagination = new PaginationState(50);
     private LeaderboardCategory currentCategory = LeaderboardCategory.VEXA;
@@ -197,23 +190,19 @@ public class AscendLeaderboardPage extends InteractiveCustomUIPage<AscendLeaderb
     }
 
     private void updateTabStyles(UICommandBuilder commandBuilder) {
-        commandBuilder.set("#TabVexaWrap.Background",
-                currentCategory == LeaderboardCategory.VEXA ? COLOR_TAB_ACTIVE : COLOR_TAB_INACTIVE);
-        commandBuilder.set("#TabAscensionsWrap.Background",
-                currentCategory == LeaderboardCategory.ASCENSIONS ? COLOR_TAB_ACTIVE : COLOR_TAB_INACTIVE);
-        commandBuilder.set("#TabRunsWrap.Background",
-                currentCategory == LeaderboardCategory.MANUAL_RUNS ? COLOR_TAB_ACTIVE : COLOR_TAB_INACTIVE);
-        commandBuilder.set("#TabFastestWrap.Background",
-                currentCategory == LeaderboardCategory.FASTEST_ASCENSION ? COLOR_TAB_ACTIVE : COLOR_TAB_INACTIVE);
+        setTabActive(commandBuilder, "TabVexa", currentCategory == LeaderboardCategory.VEXA);
+        setTabActive(commandBuilder, "TabAscensions", currentCategory == LeaderboardCategory.ASCENSIONS);
+        setTabActive(commandBuilder, "TabRuns", currentCategory == LeaderboardCategory.MANUAL_RUNS);
+        setTabActive(commandBuilder, "TabFastest", currentCategory == LeaderboardCategory.FASTEST_ASCENSION);
+    }
 
-        commandBuilder.set("#TabVexaAccent.Background",
-                currentCategory == LeaderboardCategory.VEXA ? COLOR_TAB_VEXA : COLOR_TAB_INACTIVE);
-        commandBuilder.set("#TabAscensionsAccent.Background",
-                currentCategory == LeaderboardCategory.ASCENSIONS ? COLOR_TAB_ASCENSIONS : COLOR_TAB_INACTIVE);
-        commandBuilder.set("#TabRunsAccent.Background",
-                currentCategory == LeaderboardCategory.MANUAL_RUNS ? COLOR_TAB_RUNS : COLOR_TAB_INACTIVE);
-        commandBuilder.set("#TabFastestAccent.Background",
-                currentCategory == LeaderboardCategory.FASTEST_ASCENSION ? COLOR_TAB_FASTEST : COLOR_TAB_INACTIVE);
+    private void setTabActive(UICommandBuilder commandBuilder, String tabId, boolean active) {
+        String wrapPath = "#" + tabId + "Wrap";
+        String accentPath = "#" + tabId + "Accent";
+        commandBuilder.set(wrapPath + " #" + tabId + "ActiveBg.Visible", active);
+        commandBuilder.set(wrapPath + " #" + tabId + "InactiveBg.Visible", !active);
+        commandBuilder.set(wrapPath + " " + accentPath + " #" + tabId + "AccentActive.Visible", active);
+        commandBuilder.set(wrapPath + " " + accentPath + " #" + tabId + "AccentInactive.Visible", !active);
     }
 
     private List<LeaderboardRow> getSortedEntries(List<LeaderboardEntry> entries) {

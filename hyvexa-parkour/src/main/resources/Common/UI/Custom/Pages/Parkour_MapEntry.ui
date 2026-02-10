@@ -9,6 +9,12 @@ Button {
     Sounds: $C.@ButtonSounds,
   );
 
+  Group #SelectedOverlay {
+    Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+    Background: #253742;
+    Visible: false;
+  }
+
   Label #MapName {
     Style: (
       FontSize: 15,
