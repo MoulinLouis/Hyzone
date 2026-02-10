@@ -211,15 +211,24 @@ public class AscendLeaderboardPage extends InteractiveCustomUIPage<AscendLeaderb
         List<LeaderboardEntry> sorted = new ArrayList<>(entries);
 
         switch (currentCategory) {
-            case VEXA -> sorted.sort((a, b) -> {
-                int cmp = Integer.compare(b.totalVexaEarnedExp10(), a.totalVexaEarnedExp10());
-                if (cmp != 0) return cmp;
-                return Double.compare(b.totalVexaEarnedMantissa(), a.totalVexaEarnedMantissa());
-            });
-            case ASCENSIONS -> sorted.sort((a, b) ->
-                    Integer.compare(b.ascensionCount(), a.ascensionCount()));
-            case MANUAL_RUNS -> sorted.sort((a, b) ->
-                    Integer.compare(b.totalManualRuns(), a.totalManualRuns()));
+            case VEXA -> {
+                sorted.removeIf(e -> e.totalVexaEarnedExp10() == 0 && e.totalVexaEarnedMantissa() == 0);
+                sorted.sort((a, b) -> {
+                    int cmp = Integer.compare(b.totalVexaEarnedExp10(), a.totalVexaEarnedExp10());
+                    if (cmp != 0) return cmp;
+                    return Double.compare(b.totalVexaEarnedMantissa(), a.totalVexaEarnedMantissa());
+                });
+            }
+            case ASCENSIONS -> {
+                sorted.removeIf(e -> e.ascensionCount() == 0);
+                sorted.sort((a, b) ->
+                        Integer.compare(b.ascensionCount(), a.ascensionCount()));
+            }
+            case MANUAL_RUNS -> {
+                sorted.removeIf(e -> e.totalManualRuns() == 0);
+                sorted.sort((a, b) ->
+                        Integer.compare(b.totalManualRuns(), a.totalManualRuns()));
+            }
             case FASTEST_ASCENSION -> {
                 sorted.removeIf(e -> e.fastestAscensionMs() == null);
                 sorted.sort((a, b) ->
