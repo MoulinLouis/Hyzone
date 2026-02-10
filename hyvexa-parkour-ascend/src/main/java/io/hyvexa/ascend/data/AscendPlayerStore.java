@@ -413,6 +413,17 @@ public class AscendPlayerStore {
         }
     }
 
+    /**
+     * Marks a player for full child-row deletion on the next syncSave.
+     * Use before clearing in-memory collections (e.g. mapProgress.clear())
+     * so stale DB rows are removed before re-insert.
+     */
+    public void markResetPending(UUID playerId) {
+        if (playerId != null) {
+            resetPendingPlayers.add(playerId);
+        }
+    }
+
     public void markDirty(UUID playerId) {
         if (playerId == null) {
             return;
