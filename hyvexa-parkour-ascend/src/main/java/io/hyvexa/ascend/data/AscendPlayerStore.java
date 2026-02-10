@@ -167,7 +167,6 @@ public class AscendPlayerStore {
                     progress.setSkillTreePoints(safeGetInt(rs, "skill_tree_points", 0));
                     progress.setTotalVexaEarned(safeGetBigNumber(rs, "total_vexa_earned_mantissa", "total_vexa_earned_exp10"));
                     progress.setTotalManualRuns(safeGetInt(rs, "total_manual_runs", 0));
-                    progress.setActiveTitle(safeGetString(rs, "active_title", null));
 
                     Long ascensionStartedAt = safeGetLong(rs, "ascension_started_at");
                     if (ascensionStartedAt != null) {
@@ -362,7 +361,6 @@ public class AscendPlayerStore {
 
         // Reset Achievements
         progress.setUnlockedAchievements(null);
-        progress.setActiveTitle(null);
 
         // Reset Statistics
         progress.setTotalManualRuns(0);
@@ -905,17 +903,6 @@ public class AscendPlayerStore {
         return progress.getUnlockedAchievements();
     }
 
-    public String getActiveTitle(UUID playerId) {
-        AscendPlayerProgress progress = players.get(playerId);
-        return progress != null ? progress.getActiveTitle() : null;
-    }
-
-    public void setActiveTitle(UUID playerId, String title) {
-        AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        progress.setActiveTitle(title);
-        markDirty(playerId);
-    }
-
     public int getTotalManualRuns(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
         return progress != null ? progress.getTotalManualRuns() : 0;
@@ -1374,7 +1361,7 @@ public class AscendPlayerStore {
                     playerStmt.setDouble(8, progress.getTotalVexaEarned().getMantissa());
                     playerStmt.setInt(9, progress.getTotalVexaEarned().getExponent());
                     playerStmt.setInt(10, progress.getTotalManualRuns());
-                    playerStmt.setString(11, progress.getActiveTitle());
+                    playerStmt.setNull(11, java.sql.Types.VARCHAR);
                     if (progress.getAscensionStartedAt() != null) {
                         playerStmt.setLong(12, progress.getAscensionStartedAt());
                     } else {

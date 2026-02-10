@@ -15,6 +15,7 @@ import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.ParkourAscendPlugin;
+import io.hyvexa.ascend.achievement.AchievementManager;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.common.ui.ButtonEventData;
@@ -34,6 +35,7 @@ public class AscendSettingsPage extends BaseAscendPage {
     private static final String BUTTON_TOGGLE_RUNNERS = "ToggleRunners";
     private static final String BUTTON_HIDE_ALL = "HideAll";
     private static final String BUTTON_SHOW_ALL = "ShowAll";
+    private static final String BUTTON_ACHIEVEMENTS = "Achievements";
 
     private static final ConcurrentHashMap<UUID, Boolean> PLAYERS_HIDDEN = new ConcurrentHashMap<>();
 
@@ -75,6 +77,8 @@ public class AscendSettingsPage extends BaseAscendPage {
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_HIDE_ALL), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ShowAllButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_SHOW_ALL), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#AchievementsButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_ACHIEVEMENTS), false);
     }
 
     @Override
@@ -144,6 +148,15 @@ public class AscendSettingsPage extends BaseAscendPage {
             player.sendMessage(Message.raw("All players shown."));
             player.getPageManager().openCustomPage(ref, store,
                     new AscendSettingsPage(playerRef, playerStore, robotManager));
+            return;
+        }
+
+        if (BUTTON_ACHIEVEMENTS.equals(data.getButton())) {
+            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+            if (plugin != null && plugin.getAchievementManager() != null) {
+                player.getPageManager().openCustomPage(ref, store,
+                        new AscendAchievementPage(playerRef, playerStore, plugin.getAchievementManager()));
+            }
         }
     }
 

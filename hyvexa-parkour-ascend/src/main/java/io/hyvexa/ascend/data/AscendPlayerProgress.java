@@ -30,7 +30,6 @@ public class AscendPlayerProgress {
 
     // Achievement System
     private final Set<AscendConstants.AchievementType> unlockedAchievements = ConcurrentHashMap.newKeySet();
-    private volatile String activeTitle;
     private final AtomicInteger totalManualRuns = new AtomicInteger(0);
     private final AtomicInteger consecutiveManualRuns = new AtomicInteger(0); // For chain bonus tracking
     private volatile boolean sessionFirstRunClaimed;
@@ -259,13 +258,6 @@ public class AscendPlayerProgress {
         }
     }
 
-    public String getActiveTitle() {
-        return activeTitle;
-    }
-
-    public void setActiveTitle(String activeTitle) {
-        this.activeTitle = activeTitle;
-    }
 
     public int getTotalManualRuns() {
         return totalManualRuns.get();

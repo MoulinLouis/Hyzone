@@ -152,7 +152,6 @@ public class AscendCommand extends AbstractAsyncCommand {
         handlers.put("skills", () -> openSkillTreePage(player, playerRef, ref, store));
         handlers.put("automation", () -> openAutomationPage(player, playerRef, ref, store));
         handlers.put("achievements", () -> showAchievements(player, playerRef));
-        handlers.put("title", () -> handleTitle(player, playerRef, args));
         handlers.put("leaderboard", () -> openLeaderboardPage(player, playerRef, ref, store));
         handlers.put("maplb", () -> openMapLeaderboardPage(player, playerRef, ref, store));
         handlers.put("settings", () -> openSettingsPage(player, playerRef, ref, store));
@@ -261,53 +260,8 @@ public class AscendCommand extends AbstractAsyncCommand {
             var progress = achievementManager.getProgress(playerRef.getUuid(), achievement);
             String status = progress.unlocked() ? "[X]" : "[ ]";
             String progressText = progress.unlocked() ? "" : " (" + progress.current() + "/" + progress.required() + ")";
-            player.sendMessage(Message.raw("  " + status + " " + achievement.getName() + ": \"" + achievement.getTitle() + "\"" + progressText)
+            player.sendMessage(Message.raw("  " + status + " " + achievement.getName() + progressText)
                 .color(progress.unlocked() ? SystemMessageUtils.SUCCESS : SystemMessageUtils.SECONDARY));
-        }
-    }
-
-    private void handleTitle(Player player, PlayerRef playerRef, String[] args) {
-        ParkourAscendPlugin plugin = requirePlugin(player);
-        if (plugin == null || plugin.getAchievementManager() == null) return;
-
-        AchievementManager achievementManager = plugin.getAchievementManager();
-
-        // Show available titles if no argument
-        if (args.length < 2) {
-            var titles = achievementManager.getAvailableTitles(playerRef.getUuid());
-            String currentTitle = achievementManager.getActiveTitle(playerRef.getUuid());
-
-            player.sendMessage(Message.raw("[Title] Current: " + (currentTitle != null ? currentTitle : "None"))
-                .color(SystemMessageUtils.PRIMARY_TEXT));
-
-            if (titles.isEmpty()) {
-                player.sendMessage(Message.raw("[Title] No titles unlocked. Complete achievements to earn titles!")
-                    .color(SystemMessageUtils.SECONDARY));
-            } else {
-                player.sendMessage(Message.raw("[Title] Available: " + String.join(", ", titles))
-                    .color(SystemMessageUtils.SECONDARY));
-            }
-            player.sendMessage(Message.raw("[Title] Use: /ascend title <name> or /ascend title clear")
-                .color(SystemMessageUtils.SECONDARY));
-            return;
-        }
-
-        // Clear title
-        if (args[1].equalsIgnoreCase("clear") || args[1].equalsIgnoreCase("none")) {
-            achievementManager.setActiveTitle(playerRef.getUuid(), null);
-            player.sendMessage(Message.raw("[Title] Title cleared.")
-                .color(SystemMessageUtils.SUCCESS));
-            return;
-        }
-
-        // Set title
-        String title = String.join(" ", java.util.Arrays.copyOfRange(args, 1, args.length));
-        if (achievementManager.setActiveTitle(playerRef.getUuid(), title)) {
-            player.sendMessage(Message.raw("[Title] Title set to: " + title)
-                .color(SystemMessageUtils.SUCCESS));
-        } else {
-            player.sendMessage(Message.raw("[Title] You haven't unlocked that title.")
-                .color(SystemMessageUtils.SECONDARY));
         }
     }
 
