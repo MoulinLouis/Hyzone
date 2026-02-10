@@ -9,6 +9,7 @@ import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.common.ui.ButtonEventData;
@@ -21,6 +22,7 @@ import io.hyvexa.duel.data.DuelPreferenceStore;
 import io.hyvexa.duel.data.DuelPreferenceStore.DuelCategory;
 import io.hyvexa.parkour.data.ProgressStore;
 import io.hyvexa.parkour.tracker.RunTracker;
+import io.hyvexa.parkour.util.PlayerSettingsStore;
 import io.hyvexa.parkour.ui.BaseParkourPage;
 
 import javax.annotation.Nonnull;
@@ -243,7 +245,7 @@ public class DuelMenuPage extends BaseParkourPage {
         if (playerRef == null) {
             return;
         }
-        boolean hidden = io.hyvexa.parkour.util.PlayerSettingsStore.isDuelOpponentHidden(playerRef.getUuid());
+        boolean hidden = PlayerSettingsStore.isDuelOpponentHidden(playerRef.getUuid());
         commandBuilder.set("#OpponentButton.Text", hidden ? "Show Opponent" : "Hide Opponent");
         commandBuilder.set("#OpponentStatus.Text", hidden ? "Opponent hidden." : "Opponent visible.");
     }
@@ -273,7 +275,7 @@ public class DuelMenuPage extends BaseParkourPage {
         if (playerRef == null) {
             return;
         }
-        boolean hidden = io.hyvexa.parkour.util.PlayerSettingsStore.toggleDuelOpponentHidden(playerRef.getUuid());
+        boolean hidden = PlayerSettingsStore.toggleDuelOpponentHidden(playerRef.getUuid());
         HyvexaPlugin plugin = HyvexaPlugin.getInstance();
         if (plugin != null && plugin.getDuelTracker() != null) {
             plugin.getDuelTracker().refreshOpponentVisibility(playerRef.getUuid());
@@ -374,7 +376,7 @@ public class DuelMenuPage extends BaseParkourPage {
     }
 
     private String resolveName(UUID playerId) {
-        var ref = com.hypixel.hytale.server.core.universe.Universe.get().getPlayer(playerId);
+        var ref = Universe.get().getPlayer(playerId);
         return ref != null ? ref.getUsername() : playerId.toString();
     }
 }

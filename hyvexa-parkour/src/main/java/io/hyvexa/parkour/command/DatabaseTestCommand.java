@@ -66,12 +66,12 @@ public class DatabaseTestCommand extends AbstractAsyncCommand {
         // Run the test
         DatabaseManager.TestResult result = db.testConnection();
 
-        if (result.success) {
-            commandContext.sendMessage(Message.raw(result.message).color("#44ff44"));
+        if (result.success()) {
+            commandContext.sendMessage(Message.raw(result.message()).color("#44ff44"));
         } else {
-            commandContext.sendMessage(Message.raw(result.message).color("#ff4444"));
-            if (result.cause != null) {
-                result.cause.printStackTrace();
+            commandContext.sendMessage(Message.raw(result.message()).color("#ff4444"));
+            if (result.cause() != null) {
+                result.cause().printStackTrace();
             }
         }
 

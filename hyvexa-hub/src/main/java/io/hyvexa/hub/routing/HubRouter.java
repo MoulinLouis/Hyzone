@@ -23,6 +23,7 @@ import java.util.logging.Level;
 public class HubRouter {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
+    private static final Vector3d DEFAULT_SPAWN = new Vector3d(0, 64, 0);
 
     public void openMenuOrRoute(Ref<EntityStore> ref, Store<EntityStore> store,
                                 PlayerRef playerRef, World world) {
@@ -77,7 +78,7 @@ public class HubRouter {
 
     private Teleport createTeleport(World targetWorld, UUID playerId) {
         Transform spawn = resolveSpawnTransform(targetWorld, playerId);
-        Vector3d position = spawn != null ? spawn.getPosition() : new Vector3d(0, 64, 0);
+        Vector3d position = spawn != null ? spawn.getPosition() : DEFAULT_SPAWN;
         Vector3f rotation = spawn != null ? spawn.getRotation() : new Vector3f(0f, 0f, 0f);
         return new Teleport(targetWorld, position, rotation);
     }

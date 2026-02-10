@@ -386,7 +386,7 @@ public class ProgressStore {
     }
 
     public java.util.Map<UUID, Integer> getMapCompletionCounts() {
-        java.util.Map<UUID, Integer> counts = new ConcurrentHashMap<>();
+        java.util.Map<UUID, Integer> counts = new HashMap<>();
         for (java.util.Map.Entry<UUID, PlayerProgress> entry : progress.entrySet()) {
             counts.put(entry.getKey(), entry.getValue().completedMaps.size());
         }

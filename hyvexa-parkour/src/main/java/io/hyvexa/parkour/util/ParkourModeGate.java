@@ -8,12 +8,11 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.core.state.ModeMessages;
+import io.hyvexa.HyvexaPlugin;
 
 import java.util.UUID;
 
 public final class ParkourModeGate {
-
-    private static final String PARKOUR_WORLD_NAME = "Parkour";
 
     private ParkourModeGate() {
     }
@@ -22,7 +21,7 @@ public final class ParkourModeGate {
         if (world == null || world.getName() == null) {
             return false;
         }
-        return PARKOUR_WORLD_NAME.equalsIgnoreCase(world.getName());
+        return HyvexaPlugin.PARKOUR_WORLD_NAME.equalsIgnoreCase(world.getName());
     }
 
     public static boolean denyIfNotParkour(CommandContext context, World world) {

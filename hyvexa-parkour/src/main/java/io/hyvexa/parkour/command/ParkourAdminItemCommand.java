@@ -12,6 +12,7 @@ import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.parkour.ParkourConstants;
 import io.hyvexa.parkour.util.ParkourModeGate;
 
 import javax.annotation.Nonnull;
@@ -20,8 +21,6 @@ import java.util.concurrent.CompletableFuture;
 import static com.hypixel.hytale.server.core.command.commands.player.inventory.InventorySeeCommand.MESSAGE_COMMANDS_ERRORS_PLAYER_NOT_IN_WORLD;
 
 public class ParkourAdminItemCommand extends AbstractAsyncCommand {
-
-    private static final String ITEM_REMOTE_CONTROL = "Recipe_Book_Magic_Air";
 
     public ParkourAdminItemCommand() {
         super("pkadminitem", "Give the admin player settings item.");
@@ -66,7 +65,7 @@ public class ParkourAdminItemCommand extends AbstractAsyncCommand {
             ctx.sendMessage(Message.raw("Hotbar not available."));
             return;
         }
-        hotbar.setItemStackForSlot((short) 0, new ItemStack(ITEM_REMOTE_CONTROL, 1));
+        hotbar.setItemStackForSlot((short) 0, new ItemStack(ParkourConstants.ITEM_ADMIN_REMOTE, 1));
         player.sendMessage(Message.raw("Admin remote control added to your hotbar."));
     }
 }

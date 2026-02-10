@@ -21,26 +21,14 @@ import java.util.logging.Level;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
-/**
- * Manages ghost recording persistence and caching for parkour maps.
- * Stores recordings as GZIP-compressed binary BLOBs in MySQL.
- */
 public class GhostStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
 
-    /**
-     * Maximum number of samples allowed in a ghost recording.
-     * At 50ms per sample, 12000 samples = 10 minutes max recording.
-     * This prevents DoS via excessively large recordings.
-     */
     public static final int MAX_SAMPLES = 12000;
 
     private final Map<String, GhostRecording> cache = new ConcurrentHashMap<>();
 
-    /**
-     * Load all ghost recordings from the database on startup.
-     */
     public void syncLoad() {
         if (!DatabaseManager.getInstance().isInitialized()) {
             LOGGER.atWarning().log("Database not initialized, GhostStore will be empty");
@@ -81,10 +69,6 @@ public class GhostStore {
         }
     }
 
-    /**
-     * Save a ghost recording to the database and cache.
-     * Rejects recordings that exceed MAX_SAMPLES to prevent DoS.
-     */
     public void saveRecording(UUID playerId, String mapId, GhostRecording recording) {
         // Validate sample count to prevent DoS via oversized recordings
         if (recording.getSamples().size() > MAX_SAMPLES) {
@@ -121,17 +105,11 @@ public class GhostStore {
         }
     }
 
-    /**
-     * Retrieve a ghost recording from cache.
-     */
     public GhostRecording getRecording(UUID playerId, String mapId) {
         String key = makeKey(playerId, mapId);
         return cache.get(key);
     }
 
-    /**
-     * Delete a ghost recording from cache and database.
-     */
     public void deleteRecording(UUID playerId, String mapId) {
         String key = makeKey(playerId, mapId);
         cache.remove(key);
@@ -149,9 +127,6 @@ public class GhostStore {
         }
     }
 
-    /**
-     * Serialize a ghost recording to GZIP-compressed binary format.
-     */
     private byte[] serialize(GhostRecording recording) throws Exception {
         ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
         try (GZIPOutputStream gzipOut = new GZIPOutputStream(byteOut);
@@ -171,9 +146,6 @@ public class GhostStore {
         return byteOut.toByteArray();
     }
 
-    /**
-     * Deserialize a ghost recording from GZIP-compressed binary format.
-     */
     private GhostRecording deserialize(byte[] blob, long completionTimeMs) throws Exception {
         ByteArrayInputStream byteIn = new ByteArrayInputStream(blob);
         try (GZIPInputStream gzipIn = new GZIPInputStream(byteIn);
@@ -195,9 +167,6 @@ public class GhostStore {
         }
     }
 
-    /**
-     * Ensure the ghost recordings table exists in the database.
-     */
     private void ensureGhostTableExists() {
         String sql = """
             CREATE TABLE IF NOT EXISTS parkour_ghost_recordings (

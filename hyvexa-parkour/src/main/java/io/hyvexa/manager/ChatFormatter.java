@@ -9,9 +9,6 @@ import io.hyvexa.parkour.data.ProgressStore;
 
 import java.util.UUID;
 
-/**
- * Formats player chat messages with rank badges and special perks.
- */
 public class ChatFormatter {
 
     private final ProgressStore progressStore;
@@ -24,13 +21,6 @@ public class ChatFormatter {
         this.perksManager = perksManager;
     }
 
-    /**
-     * Formats a chat message with the sender's rank badge and any special perks.
-     *
-     * @param sender  the player sending the message
-     * @param content the message content
-     * @return the formatted Message
-     */
     public Message formatChatMessage(PlayerRef sender, String content) {
         if (sender == null) {
             return Message.raw(content != null ? content : "");

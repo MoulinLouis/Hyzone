@@ -260,21 +260,9 @@ public class DatabaseManager {
         }
     }
 
-    public static class TestResult {
-        public final boolean success;
-        public final String message;
-        public final Throwable cause;
-
+    public record TestResult(boolean success, String message, Throwable cause) {
         public TestResult(boolean success, String message) {
-            this.success = success;
-            this.message = message;
-            this.cause = null;
-        }
-
-        public TestResult(boolean success, String message, Throwable cause) {
-            this.success = success;
-            this.message = message;
-            this.cause = cause;
+            this(success, message, null);
         }
     }
 }

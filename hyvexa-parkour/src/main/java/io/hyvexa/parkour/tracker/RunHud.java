@@ -114,7 +114,7 @@ public class RunHud extends CustomUIHud {
         String line2 = "";
         String line3 = "";
         if (lines != null) {
-            if (lines.size() > 0) {
+            if (!lines.isEmpty()) {
                 line1 = lines.get(0);
             }
             if (lines.size() > 1) {

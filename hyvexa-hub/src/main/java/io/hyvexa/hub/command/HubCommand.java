@@ -25,7 +25,7 @@ public class HubCommand extends AbstractPlayerCommand {
     @Override
     protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref,
                            @Nonnull PlayerRef playerRef, @Nonnull World world) {
-        if (plugin == null || plugin.getRouter() == null) {
+        if (plugin.getRouter() == null) {
             return;
         }
         plugin.getRouter().openMenuOrRoute(ref, store, playerRef, world);

@@ -11,10 +11,6 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
 import java.util.concurrent.CompletableFuture;
 
-/**
- * Manages world map generation settings for players.
- * Disables world map on parkour servers to save memory.
- */
 public class WorldMapManager {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
@@ -24,9 +20,6 @@ public class WorldMapManager {
         this.disableWorldMap = disableWorldMap;
     }
 
-    /**
-     * Disable world map generation for a player if configured.
-     */
     public void disableWorldMapForPlayer(Ref<EntityStore> ref) {
         if (!disableWorldMap) {
             return;

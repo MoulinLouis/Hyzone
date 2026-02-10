@@ -7,10 +7,6 @@ import io.hyvexa.parkour.data.ProgressStore;
 
 import java.util.UUID;
 
-/**
- * Manages teleport item usage hints for new players.
- * Shows persistent hints for first 5 teleport uses and corridor navigation hints.
- */
 public class TeleportHintManager {
 
     private static final int MAX_HINT_COUNT = 5;
@@ -20,11 +16,6 @@ public class TeleportHintManager {
         this.progressStore = progressStore;
     }
 
-    /**
-     * Records a teleport item use and shows hint if appropriate.
-     *
-     * @param playerRef the player reference
-     */
     public void onTeleportItemUse(PlayerRef playerRef) {
         if (playerRef == null || progressStore == null) {
             return;
@@ -43,11 +34,6 @@ public class TeleportHintManager {
         }
     }
 
-    /**
-     * Shows a corridor walking hint to guide players to use the map selector.
-     *
-     * @param playerRef the player reference
-     */
     public void showCorridorWalkingHint(PlayerRef playerRef) {
         if (playerRef == null) {
             return;

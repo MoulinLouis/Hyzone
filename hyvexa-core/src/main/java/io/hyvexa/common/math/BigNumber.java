@@ -21,9 +21,7 @@ public final class BigNumber implements Comparable<BigNumber> {
         this.exponent = exponent;
     }
 
-    // ========================================
     // Factories
-    // ========================================
 
     /**
      * Create a BigNumber from mantissa and exponent, normalizing automatically.
@@ -70,9 +68,7 @@ public final class BigNumber implements Comparable<BigNumber> {
         return normalize(m, exp);
     }
 
-    // ========================================
     // Normalization
-    // ========================================
 
     private static BigNumber normalize(double mantissa, int exponent) {
         if (mantissa == 0.0 || Double.isNaN(mantissa)) {
@@ -96,9 +92,7 @@ public final class BigNumber implements Comparable<BigNumber> {
         return new BigNumber(abs, exponent);
     }
 
-    // ========================================
     // Arithmetic
-    // ========================================
 
     public BigNumber add(BigNumber other) {
         if (this.isZero()) return other;
@@ -188,9 +182,7 @@ public final class BigNumber implements Comparable<BigNumber> {
         return this.compareTo(other) <= 0 ? this : other;
     }
 
-    // ========================================
     // Comparison
-    // ========================================
 
     @Override
     public int compareTo(BigNumber other) {
@@ -238,9 +230,7 @@ public final class BigNumber implements Comparable<BigNumber> {
         return mantissa < 0;
     }
 
-    // ========================================
     // Conversion
-    // ========================================
 
     /**
      * Convert to double. For values beyond double range, returns
@@ -266,9 +256,7 @@ public final class BigNumber implements Comparable<BigNumber> {
         return (long) value;
     }
 
-    // ========================================
     // Accessors
-    // ========================================
 
     public double getMantissa() {
         return mantissa;
@@ -278,9 +266,7 @@ public final class BigNumber implements Comparable<BigNumber> {
         return exponent;
     }
 
-    // ========================================
     // Object overrides
-    // ========================================
 
     @Override
     public boolean equals(Object obj) {

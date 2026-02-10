@@ -28,14 +28,10 @@ public final class EntityVisibilityManager {
     }
 
     public void showEntity(@Nonnull UUID viewerId, @Nonnull UUID targetId) {
-        Set<UUID> hidden = hiddenByViewer.get(viewerId);
-        if (hidden == null) {
-            return;
-        }
-        hidden.remove(targetId);
-        if (hidden.isEmpty()) {
-            hiddenByViewer.remove(viewerId, hidden);
-        }
+        hiddenByViewer.computeIfPresent(viewerId, (ignored, hidden) -> {
+            hidden.remove(targetId);
+            return hidden.isEmpty() ? null : hidden;
+        });
     }
 
     @Nonnull
@@ -63,10 +59,6 @@ public final class EntityVisibilityManager {
                 continue;
             }
             Set<UUID> hidden = entry.getValue();
-            if (hidden == null) {
-                hiddenByViewer.remove(viewerId);
-                continue;
-            }
             hidden.removeIf(id -> !onlinePlayers.contains(id));
             if (hidden.isEmpty()) {
                 hiddenByViewer.remove(viewerId, hidden);

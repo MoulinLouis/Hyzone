@@ -6,49 +6,20 @@ import java.sql.SQLException;
 import java.util.concurrent.Callable;
 import java.util.logging.Level;
 
-/**
- * Utility for retrying database operations with exponential backoff.
- */
 public final class DatabaseRetry {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-
-    /** Default number of retry attempts */
     public static final int DEFAULT_MAX_RETRIES = 3;
-
-    /** Default initial delay between retries in milliseconds */
     public static final long DEFAULT_INITIAL_DELAY_MS = 100L;
-
-    /** Maximum delay between retries in milliseconds */
     public static final long MAX_DELAY_MS = 5000L;
 
     private DatabaseRetry() {
     }
 
-    /**
-     * Execute a database operation with retry logic.
-     *
-     * @param operation The operation to execute
-     * @param operationName Human-readable name for logging
-     * @param <T> Return type
-     * @return The result of the operation
-     * @throws SQLException if all retries fail
-     */
     public static <T> T executeWithRetry(Callable<T> operation, String operationName) throws SQLException {
         return executeWithRetry(operation, operationName, DEFAULT_MAX_RETRIES, DEFAULT_INITIAL_DELAY_MS);
     }
 
-    /**
-     * Execute a database operation with retry logic.
-     *
-     * @param operation The operation to execute
-     * @param operationName Human-readable name for logging
-     * @param maxRetries Maximum number of retry attempts
-     * @param initialDelayMs Initial delay between retries
-     * @param <T> Return type
-     * @return The result of the operation
-     * @throws SQLException if all retries fail
-     */
     public static <T> T executeWithRetry(Callable<T> operation, String operationName,
                                           int maxRetries, long initialDelayMs) throws SQLException {
         SQLException lastException = null;
@@ -79,13 +50,6 @@ public final class DatabaseRetry {
         throw lastException;
     }
 
-    /**
-     * Execute a void database operation with retry logic.
-     *
-     * @param operation The operation to execute
-     * @param operationName Human-readable name for logging
-     * @throws SQLException if all retries fail
-     */
     public static void executeWithRetryVoid(VoidCallable operation, String operationName) throws SQLException {
         executeWithRetry(() -> {
             operation.call();
@@ -93,9 +57,6 @@ public final class DatabaseRetry {
         }, operationName);
     }
 
-    /**
-     * Functional interface for void operations that can throw SQLException.
-     */
     @FunctionalInterface
     public interface VoidCallable {
         void call() throws SQLException;
