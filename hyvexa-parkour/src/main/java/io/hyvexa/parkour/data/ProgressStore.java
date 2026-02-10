@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -26,6 +27,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 
 /** MySQL-backed storage for player progress, completions, and leaderboard caches. */
@@ -38,7 +40,7 @@ public class ProgressStore {
     private final java.util.Map<UUID, PlayerProgress> progress = new ConcurrentHashMap<>();
     private final java.util.Map<UUID, String> lastKnownNames = new ConcurrentHashMap<>();
     private final java.util.Map<String, LeaderboardCache> leaderboardCache = new ConcurrentHashMap<>();
-    private final Set<UUID> dirtyPlayers = ConcurrentHashMap.newKeySet();
+    private final java.util.Map<UUID, Long> dirtyPlayerVersions = new ConcurrentHashMap<>();
     private final AtomicBoolean saveQueued = new AtomicBoolean(false);
     private final AtomicReference<ScheduledFuture<?>> saveFuture = new AtomicReference<>();
     private final ReadWriteLock fileLock = new ReentrantReadWriteLock();
@@ -58,7 +60,7 @@ public class ProgressStore {
             progress.clear();
             lastKnownNames.clear();
             leaderboardCache.clear();
-            dirtyPlayers.clear();
+            dirtyPlayerVersions.clear();
 
             loadPlayers();
             loadCompletions();
@@ -175,7 +177,7 @@ public class ProgressStore {
             PlayerProgress playerProgress = progress.computeIfAbsent(playerId, ignored -> new PlayerProgress());
             storePlayerName(playerId, playerName);
             playerProgress.welcomeShown = true;
-            dirtyPlayers.add(playerId);
+            markDirty(playerId);
         } finally {
             fileLock.writeLock().unlock();
         }
@@ -204,7 +206,7 @@ public class ProgressStore {
             PlayerProgress playerProgress = progress.computeIfAbsent(playerId, ignored -> new PlayerProgress());
             storePlayerName(playerId, playerName);
             playerProgress.teleportItemUseCount++;
-            dirtyPlayers.add(playerId);
+            markDirty(playerId);
         } finally {
             fileLock.writeLock().unlock();
         }
@@ -226,7 +228,7 @@ public class ProgressStore {
             if (playerProgress.vip != vip || playerProgress.founder != founder) {
                 playerProgress.vip = vip;
                 playerProgress.founder = founder;
-                dirtyPlayers.add(playerId);
+                markDirty(playerId);
                 changed = true;
             }
         } finally {
@@ -282,10 +284,16 @@ public class ProgressStore {
 
     public ProgressionResult recordMapCompletion(UUID playerId, String playerName, String mapId, long timeMs,
                                                  MapStore mapStore, List<Long> checkpointTimes) {
+        return recordMapCompletion(playerId, playerName, mapId, timeMs, mapStore, checkpointTimes, null);
+    }
+
+    public ProgressionResult recordMapCompletion(UUID playerId, String playerName, String mapId, long timeMs,
+                                                 MapStore mapStore, List<Long> checkpointTimes,
+                                                 Consumer<Boolean> completionSavedCallback) {
         fileLock.writeLock().lock();
         ProgressionResult result;
         boolean newBest = false;
-        boolean completionSaved = false;
+        CompletionPersistenceRequest completionPersistenceRequest = null;
         try {
             PlayerProgress playerProgress = progress.computeIfAbsent(playerId, ignored -> new PlayerProgress());
             storePlayerName(playerId, playerName);
@@ -297,7 +305,6 @@ public class ProgressStore {
                 playerProgress.bestMapTimes.put(mapId, timeMs);
                 if (checkpointTimes != null && !checkpointTimes.isEmpty()) {
                     playerProgress.checkpointTimes.put(mapId, new ArrayList<>(checkpointTimes));
-                    saveCheckpointTimes(playerId, mapId, checkpointTimes);
                 }
             }
             long oldXp = playerProgress.xp;
@@ -306,9 +313,12 @@ public class ProgressStore {
             playerProgress.xp = Math.max(0L, recalculatedXp);
             playerProgress.level = calculateLevel(playerProgress.xp);
 
-            dirtyPlayers.add(playerId);
-            // Save completion immediately
-            completionSaved = saveCompletion(playerId, mapId, timeMs);
+            markDirty(playerId);
+            List<Long> checkpointSnapshot = newBest && checkpointTimes != null && !checkpointTimes.isEmpty()
+                    ? List.copyOf(checkpointTimes)
+                    : List.of();
+            completionPersistenceRequest = new CompletionPersistenceRequest(playerId, mapId, timeMs, checkpointSnapshot);
+            boolean completionSaved = DatabaseManager.getInstance().isInitialized();
 
             result = new ProgressionResult(firstCompletionForMap, newBest, personalBest, 0L,
                     oldLevel, playerProgress.level, completionSaved);
@@ -319,7 +329,42 @@ public class ProgressStore {
             invalidateLeaderboardCache(mapId);
         }
         queueSave();
+        persistCompletionAsync(completionPersistenceRequest, completionSavedCallback);
         return result;
+    }
+
+    private void persistCompletionAsync(CompletionPersistenceRequest request, Consumer<Boolean> completionSavedCallback) {
+        CompletableFuture.supplyAsync(() -> persistCompletion(request), HytaleServer.SCHEDULED_EXECUTOR)
+                .whenComplete((saved, throwable) -> {
+                    if (throwable != null) {
+                        LOGGER.at(Level.SEVERE).withCause(throwable)
+                                .log("Unexpected error while saving completion asynchronously");
+                        notifyCompletionSaveResult(completionSavedCallback, false);
+                        return;
+                    }
+                    notifyCompletionSaveResult(completionSavedCallback, Boolean.TRUE.equals(saved));
+                });
+    }
+
+    private boolean persistCompletion(CompletionPersistenceRequest request) {
+        if (request == null || !DatabaseManager.getInstance().isInitialized()) {
+            return false;
+        }
+        if (!request.checkpointTimes.isEmpty()) {
+            saveCheckpointTimes(request.playerId, request.mapId, request.checkpointTimes);
+        }
+        return saveCompletion(request.playerId, request.mapId, request.timeMs);
+    }
+
+    private void notifyCompletionSaveResult(Consumer<Boolean> completionSavedCallback, boolean completionSaved) {
+        if (completionSavedCallback == null) {
+            return;
+        }
+        try {
+            completionSavedCallback.accept(completionSaved);
+        } catch (Exception e) {
+            LOGGER.at(Level.WARNING).withCause(e).log("Completion save callback failed");
+        }
     }
 
     private boolean saveCompletion(UUID playerId, String mapId, long timeMs) {
@@ -527,7 +572,7 @@ public class ProgressStore {
         try {
             removed = progress.remove(playerId) != null;
             lastKnownNames.remove(playerId);
-            dirtyPlayers.remove(playerId);
+            dirtyPlayerVersions.remove(playerId);
         } finally {
             fileLock.writeLock().unlock();
         }
@@ -585,7 +630,7 @@ public class ProgressStore {
                     totalXpRemoved += Math.max(0L, oldXp - newXp);
                     playerProgress.xp = Math.max(0L, newXp);
                     playerProgress.level = calculateLevel(playerProgress.xp);
-                    dirtyPlayers.add(entry.getKey());
+                    markDirty(entry.getKey());
                 }
             }
         } finally {
@@ -626,7 +671,7 @@ public class ProgressStore {
                 long newXp = mapStore != null ? calculateCompletionXp(playerProgress, mapStore) : playerProgress.xp;
                 playerProgress.xp = Math.max(0L, newXp);
                 playerProgress.level = calculateLevel(playerProgress.xp);
-                dirtyPlayers.add(playerId);
+                markDirty(playerId);
             }
         } finally {
             fileLock.writeLock().unlock();
@@ -695,7 +740,7 @@ public class ProgressStore {
             PlayerProgress playerProgress = progress.computeIfAbsent(playerId, ignored -> new PlayerProgress());
             storePlayerName(playerId, playerName);
             playerProgress.playtimeMs = Math.max(0L, playerProgress.playtimeMs + deltaMs);
-            dirtyPlayers.add(playerId);
+            markDirty(playerId);
         } finally {
             fileLock.writeLock().unlock();
         }
@@ -720,7 +765,7 @@ public class ProgressStore {
             PlayerProgress playerProgress = progress.computeIfAbsent(playerId, ignored -> new PlayerProgress());
             storePlayerName(playerId, playerName);
             playerProgress.jumpCount = Math.max(0L, playerProgress.jumpCount + count);
-            dirtyPlayers.add(playerId);
+            markDirty(playerId);
         } finally {
             fileLock.writeLock().unlock();
         }
@@ -811,6 +856,13 @@ public class ProgressStore {
         lastKnownNames.put(playerId, trimmedName);
     }
 
+    private void markDirty(UUID playerId) {
+        if (playerId == null) {
+            return;
+        }
+        dirtyPlayerVersions.compute(playerId, (ignored, version) -> version == null ? 1L : version + 1L);
+    }
+
     public void flushPendingSave() {
         ScheduledFuture<?> pending = saveFuture.getAndSet(null);
         if (pending != null) {
@@ -821,25 +873,32 @@ public class ProgressStore {
     }
 
     private void queueSave() {
+        queueSave(SAVE_DEBOUNCE_MS);
+    }
+
+    private void queueSave(long delayMs) {
         if (!saveQueued.compareAndSet(false, true)) return;
         ScheduledFuture<?> future = HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
             try {
                 syncSave();
             } finally {
-                saveQueued.set(false);
                 saveFuture.set(null);
+                saveQueued.set(false);
+                if (!dirtyPlayerVersions.isEmpty()) {
+                    long followUpDelay = DatabaseManager.getInstance().isInitialized() ? 0L : SAVE_DEBOUNCE_MS;
+                    queueSave(followUpDelay);
+                }
             }
-        }, SAVE_DEBOUNCE_MS, TimeUnit.MILLISECONDS);
+        }, Math.max(0L, delayMs), TimeUnit.MILLISECONDS);
         saveFuture.set(future);
     }
 
     private void syncSave() {
-        if (!DatabaseManager.getInstance().isInitialized()) return;
-
-        Set<UUID> toSave = Set.copyOf(dirtyPlayers);
-        dirtyPlayers.clear();
-
+        java.util.Map<UUID, Long> toSave = java.util.Map.copyOf(dirtyPlayerVersions);
         if (toSave.isEmpty()) return;
+        if (!DatabaseManager.getInstance().isInitialized()) return;
+        java.util.Map<UUID, Long> skippedIds = new HashMap<>();
+        List<UUID> batchedIds = new ArrayList<>();
 
         String sql = """
             INSERT INTO players (uuid, name, xp, level, welcome_shown, playtime_ms, vip, founder, teleport_item_use_count, jump_count)
@@ -855,9 +914,13 @@ public class ProgressStore {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
 
-            for (UUID playerId : toSave) {
+            for (java.util.Map.Entry<UUID, Long> dirtyEntry : toSave.entrySet()) {
+                UUID playerId = dirtyEntry.getKey();
                 PlayerProgress playerProgress = progress.get(playerId);
-                if (playerProgress == null) continue;
+                if (playerProgress == null) {
+                    skippedIds.put(playerId, dirtyEntry.getValue());
+                    continue;
+                }
 
                 stmt.setString(1, playerId.toString());
                 stmt.setString(2, lastKnownNames.get(playerId));
@@ -870,13 +933,32 @@ public class ProgressStore {
                 stmt.setInt(9, playerProgress.teleportItemUseCount);
                 stmt.setLong(10, playerProgress.jumpCount);
                 stmt.addBatch();
+                batchedIds.add(playerId);
+            }
+            if (batchedIds.isEmpty()) {
+                clearSavedVersions(skippedIds);
+                return;
             }
             stmt.executeBatch();
+            clearSavedVersions(toSave);
 
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Failed to save players to database: " + e.getMessage());
-            // Re-add to dirty set for retry
-            dirtyPlayers.addAll(toSave);
+            // Keep failed writes dirty for retry, but clear stale IDs with no in-memory state.
+            clearSavedVersions(skippedIds);
+        }
+    }
+
+    private void clearSavedVersions(java.util.Map<UUID, Long> snapshot) {
+        for (java.util.Map.Entry<UUID, Long> entry : snapshot.entrySet()) {
+            UUID playerId = entry.getKey();
+            Long savedVersion = entry.getValue();
+            dirtyPlayerVersions.compute(playerId, (ignored, currentVersion) -> {
+                if (currentVersion == null) {
+                    return null;
+                }
+                return currentVersion.equals(savedVersion) ? null : currentVersion;
+            });
         }
     }
 
@@ -941,6 +1023,20 @@ public class ProgressStore {
             this.entries = entries;
             this.positions = positions;
             this.worldRecordMs = worldRecordMs;
+        }
+    }
+
+    private static final class CompletionPersistenceRequest {
+        private final UUID playerId;
+        private final String mapId;
+        private final long timeMs;
+        private final List<Long> checkpointTimes;
+
+        private CompletionPersistenceRequest(UUID playerId, String mapId, long timeMs, List<Long> checkpointTimes) {
+            this.playerId = playerId;
+            this.mapId = mapId;
+            this.timeMs = timeMs;
+            this.checkpointTimes = checkpointTimes != null ? checkpointTimes : List.of();
         }
     }
 
