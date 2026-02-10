@@ -13,6 +13,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.hud.HudPreviewHud;
+import io.hyvexa.common.util.PermissionUtils;
 
 import javax.annotation.Nonnull;
 import java.util.concurrent.CompletableFuture;
@@ -35,6 +36,10 @@ public class HudPreviewCommand extends AbstractAsyncCommand {
         CommandSender sender = ctx.sender();
         if (!(sender instanceof Player player)) {
             ctx.sendMessage(Message.raw("Players only."));
+            return CompletableFuture.completedFuture(null);
+        }
+        if (!PermissionUtils.isOp(player)) {
+            ctx.sendMessage(Message.raw("You must be OP to use this command."));
             return CompletableFuture.completedFuture(null);
         }
 

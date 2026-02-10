@@ -14,6 +14,9 @@
 - **Ascend: Leaderboard system** - New `/ascend leaderboard` command with tabbed rankings for Vexa, Ascensions, and Manual Runs. Includes pagination (50 per page) and player search. Accessible via the Bolt of Stormsilk item.
 
 ### Fixed
+- **Ascend: Added async backpressure guards for tick and page refresh loops** - Per-world tick jobs and auto-refresh UI updates now coalesce overlapping work instead of queueing unbounded async tasks
+- **Ascend: Passive earnings leave tracking now uses true world-edge transitions** - Leave timestamps are only recorded on real Ascend -> non-Ascend transitions and Ascend-state disconnects
+- **Ascend: Test commands are now production-gated** - `/ctest` and `/hudpreview` register only when `ascend.enableTestCommands=true` and now require OP
 - **Parkour: Completion writes no longer block world ticks** - Map completion DB writes/retries now run asynchronously with post-save warning signaling for failures
 - **Parkour: Debounced progress saves no longer drop dirty updates** - Save cycles now snapshot dirty IDs, clear only successful writes, and immediately requeue when dirty state remains
 - **Ascend: Same-player dirty updates are preserved across save windows** - Dirty tracking now uses per-player versions so in-flight saves cannot erase newer updates

@@ -30,9 +30,9 @@ import io.hyvexa.common.util.SystemMessageUtils;
 import javax.annotation.Nonnull;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ElevationPage extends BaseAscendPage {
 
@@ -42,6 +42,8 @@ public class ElevationPage extends BaseAscendPage {
 
     private final AscendPlayerStore playerStore;
     private ScheduledFuture<?> refreshTask;
+    private final AtomicBoolean refreshInFlight = new AtomicBoolean(false);
+    private final AtomicBoolean refreshRequested = new AtomicBoolean(false);
 
     public ElevationPage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
@@ -186,11 +188,14 @@ public class ElevationPage extends BaseAscendPage {
                 stopAutoRefresh();
                 return;
             }
-            try {
-                CompletableFuture.runAsync(() -> refreshDisplay(ref, store), world);
-            } catch (Exception e) {
-                stopAutoRefresh();
-            }
+            PageRefreshScheduler.requestRefresh(
+                world,
+                refreshInFlight,
+                refreshRequested,
+                () -> refreshDisplay(ref, store),
+                this::stopAutoRefresh,
+                "ElevationPage"
+            );
         }, REFRESH_INTERVAL_MS, REFRESH_INTERVAL_MS, TimeUnit.MILLISECONDS);
     }
 
@@ -199,6 +204,7 @@ public class ElevationPage extends BaseAscendPage {
             refreshTask.cancel(false);
             refreshTask = null;
         }
+        refreshRequested.set(false);
     }
 
     private void refreshDisplay(Ref<EntityStore> ref, Store<EntityStore> store) {

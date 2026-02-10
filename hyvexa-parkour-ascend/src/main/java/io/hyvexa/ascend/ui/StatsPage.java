@@ -3,9 +3,9 @@ package io.hyvexa.ascend.ui;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.annotation.Nonnull;
 
@@ -41,6 +41,8 @@ public class StatsPage extends BaseAscendPage {
     private final AscendMapStore mapStore;
     private final GhostStore ghostStore;
     private ScheduledFuture<?> refreshTask;
+    private final AtomicBoolean refreshInFlight = new AtomicBoolean(false);
+    private final AtomicBoolean refreshRequested = new AtomicBoolean(false);
 
     public StatsPage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore,
                      AscendMapStore mapStore, GhostStore ghostStore) {
@@ -211,11 +213,14 @@ public class StatsPage extends BaseAscendPage {
                 stopAutoRefresh();
                 return;
             }
-            try {
-                CompletableFuture.runAsync(() -> refreshStats(ref, store), world);
-            } catch (Exception e) {
-                stopAutoRefresh();
-            }
+            PageRefreshScheduler.requestRefresh(
+                world,
+                refreshInFlight,
+                refreshRequested,
+                () -> refreshStats(ref, store),
+                this::stopAutoRefresh,
+                "StatsPage"
+            );
         }, 500L, 500L, TimeUnit.MILLISECONDS);
     }
 
@@ -224,6 +229,7 @@ public class StatsPage extends BaseAscendPage {
             refreshTask.cancel(false);
             refreshTask = null;
         }
+        refreshRequested.set(false);
     }
 
     private void refreshStats(Ref<EntityStore> ref, Store<EntityStore> store) {
