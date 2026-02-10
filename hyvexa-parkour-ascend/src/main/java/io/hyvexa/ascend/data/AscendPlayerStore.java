@@ -957,13 +957,6 @@ public class AscendPlayerStore {
     private List<String> resetMapProgress(AscendPlayerProgress progress, String firstMapId, boolean clearBestTimes, UUID playerId) {
         List<String> mapsWithRunners = new java.util.ArrayList<>();
 
-        // Check Persistence skill: keep 10% of map multipliers after reset
-        boolean hasPersistence = false;
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin != null && plugin.getAscensionManager() != null) {
-            hasPersistence = plugin.getAscensionManager().hasPersistence(playerId);
-        }
-
         progress.setVexa(BigNumber.ZERO);
         progress.setSummitAccumulatedVexa(BigNumber.ZERO);
         progress.setElevationAccumulatedVexa(BigNumber.ZERO);
@@ -973,17 +966,7 @@ public class AscendPlayerStore {
             AscendPlayerProgress.MapProgress mapProgress = entry.getValue();
 
             mapProgress.setUnlocked(mapId.equals(firstMapId));
-
-            // Persistence: keep 10% of multiplier (minimum 1.0)
-            if (hasPersistence) {
-                BigNumber retained = mapProgress.getMultiplier()
-                    .multiply(BigNumber.fromDouble(0.10))
-                    .max(BigNumber.ONE);
-                mapProgress.setMultiplier(retained);
-            } else {
-                mapProgress.setMultiplier(BigNumber.ONE);
-            }
-
+            mapProgress.setMultiplier(BigNumber.ONE);
             mapProgress.setCompletedManually(false);
 
             if (clearBestTimes) {
@@ -1036,19 +1019,7 @@ public class AscendPlayerStore {
             return List.of();
         }
 
-        // Summit Memory skill: keep 10% of elevation multiplier (minimum 1)
-        boolean hasSummitMemory = false;
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin != null && plugin.getAscensionManager() != null) {
-            hasSummitMemory = plugin.getAscensionManager().hasSummitMemory(playerId);
-        }
-
-        if (hasSummitMemory) {
-            int retained = Math.max(1, (int) (progress.getElevationMultiplier() * 0.10));
-            progress.setElevationMultiplier(retained);
-        } else {
-            progress.setElevationMultiplier(1);
-        }
+        progress.setElevationMultiplier(1);
 
         List<String> mapsWithRunners = resetMapProgress(progress, firstMapId, false, playerId);
         markDirty(playerId);

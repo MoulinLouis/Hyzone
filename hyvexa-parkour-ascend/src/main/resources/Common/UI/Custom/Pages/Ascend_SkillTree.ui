@@ -12,7 +12,7 @@ $C.@PageOverlay {
   SceneBlur {}
 
   Group #SkillTreeWindow {
-    Anchor: (Width: 700, Height: 900);
+    Anchor: (Width: 700, Height: 780);
     LayoutMode: Full;
     Background: #0d1620(0.95);
     OutlineColor: #ffffff(0.06);
@@ -91,27 +91,33 @@ $C.@PageOverlay {
           LayoutMode: Left;
 
           Label {
-            Anchor: (Width: 140, Top: 0, Bottom: 0);
+            Anchor: (Width: 30, Top: 0, Bottom: 0);
             Style: (FontSize: 13, TextColor: #9fb0ba, VerticalAlignment: Center);
-            Text: "Ascendancy Points:";
+            Text: "AP:";
           }
 
           Label #AvailablePoints {
-            Anchor: (Width: 30, Top: 0, Bottom: 0);
+            Anchor: (Width: 24, Top: 0, Bottom: 0);
             Style: (FontSize: 14, TextColor: #4ade80, RenderBold: true, VerticalAlignment: Center);
             Text: "0";
           }
 
           Label {
-            Anchor: (Width: 70, Top: 0, Bottom: 0);
-            Style: (FontSize: 13, TextColor: #6b7280, VerticalAlignment: Center);
-            Text: "available /";
+            Anchor: (Width: 20, Top: 0, Bottom: 0);
+            Style: (FontSize: 13, TextColor: #4b5563, VerticalAlignment: Center);
+            Text: "|";
           }
 
-          Label #TotalPoints {
+          Label {
+            Anchor: (Width: 95, Top: 0, Bottom: 0);
+            Style: (FontSize: 13, TextColor: #9fb0ba, VerticalAlignment: Center);
+            Text: "Ascendance:";
+          }
+
+          Label #AscendanceValue {
             Anchor: (Top: 0, Bottom: 0);
-            Style: (FontSize: 14, TextColor: #f59e0b, RenderBold: true, VerticalAlignment: Center);
-            Text: "0 total";
+            Style: (FontSize: 14, TextColor: #c084fc, RenderBold: true, VerticalAlignment: Center);
+            Text: "0";
           }
         }
       }
@@ -122,32 +128,27 @@ $C.@PageOverlay {
         FlexWeight: 1;
 
         Group #TreeContent {
-          Anchor: (Width: 660, Height: 780);
+          Anchor: (Width: 660, Height: 650);
 
-          // Connectors
+          // Connectors: T1->T2 straight
           Group #ConnT0T1 { Anchor: (Left: 328, Top: 130, Width: 4, Height: 20); Background: #4b5563; }
 
+          // T2->split to T3 left/right
           Group #ConnT1Split { Anchor: (Left: 328, Top: 260, Width: 4, Height: 8); Background: #4b5563; }
           Group #ConnT1H { Anchor: (Left: 160, Top: 268, Width: 340, Height: 4); Background: #4b5563; }
           Group #ConnT1Left { Anchor: (Left: 160, Top: 272, Width: 4, Height: 8); Background: #4b5563; }
           Group #ConnT1Right { Anchor: (Left: 500, Top: 272, Width: 4, Height: 8); Background: #4b5563; }
 
+          // T3 left/right merge to T4 center
           Group #ConnT2Left { Anchor: (Left: 160, Top: 390, Width: 4, Height: 8); Background: #4b5563; }
           Group #ConnT2Right { Anchor: (Left: 500, Top: 390, Width: 4, Height: 8); Background: #4b5563; }
           Group #ConnT2H { Anchor: (Left: 160, Top: 398, Width: 340, Height: 4); Background: #4b5563; }
           Group #ConnT2Merge { Anchor: (Left: 328, Top: 402, Width: 4, Height: 8); Background: #4b5563; }
 
-          Group #ConnT3Split { Anchor: (Left: 328, Top: 520, Width: 4, Height: 8); Background: #4b5563; }
-          Group #ConnT3H { Anchor: (Left: 160, Top: 528, Width: 340, Height: 4); Background: #4b5563; }
-          Group #ConnT3Left { Anchor: (Left: 160, Top: 532, Width: 4, Height: 8); Background: #4b5563; }
-          Group #ConnT3Right { Anchor: (Left: 500, Top: 532, Width: 4, Height: 8); Background: #4b5563; }
+          // T4->T5 straight
+          Group #ConnT3T4 { Anchor: (Left: 328, Top: 520, Width: 4, Height: 20); Background: #4b5563; }
 
-          Group #ConnT4Left { Anchor: (Left: 160, Top: 650, Width: 4, Height: 8); Background: #4b5563; }
-          Group #ConnT4Right { Anchor: (Left: 500, Top: 650, Width: 4, Height: 8); Background: #4b5563; }
-          Group #ConnT4H { Anchor: (Left: 160, Top: 658, Width: 340, Height: 4); Background: #4b5563; }
-          Group #ConnT4Merge { Anchor: (Left: 328, Top: 662, Width: 4, Height: 8); Background: #4b5563; }
-
-          // Tier 0: AUTO_RUNNERS
+          // Tier 1: AUTO_RUNNERS
           Button #NodeAutoRunners {
             Anchor: (Left: 250, Top: 20, Width: 160, Height: 110);
             Background: #1a2530;
@@ -173,7 +174,7 @@ $C.@PageOverlay {
             }
           }
 
-          // Tier 1: AUTO_EVOLUTION
+          // Tier 2: AUTO_EVOLUTION
           Button #NodeAutoEvolution {
             Anchor: (Left: 250, Top: 150, Width: 160, Height: 110);
             Background: #1a2530;
@@ -199,35 +200,9 @@ $C.@PageOverlay {
             }
           }
 
-          // Tier 2: PERSISTENCE
-          Button #NodePersistence {
-            Anchor: (Left: 80, Top: 280, Width: 160, Height: 110);
-            Background: #1a2530;
-            Style: @NodeStyle;
-            LayoutMode: Top;
-            Group #BorderPersistence { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Background: #4b5563; }
-            Group #RevealedPersistence {
-              Visible: false;
-              Anchor: (Left: 0, Right: 0);
-              FlexWeight: 1;
-              LayoutMode: Top;
-              Label { Anchor: (Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "3:1"; }
-              Label #NamePersistence { Anchor: (Top: 2); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Persistence"; }
-              Label #DescPersistence { Anchor: (Top: 4); Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center); Text: "Keep 10% multipliers"; }
-              Label #StatusPersistence { Anchor: (Top: 6); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
-            }
-            Group #LockedPersistence {
-              Anchor: (Left: 0, Right: 0);
-              FlexWeight: 1;
-              Label { Anchor: (Left: 0, Right: 0, Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "3:1"; }
-              Group { Anchor: (Left: 64, Top: 18, Width: 32, Height: 32); Background: @LockIcon; }
-              Label { Anchor: (Left: 0, Right: 0, Top: 56); Style: (FontSize: 12, RenderBold: true, TextColor: #4b5563, HorizontalAlignment: Center); Text: "LOCKED"; }
-            }
-          }
-
-          // Tier 2: RUNNER_SPEED
+          // Tier 3: RUNNER_SPEED (left)
           Button #NodeRunnerSpeed {
-            Anchor: (Left: 420, Top: 280, Width: 160, Height: 110);
+            Anchor: (Left: 80, Top: 280, Width: 160, Height: 110);
             Background: #1a2530;
             Style: @NodeStyle;
             LayoutMode: Top;
@@ -237,75 +212,23 @@ $C.@PageOverlay {
               Anchor: (Left: 0, Right: 0);
               FlexWeight: 1;
               LayoutMode: Top;
-              Label { Anchor: (Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "3:2"; }
+              Label { Anchor: (Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "3:1"; }
               Label #NameRunnerSpeed { Anchor: (Top: 2); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Runner Speed"; }
-              Label #DescRunnerSpeed { Anchor: (Top: 4); Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center); Text: "x1.5 global speed"; }
+              Label #DescRunnerSpeed { Anchor: (Top: 4); Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center); Text: "x1.1 global speed"; }
               Label #StatusRunnerSpeed { Anchor: (Top: 6); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
             }
             Group #LockedRunnerSpeed {
               Anchor: (Left: 0, Right: 0);
               FlexWeight: 1;
-              Label { Anchor: (Left: 0, Right: 0, Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "3:2"; }
+              Label { Anchor: (Left: 0, Right: 0, Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "3:1"; }
               Group { Anchor: (Left: 64, Top: 18, Width: 32, Height: 32); Background: @LockIcon; }
               Label { Anchor: (Left: 0, Right: 0, Top: 56); Style: (FontSize: 12, RenderBold: true, TextColor: #4b5563, HorizontalAlignment: Center); Text: "LOCKED"; }
             }
           }
 
-          // Tier 3: OFFLINE_BOOST
-          Button #NodeOfflineBoost {
-            Anchor: (Left: 250, Top: 410, Width: 160, Height: 110);
-            Background: #1a2530;
-            Style: @NodeStyle;
-            LayoutMode: Top;
-            Group #BorderOfflineBoost { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Background: #4b5563; }
-            Group #RevealedOfflineBoost {
-              Visible: false;
-              Anchor: (Left: 0, Right: 0);
-              FlexWeight: 1;
-              LayoutMode: Top;
-              Label { Anchor: (Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "4:1"; }
-              Label #NameOfflineBoost { Anchor: (Top: 2); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Offline Boost"; }
-              Label #DescOfflineBoost { Anchor: (Top: 4); Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center); Text: "25% to 40% offline rate"; }
-              Label #StatusOfflineBoost { Anchor: (Top: 6); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
-            }
-            Group #LockedOfflineBoost {
-              Anchor: (Left: 0, Right: 0);
-              FlexWeight: 1;
-              Label { Anchor: (Left: 0, Right: 0, Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "4:1"; }
-              Group { Anchor: (Left: 64, Top: 18, Width: 32, Height: 32); Background: @LockIcon; }
-              Label { Anchor: (Left: 0, Right: 0, Top: 56); Style: (FontSize: 12, RenderBold: true, TextColor: #4b5563, HorizontalAlignment: Center); Text: "LOCKED"; }
-            }
-          }
-
-          // Tier 4: SUMMIT_MEMORY
-          Button #NodeSummitMemory {
-            Anchor: (Left: 80, Top: 540, Width: 160, Height: 110);
-            Background: #1a2530;
-            Style: @NodeStyle;
-            LayoutMode: Top;
-            Group #BorderSummitMemory { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Background: #4b5563; }
-            Group #RevealedSummitMemory {
-              Visible: false;
-              Anchor: (Left: 0, Right: 0);
-              FlexWeight: 1;
-              LayoutMode: Top;
-              Label { Anchor: (Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "5:1"; }
-              Label #NameSummitMemory { Anchor: (Top: 2); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Summit Memory"; }
-              Label #DescSummitMemory { Anchor: (Top: 4); Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center); Text: "Keep 10% Elevation"; }
-              Label #StatusSummitMemory { Anchor: (Top: 6); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
-            }
-            Group #LockedSummitMemory {
-              Anchor: (Left: 0, Right: 0);
-              FlexWeight: 1;
-              Label { Anchor: (Left: 0, Right: 0, Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "5:1"; }
-              Group { Anchor: (Left: 64, Top: 18, Width: 32, Height: 32); Background: @LockIcon; }
-              Label { Anchor: (Left: 0, Right: 0, Top: 56); Style: (FontSize: 12, RenderBold: true, TextColor: #4b5563, HorizontalAlignment: Center); Text: "LOCKED"; }
-            }
-          }
-
-          // Tier 4: EVOLUTION_POWER
+          // Tier 3: EVOLUTION_POWER (right)
           Button #NodeEvolutionPower {
-            Anchor: (Left: 420, Top: 540, Width: 160, Height: 110);
+            Anchor: (Left: 420, Top: 280, Width: 160, Height: 110);
             Background: #1a2530;
             Style: @NodeStyle;
             LayoutMode: Top;
@@ -315,7 +238,7 @@ $C.@PageOverlay {
               Anchor: (Left: 0, Right: 0);
               FlexWeight: 1;
               LayoutMode: Top;
-              Label { Anchor: (Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "5:2"; }
+              Label { Anchor: (Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "3:2"; }
               Label #NameEvolutionPower { Anchor: (Top: 2); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Evolution Power+"; }
               Label #DescEvolutionPower { Anchor: (Top: 4); Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center); Text: "+1 base evo power"; }
               Label #StatusEvolutionPower { Anchor: (Top: 6); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
@@ -323,7 +246,33 @@ $C.@PageOverlay {
             Group #LockedEvolutionPower {
               Anchor: (Left: 0, Right: 0);
               FlexWeight: 1;
-              Label { Anchor: (Left: 0, Right: 0, Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "5:2"; }
+              Label { Anchor: (Left: 0, Right: 0, Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "3:2"; }
+              Group { Anchor: (Left: 64, Top: 18, Width: 32, Height: 32); Background: @LockIcon; }
+              Label { Anchor: (Left: 0, Right: 0, Top: 56); Style: (FontSize: 12, RenderBold: true, TextColor: #4b5563, HorizontalAlignment: Center); Text: "LOCKED"; }
+            }
+          }
+
+          // Tier 4: RUNNER_SPEED_2 (center)
+          Button #NodeRunnerSpeed2 {
+            Anchor: (Left: 250, Top: 410, Width: 160, Height: 110);
+            Background: #1a2530;
+            Style: @NodeStyle;
+            LayoutMode: Top;
+            Group #BorderRunnerSpeed2 { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Background: #4b5563; }
+            Group #RevealedRunnerSpeed2 {
+              Visible: false;
+              Anchor: (Left: 0, Right: 0);
+              FlexWeight: 1;
+              LayoutMode: Top;
+              Label { Anchor: (Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "4:1"; }
+              Label #NameRunnerSpeed2 { Anchor: (Top: 2); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Runner Speed II"; }
+              Label #DescRunnerSpeed2 { Anchor: (Top: 4); Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center); Text: "x1.2 global speed"; }
+              Label #StatusRunnerSpeed2 { Anchor: (Top: 6); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
+            }
+            Group #LockedRunnerSpeed2 {
+              Anchor: (Left: 0, Right: 0);
+              FlexWeight: 1;
+              Label { Anchor: (Left: 0, Right: 0, Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "4:1"; }
               Group { Anchor: (Left: 64, Top: 18, Width: 32, Height: 32); Background: @LockIcon; }
               Label { Anchor: (Left: 0, Right: 0, Top: 56); Style: (FontSize: 12, RenderBold: true, TextColor: #4b5563, HorizontalAlignment: Center); Text: "LOCKED"; }
             }
@@ -331,7 +280,7 @@ $C.@PageOverlay {
 
           // Tier 5: ASCENSION_CHALLENGES
           Button #NodeAscensionChallenges {
-            Anchor: (Left: 250, Top: 670, Width: 160, Height: 110);
+            Anchor: (Left: 250, Top: 540, Width: 160, Height: 110);
             Background: #1a2530;
             Style: @NodeStyle;
             LayoutMode: Top;
@@ -341,7 +290,7 @@ $C.@PageOverlay {
               Anchor: (Left: 0, Right: 0);
               FlexWeight: 1;
               LayoutMode: Top;
-              Label { Anchor: (Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "6:1"; }
+              Label { Anchor: (Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "5:1"; }
               Label #NameAscensionChallenges { Anchor: (Top: 2); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Challenges"; }
               Label #DescAscensionChallenges { Anchor: (Top: 4); Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center); Text: "Coming Soon"; }
               Label #StatusAscensionChallenges { Anchor: (Top: 6); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
@@ -349,7 +298,7 @@ $C.@PageOverlay {
             Group #LockedAscensionChallenges {
               Anchor: (Left: 0, Right: 0);
               FlexWeight: 1;
-              Label { Anchor: (Left: 0, Right: 0, Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "6:1"; }
+              Label { Anchor: (Left: 0, Right: 0, Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "5:1"; }
               Group { Anchor: (Left: 64, Top: 18, Width: 32, Height: 32); Background: @LockIcon; }
               Label { Anchor: (Left: 0, Right: 0, Top: 56); Style: (FontSize: 12, RenderBold: true, TextColor: #4b5563, HorizontalAlignment: Center); Text: "LOCKED"; }
             }
