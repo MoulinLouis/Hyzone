@@ -18,7 +18,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
 
-/** MySQL-backed storage for duel category preferences. */
 public class DuelPreferenceStore {
 
     public enum DuelCategory {

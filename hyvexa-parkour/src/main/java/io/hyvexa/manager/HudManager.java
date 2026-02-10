@@ -14,6 +14,7 @@ import io.hyvexa.parkour.tracker.RunTracker;
 import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.data.ProgressStore;
 import io.hyvexa.duel.DuelTracker;
+import io.hyvexa.parkour.ParkourTimingConstants;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,7 +28,6 @@ import java.util.concurrent.ConcurrentHashMap;
 public class HudManager {
 
     private static final String SERVER_IP_DISPLAY = "play.hyvexa.com";
-    private static final long CHECKPOINT_SPLIT_HUD_DURATION_MS = 2500L;
 
     private final ConcurrentHashMap<UUID, RunHud> runHuds = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, RunRecordsHud> runRecordHuds = new ConcurrentHashMap<>();
@@ -361,7 +361,7 @@ public class HudManager {
             checkpointSplitHuds.remove(playerId);
             return;
         }
-        long expiresAt = System.currentTimeMillis() + CHECKPOINT_SPLIT_HUD_DURATION_MS;
+        long expiresAt = System.currentTimeMillis() + ParkourTimingConstants.CHECKPOINT_SPLIT_HUD_DURATION_MS;
         checkpointSplitHuds.put(playerId, new CheckpointSplitHudState(splitText, splitColor, expiresAt));
     }
 

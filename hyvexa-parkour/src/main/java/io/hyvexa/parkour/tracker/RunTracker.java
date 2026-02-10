@@ -293,7 +293,7 @@ public class RunTracker {
         return true;
     }
 
-    public static void setFly(UUID playerId, boolean enabled) {
+    private void setFly(UUID playerId, boolean enabled) {
         PlayerRef playerRef = Universe.get().getPlayer(playerId);
         if (playerRef == null) {
             return;
@@ -683,7 +683,7 @@ public class RunTracker {
                 long elapsedMs = resolveInterpolatedTimeMs(run, previousPosition, position, checkpoint,
                         previousElapsedMs, deltaMs);
                 run.checkpointTouchTimes.put(i, elapsedMs);
-                playCheckpointSound(playerRef);
+                TrackerUtils.playCheckpointSound(playerRef);
                 CheckpointSplitInfo splitInfo = buildCheckpointSplitInfo(i, elapsedMs, personalBestSplits);
                 player.sendMessage(splitInfo.message);
                 HyvexaPlugin plugin = HyvexaPlugin.getInstance();
@@ -776,7 +776,7 @@ public class RunTracker {
                 return;
             }
             run.finishTouched = true;
-            playFinishSound(playerRef);
+            TrackerUtils.playFinishSound(playerRef);
             long durationMs = resolveInterpolatedTimeMs(run, previousPosition, position, map.getFinish(),
                     previousElapsedMs, deltaMs);
             List<Long> checkpointTimes = new ArrayList<>();
@@ -869,14 +869,6 @@ public class RunTracker {
             clearActiveMap(playerId);
             InventoryUtils.giveMenuItems(player);
         }
-    }
-
-    private void playFinishSound(PlayerRef playerRef) {
-        TrackerUtils.playFinishSound(playerRef);
-    }
-
-    private void playCheckpointSound(PlayerRef playerRef) {
-        TrackerUtils.playCheckpointSound(playerRef);
     }
 
     private static double distanceSq(Vector3d position, TransformData target) {

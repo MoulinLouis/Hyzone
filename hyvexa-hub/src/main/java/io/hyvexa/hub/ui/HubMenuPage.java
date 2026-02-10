@@ -6,6 +6,7 @@ import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
 import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
@@ -19,7 +20,7 @@ import io.hyvexa.hub.routing.HubRouter;
 
 import javax.annotation.Nonnull;
 
-public class HubMenuPage extends BaseHubPage {
+public class HubMenuPage extends InteractiveCustomUIPage<ButtonEventData> {
 
     private static final String BUTTON_PARKOUR = "Parkour";
     private static final String BUTTON_ASCEND = "Parkour Ascend";
@@ -44,7 +45,7 @@ public class HubMenuPage extends BaseHubPage {
     private final HubRouter router;
 
     public HubMenuPage(@Nonnull PlayerRef playerRef, @Nonnull HubRouter router) {
-        super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
+        super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, ButtonEventData.CODEC);
         this.router = router;
     }
 

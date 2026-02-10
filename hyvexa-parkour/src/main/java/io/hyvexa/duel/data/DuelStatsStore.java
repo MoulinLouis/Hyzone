@@ -14,7 +14,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 
-/** MySQL-backed storage for duel win/loss stats. */
 public class DuelStatsStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();

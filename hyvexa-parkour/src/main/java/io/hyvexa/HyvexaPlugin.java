@@ -97,16 +97,12 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 
-/**
- * This class serves as the entrypoint for your plugin. Use the setup method to register into game registries or add
- * event listeners.
- */
 public class HyvexaPlugin extends JavaPlugin {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final long PLAYER_COUNT_SAMPLE_SECONDS = PlayerCountStore.DEFAULT_SAMPLE_INTERVAL_SECONDS;
     private static final boolean DISABLE_WORLD_MAP = true; // Parkour server doesn't need world map
-    private static final String PARKOUR_WORLD_NAME = "Parkour";
+    public static final String PARKOUR_WORLD_NAME = "Parkour";
     private static final String DISCORD_URL = "https://discord.gg/2PAygkyFnK";
     private static final String JOIN_LANGUAGE_NOTICE =
             "This is an English-speaking community server. Please use English only in the chat. "
@@ -164,7 +160,6 @@ public class HyvexaPlugin extends JavaPlugin {
         if (!folder.exists()) {
             folder.mkdirs();
         }
-        // Initialize database connection
         try {
             DatabaseManager.getInstance().initialize();
             LOGGER.atInfo().log("Database connection initialized");
@@ -258,20 +253,7 @@ public class HyvexaPlugin extends JavaPlugin {
         // to avoid blocking during plugin setup when those modules aren't ready yet
         HytaleServer.SCHEDULED_EXECUTOR.schedule(this::registerDeferredSystems, 1, TimeUnit.SECONDS);
 
-        this.getEventRegistry().registerGlobal(PlayerConnectEvent.class, event -> {
-            try {
-                collisionManager.disablePlayerCollision(event.getPlayerRef());
-            } catch (Exception e) {
-                LOGGER.at(Level.WARNING).withCause(e).log("Exception in PlayerConnectEvent (collision)");
-            }
-        });
-        this.getEventRegistry().registerGlobal(PlayerConnectEvent.class, event -> {
-            try {
-                playtimeManager.incrementOnlineCount();
-            } catch (Exception e) {
-                LOGGER.at(Level.WARNING).withCause(e).log("Exception in PlayerConnectEvent (count)");
-            }
-        });
+        this.getEventRegistry().registerGlobal(PlayerConnectEvent.class, this::handlePlayerConnect);
         this.getEventRegistry().registerGlobal(PlayerReadyEvent.class, event -> {
             try {
                 collisionManager.disablePlayerCollision(event.getPlayerRef());
@@ -281,23 +263,6 @@ public class HyvexaPlugin extends JavaPlugin {
         });
         collisionManager.disableAllCollisions();
 
-        this.getEventRegistry().registerGlobal(PlayerConnectEvent.class, event -> {
-            try {
-                PlayerRef playerRef = event.getPlayerRef();
-                if (playerRef != null) {
-                    Ref<EntityStore> ref = playerRef.getReference();
-                    if (ref != null && ref.isValid()) {
-                        Store<EntityStore> store = ref.getStore();
-                        if (shouldApplyParkourMode(playerRef, store)) {
-                            hudManager.ensureRunHud(playerRef);
-                        }
-                    }
-                }
-                playtimeManager.startPlaytimeSession(event.getPlayerRef());
-            } catch (Exception e) {
-                LOGGER.at(Level.WARNING).withCause(e).log("Exception in PlayerConnectEvent (hud/playtime)");
-            }
-        });
         for (PlayerRef playerRef : Universe.get().getPlayers()) {
             Ref<EntityStore> ref = playerRef != null ? playerRef.getReference() : null;
             if (ref != null && ref.isValid()) {
@@ -347,13 +312,6 @@ public class HyvexaPlugin extends JavaPlugin {
                 event.setBroadcastJoinMessage(false);
             } catch (Exception e) {
                 LOGGER.at(Level.WARNING).withCause(e).log("Exception in AddPlayerToWorldEvent");
-            }
-        });
-        this.getEventRegistry().registerGlobal(PlayerConnectEvent.class, event -> {
-            try {
-                playtimeManager.broadcastPresence(event.getPlayerRef(), true);
-            } catch (Exception e) {
-                LOGGER.at(Level.WARNING).withCause(e).log("Exception in PlayerConnectEvent (broadcast)");
             }
         });
         this.getEventRegistry().registerGlobal(PlayerDisconnectEvent.class, event -> {
@@ -456,7 +414,7 @@ public class HyvexaPlugin extends JavaPlugin {
         if (leaderboardHologramManager != null) {
             return leaderboardHologramManager.buildMapLeaderboardHologramLines(mapId);
         }
-        return new java.util.ArrayList<>();
+        return new ArrayList<>();
     }
 
     public float getVipSpeedMultiplier(UUID playerId) {
@@ -660,6 +618,39 @@ public class HyvexaPlugin extends JavaPlugin {
         }
         duelTracker.sweepQueuedPlayersInRun(runTracker);
         duelTracker.tick();
+    }
+
+    private void handlePlayerConnect(PlayerConnectEvent event) {
+        PlayerRef playerRef = event.getPlayerRef();
+        try {
+            collisionManager.disablePlayerCollision(playerRef);
+        } catch (Exception e) {
+            LOGGER.at(Level.WARNING).withCause(e).log("Exception in PlayerConnectEvent (collision)");
+        }
+        try {
+            playtimeManager.incrementOnlineCount();
+        } catch (Exception e) {
+            LOGGER.at(Level.WARNING).withCause(e).log("Exception in PlayerConnectEvent (count)");
+        }
+        try {
+            if (playerRef != null) {
+                Ref<EntityStore> ref = playerRef.getReference();
+                if (ref != null && ref.isValid()) {
+                    Store<EntityStore> store = ref.getStore();
+                    if (shouldApplyParkourMode(playerRef, store)) {
+                        hudManager.ensureRunHud(playerRef);
+                    }
+                }
+            }
+            playtimeManager.startPlaytimeSession(playerRef);
+        } catch (Exception e) {
+            LOGGER.at(Level.WARNING).withCause(e).log("Exception in PlayerConnectEvent (hud/playtime)");
+        }
+        try {
+            playtimeManager.broadcastPresence(playerRef, true);
+        } catch (Exception e) {
+            LOGGER.at(Level.WARNING).withCause(e).log("Exception in PlayerConnectEvent (broadcast)");
+        }
     }
 
     private Map<World, List<PlayerTickContext>> collectPlayersByWorld() {

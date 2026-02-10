@@ -154,9 +154,7 @@ public class AscensionManager {
         return true;
     }
 
-    // ========================================
     // Skill Node Accessors
-    // ========================================
 
     public boolean hasAutoRunners(UUID playerId) {
         return hasSkillNode(playerId, SkillTreeNode.AUTO_RUNNERS);
@@ -195,9 +193,7 @@ public class AscensionManager {
         return progress != null && progress.hasSkillNode(node);
     }
 
-    // ========================================
     // Skill Tree Summary
-    // ========================================
 
     /**
      * Gets skill tree summary for a player.

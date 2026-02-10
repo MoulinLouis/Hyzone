@@ -28,10 +28,6 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 
-/**
- * Manages ghost NPC entities for personal best replay in parkour.
- * Each player can have one ghost NPC visible only to them.
- */
 public class GhostNpcManager {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
@@ -50,9 +46,6 @@ public class GhostNpcManager {
         this.mapStore = mapStore;
     }
 
-    /**
-     * Start the ghost tick task.
-     */
     public void start() {
         try {
             npcPlugin = NPCPlugin.get();
@@ -69,9 +62,6 @@ public class GhostNpcManager {
         );
     }
 
-    /**
-     * Stop the ghost tick task and despawn all ghosts.
-     */
     public void stop() {
         if (tickTask != null) {
             tickTask.cancel(false);
@@ -83,10 +73,6 @@ public class GhostNpcManager {
         activeGhosts.clear();
     }
 
-    /**
-     * Spawn a ghost NPC for a player at the start of a map.
-     * Only spawns if the player has a ghost recording for this map.
-     */
     public void spawnGhost(UUID playerId, String mapId) {
         if (npcPlugin == null || playerId == null || mapId == null) {
             return;
@@ -126,9 +112,6 @@ public class GhostNpcManager {
         world.execute(() -> spawnNpcOnWorldThread(state, map, world));
     }
 
-    /**
-     * Start ghost playback (called when player begins moving).
-     */
     public void startPlayback(UUID playerId) {
         GhostNpcState state = activeGhosts.get(playerId);
         if (state == null) {
@@ -137,9 +120,6 @@ public class GhostNpcManager {
         state.playbackStartMs = System.currentTimeMillis();
     }
 
-    /**
-     * Despawn a ghost NPC for a player.
-     */
     public void despawnGhost(UUID playerId) {
         if (playerId == null) {
             return;
@@ -151,10 +131,6 @@ public class GhostNpcManager {
         despawnNpcEntity(state);
     }
 
-    /**
-     * Hide all active ghost NPCs from a newly connected player.
-     * Called when a new player joins the parkour world.
-     */
     public void hideGhostsFromPlayer(UUID viewerId) {
         if (viewerId == null) {
             return;
@@ -383,9 +359,6 @@ public class GhostNpcManager {
         }
     }
 
-    /**
-     * Tracks the state of a single ghost NPC.
-     */
     private static class GhostNpcState {
         final UUID ownerId;
         final String mapId;

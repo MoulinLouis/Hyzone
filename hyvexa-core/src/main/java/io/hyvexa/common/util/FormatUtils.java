@@ -109,7 +109,7 @@ public final class FormatUtils {
         if (!"VexaGod".equals(rank)) {
             return Message.raw(rank != null ? rank : "").color(getRankColor(rank));
         }
-        String safeRank = rank != null ? rank : "";
+        String safeRank = rank;
         String[] colors = {
                 "#ff4d4d",
                 "#ffa94d",

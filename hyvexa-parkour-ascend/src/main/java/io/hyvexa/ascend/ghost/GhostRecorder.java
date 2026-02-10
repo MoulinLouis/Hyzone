@@ -21,10 +21,6 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 
-/**
- * Records player movements during manual parkour runs.
- * Samples position and rotation every 50ms for ghost replay.
- */
 public class GhostRecorder {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
@@ -39,9 +35,6 @@ public class GhostRecorder {
         this.ghostStore = ghostStore;
     }
 
-    /**
-     * Start the periodic sampling task.
-     */
     public void start() {
         if (samplingTask != null && !samplingTask.isDone()) {
             LOGGER.atWarning().log("GhostRecorder sampling task already running");
@@ -56,9 +49,6 @@ public class GhostRecorder {
         );
     }
 
-    /**
-     * Stop the periodic sampling task.
-     */
     public void stop() {
         if (samplingTask != null) {
             samplingTask.cancel(false);
@@ -67,18 +57,12 @@ public class GhostRecorder {
         activeRecordings.clear();
     }
 
-    /**
-     * Start recording a player's movements for a parkour run.
-     */
     public void startRecording(UUID playerId, String mapId) {
         long startTime = System.currentTimeMillis();
         ActiveRecording recording = new ActiveRecording(playerId, mapId, startTime);
         activeRecordings.put(playerId, recording);
     }
 
-    /**
-     * Stop recording and save if this was a personal best.
-     */
     public void stopRecording(UUID playerId, long completionTimeMs, boolean isPersonalBest) {
         ActiveRecording recording = activeRecordings.remove(playerId);
 
@@ -117,18 +101,10 @@ public class GhostRecorder {
         }
     }
 
-    /**
-     * Cancel an active recording without saving.
-     */
     public void cancelRecording(UUID playerId) {
         activeRecordings.remove(playerId);
     }
 
-    /**
-     * Sample all active recordings (called every 50ms).
-     * Takes a snapshot of active recordings to avoid concurrent modification issues
-     * when recordings are started/stopped during iteration.
-     */
     private void sampleActiveRecordings() {
         long now = System.currentTimeMillis();
 
@@ -144,9 +120,6 @@ public class GhostRecorder {
         }
     }
 
-    /**
-     * Sample a single player's position and rotation.
-     */
     private void samplePlayer(ActiveRecording recording, long now) {
         // Check if recording has reached sample limit
         synchronized (recording.samples) {
@@ -226,9 +199,6 @@ public class GhostRecorder {
         });
     }
 
-    /**
-     * Represents an in-progress recording.
-     */
     private static class ActiveRecording {
         private final UUID playerId;
         private final String mapId;

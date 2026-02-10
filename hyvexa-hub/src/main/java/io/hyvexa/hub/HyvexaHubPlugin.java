@@ -39,6 +39,8 @@ public class HyvexaHubPlugin extends JavaPlugin {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     /** Delay before first HUD update after attach, to allow the client to load the UI. */
     private static final long HUD_READY_DELAY_MS = 250L;
+    private static final long HUD_TICK_INTERVAL_MS = 200L;
+    public static final short SLOT_SERVER_SELECTOR = 0;
     private static HyvexaHubPlugin INSTANCE;
 
     private HubRouter router;
@@ -85,6 +87,9 @@ public class HyvexaHubPlugin extends JavaPlugin {
                 return;
             }
             PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+            if (playerRef == null) {
+                return;
+            }
             World world = store.getExternalData().getWorld();
             if (world == null) {
                 return;
@@ -128,14 +133,11 @@ public class HyvexaHubPlugin extends JavaPlugin {
         }
 
         hubHudTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(
-                this::tickHubHud, 200, 200, TimeUnit.MILLISECONDS
+                this::tickHubHud, HUD_TICK_INTERVAL_MS, HUD_TICK_INTERVAL_MS, TimeUnit.MILLISECONDS
         );
     }
 
     private void attachHubHud(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef) {
-        if (playerRef == null) {
-            return;
-        }
         var world = store.getExternalData().getWorld();
         if (world == null) {
             return;
@@ -179,14 +181,11 @@ public class HyvexaHubPlugin extends JavaPlugin {
     }
 
     private void giveHubItems(Player player) {
-        if (player == null) {
-            return;
-        }
         Inventory inventory = player.getInventory();
         if (inventory == null || inventory.getHotbar() == null) {
             return;
         }
-        inventory.getHotbar().setItemStackForSlot((short) 0, new ItemStack(HubConstants.ITEM_SERVER_SELECTOR, 1), false);
+        inventory.getHotbar().setItemStackForSlot(SLOT_SERVER_SELECTOR, new ItemStack(HubConstants.ITEM_SERVER_SELECTOR, 1), false);
     }
 
     private static void clearInventory(Player player) {

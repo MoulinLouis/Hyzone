@@ -20,9 +20,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Level;
 
-/**
- * Manages leaderboard hologram updates for both global and per-map leaderboards.
- */
 public class LeaderboardHologramManager {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
@@ -53,10 +50,6 @@ public class LeaderboardHologramManager {
         return parkourWorldName;
     }
 
-    /**
-     * Refreshes the global leaderboard hologram.
-     * This method resolves the parkour world and dispatches the update to the world thread.
-     */
     public void refreshLeaderboardHologram() {
         if (!HylogramsBridge.isAvailable()) {
             return;
@@ -68,12 +61,6 @@ public class LeaderboardHologramManager {
         world.execute(() -> updateLeaderboardHologram(world.getEntityStore().getStore()));
     }
 
-    /**
-     * Refreshes the global leaderboard hologram using the provided store.
-     * If the store's world is the parkour world, dispatches update to that world thread.
-     *
-     * @param store the entity store to use for the update
-     */
     public void refreshLeaderboardHologram(Store<EntityStore> store) {
         if (store == null) {
             return;
@@ -89,12 +76,6 @@ public class LeaderboardHologramManager {
         }
     }
 
-    /**
-     * Refreshes a per-map leaderboard hologram.
-     *
-     * @param mapId the map identifier
-     * @param store the entity store context
-     */
     public void refreshMapLeaderboardHologram(String mapId, Store<EntityStore> store) {
         if (mapId == null || mapId.isBlank() || store == null || progressStore == null) {
             return;
@@ -216,12 +197,6 @@ public class LeaderboardHologramManager {
         return rows;
     }
 
-    /**
-     * Builds hologram lines for a per-map leaderboard.
-     *
-     * @param mapId the map identifier
-     * @return the list of hologram lines
-     */
     public List<String> buildMapLeaderboardHologramLines(String mapId) {
         List<String> lines = new ArrayList<>();
         String mapName = mapId;
@@ -274,11 +249,6 @@ public class LeaderboardHologramManager {
         return parkourWorldName.equalsIgnoreCase(world.getName());
     }
 
-    /**
-     * Logs a debug message for map hologram operations.
-     *
-     * @param message the message to log
-     */
     public void logMapHologramDebug(String message) {
         if (!DEBUG_MAP_HOLOGRAM) {
             return;
@@ -314,17 +284,7 @@ public class LeaderboardHologramManager {
     }
 
     private static String formatLeaderboardName(String name) {
-        if (name == null) {
-            return "";
-        }
-        String trimmed = name.trim();
-        if (trimmed.length() <= ParkourTimingConstants.LEADERBOARD_NAME_MAX) {
-            return trimmed;
-        }
-        if (ParkourTimingConstants.LEADERBOARD_NAME_MAX <= 3) {
-            return trimmed.substring(0, ParkourTimingConstants.LEADERBOARD_NAME_MAX);
-        }
-        return trimmed.substring(0, ParkourTimingConstants.LEADERBOARD_NAME_MAX - 3) + "...";
+        return clampToWidth(name, ParkourTimingConstants.LEADERBOARD_NAME_MAX);
     }
 
     private static String clampToWidth(String value, int width) {
@@ -353,9 +313,6 @@ public class LeaderboardHologramManager {
                 safePosition, safeName, time);
     }
 
-    /**
-     * Represents a row in the global completion leaderboard.
-     */
     private static final class CompletionRow {
         private static final Comparator<CompletionRow> COMPARATOR = Comparator
                 .comparingInt((CompletionRow row) -> row.count).reversed()

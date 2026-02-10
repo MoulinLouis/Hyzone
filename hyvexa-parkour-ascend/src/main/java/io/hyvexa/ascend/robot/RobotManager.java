@@ -653,9 +653,7 @@ public class RobotManager {
         }
     }
 
-    // ========================================
     // Auto Runner Upgrades (Skill Tree)
-    // ========================================
 
     private void performAutoRunnerUpgrades() {
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
@@ -900,9 +898,7 @@ public class RobotManager {
         return distSq <= CHUNK_LOAD_DISTANCE * CHUNK_LOAD_DISTANCE;
     }
 
-    // ========================================
     // Runner Cleanup (Server Restart Handling)
-    // ========================================
 
     private Path getRunnerUuidsPath() {
         return Path.of("mods", "Parkour", RUNNER_UUIDS_FILE);

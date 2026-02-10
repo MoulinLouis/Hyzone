@@ -15,6 +15,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.common.util.InventoryUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
@@ -25,6 +26,7 @@ import io.hyvexa.parkour.data.SettingsStore;
 import io.hyvexa.parkour.data.TransformData;
 import io.hyvexa.parkour.tracker.RunTracker;
 import io.hyvexa.parkour.tracker.TrackerUtils;
+import io.hyvexa.parkour.util.PlayerSettingsStore;
 import io.hyvexa.parkour.visibility.PlayerVisibilityManager;
 import io.hyvexa.duel.data.DuelMatchStore;
 import io.hyvexa.duel.data.DuelPreferenceStore;
@@ -228,7 +230,7 @@ public class DuelTracker {
         if (isInMatch(player1) || isInMatch(player2)) {
             return false;
         }
-        if (map == null || map.getStart() == null || map.getFinish() == null) {
+        if (map.getStart() == null || map.getFinish() == null) {
             return false;
         }
         PlayerRef ref1 = Universe.get().getPlayer(player1);
@@ -252,8 +254,8 @@ public class DuelTracker {
 
         applyDuelVisibility(player1, player2);
 
-        String name1 = ref1 != null && ref1.getUsername() != null ? ref1.getUsername() : "Player";
-        String name2 = ref2 != null && ref2.getUsername() != null ? ref2.getUsername() : "Player";
+        String name1 = ref1.getUsername() != null ? ref1.getUsername() : "Player";
+        String name2 = ref2.getUsername() != null ? ref2.getUsername() : "Player";
         String mapName = map.getName() != null && !map.getName().isBlank() ? map.getName() : map.getId();
         Message matchMessage1 = SystemMessageUtils.duelSuccess(
                 String.format(DuelConstants.MSG_MATCH_FOUND, name2, mapName)
@@ -261,12 +263,8 @@ public class DuelTracker {
         Message matchMessage2 = SystemMessageUtils.duelSuccess(
                 String.format(DuelConstants.MSG_MATCH_FOUND, name1, mapName)
         );
-        if (ref1 != null) {
-            ref1.sendMessage(matchMessage1);
-        }
-        if (ref2 != null) {
-            ref2.sendMessage(matchMessage2);
-        }
+        ref1.sendMessage(matchMessage1);
+        ref2.sendMessage(matchMessage2);
 
         preparePlayerForMatch(ref1, map);
         preparePlayerForMatch(ref2, map);
@@ -509,7 +507,7 @@ public class DuelTracker {
             if (distanceSqWithVerticalBonus(position, checkpoint) <= DuelConstants.TOUCH_RADIUS_SQ) {
                 state.touchedCheckpoints.add(i);
                 state.lastCheckpointIndex = i;
-                playCheckpointSound(playerRef);
+                TrackerUtils.playCheckpointSound(playerRef);
                 player.sendMessage(SystemMessageUtils.duelInfo("Checkpoint reached."));
             }
         }
@@ -530,7 +528,7 @@ public class DuelTracker {
                 return;
             }
             state.finishTouched = true;
-            playFinishSound(playerRef);
+            TrackerUtils.playFinishSound(playerRef);
             long elapsedMs = Math.max(0L, now - match.getRaceStartMs());
             match.setFinishTimeFor(playerRef.getUuid(), elapsedMs);
             if (match.trySetWinner(playerRef.getUuid())) {
@@ -538,14 +536,6 @@ public class DuelTracker {
                 endMatch(match, FinishReason.COMPLETED, playerRef.getUuid(), match.getOpponent(playerRef.getUuid()));
             }
         }
-    }
-
-    private void playFinishSound(PlayerRef playerRef) {
-        TrackerUtils.playFinishSound(playerRef);
-    }
-
-    private void playCheckpointSound(PlayerRef playerRef) {
-        TrackerUtils.playCheckpointSound(playerRef);
     }
 
     private void teleportToRespawn(Ref<EntityStore> ref, Store<EntityStore> store, DuelPlayerState state, Map map) {
@@ -836,7 +826,7 @@ public class DuelTracker {
 
     private void resetVipSpeedForDuel(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store,
                                       @Nonnull PlayerRef playerRef) {
-        io.hyvexa.HyvexaPlugin plugin = io.hyvexa.HyvexaPlugin.getInstance();
+        HyvexaPlugin plugin = HyvexaPlugin.getInstance();
         if (plugin == null) {
             return;
         }
@@ -853,7 +843,7 @@ public class DuelTracker {
 
     private void restoreVipSpeedAfterDuel(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store,
                                           @Nonnull PlayerRef playerRef) {
-        io.hyvexa.HyvexaPlugin plugin = io.hyvexa.HyvexaPlugin.getInstance();
+        HyvexaPlugin plugin = HyvexaPlugin.getInstance();
         if (plugin == null) {
             return;
         }
@@ -904,7 +894,7 @@ public class DuelTracker {
 
     private void applyOpponentVisibility(@Nonnull UUID viewerId, @Nonnull UUID opponentId,
                                          @Nonnull PlayerVisibilityManager visibility) {
-        boolean hideOpponent = io.hyvexa.parkour.util.PlayerSettingsStore.isDuelOpponentHidden(viewerId);
+        boolean hideOpponent = PlayerSettingsStore.isDuelOpponentHidden(viewerId);
         if (hideOpponent) {
             visibility.hidePlayer(viewerId, opponentId);
         } else {
@@ -935,7 +925,7 @@ public class DuelTracker {
     }
 
     private double getVoidY() {
-        io.hyvexa.HyvexaPlugin plugin = io.hyvexa.HyvexaPlugin.getInstance();
+        HyvexaPlugin plugin = HyvexaPlugin.getInstance();
         SettingsStore settings = plugin != null ? plugin.getSettingsStore() : null;
         if (settings == null) {
             return ParkourConstants.FALL_FAILSAFE_VOID_Y;
@@ -944,7 +934,7 @@ public class DuelTracker {
     }
 
     private long getFallRespawnTimeoutMs() {
-        io.hyvexa.HyvexaPlugin plugin = io.hyvexa.HyvexaPlugin.getInstance();
+        HyvexaPlugin plugin = HyvexaPlugin.getInstance();
         SettingsStore settings = plugin != null ? plugin.getSettingsStore() : null;
         if (settings == null) {
             return (long) (ParkourConstants.DEFAULT_FALL_RESPAWN_SECONDS * 1000L);

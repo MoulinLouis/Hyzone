@@ -3,10 +3,6 @@ package io.hyvexa.parkour.ghost;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Represents a complete ghost recording with interpolation logic for smooth playback.
- * Samples are captured at 50ms intervals and interpolated to 60fps during playback.
- */
 public class GhostRecording {
     private final List<GhostSample> samples;
     private final long completionTimeMs;
@@ -24,12 +20,6 @@ public class GhostRecording {
         return completionTimeMs;
     }
 
-    /**
-     * Interpolate ghost position at a specific progress point.
-     *
-     * @param progress 0.0 to 1.0 representing position through the run
-     * @return Interpolated sample at the target position
-     */
     public GhostSample interpolateAt(double progress) {
         if (samples.isEmpty()) {
             return new GhostSample(0, 0, 0, 0, 0);
@@ -83,9 +73,6 @@ public class GhostRecording {
         return new GhostSample(x, y, z, yaw, targetTimestamp);
     }
 
-    /**
-     * Linear interpolation between two values.
-     */
     private double lerp(double a, double b, double t) {
         return a + (b - a) * t;
     }

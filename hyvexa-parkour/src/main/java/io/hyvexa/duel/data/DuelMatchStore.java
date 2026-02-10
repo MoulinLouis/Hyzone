@@ -11,7 +11,6 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.logging.Level;
 
-/** MySQL-backed storage for duel match history. */
 public class DuelMatchStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();

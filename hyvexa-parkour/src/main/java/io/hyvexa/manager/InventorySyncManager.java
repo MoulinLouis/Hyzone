@@ -19,11 +19,6 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiPredicate;
 
-/**
- * Manages inventory synchronization on player connect/ready events.
- * Handles giving appropriate items based on player state (in run vs menu),
- * showing welcome page for first-time players, and enforcing drop protection.
- */
 public class InventorySyncManager {
 
     private final MapStore mapStore;
@@ -34,17 +29,6 @@ public class InventorySyncManager {
     private final String languageNotice;
     private final String languageNoticeSuffix;
 
-    /**
-     * Creates a new InventorySyncManager.
-     *
-     * @param mapStore           the map store for retrieving map data
-     * @param progressStore      the progress store for player progress data
-     * @param runTracker         the run tracker for active run state
-     * @param parkourModeChecker predicate to check if parkour mode should be applied
-     * @param discordUrl         the Discord URL for the language notice
-     * @param languageNotice     the language notice message prefix
-     * @param languageNoticeSuffix the language notice message suffix
-     */
     public InventorySyncManager(MapStore mapStore, ProgressStore progressStore, RunTracker runTracker,
                                 BiPredicate<PlayerRef, Store<EntityStore>> parkourModeChecker,
                                 String discordUrl, String languageNotice, String languageNoticeSuffix) {
@@ -57,12 +41,6 @@ public class InventorySyncManager {
         this.languageNoticeSuffix = languageNoticeSuffix;
     }
 
-    /**
-     * Synchronizes inventory for a player on connect.
-     * Checks if player is in parkour mode and delegates to the full sync method.
-     *
-     * @param playerRef the player reference
-     */
     public void syncRunInventoryOnConnect(PlayerRef playerRef) {
         if (playerRef == null) {
             return;
@@ -78,12 +56,6 @@ public class InventorySyncManager {
         syncRunInventoryOnConnect(ref, store, playerRef);
     }
 
-    /**
-     * Synchronizes inventory for a player on ready event.
-     * Dispatches to World thread and performs full sync including welcome page and language notice.
-     *
-     * @param ref the entity reference
-     */
     public void syncRunInventoryOnReady(Ref<EntityStore> ref) {
         if (ref == null || !ref.isValid()) {
             return;
@@ -111,14 +83,6 @@ public class InventorySyncManager {
         }, world);
     }
 
-    /**
-     * Synchronizes inventory for a player with full context.
-     * Gives run items if player is in a run, otherwise gives menu items.
-     *
-     * @param ref       the entity reference
-     * @param store     the entity store
-     * @param playerRef the player reference
-     */
     public void syncRunInventoryOnConnect(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef) {
         World world = store.getExternalData().getWorld();
         if (world == null) {
@@ -142,13 +106,6 @@ public class InventorySyncManager {
         }, world);
     }
 
-    /**
-     * Shows the welcome page if this is the player's first join.
-     *
-     * @param ref       the entity reference
-     * @param store     the entity store
-     * @param playerRef the player reference
-     */
     public void showWelcomeIfFirstJoin(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef) {
         if (progressStore == null || playerRef == null || !progressStore.shouldShowWelcome(playerRef.getUuid())) {
             return;
@@ -167,11 +124,6 @@ public class InventorySyncManager {
         }, world);
     }
 
-    /**
-     * Sends the language notice to the player with Discord link.
-     *
-     * @param playerRef the player reference
-     */
     public void sendLanguageNotice(PlayerRef playerRef) {
         if (playerRef == null) {
             return;
@@ -200,12 +152,6 @@ public class InventorySyncManager {
         }, world);
     }
 
-    /**
-     * Updates drop protection filters for all inventory containers.
-     * Non-OP players cannot drop or remove items.
-     *
-     * @param player the player to update
-     */
     public void updateDropProtection(Player player) {
         Inventory inventory = player.getInventory();
         if (inventory == null) {
