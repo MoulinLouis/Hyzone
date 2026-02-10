@@ -673,12 +673,11 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
                 continue;
             }
             commandBuilder.append("#MapCards", "Pages/Parkour_MapEntry.ui");
-            commandBuilder.set("#MapCards[" + index + "].Background", "$C.@InputBoxBackground");
             commandBuilder.set("#MapCards[" + index + "] #MapName.Text", displayName);
             boolean isSelected = map.getId().equals(selectedMapId);
+            commandBuilder.set("#MapCards[" + index + "] #SelectedOverlay.Visible", isSelected);
             if (isSelected) {
                 commandBuilder.set("#MapCards[" + index + "] #MapName.Text", ">> " + displayName);
-                commandBuilder.set("#MapCards[" + index + "].Background", "#253742");
             }
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
                     "#MapCards[" + index + "]",
