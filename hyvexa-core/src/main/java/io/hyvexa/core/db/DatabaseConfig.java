@@ -4,6 +4,8 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.hypixel.hytale.logger.HytaleLogger;
 
+import com.google.gson.JsonParseException;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -34,7 +36,7 @@ public class DatabaseConfig {
             DatabaseConfig config = GSON.fromJson(json, DatabaseConfig.class);
             LOGGER.atInfo().log("Loaded database config from " + CONFIG_PATH);
             return config;
-        } catch (IOException e) {
+        } catch (IOException | JsonParseException e) {
             LOGGER.at(Level.SEVERE).log("Failed to load database config: " + e.getMessage());
             return new DatabaseConfig();
         }
