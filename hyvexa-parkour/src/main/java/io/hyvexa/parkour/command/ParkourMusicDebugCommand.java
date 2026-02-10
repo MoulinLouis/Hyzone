@@ -13,6 +13,7 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.util.CommandUtils;
+import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.parkour.util.ParkourModeGate;
 
 import javax.annotation.Nonnull;
@@ -25,8 +26,10 @@ import static com.hypixel.hytale.server.core.command.commands.player.inventory.I
 
 public class ParkourMusicDebugCommand extends AbstractAsyncCommand {
 
+    private static final Message MESSAGE_OP_REQUIRED = Message.raw("You must be OP to use /pkmusic.");
+
     public ParkourMusicDebugCommand() {
-        super("pkmusic", "Show loaded ambience music assets.");
+        super("pkmusic", "Staff-only: show loaded ambience music assets.");
         this.setPermissionGroup(GameMode.Adventure);
         this.setAllowsExtraArguments(true);
     }
@@ -36,6 +39,10 @@ public class ParkourMusicDebugCommand extends AbstractAsyncCommand {
     protected java.util.concurrent.CompletableFuture<Void> executeAsync(CommandContext commandContext) {
         CommandSender sender = commandContext.sender();
         if (!(sender instanceof Player player)) {
+            return java.util.concurrent.CompletableFuture.completedFuture(null);
+        }
+        if (!PermissionUtils.isOp(player)) {
+            commandContext.sendMessage(MESSAGE_OP_REQUIRED);
             return java.util.concurrent.CompletableFuture.completedFuture(null);
         }
         Ref<EntityStore> ref = player.getReference();

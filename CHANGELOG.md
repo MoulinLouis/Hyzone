@@ -5,6 +5,7 @@
 ### Changed
 - **Ascend: Renamed "Coins" to "Vexa"** - All player-facing text, Java identifiers, UI element IDs, database columns, and documentation updated to use "Vexa" as the currency name
 - **Parkour/Ascend: Tick-path performance cleanup** - Optimized ghost playback sampling/interpolation and reduced per-tick map scanning overhead in run tracking
+- **Parkour/Ascend: Ghost stack moved to shared core wrappers** - Recorder/store/interpolation logic now lives in `hyvexa-core` with mode-specific table/resolver adapters and parity tests
 
 ### Added
 - **Ascend: Toast notification system** - HUD-based toast notifications at bottom-left for upgrades, evolutions, purchases, and economy events. 4 stacked slots with category-colored accent bars and countdown progress bars. Consolidates rapid-fire actions. Displays alongside existing chat messages.
@@ -14,6 +15,9 @@
 - **Ascend: Leaderboard system** - New `/ascend leaderboard` command with tabbed rankings for Vexa, Ascensions, and Manual Runs. Includes pagination (50 per page) and player search. Accessible via the Bolt of Stormsilk item.
 
 ### Fixed
+- **Parkour: Hardened debug/admin command access** - `/pkadminitem` and `/pkmusic` now require OP and clearly label staff-only usage
+- **Ascend: Cinematic/runner failures are now observable and recoverable** - Silent catches were replaced with throttled phase/context warning logs, and the cinematic now always schedules a movement/camera restore finalizer
+- **Parkour/Ascend: Closed two completion/stat races** - Jump flush now uses remove-drain semantics and near-finish checks now enforce one in-flight completion check per player
 - **Ascend: Added async backpressure guards for tick and page refresh loops** - Per-world tick jobs and auto-refresh UI updates now coalesce overlapping work instead of queueing unbounded async tasks
 - **Ascend: Passive earnings leave tracking now uses true world-edge transitions** - Leave timestamps are only recorded on real Ascend -> non-Ascend transitions and Ascend-state disconnects
 - **Ascend: Test commands are now production-gated** - `/ctest` and `/hudpreview` register only when `ascend.enableTestCommands=true` and now require OP
