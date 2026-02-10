@@ -220,19 +220,22 @@ $C.@PageOverlay {
         Background: #0d1620(0.95);
         OutlineColor: #ffffff(0.06);
         OutlineSize: 1;
-        LayoutMode: Top;
 
-        Group #InfoImageBanner {
-          Anchor: (Width: 200, Height: 111, Top: 8);
-          Background: (TexturePath: "../Textures/ascend.png");
-        }
-
-        Group #InfoContent {
-          Anchor: (Left: 0, Right: 0);
+        Group #InfoBoxFlow {
+          Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
           LayoutMode: Top;
-          Padding: (Left: 14, Right: 14, Top: 12, Bottom: 14);
 
-          Label #PlayerNameText {
+          Group #InfoImageBanner {
+            Anchor: (Width: 200, Height: 111, Top: 8);
+            Background: (TexturePath: "../Textures/ascend.png");
+          }
+
+          Group #InfoContent {
+            Anchor: (Left: 0, Right: 0);
+            LayoutMode: Top;
+            Padding: (Left: 14, Right: 14, Top: 12, Bottom: 14);
+
+            Label #PlayerNameText {
             Style: (
               FontSize: 13,
               TextColor: #ec4899(0.7),
@@ -322,6 +325,26 @@ $C.@PageOverlay {
               HorizontalAlignment: Center
             );
             Text: "store.hyvexa.com";
+          }
+        }
+        }
+
+        Group #PlayerCountRow {
+          Anchor: (Right: 12, Top: 8, Height: 20);
+          LayoutMode: Left;
+
+          Group #PlayerCountIcon {
+            Anchor: (Width: 14, Height: 14);
+            Background: (TexturePath: "../Textures/user.png");
+          }
+          Group { Anchor: (Width: 4); }
+          Label #PlayerCountText {
+            Style: (
+              FontSize: 14,
+              TextColor: #8b9db0,
+              RenderBold: true
+            );
+            Text: "0";
           }
         }
       }
@@ -421,6 +444,55 @@ $C.@PageOverlay {
           Anchor: (Top: 8);
           Style: (FontSize: 13, TextColor: #a855f7(0.5), RenderBold: true);
           Text: "/ascend summit";
+        }
+      }
+    }
+
+    Group #AscensionHud {
+      Anchor: (Left: 20, Top: 80, Width: 340, Height: 130);
+      LayoutMode: Left;
+      Visible: false;
+
+      Group {
+        Anchor: (Width: 4, Top: 0, Bottom: 0);
+        Background: #c084fc;
+      }
+
+      Group {
+        FlexWeight: 1;
+        Anchor: (Top: 0, Bottom: 0);
+        Background: #0d1620(0.95);
+        OutlineColor: #ffffff(0.06);
+        OutlineSize: 1;
+        LayoutMode: Top;
+        Padding: (Left: 16, Right: 16, Top: 12, Bottom: 12);
+
+        Label #AscensionTitle {
+          Style: (FontSize: 12, TextColor: #c084fc(0.7), RenderUppercase: true, LetterSpacing: 2, RenderBold: true);
+          Text: "Ascension";
+        }
+
+        Group {
+          Anchor: (Left: 0, Width: 30, Height: 2, Top: 8);
+          Background: #c084fc;
+        }
+
+        Label #AscensionApText {
+          Anchor: (Top: 10);
+          Style: (FontSize: 15, TextColor: #f0f4f8, RenderBold: true);
+          Text: "AP: 0 available";
+        }
+
+        Label #AscensionCountText {
+          Anchor: (Top: 4);
+          Style: (FontSize: 15, TextColor: #f0f4f8, RenderBold: true);
+          Text: "Ascendance: 0";
+        }
+
+        Label #AscensionHint {
+          Anchor: (Top: 8);
+          Style: (FontSize: 13, TextColor: #c084fc(0.5), RenderBold: true);
+          Text: "/ascend tree";
         }
       }
     }
