@@ -75,7 +75,7 @@ public class AscendHudManager {
             BigNumber accumulatedVexa = playerStore.getElevationAccumulatedVexa(playerId);
             AscendConstants.ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(elevationLevel, accumulatedVexa);
             int potentialElevation = elevationLevel + purchase.levels;
-            boolean showElevation = elevationLevel > 0 || purchase.levels > 0;
+            boolean showElevation = elevationLevel > 1 || purchase.levels > 0;
             hud.updateEconomy(vexa, product, digits, elevationLevel, potentialElevation, showElevation);
 
             // Update prestige HUD
