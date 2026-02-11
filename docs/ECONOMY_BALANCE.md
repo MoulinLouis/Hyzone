@@ -173,15 +173,17 @@ Smooth ~2× growth per level, no artificial boosts or jumps:
 
 ### Multiplier Formula
 
-**Elevation multiplier = level** (direct 1:1 mapping)
+**Elevation multiplier = level^1.05** (slightly super-linear)
 
-Elevation uses a level-based prestige system where each level directly equals the multiplier:
+Elevation uses a level-based prestige system where higher levels give progressively better multipliers:
 - Level 1 → ×1 multiplier
-- Level 10 → ×10 multiplier
-- Level 100 → ×100 multiplier
-- Level 500 → ×500 multiplier
+- Level 10 → ×11 multiplier
+- Level 50 → ×61 multiplier
+- Level 100 → ×126 multiplier
+- Level 200 → ×261 multiplier
+- Level 500 → ×695 multiplier
 
-**Note:** This is different from the cost formula below. The multiplier is simply the level number itself.
+**Note:** This rewards players for pushing higher elevation levels rather than stopping early.
 
 ### Cost Formula
 
@@ -426,11 +428,16 @@ Summit performs a full reset similar to Elevation:
 | **Multiplier Gain** | 1 + 0.30 × level | +0.30 | ×1.00 | ×4.00 | ×8.50 |
 | **Evolution Power** | 3 + 0.10 × level | +0.10 | ×3.00 | ×4.00 | ×5.50 |
 
-**Soft cap at level 25:** All categories are linear up to level 25, then transition to √(level) growth. No ceiling — progression continues forever, just slower past the soft cap. This prevents extreme values at very high levels while keeping normal play (level 0-25) fully linear.
+**Three growth zones:**
+- **Level 0-25 (soft cap):** Linear growth — full increment per level
+- **Level 25-500 (deep cap):** √ growth — diminishing returns
+- **Level 500-1000 (hard cap):** ⁴√ growth — heavy diminishing returns
+
+**Hard cap at level 1000:** Absolute maximum per category. XP is capped at 333,833,500. Once reached, the UI shows "MAX" and further summiting is blocked.
 
 ### Runner Speed
 
-**Formula:** `1 + 0.15 × level` (linear up to soft cap 25, then √ growth)
+**Formula:** `1 + 0.15 × level` (linear 0-25, √ growth 25-500, ⁴√ growth 500-1000)
 
 Multiplies runner completion speed (inversely affects run time).
 
@@ -441,10 +448,12 @@ Multiplies runner completion speed (inversely affects run time).
 | 25 | ×4.75 | soft cap |
 | 50 | ×5.50 | √ growth |
 | 100 | ×6.05 | √ growth |
+| 500 | ×8.02 | deep cap |
+| 1000 | ×8.73 | hard cap |
 
 ### Multiplier Gain
 
-**Formula:** `1 + 0.30 × level` (linear up to soft cap 25, then √ growth)
+**Formula:** `1 + 0.30 × level` (linear 0-25, √ growth 25-500, ⁴√ growth 500-1000)
 
 Multiplies the per-run multiplier increment for runners.
 
@@ -455,14 +464,16 @@ Multiplies the per-run multiplier increment for runners.
 | 25 | ×8.50 | +0.85/run | +2.55/run | soft cap |
 | 50 | ×10.00 | +1.00/run | +3.00/run | √ growth |
 | 100 | ×11.10 | +1.11/run | +3.33/run | √ growth |
+| 500 | ×15.04 | +1.50/run | +4.51/run | deep cap |
+| 1000 | ×16.46 | +1.65/run | +4.94/run | hard cap |
 
 *Note: 1★+ increments shown assume base Evolution Power (×3). Higher Evolution Power increases per star.*
 
 ### Evolution Power
 
-**Formula:** `3 + 0.10 × level` (linear up to soft cap 25, then √ growth)
+**Formula:** `3 + 0.10 × level` (linear 0-25, √ growth 25-500, ⁴√ growth 500-1000)
 
-Each Summit level gives a flat EP boost up to level 25, then transitions to slower √ growth. No ceiling.
+Each Summit level gives a flat EP boost up to level 25, then transitions to slower growth.
 
 | Level | Evolution Power | 0★ | 3★ | 5★ | Zone |
 |-------|-----------------|------|------|------|------|
@@ -471,6 +482,8 @@ Each Summit level gives a flat EP boost up to level 25, then transitions to slow
 | 25 | ×5.50 | 0.10 | 16.64 | 503.3 | soft cap |
 | 50 | ×6.00 | 0.10 | 21.60 | 777.6 | √ growth |
 | 100 | ×6.37 | 0.10 | 25.82 | 1,047.5 | √ growth |
+| 500 | ×7.68 | 0.10 | 45.31 | 2,555.8 | deep cap |
+| 1000 | ×8.15 | 0.10 | 54.19 | 3,593.2 | hard cap |
 
 **Formula:** `increment = 0.1 × evolutionPower^stars × multiplierGainBonus`
 

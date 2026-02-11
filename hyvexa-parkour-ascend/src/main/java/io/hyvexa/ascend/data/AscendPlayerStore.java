@@ -454,14 +454,10 @@ public class AscendPlayerStore {
 
     /**
      * Get the player's elevation multiplier.
-     * Returns the level directly as a multiplier.
+     * Returns level^1.05 — slightly super-linear to reward higher elevation.
      */
     public double getCalculatedElevationMultiplier(UUID playerId) {
-        int level = getElevationLevel(playerId);
-        if (level <= 0) {
-            return 1.0;
-        }
-        return level;
+        return AscendConstants.getElevationMultiplier(getElevationLevel(playerId));
     }
 
     /**

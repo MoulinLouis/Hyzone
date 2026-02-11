@@ -106,6 +106,8 @@ public class AscendPlayerProgress {
     public long addSummitXp(AscendConstants.SummitCategory category, long amount) {
         long current = getSummitXp(category);
         long newXp = Math.max(0, AscendConstants.saturatingAdd(current, amount));
+        // Cap XP at max level threshold
+        newXp = Math.min(newXp, AscendConstants.SUMMIT_MAX_XP);
         summitXp.put(category, newXp);
         return newXp;
     }
