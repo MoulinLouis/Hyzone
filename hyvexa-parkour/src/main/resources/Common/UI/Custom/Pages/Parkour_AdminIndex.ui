@@ -4,7 +4,7 @@ $C.@PageOverlay {
   SceneBlur {}
 
   Group #AdminIndexWindow {
-    Anchor: (Width: 420, Height: 520);
+    Anchor: (Width: 420, Height: 620);
     LayoutMode: Top;
     Background: #0d1620(0.95);
     OutlineColor: #ffffff(0.06);
