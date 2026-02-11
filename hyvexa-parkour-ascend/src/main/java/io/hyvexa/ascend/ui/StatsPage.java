@@ -21,6 +21,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
+import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
@@ -40,22 +41,33 @@ public class StatsPage extends BaseAscendPage {
     private final AscendPlayerStore playerStore;
     private final AscendMapStore mapStore;
     private final GhostStore ghostStore;
+    private final boolean fromProfile;
     private ScheduledFuture<?> refreshTask;
     private final AtomicBoolean refreshInFlight = new AtomicBoolean(false);
     private final AtomicBoolean refreshRequested = new AtomicBoolean(false);
 
     public StatsPage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore,
                      AscendMapStore mapStore, GhostStore ghostStore) {
+        this(playerRef, playerStore, mapStore, ghostStore, false);
+    }
+
+    public StatsPage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore,
+                     AscendMapStore mapStore, GhostStore ghostStore, boolean fromProfile) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
         this.playerStore = playerStore;
         this.mapStore = mapStore;
         this.ghostStore = ghostStore;
+        this.fromProfile = fromProfile;
     }
 
     @Override
     public void build(@Nonnull Ref<EntityStore> ref, @Nonnull UICommandBuilder commandBuilder,
                       @Nonnull UIEventBuilder eventBuilder, @Nonnull Store<EntityStore> store) {
         commandBuilder.append("Pages/Ascend_Stats.ui");
+
+        if (fromProfile) {
+            commandBuilder.set("#CloseButton.Text", "Back");
+        }
 
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CloseButton",
             EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE), false);
@@ -84,6 +96,23 @@ public class StatsPage extends BaseAscendPage {
                                 @Nonnull ButtonEventData data) {
         super.handleDataEvent(ref, store, data);
         if (BUTTON_CLOSE.equals(data.getButton())) {
+            if (fromProfile) {
+                navigateBackToProfile(ref, store);
+            } else {
+                this.close();
+            }
+        }
+    }
+
+    private void navigateBackToProfile(Ref<EntityStore> ref, Store<EntityStore> store) {
+        com.hypixel.hytale.server.core.entity.entities.Player player =
+                store.getComponent(ref, com.hypixel.hytale.server.core.entity.entities.Player.getComponentType());
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (player != null && playerRef != null && plugin != null && plugin.getRobotManager() != null) {
+            player.getPageManager().openCustomPage(ref, store,
+                    new AscendProfilePage(playerRef, playerStore, plugin.getRobotManager()));
+        } else {
             this.close();
         }
     }

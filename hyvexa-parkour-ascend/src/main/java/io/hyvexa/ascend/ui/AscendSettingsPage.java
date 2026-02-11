@@ -15,7 +15,6 @@ import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.ParkourAscendPlugin;
-import io.hyvexa.ascend.achievement.AchievementManager;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.common.ui.ButtonEventData;
@@ -35,23 +34,32 @@ public class AscendSettingsPage extends BaseAscendPage {
     private static final String BUTTON_TOGGLE_RUNNERS = "ToggleRunners";
     private static final String BUTTON_HIDE_ALL = "HideAll";
     private static final String BUTTON_SHOW_ALL = "ShowAll";
-    private static final String BUTTON_ACHIEVEMENTS = "Achievements";
-
     private static final ConcurrentHashMap<UUID, Boolean> PLAYERS_HIDDEN = new ConcurrentHashMap<>();
 
     private final AscendPlayerStore playerStore;
     private final RobotManager robotManager;
+    private final boolean fromProfile;
 
     public AscendSettingsPage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore, RobotManager robotManager) {
+        this(playerRef, playerStore, robotManager, false);
+    }
+
+    public AscendSettingsPage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore,
+                              RobotManager robotManager, boolean fromProfile) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
         this.playerStore = playerStore;
         this.robotManager = robotManager;
+        this.fromProfile = fromProfile;
     }
 
     @Override
     public void build(@Nonnull Ref<EntityStore> ref, @Nonnull UICommandBuilder commandBuilder,
                       @Nonnull UIEventBuilder eventBuilder, @Nonnull Store<EntityStore> store) {
         commandBuilder.append("Pages/Ascend_Settings.ui");
+
+        if (fromProfile) {
+            commandBuilder.set("#CloseButton.Text", "Back");
+        }
 
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         UUID playerId = playerRef != null ? playerRef.getUuid() : null;
@@ -77,8 +85,6 @@ public class AscendSettingsPage extends BaseAscendPage {
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_HIDE_ALL), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ShowAllButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_SHOW_ALL), false);
-        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#AchievementsButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_ACHIEVEMENTS), false);
     }
 
     @Override
@@ -90,7 +96,18 @@ public class AscendSettingsPage extends BaseAscendPage {
         }
 
         if (BUTTON_CLOSE.equals(data.getButton())) {
-            this.close();
+            if (fromProfile) {
+                Player p = store.getComponent(ref, Player.getComponentType());
+                PlayerRef pr = store.getComponent(ref, PlayerRef.getComponentType());
+                if (p != null && pr != null) {
+                    p.getPageManager().openCustomPage(ref, store,
+                            new AscendProfilePage(pr, playerStore, robotManager));
+                } else {
+                    this.close();
+                }
+            } else {
+                this.close();
+            }
             return;
         }
 
@@ -112,7 +129,7 @@ public class AscendSettingsPage extends BaseAscendPage {
                 plugin.getHudManager().hideHud(playerRef.getUuid());
                 player.sendMessage(Message.raw("HUD hidden."));
                 player.getPageManager().openCustomPage(ref, store,
-                        new AscendSettingsPage(playerRef, playerStore, robotManager));
+                        new AscendSettingsPage(playerRef, playerStore, robotManager, fromProfile));
             }
             return;
         }
@@ -123,7 +140,7 @@ public class AscendSettingsPage extends BaseAscendPage {
                 plugin.getHudManager().showHud(playerRef.getUuid());
                 player.sendMessage(Message.raw("HUD shown."));
                 player.getPageManager().openCustomPage(ref, store,
-                        new AscendSettingsPage(playerRef, playerStore, robotManager));
+                        new AscendSettingsPage(playerRef, playerStore, robotManager, fromProfile));
             }
             return;
         }
@@ -138,7 +155,7 @@ public class AscendSettingsPage extends BaseAscendPage {
             PLAYERS_HIDDEN.put(playerRef.getUuid(), true);
             player.sendMessage(Message.raw("All players hidden."));
             player.getPageManager().openCustomPage(ref, store,
-                    new AscendSettingsPage(playerRef, playerStore, robotManager));
+                    new AscendSettingsPage(playerRef, playerStore, robotManager, fromProfile));
             return;
         }
 
@@ -147,16 +164,8 @@ public class AscendSettingsPage extends BaseAscendPage {
             PLAYERS_HIDDEN.remove(playerRef.getUuid());
             player.sendMessage(Message.raw("All players shown."));
             player.getPageManager().openCustomPage(ref, store,
-                    new AscendSettingsPage(playerRef, playerStore, robotManager));
+                    new AscendSettingsPage(playerRef, playerStore, robotManager, fromProfile));
             return;
-        }
-
-        if (BUTTON_ACHIEVEMENTS.equals(data.getButton())) {
-            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-            if (plugin != null && plugin.getAchievementManager() != null) {
-                player.getPageManager().openCustomPage(ref, store,
-                        new AscendAchievementPage(playerRef, playerStore, plugin.getAchievementManager()));
-            }
         }
     }
 
@@ -180,7 +189,7 @@ public class AscendSettingsPage extends BaseAscendPage {
         }
 
         player.getPageManager().openCustomPage(ref, store,
-                new AscendSettingsPage(playerRef, playerStore, robotManager));
+                new AscendSettingsPage(playerRef, playerStore, robotManager, fromProfile));
     }
 
     private void applyIndicators(UICommandBuilder cmd, UUID playerId) {
