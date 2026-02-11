@@ -4,7 +4,7 @@ $C.@PageOverlay {
   SceneBlur {}
 
   Group #AchievementWindow {
-    Anchor: (Width: 480, Height: 530);
+    Anchor: (Width: 480, Height: 620);
     LayoutMode: Top;
     Background: #0d1620(0.95);
     OutlineColor: #ffffff(0.06);

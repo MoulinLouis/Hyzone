@@ -9,6 +9,7 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.ascend.AscendConstants.AchievementCategory;
 import io.hyvexa.ascend.AscendConstants.AchievementType;
 import io.hyvexa.ascend.achievement.AchievementManager;
 import io.hyvexa.ascend.achievement.AchievementManager.AchievementProgress;
@@ -52,18 +53,29 @@ public class AscendAchievementPage extends BaseAscendPage {
     private void buildAchievementCards(UUID playerId, UICommandBuilder commandBuilder) {
         AchievementType[] achievements = AchievementType.values();
         int unlockedCount = 0;
+        int cardIndex = 0;
+        AchievementCategory lastCategory = null;
 
-        for (int i = 0; i < achievements.length; i++) {
-            AchievementType achievement = achievements[i];
+        for (AchievementType achievement : achievements) {
             AchievementProgress progress = achievementManager.getProgress(playerId, achievement);
 
+            // Insert category header when category changes
+            if (achievement.getCategory() != lastCategory) {
+                lastCategory = achievement.getCategory();
+                commandBuilder.append("#AchievementCards", "Pages/Ascend_AchievementCategoryHeader.ui");
+                String headerPrefix = "#AchievementCards[" + cardIndex + "] ";
+                commandBuilder.set(headerPrefix + "#CategoryName.Text", lastCategory.getDisplayName());
+                cardIndex++;
+            }
+
             commandBuilder.append("#AchievementCards", "Pages/Ascend_AchievementEntry.ui");
+            String prefix = "#AchievementCards[" + cardIndex + "] ";
 
-            String prefix = "#AchievementCards[" + i + "] ";
+            boolean isHiddenAndLocked = achievement.isHidden() && !progress.unlocked();
 
-            // Set name, description, title
-            commandBuilder.set(prefix + "#Name.Text", achievement.getName());
-            commandBuilder.set(prefix + "#Description.Text", achievement.getDescription());
+            // Set name, description (hidden achievements show ??? when locked)
+            commandBuilder.set(prefix + "#Name.Text", isHiddenAndLocked ? "???" : achievement.getName());
+            commandBuilder.set(prefix + "#Description.Text", isHiddenAndLocked ? "???" : achievement.getDescription());
 
             if (progress.unlocked()) {
                 unlockedCount++;
@@ -81,6 +93,8 @@ public class AscendAchievementPage extends BaseAscendPage {
                 commandBuilder.set(prefix + "#UnlockedIcon.Visible", false);
                 commandBuilder.set(prefix + "#LockIcon.Visible", true);
             }
+
+            cardIndex++;
         }
 
         // Update progress counter

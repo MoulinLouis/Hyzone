@@ -712,28 +712,82 @@ public final class AscendConstants {
     // Achievement System
     // ========================================
 
+    public enum AchievementCategory {
+        MILESTONES("Milestones"),
+        RUNNERS("Runners"),
+        PRESTIGE("Prestige"),
+        SKILLS("Skills"),
+        CHALLENGES("Challenges"),
+        SECRET("Secret");
+
+        private final String displayName;
+
+        AchievementCategory(String displayName) {
+            this.displayName = displayName;
+        }
+
+        public String getDisplayName() {
+            return displayName;
+        }
+    }
+
     public enum AchievementType {
-        // Milestones
-        FIRST_STEPS("First Steps", "Complete first manual run"),
-        DEDICATED("Dedicated", "Complete 100 manual runs"),
-        MARATHON("Marathon", "Complete 1000 manual runs"),
+        // Milestones - Manual Runs
+        FIRST_STEPS("First Steps", "Complete your first manual run", AchievementCategory.MILESTONES),
+        WARMING_UP("Warming Up", "Complete 10 manual runs", AchievementCategory.MILESTONES),
+        DEDICATED("Dedicated", "Complete 100 manual runs", AchievementCategory.MILESTONES),
+        HALFWAY_THERE("Halfway There", "Complete 500 manual runs", AchievementCategory.MILESTONES),
+        MARATHON("Marathon", "Complete 1000 manual runs", AchievementCategory.MILESTONES),
+        UNSTOPPABLE("Unstoppable", "Complete 5000 manual runs", AchievementCategory.MILESTONES),
+        LIVING_LEGEND("Living Legend", "Complete 10000 manual runs", AchievementCategory.MILESTONES),
 
-        // Runners
-        FIRST_ROBOT("First Robot", "Buy your first runner"),
-        ARMY("Army", "Have 5+ active runners"),
-        EVOLVED("Evolved", "Evolve a runner to 1+ stars"),
+        // Runners - Automation
+        FIRST_ROBOT("First Robot", "Buy your first runner", AchievementCategory.RUNNERS),
+        ARMY("Army", "Have 5+ active runners", AchievementCategory.RUNNERS),
+        EVOLVED("Evolved", "Evolve a runner to 1+ stars", AchievementCategory.RUNNERS),
+        STAR_COLLECTOR("Star Collector", "Evolve a runner to max stars", AchievementCategory.RUNNERS),
+        MAXED_OUT("Maxed Out", "Max a runner's speed level", AchievementCategory.RUNNERS),
 
-        // Prestige
-        FIRST_ELEVATION("First Elevation", "Complete first Elevation"),
-        SUMMIT_SEEKER("Summit Seeker", "Complete first Summit"),
-        ASCENDED("Ascended", "Complete first Ascension");
+        // Prestige - Progression
+        FIRST_ELEVATION("First Elevation", "Complete your first Elevation", AchievementCategory.PRESTIGE),
+        GOING_UP("Going Up", "Reach elevation 100", AchievementCategory.PRESTIGE),
+        SKY_HIGH("Sky High", "Reach elevation 5,000", AchievementCategory.PRESTIGE),
+        STRATOSPHERE("Stratosphere", "Reach elevation 20,000", AchievementCategory.PRESTIGE),
+        SUMMIT_SEEKER("Summit Seeker", "Complete your first Summit", AchievementCategory.PRESTIGE),
+        PEAK_PERFORMER("Peak Performer", "Reach summit level 10", AchievementCategory.PRESTIGE),
+        MOUNTAINEER("Mountaineer", "Reach summit level 100", AchievementCategory.PRESTIGE),
+        SUMMIT_LEGEND("Summit Legend", "Reach summit level 1,000", AchievementCategory.PRESTIGE),
+        ASCENDED("Ascended", "Complete your first Ascension", AchievementCategory.PRESTIGE),
+        VETERAN("Veteran", "Complete 5 ascensions", AchievementCategory.PRESTIGE),
+        TRANSCENDENT("Transcendent", "Complete 10 ascensions", AchievementCategory.PRESTIGE),
+
+        // Skills - Skill Tree
+        NEW_POWERS("New Powers", "Unlock your first skill", AchievementCategory.SKILLS),
+        SKILL_MASTER("Skill Master", "Unlock all skill tree nodes", AchievementCategory.SKILLS),
+
+        // Challenges
+        CHALLENGER("Challenger", "Complete your first challenge", AchievementCategory.CHALLENGES),
+        CHALLENGE_MASTER("Challenge Master", "Complete all challenges", AchievementCategory.CHALLENGES),
+
+        // Secret - Hidden
+        CHAIN_RUNNER("Chain Runner", "Complete 25 consecutive runs", AchievementCategory.SECRET, true),
+        ALL_STARS("All Stars", "Max-star runners on all maps", AchievementCategory.SECRET, true),
+        COMPLETIONIST("Completionist", "Unlock all other achievements", AchievementCategory.SECRET, true);
 
         private final String name;
         private final String description;
+        private final AchievementCategory category;
+        private final boolean hidden;
 
-        AchievementType(String name, String description) {
+        AchievementType(String name, String description, AchievementCategory category) {
+            this(name, description, category, false);
+        }
+
+        AchievementType(String name, String description, AchievementCategory category, boolean hidden) {
             this.name = name;
             this.description = description;
+            this.category = category;
+            this.hidden = hidden;
         }
 
         public String getName() {
@@ -743,10 +797,32 @@ public final class AscendConstants {
         public String getDescription() {
             return description;
         }
+
+        public AchievementCategory getCategory() {
+            return category;
+        }
+
+        public boolean isHidden() {
+            return hidden;
+        }
     }
 
     // Achievement thresholds
+    public static final int ACHIEVEMENT_MANUAL_RUNS_10 = 10;
     public static final int ACHIEVEMENT_MANUAL_RUNS_100 = 100;
+    public static final int ACHIEVEMENT_MANUAL_RUNS_500 = 500;
     public static final int ACHIEVEMENT_MANUAL_RUNS_1000 = 1000;
+    public static final int ACHIEVEMENT_MANUAL_RUNS_5000 = 5000;
+    public static final int ACHIEVEMENT_MANUAL_RUNS_10000 = 10000;
     public static final int ACHIEVEMENT_RUNNER_COUNT = 5;
+    public static final int ACHIEVEMENT_ELEVATION_100 = 100;
+    public static final int ACHIEVEMENT_ELEVATION_5000 = 5000;
+    public static final int ACHIEVEMENT_ELEVATION_20000 = 20000;
+    public static final int ACHIEVEMENT_SUMMIT_LEVEL_10 = 10;
+    public static final int ACHIEVEMENT_SUMMIT_LEVEL_100 = 100;
+    public static final int ACHIEVEMENT_SUMMIT_LEVEL_1000 = 1000;
+    public static final int ACHIEVEMENT_ASCENSION_5 = 5;
+    public static final int ACHIEVEMENT_ASCENSION_10 = 10;
+    public static final int ACHIEVEMENT_CONSECUTIVE_RUNS_25 = 25;
+    public static final int ACHIEVEMENT_TOTAL_SKILL_NODES = 11;
 }
