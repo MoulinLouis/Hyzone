@@ -626,7 +626,7 @@ public class AscendPlayerStore {
                         "[Challenge] " + (type != null ? type.getDisplayName() : "Challenge") + " completed in " + timeStr + "!")
                         .color(io.hyvexa.common.util.SystemMessageUtils.SUCCESS));
                     player.sendMessage(com.hypixel.hytale.server.core.Message.raw(
-                        "[Challenge] Your progress has been restored. Reward XP applied!")
+                        "[Challenge] Your progress has been restored. Permanent reward unlocked!")
                         .color(io.hyvexa.common.util.SystemMessageUtils.SUCCESS));
                 }
                 return;
@@ -802,6 +802,13 @@ public class AscendPlayerStore {
             // Check if already unlocked
             AscendPlayerProgress.MapProgress mapProgress = getMapProgress(playerId, map.getId());
             if (mapProgress != null && mapProgress.isUnlocked()) {
+                continue;
+            }
+
+            // Skip maps blocked by active challenge
+            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+            if (plugin != null && plugin.getChallengeManager() != null
+                    && plugin.getChallengeManager().isMapBlocked(playerId, map.getDisplayOrder())) {
                 continue;
             }
 

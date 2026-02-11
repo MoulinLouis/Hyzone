@@ -14,8 +14,10 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.AscendConstants.ChallengeType;
+import io.hyvexa.ascend.AscendConstants.SummitCategory;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.ascension.ChallengeManager;
+import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.common.ui.ButtonEventData;
@@ -80,47 +82,65 @@ public class AscendChallengePage extends BaseAscendPage {
         }
 
         // Build challenge entries dynamically
-        for (ChallengeType type : ChallengeType.values()) {
+        AscendPlayerProgress progress = playerStore.getPlayer(playerId);
+        ChallengeType activeType = challengeManager.getActiveChallenge(playerId);
+        ChallengeType[] types = ChallengeType.values();
+
+        for (int i = 0; i < types.length; i++) {
+            ChallengeType type = types[i];
+            String p = "#ChallengeCards[" + i + "] ";
             commandBuilder.append("#ChallengeCards", "Pages/Ascend_ChallengeEntry.ui");
 
             // Set challenge info
-            commandBuilder.set("#ChallengeName.Text", type.getDisplayName());
-            commandBuilder.set("#ChallengeDesc.Text", type.getDescription());
+            commandBuilder.set(p + "#ChallengeName.Text", type.getDisplayName());
+            commandBuilder.set(p + "#ChallengeDesc.Text", type.getDescription());
 
             // Set accent bar color via visibility toggle (dynamic Background doesn't work)
             String accentId = ACCENT_COLOR_MAP.getOrDefault(type.getAccentColor(), "AccentRed");
             for (String id : ALL_ACCENT_IDS) {
-                commandBuilder.set("#" + id + ".Visible", id.equals(accentId));
+                commandBuilder.set(p + "#" + id + ".Visible", id.equals(accentId));
             }
 
             // Malus description
-            StringBuilder malusText = new StringBuilder("Malus: ");
-            for (AscendConstants.SummitCategory blocked : type.getBlockedSummitCategories()) {
-                malusText.append(blocked.getDisplayName()).append(" locked to base");
+            commandBuilder.set(p + "#MalusLabel.Text", buildMalusDescription(type));
+
+            // Reward description
+            commandBuilder.set(p + "#RewardLabel.Text", buildRewardDescription(type));
+
+            // Reward status (claimed or not)
+            boolean rewardClaimed = progress != null && progress.hasChallengeReward(type);
+            if (rewardClaimed) {
+                commandBuilder.set(p + "#RewardStatus.Text", "Reward: Claimed");
+                commandBuilder.set(p + "#RewardStatus.Style.TextColor", "#10b981");
+            } else {
+                commandBuilder.set(p + "#RewardStatus.Text", "Reward: Not yet earned");
+                commandBuilder.set(p + "#RewardStatus.Style.TextColor", "#9fb0ba");
             }
-            commandBuilder.set("#MalusLabel.Text", malusText.toString());
 
             // Load record
             ChallengeManager.ChallengeRecord record = challengeManager.getChallengeRecord(playerId, type);
             if (record.completions() > 0) {
                 String bestStr = record.bestTimeMs() != null ? FormatUtils.formatDurationLong(record.bestTimeMs()) : "N/A";
-                commandBuilder.set("#StatusLabel.Text", "Best: " + bestStr + " | x" + record.completions() + " completions");
+                commandBuilder.set(p + "#StatusLabel.Text", "Best: " + bestStr + " | x" + record.completions() + " completions");
             } else {
-                commandBuilder.set("#StatusLabel.Text", "Not attempted");
+                commandBuilder.set(p + "#StatusLabel.Text", "Not attempted");
             }
 
             // Button state
-            ChallengeType activeType = challengeManager.getActiveChallenge(playerId);
-            if (activeType == type) {
-                commandBuilder.set("#StartButton.Visible", false);
-                commandBuilder.set("#InProgressLabel.Visible", true);
+            boolean challengeUnlocked = challengeManager.isChallengeUnlocked(playerId, type);
+            if (!challengeUnlocked) {
+                commandBuilder.set(p + "#StartButton.Visible", false);
+                commandBuilder.set(p + "#LockedLabel.Visible", true);
+            } else if (activeType == type) {
+                commandBuilder.set(p + "#StartButton.Visible", false);
+                commandBuilder.set(p + "#InProgressLabel.Visible", true);
             } else if (inChallenge) {
-                // Another challenge is active, disable start
-                commandBuilder.set("#StartButton.Visible", false);
+                commandBuilder.set(p + "#StartButton.Visible", false);
             }
 
             // Bind start button
-            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#StartButton",
+            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
+                p + "#StartButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_START_PREFIX + type.name()), false);
         }
 
@@ -168,6 +188,12 @@ public class AscendChallengePage extends BaseAscendPage {
 
         if (challengeManager.isInChallenge(playerId)) {
             player.sendMessage(Message.raw("[Challenge] You already have an active challenge. Quit first.")
+                .color(SystemMessageUtils.SECONDARY));
+            return;
+        }
+
+        if (!challengeManager.isChallengeUnlocked(playerId, type)) {
+            player.sendMessage(Message.raw("[Challenge] Complete the previous challenge first.")
                 .color(SystemMessageUtils.SECONDARY));
             return;
         }
@@ -256,5 +282,29 @@ public class AscendChallengePage extends BaseAscendPage {
     public void shutdown() {
         stopTimerRefresh();
         super.shutdown();
+    }
+
+    private String buildMalusDescription(ChallengeType type) {
+        StringBuilder sb = new StringBuilder("Malus: ");
+        if (!type.getBlockedSummitCategories().isEmpty()) {
+            for (SummitCategory blocked : type.getBlockedSummitCategories()) {
+                sb.append(blocked.getDisplayName()).append(" locked to base");
+            }
+        } else if (!type.getBlockedMapDisplayOrders().isEmpty()) {
+            sb.append("Maps 4 & 5 locked");
+        } else if (type.getSpeedEffectiveness() < 1.0) {
+            int pct = (int) (type.getSpeedEffectiveness() * 100);
+            sb.append("Runner Speed at ").append(pct).append("% effectiveness");
+        }
+        return sb.toString();
+    }
+
+    private String buildRewardDescription(ChallengeType type) {
+        return switch (type) {
+            case CHALLENGE_1 -> "Reward: Maps 4 & 5 mult gain x1.5 (permanent)";
+            case CHALLENGE_2 -> "Reward: +10% global Runner Speed (permanent)";
+            case CHALLENGE_3 -> "Reward: +20% Multiplier Gain (permanent)";
+            case CHALLENGE_4 -> "Reward: +1 base Evolution Power (permanent)";
+        };
     }
 }

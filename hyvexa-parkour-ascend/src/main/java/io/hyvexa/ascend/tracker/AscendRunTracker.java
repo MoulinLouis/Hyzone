@@ -15,6 +15,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants;
+import io.hyvexa.ascend.AscendConstants.ChallengeType;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.achievement.AchievementManager;
 import io.hyvexa.ascend.tutorial.TutorialTriggerService;
@@ -278,6 +279,15 @@ public class AscendRunTracker {
             evolutionPowerBonus = plugin.getSummitManager().getEvolutionPowerBonus(playerId);
         }
         BigNumber runnerIncrement = AscendConstants.getRunnerMultiplierIncrement(runnerStars, multiplierGainBonus, evolutionPowerBonus);
+
+        // Challenge 1 reward: x1.5 multiplier gain on maps with displayOrder 3 or 4
+        AscendPlayerProgress challengeProgress = playerStore.getPlayer(playerId);
+        if (challengeProgress != null && challengeProgress.hasChallengeReward(ChallengeType.CHALLENGE_1)) {
+            if (map.getDisplayOrder() == 3 || map.getDisplayOrder() == 4) {
+                runnerIncrement = runnerIncrement.multiply(BigNumber.fromDouble(1.5));
+            }
+        }
+
         BigNumber multiplierIncrement = runnerIncrement.multiply(BigNumber.fromDouble(5.0));
 
         // Calculate payout BEFORE adding multiplier (use current multiplier, not the new one)
@@ -409,6 +419,22 @@ public class AscendRunTracker {
             double dz = pos.getZ() - entry.startZ;
 
             if (dx * dx + dz * dz <= START_DETECTION_RADIUS_SQ && Math.abs(dy) <= START_VERTICAL_RANGE) {
+                // Check if map is blocked by active challenge
+                ParkourAscendPlugin challengePlugin = ParkourAscendPlugin.getInstance();
+                if (challengePlugin != null && challengePlugin.getChallengeManager() != null
+                        && challengePlugin.getChallengeManager().isMapBlocked(playerId, map.getDisplayOrder())) {
+                    // Teleport player back to spawn
+                    if (challengePlugin.getSettingsStore() != null && challengePlugin.getSettingsStore().hasSpawnPosition()) {
+                        Vector3d spawnPos = challengePlugin.getSettingsStore().getSpawnPosition();
+                        Vector3f spawnRot = challengePlugin.getSettingsStore().getSpawnRotation();
+                        store.addComponent(ref, Teleport.getComponentType(),
+                            new Teleport(store.getExternalData().getWorld(), spawnPos, spawnRot));
+                    }
+                    player.sendMessage(Message.raw("[Ascend] This map is locked during your active challenge!")
+                        .color(SystemMessageUtils.ERROR));
+                    return;
+                }
+
                 // Player is on this map's start - check if unlocked
                 MapUnlockHelper.UnlockResult unlockResult = MapUnlockHelper.checkAndEnsureUnlock(
                     playerId, map, playerStore, mapStore);

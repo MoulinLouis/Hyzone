@@ -1,7 +1,7 @@
 $C = "../Common.ui";
 
 Group #ChallengeEntry {
-  Anchor: (Left: 0, Right: 0, Bottom: 8, Height: 130);
+  Anchor: (Left: 0, Right: 0, Bottom: 8, Height: 160);
   LayoutMode: Left;
   Background: #0f1820;
   OutlineColor: #ffffff(0.04);
@@ -64,11 +64,30 @@ Group #ChallengeEntry {
       Text: "Malus: Evolution Power locked to base 3.0";
     }
 
-    // Status line (best time / completions)
-    Label #StatusLabel {
-      Anchor: (Left: 0, Right: 0, Height: 20, Top: 4);
-      Style: (FontSize: 13, TextColor: #8b9cb3);
-      Text: "Not attempted";
+    // Reward info
+    Label #RewardLabel {
+      Anchor: (Left: 0, Right: 0, Height: 18, Top: 4);
+      Style: (FontSize: 13, TextColor: #fbbf24);
+      Text: "Reward: ...";
+    }
+
+    // Reward status + completions
+    Group #StatusRow {
+      Anchor: (Left: 0, Right: 0, Height: 18, Top: 2);
+      LayoutMode: Left;
+
+      Label #RewardStatus {
+        Anchor: (Width: 140, Top: 0, Bottom: 0);
+        Style: (FontSize: 12, TextColor: #9fb0ba);
+        Text: "Reward: Not yet earned";
+      }
+
+      Label #StatusLabel {
+        Anchor: (Top: 0, Bottom: 0);
+        FlexWeight: 1;
+        Style: (FontSize: 12, TextColor: #8b9cb3);
+        Text: "Not attempted";
+      }
     }
   }
 
@@ -107,6 +126,14 @@ Group #ChallengeEntry {
       Anchor: (Left: 0, Right: 0, Height: 42, Top: 0);
       Style: (FontSize: 14, TextColor: #fbbf24, RenderBold: true, Alignment: Center, VerticalAlignment: Center);
       Text: "In Progress";
+      Visible: false;
+    }
+
+    // "Locked" indicator (hidden by default, shown when previous challenge not completed)
+    Label #LockedLabel {
+      Anchor: (Left: 0, Right: 0, Height: 42, Top: 0);
+      Style: (FontSize: 14, TextColor: #64748b, RenderBold: true, Alignment: Center, VerticalAlignment: Center);
+      Text: "Locked";
       Visible: false;
     }
   }

@@ -648,27 +648,41 @@ public final class AscendConstants {
     }
 
     public enum ChallengeType {
-        ASCENSION_SPRINT(1, "Ascension Sprint",
+        CHALLENGE_1(1, "Challenge 1",
+            "Complete an Ascension without maps 4 and 5",
+            "#10b981",
+            Set.of(), Set.of(3, 4), 1.0),
+        CHALLENGE_2(2, "Challenge 2",
+            "Complete an Ascension with 50% Runner Speed",
+            "#f59e0b",
+            Set.of(), Set.of(), 0.5),
+        CHALLENGE_3(3, "Challenge 3",
+            "Complete an Ascension without Multiplier Gain",
+            "#3b82f6",
+            Set.of(SummitCategory.MULTIPLIER_GAIN), Set.of(), 1.0),
+        CHALLENGE_4(4, "Challenge 4",
             "Complete an Ascension without Evolution Power",
             "#ef4444",
-            Set.of(SummitCategory.EVOLUTION_POWER),
-            50L);
+            Set.of(SummitCategory.EVOLUTION_POWER), Set.of(), 1.0);
 
         private final int id;
         private final String displayName;
         private final String description;
         private final String accentColor;
         private final Set<SummitCategory> blockedSummitCategories;
-        private final long rewardXp;
+        private final Set<Integer> blockedMapDisplayOrders;
+        private final double speedEffectiveness;
 
         ChallengeType(int id, String displayName, String description, String accentColor,
-                      Set<SummitCategory> blockedSummitCategories, long rewardXp) {
+                      Set<SummitCategory> blockedSummitCategories,
+                      Set<Integer> blockedMapDisplayOrders, double speedEffectiveness) {
             this.id = id;
             this.displayName = displayName;
             this.description = description;
             this.accentColor = accentColor;
             this.blockedSummitCategories = blockedSummitCategories;
-            this.rewardXp = rewardXp;
+            this.blockedMapDisplayOrders = blockedMapDisplayOrders;
+            this.speedEffectiveness = speedEffectiveness;
         }
 
         public int getId() { return id; }
@@ -676,7 +690,8 @@ public final class AscendConstants {
         public String getDescription() { return description; }
         public String getAccentColor() { return accentColor; }
         public Set<SummitCategory> getBlockedSummitCategories() { return blockedSummitCategories; }
-        public long getRewardXp() { return rewardXp; }
+        public Set<Integer> getBlockedMapDisplayOrders() { return blockedMapDisplayOrders; }
+        public double getSpeedEffectiveness() { return speedEffectiveness; }
 
         public static ChallengeType fromId(int id) {
             for (ChallengeType type : values()) {

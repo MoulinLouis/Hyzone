@@ -57,6 +57,9 @@ public class ChallengeManager {
         if (isInChallenge(playerId)) {
             return null; // already in a challenge
         }
+        if (!isChallengeUnlocked(playerId, challengeType)) {
+            return null; // previous challenges not completed
+        }
 
         AscendPlayerProgress progress = playerStore.getPlayer(playerId);
         if (progress == null) {
@@ -123,10 +126,8 @@ public class ChallengeManager {
         // Restore snapshot
         active.snapshot().restore(progress);
 
-        // Apply reward: bonus summit XP to the blocked category
-        for (SummitCategory blockedCat : active.challengeType().getBlockedSummitCategories()) {
-            playerStore.addSummitXp(playerId, blockedCat, active.challengeType().getRewardXp());
-        }
+        // Apply permanent reward
+        progress.addChallengeReward(active.challengeType());
 
         // Clean up
         activeChallenges.remove(playerId);
@@ -187,6 +188,26 @@ public class ChallengeManager {
     }
 
     /**
+     * Check if a challenge is unlocked for a player.
+     * Challenge 1 is always unlocked. Challenge N requires completing all challenges 1..N-1.
+     */
+    public boolean isChallengeUnlocked(UUID playerId, ChallengeType challengeType) {
+        AscendPlayerProgress progress = playerStore.getPlayer(playerId);
+        if (progress == null) {
+            return challengeType == ChallengeType.CHALLENGE_1;
+        }
+        for (ChallengeType prev : ChallengeType.values()) {
+            if (prev.getId() >= challengeType.getId()) {
+                break;
+            }
+            if (!progress.hasChallengeReward(prev)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
      * Check if a summit category is blocked by the player's active challenge.
      */
     public boolean isSummitBlocked(UUID playerId, SummitCategory category) {
@@ -198,13 +219,38 @@ public class ChallengeManager {
     }
 
     /**
+     * Check if a map is blocked by the player's active challenge (by displayOrder).
+     */
+    public boolean isMapBlocked(UUID playerId, int displayOrder) {
+        ActiveChallenge active = activeChallenges.get(playerId);
+        if (active == null) {
+            return false;
+        }
+        return active.challengeType().getBlockedMapDisplayOrders().contains(displayOrder);
+    }
+
+    /**
+     * Get the speed effectiveness for the player's active challenge.
+     * Returns 1.0 if no challenge or no speed nerf.
+     */
+    public double getSpeedEffectiveness(UUID playerId) {
+        ActiveChallenge active = activeChallenges.get(playerId);
+        if (active == null) {
+            return 1.0;
+        }
+        return active.challengeType().getSpeedEffectiveness();
+    }
+
+    /**
      * Load active challenge from DB on player connect (crash recovery).
+     * Also loads permanent challenge rewards from ascend_challenge_records.
      */
     public void onPlayerConnect(UUID playerId) {
         if (!DatabaseManager.getInstance().isInitialized()) {
             return;
         }
 
+        // Load active challenge (crash recovery)
         String sql = "SELECT challenge_type_id, started_at_ms, snapshot_json FROM ascend_challenges WHERE player_uuid = ?";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -220,24 +266,55 @@ public class ChallengeManager {
                     if (type == null) {
                         LOGGER.atWarning().log("[Challenge] Unknown challenge type ID " + typeId + " for player " + playerId);
                         deleteActiveChallenge(playerId);
-                        return;
+                    } else {
+                        ChallengeSnapshot snapshot = GSON.fromJson(json, ChallengeSnapshot.class);
+                        activeChallenges.put(playerId, new ActiveChallenge(type, startedAt, snapshot));
+
+                        // Restore challenge state on progress
+                        AscendPlayerProgress progress = playerStore.getPlayer(playerId);
+                        if (progress != null) {
+                            progress.setActiveChallenge(type);
+                            progress.setChallengeStartedAtMs(startedAt);
+                        }
+
+                        LOGGER.atInfo().log("[Challenge] Restored active challenge for " + playerId + ": " + type.name());
                     }
-
-                    ChallengeSnapshot snapshot = GSON.fromJson(json, ChallengeSnapshot.class);
-                    activeChallenges.put(playerId, new ActiveChallenge(type, startedAt, snapshot));
-
-                    // Restore challenge state on progress
-                    AscendPlayerProgress progress = playerStore.getPlayer(playerId);
-                    if (progress != null) {
-                        progress.setActiveChallenge(type);
-                        progress.setChallengeStartedAtMs(startedAt);
-                    }
-
-                    LOGGER.atInfo().log("[Challenge] Restored active challenge for " + playerId + ": " + type.name());
                 }
             }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("[Challenge] Failed to load challenge for " + playerId + ": " + e.getMessage());
+        }
+
+        // Load permanent challenge rewards (any challenge with completions > 0)
+        loadChallengeRewards(playerId);
+    }
+
+    /**
+     * Load permanent challenge rewards from ascend_challenge_records.
+     * Any challenge with completions > 0 is considered completed.
+     */
+    private void loadChallengeRewards(UUID playerId) {
+        AscendPlayerProgress progress = playerStore.getPlayer(playerId);
+        if (progress == null) {
+            return;
+        }
+
+        String sql = "SELECT challenge_type_id FROM ascend_challenge_records WHERE player_uuid = ? AND completions > 0";
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            stmt.setString(1, playerId.toString());
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    int typeId = rs.getInt("challenge_type_id");
+                    ChallengeType type = ChallengeType.fromId(typeId);
+                    if (type != null) {
+                        progress.addChallengeReward(type);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.at(Level.SEVERE).log("[Challenge] Failed to load challenge rewards for " + playerId + ": " + e.getMessage());
         }
     }
 
