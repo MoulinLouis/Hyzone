@@ -7,6 +7,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.common.util.HylogramsBridge;
+import io.hyvexa.common.util.ModeGate;
 import io.hyvexa.parkour.ParkourTimingConstants;
 import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.data.ProgressStore;
@@ -228,10 +229,7 @@ public class LeaderboardHologramManager {
     }
 
     private boolean isParkourWorld(World world) {
-        if (world == null || world.getName() == null) {
-            return false;
-        }
-        return parkourWorldName.equalsIgnoreCase(world.getName());
+        return ModeGate.isParkourWorld(world);
     }
 
     public void logMapHologramDebug(String message) {

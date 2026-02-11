@@ -1,12 +1,14 @@
 package io.hyvexa.hub;
 
+import io.hyvexa.common.WorldConstants;
+
 public final class HubConstants {
 
-    public static final String WORLD_HUB = "Hub";
-    public static final String WORLD_PARKOUR = "Parkour";
-    public static final String WORLD_ASCEND = "Ascend";
+    public static final String WORLD_HUB = WorldConstants.WORLD_HUB;
+    public static final String WORLD_PARKOUR = WorldConstants.WORLD_PARKOUR;
+    public static final String WORLD_ASCEND = WorldConstants.WORLD_ASCEND;
 
-    public static final String ITEM_SERVER_SELECTOR = "Hub_Server_Selector";
+    public static final String ITEM_SERVER_SELECTOR = WorldConstants.ITEM_SERVER_SELECTOR;
 
     private HubConstants() {
     }

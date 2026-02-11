@@ -5,6 +5,9 @@ import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.common.ghost.AbstractGhostRecorder;
+import io.hyvexa.common.ghost.GhostRecording;
+import io.hyvexa.common.ghost.GhostSample;
+import io.hyvexa.common.ghost.GhostStore;
 
 import java.util.List;
 import java.util.UUID;

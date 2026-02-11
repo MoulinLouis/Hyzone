@@ -14,6 +14,7 @@ import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.common.util.CommandUtils;
 import io.hyvexa.parkour.util.ParkourModeGate;
 
 import javax.annotation.Nonnull;
@@ -57,7 +58,8 @@ public class CheckpointCommand extends AbstractPlayerCommand {
         if (this.actionArg.provided(ctx)) {
             action = this.actionArg.get(ctx);
         } else {
-            action = readPositionalAction(ctx);
+            String[] tokens = CommandUtils.tokenize(ctx);
+            action = tokens.length > 0 ? tokens[0] : null;
         }
         if (action != null) {
             action = action.trim();
@@ -115,31 +117,6 @@ public class CheckpointCommand extends AbstractPlayerCommand {
             return;
         }
         ctx.sendMessage(MESSAGE_CHECKPOINT_CLEARED);
-    }
-
-    private static String readPositionalAction(@Nonnull CommandContext ctx) {
-        String input = ctx.getInputString();
-        if (input == null) {
-            return null;
-        }
-        String trimmed = input.trim();
-        if (trimmed.isEmpty()) {
-            return null;
-        }
-        String[] tokens = trimmed.split("\\s+");
-        if (tokens.length == 0) {
-            return null;
-        }
-        String first = tokens[0];
-        if (first.startsWith("/")) {
-            first = first.substring(1);
-        }
-        String commandName = ctx.getCalledCommand().getName();
-        int actionIndex = first.equalsIgnoreCase(commandName) ? 1 : 0;
-        if (actionIndex >= tokens.length) {
-            return null;
-        }
-        return tokens[actionIndex];
     }
 
     private static final class Checkpoint {

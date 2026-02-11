@@ -20,7 +20,7 @@ import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.data.AscendSettingsStore;
-import io.hyvexa.ascend.ghost.GhostStore;
+import io.hyvexa.common.ghost.GhostStore;
 import io.hyvexa.ascend.ghost.GhostRecorder;
 import io.hyvexa.ascend.achievement.AchievementManager;
 import io.hyvexa.ascend.ascension.AscensionManager;
@@ -144,7 +144,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
         // Ghost system
         try {
-            ghostStore = new GhostStore();
+            ghostStore = new GhostStore("ascend_ghost_recordings", "ascend");
             ghostStore.syncLoad();
 
             ghostRecorder = new GhostRecorder(ghostStore);

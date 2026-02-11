@@ -38,4 +38,27 @@ public final class InventoryUtils {
             container.setItemStackForSlot(slot, ItemStack.EMPTY, false);
         }
     }
+
+    public static void safeSetSlot(ItemContainer hotbar, short slot, ItemStack item) {
+        if (hotbar == null || item == null) {
+            return;
+        }
+        if (slot < 0 || slot >= hotbar.getCapacity()) {
+            return;
+        }
+        hotbar.setItemStackForSlot(slot, item, false);
+    }
+
+    public static void setIfMissing(ItemContainer hotbar, short slot, String itemId) {
+        if (hotbar == null || itemId == null || itemId.isBlank()) {
+            return;
+        }
+        if (slot < 0 || slot >= hotbar.getCapacity()) {
+            return;
+        }
+        ItemStack existing = hotbar.getItemStack(slot);
+        if (existing == null || ItemStack.isEmpty(existing) || !itemId.equals(existing.getItemId())) {
+            hotbar.setItemStackForSlot(slot, new ItemStack(itemId, 1), false);
+        }
+    }
 }

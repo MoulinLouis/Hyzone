@@ -5,6 +5,7 @@ import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import io.hyvexa.ascend.AscendConstants;
+import io.hyvexa.common.WorldConstants;
 import io.hyvexa.common.util.InventoryUtils;
 
 public final class AscendInventoryUtils {
@@ -30,7 +31,7 @@ public final class AscendInventoryUtils {
         hotbar.setItemStackForSlot((short) 3, new ItemStack(AscendConstants.ITEM_DEV_SHADOWEAVE, 1), false);
         hotbar.setItemStackForSlot((short) 4, new ItemStack(AscendConstants.ITEM_DEV_SILK, 1), false);
         short slot = (short) (hotbar.getCapacity() - 1);
-        hotbar.setItemStackForSlot(slot, new ItemStack("Hub_Server_Selector", 1), false);
+        hotbar.setItemStackForSlot(slot, new ItemStack(WorldConstants.ITEM_SERVER_SELECTOR, 1), false);
     }
 
     public static void ensureMenuItems(Player player) {
@@ -46,13 +47,13 @@ public final class AscendInventoryUtils {
         if (capacity <= 0) {
             return;
         }
-        setIfMissing(hotbar, (short) 0, AscendConstants.ITEM_DEV_CINDERCLOTH);
-        setIfMissing(hotbar, (short) 1, AscendConstants.ITEM_DEV_STORMSILK);
-        setIfMissing(hotbar, (short) 2, AscendConstants.ITEM_DEV_COTTON);
-        setIfMissing(hotbar, (short) 3, AscendConstants.ITEM_DEV_SHADOWEAVE);
-        setIfMissing(hotbar, (short) 4, AscendConstants.ITEM_DEV_SILK);
+        InventoryUtils.setIfMissing(hotbar, (short) 0, AscendConstants.ITEM_DEV_CINDERCLOTH);
+        InventoryUtils.setIfMissing(hotbar, (short) 1, AscendConstants.ITEM_DEV_STORMSILK);
+        InventoryUtils.setIfMissing(hotbar, (short) 2, AscendConstants.ITEM_DEV_COTTON);
+        InventoryUtils.setIfMissing(hotbar, (short) 3, AscendConstants.ITEM_DEV_SHADOWEAVE);
+        InventoryUtils.setIfMissing(hotbar, (short) 4, AscendConstants.ITEM_DEV_SILK);
         short slot = (short) (capacity - 1);
-        setIfMissing(hotbar, slot, "Hub_Server_Selector");
+        InventoryUtils.setIfMissing(hotbar, slot, WorldConstants.ITEM_SERVER_SELECTOR);
     }
 
     public static void giveRunItems(Player player) {
@@ -71,19 +72,6 @@ public final class AscendInventoryUtils {
         hotbar.setItemStackForSlot((short) 0, new ItemStack(AscendConstants.ITEM_RESET, 1), false);
         hotbar.setItemStackForSlot((short) 1, new ItemStack(AscendConstants.ITEM_LEAVE, 1), false);
         hotbar.setItemStackForSlot((short) 2, new ItemStack(AscendConstants.ITEM_DEV_CINDERCLOTH, 1), false);
-    }
-
-    private static void setIfMissing(ItemContainer hotbar, short slot, String itemId) {
-        if (hotbar == null || itemId == null || itemId.isBlank()) {
-            return;
-        }
-        if (slot < 0 || slot >= hotbar.getCapacity()) {
-            return;
-        }
-        ItemStack existing = hotbar.getItemStack(slot);
-        if (existing == null || ItemStack.isEmpty(existing) || !itemId.equals(existing.getItemId())) {
-            hotbar.setItemStackForSlot(slot, new ItemStack(itemId, 1), false);
-        }
     }
 
     private static boolean isInventoryWriteSafe(Player player) {

@@ -1,8 +1,8 @@
-package io.hyvexa.ascend.ghost;
+package io.hyvexa.common.ghost;
 
 /**
  * Represents a single position snapshot in a ghost recording.
- * Captured every 50ms during manual parkour runs.
+ * Captured every 50ms during parkour runs.
  */
 public record GhostSample(
     double x,
