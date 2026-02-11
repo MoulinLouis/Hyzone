@@ -3,6 +3,8 @@
 ## [Unreleased]
 
 ### Changed
+- **Ascend: Summit hard cap at level 1000 with deep cap nerf** - Each summit category now has a maximum level of 1000. Added a "deep cap" at level 500 where growth transitions from √ to ⁴√ (heavy diminishing returns). XP is capped, UI shows "MAX" state, and summiting is blocked once reached.
+- **Ascend: Elevation multiplier buff** - Elevation multiplier changed from level (1:1) to level^1.05 (slightly super-linear). Higher elevation levels now give progressively better multipliers, rewarding deeper elevation pushes.
 - **Ascend: Renamed "Coins" to "Vexa"** - All player-facing text, Java identifiers, UI element IDs, database columns, and documentation updated to use "Vexa" as the currency name
 - **Parkour/Ascend: Tick-path performance cleanup** - Optimized ghost playback sampling/interpolation and reduced per-tick map scanning overhead in run tracking
 - **Parkour/Ascend: Ghost stack moved to shared core wrappers** - Recorder/store/interpolation logic now lives in `hyvexa-core` with mode-specific table/resolver adapters and parity tests

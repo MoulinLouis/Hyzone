@@ -276,7 +276,26 @@ public final class AscendConstants {
     // Elevation System (First Prestige)
     // ========================================
 
-    // Elevation: level = multiplier (1:1), cost curve flattened at high levels.
+    // Elevation multiplier: level^1.05 (slightly super-linear to reward higher elevation)
+    public static final double ELEVATION_MULTIPLIER_EXPONENT = 1.05;
+
+    /**
+     * Calculate the elevation multiplier for a given level.
+     * Returns level^1.05 (slightly super-linear).
+     */
+    public static double getElevationMultiplier(int level) {
+        if (level <= 0) return 1.0;
+        return Math.pow(level, ELEVATION_MULTIPLIER_EXPONENT);
+    }
+
+    /**
+     * Format the elevation multiplier for display (rounded to integer).
+     */
+    public static String formatElevationMultiplier(int level) {
+        return "x" + Math.round(getElevationMultiplier(level));
+    }
+
+    // Elevation: cost curve flattened at high levels.
     // Cost formula: BASE_COST * COST_GROWTH^(effectiveLevel)
     // For level <= SOFT_CAP: effectiveLevel = level^0.72
     // For level > SOFT_CAP:  effectiveLevel = SOFT_CAP^0.72 + (level-SOFT_CAP)^0.58
@@ -401,8 +420,14 @@ public final class AscendConstants {
     // Summit System (Middle Prestige)
     // ========================================
 
-    // Summit soft cap: linear growth below, sqrt growth above (no ceiling, just slower)
+    // Summit soft cap: linear growth below, sqrt growth above
     public static final int SUMMIT_SOFT_CAP = 25;
+    // Summit deep cap: sqrt growth below, fourth-root growth above (heavy diminishing returns)
+    public static final int SUMMIT_DEEP_CAP = 500;
+    // Summit hard cap: absolute maximum level per category
+    public static final int SUMMIT_MAX_LEVEL = 1000;
+    // Max cumulative XP needed (pre-computed for SUMMIT_MAX_LEVEL)
+    public static final long SUMMIT_MAX_XP = getCumulativeXpForLevel(SUMMIT_MAX_LEVEL);
 
     public enum SummitCategory {
         RUNNER_SPEED("Runner Speed", 1.0, 0.15),        // 1 + 0.15/level
@@ -425,19 +450,26 @@ public final class AscendConstants {
 
         /**
          * Get the bonus multiplier for a given level.
-         * Linear up to SUMMIT_SOFT_CAP, then sqrt growth on excess.
-         * Below soft cap: base + increment × level
-         * Above soft cap: base + increment × softCap + increment × √(level - softCap)
-         * No ceiling — growth continues forever, just slower past the soft cap.
+         * Three growth zones:
+         *   0-25 (soft cap): linear — base + increment × level
+         *   25-500 (deep cap): sqrt — + increment × √(level - 25)
+         *   500-1000 (hard cap): fourth root — + increment × ⁴√(level - 500)
          */
         public double getBonusForLevel(int level) {
-            int safeLevel = Math.max(0, level);
+            int safeLevel = Math.max(0, Math.min(level, SUMMIT_MAX_LEVEL));
             if (safeLevel <= SUMMIT_SOFT_CAP) {
                 return base + increment * safeLevel;
             }
             double linearPart = increment * SUMMIT_SOFT_CAP;
-            double sqrtPart = increment * Math.sqrt(safeLevel - SUMMIT_SOFT_CAP);
-            return base + linearPart + sqrtPart;
+            if (safeLevel <= SUMMIT_DEEP_CAP) {
+                double sqrtPart = increment * Math.sqrt(safeLevel - SUMMIT_SOFT_CAP);
+                return base + linearPart + sqrtPart;
+            }
+            // sqrt portion from soft cap to deep cap (frozen)
+            double sqrtPart = increment * Math.sqrt(SUMMIT_DEEP_CAP - SUMMIT_SOFT_CAP);
+            // fourth-root portion from deep cap onward (heavy diminishing returns)
+            double fourthRootPart = increment * Math.pow(safeLevel - SUMMIT_DEEP_CAP, 0.25);
+            return base + linearPart + sqrtPart + fourthRootPart;
         }
     }
 
@@ -525,7 +557,7 @@ public final class AscendConstants {
         if (xp <= 0) return 0;
         // Binary search: find highest level where getCumulativeXpForLevel(level) <= xp
         int lo = 0;
-        int hi = 100_000;
+        int hi = SUMMIT_MAX_LEVEL; // hard cap
         while (lo < hi) {
             int mid = lo + (hi - lo + 1) / 2;
             if (getCumulativeXpForLevel(mid) <= xp) {
@@ -543,6 +575,10 @@ public final class AscendConstants {
      */
     public static long[] getXpProgress(long totalXp) {
         int level = calculateLevelFromXp(totalXp);
+        if (level >= SUMMIT_MAX_LEVEL) {
+            // At max level: show full progress bar
+            return new long[]{1, 1};
+        }
         long xpForCurrentLevel = getCumulativeXpForLevel(level);
         long xpInLevel = totalXp - xpForCurrentLevel;
         long xpForNextLevel = getXpForLevel(level + 1);

@@ -70,11 +70,11 @@ public class AscendTutorialPage extends BaseAscendPage {
             "Pages/Ascend_Tutorial_Elevation.ui",
             new String[]{"Elevation", "Elevate Often"},
             new String[]{
-                "Spend your vexa to gain elevation levels. Your level is your multiplier: level 10 = x10, level 100 = x100. Open with /ascend elevate.",
+                "Spend your vexa to gain elevation levels. Higher levels give bigger multipliers: level 10 = x11, level 100 = x126. Open with /ascend elevate.",
                 "Elevation resets vexa, runners, multipliers, and map unlocks. You keep your best times and your new elevation level. Elevate often to grow faster."
             },
             new String[][]{
-                {"Spend vexa to gain elevation levels", "Your level equals your global multiplier", "Level 10 = x10, level 100 = x100"},
+                {"Spend vexa to gain elevation levels", "Higher levels give bigger multipliers", "Level 10 = x11, level 100 = x126"},
                 {"Resets vexa, runners, and multipliers", "Keeps best times and elevation level", "Elevate often to grow faster"}
             },
             new String[][]{

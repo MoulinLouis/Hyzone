@@ -4,6 +4,7 @@ import com.hypixel.hytale.server.core.entity.entities.player.hud.CustomUIHud;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
+import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.AscendConstants.SummitCategory;
 import io.hyvexa.ascend.summit.SummitManager;
 import io.hyvexa.common.math.BigNumber;
@@ -79,11 +80,12 @@ public class AscendHud extends CustomUIHud {
         String digitsKey = buildDigitsKey(digits);
         String elevationText;
         if (showElevation && potentialElevation > currentElevation) {
-            elevationText = "x" + currentElevation + " -> x" + potentialElevation;
+            elevationText = AscendConstants.formatElevationMultiplier(currentElevation)
+                + " -> " + AscendConstants.formatElevationMultiplier(potentialElevation);
         } else {
-            elevationText = "x" + currentElevation;
+            elevationText = AscendConstants.formatElevationMultiplier(currentElevation);
         }
-        String elevationValueText = formatMultiplier(currentElevation);
+        String elevationValueText = formatMultiplier(AscendConstants.getElevationMultiplier(currentElevation));
         // Check if values changed OR if we have active effects to process
         boolean valuesChanged = !vexaText.equals(lastVexaText)
             || !vexaPerRunText.equals(lastVexaPerRunText)
