@@ -28,6 +28,7 @@ import io.hyvexa.ascend.ui.AscensionPage;
 import io.hyvexa.ascend.ui.BaseAscendPage;
 import io.hyvexa.ascend.ui.ElevationPage;
 import io.hyvexa.ascend.ui.AscendHelpPage;
+import io.hyvexa.ascend.ui.AscendProfilePage;
 import io.hyvexa.ascend.ui.AscendSettingsPage;
 import io.hyvexa.ascend.ui.AutomationPage;
 import io.hyvexa.ascend.ui.SkillTreePage;
@@ -51,7 +52,7 @@ public class AscendCommand extends AbstractAsyncCommand {
     private static final String UNKNOWN_SUBCOMMAND_MESSAGE =
             "Unknown subcommand. Use: /ascend, /ascend stats, /ascend elevate, /ascend summit, "
                     + "/ascend ascension, /ascend skills, /ascend automation, /ascend settings, "
-                    + "/ascend achievements, /ascend title, /ascend leaderboard, /ascend maplb, /ascend help";
+                    + "/ascend achievements, /ascend profile, /ascend leaderboard, /ascend maplb, /ascend help";
 
     /**
      * Close any existing page for the player before opening a new one.
@@ -156,6 +157,7 @@ public class AscendCommand extends AbstractAsyncCommand {
         handlers.put("leaderboard", () -> openLeaderboardPage(player, playerRef, ref, store));
         handlers.put("maplb", () -> openMapLeaderboardPage(player, playerRef, ref, store));
         handlers.put("settings", () -> openSettingsPage(player, playerRef, ref, store));
+        handlers.put("profile", () -> openProfilePage(player, playerRef, ref, store));
         handlers.put("help", () -> openHelpPage(player, playerRef, ref, store));
         handlers.put("challenge", () -> openChallengePage(player, playerRef, ref, store));
         return handlers;
@@ -219,6 +221,13 @@ public class AscendCommand extends AbstractAsyncCommand {
         ParkourAscendPlugin plugin = requirePlugin(player);
         if (plugin == null || plugin.getAscensionManager() == null) return;
         AutomationPage page = new AutomationPage(playerRef, plugin.getPlayerStore(), plugin.getAscensionManager());
+        openTrackedPage(player, playerRef, ref, store, page);
+    }
+
+    private void openProfilePage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
+        ParkourAscendPlugin plugin = requirePlugin(player);
+        if (plugin == null || plugin.getPlayerStore() == null || plugin.getRobotManager() == null) return;
+        AscendProfilePage page = new AscendProfilePage(playerRef, plugin.getPlayerStore(), plugin.getRobotManager());
         openTrackedPage(player, playerRef, ref, store, page);
     }
 

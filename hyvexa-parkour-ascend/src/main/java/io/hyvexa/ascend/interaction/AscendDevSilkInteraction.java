@@ -11,7 +11,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.ParkourAscendPlugin;
-import io.hyvexa.ascend.ui.AscendSettingsPage;
+import io.hyvexa.ascend.ui.AscendProfilePage;
 import io.hyvexa.ascend.util.AscendModeGate;
 import io.hyvexa.core.state.ModeMessages;
 
@@ -46,6 +46,6 @@ public class AscendDevSilkInteraction extends SimpleInteraction {
             return;
         }
         player.getPageManager().openCustomPage(ref, store,
-            new AscendSettingsPage(playerRef, plugin.getPlayerStore(), plugin.getRobotManager()));
+            new AscendProfilePage(playerRef, plugin.getPlayerStore(), plugin.getRobotManager()));
     }
 }

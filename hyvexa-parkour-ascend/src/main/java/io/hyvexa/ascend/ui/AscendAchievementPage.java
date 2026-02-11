@@ -4,11 +4,13 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
+import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.AscendConstants.AchievementCategory;
 import io.hyvexa.ascend.AscendConstants.AchievementType;
 import io.hyvexa.ascend.achievement.AchievementManager;
@@ -25,18 +27,29 @@ public class AscendAchievementPage extends BaseAscendPage {
 
     private final AscendPlayerStore playerStore;
     private final AchievementManager achievementManager;
+    private final boolean fromProfile;
 
     public AscendAchievementPage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore,
                                   AchievementManager achievementManager) {
+        this(playerRef, playerStore, achievementManager, false);
+    }
+
+    public AscendAchievementPage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore,
+                                  AchievementManager achievementManager, boolean fromProfile) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
         this.playerStore = playerStore;
         this.achievementManager = achievementManager;
+        this.fromProfile = fromProfile;
     }
 
     @Override
     public void build(@Nonnull Ref<EntityStore> ref, @Nonnull UICommandBuilder commandBuilder,
                       @Nonnull UIEventBuilder eventBuilder, @Nonnull Store<EntityStore> store) {
         commandBuilder.append("Pages/Ascend_Achievement.ui");
+
+        if (fromProfile) {
+            commandBuilder.set("#CloseButton.Text", "Back");
+        }
 
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CloseButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE), false);
@@ -110,6 +123,22 @@ public class AscendAchievementPage extends BaseAscendPage {
         }
 
         if (BUTTON_CLOSE.equals(data.getButton())) {
+            if (fromProfile) {
+                navigateBackToProfile(ref, store);
+            } else {
+                this.close();
+            }
+        }
+    }
+
+    private void navigateBackToProfile(Ref<EntityStore> ref, Store<EntityStore> store) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (player != null && playerRef != null && plugin != null && plugin.getRobotManager() != null) {
+            player.getPageManager().openCustomPage(ref, store,
+                    new AscendProfilePage(playerRef, playerStore, plugin.getRobotManager()));
+        } else {
             this.close();
         }
     }
