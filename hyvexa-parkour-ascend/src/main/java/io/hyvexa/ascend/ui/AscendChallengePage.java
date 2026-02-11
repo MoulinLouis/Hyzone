@@ -363,17 +363,23 @@ public class AscendChallengePage extends BaseAscendPage {
                 sb.append(blocked.getDisplayName()).append(" locked to base");
             }
         } else if (!type.getBlockedMapDisplayOrders().isEmpty()) {
-            sb.append("Maps 4 & 5 locked");
+            sb.append("Map 5 locked");
         } else if (type.getSpeedEffectiveness() < 1.0) {
             int pct = (int) (type.getSpeedEffectiveness() * 100);
             sb.append("Runner Speed at ").append(pct).append("% effectiveness");
+        } else if (type.getMultiplierGainEffectiveness() < 1.0) {
+            int pct = (int) (type.getMultiplierGainEffectiveness() * 100);
+            sb.append("Multiplier Gain at ").append(pct).append("% effectiveness");
+        } else if (type.getEvolutionPowerEffectiveness() < 1.0) {
+            int pct = (int) (type.getEvolutionPowerEffectiveness() * 100);
+            sb.append("Evolution Power at ").append(pct).append("% effectiveness");
         }
         return sb.toString();
     }
 
     private String buildRewardDescription(ChallengeType type) {
         return switch (type) {
-            case CHALLENGE_1 -> "Reward: Maps 4 & 5 mult gain x1.5 (permanent)";
+            case CHALLENGE_1 -> "Reward: Map 5 mult gain x1.5 (permanent)";
             case CHALLENGE_2 -> "Reward: +10% global Runner Speed (permanent)";
             case CHALLENGE_3 -> "Reward: +20% Multiplier Gain (permanent)";
             case CHALLENGE_4 -> "Reward: +1 base Evolution Power (permanent)";

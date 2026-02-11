@@ -649,21 +649,21 @@ public final class AscendConstants {
 
     public enum ChallengeType {
         CHALLENGE_1(1, "Challenge 1",
-            "Complete an Ascension without maps 4 and 5",
+            "Complete an Ascension without map 5",
             "#10b981",
-            Set.of(), Set.of(3, 4), 1.0),
+            Set.of(), Set.of(4), 1.0, 1.0, 1.0),
         CHALLENGE_2(2, "Challenge 2",
             "Complete an Ascension with 50% Runner Speed",
             "#f59e0b",
-            Set.of(), Set.of(), 0.5),
+            Set.of(), Set.of(), 0.5, 1.0, 1.0),
         CHALLENGE_3(3, "Challenge 3",
-            "Complete an Ascension without Multiplier Gain",
+            "Complete an Ascension with 50% Multiplier Gain",
             "#3b82f6",
-            Set.of(SummitCategory.MULTIPLIER_GAIN), Set.of(), 1.0),
+            Set.of(), Set.of(), 1.0, 0.5, 1.0),
         CHALLENGE_4(4, "Challenge 4",
-            "Complete an Ascension without Evolution Power",
+            "Complete an Ascension with 50% Evolution Power",
             "#ef4444",
-            Set.of(SummitCategory.EVOLUTION_POWER), Set.of(), 1.0);
+            Set.of(), Set.of(), 1.0, 1.0, 0.5);
 
         private final int id;
         private final String displayName;
@@ -672,10 +672,13 @@ public final class AscendConstants {
         private final Set<SummitCategory> blockedSummitCategories;
         private final Set<Integer> blockedMapDisplayOrders;
         private final double speedEffectiveness;
+        private final double multiplierGainEffectiveness;
+        private final double evolutionPowerEffectiveness;
 
         ChallengeType(int id, String displayName, String description, String accentColor,
                       Set<SummitCategory> blockedSummitCategories,
-                      Set<Integer> blockedMapDisplayOrders, double speedEffectiveness) {
+                      Set<Integer> blockedMapDisplayOrders, double speedEffectiveness,
+                      double multiplierGainEffectiveness, double evolutionPowerEffectiveness) {
             this.id = id;
             this.displayName = displayName;
             this.description = description;
@@ -683,6 +686,8 @@ public final class AscendConstants {
             this.blockedSummitCategories = blockedSummitCategories;
             this.blockedMapDisplayOrders = blockedMapDisplayOrders;
             this.speedEffectiveness = speedEffectiveness;
+            this.multiplierGainEffectiveness = multiplierGainEffectiveness;
+            this.evolutionPowerEffectiveness = evolutionPowerEffectiveness;
         }
 
         public int getId() { return id; }
@@ -692,6 +697,8 @@ public final class AscendConstants {
         public Set<SummitCategory> getBlockedSummitCategories() { return blockedSummitCategories; }
         public Set<Integer> getBlockedMapDisplayOrders() { return blockedMapDisplayOrders; }
         public double getSpeedEffectiveness() { return speedEffectiveness; }
+        public double getMultiplierGainEffectiveness() { return multiplierGainEffectiveness; }
+        public double getEvolutionPowerEffectiveness() { return evolutionPowerEffectiveness; }
 
         public static ChallengeType fromId(int id) {
             for (ChallengeType type : values()) {

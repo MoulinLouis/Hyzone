@@ -280,10 +280,10 @@ public class AscendRunTracker {
         }
         BigNumber runnerIncrement = AscendConstants.getRunnerMultiplierIncrement(runnerStars, multiplierGainBonus, evolutionPowerBonus);
 
-        // Challenge 1 reward: x1.5 multiplier gain on maps with displayOrder 3 or 4
+        // Challenge 1 reward: x1.5 multiplier gain on map 5 (displayOrder 4)
         AscendPlayerProgress challengeProgress = playerStore.getPlayer(playerId);
         if (challengeProgress != null && challengeProgress.hasChallengeReward(ChallengeType.CHALLENGE_1)) {
-            if (map.getDisplayOrder() == 3 || map.getDisplayOrder() == 4) {
+            if (map.getDisplayOrder() == 4) {
                 runnerIncrement = runnerIncrement.multiply(BigNumber.fromDouble(1.5));
             }
         }
