@@ -1,0 +1,11 @@
+// Category header - appended into #AchievementCards
+Group {
+  Anchor: (Left: 0, Right: 0, Height: 28, Top: 10);
+  LayoutMode: Full;
+
+  Label #CategoryName {
+    Anchor: (Left: 4, Top: 4, Width: 200, Height: 20);
+    Style: (FontSize: 14, TextColor: #f59e0b, RenderBold: true);
+    Text: "Category";
+  }
+}
