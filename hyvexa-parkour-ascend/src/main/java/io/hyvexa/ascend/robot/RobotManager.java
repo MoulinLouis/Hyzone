@@ -731,6 +731,16 @@ public class RobotManager {
             if (ghost == null) continue;
 
             playerStore.setHasRobot(playerId, map.getId(), true);
+            // Swift Restart: new runners start at 1-star
+            ParkourAscendPlugin swiftPlugin = ParkourAscendPlugin.getInstance();
+            AscensionManager swiftAm = swiftPlugin != null ? swiftPlugin.getAscensionManager() : null;
+            if (swiftAm != null && swiftAm.hasSwiftRestart(playerId)) {
+                AscendPlayerProgress.MapProgress placed = progress.getMapProgress().get(map.getId());
+                if (placed != null && placed.getRobotStars() == 0) {
+                    placed.setRobotStars(1);
+                    playerStore.markDirty(playerId);
+                }
+            }
             return; // One action per call for smooth visual
         }
 
@@ -808,14 +818,18 @@ public class RobotManager {
                 }
             }
 
-            // Momentum: temporary ×2.0 speed boost from manual run (per-map)
+            // Momentum: temporary speed boost from manual run (per-map)
+            // Base: x2.0, with Momentum Surge skill: x3.0
             AscendPlayerStore ps = plugin.getPlayerStore();
             if (ps != null) {
                 AscendPlayerProgress progress = ps.getPlayer(ownerId);
                 if (progress != null) {
                     AscendPlayerProgress.MapProgress mapProgress = progress.getMapProgress().get(map.getId());
                     if (mapProgress != null && mapProgress.isMomentumActive()) {
-                        speedMultiplier *= AscendConstants.MOMENTUM_SPEED_MULTIPLIER;
+                        double momentumMultiplier = (ascensionManager != null && ascensionManager.hasMomentumSurge(ownerId))
+                            ? AscendConstants.MOMENTUM_SURGE_MULTIPLIER
+                            : AscendConstants.MOMENTUM_SPEED_MULTIPLIER;
+                        speedMultiplier *= momentumMultiplier;
                     }
                 }
             }

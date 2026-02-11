@@ -126,11 +126,11 @@ $C.@PageOverlay {
       Group #TreeCanvas {
         Anchor: (Left: 0, Right: 0, Top: 8);
         FlexWeight: 1;
-        ContentHeight: 650;
+        ContentHeight: 1050;
         ScrollbarStyle: (Size: 6, Spacing: 2, OnlyVisibleWhenHovered: true, Handle: #ffffff(0.15), HoveredHandle: #ffffff(0.25), DraggedHandle: #ffffff(0.3));
 
         Group #TreeContent {
-          Anchor: (Left: 0, Top: 0, Width: 660, Height: 650);
+          Anchor: (Left: 0, Top: 0, Width: 660, Height: 1050);
 
           // Connectors: T1->T2 straight
           Group #ConnT0T1 { Anchor: (Left: 328, Top: 130, Width: 4, Height: 20); Background: #4b5563; }
@@ -147,8 +147,29 @@ $C.@PageOverlay {
           Group #ConnT2H { Anchor: (Left: 160, Top: 398, Width: 340, Height: 4); Background: #4b5563; }
           Group #ConnT2Merge { Anchor: (Left: 328, Top: 402, Width: 4, Height: 8); Background: #4b5563; }
 
-          // T4->T5 straight
-          Group #ConnT3T4 { Anchor: (Left: 328, Top: 520, Width: 4, Height: 20); Background: #4b5563; }
+          // T4->split to T5 left/right
+          Group #ConnT3Split { Anchor: (Left: 328, Top: 520, Width: 4, Height: 8); Background: #4b5563; }
+          Group #ConnT3H { Anchor: (Left: 160, Top: 528, Width: 340, Height: 4); Background: #4b5563; }
+          Group #ConnT3Left { Anchor: (Left: 160, Top: 532, Width: 4, Height: 8); Background: #4b5563; }
+          Group #ConnT3Right { Anchor: (Left: 500, Top: 532, Width: 4, Height: 8); Background: #4b5563; }
+
+          // T5 left/right merge to T6 center
+          Group #ConnT4Left { Anchor: (Left: 160, Top: 650, Width: 4, Height: 8); Background: #4b5563; }
+          Group #ConnT4Right { Anchor: (Left: 500, Top: 650, Width: 4, Height: 8); Background: #4b5563; }
+          Group #ConnT4H { Anchor: (Left: 160, Top: 658, Width: 340, Height: 4); Background: #4b5563; }
+          Group #ConnT4Merge { Anchor: (Left: 328, Top: 662, Width: 4, Height: 8); Background: #4b5563; }
+
+          // T6->split to T7 left/right
+          Group #ConnT5Split { Anchor: (Left: 328, Top: 780, Width: 4, Height: 8); Background: #4b5563; }
+          Group #ConnT5H { Anchor: (Left: 160, Top: 788, Width: 340, Height: 4); Background: #4b5563; }
+          Group #ConnT5Left { Anchor: (Left: 160, Top: 792, Width: 4, Height: 8); Background: #4b5563; }
+          Group #ConnT5Right { Anchor: (Left: 500, Top: 792, Width: 4, Height: 8); Background: #4b5563; }
+
+          // T7 left/right merge to T8 center
+          Group #ConnT6Left { Anchor: (Left: 160, Top: 910, Width: 4, Height: 8); Background: #4b5563; }
+          Group #ConnT6Right { Anchor: (Left: 500, Top: 910, Width: 4, Height: 8); Background: #4b5563; }
+          Group #ConnT6H { Anchor: (Left: 160, Top: 918, Width: 340, Height: 4); Background: #4b5563; }
+          Group #ConnT6Merge { Anchor: (Left: 328, Top: 922, Width: 4, Height: 8); Background: #4b5563; }
 
           // Tier 1: AUTO_RUNNERS
           Button #NodeAutoRunners {
@@ -280,9 +301,9 @@ $C.@PageOverlay {
             }
           }
 
-          // Tier 5: ASCENSION_CHALLENGES
+          // Tier 6: ASCENSION_CHALLENGES
           Button #NodeAscensionChallenges {
-            Anchor: (Left: 250, Top: 540, Width: 160, Height: 110);
+            Anchor: (Left: 250, Top: 670, Width: 160, Height: 110);
             Background: #1a2530;
             Style: @NodeStyle;
             LayoutMode: Top;
@@ -292,15 +313,145 @@ $C.@PageOverlay {
               Anchor: (Left: 0, Right: 0);
               FlexWeight: 1;
               LayoutMode: Top;
-              Label { Anchor: (Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "5:1"; }
+              Label { Anchor: (Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "6:1"; }
               Label #NameAscensionChallenges { Anchor: (Top: 2); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Challenges"; }
-              Label #DescAscensionChallenges { Anchor: (Top: 4); Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center); Text: "Coming Soon"; }
+              Label #DescAscensionChallenges { Anchor: (Top: 4); Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center); Text: ""; }
               Label #StatusAscensionChallenges { Anchor: (Top: 6); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
             }
             Group #LockedAscensionChallenges {
               Anchor: (Left: 0, Right: 0);
               FlexWeight: 1;
+              Label { Anchor: (Left: 0, Right: 0, Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "6:1"; }
+              Group { Anchor: (Left: 64, Top: 18, Width: 32, Height: 32); Background: @LockIcon; }
+              Label { Anchor: (Left: 0, Right: 0, Top: 56); Style: (FontSize: 12, RenderBold: true, TextColor: #4b5563, HorizontalAlignment: Center); Text: "LOCKED"; }
+            }
+          }
+
+          // Tier 5: MOMENTUM_SURGE (left)
+          Button #NodeMomentumSurge {
+            Anchor: (Left: 80, Top: 540, Width: 160, Height: 110);
+            Background: #1a2530;
+            Style: @NodeStyle;
+            LayoutMode: Top;
+            Group #BorderMomentumSurge { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Background: #4b5563; }
+            Group #RevealedMomentumSurge {
+              Visible: false;
+              Anchor: (Left: 0, Right: 0);
+              FlexWeight: 1;
+              LayoutMode: Top;
+              Label { Anchor: (Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "5:1"; }
+              Label #NameMomentumSurge { Anchor: (Top: 2); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Momentum Surge"; }
+              Label #DescMomentumSurge { Anchor: (Top: 4); Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center); Text: "x2 -> x3 momentum"; }
+              Label #StatusMomentumSurge { Anchor: (Top: 6); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
+            }
+            Group #LockedMomentumSurge {
+              Anchor: (Left: 0, Right: 0);
+              FlexWeight: 1;
               Label { Anchor: (Left: 0, Right: 0, Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "5:1"; }
+              Group { Anchor: (Left: 64, Top: 18, Width: 32, Height: 32); Background: @LockIcon; }
+              Label { Anchor: (Left: 0, Right: 0, Top: 56); Style: (FontSize: 12, RenderBold: true, TextColor: #4b5563, HorizontalAlignment: Center); Text: "LOCKED"; }
+            }
+          }
+
+          // Tier 5: ELEVATION_REMNANT (right)
+          Button #NodeElevationRemnant {
+            Anchor: (Left: 420, Top: 540, Width: 160, Height: 110);
+            Background: #1a2530;
+            Style: @NodeStyle;
+            LayoutMode: Top;
+            Group #BorderElevationRemnant { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Background: #4b5563; }
+            Group #RevealedElevationRemnant {
+              Visible: false;
+              Anchor: (Left: 0, Right: 0);
+              FlexWeight: 1;
+              LayoutMode: Top;
+              Label { Anchor: (Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "5:2"; }
+              Label #NameElevationRemnant { Anchor: (Top: 2); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Elev. Remnant"; }
+              Label #DescElevationRemnant { Anchor: (Top: 4); Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center); Text: "Keep 15% elevation"; }
+              Label #StatusElevationRemnant { Anchor: (Top: 6); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
+            }
+            Group #LockedElevationRemnant {
+              Anchor: (Left: 0, Right: 0);
+              FlexWeight: 1;
+              Label { Anchor: (Left: 0, Right: 0, Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "5:2"; }
+              Group { Anchor: (Left: 64, Top: 18, Width: 32, Height: 32); Background: @LockIcon; }
+              Label { Anchor: (Left: 0, Right: 0, Top: 56); Style: (FontSize: 12, RenderBold: true, TextColor: #4b5563, HorizontalAlignment: Center); Text: "LOCKED"; }
+            }
+          }
+
+          // Tier 7: SUMMIT_PERSISTENCE (left)
+          Button #NodeSummitPersistence {
+            Anchor: (Left: 80, Top: 800, Width: 160, Height: 110);
+            Background: #1a2530;
+            Style: @NodeStyle;
+            LayoutMode: Top;
+            Group #BorderSummitPersistence { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Background: #4b5563; }
+            Group #RevealedSummitPersistence {
+              Visible: false;
+              Anchor: (Left: 0, Right: 0);
+              FlexWeight: 1;
+              LayoutMode: Top;
+              Label { Anchor: (Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "7:1"; }
+              Label #NameSummitPersistence { Anchor: (Top: 2); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Summit Persist"; }
+              Label #DescSummitPersistence { Anchor: (Top: 4); Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center); Text: "Keep 10% summit lvls"; }
+              Label #StatusSummitPersistence { Anchor: (Top: 6); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
+            }
+            Group #LockedSummitPersistence {
+              Anchor: (Left: 0, Right: 0);
+              FlexWeight: 1;
+              Label { Anchor: (Left: 0, Right: 0, Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "7:1"; }
+              Group { Anchor: (Left: 64, Top: 18, Width: 32, Height: 32); Background: @LockIcon; }
+              Label { Anchor: (Left: 0, Right: 0, Top: 56); Style: (FontSize: 12, RenderBold: true, TextColor: #4b5563, HorizontalAlignment: Center); Text: "LOCKED"; }
+            }
+          }
+
+          // Tier 7: SWIFT_RESTART (right)
+          Button #NodeSwiftRestart {
+            Anchor: (Left: 420, Top: 800, Width: 160, Height: 110);
+            Background: #1a2530;
+            Style: @NodeStyle;
+            LayoutMode: Top;
+            Group #BorderSwiftRestart { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Background: #4b5563; }
+            Group #RevealedSwiftRestart {
+              Visible: false;
+              Anchor: (Left: 0, Right: 0);
+              FlexWeight: 1;
+              LayoutMode: Top;
+              Label { Anchor: (Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "7:2"; }
+              Label #NameSwiftRestart { Anchor: (Top: 2); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Swift Restart"; }
+              Label #DescSwiftRestart { Anchor: (Top: 4); Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center); Text: "Start at 1-star"; }
+              Label #StatusSwiftRestart { Anchor: (Top: 6); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
+            }
+            Group #LockedSwiftRestart {
+              Anchor: (Left: 0, Right: 0);
+              FlexWeight: 1;
+              Label { Anchor: (Left: 0, Right: 0, Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "7:2"; }
+              Group { Anchor: (Left: 64, Top: 18, Width: 32, Height: 32); Background: @LockIcon; }
+              Label { Anchor: (Left: 0, Right: 0, Top: 56); Style: (FontSize: 12, RenderBold: true, TextColor: #4b5563, HorizontalAlignment: Center); Text: "LOCKED"; }
+            }
+          }
+
+          // Tier 8: VEXA_OVERFLOW (center)
+          Button #NodeVexaOverflow {
+            Anchor: (Left: 250, Top: 930, Width: 160, Height: 110);
+            Background: #1a2530;
+            Style: @NodeStyle;
+            LayoutMode: Top;
+            Group #BorderVexaOverflow { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Background: #4b5563; }
+            Group #RevealedVexaOverflow {
+              Visible: false;
+              Anchor: (Left: 0, Right: 0);
+              FlexWeight: 1;
+              LayoutMode: Top;
+              Label { Anchor: (Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "8:1"; }
+              Label #NameVexaOverflow { Anchor: (Top: 2); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Vexa Overflow"; }
+              Label #DescVexaOverflow { Anchor: (Top: 4); Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center); Text: "Keep 1% vexa"; }
+              Label #StatusVexaOverflow { Anchor: (Top: 6); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
+            }
+            Group #LockedVexaOverflow {
+              Anchor: (Left: 0, Right: 0);
+              FlexWeight: 1;
+              Label { Anchor: (Left: 0, Right: 0, Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "8:1"; }
               Group { Anchor: (Left: 64, Top: 18, Width: 32, Height: 32); Background: @LockIcon; }
               Label { Anchor: (Left: 0, Right: 0, Top: 56); Style: (FontSize: 12, RenderBold: true, TextColor: #4b5563, HorizontalAlignment: Center); Text: "LOCKED"; }
             }

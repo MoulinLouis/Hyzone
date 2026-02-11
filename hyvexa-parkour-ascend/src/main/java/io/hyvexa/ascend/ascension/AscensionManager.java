@@ -72,7 +72,22 @@ public class AscensionManager {
         progress.setElevationMultiplier(1);
         progress.setSummitAccumulatedVexa(io.hyvexa.common.math.BigNumber.ZERO);
         progress.setElevationAccumulatedVexa(io.hyvexa.common.math.BigNumber.ZERO);
-        progress.clearSummitXp();
+
+        // Summit Persistence: retain 10% of summit category levels
+        if (progress.hasSkillNode(SkillTreeNode.SUMMIT_PERSISTENCE)) {
+            for (AscendConstants.SummitCategory cat : AscendConstants.SummitCategory.values()) {
+                int level = progress.getSummitLevel(cat);
+                int retained = (int) Math.floor(level * AscendConstants.SUMMIT_PERSISTENCE_FRACTION);
+                if (retained > 0) {
+                    long retainedXp = AscendConstants.getCumulativeXpForLevel(retained);
+                    progress.setSummitXp(cat, retainedXp);
+                } else {
+                    progress.setSummitXp(cat, 0);
+                }
+            }
+        } else {
+            progress.clearSummitXp();
+        }
 
         // Mark for full child-row deletion so stale DB rows are purged
         playerStore.markResetPending(playerId);
@@ -181,6 +196,26 @@ public class AscensionManager {
 
     public boolean hasAscensionChallenges(UUID playerId) {
         return hasSkillNode(playerId, SkillTreeNode.ASCENSION_CHALLENGES);
+    }
+
+    public boolean hasMomentumSurge(UUID playerId) {
+        return hasSkillNode(playerId, SkillTreeNode.MOMENTUM_SURGE);
+    }
+
+    public boolean hasElevationRemnant(UUID playerId) {
+        return hasSkillNode(playerId, SkillTreeNode.ELEVATION_REMNANT);
+    }
+
+    public boolean hasSummitPersistence(UUID playerId) {
+        return hasSkillNode(playerId, SkillTreeNode.SUMMIT_PERSISTENCE);
+    }
+
+    public boolean hasSwiftRestart(UUID playerId) {
+        return hasSkillNode(playerId, SkillTreeNode.SWIFT_RESTART);
+    }
+
+    public boolean hasVexaOverflow(UUID playerId) {
+        return hasSkillNode(playerId, SkillTreeNode.VEXA_OVERFLOW);
     }
 
     private boolean hasSkillNode(UUID playerId, SkillTreeNode node) {
