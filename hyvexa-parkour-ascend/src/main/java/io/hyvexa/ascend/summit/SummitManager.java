@@ -83,6 +83,13 @@ public class SummitManager {
      * @return SummitResult containing the new level, list of maps with runners (for despawn), and XP gained
      */
     public SummitResult performSummit(UUID playerId, SummitCategory category) {
+        // Block summiting in categories locked by an active challenge
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin != null && plugin.getChallengeManager() != null
+                && plugin.getChallengeManager().isSummitBlocked(playerId, category)) {
+            return new SummitResult(-1, List.of(), 0);
+        }
+
         BigNumber vexa = playerStore.getSummitAccumulatedVexa(playerId);
         long xpToGain = AscendConstants.vexaToXp(vexa);
 
@@ -152,12 +159,25 @@ public class SummitManager {
      * Gets the Evolution Power bonus for runner evolution.
      * Formula: 3.0 + 0.10 * level (linear below soft cap, sqrt growth above).
      * Applied per star: multiplier_increment = 0.1 * evolutionPower^stars
+     * During a challenge, if EVOLUTION_POWER is blocked, returns base 3.0 (+ skill tree bonus only).
      * @return Evolution bonus (3.0 at level 0, 4.0 at level 10)
      */
     public double getEvolutionPowerBonus(UUID playerId) {
+        // Challenge malus: if Evolution Power is blocked, skip summit bonus
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin != null && plugin.getChallengeManager() != null
+                && plugin.getChallengeManager().isSummitBlocked(playerId, SummitCategory.EVOLUTION_POWER)) {
+            double base = SummitCategory.EVOLUTION_POWER.getBonusForLevel(0); // 3.0
+            // Still apply skill tree bonus
+            if (plugin.getAscensionManager() != null
+                    && plugin.getAscensionManager().hasEvolutionPowerBoost(playerId)) {
+                base += 1.0;
+            }
+            return base;
+        }
+
         double base = playerStore.getSummitBonusDouble(playerId, SummitCategory.EVOLUTION_POWER);
         // Skill tree: Evolution Power+ adds +1.0 to base evolution power
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         if (plugin != null && plugin.getAscensionManager() != null
                 && plugin.getAscensionManager().hasEvolutionPowerBoost(playerId)) {
             base += 1.0;

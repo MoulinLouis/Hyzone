@@ -22,6 +22,7 @@ import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 import io.hyvexa.ascend.ui.AscendLeaderboardPage;
 import io.hyvexa.ascend.ui.AscendMapLeaderboardPage;
+import io.hyvexa.ascend.ui.AscendChallengePage;
 import io.hyvexa.ascend.ui.AscendMapSelectPage;
 import io.hyvexa.ascend.ui.AscensionPage;
 import io.hyvexa.ascend.ui.BaseAscendPage;
@@ -156,6 +157,7 @@ public class AscendCommand extends AbstractAsyncCommand {
         handlers.put("maplb", () -> openMapLeaderboardPage(player, playerRef, ref, store));
         handlers.put("settings", () -> openSettingsPage(player, playerRef, ref, store));
         handlers.put("help", () -> openHelpPage(player, playerRef, ref, store));
+        handlers.put("challenge", () -> openChallengePage(player, playerRef, ref, store));
         return handlers;
     }
 
@@ -224,6 +226,18 @@ public class AscendCommand extends AbstractAsyncCommand {
         ParkourAscendPlugin plugin = requirePlugin(player);
         if (plugin == null || plugin.getPlayerStore() == null || plugin.getRobotManager() == null) return;
         AscendSettingsPage page = new AscendSettingsPage(playerRef, plugin.getPlayerStore(), plugin.getRobotManager());
+        openTrackedPage(player, playerRef, ref, store, page);
+    }
+
+    private void openChallengePage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
+        ParkourAscendPlugin plugin = requirePlugin(player);
+        if (plugin == null || plugin.getChallengeManager() == null) return;
+        if (!plugin.getAscensionManager().hasAscensionChallenges(playerRef.getUuid())) {
+            player.sendMessage(Message.raw("[Ascend] You need the Ascension Challenges skill to access this.")
+                .color(SystemMessageUtils.SECONDARY));
+            return;
+        }
+        AscendChallengePage page = new AscendChallengePage(playerRef, plugin.getPlayerStore(), plugin.getChallengeManager());
         openTrackedPage(player, playerRef, ref, store, page);
     }
 

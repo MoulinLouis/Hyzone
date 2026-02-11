@@ -56,6 +56,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
     private static final String BUTTON_EVOLVE_ALL = "EvolveAll";
     private static final String BUTTON_EVOLVE_ALL_DISABLED = "EvolveAllDisabled";
     private static final String BUTTON_LEADERBOARD = "Leaderboard";
+    private static final String BUTTON_CHALLENGE_TAB = "ChallengeTab";
     private static final int MAX_SPEED_LEVEL = 20;
     private static final long BUY_ALL_COOLDOWN_MS = 100L; // 100ms cooldown to prevent race conditions while allowing satisfying spam clicks
 
@@ -105,6 +106,21 @@ public class AscendMapSelectPage extends BaseAscendPage {
             EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_EVOLVE_ALL_DISABLED), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ActionButton3",
             EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_LEADERBOARD), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#TabLockedA",
+            EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CHALLENGE_TAB), false);
+
+        // Check if Challenge tab should be unlocked
+        PlayerRef pRef = store.getComponent(ref, PlayerRef.getComponentType());
+        if (pRef != null) {
+            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+            if (plugin != null && plugin.getAscensionManager() != null
+                    && plugin.getAscensionManager().hasAscensionChallenges(pRef.getUuid())) {
+                uiCommandBuilder.set("#TabUnlockedBg.Visible", true);
+                uiCommandBuilder.set("#TabLockedAContent.Visible", false);
+                uiCommandBuilder.set("#TabChallengeLabel.Visible", true);
+            }
+        }
+
         RefreshSnapshot refreshSnapshot = buildMapList(ref, store, uiCommandBuilder, uiEventBuilder);
 
         // Set initial button states
@@ -144,6 +160,10 @@ public class AscendMapSelectPage extends BaseAscendPage {
         }
         if (BUTTON_LEADERBOARD.equals(data.getButton())) {
             handleOpenLeaderboard(ref, store);
+            return;
+        }
+        if (BUTTON_CHALLENGE_TAB.equals(data.getButton())) {
+            handleOpenChallenge(ref, store);
             return;
         }
         if (data.getButton().startsWith(BUTTON_ROBOT_PREFIX)) {
@@ -1130,6 +1150,29 @@ public class AscendMapSelectPage extends BaseAscendPage {
         }
         player.getPageManager().openCustomPage(ref, store,
             new AscendMapLeaderboardPage(playerRef, playerStore, mapStore));
+    }
+
+    private void handleOpenChallenge(Ref<EntityStore> ref, Store<EntityStore> store) {
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        if (playerRef == null) {
+            return;
+        }
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null) {
+            return;
+        }
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin == null || plugin.getChallengeManager() == null) {
+            return;
+        }
+        if (plugin.getAscensionManager() == null
+                || !plugin.getAscensionManager().hasAscensionChallenges(playerRef.getUuid())) {
+            player.sendMessage(com.hypixel.hytale.server.core.Message.raw("[Ascend] Unlock the Ascension Challenges skill first.")
+                .color(io.hyvexa.common.util.SystemMessageUtils.SECONDARY));
+            return;
+        }
+        player.getPageManager().openCustomPage(ref, store,
+            new AscendChallengePage(playerRef, playerStore, plugin.getChallengeManager()));
     }
 
     /**

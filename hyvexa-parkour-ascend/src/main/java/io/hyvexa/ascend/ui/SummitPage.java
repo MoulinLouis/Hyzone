@@ -182,7 +182,12 @@ public class SummitPage extends BaseAscendPage {
             }
 
             // Show colored background if summit is possible, lock icon if not
-            boolean canSummit = preview.hasGain() && summitManager.canSummit(playerId);
+            boolean blocked = false;
+            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+            if (plugin != null && plugin.getChallengeManager() != null) {
+                blocked = plugin.getChallengeManager().isSummitBlocked(playerId, category);
+            }
+            boolean canSummit = !blocked && preview.hasGain() && summitManager.canSummit(playerId);
             commandBuilder.set("#CategoryCards[" + i + "] " + resolveCardBgElementId(i) + ".Visible", canSummit);
             commandBuilder.set("#CategoryCards[" + i + "] #LockIcon.Visible", !canSummit);
         }
@@ -274,6 +279,16 @@ public class SummitPage extends BaseAscendPage {
 
         UUID playerId = playerRef.getUuid();
 
+        // Block summiting in categories locked by an active challenge
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin != null && plugin.getChallengeManager() != null
+                && plugin.getChallengeManager().isSummitBlocked(playerId, category)) {
+            player.sendMessage(Message.raw("[Summit] " + category.getDisplayName()
+                + " is locked during your active challenge.")
+                .color(SystemMessageUtils.SECONDARY));
+            return;
+        }
+
         if (!summitManager.canSummit(playerId)) {
             BigNumber vexa = playerStore.getVexa(playerId);
             String minVexa = FormatUtils.formatBigNumber(
@@ -300,7 +315,6 @@ public class SummitPage extends BaseAscendPage {
         }
 
         // Despawn all runners (player loses them on Summit, like elevation)
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         if (plugin != null) {
             RobotManager robotManager = plugin.getRobotManager();
             if (robotManager != null && !result.mapsWithRunners().isEmpty()) {

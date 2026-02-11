@@ -24,6 +24,7 @@ import io.hyvexa.ascend.ghost.GhostStore;
 import io.hyvexa.ascend.ghost.GhostRecorder;
 import io.hyvexa.ascend.achievement.AchievementManager;
 import io.hyvexa.ascend.ascension.AscensionManager;
+import io.hyvexa.ascend.ascension.ChallengeManager;
 import io.hyvexa.ascend.holo.AscendHologramManager;
 import io.hyvexa.ascend.hud.AscendHudManager;
 import io.hyvexa.ascend.interaction.AscendDevCinderclothInteraction;
@@ -87,6 +88,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
     private AscendHologramManager hologramManager;
     private SummitManager summitManager;
     private AscensionManager ascensionManager;
+    private ChallengeManager challengeManager;
     private AchievementManager achievementManager;
     private PassiveEarningsManager passiveEarningsManager;
     private TutorialTriggerService tutorialTriggerService;
@@ -164,6 +166,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
             LOGGER.at(Level.WARNING).withCause(e).log("Failed to initialize robot manager");
         }
         ascensionManager = new AscensionManager(playerStore, runTracker);
+        challengeManager = new ChallengeManager(playerStore, mapStore, runTracker);
         achievementManager = new AchievementManager(playerStore);
 
         // Initialize passive earnings manager
@@ -247,6 +250,11 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     // Check for passive earnings
                     if (passiveEarningsManager != null) {
                         passiveEarningsManager.checkPassiveEarningsOnJoin(playerId);
+                    }
+
+                    // Restore active challenge from DB (crash recovery)
+                    if (challengeManager != null) {
+                        challengeManager.onPlayerConnect(playerId);
                     }
 
                     // Trigger welcome tutorial for new players
@@ -335,6 +343,9 @@ public class ParkourAscendPlugin extends JavaPlugin {
             if (robotManager != null) {
                 robotManager.onPlayerLeave(playerId);
             }
+            if (challengeManager != null) {
+                challengeManager.onPlayerDisconnect(playerId);
+            }
 
             // Evict player from cache (lazy loading - saves memory)
             if (playerStore != null) {
@@ -410,6 +421,10 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
     public AscensionManager getAscensionManager() {
         return ascensionManager;
+    }
+
+    public ChallengeManager getChallengeManager() {
+        return challengeManager;
     }
 
     public AchievementManager getAchievementManager() {
