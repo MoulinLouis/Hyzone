@@ -1,6 +1,7 @@
 package io.hyvexa.ascend.util;
 
 import io.hyvexa.ascend.AscendConstants;
+import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
@@ -145,6 +146,13 @@ public final class MapUnlockHelper {
         // First map is always unlockable
         if (map.getDisplayOrder() == 0) {
             return true;
+        }
+
+        // Challenge 3: block maps with displayOrder 3 or 4
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin != null && plugin.getChallengeManager() != null
+                && plugin.getChallengeManager().isMapBlocked(playerId, map.getDisplayOrder())) {
+            return false;
         }
 
         // Get previous map

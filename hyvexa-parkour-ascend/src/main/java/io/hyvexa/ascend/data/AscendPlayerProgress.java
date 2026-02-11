@@ -54,6 +54,9 @@ public class AscendPlayerProgress {
     private volatile AscendConstants.ChallengeType activeChallenge;
     private volatile long challengeStartedAtMs;
 
+    // Permanent challenge rewards (never reset by ascension/challenge)
+    private final Set<AscendConstants.ChallengeType> completedChallengeRewards = ConcurrentHashMap.newKeySet();
+
     public BigNumber getVexa() {
         return vexa.get();
     }
@@ -403,6 +406,25 @@ public class AscendPlayerProgress {
 
     public void setChallengeStartedAtMs(long challengeStartedAtMs) {
         this.challengeStartedAtMs = challengeStartedAtMs;
+    }
+
+    public boolean hasChallengeReward(AscendConstants.ChallengeType type) {
+        return completedChallengeRewards.contains(type);
+    }
+
+    public void addChallengeReward(AscendConstants.ChallengeType type) {
+        completedChallengeRewards.add(type);
+    }
+
+    public Set<AscendConstants.ChallengeType> getCompletedChallengeRewards() {
+        return Set.copyOf(completedChallengeRewards);
+    }
+
+    public void setCompletedChallengeRewards(Set<AscendConstants.ChallengeType> rewards) {
+        completedChallengeRewards.clear();
+        if (rewards != null) {
+            completedChallengeRewards.addAll(rewards);
+        }
     }
 
     public static class MapProgress {

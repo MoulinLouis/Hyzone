@@ -2,9 +2,11 @@ package io.hyvexa.ascend.summit;
 
 import com.hypixel.hytale.logger.HytaleLogger;
 import io.hyvexa.ascend.AscendConstants;
+import io.hyvexa.ascend.AscendConstants.ChallengeType;
 import io.hyvexa.ascend.AscendConstants.SummitCategory;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
+import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.common.math.BigNumber;
@@ -140,26 +142,65 @@ public class SummitManager {
     /**
      * Gets the runner speed bonus multiplier.
      * Formula: 1.0 + 0.15 * level (linear below soft cap, sqrt growth above).
+     * During Challenge 4, the summit bonus portion is reduced by speedEffectiveness.
      * @return Multiplier value (1.0 at level 0, 2.5 at level 10)
      */
     public double getRunnerSpeedBonus(UUID playerId) {
-        return playerStore.getSummitBonusDouble(playerId, SummitCategory.RUNNER_SPEED);
+        double fullBonus = playerStore.getSummitBonusDouble(playerId, SummitCategory.RUNNER_SPEED);
+
+        // Challenge malus: if speed is nerfed, reduce only the bonus portion
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin != null && plugin.getChallengeManager() != null) {
+            double speedEffectiveness = plugin.getChallengeManager().getSpeedEffectiveness(playerId);
+            if (speedEffectiveness < 1.0) {
+                double base = SummitCategory.RUNNER_SPEED.getBonusForLevel(0); // 1.0
+                double bonus = fullBonus - base;
+                fullBonus = base + (bonus * speedEffectiveness);
+            }
+        }
+
+        return fullBonus;
     }
 
     /**
      * Gets the multiplier gain bonus.
      * Formula: 1.0 + 0.30 * level (linear below soft cap, sqrt growth above).
+     * During Challenge 3, returns base 1.0 (no summit bonus).
+     * Challenge 3 reward: x1.2 permanent multiplier gain bonus.
      * @return Multiplier value (1.0 at level 0, 4.0 at level 10)
      */
     public double getMultiplierGainBonus(UUID playerId) {
-        return playerStore.getSummitBonusDouble(playerId, SummitCategory.MULTIPLIER_GAIN);
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+
+        // Challenge malus: if Multiplier Gain is blocked, skip summit bonus
+        if (plugin != null && plugin.getChallengeManager() != null
+                && plugin.getChallengeManager().isSummitBlocked(playerId, SummitCategory.MULTIPLIER_GAIN)) {
+            double base = SummitCategory.MULTIPLIER_GAIN.getBonusForLevel(0); // 1.0
+            // Still apply Challenge 3 permanent reward if unlocked
+            base = applyChallengeRewardMultiplierGain(playerId, base);
+            return base;
+        }
+
+        double result = playerStore.getSummitBonusDouble(playerId, SummitCategory.MULTIPLIER_GAIN);
+        // Challenge 3 reward: x1.2 permanent multiplier gain bonus
+        result = applyChallengeRewardMultiplierGain(playerId, result);
+        return result;
+    }
+
+    private double applyChallengeRewardMultiplierGain(UUID playerId, double value) {
+        AscendPlayerProgress progress = playerStore.getPlayer(playerId);
+        if (progress != null && progress.hasChallengeReward(ChallengeType.CHALLENGE_3)) {
+            value *= 1.2;
+        }
+        return value;
     }
 
     /**
      * Gets the Evolution Power bonus for runner evolution.
      * Formula: 3.0 + 0.10 * level (linear below soft cap, sqrt growth above).
      * Applied per star: multiplier_increment = 0.1 * evolutionPower^stars
-     * During a challenge, if EVOLUTION_POWER is blocked, returns base 3.0 (+ skill tree bonus only).
+     * During a challenge, if EVOLUTION_POWER is blocked, returns base 3.0 (+ skill tree bonus + challenge reward only).
+     * Challenge 4 reward: +1 base Evolution Power.
      * @return Evolution bonus (3.0 at level 0, 4.0 at level 10)
      */
     public double getEvolutionPowerBonus(UUID playerId) {
@@ -173,6 +214,8 @@ public class SummitManager {
                     && plugin.getAscensionManager().hasEvolutionPowerBoost(playerId)) {
                 base += 1.0;
             }
+            // Still apply Challenge 4 reward
+            base = applyChallengeRewardEvolutionPower(playerId, base);
             return base;
         }
 
@@ -182,7 +225,17 @@ public class SummitManager {
                 && plugin.getAscensionManager().hasEvolutionPowerBoost(playerId)) {
             base += 1.0;
         }
+        // Challenge 4 reward: +1 base Evolution Power
+        base = applyChallengeRewardEvolutionPower(playerId, base);
         return base;
+    }
+
+    private double applyChallengeRewardEvolutionPower(UUID playerId, double value) {
+        AscendPlayerProgress progress = playerStore.getPlayer(playerId);
+        if (progress != null && progress.hasChallengeReward(ChallengeType.CHALLENGE_4)) {
+            value += 1.0;
+        }
+        return value;
     }
 
     /**

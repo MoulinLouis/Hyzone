@@ -18,6 +18,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.NPCPlugin;
 import io.hyvexa.ascend.AscendConstants;
+import io.hyvexa.ascend.AscendConstants.ChallengeType;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.ascension.AscensionManager;
 import io.hyvexa.ascend.data.AscendMap;
@@ -664,6 +665,15 @@ public class RobotManager {
         }
         BigNumber multiplierIncrement = AscendConstants.getRunnerMultiplierIncrement(stars, multiplierGainBonus, evolutionPowerBonus);
 
+        // Challenge 1 reward: x1.5 multiplier gain on maps with displayOrder 3 or 4
+        AscendPlayerProgress ownerProgress = playerStore.getPlayer(ownerId);
+        if (ownerProgress != null && ownerProgress.hasChallengeReward(ChallengeType.CHALLENGE_1)) {
+            int displayOrder = map.getDisplayOrder();
+            if (displayOrder == 3 || displayOrder == 4) {
+                multiplierIncrement = multiplierIncrement.multiply(BigNumber.fromDouble(1.5));
+            }
+        }
+
         BigNumber totalMultiplierBonus = multiplierIncrement.multiply(BigNumber.fromLong(completions));
 
         // Calculate payout BEFORE adding multiplier (use current multiplier, not the new one)
@@ -830,6 +840,11 @@ public class RobotManager {
                             ? AscendConstants.MOMENTUM_SURGE_MULTIPLIER
                             : AscendConstants.MOMENTUM_SPEED_MULTIPLIER;
                         speedMultiplier *= momentumMultiplier;
+                    }
+
+                    // Challenge 2 reward: x1.1 global runner speed
+                    if (progress.hasChallengeReward(ChallengeType.CHALLENGE_2)) {
+                        speedMultiplier *= 1.1;
                     }
                 }
             }
