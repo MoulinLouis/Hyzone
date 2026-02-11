@@ -82,35 +82,39 @@ public class AscendPlayerStore {
     }
 
     public AscendPlayerProgress getOrCreatePlayer(UUID playerId) {
-        // Check cache first
+        // Fast path: already cached
         AscendPlayerProgress progress = players.get(playerId);
         if (progress != null) {
-            // Migration: start ascension timer for players who don't have one yet
-            if (progress.getAscensionStartedAt() == null) {
-                progress.setAscensionStartedAt(System.currentTimeMillis());
-                markDirty(playerId);
-            }
+            migrateAscensionTimer(playerId, progress);
             return progress;
         }
 
-        // Lazy load from database
-        progress = loadPlayerFromDatabase(playerId);
-        if (progress != null) {
-            players.put(playerId, progress);
-            // Migration: start ascension timer for players who don't have one yet
-            if (progress.getAscensionStartedAt() == null) {
-                progress.setAscensionStartedAt(System.currentTimeMillis());
-                markDirty(playerId);
-            }
-            return progress;
+        // Slow path: load from DB or create new
+        AscendPlayerProgress loaded = loadPlayerFromDatabase(playerId);
+        if (loaded == null) {
+            loaded = new AscendPlayerProgress();
+            loaded.setAscensionStartedAt(System.currentTimeMillis());
+            markDirty(playerId);
         }
 
-        // Create new player — timer starts now (first run toward first ascension)
-        AscendPlayerProgress newProgress = new AscendPlayerProgress();
-        newProgress.setAscensionStartedAt(System.currentTimeMillis());
-        players.put(playerId, newProgress);
-        markDirty(playerId);
-        return newProgress;
+        // Atomic insert — if another thread won the race, use their instance
+        AscendPlayerProgress existing = players.putIfAbsent(playerId, loaded);
+        if (existing != null) {
+            // Another thread already inserted — use their version
+            migrateAscensionTimer(playerId, existing);
+            return existing;
+        }
+
+        // We won the race — our instance is now in the cache
+        migrateAscensionTimer(playerId, loaded);
+        return loaded;
+    }
+
+    private void migrateAscensionTimer(UUID playerId, AscendPlayerProgress progress) {
+        if (progress.getAscensionStartedAt() == null) {
+            progress.setAscensionStartedAt(System.currentTimeMillis());
+            markDirty(playerId);
+        }
     }
 
     public void storePlayerName(UUID playerId, String name) {
