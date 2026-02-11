@@ -36,6 +36,7 @@ public class AscendChallengePage extends BaseAscendPage {
     private static final String BUTTON_CLOSE = "Close";
     private static final String BUTTON_QUIT = "Quit";
     private static final String BUTTON_START_PREFIX = "Start:";
+    private static final String BUTTON_BREAK = "BreakToggle";
 
     // Maps ChallengeType accent color hex to UI group ID for visibility toggling
     private static final Map<String, String> ACCENT_COLOR_MAP = Map.of(
@@ -144,6 +145,9 @@ public class AscendChallengePage extends BaseAscendPage {
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_START_PREFIX + type.name()), false);
         }
 
+        // Break Ascension card
+        buildBreakCard(commandBuilder, eventBuilder, progress);
+
         // Start timer refresh if in challenge
         if (inChallenge) {
             startTimerRefresh(playerId);
@@ -165,6 +169,11 @@ public class AscendChallengePage extends BaseAscendPage {
 
         if (BUTTON_QUIT.equals(data.getButton())) {
             handleQuit(ref, store);
+            return;
+        }
+
+        if (BUTTON_BREAK.equals(data.getButton())) {
+            handleBreakToggle(ref, store);
             return;
         }
 
@@ -245,6 +254,69 @@ public class AscendChallengePage extends BaseAscendPage {
             .color(SystemMessageUtils.SECONDARY));
 
         this.close();
+    }
+
+    private void buildBreakCard(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder,
+                                AscendPlayerProgress progress) {
+        commandBuilder.set("#BreakCard.Visible", true);
+
+        if (progress != null && progress.hasAllChallengeRewards()) {
+            // Unlocked — show toggle button
+            commandBuilder.set("#BreakButton.Visible", true);
+            commandBuilder.set("#BreakLocked.Visible", false);
+
+            boolean active = progress.isBreakAscensionEnabled();
+            commandBuilder.set("#BreakButton.Text", active ? "Disable" : "Break");
+            commandBuilder.set("#BreakStatus.Text", active ? "ACTIVE" : "OFF");
+            commandBuilder.set("#BreakStatus.Style.TextColor", active ? "#a855f7" : "#64748b");
+
+            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BreakButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_BREAK), false);
+        } else {
+            // Locked — show progress bar segments
+            commandBuilder.set("#BreakButton.Visible", false);
+            commandBuilder.set("#BreakLocked.Visible", true);
+
+            ChallengeType[] types = ChallengeType.values();
+            for (int i = 0; i < types.length; i++) {
+                boolean completed = progress != null && progress.hasChallengeReward(types[i]);
+                commandBuilder.set("#Bar" + (i + 1) + ".Visible", completed);
+            }
+        }
+    }
+
+    private void handleBreakToggle(Ref<EntityStore> ref, Store<EntityStore> store) {
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (playerRef == null || player == null) {
+            return;
+        }
+        UUID playerId = playerRef.getUuid();
+
+        AscendPlayerProgress progress = playerStore.getPlayer(playerId);
+        if (progress == null || !progress.hasAllChallengeRewards()) {
+            player.sendMessage(Message.raw("[Challenge] Complete all 4 challenges first.")
+                .color(SystemMessageUtils.SECONDARY));
+            return;
+        }
+
+        boolean newState = !progress.isBreakAscensionEnabled();
+        playerStore.setBreakAscensionEnabled(playerId, newState);
+
+        if (newState) {
+            player.sendMessage(Message.raw("[Challenge] Break Ascension enabled. Auto-ascension at 1Dc is now suppressed.")
+                .color(SystemMessageUtils.SUCCESS));
+        } else {
+            player.sendMessage(Message.raw("[Challenge] Break Ascension disabled.")
+                .color(SystemMessageUtils.SECONDARY));
+        }
+
+        // Live UI update
+        UICommandBuilder updateBuilder = new UICommandBuilder();
+        updateBuilder.set("#BreakButton.Text", newState ? "Disable" : "Break");
+        updateBuilder.set("#BreakStatus.Text", newState ? "ACTIVE" : "OFF");
+        updateBuilder.set("#BreakStatus.Style.TextColor", newState ? "#a855f7" : "#64748b");
+        sendUpdate(updateBuilder, null, false);
     }
 
     private void updateActiveTimer(UICommandBuilder commandBuilder, UUID playerId) {

@@ -46,6 +46,7 @@ public class AscendPlayerProgress {
     private volatile boolean autoUpgradeEnabled;
     private volatile boolean autoEvolutionEnabled;
     private volatile boolean hideOtherRunners;
+    private volatile boolean breakAscensionEnabled;
 
     // Tutorial tracking (bitmask)
     private volatile int seenTutorials;
@@ -368,6 +369,14 @@ public class AscendPlayerProgress {
         this.hideOtherRunners = hideOtherRunners;
     }
 
+    public boolean isBreakAscensionEnabled() {
+        return breakAscensionEnabled;
+    }
+
+    public void setBreakAscensionEnabled(boolean breakAscensionEnabled) {
+        this.breakAscensionEnabled = breakAscensionEnabled;
+    }
+
     // ========================================
     // Tutorial Tracking
     // ========================================
@@ -425,6 +434,15 @@ public class AscendPlayerProgress {
         if (rewards != null) {
             completedChallengeRewards.addAll(rewards);
         }
+    }
+
+    public boolean hasAllChallengeRewards() {
+        for (AscendConstants.ChallengeType type : AscendConstants.ChallengeType.values()) {
+            if (!completedChallengeRewards.contains(type)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     public static class MapProgress {
