@@ -20,6 +20,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.util.AsyncExecutionHelper;
 import io.hyvexa.common.util.InventoryUtils;
+import io.hyvexa.common.util.ModeGate;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.hub.command.HubCommand;
 import io.hyvexa.hub.hud.HubHud;
@@ -303,10 +304,7 @@ public class HyvexaHubPlugin extends JavaPlugin {
     }
 
     private boolean isHubWorld(World world) {
-        if (world == null || world.getName() == null) {
-            return false;
-        }
-        return HubConstants.WORLD_HUB.equalsIgnoreCase(world.getName());
+        return ModeGate.isHubWorld(world);
     }
 
     private boolean isHubWorld(Store<EntityStore> store) {

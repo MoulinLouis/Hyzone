@@ -47,10 +47,11 @@ import com.hypixel.hytale.server.core.event.events.ecs.UseBlockEvent;
 import com.hypixel.hytale.server.core.Message;
 import io.hyvexa.manager.WorldMapManager;
 import io.hyvexa.common.util.FormatUtils;
+import io.hyvexa.common.util.ModeGate;
 import io.hyvexa.common.util.AsyncExecutionHelper;
 import io.hyvexa.parkour.ghost.GhostNpcManager;
 import io.hyvexa.parkour.ghost.GhostRecorder;
-import io.hyvexa.parkour.ghost.GhostStore;
+import io.hyvexa.common.ghost.GhostStore;
 import io.hyvexa.parkour.command.CheckpointCommand;
 import io.hyvexa.parkour.command.DatabaseClearCommand;
 import io.hyvexa.parkour.command.DatabaseReloadCommand;
@@ -82,6 +83,7 @@ import io.hyvexa.manager.PlaytimeManager;
 import io.hyvexa.manager.PlayerCleanupManager;
 import io.hyvexa.manager.PlayerPerksManager;
 import io.hyvexa.parkour.ParkourTimingConstants;
+import io.hyvexa.common.WorldConstants;
 
 import javax.annotation.Nonnull;
 import java.io.File;
@@ -100,7 +102,7 @@ public class HyvexaPlugin extends JavaPlugin {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final long PLAYER_COUNT_SAMPLE_SECONDS = PlayerCountStore.DEFAULT_SAMPLE_INTERVAL_SECONDS;
     private static final boolean DISABLE_WORLD_MAP = true; // Parkour server doesn't need world map
-    public static final String PARKOUR_WORLD_NAME = "Parkour";
+    public static final String PARKOUR_WORLD_NAME = WorldConstants.WORLD_PARKOUR;
     private static final String DISCORD_URL = "https://discord.gg/2PAygkyFnK";
     private static final String JOIN_LANGUAGE_NOTICE =
             "This is an English-speaking community server. Please use English only in the chat. "
@@ -177,7 +179,7 @@ public class HyvexaPlugin extends JavaPlugin {
         this.globalMessageStore = new GlobalMessageStore();
         this.globalMessageStore.syncLoad();
         this.runTracker = new RunTracker(this.mapStore, this.progressStore, this.settingsStore);
-        this.ghostStore = new GhostStore();
+        this.ghostStore = new GhostStore("parkour_ghost_recordings", "parkour");
         this.ghostStore.syncLoad();
         this.ghostRecorder = new GhostRecorder(this.ghostStore);
         this.ghostRecorder.start();
@@ -712,10 +714,7 @@ public class HyvexaPlugin extends JavaPlugin {
     }
 
     public boolean isParkourWorld(World world) {
-        if (world == null || world.getName() == null) {
-            return false;
-        }
-        return PARKOUR_WORLD_NAME.equalsIgnoreCase(world.getName());
+        return ModeGate.isParkourWorld(world);
     }
 
     private void cancelScheduled(ScheduledFuture<?> handle) {

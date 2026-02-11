@@ -24,11 +24,12 @@ import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
-import io.hyvexa.ascend.ghost.GhostRecording;
-import io.hyvexa.ascend.ghost.GhostSample;
-import io.hyvexa.ascend.ghost.GhostStore;
+import io.hyvexa.common.ghost.GhostStore;
+import io.hyvexa.common.ghost.GhostRecording;
+import io.hyvexa.common.ghost.GhostSample;
 import io.hyvexa.ascend.summit.SummitManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
+import io.hyvexa.ascend.util.AscendModeGate;
 import io.hyvexa.common.math.BigNumber;
 import io.hyvexa.common.visibility.EntityVisibilityManager;
 
@@ -446,7 +447,7 @@ public class RobotManager {
         double speedMultiplier = (double) baseTime / intervalMs;
 
         // Interpolate ghost position at current progress
-        GhostSample sample = ghost.interpolateAt(progress, speedMultiplier);
+        GhostSample sample = ghost.interpolateAt(progress);
         double[] targetPos = sample.toPositionArray();
         float yaw = sample.yaw();
 
@@ -891,8 +892,6 @@ public class RobotManager {
         }
     }
 
-    private static final String ASCEND_WORLD_NAME = "Ascend";
-
     /**
      * Check if a player is currently in the Ascend world.
      * Uses the plugin's PlayerRef cache for O(1) lookup instead of scanning all players.
@@ -918,7 +917,7 @@ public class RobotManager {
             return false;
         }
         World world = store.getExternalData().getWorld();
-        return world != null && ASCEND_WORLD_NAME.equalsIgnoreCase(world.getName());
+        return AscendModeGate.isAscendWorld(world);
     }
 
     /**

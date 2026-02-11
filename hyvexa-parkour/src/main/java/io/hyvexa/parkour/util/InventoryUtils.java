@@ -1,21 +1,16 @@
 package io.hyvexa.parkour.util;
 
-import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.inventory.container.filter.FilterActionType;
 import com.hypixel.hytale.server.core.inventory.container.filter.SlotFilter;
-import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.common.util.PlayerUtils;
 import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.duel.DuelConstants;
 import io.hyvexa.parkour.ParkourConstants;
 import io.hyvexa.parkour.data.Map;
-
-import java.util.UUID;
 
 public final class InventoryUtils {
 
@@ -54,7 +49,7 @@ public final class InventoryUtils {
         if (practiceEnabled) {
             setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_PRACTICE_CHECKPOINT, 1));
             setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_TOGGLE_FLY, 1));
-        } else if (PlayerSettingsStore.isResetItemEnabled(resolvePlayerUuid(player))) {
+        } else if (PlayerSettingsStore.isResetItemEnabled(PlayerUtils.resolvePlayerId(player))) {
             setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_RESET, 1));
         }
         setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_RESTART_CHECKPOINT, 1));
@@ -152,16 +147,4 @@ public final class InventoryUtils {
         }
     }
 
-    private static UUID resolvePlayerUuid(Player player) {
-        if (player == null) {
-            return null;
-        }
-        Ref<EntityStore> ref = player.getReference();
-        if (ref == null || !ref.isValid()) {
-            return null;
-        }
-        Store<EntityStore> store = ref.getStore();
-        UUIDComponent uuidComponent = store.getComponent(ref, UUIDComponent.getComponentType());
-        return uuidComponent != null ? uuidComponent.getUuid() : null;
-    }
 }

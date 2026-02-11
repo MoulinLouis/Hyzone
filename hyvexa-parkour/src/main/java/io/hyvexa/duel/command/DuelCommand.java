@@ -12,6 +12,7 @@ import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.HyvexaPlugin;
+import io.hyvexa.common.util.CommandUtils;
 import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.duel.DuelConstants;
@@ -67,7 +68,7 @@ public class DuelCommand extends AbstractAsyncCommand {
         if (playerRef == null) {
             return;
         }
-        String[] tokens = tokenize(ctx);
+        String[] tokens = CommandUtils.tokenize(ctx);
         if (tokens.length == 0) {
             handleJoin(ctx, playerRef);
             return;
@@ -322,28 +323,4 @@ public class DuelCommand extends AbstractAsyncCommand {
         return null;
     }
 
-    private static String[] tokenize(CommandContext ctx) {
-        String input = ctx.getInputString();
-        if (input == null || input.trim().isEmpty()) {
-            return new String[0];
-        }
-        String[] tokens = input.trim().split("\\s+");
-        if (tokens.length == 0) {
-            return tokens;
-        }
-        String first = tokens[0];
-        if (first.startsWith("/")) {
-            first = first.substring(1);
-        }
-        String commandName = ctx.getCalledCommand().getName();
-        if (first.equalsIgnoreCase(commandName)) {
-            if (tokens.length == 1) {
-                return new String[0];
-            }
-            String[] trimmed = new String[tokens.length - 1];
-            System.arraycopy(tokens, 1, trimmed, 0, trimmed.length);
-            return trimmed;
-        }
-        return tokens;
-    }
 }
