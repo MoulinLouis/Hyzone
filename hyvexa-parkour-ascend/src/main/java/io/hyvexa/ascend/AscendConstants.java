@@ -174,6 +174,10 @@ public final class AscendConstants {
 
     // Momentum System (temporary speed boost from manual runs)
     public static final double MOMENTUM_SPEED_MULTIPLIER = 2.0;
+    public static final double MOMENTUM_SURGE_MULTIPLIER = 3.0;
+    public static final double ELEVATION_REMNANT_FRACTION = 0.15;
+    public static final double SUMMIT_PERSISTENCE_FRACTION = 0.10;
+    public static final double VEXA_OVERFLOW_FRACTION = 0.01;
     public static final long MOMENTUM_DURATION_MS = 60_000L;
 
     // Runner star evolution
@@ -597,7 +601,12 @@ public final class AscendConstants {
         RUNNER_SPEED("Runner Speed Boost", "x1.1 global runner speed", AUTO_EVOLUTION),
         EVOLUTION_POWER("Evolution Power+", "+1 base evolution power", AUTO_EVOLUTION),
         RUNNER_SPEED_2("Runner Speed II", "x1.2 global runner speed", RUNNER_SPEED, EVOLUTION_POWER),
-        ASCENSION_CHALLENGES("Ascension Challenges", "Unlock Ascension Challenges", RUNNER_SPEED_2);
+        MOMENTUM_SURGE("Momentum Surge", "Momentum boost x2 -> x3", RUNNER_SPEED_2),
+        ELEVATION_REMNANT("Elevation Remnant", "Keep 15% elevation level on summit reset", RUNNER_SPEED_2),
+        ASCENSION_CHALLENGES("Ascension Challenges", "Unlock Ascension Challenges", MOMENTUM_SURGE, ELEVATION_REMNANT),
+        SUMMIT_PERSISTENCE("Summit Persistence", "Keep 10% summit category levels on ascension", ASCENSION_CHALLENGES),
+        SWIFT_RESTART("Swift Restart", "New runners start at 1-star after prestige", ASCENSION_CHALLENGES),
+        VEXA_OVERFLOW("Vexa Overflow", "Keep 1% of vexa on summit reset", SUMMIT_PERSISTENCE, SWIFT_RESTART);
 
         private final String name;
         private final String description;

@@ -1094,9 +1094,26 @@ public class AscendPlayerStore {
             return List.of();
         }
 
-        progress.setElevationMultiplier(1);
+        // Elevation Remnant: retain 15% of elevation level
+        int currentElevation = progress.getElevationMultiplier();
+        if (progress.hasSkillNode(AscendConstants.SkillTreeNode.ELEVATION_REMNANT)) {
+            int retained = (int) Math.floor(currentElevation * AscendConstants.ELEVATION_REMNANT_FRACTION);
+            progress.setElevationMultiplier(Math.max(1, retained));
+        } else {
+            progress.setElevationMultiplier(1);
+        }
+
+        // Vexa Overflow: capture vexa before reset, restore 1% after
+        BigNumber currentVexa = progress.getVexa();
+        boolean hasVexaOverflow = progress.hasSkillNode(AscendConstants.SkillTreeNode.VEXA_OVERFLOW);
 
         List<String> mapsWithRunners = resetMapProgress(progress, firstMapId, false, playerId);
+
+        if (hasVexaOverflow && currentVexa.gt(BigNumber.ZERO)) {
+            BigNumber retained = currentVexa.multiply(BigNumber.fromDouble(AscendConstants.VEXA_OVERFLOW_FRACTION));
+            progress.setVexa(retained);
+        }
+
         markDirty(playerId);
         return mapsWithRunners;
     }
