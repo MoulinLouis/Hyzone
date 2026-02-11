@@ -50,6 +50,10 @@ public class AscendPlayerProgress {
     // Tutorial tracking (bitmask)
     private volatile int seenTutorials;
 
+    // Challenge system (in-memory only, persisted via ChallengeManager)
+    private volatile AscendConstants.ChallengeType activeChallenge;
+    private volatile long challengeStartedAtMs;
+
     public BigNumber getVexa() {
         return vexa.get();
     }
@@ -377,6 +381,26 @@ public class AscendPlayerProgress {
 
     public void markTutorialSeen(int bit) {
         seenTutorials |= bit;
+    }
+
+    // ========================================
+    // Challenge System
+    // ========================================
+
+    public AscendConstants.ChallengeType getActiveChallenge() {
+        return activeChallenge;
+    }
+
+    public void setActiveChallenge(AscendConstants.ChallengeType activeChallenge) {
+        this.activeChallenge = activeChallenge;
+    }
+
+    public long getChallengeStartedAtMs() {
+        return challengeStartedAtMs;
+    }
+
+    public void setChallengeStartedAtMs(long challengeStartedAtMs) {
+        this.challengeStartedAtMs = challengeStartedAtMs;
     }
 
     public static class MapProgress {

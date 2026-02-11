@@ -93,7 +93,7 @@ $C.@PageOverlay {
 
         Group { Anchor: (Width: 6); }
 
-        // Tab 2: Locked
+        // Tab 2: Locked / Challenge
         Group #TabLockedAWrap {
           Anchor: (Height: 36);
           FlexWeight: 1;
@@ -101,8 +101,17 @@ $C.@PageOverlay {
           OutlineColor: #ffffff(0.03);
           OutlineSize: 1;
 
-          // Lock icon + label layout
-          Group {
+          // Unlocked background overlay (shown when Challenge skill is unlocked)
+          Group #TabUnlockedBg {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Background: #2d3f50;
+            OutlineColor: #ffffff(0.06);
+            OutlineSize: 1;
+            Visible: false;
+          }
+
+          // Lock icon + label layout (shown when locked)
+          Group #TabLockedAContent {
             Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
             LayoutMode: Left;
 
@@ -127,7 +136,15 @@ $C.@PageOverlay {
             Group { FlexWeight: 1; }
           }
 
-          // Disabled overlay
+          // Challenge label (shown when unlocked)
+          Label #TabChallengeLabel {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Style: (FontSize: 14, RenderBold: true, TextColor: #f0f4f8, Alignment: Center, VerticalAlignment: Center);
+            Text: "Challenge";
+            Visible: false;
+          }
+
+          // Button overlay
           TextButton #TabLockedA {
             Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
             Text: "";

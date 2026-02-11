@@ -8,6 +8,7 @@
 - **Parkour/Ascend: Ghost stack moved to shared core wrappers** - Recorder/store/interpolation logic now lives in `hyvexa-core` with mode-specific table/resolver adapters and parity tests
 
 ### Added
+- **Ascend: Ascension Challenge system** - Players who unlock the Ascension Challenges skill tree node can start timed challenges that snapshot progress, reset state, and apply malus effects (e.g., blocking Evolution Power). Completing an ascension during a challenge records best time and grants bonus summit XP. Progress is fully restored on completion or quit. Crash recovery via DB-persisted snapshots.
 - **Ascend: Toast notification system** - HUD-based toast notifications at bottom-left for upgrades, evolutions, purchases, and economy events. 4 stacked slots with category-colored accent bars and countdown progress bars. Consolidates rapid-fire actions. Displays alongside existing chat messages.
 - **Ascend: Per-map leaderboard** - "Stats" button in map select replaced with "Leaderboard" showing best times per map with map tabs, search, and pagination. Also accessible via `/ascend maplb`.
 - **Ascend: Expanded skill tree (1 → 8 nodes)** - Tree now has Auto Runners, Auto-Evolution, Momentum, Runner Speed, Offline Boost, Summit Memory, Evolution Power+, and Ascension Challenges (teaser). Branch/converge structure with OR-logic prerequisites.

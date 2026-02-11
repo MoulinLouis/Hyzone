@@ -181,6 +181,9 @@ public final class AscendDatabaseSetup {
             ensurePlayerNameColumn(conn);
             ensureMapLeaderboardIndex(conn);
 
+            // Challenge system tables
+            ensureChallengeTables(conn);
+
             LOGGER.atInfo().log("Ascend database tables ensured");
 
         } catch (SQLException e) {
@@ -762,6 +765,41 @@ public final class AscendDatabaseSetup {
             LOGGER.atInfo().log("Scientific notation migration complete");
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Failed to migrate to scientific notation: " + e.getMessage());
+        }
+    }
+
+    private static void ensureChallengeTables(Connection conn) {
+        if (conn == null) {
+            return;
+        }
+
+        try (Statement stmt = conn.createStatement()) {
+            // Active challenge + snapshot for crash recovery (deleted on complete/quit)
+            stmt.executeUpdate("""
+                CREATE TABLE IF NOT EXISTS ascend_challenges (
+                    player_uuid VARCHAR(36) PRIMARY KEY,
+                    challenge_type_id INT NOT NULL,
+                    started_at_ms BIGINT NOT NULL,
+                    snapshot_json MEDIUMTEXT NOT NULL,
+                    FOREIGN KEY (player_uuid) REFERENCES ascend_players(uuid) ON DELETE CASCADE
+                ) ENGINE=InnoDB
+                """);
+
+            // Permanent records: best time + completion count per challenge type
+            stmt.executeUpdate("""
+                CREATE TABLE IF NOT EXISTS ascend_challenge_records (
+                    player_uuid VARCHAR(36) NOT NULL,
+                    challenge_type_id INT NOT NULL,
+                    best_time_ms BIGINT DEFAULT NULL,
+                    completions INT NOT NULL DEFAULT 0,
+                    PRIMARY KEY (player_uuid, challenge_type_id),
+                    FOREIGN KEY (player_uuid) REFERENCES ascend_players(uuid) ON DELETE CASCADE
+                ) ENGINE=InnoDB
+                """);
+
+            LOGGER.atInfo().log("Ensured challenge system tables");
+        } catch (SQLException e) {
+            LOGGER.at(Level.SEVERE).log("Failed to create challenge tables: " + e.getMessage());
         }
     }
 

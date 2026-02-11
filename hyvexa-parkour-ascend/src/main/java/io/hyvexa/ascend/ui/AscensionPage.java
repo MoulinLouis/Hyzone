@@ -85,6 +85,14 @@ public class AscensionPage extends BaseAscendPage {
             return;
         }
 
+        // Check if player is in a challenge — route to challenge completion instead
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin != null && plugin.getChallengeManager() != null
+                && plugin.getChallengeManager().isInChallenge(playerId)) {
+            handleChallengeCompletion(playerId, player, plugin);
+            return;
+        }
+
         int newCount = ascensionManager.performAscension(playerId);
         if (newCount < 0) {
             player.sendMessage(Message.raw("[Ascension] Ascension failed.")
@@ -100,7 +108,6 @@ public class AscensionPage extends BaseAscendPage {
             .color(SystemMessageUtils.SECONDARY));
 
         // Check achievements
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         if (plugin != null && plugin.getAchievementManager() != null) {
             plugin.getAchievementManager().checkAndUnlockAchievements(playerId, player);
         }
@@ -109,6 +116,26 @@ public class AscensionPage extends BaseAscendPage {
         UICommandBuilder updateBuilder = new UICommandBuilder();
         updateDisplay(ref, store, updateBuilder);
         sendUpdate(updateBuilder, null, false);
+    }
+
+    private void handleChallengeCompletion(UUID playerId, Player player, ParkourAscendPlugin plugin) {
+        io.hyvexa.ascend.ascension.ChallengeManager challengeManager = plugin.getChallengeManager();
+        AscendConstants.ChallengeType type = challengeManager.getActiveChallenge(playerId);
+
+        long elapsedMs = challengeManager.completeChallenge(playerId);
+        if (elapsedMs < 0) {
+            player.sendMessage(Message.raw("[Challenge] Challenge completion failed.")
+                .color(SystemMessageUtils.SECONDARY));
+            return;
+        }
+
+        String timeStr = FormatUtils.formatDurationLong(elapsedMs);
+        player.sendMessage(Message.raw("[Challenge] " + (type != null ? type.getDisplayName() : "Challenge") + " completed in " + timeStr + "!")
+            .color(SystemMessageUtils.SUCCESS));
+        player.sendMessage(Message.raw("[Challenge] Your progress has been restored. Reward XP applied!")
+            .color(SystemMessageUtils.SUCCESS));
+
+        this.close();
     }
 
     private void updateDisplay(Ref<EntityStore> ref, Store<EntityStore> store, UICommandBuilder commandBuilder) {

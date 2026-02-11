@@ -2,6 +2,8 @@ package io.hyvexa.ascend;
 
 import io.hyvexa.common.math.BigNumber;
 
+import java.util.Set;
+
 public final class AscendConstants {
 
     private AscendConstants() {
@@ -559,7 +561,7 @@ public final class AscendConstants {
         RUNNER_SPEED("Runner Speed Boost", "x1.1 global runner speed", AUTO_EVOLUTION),
         EVOLUTION_POWER("Evolution Power+", "+1 base evolution power", AUTO_EVOLUTION),
         RUNNER_SPEED_2("Runner Speed II", "x1.2 global runner speed", RUNNER_SPEED, EVOLUTION_POWER),
-        ASCENSION_CHALLENGES("Ascension Challenges", "Coming Soon", RUNNER_SPEED_2);
+        ASCENSION_CHALLENGES("Ascension Challenges", "Unlock Ascension Challenges", RUNNER_SPEED_2);
 
         private final String name;
         private final String description;
@@ -597,6 +599,45 @@ public final class AscendConstants {
                 }
             }
             return false;
+        }
+    }
+
+    public enum ChallengeType {
+        ASCENSION_SPRINT(1, "Ascension Sprint",
+            "Complete an Ascension without Evolution Power",
+            "#ef4444",
+            Set.of(SummitCategory.EVOLUTION_POWER),
+            50L);
+
+        private final int id;
+        private final String displayName;
+        private final String description;
+        private final String accentColor;
+        private final Set<SummitCategory> blockedSummitCategories;
+        private final long rewardXp;
+
+        ChallengeType(int id, String displayName, String description, String accentColor,
+                      Set<SummitCategory> blockedSummitCategories, long rewardXp) {
+            this.id = id;
+            this.displayName = displayName;
+            this.description = description;
+            this.accentColor = accentColor;
+            this.blockedSummitCategories = blockedSummitCategories;
+            this.rewardXp = rewardXp;
+        }
+
+        public int getId() { return id; }
+        public String getDisplayName() { return displayName; }
+        public String getDescription() { return description; }
+        public String getAccentColor() { return accentColor; }
+        public Set<SummitCategory> getBlockedSummitCategories() { return blockedSummitCategories; }
+        public long getRewardXp() { return rewardXp; }
+
+        public static ChallengeType fromId(int id) {
+            for (ChallengeType type : values()) {
+                if (type.id == id) return type;
+            }
+            return null;
         }
     }
 
