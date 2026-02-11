@@ -183,6 +183,7 @@ public final class AscendDatabaseSetup {
 
             // Challenge system tables
             ensureChallengeTables(conn);
+            ensureBreakAscensionColumn(conn);
 
             LOGGER.atInfo().log("Ascend database tables ensured");
 
@@ -800,6 +801,21 @@ public final class AscendDatabaseSetup {
             LOGGER.atInfo().log("Ensured challenge system tables");
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Failed to create challenge tables: " + e.getMessage());
+        }
+    }
+
+    private static void ensureBreakAscensionColumn(Connection conn) {
+        if (conn == null) {
+            return;
+        }
+        if (columnExists(conn, "ascend_players", "break_ascension_enabled")) {
+            return;
+        }
+        try (Statement stmt = conn.createStatement()) {
+            stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN break_ascension_enabled BOOLEAN NOT NULL DEFAULT FALSE");
+            LOGGER.atInfo().log("Added break_ascension_enabled column to ascend_players");
+        } catch (SQLException e) {
+            LOGGER.at(Level.SEVERE).log("Failed to add break_ascension_enabled column: " + e.getMessage());
         }
     }
 

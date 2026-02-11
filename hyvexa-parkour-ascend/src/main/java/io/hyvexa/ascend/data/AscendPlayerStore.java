@@ -149,7 +149,8 @@ public class AscendPlayerStore {
                    last_active_timestamp, has_unclaimed_passive,
                    summit_accumulated_vexa_mantissa, summit_accumulated_vexa_exp10,
                    elevation_accumulated_vexa_mantissa, elevation_accumulated_vexa_exp10,
-                   auto_upgrade_enabled, auto_evolution_enabled, seen_tutorials, hide_other_runners
+                   auto_upgrade_enabled, auto_evolution_enabled, seen_tutorials, hide_other_runners,
+                   break_ascension_enabled
             FROM ascend_players
             WHERE uuid = ?
             """;
@@ -204,6 +205,7 @@ public class AscendPlayerStore {
                     progress.setAutoEvolutionEnabled(safeGetBoolean(rs, "auto_evolution_enabled", false));
                     progress.setSeenTutorials(safeGetInt(rs, "seen_tutorials", 0));
                     progress.setHideOtherRunners(safeGetBoolean(rs, "hide_other_runners", false));
+                    progress.setBreakAscensionEnabled(safeGetBoolean(rs, "break_ascension_enabled", false));
                 }
             }
         } catch (SQLException e) {
@@ -560,6 +562,10 @@ public class AscendPlayerStore {
 
         // Trigger ascension cinematic every time the threshold is crossed
         if (crossedAscension) {
+            AscendPlayerProgress progress = getPlayer(playerId);
+            if (progress != null && progress.isBreakAscensionEnabled() && progress.hasAllChallengeRewards()) {
+                return; // Break mode active — suppress auto-ascension
+            }
             triggerAscensionCinematic(playerId);
         }
     }
@@ -1399,8 +1405,9 @@ public class AscendPlayerStore {
                 ascension_started_at, fastest_ascension_ms, last_active_timestamp, has_unclaimed_passive,
                 summit_accumulated_vexa_mantissa, summit_accumulated_vexa_exp10,
                 elevation_accumulated_vexa_mantissa, elevation_accumulated_vexa_exp10,
-                auto_upgrade_enabled, auto_evolution_enabled, seen_tutorials, hide_other_runners)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                auto_upgrade_enabled, auto_evolution_enabled, seen_tutorials, hide_other_runners,
+                break_ascension_enabled)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 player_name = VALUES(player_name),
                 vexa_mantissa = VALUES(vexa_mantissa), vexa_exp10 = VALUES(vexa_exp10),
@@ -1420,7 +1427,8 @@ public class AscendPlayerStore {
                 auto_upgrade_enabled = VALUES(auto_upgrade_enabled),
                 auto_evolution_enabled = VALUES(auto_evolution_enabled),
                 hide_other_runners = VALUES(hide_other_runners),
-                seen_tutorials = VALUES(seen_tutorials)
+                seen_tutorials = VALUES(seen_tutorials),
+                break_ascension_enabled = VALUES(break_ascension_enabled)
             """;
 
         String mapSql = """
@@ -1525,6 +1533,7 @@ public class AscendPlayerStore {
                     playerStmt.setBoolean(21, progress.isAutoEvolutionEnabled());
                     playerStmt.setInt(22, progress.getSeenTutorials());
                     playerStmt.setBoolean(23, progress.isHideOtherRunners());
+                    playerStmt.setBoolean(24, progress.isBreakAscensionEnabled());
                     playerStmt.addBatch();
 
                     // Save map progress
@@ -1852,6 +1861,22 @@ public class AscendPlayerStore {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
         progress.setHideOtherRunners(enabled);
         markDirty(playerId);
+    }
+
+    public boolean isBreakAscensionEnabled(UUID playerId) {
+        AscendPlayerProgress progress = players.get(playerId);
+        return progress != null && progress.isBreakAscensionEnabled();
+    }
+
+    public void setBreakAscensionEnabled(UUID playerId, boolean enabled) {
+        AscendPlayerProgress progress = getOrCreatePlayer(playerId);
+        progress.setBreakAscensionEnabled(enabled);
+        markDirty(playerId);
+
+        // If disabling break mode while above threshold, trigger ascension
+        if (!enabled && progress.getVexa().gte(AscendConstants.ASCENSION_VEXA_THRESHOLD)) {
+            triggerAscensionCinematic(playerId);
+        }
     }
 
     private static int safeGetInt(ResultSet rs, String column, int defaultValue) {
