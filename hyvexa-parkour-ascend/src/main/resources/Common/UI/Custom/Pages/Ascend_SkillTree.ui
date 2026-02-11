@@ -122,13 +122,15 @@ $C.@PageOverlay {
         }
       }
 
-      // --- Tree Canvas ---
+      // --- Tree Canvas (scrollable when detail panel is open) ---
       Group #TreeCanvas {
         Anchor: (Left: 0, Right: 0, Top: 8);
         FlexWeight: 1;
+        ContentHeight: 650;
+        ScrollbarStyle: (Size: 6, Spacing: 2, OnlyVisibleWhenHovered: true, Handle: #ffffff(0.15), HoveredHandle: #ffffff(0.25), DraggedHandle: #ffffff(0.3));
 
         Group #TreeContent {
-          Anchor: (Width: 660, Height: 650);
+          Anchor: (Left: 0, Top: 0, Width: 660, Height: 650);
 
           // Connectors: T1->T2 straight
           Group #ConnT0T1 { Anchor: (Left: 328, Top: 130, Width: 4, Height: 20); Background: #4b5563; }
@@ -306,12 +308,11 @@ $C.@PageOverlay {
         }
       }
     }
-    } // end main flex layout
 
-    // === NODE DETAIL PANEL (overlay at bottom) ===
+    // === NODE DETAIL PANEL (inside flex layout, pushes tree up) ===
     Group #DetailPanel {
       Visible: false;
-      Anchor: (Left: 0, Right: 0, Bottom: 0, Height: 200);
+      Anchor: (Left: 0, Right: 0, Height: 200);
       Background: #0a1018;
       OutlineColor: #ffffff(0.08);
       OutlineSize: 1;
@@ -451,5 +452,6 @@ $C.@PageOverlay {
         }
       }
     }
+    } // end main flex layout
   }
 }
