@@ -242,6 +242,30 @@ public class ChallengeManager {
     }
 
     /**
+     * Get the multiplier gain effectiveness for the player's active challenge.
+     * Returns 1.0 if no challenge or no multiplier gain nerf.
+     */
+    public double getMultiplierGainEffectiveness(UUID playerId) {
+        ActiveChallenge active = activeChallenges.get(playerId);
+        if (active == null) {
+            return 1.0;
+        }
+        return active.challengeType().getMultiplierGainEffectiveness();
+    }
+
+    /**
+     * Get the evolution power effectiveness for the player's active challenge.
+     * Returns 1.0 if no challenge or no evolution power nerf.
+     */
+    public double getEvolutionPowerEffectiveness(UUID playerId) {
+        ActiveChallenge active = activeChallenges.get(playerId);
+        if (active == null) {
+            return 1.0;
+        }
+        return active.challengeType().getEvolutionPowerEffectiveness();
+    }
+
+    /**
      * Load active challenge from DB on player connect (crash recovery).
      * Also loads permanent challenge rewards from ascend_challenge_records.
      */

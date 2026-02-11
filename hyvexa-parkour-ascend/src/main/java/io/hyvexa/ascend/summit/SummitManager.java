@@ -165,26 +165,27 @@ public class SummitManager {
     /**
      * Gets the multiplier gain bonus.
      * Formula: 1.0 + 0.30 * level (linear below soft cap, sqrt growth above).
-     * During Challenge 3, returns base 1.0 (no summit bonus).
+     * During Challenge 3, the summit bonus portion is reduced by multiplierGainEffectiveness.
      * Challenge 3 reward: x1.2 permanent multiplier gain bonus.
      * @return Multiplier value (1.0 at level 0, 4.0 at level 10)
      */
     public double getMultiplierGainBonus(UUID playerId) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        double fullBonus = playerStore.getSummitBonusDouble(playerId, SummitCategory.MULTIPLIER_GAIN);
 
-        // Challenge malus: if Multiplier Gain is blocked, skip summit bonus
-        if (plugin != null && plugin.getChallengeManager() != null
-                && plugin.getChallengeManager().isSummitBlocked(playerId, SummitCategory.MULTIPLIER_GAIN)) {
-            double base = SummitCategory.MULTIPLIER_GAIN.getBonusForLevel(0); // 1.0
-            // Still apply Challenge 3 permanent reward if unlocked
-            base = applyChallengeRewardMultiplierGain(playerId, base);
-            return base;
+        // Challenge malus: reduce multiplier gain bonus portion
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin != null && plugin.getChallengeManager() != null) {
+            double effectiveness = plugin.getChallengeManager().getMultiplierGainEffectiveness(playerId);
+            if (effectiveness < 1.0) {
+                double base = SummitCategory.MULTIPLIER_GAIN.getBonusForLevel(0); // 1.0
+                double bonus = fullBonus - base;
+                fullBonus = base + (bonus * effectiveness);
+            }
         }
 
-        double result = playerStore.getSummitBonusDouble(playerId, SummitCategory.MULTIPLIER_GAIN);
         // Challenge 3 reward: x1.2 permanent multiplier gain bonus
-        result = applyChallengeRewardMultiplierGain(playerId, result);
-        return result;
+        fullBonus = applyChallengeRewardMultiplierGain(playerId, fullBonus);
+        return fullBonus;
     }
 
     private double applyChallengeRewardMultiplierGain(UUID playerId, double value) {
@@ -199,35 +200,32 @@ public class SummitManager {
      * Gets the Evolution Power bonus for runner evolution.
      * Formula: 3.0 + 0.10 * level (linear below soft cap, sqrt growth above).
      * Applied per star: multiplier_increment = 0.1 * evolutionPower^stars
-     * During a challenge, if EVOLUTION_POWER is blocked, returns base 3.0 (+ skill tree bonus + challenge reward only).
+     * During Challenge 4, the summit bonus portion is reduced by evolutionPowerEffectiveness.
      * Challenge 4 reward: +1 base Evolution Power.
      * @return Evolution bonus (3.0 at level 0, 4.0 at level 10)
      */
     public double getEvolutionPowerBonus(UUID playerId) {
-        // Challenge malus: if Evolution Power is blocked, skip summit bonus
+        double fullBonus = playerStore.getSummitBonusDouble(playerId, SummitCategory.EVOLUTION_POWER);
+
+        // Challenge malus: reduce evolution power bonus portion
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin != null && plugin.getChallengeManager() != null
-                && plugin.getChallengeManager().isSummitBlocked(playerId, SummitCategory.EVOLUTION_POWER)) {
-            double base = SummitCategory.EVOLUTION_POWER.getBonusForLevel(0); // 3.0
-            // Still apply skill tree bonus
-            if (plugin.getAscensionManager() != null
-                    && plugin.getAscensionManager().hasEvolutionPowerBoost(playerId)) {
-                base += 1.0;
+        if (plugin != null && plugin.getChallengeManager() != null) {
+            double effectiveness = plugin.getChallengeManager().getEvolutionPowerEffectiveness(playerId);
+            if (effectiveness < 1.0) {
+                double base = SummitCategory.EVOLUTION_POWER.getBonusForLevel(0); // 3.0
+                double bonus = fullBonus - base;
+                fullBonus = base + (bonus * effectiveness);
             }
-            // Still apply Challenge 4 reward
-            base = applyChallengeRewardEvolutionPower(playerId, base);
-            return base;
         }
 
-        double base = playerStore.getSummitBonusDouble(playerId, SummitCategory.EVOLUTION_POWER);
         // Skill tree: Evolution Power+ adds +1.0 to base evolution power
         if (plugin != null && plugin.getAscensionManager() != null
                 && plugin.getAscensionManager().hasEvolutionPowerBoost(playerId)) {
-            base += 1.0;
+            fullBonus += 1.0;
         }
         // Challenge 4 reward: +1 base Evolution Power
-        base = applyChallengeRewardEvolutionPower(playerId, base);
-        return base;
+        fullBonus = applyChallengeRewardEvolutionPower(playerId, fullBonus);
+        return fullBonus;
     }
 
     private double applyChallengeRewardEvolutionPower(UUID playerId, double value) {

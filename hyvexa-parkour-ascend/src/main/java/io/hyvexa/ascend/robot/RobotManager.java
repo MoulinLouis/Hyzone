@@ -665,11 +665,10 @@ public class RobotManager {
         }
         BigNumber multiplierIncrement = AscendConstants.getRunnerMultiplierIncrement(stars, multiplierGainBonus, evolutionPowerBonus);
 
-        // Challenge 1 reward: x1.5 multiplier gain on maps with displayOrder 3 or 4
+        // Challenge 1 reward: x1.5 multiplier gain on map 5 (displayOrder 4)
         AscendPlayerProgress ownerProgress = playerStore.getPlayer(ownerId);
         if (ownerProgress != null && ownerProgress.hasChallengeReward(ChallengeType.CHALLENGE_1)) {
-            int displayOrder = map.getDisplayOrder();
-            if (displayOrder == 3 || displayOrder == 4) {
+            if (map.getDisplayOrder() == 4) {
                 multiplierIncrement = multiplierIncrement.multiply(BigNumber.fromDouble(1.5));
             }
         }
