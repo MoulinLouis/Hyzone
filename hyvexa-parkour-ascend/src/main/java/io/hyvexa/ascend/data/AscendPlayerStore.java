@@ -566,14 +566,69 @@ public class AscendPlayerStore {
             if (progress != null && progress.isBreakAscensionEnabled() && progress.hasAllChallengeRewards()) {
                 return; // Break mode active — suppress auto-ascension
             }
-            triggerAscensionCinematic(playerId);
+            showAscensionExplainer(playerId);
         }
     }
 
-    private void triggerAscensionCinematic(UUID playerId) {
+    private void showAscensionExplainer(UUID playerId) {
         if (!ascensionCinematicActive.add(playerId)) {
-            return; // Cinematic already in progress for this player
+            return; // Already in progress for this player
         }
+        HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
+            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+            if (plugin == null) {
+                ascensionCinematicActive.remove(playerId);
+                return;
+            }
+
+            com.hypixel.hytale.server.core.universe.PlayerRef playerRef = plugin.getPlayerRef(playerId);
+            if (playerRef == null) {
+                ascensionCinematicActive.remove(playerId);
+                return;
+            }
+
+            com.hypixel.hytale.component.Ref<com.hypixel.hytale.server.core.universe.world.storage.EntityStore> ref =
+                playerRef.getReference();
+            if (ref == null || !ref.isValid()) {
+                ascensionCinematicActive.remove(playerId);
+                return;
+            }
+
+            com.hypixel.hytale.component.Store<com.hypixel.hytale.server.core.universe.world.storage.EntityStore> store =
+                ref.getStore();
+            com.hypixel.hytale.server.core.universe.world.World world = store.getExternalData().getWorld();
+            if (world == null) {
+                ascensionCinematicActive.remove(playerId);
+                return;
+            }
+
+            java.util.concurrent.CompletableFuture.runAsync(() -> {
+                if (!ref.isValid()) {
+                    ascensionCinematicActive.remove(playerId);
+                    return;
+                }
+                com.hypixel.hytale.server.core.entity.entities.Player player =
+                    store.getComponent(ref, com.hypixel.hytale.server.core.entity.entities.Player.getComponentType());
+                if (player == null) {
+                    ascensionCinematicActive.remove(playerId);
+                    return;
+                }
+                player.getPageManager().openCustomPage(ref, store,
+                    new io.hyvexa.ascend.ui.AscendAscensionExplainerPage(playerRef));
+            }, world);
+        }, 500, TimeUnit.MILLISECONDS);
+    }
+
+    /**
+     * Called by AscendAscensionExplainerPage when the player clicks Continue (or dismisses).
+     * Proceeds with the cinematic and auto-ascension.
+     */
+    public void proceedWithAscensionCinematic(UUID playerId) {
+        // The player is already in ascensionCinematicActive from showAscensionExplainer
+        triggerAscensionCinematic(playerId);
+    }
+
+    private void triggerAscensionCinematic(UUID playerId) {
         HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
             ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
             if (plugin == null) return;

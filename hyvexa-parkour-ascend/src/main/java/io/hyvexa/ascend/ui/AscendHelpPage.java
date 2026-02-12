@@ -23,6 +23,7 @@ public class AscendHelpPage extends BaseAscendPage {
     private static final String BUTTON_ELEVATION = "Elevation";
     private static final String BUTTON_SUMMIT = "Summit";
     private static final String BUTTON_ASCENSION = "Ascension";
+    private static final String BUTTON_CHALLENGES = "Challenges";
     private static final String BUTTON_CLOSE = "Close";
 
     public AscendHelpPage(@Nonnull PlayerRef playerRef) {
@@ -47,8 +48,20 @@ public class AscendHelpPage extends BaseAscendPage {
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_SUMMIT), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#AscensionButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_ASCENSION), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ChallengesButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CHALLENGES), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CloseButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE), false);
+
+        // Set subtitle labels from centralized copy (prevents drift)
+        uiCommandBuilder.set("#WelcomeSubtitle.Text", AscendOnboardingCopy.HELP_SUBTITLE_WELCOME);
+        uiCommandBuilder.set("#FirstCompletionSubtitle.Text", AscendOnboardingCopy.HELP_SUBTITLE_FIRST_COMPLETION);
+        uiCommandBuilder.set("#MapUnlockSubtitle.Text", AscendOnboardingCopy.HELP_SUBTITLE_MAP_UNLOCK);
+        uiCommandBuilder.set("#EvolutionSubtitle.Text", AscendOnboardingCopy.HELP_SUBTITLE_EVOLUTION);
+        uiCommandBuilder.set("#ElevationSubtitle.Text", AscendOnboardingCopy.HELP_SUBTITLE_ELEVATION);
+        uiCommandBuilder.set("#SummitSubtitle.Text", AscendOnboardingCopy.HELP_SUBTITLE_SUMMIT);
+        uiCommandBuilder.set("#AscensionSubtitle.Text", AscendOnboardingCopy.HELP_SUBTITLE_ASCENSION);
+        uiCommandBuilder.set("#ChallengesSubtitle.Text", AscendOnboardingCopy.HELP_SUBTITLE_CHALLENGES);
     }
 
     @Override
@@ -88,6 +101,10 @@ public class AscendHelpPage extends BaseAscendPage {
             case BUTTON_ASCENSION:
                 player.getPageManager().openCustomPage(ref, store,
                         new AscendTutorialPage(playerRef, AscendTutorialPage.Tutorial.ASCENSION));
+                break;
+            case BUTTON_CHALLENGES:
+                player.getPageManager().openCustomPage(ref, store,
+                        new AscendTutorialPage(playerRef, AscendTutorialPage.Tutorial.CHALLENGES));
                 break;
             case BUTTON_CLOSE:
                 this.close();

@@ -74,7 +74,7 @@ $C.@PageOverlay {
       Label #MainTitle {
         Anchor: (Top: 10);
         Style: (FontSize: 22, TextColor: #f0f4f8, RenderBold: true);
-        Text: "Title";
+        Text: "New Map Unlocked!";
       }
 
       // Separator
@@ -87,7 +87,7 @@ $C.@PageOverlay {
       Label #Description {
         Anchor: (Top: 14, Left: 0, Right: 0);
         Style: (FontSize: 14, TextColor: #b2c0c7, Wrap: true);
-        Text: "Description placeholder";
+        Text: "Runner level 5 unlocks the next map. All map multipliers are multiplied together - more maps = way more vexa.";
       }
 
       // Feature list with accent dots
@@ -102,7 +102,7 @@ $C.@PageOverlay {
 
           Group #Feature1Dot { Anchor: (Width: 8, Height: 8, Top: 6); Background: #10b981; }
           Group { Anchor: (Width: 10); }
-          Label #Feature1Label { Style: (FontSize: 13, TextColor: #cfd7dc); Text: "Feature 1"; }
+          Label #Feature1Label { Style: (FontSize: 13, TextColor: #cfd7dc); Text: "Runner level 5 unlocks new maps"; }
         }
 
         // Feature 2
@@ -112,7 +112,7 @@ $C.@PageOverlay {
 
           Group #Feature2Dot { Anchor: (Width: 8, Height: 8, Top: 6); Background: #3b82f6; }
           Group { Anchor: (Width: 10); }
-          Label #Feature2Label { Style: (FontSize: 13, TextColor: #cfd7dc); Text: "Feature 2"; }
+          Label #Feature2Label { Style: (FontSize: 13, TextColor: #cfd7dc); Text: "Map multipliers multiply together"; }
         }
 
         // Feature 3
@@ -122,11 +122,11 @@ $C.@PageOverlay {
 
           Group #Feature3Dot { Anchor: (Width: 8, Height: 8, Top: 6); Background: #a855f7; }
           Group { Anchor: (Width: 10); }
-          Label #Feature3Label { Style: (FontSize: 13, TextColor: #cfd7dc); Text: "Feature 3"; }
+          Label #Feature3Label { Style: (FontSize: 13, TextColor: #cfd7dc); Text: "More maps means exponential vexa growth"; }
         }
       }
 
-      // Tip box (step 2 only)
+      // Tip box
       Group #TipBox {
         Anchor: (Left: 0, Right: 0, Top: 14);
         LayoutMode: Left;
@@ -143,7 +143,7 @@ $C.@PageOverlay {
         Group { Anchor: (Width: 8); }
         Label #TipText {
           Style: (FontSize: 12, TextColor: #d4a04a, Wrap: true);
-          Text: "Tip text";
+          Text: "Focus on leveling runners to unlock all maps quickly.";
         }
       }
 

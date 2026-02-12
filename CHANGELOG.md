@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Changed
+- **Ascend: Onboarding alignment overhaul** - Centralized all tutorial/welcome text into AscendOnboardingCopy.java. Fixed Ascension tutorial claiming "8 nodes" (actual: 11) and naming non-existent nodes. Fixed Welcome page saying "4 items" (actual: 5). Replaced placeholder text in all 6 tutorial .ui files. Added pre-reset explainer modal before auto-ascension cinematic. Added fallback tutorial triggers when opening elevation/summit/ascension pages. Standardized terminology to "Ascendancy Tree" + "AP" everywhere.
 - **Ascend: Summit hard cap at level 1000 with deep cap nerf** - Each summit category now has a maximum level of 1000. Added a "deep cap" at level 500 where growth transitions from √ to ⁴√ (heavy diminishing returns). XP is capped, UI shows "MAX" state, and summiting is blocked once reached.
 - **Ascend: Elevation multiplier buff** - Elevation multiplier changed from level (1:1) to level^1.05 (slightly super-linear). Higher elevation levels now give progressively better multipliers, rewarding deeper elevation pushes.
 - **Ascend: Renamed "Coins" to "Vexa"** - All player-facing text, Java identifiers, UI element IDs, database columns, and documentation updated to use "Vexa" as the currency name
@@ -10,6 +11,7 @@
 - **Parkour/Ascend: Ghost stack moved to shared core wrappers** - Recorder/store/interpolation logic now lives in `hyvexa-core` with mode-specific table/resolver adapters and parity tests
 
 ### Added
+- **Parkour: Advanced HUD toggle** - New "Advanced HUD" ON/OFF toggle in Player Settings that displays a compact panel above the right-side HUD showing real-time orientation (pitch, yaw, roll + cardinal direction), velocity (x, y, z), and speed
 - **Ascend: My Profile hub page** - Silk item now opens a "My Profile" page with links to Stats, Achievements, and Settings. Also accessible via `/ascend profile`.
 - **Ascend: Expanded achievement system (9 -> 30 achievements)** - 6 categories (Milestones, Runners, Prestige, Skills, Challenges, Secret) with category headers, hidden/secret achievements showing "???" until unlocked, and a Completionist meta-achievement. Fixed First Elevation threshold (was >=1, now >=2).
 - **Ascend: Ascension Challenge system** - Players who unlock the Ascension Challenges skill tree node can start timed challenges that snapshot progress, reset state, and apply malus effects (e.g., blocking Evolution Power). Completing an ascension during a challenge records best time and grants bonus summit XP. Progress is fully restored on completion or quit. Crash recovery via DB-persisted snapshots.

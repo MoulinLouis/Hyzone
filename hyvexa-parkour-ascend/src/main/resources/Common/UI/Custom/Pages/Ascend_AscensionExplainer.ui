@@ -1,0 +1,77 @@
+$C = "../Common.ui";
+
+$C.@PageOverlay {
+  SceneBlur {}
+
+  Group #ExplainerWindow {
+    Anchor: (Width: 420, Height: 240);
+    LayoutMode: Top;
+    Background: #0d1620(0.95);
+    OutlineColor: #ffffff(0.06);
+    OutlineSize: 1;
+
+    // Top accent bar
+    Group {
+      Anchor: (Left: 0, Right: 0, Top: 0, Height: 3);
+      Background: #f59e0b;
+    }
+
+    // Content area
+    Group #ContentArea {
+      Anchor: (Left: 0, Right: 0);
+      FlexWeight: 1;
+      LayoutMode: Top;
+      Padding: (Left: 24, Right: 24, Top: 24, Bottom: 16);
+
+      // Title
+      Label #ExplainerTitle {
+        Style: (FontSize: 20, TextColor: #f0f4f8, RenderBold: true);
+        Text: "Ascending";
+      }
+
+      // Separator
+      Group {
+        Anchor: (Left: 0, Width: 40, Height: 2, Top: 10);
+        Background: #f59e0b;
+      }
+
+      // Description
+      Label #ExplainerDescription {
+        Anchor: (Top: 12, Left: 0, Right: 0);
+        Style: (FontSize: 13, TextColor: #b2c0c7, Wrap: true);
+        Text: "All progress will be reset, but you will earn 1 AP to spend on permanent Ascendancy Tree abilities.";
+      }
+
+      // Spacer
+      Group { FlexWeight: 1; }
+
+      // Continue button
+      Group #ButtonRow {
+        Anchor: (Left: 0, Right: 0, Height: 40);
+        LayoutMode: Left;
+
+        Group { FlexWeight: 1; }
+
+        TextButton #ContinueButton {
+          Anchor: (Width: 140, Height: 36);
+          Text: "Continue";
+          Style: TextButtonStyle(
+            Default: (
+              Background: #f59e0b,
+              LabelStyle: (FontSize: 14, TextColor: #1a1a2a, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Hovered: (
+              Background: #fbbf24,
+              LabelStyle: (FontSize: 14, TextColor: #1a1a2a, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Pressed: (
+              Background: #d97706,
+              LabelStyle: (FontSize: 14, TextColor: #1a1a2a, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Sounds: $C.@ButtonSounds,
+          );
+        }
+      }
+    }
+  }
+}

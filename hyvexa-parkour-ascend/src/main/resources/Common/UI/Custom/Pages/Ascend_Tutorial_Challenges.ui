@@ -43,7 +43,7 @@ $C.@PageOverlay {
         Label {
           Anchor: (Top: 4);
           Style: (FontSize: 16, TextColor: #f0f4f8, RenderBold: true);
-          Text: "Evolution";
+          Text: "Challenges";
         }
 
         // Progress bar
@@ -79,7 +79,7 @@ $C.@PageOverlay {
       Label #MainTitle {
         Anchor: (Top: 10);
         Style: (FontSize: 22, TextColor: #f0f4f8, RenderBold: true);
-        Text: "Evolution";
+        Text: "Ascension Challenges";
       }
 
       // Separator
@@ -92,7 +92,7 @@ $C.@PageOverlay {
       Label #Description {
         Anchor: (Top: 14, Left: 0, Right: 0);
         Style: (FontSize: 14, TextColor: #b2c0c7, Wrap: true);
-        Text: "Your runner hit max speed. Evolve it to earn a star - each star triples the multiplier it earns per lap.";
+        Text: "Test your skills with timed challenge runs. Each challenge applies a handicap - complete an Ascension under those conditions to earn permanent rewards.";
       }
 
       // Feature list with accent dots
@@ -107,7 +107,7 @@ $C.@PageOverlay {
 
           Group #Feature1Dot { Anchor: (Width: 8, Height: 8, Top: 6); Background: #10b981; }
           Group { Anchor: (Width: 10); }
-          Label #Feature1Label { Style: (FontSize: 13, TextColor: #cfd7dc); Text: "Evolve runners when they hit max speed"; }
+          Label #Feature1Label { Style: (FontSize: 13, TextColor: #cfd7dc); Text: "4 progressive challenges to complete"; }
         }
 
         // Feature 2
@@ -117,7 +117,7 @@ $C.@PageOverlay {
 
           Group #Feature2Dot { Anchor: (Width: 8, Height: 8, Top: 6); Background: #3b82f6; }
           Group { Anchor: (Width: 10); }
-          Label #Feature2Label { Style: (FontSize: 13, TextColor: #cfd7dc); Text: "Each star triples multiplier per lap"; }
+          Label #Feature2Label { Style: (FontSize: 13, TextColor: #cfd7dc); Text: "Each applies a unique handicap"; }
         }
 
         // Feature 3
@@ -127,11 +127,11 @@ $C.@PageOverlay {
 
           Group #Feature3Dot { Anchor: (Width: 8, Height: 8, Top: 6); Background: #a855f7; }
           Group { Anchor: (Width: 10); }
-          Label #Feature3Label { Style: (FontSize: 13, TextColor: #cfd7dc); Text: "Speed resets but gains are massive"; }
+          Label #Feature3Label { Style: (FontSize: 13, TextColor: #cfd7dc); Text: "Permanent rewards for completion"; }
         }
       }
 
-      // Tip box (step 2 only)
+      // Tip box
       Group #TipBox {
         Anchor: (Left: 0, Right: 0, Top: 14);
         LayoutMode: Left;
@@ -148,7 +148,7 @@ $C.@PageOverlay {
         Group { Anchor: (Width: 8); }
         Label #TipText {
           Style: (FontSize: 12, TextColor: #d4a04a, Wrap: true);
-          Text: "Always evolve as soon as possible for maximum gains.";
+          Text: "You can quit a challenge anytime - your original progress is always restored.";
         }
       }
 
