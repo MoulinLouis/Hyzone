@@ -315,18 +315,19 @@ public class HyvexaPlugin extends JavaPlugin {
             }
         });
         this.getEventRegistry().registerGlobal(PlayerDisconnectEvent.class, event -> {
-            try {
-                if (event.getPlayerRef() != null) {
-                    UUID playerId = event.getPlayerRef().getUuid();
-                    if (duelTracker != null) {
-                        duelTracker.handleDisconnect(playerId);
-                    }
-                    cleanupManager.handleDisconnect(event.getPlayerRef());
-                }
-                playtimeManager.decrementOnlineCount();
-            } catch (Exception e) {
-                LOGGER.at(Level.WARNING).withCause(e).log("Exception in PlayerDisconnectEvent");
+            // Each cleanup wrapped individually so one failure doesn't skip the rest
+            if (event.getPlayerRef() != null) {
+                UUID playerId = event.getPlayerRef().getUuid();
+
+                try { if (duelTracker != null) { duelTracker.handleDisconnect(playerId); } }
+                catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Disconnect cleanup: duelTracker"); }
+
+                try { cleanupManager.handleDisconnect(event.getPlayerRef()); }
+                catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Disconnect cleanup: cleanupManager"); }
             }
+
+            try { playtimeManager.decrementOnlineCount(); }
+            catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Disconnect cleanup: playtimeManager"); }
         });
         for (PlayerRef playerRef : Universe.get().getPlayers()) {
             inventorySyncManager.syncRunInventoryOnConnect(playerRef);
@@ -841,26 +842,29 @@ public class HyvexaPlugin extends JavaPlugin {
 
     @Override
     protected void shutdown() {
-        cancelScheduled(hudUpdateTask);
-        cancelScheduled(playtimeTask);
-        cancelScheduled(collisionTask);
-        cancelScheduled(playerCountTask);
-        cancelScheduled(stalePlayerSweepTask);
-        cancelScheduled(teleportDebugTask);
-        cancelScheduled(duelTickTask);
-        if (ghostRecorder != null) {
-            ghostRecorder.stop();
-        }
-        if (ghostNpcManager != null) {
-            ghostNpcManager.stop();
-        }
-        if (announcementManager != null) {
-            announcementManager.shutdown();
-        }
-        if (progressStore != null) {
-            progressStore.flushPendingSave();
-        }
-        DatabaseManager.getInstance().shutdown();
+        try { cancelScheduled(hudUpdateTask); } catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Shutdown: hudUpdateTask"); }
+        try { cancelScheduled(playtimeTask); } catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Shutdown: playtimeTask"); }
+        try { cancelScheduled(collisionTask); } catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Shutdown: collisionTask"); }
+        try { cancelScheduled(playerCountTask); } catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Shutdown: playerCountTask"); }
+        try { cancelScheduled(stalePlayerSweepTask); } catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Shutdown: stalePlayerSweepTask"); }
+        try { cancelScheduled(teleportDebugTask); } catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Shutdown: teleportDebugTask"); }
+        try { cancelScheduled(duelTickTask); } catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Shutdown: duelTickTask"); }
+
+        try { if (ghostRecorder != null) { ghostRecorder.stop(); } }
+        catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Shutdown: ghostRecorder"); }
+
+        try { if (ghostNpcManager != null) { ghostNpcManager.stop(); } }
+        catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Shutdown: ghostNpcManager"); }
+
+        try { if (announcementManager != null) { announcementManager.shutdown(); } }
+        catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Shutdown: announcementManager"); }
+
+        try { if (progressStore != null) { progressStore.flushPendingSave(); } }
+        catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Shutdown: progressStore flush"); }
+
+        try { DatabaseManager.getInstance().shutdown(); }
+        catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Shutdown: DatabaseManager"); }
+
         super.shutdown();
     }
 

@@ -989,6 +989,7 @@ public class RunTracker {
         addTeleport(ref, store, buffer, new Teleport(store.getExternalData().getWorld(), position, rotation));
     }
 
+    // Called from interaction handlers (outside ECS tick) — store.addComponent() is safe here
     public boolean teleportToLastCheckpoint(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef) {
         if (playerRef == null) {
             return false;
@@ -1023,6 +1024,7 @@ public class RunTracker {
         return true;
     }
 
+    // Called from teleportToLastCheckpoint (interaction context, outside ECS tick) — store.addComponent() is safe
     private boolean teleportToPracticeCheckpoint(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef,
                                                  ActiveRun run) {
         if (run == null || run.practiceCheckpoint == null) {
@@ -1058,6 +1060,7 @@ public class RunTracker {
                 map.getCheckpoints());
     }
 
+    // Called from interaction handlers (outside ECS tick) — store.addComponent() is safe here
     public boolean resetRunToStart(Ref<EntityStore> ref, Store<EntityStore> store, Player player, PlayerRef playerRef) {
         if (playerRef == null || player == null) {
             return false;
