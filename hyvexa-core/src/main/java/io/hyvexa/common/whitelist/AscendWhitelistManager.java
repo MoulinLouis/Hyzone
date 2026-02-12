@@ -28,6 +28,7 @@ public class AscendWhitelistManager {
     private final Set<String> whitelistedPlayers = ConcurrentHashMap.newKeySet();
     private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
     private volatile boolean enabled = false; // Disabled by default - only OPs can access until whitelist is enabled
+    private volatile boolean publicMode = false; // When true, anyone can join (no whitelist check at all)
 
     public AscendWhitelistManager(File whitelistFile) {
         this.whitelistFile = whitelistFile;
@@ -111,6 +112,25 @@ public class AscendWhitelistManager {
         save();
     }
 
+    /**
+     * Checks if public mode is active.
+     * When true, any player can access Ascend — no whitelist check at all.
+     * @return true if public mode is active
+     */
+    public boolean isPublicMode() {
+        return publicMode;
+    }
+
+    /**
+     * Enables or disables public mode.
+     * When enabled, all players can access Ascend without restriction.
+     * @param publicMode true to open to public, false to re-enable whitelist restrictions
+     */
+    public void setPublicMode(boolean publicMode) {
+        this.publicMode = publicMode;
+        save();
+    }
+
     private void load() {
         if (!whitelistFile.exists()) {
             LOGGER.atInfo().log("Whitelist file not found, creating new one: " + whitelistFile.getPath());
@@ -129,6 +149,11 @@ public class AscendWhitelistManager {
             // Load enabled flag (default remains false if not present)
             if (json.has("enabled")) {
                 enabled = json.get("enabled").getAsBoolean();
+            }
+
+            // Load public mode flag (default remains false if not present)
+            if (json.has("publicMode")) {
+                publicMode = json.get("publicMode").getAsBoolean();
             }
 
             JsonArray whitelisted = json.getAsJsonArray("whitelisted");
@@ -158,6 +183,7 @@ public class AscendWhitelistManager {
 
             JsonObject json = new JsonObject();
             json.addProperty("enabled", enabled);
+            json.addProperty("publicMode", publicMode);
 
             JsonArray whitelisted = new JsonArray();
 
