@@ -50,6 +50,25 @@ $C.@PageOverlay {
             FontSize: 13,
             TextColor: #cfd7dc
           );
+          Text: "Access Mode:";
+        }
+
+        $C.@TextButton #PublicToggleButton {
+          Anchor: (Width: 120, Height: 28);
+          Text: "WHITELIST";
+        }
+      }
+
+      Group {
+        LayoutMode: Left;
+        Anchor: (Top: 6, Height: 32);
+
+        Label {
+          Anchor: (Width: 140);
+          Style: (
+            FontSize: 13,
+            TextColor: #cfd7dc
+          );
           Text: "Whitelist Status:";
         }
 

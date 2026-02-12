@@ -26,6 +26,7 @@ public class AscendWhitelistPage extends InteractiveCustomUIPage<AscendWhitelist
     private static final String BUTTON_BACK = "BackButton";
     private static final String BUTTON_ADD = "AddPlayer";
     private static final String BUTTON_TOGGLE = "ToggleWhitelist";
+    private static final String BUTTON_PUBLIC_TOGGLE = "TogglePublic";
     private static final String BUTTON_REMOVE_PREFIX = "Remove:";
 
     private final AscendWhitelistManager whitelistManager;
@@ -58,6 +59,10 @@ public class AscendWhitelistPage extends InteractiveCustomUIPage<AscendWhitelist
             openAdminPanel(ref, store);
             return;
         }
+        if (BUTTON_PUBLIC_TOGGLE.equals(data.button)) {
+            handlePublicToggle(ref, store);
+            return;
+        }
         if (BUTTON_TOGGLE.equals(data.button)) {
             handleToggle(ref, store);
             return;
@@ -69,6 +74,20 @@ public class AscendWhitelistPage extends InteractiveCustomUIPage<AscendWhitelist
         if (data.button.startsWith(BUTTON_REMOVE_PREFIX)) {
             handleRemove(ref, store, data.button.substring(BUTTON_REMOVE_PREFIX.length()));
         }
+    }
+
+    private void handlePublicToggle(Ref<EntityStore> ref, Store<EntityStore> store) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null || whitelistManager == null) {
+            return;
+        }
+        boolean newState = !whitelistManager.isPublicMode();
+        whitelistManager.setPublicMode(newState);
+        String msg = newState
+                ? "Public mode enabled. Any player can access Ascend mode."
+                : "Public mode disabled. Whitelist restrictions are back in effect.";
+        player.sendMessage(Message.raw(msg));
+        sendRefresh();
     }
 
     private void handleToggle(Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -140,9 +159,11 @@ public class AscendWhitelistPage extends InteractiveCustomUIPage<AscendWhitelist
         if (whitelistManager == null) {
             return;
         }
+        boolean publicMode = whitelistManager.isPublicMode();
+        commandBuilder.set("#PublicToggleButton.Text", publicMode ? "PUBLIC" : "WHITELIST");
+
         boolean enabled = whitelistManager.isEnabled();
-        String buttonText = enabled ? "ENABLED" : "DISABLED";
-        commandBuilder.set("#ToggleButton.Text", buttonText);
+        commandBuilder.set("#ToggleButton.Text", enabled ? "ENABLED" : "DISABLED");
     }
 
     private void buildWhitelistEntries(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
@@ -175,6 +196,8 @@ public class AscendWhitelistPage extends InteractiveCustomUIPage<AscendWhitelist
     private void bindEvents(UIEventBuilder uiEventBuilder) {
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton",
                 EventData.of(WhitelistData.KEY_BUTTON, BUTTON_BACK), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#PublicToggleButton",
+                EventData.of(WhitelistData.KEY_BUTTON, BUTTON_PUBLIC_TOGGLE), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ToggleButton",
                 EventData.of(WhitelistData.KEY_BUTTON, BUTTON_TOGGLE), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#UsernameField",

@@ -426,7 +426,7 @@ public class AscendAdminCommand extends AbstractAsyncCommand {
             return;
         }
         if (args.length < 3) {
-            player.sendMessage(Message.raw("Usage: /as admin whitelist <add|remove|list|enable|disable|status> [username]"));
+            player.sendMessage(Message.raw("Usage: /as admin whitelist <add|remove|list|enable|disable|public|status> [username]"));
             return;
         }
         String action = args[2].toLowerCase();
@@ -436,8 +436,9 @@ public class AscendAdminCommand extends AbstractAsyncCommand {
             case "list" -> handleWhitelistList(player, whitelistManager);
             case "enable" -> handleWhitelistEnable(player, whitelistManager);
             case "disable" -> handleWhitelistDisable(player, whitelistManager);
+            case "public" -> handleWhitelistPublic(player, whitelistManager);
             case "status" -> handleWhitelistStatus(player, whitelistManager);
-            default -> player.sendMessage(Message.raw("Usage: /as admin whitelist <add|remove|list|enable|disable|status> [username]"));
+            default -> player.sendMessage(Message.raw("Usage: /as admin whitelist <add|remove|list|enable|disable|public|status> [username]"));
         }
     }
 
@@ -497,16 +498,32 @@ public class AscendAdminCommand extends AbstractAsyncCommand {
         player.sendMessage(Message.raw("Whitelist disabled. Only OPs can access Ascend mode."));
     }
 
-    private void handleWhitelistStatus(Player player, AscendWhitelistManager whitelistManager) {
-        boolean enabled = whitelistManager.isEnabled();
-        String status = enabled ? "ENABLED" : "DISABLED";
-        int count = whitelistManager.list().size();
-        player.sendMessage(Message.raw("Whitelist status: " + status));
-        player.sendMessage(Message.raw("Whitelisted players: " + count));
-        if (enabled) {
-            player.sendMessage(Message.raw("Whitelisted players and OPs can access Ascend mode."));
+    private void handleWhitelistPublic(Player player, AscendWhitelistManager whitelistManager) {
+        boolean newState = !whitelistManager.isPublicMode();
+        whitelistManager.setPublicMode(newState);
+        if (newState) {
+            player.sendMessage(Message.raw("Public mode ENABLED. Any player can now access Ascend mode."));
         } else {
-            player.sendMessage(Message.raw("Only OPs can access Ascend mode."));
+            player.sendMessage(Message.raw("Public mode DISABLED. Whitelist restrictions are back in effect."));
         }
+    }
+
+    private void handleWhitelistStatus(Player player, AscendWhitelistManager whitelistManager) {
+        boolean publicMode = whitelistManager.isPublicMode();
+        boolean enabled = whitelistManager.isEnabled();
+        int count = whitelistManager.list().size();
+
+        if (publicMode) {
+            player.sendMessage(Message.raw("Access mode: PUBLIC (any player can join)"));
+        } else {
+            String status = enabled ? "ENABLED" : "DISABLED";
+            player.sendMessage(Message.raw("Whitelist status: " + status));
+            if (enabled) {
+                player.sendMessage(Message.raw("Whitelisted players and OPs can access Ascend mode."));
+            } else {
+                player.sendMessage(Message.raw("Only OPs can access Ascend mode."));
+            }
+        }
+        player.sendMessage(Message.raw("Whitelisted players: " + count));
     }
 }
