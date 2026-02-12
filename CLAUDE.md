@@ -71,7 +71,7 @@ Quick reference for AI agents working on this Hytale plugin project.
 | System architecture | `docs/ARCHITECTURE.md`          |
 | Database schema | `docs/DATABASE.md`              |
 | Game balancing | `docs/ECONOMY_BALANCE.md`       |
-| Help & tutorial system | `docs/HELP_TUTORIAL_SYSTEM.md` |
+| Help & tutorial system | `docs/TUTORIAL_FLOW.md` |
 | Feature history | `CHANGELOG.md`                  |
 
 ### Hytale Custom UI Reference (`docs/hytale-custom-ui/`)

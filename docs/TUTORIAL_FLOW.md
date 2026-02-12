@@ -12,13 +12,14 @@ This document defines the progressive tutorial system for Ascend mode. Tutorials
 
 | # | Trigger | Tutorial Name | Steps |
 |---|---------|---------------|-------|
-| 1 | First join to Ascend | Welcome | 2 |
+| 1 | First join to Ascend | Welcome | 3 |
 | 2 | First manual map completion | First Completion | 2 |
 | 3 | Runner reaches level 5 (new map unlocks) | New Map Unlocked | 1 |
 | 4 | Runner reaches level 20 (evolution available) | Evolution | 2 |
 | 5 | Vexa reach first elevation cost (~30K) | Elevation | 2 |
 | 6 | Vexa reach 1B (Summit available) | Summit | 2 |
 | 7 | Vexa reach 10Q (Ascension available) | Ascension | 2 |
+| 8 | Ascension Challenges skill unlocked | Challenges | 2 |
 
 ---
 
@@ -34,17 +35,33 @@ _Idea: Overview of the Ascend island/world._
 **Title:** Welcome to Ascend
 
 **Text:**
-> Run parkour maps, earn vexa, and unlock automated runners that play for you.
+> Ascend is a parkour idle game. Run maps, earn vexa, and build up an army of automated runners that play for you - even while you're offline.
 
-### Step 2 — Play Your First Map
+### Step 2 — Your Shortcuts
 
 **Image:** `welcome_step2.png`
-_Idea: Map select menu with first map highlighted._
+_Idea: Inventory items with labels._
 
-**Title:** Your First Run
+**Title:** Your Shortcuts
 
 **Text:**
-> Type **`/ascend`** to open the map menu and pick a map. Complete it to earn vexa and unlock your runner.
+> You have 5 items in your inventory that open menus instantly - no need to type commands. Here's what each one does:
+>
+> - /ascend - Map menu, runners, and upgrades
+> - /ascend leaderboard - Rankings and stats
+> - /ascend automation - Runner speed controls
+> - /ascend help - Tutorials and guides
+> - /ascend profile - Your stats and progress
+
+### Step 3 — Play Your First Map
+
+**Image:** `welcome_step3.png`
+_Idea: Map select menu with first map highlighted._
+
+**Title:** Play Your First Map
+
+**Text:**
+> Open the map menu and pick a map. Complete it to earn your first vexa and unlock new features along the way!
 
 ---
 
@@ -186,21 +203,47 @@ _Idea: Ascension UI with progress bar and "Ascend" button._
 **Title:** Ascension
 
 **Text:**
-> The ultimate prestige. Resets **everything** including Summit — but grants a **Skill Tree point** for powerful permanent abilities.
+> The ultimate prestige. Resets **everything** including Summit — but grants an **AP** for powerful permanent abilities.
 >
 > Open with **`/ascend ascension`**.
 
-### Step 2 — Skill Tree
+### Step 2 — Ascendancy Tree
 
 **Image:** `ascension_step2.png`
-_Idea: Skill tree overview with the 5 paths._
+_Idea: Ascendancy Tree overview._
 
-**Title:** Skill Tree
+**Title:** Ascendancy Tree
 
 **Text:**
-> 8 skill nodes to unlock: **Auto-Runners**, **Auto-Evolution**, **Persistence**, **Runner Speed**, **Offline Boost**, **Summit Memory**, **Evolution Power**, and more.
+> 11 ascendancy nodes to unlock: **Auto-Upgrade + Momentum**, **Auto-Evolution**, **Runner Speed Boost**, **Evolution Power+**, **Runner Speed II**, **Momentum Surge**, **Elevation Remnant**, **Ascension Challenges**, **Summit Persistence**, **Swift Restart**, **Vexa Overflow**.
 >
-> Skill points are permanent across all future Ascensions.
+> AP are permanent across all future Ascensions.
+
+---
+
+## 8. Challenges
+
+**Trigger:** Ascension Challenges skill node unlocked (or first `/ascend challenge` open).
+
+### Step 1 — Ascension Challenges
+
+**Image:** `challenges_step1.png`
+_Idea: Challenge selection UI with 4 challenge cards._
+
+**Title:** Ascension Challenges
+
+**Text:**
+> Test your skills with timed challenge runs. Each challenge applies a handicap — complete an Ascension under those conditions to earn permanent rewards.
+
+### Step 2 — How It Works
+
+**Image:** `challenges_step2.png`
+_Idea: Snapshot/restore flow diagram._
+
+**Title:** How It Works
+
+**Text:**
+> Starting a challenge snapshots your progress and resets you. Reach **1Dc** vexa to complete it. Your original progress is fully restored afterward — win or quit.
 
 ---
 
@@ -226,13 +269,15 @@ Suggested approach:
 | Elevation | `ElevationPage` open or HUD vexa threshold check |
 | Summit | HUD vexa threshold check or `/ascend summit` first open |
 | Ascension | HUD vexa threshold check or `/ascend ascension` first open |
+| Challenges | `SkillTreePage` on ASCENSION_CHALLENGES node unlock or `/ascend challenge` first open |
 
 ### Image Checklist
 
 | File | Size | Description |
 |------|------|-------------|
 | `welcome_step1.png` | 220×320 | Ascend world overview |
-| `welcome_step2.png` | 220×320 | Map select menu / map start |
+| `welcome_step2.png` | 220×320 | Inventory items with labels |
+| `welcome_step3.png` | 220×320 | Map select menu / map start |
 | `firstcompletion_step1.png` | 220×320 | Vexa + multiplier earned |
 | `firstcompletion_step2.png` | 220×320 | Buy Runner button / Kweebec NPC |
 | `mapunlock_step1.png` | 220×320 | New map appearing in menu |
@@ -243,4 +288,6 @@ Suggested approach:
 | `summit_step1.png` | 220×320 | Summit UI with 3 categories |
 | `summit_step2.png` | 220×320 | Reset vs. kept visual |
 | `ascension_step1.png` | 220×320 | Ascension UI / progress bar |
-| `ascension_step2.png` | 220×320 | Skill tree overview |
+| `ascension_step2.png` | 220×320 | Ascendancy Tree overview |
+| `challenges_step1.png` | 220×320 | Challenge selection UI |
+| `challenges_step2.png` | 220×320 | Snapshot/restore flow |

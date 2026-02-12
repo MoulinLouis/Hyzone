@@ -260,6 +260,14 @@ public class SkillTreePage extends BaseAscendPage {
 
                 // Re-show the detail panel with updated state
                 showDetailPanel(playerId, node);
+
+                // Show challenges tutorial when the Ascension Challenges node is unlocked
+                if (node == SkillTreeNode.ASCENSION_CHALLENGES
+                        && !playerStore.hasSeenTutorial(playerId, io.hyvexa.ascend.tutorial.TutorialTriggerService.CHALLENGES)) {
+                    playerStore.markTutorialSeen(playerId, io.hyvexa.ascend.tutorial.TutorialTriggerService.CHALLENGES);
+                    player.getPageManager().openCustomPage(ref, store,
+                        new AscendTutorialPage(playerRef, AscendTutorialPage.Tutorial.CHALLENGES));
+                }
             }
         }
     }

@@ -21,115 +21,30 @@ public class AscendTutorialPage extends BaseAscendPage {
     private static final String BUTTON_BACK = "Back";
 
     public enum Tutorial {
-        FIRST_COMPLETION(
-            "Pages/Ascend_Tutorial_FirstCompletion.ui",
-            new String[]{"Nice Run!", "Automate It"},
-            new String[]{
-                "You earned vexa and your map multiplier went up! Manual runs give 5x the runner's multiplier gain.",
-                "Open /ascend and click Buy Runner. It replays the map automatically, earning multiplier while you're away."
-            },
-            new String[][]{
-                {"Vexa earned on every manual completion", "Multiplier gain = 5x the runner's gain", "Higher multiplier means bigger rewards"},
-                {"Runners replay maps automatically for you", "They earn multiplier even while you're offline", "Buy runners from the map select menu"}
-            },
-            new String[][]{
-                {"#10b981", "#3b82f6", "#a855f7"},
-                {"#f59e0b", "#10b981", "#3b82f6"}
-            }
-        ),
-        MAP_UNLOCK(
-            "Pages/Ascend_Tutorial_MapUnlock.ui",
-            new String[]{"New Map Unlocked!"},
-            new String[]{
-                "Runner level 5 unlocks the next map. All map multipliers are multiplied together - more maps = way more vexa."
-            },
-            new String[][]{
-                {"Runner level 5 unlocks new maps", "Map multipliers multiply together", "More maps means exponential vexa growth"}
-            },
-            new String[][]{
-                {"#10b981", "#3b82f6", "#a855f7"}
-            }
-        ),
-        EVOLUTION(
-            "Pages/Ascend_Tutorial_Evolution.ui",
-            new String[]{"Evolution", "Star Power"},
-            new String[]{
-                "Your runner hit max speed. Evolve it to earn a star - each star triples the multiplier it earns per lap. Speed resets, but the gains are massive.",
-                "0 -> +0.10 | 1 -> +0.30 | 2 -> +0.90 | 3 -> +2.70 | 4 -> +8.10 | 5 -> +24.3 per lap. Always evolve when you can."
-            },
-            new String[][]{
-                {"Evolve runners when they hit max speed", "Each star triples multiplier per lap", "Speed resets but gains are massive"},
-                {"Stars multiply earnings exponentially", "5-star runners earn 243x base rate", "Always evolve as soon as possible"}
-            },
-            new String[][]{
-                {"#a855f7", "#10b981", "#3b82f6"},
-                {"#f59e0b", "#a855f7", "#10b981"}
-            }
-        ),
-        ELEVATION(
-            "Pages/Ascend_Tutorial_Elevation.ui",
-            new String[]{"Elevation", "Elevate Often"},
-            new String[]{
-                "Spend your vexa to gain elevation levels. Higher levels give bigger multipliers: level 10 = x11, level 100 = x126. Open with /ascend elevate.",
-                "Elevation resets vexa, runners, multipliers, and map unlocks. You keep your best times and your new elevation level. Elevate often to grow faster."
-            },
-            new String[][]{
-                {"Spend vexa to gain elevation levels", "Higher levels give bigger multipliers", "Level 10 = x11, level 100 = x126"},
-                {"Resets vexa, runners, and multipliers", "Keeps best times and elevation level", "Elevate often to grow faster"}
-            },
-            new String[][]{
-                {"#10b981", "#f59e0b", "#3b82f6"},
-                {"#a855f7", "#10b981", "#f59e0b"}
-            }
-        ),
-        SUMMIT(
-            "Pages/Ascend_Tutorial_Summit.ui",
-            new String[]{"Summit", "The Reset"},
-            new String[]{
-                "Convert vexa into permanent upgrades: Runner Speed, Multiplier Gain, and Evolution Power. These stay forever. Open with /ascend summit.",
-                "Summit resets vexa, elevation, runners, and maps. You keep your best times and Summit upgrades. Each cycle you'll progress faster."
-            },
-            new String[][]{
-                {"Permanent Runner Speed upgrades", "Permanent Multiplier Gain boosts", "Permanent Evolution Power bonuses"},
-                {"Resets vexa, elevation, and runners", "Keeps best times and Summit upgrades", "Each cycle you progress faster"}
-            },
-            new String[][]{
-                {"#ef4444", "#f59e0b", "#a855f7"},
-                {"#3b82f6", "#10b981", "#ef4444"}
-            }
-        ),
-        ASCENSION(
-            "Pages/Ascend_Tutorial_Ascension.ui",
-            new String[]{"Ascension", "Ascendancy Tree"},
-            new String[]{
-                "The ultimate prestige. Resets everything including Summit - but grants an AP for powerful permanent abilities. Open with /ascend ascension.",
-                "8 ascendancy nodes to unlock: Auto-Runners, Auto-Evolution, Persistence, Runner Speed, Offline Boost, Summit Memory, Evolution Power, and more. AP are permanent across all future Ascensions."
-            },
-            new String[][]{
-                {"Resets everything including Summit", "Grants 1 AP each time", "Unlocks powerful permanent abilities"},
-                {"8 ascendancy nodes to unlock", "Auto-Runners, Speed, Persistence, and more", "AP persist across Ascensions"}
-            },
-            new String[][]{
-                {"#ef4444", "#a855f7", "#f59e0b"},
-                {"#3b82f6", "#10b981", "#a855f7"}
-            }
-        );
+        FIRST_COMPLETION("Pages/Ascend_Tutorial_FirstCompletion.ui"),
+        MAP_UNLOCK("Pages/Ascend_Tutorial_MapUnlock.ui"),
+        EVOLUTION("Pages/Ascend_Tutorial_Evolution.ui"),
+        ELEVATION("Pages/Ascend_Tutorial_Elevation.ui"),
+        SUMMIT("Pages/Ascend_Tutorial_Summit.ui"),
+        ASCENSION("Pages/Ascend_Tutorial_Ascension.ui"),
+        CHALLENGES("Pages/Ascend_Tutorial_Challenges.ui");
 
         public final String uiPath;
-        public final String[] stepTitles;
-        public final String[] stepDescriptions;
-        public final String[][] stepFeatures;
-        public final String[][] stepFeatureColors;
-        public final int totalSteps;
 
-        Tutorial(String uiPath, String[] stepTitles, String[] stepDescriptions,
-                 String[][] stepFeatures, String[][] stepFeatureColors) {
+        Tutorial(String uiPath) {
             this.uiPath = uiPath;
-            this.stepTitles = stepTitles;
-            this.stepDescriptions = stepDescriptions;
-            this.stepFeatures = stepFeatures;
-            this.stepFeatureColors = stepFeatureColors;
-            this.totalSteps = stepTitles.length;
+        }
+
+        public AscendOnboardingCopy.TutorialCopy getCopy() {
+            return switch (this) {
+                case FIRST_COMPLETION -> AscendOnboardingCopy.firstCompletionCopy();
+                case MAP_UNLOCK -> AscendOnboardingCopy.mapUnlockCopy();
+                case EVOLUTION -> AscendOnboardingCopy.evolutionCopy();
+                case ELEVATION -> AscendOnboardingCopy.elevationCopy();
+                case SUMMIT -> AscendOnboardingCopy.summitCopy();
+                case ASCENSION -> AscendOnboardingCopy.ascensionCopy();
+                case CHALLENGES -> AscendOnboardingCopy.challengesCopy();
+            };
         }
     }
 
@@ -143,12 +58,16 @@ public class AscendTutorialPage extends BaseAscendPage {
     public AscendTutorialPage(@Nonnull PlayerRef playerRef, @Nonnull Tutorial tutorial, int step) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
         this.tutorial = tutorial;
-        this.step = Math.max(0, Math.min(step, tutorial.totalSteps - 1));
+        AscendOnboardingCopy.TutorialCopy copy = tutorial.getCopy();
+        this.step = Math.max(0, Math.min(step, copy.stepTitles().length - 1));
     }
 
     @Override
     public void build(@Nonnull Ref<EntityStore> ref, @Nonnull UICommandBuilder cmd,
                       @Nonnull UIEventBuilder uiEventBuilder, @Nonnull Store<EntityStore> store) {
+        AscendOnboardingCopy.TutorialCopy copy = tutorial.getCopy();
+        int totalSteps = copy.stepTitles().length;
+
         cmd.append(tutorial.uiPath);
 
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#NextButton",
@@ -157,29 +76,29 @@ public class AscendTutorialPage extends BaseAscendPage {
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_BACK), false);
 
         // Set image visibility per step
-        for (int i = 0; i < tutorial.totalSteps; i++) {
+        for (int i = 0; i < totalSteps; i++) {
             cmd.set("#StepImage" + (i + 1) + ".Visible", i == step);
         }
 
         // Set progress bar
-        float progress = (float) (step + 1) / tutorial.totalSteps;
+        float progress = (float) (step + 1) / totalSteps;
         cmd.set("#StepProgress.Value", progress);
 
         // Set step indicator
-        cmd.set("#StepIndicator.Text", "STEP " + (step + 1) + " OF " + tutorial.totalSteps);
+        cmd.set("#StepIndicator.Text", "STEP " + (step + 1) + " OF " + totalSteps);
 
         // Set title and description
-        cmd.set("#MainTitle.Text", tutorial.stepTitles[step]);
-        cmd.set("#Description.Text", tutorial.stepDescriptions[step]);
+        cmd.set("#MainTitle.Text", copy.stepTitles()[step]);
+        cmd.set("#Description.Text", copy.stepDescriptions()[step]);
 
         // Set feature labels and dot colors
         for (int i = 0; i < 3; i++) {
-            cmd.set("#Feature" + (i + 1) + "Label.Text", tutorial.stepFeatures[step][i]);
-            cmd.set("#Feature" + (i + 1) + "Dot.Background", tutorial.stepFeatureColors[step][i]);
+            cmd.set("#Feature" + (i + 1) + "Label.Text", copy.stepFeatures()[step][i]);
+            cmd.set("#Feature" + (i + 1) + "Dot.Background", copy.stepFeatureColors()[step][i]);
         }
 
         // Set button text
-        cmd.set("#NextButton.Text", step == tutorial.totalSteps - 1 ? "Got It!" : "Next");
+        cmd.set("#NextButton.Text", step == totalSteps - 1 ? "Got It!" : "Next");
 
         // Tip boxes
         if (tutorial == Tutorial.ELEVATION) {
@@ -201,8 +120,11 @@ public class AscendTutorialPage extends BaseAscendPage {
             return;
         }
 
+        AscendOnboardingCopy.TutorialCopy copy = tutorial.getCopy();
+        int totalSteps = copy.stepTitles().length;
+
         if (BUTTON_NEXT.equals(data.getButton())) {
-            if (step < tutorial.totalSteps - 1) {
+            if (step < totalSteps - 1) {
                 player.getPageManager().openCustomPage(ref, store,
                         new AscendTutorialPage(playerRef, tutorial, step + 1));
             } else {

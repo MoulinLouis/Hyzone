@@ -294,7 +294,6 @@ Runners have no vexa cost after map unlock. They can be purchased for free once:
 When a player disconnects or switches worlds, their runners continue to earn vexa at a reduced rate.
 
 **Base offline rate:** 10% of normal production
-**Boosted rate (OFFLINE_BOOST skill):** 25% of normal production
 **Maximum accumulation time:** 24 hours
 **Minimum offline time:** 1 minute
 
@@ -302,7 +301,7 @@ When a player disconnects or switches worlds, their runners continue to earn vex
 - Passive earnings are calculated based on runner production rates at the time of disconnect
 - Vexa and map multiplier gains accumulate at the reduced rate
 - Players receive a summary popup on reconnect showing total passive earnings
-- The OFFLINE_BOOST skill (Ascension skill tree) increases the rate from 10% to 25%
+- There is no Ascendancy Tree node that boosts offline rate. Base rate is 10%.
 
 **Design rationale:**
 - Rewards consistent play without punishing casual players
@@ -622,7 +621,7 @@ Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure conti
 
 - **2026-02-09 (v18):** Passive offline rate reduction
   - Offline earnings rate: 25% → 10% (base rate)
-  - OFFLINE_BOOST skill: 25% → 40% becomes 10% → 25%
+  - No Ascendancy Tree node boosts offline rate
   - More balanced offline vs. active play incentives
 
 - **2026-02-08 (v17):** Elevation accumulated vexa system

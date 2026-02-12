@@ -79,7 +79,7 @@ $C.@PageOverlay {
       Label #MainTitle {
         Anchor: (Top: 10);
         Style: (FontSize: 22, TextColor: #f0f4f8, RenderBold: true);
-        Text: "Title";
+        Text: "Summit";
       }
 
       // Separator
@@ -92,7 +92,7 @@ $C.@PageOverlay {
       Label #Description {
         Anchor: (Top: 14, Left: 0, Right: 0);
         Style: (FontSize: 14, TextColor: #b2c0c7, Wrap: true);
-        Text: "Description placeholder";
+        Text: "Convert vexa into permanent upgrades: Runner Speed, Multiplier Gain, and Evolution Power.";
       }
 
       // Feature list with accent dots
@@ -107,7 +107,7 @@ $C.@PageOverlay {
 
           Group #Feature1Dot { Anchor: (Width: 8, Height: 8, Top: 6); Background: #10b981; }
           Group { Anchor: (Width: 10); }
-          Label #Feature1Label { Style: (FontSize: 13, TextColor: #cfd7dc); Text: "Feature 1"; }
+          Label #Feature1Label { Style: (FontSize: 13, TextColor: #cfd7dc); Text: "Permanent Runner Speed upgrades"; }
         }
 
         // Feature 2
@@ -117,7 +117,7 @@ $C.@PageOverlay {
 
           Group #Feature2Dot { Anchor: (Width: 8, Height: 8, Top: 6); Background: #3b82f6; }
           Group { Anchor: (Width: 10); }
-          Label #Feature2Label { Style: (FontSize: 13, TextColor: #cfd7dc); Text: "Feature 2"; }
+          Label #Feature2Label { Style: (FontSize: 13, TextColor: #cfd7dc); Text: "Permanent Multiplier Gain boosts"; }
         }
 
         // Feature 3
@@ -127,7 +127,7 @@ $C.@PageOverlay {
 
           Group #Feature3Dot { Anchor: (Width: 8, Height: 8, Top: 6); Background: #a855f7; }
           Group { Anchor: (Width: 10); }
-          Label #Feature3Label { Style: (FontSize: 13, TextColor: #cfd7dc); Text: "Feature 3"; }
+          Label #Feature3Label { Style: (FontSize: 13, TextColor: #cfd7dc); Text: "Permanent Evolution Power bonuses"; }
         }
       }
 
@@ -148,7 +148,7 @@ $C.@PageOverlay {
         Group { Anchor: (Width: 8); }
         Label #TipText {
           Style: (FontSize: 12, TextColor: #d4a04a, Wrap: true);
-          Text: "Tip text";
+          Text: "Each Summit cycle you progress faster than the last.";
         }
       }
 

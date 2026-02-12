@@ -22,45 +22,6 @@ public class AscendWelcomePage extends BaseAscendPage {
 
     private static final int TOTAL_STEPS = 3;
 
-    private static final String[] STEP_TITLES = {
-        "Welcome to Ascend",
-        "Your Shortcuts",
-        "Play Your First Map"
-    };
-
-    private static final String[] STEP_DESCRIPTIONS = {
-        "Ascend is a parkour idle game. Run maps, earn vexa, and build up an army of automated runners that play for you - even while you're offline.",
-        "You have 4 items in your inventory that open menus instantly - no need to type commands. Here's what each one does:",
-        "Open the map menu and pick a map. Complete it to earn your first vexa and unlock new features along the way!"
-    };
-
-    private static final String[][] STEP_FEATURES = {
-        {
-            "Run parkour maps to earn vexa",
-            "Buy runners that replay maps for you",
-            "Progress and unlock new content over time"
-        },
-        {
-            "/ascend - Map menu, runners, and upgrades",
-            "/ascend leaderboard - Rankings and stats",
-            "/ascend automation - Runner speed controls"
-        },
-        {
-            "Use the first item in your inventory",
-            "Pick any map and complete the parkour",
-            "Your first completion unlocks runners"
-        }
-    };
-
-    private static final String STEP2_FEATURE4_TEXT = "/ascend help - Tutorials and guides";
-    private static final String STEP2_FEATURE4_COLOR = "#a855f7";
-
-    private static final String[][] STEP_FEATURE_COLORS = {
-        {"#10b981", "#3b82f6", "#f59e0b"},
-        {"#f59e0b", "#3b82f6", "#10b981"},
-        {"#f59e0b", "#10b981", "#a855f7"}
-    };
-
     private final int step;
 
     public AscendWelcomePage(@Nonnull PlayerRef playerRef) {
@@ -75,6 +36,11 @@ public class AscendWelcomePage extends BaseAscendPage {
     @Override
     public void build(@Nonnull Ref<EntityStore> ref, @Nonnull UICommandBuilder cmd,
                       @Nonnull UIEventBuilder uiEventBuilder, @Nonnull Store<EntityStore> store) {
+        String[] titles = AscendOnboardingCopy.welcomeTitles();
+        String[] descriptions = AscendOnboardingCopy.welcomeDescriptions();
+        String[][] features = AscendOnboardingCopy.welcomeFeatures();
+        String[][] featureColors = AscendOnboardingCopy.welcomeFeatureColors();
+
         cmd.append("Pages/Ascend_Welcome.ui");
 
         // Bind buttons
@@ -96,21 +62,24 @@ public class AscendWelcomePage extends BaseAscendPage {
         cmd.set("#StepIndicator.Text", "STEP " + (step + 1) + " OF " + TOTAL_STEPS);
 
         // Set title and description
-        cmd.set("#MainTitle.Text", STEP_TITLES[step]);
-        cmd.set("#Description.Text", STEP_DESCRIPTIONS[step]);
+        cmd.set("#MainTitle.Text", titles[step]);
+        cmd.set("#Description.Text", descriptions[step]);
 
         // Set feature labels and dot colors
         for (int i = 0; i < 3; i++) {
-            cmd.set("#Feature" + (i + 1) + "Label.Text", STEP_FEATURES[step][i]);
-            cmd.set("#Feature" + (i + 1) + "Dot.Background", STEP_FEATURE_COLORS[step][i]);
+            cmd.set("#Feature" + (i + 1) + "Label.Text", features[step][i]);
+            cmd.set("#Feature" + (i + 1) + "Dot.Background", featureColors[step][i]);
         }
 
-        // Show 4th feature on shortcuts step (step 2)
+        // Show 4th and 5th features on shortcuts step (step 2)
         boolean isShortcutsStep = step == 1;
         cmd.set("#Feature4Row.Visible", isShortcutsStep);
+        cmd.set("#Feature5Row.Visible", isShortcutsStep);
         if (isShortcutsStep) {
-            cmd.set("#Feature4Label.Text", STEP2_FEATURE4_TEXT);
-            cmd.set("#Feature4Dot.Background", STEP2_FEATURE4_COLOR);
+            cmd.set("#Feature4Label.Text", AscendOnboardingCopy.WELCOME_FEATURE4_TEXT);
+            cmd.set("#Feature4Dot.Background", AscendOnboardingCopy.WELCOME_FEATURE4_COLOR);
+            cmd.set("#Feature5Label.Text", AscendOnboardingCopy.WELCOME_FEATURE5_TEXT);
+            cmd.set("#Feature5Dot.Background", AscendOnboardingCopy.WELCOME_FEATURE5_COLOR);
         }
 
         // Show tip card on last step

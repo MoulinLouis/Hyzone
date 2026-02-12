@@ -20,10 +20,12 @@ import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.common.ghost.GhostStore;
 import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
+import io.hyvexa.ascend.tutorial.TutorialTriggerService;
 import io.hyvexa.ascend.ui.AscendLeaderboardPage;
 import io.hyvexa.ascend.ui.AscendMapLeaderboardPage;
 import io.hyvexa.ascend.ui.AscendChallengePage;
 import io.hyvexa.ascend.ui.AscendMapSelectPage;
+import io.hyvexa.ascend.ui.AscendTutorialPage;
 import io.hyvexa.ascend.ui.AscensionPage;
 import io.hyvexa.ascend.ui.BaseAscendPage;
 import io.hyvexa.ascend.ui.ElevationPage;
@@ -192,6 +194,13 @@ public class AscendCommand extends AbstractAsyncCommand {
     private void openElevationPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
         ParkourAscendPlugin plugin = requirePlugin(player);
         if (plugin == null || plugin.getPlayerStore() == null) return;
+        UUID playerId = playerRef.getUuid();
+        if (!plugin.getPlayerStore().hasSeenTutorial(playerId, TutorialTriggerService.ELEVATION)) {
+            plugin.getPlayerStore().markTutorialSeen(playerId, TutorialTriggerService.ELEVATION);
+            player.getPageManager().openCustomPage(ref, store,
+                new AscendTutorialPage(playerRef, AscendTutorialPage.Tutorial.ELEVATION));
+            return;
+        }
         ElevationPage page = new ElevationPage(playerRef, plugin.getPlayerStore());
         openTrackedPage(player, playerRef, ref, store, page);
     }
@@ -199,6 +208,13 @@ public class AscendCommand extends AbstractAsyncCommand {
     private void openSummitPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store, String[] args) {
         ParkourAscendPlugin plugin = requirePlugin(player);
         if (plugin == null || plugin.getSummitManager() == null) return;
+        UUID playerId = playerRef.getUuid();
+        if (!plugin.getPlayerStore().hasSeenTutorial(playerId, TutorialTriggerService.SUMMIT)) {
+            plugin.getPlayerStore().markTutorialSeen(playerId, TutorialTriggerService.SUMMIT);
+            player.getPageManager().openCustomPage(ref, store,
+                new AscendTutorialPage(playerRef, AscendTutorialPage.Tutorial.SUMMIT));
+            return;
+        }
         SummitPage page = new SummitPage(playerRef, plugin.getPlayerStore(), plugin.getSummitManager());
         openTrackedPage(player, playerRef, ref, store, page);
     }
@@ -206,6 +222,13 @@ public class AscendCommand extends AbstractAsyncCommand {
     private void openAscensionPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
         ParkourAscendPlugin plugin = requirePlugin(player);
         if (plugin == null || plugin.getAscensionManager() == null) return;
+        UUID playerId = playerRef.getUuid();
+        if (!plugin.getPlayerStore().hasSeenTutorial(playerId, TutorialTriggerService.ASCENSION)) {
+            plugin.getPlayerStore().markTutorialSeen(playerId, TutorialTriggerService.ASCENSION);
+            player.getPageManager().openCustomPage(ref, store,
+                new AscendTutorialPage(playerRef, AscendTutorialPage.Tutorial.ASCENSION));
+            return;
+        }
         AscensionPage page = new AscensionPage(playerRef, plugin.getPlayerStore(), plugin.getAscensionManager());
         openTrackedPage(player, playerRef, ref, store, page);
     }
@@ -244,6 +267,13 @@ public class AscendCommand extends AbstractAsyncCommand {
         if (!plugin.getAscensionManager().hasAscensionChallenges(playerRef.getUuid())) {
             player.sendMessage(Message.raw("[Ascend] You need the Ascension Challenges skill to access this.")
                 .color(SystemMessageUtils.SECONDARY));
+            return;
+        }
+        UUID playerId = playerRef.getUuid();
+        if (!plugin.getPlayerStore().hasSeenTutorial(playerId, TutorialTriggerService.CHALLENGES)) {
+            plugin.getPlayerStore().markTutorialSeen(playerId, TutorialTriggerService.CHALLENGES);
+            player.getPageManager().openCustomPage(ref, store,
+                new AscendTutorialPage(playerRef, AscendTutorialPage.Tutorial.CHALLENGES));
             return;
         }
         AscendChallengePage page = new AscendChallengePage(playerRef, plugin.getPlayerStore(), plugin.getChallengeManager());

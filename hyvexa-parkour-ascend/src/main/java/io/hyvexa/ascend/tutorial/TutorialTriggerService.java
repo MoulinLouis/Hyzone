@@ -33,6 +33,7 @@ public class TutorialTriggerService {
     public static final int ELEVATION = 16;
     public static final int SUMMIT = 32;
     public static final int ASCENSION = 64;
+    public static final int CHALLENGES = 128;
 
     private static final long TRIGGER_DELAY_MS = 500L;
 
