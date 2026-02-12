@@ -2,7 +2,10 @@ package io.hyvexa.manager;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -14,6 +17,7 @@ import io.hyvexa.parkour.tracker.RunRecordsHud;
 import io.hyvexa.parkour.tracker.RunTracker;
 import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.data.ProgressStore;
+import io.hyvexa.parkour.util.PlayerSettingsStore;
 import io.hyvexa.duel.DuelTracker;
 import io.hyvexa.parkour.ParkourTimingConstants;
 
@@ -37,6 +41,7 @@ public class HudManager {
     private final ConcurrentHashMap<UUID, Boolean> runHudWasRunning = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Boolean> runHudHidden = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, CheckpointSplitHudState> checkpointSplitHuds = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, PositionSample> lastPositionSamples = new ConcurrentHashMap<>();
 
     private final ProgressStore progressStore;
     private final MapStore mapStore;
@@ -131,6 +136,7 @@ public class HudManager {
         int totalMaps = mapStore.getMapCount();
         hud.updateInfo(playerRef.getUsername(), rankName, completedMaps, totalMaps, SERVER_IP_DISPLAY);
         hud.updatePlayerCount();
+        updateAdvancedHudData(ref, store, playerRef, hud);
         if (!running) {
             if (wasRunning) {
                 hud.updateText("");
@@ -344,6 +350,83 @@ public class HudManager {
         runHudIsRecords.remove(playerId);
         runHudHidden.remove(playerId);
         checkpointSplitHuds.remove(playerId);
+        lastPositionSamples.remove(playerId);
+    }
+
+    public void setAdvancedHudVisible(PlayerRef playerRef, boolean visible) {
+        if (playerRef == null) {
+            return;
+        }
+        UUID playerId = playerRef.getUuid();
+        if (playerId == null) {
+            return;
+        }
+        if (!visible) {
+            lastPositionSamples.remove(playerId);
+        }
+        RunHud hud = getActiveHud(playerRef);
+        if (hud != null) {
+            hud.updateAdvancedHud(visible, "", "", "", "");
+        }
+    }
+
+    private void updateAdvancedHudData(Ref<EntityStore> ref, Store<EntityStore> store,
+                                       PlayerRef playerRef, RunHud hud) {
+        UUID playerId = playerRef.getUuid();
+        boolean enabled = PlayerSettingsStore.isAdvancedHudEnabled(playerId);
+        if (!enabled) {
+            hud.updateAdvancedHud(false, "", "", "", "");
+            lastPositionSamples.remove(playerId);
+            return;
+        }
+        TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
+        if (transform == null) {
+            hud.updateAdvancedHud(true, "N/A", "N/A", "N/A", "N/A");
+            return;
+        }
+        Vector3f headRotation = playerRef.getHeadRotation();
+        float headPitch = headRotation != null ? headRotation.getX() : 0f;
+        float headYaw = headRotation != null ? headRotation.getY() : 0f;
+        double pitchDeg = Math.toDegrees(headPitch);
+        double yawDeg = Math.toDegrees(headYaw);
+        String direction = getCardinalDirection((float) yawDeg);
+        String orientationText = String.format("(%.1f, %.1f, 0.0) %s", pitchDeg, yawDeg, direction);
+
+        Vector3d position = transform.getPosition();
+        double px = position != null ? position.getX() : 0.0;
+        double py = position != null ? position.getY() : 0.0;
+        double pz = position != null ? position.getZ() : 0.0;
+        long now = System.currentTimeMillis();
+        PositionSample prev = lastPositionSamples.get(playerId);
+        double vx = 0.0, vy = 0.0, vz = 0.0;
+        if (prev != null) {
+            long deltaMs = now - prev.timeMs;
+            if (deltaMs > 0) {
+                double deltaSec = deltaMs / 1000.0;
+                vx = (px - prev.x) / deltaSec;
+                vy = (py - prev.y) / deltaSec;
+                vz = (pz - prev.z) / deltaSec;
+            }
+        }
+        lastPositionSamples.put(playerId, new PositionSample(px, py, pz, now));
+        String velocityText = String.format("(%.3f, %.3f, %.3f)", vx, vy, vz);
+        double speed = Math.sqrt(vx * vx + vy * vy + vz * vz);
+        String speedText = String.format("%.2f", speed);
+        String positionText = String.format("(%.1f, %.1f, %.1f)", px, py, pz);
+        hud.updateAdvancedHud(true, orientationText, velocityText, speedText, positionText);
+    }
+
+    private static String getCardinalDirection(float yaw) {
+        float normalized = ((yaw % 360) + 360) % 360;
+        if (normalized >= 315 || normalized < 45) {
+            return "North";
+        } else if (normalized < 135) {
+            return "East";
+        } else if (normalized < 225) {
+            return "South";
+        } else {
+            return "West";
+        }
     }
 
     public void sweepStalePlayers(Set<UUID> onlinePlayers) {
@@ -355,6 +438,7 @@ public class HudManager {
         runHudWasRunning.keySet().removeIf(id -> !onlinePlayers.contains(id));
         runHudHidden.keySet().removeIf(id -> !onlinePlayers.contains(id));
         checkpointSplitHuds.keySet().removeIf(id -> !onlinePlayers.contains(id));
+        lastPositionSamples.keySet().removeIf(id -> !onlinePlayers.contains(id));
     }
 
     public void showCheckpointSplit(PlayerRef playerRef, String splitText, String splitColor) {
@@ -409,6 +493,20 @@ public class HudManager {
             this.text = text;
             this.color = color;
             this.expiresAt = expiresAt;
+        }
+    }
+
+    private static final class PositionSample {
+        private final double x;
+        private final double y;
+        private final double z;
+        private final long timeMs;
+
+        private PositionSample(double x, double y, double z, long timeMs) {
+            this.x = x;
+            this.y = y;
+            this.z = z;
+            this.timeMs = timeMs;
         }
     }
 }

@@ -9,6 +9,7 @@ public final class PlayerSettingsStore {
     private static final ConcurrentHashMap<UUID, Boolean> DUEL_HIDE_OPPONENT = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<UUID, Boolean> GHOST_VISIBLE = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<UUID, Boolean> PLAYERS_HIDDEN = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<UUID, Boolean> ADVANCED_HUD_ENABLED = new ConcurrentHashMap<>();
 
     private PlayerSettingsStore() {
     }
@@ -80,6 +81,20 @@ public final class PlayerSettingsStore {
         return newValue;
     }
 
+    public static boolean isAdvancedHudEnabled(UUID playerId) {
+        return playerId != null && ADVANCED_HUD_ENABLED.getOrDefault(playerId, false);
+    }
+
+    public static boolean toggleAdvancedHud(UUID playerId) {
+        if (playerId == null) {
+            return false;
+        }
+        boolean enabled = ADVANCED_HUD_ENABLED.getOrDefault(playerId, false);
+        boolean newValue = !enabled;
+        ADVANCED_HUD_ENABLED.put(playerId, newValue);
+        return newValue;
+    }
+
     public static void clearSession(UUID playerId) {
         if (playerId == null) {
             return;
@@ -88,6 +103,7 @@ public final class PlayerSettingsStore {
         DUEL_HIDE_OPPONENT.remove(playerId);
         GHOST_VISIBLE.remove(playerId);
         PLAYERS_HIDDEN.remove(playerId);
+        ADVANCED_HUD_ENABLED.remove(playerId);
     }
 
     public static void clear(UUID playerId) {
@@ -98,5 +114,6 @@ public final class PlayerSettingsStore {
         DUEL_HIDE_OPPONENT.remove(playerId);
         GHOST_VISIBLE.remove(playerId);
         PLAYERS_HIDDEN.remove(playerId);
+        ADVANCED_HUD_ENABLED.remove(playerId);
     }
 }

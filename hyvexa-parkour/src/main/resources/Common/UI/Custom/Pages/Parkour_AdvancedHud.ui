@@ -1,0 +1,117 @@
+$C = "../Common.ui";
+
+$C.@PageOverlay {
+  Background: #000000(0.0);
+  Group #HudLayer {
+    Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+
+    Group #AdvancedHudRoot {
+      Anchor: (Right: 20, Top: 264, Width: 284, Height: 128);
+      LayoutMode: Left;
+      Visible: false;
+
+      Group #AdvancedAccentBar {
+        Anchor: (Width: 4, Top: 0, Bottom: 0);
+        Background: #f97316;
+      }
+
+      Group #AdvancedBox {
+        FlexWeight: 1;
+        Anchor: (Top: 0, Bottom: 0);
+        Background: #0d1620(0.85);
+        OutlineColor: #ffffff(0.06);
+        OutlineSize: 1;
+
+        Group #AdvancedContent {
+          Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+          LayoutMode: Top;
+          Padding: (Left: 10, Right: 10, Top: 8, Bottom: 12);
+
+          Label #AdvancedHudTitle {
+            Style: (
+              FontSize: 11,
+              TextColor: #f97316(0.7),
+              RenderUppercase: true,
+              LetterSpacing: 2,
+              RenderBold: true
+            );
+            Text: "Advanced HUD";
+          }
+
+          Group {
+            Anchor: (Left: 0, Width: 24, Height: 2, Top: 4);
+            Background: #f97316;
+          }
+
+          Group #OrientationRow {
+            Anchor: (Left: 0, Right: 0, Top: 6, Height: 18);
+            LayoutMode: Left;
+
+            Label #OrientationLabel {
+              Anchor: (Width: 74);
+              Style: (FontSize: 14, TextColor: #9fb0ba);
+              Text: "Orient:";
+            }
+
+            Label #OrientationValue {
+              FlexWeight: 1;
+              Style: (FontSize: 14, TextColor: #e7f1f4);
+              Text: "(0.0, 0.0, 0.0) N";
+            }
+          }
+
+          Group #VelocityRow {
+            Anchor: (Left: 0, Right: 0, Top: 4, Height: 18);
+            LayoutMode: Left;
+
+            Label #VelocityLabel {
+              Anchor: (Width: 74);
+              Style: (FontSize: 14, TextColor: #9fb0ba);
+              Text: "Velocity:";
+            }
+
+            Label #VelocityValue {
+              FlexWeight: 1;
+              Style: (FontSize: 14, TextColor: #e7f1f4);
+              Text: "(0.000, 0.000, 0.000)";
+            }
+          }
+
+          Group #SpeedRow {
+            Anchor: (Left: 0, Right: 0, Top: 4, Height: 18);
+            LayoutMode: Left;
+
+            Label #SpeedLabel {
+              Anchor: (Width: 74);
+              Style: (FontSize: 14, TextColor: #9fb0ba);
+              Text: "Speed:";
+            }
+
+            Label #SpeedValue {
+              FlexWeight: 1;
+              Style: (FontSize: 14, TextColor: #e7f1f4);
+              Text: "0.00";
+            }
+          }
+
+          Group #PositionRow {
+            Anchor: (Left: 0, Right: 0, Top: 4, Height: 18);
+            LayoutMode: Left;
+
+            Label #PositionLabel {
+              Anchor: (Width: 74);
+              Style: (FontSize: 14, TextColor: #9fb0ba);
+              Text: "Position:";
+            }
+
+            Label #PositionValue {
+              FlexWeight: 1;
+              Style: (FontSize: 14, TextColor: #e7f1f4);
+              Text: "(0.0, 0.0, 0.0)";
+            }
+          }
+        }
+      }
+    }
+  }
+}

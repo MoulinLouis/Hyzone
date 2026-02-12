@@ -38,12 +38,16 @@ public class PlayerSettingsPage extends BaseParkourPage {
     private static final String BUTTON_SPEED_X4 = "SpeedX4";
     private static final String BUTTON_TOGGLE_RESET_ITEM = "ToggleResetItem";
     private static final String BUTTON_TOGGLE_GHOST = "ToggleGhost";
+    private static final String BUTTON_TOGGLE_ADVANCED_HUD = "ToggleAdvancedHud";
     private static final String RESET_ITEM_BUTTON_SELECTOR = "#ResetItemButton";
     private static final String RESET_ITEM_LABEL_DISABLE = "No reset item: Off";
     private static final String RESET_ITEM_LABEL_ENABLE = "No reset item: On";
     private static final String GHOST_BUTTON_SELECTOR = "#GhostButton";
     private static final String GHOST_LABEL_ON = "PB Ghost: On";
     private static final String GHOST_LABEL_OFF = "PB Ghost: Off";
+    private static final String ADVANCED_HUD_BUTTON_SELECTOR = "#AdvancedHudButton";
+    private static final String ADVANCED_HUD_LABEL_ON = "Advanced HUD: On";
+    private static final String ADVANCED_HUD_LABEL_OFF = "Advanced HUD: Off";
 
     public PlayerSettingsPage(@Nonnull PlayerRef playerRef) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
@@ -67,6 +71,7 @@ public class PlayerSettingsPage extends BaseParkourPage {
         uiCommandBuilder.set("#VipSpeedRow.Visible", showSpeedBoost);
         uiCommandBuilder.set(RESET_ITEM_BUTTON_SELECTOR + ".Text", getResetItemLabel(playerRef.getUuid()));
         uiCommandBuilder.set(GHOST_BUTTON_SELECTOR + ".Text", getGhostLabel(playerRef.getUuid()));
+        uiCommandBuilder.set(ADVANCED_HUD_BUTTON_SELECTOR + ".Text", getAdvancedHudLabel(playerRef.getUuid()));
         applyToggleIndicators(uiCommandBuilder, playerRef.getUuid(), plugin);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE), false);
@@ -90,6 +95,8 @@ public class PlayerSettingsPage extends BaseParkourPage {
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TOGGLE_RESET_ITEM), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#GhostButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TOGGLE_GHOST), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#AdvancedHudButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TOGGLE_ADVANCED_HUD), false);
     }
 
     @Override
@@ -181,6 +188,16 @@ public class PlayerSettingsPage extends BaseParkourPage {
                 }
             }
             player.sendMessage(Message.raw(visible ? "PB ghost enabled." : "PB ghost disabled."));
+            player.getPageManager().openCustomPage(ref, store, new PlayerSettingsPage(playerRef));
+            return;
+        }
+        if (BUTTON_TOGGLE_ADVANCED_HUD.equals(data.getButton())) {
+            boolean enabled = PlayerSettingsStore.toggleAdvancedHud(playerRef.getUuid());
+            HyvexaPlugin plugin = HyvexaPlugin.getInstance();
+            if (plugin != null && plugin.getHudManager() != null) {
+                plugin.getHudManager().setAdvancedHudVisible(playerRef, enabled);
+            }
+            player.sendMessage(Message.raw(enabled ? "Advanced HUD enabled." : "Advanced HUD disabled."));
             player.getPageManager().openCustomPage(ref, store, new PlayerSettingsPage(playerRef));
             return;
         }
@@ -280,6 +297,10 @@ public class PlayerSettingsPage extends BaseParkourPage {
 
     private static String getGhostLabel(UUID playerId) {
         return PlayerSettingsStore.isGhostVisible(playerId) ? GHOST_LABEL_ON : GHOST_LABEL_OFF;
+    }
+
+    private static String getAdvancedHudLabel(UUID playerId) {
+        return PlayerSettingsStore.isAdvancedHudEnabled(playerId) ? ADVANCED_HUD_LABEL_ON : ADVANCED_HUD_LABEL_OFF;
     }
 
 }
