@@ -18,6 +18,8 @@ public class RunHud extends CustomUIHud {
     private String lastInfoKey;
     private String lastAnnouncementKey;
     private int lastPlayerCount = -1;
+    private String lastAdvancedHudKey;
+    private Boolean lastAdvancedHudVisible;
 
     public RunHud(PlayerRef playerRef) {
         super(playerRef);
@@ -27,6 +29,7 @@ public class RunHud extends CustomUIHud {
     protected void build(UICommandBuilder commandBuilder) {
         commandBuilder.append("Pages/Parkour_RunHud.ui");
         commandBuilder.append("Pages/Parkour_RunCheckpointHud.ui");
+        commandBuilder.append("Pages/Parkour_AdvancedHud.ui");
     }
 
     public void updateText(String timeText) {
@@ -138,6 +141,38 @@ public class RunHud extends CustomUIHud {
         update(false, commandBuilder);
     }
 
+    public void updateAdvancedHud(boolean visible, String orientation, String velocity,
+                                  String speed, String position) {
+        if (!Boolean.valueOf(visible).equals(lastAdvancedHudVisible)) {
+            lastAdvancedHudVisible = visible;
+            UICommandBuilder commandBuilder = new UICommandBuilder();
+            commandBuilder.set("#AdvancedHudRoot.Visible", visible);
+            update(false, commandBuilder);
+            if (!visible) {
+                lastAdvancedHudKey = null;
+                return;
+            }
+        }
+        if (!visible) {
+            return;
+        }
+        String safeOrientation = orientation != null ? orientation : "";
+        String safeVelocity = velocity != null ? velocity : "";
+        String safeSpeed = speed != null ? speed : "";
+        String safePosition = position != null ? position : "";
+        String key = safeOrientation + "|" + safeVelocity + "|" + safeSpeed + "|" + safePosition;
+        if (key.equals(lastAdvancedHudKey)) {
+            return;
+        }
+        lastAdvancedHudKey = key;
+        UICommandBuilder commandBuilder = new UICommandBuilder();
+        commandBuilder.set("#OrientationValue.Text", safeOrientation);
+        commandBuilder.set("#VelocityValue.Text", safeVelocity);
+        commandBuilder.set("#SpeedValue.Text", safeSpeed);
+        commandBuilder.set("#PositionValue.Text", safePosition);
+        update(false, commandBuilder);
+    }
+
     public void updatePlayerCount() {
         int count = Universe.get().getPlayers().size();
         if (count == lastPlayerCount) {
@@ -158,5 +193,7 @@ public class RunHud extends CustomUIHud {
         lastInfoKey = null;
         lastAnnouncementKey = null;
         lastPlayerCount = -1;
+        lastAdvancedHudKey = null;
+        lastAdvancedHudVisible = null;
     }
 }
