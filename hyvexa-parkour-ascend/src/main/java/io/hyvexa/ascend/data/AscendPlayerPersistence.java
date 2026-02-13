@@ -520,32 +520,26 @@ class AscendPlayerPersistence {
                     }
                 }
             }
+
+            // If player doesn't exist in database, return null
+            if (progress == null) {
+                return null;
+            }
+
+            // Load related data on the same connection
+            loadMapProgressForPlayer(conn, playerId, progress);
+            loadSummitLevelsForPlayer(conn, playerId, progress);
+            loadSkillNodesForPlayer(conn, playerId, progress);
+            loadAchievementsForPlayer(conn, playerId, progress);
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Failed to load player " + playerId + ": " + e.getMessage());
             return null;
         }
 
-        // If player doesn't exist in database, return null
-        if (progress == null) {
-            return null;
-        }
-
-        // Load map progress
-        loadMapProgressForPlayer(playerId, progress);
-
-        // Load summit levels
-        loadSummitLevelsForPlayer(playerId, progress);
-
-        // Load skill nodes
-        loadSkillNodesForPlayer(playerId, progress);
-
-        // Load achievements
-        loadAchievementsForPlayer(playerId, progress);
-
         return progress;
     }
 
-    private void loadMapProgressForPlayer(UUID playerId, AscendPlayerProgress progress) {
+    private void loadMapProgressForPlayer(Connection conn, UUID playerId, AscendPlayerProgress progress) throws SQLException {
         String sql = """
             SELECT map_id, unlocked, completed_manually, has_robot,
                    robot_speed_level, robot_stars, multiplier_mantissa, multiplier_exp10, best_time_ms
@@ -553,118 +547,86 @@ class AscendPlayerPersistence {
             WHERE player_uuid = ?
             """;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
-            if (conn == null) {
-                LOGGER.atWarning().log("Failed to acquire database connection");
-                return;
-            }
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.setString(1, playerId.toString());
-                try (ResultSet rs = stmt.executeQuery()) {
-                    while (rs.next()) {
-                        String mapId = rs.getString("map_id");
-                        AscendPlayerProgress.MapProgress mapProgress = progress.getOrCreateMapProgress(mapId);
-                        mapProgress.setUnlocked(rs.getBoolean("unlocked"));
-                        mapProgress.setCompletedManually(rs.getBoolean("completed_manually"));
-                        mapProgress.setHasRobot(rs.getBoolean("has_robot"));
-                        mapProgress.setRobotSpeedLevel(rs.getInt("robot_speed_level"));
-                        mapProgress.setRobotStars(rs.getInt("robot_stars"));
-                        mapProgress.setMultiplier(BigNumber.of(rs.getDouble("multiplier_mantissa"), rs.getInt("multiplier_exp10")));
-                        long bestTime = rs.getLong("best_time_ms");
-                        if (!rs.wasNull()) {
-                            mapProgress.setBestTimeMs(bestTime);
-                        }
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            stmt.setString(1, playerId.toString());
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    String mapId = rs.getString("map_id");
+                    AscendPlayerProgress.MapProgress mapProgress = progress.getOrCreateMapProgress(mapId);
+                    mapProgress.setUnlocked(rs.getBoolean("unlocked"));
+                    mapProgress.setCompletedManually(rs.getBoolean("completed_manually"));
+                    mapProgress.setHasRobot(rs.getBoolean("has_robot"));
+                    mapProgress.setRobotSpeedLevel(rs.getInt("robot_speed_level"));
+                    mapProgress.setRobotStars(rs.getInt("robot_stars"));
+                    mapProgress.setMultiplier(BigNumber.of(rs.getDouble("multiplier_mantissa"), rs.getInt("multiplier_exp10")));
+                    long bestTime = rs.getLong("best_time_ms");
+                    if (!rs.wasNull()) {
+                        mapProgress.setBestTimeMs(bestTime);
                     }
                 }
             }
-        } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to load map progress for player " + playerId + ": " + e.getMessage());
         }
     }
 
-    private void loadSummitLevelsForPlayer(UUID playerId, AscendPlayerProgress progress) {
+    private void loadSummitLevelsForPlayer(Connection conn, UUID playerId, AscendPlayerProgress progress) throws SQLException {
         String sql = "SELECT category, xp FROM ascend_player_summit WHERE player_uuid = ?";
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
-            if (conn == null) {
-                LOGGER.atWarning().log("Failed to acquire database connection");
-                return;
-            }
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.setString(1, playerId.toString());
-                try (ResultSet rs = stmt.executeQuery()) {
-                    while (rs.next()) {
-                        String categoryName = rs.getString("category");
-                        long xp = rs.getLong("xp");
-                        try {
-                            SummitCategory category = SummitCategory.valueOf(categoryName);
-                            progress.setSummitXp(category, xp);
-                        } catch (IllegalArgumentException ignored) {
-                            // Unknown category
-                        }
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            stmt.setString(1, playerId.toString());
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    String categoryName = rs.getString("category");
+                    long xp = rs.getLong("xp");
+                    try {
+                        SummitCategory category = SummitCategory.valueOf(categoryName);
+                        progress.setSummitXp(category, xp);
+                    } catch (IllegalArgumentException ignored) {
+                        // Unknown category
                     }
                 }
             }
-        } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to load summit levels for player " + playerId + ": " + e.getMessage());
         }
     }
 
-    private void loadSkillNodesForPlayer(UUID playerId, AscendPlayerProgress progress) {
+    private void loadSkillNodesForPlayer(Connection conn, UUID playerId, AscendPlayerProgress progress) throws SQLException {
         String sql = "SELECT skill_node FROM ascend_player_skills WHERE player_uuid = ?";
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
-            if (conn == null) {
-                LOGGER.atWarning().log("Failed to acquire database connection");
-                return;
-            }
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.setString(1, playerId.toString());
-                try (ResultSet rs = stmt.executeQuery()) {
-                    while (rs.next()) {
-                        String nodeName = rs.getString("skill_node");
-                        try {
-                            SkillTreeNode node = SkillTreeNode.valueOf(nodeName);
-                            progress.unlockSkillNode(node);
-                        } catch (IllegalArgumentException ignored) {
-                            // Unknown node
-                        }
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            stmt.setString(1, playerId.toString());
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    String nodeName = rs.getString("skill_node");
+                    try {
+                        SkillTreeNode node = SkillTreeNode.valueOf(nodeName);
+                        progress.unlockSkillNode(node);
+                    } catch (IllegalArgumentException ignored) {
+                        // Unknown node
                     }
                 }
             }
-        } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to load skill nodes for player " + playerId + ": " + e.getMessage());
         }
     }
 
-    private void loadAchievementsForPlayer(UUID playerId, AscendPlayerProgress progress) {
+    private void loadAchievementsForPlayer(Connection conn, UUID playerId, AscendPlayerProgress progress) throws SQLException {
         String sql = "SELECT achievement FROM ascend_player_achievements WHERE player_uuid = ?";
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
-            if (conn == null) {
-                LOGGER.atWarning().log("Failed to acquire database connection");
-                return;
-            }
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.setString(1, playerId.toString());
-                try (ResultSet rs = stmt.executeQuery()) {
-                    while (rs.next()) {
-                        String achievementName = rs.getString("achievement");
-                        try {
-                            AchievementType achievement = AchievementType.valueOf(achievementName);
-                            progress.unlockAchievement(achievement);
-                        } catch (IllegalArgumentException ignored) {
-                            // Unknown achievement
-                        }
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            stmt.setString(1, playerId.toString());
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    String achievementName = rs.getString("achievement");
+                    try {
+                        AchievementType achievement = AchievementType.valueOf(achievementName);
+                        progress.unlockAchievement(achievement);
+                    } catch (IllegalArgumentException ignored) {
+                        // Unknown achievement
                     }
                 }
             }
-        } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to load achievements for player " + playerId + ": " + e.getMessage());
         }
     }
 
@@ -801,6 +763,13 @@ class AscendPlayerPersistence {
 
     void invalidateLeaderboardCache() {
         leaderboardCacheTimestamp = 0;
+    }
+
+    void invalidateMapLeaderboardCache(String mapId) {
+        if (mapId != null) {
+            mapLeaderboardCache.remove(mapId);
+            mapLeaderboardCacheTimestamps.remove(mapId);
+        }
     }
 
     // ========================================

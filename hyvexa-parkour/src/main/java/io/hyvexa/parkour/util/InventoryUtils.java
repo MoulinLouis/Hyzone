@@ -12,9 +12,22 @@ import io.hyvexa.duel.DuelConstants;
 import io.hyvexa.parkour.ParkourConstants;
 import io.hyvexa.parkour.data.Map;
 
+import java.util.Optional;
+
 public final class InventoryUtils {
 
     private InventoryUtils() {
+    }
+
+    private static Optional<ItemContainer> getValidHotbar(Player player) {
+        if (player == null) {
+            return Optional.empty();
+        }
+        Inventory inventory = player.getInventory();
+        if (inventory == null) {
+            return Optional.empty();
+        }
+        return Optional.ofNullable(inventory.getHotbar());
     }
 
     public static void giveRunItems(Player player) {
@@ -62,20 +75,14 @@ public final class InventoryUtils {
     }
 
     public static void giveDuelItems(Player player, Map map) {
-        Inventory inventory = player.getInventory();
-        if (inventory == null) {
-            return;
-        }
-        ItemContainer hotbar = inventory.getHotbar();
-        if (hotbar == null) {
-            return;
-        }
-        hotbar.setItemStackForSlot((short) 0, new ItemStack(ParkourConstants.ITEM_RESET, 1), false);
-        hotbar.setItemStackForSlot((short) 1, new ItemStack(ParkourConstants.ITEM_RESTART_CHECKPOINT, 1), false);
-        hotbar.setItemStackForSlot((short) 2, new ItemStack(DuelConstants.ITEM_FORFEIT, 1), false);
-        for (short i = 3; i < 9; i++) {
-            hotbar.setItemStackForSlot(i, ItemStack.EMPTY, false);
-        }
+        getValidHotbar(player).ifPresent(hotbar -> {
+            hotbar.setItemStackForSlot((short) 0, new ItemStack(ParkourConstants.ITEM_RESET, 1), false);
+            hotbar.setItemStackForSlot((short) 1, new ItemStack(ParkourConstants.ITEM_RESTART_CHECKPOINT, 1), false);
+            hotbar.setItemStackForSlot((short) 2, new ItemStack(DuelConstants.ITEM_FORFEIT, 1), false);
+            for (short i = 3; i < 9; i++) {
+                hotbar.setItemStackForSlot(i, ItemStack.EMPTY, false);
+            }
+        });
     }
 
     public static void giveMenuItems(Player player) {
@@ -127,12 +134,13 @@ public final class InventoryUtils {
     }
 
     private static void applyDropFilters(Inventory inventory, boolean allowDrop) {
-        applyDropFilter(inventory.getHotbar(), allowDrop);
-        applyDropFilter(inventory.getStorage(), allowDrop);
-        applyDropFilter(inventory.getBackpack(), allowDrop);
-        applyDropFilter(inventory.getTools(), allowDrop);
-        applyDropFilter(inventory.getUtility(), allowDrop);
-        applyDropFilter(inventory.getArmor(), allowDrop);
+        ItemContainer[] containers = {
+            inventory.getHotbar(), inventory.getStorage(), inventory.getBackpack(),
+            inventory.getTools(), inventory.getUtility(), inventory.getArmor()
+        };
+        for (ItemContainer container : containers) {
+            applyDropFilter(container, allowDrop);
+        }
     }
 
     public static void applyDropFilter(ItemContainer container, boolean allowDrop) {

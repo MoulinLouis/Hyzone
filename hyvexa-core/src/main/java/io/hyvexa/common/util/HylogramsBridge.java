@@ -8,6 +8,7 @@ import com.hypixel.hytale.server.core.plugin.PluginBase;
 import com.hypixel.hytale.server.core.plugin.PluginManager;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -42,8 +43,12 @@ public final class HylogramsBridge {
                 }
             }
             return names;
-        } catch (ReflectiveOperationException e) {
-            throw new IllegalStateException("Failed to access Hylograms API.", e);
+        } catch (NoSuchMethodException e) {
+            throw new IllegalStateException("Hylograms API method 'list' not found (version mismatch?)", e);
+        } catch (IllegalAccessException e) {
+            throw new IllegalStateException("Hylograms API access denied for 'list'", e);
+        } catch (InvocationTargetException e) {
+            throw new IllegalStateException("Hylograms API call 'list' failed", e.getCause() != null ? e.getCause() : e);
         }
     }
 
@@ -265,8 +270,10 @@ public final class HylogramsBridge {
             try {
                 Method method = getCachedMethod(handle.getClass(), methodName, paramTypes);
                 return method.invoke(handle, args);
-            } catch (ReflectiveOperationException e) {
-                throw new IllegalStateException("Failed to invoke Hylograms hologram method: " + methodName, e);
+            } catch (IllegalAccessException e) {
+                throw new IllegalStateException("Hylograms API access denied for hologram method: " + methodName, e);
+            } catch (InvocationTargetException e) {
+                throw new IllegalStateException("Hylograms hologram method failed: " + methodName, e.getCause() != null ? e.getCause() : e);
             }
         }
     }
@@ -328,8 +335,10 @@ public final class HylogramsBridge {
             try {
                 Method method = getCachedMethod(handle.getClass(), methodName, paramTypes);
                 return method.invoke(handle, args);
-            } catch (ReflectiveOperationException e) {
-                throw new IllegalStateException("Failed to invoke Hylograms builder method: " + methodName, e);
+            } catch (IllegalAccessException e) {
+                throw new IllegalStateException("Hylograms API access denied for builder method: " + methodName, e);
+            } catch (InvocationTargetException e) {
+                throw new IllegalStateException("Hylograms builder method failed: " + methodName, e.getCause() != null ? e.getCause() : e);
             }
         }
     }
@@ -339,8 +348,10 @@ public final class HylogramsBridge {
         try {
             Method method = getCachedMethod(apiClass, methodName, paramTypes);
             return method.invoke(null, args);
-        } catch (ReflectiveOperationException e) {
-            throw new IllegalStateException("Failed to invoke Hylograms API method: " + methodName, e);
+        } catch (IllegalAccessException e) {
+            throw new IllegalStateException("Hylograms API access denied for method: " + methodName, e);
+        } catch (InvocationTargetException e) {
+            throw new IllegalStateException("Hylograms API call failed for method: " + methodName, e.getCause() != null ? e.getCause() : e);
         }
     }
 

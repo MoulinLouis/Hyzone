@@ -30,7 +30,7 @@ public class AscendHudManager {
     private final AscendRunTracker runTracker;
     private final SummitManager summitManager;
     private final ConcurrentHashMap<UUID, AscendHud> ascendHuds = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<UUID, Boolean> ascendHudAttached = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, Boolean> hudAttached = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Long> ascendHudReadyAt = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, HiddenAscendHud> hiddenHuds = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Boolean> hudHidden = new ConcurrentHashMap<>();
@@ -57,7 +57,7 @@ public class AscendHudManager {
             return;
         }
         AscendHud hud = ascendHuds.get(playerId);
-        boolean needsAttach = !Boolean.TRUE.equals(ascendHudAttached.get(playerId));
+        boolean needsAttach = !Boolean.TRUE.equals(hudAttached.get(playerId));
         if (needsAttach || hud == null) {
             attach(playerRef, player);
             return;
@@ -71,6 +71,7 @@ public class AscendHudManager {
         hud.applyStaticText();
         hud.updatePlayerCount();
         if (playerStore == null) {
+            LOGGER.atFine().log("Skipping HUD update for %s: playerStore is null", playerId);
             return;
         }
         try {
@@ -157,18 +158,18 @@ public class AscendHudManager {
         hud.resetCache();
         hud.show();
         hud.applyStaticText();
-        ascendHudAttached.put(playerRef.getUuid(), true);
+        hudAttached.put(playerRef.getUuid(), true);
         ascendHudReadyAt.put(playerRef.getUuid(), System.currentTimeMillis() + 250L);
     }
 
     public void hideHud(UUID playerId) {
         hudHidden.put(playerId, true);
-        ascendHudAttached.remove(playerId);
+        hudAttached.remove(playerId);
     }
 
     public void showHud(UUID playerId) {
         hudHidden.remove(playerId);
-        ascendHudAttached.remove(playerId);
+        hudAttached.remove(playerId);
     }
 
     public boolean isHudHidden(UUID playerId) {
@@ -194,7 +195,7 @@ public class AscendHudManager {
 
     public void removePlayer(UUID playerId) {
         ascendHuds.remove(playerId);
-        ascendHudAttached.remove(playerId);
+        hudAttached.remove(playerId);
         ascendHudReadyAt.remove(playerId);
         hiddenHuds.remove(playerId);
         hudHidden.remove(playerId);

@@ -4,6 +4,7 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.parkour.ParkourConstants;
@@ -66,6 +67,9 @@ class RunSessionTracker {
                 if (ref == null || !ref.isValid()) {
                     return;
                 }
+                if (Universe.get().getPlayer(playerId) == null) {
+                    return;
+                }
                 Player p = store.getComponent(ref, Player.getComponentType());
                 if (p == null) {
                     return;
@@ -83,6 +87,9 @@ class RunSessionTracker {
             World world = store.getExternalData().getWorld();
             CompletableFuture.runAsync(() -> {
                 if (ref == null || !ref.isValid()) {
+                    return;
+                }
+                if (Universe.get().getPlayer(playerId) == null) {
                     return;
                 }
                 Player p = store.getComponent(ref, Player.getComponentType());

@@ -21,6 +21,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.util.AsyncExecutionHelper;
 import io.hyvexa.common.util.InventoryUtils;
 import io.hyvexa.common.util.ModeGate;
+import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.hub.command.HubCommand;
 import io.hyvexa.hub.hud.HubHud;
@@ -46,6 +47,7 @@ public class HyvexaHubPlugin extends JavaPlugin {
     private static HyvexaHubPlugin INSTANCE;
 
     private HubRouter router;
+    private volatile boolean databaseAvailable = true;
     private final ConcurrentHashMap<UUID, HudLifecycle> hubHudLifecycles = new ConcurrentHashMap<>();
     private ScheduledFuture<?> hubHudTask;
     private ScheduledFuture<?> playerCountTask;
@@ -84,6 +86,7 @@ public class HyvexaHubPlugin extends JavaPlugin {
                 DatabaseManager.getInstance().initialize();
             } catch (Exception e) {
                 LOGGER.at(Level.SEVERE).log("Failed to initialize database: " + e.getMessage());
+                databaseAvailable = false;
             }
         }
         router = new HubRouter();
@@ -118,6 +121,10 @@ public class HyvexaHubPlugin extends JavaPlugin {
                 Player player = store.getComponent(ref, Player.getComponentType());
                 if (player == null) {
                     return;
+                }
+                if (!databaseAvailable && PermissionUtils.isOp(player)) {
+                    player.sendMessage(com.hypixel.hytale.server.core.Message.raw(
+                        "[Hub] Warning: Database unavailable. Some features may be degraded."));
                 }
                 InventoryUtils.clearAllContainers(player);
                 giveHubItems(player);

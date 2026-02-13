@@ -14,7 +14,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.logging.Level;
 
 /**
@@ -25,7 +25,7 @@ public class AscendWhitelistManager {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
 
     private final File whitelistFile;
-    private final Set<String> whitelistedPlayers = ConcurrentHashMap.newKeySet();
+    private final Set<String> whitelistedPlayers = new ConcurrentSkipListSet<>();
     private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
     private volatile boolean enabled = false; // Disabled by default - only OPs can access until whitelist is enabled
     private volatile boolean publicMode = false; // When true, anyone can join (no whitelist check at all)
@@ -88,9 +88,7 @@ public class AscendWhitelistManager {
      * @return List of whitelisted usernames (sorted alphabetically)
      */
     public List<String> list() {
-        List<String> sorted = new ArrayList<>(whitelistedPlayers);
-        Collections.sort(sorted);
-        return sorted;
+        return new ArrayList<>(whitelistedPlayers);
     }
 
     /**
@@ -187,11 +185,7 @@ public class AscendWhitelistManager {
 
             JsonArray whitelisted = new JsonArray();
 
-            // Sort for consistent file output
-            List<String> sorted = new ArrayList<>(whitelistedPlayers);
-            Collections.sort(sorted);
-
-            for (String username : sorted) {
+            for (String username : whitelistedPlayers) {
                 whitelisted.add(username);
             }
 

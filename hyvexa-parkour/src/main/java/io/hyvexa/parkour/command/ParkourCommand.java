@@ -172,6 +172,26 @@ public class ParkourCommand extends AbstractAsyncCommand {
                 new AdminIndexPage(playerRef, mapStore, progressStore, settingsStore, playerCountStore));
     }
 
+    private record ResolvedPlayer(UUID playerId, String name) {}
+
+    private ResolvedPlayer resolvePlayer(CommandContext ctx, String target) {
+        PlayerRef onlineMatch = findOnlineByName(target);
+        UUID playerId = onlineMatch != null ? onlineMatch.getUuid() : parseUuid(target);
+        if (playerId == null && progressStore != null) {
+            playerId = progressStore.getPlayerIdByName(target);
+        }
+        if (playerId == null) {
+            ctx.sendMessage(Message.raw("Player not found: " + target).color("#ff4444"));
+            return null;
+        }
+        String resolvedName = onlineMatch != null ? onlineMatch.getUsername()
+                : (progressStore != null ? progressStore.getPlayerName(playerId) : null);
+        if (resolvedName == null || resolvedName.isBlank()) {
+            resolvedName = target;
+        }
+        return new ResolvedPlayer(playerId, resolvedName);
+    }
+
     private void handleAdminRank(CommandContext ctx, Player player, String[] tokens) {
         if (player != null && !PermissionUtils.isOp(player)) {
             ctx.sendMessage(MESSAGE_OP_REQUIRED);
@@ -207,37 +227,29 @@ public class ParkourCommand extends AbstractAsyncCommand {
             return;
         }
 
-        PlayerRef onlineMatch = findOnlineByName(target);
-        UUID playerId = onlineMatch != null ? onlineMatch.getUuid() : parseUuid(target);
-        if (playerId == null) {
-            playerId = progressStore.getPlayerIdByName(target);
-        }
-        if (playerId == null) {
-            ctx.sendMessage(Message.raw("Player not found: " + target).color("#ff4444"));
+        ResolvedPlayer resolved = resolvePlayer(ctx, target);
+        if (resolved == null) {
             return;
         }
 
-        String resolvedName = onlineMatch != null ? onlineMatch.getUsername() : progressStore.getPlayerName(playerId);
-        if (resolvedName == null || resolvedName.isBlank()) {
-            resolvedName = target;
-        }
-
-        boolean currentVip = progressStore.isVip(playerId);
-        boolean currentFounder = progressStore.isFounder(playerId);
+        boolean currentVip = progressStore.isVip(resolved.playerId);
+        boolean currentFounder = progressStore.isFounder(resolved.playerId);
         boolean newVip = isVip ? isAdd : currentVip;
         boolean newFounder = isFounder ? isAdd : currentFounder;
+        // Rank precedence: Founder implies VIP. Removing VIP from a Founder keeps VIP.
+        // Removing Founder always clears Founder but preserves any standalone VIP.
         if (isVip && isRemove) {
             newVip = currentFounder;
         } else if (isFounder && isRemove) {
             newFounder = false;
         }
 
-        boolean changed = progressStore.setPlayerRank(playerId, resolvedName, newVip, newFounder);
+        boolean changed = progressStore.setPlayerRank(resolved.playerId, resolved.name, newVip, newFounder);
         String label = (isVip ? "VIP" : "Founder") + " " + (isAdd ? "added" : "removed");
         if (changed) {
-            ctx.sendMessage(Message.raw(label + " for " + resolvedName + ".").color("#44ff44"));
+            ctx.sendMessage(Message.raw(label + " for " + resolved.name + ".").color("#44ff44"));
         } else {
-            ctx.sendMessage(Message.raw(resolvedName + " already has that rank setting.").color("#ffaa00"));
+            ctx.sendMessage(Message.raw(resolved.name + " already has that rank setting.").color("#ffaa00"));
         }
     }
 
@@ -250,25 +262,19 @@ public class ParkourCommand extends AbstractAsyncCommand {
             ctx.sendMessage(Message.raw("Progress store not available.").color("#ff4444"));
             return;
         }
-        String target = tokens[3];
         String rankInput = tokens[4].toLowerCase(Locale.ROOT);
-        boolean isVip = "vip".equals(rankInput);
         boolean isFounder = "founder".equals(rankInput);
-        if (!isVip && !isFounder) {
+        if (!"vip".equals(rankInput) && !isFounder) {
             ctx.sendMessage(Message.raw("Unknown rank: " + rankInput + ". Use vip or founder."));
             return;
         }
-        PlayerRef onlineMatch = findOnlineByName(target);
-        UUID playerId = onlineMatch != null ? onlineMatch.getUuid() : parseUuid(target);
-        if (playerId == null) {
-            playerId = progressStore.getPlayerIdByName(target);
-        }
-        String resolvedName = onlineMatch != null ? onlineMatch.getUsername() : progressStore.getPlayerName(playerId);
-        if (resolvedName == null || resolvedName.isBlank()) {
-            resolvedName = target;
+
+        ResolvedPlayer resolved = resolvePlayer(ctx, tokens[3]);
+        if (resolved == null) {
+            return;
         }
 
-        broadcastSupporterMessage(resolvedName, isFounder);
+        broadcastSupporterMessage(resolved.name, isFounder);
     }
 
     private void broadcastSupporterMessage(String playerName, boolean founder) {
