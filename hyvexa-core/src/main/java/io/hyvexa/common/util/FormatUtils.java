@@ -19,18 +19,20 @@ public final class FormatUtils {
     }
 
     public static String formatDurationLong(long durationMs) {
-        long totalSeconds = Math.max(0L, durationMs / 1000L);
+        long totalMs = Math.max(0L, durationMs);
+        long totalSeconds = totalMs / 1000L;
+        long ms = totalMs % 1000L;
         long hours = totalSeconds / 3600L;
         long minutes = (totalSeconds % 3600L) / 60L;
         long seconds = totalSeconds % 60L;
 
         if (hours > 0L) {
-            return String.format(Locale.ROOT, "%dh %02dm %02ds", hours, minutes, seconds);
+            return String.format(Locale.ROOT, "%dh %02dm %02d.%03ds", hours, minutes, seconds, ms);
         }
         if (minutes > 0L) {
-            return String.format(Locale.ROOT, "%dm %02ds", minutes, seconds);
+            return String.format(Locale.ROOT, "%dm %02d.%03ds", minutes, seconds, ms);
         }
-        return String.format(Locale.ROOT, "%ds", seconds);
+        return String.format(Locale.ROOT, "%d.%03ds", seconds, ms);
     }
 
     public static String formatPlaytime(long durationMs) {
