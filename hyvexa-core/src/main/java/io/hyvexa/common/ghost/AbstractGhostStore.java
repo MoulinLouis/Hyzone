@@ -66,24 +66,29 @@ public abstract class AbstractGhostStore<TSample, TRecording> {
 
         String sql = "SELECT player_uuid, map_id, recording_blob, completion_time_ms FROM " + tableName();
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    String playerUuid = rs.getString("player_uuid");
-                    String mapId = rs.getString("map_id");
-                    byte[] blob = rs.getBytes("recording_blob");
-                    long completionTimeMs = rs.getLong("completion_time_ms");
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                logger().atWarning().log("Failed to acquire database connection");
+                return;
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        String playerUuid = rs.getString("player_uuid");
+                        String mapId = rs.getString("map_id");
+                        byte[] blob = rs.getBytes("recording_blob");
+                        long completionTimeMs = rs.getLong("completion_time_ms");
 
-                    try {
-                        TRecording recording = deserialize(blob, completionTimeMs);
-                        String key = makeKey(UUID.fromString(playerUuid), mapId);
-                        cache.put(key, recording);
-                    } catch (Exception e) {
-                        logger().at(Level.WARNING).withCause(e)
-                                .log("Failed to deserialize " + modeLabel()
-                                        + " ghost recording for " + playerUuid + "/" + mapId);
+                        try {
+                            TRecording recording = deserialize(blob, completionTimeMs);
+                            String key = makeKey(UUID.fromString(playerUuid), mapId);
+                            cache.put(key, recording);
+                        } catch (Exception e) {
+                            logger().at(Level.WARNING).withCause(e)
+                                    .log("Failed to deserialize " + modeLabel()
+                                            + " ghost recording for " + playerUuid + "/" + mapId);
+                        }
                     }
                 }
             }
@@ -115,14 +120,19 @@ public abstract class AbstractGhostStore<TSample, TRecording> {
                                             recorded_at = CURRENT_TIMESTAMP
                     """.formatted(tableName());
 
-            try (Connection conn = DatabaseManager.getInstance().getConnection();
-                 PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.setString(1, playerId.toString());
-                stmt.setString(2, mapId);
-                stmt.setBytes(3, blob);
-                stmt.setLong(4, getCompletionTimeMs(recording));
-                stmt.executeUpdate();
+            try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+                if (conn == null) {
+                    logger().atWarning().log("Failed to acquire database connection");
+                    return;
+                }
+                try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                    DatabaseManager.applyQueryTimeout(stmt);
+                    stmt.setString(1, playerId.toString());
+                    stmt.setString(2, mapId);
+                    stmt.setBytes(3, blob);
+                    stmt.setLong(4, getCompletionTimeMs(recording));
+                    stmt.executeUpdate();
+                }
             }
         } catch (Exception e) {
             logger().at(Level.SEVERE).withCause(e)
@@ -138,12 +148,17 @@ public abstract class AbstractGhostStore<TSample, TRecording> {
         cache.remove(makeKey(playerId, mapId));
 
         String sql = "DELETE FROM " + tableName() + " WHERE player_uuid = ? AND map_id = ?";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.setString(1, playerId.toString());
-            stmt.setString(2, mapId);
-            stmt.executeUpdate();
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                logger().atWarning().log("Failed to acquire database connection");
+                return;
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setString(1, playerId.toString());
+                stmt.setString(2, mapId);
+                stmt.executeUpdate();
+            }
         } catch (SQLException e) {
             logger().at(Level.WARNING).withCause(e)
                     .log("Failed to delete " + modeLabel() + " ghost recording for " + playerId + "/" + mapId);
@@ -202,9 +217,14 @@ public abstract class AbstractGhostStore<TSample, TRecording> {
                 ) ENGINE=InnoDB
                 """.formatted(tableName());
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             Statement stmt = conn.createStatement()) {
-            stmt.executeUpdate(sql);
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                logger().atWarning().log("Failed to acquire database connection");
+                return;
+            }
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate(sql);
+            }
         } catch (SQLException e) {
             logger().at(Level.SEVERE).withCause(e)
                     .log("Failed to create " + modeLabel() + " ghost table " + tableName());

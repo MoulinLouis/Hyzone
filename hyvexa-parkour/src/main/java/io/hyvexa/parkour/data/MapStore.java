@@ -61,6 +61,10 @@ public class MapStore {
             maps.clear();
 
             try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+                if (conn == null) {
+                    LOGGER.atWarning().log("Failed to acquire database connection");
+                    return;
+                }
                 // Load all maps
                 try (PreparedStatement stmt = conn.prepareStatement(mapSql)) {
                     DatabaseManager.applyQueryTimeout(stmt);
@@ -334,6 +338,10 @@ public class MapStore {
             """;
 
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection");
+                return;
+            }
             conn.setAutoCommit(false);
 
             try (PreparedStatement mapStmt = conn.prepareStatement(mapSql);
@@ -434,11 +442,16 @@ public class MapStore {
         // Checkpoints will be deleted by CASCADE
         String sql = "DELETE FROM maps WHERE id = ?";
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.setString(1, mapId);
-            stmt.executeUpdate();
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection");
+                return;
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setString(1, mapId);
+                stmt.executeUpdate();
+            }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Failed to delete map from database: " + e.getMessage());
         }

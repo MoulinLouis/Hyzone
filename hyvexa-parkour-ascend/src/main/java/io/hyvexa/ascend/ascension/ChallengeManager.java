@@ -276,32 +276,47 @@ public class ChallengeManager {
 
         // Load active challenge (crash recovery)
         String sql = "SELECT challenge_type_id, started_at_ms, snapshot_json FROM ascend_challenges WHERE player_uuid = ?";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.setString(1, playerId.toString());
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    int typeId = rs.getInt("challenge_type_id");
-                    long startedAt = rs.getLong("started_at_ms");
-                    String json = rs.getString("snapshot_json");
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection");
+                return;
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setString(1, playerId.toString());
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        int typeId = rs.getInt("challenge_type_id");
+                        long startedAt = rs.getLong("started_at_ms");
+                        String json = rs.getString("snapshot_json");
 
-                    ChallengeType type = ChallengeType.fromId(typeId);
-                    if (type == null) {
-                        LOGGER.atWarning().log("[Challenge] Unknown challenge type ID " + typeId + " for player " + playerId);
-                        deleteActiveChallenge(playerId);
-                    } else {
-                        ChallengeSnapshot snapshot = GSON.fromJson(json, ChallengeSnapshot.class);
-                        activeChallenges.put(playerId, new ActiveChallenge(type, startedAt, snapshot));
+                        ChallengeType type = ChallengeType.fromId(typeId);
+                        if (type == null) {
+                            LOGGER.atWarning().log("[Challenge] Unknown challenge type ID " + typeId + " for player " + playerId);
+                            deleteActiveChallenge(playerId);
+                        } else {
+                            ChallengeSnapshot snapshot;
+                            try {
+                                snapshot = GSON.fromJson(json, ChallengeSnapshot.class);
+                            } catch (Exception e) {
+                                LOGGER.at(Level.WARNING).withCause(e)
+                                        .log("[Challenge] Failed to deserialize snapshot for " + playerId + ", clearing challenge");
+                                deleteActiveChallenge(playerId);
+                                snapshot = null;
+                            }
+                            if (snapshot != null) {
+                                activeChallenges.put(playerId, new ActiveChallenge(type, startedAt, snapshot));
 
-                        // Restore challenge state on progress
-                        AscendPlayerProgress progress = playerStore.getPlayer(playerId);
-                        if (progress != null) {
-                            progress.setActiveChallenge(type);
-                            progress.setChallengeStartedAtMs(startedAt);
+                                // Restore challenge state on progress
+                                AscendPlayerProgress progress = playerStore.getPlayer(playerId);
+                                if (progress != null) {
+                                    progress.setActiveChallenge(type);
+                                    progress.setChallengeStartedAtMs(startedAt);
+                                }
+
+                                LOGGER.atInfo().log("[Challenge] Restored active challenge for " + playerId + ": " + type.name());
+                            }
                         }
-
-                        LOGGER.atInfo().log("[Challenge] Restored active challenge for " + playerId + ": " + type.name());
                     }
                 }
             }
@@ -324,16 +339,21 @@ public class ChallengeManager {
         }
 
         String sql = "SELECT challenge_type_id FROM ascend_challenge_records WHERE player_uuid = ? AND completions > 0";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.setString(1, playerId.toString());
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    int typeId = rs.getInt("challenge_type_id");
-                    ChallengeType type = ChallengeType.fromId(typeId);
-                    if (type != null) {
-                        progress.addChallengeReward(type);
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection");
+                return;
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setString(1, playerId.toString());
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        int typeId = rs.getInt("challenge_type_id");
+                        ChallengeType type = ChallengeType.fromId(typeId);
+                        if (type != null) {
+                            progress.addChallengeReward(type);
+                        }
                     }
                 }
             }
@@ -358,17 +378,22 @@ public class ChallengeManager {
         }
 
         String sql = "SELECT best_time_ms, completions FROM ascend_challenge_records WHERE player_uuid = ? AND challenge_type_id = ?";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.setString(1, playerId.toString());
-            stmt.setInt(2, challengeType.getId());
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    long bestTime = rs.getLong("best_time_ms");
-                    Long bestTimeMs = rs.wasNull() ? null : bestTime;
-                    int completions = rs.getInt("completions");
-                    return new ChallengeRecord(bestTimeMs, completions);
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection");
+                return new ChallengeRecord(null, 0);
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setString(1, playerId.toString());
+                stmt.setInt(2, challengeType.getId());
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        long bestTime = rs.getLong("best_time_ms");
+                        Long bestTimeMs = rs.wasNull() ? null : bestTime;
+                        int completions = rs.getInt("completions");
+                        return new ChallengeRecord(bestTimeMs, completions);
+                    }
                 }
             }
         } catch (SQLException e) {
@@ -393,14 +418,19 @@ public class ChallengeManager {
                 started_at_ms = VALUES(started_at_ms), snapshot_json = VALUES(snapshot_json)
             """;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.setString(1, playerId.toString());
-            stmt.setInt(2, type.getId());
-            stmt.setLong(3, startedAtMs);
-            stmt.setString(4, snapshotJson);
-            stmt.executeUpdate();
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection");
+                return;
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setString(1, playerId.toString());
+                stmt.setInt(2, type.getId());
+                stmt.setLong(3, startedAtMs);
+                stmt.setString(4, snapshotJson);
+                stmt.executeUpdate();
+            }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("[Challenge] Failed to persist challenge for " + playerId + ": " + e.getMessage());
         }
@@ -412,11 +442,16 @@ public class ChallengeManager {
         }
 
         String sql = "DELETE FROM ascend_challenges WHERE player_uuid = ?";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.setString(1, playerId.toString());
-            stmt.executeUpdate();
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection");
+                return;
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setString(1, playerId.toString());
+                stmt.executeUpdate();
+            }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("[Challenge] Failed to delete challenge for " + playerId + ": " + e.getMessage());
         }
@@ -436,13 +471,18 @@ public class ChallengeManager {
                 completions = completions + 1
             """;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.setString(1, playerId.toString());
-            stmt.setInt(2, type.getId());
-            stmt.setLong(3, elapsedMs);
-            stmt.executeUpdate();
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection");
+                return;
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setString(1, playerId.toString());
+                stmt.setInt(2, type.getId());
+                stmt.setLong(3, elapsedMs);
+                stmt.executeUpdate();
+            }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("[Challenge] Failed to record completion for " + playerId + ": " + e.getMessage());
         }

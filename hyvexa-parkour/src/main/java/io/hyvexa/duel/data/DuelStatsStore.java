@@ -36,18 +36,23 @@ public class DuelStatsStore {
         }
         ensureTable();
         String sql = "SELECT player_uuid, player_name, wins, losses FROM duel_player_stats";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    UUID playerId = UUID.fromString(rs.getString("player_uuid"));
-                    String playerName = rs.getString("player_name");
-                    int wins = rs.getInt("wins");
-                    int losses = rs.getInt("losses");
-                    cache.put(playerId, new DuelStats(playerId, playerName, wins, losses));
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection");
+                return;
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        UUID playerId = UUID.fromString(rs.getString("player_uuid"));
+                        String playerName = rs.getString("player_name");
+                        int wins = rs.getInt("wins");
+                        int losses = rs.getInt("losses");
+                        cache.put(playerId, new DuelStats(playerId, playerName, wins, losses));
+                    }
+                    LOGGER.atInfo().log("DuelStatsStore loaded " + cache.size() + " player stats");
                 }
-                LOGGER.atInfo().log("DuelStatsStore loaded " + cache.size() + " player stats");
             }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Failed to load DuelStatsStore: " + e.getMessage());
@@ -55,10 +60,15 @@ public class DuelStatsStore {
     }
 
     private void ensureTable() {
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(CREATE_TABLE_SQL)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.executeUpdate();
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection");
+                return;
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(CREATE_TABLE_SQL)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.executeUpdate();
+            }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Failed to create duel_player_stats table: " + e.getMessage());
         }
@@ -111,15 +121,20 @@ public class DuelStatsStore {
                 player_name = VALUES(player_name), wins = VALUES(wins),
                 losses = VALUES(losses), updated_at = VALUES(updated_at)
             """;
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.setString(1, stats.getPlayerId().toString());
-            stmt.setString(2, stats.getPlayerName());
-            stmt.setInt(3, stats.getWins());
-            stmt.setInt(4, stats.getLosses());
-            stmt.setTimestamp(5, new Timestamp(System.currentTimeMillis()));
-            stmt.executeUpdate();
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection");
+                return;
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setString(1, stats.getPlayerId().toString());
+                stmt.setString(2, stats.getPlayerName());
+                stmt.setInt(3, stats.getWins());
+                stmt.setInt(4, stats.getLosses());
+                stmt.setTimestamp(5, new Timestamp(System.currentTimeMillis()));
+                stmt.executeUpdate();
+            }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Failed to save duel stats: " + e.getMessage());
         }

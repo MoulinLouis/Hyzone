@@ -88,15 +88,16 @@ public class HubMenuPage extends InteractiveCustomUIPage<ButtonEventData> {
         }
         if (BUTTON_ASCEND.equals(data.getButton())) {
             AscendWhitelistManager whitelistManager = WhitelistRegistry.getInstance();
-            boolean isAllowed = whitelistManager != null && whitelistManager.isPublicMode();
-            if (!isAllowed) {
-                isAllowed = PermissionUtils.isOp(player);
-            }
-            if (!isAllowed && playerRef != null && whitelistManager != null && whitelistManager.isEnabled()) {
+            boolean isAllowed;
+            if (whitelistManager == null || whitelistManager.isPublicMode()) {
+                isAllowed = true;
+            } else if (PermissionUtils.isOp(player)) {
+                isAllowed = true;
+            } else if (whitelistManager.isEnabled() && playerRef != null) {
                 String username = playerRef.getUsername();
-                if (username != null && whitelistManager.contains(username)) {
-                    isAllowed = true;
-                }
+                isAllowed = username != null && whitelistManager.contains(username);
+            } else {
+                isAllowed = false;
             }
             if (player != null && !isAllowed) {
                 player.sendMessage(MESSAGE_ASCEND_RESTRICTED);

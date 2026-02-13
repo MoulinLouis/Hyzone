@@ -86,31 +86,36 @@ public class DuelPreferenceStore {
             SELECT player_uuid, easy_enabled, medium_enabled, hard_enabled, insane_enabled
             FROM duel_category_prefs
             """;
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    UUID playerId = UUID.fromString(rs.getString("player_uuid"));
-                    EnumSet<DuelCategory> enabled = EnumSet.noneOf(DuelCategory.class);
-                    if (rs.getBoolean("easy_enabled")) {
-                        enabled.add(DuelCategory.EASY);
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection");
+                return;
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        UUID playerId = UUID.fromString(rs.getString("player_uuid"));
+                        EnumSet<DuelCategory> enabled = EnumSet.noneOf(DuelCategory.class);
+                        if (rs.getBoolean("easy_enabled")) {
+                            enabled.add(DuelCategory.EASY);
+                        }
+                        if (rs.getBoolean("medium_enabled")) {
+                            enabled.add(DuelCategory.MEDIUM);
+                        }
+                        if (rs.getBoolean("hard_enabled")) {
+                            enabled.add(DuelCategory.HARD);
+                        }
+                        if (rs.getBoolean("insane_enabled")) {
+                            enabled.add(DuelCategory.INSANE);
+                        }
+                        if (enabled.isEmpty()) {
+                            enabled = defaultEnabled();
+                        }
+                        enabledByPlayer.put(playerId, enabled);
                     }
-                    if (rs.getBoolean("medium_enabled")) {
-                        enabled.add(DuelCategory.MEDIUM);
-                    }
-                    if (rs.getBoolean("hard_enabled")) {
-                        enabled.add(DuelCategory.HARD);
-                    }
-                    if (rs.getBoolean("insane_enabled")) {
-                        enabled.add(DuelCategory.INSANE);
-                    }
-                    if (enabled.isEmpty()) {
-                        enabled = defaultEnabled();
-                    }
-                    enabledByPlayer.put(playerId, enabled);
+                    LOGGER.atInfo().log("DuelPreferenceStore loaded " + enabledByPlayer.size() + " player preferences");
                 }
-                LOGGER.atInfo().log("DuelPreferenceStore loaded " + enabledByPlayer.size() + " player preferences");
             }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Failed to load DuelPreferenceStore: " + e.getMessage());
@@ -118,10 +123,15 @@ public class DuelPreferenceStore {
     }
 
     private void ensureTable() {
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(CREATE_TABLE_SQL)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.executeUpdate();
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection");
+                return;
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(CREATE_TABLE_SQL)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.executeUpdate();
+            }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Failed to create duel_category_prefs table: " + e.getMessage());
         }
@@ -195,16 +205,21 @@ public class DuelPreferenceStore {
                 insane_enabled = VALUES(insane_enabled),
                 updated_at = VALUES(updated_at)
             """;
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.setString(1, playerId.toString());
-            stmt.setBoolean(2, flags.get(DuelCategory.EASY));
-            stmt.setBoolean(3, flags.get(DuelCategory.MEDIUM));
-            stmt.setBoolean(4, flags.get(DuelCategory.HARD));
-            stmt.setBoolean(5, flags.get(DuelCategory.INSANE));
-            stmt.setTimestamp(6, new Timestamp(System.currentTimeMillis()));
-            stmt.executeUpdate();
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection");
+                return;
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setString(1, playerId.toString());
+                stmt.setBoolean(2, flags.get(DuelCategory.EASY));
+                stmt.setBoolean(3, flags.get(DuelCategory.MEDIUM));
+                stmt.setBoolean(4, flags.get(DuelCategory.HARD));
+                stmt.setBoolean(5, flags.get(DuelCategory.INSANE));
+                stmt.setTimestamp(6, new Timestamp(System.currentTimeMillis()));
+                stmt.executeUpdate();
+            }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Failed to save duel preferences: " + e.getMessage());
         }

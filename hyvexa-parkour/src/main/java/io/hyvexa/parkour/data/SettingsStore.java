@@ -49,65 +49,70 @@ public class SettingsStore {
             FROM settings WHERE id = 1
             """;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    fileLock.writeLock().lock();
-                    try {
-                        fallRespawnSeconds = rs.getDouble("fall_respawn_seconds");
-                        if (fallRespawnSeconds <= 0) {
-                            fallRespawnSeconds = ParkourConstants.DEFAULT_FALL_RESPAWN_SECONDS;
-                        }
-                        fallFailsafeVoidY = rs.getDouble("void_y_failsafe");
-                        disableWeaponDamage = rs.getBoolean("weapon_damage_disabled");
-                        teleportDebugEnabled = rs.getBoolean("debug_mode");
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection");
+                return;
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        fileLock.writeLock().lock();
+                        try {
+                            fallRespawnSeconds = rs.getDouble("fall_respawn_seconds");
+                            if (fallRespawnSeconds <= 0) {
+                                fallRespawnSeconds = ParkourConstants.DEFAULT_FALL_RESPAWN_SECONDS;
+                            }
+                            fallFailsafeVoidY = rs.getDouble("void_y_failsafe");
+                            disableWeaponDamage = rs.getBoolean("weapon_damage_disabled");
+                            teleportDebugEnabled = rs.getBoolean("debug_mode");
 
-                        Double spawnX = rs.getObject("spawn_x", Double.class);
-                        if (spawnX != null) {
-                            spawnPosition = new TransformData();
-                            spawnPosition.setX(spawnX);
-                            spawnPosition.setY(rs.getDouble("spawn_y"));
-                            spawnPosition.setZ(rs.getDouble("spawn_z"));
-                            spawnPosition.setRotX(rs.getFloat("spawn_rot_x"));
-                            spawnPosition.setRotY(rs.getFloat("spawn_rot_y"));
-                            spawnPosition.setRotZ(rs.getFloat("spawn_rot_z"));
-                        } else {
-                            spawnPosition = defaultSpawn();
-                        }
+                            Double spawnX = rs.getObject("spawn_x", Double.class);
+                            if (spawnX != null) {
+                                spawnPosition = new TransformData();
+                                spawnPosition.setX(spawnX);
+                                spawnPosition.setY(rs.getDouble("spawn_y"));
+                                spawnPosition.setZ(rs.getDouble("spawn_z"));
+                                spawnPosition.setRotX(rs.getFloat("spawn_rot_x"));
+                                spawnPosition.setRotY(rs.getFloat("spawn_rot_y"));
+                                spawnPosition.setRotZ(rs.getFloat("spawn_rot_z"));
+                            } else {
+                                spawnPosition = defaultSpawn();
+                            }
 
-                        Boolean idleFall = rs.getObject("idle_fall_respawn_for_op", Boolean.class);
-                        idleFallRespawnForOp = idleFall != null && idleFall;
+                            Boolean idleFall = rs.getObject("idle_fall_respawn_for_op", Boolean.class);
+                            idleFallRespawnForOp = idleFall != null && idleFall;
 
-                        categoryOrder.clear();
-                        String categoryJson = rs.getString("category_order_json");
-                        if (categoryJson != null && !categoryJson.isBlank()) {
-                            try {
-                                List<String> loaded = GSON.fromJson(categoryJson, CATEGORY_LIST_TYPE);
-                                if (loaded != null) {
-                                    for (String entry : loaded) {
-                                        if (entry == null) {
-                                            continue;
-                                        }
-                                        String trimmed = entry.trim();
-                                        if (!trimmed.isEmpty()) {
-                                            categoryOrder.add(trimmed);
+                            categoryOrder.clear();
+                            String categoryJson = rs.getString("category_order_json");
+                            if (categoryJson != null && !categoryJson.isBlank()) {
+                                try {
+                                    List<String> loaded = GSON.fromJson(categoryJson, CATEGORY_LIST_TYPE);
+                                    if (loaded != null) {
+                                        for (String entry : loaded) {
+                                            if (entry == null) {
+                                                continue;
+                                            }
+                                            String trimmed = entry.trim();
+                                            if (!trimmed.isEmpty()) {
+                                                categoryOrder.add(trimmed);
+                                            }
                                         }
                                     }
+                                } catch (RuntimeException e) {
+                                    LOGGER.at(Level.WARNING).log("Failed to parse category order: " + e.getMessage());
                                 }
-                            } catch (RuntimeException e) {
-                                LOGGER.at(Level.WARNING).log("Failed to parse category order: " + e.getMessage());
                             }
+                        } finally {
+                            fileLock.writeLock().unlock();
                         }
-                    } finally {
-                        fileLock.writeLock().unlock();
+                        LOGGER.atInfo().log("SettingsStore loaded from database");
+                    } else {
+                        // No settings row exists, insert defaults
+                        insertDefaults();
+                        LOGGER.atInfo().log("SettingsStore created with defaults");
                     }
-                    LOGGER.atInfo().log("SettingsStore loaded from database");
-                } else {
-                    // No settings row exists, insert defaults
-                    insertDefaults();
-                    LOGGER.atInfo().log("SettingsStore created with defaults");
                 }
             }
         } catch (SQLException e) {
@@ -123,22 +128,27 @@ public class SettingsStore {
             VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.setDouble(1, fallRespawnSeconds);
-            stmt.setDouble(2, fallFailsafeVoidY);
-            stmt.setBoolean(3, disableWeaponDamage);
-            stmt.setBoolean(4, teleportDebugEnabled);
-            stmt.setDouble(5, spawnPosition.getX());
-            stmt.setDouble(6, spawnPosition.getY());
-            stmt.setDouble(7, spawnPosition.getZ());
-            stmt.setFloat(8, spawnPosition.getRotX());
-            stmt.setFloat(9, spawnPosition.getRotY());
-            stmt.setFloat(10, spawnPosition.getRotZ());
-            stmt.setBoolean(11, idleFallRespawnForOp);
-            stmt.setString(12, GSON.toJson(categoryOrder));
-            stmt.executeUpdate();
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection");
+                return;
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setDouble(1, fallRespawnSeconds);
+                stmt.setDouble(2, fallFailsafeVoidY);
+                stmt.setBoolean(3, disableWeaponDamage);
+                stmt.setBoolean(4, teleportDebugEnabled);
+                stmt.setDouble(5, spawnPosition.getX());
+                stmt.setDouble(6, spawnPosition.getY());
+                stmt.setDouble(7, spawnPosition.getZ());
+                stmt.setFloat(8, spawnPosition.getRotX());
+                stmt.setFloat(9, spawnPosition.getRotY());
+                stmt.setFloat(10, spawnPosition.getRotZ());
+                stmt.setBoolean(11, idleFallRespawnForOp);
+                stmt.setString(12, GSON.toJson(categoryOrder));
+                stmt.executeUpdate();
+            }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Failed to insert default settings: " + e.getMessage());
         }
@@ -166,33 +176,38 @@ public class SettingsStore {
             WHERE id = 1
             """;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.setDouble(1, fallRespawnSeconds);
-            stmt.setDouble(2, fallFailsafeVoidY);
-            stmt.setBoolean(3, disableWeaponDamage);
-            stmt.setBoolean(4, teleportDebugEnabled);
-
-            if (spawnPosition != null) {
-                stmt.setDouble(5, spawnPosition.getX());
-                stmt.setDouble(6, spawnPosition.getY());
-                stmt.setDouble(7, spawnPosition.getZ());
-                stmt.setFloat(8, spawnPosition.getRotX());
-                stmt.setFloat(9, spawnPosition.getRotY());
-                stmt.setFloat(10, spawnPosition.getRotZ());
-            } else {
-                stmt.setNull(5, java.sql.Types.DOUBLE);
-                stmt.setNull(6, java.sql.Types.DOUBLE);
-                stmt.setNull(7, java.sql.Types.DOUBLE);
-                stmt.setNull(8, java.sql.Types.FLOAT);
-                stmt.setNull(9, java.sql.Types.FLOAT);
-                stmt.setNull(10, java.sql.Types.FLOAT);
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection");
+                return;
             }
-            stmt.setBoolean(11, idleFallRespawnForOp);
-            stmt.setString(12, GSON.toJson(categoryOrder));
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setDouble(1, fallRespawnSeconds);
+                stmt.setDouble(2, fallFailsafeVoidY);
+                stmt.setBoolean(3, disableWeaponDamage);
+                stmt.setBoolean(4, teleportDebugEnabled);
 
-            stmt.executeUpdate();
+                if (spawnPosition != null) {
+                    stmt.setDouble(5, spawnPosition.getX());
+                    stmt.setDouble(6, spawnPosition.getY());
+                    stmt.setDouble(7, spawnPosition.getZ());
+                    stmt.setFloat(8, spawnPosition.getRotX());
+                    stmt.setFloat(9, spawnPosition.getRotY());
+                    stmt.setFloat(10, spawnPosition.getRotZ());
+                } else {
+                    stmt.setNull(5, java.sql.Types.DOUBLE);
+                    stmt.setNull(6, java.sql.Types.DOUBLE);
+                    stmt.setNull(7, java.sql.Types.DOUBLE);
+                    stmt.setNull(8, java.sql.Types.FLOAT);
+                    stmt.setNull(9, java.sql.Types.FLOAT);
+                    stmt.setNull(10, java.sql.Types.FLOAT);
+                }
+                stmt.setBoolean(11, idleFallRespawnForOp);
+                stmt.setString(12, GSON.toJson(categoryOrder));
+
+                stmt.executeUpdate();
+            }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Failed to save SettingsStore to database: " + e.getMessage());
         }

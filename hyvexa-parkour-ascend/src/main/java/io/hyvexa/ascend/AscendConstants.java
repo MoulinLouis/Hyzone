@@ -222,9 +222,16 @@ public final class AscendConstants {
     public static BigNumber getRunnerMultiplierIncrement(int stars, double multiplierGainBonus, double evolutionPowerBonus) {
         double base = RUNNER_MULTIPLIER_INCREMENT; // 0.1
         if (stars > 0) {
-            base *= Math.pow(evolutionPowerBonus, stars);
+            double power = Math.pow(evolutionPowerBonus, stars);
+            if (!Double.isFinite(power)) {
+                power = Double.MAX_VALUE;
+            }
+            base *= power;
         }
         base *= multiplierGainBonus;
+        if (!Double.isFinite(base)) {
+            base = Double.MAX_VALUE;
+        }
         return BigNumber.fromDouble(base);
     }
 
@@ -341,8 +348,14 @@ public final class AscendConstants {
         // cost = baseCost * growth^effectiveLevel
         // Compute in log10 space to avoid double overflow for large effectiveLevel
         double log10Cost = Math.log10(ELEVATION_BASE_COST) + effectiveLevel * Math.log10(ELEVATION_COST_GROWTH);
+        if (!Double.isFinite(log10Cost) || log10Cost > 1_000_000_000) {
+            return BigNumber.of(9.999, 999_999_999); // practical cap
+        }
         int resultExp = (int) Math.floor(log10Cost);
         double resultMantissa = Math.pow(10.0, log10Cost - resultExp);
+        if (!Double.isFinite(resultMantissa)) {
+            resultMantissa = 1.0;
+        }
         BigNumber cost = BigNumber.of(resultMantissa, resultExp);
 
         // Apply cost multiplier (skill discount)
@@ -497,11 +510,11 @@ public final class AscendConstants {
             return 0;
         }
         double ratio = vexa.divide(BigNumber.fromLong(SUMMIT_MIN_VEXA)).toDouble();
-        if (ratio < 1.0) {
-            return 0;
+        if (!Double.isFinite(ratio) || ratio < 1.0) {
+            return ratio < 1.0 ? 0 : Long.MAX_VALUE;
         }
         double xp = Math.pow(ratio, SUMMIT_XP_VEXA_POWER);
-        if (xp >= (double) Long.MAX_VALUE) {
+        if (!Double.isFinite(xp) || xp >= (double) Long.MAX_VALUE) {
             return Long.MAX_VALUE;
         }
         return (long) xp;

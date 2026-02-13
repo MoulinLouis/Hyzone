@@ -76,27 +76,32 @@ public class ProgressStore {
     private void loadPlayers() {
         String sql = "SELECT uuid, name, xp, level, welcome_shown, playtime_ms, vip, founder, teleport_item_use_count, jump_count FROM players";
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    UUID uuid = UUID.fromString(rs.getString("uuid"));
-                    PlayerProgress playerProgress = new PlayerProgress();
-                    playerProgress.xp = rs.getLong("xp");
-                    playerProgress.level = rs.getInt("level");
-                    playerProgress.welcomeShown = rs.getBoolean("welcome_shown");
-                    playerProgress.playtimeMs = rs.getLong("playtime_ms");
-                    playerProgress.vip = rs.getBoolean("vip");
-                    playerProgress.founder = rs.getBoolean("founder");
-                    playerProgress.teleportItemUseCount = rs.getInt("teleport_item_use_count");
-                    playerProgress.jumpCount = rs.getLong("jump_count");
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection");
+                return;
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        UUID uuid = UUID.fromString(rs.getString("uuid"));
+                        PlayerProgress playerProgress = new PlayerProgress();
+                        playerProgress.xp = rs.getLong("xp");
+                        playerProgress.level = rs.getInt("level");
+                        playerProgress.welcomeShown = rs.getBoolean("welcome_shown");
+                        playerProgress.playtimeMs = rs.getLong("playtime_ms");
+                        playerProgress.vip = rs.getBoolean("vip");
+                        playerProgress.founder = rs.getBoolean("founder");
+                        playerProgress.teleportItemUseCount = rs.getInt("teleport_item_use_count");
+                        playerProgress.jumpCount = rs.getLong("jump_count");
 
-                    progress.put(uuid, playerProgress);
+                        progress.put(uuid, playerProgress);
 
-                    String name = rs.getString("name");
-                    if (name != null && !name.isBlank()) {
-                        lastKnownNames.put(uuid, name);
+                        String name = rs.getString("name");
+                        if (name != null && !name.isBlank()) {
+                            lastKnownNames.put(uuid, name);
+                        }
                     }
                 }
             }
@@ -108,20 +113,25 @@ public class ProgressStore {
     private void loadCompletions() {
         String sql = "SELECT player_uuid, map_id, best_time_ms FROM player_completions";
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    UUID uuid = UUID.fromString(rs.getString("player_uuid"));
-                    String mapId = rs.getString("map_id");
-                    long bestTime = rs.getLong("best_time_ms");
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection");
+                return;
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        UUID uuid = UUID.fromString(rs.getString("player_uuid"));
+                        String mapId = rs.getString("map_id");
+                        long bestTime = rs.getLong("best_time_ms");
 
-                    PlayerProgress playerProgress = progress.get(uuid);
-                    if (playerProgress != null) {
-                        playerProgress.completedMaps.add(mapId);
-                        if (bestTime > 0) {
-                            playerProgress.bestMapTimes.put(mapId, bestTime);
+                        PlayerProgress playerProgress = progress.get(uuid);
+                        if (playerProgress != null) {
+                            playerProgress.completedMaps.add(mapId);
+                            if (bestTime > 0) {
+                                playerProgress.bestMapTimes.put(mapId, bestTime);
+                            }
                         }
                     }
                 }
@@ -135,24 +145,29 @@ public class ProgressStore {
         String sql = "SELECT player_uuid, map_id, checkpoint_index, time_ms FROM player_checkpoint_times"
                 + " ORDER BY checkpoint_index";
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    UUID uuid = UUID.fromString(rs.getString("player_uuid"));
-                    String mapId = rs.getString("map_id");
-                    int checkpointIndex = rs.getInt("checkpoint_index");
-                    long timeMs = rs.getLong("time_ms");
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection");
+                return;
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        UUID uuid = UUID.fromString(rs.getString("player_uuid"));
+                        String mapId = rs.getString("map_id");
+                        int checkpointIndex = rs.getInt("checkpoint_index");
+                        long timeMs = rs.getLong("time_ms");
 
-                    PlayerProgress playerProgress = progress.get(uuid);
-                    if (playerProgress != null) {
-                        List<Long> times = playerProgress.checkpointTimes
-                                .computeIfAbsent(mapId, k -> new ArrayList<>());
-                        while (times.size() <= checkpointIndex) {
-                            times.add(0L);
+                        PlayerProgress playerProgress = progress.get(uuid);
+                        if (playerProgress != null) {
+                            List<Long> times = playerProgress.checkpointTimes
+                                    .computeIfAbsent(mapId, k -> new ArrayList<>());
+                            while (times.size() <= checkpointIndex) {
+                                times.add(0L);
+                            }
+                            times.set(checkpointIndex, timeMs);
                         }
-                        times.set(checkpointIndex, timeMs);
                     }
                 }
             }
@@ -381,13 +396,18 @@ public class ProgressStore {
 
         try {
             DatabaseRetry.executeWithRetryVoid(() -> {
-                try (Connection conn = DatabaseManager.getInstance().getConnection();
-                     PreparedStatement stmt = conn.prepareStatement(sql)) {
-                    DatabaseManager.applyQueryTimeout(stmt);
-                    stmt.setString(1, playerId.toString());
-                    stmt.setString(2, mapId);
-                    stmt.setLong(3, timeMs);
-                    stmt.executeUpdate();
+                try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+                    if (conn == null) {
+                        LOGGER.atWarning().log("Failed to acquire database connection");
+                        return;
+                    }
+                    try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                        DatabaseManager.applyQueryTimeout(stmt);
+                        stmt.setString(1, playerId.toString());
+                        stmt.setString(2, mapId);
+                        stmt.setLong(3, timeMs);
+                        stmt.executeUpdate();
+                    }
                 }
             }, "save completion for " + playerId);
             return true;
@@ -407,25 +427,34 @@ public class ProgressStore {
             VALUES (?, ?, ?, ?)
             """;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement deleteStmt = conn.prepareStatement(deleteSql);
-             PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
-            DatabaseManager.applyQueryTimeout(deleteStmt);
-            DatabaseManager.applyQueryTimeout(insertStmt);
-
-            deleteStmt.setString(1, playerId.toString());
-            deleteStmt.setString(2, mapId);
-            deleteStmt.executeUpdate();
-
-            for (int i = 0; i < times.size(); i++) {
-                insertStmt.setString(1, playerId.toString());
-                insertStmt.setString(2, mapId);
-                insertStmt.setInt(3, i);
-                insertStmt.setLong(4, times.get(i));
-                insertStmt.addBatch();
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection for checkpoint save");
+                return;
             }
-            insertStmt.executeBatch();
+            conn.setAutoCommit(false);
+            try (PreparedStatement deleteStmt = conn.prepareStatement(deleteSql);
+                 PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
+                DatabaseManager.applyQueryTimeout(deleteStmt);
+                DatabaseManager.applyQueryTimeout(insertStmt);
 
+                deleteStmt.setString(1, playerId.toString());
+                deleteStmt.setString(2, mapId);
+                deleteStmt.executeUpdate();
+
+                for (int i = 0; i < times.size(); i++) {
+                    insertStmt.setString(1, playerId.toString());
+                    insertStmt.setString(2, mapId);
+                    insertStmt.setInt(3, i);
+                    insertStmt.setLong(4, times.get(i));
+                    insertStmt.addBatch();
+                }
+                insertStmt.executeBatch();
+                conn.commit();
+            } catch (SQLException e) {
+                try { conn.rollback(); } catch (SQLException re) { /* ignore */ }
+                LOGGER.at(Level.WARNING).log("Failed to save checkpoint times (rolled back): " + e.getMessage());
+            }
         } catch (SQLException e) {
             LOGGER.at(Level.WARNING).log("Failed to save checkpoint times: " + e.getMessage());
         }
@@ -595,15 +624,20 @@ public class ProgressStore {
         // CASCADE will delete completions
         String sql = "DELETE FROM players WHERE uuid = ?";
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement checkpointStmt = conn.prepareStatement(deleteCheckpoints);
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(checkpointStmt);
-            DatabaseManager.applyQueryTimeout(stmt);
-            checkpointStmt.setString(1, playerId.toString());
-            checkpointStmt.executeUpdate();
-            stmt.setString(1, playerId.toString());
-            stmt.executeUpdate();
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection");
+                return;
+            }
+            try (PreparedStatement checkpointStmt = conn.prepareStatement(deleteCheckpoints);
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(checkpointStmt);
+                DatabaseManager.applyQueryTimeout(stmt);
+                checkpointStmt.setString(1, playerId.toString());
+                checkpointStmt.executeUpdate();
+                stmt.setString(1, playerId.toString());
+                stmt.executeUpdate();
+            }
         } catch (SQLException e) {
             LOGGER.at(Level.WARNING).log("Failed to delete player: " + e.getMessage());
         }
@@ -695,18 +729,23 @@ public class ProgressStore {
         String deleteCheckpoints = "DELETE FROM player_checkpoint_times WHERE player_uuid = ? AND map_id = ?";
         String sql = "DELETE FROM player_completions WHERE player_uuid = ? AND map_id = ?";
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement checkpointStmt = conn.prepareStatement(deleteCheckpoints);
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(checkpointStmt);
-            DatabaseManager.applyQueryTimeout(stmt);
-            checkpointStmt.setString(1, playerId.toString());
-            checkpointStmt.setString(2, mapId);
-            checkpointStmt.executeUpdate();
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection");
+                return;
+            }
+            try (PreparedStatement checkpointStmt = conn.prepareStatement(deleteCheckpoints);
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(checkpointStmt);
+                DatabaseManager.applyQueryTimeout(stmt);
+                checkpointStmt.setString(1, playerId.toString());
+                checkpointStmt.setString(2, mapId);
+                checkpointStmt.executeUpdate();
 
-            stmt.setString(1, playerId.toString());
-            stmt.setString(2, mapId);
-            stmt.executeUpdate();
+                stmt.setString(1, playerId.toString());
+                stmt.setString(2, mapId);
+                stmt.executeUpdate();
+            }
         } catch (SQLException e) {
             LOGGER.at(Level.WARNING).log("Failed to delete player map completion: " + e.getMessage());
         }
@@ -718,16 +757,21 @@ public class ProgressStore {
         String deleteCheckpoints = "DELETE FROM player_checkpoint_times WHERE map_id = ?";
         String sql = "DELETE FROM player_completions WHERE map_id = ?";
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement checkpointStmt = conn.prepareStatement(deleteCheckpoints);
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(checkpointStmt);
-            DatabaseManager.applyQueryTimeout(stmt);
-            checkpointStmt.setString(1, mapId);
-            checkpointStmt.executeUpdate();
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection");
+                return;
+            }
+            try (PreparedStatement checkpointStmt = conn.prepareStatement(deleteCheckpoints);
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(checkpointStmt);
+                DatabaseManager.applyQueryTimeout(stmt);
+                checkpointStmt.setString(1, mapId);
+                checkpointStmt.executeUpdate();
 
-            stmt.setString(1, mapId);
-            stmt.executeUpdate();
+                stmt.setString(1, mapId);
+                stmt.executeUpdate();
+            }
         } catch (SQLException e) {
             LOGGER.at(Level.WARNING).log("Failed to purge map completions: " + e.getMessage());
         }
@@ -911,38 +955,42 @@ public class ProgressStore {
                 jump_count = VALUES(jump_count)
             """;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-
-            for (java.util.Map.Entry<UUID, Long> dirtyEntry : toSave.entrySet()) {
-                UUID playerId = dirtyEntry.getKey();
-                PlayerProgress playerProgress = progress.get(playerId);
-                if (playerProgress == null) {
-                    skippedIds.put(playerId, dirtyEntry.getValue());
-                    continue;
-                }
-
-                stmt.setString(1, playerId.toString());
-                stmt.setString(2, lastKnownNames.get(playerId));
-                stmt.setLong(3, playerProgress.xp);
-                stmt.setInt(4, playerProgress.level);
-                stmt.setBoolean(5, playerProgress.welcomeShown);
-                stmt.setLong(6, playerProgress.playtimeMs);
-                stmt.setBoolean(7, playerProgress.vip);
-                stmt.setBoolean(8, playerProgress.founder);
-                stmt.setInt(9, playerProgress.teleportItemUseCount);
-                stmt.setLong(10, playerProgress.jumpCount);
-                stmt.addBatch();
-                batchedIds.add(playerId);
-            }
-            if (batchedIds.isEmpty()) {
-                clearSavedVersions(skippedIds);
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection");
                 return;
             }
-            stmt.executeBatch();
-            clearSavedVersions(toSave);
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
 
+                for (java.util.Map.Entry<UUID, Long> dirtyEntry : toSave.entrySet()) {
+                    UUID playerId = dirtyEntry.getKey();
+                    PlayerProgress playerProgress = progress.get(playerId);
+                    if (playerProgress == null) {
+                        skippedIds.put(playerId, dirtyEntry.getValue());
+                        continue;
+                    }
+
+                    stmt.setString(1, playerId.toString());
+                    stmt.setString(2, lastKnownNames.get(playerId));
+                    stmt.setLong(3, playerProgress.xp);
+                    stmt.setInt(4, playerProgress.level);
+                    stmt.setBoolean(5, playerProgress.welcomeShown);
+                    stmt.setLong(6, playerProgress.playtimeMs);
+                    stmt.setBoolean(7, playerProgress.vip);
+                    stmt.setBoolean(8, playerProgress.founder);
+                    stmt.setInt(9, playerProgress.teleportItemUseCount);
+                    stmt.setLong(10, playerProgress.jumpCount);
+                    stmt.addBatch();
+                    batchedIds.add(playerId);
+                }
+                if (batchedIds.isEmpty()) {
+                    clearSavedVersions(skippedIds);
+                    return;
+                }
+                stmt.executeBatch();
+                clearSavedVersions(toSave);
+            }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Failed to save players to database: " + e.getMessage());
             // Keep failed writes dirty for retry, but clear stale IDs with no in-memory state.

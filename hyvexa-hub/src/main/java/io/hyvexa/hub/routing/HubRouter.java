@@ -13,6 +13,7 @@ import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
+import com.hypixel.hytale.server.core.Message;
 import io.hyvexa.common.util.AsyncExecutionHelper;
 import io.hyvexa.hub.HubConstants;
 import io.hyvexa.hub.ui.HubMenuPage;
@@ -67,6 +68,12 @@ public class HubRouter {
             }
             World targetWorld = resolveWorld(targetWorldName);
             if (targetWorld == null) {
+                LOGGER.at(Level.WARNING).log("Failed to resolve world '" + targetWorldName
+                        + "' for player " + playerIdText);
+                Player p = store.getComponent(ref, Player.getComponentType());
+                if (p != null) {
+                    p.sendMessage(Message.raw("Failed to teleport: world '" + targetWorldName + "' is unavailable."));
+                }
                 return;
             }
             if (sourceWorldName.equalsIgnoreCase(targetWorldName)) {
@@ -99,8 +106,8 @@ public class HubRouter {
         if (world != null) {
             return world;
         }
-        LOGGER.at(Level.WARNING).log("World '" + worldName + "' not found, using default world.");
-        return Universe.get().getDefaultWorld();
+        LOGGER.at(Level.WARNING).log("World '" + worldName + "' not found after load attempt.");
+        return null;
     }
 
     private static Transform resolveSpawnTransform(World world, UUID playerId) {

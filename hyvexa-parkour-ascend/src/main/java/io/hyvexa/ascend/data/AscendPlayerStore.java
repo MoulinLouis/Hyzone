@@ -155,57 +155,62 @@ public class AscendPlayerStore {
             WHERE uuid = ?
             """;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(playerSql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.setString(1, playerIdStr);
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    String dbName = safeGetString(rs, "player_name", null);
-                    if (dbName != null) {
-                        playerNames.put(playerId, dbName);
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection");
+                return null;
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(playerSql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setString(1, playerIdStr);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        String dbName = safeGetString(rs, "player_name", null);
+                        if (dbName != null) {
+                            playerNames.put(playerId, dbName);
+                        }
+                        progress = new AscendPlayerProgress();
+                        progress.setVexa(BigNumber.of(rs.getDouble("vexa_mantissa"), rs.getInt("vexa_exp10")));
+                        progress.setElevationMultiplier(rs.getInt("elevation_multiplier"));
+
+                        progress.setAscensionCount(safeGetInt(rs, "ascension_count", 0));
+                        progress.setSkillTreePoints(safeGetInt(rs, "skill_tree_points", 0));
+                        progress.setTotalVexaEarned(safeGetBigNumber(rs, "total_vexa_earned_mantissa", "total_vexa_earned_exp10"));
+                        progress.setTotalManualRuns(safeGetInt(rs, "total_manual_runs", 0));
+
+                        Long ascensionStartedAt = safeGetLong(rs, "ascension_started_at");
+                        if (ascensionStartedAt != null) {
+                            progress.setAscensionStartedAt(ascensionStartedAt);
+                        }
+
+                        Long fastestAscensionMs = safeGetLong(rs, "fastest_ascension_ms");
+                        if (fastestAscensionMs != null) {
+                            progress.setFastestAscensionMs(fastestAscensionMs);
+                        }
+
+                        Long timestamp = safeGetLong(rs, "last_active_timestamp");
+                        if (timestamp != null) {
+                            progress.setLastActiveTimestamp(timestamp);
+                        }
+
+                        progress.setHasUnclaimedPassive(safeGetBoolean(rs, "has_unclaimed_passive", false));
+
+                        BigNumber summitAccumulated = safeGetBigNumber(rs, "summit_accumulated_vexa_mantissa", "summit_accumulated_vexa_exp10");
+                        if (!summitAccumulated.isZero()) {
+                            progress.setSummitAccumulatedVexa(summitAccumulated);
+                        }
+
+                        BigNumber elevationAccumulated = safeGetBigNumber(rs, "elevation_accumulated_vexa_mantissa", "elevation_accumulated_vexa_exp10");
+                        if (!elevationAccumulated.isZero()) {
+                            progress.setElevationAccumulatedVexa(elevationAccumulated);
+                        }
+
+                        progress.setAutoUpgradeEnabled(safeGetBoolean(rs, "auto_upgrade_enabled", false));
+                        progress.setAutoEvolutionEnabled(safeGetBoolean(rs, "auto_evolution_enabled", false));
+                        progress.setSeenTutorials(safeGetInt(rs, "seen_tutorials", 0));
+                        progress.setHideOtherRunners(safeGetBoolean(rs, "hide_other_runners", false));
+                        progress.setBreakAscensionEnabled(safeGetBoolean(rs, "break_ascension_enabled", false));
                     }
-                    progress = new AscendPlayerProgress();
-                    progress.setVexa(BigNumber.of(rs.getDouble("vexa_mantissa"), rs.getInt("vexa_exp10")));
-                    progress.setElevationMultiplier(rs.getInt("elevation_multiplier"));
-
-                    progress.setAscensionCount(safeGetInt(rs, "ascension_count", 0));
-                    progress.setSkillTreePoints(safeGetInt(rs, "skill_tree_points", 0));
-                    progress.setTotalVexaEarned(safeGetBigNumber(rs, "total_vexa_earned_mantissa", "total_vexa_earned_exp10"));
-                    progress.setTotalManualRuns(safeGetInt(rs, "total_manual_runs", 0));
-
-                    Long ascensionStartedAt = safeGetLong(rs, "ascension_started_at");
-                    if (ascensionStartedAt != null) {
-                        progress.setAscensionStartedAt(ascensionStartedAt);
-                    }
-
-                    Long fastestAscensionMs = safeGetLong(rs, "fastest_ascension_ms");
-                    if (fastestAscensionMs != null) {
-                        progress.setFastestAscensionMs(fastestAscensionMs);
-                    }
-
-                    Long timestamp = safeGetLong(rs, "last_active_timestamp");
-                    if (timestamp != null) {
-                        progress.setLastActiveTimestamp(timestamp);
-                    }
-
-                    progress.setHasUnclaimedPassive(safeGetBoolean(rs, "has_unclaimed_passive", false));
-
-                    BigNumber summitAccumulated = safeGetBigNumber(rs, "summit_accumulated_vexa_mantissa", "summit_accumulated_vexa_exp10");
-                    if (!summitAccumulated.isZero()) {
-                        progress.setSummitAccumulatedVexa(summitAccumulated);
-                    }
-
-                    BigNumber elevationAccumulated = safeGetBigNumber(rs, "elevation_accumulated_vexa_mantissa", "elevation_accumulated_vexa_exp10");
-                    if (!elevationAccumulated.isZero()) {
-                        progress.setElevationAccumulatedVexa(elevationAccumulated);
-                    }
-
-                    progress.setAutoUpgradeEnabled(safeGetBoolean(rs, "auto_upgrade_enabled", false));
-                    progress.setAutoEvolutionEnabled(safeGetBoolean(rs, "auto_evolution_enabled", false));
-                    progress.setSeenTutorials(safeGetInt(rs, "seen_tutorials", 0));
-                    progress.setHideOtherRunners(safeGetBoolean(rs, "hide_other_runners", false));
-                    progress.setBreakAscensionEnabled(safeGetBoolean(rs, "break_ascension_enabled", false));
                 }
             }
         } catch (SQLException e) {
@@ -241,23 +246,28 @@ public class AscendPlayerStore {
             WHERE player_uuid = ?
             """;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.setString(1, playerId.toString());
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    String mapId = rs.getString("map_id");
-                    AscendPlayerProgress.MapProgress mapProgress = progress.getOrCreateMapProgress(mapId);
-                    mapProgress.setUnlocked(rs.getBoolean("unlocked"));
-                    mapProgress.setCompletedManually(rs.getBoolean("completed_manually"));
-                    mapProgress.setHasRobot(rs.getBoolean("has_robot"));
-                    mapProgress.setRobotSpeedLevel(rs.getInt("robot_speed_level"));
-                    mapProgress.setRobotStars(rs.getInt("robot_stars"));
-                    mapProgress.setMultiplier(BigNumber.of(rs.getDouble("multiplier_mantissa"), rs.getInt("multiplier_exp10")));
-                    long bestTime = rs.getLong("best_time_ms");
-                    if (!rs.wasNull()) {
-                        mapProgress.setBestTimeMs(bestTime);
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection");
+                return;
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setString(1, playerId.toString());
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        String mapId = rs.getString("map_id");
+                        AscendPlayerProgress.MapProgress mapProgress = progress.getOrCreateMapProgress(mapId);
+                        mapProgress.setUnlocked(rs.getBoolean("unlocked"));
+                        mapProgress.setCompletedManually(rs.getBoolean("completed_manually"));
+                        mapProgress.setHasRobot(rs.getBoolean("has_robot"));
+                        mapProgress.setRobotSpeedLevel(rs.getInt("robot_speed_level"));
+                        mapProgress.setRobotStars(rs.getInt("robot_stars"));
+                        mapProgress.setMultiplier(BigNumber.of(rs.getDouble("multiplier_mantissa"), rs.getInt("multiplier_exp10")));
+                        long bestTime = rs.getLong("best_time_ms");
+                        if (!rs.wasNull()) {
+                            mapProgress.setBestTimeMs(bestTime);
+                        }
                     }
                 }
             }
@@ -269,19 +279,24 @@ public class AscendPlayerStore {
     private void loadSummitLevelsForPlayer(UUID playerId, AscendPlayerProgress progress) {
         String sql = "SELECT category, xp FROM ascend_player_summit WHERE player_uuid = ?";
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.setString(1, playerId.toString());
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    String categoryName = rs.getString("category");
-                    long xp = rs.getLong("xp");
-                    try {
-                        SummitCategory category = SummitCategory.valueOf(categoryName);
-                        progress.setSummitXp(category, xp);
-                    } catch (IllegalArgumentException ignored) {
-                        // Unknown category
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection");
+                return;
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setString(1, playerId.toString());
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        String categoryName = rs.getString("category");
+                        long xp = rs.getLong("xp");
+                        try {
+                            SummitCategory category = SummitCategory.valueOf(categoryName);
+                            progress.setSummitXp(category, xp);
+                        } catch (IllegalArgumentException ignored) {
+                            // Unknown category
+                        }
                     }
                 }
             }
@@ -293,18 +308,23 @@ public class AscendPlayerStore {
     private void loadSkillNodesForPlayer(UUID playerId, AscendPlayerProgress progress) {
         String sql = "SELECT skill_node FROM ascend_player_skills WHERE player_uuid = ?";
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.setString(1, playerId.toString());
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    String nodeName = rs.getString("skill_node");
-                    try {
-                        SkillTreeNode node = SkillTreeNode.valueOf(nodeName);
-                        progress.unlockSkillNode(node);
-                    } catch (IllegalArgumentException ignored) {
-                        // Unknown node
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection");
+                return;
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setString(1, playerId.toString());
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        String nodeName = rs.getString("skill_node");
+                        try {
+                            SkillTreeNode node = SkillTreeNode.valueOf(nodeName);
+                            progress.unlockSkillNode(node);
+                        } catch (IllegalArgumentException ignored) {
+                            // Unknown node
+                        }
                     }
                 }
             }
@@ -316,18 +336,23 @@ public class AscendPlayerStore {
     private void loadAchievementsForPlayer(UUID playerId, AscendPlayerProgress progress) {
         String sql = "SELECT achievement FROM ascend_player_achievements WHERE player_uuid = ?";
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.setString(1, playerId.toString());
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    String achievementName = rs.getString("achievement");
-                    try {
-                        AchievementType achievement = AchievementType.valueOf(achievementName);
-                        progress.unlockAchievement(achievement);
-                    } catch (IllegalArgumentException ignored) {
-                        // Unknown achievement
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection");
+                return;
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setString(1, playerId.toString());
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        String achievementName = rs.getString("achievement");
+                        try {
+                            AchievementType achievement = AchievementType.valueOf(achievementName);
+                            progress.unlockAchievement(achievement);
+                        } catch (IllegalArgumentException ignored) {
+                            // Unknown achievement
+                        }
                     }
                 }
             }
@@ -397,6 +422,10 @@ public class AscendPlayerStore {
         };
 
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection");
+                return;
+            }
             conn.setAutoCommit(false);
             try {
                 for (String table : tables) {
@@ -1336,6 +1365,10 @@ public class AscendPlayerStore {
             };
 
             try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+                if (conn == null) {
+                    LOGGER.atWarning().log("Failed to acquire database connection");
+                    return;
+                }
                 conn.setAutoCommit(false);
                 try {
                     for (String table : tables) {
@@ -1517,6 +1550,10 @@ public class AscendPlayerStore {
         String deleteChildSql = "DELETE FROM %s WHERE player_uuid = ?";
 
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection");
+                return;
+            }
             conn.setAutoCommit(false); // Begin transaction
             try (PreparedStatement playerStmt = conn.prepareStatement(playerSql);
                  PreparedStatement mapStmt = conn.prepareStatement(mapSql);
@@ -1738,21 +1775,26 @@ public class AscendPlayerStore {
             """;
 
         List<LeaderboardEntry> entries = new java.util.ArrayList<>();
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    UUID playerId = UUID.fromString(rs.getString("uuid"));
-                    String name = rs.getString("player_name");
-                    double mantissa = rs.getDouble("total_vexa_earned_mantissa");
-                    int exp10 = rs.getInt("total_vexa_earned_exp10");
-                    int ascensions = rs.getInt("ascension_count");
-                    int manualRuns = rs.getInt("total_manual_runs");
-                    long fastest = rs.getLong("fastest_ascension_ms");
-                    Long fastestMs = rs.wasNull() ? null : fastest;
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection");
+                return null;
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        UUID playerId = UUID.fromString(rs.getString("uuid"));
+                        String name = rs.getString("player_name");
+                        double mantissa = rs.getDouble("total_vexa_earned_mantissa");
+                        int exp10 = rs.getInt("total_vexa_earned_exp10");
+                        int ascensions = rs.getInt("ascension_count");
+                        int manualRuns = rs.getInt("total_manual_runs");
+                        long fastest = rs.getLong("fastest_ascension_ms");
+                        Long fastestMs = rs.wasNull() ? null : fastest;
 
-                    entries.add(new LeaderboardEntry(playerId, name, mantissa, exp10, ascensions, manualRuns, fastestMs));
+                        entries.add(new LeaderboardEntry(playerId, name, mantissa, exp10, ascensions, manualRuns, fastestMs));
+                    }
                 }
             }
         } catch (SQLException e) {
@@ -1833,23 +1875,28 @@ public class AscendPlayerStore {
             """;
 
         List<MapLeaderboardEntry> entries = new java.util.ArrayList<>();
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.setString(1, mapId);
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    String name = rs.getString("player_name");
-                    long bestTimeMs = rs.getLong("best_time_ms");
-                    // Enrich null names from in-memory cache
-                    if (name == null || name.isEmpty()) {
-                        try {
-                            UUID pid = UUID.fromString(rs.getString("player_uuid"));
-                            name = playerNames.get(pid);
-                        } catch (IllegalArgumentException ignored) {
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection");
+                return null;
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setString(1, mapId);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        String name = rs.getString("player_name");
+                        long bestTimeMs = rs.getLong("best_time_ms");
+                        // Enrich null names from in-memory cache
+                        if (name == null || name.isEmpty()) {
+                            try {
+                                UUID pid = UUID.fromString(rs.getString("player_uuid"));
+                                name = playerNames.get(pid);
+                            } catch (IllegalArgumentException ignored) {
+                            }
                         }
+                        entries.add(new MapLeaderboardEntry(name, bestTimeMs));
                     }
-                    entries.add(new MapLeaderboardEntry(name, bestTimeMs));
                 }
             }
         } catch (SQLException e) {

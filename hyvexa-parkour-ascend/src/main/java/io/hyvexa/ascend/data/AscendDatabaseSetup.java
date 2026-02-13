@@ -22,8 +22,12 @@ public final class AscendDatabaseSetup {
             return;
         }
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             Statement stmt = conn.createStatement()) {
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection for Ascend table setup");
+                return;
+            }
+            try (Statement stmt = conn.createStatement()) {
 
             stmt.executeUpdate("""
                 CREATE TABLE IF NOT EXISTS ascend_players (
@@ -186,6 +190,7 @@ public final class AscendDatabaseSetup {
             ensureBreakAscensionColumn(conn);
 
             LOGGER.atInfo().log("Ascend database tables ensured");
+            } // close try (Statement stmt)
 
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Failed to create Ascend tables: " + e.getMessage());
@@ -231,25 +236,35 @@ public final class AscendDatabaseSetup {
         if (columnExists(conn, "ascend_player_maps", "multiplier")) {
             return;
         }
-        try (Statement stmt = conn.createStatement()) {
-            stmt.executeUpdate("ALTER TABLE ascend_player_maps ADD COLUMN multiplier DOUBLE NOT NULL DEFAULT 1.0");
-            if (columnExists(conn, "ascend_player_maps", "multiplier_value")
-                && columnExists(conn, "ascend_player_maps", "robot_multiplier_bonus")) {
-                stmt.executeUpdate("""
-                    UPDATE ascend_player_maps
-                    SET multiplier = GREATEST(1.0, multiplier_value + robot_multiplier_bonus)
-                    """);
-                LOGGER.atInfo().log("Migrated multiplier data to new schema");
+        boolean wasAutoCommit = true;
+        try {
+            wasAutoCommit = conn.getAutoCommit();
+            conn.setAutoCommit(false);
+
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("ALTER TABLE ascend_player_maps ADD COLUMN multiplier DOUBLE NOT NULL DEFAULT 1.0");
+                if (columnExists(conn, "ascend_player_maps", "multiplier_value")
+                    && columnExists(conn, "ascend_player_maps", "robot_multiplier_bonus")) {
+                    stmt.executeUpdate("""
+                        UPDATE ascend_player_maps
+                        SET multiplier = GREATEST(1.0, multiplier_value + robot_multiplier_bonus)
+                        """);
+                    LOGGER.atInfo().log("Migrated multiplier data to new schema");
+                }
+                if (columnExists(conn, "ascend_player_maps", "robot_count")) {
+                    stmt.executeUpdate("""
+                        UPDATE ascend_player_maps
+                        SET has_robot = (robot_count > 0)
+                        WHERE robot_count > 0 AND has_robot = FALSE
+                        """);
+                }
             }
-            if (columnExists(conn, "ascend_player_maps", "robot_count")) {
-                stmt.executeUpdate("""
-                    UPDATE ascend_player_maps
-                    SET has_robot = (robot_count > 0)
-                    WHERE robot_count > 0 AND has_robot = FALSE
-                    """);
-            }
+            conn.commit();
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to migrate multiplier schema: " + e.getMessage());
+            try { conn.rollback(); } catch (SQLException re) { /* ignore */ }
+            LOGGER.at(Level.SEVERE).log("Failed to migrate multiplier schema (rolled back): " + e.getMessage());
+        } finally {
+            try { conn.setAutoCommit(wasAutoCommit); } catch (SQLException e) { /* ignore */ }
         }
     }
 
@@ -308,14 +323,40 @@ public final class AscendDatabaseSetup {
         if (columnExists(conn, "ascend_player_summit", "xp_scale_v2")) {
             return; // Already migrated
         }
-        try (Statement stmt = conn.createStatement()) {
-            // Convert all existing XP: new_xp = round(old_xp^(6/7))
-            stmt.executeUpdate("UPDATE ascend_player_summit SET xp = ROUND(POW(GREATEST(xp, 1), 0.857143)) WHERE xp > 0");
-            // Add marker column to prevent re-migration
-            stmt.executeUpdate("ALTER TABLE ascend_player_summit ADD COLUMN xp_scale_v2 TINYINT NOT NULL DEFAULT 1");
+        boolean wasAutoCommit = true;
+        try {
+            wasAutoCommit = conn.getAutoCommit();
+            conn.setAutoCommit(false);
+
+            try (Statement stmt = conn.createStatement()) {
+                // Validate row count before migration
+                long rowCount = 0;
+                try (ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM ascend_player_summit WHERE xp > 0")) {
+                    if (rs.next()) rowCount = rs.getLong(1);
+                }
+
+                // Convert existing XP: new_xp = round(old_xp^(6/7)), with bounds check to avoid POW overflow
+                stmt.executeUpdate("UPDATE ascend_player_summit SET xp = ROUND(POW(LEAST(GREATEST(xp, 1), 9223372036854775807), 0.857143)) WHERE xp > 0");
+
+                // Validate row count after migration
+                long postCount = 0;
+                try (ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM ascend_player_summit WHERE xp > 0")) {
+                    if (rs.next()) postCount = rs.getLong(1);
+                }
+                if (postCount < rowCount) {
+                    throw new SQLException("Row count decreased during migration: " + rowCount + " -> " + postCount);
+                }
+
+                // Add marker column to prevent re-migration
+                stmt.executeUpdate("ALTER TABLE ascend_player_summit ADD COLUMN xp_scale_v2 TINYINT NOT NULL DEFAULT 1");
+            }
+            conn.commit();
             LOGGER.atInfo().log("Migrated Summit XP to new scale (exponent 2.5 -> 2.0)");
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to migrate Summit XP scale: " + e.getMessage());
+            try { conn.rollback(); } catch (SQLException re) { /* ignore */ }
+            LOGGER.at(Level.SEVERE).log("Failed to migrate Summit XP scale (rolled back): " + e.getMessage());
+        } finally {
+            try { conn.setAutoCommit(wasAutoCommit); } catch (SQLException e) { /* ignore */ }
         }
     }
 
@@ -585,32 +626,41 @@ public final class AscendDatabaseSetup {
         if (conn == null) {
             return;
         }
-        // Check if coins column is BIGINT and migrate to DOUBLE
-        try (Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery("SHOW COLUMNS FROM ascend_players LIKE 'coins'")) {
-            if (rs.next()) {
-                String type = rs.getString("Type").toUpperCase();
-                if (type.contains("BIGINT")) {
-                    stmt.executeUpdate("ALTER TABLE ascend_players MODIFY COLUMN coins DOUBLE NOT NULL DEFAULT 0");
-                    LOGGER.atInfo().log("Migrated coins column from BIGINT to DOUBLE");
-                }
-            }
-        } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to migrate coins column: " + e.getMessage());
-        }
+        boolean wasAutoCommit = true;
+        try {
+            wasAutoCommit = conn.getAutoCommit();
+            conn.setAutoCommit(false);
 
-        // Check if total_coins_earned column is BIGINT and migrate to DOUBLE
-        try (Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery("SHOW COLUMNS FROM ascend_players LIKE 'total_coins_earned'")) {
-            if (rs.next()) {
-                String type = rs.getString("Type").toUpperCase();
-                if (type.contains("BIGINT")) {
-                    stmt.executeUpdate("ALTER TABLE ascend_players MODIFY COLUMN total_coins_earned DOUBLE NOT NULL DEFAULT 0");
-                    LOGGER.atInfo().log("Migrated total_coins_earned column from BIGINT to DOUBLE");
+            // Check if coins column is BIGINT and migrate to DOUBLE
+            try (Statement stmt = conn.createStatement();
+                 ResultSet rs = stmt.executeQuery("SHOW COLUMNS FROM ascend_players LIKE 'coins'")) {
+                if (rs.next()) {
+                    String type = rs.getString("Type").toUpperCase();
+                    if (type.contains("BIGINT")) {
+                        stmt.executeUpdate("ALTER TABLE ascend_players MODIFY COLUMN coins DOUBLE NOT NULL DEFAULT 0");
+                        LOGGER.atInfo().log("Migrated coins column from BIGINT to DOUBLE");
+                    }
                 }
             }
+
+            // Check if total_coins_earned column is BIGINT and migrate to DOUBLE
+            try (Statement stmt = conn.createStatement();
+                 ResultSet rs = stmt.executeQuery("SHOW COLUMNS FROM ascend_players LIKE 'total_coins_earned'")) {
+                if (rs.next()) {
+                    String type = rs.getString("Type").toUpperCase();
+                    if (type.contains("BIGINT")) {
+                        stmt.executeUpdate("ALTER TABLE ascend_players MODIFY COLUMN total_coins_earned DOUBLE NOT NULL DEFAULT 0");
+                        LOGGER.atInfo().log("Migrated total_coins_earned column from BIGINT to DOUBLE");
+                    }
+                }
+            }
+
+            conn.commit();
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to migrate total_coins_earned column: " + e.getMessage());
+            try { conn.rollback(); } catch (SQLException re) { /* ignore */ }
+            LOGGER.at(Level.SEVERE).log("Failed to migrate coins columns to DOUBLE (rolled back): " + e.getMessage());
+        } finally {
+            try { conn.setAutoCommit(wasAutoCommit); } catch (SQLException e) { /* ignore */ }
         }
     }
 
@@ -633,47 +683,53 @@ public final class AscendDatabaseSetup {
         if (conn == null) {
             return;
         }
+        boolean wasAutoCommit = true;
+        try {
+            wasAutoCommit = conn.getAutoCommit();
+            conn.setAutoCommit(false);
 
-        // Migrate coins column from DOUBLE to DECIMAL(65,2)
-        try (Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery("SHOW COLUMNS FROM ascend_players LIKE 'coins'")) {
-            if (rs.next()) {
-                String type = rs.getString("Type").toUpperCase();
-                if (type.contains("DOUBLE")) {
-                    stmt.executeUpdate("ALTER TABLE ascend_players MODIFY COLUMN coins DECIMAL(65,2) NOT NULL DEFAULT 0");
-                    LOGGER.atInfo().log("Migrated coins column from DOUBLE to DECIMAL(65,2)");
+            // Migrate coins column from DOUBLE to DECIMAL(65,2)
+            try (Statement stmt = conn.createStatement();
+                 ResultSet rs = stmt.executeQuery("SHOW COLUMNS FROM ascend_players LIKE 'coins'")) {
+                if (rs.next()) {
+                    String type = rs.getString("Type").toUpperCase();
+                    if (type.contains("DOUBLE")) {
+                        stmt.executeUpdate("ALTER TABLE ascend_players MODIFY COLUMN coins DECIMAL(65,2) NOT NULL DEFAULT 0");
+                        LOGGER.atInfo().log("Migrated coins column from DOUBLE to DECIMAL(65,2)");
+                    }
                 }
             }
-        } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to migrate coins column to DECIMAL: " + e.getMessage());
-        }
 
-        // Migrate total_coins_earned column from DOUBLE to DECIMAL(65,2)
-        try (Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery("SHOW COLUMNS FROM ascend_players LIKE 'total_coins_earned'")) {
-            if (rs.next()) {
-                String type = rs.getString("Type").toUpperCase();
-                if (type.contains("DOUBLE")) {
-                    stmt.executeUpdate("ALTER TABLE ascend_players MODIFY COLUMN total_coins_earned DECIMAL(65,2) NOT NULL DEFAULT 0");
-                    LOGGER.atInfo().log("Migrated total_coins_earned column from DOUBLE to DECIMAL(65,2)");
+            // Migrate total_coins_earned column from DOUBLE to DECIMAL(65,2)
+            try (Statement stmt = conn.createStatement();
+                 ResultSet rs = stmt.executeQuery("SHOW COLUMNS FROM ascend_players LIKE 'total_coins_earned'")) {
+                if (rs.next()) {
+                    String type = rs.getString("Type").toUpperCase();
+                    if (type.contains("DOUBLE")) {
+                        stmt.executeUpdate("ALTER TABLE ascend_players MODIFY COLUMN total_coins_earned DECIMAL(65,2) NOT NULL DEFAULT 0");
+                        LOGGER.atInfo().log("Migrated total_coins_earned column from DOUBLE to DECIMAL(65,2)");
+                    }
                 }
             }
-        } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to migrate total_coins_earned column to DECIMAL: " + e.getMessage());
-        }
 
-        // Migrate multiplier column in ascend_player_maps from DOUBLE to DECIMAL(65,20)
-        try (Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery("SHOW COLUMNS FROM ascend_player_maps LIKE 'multiplier'")) {
-            if (rs.next()) {
-                String type = rs.getString("Type").toUpperCase();
-                if (type.contains("DOUBLE")) {
-                    stmt.executeUpdate("ALTER TABLE ascend_player_maps MODIFY COLUMN multiplier DECIMAL(65,20) NOT NULL DEFAULT 1.0");
-                    LOGGER.atInfo().log("Migrated multiplier column from DOUBLE to DECIMAL(65,20)");
+            // Migrate multiplier column in ascend_player_maps from DOUBLE to DECIMAL(65,20)
+            try (Statement stmt = conn.createStatement();
+                 ResultSet rs = stmt.executeQuery("SHOW COLUMNS FROM ascend_player_maps LIKE 'multiplier'")) {
+                if (rs.next()) {
+                    String type = rs.getString("Type").toUpperCase();
+                    if (type.contains("DOUBLE")) {
+                        stmt.executeUpdate("ALTER TABLE ascend_player_maps MODIFY COLUMN multiplier DECIMAL(65,20) NOT NULL DEFAULT 1.0");
+                        LOGGER.atInfo().log("Migrated multiplier column from DOUBLE to DECIMAL(65,20)");
+                    }
                 }
             }
+
+            conn.commit();
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to migrate multiplier column to DECIMAL: " + e.getMessage());
+            try { conn.rollback(); } catch (SQLException re) { /* ignore */ }
+            LOGGER.at(Level.SEVERE).log("Failed to migrate columns to DECIMAL (rolled back): " + e.getMessage());
+        } finally {
+            try { conn.setAutoCommit(wasAutoCommit); } catch (SQLException e) { /* ignore */ }
         }
     }
 
@@ -704,68 +760,77 @@ public final class AscendDatabaseSetup {
             {"elevation_accumulated_coins", "elevation_accumulated_vexa_mantissa", "elevation_accumulated_vexa_exp10", "0"}
         };
 
-        try (Statement stmt = conn.createStatement()) {
-            // Add new columns for ascend_players
-            for (String[] col : playerColumns) {
-                String oldCol = col[0];
-                String mantissaCol = col[1];
-                String exp10Col = col[2];
+        boolean wasAutoCommit = true;
+        try {
+            wasAutoCommit = conn.getAutoCommit();
+            conn.setAutoCommit(false);
 
-                if (!columnExists(conn, "ascend_players", oldCol)) {
-                    // Column doesn't exist yet (fresh install or already dropped) — ensure new columns exist
-                    if (!columnExists(conn, "ascend_players", mantissaCol)) {
-                        stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN " + mantissaCol + " DOUBLE NOT NULL DEFAULT 0");
-                        stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN " + exp10Col + " INT NOT NULL DEFAULT 0");
+            try (Statement stmt = conn.createStatement()) {
+                // Add new columns for ascend_players
+                for (String[] col : playerColumns) {
+                    String oldCol = col[0];
+                    String mantissaCol = col[1];
+                    String exp10Col = col[2];
+
+                    if (!columnExists(conn, "ascend_players", oldCol)) {
+                        // Column doesn't exist yet (fresh install or already dropped) — ensure new columns exist
+                        if (!columnExists(conn, "ascend_players", mantissaCol)) {
+                            stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN " + mantissaCol + " DOUBLE NOT NULL DEFAULT 0");
+                            stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN " + exp10Col + " INT NOT NULL DEFAULT 0");
+                        }
+                        continue;
                     }
-                    continue;
+
+                    // Add new columns
+                    stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN " + mantissaCol + " DOUBLE NOT NULL DEFAULT 0");
+                    stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN " + exp10Col + " INT NOT NULL DEFAULT 0");
+
+                    // Populate from old values (with bounds check: ABS must be > 0 for LOG10)
+                    stmt.executeUpdate(
+                        "UPDATE ascend_players SET " +
+                        mantissaCol + " = CASE WHEN " + oldCol + " = 0 THEN 0 ELSE " + oldCol + " / POW(10, FLOOR(LOG10(GREATEST(ABS(" + oldCol + "), 1)))) END, " +
+                        exp10Col + " = CASE WHEN " + oldCol + " = 0 THEN 0 ELSE FLOOR(LOG10(GREATEST(ABS(" + oldCol + "), 1))) END " +
+                        "WHERE " + oldCol + " IS NOT NULL AND " + oldCol + " != 0"
+                    );
+
+                    // Drop old column
+                    stmt.executeUpdate("ALTER TABLE ascend_players DROP COLUMN " + oldCol);
+                    LOGGER.atInfo().log("Migrated " + oldCol + " to " + mantissaCol + " + " + exp10Col);
                 }
 
-                // Add new columns
-                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN " + mantissaCol + " DOUBLE NOT NULL DEFAULT 0");
-                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN " + exp10Col + " INT NOT NULL DEFAULT 0");
+                // Migrate ascend_player_maps: multiplier
+                if (columnExists(conn, "ascend_player_maps", "multiplier")
+                    && !columnExists(conn, "ascend_player_maps", "multiplier_mantissa")) {
 
-                // Populate from old values
-                stmt.executeUpdate(
-                    "UPDATE ascend_players SET " +
-                    mantissaCol + " = CASE WHEN " + oldCol + " = 0 THEN 0 ELSE " + oldCol + " / POW(10, FLOOR(LOG10(ABS(" + oldCol + ")))) END, " +
-                    exp10Col + " = CASE WHEN " + oldCol + " = 0 THEN 0 ELSE FLOOR(LOG10(ABS(" + oldCol + "))) END " +
-                    "WHERE " + oldCol + " IS NOT NULL AND " + oldCol + " != 0"
-                );
+                    stmt.executeUpdate("ALTER TABLE ascend_player_maps ADD COLUMN multiplier_mantissa DOUBLE NOT NULL DEFAULT 1.0");
+                    stmt.executeUpdate("ALTER TABLE ascend_player_maps ADD COLUMN multiplier_exp10 INT NOT NULL DEFAULT 0");
 
-                // Drop old column
-                stmt.executeUpdate("ALTER TABLE ascend_players DROP COLUMN " + oldCol);
-                LOGGER.atInfo().log("Migrated " + oldCol + " to " + mantissaCol + " + " + exp10Col);
+                    // Populate: multiplier is always >= 1.0
+                    stmt.executeUpdate(
+                        "UPDATE ascend_player_maps SET " +
+                        "multiplier_mantissa = CASE WHEN multiplier <= 0 THEN 1.0 " +
+                            "WHEN multiplier < 10 THEN multiplier " +
+                            "ELSE multiplier / POW(10, FLOOR(LOG10(GREATEST(ABS(multiplier), 1)))) END, " +
+                        "multiplier_exp10 = CASE WHEN multiplier < 10 THEN 0 " +
+                            "ELSE FLOOR(LOG10(GREATEST(ABS(multiplier), 1))) END " +
+                        "WHERE multiplier IS NOT NULL"
+                    );
+
+                    stmt.executeUpdate("ALTER TABLE ascend_player_maps DROP COLUMN multiplier");
+                    LOGGER.atInfo().log("Migrated multiplier to multiplier_mantissa + multiplier_exp10");
+                } else if (!columnExists(conn, "ascend_player_maps", "multiplier_mantissa")) {
+                    // Fresh install, no old multiplier column — ensure new columns
+                    stmt.executeUpdate("ALTER TABLE ascend_player_maps ADD COLUMN multiplier_mantissa DOUBLE NOT NULL DEFAULT 1.0");
+                    stmt.executeUpdate("ALTER TABLE ascend_player_maps ADD COLUMN multiplier_exp10 INT NOT NULL DEFAULT 0");
+                }
             }
-
-            // Migrate ascend_player_maps: multiplier
-            if (columnExists(conn, "ascend_player_maps", "multiplier")
-                && !columnExists(conn, "ascend_player_maps", "multiplier_mantissa")) {
-
-                stmt.executeUpdate("ALTER TABLE ascend_player_maps ADD COLUMN multiplier_mantissa DOUBLE NOT NULL DEFAULT 1.0");
-                stmt.executeUpdate("ALTER TABLE ascend_player_maps ADD COLUMN multiplier_exp10 INT NOT NULL DEFAULT 0");
-
-                // Populate: multiplier is always >= 1.0
-                stmt.executeUpdate(
-                    "UPDATE ascend_player_maps SET " +
-                    "multiplier_mantissa = CASE WHEN multiplier <= 0 THEN 1.0 " +
-                        "WHEN multiplier < 10 THEN multiplier " +
-                        "ELSE multiplier / POW(10, FLOOR(LOG10(ABS(multiplier)))) END, " +
-                    "multiplier_exp10 = CASE WHEN multiplier < 10 THEN 0 " +
-                        "ELSE FLOOR(LOG10(ABS(multiplier))) END " +
-                    "WHERE multiplier IS NOT NULL"
-                );
-
-                stmt.executeUpdate("ALTER TABLE ascend_player_maps DROP COLUMN multiplier");
-                LOGGER.atInfo().log("Migrated multiplier to multiplier_mantissa + multiplier_exp10");
-            } else if (!columnExists(conn, "ascend_player_maps", "multiplier_mantissa")) {
-                // Fresh install, no old multiplier column — ensure new columns
-                stmt.executeUpdate("ALTER TABLE ascend_player_maps ADD COLUMN multiplier_mantissa DOUBLE NOT NULL DEFAULT 1.0");
-                stmt.executeUpdate("ALTER TABLE ascend_player_maps ADD COLUMN multiplier_exp10 INT NOT NULL DEFAULT 0");
-            }
-
+            conn.commit();
             LOGGER.atInfo().log("Scientific notation migration complete");
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to migrate to scientific notation: " + e.getMessage());
+            try { conn.rollback(); } catch (SQLException re) { /* ignore */ }
+            LOGGER.at(Level.SEVERE).log("Failed to migrate to scientific notation (rolled back): " + e.getMessage());
+        } finally {
+            try { conn.setAutoCommit(wasAutoCommit); } catch (SQLException e) { /* ignore */ }
         }
     }
 
@@ -844,15 +909,25 @@ public final class AscendDatabaseSetup {
             {"elevation_accumulated_coins_exp10", "elevation_accumulated_vexa_exp10"}
         };
 
-        try (Statement stmt = conn.createStatement()) {
-            for (String[] rename : renames) {
-                if (columnExists(conn, "ascend_players", rename[0])) {
-                    stmt.executeUpdate("ALTER TABLE ascend_players RENAME COLUMN " + rename[0] + " TO " + rename[1]);
+        boolean wasAutoCommit = true;
+        try {
+            wasAutoCommit = conn.getAutoCommit();
+            conn.setAutoCommit(false);
+
+            try (Statement stmt = conn.createStatement()) {
+                for (String[] rename : renames) {
+                    if (columnExists(conn, "ascend_players", rename[0])) {
+                        stmt.executeUpdate("ALTER TABLE ascend_players RENAME COLUMN " + rename[0] + " TO " + rename[1]);
+                    }
                 }
             }
+            conn.commit();
             LOGGER.atInfo().log("Renamed coins columns to vexa in ascend_players");
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to rename coins columns to vexa: " + e.getMessage());
+            try { conn.rollback(); } catch (SQLException re) { /* ignore */ }
+            LOGGER.at(Level.SEVERE).log("Failed to rename coins columns to vexa (rolled back): " + e.getMessage());
+        } finally {
+            try { conn.setAutoCommit(wasAutoCommit); } catch (SQLException e) { /* ignore */ }
         }
     }
 }

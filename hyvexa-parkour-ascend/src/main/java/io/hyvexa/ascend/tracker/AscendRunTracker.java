@@ -77,6 +77,15 @@ public class AscendRunTracker {
             return;
         }
 
+        // Cancel existing active run if present to avoid inconsistent state
+        ActiveRun existing = activeRuns.remove(playerId);
+        if (existing != null) {
+            showRunnersAndReapplyVisibility(playerId, existing.mapId);
+            if (ghostRecorder != null) {
+                ghostRecorder.cancelRecording(playerId);
+            }
+        }
+
         pendingRuns.remove(playerId);
         activeRuns.put(playerId, new ActiveRun(mapId, System.currentTimeMillis()));
 
