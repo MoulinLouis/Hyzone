@@ -3,6 +3,7 @@ package io.hyvexa.parkour.tracker;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.Message;
@@ -33,6 +34,7 @@ import java.util.concurrent.TimeUnit;
 /** Checkpoint detection and finish logic extracted from RunTracker. */
 class RunValidator {
 
+    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final double TOUCH_RADIUS_SQ = ParkourConstants.TOUCH_RADIUS * ParkourConstants.TOUCH_RADIUS;
     private static final String CHECKPOINT_HUD_BG_FAST = "#1E4A7A";
     private static final String CHECKPOINT_HUD_BG_SLOW = "#6A1E1E";
@@ -391,10 +393,12 @@ class RunValidator {
         long currentElapsedMs = getRunElapsedMs(run);
         if (run == null || run.waitingForStart || previousPosition == null || currentPosition == null
                 || target == null || deltaMs <= 0.0) {
+            LOGGER.atFine().log("resolveInterpolatedTimeMs: fallback (invalid inputs, deltaMs=%.3f)", deltaMs);
             return currentElapsedMs;
         }
         double t = segmentSphereIntersectionT(previousPosition, currentPosition, target, ParkourConstants.TOUCH_RADIUS);
         if (!Double.isFinite(t)) {
+            LOGGER.atFine().log("resolveInterpolatedTimeMs: fallback (non-finite t=%.4f)", t);
             return currentElapsedMs;
         }
         long interpolated = previousElapsedMs + Math.round(deltaMs * t);
@@ -403,6 +407,7 @@ class RunValidator {
 
     private static double segmentSphereIntersectionT(Vector3d from, Vector3d to, TransformData target, double radius) {
         if (from == null || to == null || target == null) {
+            LOGGER.atFine().log("segmentSphereIntersectionT: NaN (null inputs)");
             return Double.NaN;
         }
         double dx = to.getX() - from.getX();
@@ -410,6 +415,7 @@ class RunValidator {
         double dz = to.getZ() - from.getZ();
         double a = dx * dx + dy * dy + dz * dz;
         if (a <= 1e-9) {
+            LOGGER.atFine().log("segmentSphereIntersectionT: NaN (zero-length segment, a=%.9f)", a);
             return Double.NaN;
         }
         double fx = from.getX() - target.getX();
@@ -419,6 +425,7 @@ class RunValidator {
         double c = fx * fx + fy * fy + fz * fz - radius * radius;
         double discriminant = b * b - 4.0 * a * c;
         if (discriminant < 0.0) {
+            LOGGER.atFine().log("segmentSphereIntersectionT: NaN (no intersection, discriminant=%.4f)", discriminant);
             return Double.NaN;
         }
         double sqrt = Math.sqrt(discriminant);
@@ -430,6 +437,7 @@ class RunValidator {
         if (t2 >= 0.0 && t2 <= 1.0) {
             return t2;
         }
+        LOGGER.atFine().log("segmentSphereIntersectionT: NaN (roots outside [0,1], t1=%.4f, t2=%.4f)", t1, t2);
         return Double.NaN;
     }
 

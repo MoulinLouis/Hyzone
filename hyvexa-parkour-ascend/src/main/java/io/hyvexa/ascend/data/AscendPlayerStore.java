@@ -1143,6 +1143,10 @@ public class AscendPlayerStore {
         persistence.invalidateLeaderboardCache();
     }
 
+    public void invalidateMapLeaderboardCache(String mapId) {
+        persistence.invalidateMapLeaderboardCache(mapId);
+    }
+
     public List<MapLeaderboardEntry> getMapLeaderboard(String mapId) {
         return persistence.getMapLeaderboard(mapId);
     }

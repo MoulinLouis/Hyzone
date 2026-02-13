@@ -316,14 +316,23 @@ public class AscendRunTracker {
         playerStore.incrementTotalManualRuns(playerId);
         playerStore.incrementConsecutiveManualRuns(playerId);
 
-        // Calculate completion time and check for personal best
+        // Calculate completion time and validate range
         long completionTimeMs = System.currentTimeMillis() - run.startTimeMs;
+        long maxReasonableMs = map.getEffectiveBaseRunTimeMs() * 10;
+        boolean validTime = completionTimeMs >= 500 && completionTimeMs <= maxReasonableMs;
+        if (!validTime) {
+            LOGGER.atWarning().log("Rejected suspicious completion time %dms for player %s on map %s (valid range: 500-%dms)",
+                completionTimeMs, playerId, map.getId(), maxReasonableMs);
+        }
+
         Long previousBest = mapProgress.getBestTimeMs();
-        boolean isPersonalBest = previousBest == null || completionTimeMs < previousBest;
+        boolean isPersonalBest = validTime && (previousBest == null || completionTimeMs < previousBest);
 
         if (isPersonalBest) {
             mapProgress.setBestTimeMs(completionTimeMs);
             playerStore.markDirty(playerId);
+            playerStore.invalidateMapLeaderboardCache(run.mapId);
+            playerStore.invalidateLeaderboardCache();
         }
 
         // Stop ghost recording and save if personal best
