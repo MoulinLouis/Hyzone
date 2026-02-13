@@ -468,7 +468,7 @@ public class RunTracker {
         if (run.practiceEnabled && map.hasFlyZone()) {
             if (!isInsideFlyZone(position, map)) {
                 long now = System.currentTimeMillis();
-                if (now - run.lastFlyZoneRollbackMs >= 500L) {
+                if (now - run.lastFlyZoneRollbackMs >= ParkourConstants.FLY_ZONE_ROLLBACK_THROTTLE_MS) {
                     run.lastFlyZoneRollbackMs = now;
                     player.sendMessage(SystemMessageUtils.parkourWarn("You don't have the right to go there."));
                     double[] rollback = run.lastValidFlyPosition;
@@ -509,7 +509,7 @@ public class RunTracker {
             stats.recordFailure(run.mapId);
 
             SessionStats.MapSessionData mapData = stats.getStats(run.mapId);
-            if (mapData.failureCount >= 5 && !mapData.recommendationShown && run.lastCheckpointIndex < 0 && !run.practiceEnabled) {
+            if (mapData.failureCount >= ParkourConstants.RECOMMENDATION_FAILURE_THRESHOLD && !mapData.recommendationShown && run.lastCheckpointIndex < 0 && !run.practiceEnabled) {
                 mapData.recommendationShown = true;
 
                 World world = store.getExternalData().getWorld();
@@ -527,7 +527,7 @@ public class RunTracker {
                 }, world).orTimeout(5, TimeUnit.SECONDS).exceptionally(ex -> null);
             }
 
-            if (mapData.failureCount == 3 && !mapData.practiceHintShown && !run.practiceEnabled) {
+            if (mapData.failureCount == ParkourConstants.PRACTICE_HINT_FAILURE_THRESHOLD && !mapData.practiceHintShown && !run.practiceEnabled) {
                 mapData.practiceHintShown = true;
 
                 World world = store.getExternalData().getWorld();
