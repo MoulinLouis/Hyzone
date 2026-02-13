@@ -51,6 +51,18 @@ import java.util.stream.Collectors;
 
 public class RobotManager {
 
+    /*
+     * Threading model:
+     * - robots, onlinePlayers, orphanedRunnerUuids, teleportWarningByRobot, pendingRemovals:
+     *   ConcurrentHashMap (thread-safe by construction).
+     * - npcPlugin: volatile, set once in start(), thereafter read-only.
+     * - cleanupPending: volatile flag.
+     * - lastRefreshMs, lastAutoUpgradeMs: volatile, read/written from scheduled executor tick.
+     * - tickTask: only accessed in start()/stop() (single-threaded lifecycle).
+     *
+     * Entity operations (spawn/despawn) must run on the World thread via world.execute().
+     */
+
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final String RUNNER_UUIDS_FILE = "runner_uuids.txt";
     private static final long AUTO_UPGRADE_INTERVAL_MS = 400L;
@@ -66,10 +78,10 @@ public class RobotManager {
     // Pending removals: entityUuid -> entityRef (queued during ECS tick, processed outside)
     private final Map<UUID, Ref<EntityStore>> pendingRemovals = new ConcurrentHashMap<>();
     private ScheduledFuture<?> tickTask;
-    private long lastRefreshMs;
+    private volatile long lastRefreshMs;
     private volatile NPCPlugin npcPlugin;
     private volatile boolean cleanupPending = false;
-    private long lastAutoUpgradeMs = 0;
+    private volatile long lastAutoUpgradeMs = 0;
 
     public RobotManager(AscendMapStore mapStore, AscendPlayerStore playerStore, GhostStore ghostStore) {
         this.mapStore = mapStore;
