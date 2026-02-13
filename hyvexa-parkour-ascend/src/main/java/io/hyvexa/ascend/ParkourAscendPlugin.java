@@ -67,7 +67,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.logging.Level;
+
 
 public class ParkourAscendPlugin extends JavaPlugin {
 
@@ -111,7 +111,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
         try {
             DatabaseManager.getInstance().initialize();
         } catch (Exception e) {
-            LOGGER.at(Level.WARNING).withCause(e).log("Failed to initialize database for Ascend");
+            LOGGER.atWarning().withCause(e).log("Failed to initialize database for Ascend");
         }
 
         AscendDatabaseSetup.ensureTables();
@@ -138,7 +138,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
             settingsStore = new AscendSettingsStore();
             settingsStore.syncLoad();
         } catch (Exception e) {
-            LOGGER.at(Level.SEVERE).withCause(e).log("Failed to initialize core stores for Ascend — plugin will not function");
+            LOGGER.atSevere().withCause(e).log("Failed to initialize core stores for Ascend — plugin will not function");
             return;
         }
 
@@ -150,7 +150,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
             ghostRecorder = new GhostRecorder(ghostStore);
             ghostRecorder.start();
         } catch (Exception e) {
-            LOGGER.at(Level.WARNING).withCause(e).log("Failed to initialize ghost system");
+            LOGGER.atWarning().withCause(e).log("Failed to initialize ghost system");
         }
 
         // Pass ghost dependencies to managers
@@ -163,7 +163,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
             robotManager = new RobotManager(mapStore, playerStore, ghostStore);
             robotManager.start();
         } catch (Exception e) {
-            LOGGER.at(Level.WARNING).withCause(e).log("Failed to initialize robot manager");
+            LOGGER.atWarning().withCause(e).log("Failed to initialize robot manager");
         }
         ascensionManager = new AscensionManager(playerStore, runTracker);
         challengeManager = new ChallengeManager(playerStore, mapStore, runTracker);
@@ -185,7 +185,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
                 }
             }
         } catch (Exception e) {
-            LOGGER.at(Level.WARNING).withCause(e).log("Failed to initialize holograms");
+            LOGGER.atWarning().withCause(e).log("Failed to initialize holograms");
         }
 
         getCommandRegistry().registerCommand(new AscendCommand());
@@ -271,11 +271,11 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     hudManager.attach(playerRef, player);
                     AscendMusicPage.applyStoredMusic(playerRef);
                 }, world).orTimeout(5, TimeUnit.SECONDS).exceptionally(ex -> {
-                    LOGGER.at(Level.WARNING).withCause(ex).log("Exception in PlayerReadyEvent async task");
+                    LOGGER.atWarning().withCause(ex).log("Exception in PlayerReadyEvent async task");
                     return null;
                 });
             } catch (Exception e) {
-                LOGGER.at(Level.WARNING).log("Exception in PlayerReadyEvent (ascend): " + e.getMessage());
+                LOGGER.atWarning().log("Exception in PlayerReadyEvent (ascend): " + e.getMessage());
             }
         });
 
@@ -310,7 +310,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     passiveEarningsManager.onPlayerLeaveAscend(playerId);
                 }
             } catch (Exception e) {
-                LOGGER.at(Level.WARNING).log("Exception in AddPlayerToWorldEvent (ascend): " + e.getMessage());
+                LOGGER.atWarning().log("Exception in AddPlayerToWorldEvent (ascend): " + e.getMessage());
             }
         });
 
@@ -329,44 +329,44 @@ public class ParkourAscendPlugin extends JavaPlugin {
                 if (passiveEarningsManager != null && playersInAscendWorld.remove(playerId)) {
                     passiveEarningsManager.onPlayerLeaveAscend(playerId);
                 }
-            } catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Disconnect cleanup: passiveEarnings"); }
+            } catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: passiveEarnings"); }
 
             try { AscendCommand.onPlayerDisconnect(playerId); }
-            catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Disconnect cleanup: AscendCommand"); }
+            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: AscendCommand"); }
 
             try { playerRefCache.remove(playerId); }
-            catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Disconnect cleanup: playerRefCache"); }
+            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: playerRefCache"); }
 
             try { AscendMapSelectPage.clearBuyAllCooldown(playerId); }
-            catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Disconnect cleanup: clearBuyAllCooldown"); }
+            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: clearBuyAllCooldown"); }
 
             try { BaseAscendPage.removeCurrentPage(playerId); }
-            catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Disconnect cleanup: removeCurrentPage"); }
+            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: removeCurrentPage"); }
 
             try { AscendLeaveInteraction.clearPendingLeave(playerId); }
-            catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Disconnect cleanup: clearPendingLeave"); }
+            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: clearPendingLeave"); }
 
             try { AscendSettingsPage.clearPlayer(playerId); }
-            catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Disconnect cleanup: AscendSettingsPage"); }
+            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: AscendSettingsPage"); }
 
             try { AscendMusicPage.clearPlayer(playerId); }
-            catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Disconnect cleanup: AscendMusicPage"); }
+            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: AscendMusicPage"); }
 
             try { hudManager.removePlayer(playerId); }
-            catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Disconnect cleanup: hudManager"); }
+            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: hudManager"); }
 
             try { if (runTracker != null) { runTracker.cancelRun(playerId); } }
-            catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Disconnect cleanup: runTracker"); }
+            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: runTracker"); }
 
             try { if (robotManager != null) { robotManager.onPlayerLeave(playerId); } }
-            catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Disconnect cleanup: robotManager"); }
+            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: robotManager"); }
 
             try { if (challengeManager != null) { challengeManager.onPlayerDisconnect(playerId); } }
-            catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Disconnect cleanup: challengeManager"); }
+            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: challengeManager"); }
 
             // Evict player from cache (lazy loading - saves memory)
             try { if (playerStore != null) { playerStore.removePlayer(playerId); } }
-            catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Disconnect cleanup: playerStore"); }
+            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: playerStore"); }
         });
 
         tickTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(
@@ -378,25 +378,25 @@ public class ParkourAscendPlugin extends JavaPlugin {
     @Override
     protected void shutdown() {
         try { if (tickTask != null) { tickTask.cancel(false); tickTask = null; } }
-        catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Shutdown: tickTask cancel"); }
+        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: tickTask cancel"); }
 
         try { worldTickInFlight.clear(); }
-        catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Shutdown: worldTickInFlight clear"); }
+        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: worldTickInFlight clear"); }
 
         try { playersInAscendWorld.clear(); }
-        catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Shutdown: playersInAscendWorld clear"); }
+        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: playersInAscendWorld clear"); }
 
         try { if (ghostRecorder != null) { ghostRecorder.stop(); } }
-        catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Shutdown: ghostRecorder stop"); }
+        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: ghostRecorder stop"); }
 
         try { if (robotManager != null) { robotManager.stop(); } }
-        catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Shutdown: robotManager stop"); }
+        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: robotManager stop"); }
 
         try { if (playerStore != null) { playerStore.flushPendingSave(); } }
-        catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Shutdown: playerStore flush"); }
+        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: playerStore flush"); }
 
         try { WhitelistRegistry.unregister(); }
-        catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Shutdown: whitelist unregister"); }
+        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: whitelist unregister"); }
     }
 
     public static ParkourAscendPlugin getInstance() {
@@ -509,7 +509,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     inFlight.set(false);
                 }
             }, world).orTimeout(5, TimeUnit.SECONDS).exceptionally(ex -> {
-                LOGGER.at(Level.WARNING).withCause(ex).log("Exception in tick async task");
+                LOGGER.atWarning().withCause(ex).log("Exception in tick async task");
                 return null;
             });
         }
@@ -571,7 +571,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
                 TimeUnit.MILLISECONDS
             );
         }, expectedWorld).orTimeout(5, TimeUnit.SECONDS).exceptionally(ex -> {
-            LOGGER.at(Level.WARNING).withCause(ex).log("Exception while syncing Ascend inventory after world switch");
+            LOGGER.atWarning().withCause(ex).log("Exception while syncing Ascend inventory after world switch");
             return null;
         });
     }

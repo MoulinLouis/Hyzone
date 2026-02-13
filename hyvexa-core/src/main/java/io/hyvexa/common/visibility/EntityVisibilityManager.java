@@ -52,16 +52,17 @@ public final class EntityVisibilityManager {
             hiddenByViewer.clear();
             return;
         }
-        for (var entry : hiddenByViewer.entrySet()) {
-            UUID viewerId = entry.getKey();
-            if (!onlinePlayers.contains(viewerId)) {
-                hiddenByViewer.remove(viewerId);
+        var it = hiddenByViewer.entrySet().iterator();
+        while (it.hasNext()) {
+            var entry = it.next();
+            if (!onlinePlayers.contains(entry.getKey())) {
+                it.remove();
                 continue;
             }
             Set<UUID> hidden = entry.getValue();
             hidden.removeIf(id -> !onlinePlayers.contains(id));
             if (hidden.isEmpty()) {
-                hiddenByViewer.remove(viewerId, hidden);
+                it.remove();
             }
         }
     }

@@ -8,6 +8,9 @@ public final class ModeGate {
     private ModeGate() {
     }
 
+    /**
+     * Returns false if world or world name is null (safe to call without null checks).
+     */
     public static boolean isWorld(World world, String expectedName) {
         if (world == null || world.getName() == null) {
             return false;

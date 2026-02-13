@@ -23,7 +23,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.logging.Level;
 
 /**
  * Plays the ascension cinematic (~10 seconds) with camera orbit, particles, and sounds.
@@ -310,7 +309,7 @@ public class AscensionCinematic {
             return;
         }
         LAST_WARNING_BY_PHASE.put(key, now);
-        LOGGER.at(Level.WARNING).withCause(error)
+        LOGGER.atWarning().withCause(error)
                 .log("Ascension cinematic warning player=" + playerId + " phase=" + phaseId);
     }
 

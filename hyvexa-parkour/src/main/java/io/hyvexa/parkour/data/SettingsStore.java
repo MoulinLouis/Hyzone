@@ -15,7 +15,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.logging.Level;
 
 /** MySQL-backed storage for parkour settings and spawn configuration. */
 public class SettingsStore {
@@ -101,7 +100,7 @@ public class SettingsStore {
                                         }
                                     }
                                 } catch (RuntimeException e) {
-                                    LOGGER.at(Level.WARNING).log("Failed to parse category order: " + e.getMessage());
+                                    LOGGER.atWarning().log("Failed to parse category order: " + e.getMessage());
                                 }
                             }
                         } finally {
@@ -116,7 +115,7 @@ public class SettingsStore {
                 }
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to load SettingsStore from database: " + e.getMessage());
+            LOGGER.atSevere().log("Failed to load SettingsStore from database: " + e.getMessage());
         }
     }
 
@@ -150,7 +149,7 @@ public class SettingsStore {
                 stmt.executeUpdate();
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to insert default settings: " + e.getMessage());
+            LOGGER.atSevere().log("Failed to insert default settings: " + e.getMessage());
         }
     }
 
@@ -209,7 +208,7 @@ public class SettingsStore {
                 stmt.executeUpdate();
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to save SettingsStore to database: " + e.getMessage());
+            LOGGER.atSevere().log("Failed to save SettingsStore to database: " + e.getMessage());
         }
     }
 

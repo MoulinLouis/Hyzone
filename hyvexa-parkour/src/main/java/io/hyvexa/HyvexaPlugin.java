@@ -95,13 +95,11 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
 
 public class HyvexaPlugin extends JavaPlugin {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final long PLAYER_COUNT_SAMPLE_SECONDS = PlayerCountStore.DEFAULT_SAMPLE_INTERVAL_SECONDS;
-    private static final boolean DISABLE_WORLD_MAP = true; // Parkour server doesn't need world map
     public static final String PARKOUR_WORLD_NAME = WorldConstants.WORLD_PARKOUR;
     private static final String DISCORD_URL = "https://discord.gg/2PAygkyFnK";
     private static final String JOIN_LANGUAGE_NOTICE =
@@ -164,7 +162,7 @@ public class HyvexaPlugin extends JavaPlugin {
             DatabaseManager.getInstance().initialize();
             LOGGER.atInfo().log("Database connection initialized");
         } catch (Exception e) {
-            LOGGER.at(Level.SEVERE).withCause(e).log("Failed to initialize database");
+            LOGGER.atSevere().withCause(e).log("Failed to initialize database");
         }
         this.collisionManager = new CollisionManager();
         this.mapStore = new MapStore();
@@ -206,7 +204,7 @@ public class HyvexaPlugin extends JavaPlugin {
         this.leaderboardHologramManager = new LeaderboardHologramManager(progressStore, mapStore, PARKOUR_WORLD_NAME);
         this.inventorySyncManager = new InventorySyncManager(mapStore, progressStore, runTracker,
                 this::shouldApplyParkourMode, DISCORD_URL, JOIN_LANGUAGE_NOTICE, JOIN_LANGUAGE_NOTICE_SUFFIX);
-        this.worldMapManager = new WorldMapManager(DISABLE_WORLD_MAP);
+        this.worldMapManager = new WorldMapManager(true);
         this.playtimeManager.setOnlineCount(Universe.get().getPlayers().size());
         registerRunTrackerTickSystem();
         hudUpdateTask = scheduleTick("hud updates", this::tickHudUpdates,
@@ -258,7 +256,7 @@ public class HyvexaPlugin extends JavaPlugin {
             try {
                 collisionManager.disablePlayerCollision(event.getPlayerRef());
             } catch (Exception e) {
-                LOGGER.at(Level.WARNING).withCause(e).log("Exception in PlayerReadyEvent (collision)");
+                LOGGER.atWarning().withCause(e).log("Exception in PlayerReadyEvent (collision)");
             }
             try {
                 if (runTracker != null) {
@@ -285,7 +283,7 @@ public class HyvexaPlugin extends JavaPlugin {
                     }
                 }
             } catch (Exception e) {
-                LOGGER.at(Level.WARNING).withCause(e).log("Exception in PlayerReadyEvent (setup)");
+                LOGGER.atWarning().withCause(e).log("Exception in PlayerReadyEvent (setup)");
             }
         });
         collisionManager.disableAllCollisions();
@@ -309,7 +307,7 @@ public class HyvexaPlugin extends JavaPlugin {
             try {
                 event.setBroadcastJoinMessage(false);
             } catch (Exception e) {
-                LOGGER.at(Level.WARNING).withCause(e).log("Exception in AddPlayerToWorldEvent");
+                LOGGER.atWarning().withCause(e).log("Exception in AddPlayerToWorldEvent");
             }
         });
         this.getEventRegistry().registerGlobal(PlayerDisconnectEvent.class, event -> {
@@ -318,14 +316,14 @@ public class HyvexaPlugin extends JavaPlugin {
                 UUID playerId = event.getPlayerRef().getUuid();
 
                 try { if (duelTracker != null) { duelTracker.handleDisconnect(playerId); } }
-                catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Disconnect cleanup: duelTracker"); }
+                catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: duelTracker"); }
 
                 try { cleanupManager.handleDisconnect(event.getPlayerRef()); }
-                catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Disconnect cleanup: cleanupManager"); }
+                catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: cleanupManager"); }
             }
 
             try { playtimeManager.decrementOnlineCount(); }
-            catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Disconnect cleanup: playtimeManager"); }
+            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: playtimeManager"); }
         });
         for (PlayerRef playerRef : Universe.get().getPlayers()) {
             inventorySyncManager.syncRunInventoryOnConnect(playerRef);
@@ -335,7 +333,7 @@ public class HyvexaPlugin extends JavaPlugin {
             try {
                 event.setFormatter((sender, content) -> chatFormatter.formatChatMessage(sender, content));
             } catch (Exception e) {
-                LOGGER.at(Level.WARNING).withCause(e).log("Exception in PlayerChatEvent");
+                LOGGER.atWarning().withCause(e).log("Exception in PlayerChatEvent");
             }
         });
 
@@ -452,7 +450,7 @@ public class HyvexaPlugin extends JavaPlugin {
             try {
                 refreshLeaderboardHologram();
             } catch (Exception e) {
-                LOGGER.at(Level.WARNING).withCause(e).log("Failed to refresh leaderboard hologram");
+                LOGGER.atWarning().withCause(e).log("Failed to refresh leaderboard hologram");
             }
         }, ParkourTimingConstants.LEADERBOARD_HOLOGRAM_REFRESH_DELAY_SECONDS, TimeUnit.SECONDS);
     }
@@ -532,16 +530,7 @@ public class HyvexaPlugin extends JavaPlugin {
         }
     }
 
-    private static final class PlayerTickContext {
-        private final PlayerRef playerRef;
-        private final Ref<EntityStore> ref;
-        private final Store<EntityStore> store;
-
-        private PlayerTickContext(PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
-            this.playerRef = playerRef;
-            this.ref = ref;
-            this.store = store;
-        }
+    private record PlayerTickContext(PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
     }
 
     public RunTracker getRunTracker() {
@@ -625,12 +614,12 @@ public class HyvexaPlugin extends JavaPlugin {
         try {
             collisionManager.disablePlayerCollision(playerRef);
         } catch (Exception e) {
-            LOGGER.at(Level.WARNING).withCause(e).log("Exception in PlayerConnectEvent (collision)");
+            LOGGER.atWarning().withCause(e).log("Exception in PlayerConnectEvent (collision)");
         }
         try {
             playtimeManager.incrementOnlineCount();
         } catch (Exception e) {
-            LOGGER.at(Level.WARNING).withCause(e).log("Exception in PlayerConnectEvent (count)");
+            LOGGER.atWarning().withCause(e).log("Exception in PlayerConnectEvent (count)");
         }
         try {
             if (playerRef != null) {
@@ -644,12 +633,12 @@ public class HyvexaPlugin extends JavaPlugin {
             }
             playtimeManager.startPlaytimeSession(playerRef);
         } catch (Exception e) {
-            LOGGER.at(Level.WARNING).withCause(e).log("Exception in PlayerConnectEvent (hud/playtime)");
+            LOGGER.atWarning().withCause(e).log("Exception in PlayerConnectEvent (hud/playtime)");
         }
         try {
             playtimeManager.broadcastPresence(playerRef);
         } catch (Exception e) {
-            LOGGER.at(Level.WARNING).withCause(e).log("Exception in PlayerConnectEvent (broadcast)");
+            LOGGER.atWarning().withCause(e).log("Exception in PlayerConnectEvent (broadcast)");
         }
     }
 
@@ -728,7 +717,7 @@ public class HyvexaPlugin extends JavaPlugin {
             try {
                 task.run();
             } catch (Throwable error) {
-                LOGGER.at(Level.SEVERE).withCause(error).log("Tick task failed (" + name + ")");
+                LOGGER.atSevere().withCause(error).log("Tick task failed (" + name + ")");
             }
         }, initialDelay, period, unit);
     }
@@ -840,28 +829,28 @@ public class HyvexaPlugin extends JavaPlugin {
 
     @Override
     protected void shutdown() {
-        try { cancelScheduled(hudUpdateTask); } catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Shutdown: hudUpdateTask"); }
-        try { cancelScheduled(playtimeTask); } catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Shutdown: playtimeTask"); }
-        try { cancelScheduled(collisionTask); } catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Shutdown: collisionTask"); }
-        try { cancelScheduled(playerCountTask); } catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Shutdown: playerCountTask"); }
-        try { cancelScheduled(stalePlayerSweepTask); } catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Shutdown: stalePlayerSweepTask"); }
-        try { cancelScheduled(teleportDebugTask); } catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Shutdown: teleportDebugTask"); }
-        try { cancelScheduled(duelTickTask); } catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Shutdown: duelTickTask"); }
+        try { cancelScheduled(hudUpdateTask); } catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: hudUpdateTask"); }
+        try { cancelScheduled(playtimeTask); } catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: playtimeTask"); }
+        try { cancelScheduled(collisionTask); } catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: collisionTask"); }
+        try { cancelScheduled(playerCountTask); } catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: playerCountTask"); }
+        try { cancelScheduled(stalePlayerSweepTask); } catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: stalePlayerSweepTask"); }
+        try { cancelScheduled(teleportDebugTask); } catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: teleportDebugTask"); }
+        try { cancelScheduled(duelTickTask); } catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: duelTickTask"); }
 
         try { if (ghostRecorder != null) { ghostRecorder.stop(); } }
-        catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Shutdown: ghostRecorder"); }
+        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: ghostRecorder"); }
 
         try { if (ghostNpcManager != null) { ghostNpcManager.stop(); } }
-        catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Shutdown: ghostNpcManager"); }
+        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: ghostNpcManager"); }
 
         try { if (announcementManager != null) { announcementManager.shutdown(); } }
-        catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Shutdown: announcementManager"); }
+        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: announcementManager"); }
 
         try { if (progressStore != null) { progressStore.flushPendingSave(); } }
-        catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Shutdown: progressStore flush"); }
+        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: progressStore flush"); }
 
         try { DatabaseManager.getInstance().shutdown(); }
-        catch (Exception e) { LOGGER.at(Level.WARNING).withCause(e).log("Shutdown: DatabaseManager"); }
+        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: DatabaseManager"); }
 
         super.shutdown();
     }

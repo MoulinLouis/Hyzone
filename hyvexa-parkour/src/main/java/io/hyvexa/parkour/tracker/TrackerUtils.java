@@ -56,6 +56,10 @@ public final class TrackerUtils {
         SoundUtil.playSoundEvent2dToPlayer(playerRef, soundIndex, com.hypixel.hytale.protocol.SoundCategory.SFX);
     }
 
+    /**
+     * Squared distance with a vertical bonus that reduces the Y component when the player is above
+     * the target, making it easier to hit checkpoints from above (e.g., falling onto platforms).
+     */
     public static double distanceSqWithVerticalBonus(Vector3d position, TransformData target, double verticalBonus) {
         double dx = position.getX() - target.getX();
         double dy = position.getY() - target.getY();

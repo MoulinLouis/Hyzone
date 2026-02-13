@@ -9,7 +9,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.logging.Level;
+
 
 /**
  * Stores global Ascend settings (single row, id = 1).
@@ -84,7 +84,7 @@ public class AscendSettingsStore {
                 }
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to load AscendSettingsStore: " + e.getMessage());
+            LOGGER.atSevere().log("Failed to load AscendSettingsStore: " + e.getMessage());
         }
     }
 
@@ -111,7 +111,7 @@ public class AscendSettingsStore {
                 stmt.executeUpdate();
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to insert default settings: " + e.getMessage());
+            LOGGER.atSevere().log("Failed to insert default settings: " + e.getMessage());
         }
     }
 
@@ -181,7 +181,7 @@ public class AscendSettingsStore {
                 stmt.executeUpdate();
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to save settings: " + e.getMessage());
+            LOGGER.atSevere().log("Failed to save settings: " + e.getMessage());
         }
     }
 

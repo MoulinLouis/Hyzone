@@ -53,6 +53,7 @@ public final class BigNumber implements Comparable<BigNumber> {
     /**
      * Convert from BigDecimal without double overflow.
      * Uses precision() - scale() - 1 for exponent, then scaleByPowerOfTen for mantissa.
+     * Note: mantissa is stored as double, so precision beyond ~15 significant digits is lost.
      */
     public static BigNumber fromBigDecimal(BigDecimal bd) {
         if (bd == null || bd.signum() == 0) {

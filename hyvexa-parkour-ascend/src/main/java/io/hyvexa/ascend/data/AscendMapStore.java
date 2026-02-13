@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.logging.Level;
+
 
 public class AscendMapStore {
 
@@ -74,7 +74,7 @@ public class AscendMapStore {
                 }
                 LOGGER.atInfo().log("AscendMapStore loaded " + maps.size() + " maps");
             } catch (SQLException e) {
-                LOGGER.at(Level.SEVERE).log("Failed to load AscendMapStore: " + e.getMessage());
+                LOGGER.atSevere().log("Failed to load AscendMapStore: " + e.getMessage());
             }
         } finally {
             lock.writeLock().unlock();
@@ -194,7 +194,7 @@ public class AscendMapStore {
                 stmt.executeUpdate();
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to save map: " + e.getMessage());
+            LOGGER.atSevere().log("Failed to save map: " + e.getMessage());
         }
     }
 
@@ -230,7 +230,7 @@ public class AscendMapStore {
                 stmt.executeUpdate();
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to delete map: " + e.getMessage());
+            LOGGER.atSevere().log("Failed to delete map: " + e.getMessage());
         }
     }
 }

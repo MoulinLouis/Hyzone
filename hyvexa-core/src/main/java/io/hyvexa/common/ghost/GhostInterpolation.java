@@ -41,7 +41,7 @@ public final class GhostInterpolation {
         int low = 0;
         int high = samples.size() - 1;
         while (low <= high) {
-            int mid = (low + high) >>> 1;
+            int mid = low + (high - low) / 2;
             long timestamp = adapter.timestampMs(samples.get(mid));
             if (timestamp < targetTimestamp) {
                 low = mid + 1;

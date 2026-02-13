@@ -18,7 +18,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
 
 /** Shared sampling pipeline for ghost recording. */
 public abstract class AbstractGhostRecorder<TSample, TRecording> implements AutoCloseable {
@@ -103,7 +102,7 @@ public abstract class AbstractGhostRecorder<TSample, TRecording> implements Auto
             TRecording ghost = createRecording(samplesCopy, completionTimeMs);
             recordingWriter.saveRecording(playerId, recording.mapId, ghost);
         } catch (Exception e) {
-            logger().at(Level.SEVERE).withCause(e)
+            logger().atSevere().withCause(e)
                     .log("Failed to save ghost recording for player " + playerId);
         }
     }
@@ -119,7 +118,7 @@ public abstract class AbstractGhostRecorder<TSample, TRecording> implements Auto
             try {
                 samplePlayer(recording, now);
             } catch (Exception e) {
-                logger().at(Level.WARNING).withCause(e)
+                logger().atWarning().withCause(e)
                         .log("Failed to sample player " + recording.playerId);
             }
         }
@@ -174,7 +173,7 @@ public abstract class AbstractGhostRecorder<TSample, TRecording> implements Auto
                     recording.samples.add(sample);
                 }
             } catch (Exception e) {
-                logger().at(Level.WARNING).withCause(e).log("Error sampling ghost position");
+                logger().atWarning().withCause(e).log("Error sampling ghost position");
             }
         });
     }

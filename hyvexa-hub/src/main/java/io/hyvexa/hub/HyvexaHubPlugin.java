@@ -34,7 +34,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
+
 
 public class HyvexaHubPlugin extends JavaPlugin {
 
@@ -85,7 +85,7 @@ public class HyvexaHubPlugin extends JavaPlugin {
             try {
                 DatabaseManager.getInstance().initialize();
             } catch (Exception e) {
-                LOGGER.at(Level.SEVERE).log("Failed to initialize database: " + e.getMessage());
+                LOGGER.atSevere().log("Failed to initialize database: " + e.getMessage());
                 databaseAvailable = false;
             }
         }
@@ -161,7 +161,7 @@ public class HyvexaHubPlugin extends JavaPlugin {
                 }
                 requestHubHudAttach(ref, ref.getStore(), playerRef);
             } catch (Exception e) {
-                LOGGER.at(Level.WARNING).withCause(e).log("Exception in AddPlayerToWorldEvent (hub HUD)");
+                LOGGER.atWarning().withCause(e).log("Exception in AddPlayerToWorldEvent (hub HUD)");
             }
         });
         this.getEventRegistry().registerGlobal(PlayerDisconnectEvent.class, event -> {
@@ -269,7 +269,7 @@ public class HyvexaHubPlugin extends JavaPlugin {
             Universe.get().loadWorld(HubConstants.WORLD_PARKOUR);
             Universe.get().loadWorld(HubConstants.WORLD_ASCEND);
         } catch (Exception e) {
-            LOGGER.at(Level.WARNING).log("Failed to preload hub worlds: " + e.getMessage());
+            LOGGER.atWarning().log("Failed to preload hub worlds: " + e.getMessage());
         }
     }
 

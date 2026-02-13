@@ -15,7 +15,6 @@ import java.util.List;
 import java.util.regex.Pattern;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.logging.Level;
 
 /** MySQL-backed storage for parkour map definitions and checkpoints. */
 public class MapStore {
@@ -131,7 +130,7 @@ public class MapStore {
                 LOGGER.atInfo().log("MapStore loaded " + maps.size() + " maps from database");
 
             } catch (SQLException e) {
-                LOGGER.at(Level.SEVERE).log("Failed to load MapStore from database: " + e.getMessage());
+                LOGGER.atSevere().log("Failed to load MapStore from database: " + e.getMessage());
             }
         } finally {
             fileLock.writeLock().unlock();
@@ -411,7 +410,7 @@ public class MapStore {
                 throw e;
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to save map to database: " + e.getMessage());
+            LOGGER.atSevere().log("Failed to save map to database: " + e.getMessage());
         }
     }
 
@@ -453,7 +452,7 @@ public class MapStore {
                 stmt.executeUpdate();
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to delete map from database: " + e.getMessage());
+            LOGGER.atSevere().log("Failed to delete map from database: " + e.getMessage());
         }
     }
 

@@ -19,7 +19,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
-import java.util.logging.Level;
 
 public class LeaderboardHologramManager {
 
@@ -125,7 +124,7 @@ public class LeaderboardHologramManager {
             HylogramsBridge.updateHologramLines(LEADERBOARD_HOLOGRAM_NAME, lines, store);
             HylogramsBridge.delete("leaderboard_counts", store);
         } catch (Exception e) {
-            LOGGER.at(Level.WARNING).withCause(e).log("Failed to update leaderboard hologram");
+            LOGGER.atWarning().withCause(e).log("Failed to update leaderboard hologram");
         }
     }
 
@@ -142,7 +141,7 @@ public class LeaderboardHologramManager {
                 existing.respawn(store).save(store);
             }
         } catch (Exception e) {
-            LOGGER.at(Level.WARNING).withCause(e).log("Failed to update map leaderboard hologram");
+            LOGGER.atWarning().withCause(e).log("Failed to update map leaderboard hologram");
         }
     }
 

@@ -10,6 +10,11 @@ public final class PermissionUtils {
     private PermissionUtils() {
     }
 
+    /**
+     * Check if a player has OP permissions.
+     * Uses deprecated PermissionsModule API — no replacement available as of Hytale server 0.x.
+     * Revisit when a non-deprecated permissions API is introduced.
+     */
     @SuppressWarnings("removal")
     public static boolean isOp(Player player) {
         if (player == null) {

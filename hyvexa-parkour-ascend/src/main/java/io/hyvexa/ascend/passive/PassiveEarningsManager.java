@@ -23,7 +23,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.logging.Level;
 
 public class PassiveEarningsManager {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
@@ -158,10 +157,10 @@ public class PassiveEarningsManager {
 
         // Apply earnings to player account
         if (!playerStore.atomicAddVexa(playerId, totalVexa)) {
-            LOGGER.at(Level.SEVERE).log("Failed to add passive vexa for " + playerId + " (amount: " + totalVexa + ")");
+            LOGGER.atSevere().log("Failed to add passive vexa for " + playerId + " (amount: " + totalVexa + ")");
         }
         if (!playerStore.atomicAddTotalVexaEarned(playerId, totalVexa)) {
-            LOGGER.at(Level.SEVERE).log("Failed to add total vexa earned for " + playerId + " (amount: " + totalVexa + ")");
+            LOGGER.atSevere().log("Failed to add total vexa earned for " + playerId + " (amount: " + totalVexa + ")");
         }
 
         // Apply multiplier gains to each map (at offline rate)
@@ -171,11 +170,11 @@ public class PassiveEarningsManager {
                 entry.getKey(),
                 entry.getValue().multiplierGain()
             )) {
-                LOGGER.at(Level.SEVERE).log("Failed to add passive map multiplier for " + playerId + " on map " + entry.getKey());
+                LOGGER.atSevere().log("Failed to add passive map multiplier for " + playerId + " on map " + entry.getKey());
             }
         }
 
-        LOGGER.at(Level.INFO).log(
+        LOGGER.atInfo().log(
             "Passive earnings for " + playerId + ": " +
             totalVexa + " vexa, +" + totalMultiplierGain + " multiplier over " + (timeAwayMs / 1000 / 60) + " minutes"
         );

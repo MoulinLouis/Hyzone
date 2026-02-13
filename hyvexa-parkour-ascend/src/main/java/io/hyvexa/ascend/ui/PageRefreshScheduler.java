@@ -5,7 +5,6 @@ import com.hypixel.hytale.server.core.universe.world.World;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.logging.Level;
 
 /**
  * Shared helper to coalesce page refresh ticks on a world thread.
@@ -49,13 +48,13 @@ public final class PageRefreshScheduler {
                 () -> runCoalescedRefreshes(world, refreshInFlight, refreshRequested, refreshAction, stopAction, pageName),
                 world
             ).exceptionally(ex -> {
-                LOGGER.at(Level.WARNING).withCause(ex).log("Exception while scheduling page refresh for " + pageName);
+                LOGGER.atWarning().withCause(ex).log("Exception while scheduling page refresh for " + pageName);
                 refreshInFlight.set(false);
                 safeStop(stopAction, pageName);
                 return null;
             });
         } catch (Exception e) {
-            LOGGER.at(Level.WARNING).withCause(e).log("Failed to enqueue page refresh for " + pageName);
+            LOGGER.atWarning().withCause(e).log("Failed to enqueue page refresh for " + pageName);
             refreshInFlight.set(false);
             safeStop(stopAction, pageName);
         }
@@ -74,7 +73,7 @@ public final class PageRefreshScheduler {
                 refreshAction.run();
             }
         } catch (Exception e) {
-            LOGGER.at(Level.WARNING).withCause(e).log("Exception in page refresh for " + pageName);
+            LOGGER.atWarning().withCause(e).log("Exception in page refresh for " + pageName);
             safeStop(stopAction, pageName);
         } finally {
             refreshInFlight.set(false);
@@ -88,7 +87,7 @@ public final class PageRefreshScheduler {
         try {
             stopAction.run();
         } catch (Exception e) {
-            LOGGER.at(Level.WARNING).withCause(e).log("Exception while stopping page refresh for " + pageName);
+            LOGGER.atWarning().withCause(e).log("Exception while stopping page refresh for " + pageName);
         }
     }
 }

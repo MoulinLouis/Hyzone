@@ -19,7 +19,6 @@ import io.hyvexa.common.math.BigNumber;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Level;
 
 public class AscendHudManager {
 
@@ -113,7 +112,7 @@ public class AscendHudManager {
                 hud.updateMomentum(momentumProgress);
             }
         } catch (Exception e) {
-            LOGGER.at(Level.WARNING).withCause(e).log("Failed to update Ascend HUD for player " + playerId);
+            LOGGER.atWarning().withCause(e).log("Failed to update Ascend HUD for player " + playerId);
         }
     }
 
@@ -140,7 +139,7 @@ public class AscendHudManager {
             Long elapsedMs = isRunning ? runTracker.getElapsedTimeMs(playerId) : 0L;
             hud.updateTimer(elapsedMs, showTimer);
         } catch (Exception e) {
-            LOGGER.at(Level.WARNING).withCause(e).log("Failed to update timer for player " + playerId);
+            LOGGER.atWarning().withCause(e).log("Failed to update timer for player " + playerId);
         }
     }
 
