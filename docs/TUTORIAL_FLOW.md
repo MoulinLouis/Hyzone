@@ -18,7 +18,7 @@ This document defines the progressive tutorial system for Ascend mode. Tutorials
 | 4 | Runner reaches level 20 (evolution available) | Evolution | 2 |
 | 5 | Vexa reach first elevation cost (~30K) | Elevation | 2 |
 | 6 | Vexa reach 1B (Summit available) | Summit | 2 |
-| 7 | Vexa reach 10Q (Ascension available) | Ascension | 2 |
+| 7 | Vexa reach 1Dc (Ascension available) | Ascension | 2 |
 | 8 | Ascension Challenges skill unlocked | Challenges | 2 |
 
 ---
@@ -77,7 +77,7 @@ _Idea: HUD showing vexa earned and multiplier going up._
 **Title:** Nice Run!
 
 **Text:**
-> You earned **vexa** and your map multiplier went up by **+0.1**. The higher your multiplier, the more you earn.
+> You earned vexa and your map multiplier went up! Manual runs give 5x the runner's multiplier gain.
 
 ### Step 2 — Buy a Runner
 
@@ -147,7 +147,7 @@ _Idea: Elevation UI showing level and multiplier preview._
 **Title:** Elevation
 
 **Text:**
-> Spend your vexa to gain elevation levels. Your level **is** your multiplier: level 10 = ×10, level 100 = ×100.
+> Spend your vexa to gain elevation levels. Higher levels give bigger multipliers: level 10 = ×11, level 100 = ×126.
 >
 > Open with **`/ascend elevate`**.
 
