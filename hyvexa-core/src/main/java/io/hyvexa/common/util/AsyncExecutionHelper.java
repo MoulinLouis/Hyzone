@@ -8,7 +8,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.logging.Level;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -60,10 +59,10 @@ public final class AsyncExecutionHelper {
         Throwable cause = unwrap(throwable);
         String message = buildMessage(actionName, context);
         if (cause != null) {
-            LOGGER.at(Level.WARNING).withCause(cause).log(message);
+            LOGGER.atWarning().withCause(cause).log(message);
             return;
         }
-        LOGGER.at(Level.WARNING).log(message);
+        LOGGER.atWarning().log(message);
     }
 
     private static String buildMessage(String actionName, String context) {

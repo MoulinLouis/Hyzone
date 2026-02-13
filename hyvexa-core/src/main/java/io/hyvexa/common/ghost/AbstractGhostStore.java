@@ -17,7 +17,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Level;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -55,7 +54,15 @@ public abstract class AbstractGhostStore<TSample, TRecording> {
 
     protected abstract long sampleTimestampMs(TSample sample);
 
+    private void validateTableName() {
+        String name = tableName();
+        if (name == null || !name.matches("[a-zA-Z0-9_]+")) {
+            throw new IllegalStateException("Invalid table name: " + name);
+        }
+    }
+
     public void syncLoad() {
+        validateTableName();
         if (!DatabaseManager.getInstance().isInitialized()) {
             logger().atWarning().log("Database not initialized, " + modeLabel() + " GhostStore will be empty");
             return;
@@ -85,7 +92,7 @@ public abstract class AbstractGhostStore<TSample, TRecording> {
                             String key = makeKey(UUID.fromString(playerUuid), mapId);
                             cache.put(key, recording);
                         } catch (Exception e) {
-                            logger().at(Level.WARNING).withCause(e)
+                            logger().atWarning().withCause(e)
                                     .log("Failed to deserialize " + modeLabel()
                                             + " ghost recording for " + playerUuid + "/" + mapId);
                         }
@@ -94,7 +101,7 @@ public abstract class AbstractGhostStore<TSample, TRecording> {
             }
             logger().atInfo().log("Loaded " + cache.size() + " " + modeLabel() + " ghost recordings");
         } catch (SQLException e) {
-            logger().at(Level.SEVERE).withCause(e)
+            logger().atSevere().withCause(e)
                     .log("Failed to load " + modeLabel() + " ghost recordings");
         }
     }
@@ -135,7 +142,7 @@ public abstract class AbstractGhostStore<TSample, TRecording> {
                 }
             }
         } catch (Exception e) {
-            logger().at(Level.SEVERE).withCause(e)
+            logger().atSevere().withCause(e)
                     .log("Failed to save " + modeLabel() + " ghost recording for " + playerId + "/" + mapId);
         }
     }
@@ -160,7 +167,7 @@ public abstract class AbstractGhostStore<TSample, TRecording> {
                 stmt.executeUpdate();
             }
         } catch (SQLException e) {
-            logger().at(Level.WARNING).withCause(e)
+            logger().atWarning().withCause(e)
                     .log("Failed to delete " + modeLabel() + " ghost recording for " + playerId + "/" + mapId);
         }
     }
@@ -226,7 +233,7 @@ public abstract class AbstractGhostStore<TSample, TRecording> {
                 stmt.executeUpdate(sql);
             }
         } catch (SQLException e) {
-            logger().at(Level.SEVERE).withCause(e)
+            logger().atSevere().withCause(e)
                     .log("Failed to create " + modeLabel() + " ghost table " + tableName());
         }
     }

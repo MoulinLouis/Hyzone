@@ -20,7 +20,6 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.concurrent.CompletableFuture;
-import java.util.logging.Level;
 
 public class DatabaseClearCommand extends AbstractAsyncCommand {
 
@@ -92,7 +91,7 @@ public class DatabaseClearCommand extends AbstractAsyncCommand {
             }
         } catch (SQLException e) {
             commandContext.sendMessage(Message.raw("Database clear failed: " + e.getMessage()).color("#ff4444"));
-            LOGGER.at(Level.SEVERE).withCause(e).log("Failed to clear parkour database via /dbclear");
+            LOGGER.atSevere().withCause(e).log("Failed to clear parkour database via /dbclear");
             return CompletableFuture.completedFuture(null);
         }
 

@@ -10,7 +10,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Set;
-import java.util.logging.Level;
 
 /** Manages the MySQL connection pool and schema setup for parkour data. */
 public class DatabaseManager {
@@ -117,7 +116,7 @@ public class DatabaseManager {
             ensureCheckpointTimesTable();
             ensureDuelEnabledColumn();
         } catch (Exception e) {
-            LOGGER.at(Level.SEVERE).withCause(e).log("Failed to initialize database connection pool");
+            LOGGER.atSevere().withCause(e).log("Failed to initialize database connection pool");
             throw new RuntimeException("Database initialization failed", e);
         }
     }
@@ -215,7 +214,7 @@ public class DatabaseManager {
         try (Connection conn = getConnection()) {
             createPlayerCheckpointTimesTable(conn);
         } catch (SQLException e) {
-            LOGGER.at(Level.WARNING).withCause(e).log("Failed to ensure player_checkpoint_times table");
+            LOGGER.atWarning().withCause(e).log("Failed to ensure player_checkpoint_times table");
         }
     }
 
@@ -228,7 +227,7 @@ public class DatabaseManager {
                 stmt.executeUpdate("ALTER TABLE maps ADD COLUMN duel_enabled BOOLEAN DEFAULT FALSE");
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.WARNING).withCause(e).log("Failed to ensure maps.duel_enabled column");
+            LOGGER.atWarning().withCause(e).log("Failed to ensure maps.duel_enabled column");
         }
     }
 

@@ -9,7 +9,6 @@ import com.google.gson.JsonParseException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.logging.Level;
 
 public class DatabaseConfig {
 
@@ -37,7 +36,7 @@ public class DatabaseConfig {
             LOGGER.atInfo().log("Loaded database config from " + CONFIG_PATH);
             return config;
         } catch (IOException | JsonParseException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to load database config: " + e.getMessage());
+            LOGGER.atSevere().log("Failed to load database config: " + e.getMessage());
             return new DatabaseConfig();
         }
     }
@@ -47,7 +46,7 @@ public class DatabaseConfig {
             Files.createDirectories(CONFIG_PATH.getParent());
             Files.writeString(CONFIG_PATH, GSON.toJson(this));
         } catch (IOException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to save database config: " + e.getMessage());
+            LOGGER.atSevere().log("Failed to save database config: " + e.getMessage());
         }
     }
 
@@ -68,7 +67,8 @@ public class DatabaseConfig {
     }
 
     public String getPassword() {
-        return password;
+        String envPassword = System.getenv("HYVEXA_DB_PASSWORD");
+        return envPassword != null ? envPassword : password;
     }
 
     public static Path getConfigPath() {

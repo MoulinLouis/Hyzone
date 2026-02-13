@@ -12,7 +12,6 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Level;
 
 public class DuelStatsStore {
 
@@ -55,7 +54,7 @@ public class DuelStatsStore {
                 }
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to load DuelStatsStore: " + e.getMessage());
+            LOGGER.atSevere().log("Failed to load DuelStatsStore: " + e.getMessage());
         }
     }
 
@@ -70,7 +69,7 @@ public class DuelStatsStore {
                 stmt.executeUpdate();
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to create duel_player_stats table: " + e.getMessage());
+            LOGGER.atSevere().log("Failed to create duel_player_stats table: " + e.getMessage());
         }
     }
 
@@ -136,7 +135,7 @@ public class DuelStatsStore {
                 stmt.executeUpdate();
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to save duel stats: " + e.getMessage());
+            LOGGER.atSevere().log("Failed to save duel stats: " + e.getMessage());
         }
     }
 }

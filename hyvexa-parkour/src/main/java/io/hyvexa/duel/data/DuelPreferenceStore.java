@@ -16,7 +16,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Level;
 import java.util.stream.Collectors;
 
 public class DuelPreferenceStore {
@@ -118,7 +117,7 @@ public class DuelPreferenceStore {
                 }
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to load DuelPreferenceStore: " + e.getMessage());
+            LOGGER.atSevere().log("Failed to load DuelPreferenceStore: " + e.getMessage());
         }
     }
 
@@ -133,7 +132,7 @@ public class DuelPreferenceStore {
                 stmt.executeUpdate();
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to create duel_category_prefs table: " + e.getMessage());
+            LOGGER.atSevere().log("Failed to create duel_category_prefs table: " + e.getMessage());
         }
     }
 
@@ -221,7 +220,7 @@ public class DuelPreferenceStore {
                 stmt.executeUpdate();
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to save duel preferences: " + e.getMessage());
+            LOGGER.atSevere().log("Failed to save duel preferences: " + e.getMessage());
         }
     }
 

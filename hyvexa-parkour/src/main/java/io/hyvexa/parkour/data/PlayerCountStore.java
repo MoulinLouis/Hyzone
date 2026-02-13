@@ -13,7 +13,6 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.logging.Level;
 
 /** MySQL-backed storage for sampled online player counts. */
 public class PlayerCountStore {
@@ -62,7 +61,7 @@ public class PlayerCountStore {
                     }
                 }
             } catch (SQLException e) {
-                LOGGER.at(Level.SEVERE).log("Failed to load player count samples: " + e.getMessage());
+                LOGGER.atSevere().log("Failed to load player count samples: " + e.getMessage());
             }
 
             lastSavedAtMs = System.currentTimeMillis();
@@ -96,7 +95,7 @@ public class PlayerCountStore {
                 }
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.WARNING).log("Failed to prune old samples: " + e.getMessage());
+            LOGGER.atWarning().log("Failed to prune old samples: " + e.getMessage());
         }
     }
 
@@ -143,7 +142,7 @@ public class PlayerCountStore {
                 stmt.executeUpdate();
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.WARNING).log("Failed to clear player count samples: " + e.getMessage());
+            LOGGER.atWarning().log("Failed to clear player count samples: " + e.getMessage());
         }
     }
 
@@ -164,7 +163,7 @@ public class PlayerCountStore {
                 stmt.executeUpdate();
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.WARNING).log("Failed to save sample: " + e.getMessage());
+            LOGGER.atWarning().log("Failed to save sample: " + e.getMessage());
         }
     }
 

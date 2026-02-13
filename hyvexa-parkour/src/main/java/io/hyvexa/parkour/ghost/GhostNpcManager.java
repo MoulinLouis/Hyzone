@@ -29,7 +29,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
 
 public class GhostNpcManager {
 
@@ -287,7 +286,7 @@ public class GhostNpcManager {
                 tickGhost(state, now);
             }
         } catch (Exception e) {
-            LOGGER.at(Level.WARNING).log("Error in ghost tick: " + e.getMessage());
+            LOGGER.atWarning().log("Error in ghost tick: " + e.getMessage());
         }
     }
 

@@ -375,6 +375,13 @@ public class RunTracker {
         checkPlayer(ref, store, null, deltaSeconds);
     }
 
+    /**
+     * Main per-tick player update: processes triggers, checkpoints, ghost recording, and run state.
+     * Must be called from the world thread. Uses store directly (no command buffer required).
+     *
+     * @param buffer optional command buffer for ECS writes (may be null for non-tick callers)
+     * @param deltaSeconds tick delta in seconds (NaN if unavailable)
+     */
     public void checkPlayer(Ref<EntityStore> ref, Store<EntityStore> store, CommandBuffer<EntityStore> buffer,
                             float deltaSeconds) {
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());

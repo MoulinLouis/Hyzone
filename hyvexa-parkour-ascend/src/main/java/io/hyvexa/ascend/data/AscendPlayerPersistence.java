@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.logging.Level;
+
 
 /**
  * Handles all database persistence and leaderboard queries for Ascend player data.
@@ -414,13 +414,13 @@ class AscendPlayerPersistence {
                 }
             } catch (SQLException e) {
                 conn.rollback(); // Rollback transaction on error
-                LOGGER.at(Level.SEVERE).log("Failed to save ascend players (rolled back): " + e.getMessage());
+                LOGGER.atSevere().log("Failed to save ascend players (rolled back): " + e.getMessage());
                 // On failure, versions remain dirty for the next save cycle
                 throw e; // Re-throw to trigger outer catch
             }
         } catch (SQLException e) {
             // Outer catch for connection/transaction setup errors
-            LOGGER.at(Level.SEVERE).log("Failed to initialize transaction for ascend player save: " + e.getMessage());
+            LOGGER.atSevere().log("Failed to initialize transaction for ascend player save: " + e.getMessage());
         }
     }
 
@@ -532,7 +532,7 @@ class AscendPlayerPersistence {
             loadSkillNodesForPlayer(conn, playerId, progress);
             loadAchievementsForPlayer(conn, playerId, progress);
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to load player " + playerId + ": " + e.getMessage());
+            LOGGER.atSevere().log("Failed to load player " + playerId + ": " + e.getMessage());
             return null;
         }
 
@@ -673,7 +673,7 @@ class AscendPlayerPersistence {
                 conn.setAutoCommit(true);
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to delete player data during reset: " + e.getMessage());
+            LOGGER.atSevere().log("Failed to delete player data during reset: " + e.getMessage());
         }
     }
 
@@ -755,7 +755,7 @@ class AscendPlayerPersistence {
                 }
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to fetch leaderboard from database: " + e.getMessage());
+            LOGGER.atSevere().log("Failed to fetch leaderboard from database: " + e.getMessage());
             return null;
         }
         return entries;
@@ -864,7 +864,7 @@ class AscendPlayerPersistence {
                 }
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to fetch map leaderboard for " + mapId + ": " + e.getMessage());
+            LOGGER.atSevere().log("Failed to fetch map leaderboard for " + mapId + ": " + e.getMessage());
             return null;
         }
         return entries;

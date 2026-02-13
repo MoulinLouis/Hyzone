@@ -46,7 +46,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
+
 import java.util.stream.Collectors;
 
 public class RobotManager {
@@ -410,7 +410,7 @@ public class RobotManager {
                 performAutoRunnerUpgrades();
             }
         } catch (Exception e) {
-            LOGGER.at(Level.WARNING).log("Error in robot tick: " + e.getMessage());
+            LOGGER.atWarning().log("Error in robot tick: " + e.getMessage());
         }
     }
 
@@ -504,7 +504,7 @@ public class RobotManager {
         }
         teleportWarningByRobot.put(key, now);
         String worldName = world != null ? world.getName() : "unknown";
-        LOGGER.at(Level.WARNING).withCause(error).log(
+        LOGGER.atWarning().withCause(error).log(
                 "Runner teleport failed owner=" + ownerId
                         + " map=" + mapId
                         + " world=" + worldName

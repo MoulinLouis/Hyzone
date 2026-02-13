@@ -91,6 +91,9 @@ public final class FormatUtils {
             return "Beginner";
         }
         String trimmed = category.trim();
+        if (trimmed.isEmpty()) {
+            return "Beginner";
+        }
         return trimmed.substring(0, 1).toUpperCase(Locale.ROOT) + trimmed.substring(1);
     }
 

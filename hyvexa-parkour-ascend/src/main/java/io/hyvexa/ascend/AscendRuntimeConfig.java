@@ -9,7 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Locale;
 import java.util.Properties;
-import java.util.logging.Level;
+
 
 /**
  * Runtime flags for Ascend plugin behavior.
@@ -39,7 +39,7 @@ public final class AscendRuntimeConfig {
         try (InputStream input = Files.newInputStream(CONFIG_PATH)) {
             properties.load(input);
         } catch (IOException e) {
-            LOGGER.at(Level.WARNING).withCause(e).log("Failed to load Ascend runtime config at " + CONFIG_PATH);
+            LOGGER.atWarning().withCause(e).log("Failed to load Ascend runtime config at " + CONFIG_PATH);
             return new AscendRuntimeConfig(ENABLE_TEST_COMMANDS_DEFAULT);
         }
 
@@ -65,7 +65,7 @@ public final class AscendRuntimeConfig {
                 properties.store(output, "Ascend runtime settings");
             }
         } catch (IOException e) {
-            LOGGER.at(Level.WARNING).withCause(e).log("Failed to create default Ascend runtime config at " + CONFIG_PATH);
+            LOGGER.atWarning().withCause(e).log("Failed to create default Ascend runtime config at " + CONFIG_PATH);
         }
     }
 
@@ -80,7 +80,7 @@ public final class AscendRuntimeConfig {
         if ("false".equals(normalized)) {
             return false;
         }
-        LOGGER.at(Level.WARNING).log("Invalid boolean value for " + key + ": '" + value + "' (using default: " + defaultValue + ")");
+        LOGGER.atWarning().log("Invalid boolean value for " + key + ": '" + value + "' (using default: " + defaultValue + ")");
         return defaultValue;
     }
 }

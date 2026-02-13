@@ -9,7 +9,6 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Timestamp;
-import java.util.logging.Level;
 
 public class DuelMatchStore {
 
@@ -42,7 +41,7 @@ public class DuelMatchStore {
                 stmt.executeUpdate();
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to create duel_matches table: " + e.getMessage());
+            LOGGER.atSevere().log("Failed to create duel_matches table: " + e.getMessage());
         }
     }
 
@@ -74,7 +73,7 @@ public class DuelMatchStore {
                 stmt.executeUpdate();
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to save duel match: " + e.getMessage());
+            LOGGER.atSevere().log("Failed to save duel match: " + e.getMessage());
         }
     }
 }

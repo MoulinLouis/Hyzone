@@ -23,7 +23,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
+
 
 public class AscendPlayerStore {
 
@@ -1092,7 +1092,7 @@ public class AscendPlayerStore {
                     conn.setAutoCommit(true);
                 }
             } catch (SQLException e) {
-                LOGGER.at(Level.SEVERE).log("Failed to wipe all player data: " + e.getMessage());
+                LOGGER.atSevere().log("Failed to wipe all player data: " + e.getMessage());
             }
         }
 

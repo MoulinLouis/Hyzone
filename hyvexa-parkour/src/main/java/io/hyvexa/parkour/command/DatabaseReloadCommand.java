@@ -18,7 +18,6 @@ import io.hyvexa.parkour.util.ParkourModeGate;
 
 import javax.annotation.Nonnull;
 import java.util.concurrent.CompletableFuture;
-import java.util.logging.Level;
 
 public class DatabaseReloadCommand extends AbstractAsyncCommand {
 
@@ -70,7 +69,7 @@ public class DatabaseReloadCommand extends AbstractAsyncCommand {
             commandContext.sendMessage(Message.raw("Password: (hidden)"));
         } catch (Exception e) {
             commandContext.sendMessage(Message.raw("Database reload failed: " + e.getMessage()).color("#ff4444"));
-            LOGGER.at(Level.WARNING).withCause(e).log("Failed to reload database config via /dbreload");
+            LOGGER.atWarning().withCause(e).log("Failed to reload database config via /dbreload");
         }
 
         return CompletableFuture.completedFuture(null);

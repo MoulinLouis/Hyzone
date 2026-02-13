@@ -17,7 +17,6 @@ import io.hyvexa.parkour.util.ParkourModeGate;
 
 import javax.annotation.Nonnull;
 import java.util.concurrent.CompletableFuture;
-import java.util.logging.Level;
 
 public class DatabaseTestCommand extends AbstractAsyncCommand {
 
@@ -61,7 +60,7 @@ public class DatabaseTestCommand extends AbstractAsyncCommand {
                 db.initialize();
             } catch (Exception e) {
                 commandContext.sendMessage(Message.raw("Failed to initialize: " + e.getMessage()).color("#ff4444"));
-                LOGGER.at(Level.WARNING).withCause(e).log("Failed to initialize database via /dbtest");
+                LOGGER.atWarning().withCause(e).log("Failed to initialize database via /dbtest");
                 return CompletableFuture.completedFuture(null);
             }
         }
@@ -74,7 +73,7 @@ public class DatabaseTestCommand extends AbstractAsyncCommand {
         } else {
             commandContext.sendMessage(Message.raw(result.message()).color("#ff4444"));
             if (result.cause() != null) {
-                LOGGER.at(Level.WARNING).withCause(result.cause())
+                LOGGER.atWarning().withCause(result.cause())
                         .log("Database connection test failed via /dbtest");
             }
         }

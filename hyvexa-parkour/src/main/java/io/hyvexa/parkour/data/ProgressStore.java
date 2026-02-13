@@ -28,7 +28,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
-import java.util.logging.Level;
 
 /** MySQL-backed storage for player progress, completions, and leaderboard caches. */
 public class ProgressStore {
@@ -106,7 +105,7 @@ public class ProgressStore {
                 }
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to load players: " + e.getMessage());
+            LOGGER.atSevere().log("Failed to load players: " + e.getMessage());
         }
     }
 
@@ -137,7 +136,7 @@ public class ProgressStore {
                 }
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to load completions: " + e.getMessage());
+            LOGGER.atSevere().log("Failed to load completions: " + e.getMessage());
         }
     }
 
@@ -172,7 +171,7 @@ public class ProgressStore {
                 }
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to load checkpoint times: " + e.getMessage());
+            LOGGER.atSevere().log("Failed to load checkpoint times: " + e.getMessage());
         }
     }
 
@@ -302,6 +301,12 @@ public class ProgressStore {
         return recordMapCompletion(playerId, playerName, mapId, timeMs, mapStore, checkpointTimes, null);
     }
 
+    /**
+     * Record a map completion, updating XP/level/rank and persisting asynchronously.
+     * Acquires write lock. Side effects: marks player dirty, triggers async DB save.
+     *
+     * @param completionSavedCallback optional callback invoked with true on success, false on failure
+     */
     public ProgressionResult recordMapCompletion(UUID playerId, String playerName, String mapId, long timeMs,
                                                  MapStore mapStore, List<Long> checkpointTimes,
                                                  Consumer<Boolean> completionSavedCallback) {
@@ -353,7 +358,7 @@ public class ProgressStore {
         CompletableFuture.supplyAsync(() -> persistCompletion(request), HytaleServer.SCHEDULED_EXECUTOR)
                 .whenComplete((saved, throwable) -> {
                     if (throwable != null) {
-                        LOGGER.at(Level.SEVERE).withCause(throwable)
+                        LOGGER.atSevere().withCause(throwable)
                                 .log("Unexpected error while saving completion asynchronously");
                         notifyCompletionSaveResult(completionSavedCallback, false);
                         return;
@@ -379,7 +384,7 @@ public class ProgressStore {
         try {
             completionSavedCallback.accept(completionSaved);
         } catch (Exception e) {
-            LOGGER.at(Level.WARNING).withCause(e).log("Completion save callback failed");
+            LOGGER.atWarning().withCause(e).log("Completion save callback failed");
         }
     }
 
@@ -412,7 +417,7 @@ public class ProgressStore {
             }, "save completion for " + playerId);
             return true;
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).withCause(e).log("Failed to save completion after retries");
+            LOGGER.atSevere().withCause(e).log("Failed to save completion after retries");
             return false;
         }
     }
@@ -453,10 +458,10 @@ public class ProgressStore {
                 conn.commit();
             } catch (SQLException e) {
                 try { conn.rollback(); } catch (SQLException re) { /* ignore */ }
-                LOGGER.at(Level.WARNING).log("Failed to save checkpoint times (rolled back): " + e.getMessage());
+                LOGGER.atWarning().log("Failed to save checkpoint times (rolled back): " + e.getMessage());
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.WARNING).log("Failed to save checkpoint times: " + e.getMessage());
+            LOGGER.atWarning().log("Failed to save checkpoint times: " + e.getMessage());
         }
     }
 
@@ -639,7 +644,7 @@ public class ProgressStore {
                 stmt.executeUpdate();
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.WARNING).log("Failed to delete player: " + e.getMessage());
+            LOGGER.atWarning().log("Failed to delete player: " + e.getMessage());
         }
     }
 
@@ -747,7 +752,7 @@ public class ProgressStore {
                 stmt.executeUpdate();
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.WARNING).log("Failed to delete player map completion: " + e.getMessage());
+            LOGGER.atWarning().log("Failed to delete player map completion: " + e.getMessage());
         }
     }
 
@@ -773,7 +778,7 @@ public class ProgressStore {
                 stmt.executeUpdate();
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.WARNING).log("Failed to purge map completions: " + e.getMessage());
+            LOGGER.atWarning().log("Failed to purge map completions: " + e.getMessage());
         }
     }
 
@@ -992,7 +997,7 @@ public class ProgressStore {
                 clearSavedVersions(toSave);
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to save players to database: " + e.getMessage());
+            LOGGER.atSevere().log("Failed to save players to database: " + e.getMessage());
             // Keep failed writes dirty for retry, but clear stale IDs with no in-memory state.
             clearSavedVersions(skippedIds);
         }

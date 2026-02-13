@@ -25,7 +25,7 @@ public class HubHud extends CustomUIHud {
         }
         lastPlayerCount = count;
         UICommandBuilder commandBuilder = new UICommandBuilder();
-        commandBuilder.set("#PlayerCountText.Text", String.valueOf(count));
+        commandBuilder.set("#PlayerCountText.Text", String.format("%,d", count));
         update(false, commandBuilder);
     }
 }

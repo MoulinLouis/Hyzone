@@ -11,7 +11,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.logging.Level;
 
 /** MySQL-backed storage for global announcement messages and cadence. */
 public class GlobalMessageStore {
@@ -79,7 +78,7 @@ public class GlobalMessageStore {
                 }
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to load global message settings: " + e.getMessage());
+            LOGGER.atSevere().log("Failed to load global message settings: " + e.getMessage());
             intervalMinutes = DEFAULT_INTERVAL_MINUTES;
         }
     }
@@ -98,7 +97,7 @@ public class GlobalMessageStore {
                 stmt.executeUpdate();
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.WARNING).log("Failed to insert default settings: " + e.getMessage());
+            LOGGER.atWarning().log("Failed to insert default settings: " + e.getMessage());
         }
     }
 
@@ -122,7 +121,7 @@ public class GlobalMessageStore {
                 }
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to load global messages: " + e.getMessage());
+            LOGGER.atSevere().log("Failed to load global messages: " + e.getMessage());
         }
     }
 
@@ -146,7 +145,7 @@ public class GlobalMessageStore {
                 stmt.executeUpdate();
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.WARNING).log("Failed to save settings: " + e.getMessage());
+            LOGGER.atWarning().log("Failed to save settings: " + e.getMessage());
         }
 
         // Clear and re-insert messages
@@ -178,7 +177,7 @@ public class GlobalMessageStore {
                 throw e;
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.WARNING).log("Failed to save messages: " + e.getMessage());
+            LOGGER.atWarning().log("Failed to save messages: " + e.getMessage());
         }
     }
 
@@ -227,7 +226,7 @@ public class GlobalMessageStore {
                 stmt.executeUpdate();
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.WARNING).log("Failed to save settings: " + e.getMessage());
+            LOGGER.atWarning().log("Failed to save settings: " + e.getMessage());
         }
     }
 
@@ -267,7 +266,7 @@ public class GlobalMessageStore {
                 stmt.executeUpdate();
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.WARNING).log("Failed to add message: " + e.getMessage());
+            LOGGER.atWarning().log("Failed to add message: " + e.getMessage());
         }
     }
 

@@ -4,7 +4,6 @@ import com.hypixel.hytale.logger.HytaleLogger;
 
 import java.sql.SQLException;
 import java.util.concurrent.Callable;
-import java.util.logging.Level;
 
 public final class DatabaseRetry {
 
@@ -31,11 +30,12 @@ public final class DatabaseRetry {
             } catch (SQLException e) {
                 lastException = e;
                 if (attempt < maxRetries) {
-                    LOGGER.at(Level.WARNING).log(operationName + " failed (attempt " + attempt
+                    LOGGER.atWarning().log(operationName + " failed (attempt " + attempt
                             + "/" + maxRetries + "), retrying in " + delay + "ms: " + e.getMessage());
                     try {
                         Thread.sleep(delay);
                     } catch (InterruptedException ie) {
+                        // Preserve interrupt status so callers can detect interruption
                         Thread.currentThread().interrupt();
                         throw new SQLException("Retry interrupted", ie);
                     }
@@ -46,7 +46,7 @@ public final class DatabaseRetry {
             }
         }
 
-        LOGGER.at(Level.SEVERE).log(operationName + " failed after " + maxRetries + " attempts");
+        LOGGER.atSevere().log(operationName + " failed after " + maxRetries + " attempts");
         throw lastException;
     }
 

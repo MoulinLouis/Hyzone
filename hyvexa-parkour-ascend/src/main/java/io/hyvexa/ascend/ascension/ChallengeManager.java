@@ -19,7 +19,7 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Level;
+
 
 /**
  * Manages the Ascension Challenge system.
@@ -299,7 +299,7 @@ public class ChallengeManager {
                             try {
                                 snapshot = GSON.fromJson(json, ChallengeSnapshot.class);
                             } catch (Exception e) {
-                                LOGGER.at(Level.WARNING).withCause(e)
+                                LOGGER.atWarning().withCause(e)
                                         .log("[Challenge] Failed to deserialize snapshot for " + playerId + ", clearing challenge");
                                 deleteActiveChallenge(playerId);
                                 snapshot = null;
@@ -321,7 +321,7 @@ public class ChallengeManager {
                 }
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("[Challenge] Failed to load challenge for " + playerId + ": " + e.getMessage());
+            LOGGER.atSevere().log("[Challenge] Failed to load challenge for " + playerId + ": " + e.getMessage());
         }
 
         // Load permanent challenge rewards (any challenge with completions > 0)
@@ -358,7 +358,7 @@ public class ChallengeManager {
                 }
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("[Challenge] Failed to load challenge rewards for " + playerId + ": " + e.getMessage());
+            LOGGER.atSevere().log("[Challenge] Failed to load challenge rewards for " + playerId + ": " + e.getMessage());
         }
     }
 
@@ -397,7 +397,7 @@ public class ChallengeManager {
                 }
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("[Challenge] Failed to load record for " + playerId + ": " + e.getMessage());
+            LOGGER.atSevere().log("[Challenge] Failed to load record for " + playerId + ": " + e.getMessage());
         }
         return new ChallengeRecord(null, 0);
     }
@@ -432,7 +432,7 @@ public class ChallengeManager {
                 stmt.executeUpdate();
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("[Challenge] Failed to persist challenge for " + playerId + ": " + e.getMessage());
+            LOGGER.atSevere().log("[Challenge] Failed to persist challenge for " + playerId + ": " + e.getMessage());
         }
     }
 
@@ -453,7 +453,7 @@ public class ChallengeManager {
                 stmt.executeUpdate();
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("[Challenge] Failed to delete challenge for " + playerId + ": " + e.getMessage());
+            LOGGER.atSevere().log("[Challenge] Failed to delete challenge for " + playerId + ": " + e.getMessage());
         }
     }
 
@@ -484,7 +484,7 @@ public class ChallengeManager {
                 stmt.executeUpdate();
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("[Challenge] Failed to record completion for " + playerId + ": " + e.getMessage());
+            LOGGER.atSevere().log("[Challenge] Failed to record completion for " + playerId + ": " + e.getMessage());
         }
     }
 

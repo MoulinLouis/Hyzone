@@ -2,6 +2,8 @@ package io.hyvexa.common.util;
 
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 
+import java.util.Arrays;
+
 /**
  * Utility methods for command argument parsing.
  */
@@ -34,9 +36,7 @@ public final class CommandUtils {
             if (tokens.length == 1) {
                 return new String[0];
             }
-            String[] trimmed = new String[tokens.length - 1];
-            System.arraycopy(tokens, 1, trimmed, 0, trimmed.length);
-            return trimmed;
+            return Arrays.copyOfRange(tokens, 1, tokens.length);
         }
         return tokens;
     }

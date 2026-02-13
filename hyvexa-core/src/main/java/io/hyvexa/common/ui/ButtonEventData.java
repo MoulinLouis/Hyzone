@@ -13,6 +13,7 @@ public class ButtonEventData {
                             (data, value) -> data.button = value, data -> data.button)
                     .build();
 
+    // Mutated by BuilderCodec during deserialization — intentional, not a bug.
     private String button;
 
     public String getButton() {

@@ -15,7 +15,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.*;
 import java.util.concurrent.ConcurrentSkipListSet;
-import java.util.logging.Level;
 
 /**
  * Manages the whitelist of players allowed to access Ascend mode via the Hub menu.
@@ -139,7 +138,7 @@ public class AscendWhitelistManager {
         try (BufferedReader reader = Files.newBufferedReader(whitelistFile.toPath(), StandardCharsets.UTF_8)) {
             JsonObject json = gson.fromJson(reader, JsonObject.class);
             if (json == null) {
-                LOGGER.at(Level.WARNING).log("Whitelist file is empty, resetting");
+                LOGGER.atWarning().log("Whitelist file is empty, resetting");
                 save();
                 return;
             }
@@ -166,7 +165,7 @@ public class AscendWhitelistManager {
                 LOGGER.atInfo().log("Loaded " + whitelistedPlayers.size() + " whitelisted players (enabled: " + enabled + ")");
             }
         } catch (IOException | com.google.gson.JsonSyntaxException e) {
-            LOGGER.at(Level.SEVERE).withCause(e).log("Failed to load whitelist file, resetting");
+            LOGGER.atSevere().withCause(e).log("Failed to load whitelist file, resetting");
             whitelistedPlayers.clear();
             enabled = true;
             save();
@@ -195,7 +194,7 @@ public class AscendWhitelistManager {
                 gson.toJson(json, writer);
             }
         } catch (IOException e) {
-            LOGGER.at(Level.SEVERE).withCause(e).log("Failed to save whitelist file");
+            LOGGER.atSevere().withCause(e).log("Failed to save whitelist file");
         }
     }
 }

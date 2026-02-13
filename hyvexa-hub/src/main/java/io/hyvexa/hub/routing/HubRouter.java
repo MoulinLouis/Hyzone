@@ -19,7 +19,7 @@ import io.hyvexa.hub.HubConstants;
 import io.hyvexa.hub.ui.HubMenuPage;
 
 import java.util.UUID;
-import java.util.logging.Level;
+
 
 public class HubRouter {
 
@@ -68,7 +68,7 @@ public class HubRouter {
             }
             World targetWorld = resolveWorld(targetWorldName);
             if (targetWorld == null) {
-                LOGGER.at(Level.WARNING).log("Failed to resolve world '" + targetWorldName
+                LOGGER.atWarning().log("Failed to resolve world '" + targetWorldName
                         + "' for player " + playerIdText);
                 Player p = store.getComponent(ref, Player.getComponentType());
                 if (p != null) {
@@ -100,13 +100,13 @@ public class HubRouter {
         try {
             Universe.get().loadWorld(worldName);
         } catch (Exception e) {
-            LOGGER.at(Level.WARNING).log("Failed to load world '" + worldName + "': " + e.getMessage());
+            LOGGER.atWarning().log("Failed to load world '" + worldName + "': " + e.getMessage());
         }
         world = Universe.get().getWorld(worldName);
         if (world != null) {
             return world;
         }
-        LOGGER.at(Level.WARNING).log("World '" + worldName + "' not found after load attempt.");
+        LOGGER.atWarning().log("World '" + worldName + "' not found after load attempt.");
         return null;
     }
 
@@ -116,7 +116,7 @@ public class HubRouter {
             try {
                 return worldConfig.getSpawnProvider().getSpawnPoint(world, playerId);
             } catch (Exception e) {
-                LOGGER.at(Level.WARNING).log("Failed to resolve spawn point: " + e.getMessage());
+                LOGGER.atWarning().log("Failed to resolve spawn point: " + e.getMessage());
             }
         }
         return null;

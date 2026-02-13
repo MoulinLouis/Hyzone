@@ -7,7 +7,7 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.logging.Level;
+
 
 public final class AscendDatabaseSetup {
 
@@ -193,7 +193,7 @@ public final class AscendDatabaseSetup {
             } // close try (Statement stmt)
 
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to create Ascend tables: " + e.getMessage());
+            LOGGER.atSevere().log("Failed to create Ascend tables: " + e.getMessage());
         }
     }
 
@@ -211,7 +211,7 @@ public final class AscendDatabaseSetup {
             stmt.executeUpdate("ALTER TABLE ascend_players CHANGE COLUMN rebirth_multiplier elevation_multiplier INT NOT NULL DEFAULT 1");
             LOGGER.atInfo().log("Migrated rebirth_multiplier to elevation_multiplier");
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to rename rebirth_multiplier column: " + e.getMessage());
+            LOGGER.atSevere().log("Failed to rename rebirth_multiplier column: " + e.getMessage());
         }
     }
 
@@ -225,7 +225,7 @@ public final class AscendDatabaseSetup {
         try (Statement stmt = conn.createStatement()) {
             stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN elevation_multiplier INT NOT NULL DEFAULT 1");
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to add elevation_multiplier column: " + e.getMessage());
+            LOGGER.atSevere().log("Failed to add elevation_multiplier column: " + e.getMessage());
         }
     }
 
@@ -262,7 +262,7 @@ public final class AscendDatabaseSetup {
             conn.commit();
         } catch (SQLException e) {
             try { conn.rollback(); } catch (SQLException re) { /* ignore */ }
-            LOGGER.at(Level.SEVERE).log("Failed to migrate multiplier schema (rolled back): " + e.getMessage());
+            LOGGER.atSevere().log("Failed to migrate multiplier schema (rolled back): " + e.getMessage());
         } finally {
             try { conn.setAutoCommit(wasAutoCommit); } catch (SQLException e) { /* ignore */ }
         }
@@ -278,7 +278,7 @@ public final class AscendDatabaseSetup {
         try (Statement stmt = conn.createStatement()) {
             stmt.executeUpdate("ALTER TABLE ascend_maps ADD COLUMN robot_time_reduction_ms BIGINT NOT NULL DEFAULT 0");
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to add robot_time_reduction_ms column: " + e.getMessage());
+            LOGGER.atSevere().log("Failed to add robot_time_reduction_ms column: " + e.getMessage());
         }
     }
 
@@ -293,7 +293,7 @@ public final class AscendDatabaseSetup {
             stmt.executeUpdate("ALTER TABLE ascend_player_maps ADD COLUMN robot_stars INT NOT NULL DEFAULT 0");
             LOGGER.atInfo().log("Added robot_stars column to ascend_player_maps");
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to add robot_stars column: " + e.getMessage());
+            LOGGER.atSevere().log("Failed to add robot_stars column: " + e.getMessage());
         }
     }
 
@@ -305,7 +305,7 @@ public final class AscendDatabaseSetup {
                 return rs.next();
             }
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to check column " + column + ": " + e.getMessage());
+            LOGGER.atSevere().log("Failed to check column " + column + ": " + e.getMessage());
             return false;
         }
     }
@@ -354,7 +354,7 @@ public final class AscendDatabaseSetup {
             LOGGER.atInfo().log("Migrated Summit XP to new scale (exponent 2.5 -> 2.0)");
         } catch (SQLException e) {
             try { conn.rollback(); } catch (SQLException re) { /* ignore */ }
-            LOGGER.at(Level.SEVERE).log("Failed to migrate Summit XP scale (rolled back): " + e.getMessage());
+            LOGGER.atSevere().log("Failed to migrate Summit XP scale (rolled back): " + e.getMessage());
         } finally {
             try { conn.setAutoCommit(wasAutoCommit); } catch (SQLException e) { /* ignore */ }
         }
@@ -371,7 +371,7 @@ public final class AscendDatabaseSetup {
                 stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN ascension_count INT NOT NULL DEFAULT 0");
                 LOGGER.atInfo().log("Added ascension_count column to ascend_players");
             } catch (SQLException e) {
-                LOGGER.at(Level.SEVERE).log("Failed to add ascension_count column: " + e.getMessage());
+                LOGGER.atSevere().log("Failed to add ascension_count column: " + e.getMessage());
             }
         }
 
@@ -381,7 +381,7 @@ public final class AscendDatabaseSetup {
                 stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN skill_tree_points INT NOT NULL DEFAULT 0");
                 LOGGER.atInfo().log("Added skill_tree_points column to ascend_players");
             } catch (SQLException e) {
-                LOGGER.at(Level.SEVERE).log("Failed to add skill_tree_points column: " + e.getMessage());
+                LOGGER.atSevere().log("Failed to add skill_tree_points column: " + e.getMessage());
             }
         }
 
@@ -393,7 +393,7 @@ public final class AscendDatabaseSetup {
                 stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN total_coins_earned DOUBLE NOT NULL DEFAULT 0");
                 LOGGER.atInfo().log("Added total_coins_earned column to ascend_players");
             } catch (SQLException e) {
-                LOGGER.at(Level.SEVERE).log("Failed to add total_coins_earned column: " + e.getMessage());
+                LOGGER.atSevere().log("Failed to add total_coins_earned column: " + e.getMessage());
             }
         }
 
@@ -409,7 +409,7 @@ public final class AscendDatabaseSetup {
                 stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN total_manual_runs INT NOT NULL DEFAULT 0");
                 LOGGER.atInfo().log("Added total_manual_runs column to ascend_players");
             } catch (SQLException e) {
-                LOGGER.at(Level.SEVERE).log("Failed to add total_manual_runs column: " + e.getMessage());
+                LOGGER.atSevere().log("Failed to add total_manual_runs column: " + e.getMessage());
             }
         }
 
@@ -419,7 +419,7 @@ public final class AscendDatabaseSetup {
                 stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN active_title VARCHAR(64) DEFAULT NULL");
                 LOGGER.atInfo().log("Added active_title column to ascend_players");
             } catch (SQLException e) {
-                LOGGER.at(Level.SEVERE).log("Failed to add active_title column: " + e.getMessage());
+                LOGGER.atSevere().log("Failed to add active_title column: " + e.getMessage());
             }
         }
 
@@ -429,7 +429,7 @@ public final class AscendDatabaseSetup {
                 stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN ascension_started_at BIGINT DEFAULT NULL");
                 LOGGER.atInfo().log("Added ascension_started_at column to ascend_players");
             } catch (SQLException e) {
-                LOGGER.at(Level.SEVERE).log("Failed to add ascension_started_at column: " + e.getMessage());
+                LOGGER.atSevere().log("Failed to add ascension_started_at column: " + e.getMessage());
             }
         }
 
@@ -438,7 +438,7 @@ public final class AscendDatabaseSetup {
                 stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN fastest_ascension_ms BIGINT DEFAULT NULL");
                 LOGGER.atInfo().log("Added fastest_ascension_ms column to ascend_players");
             } catch (SQLException e) {
-                LOGGER.at(Level.SEVERE).log("Failed to add fastest_ascension_ms column: " + e.getMessage());
+                LOGGER.atSevere().log("Failed to add fastest_ascension_ms column: " + e.getMessage());
             }
         }
 
@@ -448,7 +448,7 @@ public final class AscendDatabaseSetup {
                 stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN last_active_timestamp BIGINT DEFAULT NULL");
                 LOGGER.atInfo().log("Added last_active_timestamp column");
             } catch (SQLException e) {
-                LOGGER.at(Level.SEVERE).log("Failed to add last_active_timestamp: " + e.getMessage());
+                LOGGER.atSevere().log("Failed to add last_active_timestamp: " + e.getMessage());
             }
         }
 
@@ -460,7 +460,7 @@ public final class AscendDatabaseSetup {
                 stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN summit_accumulated_coins DECIMAL(65,2) NOT NULL DEFAULT 0");
                 LOGGER.atInfo().log("Added summit_accumulated_coins column to ascend_players");
             } catch (SQLException e) {
-                LOGGER.at(Level.SEVERE).log("Failed to add summit_accumulated_coins column: " + e.getMessage());
+                LOGGER.atSevere().log("Failed to add summit_accumulated_coins column: " + e.getMessage());
             }
         }
 
@@ -470,7 +470,7 @@ public final class AscendDatabaseSetup {
                 stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN has_unclaimed_passive BOOLEAN NOT NULL DEFAULT FALSE");
                 LOGGER.atInfo().log("Added has_unclaimed_passive column");
             } catch (SQLException e) {
-                LOGGER.at(Level.SEVERE).log("Failed to add has_unclaimed_passive: " + e.getMessage());
+                LOGGER.atSevere().log("Failed to add has_unclaimed_passive: " + e.getMessage());
             }
         }
 
@@ -482,7 +482,7 @@ public final class AscendDatabaseSetup {
                 stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN elevation_accumulated_coins DECIMAL(65,2) NOT NULL DEFAULT 0");
                 LOGGER.atInfo().log("Added elevation_accumulated_coins column to ascend_players");
             } catch (SQLException e) {
-                LOGGER.at(Level.SEVERE).log("Failed to add elevation_accumulated_coins column: " + e.getMessage());
+                LOGGER.atSevere().log("Failed to add elevation_accumulated_coins column: " + e.getMessage());
             }
         }
 
@@ -492,7 +492,7 @@ public final class AscendDatabaseSetup {
                 stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN auto_upgrade_enabled BOOLEAN NOT NULL DEFAULT FALSE");
                 LOGGER.atInfo().log("Added auto_upgrade_enabled column");
             } catch (SQLException e) {
-                LOGGER.at(Level.SEVERE).log("Failed to add auto_upgrade_enabled: " + e.getMessage());
+                LOGGER.atSevere().log("Failed to add auto_upgrade_enabled: " + e.getMessage());
             }
         }
 
@@ -502,7 +502,7 @@ public final class AscendDatabaseSetup {
                 stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN auto_evolution_enabled BOOLEAN NOT NULL DEFAULT FALSE");
                 LOGGER.atInfo().log("Added auto_evolution_enabled column");
             } catch (SQLException e) {
-                LOGGER.at(Level.SEVERE).log("Failed to add auto_evolution_enabled: " + e.getMessage());
+                LOGGER.atSevere().log("Failed to add auto_evolution_enabled: " + e.getMessage());
             }
         }
 
@@ -512,7 +512,7 @@ public final class AscendDatabaseSetup {
                 stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN hide_other_runners BOOLEAN NOT NULL DEFAULT FALSE");
                 LOGGER.atInfo().log("Added hide_other_runners column");
             } catch (SQLException e) {
-                LOGGER.at(Level.SEVERE).log("Failed to add hide_other_runners: " + e.getMessage());
+                LOGGER.atSevere().log("Failed to add hide_other_runners: " + e.getMessage());
             }
         }
     }
@@ -537,7 +537,7 @@ public final class AscendDatabaseSetup {
                 """);
             LOGGER.atInfo().log("Ensured ascend_ghost_recordings table");
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to create ghost recordings table: " + e.getMessage());
+            LOGGER.atSevere().log("Failed to create ghost recordings table: " + e.getMessage());
         }
     }
 
@@ -554,7 +554,7 @@ public final class AscendDatabaseSetup {
             stmt.executeUpdate("ALTER TABLE ascend_player_maps ADD COLUMN best_time_ms BIGINT DEFAULT NULL");
             LOGGER.atInfo().log("Added best_time_ms column to ascend_player_maps");
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to add best_time_ms column: " + e.getMessage());
+            LOGGER.atSevere().log("Failed to add best_time_ms column: " + e.getMessage());
         }
     }
 
@@ -574,7 +574,7 @@ public final class AscendDatabaseSetup {
                 stmt.executeUpdate("ALTER TABLE ascend_settings ADD COLUMN spawn_rot_z FLOAT NOT NULL DEFAULT 0");
                 LOGGER.atInfo().log("Added spawn columns to ascend_settings");
             } catch (SQLException e) {
-                LOGGER.at(Level.SEVERE).log("Failed to add spawn columns: " + e.getMessage());
+                LOGGER.atSevere().log("Failed to add spawn columns: " + e.getMessage());
             }
         }
     }
@@ -590,7 +590,7 @@ public final class AscendDatabaseSetup {
             stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN player_name VARCHAR(32) DEFAULT NULL");
             LOGGER.atInfo().log("Added player_name column to ascend_players");
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to add player_name column: " + e.getMessage());
+            LOGGER.atSevere().log("Failed to add player_name column: " + e.getMessage());
         }
     }
 
@@ -605,7 +605,7 @@ public final class AscendDatabaseSetup {
             stmt.executeUpdate("ALTER TABLE ascend_settings ADD COLUMN void_y_threshold DOUBLE DEFAULT NULL");
             LOGGER.atInfo().log("Added void_y_threshold column to ascend_settings");
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to add void_y_threshold column: " + e.getMessage());
+            LOGGER.atSevere().log("Failed to add void_y_threshold column: " + e.getMessage());
         }
     }
 
@@ -658,7 +658,7 @@ public final class AscendDatabaseSetup {
             conn.commit();
         } catch (SQLException e) {
             try { conn.rollback(); } catch (SQLException re) { /* ignore */ }
-            LOGGER.at(Level.SEVERE).log("Failed to migrate coins columns to DOUBLE (rolled back): " + e.getMessage());
+            LOGGER.atSevere().log("Failed to migrate coins columns to DOUBLE (rolled back): " + e.getMessage());
         } finally {
             try { conn.setAutoCommit(wasAutoCommit); } catch (SQLException e) { /* ignore */ }
         }
@@ -675,7 +675,7 @@ public final class AscendDatabaseSetup {
             stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN seen_tutorials INT NOT NULL DEFAULT 0");
             LOGGER.atInfo().log("Added seen_tutorials column to ascend_players");
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to add seen_tutorials column: " + e.getMessage());
+            LOGGER.atSevere().log("Failed to add seen_tutorials column: " + e.getMessage());
         }
     }
 
@@ -727,7 +727,7 @@ public final class AscendDatabaseSetup {
             conn.commit();
         } catch (SQLException e) {
             try { conn.rollback(); } catch (SQLException re) { /* ignore */ }
-            LOGGER.at(Level.SEVERE).log("Failed to migrate columns to DECIMAL (rolled back): " + e.getMessage());
+            LOGGER.atSevere().log("Failed to migrate columns to DECIMAL (rolled back): " + e.getMessage());
         } finally {
             try { conn.setAutoCommit(wasAutoCommit); } catch (SQLException e) { /* ignore */ }
         }
@@ -828,7 +828,7 @@ public final class AscendDatabaseSetup {
             LOGGER.atInfo().log("Scientific notation migration complete");
         } catch (SQLException e) {
             try { conn.rollback(); } catch (SQLException re) { /* ignore */ }
-            LOGGER.at(Level.SEVERE).log("Failed to migrate to scientific notation (rolled back): " + e.getMessage());
+            LOGGER.atSevere().log("Failed to migrate to scientific notation (rolled back): " + e.getMessage());
         } finally {
             try { conn.setAutoCommit(wasAutoCommit); } catch (SQLException e) { /* ignore */ }
         }
@@ -865,7 +865,7 @@ public final class AscendDatabaseSetup {
 
             LOGGER.atInfo().log("Ensured challenge system tables");
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to create challenge tables: " + e.getMessage());
+            LOGGER.atSevere().log("Failed to create challenge tables: " + e.getMessage());
         }
     }
 
@@ -880,7 +880,7 @@ public final class AscendDatabaseSetup {
             stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN break_ascension_enabled BOOLEAN NOT NULL DEFAULT FALSE");
             LOGGER.atInfo().log("Added break_ascension_enabled column to ascend_players");
         } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Failed to add break_ascension_enabled column: " + e.getMessage());
+            LOGGER.atSevere().log("Failed to add break_ascension_enabled column: " + e.getMessage());
         }
     }
 
@@ -925,7 +925,7 @@ public final class AscendDatabaseSetup {
             LOGGER.atInfo().log("Renamed coins columns to vexa in ascend_players");
         } catch (SQLException e) {
             try { conn.rollback(); } catch (SQLException re) { /* ignore */ }
-            LOGGER.at(Level.SEVERE).log("Failed to rename coins columns to vexa (rolled back): " + e.getMessage());
+            LOGGER.atSevere().log("Failed to rename coins columns to vexa (rolled back): " + e.getMessage());
         } finally {
             try { conn.setAutoCommit(wasAutoCommit); } catch (SQLException e) { /* ignore */ }
         }
