@@ -61,15 +61,21 @@ public class GlobalMessageStore {
     private void loadSettings() {
         String sql = "SELECT interval_minutes FROM global_message_settings WHERE id = 1";
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    intervalMinutes = clampInterval(rs.getLong("interval_minutes"));
-                } else {
-                    intervalMinutes = DEFAULT_INTERVAL_MINUTES;
-                    insertDefaultSettings();
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection");
+                intervalMinutes = DEFAULT_INTERVAL_MINUTES;
+                return;
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        intervalMinutes = clampInterval(rs.getLong("interval_minutes"));
+                    } else {
+                        intervalMinutes = DEFAULT_INTERVAL_MINUTES;
+                        insertDefaultSettings();
+                    }
                 }
             }
         } catch (SQLException e) {
@@ -81,11 +87,16 @@ public class GlobalMessageStore {
     private void insertDefaultSettings() {
         String sql = "INSERT INTO global_message_settings (id, interval_minutes) VALUES (1, ?)";
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.setLong(1, intervalMinutes);
-            stmt.executeUpdate();
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection");
+                return;
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setLong(1, intervalMinutes);
+                stmt.executeUpdate();
+            }
         } catch (SQLException e) {
             LOGGER.at(Level.WARNING).log("Failed to insert default settings: " + e.getMessage());
         }
@@ -94,14 +105,19 @@ public class GlobalMessageStore {
     private void loadMessages() {
         String sql = "SELECT message FROM global_messages ORDER BY display_order, id";
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    String cleaned = normalizeMessage(rs.getString("message"));
-                    if (!cleaned.isEmpty()) {
-                        messages.add(cleaned);
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection");
+                return;
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        String cleaned = normalizeMessage(rs.getString("message"));
+                        if (!cleaned.isEmpty()) {
+                            messages.add(cleaned);
+                        }
                     }
                 }
             }
@@ -119,11 +135,16 @@ public class GlobalMessageStore {
             ON DUPLICATE KEY UPDATE interval_minutes = VALUES(interval_minutes)
             """;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(settingsSql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.setLong(1, intervalMinutes);
-            stmt.executeUpdate();
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection");
+                return;
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(settingsSql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setLong(1, intervalMinutes);
+                stmt.executeUpdate();
+            }
         } catch (SQLException e) {
             LOGGER.at(Level.WARNING).log("Failed to save settings: " + e.getMessage());
         }
@@ -133,6 +154,10 @@ public class GlobalMessageStore {
         String insertSql = "INSERT INTO global_messages (message, display_order) VALUES (?, ?)";
 
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection");
+                return;
+            }
             conn.setAutoCommit(false);
             try (PreparedStatement deleteStmt = conn.prepareStatement(deleteSql);
                  PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
@@ -191,11 +216,16 @@ public class GlobalMessageStore {
 
         String sql = "UPDATE global_message_settings SET interval_minutes = ? WHERE id = 1";
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.setLong(1, intervalMinutes);
-            stmt.executeUpdate();
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection");
+                return;
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setLong(1, intervalMinutes);
+                stmt.executeUpdate();
+            }
         } catch (SQLException e) {
             LOGGER.at(Level.WARNING).log("Failed to save settings: " + e.getMessage());
         }
@@ -225,12 +255,17 @@ public class GlobalMessageStore {
 
         String sql = "INSERT INTO global_messages (message, display_order) VALUES (?, ?)";
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.setString(1, message);
-            stmt.setInt(2, order);
-            stmt.executeUpdate();
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection");
+                return;
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setString(1, message);
+                stmt.setInt(2, order);
+                stmt.executeUpdate();
+            }
         } catch (SQLException e) {
             LOGGER.at(Level.WARNING).log("Failed to add message: " + e.getMessage());
         }

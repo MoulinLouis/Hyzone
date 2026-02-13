@@ -524,7 +524,7 @@ public class RunTracker {
                     String category = map.getCategory() != null ? map.getCategory() : "Easy";
                     p.getPageManager().openCustomPage(ref, store,
                             new MapRecommendationPage(playerRef, mapStore, progressStore, this, run.mapId, category));
-                }, world);
+                }, world).orTimeout(5, TimeUnit.SECONDS).exceptionally(ex -> null);
             }
 
             if (mapData.failureCount == 3 && !mapData.practiceHintShown && !run.practiceEnabled) {
@@ -541,7 +541,7 @@ public class RunTracker {
                     }
                     p.getPageManager().openCustomPage(ref, store,
                             new PracticeModeHintPage(playerRef, this));
-                }, world);
+                }, world).orTimeout(5, TimeUnit.SECONDS).exceptionally(ex -> null);
             }
 
             return;
@@ -899,7 +899,7 @@ public class RunTracker {
             }
             targetPlayer.sendMessage(SystemMessageUtils.parkourWarn(
                     "Warning: Your time might not have been saved. Please report this."));
-        }, world);
+        }, world).orTimeout(5, TimeUnit.SECONDS).exceptionally(ex -> null);
     }
 
     private static double distanceSq(Vector3d position, TransformData target) {
@@ -1349,7 +1349,7 @@ public class RunTracker {
             if (playerId != null) {
                 readyPlayers.add(playerId);
             }
-        }, world);
+        }, world).orTimeout(5, TimeUnit.SECONDS).exceptionally(ex -> null);
     }
 
     private boolean isPlayerReady(UUID playerId) {

@@ -21,7 +21,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 
 /** Shared sampling pipeline for ghost recording. */
-public abstract class AbstractGhostRecorder<TSample, TRecording> {
+public abstract class AbstractGhostRecorder<TSample, TRecording> implements AutoCloseable {
 
     private static final long SAMPLE_INTERVAL_MS = 50L;
     private static final int MAX_SAMPLES = 12000;
@@ -67,6 +67,11 @@ public abstract class AbstractGhostRecorder<TSample, TRecording> {
             samplingTask = null;
         }
         activeRecordings.clear();
+    }
+
+    @Override
+    public void close() {
+        stop();
     }
 
     public void startRecording(UUID playerId, String mapId) {

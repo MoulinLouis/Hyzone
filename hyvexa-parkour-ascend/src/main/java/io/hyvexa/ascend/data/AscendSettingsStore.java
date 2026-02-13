@@ -52,30 +52,35 @@ public class AscendSettingsStore {
             FROM ascend_settings WHERE id = ?
             """;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.setInt(1, SETTINGS_ID);
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    spawnX = rs.getDouble("spawn_x");
-                    spawnY = rs.getDouble("spawn_y");
-                    spawnZ = rs.getDouble("spawn_z");
-                    spawnRotX = rs.getFloat("spawn_rot_x");
-                    spawnRotY = rs.getFloat("spawn_rot_y");
-                    spawnRotZ = rs.getFloat("spawn_rot_z");
-                    npcX = rs.getDouble("npc_x");
-                    npcY = rs.getDouble("npc_y");
-                    npcZ = rs.getDouble("npc_z");
-                    npcRotX = rs.getFloat("npc_rot_x");
-                    npcRotY = rs.getFloat("npc_rot_y");
-                    npcRotZ = rs.getFloat("npc_rot_z");
-                    double voidY = rs.getDouble("void_y_threshold");
-                    voidYThreshold = rs.wasNull() ? null : voidY;
-                    LOGGER.atInfo().log("AscendSettingsStore loaded");
-                } else {
-                    LOGGER.atInfo().log("No settings row found, inserting default");
-                    insertDefault();
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection");
+                return;
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setInt(1, SETTINGS_ID);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        spawnX = rs.getDouble("spawn_x");
+                        spawnY = rs.getDouble("spawn_y");
+                        spawnZ = rs.getDouble("spawn_z");
+                        spawnRotX = rs.getFloat("spawn_rot_x");
+                        spawnRotY = rs.getFloat("spawn_rot_y");
+                        spawnRotZ = rs.getFloat("spawn_rot_z");
+                        npcX = rs.getDouble("npc_x");
+                        npcY = rs.getDouble("npc_y");
+                        npcZ = rs.getDouble("npc_z");
+                        npcRotX = rs.getFloat("npc_rot_x");
+                        npcRotY = rs.getFloat("npc_rot_y");
+                        npcRotZ = rs.getFloat("npc_rot_z");
+                        double voidY = rs.getDouble("void_y_threshold");
+                        voidYThreshold = rs.wasNull() ? null : voidY;
+                        LOGGER.atInfo().log("AscendSettingsStore loaded");
+                    } else {
+                        LOGGER.atInfo().log("No settings row found, inserting default");
+                        insertDefault();
+                    }
                 }
             }
         } catch (SQLException e) {
@@ -95,11 +100,16 @@ public class AscendSettingsStore {
             ON DUPLICATE KEY UPDATE id = id
             """;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.setInt(1, SETTINGS_ID);
-            stmt.executeUpdate();
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection");
+                return;
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setInt(1, SETTINGS_ID);
+                stmt.executeUpdate();
+            }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Failed to insert default settings: " + e.getMessage());
         }
@@ -142,29 +152,34 @@ public class AscendSettingsStore {
                 void_y_threshold = VALUES(void_y_threshold)
             """;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            int i = 1;
-            stmt.setInt(i++, SETTINGS_ID);
-            stmt.setDouble(i++, spawnX);
-            stmt.setDouble(i++, spawnY);
-            stmt.setDouble(i++, spawnZ);
-            stmt.setFloat(i++, spawnRotX);
-            stmt.setFloat(i++, spawnRotY);
-            stmt.setFloat(i++, spawnRotZ);
-            stmt.setDouble(i++, npcX);
-            stmt.setDouble(i++, npcY);
-            stmt.setDouble(i++, npcZ);
-            stmt.setFloat(i++, npcRotX);
-            stmt.setFloat(i++, npcRotY);
-            stmt.setFloat(i++, npcRotZ);
-            if (voidYThreshold != null) {
-                stmt.setDouble(i, voidYThreshold);
-            } else {
-                stmt.setNull(i, java.sql.Types.DOUBLE);
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection");
+                return;
             }
-            stmt.executeUpdate();
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                int i = 1;
+                stmt.setInt(i++, SETTINGS_ID);
+                stmt.setDouble(i++, spawnX);
+                stmt.setDouble(i++, spawnY);
+                stmt.setDouble(i++, spawnZ);
+                stmt.setFloat(i++, spawnRotX);
+                stmt.setFloat(i++, spawnRotY);
+                stmt.setFloat(i++, spawnRotZ);
+                stmt.setDouble(i++, npcX);
+                stmt.setDouble(i++, npcY);
+                stmt.setDouble(i++, npcZ);
+                stmt.setFloat(i++, npcRotX);
+                stmt.setFloat(i++, npcRotY);
+                stmt.setFloat(i++, npcRotZ);
+                if (voidYThreshold != null) {
+                    stmt.setDouble(i, voidYThreshold);
+                } else {
+                    stmt.setNull(i, java.sql.Types.DOUBLE);
+                }
+                stmt.executeUpdate();
+            }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Failed to save settings: " + e.getMessage());
         }

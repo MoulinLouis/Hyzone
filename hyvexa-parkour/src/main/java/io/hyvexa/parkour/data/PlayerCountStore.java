@@ -45,15 +45,20 @@ public class PlayerCountStore {
         try {
             samples.clear();
 
-            try (Connection conn = DatabaseManager.getInstance().getConnection();
-                 PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.setLong(1, cutoff);
-                try (ResultSet rs = stmt.executeQuery()) {
-                    while (rs.next()) {
-                        long timestampMs = rs.getLong("timestamp_ms");
-                        int count = Math.max(0, rs.getInt("count"));
-                        samples.add(new Sample(timestampMs, count));
+            try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+                if (conn == null) {
+                    LOGGER.atWarning().log("Failed to acquire database connection");
+                    return;
+                }
+                try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                    DatabaseManager.applyQueryTimeout(stmt);
+                    stmt.setLong(1, cutoff);
+                    try (ResultSet rs = stmt.executeQuery()) {
+                        while (rs.next()) {
+                            long timestampMs = rs.getLong("timestamp_ms");
+                            int count = Math.max(0, rs.getInt("count"));
+                            samples.add(new Sample(timestampMs, count));
+                        }
                     }
                 }
             } catch (SQLException e) {
@@ -77,13 +82,18 @@ public class PlayerCountStore {
         long cutoff = System.currentTimeMillis() - retentionMs;
         String sql = "DELETE FROM player_count_samples WHERE timestamp_ms < ?";
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.setLong(1, cutoff);
-            int deleted = stmt.executeUpdate();
-            if (deleted > 0) {
-                LOGGER.atInfo().log("Pruned " + deleted + " old player count samples");
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection");
+                return;
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setLong(1, cutoff);
+                int deleted = stmt.executeUpdate();
+                if (deleted > 0) {
+                    LOGGER.atInfo().log("Pruned " + deleted + " old player count samples");
+                }
             }
         } catch (SQLException e) {
             LOGGER.at(Level.WARNING).log("Failed to prune old samples: " + e.getMessage());
@@ -123,10 +133,15 @@ public class PlayerCountStore {
         }
 
         String sql = "DELETE FROM player_count_samples";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.executeUpdate();
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection");
+                return;
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.executeUpdate();
+            }
         } catch (SQLException e) {
             LOGGER.at(Level.WARNING).log("Failed to clear player count samples: " + e.getMessage());
         }
@@ -137,12 +152,17 @@ public class PlayerCountStore {
 
         String sql = "INSERT INTO player_count_samples (timestamp_ms, count) VALUES (?, ?)";
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.setLong(1, timestampMs);
-            stmt.setInt(2, count);
-            stmt.executeUpdate();
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection");
+                return;
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setLong(1, timestampMs);
+                stmt.setInt(2, count);
+                stmt.executeUpdate();
+            }
         } catch (SQLException e) {
             LOGGER.at(Level.WARNING).log("Failed to save sample: " + e.getMessage());
         }

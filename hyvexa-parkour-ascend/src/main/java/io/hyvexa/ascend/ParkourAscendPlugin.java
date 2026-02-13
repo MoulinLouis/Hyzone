@@ -270,7 +270,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     AscendInventoryUtils.giveMenuItems(player);
                     hudManager.attach(playerRef, player);
                     AscendMusicPage.applyStoredMusic(playerRef);
-                }, world).exceptionally(ex -> {
+                }, world).orTimeout(5, TimeUnit.SECONDS).exceptionally(ex -> {
                     LOGGER.at(Level.WARNING).withCause(ex).log("Exception in PlayerReadyEvent async task");
                     return null;
                 });
@@ -508,7 +508,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
                 } finally {
                     inFlight.set(false);
                 }
-            }, world).exceptionally(ex -> {
+            }, world).orTimeout(5, TimeUnit.SECONDS).exceptionally(ex -> {
                 LOGGER.at(Level.WARNING).withCause(ex).log("Exception in tick async task");
                 return null;
             });
@@ -570,7 +570,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
                 MENU_SYNC_RETRY_DELAY_MS,
                 TimeUnit.MILLISECONDS
             );
-        }, expectedWorld).exceptionally(ex -> {
+        }, expectedWorld).orTimeout(5, TimeUnit.SECONDS).exceptionally(ex -> {
             LOGGER.at(Level.WARNING).withCause(ex).log("Exception while syncing Ascend inventory after world switch");
             return null;
         });
