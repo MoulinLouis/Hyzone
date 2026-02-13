@@ -260,25 +260,6 @@ public class HyvexaPlugin extends JavaPlugin {
             } catch (Exception e) {
                 LOGGER.at(Level.WARNING).withCause(e).log("Exception in PlayerReadyEvent (collision)");
             }
-        });
-        collisionManager.disableAllCollisions();
-
-        for (PlayerRef playerRef : Universe.get().getPlayers()) {
-            Ref<EntityStore> ref = playerRef != null ? playerRef.getReference() : null;
-            if (ref != null && ref.isValid()) {
-                Store<EntityStore> store = ref.getStore();
-                if (shouldApplyParkourMode(playerRef, store)) {
-                    hudManager.ensureRunHud(playerRef);
-                }
-            }
-            playtimeManager.startPlaytimeSession(playerRef);
-            if (runTracker != null) {
-                runTracker.markPlayerReady(playerRef);
-            }
-            PlayerMusicPage.applyStoredMusic(playerRef);
-        }
-
-        this.getEventRegistry().registerGlobal(PlayerReadyEvent.class, event -> {
             try {
                 if (runTracker != null) {
                     runTracker.markPlayerReady(event.getPlayerRef());
@@ -304,9 +285,26 @@ public class HyvexaPlugin extends JavaPlugin {
                     }
                 }
             } catch (Exception e) {
-                LOGGER.at(Level.WARNING).withCause(e).log("Exception in PlayerReadyEvent (inventory)");
+                LOGGER.at(Level.WARNING).withCause(e).log("Exception in PlayerReadyEvent (setup)");
             }
         });
+        collisionManager.disableAllCollisions();
+
+        for (PlayerRef playerRef : Universe.get().getPlayers()) {
+            Ref<EntityStore> ref = playerRef != null ? playerRef.getReference() : null;
+            if (ref != null && ref.isValid()) {
+                Store<EntityStore> store = ref.getStore();
+                if (shouldApplyParkourMode(playerRef, store)) {
+                    hudManager.ensureRunHud(playerRef);
+                }
+            }
+            playtimeManager.startPlaytimeSession(playerRef);
+            if (runTracker != null) {
+                runTracker.markPlayerReady(playerRef);
+            }
+            PlayerMusicPage.applyStoredMusic(playerRef);
+        }
+
         this.getEventRegistry().registerGlobal(AddPlayerToWorldEvent.class, event -> {
             try {
                 event.setBroadcastJoinMessage(false);
