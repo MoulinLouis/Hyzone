@@ -60,6 +60,15 @@ public final class ParkourConstants {
     public static final double TOUCH_RADIUS = 1.5;
     public static final double TOUCH_VERTICAL_BONUS = 1.0;
 
+    /** Number of failures before showing map recommendation. */
+    public static final int RECOMMENDATION_FAILURE_THRESHOLD = 5;
+
+    /** Number of failures before showing practice mode hint. */
+    public static final int PRACTICE_HINT_FAILURE_THRESHOLD = 3;
+
+    /** Throttle for fly zone rollback messages/teleports (ms). */
+    public static final long FLY_ZONE_ROLLBACK_THROTTLE_MS = 500L;
+
     private ParkourConstants() {
     }
 }
