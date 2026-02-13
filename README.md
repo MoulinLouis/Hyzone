@@ -1,42 +1,48 @@
-# Hyvexa Parkour Plugin (Hytale)
+# Hyvexa
 
-A Hytale server plugin providing a complete parkour experience with map selection, leaderboards, progression system, and admin tools.
+A multi-module Hytale server plugin suite for a parkour minigame server. Players join a hub and choose between two game modes: classic Parkour and Parkour Ascend (an idle/incremental progression mode).
+
+## Modules
+
+| Module | Purpose |
+|--------|---------|
+| `hyvexa-core` | Shared database, utilities, mode state, and common APIs |
+| `hyvexa-parkour` | Classic parkour gameplay with maps, leaderboards, and ranks |
+| `hyvexa-parkour-ascend` | Idle parkour mode with prestige tiers, skill trees, and economy |
+| `hyvexa-hub` | Hub world with mode selection routing and UI |
 
 ## Features
 
-- **Map Selection** - Category-first UI via `/pk` with Easy/Medium/Hard/Insane difficulties
-- **Leaderboards** - Global and per-map best times via `/pk leaderboard`
-- **Progression** - XP system with ranks (Bronze to Grandmaster) based on map completions
-- **Admin Tools** - Full map/player management, settings, playtime tracking, population history via `/pk admin` (OP only)
-- **VIP/Founder Ranks** - Purchasable ranks with chat tags, nameplates, and speed multipliers (x1/x2/x4)
-- **Player Settings** - Music controls (multiple OSTs), HUD visibility toggle, speed boost, SFX toggles
-- **Run HUD** - Live timer display during active runs with server info and support links
-- **Auto-respawn** - Fall detection teleports players back to checkpoint/start (configurable per-map)
-- **Void Protection** - Teleport back to checkpoint/start when falling below configured Y level
-- **Collision-free** - Player-player collision disabled; item drops/block breaking blocked for non-OPs
-- **God Mode** - Player damage and knockback disabled globally
-- **Personal Checkpoints** - `/cp` command for setting personal checkpoints (memory-only, separate from map checkpoints)
-- **Community Links** - `/discord` and `/store` commands for server links
+### Hub
+- Mode selection menu via hotbar item or `/menu`
+- Seamless routing between Hub, Parkour, and Ascend worlds
 
-## Commands
+### Parkour
+- **Map Selection** - Category-first UI (`/pk`) with Easy/Medium/Hard/Insane difficulties
+- **Leaderboards** - Global and per-map best times with tied-rank support
+- **Progression** - Rank system (Bronze to Grandmaster) based on map completions
+- **1v1 Duels** - Matchmaking queue with duel stats, category filters, and opponent visibility toggle
+- **Practice Mode** - Per-run checkpoints for practicing difficult sections
+- **Run HUD** - Live timer with tick-precise checkpoint splits and delta display
+- **Ghost Replay** - Per-map personal best ghost recordings for runner playback
+- **Admin Tools** - Map/player management, settings, playtime tracking, population history
+- **VIP/Founder Ranks** - Purchasable ranks with chat tags, nameplates, and speed multipliers
+- **New Player Onboarding** - 3-screen tutorial, smart map recommendations, practice mode hints
 
-| Command | Description |
-|---------|-------------|
-| `/pk` | Open map selection menu |
-| `/pk leaderboard` | Open leaderboard menu |
-| `/pk stats` | View your progression (XP, rank, completions) |
-| `/pk items` | Give yourself the menu items |
-| `/cp [set\|clear]` | Save/teleport to personal checkpoint |
-| `/discord` | Display Discord server link |
-| `/store` | Display store link |
-| `/pk admin` | Admin panel for map/player/settings management (OP only) |
-| `/pk admin rank give <player> <vip\|founder>` | Grant VIP or Founder rank (OP only) |
-| `/pk admin rank remove <player> <vip\|founder>` | Remove VIP or Founder rank (OP only) |
-| `/pk admin rank broadcast <player> <vip\|founder>` | Broadcast rank announcement (OP only) |
-| `/pkadminitem` | Give admin remote control item (OP only) |
-| `/dbtest` | Test MySQL connection (OP only) |
-| `/dbmigrate` | Migrate JSON data into MySQL (OP only) |
-| `/dbclear` | Clear all parkour tables (OP only) |
+### Parkour Ascend
+- **Idle Economy** - Runners complete maps automatically, earning Vexa (currency) and multipliers
+- **Runner Evolution** - 6-star evolution system with visual NPC progression (Kweebec models)
+- **Three Prestige Tiers**:
+  - **Elevation** - Convert accumulated coins into a global multiplier
+  - **Summit** - Permanent category upgrades (Coin Flow, Runner Speed, Manual Mastery)
+  - **Ascension** - Full reset for skill tree points and deeper progression
+- **Skill Tree** - 8 unlockable nodes across branching paths with OR-logic prerequisites
+- **Achievements** - 30 achievements across 6 categories with hidden/secret achievements
+- **Ascension Challenges** - Timed challenges with malus effects for bonus summit XP
+- **Passive Earnings** - Runners generate coins at 25% rate while offline (up to 24h)
+- **Per-Map Leaderboard** - Best times per map with tabs, search, and pagination
+- **Toast Notifications** - HUD-based notifications for upgrades, evolutions, and economy events
+- **Cinematic System** - Camera, particles, and sounds for ascension events
 
 ## Quick Start
 
@@ -45,12 +51,17 @@ A Hytale server plugin providing a complete parkour experience with map selectio
 ./gradlew build
 # Windows: gradlew.bat build
 ```
-Build produces a shaded plugin JAR that bundles runtime dependencies.
+Produces shaded plugin JARs per module that bundle runtime dependencies.
+
+### Deploy
+```bash
+./gradlew stagePlugins   # Copy JARs to run/mods
+./gradlew collectPlugins # Copy JARs to build/libs
+```
 
 ### Run
 Use the `HytaleServer` IntelliJ run config, which launches from the `run/` directory.
 
-### Server JAR Location
 The Hytale server JAR is expected at:
 ```
 %USERPROFILE%/AppData/Roaming/Hytale/install/<patchline>/package/game/latest/Server/HytaleServer.jar
@@ -60,45 +71,33 @@ Where `<patchline>` is configured in `gradle.properties`.
 ## Project Layout
 
 ```
-src/main/java/
-  io/hyvexa/
-    HyvexaPlugin.java          # Plugin entrypoint
-    common/                    # Shared utilities
-    parkour/
-      command/                 # Command handlers
-      data/                    # MySQL persistence (MapStore, ProgressStore, etc.)
-      tracker/                 # Run tracking and HUD
-      ui/                      # Custom UI pages
-      interaction/             # Right-click item handlers
-      system/                  # Event filtering systems
-      visibility/              # Player visibility management
+hyvexa-core/src/main/java/io/hyvexa/       # Shared utilities, DB, mode state
+hyvexa-parkour/src/main/java/io/hyvexa/     # Parkour gameplay
+hyvexa-parkour-ascend/src/main/java/io/hyvexa/ascend/  # Ascend idle mode
+hyvexa-hub/src/main/java/io/hyvexa/hub/     # Hub routing + UI
 
-src/main/resources/
-  manifest.json                # Plugin manifest
-  Common/UI/Custom/Pages/      # UI definition files
-  Server/                      # Server-side assets and interactions
+hyvexa-*/src/main/resources/
+  manifest.json                              # Plugin manifest
+  Common/UI/Custom/Pages/                    # UI definition files
 ```
 
 ## Configuration
 
-### Manifest
-- `manifest.json` fields `Main`, `Group`, `Name`, `Description` should match your plugin
-- `Version` and `IncludesAssetPack` are auto-populated by Gradle from `gradle.properties`
-
-### Runtime Data
 - All runtime data is stored in MySQL and loaded into memory on startup
-- Working directory is `run/`, so runtime config lives in `mods/Parkour/`
+- Working directory is `run/`, runtime config lives in `mods/Parkour/`
 - DB config: `mods/Parkour/database.json` (gitignored)
-- Ascend runtime flags: `mods/Parkour/ascend.properties` (`ascend.enableTestCommands=false` by default)
-- JSON files are only used by `/dbmigrate` and must all exist:
-  `Settings.json`, `GlobalMessages.json`, `PlayerCounts.json`, `Progress.json`, `Maps.json`
+- Ascend runtime flags: `mods/Parkour/ascend.properties`
 
 ## Documentation
 
-- [docs/codex/AGENTS.md](docs/codex/AGENTS.md) - AI agent instructions for development
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) - Technical design and edge cases
-- [docs/DATABASE.md](docs/DATABASE.md) - MySQL schema reference
-- [CHANGELOG.md](CHANGELOG.md) - Version history
+| Topic | File |
+|-------|------|
+| Architecture & threading | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
+| Database schema | [docs/DATABASE.md](docs/DATABASE.md) |
+| Code patterns | [docs/CODE_PATTERNS.md](docs/CODE_PATTERNS.md) |
+| Game economy balance | [docs/ECONOMY_BALANCE.md](docs/ECONOMY_BALANCE.md) |
+| Hytale API notes | [docs/HYTALE_API.md](docs/HYTALE_API.md) |
+| Changelog | [CHANGELOG.md](CHANGELOG.md) |
 
 ## License
 
