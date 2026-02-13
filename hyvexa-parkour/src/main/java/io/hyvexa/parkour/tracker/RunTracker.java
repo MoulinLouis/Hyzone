@@ -3,7 +3,6 @@ package io.hyvexa.parkour.tracker;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.Message;
@@ -23,7 +22,6 @@ import com.hypixel.hytale.protocol.SavedMovementStates;
 import com.hypixel.hytale.protocol.packets.player.SetMovementStates;
 import com.hypixel.hytale.protocol.packets.connection.PongType;
 import com.hypixel.hytale.metrics.metric.HistoricMetric;
-import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.parkour.util.InventoryUtils;
 import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
@@ -36,18 +34,13 @@ import io.hyvexa.parkour.data.SettingsStore;
 import io.hyvexa.parkour.data.TransformData;
 import io.hyvexa.parkour.ghost.GhostNpcManager;
 import io.hyvexa.parkour.ghost.GhostRecorder;
-import io.hyvexa.parkour.ui.MapRecommendationPage;
-import io.hyvexa.parkour.ui.PracticeModeHintPage;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /** Tracks active parkour runs, checkpoint detection, and finish logic. */
 public class RunTracker {
@@ -56,21 +49,19 @@ public class RunTracker {
     private static final double START_MOVE_THRESHOLD_SQ = 0.0025;
     private static final long OFFLINE_RUN_EXPIRY_MS = TimeUnit.MINUTES.toMillis(30L);
     private static final long PING_DELTA_THRESHOLD_MS = 50L;
-    private static final String CHECKPOINT_HUD_BG_FAST = "#1E4A7A";
-    private static final String CHECKPOINT_HUD_BG_SLOW = "#6A1E1E";
-    private static final String CHECKPOINT_HUD_BG_TIE = "#000000";
 
     private final MapStore mapStore;
     private final ProgressStore progressStore;
     private final SettingsStore settingsStore;
     private final ConcurrentHashMap<UUID, ActiveRun> activeRuns = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, TrackerUtils.FallState> idleFalls = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<UUID, TeleportStats> teleportStats = new ConcurrentHashMap<>();
     private final Set<UUID> readyPlayers = ConcurrentHashMap.newKeySet();
     private final ConcurrentHashMap<UUID, Long> lastSeenAt = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<UUID, SessionStats> sessionStats = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Boolean> previousOnGround = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Integer> pendingJumps = new ConcurrentHashMap<>();
+    private final RunValidator validator;
+    private final RunSessionTracker sessionTracker;
+    private final RunTeleporter teleporter;
     private GhostRecorder ghostRecorder;
     private GhostNpcManager ghostNpcManager;
 
@@ -79,14 +70,19 @@ public class RunTracker {
         this.mapStore = mapStore;
         this.progressStore = progressStore;
         this.settingsStore = settingsStore;
+        this.validator = new RunValidator(mapStore, progressStore);
+        this.sessionTracker = new RunSessionTracker(mapStore, progressStore);
+        this.teleporter = new RunTeleporter(mapStore, activeRuns);
     }
 
     public void setGhostRecorder(GhostRecorder ghostRecorder) {
         this.ghostRecorder = ghostRecorder;
+        this.validator.setGhostRecorder(ghostRecorder);
     }
 
     public void setGhostNpcManager(GhostNpcManager ghostNpcManager) {
         this.ghostNpcManager = ghostNpcManager;
+        this.validator.setGhostNpcManager(ghostNpcManager);
     }
 
     public ActiveRun setActiveMap(UUID playerId, String mapId) {
@@ -126,10 +122,10 @@ public class RunTracker {
     public void clearPlayer(UUID playerId) {
         clearActiveMap(playerId);
         idleFalls.remove(playerId);
-        teleportStats.remove(playerId);
+        teleporter.clearPlayer(playerId);
         readyPlayers.remove(playerId);
         lastSeenAt.remove(playerId);
-        sessionStats.remove(playerId);
+        sessionTracker.clearPlayer(playerId);
         previousOnGround.remove(playerId);
         pendingJumps.remove(playerId);
     }
@@ -152,28 +148,16 @@ public class RunTracker {
             run.skipNextTimeIncrement = true;
         }
         idleFalls.remove(playerId);
-        teleportStats.remove(playerId);
+        teleporter.clearPlayer(playerId);
         readyPlayers.remove(playerId);
         lastSeenAt.put(playerId, System.currentTimeMillis());
-        sessionStats.remove(playerId);
+        sessionTracker.clearPlayer(playerId);
         previousOnGround.remove(playerId);
         pendingJumps.remove(playerId);
     }
 
     public java.util.Map<UUID, TeleportStatsSnapshot> drainTeleportStats() {
-        if (teleportStats.isEmpty()) {
-            return java.util.Map.of();
-        }
-        java.util.Map<UUID, TeleportStatsSnapshot> snapshots = new HashMap<>();
-        for (java.util.Map.Entry<UUID, TeleportStats> entry : teleportStats.entrySet()) {
-            TeleportStatsSnapshot snapshot = entry.getValue().snapshotAndReset();
-            if (snapshot.isEmpty()) {
-                teleportStats.remove(entry.getKey(), entry.getValue());
-                continue;
-            }
-            snapshots.put(entry.getKey(), snapshot);
-        }
-        return snapshots;
+        return teleporter.drainTeleportStats();
     }
 
     public static final class TeleportStatsSnapshot {
@@ -184,7 +168,7 @@ public class RunTracker {
         public final int finish;
         public final int checkpoint;
 
-        private TeleportStatsSnapshot(int startTrigger, int leaveTrigger, int runRespawn, int idleRespawn, int finish,
+        TeleportStatsSnapshot(int startTrigger, int leaveTrigger, int runRespawn, int idleRespawn, int finish,
                                       int checkpoint) {
             this.startTrigger = startTrigger;
             this.leaveTrigger = leaveTrigger;
@@ -233,12 +217,10 @@ public class RunTracker {
     public void sweepStalePlayers(Set<UUID> onlinePlayers) {
         if (onlinePlayers == null || onlinePlayers.isEmpty()) {
             idleFalls.clear();
-            teleportStats.clear();
             return;
         }
         long now = System.currentTimeMillis();
         idleFalls.keySet().removeIf(id -> !onlinePlayers.contains(id));
-        teleportStats.keySet().removeIf(id -> !onlinePlayers.contains(id));
         readyPlayers.removeIf(id -> !onlinePlayers.contains(id));
         lastSeenAt.keySet().removeIf(id -> onlinePlayers.contains(id));
         activeRuns.keySet().removeIf(id -> !onlinePlayers.contains(id) && isExpiredOfflineRun(id, now));
@@ -419,19 +401,19 @@ public class RunTracker {
         Vector3d position = transform.getPosition();
         if (shouldTeleportFromVoid(position.getY())) {
             if (run == null) {
-                teleportToSpawn(ref, store, transform, buffer);
-                recordTeleport(playerRef.getUuid(), TeleportCause.IDLE_RESPAWN);
+                teleporter.teleportToSpawn(ref, store, transform, buffer);
+                teleporter.recordTeleport(playerRef.getUuid(), RunTeleporter.TeleportCause.IDLE_RESPAWN);
                 return;
             }
             Map map = mapStore.getMap(run.mapId);
             if (map != null) {
-                teleportToRespawn(ref, store, run, map, buffer);
+                teleporter.teleportToRespawn(ref, store, run, map, buffer);
                 run.fallState.fallStartTime = null;
                 run.fallState.lastY = null;
-                recordTeleport(playerRef.getUuid(), TeleportCause.RUN_RESPAWN);
+                teleporter.recordTeleport(playerRef.getUuid(), RunTeleporter.TeleportCause.RUN_RESPAWN);
             } else {
-                teleportToSpawn(ref, store, transform, buffer);
-                recordTeleport(playerRef.getUuid(), TeleportCause.IDLE_RESPAWN);
+                teleporter.teleportToSpawn(ref, store, transform, buffer);
+                teleporter.recordTeleport(playerRef.getUuid(), RunTeleporter.TeleportCause.IDLE_RESPAWN);
             }
             return;
         }
@@ -442,8 +424,8 @@ public class RunTracker {
                     && shouldRespawnFromFall(getIdleFallState(playerRef.getUuid()), position.getY(),
                     movementStates,
                     fallTimeoutMs)) {
-                teleportToSpawn(ref, store, transform, buffer);
-                recordTeleport(playerRef.getUuid(), TeleportCause.IDLE_RESPAWN);
+                teleporter.teleportToSpawn(ref, store, transform, buffer);
+                teleporter.recordTeleport(playerRef.getUuid(), RunTeleporter.TeleportCause.IDLE_RESPAWN);
                 return;
             }
             Map triggerMap = findStartTriggerMap(position);
@@ -482,14 +464,14 @@ public class RunTracker {
                         if (headRot != null) {
                             tp.setHeadRotation(headRot.clone());
                         }
-                        addTeleport(ref, store, buffer, tp);
+                        teleporter.addTeleport(ref, store, buffer, tp);
                     }
                 }
                 return;
             }
             run.lastValidFlyPosition = new double[]{position.getX(), position.getY(), position.getZ()};
         }
-        checkCheckpoints(run, playerRef, player, position, map, previousPosition, previousElapsedMs, deltaMs);
+        validator.checkCheckpoints(run, playerRef, player, position, map, previousPosition, previousElapsedMs, deltaMs);
         long fallTimeoutMs = getFallRespawnTimeoutMs();
         if (map.isFreeFallEnabled()) {
             run.fallState.fallStartTime = null;
@@ -502,52 +484,16 @@ public class RunTracker {
             if (run.lastCheckpointIndex < 0) {
                 armStartOnMovement(run, map.getStart());
             }
-            teleportToRespawn(ref, store, run, map, buffer);
-            recordTeleport(playerRef.getUuid(), TeleportCause.RUN_RESPAWN);
+            teleporter.teleportToRespawn(ref, store, run, map, buffer);
+            teleporter.recordTeleport(playerRef.getUuid(), RunTeleporter.TeleportCause.RUN_RESPAWN);
 
-            SessionStats stats = sessionStats.computeIfAbsent(playerRef.getUuid(), k -> new SessionStats());
-            stats.recordFailure(run.mapId);
-
-            SessionStats.MapSessionData mapData = stats.getStats(run.mapId);
-            if (mapData.failureCount >= ParkourConstants.RECOMMENDATION_FAILURE_THRESHOLD && !mapData.recommendationShown && run.lastCheckpointIndex < 0 && !run.practiceEnabled) {
-                mapData.recommendationShown = true;
-
-                World world = store.getExternalData().getWorld();
-                CompletableFuture.runAsync(() -> {
-                    if (ref == null || !ref.isValid()) {
-                        return;
-                    }
-                    Player p = store.getComponent(ref, Player.getComponentType());
-                    if (p == null) {
-                        return;
-                    }
-                    String category = map.getCategory() != null ? map.getCategory() : "Easy";
-                    p.getPageManager().openCustomPage(ref, store,
-                            new MapRecommendationPage(playerRef, mapStore, progressStore, this, run.mapId, category));
-                }, world).orTimeout(5, TimeUnit.SECONDS).exceptionally(ex -> null);
-            }
-
-            if (mapData.failureCount == ParkourConstants.PRACTICE_HINT_FAILURE_THRESHOLD && !mapData.practiceHintShown && !run.practiceEnabled) {
-                mapData.practiceHintShown = true;
-
-                World world = store.getExternalData().getWorld();
-                CompletableFuture.runAsync(() -> {
-                    if (ref == null || !ref.isValid()) {
-                        return;
-                    }
-                    Player p = store.getComponent(ref, Player.getComponentType());
-                    if (p == null) {
-                        return;
-                    }
-                    p.getPageManager().openCustomPage(ref, store,
-                            new PracticeModeHintPage(playerRef, this));
-                }, world).orTimeout(5, TimeUnit.SECONDS).exceptionally(ex -> null);
-            }
+            sessionTracker.recordFailure(playerRef.getUuid(), run.mapId);
+            sessionTracker.checkRecommendations(playerRef.getUuid(), run, map, ref, store, playerRef, this);
 
             return;
         }
-        checkFinish(run, playerRef, player, position, map, transform, ref, store, buffer, previousPosition,
-                previousElapsedMs, deltaMs);
+        validator.checkFinish(run, playerRef, player, position, map, transform, ref, store, buffer, previousPosition,
+                previousElapsedMs, deltaMs, sessionTracker, teleporter, this);
         if (activeRuns.get(playerRef.getUuid()) == run) {
             run.lastPosition = copyPosition(position);
         }
@@ -575,8 +521,8 @@ public class RunTracker {
         Vector3d position = new Vector3d(map.getStart().getX(), map.getStart().getY(), map.getStart().getZ());
         Vector3f rotation = new Vector3f(map.getStart().getRotX(), map.getStart().getRotY(),
                 map.getStart().getRotZ());
-        addTeleport(ref, store, buffer, new Teleport(store.getExternalData().getWorld(), position, rotation));
-        recordTeleport(playerRef.getUuid(), TeleportCause.START_TRIGGER);
+        teleporter.addTeleport(ref, store, buffer, new Teleport(store.getExternalData().getWorld(), position, rotation));
+        teleporter.recordTeleport(playerRef.getUuid(), RunTeleporter.TeleportCause.START_TRIGGER);
         player.sendMessage(buildRunStartMessage(map));
         InventoryUtils.giveRunItems(player, map, false);
     }
@@ -596,8 +542,8 @@ public class RunTracker {
             Vector3d targetPosition = new Vector3d(leaveTeleport.getX(), leaveTeleport.getY(), leaveTeleport.getZ());
             Vector3f targetRotation = new Vector3f(leaveTeleport.getRotX(), leaveTeleport.getRotY(),
                     leaveTeleport.getRotZ());
-            addTeleport(ref, store, buffer, new Teleport(store.getExternalData().getWorld(), targetPosition, targetRotation));
-            recordTeleport(playerRef.getUuid(), TeleportCause.LEAVE_TRIGGER);
+            teleporter.addTeleport(ref, store, buffer, new Teleport(store.getExternalData().getWorld(), targetPosition, targetRotation));
+            teleporter.recordTeleport(playerRef.getUuid(), RunTeleporter.TeleportCause.LEAVE_TRIGGER);
         }
         clearActiveMap(playerRef.getUuid());
         InventoryUtils.giveMenuItems(player);
@@ -606,7 +552,7 @@ public class RunTracker {
     }
 
     private Message buildRunStartMessage(Map map) {
-        String mapName = getMapDisplayName(map);
+        String mapName = validator.getMapDisplayName(map);
         return SystemMessageUtils.withParkourPrefix(
                 Message.raw("Run started: ").color(SystemMessageUtils.SECONDARY),
                 Message.raw(mapName).color(SystemMessageUtils.PRIMARY_TEXT),
@@ -615,23 +561,12 @@ public class RunTracker {
     }
 
     private Message buildRunEndMessage(Map map) {
-        String mapName = getMapDisplayName(map);
+        String mapName = validator.getMapDisplayName(map);
         return SystemMessageUtils.withParkourPrefix(
                 Message.raw("Run ended: ").color(SystemMessageUtils.SECONDARY),
                 Message.raw(mapName).color(SystemMessageUtils.PRIMARY_TEXT),
                 Message.raw(".").color(SystemMessageUtils.SECONDARY)
         );
-    }
-
-    private String getMapDisplayName(Map map) {
-        if (map == null) {
-            return "Map";
-        }
-        String mapName = map.getName();
-        if (mapName == null || mapName.isBlank()) {
-            return map.getId() != null && !map.getId().isBlank() ? map.getId() : "Map";
-        }
-        return mapName;
     }
 
     private long getFallRespawnTimeoutMs() {
@@ -656,261 +591,82 @@ public class RunTracker {
                 TrackerUtils.isFallTrackingBlocked(movementStates), fallTimeoutMs);
     }
 
-    private void checkCheckpoints(ActiveRun run, PlayerRef playerRef, Player player, Vector3d position, Map map,
-                                  Vector3d previousPosition, long previousElapsedMs, double deltaMs) {
-        if (run.practiceEnabled) {
-            return;
-        }
-        List<TransformData> checkpoints = map.getCheckpoints();
-        if (checkpoints == null || checkpoints.isEmpty()) {
-            return;
-        }
-        List<Long> personalBestSplits = progressStore != null
-                ? progressStore.getCheckpointTimes(playerRef.getUuid(), map.getId())
-                : List.of();
-        for (int i = 0; i < checkpoints.size(); i++) {
-            if (run.touchedCheckpoints.contains(i)) {
-                continue;
-            }
-            TransformData checkpoint = checkpoints.get(i);
-            if (checkpoint == null) {
-                continue;
-            }
-            if (distanceSqWithVerticalBonus(position, checkpoint) <= TOUCH_RADIUS_SQ) {
-                run.touchedCheckpoints.add(i);
-                run.lastCheckpointIndex = i;
-                long elapsedMs = resolveInterpolatedTimeMs(run, previousPosition, position, checkpoint,
-                        previousElapsedMs, deltaMs);
-                run.checkpointTouchTimes.put(i, elapsedMs);
-                TrackerUtils.playCheckpointSound(playerRef);
-                CheckpointSplitInfo splitInfo = buildCheckpointSplitInfo(i, elapsedMs, personalBestSplits);
-                player.sendMessage(splitInfo.message);
-                HyvexaPlugin plugin = HyvexaPlugin.getInstance();
-                if (plugin != null && plugin.getHudManager() != null) {
-                    if (splitInfo.hudText != null && splitInfo.hudColor != null) {
-                        plugin.getHudManager().showCheckpointSplit(playerRef, splitInfo.hudText, splitInfo.hudColor);
-                    } else {
-                        plugin.getHudManager().showCheckpointSplit(playerRef, null, null);
-                    }
-                }
-            }
+    // --- Delegation methods for teleport operations (preserve public API) ---
+
+    public void teleportToSpawn(Ref<EntityStore> ref, Store<EntityStore> store, TransformComponent transform) {
+        teleporter.teleportToSpawn(ref, store, transform);
+    }
+
+    // Called from interaction handlers (outside ECS tick) — store.addComponent() is safe here
+    public boolean teleportToLastCheckpoint(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef) {
+        return teleporter.teleportToLastCheckpoint(ref, store, playerRef);
+    }
+
+    // Called from interaction handlers (outside ECS tick) — store.addComponent() is safe here
+    public boolean resetRunToStart(Ref<EntityStore> ref, Store<EntityStore> store, Player player, PlayerRef playerRef) {
+        return teleporter.resetRunToStart(ref, store, player, playerRef, this);
+    }
+
+    // --- ActiveRun (package-private for collaborator access) ---
+
+    static class ActiveRun {
+        final String mapId;
+        final TrackerUtils.FallState fallState = new TrackerUtils.FallState();
+        long startTimeMs;
+        boolean waitingForStart;
+        Vector3d startPosition;
+        Vector3d lastPosition;
+        final Set<Integer> touchedCheckpoints = new HashSet<>();
+        final java.util.Map<Integer, Long> checkpointTouchTimes = new java.util.HashMap<>();
+        boolean finishTouched;
+        int lastCheckpointIndex = -1;
+        boolean practiceEnabled;
+        boolean flyActive;
+        TransformData practiceCheckpoint;
+        Vector3f practiceHeadRotation;
+        long lastFinishWarningMs;
+        long elapsedMs;
+        double elapsedRemainderMs;
+        boolean skipNextTimeIncrement;
+        Long startPingMs;
+        Long finishPingMs;
+        double[] lastValidFlyPosition;
+        long lastFlyZoneRollbackMs;
+
+        ActiveRun(String mapId, long startTimeMs) {
+            this.mapId = mapId;
+            this.startTimeMs = startTimeMs;
+            this.elapsedMs = 0L;
         }
     }
 
-    private CheckpointSplitInfo buildCheckpointSplitInfo(int checkpointIndex, long elapsedMs,
-                                                        List<Long> personalBestSplits) {
-        long pbSplitMs = 0L;
-        if (personalBestSplits != null && checkpointIndex >= 0 && checkpointIndex < personalBestSplits.size()) {
-            Long pbSplit = personalBestSplits.get(checkpointIndex);
-            pbSplitMs = pbSplit != null ? Math.max(0L, pbSplit) : 0L;
-        }
-        if (pbSplitMs <= 0L) {
-            return new CheckpointSplitInfo(SystemMessageUtils.parkourInfo("Checkpoint reached."), null, null);
-        }
+    public static class CheckpointProgress {
+        public final int touched;
+        public final int total;
 
-        long deltaMs = elapsedMs - pbSplitMs;
-        long absDeltaMs = Math.abs(deltaMs);
-        String deltaPrefix = deltaMs < 0L ? "-" : "+";
-        String deltaColor = deltaMs <= 0L ? SystemMessageUtils.SUCCESS : SystemMessageUtils.ERROR;
-        String hudBackground = deltaMs < 0L ? CHECKPOINT_HUD_BG_FAST
-                : (deltaMs > 0L ? CHECKPOINT_HUD_BG_SLOW : CHECKPOINT_HUD_BG_TIE);
-        String deltaText = deltaPrefix + FormatUtils.formatDuration(absDeltaMs);
-        String checkpointTime = FormatUtils.formatDuration(Math.max(0L, elapsedMs));
-
-        Message message = SystemMessageUtils.withParkourPrefix(
-                Message.raw("Checkpoint ").color(SystemMessageUtils.SECONDARY),
-                Message.raw("#" + (checkpointIndex + 1)).color(SystemMessageUtils.PRIMARY_TEXT),
-                Message.raw(" split: ").color(SystemMessageUtils.SECONDARY),
-                Message.raw(deltaText).color(deltaColor),
-                Message.raw(" at ").color(SystemMessageUtils.SECONDARY),
-                Message.raw(checkpointTime).color(SystemMessageUtils.PRIMARY_TEXT)
-        );
-        return new CheckpointSplitInfo(message, deltaText, hudBackground);
-    }
-
-    private static final class CheckpointSplitInfo {
-        private final Message message;
-        private final String hudText;
-        private final String hudColor;
-
-        private CheckpointSplitInfo(Message message, String hudText, String hudColor) {
-            this.message = message;
-            this.hudText = hudText;
-            this.hudColor = hudColor;
+        public CheckpointProgress(int touched, int total) {
+            this.touched = touched;
+            this.total = total;
         }
     }
 
-    private Message buildFinishSplitPart(long durationMs, Long previousBestMs) {
-        if (previousBestMs == null || previousBestMs <= 0L) {
-            return null;
-        }
-        long deltaMs = durationMs - previousBestMs;
-        long absDeltaMs = Math.abs(deltaMs);
-        String deltaPrefix = deltaMs < 0L ? "-" : "+";
-        String deltaColor = deltaMs < 0L ? SystemMessageUtils.SUCCESS : SystemMessageUtils.ERROR;
-        String deltaText = deltaPrefix + FormatUtils.formatDuration(absDeltaMs);
-        return Message.join(
-                Message.raw(" (").color(SystemMessageUtils.SECONDARY),
-                Message.raw(deltaText).color(deltaColor),
-                Message.raw(")").color(SystemMessageUtils.SECONDARY)
-        );
-    }
+    public static class CheckpointSplit {
+        public final int index;
+        public final long timeMs;
 
-    private void checkFinish(ActiveRun run, PlayerRef playerRef, Player player, Vector3d position, Map map,
-                             TransformComponent transform, Ref<EntityStore> ref, Store<EntityStore> store,
-                             CommandBuffer<EntityStore> buffer, Vector3d previousPosition, long previousElapsedMs,
-                             double deltaMs) {
-        if (run.practiceEnabled || run.finishTouched || map.getFinish() == null) {
-            return;
-        }
-        if (distanceSqWithVerticalBonus(position, map.getFinish()) <= TOUCH_RADIUS_SQ) {
-            List<TransformData> checkpoints = map.getCheckpoints();
-            int checkpointCount = checkpoints != null ? checkpoints.size() : 0;
-            if (checkpointCount > 0 && run.touchedCheckpoints.size() < checkpointCount) {
-                long now = System.currentTimeMillis();
-                if (now - run.lastFinishWarningMs >= 2000L) {
-                    run.lastFinishWarningMs = now;
-                    player.sendMessage(SystemMessageUtils.parkourWarn("You did not reach all checkpoints."));
-                }
-                return;
-            }
-            run.finishTouched = true;
-            TrackerUtils.playFinishSound(playerRef);
-            long durationMs = resolveInterpolatedTimeMs(run, previousPosition, position, map.getFinish(),
-                    previousElapsedMs, deltaMs);
-            List<Long> checkpointTimes = new ArrayList<>();
-            for (int i = 0; i < checkpointCount; i++) {
-                Long time = run.checkpointTouchTimes.get(i);
-                checkpointTimes.add(time != null ? time : 0L);
-            }
-            UUID playerId = playerRef.getUuid();
-            String playerName = playerRef.getUsername();
-            Long previousBestMs = progressStore.getBestTimeMs(playerId, map.getId());
-            int oldRank = progressStore.getCompletionRank(playerId, mapStore);
-            ProgressStore.ProgressionResult result = progressStore.recordMapCompletion(playerId, playerName,
-                    map.getId(), durationMs, mapStore, checkpointTimes,
-                    completionSaved -> {
-                        if (!completionSaved) {
-                            warnCompletionSaveFailure(playerId, ref, store);
-                        }
-                    });
-            if (ghostRecorder != null) {
-                ghostRecorder.stopRecording(playerId, durationMs, result.firstCompletion || result.newBest);
-            }
-            if (ghostNpcManager != null) {
-                ghostNpcManager.despawnGhost(playerId);
-            }
-            if (result.firstCompletion) {
-                HyvexaPlugin plugin = HyvexaPlugin.getInstance();
-                if (plugin != null) {
-                    plugin.refreshLeaderboardHologram(store);
-                }
-            }
-            int leaderboardPosition = progressStore.getLeaderboardPosition(map.getId(), playerId);
-            if (leaderboardPosition <= 0) {
-                leaderboardPosition = 1;
-            }
-            HyvexaPlugin plugin = HyvexaPlugin.getInstance();
-            if (plugin != null) {
-                plugin.refreshMapLeaderboardHologram(map.getId(), store);
-                plugin.logMapHologramDebug("Map holo refresh fired for '" + map.getId()
-                        + "' (player " + playerName + ").");
-            }
-            SessionStats stats = sessionStats.get(playerId);
-            int attempts = 1;
-            if (stats != null) {
-                SessionStats.MapSessionData mapData = stats.getStats(map.getId());
-                attempts = mapData.attemptCount + 1;
-                stats.recordAttempt(map.getId());
-            }
-
-            String mapName = getMapDisplayName(map);
-            player.sendMessage(SystemMessageUtils.withParkourPrefix(
-                    Message.raw("MAP COMPLETED: ").color(SystemMessageUtils.SUCCESS).bold(true),
-                    Message.raw(mapName).color(SystemMessageUtils.PRIMARY_TEXT)
-            ));
-
-            Message finishSplitPart = buildFinishSplitPart(durationMs, previousBestMs);
-            player.sendMessage(SystemMessageUtils.withParkourPrefix(
-                    Message.raw("Time: ").color(SystemMessageUtils.SECONDARY),
-                    Message.raw(FormatUtils.formatDuration(durationMs)).color(SystemMessageUtils.PRIMARY_TEXT),
-                    finishSplitPart != null ? finishSplitPart : Message.raw("")
-            ));
-
-            if (attempts > 1) {
-                player.sendMessage(SystemMessageUtils.withParkourPrefix(
-                        Message.raw("Attempts: ").color(SystemMessageUtils.SECONDARY),
-                        Message.raw(String.valueOf(attempts)).color(SystemMessageUtils.PRIMARY_TEXT)
-                ));
-            }
-
-            if (result.xpAwarded > 0L) {
-                player.sendMessage(SystemMessageUtils.parkourSuccess("You earned " + result.xpAwarded + " XP."));
-            }
-            int newRank = progressStore.getCompletionRank(playerId, mapStore);
-            boolean reachedVexaGod = newRank == ParkourConstants.COMPLETION_RANK_NAMES.length && oldRank < newRank;
-            if (newRank > oldRank) {
-                if (plugin != null) {
-                    plugin.invalidateRankCache(playerId);
-                }
-                String rankName = progressStore.getRankName(playerId, mapStore);
-                player.sendMessage(SystemMessageUtils.parkourSuccess("Rank up! You are now " + rankName + "."));
-            }
-            if (result.newBest) {
-                broadcastCompletion(playerId, playerName, map, durationMs, leaderboardPosition);
-                if (reachedVexaGod) {
-                    broadcastVexaGod(playerName);
-                }
-            }
-            recordFinishPing(run, playerRef);
-            sendLatencyWarning(run, player);
-            teleportToSpawn(ref, store, transform, buffer);
-            recordTeleport(playerId, TeleportCause.FINISH);
-            clearActiveMap(playerId);
-            InventoryUtils.giveMenuItems(player);
+        public CheckpointSplit(int index, long timeMs) {
+            this.index = index;
+            this.timeMs = timeMs;
         }
     }
 
-    private void warnCompletionSaveFailure(UUID playerId, Ref<EntityStore> ref, Store<EntityStore> store) {
-        if (playerId == null || store == null) {
-            return;
-        }
-        World world = store.getExternalData().getWorld();
-        if (world == null) {
-            return;
-        }
-        CompletableFuture.runAsync(() -> {
-            Ref<EntityStore> targetRef = ref;
-            Store<EntityStore> targetStore = store;
-            if (targetRef == null || !targetRef.isValid()) {
-                PlayerRef livePlayerRef = Universe.get().getPlayer(playerId);
-                if (livePlayerRef == null) {
-                    return;
-                }
-                targetRef = livePlayerRef.getReference();
-                if (targetRef == null || !targetRef.isValid()) {
-                    return;
-                }
-                targetStore = targetRef.getStore();
-            }
-            Player targetPlayer = targetStore.getComponent(targetRef, Player.getComponentType());
-            if (targetPlayer == null) {
-                return;
-            }
-            targetPlayer.sendMessage(SystemMessageUtils.parkourWarn(
-                    "Warning: Your time might not have been saved. Please report this."));
-        }, world).orTimeout(5, TimeUnit.SECONDS).exceptionally(ex -> null);
-    }
+    // --- Internal helpers ---
 
     private static double distanceSq(Vector3d position, TransformData target) {
         double dx = position.getX() - target.getX();
         double dy = position.getY() - target.getY();
         double dz = position.getZ() - target.getZ();
         return dx * dx + dy * dy + dz * dz;
-    }
-
-    private static double distanceSqWithVerticalBonus(Vector3d position, TransformData target) {
-        return TrackerUtils.distanceSqWithVerticalBonus(position, target, ParkourConstants.TOUCH_VERTICAL_BONUS);
     }
 
     private static double distanceSq(Vector3d position, Vector3d target) {
@@ -962,348 +718,6 @@ public class RunTracker {
             if (ghostNpcManager != null) {
                 ghostNpcManager.startPlayback(playerRef.getUuid());
             }
-        }
-    }
-
-    private void teleportToRespawn(Ref<EntityStore> ref, Store<EntityStore> store, ActiveRun run, Map map,
-                                   CommandBuffer<EntityStore> buffer) {
-        if (run != null) {
-            run.lastPosition = null;
-        }
-        TransformData spawn = null;
-        if (run != null && run.practiceEnabled && run.practiceCheckpoint != null) {
-            spawn = run.practiceCheckpoint;
-        }
-        int checkpointIndex = resolveCheckpointIndex(run, map);
-        if (spawn == null && checkpointIndex >= 0 && checkpointIndex < map.getCheckpoints().size()) {
-            spawn = map.getCheckpoints().get(checkpointIndex);
-        }
-        if (spawn == null) {
-            spawn = map.getStart();
-        }
-        if (spawn == null) {
-            return;
-        }
-        Vector3d position = new Vector3d(spawn.getX(), spawn.getY(), spawn.getZ());
-        Vector3f rotation = new Vector3f(spawn.getRotX(), spawn.getRotY(), spawn.getRotZ());
-        addTeleport(ref, store, buffer, new Teleport(store.getExternalData().getWorld(), position, rotation));
-    }
-
-    // Called from interaction handlers (outside ECS tick) — store.addComponent() is safe here
-    public boolean teleportToLastCheckpoint(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef) {
-        if (playerRef == null) {
-            return false;
-        }
-        ActiveRun run = activeRuns.get(playerRef.getUuid());
-        if (run == null) {
-            return false;
-        }
-        if (run.practiceEnabled) {
-            return teleportToPracticeCheckpoint(ref, store, playerRef, run);
-        }
-        Map map = mapStore.getMap(run.mapId);
-        if (map == null) {
-            return false;
-        }
-        int checkpointIndex = resolveCheckpointIndex(run, map);
-        if (checkpointIndex < 0 || checkpointIndex >= map.getCheckpoints().size()) {
-            return false;
-        }
-        TransformData checkpoint = map.getCheckpoints().get(checkpointIndex);
-        if (checkpoint == null) {
-            return false;
-        }
-        Vector3d position = new Vector3d(checkpoint.getX(), checkpoint.getY(), checkpoint.getZ());
-        Vector3f rotation = new Vector3f(checkpoint.getRotX(), checkpoint.getRotY(), checkpoint.getRotZ());
-        store.addComponent(ref, Teleport.getComponentType(),
-                new Teleport(store.getExternalData().getWorld(), position, rotation));
-        recordTeleport(playerRef.getUuid(), TeleportCause.CHECKPOINT);
-        run.fallState.fallStartTime = null;
-        run.fallState.lastY = null;
-        run.lastPosition = null;
-        return true;
-    }
-
-    // Called from teleportToLastCheckpoint (interaction context, outside ECS tick) — store.addComponent() is safe
-    private boolean teleportToPracticeCheckpoint(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef,
-                                                 ActiveRun run) {
-        if (run == null || run.practiceCheckpoint == null) {
-            return false;
-        }
-        Vector3d position = new Vector3d(run.practiceCheckpoint.getX(),
-                run.practiceCheckpoint.getY(),
-                run.practiceCheckpoint.getZ());
-        Vector3f rotation = new Vector3f(run.practiceCheckpoint.getRotX(),
-                run.practiceCheckpoint.getRotY(),
-                run.practiceCheckpoint.getRotZ());
-        World world = store.getExternalData().getWorld();
-        if (world == null) {
-            return false;
-        }
-        Teleport teleport = Teleport.createForPlayer(world, new Transform(position, rotation));
-        if (run.practiceHeadRotation != null) {
-            teleport.setHeadRotation(run.practiceHeadRotation.clone());
-        }
-        store.addComponent(ref, Teleport.getComponentType(), teleport);
-        recordTeleport(playerRef.getUuid(), TeleportCause.CHECKPOINT);
-        run.fallState.fallStartTime = null;
-        run.fallState.lastY = null;
-        run.lastPosition = null;
-        return true;
-    }
-
-    private int resolveCheckpointIndex(ActiveRun run, Map map) {
-        if (run == null || map == null) {
-            return -1;
-        }
-        return TrackerUtils.resolveCheckpointIndex(run.lastCheckpointIndex, run.touchedCheckpoints,
-                map.getCheckpoints());
-    }
-
-    // Called from interaction handlers (outside ECS tick) — store.addComponent() is safe here
-    public boolean resetRunToStart(Ref<EntityStore> ref, Store<EntityStore> store, Player player, PlayerRef playerRef) {
-        if (playerRef == null || player == null) {
-            return false;
-        }
-        World world = store.getExternalData().getWorld();
-        if (world == null) {
-            player.sendMessage(SystemMessageUtils.parkourError("World not available."));
-            return false;
-        }
-        String mapId = getActiveMapId(playerRef.getUuid());
-        if (mapId == null) {
-            player.sendMessage(SystemMessageUtils.parkourWarn("No active map to reset."));
-            return false;
-        }
-        Map map = mapStore.getMap(mapId);
-        if (map == null || map.getStart() == null) {
-            player.sendMessage(SystemMessageUtils.parkourError("Map start not available."));
-            return false;
-        }
-        ActiveRun previous = activeRuns.get(playerRef.getUuid());
-        boolean practiceEnabled = previous != null && previous.practiceEnabled;
-        boolean flyActive = previous != null && previous.flyActive;
-        TransformData practiceCheckpoint = previous != null ? previous.practiceCheckpoint : null;
-        Vector3f practiceHeadRotation = previous != null ? previous.practiceHeadRotation : null;
-        ActiveRun run = setActiveMap(playerRef.getUuid(), mapId, map.getStart());
-        if (run != null) {
-            run.practiceEnabled = practiceEnabled;
-            run.flyActive = flyActive;
-            run.practiceCheckpoint = practiceCheckpoint;
-            run.practiceHeadRotation = practiceHeadRotation;
-        }
-        Vector3d position = new Vector3d(map.getStart().getX(), map.getStart().getY(), map.getStart().getZ());
-        Vector3f rotation = new Vector3f(map.getStart().getRotX(), map.getStart().getRotY(),
-                map.getStart().getRotZ());
-        store.addComponent(ref, Teleport.getComponentType(), new Teleport(world, position, rotation));
-        return true;
-    }
-
-    private void broadcastCompletion(UUID playerId, String playerName, Map map, long durationMs, int leaderboardPosition) {
-        String mapName = map.getName();
-        if (mapName == null || mapName.isBlank()) {
-            mapName = map.getId();
-        }
-        String category = map.getCategory();
-        if (category == null || category.isBlank()) {
-            category = "Uncategorized";
-        } else {
-            category = category.trim();
-        }
-        String rank = progressStore != null ? progressStore.getRankName(playerId, mapStore) : "Unranked";
-        Message rankPart = FormatUtils.getRankMessage(rank);
-        String categoryColor = getCategoryColor(category);
-        boolean isWorldRecord = leaderboardPosition == 1;
-        Message positionPart = Message.raw("#" + leaderboardPosition)
-                .color(isWorldRecord ? "#ffd166" : SystemMessageUtils.INFO);
-        Message wrPart = isWorldRecord
-                ? Message.raw(" WR!").color("#ffd166")
-                : Message.raw("");
-        Message message = Message.join(
-                Message.raw("[").color("#ffffff"),
-                rankPart,
-                Message.raw("] ").color("#ffffff"),
-                Message.raw(playerName).color(SystemMessageUtils.PRIMARY_TEXT),
-                Message.raw(" finished ").color(SystemMessageUtils.INFO),
-                Message.raw(mapName).color(SystemMessageUtils.PRIMARY_TEXT),
-                Message.raw(" (").color(SystemMessageUtils.INFO),
-                Message.raw(category).color(categoryColor),
-                Message.raw(") in ").color(SystemMessageUtils.INFO),
-                Message.raw(FormatUtils.formatDuration(durationMs)).color(SystemMessageUtils.SUCCESS),
-                Message.raw(" - ").color(SystemMessageUtils.INFO),
-                positionPart,
-                wrPart,
-                Message.raw(".").color(SystemMessageUtils.INFO)
-        );
-        Message ggMessage = isWorldRecord
-                ? Message.raw("WORLD RECORD! SAY GG!").color(SystemMessageUtils.SUCCESS).bold(true)
-                : Message.empty();
-        for (PlayerRef target : Universe.get().getPlayers()) {
-            target.sendMessage(message);
-            if (isWorldRecord) {
-                target.sendMessage(ggMessage);
-            }
-        }
-    }
-
-    private void broadcastVexaGod(String playerName) {
-        Message message = SystemMessageUtils.withParkourPrefix(
-                Message.raw(playerName).color(SystemMessageUtils.PRIMARY_TEXT),
-                Message.raw(" is now ").color(SystemMessageUtils.SECONDARY),
-                FormatUtils.getRankMessage("VexaGod"),
-                Message.raw(" (but for how long?)").color(SystemMessageUtils.SECONDARY)
-        );
-        Message ggMessage = SystemMessageUtils.withParkourPrefix(
-                Message.raw("SEND GG IN THE CHAT!").color(SystemMessageUtils.SUCCESS).bold(true)
-        );
-        for (PlayerRef target : Universe.get().getPlayers()) {
-            target.sendMessage(message);
-            target.sendMessage(ggMessage);
-        }
-    }
-
-    private String getCategoryColor(String category) {
-        if (category == null) {
-            return "#b2c0c7";
-        }
-        return switch (category.trim().toLowerCase()) {
-            case "easy" -> "#54d28e";
-            case "medium" -> "#f2c04d";
-            case "hard" -> "#ff7a45";
-            case "insane" -> "#ff4d6d";
-            default -> "#b2c0c7";
-        };
-    }
-
-    public void teleportToSpawn(Ref<EntityStore> ref, Store<EntityStore> store, TransformComponent transform) {
-        TrackerUtils.teleportToSpawn(ref, store, transform, null);
-    }
-
-    private void teleportToSpawn(Ref<EntityStore> ref, Store<EntityStore> store, TransformComponent transform,
-                                 CommandBuffer<EntityStore> buffer) {
-        TrackerUtils.teleportToSpawn(ref, store, transform, buffer);
-    }
-
-    private static class ActiveRun {
-        private final String mapId;
-        private final TrackerUtils.FallState fallState = new TrackerUtils.FallState();
-        private long startTimeMs;
-        private boolean waitingForStart;
-        private Vector3d startPosition;
-        private Vector3d lastPosition;
-        private final Set<Integer> touchedCheckpoints = new HashSet<>();
-        private final java.util.Map<Integer, Long> checkpointTouchTimes = new HashMap<>();
-        private boolean finishTouched;
-        private int lastCheckpointIndex = -1;
-        private boolean practiceEnabled;
-        private boolean flyActive;
-        private TransformData practiceCheckpoint;
-        private Vector3f practiceHeadRotation;
-        private long lastFinishWarningMs;
-        private long elapsedMs;
-        private double elapsedRemainderMs;
-        private boolean skipNextTimeIncrement;
-        private Long startPingMs;
-        private Long finishPingMs;
-        private double[] lastValidFlyPosition;
-        private long lastFlyZoneRollbackMs;
-
-        private ActiveRun(String mapId, long startTimeMs) {
-            this.mapId = mapId;
-            this.startTimeMs = startTimeMs;
-            this.elapsedMs = 0L;
-        }
-    }
-
-    private enum TeleportCause {
-        START_TRIGGER,
-        LEAVE_TRIGGER,
-        RUN_RESPAWN,
-        IDLE_RESPAWN,
-        FINISH,
-        CHECKPOINT
-    }
-
-    private static final class TeleportStats {
-        private final AtomicInteger startTrigger = new AtomicInteger();
-        private final AtomicInteger leaveTrigger = new AtomicInteger();
-        private final AtomicInteger runRespawn = new AtomicInteger();
-        private final AtomicInteger idleRespawn = new AtomicInteger();
-        private final AtomicInteger finish = new AtomicInteger();
-        private final AtomicInteger checkpoint = new AtomicInteger();
-
-        private void increment(TeleportCause cause) {
-            if (cause == null) {
-                return;
-            }
-            switch (cause) {
-                case START_TRIGGER -> startTrigger.incrementAndGet();
-                case LEAVE_TRIGGER -> leaveTrigger.incrementAndGet();
-                case RUN_RESPAWN -> runRespawn.incrementAndGet();
-                case IDLE_RESPAWN -> idleRespawn.incrementAndGet();
-                case FINISH -> finish.incrementAndGet();
-                case CHECKPOINT -> checkpoint.incrementAndGet();
-            }
-        }
-
-        private TeleportStatsSnapshot snapshotAndReset() {
-            return new TeleportStatsSnapshot(
-                    startTrigger.getAndSet(0),
-                    leaveTrigger.getAndSet(0),
-                    runRespawn.getAndSet(0),
-                    idleRespawn.getAndSet(0),
-                    finish.getAndSet(0),
-                    checkpoint.getAndSet(0)
-            );
-        }
-    }
-
-    private static class SessionStats {
-        private final ConcurrentHashMap<String, MapSessionData> mapStats = new ConcurrentHashMap<>();
-
-        public MapSessionData getStats(String mapId) {
-            return mapStats.computeIfAbsent(mapId, k -> new MapSessionData());
-        }
-
-        public void recordFailure(String mapId) {
-            MapSessionData data = getStats(mapId);
-            data.failureCount++;
-            if (data.firstFailureTimestamp == 0) {
-                data.firstFailureTimestamp = System.currentTimeMillis();
-            }
-        }
-
-        public void recordAttempt(String mapId) {
-            MapSessionData data = getStats(mapId);
-            data.attemptCount++;
-        }
-
-        static class MapSessionData {
-            int failureCount = 0;
-            int attemptCount = 0;
-            long firstFailureTimestamp = 0;
-            boolean recommendationShown = false;
-            boolean practiceHintShown = false;
-        }
-    }
-
-    public static class CheckpointProgress {
-        public final int touched;
-        public final int total;
-
-        public CheckpointProgress(int touched, int total) {
-            this.touched = touched;
-            this.total = total;
-        }
-    }
-
-    public static class CheckpointSplit {
-        public final int index;
-        public final long timeMs;
-
-        public CheckpointSplit(int index, long timeMs) {
-            this.index = index;
-            this.timeMs = timeMs;
         }
     }
 
@@ -1364,78 +778,14 @@ public class RunTracker {
         return nowMs - lastSeen >= OFFLINE_RUN_EXPIRY_MS;
     }
 
-    private void recordTeleport(UUID playerId, TeleportCause cause) {
-        if (playerId == null || cause == null) {
-            return;
-        }
-        teleportStats.computeIfAbsent(playerId, ignored -> new TeleportStats()).increment(cause);
-    }
-
-    private void addTeleport(Ref<EntityStore> ref, Store<EntityStore> store, CommandBuffer<EntityStore> buffer,
-                             Teleport teleport) {
-        if (ref == null || teleport == null) {
-            return;
-        }
-        if (buffer != null) {
-            buffer.addComponent(ref, Teleport.getComponentType(), teleport);
-        } else if (store != null) {
-            store.addComponent(ref, Teleport.getComponentType(), teleport);
-        }
-    }
-
-    private long resolveInterpolatedTimeMs(ActiveRun run, Vector3d previousPosition, Vector3d currentPosition,
-                                           TransformData target, long previousElapsedMs, double deltaMs) {
-        long currentElapsedMs = getRunElapsedMs(run);
-        if (run == null || run.waitingForStart || previousPosition == null || currentPosition == null
-                || target == null || deltaMs <= 0.0) {
-            return currentElapsedMs;
-        }
-        double t = segmentSphereIntersectionT(previousPosition, currentPosition, target, ParkourConstants.TOUCH_RADIUS);
-        if (!Double.isFinite(t)) {
-            return currentElapsedMs;
-        }
-        long interpolated = previousElapsedMs + Math.round(deltaMs * t);
-        return Math.max(0L, Math.min(currentElapsedMs, interpolated));
-    }
-
-    private static double segmentSphereIntersectionT(Vector3d from, Vector3d to, TransformData target, double radius) {
-        if (from == null || to == null || target == null) {
-            return Double.NaN;
-        }
-        double dx = to.getX() - from.getX();
-        double dy = to.getY() - from.getY();
-        double dz = to.getZ() - from.getZ();
-        double a = dx * dx + dy * dy + dz * dz;
-        if (a <= 1e-9) {
-            return Double.NaN;
-        }
-        double fx = from.getX() - target.getX();
-        double fy = from.getY() - target.getY();
-        double fz = from.getZ() - target.getZ();
-        double b = 2.0 * (fx * dx + fy * dy + fz * dz);
-        double c = fx * fx + fy * fy + fz * fz - radius * radius;
-        double discriminant = b * b - 4.0 * a * c;
-        if (discriminant < 0.0) {
-            return Double.NaN;
-        }
-        double sqrt = Math.sqrt(discriminant);
-        double t1 = (-b - sqrt) / (2.0 * a);
-        if (t1 >= 0.0 && t1 <= 1.0) {
-            return t1;
-        }
-        double t2 = (-b + sqrt) / (2.0 * a);
-        if (t2 >= 0.0 && t2 <= 1.0) {
-            return t2;
-        }
-        return Double.NaN;
-    }
-
     private static Vector3d copyPosition(Vector3d position) {
         if (position == null) {
             return null;
         }
         return new Vector3d(position.getX(), position.getY(), position.getZ());
     }
+
+    // --- Ping tracking ---
 
     private void recordStartPing(ActiveRun run, PlayerRef playerRef) {
         if (run == null || playerRef == null || run.startPingMs != null) {
@@ -1444,7 +794,7 @@ public class RunTracker {
         run.startPingMs = readPingMs(playerRef);
     }
 
-    private void recordFinishPing(ActiveRun run, PlayerRef playerRef) {
+    void recordFinishPing(ActiveRun run, PlayerRef playerRef) {
         if (run == null || playerRef == null || run.finishPingMs != null) {
             return;
         }
@@ -1459,7 +809,7 @@ public class RunTracker {
         run.finishPingMs = null;
     }
 
-    private void sendLatencyWarning(ActiveRun run, Player player) {
+    void sendLatencyWarning(ActiveRun run, Player player) {
         if (player == null || run == null) {
             return;
         }
@@ -1522,6 +872,8 @@ public class RunTracker {
         return value * unitToMs;
     }
 
+    // --- Jump tracking ---
+
     private void trackJump(PlayerRef playerRef, MovementStates movementStates) {
         if (playerRef == null) {
             return;
@@ -1558,6 +910,8 @@ public class RunTracker {
             progressStore.addJumps(playerId, playerName, count);
         }
     }
+
+    // --- Run time ---
 
     private void advanceRunTime(ActiveRun run, float deltaSeconds) {
         if (run == null) {
