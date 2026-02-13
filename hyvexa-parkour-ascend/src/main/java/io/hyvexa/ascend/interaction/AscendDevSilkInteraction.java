@@ -2,50 +2,32 @@ package io.hyvexa.ascend.interaction;
 
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.protocol.InteractionType;
+import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.Message;
-import com.hypixel.hytale.server.core.entity.InteractionContext;
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.modules.interaction.interaction.config.SimpleInteraction;
+import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
-import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.ui.AscendProfilePage;
-import io.hyvexa.ascend.util.AscendModeGate;
-import io.hyvexa.core.state.ModeMessages;
 
-import javax.annotation.Nonnull;
-
-public class AscendDevSilkInteraction extends SimpleInteraction {
+public class AscendDevSilkInteraction extends AbstractAscendPageInteraction {
 
     public static final BuilderCodec<AscendDevSilkInteraction> CODEC =
         BuilderCodec.builder(AscendDevSilkInteraction.class, AscendDevSilkInteraction::new).build();
 
     @Override
-    public void handle(@Nonnull Ref<EntityStore> ref, boolean firstRun, float time,
-                       @Nonnull InteractionType type, @Nonnull InteractionContext interactionContext) {
-        super.handle(ref, firstRun, time, type, interactionContext);
-        var store = ref.getStore();
-        Player player = store.getComponent(ref, Player.getComponentType());
-        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-        if (player == null || playerRef == null) {
-            return;
-        }
-        World world = store.getExternalData().getWorld();
-        if (!AscendModeGate.isAscendWorld(world)) {
-            player.sendMessage(ModeMessages.MESSAGE_ENTER_ASCEND);
-            return;
-        }
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) {
-            return;
-        }
+    protected boolean validateDependencies(ParkourAscendPlugin plugin, Player player) {
         if (plugin.getPlayerStore() == null || plugin.getRobotManager() == null) {
             player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading."));
-            return;
+            return false;
         }
-        player.getPageManager().openCustomPage(ref, store,
-            new AscendProfilePage(playerRef, plugin.getPlayerStore(), plugin.getRobotManager()));
+        return true;
+    }
+
+    @Override
+    protected InteractiveCustomUIPage<?> createPage(Ref<EntityStore> ref, Store<EntityStore> store,
+                                                    PlayerRef playerRef, ParkourAscendPlugin plugin) {
+        return new AscendProfilePage(playerRef, plugin.getPlayerStore(), plugin.getRobotManager());
     }
 }
