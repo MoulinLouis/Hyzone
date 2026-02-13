@@ -29,7 +29,6 @@ import io.hyvexa.hub.routing.HubRouter;
 
 import javax.annotation.Nonnull;
 import java.io.File;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
@@ -47,13 +46,22 @@ public class HyvexaHubPlugin extends JavaPlugin {
     private static HyvexaHubPlugin INSTANCE;
 
     private HubRouter router;
-    private final ConcurrentHashMap<UUID, HubHudState> hubHudStates = new ConcurrentHashMap<>();
-    private final Set<UUID> hubHudAttachInFlight = ConcurrentHashMap.newKeySet();
-    private final Set<UUID> hubHudPendingStabilization = ConcurrentHashMap.newKeySet();
+    private final ConcurrentHashMap<UUID, HudLifecycle> hubHudLifecycles = new ConcurrentHashMap<>();
     private ScheduledFuture<?> hubHudTask;
     private ScheduledFuture<?> playerCountTask;
 
-    private record HubHudState(HubHud hud, long readyAt) {
+    private enum HudPhase { PENDING, ATTACHING, READY }
+
+    private record HudLifecycle(HubHud hud, long readyAt, HudPhase phase) {
+        static HudLifecycle pending() {
+            return new HudLifecycle(null, 0, HudPhase.PENDING);
+        }
+        static HudLifecycle attaching() {
+            return new HudLifecycle(null, 0, HudPhase.ATTACHING);
+        }
+        HudLifecycle withReady(HubHud hud, long readyAt) {
+            return new HudLifecycle(hud, readyAt, HudPhase.READY);
+        }
     }
 
     public HyvexaHubPlugin(@Nonnull JavaPluginInit init) {
@@ -139,7 +147,7 @@ public class HyvexaHubPlugin extends JavaPlugin {
                     clearHubHudState(playerId);
                     return;
                 }
-                hubHudPendingStabilization.add(playerId);
+                hubHudLifecycles.putIfAbsent(playerId, HudLifecycle.pending());
                 Ref<EntityStore> ref = playerRef.getReference();
                 if (ref == null || !ref.isValid()) {
                     return;
@@ -181,9 +189,9 @@ public class HyvexaHubPlugin extends JavaPlugin {
     }
 
     private void tickPlayerCount() {
-        for (HubHudState state : hubHudStates.values()) {
-            if (state.hud() != null) {
-                state.hud().updatePlayerCount();
+        for (HudLifecycle lifecycle : hubHudLifecycles.values()) {
+            if (lifecycle.hud() != null) {
+                lifecycle.hud().updatePlayerCount();
             }
         }
     }
@@ -193,17 +201,24 @@ public class HyvexaHubPlugin extends JavaPlugin {
         if (playerId == null) {
             return;
         }
-        hubHudPendingStabilization.add(playerId);
-        if (!hubHudAttachInFlight.add(playerId)) {
-            return;
+        boolean[] shouldAttach = {false};
+        hubHudLifecycles.compute(playerId, (id, existing) -> {
+            if (existing != null && existing.phase() == HudPhase.ATTACHING) {
+                return existing; // Already in-flight
+            }
+            shouldAttach[0] = true;
+            return HudLifecycle.attaching();
+        });
+        if (shouldAttach[0]) {
+            attachHubHud(ref, store, playerRef, playerId);
         }
-        attachHubHud(ref, store, playerRef, playerId);
     }
 
     private void attachHubHud(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef, UUID playerId) {
         var world = store.getExternalData().getWorld();
         if (world == null) {
-            hubHudAttachInFlight.remove(playerId);
+            hubHudLifecycles.compute(playerId, (id, existing) ->
+                existing != null && existing.phase() == HudPhase.ATTACHING ? HudLifecycle.pending() : existing);
             return;
         }
         String worldName = world.getName() != null ? world.getName() : "unknown";
@@ -217,16 +232,20 @@ public class HyvexaHubPlugin extends JavaPlugin {
                 if (player == null) {
                     return;
                 }
-                HubHudState state = hubHudStates.compute(playerId, (ignored, existing) -> {
-                    HubHud hud = existing != null ? existing.hud() : new HubHud(playerRef);
-                    return new HubHudState(hud, System.currentTimeMillis() + HUD_READY_DELAY_MS);
+                hubHudLifecycles.compute(playerId, (ignored, existing) -> {
+                    HubHud hud = (existing != null && existing.hud() != null) ? existing.hud() : new HubHud(playerRef);
+                    return new HudLifecycle(hud, System.currentTimeMillis() + HUD_READY_DELAY_MS, HudPhase.READY);
                 });
-                HubHud hud = state.hud();
-                player.getHudManager().setCustomHud(playerRef, hud);
-                player.getHudManager().hideHudComponents(playerRef, HudComponent.Compass);
-                hud.show();
+                HudLifecycle state = hubHudLifecycles.get(playerId);
+                if (state != null && state.hud() != null) {
+                    player.getHudManager().setCustomHud(playerRef, state.hud());
+                    player.getHudManager().hideHudComponents(playerRef, HudComponent.Compass);
+                    state.hud().show();
+                }
             } finally {
-                hubHudAttachInFlight.remove(playerId);
+                // If still ATTACHING (e.g. early return), revert to PENDING for recovery
+                hubHudLifecycles.computeIfPresent(playerId, (id, existing) ->
+                    existing.phase() == HudPhase.ATTACHING ? HudLifecycle.pending() : existing);
             }
         }, "hub.hud.attach", "hub HUD attach",
                 "player=" + playerIdText + ", world=" + worldName);
@@ -261,33 +280,35 @@ public class HyvexaHubPlugin extends JavaPlugin {
 
     private void tickHubHudRecovery() {
         long now = System.currentTimeMillis();
-        for (UUID playerId : hubHudPendingStabilization) {
-            if (hubHudAttachInFlight.contains(playerId)) {
-                continue;
-            }
+        for (var entry : hubHudLifecycles.entrySet()) {
+            UUID playerId = entry.getKey();
+            HudLifecycle lifecycle = entry.getValue();
 
-            HubHudState state = hubHudStates.get(playerId);
-            if (state != null && state.hud() != null) {
-                if (now < state.readyAt()) {
-                    continue;
+            if (lifecycle.phase() == HudPhase.ATTACHING) {
+                continue; // In-flight, don't interfere
+            }
+            if (lifecycle.phase() == HudPhase.READY && lifecycle.hud() != null) {
+                if (now < lifecycle.readyAt()) {
+                    continue; // Still stabilizing
                 }
-                hubHudPendingStabilization.remove(playerId);
+                // Stabilized — no action needed
                 continue;
             }
 
+            // PENDING phase — attempt recovery
             PlayerRef playerRef = Universe.get().getPlayer(playerId);
             if (playerRef == null || !playerRef.isValid()) {
-                clearHubHudState(playerId);
+                hubHudLifecycles.remove(playerId);
                 continue;
             }
             Ref<EntityStore> ref = playerRef.getReference();
             if (ref == null || !ref.isValid()) {
-                clearHubHudState(playerId);
+                hubHudLifecycles.remove(playerId);
                 continue;
             }
             Store<EntityStore> store = ref.getStore();
             if (!isHubWorld(store)) {
-                clearHubHudState(playerId);
+                hubHudLifecycles.remove(playerId);
                 continue;
             }
             requestHubHudAttach(ref, store, playerRef);
@@ -298,9 +319,7 @@ public class HyvexaHubPlugin extends JavaPlugin {
         if (playerId == null) {
             return;
         }
-        hubHudStates.remove(playerId);
-        hubHudAttachInFlight.remove(playerId);
-        hubHudPendingStabilization.remove(playerId);
+        hubHudLifecycles.remove(playerId);
     }
 
     private boolean isHubWorld(World world) {
@@ -324,8 +343,6 @@ public class HyvexaHubPlugin extends JavaPlugin {
             playerCountTask.cancel(false);
             playerCountTask = null;
         }
-        hubHudStates.clear();
-        hubHudAttachInFlight.clear();
-        hubHudPendingStabilization.clear();
+        hubHudLifecycles.clear();
     }
 }
