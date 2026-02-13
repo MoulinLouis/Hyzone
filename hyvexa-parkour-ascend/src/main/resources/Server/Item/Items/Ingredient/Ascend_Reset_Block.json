@@ -3,39 +3,37 @@
     "Name": "Reset current map",
     "Description": "Right click to restart the current map."
   },
-  "Icon": "Icons/ItemsGenerated/Ingredient_Ice_Essence.png",
+  "Icon": "Icons/ItemsGenerated/Orange_Orb_Hyvexa.png",
   "Quality": "Developer",
   "Categories": [
     "Items.Ingredients"
   ],
-  "Model": "Resources/Ingredients/Essence.blockymodel",
-  "Texture": "Resources/Ingredients/Essence_Textures/Ice_Essence_Texture.png",
-  "PlayerAnimationsId": "Item",
+  "Model": "Items/Custom/Orb Hyvexa.blockymodel",
+  "Texture": "Items/Custom/Orb_Texture_Orange.png",
+  "PlayerAnimationsId": "Block",
   "IconProperties": {
-    "Scale": 0.6,
+    "Scale": 0.9,
     "Rotation": [
       0,
-      0,
+      196,
       0
     ],
     "Translation": [
       0,
-      -13
-    ]
-  },
-  "Tags": {
-    "Type": [
-      "Ingredient"
+      -19
     ]
   },
   "ItemEntity": {
     "ParticleSystemId": null
   },
-  "Scale": 0.8,
-  "Light": {
-    "Color": "#023",
-    "Radius": 1
-  },
+  "MaxStack": 1,
+  "Scale": 1.3,
+  "Particles": [
+    {
+      "Color": "#ff8e11",
+      "SystemId": "Temple_Light_Lantern"
+    }
+  ],
   "ItemSoundSetId": "ISS_Items_Gems",
   "DropOnDeath": false,
   "Interactions": {
