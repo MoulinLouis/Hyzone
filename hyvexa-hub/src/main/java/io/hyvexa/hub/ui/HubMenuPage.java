@@ -19,6 +19,8 @@ import io.hyvexa.common.whitelist.WhitelistRegistry;
 import io.hyvexa.hub.routing.HubRouter;
 
 import javax.annotation.Nonnull;
+import java.io.File;
+import java.nio.file.Path;
 
 public class HubMenuPage extends InteractiveCustomUIPage<ButtonEventData> {
 
@@ -88,14 +90,25 @@ public class HubMenuPage extends InteractiveCustomUIPage<ButtonEventData> {
         }
         if (BUTTON_ASCEND.equals(data.getButton())) {
             AscendWhitelistManager whitelistManager = WhitelistRegistry.getInstance();
+            if (whitelistManager == null) {
+                // Plugins use separate classloaders, so the registry singleton set by the
+                // Ascend plugin is not visible here. Read the whitelist file directly instead.
+                File whitelistFile = Path.of("mods", "Parkour", "ascend_whitelist.json").toFile();
+                if (whitelistFile.exists()) {
+                    whitelistManager = new AscendWhitelistManager(whitelistFile);
+                }
+            }
             boolean isAllowed;
-            if (whitelistManager == null || whitelistManager.isPublicMode()) {
+            if (whitelistManager != null && whitelistManager.isPublicMode()) {
                 isAllowed = true;
             } else if (PermissionUtils.isOp(player)) {
                 isAllowed = true;
-            } else if (whitelistManager.isEnabled() && playerRef != null) {
+            } else if (whitelistManager != null && whitelistManager.isEnabled() && playerRef != null) {
                 String username = playerRef.getUsername();
                 isAllowed = username != null && whitelistManager.contains(username);
+            } else if (whitelistManager == null) {
+                // No whitelist configured at all — default to OP-only
+                isAllowed = false;
             } else {
                 isAllowed = false;
             }
