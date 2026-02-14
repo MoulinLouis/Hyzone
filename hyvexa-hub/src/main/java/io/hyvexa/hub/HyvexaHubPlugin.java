@@ -31,6 +31,7 @@ import io.hyvexa.hub.routing.HubRouter;
 
 import javax.annotation.Nonnull;
 import java.io.File;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
@@ -240,11 +241,10 @@ public class HyvexaHubPlugin extends JavaPlugin {
                 if (player == null) {
                     return;
                 }
-                hubHudLifecycles.compute(playerId, (ignored, existing) -> {
+                HudLifecycle state = hubHudLifecycles.compute(playerId, (ignored, existing) -> {
                     HubHud hud = (existing != null && existing.hud() != null) ? existing.hud() : new HubHud(playerRef);
                     return new HudLifecycle(hud, System.currentTimeMillis() + HUD_READY_DELAY_MS, HudPhase.READY);
                 });
-                HudLifecycle state = hubHudLifecycles.get(playerId);
                 if (state != null && state.hud() != null) {
                     player.getHudManager().setCustomHud(playerRef, state.hud());
                     player.getHudManager().hideHudComponents(playerRef, HudComponent.Compass);
@@ -288,6 +288,7 @@ public class HyvexaHubPlugin extends JavaPlugin {
 
     private void tickHubHudRecovery() {
         long now = System.currentTimeMillis();
+        List<UUID> toRemove = null;
         for (var entry : hubHudLifecycles.entrySet()) {
             UUID playerId = entry.getKey();
             HudLifecycle lifecycle = entry.getValue();
@@ -306,20 +307,28 @@ public class HyvexaHubPlugin extends JavaPlugin {
             // PENDING phase — attempt recovery
             PlayerRef playerRef = Universe.get().getPlayer(playerId);
             if (playerRef == null || !playerRef.isValid()) {
-                hubHudLifecycles.remove(playerId);
+                if (toRemove == null) toRemove = new java.util.ArrayList<>();
+                toRemove.add(playerId);
                 continue;
             }
             Ref<EntityStore> ref = playerRef.getReference();
             if (ref == null || !ref.isValid()) {
-                hubHudLifecycles.remove(playerId);
+                if (toRemove == null) toRemove = new java.util.ArrayList<>();
+                toRemove.add(playerId);
                 continue;
             }
             Store<EntityStore> store = ref.getStore();
             if (!isHubWorld(store)) {
-                hubHudLifecycles.remove(playerId);
+                if (toRemove == null) toRemove = new java.util.ArrayList<>();
+                toRemove.add(playerId);
                 continue;
             }
             requestHubHudAttach(ref, store, playerRef);
+        }
+        if (toRemove != null) {
+            for (UUID id : toRemove) {
+                hubHudLifecycles.remove(id);
+            }
         }
     }
 
