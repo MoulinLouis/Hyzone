@@ -215,7 +215,7 @@ _Idea: Ascendancy Tree overview._
 **Title:** Ascendancy Tree
 
 **Text:**
-> 11 ascendancy nodes to unlock: **Auto-Upgrade + Momentum**, **Auto-Evolution**, **Runner Speed Boost**, **Evolution Power+**, **Runner Speed II**, **Momentum Surge**, **Elevation Remnant**, **Ascension Challenges**, **Summit Persistence**, **Swift Restart**, **Vexa Overflow**.
+> 10 ascendancy nodes to unlock: **Auto-Upgrade + Momentum**, **Auto-Evolution**, **Runner Speed Boost**, **Evolution Power+**, **Runner Speed II**, **Momentum Surge**, **Elevation Remnant**, **Ascension Challenges**, **Swift Restart**, **Vexa Overflow**.
 >
 > AP are permanent across all future Ascensions.
 

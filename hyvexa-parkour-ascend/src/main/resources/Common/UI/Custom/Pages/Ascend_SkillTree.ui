@@ -159,17 +159,11 @@ $C.@PageOverlay {
           Group #ConnT4H { Anchor: (Left: 160, Top: 658, Width: 340, Height: 4); Background: #4b5563; }
           Group #ConnT4Merge { Anchor: (Left: 328, Top: 662, Width: 4, Height: 8); Background: #4b5563; }
 
-          // T6->split to T7 left/right
-          Group #ConnT5Split { Anchor: (Left: 328, Top: 780, Width: 4, Height: 8); Background: #4b5563; }
-          Group #ConnT5H { Anchor: (Left: 160, Top: 788, Width: 340, Height: 4); Background: #4b5563; }
-          Group #ConnT5Left { Anchor: (Left: 160, Top: 792, Width: 4, Height: 8); Background: #4b5563; }
-          Group #ConnT5Right { Anchor: (Left: 500, Top: 792, Width: 4, Height: 8); Background: #4b5563; }
+          // T6->T7 straight
+          Group #ConnT5T6 { Anchor: (Left: 328, Top: 780, Width: 4, Height: 20); Background: #4b5563; }
 
-          // T7 left/right merge to T8 center
-          Group #ConnT6Left { Anchor: (Left: 160, Top: 910, Width: 4, Height: 8); Background: #4b5563; }
-          Group #ConnT6Right { Anchor: (Left: 500, Top: 910, Width: 4, Height: 8); Background: #4b5563; }
-          Group #ConnT6H { Anchor: (Left: 160, Top: 918, Width: 340, Height: 4); Background: #4b5563; }
-          Group #ConnT6Merge { Anchor: (Left: 328, Top: 922, Width: 4, Height: 8); Background: #4b5563; }
+          // T7->T8 straight
+          Group #ConnT6T7 { Anchor: (Left: 328, Top: 910, Width: 4, Height: 20); Background: #4b5563; }
 
           // Tier 1: AUTO_RUNNERS
           Button #NodeAutoRunners {
@@ -379,35 +373,9 @@ $C.@PageOverlay {
             }
           }
 
-          // Tier 7: SUMMIT_PERSISTENCE (left)
-          Button #NodeSummitPersistence {
-            Anchor: (Left: 80, Top: 800, Width: 160, Height: 110);
-            Background: #1a2530;
-            Style: @NodeStyle;
-            LayoutMode: Top;
-            Group #BorderSummitPersistence { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Background: #4b5563; }
-            Group #RevealedSummitPersistence {
-              Visible: false;
-              Anchor: (Left: 0, Right: 0);
-              FlexWeight: 1;
-              LayoutMode: Top;
-              Label { Anchor: (Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "7:1"; }
-              Label #NameSummitPersistence { Anchor: (Top: 2); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Summit Persist"; }
-              Label #DescSummitPersistence { Anchor: (Top: 4); Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center); Text: "Keep 10% summit lvls"; }
-              Label #StatusSummitPersistence { Anchor: (Top: 6); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
-            }
-            Group #LockedSummitPersistence {
-              Anchor: (Left: 0, Right: 0);
-              FlexWeight: 1;
-              Label { Anchor: (Left: 0, Right: 0, Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "7:1"; }
-              Group { Anchor: (Left: 64, Top: 18, Width: 32, Height: 32); Background: @LockIcon; }
-              Label { Anchor: (Left: 0, Right: 0, Top: 56); Style: (FontSize: 12, RenderBold: true, TextColor: #4b5563, HorizontalAlignment: Center); Text: "LOCKED"; }
-            }
-          }
-
-          // Tier 7: SWIFT_RESTART (right)
+          // Tier 7: SWIFT_RESTART
           Button #NodeSwiftRestart {
-            Anchor: (Left: 420, Top: 800, Width: 160, Height: 110);
+            Anchor: (Left: 250, Top: 800, Width: 160, Height: 110);
             Background: #1a2530;
             Style: @NodeStyle;
             LayoutMode: Top;
@@ -417,7 +385,7 @@ $C.@PageOverlay {
               Anchor: (Left: 0, Right: 0);
               FlexWeight: 1;
               LayoutMode: Top;
-              Label { Anchor: (Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "7:2"; }
+              Label { Anchor: (Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "7:1"; }
               Label #NameSwiftRestart { Anchor: (Top: 2); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Swift Restart"; }
               Label #DescSwiftRestart { Anchor: (Top: 4); Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center); Text: "Start at 1-star"; }
               Label #StatusSwiftRestart { Anchor: (Top: 6); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
@@ -425,7 +393,7 @@ $C.@PageOverlay {
             Group #LockedSwiftRestart {
               Anchor: (Left: 0, Right: 0);
               FlexWeight: 1;
-              Label { Anchor: (Left: 0, Right: 0, Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "7:2"; }
+              Label { Anchor: (Left: 0, Right: 0, Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "7:1"; }
               Group { Anchor: (Left: 64, Top: 18, Width: 32, Height: 32); Background: @LockIcon; }
               Label { Anchor: (Left: 0, Right: 0, Top: 56); Style: (FontSize: 12, RenderBold: true, TextColor: #4b5563, HorizontalAlignment: Center); Text: "LOCKED"; }
             }

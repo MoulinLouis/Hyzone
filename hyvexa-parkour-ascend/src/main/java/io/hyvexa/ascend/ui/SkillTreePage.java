@@ -33,8 +33,7 @@ public class SkillTreePage extends BaseAscendPage {
         NODE_COORDINATES.put(SkillTreeNode.MOMENTUM_SURGE, "5:1");
         NODE_COORDINATES.put(SkillTreeNode.ELEVATION_REMNANT, "5:2");
         NODE_COORDINATES.put(SkillTreeNode.ASCENSION_CHALLENGES, "6:1");
-        NODE_COORDINATES.put(SkillTreeNode.SUMMIT_PERSISTENCE, "7:1");
-        NODE_COORDINATES.put(SkillTreeNode.SWIFT_RESTART, "7:2");
+        NODE_COORDINATES.put(SkillTreeNode.SWIFT_RESTART, "7:1");
         NODE_COORDINATES.put(SkillTreeNode.VEXA_OVERFLOW, "8:1");
     }
 
