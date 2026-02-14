@@ -347,22 +347,6 @@ public class AscendRunTracker {
         long millis = completionTimeMs % 1000;
         String timeStr = String.format("%d.%03ds", seconds, millis);
 
-        // Build payout message with time and optional PB/bonus info
-        StringBuilder payoutMsg = new StringBuilder();
-        payoutMsg.append("[Ascend] +")
-                 .append(FormatUtils.formatBigNumber(payout))
-                 .append(" vexa | x5 multi (+" )
-                 .append(FormatUtils.formatBigNumber(multiplierIncrement))
-                 .append(") | ")
-                 .append(timeStr);
-
-        if (isPersonalBest) {
-            payoutMsg.append(" | PB!");
-        }
-
-        player.sendMessage(Message.raw(payoutMsg.toString())
-            .color(isPersonalBest ? SystemMessageUtils.SUCCESS : SystemMessageUtils.PRIMARY_TEXT));
-
         // Toast for run completion
         String toastMsg = "+" + FormatUtils.formatBigNumber(payout) + " vexa | " + timeStr;
         if (isPersonalBest) {
@@ -382,9 +366,6 @@ public class AscendRunTracker {
             mapProgress.activateMomentum();
             if (!wasActive) {
                 String mapName = map.getName() != null && !map.getName().isBlank() ? map.getName() : map.getId();
-                long durationSec = AscendConstants.MOMENTUM_DURATION_MS / 1000;
-                player.sendMessage(Message.raw("[Momentum] x2 runner speed on " + mapName + " for " + durationSec + "s!")
-                    .color(SystemMessageUtils.WARN));
                 showToast(playerId, ToastType.ECONOMY, "Momentum: x2 speed on " + mapName);
             }
         }
