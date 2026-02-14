@@ -10,7 +10,6 @@ import com.hypixel.hytale.server.core.entity.movement.MovementStatesComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.movement.MovementManager;
 import com.hypixel.hytale.protocol.MovementSettings;
-import com.hypixel.hytale.server.core.io.PacketHandler;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -20,8 +19,6 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.protocol.MovementStates;
 import com.hypixel.hytale.protocol.SavedMovementStates;
 import com.hypixel.hytale.protocol.packets.player.SetMovementStates;
-import com.hypixel.hytale.protocol.packets.connection.PongType;
-import com.hypixel.hytale.metrics.metric.HistoricMetric;
 import io.hyvexa.parkour.util.InventoryUtils;
 import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
@@ -34,7 +31,6 @@ import io.hyvexa.parkour.data.SettingsStore;
 import io.hyvexa.parkour.data.TransformData;
 import io.hyvexa.parkour.ghost.GhostNpcManager;
 import io.hyvexa.parkour.ghost.GhostRecorder;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -48,7 +44,6 @@ public class RunTracker {
     private static final double TOUCH_RADIUS_SQ = ParkourConstants.TOUCH_RADIUS * ParkourConstants.TOUCH_RADIUS;
     private static final double START_MOVE_THRESHOLD_SQ = 0.0025;
     private static final long OFFLINE_RUN_EXPIRY_MS = TimeUnit.MINUTES.toMillis(30L);
-    private static final long PING_DELTA_THRESHOLD_MS = 50L;
 
     private final MapStore mapStore;
     private final ProgressStore progressStore;
@@ -57,8 +52,8 @@ public class RunTracker {
     private final ConcurrentHashMap<UUID, TrackerUtils.FallState> idleFalls = new ConcurrentHashMap<>();
     private final Set<UUID> readyPlayers = ConcurrentHashMap.newKeySet();
     private final ConcurrentHashMap<UUID, Long> lastSeenAt = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<UUID, Boolean> previousOnGround = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<UUID, Integer> pendingJumps = new ConcurrentHashMap<>();
+    private final PingTracker pingTracker = new PingTracker();
+    private final JumpTracker jumpTracker;
     private final RunValidator validator;
     private final RunSessionTracker sessionTracker;
     private final RunTeleporter teleporter;
@@ -70,6 +65,7 @@ public class RunTracker {
         this.mapStore = mapStore;
         this.progressStore = progressStore;
         this.settingsStore = settingsStore;
+        this.jumpTracker = new JumpTracker(progressStore);
         this.validator = new RunValidator(mapStore, progressStore);
         this.sessionTracker = new RunSessionTracker(mapStore, progressStore);
         this.teleporter = new RunTeleporter(mapStore, activeRuns);
@@ -126,8 +122,7 @@ public class RunTracker {
         readyPlayers.remove(playerId);
         lastSeenAt.remove(playerId);
         sessionTracker.clearPlayer(playerId);
-        previousOnGround.remove(playerId);
-        pendingJumps.remove(playerId);
+        jumpTracker.clearPlayer(playerId);
     }
 
     public void handleDisconnect(UUID playerId) {
@@ -152,8 +147,7 @@ public class RunTracker {
         readyPlayers.remove(playerId);
         lastSeenAt.put(playerId, System.currentTimeMillis());
         sessionTracker.clearPlayer(playerId);
-        previousOnGround.remove(playerId);
-        pendingJumps.remove(playerId);
+        jumpTracker.clearPlayer(playerId);
     }
 
     public java.util.Map<UUID, TeleportStatsSnapshot> drainTeleportStats() {
@@ -397,7 +391,7 @@ public class RunTracker {
         if (!isPlayerReady(playerRef.getUuid())) {
             return;
         }
-        trackJump(playerRef, movementStates);
+        jumpTracker.trackJump(playerRef, movementStates);
         lastSeenAt.put(playerRef.getUuid(), System.currentTimeMillis());
         HyvexaPlugin plugin = HyvexaPlugin.getInstance();
         if (plugin != null && plugin.getDuelTracker() != null
@@ -704,7 +698,7 @@ public class RunTracker {
         run.elapsedMs = 0L;
         run.elapsedRemainderMs = 0.0;
         run.skipNextTimeIncrement = false;
-        resetPingSnapshots(run);
+        pingTracker.resetPingSnapshots(run);
     }
 
     private void updateStartOnMovement(ActiveRun run, Vector3d position, PlayerRef playerRef) {
@@ -717,8 +711,8 @@ public class RunTracker {
             run.elapsedMs = 0L;
             run.elapsedRemainderMs = 0.0;
             run.skipNextTimeIncrement = true;
-            resetPingSnapshots(run);
-            recordStartPing(run, playerRef);
+            pingTracker.resetPingSnapshots(run);
+            pingTracker.recordStartPing(run, playerRef);
             if (ghostRecorder != null && !run.practiceEnabled) {
                 ghostRecorder.startRecording(playerRef.getUuid(), run.mapId);
             }
@@ -792,130 +786,20 @@ public class RunTracker {
         return new Vector3d(position.getX(), position.getY(), position.getZ());
     }
 
-    // --- Ping tracking ---
-
-    private void recordStartPing(ActiveRun run, PlayerRef playerRef) {
-        if (run == null || playerRef == null || run.startPingMs != null) {
-            return;
-        }
-        run.startPingMs = readPingMs(playerRef);
-    }
+    // --- Ping tracking (delegated to PingTracker) ---
 
     void recordFinishPing(ActiveRun run, PlayerRef playerRef) {
-        if (run == null || playerRef == null || run.finishPingMs != null) {
-            return;
-        }
-        run.finishPingMs = readPingMs(playerRef);
-    }
-
-    private void resetPingSnapshots(ActiveRun run) {
-        if (run == null) {
-            return;
-        }
-        run.startPingMs = null;
-        run.finishPingMs = null;
+        pingTracker.recordFinishPing(run, playerRef);
     }
 
     void sendLatencyWarning(ActiveRun run, Player player) {
-        if (player == null || run == null) {
-            return;
-        }
-        Long startPingMs = run.startPingMs;
-        Long finishPingMs = run.finishPingMs;
-        String startText = startPingMs != null ? startPingMs + "ms" : "N/A";
-        String finishText = finishPingMs != null ? finishPingMs + "ms" : "N/A";
-        Message message = SystemMessageUtils.withParkourPrefix(
-                Message.raw("Ping ").color(SystemMessageUtils.SECONDARY),
-                Message.raw("(start ").color(SystemMessageUtils.SECONDARY),
-                Message.raw(startText).color(SystemMessageUtils.PRIMARY_TEXT),
-                Message.raw(", finish ").color(SystemMessageUtils.SECONDARY),
-                Message.raw(finishText).color(SystemMessageUtils.PRIMARY_TEXT),
-                Message.raw(")").color(SystemMessageUtils.SECONDARY)
-        );
-        player.sendMessage(message);
-        if (startPingMs == null || finishPingMs == null) {
-            return;
-        }
-        long deltaMs = Math.abs(finishPingMs - startPingMs);
-        if (deltaMs <= PING_DELTA_THRESHOLD_MS) {
-            return;
-        }
-        player.sendMessage(SystemMessageUtils.withParkourPrefix(
-                Message.raw("Notice: ").color(SystemMessageUtils.WARN),
-                Message.raw("Latency changed significantly during your run; timing may be less accurate.")
-                        .color(SystemMessageUtils.WARN)
-        ));
+        pingTracker.sendLatencyWarning(run, player);
     }
 
-    private Long readPingMs(PlayerRef playerRef) {
-        if (playerRef == null) {
-            return null;
-        }
-        PacketHandler handler = playerRef.getPacketHandler();
-        if (handler == null) {
-            return null;
-        }
-        PacketHandler.PingInfo pingInfo = handler.getPingInfo(PongType.Tick);
-        if (pingInfo == null) {
-            return null;
-        }
-        HistoricMetric metric = pingInfo.getPingMetricSet();
-        if (metric == null) {
-            return null;
-        }
-        double avg = metric.getAverage(0);
-        double avgMs = convertPingToMs(avg, PacketHandler.PingInfo.TIME_UNIT);
-        if (!Double.isFinite(avgMs) || avgMs <= 0.0) {
-            return null;
-        }
-        return Math.round(avgMs);
-    }
-
-    private static double convertPingToMs(double value, TimeUnit unit) {
-        if (unit == null) {
-            return value;
-        }
-        double unitToMs = unit.toNanos(1L) / 1_000_000.0;
-        return value * unitToMs;
-    }
-
-    // --- Jump tracking ---
-
-    private void trackJump(PlayerRef playerRef, MovementStates movementStates) {
-        if (playerRef == null) {
-            return;
-        }
-        UUID playerId = playerRef.getUuid();
-        if (playerId == null) {
-            return;
-        }
-        boolean currentOnGround = movementStates != null && movementStates.onGround;
-        Boolean wasOnGround = previousOnGround.put(playerId, currentOnGround);
-        if (wasOnGround != null && wasOnGround && !currentOnGround) {
-            pendingJumps.merge(playerId, 1, Integer::sum);
-        }
-    }
+    // --- Jump tracking (delegated to JumpTracker) ---
 
     public void flushPendingJumps() {
-        if (pendingJumps.isEmpty() || progressStore == null) {
-            return;
-        }
-        // Snapshot + compare-and-remove drain to avoid losing increments that arrive mid-flush.
-        for (java.util.Map.Entry<UUID, Integer> entry : new ArrayList<>(pendingJumps.entrySet())) {
-            UUID playerId = entry.getKey();
-            Integer count = entry.getValue();
-            if (playerId == null || count == null) {
-                continue;
-            }
-            if (!pendingJumps.remove(playerId, count)) {
-                continue;
-            }
-            if (count <= 0) {
-                continue;
-            }
-            String playerName = progressStore.getPlayerName(playerId);
-            progressStore.addJumps(playerId, playerName, count);
-        }
+        jumpTracker.flushPendingJumps();
     }
 
     // --- Run time ---

@@ -33,15 +33,7 @@ public class HudManager {
 
     private static final String SERVER_IP_DISPLAY = "play.hyvexa.com";
 
-    private final ConcurrentHashMap<UUID, RunHud> runHuds = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<UUID, RunRecordsHud> runRecordHuds = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<UUID, HiddenRunHud> hiddenRunHuds = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<UUID, Boolean> runHudIsRecords = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<UUID, Long> runHudReadyAt = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<UUID, Boolean> runHudWasRunning = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<UUID, Boolean> runHudHidden = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<UUID, CheckpointSplitHudState> checkpointSplitHuds = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<UUID, PositionSample> lastPositionSamples = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, PlayerHudState> playerStates = new ConcurrentHashMap<>();
 
     private final ProgressStore progressStore;
     private final MapStore mapStore;
@@ -58,14 +50,19 @@ public class HudManager {
         this.perksManager = perksManager;
     }
 
+    private PlayerHudState getState(UUID playerId) {
+        return playerStates.computeIfAbsent(playerId, k -> new PlayerHudState());
+    }
+
     public void ensureRunHud(PlayerRef playerRef) {
         if (playerRef == null) {
             return;
         }
         UUID playerId = playerRef.getUuid();
-        runHuds.remove(playerId);
-        runHudReadyAt.remove(playerId);
-        runHudWasRunning.remove(playerId);
+        PlayerHudState state = getState(playerId);
+        state.runHud = null;
+        state.readyAt = 0;
+        state.wasRunning = false;
         var ref = playerRef.getReference();
         if (ref == null || !ref.isValid()) {
             return;
@@ -92,7 +89,10 @@ public class HudManager {
         }
         RunHud hud = getOrCreateHud(playerRef, false);
         attachHud(playerRef, player, hud, false);
-        runHudReadyAt.putIfAbsent(playerRef.getUuid(), System.currentTimeMillis() + 250L);
+        PlayerHudState state = getState(playerRef.getUuid());
+        if (state.readyAt == 0) {
+            state.readyAt = System.currentTimeMillis() + 250L;
+        }
     }
 
     public void updateRunHud(Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -114,20 +114,20 @@ public class HudManager {
             return;
         }
         UUID playerId = playerRef.getUuid();
+        PlayerHudState state = getState(playerId);
         boolean duelActive = duelTracker != null && duelTracker.isInMatch(playerId);
         Long elapsedMs = duelActive ? duelTracker.getElapsedTimeMs(playerId) : runTracker.getElapsedTimeMs(playerId);
         RunHud hud = getActiveHud(playerRef);
-        long readyAt = runHudReadyAt.getOrDefault(playerId, Long.MAX_VALUE);
-        if (hud == null || System.currentTimeMillis() < readyAt) {
+        if (hud == null || (state.readyAt != 0 && System.currentTimeMillis() < state.readyAt)) {
             return;
         }
         boolean running = elapsedMs != null;
-        boolean wasRunning = runHudWasRunning.getOrDefault(playerId, false);
+        boolean wasRunning = state.wasRunning;
         if (!running && wasRunning) {
             RunHud baseHud = getOrCreateHud(playerRef, false);
             attachHud(playerRef, player, baseHud, false);
             hud = baseHud;
-        } else if (running && !Boolean.TRUE.equals(runHudIsRecords.get(playerId))) {
+        } else if (running && !state.isRecords) {
             RunHud recordsHud = getOrCreateHud(playerRef, true);
             attachHud(playerRef, player, recordsHud, true);
             hud = recordsHud;
@@ -141,16 +141,16 @@ public class HudManager {
             if (wasRunning) {
                 hud.updateText("");
                 hud.updateCheckpointText("");
-                runHudWasRunning.put(playerRef.getUuid(), false);
+                state.wasRunning = false;
             }
             hud.updateCheckpointSplit("", null, false);
             if (hud instanceof RunRecordsHud recordsHud) {
                 recordsHud.updateTopTimes(List.of());
             }
-            checkpointSplitHuds.remove(playerId);
+            state.checkpointSplit = null;
             return;
         }
-        runHudWasRunning.put(playerId, true);
+        state.wasRunning = true;
         String mapId = duelActive ? duelTracker.getActiveMapId(playerId) : runTracker.getActiveMapId(playerId);
         String mapName = mapId;
         if (mapId != null) {
@@ -185,30 +185,47 @@ public class HudManager {
     }
 
     public boolean isRunHudHidden(UUID playerId) {
-        return playerId != null && Boolean.TRUE.equals(runHudHidden.get(playerId));
+        if (playerId == null) {
+            return false;
+        }
+        PlayerHudState s = playerStates.get(playerId);
+        return s != null && s.hidden;
     }
 
     RunHud getActiveHud(PlayerRef playerRef) {
         if (playerRef == null) {
             return null;
         }
-        UUID playerId = playerRef.getUuid();
-        if (Boolean.TRUE.equals(runHudIsRecords.get(playerId))) {
-            return runRecordHuds.get(playerId);
+        PlayerHudState state = playerStates.get(playerRef.getUuid());
+        if (state == null) {
+            return null;
         }
-        return runHuds.get(playerId);
+        if (state.isRecords) {
+            return state.runRecordHud;
+        }
+        return state.runHud;
     }
 
     RunHud getOrCreateHud(PlayerRef playerRef, boolean records) {
-        UUID playerId = playerRef.getUuid();
+        PlayerHudState state = getState(playerRef.getUuid());
         if (records) {
-            return runRecordHuds.computeIfAbsent(playerId, ignored -> new RunRecordsHud(playerRef));
+            RunRecordsHud hud = state.runRecordHud;
+            if (hud == null) {
+                hud = new RunRecordsHud(playerRef);
+                state.runRecordHud = hud;
+            }
+            return hud;
         }
-        return runHuds.computeIfAbsent(playerId, ignored -> new RunHud(playerRef));
+        RunHud hud = state.runHud;
+        if (hud == null) {
+            hud = new RunHud(playerRef);
+            state.runHud = hud;
+        }
+        return hud;
     }
 
     void attachHud(PlayerRef playerRef, Player player, RunHud hud, boolean records) {
-        runHudIsRecords.put(playerRef.getUuid(), records);
+        getState(playerRef.getUuid()).isRecords = records;
         player.getHudManager().setCustomHud(playerRef, hud);
         hud.resetCache();
         hud.show();
@@ -222,15 +239,12 @@ public class HudManager {
         if (playerId == null) {
             return;
         }
-        if (hidden) {
-            runHudHidden.put(playerId, true);
-        } else {
-            runHudHidden.remove(playerId);
-        }
-        runHudReadyAt.remove(playerId);
-        runHudWasRunning.remove(playerId);
-        runHudIsRecords.remove(playerId);
-        checkpointSplitHuds.remove(playerId);
+        PlayerHudState state = getState(playerId);
+        state.hidden = hidden;
+        state.readyAt = 0;
+        state.wasRunning = false;
+        state.isRecords = false;
+        state.checkpointSplit = null;
         var ref = playerRef.getReference();
         if (ref == null || !ref.isValid()) {
             return;
@@ -271,8 +285,13 @@ public class HudManager {
     }
 
     private HiddenRunHud getOrCreateHiddenHud(PlayerRef playerRef) {
-        UUID playerId = playerRef.getUuid();
-        return hiddenRunHuds.computeIfAbsent(playerId, ignored -> new HiddenRunHud(playerRef));
+        PlayerHudState state = getState(playerRef.getUuid());
+        HiddenRunHud hud = state.hiddenRunHud;
+        if (hud == null) {
+            hud = new HiddenRunHud(playerRef);
+            state.hiddenRunHud = hud;
+        }
+        return hud;
     }
 
     private List<RunRecordsHud.RecordLine> buildTopTimes(String mapId, UUID playerId) {
@@ -342,15 +361,7 @@ public class HudManager {
         if (playerId == null) {
             return;
         }
-        runHuds.remove(playerId);
-        runRecordHuds.remove(playerId);
-        hiddenRunHuds.remove(playerId);
-        runHudReadyAt.remove(playerId);
-        runHudWasRunning.remove(playerId);
-        runHudIsRecords.remove(playerId);
-        runHudHidden.remove(playerId);
-        checkpointSplitHuds.remove(playerId);
-        lastPositionSamples.remove(playerId);
+        playerStates.remove(playerId);
     }
 
     public void setAdvancedHudVisible(PlayerRef playerRef, boolean visible) {
@@ -362,7 +373,10 @@ public class HudManager {
             return;
         }
         if (!visible) {
-            lastPositionSamples.remove(playerId);
+            PlayerHudState state = playerStates.get(playerId);
+            if (state != null) {
+                state.lastPositionSample = null;
+            }
         }
         RunHud hud = getActiveHud(playerRef);
         if (hud != null) {
@@ -374,9 +388,10 @@ public class HudManager {
                                        PlayerRef playerRef, RunHud hud) {
         UUID playerId = playerRef.getUuid();
         boolean enabled = PlayerSettingsStore.isAdvancedHudEnabled(playerId);
+        PlayerHudState state = getState(playerId);
         if (!enabled) {
             hud.updateAdvancedHud(false, "", "", "", "");
-            lastPositionSamples.remove(playerId);
+            state.lastPositionSample = null;
             return;
         }
         TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
@@ -397,7 +412,7 @@ public class HudManager {
         double py = position != null ? position.getY() : 0.0;
         double pz = position != null ? position.getZ() : 0.0;
         long now = System.currentTimeMillis();
-        PositionSample prev = lastPositionSamples.get(playerId);
+        PositionSample prev = state.lastPositionSample;
         double vx = 0.0, vy = 0.0, vz = 0.0;
         if (prev != null) {
             long deltaMs = now - prev.timeMs;
@@ -408,7 +423,7 @@ public class HudManager {
                 vz = (pz - prev.z) / deltaSec;
             }
         }
-        lastPositionSamples.put(playerId, new PositionSample(px, py, pz, now));
+        state.lastPositionSample = new PositionSample(px, py, pz, now);
         String velocityText = String.format("(%.3f, %.3f, %.3f)", vx, vy, vz);
         double speed = Math.sqrt(vx * vx + vy * vy + vz * vz);
         String speedText = String.format("%.2f", speed);
@@ -430,15 +445,7 @@ public class HudManager {
     }
 
     public void sweepStalePlayers(Set<UUID> onlinePlayers) {
-        runHuds.keySet().removeIf(id -> !onlinePlayers.contains(id));
-        runRecordHuds.keySet().removeIf(id -> !onlinePlayers.contains(id));
-        hiddenRunHuds.keySet().removeIf(id -> !onlinePlayers.contains(id));
-        runHudIsRecords.keySet().removeIf(id -> !onlinePlayers.contains(id));
-        runHudReadyAt.keySet().removeIf(id -> !onlinePlayers.contains(id));
-        runHudWasRunning.keySet().removeIf(id -> !onlinePlayers.contains(id));
-        runHudHidden.keySet().removeIf(id -> !onlinePlayers.contains(id));
-        checkpointSplitHuds.keySet().removeIf(id -> !onlinePlayers.contains(id));
-        lastPositionSamples.keySet().removeIf(id -> !onlinePlayers.contains(id));
+        playerStates.keySet().removeIf(id -> !onlinePlayers.contains(id));
     }
 
     public void showCheckpointSplit(PlayerRef playerRef, String splitText, String splitColor) {
@@ -449,12 +456,13 @@ public class HudManager {
         if (playerId == null) {
             return;
         }
+        PlayerHudState state = getState(playerId);
         if (splitText == null || splitText.isBlank()) {
-            checkpointSplitHuds.remove(playerId);
+            state.checkpointSplit = null;
             return;
         }
         long expiresAt = System.currentTimeMillis() + ParkourTimingConstants.CHECKPOINT_SPLIT_HUD_DURATION_MS;
-        checkpointSplitHuds.put(playerId, new CheckpointSplitHudState(splitText, splitColor, expiresAt));
+        state.checkpointSplit = new CheckpointSplitHudState(splitText, splitColor, expiresAt);
     }
 
     private void updateCheckpointSplitHud(PlayerRef playerRef, RunHud hud, boolean running, boolean duelActive) {
@@ -465,23 +473,38 @@ public class HudManager {
         if (playerId == null) {
             return;
         }
+        PlayerHudState state = playerStates.get(playerId);
         if (!running || duelActive) {
-            checkpointSplitHuds.remove(playerId);
+            if (state != null) {
+                state.checkpointSplit = null;
+            }
             hud.updateCheckpointSplit("", null, false);
             return;
         }
-        CheckpointSplitHudState state = checkpointSplitHuds.get(playerId);
-        if (state == null) {
+        CheckpointSplitHudState split = state != null ? state.checkpointSplit : null;
+        if (split == null) {
             hud.updateCheckpointSplit("", null, false);
             return;
         }
         long now = System.currentTimeMillis();
-        if (now >= state.expiresAt) {
-            checkpointSplitHuds.remove(playerId, state);
+        if (now >= split.expiresAt) {
+            state.checkpointSplit = null;
             hud.updateCheckpointSplit("", null, false);
             return;
         }
-        hud.updateCheckpointSplit(state.text, state.color, true);
+        hud.updateCheckpointSplit(split.text, split.color, true);
+    }
+
+    private static final class PlayerHudState {
+        volatile RunHud runHud;
+        volatile RunRecordsHud runRecordHud;
+        volatile HiddenRunHud hiddenRunHud;
+        volatile boolean isRecords;
+        volatile long readyAt;
+        volatile boolean wasRunning;
+        volatile boolean hidden;
+        volatile CheckpointSplitHudState checkpointSplit;
+        volatile PositionSample lastPositionSample;
     }
 
     private static final class CheckpointSplitHudState {

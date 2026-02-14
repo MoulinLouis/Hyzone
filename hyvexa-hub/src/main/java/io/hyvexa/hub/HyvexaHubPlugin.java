@@ -18,6 +18,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.common.WorldConstants;
 import io.hyvexa.common.util.AsyncExecutionHelper;
 import io.hyvexa.common.util.InventoryUtils;
 import io.hyvexa.common.util.ModeGate;
@@ -265,9 +266,9 @@ public class HyvexaHubPlugin extends JavaPlugin {
 
     private void preloadWorlds() {
         try {
-            Universe.get().loadWorld(HubConstants.WORLD_HUB);
-            Universe.get().loadWorld(HubConstants.WORLD_PARKOUR);
-            Universe.get().loadWorld(HubConstants.WORLD_ASCEND);
+            Universe.get().loadWorld(WorldConstants.WORLD_HUB);
+            Universe.get().loadWorld(WorldConstants.WORLD_PARKOUR);
+            Universe.get().loadWorld(WorldConstants.WORLD_ASCEND);
         } catch (Exception e) {
             LOGGER.atWarning().log("Failed to preload hub worlds: " + e.getMessage());
         }
@@ -282,7 +283,7 @@ public class HyvexaHubPlugin extends JavaPlugin {
         if (inventory == null || inventory.getHotbar() == null) {
             return;
         }
-        inventory.getHotbar().setItemStackForSlot(SLOT_SERVER_SELECTOR, new ItemStack(HubConstants.ITEM_SERVER_SELECTOR, 1), false);
+        inventory.getHotbar().setItemStackForSlot(SLOT_SERVER_SELECTOR, new ItemStack(WorldConstants.ITEM_SERVER_SELECTOR, 1), false);
     }
 
     private void tickHubHudRecovery() {
