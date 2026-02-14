@@ -170,6 +170,71 @@ checkpoint  finish     N seconds  │
     └─────────────────────────────┘
 ```
 
+## Ghost Replay Pipeline
+
+Ghost replay records player movement during runs and plays it back as an NPC for visual comparison.
+
+### Recording
+
+```
+Player starts run
+  |
+  v
+RunTracker -> GhostRecorder.startRecording(playerId, mapId)
+  |
+  v
+ScheduledExecutor every 50ms:
+  samplePlayer() -> world.execute() -> read TransformComponent
+  -> create GhostSample(x, y, z, yaw, timestampMs)
+  -> add to List<GhostSample> (max 12,000 samples / ~10 min)
+  |
+  v
+Run completes (first completion or new PB)
+  |
+  v
+RunValidator -> GhostRecorder.stopRecording(playerId, durationMs, isPersonalBest=true)
+  -> GhostStore.saveRecording()
+     -> serialize to GZIP binary blob
+     -> INSERT...ON DUPLICATE KEY UPDATE to MySQL
+     -> update in-memory cache
+```
+
+### Playback
+
+```
+Player enters map -> GhostNpcManager.spawnGhost(playerId, mapId)
+  -> GhostStore.getRecording() (cache hit)
+  -> NPCPlugin.spawnNPC(Kweebec_Seedling) at start position
+  -> Add Invulnerable + Frozen components
+  -> Hide from all players except owner
+  |
+  v
+Player starts running -> GhostNpcManager.startPlayback(playerId)
+  |
+  v
+ScheduledExecutor every 50ms:
+  progress = elapsed / completionTimeMs
+  -> GhostInterpolation.interpolateAt(samples, progress)
+     -> binary search for surrounding samples
+     -> linear interpolation (x, y, z) + angle-aware yaw interpolation
+  -> Teleport NPC to interpolated position
+  |
+  v
+Progress >= 100% -> despawnGhost() -> store.removeEntity(ref, REMOVE)
+```
+
+### Key Classes
+
+| Class | Module | Role |
+|-------|--------|------|
+| `AbstractGhostRecorder` | core | Sampling loop (50ms), max 12K samples |
+| `GhostRecording` | core | Container for samples + interpolation |
+| `GhostInterpolation` | core | Binary search + linear/angle interpolation |
+| `AbstractGhostStore` | core | GZIP serialization + MySQL persistence |
+| `GhostStore` | core | Concrete store (per-mode table name) |
+| `GhostRecorder` | parkour/ascend | Module-specific player resolution |
+| `GhostNpcManager` | parkour | NPC spawn/despawn + tick playback |
+
 ## Component Interactions
 
 ### Run Tracking (RunTracker.java)
@@ -291,13 +356,26 @@ Server Stop: flushPendingSave() + connection pool shutdown
 
 ### Player Disconnect
 
+#### Cleanup Strategy Comparison
+
+| Aspect | Parkour | Ascend |
+|--------|---------|--------|
+| **State persistence** | Session-only (ephemeral) | Lazy-loaded from DB, evicted on disconnect |
+| **Memory strategy** | Keeps all visited players in cache | Evicts player data to save memory |
+| **Cleanup orchestration** | Centralized (`PlayerCleanupManager`) | Distributed (`cleanupAscendState` + per-manager cleanup) |
+| **DB persistence on disconnect** | Not needed (session data) | Yes — snapshots dirty data, flushes to MySQL, then evicts cache |
+| **World transition handling** | Single cleanup path | Two paths: `cleanupAscendState` (shared) + `removePlayer` (disconnect-only) |
+| **Reconnect behavior** | Fresh session | Re-loads from DB on demand |
+
+**Parkour** cleans up HUD, perks, announcements, playtime, settings, visibility, and run state via `PlayerCleanupManager.handleDisconnect()`. All state is ephemeral.
+
+**Ascend** additionally evicts player data from memory after persisting dirty changes (`AscendPlayerStore.removePlayer()` snapshots, saves, then removes from cache). This lazy-load + evict pattern keeps memory bounded.
+
 | Scenario | Current Behavior | Notes |
 |----------|------------------|-------|
-| Disconnect mid-run | Run state remains in `activeRuns` | Cleaned up eventually by GC |
+| Disconnect mid-run | Run cancelled, state cleaned up | Both modules handle this |
 | Disconnect at finish | Completion recorded before disconnect | Works correctly |
-| Reconnect after disconnect | New run state; old run lost | No run persistence |
-
-**Mitigation**: Add disconnect event handler to clear `activeRuns` entry.
+| Reconnect after disconnect | Parkour: fresh session; Ascend: re-loads from DB | No run persistence in either |
 
 ### Timer Precision
 
@@ -436,6 +514,26 @@ Hardcoded values that may need tuning:
 | `MAP_XP_MEDIUM` | 200 | XP for Medium map completion |
 | `MAP_XP_HARD` | 400 | XP for Hard map completion |
 | `MAP_XP_INSANE` | 800 | XP for Insane map completion |
+
+### AscendConstants.java
+
+Economy, progression, and system constants for Ascend mode. Key values:
+
+| Constant | Value | Purpose |
+|----------|-------|---------|
+| `MAP_BASE_RUN_TIMES_MS` | 5s-42s (5 tiers) | Base run time per map level |
+| `MAP_BASE_REWARDS` | 1-500 vexa (5 tiers) | Base vexa per manual completion |
+| `MAP_UNLOCK_PRICES` | 0-10,000 vexa (5 tiers) | Map unlock costs |
+| `RUNNER_TICK_INTERVAL_MS` | 16ms | Ghost replay tick (~60fps) |
+| `MAX_ROBOT_STARS` | 5 | Max evolution level |
+| `MAX_SPEED_LEVEL` | 20 | Max runner speed level |
+| `ELEVATION_MULTIPLIER_EXPONENT` | 1.05 | Elevation level curve |
+| `ELEVATION_BASE_COST` | 30,000 | Starting elevation cost |
+| `ASCENSION_VEXA_THRESHOLD` | 10^33 | Vexa needed to Ascend |
+| `PASSIVE_OFFLINE_RATE_PERCENT` | 10% | Offline earning rate |
+| `PASSIVE_MAX_TIME_MS` | 24h | Max offline earning window |
+
+Also defines `SkillTreeNode` enum (12 nodes with AP costs 1-10) and `SummitCategory` enum (3 categories with scaling factors). See `docs/ECONOMY_BALANCE.md` for full formulas.
 
 ## Future Considerations
 
