@@ -1176,7 +1176,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
             return;
         }
         player.getPageManager().openCustomPage(ref, store,
-            new AscendMapLeaderboardPage(playerRef, playerStore, mapStore));
+            new AscendMapLeaderboardPage(playerRef, playerStore, mapStore, runTracker, robotManager, ghostStore));
     }
 
     private void handleOpenChallenge(Ref<EntityStore> ref, Store<EntityStore> store) {

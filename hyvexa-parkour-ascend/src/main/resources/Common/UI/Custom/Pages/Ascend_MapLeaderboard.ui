@@ -39,13 +39,13 @@ $C.@PageOverlay {
         }
       }
 
-      // Right side: close button
+      // Right side: back button
       Group {
         Anchor: (Width: 72, Height: 32, Top: 4);
 
         TextButton #CloseButton {
           Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-          Text: "Close";
+          Text: "< Back";
           Style: TextButtonStyle(
             Default: (
               Background: #ffffff(0.06),
