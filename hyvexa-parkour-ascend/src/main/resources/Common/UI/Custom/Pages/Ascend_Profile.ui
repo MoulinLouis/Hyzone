@@ -147,7 +147,7 @@ $C.@PageOverlay {
         }
       }
 
-      // --- My Profile ---
+      // --- Player Settings ---
       Group {
         Anchor: (Left: 0, Right: 0, Height: 46, Top: 6);
         LayoutMode: Full;
@@ -163,7 +163,7 @@ $C.@PageOverlay {
         Label {
           Anchor: (Left: 16, Top: 0, Bottom: 0, Width: 200);
           Style: (FontSize: 14, TextColor: #9fb0ba, VerticalAlignment: Center);
-          Text: "My Profile";
+          Text: "Player Settings";
         }
 
         Group {
