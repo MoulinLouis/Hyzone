@@ -364,7 +364,7 @@ CREATE TABLE ascend_player_summit (
 Notes:
 - `category` values: `VEXA_FLOW`, `RUNNER_SPEED`, `MANUAL_MASTERY`
 - `level` is the Summit level in that category (0+)
-- Summit levels reset on Ascension (unless Summit Persistence skill is unlocked)
+- Summit levels reset on Ascension
 
 ## ascend_player_skills
 Stores unlocked skill tree nodes per player.
