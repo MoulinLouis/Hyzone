@@ -590,6 +590,18 @@ public class AscendMapSelectPage extends BaseAscendPage {
 
             // Buying a runner is now free
             playerStore.setHasRobot(playerRef.getUuid(), mapId, true);
+            // Swift Restart: new runners start at 1-star
+            {
+                ParkourAscendPlugin swiftPlugin = ParkourAscendPlugin.getInstance();
+                io.hyvexa.ascend.ascension.AscensionManager am = swiftPlugin != null ? swiftPlugin.getAscensionManager() : null;
+                if (am != null && am.hasSwiftRestart(playerRef.getUuid())) {
+                    AscendPlayerProgress.MapProgress placed = progress.getMapProgress().get(mapId);
+                    if (placed != null && placed.getRobotStars() == 0) {
+                        placed.setRobotStars(1);
+                        playerStore.markDirty(playerRef.getUuid());
+                    }
+                }
+            }
             showToast(playerRef.getUuid(), ToastType.SUCCESS, "Runner purchased!");
             updateRobotRow(ref, store, mapId);
         } else {
@@ -989,6 +1001,21 @@ public class AscendMapSelectPage extends BaseAscendPage {
                         }
                     }
                     playerStore.setHasRobot(playerRef.getUuid(), option.mapId, true);
+                    // Swift Restart: new runners start at 1-star
+                    {
+                        ParkourAscendPlugin swiftPlugin = ParkourAscendPlugin.getInstance();
+                        io.hyvexa.ascend.ascension.AscensionManager am2 = swiftPlugin != null ? swiftPlugin.getAscensionManager() : null;
+                        if (am2 != null && am2.hasSwiftRestart(playerRef.getUuid())) {
+                            AscendPlayerProgress bulkProgress = playerStore.getPlayer(playerRef.getUuid());
+                            if (bulkProgress != null) {
+                                AscendPlayerProgress.MapProgress placed = bulkProgress.getMapProgress().get(option.mapId);
+                                if (placed != null && placed.getRobotStars() == 0) {
+                                    placed.setRobotStars(1);
+                                    playerStore.markDirty(playerRef.getUuid());
+                                }
+                            }
+                        }
+                    }
                     success = true;
                 }
                 case UPGRADE_SPEED -> {

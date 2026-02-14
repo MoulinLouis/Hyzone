@@ -616,15 +616,22 @@ public final class AscendConstants {
         RUNNER_SPEED_2("Runner Speed II", "x1.2 global runner speed", RUNNER_SPEED, EVOLUTION_POWER),
         MOMENTUM_SURGE("Momentum Surge", "Momentum boost x2 -> x3", RUNNER_SPEED_2),
         ELEVATION_REMNANT("Elevation Remnant", "Keep 15% elevation level on summit reset", RUNNER_SPEED_2),
-        ASCENSION_CHALLENGES("Ascension Challenges", "Unlock Ascension Challenges", MOMENTUM_SURGE, ELEVATION_REMNANT);
+        ASCENSION_CHALLENGES("Ascension Challenges", "Unlock Ascension Challenges", 3, MOMENTUM_SURGE, ELEVATION_REMNANT),
+        SWIFT_RESTART("Swift Restart", "New runners start at 1-star after prestige", 5, ASCENSION_CHALLENGES);
 
         private final String name;
         private final String description;
+        private final int cost;
         private final SkillTreeNode[] prerequisites;
 
         SkillTreeNode(String name, String description, SkillTreeNode... prerequisites) {
+            this(name, description, 1, prerequisites);
+        }
+
+        SkillTreeNode(String name, String description, int cost, SkillTreeNode... prerequisites) {
             this.name = name;
             this.description = description;
+            this.cost = cost;
             this.prerequisites = prerequisites;
         }
 
@@ -634,6 +641,10 @@ public final class AscendConstants {
 
         public String getDescription() {
             return description;
+        }
+
+        public int getCost() {
+            return cost;
         }
 
         public SkillTreeNode[] getPrerequisites() {

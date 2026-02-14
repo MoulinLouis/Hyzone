@@ -759,7 +759,7 @@ public class AscendPlayerStore {
         if (progress.hasSkillNode(node)) {
             return false;
         }
-        if (progress.getAvailableSkillPoints() <= 0) {
+        if (progress.getAvailableSkillPoints() < node.getCost()) {
             return false;
         }
         progress.unlockSkillNode(node);
