@@ -11,12 +11,16 @@ import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCu
 import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
+import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.data.AscendPlayerStore.MapLeaderboardEntry;
+import io.hyvexa.ascend.robot.RobotManager;
+import io.hyvexa.ascend.tracker.AscendRunTracker;
+import io.hyvexa.common.ghost.GhostStore;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.ui.PaginationState;
 import io.hyvexa.common.util.FormatUtils;
@@ -52,15 +56,26 @@ public class AscendMapLeaderboardPage extends InteractiveCustomUIPage<AscendMapL
 
     private final AscendPlayerStore playerStore;
     private final AscendMapStore mapStore;
+    private final AscendRunTracker runTracker;
+    private final RobotManager robotManager;
+    private final GhostStore ghostStore;
     private final PaginationState pagination = new PaginationState(50);
     private final List<AscendMap> maps;
     private int currentTabIndex = 0;
     private String searchText = "";
 
     public AscendMapLeaderboardPage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore, AscendMapStore mapStore) {
+        this(playerRef, playerStore, mapStore, null, null, null);
+    }
+
+    public AscendMapLeaderboardPage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore, AscendMapStore mapStore,
+                                    AscendRunTracker runTracker, RobotManager robotManager, GhostStore ghostStore) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, MapLeaderboardData.CODEC);
         this.playerStore = playerStore;
         this.mapStore = mapStore;
+        this.runTracker = runTracker;
+        this.robotManager = robotManager;
+        this.ghostStore = ghostStore;
         this.maps = new ArrayList<>(mapStore.listMapsSorted());
     }
 
@@ -92,7 +107,7 @@ public class AscendMapLeaderboardPage extends InteractiveCustomUIPage<AscendMapL
         }
 
         switch (data.getButton()) {
-            case BUTTON_CLOSE -> this.close();
+            case BUTTON_CLOSE -> handleBack(ref, store);
             case BUTTON_PREV -> {
                 pagination.previous();
                 sendRefresh();
@@ -124,6 +139,19 @@ public class AscendMapLeaderboardPage extends InteractiveCustomUIPage<AscendMapL
         pagination.reset();
         searchText = "";
         sendRefresh();
+    }
+
+    private void handleBack(Ref<EntityStore> ref, Store<EntityStore> store) {
+        if (runTracker != null && robotManager != null && ghostStore != null) {
+            PlayerRef pRef = store.getComponent(ref, PlayerRef.getComponentType());
+            Player player = store.getComponent(ref, Player.getComponentType());
+            if (pRef != null && player != null) {
+                player.getPageManager().openCustomPage(ref, store,
+                    new AscendMapSelectPage(pRef, mapStore, playerStore, runTracker, robotManager, ghostStore));
+                return;
+            }
+        }
+        this.close();
     }
 
     private void sendRefresh() {
