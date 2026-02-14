@@ -35,15 +35,16 @@ Quick reference for AI agents working on this Hytale plugin project.
 1. **Update CHANGELOG.md** for significant changes only (new features, balance changes, bug fixes) - keep entries brief (1-2 lines), no implementation details
 2. **Update docs/ECONOMY_BALANCE.md** when modifying game economy (costs, rewards, multipliers, formulas)
 3. **Follow existing patterns** - check similar files before implementing
-3. **No build runs** - owner handles `./gradlew build`
-4. **UI paths** - Code uses `"Pages/X.ui"`, files go in `Common/UI/Custom/Pages/`
-5. **Check ref validity** - `if (ref == null || !ref.isValid()) return;`
-6. **World thread for entity ops** - use `world.execute(() -> ...)` or `CompletableFuture.runAsync(..., world)`
-7. **Entity removal** - use `store.removeEntity(ref, RemoveReason.REMOVE)`
-8. **Singleton components** - check for `INSTANCE` or `get()` (e.g., `Invulnerable.INSTANCE`)
-9. **Track online players** - only spawn per-player entities for connected players
-10. **Disable NPC AI** - use `Frozen` component to prevent autonomous movement
-11. **Avoid Unicode in chat messages** - Hytale client displays many Unicode characters as `?`. Use ASCII alternatives: `->` instead of `→`, `x` instead of `×`, `-` instead of `–`/`—`
+4. **Reuse existing Managers** - 25+ Manager classes exist across modules. Check for existing ones before creating new ones (e.g., `HyvexaPlugin.getInstance().getHudManager()`, `ParkourAscendPlugin.getInstance().getRobotManager()`)
+5. **No build runs** - owner handles `./gradlew build`
+6. **UI paths** - Code uses `"Pages/X.ui"`, files go in `Common/UI/Custom/Pages/`
+7. **Check ref validity** - `if (ref == null || !ref.isValid()) return;`
+8. **World thread for entity ops** - use `world.execute(() -> ...)` or `CompletableFuture.runAsync(..., world)`
+9. **Entity removal** - use `store.removeEntity(ref, RemoveReason.REMOVE)`
+10. **Singleton components** - check for `INSTANCE` or `get()` (e.g., `Invulnerable.INSTANCE`)
+11. **Track online players** - only spawn per-player entities for connected players
+12. **Disable NPC AI** - use `Frozen` component to prevent autonomous movement
+13. **Avoid Unicode in chat messages** - Hytale client displays many Unicode characters as `?`. Use ASCII alternatives: `->` instead of `→`, `x` instead of `×`, `-` instead of `–`/`—`
 
 ## UI Patterns
 - Never use dynamic Background property changes on UI elements — they don't work in Hytale's UI system

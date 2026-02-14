@@ -348,14 +348,15 @@ CREATE TABLE ascend_upgrade_costs (
 ```
 
 ## ascend_player_summit
-Stores Summit level per category per player.
+Stores Summit XP per category per player.
 
 Suggested schema:
 ```sql
 CREATE TABLE ascend_player_summit (
   player_uuid VARCHAR(36) NOT NULL,
   category VARCHAR(32) NOT NULL,
-  level INT NOT NULL DEFAULT 0,
+  xp BIGINT NOT NULL DEFAULT 0,
+  xp_scale_v2 TINYINT NOT NULL DEFAULT 1,
   PRIMARY KEY (player_uuid, category),
   FOREIGN KEY (player_uuid) REFERENCES ascend_players(uuid) ON DELETE CASCADE
 ) ENGINE=InnoDB;
@@ -363,8 +364,10 @@ CREATE TABLE ascend_player_summit (
 
 Notes:
 - `category` values: `VEXA_FLOW`, `RUNNER_SPEED`, `MANUAL_MASTERY`
-- `level` is the Summit level in that category (0+)
+- `xp` is the Summit XP in that category (converted to level via formula in code)
+- `xp_scale_v2` is a migration marker (prevents re-running XP scale migration)
 - Summit levels reset on Ascension
+- **Migration history:** Old `level` column was migrated to `xp`, then XP values were rescaled (exponent 2.5 -> 2.0)
 
 ## ascend_player_skills
 Stores unlocked skill tree nodes per player.
@@ -432,6 +435,46 @@ Notes:
 - `spawn_*` fields store the spawn teleport location (configurable via `/as admin` panel)
 - `npc_*` fields store the NPC teleport location (configurable via `/as admin` panel)
 - `void_y_threshold` stores the Y coordinate below which players are teleported back to spawn (NULL = disabled)
+
+## ascend_challenges
+Stores active challenge state per player (one active challenge at a time).
+
+Suggested schema:
+```sql
+CREATE TABLE ascend_challenges (
+  player_uuid VARCHAR(36) PRIMARY KEY,
+  challenge_type_id INT NOT NULL,
+  started_at_ms BIGINT NOT NULL,
+  snapshot_json MEDIUMTEXT NOT NULL,
+  FOREIGN KEY (player_uuid) REFERENCES ascend_players(uuid) ON DELETE CASCADE
+) ENGINE=InnoDB;
+```
+
+Notes:
+- One active challenge per player (PK on player_uuid)
+- `challenge_type_id` maps to an enum in code
+- `snapshot_json` stores challenge-specific state (e.g., target values, progress)
+- Row is deleted when challenge completes or is abandoned
+
+## ascend_challenge_records
+Stores permanent best times and completion counts per challenge type per player.
+
+Suggested schema:
+```sql
+CREATE TABLE ascend_challenge_records (
+  player_uuid VARCHAR(36) NOT NULL,
+  challenge_type_id INT NOT NULL,
+  best_time_ms BIGINT DEFAULT NULL,
+  completions INT NOT NULL DEFAULT 0,
+  PRIMARY KEY (player_uuid, challenge_type_id),
+  FOREIGN KEY (player_uuid) REFERENCES ascend_players(uuid) ON DELETE CASCADE
+) ENGINE=InnoDB;
+```
+
+Notes:
+- Permanent records (never deleted)
+- `best_time_ms` is NULL until first completion
+- `completions` counts total successful completions of that challenge type
 
 ## ascend_ghost_recordings
 Stores ghost recordings for runner replay (personal best movement paths).

@@ -403,6 +403,83 @@ Store<EntityStore> store = ref.getStore();
 Player player = store.getComponent(ref, Player.getComponentType());
 ```
 
+### CommandBuffer in Tick Systems
+
+Inside `EntityTickingSystem.tick()`, the store is locked for writes. **Reads are safe** (`store.getComponent()`, `chunk.getComponent()`), but writes (`addComponent`, `removeComponent`) will throw `IllegalStateException: Store is currently processing`.
+
+Use the `CommandBuffer` parameter for writes:
+
+```java
+@Override
+public void tick(float delta, int entityId, ArchetypeChunk<EntityStore> chunk,
+                 Store<EntityStore> store, CommandBuffer<EntityStore> buffer) {
+    // READS: use chunk (preferred) or store — both safe
+    PlayerRef playerRef = chunk.getComponent(entityId, PlayerRef.getComponentType());
+    TransformComponent transform = chunk.getComponent(entityId, TransformComponent.getComponentType());
+
+    // WRITES: use buffer, NOT store
+    Ref<EntityStore> ref = chunk.getReferenceTo(entityId);
+    buffer.tryRemoveComponent(ref, KnockbackComponent.getComponentType());
+
+    // Pass buffer to helpers that need to write
+    runTracker.checkPlayer(ref, store, buffer, delta);
+}
+```
+
+**When the tick system can't use CommandBuffer** (e.g., complex logic that needs store writes), defer to the world thread:
+
+```java
+// Inside tick(): defer store-modifying work outside system processing
+Ref<EntityStore> ref = chunk.getReferenceTo(entityId);
+AsyncExecutionHelper.runBestEffort(world, () -> {
+    if (ref != null && ref.isValid()) {
+        // Now safe to use store directly
+        runTracker.checkPlayer(ref, ref.getStore());
+    }
+}, "description", ...);
+```
+
+### Page-ID Tracking for Long-Running Refresh Tasks
+
+**Recommended:** Extend `BaseAscendPage` for all Ascend module pages. It provides page-ID tracking that prevents stale UI updates when a page is replaced.
+
+```java
+// BaseAscendPage assigns each instance a unique pageId and tracks the current page per player.
+// When a new page opens, the old page's isCurrentPage() returns false.
+
+public class MyPage extends BaseAscendPage {
+    private ScheduledFuture<?> refreshTask;
+
+    @Override
+    public void build(...) {
+        commandBuilder.append("Pages/MyPage.ui");
+        startAutoRefresh(ref, store);
+    }
+
+    private void startAutoRefresh(Ref<EntityStore> ref, Store<EntityStore> store) {
+        refreshTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(() -> {
+            if (!isCurrentPage()) {   // Page was replaced — stop
+                stopAutoRefresh();
+                return;
+            }
+            // Use PageRefreshScheduler to coalesce refreshes on world thread
+            PageRefreshScheduler.requestRefresh(world, refreshInFlight, refreshRequested,
+                () -> refreshDisplay(ref, store), this::stopAutoRefresh, "MyPage");
+        }, 1000L, 1000L, TimeUnit.MILLISECONDS);
+    }
+
+    @Override
+    protected void stopBackgroundTasks() {
+        stopAutoRefresh();
+    }
+}
+```
+
+**Key points:**
+1. `isCurrentPage()` — checks if this page instance is still the active one for the player
+2. `stopBackgroundTasks()` — called by `BaseAscendPage.onDismiss()` when page is dismissed/replaced
+3. `PageRefreshScheduler` — coalesces multiple refresh requests on the world thread, prevents concurrent refreshes
+
 ## NPC/Entity Spawning
 
 ```java
