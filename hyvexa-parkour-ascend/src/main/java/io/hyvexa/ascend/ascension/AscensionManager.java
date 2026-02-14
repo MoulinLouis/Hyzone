@@ -125,8 +125,8 @@ public class AscensionManager {
             return false;
         }
 
-        // Has available points?
-        if (progress.getAvailableSkillPoints() <= 0) {
+        // Has enough points for this node?
+        if (progress.getAvailableSkillPoints() < node.getCost()) {
             return false;
         }
 
@@ -164,7 +164,7 @@ public class AscensionManager {
             return false;
         }
 
-        if (progress.getAvailableSkillPoints() <= 0) {
+        if (progress.getAvailableSkillPoints() < node.getCost()) {
             return false;
         }
 
@@ -209,7 +209,9 @@ public class AscensionManager {
         return hasSkillNode(playerId, SkillTreeNode.ELEVATION_REMNANT);
     }
 
-
+    public boolean hasSwiftRestart(UUID playerId) {
+        return hasSkillNode(playerId, SkillTreeNode.SWIFT_RESTART);
+    }
 
     private boolean hasSkillNode(UUID playerId, SkillTreeNode node) {
         AscendPlayerProgress progress = playerStore.getPlayer(playerId);

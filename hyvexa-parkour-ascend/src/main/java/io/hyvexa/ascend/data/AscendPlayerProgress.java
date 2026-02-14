@@ -236,11 +236,15 @@ public class AscendPlayerProgress {
     }
 
     public int getSpentSkillPoints() {
-        return unlockedSkillNodes.size();
+        int total = 0;
+        for (AscendConstants.SkillTreeNode node : unlockedSkillNodes) {
+            total += node.getCost();
+        }
+        return total;
     }
 
     public int getAvailableSkillPoints() {
-        return Math.max(0, skillTreePoints - unlockedSkillNodes.size());
+        return Math.max(0, skillTreePoints - getSpentSkillPoints());
     }
 
     // ========================================

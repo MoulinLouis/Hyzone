@@ -33,6 +33,7 @@ public class SkillTreePage extends BaseAscendPage {
         NODE_COORDINATES.put(SkillTreeNode.MOMENTUM_SURGE, "5:1");
         NODE_COORDINATES.put(SkillTreeNode.ELEVATION_REMNANT, "5:2");
         NODE_COORDINATES.put(SkillTreeNode.ASCENSION_CHALLENGES, "6:1");
+        NODE_COORDINATES.put(SkillTreeNode.SWIFT_RESTART, "7:1");
     }
 
     private static final String BUTTON_CLOSE = "Close";
@@ -211,15 +212,18 @@ public class SkillTreePage extends BaseAscendPage {
             // Prerequisites met, not yet unlocked
             builder.set("#DetailTitle.Text", node.getName());
             builder.set("#DetailDesc.Text", node.getDescription());
+            String costText = node.getCost() + " AP";
             if (canUnlock) {
                 builder.set("#DetailStatus.Text", "");
                 builder.set("#UnlockBtnActive.Visible", true);
                 builder.set("#UnlockBtnDisabled.Visible", false);
+                builder.set("#UnlockButton.Text", costText);
             } else {
                 builder.set("#DetailStatus.Text", "Not enough AP");
                 builder.set("#DetailStatus.Style.TextColor", COLOR_LOCKED_TEXT);
                 builder.set("#UnlockBtnActive.Visible", false);
                 builder.set("#UnlockBtnDisabled.Visible", true);
+                builder.set("#UnlockBtnDisabledLabel.Text", costText);
             }
         }
 
