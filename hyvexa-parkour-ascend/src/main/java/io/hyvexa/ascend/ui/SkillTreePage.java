@@ -253,6 +253,18 @@ public class SkillTreePage extends BaseAscendPage {
         if (ascensionManager.canUnlockSkillNode(playerId, node)) {
             boolean success = ascensionManager.tryUnlockSkillNode(playerId, node);
             if (success) {
+                // Show challenges tutorial when the Ascension Challenges node is unlocked.
+                // Skip sendUpdate/showDetailPanel — the page is about to be replaced by the
+                // tutorial, and sending UI commands to a replaced page causes a client crash
+                // ("element not found" for #AvailablePoints).
+                if (node == SkillTreeNode.ASCENSION_CHALLENGES
+                        && !playerStore.hasSeenTutorial(playerId, io.hyvexa.ascend.tutorial.TutorialTriggerService.CHALLENGES)) {
+                    playerStore.markTutorialSeen(playerId, io.hyvexa.ascend.tutorial.TutorialTriggerService.CHALLENGES);
+                    player.getPageManager().openCustomPage(ref, store,
+                        new AscendTutorialPage(playerRef, AscendTutorialPage.Tutorial.CHALLENGES));
+                    return;
+                }
+
                 // Refresh tree states and update detail panel to show unlocked state
                 UICommandBuilder builder = new UICommandBuilder();
                 updateAllNodeStates(ref, store, builder);
@@ -260,14 +272,6 @@ public class SkillTreePage extends BaseAscendPage {
 
                 // Re-show the detail panel with updated state
                 showDetailPanel(playerId, node);
-
-                // Show challenges tutorial when the Ascension Challenges node is unlocked
-                if (node == SkillTreeNode.ASCENSION_CHALLENGES
-                        && !playerStore.hasSeenTutorial(playerId, io.hyvexa.ascend.tutorial.TutorialTriggerService.CHALLENGES)) {
-                    playerStore.markTutorialSeen(playerId, io.hyvexa.ascend.tutorial.TutorialTriggerService.CHALLENGES);
-                    player.getPageManager().openCustomPage(ref, store,
-                        new AscendTutorialPage(playerRef, AscendTutorialPage.Tutorial.CHALLENGES));
-                }
             }
         }
     }
