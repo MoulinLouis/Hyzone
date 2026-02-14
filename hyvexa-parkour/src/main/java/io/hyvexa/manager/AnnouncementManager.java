@@ -228,12 +228,7 @@ public class AnnouncementManager {
         boolean hasDiscordPlaceholder = trimmed.contains(CHAT_LINK_PLACEHOLDER);
         boolean hasStorePlaceholder = trimmed.contains(CHAT_STORE_PLACEHOLDER);
         if (!hasDiscordPlaceholder && !hasStorePlaceholder) {
-            return Message.join(
-                    Message.raw(trimmed),
-                    Message.raw(" ("),
-                    discordLink,
-                    Message.raw(").")
-            );
+            return Message.raw(trimmed);
         }
         List<Message> parts = new ArrayList<>();
         int index = 0;
