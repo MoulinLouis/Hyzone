@@ -31,7 +31,7 @@ public class AscendHud extends CustomUIHud {
     private String lastTimerText;
     private Boolean lastTimerVisible;
     private String lastAscensionProgressKey;
-    private String lastMomentumKey;
+    private String lastRunnerBarKey;
     private int lastPlayerCount = -1;
 
     // Track previous values for effect triggering (converted to double for comparison)
@@ -177,26 +177,24 @@ public class AscendHud extends CustomUIHud {
         return String.format(java.util.Locale.US, "%d.%03d", seconds, millis);
     }
 
-    public void updateMomentum(double[] progress) {
+    public void updateRunnerBars(float[] progress) {
         StringBuilder keyBuilder = new StringBuilder();
         for (int i = 0; i < progress.length; i++) {
-            // Quantize to 1% steps to avoid excessive updates
-            int quantized = (int) (progress[i] * 100);
+            int quantized = (int) (progress[i] * 1000);
             if (i > 0) keyBuilder.append('|');
             keyBuilder.append(quantized);
         }
-        String momentumKey = keyBuilder.toString();
-        if (momentumKey.equals(lastMomentumKey)) {
+        String key = keyBuilder.toString();
+        if (key.equals(lastRunnerBarKey)) {
             return;
         }
-        lastMomentumKey = momentumKey;
-
+        lastRunnerBarKey = key;
         UICommandBuilder commandBuilder = new UICommandBuilder();
         for (int i = 0; i < progress.length; i++) {
             boolean active = progress[i] > 0;
             commandBuilder.set("#MomentumBar" + i + ".Visible", active);
             if (active) {
-                commandBuilder.set("#MomentumBar" + i + ".Value", (float) progress[i]);
+                commandBuilder.set("#MomentumBar" + i + ".Value", progress[i]);
             }
         }
         update(false, commandBuilder);
@@ -230,7 +228,7 @@ public class AscendHud extends CustomUIHud {
         lastTimerText = null;
         lastTimerVisible = null;
         lastAscensionProgressKey = null;
-        lastMomentumKey = null;
+        lastRunnerBarKey = null;
         lastPlayerCount = -1;
         lastDigits = null;
         lastVexa = null;

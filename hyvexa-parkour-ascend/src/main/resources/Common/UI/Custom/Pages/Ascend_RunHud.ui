@@ -18,7 +18,7 @@ $C.@PageOverlay {
           Style: (FontSize: 30, TextColor: #7c3aed, RenderBold: true, HorizontalAlignment: Center);
           Text: "1";
         }
-        ProgressBar #MomentumBar0 { Anchor: (Left: 25, Right: 25, Bottom: 2, Height: 4); Value: 0; Bar: #7c3aed; Background: #7c3aed(0.15); Visible: false; }
+        ProgressBar #MomentumBar0 { Anchor: (Left: 20, Right: 20, Bottom: 6, Height: 6); Value: 0; Bar: #7c3aed; Background: #7c3aed(0.15); Visible: false; }
       }
 
       Group {
@@ -37,7 +37,7 @@ $C.@PageOverlay {
           Style: (FontSize: 30, TextColor: #ef4444, RenderBold: true, HorizontalAlignment: Center);
           Text: "1";
         }
-        ProgressBar #MomentumBar1 { Anchor: (Left: 25, Right: 25, Bottom: 2, Height: 4); Value: 0; Bar: #ef4444; Background: #ef4444(0.15); Visible: false; }
+        ProgressBar #MomentumBar1 { Anchor: (Left: 20, Right: 20, Bottom: 6, Height: 6); Value: 0; Bar: #ef4444; Background: #ef4444(0.15); Visible: false; }
       }
 
       Group {
@@ -56,7 +56,7 @@ $C.@PageOverlay {
           Style: (FontSize: 30, TextColor: #f59e0b, RenderBold: true, HorizontalAlignment: Center);
           Text: "1";
         }
-        ProgressBar #MomentumBar2 { Anchor: (Left: 25, Right: 25, Bottom: 2, Height: 4); Value: 0; Bar: #f59e0b; Background: #f59e0b(0.15); Visible: false; }
+        ProgressBar #MomentumBar2 { Anchor: (Left: 20, Right: 20, Bottom: 6, Height: 6); Value: 0; Bar: #f59e0b; Background: #f59e0b(0.15); Visible: false; }
       }
 
       Group {
@@ -75,7 +75,7 @@ $C.@PageOverlay {
           Style: (FontSize: 30, TextColor: #10b981, RenderBold: true, HorizontalAlignment: Center);
           Text: "1";
         }
-        ProgressBar #MomentumBar3 { Anchor: (Left: 25, Right: 25, Bottom: 2, Height: 4); Value: 0; Bar: #10b981; Background: #10b981(0.15); Visible: false; }
+        ProgressBar #MomentumBar3 { Anchor: (Left: 20, Right: 20, Bottom: 6, Height: 6); Value: 0; Bar: #10b981; Background: #10b981(0.15); Visible: false; }
       }
 
       Group {
@@ -94,7 +94,7 @@ $C.@PageOverlay {
           Style: (FontSize: 30, TextColor: #3b82f6, RenderBold: true, HorizontalAlignment: Center);
           Text: "1";
         }
-        ProgressBar #MomentumBar4 { Anchor: (Left: 25, Right: 25, Bottom: 2, Height: 4); Value: 0; Bar: #3b82f6; Background: #3b82f6(0.15); Visible: false; }
+        ProgressBar #MomentumBar4 { Anchor: (Left: 20, Right: 20, Bottom: 6, Height: 6); Value: 0; Bar: #3b82f6; Background: #3b82f6(0.15); Visible: false; }
       }
 
       Group {

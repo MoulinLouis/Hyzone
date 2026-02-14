@@ -864,6 +864,34 @@ public class RobotManager {
         return speedMultiplier;
     }
 
+    /**
+     * Returns the runner's current lap progress (0.0 to 1.0), synchronized with its actual cycle.
+     * Returns -1 if the runner has no active cycle.
+     */
+    public double getRunnerProgress(UUID ownerId, String mapId) {
+        RobotState robot = robots.get(robotKey(ownerId, mapId));
+        if (robot == null) {
+            return -1;
+        }
+        AscendMap map = mapStore.getMap(mapId);
+        if (map == null) {
+            return -1;
+        }
+        long intervalMs = computeCompletionIntervalMs(map, robot.getSpeedLevel(), ownerId);
+        if (intervalMs <= 0L) {
+            return -1;
+        }
+        long lastCompletion = robot.getLastCompletionMs();
+        if (lastCompletion <= 0L) {
+            return -1;
+        }
+        long elapsed = System.currentTimeMillis() - lastCompletion;
+        if (elapsed < 0) {
+            return 0;
+        }
+        return Math.min(1.0, (double) elapsed / intervalMs);
+    }
+
     private long computeCompletionIntervalMs(AscendMap map, int speedLevel, UUID ownerId) {
         if (map == null) {
             return -1L;

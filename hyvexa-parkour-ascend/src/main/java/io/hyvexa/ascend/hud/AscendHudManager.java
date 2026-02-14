@@ -10,9 +10,10 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
-import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.summit.SummitManager;
+import io.hyvexa.ascend.ParkourAscendPlugin;
+import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 import io.hyvexa.common.math.BigNumber;
 
@@ -100,17 +101,7 @@ public class AscendHudManager {
             // Update ascension quest progress bar
             hud.updateAscensionQuest(vexa);
 
-            // Update momentum progress bars (per-map temporary speed boost)
-            AscendPlayerProgress progress = playerStore.getPlayer(playerId);
-            if (progress != null) {
-                List<AscendMap> momentumMaps = mapList;
-                double[] momentumProgress = new double[AscendConstants.MULTIPLIER_SLOTS];
-                for (int i = 0; i < momentumMaps.size() && i < momentumProgress.length; i++) {
-                    AscendPlayerProgress.MapProgress mp = progress.getMapProgress().get(momentumMaps.get(i).getId());
-                    momentumProgress[i] = mp != null ? mp.getMomentumProgress() : 0.0;
-                }
-                hud.updateMomentum(momentumProgress);
-            }
+            // Runner bars are updated at higher frequency by updateRunnerBar()
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("Failed to update Ascend HUD for player " + playerId);
         }
@@ -141,6 +132,43 @@ public class AscendHudManager {
             hud.updateTimer(elapsedMs, showTimer);
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("Failed to update timer for player " + playerId);
+        }
+    }
+
+    public void updateRunnerBars(PlayerRef playerRef) {
+        if (playerRef == null || playerStore == null || mapStore == null) {
+            return;
+        }
+        UUID playerId = playerRef.getUuid();
+        if (previewPlayers.contains(playerId) || isHudHidden(playerId)
+                || !Boolean.TRUE.equals(hudAttached.get(playerId))) {
+            return;
+        }
+        AscendHud hud = ascendHuds.get(playerId);
+        if (hud == null) {
+            return;
+        }
+        long readyAt = ascendHudReadyAt.getOrDefault(playerId, Long.MAX_VALUE);
+        if (System.currentTimeMillis() < readyAt) {
+            return;
+        }
+        try {
+            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+            RobotManager robotManager = plugin != null ? plugin.getRobotManager() : null;
+            if (robotManager == null) {
+                return;
+            }
+            List<AscendMap> maps = mapStore.listMapsSorted();
+            float[] bars = new float[AscendConstants.MULTIPLIER_SLOTS];
+            for (int i = 0; i < maps.size() && i < bars.length; i++) {
+                double progress = robotManager.getRunnerProgress(playerId, maps.get(i).getId());
+                if (progress >= 0) {
+                    bars[i] = (float) progress;
+                }
+            }
+            hud.updateRunnerBars(bars);
+        } catch (Exception e) {
+            LOGGER.atWarning().withCause(e).log("Failed to update runner bars for player " + playerId);
         }
     }
 
