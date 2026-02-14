@@ -905,7 +905,7 @@ public class AscendPlayerStore {
             return List.of();
         }
 
-        // Elevation Remnant: retain 15% of elevation level
+        // Elevation Remnant: retain 5% of elevation level
         int currentElevation = progress.getElevationMultiplier();
         if (progress.hasSkillNode(AscendConstants.SkillTreeNode.ELEVATION_REMNANT)) {
             int retained = (int) Math.floor(currentElevation * AscendConstants.ELEVATION_REMNANT_FRACTION);

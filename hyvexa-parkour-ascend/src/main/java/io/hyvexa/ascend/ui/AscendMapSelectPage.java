@@ -395,8 +395,12 @@ public class AscendMapSelectPage extends BaseAscendPage {
         updateProgressBar(commandBuilder, index, speedLevel);
         updateStarDisplay(commandBuilder, index, stars);
 
-        commandBuilder.set("#MapCards[" + index + "] #MomentumLabel.Visible",
-            mapProgress != null && mapProgress.isMomentumActive());
+        boolean momentumActive = mapProgress != null && mapProgress.isMomentumActive();
+        commandBuilder.set("#MapCards[" + index + "] #MomentumLabel.Visible", momentumActive);
+        if (momentumActive) {
+            commandBuilder.set("#MapCards[" + index + "] #MomentumLabel.Text",
+                buildMomentumText(mapProgress, playerId));
+        }
         commandBuilder.set("#MapCards[" + index + "] " + resolveButtonBgElementId(index) + ".Visible", true);
         commandBuilder.set("#MapCards[" + index + "] #MapStatus.Text",
             buildMapStatusText(map, hasRobot, speedLevel, stars, playerId));
@@ -590,18 +594,6 @@ public class AscendMapSelectPage extends BaseAscendPage {
 
             // Buying a runner is now free
             playerStore.setHasRobot(playerRef.getUuid(), mapId, true);
-            // Swift Restart: new runners start at 1-star
-            {
-                ParkourAscendPlugin swiftPlugin = ParkourAscendPlugin.getInstance();
-                io.hyvexa.ascend.ascension.AscensionManager am = swiftPlugin != null ? swiftPlugin.getAscensionManager() : null;
-                if (am != null && am.hasSwiftRestart(playerRef.getUuid())) {
-                    AscendPlayerProgress.MapProgress placed = progress.getMapProgress().get(mapId);
-                    if (placed != null && placed.getRobotStars() == 0) {
-                        placed.setRobotStars(1);
-                        playerStore.markDirty(playerRef.getUuid());
-                    }
-                }
-            }
             showToast(playerRef.getUuid(), ToastType.SUCCESS, "Runner purchased!");
             updateRobotRow(ref, store, mapId);
         } else {
@@ -761,6 +753,10 @@ public class AscendMapSelectPage extends BaseAscendPage {
 
             // Update momentum indicator (can expire independently of other data changes)
             commandBuilder.set("#MapCards[" + i + "] #MomentumLabel.Visible", mapState.momentumActive());
+            if (mapState.momentumActive() && mapProgress != null) {
+                commandBuilder.set("#MapCards[" + i + "] #MomentumLabel.Text",
+                    buildMomentumText(mapProgress, playerRef.getUuid()));
+            }
 
             // Check if data changed since last refresh (auto-upgrade happened)
             int[] cached = cachedMapState.get(map.getId());
@@ -1001,21 +997,6 @@ public class AscendMapSelectPage extends BaseAscendPage {
                         }
                     }
                     playerStore.setHasRobot(playerRef.getUuid(), option.mapId, true);
-                    // Swift Restart: new runners start at 1-star
-                    {
-                        ParkourAscendPlugin swiftPlugin = ParkourAscendPlugin.getInstance();
-                        io.hyvexa.ascend.ascension.AscensionManager am2 = swiftPlugin != null ? swiftPlugin.getAscensionManager() : null;
-                        if (am2 != null && am2.hasSwiftRestart(playerRef.getUuid())) {
-                            AscendPlayerProgress bulkProgress = playerStore.getPlayer(playerRef.getUuid());
-                            if (bulkProgress != null) {
-                                AscendPlayerProgress.MapProgress placed = bulkProgress.getMapProgress().get(option.mapId);
-                                if (placed != null && placed.getRobotStars() == 0) {
-                                    placed.setRobotStars(1);
-                                    playerStore.markDirty(playerRef.getUuid());
-                                }
-                            }
-                        }
-                    }
                     success = true;
                 }
                 case UPGRADE_SPEED -> {
@@ -1088,6 +1069,19 @@ public class AscendMapSelectPage extends BaseAscendPage {
                                    boolean hasAvailableBuyAll, boolean hasEligibleEvolution) {}
 
     private record RunnerCardSnapshot(int speedLevel, int stars) {}
+
+    private String buildMomentumText(AscendPlayerProgress.MapProgress mapProgress, UUID playerId) {
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        boolean hasSurge = plugin != null && plugin.getAscensionManager() != null
+                && plugin.getAscensionManager().hasMomentumSurge(playerId);
+        String mult = hasSurge ? "x3" : "x2";
+        long remainingMs = mapProgress.getMomentumExpireTimeMs() - System.currentTimeMillis();
+        if (remainingMs <= 0) {
+            return "MOMENTUM " + mult;
+        }
+        long secs = (remainingMs + 999) / 1000; // round up
+        return "MOMENTUM " + mult + " (" + secs + "s)";
+    }
 
     private record RunnerStatusData(String runnerStatusText, String displayButtonText, String displayPriceText,
                                     BigNumber actionPrice, boolean isUpgrade) {}

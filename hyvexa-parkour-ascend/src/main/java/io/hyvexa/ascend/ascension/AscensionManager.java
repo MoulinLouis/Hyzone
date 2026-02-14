@@ -209,8 +209,20 @@ public class AscensionManager {
         return hasSkillNode(playerId, SkillTreeNode.ELEVATION_REMNANT);
     }
 
-    public boolean hasSwiftRestart(UUID playerId) {
-        return hasSkillNode(playerId, SkillTreeNode.SWIFT_RESTART);
+    public boolean hasMultiplierBoost(UUID playerId) {
+        return hasSkillNode(playerId, SkillTreeNode.MULTIPLIER_BOOST);
+    }
+
+    public boolean hasRunnerSpeedBoost3(UUID playerId) {
+        return hasSkillNode(playerId, SkillTreeNode.RUNNER_SPEED_3);
+    }
+
+    public boolean hasEvolutionPowerBoost2(UUID playerId) {
+        return hasSkillNode(playerId, SkillTreeNode.EVOLUTION_POWER_2);
+    }
+
+    public boolean hasMomentumEndurance(UUID playerId) {
+        return hasSkillNode(playerId, SkillTreeNode.MOMENTUM_ENDURANCE);
     }
 
     private boolean hasSkillNode(UUID playerId, SkillTreeNode node) {
