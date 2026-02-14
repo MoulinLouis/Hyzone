@@ -166,7 +166,7 @@ public class AscendCommand extends AbstractAsyncCommand {
     }
 
     private void openTrackedPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store,
-                                 BaseAscendPage page) {
+                                 InteractiveCustomUIPage<?> page) {
         openPage(player, playerRef.getUuid(), ref, store, page, true);
     }
 

@@ -356,24 +356,24 @@ $C.@PageOverlay {
             }
           }
 
-          // Tier 5: ELEVATION_REMNANT (right)
-          Button #NodeElevationRemnant {
+          // Tier 5: AUTO_ELEVATION (right)
+          Button #NodeAutoElevation {
             Anchor: (Left: 420, Top: 540, Width: 160, Height: 110);
             Background: #1a2530;
             Style: @NodeStyle;
             LayoutMode: Top;
-            Group #BorderElevationRemnant { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Background: #4b5563; }
-            Group #RevealedElevationRemnant {
+            Group #BorderAutoElevation { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Background: #4b5563; }
+            Group #RevealedAutoElevation {
               Visible: false;
               Anchor: (Left: 0, Right: 0);
               FlexWeight: 1;
               LayoutMode: Top;
               Label { Anchor: (Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "5:2"; }
-              Label #NameElevationRemnant { Anchor: (Top: 2); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Elev. Remnant"; }
-              Label #DescElevationRemnant { Anchor: (Top: 4); Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center); Text: "Keep 5% elevation"; }
-              Label #StatusElevationRemnant { Anchor: (Top: 6); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
+              Label #NameAutoElevation { Anchor: (Top: 2); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Auto-Elevation"; }
+              Label #DescAutoElevation { Anchor: (Top: 4); Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center); Text: "Auto-elevate targets"; }
+              Label #StatusAutoElevation { Anchor: (Top: 6); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
             }
-            Group #LockedElevationRemnant {
+            Group #LockedAutoElevation {
               Anchor: (Left: 0, Right: 0);
               FlexWeight: 1;
               Label { Anchor: (Left: 0, Right: 0, Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "5:2"; }
