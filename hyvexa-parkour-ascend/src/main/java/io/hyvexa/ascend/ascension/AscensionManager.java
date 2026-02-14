@@ -210,13 +210,6 @@ public class AscensionManager {
     }
 
 
-    public boolean hasSwiftRestart(UUID playerId) {
-        return hasSkillNode(playerId, SkillTreeNode.SWIFT_RESTART);
-    }
-
-    public boolean hasVexaOverflow(UUID playerId) {
-        return hasSkillNode(playerId, SkillTreeNode.VEXA_OVERFLOW);
-    }
 
     private boolean hasSkillNode(UUID playerId, SkillTreeNode node) {
         AscendPlayerProgress progress = playerStore.getPlayer(playerId);

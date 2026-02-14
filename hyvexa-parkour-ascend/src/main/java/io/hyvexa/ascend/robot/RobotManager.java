@@ -752,16 +752,6 @@ public class RobotManager {
             if (ghost == null) continue;
 
             playerStore.setHasRobot(playerId, map.getId(), true);
-            // Swift Restart: new runners start at 1-star
-            ParkourAscendPlugin swiftPlugin = ParkourAscendPlugin.getInstance();
-            AscensionManager swiftAm = swiftPlugin != null ? swiftPlugin.getAscensionManager() : null;
-            if (swiftAm != null && swiftAm.hasSwiftRestart(playerId)) {
-                AscendPlayerProgress.MapProgress placed = progress.getMapProgress().get(map.getId());
-                if (placed != null && placed.getRobotStars() == 0) {
-                    placed.setRobotStars(1);
-                    playerStore.markDirty(playerId);
-                }
-            }
             return; // One action per call for smooth visual
         }
 

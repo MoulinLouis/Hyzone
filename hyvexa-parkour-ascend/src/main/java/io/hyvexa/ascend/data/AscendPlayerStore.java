@@ -914,16 +914,7 @@ public class AscendPlayerStore {
             progress.setElevationMultiplier(1);
         }
 
-        // Vexa Overflow: capture vexa before reset, restore 1% after
-        BigNumber currentVexa = progress.getVexa();
-        boolean hasVexaOverflow = progress.hasSkillNode(AscendConstants.SkillTreeNode.VEXA_OVERFLOW);
-
         List<String> mapsWithRunners = resetMapProgress(progress, firstMapId, false, playerId);
-
-        if (hasVexaOverflow && currentVexa.gt(BigNumber.ZERO)) {
-            BigNumber retained = currentVexa.multiply(BigNumber.fromDouble(AscendConstants.VEXA_OVERFLOW_FRACTION));
-            progress.setVexa(retained);
-        }
 
         markDirty(playerId);
         return mapsWithRunners;
