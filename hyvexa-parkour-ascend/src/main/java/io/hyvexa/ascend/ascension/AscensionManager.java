@@ -143,6 +143,8 @@ public class AscensionManager {
             playerStore.setAutoUpgradeEnabled(playerId, true);
         } else if (node == SkillTreeNode.AUTO_EVOLUTION) {
             playerStore.setAutoEvolutionEnabled(playerId, true);
+        } else if (node == SkillTreeNode.AUTO_ELEVATION) {
+            playerStore.setAutoElevationEnabled(playerId, true);
         }
 
         playerStore.markDirty(playerId);
@@ -185,6 +187,10 @@ public class AscensionManager {
         return hasSkillNode(playerId, SkillTreeNode.AUTO_EVOLUTION);
     }
 
+    public boolean hasAutoElevation(UUID playerId) {
+        return hasSkillNode(playerId, SkillTreeNode.AUTO_ELEVATION);
+    }
+
     public boolean hasRunnerSpeedBoost(UUID playerId) {
         return hasSkillNode(playerId, SkillTreeNode.RUNNER_SPEED);
     }
@@ -205,9 +211,7 @@ public class AscensionManager {
         return hasSkillNode(playerId, SkillTreeNode.MOMENTUM_SURGE);
     }
 
-    public boolean hasElevationRemnant(UUID playerId) {
-        return hasSkillNode(playerId, SkillTreeNode.ELEVATION_REMNANT);
-    }
+    // Elevation Remnant was removed — its functionality is no longer available
 
     public boolean hasMultiplierBoost(UUID playerId) {
         return hasSkillNode(playerId, SkillTreeNode.MULTIPLIER_BOOST);

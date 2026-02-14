@@ -206,8 +206,9 @@ class AscendPlayerPersistence {
                 summit_accumulated_vexa_mantissa, summit_accumulated_vexa_exp10,
                 elevation_accumulated_vexa_mantissa, elevation_accumulated_vexa_exp10,
                 auto_upgrade_enabled, auto_evolution_enabled, seen_tutorials, hide_other_runners,
-                break_ascension_enabled)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                break_ascension_enabled,
+                auto_elevation_enabled, auto_elevation_timer_seconds, auto_elevation_targets, auto_elevation_target_index)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 player_name = VALUES(player_name),
                 vexa_mantissa = VALUES(vexa_mantissa), vexa_exp10 = VALUES(vexa_exp10),
@@ -228,7 +229,11 @@ class AscendPlayerPersistence {
                 auto_evolution_enabled = VALUES(auto_evolution_enabled),
                 hide_other_runners = VALUES(hide_other_runners),
                 seen_tutorials = VALUES(seen_tutorials),
-                break_ascension_enabled = VALUES(break_ascension_enabled)
+                break_ascension_enabled = VALUES(break_ascension_enabled),
+                auto_elevation_enabled = VALUES(auto_elevation_enabled),
+                auto_elevation_timer_seconds = VALUES(auto_elevation_timer_seconds),
+                auto_elevation_targets = VALUES(auto_elevation_targets),
+                auto_elevation_target_index = VALUES(auto_elevation_target_index)
             """;
 
         String mapSql = """
@@ -338,6 +343,10 @@ class AscendPlayerPersistence {
                     playerStmt.setInt(22, progress.getSeenTutorials());
                     playerStmt.setBoolean(23, progress.isHideOtherRunners());
                     playerStmt.setBoolean(24, progress.isBreakAscensionEnabled());
+                    playerStmt.setBoolean(25, progress.isAutoElevationEnabled());
+                    playerStmt.setInt(26, progress.getAutoElevationTimerSeconds());
+                    playerStmt.setString(27, serializeTargets(progress.getAutoElevationTargets()));
+                    playerStmt.setInt(28, progress.getAutoElevationTargetIndex());
                     playerStmt.addBatch();
 
                     // Save map progress
@@ -457,7 +466,8 @@ class AscendPlayerPersistence {
                    summit_accumulated_vexa_mantissa, summit_accumulated_vexa_exp10,
                    elevation_accumulated_vexa_mantissa, elevation_accumulated_vexa_exp10,
                    auto_upgrade_enabled, auto_evolution_enabled, seen_tutorials, hide_other_runners,
-                   break_ascension_enabled
+                   break_ascension_enabled,
+                   auto_elevation_enabled, auto_elevation_timer_seconds, auto_elevation_targets, auto_elevation_target_index
             FROM ascend_players
             WHERE uuid = ?
             """;
@@ -517,6 +527,11 @@ class AscendPlayerPersistence {
                         progress.setSeenTutorials(safeGetInt(rs, "seen_tutorials", 0));
                         progress.setHideOtherRunners(safeGetBoolean(rs, "hide_other_runners", false));
                         progress.setBreakAscensionEnabled(safeGetBoolean(rs, "break_ascension_enabled", false));
+
+                        progress.setAutoElevationEnabled(safeGetBoolean(rs, "auto_elevation_enabled", false));
+                        progress.setAutoElevationTimerSeconds(safeGetInt(rs, "auto_elevation_timer_seconds", 0));
+                        progress.setAutoElevationTargets(parseTargets(safeGetString(rs, "auto_elevation_targets", "[]")));
+                        progress.setAutoElevationTargetIndex(safeGetInt(rs, "auto_elevation_target_index", 0));
                     }
                 }
             }
@@ -599,6 +614,10 @@ class AscendPlayerPersistence {
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     String nodeName = rs.getString("skill_node");
+                    // Migration: ELEVATION_REMNANT replaced by AUTO_ELEVATION
+                    if ("ELEVATION_REMNANT".equals(nodeName)) {
+                        nodeName = "AUTO_ELEVATION";
+                    }
                     try {
                         SkillTreeNode node = SkillTreeNode.valueOf(nodeName);
                         progress.unlockSkillNode(node);
@@ -920,5 +939,39 @@ class AscendPlayerPersistence {
             LOGGER.atWarning().log("Columns '" + mantissaCol + "'/'" + exp10Col + "' not available: " + ex.getMessage());
             return BigNumber.ZERO;
         }
+    }
+
+    private static String serializeTargets(java.util.List<Long> targets) {
+        if (targets == null || targets.isEmpty()) {
+            return "[]";
+        }
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < targets.size(); i++) {
+            if (i > 0) sb.append(",");
+            sb.append(targets.get(i));
+        }
+        sb.append("]");
+        return sb.toString();
+    }
+
+    private static java.util.List<Long> parseTargets(String json) {
+        if (json == null || json.isBlank() || json.equals("[]")) {
+            return java.util.Collections.emptyList();
+        }
+        String trimmed = json.trim();
+        if (trimmed.startsWith("[")) trimmed = trimmed.substring(1);
+        if (trimmed.endsWith("]")) trimmed = trimmed.substring(0, trimmed.length() - 1);
+        if (trimmed.isBlank()) {
+            return java.util.Collections.emptyList();
+        }
+        java.util.List<Long> result = new java.util.ArrayList<>();
+        for (String part : trimmed.split(",")) {
+            try {
+                result.add(Long.parseLong(part.trim()));
+            } catch (NumberFormatException e) {
+                // Skip invalid entries
+            }
+        }
+        return result;
     }
 }

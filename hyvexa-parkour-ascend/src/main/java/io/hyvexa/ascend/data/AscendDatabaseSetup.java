@@ -189,6 +189,9 @@ public final class AscendDatabaseSetup {
             ensureChallengeTables(conn);
             ensureBreakAscensionColumn(conn);
 
+            // Auto-elevation columns
+            ensureAutoElevationColumns(conn);
+
             LOGGER.atInfo().log("Ascend database tables ensured");
             } // close try (Statement stmt)
 
@@ -928,6 +931,48 @@ public final class AscendDatabaseSetup {
             LOGGER.atSevere().log("Failed to rename coins columns to vexa (rolled back): " + e.getMessage());
         } finally {
             try { conn.setAutoCommit(wasAutoCommit); } catch (SQLException e) { /* ignore */ }
+        }
+    }
+
+    private static void ensureAutoElevationColumns(Connection conn) {
+        if (conn == null) {
+            return;
+        }
+
+        if (!columnExists(conn, "ascend_players", "auto_elevation_enabled")) {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN auto_elevation_enabled BOOLEAN NOT NULL DEFAULT FALSE");
+                LOGGER.atInfo().log("Added auto_elevation_enabled column");
+            } catch (SQLException e) {
+                LOGGER.atSevere().log("Failed to add auto_elevation_enabled: " + e.getMessage());
+            }
+        }
+
+        if (!columnExists(conn, "ascend_players", "auto_elevation_timer_seconds")) {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN auto_elevation_timer_seconds INT NOT NULL DEFAULT 0");
+                LOGGER.atInfo().log("Added auto_elevation_timer_seconds column");
+            } catch (SQLException e) {
+                LOGGER.atSevere().log("Failed to add auto_elevation_timer_seconds: " + e.getMessage());
+            }
+        }
+
+        if (!columnExists(conn, "ascend_players", "auto_elevation_targets")) {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN auto_elevation_targets TEXT DEFAULT '[]'");
+                LOGGER.atInfo().log("Added auto_elevation_targets column");
+            } catch (SQLException e) {
+                LOGGER.atSevere().log("Failed to add auto_elevation_targets: " + e.getMessage());
+            }
+        }
+
+        if (!columnExists(conn, "ascend_players", "auto_elevation_target_index")) {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN auto_elevation_target_index INT NOT NULL DEFAULT 0");
+                LOGGER.atInfo().log("Added auto_elevation_target_index column");
+            } catch (SQLException e) {
+                LOGGER.atSevere().log("Failed to add auto_elevation_target_index: " + e.getMessage());
+            }
         }
     }
 }

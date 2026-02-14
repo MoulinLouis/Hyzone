@@ -3,8 +3,11 @@ package io.hyvexa.ascend.data;
 import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.common.math.BigNumber;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumMap;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -47,6 +50,12 @@ public class AscendPlayerProgress {
     private volatile boolean autoEvolutionEnabled;
     private volatile boolean hideOtherRunners;
     private volatile boolean breakAscensionEnabled;
+
+    // Auto-elevation config
+    private volatile boolean autoElevationEnabled;
+    private volatile int autoElevationTimerSeconds;
+    private volatile List<Long> autoElevationTargets = Collections.emptyList();
+    private volatile int autoElevationTargetIndex;
 
     // Tutorial tracking (bitmask)
     private volatile int seenTutorials;
@@ -377,6 +386,42 @@ public class AscendPlayerProgress {
 
     public void setBreakAscensionEnabled(boolean breakAscensionEnabled) {
         this.breakAscensionEnabled = breakAscensionEnabled;
+    }
+
+    // ========================================
+    // Auto-Elevation
+    // ========================================
+
+    public boolean isAutoElevationEnabled() {
+        return autoElevationEnabled;
+    }
+
+    public void setAutoElevationEnabled(boolean enabled) {
+        this.autoElevationEnabled = enabled;
+    }
+
+    public int getAutoElevationTimerSeconds() {
+        return autoElevationTimerSeconds;
+    }
+
+    public void setAutoElevationTimerSeconds(int seconds) {
+        this.autoElevationTimerSeconds = Math.max(0, seconds);
+    }
+
+    public List<Long> getAutoElevationTargets() {
+        return autoElevationTargets;
+    }
+
+    public void setAutoElevationTargets(List<Long> targets) {
+        this.autoElevationTargets = targets != null ? new ArrayList<>(targets) : Collections.emptyList();
+    }
+
+    public int getAutoElevationTargetIndex() {
+        return autoElevationTargetIndex;
+    }
+
+    public void setAutoElevationTargetIndex(int index) {
+        this.autoElevationTargetIndex = Math.max(0, index);
     }
 
     // ========================================

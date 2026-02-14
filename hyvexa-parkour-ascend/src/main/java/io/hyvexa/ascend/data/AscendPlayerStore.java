@@ -905,14 +905,7 @@ public class AscendPlayerStore {
             return List.of();
         }
 
-        // Elevation Remnant: retain 5% of elevation level
-        int currentElevation = progress.getElevationMultiplier();
-        if (progress.hasSkillNode(AscendConstants.SkillTreeNode.ELEVATION_REMNANT)) {
-            int retained = (int) Math.floor(currentElevation * AscendConstants.ELEVATION_REMNANT_FRACTION);
-            progress.setElevationMultiplier(Math.max(1, retained));
-        } else {
-            progress.setElevationMultiplier(1);
-        }
+        progress.setElevationMultiplier(1);
 
         List<String> mapsWithRunners = resetMapProgress(progress, firstMapId, false, playerId);
 
@@ -1204,6 +1197,54 @@ public class AscendPlayerStore {
     public boolean isBreakAscensionEnabled(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
         return progress != null && progress.isBreakAscensionEnabled();
+    }
+
+    // ========================================
+    // Auto-Elevation
+    // ========================================
+
+    public boolean isAutoElevationEnabled(UUID playerId) {
+        AscendPlayerProgress progress = players.get(playerId);
+        return progress != null && progress.isAutoElevationEnabled();
+    }
+
+    public void setAutoElevationEnabled(UUID playerId, boolean enabled) {
+        AscendPlayerProgress progress = getOrCreatePlayer(playerId);
+        progress.setAutoElevationEnabled(enabled);
+        markDirty(playerId);
+    }
+
+    public int getAutoElevationTimerSeconds(UUID playerId) {
+        AscendPlayerProgress progress = players.get(playerId);
+        return progress != null ? progress.getAutoElevationTimerSeconds() : 0;
+    }
+
+    public void setAutoElevationTimerSeconds(UUID playerId, int seconds) {
+        AscendPlayerProgress progress = getOrCreatePlayer(playerId);
+        progress.setAutoElevationTimerSeconds(seconds);
+        markDirty(playerId);
+    }
+
+    public java.util.List<Long> getAutoElevationTargets(UUID playerId) {
+        AscendPlayerProgress progress = players.get(playerId);
+        return progress != null ? progress.getAutoElevationTargets() : java.util.Collections.emptyList();
+    }
+
+    public void setAutoElevationTargets(UUID playerId, java.util.List<Long> targets) {
+        AscendPlayerProgress progress = getOrCreatePlayer(playerId);
+        progress.setAutoElevationTargets(targets);
+        markDirty(playerId);
+    }
+
+    public int getAutoElevationTargetIndex(UUID playerId) {
+        AscendPlayerProgress progress = players.get(playerId);
+        return progress != null ? progress.getAutoElevationTargetIndex() : 0;
+    }
+
+    public void setAutoElevationTargetIndex(UUID playerId, int index) {
+        AscendPlayerProgress progress = getOrCreatePlayer(playerId);
+        progress.setAutoElevationTargetIndex(index);
+        markDirty(playerId);
     }
 
     public void setBreakAscensionEnabled(UUID playerId, boolean enabled) {

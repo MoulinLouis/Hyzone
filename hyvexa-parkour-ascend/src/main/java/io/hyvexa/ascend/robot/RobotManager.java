@@ -82,6 +82,7 @@ public class RobotManager {
     private volatile NPCPlugin npcPlugin;
     private volatile boolean cleanupPending = false;
     private volatile long lastAutoUpgradeMs = 0;
+    private final Map<UUID, Long> lastAutoElevationMs = new ConcurrentHashMap<>();
 
     public RobotManager(AscendMapStore mapStore, AscendPlayerStore playerStore, GhostStore ghostStore) {
         this.mapStore = mapStore;
@@ -134,6 +135,7 @@ public class RobotManager {
     public void onPlayerLeave(UUID playerId) {
         if (playerId != null) {
             onlinePlayers.remove(playerId);
+            lastAutoElevationMs.remove(playerId);
             // Despawn all robots for this player
             despawnRobotsForPlayer(playerId);
         }
@@ -408,6 +410,7 @@ public class RobotManager {
             if (now - lastAutoUpgradeMs >= AUTO_UPGRADE_INTERVAL_MS) {
                 lastAutoUpgradeMs = now;
                 performAutoRunnerUpgrades();
+                performAutoElevation(now);
             }
         } catch (Exception e) {
             LOGGER.atWarning().log("Error in robot tick: " + e.getMessage());
@@ -800,6 +803,99 @@ public class RobotManager {
             playerStore.incrementRobotSpeedLevel(playerId, cheapestMapId);
             playerStore.checkAndUnlockEligibleMaps(playerId, mapStore);
         }
+    }
+
+    // Auto-Elevation
+
+    private void performAutoElevation(long now) {
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin == null) return;
+        AscensionManager ascensionManager = plugin.getAscensionManager();
+        if (ascensionManager == null) return;
+
+        for (UUID playerId : onlinePlayers) {
+            if (!ascensionManager.hasAutoElevation(playerId)) continue;
+            autoElevatePlayer(playerId, now);
+        }
+    }
+
+    private void autoElevatePlayer(UUID playerId, long now) {
+        AscendPlayerProgress progress = playerStore.getPlayer(playerId);
+        if (progress == null) return;
+        if (!progress.isAutoElevationEnabled()) return;
+
+        List<Long> targets = progress.getAutoElevationTargets();
+        int targetIndex = progress.getAutoElevationTargetIndex();
+
+        // Skip targets already surpassed by current multiplier
+        int currentMultiplier = progress.getElevationMultiplier();
+        while (targetIndex < targets.size() && targets.get(targetIndex) <= currentMultiplier) {
+            targetIndex++;
+        }
+        if (targetIndex != progress.getAutoElevationTargetIndex()) {
+            playerStore.setAutoElevationTargetIndex(playerId, targetIndex);
+        }
+
+        if (targets.isEmpty() || targetIndex >= targets.size()) return;
+
+        // Check timer
+        int timerSeconds = progress.getAutoElevationTimerSeconds();
+        if (timerSeconds > 0) {
+            Long lastMs = lastAutoElevationMs.get(playerId);
+            if (lastMs != null && (now - lastMs) < (long) timerSeconds * 1000L) return;
+        }
+
+        // Calculate purchasable levels
+        int currentLevel = progress.getElevationMultiplier();
+        BigNumber accumulatedVexa = progress.getElevationAccumulatedVexa();
+        AscendConstants.ElevationPurchaseResult result = AscendConstants.calculateElevationPurchase(currentLevel, accumulatedVexa);
+        if (result.levels <= 0) return;
+
+        int newLevel = currentLevel + result.levels;
+        long newMultiplier = Math.round(AscendConstants.getElevationMultiplier(newLevel));
+        long nextTarget = targets.get(targetIndex);
+        if (newMultiplier < nextTarget) return;
+
+        // Execute elevation
+        playerStore.atomicSetElevationAndResetVexa(playerId, newLevel);
+
+        // Get first map ID for reset
+        List<AscendMap> maps = mapStore.listMapsSorted();
+        String firstMapId = maps.isEmpty() ? null : maps.get(0).getId();
+
+        List<String> mapsWithRunners = playerStore.resetProgressForElevation(playerId, firstMapId);
+        for (String mapId : mapsWithRunners) {
+            despawnRobot(playerId, mapId);
+        }
+
+        // Send chat message
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin != null) {
+            PlayerRef playerRef = plugin.getPlayerRef(playerId);
+            if (playerRef != null) {
+                Ref<EntityStore> ref = playerRef.getReference();
+                if (ref != null && ref.isValid()) {
+                    Store<EntityStore> store = ref.getStore();
+                    com.hypixel.hytale.server.core.entity.entities.Player player =
+                        store.getComponent(ref, com.hypixel.hytale.server.core.entity.entities.Player.getComponentType());
+                    if (player != null) {
+                        player.sendMessage(com.hypixel.hytale.server.core.Message.raw(
+                            "[Auto-Elevation] Elevated to x" + newMultiplier)
+                            .color(io.hyvexa.common.util.SystemMessageUtils.SUCCESS));
+                    }
+                }
+            }
+        }
+
+        // Advance targetIndex past all surpassed targets
+        int newIndex = targetIndex;
+        while (newIndex < targets.size() && newMultiplier >= targets.get(newIndex)) {
+            newIndex++;
+        }
+        playerStore.setAutoElevationTargetIndex(playerId, newIndex);
+
+        lastAutoElevationMs.put(playerId, now);
+        playerStore.markDirty(playerId);
     }
 
     /**

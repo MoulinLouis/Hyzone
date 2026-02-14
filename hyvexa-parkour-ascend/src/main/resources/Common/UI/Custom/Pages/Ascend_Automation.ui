@@ -4,7 +4,7 @@ $C.@PageOverlay {
   SceneBlur {}
 
   Group #AutomationWindow {
-    Anchor: (Width: 460, Height: 530);
+    Anchor: (Width: 830, Height: 540);
     LayoutMode: Top;
     Background: #0d1620(0.95);
     OutlineColor: #ffffff(0.06);
@@ -58,7 +58,7 @@ $C.@PageOverlay {
       Anchor: (Left: 0, Right: 0);
       FlexWeight: 1;
       LayoutMode: Top;
-      Padding: (Left: 24, Right: 24, Top: 12, Bottom: 16);
+      Padding: (Left: 20, Right: 20, Top: 12, Bottom: 16);
 
       // Disclaimer for players who haven't ascended yet
       Group #AscensionDisclaimer {
@@ -77,132 +77,392 @@ $C.@PageOverlay {
 
       Group #DisclaimerSpacer { Anchor: (Height: 12); Visible: false; }
 
-      Group #AutoUpgradeSection {
+      // === TWO-COLUMN LAYOUT ===
+      Group #ColumnsRow {
         Anchor: (Left: 0, Right: 0);
-        LayoutMode: Top;
+        FlexWeight: 1;
+        LayoutMode: Left;
 
-        Label {
-          Anchor: (Left: 0, Right: 0, Height: 22);
-          Style: (FontSize: 14, RenderBold: true, TextColor: #f0f4f8);
-          Text: "Auto-Upgrade Runners";
-        }
+        // === LEFT COLUMN: Auto-Upgrade + Auto-Evolution ===
+        Group #LeftColumn {
+          Anchor: (Width: 380);
+          LayoutMode: Top;
 
-        Label {
-          Anchor: (Left: 0, Right: 0, Height: 18);
-          Style: (FontSize: 11, TextColor: #6b7280);
-          Text: "Automatically upgrades runner speed levels.";
-        }
-
-        Label {
-          Anchor: (Left: 0, Right: 0, Height: 18);
-          Style: (FontSize: 11, TextColor: #6b7280);
-          Text: "Prioritizes cheapest cost. Does not auto-evolve.";
-        }
-
-        Group { Anchor: (Height: 10); }
-
-        Group #ToggleRow {
-          Anchor: (Left: 0, Right: 0, Height: 44);
-          LayoutMode: Left;
-
-          Label #StatusLabel {
-            Anchor: (Width: 240, Height: 44);
-            Padding: (Top: 12);
-            Style: (FontSize: 13, TextColor: #9fb0ba);
-            Text: "Status: OFF";
-          }
-
-          Button #ToggleButton {
-            Anchor: (Width: 120, Height: 40);
-            Background: #1a2530;
-            Style: ButtonStyle(
-              Default: (Background: #1a2530),
-              Hovered: (Background: #243342),
-              Pressed: (Background: #1e2b38),
-              Sounds: $C.@ButtonSounds,
-            );
+          Group #AutoUpgradeSection {
+            Anchor: (Left: 0, Right: 0);
             LayoutMode: Top;
-            Group #ToggleBorder { Anchor: (Left: 0, Right: 0, Top: 0, Height: 3); Background: #4b5563; }
-            Label #ToggleText { Anchor: (Top: 10); Style: (FontSize: 13, RenderBold: true, TextColor: #9fb0ba, HorizontalAlignment: Center); Text: "Enable"; }
+            Background: #ffffff(0.02);
+            OutlineColor: #ffffff(0.05);
+            OutlineSize: 1;
+            Padding: (Left: 14, Right: 14, Top: 12, Bottom: 12);
+
+            // Shown when unlocked
+            Group #UpgradeContent {
+              Anchor: (Left: 0, Right: 0);
+              LayoutMode: Top;
+
+              Label {
+                Anchor: (Left: 0, Right: 0, Height: 22);
+                Style: (FontSize: 14, RenderBold: true, TextColor: #f0f4f8);
+                Text: "Auto-Upgrade Runners";
+              }
+
+              Label {
+                Anchor: (Left: 0, Right: 0, Height: 18);
+                Style: (FontSize: 11, TextColor: #6b7280);
+                Text: "Automatically upgrades runner speed levels.";
+              }
+
+              Group { Anchor: (Height: 10); }
+
+              Group #ToggleRow {
+                Anchor: (Left: 0, Right: 0, Height: 44);
+                LayoutMode: Left;
+
+                Label #StatusLabel {
+                  Anchor: (Width: 220, Height: 44);
+                  Padding: (Top: 12);
+                  Style: (FontSize: 13, TextColor: #9fb0ba);
+                  Text: "Status: OFF";
+                }
+
+                Button #ToggleButton {
+                  Anchor: (Width: 120, Height: 40);
+                  Background: #1a2530;
+                  Style: ButtonStyle(
+                    Default: (Background: #1a2530),
+                    Hovered: (Background: #243342),
+                    Pressed: (Background: #1e2b38),
+                    Sounds: $C.@ButtonSounds,
+                  );
+                  LayoutMode: Top;
+                  Group #ToggleBorder { Anchor: (Left: 0, Right: 0, Top: 0, Height: 3); Background: #4b5563; }
+                  Label #ToggleText { Anchor: (Top: 10); Style: (FontSize: 13, RenderBold: true, TextColor: #9fb0ba, HorizontalAlignment: Center); Text: "Enable"; }
+                }
+              }
+            }
+
+            // Shown when locked
+            Group #UpgradeLockedOverlay {
+              Anchor: (Left: 0, Right: 0, Height: 94);
+              LayoutMode: Top;
+              Visible: false;
+
+              Group { Anchor: (Height: 24); }
+              Group { Anchor: (Width: 24, Height: 24); Background: (TexturePath: "../Textures/lock.png"); }
+              Group { Anchor: (Height: 6); }
+              Label {
+                Anchor: (Left: 0, Right: 0, Height: 18);
+                Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center, Wrap: true);
+                Text: "Unlock in the Ascendancy Tree";
+              }
+            }
           }
-        }
 
-        Group { Anchor: (Height: 12); }
+          Group { Anchor: (Height: 12); }
 
-        Group #LockedOverlay {
-          Anchor: (Left: 0, Right: 0, Height: 36);
-          Background: #1a2530;
-          Padding: (Left: 12, Top: 8);
-
-          Label #LockedLabel {
-            Style: (FontSize: 12, TextColor: #f59e0b);
-            Text: "Unlock 'Auto-Upgrade + Momentum' in the Ascendancy Tree first.";
-          }
-        }
-      }
-
-      Group { Anchor: (Height: 16); }
-
-      Group #AutoEvolutionSection {
-        Anchor: (Left: 0, Right: 0);
-        LayoutMode: Top;
-
-        Label {
-          Anchor: (Left: 0, Right: 0, Height: 22);
-          Style: (FontSize: 14, RenderBold: true, TextColor: #f0f4f8);
-          Text: "Auto-Evolution";
-        }
-
-        Label {
-          Anchor: (Left: 0, Right: 0, Height: 18);
-          Style: (FontSize: 11, TextColor: #6b7280);
-          Text: "Runners auto-evolve at max speed level.";
-        }
-
-        Label {
-          Anchor: (Left: 0, Right: 0, Height: 18);
-          Style: (FontSize: 11, TextColor: #6b7280);
-          Text: "Requires the Auto-Evolution ascendancy node.";
-        }
-
-        Group { Anchor: (Height: 10); }
-
-        Group #EvoToggleRow {
-          Anchor: (Left: 0, Right: 0, Height: 44);
-          LayoutMode: Left;
-
-          Label #EvoStatusLabel {
-            Anchor: (Width: 240, Height: 44);
-            Padding: (Top: 12);
-            Style: (FontSize: 13, TextColor: #9fb0ba);
-            Text: "Status: OFF";
-          }
-
-          Button #EvoToggleButton {
-            Anchor: (Width: 120, Height: 40);
-            Background: #1a2530;
-            Style: ButtonStyle(
-              Default: (Background: #1a2530),
-              Hovered: (Background: #243342),
-              Pressed: (Background: #1e2b38),
-              Sounds: $C.@ButtonSounds,
-            );
+          Group #AutoEvolutionSection {
+            Anchor: (Left: 0, Right: 0);
             LayoutMode: Top;
-            Group #EvoToggleBorder { Anchor: (Left: 0, Right: 0, Top: 0, Height: 3); Background: #4b5563; }
-            Label #EvoToggleText { Anchor: (Top: 10); Style: (FontSize: 13, RenderBold: true, TextColor: #9fb0ba, HorizontalAlignment: Center); Text: "Enable"; }
+            Background: #ffffff(0.02);
+            OutlineColor: #ffffff(0.05);
+            OutlineSize: 1;
+            Padding: (Left: 14, Right: 14, Top: 12, Bottom: 12);
+
+            // Shown when unlocked
+            Group #EvoContent {
+              Anchor: (Left: 0, Right: 0);
+              LayoutMode: Top;
+
+              Label {
+                Anchor: (Left: 0, Right: 0, Height: 22);
+                Style: (FontSize: 14, RenderBold: true, TextColor: #f0f4f8);
+                Text: "Auto-Evolution";
+              }
+
+              Label {
+                Anchor: (Left: 0, Right: 0, Height: 18);
+                Style: (FontSize: 11, TextColor: #6b7280);
+                Text: "Runners auto-evolve at max speed level.";
+              }
+
+              Group { Anchor: (Height: 10); }
+
+              Group #EvoToggleRow {
+                Anchor: (Left: 0, Right: 0, Height: 44);
+                LayoutMode: Left;
+
+                Label #EvoStatusLabel {
+                  Anchor: (Width: 220, Height: 44);
+                  Padding: (Top: 12);
+                  Style: (FontSize: 13, TextColor: #9fb0ba);
+                  Text: "Status: OFF";
+                }
+
+                Button #EvoToggleButton {
+                  Anchor: (Width: 120, Height: 40);
+                  Background: #1a2530;
+                  Style: ButtonStyle(
+                    Default: (Background: #1a2530),
+                    Hovered: (Background: #243342),
+                    Pressed: (Background: #1e2b38),
+                    Sounds: $C.@ButtonSounds,
+                  );
+                  LayoutMode: Top;
+                  Group #EvoToggleBorder { Anchor: (Left: 0, Right: 0, Top: 0, Height: 3); Background: #4b5563; }
+                  Label #EvoToggleText { Anchor: (Top: 10); Style: (FontSize: 13, RenderBold: true, TextColor: #9fb0ba, HorizontalAlignment: Center); Text: "Enable"; }
+                }
+              }
+            }
+
+            // Shown when locked
+            Group #EvoLockedOverlay {
+              Anchor: (Left: 0, Right: 0, Height: 94);
+              LayoutMode: Top;
+              Visible: false;
+
+              Group { Anchor: (Height: 24); }
+              Group { Anchor: (Width: 24, Height: 24); Background: (TexturePath: "../Textures/lock.png"); }
+              Group { Anchor: (Height: 6); }
+              Label {
+                Anchor: (Left: 0, Right: 0, Height: 18);
+                Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center, Wrap: true);
+                Text: "Unlock in the Ascendancy Tree";
+              }
+            }
           }
         }
 
-        Group { Anchor: (Height: 12); }
+        // Column gap
+        Group { Anchor: (Width: 16); }
 
-        Group #EvoLockedOverlay {
-          Anchor: (Left: 0, Right: 0, Height: 36);
-          Background: #1a2530;
-          Padding: (Left: 12, Top: 8);
+        // === RIGHT COLUMN: Auto-Elevation ===
+        Group #RightColumn {
+          FlexWeight: 1;
+          LayoutMode: Top;
 
-          Label #EvoLockedLabel {
-            Style: (FontSize: 12, TextColor: #f59e0b);
-            Text: "Unlock 'Auto-Evolution' in the Ascendancy Tree first.";
+          Group #AutoElevationSection {
+            Anchor: (Left: 0, Right: 0);
+            LayoutMode: Top;
+            Background: #ffffff(0.02);
+            OutlineColor: #ffffff(0.05);
+            OutlineSize: 1;
+            Padding: (Left: 14, Right: 14, Top: 12, Bottom: 12);
+
+            // Shown when unlocked
+            Group #ElevContent {
+              Anchor: (Left: 0, Right: 0);
+              LayoutMode: Top;
+
+              Label {
+                Anchor: (Left: 0, Right: 0, Height: 22);
+                Style: (FontSize: 14, RenderBold: true, TextColor: #f0f4f8);
+                Text: "Auto-Elevation";
+              }
+
+              Label {
+                Anchor: (Left: 0, Right: 0, Height: 18);
+                Style: (FontSize: 11, TextColor: #6b7280);
+                Text: "Automatically elevates when target multipliers are reached.";
+              }
+
+              Group { Anchor: (Height: 10); }
+
+              Group #ElevToggleRow {
+                Anchor: (Left: 0, Right: 0, Height: 44);
+                LayoutMode: Left;
+
+                Label #ElevStatusLabel {
+                  Anchor: (Width: 220, Height: 44);
+                  Padding: (Top: 12);
+                  Style: (FontSize: 13, TextColor: #9fb0ba);
+                  Text: "Status: OFF";
+                }
+
+                Button #ElevToggleButton {
+                  Anchor: (Width: 120, Height: 40);
+                  Background: #1a2530;
+                  Style: ButtonStyle(
+                    Default: (Background: #1a2530),
+                    Hovered: (Background: #243342),
+                    Pressed: (Background: #1e2b38),
+                    Sounds: $C.@ButtonSounds,
+                  );
+                  LayoutMode: Top;
+                  Group #ElevToggleBorder { Anchor: (Left: 0, Right: 0, Top: 0, Height: 3); Background: #4b5563; }
+                  Label #ElevToggleText { Anchor: (Top: 10); Style: (FontSize: 13, RenderBold: true, TextColor: #9fb0ba, HorizontalAlignment: Center); Text: "Enable"; }
+                }
+              }
+
+              Group { Anchor: (Height: 10); }
+
+              // Timer row
+              Group #ElevTimerRow {
+                Anchor: (Left: 0, Right: 0, Height: 32);
+                LayoutMode: Left;
+
+                Label {
+                  Anchor: (Width: 80, Height: 32);
+                  Padding: (Top: 6);
+                  Style: (FontSize: 12, TextColor: #9fb0ba);
+                  Text: "Min delay:";
+                }
+
+                TextField #ElevTimerField {
+                  Anchor: (Width: 100, Height: 28);
+                  PlaceholderText: "0";
+                  MaxLength: 5;
+                  Background: #1a2530;
+                  OutlineColor: #ffffff(0.08);
+                  OutlineSize: 1;
+                  Style: (FontSize: 12, TextColor: #f0f4f8);
+                }
+
+                Label {
+                  Anchor: (Width: 50, Height: 32);
+                  Padding: (Left: 8, Top: 6);
+                  Style: (FontSize: 11, TextColor: #6b7280);
+                  Text: "sec";
+                }
+              }
+
+              Group { Anchor: (Height: 10); }
+
+              // Targets header row
+              Group #ElevTargetsHeader {
+                Anchor: (Left: 0, Right: 0, Height: 28);
+                LayoutMode: Full;
+
+                Label {
+                  Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 100);
+                  Padding: (Top: 4);
+                  Style: (FontSize: 12, TextColor: #9fb0ba, RenderBold: true);
+                  Text: "Targets:";
+                }
+
+                Group {
+                  Anchor: (Right: 0, Top: 0, Width: 80, Height: 26);
+
+                  TextButton #ClearAllButton {
+                    Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+                    Text: "Clear All";
+                    Style: TextButtonStyle(
+                      Default: (
+                        Background: #ffffff(0.06),
+                        LabelStyle: (FontSize: 11, TextColor: #ef4444, HorizontalAlignment: Center, VerticalAlignment: Center)
+                      ),
+                      Hovered: (
+                        Background: #ffffff(0.1),
+                        LabelStyle: (FontSize: 11, TextColor: #fca5a5, HorizontalAlignment: Center, VerticalAlignment: Center)
+                      ),
+                      Pressed: (
+                        Background: #ffffff(0.04),
+                        LabelStyle: (FontSize: 11, TextColor: #ef4444, HorizontalAlignment: Center, VerticalAlignment: Center)
+                      ),
+                      Sounds: $C.@ButtonSounds,
+                    );
+                  }
+                }
+              }
+
+              // Target slots (5 max)
+              Group #ElevTarget0 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 26); LayoutMode: Left;
+                Label #ElevTargetLabel0 { Anchor: (Width: 280, Height: 26); Padding: (Top: 4); Style: (FontSize: 12, TextColor: #e2e8f0); Text: ""; }
+                Group { Anchor: (Width: 40, Height: 24); TextButton #ElevRemove0 { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Text: "X"; Style: TextButtonStyle( Default: (Background: #ffffff(0.04), LabelStyle: (FontSize: 11, TextColor: #ef4444, HorizontalAlignment: Center, VerticalAlignment: Center)), Hovered: (Background: #ffffff(0.08), LabelStyle: (FontSize: 11, TextColor: #fca5a5, HorizontalAlignment: Center, VerticalAlignment: Center)), Pressed: (Background: #ffffff(0.02), LabelStyle: (FontSize: 11, TextColor: #ef4444, HorizontalAlignment: Center, VerticalAlignment: Center)), Sounds: $C.@ButtonSounds); } }
+              }
+              Group #ElevTarget1 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 26); LayoutMode: Left;
+                Label #ElevTargetLabel1 { Anchor: (Width: 280, Height: 26); Padding: (Top: 4); Style: (FontSize: 12, TextColor: #e2e8f0); Text: ""; }
+                Group { Anchor: (Width: 40, Height: 24); TextButton #ElevRemove1 { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Text: "X"; Style: TextButtonStyle( Default: (Background: #ffffff(0.04), LabelStyle: (FontSize: 11, TextColor: #ef4444, HorizontalAlignment: Center, VerticalAlignment: Center)), Hovered: (Background: #ffffff(0.08), LabelStyle: (FontSize: 11, TextColor: #fca5a5, HorizontalAlignment: Center, VerticalAlignment: Center)), Pressed: (Background: #ffffff(0.02), LabelStyle: (FontSize: 11, TextColor: #ef4444, HorizontalAlignment: Center, VerticalAlignment: Center)), Sounds: $C.@ButtonSounds); } }
+              }
+              Group #ElevTarget2 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 26); LayoutMode: Left;
+                Label #ElevTargetLabel2 { Anchor: (Width: 280, Height: 26); Padding: (Top: 4); Style: (FontSize: 12, TextColor: #e2e8f0); Text: ""; }
+                Group { Anchor: (Width: 40, Height: 24); TextButton #ElevRemove2 { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Text: "X"; Style: TextButtonStyle( Default: (Background: #ffffff(0.04), LabelStyle: (FontSize: 11, TextColor: #ef4444, HorizontalAlignment: Center, VerticalAlignment: Center)), Hovered: (Background: #ffffff(0.08), LabelStyle: (FontSize: 11, TextColor: #fca5a5, HorizontalAlignment: Center, VerticalAlignment: Center)), Pressed: (Background: #ffffff(0.02), LabelStyle: (FontSize: 11, TextColor: #ef4444, HorizontalAlignment: Center, VerticalAlignment: Center)), Sounds: $C.@ButtonSounds); } }
+              }
+              Group #ElevTarget3 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 26); LayoutMode: Left;
+                Label #ElevTargetLabel3 { Anchor: (Width: 280, Height: 26); Padding: (Top: 4); Style: (FontSize: 12, TextColor: #e2e8f0); Text: ""; }
+                Group { Anchor: (Width: 40, Height: 24); TextButton #ElevRemove3 { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Text: "X"; Style: TextButtonStyle( Default: (Background: #ffffff(0.04), LabelStyle: (FontSize: 11, TextColor: #ef4444, HorizontalAlignment: Center, VerticalAlignment: Center)), Hovered: (Background: #ffffff(0.08), LabelStyle: (FontSize: 11, TextColor: #fca5a5, HorizontalAlignment: Center, VerticalAlignment: Center)), Pressed: (Background: #ffffff(0.02), LabelStyle: (FontSize: 11, TextColor: #ef4444, HorizontalAlignment: Center, VerticalAlignment: Center)), Sounds: $C.@ButtonSounds); } }
+              }
+              Group #ElevTarget4 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 26); LayoutMode: Left;
+                Label #ElevTargetLabel4 { Anchor: (Width: 280, Height: 26); Padding: (Top: 4); Style: (FontSize: 12, TextColor: #e2e8f0); Text: ""; }
+                Group { Anchor: (Width: 40, Height: 24); TextButton #ElevRemove4 { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Text: "X"; Style: TextButtonStyle( Default: (Background: #ffffff(0.04), LabelStyle: (FontSize: 11, TextColor: #ef4444, HorizontalAlignment: Center, VerticalAlignment: Center)), Hovered: (Background: #ffffff(0.08), LabelStyle: (FontSize: 11, TextColor: #fca5a5, HorizontalAlignment: Center, VerticalAlignment: Center)), Pressed: (Background: #ffffff(0.02), LabelStyle: (FontSize: 11, TextColor: #ef4444, HorizontalAlignment: Center, VerticalAlignment: Center)), Sounds: $C.@ButtonSounds); } }
+              }
+
+              Group { Anchor: (Height: 8); }
+
+              // Add target row
+              Group #ElevAddRow {
+                Anchor: (Left: 0, Right: 0, Height: 32);
+                LayoutMode: Left;
+
+                Label {
+                  Anchor: (Width: 20, Height: 32);
+                  Padding: (Top: 6);
+                  Style: (FontSize: 12, TextColor: #9fb0ba);
+                  Text: "x";
+                }
+
+                TextField #ElevAddField {
+                  Anchor: (Width: 120, Height: 28);
+                  PlaceholderText: "";
+                  MaxLength: 10;
+                  Background: #1a2530;
+                  OutlineColor: #ffffff(0.08);
+                  OutlineSize: 1;
+                  Style: (FontSize: 12, TextColor: #f0f4f8);
+                }
+
+                Group { Anchor: (Width: 12, Height: 32); }
+
+                Group {
+                  Anchor: (Width: 60, Height: 28);
+
+                  TextButton #ElevAddButton {
+                    Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+                    Text: "Add";
+                    Style: TextButtonStyle(
+                      Default: (
+                        Background: #10b981,
+                        LabelStyle: (FontSize: 12, TextColor: #0d1620, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+                      ),
+                      Hovered: (
+                        Background: #34d399,
+                        LabelStyle: (FontSize: 12, TextColor: #0d1620, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+                      ),
+                      Pressed: (
+                        Background: #059669,
+                        LabelStyle: (FontSize: 12, TextColor: #0d1620, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+                      ),
+                      Sounds: $C.@ButtonSounds,
+                    );
+                  }
+                }
+              }
+
+              Group { Anchor: (Height: 8); }
+
+              // Next target info
+              Label #ElevNextTarget {
+                Anchor: (Left: 0, Right: 0, Height: 18);
+                Style: (FontSize: 11, TextColor: #6b7280);
+                Text: "";
+              }
+            }
+
+            // Shown when locked
+            Group #ElevLockedOverlay {
+              Anchor: (Left: 0, Right: 0, Height: 224);
+              LayoutMode: Top;
+              Visible: false;
+
+              Group { Anchor: (Height: 88); }
+              Group { Anchor: (Width: 24, Height: 24); Background: (TexturePath: "../Textures/lock.png"); }
+              Group { Anchor: (Height: 6); }
+              Label {
+                Anchor: (Left: 0, Right: 0, Height: 18);
+                Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center, Wrap: true);
+                Text: "Unlock in the Ascendancy Tree";
+              }
+            }
           }
         }
       }

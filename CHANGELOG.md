@@ -11,6 +11,7 @@
 - **Parkour/Ascend: Ghost stack moved to shared core wrappers** - Recorder/store/interpolation logic now lives in `hyvexa-core` with mode-specific table/resolver adapters and parity tests
 
 ### Added
+- **Ascend: Auto-Elevation skill tree node** - New AUTO_ELEVATION node (7 AP) unlocks configurable automatic elevation with multiplier target sequences and optional timer delay. Managed via the Automation page.
 - **Parkour: Advanced HUD toggle** - New "Advanced HUD" ON/OFF toggle in Player Settings that displays a compact panel above the right-side HUD showing real-time orientation (pitch, yaw, roll + cardinal direction), velocity (x, y, z), and speed
 - **Ascend: My Profile hub page** - Silk item now opens a "My Profile" page with links to Stats, Achievements, and Settings. Also accessible via `/ascend profile`.
 - **Ascend: Expanded achievement system (9 -> 30 achievements)** - 6 categories (Milestones, Runners, Prestige, Skills, Challenges, Secret) with category headers, hidden/secret achievements showing "???" until unlocked, and a Completionist meta-achievement. Fixed First Elevation threshold (was >=1, now >=2).

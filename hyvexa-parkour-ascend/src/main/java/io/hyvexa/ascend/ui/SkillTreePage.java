@@ -31,7 +31,7 @@ public class SkillTreePage extends BaseAscendPage {
         NODE_COORDINATES.put(SkillTreeNode.EVOLUTION_POWER, "3:2");
         NODE_COORDINATES.put(SkillTreeNode.RUNNER_SPEED_2, "4:1");
         NODE_COORDINATES.put(SkillTreeNode.MOMENTUM_SURGE, "5:1");
-        NODE_COORDINATES.put(SkillTreeNode.ELEVATION_REMNANT, "5:2");
+        NODE_COORDINATES.put(SkillTreeNode.AUTO_ELEVATION, "5:2");
         NODE_COORDINATES.put(SkillTreeNode.ASCENSION_CHALLENGES, "6:1");
         NODE_COORDINATES.put(SkillTreeNode.MULTIPLIER_BOOST, "7:1");
         NODE_COORDINATES.put(SkillTreeNode.RUNNER_SPEED_3, "8:1");
