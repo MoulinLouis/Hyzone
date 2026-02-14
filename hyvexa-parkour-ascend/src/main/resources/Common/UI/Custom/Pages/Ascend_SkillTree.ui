@@ -159,11 +159,6 @@ $C.@PageOverlay {
           Group #ConnT4H { Anchor: (Left: 160, Top: 658, Width: 340, Height: 4); Background: #4b5563; }
           Group #ConnT4Merge { Anchor: (Left: 328, Top: 662, Width: 4, Height: 8); Background: #4b5563; }
 
-          // T6->T7 straight
-          Group #ConnT5T6 { Anchor: (Left: 328, Top: 780, Width: 4, Height: 20); Background: #4b5563; }
-
-          // T7->T8 straight
-          Group #ConnT6T7 { Anchor: (Left: 328, Top: 910, Width: 4, Height: 20); Background: #4b5563; }
 
           // Tier 1: AUTO_RUNNERS
           Button #NodeAutoRunners {
@@ -373,57 +368,6 @@ $C.@PageOverlay {
             }
           }
 
-          // Tier 7: SWIFT_RESTART
-          Button #NodeSwiftRestart {
-            Anchor: (Left: 250, Top: 800, Width: 160, Height: 110);
-            Background: #1a2530;
-            Style: @NodeStyle;
-            LayoutMode: Top;
-            Group #BorderSwiftRestart { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Background: #4b5563; }
-            Group #RevealedSwiftRestart {
-              Visible: false;
-              Anchor: (Left: 0, Right: 0);
-              FlexWeight: 1;
-              LayoutMode: Top;
-              Label { Anchor: (Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "7:1"; }
-              Label #NameSwiftRestart { Anchor: (Top: 2); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Swift Restart"; }
-              Label #DescSwiftRestart { Anchor: (Top: 4); Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center); Text: "Start at 1-star"; }
-              Label #StatusSwiftRestart { Anchor: (Top: 6); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
-            }
-            Group #LockedSwiftRestart {
-              Anchor: (Left: 0, Right: 0);
-              FlexWeight: 1;
-              Label { Anchor: (Left: 0, Right: 0, Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "7:1"; }
-              Group { Anchor: (Left: 64, Top: 18, Width: 32, Height: 32); Background: @LockIcon; }
-              Label { Anchor: (Left: 0, Right: 0, Top: 56); Style: (FontSize: 12, RenderBold: true, TextColor: #4b5563, HorizontalAlignment: Center); Text: "LOCKED"; }
-            }
-          }
-
-          // Tier 8: VEXA_OVERFLOW (center)
-          Button #NodeVexaOverflow {
-            Anchor: (Left: 250, Top: 930, Width: 160, Height: 110);
-            Background: #1a2530;
-            Style: @NodeStyle;
-            LayoutMode: Top;
-            Group #BorderVexaOverflow { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Background: #4b5563; }
-            Group #RevealedVexaOverflow {
-              Visible: false;
-              Anchor: (Left: 0, Right: 0);
-              FlexWeight: 1;
-              LayoutMode: Top;
-              Label { Anchor: (Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "8:1"; }
-              Label #NameVexaOverflow { Anchor: (Top: 2); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Vexa Overflow"; }
-              Label #DescVexaOverflow { Anchor: (Top: 4); Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center); Text: "Keep 1% vexa"; }
-              Label #StatusVexaOverflow { Anchor: (Top: 6); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
-            }
-            Group #LockedVexaOverflow {
-              Anchor: (Left: 0, Right: 0);
-              FlexWeight: 1;
-              Label { Anchor: (Left: 0, Right: 0, Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "8:1"; }
-              Group { Anchor: (Left: 64, Top: 18, Width: 32, Height: 32); Background: @LockIcon; }
-              Label { Anchor: (Left: 0, Right: 0, Top: 56); Style: (FontSize: 12, RenderBold: true, TextColor: #4b5563, HorizontalAlignment: Center); Text: "LOCKED"; }
-            }
-          }
         }
       }
     }
