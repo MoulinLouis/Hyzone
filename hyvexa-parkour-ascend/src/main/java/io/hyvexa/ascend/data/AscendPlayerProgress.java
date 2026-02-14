@@ -14,7 +14,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class AscendPlayerProgress {
 
     private final AtomicReference<BigNumber> vexa = new AtomicReference<>(BigNumber.ZERO);
-    private volatile int elevationMultiplier = 1;
+    private final AtomicInteger elevationMultiplier = new AtomicInteger(1);
     private final Map<String, MapProgress> mapProgress = new ConcurrentHashMap<>();
 
     // Summit System - XP per category (level calculated from XP)
@@ -75,16 +75,15 @@ public class AscendPlayerProgress {
     }
 
     public int getElevationMultiplier() {
-        return elevationMultiplier;
+        return elevationMultiplier.get();
     }
 
     public void setElevationMultiplier(int elevationMultiplier) {
-        this.elevationMultiplier = Math.max(1, elevationMultiplier);
+        this.elevationMultiplier.set(Math.max(1, elevationMultiplier));
     }
 
     public int addElevationMultiplier(int amount) {
-        elevationMultiplier = Math.max(1, elevationMultiplier + amount);
-        return elevationMultiplier;
+        return elevationMultiplier.updateAndGet(current -> Math.max(1, current + amount));
     }
 
     public Map<String, MapProgress> getMapProgress() {
@@ -108,12 +107,11 @@ public class AscendPlayerProgress {
     }
 
     public long addSummitXp(AscendConstants.SummitCategory category, long amount) {
-        long current = getSummitXp(category);
-        long newXp = Math.max(0, AscendConstants.saturatingAdd(current, amount));
-        // Cap XP at max level threshold
-        newXp = Math.min(newXp, AscendConstants.SUMMIT_MAX_XP);
-        summitXp.put(category, newXp);
-        return newXp;
+        return summitXp.compute(category, (cat, current) -> {
+            long base = current != null ? current : 0L;
+            long newXp = Math.max(0, AscendConstants.saturatingAdd(base, amount));
+            return Math.min(newXp, AscendConstants.SUMMIT_MAX_XP);
+        });
     }
 
     public int getSummitLevel(AscendConstants.SummitCategory category) {

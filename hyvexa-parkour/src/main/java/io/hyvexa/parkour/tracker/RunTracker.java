@@ -361,14 +361,6 @@ public class RunTracker {
         return Math.max(0L, run.elapsedMs);
     }
 
-    public void checkPlayer(Ref<EntityStore> ref, Store<EntityStore> store) {
-        checkPlayer(ref, store, null, Float.NaN);
-    }
-
-    public void checkPlayer(Ref<EntityStore> ref, Store<EntityStore> store, float deltaSeconds) {
-        checkPlayer(ref, store, null, deltaSeconds);
-    }
-
     /**
      * Main per-tick player update: processes triggers, checkpoints, ghost recording, and run state.
      * Must be called from the world thread. Uses store directly (no command buffer required).

@@ -45,6 +45,9 @@ public class HubMenuPage extends InteractiveCustomUIPage<ButtonEventData> {
             Message.raw(" for updates.")
     );
 
+    private static volatile AscendWhitelistManager cachedWhitelistManager;
+    private static volatile long cachedWhitelistModified;
+
     private final HubRouter router;
 
     public HubMenuPage(@Nonnull PlayerRef playerRef, @Nonnull HubRouter router) {
@@ -95,7 +98,12 @@ public class HubMenuPage extends InteractiveCustomUIPage<ButtonEventData> {
                 // Ascend plugin is not visible here. Read the whitelist file directly instead.
                 File whitelistFile = Path.of("mods", "Parkour", "ascend_whitelist.json").toFile();
                 if (whitelistFile.exists()) {
-                    whitelistManager = new AscendWhitelistManager(whitelistFile);
+                    long lastModified = whitelistFile.lastModified();
+                    if (cachedWhitelistManager == null || lastModified != cachedWhitelistModified) {
+                        cachedWhitelistManager = new AscendWhitelistManager(whitelistFile);
+                        cachedWhitelistModified = lastModified;
+                    }
+                    whitelistManager = cachedWhitelistManager;
                 }
             }
             boolean isAllowed;
