@@ -121,7 +121,8 @@ public class AscendHudManager {
             return;
         }
         UUID playerId = playerRef.getUuid();
-        if (previewPlayers.contains(playerId) || isHudHidden(playerId)) {
+        if (previewPlayers.contains(playerId) || isHudHidden(playerId)
+                || !Boolean.TRUE.equals(hudAttached.get(playerId))) {
             return;
         }
         AscendHud hud = ascendHuds.get(playerId);
@@ -210,7 +211,8 @@ public class AscendHudManager {
     }
 
     public void updateToasts(UUID playerId) {
-        if (previewPlayers.contains(playerId) || isHudHidden(playerId)) {
+        if (previewPlayers.contains(playerId) || isHudHidden(playerId)
+                || !Boolean.TRUE.equals(hudAttached.get(playerId))) {
             return;
         }
         AscendHud hud = ascendHuds.get(playerId);
