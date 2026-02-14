@@ -752,16 +752,6 @@ public class RobotManager {
             if (ghost == null) continue;
 
             playerStore.setHasRobot(playerId, map.getId(), true);
-            // Swift Restart: new runners start at 1-star
-            ParkourAscendPlugin swiftPlugin = ParkourAscendPlugin.getInstance();
-            AscensionManager swiftAm = swiftPlugin != null ? swiftPlugin.getAscensionManager() : null;
-            if (swiftAm != null && swiftAm.hasSwiftRestart(playerId)) {
-                AscendPlayerProgress.MapProgress placed = progress.getMapProgress().get(map.getId());
-                if (placed != null && placed.getRobotStars() == 0) {
-                    placed.setRobotStars(1);
-                    playerStore.markDirty(playerId);
-                }
-            }
             return; // One action per call for smooth visual
         }
 
@@ -836,6 +826,10 @@ public class RobotManager {
                 // Skill tree: Runner Speed II (×1.2 global runner speed)
                 if (ascensionManager.hasRunnerSpeedBoost2(ownerId)) {
                     speedMultiplier *= 1.2;
+                }
+                // Skill tree: Runner Speed III (×1.3 global runner speed)
+                if (ascensionManager.hasRunnerSpeedBoost3(ownerId)) {
+                    speedMultiplier *= 1.3;
                 }
             }
 

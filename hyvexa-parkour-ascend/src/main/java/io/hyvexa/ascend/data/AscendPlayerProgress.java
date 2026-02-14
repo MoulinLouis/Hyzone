@@ -458,13 +458,15 @@ public class AscendPlayerProgress {
         private final AtomicReference<BigNumber> multiplier = new AtomicReference<>(BigNumber.ONE);
         private volatile Long bestTimeMs;
         private volatile long momentumExpireTimeMs; // 0 = inactive (ephemeral, not persisted)
+        private volatile long momentumDurationMs = AscendConstants.MOMENTUM_DURATION_MS; // total duration for progress bar
 
         public boolean isMomentumActive() {
             return System.currentTimeMillis() < momentumExpireTimeMs;
         }
 
-        public void activateMomentum() {
-            this.momentumExpireTimeMs = System.currentTimeMillis() + AscendConstants.MOMENTUM_DURATION_MS;
+        public void activateMomentum(long durationMs) {
+            this.momentumDurationMs = durationMs;
+            this.momentumExpireTimeMs = System.currentTimeMillis() + durationMs;
         }
 
         public long getMomentumExpireTimeMs() {
@@ -474,7 +476,7 @@ public class AscendPlayerProgress {
         public double getMomentumProgress() {
             long remaining = momentumExpireTimeMs - System.currentTimeMillis();
             if (remaining <= 0) return 0.0;
-            return Math.min(1.0, remaining / (double) AscendConstants.MOMENTUM_DURATION_MS);
+            return Math.min(1.0, remaining / (double) momentumDurationMs);
         }
 
         public boolean isUnlocked() {

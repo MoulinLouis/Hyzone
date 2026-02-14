@@ -363,10 +363,15 @@ public class AscendRunTracker {
         if (plugin != null && plugin.getAscensionManager() != null
                 && plugin.getAscensionManager().hasAutoRunners(playerId)) {
             boolean wasActive = mapProgress.isMomentumActive();
-            mapProgress.activateMomentum();
+            boolean hasEndurance = plugin.getAscensionManager().hasMomentumEndurance(playerId);
+            long momentumDuration = hasEndurance
+                ? AscendConstants.MOMENTUM_ENDURANCE_DURATION_MS
+                : AscendConstants.MOMENTUM_DURATION_MS;
+            mapProgress.activateMomentum(momentumDuration);
             if (!wasActive) {
                 String mapName = map.getName() != null && !map.getName().isBlank() ? map.getName() : map.getId();
-                showToast(playerId, ToastType.ECONOMY, "Momentum: x2 speed on " + mapName);
+                boolean hasSurge = plugin.getAscensionManager().hasMomentumSurge(playerId);
+                showToast(playerId, ToastType.ECONOMY, "Momentum: x" + (hasSurge ? "3" : "2") + " speed on " + mapName);
             }
         }
 

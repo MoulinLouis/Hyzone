@@ -126,11 +126,11 @@ $C.@PageOverlay {
       Group #TreeCanvas {
         Anchor: (Left: 0, Right: 0, Top: 8);
         FlexWeight: 1;
-        ContentHeight: 1050;
+        ContentHeight: 1190;
         ScrollbarStyle: (Size: 6, Spacing: 2, OnlyVisibleWhenHovered: true, Handle: #ffffff(0.15), HoveredHandle: #ffffff(0.25), DraggedHandle: #ffffff(0.3));
 
         Group #TreeContent {
-          Anchor: (Left: 0, Top: 0, Width: 660, Height: 1050);
+          Anchor: (Left: 0, Top: 0, Width: 660, Height: 1190);
 
           // Connectors: T1->T2 straight
           Group #ConnT0T1 { Anchor: (Left: 328, Top: 130, Width: 4, Height: 20); Background: #4b5563; }
@@ -161,6 +161,18 @@ $C.@PageOverlay {
 
           // T6->T7 straight
           Group #ConnT5T6 { Anchor: (Left: 328, Top: 780, Width: 4, Height: 20); Background: #4b5563; }
+
+          // T7->split to T8 left/right
+          Group #ConnT6Split { Anchor: (Left: 328, Top: 910, Width: 4, Height: 8); Background: #4b5563; }
+          Group #ConnT6H { Anchor: (Left: 160, Top: 918, Width: 340, Height: 4); Background: #4b5563; }
+          Group #ConnT6Left { Anchor: (Left: 160, Top: 922, Width: 4, Height: 8); Background: #4b5563; }
+          Group #ConnT6Right { Anchor: (Left: 500, Top: 922, Width: 4, Height: 8); Background: #4b5563; }
+
+          // T8 left/right merge to T9 center
+          Group #ConnT7Left { Anchor: (Left: 160, Top: 1040, Width: 4, Height: 8); Background: #4b5563; }
+          Group #ConnT7Right { Anchor: (Left: 500, Top: 1040, Width: 4, Height: 8); Background: #4b5563; }
+          Group #ConnT7H { Anchor: (Left: 160, Top: 1048, Width: 340, Height: 4); Background: #4b5563; }
+          Group #ConnT7Merge { Anchor: (Left: 328, Top: 1052, Width: 4, Height: 8); Background: #4b5563; }
 
           // Tier 1: AUTO_RUNNERS
           Button #NodeAutoRunners {
@@ -358,7 +370,7 @@ $C.@PageOverlay {
               LayoutMode: Top;
               Label { Anchor: (Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "5:2"; }
               Label #NameElevationRemnant { Anchor: (Top: 2); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Elev. Remnant"; }
-              Label #DescElevationRemnant { Anchor: (Top: 4); Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center); Text: "Keep 15% elevation"; }
+              Label #DescElevationRemnant { Anchor: (Top: 4); Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center); Text: "Keep 5% elevation"; }
               Label #StatusElevationRemnant { Anchor: (Top: 6); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
             }
             Group #LockedElevationRemnant {
@@ -370,27 +382,105 @@ $C.@PageOverlay {
             }
           }
 
-          // Tier 7: SWIFT_RESTART
-          Button #NodeSwiftRestart {
+          // Tier 7: MULTIPLIER_BOOST
+          Button #NodeMultiplierBoost {
             Anchor: (Left: 250, Top: 800, Width: 160, Height: 110);
             Background: #1a2530;
             Style: @NodeStyle;
             LayoutMode: Top;
-            Group #BorderSwiftRestart { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Background: #4b5563; }
-            Group #RevealedSwiftRestart {
+            Group #BorderMultiplierBoost { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Background: #4b5563; }
+            Group #RevealedMultiplierBoost {
               Visible: false;
               Anchor: (Left: 0, Right: 0);
               FlexWeight: 1;
               LayoutMode: Top;
               Label { Anchor: (Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "7:1"; }
-              Label #NameSwiftRestart { Anchor: (Top: 2); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Swift Restart"; }
-              Label #DescSwiftRestart { Anchor: (Top: 4); Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center); Text: "Start at 1-star"; }
-              Label #StatusSwiftRestart { Anchor: (Top: 6); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
+              Label #NameMultiplierBoost { Anchor: (Top: 2); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Multiplier Boost"; }
+              Label #DescMultiplierBoost { Anchor: (Top: 4); Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center); Text: "+0.10 base mult gain"; }
+              Label #StatusMultiplierBoost { Anchor: (Top: 6); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
             }
-            Group #LockedSwiftRestart {
+            Group #LockedMultiplierBoost {
               Anchor: (Left: 0, Right: 0);
               FlexWeight: 1;
               Label { Anchor: (Left: 0, Right: 0, Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "7:1"; }
+              Group { Anchor: (Left: 64, Top: 18, Width: 32, Height: 32); Background: @LockIcon; }
+              Label { Anchor: (Left: 0, Right: 0, Top: 56); Style: (FontSize: 12, RenderBold: true, TextColor: #4b5563, HorizontalAlignment: Center); Text: "LOCKED"; }
+            }
+          }
+
+          // Tier 8: RUNNER_SPEED_3 (left)
+          Button #NodeRunnerSpeed3 {
+            Anchor: (Left: 80, Top: 930, Width: 160, Height: 110);
+            Background: #1a2530;
+            Style: @NodeStyle;
+            LayoutMode: Top;
+            Group #BorderRunnerSpeed3 { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Background: #4b5563; }
+            Group #RevealedRunnerSpeed3 {
+              Visible: false;
+              Anchor: (Left: 0, Right: 0);
+              FlexWeight: 1;
+              LayoutMode: Top;
+              Label { Anchor: (Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "8:1"; }
+              Label #NameRunnerSpeed3 { Anchor: (Top: 2); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Runner Speed III"; }
+              Label #DescRunnerSpeed3 { Anchor: (Top: 4); Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center); Text: "x1.3 global speed"; }
+              Label #StatusRunnerSpeed3 { Anchor: (Top: 6); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
+            }
+            Group #LockedRunnerSpeed3 {
+              Anchor: (Left: 0, Right: 0);
+              FlexWeight: 1;
+              Label { Anchor: (Left: 0, Right: 0, Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "8:1"; }
+              Group { Anchor: (Left: 64, Top: 18, Width: 32, Height: 32); Background: @LockIcon; }
+              Label { Anchor: (Left: 0, Right: 0, Top: 56); Style: (FontSize: 12, RenderBold: true, TextColor: #4b5563, HorizontalAlignment: Center); Text: "LOCKED"; }
+            }
+          }
+
+          // Tier 8: EVOLUTION_POWER_2 (right)
+          Button #NodeEvolutionPower2 {
+            Anchor: (Left: 420, Top: 930, Width: 160, Height: 110);
+            Background: #1a2530;
+            Style: @NodeStyle;
+            LayoutMode: Top;
+            Group #BorderEvolutionPower2 { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Background: #4b5563; }
+            Group #RevealedEvolutionPower2 {
+              Visible: false;
+              Anchor: (Left: 0, Right: 0);
+              FlexWeight: 1;
+              LayoutMode: Top;
+              Label { Anchor: (Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "8:2"; }
+              Label #NameEvolutionPower2 { Anchor: (Top: 2); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Evolution Power II"; }
+              Label #DescEvolutionPower2 { Anchor: (Top: 4); Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center); Text: "+1 base evo power"; }
+              Label #StatusEvolutionPower2 { Anchor: (Top: 6); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
+            }
+            Group #LockedEvolutionPower2 {
+              Anchor: (Left: 0, Right: 0);
+              FlexWeight: 1;
+              Label { Anchor: (Left: 0, Right: 0, Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "8:2"; }
+              Group { Anchor: (Left: 64, Top: 18, Width: 32, Height: 32); Background: @LockIcon; }
+              Label { Anchor: (Left: 0, Right: 0, Top: 56); Style: (FontSize: 12, RenderBold: true, TextColor: #4b5563, HorizontalAlignment: Center); Text: "LOCKED"; }
+            }
+          }
+
+          // Tier 9: MOMENTUM_ENDURANCE (center)
+          Button #NodeMomentumEndurance {
+            Anchor: (Left: 250, Top: 1060, Width: 160, Height: 110);
+            Background: #1a2530;
+            Style: @NodeStyle;
+            LayoutMode: Top;
+            Group #BorderMomentumEndurance { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Background: #4b5563; }
+            Group #RevealedMomentumEndurance {
+              Visible: false;
+              Anchor: (Left: 0, Right: 0);
+              FlexWeight: 1;
+              LayoutMode: Top;
+              Label { Anchor: (Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "9:1"; }
+              Label #NameMomentumEndurance { Anchor: (Top: 2); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Momentum End."; }
+              Label #DescMomentumEndurance { Anchor: (Top: 4); Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center); Text: "60s -> 90s duration"; }
+              Label #StatusMomentumEndurance { Anchor: (Top: 6); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
+            }
+            Group #LockedMomentumEndurance {
+              Anchor: (Left: 0, Right: 0);
+              FlexWeight: 1;
+              Label { Anchor: (Left: 0, Right: 0, Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "9:1"; }
               Group { Anchor: (Left: 64, Top: 18, Width: 32, Height: 32); Background: @LockIcon; }
               Label { Anchor: (Left: 0, Right: 0, Top: 56); Style: (FontSize: 12, RenderBold: true, TextColor: #4b5563, HorizontalAlignment: Center); Text: "LOCKED"; }
             }

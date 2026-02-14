@@ -175,10 +175,11 @@ public final class AscendConstants {
     // Momentum System (temporary speed boost from manual runs)
     public static final double MOMENTUM_SPEED_MULTIPLIER = 2.0;
     public static final double MOMENTUM_SURGE_MULTIPLIER = 3.0;
-    public static final double ELEVATION_REMNANT_FRACTION = 0.15;
+    public static final double ELEVATION_REMNANT_FRACTION = 0.05;
 
 
     public static final long MOMENTUM_DURATION_MS = 60_000L;
+    public static final long MOMENTUM_ENDURANCE_DURATION_MS = 90_000L;
 
     // Runner star evolution
     public static final int MAX_ROBOT_STARS = 5;
@@ -615,9 +616,12 @@ public final class AscendConstants {
         EVOLUTION_POWER("Evolution Power+", "+1 base evolution power", AUTO_EVOLUTION),
         RUNNER_SPEED_2("Runner Speed II", "x1.2 global runner speed", RUNNER_SPEED, EVOLUTION_POWER),
         MOMENTUM_SURGE("Momentum Surge", "Momentum boost x2 -> x3", RUNNER_SPEED_2),
-        ELEVATION_REMNANT("Elevation Remnant", "Keep 15% elevation level on summit reset", RUNNER_SPEED_2),
-        ASCENSION_CHALLENGES("Ascension Challenges", "Unlock Ascension Challenges", 3, MOMENTUM_SURGE, ELEVATION_REMNANT),
-        SWIFT_RESTART("Swift Restart", "New runners start at 1-star after prestige", 5, ASCENSION_CHALLENGES);
+        ELEVATION_REMNANT("Elevation Remnant", "Keep 5% elevation level on summit reset", RUNNER_SPEED_2),
+        ASCENSION_CHALLENGES("Ascension Challenges", "Unlock Ascension Challenges", 1, MOMENTUM_SURGE, ELEVATION_REMNANT),
+        MULTIPLIER_BOOST("Multiplier Boost", "+0.10 base multiplier gain", 3, ASCENSION_CHALLENGES),
+        RUNNER_SPEED_3("Runner Speed III", "x1.3 global runner speed", 5, MULTIPLIER_BOOST),
+        EVOLUTION_POWER_2("Evolution Power II", "+1 base evolution power", 5, MULTIPLIER_BOOST),
+        MOMENTUM_ENDURANCE("Momentum Endurance", "Momentum 60s -> 90s", 10, RUNNER_SPEED_3, EVOLUTION_POWER_2);
 
         private final String name;
         private final String description;
@@ -845,5 +849,5 @@ public final class AscendConstants {
     public static final int ACHIEVEMENT_ASCENSION_5 = 5;
     public static final int ACHIEVEMENT_ASCENSION_10 = 10;
     public static final int ACHIEVEMENT_CONSECUTIVE_RUNS_25 = 25;
-    public static final int ACHIEVEMENT_TOTAL_SKILL_NODES = 11;
+    public static final int ACHIEVEMENT_TOTAL_SKILL_NODES = 12;
 }

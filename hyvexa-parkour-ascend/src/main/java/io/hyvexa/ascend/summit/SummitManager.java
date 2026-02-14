@@ -183,6 +183,11 @@ public class SummitManager {
             }
         }
 
+        // Skill tree: Multiplier Boost adds +0.10 to base multiplier gain
+        if (plugin != null && plugin.getAscensionManager() != null
+                && plugin.getAscensionManager().hasMultiplierBoost(playerId)) {
+            fullBonus += 0.10;
+        }
         // Challenge 3 reward: x1.2 permanent multiplier gain bonus
         fullBonus = applyChallengeRewardMultiplierGain(playerId, fullBonus);
         return fullBonus;
@@ -221,6 +226,11 @@ public class SummitManager {
         // Skill tree: Evolution Power+ adds +1.0 to base evolution power
         if (plugin != null && plugin.getAscensionManager() != null
                 && plugin.getAscensionManager().hasEvolutionPowerBoost(playerId)) {
+            fullBonus += 1.0;
+        }
+        // Skill tree: Evolution Power II adds +1.0 to base evolution power
+        if (plugin != null && plugin.getAscensionManager() != null
+                && plugin.getAscensionManager().hasEvolutionPowerBoost2(playerId)) {
             fullBonus += 1.0;
         }
         // Challenge 4 reward: +1 base Evolution Power
