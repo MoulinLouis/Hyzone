@@ -15,7 +15,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
 import com.hypixel.hytale.server.core.Message;
 import io.hyvexa.common.util.AsyncExecutionHelper;
-import io.hyvexa.hub.HubConstants;
+import io.hyvexa.common.WorldConstants;
 import io.hyvexa.hub.ui.HubMenuPage;
 
 import java.util.UUID;
@@ -28,7 +28,7 @@ public class HubRouter {
 
     public void openMenuOrRoute(Ref<EntityStore> ref, Store<EntityStore> store,
                                 PlayerRef playerRef, World world) {
-        if (world != null && HubConstants.WORLD_HUB.equalsIgnoreCase(world.getName())) {
+        if (world != null && WorldConstants.WORLD_HUB.equalsIgnoreCase(world.getName())) {
             Player player = store.getComponent(ref, Player.getComponentType());
             if (player != null) {
                 player.getPageManager().openCustomPage(ref, store, new HubMenuPage(playerRef, this));
@@ -39,15 +39,15 @@ public class HubRouter {
     }
 
     public void routeToHub(PlayerRef playerRef) {
-        routeToWorld(playerRef, HubConstants.WORLD_HUB);
+        routeToWorld(playerRef, WorldConstants.WORLD_HUB);
     }
 
     public void routeToParkour(PlayerRef playerRef) {
-        routeToWorld(playerRef, HubConstants.WORLD_PARKOUR);
+        routeToWorld(playerRef, WorldConstants.WORLD_PARKOUR);
     }
 
     public void routeToAscend(PlayerRef playerRef) {
-        routeToWorld(playerRef, HubConstants.WORLD_ASCEND);
+        routeToWorld(playerRef, WorldConstants.WORLD_ASCEND);
     }
 
     private void routeToWorld(PlayerRef playerRef, String targetWorldName) {
