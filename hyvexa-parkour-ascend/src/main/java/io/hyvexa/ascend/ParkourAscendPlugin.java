@@ -305,9 +305,9 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     return;
                 }
 
-                // Only trigger passive-leave on true Ascend -> non-Ascend transitions
-                if (playerId != null && playersInAscendWorld.remove(playerId) && passiveEarningsManager != null) {
-                    passiveEarningsManager.onPlayerLeaveAscend(playerId);
+                // Clean up Ascend state on true Ascend -> non-Ascend transitions
+                if (playerId != null && playersInAscendWorld.remove(playerId)) {
+                    cleanupAscendState(playerId);
                 }
             } catch (Exception e) {
                 LOGGER.atWarning().log("Exception in AddPlayerToWorldEvent (ascend): " + e.getMessage());
@@ -324,45 +324,12 @@ public class ParkourAscendPlugin extends JavaPlugin {
                 return;
             }
 
-            // Each cleanup wrapped individually so one failure doesn't skip the rest
-            try {
-                if (passiveEarningsManager != null && playersInAscendWorld.remove(playerId)) {
-                    passiveEarningsManager.onPlayerLeaveAscend(playerId);
-                }
-            } catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: passiveEarnings"); }
+            playersInAscendWorld.remove(playerId);
+            cleanupAscendState(playerId);
 
-            try { AscendCommand.onPlayerDisconnect(playerId); }
-            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: AscendCommand"); }
-
-            try { playerRefCache.remove(playerId); }
-            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: playerRefCache"); }
-
+            // Disconnect-only cleanup (not needed on world transitions)
             try { AscendMapSelectPage.clearBuyAllCooldown(playerId); }
             catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: clearBuyAllCooldown"); }
-
-            try { BaseAscendPage.removeCurrentPage(playerId); }
-            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: removeCurrentPage"); }
-
-            try { AscendLeaveInteraction.clearPendingLeave(playerId); }
-            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: clearPendingLeave"); }
-
-            try { AscendSettingsPage.clearPlayer(playerId); }
-            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: AscendSettingsPage"); }
-
-            try { AscendMusicPage.clearPlayer(playerId); }
-            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: AscendMusicPage"); }
-
-            try { hudManager.removePlayer(playerId); }
-            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: hudManager"); }
-
-            try { if (runTracker != null) { runTracker.cancelRun(playerId); } }
-            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: runTracker"); }
-
-            try { if (robotManager != null) { robotManager.onPlayerLeave(playerId); } }
-            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: robotManager"); }
-
-            try { if (challengeManager != null) { challengeManager.onPlayerDisconnect(playerId); } }
-            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: challengeManager"); }
 
             // Evict player from cache (lazy loading - saves memory)
             try { if (playerStore != null) { playerStore.removePlayer(playerId); } }
@@ -574,6 +541,46 @@ public class ParkourAscendPlugin extends JavaPlugin {
             LOGGER.atWarning().withCause(ex).log("Exception while syncing Ascend inventory after world switch");
             return null;
         });
+    }
+
+    /**
+     * Cleans up Ascend-specific state when a player leaves the Ascend world
+     * without disconnecting (e.g. teleported to Hub). Mirrors disconnect cleanup
+     * but keeps player data cached for quick re-entry.
+     */
+    private void cleanupAscendState(UUID playerId) {
+        try { if (passiveEarningsManager != null) { passiveEarningsManager.onPlayerLeaveAscend(playerId); } }
+        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Leave cleanup: passiveEarnings"); }
+
+        try { AscendCommand.onPlayerDisconnect(playerId); }
+        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Leave cleanup: AscendCommand"); }
+
+        try { playerRefCache.remove(playerId); }
+        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Leave cleanup: playerRefCache"); }
+
+        try { BaseAscendPage.removeCurrentPage(playerId); }
+        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Leave cleanup: removeCurrentPage"); }
+
+        try { AscendLeaveInteraction.clearPendingLeave(playerId); }
+        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Leave cleanup: clearPendingLeave"); }
+
+        try { AscendSettingsPage.clearPlayer(playerId); }
+        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Leave cleanup: AscendSettingsPage"); }
+
+        try { AscendMusicPage.clearPlayer(playerId); }
+        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Leave cleanup: AscendMusicPage"); }
+
+        try { hudManager.removePlayer(playerId); }
+        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Leave cleanup: hudManager"); }
+
+        try { if (runTracker != null) { runTracker.cancelRun(playerId); } }
+        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Leave cleanup: runTracker"); }
+
+        try { if (robotManager != null) { robotManager.onPlayerLeave(playerId); } }
+        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Leave cleanup: robotManager"); }
+
+        try { if (challengeManager != null) { challengeManager.onPlayerDisconnect(playerId); } }
+        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Leave cleanup: challengeManager"); }
     }
 
     private void registerInteractionCodecs() {
