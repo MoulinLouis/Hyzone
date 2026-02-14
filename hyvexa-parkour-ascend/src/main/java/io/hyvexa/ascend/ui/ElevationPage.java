@@ -114,7 +114,6 @@ public class ElevationPage extends BaseAscendPage {
             BigNumber nextCost = AscendConstants.getElevationLevelUpCost(currentElevation, BigNumber.fromDouble(costMultiplier));
             player.sendMessage(Message.raw("[Ascend] You need " + FormatUtils.formatBigNumber(nextCost) + " accumulated vexa to elevate.")
                 .color(SystemMessageUtils.SECONDARY));
-            showToast(playerId, ToastType.ERROR, "Need " + FormatUtils.formatBigNumber(nextCost) + " accumulated vexa");
             return;
         }
 
@@ -122,9 +121,6 @@ public class ElevationPage extends BaseAscendPage {
         int newElevation = currentElevation + purchase.levels;
         playerStore.atomicSetElevationAndResetVexa(playerId, newElevation);
 
-        player.sendMessage(Message.raw("[Ascend] Elevation +" + purchase.levels
-            + " (" + AscendConstants.formatElevationMultiplier(newElevation) + ")!")
-            .color(SystemMessageUtils.SUCCESS));
         showToast(playerId, ToastType.ECONOMY, "Elevation: "
             + AscendConstants.formatElevationMultiplier(currentElevation) + " -> "
             + AscendConstants.formatElevationMultiplier(newElevation));

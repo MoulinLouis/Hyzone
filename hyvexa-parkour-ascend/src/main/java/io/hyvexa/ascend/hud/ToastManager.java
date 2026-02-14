@@ -5,7 +5,7 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 public class ToastManager {
 
     private static final int MAX_SLOTS = 4;
-    private static final long TOAST_DURATION_MS = 4000;
+    private static final long TOAST_DURATION_MS = 5000;
     private static final long CONSOLIDATION_WINDOW_MS = 1000;
 
     private final ToastEntry[] slots = new ToastEntry[MAX_SLOTS];

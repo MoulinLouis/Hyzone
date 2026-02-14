@@ -350,10 +350,6 @@ public class SummitPage extends BaseAscendPage {
             }
         }
 
-        player.sendMessage(Message.raw("[Summit] " + category.getDisplayName() + " Lv." + preview.currentLevel()
-            + " -> Lv." + result.newLevel() + " | " + formatBonus(category, preview.currentBonus())
-            + " -> " + formatBonus(category, preview.newBonus()))
-            .color(SystemMessageUtils.SUCCESS));
         showToast(playerId, ToastType.EVOLUTION,
             category.getDisplayName() + " Lv." + preview.currentLevel()
             + " -> Lv." + result.newLevel() + " | " + formatBonus(category, preview.currentBonus())
