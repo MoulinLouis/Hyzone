@@ -7,12 +7,14 @@ import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
 /**
  * Manages the Ascension prestige system.
- * Ascension grants skill tree points and resets ALL progress (vexa, elevation, Summit levels).
+ * Ascension grants skill tree points and resets progress (vexa, elevation, Summit levels) but preserves map PBs.
  */
 public class AscensionManager {
 
@@ -35,7 +37,7 @@ public class AscensionManager {
     }
 
     /**
-     * Performs an Ascension: grants 1 skill tree point, resets all progress.
+     * Performs an Ascension: grants 1 skill tree point, resets progress (preserves map PBs).
      *
      * @return the new Ascension count, or -1 if insufficient vexa
      */
@@ -92,8 +94,23 @@ public class AscensionManager {
         // Mark for full child-row deletion so stale DB rows are purged
         playerStore.markResetPending(playerId);
 
+        // Preserve personal bests before clearing map progress
+        Map<String, Long> savedPBs = new HashMap<>();
+        for (Map.Entry<String, AscendPlayerProgress.MapProgress> entry : progress.getMapProgress().entrySet()) {
+            Long bestTime = entry.getValue().getBestTimeMs();
+            if (bestTime != null) {
+                savedPBs.put(entry.getKey(), bestTime);
+            }
+        }
+
         // Reset all map progress (multipliers, unlocks, robots)
         progress.getMapProgress().clear();
+
+        // Restore personal bests
+        for (Map.Entry<String, Long> entry : savedPBs.entrySet()) {
+            AscendPlayerProgress.MapProgress mp = progress.getOrCreateMapProgress(entry.getKey());
+            mp.setBestTimeMs(entry.getValue());
+        }
 
         playerStore.markDirty(playerId);
 
