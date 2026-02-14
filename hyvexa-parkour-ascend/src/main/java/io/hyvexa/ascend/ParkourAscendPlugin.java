@@ -470,6 +470,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
                             hudManager.updateFull(context.ref, context.store, context.playerRef);
                         }
                         hudManager.updateTimer(context.playerRef);
+                        hudManager.updateRunnerBars(context.playerRef);
                         hudManager.updateToasts(context.playerRef.getUuid());
                     }
                 } finally {
