@@ -21,6 +21,7 @@ import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.AscendConstants.ChallengeType;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.ascension.AscensionManager;
+import io.hyvexa.ascend.command.AscendCommand;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
@@ -833,8 +834,9 @@ public class RobotManager {
         int targetIndex = progress.getAutoElevationTargetIndex();
 
         // Skip targets already surpassed by current multiplier
-        int currentMultiplier = progress.getElevationMultiplier();
-        while (targetIndex < targets.size() && targets.get(targetIndex) <= currentMultiplier) {
+        int currentLevel = progress.getElevationMultiplier();
+        long currentActualMultiplier = Math.round(AscendConstants.getElevationMultiplier(currentLevel));
+        while (targetIndex < targets.size() && targets.get(targetIndex) <= currentActualMultiplier) {
             targetIndex++;
         }
         if (targetIndex != progress.getAutoElevationTargetIndex()) {
@@ -851,7 +853,6 @@ public class RobotManager {
         }
 
         // Calculate purchasable levels
-        int currentLevel = progress.getElevationMultiplier();
         BigNumber accumulatedVexa = progress.getElevationAccumulatedVexa();
         AscendConstants.ElevationPurchaseResult result = AscendConstants.calculateElevationPurchase(currentLevel, accumulatedVexa);
         if (result.levels <= 0) return;
@@ -901,6 +902,9 @@ public class RobotManager {
 
         lastAutoElevationMs.put(playerId, now);
         playerStore.markDirty(playerId);
+
+        // Close the player's ascend page so they see fresh state on reopen
+        AscendCommand.forceCloseActivePage(playerId);
     }
 
     // Auto-Summit
@@ -987,6 +991,10 @@ public class RobotManager {
             }
 
             lastAutoSummitMs.put(playerId, now);
+
+            // Close the player's ascend page so they see fresh state on reopen
+            AscendCommand.forceCloseActivePage(playerId);
+
             return; // One summit per tick for smooth visual
         }
     }

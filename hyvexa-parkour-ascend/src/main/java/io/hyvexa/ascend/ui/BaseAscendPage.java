@@ -42,7 +42,16 @@ public abstract class BaseAscendPage extends InteractiveCustomUIPage<ButtonEvent
     }
 
     public void shutdown() {
-        this.close();
+        stopBackgroundTasks();
+        currentPageIds.remove(playerId, pageId);
+    }
+
+    /**
+     * Public wrapper for the protected {@code close()} so external callers
+     * (e.g., AscendCommand.forceCloseActivePage) can dismiss the page.
+     */
+    public void forceClose() {
+        close();
     }
 
     @Override
