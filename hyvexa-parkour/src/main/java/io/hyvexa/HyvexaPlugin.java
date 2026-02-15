@@ -19,6 +19,7 @@ import io.hyvexa.duel.data.DuelStatsStore;
 import io.hyvexa.duel.interaction.DuelMenuInteraction;
 import io.hyvexa.duel.interaction.ForfeitInteraction;
 import io.hyvexa.core.db.DatabaseManager;
+import io.hyvexa.core.discord.DiscordLinkStore;
 import io.hyvexa.core.economy.GemStore;
 import io.hyvexa.parkour.data.GlobalMessageStore;
 import io.hyvexa.parkour.data.MapStore;
@@ -55,6 +56,7 @@ import io.hyvexa.parkour.ghost.GhostRecorder;
 import io.hyvexa.common.ghost.GhostStore;
 import io.hyvexa.parkour.command.CheckpointCommand;
 import io.hyvexa.parkour.command.GemsCommand;
+import io.hyvexa.parkour.command.LinkCommand;
 import io.hyvexa.parkour.command.DatabaseClearCommand;
 import io.hyvexa.parkour.command.DatabaseReloadCommand;
 import io.hyvexa.parkour.command.DatabaseTestCommand;
@@ -171,6 +173,11 @@ public class HyvexaPlugin extends JavaPlugin {
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("Failed to initialize GemStore");
         }
+        try {
+            DiscordLinkStore.getInstance().initialize();
+        } catch (Exception e) {
+            LOGGER.atWarning().withCause(e).log("Failed to initialize DiscordLinkStore");
+        }
         this.collisionManager = new CollisionManager();
         this.mapStore = new MapStore();
         this.mapStore.syncLoad();
@@ -251,6 +258,7 @@ public class HyvexaPlugin extends JavaPlugin {
         this.getCommandRegistry().registerCommand(new MessageTestCommand());
         this.getCommandRegistry().registerCommand(new DuelCommand(this.duelTracker, this.runTracker));
         this.getCommandRegistry().registerCommand(new GemsCommand());
+        this.getCommandRegistry().registerCommand(new LinkCommand());
 
         registerNoDropSystem();
         registerNoBreakSystem();
@@ -284,6 +292,14 @@ public class HyvexaPlugin extends JavaPlugin {
                     }
                     if (playerRef != null && shouldApplyParkourMode(playerRef, store)) {
                         hudManager.ensureRunHud(playerRef);
+                    }
+                    // Check for pending Discord link gem reward
+                    if (player != null && playerRef != null) {
+                        try {
+                            DiscordLinkStore.getInstance().checkAndRewardGems(playerRef.getUuid(), player);
+                        } catch (Exception e) {
+                            LOGGER.atWarning().withCause(e).log("Discord link check failed");
+                        }
                     }
                     // Hide all existing ghost NPCs from the newly connected player
                     if (ghostNpcManager != null && playerRef != null) {
@@ -331,6 +347,9 @@ public class HyvexaPlugin extends JavaPlugin {
 
                 try { GemStore.getInstance().evictPlayer(playerId); }
                 catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: GemStore"); }
+
+                try { DiscordLinkStore.getInstance().evictPlayer(playerId); }
+                catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: DiscordLinkStore"); }
             }
 
             try { playtimeManager.decrementOnlineCount(); }

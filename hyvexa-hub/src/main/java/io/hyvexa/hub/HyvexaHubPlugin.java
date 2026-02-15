@@ -24,6 +24,7 @@ import io.hyvexa.common.util.InventoryUtils;
 import io.hyvexa.common.util.ModeGate;
 import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.core.db.DatabaseManager;
+import io.hyvexa.core.discord.DiscordLinkStore;
 import io.hyvexa.core.economy.GemStore;
 import io.hyvexa.hub.command.HubCommand;
 import io.hyvexa.hub.hud.HubHud;
@@ -97,6 +98,11 @@ public class HyvexaHubPlugin extends JavaPlugin {
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("Failed to initialize GemStore for Hub");
         }
+        try {
+            DiscordLinkStore.getInstance().initialize();
+        } catch (Exception e) {
+            LOGGER.atWarning().withCause(e).log("Failed to initialize DiscordLinkStore for Hub");
+        }
         router = new HubRouter();
         preloadWorlds();
 
@@ -137,6 +143,11 @@ public class HyvexaHubPlugin extends JavaPlugin {
                 InventoryUtils.clearAllContainers(player);
                 giveHubItems(player);
                 requestHubHudAttach(ref, store, playerRef);
+                try {
+                    DiscordLinkStore.getInstance().checkAndRewardGems(playerRef.getUuid(), player);
+                } catch (Exception e) {
+                    LOGGER.atWarning().withCause(e).log("Discord link check failed (hub)");
+                }
             }, "hub.player_ready.setup", "hub player ready setup",
                     "player=" + playerIdText + ", world=" + worldName);
         });
@@ -184,6 +195,8 @@ public class HyvexaHubPlugin extends JavaPlugin {
             clearHubHudState(playerId);
             try { GemStore.getInstance().evictPlayer(playerId); }
             catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: GemStore"); }
+            try { DiscordLinkStore.getInstance().evictPlayer(playerId); }
+            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: DiscordLinkStore"); }
         });
 
         for (PlayerRef playerRef : Universe.get().getPlayers()) {

@@ -515,3 +515,45 @@ Notes:
 - `completion_time_ms` stores the player's personal best time for this recording
 - Recordings are only saved when achieving a new personal best
 - Table is created automatically by `GhostStore.ensureGhostTableExists()` on startup
+
+---
+
+# Discord Linking Tables
+
+## discord_link_codes
+Stores temporary link codes generated in-game. Codes expire after 5 minutes.
+
+Suggested schema:
+```sql
+CREATE TABLE discord_link_codes (
+  code VARCHAR(7) NOT NULL PRIMARY KEY,
+  player_uuid VARCHAR(36) NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  expires_at TIMESTAMP NOT NULL
+) ENGINE=InnoDB;
+```
+
+Notes:
+- Codes are 6 alphanumeric characters, displayed as XXX-XXX (stored without dash)
+- Expired codes are cleaned on startup and replaced when a player generates a new code
+- Auto-created by `DiscordLinkStore.initialize()` on startup
+
+## discord_links
+Stores permanent Discord-Minecraft account links and gem reward tracking.
+
+Suggested schema:
+```sql
+CREATE TABLE discord_links (
+  player_uuid VARCHAR(36) NOT NULL PRIMARY KEY,
+  discord_id VARCHAR(20) NOT NULL UNIQUE,
+  linked_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  gems_rewarded BOOLEAN NOT NULL DEFAULT FALSE
+) ENGINE=InnoDB;
+```
+
+Notes:
+- One-to-one mapping: each game account links to exactly one Discord account and vice versa
+- `gems_rewarded` tracks whether the one-time 100 gem reward has been given
+- The Discord bot writes to this table; the plugin reads it on player login
+- Auto-created by `DiscordLinkStore.initialize()` on startup
+- Managed by `hyvexa-core/src/main/java/io/hyvexa/core/discord/DiscordLinkStore.java`

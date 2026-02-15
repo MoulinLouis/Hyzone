@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Added
+- **Global: Discord account linking** - Players use `/link` in-game to get a code, enter it on Discord via `/link <code>`, and receive a one-time 100 gem reward on next login. Includes a Discord bot (`discord-bot/`) and shared MySQL tables for cross-system communication.
+
 ### Changed
 - **Ascend: Onboarding alignment overhaul** - Centralized all tutorial/welcome text into AscendOnboardingCopy.java. Fixed Ascension tutorial claiming "8 nodes" (actual: 11) and naming non-existent nodes. Fixed Welcome page saying "4 items" (actual: 5). Replaced placeholder text in all 6 tutorial .ui files. Added pre-reset explainer modal before auto-ascension cinematic. Added fallback tutorial triggers when opening elevation/summit/ascension pages. Standardized terminology to "Ascendancy Tree" + "AP" everywhere.
 - **Ascend: Summit hard cap at level 1000 with deep cap nerf** - Each summit category now has a maximum level of 1000. Added a "deep cap" at level 500 where growth transitions from √ to ⁴√ (heavy diminishing returns). XP is capped, UI shows "MAX" state, and summiting is blocked once reached.

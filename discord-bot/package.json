@@ -1,0 +1,14 @@
+{
+  "name": "hyvexa-discord-bot",
+  "version": "1.0.0",
+  "description": "Discord bot for Hyvexa account linking and gem rewards",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.14.1",
+    "dotenv": "^16.3.1",
+    "mysql2": "^3.6.5"
+  }
+}
