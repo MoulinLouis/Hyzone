@@ -4,6 +4,21 @@ What's new in Hyvexa? All player-facing changes, newest first.
 
 ---
 
+## v0.1.1 - 2026-02-15
+
+### New
+- **Auto-Summit** - Unlock the Auto-Summit skill node to automatically cycle through Summit categories with configurable thresholds and timer delay. Managed from the Automation page.
+- **/hello** - Say hello and get a greeting back.
+- **/ping** - Check your connection to the server.
+
+### Improved
+- **Ascendancy Tree rebalanced** - Summit categories reordered, skill costs adjusted, Momentum Surge reduced from x3 to x2.5, and tree layout streamlined.
+
+### Fixed
+- **Multiplier Boost skill** - Now correctly adds +0.10 to your base multiplier gain per run instead of applying a flat +10% bonus.
+
+---
+
 ## v0.1.0 - 2026-02-15
 
 ### New
