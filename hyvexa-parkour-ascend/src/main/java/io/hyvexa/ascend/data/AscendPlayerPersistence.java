@@ -560,6 +560,7 @@ class AscendPlayerPersistence {
             loadMapProgressForPlayer(conn, playerId, progress);
             loadSummitLevelsForPlayer(conn, playerId, progress);
             loadSkillNodesForPlayer(conn, playerId, progress);
+            compensateSkillTreeCostChanges(playerId, progress);
             loadAchievementsForPlayer(conn, playerId, progress);
         } catch (SQLException e) {
             LOGGER.atSevere().log("Failed to load player " + playerId + ": " + e.getMessage());
@@ -641,6 +642,21 @@ class AscendPlayerPersistence {
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * Compensates players whose unlocked skill nodes now cost more after a tree rebalance.
+     * If spent points exceed total points, grants bonus AP to cover the deficit.
+     */
+    private void compensateSkillTreeCostChanges(UUID playerId, AscendPlayerProgress progress) {
+        int spent = progress.getSpentSkillPoints();
+        int total = progress.getSkillTreePoints();
+        if (spent > total) {
+            int deficit = spent - total;
+            progress.setSkillTreePoints(spent);
+            LOGGER.atInfo().log("[SkillTree] Compensated player " + playerId
+                + " with +" + deficit + " AP for tree rebalance (was " + total + ", now " + spent + ")");
         }
     }
 
