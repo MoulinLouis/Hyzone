@@ -503,15 +503,17 @@ public class AscendMapSelectPage extends BaseAscendPage {
         // Get Summit bonuses (Multiplier Gain + Evolution Power)
         double multiplierGainBonus = 1.0;
         double evolutionPowerBonus = 3.0;
+        double baseMultiplierBonus = 0.0;
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         if (plugin != null) {
             SummitManager summitManager = plugin.getSummitManager();
             if (summitManager != null && playerId != null) {
                 multiplierGainBonus = summitManager.getMultiplierGainBonus(playerId);
                 evolutionPowerBonus = summitManager.getEvolutionPowerBonus(playerId);
+                baseMultiplierBonus = summitManager.getBaseMultiplierBonus(playerId);
             }
         }
-        BigNumber increment = AscendConstants.getRunnerMultiplierIncrement(stars, multiplierGainBonus, evolutionPowerBonus);
+        BigNumber increment = AscendConstants.getRunnerMultiplierIncrement(stars, multiplierGainBonus, evolutionPowerBonus, baseMultiplierBonus);
         // Format: show 2 decimals for values under 1, 1 decimal for 1-10, integer for 10+
         double val = increment.toDouble();
         if (val < 1.0) {
@@ -530,15 +532,17 @@ public class AscendMapSelectPage extends BaseAscendPage {
     private String formatEvolveGain(int stars, java.util.UUID playerId) {
         double multiplierGainBonus = 1.0;
         double evolutionPowerBonus = 3.0;
+        double baseMultiplierBonus = 0.0;
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         if (plugin != null) {
             SummitManager summitManager = plugin.getSummitManager();
             if (summitManager != null && playerId != null) {
                 multiplierGainBonus = summitManager.getMultiplierGainBonus(playerId);
                 evolutionPowerBonus = summitManager.getEvolutionPowerBonus(playerId);
+                baseMultiplierBonus = summitManager.getBaseMultiplierBonus(playerId);
             }
         }
-        BigNumber nextIncrement = AscendConstants.getRunnerMultiplierIncrement(stars + 1, multiplierGainBonus, evolutionPowerBonus);
+        BigNumber nextIncrement = AscendConstants.getRunnerMultiplierIncrement(stars + 1, multiplierGainBonus, evolutionPowerBonus, baseMultiplierBonus);
         double val = nextIncrement.toDouble();
         String formatted;
         if (val < 1.0) {
@@ -1074,7 +1078,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         boolean hasSurge = plugin != null && plugin.getAscensionManager() != null
                 && plugin.getAscensionManager().hasMomentumSurge(playerId);
-        String mult = hasSurge ? "x3" : "x2";
+        String mult = hasSurge ? "x2.5" : "x2";
         long remainingMs = mapProgress.getMomentumExpireTimeMs() - System.currentTimeMillis();
         if (remainingMs <= 0) {
             return "MOMENTUM " + mult;

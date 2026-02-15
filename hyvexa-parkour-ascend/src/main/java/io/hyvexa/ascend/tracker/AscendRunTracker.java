@@ -283,11 +283,13 @@ public class AscendRunTracker {
         int runnerStars = playerStore.getRobotStars(playerId, run.mapId);
         double multiplierGainBonus = 1.0;
         double evolutionPowerBonus = 3.0;
+        double baseMultiplierBonus = 0.0;
         if (plugin != null && plugin.getSummitManager() != null) {
             multiplierGainBonus = plugin.getSummitManager().getMultiplierGainBonus(playerId);
             evolutionPowerBonus = plugin.getSummitManager().getEvolutionPowerBonus(playerId);
+            baseMultiplierBonus = plugin.getSummitManager().getBaseMultiplierBonus(playerId);
         }
-        BigNumber runnerIncrement = AscendConstants.getRunnerMultiplierIncrement(runnerStars, multiplierGainBonus, evolutionPowerBonus);
+        BigNumber runnerIncrement = AscendConstants.getRunnerMultiplierIncrement(runnerStars, multiplierGainBonus, evolutionPowerBonus, baseMultiplierBonus);
 
         // Challenge 1 reward: x1.5 multiplier gain on map 5 (displayOrder 4)
         AscendPlayerProgress challengeProgress = playerStore.getPlayer(playerId);
@@ -371,7 +373,7 @@ public class AscendRunTracker {
             if (!wasActive) {
                 String mapName = map.getName() != null && !map.getName().isBlank() ? map.getName() : map.getId();
                 boolean hasSurge = plugin.getAscensionManager().hasMomentumSurge(playerId);
-                showToast(playerId, ToastType.ECONOMY, "Momentum: x" + (hasSurge ? "3" : "2") + " speed on " + mapName);
+                showToast(playerId, ToastType.ECONOMY, "Momentum: x" + (hasSurge ? "2.5" : "2") + " speed on " + mapName);
             }
         }
 

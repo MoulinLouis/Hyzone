@@ -183,14 +183,22 @@ public class SummitManager {
             }
         }
 
-        // Skill tree: Multiplier Boost adds +0.10 to base multiplier gain
-        if (plugin != null && plugin.getAscensionManager() != null
-                && plugin.getAscensionManager().hasMultiplierBoost(playerId)) {
-            fullBonus += 0.10;
-        }
         // Challenge 3 reward: x1.2 permanent multiplier gain bonus
         fullBonus = applyChallengeRewardMultiplierGain(playerId, fullBonus);
         return fullBonus;
+    }
+
+    /**
+     * Get additive bonus to base multiplier increment from Multiplier Boost skill.
+     * @return 0.10 if skill unlocked, 0.0 otherwise
+     */
+    public double getBaseMultiplierBonus(UUID playerId) {
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin != null && plugin.getAscensionManager() != null
+                && plugin.getAscensionManager().hasMultiplierBoost(playerId)) {
+            return 0.10;
+        }
+        return 0.0;
     }
 
     private double applyChallengeRewardMultiplierGain(UUID playerId, double value) {
