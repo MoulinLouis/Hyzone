@@ -19,6 +19,7 @@ import io.hyvexa.ascend.command.HudPreviewCommand;
 import io.hyvexa.ascend.command.SummitCommand;
 import io.hyvexa.ascend.data.AscendDatabaseSetup;
 import io.hyvexa.core.db.DatabaseManager;
+import io.hyvexa.core.discord.DiscordLinkStore;
 import io.hyvexa.core.economy.GemStore;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerStore;
@@ -122,6 +123,11 @@ public class ParkourAscendPlugin extends JavaPlugin {
             GemStore.getInstance().initialize();
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("Failed to initialize GemStore for Ascend");
+        }
+        try {
+            DiscordLinkStore.getInstance().initialize();
+        } catch (Exception e) {
+            LOGGER.atWarning().withCause(e).log("Failed to initialize DiscordLinkStore for Ascend");
         }
 
         // Initialize whitelist manager
@@ -280,6 +286,11 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     AscendInventoryUtils.giveMenuItems(player);
                     hudManager.attach(playerRef, player);
                     AscendMusicPage.applyStoredMusic(playerRef);
+                    try {
+                        DiscordLinkStore.getInstance().checkAndRewardGems(playerId, player);
+                    } catch (Exception e) {
+                        LOGGER.atWarning().withCause(e).log("Discord link check failed (ascend)");
+                    }
                 }, world).orTimeout(5, TimeUnit.SECONDS).exceptionally(ex -> {
                     LOGGER.atWarning().withCause(ex).log("Exception in PlayerReadyEvent async task");
                     return null;
@@ -344,6 +355,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     "Disconnect cleanup: playerStore");
             runSafe(() -> GemStore.getInstance().evictPlayer(playerId),
                     "Disconnect cleanup: GemStore");
+            runSafe(() -> DiscordLinkStore.getInstance().evictPlayer(playerId),
+                    "Disconnect cleanup: DiscordLinkStore");
         });
 
         tickTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(
