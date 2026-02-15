@@ -37,7 +37,7 @@ public class SummitPage extends BaseAscendPage {
 
     private static final String BUTTON_CLOSE = "Close";
     private static final String BUTTON_SUMMIT_PREFIX = "Summit_";
-    private static final long REFRESH_INTERVAL_MS = 200L;
+    private static final long REFRESH_INTERVAL_MS = 1000L;
 
     private final AscendPlayerStore playerStore;
     private final SummitManager summitManager;

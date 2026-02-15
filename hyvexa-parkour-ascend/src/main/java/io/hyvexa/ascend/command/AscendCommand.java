@@ -217,6 +217,8 @@ public class AscendCommand extends AbstractAsyncCommand {
         }
         ElevationPage page = new ElevationPage(playerRef, plugin.getPlayerStore());
         openTrackedPage(player, playerRef, ref, store, page);
+        player.sendMessage(Message.raw("[Ascend] Having trouble elevating? Contact Playfade on Discord.")
+            .color(SystemMessageUtils.SECONDARY));
     }
 
     private void openSummitPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store, String[] args) {
@@ -231,6 +233,8 @@ public class AscendCommand extends AbstractAsyncCommand {
         }
         SummitPage page = new SummitPage(playerRef, plugin.getPlayerStore(), plugin.getSummitManager());
         openTrackedPage(player, playerRef, ref, store, page);
+        player.sendMessage(Message.raw("[Ascend] Having trouble summiting? Contact Playfade on Discord.")
+            .color(SystemMessageUtils.SECONDARY));
     }
 
     private void openAscensionPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
