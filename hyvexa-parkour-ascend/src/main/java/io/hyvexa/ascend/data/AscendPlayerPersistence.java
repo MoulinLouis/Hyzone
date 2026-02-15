@@ -207,8 +207,9 @@ class AscendPlayerPersistence {
                 elevation_accumulated_vexa_mantissa, elevation_accumulated_vexa_exp10,
                 auto_upgrade_enabled, auto_evolution_enabled, seen_tutorials, hide_other_runners,
                 break_ascension_enabled,
-                auto_elevation_enabled, auto_elevation_timer_seconds, auto_elevation_targets, auto_elevation_target_index)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                auto_elevation_enabled, auto_elevation_timer_seconds, auto_elevation_targets, auto_elevation_target_index,
+                auto_summit_enabled, auto_summit_timer_seconds, auto_summit_config, auto_summit_rotation_index)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 player_name = VALUES(player_name),
                 vexa_mantissa = VALUES(vexa_mantissa), vexa_exp10 = VALUES(vexa_exp10),
@@ -233,7 +234,11 @@ class AscendPlayerPersistence {
                 auto_elevation_enabled = VALUES(auto_elevation_enabled),
                 auto_elevation_timer_seconds = VALUES(auto_elevation_timer_seconds),
                 auto_elevation_targets = VALUES(auto_elevation_targets),
-                auto_elevation_target_index = VALUES(auto_elevation_target_index)
+                auto_elevation_target_index = VALUES(auto_elevation_target_index),
+                auto_summit_enabled = VALUES(auto_summit_enabled),
+                auto_summit_timer_seconds = VALUES(auto_summit_timer_seconds),
+                auto_summit_config = VALUES(auto_summit_config),
+                auto_summit_rotation_index = VALUES(auto_summit_rotation_index)
             """;
 
         String mapSql = """
@@ -347,6 +352,10 @@ class AscendPlayerPersistence {
                     playerStmt.setInt(26, progress.getAutoElevationTimerSeconds());
                     playerStmt.setString(27, serializeTargets(progress.getAutoElevationTargets()));
                     playerStmt.setInt(28, progress.getAutoElevationTargetIndex());
+                    playerStmt.setBoolean(29, progress.isAutoSummitEnabled());
+                    playerStmt.setInt(30, progress.getAutoSummitTimerSeconds());
+                    playerStmt.setString(31, serializeAutoSummitConfig(progress.getAutoSummitConfig()));
+                    playerStmt.setInt(32, progress.getAutoSummitRotationIndex());
                     playerStmt.addBatch();
 
                     // Save map progress
@@ -467,7 +476,8 @@ class AscendPlayerPersistence {
                    elevation_accumulated_vexa_mantissa, elevation_accumulated_vexa_exp10,
                    auto_upgrade_enabled, auto_evolution_enabled, seen_tutorials, hide_other_runners,
                    break_ascension_enabled,
-                   auto_elevation_enabled, auto_elevation_timer_seconds, auto_elevation_targets, auto_elevation_target_index
+                   auto_elevation_enabled, auto_elevation_timer_seconds, auto_elevation_targets, auto_elevation_target_index,
+                   auto_summit_enabled, auto_summit_timer_seconds, auto_summit_config, auto_summit_rotation_index
             FROM ascend_players
             WHERE uuid = ?
             """;
@@ -532,6 +542,11 @@ class AscendPlayerPersistence {
                         progress.setAutoElevationTimerSeconds(safeGetInt(rs, "auto_elevation_timer_seconds", 0));
                         progress.setAutoElevationTargets(parseTargets(safeGetString(rs, "auto_elevation_targets", "[]")));
                         progress.setAutoElevationTargetIndex(safeGetInt(rs, "auto_elevation_target_index", 0));
+
+                        progress.setAutoSummitEnabled(safeGetBoolean(rs, "auto_summit_enabled", false));
+                        progress.setAutoSummitTimerSeconds(safeGetInt(rs, "auto_summit_timer_seconds", 0));
+                        progress.setAutoSummitConfig(parseAutoSummitConfig(safeGetString(rs, "auto_summit_config", "[]")));
+                        progress.setAutoSummitRotationIndex(safeGetInt(rs, "auto_summit_rotation_index", 0));
                     }
                 }
             }
@@ -972,6 +987,83 @@ class AscendPlayerPersistence {
                 // Skip invalid entries
             }
         }
+        return result;
+    }
+
+    /**
+     * Serialize auto-summit config to JSON.
+     * Format: [{"enabled":true,"increment":10},{"enabled":false,"increment":5},...]
+     */
+    static String serializeAutoSummitConfig(java.util.List<AscendPlayerProgress.AutoSummitCategoryConfig> config) {
+        if (config == null || config.isEmpty()) {
+            return "[]";
+        }
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < config.size(); i++) {
+            if (i > 0) sb.append(",");
+            AscendPlayerProgress.AutoSummitCategoryConfig c = config.get(i);
+            sb.append("{\"enabled\":").append(c.isEnabled())
+              .append(",\"increment\":").append(c.getIncrement())
+              .append("}");
+        }
+        sb.append("]");
+        return sb.toString();
+    }
+
+    /**
+     * Parse auto-summit config from JSON.
+     * Expects: [{"enabled":true,"increment":10},...]
+     */
+    static java.util.List<AscendPlayerProgress.AutoSummitCategoryConfig> parseAutoSummitConfig(String json) {
+        java.util.List<AscendPlayerProgress.AutoSummitCategoryConfig> result = new java.util.ArrayList<>();
+        if (json == null || json.isBlank() || json.equals("[]")) {
+            // Return defaults for 3 categories
+            for (int i = 0; i < 3; i++) {
+                result.add(new AscendPlayerProgress.AutoSummitCategoryConfig(false, 10));
+            }
+            return result;
+        }
+
+        // Simple JSON parsing for {"enabled":bool,"increment":int} objects
+        String trimmed = json.trim();
+        if (trimmed.startsWith("[")) trimmed = trimmed.substring(1);
+        if (trimmed.endsWith("]")) trimmed = trimmed.substring(0, trimmed.length() - 1);
+
+        // Split by "},{"
+        String[] parts = trimmed.split("\\},\\s*\\{");
+        for (String part : parts) {
+            String cleaned = part.replace("{", "").replace("}", "").trim();
+            if (cleaned.isBlank()) continue;
+
+            boolean enabled = false;
+            int increment = 10;
+
+            for (String field : cleaned.split(",")) {
+                String[] kv = field.split(":");
+                if (kv.length != 2) continue;
+                String key = kv[0].trim().replace("\"", "");
+                String val = kv[1].trim().replace("\"", "");
+                if ("enabled".equals(key)) {
+                    enabled = "true".equalsIgnoreCase(val);
+                } else if ("increment".equals(key)) {
+                    try {
+                        increment = Integer.parseInt(val);
+                    } catch (NumberFormatException e) {
+                        increment = 10;
+                    }
+                }
+            }
+            result.add(new AscendPlayerProgress.AutoSummitCategoryConfig(enabled, increment));
+        }
+
+        // Ensure exactly 3 entries
+        while (result.size() < 3) {
+            result.add(new AscendPlayerProgress.AutoSummitCategoryConfig(false, 10));
+        }
+        if (result.size() > 3) {
+            result = new java.util.ArrayList<>(result.subList(0, 3));
+        }
+
         return result;
     }
 }

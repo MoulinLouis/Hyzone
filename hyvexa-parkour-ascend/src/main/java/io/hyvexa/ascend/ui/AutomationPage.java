@@ -34,8 +34,11 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
     private static final String BUTTON_ELEV_ADD = "ElevAdd";
     private static final String BUTTON_ELEV_CLEAR = "ElevClear";
     private static final String BUTTON_ELEV_REMOVE_PREFIX = "ElevRemove";
+    private static final String BUTTON_TOGGLE_SUMMIT = "ToggleSummit";
+    private static final String BUTTON_SUM_CAT_TOGGLE_PREFIX = "SumCatToggle";
 
     private static final int MAX_TARGETS = 5;
+    private static final int SUMMIT_CATEGORIES = 3;
 
     private static final String COLOR_ON = "#4ade80";
     private static final String COLOR_OFF = "#6b7280";
@@ -47,6 +50,8 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
 
     private String timerInput;
     private String addValueInput;
+    private String sumTimerInput;
+    private final String[] sumIncrementInput = new String[SUMMIT_CATEGORIES];
 
     public AutomationPage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore, AscensionManager ascensionManager) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, AutomationData.CODEC);
@@ -88,6 +93,25 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ElevRemove" + i,
                 EventData.of(AutomationData.KEY_BUTTON, BUTTON_ELEV_REMOVE_PREFIX + i), false);
         }
+
+        // Auto-Summit bindings
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SumToggleButton",
+            EventData.of(AutomationData.KEY_BUTTON, BUTTON_TOGGLE_SUMMIT), false);
+
+        for (int i = 0; i < SUMMIT_CATEGORIES; i++) {
+            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SumCatToggle" + i,
+                EventData.of(AutomationData.KEY_BUTTON, BUTTON_SUM_CAT_TOGGLE_PREFIX + i), false);
+        }
+
+        eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#SumTimerField",
+            EventData.of(AutomationData.KEY_SUM_TIMER, "#SumTimerField.Value"), false);
+
+        eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#SumIncField0",
+            EventData.of(AutomationData.KEY_SUM_INC_0, "#SumIncField0.Value"), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#SumIncField1",
+            EventData.of(AutomationData.KEY_SUM_INC_1, "#SumIncField1.Value"), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#SumIncField2",
+            EventData.of(AutomationData.KEY_SUM_INC_2, "#SumIncField2.Value"), false);
 
         updateState(ref, store, commandBuilder);
     }
@@ -210,6 +234,81 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
             commandBuilder.set("#ElevNextTarget.Text",
                 "Next target: x" + targets.get(targetIndex) + " (" + (targetIndex + 1) + "/" + targets.size() + ")");
         }
+
+        // Auto-Summit section
+        boolean hasSumSkill = ascensionManager.hasAutoSummit(playerId);
+        boolean isSumEnabled = playerStore.isAutoSummitEnabled(playerId);
+
+        if (!hasSumSkill) {
+            commandBuilder.set("#SumContent.Visible", false);
+            commandBuilder.set("#SumLockedOverlay.Visible", true);
+        } else {
+            commandBuilder.set("#SumContent.Visible", true);
+            commandBuilder.set("#SumLockedOverlay.Visible", false);
+
+            if (isSumEnabled) {
+                commandBuilder.set("#SumToggleBorder.Background", COLOR_ON);
+                commandBuilder.set("#SumToggleText.Text", "Disable");
+                commandBuilder.set("#SumToggleText.Style.TextColor", COLOR_ON);
+                commandBuilder.set("#SumStatusLabel.Text", "Status: ON");
+                commandBuilder.set("#SumStatusLabel.Style.TextColor", COLOR_ON);
+            } else {
+                commandBuilder.set("#SumToggleBorder.Background", COLOR_ACCENT);
+                commandBuilder.set("#SumToggleText.Text", "Enable");
+                commandBuilder.set("#SumToggleText.Style.TextColor", COLOR_ACCENT);
+                commandBuilder.set("#SumStatusLabel.Text", "Status: OFF");
+                commandBuilder.set("#SumStatusLabel.Style.TextColor", COLOR_OFF);
+            }
+        }
+
+        // Summit timer
+        commandBuilder.set("#SumTimerField.Value", String.valueOf(playerStore.getAutoSummitTimerSeconds(playerId)));
+
+        // Summit categories
+        List<AscendPlayerProgress.AutoSummitCategoryConfig> sumConfig = playerStore.getAutoSummitConfig(playerId);
+        io.hyvexa.ascend.AscendConstants.SummitCategory[] categories = io.hyvexa.ascend.AscendConstants.SummitCategory.values();
+        int rotationIndex = playerStore.getAutoSummitRotationIndex(playerId);
+
+        for (int i = 0; i < SUMMIT_CATEGORIES; i++) {
+            AscendPlayerProgress.AutoSummitCategoryConfig catConfig =
+                i < sumConfig.size() ? sumConfig.get(i) : new AscendPlayerProgress.AutoSummitCategoryConfig(false, 10);
+
+            // Level display
+            int level = 0;
+            if (i < categories.length) {
+                level = playerStore.getSummitLevel(playerId, categories[i]);
+            }
+            commandBuilder.set("#SumCatLevel" + i + ".Text", "Lv " + level);
+
+            // Toggle state
+            if (catConfig.isEnabled()) {
+                commandBuilder.set("#SumCatBorder" + i + ".Background", COLOR_ON);
+                commandBuilder.set("#SumCatToggleText" + i + ".Text", "ON");
+                commandBuilder.set("#SumCatToggleText" + i + ".Style.TextColor", COLOR_ON);
+            } else {
+                commandBuilder.set("#SumCatBorder" + i + ".Background", COLOR_LOCKED_BORDER);
+                commandBuilder.set("#SumCatToggleText" + i + ".Text", "OFF");
+                commandBuilder.set("#SumCatToggleText" + i + ".Style.TextColor", COLOR_OFF);
+            }
+
+            // Increment field value
+            commandBuilder.set("#SumIncField" + i + ".Value", String.valueOf(catConfig.getIncrement()));
+        }
+
+        // Next category info
+        String nextCatName = null;
+        for (int i = 0; i < SUMMIT_CATEGORIES; i++) {
+            int idx = (rotationIndex + i) % SUMMIT_CATEGORIES;
+            if (idx < sumConfig.size() && sumConfig.get(idx).isEnabled() && idx < categories.length) {
+                nextCatName = categories[idx].getDisplayName();
+                break;
+            }
+        }
+        if (nextCatName != null) {
+            commandBuilder.set("#SumNextLabel.Text", "Next: " + nextCatName);
+        } else {
+            commandBuilder.set("#SumNextLabel.Text", "No categories enabled.");
+        }
     }
 
     @Override
@@ -224,6 +323,22 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
         }
         if (data.addValue != null) {
             addValueInput = data.addValue;
+        }
+        if (data.sumTimerValue != null) {
+            sumTimerInput = data.sumTimerValue;
+            handleSumTimerChanged(ref, store);
+        }
+        if (data.sumInc0 != null) {
+            sumIncrementInput[0] = data.sumInc0;
+            handleSumIncrementChanged(ref, store, 0);
+        }
+        if (data.sumInc1 != null) {
+            sumIncrementInput[1] = data.sumInc1;
+            handleSumIncrementChanged(ref, store, 1);
+        }
+        if (data.sumInc2 != null) {
+            sumIncrementInput[2] = data.sumInc2;
+            handleSumIncrementChanged(ref, store, 2);
         }
 
         if (data.button == null) {
@@ -265,6 +380,21 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
             try {
                 int index = Integer.parseInt(indexStr);
                 handleRemoveTarget(ref, store, index);
+            } catch (NumberFormatException ignored) {
+            }
+            return;
+        }
+
+        if (BUTTON_TOGGLE_SUMMIT.equals(data.button)) {
+            handleToggleSummit(ref, store);
+            return;
+        }
+
+        if (data.button.startsWith(BUTTON_SUM_CAT_TOGGLE_PREFIX)) {
+            String indexStr = data.button.substring(BUTTON_SUM_CAT_TOGGLE_PREFIX.length());
+            try {
+                int index = Integer.parseInt(indexStr);
+                handleSumCategoryToggle(ref, store, index);
             } catch (NumberFormatException ignored) {
             }
         }
@@ -479,10 +609,112 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
         sendUpdate(updateBuilder, null, false);
     }
 
+    private void handleToggleSummit(Ref<EntityStore> ref, Store<EntityStore> store) {
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (playerRef == null || player == null) {
+            return;
+        }
+
+        UUID playerId = playerRef.getUuid();
+
+        if (!ascensionManager.hasAutoSummit(playerId)) {
+            player.sendMessage(Message.raw("[Automation] Unlock 'Auto-Summit' in the Ascendancy Tree first.")
+                .color(SystemMessageUtils.SECONDARY));
+            return;
+        }
+
+        boolean current = playerStore.isAutoSummitEnabled(playerId);
+        boolean newState = !current;
+        playerStore.setAutoSummitEnabled(playerId, newState);
+
+        if (newState) {
+            player.sendMessage(Message.raw("[Automation] Auto-summit enabled.")
+                .color(SystemMessageUtils.SUCCESS));
+        } else {
+            player.sendMessage(Message.raw("[Automation] Auto-summit disabled.")
+                .color(SystemMessageUtils.SECONDARY));
+        }
+
+        UICommandBuilder updateBuilder = new UICommandBuilder();
+        updateState(ref, store, updateBuilder);
+        sendUpdate(updateBuilder, null, false);
+    }
+
+    private void handleSumTimerChanged(Ref<EntityStore> ref, Store<EntityStore> store) {
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        if (playerRef == null || sumTimerInput == null) {
+            return;
+        }
+
+        try {
+            int timer = (int) Double.parseDouble(sumTimerInput);
+            timer = Math.max(0, Math.min(86400, timer));
+            playerStore.setAutoSummitTimerSeconds(playerRef.getUuid(), timer);
+        } catch (NumberFormatException ignored) {
+        }
+    }
+
+    private void handleSumCategoryToggle(Ref<EntityStore> ref, Store<EntityStore> store, int index) {
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        if (playerRef == null || index < 0 || index >= SUMMIT_CATEGORIES) {
+            return;
+        }
+
+        UUID playerId = playerRef.getUuid();
+        List<AscendPlayerProgress.AutoSummitCategoryConfig> config =
+            new ArrayList<>(playerStore.getAutoSummitConfig(playerId));
+
+        while (config.size() <= index) {
+            config.add(new AscendPlayerProgress.AutoSummitCategoryConfig(false, 10));
+        }
+
+        AscendPlayerProgress.AutoSummitCategoryConfig catConfig = config.get(index);
+        config.set(index, new AscendPlayerProgress.AutoSummitCategoryConfig(!catConfig.isEnabled(), catConfig.getIncrement()));
+        playerStore.setAutoSummitConfig(playerId, config);
+
+        UICommandBuilder updateBuilder = new UICommandBuilder();
+        updateState(ref, store, updateBuilder);
+        sendUpdate(updateBuilder, null, false);
+    }
+
+    private void handleSumIncrementChanged(Ref<EntityStore> ref, Store<EntityStore> store, int index) {
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        if (playerRef == null || index < 0 || index >= SUMMIT_CATEGORIES) {
+            return;
+        }
+        String input = sumIncrementInput[index];
+        if (input == null) {
+            return;
+        }
+
+        try {
+            int increment = (int) Double.parseDouble(input);
+            increment = Math.max(1, Math.min(1000, increment));
+
+            UUID playerId = playerRef.getUuid();
+            List<AscendPlayerProgress.AutoSummitCategoryConfig> config =
+                new ArrayList<>(playerStore.getAutoSummitConfig(playerId));
+
+            while (config.size() <= index) {
+                config.add(new AscendPlayerProgress.AutoSummitCategoryConfig(false, 10));
+            }
+
+            AscendPlayerProgress.AutoSummitCategoryConfig catConfig = config.get(index);
+            config.set(index, new AscendPlayerProgress.AutoSummitCategoryConfig(catConfig.isEnabled(), increment));
+            playerStore.setAutoSummitConfig(playerId, config);
+        } catch (NumberFormatException ignored) {
+        }
+    }
+
     public static class AutomationData {
         static final String KEY_BUTTON = "Button";
         static final String KEY_TIMER = "@TimerValue";
         static final String KEY_ADD_VALUE = "@AddValue";
+        static final String KEY_SUM_TIMER = "@SumTimerValue";
+        static final String KEY_SUM_INC_0 = "@SumInc0";
+        static final String KEY_SUM_INC_1 = "@SumInc1";
+        static final String KEY_SUM_INC_2 = "@SumInc2";
 
         public static final BuilderCodec<AutomationData> CODEC =
             BuilderCodec.<AutomationData>builder(AutomationData.class, AutomationData::new)
@@ -492,10 +724,22 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
                     (data, value) -> data.timerValue = value, data -> data.timerValue)
                 .addField(new KeyedCodec<>(KEY_ADD_VALUE, Codec.STRING),
                     (data, value) -> data.addValue = value, data -> data.addValue)
+                .addField(new KeyedCodec<>(KEY_SUM_TIMER, Codec.STRING),
+                    (data, value) -> data.sumTimerValue = value, data -> data.sumTimerValue)
+                .addField(new KeyedCodec<>(KEY_SUM_INC_0, Codec.STRING),
+                    (data, value) -> data.sumInc0 = value, data -> data.sumInc0)
+                .addField(new KeyedCodec<>(KEY_SUM_INC_1, Codec.STRING),
+                    (data, value) -> data.sumInc1 = value, data -> data.sumInc1)
+                .addField(new KeyedCodec<>(KEY_SUM_INC_2, Codec.STRING),
+                    (data, value) -> data.sumInc2 = value, data -> data.sumInc2)
                 .build();
 
         String button;
         String timerValue;
         String addValue;
+        String sumTimerValue;
+        String sumInc0;
+        String sumInc1;
+        String sumInc2;
     }
 }

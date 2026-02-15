@@ -1247,6 +1247,54 @@ public class AscendPlayerStore {
         markDirty(playerId);
     }
 
+    // ========================================
+    // Auto-Summit
+    // ========================================
+
+    public boolean isAutoSummitEnabled(UUID playerId) {
+        AscendPlayerProgress progress = players.get(playerId);
+        return progress != null && progress.isAutoSummitEnabled();
+    }
+
+    public void setAutoSummitEnabled(UUID playerId, boolean enabled) {
+        AscendPlayerProgress progress = getOrCreatePlayer(playerId);
+        progress.setAutoSummitEnabled(enabled);
+        markDirty(playerId);
+    }
+
+    public int getAutoSummitTimerSeconds(UUID playerId) {
+        AscendPlayerProgress progress = players.get(playerId);
+        return progress != null ? progress.getAutoSummitTimerSeconds() : 0;
+    }
+
+    public void setAutoSummitTimerSeconds(UUID playerId, int seconds) {
+        AscendPlayerProgress progress = getOrCreatePlayer(playerId);
+        progress.setAutoSummitTimerSeconds(seconds);
+        markDirty(playerId);
+    }
+
+    public java.util.List<AscendPlayerProgress.AutoSummitCategoryConfig> getAutoSummitConfig(UUID playerId) {
+        AscendPlayerProgress progress = players.get(playerId);
+        return progress != null ? progress.getAutoSummitConfig() : java.util.List.of();
+    }
+
+    public void setAutoSummitConfig(UUID playerId, java.util.List<AscendPlayerProgress.AutoSummitCategoryConfig> config) {
+        AscendPlayerProgress progress = getOrCreatePlayer(playerId);
+        progress.setAutoSummitConfig(config);
+        markDirty(playerId);
+    }
+
+    public int getAutoSummitRotationIndex(UUID playerId) {
+        AscendPlayerProgress progress = players.get(playerId);
+        return progress != null ? progress.getAutoSummitRotationIndex() : 0;
+    }
+
+    public void setAutoSummitRotationIndex(UUID playerId, int index) {
+        AscendPlayerProgress progress = getOrCreatePlayer(playerId);
+        progress.setAutoSummitRotationIndex(index);
+        markDirty(playerId);
+    }
+
     public void setBreakAscensionEnabled(UUID playerId, boolean enabled) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
         progress.setBreakAscensionEnabled(enabled);

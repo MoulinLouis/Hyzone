@@ -4,7 +4,7 @@ $C.@PageOverlay {
   SceneBlur {}
 
   Group #AutomationWindow {
-    Anchor: (Width: 830, Height: 540);
+    Anchor: (Width: 830, Height: 700);
     LayoutMode: Top;
     Background: #0d1620(0.95);
     OutlineColor: #ffffff(0.06);
@@ -236,10 +236,12 @@ $C.@PageOverlay {
         // Column gap
         Group { Anchor: (Width: 16); }
 
-        // === RIGHT COLUMN: Auto-Elevation ===
+        // === RIGHT COLUMN: Auto-Elevation + Auto-Summit ===
         Group #RightColumn {
           FlexWeight: 1;
           LayoutMode: Top;
+          ContentHeight: 760;
+          ScrollbarStyle: (Size: 6, Spacing: 2, OnlyVisibleWhenHovered: true, Handle: #ffffff(0.15), HoveredHandle: #ffffff(0.25), DraggedHandle: #ffffff(0.3));
 
           Group #AutoElevationSection {
             Anchor: (Left: 0, Right: 0);
@@ -450,6 +452,310 @@ $C.@PageOverlay {
 
             // Shown when locked
             Group #ElevLockedOverlay {
+              Anchor: (Left: 0, Right: 0, Height: 224);
+              LayoutMode: Top;
+              Visible: false;
+
+              Group { Anchor: (Height: 88); }
+              Group { Anchor: (Width: 24, Height: 24); Background: (TexturePath: "../Textures/lock.png"); }
+              Group { Anchor: (Height: 6); }
+              Label {
+                Anchor: (Left: 0, Right: 0, Height: 18);
+                Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center, Wrap: true);
+                Text: "Unlock in the Ascendancy Tree";
+              }
+            }
+          }
+
+          Group { Anchor: (Height: 12); }
+
+          // === AUTO-SUMMIT SECTION ===
+          Group #AutoSummitSection {
+            Anchor: (Left: 0, Right: 0);
+            LayoutMode: Top;
+            Background: #ffffff(0.02);
+            OutlineColor: #ffffff(0.05);
+            OutlineSize: 1;
+            Padding: (Left: 14, Right: 14, Top: 12, Bottom: 12);
+
+            // Shown when unlocked
+            Group #SumContent {
+              Anchor: (Left: 0, Right: 0);
+              LayoutMode: Top;
+
+              Label {
+                Anchor: (Left: 0, Right: 0, Height: 22);
+                Style: (FontSize: 14, RenderBold: true, TextColor: #f0f4f8);
+                Text: "Auto-Summit";
+              }
+
+              Label {
+                Anchor: (Left: 0, Right: 0, Height: 18);
+                Style: (FontSize: 11, TextColor: #6b7280);
+                Text: "Auto-summit with per-category increment cycling.";
+              }
+
+              Group { Anchor: (Height: 10); }
+
+              Group #SumToggleRow {
+                Anchor: (Left: 0, Right: 0, Height: 44);
+                LayoutMode: Left;
+
+                Label #SumStatusLabel {
+                  Anchor: (Width: 220, Height: 44);
+                  Padding: (Top: 12);
+                  Style: (FontSize: 13, TextColor: #9fb0ba);
+                  Text: "Status: OFF";
+                }
+
+                Button #SumToggleButton {
+                  Anchor: (Width: 120, Height: 40);
+                  Background: #1a2530;
+                  Style: ButtonStyle(
+                    Default: (Background: #1a2530),
+                    Hovered: (Background: #243342),
+                    Pressed: (Background: #1e2b38),
+                    Sounds: $C.@ButtonSounds,
+                  );
+                  LayoutMode: Top;
+                  Group #SumToggleBorder { Anchor: (Left: 0, Right: 0, Top: 0, Height: 3); Background: #4b5563; }
+                  Label #SumToggleText { Anchor: (Top: 10); Style: (FontSize: 13, RenderBold: true, TextColor: #9fb0ba, HorizontalAlignment: Center); Text: "Enable"; }
+                }
+              }
+
+              Group { Anchor: (Height: 10); }
+
+              // Timer row
+              Group #SumTimerRow {
+                Anchor: (Left: 0, Right: 0, Height: 32);
+                LayoutMode: Left;
+
+                Label {
+                  Anchor: (Width: 80, Height: 32);
+                  Padding: (Top: 6);
+                  Style: (FontSize: 12, TextColor: #9fb0ba);
+                  Text: "Min delay:";
+                }
+
+                TextField #SumTimerField {
+                  Anchor: (Width: 100, Height: 28);
+                  PlaceholderText: "0";
+                  MaxLength: 5;
+                  Background: #1a2530;
+                  OutlineColor: #ffffff(0.08);
+                  OutlineSize: 1;
+                  Style: (FontSize: 12, TextColor: #f0f4f8);
+                }
+
+                Label {
+                  Anchor: (Width: 50, Height: 32);
+                  Padding: (Left: 8, Top: 6);
+                  Style: (FontSize: 11, TextColor: #6b7280);
+                  Text: "sec";
+                }
+              }
+
+              Group { Anchor: (Height: 10); }
+
+              // Categories header
+              Label {
+                Anchor: (Left: 0, Right: 0, Height: 22);
+                Style: (FontSize: 12, TextColor: #9fb0ba, RenderBold: true);
+                Text: "Categories:";
+              }
+
+              // Category 0: Runner Speed
+              Group #SumCat0 {
+                Anchor: (Left: 0, Right: 0, Height: 32);
+                LayoutMode: Left;
+
+                Label #SumCatName0 {
+                  Anchor: (Width: 110, Height: 32);
+                  Padding: (Top: 6);
+                  Style: (FontSize: 11, TextColor: #e2e8f0);
+                  Text: "Runner Speed";
+                }
+
+                Label #SumCatLevel0 {
+                  Anchor: (Width: 44, Height: 32);
+                  Padding: (Top: 6);
+                  Style: (FontSize: 11, TextColor: #6b7280);
+                  Text: "Lv 0";
+                }
+
+                Button #SumCatToggle0 {
+                  Anchor: (Width: 42, Height: 26);
+                  Background: #1a2530;
+                  Style: ButtonStyle(
+                    Default: (Background: #1a2530),
+                    Hovered: (Background: #243342),
+                    Pressed: (Background: #1e2b38),
+                    Sounds: $C.@ButtonSounds,
+                  );
+                  LayoutMode: Top;
+                  Group #SumCatBorder0 { Anchor: (Left: 0, Right: 0, Top: 0, Height: 2); Background: #4b5563; }
+                  Label #SumCatToggleText0 { Anchor: (Top: 5); Style: (FontSize: 10, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "OFF"; }
+                }
+
+                Group { Anchor: (Width: 8, Height: 32); }
+
+                Label {
+                  Anchor: (Width: 12, Height: 32);
+                  Padding: (Top: 6);
+                  Style: (FontSize: 11, TextColor: #6b7280);
+                  Text: "+";
+                }
+
+                TextField #SumIncField0 {
+                  Anchor: (Width: 50, Height: 26);
+                  PlaceholderText: "10";
+                  MaxLength: 5;
+                  Background: #1a2530;
+                  OutlineColor: #ffffff(0.08);
+                  OutlineSize: 1;
+                  Style: (FontSize: 11, TextColor: #f0f4f8);
+                }
+
+                Label {
+                  Anchor: (Width: 30, Height: 32);
+                  Padding: (Left: 4, Top: 6);
+                  Style: (FontSize: 10, TextColor: #6b7280);
+                  Text: "lvl";
+                }
+              }
+
+              // Category 1: Multiplier Gain
+              Group #SumCat1 {
+                Anchor: (Left: 0, Right: 0, Height: 32);
+                LayoutMode: Left;
+
+                Label #SumCatName1 {
+                  Anchor: (Width: 110, Height: 32);
+                  Padding: (Top: 6);
+                  Style: (FontSize: 11, TextColor: #e2e8f0);
+                  Text: "Multiplier Gain";
+                }
+
+                Label #SumCatLevel1 {
+                  Anchor: (Width: 44, Height: 32);
+                  Padding: (Top: 6);
+                  Style: (FontSize: 11, TextColor: #6b7280);
+                  Text: "Lv 0";
+                }
+
+                Button #SumCatToggle1 {
+                  Anchor: (Width: 42, Height: 26);
+                  Background: #1a2530;
+                  Style: ButtonStyle(
+                    Default: (Background: #1a2530),
+                    Hovered: (Background: #243342),
+                    Pressed: (Background: #1e2b38),
+                    Sounds: $C.@ButtonSounds,
+                  );
+                  LayoutMode: Top;
+                  Group #SumCatBorder1 { Anchor: (Left: 0, Right: 0, Top: 0, Height: 2); Background: #4b5563; }
+                  Label #SumCatToggleText1 { Anchor: (Top: 5); Style: (FontSize: 10, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "OFF"; }
+                }
+
+                Group { Anchor: (Width: 8, Height: 32); }
+
+                Label {
+                  Anchor: (Width: 12, Height: 32);
+                  Padding: (Top: 6);
+                  Style: (FontSize: 11, TextColor: #6b7280);
+                  Text: "+";
+                }
+
+                TextField #SumIncField1 {
+                  Anchor: (Width: 50, Height: 26);
+                  PlaceholderText: "10";
+                  MaxLength: 5;
+                  Background: #1a2530;
+                  OutlineColor: #ffffff(0.08);
+                  OutlineSize: 1;
+                  Style: (FontSize: 11, TextColor: #f0f4f8);
+                }
+
+                Label {
+                  Anchor: (Width: 30, Height: 32);
+                  Padding: (Left: 4, Top: 6);
+                  Style: (FontSize: 10, TextColor: #6b7280);
+                  Text: "lvl";
+                }
+              }
+
+              // Category 2: Evolution Power
+              Group #SumCat2 {
+                Anchor: (Left: 0, Right: 0, Height: 32);
+                LayoutMode: Left;
+
+                Label #SumCatName2 {
+                  Anchor: (Width: 110, Height: 32);
+                  Padding: (Top: 6);
+                  Style: (FontSize: 11, TextColor: #e2e8f0);
+                  Text: "Evolution Power";
+                }
+
+                Label #SumCatLevel2 {
+                  Anchor: (Width: 44, Height: 32);
+                  Padding: (Top: 6);
+                  Style: (FontSize: 11, TextColor: #6b7280);
+                  Text: "Lv 0";
+                }
+
+                Button #SumCatToggle2 {
+                  Anchor: (Width: 42, Height: 26);
+                  Background: #1a2530;
+                  Style: ButtonStyle(
+                    Default: (Background: #1a2530),
+                    Hovered: (Background: #243342),
+                    Pressed: (Background: #1e2b38),
+                    Sounds: $C.@ButtonSounds,
+                  );
+                  LayoutMode: Top;
+                  Group #SumCatBorder2 { Anchor: (Left: 0, Right: 0, Top: 0, Height: 2); Background: #4b5563; }
+                  Label #SumCatToggleText2 { Anchor: (Top: 5); Style: (FontSize: 10, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "OFF"; }
+                }
+
+                Group { Anchor: (Width: 8, Height: 32); }
+
+                Label {
+                  Anchor: (Width: 12, Height: 32);
+                  Padding: (Top: 6);
+                  Style: (FontSize: 11, TextColor: #6b7280);
+                  Text: "+";
+                }
+
+                TextField #SumIncField2 {
+                  Anchor: (Width: 50, Height: 26);
+                  PlaceholderText: "10";
+                  MaxLength: 5;
+                  Background: #1a2530;
+                  OutlineColor: #ffffff(0.08);
+                  OutlineSize: 1;
+                  Style: (FontSize: 11, TextColor: #f0f4f8);
+                }
+
+                Label {
+                  Anchor: (Width: 30, Height: 32);
+                  Padding: (Left: 4, Top: 6);
+                  Style: (FontSize: 10, TextColor: #6b7280);
+                  Text: "lvl";
+                }
+              }
+
+              Group { Anchor: (Height: 8); }
+
+              // Next category info
+              Label #SumNextLabel {
+                Anchor: (Left: 0, Right: 0, Height: 18);
+                Style: (FontSize: 11, TextColor: #6b7280);
+                Text: "";
+              }
+            }
+
+            // Shown when locked
+            Group #SumLockedOverlay {
               Anchor: (Left: 0, Right: 0, Height: 224);
               LayoutMode: Top;
               Visible: false;

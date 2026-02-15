@@ -83,6 +83,7 @@ public class RobotManager {
     private volatile boolean cleanupPending = false;
     private volatile long lastAutoUpgradeMs = 0;
     private final Map<UUID, Long> lastAutoElevationMs = new ConcurrentHashMap<>();
+    private final Map<UUID, Long> lastAutoSummitMs = new ConcurrentHashMap<>();
 
     public RobotManager(AscendMapStore mapStore, AscendPlayerStore playerStore, GhostStore ghostStore) {
         this.mapStore = mapStore;
@@ -136,6 +137,7 @@ public class RobotManager {
         if (playerId != null) {
             onlinePlayers.remove(playerId);
             lastAutoElevationMs.remove(playerId);
+            lastAutoSummitMs.remove(playerId);
             // Despawn all robots for this player
             despawnRobotsForPlayer(playerId);
         }
@@ -411,6 +413,7 @@ public class RobotManager {
                 lastAutoUpgradeMs = now;
                 performAutoRunnerUpgrades();
                 performAutoElevation(now);
+                performAutoSummit(now);
             }
         } catch (Exception e) {
             LOGGER.atWarning().log("Error in robot tick: " + e.getMessage());
@@ -896,6 +899,93 @@ public class RobotManager {
 
         lastAutoElevationMs.put(playerId, now);
         playerStore.markDirty(playerId);
+    }
+
+    // Auto-Summit
+
+    private void performAutoSummit(long now) {
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin == null) return;
+        AscensionManager ascensionManager = plugin.getAscensionManager();
+        if (ascensionManager == null) return;
+
+        for (UUID playerId : onlinePlayers) {
+            if (!ascensionManager.hasAutoSummit(playerId)) continue;
+            autoSummitPlayer(playerId, now);
+        }
+    }
+
+    private void autoSummitPlayer(UUID playerId, long now) {
+        AscendPlayerProgress progress = playerStore.getPlayer(playerId);
+        if (progress == null) return;
+        if (!progress.isAutoSummitEnabled()) return;
+
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin == null) return;
+        SummitManager summitManager = plugin.getSummitManager();
+        if (summitManager == null) return;
+
+        if (!summitManager.canSummit(playerId)) return;
+
+        // Check timer
+        int timerSeconds = progress.getAutoSummitTimerSeconds();
+        if (timerSeconds > 0) {
+            Long lastMs = lastAutoSummitMs.get(playerId);
+            if (lastMs != null && (now - lastMs) < (long) timerSeconds * 1000L) return;
+        }
+
+        List<AscendPlayerProgress.AutoSummitCategoryConfig> config = progress.getAutoSummitConfig();
+        int rotationIndex = progress.getAutoSummitRotationIndex();
+        AscendConstants.SummitCategory[] categories = AscendConstants.SummitCategory.values();
+
+        // Find next enabled category starting from rotation index
+        for (int i = 0; i < categories.length; i++) {
+            int idx = (rotationIndex + i) % categories.length;
+            if (idx >= config.size()) continue;
+
+            AscendPlayerProgress.AutoSummitCategoryConfig catConfig = config.get(idx);
+            if (!catConfig.isEnabled()) continue;
+
+            AscendConstants.SummitCategory category = categories[idx];
+
+            // Preview the summit
+            SummitManager.SummitPreview preview = summitManager.previewSummit(playerId, category);
+            if (!preview.hasGain()) continue;
+
+            // Only summit if projected level reaches currentLevel + increment
+            if (preview.newLevel() < preview.currentLevel() + catConfig.getIncrement()) continue;
+
+            // Perform summit
+            SummitManager.SummitResult result = summitManager.performSummit(playerId, category);
+            if (!result.succeeded()) continue;
+
+            // Despawn robots from maps that had runners
+            for (String mapId : result.mapsWithRunners()) {
+                despawnRobot(playerId, mapId);
+            }
+
+            // Advance rotation to next category
+            playerStore.setAutoSummitRotationIndex(playerId, (idx + 1) % categories.length);
+
+            // Send chat message
+            PlayerRef playerRef = plugin.getPlayerRef(playerId);
+            if (playerRef != null) {
+                Ref<EntityStore> ref = playerRef.getReference();
+                if (ref != null && ref.isValid()) {
+                    Store<EntityStore> store = ref.getStore();
+                    com.hypixel.hytale.server.core.entity.entities.Player player =
+                        store.getComponent(ref, com.hypixel.hytale.server.core.entity.entities.Player.getComponentType());
+                    if (player != null) {
+                        player.sendMessage(com.hypixel.hytale.server.core.Message.raw(
+                            "[Auto-Summit] " + category.getDisplayName() + " Lv " + result.newLevel())
+                            .color(io.hyvexa.common.util.SystemMessageUtils.SUCCESS));
+                    }
+                }
+            }
+
+            lastAutoSummitMs.put(playerId, now);
+            return; // One summit per tick for smooth visual
+        }
     }
 
     /**
