@@ -4,14 +4,12 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
-import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
-import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.AscendConstants.ElevationPurchaseResult;
@@ -30,20 +28,13 @@ import io.hyvexa.common.util.SystemMessageUtils;
 import javax.annotation.Nonnull;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ElevationPage extends BaseAscendPage {
 
     private static final String BUTTON_CLOSE = "Close";
     private static final String BUTTON_ELEVATE = "Elevate";
-    private static final long REFRESH_INTERVAL_MS = 1000L;
 
     private final AscendPlayerStore playerStore;
-    private ScheduledFuture<?> refreshTask;
-    private final AtomicBoolean refreshInFlight = new AtomicBoolean(false);
-    private final AtomicBoolean refreshRequested = new AtomicBoolean(false);
 
     public ElevationPage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
@@ -61,18 +52,6 @@ public class ElevationPage extends BaseAscendPage {
             EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_ELEVATE), false);
 
         updateDisplay(ref, store, commandBuilder);
-        startAutoRefresh(ref, store);
-    }
-
-    @Override
-    public void close() {
-        stopAutoRefresh();
-        super.close();
-    }
-
-    @Override
-    protected void stopBackgroundTasks() {
-        stopAutoRefresh();
     }
 
     @Override
@@ -166,63 +145,6 @@ public class ElevationPage extends BaseAscendPage {
             sendUpdate(updateBuilder, null, false);
         } catch (Exception e) {
             // UI was replaced - ignore silently
-        }
-    }
-
-    private void startAutoRefresh(Ref<EntityStore> ref, Store<EntityStore> store) {
-        if (refreshTask != null) {
-            return;
-        }
-        World world = store.getExternalData().getWorld();
-        if (world == null) {
-            return;
-        }
-        refreshTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(() -> {
-            // Quick check - if not current page, stop refreshing
-            if (!isCurrentPage()) {
-                stopAutoRefresh();
-                return;
-            }
-            if (ref == null || !ref.isValid()) {
-                stopAutoRefresh();
-                return;
-            }
-            PageRefreshScheduler.requestRefresh(
-                world,
-                refreshInFlight,
-                refreshRequested,
-                () -> refreshDisplay(ref, store),
-                this::stopAutoRefresh,
-                "ElevationPage"
-            );
-        }, REFRESH_INTERVAL_MS, REFRESH_INTERVAL_MS, TimeUnit.MILLISECONDS);
-    }
-
-    private void stopAutoRefresh() {
-        if (refreshTask != null) {
-            refreshTask.cancel(false);
-            refreshTask = null;
-        }
-        refreshRequested.set(false);
-    }
-
-    private void refreshDisplay(Ref<EntityStore> ref, Store<EntityStore> store) {
-        // Don't send updates if this page is no longer current
-        if (!isCurrentPage()) {
-            stopAutoRefresh();
-            return;
-        }
-        UICommandBuilder commandBuilder = new UICommandBuilder();
-        updateDisplay(ref, store, commandBuilder);
-        // Final check before sending
-        if (!isCurrentPage()) {
-            return;
-        }
-        try {
-            sendUpdate(commandBuilder, null, false);
-        } catch (Exception e) {
-            // UI was replaced by external dialog (e.g., NPCDialog) - stop refreshing
-            stopAutoRefresh();
         }
     }
 
