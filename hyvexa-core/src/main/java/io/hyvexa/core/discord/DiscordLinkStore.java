@@ -60,7 +60,9 @@ public class DiscordLinkStore {
                 + "player_uuid VARCHAR(36) NOT NULL PRIMARY KEY, "
                 + "discord_id VARCHAR(20) NOT NULL UNIQUE, "
                 + "linked_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, "
-                + "gems_rewarded BOOLEAN NOT NULL DEFAULT FALSE"
+                + "gems_rewarded BOOLEAN NOT NULL DEFAULT FALSE, "
+                + "current_rank VARCHAR(20) DEFAULT 'Unranked', "
+                + "last_synced_rank VARCHAR(20) DEFAULT NULL"
                 + ") ENGINE=InnoDB";
 
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
@@ -75,6 +77,26 @@ public class DiscordLinkStore {
             LOGGER.atInfo().log("DiscordLinkStore initialized (tables ensured)");
         } catch (SQLException e) {
             LOGGER.atSevere().withCause(e).log("Failed to create discord link tables");
+        }
+
+        // Migration: add rank sync columns to existing installs
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            try (PreparedStatement stmt = conn.prepareStatement(
+                    "ALTER TABLE discord_links ADD COLUMN current_rank VARCHAR(20) DEFAULT 'Unranked'")) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.executeUpdate();
+            }
+        } catch (SQLException ignored) {
+            // Column already exists — expected on repeat startup
+        }
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            try (PreparedStatement stmt = conn.prepareStatement(
+                    "ALTER TABLE discord_links ADD COLUMN last_synced_rank VARCHAR(20) DEFAULT NULL")) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.executeUpdate();
+            }
+        } catch (SQLException ignored) {
+            // Column already exists — expected on repeat startup
         }
 
         cleanExpiredCodes();
@@ -211,6 +233,55 @@ public class DiscordLinkStore {
             LOGGER.atWarning().withCause(e).log("Failed to mark gems rewarded for " + playerId);
         }
         return false;
+    }
+
+    /**
+     * Write the player's current parkour rank to discord_links for bot sync.
+     * Only updates if the player has a linked Discord account.
+     */
+    public void updateRank(UUID playerId, String rankName) {
+        if (playerId == null || rankName == null || !DatabaseManager.getInstance().isInitialized()) {
+            return;
+        }
+        String sql = "UPDATE discord_links SET current_rank = ? WHERE player_uuid = ?";
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            stmt.setString(1, rankName);
+            stmt.setString(2, playerId.toString());
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            LOGGER.atWarning().withCause(e).log("Failed to update rank for " + playerId);
+        }
+    }
+
+    /**
+     * Remove a player's Discord link entirely (link + pending codes).
+     * Returns true if a link was deleted.
+     */
+    public boolean unlinkPlayer(UUID playerId) {
+        if (playerId == null || !DatabaseManager.getInstance().isInitialized()) {
+            return false;
+        }
+        cache.remove(playerId);
+        boolean deleted = false;
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            try (PreparedStatement stmt = conn.prepareStatement(
+                    "DELETE FROM discord_links WHERE player_uuid = ?")) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setString(1, playerId.toString());
+                deleted = stmt.executeUpdate() > 0;
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(
+                    "DELETE FROM discord_link_codes WHERE player_uuid = ?")) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setString(1, playerId.toString());
+                stmt.executeUpdate();
+            }
+        } catch (SQLException e) {
+            LOGGER.atWarning().withCause(e).log("Failed to unlink player " + playerId);
+        }
+        return deleted;
     }
 
     /**

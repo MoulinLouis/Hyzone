@@ -80,6 +80,30 @@ async function createLink(playerUuid, discordId) {
 }
 
 /**
+ * Find all linked players whose current_rank differs from last_synced_rank.
+ * Returns an array of { player_uuid, discord_id, current_rank, last_synced_rank }.
+ */
+async function getDesyncedRanks() {
+  const [rows] = await getPool().execute(
+    `SELECT player_uuid, discord_id, current_rank, last_synced_rank
+     FROM discord_links
+     WHERE current_rank IS NOT NULL
+       AND (last_synced_rank IS NULL OR last_synced_rank != current_rank)`
+  );
+  return rows;
+}
+
+/**
+ * Mark a player's rank as synced after the Discord role has been updated.
+ */
+async function markRankSynced(playerUuid, rank) {
+  await getPool().execute(
+    'UPDATE discord_links SET last_synced_rank = ? WHERE player_uuid = ?',
+    [rank, playerUuid]
+  );
+}
+
+/**
  * Gracefully close the connection pool.
  */
 async function shutdown() {
@@ -94,5 +118,7 @@ module.exports = {
   findLinkByDiscordId,
   findLinkByPlayerUuid,
   createLink,
+  getDesyncedRanks,
+  markRankSynced,
   shutdown,
 };

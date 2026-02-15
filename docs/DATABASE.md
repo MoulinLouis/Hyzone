@@ -547,13 +547,17 @@ CREATE TABLE discord_links (
   player_uuid VARCHAR(36) NOT NULL PRIMARY KEY,
   discord_id VARCHAR(20) NOT NULL UNIQUE,
   linked_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  gems_rewarded BOOLEAN NOT NULL DEFAULT FALSE
+  gems_rewarded BOOLEAN NOT NULL DEFAULT FALSE,
+  current_rank VARCHAR(20) DEFAULT 'Unranked',
+  last_synced_rank VARCHAR(20) DEFAULT NULL
 ) ENGINE=InnoDB;
 ```
 
 Notes:
 - One-to-one mapping: each game account links to exactly one Discord account and vice versa
 - `gems_rewarded` tracks whether the one-time 100 gem reward has been given
+- `current_rank` is the player's parkour rank, written by the plugin on rank-up and login
+- `last_synced_rank` is the rank last synced to Discord by the bot; when it differs from `current_rank`, the bot knows to update roles
 - The Discord bot writes to this table; the plugin reads it on player login
-- Auto-created by `DiscordLinkStore.initialize()` on startup
+- Auto-created by `DiscordLinkStore.initialize()` on startup (columns added via ALTER TABLE migration for existing installs)
 - Managed by `hyvexa-core/src/main/java/io/hyvexa/core/discord/DiscordLinkStore.java`

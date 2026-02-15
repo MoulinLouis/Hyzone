@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Added
+- **Global: Discord rank role sync** - Linked players' parkour ranks (Unranked -> VexaGod) are automatically synced as Discord roles. Plugin writes rank on rank-up and login; bot polls every 30s and swaps roles.
 - **Global: Discord account linking** - Players use `/link` in-game to get a code, enter it on Discord via `/link <code>`, and receive a one-time 100 gem reward on next login. Includes a Discord bot (`discord-bot/`) and shared MySQL tables for cross-system communication.
 
 ### Changed
