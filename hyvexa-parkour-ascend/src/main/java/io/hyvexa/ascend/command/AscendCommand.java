@@ -43,6 +43,7 @@ import io.hyvexa.common.util.SystemMessageUtils;
 import javax.annotation.Nonnull;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -52,9 +53,13 @@ public class AscendCommand extends AbstractAsyncCommand {
     // Track active pages per player to ensure proper cleanup when switching pages
     private static final Map<UUID, BaseAscendPage> activePages = new ConcurrentHashMap<>();
     private static final String UNKNOWN_SUBCOMMAND_MESSAGE =
-            "Unknown subcommand. Use: /ascend, /ascend stats, /ascend elevate, /ascend summit, "
-                    + "/ascend ascension, /ascend skills, /ascend automation, /ascend settings, "
-                    + "/ascend achievements, /ascend profile, /ascend leaderboard, /ascend maplb, /ascend help";
+            "Unknown subcommand. Use: /ascend, /ascend stats, /ascend ascension, /ascend automation, "
+                    + "/ascend settings, /ascend achievements, /ascend profile, /ascend leaderboard, "
+                    + "/ascend maplb, /ascend help";
+
+    // NPC-gated commands: only executable with the correct token (passed by NPC dialog buttons)
+    private static final String NPC_TOKEN = "hx7Kq9mW";
+    private static final Set<String> NPC_GATED = Set.of("elevate", "summit", "skills");
 
     /**
      * Close any existing page for the player before opening a new one.
@@ -135,6 +140,15 @@ public class AscendCommand extends AbstractAsyncCommand {
             }
 
             String subCommand = args[0].toLowerCase();
+
+            // NPC-gated commands require a secret token as second arg
+            if (NPC_GATED.contains(subCommand)) {
+                if (args.length < 2 || !args[1].equals(NPC_TOKEN)) {
+                    ctx.sendMessage(Message.raw(UNKNOWN_SUBCOMMAND_MESSAGE));
+                    return;
+                }
+            }
+
             Runnable handler = buildSubCommandHandlers(player, playerRef, ref, store, args).get(subCommand);
             if (handler != null) {
                 handler.run();
