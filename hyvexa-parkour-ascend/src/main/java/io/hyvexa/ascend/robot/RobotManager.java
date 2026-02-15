@@ -33,6 +33,7 @@ import io.hyvexa.ascend.summit.SummitManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 import io.hyvexa.ascend.util.AscendModeGate;
 import io.hyvexa.common.math.BigNumber;
+import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.common.visibility.EntityVisibilityManager;
 
 import java.io.IOException;
@@ -814,13 +815,8 @@ public class RobotManager {
     // Auto-Elevation
 
     private void performAutoElevation(long now) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) return;
-        AscensionManager ascensionManager = plugin.getAscensionManager();
-        if (ascensionManager == null) return;
-
         for (UUID playerId : onlinePlayers) {
-            if (!ascensionManager.hasAutoElevation(playerId)) continue;
+            if (!PermissionUtils.isOp(playerId)) continue;
             autoElevatePlayer(playerId, now);
         }
     }
@@ -910,13 +906,8 @@ public class RobotManager {
     // Auto-Summit
 
     private void performAutoSummit(long now) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) return;
-        AscensionManager ascensionManager = plugin.getAscensionManager();
-        if (ascensionManager == null) return;
-
         for (UUID playerId : onlinePlayers) {
-            if (!ascensionManager.hasAutoSummit(playerId)) continue;
+            if (!PermissionUtils.isOp(playerId)) continue;
             autoSummitPlayer(playerId, now);
         }
     }

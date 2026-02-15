@@ -3,6 +3,8 @@ package io.hyvexa.common.util;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.permissions.PermissionsModule;
 
+import java.util.UUID;
+
 public final class PermissionUtils {
 
     private static final String OP_GROUP = "OP";
@@ -20,7 +22,11 @@ public final class PermissionUtils {
         if (player == null) {
             return false;
         }
-        var uuid = player.getUuid();
+        return isOp(player.getUuid());
+    }
+
+    @SuppressWarnings("removal")
+    public static boolean isOp(UUID uuid) {
         if (uuid == null) {
             return false;
         }
