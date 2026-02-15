@@ -126,11 +126,11 @@ $C.@PageOverlay {
       Group #TreeCanvas {
         Anchor: (Left: 0, Right: 0, Top: 8);
         FlexWeight: 1;
-        ContentHeight: 1190;
+        ContentHeight: 1320;
         ScrollbarStyle: (Size: 6, Spacing: 2, OnlyVisibleWhenHovered: true, Handle: #ffffff(0.15), HoveredHandle: #ffffff(0.25), DraggedHandle: #ffffff(0.3));
 
         Group #TreeContent {
-          Anchor: (Left: 0, Top: 0, Width: 660, Height: 1190);
+          Anchor: (Left: 0, Top: 0, Width: 660, Height: 1320);
 
           // Connectors: T1->T2 straight
           Group #ConnT0T1 { Anchor: (Left: 328, Top: 130, Width: 4, Height: 20); Background: #4b5563; }
@@ -162,17 +162,20 @@ $C.@PageOverlay {
           // T6->T7 straight
           Group #ConnT5T6 { Anchor: (Left: 328, Top: 780, Width: 4, Height: 20); Background: #4b5563; }
 
-          // T7->split to T8 left/right
-          Group #ConnT6Split { Anchor: (Left: 328, Top: 910, Width: 4, Height: 8); Background: #4b5563; }
-          Group #ConnT6H { Anchor: (Left: 160, Top: 918, Width: 340, Height: 4); Background: #4b5563; }
-          Group #ConnT6Left { Anchor: (Left: 160, Top: 922, Width: 4, Height: 8); Background: #4b5563; }
-          Group #ConnT6Right { Anchor: (Left: 500, Top: 922, Width: 4, Height: 8); Background: #4b5563; }
+          // T7->T8 straight
+          Group #ConnT6T7 { Anchor: (Left: 328, Top: 910, Width: 4, Height: 20); Background: #4b5563; }
 
-          // T8 left/right merge to T9 center
-          Group #ConnT7Left { Anchor: (Left: 160, Top: 1040, Width: 4, Height: 8); Background: #4b5563; }
-          Group #ConnT7Right { Anchor: (Left: 500, Top: 1040, Width: 4, Height: 8); Background: #4b5563; }
+          // T8->split to T9 left/right
+          Group #ConnT7Split { Anchor: (Left: 328, Top: 1040, Width: 4, Height: 8); Background: #4b5563; }
           Group #ConnT7H { Anchor: (Left: 160, Top: 1048, Width: 340, Height: 4); Background: #4b5563; }
-          Group #ConnT7Merge { Anchor: (Left: 328, Top: 1052, Width: 4, Height: 8); Background: #4b5563; }
+          Group #ConnT7Left { Anchor: (Left: 160, Top: 1052, Width: 4, Height: 8); Background: #4b5563; }
+          Group #ConnT7Right { Anchor: (Left: 500, Top: 1052, Width: 4, Height: 8); Background: #4b5563; }
+
+          // T9 left/right merge to T10 center
+          Group #ConnT8Left { Anchor: (Left: 160, Top: 1170, Width: 4, Height: 8); Background: #4b5563; }
+          Group #ConnT8Right { Anchor: (Left: 500, Top: 1170, Width: 4, Height: 8); Background: #4b5563; }
+          Group #ConnT8H { Anchor: (Left: 160, Top: 1178, Width: 340, Height: 4); Background: #4b5563; }
+          Group #ConnT8Merge { Anchor: (Left: 328, Top: 1182, Width: 4, Height: 8); Background: #4b5563; }
 
           // Tier 1: AUTO_RUNNERS
           Button #NodeAutoRunners {
@@ -304,7 +307,7 @@ $C.@PageOverlay {
             }
           }
 
-          // Tier 6: ASCENSION_CHALLENGES
+          // Tier 6: ASCENSION_CHALLENGES (center)
           Button #NodeAscensionChallenges {
             Anchor: (Left: 250, Top: 670, Width: 160, Height: 110);
             Background: #1a2530;
@@ -330,9 +333,9 @@ $C.@PageOverlay {
             }
           }
 
-          // Tier 5: MOMENTUM_SURGE (left)
+          // Tier 7: MOMENTUM_SURGE (center)
           Button #NodeMomentumSurge {
-            Anchor: (Left: 80, Top: 540, Width: 160, Height: 110);
+            Anchor: (Left: 250, Top: 800, Width: 160, Height: 110);
             Background: #1a2530;
             Style: @NodeStyle;
             LayoutMode: Top;
@@ -342,12 +345,38 @@ $C.@PageOverlay {
               Anchor: (Left: 0, Right: 0);
               FlexWeight: 1;
               LayoutMode: Top;
-              Label { Anchor: (Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "5:1"; }
+              Label { Anchor: (Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "7:1"; }
               Label #NameMomentumSurge { Anchor: (Top: 2); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Momentum Surge"; }
               Label #DescMomentumSurge { Anchor: (Top: 4); Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center); Text: "x2 -> x3 momentum"; }
               Label #StatusMomentumSurge { Anchor: (Top: 6); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
             }
             Group #LockedMomentumSurge {
+              Anchor: (Left: 0, Right: 0);
+              FlexWeight: 1;
+              Label { Anchor: (Left: 0, Right: 0, Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "7:1"; }
+              Group { Anchor: (Left: 64, Top: 18, Width: 32, Height: 32); Background: @LockIcon; }
+              Label { Anchor: (Left: 0, Right: 0, Top: 56); Style: (FontSize: 12, RenderBold: true, TextColor: #4b5563, HorizontalAlignment: Center); Text: "LOCKED"; }
+            }
+          }
+
+          // Tier 5: AUTO_SUMMIT (left)
+          Button #NodeAutoSummit {
+            Anchor: (Left: 80, Top: 540, Width: 160, Height: 110);
+            Background: #1a2530;
+            Style: @NodeStyle;
+            LayoutMode: Top;
+            Group #BorderAutoSummit { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Background: #4b5563; }
+            Group #RevealedAutoSummit {
+              Visible: false;
+              Anchor: (Left: 0, Right: 0);
+              FlexWeight: 1;
+              LayoutMode: Top;
+              Label { Anchor: (Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "5:1"; }
+              Label #NameAutoSummit { Anchor: (Top: 2); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Auto-Summit"; }
+              Label #DescAutoSummit { Anchor: (Top: 4); Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center); Text: "Auto-summit cycling"; }
+              Label #StatusAutoSummit { Anchor: (Top: 6); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
+            }
+            Group #LockedAutoSummit {
               Anchor: (Left: 0, Right: 0);
               FlexWeight: 1;
               Label { Anchor: (Left: 0, Right: 0, Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "5:1"; }
@@ -382,9 +411,9 @@ $C.@PageOverlay {
             }
           }
 
-          // Tier 7: MULTIPLIER_BOOST
+          // Tier 8: MULTIPLIER_BOOST (center)
           Button #NodeMultiplierBoost {
-            Anchor: (Left: 250, Top: 800, Width: 160, Height: 110);
+            Anchor: (Left: 250, Top: 930, Width: 160, Height: 110);
             Background: #1a2530;
             Style: @NodeStyle;
             LayoutMode: Top;
@@ -394,7 +423,7 @@ $C.@PageOverlay {
               Anchor: (Left: 0, Right: 0);
               FlexWeight: 1;
               LayoutMode: Top;
-              Label { Anchor: (Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "7:1"; }
+              Label { Anchor: (Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "8:1"; }
               Label #NameMultiplierBoost { Anchor: (Top: 2); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Multiplier Boost"; }
               Label #DescMultiplierBoost { Anchor: (Top: 4); Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center); Text: "+0.10 base mult gain"; }
               Label #StatusMultiplierBoost { Anchor: (Top: 6); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
@@ -402,15 +431,15 @@ $C.@PageOverlay {
             Group #LockedMultiplierBoost {
               Anchor: (Left: 0, Right: 0);
               FlexWeight: 1;
-              Label { Anchor: (Left: 0, Right: 0, Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "7:1"; }
+              Label { Anchor: (Left: 0, Right: 0, Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "8:1"; }
               Group { Anchor: (Left: 64, Top: 18, Width: 32, Height: 32); Background: @LockIcon; }
               Label { Anchor: (Left: 0, Right: 0, Top: 56); Style: (FontSize: 12, RenderBold: true, TextColor: #4b5563, HorizontalAlignment: Center); Text: "LOCKED"; }
             }
           }
 
-          // Tier 8: RUNNER_SPEED_3 (left)
+          // Tier 9: RUNNER_SPEED_3 (left)
           Button #NodeRunnerSpeed3 {
-            Anchor: (Left: 80, Top: 930, Width: 160, Height: 110);
+            Anchor: (Left: 80, Top: 1060, Width: 160, Height: 110);
             Background: #1a2530;
             Style: @NodeStyle;
             LayoutMode: Top;
@@ -420,7 +449,7 @@ $C.@PageOverlay {
               Anchor: (Left: 0, Right: 0);
               FlexWeight: 1;
               LayoutMode: Top;
-              Label { Anchor: (Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "8:1"; }
+              Label { Anchor: (Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "9:1"; }
               Label #NameRunnerSpeed3 { Anchor: (Top: 2); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Runner Speed III"; }
               Label #DescRunnerSpeed3 { Anchor: (Top: 4); Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center); Text: "x1.3 global speed"; }
               Label #StatusRunnerSpeed3 { Anchor: (Top: 6); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
@@ -428,15 +457,15 @@ $C.@PageOverlay {
             Group #LockedRunnerSpeed3 {
               Anchor: (Left: 0, Right: 0);
               FlexWeight: 1;
-              Label { Anchor: (Left: 0, Right: 0, Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "8:1"; }
+              Label { Anchor: (Left: 0, Right: 0, Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "9:1"; }
               Group { Anchor: (Left: 64, Top: 18, Width: 32, Height: 32); Background: @LockIcon; }
               Label { Anchor: (Left: 0, Right: 0, Top: 56); Style: (FontSize: 12, RenderBold: true, TextColor: #4b5563, HorizontalAlignment: Center); Text: "LOCKED"; }
             }
           }
 
-          // Tier 8: EVOLUTION_POWER_2 (right)
+          // Tier 9: EVOLUTION_POWER_2 (right)
           Button #NodeEvolutionPower2 {
-            Anchor: (Left: 420, Top: 930, Width: 160, Height: 110);
+            Anchor: (Left: 420, Top: 1060, Width: 160, Height: 110);
             Background: #1a2530;
             Style: @NodeStyle;
             LayoutMode: Top;
@@ -446,7 +475,7 @@ $C.@PageOverlay {
               Anchor: (Left: 0, Right: 0);
               FlexWeight: 1;
               LayoutMode: Top;
-              Label { Anchor: (Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "8:2"; }
+              Label { Anchor: (Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "9:2"; }
               Label #NameEvolutionPower2 { Anchor: (Top: 2); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Evolution Power II"; }
               Label #DescEvolutionPower2 { Anchor: (Top: 4); Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center); Text: "+1 base evo power"; }
               Label #StatusEvolutionPower2 { Anchor: (Top: 6); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
@@ -454,15 +483,15 @@ $C.@PageOverlay {
             Group #LockedEvolutionPower2 {
               Anchor: (Left: 0, Right: 0);
               FlexWeight: 1;
-              Label { Anchor: (Left: 0, Right: 0, Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "8:2"; }
+              Label { Anchor: (Left: 0, Right: 0, Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "9:2"; }
               Group { Anchor: (Left: 64, Top: 18, Width: 32, Height: 32); Background: @LockIcon; }
               Label { Anchor: (Left: 0, Right: 0, Top: 56); Style: (FontSize: 12, RenderBold: true, TextColor: #4b5563, HorizontalAlignment: Center); Text: "LOCKED"; }
             }
           }
 
-          // Tier 9: MOMENTUM_ENDURANCE (center)
+          // Tier 10: MOMENTUM_ENDURANCE (center)
           Button #NodeMomentumEndurance {
-            Anchor: (Left: 250, Top: 1060, Width: 160, Height: 110);
+            Anchor: (Left: 250, Top: 1190, Width: 160, Height: 110);
             Background: #1a2530;
             Style: @NodeStyle;
             LayoutMode: Top;
@@ -472,7 +501,7 @@ $C.@PageOverlay {
               Anchor: (Left: 0, Right: 0);
               FlexWeight: 1;
               LayoutMode: Top;
-              Label { Anchor: (Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "9:1"; }
+              Label { Anchor: (Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "10:1"; }
               Label #NameMomentumEndurance { Anchor: (Top: 2); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Momentum End."; }
               Label #DescMomentumEndurance { Anchor: (Top: 4); Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center); Text: "60s -> 90s duration"; }
               Label #StatusMomentumEndurance { Anchor: (Top: 6); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
@@ -480,7 +509,7 @@ $C.@PageOverlay {
             Group #LockedMomentumEndurance {
               Anchor: (Left: 0, Right: 0);
               FlexWeight: 1;
-              Label { Anchor: (Left: 0, Right: 0, Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "9:1"; }
+              Label { Anchor: (Left: 0, Right: 0, Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "10:1"; }
               Group { Anchor: (Left: 64, Top: 18, Width: 32, Height: 32); Background: @LockIcon; }
               Label { Anchor: (Left: 0, Right: 0, Top: 56); Style: (FontSize: 12, RenderBold: true, TextColor: #4b5563, HorizontalAlignment: Center); Text: "LOCKED"; }
             }

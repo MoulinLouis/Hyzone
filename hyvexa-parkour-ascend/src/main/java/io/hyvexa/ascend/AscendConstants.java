@@ -614,10 +614,11 @@ public final class AscendConstants {
         RUNNER_SPEED("Runner Speed Boost", "x1.1 global runner speed", AUTO_EVOLUTION),
         EVOLUTION_POWER("Evolution Power+", "+1 base evolution power", AUTO_EVOLUTION),
         RUNNER_SPEED_2("Runner Speed II", "x1.2 global runner speed", RUNNER_SPEED, EVOLUTION_POWER),
-        MOMENTUM_SURGE("Momentum Surge", "Momentum boost x2 -> x3", RUNNER_SPEED_2),
-        AUTO_ELEVATION("Auto-Elevation", "Unlock automatic elevation with configurable multiplier targets.", 7, RUNNER_SPEED_2),
-        ASCENSION_CHALLENGES("Ascension Challenges", "Unlock Ascension Challenges", 1, MOMENTUM_SURGE, AUTO_ELEVATION),
-        MULTIPLIER_BOOST("Multiplier Boost", "+0.10 base multiplier gain", 3, ASCENSION_CHALLENGES),
+        AUTO_SUMMIT("Auto-Summit", "Unlock automatic summit with per-category increment cycling.", RUNNER_SPEED_2),
+        AUTO_ELEVATION("Auto-Elevation", "Unlock automatic elevation with configurable multiplier targets.", RUNNER_SPEED_2),
+        ASCENSION_CHALLENGES("Ascension Challenges", "Unlock Ascension Challenges", 1, AUTO_SUMMIT, AUTO_ELEVATION),
+        MOMENTUM_SURGE("Momentum Surge", "Momentum boost x2 -> x3", 3, ASCENSION_CHALLENGES),
+        MULTIPLIER_BOOST("Multiplier Boost", "+0.10 base multiplier gain", 3, MOMENTUM_SURGE),
         RUNNER_SPEED_3("Runner Speed III", "x1.3 global runner speed", 5, MULTIPLIER_BOOST),
         EVOLUTION_POWER_2("Evolution Power II", "+1 base evolution power", 5, MULTIPLIER_BOOST),
         MOMENTUM_ENDURANCE("Momentum Endurance", "Momentum 60s -> 90s", 10, RUNNER_SPEED_3, EVOLUTION_POWER_2);
@@ -848,5 +849,5 @@ public final class AscendConstants {
     public static final int ACHIEVEMENT_ASCENSION_5 = 5;
     public static final int ACHIEVEMENT_ASCENSION_10 = 10;
     public static final int ACHIEVEMENT_CONSECUTIVE_RUNS_25 = 25;
-    public static final int ACHIEVEMENT_TOTAL_SKILL_NODES = 12;
+    public static final int ACHIEVEMENT_TOTAL_SKILL_NODES = 13;
 }

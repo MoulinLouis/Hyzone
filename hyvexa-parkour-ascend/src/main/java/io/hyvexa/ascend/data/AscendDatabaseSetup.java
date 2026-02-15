@@ -192,6 +192,9 @@ public final class AscendDatabaseSetup {
             // Auto-elevation columns
             ensureAutoElevationColumns(conn);
 
+            // Auto-summit columns
+            ensureAutoSummitColumns(conn);
+
             LOGGER.atInfo().log("Ascend database tables ensured");
             } // close try (Statement stmt)
 
@@ -972,6 +975,48 @@ public final class AscendDatabaseSetup {
                 LOGGER.atInfo().log("Added auto_elevation_target_index column");
             } catch (SQLException e) {
                 LOGGER.atSevere().log("Failed to add auto_elevation_target_index: " + e.getMessage());
+            }
+        }
+    }
+
+    private static void ensureAutoSummitColumns(Connection conn) {
+        if (conn == null) {
+            return;
+        }
+
+        if (!columnExists(conn, "ascend_players", "auto_summit_enabled")) {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN auto_summit_enabled BOOLEAN NOT NULL DEFAULT FALSE");
+                LOGGER.atInfo().log("Added auto_summit_enabled column");
+            } catch (SQLException e) {
+                LOGGER.atSevere().log("Failed to add auto_summit_enabled: " + e.getMessage());
+            }
+        }
+
+        if (!columnExists(conn, "ascend_players", "auto_summit_timer_seconds")) {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN auto_summit_timer_seconds INT NOT NULL DEFAULT 0");
+                LOGGER.atInfo().log("Added auto_summit_timer_seconds column");
+            } catch (SQLException e) {
+                LOGGER.atSevere().log("Failed to add auto_summit_timer_seconds: " + e.getMessage());
+            }
+        }
+
+        if (!columnExists(conn, "ascend_players", "auto_summit_config")) {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN auto_summit_config TEXT DEFAULT '[{\"enabled\":false,\"increment\":10},{\"enabled\":false,\"increment\":10},{\"enabled\":false,\"increment\":10}]'");
+                LOGGER.atInfo().log("Added auto_summit_config column");
+            } catch (SQLException e) {
+                LOGGER.atSevere().log("Failed to add auto_summit_config: " + e.getMessage());
+            }
+        }
+
+        if (!columnExists(conn, "ascend_players", "auto_summit_rotation_index")) {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN auto_summit_rotation_index INT NOT NULL DEFAULT 0");
+                LOGGER.atInfo().log("Added auto_summit_rotation_index column");
+            } catch (SQLException e) {
+                LOGGER.atSevere().log("Failed to add auto_summit_rotation_index: " + e.getMessage());
             }
         }
     }

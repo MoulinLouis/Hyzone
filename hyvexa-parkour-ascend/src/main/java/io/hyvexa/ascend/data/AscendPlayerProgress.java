@@ -57,6 +57,16 @@ public class AscendPlayerProgress {
     private volatile List<Long> autoElevationTargets = Collections.emptyList();
     private volatile int autoElevationTargetIndex;
 
+    // Auto-summit config
+    private volatile boolean autoSummitEnabled;
+    private volatile int autoSummitTimerSeconds;
+    private volatile List<AutoSummitCategoryConfig> autoSummitConfig = List.of(
+        new AutoSummitCategoryConfig(false, 10),
+        new AutoSummitCategoryConfig(false, 10),
+        new AutoSummitCategoryConfig(false, 10)
+    );
+    private volatile int autoSummitRotationIndex;
+
     // Tutorial tracking (bitmask)
     private volatile int seenTutorials;
 
@@ -425,6 +435,46 @@ public class AscendPlayerProgress {
     }
 
     // ========================================
+    // Auto-Summit
+    // ========================================
+
+    public boolean isAutoSummitEnabled() {
+        return autoSummitEnabled;
+    }
+
+    public void setAutoSummitEnabled(boolean enabled) {
+        this.autoSummitEnabled = enabled;
+    }
+
+    public int getAutoSummitTimerSeconds() {
+        return autoSummitTimerSeconds;
+    }
+
+    public void setAutoSummitTimerSeconds(int seconds) {
+        this.autoSummitTimerSeconds = Math.max(0, seconds);
+    }
+
+    public List<AutoSummitCategoryConfig> getAutoSummitConfig() {
+        return autoSummitConfig;
+    }
+
+    public void setAutoSummitConfig(List<AutoSummitCategoryConfig> config) {
+        this.autoSummitConfig = config != null ? new ArrayList<>(config) : List.of(
+            new AutoSummitCategoryConfig(false, 10),
+            new AutoSummitCategoryConfig(false, 10),
+            new AutoSummitCategoryConfig(false, 10)
+        );
+    }
+
+    public int getAutoSummitRotationIndex() {
+        return autoSummitRotationIndex;
+    }
+
+    public void setAutoSummitRotationIndex(int index) {
+        this.autoSummitRotationIndex = Math.max(0, index);
+    }
+
+    // ========================================
     // Tutorial Tracking
     // ========================================
 
@@ -490,6 +540,32 @@ public class AscendPlayerProgress {
             }
         }
         return true;
+    }
+
+    public static class AutoSummitCategoryConfig {
+        private boolean enabled;
+        private int increment;
+
+        public AutoSummitCategoryConfig(boolean enabled, int increment) {
+            this.enabled = enabled;
+            this.increment = Math.max(1, increment);
+        }
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public int getIncrement() {
+            return increment;
+        }
+
+        public void setIncrement(int increment) {
+            this.increment = Math.max(1, increment);
+        }
     }
 
     public static class MapProgress {
