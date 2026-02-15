@@ -365,19 +365,26 @@ Summit converts vexa into XP for permanent category bonuses, resetting vexa, ele
 
 ### XP System
 
-**Vexa to XP conversion:** `(vexa / 1B)^(3/7)` (compressed diminishing returns)
+**Vexa to XP conversion:** `(vexa / 1B)^power` where power is calibrated so 1Dc = level 1000
 
 | Vexa | XP Gained |
 |-------|-----------|
 | 1B | 1 |
 | 10B | 2 |
 | 100B | 5 |
-| 1T | 19 |
-| 10T | 51 |
-| 100T | 139 |
-| 1Q | 372 |
+| 1T | 12 |
+| 10T | 26 |
+| 100T | 60 |
+| 1Qa | 135 |
+| 1Qi | 1,572 |
+| 1Sx | 18,271 |
+| 1Sp | 212,425 |
+| 1Oc | 2,469,718 |
+| 1No | 28,713,668 |
+| 1Dc | 333,833,500 |
 
 **Minimum vexa for 1 XP:** 1 billion vexa (1B)
+**Level 1000 target:** 1 Decillion (10^33) accumulated vexa
 
 **XP per level formula:** `level^2`
 
@@ -398,10 +405,16 @@ Summit converts vexa into XP for permanent category bonuses, resetting vexa, ele
 | 1B | 1 | 1 |
 | 10B | 2 | 1 |
 | 100B | 5 | 2 |
-| 1T | 19 | 3 |
-| 10T | 51 | 4 |
-| 100T | 139 | 6 |
-| 1Q | 372 | 9 |
+| 1T | 12 | 2 |
+| 10T | 26 | 3 |
+| 100T | 60 | 5 |
+| 1Qa | 135 | 6 |
+| 1Qi | 1,572 | 16 |
+| 1Sx | 18,271 | 37 |
+| 1Sp | 212,425 | 85 |
+| 1Oc | 2.5M | 194 |
+| 1No | 28.7M | 441 |
+| 1Dc | 333.8M | 1000 |
 
 ### What Summit Resets
 
@@ -610,7 +623,7 @@ All formulas use consistent growth rates:
 - **Elevation cost:** 1.15^(level^0.72) for level<=300, then 1.15^(300^0.72 + (level-300)^0.58) (soft cap at 300)
 - **Upgrades:** 2^totalLevel (100% growth per level, smooth and predictable)
 - **Evolution gain:** EP^stars, where EP = 3 + 0.10 × level (linear, no ceiling)
-- **Summit XP:** (accumulatedVexa / 1B)^(3/7) (compressed diminishing returns)
+- **Summit XP:** (accumulatedVexa / 1B)^power, calibrated for 1Dc = level 1000
 - **Summit levels:** level^2 (manageable numbers at all levels)
 
 Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure continuous progression after evolution.
@@ -623,6 +636,12 @@ Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure conti
   - Offline earnings rate: 25% → 10% (base rate)
   - No Ascendancy Tree node boosts offline rate
   - More balanced offline vs. active play incentives
+
+- **2026-02-15 (v18):** Summit XP recalibration for 1Dc = level 1000
+  - Vexa→XP power: 3/7 (~0.4286) → ~0.3552 (derived from 1Dc target)
+  - 1 Decillion accumulated vexa now reaches exactly level 1000 (max)
+  - Early/mid game slower: 1Qa gives ~135 XP (was 372), 1Qi gives ~1,571 XP (was ~7,196)
+  - Progression stretched to fill the full 1B → 1Dc range evenly
 
 - **2026-02-08 (v17):** Elevation accumulated vexa system
   - Elevation now uses accumulated vexa (total earned since last reset) instead of current balance
