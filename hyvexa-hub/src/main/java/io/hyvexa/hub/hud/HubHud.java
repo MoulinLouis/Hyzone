@@ -8,6 +8,7 @@ import com.hypixel.hytale.server.core.universe.Universe;
 public class HubHud extends CustomUIHud {
 
     private int lastPlayerCount = -1;
+    private long lastGems = -1;
 
     public HubHud(PlayerRef playerRef) {
         super(playerRef);
@@ -16,6 +17,16 @@ public class HubHud extends CustomUIHud {
     @Override
     protected void build(UICommandBuilder commandBuilder) {
         commandBuilder.append("Pages/Hub_RunHud.ui");
+    }
+
+    public void updateGems(long gems) {
+        if (gems == lastGems) {
+            return;
+        }
+        lastGems = gems;
+        UICommandBuilder commandBuilder = new UICommandBuilder();
+        commandBuilder.set("#PlayerGemsValue.Text", String.valueOf(gems));
+        update(false, commandBuilder);
     }
 
     public void updatePlayerCount() {

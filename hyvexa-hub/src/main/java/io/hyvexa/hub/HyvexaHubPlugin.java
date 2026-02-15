@@ -24,6 +24,7 @@ import io.hyvexa.common.util.InventoryUtils;
 import io.hyvexa.common.util.ModeGate;
 import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.core.db.DatabaseManager;
+import io.hyvexa.core.economy.GemStore;
 import io.hyvexa.hub.command.HubCommand;
 import io.hyvexa.hub.hud.HubHud;
 import io.hyvexa.hub.interaction.HubMenuInteraction;
@@ -90,6 +91,11 @@ public class HyvexaHubPlugin extends JavaPlugin {
                 LOGGER.atSevere().log("Failed to initialize database: " + e.getMessage());
                 databaseAvailable = false;
             }
+        }
+        try {
+            GemStore.getInstance().initialize();
+        } catch (Exception e) {
+            LOGGER.atWarning().withCause(e).log("Failed to initialize GemStore for Hub");
         }
         router = new HubRouter();
         preloadWorlds();
@@ -176,6 +182,8 @@ public class HyvexaHubPlugin extends JavaPlugin {
                 return;
             }
             clearHubHudState(playerId);
+            try { GemStore.getInstance().evictPlayer(playerId); }
+            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: GemStore"); }
         });
 
         for (PlayerRef playerRef : Universe.get().getPlayers()) {
@@ -198,9 +206,11 @@ public class HyvexaHubPlugin extends JavaPlugin {
     }
 
     private void tickPlayerCount() {
-        for (HudLifecycle lifecycle : hubHudLifecycles.values()) {
+        for (var entry : hubHudLifecycles.entrySet()) {
+            HudLifecycle lifecycle = entry.getValue();
             if (lifecycle.hud() != null) {
                 lifecycle.hud().updatePlayerCount();
+                lifecycle.hud().updateGems(GemStore.getInstance().getGems(entry.getKey()));
             }
         }
     }

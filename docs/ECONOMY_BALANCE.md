@@ -16,6 +16,7 @@ This document provides a factual overview of the economy balancing in Ascend mod
 6. [Expected Progression Timeline](#expected-progression-timeline)
 7. [Strategic Evolution System](#strategic-evolution-system)
 8. [Design Philosophy](#design-philosophy)
+9. [Gems (Global Currency)](#gems-global-currency)
 
 ---
 
@@ -599,6 +600,18 @@ Evolution provides a clear benefit with continuous cost progression.
 - **Income:** ×10 inflation on runner multiplier gains (0.01 → 0.1)
 - **Costs:** ×2 base inflation on upgrades, ×6 on elevations
 - **Net effect:** ~50% faster progression than pre-rebalance, much bigger numbers
+
+---
+
+## Gems (Global Currency)
+
+Gems are a **global cross-mode currency** stored in `hyvexa-core` and displayed on all HUDs (Parkour, Ascend, Hub).
+
+- **Storage:** `player_gems` table, managed by `GemStore` singleton
+- **Display:** Green gem icon + count on right-side info box of every HUD
+- **Admin command:** `/gems <set|add|remove|check> <player> [amount]` (OP only)
+- **Current sources:** Admin-granted only (future: vote rewards, cosmetics shop)
+- **Floor:** Balance cannot go below 0
 
 ---
 

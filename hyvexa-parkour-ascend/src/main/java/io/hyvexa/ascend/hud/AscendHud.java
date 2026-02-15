@@ -33,6 +33,7 @@ public class AscendHud extends CustomUIHud {
     private String lastAscensionProgressKey;
     private String lastRunnerBarKey;
     private int lastPlayerCount = -1;
+    private long lastGems = -1;
 
     // Track previous values for effect triggering (converted to double for comparison)
     private double[] lastDigits;
@@ -60,6 +61,16 @@ public class AscendHud extends CustomUIHud {
         lastStaticKey = key;
         UICommandBuilder commandBuilder = new UICommandBuilder();
         commandBuilder.set("#PlayerNameText.Text", "Ascend");
+        update(false, commandBuilder);
+    }
+
+    public void updateGems(long gems) {
+        if (gems == lastGems) {
+            return;
+        }
+        lastGems = gems;
+        UICommandBuilder commandBuilder = new UICommandBuilder();
+        commandBuilder.set("#PlayerGemsValue.Text", String.valueOf(gems));
         update(false, commandBuilder);
     }
 
@@ -230,6 +241,7 @@ public class AscendHud extends CustomUIHud {
         lastAscensionProgressKey = null;
         lastRunnerBarKey = null;
         lastPlayerCount = -1;
+        lastGems = -1;
         lastDigits = null;
         lastVexa = null;
         effectManager.clearEffects();

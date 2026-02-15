@@ -19,6 +19,7 @@ import io.hyvexa.duel.data.DuelStatsStore;
 import io.hyvexa.duel.interaction.DuelMenuInteraction;
 import io.hyvexa.duel.interaction.ForfeitInteraction;
 import io.hyvexa.core.db.DatabaseManager;
+import io.hyvexa.core.economy.GemStore;
 import io.hyvexa.parkour.data.GlobalMessageStore;
 import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.data.PlayerCountStore;
@@ -53,6 +54,7 @@ import io.hyvexa.parkour.ghost.GhostNpcManager;
 import io.hyvexa.parkour.ghost.GhostRecorder;
 import io.hyvexa.common.ghost.GhostStore;
 import io.hyvexa.parkour.command.CheckpointCommand;
+import io.hyvexa.parkour.command.GemsCommand;
 import io.hyvexa.parkour.command.DatabaseClearCommand;
 import io.hyvexa.parkour.command.DatabaseReloadCommand;
 import io.hyvexa.parkour.command.DatabaseTestCommand;
@@ -164,6 +166,11 @@ public class HyvexaPlugin extends JavaPlugin {
         } catch (Exception e) {
             LOGGER.atSevere().withCause(e).log("Failed to initialize database");
         }
+        try {
+            GemStore.getInstance().initialize();
+        } catch (Exception e) {
+            LOGGER.atWarning().withCause(e).log("Failed to initialize GemStore");
+        }
         this.collisionManager = new CollisionManager();
         this.mapStore = new MapStore();
         this.mapStore.syncLoad();
@@ -243,6 +250,7 @@ public class HyvexaPlugin extends JavaPlugin {
         this.getCommandRegistry().registerCommand(new DatabaseTestCommand());
         this.getCommandRegistry().registerCommand(new MessageTestCommand());
         this.getCommandRegistry().registerCommand(new DuelCommand(this.duelTracker, this.runTracker));
+        this.getCommandRegistry().registerCommand(new GemsCommand());
 
         registerNoDropSystem();
         registerNoBreakSystem();
@@ -320,6 +328,9 @@ public class HyvexaPlugin extends JavaPlugin {
 
                 try { cleanupManager.handleDisconnect(event.getPlayerRef()); }
                 catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: cleanupManager"); }
+
+                try { GemStore.getInstance().evictPlayer(playerId); }
+                catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: GemStore"); }
             }
 
             try { playtimeManager.decrementOnlineCount(); }

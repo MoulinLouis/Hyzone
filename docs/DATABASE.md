@@ -227,6 +227,23 @@ CREATE TABLE player_count_samples (
 ) ENGINE=InnoDB;
 ```
 
+## player_gems
+Stores the global gems currency balance per player. Shared across all modules.
+
+Suggested schema:
+```sql
+CREATE TABLE player_gems (
+  uuid VARCHAR(36) NOT NULL PRIMARY KEY,
+  gems BIGINT NOT NULL DEFAULT 0
+) ENGINE=InnoDB;
+```
+
+Notes:
+- Auto-created by `GemStore.initialize()` on startup
+- Managed by `hyvexa-core/src/main/java/io/hyvexa/core/economy/GemStore.java`
+- Writes are immediate (no dirty tracking) since gems are rare/precious
+- Player cache is evicted on disconnect (lazy-loaded on next access)
+
 ## Notes
 - Foreign keys are not required by the current code, but you can add them if desired.
 - All reads/writes are performed by the stores in `hyvexa-parkour/src/main/java/io/hyvexa/parkour/data/`.

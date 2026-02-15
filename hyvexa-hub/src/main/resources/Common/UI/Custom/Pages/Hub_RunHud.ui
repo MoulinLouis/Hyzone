@@ -6,7 +6,7 @@ $C.@PageOverlay {
     Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
 
     Group #RunHudRoot {
-      Anchor: (Right: 20, Top: 400, Width: 284, Height: 370);
+      Anchor: (Right: 20, Top: 400, Width: 284, Height: 396);
       LayoutMode: Left;
 
       Group #InfoAccentBar {
@@ -59,6 +59,21 @@ $C.@PageOverlay {
                 Wrap: true
               );
               Text: "Right click on the Game Selector item to choose your mode.";
+            }
+
+            Group #PlayerGemsRow {
+              Anchor: (Left: 0, Right: 0, Top: 6, Height: 20);
+              LayoutMode: Left;
+
+              Group #GemIcon {
+                Anchor: (Width: 16, Height: 16);
+                Background: (TexturePath: "../Textures/gem.png");
+              }
+              Group { Anchor: (Width: 6); }
+              Label #PlayerGemsValue {
+                Style: (FontSize: 14, TextColor: #62d96b, RenderBold: true);
+                Text: "0";
+              }
             }
 
             Label #InfoIpText {
