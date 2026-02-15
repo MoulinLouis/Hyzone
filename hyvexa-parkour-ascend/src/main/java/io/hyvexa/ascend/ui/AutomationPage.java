@@ -20,6 +20,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.ascension.AscensionManager;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
+import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
 
 import javax.annotation.Nonnull;
@@ -194,11 +195,12 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
             }
         }
 
-        // Auto-Elevation section
-        boolean hasElevSkill = ascensionManager.hasAutoElevation(playerId);
+        // Auto-Elevation section (restricted to OP players only)
+        boolean isPlayerOp = PermissionUtils.isOp(playerId);
+        boolean hasElevAccess = isPlayerOp;
         boolean isElevEnabled = playerStore.isAutoElevationEnabled(playerId);
 
-        if (!hasElevSkill) {
+        if (!hasElevAccess) {
             commandBuilder.set("#ElevContent.Visible", false);
             commandBuilder.set("#ElevLockedOverlay.Visible", true);
         } else {
@@ -247,11 +249,11 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
                 "Next target: x" + targets.get(targetIndex) + " (" + (targetIndex + 1) + "/" + targets.size() + ")");
         }
 
-        // Auto-Summit section
-        boolean hasSumSkill = ascensionManager.hasAutoSummit(playerId);
+        // Auto-Summit section (restricted to OP players only)
+        boolean hasSumAccess = isPlayerOp;
         boolean isSumEnabled = playerStore.isAutoSummitEnabled(playerId);
 
-        if (!hasSumSkill) {
+        if (!hasSumAccess) {
             commandBuilder.set("#SumContent.Visible", false);
             commandBuilder.set("#SumLockedOverlay.Visible", true);
         } else {
@@ -539,8 +541,8 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
 
         UUID playerId = playerRef.getUuid();
 
-        if (!ascensionManager.hasAutoElevation(playerId)) {
-            player.sendMessage(Message.raw("[Automation] Unlock 'Auto-Elevation' in the Ascendancy Tree first.")
+        if (!PermissionUtils.isOp(player)) {
+            player.sendMessage(Message.raw("[Automation] Auto-Elevation is currently disabled.")
                 .color(SystemMessageUtils.SECONDARY));
             return;
         }
@@ -684,8 +686,8 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
 
         UUID playerId = playerRef.getUuid();
 
-        if (!ascensionManager.hasAutoSummit(playerId)) {
-            player.sendMessage(Message.raw("[Automation] Unlock 'Auto-Summit' in the Ascendancy Tree first.")
+        if (!PermissionUtils.isOp(player)) {
+            player.sendMessage(Message.raw("[Automation] Auto-Summit is currently disabled.")
                 .color(SystemMessageUtils.SECONDARY));
             return;
         }
