@@ -1004,7 +1004,7 @@ public final class AscendDatabaseSetup {
 
         if (!columnExists(conn, "ascend_players", "auto_summit_config")) {
             try (Statement stmt = conn.createStatement()) {
-                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN auto_summit_config TEXT DEFAULT '[{\"enabled\":false,\"increment\":10},{\"enabled\":false,\"increment\":10},{\"enabled\":false,\"increment\":10}]'");
+                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN auto_summit_config TEXT DEFAULT '[{\"enabled\":false,\"increment\":0},{\"enabled\":false,\"increment\":0},{\"enabled\":false,\"increment\":0}]'");
                 LOGGER.atInfo().log("Added auto_summit_config column");
             } catch (SQLException e) {
                 LOGGER.atSevere().log("Failed to add auto_summit_config: " + e.getMessage());

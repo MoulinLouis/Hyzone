@@ -271,7 +271,7 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
 
         for (int i = 0; i < SUMMIT_CATEGORIES; i++) {
             AscendPlayerProgress.AutoSummitCategoryConfig catConfig =
-                i < sumConfig.size() ? sumConfig.get(i) : new AscendPlayerProgress.AutoSummitCategoryConfig(false, 10);
+                i < sumConfig.size() ? sumConfig.get(i) : new AscendPlayerProgress.AutoSummitCategoryConfig(false, 0);
 
             // Level display
             int level = 0;
@@ -666,7 +666,7 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
             new ArrayList<>(playerStore.getAutoSummitConfig(playerId));
 
         while (config.size() <= index) {
-            config.add(new AscendPlayerProgress.AutoSummitCategoryConfig(false, 10));
+            config.add(new AscendPlayerProgress.AutoSummitCategoryConfig(false, 0));
         }
 
         AscendPlayerProgress.AutoSummitCategoryConfig catConfig = config.get(index);
@@ -690,14 +690,14 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
 
         try {
             int increment = (int) Double.parseDouble(input);
-            increment = Math.max(1, Math.min(1000, increment));
+            increment = Math.max(0, Math.min(1000, increment));
 
             UUID playerId = playerRef.getUuid();
             List<AscendPlayerProgress.AutoSummitCategoryConfig> config =
                 new ArrayList<>(playerStore.getAutoSummitConfig(playerId));
 
             while (config.size() <= index) {
-                config.add(new AscendPlayerProgress.AutoSummitCategoryConfig(false, 10));
+                config.add(new AscendPlayerProgress.AutoSummitCategoryConfig(false, 0));
             }
 
             AscendPlayerProgress.AutoSummitCategoryConfig catConfig = config.get(index);

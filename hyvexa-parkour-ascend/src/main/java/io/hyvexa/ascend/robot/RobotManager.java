@@ -677,11 +677,13 @@ public class RobotManager {
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         double multiplierGainBonus = 1.0;
         double evolutionPowerBonus = 3.0;
+        double baseMultiplierBonus = 0.0;
         if (plugin != null && plugin.getSummitManager() != null) {
             multiplierGainBonus = plugin.getSummitManager().getMultiplierGainBonus(ownerId);
             evolutionPowerBonus = plugin.getSummitManager().getEvolutionPowerBonus(ownerId);
+            baseMultiplierBonus = plugin.getSummitManager().getBaseMultiplierBonus(ownerId);
         }
-        BigNumber multiplierIncrement = AscendConstants.getRunnerMultiplierIncrement(stars, multiplierGainBonus, evolutionPowerBonus);
+        BigNumber multiplierIncrement = AscendConstants.getRunnerMultiplierIncrement(stars, multiplierGainBonus, evolutionPowerBonus, baseMultiplierBonus);
 
         // Challenge 1 reward: x1.5 multiplier gain on map 5 (displayOrder 4)
         AscendPlayerProgress ownerProgress = playerStore.getPlayer(ownerId);
@@ -945,6 +947,7 @@ public class RobotManager {
 
             AscendPlayerProgress.AutoSummitCategoryConfig catConfig = config.get(idx);
             if (!catConfig.isEnabled()) continue;
+            if (catConfig.getIncrement() <= 0) continue;
 
             AscendConstants.SummitCategory category = categories[idx];
 
@@ -1020,7 +1023,7 @@ public class RobotManager {
             }
 
             // Momentum: temporary speed boost from manual run (per-map)
-            // Base: x2.0, with Momentum Surge skill: x3.0
+            // Base: x2.0, with Momentum Surge skill: x2.5
             AscendPlayerStore ps = plugin.getPlayerStore();
             if (ps != null) {
                 AscendPlayerProgress progress = ps.getPlayer(ownerId);

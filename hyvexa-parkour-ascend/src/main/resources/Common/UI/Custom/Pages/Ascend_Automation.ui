@@ -564,7 +564,7 @@ $C.@PageOverlay {
                 Text: "Categories:";
               }
 
-              // Category 0: Runner Speed
+              // Category 0: Multiplier Gain
               Group #SumCat0 {
                 Anchor: (Left: 0, Right: 0, Height: 32);
                 LayoutMode: Left;
@@ -573,7 +573,7 @@ $C.@PageOverlay {
                   Anchor: (Width: 110, Height: 32);
                   Padding: (Top: 6);
                   Style: (FontSize: 11, TextColor: #e2e8f0);
-                  Text: "Runner Speed";
+                  Text: "Multiplier Gain";
                 }
 
                 Label #SumCatLevel0 {
@@ -608,7 +608,7 @@ $C.@PageOverlay {
 
                 TextField #SumIncField0 {
                   Anchor: (Width: 50, Height: 26);
-                  PlaceholderText: "10";
+                  PlaceholderText: "0";
                   MaxLength: 5;
                   Background: #1a2530;
                   OutlineColor: #ffffff(0.08);
@@ -624,7 +624,7 @@ $C.@PageOverlay {
                 }
               }
 
-              // Category 1: Multiplier Gain
+              // Category 1: Runner Speed
               Group #SumCat1 {
                 Anchor: (Left: 0, Right: 0, Height: 32);
                 LayoutMode: Left;
@@ -633,7 +633,7 @@ $C.@PageOverlay {
                   Anchor: (Width: 110, Height: 32);
                   Padding: (Top: 6);
                   Style: (FontSize: 11, TextColor: #e2e8f0);
-                  Text: "Multiplier Gain";
+                  Text: "Runner Speed";
                 }
 
                 Label #SumCatLevel1 {
@@ -668,7 +668,7 @@ $C.@PageOverlay {
 
                 TextField #SumIncField1 {
                   Anchor: (Width: 50, Height: 26);
-                  PlaceholderText: "10";
+                  PlaceholderText: "0";
                   MaxLength: 5;
                   Background: #1a2530;
                   OutlineColor: #ffffff(0.08);
@@ -728,7 +728,7 @@ $C.@PageOverlay {
 
                 TextField #SumIncField2 {
                   Anchor: (Width: 50, Height: 26);
-                  PlaceholderText: "10";
+                  PlaceholderText: "0";
                   MaxLength: 5;
                   Background: #1a2530;
                   OutlineColor: #ffffff(0.08);

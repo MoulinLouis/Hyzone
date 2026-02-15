@@ -105,16 +105,18 @@ public class PassiveEarningsManager {
             ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
             double multiplierGainBonus = 1.0;
             double evolutionPowerBonus = 3.0;
+            double baseMultiplierBonus = 0.0;
             if (plugin != null && plugin.getSummitManager() != null) {
                 multiplierGainBonus = plugin.getSummitManager().getMultiplierGainBonus(playerId);
                 evolutionPowerBonus = plugin.getSummitManager().getEvolutionPowerBonus(playerId);
+                baseMultiplierBonus = plugin.getSummitManager().getBaseMultiplierBonus(playerId);
             }
 
             // Offline rate: always base 10%
             long effectiveOfflineRate = OFFLINE_RATE_PERCENT;
 
             // Multiplier gain per run (with Summit bonuses) - at offline rate
-            BigNumber multiplierIncrement = AscendConstants.getRunnerMultiplierIncrement(stars, multiplierGainBonus, evolutionPowerBonus);
+            BigNumber multiplierIncrement = AscendConstants.getRunnerMultiplierIncrement(stars, multiplierGainBonus, evolutionPowerBonus, baseMultiplierBonus);
 
             // Challenge 1 reward: x1.5 multiplier gain on map 5 (displayOrder 4)
             if (progress.hasChallengeReward(ChallengeType.CHALLENGE_1)) {

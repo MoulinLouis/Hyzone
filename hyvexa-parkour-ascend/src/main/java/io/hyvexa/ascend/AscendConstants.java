@@ -174,7 +174,7 @@ public final class AscendConstants {
 
     // Momentum System (temporary speed boost from manual runs)
     public static final double MOMENTUM_SPEED_MULTIPLIER = 2.0;
-    public static final double MOMENTUM_SURGE_MULTIPLIER = 3.0;
+    public static final double MOMENTUM_SURGE_MULTIPLIER = 2.5;
 
 
     public static final long MOMENTUM_DURATION_MS = 60_000L;
@@ -206,21 +206,21 @@ public final class AscendConstants {
      * @return Multiplier increment per completion (base 0.1)
      */
     public static BigNumber getRunnerMultiplierIncrement(int stars) {
-        return getRunnerMultiplierIncrement(stars, 1.0, 3.0);
+        return getRunnerMultiplierIncrement(stars, 1.0, 3.0, 0.0);
     }
 
     /**
      * Get the multiplier increment for a runner with Summit bonuses.
-     * Base: 0.1 per completion, raised by Evolution Power per star.
-     * Formula: base × evolutionPower^stars × multiplierGainBonus
-     * Example with evolutionPower=3: 0★=0.1, 1★=0.3, 2★=0.9, 3★=2.7, 5★=24.3
+     * Base: (0.1 + baseIncrementBonus) per completion, raised by Evolution Power per star.
+     * Formula: (base + baseIncrementBonus) × evolutionPower^stars × multiplierGainBonus
      * @param stars Evolution level - each star multiplies by evolutionPower
      * @param multiplierGainBonus Bonus from Summit Multiplier Gain (1.0 = no bonus)
      * @param evolutionPowerBonus Bonus from Summit Evolution Power (3.0 + 0.10 per level)
+     * @param baseIncrementBonus Additive bonus to base increment (e.g. +0.10 from Multiplier Boost skill)
      * @return Multiplier increment per completion
      */
-    public static BigNumber getRunnerMultiplierIncrement(int stars, double multiplierGainBonus, double evolutionPowerBonus) {
-        double base = RUNNER_MULTIPLIER_INCREMENT; // 0.1
+    public static BigNumber getRunnerMultiplierIncrement(int stars, double multiplierGainBonus, double evolutionPowerBonus, double baseIncrementBonus) {
+        double base = RUNNER_MULTIPLIER_INCREMENT + baseIncrementBonus; // 0.1 + bonus
         if (stars > 0) {
             double power = Math.pow(evolutionPowerBonus, stars);
             if (!Double.isFinite(power)) {
@@ -447,8 +447,8 @@ public final class AscendConstants {
     public static final long SUMMIT_MAX_XP = getCumulativeXpForLevel(SUMMIT_MAX_LEVEL);
 
     public enum SummitCategory {
-        RUNNER_SPEED("Runner Speed", 1.0, 0.15),        // 1 + 0.15/level
         MULTIPLIER_GAIN("Multiplier Gain", 1.0, 0.30),  // 1 + 0.30/level
+        RUNNER_SPEED("Runner Speed", 1.0, 0.15),        // 1 + 0.15/level
         EVOLUTION_POWER("Evolution Power", 3.0, 0.10);   // 3 + 0.10/level
 
         private final String displayName;
@@ -617,11 +617,11 @@ public final class AscendConstants {
         AUTO_SUMMIT("Auto-Summit", "Unlock automatic summit with per-category increment cycling.", RUNNER_SPEED_2),
         AUTO_ELEVATION("Auto-Elevation", "Unlock automatic elevation with configurable multiplier targets.", RUNNER_SPEED_2),
         ASCENSION_CHALLENGES("Ascension Challenges", "Unlock Ascension Challenges", 1, AUTO_SUMMIT, AUTO_ELEVATION),
-        MOMENTUM_SURGE("Momentum Surge", "Momentum boost x2 -> x3", 3, ASCENSION_CHALLENGES),
-        MULTIPLIER_BOOST("Multiplier Boost", "+0.10 base multiplier gain", 3, MOMENTUM_SURGE),
-        RUNNER_SPEED_3("Runner Speed III", "x1.3 global runner speed", 5, MULTIPLIER_BOOST),
-        EVOLUTION_POWER_2("Evolution Power II", "+1 base evolution power", 5, MULTIPLIER_BOOST),
-        MOMENTUM_ENDURANCE("Momentum Endurance", "Momentum 60s -> 90s", 10, RUNNER_SPEED_3, EVOLUTION_POWER_2);
+        MOMENTUM_SURGE("Momentum Surge", "Momentum boost x2 -> x2.5", 3, ASCENSION_CHALLENGES),
+        MOMENTUM_ENDURANCE("Momentum Endurance", "Momentum 60s -> 90s", 3, ASCENSION_CHALLENGES),
+        MULTIPLIER_BOOST("Multiplier Boost", "+0.10 base multiplier gain", 5, MOMENTUM_SURGE, MOMENTUM_ENDURANCE),
+        RUNNER_SPEED_3("Runner Speed III", "x1.3 global runner speed", 10, MULTIPLIER_BOOST),
+        EVOLUTION_POWER_2("Evolution Power II", "+1 base evolution power", 10, MULTIPLIER_BOOST);
 
         private final String name;
         private final String description;

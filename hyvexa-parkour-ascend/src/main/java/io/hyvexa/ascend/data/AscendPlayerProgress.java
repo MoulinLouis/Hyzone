@@ -61,9 +61,9 @@ public class AscendPlayerProgress {
     private volatile boolean autoSummitEnabled;
     private volatile int autoSummitTimerSeconds;
     private volatile List<AutoSummitCategoryConfig> autoSummitConfig = List.of(
-        new AutoSummitCategoryConfig(false, 10),
-        new AutoSummitCategoryConfig(false, 10),
-        new AutoSummitCategoryConfig(false, 10)
+        new AutoSummitCategoryConfig(false, 0),
+        new AutoSummitCategoryConfig(false, 0),
+        new AutoSummitCategoryConfig(false, 0)
     );
     private volatile int autoSummitRotationIndex;
 
@@ -460,9 +460,9 @@ public class AscendPlayerProgress {
 
     public void setAutoSummitConfig(List<AutoSummitCategoryConfig> config) {
         this.autoSummitConfig = config != null ? new ArrayList<>(config) : List.of(
-            new AutoSummitCategoryConfig(false, 10),
-            new AutoSummitCategoryConfig(false, 10),
-            new AutoSummitCategoryConfig(false, 10)
+            new AutoSummitCategoryConfig(false, 0),
+            new AutoSummitCategoryConfig(false, 0),
+            new AutoSummitCategoryConfig(false, 0)
         );
     }
 

@@ -1019,7 +1019,7 @@ class AscendPlayerPersistence {
         if (json == null || json.isBlank() || json.equals("[]")) {
             // Return defaults for 3 categories
             for (int i = 0; i < 3; i++) {
-                result.add(new AscendPlayerProgress.AutoSummitCategoryConfig(false, 10));
+                result.add(new AscendPlayerProgress.AutoSummitCategoryConfig(false, 0));
             }
             return result;
         }
@@ -1036,7 +1036,7 @@ class AscendPlayerPersistence {
             if (cleaned.isBlank()) continue;
 
             boolean enabled = false;
-            int increment = 10;
+            int increment = 0;
 
             for (String field : cleaned.split(",")) {
                 String[] kv = field.split(":");
@@ -1049,7 +1049,7 @@ class AscendPlayerPersistence {
                     try {
                         increment = Integer.parseInt(val);
                     } catch (NumberFormatException e) {
-                        increment = 10;
+                        increment = 0;
                     }
                 }
             }
@@ -1058,7 +1058,7 @@ class AscendPlayerPersistence {
 
         // Ensure exactly 3 entries
         while (result.size() < 3) {
-            result.add(new AscendPlayerProgress.AutoSummitCategoryConfig(false, 10));
+            result.add(new AscendPlayerProgress.AutoSummitCategoryConfig(false, 0));
         }
         if (result.size() > 3) {
             result = new java.util.ArrayList<>(result.subList(0, 3));
