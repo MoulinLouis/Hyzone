@@ -16,6 +16,7 @@ import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 import io.hyvexa.common.math.BigNumber;
+import io.hyvexa.core.economy.GemStore;
 
 import java.util.List;
 import java.util.UUID;
@@ -100,6 +101,9 @@ public class AscendHudManager {
 
             // Update ascension quest progress bar
             hud.updateAscensionQuest(vexa);
+
+            // Update gems display
+            hud.updateGems(GemStore.getInstance().getGems(playerId));
 
             // Runner bars are updated at higher frequency by updateRunnerBar()
         } catch (Exception e) {

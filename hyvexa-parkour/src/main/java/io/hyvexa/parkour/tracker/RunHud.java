@@ -18,6 +18,7 @@ public class RunHud extends CustomUIHud {
     private String lastInfoKey;
     private String lastAnnouncementKey;
     private int lastPlayerCount = -1;
+    private long lastGems = -1;
     private String lastAdvancedHudKey;
     private Boolean lastAdvancedHudVisible;
 
@@ -173,6 +174,16 @@ public class RunHud extends CustomUIHud {
         update(false, commandBuilder);
     }
 
+    public void updateGems(long gems) {
+        if (gems == lastGems) {
+            return;
+        }
+        lastGems = gems;
+        UICommandBuilder commandBuilder = new UICommandBuilder();
+        commandBuilder.set("#PlayerGemsValue.Text", String.valueOf(gems));
+        update(false, commandBuilder);
+    }
+
     public void updatePlayerCount() {
         int count = Universe.get().getPlayers().size();
         if (count == lastPlayerCount) {
@@ -193,6 +204,7 @@ public class RunHud extends CustomUIHud {
         lastInfoKey = null;
         lastAnnouncementKey = null;
         lastPlayerCount = -1;
+        lastGems = -1;
         lastAdvancedHudKey = null;
         lastAdvancedHudVisible = null;
     }

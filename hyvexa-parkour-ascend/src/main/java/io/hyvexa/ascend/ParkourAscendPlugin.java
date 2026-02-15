@@ -19,6 +19,7 @@ import io.hyvexa.ascend.command.HudPreviewCommand;
 import io.hyvexa.ascend.command.SummitCommand;
 import io.hyvexa.ascend.data.AscendDatabaseSetup;
 import io.hyvexa.core.db.DatabaseManager;
+import io.hyvexa.core.economy.GemStore;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.data.AscendSettingsStore;
@@ -117,6 +118,11 @@ public class ParkourAscendPlugin extends JavaPlugin {
         }
 
         AscendDatabaseSetup.ensureTables();
+        try {
+            GemStore.getInstance().initialize();
+        } catch (Exception e) {
+            LOGGER.atWarning().withCause(e).log("Failed to initialize GemStore for Ascend");
+        }
 
         // Initialize whitelist manager
         java.nio.file.Path modsFolderPath = java.nio.file.Path.of("mods", "Parkour");
@@ -336,6 +342,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
             // Evict player from cache (lazy loading - saves memory)
             runSafe(() -> { if (playerStore != null) playerStore.removePlayer(playerId); },
                     "Disconnect cleanup: playerStore");
+            runSafe(() -> GemStore.getInstance().evictPlayer(playerId),
+                    "Disconnect cleanup: GemStore");
         });
 
         tickTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(

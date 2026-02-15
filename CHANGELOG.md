@@ -11,6 +11,7 @@
 - **Parkour/Ascend: Ghost stack moved to shared core wrappers** - Recorder/store/interpolation logic now lives in `hyvexa-core` with mode-specific table/resolver adapters and parity tests
 
 ### Added
+- **Global: Gems currency** - Cross-mode currency stored in `hyvexa-core`, displayed on all HUDs with green gem icon. Admin command `/gems` for set/add/remove/check. Groundwork for future cosmetics and vote rewards.
 - **Ascend: Auto-Elevation skill tree node** - New AUTO_ELEVATION node (7 AP) unlocks configurable automatic elevation with multiplier target sequences and optional timer delay. Managed via the Automation page.
 - **Parkour: Advanced HUD toggle** - New "Advanced HUD" ON/OFF toggle in Player Settings that displays a compact panel above the right-side HUD showing real-time orientation (pitch, yaw, roll + cardinal direction), velocity (x, y, z), and speed
 - **Ascend: My Profile hub page** - Silk item now opens a "My Profile" page with links to Stats, Achievements, and Settings. Also accessible via `/ascend profile`.
