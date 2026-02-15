@@ -87,6 +87,18 @@ public class AscendCommand extends AbstractAsyncCommand {
     }
 
     /**
+     * Force-close the player's active ascend page from an external trigger
+     * (e.g., auto-elevation or auto-summit resetting progress).
+     */
+    public static void forceCloseActivePage(UUID playerId) {
+        BaseAscendPage page = activePages.remove(playerId);
+        if (page != null) {
+            page.shutdown();
+            page.forceClose();
+        }
+    }
+
+    /**
      * Get the plugin instance, sending an error message to the player if unavailable.
      * Returns null if the plugin or its core systems are not ready.
      */

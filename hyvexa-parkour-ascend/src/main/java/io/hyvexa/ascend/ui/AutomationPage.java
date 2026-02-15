@@ -8,12 +8,14 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
 import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
 import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.ascension.AscensionManager;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
@@ -24,6 +26,9 @@ import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.AutomationData> {
 
@@ -44,6 +49,7 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
     private static final String COLOR_OFF = "#6b7280";
     private static final String COLOR_ACCENT = "#f59e0b";
     private static final String COLOR_LOCKED_BORDER = "#4b5563";
+    private static final long REFRESH_INTERVAL_MS = 1000L;
 
     private final AscendPlayerStore playerStore;
     private final AscensionManager ascensionManager;
@@ -52,6 +58,11 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
     private String addValueInput;
     private String sumTimerInput;
     private final String[] sumIncrementInput = new String[SUMMIT_CATEGORIES];
+
+    private volatile ScheduledFuture<?> refreshTask;
+    private final AtomicBoolean refreshInFlight = new AtomicBoolean(false);
+    private final AtomicBoolean refreshRequested = new AtomicBoolean(false);
+    private volatile boolean dismissed = false;
 
     public AutomationPage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore, AscensionManager ascensionManager) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, AutomationData.CODEC);
@@ -114,6 +125,7 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
             EventData.of(AutomationData.KEY_SUM_INC_2, "#SumIncField2.Value"), false);
 
         updateState(ref, store, commandBuilder);
+        startAutoRefresh(ref, store);
     }
 
     private void updateState(Ref<EntityStore> ref, Store<EntityStore> store, UICommandBuilder commandBuilder) {
@@ -309,6 +321,58 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
         } else {
             commandBuilder.set("#SumNextLabel.Text", "No categories enabled.");
         }
+    }
+
+    @Override
+    public void onDismiss(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store) {
+        dismissed = true;
+        stopAutoRefresh();
+        super.onDismiss(ref, store);
+    }
+
+    private void startAutoRefresh(Ref<EntityStore> ref, Store<EntityStore> store) {
+        if (refreshTask != null) {
+            return;
+        }
+        World world = store.getExternalData().getWorld();
+        if (world == null) {
+            return;
+        }
+        refreshTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(() -> {
+            if (dismissed) {
+                stopAutoRefresh();
+                return;
+            }
+            if (ref == null || !ref.isValid()) {
+                stopAutoRefresh();
+                return;
+            }
+            PageRefreshScheduler.requestRefresh(
+                world,
+                refreshInFlight,
+                refreshRequested,
+                () -> refreshDisplay(ref, store),
+                this::stopAutoRefresh,
+                "AutomationPage"
+            );
+        }, REFRESH_INTERVAL_MS, REFRESH_INTERVAL_MS, TimeUnit.MILLISECONDS);
+    }
+
+    private void stopAutoRefresh() {
+        if (refreshTask != null) {
+            refreshTask.cancel(false);
+            refreshTask = null;
+        }
+        refreshRequested.set(false);
+    }
+
+    private void refreshDisplay(Ref<EntityStore> ref, Store<EntityStore> store) {
+        if (dismissed || ref == null || !ref.isValid()) {
+            return;
+        }
+        UICommandBuilder updateBuilder = new UICommandBuilder();
+        updateState(ref, store, updateBuilder);
+        sendUpdate(updateBuilder, null, false);
     }
 
     @Override
@@ -537,9 +601,10 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
             if (value < 1) {
                 return;
             }
-            int currentMultiplier = playerStore.getOrCreatePlayer(playerId).getElevationMultiplier();
-            if (value <= currentMultiplier) {
-                player.sendMessage(Message.raw("[Automation] Target must be higher than your current elevation (x" + currentMultiplier + ").")
+            int currentLevel = playerStore.getOrCreatePlayer(playerId).getElevationMultiplier();
+            long currentActualMultiplier = Math.round(io.hyvexa.ascend.AscendConstants.getElevationMultiplier(currentLevel));
+            if (value <= currentActualMultiplier) {
+                player.sendMessage(Message.raw("[Automation] Target must be higher than your current elevation (" + io.hyvexa.ascend.AscendConstants.formatElevationMultiplier(currentLevel) + ").")
                     .color(SystemMessageUtils.ERROR));
                 return;
             }
@@ -586,9 +651,10 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
      * the player's current elevation multiplier. Already-surpassed targets are skipped.
      */
     private void recalculateTargetIndex(UUID playerId, List<Long> targets) {
-        int currentMultiplier = playerStore.getOrCreatePlayer(playerId).getElevationMultiplier();
+        int currentLevel = playerStore.getOrCreatePlayer(playerId).getElevationMultiplier();
+        long currentActualMultiplier = Math.round(io.hyvexa.ascend.AscendConstants.getElevationMultiplier(currentLevel));
         int newIndex = 0;
-        while (newIndex < targets.size() && targets.get(newIndex) <= currentMultiplier) {
+        while (newIndex < targets.size() && targets.get(newIndex) <= currentActualMultiplier) {
             newIndex++;
         }
         playerStore.setAutoElevationTargetIndex(playerId, newIndex);
