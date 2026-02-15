@@ -15,6 +15,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
+import io.hyvexa.core.discord.DiscordLinkStore;
 import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.parkour.ParkourConstants;
 import io.hyvexa.parkour.data.Map;
@@ -195,6 +196,14 @@ class RunValidator {
                 }
                 String rankName = progressStore.getRankName(playerId, mapStore);
                 player.sendMessage(SystemMessageUtils.parkourSuccess("Rank up! You are now " + rankName + "."));
+                // Sync new rank to Discord (if linked)
+                try {
+                    if (DiscordLinkStore.getInstance().isLinked(playerId)) {
+                        DiscordLinkStore.getInstance().updateRank(playerId, rankName);
+                    }
+                } catch (Exception e) {
+                    LOGGER.atWarning().withCause(e).log("Discord rank sync failed for " + playerId);
+                }
             }
             if (result.newBest) {
                 broadcastCompletion(playerId, playerName, map, durationMs, leaderboardPosition);

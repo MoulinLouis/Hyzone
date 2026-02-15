@@ -57,6 +57,7 @@ import io.hyvexa.common.ghost.GhostStore;
 import io.hyvexa.parkour.command.CheckpointCommand;
 import io.hyvexa.parkour.command.GemsCommand;
 import io.hyvexa.parkour.command.LinkCommand;
+import io.hyvexa.parkour.command.UnlinkCommand;
 import io.hyvexa.parkour.command.DatabaseClearCommand;
 import io.hyvexa.parkour.command.DatabaseReloadCommand;
 import io.hyvexa.parkour.command.DatabaseTestCommand;
@@ -259,6 +260,7 @@ public class HyvexaPlugin extends JavaPlugin {
         this.getCommandRegistry().registerCommand(new DuelCommand(this.duelTracker, this.runTracker));
         this.getCommandRegistry().registerCommand(new GemsCommand());
         this.getCommandRegistry().registerCommand(new LinkCommand());
+        this.getCommandRegistry().registerCommand(new UnlinkCommand());
 
         registerNoDropSystem();
         registerNoBreakSystem();
@@ -299,6 +301,19 @@ public class HyvexaPlugin extends JavaPlugin {
                             DiscordLinkStore.getInstance().checkAndRewardGems(playerRef.getUuid(), player);
                         } catch (Exception e) {
                             LOGGER.atWarning().withCause(e).log("Discord link check failed");
+                        }
+                        // Sync parkour rank to Discord (if linked)
+                        try {
+                            if (DiscordLinkStore.getInstance().isLinked(playerRef.getUuid())) {
+                                MapStore ms = HyvexaPlugin.getInstance().getMapStore();
+                                ProgressStore ps = HyvexaPlugin.getInstance().getProgressStore();
+                                if (ms != null && ps != null) {
+                                    String rank = ps.getRankName(playerRef.getUuid(), ms);
+                                    DiscordLinkStore.getInstance().updateRank(playerRef.getUuid(), rank);
+                                }
+                            }
+                        } catch (Exception e) {
+                            LOGGER.atWarning().withCause(e).log("Discord rank sync failed");
                         }
                     }
                     // Hide all existing ghost NPCs from the newly connected player

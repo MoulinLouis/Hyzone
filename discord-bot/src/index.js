@@ -5,14 +5,28 @@ const db = require('./db');
 
 const TOKEN = process.env.DISCORD_TOKEN;
 const GUILD_ID = process.env.GUILD_ID;
-const LINKED_ROLE_ID = process.env.LINKED_ROLE_ID || '';
 
 if (!TOKEN) {
   console.error('DISCORD_TOKEN is required in .env');
   process.exit(1);
 }
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
+
+// Rank role mapping: rank name -> Discord role ID
+const RANK_ROLES = new Map();
+const RANK_NAMES = [
+  'Unranked', 'Iron', 'Bronze', 'Silver', 'Gold', 'Platinum',
+  'Emerald', 'Diamond', 'Master', 'Grandmaster', 'Challenger', 'VexaGod',
+];
+for (const name of RANK_NAMES) {
+  const envKey = `RANK_ROLE_${name.toUpperCase()}`;
+  const roleId = process.env[envKey];
+  if (roleId) {
+    RANK_ROLES.set(name, roleId);
+  }
+}
+
 
 // Register the /link slash command
 async function registerCommands() {
@@ -38,12 +52,63 @@ async function registerCommands() {
   }
 }
 
+// Poll for rank changes and sync Discord roles
+async function syncRankRoles() {
+  if (!GUILD_ID || RANK_ROLES.size === 0) return;
+
+  let guild;
+  try {
+    guild = await client.guilds.fetch(GUILD_ID);
+  } catch (err) {
+    console.error('Rank sync: failed to fetch guild:', err.message);
+    return;
+  }
+
+  let rows;
+  try {
+    rows = await db.getDesyncedRanks();
+  } catch (err) {
+    console.error('Rank sync: DB query failed:', err.message);
+    return;
+  }
+
+  for (const row of rows) {
+    try {
+      const member = await guild.members.fetch(row.discord_id);
+
+      // Remove old rank role
+      if (row.last_synced_rank && RANK_ROLES.has(row.last_synced_rank)) {
+        const oldRoleId = RANK_ROLES.get(row.last_synced_rank);
+        if (member.roles.cache.has(oldRoleId)) {
+          await member.roles.remove(oldRoleId);
+        }
+      }
+
+      // Add new rank role
+      const newRoleId = RANK_ROLES.get(row.current_rank);
+      if (newRoleId) {
+        await member.roles.add(newRoleId);
+      }
+
+      await db.markRankSynced(row.player_uuid, row.current_rank);
+    } catch (err) {
+      console.warn(`Rank sync: failed for ${row.discord_id} (${row.player_uuid}):`, err.message);
+    }
+  }
+}
+
 client.once('ready', async () => {
   console.log(`Logged in as ${client.user.tag}`);
   try {
     await registerCommands();
   } catch (err) {
     console.error('Failed to register commands:', err);
+  }
+
+  // Start rank role sync polling (every 30 seconds)
+  if (GUILD_ID && RANK_ROLES.size > 0) {
+    setInterval(syncRankRoles, 30_000);
+    console.log(`Rank role sync enabled (${RANK_ROLES.size} roles configured, polling every 30s)`);
   }
 });
 
@@ -90,16 +155,6 @@ client.on('interactionCreate', async (interaction) => {
 
     // Create the link
     await db.createLink(playerUuid, discordId);
-
-    // Assign the "Linked" role if configured
-    if (LINKED_ROLE_ID && interaction.guild) {
-      try {
-        const member = await interaction.guild.members.fetch(discordId);
-        await member.roles.add(LINKED_ROLE_ID);
-      } catch (roleErr) {
-        console.warn('Failed to assign linked role:', roleErr.message);
-      }
-    }
 
     await interaction.editReply(
       'Account linked successfully! You\'ll receive **100 gems** next time you log in to the server.'
