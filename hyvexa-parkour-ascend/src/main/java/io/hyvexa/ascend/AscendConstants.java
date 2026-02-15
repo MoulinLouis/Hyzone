@@ -495,15 +495,17 @@ public final class AscendConstants {
     // ========================================
 
     public static final double SUMMIT_XP_LEVEL_EXPONENT = 2.0; // Exponent for level formula
-    public static final double SUMMIT_XP_VEXA_POWER = 3.0 / 7.0; // ~0.4286, compression for vexa → XP
     public static final long SUMMIT_MIN_VEXA = 1_000_000_000L; // Minimum vexa for 1 XP (1B)
+
+    // Calibrated so 1 Decillion (10^33) accumulated vexa = exactly level 1000
+    // Derived: power = log(SUMMIT_MAX_XP) / log(1Dc / MIN_VEXA)
+    public static final double SUMMIT_XP_VEXA_POWER =
+        Math.log(SUMMIT_MAX_XP) / Math.log(1e33 / SUMMIT_MIN_VEXA); // ~0.3552
 
     /**
      * Convert vexa to XP.
-     * Formula: (vexa / SUMMIT_MIN_VEXA)^(3/7)
-     * At 1B = 1 XP, at 10B ≈ 2 XP, at 1T ≈ 19 XP, at 1Q ≈ 372 XP.
-     * Uses power 3/7 (paired with level^2.0) to preserve the same vexa→level mapping
-     * as the old system (sqrt + level^2.5) while producing smaller XP numbers.
+     * Formula: (vexa / SUMMIT_MIN_VEXA)^power  (power calibrated for 1Dc = level 1000)
+     * At 1B = 1 XP, at 10B ≈ 2 XP, at 1T ≈ 12 XP, at 1Qa ≈ 135 XP, at 1Dc = 333.8M XP (level 1000).
      */
     public static long vexaToXp(BigNumber vexa) {
         if (vexa.lte(BigNumber.ZERO)) {
@@ -517,7 +519,7 @@ public final class AscendConstants {
         if (!Double.isFinite(xp) || xp >= (double) Long.MAX_VALUE) {
             return Long.MAX_VALUE;
         }
-        return (long) xp;
+        return Math.round(xp);
     }
 
     /**
@@ -537,13 +539,13 @@ public final class AscendConstants {
 
     /**
      * Calculate vexa needed to reach a given XP amount.
-     * Inverse of vexaToXp: vexa = xp^(7/3) × SUMMIT_MIN_VEXA
+     * Inverse of vexaToXp: vexa = xp^(1/power) × SUMMIT_MIN_VEXA
      */
     public static BigNumber xpToVexa(long xp) {
         if (xp <= 0) {
             return BigNumber.ZERO;
         }
-        double vexa = Math.pow(xp, 7.0 / 3.0) * SUMMIT_MIN_VEXA;
+        double vexa = Math.pow(xp, 1.0 / SUMMIT_XP_VEXA_POWER) * SUMMIT_MIN_VEXA;
         return BigNumber.fromDouble(vexa);
     }
 
