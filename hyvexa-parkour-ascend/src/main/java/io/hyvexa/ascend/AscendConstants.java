@@ -690,7 +690,19 @@ public final class AscendConstants {
         CHALLENGE_4(4, "Challenge 4",
             "Complete an Ascension with 50% Evolution Power",
             "#ef4444",
-            Set.of(), Set.of(), 1.0, 1.0, 0.5);
+            Set.of(), Set.of(), 1.0, 1.0, 0.5),
+        CHALLENGE_5(5, "Challenge 5",
+            "Complete an Ascension with 50% Runner Speed and Multiplier Gain",
+            "#8b5cf6",
+            Set.of(), Set.of(), 0.5, 0.5, 1.0),
+        CHALLENGE_6(6, "Challenge 6",
+            "Complete an Ascension with all Summit bonuses at 50%",
+            "#ec4899",
+            Set.of(), Set.of(), 0.5, 0.5, 0.5),
+        CHALLENGE_7(7, "Challenge 7",
+            "Complete an Ascension without maps 4 and 5",
+            "#f59e0b",
+            Set.of(), Set.of(3, 4), 1.0, 1.0, 1.0);
 
         private final int id;
         private final String displayName;
@@ -773,7 +785,6 @@ public final class AscendConstants {
         ARMY("Army", "Have 5+ active runners", AchievementCategory.RUNNERS),
         EVOLVED("Evolved", "Evolve a runner to 1+ stars", AchievementCategory.RUNNERS),
         STAR_COLLECTOR("Star Collector", "Evolve a runner to max stars", AchievementCategory.RUNNERS),
-        MAXED_OUT("Maxed Out", "Max a runner's speed level", AchievementCategory.RUNNERS),
 
         // Prestige - Progression
         FIRST_ELEVATION("First Elevation", "Complete your first Elevation", AchievementCategory.PRESTIGE),
@@ -790,7 +801,6 @@ public final class AscendConstants {
 
         // Skills - Skill Tree
         NEW_POWERS("New Powers", "Unlock your first skill", AchievementCategory.SKILLS),
-        SKILL_MASTER("Skill Master", "Unlock all skill tree nodes", AchievementCategory.SKILLS),
 
         // Challenges
         CHALLENGER("Challenger", "Complete your first challenge", AchievementCategory.CHALLENGES),
@@ -851,5 +861,4 @@ public final class AscendConstants {
     public static final int ACHIEVEMENT_ASCENSION_5 = 5;
     public static final int ACHIEVEMENT_ASCENSION_10 = 10;
     public static final int ACHIEVEMENT_CONSECUTIVE_RUNS_25 = 25;
-    public static final int ACHIEVEMENT_TOTAL_SKILL_NODES = 13;
 }
