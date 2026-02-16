@@ -37,7 +37,7 @@ public class AscensionManager {
     }
 
     /**
-     * Performs an Ascension: grants 1 skill tree point, resets progress (preserves map PBs).
+     * Performs an Ascension: grants AP (1 + completed challenges), resets progress (preserves map PBs).
      *
      * @return the new Ascension count, or -1 if insufficient vexa
      */
@@ -49,8 +49,9 @@ public class AscensionManager {
 
         AscendPlayerProgress progress = playerStore.getOrCreatePlayer(playerId);
 
-        // Grant skill tree point
-        int newPoints = progress.addSkillTreePoints(1);
+        // Grant skill tree points (1 base + 1 per completed challenge)
+        int apGained = 1 + progress.getCompletedChallengeCount();
+        int newPoints = progress.addSkillTreePoints(apGained);
         int newAscensionCount = progress.incrementAscensionCount();
 
         // Update ascension timer stats
@@ -104,7 +105,7 @@ public class AscensionManager {
         playerStore.flushPendingSave();
 
         LOGGER.atInfo().log("[Ascension] Player " + playerId + " ascended! Count: " + newAscensionCount
-            + ", AP: " + newPoints);
+            + ", AP gained: " + apGained + ", total AP: " + newPoints);
 
         try {
             io.hyvexa.core.analytics.AnalyticsStore.getInstance().logEvent(playerId, "ascend_ascension",
