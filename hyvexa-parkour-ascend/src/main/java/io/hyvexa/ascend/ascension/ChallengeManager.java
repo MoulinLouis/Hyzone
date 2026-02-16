@@ -95,6 +95,10 @@ public class ChallengeManager {
         playerStore.flushPendingSave();
 
         LOGGER.atInfo().log("[Challenge] Player " + playerId + " started challenge: " + challengeType.name());
+        try {
+            io.hyvexa.core.analytics.AnalyticsStore.getInstance().logEvent(playerId, "ascend_challenge_start",
+                    "{\"type\":\"" + challengeType.name() + "\"}");
+        } catch (Exception e) { /* silent */ }
         return mapsWithRunners;
     }
 
@@ -137,6 +141,10 @@ public class ChallengeManager {
 
         LOGGER.atInfo().log("[Challenge] Player " + playerId + " completed " + active.challengeType().name()
             + " in " + elapsedMs + "ms");
+        try {
+            io.hyvexa.core.analytics.AnalyticsStore.getInstance().logEvent(playerId, "ascend_challenge_complete",
+                    "{\"type\":\"" + active.challengeType().name() + "\",\"time_ms\":" + elapsedMs + "}");
+        } catch (Exception e) { /* silent */ }
         return elapsedMs;
     }
 

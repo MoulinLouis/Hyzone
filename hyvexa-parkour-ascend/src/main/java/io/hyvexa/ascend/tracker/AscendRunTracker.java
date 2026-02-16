@@ -382,6 +382,11 @@ public class AscendRunTracker {
             plugin.getTutorialTriggerService().checkFirstCompletion(playerId, ref);
         }
 
+        try {
+            io.hyvexa.core.analytics.AnalyticsStore.getInstance().logEvent(playerId, "ascend_manual_run",
+                    "{\"map_id\":\"" + map.getId() + "\",\"time_ms\":" + completionTimeMs + "}");
+        } catch (Exception e) { /* silent */ }
+
         Vector3d startPos = new Vector3d(map.getStartX(), map.getStartY(), map.getStartZ());
         Vector3f startRot = new Vector3f(map.getStartRotX(), map.getStartRotY(), map.getStartRotZ());
         store.addComponent(ref, Teleport.getComponentType(),

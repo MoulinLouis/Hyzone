@@ -351,6 +351,17 @@ public class ProgressStore {
         }
         queueSave();
         persistCompletionAsync(completionPersistenceRequest, completionSavedCallback);
+        try {
+            io.hyvexa.core.analytics.AnalyticsStore.getInstance().logEvent(playerId, "map_complete",
+                    "{\"map_id\":\"" + mapId + "\",\"time_ms\":" + timeMs
+                    + ",\"is_pb\":" + result.newBest
+                    + ",\"first_completion\":" + result.firstCompletion + "}");
+            if (result.oldLevel != result.newLevel) {
+                io.hyvexa.core.analytics.AnalyticsStore.getInstance().logEvent(playerId, "level_up",
+                        "{\"old_level\":" + result.oldLevel
+                        + ",\"new_level\":" + result.newLevel + "}");
+            }
+        } catch (Exception e) { /* silent */ }
         return result;
     }
 

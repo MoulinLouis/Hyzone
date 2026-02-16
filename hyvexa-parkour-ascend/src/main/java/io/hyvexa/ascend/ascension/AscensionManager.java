@@ -106,6 +106,11 @@ public class AscensionManager {
         LOGGER.atInfo().log("[Ascension] Player " + playerId + " ascended! Count: " + newAscensionCount
             + ", AP: " + newPoints);
 
+        try {
+            io.hyvexa.core.analytics.AnalyticsStore.getInstance().logEvent(playerId, "ascend_ascension",
+                    "{\"count\":" + newAscensionCount + "}");
+        } catch (Exception e) { /* silent */ }
+
         return newAscensionCount;
     }
 

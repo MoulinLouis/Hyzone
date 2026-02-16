@@ -129,6 +129,10 @@ public class PlaytimeManager {
         playtimeSessionStart.remove(playerId);
     }
 
+    public Long getSessionStart(UUID playerId) {
+        return playerId != null ? playtimeSessionStart.get(playerId) : null;
+    }
+
     public void sweepStalePlayers(Set<UUID> onlinePlayers) {
         playtimeSessionStart.keySet().removeIf(id -> !onlinePlayers.contains(id));
     }

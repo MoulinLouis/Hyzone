@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Added
+- **Global: Analytics system** - Event-based analytics tracking gameplay events (joins, completions, duels, mode switches, purchases, Ascend progression). Daily aggregates computed into `analytics_daily` table. OP-only `/analytics` command shows DAU, retention, session length, and mode split. 90-day event retention with auto-purge.
 - **Global: Cosmetic Shop** - `/shop` command opens a UI to buy, equip, preview, and unequip 6 glow cosmetics (100 gems each). Equipped cosmetics persist across reconnects.
 - **Global: Discord rank role sync** - Linked players' parkour ranks (Unranked -> VexaGod) are automatically synced as Discord roles. Plugin writes rank on rank-up and login; bot polls every 30s and swaps roles.
 - **Global: Discord account linking** - Players use `/link` in-game to get a code, enter it on Discord via `/link <code>`, and receive a one-time 100 gem reward on next login. Includes a Discord bot (`discord-bot/`) and shared MySQL tables for cross-system communication.
