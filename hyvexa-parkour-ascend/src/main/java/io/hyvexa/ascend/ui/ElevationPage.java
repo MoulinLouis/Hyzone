@@ -83,14 +83,17 @@ public class ElevationPage extends BaseAscendPage {
         BigNumber accumulatedVexa = playerStore.getElevationAccumulatedVexa(playerId);
         int currentElevation = playerStore.getElevationLevel(playerId);
 
-        double costMultiplier = 1.0;
+        // Get cost multiplier from skill tree (Elevation Boost = -30%)
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        BigNumber costMultiplierBN = (plugin != null && plugin.getSummitManager() != null)
+            ? plugin.getSummitManager().getElevationCostMultiplier(playerId)
+            : BigNumber.ONE;
 
         // Calculate how many levels can be purchased based on accumulated vexa
-        BigNumber costMultiplierBN = BigNumber.fromDouble(costMultiplier);
         ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(currentElevation, accumulatedVexa, costMultiplierBN);
 
         if (purchase.levels <= 0) {
-            BigNumber nextCost = AscendConstants.getElevationLevelUpCost(currentElevation, BigNumber.fromDouble(costMultiplier));
+            BigNumber nextCost = AscendConstants.getElevationLevelUpCost(currentElevation, costMultiplierBN);
             player.sendMessage(Message.raw("[Ascend] You need " + FormatUtils.formatBigNumber(nextCost) + " accumulated vexa to elevate.")
                 .color(SystemMessageUtils.SECONDARY));
             return;
@@ -158,10 +161,13 @@ public class ElevationPage extends BaseAscendPage {
         BigNumber accumulatedVexa = playerStore.getElevationAccumulatedVexa(playerId);
         int currentElevation = playerStore.getElevationLevel(playerId);
 
-        double costMultiplier = 1.0;
+        // Get cost multiplier from skill tree (Elevation Boost = -30%)
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        BigNumber costMultiplierBN = (plugin != null && plugin.getSummitManager() != null)
+            ? plugin.getSummitManager().getElevationCostMultiplier(playerId)
+            : BigNumber.ONE;
 
         // Calculate purchase info based on accumulated vexa
-        BigNumber costMultiplierBN = BigNumber.fromDouble(costMultiplier);
         ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(currentElevation, accumulatedVexa, costMultiplierBN);
         int newElevation = currentElevation + purchase.levels;
         BigNumber nextCost = AscendConstants.getElevationLevelUpCost(currentElevation, costMultiplierBN);
@@ -175,8 +181,9 @@ public class ElevationPage extends BaseAscendPage {
         String costText = "Progress to " + AscendConstants.formatElevationMultiplier(targetElevation) + ": " +
                          FormatUtils.formatBigNumber(accumulatedVexa) + " / " +
                          FormatUtils.formatBigNumber(targetCost) + " accumulated vexa";
-        if (costMultiplier < 1.0) {
-            costText += " (-" + Math.round((1.0 - costMultiplier) * 100) + "%)";
+        double costMultiplierDouble = costMultiplierBN.toDouble();
+        if (costMultiplierDouble < 1.0) {
+            costText += " (-" + Math.round((1.0 - costMultiplierDouble) * 100) + "%)";
         }
         commandBuilder.set("#ConversionRate.Text", costText);
 

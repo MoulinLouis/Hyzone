@@ -179,6 +179,8 @@ public final class AscendConstants {
 
     public static final long MOMENTUM_DURATION_MS = 60_000L;
     public static final long MOMENTUM_ENDURANCE_DURATION_MS = 90_000L;
+    public static final double MOMENTUM_MASTERY_MULTIPLIER = 3.0;
+    public static final long MOMENTUM_MASTERY_DURATION_MS = 120_000L;
 
     // Runner star evolution
     public static final int MAX_ROBOT_STARS = 5;
@@ -470,10 +472,10 @@ public final class AscendConstants {
          * Three growth zones:
          *   0-25 (soft cap): linear — base + increment × level
          *   25-500 (deep cap): sqrt — + increment × √(level - 25)
-         *   500-1000 (hard cap): fourth root — + increment × ⁴√(level - 500)
+         *   500+ (deep cap): fourth root — + increment × ⁴√(level - 500)
          */
         public double getBonusForLevel(int level) {
-            int safeLevel = Math.max(0, Math.min(level, SUMMIT_MAX_LEVEL));
+            int safeLevel = Math.max(0, level);
             if (safeLevel <= SUMMIT_SOFT_CAP) {
                 return base + increment * safeLevel;
             }
@@ -574,9 +576,9 @@ public final class AscendConstants {
      */
     public static int calculateLevelFromXp(long xp) {
         if (xp <= 0) return 0;
-        // Binary search: find highest level where getCumulativeXpForLevel(level) <= xp
+        // Dynamic upper bound: cumXp ~ n^3/3, so n ~ (3*xp)^(1/3)
         int lo = 0;
-        int hi = SUMMIT_MAX_LEVEL; // hard cap
+        int hi = Math.max(SUMMIT_MAX_LEVEL, (int) Math.ceil(Math.cbrt(3.0 * xp)) + 10);
         while (lo < hi) {
             int mid = lo + (hi - lo + 1) / 2;
             if (getCumulativeXpForLevel(mid) <= xp) {
@@ -594,10 +596,6 @@ public final class AscendConstants {
      */
     public static long[] getXpProgress(long totalXp) {
         int level = calculateLevelFromXp(totalXp);
-        if (level >= SUMMIT_MAX_LEVEL) {
-            // At max level: show full progress bar
-            return new long[]{1, 1};
-        }
         long xpForCurrentLevel = getCumulativeXpForLevel(level);
         long xpInLevel = totalXp - xpForCurrentLevel;
         long xpForNextLevel = getXpForLevel(level + 1);
@@ -623,7 +621,13 @@ public final class AscendConstants {
         MOMENTUM_ENDURANCE("Momentum Endurance", "Momentum 60s -> 90s", 3, ASCENSION_CHALLENGES),
         MULTIPLIER_BOOST("Multiplier Boost", "+0.10 base multiplier gain", 5, MOMENTUM_SURGE, MOMENTUM_ENDURANCE),
         RUNNER_SPEED_3("Runner Speed III", "x1.3 global runner speed", 10, MULTIPLIER_BOOST),
-        EVOLUTION_POWER_2("Evolution Power II", "+1 base evolution power", 10, MULTIPLIER_BOOST);
+        EVOLUTION_POWER_2("Evolution Power II", "+1 base evolution power", 10, MULTIPLIER_BOOST),
+        RUNNER_SPEED_4("Runner Speed IV", "x1.5 global runner speed", 15, RUNNER_SPEED_3, EVOLUTION_POWER_2),
+        EVOLUTION_POWER_3("Evolution Power III", "+2 base evolution power", 15, RUNNER_SPEED_3, EVOLUTION_POWER_2),
+        MOMENTUM_MASTERY("Momentum Mastery", "Momentum x3.0 + 120s duration", 25, RUNNER_SPEED_4, EVOLUTION_POWER_3),
+        MULTIPLIER_BOOST_2("Multiplier Boost II", "+0.25 base multiplier gain", 40, MOMENTUM_MASTERY),
+        ELEVATION_BOOST("Elevation Boost", "Elevation cost -30%", 40, MOMENTUM_MASTERY),
+        RUNNER_SPEED_5("Runner Speed V", "x2.0 global runner speed", 75, MULTIPLIER_BOOST_2, ELEVATION_BOOST);
 
         private final String name;
         private final String description;
@@ -680,17 +684,29 @@ public final class AscendConstants {
             "#10b981",
             Set.of(), Set.of(4), 1.0, 1.0, 1.0),
         CHALLENGE_2(2, "Challenge 2",
-            "Complete an Ascension with 50% Runner Speed",
+            "Complete an Ascension with 150% Runner Speed malus",
             "#f59e0b",
-            Set.of(), Set.of(), 0.5, 1.0, 1.0),
+            Set.of(), Set.of(), -0.5, 1.0, 1.0),
         CHALLENGE_3(3, "Challenge 3",
-            "Complete an Ascension with 50% Multiplier Gain",
+            "Complete an Ascension with 150% Multiplier Gain malus",
             "#3b82f6",
-            Set.of(), Set.of(), 1.0, 0.5, 1.0),
+            Set.of(), Set.of(), 1.0, -0.5, 1.0),
         CHALLENGE_4(4, "Challenge 4",
-            "Complete an Ascension with 50% Evolution Power",
+            "Complete an Ascension with 150% Evolution Power malus",
             "#ef4444",
-            Set.of(), Set.of(), 1.0, 1.0, 0.5);
+            Set.of(), Set.of(), 1.0, 1.0, -0.5),
+        CHALLENGE_5(5, "Challenge 5",
+            "Complete an Ascension with no Runner Speed and Multiplier Gain bonus",
+            "#8b5cf6",
+            Set.of(), Set.of(), 0.0, 0.0, 1.0),
+        CHALLENGE_6(6, "Challenge 6",
+            "Complete an Ascension with no Summit bonuses",
+            "#ec4899",
+            Set.of(), Set.of(), 0.0, 0.0, 0.0),
+        CHALLENGE_7(7, "Challenge 7",
+            "Complete an Ascension without maps 4 and 5",
+            "#f59e0b",
+            Set.of(), Set.of(3, 4), 1.0, 1.0, 1.0);
 
         private final int id;
         private final String displayName;
@@ -773,7 +789,6 @@ public final class AscendConstants {
         ARMY("Army", "Have 5+ active runners", AchievementCategory.RUNNERS),
         EVOLVED("Evolved", "Evolve a runner to 1+ stars", AchievementCategory.RUNNERS),
         STAR_COLLECTOR("Star Collector", "Evolve a runner to max stars", AchievementCategory.RUNNERS),
-        MAXED_OUT("Maxed Out", "Max a runner's speed level", AchievementCategory.RUNNERS),
 
         // Prestige - Progression
         FIRST_ELEVATION("First Elevation", "Complete your first Elevation", AchievementCategory.PRESTIGE),
@@ -790,7 +805,6 @@ public final class AscendConstants {
 
         // Skills - Skill Tree
         NEW_POWERS("New Powers", "Unlock your first skill", AchievementCategory.SKILLS),
-        SKILL_MASTER("Skill Master", "Unlock all skill tree nodes", AchievementCategory.SKILLS),
 
         // Challenges
         CHALLENGER("Challenger", "Complete your first challenge", AchievementCategory.CHALLENGES),
@@ -851,5 +865,4 @@ public final class AscendConstants {
     public static final int ACHIEVEMENT_ASCENSION_5 = 5;
     public static final int ACHIEVEMENT_ASCENSION_10 = 10;
     public static final int ACHIEVEMENT_CONSECUTIVE_RUNS_25 = 25;
-    public static final int ACHIEVEMENT_TOTAL_SKILL_NODES = 13;
 }

@@ -79,7 +79,10 @@ public class ElevateCommand extends AbstractAsyncCommand {
             BigNumber accumulatedVexa = playerStore.getElevationAccumulatedVexa(playerId);
             int currentElevation = playerStore.getElevationLevel(playerId);
 
-            BigNumber costMultiplier = BigNumber.fromDouble(1.0);
+            // Get cost multiplier from skill tree (Elevation Boost = -30%)
+            BigNumber costMultiplier = (plugin.getSummitManager() != null)
+                ? plugin.getSummitManager().getElevationCostMultiplier(playerId)
+                : BigNumber.ONE;
             ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(
                 currentElevation, accumulatedVexa, costMultiplier);
 

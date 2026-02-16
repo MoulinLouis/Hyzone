@@ -631,6 +631,13 @@ public class AscendMapSelectPage extends BaseAscendPage {
                     io.hyvexa.core.analytics.AnalyticsStore.getInstance().logEvent(playerRef.getUuid(), "ascend_runner_evolve",
                             "{\"map_id\":\"" + mapId + "\",\"new_stars\":" + newStars + "}");
                 } catch (Exception e) { /* silent */ }
+                // Check achievements
+                ParkourAscendPlugin pluginForAch = ParkourAscendPlugin.getInstance();
+                if (pluginForAch != null && pluginForAch.getAchievementManager() != null) {
+                    Player achPlayer = store.getComponent(ref, Player.getComponentType());
+                    pluginForAch.getAchievementManager().checkAndUnlockAchievements(playerRef.getUuid(), achPlayer);
+                }
+
                 String evoMsg = "Runner evolved! Now at " + newStars + " star" + (newStars > 1 ? "s" : "") + "!";
                 showToast(playerRef.getUuid(), ToastType.EVOLUTION, evoMsg);
                 updateRobotRow(ref, store, mapId);
@@ -1144,6 +1151,13 @@ public class AscendMapSelectPage extends BaseAscendPage {
             }
             evolved++;
             updateRobotRow(ref, store, mapId);
+        }
+
+        // Check achievements
+        ParkourAscendPlugin pluginForAch = ParkourAscendPlugin.getInstance();
+        if (pluginForAch != null && pluginForAch.getAchievementManager() != null) {
+            Player achPlayer = store.getComponent(ref, Player.getComponentType());
+            pluginForAch.getAchievementManager().checkAndUnlockAchievements(playerRef.getUuid(), achPlayer);
         }
 
         String evolveAllMsg = "Evolve All: " + evolved + " runner" + (evolved > 1 ? "s" : "");
