@@ -180,6 +180,12 @@ public class SkillCommand extends AbstractAsyncCommand {
             case "8_1" -> SkillTreeNode.MULTIPLIER_BOOST;
             case "9_1" -> SkillTreeNode.RUNNER_SPEED_3;
             case "9_2" -> SkillTreeNode.EVOLUTION_POWER_2;
+            case "10_1" -> SkillTreeNode.RUNNER_SPEED_4;
+            case "10_2" -> SkillTreeNode.EVOLUTION_POWER_3;
+            case "11_1" -> SkillTreeNode.MOMENTUM_MASTERY;
+            case "12_1" -> SkillTreeNode.MULTIPLIER_BOOST_2;
+            case "12_2" -> SkillTreeNode.ELEVATION_BOOST;
+            case "13_1" -> SkillTreeNode.RUNNER_SPEED_5;
             default -> null;
         };
     }
@@ -199,6 +205,12 @@ public class SkillCommand extends AbstractAsyncCommand {
             case MULTIPLIER_BOOST -> "8:1";
             case RUNNER_SPEED_3 -> "9:1";
             case EVOLUTION_POWER_2 -> "9:2";
+            case RUNNER_SPEED_4 -> "10:1";
+            case EVOLUTION_POWER_3 -> "10:2";
+            case MOMENTUM_MASTERY -> "11:1";
+            case MULTIPLIER_BOOST_2 -> "12:1";
+            case ELEVATION_BOOST -> "12:2";
+            case RUNNER_SPEED_5 -> "13:1";
         };
     }
 }
