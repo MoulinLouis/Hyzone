@@ -244,6 +244,26 @@ Notes:
 - Writes are immediate (no dirty tracking) since gems are rare/precious
 - Player cache is evicted on disconnect (lazy-loaded on next access)
 
+## player_cosmetics
+Stores purchased cosmetics and equipped state per player.
+
+Suggested schema:
+```sql
+CREATE TABLE player_cosmetics (
+  player_uuid VARCHAR(36) NOT NULL,
+  cosmetic_id VARCHAR(64) NOT NULL,
+  equipped BOOLEAN NOT NULL DEFAULT FALSE,
+  PRIMARY KEY (player_uuid, cosmetic_id)
+) ENGINE=InnoDB;
+```
+
+Notes:
+- Auto-created by `CosmeticStore.initialize()` on startup
+- Managed by `hyvexa-core/src/main/java/io/hyvexa/core/cosmetic/CosmeticStore.java`
+- At most one cosmetic can be `equipped = TRUE` per player at a time
+- Writes are immediate (same pattern as GemStore)
+- Player cache is evicted on disconnect (lazy-loaded on next access)
+
 ## Notes
 - Foreign keys are not required by the current code, but you can add them if desired.
 - All reads/writes are performed by the stores in `hyvexa-parkour/src/main/java/io/hyvexa/parkour/data/`.
