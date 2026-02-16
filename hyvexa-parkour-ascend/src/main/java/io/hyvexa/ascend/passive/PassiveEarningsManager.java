@@ -7,7 +7,6 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants;
-import io.hyvexa.ascend.AscendConstants.ChallengeType;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
@@ -117,13 +116,6 @@ public class PassiveEarningsManager {
 
             // Multiplier gain per run (with Summit bonuses) - at offline rate
             BigNumber multiplierIncrement = AscendConstants.getRunnerMultiplierIncrement(stars, multiplierGainBonus, evolutionPowerBonus, baseMultiplierBonus);
-
-            // Challenge 1 reward: x1.5 multiplier gain on map 5 (displayOrder 4)
-            if (progress.hasChallengeReward(ChallengeType.CHALLENGE_1)) {
-                if (map.getDisplayOrder() == 4) {
-                    multiplierIncrement = multiplierIncrement.multiply(BigNumber.fromDouble(1.5));
-                }
-            }
 
             BigNumber mapMultiplierGain = multiplierIncrement
                 .multiply(BigNumber.fromDouble(theoreticalRuns))
