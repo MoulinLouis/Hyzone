@@ -34,6 +34,18 @@ Group #ChallengeEntry {
       Background: #f59e0b;
       Visible: false;
     }
+
+    Group #AccentViolet {
+      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+      Background: #8b5cf6;
+      Visible: false;
+    }
+
+    Group #AccentPink {
+      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+      Background: #ec4899;
+      Visible: false;
+    }
   }
 
   // Main info area
