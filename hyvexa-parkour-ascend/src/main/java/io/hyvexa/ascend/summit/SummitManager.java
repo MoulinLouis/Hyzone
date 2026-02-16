@@ -160,6 +160,8 @@ public class SummitManager {
                 double bonus = fullBonus - base;
                 fullBonus = Math.max(base, base + (bonus * speedEffectiveness));
             }
+            // Challenge reward: permanent speed bonus from completed challenges
+            fullBonus *= plugin.getChallengeManager().getChallengeSpeedMultiplier(playerId);
         }
 
         return fullBonus;
@@ -183,6 +185,8 @@ public class SummitManager {
                 double bonus = fullBonus - base;
                 fullBonus = Math.max(base, base + (bonus * effectiveness));
             }
+            // Challenge reward: permanent mult gain bonus from completed challenges
+            fullBonus *= plugin.getChallengeManager().getChallengeMultiplierGainBonus(playerId);
         }
 
         return fullBonus;
@@ -254,6 +258,10 @@ public class SummitManager {
         if (plugin != null && plugin.getAscensionManager() != null
                 && plugin.getAscensionManager().hasEvolutionPowerBoost3(playerId)) {
             fullBonus += 2.0;
+        }
+        // Challenge reward: permanent evo power bonus from completed challenges
+        if (plugin != null && plugin.getChallengeManager() != null) {
+            fullBonus += plugin.getChallengeManager().getChallengeEvolutionPowerBonus(playerId);
         }
         return fullBonus;
     }

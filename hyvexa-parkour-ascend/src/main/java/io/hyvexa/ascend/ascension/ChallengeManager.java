@@ -273,6 +273,71 @@ public class ChallengeManager {
         return active.challengeType().getEvolutionPowerEffectiveness();
     }
 
+    // ========================================
+    // Challenge Reward Bonuses (permanent, from completed challenges)
+    // ========================================
+
+    /**
+     * Get cumulative runner speed multiplier from challenge rewards.
+     * C2: x1.10, C5: x1.05, C6: x1.05 — multiplicative stacking.
+     */
+    public double getChallengeSpeedMultiplier(UUID playerId) {
+        AscendPlayerProgress progress = playerStore.getPlayer(playerId);
+        if (progress == null) return 1.0;
+        double mult = 1.0;
+        if (progress.hasChallengeReward(ChallengeType.CHALLENGE_2)) mult *= 1.10;
+        if (progress.hasChallengeReward(ChallengeType.CHALLENGE_5)) mult *= 1.05;
+        if (progress.hasChallengeReward(ChallengeType.CHALLENGE_6)) mult *= 1.05;
+        return mult;
+    }
+
+    /**
+     * Get cumulative multiplier gain bonus from challenge rewards.
+     * C3: x1.10, C5: x1.05, C6: x1.05 — multiplicative stacking.
+     */
+    public double getChallengeMultiplierGainBonus(UUID playerId) {
+        AscendPlayerProgress progress = playerStore.getPlayer(playerId);
+        if (progress == null) return 1.0;
+        double mult = 1.0;
+        if (progress.hasChallengeReward(ChallengeType.CHALLENGE_3)) mult *= 1.10;
+        if (progress.hasChallengeReward(ChallengeType.CHALLENGE_5)) mult *= 1.05;
+        if (progress.hasChallengeReward(ChallengeType.CHALLENGE_6)) mult *= 1.05;
+        return mult;
+    }
+
+    /**
+     * Get cumulative evolution power bonus from challenge rewards.
+     * C4: +0.50, C6: +0.25 — additive stacking.
+     */
+    public double getChallengeEvolutionPowerBonus(UUID playerId) {
+        AscendPlayerProgress progress = playerStore.getPlayer(playerId);
+        if (progress == null) return 0.0;
+        double bonus = 0.0;
+        if (progress.hasChallengeReward(ChallengeType.CHALLENGE_4)) bonus += 0.50;
+        if (progress.hasChallengeReward(ChallengeType.CHALLENGE_6)) bonus += 0.25;
+        return bonus;
+    }
+
+    /**
+     * Get map base multiplier bonus from challenge rewards for a given display order.
+     * C1: map 5 (displayOrder 4) gets x1.5. C7: map 4+5 (displayOrder 3,4) get x1.5.
+     * Multiplicative stacking: map 5 with both = x2.25.
+     */
+    public double getChallengeMapBaseMultiplier(UUID playerId, int displayOrder) {
+        AscendPlayerProgress progress = playerStore.getPlayer(playerId);
+        if (progress == null) return 1.0;
+        double mult = 1.0;
+        // C1: map 5 (displayOrder 4)
+        if (displayOrder == 4 && progress.hasChallengeReward(ChallengeType.CHALLENGE_1)) {
+            mult *= 1.5;
+        }
+        // C7: map 4 (displayOrder 3) and map 5 (displayOrder 4)
+        if ((displayOrder == 3 || displayOrder == 4) && progress.hasChallengeReward(ChallengeType.CHALLENGE_7)) {
+            mult *= 1.5;
+        }
+        return mult;
+    }
+
     /**
      * Load active challenge from DB on player connect (crash recovery).
      * Also loads permanent challenge rewards from ascend_challenge_records.
