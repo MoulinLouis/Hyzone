@@ -581,3 +581,76 @@ Notes:
 - The Discord bot writes to this table; the plugin reads it on player login
 - Auto-created by `DiscordLinkStore.initialize()` on startup (columns added via ALTER TABLE migration for existing installs)
 - Managed by `hyvexa-core/src/main/java/io/hyvexa/core/discord/DiscordLinkStore.java`
+
+---
+
+# Analytics Tables
+
+## analytics_events
+Append-only event log for gameplay analytics. Purged after 90 days.
+
+Suggested schema:
+```sql
+CREATE TABLE analytics_events (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  timestamp_ms BIGINT NOT NULL,
+  player_uuid VARCHAR(36) NOT NULL,
+  event_type VARCHAR(32) NOT NULL,
+  data_json TEXT NULL,
+  INDEX idx_timestamp (timestamp_ms),
+  INDEX idx_player (player_uuid),
+  INDEX idx_type_timestamp (event_type, timestamp_ms)
+) ENGINE=InnoDB;
+```
+
+Notes:
+- Auto-created by `AnalyticsStore.initialize()` on startup
+- Event types: `player_join`, `player_leave`, `map_start`, `map_complete`, `level_up`, `duel_finish`, `mode_switch`, `gem_spend`, `discord_link`, `ascend_manual_run`, `ascend_elevation_up`, `ascend_summit_up`, `ascend_ascension`, `ascend_runner_buy`, `ascend_runner_evolve`, `ascend_challenge_start`, `ascend_challenge_complete`, `ascend_achievement`
+- `data_json` contains event-specific payload (e.g., `{"map_id":"...", "time_ms":1234}`)
+- Events older than 90 days are purged on startup
+
+## analytics_daily
+Pre-computed daily aggregate statistics. Kept indefinitely.
+
+Suggested schema:
+```sql
+CREATE TABLE analytics_daily (
+  date DATE NOT NULL PRIMARY KEY,
+  dau INT NOT NULL,
+  new_players INT NOT NULL,
+  avg_session_ms BIGINT NOT NULL,
+  total_sessions INT NOT NULL,
+  parkour_time_pct FLOAT NOT NULL,
+  ascend_time_pct FLOAT NOT NULL,
+  peak_concurrent INT NOT NULL,
+  data_json TEXT NULL
+) ENGINE=InnoDB;
+```
+
+Notes:
+- One row per day, computed by `AnalyticsStore.computeDailyAggregates()`
+- Computed on server shutdown and on-demand via `/analytics refresh`
+- `dau` = distinct players with `player_join` events that day
+- `parkour_time_pct` / `ascend_time_pct` = percentage of `mode_switch` events to each mode
+
+## /analytics Command (OP-only)
+
+```
+/analytics [days]          Overview: DAU, retention, sessions, mode split (default 7d)
+/analytics parkour [days]  Map starts/completions/rate, PBs, first completions,
+                           level ups, unique players, duels (by reason), top maps
+/analytics ascend [days]   Manual runs, unique runners, elevations, summits,
+                           ascensions, runners bought/evolved, achievements,
+                           challenges (start/complete/rate), top summit categories
+/analytics economy [days]  Gems spent, purchases, unique buyers, discord links,
+                           top purchased items
+/analytics refresh         Recompute today's daily aggregates
+/analytics purge           Purge events older than 90 days
+```
+
+Days range: 1-365, default 7 for all subcommands.
+
+## players table additions
+Two columns added to the existing `players` table via ALTER TABLE migration:
+- `first_join_ms BIGINT NULL` - Timestamp of player's first ever join (set once)
+- `last_seen_ms BIGINT NULL` - Timestamp of player's most recent join/leave (updated every session)
