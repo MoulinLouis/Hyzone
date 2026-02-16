@@ -3,6 +3,13 @@
 ## [Unreleased]
 
 ### Added
+- **Ascend: 3 new challenges** - Challenge 5 (50% Runner Speed + Multiplier Gain), Challenge 6 (all Summit bonuses at 50%), Challenge 7 (maps 4 & 5 locked). Total: 7 challenges.
+
+### Changed
+- **Ascend: AP Multiplier system** - Each completed challenge grants +1 to AP multiplier (base x1, max x8). Replaces old per-challenge permanent bonuses. Displayed in the Challenges tab.
+- **Ascend: Summit levels unlimited** - Removed hard cap at level 1000. Diminishing returns curve unchanged (4th-root above 500).
+
+### Added
 - **Global: Analytics system** - Event-based analytics tracking gameplay events (joins, completions, duels, mode switches, purchases, Ascend progression). Daily aggregates computed into `analytics_daily` table. OP-only `/analytics` command shows DAU, retention, session length, and mode split. 90-day event retention with auto-purge.
 - **Global: Cosmetic Shop** - `/shop` command opens a UI to buy, equip, preview, and unequip 6 glow cosmetics (100 gems each). Equipped cosmetics persist across reconnects.
 - **Global: Discord rank role sync** - Linked players' parkour ranks (Unranked -> VexaGod) are automatically synced as Discord roles. Plugin writes rank on rank-up and login; bot polls every 30s and swaps roles.
