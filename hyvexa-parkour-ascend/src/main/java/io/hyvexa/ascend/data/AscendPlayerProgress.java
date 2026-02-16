@@ -128,8 +128,7 @@ public class AscendPlayerProgress {
     public long addSummitXp(AscendConstants.SummitCategory category, long amount) {
         return summitXp.compute(category, (cat, current) -> {
             long base = current != null ? current : 0L;
-            long newXp = Math.max(0, AscendConstants.saturatingAdd(base, amount));
-            return Math.min(newXp, AscendConstants.SUMMIT_MAX_XP);
+            return Math.max(0, AscendConstants.saturatingAdd(base, amount));
         });
     }
 

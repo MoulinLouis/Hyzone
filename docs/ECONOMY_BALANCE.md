@@ -441,12 +441,12 @@ Summit performs a full reset similar to Elevation:
 | **Multiplier Gain** | 1 + 0.30 × level | +0.30 | ×1.00 | ×4.00 | ×8.50 |
 | **Evolution Power** | 3 + 0.10 × level | +0.10 | ×3.00 | ×4.00 | ×5.50 |
 
-**Three growth zones:**
+**Three bonus growth zones:**
 - **Level 0-25 (soft cap):** Linear growth — full increment per level
 - **Level 25-500 (deep cap):** √ growth — diminishing returns
 - **Level 500+ (deep cap):** ⁴√ growth — heavy diminishing returns
 
-**No hard cap:** Summit levels are unlimited. The diminishing returns curve naturally throttles progression above level 500. The XP calibration targets level 1000 at 1Dc accumulated vexa.
+**XP softcap at level 1000:** Levels above 1000 cost progressively more XP (exponent rises from level^2 to level^3). With the same vexa, old level 5000 now reaches ~3591, old level 10000 now reaches ~6042. The XP calibration targets level 1000 at 1Dc accumulated vexa (unchanged).
 
 ### Runner Speed
 
@@ -698,12 +698,20 @@ All formulas use consistent growth rates:
 - **Evolution gain:** EP^stars, where EP = 3 + 0.10 × level (linear, no ceiling)
 - **Summit XP:** (accumulatedVexa / 1B)^power, calibrated for 1Dc = level 1000
 - **Summit levels:** level^2 (manageable numbers at all levels)
+- **Summit bonuses:** linear (0-25), √ (25-500), ⁴√ (500+)
+- **Summit XP cost:** level^2 (below 1000), level^3/1000 (above 1000, continuous at boundary)
 
 Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure continuous progression after evolution.
 
 ---
 
 ## Version History
+
+- **2026-02-16 (v18):** Summit XP softcap at level 1000
+  - XP cost per level: level^2 (below 1000) -> level^3/1000 (above 1000, continuous)
+  - Same vexa reaches fewer levels: old 5000 -> ~3591, old 10000 -> ~6042
+  - Summit level hard cap removed (was 1000, now unlimited)
+  - Bonus growth zones unchanged: linear (0-25), √ (25-500), ⁴√ (500+)
 
 - **2026-02-09 (v18):** Passive offline rate reduction
   - Offline earnings rate: 25% → 10% (base rate)
