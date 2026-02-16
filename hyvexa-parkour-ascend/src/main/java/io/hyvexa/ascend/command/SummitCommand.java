@@ -115,12 +115,6 @@ public class SummitCommand extends AbstractAsyncCommand {
             }
 
             SummitManager.SummitPreview preview = summitManager.previewSummit(playerId, category);
-            if (preview.currentLevel() >= AscendConstants.SUMMIT_MAX_LEVEL) {
-                player.sendMessage(Message.raw("[Summit] " + category.getDisplayName()
-                    + " is already at max level (" + AscendConstants.SUMMIT_MAX_LEVEL + ").")
-                    .color(SystemMessageUtils.SECONDARY));
-                return;
-            }
             if (!preview.hasGain()) {
                 player.sendMessage(Message.raw("[Summit] Insufficient vexa for level gain.")
                     .color(SystemMessageUtils.SECONDARY));

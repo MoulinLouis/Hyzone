@@ -15,7 +15,6 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants;
-import io.hyvexa.ascend.AscendConstants.ChallengeType;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.achievement.AchievementManager;
 import io.hyvexa.ascend.tutorial.TutorialTriggerService;
@@ -291,14 +290,6 @@ public class AscendRunTracker {
         }
         BigNumber runnerIncrement = AscendConstants.getRunnerMultiplierIncrement(runnerStars, multiplierGainBonus, evolutionPowerBonus, baseMultiplierBonus);
 
-        // Challenge 1 reward: x1.5 multiplier gain on map 5 (displayOrder 4)
-        AscendPlayerProgress challengeProgress = playerStore.getPlayer(playerId);
-        if (challengeProgress != null && challengeProgress.hasChallengeReward(ChallengeType.CHALLENGE_1)) {
-            if (map.getDisplayOrder() == 4) {
-                runnerIncrement = runnerIncrement.multiply(BigNumber.fromDouble(1.5));
-            }
-        }
-
         BigNumber multiplierIncrement = runnerIncrement.multiply(BigNumber.fromDouble(5.0));
 
         // Calculate payout BEFORE adding multiplier (use current multiplier, not the new one)
@@ -365,15 +356,21 @@ public class AscendRunTracker {
         if (plugin != null && plugin.getAscensionManager() != null
                 && plugin.getAscensionManager().hasAutoRunners(playerId)) {
             boolean wasActive = mapProgress.isMomentumActive();
-            boolean hasEndurance = plugin.getAscensionManager().hasMomentumEndurance(playerId);
-            long momentumDuration = hasEndurance
-                ? AscendConstants.MOMENTUM_ENDURANCE_DURATION_MS
-                : AscendConstants.MOMENTUM_DURATION_MS;
+            long momentumDuration;
+            if (plugin.getAscensionManager().hasMomentumMastery(playerId)) {
+                momentumDuration = AscendConstants.MOMENTUM_MASTERY_DURATION_MS;
+            } else if (plugin.getAscensionManager().hasMomentumEndurance(playerId)) {
+                momentumDuration = AscendConstants.MOMENTUM_ENDURANCE_DURATION_MS;
+            } else {
+                momentumDuration = AscendConstants.MOMENTUM_DURATION_MS;
+            }
             mapProgress.activateMomentum(momentumDuration);
             if (!wasActive) {
                 String mapName = map.getName() != null && !map.getName().isBlank() ? map.getName() : map.getId();
+                boolean hasMastery = plugin.getAscensionManager().hasMomentumMastery(playerId);
                 boolean hasSurge = plugin.getAscensionManager().hasMomentumSurge(playerId);
-                showToast(playerId, ToastType.ECONOMY, "Momentum: x" + (hasSurge ? "2.5" : "2") + " speed on " + mapName);
+                String momentumText = hasMastery ? "3" : (hasSurge ? "2.5" : "2");
+                showToast(playerId, ToastType.ECONOMY, "Momentum: x" + momentumText + " speed on " + mapName);
             }
         }
 

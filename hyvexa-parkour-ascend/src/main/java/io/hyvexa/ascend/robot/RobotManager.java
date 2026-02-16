@@ -18,7 +18,6 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.NPCPlugin;
 import io.hyvexa.ascend.AscendConstants;
-import io.hyvexa.ascend.AscendConstants.ChallengeType;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.ascension.AscensionManager;
 import io.hyvexa.ascend.command.AscendCommand;
@@ -687,14 +686,6 @@ public class RobotManager {
         }
         BigNumber multiplierIncrement = AscendConstants.getRunnerMultiplierIncrement(stars, multiplierGainBonus, evolutionPowerBonus, baseMultiplierBonus);
 
-        // Challenge 1 reward: x1.5 multiplier gain on map 5 (displayOrder 4)
-        AscendPlayerProgress ownerProgress = playerStore.getPlayer(ownerId);
-        if (ownerProgress != null && ownerProgress.hasChallengeReward(ChallengeType.CHALLENGE_1)) {
-            if (map.getDisplayOrder() == 4) {
-                multiplierIncrement = multiplierIncrement.multiply(BigNumber.fromDouble(1.5));
-            }
-        }
-
         BigNumber totalMultiplierBonus = multiplierIncrement.multiply(BigNumber.fromLong(completions));
 
         // Calculate payout BEFORE adding multiplier (use current multiplier, not the new one)
@@ -772,6 +763,7 @@ public class RobotManager {
             ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
             AscensionManager am = plugin != null ? plugin.getAscensionManager() : null;
             if (am != null && am.hasAutoEvolution(playerId)) {
+                boolean anyEvolved = false;
                 for (AscendMap map : maps) {
                     AscendPlayerProgress.MapProgress mp = progress.getMapProgress().get(map.getId());
                     if (mp == null || !mp.hasRobot()) continue;
@@ -779,7 +771,11 @@ public class RobotManager {
                             && mp.getRobotStars() < AscendConstants.MAX_ROBOT_STARS) {
                         int newStars = playerStore.evolveRobot(playerId, map.getId());
                         respawnRobot(playerId, map.getId(), newStars);
+                        anyEvolved = true;
                     }
+                }
+                if (anyEvolved && plugin.getAchievementManager() != null) {
+                    plugin.getAchievementManager().checkAndUnlockAchievements(playerId, null);
                 }
             }
         }
@@ -848,9 +844,13 @@ public class RobotManager {
             if (lastMs != null && (now - lastMs) < (long) timerSeconds * 1000L) return;
         }
 
-        // Calculate purchasable levels
+        // Calculate purchasable levels (apply Elevation Boost cost reduction if unlocked)
         BigNumber accumulatedVexa = progress.getElevationAccumulatedVexa();
-        AscendConstants.ElevationPurchaseResult result = AscendConstants.calculateElevationPurchase(currentLevel, accumulatedVexa);
+        ParkourAscendPlugin ascendPlugin = ParkourAscendPlugin.getInstance();
+        BigNumber elevationCostMultiplier = (ascendPlugin != null && ascendPlugin.getSummitManager() != null)
+            ? ascendPlugin.getSummitManager().getElevationCostMultiplier(playerId)
+            : BigNumber.ONE;
+        AscendConstants.ElevationPurchaseResult result = AscendConstants.calculateElevationPurchase(currentLevel, accumulatedVexa, elevationCostMultiplier);
         if (result.levels <= 0) return;
 
         int newLevel = currentLevel + result.levels;
@@ -1019,6 +1019,14 @@ public class RobotManager {
                 if (ascensionManager.hasRunnerSpeedBoost3(ownerId)) {
                     speedMultiplier *= 1.3;
                 }
+                // Skill tree: Runner Speed IV (×1.5 global runner speed)
+                if (ascensionManager.hasRunnerSpeedBoost4(ownerId)) {
+                    speedMultiplier *= 1.5;
+                }
+                // Skill tree: Runner Speed V (×2.0 global runner speed)
+                if (ascensionManager.hasRunnerSpeedBoost5(ownerId)) {
+                    speedMultiplier *= 2.0;
+                }
             }
 
             // Momentum: temporary speed boost from manual run (per-map)
@@ -1029,16 +1037,17 @@ public class RobotManager {
                 if (progress != null) {
                     AscendPlayerProgress.MapProgress mapProgress = progress.getMapProgress().get(map.getId());
                     if (mapProgress != null && mapProgress.isMomentumActive()) {
-                        double momentumMultiplier = (ascensionManager != null && ascensionManager.hasMomentumSurge(ownerId))
-                            ? AscendConstants.MOMENTUM_SURGE_MULTIPLIER
-                            : AscendConstants.MOMENTUM_SPEED_MULTIPLIER;
+                        double momentumMultiplier;
+                        if (ascensionManager != null && ascensionManager.hasMomentumMastery(ownerId)) {
+                            momentumMultiplier = AscendConstants.MOMENTUM_MASTERY_MULTIPLIER;
+                        } else if (ascensionManager != null && ascensionManager.hasMomentumSurge(ownerId)) {
+                            momentumMultiplier = AscendConstants.MOMENTUM_SURGE_MULTIPLIER;
+                        } else {
+                            momentumMultiplier = AscendConstants.MOMENTUM_SPEED_MULTIPLIER;
+                        }
                         speedMultiplier *= momentumMultiplier;
                     }
 
-                    // Challenge 2 reward: x1.1 global runner speed
-                    if (progress.hasChallengeReward(ChallengeType.CHALLENGE_2)) {
-                        speedMultiplier *= 1.1;
-                    }
                 }
             }
         }

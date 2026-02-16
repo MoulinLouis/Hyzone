@@ -14,7 +14,6 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.AscendConstants.ChallengeType;
-import io.hyvexa.ascend.AscendConstants.SummitCategory;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.ascension.ChallengeManager;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
@@ -43,9 +42,11 @@ public class AscendChallengePage extends BaseAscendPage {
         "#ef4444", "AccentRed",
         "#3b82f6", "AccentBlue",
         "#10b981", "AccentGreen",
-        "#f59e0b", "AccentOrange"
+        "#f59e0b", "AccentOrange",
+        "#8b5cf6", "AccentViolet",
+        "#ec4899", "AccentPink"
     );
-    private static final String[] ALL_ACCENT_IDS = {"AccentRed", "AccentBlue", "AccentGreen", "AccentOrange"};
+    private static final String[] ALL_ACCENT_IDS = {"AccentRed", "AccentBlue", "AccentGreen", "AccentOrange", "AccentViolet", "AccentPink"};
 
     private final AscendPlayerStore playerStore;
     private final ChallengeManager challengeManager;
@@ -84,6 +85,10 @@ public class AscendChallengePage extends BaseAscendPage {
 
         // Build challenge entries dynamically
         AscendPlayerProgress progress = playerStore.getPlayer(playerId);
+
+        // AP Multiplier display
+        int apMultiplier = 1 + (progress != null ? progress.getCompletedChallengeCount() : 0);
+        commandBuilder.set("#ApMultiplier.Text", "AP Multiplier: x" + apMultiplier);
         ChallengeType activeType = challengeManager.getActiveChallenge(playerId);
         ChallengeType[] types = ChallengeType.values();
 
@@ -94,7 +99,6 @@ public class AscendChallengePage extends BaseAscendPage {
 
             // Set challenge info
             commandBuilder.set(p + "#ChallengeName.Text", type.getDisplayName());
-            commandBuilder.set(p + "#ChallengeDesc.Text", type.getDescription());
 
             // Set accent bar color via visibility toggle (dynamic Background doesn't work)
             String accentId = ACCENT_COLOR_MAP.getOrDefault(type.getAccentColor(), "AccentRed");
@@ -130,13 +134,13 @@ public class AscendChallengePage extends BaseAscendPage {
             // Button state
             boolean challengeUnlocked = challengeManager.isChallengeUnlocked(playerId, type);
             if (!challengeUnlocked) {
-                commandBuilder.set(p + "#StartButton.Visible", false);
+                commandBuilder.set(p + "#StartButtonWrap.Visible", false);
                 commandBuilder.set(p + "#LockedLabel.Visible", true);
             } else if (activeType == type) {
-                commandBuilder.set(p + "#StartButton.Visible", false);
+                commandBuilder.set(p + "#StartButtonWrap.Visible", false);
                 commandBuilder.set(p + "#InProgressLabel.Visible", true);
             } else if (inChallenge) {
-                commandBuilder.set(p + "#StartButton.Visible", false);
+                commandBuilder.set(p + "#StartButtonWrap.Visible", false);
             }
 
             // Bind start button
@@ -295,7 +299,7 @@ public class AscendChallengePage extends BaseAscendPage {
 
         AscendPlayerProgress progress = playerStore.getPlayer(playerId);
         if (progress == null || !progress.hasAllChallengeRewards()) {
-            player.sendMessage(Message.raw("[Challenge] Complete all 4 challenges first.")
+            player.sendMessage(Message.raw("[Challenge] Complete all challenges first.")
                 .color(SystemMessageUtils.SECONDARY));
             return;
         }
@@ -357,32 +361,33 @@ public class AscendChallengePage extends BaseAscendPage {
     }
 
     private String buildMalusDescription(ChallengeType type) {
-        StringBuilder sb = new StringBuilder("Malus: ");
-        if (!type.getBlockedSummitCategories().isEmpty()) {
-            for (SummitCategory blocked : type.getBlockedSummitCategories()) {
-                sb.append(blocked.getDisplayName()).append(" locked to base");
+        List<String> parts = new java.util.ArrayList<>();
+
+        if (!type.getBlockedMapDisplayOrders().isEmpty()) {
+            if (type.getBlockedMapDisplayOrders().size() > 1) {
+                parts.add("Maps 4 & 5 locked");
+            } else {
+                parts.add("Map 5 locked");
             }
-        } else if (!type.getBlockedMapDisplayOrders().isEmpty()) {
-            sb.append("Map 5 locked");
-        } else if (type.getSpeedEffectiveness() < 1.0) {
-            int pct = (int) (type.getSpeedEffectiveness() * 100);
-            sb.append("Runner Speed at ").append(pct).append("% effectiveness");
-        } else if (type.getMultiplierGainEffectiveness() < 1.0) {
-            int pct = (int) (type.getMultiplierGainEffectiveness() * 100);
-            sb.append("Multiplier Gain at ").append(pct).append("% effectiveness");
-        } else if (type.getEvolutionPowerEffectiveness() < 1.0) {
-            int pct = (int) (type.getEvolutionPowerEffectiveness() * 100);
-            sb.append("Evolution Power at ").append(pct).append("% effectiveness");
         }
-        return sb.toString();
+        if (type.getSpeedEffectiveness() < 1.0) {
+            int malus = (int) ((1.0 - type.getSpeedEffectiveness()) * 100);
+            parts.add("Runner Speed -" + malus + "%");
+        }
+        if (type.getMultiplierGainEffectiveness() < 1.0) {
+            int malus = (int) ((1.0 - type.getMultiplierGainEffectiveness()) * 100);
+            parts.add("Multiplier Gain -" + malus + "%");
+        }
+        if (type.getEvolutionPowerEffectiveness() < 1.0) {
+            int malus = (int) ((1.0 - type.getEvolutionPowerEffectiveness()) * 100);
+            parts.add("Evolution Power -" + malus + "%");
+        }
+
+        if (parts.isEmpty()) return "Malus: None";
+        return "Malus: " + String.join(" + ", parts);
     }
 
     private String buildRewardDescription(ChallengeType type) {
-        return switch (type) {
-            case CHALLENGE_1 -> "Reward: Map 5 mult gain x1.5 (permanent)";
-            case CHALLENGE_2 -> "Reward: +10% global Runner Speed (permanent)";
-            case CHALLENGE_3 -> "Reward: +20% Multiplier Gain (permanent)";
-            case CHALLENGE_4 -> "Reward: +1 base Evolution Power (permanent)";
-        };
+        return "Reward: +1 AP Multiplier";
     }
 }

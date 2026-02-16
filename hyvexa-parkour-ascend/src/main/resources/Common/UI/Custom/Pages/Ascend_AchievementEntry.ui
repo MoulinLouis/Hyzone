@@ -59,5 +59,13 @@ Group {
       Style: (FontSize: 12, TextColor: #6b7280);
       Text: "Achievement description";
     }
+
+    // Progress (hidden by default, shown for progressive achievements)
+    Label #Progress {
+      Anchor: (Left: 0, Right: 0, Height: 16, Top: 4);
+      Style: (FontSize: 11, TextColor: #9ca3af);
+      Text: "";
+      Visible: false;
+    }
   }
 }
