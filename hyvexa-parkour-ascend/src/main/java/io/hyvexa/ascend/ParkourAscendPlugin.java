@@ -16,6 +16,7 @@ import io.hyvexa.ascend.command.AscendAdminCommand;
 import io.hyvexa.ascend.command.CinematicTestCommand;
 import io.hyvexa.ascend.command.ElevateCommand;
 import io.hyvexa.ascend.command.HudPreviewCommand;
+import io.hyvexa.ascend.command.SkillCommand;
 import io.hyvexa.ascend.command.SummitCommand;
 import io.hyvexa.ascend.data.AscendDatabaseSetup;
 import io.hyvexa.core.db.DatabaseManager;
@@ -206,6 +207,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
         getCommandRegistry().registerCommand(new AscendAdminCommand());
         getCommandRegistry().registerCommand(new ElevateCommand());
         getCommandRegistry().registerCommand(new SummitCommand());
+        getCommandRegistry().registerCommand(new SkillCommand());
         if (runtimeConfig.isEnableTestCommands()) {
             getCommandRegistry().registerCommand(new CinematicTestCommand());
             getCommandRegistry().registerCommand(new HudPreviewCommand());
