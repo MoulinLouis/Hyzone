@@ -158,7 +158,7 @@ public class SummitManager {
             if (speedEffectiveness < 1.0) {
                 double base = SummitCategory.RUNNER_SPEED.getBonusForLevel(0); // 1.0
                 double bonus = fullBonus - base;
-                fullBonus = base + (bonus * speedEffectiveness);
+                fullBonus = Math.max(base, base + (bonus * speedEffectiveness));
             }
         }
 
@@ -181,7 +181,7 @@ public class SummitManager {
             if (effectiveness < 1.0) {
                 double base = SummitCategory.MULTIPLIER_GAIN.getBonusForLevel(0); // 1.0
                 double bonus = fullBonus - base;
-                fullBonus = base + (bonus * effectiveness);
+                fullBonus = Math.max(base, base + (bonus * effectiveness));
             }
         }
 
@@ -218,7 +218,7 @@ public class SummitManager {
             if (effectiveness < 1.0) {
                 double base = SummitCategory.EVOLUTION_POWER.getBonusForLevel(0); // 3.0
                 double bonus = fullBonus - base;
-                fullBonus = base + (bonus * effectiveness);
+                fullBonus = Math.max(base, base + (bonus * effectiveness));
             }
         }
 
