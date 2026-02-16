@@ -20,6 +20,7 @@ import io.hyvexa.duel.interaction.DuelMenuInteraction;
 import io.hyvexa.duel.interaction.ForfeitInteraction;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.core.discord.DiscordLinkStore;
+import io.hyvexa.core.cosmetic.CosmeticStore;
 import io.hyvexa.core.economy.GemStore;
 import io.hyvexa.parkour.data.GlobalMessageStore;
 import io.hyvexa.parkour.data.MapStore;
@@ -51,11 +52,14 @@ import io.hyvexa.manager.WorldMapManager;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.common.util.ModeGate;
 import io.hyvexa.common.util.AsyncExecutionHelper;
+import io.hyvexa.parkour.cosmetic.CosmeticManager;
 import io.hyvexa.parkour.ghost.GhostNpcManager;
 import io.hyvexa.parkour.ghost.GhostRecorder;
 import io.hyvexa.common.ghost.GhostStore;
 import io.hyvexa.parkour.command.CheckpointCommand;
+import io.hyvexa.parkour.command.CosmeticTestCommand;
 import io.hyvexa.parkour.command.GemsCommand;
+import io.hyvexa.parkour.command.ShopCommand;
 import io.hyvexa.parkour.command.LinkCommand;
 import io.hyvexa.parkour.command.UnlinkCommand;
 import io.hyvexa.parkour.command.DatabaseClearCommand;
@@ -143,6 +147,7 @@ public class HyvexaPlugin extends JavaPlugin {
     private GhostStore ghostStore;
     private GhostRecorder ghostRecorder;
     private GhostNpcManager ghostNpcManager;
+    private CosmeticManager cosmeticManager;
 
     public HyvexaPlugin(@Nonnull JavaPluginInit init) {
         super(init);
@@ -179,6 +184,12 @@ public class HyvexaPlugin extends JavaPlugin {
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("Failed to initialize DiscordLinkStore");
         }
+        try {
+            CosmeticStore.getInstance().initialize();
+        } catch (Exception e) {
+            LOGGER.atWarning().withCause(e).log("Failed to initialize CosmeticStore");
+        }
+        this.cosmeticManager = new CosmeticManager();
         this.collisionManager = new CollisionManager();
         this.mapStore = new MapStore();
         this.mapStore.syncLoad();
@@ -261,6 +272,8 @@ public class HyvexaPlugin extends JavaPlugin {
         this.getCommandRegistry().registerCommand(new GemsCommand());
         this.getCommandRegistry().registerCommand(new LinkCommand());
         this.getCommandRegistry().registerCommand(new UnlinkCommand());
+        this.getCommandRegistry().registerCommand(new CosmeticTestCommand());
+        this.getCommandRegistry().registerCommand(new ShopCommand());
 
         registerNoDropSystem();
         registerNoBreakSystem();
@@ -316,6 +329,14 @@ public class HyvexaPlugin extends JavaPlugin {
                             LOGGER.atWarning().withCause(e).log("Discord rank sync failed");
                         }
                     }
+                    // Re-apply equipped cosmetic on login
+                    try {
+                        if (cosmeticManager != null) {
+                            cosmeticManager.reapplyOnLogin(ref, store);
+                        }
+                    } catch (Exception e) {
+                        LOGGER.atWarning().withCause(e).log("Cosmetic reapply on login failed");
+                    }
                     // Hide all existing ghost NPCs from the newly connected player
                     if (ghostNpcManager != null && playerRef != null) {
                         ghostNpcManager.hideGhostsFromPlayer(playerRef.getUuid());
@@ -365,6 +386,12 @@ public class HyvexaPlugin extends JavaPlugin {
 
                 try { DiscordLinkStore.getInstance().evictPlayer(playerId); }
                 catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: DiscordLinkStore"); }
+
+                try { if (cosmeticManager != null) { cosmeticManager.cleanupOnDisconnect(playerId); } }
+                catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: CosmeticManager"); }
+
+                try { CosmeticStore.getInstance().evictPlayer(playerId); }
+                catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: CosmeticStore"); }
             }
 
             try { playtimeManager.decrementOnlineCount(); }
@@ -616,6 +643,10 @@ public class HyvexaPlugin extends JavaPlugin {
 
     public PlayerCleanupManager getCleanupManager() {
         return cleanupManager;
+    }
+
+    public CosmeticManager getCosmeticManager() {
+        return cosmeticManager;
     }
 
     private void tickHudUpdates() {
