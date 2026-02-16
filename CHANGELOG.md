@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Added
+- **Ascend: 6 new skill tree nodes** - Runner Speed IV/V, Evolution Power III, Momentum Mastery (x3.0 + 120s), Multiplier Boost II (+0.25), Elevation Boost (-30% cost). Costs 15-75 AP for late-game replay incentive.
 - **Ascend: 3 new challenges** - Challenge 5 (50% Runner Speed + Multiplier Gain), Challenge 6 (all Summit bonuses at 50%), Challenge 7 (maps 4 & 5 locked). Total: 7 challenges.
 
 ### Changed

@@ -1,7 +1,7 @@
 $C = "../Common.ui";
 
 Group #ChallengeEntry {
-  Anchor: (Left: 0, Right: 0, Bottom: 8, Height: 160);
+  Anchor: (Left: 0, Right: 0, Bottom: 8, Height: 136);
   LayoutMode: Left;
   Background: #0f1820;
   OutlineColor: #ffffff(0.04);
@@ -62,17 +62,10 @@ Group #ChallengeEntry {
       Text: "Ascension Sprint";
     }
 
-    // Description
-    Label #ChallengeDesc {
-      Anchor: (Left: 0, Right: 0, Height: 20, Top: 4);
-      Style: (FontSize: 14, TextColor: #9fb0ba);
-      Text: "Complete an Ascension without Evolution Power";
-    }
-
     // Malus info
     Label #MalusLabel {
-      Anchor: (Left: 0, Right: 0, Height: 20, Top: 6);
-      Style: (FontSize: 13, TextColor: #ef4444, RenderBold: true);
+      Anchor: (Left: 0, Right: 0, Height: 38, Top: 6);
+      Style: (FontSize: 13, TextColor: #ef4444, RenderBold: true, Wrap: true);
       Text: "Malus: Evolution Power locked to base 3.0";
     }
 
@@ -103,14 +96,13 @@ Group #ChallengeEntry {
     }
   }
 
-  // Right button area
+  // Right button area (all 3 states overlap at same centered position)
   Group #ButtonArea {
     Anchor: (Width: 120, Top: 0, Bottom: 0);
-    LayoutMode: Top;
-    Padding: (Top: 38, Right: 14, Left: 6);
+    Padding: (Right: 14, Left: 6);
 
-    Group {
-      Anchor: (Left: 0, Right: 0, Height: 42);
+    Group #StartButtonWrap {
+      Anchor: (Left: 0, Right: 0, Height: 42, Top: 47);
 
       TextButton #StartButton {
         Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
@@ -135,7 +127,7 @@ Group #ChallengeEntry {
 
     // "In Progress" indicator (hidden by default, shown when this challenge is active)
     Label #InProgressLabel {
-      Anchor: (Left: 0, Right: 0, Height: 42, Top: 0);
+      Anchor: (Left: 0, Right: 0, Height: 42, Top: 47);
       Style: (FontSize: 14, TextColor: #fbbf24, RenderBold: true, Alignment: Center, VerticalAlignment: Center);
       Text: "In Progress";
       Visible: false;
@@ -143,7 +135,7 @@ Group #ChallengeEntry {
 
     // "Locked" indicator (hidden by default, shown when previous challenge not completed)
     Label #LockedLabel {
-      Anchor: (Left: 0, Right: 0, Height: 42, Top: 0);
+      Anchor: (Left: 0, Right: 0, Height: 42, Top: 47);
       Style: (FontSize: 14, TextColor: #64748b, RenderBold: true, Alignment: Center, VerticalAlignment: Center);
       Text: "Locked";
       Visible: false;

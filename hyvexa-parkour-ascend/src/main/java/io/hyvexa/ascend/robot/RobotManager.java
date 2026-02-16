@@ -844,9 +844,13 @@ public class RobotManager {
             if (lastMs != null && (now - lastMs) < (long) timerSeconds * 1000L) return;
         }
 
-        // Calculate purchasable levels
+        // Calculate purchasable levels (apply Elevation Boost cost reduction if unlocked)
         BigNumber accumulatedVexa = progress.getElevationAccumulatedVexa();
-        AscendConstants.ElevationPurchaseResult result = AscendConstants.calculateElevationPurchase(currentLevel, accumulatedVexa);
+        ParkourAscendPlugin ascendPlugin = ParkourAscendPlugin.getInstance();
+        BigNumber elevationCostMultiplier = (ascendPlugin != null && ascendPlugin.getSummitManager() != null)
+            ? ascendPlugin.getSummitManager().getElevationCostMultiplier(playerId)
+            : BigNumber.ONE;
+        AscendConstants.ElevationPurchaseResult result = AscendConstants.calculateElevationPurchase(currentLevel, accumulatedVexa, elevationCostMultiplier);
         if (result.levels <= 0) return;
 
         int newLevel = currentLevel + result.levels;
@@ -1015,6 +1019,14 @@ public class RobotManager {
                 if (ascensionManager.hasRunnerSpeedBoost3(ownerId)) {
                     speedMultiplier *= 1.3;
                 }
+                // Skill tree: Runner Speed IV (×1.5 global runner speed)
+                if (ascensionManager.hasRunnerSpeedBoost4(ownerId)) {
+                    speedMultiplier *= 1.5;
+                }
+                // Skill tree: Runner Speed V (×2.0 global runner speed)
+                if (ascensionManager.hasRunnerSpeedBoost5(ownerId)) {
+                    speedMultiplier *= 2.0;
+                }
             }
 
             // Momentum: temporary speed boost from manual run (per-map)
@@ -1025,9 +1037,14 @@ public class RobotManager {
                 if (progress != null) {
                     AscendPlayerProgress.MapProgress mapProgress = progress.getMapProgress().get(map.getId());
                     if (mapProgress != null && mapProgress.isMomentumActive()) {
-                        double momentumMultiplier = (ascensionManager != null && ascensionManager.hasMomentumSurge(ownerId))
-                            ? AscendConstants.MOMENTUM_SURGE_MULTIPLIER
-                            : AscendConstants.MOMENTUM_SPEED_MULTIPLIER;
+                        double momentumMultiplier;
+                        if (ascensionManager != null && ascensionManager.hasMomentumMastery(ownerId)) {
+                            momentumMultiplier = AscendConstants.MOMENTUM_MASTERY_MULTIPLIER;
+                        } else if (ascensionManager != null && ascensionManager.hasMomentumSurge(ownerId)) {
+                            momentumMultiplier = AscendConstants.MOMENTUM_SURGE_MULTIPLIER;
+                        } else {
+                            momentumMultiplier = AscendConstants.MOMENTUM_SPEED_MULTIPLIER;
+                        }
                         speedMultiplier *= momentumMultiplier;
                     }
 
