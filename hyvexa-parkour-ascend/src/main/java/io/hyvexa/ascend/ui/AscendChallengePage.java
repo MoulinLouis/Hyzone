@@ -372,16 +372,16 @@ public class AscendChallengePage extends BaseAscendPage {
             }
         }
         if (type.getSpeedEffectiveness() < 1.0) {
-            int pct = (int) (type.getSpeedEffectiveness() * 100);
-            parts.add("Runner Speed at " + pct + "%");
+            int malus = (int) ((1.0 - type.getSpeedEffectiveness()) * 100);
+            parts.add("Runner Speed -" + malus + "%");
         }
         if (type.getMultiplierGainEffectiveness() < 1.0) {
-            int pct = (int) (type.getMultiplierGainEffectiveness() * 100);
-            parts.add("Multiplier Gain at " + pct + "%");
+            int malus = (int) ((1.0 - type.getMultiplierGainEffectiveness()) * 100);
+            parts.add("Multiplier Gain -" + malus + "%");
         }
         if (type.getEvolutionPowerEffectiveness() < 1.0) {
-            int pct = (int) (type.getEvolutionPowerEffectiveness() * 100);
-            parts.add("Evolution Power at " + pct + "%");
+            int malus = (int) ((1.0 - type.getEvolutionPowerEffectiveness()) * 100);
+            parts.add("Evolution Power -" + malus + "%");
         }
 
         if (parts.isEmpty()) return "Malus: None";
