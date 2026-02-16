@@ -15,7 +15,6 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants;
-import io.hyvexa.ascend.AscendConstants.ChallengeType;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.achievement.AchievementManager;
 import io.hyvexa.ascend.tutorial.TutorialTriggerService;
@@ -290,14 +289,6 @@ public class AscendRunTracker {
             baseMultiplierBonus = plugin.getSummitManager().getBaseMultiplierBonus(playerId);
         }
         BigNumber runnerIncrement = AscendConstants.getRunnerMultiplierIncrement(runnerStars, multiplierGainBonus, evolutionPowerBonus, baseMultiplierBonus);
-
-        // Challenge 1 reward: x1.5 multiplier gain on map 5 (displayOrder 4)
-        AscendPlayerProgress challengeProgress = playerStore.getPlayer(playerId);
-        if (challengeProgress != null && challengeProgress.hasChallengeReward(ChallengeType.CHALLENGE_1)) {
-            if (map.getDisplayOrder() == 4) {
-                runnerIncrement = runnerIncrement.multiply(BigNumber.fromDouble(1.5));
-            }
-        }
 
         BigNumber multiplierIncrement = runnerIncrement.multiply(BigNumber.fromDouble(5.0));
 
