@@ -4,6 +4,25 @@ What's new in Hyvexa? All player-facing changes, newest first.
 
 ---
 
+## v0.1.2 - 2026-02-16
+
+### New
+- **Gems** - A new global currency displayed on all HUDs. Earn gems through Discord linking and spend them in the Cosmetic Shop.
+- **Cosmetic Shop** - Use `/shop` to browse and buy 6 glow effects (100 gems each). Equip, preview, and unequip cosmetics — your equipped glow persists across reconnects.
+- **Discord Linking** - Use `/link` in-game to get a code, then enter it on Discord with `/link <code>` to connect your accounts. You'll receive 100 gems as a reward on your next login. Use `/unlink` to disconnect.
+- **Discord Rank Roles** - Your parkour rank (Bronze through VexaGod) automatically syncs as a Discord role when your accounts are linked.
+- **`/skill`** - Unlock Ascendancy Tree nodes directly via chat without opening the UI.
+- **`/elevate` and `/summit`** - Quick commands to elevate or summit without opening the menu.
+
+### Improved
+- **Summit XP recalibrated** - Scaling adjusted so reaching level 1000 requires roughly 1 Decillion accumulated Vexa, making the endgame grind more consistent.
+
+### Fixed
+- **Skill tree points** - Fixed an issue where the Ascendancy Tree rebalance could leave players with negative AP.
+- **Auto-Elevation** - Fixed target comparison and stale UI after auto-elevate or auto-summit triggers.
+
+---
+
 ## v0.1.1 - 2026-02-15
 
 ### New
