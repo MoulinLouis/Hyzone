@@ -388,6 +388,15 @@ public class AscendChallengePage extends BaseAscendPage {
     }
 
     private String buildRewardDescription(ChallengeType type) {
-        return "Reward: +1 AP Multiplier";
+        String bonus = switch (type) {
+            case CHALLENGE_1 -> " + Map 5 base x1.5";
+            case CHALLENGE_2 -> " + Runner Speed +10%";
+            case CHALLENGE_3 -> " + Multiplier Gain +10%";
+            case CHALLENGE_4 -> " + Evolution Power +0.5";
+            case CHALLENGE_5 -> " + Speed +5% + Mult Gain +5%";
+            case CHALLENGE_6 -> " + Speed/Mult/Evo +5%/+5%/+0.25";
+            case CHALLENGE_7 -> " + Map 4&5 base x1.5";
+        };
+        return "Reward: +1 AP Multiplier" + bonus;
     }
 }

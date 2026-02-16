@@ -965,7 +965,12 @@ public class AscendPlayerStore {
             if (map == null || map.getId() == null) {
                 continue;
             }
-            digits[index] = getMapMultiplier(playerId, map.getId());
+            BigNumber value = getMapMultiplier(playerId, map.getId());
+            double challengeMapBonus = getChallengeMapBonus(playerId, map.getDisplayOrder());
+            if (challengeMapBonus > 1.0) {
+                value = value.multiply(BigNumber.fromDouble(challengeMapBonus));
+            }
+            digits[index] = value;
             index++;
         }
         return digits;
@@ -987,6 +992,10 @@ public class AscendPlayerStore {
                 continue;
             }
             BigNumber value = getMapMultiplier(playerId, map.getId());
+            double challengeMapBonus = getChallengeMapBonus(playerId, map.getDisplayOrder());
+            if (challengeMapBonus > 1.0) {
+                value = value.multiply(BigNumber.fromDouble(challengeMapBonus));
+            }
             product = product.multiply(value.max(BigNumber.ONE));
             index++;
         }
@@ -1010,6 +1019,10 @@ public class AscendPlayerStore {
                 continue;
             }
             BigNumber value = getMapMultiplier(playerId, map.getId());
+            double challengeMapBonus = getChallengeMapBonus(playerId, map.getDisplayOrder());
+            if (challengeMapBonus > 1.0) {
+                value = value.multiply(BigNumber.fromDouble(challengeMapBonus));
+            }
             if (map.getId().equals(mapId)) {
                 value = value.add(bonusAmount);
             }
@@ -1018,6 +1031,18 @@ public class AscendPlayerStore {
         }
         BigNumber elevation = BigNumber.fromDouble(getCalculatedElevationMultiplier(playerId));
         return product.multiply(elevation);
+    }
+
+    /**
+     * Get map base multiplier bonus from completed challenge rewards.
+     * Delegates to ChallengeManager if available.
+     */
+    private double getChallengeMapBonus(UUID playerId, int displayOrder) {
+        io.hyvexa.ascend.ParkourAscendPlugin plugin = io.hyvexa.ascend.ParkourAscendPlugin.getInstance();
+        if (plugin != null && plugin.getChallengeManager() != null) {
+            return plugin.getChallengeManager().getChallengeMapBaseMultiplier(playerId, displayOrder);
+        }
+        return 1.0;
     }
 
     // ========================================
