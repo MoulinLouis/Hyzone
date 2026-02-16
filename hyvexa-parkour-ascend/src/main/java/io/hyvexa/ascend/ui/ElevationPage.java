@@ -108,7 +108,6 @@ public class ElevationPage extends BaseAscendPage {
             + AscendConstants.formatElevationMultiplier(newElevation));
 
         // Reset all progress (vexa, map unlocks, runners). Best times are preserved.
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         if (plugin != null) {
             AscendMapStore mapStore = plugin.getMapStore();
             RobotManager robotManager = plugin.getRobotManager();
