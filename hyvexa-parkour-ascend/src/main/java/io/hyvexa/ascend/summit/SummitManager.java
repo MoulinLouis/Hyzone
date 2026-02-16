@@ -193,12 +193,30 @@ public class SummitManager {
      * @return 0.10 if skill unlocked, 0.0 otherwise
      */
     public double getBaseMultiplierBonus(UUID playerId) {
+        double bonus = 0.0;
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin != null && plugin.getAscensionManager() != null) {
+            if (plugin.getAscensionManager().hasMultiplierBoost(playerId)) {
+                bonus += 0.10;
+            }
+            if (plugin.getAscensionManager().hasMultiplierBoost2(playerId)) {
+                bonus += 0.25;
+            }
+        }
+        return bonus;
+    }
+
+    /**
+     * Get elevation cost multiplier based on skill tree.
+     * @return 0.70 if ELEVATION_BOOST unlocked, 1.0 otherwise
+     */
+    public BigNumber getElevationCostMultiplier(UUID playerId) {
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         if (plugin != null && plugin.getAscensionManager() != null
-                && plugin.getAscensionManager().hasMultiplierBoost(playerId)) {
-            return 0.10;
+                && plugin.getAscensionManager().hasElevationBoost(playerId)) {
+            return BigNumber.fromDouble(0.70);
         }
-        return 0.0;
+        return BigNumber.ONE;
     }
 
     /**
@@ -231,6 +249,11 @@ public class SummitManager {
         if (plugin != null && plugin.getAscensionManager() != null
                 && plugin.getAscensionManager().hasEvolutionPowerBoost2(playerId)) {
             fullBonus += 1.0;
+        }
+        // Skill tree: Evolution Power III adds +2.0 to base evolution power
+        if (plugin != null && plugin.getAscensionManager() != null
+                && plugin.getAscensionManager().hasEvolutionPowerBoost3(playerId)) {
+            fullBonus += 2.0;
         }
         return fullBonus;
     }

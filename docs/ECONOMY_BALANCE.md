@@ -532,6 +532,34 @@ Ascension is the ultimate prestige. Requires 1 Decillion (1Dc = 10^33) vexa. Res
 
 **Break Ascension:** Unlocked after completing all 7 challenges. Suppresses auto-ascension at 1Dc.
 
+### Ascendancy Tree
+
+Permanent skill nodes purchased with AP. Prerequisites use OR logic (any one parent unlocks the child).
+
+| Tier | Node | Cost | Effect | Prerequisites |
+|------|------|------|--------|---------------|
+| 1 | Runner Speed+ | 1 | x1.25 global runner speed | — |
+| 2L | Runner Speed II | 2 | x1.25 global runner speed | Runner Speed+ |
+| 2R | Evolution Power+ | 2 | +1 base evolution power | Runner Speed+ |
+| 3 | Momentum Speed | 2 | x2 speed during momentum | Runner Speed II OR Evolution Power+ |
+| 4L | Runner Speed III | 3 | x1.25 global runner speed | Momentum Speed |
+| 4R | Momentum Endurance | 3 | Momentum duration 90s | Momentum Speed |
+| 5 | Multiplier Boost | 3 | +0.10 base multiplier gain | Runner Speed III OR Momentum Endurance |
+| 6L | Momentum Surge | 5 | Momentum x2.5 speed | Multiplier Boost |
+| 6R | Evolution Power II | 5 | +1 base evolution power | Multiplier Boost |
+| 7 | Auto-Elevation | 7 | Automatic elevation | Momentum Surge OR Evolution Power II |
+| 8L | Runner Speed III | 7 | x1.25 global runner speed | Auto-Elevation |
+| 8R | Evolution Power II | 7 | +1 base evolution power | Auto-Elevation |
+| 9 | Automation | 10 | Auto-summit, auto-ascension | Runner Speed III OR Evolution Power II |
+| 10L | Runner Speed IV | 15 | x1.5 global runner speed | Runner Speed III OR Evolution Power II |
+| 10R | Evolution Power III | 15 | +2 base evolution power | Runner Speed III OR Evolution Power II |
+| 11 | Momentum Mastery | 25 | Momentum x3.0 + 120s duration | Runner Speed IV OR Evolution Power III |
+| 12L | Multiplier Boost II | 40 | +0.25 base multiplier gain | Momentum Mastery |
+| 12R | Elevation Boost | 40 | Elevation cost -30% | Momentum Mastery |
+| 13 | Runner Speed V | 75 | x2.0 global runner speed | Multiplier Boost II OR Elevation Boost |
+
+**Total AP for all nodes:** 286 AP
+
 ---
 
 ## Strategic Evolution System
@@ -699,6 +727,7 @@ Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure conti
   - 3 new challenges: mixed summit malus (5), all summit malus (6), maps 4+5 blocked (7)
   - Old per-challenge permanent rewards removed (x1.5 map5, +10% speed, +20% multi, +1 evo power)
   - Summit level cap removed (was 1000, now unlimited)
+  - 6 new skill tree nodes: Runner Speed IV (15 AP), Evolution Power III (15 AP), Momentum Mastery (25 AP), Multiplier Boost II (40 AP), Elevation Boost (40 AP), Runner Speed V (75 AP)
 
 - **2026-02-08 (v16):** Elevation cost reduction
   - Cost curve exponent: 0.77 → 0.72 (early), 0.63 → 0.58 (late, above level 300)

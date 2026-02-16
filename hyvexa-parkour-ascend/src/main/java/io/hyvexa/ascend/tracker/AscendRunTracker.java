@@ -356,15 +356,21 @@ public class AscendRunTracker {
         if (plugin != null && plugin.getAscensionManager() != null
                 && plugin.getAscensionManager().hasAutoRunners(playerId)) {
             boolean wasActive = mapProgress.isMomentumActive();
-            boolean hasEndurance = plugin.getAscensionManager().hasMomentumEndurance(playerId);
-            long momentumDuration = hasEndurance
-                ? AscendConstants.MOMENTUM_ENDURANCE_DURATION_MS
-                : AscendConstants.MOMENTUM_DURATION_MS;
+            long momentumDuration;
+            if (plugin.getAscensionManager().hasMomentumMastery(playerId)) {
+                momentumDuration = AscendConstants.MOMENTUM_MASTERY_DURATION_MS;
+            } else if (plugin.getAscensionManager().hasMomentumEndurance(playerId)) {
+                momentumDuration = AscendConstants.MOMENTUM_ENDURANCE_DURATION_MS;
+            } else {
+                momentumDuration = AscendConstants.MOMENTUM_DURATION_MS;
+            }
             mapProgress.activateMomentum(momentumDuration);
             if (!wasActive) {
                 String mapName = map.getName() != null && !map.getName().isBlank() ? map.getName() : map.getId();
+                boolean hasMastery = plugin.getAscensionManager().hasMomentumMastery(playerId);
                 boolean hasSurge = plugin.getAscensionManager().hasMomentumSurge(playerId);
-                showToast(playerId, ToastType.ECONOMY, "Momentum: x" + (hasSurge ? "2.5" : "2") + " speed on " + mapName);
+                String momentumText = hasMastery ? "3" : (hasSurge ? "2.5" : "2");
+                showToast(playerId, ToastType.ECONOMY, "Momentum: x" + momentumText + " speed on " + mapName);
             }
         }
 

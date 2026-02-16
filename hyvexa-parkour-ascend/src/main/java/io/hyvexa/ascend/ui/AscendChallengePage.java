@@ -99,7 +99,6 @@ public class AscendChallengePage extends BaseAscendPage {
 
             // Set challenge info
             commandBuilder.set(p + "#ChallengeName.Text", type.getDisplayName());
-            commandBuilder.set(p + "#ChallengeDesc.Text", type.getDescription());
 
             // Set accent bar color via visibility toggle (dynamic Background doesn't work)
             String accentId = ACCENT_COLOR_MAP.getOrDefault(type.getAccentColor(), "AccentRed");
@@ -135,13 +134,13 @@ public class AscendChallengePage extends BaseAscendPage {
             // Button state
             boolean challengeUnlocked = challengeManager.isChallengeUnlocked(playerId, type);
             if (!challengeUnlocked) {
-                commandBuilder.set(p + "#StartButton.Visible", false);
+                commandBuilder.set(p + "#StartButtonWrap.Visible", false);
                 commandBuilder.set(p + "#LockedLabel.Visible", true);
             } else if (activeType == type) {
-                commandBuilder.set(p + "#StartButton.Visible", false);
+                commandBuilder.set(p + "#StartButtonWrap.Visible", false);
                 commandBuilder.set(p + "#InProgressLabel.Visible", true);
             } else if (inChallenge) {
-                commandBuilder.set(p + "#StartButton.Visible", false);
+                commandBuilder.set(p + "#StartButtonWrap.Visible", false);
             }
 
             // Bind start button

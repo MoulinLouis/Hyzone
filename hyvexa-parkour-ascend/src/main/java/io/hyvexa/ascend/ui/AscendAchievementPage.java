@@ -60,6 +60,11 @@ public class AscendAchievementPage extends BaseAscendPage {
         }
 
         UUID playerId = playerRef.getUuid();
+
+        // Check and unlock any pending achievements before displaying
+        Player player = store.getComponent(ref, Player.getComponentType());
+        achievementManager.checkAndUnlockAchievements(playerId, player);
+
         buildAchievementCards(playerId, commandBuilder);
     }
 
@@ -89,6 +94,12 @@ public class AscendAchievementPage extends BaseAscendPage {
             // Set name, description (hidden achievements show ??? when locked)
             commandBuilder.set(prefix + "#Name.Text", isHiddenAndLocked ? "???" : achievement.getName());
             commandBuilder.set(prefix + "#Description.Text", isHiddenAndLocked ? "???" : achievement.getDescription());
+
+            // Show progress for progressive achievements (required > 1)
+            if (!isHiddenAndLocked && progress.required() > 1) {
+                commandBuilder.set(prefix + "#Progress.Visible", true);
+                commandBuilder.set(prefix + "#Progress.Text", progress.current() + " / " + progress.required());
+            }
 
             if (progress.unlocked()) {
                 unlockedCount++;

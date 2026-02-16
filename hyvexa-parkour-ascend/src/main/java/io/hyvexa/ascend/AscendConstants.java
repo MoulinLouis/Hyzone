@@ -179,6 +179,8 @@ public final class AscendConstants {
 
     public static final long MOMENTUM_DURATION_MS = 60_000L;
     public static final long MOMENTUM_ENDURANCE_DURATION_MS = 90_000L;
+    public static final double MOMENTUM_MASTERY_MULTIPLIER = 3.0;
+    public static final long MOMENTUM_MASTERY_DURATION_MS = 120_000L;
 
     // Runner star evolution
     public static final int MAX_ROBOT_STARS = 5;
@@ -619,7 +621,13 @@ public final class AscendConstants {
         MOMENTUM_ENDURANCE("Momentum Endurance", "Momentum 60s -> 90s", 3, ASCENSION_CHALLENGES),
         MULTIPLIER_BOOST("Multiplier Boost", "+0.10 base multiplier gain", 5, MOMENTUM_SURGE, MOMENTUM_ENDURANCE),
         RUNNER_SPEED_3("Runner Speed III", "x1.3 global runner speed", 10, MULTIPLIER_BOOST),
-        EVOLUTION_POWER_2("Evolution Power II", "+1 base evolution power", 10, MULTIPLIER_BOOST);
+        EVOLUTION_POWER_2("Evolution Power II", "+1 base evolution power", 10, MULTIPLIER_BOOST),
+        RUNNER_SPEED_4("Runner Speed IV", "x1.5 global runner speed", 15, RUNNER_SPEED_3, EVOLUTION_POWER_2),
+        EVOLUTION_POWER_3("Evolution Power III", "+2 base evolution power", 15, RUNNER_SPEED_3, EVOLUTION_POWER_2),
+        MOMENTUM_MASTERY("Momentum Mastery", "Momentum x3.0 + 120s duration", 25, RUNNER_SPEED_4, EVOLUTION_POWER_3),
+        MULTIPLIER_BOOST_2("Multiplier Boost II", "+0.25 base multiplier gain", 40, MOMENTUM_MASTERY),
+        ELEVATION_BOOST("Elevation Boost", "Elevation cost -30%", 40, MOMENTUM_MASTERY),
+        RUNNER_SPEED_5("Runner Speed V", "x2.0 global runner speed", 75, MULTIPLIER_BOOST_2, ELEVATION_BOOST);
 
         private final String name;
         private final String description;

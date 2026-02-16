@@ -241,6 +241,30 @@ public class AscensionManager {
         return hasSkillNode(playerId, SkillTreeNode.MOMENTUM_ENDURANCE);
     }
 
+    public boolean hasRunnerSpeedBoost4(UUID playerId) {
+        return hasSkillNode(playerId, SkillTreeNode.RUNNER_SPEED_4);
+    }
+
+    public boolean hasEvolutionPowerBoost3(UUID playerId) {
+        return hasSkillNode(playerId, SkillTreeNode.EVOLUTION_POWER_3);
+    }
+
+    public boolean hasMomentumMastery(UUID playerId) {
+        return hasSkillNode(playerId, SkillTreeNode.MOMENTUM_MASTERY);
+    }
+
+    public boolean hasMultiplierBoost2(UUID playerId) {
+        return hasSkillNode(playerId, SkillTreeNode.MULTIPLIER_BOOST_2);
+    }
+
+    public boolean hasElevationBoost(UUID playerId) {
+        return hasSkillNode(playerId, SkillTreeNode.ELEVATION_BOOST);
+    }
+
+    public boolean hasRunnerSpeedBoost5(UUID playerId) {
+        return hasSkillNode(playerId, SkillTreeNode.RUNNER_SPEED_5);
+    }
+
     private boolean hasSkillNode(UUID playerId, SkillTreeNode node) {
         AscendPlayerProgress progress = playerStore.getPlayer(playerId);
         return progress != null && progress.hasSkillNode(node);

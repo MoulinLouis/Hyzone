@@ -87,7 +87,6 @@ public class AchievementManager {
             case ARMY -> countRobots(progress) >= AscendConstants.ACHIEVEMENT_RUNNER_COUNT;
             case EVOLVED -> hasEvolvedRobot(progress);
             case STAR_COLLECTOR -> hasMaxStarRobot(progress);
-            case MAXED_OUT -> hasMaxSpeedRobot(progress);
 
             // Prestige
             case FIRST_ELEVATION -> progress.getElevationMultiplier() >= 2;
@@ -104,7 +103,6 @@ public class AchievementManager {
 
             // Skills
             case NEW_POWERS -> !progress.getUnlockedSkillNodes().isEmpty();
-            case SKILL_MASTER -> progress.getUnlockedSkillNodes().size() >= AscendConstants.ACHIEVEMENT_TOTAL_SKILL_NODES;
 
             // Challenges
             case CHALLENGER -> !progress.getCompletedChallengeRewards().isEmpty();
@@ -154,13 +152,14 @@ public class AchievementManager {
         return false;
     }
 
-    private boolean hasMaxSpeedRobot(AscendPlayerProgress progress) {
+    private int getMaxRobotStars(AscendPlayerProgress progress) {
+        int max = 0;
         for (var mapProgress : progress.getMapProgress().values()) {
-            if (mapProgress.hasRobot() && mapProgress.getRobotSpeedLevel() >= AscendConstants.MAX_SPEED_LEVEL) {
-                return true;
+            if (mapProgress.hasRobot()) {
+                max = Math.max(max, mapProgress.getRobotStars());
             }
         }
-        return false;
+        return max;
     }
 
     private boolean hasAnySummitLevel(AscendPlayerProgress progress) {
@@ -284,12 +283,8 @@ public class AchievementManager {
                 required = 1;
             }
             case STAR_COLLECTOR -> {
-                current = hasMaxStarRobot(progress) ? 1 : 0;
-                required = 1;
-            }
-            case MAXED_OUT -> {
-                current = hasMaxSpeedRobot(progress) ? 1 : 0;
-                required = 1;
+                current = Math.min(getMaxRobotStars(progress), AscendConstants.MAX_ROBOT_STARS);
+                required = AscendConstants.MAX_ROBOT_STARS;
             }
 
             // Prestige
@@ -342,10 +337,6 @@ public class AchievementManager {
             case NEW_POWERS -> {
                 current = Math.min(progress.getUnlockedSkillNodes().size(), 1);
                 required = 1;
-            }
-            case SKILL_MASTER -> {
-                current = Math.min(progress.getUnlockedSkillNodes().size(), AscendConstants.ACHIEVEMENT_TOTAL_SKILL_NODES);
-                required = AscendConstants.ACHIEVEMENT_TOTAL_SKILL_NODES;
             }
 
             // Challenges
