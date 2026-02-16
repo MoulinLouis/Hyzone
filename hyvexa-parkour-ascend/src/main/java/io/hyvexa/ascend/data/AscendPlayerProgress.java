@@ -526,6 +526,10 @@ public class AscendPlayerProgress {
         return Set.copyOf(completedChallengeRewards);
     }
 
+    public int getCompletedChallengeCount() {
+        return completedChallengeRewards.size();
+    }
+
     public void setCompletedChallengeRewards(Set<AscendConstants.ChallengeType> rewards) {
         completedChallengeRewards.clear();
         if (rewards != null) {
