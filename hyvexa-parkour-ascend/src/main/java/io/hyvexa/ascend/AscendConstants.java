@@ -443,10 +443,8 @@ public final class AscendConstants {
     public static final int SUMMIT_SOFT_CAP = 25;
     // Summit deep cap: sqrt growth below, fourth-root growth above (heavy diminishing returns)
     public static final int SUMMIT_DEEP_CAP = 500;
-    // Summit hard cap: absolute maximum level per category
-    public static final int SUMMIT_MAX_LEVEL = 1000;
-    // Max cumulative XP needed (pre-computed for SUMMIT_MAX_LEVEL)
-    public static final long SUMMIT_MAX_XP = getCumulativeXpForLevel(SUMMIT_MAX_LEVEL);
+    // Summit XP softcap: levels above this cost increasingly more XP (exponent rises from 2.0 to 3.0)
+    public static final int SUMMIT_XP_SOFTCAP = 1000;
 
     public enum SummitCategory {
         MULTIPLIER_GAIN("Multiplier Gain", 1.0, 0.30),  // 1 + 0.30/level
@@ -496,13 +494,14 @@ public final class AscendConstants {
     // Summit XP System
     // ========================================
 
-    public static final double SUMMIT_XP_LEVEL_EXPONENT = 2.0; // Exponent for level formula
+    public static final double SUMMIT_XP_LEVEL_EXPONENT = 2.0; // Exponent for level formula (below softcap)
+    public static final double SUMMIT_XP_LATE_EXPONENT = 3.0; // Exponent for level formula (above softcap)
     public static final long SUMMIT_MIN_VEXA = 1_000_000_000L; // Minimum vexa for 1 XP (1B)
 
-    // Calibrated so 1 Decillion (10^33) accumulated vexa = exactly level 1000
-    // Derived: power = log(SUMMIT_MAX_XP) / log(1Dc / MIN_VEXA)
+    // Calibrated so 1 Decillion (10^33) accumulated vexa = exactly level 1000 (SUMMIT_XP_SOFTCAP)
+    // Derived: power = log(cumXp(1000)) / log(1Dc / MIN_VEXA)
     public static final double SUMMIT_XP_VEXA_POWER =
-        Math.log(SUMMIT_MAX_XP) / Math.log(1e33 / SUMMIT_MIN_VEXA); // ~0.3552
+        Math.log(getCumulativeXpForLevel(SUMMIT_XP_SOFTCAP)) / Math.log(1e33 / SUMMIT_MIN_VEXA); // ~0.3552
 
     /**
      * Convert vexa to XP.
@@ -553,21 +552,42 @@ public final class AscendConstants {
 
     /**
      * Calculate XP required to reach a specific level (from level-1).
-     * Formula: level^2.0
+     * Below softcap: level^2
+     * Above softcap: level^3 / SOFTCAP (continuous at softcap boundary)
      */
     public static long getXpForLevel(int level) {
         if (level <= 0) return 0;
-        return (long) Math.pow(level, SUMMIT_XP_LEVEL_EXPONENT);
+        if (level <= SUMMIT_XP_SOFTCAP) {
+            return (long) Math.pow(level, SUMMIT_XP_LEVEL_EXPONENT);
+        }
+        // level^3 / SOFTCAP ensures continuity: at SOFTCAP, SOFTCAP^3/SOFTCAP = SOFTCAP^2
+        double cost = Math.pow(level, SUMMIT_XP_LATE_EXPONENT) / SUMMIT_XP_SOFTCAP;
+        if (cost >= (double) Long.MAX_VALUE) return Long.MAX_VALUE;
+        return (long) cost;
     }
 
     /**
      * Calculate cumulative XP required to reach a level (total from 0).
-     * Closed-form formula: sum(i^2, i=1..n) = n*(n+1)*(2n+1)/6
+     * Below softcap: sum(i^2, i=1..n) = n*(n+1)*(2n+1)/6
+     * Above softcap: base + sum(i^3/SOFTCAP, i=SOFTCAP+1..n)
      */
     public static long getCumulativeXpForLevel(int level) {
         if (level <= 0) return 0;
         long n = level;
-        return n * (n + 1) * (2 * n + 1) / 6;
+        if (level <= SUMMIT_XP_SOFTCAP) {
+            return n * (n + 1) * (2 * n + 1) / 6;
+        }
+        // Cumulative up to softcap (closed-form sum of squares)
+        long sc = SUMMIT_XP_SOFTCAP;
+        long baseCum = sc * (sc + 1) * (2 * sc + 1) / 6;
+        // Late zone: sum(i^3/SOFTCAP, i=SC+1..n)
+        // sum(i^3, i=1..n) = [n(n+1)/2]^2, so sum(i^3, i=SC+1..n) = [n(n+1)/2]^2 - [SC(SC+1)/2]^2
+        double halfN = (double) n * (n + 1) / 2.0;
+        double halfSC = (double) sc * (sc + 1) / 2.0;
+        double lateCum = (halfN * halfN - halfSC * halfSC) / SUMMIT_XP_SOFTCAP;
+        double total = baseCum + lateCum;
+        if (total >= (double) Long.MAX_VALUE) return Long.MAX_VALUE;
+        return (long) total;
     }
 
     /**
@@ -578,7 +598,7 @@ public final class AscendConstants {
         if (xp <= 0) return 0;
         // Dynamic upper bound: cumXp ~ n^3/3, so n ~ (3*xp)^(1/3)
         int lo = 0;
-        int hi = Math.max(SUMMIT_MAX_LEVEL, (int) Math.ceil(Math.cbrt(3.0 * xp)) + 10);
+        int hi = (int) Math.ceil(Math.cbrt(3.0 * xp)) + 10;
         while (lo < hi) {
             int mid = lo + (hi - lo + 1) / 2;
             if (getCumulativeXpForLevel(mid) <= xp) {

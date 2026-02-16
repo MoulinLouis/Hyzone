@@ -8,7 +8,7 @@
 
 ### Changed
 - **Ascend: AP Multiplier system** - Each completed challenge grants +1 to AP multiplier (base x1, max x8). Replaces old per-challenge permanent bonuses. Displayed in the Challenges tab.
-- **Ascend: Summit levels unlimited** - Removed hard cap at level 1000. Diminishing returns curve unchanged (4th-root above 500).
+- **Ascend: Summit XP softcap at level 1000** - Removed hard cap at level 1000 (unlimited levels). XP cost per level rises from level^2 to level^3 above 1000 — same vexa reaches fewer levels (old 5000 -> ~3591).
 
 ### Added
 - **Global: Analytics system** - Event-based analytics tracking gameplay events (joins, completions, duels, mode switches, purchases, Ascend progression). Daily aggregates computed into `analytics_daily` table. OP-only `/analytics` command shows DAU, retention, session length, and mode split. 90-day event retention with auto-purge.
