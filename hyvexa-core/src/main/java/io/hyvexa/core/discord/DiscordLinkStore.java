@@ -227,6 +227,9 @@ public class DiscordLinkStore {
                         Message.raw(" as a reward!").color("#a3e635")
                 ));
                 LOGGER.atInfo().log("Awarded " + GEM_REWARD + " gems to " + playerId + " for Discord link");
+                try {
+                    io.hyvexa.core.analytics.AnalyticsStore.getInstance().logEvent(playerId, "discord_link", "{}");
+                } catch (Exception e) { /* silent */ }
                 return true;
             }
         } catch (SQLException e) {

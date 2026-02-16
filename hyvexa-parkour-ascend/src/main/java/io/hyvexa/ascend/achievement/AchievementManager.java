@@ -56,6 +56,11 @@ public class AchievementManager {
                         .color(SystemMessageUtils.SUCCESS));
                 }
 
+                try {
+                    io.hyvexa.core.analytics.AnalyticsStore.getInstance().logEvent(playerId, "ascend_achievement",
+                            "{\"achievement_id\":\"" + achievement.name() + "\"}");
+                } catch (Exception e) { /* silent */ }
+
                 LOGGER.atInfo().log("[Achievement] Player " + playerId + " unlocked: " + achievement.name());
             }
         }

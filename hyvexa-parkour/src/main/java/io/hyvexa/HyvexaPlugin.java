@@ -18,6 +18,7 @@ import io.hyvexa.duel.data.DuelPreferenceStore;
 import io.hyvexa.duel.data.DuelStatsStore;
 import io.hyvexa.duel.interaction.DuelMenuInteraction;
 import io.hyvexa.duel.interaction.ForfeitInteraction;
+import io.hyvexa.core.analytics.AnalyticsStore;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.core.discord.DiscordLinkStore;
 import io.hyvexa.core.cosmetic.CosmeticStore;
@@ -59,6 +60,7 @@ import io.hyvexa.common.ghost.GhostStore;
 import io.hyvexa.parkour.command.CheckpointCommand;
 import io.hyvexa.parkour.command.CosmeticTestCommand;
 import io.hyvexa.parkour.command.GemsCommand;
+import io.hyvexa.parkour.command.AnalyticsCommand;
 import io.hyvexa.parkour.command.ShopCommand;
 import io.hyvexa.parkour.command.LinkCommand;
 import io.hyvexa.parkour.command.UnlinkCommand;
@@ -189,6 +191,12 @@ public class HyvexaPlugin extends JavaPlugin {
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("Failed to initialize CosmeticStore");
         }
+        try {
+            AnalyticsStore.getInstance().initialize();
+            AnalyticsStore.getInstance().purgeOldEvents(90);
+        } catch (Exception e) {
+            LOGGER.atWarning().withCause(e).log("Failed to initialize AnalyticsStore");
+        }
         this.cosmeticManager = new CosmeticManager();
         this.collisionManager = new CollisionManager();
         this.mapStore = new MapStore();
@@ -274,6 +282,7 @@ public class HyvexaPlugin extends JavaPlugin {
         this.getCommandRegistry().registerCommand(new UnlinkCommand());
         this.getCommandRegistry().registerCommand(new CosmeticTestCommand());
         this.getCommandRegistry().registerCommand(new ShopCommand());
+        this.getCommandRegistry().registerCommand(new AnalyticsCommand());
 
         registerNoDropSystem();
         registerNoBreakSystem();
@@ -392,6 +401,16 @@ public class HyvexaPlugin extends JavaPlugin {
 
                 try { CosmeticStore.getInstance().evictPlayer(playerId); }
                 catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: CosmeticStore"); }
+
+                try {
+                    Long sessionStart = playtimeManager.getSessionStart(playerId);
+                    long sessionMs = sessionStart != null ? System.currentTimeMillis() - sessionStart : 0;
+                    AnalyticsStore.getInstance().logEvent(playerId, "player_leave",
+                            "{\"session_ms\":" + sessionMs + "}");
+                    AnalyticsStore.getInstance().updatePlayerTimestamps(playerId, false);
+                } catch (Exception e) {
+                    LOGGER.atWarning().withCause(e).log("Disconnect cleanup: Analytics");
+                }
             }
 
             try { playtimeManager.decrementOnlineCount(); }
@@ -716,6 +735,15 @@ public class HyvexaPlugin extends JavaPlugin {
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("Exception in PlayerConnectEvent (broadcast)");
         }
+        try {
+            UUID playerId = playerRef.getUuid();
+            boolean isNew = progressStore.shouldShowWelcome(playerId);
+            AnalyticsStore.getInstance().logEvent(playerId, "player_join",
+                    "{\"is_new\":" + isNew + "}");
+            AnalyticsStore.getInstance().updatePlayerTimestamps(playerId, isNew);
+        } catch (Exception e) {
+            LOGGER.atWarning().withCause(e).log("Analytics: player_join");
+        }
     }
 
     private Map<World, List<PlayerTickContext>> collectPlayersByWorld() {
@@ -924,6 +952,9 @@ public class HyvexaPlugin extends JavaPlugin {
 
         try { if (progressStore != null) { progressStore.flushPendingSave(); } }
         catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: progressStore flush"); }
+
+        try { AnalyticsStore.getInstance().computeDailyAggregates(java.time.LocalDate.now()); }
+        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: analytics aggregation"); }
 
         try { DatabaseManager.getInstance().shutdown(); }
         catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: DatabaseManager"); }

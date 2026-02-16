@@ -79,6 +79,11 @@ public class HubRouter {
             if (sourceWorldName.equalsIgnoreCase(targetWorldName)) {
                 return;
             }
+            try {
+                io.hyvexa.core.analytics.AnalyticsStore.getInstance().logEvent(
+                        playerRef.getUuid(), "mode_switch",
+                        "{\"to\":\"" + targetWorldName + "\"}");
+            } catch (Exception e) { /* silent */ }
             Teleport teleport = createTeleport(targetWorld, playerRef.getUuid());
             store.addComponent(ref, Teleport.getComponentType(), teleport);
         }, "hub.route.world", "hub route to world",

@@ -216,6 +216,10 @@ public class AscendPlayerStore {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
         int value = progress.addElevationMultiplier(amount);
         markDirty(playerId);
+        try {
+            io.hyvexa.core.analytics.AnalyticsStore.getInstance().logEvent(playerId, "ascend_elevation_up",
+                    "{\"new_level\":" + value + "}");
+        } catch (Exception e) { /* silent */ }
         return value;
     }
 

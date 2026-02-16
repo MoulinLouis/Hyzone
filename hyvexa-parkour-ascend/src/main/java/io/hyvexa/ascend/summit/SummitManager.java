@@ -127,6 +127,11 @@ public class SummitManager {
         LOGGER.atInfo().log("[Summit] Player " + playerId + " summited " + category.name()
             + " +" + xpToGain + " XP, Lv." + previousLevel + " -> Lv." + newLevel);
 
+        try {
+            io.hyvexa.core.analytics.AnalyticsStore.getInstance().logEvent(playerId, "ascend_summit_up",
+                    "{\"category\":\"" + category.name() + "\",\"new_level\":" + newLevel + "}");
+        } catch (Exception e) { /* silent */ }
+
         return new SummitResult(newLevel, mapsWithRunners, xpToGain);
     }
 

@@ -19,6 +19,7 @@ import io.hyvexa.ascend.command.HudPreviewCommand;
 import io.hyvexa.ascend.command.SkillCommand;
 import io.hyvexa.ascend.command.SummitCommand;
 import io.hyvexa.ascend.data.AscendDatabaseSetup;
+import io.hyvexa.core.analytics.AnalyticsStore;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.core.discord.DiscordLinkStore;
 import io.hyvexa.core.economy.GemStore;
@@ -129,6 +130,11 @@ public class ParkourAscendPlugin extends JavaPlugin {
             DiscordLinkStore.getInstance().initialize();
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("Failed to initialize DiscordLinkStore for Ascend");
+        }
+        try {
+            AnalyticsStore.getInstance().initialize();
+        } catch (Exception e) {
+            LOGGER.atWarning().withCause(e).log("Failed to initialize AnalyticsStore for Ascend");
         }
 
         // Initialize whitelist manager

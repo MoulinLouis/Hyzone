@@ -179,6 +179,10 @@ public class CosmeticShopPage extends BaseParkourPage {
         CosmeticStore.getInstance().purchaseCosmetic(playerId, cosmeticId);
         player.sendMessage(Message.raw("[Shop] Purchased " + def.getDisplayName() + "!")
                 .color(SystemMessageUtils.SUCCESS));
+        try {
+            io.hyvexa.core.analytics.AnalyticsStore.getInstance().logEvent(playerId, "gem_spend",
+                    "{\"amount\":" + def.getPrice() + ",\"item\":\"" + cosmeticId + "\"}");
+        } catch (Exception e) { /* silent */ }
 
         // Re-open page on world thread to refresh state
         executeOnWorldThread(player, (wRef, wStore) -> {

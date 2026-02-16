@@ -749,6 +749,15 @@ public class DuelTracker {
             matchStore.saveMatch(match);
         }
 
+        try {
+            if (winnerId != null) {
+                io.hyvexa.core.analytics.AnalyticsStore.getInstance().logEvent(winnerId, "duel_finish",
+                        "{\"winner\":\"" + winnerId + "\",\"loser\":\"" + loserId
+                        + "\",\"map_id\":\"" + match.getMapId()
+                        + "\",\"reason\":\"" + reason.name() + "\"}");
+            }
+        } catch (Exception e) { /* silent */ }
+
         HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> cleanupMatch(match),
                 DuelConstants.POST_MATCH_DELAY_MS, TimeUnit.MILLISECONDS);
     }

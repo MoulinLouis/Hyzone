@@ -599,6 +599,10 @@ public class AscendMapSelectPage extends BaseAscendPage {
             // Buying a runner is now free
             playerStore.setHasRobot(playerRef.getUuid(), mapId, true);
             showToast(playerRef.getUuid(), ToastType.SUCCESS, "Runner purchased!");
+            try {
+                io.hyvexa.core.analytics.AnalyticsStore.getInstance().logEvent(playerRef.getUuid(), "ascend_runner_buy",
+                        "{\"map_id\":\"" + mapId + "\"}");
+            } catch (Exception e) { /* silent */ }
             updateRobotRow(ref, store, mapId);
         } else {
             int currentLevel = mapProgress.getRobotSpeedLevel();
@@ -623,6 +627,10 @@ public class AscendMapSelectPage extends BaseAscendPage {
                         plugin.getTutorialTriggerService().checkEvolution(playerRef.getUuid(), ref);
                     }
                 }
+                try {
+                    io.hyvexa.core.analytics.AnalyticsStore.getInstance().logEvent(playerRef.getUuid(), "ascend_runner_evolve",
+                            "{\"map_id\":\"" + mapId + "\",\"new_stars\":" + newStars + "}");
+                } catch (Exception e) { /* silent */ }
                 String evoMsg = "Runner evolved! Now at " + newStars + " star" + (newStars > 1 ? "s" : "") + "!";
                 showToast(playerRef.getUuid(), ToastType.EVOLUTION, evoMsg);
                 updateRobotRow(ref, store, mapId);

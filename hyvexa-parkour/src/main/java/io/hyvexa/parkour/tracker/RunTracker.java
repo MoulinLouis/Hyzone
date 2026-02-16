@@ -99,6 +99,10 @@ public class RunTracker {
         if (ghostNpcManager != null) {
             ghostNpcManager.spawnGhost(playerId, mapId);
         }
+        try {
+            io.hyvexa.core.analytics.AnalyticsStore.getInstance().logEvent(playerId, "map_start",
+                    "{\"map_id\":\"" + mapId + "\"}");
+        } catch (Exception e) { /* silent */ }
         return run;
     }
 

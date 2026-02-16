@@ -23,6 +23,7 @@ import io.hyvexa.common.util.AsyncExecutionHelper;
 import io.hyvexa.common.util.InventoryUtils;
 import io.hyvexa.common.util.ModeGate;
 import io.hyvexa.common.util.PermissionUtils;
+import io.hyvexa.core.analytics.AnalyticsStore;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.core.discord.DiscordLinkStore;
 import io.hyvexa.core.economy.GemStore;
@@ -102,6 +103,11 @@ public class HyvexaHubPlugin extends JavaPlugin {
             DiscordLinkStore.getInstance().initialize();
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("Failed to initialize DiscordLinkStore for Hub");
+        }
+        try {
+            AnalyticsStore.getInstance().initialize();
+        } catch (Exception e) {
+            LOGGER.atWarning().withCause(e).log("Failed to initialize AnalyticsStore for Hub");
         }
         router = new HubRouter();
         preloadWorlds();
