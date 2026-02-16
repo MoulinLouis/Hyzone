@@ -470,10 +470,10 @@ public final class AscendConstants {
          * Three growth zones:
          *   0-25 (soft cap): linear — base + increment × level
          *   25-500 (deep cap): sqrt — + increment × √(level - 25)
-         *   500-1000 (hard cap): fourth root — + increment × ⁴√(level - 500)
+         *   500+ (deep cap): fourth root — + increment × ⁴√(level - 500)
          */
         public double getBonusForLevel(int level) {
-            int safeLevel = Math.max(0, Math.min(level, SUMMIT_MAX_LEVEL));
+            int safeLevel = Math.max(0, level);
             if (safeLevel <= SUMMIT_SOFT_CAP) {
                 return base + increment * safeLevel;
             }
@@ -574,9 +574,9 @@ public final class AscendConstants {
      */
     public static int calculateLevelFromXp(long xp) {
         if (xp <= 0) return 0;
-        // Binary search: find highest level where getCumulativeXpForLevel(level) <= xp
+        // Dynamic upper bound: cumXp ~ n^3/3, so n ~ (3*xp)^(1/3)
         int lo = 0;
-        int hi = SUMMIT_MAX_LEVEL; // hard cap
+        int hi = Math.max(SUMMIT_MAX_LEVEL, (int) Math.ceil(Math.cbrt(3.0 * xp)) + 10);
         while (lo < hi) {
             int mid = lo + (hi - lo + 1) / 2;
             if (getCumulativeXpForLevel(mid) <= xp) {
@@ -594,10 +594,6 @@ public final class AscendConstants {
      */
     public static long[] getXpProgress(long totalXp) {
         int level = calculateLevelFromXp(totalXp);
-        if (level >= SUMMIT_MAX_LEVEL) {
-            // At max level: show full progress bar
-            return new long[]{1, 1};
-        }
         long xpForCurrentLevel = getCumulativeXpForLevel(level);
         long xpInLevel = totalXp - xpForCurrentLevel;
         long xpForNextLevel = getXpForLevel(level + 1);

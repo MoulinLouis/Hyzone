@@ -144,13 +144,9 @@ public class SummitPage extends BaseAscendPage {
         for (int i = 0; i < categories.length; i++) {
             SummitCategory category = categories[i];
             SummitManager.SummitPreview preview = summitManager.previewSummit(playerId, category);
-            boolean isMaxLevel = preview.currentLevel() >= AscendConstants.SUMMIT_MAX_LEVEL;
-
             // Category name with level progression
             String levelText;
-            if (isMaxLevel) {
-                levelText = String.format(" (Lv.%d MAX)", preview.currentLevel());
-            } else if (preview.hasGain()) {
+            if (preview.hasGain()) {
                 levelText = String.format(" (Lv.%d -> Lv.%d)", preview.currentLevel(), preview.newLevel());
             } else {
                 levelText = String.format(" (Lv.%d)", preview.currentLevel());
@@ -158,44 +154,30 @@ public class SummitPage extends BaseAscendPage {
             commandBuilder.set("#CategoryCards[" + i + "] #CategoryName.Text", category.getDisplayName() + levelText);
 
             // Bonus text
-            String bonusText;
-            if (isMaxLevel) {
-                bonusText = "Current: " + formatBonus(category, preview.currentBonus()) + " (MAX)";
-            } else {
-                bonusText = "Current: " + formatBonus(category, preview.currentBonus())
-                    + " -> Next: " + formatBonus(category, preview.newBonus());
-            }
+            String bonusText = "Current: " + formatBonus(category, preview.currentBonus())
+                + " -> Next: " + formatBonus(category, preview.newBonus());
             commandBuilder.set("#CategoryCards[" + i + "] #CategoryBonus.Text", bonusText);
 
             // XP progress text
             String xpText;
-            if (isMaxLevel) {
-                xpText = "MAX LEVEL";
+            long xpRemaining = preview.currentXpRequired() - preview.currentXpInLevel();
+            long xpAfterSummit = xpRemaining - preview.xpToGain();
+            if (preview.xpToGain() > 0 && xpAfterSummit <= 0) {
+                // Player will level up - show what the NEXT level requires
+                long nextLevelXpReq = AscendConstants.getXpForLevel(preview.newLevel() + 1);
+                xpText = String.format("Exp %d/%d (+%d) | Needs %d XP to get Lv.%d",
+                    preview.currentXpInLevel(), preview.currentXpRequired(), preview.xpToGain(),
+                    nextLevelXpReq, preview.newLevel() + 1);
             } else {
-                long xpRemaining = preview.currentXpRequired() - preview.currentXpInLevel();
-                long xpAfterSummit = xpRemaining - preview.xpToGain();
-                if (preview.xpToGain() > 0 && xpAfterSummit <= 0) {
-                    // Player will level up - show what the NEXT level requires
-                    long nextLevelXpReq = AscendConstants.getXpForLevel(preview.newLevel() + 1);
-                    xpText = String.format("Exp %d/%d (+%d) | Needs %d XP to get Lv.%d",
-                        preview.currentXpInLevel(), preview.currentXpRequired(), preview.xpToGain(),
-                        nextLevelXpReq, preview.newLevel() + 1);
-                } else {
-                    xpText = String.format("Exp %d/%d (+%d)",
-                        preview.currentXpInLevel(), preview.currentXpRequired(), preview.xpToGain());
-                }
+                xpText = String.format("Exp %d/%d (+%d)",
+                    preview.currentXpInLevel(), preview.currentXpRequired(), preview.xpToGain());
             }
             commandBuilder.set("#CategoryCards[" + i + "] #XpProgress.Text", xpText);
 
             // XP progress bar segments (20 segments = 5% each)
-            double progressPercent;
-            if (isMaxLevel) {
-                progressPercent = 1.0;
-            } else {
-                progressPercent = preview.currentXpRequired() > 0
-                    ? (double) preview.currentXpInLevel() / preview.currentXpRequired()
-                    : 0;
-            }
+            double progressPercent = preview.currentXpRequired() > 0
+                ? (double) preview.currentXpInLevel() / preview.currentXpRequired()
+                : 0;
             int filledSegments = (int)(progressPercent * 20);
             for (int seg = 1; seg <= 20; seg++) {
                 commandBuilder.set("#CategoryCards[" + i + "] #XpSeg" + seg + ".Visible", seg <= filledSegments);
