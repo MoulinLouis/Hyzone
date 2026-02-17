@@ -646,17 +646,17 @@ public final class AscendConstants {
         AUTO_SUMMIT("Auto-Summit", "Unlock automatic summit with per-category target levels.", RUNNER_SPEED_2),
         AUTO_ELEVATION("Auto-Elevation", "Unlock automatic elevation with configurable multiplier targets.", RUNNER_SPEED_2),
         ASCENSION_CHALLENGES("Ascension Challenges", "Unlock Ascension Challenges", 1, AUTO_SUMMIT, AUTO_ELEVATION),
-        MOMENTUM_SURGE("Momentum Surge", "Momentum boost x2 -> x2.5", 3, ASCENSION_CHALLENGES),
-        MOMENTUM_ENDURANCE("Momentum Endurance", "Momentum 60s -> 90s", 3, ASCENSION_CHALLENGES),
-        MULTIPLIER_BOOST("Multiplier Boost", "+0.10 base multiplier gain", 5, MOMENTUM_SURGE, MOMENTUM_ENDURANCE),
-        RUNNER_SPEED_3("Runner Speed III", "x1.3 global runner speed", 10, MULTIPLIER_BOOST),
-        EVOLUTION_POWER_2("Evolution Power II", "+1 base evolution power", 10, MULTIPLIER_BOOST),
-        RUNNER_SPEED_4("Runner Speed IV", "x1.5 global runner speed", 15, RUNNER_SPEED_3, EVOLUTION_POWER_2),
-        EVOLUTION_POWER_3("Evolution Power III", "+2 base evolution power", 15, RUNNER_SPEED_3, EVOLUTION_POWER_2),
-        MOMENTUM_MASTERY("Momentum Mastery", "Momentum x3.0 + 120s duration", 25, RUNNER_SPEED_4, EVOLUTION_POWER_3),
-        MULTIPLIER_BOOST_2("Multiplier Boost II", "+0.25 base multiplier gain", 40, MOMENTUM_MASTERY),
-        ELEVATION_BOOST("Elevation Boost", "Elevation cost -30%", 40, MOMENTUM_MASTERY),
-        RUNNER_SPEED_5("Runner Speed V", "x2.0 global runner speed", 75, MULTIPLIER_BOOST_2, ELEVATION_BOOST);
+        MOMENTUM_SURGE("Momentum Surge", "Momentum boost x2 -> x2.5", 10, ASCENSION_CHALLENGES),
+        MOMENTUM_ENDURANCE("Momentum Endurance", "Momentum 60s -> 90s", 10, ASCENSION_CHALLENGES),
+        MULTIPLIER_BOOST("Multiplier Boost", "+0.10 base multiplier gain", 25, MOMENTUM_SURGE, MOMENTUM_ENDURANCE),
+        RUNNER_SPEED_3("Runner Speed III", "x1.3 global runner speed", 50, MULTIPLIER_BOOST),
+        EVOLUTION_POWER_2("Evolution Power II", "+1 base evolution power", 50, MULTIPLIER_BOOST),
+        RUNNER_SPEED_4("Runner Speed IV", "x1.5 global runner speed", 100, RUNNER_SPEED_3, EVOLUTION_POWER_2),
+        EVOLUTION_POWER_3("Evolution Power III", "+2 base evolution power", 100, RUNNER_SPEED_3, EVOLUTION_POWER_2),
+        MOMENTUM_MASTERY("Momentum Mastery", "Momentum x3.0 + 120s duration", 200, RUNNER_SPEED_4, EVOLUTION_POWER_3),
+        MULTIPLIER_BOOST_2("Multiplier Boost II", "+0.25 base multiplier gain", 400, MOMENTUM_MASTERY),
+        ELEVATION_BOOST("Elevation Boost", "Elevation cost -30%", 400, MOMENTUM_MASTERY),
+        RUNNER_SPEED_5("Runner Speed V", "x2.0 global runner speed", 1000, MULTIPLIER_BOOST_2, ELEVATION_BOOST);
 
         private final String name;
         private final String description;
