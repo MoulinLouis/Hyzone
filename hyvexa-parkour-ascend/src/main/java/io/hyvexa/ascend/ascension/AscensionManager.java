@@ -73,6 +73,7 @@ public class AscensionManager {
         // Reset progress
         progress.setVexa(io.hyvexa.common.math.BigNumber.ZERO);
         progress.setElevationMultiplier(1);
+        progress.setAutoElevationTargetIndex(0);
         progress.setSummitAccumulatedVexa(io.hyvexa.common.math.BigNumber.ZERO);
         progress.setElevationAccumulatedVexa(io.hyvexa.common.math.BigNumber.ZERO);
 

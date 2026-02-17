@@ -492,7 +492,7 @@ $C.@PageOverlay {
               Label {
                 Anchor: (Left: 0, Right: 0, Height: 18);
                 Style: (FontSize: 11, TextColor: #6b7280);
-                Text: "Auto-summit with per-category increment cycling.";
+                Text: "Auto-summit to a target level per category.";
               }
 
               Group { Anchor: (Height: 10); }
@@ -600,10 +600,10 @@ $C.@PageOverlay {
                 Group { Anchor: (Width: 8, Height: 32); }
 
                 Label {
-                  Anchor: (Width: 12, Height: 32);
+                  Anchor: (Width: 42, Height: 32);
                   Padding: (Top: 6);
                   Style: (FontSize: 11, TextColor: #6b7280);
-                  Text: "+";
+                  Text: "Target:";
                 }
 
                 TextField #SumIncField0 {
@@ -614,13 +614,6 @@ $C.@PageOverlay {
                   OutlineColor: #ffffff(0.08);
                   OutlineSize: 1;
                   Style: (FontSize: 11, TextColor: #f0f4f8);
-                }
-
-                Label {
-                  Anchor: (Width: 30, Height: 32);
-                  Padding: (Left: 4, Top: 6);
-                  Style: (FontSize: 10, TextColor: #6b7280);
-                  Text: "lvl";
                 }
               }
 
@@ -660,10 +653,10 @@ $C.@PageOverlay {
                 Group { Anchor: (Width: 8, Height: 32); }
 
                 Label {
-                  Anchor: (Width: 12, Height: 32);
+                  Anchor: (Width: 42, Height: 32);
                   Padding: (Top: 6);
                   Style: (FontSize: 11, TextColor: #6b7280);
-                  Text: "+";
+                  Text: "Target:";
                 }
 
                 TextField #SumIncField1 {
@@ -674,13 +667,6 @@ $C.@PageOverlay {
                   OutlineColor: #ffffff(0.08);
                   OutlineSize: 1;
                   Style: (FontSize: 11, TextColor: #f0f4f8);
-                }
-
-                Label {
-                  Anchor: (Width: 30, Height: 32);
-                  Padding: (Left: 4, Top: 6);
-                  Style: (FontSize: 10, TextColor: #6b7280);
-                  Text: "lvl";
                 }
               }
 
@@ -720,10 +706,10 @@ $C.@PageOverlay {
                 Group { Anchor: (Width: 8, Height: 32); }
 
                 Label {
-                  Anchor: (Width: 12, Height: 32);
+                  Anchor: (Width: 42, Height: 32);
                   Padding: (Top: 6);
                   Style: (FontSize: 11, TextColor: #6b7280);
-                  Text: "+";
+                  Text: "Target:";
                 }
 
                 TextField #SumIncField2 {
@@ -734,13 +720,6 @@ $C.@PageOverlay {
                   OutlineColor: #ffffff(0.08);
                   OutlineSize: 1;
                   Style: (FontSize: 11, TextColor: #f0f4f8);
-                }
-
-                Label {
-                  Anchor: (Width: 30, Height: 32);
-                  Padding: (Left: 4, Top: 6);
-                  Style: (FontSize: 10, TextColor: #6b7280);
-                  Text: "lvl";
                 }
               }
 

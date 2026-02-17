@@ -812,8 +812,11 @@ public class RobotManager {
     private void performAutoElevation(long now) {
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         AscensionManager ascensionMgr = plugin != null ? plugin.getAscensionManager() : null;
+        AscendRunTracker runTracker = plugin != null ? plugin.getRunTracker() : null;
         for (UUID playerId : onlinePlayers) {
             if (ascensionMgr == null || !ascensionMgr.hasAutoElevation(playerId)) continue;
+            // Skip if player is actively playing a map — don't reset progress mid-run
+            if (runTracker != null && runTracker.getActiveMapId(playerId) != null) continue;
             autoElevatePlayer(playerId, now);
         }
     }
@@ -909,8 +912,11 @@ public class RobotManager {
     private void performAutoSummit(long now) {
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         AscensionManager ascensionMgr = plugin != null ? plugin.getAscensionManager() : null;
+        AscendRunTracker runTracker = plugin != null ? plugin.getRunTracker() : null;
         for (UUID playerId : onlinePlayers) {
             if (ascensionMgr == null || !ascensionMgr.hasAutoSummit(playerId)) continue;
+            // Skip if player is actively playing a map — don't reset progress mid-run
+            if (runTracker != null && runTracker.getActiveMapId(playerId) != null) continue;
             autoSummitPlayer(playerId, now);
         }
     }
