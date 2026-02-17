@@ -538,14 +538,12 @@ public class CosmeticTestCommand extends AbstractAsyncCommand {
                 updates = new EntityEffectUpdate[0];
             }
 
-            ComponentUpdate cu = new ComponentUpdate();
-            cu.type = ComponentUpdateType.EntityEffects;
-            cu.entityEffectUpdates = updates;
+            EntityEffectsUpdate cu = new EntityEffectsUpdate(updates);
 
             EntityUpdate eu = new EntityUpdate(
                     player.getNetworkId(),
                     null, // no removed component types
-                    new ComponentUpdate[]{cu}
+                    new EntityEffectsUpdate[]{cu}
             );
 
             ph.writeNoCache(new EntityUpdates(null, new EntityUpdate[]{eu}));
