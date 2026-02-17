@@ -147,9 +147,9 @@ public class SummitPage extends BaseAscendPage {
             // Category name with level progression
             String levelText;
             if (preview.hasGain()) {
-                levelText = String.format(" (Lv.%d -> Lv.%d)", preview.currentLevel(), preview.newLevel());
+                levelText = " (Lv." + FormatUtils.formatLong(preview.currentLevel()) + " -> Lv." + FormatUtils.formatLong(preview.newLevel()) + ")";
             } else {
-                levelText = String.format(" (Lv.%d)", preview.currentLevel());
+                levelText = " (Lv." + FormatUtils.formatLong(preview.currentLevel()) + ")";
             }
             commandBuilder.set("#CategoryCards[" + i + "] #CategoryName.Text", category.getDisplayName() + levelText);
 
@@ -165,12 +165,12 @@ public class SummitPage extends BaseAscendPage {
             if (preview.xpToGain() > 0 && xpAfterSummit <= 0) {
                 // Player will level up - show what the NEXT level requires
                 long nextLevelXpReq = AscendConstants.getXpForLevel(preview.newLevel() + 1);
-                xpText = String.format("Exp %d/%d (+%d) | Needs %d XP to get Lv.%d",
-                    preview.currentXpInLevel(), preview.currentXpRequired(), preview.xpToGain(),
-                    nextLevelXpReq, preview.newLevel() + 1);
+                xpText = "Exp " + FormatUtils.formatLong(preview.currentXpInLevel()) + "/" + FormatUtils.formatLong(preview.currentXpRequired())
+                    + " (+" + FormatUtils.formatLong(preview.xpToGain()) + ") | Needs " + FormatUtils.formatLong(nextLevelXpReq)
+                    + " XP to get Lv." + FormatUtils.formatLong(preview.newLevel() + 1);
             } else {
-                xpText = String.format("Exp %d/%d (+%d)",
-                    preview.currentXpInLevel(), preview.currentXpRequired(), preview.xpToGain());
+                xpText = "Exp " + FormatUtils.formatLong(preview.currentXpInLevel()) + "/" + FormatUtils.formatLong(preview.currentXpRequired())
+                    + " (+" + FormatUtils.formatLong(preview.xpToGain()) + ")";
             }
             commandBuilder.set("#CategoryCards[" + i + "] #XpProgress.Text", xpText);
 
@@ -325,8 +325,8 @@ public class SummitPage extends BaseAscendPage {
         }
 
         showToast(playerId, ToastType.EVOLUTION,
-            category.getDisplayName() + " Lv." + preview.currentLevel()
-            + " -> Lv." + result.newLevel() + " | " + formatBonus(category, preview.currentBonus())
+            category.getDisplayName() + " Lv." + FormatUtils.formatLong(preview.currentLevel())
+            + " -> Lv." + FormatUtils.formatLong(result.newLevel()) + " | " + formatBonus(category, preview.currentBonus())
             + " -> " + formatBonus(category, preview.newBonus()));
         player.sendMessage(Message.raw("[Summit] Progress reset: vexa, elevation, multipliers, runners, map unlocks")
             .color(SystemMessageUtils.SECONDARY));
