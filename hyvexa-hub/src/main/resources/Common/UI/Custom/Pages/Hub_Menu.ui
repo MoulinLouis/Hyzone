@@ -4,7 +4,7 @@ $C.@PageOverlay {
   SceneBlur {}
 
   Group #HubMenuWindow {
-    Anchor: (Width: 620, Height: 300);
+    Anchor: (Width: 860, Height: 300);
     LayoutMode: Top;
     Background: #0d1620(0.95);
     OutlineColor: #ffffff(0.06);
@@ -73,7 +73,7 @@ $C.@PageOverlay {
       Group #ModeButtons {
         Anchor: (Top: 12, Left: 0, Right: 0, Height: 130);
         LayoutMode: Left;
-        Padding: (Left: 36, Top: 6);
+        Padding: (Left: 57, Top: 6);
 
         Group #ParkourCard {
           Anchor: (Width: 258, Height: 120);
@@ -104,13 +104,30 @@ $C.@PageOverlay {
             );
           }
         }
+
+        Group {
+          Anchor: (Width: 12);
+        }
+
+        Group #PurgeCard {
+          Anchor: (Width: 216, Height: 120);
+          Background: (TexturePath: "../Textures/purge.png");
+
+          Button #PurgeButton {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Background: #000000(0);
+            Style: ButtonStyle(
+              Sounds: $C.@ButtonSounds,
+            );
+          }
+        }
       }
 
 
       Group #BannerRow {
         Anchor: (Top: 8, Left: 0, Right: 0, Height: 44);
         LayoutMode: Left;
-        Padding: (Left: 64);
+        Padding: (Left: 188);
 
         Button #DiscordBannerButton {
           Anchor: (Width: 220, Height: 44);
