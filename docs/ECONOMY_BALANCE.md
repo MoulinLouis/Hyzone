@@ -15,8 +15,9 @@ This document provides a factual overview of the economy balancing in Ascend mod
 5. [Map Economics](#map-economics)
 6. [Expected Progression Timeline](#expected-progression-timeline)
 7. [Strategic Evolution System](#strategic-evolution-system)
-8. [Design Philosophy](#design-philosophy)
-9. [Gems (Global Currency)](#gems-global-currency)
+8. [Transcendence System](#transcendence-system-4th-prestige)
+9. [Design Philosophy](#design-philosophy)
+10. [Gems (Global Currency)](#gems-global-currency)
 
 ---
 
@@ -37,8 +38,8 @@ This document provides a factual overview of the economy balancing in Ascend mod
   - Example at level 10 (×4.16 bonus): 0★ = +0.42/run, 1★+ = +0.83/run
 
 ### Multiplier Slots
-- **Total slots:** 5 (one per map)
-- **Product formula:** Total multiplier = slot₁ × slot₂ × slot₃ × slot₄ × slot₅
+- **Total slots:** 6 (one per map; map 6 requires Transcendence Milestone 1)
+- **Product formula:** Total multiplier = product of all active map multipliers
 
 ### Elevation Multiplier (Linear)
 - **Formula:** `level` (direct multiplier)
@@ -66,6 +67,7 @@ Speed upgrade effectiveness is the same for all maps:
 | Jaune (Yellow) | 2 | +10% | +200% |
 | Vert (Green) | 3 | +10% | +200% |
 | Bleu (Blue) | 4 | +10% | +200% |
+| Gold | 5 | +10% | +200% |
 
 **Formula:** `speedMultiplier = 1.0 + (speedLevel × mapSpeedBonus)`
 
@@ -101,6 +103,7 @@ To create more time between map unlocks without affecting late-game, a decaying 
 | Jaune | ×2.0 | Level 10 |
 | Vert | ×2.5 | Level 10 |
 | Bleu | ×3.0 | Level 10 |
+| Gold | ×3.5 | Level 10 |
 
 **Decay formula:**
 ```
@@ -140,6 +143,7 @@ Each map has an offset and multiplier applied to upgrade costs:
 | Jaune | 2 | +2 | ×1.9 |
 | Vert | 3 | +3 | ×2.6 |
 | Bleu | 4 | +4 | ×3.5 |
+| Gold | 5 | +5 | ×4.7 |
 
 ### Cost Progression Table (Map 0, Rouge)
 
@@ -236,6 +240,7 @@ Elevation uses **accumulated vexa** (total vexa earned since last reset) instead
 | Jaune | 2 | 25 vexa | 2,500 vexa |
 | Vert | 3 | 100 vexa | 10,000 vexa |
 | Bleu | 4 | 500 vexa | 50,000 vexa |
+| Gold | 5 | 2,500 vexa | 250,000 vexa |
 
 **Actual reward formula:**
 ```
@@ -260,6 +265,7 @@ Maps unlock progressively based on runner level, not vexa price.
 | Jaune | 2 | Map 1 runner reaches level 5 |
 | Vert | 3 | Map 2 runner reaches level 5 |
 | Bleu | 4 | Map 3 runner reaches level 5 |
+| Gold | 5 | Map 4 runner reaches level 5 + Transcendence Milestone 1 |
 
 **Constant:** `MAP_UNLOCK_REQUIRED_RUNNER_LEVEL = 5`
 
@@ -283,6 +289,7 @@ Runners have no vexa cost after map unlock. They can be purchased for free once:
 | Jaune | 2 | 16 seconds | 5.33 seconds |
 | Vert | 3 | 26 seconds | 8.67 seconds |
 | Bleu | 4 | 42 seconds | 14 seconds |
+| Gold | 5 | 68 seconds | 22.7 seconds |
 
 **Actual run time:** Uses player's personal best (ghost recording) as baseline, modified by speed upgrades.
 
@@ -636,6 +643,44 @@ Evolution provides a clear benefit with continuous cost progression.
 
 ---
 
+## Transcendence System (4th Prestige)
+
+Transcendence is the ultimate endgame prestige. Requires 1 Googol (1e100 = 10^100) vexa with BREAK_ASCENSION active and all 7 challenges completed.
+
+### Trigger
+- **Manual opt-in** via Transcendence NPC or `/transcend` command
+- **Threshold:** 1e100 vexa (1 Googol)
+- **Requirements:** BREAK_ASCENSION active + all challenge rewards completed
+
+### What Gets Reset
+- Vexa, elevation, ascension count
+- Skill tree (AP + all unlocked nodes)
+- Summit XP (all categories)
+- Challenge completions and records
+- Map progress (runners, unlocks, multipliers)
+- All automation toggles
+
+### What Is Preserved
+- Best times (ghost recordings)
+- Achievements
+- Transcendence count (permanent)
+- Lifetime stats (totalVexaEarned, totalManualRuns)
+
+### Milestones
+| Count | Milestone | Reward |
+|-------|-----------|--------|
+| 1 | First Transcendence | Permanently unlock Map 6 (Gold) |
+
+### Map 6 (Gold)
+- **Base reward:** 2,500 vexa
+- **Base run time:** 68 seconds
+- **Cost multiplier:** x4.7
+- **Early-level boost:** x3.5
+- **Accent color:** Gold (#f59e0b)
+- **Unlock:** Transcendence Milestone 1 + Map 5 runner level 5
+
+---
+
 ## Design Philosophy
 
 ### Core Principles
@@ -706,6 +751,12 @@ Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure conti
 ---
 
 ## Version History
+
+- **2026-02-17 (v19):** Transcendence (4th Prestige) + Map 6
+  - 4th prestige layer: Transcendence at 1e100 vexa with BREAK_ASCENSION + all challenges
+  - Full reset including skill tree + challenges; preserves best times, achievements, transcendence count
+  - Milestone 1 (first transcend) permanently unlocks Map 6 (Gold)
+  - Map 6: 2500 base reward, 68s base time, x4.7 cost multiplier, x3.5 early-level boost
 
 - **2026-02-16 (v18):** Summit XP softcap at level 1000
   - XP cost per level: level^2 (below 1000) -> level^3/1000 (above 1000, continuous)
