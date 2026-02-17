@@ -3,6 +3,8 @@
 ## [Unreleased]
 
 ### Added
+- **Parkour: Map active toggle** - Admins can disable maps without deleting them via `/pk admin` Maps panel. Inactive maps block both start trigger and map selector entry with a warning message. New `active` column in `maps` table (defaults to TRUE).
+
 - **Ascend: Transcendence (4th prestige)** - Endgame prestige layer at 1e100 vexa with BREAK_ASCENSION active. Resets everything including skill tree and challenges. Permanent transcendence count; Milestone 1 unlocks Map 6. Gold-themed UI page, NPC interaction (challenge-gated), and `/transcend` command.
 - **Ascend: Map 6 support** - 6th parkour map slot with gold accent, gated behind Transcendence Milestone 1. Balance: 2500 base reward, 68s base time, x4.7 cost multiplier.
 - **Ascend: 6 new skill tree nodes** - Runner Speed IV/V, Evolution Power III, Momentum Mastery (x3.0 + 120s), Multiplier Boost II (+0.25), Elevation Boost (-30% cost). Costs 15-75 AP for late-game replay incentive.

@@ -51,6 +51,7 @@ CREATE TABLE maps (
   free_fall_enabled BOOLEAN NOT NULL,
   dropper_enabled BOOLEAN NOT NULL,
   duel_enabled BOOLEAN NOT NULL,
+  active BOOLEAN NOT NULL DEFAULT TRUE,
   start_x DOUBLE NULL,
   start_y DOUBLE NULL,
   start_z DOUBLE NULL,

@@ -39,7 +39,7 @@ public class MapStore {
 
         String mapSql = """
             SELECT id, name, category, world, difficulty, display_order, first_completion_xp, mithril_sword_enabled,
-                   mithril_daggers_enabled, glider_enabled, free_fall_enabled, duel_enabled,
+                   mithril_daggers_enabled, glider_enabled, free_fall_enabled, duel_enabled, active,
                    start_x, start_y, start_z, start_rot_x, start_rot_y, start_rot_z,
                    finish_x, finish_y, finish_z, finish_rot_x, finish_rot_y, finish_rot_z,
                    start_trigger_x, start_trigger_y, start_trigger_z, start_trigger_rot_x, start_trigger_rot_y, start_trigger_rot_z,
@@ -82,6 +82,7 @@ public class MapStore {
                             map.setGliderEnabled(rs.getBoolean("glider_enabled"));
                             map.setFreeFallEnabled(rs.getBoolean("free_fall_enabled"));
                             map.setDuelEnabled(rs.getBoolean("duel_enabled"));
+                            map.setActive(rs.getBoolean("active"));
 
                             map.setStart(readTransform(rs, "start_"));
                             map.setFinish(readTransform(rs, "finish_"));
@@ -224,6 +225,9 @@ public class MapStore {
                 if (trigger == null) {
                     continue;
                 }
+                if (!map.isActive()) {
+                    continue;
+                }
                 double dx = x - trigger.getX();
                 double dy = y - trigger.getY();
                 double dz = z - trigger.getZ();
@@ -299,7 +303,7 @@ public class MapStore {
 
         String mapSql = """
             INSERT INTO maps (id, name, category, world, difficulty, display_order, first_completion_xp, mithril_sword_enabled,
-                mithril_daggers_enabled, glider_enabled, free_fall_enabled, duel_enabled,
+                mithril_daggers_enabled, glider_enabled, free_fall_enabled, duel_enabled, active,
                 start_x, start_y, start_z, start_rot_x, start_rot_y, start_rot_z,
                 finish_x, finish_y, finish_z, finish_rot_x, finish_rot_y, finish_rot_z,
                 start_trigger_x, start_trigger_y, start_trigger_z, start_trigger_rot_x, start_trigger_rot_y, start_trigger_rot_z,
@@ -307,7 +311,7 @@ public class MapStore {
                 leave_teleport_x, leave_teleport_y, leave_teleport_z, leave_teleport_rot_x, leave_teleport_rot_y, leave_teleport_rot_z,
                 fly_zone_min_x, fly_zone_min_y, fly_zone_min_z, fly_zone_max_x, fly_zone_max_y, fly_zone_max_z,
                 created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 name = VALUES(name), category = VALUES(category), world = VALUES(world),
                 difficulty = VALUES(difficulty), display_order = VALUES(display_order),
@@ -315,6 +319,7 @@ public class MapStore {
                 mithril_daggers_enabled = VALUES(mithril_daggers_enabled), glider_enabled = VALUES(glider_enabled),
                 free_fall_enabled = VALUES(free_fall_enabled),
                 duel_enabled = VALUES(duel_enabled),
+                active = VALUES(active),
                 start_x = VALUES(start_x), start_y = VALUES(start_y), start_z = VALUES(start_z),
                 start_rot_x = VALUES(start_rot_x), start_rot_y = VALUES(start_rot_y), start_rot_z = VALUES(start_rot_z),
                 finish_x = VALUES(finish_x), finish_y = VALUES(finish_y), finish_z = VALUES(finish_z),
@@ -364,6 +369,7 @@ public class MapStore {
                 mapStmt.setBoolean(idx++, map.isGliderEnabled());
                 mapStmt.setBoolean(idx++, map.isFreeFallEnabled());
                 mapStmt.setBoolean(idx++, map.isDuelEnabled());
+                mapStmt.setBoolean(idx++, map.isActive());
 
                 idx = setTransform(mapStmt, idx, map.getStart());
                 idx = setTransform(mapStmt, idx, map.getFinish());
@@ -535,6 +541,7 @@ public class MapStore {
         copy.setGliderEnabled(source.isGliderEnabled());
         copy.setFreeFallEnabled(source.isFreeFallEnabled());
         copy.setDuelEnabled(source.isDuelEnabled());
+        copy.setActive(source.isActive());
         copy.setFlyZoneMinX(source.getFlyZoneMinX());
         copy.setFlyZoneMinY(source.getFlyZoneMinY());
         copy.setFlyZoneMinZ(source.getFlyZoneMinZ());

@@ -23,6 +23,7 @@ public class Map {
     private boolean gliderEnabled;
     private boolean freeFallEnabled;
     private boolean duelEnabled;
+    private boolean active = true;
     private Double flyZoneMinX;
     private Double flyZoneMinY;
     private Double flyZoneMinZ;
@@ -170,6 +171,14 @@ public class Map {
 
     public void setDuelEnabled(boolean duelEnabled) {
         this.duelEnabled = duelEnabled;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
     }
 
     public Double getFlyZoneMinX() {
