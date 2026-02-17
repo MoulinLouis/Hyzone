@@ -77,6 +77,9 @@ public class AscendPlayerProgress {
     // Permanent challenge rewards (never reset by ascension/challenge)
     private final Set<AscendConstants.ChallengeType> completedChallengeRewards = ConcurrentHashMap.newKeySet();
 
+    // Transcendence System (4th Prestige)
+    private final AtomicInteger transcendenceCount = new AtomicInteger(0);
+
     public BigNumber getVexa() {
         return vexa.get();
     }
@@ -543,6 +546,22 @@ public class AscendPlayerProgress {
             }
         }
         return true;
+    }
+
+    // ========================================
+    // Transcendence System (4th Prestige)
+    // ========================================
+
+    public int getTranscendenceCount() {
+        return transcendenceCount.get();
+    }
+
+    public void setTranscendenceCount(int count) {
+        this.transcendenceCount.set(Math.max(0, count));
+    }
+
+    public int incrementTranscendenceCount() {
+        return transcendenceCount.incrementAndGet();
     }
 
     public static class AutoSummitCategoryConfig {

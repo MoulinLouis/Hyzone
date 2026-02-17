@@ -36,6 +36,7 @@ import io.hyvexa.ascend.ui.AutomationPage;
 import io.hyvexa.ascend.ui.SkillTreePage;
 import io.hyvexa.ascend.ui.StatsPage;
 import io.hyvexa.ascend.ui.SummitPage;
+import io.hyvexa.ascend.ui.TranscendencePage;
 import io.hyvexa.ascend.util.AscendModeGate;
 import io.hyvexa.common.util.CommandUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
@@ -55,7 +56,7 @@ public class AscendCommand extends AbstractAsyncCommand {
     private static final String UNKNOWN_SUBCOMMAND_MESSAGE =
             "Unknown subcommand. Use: /ascend, /ascend stats, /ascend ascension, /ascend automation, "
                     + "/ascend settings, /ascend achievements, /ascend profile, /ascend leaderboard, "
-                    + "/ascend maplb, /ascend help";
+                    + "/ascend maplb, /ascend transcend, /ascend help";
 
     // NPC-gated commands: only executable with the correct token (passed by NPC dialog buttons)
     private static final String NPC_TOKEN = "hx7Kq9mW";
@@ -188,6 +189,8 @@ public class AscendCommand extends AbstractAsyncCommand {
         handlers.put("profile", () -> openProfilePage(player, playerRef, ref, store));
         handlers.put("help", () -> openHelpPage(player, playerRef, ref, store));
         handlers.put("challenge", () -> openChallengePage(player, playerRef, ref, store));
+        handlers.put("transcend", () -> openTranscendencePage(player, playerRef, ref, store));
+        handlers.put("transcendence", () -> openTranscendencePage(player, playerRef, ref, store));
         return handlers;
     }
 
@@ -307,6 +310,13 @@ public class AscendCommand extends AbstractAsyncCommand {
             return;
         }
         AscendChallengePage page = new AscendChallengePage(playerRef, plugin.getPlayerStore(), plugin.getChallengeManager());
+        openTrackedPage(player, playerRef, ref, store, page);
+    }
+
+    private void openTranscendencePage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
+        ParkourAscendPlugin plugin = requirePlugin(player);
+        if (plugin == null || plugin.getTranscendenceManager() == null) return;
+        TranscendencePage page = new TranscendencePage(playerRef, plugin.getPlayerStore(), plugin.getTranscendenceManager());
         openTrackedPage(player, playerRef, ref, store, page);
     }
 

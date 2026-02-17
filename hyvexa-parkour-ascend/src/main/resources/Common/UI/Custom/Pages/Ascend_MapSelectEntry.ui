@@ -37,6 +37,12 @@ Group {
       Background: #3b82f6;
       Visible: false;
     }
+
+    Group #AccentGold {
+      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+      Background: #f59e0b;
+      Visible: false;
+    }
   }
 
   Button #SelectButton {
@@ -229,6 +235,12 @@ Group {
     Group #ButtonBgBlue {
       Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
       Background: #3b82f6(0.85);
+      Visible: false;
+    }
+
+    Group #ButtonBgGold {
+      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+      Background: #f59e0b(0.85);
       Visible: false;
     }
 

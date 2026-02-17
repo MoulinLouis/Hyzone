@@ -39,6 +39,7 @@ import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.summit.SummitManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 import io.hyvexa.ascend.util.AscendInventoryUtils;
+import io.hyvexa.ascend.transcendence.TranscendenceManager;
 import io.hyvexa.ascend.util.MapUnlockHelper;
 import io.hyvexa.ascend.hud.AscendHudManager;
 import io.hyvexa.ascend.hud.ToastType;
@@ -57,6 +58,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
     private static final String BUTTON_EVOLVE_ALL_DISABLED = "EvolveAllDisabled";
     private static final String BUTTON_LEADERBOARD = "Leaderboard";
     private static final String BUTTON_CHALLENGE_TAB = "ChallengeTab";
+    private static final String BUTTON_TRANSCENDENCE_TAB = "TranscendenceTab";
     private static final int MAX_SPEED_LEVEL = 20;
     private static final long BUY_ALL_COOLDOWN_MS = 100L; // 100ms cooldown to prevent race conditions while allowing satisfying spam clicks
 
@@ -108,6 +110,8 @@ public class AscendMapSelectPage extends BaseAscendPage {
             EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_LEADERBOARD), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#TabLockedA",
             EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CHALLENGE_TAB), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#TabLockedB",
+            EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TRANSCENDENCE_TAB), false);
 
         // Check if Challenge tab should be unlocked
         PlayerRef pRef = store.getComponent(ref, PlayerRef.getComponentType());
@@ -118,6 +122,12 @@ public class AscendMapSelectPage extends BaseAscendPage {
                 uiCommandBuilder.set("#TabUnlockedBg.Visible", true);
                 uiCommandBuilder.set("#TabLockedAContent.Visible", false);
                 uiCommandBuilder.set("#TabChallengeLabel.Visible", true);
+            }
+            // Check if Transcendence tab should be unlocked (milestone 1)
+            if (plugin != null && playerStore.getTranscendenceCount(pRef.getUuid()) >= 1) {
+                uiCommandBuilder.set("#TabTransUnlockedBg.Visible", true);
+                uiCommandBuilder.set("#TabLockedBContent.Visible", false);
+                uiCommandBuilder.set("#TabTransLabel.Visible", true);
             }
         }
 
@@ -164,6 +174,10 @@ public class AscendMapSelectPage extends BaseAscendPage {
         }
         if (BUTTON_CHALLENGE_TAB.equals(data.getButton())) {
             handleOpenChallenge(ref, store);
+            return;
+        }
+        if (BUTTON_TRANSCENDENCE_TAB.equals(data.getButton())) {
+            handleOpenTranscendence(ref, store);
             return;
         }
         if (data.getButton().startsWith(BUTTON_ROBOT_PREFIX)) {
@@ -348,7 +362,8 @@ public class AscendMapSelectPage extends BaseAscendPage {
             case 1 -> "#ef4444";  // Red
             case 2 -> "#f59e0b";  // Orange
             case 3 -> "#10b981";  // Green
-            default -> "#3b82f6"; // Blue
+            case 4 -> "#3b82f6";  // Blue
+            default -> "#f59e0b"; // Gold (Transcendence)
         };
     }
 
@@ -357,13 +372,15 @@ public class AscendMapSelectPage extends BaseAscendPage {
         boolean red = mapIndex == 1;
         boolean orange = mapIndex == 2;
         boolean green = mapIndex == 3;
-        boolean blue = mapIndex >= 4;
+        boolean blue = mapIndex == 4;
+        boolean gold = mapIndex >= 5;
         String basePath = "#MapCards[" + cardIndex + "] #AccentBar";
         commandBuilder.set(basePath + " #AccentViolet.Visible", violet);
         commandBuilder.set(basePath + " #AccentRed.Visible", red);
         commandBuilder.set(basePath + " #AccentOrange.Visible", orange);
         commandBuilder.set(basePath + " #AccentGreen.Visible", green);
         commandBuilder.set(basePath + " #AccentBlue.Visible", blue);
+        commandBuilder.set(basePath + " #AccentGold.Visible", gold);
     }
 
     private boolean isDisplayedMapId(String mapId) {
@@ -376,7 +393,8 @@ public class AscendMapSelectPage extends BaseAscendPage {
             case 1 -> "#ButtonBgRed";
             case 2 -> "#ButtonBgOrange";
             case 3 -> "#ButtonBgGreen";
-            default -> "#ButtonBgBlue";
+            case 4 -> "#ButtonBgBlue";
+            default -> "#ButtonBgGold";
         };
     }
 
@@ -1232,6 +1250,28 @@ public class AscendMapSelectPage extends BaseAscendPage {
         }
         player.getPageManager().openCustomPage(ref, store,
             new AscendChallengePage(playerRef, playerStore, plugin.getChallengeManager()));
+    }
+
+    private void handleOpenTranscendence(Ref<EntityStore> ref, Store<EntityStore> store) {
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        if (playerRef == null) {
+            return;
+        }
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null) {
+            return;
+        }
+        if (playerStore.getTranscendenceCount(playerRef.getUuid()) < 1) {
+            player.sendMessage(Message.raw("[Ascend] Transcend to unlock this tab.")
+                .color(io.hyvexa.common.util.SystemMessageUtils.SECONDARY));
+            return;
+        }
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin == null || plugin.getTranscendenceManager() == null) {
+            return;
+        }
+        player.getPageManager().openCustomPage(ref, store,
+            new TranscendencePage(playerRef, playerStore, plugin.getTranscendenceManager()));
     }
 
     /**

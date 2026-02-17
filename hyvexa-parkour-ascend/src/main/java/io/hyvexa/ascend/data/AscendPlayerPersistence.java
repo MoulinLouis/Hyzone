@@ -38,6 +38,7 @@ class AscendPlayerPersistence {
     private final Map<UUID, AscendPlayerProgress> players;
     private final Map<UUID, String> playerNames;
     private final Set<UUID> resetPendingPlayers;
+    private final Set<UUID> transcendenceResetPending = ConcurrentHashMap.newKeySet();
 
     private final Map<UUID, Long> dirtyPlayerVersions = new ConcurrentHashMap<>();
     private final Map<UUID, AscendPlayerProgress> detachedDirtyPlayers = new ConcurrentHashMap<>();
@@ -76,6 +77,12 @@ class AscendPlayerPersistence {
 
     void snapshotForSave(UUID playerId, AscendPlayerProgress progress) {
         detachedDirtyPlayers.put(playerId, progress);
+    }
+
+    void markTranscendenceResetPending(UUID playerId) {
+        if (playerId != null) {
+            transcendenceResetPending.add(playerId);
+        }
     }
 
     /**
@@ -208,8 +215,9 @@ class AscendPlayerPersistence {
                 auto_upgrade_enabled, auto_evolution_enabled, seen_tutorials, hide_other_runners,
                 break_ascension_enabled,
                 auto_elevation_enabled, auto_elevation_timer_seconds, auto_elevation_targets, auto_elevation_target_index,
-                auto_summit_enabled, auto_summit_timer_seconds, auto_summit_config, auto_summit_rotation_index)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                auto_summit_enabled, auto_summit_timer_seconds, auto_summit_config, auto_summit_rotation_index,
+                transcendence_count)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 player_name = VALUES(player_name),
                 vexa_mantissa = VALUES(vexa_mantissa), vexa_exp10 = VALUES(vexa_exp10),
@@ -238,7 +246,8 @@ class AscendPlayerPersistence {
                 auto_summit_enabled = VALUES(auto_summit_enabled),
                 auto_summit_timer_seconds = VALUES(auto_summit_timer_seconds),
                 auto_summit_config = VALUES(auto_summit_config),
-                auto_summit_rotation_index = VALUES(auto_summit_rotation_index)
+                auto_summit_rotation_index = VALUES(auto_summit_rotation_index),
+                transcendence_count = VALUES(transcendence_count)
             """;
 
         String mapSql = """
@@ -285,7 +294,8 @@ class AscendPlayerPersistence {
                  PreparedStatement delMaps = conn.prepareStatement(String.format(deleteChildSql, "ascend_player_maps"));
                  PreparedStatement delSummit = conn.prepareStatement(String.format(deleteChildSql, "ascend_player_summit"));
                  PreparedStatement delSkills = conn.prepareStatement(String.format(deleteChildSql, "ascend_player_skills"));
-                 PreparedStatement delAchievements = conn.prepareStatement(String.format(deleteChildSql, "ascend_player_achievements"))) {
+                 PreparedStatement delAchievements = conn.prepareStatement(String.format(deleteChildSql, "ascend_player_achievements"));
+                 PreparedStatement delChallengeRecords = conn.prepareStatement(String.format(deleteChildSql, "ascend_challenge_records"))) {
                 DatabaseManager.applyQueryTimeout(playerStmt);
                 DatabaseManager.applyQueryTimeout(mapStmt);
                 DatabaseManager.applyQueryTimeout(summitStmt);
@@ -309,6 +319,12 @@ class AscendPlayerPersistence {
                             delStmt.setString(1, pid);
                             delStmt.executeUpdate();
                         }
+                    }
+
+                    // Transcendence reset: additionally delete challenge records
+                    if (transcendenceResetPending.remove(playerId)) {
+                        delChallengeRecords.setString(1, playerId.toString());
+                        delChallengeRecords.executeUpdate();
                     }
 
                     // Save player base data
@@ -356,6 +372,7 @@ class AscendPlayerPersistence {
                     playerStmt.setInt(30, progress.getAutoSummitTimerSeconds());
                     playerStmt.setString(31, serializeAutoSummitConfig(progress.getAutoSummitConfig()));
                     playerStmt.setInt(32, progress.getAutoSummitRotationIndex());
+                    playerStmt.setInt(33, progress.getTranscendenceCount());
                     playerStmt.addBatch();
 
                     // Save map progress
@@ -477,7 +494,8 @@ class AscendPlayerPersistence {
                    auto_upgrade_enabled, auto_evolution_enabled, seen_tutorials, hide_other_runners,
                    break_ascension_enabled,
                    auto_elevation_enabled, auto_elevation_timer_seconds, auto_elevation_targets, auto_elevation_target_index,
-                   auto_summit_enabled, auto_summit_timer_seconds, auto_summit_config, auto_summit_rotation_index
+                   auto_summit_enabled, auto_summit_timer_seconds, auto_summit_config, auto_summit_rotation_index,
+                   transcendence_count
             FROM ascend_players
             WHERE uuid = ?
             """;
@@ -547,6 +565,8 @@ class AscendPlayerPersistence {
                         progress.setAutoSummitTimerSeconds(safeGetInt(rs, "auto_summit_timer_seconds", 0));
                         progress.setAutoSummitConfig(parseAutoSummitConfig(safeGetString(rs, "auto_summit_config", "[]")));
                         progress.setAutoSummitRotationIndex(safeGetInt(rs, "auto_summit_rotation_index", 0));
+
+                        progress.setTranscendenceCount(safeGetInt(rs, "transcendence_count", 0));
                     }
                 }
             }

@@ -169,6 +169,14 @@ public class AscendPlayerStore {
         }
     }
 
+    /**
+     * Marks a player for challenge records deletion on the next syncSave (transcendence reset).
+     * Must be combined with markResetPending for full transcendence wipe.
+     */
+    public void markTranscendenceResetPending(UUID playerId) {
+        persistence.markTranscendenceResetPending(playerId);
+    }
+
     public void markDirty(UUID playerId) {
         if (playerId == null) {
             return;
@@ -307,9 +315,35 @@ public class AscendPlayerStore {
         if (crossedAscension) {
             AscendPlayerProgress progress = getPlayer(playerId);
             if (progress != null && progress.isBreakAscensionEnabled() && progress.hasAllChallengeRewards()) {
+                // Check for transcendence eligibility notification
+                checkTranscendenceNotification(playerId, oldBalance, newBalance, progress);
                 return; // Break mode active — suppress auto-ascension
             }
             showAscensionExplainer(playerId);
+        }
+
+        // Also check transcendence threshold when break ascension is active
+        AscendPlayerProgress progress = getPlayer(playerId);
+        if (progress != null && progress.isBreakAscensionEnabled() && progress.hasAllChallengeRewards()) {
+            checkTranscendenceNotification(playerId, oldBalance, newBalance, progress);
+        }
+    }
+
+    private void checkTranscendenceNotification(UUID playerId, BigNumber oldBalance, BigNumber newBalance, AscendPlayerProgress progress) {
+        boolean crossedTranscendence = oldBalance.lt(AscendConstants.TRANSCENDENCE_VEXA_THRESHOLD)
+                && newBalance.gte(AscendConstants.TRANSCENDENCE_VEXA_THRESHOLD);
+        if (!crossedTranscendence) {
+            return;
+        }
+
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin == null) {
+            return;
+        }
+        io.hyvexa.ascend.hud.AscendHudManager hm = plugin.getHudManager();
+        if (hm != null) {
+            hm.showToast(playerId, io.hyvexa.ascend.hud.ToastType.ECONOMY,
+                "Transcendence available! Talk to the NPC.");
         }
     }
 
@@ -734,6 +768,11 @@ public class AscendPlayerStore {
     public int getAscensionCount(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
         return progress != null ? progress.getAscensionCount() : 0;
+    }
+
+    public int getTranscendenceCount(UUID playerId) {
+        AscendPlayerProgress progress = players.get(playerId);
+        return progress != null ? progress.getTranscendenceCount() : 0;
     }
 
     public int getSkillTreePoints(UUID playerId) {

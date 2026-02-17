@@ -35,14 +35,15 @@ public final class AscendConstants {
     public static final long PASSIVE_MAX_TIME_MS = 24 * 60 * 60 * 1000L; // 24 hours
     public static final long PASSIVE_MIN_TIME_MS = 60 * 1000L; // 1 minute
 
-    // Speed upgrade multipliers by map (indexed by displayOrder 0-4)
+    // Speed upgrade multipliers by map (indexed by displayOrder 0-5)
     // Uniform speed gain: all maps use +10% per level
     public static final double[] MAP_SPEED_MULTIPLIERS = {
         0.10,  // Map 0 (Rouge)  - +10% per level
         0.10,  // Map 1 (Orange) - +10% per level
         0.10,  // Map 2 (Jaune)  - +10% per level
         0.10,  // Map 3 (Vert)   - +10% per level
-        0.10   // Map 4 (Bleu)   - +10% per level
+        0.10,  // Map 4 (Bleu)   - +10% per level
+        0.10   // Map 5 (Gold)   - +10% per level (Transcendence)
     };
 
     public static double getMapSpeedMultiplier(int displayOrder) {
@@ -52,14 +53,15 @@ public final class AscendConstants {
         return MAP_SPEED_MULTIPLIERS[displayOrder];
     }
 
-    // Map Level Defaults (indexed by displayOrder 0-4)
+    // Map Level Defaults (indexed by displayOrder 0-5)
     // Base run times: faster maps = faster multiplier growth
     public static final long[] MAP_BASE_RUN_TIMES_MS = {
         5000L,    // Level 0 (Rouge)  - 5 sec
         10000L,   // Level 1 (Orange) - 10 sec
         16000L,   // Level 2 (Jaune)  - 16 sec
         26000L,   // Level 3 (Vert)   - 26 sec
-        42000L    // Level 4 (Bleu)   - 42 sec
+        42000L,   // Level 4 (Bleu)   - 42 sec
+        68000L    // Level 5 (Gold)   - 68 sec (Transcendence)
     };
 
     // Base vexa rewards per manual completion (before multiplier)
@@ -69,7 +71,8 @@ public final class AscendConstants {
         5L,       // Level 1 (Orange) - 5 vexa/run base
         25L,      // Level 2 (Jaune)  - 25 vexa/run base
         100L,     // Level 3 (Vert)   - 100 vexa/run base
-        500L      // Level 4 (Bleu)   - 500 vexa/run base
+        500L,     // Level 4 (Bleu)   - 500 vexa/run base
+        2500L     // Level 5 (Gold)   - 2500 vexa/run base (Transcendence)
     };
 
     // Map unlock prices: first map free, then increasing
@@ -78,7 +81,8 @@ public final class AscendConstants {
         100L,     // Level 1 (Orange)
         500L,     // Level 2 (Jaune)
         2500L,    // Level 3 (Vert)
-        10000L    // Level 4 (Bleu)
+        10000L,   // Level 4 (Bleu)
+        50000L    // Level 5 (Gold)   - Transcendence milestone required
     };
 
     // Runner upgrade cost scaling by map level
@@ -88,7 +92,8 @@ public final class AscendConstants {
         1,    // Level 1 (Orange) - +1 level offset
         2,    // Level 2 (Jaune)  - +2 level offset
         3,    // Level 3 (Vert)   - +3 level offset
-        4     // Level 4 (Bleu)   - +4 level offset
+        4,    // Level 4 (Bleu)   - +4 level offset
+        5     // Level 5 (Gold)   - +5 level offset (Transcendence)
     };
 
     public static final double[] MAP_UPGRADE_MULTIPLIER = {
@@ -96,7 +101,8 @@ public final class AscendConstants {
         1.4,  // Level 1 (Orange) - 1.4x cost
         1.9,  // Level 2 (Jaune)  - 1.9x cost
         2.6,  // Level 3 (Vert)   - 2.6x cost
-        3.5   // Level 4 (Bleu)   - 3.5x cost
+        3.5,  // Level 4 (Bleu)   - 3.5x cost
+        4.7   // Level 5 (Gold)   - 4.7x cost (Transcendence)
     };
 
     // Early-game unlock pacing: decaying boost for levels 0-9 on maps 2+
@@ -108,7 +114,8 @@ public final class AscendConstants {
         1.5,  // Map 1 (Orange) - 1.5x max boost at level 0
         2.0,  // Map 2 (Jaune)  - 2.0x max boost at level 0
         2.5,  // Map 3 (Vert)   - 2.5x max boost at level 0
-        3.0   // Map 4 (Bleu)   - 3.0x max boost at level 0
+        3.0,  // Map 4 (Bleu)   - 3.0x max boost at level 0
+        3.5   // Map 5 (Gold)   - 3.5x max boost at level 0 (Transcendence)
     };
 
     public static double getMapEarlyLevelBoost(int displayOrder) {
@@ -432,7 +439,8 @@ public final class AscendConstants {
         {"#ef4444", "#fca5a5"},  // Red -> Light red (Parkour 2)
         {"#f59e0b", "#fbbf24"},  // Orange -> Light orange (Parkour 3)
         {"#10b981", "#34d399"},  // Green -> Light green (Parkour 4)
-        {"#3b82f6", "#93c5fd"}   // Blue -> Light blue (Parkour 5)
+        {"#3b82f6", "#93c5fd"},  // Blue -> Light blue (Parkour 5)
+        {"#f59e0b", "#fcd34d"}   // Gold -> Light gold (Parkour 6 - Transcendence)
     };
 
     // ========================================
@@ -627,6 +635,7 @@ public final class AscendConstants {
     // ========================================
 
     public static final BigNumber ASCENSION_VEXA_THRESHOLD = BigNumber.of(1, 33); // 1 Decillion (10^33)
+    public static final BigNumber TRANSCENDENCE_VEXA_THRESHOLD = BigNumber.of(1, 100); // 1 Googol (10^100)
 
     public enum SkillTreeNode {
         AUTO_RUNNERS("Auto-Upgrade + Momentum", "Auto-upgrade runners & momentum speed boost on manual runs"),

@@ -148,6 +148,13 @@ public final class MapUnlockHelper {
             return true;
         }
 
+        // Map 6 (displayOrder 5): requires transcendence milestone 1
+        if (map.getDisplayOrder() == 5) {
+            if (playerStore.getTranscendenceCount(playerId) < 1) {
+                return false;
+            }
+        }
+
         // Challenge 3: block maps with displayOrder 3 or 4
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         if (plugin != null && plugin.getChallengeManager() != null
