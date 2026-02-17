@@ -74,6 +74,7 @@ import io.hyvexa.parkour.command.ParkourCommand;
 import io.hyvexa.parkour.command.ParkourMusicDebugCommand;
 import io.hyvexa.parkour.command.RulesCommand;
 import io.hyvexa.parkour.command.StoreCommand;
+import io.hyvexa.parkour.command.VoteCommand;
 import io.hyvexa.parkour.tracker.RunTracker;
 import io.hyvexa.parkour.system.NoDropSystem;
 import io.hyvexa.parkour.system.NoBreakSystem;
@@ -283,6 +284,7 @@ public class HyvexaPlugin extends JavaPlugin {
         this.getCommandRegistry().registerCommand(new CosmeticTestCommand());
         this.getCommandRegistry().registerCommand(new ShopCommand());
         this.getCommandRegistry().registerCommand(new AnalyticsCommand());
+        this.getCommandRegistry().registerCommand(new VoteCommand());
 
         registerNoDropSystem();
         registerNoBreakSystem();
