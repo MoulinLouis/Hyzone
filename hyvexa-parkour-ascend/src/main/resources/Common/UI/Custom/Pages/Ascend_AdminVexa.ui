@@ -100,6 +100,11 @@ $C.@PageOverlay {
         }
       }
 
+      $C.@TextButton #SimulateAscensionButton {
+        Anchor: (Top: 8, Width: 250, Height: 36);
+        Text: "Simulate Ascension";
+      }
+
       Label {
         Anchor: (Top: 16);
         Style: (FontSize: 16, TextColor: #93844c, RenderBold: true);

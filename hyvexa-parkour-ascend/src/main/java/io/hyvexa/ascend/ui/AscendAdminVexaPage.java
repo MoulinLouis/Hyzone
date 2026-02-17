@@ -18,9 +18,13 @@ import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.ParkourAscendPlugin;
+import io.hyvexa.ascend.ascension.AscensionManager;
+import io.hyvexa.ascend.ascension.ChallengeManager;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
+import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.data.AscendSettingsStore;
 import io.hyvexa.common.math.BigNumber;
@@ -28,6 +32,7 @@ import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
 
 import javax.annotation.Nonnull;
+import java.util.UUID;
 
 public class AscendAdminVexaPage extends InteractiveCustomUIPage<AscendAdminVexaPage.VexaData> {
 
@@ -81,6 +86,7 @@ public class AscendAdminVexaPage extends InteractiveCustomUIPage<AscendAdminVexa
             case VexaData.BUTTON_REMOVE_SKILL_POINTS -> applySkillPoints(player, playerRef, false);
             case VexaData.BUTTON_SAVE_VOID_Y -> saveVoidYThreshold(player);
             case VexaData.BUTTON_CLEAR_VOID_Y -> clearVoidYThreshold(player);
+            case VexaData.BUTTON_SIMULATE_ASCENSION -> simulateAscension(player, playerRef);
             default -> {
             }
         }
@@ -119,6 +125,8 @@ public class AscendAdminVexaPage extends InteractiveCustomUIPage<AscendAdminVexa
             EventData.of(VexaData.KEY_BUTTON, VexaData.BUTTON_SAVE_VOID_Y), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ClearVoidYButton",
             EventData.of(VexaData.KEY_BUTTON, VexaData.BUTTON_CLEAR_VOID_Y), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SimulateAscensionButton",
+            EventData.of(VexaData.KEY_BUTTON, VexaData.BUTTON_SIMULATE_ASCENSION), false);
     }
 
     private void resetProgress(Player player, PlayerRef playerRef, Store<EntityStore> store) {
@@ -177,6 +185,70 @@ public class AscendAdminVexaPage extends InteractiveCustomUIPage<AscendAdminVexa
         UICommandBuilder commandBuilder = new UICommandBuilder();
         commandBuilder.set("#CurrentVexaValue.Text", "0");
         commandBuilder.set("#CurrentSkillPointsValue.Text", "0");
+        sendUpdate(commandBuilder, null, false);
+    }
+
+    private void simulateAscension(Player player, PlayerRef playerRef) {
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        AscendPlayerStore playerStore = plugin != null ? plugin.getPlayerStore() : null;
+        AscensionManager ascensionManager = plugin != null ? plugin.getAscensionManager() : null;
+        if (playerStore == null || ascensionManager == null) {
+            player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading."));
+            return;
+        }
+
+        UUID playerId = playerRef.getUuid();
+
+        // Bypass vexa threshold for admin simulation
+        BigNumber vexa = playerStore.getVexa(playerId);
+        if (vexa.lt(AscendConstants.ASCENSION_VEXA_THRESHOLD)) {
+            AscendPlayerProgress progress = playerStore.getOrCreatePlayer(playerId);
+            progress.setVexa(AscendConstants.ASCENSION_VEXA_THRESHOLD);
+        }
+
+        // Despawn all robots before resetting data to prevent completions with pre-reset multipliers
+        if (plugin.getRobotManager() != null) {
+            plugin.getRobotManager().despawnRobotsForPlayer(playerId);
+        }
+
+        // Complete active challenge if in one (same routing as normal ascension)
+        ChallengeManager challengeManager = plugin.getChallengeManager();
+        if (challengeManager != null && challengeManager.isInChallenge(playerId)) {
+            AscendConstants.ChallengeType type = challengeManager.getActiveChallenge(playerId);
+            long elapsedMs = challengeManager.completeChallenge(playerId);
+            if (elapsedMs >= 0) {
+                String timeStr = FormatUtils.formatDurationLong(elapsedMs);
+                player.sendMessage(Message.raw(
+                    "[Challenge] " + (type != null ? type.getDisplayName() : "Challenge") + " completed in " + timeStr + "!")
+                    .color(SystemMessageUtils.SUCCESS));
+                player.sendMessage(Message.raw(
+                    "[Challenge] Your progress has been restored. Permanent reward unlocked!")
+                    .color(SystemMessageUtils.SUCCESS));
+            }
+            UICommandBuilder commandBuilder = new UICommandBuilder();
+            commandBuilder.set("#CurrentVexaValue.Text", FormatUtils.formatBigNumber(playerStore.getVexa(playerId)));
+            commandBuilder.set("#CurrentSkillPointsValue.Text", String.valueOf(playerStore.getSkillTreePoints(playerId)));
+            sendUpdate(commandBuilder, null, false);
+            return;
+        }
+
+        int newCount = ascensionManager.performAscension(playerId);
+        if (newCount < 0) {
+            player.sendMessage(Message.raw("[Ascend] Ascension simulation failed."));
+            return;
+        }
+
+        player.sendMessage(Message.raw("[Ascend] Ascension simulated! (x" + newCount + ")")
+            .color(SystemMessageUtils.SUCCESS));
+
+        if (plugin.getAchievementManager() != null) {
+            plugin.getAchievementManager().checkAndUnlockAchievements(playerId, player);
+        }
+
+        UICommandBuilder commandBuilder = new UICommandBuilder();
+        commandBuilder.set("#CurrentVexaValue.Text", "0");
+        int skillPoints = playerStore.getSkillTreePoints(playerId);
+        commandBuilder.set("#CurrentSkillPointsValue.Text", String.valueOf(skillPoints));
         sendUpdate(commandBuilder, null, false);
     }
 
@@ -434,6 +506,7 @@ public class AscendAdminVexaPage extends InteractiveCustomUIPage<AscendAdminVexa
         static final String BUTTON_SAVE_VOID_Y = "SaveVoidY";
         static final String BUTTON_CLEAR_VOID_Y = "ClearVoidY";
         static final String BUTTON_RESET_ALL = "ResetAllPlayers";
+        static final String BUTTON_SIMULATE_ASCENSION = "SimulateAscension";
         static final String BUTTON_BACK = "Back";
         static final String BUTTON_CLOSE = "Close";
 
