@@ -4,6 +4,21 @@ What's new in Hyvexa? All player-facing changes, newest first.
 
 ---
 
+## v0.1.3 - 2026-02-17
+
+### New
+- **6 New Ascendancy Tree Nodes** - Runner Speed IV & V, Evolution Power III, Momentum Mastery (x3.0 for 120s), Multiplier Boost II (+0.25), and Elevation Boost (-30% cost). Deep late-game skills costing 15-75 AP.
+- **3 New Challenges** - Challenge 5 disables half your Runner Speed and Multiplier Gain, Challenge 6 cuts all Summit bonuses by 50%, and Challenge 7 locks maps 4 and 5. Total challenges now: 7.
+- **AP Multiplier** - Each challenge you complete permanently increases the AP you earn per Ascension. Base x1, scaling up to x8 with all 7 challenges done.
+
+### Improved
+- **Summit Levels Uncapped** - Summit categories no longer cap at level 1000. Beyond 1000, XP costs grow steeply (cubic scaling), so progress slows but never stops.
+
+### Fixed
+- **Auto-Elevation and Auto-Summit** - Fixed target comparison and stale UI issues that caused these automations to malfunction. Both are now re-enabled for all players.
+
+---
+
 ## v0.1.2 - 2026-02-16
 
 ### New
