@@ -754,17 +754,17 @@ public class AscendPlayerStore {
         return progress.getSummitLevel(category);
     }
 
-    public long getSummitXp(UUID playerId, SummitCategory category) {
+    public double getSummitXp(UUID playerId, SummitCategory category) {
         AscendPlayerProgress progress = players.get(playerId);
         if (progress == null) {
-            return 0L;
+            return 0.0;
         }
         return progress.getSummitXp(category);
     }
 
-    public long addSummitXp(UUID playerId, SummitCategory category, long amount) {
+    public double addSummitXp(UUID playerId, SummitCategory category, double amount) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        long newXp = progress.addSummitXp(category, amount);
+        double newXp = progress.addSummitXp(category, amount);
         markDirty(playerId);
         return newXp;
     }

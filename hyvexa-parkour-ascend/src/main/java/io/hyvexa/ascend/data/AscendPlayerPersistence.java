@@ -399,10 +399,10 @@ class AscendPlayerPersistence {
 
                     // Save summit XP
                     for (SummitCategory category : SummitCategory.values()) {
-                        long xp = progress.getSummitXp(category);
+                        double xp = progress.getSummitXp(category);
                         summitStmt.setString(1, playerId.toString());
                         summitStmt.setString(2, category.name());
-                        summitStmt.setLong(3, xp);
+                        summitStmt.setDouble(3, xp);
                         summitStmt.addBatch();
                     }
 
@@ -632,7 +632,7 @@ class AscendPlayerPersistence {
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     String categoryName = rs.getString("category");
-                    long xp = rs.getLong("xp");
+                    double xp = rs.getDouble("xp");
                     try {
                         SummitCategory category = SummitCategory.valueOf(categoryName);
                         progress.setSummitXp(category, xp);

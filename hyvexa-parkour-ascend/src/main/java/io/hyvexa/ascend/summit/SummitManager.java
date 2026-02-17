@@ -35,8 +35,8 @@ public class SummitManager {
      */
     public boolean canSummit(UUID playerId) {
         BigNumber accumulatedVexa = playerStore.getSummitAccumulatedVexa(playerId);
-        long potentialXp = AscendConstants.vexaToXp(accumulatedVexa);
-        return potentialXp >= 1;
+        double potentialXp = AscendConstants.vexaToXp(accumulatedVexa);
+        return potentialXp >= 1.0;
     }
 
     /**
@@ -46,19 +46,19 @@ public class SummitManager {
      */
     public SummitPreview previewSummit(UUID playerId, SummitCategory category) {
         BigNumber vexa = playerStore.getSummitAccumulatedVexa(playerId);
-        long xpToGain = AscendConstants.vexaToXp(vexa);
+        double xpToGain = AscendConstants.vexaToXp(vexa);
 
-        long currentXp = playerStore.getSummitXp(playerId, category);
+        double currentXp = playerStore.getSummitXp(playerId, category);
         int currentLevel = AscendConstants.calculateLevelFromXp(currentXp);
 
-        long newXp = AscendConstants.saturatingAdd(currentXp, xpToGain);
+        double newXp = currentXp + xpToGain;
         int newLevel = AscendConstants.calculateLevelFromXp(newXp);
 
         double currentBonus = category.getBonusForLevel(currentLevel);
         double newBonus = category.getBonusForLevel(newLevel);
 
-        long[] currentProgress = AscendConstants.getXpProgress(currentXp);
-        long[] newProgress = AscendConstants.getXpProgress(newXp);
+        double[] currentProgress = AscendConstants.getXpProgress(currentXp);
+        double[] newProgress = AscendConstants.getXpProgress(newXp);
 
         return new SummitPreview(
             category,
@@ -87,20 +87,20 @@ public class SummitManager {
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         if (plugin != null && plugin.getChallengeManager() != null
                 && plugin.getChallengeManager().isSummitBlocked(playerId, category)) {
-            return new SummitResult(-1, List.of(), 0);
+            return new SummitResult(-1, List.of(), 0.0);
         }
 
         BigNumber vexa = playerStore.getSummitAccumulatedVexa(playerId);
-        long xpToGain = AscendConstants.vexaToXp(vexa);
+        double xpToGain = AscendConstants.vexaToXp(vexa);
 
-        if (xpToGain < 1) {
-            return new SummitResult(-1, List.of(), 0);
+        if (xpToGain < 1.0) {
+            return new SummitResult(-1, List.of(), 0.0);
         }
 
         // Verify level gain before performing summit
         SummitPreview preview = previewSummit(playerId, category);
         if (!preview.hasGain()) {
-            return new SummitResult(-1, List.of(), 0);
+            return new SummitResult(-1, List.of(), 0.0);
         }
 
         int previousLevel = playerStore.getSummitLevel(playerId, category);
@@ -136,7 +136,7 @@ public class SummitManager {
     /**
      * Result of a Summit operation.
      */
-    public record SummitResult(int newLevel, List<String> mapsWithRunners, long xpGained) {
+    public record SummitResult(int newLevel, List<String> mapsWithRunners, double xpGained) {
         public boolean succeeded() {
             return newLevel >= 0;
         }
@@ -258,11 +258,11 @@ public class SummitManager {
         double currentBonus,
         double newBonus,
         BigNumber vexaToSpend,
-        long xpToGain,
-        long currentXpInLevel,
-        long currentXpRequired,
-        long newXpInLevel,
-        long newXpRequired
+        double xpToGain,
+        double currentXpInLevel,
+        double currentXpRequired,
+        double newXpInLevel,
+        double newXpRequired
     ) {
         public double bonusGain() {
             return newBonus - currentBonus;

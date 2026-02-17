@@ -24,7 +24,7 @@ public class ChallengeSnapshot {
     private Map<String, MapSnapshot> maps;
 
     // Summit XP
-    private Map<String, Long> summitXp;
+    private Map<String, Double> summitXp;
 
     // Accumulated vexa trackers (mantissa + exp10)
     private double summitAccumulatedVexaMantissa;
@@ -116,7 +116,7 @@ public class ChallengeSnapshot {
         // Restore summit XP
         progress.clearSummitXp();
         if (summitXp != null) {
-            for (Map.Entry<String, Long> entry : summitXp.entrySet()) {
+            for (Map.Entry<String, Double> entry : summitXp.entrySet()) {
                 try {
                     AscendConstants.SummitCategory cat = AscendConstants.SummitCategory.valueOf(entry.getKey());
                     progress.setSummitXp(cat, entry.getValue());

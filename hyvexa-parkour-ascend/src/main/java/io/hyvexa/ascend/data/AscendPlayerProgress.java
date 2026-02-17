@@ -21,7 +21,7 @@ public class AscendPlayerProgress {
     private final Map<String, MapProgress> mapProgress = new ConcurrentHashMap<>();
 
     // Summit System - XP per category (level calculated from XP)
-    private final Map<AscendConstants.SummitCategory, Long> summitXp = new ConcurrentHashMap<>();
+    private final Map<AscendConstants.SummitCategory, Double> summitXp = new ConcurrentHashMap<>();
     private final AtomicReference<BigNumber> totalVexaEarned = new AtomicReference<>(BigNumber.ZERO);
     private final AtomicReference<BigNumber> summitAccumulatedVexa = new AtomicReference<>(BigNumber.ZERO);
     private final AtomicReference<BigNumber> elevationAccumulatedVexa = new AtomicReference<>(BigNumber.ZERO);
@@ -121,18 +121,18 @@ public class AscendPlayerProgress {
     // Summit System (XP-based)
     // ========================================
 
-    public long getSummitXp(AscendConstants.SummitCategory category) {
-        return summitXp.getOrDefault(category, 0L);
+    public double getSummitXp(AscendConstants.SummitCategory category) {
+        return summitXp.getOrDefault(category, 0.0);
     }
 
-    public void setSummitXp(AscendConstants.SummitCategory category, long xp) {
-        summitXp.put(category, Math.max(0, xp));
+    public void setSummitXp(AscendConstants.SummitCategory category, double xp) {
+        summitXp.put(category, Math.max(0.0, xp));
     }
 
-    public long addSummitXp(AscendConstants.SummitCategory category, long amount) {
+    public double addSummitXp(AscendConstants.SummitCategory category, double amount) {
         return summitXp.compute(category, (cat, current) -> {
-            long base = current != null ? current : 0L;
-            return Math.max(0, AscendConstants.saturatingAdd(base, amount));
+            double base = current != null ? current : 0.0;
+            return Math.max(0.0, base + amount);
         });
     }
 
@@ -140,8 +140,8 @@ public class AscendPlayerProgress {
         return AscendConstants.calculateLevelFromXp(getSummitXp(category));
     }
 
-    public Map<AscendConstants.SummitCategory, Long> getSummitXpMap() {
-        Map<AscendConstants.SummitCategory, Long> xpMap = new EnumMap<>(AscendConstants.SummitCategory.class);
+    public Map<AscendConstants.SummitCategory, Double> getSummitXpMap() {
+        Map<AscendConstants.SummitCategory, Double> xpMap = new EnumMap<>(AscendConstants.SummitCategory.class);
         for (AscendConstants.SummitCategory cat : AscendConstants.SummitCategory.values()) {
             xpMap.put(cat, getSummitXp(cat));
         }
