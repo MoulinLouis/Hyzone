@@ -495,21 +495,23 @@ public class AscendPlayerStore {
                 plugin.getAchievementManager().checkAndUnlockAchievements(playerId, player);
             }
 
-            // Show ascension tutorial page after a short delay
-            HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
-                if (ref == null || !ref.isValid()) return;
-                com.hypixel.hytale.server.core.universe.world.World world = store.getExternalData().getWorld();
-                if (world == null) return;
-                java.util.concurrent.CompletableFuture.runAsync(() -> {
-                    if (!ref.isValid()) return;
-                    com.hypixel.hytale.server.core.entity.entities.Player p =
-                        store.getComponent(ref, com.hypixel.hytale.server.core.entity.entities.Player.getComponentType());
-                    if (p == null) return;
-                    p.getPageManager().openCustomPage(ref, store,
-                        new io.hyvexa.ascend.ui.AscendTutorialPage(playerRef,
-                            io.hyvexa.ascend.ui.AscendTutorialPage.Tutorial.ASCENSION));
-                }, world);
-            }, 500, TimeUnit.MILLISECONDS);
+            // Show ascension tutorial page only on first ascension
+            if (newCount == 1) {
+                HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
+                    if (ref == null || !ref.isValid()) return;
+                    com.hypixel.hytale.server.core.universe.world.World world = store.getExternalData().getWorld();
+                    if (world == null) return;
+                    java.util.concurrent.CompletableFuture.runAsync(() -> {
+                        if (!ref.isValid()) return;
+                        com.hypixel.hytale.server.core.entity.entities.Player p =
+                            store.getComponent(ref, com.hypixel.hytale.server.core.entity.entities.Player.getComponentType());
+                        if (p == null) return;
+                        p.getPageManager().openCustomPage(ref, store,
+                            new io.hyvexa.ascend.ui.AscendTutorialPage(playerRef,
+                                io.hyvexa.ascend.ui.AscendTutorialPage.Tutorial.ASCENSION));
+                    }, world);
+                }, 500, TimeUnit.MILLISECONDS);
+            }
         } finally {
             ascensionCinematicActive.remove(playerId);
         }
