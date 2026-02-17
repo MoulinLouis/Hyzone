@@ -87,6 +87,7 @@ public class AscendAdminVexaPage extends InteractiveCustomUIPage<AscendAdminVexa
             case VexaData.BUTTON_SAVE_VOID_Y -> saveVoidYThreshold(player);
             case VexaData.BUTTON_CLEAR_VOID_Y -> clearVoidYThreshold(player);
             case VexaData.BUTTON_SIMULATE_ASCENSION -> simulateAscension(player, playerRef);
+            case VexaData.BUTTON_ENDGAME -> endgame(player, playerRef);
             default -> {
             }
         }
@@ -127,6 +128,8 @@ public class AscendAdminVexaPage extends InteractiveCustomUIPage<AscendAdminVexa
             EventData.of(VexaData.KEY_BUTTON, VexaData.BUTTON_CLEAR_VOID_Y), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SimulateAscensionButton",
             EventData.of(VexaData.KEY_BUTTON, VexaData.BUTTON_SIMULATE_ASCENSION), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#EndgameButton",
+            EventData.of(VexaData.KEY_BUTTON, VexaData.BUTTON_ENDGAME), false);
     }
 
     private void resetProgress(Player player, PlayerRef playerRef, Store<EntityStore> store) {
@@ -249,6 +252,43 @@ public class AscendAdminVexaPage extends InteractiveCustomUIPage<AscendAdminVexa
         commandBuilder.set("#CurrentVexaValue.Text", "0");
         int skillPoints = playerStore.getSkillTreePoints(playerId);
         commandBuilder.set("#CurrentSkillPointsValue.Text", String.valueOf(skillPoints));
+        sendUpdate(commandBuilder, null, false);
+    }
+
+    private void endgame(Player player, PlayerRef playerRef) {
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        AscendPlayerStore playerStore = plugin != null ? plugin.getPlayerStore() : null;
+        if (playerStore == null) {
+            player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading."));
+            return;
+        }
+
+        UUID playerId = playerRef.getUuid();
+        AscendPlayerProgress progress = playerStore.getOrCreatePlayer(playerId);
+
+        // Unlock all skill tree nodes and grant enough points to cover costs
+        int totalCost = 0;
+        for (AscendConstants.SkillTreeNode node : AscendConstants.SkillTreeNode.values()) {
+            totalCost += node.getCost();
+            progress.unlockSkillNode(node);
+        }
+        int needed = totalCost - progress.getSkillTreePoints();
+        if (needed > 0) {
+            progress.addSkillTreePoints(needed);
+        }
+
+        // Complete all challenges
+        for (AscendConstants.ChallengeType type : AscendConstants.ChallengeType.values()) {
+            progress.addChallengeReward(type);
+        }
+
+        playerStore.markDirty(playerId);
+
+        player.sendMessage(Message.raw("[Ascend] Endgame activated: all skill nodes unlocked, all challenges completed.")
+            .color(SystemMessageUtils.SUCCESS));
+
+        UICommandBuilder commandBuilder = new UICommandBuilder();
+        commandBuilder.set("#CurrentSkillPointsValue.Text", String.valueOf(progress.getSkillTreePoints()));
         sendUpdate(commandBuilder, null, false);
     }
 
@@ -507,6 +547,7 @@ public class AscendAdminVexaPage extends InteractiveCustomUIPage<AscendAdminVexa
         static final String BUTTON_CLEAR_VOID_Y = "ClearVoidY";
         static final String BUTTON_RESET_ALL = "ResetAllPlayers";
         static final String BUTTON_SIMULATE_ASCENSION = "SimulateAscension";
+        static final String BUTTON_ENDGAME = "Endgame";
         static final String BUTTON_BACK = "Back";
         static final String BUTTON_CLOSE = "Close";
 
