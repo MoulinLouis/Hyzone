@@ -910,6 +910,7 @@ public class AscendPlayerStore {
         }
 
         progress.setElevationMultiplier(1);
+        progress.setAutoElevationTargetIndex(0);
 
         List<String> mapsWithRunners = resetMapProgress(progress, firstMapId, false, playerId);
 
@@ -930,6 +931,7 @@ public class AscendPlayerStore {
         }
 
         progress.setElevationMultiplier(1);
+        progress.setAutoElevationTargetIndex(0);
         progress.clearSummitXp();
 
         List<String> mapsWithRunners = resetMapProgress(progress, firstMapId, false, playerId);
