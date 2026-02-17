@@ -100,9 +100,26 @@ $C.@PageOverlay {
         }
       }
 
-      $C.@TextButton #SimulateAscensionButton {
-        Anchor: (Top: 8, Width: 250, Height: 36);
-        Text: "Simulate Ascension";
+      Group {
+        LayoutMode: Left;
+        Anchor: (Top: 8, Height: 36);
+
+        $C.@TextButton #SimulateAscensionButton {
+          Anchor: (Width: 250, Height: 36);
+          Text: "Simulate Ascension";
+        }
+
+        TextButton #EndgameButton {
+          Anchor: (Left: 10, Width: 200, Height: 36);
+          Padding: (Left: 8, Top: 2);
+          Text: "Endgame";
+          Style: TextButtonStyle(
+            Default: (LabelStyle: (FontSize: 14, TextColor: #fbbf24, RenderBold: true)),
+            Hovered: (LabelStyle: (FontSize: 14, TextColor: #fcd34d, RenderBold: true)),
+            Sounds: $C.@ButtonSounds,
+          );
+          Background: #3d2e00(0.4);
+        }
       }
 
       Label {
