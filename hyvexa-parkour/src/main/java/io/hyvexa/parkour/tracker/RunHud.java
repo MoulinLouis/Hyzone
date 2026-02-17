@@ -4,8 +4,6 @@ import com.hypixel.hytale.server.core.entity.entities.player.hud.CustomUIHud;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
-import io.hyvexa.parkour.ui.PlayerMusicPage;
-
 import java.util.List;
 
 public class RunHud extends CustomUIHud {
@@ -109,8 +107,6 @@ public class RunHud extends CustomUIHud {
             commandBuilder.set("#PlayerRankD.Text", "");
         }
         commandBuilder.set("#PlayerMapsValue.Text", completedMaps + "/" + totalMaps);
-        String musicLabel = PlayerMusicPage.getStoredMusicLabel(getPlayerRef().getUuid());
-        commandBuilder.set("#ServerDateText.Text", "Music: " + musicLabel);
         commandBuilder.set("#ServerIpText.Text", "IP: " + safeServerIp);
         update(false, commandBuilder);
     }
