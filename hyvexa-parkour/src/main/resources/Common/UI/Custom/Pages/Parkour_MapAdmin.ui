@@ -184,6 +184,28 @@ $C.@PageOverlay {
         }
 
         Label {
+          Text: "Map Active";
+          Style: (FontSize: 13, TextColor: #cfd7dc);
+          Anchor: (Top: 6);
+        }
+
+        Group {
+          LayoutMode: Left;
+          Anchor: (Top: 4, Height: 22);
+
+          Label #ActiveValue {
+            Anchor: (Width: 120);
+            Style: (FontSize: 12, TextColor: #9fb0ba);
+            Text: "";
+          }
+
+          $C.@TextButton #ActiveToggle {
+            Anchor: (Width: 120, Height: 22);
+            Text: "Toggle";
+          }
+        }
+
+        Label {
           Text: "Mithril Sword (run item)";
           Style: (FontSize: 13, TextColor: #cfd7dc);
           Anchor: (Top: 6);

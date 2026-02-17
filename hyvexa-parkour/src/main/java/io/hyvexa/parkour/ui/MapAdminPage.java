@@ -47,6 +47,7 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
     private boolean mapGliderEnabled = false;
     private boolean mapFreeFallEnabled = false;
     private boolean mapDuelEnabled = false;
+    private boolean mapActive = true;
     private String selectedMapId = "";
     private final java.util.Map<String, BiConsumer<Ref<EntityStore>, Store<EntityStore>>> buttonHandlers =
             createButtonHandlers();
@@ -123,6 +124,7 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
         handlers.put(MapData.BUTTON_TOGGLE_GLIDER, this::handleToggleGlider);
         handlers.put(MapData.BUTTON_TOGGLE_FREE_FALL, this::handleToggleFreeFall);
         handlers.put(MapData.BUTTON_TOGGLE_DUEL_ENABLED, this::handleToggleDuelEnabled);
+        handlers.put(MapData.BUTTON_TOGGLE_ACTIVE, this::handleToggleActive);
         handlers.put(MapData.BUTTON_SET_FLY_ZONE_1, this::handleSetFlyZoneCorner1);
         handlers.put(MapData.BUTTON_SET_FLY_ZONE_2, this::handleSetFlyZoneCorner2);
         handlers.put(MapData.BUTTON_CLEAR_FLY_ZONE, this::handleClearFlyZone);
@@ -151,6 +153,7 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
             mapGliderEnabled = map.isGliderEnabled();
             mapFreeFallEnabled = map.isFreeFallEnabled();
             mapDuelEnabled = map.isDuelEnabled();
+            mapActive = map.isActive();
         }
         sendRefresh(ref, store);
     }
@@ -177,6 +180,11 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
 
     private void handleToggleDuelEnabled(Ref<EntityStore> ref, Store<EntityStore> store) {
         mapDuelEnabled = !mapDuelEnabled;
+        sendRefresh(ref, store);
+    }
+
+    private void handleToggleActive(Ref<EntityStore> ref, Store<EntityStore> store) {
+        mapActive = !mapActive;
         sendRefresh(ref, store);
     }
 
@@ -223,6 +231,7 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
         map.setGliderEnabled(mapGliderEnabled);
         map.setFreeFallEnabled(mapFreeFallEnabled);
         map.setDuelEnabled(mapDuelEnabled);
+        map.setActive(mapActive);
         map.setStart(start);
         map.setCreatedAt(System.currentTimeMillis());
         map.setUpdatedAt(map.getCreatedAt());
@@ -390,6 +399,7 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
         map.setGliderEnabled(mapGliderEnabled);
         map.setFreeFallEnabled(mapFreeFallEnabled);
         map.setDuelEnabled(mapDuelEnabled);
+        map.setActive(mapActive);
         map.setUpdatedAt(System.currentTimeMillis());
         try {
             mapStore.updateMap(map);
@@ -623,6 +633,7 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
         commandBuilder.set("#GliderValue.Text", mapGliderEnabled ? "Enabled" : "Disabled");
         commandBuilder.set("#FreeFallValue.Text", mapFreeFallEnabled ? "YES" : "NO");
         commandBuilder.set("#DuelEnabledValue.Text", mapDuelEnabled ? "YES" : "NO");
+        commandBuilder.set("#ActiveValue.Text", mapActive ? "YES" : "NO");
         String flyZoneText = "(none)";
         if (!selectedMapId.isEmpty()) {
             Map selectedMap = mapStore.getMap(selectedMapId);
@@ -716,6 +727,8 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
                 EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_TOGGLE_FREE_FALL), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#DuelEnabledToggle",
                 EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_TOGGLE_DUEL_ENABLED), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ActiveToggle",
+                EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_TOGGLE_ACTIVE), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SetFlyZone1Button",
                 EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_SET_FLY_ZONE_1), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SetFlyZone2Button",
@@ -839,6 +852,7 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
         static final String BUTTON_TOGGLE_GLIDER = "ToggleGlider";
         static final String BUTTON_TOGGLE_FREE_FALL = "ToggleFreeFall";
         static final String BUTTON_TOGGLE_DUEL_ENABLED = "ToggleDuelEnabled";
+        static final String BUTTON_TOGGLE_ACTIVE = "ToggleActive";
         static final String BUTTON_SET_FLY_ZONE_1 = "SetFlyZone1";
         static final String BUTTON_SET_FLY_ZONE_2 = "SetFlyZone2";
         static final String BUTTON_CLEAR_FLY_ZONE = "ClearFlyZone";

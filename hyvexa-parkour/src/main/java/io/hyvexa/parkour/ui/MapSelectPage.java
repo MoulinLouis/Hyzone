@@ -109,6 +109,13 @@ public class MapSelectPage extends BaseParkourPage {
             sendMessage(store, ref, "Map '" + mapId + "' has no start set.");
             return;
         }
+        if (!map.isActive()) {
+            Player p = store.getComponent(ref, Player.getComponentType());
+            if (p != null) {
+                p.sendMessage(SystemMessageUtils.parkourWarn("This map is currently unavailable."));
+            }
+            return;
+        }
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         Player player = store.getComponent(ref, Player.getComponentType());
         if (playerRef == null || player == null) {
