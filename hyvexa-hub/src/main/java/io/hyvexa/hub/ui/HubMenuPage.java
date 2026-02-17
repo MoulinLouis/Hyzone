@@ -45,6 +45,10 @@ public class HubMenuPage extends InteractiveCustomUIPage<ButtonEventData> {
             Message.raw("/discord").color(LINK_COLOR),
             Message.raw(" for updates.")
     );
+    private static final Message MESSAGE_PURGE_RESTRICTED = Message.join(
+            Message.raw("Hyvexa: ").color("#ff8a3d"),
+            Message.raw("Purge is currently restricted to staff only.")
+    );
 
     private static volatile AscendWhitelistManager cachedWhitelistManager;
     private static volatile long cachedWhitelistModified;
@@ -60,6 +64,13 @@ public class HubMenuPage extends InteractiveCustomUIPage<ButtonEventData> {
     public void build(@Nonnull Ref<EntityStore> ref, @Nonnull UICommandBuilder uiCommandBuilder,
                       @Nonnull UIEventBuilder uiEventBuilder, @Nonnull Store<EntityStore> store) {
         uiCommandBuilder.append("Pages/Hub_Menu.ui");
+
+        Player player = store.getComponent(ref, Player.getComponentType());
+        boolean isOp = PermissionUtils.isOp(player);
+        if (!isOp) {
+            uiCommandBuilder.set("#PurgeCard.Visible", false);
+        }
+
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ParkourButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_PARKOUR), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#AscendButton",
@@ -135,6 +146,13 @@ public class HubMenuPage extends InteractiveCustomUIPage<ButtonEventData> {
             return;
         }
         if (BUTTON_PURGE.equals(data.getButton())) {
+            if (!PermissionUtils.isOp(player)) {
+                if (player != null) {
+                    player.sendMessage(MESSAGE_PURGE_RESTRICTED);
+                }
+                this.close();
+                return;
+            }
             if (playerRef != null) {
                 router.routeToPurge(playerRef);
             }
