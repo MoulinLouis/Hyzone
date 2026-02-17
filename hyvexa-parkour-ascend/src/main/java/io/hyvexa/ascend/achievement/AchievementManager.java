@@ -90,9 +90,9 @@ public class AchievementManager {
 
             // Prestige
             case FIRST_ELEVATION -> progress.getElevationMultiplier() >= 2;
-            case GOING_UP -> progress.getElevationMultiplier() >= AscendConstants.ACHIEVEMENT_ELEVATION_100;
-            case SKY_HIGH -> progress.getElevationMultiplier() >= AscendConstants.ACHIEVEMENT_ELEVATION_5000;
-            case STRATOSPHERE -> progress.getElevationMultiplier() >= AscendConstants.ACHIEVEMENT_ELEVATION_20000;
+            case GOING_UP -> getVisibleElevationMultiplier(progress) >= AscendConstants.ACHIEVEMENT_ELEVATION_100;
+            case SKY_HIGH -> getVisibleElevationMultiplier(progress) >= AscendConstants.ACHIEVEMENT_ELEVATION_5000;
+            case STRATOSPHERE -> getVisibleElevationMultiplier(progress) >= AscendConstants.ACHIEVEMENT_ELEVATION_20000;
             case SUMMIT_SEEKER -> hasAnySummitLevel(progress);
             case PEAK_PERFORMER -> hasAnySummitLevelAbove(progress, AscendConstants.ACHIEVEMENT_SUMMIT_LEVEL_10);
             case MOUNTAINEER -> hasAnySummitLevelAbove(progress, AscendConstants.ACHIEVEMENT_SUMMIT_LEVEL_100);
@@ -113,6 +113,10 @@ public class AchievementManager {
             case ALL_STARS -> allMapsMaxStars(progress);
             case COMPLETIONIST -> allOtherAchievementsUnlocked(progress);
         };
+    }
+
+    private long getVisibleElevationMultiplier(AscendPlayerProgress progress) {
+        return Math.round(AscendConstants.getElevationMultiplier(progress.getElevationMultiplier()));
     }
 
     private boolean hasAnyRobot(AscendPlayerProgress progress) {
@@ -293,15 +297,15 @@ public class AchievementManager {
                 required = 1;
             }
             case GOING_UP -> {
-                current = Math.min(progress.getElevationMultiplier(), AscendConstants.ACHIEVEMENT_ELEVATION_100);
+                current = (int) Math.min(getVisibleElevationMultiplier(progress), AscendConstants.ACHIEVEMENT_ELEVATION_100);
                 required = AscendConstants.ACHIEVEMENT_ELEVATION_100;
             }
             case SKY_HIGH -> {
-                current = Math.min(progress.getElevationMultiplier(), AscendConstants.ACHIEVEMENT_ELEVATION_5000);
+                current = (int) Math.min(getVisibleElevationMultiplier(progress), AscendConstants.ACHIEVEMENT_ELEVATION_5000);
                 required = AscendConstants.ACHIEVEMENT_ELEVATION_5000;
             }
             case STRATOSPHERE -> {
-                current = Math.min(progress.getElevationMultiplier(), AscendConstants.ACHIEVEMENT_ELEVATION_20000);
+                current = (int) Math.min(getVisibleElevationMultiplier(progress), AscendConstants.ACHIEVEMENT_ELEVATION_20000);
                 required = AscendConstants.ACHIEVEMENT_ELEVATION_20000;
             }
             case SUMMIT_SEEKER -> {
