@@ -3,7 +3,6 @@ package io.hyvexa.ascend.command;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.*;
-import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolSetEntityLight;
 import com.hypixel.hytale.protocol.packets.camera.CameraShakeEffect;
 import com.hypixel.hytale.protocol.packets.camera.SetServerCamera;
 import com.hypixel.hytale.protocol.packets.world.PlaySoundEvent2D;
@@ -551,28 +550,7 @@ public class CinematicTestCommand extends AbstractAsyncCommand {
     // ── Test: Entity light ───────────────────────────────────────────────
 
     private void testLight(Player player, PacketHandler ph, String[] args) {
-        int r = 255, g = 200, b = 100;
-        int radius = 15;
-
-        if (args.length > 1) {
-            try { r = Integer.parseInt(args[1]); } catch (NumberFormatException ignored) {}
-        }
-        if (args.length > 2) {
-            try { g = Integer.parseInt(args[2]); } catch (NumberFormatException ignored) {}
-        }
-        if (args.length > 3) {
-            try { b = Integer.parseInt(args[3]); } catch (NumberFormatException ignored) {}
-        }
-        if (args.length > 4) {
-            try { radius = Integer.parseInt(args[4]); } catch (NumberFormatException ignored) {}
-        }
-
-        int networkId = player.getNetworkId();
-        ph.writeNoCache(new BuilderToolSetEntityLight(
-            networkId,
-            new ColorLight((byte) radius, (byte) r, (byte) g, (byte) b)
-        ));
-        player.sendMessage(Message.raw("[CTest] Light on entity #" + networkId + " (r=" + r + " g=" + g + " b=" + b + " radius=" + radius + "). Use /ctest light 0 0 0 0 to remove."));
+        player.sendMessage(Message.raw("[CTest] Entity light is no longer supported - BuilderToolSetEntityLight is now a server-bound packet."));
     }
 
     private void scheduleCamera(PacketHandler ph, World world, Ref<EntityStore> ref,

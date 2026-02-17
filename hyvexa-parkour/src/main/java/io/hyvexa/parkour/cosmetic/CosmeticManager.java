@@ -3,9 +3,8 @@ package io.hyvexa.parkour.cosmetic;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
-import com.hypixel.hytale.protocol.ComponentUpdate;
-import com.hypixel.hytale.protocol.ComponentUpdateType;
 import com.hypixel.hytale.protocol.EntityEffectUpdate;
+import com.hypixel.hytale.protocol.EntityEffectsUpdate;
 import com.hypixel.hytale.protocol.EntityUpdate;
 import com.hypixel.hytale.protocol.packets.entities.EntityUpdates;
 import com.hypixel.hytale.server.core.HytaleServer;
@@ -203,14 +202,12 @@ public class CosmeticManager {
                 updates = new EntityEffectUpdate[0];
             }
 
-            ComponentUpdate cu = new ComponentUpdate();
-            cu.type = ComponentUpdateType.EntityEffects;
-            cu.entityEffectUpdates = updates;
+            EntityEffectsUpdate cu = new EntityEffectsUpdate(updates);
 
             EntityUpdate eu = new EntityUpdate(
                     player.getNetworkId(),
                     null,
-                    new ComponentUpdate[]{cu}
+                    new EntityEffectsUpdate[]{cu}
             );
 
             ph.writeNoCache(new EntityUpdates(null, new EntityUpdate[]{eu}));
