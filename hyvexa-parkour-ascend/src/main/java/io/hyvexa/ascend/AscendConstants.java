@@ -296,23 +296,19 @@ public final class AscendConstants {
     // Elevation System (First Prestige)
     // ========================================
 
-    // Elevation multiplier: level^1.05 (slightly super-linear to reward higher elevation)
-    public static final double ELEVATION_MULTIPLIER_EXPONENT = 1.05;
-
     /**
      * Calculate the elevation multiplier for a given level.
-     * Returns level^1.05 (slightly super-linear).
+     * Multiplier = level (1:1).
      */
     public static double getElevationMultiplier(int level) {
-        if (level <= 0) return 1.0;
-        return Math.pow(level, ELEVATION_MULTIPLIER_EXPONENT);
+        return Math.max(1, level);
     }
 
     /**
-     * Format the elevation multiplier for display (rounded to integer).
+     * Format the elevation multiplier for display.
      */
     public static String formatElevationMultiplier(int level) {
-        return "x" + Math.round(getElevationMultiplier(level));
+        return "x" + Math.max(1, level);
     }
 
     // Elevation: cost curve flattened at high levels.
@@ -385,23 +381,41 @@ public final class AscendConstants {
 
     /**
      * Calculate how many levels can be purchased with given vexa and cost multiplier.
-     * @param currentLevel The player's current elevation level
-     * @param availableVexa Vexa available to spend
-     * @param costMultiplier Cost modifier (1.0 = full cost, 0.8 = 20% discount)
+     * Uses exponential probing + binary search to find the upper bound, then iterates precisely.
+     * No artificial cap — bounded naturally by exponential cost growth.
      */
-    private static final int MAX_ELEVATION_PURCHASE_ITERATIONS = 100_000;
-
     public static ElevationPurchaseResult calculateElevationPurchase(int currentLevel, BigNumber availableVexa, BigNumber costMultiplier) {
         if (availableVexa.lte(BigNumber.ZERO)
                 || costMultiplier.lte(BigNumber.ZERO)) {
             return new ElevationPurchaseResult(0, BigNumber.ZERO);
         }
 
+        // Find upper bound: max level where a single level's cost <= budget.
+        // Beyond this, no level can be afforded even individually.
+        int upperBound = currentLevel;
+        int step = 1;
+        while (getElevationLevelUpCost(upperBound + step, costMultiplier).lte(availableVexa)) {
+            upperBound += step;
+            step *= 2;
+        }
+        // Binary search for exact boundary
+        int lo = upperBound, hi = upperBound + step;
+        while (lo < hi) {
+            int mid = lo + (hi - lo + 1) / 2;
+            if (getElevationLevelUpCost(mid, costMultiplier).lte(availableVexa)) {
+                lo = mid;
+            } else {
+                hi = mid - 1;
+            }
+        }
+        int maxLevel = lo;
+
+        // Iterate precisely from currentLevel to maxLevel, summing costs
         int levelsAffordable = 0;
         BigNumber totalCost = BigNumber.ZERO;
         int level = currentLevel;
 
-        while (levelsAffordable < MAX_ELEVATION_PURCHASE_ITERATIONS) {
+        while (level <= maxLevel) {
             BigNumber nextCost = getElevationLevelUpCost(level, costMultiplier);
             BigNumber newTotal = totalCost.add(nextCost);
 
@@ -454,8 +468,8 @@ public final class AscendConstants {
     // Summit XP softcap: levels above this cost increasingly more XP (exponent rises from 2.0 to 3.0)
     public static final int SUMMIT_XP_SOFTCAP = 1000;
     // Post-cap exponent: above XP softcap, bonus = anchorAt1000 * (level/1000)^exponent
-    // Snowball scaling — per-level gains scale with current bonus, never approach zero
-    public static final double SUMMIT_POST_CAP_EXPONENT = 0.7;
+    // Soft scaling — diminishing returns, prevents runaway bonus inflation
+    public static final double SUMMIT_POST_CAP_EXPONENT = 0.3;
 
     public enum SummitCategory {
         MULTIPLIER_GAIN("Multiplier Gain", 1.0, 0.30),  // 1 + 0.30/level
@@ -482,7 +496,7 @@ public final class AscendConstants {
          *   0-25 (soft cap): linear — base + increment × level
          *   25-500 (deep cap): sqrt — + increment × √(level - 25)
          *   500-1000: fourth root — + increment × ⁴√(level - 500)
-         *   1000+ (snowball): anchor × (level / 1000)^0.7 — gains scale with current bonus
+         *   1000+ (soft): anchor × (level / 1000)^0.3 — diminishing returns
          */
         public double getBonusForLevel(int level) {
             int safeLevel = Math.max(0, level);
@@ -501,7 +515,7 @@ public final class AscendConstants {
                 double fourthRootPart = increment * Math.pow(safeLevel - SUMMIT_DEEP_CAP, 0.25);
                 return base + linearPart + sqrtPart + fourthRootPart;
             }
-            // Snowball zone: anchor at 1000 scaled by power function
+            // Post-cap zone: anchor at 1000 scaled by soft power function
             double fourthRootPart = increment * Math.pow(SUMMIT_XP_SOFTCAP - SUMMIT_DEEP_CAP, 0.25);
             double anchor = base + linearPart + sqrtPart + fourthRootPart;
             return anchor * Math.pow((double) safeLevel / SUMMIT_XP_SOFTCAP, SUMMIT_POST_CAP_EXPONENT);
@@ -524,10 +538,16 @@ public final class AscendConstants {
     public static final double SUMMIT_XP_VEXA_POWER =
         Math.log(getCumulativeXpForLevel(SUMMIT_XP_SOFTCAP)) / Math.log(1e33 / SUMMIT_MIN_VEXA); // ~0.3552
 
+    // Piecewise: above 1Dc, XP grows much slower (power 0.08 on the ratio above 1Dc)
+    // At 1e100 vexa -> ~level 13K. Keeps post-1000 progression meaningful but bounded.
+    private static final double SUMMIT_XP_POST_DC_POWER = 0.08;
+    private static final double SUMMIT_XP_AT_1DC = getCumulativeXpForLevel(SUMMIT_XP_SOFTCAP); // ~333.8M
+
     /**
      * Convert vexa to XP.
-     * Formula: (vexa / SUMMIT_MIN_VEXA)^power  (power calibrated for 1Dc = level 1000)
-     * At 1B = 1 XP, at 10B ≈ 2 XP, at 1T ≈ 12 XP, at 1Qa ≈ 135 XP, at 1Dc = 333.8M XP (level 1000).
+     * Piecewise formula:
+     *   Below 1Dc: (vexa / MIN_VEXA)^0.3552  (calibrated for 1Dc = level 1000)
+     *   Above 1Dc: XP_at_1Dc + ((vexa / 1Dc)^0.08 - 1) × XP_at_1Dc
      */
     public static double vexaToXp(BigNumber vexa) {
         if (vexa.lte(BigNumber.ZERO)) {
@@ -537,7 +557,19 @@ public final class AscendConstants {
         if (!Double.isFinite(ratio) || ratio < 1.0) {
             return 0.0;
         }
-        double xp = Math.pow(ratio, SUMMIT_XP_VEXA_POWER);
+        // Below 1Dc: original power formula
+        double dcRatio = 1e33 / SUMMIT_MIN_VEXA; // 1e24
+        if (ratio <= dcRatio) {
+            double xp = Math.pow(ratio, SUMMIT_XP_VEXA_POWER);
+            if (!Double.isFinite(xp)) {
+                return Double.MAX_VALUE;
+            }
+            return Math.floor(xp);
+        }
+        // Above 1Dc: piecewise soft growth
+        double aboveDcRatio = ratio / dcRatio; // how many times above 1Dc
+        double extraXp = (Math.pow(aboveDcRatio, SUMMIT_XP_POST_DC_POWER) - 1) * SUMMIT_XP_AT_1DC;
+        double xp = SUMMIT_XP_AT_1DC + extraXp;
         if (!Double.isFinite(xp)) {
             return Double.MAX_VALUE;
         }
@@ -546,13 +578,24 @@ public final class AscendConstants {
 
     /**
      * Calculate vexa needed to reach a given XP amount.
-     * Inverse of vexaToXp: vexa = xp^(1/power) × SUMMIT_MIN_VEXA
+     * Inverse of vexaToXp (piecewise).
      */
     public static BigNumber xpToVexa(double xp) {
         if (xp <= 0) {
             return BigNumber.ZERO;
         }
-        double vexa = Math.pow(xp, 1.0 / SUMMIT_XP_VEXA_POWER) * SUMMIT_MIN_VEXA;
+        // Below 1Dc threshold (XP <= XP_at_1Dc): original inverse
+        if (xp <= SUMMIT_XP_AT_1DC) {
+            double vexa = Math.pow(xp, 1.0 / SUMMIT_XP_VEXA_POWER) * SUMMIT_MIN_VEXA;
+            return BigNumber.fromDouble(vexa);
+        }
+        // Above 1Dc: inverse of piecewise formula
+        // xp = XP_at_1Dc + (aboveDcRatio^p - 1) * XP_at_1Dc
+        // aboveDcRatio = ((xp - XP_at_1Dc) / XP_at_1Dc + 1)^(1/p)
+        // vexa = aboveDcRatio * 1Dc
+        double scaledExtra = (xp - SUMMIT_XP_AT_1DC) / SUMMIT_XP_AT_1DC + 1.0;
+        double aboveDcRatio = Math.pow(scaledExtra, 1.0 / SUMMIT_XP_POST_DC_POWER);
+        double vexa = aboveDcRatio * 1e33;
         return BigNumber.fromDouble(vexa);
     }
 
