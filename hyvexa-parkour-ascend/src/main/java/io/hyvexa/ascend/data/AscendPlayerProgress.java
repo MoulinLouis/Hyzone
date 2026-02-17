@@ -547,11 +547,11 @@ public class AscendPlayerProgress {
 
     public static class AutoSummitCategoryConfig {
         private boolean enabled;
-        private int increment;
+        private int targetLevel;
 
-        public AutoSummitCategoryConfig(boolean enabled, int increment) {
+        public AutoSummitCategoryConfig(boolean enabled, int targetLevel) {
             this.enabled = enabled;
-            this.increment = Math.max(1, increment);
+            this.targetLevel = Math.max(0, targetLevel);
         }
 
         public boolean isEnabled() {
@@ -562,12 +562,12 @@ public class AscendPlayerProgress {
             this.enabled = enabled;
         }
 
-        public int getIncrement() {
-            return increment;
+        public int getTargetLevel() {
+            return targetLevel;
         }
 
-        public void setIncrement(int increment) {
-            this.increment = Math.max(1, increment);
+        public void setTargetLevel(int targetLevel) {
+            this.targetLevel = Math.max(0, targetLevel);
         }
     }
 
