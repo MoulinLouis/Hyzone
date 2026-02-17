@@ -195,6 +195,9 @@ public final class AscendDatabaseSetup {
             // Auto-summit columns
             ensureAutoSummitColumns(conn);
 
+            // Transcendence system
+            ensureTranscendenceColumns(conn);
+
             LOGGER.atInfo().log("Ascend database tables ensured");
             } // close try (Statement stmt)
 
@@ -1017,6 +1020,20 @@ public final class AscendDatabaseSetup {
                 LOGGER.atInfo().log("Added auto_summit_rotation_index column");
             } catch (SQLException e) {
                 LOGGER.atSevere().log("Failed to add auto_summit_rotation_index: " + e.getMessage());
+            }
+        }
+    }
+
+    private static void ensureTranscendenceColumns(Connection conn) {
+        if (conn == null) {
+            return;
+        }
+        if (!columnExists(conn, "ascend_players", "transcendence_count")) {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN transcendence_count INT NOT NULL DEFAULT 0");
+                LOGGER.atInfo().log("Added transcendence_count column to ascend_players");
+            } catch (SQLException e) {
+                LOGGER.atSevere().log("Failed to add transcendence_count column: " + e.getMessage());
             }
         }
     }

@@ -18,6 +18,7 @@ import io.hyvexa.ascend.command.ElevateCommand;
 import io.hyvexa.ascend.command.HudPreviewCommand;
 import io.hyvexa.ascend.command.SkillCommand;
 import io.hyvexa.ascend.command.SummitCommand;
+import io.hyvexa.ascend.command.TranscendCommand;
 import io.hyvexa.ascend.data.AscendDatabaseSetup;
 import io.hyvexa.core.analytics.AnalyticsStore;
 import io.hyvexa.core.db.DatabaseManager;
@@ -40,9 +41,11 @@ import io.hyvexa.ascend.interaction.AscendDevSilkInteraction;
 import io.hyvexa.ascend.interaction.AscendDevStormsilkInteraction;
 import io.hyvexa.ascend.interaction.AscendLeaveInteraction;
 import io.hyvexa.ascend.interaction.AscendResetInteraction;
+import io.hyvexa.ascend.interaction.AscendTranscendenceInteraction;
 import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.summit.SummitManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
+import io.hyvexa.ascend.transcendence.TranscendenceManager;
 import io.hyvexa.ascend.tutorial.TutorialTriggerService;
 import io.hyvexa.ascend.passive.PassiveEarningsManager;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
@@ -94,6 +97,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
     private AscendHologramManager hologramManager;
     private SummitManager summitManager;
     private AscensionManager ascensionManager;
+    private TranscendenceManager transcendenceManager;
     private ChallengeManager challengeManager;
     private AchievementManager achievementManager;
     private PassiveEarningsManager passiveEarningsManager;
@@ -187,6 +191,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
             LOGGER.atWarning().withCause(e).log("Failed to initialize robot manager");
         }
         ascensionManager = new AscensionManager(playerStore, runTracker);
+        transcendenceManager = new TranscendenceManager(playerStore, runTracker);
         challengeManager = new ChallengeManager(playerStore, mapStore, runTracker);
         achievementManager = new AchievementManager(playerStore);
 
@@ -214,6 +219,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
         getCommandRegistry().registerCommand(new ElevateCommand());
         getCommandRegistry().registerCommand(new SummitCommand());
         getCommandRegistry().registerCommand(new SkillCommand());
+        getCommandRegistry().registerCommand(new TranscendCommand());
         if (runtimeConfig.isEnableTestCommands()) {
             getCommandRegistry().registerCommand(new CinematicTestCommand());
             getCommandRegistry().registerCommand(new HudPreviewCommand());
@@ -429,6 +435,10 @@ public class ParkourAscendPlugin extends JavaPlugin {
         return ascensionManager;
     }
 
+    public TranscendenceManager getTranscendenceManager() {
+        return transcendenceManager;
+    }
+
     public ChallengeManager getChallengeManager() {
         return challengeManager;
     }
@@ -605,5 +615,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
             AscendLeaveInteraction.class, AscendLeaveInteraction.CODEC);
         registry.register("Ascend_Dev_Silk_Interaction",
             AscendDevSilkInteraction.class, AscendDevSilkInteraction.CODEC);
+        registry.register("Ascend_Transcendence_Interaction",
+            AscendTranscendenceInteraction.class, AscendTranscendenceInteraction.CODEC);
     }
 }
