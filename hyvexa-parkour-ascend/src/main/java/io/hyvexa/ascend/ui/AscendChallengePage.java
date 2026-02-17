@@ -34,6 +34,7 @@ public class AscendChallengePage extends BaseAscendPage {
 
     private static final String BUTTON_CLOSE = "Close";
     private static final String BUTTON_QUIT = "Quit";
+    private static final String BUTTON_LEADERBOARD = "Leaderboard";
     private static final String BUTTON_START_PREFIX = "Start:";
     private static final String BUTTON_BREAK = "BreakToggle";
 
@@ -66,6 +67,8 @@ public class AscendChallengePage extends BaseAscendPage {
 
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CloseButton",
             EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#LeaderboardButton",
+            EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_LEADERBOARD), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#QuitButton",
             EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_QUIT), false);
 
@@ -171,6 +174,11 @@ public class AscendChallengePage extends BaseAscendPage {
             return;
         }
 
+        if (BUTTON_LEADERBOARD.equals(data.getButton())) {
+            handleLeaderboard(ref, store);
+            return;
+        }
+
         if (BUTTON_QUIT.equals(data.getButton())) {
             handleQuit(ref, store);
             return;
@@ -236,6 +244,16 @@ public class AscendChallengePage extends BaseAscendPage {
             .color(SystemMessageUtils.SECONDARY));
 
         this.close();
+    }
+
+    private void handleLeaderboard(Ref<EntityStore> ref, Store<EntityStore> store) {
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (playerRef == null || player == null) {
+            return;
+        }
+        player.getPageManager().openCustomPage(ref, store,
+            new ChallengeLeaderboardPage(playerRef, playerStore, challengeManager));
     }
 
     private void handleQuit(Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -370,21 +388,25 @@ public class AscendChallengePage extends BaseAscendPage {
                 parts.add("Map 5 locked");
             }
         }
-        if (type.getSpeedEffectiveness() < 1.0) {
-            int malus = (int) ((1.0 - type.getSpeedEffectiveness()) * 100);
-            parts.add("Runner Speed -" + malus + "%");
+        if (type.getSpeedDivisor() > 1.0) {
+            parts.add("Runner Speed /" + formatDivisor(type.getSpeedDivisor()));
         }
-        if (type.getMultiplierGainEffectiveness() < 1.0) {
-            int malus = (int) ((1.0 - type.getMultiplierGainEffectiveness()) * 100);
-            parts.add("Multiplier Gain -" + malus + "%");
+        if (type.getMultiplierGainDivisor() > 1.0) {
+            parts.add("Multiplier Gain /" + formatDivisor(type.getMultiplierGainDivisor()));
         }
-        if (type.getEvolutionPowerEffectiveness() < 1.0) {
-            int malus = (int) ((1.0 - type.getEvolutionPowerEffectiveness()) * 100);
-            parts.add("Evolution Power -" + malus + "%");
+        if (type.getEvolutionPowerDivisor() > 1.0) {
+            parts.add("Evolution Power /" + formatDivisor(type.getEvolutionPowerDivisor()));
         }
 
         if (parts.isEmpty()) return "Malus: None";
         return "Malus: " + String.join(" + ", parts);
+    }
+
+    private static String formatDivisor(double divisor) {
+        if (divisor == (long) divisor) {
+            return String.valueOf((long) divisor);
+        }
+        return String.valueOf(divisor);
     }
 
     private String buildRewardDescription(ChallengeType type) {

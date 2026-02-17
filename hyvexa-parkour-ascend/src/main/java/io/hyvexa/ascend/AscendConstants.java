@@ -704,29 +704,29 @@ public final class AscendConstants {
             "#10b981",
             Set.of(), Set.of(4), 1.0, 1.0, 1.0),
         CHALLENGE_2(2, "Challenge 2",
-            "Complete an Ascension with 150% Runner Speed malus",
+            "Complete an Ascension with Runner Speed /3",
             "#f59e0b",
-            Set.of(), Set.of(), -0.5, 1.0, 1.0),
+            Set.of(), Set.of(), 3.0, 1.0, 1.0),
         CHALLENGE_3(3, "Challenge 3",
-            "Complete an Ascension with 150% Multiplier Gain malus",
+            "Complete an Ascension with Multiplier Gain /4",
             "#3b82f6",
-            Set.of(), Set.of(), 1.0, -0.5, 1.0),
+            Set.of(), Set.of(), 1.0, 4.0, 1.0),
         CHALLENGE_4(4, "Challenge 4",
-            "Complete an Ascension with 150% Evolution Power malus",
+            "Complete an Ascension with Evolution Power /5",
             "#ef4444",
-            Set.of(), Set.of(), 1.0, 1.0, -0.5),
+            Set.of(), Set.of(), 1.0, 1.0, 5.0),
         CHALLENGE_5(5, "Challenge 5",
-            "Complete an Ascension with no Runner Speed and Multiplier Gain bonus",
+            "Complete an Ascension with Runner Speed /2 and Multiplier Gain /2",
             "#8b5cf6",
-            Set.of(), Set.of(), 0.0, 0.0, 1.0),
+            Set.of(), Set.of(), 2.0, 2.0, 1.0),
         CHALLENGE_6(6, "Challenge 6",
-            "Complete an Ascension with no Summit bonuses",
+            "Complete an Ascension with Runner Speed /4 and Multiplier Gain /4",
             "#ec4899",
-            Set.of(), Set.of(), 0.0, 0.0, 0.0),
+            Set.of(), Set.of(), 4.0, 4.0, 1.0),
         CHALLENGE_7(7, "Challenge 7",
-            "Complete an Ascension without maps 4 and 5",
+            "Complete an Ascension with all Summit bonuses /2",
             "#f59e0b",
-            Set.of(), Set.of(3, 4), 1.0, 1.0, 1.0);
+            Set.of(), Set.of(3, 4), 2.0, 2.0, 2.0);
 
         private final int id;
         private final String displayName;
@@ -734,23 +734,23 @@ public final class AscendConstants {
         private final String accentColor;
         private final Set<SummitCategory> blockedSummitCategories;
         private final Set<Integer> blockedMapDisplayOrders;
-        private final double speedEffectiveness;
-        private final double multiplierGainEffectiveness;
-        private final double evolutionPowerEffectiveness;
+        private final double speedDivisor;
+        private final double multiplierGainDivisor;
+        private final double evolutionPowerDivisor;
 
         ChallengeType(int id, String displayName, String description, String accentColor,
                       Set<SummitCategory> blockedSummitCategories,
-                      Set<Integer> blockedMapDisplayOrders, double speedEffectiveness,
-                      double multiplierGainEffectiveness, double evolutionPowerEffectiveness) {
+                      Set<Integer> blockedMapDisplayOrders, double speedDivisor,
+                      double multiplierGainDivisor, double evolutionPowerDivisor) {
             this.id = id;
             this.displayName = displayName;
             this.description = description;
             this.accentColor = accentColor;
             this.blockedSummitCategories = blockedSummitCategories;
             this.blockedMapDisplayOrders = blockedMapDisplayOrders;
-            this.speedEffectiveness = speedEffectiveness;
-            this.multiplierGainEffectiveness = multiplierGainEffectiveness;
-            this.evolutionPowerEffectiveness = evolutionPowerEffectiveness;
+            this.speedDivisor = speedDivisor;
+            this.multiplierGainDivisor = multiplierGainDivisor;
+            this.evolutionPowerDivisor = evolutionPowerDivisor;
         }
 
         public int getId() { return id; }
@@ -759,9 +759,9 @@ public final class AscendConstants {
         public String getAccentColor() { return accentColor; }
         public Set<SummitCategory> getBlockedSummitCategories() { return blockedSummitCategories; }
         public Set<Integer> getBlockedMapDisplayOrders() { return blockedMapDisplayOrders; }
-        public double getSpeedEffectiveness() { return speedEffectiveness; }
-        public double getMultiplierGainEffectiveness() { return multiplierGainEffectiveness; }
-        public double getEvolutionPowerEffectiveness() { return evolutionPowerEffectiveness; }
+        public double getSpeedDivisor() { return speedDivisor; }
+        public double getMultiplierGainDivisor() { return multiplierGainDivisor; }
+        public double getEvolutionPowerDivisor() { return evolutionPowerDivisor; }
 
         public static ChallengeType fromId(int id) {
             for (ChallengeType type : values()) {

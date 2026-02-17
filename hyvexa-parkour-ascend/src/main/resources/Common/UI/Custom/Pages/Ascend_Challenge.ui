@@ -34,27 +34,59 @@ $C.@PageOverlay {
         Text: "AP Multiplier: x1";
       }
 
+      // Right side buttons
       Group {
-        Anchor: (Right: 16, Top: 10, Width: 72, Height: 32);
+        Anchor: (Right: 16, Top: 10, Width: 180, Height: 32);
+        LayoutMode: Left;
 
-        TextButton #CloseButton {
-          Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-          Text: "Close";
-          Style: TextButtonStyle(
-            Default: (
-              Background: #ffffff(0.06),
-              LabelStyle: (FontSize: 13, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
-            ),
-            Hovered: (
-              Background: #ffffff(0.1),
-              LabelStyle: (FontSize: 13, TextColor: #f0f4f8, HorizontalAlignment: Center, VerticalAlignment: Center)
-            ),
-            Pressed: (
-              Background: #ffffff(0.04),
-              LabelStyle: (FontSize: 13, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
-            ),
-            Sounds: $C.@ButtonSounds,
-          );
+        Group {
+          Anchor: (Width: 100, Height: 32);
+
+          TextButton #LeaderboardButton {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Text: "Leaderboard";
+            Style: TextButtonStyle(
+              Default: (
+                Background: #ffffff(0.06),
+                LabelStyle: (FontSize: 13, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Hovered: (
+                Background: #ffffff(0.1),
+                LabelStyle: (FontSize: 13, TextColor: #f0f4f8, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Pressed: (
+                Background: #ffffff(0.04),
+                LabelStyle: (FontSize: 13, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Sounds: $C.@ButtonSounds,
+            );
+          }
+        }
+
+        Group { Anchor: (Width: 8); }
+
+        Group {
+          Anchor: (Width: 72, Height: 32);
+
+          TextButton #CloseButton {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Text: "Close";
+            Style: TextButtonStyle(
+              Default: (
+                Background: #ffffff(0.06),
+                LabelStyle: (FontSize: 13, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Hovered: (
+                Background: #ffffff(0.1),
+                LabelStyle: (FontSize: 13, TextColor: #f0f4f8, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Pressed: (
+                Background: #ffffff(0.04),
+                LabelStyle: (FontSize: 13, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Sounds: $C.@ButtonSounds,
+            );
+          }
         }
       }
     }
