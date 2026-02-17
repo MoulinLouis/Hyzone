@@ -76,7 +76,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
     private final AtomicBoolean refreshRequested = new AtomicBoolean(false);
     private int lastMapCount;
     private final List<String> displayedMapIds = new ArrayList<>();
-    private final Map<String, int[]> cachedMapState = new HashMap<>(); // mapId -> [speedLevel, stars]
+    private final Map<String, int[]> cachedMapState = new HashMap<>(); // mapId -> [speedLevel, stars, hasRobot]
 
 
     public AscendMapSelectPage(@Nonnull PlayerRef playerRef, AscendMapStore mapStore,
@@ -258,7 +258,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_ROBOT_PREFIX + map.getId()), false);
 
             displayedMapIds.add(map.getId());
-            cachedMapState.put(map.getId(), new int[]{snapshot.speedLevel(), snapshot.stars()});
+            cachedMapState.put(map.getId(), new int[]{snapshot.speedLevel(), snapshot.stars(), snapshot.hasRobot() ? 1 : 0});
             index++;
         }
         return refreshSnapshot;
@@ -425,7 +425,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
         commandBuilder.set("#MapCards[" + index + "] #RobotPriceText.Text", runnerStatus.displayPriceText());
         commandBuilder.set("#MapCards[" + index + "] #RobotPriceText.Style.TextColor", secondaryTextColor);
 
-        return new RunnerCardSnapshot(speedLevel, stars);
+        return new RunnerCardSnapshot(speedLevel, stars, hasRobot);
     }
 
     private RunnerStatusData resolveRunnerStatusData(AscendMap map, boolean hasRobot, boolean hasGhostRecording,
@@ -748,6 +748,24 @@ public class AscendMapSelectPage extends BaseAscendPage {
             return;
         }
 
+        // Detect map count decrease (elevation reset locked maps) — full rebuild needed
+        if (maps.size() < lastMapCount) {
+            UICommandBuilder rebuildCmd = new UICommandBuilder();
+            UIEventBuilder rebuildEvt = new UIEventBuilder();
+            RefreshSnapshot rebuilt = buildMapList(ref, store, rebuildCmd, rebuildEvt);
+            if (rebuilt != null) {
+                updateBuyAllButtonState(rebuildCmd, rebuilt);
+                updateEvolveAllButtonState(rebuildCmd, rebuilt);
+            }
+            if (!isCurrentPage()) return;
+            try {
+                sendUpdate(rebuildCmd, rebuildEvt, false);
+            } catch (Exception e) {
+                stopAffordabilityUpdates();
+            }
+            return;
+        }
+
         // Detect new map unlocks (auto-upgrade hit level 3 and unlocked new maps)
         if (maps.size() > lastMapCount) {
             for (int i = lastMapCount; i < maps.size(); i++) {
@@ -779,12 +797,13 @@ public class AscendMapSelectPage extends BaseAscendPage {
 
             // Check if data changed since last refresh (auto-upgrade happened)
             int[] cached = cachedMapState.get(map.getId());
-            boolean dataChanged = cached == null || cached[0] != speedLevel || cached[1] != stars;
+            int hasRobotInt = mapState.hasRobot() ? 1 : 0;
+            boolean dataChanged = cached == null || cached[0] != speedLevel || cached[1] != stars || cached[2] != hasRobotInt;
 
             if (dataChanged) {
                 RunnerCardSnapshot snapshot = renderRunnerButton(
                     commandBuilder, i, map, mapProgress, playerRef.getUuid(), currentVexa);
-                cachedMapState.put(map.getId(), new int[]{snapshot.speedLevel(), snapshot.stars()});
+                cachedMapState.put(map.getId(), new int[]{snapshot.speedLevel(), snapshot.stars(), snapshot.hasRobot() ? 1 : 0});
             } else if (mapState.hasRobot() && speedLevel < MAX_SPEED_LEVEL) {
                 // No data change — affordability-only update for maps with upgrade buttons
                 boolean canAfford = mapState.canAffordUpgrade();
@@ -847,7 +866,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
         );
 
         // Keep cache in sync so the periodic refresh doesn't see a stale diff
-        cachedMapState.put(mapId, new int[]{snapshot.speedLevel(), snapshot.stars()});
+        cachedMapState.put(mapId, new int[]{snapshot.speedLevel(), snapshot.stars(), snapshot.hasRobot() ? 1 : 0});
 
         // Also update action button states (runner state may have changed)
         updateBuyAllButtonState(commandBuilder, playerRef.getUuid());
@@ -911,7 +930,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
 
         // Track new map in cache
         displayedMapIds.add(map.getId());
-        cachedMapState.put(map.getId(), new int[]{snapshot.speedLevel(), snapshot.stars()});
+        cachedMapState.put(map.getId(), new int[]{snapshot.speedLevel(), snapshot.stars(), snapshot.hasRobot() ? 1 : 0});
         lastMapCount++;
 
         // Send update to client
@@ -1087,7 +1106,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
     private record RefreshSnapshot(BigNumber currentVexa, List<MapRefreshState> mapStates,
                                    boolean hasAvailableBuyAll, boolean hasEligibleEvolution) {}
 
-    private record RunnerCardSnapshot(int speedLevel, int stars) {}
+    private record RunnerCardSnapshot(int speedLevel, int stars, boolean hasRobot) {}
 
     private String buildMomentumText(AscendPlayerProgress.MapProgress mapProgress, UUID playerId) {
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();

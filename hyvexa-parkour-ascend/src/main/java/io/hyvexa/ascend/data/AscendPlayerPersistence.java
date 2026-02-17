@@ -1008,7 +1008,7 @@ class AscendPlayerPersistence {
 
     /**
      * Serialize auto-summit config to JSON.
-     * Format: [{"enabled":true,"increment":10},{"enabled":false,"increment":5},...]
+     * Format: [{"enabled":true,"target":10},{"enabled":false,"target":5},...]
      */
     static String serializeAutoSummitConfig(java.util.List<AscendPlayerProgress.AutoSummitCategoryConfig> config) {
         if (config == null || config.isEmpty()) {
@@ -1019,7 +1019,7 @@ class AscendPlayerPersistence {
             if (i > 0) sb.append(",");
             AscendPlayerProgress.AutoSummitCategoryConfig c = config.get(i);
             sb.append("{\"enabled\":").append(c.isEnabled())
-              .append(",\"increment\":").append(c.getIncrement())
+              .append(",\"target\":").append(c.getTargetLevel())
               .append("}");
         }
         sb.append("]");
@@ -1028,7 +1028,7 @@ class AscendPlayerPersistence {
 
     /**
      * Parse auto-summit config from JSON.
-     * Expects: [{"enabled":true,"increment":10},...]
+     * Expects: [{"enabled":true,"target":10},...] (also accepts legacy "increment" key)
      */
     static java.util.List<AscendPlayerProgress.AutoSummitCategoryConfig> parseAutoSummitConfig(String json) {
         java.util.List<AscendPlayerProgress.AutoSummitCategoryConfig> result = new java.util.ArrayList<>();
@@ -1040,7 +1040,7 @@ class AscendPlayerPersistence {
             return result;
         }
 
-        // Simple JSON parsing for {"enabled":bool,"increment":int} objects
+        // Simple JSON parsing for {"enabled":bool,"target":int} objects
         String trimmed = json.trim();
         if (trimmed.startsWith("[")) trimmed = trimmed.substring(1);
         if (trimmed.endsWith("]")) trimmed = trimmed.substring(0, trimmed.length() - 1);
@@ -1052,7 +1052,7 @@ class AscendPlayerPersistence {
             if (cleaned.isBlank()) continue;
 
             boolean enabled = false;
-            int increment = 0;
+            int targetLevel = 0;
 
             for (String field : cleaned.split(",")) {
                 String[] kv = field.split(":");
@@ -1061,15 +1061,15 @@ class AscendPlayerPersistence {
                 String val = kv[1].trim().replace("\"", "");
                 if ("enabled".equals(key)) {
                     enabled = "true".equalsIgnoreCase(val);
-                } else if ("increment".equals(key)) {
+                } else if ("target".equals(key) || "increment".equals(key)) {
                     try {
-                        increment = Integer.parseInt(val);
+                        targetLevel = Integer.parseInt(val);
                     } catch (NumberFormatException e) {
-                        increment = 0;
+                        targetLevel = 0;
                     }
                 }
             }
-            result.add(new AscendPlayerProgress.AutoSummitCategoryConfig(enabled, increment));
+            result.add(new AscendPlayerProgress.AutoSummitCategoryConfig(enabled, targetLevel));
         }
 
         // Ensure exactly 3 entries

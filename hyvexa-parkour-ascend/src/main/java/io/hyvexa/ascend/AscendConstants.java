@@ -634,7 +634,7 @@ public final class AscendConstants {
         RUNNER_SPEED("Runner Speed Boost", "x1.1 global runner speed", AUTO_EVOLUTION),
         EVOLUTION_POWER("Evolution Power+", "+1 base evolution power", AUTO_EVOLUTION),
         RUNNER_SPEED_2("Runner Speed II", "x1.2 global runner speed", RUNNER_SPEED, EVOLUTION_POWER),
-        AUTO_SUMMIT("Auto-Summit", "Unlock automatic summit with per-category increment cycling.", RUNNER_SPEED_2),
+        AUTO_SUMMIT("Auto-Summit", "Unlock automatic summit with per-category target levels.", RUNNER_SPEED_2),
         AUTO_ELEVATION("Auto-Elevation", "Unlock automatic elevation with configurable multiplier targets.", RUNNER_SPEED_2),
         ASCENSION_CHALLENGES("Ascension Challenges", "Unlock Ascension Challenges", 1, AUTO_SUMMIT, AUTO_ELEVATION),
         MOMENTUM_SURGE("Momentum Surge", "Momentum boost x2 -> x2.5", 3, ASCENSION_CHALLENGES),

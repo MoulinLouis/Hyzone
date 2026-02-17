@@ -20,7 +20,6 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.ascension.AscensionManager;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
-import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
 
 import javax.annotation.Nonnull;
@@ -195,9 +194,8 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
             }
         }
 
-        // Auto-Elevation section (restricted to OP players only)
-        boolean isPlayerOp = PermissionUtils.isOp(playerId);
-        boolean hasElevAccess = isPlayerOp;
+        // Auto-Elevation section
+        boolean hasElevAccess = ascensionManager.hasAutoElevation(playerId);
         boolean isElevEnabled = playerStore.isAutoElevationEnabled(playerId);
 
         if (!hasElevAccess) {
@@ -249,8 +247,8 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
                 "Next target: x" + targets.get(targetIndex) + " (" + (targetIndex + 1) + "/" + targets.size() + ")");
         }
 
-        // Auto-Summit section (restricted to OP players only)
-        boolean hasSumAccess = isPlayerOp;
+        // Auto-Summit section
+        boolean hasSumAccess = ascensionManager.hasAutoSummit(playerId);
         boolean isSumEnabled = playerStore.isAutoSummitEnabled(playerId);
 
         if (!hasSumAccess) {
@@ -281,7 +279,9 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
         // Summit categories
         List<AscendPlayerProgress.AutoSummitCategoryConfig> sumConfig = playerStore.getAutoSummitConfig(playerId);
         io.hyvexa.ascend.AscendConstants.SummitCategory[] categories = io.hyvexa.ascend.AscendConstants.SummitCategory.values();
-        int rotationIndex = playerStore.getAutoSummitRotationIndex(playerId);
+
+        int activeCount = 0;
+        int reachedCount = 0;
 
         for (int i = 0; i < SUMMIT_CATEGORIES; i++) {
             AscendPlayerProgress.AutoSummitCategoryConfig catConfig =
@@ -292,7 +292,20 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
             if (i < categories.length) {
                 level = playerStore.getSummitLevel(playerId, categories[i]);
             }
-            commandBuilder.set("#SumCatLevel" + i + ".Text", "Lv " + level);
+
+            int targetLevel = catConfig.getTargetLevel();
+            boolean reached = targetLevel > 0 && level >= targetLevel;
+
+            if (catConfig.isEnabled() && targetLevel > 0) {
+                activeCount++;
+                if (reached) reachedCount++;
+            }
+
+            // Show current level and target status
+            String levelText = reached && targetLevel > 0
+                ? "Lv " + level + " (Reached!)"
+                : "Lv " + level;
+            commandBuilder.set("#SumCatLevel" + i + ".Text", levelText);
 
             // Toggle state
             if (catConfig.isEnabled()) {
@@ -305,23 +318,18 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
                 commandBuilder.set("#SumCatToggleText" + i + ".Style.TextColor", COLOR_OFF);
             }
 
-            // Increment field value
-            commandBuilder.set("#SumIncField" + i + ".Value", String.valueOf(catConfig.getIncrement()));
+            // Target level field value
+            commandBuilder.set("#SumIncField" + i + ".Value", String.valueOf(catConfig.getTargetLevel()));
         }
 
-        // Next category info
-        String nextCatName = null;
-        for (int i = 0; i < SUMMIT_CATEGORIES; i++) {
-            int idx = (rotationIndex + i) % SUMMIT_CATEGORIES;
-            if (idx < sumConfig.size() && sumConfig.get(idx).isEnabled() && idx < categories.length) {
-                nextCatName = categories[idx].getDisplayName();
-                break;
-            }
-        }
-        if (nextCatName != null) {
-            commandBuilder.set("#SumNextLabel.Text", "Next: " + nextCatName);
-        } else {
+        // Target summary
+        if (activeCount == 0) {
             commandBuilder.set("#SumNextLabel.Text", "No categories enabled.");
+        } else if (reachedCount >= activeCount) {
+            commandBuilder.set("#SumNextLabel.Text", "All targets reached!");
+        } else {
+            commandBuilder.set("#SumNextLabel.Text",
+                (activeCount - reachedCount) + " target" + (activeCount - reachedCount > 1 ? "s" : "") + " pending.");
         }
     }
 
@@ -541,8 +549,8 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
 
         UUID playerId = playerRef.getUuid();
 
-        if (!PermissionUtils.isOp(player)) {
-            player.sendMessage(Message.raw("[Automation] Auto-Elevation is currently disabled.")
+        if (!ascensionManager.hasAutoElevation(playerId)) {
+            player.sendMessage(Message.raw("[Automation] Unlock 'Auto-Elevation' in the Ascendancy Tree first.")
                 .color(SystemMessageUtils.SECONDARY));
             return;
         }
@@ -686,8 +694,8 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
 
         UUID playerId = playerRef.getUuid();
 
-        if (!PermissionUtils.isOp(player)) {
-            player.sendMessage(Message.raw("[Automation] Auto-Summit is currently disabled.")
+        if (!ascensionManager.hasAutoSummit(playerId)) {
+            player.sendMessage(Message.raw("[Automation] Unlock 'Auto-Summit' in the Ascendancy Tree first.")
                 .color(SystemMessageUtils.SECONDARY));
             return;
         }
@@ -738,7 +746,7 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
         }
 
         AscendPlayerProgress.AutoSummitCategoryConfig catConfig = config.get(index);
-        config.set(index, new AscendPlayerProgress.AutoSummitCategoryConfig(!catConfig.isEnabled(), catConfig.getIncrement()));
+        config.set(index, new AscendPlayerProgress.AutoSummitCategoryConfig(!catConfig.isEnabled(), catConfig.getTargetLevel()));
         playerStore.setAutoSummitConfig(playerId, config);
 
         UICommandBuilder updateBuilder = new UICommandBuilder();
@@ -757,8 +765,8 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
         }
 
         try {
-            int increment = (int) Double.parseDouble(input);
-            increment = Math.max(0, Math.min(1000, increment));
+            int targetLevel = (int) Double.parseDouble(input);
+            targetLevel = Math.max(0, Math.min(1000, targetLevel));
 
             UUID playerId = playerRef.getUuid();
             List<AscendPlayerProgress.AutoSummitCategoryConfig> config =
@@ -769,7 +777,7 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
             }
 
             AscendPlayerProgress.AutoSummitCategoryConfig catConfig = config.get(index);
-            config.set(index, new AscendPlayerProgress.AutoSummitCategoryConfig(catConfig.isEnabled(), increment));
+            config.set(index, new AscendPlayerProgress.AutoSummitCategoryConfig(catConfig.isEnabled(), targetLevel));
             playerStore.setAutoSummitConfig(playerId, config);
         } catch (NumberFormatException ignored) {
         }

@@ -32,7 +32,6 @@ import io.hyvexa.ascend.summit.SummitManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 import io.hyvexa.ascend.util.AscendModeGate;
 import io.hyvexa.common.math.BigNumber;
-import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.common.visibility.EntityVisibilityManager;
 
 import java.io.IOException;
@@ -811,8 +810,10 @@ public class RobotManager {
     // Auto-Elevation
 
     private void performAutoElevation(long now) {
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        AscensionManager ascensionMgr = plugin != null ? plugin.getAscensionManager() : null;
         for (UUID playerId : onlinePlayers) {
-            if (!PermissionUtils.isOp(playerId)) continue;
+            if (ascensionMgr == null || !ascensionMgr.hasAutoElevation(playerId)) continue;
             autoElevatePlayer(playerId, now);
         }
     }
@@ -906,8 +907,10 @@ public class RobotManager {
     // Auto-Summit
 
     private void performAutoSummit(long now) {
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        AscensionManager ascensionMgr = plugin != null ? plugin.getAscensionManager() : null;
         for (UUID playerId : onlinePlayers) {
-            if (!PermissionUtils.isOp(playerId)) continue;
+            if (ascensionMgr == null || !ascensionMgr.hasAutoSummit(playerId)) continue;
             autoSummitPlayer(playerId, now);
         }
     }
@@ -932,26 +935,29 @@ public class RobotManager {
         }
 
         List<AscendPlayerProgress.AutoSummitCategoryConfig> config = progress.getAutoSummitConfig();
-        int rotationIndex = progress.getAutoSummitRotationIndex();
         AscendConstants.SummitCategory[] categories = AscendConstants.SummitCategory.values();
 
-        // Find next enabled category starting from rotation index
+        // Target-based: iterate all categories and summit the first one that can reach its target
         for (int i = 0; i < categories.length; i++) {
-            int idx = (rotationIndex + i) % categories.length;
-            if (idx >= config.size()) continue;
+            if (i >= config.size()) continue;
 
-            AscendPlayerProgress.AutoSummitCategoryConfig catConfig = config.get(idx);
+            AscendPlayerProgress.AutoSummitCategoryConfig catConfig = config.get(i);
             if (!catConfig.isEnabled()) continue;
-            if (catConfig.getIncrement() <= 0) continue;
+            int targetLevel = catConfig.getTargetLevel();
+            if (targetLevel <= 0) continue;
 
-            AscendConstants.SummitCategory category = categories[idx];
+            AscendConstants.SummitCategory category = categories[i];
+            int currentLevel = playerStore.getSummitLevel(playerId, category);
+
+            // Skip if target already reached
+            if (currentLevel >= targetLevel) continue;
 
             // Preview the summit
             SummitManager.SummitPreview preview = summitManager.previewSummit(playerId, category);
             if (!preview.hasGain()) continue;
 
-            // Only summit if projected level reaches currentLevel + increment
-            if (preview.newLevel() < preview.currentLevel() + catConfig.getIncrement()) continue;
+            // Only summit if projected level reaches the target
+            if (preview.newLevel() < targetLevel) continue;
 
             // Perform summit
             SummitManager.SummitResult result = summitManager.performSummit(playerId, category);
@@ -961,9 +967,6 @@ public class RobotManager {
             for (String mapId : result.mapsWithRunners()) {
                 despawnRobot(playerId, mapId);
             }
-
-            // Advance rotation to next category
-            playerStore.setAutoSummitRotationIndex(playerId, (idx + 1) % categories.length);
 
             // Send chat message
             PlayerRef playerRef = plugin.getPlayerRef(playerId);
