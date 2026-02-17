@@ -121,6 +121,12 @@ public class SummitCommand extends AbstractAsyncCommand {
                 return;
             }
 
+            // Despawn all robots before resetting data to prevent completions with pre-reset multipliers
+            RobotManager robotManager = plugin.getRobotManager();
+            if (robotManager != null) {
+                robotManager.despawnRobotsForPlayer(playerId);
+            }
+
             // Perform summit
             SummitManager.SummitResult result = summitManager.performSummit(playerId, category);
             if (!result.succeeded()) {
@@ -129,26 +135,19 @@ public class SummitCommand extends AbstractAsyncCommand {
                 return;
             }
 
-            // Despawn runners
-            RobotManager robotManager = plugin.getRobotManager();
-            if (robotManager != null && !result.mapsWithRunners().isEmpty()) {
-                for (String mapId : result.mapsWithRunners()) {
-                    robotManager.despawnRobot(playerId, mapId);
-                }
-            }
-
             // Toast
             AscendHudManager hm = plugin.getHudManager();
             if (hm != null) {
                 hm.showToast(playerId, ToastType.EVOLUTION,
-                    category.getDisplayName() + " Lv." + preview.currentLevel()
-                    + " -> Lv." + result.newLevel()
+                    category.getDisplayName() + " Lv." + FormatUtils.formatLong(preview.currentLevel())
+                    + " -> Lv." + FormatUtils.formatLong(result.newLevel())
                     + " | " + formatBonus(category, preview.currentBonus())
                     + " -> " + formatBonus(category, preview.newBonus()));
             }
 
             player.sendMessage(Message.raw("[Summit] " + category.getDisplayName()
-                + " Lv." + preview.currentLevel() + " -> Lv." + result.newLevel()
+                + " Lv." + FormatUtils.formatLong(preview.currentLevel())
+                + " -> Lv." + FormatUtils.formatLong(result.newLevel())
                 + " | " + formatBonus(category, preview.currentBonus())
                 + " -> " + formatBonus(category, preview.newBonus()))
                 .color(SystemMessageUtils.SUCCESS));

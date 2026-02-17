@@ -88,6 +88,23 @@ public final class FormatUtils {
         return String.format(Locale.ROOT, "%.2fe%d", mantissa, exp);
     }
 
+    /**
+     * Format a plain long value with suffix notation (K, M, B, ...).
+     */
+    public static String formatLong(long value) {
+        if (value < 1_000L) {
+            return String.valueOf(value);
+        }
+        for (int i = SUFFIX_EXPONENTS.length - 1; i >= 0; i--) {
+            long threshold = (long) Math.pow(10, SUFFIX_EXPONENTS[i]);
+            if (value >= threshold) {
+                double display = value / (double) threshold;
+                return stripTrailingZeros(String.format(Locale.ROOT, "%.2f%s", display, SUFFIX_LABELS[i]));
+            }
+        }
+        return String.valueOf(value);
+    }
+
     public static String normalizeCategory(String category) {
         if (category == null || category.isBlank()) {
             return "Beginner";

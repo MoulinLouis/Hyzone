@@ -72,11 +72,9 @@ public class TranscendCommand extends AbstractAsyncCommand {
                 return;
             }
 
-            // Despawn all robots for this player before transcendence
-            if (plugin.getRobotManager() != null && plugin.getMapStore() != null) {
-                for (var map : plugin.getMapStore().listMaps()) {
-                    plugin.getRobotManager().despawnRobot(playerId, map.getId());
-                }
+            // Despawn all robots before resetting data to prevent completions with pre-reset multipliers
+            if (plugin.getRobotManager() != null) {
+                plugin.getRobotManager().despawnRobotsForPlayer(playerId);
             }
 
             int newCount = transcendenceManager.performTranscendence(playerId);
