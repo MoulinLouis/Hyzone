@@ -1111,9 +1111,11 @@ public class AscendMapSelectPage extends BaseAscendPage {
 
     private String buildMomentumText(AscendPlayerProgress.MapProgress mapProgress, UUID playerId) {
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        boolean hasMastery = plugin != null && plugin.getAscensionManager() != null
+                && plugin.getAscensionManager().hasMomentumMastery(playerId);
         boolean hasSurge = plugin != null && plugin.getAscensionManager() != null
                 && plugin.getAscensionManager().hasMomentumSurge(playerId);
-        String mult = hasSurge ? "x2.5" : "x2";
+        String mult = hasMastery ? "x3" : (hasSurge ? "x2.5" : "x2");
         long remainingMs = mapProgress.getMomentumExpireTimeMs() - System.currentTimeMillis();
         if (remainingMs <= 0) {
             return "MOMENTUM " + mult;
