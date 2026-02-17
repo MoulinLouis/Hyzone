@@ -6,7 +6,7 @@ $C.@PageOverlay {
     Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
 
     Group #RunHudRoot {
-      Anchor: (Right: 20, Top: 400, Width: 284, Height: 416);
+      Anchor: (Right: 20, Top: 400, Width: 284, Height: 392);
       LayoutMode: Left;
 
       Group #InfoAccentBar {
@@ -139,12 +139,6 @@ $C.@PageOverlay {
             }
           }
 
-          Label #ServerDateText {
-            Anchor: (Left: 0, Right: 0, Top: 6);
-            Style: (FontSize: 16, TextColor: #b2c0c7);
-            Text: "Music: -";
-          }
-
           Label #ServerIpText {
             Anchor: (Left: 0, Right: 0, Top: 4);
             Style: (
@@ -152,7 +146,7 @@ $C.@PageOverlay {
               TextColor: #ec4899(0.8),
               RenderBold: true
             );
-            Text: "IP: play.hyvexa.com";
+            Text: "IP: play.hyvexa.com (/vote)";
           }
 
           Group #InfoDivider {

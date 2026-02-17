@@ -32,7 +32,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /** Manages player run HUDs: timer display, checkpoint progress, leaderboard overlay. */
 public class HudManager {
 
-    private static final String SERVER_IP_DISPLAY = "play.hyvexa.com";
+    private static final String SERVER_IP_DISPLAY = "play.hyvexa.com (/vote)";
 
     private final ConcurrentHashMap<UUID, PlayerHudState> playerStates = new ConcurrentHashMap<>();
 

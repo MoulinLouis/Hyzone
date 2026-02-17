@@ -83,7 +83,7 @@ $C.@PageOverlay {
                 TextColor: #4ade80(0.8),
                 RenderBold: true
               );
-              Text: "play.hyvexa.com";
+              Text: "play.hyvexa.com (/vote)";
             }
 
             Group #InfoDivider {
