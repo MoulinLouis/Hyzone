@@ -812,9 +812,9 @@ public final class AscendConstants {
 
         // Prestige - Progression
         FIRST_ELEVATION("First Elevation", "Complete your first Elevation", AchievementCategory.PRESTIGE),
-        GOING_UP("Going Up", "Reach elevation 100", AchievementCategory.PRESTIGE),
-        SKY_HIGH("Sky High", "Reach elevation 5,000", AchievementCategory.PRESTIGE),
-        STRATOSPHERE("Stratosphere", "Reach elevation 20,000", AchievementCategory.PRESTIGE),
+        GOING_UP("Going Up", "Reach x100 multiplier", AchievementCategory.PRESTIGE),
+        SKY_HIGH("Sky High", "Reach x5,000 multiplier", AchievementCategory.PRESTIGE),
+        STRATOSPHERE("Stratosphere", "Reach x20,000 multiplier", AchievementCategory.PRESTIGE),
         SUMMIT_SEEKER("Summit Seeker", "Complete your first Summit", AchievementCategory.PRESTIGE),
         PEAK_PERFORMER("Peak Performer", "Reach summit level 10", AchievementCategory.PRESTIGE),
         MOUNTAINEER("Mountaineer", "Reach summit level 100", AchievementCategory.PRESTIGE),
