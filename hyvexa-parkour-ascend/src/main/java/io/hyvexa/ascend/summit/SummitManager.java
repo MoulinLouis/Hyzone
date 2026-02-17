@@ -207,19 +207,6 @@ public class SummitManager {
     }
 
     /**
-     * Get elevation cost multiplier based on skill tree.
-     * @return 0.70 if ELEVATION_BOOST unlocked, 1.0 otherwise
-     */
-    public BigNumber getElevationCostMultiplier(UUID playerId) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin != null && plugin.getAscensionManager() != null
-                && plugin.getAscensionManager().hasElevationBoost(playerId)) {
-            return BigNumber.fromDouble(0.70);
-        }
-        return BigNumber.ONE;
-    }
-
-    /**
      * Gets the Evolution Power bonus for runner evolution.
      * Formula: 3.0 + 0.10 * level (linear below soft cap, sqrt growth above).
      * Applied per star: multiplier_increment = 0.1 * evolutionPower^stars

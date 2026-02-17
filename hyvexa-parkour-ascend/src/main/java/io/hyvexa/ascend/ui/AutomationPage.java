@@ -35,6 +35,7 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
     private static final String BUTTON_CLOSE = "Close";
     private static final String BUTTON_TOGGLE = "Toggle";
     private static final String BUTTON_TOGGLE_EVOLUTION = "ToggleEvolution";
+    private static final String BUTTON_TOGGLE_ASCEND = "ToggleAscend";
     private static final String BUTTON_TOGGLE_ELEVATION = "ToggleElevation";
     private static final String BUTTON_ELEV_ADD = "ElevAdd";
     private static final String BUTTON_ELEV_CLEAR = "ElevClear";
@@ -83,6 +84,9 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
 
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#EvoToggleButton",
             EventData.of(AutomationData.KEY_BUTTON, BUTTON_TOGGLE_EVOLUTION), false);
+
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#AscToggleButton",
+            EventData.of(AutomationData.KEY_BUTTON, BUTTON_TOGGLE_ASCEND), false);
 
         // Auto-Elevation bindings
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ElevToggleButton",
@@ -191,6 +195,32 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
                 commandBuilder.set("#EvoToggleText.Style.TextColor", COLOR_ACCENT);
                 commandBuilder.set("#EvoStatusLabel.Text", "Status: OFF");
                 commandBuilder.set("#EvoStatusLabel.Style.TextColor", COLOR_OFF);
+            }
+        }
+
+        // Auto-Ascend section
+        boolean hasAscSkill = ascensionManager.hasAutoAscend(playerId);
+        boolean isAscEnabled = playerStore.isAutoAscendEnabled(playerId);
+
+        if (!hasAscSkill) {
+            commandBuilder.set("#AscContent.Visible", false);
+            commandBuilder.set("#AscLockedOverlay.Visible", true);
+        } else {
+            commandBuilder.set("#AscContent.Visible", true);
+            commandBuilder.set("#AscLockedOverlay.Visible", false);
+
+            if (isAscEnabled) {
+                commandBuilder.set("#AscToggleBorder.Background", COLOR_ON);
+                commandBuilder.set("#AscToggleText.Text", "Disable");
+                commandBuilder.set("#AscToggleText.Style.TextColor", COLOR_ON);
+                commandBuilder.set("#AscStatusLabel.Text", "Status: ON");
+                commandBuilder.set("#AscStatusLabel.Style.TextColor", COLOR_ON);
+            } else {
+                commandBuilder.set("#AscToggleBorder.Background", COLOR_ACCENT);
+                commandBuilder.set("#AscToggleText.Text", "Enable");
+                commandBuilder.set("#AscToggleText.Style.TextColor", COLOR_ACCENT);
+                commandBuilder.set("#AscStatusLabel.Text", "Status: OFF");
+                commandBuilder.set("#AscStatusLabel.Style.TextColor", COLOR_OFF);
             }
         }
 
@@ -434,6 +464,11 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
             return;
         }
 
+        if (BUTTON_TOGGLE_ASCEND.equals(data.button)) {
+            handleToggleAscend(ref, store);
+            return;
+        }
+
         if (BUTTON_TOGGLE_ELEVATION.equals(data.button)) {
             handleToggleElevation(ref, store);
             return;
@@ -535,6 +570,38 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
         }
 
         // Refresh UI
+        UICommandBuilder updateBuilder = new UICommandBuilder();
+        updateState(ref, store, updateBuilder);
+        sendUpdate(updateBuilder, null, false);
+    }
+
+    private void handleToggleAscend(Ref<EntityStore> ref, Store<EntityStore> store) {
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (playerRef == null || player == null) {
+            return;
+        }
+
+        UUID playerId = playerRef.getUuid();
+
+        if (!ascensionManager.hasAutoAscend(playerId)) {
+            player.sendMessage(Message.raw("[Automation] Unlock 'Auto Ascend' in the Ascendancy Tree first.")
+                .color(SystemMessageUtils.SECONDARY));
+            return;
+        }
+
+        boolean current = playerStore.isAutoAscendEnabled(playerId);
+        boolean newState = !current;
+        playerStore.setAutoAscendEnabled(playerId, newState);
+
+        if (newState) {
+            player.sendMessage(Message.raw("[Automation] Auto ascend enabled.")
+                .color(SystemMessageUtils.SUCCESS));
+        } else {
+            player.sendMessage(Message.raw("[Automation] Auto ascend disabled.")
+                .color(SystemMessageUtils.SECONDARY));
+        }
+
         UICommandBuilder updateBuilder = new UICommandBuilder();
         updateState(ref, store, updateBuilder);
         sendUpdate(updateBuilder, null, false);

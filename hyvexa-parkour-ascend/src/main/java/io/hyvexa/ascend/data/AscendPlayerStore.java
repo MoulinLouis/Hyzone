@@ -311,7 +311,7 @@ public class AscendPlayerStore {
             triggerService.checkVexaThresholds(playerId, oldBalance, newBalance);
         }
 
-        // Trigger ascension cinematic every time the threshold is crossed
+        // Trigger ascension every time the threshold is crossed
         if (crossedAscension) {
             AscendPlayerProgress progress = getPlayer(playerId);
             if (progress != null && progress.isBreakAscensionEnabled() && progress.hasAllChallengeRewards()) {
@@ -319,7 +319,13 @@ public class AscendPlayerStore {
                 checkTranscendenceNotification(playerId, oldBalance, newBalance, progress);
                 return; // Break mode active — suppress auto-ascension
             }
-            showAscensionExplainer(playerId);
+            // Auto Ascend skill + toggle: skip popup and cinematic, ascend immediately
+            if (plugin.getAscensionManager() != null && plugin.getAscensionManager().hasAutoAscend(playerId)
+                    && isAutoAscendEnabled(playerId)) {
+                performInstantAscension(playerId);
+            } else {
+                showAscensionExplainer(playerId);
+            }
         }
 
         // Also check transcendence threshold when break ascension is active
@@ -392,6 +398,57 @@ public class AscendPlayerStore {
                 }
                 player.getPageManager().openCustomPage(ref, store,
                     new io.hyvexa.ascend.ui.AscendAscensionExplainerPage(playerRef));
+            }, world);
+        }, 500, TimeUnit.MILLISECONDS);
+    }
+
+    /**
+     * Performs an instant ascension (no popup, no cinematic) for players with AUTO_ASCEND skill.
+     */
+    private void performInstantAscension(UUID playerId) {
+        if (!ascensionCinematicActive.add(playerId)) {
+            return; // Already in progress
+        }
+        HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
+            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+            if (plugin == null) {
+                ascensionCinematicActive.remove(playerId);
+                return;
+            }
+
+            com.hypixel.hytale.server.core.universe.PlayerRef playerRef = plugin.getPlayerRef(playerId);
+            if (playerRef == null) {
+                ascensionCinematicActive.remove(playerId);
+                return;
+            }
+
+            com.hypixel.hytale.component.Ref<com.hypixel.hytale.server.core.universe.world.storage.EntityStore> ref =
+                playerRef.getReference();
+            if (ref == null || !ref.isValid()) {
+                ascensionCinematicActive.remove(playerId);
+                return;
+            }
+
+            com.hypixel.hytale.component.Store<com.hypixel.hytale.server.core.universe.world.storage.EntityStore> store =
+                ref.getStore();
+            com.hypixel.hytale.server.core.universe.world.World world = store.getExternalData().getWorld();
+            if (world == null) {
+                ascensionCinematicActive.remove(playerId);
+                return;
+            }
+
+            java.util.concurrent.CompletableFuture.runAsync(() -> {
+                if (!ref.isValid()) {
+                    ascensionCinematicActive.remove(playerId);
+                    return;
+                }
+                com.hypixel.hytale.server.core.entity.entities.Player player =
+                    store.getComponent(ref, com.hypixel.hytale.server.core.entity.entities.Player.getComponentType());
+                if (player == null) {
+                    ascensionCinematicActive.remove(playerId);
+                    return;
+                }
+                performAutoAscension(playerId, player, playerRef, ref, store);
             }, world);
         }, 500, TimeUnit.MILLISECONDS);
     }
@@ -1380,8 +1437,30 @@ public class AscendPlayerStore {
 
         // If disabling break mode while above threshold, trigger ascension
         if (!enabled && progress.getVexa().gte(AscendConstants.ASCENSION_VEXA_THRESHOLD)) {
-            triggerAscensionCinematic(playerId);
+            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+            if (plugin != null && plugin.getAscensionManager() != null
+                    && plugin.getAscensionManager().hasAutoAscend(playerId)
+                    && isAutoAscendEnabled(playerId)) {
+                performInstantAscension(playerId);
+            } else {
+                triggerAscensionCinematic(playerId);
+            }
         }
+    }
+
+    // ========================================
+    // Auto-Ascend
+    // ========================================
+
+    public boolean isAutoAscendEnabled(UUID playerId) {
+        AscendPlayerProgress progress = players.get(playerId);
+        return progress != null && progress.isAutoAscendEnabled();
+    }
+
+    public void setAutoAscendEnabled(UUID playerId, boolean enabled) {
+        AscendPlayerProgress progress = getOrCreatePlayer(playerId);
+        progress.setAutoAscendEnabled(enabled);
+        markDirty(playerId);
     }
 
 }

@@ -562,8 +562,8 @@ Permanent skill nodes purchased with AP. Prerequisites use OR logic (any one par
 | 10R | Evolution Power III | 15 | +2 base evolution power | Runner Speed III OR Evolution Power II |
 | 11 | Momentum Mastery | 25 | Momentum x3.0 + 120s duration | Runner Speed IV OR Evolution Power III |
 | 12L | Multiplier Boost II | 40 | +0.25 base multiplier gain | Momentum Mastery |
-| 12R | Elevation Boost | 40 | Elevation cost -30% | Momentum Mastery |
-| 13 | Runner Speed V | 75 | x2.0 global runner speed | Multiplier Boost II OR Elevation Boost |
+| 12R | Auto Ascend | 40 | Automatically ascend at 1Dc | Momentum Mastery |
+| 13 | Runner Speed V | 75 | x2.0 global runner speed | Multiplier Boost II OR Auto Ascend |
 
 **Total AP for all nodes:** 286 AP
 

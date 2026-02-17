@@ -231,6 +231,79 @@ $C.@PageOverlay {
               }
             }
           }
+
+          Group { Anchor: (Height: 12); }
+
+          Group #AutoAscendSection {
+            Anchor: (Left: 0, Right: 0);
+            LayoutMode: Top;
+            Background: #ffffff(0.02);
+            OutlineColor: #ffffff(0.05);
+            OutlineSize: 1;
+            Padding: (Left: 14, Right: 14, Top: 12, Bottom: 12);
+
+            // Shown when unlocked
+            Group #AscContent {
+              Anchor: (Left: 0, Right: 0);
+              LayoutMode: Top;
+
+              Label {
+                Anchor: (Left: 0, Right: 0, Height: 22);
+                Style: (FontSize: 14, RenderBold: true, TextColor: #f0f4f8);
+                Text: "Auto Ascend";
+              }
+
+              Label {
+                Anchor: (Left: 0, Right: 0, Height: 18);
+                Style: (FontSize: 11, TextColor: #6b7280);
+                Text: "Skip popup and cinematic when ascending.";
+              }
+
+              Group { Anchor: (Height: 10); }
+
+              Group #AscToggleRow {
+                Anchor: (Left: 0, Right: 0, Height: 44);
+                LayoutMode: Left;
+
+                Label #AscStatusLabel {
+                  Anchor: (Width: 220, Height: 44);
+                  Padding: (Top: 12);
+                  Style: (FontSize: 13, TextColor: #9fb0ba);
+                  Text: "Status: OFF";
+                }
+
+                Button #AscToggleButton {
+                  Anchor: (Width: 120, Height: 40);
+                  Background: #1a2530;
+                  Style: ButtonStyle(
+                    Default: (Background: #1a2530),
+                    Hovered: (Background: #243342),
+                    Pressed: (Background: #1e2b38),
+                    Sounds: $C.@ButtonSounds,
+                  );
+                  LayoutMode: Top;
+                  Group #AscToggleBorder { Anchor: (Left: 0, Right: 0, Top: 0, Height: 3); Background: #4b5563; }
+                  Label #AscToggleText { Anchor: (Top: 10); Style: (FontSize: 13, RenderBold: true, TextColor: #9fb0ba, HorizontalAlignment: Center); Text: "Enable"; }
+                }
+              }
+            }
+
+            // Shown when locked
+            Group #AscLockedOverlay {
+              Anchor: (Left: 0, Right: 0, Height: 94);
+              LayoutMode: Top;
+              Visible: false;
+
+              Group { Anchor: (Height: 24); }
+              Group { Anchor: (Width: 24, Height: 24); Background: (TexturePath: "../Textures/lock.png"); }
+              Group { Anchor: (Height: 6); }
+              Label {
+                Anchor: (Left: 0, Right: 0, Height: 18);
+                Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center, Wrap: true);
+                Text: "Unlock in the Ascendancy Tree";
+              }
+            }
+          }
         }
 
         // Column gap

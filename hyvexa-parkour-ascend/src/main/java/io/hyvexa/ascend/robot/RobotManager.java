@@ -853,13 +853,9 @@ public class RobotManager {
             if (lastMs != null && (now - lastMs) < (long) timerSeconds * 1000L) return;
         }
 
-        // Calculate purchasable levels (apply Elevation Boost cost reduction if unlocked)
+        // Calculate purchasable levels
         BigNumber accumulatedVexa = progress.getElevationAccumulatedVexa();
-        ParkourAscendPlugin ascendPlugin = ParkourAscendPlugin.getInstance();
-        BigNumber elevationCostMultiplier = (ascendPlugin != null && ascendPlugin.getSummitManager() != null)
-            ? ascendPlugin.getSummitManager().getElevationCostMultiplier(playerId)
-            : BigNumber.ONE;
-        AscendConstants.ElevationPurchaseResult result = AscendConstants.calculateElevationPurchase(currentLevel, accumulatedVexa, elevationCostMultiplier);
+        AscendConstants.ElevationPurchaseResult result = AscendConstants.calculateElevationPurchase(currentLevel, accumulatedVexa, BigNumber.ONE);
         if (result.levels <= 0) return;
 
         int newLevel = currentLevel + result.levels;
