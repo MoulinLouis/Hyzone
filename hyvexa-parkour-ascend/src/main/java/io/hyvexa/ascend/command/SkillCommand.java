@@ -184,7 +184,7 @@ public class SkillCommand extends AbstractAsyncCommand {
             case "10_2" -> SkillTreeNode.EVOLUTION_POWER_3;
             case "11_1" -> SkillTreeNode.MOMENTUM_MASTERY;
             case "12_1" -> SkillTreeNode.MULTIPLIER_BOOST_2;
-            case "12_2" -> SkillTreeNode.ELEVATION_BOOST;
+            case "12_2" -> SkillTreeNode.AUTO_ASCEND;
             case "13_1" -> SkillTreeNode.RUNNER_SPEED_5;
             default -> null;
         };
@@ -209,7 +209,7 @@ public class SkillCommand extends AbstractAsyncCommand {
             case EVOLUTION_POWER_3 -> "10:2";
             case MOMENTUM_MASTERY -> "11:1";
             case MULTIPLIER_BOOST_2 -> "12:1";
-            case ELEVATION_BOOST -> "12:2";
+            case AUTO_ASCEND -> "12:2";
             case RUNNER_SPEED_5 -> "13:1";
         };
     }

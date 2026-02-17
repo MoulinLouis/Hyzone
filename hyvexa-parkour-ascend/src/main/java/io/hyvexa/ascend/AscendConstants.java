@@ -655,8 +655,8 @@ public final class AscendConstants {
         EVOLUTION_POWER_3("Evolution Power III", "+2 base evolution power", 100, RUNNER_SPEED_3, EVOLUTION_POWER_2),
         MOMENTUM_MASTERY("Momentum Mastery", "Momentum x3.0 + 120s duration", 200, RUNNER_SPEED_4, EVOLUTION_POWER_3),
         MULTIPLIER_BOOST_2("Multiplier Boost II", "+0.25 base multiplier gain", 400, MOMENTUM_MASTERY),
-        ELEVATION_BOOST("Elevation Boost", "Elevation cost -30%", 400, MOMENTUM_MASTERY),
-        RUNNER_SPEED_5("Runner Speed V", "x2.0 global runner speed", 1000, MULTIPLIER_BOOST_2, ELEVATION_BOOST);
+        AUTO_ASCEND("Auto Ascend", "Automatically ascend at 1Dc", 400, MOMENTUM_MASTERY),
+        RUNNER_SPEED_5("Runner Speed V", "x2.0 global runner speed", 1000, MULTIPLIER_BOOST_2, AUTO_ASCEND);
 
         private final String name;
         private final String description;

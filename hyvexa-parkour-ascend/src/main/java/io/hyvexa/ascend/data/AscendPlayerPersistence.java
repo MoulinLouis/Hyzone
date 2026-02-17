@@ -216,8 +216,8 @@ class AscendPlayerPersistence {
                 break_ascension_enabled,
                 auto_elevation_enabled, auto_elevation_timer_seconds, auto_elevation_targets, auto_elevation_target_index,
                 auto_summit_enabled, auto_summit_timer_seconds, auto_summit_config, auto_summit_rotation_index,
-                transcendence_count)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                transcendence_count, auto_ascend_enabled)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 player_name = VALUES(player_name),
                 vexa_mantissa = VALUES(vexa_mantissa), vexa_exp10 = VALUES(vexa_exp10),
@@ -247,7 +247,8 @@ class AscendPlayerPersistence {
                 auto_summit_timer_seconds = VALUES(auto_summit_timer_seconds),
                 auto_summit_config = VALUES(auto_summit_config),
                 auto_summit_rotation_index = VALUES(auto_summit_rotation_index),
-                transcendence_count = VALUES(transcendence_count)
+                transcendence_count = VALUES(transcendence_count),
+                auto_ascend_enabled = VALUES(auto_ascend_enabled)
             """;
 
         String mapSql = """
@@ -373,6 +374,7 @@ class AscendPlayerPersistence {
                     playerStmt.setString(31, serializeAutoSummitConfig(progress.getAutoSummitConfig()));
                     playerStmt.setInt(32, progress.getAutoSummitRotationIndex());
                     playerStmt.setInt(33, progress.getTranscendenceCount());
+                    playerStmt.setBoolean(34, progress.isAutoAscendEnabled());
                     playerStmt.addBatch();
 
                     // Save map progress
@@ -495,7 +497,7 @@ class AscendPlayerPersistence {
                    break_ascension_enabled,
                    auto_elevation_enabled, auto_elevation_timer_seconds, auto_elevation_targets, auto_elevation_target_index,
                    auto_summit_enabled, auto_summit_timer_seconds, auto_summit_config, auto_summit_rotation_index,
-                   transcendence_count
+                   transcendence_count, auto_ascend_enabled
             FROM ascend_players
             WHERE uuid = ?
             """;
@@ -567,6 +569,7 @@ class AscendPlayerPersistence {
                         progress.setAutoSummitRotationIndex(safeGetInt(rs, "auto_summit_rotation_index", 0));
 
                         progress.setTranscendenceCount(safeGetInt(rs, "transcendence_count", 0));
+                        progress.setAutoAscendEnabled(safeGetBoolean(rs, "auto_ascend_enabled", false));
                     }
                 }
             }
@@ -653,6 +656,10 @@ class AscendPlayerPersistence {
                     // Migration: ELEVATION_REMNANT replaced by AUTO_ELEVATION
                     if ("ELEVATION_REMNANT".equals(nodeName)) {
                         nodeName = "AUTO_ELEVATION";
+                    }
+                    // Migration: ELEVATION_BOOST replaced by AUTO_ASCEND
+                    if ("ELEVATION_BOOST".equals(nodeName)) {
+                        nodeName = "AUTO_ASCEND";
                     }
                     try {
                         SkillTreeNode node = SkillTreeNode.valueOf(nodeName);

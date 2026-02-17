@@ -644,24 +644,24 @@ $C.@PageOverlay {
             }
           }
 
-          // Tier 12: ELEVATION_BOOST (right)
-          Button #NodeElevationBoost {
+          // Tier 12: AUTO_ASCEND (right)
+          Button #NodeAutoAscend {
             Anchor: (Left: 420, Top: 1450, Width: 160, Height: 110);
             Background: #1a2530;
             Style: @NodeStyle;
             LayoutMode: Top;
-            Group #BorderElevationBoost { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Background: #4b5563; }
-            Group #RevealedElevationBoost {
+            Group #BorderAutoAscend { Anchor: (Left: 0, Right: 0, Top: 0, Height: 6); Background: #4b5563; }
+            Group #RevealedAutoAscend {
               Visible: false;
               Anchor: (Left: 0, Right: 0);
               FlexWeight: 1;
               LayoutMode: Top;
               Label { Anchor: (Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "12:2"; }
-              Label #NameElevationBoost { Anchor: (Top: 2); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Elevation Boost"; }
-              Label #DescElevationBoost { Anchor: (Top: 4); Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center); Text: "-30% elevation cost"; }
-              Label #StatusElevationBoost { Anchor: (Top: 6); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
+              Label #NameAutoAscend { Anchor: (Top: 2); Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, HorizontalAlignment: Center); Text: "Auto Ascend"; }
+              Label #DescAutoAscend { Anchor: (Top: 4); Style: (FontSize: 11, TextColor: #6b7280, HorizontalAlignment: Center); Text: "Auto ascend at 1Dc"; }
+              Label #StatusAutoAscend { Anchor: (Top: 6); Style: (FontSize: 12, RenderBold: true, TextColor: #6b7280, HorizontalAlignment: Center); Text: "LOCKED"; }
             }
-            Group #LockedElevationBoost {
+            Group #LockedAutoAscend {
               Anchor: (Left: 0, Right: 0);
               FlexWeight: 1;
               Label { Anchor: (Left: 0, Right: 0, Top: 4); Style: (FontSize: 9, TextColor: #4b5563, HorizontalAlignment: Center); Text: "12:2"; }

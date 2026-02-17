@@ -198,6 +198,9 @@ public final class AscendDatabaseSetup {
             // Transcendence system
             ensureTranscendenceColumns(conn);
 
+            // Auto-ascend toggle
+            ensureAutoAscendColumn(conn);
+
             LOGGER.atInfo().log("Ascend database tables ensured");
             } // close try (Statement stmt)
 
@@ -1034,6 +1037,20 @@ public final class AscendDatabaseSetup {
                 LOGGER.atInfo().log("Added transcendence_count column to ascend_players");
             } catch (SQLException e) {
                 LOGGER.atSevere().log("Failed to add transcendence_count column: " + e.getMessage());
+            }
+        }
+    }
+
+    private static void ensureAutoAscendColumn(Connection conn) {
+        if (conn == null) {
+            return;
+        }
+        if (!columnExists(conn, "ascend_players", "auto_ascend_enabled")) {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN auto_ascend_enabled BOOLEAN NOT NULL DEFAULT FALSE");
+                LOGGER.atInfo().log("Added auto_ascend_enabled column to ascend_players");
+            } catch (SQLException e) {
+                LOGGER.atSevere().log("Failed to add auto_ascend_enabled column: " + e.getMessage());
             }
         }
     }

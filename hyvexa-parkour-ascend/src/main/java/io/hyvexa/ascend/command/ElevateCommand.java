@@ -79,15 +79,11 @@ public class ElevateCommand extends AbstractAsyncCommand {
             BigNumber accumulatedVexa = playerStore.getElevationAccumulatedVexa(playerId);
             int currentElevation = playerStore.getElevationLevel(playerId);
 
-            // Get cost multiplier from skill tree (Elevation Boost = -30%)
-            BigNumber costMultiplier = (plugin.getSummitManager() != null)
-                ? plugin.getSummitManager().getElevationCostMultiplier(playerId)
-                : BigNumber.ONE;
             ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(
-                currentElevation, accumulatedVexa, costMultiplier);
+                currentElevation, accumulatedVexa, BigNumber.ONE);
 
             if (purchase.levels <= 0) {
-                BigNumber nextCost = AscendConstants.getElevationLevelUpCost(currentElevation, costMultiplier);
+                BigNumber nextCost = AscendConstants.getElevationLevelUpCost(currentElevation, BigNumber.ONE);
                 player.sendMessage(Message.raw("[Ascend] You need "
                     + FormatUtils.formatBigNumber(nextCost) + " accumulated vexa to elevate.")
                     .color(SystemMessageUtils.SECONDARY));

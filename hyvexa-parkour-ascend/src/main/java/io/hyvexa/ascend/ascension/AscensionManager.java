@@ -154,6 +154,8 @@ public class AscensionManager {
             playerStore.setAutoElevationEnabled(playerId, true);
         } else if (node == SkillTreeNode.AUTO_SUMMIT) {
             playerStore.setAutoSummitEnabled(playerId, true);
+        } else if (node == SkillTreeNode.AUTO_ASCEND) {
+            playerStore.setAutoAscendEnabled(playerId, true);
         }
 
         playerStore.markDirty(playerId);
@@ -258,8 +260,8 @@ public class AscensionManager {
         return hasSkillNode(playerId, SkillTreeNode.MULTIPLIER_BOOST_2);
     }
 
-    public boolean hasElevationBoost(UUID playerId) {
-        return hasSkillNode(playerId, SkillTreeNode.ELEVATION_BOOST);
+    public boolean hasAutoAscend(UUID playerId) {
+        return hasSkillNode(playerId, SkillTreeNode.AUTO_ASCEND);
     }
 
     public boolean hasRunnerSpeedBoost5(UUID playerId) {

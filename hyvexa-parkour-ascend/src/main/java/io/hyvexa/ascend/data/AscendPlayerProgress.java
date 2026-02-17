@@ -50,6 +50,7 @@ public class AscendPlayerProgress {
     private volatile boolean autoEvolutionEnabled;
     private volatile boolean hideOtherRunners;
     private volatile boolean breakAscensionEnabled;
+    private volatile boolean autoAscendEnabled;
 
     // Auto-elevation config
     private volatile boolean autoElevationEnabled;
@@ -474,6 +475,18 @@ public class AscendPlayerProgress {
 
     public void setAutoSummitRotationIndex(int index) {
         this.autoSummitRotationIndex = Math.max(0, index);
+    }
+
+    // ========================================
+    // Auto-Ascend
+    // ========================================
+
+    public boolean isAutoAscendEnabled() {
+        return autoAscendEnabled;
+    }
+
+    public void setAutoAscendEnabled(boolean enabled) {
+        this.autoAscendEnabled = enabled;
     }
 
     // ========================================
