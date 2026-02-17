@@ -26,6 +26,7 @@ public class HubMenuPage extends InteractiveCustomUIPage<ButtonEventData> {
 
     private static final String BUTTON_PARKOUR = "Parkour";
     private static final String BUTTON_ASCEND = "Parkour Ascend";
+    private static final String BUTTON_PURGE = "Purge";
     private static final String BUTTON_DISCORD = "Discord";
     private static final String BUTTON_STORE = "Store";
     private static final String BUTTON_CLOSE = "Close";
@@ -63,6 +64,8 @@ public class HubMenuPage extends InteractiveCustomUIPage<ButtonEventData> {
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_PARKOUR), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#AscendButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_ASCEND), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#PurgeButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_PURGE), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#DiscordBannerButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_DISCORD), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#StoreBannerButton",
@@ -127,6 +130,13 @@ public class HubMenuPage extends InteractiveCustomUIPage<ButtonEventData> {
             }
             if (playerRef != null) {
                 router.routeToAscend(playerRef);
+            }
+            this.close();
+            return;
+        }
+        if (BUTTON_PURGE.equals(data.getButton())) {
+            if (playerRef != null) {
+                router.routeToPurge(playerRef);
             }
             this.close();
             return;

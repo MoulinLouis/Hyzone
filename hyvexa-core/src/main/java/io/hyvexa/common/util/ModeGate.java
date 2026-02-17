@@ -29,4 +29,8 @@ public final class ModeGate {
     public static boolean isAscendWorld(World world) {
         return isWorld(world, WorldConstants.WORLD_ASCEND);
     }
+
+    public static boolean isPurgeWorld(World world) {
+        return isWorld(world, WorldConstants.WORLD_PURGE);
+    }
 }

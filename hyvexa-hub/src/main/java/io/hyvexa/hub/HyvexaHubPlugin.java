@@ -298,6 +298,7 @@ public class HyvexaHubPlugin extends JavaPlugin {
             Universe.get().loadWorld(WorldConstants.WORLD_HUB);
             Universe.get().loadWorld(WorldConstants.WORLD_PARKOUR);
             Universe.get().loadWorld(WorldConstants.WORLD_ASCEND);
+            Universe.get().loadWorld(WorldConstants.WORLD_PURGE);
         } catch (Exception e) {
             LOGGER.atWarning().log("Failed to preload hub worlds: " + e.getMessage());
         }

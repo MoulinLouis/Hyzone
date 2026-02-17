@@ -1,0 +1,22 @@
+{
+    "Group": "io.hyvexa",
+    "Name": "HyvexaPurge",
+    "Version": "1.0.0",
+    "Description": "Hyvexa Purge - Zombie Survival Mode",
+    "Authors": [
+        {
+            "Name": "Playfade"
+        }
+    ],
+    "Website": "",
+    "ServerVersion": "*",
+    "Dependencies": {
+        
+    },
+    "OptionalDependencies": {
+        
+    },
+    "DisabledByDefault": false,
+    "Main": "io.hyvexa.purge.HyvexaPurgePlugin",
+    "IncludesAssetPack": true
+}
