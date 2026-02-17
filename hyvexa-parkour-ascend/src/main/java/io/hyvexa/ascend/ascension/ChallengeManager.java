@@ -16,6 +16,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -238,39 +239,39 @@ public class ChallengeManager {
     }
 
     /**
-     * Get the speed effectiveness for the player's active challenge.
+     * Get the speed divisor for the player's active challenge.
      * Returns 1.0 if no challenge or no speed nerf.
      */
-    public double getSpeedEffectiveness(UUID playerId) {
+    public double getSpeedDivisor(UUID playerId) {
         ActiveChallenge active = activeChallenges.get(playerId);
         if (active == null) {
             return 1.0;
         }
-        return active.challengeType().getSpeedEffectiveness();
+        return active.challengeType().getSpeedDivisor();
     }
 
     /**
-     * Get the multiplier gain effectiveness for the player's active challenge.
+     * Get the multiplier gain divisor for the player's active challenge.
      * Returns 1.0 if no challenge or no multiplier gain nerf.
      */
-    public double getMultiplierGainEffectiveness(UUID playerId) {
+    public double getMultiplierGainDivisor(UUID playerId) {
         ActiveChallenge active = activeChallenges.get(playerId);
         if (active == null) {
             return 1.0;
         }
-        return active.challengeType().getMultiplierGainEffectiveness();
+        return active.challengeType().getMultiplierGainDivisor();
     }
 
     /**
-     * Get the evolution power effectiveness for the player's active challenge.
+     * Get the evolution power divisor for the player's active challenge.
      * Returns 1.0 if no challenge or no evolution power nerf.
      */
-    public double getEvolutionPowerEffectiveness(UUID playerId) {
+    public double getEvolutionPowerDivisor(UUID playerId) {
         ActiveChallenge active = activeChallenges.get(playerId);
         if (active == null) {
             return 1.0;
         }
-        return active.challengeType().getEvolutionPowerEffectiveness();
+        return active.challengeType().getEvolutionPowerDivisor();
     }
 
     // ========================================
@@ -576,4 +577,47 @@ public class ChallengeManager {
     public record ActiveChallenge(ChallengeType challengeType, long startedAtMs, ChallengeSnapshot snapshot) {}
 
     public record ChallengeRecord(Long bestTimeMs, int completions) {}
+
+    public record ChallengeLeaderboardEntry(String playerName, long bestTimeMs, int completions) {}
+
+    /**
+     * Get the leaderboard for a specific challenge type.
+     * Returns all players who have a best time, sorted fastest first.
+     */
+    public List<ChallengeLeaderboardEntry> getChallengeLeaderboard(ChallengeType challengeType) {
+        List<ChallengeLeaderboardEntry> entries = new ArrayList<>();
+        if (!DatabaseManager.getInstance().isInitialized()) {
+            return entries;
+        }
+
+        String sql = """
+            SELECT cr.best_time_ms, cr.completions, ap.player_name
+            FROM ascend_challenge_records cr
+            LEFT JOIN ascend_players ap ON cr.player_uuid = ap.uuid
+            WHERE cr.challenge_type_id = ? AND cr.best_time_ms IS NOT NULL
+            ORDER BY cr.best_time_ms ASC
+            """;
+
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection");
+                return entries;
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setInt(1, challengeType.getId());
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        String playerName = rs.getString("player_name");
+                        long bestTimeMs = rs.getLong("best_time_ms");
+                        int completions = rs.getInt("completions");
+                        entries.add(new ChallengeLeaderboardEntry(playerName, bestTimeMs, completions));
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.atSevere().log("[Challenge] Failed to load leaderboard for " + challengeType.name() + ": " + e.getMessage());
+        }
+        return entries;
+    }
 }

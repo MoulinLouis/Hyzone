@@ -145,20 +145,18 @@ public class SummitManager {
     /**
      * Gets the runner speed bonus multiplier.
      * Formula: 1.0 + 0.15 * level (linear below soft cap, sqrt growth above).
-     * During Challenge 4, the summit bonus portion is reduced by speedEffectiveness.
+     * During active challenges, the full value is divided by the challenge's speed divisor.
      * @return Multiplier value (1.0 at level 0, 2.5 at level 10)
      */
     public double getRunnerSpeedBonus(UUID playerId) {
         double fullBonus = playerStore.getSummitBonusDouble(playerId, SummitCategory.RUNNER_SPEED);
 
-        // Challenge malus: if speed is nerfed, reduce only the bonus portion
+        // Challenge malus: divide full value by speed divisor
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         if (plugin != null && plugin.getChallengeManager() != null) {
-            double speedEffectiveness = plugin.getChallengeManager().getSpeedEffectiveness(playerId);
-            if (speedEffectiveness < 1.0) {
-                double base = SummitCategory.RUNNER_SPEED.getBonusForLevel(0); // 1.0
-                double bonus = fullBonus - base;
-                fullBonus = Math.max(base, base + (bonus * speedEffectiveness));
+            double divisor = plugin.getChallengeManager().getSpeedDivisor(playerId);
+            if (divisor > 1.0) {
+                fullBonus /= divisor;
             }
             // Challenge reward: permanent speed bonus from completed challenges
             fullBonus *= plugin.getChallengeManager().getChallengeSpeedMultiplier(playerId);
@@ -170,20 +168,18 @@ public class SummitManager {
     /**
      * Gets the multiplier gain bonus.
      * Formula: 1.0 + 0.30 * level (linear below soft cap, sqrt growth above).
-     * During active challenges, the summit bonus portion is reduced by multiplierGainEffectiveness.
+     * During active challenges, the full value is divided by the challenge's multiplier gain divisor.
      * @return Multiplier value (1.0 at level 0, 4.0 at level 10)
      */
     public double getMultiplierGainBonus(UUID playerId) {
         double fullBonus = playerStore.getSummitBonusDouble(playerId, SummitCategory.MULTIPLIER_GAIN);
 
-        // Challenge malus: reduce multiplier gain bonus portion
+        // Challenge malus: divide full value by multiplier gain divisor
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         if (plugin != null && plugin.getChallengeManager() != null) {
-            double effectiveness = plugin.getChallengeManager().getMultiplierGainEffectiveness(playerId);
-            if (effectiveness < 1.0) {
-                double base = SummitCategory.MULTIPLIER_GAIN.getBonusForLevel(0); // 1.0
-                double bonus = fullBonus - base;
-                fullBonus = Math.max(base, base + (bonus * effectiveness));
+            double divisor = plugin.getChallengeManager().getMultiplierGainDivisor(playerId);
+            if (divisor > 1.0) {
+                fullBonus /= divisor;
             }
             // Challenge reward: permanent mult gain bonus from completed challenges
             fullBonus *= plugin.getChallengeManager().getChallengeMultiplierGainBonus(playerId);
@@ -227,20 +223,18 @@ public class SummitManager {
      * Gets the Evolution Power bonus for runner evolution.
      * Formula: 3.0 + 0.10 * level (linear below soft cap, sqrt growth above).
      * Applied per star: multiplier_increment = 0.1 * evolutionPower^stars
-     * During active challenges, the summit bonus portion is reduced by evolutionPowerEffectiveness.
+     * During active challenges, the full value is divided by the challenge's evolution power divisor.
      * @return Evolution bonus (3.0 at level 0, 4.0 at level 10)
      */
     public double getEvolutionPowerBonus(UUID playerId) {
         double fullBonus = playerStore.getSummitBonusDouble(playerId, SummitCategory.EVOLUTION_POWER);
 
-        // Challenge malus: reduce evolution power bonus portion
+        // Challenge malus: divide full value by evolution power divisor
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         if (plugin != null && plugin.getChallengeManager() != null) {
-            double effectiveness = plugin.getChallengeManager().getEvolutionPowerEffectiveness(playerId);
-            if (effectiveness < 1.0) {
-                double base = SummitCategory.EVOLUTION_POWER.getBonusForLevel(0); // 3.0
-                double bonus = fullBonus - base;
-                fullBonus = Math.max(base, base + (bonus * effectiveness));
+            double divisor = plugin.getChallengeManager().getEvolutionPowerDivisor(playerId);
+            if (divisor > 1.0) {
+                fullBonus /= divisor;
             }
         }
 
