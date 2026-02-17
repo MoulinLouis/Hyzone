@@ -135,11 +135,7 @@ public class LeaderboardHologramManager {
         List<String> lines = buildMapLeaderboardHologramLines(mapId);
         logMapHologramDebug("Updating map holo '" + holoName + "' with " + lines.size() + " lines.");
         try {
-            HylogramsBridge.Hologram existing = HylogramsBridge.get(holoName);
             HylogramsBridge.updateHologramLines(holoName, lines, store);
-            if (existing != null) {
-                existing.respawn(store).save(store);
-            }
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("Failed to update map leaderboard hologram");
         }
