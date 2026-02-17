@@ -94,6 +94,12 @@ public class ElevateCommand extends AbstractAsyncCommand {
                 return;
             }
 
+            // Despawn all robots before resetting data to prevent completions with pre-reset multipliers
+            RobotManager robotManager = plugin.getRobotManager();
+            if (robotManager != null) {
+                robotManager.despawnRobotsForPlayer(playerId);
+            }
+
             // Perform elevation
             int newElevation = currentElevation + purchase.levels;
             playerStore.atomicSetElevationAndResetVexa(playerId, newElevation);
@@ -108,7 +114,6 @@ public class ElevateCommand extends AbstractAsyncCommand {
 
             // Reset progress (vexa, map unlocks, runners)
             AscendMapStore mapStore = plugin.getMapStore();
-            RobotManager robotManager = plugin.getRobotManager();
 
             String firstMapId = null;
             if (mapStore != null) {
@@ -118,13 +123,7 @@ public class ElevateCommand extends AbstractAsyncCommand {
                 }
             }
 
-            List<String> mapsWithRunners = playerStore.resetProgressForElevation(playerId, firstMapId);
-
-            if (robotManager != null && !mapsWithRunners.isEmpty()) {
-                for (String mapId : mapsWithRunners) {
-                    robotManager.despawnRobot(playerId, mapId);
-                }
-            }
+            playerStore.resetProgressForElevation(playerId, firstMapId);
 
             if (plugin.getAchievementManager() != null) {
                 plugin.getAchievementManager().checkAndUnlockAchievements(playerId, player);

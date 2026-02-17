@@ -93,6 +93,14 @@ public class AscensionPage extends BaseAscendPage {
             return;
         }
 
+        // Despawn all robots before resetting data to prevent completions with pre-reset multipliers
+        if (plugin != null) {
+            io.hyvexa.ascend.robot.RobotManager robotManager = plugin.getRobotManager();
+            if (robotManager != null) {
+                robotManager.despawnRobotsForPlayer(playerId);
+            }
+        }
+
         int newCount = ascensionManager.performAscension(playerId);
         if (newCount < 0) {
             player.sendMessage(Message.raw("[Ascension] Ascension failed.")

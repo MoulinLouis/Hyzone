@@ -309,21 +309,19 @@ public class SummitPage extends BaseAscendPage {
             return;
         }
 
+        // Despawn all robots before resetting data to prevent completions with pre-reset multipliers
+        if (plugin != null) {
+            RobotManager robotManager = plugin.getRobotManager();
+            if (robotManager != null) {
+                robotManager.despawnRobotsForPlayer(playerId);
+            }
+        }
+
         SummitManager.SummitResult result = summitManager.performSummit(playerId, category);
         if (!result.succeeded()) {
             player.sendMessage(Message.raw("[Summit] Summit failed.")
                 .color(SystemMessageUtils.SECONDARY));
             return;
-        }
-
-        // Despawn all runners (player loses them on Summit, like elevation)
-        if (plugin != null) {
-            RobotManager robotManager = plugin.getRobotManager();
-            if (robotManager != null && !result.mapsWithRunners().isEmpty()) {
-                for (String mapId : result.mapsWithRunners()) {
-                    robotManager.despawnRobot(playerId, mapId);
-                }
-            }
         }
 
         showToast(playerId, ToastType.EVOLUTION,

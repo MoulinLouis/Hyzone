@@ -470,6 +470,12 @@ public class AscendPlayerStore {
                 return;
             }
 
+            // Despawn all robots before resetting data to prevent completions with pre-reset multipliers
+            io.hyvexa.ascend.robot.RobotManager robotManager = plugin.getRobotManager();
+            if (robotManager != null) {
+                robotManager.despawnRobotsForPlayer(playerId);
+            }
+
             int newCount = ascensionManager.performAscension(playerId);
             if (newCount < 0) return;
 

@@ -65,7 +65,7 @@ public class RobotManager {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final String RUNNER_UUIDS_FILE = "runner_uuids.txt";
-    private static final long AUTO_UPGRADE_INTERVAL_MS = 400L;
+    private static final long AUTO_UPGRADE_INTERVAL_MS = 50L;
     private static final long TELEPORT_WARNING_THROTTLE_MS = 10_000L;
 
     private final AscendMapStore mapStore;
@@ -143,7 +143,7 @@ public class RobotManager {
         }
     }
 
-    private void despawnRobotsForPlayer(UUID playerId) {
+    public void despawnRobotsForPlayer(UUID playerId) {
         for (String key : List.copyOf(robots.keySet())) {
             if (key.startsWith(playerId.toString() + ":")) {
                 RobotState removed = robots.remove(key);
@@ -404,16 +404,21 @@ public class RobotManager {
             // Process any pending orphan removals first (queued from ECS tick)
             processPendingRemovals();
             refreshRobots(now);
+            boolean doAutoOps = now - lastAutoUpgradeMs >= AUTO_UPGRADE_INTERVAL_MS;
+            // Process auto-elevation/summit BEFORE robot ticking so that
+            // robots are despawned before they can earn with pre-reset multipliers
+            if (doAutoOps) {
+                performAutoElevation(now);
+                performAutoSummit(now);
+            }
             for (RobotState robot : robots.values()) {
                 tickRobot(robot, now);
                 tickRobotMovement(robot, now);
             }
             // Auto-upgrade runners for players with the skill (throttled)
-            if (now - lastAutoUpgradeMs >= AUTO_UPGRADE_INTERVAL_MS) {
+            if (doAutoOps) {
                 lastAutoUpgradeMs = now;
                 performAutoRunnerUpgrades();
-                performAutoElevation(now);
-                performAutoSummit(now);
             }
         } catch (Exception e) {
             LOGGER.atWarning().log("Error in robot tick: " + e.getMessage());
@@ -862,6 +867,9 @@ public class RobotManager {
         long nextTarget = targets.get(targetIndex);
         if (newMultiplier < nextTarget) return;
 
+        // Despawn all robots before resetting data to prevent completions with pre-reset multipliers
+        despawnRobotsForPlayer(playerId);
+
         // Execute elevation
         playerStore.atomicSetElevationAndResetVexa(playerId, newLevel);
 
@@ -869,10 +877,7 @@ public class RobotManager {
         List<AscendMap> maps = mapStore.listMapsSorted();
         String firstMapId = maps.isEmpty() ? null : maps.get(0).getId();
 
-        List<String> mapsWithRunners = playerStore.resetProgressForElevation(playerId, firstMapId);
-        for (String mapId : mapsWithRunners) {
-            despawnRobot(playerId, mapId);
-        }
+        playerStore.resetProgressForElevation(playerId, firstMapId);
 
         // Send chat message
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
@@ -965,14 +970,12 @@ public class RobotManager {
             // Only summit if projected level reaches the target
             if (preview.newLevel() < targetLevel) continue;
 
+            // Despawn all robots before resetting data to prevent completions with pre-reset multipliers
+            despawnRobotsForPlayer(playerId);
+
             // Perform summit
             SummitManager.SummitResult result = summitManager.performSummit(playerId, category);
             if (!result.succeeded()) continue;
-
-            // Despawn robots from maps that had runners
-            for (String mapId : result.mapsWithRunners()) {
-                despawnRobot(playerId, mapId);
-            }
 
             // Send chat message
             PlayerRef playerRef = plugin.getPlayerRef(playerId);

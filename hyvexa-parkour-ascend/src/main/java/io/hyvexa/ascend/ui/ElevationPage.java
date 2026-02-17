@@ -99,6 +99,14 @@ public class ElevationPage extends BaseAscendPage {
             return;
         }
 
+        // Despawn all robots before resetting data to prevent completions with pre-reset multipliers
+        if (plugin != null) {
+            RobotManager robotManager = plugin.getRobotManager();
+            if (robotManager != null) {
+                robotManager.despawnRobotsForPlayer(playerId);
+            }
+        }
+
         // Set new elevation and reset vexa/accumulators atomically
         int newElevation = currentElevation + purchase.levels;
         playerStore.atomicSetElevationAndResetVexa(playerId, newElevation);
@@ -110,7 +118,6 @@ public class ElevationPage extends BaseAscendPage {
         // Reset all progress (vexa, map unlocks, runners). Best times are preserved.
         if (plugin != null) {
             AscendMapStore mapStore = plugin.getMapStore();
-            RobotManager robotManager = plugin.getRobotManager();
 
             // Get first map ID
             String firstMapId = null;
@@ -121,15 +128,7 @@ public class ElevationPage extends BaseAscendPage {
                 }
             }
 
-            // Reset progress and get list of maps with runners for despawn
-            List<String> mapsWithRunners = playerStore.resetProgressForElevation(playerId, firstMapId);
-
-            // Despawn all runners (player loses them on elevation)
-            if (robotManager != null && !mapsWithRunners.isEmpty()) {
-                for (String mapId : mapsWithRunners) {
-                    robotManager.despawnRobot(playerId, mapId);
-                }
-            }
+            playerStore.resetProgressForElevation(playerId, firstMapId);
 
             // Check achievements
             if (plugin.getAchievementManager() != null) {

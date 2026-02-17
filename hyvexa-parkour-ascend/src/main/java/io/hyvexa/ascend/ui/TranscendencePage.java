@@ -86,12 +86,10 @@ public class TranscendencePage extends BaseAscendPage {
             return;
         }
 
-        // Despawn all robots for this player before transcendence
+        // Despawn all robots before resetting data to prevent completions with pre-reset multipliers
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin != null && plugin.getRobotManager() != null && plugin.getMapStore() != null) {
-            for (var map : plugin.getMapStore().listMaps()) {
-                plugin.getRobotManager().despawnRobot(playerId, map.getId());
-            }
+        if (plugin != null && plugin.getRobotManager() != null) {
+            plugin.getRobotManager().despawnRobotsForPlayer(playerId);
         }
 
         int newCount = transcendenceManager.performTranscendence(playerId);

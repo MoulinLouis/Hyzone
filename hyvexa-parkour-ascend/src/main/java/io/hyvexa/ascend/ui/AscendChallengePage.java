@@ -219,22 +219,20 @@ public class AscendChallengePage extends BaseAscendPage {
             return;
         }
 
+        // Despawn all robots before resetting data to prevent completions with pre-reset multipliers
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin != null) {
+            RobotManager robotManager = plugin.getRobotManager();
+            if (robotManager != null) {
+                robotManager.despawnRobotsForPlayer(playerId);
+            }
+        }
+
         List<String> mapsWithRunners = challengeManager.startChallenge(playerId, type);
         if (mapsWithRunners == null) {
             player.sendMessage(Message.raw("[Challenge] Failed to start challenge.")
                 .color(SystemMessageUtils.SECONDARY));
             return;
-        }
-
-        // Despawn runners
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin != null) {
-            RobotManager robotManager = plugin.getRobotManager();
-            if (robotManager != null) {
-                for (String mapId : mapsWithRunners) {
-                    robotManager.despawnRobot(playerId, mapId);
-                }
-            }
         }
 
         player.sendMessage(Message.raw("[Challenge] " + type.getDisplayName() + " started! All progress has been reset.")
