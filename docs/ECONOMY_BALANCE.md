@@ -394,17 +394,19 @@ Summit converts vexa into XP for permanent category bonuses, resetting vexa, ele
 **Minimum vexa for 1 XP:** 1 billion vexa (1B)
 **Level 1000 target:** 1 Decillion (10^33) accumulated vexa
 
-**XP per level formula:** `level^2`
+**XP per level formula:**
+- Below level 1000: `level^2`
+- Above level 1000: `level^4 / 1,000,000` (continuous at 1000, steeper curve)
 
 | Level | XP Required | Cumulative XP |
 |-------|-------------|---------------|
 | 1 | 1 | 1 |
-| 2 | 4 | 5 |
-| 3 | 9 | 14 |
-| 5 | 25 | 55 |
 | 10 | 100 | 385 |
-| 20 | 400 | 2,870 |
 | 50 | 2,500 | 42,925 |
+| 1000 | 1,000,000 | 333,833,500 |
+| 2000 | 16,000,000 | 6.5B |
+| 5000 | 625,000,000 | 625B |
+| 10000 | 10,000,000,000 | 20T |
 
 **Expected level gains by vexa (from level 0):**
 
@@ -448,16 +450,17 @@ Summit performs a full reset similar to Elevation:
 | **Multiplier Gain** | 1 + 0.30 × level | +0.30 | ×1.00 | ×4.00 | ×8.50 |
 | **Evolution Power** | 3 + 0.10 × level | +0.10 | ×3.00 | ×4.00 | ×5.50 |
 
-**Three bonus growth zones:**
+**Four bonus growth zones:**
 - **Level 0-25 (soft cap):** Linear growth — full increment per level
 - **Level 25-500 (deep cap):** √ growth — diminishing returns
-- **Level 500+ (deep cap):** ⁴√ growth — heavy diminishing returns
+- **Level 500-1000:** ⁴√ growth — heavy diminishing returns
+- **Level 1000+ (snowball):** `anchorAt1000 × (level / 1000)^0.7` — per-level gains scale with current bonus, never approach zero
 
-**XP softcap at level 1000:** Levels above 1000 cost progressively more XP (exponent rises from level^2 to level^3). With the same vexa, old level 5000 now reaches ~3591, old level 10000 now reaches ~6042. The XP calibration targets level 1000 at 1Dc accumulated vexa (unchanged).
+**XP softcap at level 1000:** Levels above 1000 cost progressively more XP (exponent rises from level^2 to level^4). Compared to the previous level^3 curve, progression is ~1.3x slower at 1e40 vexa, ~1.9x slower at 1e50, and ~3.6x slower at 1e65. The XP calibration targets level 1000 at 1Dc accumulated vexa (unchanged). The snowball zone ensures post-1000 levels always feel rewarding despite the higher XP costs.
 
 ### Runner Speed
 
-**Formula:** `1 + 0.15 × level` (linear 0-25, √ growth 25-500, ⁴√ growth 500+)
+**Formula:** `1 + 0.15 × level` (linear 0-25, √ growth 25-500, ⁴√ growth 500-1000, snowball 1000+)
 
 Multiplies runner completion speed (inversely affects run time).
 
@@ -469,11 +472,14 @@ Multiplies runner completion speed (inversely affects run time).
 | 50 | ×5.50 | √ growth |
 | 100 | ×6.05 | √ growth |
 | 500 | ×8.02 | deep cap |
-| 1000 | ×8.73 | ⁴√ growth |
+| 1000 | ×8.73 | ⁴√ / snowball |
+| 2000 | ×14.15 | snowball |
+| 5000 | ×28.02 | snowball |
+| 10000 | ×47.58 | snowball |
 
 ### Multiplier Gain
 
-**Formula:** `1 + 0.30 × level` (linear 0-25, √ growth 25-500, ⁴√ growth 500+)
+**Formula:** `1 + 0.30 × level` (linear 0-25, √ growth 25-500, ⁴√ growth 500-1000, snowball 1000+)
 
 Multiplies the per-run multiplier increment for runners.
 
@@ -485,15 +491,18 @@ Multiplies the per-run multiplier increment for runners.
 | 50 | ×10.00 | +1.00/run | +3.00/run | √ growth |
 | 100 | ×11.10 | +1.11/run | +3.33/run | √ growth |
 | 500 | ×15.04 | +1.50/run | +4.51/run | deep cap |
-| 1000 | ×16.46 | +1.65/run | +4.94/run | ⁴√ growth |
+| 1000 | ×16.46 | +1.65/run | +4.94/run | ⁴√ / snowball |
+| 2000 | ×26.69 | +2.67/run | +8.01/run | snowball |
+| 5000 | ×52.85 | +5.29/run | +15.86/run | snowball |
+| 10000 | ×89.73 | +8.97/run | +26.92/run | snowball |
 
 *Note: 1★+ increments shown assume base Evolution Power (×3). Higher Evolution Power increases per star.*
 
 ### Evolution Power
 
-**Formula:** `3 + 0.10 × level` (linear 0-25, √ growth 25-500, ⁴√ growth 500+)
+**Formula:** `3 + 0.10 × level` (linear 0-25, √ growth 25-500, ⁴√ growth 500-1000, snowball 1000+)
 
-Each Summit level gives a flat EP boost up to level 25, then transitions to slower growth.
+Each Summit level gives a flat EP boost up to level 25, then transitions to slower growth. Post-1000, snowball scaling ensures each level always adds meaningful evolution power.
 
 | Level | Evolution Power | 0★ | 3★ | 5★ | Zone |
 |-------|-----------------|------|------|------|------|
@@ -503,7 +512,10 @@ Each Summit level gives a flat EP boost up to level 25, then transitions to slow
 | 50 | ×6.00 | 0.10 | 21.60 | 777.6 | √ growth |
 | 100 | ×6.37 | 0.10 | 25.82 | 1,047.5 | √ growth |
 | 500 | ×7.68 | 0.10 | 45.31 | 2,555.8 | deep cap |
-| 1000 | ×8.15 | 0.10 | 54.19 | 3,593.2 | ⁴√ growth |
+| 1000 | ×8.15 | 0.10 | 54.19 | 3,593.2 | ⁴√ / snowball |
+| 2000 | ×13.21 | 0.10 | 230.5 | 40,207 | snowball |
+| 5000 | ×26.17 | 0.10 | 1,791 | 1,278,480 | snowball |
+| 10000 | ×44.42 | 0.10 | 8,772 | 34,461,485 | snowball |
 
 **Formula:** `increment = 0.1 × evolutionPower^stars × multiplierGainBonus`
 
@@ -744,7 +756,8 @@ All formulas use consistent growth rates:
 - **Summit XP:** (accumulatedVexa / 1B)^power, calibrated for 1Dc = level 1000
 - **Summit levels:** level^2 (manageable numbers at all levels)
 - **Summit bonuses:** linear (0-25), √ (25-500), ⁴√ (500+)
-- **Summit XP cost:** level^2 (below 1000), level^3/1000 (above 1000, continuous at boundary)
+- **Summit XP cost:** level^2 (below 1000), level^4/1M (above 1000, continuous at boundary)
+- **Summit XP storage:** `double` (no cap — unlimited progression)
 
 Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure continuous progression after evolution.
 
@@ -752,11 +765,14 @@ Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure conti
 
 ## Version History
 
-- **2026-02-17 (v19):** Transcendence (4th Prestige) + Map 6
+- **2026-02-17 (v19):** Transcendence (4th Prestige) + Map 6 + Summit uncap
   - 4th prestige layer: Transcendence at 1e100 vexa with BREAK_ASCENSION + all challenges
   - Full reset including skill tree + challenges; preserves best times, achievements, transcendence count
   - Milestone 1 (first transcend) permanently unlocks Map 6 (Gold)
   - Map 6: 2500 base reward, 68s base time, x4.7 cost multiplier, x3.5 early-level boost
+  - Summit XP storage: long -> double (removes ~136k level cap, unlimited progression)
+  - Summit post-1000 bonus: snowball zone `anchor × (level/1000)^0.7`
+  - Summit XP curve: level^4/1M above 1000 (steeper than previous level^3/1000)
 
 - **2026-02-16 (v18):** Summit XP softcap at level 1000
   - XP cost per level: level^2 (below 1000) -> level^3/1000 (above 1000, continuous)

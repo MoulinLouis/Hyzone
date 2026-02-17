@@ -127,8 +127,8 @@ public class SummitPage extends BaseAscendPage {
 
         // Update progress text (shared across all categories)
         BigNumber accumulatedVexa = playerStore.getSummitAccumulatedVexa(playerId);
-        long currentXp = AscendConstants.vexaToXp(accumulatedVexa);
-        long nextXp = currentXp + 1;
+        double currentXp = AscendConstants.vexaToXp(accumulatedVexa);
+        double nextXp = currentXp + 1;
         BigNumber vexaForNextXp = AscendConstants.xpToVexa(nextXp);
         String progressText = "Progress to next EXP: " +
             FormatUtils.formatBigNumber(accumulatedVexa) + " / " +
@@ -160,23 +160,23 @@ public class SummitPage extends BaseAscendPage {
 
             // XP progress text
             String xpText;
-            long xpRemaining = preview.currentXpRequired() - preview.currentXpInLevel();
-            long xpAfterSummit = xpRemaining - preview.xpToGain();
+            double xpRemaining = preview.currentXpRequired() - preview.currentXpInLevel();
+            double xpAfterSummit = xpRemaining - preview.xpToGain();
             if (preview.xpToGain() > 0 && xpAfterSummit <= 0) {
                 // Player will level up - show what the NEXT level requires
-                long nextLevelXpReq = AscendConstants.getXpForLevel(preview.newLevel() + 1);
-                xpText = "Exp " + FormatUtils.formatLong(preview.currentXpInLevel()) + "/" + FormatUtils.formatLong(preview.currentXpRequired())
-                    + " (+" + FormatUtils.formatLong(preview.xpToGain()) + ") | Needs " + FormatUtils.formatLong(nextLevelXpReq)
+                double nextLevelXpReq = AscendConstants.getXpForLevel(preview.newLevel() + 1);
+                xpText = "Exp " + FormatUtils.formatLong((long) preview.currentXpInLevel()) + "/" + FormatUtils.formatLong((long) preview.currentXpRequired())
+                    + " (+" + FormatUtils.formatLong((long) preview.xpToGain()) + ") | Needs " + FormatUtils.formatLong((long) nextLevelXpReq)
                     + " XP to get Lv." + FormatUtils.formatLong(preview.newLevel() + 1);
             } else {
-                xpText = "Exp " + FormatUtils.formatLong(preview.currentXpInLevel()) + "/" + FormatUtils.formatLong(preview.currentXpRequired())
-                    + " (+" + FormatUtils.formatLong(preview.xpToGain()) + ")";
+                xpText = "Exp " + FormatUtils.formatLong((long) preview.currentXpInLevel()) + "/" + FormatUtils.formatLong((long) preview.currentXpRequired())
+                    + " (+" + FormatUtils.formatLong((long) preview.xpToGain()) + ")";
             }
             commandBuilder.set("#CategoryCards[" + i + "] #XpProgress.Text", xpText);
 
             // XP progress bar segments (20 segments = 5% each)
             double progressPercent = preview.currentXpRequired() > 0
-                ? (double) preview.currentXpInLevel() / preview.currentXpRequired()
+                ? preview.currentXpInLevel() / preview.currentXpRequired()
                 : 0;
             int filledSegments = (int)(progressPercent * 20);
             for (int seg = 1; seg <= 20; seg++) {

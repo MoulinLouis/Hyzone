@@ -103,7 +103,7 @@ public final class AscendDatabaseSetup {
                 CREATE TABLE IF NOT EXISTS ascend_player_summit (
                     player_uuid VARCHAR(36) NOT NULL,
                     category VARCHAR(32) NOT NULL,
-                    xp BIGINT NOT NULL DEFAULT 0,
+                    xp DOUBLE NOT NULL DEFAULT 0,
                     PRIMARY KEY (player_uuid, category),
                     FOREIGN KEY (player_uuid) REFERENCES ascend_players(uuid) ON DELETE CASCADE
                 ) ENGINE=InnoDB
@@ -200,6 +200,9 @@ public final class AscendDatabaseSetup {
 
             // Auto-ascend toggle
             ensureAutoAscendColumn(conn);
+
+            // Summit XP column: BIGINT -> DOUBLE (uncapped progression)
+            migrateSummitXpToDouble(conn);
 
             LOGGER.atInfo().log("Ascend database tables ensured");
             } // close try (Statement stmt)
@@ -1052,6 +1055,28 @@ public final class AscendDatabaseSetup {
             } catch (SQLException e) {
                 LOGGER.atSevere().log("Failed to add auto_ascend_enabled column: " + e.getMessage());
             }
+        }
+    }
+
+    /**
+     * Migrate summit XP column from BIGINT to DOUBLE for uncapped progression.
+     * Idempotent: checks current column type before altering.
+     */
+    private static void migrateSummitXpToDouble(Connection conn) {
+        if (conn == null) {
+            return;
+        }
+        try (Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SHOW COLUMNS FROM ascend_player_summit LIKE 'xp'")) {
+            if (rs.next()) {
+                String type = rs.getString("Type").toUpperCase();
+                if (type.contains("BIGINT")) {
+                    stmt.executeUpdate("ALTER TABLE ascend_player_summit MODIFY COLUMN xp DOUBLE NOT NULL DEFAULT 0");
+                    LOGGER.atInfo().log("Migrated summit XP column from BIGINT to DOUBLE");
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.atSevere().log("Failed to migrate summit XP to DOUBLE: " + e.getMessage());
         }
     }
 }
