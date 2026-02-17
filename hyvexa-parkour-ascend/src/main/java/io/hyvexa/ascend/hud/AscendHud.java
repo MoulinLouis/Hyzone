@@ -277,9 +277,9 @@ public class AscendHud extends CustomUIHud {
             return name + " Lv.0";
         }
         if (preview.hasGain()) {
-            return name + " Lv." + preview.currentLevel() + " -> Lv." + preview.newLevel();
+            return name + " Lv." + FormatUtils.formatLong(preview.currentLevel()) + " -> Lv." + FormatUtils.formatLong(preview.newLevel());
         }
-        return name + " Lv." + preview.currentLevel();
+        return name + " Lv." + FormatUtils.formatLong(preview.currentLevel());
     }
 
     public void updateAscension(int ascensionCount, int availableAP) {
