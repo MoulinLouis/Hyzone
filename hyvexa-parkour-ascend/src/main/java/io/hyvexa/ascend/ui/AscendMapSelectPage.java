@@ -980,9 +980,10 @@ public class AscendMapSelectPage extends BaseAscendPage {
         List<AscendMap> maps = mapStore.listMapsSorted();
 
         for (AscendMap map : maps) {
-            MapUnlockHelper.UnlockResult unlockResult = MapUnlockHelper.checkAndEnsureUnlock(
-                playerRef.getUuid(), map, playerStore, mapStore);
-            if (!unlockResult.unlocked) {
+            // Only process maps that are displayed in the UI (already unlocked).
+            // Using checkAndEnsureUnlock here would auto-unlock maps without adding UI cards,
+            // causing a crash when updateRobotRow tries to set properties on non-existent elements.
+            if (!isDisplayedMapId(map.getId())) {
                 continue;
             }
 
