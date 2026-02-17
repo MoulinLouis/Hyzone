@@ -103,7 +103,8 @@ public final class HylogramsBridge {
             }
         }
         if (store != null) {
-            hologram.respawn(store);
+            hologram.despawn(store);
+            hologram.spawn(store);
             hologram.save(store);
         }
         return true;
