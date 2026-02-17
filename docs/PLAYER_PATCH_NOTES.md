@@ -4,6 +4,23 @@ What's new in Hyvexa? All player-facing changes, newest first.
 
 ---
 
+## v0.1.4 - 2026-02-17
+
+### New
+- **Challenge Leaderboard** - See how you stack up against other players on each challenge with a new leaderboard tab.
+
+### Improved
+- **Challenge 7 Rebalanced** - Adjusted difficulty for a fairer experience with locked maps.
+
+### Fixed
+- **Elevation Achievements** - Achievements now trigger based on your actual multiplier instead of an internal value, so milestones unlock when they should.
+- **Momentum Mastery Skill** - Now displays the correct x3.0 multiplier instead of a wrong value.
+- **Buy All Button** - No longer crashes when you have locked maps.
+- **Auto-Elevation and Auto-Summit** - No longer fire during active runs, and target sequences no longer get stuck.
+- **Leaderboard Holograms** - Fixed duplicate entries appearing after updates.
+
+---
+
 ## v0.1.3 - 2026-02-17
 
 ### New
