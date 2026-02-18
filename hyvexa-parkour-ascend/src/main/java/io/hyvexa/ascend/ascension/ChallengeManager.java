@@ -228,6 +228,17 @@ public class ChallengeManager {
     }
 
     /**
+     * Check if elevation is blocked by the player's active challenge.
+     */
+    public boolean isElevationBlocked(UUID playerId) {
+        ActiveChallenge active = activeChallenges.get(playerId);
+        if (active == null) {
+            return false;
+        }
+        return active.challengeType().blocksElevation();
+    }
+
+    /**
      * Check if a map is blocked by the player's active challenge (by displayOrder).
      */
     public boolean isMapBlocked(UUID playerId, int displayOrder) {

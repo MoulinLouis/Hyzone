@@ -78,7 +78,7 @@ $C.@PageOverlay {
         LayoutMode: Left;
 
         Group #Tab0Wrap {
-          Anchor: (Width: 68, Height: 34);
+          Anchor: (Width: 60, Height: 34);
           Background: #2d3f50;
           OutlineColor: #ffffff(0.04);
           OutlineSize: 1;
@@ -109,7 +109,7 @@ $C.@PageOverlay {
         Group { Anchor: (Width: 4); }
 
         Group #Tab1Wrap {
-          Anchor: (Width: 68, Height: 34);
+          Anchor: (Width: 60, Height: 34);
           Background: #142029;
           OutlineColor: #ffffff(0.04);
           OutlineSize: 1;
@@ -140,7 +140,7 @@ $C.@PageOverlay {
         Group { Anchor: (Width: 4); }
 
         Group #Tab2Wrap {
-          Anchor: (Width: 68, Height: 34);
+          Anchor: (Width: 60, Height: 34);
           Background: #142029;
           OutlineColor: #ffffff(0.04);
           OutlineSize: 1;
@@ -171,7 +171,7 @@ $C.@PageOverlay {
         Group { Anchor: (Width: 4); }
 
         Group #Tab3Wrap {
-          Anchor: (Width: 68, Height: 34);
+          Anchor: (Width: 60, Height: 34);
           Background: #142029;
           OutlineColor: #ffffff(0.04);
           OutlineSize: 1;
@@ -202,7 +202,7 @@ $C.@PageOverlay {
         Group { Anchor: (Width: 4); }
 
         Group #Tab4Wrap {
-          Anchor: (Width: 68, Height: 34);
+          Anchor: (Width: 60, Height: 34);
           Background: #142029;
           OutlineColor: #ffffff(0.04);
           OutlineSize: 1;
@@ -233,7 +233,7 @@ $C.@PageOverlay {
         Group { Anchor: (Width: 4); }
 
         Group #Tab5Wrap {
-          Anchor: (Width: 68, Height: 34);
+          Anchor: (Width: 60, Height: 34);
           Background: #142029;
           OutlineColor: #ffffff(0.04);
           OutlineSize: 1;
@@ -264,7 +264,7 @@ $C.@PageOverlay {
         Group { Anchor: (Width: 4); }
 
         Group #Tab6Wrap {
-          Anchor: (Width: 68, Height: 34);
+          Anchor: (Width: 60, Height: 34);
           Background: #142029;
           OutlineColor: #ffffff(0.04);
           OutlineSize: 1;
@@ -281,6 +281,37 @@ $C.@PageOverlay {
           }
 
           TextButton #Tab6 {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Text: "";
+            Style: TextButtonStyle(
+              Default: (Background: #000000(0)),
+              Hovered: (Background: #ffffff(0.05)),
+              Pressed: (Background: #ffffff(0.1)),
+              Sounds: $C.@ButtonSounds,
+            );
+          }
+        }
+
+        Group { Anchor: (Width: 4); }
+
+        Group #Tab7Wrap {
+          Anchor: (Width: 60, Height: 34);
+          Background: #142029;
+          OutlineColor: #ffffff(0.04);
+          OutlineSize: 1;
+
+          Group #Tab7Accent {
+            Anchor: (Left: 0, Right: 0, Top: 0, Height: 3);
+            Background: #142029;
+          }
+
+          Label #Tab7Label {
+            Anchor: (Left: 0, Right: 0, Top: 6, Bottom: 0);
+            Style: (FontSize: 12, RenderBold: true, TextColor: #9fb0ba, Alignment: Center);
+            Text: "C8";
+          }
+
+          TextButton #Tab7 {
             Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
             Text: "";
             Style: TextButtonStyle(

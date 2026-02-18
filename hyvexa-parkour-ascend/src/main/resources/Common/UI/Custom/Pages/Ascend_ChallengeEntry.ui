@@ -46,6 +46,12 @@ Group #ChallengeEntry {
       Background: #ec4899;
       Visible: false;
     }
+
+    Group #AccentCyan {
+      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+      Background: #06b6d4;
+      Visible: false;
+    }
   }
 
   // Main info area

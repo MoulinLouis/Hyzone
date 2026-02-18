@@ -33,7 +33,7 @@ public class ChallengeLeaderboardPage extends InteractiveCustomUIPage<ChallengeL
     private static final String BUTTON_NEXT = "NextPage";
     private static final String BUTTON_TAB_PREFIX = "Tab";
 
-    private static final int MAX_TABS = 7;
+    private static final int MAX_TABS = 8;
 
     private static final String COLOR_RANK_1 = "#ffd700";
     private static final String COLOR_RANK_2 = "#c0c0c0";
