@@ -22,6 +22,7 @@ public class PurgeSession {
     private volatile ScheduledFuture<?> waveTick;
     private volatile ScheduledFuture<?> spawnTask;
     private volatile ScheduledFuture<?> intermissionTask;
+    private final PurgeUpgradeState upgradeState = new PurgeUpgradeState();
     private final long sessionStartTime = System.currentTimeMillis();
 
     public PurgeSession(UUID playerId, Ref<EntityStore> playerRef) {
@@ -91,6 +92,10 @@ public class PurgeSession {
 
     public void incrementKills() {
         totalKills.incrementAndGet();
+    }
+
+    public PurgeUpgradeState getUpgradeState() {
+        return upgradeState;
     }
 
     public long getSessionStartTime() {

@@ -25,6 +25,7 @@ public class PurgeSessionManager {
     private final PurgeWaveManager waveManager;
     private final PurgeHudManager hudManager;
     private final PurgeSettingsManager settingsManager;
+    private volatile PurgeUpgradeManager upgradeManager;
 
     public PurgeSessionManager(PurgeSpawnPointManager spawnPointManager,
                                PurgeWaveManager waveManager,
@@ -35,6 +36,10 @@ public class PurgeSessionManager {
         this.hudManager = hudManager;
         this.settingsManager = settingsManager;
         waveManager.setSessionManager(this);
+    }
+
+    public void setUpgradeManager(PurgeUpgradeManager upgradeManager) {
+        this.upgradeManager = upgradeManager;
     }
 
     public boolean startSession(UUID playerId, Ref<EntityStore> playerRef) {
@@ -93,6 +98,17 @@ public class PurgeSessionManager {
 
         runSafe("cancel tasks", session::cancelAllTasks);
         runSafe("remove zombies", () -> waveManager.removeAllZombies(session));
+        runSafe("revert upgrades", () -> {
+            PurgeUpgradeManager um = upgradeManager;
+            if (um != null) {
+                Ref<EntityStore> ref = session.getPlayerRef();
+                if (ref != null && ref.isValid()) {
+                    Store<EntityStore> store = ref.getStore();
+                    um.revertAllUpgrades(session, ref, store);
+                }
+                um.cleanupPlayer(playerId);
+            }
+        });
         runSafe("hide hud", () -> hudManager.hideRunHud(playerId));
         runSafe("persist", () -> persistResults(playerId, session));
         runSafe("remove loadout", () -> {
@@ -113,10 +129,13 @@ public class PurgeSessionManager {
         });
 
         // Send summary to player
-        int scrap = calculateScrapReward(session.getCurrentWave());
+        int summaryBaseScrap = calculateScrapReward(session.getCurrentWave());
+        PurgeUpgradeManager sumUm = upgradeManager;
+        double summaryMult = (sumUm != null) ? sumUm.getScrapMultiplier(session) : 1.0;
+        int summaryScrap = (int) (summaryBaseScrap * summaryMult);
         String summary = "Purge ended - Wave " + session.getCurrentWave()
                 + " - " + session.getTotalKills() + " kills"
-                + " - " + scrap + " scrap earned"
+                + " - " + summaryScrap + " scrap earned"
                 + " (" + reason + ")";
         runSafe("send summary", () -> sendMessage(session.getPlayerRef(), summary));
 
@@ -157,8 +176,11 @@ public class PurgeSessionManager {
         stats.incrementSessions();
         PurgePlayerStore.getInstance().save(playerId, stats);
 
-        // Award scrap
-        int scrap = calculateScrapReward(session.getCurrentWave());
+        // Award scrap (with Scavenger upgrade multiplier)
+        int baseScrap = calculateScrapReward(session.getCurrentWave());
+        PurgeUpgradeManager um = upgradeManager;
+        double scrapMult = (um != null) ? um.getScrapMultiplier(session) : 1.0;
+        int scrap = (int) (baseScrap * scrapMult);
         if (scrap > 0) {
             PurgeScrapStore.getInstance().addScrap(playerId, scrap);
         }

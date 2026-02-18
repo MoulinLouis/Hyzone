@@ -14,6 +14,8 @@ public class PurgeHud extends CustomUIHud {
     private int lastTotal = -1;
     private long lastScrap = -1;
     private String lastIntermissionText = null;
+    private int lastHpCurrent = -1;
+    private int lastHpMax = -1;
 
     public PurgeHud(PlayerRef playerRef) {
         super(playerRef);
@@ -80,6 +82,17 @@ public class PurgeHud extends CustomUIHud {
         update(false, cmd);
     }
 
+    public void updatePlayerHealth(int current, int max) {
+        if (current == lastHpCurrent && max == lastHpMax) {
+            return;
+        }
+        lastHpCurrent = current;
+        lastHpMax = max;
+        UICommandBuilder cmd = new UICommandBuilder();
+        cmd.set("#PlayerHealthLabel.Text", "HP: " + current + " / " + max);
+        update(false, cmd);
+    }
+
     public void setWaveStatusVisible(boolean visible) {
         UICommandBuilder cmd = new UICommandBuilder();
         cmd.set("#WaveStatusRow.Visible", visible);
@@ -94,5 +107,7 @@ public class PurgeHud extends CustomUIHud {
         lastPlayerCount = -1;
         lastGems = -1;
         lastIntermissionText = null;
+        lastHpCurrent = -1;
+        lastHpMax = -1;
     }
 }

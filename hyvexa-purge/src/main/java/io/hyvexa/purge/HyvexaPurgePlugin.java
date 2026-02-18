@@ -28,6 +28,7 @@ import io.hyvexa.purge.data.PurgePlayerStore;
 import io.hyvexa.purge.data.PurgeScrapStore;
 import io.hyvexa.purge.hud.PurgeHudManager;
 import io.hyvexa.purge.manager.PurgeSessionManager;
+import io.hyvexa.purge.manager.PurgeUpgradeManager;
 import io.hyvexa.purge.manager.PurgeSettingsManager;
 import io.hyvexa.purge.manager.PurgeSpawnPointManager;
 import io.hyvexa.purge.manager.PurgeWaveConfigManager;
@@ -101,6 +102,9 @@ public class HyvexaPurgePlugin extends JavaPlugin {
         hudManager = new PurgeHudManager();
         waveManager = new PurgeWaveManager(spawnPointManager, waveConfigManager, hudManager);
         sessionManager = new PurgeSessionManager(spawnPointManager, waveManager, hudManager, settingsManager);
+        PurgeUpgradeManager upgradeManager = new PurgeUpgradeManager();
+        waveManager.setUpgradeManager(upgradeManager);
+        sessionManager.setUpgradeManager(upgradeManager);
 
         // Register commands
         this.getCommandRegistry().registerCommand(
