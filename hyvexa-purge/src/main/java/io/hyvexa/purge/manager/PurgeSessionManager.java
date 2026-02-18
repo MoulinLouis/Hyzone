@@ -5,7 +5,12 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
+import com.hypixel.hytale.server.core.modules.entitystats.EntityStatMap;
+import com.hypixel.hytale.server.core.modules.entitystats.asset.DefaultEntityStatTypes;
+import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.common.util.DamageBypassRegistry;
 import io.hyvexa.purge.HyvexaPurgePlugin;
 import io.hyvexa.purge.data.*;
 import io.hyvexa.purge.hud.PurgeHudManager;
@@ -21,14 +26,22 @@ public class PurgeSessionManager {
     private final PurgeSpawnPointManager spawnPointManager;
     private final PurgeWaveManager waveManager;
     private final PurgeHudManager hudManager;
+    private final PurgeSettingsManager settingsManager;
+    private volatile PurgeUpgradeManager upgradeManager;
 
     public PurgeSessionManager(PurgeSpawnPointManager spawnPointManager,
                                PurgeWaveManager waveManager,
-                               PurgeHudManager hudManager) {
+                               PurgeHudManager hudManager,
+                               PurgeSettingsManager settingsManager) {
         this.spawnPointManager = spawnPointManager;
         this.waveManager = waveManager;
         this.hudManager = hudManager;
+        this.settingsManager = settingsManager;
         waveManager.setSessionManager(this);
+    }
+
+    public void setUpgradeManager(PurgeUpgradeManager upgradeManager) {
+        this.upgradeManager = upgradeManager;
     }
 
     public boolean startSession(UUID playerId, Ref<EntityStore> playerRef) {
@@ -43,9 +56,14 @@ public class PurgeSessionManager {
             sendMessage(playerRef, "No purge spawn points configured. Use /purgespawn add first.");
             return false;
         }
+        if (!waveManager.hasConfiguredWaves()) {
+            sendMessage(playerRef, "No purge waves configured. Ask an admin to set waves in /purge admin.");
+            return false;
+        }
 
         PurgeSession session = new PurgeSession(playerId, playerRef);
         activeSessions.put(playerId, session);
+        DamageBypassRegistry.add(playerId);
 
         // Grant loadout
         try {
@@ -56,6 +74,7 @@ public class PurgeSessionManager {
                 if (player != null) {
                     plugin.grantLoadout(player);
                 }
+                teleportToConfiguredStart(playerRef, store);
             }
         } catch (Exception e) {
             LOGGER.atWarning().log("Failed to grant loadout: " + e.getMessage());
@@ -76,10 +95,32 @@ public class PurgeSessionManager {
         if (session == null) {
             return;
         }
+        DamageBypassRegistry.remove(playerId);
         session.setState(SessionState.ENDED);
 
         runSafe("cancel tasks", session::cancelAllTasks);
         runSafe("remove zombies", () -> waveManager.removeAllZombies(session));
+        runSafe("revert upgrades", () -> {
+            PurgeUpgradeManager um = upgradeManager;
+            if (um != null) {
+                Ref<EntityStore> ref = session.getPlayerRef();
+                if (ref != null && ref.isValid()) {
+                    Store<EntityStore> store = ref.getStore();
+                    um.revertAllUpgrades(session, ref, store);
+                }
+                um.cleanupPlayer(playerId);
+            }
+        });
+        runSafe("heal player", () -> {
+            Ref<EntityStore> ref = session.getPlayerRef();
+            if (ref != null && ref.isValid()) {
+                Store<EntityStore> store = ref.getStore();
+                EntityStatMap statMap = store.getComponent(ref, EntityStatMap.getComponentType());
+                if (statMap != null) {
+                    statMap.maximizeStatValue(DefaultEntityStatTypes.getHealth());
+                }
+            }
+        });
         runSafe("hide hud", () -> hudManager.hideRunHud(playerId));
         runSafe("persist", () -> persistResults(playerId, session));
         runSafe("remove loadout", () -> {
@@ -92,15 +133,21 @@ public class PurgeSessionManager {
                     if (player != null) {
                         plugin.removeLoadout(player);
                     }
+                    if ("voluntary stop".equalsIgnoreCase(reason) || "victory".equalsIgnoreCase(reason)) {
+                        teleportToConfiguredExit(ref, store);
+                    }
                 }
             }
         });
 
         // Send summary to player
-        int scrap = calculateScrapReward(session.getCurrentWave());
+        int summaryBaseScrap = calculateScrapReward(session.getCurrentWave());
+        PurgeUpgradeManager sumUm = upgradeManager;
+        double summaryMult = (sumUm != null) ? sumUm.getScrapMultiplier(session) : 1.0;
+        int summaryScrap = (int) (summaryBaseScrap * summaryMult);
         String summary = "Purge ended - Wave " + session.getCurrentWave()
                 + " - " + session.getTotalKills() + " kills"
-                + " - " + scrap + " scrap earned"
+                + " - " + summaryScrap + " scrap earned"
                 + " (" + reason + ")";
         runSafe("send summary", () -> sendMessage(session.getPlayerRef(), summary));
 
@@ -141,8 +188,11 @@ public class PurgeSessionManager {
         stats.incrementSessions();
         PurgePlayerStore.getInstance().save(playerId, stats);
 
-        // Award scrap
-        int scrap = calculateScrapReward(session.getCurrentWave());
+        // Award scrap (with Scavenger upgrade multiplier)
+        int baseScrap = calculateScrapReward(session.getCurrentWave());
+        PurgeUpgradeManager um = upgradeManager;
+        double scrapMult = (um != null) ? um.getScrapMultiplier(session) : 1.0;
+        int scrap = (int) (baseScrap * scrapMult);
         if (scrap > 0) {
             PurgeScrapStore.getInstance().addScrap(playerId, scrap);
         }
@@ -185,5 +235,37 @@ public class PurgeSessionManager {
         } catch (Exception e) {
             LOGGER.atWarning().log("Cleanup failed [" + label + "]: " + e.getMessage());
         }
+    }
+
+    private void teleportToConfiguredStart(Ref<EntityStore> ref, Store<EntityStore> store) {
+        if (settingsManager == null) {
+            return;
+        }
+        PurgeLocation location = settingsManager.getSessionStartPoint();
+        if (location == null) {
+            return;
+        }
+        World world = store.getExternalData() != null ? store.getExternalData().getWorld() : null;
+        if (world == null) {
+            return;
+        }
+        store.addComponent(ref, Teleport.getComponentType(),
+                new Teleport(world, location.toPosition(), location.toRotation()));
+    }
+
+    private void teleportToConfiguredExit(Ref<EntityStore> ref, Store<EntityStore> store) {
+        if (settingsManager == null) {
+            return;
+        }
+        PurgeLocation location = settingsManager.getSessionExitPoint();
+        if (location == null) {
+            return;
+        }
+        World world = store.getExternalData() != null ? store.getExternalData().getWorld() : null;
+        if (world == null) {
+            return;
+        }
+        store.addComponent(ref, Teleport.getComponentType(),
+                new Teleport(world, location.toPosition(), location.toRotation()));
     }
 }

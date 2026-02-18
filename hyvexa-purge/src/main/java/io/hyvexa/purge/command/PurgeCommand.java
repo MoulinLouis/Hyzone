@@ -18,7 +18,9 @@ import io.hyvexa.purge.data.PurgePlayerStats;
 import io.hyvexa.purge.data.PurgePlayerStore;
 import io.hyvexa.purge.data.PurgeScrapStore;
 import io.hyvexa.purge.manager.PurgeSessionManager;
+import io.hyvexa.purge.manager.PurgeSettingsManager;
 import io.hyvexa.purge.manager.PurgeSpawnPointManager;
+import io.hyvexa.purge.manager.PurgeWaveConfigManager;
 import io.hyvexa.purge.ui.PurgeAdminIndexPage;
 
 import javax.annotation.Nonnull;
@@ -30,14 +32,21 @@ public class PurgeCommand extends AbstractAsyncCommand {
     private static final Message MESSAGE_OP_REQUIRED = Message.raw("You must be OP to use /purge admin.");
 
     private final PurgeSessionManager sessionManager;
+    private final PurgeSettingsManager settingsManager;
     private final PurgeSpawnPointManager spawnPointManager;
+    private final PurgeWaveConfigManager waveConfigManager;
 
-    public PurgeCommand(PurgeSessionManager sessionManager, PurgeSpawnPointManager spawnPointManager) {
+    public PurgeCommand(PurgeSessionManager sessionManager,
+                        PurgeSpawnPointManager spawnPointManager,
+                        PurgeWaveConfigManager waveConfigManager,
+                        PurgeSettingsManager settingsManager) {
         super("purge", "Purge zombie survival commands");
         this.setPermissionGroup(GameMode.Adventure);
         this.setAllowsExtraArguments(true);
         this.sessionManager = sessionManager;
+        this.settingsManager = settingsManager;
         this.spawnPointManager = spawnPointManager;
+        this.waveConfigManager = waveConfigManager;
     }
 
     @Override
@@ -93,7 +102,7 @@ public class PurgeCommand extends AbstractAsyncCommand {
             return;
         }
         player.getPageManager().openCustomPage(ref, store,
-                new PurgeAdminIndexPage(playerRef, spawnPointManager));
+                new PurgeAdminIndexPage(playerRef, spawnPointManager, waveConfigManager, settingsManager));
     }
 
     private void handleStart(Player player, Ref<EntityStore> ref, World world, UUID playerId) {

@@ -61,6 +61,13 @@ public class PurgeHudManager {
         }
     }
 
+    public void updatePlayerHealth(UUID playerId, int current, int max) {
+        PurgeHud hud = getHud(playerId);
+        if (hud != null) {
+            hud.updatePlayerHealth(current, max);
+        }
+    }
+
     public void updateIntermission(UUID playerId, int seconds) {
         PurgeHud hud = getHud(playerId);
         if (hud != null) {

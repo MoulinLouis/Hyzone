@@ -1,16 +1,10 @@
 {
   "Type": "Variant",
-  "Reference": "Template_Purge_Zombie",
+  "Reference": "Template_Aggressive_Zombies",
   "Modify": {
     "DropList": "Empty",
     "Appearance": "Zombie",
     "MaxHealth": 49,
-    "MaxWalkSpeed": 9,
-    "AggroRange": 100,
-    "AttackDistance": 1.5,
-    "CombatRelativeTurnSpeed": 1.5,
-    "IsMemory": true,
-    "MemoriesCategory": "Undead",
     "_InteractionVars": {
       "Melee_Damage": {
         "Interactions": [
@@ -24,15 +18,6 @@
           }
         ]
       }
-    },
-    "NameTranslationKey": {
-      "Compute": "NameTranslationKey"
-    }
-  },
-  "Parameters": {
-    "NameTranslationKey": {
-      "Value": "server.npcRoles.Zombie.name",
-      "Description": "Translation key for NPC name display"
     }
   }
 }

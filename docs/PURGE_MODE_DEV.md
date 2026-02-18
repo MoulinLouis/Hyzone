@@ -22,17 +22,28 @@ All under `hyvexa-purge/src/main/java/io/hyvexa/purge/`:
 | `data/PurgePlayerStats.java` | Stats POJO | bestWave, totalKills, totalSessions |
 | `data/PurgeSpawnPoint.java` | Record | `record(int id, double x, double y, double z, float yaw)` |
 | `data/SessionState.java` | Enum | COUNTDOWN, SPAWNING, COMBAT, INTERMISSION, ENDED |
-| `command/PurgeCommand.java` | `/purge` | start, stop, stats |
+| `manager/PurgeWaveConfigManager.java` | Wave config CRUD | DB-backed wave definitions (slow/normal/fast counts) |
+| `manager/PurgeSettingsManager.java` | Session settings | DB-backed key-value settings |
+| `data/PurgeWaveDefinition.java` | Record | `record(int wave, int slowCount, int normalCount, int fastCount)` |
+| `data/PurgeZombieVariant.java` | Enum | SLOW/NORMAL/FAST with NPC type names |
+| `data/PurgeLocation.java` | Record | Location data for spawn points |
+| `command/PurgeCommand.java` | `/purge` | start, stop, stats, admin |
 | `command/PurgeSpawnCommand.java` | `/purgespawn` | add, remove, list, clear (OP only) |
+| `ui/PurgeAdminIndexPage.java` | Admin menu | Tab navigation for admin pages |
+| `ui/PurgeWaveAdminPage.java` | Wave config UI | Add/edit/remove wave definitions |
+| `ui/PurgeSpawnAdminPage.java` | Spawn point UI | Manage spawn points via GUI |
+| `ui/PurgeSettingsAdminPage.java` | Settings UI | Configure session settings |
 
 **UI file:** `hyvexa-purge/src/main/resources/Common/UI/Custom/Pages/Purge_RunHud.ui`
 
 **Zombie NPC roles (resources):**
-- `Server/NPC/Roles/Purge/Templates/Template_Purge_Zombie.json` (base template, `AggroRange` + `MaxWalkSpeed`)
-- `Server/NPC/Roles/Purge/Purge_Zombie_Slow.json` (`MaxWalkSpeed: 7`)
-- `Server/NPC/Roles/Purge/Purge_Zombie_Normal.json` (`MaxWalkSpeed: 9`)
-- `Server/NPC/Roles/Purge/Purge_Zombie_Fast.json` (`MaxWalkSpeed: 11`)
-- `Server/NPC/Roles/Purge/Purge_Zombie.json` (alias -> `Purge_Zombie_Normal`)
+All variants extend the **vanilla** `Template_Aggressive_Zombies` (Hytale built-in). Do NOT use custom abstract templates — they fail builder validation.
+- `Server/NPC/Roles/Purge/Purge_Zombie.json` — default variant (NORMAL speed)
+- `Server/NPC/Roles/Purge/Purge_Zombie_Normal.json` — same as Purge_Zombie (fallback)
+- `Server/NPC/Roles/Purge/Purge_Zombie_Slow.json` — `MaxWalkSpeed: 8`
+- `Server/NPC/Roles/Purge/Purge_Zombie_Fast.json` — `MaxWalkSpeed: 11`
+
+Each variant sets: `DropList: "Empty"`, `Appearance: "Zombie"`, `MaxHealth: 49`, `_InteractionVars` (18 physical melee damage). Only Slow/Fast override `MaxWalkSpeed`.
 
 ---
 
@@ -86,7 +97,7 @@ Plugin creates in this order:
 **Gameplay (PurgeWaveManager):**
 | Constant | Value | Controls |
 |----------|-------|----------|
-| `ZOMBIE_NPC_TYPE` | `"Purge_Zombie"` | Default NPC role to spawn |
+| _(no constant)_ | `candidateNpcTypes()` | Variant-specific NPC type + fallback |
 | `WAVE_TICK_INTERVAL_MS` | `200` | Death detection polling rate |
 | `SPAWN_STAGGER_MS` | `500` | Delay between spawn batches |
 | `SPAWN_BATCH_SIZE` | `5` | Zombies per batch |
@@ -220,7 +231,7 @@ All tables use `ENGINE=InnoDB`, created with `CREATE TABLE IF NOT EXISTS`, queri
 
 | Gap | Location | Impact |
 |-----|----------|--------|
-| Wave-based speed/damage scaling | `PurgeWaveManager` + Purge zombie role variants | Speed uses static variants; damage is still static unless role/interaction vars are switched by wave |
+| Wave-based speed/damage scaling | `PurgeWaveManager` | HP scaling applied per wave; speed comes from static role variants (Slow/Normal/Fast); damage scaling not yet wired |
 | Player healing on intermission | `PurgeWaveManager.startIntermission()` line ~277 | No healing between waves — API unknown |
 | Player death detection | `PurgeWaveManager.startWaveTick()` | Uses 200ms `ref.isValid()` polling, not event-based |
 | Ammo resupply | Not implemented | Player starts with 120 bullets, no refills |
@@ -229,14 +240,31 @@ All tables use `ENGINE=InnoDB`, created with `CREATE TABLE IF NOT EXISTS`, queri
 
 ## Zombie Spawn Flow (detail)
 
-1. `startSpawning(session, totalCount)` scheduled at 500ms intervals
-2. Each tick: read player position, pick spawn point via `selectSpawnPoint(playerX, playerZ)`
-3. Spawn point selection: filter >= 15 blocks away, weight by distance², random pick
-4. Apply +/- 2 block random X/Z offset to chosen point
-5. `world.execute(() -> npcPlugin.spawnNPC(store, "Purge_Zombie", "", position, rotation))`
-6. Extract `Ref<EntityStore>` from result via reflection (getFirst/getLeft/getKey/first/left pattern)
-7. Add to `session.aliveZombies`, hide nameplate via `Nameplate.setText("")`
-8. When all spawned: set `spawningComplete = true`, transition SPAWNING → COMBAT
+1. `buildSpawnQueue(wave)` creates interleaved list of `PurgeZombieVariant` (NORMAL, SLOW, FAST)
+2. `startSpawning(session, spawnQueue)` scheduled at 500ms intervals, batches of 5
+3. Each tick: read player position, pick spawn point via `selectSpawnPoint(playerX, playerZ)`
+4. Spawn point selection: filter >= 15 blocks away, weight by distance², random pick
+5. Apply +/- 2 block random X/Z offset to chosen point
+6. `candidateNpcTypes(variant)` returns NPC type + fallback (e.g. SLOW -> `["Purge_Zombie_Slow", "Purge_Zombie"]`)
+7. `world.execute(() -> npcPlugin.spawnNPC(store, npcType, "", position, rotation))`
+8. Extract `Ref<EntityStore>` from result via reflection (getFirst/getLeft/getKey/first/left pattern)
+9. Apply wave HP scaling via `EntityStatMap` modifier, set nameplate to `"HP / HP"`
+10. Force aggro: `npcEntity.getRole().setMarkedTarget("LockedTarget", playerRef)` + set state "Angry"
+11. Add to `session.aliveZombies`
+12. When all spawned: set `spawningComplete = true`, transition SPAWNING → COMBAT
+
+### NPC Role Template Rules
+
+Zombie variants use Hytale's `Variant` / `Abstract` template system:
+```json
+{
+  "Type": "Variant",
+  "Reference": "Template_Aggressive_Zombies",
+  "Modify": { "MaxHealth": 49, "MaxWalkSpeed": 8, ... }
+}
+```
+
+**Critical**: Always reference **vanilla** abstract templates (e.g. `Template_Aggressive_Zombies`). Custom abstract templates fail builder validation at spawn time. The `Modify` block overrides properties from the vanilla template.
 
 ---
 

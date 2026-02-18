@@ -28,7 +28,10 @@ import io.hyvexa.purge.data.PurgePlayerStore;
 import io.hyvexa.purge.data.PurgeScrapStore;
 import io.hyvexa.purge.hud.PurgeHudManager;
 import io.hyvexa.purge.manager.PurgeSessionManager;
+import io.hyvexa.purge.manager.PurgeUpgradeManager;
+import io.hyvexa.purge.manager.PurgeSettingsManager;
 import io.hyvexa.purge.manager.PurgeSpawnPointManager;
+import io.hyvexa.purge.manager.PurgeWaveConfigManager;
 import io.hyvexa.purge.manager.PurgeWaveManager;
 
 import javax.annotation.Nonnull;
@@ -41,9 +44,15 @@ import java.util.concurrent.TimeUnit;
 public class HyvexaPurgePlugin extends JavaPlugin {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
+    private static final String ITEM_BASE_ORB_RESET = "Ingredient_Ice_Essence";
+    private static final String ITEM_BASE_ORB_RESTART_CHECKPOINT = "Ingredient_Lightning_Essence";
+    private static final String ITEM_BASE_ORB_LEAVE = "Ingredient_Void_Essence";
     private static final String ITEM_AK47 = "AK47";
     private static final String ITEM_BULLET = "Bullet";
     private static final int STARTING_BULLET_COUNT = 120;
+    private static final short SLOT_BASE_ORB_RESET = 0;
+    private static final short SLOT_BASE_ORB_RESTART_CHECKPOINT = 1;
+    private static final short SLOT_BASE_ORB_LEAVE = 2;
     private static final short SLOT_PRIMARY_WEAPON = 0;
     private static final short SLOT_PRIMARY_AMMO = 1;
     private static final short SLOT_SERVER_SELECTOR = 8;
@@ -53,6 +62,8 @@ public class HyvexaPurgePlugin extends JavaPlugin {
     private ScheduledFuture<?> hudUpdateTask;
 
     private PurgeSpawnPointManager spawnPointManager;
+    private PurgeSettingsManager settingsManager;
+    private PurgeWaveConfigManager waveConfigManager;
     private PurgeWaveManager waveManager;
     private PurgeHudManager hudManager;
     private PurgeSessionManager sessionManager;
@@ -86,12 +97,18 @@ public class HyvexaPurgePlugin extends JavaPlugin {
 
         // Create managers
         spawnPointManager = new PurgeSpawnPointManager();
+        settingsManager = new PurgeSettingsManager();
+        waveConfigManager = new PurgeWaveConfigManager();
         hudManager = new PurgeHudManager();
-        waveManager = new PurgeWaveManager(spawnPointManager, hudManager);
-        sessionManager = new PurgeSessionManager(spawnPointManager, waveManager, hudManager);
+        waveManager = new PurgeWaveManager(spawnPointManager, waveConfigManager, hudManager);
+        sessionManager = new PurgeSessionManager(spawnPointManager, waveManager, hudManager, settingsManager);
+        PurgeUpgradeManager upgradeManager = new PurgeUpgradeManager();
+        waveManager.setUpgradeManager(upgradeManager);
+        sessionManager.setUpgradeManager(upgradeManager);
 
         // Register commands
-        this.getCommandRegistry().registerCommand(new PurgeCommand(sessionManager, spawnPointManager));
+        this.getCommandRegistry().registerCommand(
+                new PurgeCommand(sessionManager, spawnPointManager, waveConfigManager, settingsManager));
         this.getCommandRegistry().registerCommand(new PurgeSpawnCommand(spawnPointManager));
 
         // --- Event Handlers ---
@@ -120,8 +137,9 @@ public class HyvexaPurgePlugin extends JavaPlugin {
             }
             // Attach HUD (base info panel, wave status hidden by default)
             hudManager.attach(playerRef, player);
-            // Give server selector only (session start handles weapon/ammo)
-            giveServerSelector(player);
+            // Base idle loadout in Purge world.
+            InventoryUtils.clearAllContainers(player);
+            giveBaseLoadout(player, false);
             LOGGER.atInfo().log("Player entered Purge: " + (playerId != null ? playerId : "unknown"));
             try {
                 DiscordLinkStore.getInstance().checkAndRewardGems(playerId, player);
@@ -207,15 +225,31 @@ public class HyvexaPurgePlugin extends JavaPlugin {
         InventoryUtils.clearAllContainers(player);
         giveStartingWeapon(player);
         giveStartingAmmo(player);
-        giveServerSelector(player);
     }
 
     public void removeLoadout(Player player) {
         InventoryUtils.clearAllContainers(player);
-        giveServerSelector(player);
+        giveBaseLoadout(player, true);
     }
 
     // --- Private item grant methods ---
+
+    private void giveBaseLoadout(Player player, boolean includeServerSelector) {
+        Inventory inventory = player.getInventory();
+        if (inventory == null || inventory.getHotbar() == null) {
+            return;
+        }
+        inventory.getHotbar().setItemStackForSlot(SLOT_BASE_ORB_RESET, new ItemStack(ITEM_BASE_ORB_RESET, 1), false);
+        inventory.getHotbar().setItemStackForSlot(
+                SLOT_BASE_ORB_RESTART_CHECKPOINT,
+                new ItemStack(ITEM_BASE_ORB_RESTART_CHECKPOINT, 1),
+                false
+        );
+        inventory.getHotbar().setItemStackForSlot(SLOT_BASE_ORB_LEAVE, new ItemStack(ITEM_BASE_ORB_LEAVE, 1), false);
+        if (includeServerSelector) {
+            giveServerSelector(player);
+        }
+    }
 
     private void giveServerSelector(Player player) {
         Inventory inventory = player.getInventory();
