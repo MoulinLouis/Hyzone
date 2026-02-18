@@ -16,6 +16,7 @@ import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.hud.AscendHudManager;
 import io.hyvexa.ascend.hud.ToastType;
 import io.hyvexa.ascend.util.AscendModeGate;
+import io.hyvexa.common.util.CommandUtils;
 
 import javax.annotation.Nonnull;
 import java.util.Map;
@@ -49,7 +50,7 @@ public class CatCommand extends AbstractAsyncCommand {
             return CompletableFuture.completedFuture(null);
         }
 
-        String[] args = ctx.args();
+        String[] args = CommandUtils.getArgs(ctx);
         if (args.length < 1) {
             return CompletableFuture.completedFuture(null);
         }
