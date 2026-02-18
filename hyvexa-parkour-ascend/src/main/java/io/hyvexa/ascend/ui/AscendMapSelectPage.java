@@ -532,15 +532,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
             }
         }
         BigNumber increment = AscendConstants.getRunnerMultiplierIncrement(stars, multiplierGainBonus, evolutionPowerBonus, baseMultiplierBonus);
-        // Format: show 2 decimals for values under 1, 1 decimal for 1-10, integer for 10+
-        double val = increment.toDouble();
-        if (val < 1.0) {
-            return String.format(Locale.US, "+%.2fx", val);
-        } else if (val < 10.0) {
-            return String.format(Locale.US, "+%.1fx", val);
-        } else {
-            return String.format(Locale.US, "+%.0fx", val);
-        }
+        return "+" + FormatUtils.formatBigNumber(increment) + "x";
     }
 
     /**
