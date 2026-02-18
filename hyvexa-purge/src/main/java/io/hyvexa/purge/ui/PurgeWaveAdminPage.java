@@ -32,6 +32,7 @@ public class PurgeWaveAdminPage extends InteractiveCustomUIPage<PurgeWaveAdminPa
     private static final String BUTTON_CLEAR = "Clear";
     private static final String BUTTON_DELETE_PREFIX = "Delete:";
     private static final String BUTTON_ADJUST_PREFIX = "Adjust:";
+    private static final String BUTTON_SPAWN_PREFIX = "Spawn:";
 
     private final PurgeSettingsManager settingsManager;
     private final PurgeSpawnPointManager spawnPointManager;
@@ -84,7 +85,11 @@ public class PurgeWaveAdminPage extends InteractiveCustomUIPage<PurgeWaveAdminPa
             return;
         }
         if (button.startsWith(BUTTON_ADJUST_PREFIX)) {
-            handleAdjust(button.substring(BUTTON_ADJUST_PREFIX.length()));
+            handleAdjust(button.substring(BUTTON_ADJUST_PREFIX.length()), ref, store);
+            return;
+        }
+        if (button.startsWith(BUTTON_SPAWN_PREFIX)) {
+            handleSpawnAdjust(button.substring(BUTTON_SPAWN_PREFIX.length()), ref, store);
         }
     }
 
@@ -94,6 +99,8 @@ public class PurgeWaveAdminPage extends InteractiveCustomUIPage<PurgeWaveAdminPa
         if (player != null) {
             if (waveNumber > 0) {
                 player.sendMessage(Message.raw("Added wave " + waveNumber + " (default: slow 0, normal 5, fast 0)."));
+            } else if (!waveConfigManager.isPersistenceAvailable()) {
+                player.sendMessage(Message.raw(waveConfigManager.getPersistenceDisabledMessage()));
             } else {
                 player.sendMessage(Message.raw("Failed to add wave."));
             }
@@ -103,6 +110,12 @@ public class PurgeWaveAdminPage extends InteractiveCustomUIPage<PurgeWaveAdminPa
 
     private void handleClear(Ref<EntityStore> ref, Store<EntityStore> store) {
         Player player = store.getComponent(ref, Player.getComponentType());
+        if (!waveConfigManager.isPersistenceAvailable()) {
+            if (player != null) {
+                player.sendMessage(Message.raw(waveConfigManager.getPersistenceDisabledMessage()));
+            }
+            return;
+        }
         waveConfigManager.clearAll();
         if (player != null) {
             player.sendMessage(Message.raw("Cleared all wave definitions."));
@@ -126,6 +139,8 @@ public class PurgeWaveAdminPage extends InteractiveCustomUIPage<PurgeWaveAdminPa
         if (player != null) {
             if (removed) {
                 player.sendMessage(Message.raw("Removed wave " + waveNumber + "."));
+            } else if (!waveConfigManager.isPersistenceAvailable()) {
+                player.sendMessage(Message.raw(waveConfigManager.getPersistenceDisabledMessage()));
             } else {
                 player.sendMessage(Message.raw("Wave " + waveNumber + " not found."));
             }
@@ -133,7 +148,39 @@ public class PurgeWaveAdminPage extends InteractiveCustomUIPage<PurgeWaveAdminPa
         sendRefresh();
     }
 
-    private void handleAdjust(String payload) {
+    private void handleSpawnAdjust(String payload, Ref<EntityStore> ref, Store<EntityStore> store) {
+        String[] parts = payload.split(":");
+        if (parts.length != 3) {
+            return;
+        }
+
+        int waveNumber;
+        int delta;
+        try {
+            waveNumber = Integer.parseInt(parts[0]);
+            delta = Integer.parseInt(parts[2]);
+        } catch (NumberFormatException e) {
+            return;
+        }
+
+        String field = parts[1];
+        boolean updated = switch (field) {
+            case "delay" -> waveConfigManager.adjustSpawnDelay(waveNumber, delta);
+            case "batch" -> waveConfigManager.adjustBatchSize(waveNumber, delta);
+            default -> false;
+        };
+
+        if (updated) {
+            sendRefresh();
+        } else if (!waveConfigManager.isPersistenceAvailable()) {
+            Player player = store.getComponent(ref, Player.getComponentType());
+            if (player != null) {
+                player.sendMessage(Message.raw(waveConfigManager.getPersistenceDisabledMessage()));
+            }
+        }
+    }
+
+    private void handleAdjust(String payload, Ref<EntityStore> ref, Store<EntityStore> store) {
         String[] parts = payload.split(":");
         if (parts.length != 3) {
             return;
@@ -155,6 +202,11 @@ public class PurgeWaveAdminPage extends InteractiveCustomUIPage<PurgeWaveAdminPa
 
         if (waveConfigManager.adjustVariantCount(waveNumber, variant, delta)) {
             sendRefresh();
+        } else if (!waveConfigManager.isPersistenceAvailable()) {
+            Player player = store.getComponent(ref, Player.getComponentType());
+            if (player != null) {
+                player.sendMessage(Message.raw(waveConfigManager.getPersistenceDisabledMessage()));
+            }
         }
     }
 
@@ -210,6 +262,8 @@ public class PurgeWaveAdminPage extends InteractiveCustomUIPage<PurgeWaveAdminPa
             commandBuilder.set(root + " #SlowCount.Text", String.valueOf(Math.max(0, wave.slowCount())));
             commandBuilder.set(root + " #NormalCount.Text", String.valueOf(Math.max(0, wave.normalCount())));
             commandBuilder.set(root + " #FastCount.Text", String.valueOf(Math.max(0, wave.fastCount())));
+            commandBuilder.set(root + " #DelayValue.Text", wave.spawnDelayMs() + "ms");
+            commandBuilder.set(root + " #BatchValue.Text", String.valueOf(wave.spawnBatchSize()));
 
             bindAdjust(eventBuilder, root + " #SlowMinusButton", wave.waveNumber(), PurgeZombieVariant.SLOW, -1);
             bindAdjust(eventBuilder, root + " #SlowPlusButton", wave.waveNumber(), PurgeZombieVariant.SLOW, 1);
@@ -218,10 +272,26 @@ public class PurgeWaveAdminPage extends InteractiveCustomUIPage<PurgeWaveAdminPa
             bindAdjust(eventBuilder, root + " #FastMinusButton", wave.waveNumber(), PurgeZombieVariant.FAST, -1);
             bindAdjust(eventBuilder, root + " #FastPlusButton", wave.waveNumber(), PurgeZombieVariant.FAST, 1);
 
+            bindSpawnAdjust(eventBuilder, root + " #DelayMinusButton", wave.waveNumber(), "delay", -100);
+            bindSpawnAdjust(eventBuilder, root + " #DelayPlusButton", wave.waveNumber(), "delay", 100);
+            bindSpawnAdjust(eventBuilder, root + " #BatchMinusButton", wave.waveNumber(), "batch", -1);
+            bindSpawnAdjust(eventBuilder, root + " #BatchPlusButton", wave.waveNumber(), "batch", 1);
+
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
                     root + " #DeleteButton",
                     EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_DELETE_PREFIX + wave.waveNumber()), false);
         }
+    }
+
+    private void bindSpawnAdjust(UIEventBuilder eventBuilder,
+                              String target,
+                              int waveNumber,
+                              String field,
+                              int delta) {
+        String payload = BUTTON_SPAWN_PREFIX + waveNumber + ":" + field + ":" + delta;
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
+                target,
+                EventData.of(ButtonEventData.KEY_BUTTON, payload), false);
     }
 
     private void bindAdjust(UIEventBuilder eventBuilder,

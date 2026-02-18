@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Added
+- **Ascend: Cat Collector easter egg** - 5 hidden cat NPCs in Ascend world. Players find them via NPC dialog, tracked as a secret achievement (X/5 progress).
 - **Parkour: Map active toggle** - Admins can disable maps without deleting them via `/pk admin` Maps panel. Inactive maps block both start trigger and map selector entry with a warning message. New `active` column in `maps` table (defaults to TRUE).
 - **Purge: Configurable wave compositions** - `/purge admin` now has a Waves panel where staff define per-wave slow/normal/fast zombie counts. Sessions only start when at least one wave exists, spawns are distributed across configured spawn points, and clearing the final configured wave now ends with a win message.
 - **Purge: Session start/stop points in admin settings** - `/purge admin` now has a Settings panel (before Spawn Points) to set start spawn (`/purge start`) and exit point (`/purge stop`) from current position.
@@ -20,6 +21,9 @@
 - **Ascend: Replaced Elevation Boost with Auto Ascend** - Skill tree node at tier 12R now skips the ascension popup and cinematic, instantly ascending when reaching 1Dc. Players who had Elevation Boost get Auto Ascend automatically.
 - **Ascend: AP Multiplier system** - Each completed challenge grants +1 to AP multiplier (base x1, max x8). Replaces old per-challenge permanent bonuses. Displayed in the Challenges tab.
 - **Ascend: Summit XP softcap at level 1000** - Removed hard cap at level 1000 (unlimited levels). XP cost per level rises from level^2 to level^3 above 1000 — same vexa reaches fewer levels (old 5000 -> ~3591).
+
+### Fixed
+- **Purge: Deep-dive stability pass** - Fixed spawn/end race leaks, moved session teardown entity/inventory mutations onto world thread cleanup, replaced unsupported upgrade-card accent runtime background writes with visibility variants, added world-transfer HUD/loadout reconciliation, batched per-tick world work, improved purge error observability, and cleaned dead code/resources.
 
 ### Added
 - **Global: Analytics system** - Event-based analytics tracking gameplay events (joins, completions, duels, mode switches, purchases, Ascend progression). Daily aggregates computed into `analytics_daily` table. OP-only `/analytics` command shows DAU, retention, session length, and mode split. 90-day event retention with auto-purge.

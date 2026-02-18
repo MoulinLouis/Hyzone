@@ -65,7 +65,7 @@ public class PurgeUpgradePickPage extends InteractiveCustomUIPage<PurgeUpgradePi
 
             uiCommandBuilder.set("#Card" + cardNum + "Name.Text", type.getDisplayName());
             uiCommandBuilder.set("#Card" + cardNum + "Desc.Text", type.getDescription());
-            uiCommandBuilder.set("#Card" + cardNum + "Accent.Background", type.getColor());
+            applyCardAccent(uiCommandBuilder, cardNum, type);
 
             if (existingStacks > 0) {
                 uiCommandBuilder.set("#Card" + cardNum + "Stacks.Text", "x" + existingStacks);
@@ -103,6 +103,22 @@ public class PurgeUpgradePickPage extends InteractiveCustomUIPage<PurgeUpgradePi
             onComplete.run();
         }
         super.onDismiss(ref, store);
+    }
+
+    private static void applyCardAccent(UICommandBuilder uiCommandBuilder, int cardNum, PurgeUpgradeType type) {
+        String[] variants = {"Blue", "Red", "Amber", "Green", "Violet", "Gold"};
+        for (String variant : variants) {
+            uiCommandBuilder.set("#Card" + cardNum + "Accent" + variant + ".Visible", false);
+        }
+        String selected = switch (type) {
+            case SWIFT_FEET -> "Blue";
+            case IRON_SKIN -> "Red";
+            case AMMO_CACHE -> "Amber";
+            case SECOND_WIND -> "Green";
+            case THICK_HIDE -> "Violet";
+            case SCAVENGER -> "Gold";
+        };
+        uiCommandBuilder.set("#Card" + cardNum + "Accent" + selected + ".Visible", true);
     }
 
     public static class PurgeUpgradePickData {

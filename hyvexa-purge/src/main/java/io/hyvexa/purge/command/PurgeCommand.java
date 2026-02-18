@@ -63,7 +63,11 @@ public class PurgeCommand extends AbstractAsyncCommand {
             return CompletableFuture.completedFuture(null);
         }
         Store<EntityStore> store = ref.getStore();
-        World world = store.getExternalData().getWorld();
+        World world = store.getExternalData() != null ? store.getExternalData().getWorld() : null;
+        if (world == null) {
+            ctx.sendMessage(Message.raw("Could not resolve your world."));
+            return CompletableFuture.completedFuture(null);
+        }
         return CompletableFuture.runAsync(() -> handleCommand(ctx, player, ref, store, world), world);
     }
 

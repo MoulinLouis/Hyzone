@@ -1,6 +1,7 @@
 package io.hyvexa.purge.data;
 
-public record PurgeWaveDefinition(int waveNumber, int slowCount, int normalCount, int fastCount) {
+public record PurgeWaveDefinition(int waveNumber, int slowCount, int normalCount, int fastCount,
+                                   int spawnDelayMs, int spawnBatchSize) {
 
     public int getCount(PurgeZombieVariant variant) {
         return switch (variant) {

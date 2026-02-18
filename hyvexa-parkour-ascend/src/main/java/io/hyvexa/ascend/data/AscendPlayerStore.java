@@ -147,6 +147,9 @@ public class AscendPlayerStore {
         // Reset Achievements
         progress.setUnlockedAchievements(null);
 
+        // Reset Easter Egg cats
+        progress.setFoundCats(null);
+
         // Reset Statistics
         progress.setTotalManualRuns(0);
         progress.setConsecutiveManualRuns(0);
@@ -1227,6 +1230,7 @@ public class AscendPlayerStore {
                 "ascend_player_summit",
                 "ascend_player_skills",
                 "ascend_player_achievements",
+                "ascend_player_cats",
                 "ascend_ghost_recordings",
                 "ascend_challenges",
                 "ascend_challenge_records",

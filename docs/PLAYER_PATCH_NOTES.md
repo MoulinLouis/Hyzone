@@ -4,6 +4,25 @@ What's new in Hyvexa? All player-facing changes, newest first.
 
 ---
 
+## v0.1.6 - 2026-02-18
+
+### New
+
+- **Leave Practice** : A new item in Parkour that lets you exit Practice Mode and return to the exact spot where you started practicing.
+- **Protected Pickups** : Pick-up items such as mushrooms and rubble are now protected.
+
+### Improved
+
+- **Auto-Ascension** : Automatically purchases your first Runner on Map 1 after ascending, so you no longer have to buy it manually each time.
+- **Cleaner Parkour Experience** : Removed the "Having Trouble?" and "Try Practice Mode" popup hints
+
+### Fixed
+
+- **Fall Respawn** : Fall respawn during Parkour runs is now working properly again.
+- **Challenge Stats** : Fixed an issue where challenge stats and personal bests could incorrectly roll back after completing or disconnecting during a challenge.
+
+---
+
 ## v0.1.5 - 2026-02-18
 
 ### New

@@ -577,6 +577,35 @@ public class AscendPlayerProgress {
         return transcendenceCount.incrementAndGet();
     }
 
+    // ========================================
+    // Easter Egg - Cat Collector
+    // ========================================
+
+    private final Set<String> foundCats = ConcurrentHashMap.newKeySet();
+
+    public boolean hasFoundCat(String token) {
+        return foundCats.contains(token);
+    }
+
+    public boolean addFoundCat(String token) {
+        return foundCats.add(token);
+    }
+
+    public int getFoundCatCount() {
+        return foundCats.size();
+    }
+
+    public Set<String> getFoundCats() {
+        return Set.copyOf(foundCats);
+    }
+
+    public void setFoundCats(Set<String> cats) {
+        foundCats.clear();
+        if (cats != null) {
+            foundCats.addAll(cats);
+        }
+    }
+
     public static class AutoSummitCategoryConfig {
         private boolean enabled;
         private int targetLevel;

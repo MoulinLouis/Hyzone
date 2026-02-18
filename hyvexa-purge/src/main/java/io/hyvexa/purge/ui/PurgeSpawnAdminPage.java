@@ -93,7 +93,7 @@ public class PurgeSpawnAdminPage extends InteractiveCustomUIPage<PurgeSpawnAdmin
             return;
         }
         TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
-        if (transform == null) {
+        if (transform == null || transform.getPosition() == null) {
             player.sendMessage(Message.raw("Could not read position."));
             return;
         }
@@ -101,8 +101,14 @@ public class PurgeSpawnAdminPage extends InteractiveCustomUIPage<PurgeSpawnAdmin
         Vector3f rot = transform.getRotation();
         float yaw = rot != null ? rot.getY() : 0f;
         int id = spawnPointManager.addSpawnPoint(pos.getX(), pos.getY(), pos.getZ(), yaw);
-        player.sendMessage(Message.raw("Added spawn point #" + id + " at "
-                + formatCoord(pos.getX()) + ", " + formatCoord(pos.getY()) + ", " + formatCoord(pos.getZ())));
+        if (id > 0) {
+            player.sendMessage(Message.raw("Added spawn point #" + id + " at "
+                    + formatCoord(pos.getX()) + ", " + formatCoord(pos.getY()) + ", " + formatCoord(pos.getZ())));
+        } else if (!spawnPointManager.isPersistenceAvailable()) {
+            player.sendMessage(Message.raw(spawnPointManager.getPersistenceDisabledMessage()));
+        } else {
+            player.sendMessage(Message.raw("Failed to add spawn point."));
+        }
         sendRefresh();
     }
 
@@ -121,6 +127,8 @@ public class PurgeSpawnAdminPage extends InteractiveCustomUIPage<PurgeSpawnAdmin
         boolean removed = spawnPointManager.removeSpawnPoint(id);
         if (removed) {
             player.sendMessage(Message.raw("Removed spawn point #" + id + "."));
+        } else if (!spawnPointManager.isPersistenceAvailable()) {
+            player.sendMessage(Message.raw(spawnPointManager.getPersistenceDisabledMessage()));
         } else {
             player.sendMessage(Message.raw("Spawn point #" + id + " not found."));
         }
