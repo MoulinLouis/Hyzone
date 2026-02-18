@@ -13,6 +13,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.command.AscendCommand;
 import io.hyvexa.ascend.command.AscendAdminCommand;
+import io.hyvexa.ascend.command.CatCommand;
 import io.hyvexa.ascend.command.CinematicTestCommand;
 import io.hyvexa.ascend.command.ElevateCommand;
 import io.hyvexa.ascend.command.HudPreviewCommand;
@@ -220,6 +221,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
         getCommandRegistry().registerCommand(new SummitCommand());
         getCommandRegistry().registerCommand(new SkillCommand());
         getCommandRegistry().registerCommand(new TranscendCommand());
+        getCommandRegistry().registerCommand(new CatCommand());
         if (runtimeConfig.isEnableTestCommands()) {
             getCommandRegistry().registerCommand(new CinematicTestCommand());
             getCommandRegistry().registerCommand(new HudPreviewCommand());

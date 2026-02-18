@@ -108,6 +108,9 @@ public class AchievementManager {
             case CHALLENGER -> !progress.getCompletedChallengeRewards().isEmpty();
             case CHALLENGE_MASTER -> progress.hasAllChallengeRewards();
 
+            // Easter Eggs
+            case CAT_COLLECTOR -> progress.getFoundCatCount() >= AscendConstants.ACHIEVEMENT_CATS_REQUIRED;
+
             // Secret
             case CHAIN_RUNNER -> progress.getConsecutiveManualRuns() >= AscendConstants.ACHIEVEMENT_CONSECUTIVE_RUNS_25;
             case ALL_STARS -> allMapsMaxStars(progress);
@@ -351,6 +354,12 @@ public class AchievementManager {
             case CHALLENGE_MASTER -> {
                 current = progress.getCompletedChallengeRewards().size();
                 required = AscendConstants.ChallengeType.values().length;
+            }
+
+            // Easter Eggs
+            case CAT_COLLECTOR -> {
+                current = Math.min(progress.getFoundCatCount(), AscendConstants.ACHIEVEMENT_CATS_REQUIRED);
+                required = AscendConstants.ACHIEVEMENT_CATS_REQUIRED;
             }
 
             // Secret
