@@ -50,15 +50,7 @@ public final class InventoryUtils {
         boolean hasDaggers = map != null && map.isMithrilDaggersEnabled();
         boolean hasGlider = map != null && map.isGliderEnabled();
         if (practiceEnabled) {
-            // Practice mode order:
-            // Set checkpoint, Restart to checkpoint, Leave map, Leave practice, Toggle fly, Player settings
-            setHotbarItem(inventory, 0, new ItemStack(ParkourConstants.ITEM_PRACTICE_CHECKPOINT, 1));
-            setHotbarItem(inventory, 1, new ItemStack(ParkourConstants.ITEM_RESTART_CHECKPOINT, 1));
-            setHotbarItem(inventory, 2, new ItemStack(ParkourConstants.ITEM_LEAVE, 1));
-            setHotbarItem(inventory, 3, new ItemStack(ParkourConstants.ITEM_LEAVE_PRACTICE, 1));
-            setHotbarItem(inventory, 4, new ItemStack(ParkourConstants.ITEM_TOGGLE_FLY, 1));
-            setHotbarItem(inventory, 5, new ItemStack(ParkourConstants.ITEM_ADMIN_REMOTE, 1));
-            int slotIndex = 6;
+            int slotIndex = 0;
             if (hasSword) {
                 setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_RUN_MITHRIL_SWORD, 1));
             }
@@ -66,8 +58,17 @@ public final class InventoryUtils {
                 setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_RUN_MITHRIL_DAGGERS, 1));
             }
             if (hasGlider) {
-                setHotbarItem(inventory, slotIndex, new ItemStack(ParkourConstants.ITEM_RUN_GLIDER, 1));
+                setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_RUN_GLIDER, 1));
             }
+
+            // Practice mode order:
+            // Set checkpoint, Restart to checkpoint, Leave map, Leave practice, Toggle fly, Player settings
+            setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_PRACTICE_CHECKPOINT, 1));
+            setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_RESTART_CHECKPOINT, 1));
+            setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_LEAVE, 1));
+            setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_LEAVE_PRACTICE, 1));
+            setHotbarItem(inventory, slotIndex++, new ItemStack(ParkourConstants.ITEM_TOGGLE_FLY, 1));
+            setHotbarItem(inventory, slotIndex, new ItemStack(ParkourConstants.ITEM_ADMIN_REMOTE, 1));
             finalizeInventory(inventory, isOp);
             return;
         }
