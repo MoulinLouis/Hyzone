@@ -835,6 +835,12 @@ public class RobotManager {
         if (progress == null) return;
         if (!progress.isAutoElevationEnabled()) return;
 
+        // Compound path for Challenge 8 players
+        if (playerStore.hasCompoundElevation(playerId)) {
+            autoCompoundElevatePlayer(playerId, progress, now);
+            return;
+        }
+
         List<Long> targets = progress.getAutoElevationTargets();
         int targetIndex = progress.getAutoElevationTargetIndex();
 
@@ -909,6 +915,65 @@ public class RobotManager {
         playerStore.markDirty(playerId);
 
         // Close the player's ascend page so they see fresh state on reopen
+        AscendCommand.forceCloseActivePage(playerId);
+    }
+
+    private void autoCompoundElevatePlayer(UUID playerId, AscendPlayerProgress progress, long now) {
+        // Check timer
+        int timerSeconds = progress.getAutoElevationTimerSeconds();
+        if (timerSeconds > 0) {
+            Long lastMs = lastAutoElevationMs.get(playerId);
+            if (lastMs != null && (now - lastMs) < (long) timerSeconds * 1000L) return;
+        }
+
+        int cycleLevel = progress.getCycleLevel();
+        BigNumber accumulatedVexa = progress.getElevationAccumulatedVexa();
+        AscendConstants.ElevationPurchaseResult purchase = AscendConstants.calculateCompoundPurchase(cycleLevel, accumulatedVexa);
+
+        if (purchase.levels <= 0 && cycleLevel <= 0) return;
+
+        // Buy cycle levels
+        int newCycleLevel = cycleLevel + purchase.levels;
+        if (purchase.levels > 0) {
+            progress.addCycleLevel(purchase.levels);
+        }
+
+        if (newCycleLevel <= 0) return;
+
+        // Auto-compound whenever we have cycle levels to compound
+        despawnRobotsForPlayer(playerId);
+
+        String beforeText = AscendConstants.formatCompoundedElevation(progress.getCompoundedElevation());
+        playerStore.compoundElevation(playerId);
+        String afterText = AscendConstants.formatCompoundedElevation(progress.getCompoundedElevation());
+
+        // Reset progress
+        List<AscendMap> maps = mapStore.listMapsSorted();
+        String firstMapId = maps.isEmpty() ? null : maps.get(0).getId();
+        playerStore.resetProgressForElevation(playerId, firstMapId);
+
+        // Send chat message
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin != null) {
+            PlayerRef playerRef = plugin.getPlayerRef(playerId);
+            if (playerRef != null) {
+                Ref<EntityStore> ref = playerRef.getReference();
+                if (ref != null && ref.isValid()) {
+                    Store<EntityStore> store = ref.getStore();
+                    com.hypixel.hytale.server.core.entity.entities.Player player =
+                        store.getComponent(ref, com.hypixel.hytale.server.core.entity.entities.Player.getComponentType());
+                    if (player != null) {
+                        player.sendMessage(com.hypixel.hytale.server.core.Message.raw(
+                            "[Auto-Elevation] Compound: " + beforeText + " -> " + afterText)
+                            .color(io.hyvexa.common.util.SystemMessageUtils.SUCCESS));
+                    }
+                }
+            }
+        }
+
+        lastAutoElevationMs.put(playerId, now);
+        playerStore.markDirty(playerId);
+
         AscendCommand.forceCloseActivePage(playerId);
     }
 

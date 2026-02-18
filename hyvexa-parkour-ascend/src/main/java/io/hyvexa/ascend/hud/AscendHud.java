@@ -164,6 +164,78 @@ public class AscendHud extends CustomUIHud {
         update(false, commandBuilder);
     }
 
+    public void updateCompoundEconomy(BigNumber vexa, BigNumber product, BigNumber[] digits,
+                                       String currentElevationText, String potentialElevationText,
+                                       boolean showElevation) {
+        String vexaText = FormatUtils.formatBigNumber(vexa);
+        String vexaPerRunText = FormatUtils.formatBigNumber(product) + "/run";
+        String digitsKey = buildDigitsKey(digits);
+        String elevationText;
+        if (showElevation && !potentialElevationText.equals(currentElevationText)) {
+            elevationText = currentElevationText + " -> " + potentialElevationText;
+        } else {
+            elevationText = currentElevationText;
+        }
+        // Use currentElevationText as the value display (already formatted)
+        String elevationValueText = currentElevationText;
+
+        boolean valuesChanged = !vexaText.equals(lastVexaText)
+            || !vexaPerRunText.equals(lastVexaPerRunText)
+            || !digitsKey.equals(lastDigitsKey)
+            || !elevationValueText.equals(lastElevationValueText)
+            || !elevationText.equals(lastElevationText)
+            || !Boolean.valueOf(showElevation).equals(lastElevationVisible);
+
+        boolean hasActiveEffects = effectManager.hasActiveEffects();
+
+        if (!valuesChanged && !hasActiveEffects) {
+            return;
+        }
+
+        double[] safeDigits = null;
+        if (valuesChanged) {
+            safeDigits = normalizeDigits(digits);
+
+            if (lastDigits != null) {
+                String[] elementIds = {"#TopRedValue", "#TopOrangeValue", "#TopYellowValue", "#TopGreenValue", "#TopBlueValue"};
+                for (int i = 0; i < Math.min(safeDigits.length, lastDigits.length); i++) {
+                    if (safeDigits[i] > lastDigits[i]) {
+                        effectManager.triggerMultiplierEffect(elementIds[i], i);
+                    }
+                }
+            }
+
+            lastVexaText = vexaText;
+            lastVexaPerRunText = vexaPerRunText;
+            lastDigitsKey = digitsKey;
+            lastElevationValueText = elevationValueText;
+            lastElevationText = elevationText;
+            lastElevationVisible = showElevation;
+            lastDigits = safeDigits.clone();
+            lastVexa = vexa;
+        }
+
+        UICommandBuilder commandBuilder = new UICommandBuilder();
+
+        if (valuesChanged) {
+            commandBuilder.set("#TopVexaValue.Text", vexaText);
+            commandBuilder.set("#TopVexaPerRunValue.Text", vexaPerRunText);
+            commandBuilder.set("#TopRedValue.Text", formatMultiplier(safeDigits[0]));
+            commandBuilder.set("#TopOrangeValue.Text", formatMultiplier(safeDigits[1]));
+            commandBuilder.set("#TopYellowValue.Text", formatMultiplier(safeDigits[2]));
+            commandBuilder.set("#TopGreenValue.Text", formatMultiplier(safeDigits[3]));
+            commandBuilder.set("#TopBlueValue.Text", formatMultiplier(safeDigits[4]));
+            commandBuilder.set("#TopElevationValue.Text", elevationValueText);
+            commandBuilder.set("#ElevationHud.Visible", showElevation);
+            if (showElevation) {
+                commandBuilder.set("#ElevationStatusText.Text", elevationText);
+            }
+        }
+
+        effectManager.update(commandBuilder);
+        update(false, commandBuilder);
+    }
+
     public void updateTimer(Long elapsedMs, boolean visible) {
         String timerText = elapsedMs != null ? formatTimer(elapsedMs) : "0.000";
 
