@@ -43,6 +43,7 @@
 - **Ascend: Leaderboard system** - New `/ascend leaderboard` command with tabbed rankings for Vexa, Ascensions, and Manual Runs. Includes pagination (50 per page) and player search. Accessible via the Bolt of Stormsilk item.
 
 ### Fixed
+- **Parkour: Fall respawn restored** - Fall respawn behavior is working again during parkour runs.
 - **Ascend/Hub: Low-priority review cleanup** - Clarified Ascend map balance source-of-truth and migration staging (legacy read/write drift), and updated Hub Ascend denial copy to match whitelist-restricted access behavior
 - **Parkour/Ascend: Completed medium-priority stability/maintainability pass** - Correct XP award deltas on completion, null-safe admin transform reads, shared throttled async error logging, and snapshot-based Ascend map-select refresh with dispatch/lifecycle refactors
 - **Ascend: Closed crafted map-selection unlock bypass** - Map select now validates payload map IDs against displayed entries and enforces unlock requirements instead of force-unlocking.

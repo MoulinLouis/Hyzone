@@ -23,9 +23,10 @@ A multi-module Hytale server plugin suite for a parkour minigame server. Players
 - **Progression** - Rank system (Bronze to Grandmaster) based on map completions
 - **1v1 Duels** - Matchmaking queue with duel stats, category filters, and opponent visibility toggle
 - **Practice Mode** - Per-run checkpoints for practicing difficult sections
+- **Fall Respawn** - Automatic respawn safety is active again during runs
 - **Run HUD** - Live timer with tick-precise checkpoint splits and delta display
 - **Ghost Replay** - Per-map personal best ghost recordings for runner playback
-- **Admin Tools** - Map/player management, settings, playtime tracking, population history
+- **Admin Tools** - Map/player management, settings, playtime tracking, population history, and expanded Map Admin UI space
 - **VIP/Founder Ranks** - Purchasable ranks with chat tags, nameplates, and speed multipliers
 - **New Player Onboarding** - 3-screen tutorial, smart map recommendations, practice mode hints
 
