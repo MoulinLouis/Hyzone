@@ -1,0 +1,42 @@
+{
+  "TranslationProperties": {
+    "Name": "Quit Purge",
+    "Description": "Right click to leave the current Purge session."
+  },
+  "Icon": "Icons/ItemsGenerated/Red_Orb_Hyvexa.png",
+  "Quality": "Developer",
+  "Categories": [
+    "Items.Ingredients"
+  ],
+  "Model": "Items/Custom/Orb Hyvexa.blockymodel",
+  "Texture": "Items/Custom/Orb_Texture_red.png",
+  "PlayerAnimationsId": "Block",
+  "IconProperties": {
+    "Scale": 0.9,
+    "Rotation": [
+      0,
+      196,
+      0
+    ],
+    "Translation": [
+      0,
+      -19
+    ]
+  },
+  "ItemEntity": {
+    "ParticleSystemId": null
+  },
+  "MaxStack": 1,
+  "Scale": 1.3,
+  "Particles": [
+    {
+      "Color": "#ef4444",
+      "SystemId": "Temple_Light_Lantern"
+    }
+  ],
+  "ItemSoundSetId": "ISS_Items_Gems",
+  "DropOnDeath": false,
+  "Interactions": {
+    "Secondary": "Purge_Orb_Red"
+  }
+}
