@@ -10,8 +10,11 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.common.ui.ButtonEventData;
+import io.hyvexa.parkour.data.Map;
 import io.hyvexa.parkour.tracker.RunTracker;
+import io.hyvexa.parkour.util.InventoryUtils;
 
 import javax.annotation.Nonnull;
 
@@ -50,7 +53,16 @@ public class PracticeModeHintPage extends BaseParkourPage {
 
         if (BUTTON_ENABLE_PRACTICE.equals(data.getButton())) {
             if (runTracker != null) {
-                runTracker.enablePractice(playerRef.getUuid());
+                boolean enabled = runTracker.enablePractice(ref, store, playerRef);
+                if (enabled) {
+                    String mapId = runTracker.getActiveMapId(playerRef.getUuid());
+                    HyvexaPlugin plugin = HyvexaPlugin.getInstance();
+                    Map map = mapId != null && plugin != null && plugin.getMapStore() != null
+                            ? plugin.getMapStore().getMap(mapId)
+                            : null;
+                    InventoryUtils.clearAllItems(player);
+                    InventoryUtils.giveRunItems(player, map, true);
+                }
             }
             this.close();
         } else if (BUTTON_NOT_NOW.equals(data.getButton())) {

@@ -1,7 +1,7 @@
 {
   "TranslationProperties": {
-    "Name": "Start practice",
-    "Description": "Right click to start practice mode."
+    "Name": "Leave practice",
+    "Description": "Right click to leave practice mode."
   },
   "Icon": "Icons/ItemsGenerated/Purple_Orb_Hyvexa.png",
   "Quality": "Developer",
@@ -37,6 +37,6 @@
   "ItemSoundSetId": "ISS_Items_Gems",
   "DropOnDeath": true,
   "Interactions": {
-    "Secondary": "Ingredient_Water_Essence"
+    "Secondary": "Parkour_Leave_Practice_Block"
   }
 }

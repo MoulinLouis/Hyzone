@@ -11,9 +11,11 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.ui.ButtonEventData;
+import io.hyvexa.parkour.data.Map;
 import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.data.ProgressStore;
 import io.hyvexa.parkour.tracker.RunTracker;
+import io.hyvexa.parkour.util.InventoryUtils;
 
 import javax.annotation.Nonnull;
 
@@ -68,7 +70,12 @@ public class MapRecommendationPage extends BaseParkourPage {
                     new MapSelectPage(playerRef, mapStore, progressStore, runTracker, category));
         } else if (BUTTON_PRACTICE_MODE.equals(data.getButton())) {
             if (runTracker != null) {
-                runTracker.enablePractice(playerRef.getUuid());
+                boolean enabled = runTracker.enablePractice(ref, store, playerRef);
+                if (enabled) {
+                    Map map = mapStore != null ? mapStore.getMap(currentMapId) : null;
+                    InventoryUtils.clearAllItems(player);
+                    InventoryUtils.giveRunItems(player, map, true);
+                }
             }
             this.close();
         } else if (BUTTON_CONTINUE.equals(data.getButton())) {

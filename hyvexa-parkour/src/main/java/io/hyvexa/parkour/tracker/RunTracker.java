@@ -250,10 +250,31 @@ public class RunTracker {
     }
 
     public boolean enablePractice(UUID playerId) {
+        return enablePractice(playerId, null, null, null);
+    }
+
+    public boolean enablePractice(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef) {
+        if (playerRef == null) {
+            return false;
+        }
+        return enablePractice(playerRef.getUuid(), ref, store, playerRef);
+    }
+
+    private boolean enablePractice(UUID playerId, Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef) {
         ActiveRun run = activeRuns.get(playerId);
         if (run == null) {
             return false;
         }
+        if (run.practiceEnabled) {
+            return true;
+        }
+        run.practiceStartTouchedCheckpoints.clear();
+        run.practiceStartTouchedCheckpoints.addAll(run.touchedCheckpoints);
+        run.practiceStartCheckpointTouchTimes.clear();
+        run.practiceStartCheckpointTouchTimes.putAll(run.checkpointTouchTimes);
+        run.practiceStartCheckpointIndex = run.lastCheckpointIndex;
+        run.practiceStartFinishTouched = run.finishTouched;
+        run.practiceStartPosition = resolvePracticeStartPosition(run, ref, store, playerRef);
         run.practiceEnabled = true;
         run.practiceCheckpoint = null;
         run.practiceHeadRotation = null;
@@ -270,6 +291,48 @@ public class RunTracker {
             }
         }
         run.flyActive = false;
+        return true;
+    }
+
+    public boolean disablePracticeAndRestore(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef) {
+        if (playerRef == null) {
+            return false;
+        }
+        ActiveRun run = activeRuns.get(playerRef.getUuid());
+        if (run == null || !run.practiceEnabled) {
+            return false;
+        }
+        run.practiceEnabled = false;
+        run.flyActive = false;
+        setFly(playerRef.getUuid(), false);
+        run.practiceCheckpoint = null;
+        run.practiceHeadRotation = null;
+        run.touchedCheckpoints.clear();
+        run.touchedCheckpoints.addAll(run.practiceStartTouchedCheckpoints);
+        run.checkpointTouchTimes.clear();
+        run.checkpointTouchTimes.putAll(run.practiceStartCheckpointTouchTimes);
+        run.lastCheckpointIndex = run.practiceStartCheckpointIndex;
+        run.finishTouched = run.practiceStartFinishTouched;
+        run.practiceStartTouchedCheckpoints.clear();
+        run.practiceStartCheckpointTouchTimes.clear();
+        run.practiceStartCheckpointIndex = -1;
+        run.practiceStartFinishTouched = false;
+        TransformData returnPoint = run.practiceStartPosition;
+        run.practiceStartPosition = null;
+        run.lastFlyZoneRollbackMs = 0L;
+        if (returnPoint == null || ref == null || store == null) {
+            return true;
+        }
+        World world = store.getExternalData().getWorld();
+        if (world == null) {
+            return true;
+        }
+        Vector3d position = new Vector3d(returnPoint.getX(), returnPoint.getY(), returnPoint.getZ());
+        Vector3f rotation = new Vector3f(returnPoint.getRotX(), returnPoint.getRotY(), returnPoint.getRotZ());
+        teleporter.addTeleport(ref, store, null, new Teleport(world, position, rotation));
+        run.fallState.fallStartTime = null;
+        run.fallState.lastY = null;
+        run.lastPosition = null;
         return true;
     }
 
@@ -626,6 +689,11 @@ public class RunTracker {
         boolean flyActive;
         TransformData practiceCheckpoint;
         Vector3f practiceHeadRotation;
+        TransformData practiceStartPosition;
+        final Set<Integer> practiceStartTouchedCheckpoints = new HashSet<>();
+        final java.util.Map<Integer, Long> practiceStartCheckpointTouchTimes = new java.util.HashMap<>();
+        int practiceStartCheckpointIndex = -1;
+        boolean practiceStartFinishTouched;
         long lastFinishWarningMs;
         long elapsedMs;
         double elapsedRemainderMs;
@@ -682,6 +750,57 @@ public class RunTracker {
         return pos.getX() >= map.getFlyZoneMinX() && pos.getX() <= map.getFlyZoneMaxX()
             && pos.getY() >= map.getFlyZoneMinY() && pos.getY() <= map.getFlyZoneMaxY()
             && pos.getZ() >= map.getFlyZoneMinZ() && pos.getZ() <= map.getFlyZoneMaxZ();
+    }
+
+    private TransformData resolvePracticeStartPosition(ActiveRun run, Ref<EntityStore> ref,
+                                                       Store<EntityStore> store, PlayerRef playerRef) {
+        if (run == null) {
+            return null;
+        }
+        if (ref != null && store != null && ref.isValid()) {
+            TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
+            if (transform != null && transform.getPosition() != null && transform.getRotation() != null) {
+                Vector3f headRotation = playerRef != null ? playerRef.getHeadRotation() : null;
+                Vector3f useRotation = headRotation != null ? headRotation : transform.getRotation();
+                TransformData data = new TransformData();
+                data.setX(transform.getPosition().getX());
+                data.setY(transform.getPosition().getY());
+                data.setZ(transform.getPosition().getZ());
+                data.setRotX(useRotation.getX());
+                data.setRotY(useRotation.getY());
+                data.setRotZ(useRotation.getZ());
+                return data;
+            }
+        }
+        if (run.lastPosition != null) {
+            TransformData data = new TransformData();
+            data.setX(run.lastPosition.getX());
+            data.setY(run.lastPosition.getY());
+            data.setZ(run.lastPosition.getZ());
+            data.setRotX(0f);
+            data.setRotY(0f);
+            data.setRotZ(0f);
+            return data;
+        }
+        Map map = mapStore.getMap(run.mapId);
+        if (map == null || map.getStart() == null) {
+            return null;
+        }
+        return copyTransformData(map.getStart());
+    }
+
+    private static TransformData copyTransformData(TransformData source) {
+        if (source == null) {
+            return null;
+        }
+        TransformData copy = new TransformData();
+        copy.setX(source.getX());
+        copy.setY(source.getY());
+        copy.setZ(source.getZ());
+        copy.setRotX(source.getRotX());
+        copy.setRotY(source.getRotY());
+        copy.setRotZ(source.getRotZ());
+        return copy;
     }
 
     private void armStartOnMovement(ActiveRun run, TransformData start) {
