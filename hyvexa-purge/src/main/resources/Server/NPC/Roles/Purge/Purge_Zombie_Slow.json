@@ -1,0 +1,38 @@
+{
+  "Type": "Variant",
+  "Reference": "Template_Purge_Zombie",
+  "Modify": {
+    "DropList": "Empty",
+    "Appearance": "Zombie",
+    "MaxHealth": 49,
+    "MaxWalkSpeed": 7,
+    "AggroRange": 100,
+    "AttackDistance": 1.5,
+    "CombatRelativeTurnSpeed": 1.5,
+    "IsMemory": true,
+    "MemoriesCategory": "Undead",
+    "_InteractionVars": {
+      "Melee_Damage": {
+        "Interactions": [
+          {
+            "Parent": "NPC_Attack_Melee_Damage",
+            "DamageCalculator": {
+              "BaseDamage": {
+                "Physical": 18
+              }
+            }
+          }
+        ]
+      }
+    },
+    "NameTranslationKey": {
+      "Compute": "NameTranslationKey"
+    }
+  },
+  "Parameters": {
+    "NameTranslationKey": {
+      "Value": "server.npcRoles.Zombie.name",
+      "Description": "Translation key for NPC name display"
+    }
+  }
+}
