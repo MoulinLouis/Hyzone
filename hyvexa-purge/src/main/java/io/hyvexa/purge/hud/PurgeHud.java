@@ -9,6 +9,11 @@ public class PurgeHud extends CustomUIHud {
 
     private int lastPlayerCount = -1;
     private long lastGems = -1;
+    private int lastWave = -1;
+    private int lastAlive = -1;
+    private int lastTotal = -1;
+    private long lastScrap = -1;
+    private String lastIntermissionText = null;
 
     public PurgeHud(PlayerRef playerRef) {
         super(playerRef);
@@ -24,9 +29,9 @@ public class PurgeHud extends CustomUIHud {
             return;
         }
         lastGems = gems;
-        UICommandBuilder commandBuilder = new UICommandBuilder();
-        commandBuilder.set("#PlayerGemsValue.Text", String.valueOf(gems));
-        update(false, commandBuilder);
+        UICommandBuilder cmd = new UICommandBuilder();
+        cmd.set("#PlayerGemsValue.Text", String.valueOf(gems));
+        update(false, cmd);
     }
 
     public void updatePlayerCount() {
@@ -35,8 +40,59 @@ public class PurgeHud extends CustomUIHud {
             return;
         }
         lastPlayerCount = count;
-        UICommandBuilder commandBuilder = new UICommandBuilder();
-        commandBuilder.set("#PlayerCountText.Text", String.format("%,d", count));
-        update(false, commandBuilder);
+        UICommandBuilder cmd = new UICommandBuilder();
+        cmd.set("#PlayerCountText.Text", String.format("%,d", count));
+        update(false, cmd);
+    }
+
+    public void updateWaveStatus(int wave, int alive, int total) {
+        if (wave == lastWave && alive == lastAlive && total == lastTotal) {
+            return;
+        }
+        lastWave = wave;
+        lastAlive = alive;
+        lastTotal = total;
+        lastIntermissionText = null;
+        UICommandBuilder cmd = new UICommandBuilder();
+        cmd.set("#WaveLabel.Text", "WAVE " + wave);
+        cmd.set("#ZombieCountLabel.Text", "Zombies: " + alive + "/" + total);
+        update(false, cmd);
+    }
+
+    public void updateIntermission(int seconds) {
+        String text = "Next wave in " + seconds + "...";
+        if (text.equals(lastIntermissionText)) {
+            return;
+        }
+        lastIntermissionText = text;
+        UICommandBuilder cmd = new UICommandBuilder();
+        cmd.set("#ZombieCountLabel.Text", text);
+        update(false, cmd);
+    }
+
+    public void updateScrap(long scrap) {
+        if (scrap == lastScrap) {
+            return;
+        }
+        lastScrap = scrap;
+        UICommandBuilder cmd = new UICommandBuilder();
+        cmd.set("#PlayerScrapValue.Text", scrap + " scrap");
+        update(false, cmd);
+    }
+
+    public void setWaveStatusVisible(boolean visible) {
+        UICommandBuilder cmd = new UICommandBuilder();
+        cmd.set("#WaveStatusRow.Visible", visible);
+        update(false, cmd);
+    }
+
+    public void resetCache() {
+        lastWave = -1;
+        lastAlive = -1;
+        lastTotal = -1;
+        lastScrap = -1;
+        lastPlayerCount = -1;
+        lastGems = -1;
+        lastIntermissionText = null;
     }
 }
