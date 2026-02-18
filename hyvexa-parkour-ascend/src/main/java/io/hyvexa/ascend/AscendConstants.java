@@ -1,6 +1,7 @@
 package io.hyvexa.ascend;
 
 import io.hyvexa.common.math.BigNumber;
+import io.hyvexa.common.util.FormatUtils;
 
 import java.util.Set;
 
@@ -322,6 +323,12 @@ public final class AscendConstants {
     public static final double ELEVATION_COST_CURVE_LATE = 0.58; // Late game exponent (level > SOFT_CAP)
     public static final int ELEVATION_SOFT_CAP = 300; // Level where late-game curve kicks in
 
+    // Compound Elevation (post-Challenge 8)
+    public static final double COMPOUND_COST_BASE = 1000.0;
+    public static final double COMPOUND_COST_GROWTH = 1.3;
+    public static final double COMPOUND_COST_CURVE = 0.8;
+    public static final int COMPOUND_POWER = 2;
+
     /**
      * Calculate the cost to reach the next elevation level.
      * Below SOFT_CAP: baseCost * 1.15^(level^0.72)
@@ -439,6 +446,87 @@ public final class AscendConstants {
             this.levels = levels;
             this.cost = cost;
         }
+    }
+
+    // ========================================
+    // Compound Elevation (post-Challenge 8)
+    // ========================================
+
+    /**
+     * Calculate the cost to buy the next compound level in a cycle.
+     * cost(n) = 1000 * 1.3^(n^0.8)
+     * Computed in log10 space to avoid overflow.
+     */
+    public static BigNumber getCompoundLevelCost(int level) {
+        int safe = Math.max(0, level);
+        double effectiveLevel = Math.pow(safe, COMPOUND_COST_CURVE);
+        double log10Cost = Math.log10(COMPOUND_COST_BASE) + effectiveLevel * Math.log10(COMPOUND_COST_GROWTH);
+        if (!Double.isFinite(log10Cost) || log10Cost > 1_000_000_000) {
+            return BigNumber.of(9.999, 999_999_999);
+        }
+        int exp = (int) Math.floor(log10Cost);
+        double mantissa = Math.pow(10, log10Cost - exp);
+        if (!Double.isFinite(mantissa)) {
+            mantissa = 1.0;
+        }
+        return BigNumber.of(mantissa, exp);
+    }
+
+    /**
+     * Calculate how many compound levels can be purchased with given vexa.
+     * Uses exponential probing + binary search + iterate pattern (same as calculateElevationPurchase).
+     */
+    public static ElevationPurchaseResult calculateCompoundPurchase(int currentCycleLevel, BigNumber availableVexa) {
+        if (availableVexa.lte(BigNumber.ZERO)) {
+            return new ElevationPurchaseResult(0, BigNumber.ZERO);
+        }
+
+        // Find upper bound: max level where a single level's cost <= budget
+        int upperBound = currentCycleLevel;
+        int step = 1;
+        while (getCompoundLevelCost(upperBound + step).lte(availableVexa)) {
+            upperBound += step;
+            step *= 2;
+        }
+        // Binary search for exact boundary
+        int lo = upperBound, hi = upperBound + step;
+        while (lo < hi) {
+            int mid = lo + (hi - lo + 1) / 2;
+            if (getCompoundLevelCost(mid).lte(availableVexa)) {
+                lo = mid;
+            } else {
+                hi = mid - 1;
+            }
+        }
+        int maxLevel = lo;
+
+        // Iterate precisely from currentCycleLevel to maxLevel, summing costs
+        int levelsAffordable = 0;
+        BigNumber totalCost = BigNumber.ZERO;
+        int level = currentCycleLevel;
+
+        while (level <= maxLevel) {
+            BigNumber nextCost = getCompoundLevelCost(level);
+            BigNumber newTotal = totalCost.add(nextCost);
+
+            if (newTotal.gt(availableVexa)) {
+                break;
+            }
+
+            totalCost = newTotal;
+            levelsAffordable++;
+            level++;
+        }
+
+        return new ElevationPurchaseResult(levelsAffordable, totalCost);
+    }
+
+    /**
+     * Format a compounded elevation multiplier for display.
+     */
+    public static String formatCompoundedElevation(double multiplier) {
+        if (multiplier <= 1.0) return "x1";
+        return "x" + FormatUtils.formatBigNumber(BigNumber.fromDouble(multiplier));
     }
 
     // ========================================
