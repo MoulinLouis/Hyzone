@@ -2,22 +2,14 @@ package io.hyvexa.parkour.tracker;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
-import com.hypixel.hytale.server.core.universe.Universe;
-import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.parkour.ParkourConstants;
 import io.hyvexa.parkour.data.Map;
 import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.data.ProgressStore;
-import io.hyvexa.parkour.ui.MapRecommendationPage;
-import io.hyvexa.parkour.ui.PracticeModeHintPage;
 
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 
 /** Session stats and recommendation logic extracted from RunTracker. */
 class RunSessionTracker {
@@ -52,54 +44,7 @@ class RunSessionTracker {
     void checkRecommendations(UUID playerId, RunTracker.ActiveRun run, Map map,
                               Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef,
                               RunTracker runTracker) {
-        SessionStats stats = sessionStats.get(playerId);
-        if (stats == null) {
-            return;
-        }
-        SessionStats.MapSessionData mapData = stats.getStats(run.mapId);
-
-        if (mapData.failureCount >= ParkourConstants.RECOMMENDATION_FAILURE_THRESHOLD
-                && !mapData.recommendationShown && run.lastCheckpointIndex < 0 && !run.practiceEnabled) {
-            mapData.recommendationShown = true;
-
-            World world = store.getExternalData().getWorld();
-            CompletableFuture.runAsync(() -> {
-                if (ref == null || !ref.isValid()) {
-                    return;
-                }
-                if (Universe.get().getPlayer(playerId) == null) {
-                    return;
-                }
-                Player p = store.getComponent(ref, Player.getComponentType());
-                if (p == null) {
-                    return;
-                }
-                String category = map.getCategory() != null ? map.getCategory() : "Easy";
-                p.getPageManager().openCustomPage(ref, store,
-                        new MapRecommendationPage(playerRef, mapStore, progressStore, runTracker, run.mapId, category));
-            }, world).orTimeout(5, TimeUnit.SECONDS).exceptionally(ex -> null);
-        }
-
-        if (mapData.failureCount == ParkourConstants.PRACTICE_HINT_FAILURE_THRESHOLD
-                && !mapData.practiceHintShown && !run.practiceEnabled) {
-            mapData.practiceHintShown = true;
-
-            World world = store.getExternalData().getWorld();
-            CompletableFuture.runAsync(() -> {
-                if (ref == null || !ref.isValid()) {
-                    return;
-                }
-                if (Universe.get().getPlayer(playerId) == null) {
-                    return;
-                }
-                Player p = store.getComponent(ref, Player.getComponentType());
-                if (p == null) {
-                    return;
-                }
-                p.getPageManager().openCustomPage(ref, store,
-                        new PracticeModeHintPage(playerRef, runTracker));
-            }, world).orTimeout(5, TimeUnit.SECONDS).exceptionally(ex -> null);
-        }
+        // Practice/recommendation popups intentionally disabled.
     }
 
     void clearPlayer(UUID playerId) {
