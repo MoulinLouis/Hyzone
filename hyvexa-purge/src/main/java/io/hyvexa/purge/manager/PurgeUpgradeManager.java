@@ -58,9 +58,17 @@ public class PurgeUpgradeManager {
         }
     }
 
-    public double getZombieDamageMultiplier(PurgeSession session) {
+    public double getZombieHealthMultiplier(PurgeSession session) {
         int stacks = session.getUpgradeState().getStacks(PurgeUpgradeType.THICK_HIDE);
         return Math.max(0.2, 1.0 - stacks * 0.08);
+    }
+
+    /**
+     * @deprecated Use {@link #getZombieHealthMultiplier(PurgeSession)}.
+     */
+    @Deprecated
+    public double getZombieDamageMultiplier(PurgeSession session) {
+        return getZombieHealthMultiplier(session);
     }
 
     public double getScrapMultiplier(PurgeSession session) {
@@ -196,7 +204,7 @@ public class PurgeUpgradeManager {
                     statMap.addStatValue(healthIndex, stacks);
                 }
             } catch (Exception e) {
-                LOGGER.atWarning().log("Second Wind regen error: " + e.getMessage());
+                LOGGER.atWarning().withCause(e).log("Second Wind regen error");
             }
         }, 1000, 1000, TimeUnit.MILLISECONDS);
 

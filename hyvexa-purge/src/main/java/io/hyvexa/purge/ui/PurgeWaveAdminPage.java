@@ -85,11 +85,11 @@ public class PurgeWaveAdminPage extends InteractiveCustomUIPage<PurgeWaveAdminPa
             return;
         }
         if (button.startsWith(BUTTON_ADJUST_PREFIX)) {
-            handleAdjust(button.substring(BUTTON_ADJUST_PREFIX.length()));
+            handleAdjust(button.substring(BUTTON_ADJUST_PREFIX.length()), ref, store);
             return;
         }
         if (button.startsWith(BUTTON_SPAWN_PREFIX)) {
-            handleSpawnAdjust(button.substring(BUTTON_SPAWN_PREFIX.length()));
+            handleSpawnAdjust(button.substring(BUTTON_SPAWN_PREFIX.length()), ref, store);
         }
     }
 
@@ -99,6 +99,8 @@ public class PurgeWaveAdminPage extends InteractiveCustomUIPage<PurgeWaveAdminPa
         if (player != null) {
             if (waveNumber > 0) {
                 player.sendMessage(Message.raw("Added wave " + waveNumber + " (default: slow 0, normal 5, fast 0)."));
+            } else if (!waveConfigManager.isPersistenceAvailable()) {
+                player.sendMessage(Message.raw(waveConfigManager.getPersistenceDisabledMessage()));
             } else {
                 player.sendMessage(Message.raw("Failed to add wave."));
             }
@@ -108,6 +110,12 @@ public class PurgeWaveAdminPage extends InteractiveCustomUIPage<PurgeWaveAdminPa
 
     private void handleClear(Ref<EntityStore> ref, Store<EntityStore> store) {
         Player player = store.getComponent(ref, Player.getComponentType());
+        if (!waveConfigManager.isPersistenceAvailable()) {
+            if (player != null) {
+                player.sendMessage(Message.raw(waveConfigManager.getPersistenceDisabledMessage()));
+            }
+            return;
+        }
         waveConfigManager.clearAll();
         if (player != null) {
             player.sendMessage(Message.raw("Cleared all wave definitions."));
@@ -131,6 +139,8 @@ public class PurgeWaveAdminPage extends InteractiveCustomUIPage<PurgeWaveAdminPa
         if (player != null) {
             if (removed) {
                 player.sendMessage(Message.raw("Removed wave " + waveNumber + "."));
+            } else if (!waveConfigManager.isPersistenceAvailable()) {
+                player.sendMessage(Message.raw(waveConfigManager.getPersistenceDisabledMessage()));
             } else {
                 player.sendMessage(Message.raw("Wave " + waveNumber + " not found."));
             }
@@ -138,7 +148,7 @@ public class PurgeWaveAdminPage extends InteractiveCustomUIPage<PurgeWaveAdminPa
         sendRefresh();
     }
 
-    private void handleSpawnAdjust(String payload) {
+    private void handleSpawnAdjust(String payload, Ref<EntityStore> ref, Store<EntityStore> store) {
         String[] parts = payload.split(":");
         if (parts.length != 3) {
             return;
@@ -162,10 +172,15 @@ public class PurgeWaveAdminPage extends InteractiveCustomUIPage<PurgeWaveAdminPa
 
         if (updated) {
             sendRefresh();
+        } else if (!waveConfigManager.isPersistenceAvailable()) {
+            Player player = store.getComponent(ref, Player.getComponentType());
+            if (player != null) {
+                player.sendMessage(Message.raw(waveConfigManager.getPersistenceDisabledMessage()));
+            }
         }
     }
 
-    private void handleAdjust(String payload) {
+    private void handleAdjust(String payload, Ref<EntityStore> ref, Store<EntityStore> store) {
         String[] parts = payload.split(":");
         if (parts.length != 3) {
             return;
@@ -187,6 +202,11 @@ public class PurgeWaveAdminPage extends InteractiveCustomUIPage<PurgeWaveAdminPa
 
         if (waveConfigManager.adjustVariantCount(waveNumber, variant, delta)) {
             sendRefresh();
+        } else if (!waveConfigManager.isPersistenceAvailable()) {
+            Player player = store.getComponent(ref, Player.getComponentType());
+            if (player != null) {
+                player.sendMessage(Message.raw(waveConfigManager.getPersistenceDisabledMessage()));
+            }
         }
     }
 

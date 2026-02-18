@@ -69,7 +69,7 @@ public class PurgeWaveManager {
         try {
             this.npcPlugin = NPCPlugin.get();
         } catch (Exception e) {
-            LOGGER.atWarning().log("NPCPlugin not available: " + e.getMessage());
+            LOGGER.atWarning().withCause(e).log("NPCPlugin not available");
         }
     }
 
@@ -89,14 +89,6 @@ public class PurgeWaveManager {
 
     public static double hpMultiplier(int wave) {
         return 1.0 + Math.max(0, wave - 2) * 0.12;
-    }
-
-    public static double speedMultiplier(int wave) {
-        return 1.0 + Math.max(0, wave - 4) * 0.025;
-    }
-
-    public static double damageMultiplier(int wave) {
-        return 1.0 + Math.max(0, wave - 4) * 0.05;
     }
 
     // --- Wave Lifecycle ---
@@ -120,7 +112,7 @@ public class PurgeWaveManager {
                 sendMessage(session, "Wave " + (session.getCurrentWave() + 1) + " starting in " + remaining + "...");
                 hudManager.updateIntermission(session.getPlayerId(), remaining);
             } catch (Exception e) {
-                LOGGER.atWarning().log("Countdown tick error: " + e.getMessage());
+                LOGGER.atWarning().withCause(e).log("Countdown tick error");
             }
         }, 0, 1000, TimeUnit.MILLISECONDS);
         session.setSpawnTask(task);
@@ -204,6 +196,9 @@ public class PurgeWaveManager {
 
                 world.execute(() -> {
                     try {
+                        if (session.getState() == SessionState.ENDED) {
+                            return;
+                        }
                         Store<EntityStore> store = world.getEntityStore().getStore();
                         if (store == null) {
                             return;
@@ -214,6 +209,9 @@ public class PurgeWaveManager {
 
                         int toSpawn = Math.min(wave.spawnBatchSize(), remaining.get());
                         for (int i = 0; i < toSpawn && remaining.get() > 0; i++) {
+                            if (session.getState() == SessionState.ENDED) {
+                                return;
+                            }
                             int idx = queueIndex.getAndIncrement();
                             if (idx >= spawnQueue.size()) {
                                 remaining.set(0);
@@ -235,11 +233,11 @@ public class PurgeWaveManager {
                             session.cancelSpawnTask();
                         }
                     } catch (Exception e) {
-                        LOGGER.atWarning().log("Spawn batch error: " + e.getMessage());
+                        LOGGER.atWarning().withCause(e).log("Spawn batch error");
                     }
                 });
             } catch (Exception e) {
-                LOGGER.atWarning().log("Spawn task error: " + e.getMessage());
+                LOGGER.atWarning().withCause(e).log("Spawn task error");
             }
         }, 0, wave.spawnDelayMs(), TimeUnit.MILLISECONDS);
         session.setSpawnTask(task);
@@ -257,6 +255,9 @@ public class PurgeWaveManager {
                                 PurgeSpawnPoint point,
                                 PurgeZombieVariant variant,
                                 int wave) {
+        if (session.getState() == SessionState.ENDED) {
+            return false;
+        }
         if (npcPlugin == null) {
             return false;
         }
@@ -275,6 +276,10 @@ public class PurgeWaveManager {
                 if (result != null) {
                     Ref<EntityStore> entityRef = extractEntityRef(result);
                     if (entityRef != null) {
+                        if (session.getState() == SessionState.ENDED) {
+                            removeZombieEntity(store, entityRef);
+                            return false;
+                        }
                         session.addAliveZombie(entityRef);
                         // Apply wave HP scaling + show HP on nameplate
                         try {
@@ -292,11 +297,11 @@ public class PurgeWaveManager {
                                 // Apply Thick Hide damage reduction (reduces zombie HP as proxy)
                                 PurgeUpgradeManager um = upgradeManager;
                                 if (um != null) {
-                                    double dmgMult = um.getZombieDamageMultiplier(session);
-                                    if (dmgMult < 1.0) {
+                                    double healthMult = um.getZombieHealthMultiplier(session);
+                                    if (healthMult < 1.0) {
                                         statMap.putModifier(healthIndex, PURGE_THICK_HIDE_MODIFIER,
                                                 new StaticModifier(Modifier.ModifierTarget.MAX,
-                                                        StaticModifier.CalculationType.MULTIPLICATIVE, (float) dmgMult));
+                                                        StaticModifier.CalculationType.MULTIPLICATIVE, (float) healthMult));
                                         statMap.update();
                                     }
                                 }
@@ -310,7 +315,7 @@ public class PurgeWaveManager {
                                 nameplate.setText("");
                             }
                         } catch (Exception e) {
-                            LOGGER.atWarning().log("Failed to apply zombie stats: " + e.getMessage());
+                            LOGGER.atWarning().withCause(e).log("Failed to apply zombie stats");
                         }
                         // Force aggro on player immediately
                         try {
@@ -320,14 +325,14 @@ public class PurgeWaveManager {
                                 npcEntity.getRole().getStateSupport().setState(entityRef, "Angry", "", store);
                             }
                         } catch (Exception e) {
-                            LOGGER.atWarning().log("Failed to set zombie aggro: " + e.getMessage());
+                            LOGGER.atWarning().withCause(e).log("Failed to set zombie aggro");
                         }
                         return true;
                     }
                 }
             } catch (Exception e) {
-                LOGGER.atWarning().log("Failed to spawn zombie with role " + npcType
-                        + " (variant " + variant.name() + "): " + e.getMessage());
+                LOGGER.atWarning().withCause(e).log("Failed to spawn zombie with role "
+                        + npcType + " (variant " + variant.name() + ")");
             }
         }
         return false;
@@ -363,8 +368,7 @@ public class PurgeWaveManager {
                 }
 
                 checkZombieDeaths(session);
-                updateZombieNameplates(session);
-                updatePlayerHealthHud(session);
+                updateWaveWorldState(session);
 
                 // Update HUD with alive count
                 int alive = session.getAliveZombieCount();
@@ -375,7 +379,7 @@ public class PurgeWaveManager {
                     onWaveComplete(session);
                 }
             } catch (Exception e) {
-                LOGGER.atWarning().log("Wave tick error: " + e.getMessage());
+                LOGGER.atWarning().withCause(e).log("Wave tick error");
             }
         }, WAVE_TICK_INTERVAL_MS, WAVE_TICK_INTERVAL_MS, TimeUnit.MILLISECONDS);
         session.setWaveTick(task);
@@ -392,7 +396,7 @@ public class PurgeWaveManager {
         session.getAliveZombies().removeAll(dead);
     }
 
-    private void updateZombieNameplates(PurgeSession session) {
+    private void updateWaveWorldState(PurgeSession session) {
         World world = getPurgeWorld();
         if (world == null) {
             return;
@@ -403,70 +407,65 @@ public class PurgeWaveManager {
                 if (store == null) {
                     return;
                 }
-                int healthIndex = DefaultEntityStatTypes.getHealth();
-                for (Ref<EntityStore> ref : session.getAliveZombies()) {
-                    if (ref == null || !ref.isValid()) {
-                        continue;
-                    }
-                    try {
-                        EntityStatMap statMap = store.getComponent(ref, EntityStatMap.getComponentType());
-                        Nameplate nameplate = store.getComponent(ref, Nameplate.getComponentType());
-                        if (statMap != null && nameplate != null) {
-                            EntityStatValue health = statMap.get(healthIndex);
-                            if (health != null) {
-                                int current = Math.round(health.get());
-                                int max = Math.round(health.getMax());
-                                nameplate.setText(current + " / " + max);
-                            }
-                        }
-                    } catch (Exception e) {
-                        // Ignore per-zombie errors
-                    }
-                }
+                updateZombieNameplates(session, store);
+                updatePlayerHealthHud(session, store);
             } catch (Exception e) {
-                LOGGER.atWarning().log("Failed to update zombie nameplates: " + e.getMessage());
+                LOGGER.atWarning().withCause(e).log("Failed to process wave world updates");
             }
         });
     }
 
-    private void updatePlayerHealthHud(PurgeSession session) {
+    private void updateZombieNameplates(PurgeSession session, Store<EntityStore> store) {
+        int healthIndex = DefaultEntityStatTypes.getHealth();
+        for (Ref<EntityStore> ref : session.getAliveZombies()) {
+            if (ref == null || !ref.isValid()) {
+                continue;
+            }
+            try {
+                EntityStatMap statMap = store.getComponent(ref, EntityStatMap.getComponentType());
+                Nameplate nameplate = store.getComponent(ref, Nameplate.getComponentType());
+                if (statMap != null && nameplate != null) {
+                    EntityStatValue health = statMap.get(healthIndex);
+                    if (health != null) {
+                        int current = Math.round(health.get());
+                        int max = Math.round(health.getMax());
+                        nameplate.setText(current + " / " + max);
+                    }
+                }
+            } catch (Exception e) {
+                LOGGER.atFine().log("Failed to update one zombie nameplate: " + e.getMessage());
+            }
+        }
+    }
+
+    private void updatePlayerHealthHud(PurgeSession session, Store<EntityStore> store) {
         Ref<EntityStore> ref = session.getPlayerRef();
         if (ref == null || !ref.isValid()) {
             return;
         }
-        World world = getPurgeWorld();
-        if (world == null) {
-            return;
-        }
-        world.execute(() -> {
-            try {
-                Store<EntityStore> store = world.getEntityStore().getStore();
-                if (store == null) {
-                    return;
-                }
-                Ref<EntityStore> playerRef = session.getPlayerRef();
-                if (playerRef == null || !playerRef.isValid()) {
-                    return;
-                }
-                EntityStatMap statMap = store.getComponent(playerRef, EntityStatMap.getComponentType());
-                if (statMap != null) {
-                    EntityStatValue health = statMap.get(DefaultEntityStatTypes.getHealth());
-                    if (health != null) {
-                        int current = Math.round(health.get());
-                        int max = Math.round(health.getMax());
-                        hudManager.updatePlayerHealth(session.getPlayerId(), current, max);
-                        if (current <= 0 && session.getState() != SessionState.ENDED) {
-                            PurgeSessionManager sm = sessionManager;
-                            if (sm != null) {
-                                sm.stopSession(session.getPlayerId(), "death");
-                            }
+        try {
+            Ref<EntityStore> playerRef = session.getPlayerRef();
+            if (playerRef == null || !playerRef.isValid()) {
+                return;
+            }
+            EntityStatMap statMap = store.getComponent(playerRef, EntityStatMap.getComponentType());
+            if (statMap != null) {
+                EntityStatValue health = statMap.get(DefaultEntityStatTypes.getHealth());
+                if (health != null) {
+                    int current = Math.round(health.get());
+                    int max = Math.round(health.getMax());
+                    hudManager.updatePlayerHealth(session.getPlayerId(), current, max);
+                    if (current <= 0 && session.getState() != SessionState.ENDED) {
+                        PurgeSessionManager sm = sessionManager;
+                        if (sm != null) {
+                            sm.stopSession(session.getPlayerId(), "death");
                         }
                     }
                 }
-            } catch (Exception e) {
-                // Ignore health read errors
             }
-        });
+        } catch (Exception e) {
+            LOGGER.atFine().log("Failed to update player HP HUD: " + e.getMessage());
+        }
     }
 
     private void onWaveComplete(PurgeSession session) {
@@ -544,7 +543,7 @@ public class PurgeWaveManager {
                 PurgeUpgradePickPage page = new PurgeUpgradePickPage(pRef, session, um, offered, onComplete);
                 player.getPageManager().openCustomPage(ref, store, page);
             } catch (Exception e) {
-                LOGGER.atWarning().log("Failed to show upgrade popup: " + e.getMessage());
+                LOGGER.atWarning().withCause(e).log("Failed to show upgrade popup");
                 session.setState(SessionState.INTERMISSION);
                 startIntermission(session);
             }
@@ -577,7 +576,7 @@ public class PurgeWaveManager {
                     session.cancelIntermissionTask();
                     return;
                 }
-                int remaining = countdown.decrementAndGet();
+                int remaining = countdown.getAndDecrement();
                 if (remaining <= 0) {
                     session.cancelIntermissionTask();
                     startNextWave(session);
@@ -586,7 +585,7 @@ public class PurgeWaveManager {
                 hudManager.updateIntermission(session.getPlayerId(), remaining);
                 sendMessage(session, "Next wave in " + remaining + "...");
             } catch (Exception e) {
-                LOGGER.atWarning().log("Intermission tick error: " + e.getMessage());
+                LOGGER.atWarning().withCause(e).log("Intermission tick error");
             }
         }, 1000, 1000, TimeUnit.MILLISECONDS);
         session.setIntermissionTask(task);
@@ -596,23 +595,31 @@ public class PurgeWaveManager {
 
     public void removeAllZombies(PurgeSession session) {
         World world = getPurgeWorld();
-        for (Ref<EntityStore> ref : session.getAliveZombies()) {
-            if (ref != null && ref.isValid()) {
-                if (world != null) {
-                    world.execute(() -> {
-                        try {
-                            Store<EntityStore> store = ref.getStore();
-                            if (store != null) {
-                                store.removeEntity(ref, RemoveReason.REMOVE);
-                            }
-                        } catch (Exception e) {
-                            LOGGER.atWarning().log("Failed to remove zombie: " + e.getMessage());
-                        }
-                    });
-                }
-            }
-        }
+        Set<Ref<EntityStore>> toRemove = new HashSet<>(session.getAliveZombies());
         session.getAliveZombies().clear();
+        if (world == null || toRemove.isEmpty()) {
+            return;
+        }
+        world.execute(() -> {
+            try {
+                Store<EntityStore> store = world.getEntityStore().getStore();
+                if (store == null) {
+                    return;
+                }
+                for (Ref<EntityStore> ref : toRemove) {
+                    if (ref == null || !ref.isValid()) {
+                        continue;
+                    }
+                    try {
+                        store.removeEntity(ref, RemoveReason.REMOVE);
+                    } catch (Exception e) {
+                        LOGGER.atFine().log("Failed to remove one zombie during cleanup: " + e.getMessage());
+                    }
+                }
+            } catch (Exception e) {
+                LOGGER.atWarning().withCause(e).log("Failed to remove zombies");
+            }
+        });
     }
 
     // --- Utility ---
@@ -630,7 +637,7 @@ public class PurgeWaveManager {
                 return new double[]{pos.getX(), pos.getY(), pos.getZ()};
             }
         } catch (Exception e) {
-            // Ignore position read errors
+            LOGGER.atFine().log("Failed to read player position for spawning: " + e.getMessage());
         }
         return null;
     }
@@ -647,7 +654,7 @@ public class PurgeWaveManager {
                 player.sendMessage(Message.raw(text));
             }
         } catch (Exception e) {
-            // Ignore message send errors
+            LOGGER.atFine().log("Failed to send wave message: " + e.getMessage());
         }
     }
 
@@ -677,8 +684,18 @@ public class PurgeWaveManager {
                 }
             }
         } catch (Exception e) {
-            LOGGER.atWarning().log("Failed to extract entity ref from NPC result: " + e.getMessage());
+            LOGGER.atWarning().withCause(e).log("Failed to extract entity ref from NPC result");
         }
         return null;
+    }
+
+    private void removeZombieEntity(Store<EntityStore> store, Ref<EntityStore> entityRef) {
+        try {
+            if (store != null && entityRef != null && entityRef.isValid()) {
+                store.removeEntity(entityRef, RemoveReason.REMOVE);
+            }
+        } catch (Exception e) {
+            LOGGER.atFine().log("Failed to remove late zombie spawn: " + e.getMessage());
+        }
     }
 }
