@@ -294,6 +294,11 @@ class AscendPlayerPersistence {
             VALUES (?, ?)
             """;
 
+        String catSql = """
+            INSERT IGNORE INTO ascend_player_cats (player_uuid, cat_token)
+            VALUES (?, ?)
+            """;
+
         String deleteChildSql = "DELETE FROM %s WHERE player_uuid = ?";
 
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
@@ -311,12 +316,15 @@ class AscendPlayerPersistence {
                  PreparedStatement delSummit = conn.prepareStatement(String.format(deleteChildSql, "ascend_player_summit"));
                  PreparedStatement delSkills = conn.prepareStatement(String.format(deleteChildSql, "ascend_player_skills"));
                  PreparedStatement delAchievements = conn.prepareStatement(String.format(deleteChildSql, "ascend_player_achievements"));
-                 PreparedStatement delChallengeRecords = conn.prepareStatement(String.format(deleteChildSql, "ascend_challenge_records"))) {
+                 PreparedStatement delChallengeRecords = conn.prepareStatement(String.format(deleteChildSql, "ascend_challenge_records"));
+                 PreparedStatement catStmt = conn.prepareStatement(catSql);
+                 PreparedStatement delCats = conn.prepareStatement(String.format(deleteChildSql, "ascend_player_cats"))) {
                 DatabaseManager.applyQueryTimeout(playerStmt);
                 DatabaseManager.applyQueryTimeout(mapStmt);
                 DatabaseManager.applyQueryTimeout(summitStmt);
                 DatabaseManager.applyQueryTimeout(skillStmt);
                 DatabaseManager.applyQueryTimeout(achievementStmt);
+                DatabaseManager.applyQueryTimeout(catStmt);
 
                 Map<UUID, Long> persistedVersions = new HashMap<>();
                 for (Map.Entry<UUID, Long> dirtyEntry : toSave.entrySet()) {
@@ -331,7 +339,7 @@ class AscendPlayerPersistence {
                     // to prevent stale upserts from re-inserting deleted data
                     if (resetPendingPlayers.remove(playerId)) {
                         String pid = playerId.toString();
-                        for (PreparedStatement delStmt : new PreparedStatement[]{delMaps, delSummit, delSkills, delAchievements}) {
+                        for (PreparedStatement delStmt : new PreparedStatement[]{delMaps, delSummit, delSkills, delAchievements, delCats}) {
                             delStmt.setString(1, pid);
                             delStmt.executeUpdate();
                         }
@@ -434,6 +442,13 @@ class AscendPlayerPersistence {
                         achievementStmt.setString(2, achievement.name());
                         achievementStmt.addBatch();
                     }
+
+                    // Save found cats
+                    for (String catToken : progress.getFoundCats()) {
+                        catStmt.setString(1, playerId.toString());
+                        catStmt.setString(2, catToken);
+                        catStmt.addBatch();
+                    }
                 }
 
                 if (persistedVersions.isEmpty()) {
@@ -445,6 +460,7 @@ class AscendPlayerPersistence {
                 summitStmt.executeBatch();
                 skillStmt.executeBatch();
                 achievementStmt.executeBatch();
+                catStmt.executeBatch();
 
                 conn.commit(); // Commit transaction
 
@@ -647,6 +663,7 @@ class AscendPlayerPersistence {
             loadSkillNodesForPlayer(conn, playerId, progress);
             compensateSkillTreeCostChanges(playerId, progress);
             loadAchievementsForPlayer(conn, playerId, progress);
+            loadCatsForPlayer(conn, playerId, progress);
         } catch (SQLException e) {
             LOGGER.atSevere().log("Failed to load player " + playerId + ": " + e.getMessage());
             return null;
@@ -769,6 +786,20 @@ class AscendPlayerPersistence {
         }
     }
 
+    private void loadCatsForPlayer(Connection conn, UUID playerId, AscendPlayerProgress progress) throws SQLException {
+        String sql = "SELECT cat_token FROM ascend_player_cats WHERE player_uuid = ?";
+
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            stmt.setString(1, playerId.toString());
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    progress.addFoundCat(rs.getString("cat_token"));
+                }
+            }
+        }
+    }
+
     // ========================================
     // Delete
     // ========================================
@@ -784,6 +815,7 @@ class AscendPlayerPersistence {
             "ascend_player_summit",
             "ascend_player_skills",
             "ascend_player_achievements",
+            "ascend_player_cats",
             "ascend_ghost_recordings",
             "ascend_challenges",
             "ascend_challenge_records"

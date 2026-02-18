@@ -145,6 +145,17 @@ public final class AscendDatabaseSetup {
                 ) ENGINE=InnoDB
                 """);
 
+            // Easter Egg - Cat Collector
+            stmt.executeUpdate("""
+                CREATE TABLE IF NOT EXISTS ascend_player_cats (
+                    player_uuid VARCHAR(36) NOT NULL,
+                    cat_token VARCHAR(16) NOT NULL,
+                    found_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (player_uuid, cat_token),
+                    FOREIGN KEY (player_uuid) REFERENCES ascend_players(uuid) ON DELETE CASCADE
+                ) ENGINE=InnoDB
+                """);
+
             // Migrate Summit XP from old scale (level^2.5) to new scale (level^2.0)
             migrateSummitXpScale(conn);
 
