@@ -52,6 +52,7 @@
 - **Ascend: Leaderboard system** - New `/ascend leaderboard` command with tabbed rankings for Vexa, Ascensions, and Manual Runs. Includes pagination (50 per page) and player search. Accessible via the Bolt of Stormsilk item.
 
 ### Fixed
+- **Parkour: Practice weapon slot priority** - In practice mode, map weapon items (Sword, Daggers, Glider) are now placed first in the hotbar and other practice items are shifted accordingly.
 - **Parkour: Fall respawn restored** - Fall respawn behavior is working again during parkour runs.
 - **Ascend: Challenge restore no longer rolls back manual run totals** - Exiting/completing a challenge now preserves any `totalManualRuns` gained during the challenge instead of restoring an older snapshot value.
 - **Ascend: Disconnect/reconnect save race no longer replays stale stats** - Per-player disconnect saves now persist the captured snapshot directly, and reconnect lazy-load reuses pending detached dirty state instead of reloading older DB rows.
