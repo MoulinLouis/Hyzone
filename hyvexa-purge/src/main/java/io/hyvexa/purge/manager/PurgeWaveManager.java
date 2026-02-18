@@ -11,10 +11,16 @@ import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.nameplate.Nameplate;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
+import com.hypixel.hytale.server.core.modules.entitystats.EntityStatMap;
+import com.hypixel.hytale.server.core.modules.entitystats.EntityStatValue;
+import com.hypixel.hytale.server.core.modules.entitystats.asset.DefaultEntityStatTypes;
+import com.hypixel.hytale.server.core.modules.entitystats.modifier.Modifier;
+import com.hypixel.hytale.server.core.modules.entitystats.modifier.StaticModifier;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.NPCPlugin;
+import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import io.hyvexa.common.WorldConstants;
 import io.hyvexa.purge.data.PurgeSession;
 import io.hyvexa.purge.data.PurgeSpawnPoint;
@@ -32,7 +38,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class PurgeWaveManager {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final String ZOMBIE_NPC_TYPE = "Trork_Grunt";
+    private static final String ZOMBIE_NPC_TYPE = "Purge_Zombie";
+    private static final String PURGE_HP_MODIFIER = "purge_wave_hp";
     private static final long WAVE_TICK_INTERVAL_MS = 200;
     private static final long SPAWN_STAGGER_MS = 500;
     private static final int SPAWN_BATCH_SIZE = 5;
@@ -192,17 +199,41 @@ public class PurgeWaveManager {
                 Ref<EntityStore> entityRef = extractEntityRef(result);
                 if (entityRef != null) {
                     session.addAliveZombie(entityRef);
-                    // Hide nameplate
+                    // Apply wave HP scaling + show HP on nameplate
                     try {
+                        EntityStatMap statMap = store.getComponent(entityRef, EntityStatMap.getComponentType());
                         Nameplate nameplate = store.ensureAndGetComponent(entityRef, Nameplate.getComponentType());
-                        nameplate.setText("");
+                        if (statMap != null) {
+                            int healthIndex = DefaultEntityStatTypes.getHealth();
+                            double hpMult = hpMultiplier(wave);
+                            if (hpMult > 1.0) {
+                                statMap.putModifier(healthIndex, PURGE_HP_MODIFIER,
+                                        new StaticModifier(Modifier.ModifierTarget.MAX,
+                                                StaticModifier.CalculationType.MULTIPLICATIVE, (float) hpMult));
+                                statMap.update();
+                            }
+                            statMap.maximizeStatValue(healthIndex);
+                            EntityStatValue health = statMap.get(healthIndex);
+                            if (health != null) {
+                                int hp = Math.round(health.getMax());
+                                nameplate.setText(hp + " / " + hp);
+                            }
+                        } else {
+                            nameplate.setText("");
+                        }
                     } catch (Exception e) {
-                        // Ignore nameplate errors
+                        LOGGER.atWarning().log("Failed to apply zombie stats: " + e.getMessage());
                     }
-                    // TODO: Apply HP/speed/damage scaling when API is discovered
-                    //   double hp = baseHp * hpMultiplier(wave);
-                    //   double speed = baseSpeed * speedMultiplier(wave);
-                    //   double damage = baseDamage * damageMultiplier(wave);
+                    // Force aggro on player immediately
+                    try {
+                        NPCEntity npcEntity = store.getComponent(entityRef, NPCEntity.getComponentType());
+                        if (npcEntity != null && npcEntity.getRole() != null) {
+                            npcEntity.getRole().setMarkedTarget("LockedTarget", session.getPlayerRef());
+                            npcEntity.getRole().getStateSupport().setState(entityRef, "Angry", "", store);
+                        }
+                    } catch (Exception e) {
+                        LOGGER.atWarning().log("Failed to set zombie aggro: " + e.getMessage());
+                    }
                 }
             }
         } catch (Exception e) {
@@ -232,6 +263,7 @@ public class PurgeWaveManager {
                 }
 
                 checkZombieDeaths(session);
+                updateZombieNameplates(session);
 
                 // Update HUD with alive count
                 int alive = session.getAliveZombieCount();
@@ -257,6 +289,37 @@ public class PurgeWaveManager {
             }
         }
         session.getAliveZombies().removeAll(dead);
+    }
+
+    private void updateZombieNameplates(PurgeSession session) {
+        World world = getPurgeWorld();
+        if (world == null) return;
+        world.execute(() -> {
+            try {
+                Store<EntityStore> store = world.getEntityStore().getStore();
+                if (store == null) return;
+                int healthIndex = DefaultEntityStatTypes.getHealth();
+                for (Ref<EntityStore> ref : session.getAliveZombies()) {
+                    if (ref == null || !ref.isValid()) continue;
+                    try {
+                        EntityStatMap statMap = store.getComponent(ref, EntityStatMap.getComponentType());
+                        Nameplate nameplate = store.getComponent(ref, Nameplate.getComponentType());
+                        if (statMap != null && nameplate != null) {
+                            EntityStatValue health = statMap.get(healthIndex);
+                            if (health != null) {
+                                int current = Math.round(health.get());
+                                int max = Math.round(health.getMax());
+                                nameplate.setText(current + " / " + max);
+                            }
+                        }
+                    } catch (Exception e) {
+                        // Ignore per-zombie errors
+                    }
+                }
+            } catch (Exception e) {
+                LOGGER.atWarning().log("Failed to update zombie nameplates: " + e.getMessage());
+            }
+        });
     }
 
     private void onWaveComplete(PurgeSession session) {
