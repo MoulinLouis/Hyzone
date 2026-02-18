@@ -47,6 +47,9 @@
 
 ### Fixed
 - **Parkour: Fall respawn restored** - Fall respawn behavior is working again during parkour runs.
+- **Ascend: Challenge restore no longer rolls back manual run totals** - Exiting/completing a challenge now preserves any `totalManualRuns` gained during the challenge instead of restoring an older snapshot value.
+- **Ascend: Disconnect/reconnect save race no longer replays stale stats** - Per-player disconnect saves now persist the captured snapshot directly, and reconnect lazy-load reuses pending detached dirty state instead of reloading older DB rows.
+- **Ascend: PB detection now uses authoritative best-time fallback** - Manual finish PB checks now fallback to DB when in-memory best time is missing, and map best-time upserts are monotonic (can only improve), preventing slower runs from overwriting PB/leaderboard.
 - **Ascend/Hub: Low-priority review cleanup** - Clarified Ascend map balance source-of-truth and migration staging (legacy read/write drift), and updated Hub Ascend denial copy to match whitelist-restricted access behavior
 - **Parkour/Ascend: Completed medium-priority stability/maintainability pass** - Correct XP award deltas on completion, null-safe admin transform reads, shared throttled async error logging, and snapshot-based Ascend map-select refresh with dispatch/lifecycle refactors
 - **Ascend: Closed crafted map-selection unlock bypass** - Map select now validates payload map IDs against displayed entries and enforces unlock requirements instead of force-unlocking.

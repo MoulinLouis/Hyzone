@@ -94,6 +94,11 @@ public class ChallengeSnapshot {
     }
 
     public void restore(AscendPlayerProgress progress) {
+        // Keep lifetime counters monotonic across challenge restore.
+        // Challenge runs can increment totalManualRuns; restoring the pre-challenge snapshot
+        // must not roll that global stat backward.
+        int currentManualRuns = progress.getTotalManualRuns();
+
         progress.setVexa(BigNumber.of(vexaMantissa, vexaExp10));
         progress.setElevationMultiplier(elevationMultiplier);
 
@@ -129,7 +134,7 @@ public class ChallengeSnapshot {
         progress.setElevationAccumulatedVexa(BigNumber.of(elevationAccumulatedVexaMantissa, elevationAccumulatedVexaExp10));
         progress.setTotalVexaEarned(BigNumber.of(totalVexaEarnedMantissa, totalVexaEarnedExp10));
 
-        progress.setTotalManualRuns(totalManualRuns);
+        progress.setTotalManualRuns(Math.max(totalManualRuns, currentManualRuns));
         progress.setConsecutiveManualRuns(consecutiveManualRuns);
         progress.setAutoUpgradeEnabled(autoUpgradeEnabled);
         progress.setAutoEvolutionEnabled(autoEvolutionEnabled);

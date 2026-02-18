@@ -318,7 +318,7 @@ public class AscendRunTracker {
                 completionTimeMs, playerId, map.getId(), maxReasonableMs);
         }
 
-        Long previousBest = mapProgress.getBestTimeMs();
+        Long previousBest = playerStore.getBestTimeMs(playerId, run.mapId);
         boolean isPersonalBest = validTime && (previousBest == null || completionTimeMs < previousBest);
 
         if (isPersonalBest) {
