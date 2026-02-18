@@ -4,6 +4,8 @@ import com.hypixel.hytale.common.plugin.PluginIdentifier;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.server.core.command.system.CommandManager;
+import com.hypixel.hytale.server.core.console.ConsoleSender;
 import com.hypixel.hytale.server.core.plugin.PluginBase;
 import com.hypixel.hytale.server.core.plugin.PluginManager;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -106,6 +108,10 @@ public final class HylogramsBridge {
             hologram.despawn(store);
             hologram.spawn(store);
             hologram.save(store);
+        }
+        try {
+            CommandManager.get().handleCommand(ConsoleSender.INSTANCE, "holo respawnHolograms --confirm");
+        } catch (Exception ignored) {
         }
         return true;
     }
