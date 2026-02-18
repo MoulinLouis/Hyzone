@@ -13,6 +13,7 @@
 ### Changed
 - **Parkour: Map Admin UI height increased** - Increased the Map Admin window height by 50px for more vertical space.
 - **Parkour: Leave Practice flow** - Added a separate Leave Practice item (same skin as Start Practice) that exits practice, returns players to their practice start position, and restores pre-practice checkpoint progression.
+- **Parkour: Removed struggle/practice hint popups** - The "Having Trouble?" and "Try Practice Mode" UI popups are fully removed and no longer shown.
 - **Ascend: Replaced Elevation Boost with Auto Ascend** - Skill tree node at tier 12R now skips the ascension popup and cinematic, instantly ascending when reaching 1Dc. Players who had Elevation Boost get Auto Ascend automatically.
 - **Ascend: AP Multiplier system** - Each completed challenge grants +1 to AP multiplier (base x1, max x8). Replaces old per-challenge permanent bonuses. Displayed in the Challenges tab.
 - **Ascend: Summit XP softcap at level 1000** - Removed hard cap at level 1000 (unlimited levels). XP cost per level rises from level^2 to level^3 above 1000 — same vexa reaches fewer levels (old 5000 -> ~3591).
