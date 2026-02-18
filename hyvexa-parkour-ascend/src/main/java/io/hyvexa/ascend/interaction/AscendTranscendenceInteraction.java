@@ -11,6 +11,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.ui.TranscendencePage;
+import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
 
 import java.util.UUID;
@@ -22,6 +23,12 @@ public class AscendTranscendenceInteraction extends AbstractAscendPageInteractio
 
     @Override
     protected boolean validateDependencies(ParkourAscendPlugin plugin, Player player) {
+        if (!PermissionUtils.isOp(player)) {
+            player.sendMessage(Message.raw("[Transcendence] This feature is currently locked.")
+                .color(SystemMessageUtils.SECONDARY));
+            return false;
+        }
+
         if (plugin.getPlayerStore() == null || plugin.getTranscendenceManager() == null) {
             player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading."));
             return false;

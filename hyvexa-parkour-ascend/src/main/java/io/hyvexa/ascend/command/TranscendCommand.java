@@ -14,6 +14,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.transcendence.TranscendenceManager;
 import io.hyvexa.ascend.util.AscendModeGate;
+import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
 
 import javax.annotation.Nonnull;
@@ -36,6 +37,12 @@ public class TranscendCommand extends AbstractAsyncCommand {
         CommandSender sender = ctx.sender();
         if (!(sender instanceof Player player)) {
             ctx.sendMessage(Message.raw("This command can only be used by players."));
+            return CompletableFuture.completedFuture(null);
+        }
+
+        if (!PermissionUtils.isOp(player)) {
+            ctx.sendMessage(Message.raw("[Transcendence] This feature is currently locked.")
+                .color(SystemMessageUtils.SECONDARY));
             return CompletableFuture.completedFuture(null);
         }
 
