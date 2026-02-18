@@ -781,7 +781,11 @@ public final class AscendConstants {
         CHALLENGE_7(7, "Challenge 7",
             "Complete an Ascension with all Summit bonuses /2",
             "#f59e0b",
-            Set.of(), Set.of(3, 4), 2.0, 2.0, 2.0);
+            Set.of(), Set.of(3, 4), 2.0, 2.0, 2.0),
+        CHALLENGE_8(8, "Challenge 8",
+            "Complete an Ascension without Elevation",
+            "#06b6d4",
+            Set.of(), Set.of(), 1.0, 1.0, 1.0, true);
 
         private final int id;
         private final String displayName;
@@ -792,11 +796,22 @@ public final class AscendConstants {
         private final double speedDivisor;
         private final double multiplierGainDivisor;
         private final double evolutionPowerDivisor;
+        private final boolean blocksElevation;
 
         ChallengeType(int id, String displayName, String description, String accentColor,
                       Set<SummitCategory> blockedSummitCategories,
                       Set<Integer> blockedMapDisplayOrders, double speedDivisor,
                       double multiplierGainDivisor, double evolutionPowerDivisor) {
+            this(id, displayName, description, accentColor, blockedSummitCategories,
+                 blockedMapDisplayOrders, speedDivisor, multiplierGainDivisor,
+                 evolutionPowerDivisor, false);
+        }
+
+        ChallengeType(int id, String displayName, String description, String accentColor,
+                      Set<SummitCategory> blockedSummitCategories,
+                      Set<Integer> blockedMapDisplayOrders, double speedDivisor,
+                      double multiplierGainDivisor, double evolutionPowerDivisor,
+                      boolean blocksElevation) {
             this.id = id;
             this.displayName = displayName;
             this.description = description;
@@ -806,6 +821,7 @@ public final class AscendConstants {
             this.speedDivisor = speedDivisor;
             this.multiplierGainDivisor = multiplierGainDivisor;
             this.evolutionPowerDivisor = evolutionPowerDivisor;
+            this.blocksElevation = blocksElevation;
         }
 
         public int getId() { return id; }
@@ -817,6 +833,7 @@ public final class AscendConstants {
         public double getSpeedDivisor() { return speedDivisor; }
         public double getMultiplierGainDivisor() { return multiplierGainDivisor; }
         public double getEvolutionPowerDivisor() { return evolutionPowerDivisor; }
+        public boolean blocksElevation() { return blocksElevation; }
 
         public static ChallengeType fromId(int id) {
             for (ChallengeType type : values()) {

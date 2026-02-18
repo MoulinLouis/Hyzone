@@ -45,9 +45,10 @@ public class AscendChallengePage extends BaseAscendPage {
         "#10b981", "AccentGreen",
         "#f59e0b", "AccentOrange",
         "#8b5cf6", "AccentViolet",
-        "#ec4899", "AccentPink"
+        "#ec4899", "AccentPink",
+        "#06b6d4", "AccentCyan"
     );
-    private static final String[] ALL_ACCENT_IDS = {"AccentRed", "AccentBlue", "AccentGreen", "AccentOrange", "AccentViolet", "AccentPink"};
+    private static final String[] ALL_ACCENT_IDS = {"AccentRed", "AccentBlue", "AccentGreen", "AccentOrange", "AccentViolet", "AccentPink", "AccentCyan"};
 
     private final AscendPlayerStore playerStore;
     private final ChallengeManager challengeManager;
@@ -395,6 +396,9 @@ public class AscendChallengePage extends BaseAscendPage {
         if (type.getEvolutionPowerDivisor() > 1.0) {
             parts.add("Evolution Power /" + formatDivisor(type.getEvolutionPowerDivisor()));
         }
+        if (type.blocksElevation()) {
+            parts.add("Elevation blocked");
+        }
 
         if (parts.isEmpty()) return "Malus: None";
         return "Malus: " + String.join(" + ", parts);
@@ -416,6 +420,7 @@ public class AscendChallengePage extends BaseAscendPage {
             case CHALLENGE_5 -> "Speed +5% + Mult Gain +5%";
             case CHALLENGE_6 -> "Speed/Mult/Evo +5%/+5%/+0.25";
             case CHALLENGE_7 -> "Map 4&5 base x1.5";
+            case CHALLENGE_8 -> "Add Permanent Bonus to Elevation";
         };
     }
 }

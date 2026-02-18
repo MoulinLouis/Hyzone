@@ -14,6 +14,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.AscendConstants.ElevationPurchaseResult;
 import io.hyvexa.ascend.ParkourAscendPlugin;
+import io.hyvexa.ascend.ascension.ChallengeManager;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerStore;
@@ -80,6 +81,14 @@ public class ElevationPage extends BaseAscendPage {
         }
 
         UUID playerId = playerRef.getUuid();
+
+        // Block elevation during Challenge 8
+        if (isElevationBlocked(playerId)) {
+            player.sendMessage(Message.raw("[Ascend] Elevation is blocked during this challenge.")
+                .color(SystemMessageUtils.SECONDARY));
+            return;
+        }
+
         BigNumber accumulatedVexa = playerStore.getElevationAccumulatedVexa(playerId);
         int currentElevation = playerStore.getElevationLevel(playerId);
 
@@ -151,8 +160,22 @@ public class ElevationPage extends BaseAscendPage {
         }
 
         UUID playerId = playerRef.getUuid();
-        BigNumber accumulatedVexa = playerStore.getElevationAccumulatedVexa(playerId);
         int currentElevation = playerStore.getElevationLevel(playerId);
+
+        // Show blocked state during Challenge 8
+        if (isElevationBlocked(playerId)) {
+            commandBuilder.set("#ConversionRate.Text", "Elevation is blocked during this challenge");
+            commandBuilder.set("#MultiplierValue.Text", AscendConstants.formatElevationMultiplier(currentElevation));
+            commandBuilder.set("#NewMultiplierValue.Text", "BLOCKED");
+            commandBuilder.set("#NewMultiplierValue.Style.TextColor", "#ef4444");
+            commandBuilder.set("#ArrowLabel.Style.TextColor", "#ef4444");
+            commandBuilder.set("#ElevateButton.Text", "BLOCKED");
+            commandBuilder.set("#GainValue.Text", "Complete the challenge to elevate");
+            commandBuilder.set("#GainValue.Style.TextColor", "#ef4444");
+            return;
+        }
+
+        BigNumber accumulatedVexa = playerStore.getElevationAccumulatedVexa(playerId);
 
         // Calculate purchase info based on accumulated vexa
         ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(currentElevation, accumulatedVexa, BigNumber.ONE);
@@ -191,6 +214,13 @@ public class ElevationPage extends BaseAscendPage {
         // Always show how much more is needed for the next level
         commandBuilder.set("#GainValue.Text", "Need " + FormatUtils.formatBigNumber(amountNeededForNextLevel) + " more");
         commandBuilder.set("#GainValue.Style.TextColor", "#9ca3af");
+    }
+
+    private boolean isElevationBlocked(UUID playerId) {
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin == null) return false;
+        ChallengeManager cm = plugin.getChallengeManager();
+        return cm != null && cm.isElevationBlocked(playerId);
     }
 
     private void showToast(UUID playerId, ToastType type, String message) {

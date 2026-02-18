@@ -294,6 +294,15 @@ $C.@PageOverlay {
                   Background: #1a2530;
                   Group #Bar7 { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #f59e0b; Visible: false; }
                 }
+                Group { Anchor: (Width: 3); }
+
+                // Challenge 8 — cyan
+                Group {
+                  Anchor: (Height: 8, Top: 1);
+                  FlexWeight: 1;
+                  Background: #1a2530;
+                  Group #Bar8 { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: #06b6d4; Visible: false; }
+                }
               }
             }
           }

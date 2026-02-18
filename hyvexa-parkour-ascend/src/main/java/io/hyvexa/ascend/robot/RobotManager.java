@@ -20,6 +20,7 @@ import com.hypixel.hytale.server.npc.NPCPlugin;
 import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.ascension.AscensionManager;
+import io.hyvexa.ascend.ascension.ChallengeManager;
 import io.hyvexa.ascend.command.AscendCommand;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
@@ -818,10 +819,13 @@ public class RobotManager {
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         AscensionManager ascensionMgr = plugin != null ? plugin.getAscensionManager() : null;
         AscendRunTracker runTracker = plugin != null ? plugin.getRunTracker() : null;
+        ChallengeManager challengeMgr = plugin != null ? plugin.getChallengeManager() : null;
         for (UUID playerId : onlinePlayers) {
             if (ascensionMgr == null || !ascensionMgr.hasAutoElevation(playerId)) continue;
             // Skip if player is actively playing a map — don't reset progress mid-run
             if (runTracker != null && runTracker.getActiveMapId(playerId) != null) continue;
+            // Skip if elevation is blocked by active challenge
+            if (challengeMgr != null && challengeMgr.isElevationBlocked(playerId)) continue;
             autoElevatePlayer(playerId, now);
         }
     }
