@@ -150,14 +150,21 @@ class AscendPlayerPersistence {
             detachedDirtyPlayers.remove(playerId);
             return;
         }
-        AscendPlayerProgress progress = players.get(playerId);
+        AscendPlayerProgress progress = detachedDirtyPlayers.get(playerId);
         if (progress == null) {
+            progress = players.get(playerId);
+        }
+        if (progress == null) {
+            LOGGER.atWarning().log("savePlayerIfDirty: missing progress snapshot for dirty player " + playerId);
             dirtyPlayerVersions.remove(playerId, dirtyVersion);
             detachedDirtyPlayers.remove(playerId);
             return;
         }
         detachedDirtyPlayers.put(playerId, progress);
-        HytaleServer.SCHEDULED_EXECUTOR.execute(() -> syncSave(Map.of(playerId, dirtyVersion)));
+        AscendPlayerProgress snapshot = progress;
+        HytaleServer.SCHEDULED_EXECUTOR.execute(
+            () -> syncSave(Map.of(playerId, dirtyVersion), Map.of(playerId, snapshot))
+        );
     }
 
     /**
@@ -186,10 +193,14 @@ class AscendPlayerPersistence {
     // ========================================
 
     void syncSave() {
-        syncSave(Map.copyOf(dirtyPlayerVersions));
+        syncSave(Map.copyOf(dirtyPlayerVersions), Map.of());
     }
 
     void syncSave(Map<UUID, Long> toSave) {
+        syncSave(toSave, Map.of());
+    }
+
+    private void syncSave(Map<UUID, Long> toSave, Map<UUID, AscendPlayerProgress> progressOverrides) {
         if (!DatabaseManager.getInstance().isInitialized()) {
             return;
         }
@@ -199,13 +210,13 @@ class AscendPlayerPersistence {
 
         saveLock.writeLock().lock();
         try {
-            doSyncSave(toSave);
+            doSyncSave(toSave, progressOverrides);
         } finally {
             saveLock.writeLock().unlock();
         }
     }
 
-    private void doSyncSave(Map<UUID, Long> toSave) {
+    private void doSyncSave(Map<UUID, Long> toSave, Map<UUID, AscendPlayerProgress> progressOverrides) {
         String playerSql = """
             INSERT INTO ascend_players (uuid, player_name, vexa_mantissa, vexa_exp10, elevation_multiplier, ascension_count,
                 skill_tree_points, total_vexa_earned_mantissa, total_vexa_earned_exp10, total_manual_runs, active_title,
@@ -260,7 +271,11 @@ class AscendPlayerPersistence {
                 has_robot = VALUES(has_robot), robot_speed_level = VALUES(robot_speed_level),
                 robot_stars = VALUES(robot_stars), multiplier_mantissa = VALUES(multiplier_mantissa),
                 multiplier_exp10 = VALUES(multiplier_exp10),
-                best_time_ms = VALUES(best_time_ms)
+                best_time_ms = CASE
+                    WHEN VALUES(best_time_ms) IS NULL THEN best_time_ms
+                    WHEN best_time_ms IS NULL OR VALUES(best_time_ms) < best_time_ms THEN VALUES(best_time_ms)
+                    ELSE best_time_ms
+                END
             """;
 
         String summitSql = """
@@ -306,7 +321,7 @@ class AscendPlayerPersistence {
                 Map<UUID, Long> persistedVersions = new HashMap<>();
                 for (Map.Entry<UUID, Long> dirtyEntry : toSave.entrySet()) {
                     UUID playerId = dirtyEntry.getKey();
-                    AscendPlayerProgress progress = resolveProgressForSave(playerId);
+                    AscendPlayerProgress progress = resolveProgressForSave(playerId, progressOverrides);
                     if (progress == null) {
                         continue;
                     }
@@ -461,12 +476,52 @@ class AscendPlayerPersistence {
         }
     }
 
-    private AscendPlayerProgress resolveProgressForSave(UUID playerId) {
+    private AscendPlayerProgress resolveProgressForSave(UUID playerId, Map<UUID, AscendPlayerProgress> progressOverrides) {
+        if (progressOverrides != null) {
+            AscendPlayerProgress overridden = progressOverrides.get(playerId);
+            if (overridden != null) {
+                return overridden;
+            }
+        }
         AscendPlayerProgress liveProgress = players.get(playerId);
         if (liveProgress != null) {
             return liveProgress;
         }
         return detachedDirtyPlayers.get(playerId);
+    }
+
+    Long loadBestTimeFromDatabase(UUID playerId, String mapId) {
+        if (playerId == null || mapId == null || !DatabaseManager.getInstance().isInitialized()) {
+            return null;
+        }
+
+        String sql = """
+            SELECT best_time_ms
+            FROM ascend_player_maps
+            WHERE player_uuid = ? AND map_id = ? AND best_time_ms IS NOT NULL
+            LIMIT 1
+            """;
+
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection");
+                return null;
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setString(1, playerId.toString());
+                stmt.setString(2, mapId);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        long value = rs.getLong("best_time_ms");
+                        return rs.wasNull() ? null : value;
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.atWarning().log("Failed to load best_time_ms for " + playerId + " map " + mapId + ": " + e.getMessage());
+        }
+        return null;
     }
 
     // ========================================
@@ -480,6 +535,13 @@ class AscendPlayerPersistence {
     AscendPlayerProgress loadPlayerFromDatabase(UUID playerId) {
         if (!DatabaseManager.getInstance().isInitialized()) {
             return null;
+        }
+
+        // If this player has a pending detached dirty snapshot (e.g. disconnect save in-flight),
+        // use it instead of reloading an older DB row.
+        AscendPlayerProgress detached = detachedDirtyPlayers.get(playerId);
+        if (detached != null && dirtyPlayerVersions.containsKey(playerId)) {
+            return detached;
         }
 
         AscendPlayerProgress progress = null;

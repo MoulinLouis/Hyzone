@@ -249,6 +249,31 @@ public class AscendPlayerStore {
         return progress.getOrCreateMapProgress(mapId);
     }
 
+    /**
+     * Returns authoritative best time for this player/map.
+     * Uses in-memory value first, then DB fallback if memory is missing.
+     */
+    public Long getBestTimeMs(UUID playerId, String mapId) {
+        if (playerId == null || mapId == null) {
+            return null;
+        }
+
+        AscendPlayerProgress.MapProgress mapProgress = getMapProgress(playerId, mapId);
+        if (mapProgress != null && mapProgress.getBestTimeMs() != null) {
+            return mapProgress.getBestTimeMs();
+        }
+
+        Long dbBest = persistence.loadBestTimeFromDatabase(playerId, mapId);
+        if (dbBest != null) {
+            AscendPlayerProgress.MapProgress target = getOrCreateMapProgress(playerId, mapId);
+            Long current = target.getBestTimeMs();
+            if (current == null || dbBest < current) {
+                target.setBestTimeMs(dbBest);
+            }
+        }
+        return dbBest;
+    }
+
     public boolean setMapUnlocked(UUID playerId, String mapId, boolean unlocked) {
         AscendPlayerProgress.MapProgress mapProgress = getOrCreateMapProgress(playerId, mapId);
         if (mapProgress.isUnlocked() == unlocked) {
