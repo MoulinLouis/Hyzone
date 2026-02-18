@@ -143,6 +143,7 @@ public class PurgeUpgradeManager {
                         StaticModifier.CalculationType.MULTIPLICATIVE, multiplier));
         statMap.update();
         statMap.maximizeStatValue(healthIndex);
+        statMap.update();
     }
 
     private void revertIronSkin(Ref<EntityStore> ref, Store<EntityStore> store) {

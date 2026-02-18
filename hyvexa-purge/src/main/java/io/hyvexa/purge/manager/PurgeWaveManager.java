@@ -457,6 +457,12 @@ public class PurgeWaveManager {
                         int current = Math.round(health.get());
                         int max = Math.round(health.getMax());
                         hudManager.updatePlayerHealth(session.getPlayerId(), current, max);
+                        if (current <= 0 && session.getState() != SessionState.ENDED) {
+                            PurgeSessionManager sm = sessionManager;
+                            if (sm != null) {
+                                sm.stopSession(session.getPlayerId(), "death");
+                            }
+                        }
                     }
                 }
             } catch (Exception e) {
@@ -554,7 +560,12 @@ public class PurgeWaveManager {
         sendMessage(session, "You won! You cleared all configured Purge waves.");
         PurgeSessionManager sm = sessionManager;
         if (sm != null) {
-            sm.stopSession(session.getPlayerId(), "victory");
+            World world = getPurgeWorld();
+            if (world != null) {
+                world.execute(() -> sm.stopSession(session.getPlayerId(), "victory"));
+            } else {
+                sm.stopSession(session.getPlayerId(), "victory");
+            }
         }
     }
 
