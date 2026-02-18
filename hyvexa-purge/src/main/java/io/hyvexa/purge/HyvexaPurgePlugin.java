@@ -91,7 +91,7 @@ public class HyvexaPurgePlugin extends JavaPlugin {
         sessionManager = new PurgeSessionManager(spawnPointManager, waveManager, hudManager);
 
         // Register commands
-        this.getCommandRegistry().registerCommand(new PurgeCommand(sessionManager));
+        this.getCommandRegistry().registerCommand(new PurgeCommand(sessionManager, spawnPointManager));
         this.getCommandRegistry().registerCommand(new PurgeSpawnCommand(spawnPointManager));
 
         // --- Event Handlers ---

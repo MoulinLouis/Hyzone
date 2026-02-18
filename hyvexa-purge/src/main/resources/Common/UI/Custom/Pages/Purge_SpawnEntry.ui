@@ -1,0 +1,31 @@
+$C = "../Common.ui";
+
+Group {
+  LayoutMode: Left;
+  Anchor: (Left: 2, Right: 2, Bottom: 6, Height: 44, Width: 490);
+  Background: $C.@InputBoxBackground;
+  Padding: (Left: 10, Right: 6, Top: 6, Bottom: 6);
+
+  Label #SpawnId {
+    Anchor: (Width: 40);
+    Style: (FontSize: 14, RenderBold: true, TextColor: #93844c);
+    Text: "#0";
+  }
+
+  Label #SpawnCoords {
+    FlexWeight: 1;
+    Style: (FontSize: 13, TextColor: #cfd7dc);
+    Text: "0, 0, 0";
+  }
+
+  TextButton #DeleteButton {
+    Anchor: (Width: 32, Height: 32);
+    Text: "X";
+    Style: TextButtonStyle(
+      Default: (Background: #3b1219, LabelStyle: (FontSize: 14, TextColor: #ef4444, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+      Hovered: (Background: #5c1d28, LabelStyle: (FontSize: 14, TextColor: #f87171, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+      Pressed: (Background: #2d0f14, LabelStyle: (FontSize: 14, TextColor: #ef4444, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+      Sounds: $C.@ButtonSounds,
+    );
+  }
+}

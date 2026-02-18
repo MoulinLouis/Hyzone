@@ -13,10 +13,13 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.util.CommandUtils;
 import io.hyvexa.common.util.ModeGate;
+import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.purge.data.PurgePlayerStats;
 import io.hyvexa.purge.data.PurgePlayerStore;
 import io.hyvexa.purge.data.PurgeScrapStore;
 import io.hyvexa.purge.manager.PurgeSessionManager;
+import io.hyvexa.purge.manager.PurgeSpawnPointManager;
+import io.hyvexa.purge.ui.PurgeAdminIndexPage;
 
 import javax.annotation.Nonnull;
 import java.util.UUID;
@@ -24,13 +27,17 @@ import java.util.concurrent.CompletableFuture;
 
 public class PurgeCommand extends AbstractAsyncCommand {
 
-    private final PurgeSessionManager sessionManager;
+    private static final Message MESSAGE_OP_REQUIRED = Message.raw("You must be OP to use /purge admin.");
 
-    public PurgeCommand(PurgeSessionManager sessionManager) {
+    private final PurgeSessionManager sessionManager;
+    private final PurgeSpawnPointManager spawnPointManager;
+
+    public PurgeCommand(PurgeSessionManager sessionManager, PurgeSpawnPointManager spawnPointManager) {
         super("purge", "Purge zombie survival commands");
         this.setPermissionGroup(GameMode.Adventure);
         this.setAllowsExtraArguments(true);
         this.sessionManager = sessionManager;
+        this.spawnPointManager = spawnPointManager;
     }
 
     @Override
@@ -55,7 +62,7 @@ public class PurgeCommand extends AbstractAsyncCommand {
                                Store<EntityStore> store, World world) {
         String[] args = CommandUtils.getArgs(ctx);
         if (args.length == 0) {
-            player.sendMessage(Message.raw("Usage: /purge <start|stop|stats>"));
+            player.sendMessage(Message.raw("Usage: /purge <start|stop|stats|admin>"));
             return;
         }
 
@@ -71,8 +78,22 @@ public class PurgeCommand extends AbstractAsyncCommand {
             case "start" -> handleStart(player, ref, world, playerId);
             case "stop" -> handleStop(player, playerId);
             case "stats" -> handleStats(player, playerId);
-            default -> player.sendMessage(Message.raw("Usage: /purge <start|stop|stats>"));
+            case "admin" -> openAdminMenu(player, ref, store);
+            default -> player.sendMessage(Message.raw("Usage: /purge <start|stop|stats|admin>"));
         }
+    }
+
+    private void openAdminMenu(Player player, Ref<EntityStore> ref, Store<EntityStore> store) {
+        if (!PermissionUtils.isOp(player)) {
+            player.sendMessage(MESSAGE_OP_REQUIRED);
+            return;
+        }
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        if (playerRef == null) {
+            return;
+        }
+        player.getPageManager().openCustomPage(ref, store,
+                new PurgeAdminIndexPage(playerRef, spawnPointManager));
     }
 
     private void handleStart(Player player, Ref<EntityStore> ref, World world, UUID playerId) {
