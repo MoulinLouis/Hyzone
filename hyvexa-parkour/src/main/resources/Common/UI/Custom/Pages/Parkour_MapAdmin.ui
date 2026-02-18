@@ -4,7 +4,7 @@ $C.@PageOverlay {
   SceneBlur {}
 
   Group #MapAdminWindow {
-    Anchor: (Width: 920, Height: 910);
+    Anchor: (Width: 920, Height: 960);
     LayoutMode: Top;
     Background: #0d1620(0.95);
     OutlineColor: #ffffff(0.06);
