@@ -4,6 +4,23 @@ What's new in Hyvexa? All player-facing changes, newest first.
 
 ---
 
+## v0.1.5 - 2026-02-18
+
+### New
+- **Challenge 8** - Disables Elevation and Summit during the challenge. Complete it for a permanent +25% boost to both.
+- **Auto Ascend** - New Ascendancy Tree node (replaces Elevation Boost). Automatically ascends and skips the cinematic when you reach 1Dc.
+- **/vote** - Vote for Hyvexa on server listing sites to help the server grow.
+
+### Improved
+- **Number formatting** - Multiplier gains, summit levels, and XP now display with K/M/B suffixes instead of long numbers.
+- **Late-game balance** - Post-challenge Ascendancy Tree costs increased, Runner Speed V capped at level 1000, and summit post-cap scaling adjusted.
+
+### Fixed
+- **Ascension tutorial** - No longer replays on subsequent ascensions.
+- **Runners during resets** - Runners now despawn properly before prestige resets.
+
+---
+
 ## v0.1.4 - 2026-02-17
 
 ### New
