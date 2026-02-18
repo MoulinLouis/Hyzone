@@ -40,6 +40,7 @@ public class CatCommand extends AbstractAsyncCommand {
     public CatCommand() {
         super("cat", "Interact with a cat");
         this.setPermissionGroup(GameMode.Adventure);
+        this.setAllowsExtraArguments(true);
     }
 
     @Override
