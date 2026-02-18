@@ -3,6 +3,7 @@ package io.hyvexa.purge.hud;
 import com.hypixel.hytale.protocol.packets.interface_.HudComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.Universe;
 import io.hyvexa.common.util.MultiHudBridge;
 import io.hyvexa.core.economy.GemStore;
 import io.hyvexa.purge.data.PurgeScrapStore;
@@ -76,10 +77,11 @@ public class PurgeHudManager {
     }
 
     public void tickSlowUpdates() {
+        int playerCount = Universe.get().getPlayers().size();
         for (var entry : purgeHuds.entrySet()) {
             UUID playerId = entry.getKey();
             PurgeHud hud = entry.getValue();
-            hud.updatePlayerCount();
+            hud.updatePlayerCount(playerCount);
             hud.updateGems(GemStore.getInstance().getGems(playerId));
             hud.updateScrap(PurgeScrapStore.getInstance().getScrap(playerId));
         }

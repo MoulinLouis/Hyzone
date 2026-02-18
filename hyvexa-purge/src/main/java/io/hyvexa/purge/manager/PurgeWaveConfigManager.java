@@ -22,6 +22,8 @@ public class PurgeWaveConfigManager {
     private static final int DEFAULT_FAST_COUNT = 0;
     private static final int DEFAULT_SPAWN_DELAY_MS = 500;
     private static final int DEFAULT_SPAWN_BATCH_SIZE = 5;
+    private static final String PERSISTENCE_DISABLED_MESSAGE =
+            "Database is unavailable. Purge wave settings require database connectivity.";
 
     private final ConcurrentHashMap<Integer, PurgeWaveDefinition> waves = new ConcurrentHashMap<>();
 
@@ -49,8 +51,16 @@ public class PurgeWaveConfigManager {
         return list;
     }
 
+    public boolean isPersistenceAvailable() {
+        return DatabaseManager.getInstance().isInitialized();
+    }
+
+    public String getPersistenceDisabledMessage() {
+        return PERSISTENCE_DISABLED_MESSAGE;
+    }
+
     public int addWave() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!isPersistenceAvailable()) {
             return -1;
         }
         synchronized (waves) {
@@ -83,7 +93,7 @@ public class PurgeWaveConfigManager {
     }
 
     public boolean removeWave(int waveNumber) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!isPersistenceAvailable()) {
             return false;
         }
         synchronized (waves) {
@@ -122,8 +132,7 @@ public class PurgeWaveConfigManager {
     }
 
     public void clearAll() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
-            waves.clear();
+        if (!isPersistenceAvailable()) {
             return;
         }
         String sql = "DELETE FROM purge_waves";
@@ -183,7 +192,7 @@ public class PurgeWaveConfigManager {
 
     private boolean setSpawnField(int waveNumber, String column, int value,
                                    java.util.function.Function<PurgeWaveDefinition, PurgeWaveDefinition> updater) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!isPersistenceAvailable()) {
             return false;
         }
         PurgeWaveDefinition wave = waves.get(waveNumber);
@@ -209,7 +218,7 @@ public class PurgeWaveConfigManager {
     }
 
     private boolean setVariantCount(int waveNumber, PurgeZombieVariant variant, int count) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!isPersistenceAvailable()) {
             return false;
         }
         int safeCount = Math.max(0, count);

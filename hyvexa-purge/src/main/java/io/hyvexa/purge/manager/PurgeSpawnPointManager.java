@@ -5,9 +5,7 @@ import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.purge.data.PurgeSpawnPoint;
 
 import java.sql.*;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
@@ -16,6 +14,8 @@ public class PurgeSpawnPointManager {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final double MIN_SPAWN_DISTANCE = 15.0;
+    private static final String PERSISTENCE_DISABLED_MESSAGE =
+            "Database is unavailable. Purge spawn settings require database connectivity.";
 
     private final ConcurrentHashMap<Integer, PurgeSpawnPoint> spawnPoints = new ConcurrentHashMap<>();
 
@@ -32,8 +32,16 @@ public class PurgeSpawnPointManager {
         return List.copyOf(spawnPoints.values());
     }
 
+    public boolean isPersistenceAvailable() {
+        return DatabaseManager.getInstance().isInitialized();
+    }
+
+    public String getPersistenceDisabledMessage() {
+        return PERSISTENCE_DISABLED_MESSAGE;
+    }
+
     public int addSpawnPoint(double x, double y, double z, float yaw) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!isPersistenceAvailable()) {
             return -1;
         }
         String sql = "INSERT INTO purge_spawn_points (x, y, z, yaw) VALUES (?, ?, ?, ?)";
@@ -59,7 +67,7 @@ public class PurgeSpawnPointManager {
     }
 
     public boolean removeSpawnPoint(int id) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
+        if (!isPersistenceAvailable()) {
             return false;
         }
         String sql = "DELETE FROM purge_spawn_points WHERE id = ?";
@@ -79,8 +87,7 @@ public class PurgeSpawnPointManager {
     }
 
     public void clearAll() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
-            spawnPoints.clear();
+        if (!isPersistenceAvailable()) {
             return;
         }
         String sql = "DELETE FROM purge_spawn_points";
@@ -143,45 +150,6 @@ public class PurgeSpawnPointManager {
             }
         }
         return eligible.get(eligible.size() - 1);
-    }
-
-    /**
-     * Build a balanced spawn plan that prefers farther points while distributing
-     * spawns across all eligible points in round-robin order.
-     */
-    public List<PurgeSpawnPoint> buildSpawnPlan(double playerX, double playerZ, int totalCount) {
-        if (totalCount <= 0) {
-            return List.of();
-        }
-        Collection<PurgeSpawnPoint> all = spawnPoints.values();
-        if (all.isEmpty()) {
-            return List.of();
-        }
-
-        List<PurgeSpawnPoint> eligible = all.stream()
-                .filter(p -> horizontalDistance(playerX, playerZ, p.x(), p.z()) >= MIN_SPAWN_DISTANCE)
-                .sorted(Comparator.comparingDouble((PurgeSpawnPoint p) ->
-                        horizontalDistance(playerX, playerZ, p.x(), p.z())).reversed())
-                .toList();
-
-        List<PurgeSpawnPoint> preferred = eligible.isEmpty()
-                ? all.stream()
-                .sorted(Comparator.comparingDouble((PurgeSpawnPoint p) ->
-                        horizontalDistance(playerX, playerZ, p.x(), p.z())).reversed())
-                .toList()
-                : eligible;
-
-        if (preferred.isEmpty()) {
-            return List.of();
-        }
-
-        int start = ThreadLocalRandom.current().nextInt(preferred.size());
-        List<PurgeSpawnPoint> plan = new ArrayList<>(totalCount);
-        for (int i = 0; i < totalCount; i++) {
-            int idx = (start + i) % preferred.size();
-            plan.add(preferred.get(idx));
-        }
-        return plan;
     }
 
     private static double horizontalDistance(double x1, double z1, double x2, double z2) {
