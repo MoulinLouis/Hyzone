@@ -1,0 +1,69 @@
+$C = "../Common.ui";
+
+$C.@PageOverlay {
+  SceneBlur {}
+
+  Group #AdminIndexWindow {
+    Anchor: (Width: 420, Height: 400);
+    LayoutMode: Top;
+    Background: #0d1620(0.95);
+    OutlineColor: #ffffff(0.06);
+    OutlineSize: 1;
+
+    // === HEADER ===
+    Group #Header {
+      Anchor: (Left: 0, Right: 0, Height: 52);
+      LayoutMode: Full;
+      Background: #0a1018;
+
+      Group {
+        Anchor: (Left: 0, Right: 0, Top: 0, Height: 2);
+        Background: #f59e0b;
+      }
+
+      Label {
+        Anchor: (Left: 20, Top: 16, Width: 300, Height: 24);
+        Style: (FontSize: 18, TextColor: #f0f4f8, RenderBold: true);
+        Text: "Purge Admin";
+      }
+    }
+
+    // === CONTENT ===
+    Group #Content {
+      Anchor: (Left: 0, Right: 0);
+      FlexWeight: 1;
+      LayoutMode: Top;
+      Padding: (Left: 14, Right: 14, Top: 10, Bottom: 10);
+
+      Label {
+        Style: (FontSize: 14, TextColor: #9fb0ba);
+        Text: "Manage Purge settings.";
+      }
+
+      Group {
+        Anchor: (Left: 2, Right: 2, Top: 10, Height: 46, Width: 390);
+        Background: $C.@InputBoxBackground;
+
+        Button #SpawnsButton {
+          Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+          LayoutMode: Left;
+          Padding: (Left: 10, Right: 10, Top: 8, Bottom: 8);
+          Background: #00000000;
+          Style: ButtonStyle(
+            Default: (Background: #00000000),
+            Hovered: (Background: #ffffff(0.08)),
+            Pressed: (Background: #ffffff(0.03)),
+            Sounds: $C.@ButtonSounds,
+          );
+
+          Label #SpawnsLabel {
+            Style: (FontSize: 16, RenderBold: true, TextColor: #93844c);
+            Text: "Spawn Points";
+          }
+        }
+      }
+    }
+  }
+}
+
+$C.@BackButton {}
