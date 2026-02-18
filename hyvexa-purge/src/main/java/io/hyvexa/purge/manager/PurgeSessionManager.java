@@ -8,6 +8,7 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.common.util.DamageBypassRegistry;
 import io.hyvexa.purge.HyvexaPurgePlugin;
 import io.hyvexa.purge.data.*;
 import io.hyvexa.purge.hud.PurgeHudManager;
@@ -55,6 +56,7 @@ public class PurgeSessionManager {
 
         PurgeSession session = new PurgeSession(playerId, playerRef);
         activeSessions.put(playerId, session);
+        DamageBypassRegistry.add(playerId);
 
         // Grant loadout
         try {
@@ -86,6 +88,7 @@ public class PurgeSessionManager {
         if (session == null) {
             return;
         }
+        DamageBypassRegistry.remove(playerId);
         session.setState(SessionState.ENDED);
 
         runSafe("cancel tasks", session::cancelAllTasks);

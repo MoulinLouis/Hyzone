@@ -10,7 +10,9 @@ import com.hypixel.hytale.server.core.entity.knockback.KnockbackComponent;
 import com.hypixel.hytale.server.core.modules.entity.damage.Damage;
 import com.hypixel.hytale.server.core.modules.entity.damage.DamageEventSystem;
 import com.hypixel.hytale.server.core.modules.entity.damage.DamageModule;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.common.util.DamageBypassRegistry;
 
 public class NoPlayerDamageSystem extends DamageEventSystem {
 
@@ -21,6 +23,10 @@ public class NoPlayerDamageSystem extends DamageEventSystem {
                        CommandBuffer<EntityStore> buffer, Damage event) {
         Player target = chunk.getComponent(entityId, Player.getComponentType());
         if (target == null) {
+            return;
+        }
+        PlayerRef playerRef = chunk.getComponent(entityId, PlayerRef.getComponentType());
+        if (playerRef != null && DamageBypassRegistry.isBypassed(playerRef.getUuid())) {
             return;
         }
         if (event.hasMetaObject(Damage.KNOCKBACK_COMPONENT)) {
