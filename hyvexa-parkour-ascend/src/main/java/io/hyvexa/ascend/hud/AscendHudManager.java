@@ -16,6 +16,7 @@ import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 import io.hyvexa.common.math.BigNumber;
+import io.hyvexa.common.util.MultiHudBridge;
 import io.hyvexa.core.economy.GemStore;
 
 import java.util.List;
@@ -64,7 +65,7 @@ public class AscendHudManager {
             return;
         }
         // Always ensure HUD is set on player (in case they came from another world)
-        player.getHudManager().setCustomHud(playerRef, hud);
+        MultiHudBridge.setCustomHud(player, playerRef, hud);
         long readyAt = ascendHudReadyAt.getOrDefault(playerId, Long.MAX_VALUE);
         if (System.currentTimeMillis() < readyAt) {
             return;
@@ -185,10 +186,10 @@ public class AscendHudManager {
             return;
         }
         AscendHud hud = ascendHuds.computeIfAbsent(playerRef.getUuid(), id -> new AscendHud(playerRef));
-        player.getHudManager().setCustomHud(playerRef, hud);
+        MultiHudBridge.setCustomHud(player, playerRef, hud);
         player.getHudManager().hideHudComponents(playerRef, HudComponent.Compass, HudComponent.Health, HudComponent.Stamina);
         hud.resetCache();
-        hud.show();
+        MultiHudBridge.showIfNeeded(hud);
         hud.applyStaticText();
         hudAttached.put(playerRef.getUuid(), true);
         ascendHudReadyAt.put(playerRef.getUuid(), System.currentTimeMillis() + 250L);
@@ -213,7 +214,7 @@ public class AscendHudManager {
             return;
         }
         HiddenAscendHud hud = hiddenHuds.computeIfAbsent(playerRef.getUuid(), id -> new HiddenAscendHud(playerRef));
-        player.getHudManager().setCustomHud(playerRef, hud);
+        MultiHudBridge.setCustomHud(player, playerRef, hud);
         player.getHudManager().hideHudComponents(playerRef, HudComponent.Compass, HudComponent.Health, HudComponent.Stamina);
     }
 

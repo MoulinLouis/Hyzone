@@ -22,6 +22,7 @@ import io.hyvexa.common.WorldConstants;
 import io.hyvexa.common.util.AsyncExecutionHelper;
 import io.hyvexa.common.util.InventoryUtils;
 import io.hyvexa.common.util.ModeGate;
+import io.hyvexa.common.util.MultiHudBridge;
 import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.core.analytics.AnalyticsStore;
 import io.hyvexa.core.db.DatabaseManager;
@@ -275,9 +276,9 @@ public class HyvexaHubPlugin extends JavaPlugin {
                     return new HudLifecycle(hud, System.currentTimeMillis() + HUD_READY_DELAY_MS, HudPhase.READY);
                 });
                 if (state != null && state.hud() != null) {
-                    player.getHudManager().setCustomHud(playerRef, state.hud());
+                    MultiHudBridge.setCustomHud(player, playerRef, state.hud());
                     player.getHudManager().hideHudComponents(playerRef, HudComponent.Compass);
-                    state.hud().show();
+                    MultiHudBridge.showIfNeeded(state.hud());
                 }
             } finally {
                 // If still ATTACHING (e.g. early return), revert to PENDING for recovery
