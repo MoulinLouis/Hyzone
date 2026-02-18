@@ -206,25 +206,16 @@ public class AscendPlayerStore {
     }
 
     /**
-     * Check if a player has unlocked compound elevation (Challenge 8 reward).
-     */
-    public boolean hasCompoundElevation(UUID playerId) {
-        AscendPlayerProgress progress = players.get(playerId);
-        return progress != null && progress.hasChallengeReward(AscendConstants.ChallengeType.CHALLENGE_8);
-    }
-
-    /**
      * Get the player's effective elevation multiplier.
-     * Compound path (Challenge 8 reward): compoundedElevation * max(1, cycleLevel)
-     * Standard path: level-based linear multiplier.
+     * Base: level (1:1). C8 reward: x1.25 bonus.
      */
     public double getCalculatedElevationMultiplier(UUID playerId) {
-        AscendPlayerProgress progress = players.get(playerId);
-        if (progress == null) return 1.0;
-        if (progress.hasChallengeReward(AscendConstants.ChallengeType.CHALLENGE_8)) {
-            return progress.getCompoundedElevation() * Math.max(1, progress.getCycleLevel());
+        double base = AscendConstants.getElevationMultiplier(getElevationLevel(playerId));
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin != null && plugin.getChallengeManager() != null) {
+            base *= plugin.getChallengeManager().getChallengeElevationBonus(playerId);
         }
-        return AscendConstants.getElevationMultiplier(progress.getElevationMultiplier());
+        return base;
     }
 
     /**
@@ -655,27 +646,6 @@ public class AscendPlayerStore {
         return true;
     }
 
-    /**
-     * Perform the compound action: multiply compoundedElevation by cycleLevel^COMPOUND_POWER,
-     * then reset cycleLevel and vexa accumulators.
-     * @return true if compound succeeded (cycleLevel > 0)
-     */
-    public boolean compoundElevation(UUID playerId) {
-        AscendPlayerProgress progress = players.get(playerId);
-        if (progress == null) return false;
-        int cycleLevel = progress.getCycleLevel();
-        if (cycleLevel <= 0) return false;
-        double current = progress.getCompoundedElevation();
-        double newMultiplier = current * Math.pow(cycleLevel, AscendConstants.COMPOUND_POWER);
-        progress.setCompoundedElevation(newMultiplier);
-        progress.setCycleLevel(0);
-        progress.setVexa(BigNumber.ZERO);
-        progress.setSummitAccumulatedVexa(BigNumber.ZERO);
-        progress.setElevationAccumulatedVexa(BigNumber.ZERO);
-        markDirty(playerId);
-        return true;
-    }
-
     public BigNumber getMapMultiplier(UUID playerId, String mapId) {
         AscendPlayerProgress.MapProgress mapProgress = getMapProgress(playerId, mapId);
         if (mapProgress == null) {
@@ -1049,8 +1019,6 @@ public class AscendPlayerStore {
         }
 
         progress.setElevationMultiplier(1);
-        progress.setCompoundedElevation(1.0);
-        progress.setCycleLevel(0);
         progress.setAutoElevationTargetIndex(0);
 
         List<String> mapsWithRunners = resetMapProgress(progress, firstMapId, false, playerId);

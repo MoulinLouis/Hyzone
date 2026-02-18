@@ -399,6 +399,9 @@ public class AscendChallengePage extends BaseAscendPage {
         if (type.blocksElevation()) {
             parts.add("Elevation blocked");
         }
+        if (type.blocksAllSummit()) {
+            parts.add("Summit blocked");
+        }
 
         if (parts.isEmpty()) return "Malus: None";
         return "Malus: " + String.join(" + ", parts);
@@ -420,7 +423,7 @@ public class AscendChallengePage extends BaseAscendPage {
             case CHALLENGE_5 -> "Speed +5% + Mult Gain +5%";
             case CHALLENGE_6 -> "Speed/Mult/Evo +5%/+5%/+0.25";
             case CHALLENGE_7 -> "Map 4&5 base x1.5";
-            case CHALLENGE_8 -> "Add Permanent Bonus to Elevation";
+            case CHALLENGE_8 -> "Elevation & Summit +25%";
         };
     }
 }

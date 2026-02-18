@@ -216,9 +216,8 @@ class AscendPlayerPersistence {
                 break_ascension_enabled,
                 auto_elevation_enabled, auto_elevation_timer_seconds, auto_elevation_targets, auto_elevation_target_index,
                 auto_summit_enabled, auto_summit_timer_seconds, auto_summit_config, auto_summit_rotation_index,
-                transcendence_count, auto_ascend_enabled,
-                compounded_elevation, cycle_level)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                transcendence_count, auto_ascend_enabled)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 player_name = VALUES(player_name),
                 vexa_mantissa = VALUES(vexa_mantissa), vexa_exp10 = VALUES(vexa_exp10),
@@ -249,9 +248,7 @@ class AscendPlayerPersistence {
                 auto_summit_config = VALUES(auto_summit_config),
                 auto_summit_rotation_index = VALUES(auto_summit_rotation_index),
                 transcendence_count = VALUES(transcendence_count),
-                auto_ascend_enabled = VALUES(auto_ascend_enabled),
-                compounded_elevation = VALUES(compounded_elevation),
-                cycle_level = VALUES(cycle_level)
+                auto_ascend_enabled = VALUES(auto_ascend_enabled)
             """;
 
         String mapSql = """
@@ -378,8 +375,6 @@ class AscendPlayerPersistence {
                     playerStmt.setInt(32, progress.getAutoSummitRotationIndex());
                     playerStmt.setInt(33, progress.getTranscendenceCount());
                     playerStmt.setBoolean(34, progress.isAutoAscendEnabled());
-                    playerStmt.setDouble(35, progress.getCompoundedElevation());
-                    playerStmt.setInt(36, progress.getCycleLevel());
                     playerStmt.addBatch();
 
                     // Save map progress
@@ -502,8 +497,7 @@ class AscendPlayerPersistence {
                    break_ascension_enabled,
                    auto_elevation_enabled, auto_elevation_timer_seconds, auto_elevation_targets, auto_elevation_target_index,
                    auto_summit_enabled, auto_summit_timer_seconds, auto_summit_config, auto_summit_rotation_index,
-                   transcendence_count, auto_ascend_enabled,
-                   compounded_elevation, cycle_level
+                   transcendence_count, auto_ascend_enabled
             FROM ascend_players
             WHERE uuid = ?
             """;
@@ -576,15 +570,6 @@ class AscendPlayerPersistence {
 
                         progress.setTranscendenceCount(safeGetInt(rs, "transcendence_count", 0));
                         progress.setAutoAscendEnabled(safeGetBoolean(rs, "auto_ascend_enabled", false));
-
-                        double compoundedElev = safeGetDouble(rs, "compounded_elevation", 1.0);
-                        if (compoundedElev > 1.0) {
-                            progress.setCompoundedElevation(compoundedElev);
-                        }
-                        int cycleLevel = safeGetInt(rs, "cycle_level", 0);
-                        if (cycleLevel > 0) {
-                            progress.setCycleLevel(cycleLevel);
-                        }
                     }
                 }
             }
@@ -965,15 +950,6 @@ class AscendPlayerPersistence {
     // ========================================
     // Safe ResultSet Helpers
     // ========================================
-
-    private static double safeGetDouble(ResultSet rs, String column, double defaultValue) {
-        try {
-            return rs.getDouble(column);
-        } catch (SQLException e) {
-            LOGGER.atWarning().log("Column '" + column + "' not available: " + e.getMessage());
-            return defaultValue;
-        }
-    }
 
     private static int safeGetInt(ResultSet rs, String column, int defaultValue) {
         try {

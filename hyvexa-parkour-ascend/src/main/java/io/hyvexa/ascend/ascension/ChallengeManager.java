@@ -217,14 +217,14 @@ public class ChallengeManager {
     }
 
     /**
-     * Check if a summit category is blocked by the player's active challenge.
+     * Check if all summit categories are blocked by the player's active challenge.
      */
-    public boolean isSummitBlocked(UUID playerId, SummitCategory category) {
+    public boolean isAllSummitBlocked(UUID playerId) {
         ActiveChallenge active = activeChallenges.get(playerId);
         if (active == null) {
             return false;
         }
-        return active.challengeType().getBlockedSummitCategories().contains(category);
+        return active.challengeType().blocksAllSummit();
     }
 
     /**
@@ -236,6 +236,21 @@ public class ChallengeManager {
             return false;
         }
         return active.challengeType().blocksElevation();
+    }
+
+    /**
+     * Check if a summit category is blocked by the player's active challenge.
+     * Also returns true for all categories if the challenge blocks all summit.
+     */
+    public boolean isSummitBlocked(UUID playerId, SummitCategory category) {
+        ActiveChallenge active = activeChallenges.get(playerId);
+        if (active == null) {
+            return false;
+        }
+        if (active.challengeType().blocksAllSummit()) {
+            return true;
+        }
+        return active.challengeType().getBlockedSummitCategories().contains(category);
     }
 
     /**
@@ -348,6 +363,28 @@ public class ChallengeManager {
             mult *= 1.5;
         }
         return mult;
+    }
+
+    /**
+     * Get elevation multiplier bonus from challenge rewards.
+     * C8: x1.25 — multiplicative on elevation multiplier.
+     */
+    public double getChallengeElevationBonus(UUID playerId) {
+        AscendPlayerProgress progress = playerStore.getPlayer(playerId);
+        if (progress == null) return 1.0;
+        if (progress.hasChallengeReward(ChallengeType.CHALLENGE_8)) return 1.25;
+        return 1.0;
+    }
+
+    /**
+     * Get summit bonus multiplier from challenge rewards.
+     * C8: x1.25 — multiplicative on all summit bonuses.
+     */
+    public double getChallengeSummitBonus(UUID playerId) {
+        AscendPlayerProgress progress = playerStore.getPlayer(playerId);
+        if (progress == null) return 1.0;
+        if (progress.hasChallengeReward(ChallengeType.CHALLENGE_8)) return 1.25;
+        return 1.0;
     }
 
     /**

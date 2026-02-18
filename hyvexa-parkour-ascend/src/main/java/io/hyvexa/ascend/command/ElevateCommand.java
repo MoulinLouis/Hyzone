@@ -14,10 +14,8 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.AscendConstants.ElevationPurchaseResult;
 import io.hyvexa.ascend.ParkourAscendPlugin;
-import io.hyvexa.ascend.ascension.ChallengeManager;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
-import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.hud.AscendHudManager;
 import io.hyvexa.ascend.hud.ToastType;
@@ -79,17 +77,11 @@ public class ElevateCommand extends AbstractAsyncCommand {
             AscendPlayerStore playerStore = plugin.getPlayerStore();
             UUID playerId = playerRef.getUuid();
 
-            // Block elevation during active Challenge 8
-            ChallengeManager challengeMgr = plugin.getChallengeManager();
-            if (challengeMgr != null && challengeMgr.isElevationBlocked(playerId)) {
+            // Block elevation during active challenge that blocks elevation
+            if (plugin.getChallengeManager() != null
+                    && plugin.getChallengeManager().isElevationBlocked(playerId)) {
                 player.sendMessage(Message.raw("[Ascend] Elevation is blocked during this challenge.")
                     .color(SystemMessageUtils.SECONDARY));
-                return;
-            }
-
-            // Compound path for Challenge 8 players
-            if (playerStore.hasCompoundElevation(playerId)) {
-                executeCompoundElevation(player, plugin, playerStore, playerId);
                 return;
             }
 
@@ -148,68 +140,5 @@ public class ElevateCommand extends AbstractAsyncCommand {
                 + " (+" + purchase.levels + " levels)")
                 .color(SystemMessageUtils.SUCCESS));
         }, world);
-    }
-
-    private void executeCompoundElevation(Player player, ParkourAscendPlugin plugin,
-                                           AscendPlayerStore playerStore, UUID playerId) {
-        AscendPlayerProgress progress = playerStore.getPlayer(playerId);
-        if (progress == null) return;
-
-        BigNumber accumulatedVexa = playerStore.getElevationAccumulatedVexa(playerId);
-        int currentCycleLevel = progress.getCycleLevel();
-
-        ElevationPurchaseResult purchase = AscendConstants.calculateCompoundPurchase(currentCycleLevel, accumulatedVexa);
-
-        if (purchase.levels <= 0 && currentCycleLevel <= 0) {
-            BigNumber nextCost = AscendConstants.getCompoundLevelCost(currentCycleLevel);
-            player.sendMessage(Message.raw("[Ascend] You need " + FormatUtils.formatBigNumber(nextCost)
-                + " accumulated vexa to elevate.").color(SystemMessageUtils.SECONDARY));
-            return;
-        }
-
-        // Buy cycle levels
-        int newCycleLevel = currentCycleLevel + purchase.levels;
-        if (purchase.levels > 0) {
-            progress.addCycleLevel(purchase.levels);
-        }
-
-        if (newCycleLevel <= 0) return;
-
-        // Despawn robots
-        RobotManager robotManager = plugin.getRobotManager();
-        if (robotManager != null) {
-            robotManager.despawnRobotsForPlayer(playerId);
-        }
-
-        String beforeText = AscendConstants.formatCompoundedElevation(progress.getCompoundedElevation());
-
-        // Compound
-        playerStore.compoundElevation(playerId);
-
-        String afterText = AscendConstants.formatCompoundedElevation(progress.getCompoundedElevation());
-
-        // Toast
-        AscendHudManager hm = plugin.getHudManager();
-        if (hm != null) {
-            hm.showToast(playerId, ToastType.ECONOMY, "Elevation: " + beforeText + " -> " + afterText);
-        }
-
-        // Reset progress
-        AscendMapStore mapStore = plugin.getMapStore();
-        String firstMapId = null;
-        if (mapStore != null) {
-            List<AscendMap> maps = mapStore.listMapsSorted();
-            if (!maps.isEmpty()) {
-                firstMapId = maps.get(0).getId();
-            }
-        }
-        playerStore.resetProgressForElevation(playerId, firstMapId);
-
-        if (plugin.getAchievementManager() != null) {
-            plugin.getAchievementManager().checkAndUnlockAchievements(playerId, player);
-        }
-
-        player.sendMessage(Message.raw("[Ascend] Compound elevated! " + beforeText + " -> " + afterText
-            + " (+" + purchase.levels + " cycle levels)").color(SystemMessageUtils.SUCCESS));
     }
 }

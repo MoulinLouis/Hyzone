@@ -34,10 +34,6 @@ public class ChallengeSnapshot {
     private double totalVexaEarnedMantissa;
     private int totalVexaEarnedExp10;
 
-    // Compound Elevation
-    private double compoundedElevation;
-    private int cycleLevel;
-
     // Stats
     private int totalManualRuns;
     private int consecutiveManualRuns;
@@ -88,9 +84,6 @@ public class ChallengeSnapshot {
         snapshot.totalVexaEarnedMantissa = totalEarned.getMantissa();
         snapshot.totalVexaEarnedExp10 = totalEarned.getExponent();
 
-        snapshot.compoundedElevation = progress.getCompoundedElevation();
-        snapshot.cycleLevel = progress.getCycleLevel();
-
         snapshot.totalManualRuns = progress.getTotalManualRuns();
         snapshot.consecutiveManualRuns = progress.getConsecutiveManualRuns();
         snapshot.autoUpgradeEnabled = progress.isAutoUpgradeEnabled();
@@ -135,9 +128,6 @@ public class ChallengeSnapshot {
         progress.setSummitAccumulatedVexa(BigNumber.of(summitAccumulatedVexaMantissa, summitAccumulatedVexaExp10));
         progress.setElevationAccumulatedVexa(BigNumber.of(elevationAccumulatedVexaMantissa, elevationAccumulatedVexaExp10));
         progress.setTotalVexaEarned(BigNumber.of(totalVexaEarnedMantissa, totalVexaEarnedExp10));
-
-        progress.setCompoundedElevation(compoundedElevation);
-        progress.setCycleLevel(cycleLevel);
 
         progress.setTotalManualRuns(totalManualRuns);
         progress.setConsecutiveManualRuns(consecutiveManualRuns);

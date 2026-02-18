@@ -201,9 +201,6 @@ public final class AscendDatabaseSetup {
             // Auto-ascend toggle
             ensureAutoAscendColumn(conn);
 
-            // Compound elevation columns (post-Challenge 8)
-            ensureCompoundElevationColumns(conn);
-
             // Summit XP column: BIGINT -> DOUBLE (uncapped progression)
             migrateSummitXpToDouble(conn);
 
@@ -1058,24 +1055,6 @@ public final class AscendDatabaseSetup {
             } catch (SQLException e) {
                 LOGGER.atSevere().log("Failed to add auto_ascend_enabled column: " + e.getMessage());
             }
-        }
-    }
-
-    private static void ensureCompoundElevationColumns(Connection conn) {
-        if (conn == null) {
-            return;
-        }
-        try (Statement stmt = conn.createStatement()) {
-            if (!columnExists(conn, "ascend_players", "compounded_elevation")) {
-                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN compounded_elevation DOUBLE NOT NULL DEFAULT 1.0");
-                LOGGER.atInfo().log("Added compounded_elevation column to ascend_players");
-            }
-            if (!columnExists(conn, "ascend_players", "cycle_level")) {
-                stmt.executeUpdate("ALTER TABLE ascend_players ADD COLUMN cycle_level INT NOT NULL DEFAULT 0");
-                LOGGER.atInfo().log("Added cycle_level column to ascend_players");
-            }
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to add compound elevation columns: " + e.getMessage());
         }
     }
 
