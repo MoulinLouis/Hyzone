@@ -27,6 +27,13 @@ All under `hyvexa-purge/src/main/java/io/hyvexa/purge/`:
 
 **UI file:** `hyvexa-purge/src/main/resources/Common/UI/Custom/Pages/Purge_RunHud.ui`
 
+**Zombie NPC roles (resources):**
+- `Server/NPC/Roles/Purge/Templates/Template_Purge_Zombie.json` (base template, `AggroRange` + `MaxWalkSpeed`)
+- `Server/NPC/Roles/Purge/Purge_Zombie_Slow.json` (`MaxWalkSpeed: 7`)
+- `Server/NPC/Roles/Purge/Purge_Zombie_Normal.json` (`MaxWalkSpeed: 9`)
+- `Server/NPC/Roles/Purge/Purge_Zombie_Fast.json` (`MaxWalkSpeed: 11`)
+- `Server/NPC/Roles/Purge/Purge_Zombie.json` (alias -> `Purge_Zombie_Normal`)
+
 ---
 
 ## Manager Dependency Graph
@@ -79,7 +86,7 @@ Plugin creates in this order:
 **Gameplay (PurgeWaveManager):**
 | Constant | Value | Controls |
 |----------|-------|----------|
-| `ZOMBIE_NPC_TYPE` | `"Trork_Grunt"` | NPC type to spawn |
+| `ZOMBIE_NPC_TYPE` | `"Purge_Zombie"` | Default NPC role to spawn |
 | `WAVE_TICK_INTERVAL_MS` | `200` | Death detection polling rate |
 | `SPAWN_STAGGER_MS` | `500` | Delay between spawn batches |
 | `SPAWN_BATCH_SIZE` | `5` | Zombies per batch |
@@ -118,7 +125,8 @@ damageMultiplier(wave) = 1.0 + max(0, wave - 4) * 0.05
 | 20 | 43 | 3.16 | 1.40 | 1.80 |
 | 25 | 53 | 3.76 | 1.525 | 2.05 |
 
-**HP/speed/damage scaling is computed but NOT applied** — see TODOs below.
+**HP scaling is applied on spawn** (`EntityStatMap` max-health modifier).  
+**Speed/damage formulas are still not auto-wired** (speed currently comes from role variants).
 
 ---
 
@@ -212,10 +220,9 @@ All tables use `ENGINE=InnoDB`, created with `CREATE TABLE IF NOT EXISTS`, queri
 
 | Gap | Location | Impact |
 |-----|----------|--------|
-| Zombie HP/speed/damage scaling | `PurgeWaveManager.spawnZombie()` line ~202 | Formulas computed but not applied — API unknown |
+| Wave-based speed/damage scaling | `PurgeWaveManager` + Purge zombie role variants | Speed uses static variants; damage is still static unless role/interaction vars are switched by wave |
 | Player healing on intermission | `PurgeWaveManager.startIntermission()` line ~277 | No healing between waves — API unknown |
 | Player death detection | `PurgeWaveManager.startWaveTick()` | Uses 200ms `ref.isValid()` polling, not event-based |
-| NPC aggro targeting | Not implemented | Zombies use default AI, not explicitly targeted at session player |
 | Ammo resupply | Not implemented | Player starts with 120 bullets, no refills |
 
 ---
@@ -226,7 +233,7 @@ All tables use `ENGINE=InnoDB`, created with `CREATE TABLE IF NOT EXISTS`, queri
 2. Each tick: read player position, pick spawn point via `selectSpawnPoint(playerX, playerZ)`
 3. Spawn point selection: filter >= 15 blocks away, weight by distance², random pick
 4. Apply +/- 2 block random X/Z offset to chosen point
-5. `world.execute(() -> npcPlugin.spawnNPC(store, "Trork_Grunt", "", position, rotation))`
+5. `world.execute(() -> npcPlugin.spawnNPC(store, "Purge_Zombie", "", position, rotation))`
 6. Extract `Ref<EntityStore>` from result via reflection (getFirst/getLeft/getKey/first/left pattern)
 7. Add to `session.aliveZombies`, hide nameplate via `Nameplate.setText("")`
 8. When all spawned: set `spawningComplete = true`, transition SPAWNING → COMBAT
