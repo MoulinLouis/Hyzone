@@ -1,7 +1,6 @@
 package io.hyvexa.ascend;
 
 import io.hyvexa.common.math.BigNumber;
-import io.hyvexa.common.util.FormatUtils;
 
 import java.util.Set;
 
@@ -323,12 +322,6 @@ public final class AscendConstants {
     public static final double ELEVATION_COST_CURVE_LATE = 0.58; // Late game exponent (level > SOFT_CAP)
     public static final int ELEVATION_SOFT_CAP = 300; // Level where late-game curve kicks in
 
-    // Compound Elevation (post-Challenge 8)
-    public static final double COMPOUND_COST_BASE = 1000.0;
-    public static final double COMPOUND_COST_GROWTH = 1.3;
-    public static final double COMPOUND_COST_CURVE = 0.8;
-    public static final int COMPOUND_POWER = 2;
-
     /**
      * Calculate the cost to reach the next elevation level.
      * Below SOFT_CAP: baseCost * 1.15^(level^0.72)
@@ -446,87 +439,6 @@ public final class AscendConstants {
             this.levels = levels;
             this.cost = cost;
         }
-    }
-
-    // ========================================
-    // Compound Elevation (post-Challenge 8)
-    // ========================================
-
-    /**
-     * Calculate the cost to buy the next compound level in a cycle.
-     * cost(n) = 1000 * 1.3^(n^0.8)
-     * Computed in log10 space to avoid overflow.
-     */
-    public static BigNumber getCompoundLevelCost(int level) {
-        int safe = Math.max(0, level);
-        double effectiveLevel = Math.pow(safe, COMPOUND_COST_CURVE);
-        double log10Cost = Math.log10(COMPOUND_COST_BASE) + effectiveLevel * Math.log10(COMPOUND_COST_GROWTH);
-        if (!Double.isFinite(log10Cost) || log10Cost > 1_000_000_000) {
-            return BigNumber.of(9.999, 999_999_999);
-        }
-        int exp = (int) Math.floor(log10Cost);
-        double mantissa = Math.pow(10, log10Cost - exp);
-        if (!Double.isFinite(mantissa)) {
-            mantissa = 1.0;
-        }
-        return BigNumber.of(mantissa, exp);
-    }
-
-    /**
-     * Calculate how many compound levels can be purchased with given vexa.
-     * Uses exponential probing + binary search + iterate pattern (same as calculateElevationPurchase).
-     */
-    public static ElevationPurchaseResult calculateCompoundPurchase(int currentCycleLevel, BigNumber availableVexa) {
-        if (availableVexa.lte(BigNumber.ZERO)) {
-            return new ElevationPurchaseResult(0, BigNumber.ZERO);
-        }
-
-        // Find upper bound: max level where a single level's cost <= budget
-        int upperBound = currentCycleLevel;
-        int step = 1;
-        while (getCompoundLevelCost(upperBound + step).lte(availableVexa)) {
-            upperBound += step;
-            step *= 2;
-        }
-        // Binary search for exact boundary
-        int lo = upperBound, hi = upperBound + step;
-        while (lo < hi) {
-            int mid = lo + (hi - lo + 1) / 2;
-            if (getCompoundLevelCost(mid).lte(availableVexa)) {
-                lo = mid;
-            } else {
-                hi = mid - 1;
-            }
-        }
-        int maxLevel = lo;
-
-        // Iterate precisely from currentCycleLevel to maxLevel, summing costs
-        int levelsAffordable = 0;
-        BigNumber totalCost = BigNumber.ZERO;
-        int level = currentCycleLevel;
-
-        while (level <= maxLevel) {
-            BigNumber nextCost = getCompoundLevelCost(level);
-            BigNumber newTotal = totalCost.add(nextCost);
-
-            if (newTotal.gt(availableVexa)) {
-                break;
-            }
-
-            totalCost = newTotal;
-            levelsAffordable++;
-            level++;
-        }
-
-        return new ElevationPurchaseResult(levelsAffordable, totalCost);
-    }
-
-    /**
-     * Format a compounded elevation multiplier for display.
-     */
-    public static String formatCompoundedElevation(double multiplier) {
-        if (multiplier <= 1.0) return "x1";
-        return "x" + FormatUtils.formatBigNumber(BigNumber.fromDouble(multiplier));
     }
 
     // ========================================
@@ -871,9 +783,9 @@ public final class AscendConstants {
             "#f59e0b",
             Set.of(), Set.of(3, 4), 2.0, 2.0, 2.0),
         CHALLENGE_8(8, "Challenge 8",
-            "Complete an Ascension without Elevation",
+            "Complete an Ascension without Elevation or Summit",
             "#06b6d4",
-            Set.of(), Set.of(), 1.0, 1.0, 1.0, true);
+            Set.of(), Set.of(), 1.0, 1.0, 1.0, true, true);
 
         private final int id;
         private final String displayName;
@@ -885,6 +797,7 @@ public final class AscendConstants {
         private final double multiplierGainDivisor;
         private final double evolutionPowerDivisor;
         private final boolean blocksElevation;
+        private final boolean blocksAllSummit;
 
         ChallengeType(int id, String displayName, String description, String accentColor,
                       Set<SummitCategory> blockedSummitCategories,
@@ -892,14 +805,14 @@ public final class AscendConstants {
                       double multiplierGainDivisor, double evolutionPowerDivisor) {
             this(id, displayName, description, accentColor, blockedSummitCategories,
                  blockedMapDisplayOrders, speedDivisor, multiplierGainDivisor,
-                 evolutionPowerDivisor, false);
+                 evolutionPowerDivisor, false, false);
         }
 
         ChallengeType(int id, String displayName, String description, String accentColor,
                       Set<SummitCategory> blockedSummitCategories,
                       Set<Integer> blockedMapDisplayOrders, double speedDivisor,
                       double multiplierGainDivisor, double evolutionPowerDivisor,
-                      boolean blocksElevation) {
+                      boolean blocksElevation, boolean blocksAllSummit) {
             this.id = id;
             this.displayName = displayName;
             this.description = description;
@@ -910,6 +823,7 @@ public final class AscendConstants {
             this.multiplierGainDivisor = multiplierGainDivisor;
             this.evolutionPowerDivisor = evolutionPowerDivisor;
             this.blocksElevation = blocksElevation;
+            this.blocksAllSummit = blocksAllSummit;
         }
 
         public int getId() { return id; }
@@ -922,6 +836,7 @@ public final class AscendConstants {
         public double getMultiplierGainDivisor() { return multiplierGainDivisor; }
         public double getEvolutionPowerDivisor() { return evolutionPowerDivisor; }
         public boolean blocksElevation() { return blocksElevation; }
+        public boolean blocksAllSummit() { return blocksAllSummit; }
 
         public static ChallengeType fromId(int id) {
             for (ChallengeType type : values()) {

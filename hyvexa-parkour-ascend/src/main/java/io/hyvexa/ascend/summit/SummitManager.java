@@ -160,6 +160,8 @@ public class SummitManager {
             }
             // Challenge reward: permanent speed bonus from completed challenges
             fullBonus *= plugin.getChallengeManager().getChallengeSpeedMultiplier(playerId);
+            // C8 reward: permanent summit bonus
+            fullBonus *= plugin.getChallengeManager().getChallengeSummitBonus(playerId);
         }
 
         return fullBonus;
@@ -183,6 +185,8 @@ public class SummitManager {
             }
             // Challenge reward: permanent mult gain bonus from completed challenges
             fullBonus *= plugin.getChallengeManager().getChallengeMultiplierGainBonus(playerId);
+            // C8 reward: permanent summit bonus
+            fullBonus *= plugin.getChallengeManager().getChallengeSummitBonus(playerId);
         }
 
         return fullBonus;
@@ -243,6 +247,8 @@ public class SummitManager {
         // Challenge reward: permanent evo power bonus from completed challenges
         if (plugin != null && plugin.getChallengeManager() != null) {
             fullBonus += plugin.getChallengeManager().getChallengeEvolutionPowerBonus(playerId);
+            // C8 reward: permanent summit bonus (multiplicative on final value)
+            fullBonus *= plugin.getChallengeManager().getChallengeSummitBonus(playerId);
         }
         return fullBonus;
     }

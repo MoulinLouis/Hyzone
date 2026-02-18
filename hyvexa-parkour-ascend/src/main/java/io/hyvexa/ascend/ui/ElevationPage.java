@@ -14,10 +14,8 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.AscendConstants.ElevationPurchaseResult;
 import io.hyvexa.ascend.ParkourAscendPlugin;
-import io.hyvexa.ascend.ascension.ChallengeManager;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
-import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.hud.AscendHudManager;
 import io.hyvexa.ascend.hud.ToastType;
@@ -83,16 +81,12 @@ public class ElevationPage extends BaseAscendPage {
 
         UUID playerId = playerRef.getUuid();
 
-        // Block elevation during Challenge 8
-        if (isElevationBlocked(playerId)) {
+        // Block elevation during active challenge
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin != null && plugin.getChallengeManager() != null
+                && plugin.getChallengeManager().isElevationBlocked(playerId)) {
             player.sendMessage(Message.raw("[Ascend] Elevation is blocked during this challenge.")
                 .color(SystemMessageUtils.SECONDARY));
-            return;
-        }
-
-        // Compound path for players who completed Challenge 8
-        if (playerStore.hasCompoundElevation(playerId)) {
-            handleCompoundElevate(ref, store, player, playerId);
             return;
         }
 
@@ -100,7 +94,6 @@ public class ElevationPage extends BaseAscendPage {
         int currentElevation = playerStore.getElevationLevel(playerId);
 
         // Calculate how many levels can be purchased based on accumulated vexa
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(currentElevation, accumulatedVexa, BigNumber.ONE);
 
         if (purchase.levels <= 0) {
@@ -160,75 +153,6 @@ public class ElevationPage extends BaseAscendPage {
         }
     }
 
-    private void handleCompoundElevate(Ref<EntityStore> ref, Store<EntityStore> store, Player player, UUID playerId) {
-        AscendPlayerProgress progress = playerStore.getPlayer(playerId);
-        if (progress == null) return;
-
-        BigNumber accumulatedVexa = playerStore.getElevationAccumulatedVexa(playerId);
-        int currentCycleLevel = progress.getCycleLevel();
-
-        ElevationPurchaseResult purchase = AscendConstants.calculateCompoundPurchase(currentCycleLevel, accumulatedVexa);
-
-        if (purchase.levels <= 0 && currentCycleLevel <= 0) {
-            BigNumber nextCost = AscendConstants.getCompoundLevelCost(currentCycleLevel);
-            player.sendMessage(Message.raw("[Ascend] You need " + FormatUtils.formatBigNumber(nextCost) + " accumulated vexa to elevate.")
-                .color(SystemMessageUtils.SECONDARY));
-            return;
-        }
-
-        // Buy cycle levels
-        int newCycleLevel = currentCycleLevel + purchase.levels;
-        if (purchase.levels > 0) {
-            progress.addCycleLevel(purchase.levels);
-        }
-
-        if (newCycleLevel <= 0) return;
-
-        // Despawn robots before resetting
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin != null) {
-            RobotManager robotManager = plugin.getRobotManager();
-            if (robotManager != null) {
-                robotManager.despawnRobotsForPlayer(playerId);
-            }
-        }
-
-        String beforeText = AscendConstants.formatCompoundedElevation(progress.getCompoundedElevation());
-
-        // Compound: multiplier *= cycleLevel^2, reset cycle + vexa
-        playerStore.compoundElevation(playerId);
-
-        String afterText = AscendConstants.formatCompoundedElevation(progress.getCompoundedElevation());
-        showToast(playerId, ToastType.ECONOMY, "Elevation: " + beforeText + " -> " + afterText);
-
-        // Reset all progress (vexa, map unlocks, runners)
-        if (plugin != null) {
-            AscendMapStore mapStore = plugin.getMapStore();
-            String firstMapId = null;
-            if (mapStore != null) {
-                List<AscendMap> maps = mapStore.listMapsSorted();
-                if (!maps.isEmpty()) {
-                    firstMapId = maps.get(0).getId();
-                }
-            }
-            playerStore.resetProgressForElevation(playerId, firstMapId);
-
-            if (plugin.getAchievementManager() != null) {
-                plugin.getAchievementManager().checkAndUnlockAchievements(playerId, player);
-            }
-        }
-
-        // Refresh display
-        if (!isCurrentPage()) return;
-        UICommandBuilder updateBuilder = new UICommandBuilder();
-        updateDisplay(ref, store, updateBuilder);
-        try {
-            sendUpdate(updateBuilder, null, false);
-        } catch (Exception e) {
-            // UI was replaced - ignore silently
-        }
-    }
-
     private void updateDisplay(Ref<EntityStore> ref, Store<EntityStore> store, UICommandBuilder commandBuilder) {
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (playerRef == null) {
@@ -238,8 +162,10 @@ public class ElevationPage extends BaseAscendPage {
         UUID playerId = playerRef.getUuid();
         int currentElevation = playerStore.getElevationLevel(playerId);
 
-        // Show blocked state during Challenge 8
-        if (isElevationBlocked(playerId)) {
+        // Show blocked state during active challenge
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin != null && plugin.getChallengeManager() != null
+                && plugin.getChallengeManager().isElevationBlocked(playerId)) {
             commandBuilder.set("#ConversionRate.Text", "Elevation is blocked during this challenge");
             commandBuilder.set("#MultiplierValue.Text", AscendConstants.formatElevationMultiplier(currentElevation));
             commandBuilder.set("#NewMultiplierValue.Text", "BLOCKED");
@@ -248,12 +174,6 @@ public class ElevationPage extends BaseAscendPage {
             commandBuilder.set("#ElevateButton.Text", "BLOCKED");
             commandBuilder.set("#GainValue.Text", "Complete the challenge to elevate");
             commandBuilder.set("#GainValue.Style.TextColor", "#ef4444");
-            return;
-        }
-
-        // Compound path for Challenge 8 players
-        if (playerStore.hasCompoundElevation(playerId)) {
-            updateCompoundDisplay(playerId, commandBuilder);
             return;
         }
 
@@ -296,58 +216,6 @@ public class ElevationPage extends BaseAscendPage {
         // Always show how much more is needed for the next level
         commandBuilder.set("#GainValue.Text", "Need " + FormatUtils.formatBigNumber(amountNeededForNextLevel) + " more");
         commandBuilder.set("#GainValue.Style.TextColor", "#9ca3af");
-    }
-
-    private void updateCompoundDisplay(UUID playerId, UICommandBuilder commandBuilder) {
-        AscendPlayerProgress progress = playerStore.getPlayer(playerId);
-        if (progress == null) return;
-
-        double compounded = progress.getCompoundedElevation();
-        int cycleLevel = progress.getCycleLevel();
-        BigNumber accumulatedVexa = playerStore.getElevationAccumulatedVexa(playerId);
-
-        ElevationPurchaseResult purchase = AscendConstants.calculateCompoundPurchase(cycleLevel, accumulatedVexa);
-        int newCycleLevel = cycleLevel + purchase.levels;
-
-        // Current multiplier display (compounded * current cycle contribution)
-        double currentEffective = compounded * Math.max(1, cycleLevel);
-        commandBuilder.set("#MultiplierValue.Text", AscendConstants.formatCompoundedElevation(currentEffective));
-
-        // Cost display
-        BigNumber nextLevelCost = AscendConstants.getCompoundLevelCost(newCycleLevel);
-        commandBuilder.set("#ConversionRate.Text", "Cycle Lv." + cycleLevel + " | Next: "
-            + FormatUtils.formatBigNumber(nextLevelCost) + " accumulated vexa");
-
-        if (purchase.levels > 0 || cycleLevel > 0) {
-            // Calculate projected multiplier after compound
-            int compoundCycleLevel = newCycleLevel;
-            double projected = compounded * Math.pow(compoundCycleLevel, AscendConstants.COMPOUND_POWER);
-            commandBuilder.set("#NewMultiplierValue.Text", AscendConstants.formatCompoundedElevation(projected));
-            commandBuilder.set("#NewMultiplierValue.Style.TextColor", "#4ade80");
-            commandBuilder.set("#ArrowLabel.Style.TextColor", "#4ade80");
-            commandBuilder.set("#ElevateButton.Text", "ELEVATE NOW");
-
-            commandBuilder.set("#GainValue.Text", "+" + purchase.levels + " levels -> compound "
-                + AscendConstants.formatCompoundedElevation(projected));
-            commandBuilder.set("#GainValue.Style.TextColor", "#4ade80");
-        } else {
-            commandBuilder.set("#NewMultiplierValue.Text", AscendConstants.formatCompoundedElevation(currentEffective));
-            commandBuilder.set("#NewMultiplierValue.Style.TextColor", "#6b7280");
-            commandBuilder.set("#ArrowLabel.Style.TextColor", "#6b7280");
-            commandBuilder.set("#ElevateButton.Text", "NEED MORE VEXA");
-
-            BigNumber nextCost = AscendConstants.getCompoundLevelCost(cycleLevel);
-            BigNumber needed = nextCost.subtract(accumulatedVexa).max(BigNumber.ZERO);
-            commandBuilder.set("#GainValue.Text", "Need " + FormatUtils.formatBigNumber(needed) + " more");
-            commandBuilder.set("#GainValue.Style.TextColor", "#9ca3af");
-        }
-    }
-
-    private boolean isElevationBlocked(UUID playerId) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin == null) return false;
-        ChallengeManager cm = plugin.getChallengeManager();
-        return cm != null && cm.isElevationBlocked(playerId);
     }
 
     private void showToast(UUID playerId, ToastType type, String message) {

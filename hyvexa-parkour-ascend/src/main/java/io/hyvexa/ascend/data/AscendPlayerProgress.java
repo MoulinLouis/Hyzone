@@ -18,8 +18,6 @@ public class AscendPlayerProgress {
 
     private final AtomicReference<BigNumber> vexa = new AtomicReference<>(BigNumber.ZERO);
     private final AtomicInteger elevationMultiplier = new AtomicInteger(1);
-    private volatile double compoundedElevation = 1.0;
-    private final AtomicInteger cycleLevel = new AtomicInteger(0);
     private final Map<String, MapProgress> mapProgress = new ConcurrentHashMap<>();
 
     // Summit System - XP per category (level calculated from XP)
@@ -110,13 +108,6 @@ public class AscendPlayerProgress {
     public int addElevationMultiplier(int amount) {
         return elevationMultiplier.updateAndGet(current -> Math.max(1, current + amount));
     }
-
-    public double getCompoundedElevation() { return compoundedElevation; }
-    public void setCompoundedElevation(double value) { this.compoundedElevation = Math.max(1.0, value); }
-
-    public int getCycleLevel() { return cycleLevel.get(); }
-    public void setCycleLevel(int level) { this.cycleLevel.set(Math.max(0, level)); }
-    public int addCycleLevel(int amount) { return cycleLevel.updateAndGet(c -> Math.max(0, c + amount)); }
 
     public Map<String, MapProgress> getMapProgress() {
         return mapProgress;
