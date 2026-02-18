@@ -144,7 +144,7 @@ public class HyvexaPurgePlugin extends JavaPlugin {
             hudManager.attach(playerRef, player);
             // Base idle loadout in Purge world.
             InventoryUtils.clearAllContainers(player);
-            giveBaseLoadout(player, false);
+            giveBaseLoadout(player, true);
             LOGGER.atInfo().log("Player entered Purge: " + (playerId != null ? playerId : "unknown"));
             try {
                 DiscordLinkStore.getInstance().checkAndRewardGems(playerId, player);
