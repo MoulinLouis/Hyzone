@@ -20,11 +20,14 @@ public class PurgeWaveConfigManager {
     private static final int DEFAULT_SLOW_COUNT = 0;
     private static final int DEFAULT_NORMAL_COUNT = 5;
     private static final int DEFAULT_FAST_COUNT = 0;
+    private static final int DEFAULT_SPAWN_DELAY_MS = 500;
+    private static final int DEFAULT_SPAWN_BATCH_SIZE = 5;
 
     private final ConcurrentHashMap<Integer, PurgeWaveDefinition> waves = new ConcurrentHashMap<>();
 
     public PurgeWaveConfigManager() {
         createTable();
+        migrateTable();
         loadAll();
     }
 
@@ -52,7 +55,7 @@ public class PurgeWaveConfigManager {
         }
         synchronized (waves) {
             int waveNumber = waves.keySet().stream().max(Integer::compareTo).orElse(0) + 1;
-            String sql = "INSERT INTO purge_waves (wave_number, slow_count, normal_count, fast_count) VALUES (?, ?, ?, ?)";
+            String sql = "INSERT INTO purge_waves (wave_number, slow_count, normal_count, fast_count, spawn_delay_ms, spawn_batch_size) VALUES (?, ?, ?, ?, ?, ?)";
             try (Connection conn = DatabaseManager.getInstance().getConnection();
                  PreparedStatement stmt = conn.prepareStatement(sql)) {
                 DatabaseManager.applyQueryTimeout(stmt);
@@ -60,12 +63,16 @@ public class PurgeWaveConfigManager {
                 stmt.setInt(2, DEFAULT_SLOW_COUNT);
                 stmt.setInt(3, DEFAULT_NORMAL_COUNT);
                 stmt.setInt(4, DEFAULT_FAST_COUNT);
+                stmt.setInt(5, DEFAULT_SPAWN_DELAY_MS);
+                stmt.setInt(6, DEFAULT_SPAWN_BATCH_SIZE);
                 stmt.executeUpdate();
                 waves.put(waveNumber, new PurgeWaveDefinition(
                         waveNumber,
                         DEFAULT_SLOW_COUNT,
                         DEFAULT_NORMAL_COUNT,
-                        DEFAULT_FAST_COUNT
+                        DEFAULT_FAST_COUNT,
+                        DEFAULT_SPAWN_DELAY_MS,
+                        DEFAULT_SPAWN_BATCH_SIZE
                 ));
                 return waveNumber;
             } catch (SQLException e) {
@@ -144,6 +151,63 @@ public class PurgeWaveConfigManager {
         }
     }
 
+    public boolean adjustSpawnDelay(int waveNumber, int deltaMs) {
+        if (deltaMs == 0) {
+            return false;
+        }
+        synchronized (waves) {
+            PurgeWaveDefinition wave = waves.get(waveNumber);
+            if (wave == null) {
+                return false;
+            }
+            int newDelay = Math.max(100, wave.spawnDelayMs() + deltaMs);
+            return setSpawnField(waveNumber, "spawn_delay_ms", newDelay,
+                    w -> new PurgeWaveDefinition(w.waveNumber(), w.slowCount(), w.normalCount(), w.fastCount(), newDelay, w.spawnBatchSize()));
+        }
+    }
+
+    public boolean adjustBatchSize(int waveNumber, int delta) {
+        if (delta == 0) {
+            return false;
+        }
+        synchronized (waves) {
+            PurgeWaveDefinition wave = waves.get(waveNumber);
+            if (wave == null) {
+                return false;
+            }
+            int newSize = Math.max(1, wave.spawnBatchSize() + delta);
+            return setSpawnField(waveNumber, "spawn_batch_size", newSize,
+                    w -> new PurgeWaveDefinition(w.waveNumber(), w.slowCount(), w.normalCount(), w.fastCount(), w.spawnDelayMs(), newSize));
+        }
+    }
+
+    private boolean setSpawnField(int waveNumber, String column, int value,
+                                   java.util.function.Function<PurgeWaveDefinition, PurgeWaveDefinition> updater) {
+        if (!DatabaseManager.getInstance().isInitialized()) {
+            return false;
+        }
+        PurgeWaveDefinition wave = waves.get(waveNumber);
+        if (wave == null) {
+            return false;
+        }
+        String sql = "UPDATE purge_waves SET " + column + " = ? WHERE wave_number = ?";
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            stmt.setInt(1, value);
+            stmt.setInt(2, waveNumber);
+            int rows = stmt.executeUpdate();
+            if (rows <= 0) {
+                return false;
+            }
+        } catch (SQLException e) {
+            LOGGER.atWarning().withCause(e).log("Failed to update purge wave " + waveNumber + " " + column);
+            return false;
+        }
+        waves.put(waveNumber, updater.apply(wave));
+        return true;
+    }
+
     private boolean setVariantCount(int waveNumber, PurgeZombieVariant variant, int count) {
         if (!DatabaseManager.getInstance().isInitialized()) {
             return false;
@@ -176,9 +240,9 @@ public class PurgeWaveConfigManager {
         }
 
         PurgeWaveDefinition updated = switch (variant) {
-            case SLOW -> new PurgeWaveDefinition(wave.waveNumber(), safeCount, wave.normalCount(), wave.fastCount());
-            case NORMAL -> new PurgeWaveDefinition(wave.waveNumber(), wave.slowCount(), safeCount, wave.fastCount());
-            case FAST -> new PurgeWaveDefinition(wave.waveNumber(), wave.slowCount(), wave.normalCount(), safeCount);
+            case SLOW -> new PurgeWaveDefinition(wave.waveNumber(), safeCount, wave.normalCount(), wave.fastCount(), wave.spawnDelayMs(), wave.spawnBatchSize());
+            case NORMAL -> new PurgeWaveDefinition(wave.waveNumber(), wave.slowCount(), safeCount, wave.fastCount(), wave.spawnDelayMs(), wave.spawnBatchSize());
+            case FAST -> new PurgeWaveDefinition(wave.waveNumber(), wave.slowCount(), wave.normalCount(), safeCount, wave.spawnDelayMs(), wave.spawnBatchSize());
         };
         waves.put(waveNumber, updated);
         return true;
@@ -196,7 +260,9 @@ public class PurgeWaveConfigManager {
                         shiftedWave,
                         wave.slowCount(),
                         wave.normalCount(),
-                        wave.fastCount()
+                        wave.fastCount(),
+                        wave.spawnDelayMs(),
+                        wave.spawnBatchSize()
                 ));
             }
         }
@@ -210,7 +276,9 @@ public class PurgeWaveConfigManager {
                 + "wave_number INT NOT NULL PRIMARY KEY, "
                 + "slow_count INT NOT NULL DEFAULT 0, "
                 + "normal_count INT NOT NULL DEFAULT 0, "
-                + "fast_count INT NOT NULL DEFAULT 0"
+                + "fast_count INT NOT NULL DEFAULT 0, "
+                + "spawn_delay_ms INT NOT NULL DEFAULT 500, "
+                + "spawn_batch_size INT NOT NULL DEFAULT 5"
                 + ") ENGINE=InnoDB";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -221,11 +289,31 @@ public class PurgeWaveConfigManager {
         }
     }
 
+    private void migrateTable() {
+        if (!DatabaseManager.getInstance().isInitialized()) {
+            return;
+        }
+        String[] migrations = {
+            "ALTER TABLE purge_waves ADD COLUMN IF NOT EXISTS spawn_delay_ms INT NOT NULL DEFAULT 500",
+            "ALTER TABLE purge_waves ADD COLUMN IF NOT EXISTS spawn_batch_size INT NOT NULL DEFAULT 5"
+        };
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            for (String sql : migrations) {
+                try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                    DatabaseManager.applyQueryTimeout(stmt);
+                    stmt.executeUpdate();
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.atWarning().withCause(e).log("Failed to migrate purge_waves table");
+        }
+    }
+
     private void loadAll() {
         if (!DatabaseManager.getInstance().isInitialized()) {
             return;
         }
-        String sql = "SELECT wave_number, slow_count, normal_count, fast_count FROM purge_waves ORDER BY wave_number ASC";
+        String sql = "SELECT wave_number, slow_count, normal_count, fast_count, spawn_delay_ms, spawn_batch_size FROM purge_waves ORDER BY wave_number ASC";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
@@ -236,7 +324,9 @@ public class PurgeWaveConfigManager {
                             waveNumber,
                             Math.max(0, rs.getInt("slow_count")),
                             Math.max(0, rs.getInt("normal_count")),
-                            Math.max(0, rs.getInt("fast_count"))
+                            Math.max(0, rs.getInt("fast_count")),
+                            Math.max(100, rs.getInt("spawn_delay_ms")),
+                            Math.max(1, rs.getInt("spawn_batch_size"))
                     ));
                 }
             }
