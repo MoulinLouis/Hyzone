@@ -275,9 +275,17 @@ public class RunTracker {
         run.practiceStartCheckpointIndex = run.lastCheckpointIndex;
         run.practiceStartFinishTouched = run.finishTouched;
         run.practiceStartPosition = resolvePracticeStartPosition(run, ref, store, playerRef);
+        TransformData initialPracticeCheckpoint = copyTransformData(run.practiceStartPosition);
+        Vector3f initialPracticeHeadRotation = null;
+        if (playerRef != null) {
+            Vector3f headRotation = playerRef.getHeadRotation();
+            if (headRotation != null) {
+                initialPracticeHeadRotation = headRotation.clone();
+            }
+        }
         run.practiceEnabled = true;
-        run.practiceCheckpoint = null;
-        run.practiceHeadRotation = null;
+        run.practiceCheckpoint = initialPracticeCheckpoint;
+        run.practiceHeadRotation = initialPracticeHeadRotation;
         run.touchedCheckpoints.clear();
         run.checkpointTouchTimes.clear();
         run.lastCheckpointIndex = -1;
@@ -546,7 +554,7 @@ public class RunTracker {
         if (fallTimeoutMs > 0 && shouldRespawnFromFall(run, position.getY(), movementStates, fallTimeoutMs)) {
             run.fallState.fallStartTime = null;
             run.fallState.lastY = null;
-            if (run.lastCheckpointIndex < 0) {
+            if (!run.practiceEnabled && run.lastCheckpointIndex < 0) {
                 armStartOnMovement(run, map.getStart());
             }
             teleporter.teleportToRespawn(ref, store, run, map, buffer);

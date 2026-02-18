@@ -11,6 +11,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.HyvexaPlugin;
+import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.parkour.util.InventoryUtils;
 import io.hyvexa.parkour.data.Map;
 
@@ -63,6 +64,11 @@ public class RestartCheckpointInteraction extends SimpleInteraction {
             InventoryUtils.giveRunItems(player, map, practiceEnabled);
             boolean teleported = plugin.getRunTracker().teleportToLastCheckpoint(ref, store, playerRef);
             if (!teleported) {
+                if (practiceEnabled) {
+                    player.sendMessage(SystemMessageUtils.parkourWarn(
+                            "No checkpoint available. Use Set checkpoint first."));
+                    return;
+                }
                 plugin.getRunTracker().resetRunToStart(ref, store, player, playerRef);
             }
         }, world);
