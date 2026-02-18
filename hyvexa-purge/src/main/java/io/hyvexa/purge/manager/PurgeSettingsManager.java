@@ -30,14 +30,6 @@ public class PurgeSettingsManager {
         return sessionExitPoint;
     }
 
-    public boolean hasSessionStartPoint() {
-        return sessionStartPoint != null;
-    }
-
-    public boolean hasSessionExitPoint() {
-        return sessionExitPoint != null;
-    }
-
     public synchronized void setSessionStartPoint(double x, double y, double z, float rotX, float rotY, float rotZ) {
         sessionStartPoint = new PurgeLocation(x, y, z, rotX, rotY, rotZ);
         save();

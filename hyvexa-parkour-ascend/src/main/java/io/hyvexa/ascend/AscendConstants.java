@@ -856,6 +856,7 @@ public final class AscendConstants {
         PRESTIGE("Prestige"),
         SKILLS("Skills"),
         CHALLENGES("Challenges"),
+        EASTER_EGGS("Easter Eggs"),
         SECRET("Secret");
 
         private final String displayName;
@@ -904,6 +905,9 @@ public final class AscendConstants {
         // Challenges
         CHALLENGER("Challenger", "Complete your first challenge", AchievementCategory.CHALLENGES),
         CHALLENGE_MASTER("Challenge Master", "Complete all challenges", AchievementCategory.CHALLENGES),
+
+        // Easter Eggs
+        CAT_COLLECTOR("Cat Collector", "Find all 5 hidden cats", AchievementCategory.EASTER_EGGS, true),
 
         // Secret - Hidden
         CHAIN_RUNNER("Chain Runner", "Complete 25 consecutive runs", AchievementCategory.SECRET, true),
@@ -960,4 +964,5 @@ public final class AscendConstants {
     public static final int ACHIEVEMENT_ASCENSION_5 = 5;
     public static final int ACHIEVEMENT_ASCENSION_10 = 10;
     public static final int ACHIEVEMENT_CONSECUTIVE_RUNS_25 = 25;
+    public static final int ACHIEVEMENT_CATS_REQUIRED = 5;
 }

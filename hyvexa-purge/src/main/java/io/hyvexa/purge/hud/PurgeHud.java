@@ -37,7 +37,10 @@ public class PurgeHud extends CustomUIHud {
     }
 
     public void updatePlayerCount() {
-        int count = Universe.get().getPlayers().size();
+        updatePlayerCount(Universe.get().getPlayers().size());
+    }
+
+    public void updatePlayerCount(int count) {
         if (count == lastPlayerCount) {
             return;
         }

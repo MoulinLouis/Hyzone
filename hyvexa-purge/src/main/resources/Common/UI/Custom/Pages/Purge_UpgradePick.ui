@@ -100,10 +100,36 @@ $C.@PageOverlay {
         OutlineColor: #ffffff(0.04);
         OutlineSize: 1;
 
-        // Left accent bar
-        Group #Card1Accent {
+        // Left accent bar variants (toggle visibility at runtime)
+        Group #Card1AccentBlue {
           Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
           Background: #3b82f6;
+          Visible: true;
+        }
+        Group #Card1AccentRed {
+          Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
+          Background: #ef4444;
+          Visible: false;
+        }
+        Group #Card1AccentAmber {
+          Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
+          Background: #f59e0b;
+          Visible: false;
+        }
+        Group #Card1AccentGreen {
+          Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
+          Background: #10b981;
+          Visible: false;
+        }
+        Group #Card1AccentViolet {
+          Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
+          Background: #a855f7;
+          Visible: false;
+        }
+        Group #Card1AccentGold {
+          Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
+          Background: #eab308;
+          Visible: false;
         }
 
         Group #Card1Content {
@@ -166,9 +192,35 @@ $C.@PageOverlay {
         OutlineColor: #ffffff(0.04);
         OutlineSize: 1;
 
-        Group #Card2Accent {
+        Group #Card2AccentBlue {
           Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
           Background: #3b82f6;
+          Visible: true;
+        }
+        Group #Card2AccentRed {
+          Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
+          Background: #ef4444;
+          Visible: false;
+        }
+        Group #Card2AccentAmber {
+          Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
+          Background: #f59e0b;
+          Visible: false;
+        }
+        Group #Card2AccentGreen {
+          Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
+          Background: #10b981;
+          Visible: false;
+        }
+        Group #Card2AccentViolet {
+          Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
+          Background: #a855f7;
+          Visible: false;
+        }
+        Group #Card2AccentGold {
+          Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
+          Background: #eab308;
+          Visible: false;
         }
 
         Group #Card2Content {
@@ -231,9 +283,35 @@ $C.@PageOverlay {
         OutlineColor: #ffffff(0.04);
         OutlineSize: 1;
 
-        Group #Card3Accent {
+        Group #Card3AccentBlue {
           Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
           Background: #3b82f6;
+          Visible: true;
+        }
+        Group #Card3AccentRed {
+          Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
+          Background: #ef4444;
+          Visible: false;
+        }
+        Group #Card3AccentAmber {
+          Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
+          Background: #f59e0b;
+          Visible: false;
+        }
+        Group #Card3AccentGreen {
+          Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
+          Background: #10b981;
+          Visible: false;
+        }
+        Group #Card3AccentViolet {
+          Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
+          Background: #a855f7;
+          Visible: false;
+        }
+        Group #Card3AccentGold {
+          Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
+          Background: #eab308;
+          Visible: false;
         }
 
         Group #Card3Content {

@@ -51,7 +51,11 @@ public class PurgeSpawnCommand extends AbstractAsyncCommand {
             return CompletableFuture.completedFuture(null);
         }
         Store<EntityStore> store = ref.getStore();
-        World world = store.getExternalData().getWorld();
+        World world = store.getExternalData() != null ? store.getExternalData().getWorld() : null;
+        if (world == null) {
+            ctx.sendMessage(Message.raw("Could not resolve your world."));
+            return CompletableFuture.completedFuture(null);
+        }
         return CompletableFuture.runAsync(() -> handleCommand(ctx, player, ref, store), world);
     }
 
@@ -85,6 +89,8 @@ public class PurgeSpawnCommand extends AbstractAsyncCommand {
         if (id > 0) {
             player.sendMessage(Message.raw("Spawn point #" + id + " added at "
                     + String.format("%.1f, %.1f, %.1f", pos.getX(), pos.getY(), pos.getZ())));
+        } else if (!spawnPointManager.isPersistenceAvailable()) {
+            player.sendMessage(Message.raw(spawnPointManager.getPersistenceDisabledMessage()));
         } else {
             player.sendMessage(Message.raw("Failed to add spawn point."));
         }
@@ -104,6 +110,8 @@ public class PurgeSpawnCommand extends AbstractAsyncCommand {
         }
         if (spawnPointManager.removeSpawnPoint(id)) {
             player.sendMessage(Message.raw("Spawn point #" + id + " removed."));
+        } else if (!spawnPointManager.isPersistenceAvailable()) {
+            player.sendMessage(Message.raw(spawnPointManager.getPersistenceDisabledMessage()));
         } else {
             player.sendMessage(Message.raw("Spawn point #" + id + " not found."));
         }
@@ -123,6 +131,10 @@ public class PurgeSpawnCommand extends AbstractAsyncCommand {
     }
 
     private void handleClear(Player player) {
+        if (!spawnPointManager.isPersistenceAvailable()) {
+            player.sendMessage(Message.raw(spawnPointManager.getPersistenceDisabledMessage()));
+            return;
+        }
         spawnPointManager.clearAll();
         player.sendMessage(Message.raw("All spawn points cleared."));
     }

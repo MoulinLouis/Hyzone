@@ -10,6 +10,7 @@ import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
 import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -27,6 +28,9 @@ import io.hyvexa.purge.command.PurgeSpawnCommand;
 import io.hyvexa.purge.data.PurgePlayerStore;
 import io.hyvexa.purge.data.PurgeScrapStore;
 import io.hyvexa.purge.hud.PurgeHudManager;
+import io.hyvexa.purge.interaction.PurgeOrangeOrbInteraction;
+import io.hyvexa.purge.interaction.PurgeRedOrbInteraction;
+import io.hyvexa.purge.interaction.PurgeStartInteraction;
 import io.hyvexa.purge.manager.PurgeSessionManager;
 import io.hyvexa.purge.manager.PurgeUpgradeManager;
 import io.hyvexa.purge.manager.PurgeSettingsManager;
@@ -35,30 +39,27 @@ import io.hyvexa.purge.manager.PurgeWaveConfigManager;
 import io.hyvexa.purge.manager.PurgeWaveManager;
 
 import javax.annotation.Nonnull;
-import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 public class HyvexaPurgePlugin extends JavaPlugin {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final String ITEM_BASE_ORB_RESET = "Ingredient_Ice_Essence";
-    private static final String ITEM_BASE_ORB_RESTART_CHECKPOINT = "Ingredient_Lightning_Essence";
-    private static final String ITEM_BASE_ORB_LEAVE = "Ingredient_Void_Essence";
+    private static final String ITEM_ORB_BLUE = "Purge_Orb_Blue";
+    private static final String ITEM_ORB_ORANGE = "Purge_Orb_Orange";
+    private static final String ITEM_ORB_RED = "Purge_Orb_Red";
     private static final String ITEM_AK47 = "AK47";
     private static final String ITEM_BULLET = "Bullet";
     private static final int STARTING_BULLET_COUNT = 120;
-    private static final short SLOT_BASE_ORB_RESET = 0;
-    private static final short SLOT_BASE_ORB_RESTART_CHECKPOINT = 1;
-    private static final short SLOT_BASE_ORB_LEAVE = 2;
+    private static final short SLOT_ORB_BLUE = 0;
+    private static final short SLOT_ORB_ORANGE = 1;
     private static final short SLOT_PRIMARY_WEAPON = 0;
     private static final short SLOT_PRIMARY_AMMO = 1;
+    private static final short SLOT_QUIT_ORB = 8;
     private static final short SLOT_SERVER_SELECTOR = 8;
     private static HyvexaPurgePlugin INSTANCE;
 
-    private final Set<UUID> playersInPurgeWorld = ConcurrentHashMap.newKeySet();
     private ScheduledFuture<?> hudUpdateTask;
 
     private PurgeSpawnPointManager spawnPointManager;
@@ -75,6 +76,10 @@ public class HyvexaPurgePlugin extends JavaPlugin {
 
     public static HyvexaPurgePlugin getInstance() {
         return INSTANCE;
+    }
+
+    public PurgeSessionManager getSessionManager() {
+        return sessionManager;
     }
 
     @Override
@@ -111,6 +116,9 @@ public class HyvexaPurgePlugin extends JavaPlugin {
                 new PurgeCommand(sessionManager, spawnPointManager, waveConfigManager, settingsManager));
         this.getCommandRegistry().registerCommand(new PurgeSpawnCommand(spawnPointManager));
 
+        // Register item interaction codecs
+        registerInteractionCodecs();
+
         // --- Event Handlers ---
 
         this.getEventRegistry().registerGlobal(PlayerReadyEvent.class, event -> {
@@ -128,9 +136,6 @@ public class HyvexaPurgePlugin extends JavaPlugin {
                 return;
             }
             UUID playerId = playerRef.getUuid();
-            if (playerId != null) {
-                playersInPurgeWorld.add(playerId);
-            }
             Player player = store.getComponent(ref, Player.getComponentType());
             if (player == null) {
                 return;
@@ -160,14 +165,14 @@ public class HyvexaPurgePlugin extends JavaPlugin {
             PlayerRef playerRef = holder.getComponent(PlayerRef.getComponentType());
             UUID playerId = playerRef != null ? playerRef.getUuid() : null;
             if (ModeGate.isPurgeWorld(world)) {
-                if (playerId != null) {
-                    playersInPurgeWorld.add(playerId);
+                Player player = holder.getComponent(Player.getComponentType());
+                if (playerRef != null && player != null) {
+                    ensurePurgeWorldSetup(playerRef, player);
                 }
                 return;
             }
             // Leaving Purge world
             if (playerId != null) {
-                playersInPurgeWorld.remove(playerId);
                 sessionManager.cleanupPlayer(playerId);
                 hudManager.removePlayer(playerId);
             }
@@ -182,7 +187,6 @@ public class HyvexaPurgePlugin extends JavaPlugin {
             if (playerId == null) {
                 return;
             }
-            playersInPurgeWorld.remove(playerId);
             sessionManager.cleanupPlayer(playerId);
             hudManager.removePlayer(playerId);
             try { GemStore.getInstance().evictPlayer(playerId); }
@@ -199,7 +203,7 @@ public class HyvexaPurgePlugin extends JavaPlugin {
         hudUpdateTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(
                 () -> {
                     try { hudManager.tickSlowUpdates(); }
-                    catch (Exception e) { LOGGER.atWarning().log("HUD tick error: " + e.getMessage()); }
+                    catch (Exception e) { LOGGER.atWarning().withCause(e).log("HUD tick error"); }
                 },
                 5000L, 5000L, TimeUnit.MILLISECONDS
         );
@@ -216,7 +220,6 @@ public class HyvexaPurgePlugin extends JavaPlugin {
             hudUpdateTask.cancel(false);
             hudUpdateTask = null;
         }
-        playersInPurgeWorld.clear();
     }
 
     // --- Public loadout methods for PurgeSessionManager ---
@@ -225,6 +228,7 @@ public class HyvexaPurgePlugin extends JavaPlugin {
         InventoryUtils.clearAllContainers(player);
         giveStartingWeapon(player);
         giveStartingAmmo(player);
+        giveQuitOrb(player);
     }
 
     public void removeLoadout(Player player) {
@@ -239,13 +243,8 @@ public class HyvexaPurgePlugin extends JavaPlugin {
         if (inventory == null || inventory.getHotbar() == null) {
             return;
         }
-        inventory.getHotbar().setItemStackForSlot(SLOT_BASE_ORB_RESET, new ItemStack(ITEM_BASE_ORB_RESET, 1), false);
-        inventory.getHotbar().setItemStackForSlot(
-                SLOT_BASE_ORB_RESTART_CHECKPOINT,
-                new ItemStack(ITEM_BASE_ORB_RESTART_CHECKPOINT, 1),
-                false
-        );
-        inventory.getHotbar().setItemStackForSlot(SLOT_BASE_ORB_LEAVE, new ItemStack(ITEM_BASE_ORB_LEAVE, 1), false);
+        inventory.getHotbar().setItemStackForSlot(SLOT_ORB_BLUE, new ItemStack(ITEM_ORB_BLUE, 1), false);
+        inventory.getHotbar().setItemStackForSlot(SLOT_ORB_ORANGE, new ItemStack(ITEM_ORB_ORANGE, 1), false);
         if (includeServerSelector) {
             giveServerSelector(player);
         }
@@ -258,6 +257,14 @@ public class HyvexaPurgePlugin extends JavaPlugin {
         }
         inventory.getHotbar().setItemStackForSlot(SLOT_SERVER_SELECTOR,
                 new ItemStack(WorldConstants.ITEM_SERVER_SELECTOR, 1), false);
+    }
+
+    private void giveQuitOrb(Player player) {
+        Inventory inventory = player.getInventory();
+        if (inventory == null || inventory.getHotbar() == null) {
+            return;
+        }
+        inventory.getHotbar().setItemStackForSlot(SLOT_QUIT_ORB, new ItemStack(ITEM_ORB_RED, 1), false);
     }
 
     private void giveStartingWeapon(Player player) {
@@ -278,5 +285,46 @@ public class HyvexaPurgePlugin extends JavaPlugin {
                 new ItemStack(ITEM_BULLET, STARTING_BULLET_COUNT),
                 false
         );
+    }
+
+    private void ensurePurgeWorldSetup(PlayerRef playerRef, Player player) {
+        UUID playerId = playerRef.getUuid();
+        if (playerId != null && hudManager.getHud(playerId) == null) {
+            hudManager.attach(playerRef, player);
+        }
+        if (playerId != null && sessionManager != null && sessionManager.hasActiveSession(playerId)) {
+            return;
+        }
+        ensureIdleBaseLoadout(player);
+    }
+
+    private void ensureIdleBaseLoadout(Player player) {
+        Inventory inventory = player.getInventory();
+        if (inventory == null || inventory.getHotbar() == null) {
+            return;
+        }
+        ItemStack blueOrb = inventory.getHotbar().getItemStack(SLOT_ORB_BLUE);
+        ItemStack orangeOrb = inventory.getHotbar().getItemStack(SLOT_ORB_ORANGE);
+        boolean missingBlue = blueOrb == null || blueOrb.isEmpty();
+        boolean missingOrange = orangeOrb == null || orangeOrb.isEmpty();
+        if (!missingBlue && !missingOrange) {
+            return;
+        }
+        if (missingBlue) {
+            inventory.getHotbar().setItemStackForSlot(SLOT_ORB_BLUE, new ItemStack(ITEM_ORB_BLUE, 1), false);
+        }
+        if (missingOrange) {
+            inventory.getHotbar().setItemStackForSlot(SLOT_ORB_ORANGE, new ItemStack(ITEM_ORB_ORANGE, 1), false);
+        }
+    }
+
+    private void registerInteractionCodecs() {
+        var registry = this.getCodecRegistry(Interaction.CODEC);
+        registry.register("Purge_Start_Interaction",
+                PurgeStartInteraction.class, PurgeStartInteraction.CODEC);
+        registry.register("Purge_Orange_Orb_Interaction",
+                PurgeOrangeOrbInteraction.class, PurgeOrangeOrbInteraction.CODEC);
+        registry.register("Purge_Red_Orb_Interaction",
+                PurgeRedOrbInteraction.class, PurgeRedOrbInteraction.CODEC);
     }
 }
