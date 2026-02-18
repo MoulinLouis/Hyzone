@@ -24,9 +24,12 @@ import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import io.hyvexa.common.WorldConstants;
 import io.hyvexa.purge.data.PurgeSession;
 import io.hyvexa.purge.data.PurgeSpawnPoint;
+import io.hyvexa.purge.data.PurgeWaveDefinition;
+import io.hyvexa.purge.data.PurgeZombieVariant;
 import io.hyvexa.purge.data.SessionState;
 import io.hyvexa.purge.hud.PurgeHudManager;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -38,7 +41,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class PurgeWaveManager {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final String ZOMBIE_NPC_TYPE = "Purge_Zombie";
     private static final String PURGE_HP_MODIFIER = "purge_wave_hp";
     private static final long WAVE_TICK_INTERVAL_MS = 200;
     private static final long SPAWN_STAGGER_MS = 500;
@@ -48,14 +50,18 @@ public class PurgeWaveManager {
     private static final double SPAWN_RANDOM_OFFSET = 2.0;
 
     private final PurgeSpawnPointManager spawnPointManager;
+    private final PurgeWaveConfigManager waveConfigManager;
     private final PurgeHudManager hudManager;
     private volatile NPCPlugin npcPlugin;
 
     // Set by PurgeSessionManager after construction
     private volatile PurgeSessionManager sessionManager;
 
-    public PurgeWaveManager(PurgeSpawnPointManager spawnPointManager, PurgeHudManager hudManager) {
+    public PurgeWaveManager(PurgeSpawnPointManager spawnPointManager,
+                            PurgeWaveConfigManager waveConfigManager,
+                            PurgeHudManager hudManager) {
         this.spawnPointManager = spawnPointManager;
+        this.waveConfigManager = waveConfigManager;
         this.hudManager = hudManager;
         try {
             this.npcPlugin = NPCPlugin.get();
@@ -68,11 +74,11 @@ public class PurgeWaveManager {
         this.sessionManager = sessionManager;
     }
 
-    // --- Scaling Formulas ---
-
-    public static int zombieCount(int wave) {
-        return 5 + (wave - 1) * 2;
+    public boolean hasConfiguredWaves() {
+        return waveConfigManager.hasWaves();
     }
+
+    // --- Scaling Formulas ---
 
     public static double hpMultiplier(int wave) {
         return 1.0 + Math.max(0, wave - 2) * 0.12;
@@ -114,22 +120,62 @@ public class PurgeWaveManager {
     }
 
     public void startNextWave(PurgeSession session) {
-        session.setCurrentWave(session.getCurrentWave() + 1);
-        int count = zombieCount(session.getCurrentWave());
-        session.setWaveZombieCount(count);
+        int nextWave = session.getCurrentWave() + 1;
+        PurgeWaveDefinition wave = waveConfigManager.getWave(nextWave);
+        if (wave == null) {
+            handleVictory(session);
+            return;
+        }
+
+        session.setCurrentWave(nextWave);
+        int totalCount = wave.totalCount();
+        session.setWaveZombieCount(totalCount);
         session.setSpawningComplete(false);
         session.setState(SessionState.SPAWNING);
 
-        sendMessage(session, "-- Wave " + session.getCurrentWave() + " -- (" + count + " zombies)");
-        hudManager.updateWaveStatus(session.getPlayerId(), session.getCurrentWave(), count, count);
+        sendMessage(session, "-- Wave " + nextWave + " -- (slow " + wave.slowCount()
+                + ", normal " + wave.normalCount() + ", fast " + wave.fastCount() + ")");
+        hudManager.updateWaveStatus(session.getPlayerId(), nextWave, totalCount, totalCount);
 
-        startSpawning(session, count);
+        List<PurgeZombieVariant> spawnQueue = buildSpawnQueue(wave);
+        if (spawnQueue.isEmpty()) {
+            markSpawningComplete(session);
+            onWaveComplete(session);
+            return;
+        }
+
+        startSpawning(session, spawnQueue);
         startWaveTick(session);
     }
 
-    private void startSpawning(PurgeSession session, int totalCount) {
-        double[] playerPos = getPlayerPosition(session);
+    private List<PurgeZombieVariant> buildSpawnQueue(PurgeWaveDefinition wave) {
+        int slow = Math.max(0, wave.slowCount());
+        int normal = Math.max(0, wave.normalCount());
+        int fast = Math.max(0, wave.fastCount());
+
+        List<PurgeZombieVariant> queue = new ArrayList<>(wave.totalCount());
+        while (slow > 0 || normal > 0 || fast > 0) {
+            if (normal > 0) {
+                queue.add(PurgeZombieVariant.NORMAL);
+                normal--;
+            }
+            if (slow > 0) {
+                queue.add(PurgeZombieVariant.SLOW);
+                slow--;
+            }
+            if (fast > 0) {
+                queue.add(PurgeZombieVariant.FAST);
+                fast--;
+            }
+        }
+        return queue;
+    }
+
+    private void startSpawning(PurgeSession session, List<PurgeZombieVariant> spawnQueue) {
+        int totalCount = spawnQueue.size();
+
         AtomicInteger remaining = new AtomicInteger(totalCount);
+        AtomicInteger queueIndex = new AtomicInteger(0);
 
         ScheduledFuture<?> task = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(() -> {
             try {
@@ -139,10 +185,7 @@ public class PurgeWaveManager {
                 }
                 int batch = Math.min(SPAWN_BATCH_SIZE, remaining.get());
                 if (batch <= 0) {
-                    session.setSpawningComplete(true);
-                    if (session.getState() == SessionState.SPAWNING) {
-                        session.setState(SessionState.COMBAT);
-                    }
+                    markSpawningComplete(session);
                     session.cancelSpawnTask();
                     return;
                 }
@@ -152,21 +195,37 @@ public class PurgeWaveManager {
                     return;
                 }
 
-                // Re-read player position for each batch
-                double[] currentPos = getPlayerPosition(session);
-                double spawnX = currentPos != null ? currentPos[0] : (playerPos != null ? playerPos[0] : 0);
-                double spawnZ = currentPos != null ? currentPos[2] : (playerPos != null ? playerPos[2] : 0);
-
                 world.execute(() -> {
                     try {
                         Store<EntityStore> store = world.getEntityStore().getStore();
                         if (store == null) {
                             return;
                         }
+                        double[] currentPos = getPlayerPosition(session);
+                        double spawnX = currentPos != null ? currentPos[0] : 0;
+                        double spawnZ = currentPos != null ? currentPos[2] : 0;
+
                         int toSpawn = Math.min(SPAWN_BATCH_SIZE, remaining.get());
                         for (int i = 0; i < toSpawn && remaining.get() > 0; i++) {
-                            spawnZombie(session, store, spawnX, spawnZ, session.getCurrentWave());
+                            int idx = queueIndex.getAndIncrement();
+                            if (idx >= spawnQueue.size()) {
+                                remaining.set(0);
+                                break;
+                            }
+
+                            PurgeSpawnPoint spawnPoint = spawnPointManager.selectSpawnPoint(spawnX, spawnZ);
+                            PurgeZombieVariant variant = spawnQueue.get(idx);
+                            boolean spawned = spawnZombie(session, store, spawnPoint, variant, session.getCurrentWave());
+                            if (!spawned) {
+                                LOGGER.atWarning().log("Wave spawn failed: wave=" + session.getCurrentWave()
+                                        + " variant=" + variant.name());
+                            }
                             remaining.decrementAndGet();
+                        }
+
+                        if (remaining.get() <= 0) {
+                            markSpawningComplete(session);
+                            session.cancelSpawnTask();
                         }
                     } catch (Exception e) {
                         LOGGER.atWarning().log("Spawn batch error: " + e.getMessage());
@@ -179,13 +238,23 @@ public class PurgeWaveManager {
         session.setSpawnTask(task);
     }
 
-    private void spawnZombie(PurgeSession session, Store<EntityStore> store, double playerX, double playerZ, int wave) {
-        if (npcPlugin == null) {
-            return;
+    private void markSpawningComplete(PurgeSession session) {
+        session.setSpawningComplete(true);
+        if (session.getState() == SessionState.SPAWNING) {
+            session.setState(SessionState.COMBAT);
         }
-        PurgeSpawnPoint point = spawnPointManager.selectSpawnPoint(playerX, playerZ);
-        if (point == null) {
-            return;
+    }
+
+    private boolean spawnZombie(PurgeSession session,
+                                Store<EntityStore> store,
+                                PurgeSpawnPoint point,
+                                PurgeZombieVariant variant,
+                                int wave) {
+        if (npcPlugin == null) {
+            return false;
+        }
+        if (point == null || variant == null) {
+            return false;
         }
 
         double x = point.x() + ThreadLocalRandom.current().nextDouble(-SPAWN_RANDOM_OFFSET, SPAWN_RANDOM_OFFSET);
@@ -193,52 +262,65 @@ public class PurgeWaveManager {
         Vector3d position = new Vector3d(x, point.y(), z);
         Vector3f rotation = new Vector3f(0, point.yaw(), 0);
 
-        try {
-            Object result = npcPlugin.spawnNPC(store, ZOMBIE_NPC_TYPE, "", position, rotation);
-            if (result != null) {
-                Ref<EntityStore> entityRef = extractEntityRef(result);
-                if (entityRef != null) {
-                    session.addAliveZombie(entityRef);
-                    // Apply wave HP scaling + show HP on nameplate
-                    try {
-                        EntityStatMap statMap = store.getComponent(entityRef, EntityStatMap.getComponentType());
-                        Nameplate nameplate = store.ensureAndGetComponent(entityRef, Nameplate.getComponentType());
-                        if (statMap != null) {
-                            int healthIndex = DefaultEntityStatTypes.getHealth();
-                            double hpMult = hpMultiplier(wave);
-                            if (hpMult > 1.0) {
-                                statMap.putModifier(healthIndex, PURGE_HP_MODIFIER,
-                                        new StaticModifier(Modifier.ModifierTarget.MAX,
-                                                StaticModifier.CalculationType.MULTIPLICATIVE, (float) hpMult));
-                                statMap.update();
+        for (String npcType : candidateNpcTypes(variant)) {
+            try {
+                Object result = npcPlugin.spawnNPC(store, npcType, "", position, rotation);
+                if (result != null) {
+                    Ref<EntityStore> entityRef = extractEntityRef(result);
+                    if (entityRef != null) {
+                        session.addAliveZombie(entityRef);
+                        // Apply wave HP scaling + show HP on nameplate
+                        try {
+                            EntityStatMap statMap = store.getComponent(entityRef, EntityStatMap.getComponentType());
+                            Nameplate nameplate = store.ensureAndGetComponent(entityRef, Nameplate.getComponentType());
+                            if (statMap != null) {
+                                int healthIndex = DefaultEntityStatTypes.getHealth();
+                                double hpMult = hpMultiplier(wave);
+                                if (hpMult > 1.0) {
+                                    statMap.putModifier(healthIndex, PURGE_HP_MODIFIER,
+                                            new StaticModifier(Modifier.ModifierTarget.MAX,
+                                                    StaticModifier.CalculationType.MULTIPLICATIVE, (float) hpMult));
+                                    statMap.update();
+                                }
+                                statMap.maximizeStatValue(healthIndex);
+                                EntityStatValue health = statMap.get(healthIndex);
+                                if (health != null) {
+                                    int hp = Math.round(health.getMax());
+                                    nameplate.setText(hp + " / " + hp);
+                                }
+                            } else {
+                                nameplate.setText("");
                             }
-                            statMap.maximizeStatValue(healthIndex);
-                            EntityStatValue health = statMap.get(healthIndex);
-                            if (health != null) {
-                                int hp = Math.round(health.getMax());
-                                nameplate.setText(hp + " / " + hp);
+                        } catch (Exception e) {
+                            LOGGER.atWarning().log("Failed to apply zombie stats: " + e.getMessage());
+                        }
+                        // Force aggro on player immediately
+                        try {
+                            NPCEntity npcEntity = store.getComponent(entityRef, NPCEntity.getComponentType());
+                            if (npcEntity != null && npcEntity.getRole() != null) {
+                                npcEntity.getRole().setMarkedTarget("LockedTarget", session.getPlayerRef());
+                                npcEntity.getRole().getStateSupport().setState(entityRef, "Angry", "", store);
                             }
-                        } else {
-                            nameplate.setText("");
+                        } catch (Exception e) {
+                            LOGGER.atWarning().log("Failed to set zombie aggro: " + e.getMessage());
                         }
-                    } catch (Exception e) {
-                        LOGGER.atWarning().log("Failed to apply zombie stats: " + e.getMessage());
-                    }
-                    // Force aggro on player immediately
-                    try {
-                        NPCEntity npcEntity = store.getComponent(entityRef, NPCEntity.getComponentType());
-                        if (npcEntity != null && npcEntity.getRole() != null) {
-                            npcEntity.getRole().setMarkedTarget("LockedTarget", session.getPlayerRef());
-                            npcEntity.getRole().getStateSupport().setState(entityRef, "Angry", "", store);
-                        }
-                    } catch (Exception e) {
-                        LOGGER.atWarning().log("Failed to set zombie aggro: " + e.getMessage());
+                        return true;
                     }
                 }
+            } catch (Exception e) {
+                LOGGER.atWarning().log("Failed to spawn zombie with role " + npcType
+                        + " (variant " + variant.name() + "): " + e.getMessage());
             }
-        } catch (Exception e) {
-            LOGGER.atWarning().log("Failed to spawn zombie: " + e.getMessage());
         }
+        return false;
+    }
+
+    private List<String> candidateNpcTypes(PurgeZombieVariant variant) {
+        return switch (variant) {
+            case SLOW -> List.of(PurgeZombieVariant.SLOW.getNpcType(), PurgeZombieVariant.NORMAL.getNpcType());
+            case NORMAL -> List.of(PurgeZombieVariant.NORMAL.getNpcType(), "Purge_Zombie_Normal");
+            case FAST -> List.of(PurgeZombieVariant.FAST.getNpcType(), PurgeZombieVariant.NORMAL.getNpcType());
+        };
     }
 
     private void startWaveTick(PurgeSession session) {
@@ -293,14 +375,20 @@ public class PurgeWaveManager {
 
     private void updateZombieNameplates(PurgeSession session) {
         World world = getPurgeWorld();
-        if (world == null) return;
+        if (world == null) {
+            return;
+        }
         world.execute(() -> {
             try {
                 Store<EntityStore> store = world.getEntityStore().getStore();
-                if (store == null) return;
+                if (store == null) {
+                    return;
+                }
                 int healthIndex = DefaultEntityStatTypes.getHealth();
                 for (Ref<EntityStore> ref : session.getAliveZombies()) {
-                    if (ref == null || !ref.isValid()) continue;
+                    if (ref == null || !ref.isValid()) {
+                        continue;
+                    }
                     try {
                         EntityStatMap statMap = store.getComponent(ref, EntityStatMap.getComponentType());
                         Nameplate nameplate = store.getComponent(ref, Nameplate.getComponentType());
@@ -330,9 +418,26 @@ public class PurgeWaveManager {
             session.setWaveTick(null);
         }
 
-        session.setState(SessionState.INTERMISSION);
         sendMessage(session, "Wave " + session.getCurrentWave() + " complete! (" + session.getTotalKills() + " total kills)");
+
+        if (!waveConfigManager.hasWave(session.getCurrentWave() + 1)) {
+            handleVictory(session);
+            return;
+        }
+
+        session.setState(SessionState.INTERMISSION);
         startIntermission(session);
+    }
+
+    private void handleVictory(PurgeSession session) {
+        if (session.getState() == SessionState.ENDED) {
+            return;
+        }
+        sendMessage(session, "You won! You cleared all configured Purge waves.");
+        PurgeSessionManager sm = sessionManager;
+        if (sm != null) {
+            sm.stopSession(session.getPlayerId(), "victory");
+        }
     }
 
     private void startIntermission(PurgeSession session) {

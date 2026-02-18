@@ -4,6 +4,8 @@
 
 ### Added
 - **Parkour: Map active toggle** - Admins can disable maps without deleting them via `/pk admin` Maps panel. Inactive maps block both start trigger and map selector entry with a warning message. New `active` column in `maps` table (defaults to TRUE).
+- **Purge: Configurable wave compositions** - `/purge admin` now has a Waves panel where staff define per-wave slow/normal/fast zombie counts. Sessions only start when at least one wave exists, spawns are distributed across configured spawn points, and clearing the final configured wave now ends with a win message.
+- **Purge: Session start/stop points in admin settings** - `/purge admin` now has a Settings panel (before Spawn Points) to set start spawn (`/purge start`) and exit point (`/purge stop`) from current position.
 
 - **Ascend: Transcendence (4th prestige)** - Endgame prestige layer at 1e100 vexa with BREAK_ASCENSION active. Resets everything including skill tree and challenges. Permanent transcendence count; Milestone 1 unlocks Map 6. Gold-themed UI page, NPC interaction (challenge-gated), and `/transcend` command.
 - **Ascend: Map 6 support** - 6th parkour map slot with gold accent, gated behind Transcendence Milestone 1. Balance: 2500 base reward, 68s base time, x4.7 cost multiplier.
