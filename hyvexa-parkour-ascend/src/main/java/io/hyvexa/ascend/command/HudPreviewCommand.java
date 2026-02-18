@@ -13,6 +13,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.hud.HudPreviewHud;
+import io.hyvexa.common.util.MultiHudBridge;
 import io.hyvexa.common.util.PermissionUtils;
 
 import javax.annotation.Nonnull;
@@ -62,8 +63,8 @@ public class HudPreviewCommand extends AbstractAsyncCommand {
             }
 
             HudPreviewHud hud = new HudPreviewHud(playerRef);
-            player.getHudManager().setCustomHud(playerRef, hud);
-            hud.show();
+            MultiHudBridge.setCustomHud(player, playerRef, hud);
+            MultiHudBridge.showIfNeeded(hud);
 
             player.sendMessage(Message.raw("[Preview] HUD design preview displayed. Rejoin to restore normal HUD.").color("#ec4899"));
         }, world);

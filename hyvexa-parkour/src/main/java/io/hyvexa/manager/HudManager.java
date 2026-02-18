@@ -11,6 +11,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.util.AsyncExecutionHelper;
 import io.hyvexa.common.util.FormatUtils;
+import io.hyvexa.common.util.MultiHudBridge;
 import io.hyvexa.parkour.tracker.HiddenRunHud;
 import io.hyvexa.parkour.tracker.RunHud;
 import io.hyvexa.parkour.tracker.RunRecordsHud;
@@ -228,9 +229,9 @@ public class HudManager {
 
     void attachHud(PlayerRef playerRef, Player player, RunHud hud, boolean records) {
         getState(playerRef.getUuid()).isRecords = records;
-        player.getHudManager().setCustomHud(playerRef, hud);
+        MultiHudBridge.setCustomHud(player, playerRef, hud);
         hud.resetCache();
-        hud.show();
+        MultiHudBridge.showIfNeeded(hud);
     }
 
     private void setRunHudHidden(PlayerRef playerRef, boolean hidden) {
@@ -283,7 +284,7 @@ public class HudManager {
             return;
         }
         HiddenRunHud hud = getOrCreateHiddenHud(playerRef);
-        player.getHudManager().setCustomHud(playerRef, hud);
+        MultiHudBridge.setCustomHud(player, playerRef, hud);
     }
 
     private HiddenRunHud getOrCreateHiddenHud(PlayerRef playerRef) {

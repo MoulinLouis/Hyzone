@@ -3,7 +3,6 @@ package io.hyvexa.purge;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
-import com.hypixel.hytale.protocol.packets.interface_.HudComponent;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.event.events.player.AddPlayerToWorldEvent;
@@ -23,7 +22,14 @@ import io.hyvexa.core.analytics.AnalyticsStore;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.core.discord.DiscordLinkStore;
 import io.hyvexa.core.economy.GemStore;
-import io.hyvexa.purge.hud.PurgeHud;
+import io.hyvexa.purge.command.PurgeCommand;
+import io.hyvexa.purge.command.PurgeSpawnCommand;
+import io.hyvexa.purge.data.PurgePlayerStore;
+import io.hyvexa.purge.data.PurgeScrapStore;
+import io.hyvexa.purge.hud.PurgeHudManager;
+import io.hyvexa.purge.manager.PurgeSessionManager;
+import io.hyvexa.purge.manager.PurgeSpawnPointManager;
+import io.hyvexa.purge.manager.PurgeWaveManager;
 
 import javax.annotation.Nonnull;
 import java.util.Set;
@@ -32,16 +38,24 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-
 public class HyvexaPurgePlugin extends JavaPlugin {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
+    private static final String ITEM_AK47 = "AK47";
+    private static final String ITEM_BULLET = "Bullet";
+    private static final int STARTING_BULLET_COUNT = 120;
+    private static final short SLOT_PRIMARY_WEAPON = 0;
+    private static final short SLOT_PRIMARY_AMMO = 1;
     private static final short SLOT_SERVER_SELECTOR = 8;
     private static HyvexaPurgePlugin INSTANCE;
 
     private final Set<UUID> playersInPurgeWorld = ConcurrentHashMap.newKeySet();
-    private final ConcurrentHashMap<UUID, PurgeHud> purgeHuds = new ConcurrentHashMap<>();
     private ScheduledFuture<?> hudUpdateTask;
+
+    private PurgeSpawnPointManager spawnPointManager;
+    private PurgeWaveManager waveManager;
+    private PurgeHudManager hudManager;
+    private PurgeSessionManager sessionManager;
 
     public HyvexaPurgePlugin(@Nonnull JavaPluginInit init) {
         super(init);
@@ -54,26 +68,33 @@ public class HyvexaPurgePlugin extends JavaPlugin {
 
     @Override
     protected void setup() {
-        try {
-            DatabaseManager.getInstance().initialize();
-        } catch (Exception e) {
-            LOGGER.atWarning().withCause(e).log("Failed to initialize database for Purge");
-        }
-        try {
-            GemStore.getInstance().initialize();
-        } catch (Exception e) {
-            LOGGER.atWarning().withCause(e).log("Failed to initialize GemStore for Purge");
-        }
-        try {
-            DiscordLinkStore.getInstance().initialize();
-        } catch (Exception e) {
-            LOGGER.atWarning().withCause(e).log("Failed to initialize DiscordLinkStore for Purge");
-        }
-        try {
-            AnalyticsStore.getInstance().initialize();
-        } catch (Exception e) {
-            LOGGER.atWarning().withCause(e).log("Failed to initialize AnalyticsStore for Purge");
-        }
+        // Initialize shared stores
+        try { DatabaseManager.getInstance().initialize(); }
+        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Failed to initialize database for Purge"); }
+        try { GemStore.getInstance().initialize(); }
+        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Failed to initialize GemStore for Purge"); }
+        try { DiscordLinkStore.getInstance().initialize(); }
+        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Failed to initialize DiscordLinkStore for Purge"); }
+        try { AnalyticsStore.getInstance().initialize(); }
+        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Failed to initialize AnalyticsStore for Purge"); }
+
+        // Initialize Purge-specific stores
+        try { PurgeScrapStore.getInstance().initialize(); }
+        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Failed to initialize PurgeScrapStore"); }
+        try { PurgePlayerStore.getInstance().initialize(); }
+        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Failed to initialize PurgePlayerStore"); }
+
+        // Create managers
+        spawnPointManager = new PurgeSpawnPointManager();
+        hudManager = new PurgeHudManager();
+        waveManager = new PurgeWaveManager(spawnPointManager, hudManager);
+        sessionManager = new PurgeSessionManager(spawnPointManager, waveManager, hudManager);
+
+        // Register commands
+        this.getCommandRegistry().registerCommand(new PurgeCommand(sessionManager));
+        this.getCommandRegistry().registerCommand(new PurgeSpawnCommand(spawnPointManager));
+
+        // --- Event Handlers ---
 
         this.getEventRegistry().registerGlobal(PlayerReadyEvent.class, event -> {
             Ref<EntityStore> ref = event.getPlayerRef();
@@ -97,9 +118,10 @@ public class HyvexaPurgePlugin extends JavaPlugin {
             if (player == null) {
                 return;
             }
-            InventoryUtils.clearAllContainers(player);
+            // Attach HUD (base info panel, wave status hidden by default)
+            hudManager.attach(playerRef, player);
+            // Give server selector only (session start handles weapon/ammo)
             giveServerSelector(player);
-            attachHud(playerRef, player);
             LOGGER.atInfo().log("Player entered Purge: " + (playerId != null ? playerId : "unknown"));
             try {
                 DiscordLinkStore.getInstance().checkAndRewardGems(playerId, player);
@@ -125,9 +147,11 @@ public class HyvexaPurgePlugin extends JavaPlugin {
                 }
                 return;
             }
+            // Leaving Purge world
             if (playerId != null) {
                 playersInPurgeWorld.remove(playerId);
-                purgeHuds.remove(playerId);
+                sessionManager.cleanupPlayer(playerId);
+                hudManager.removePlayer(playerId);
             }
         });
 
@@ -141,15 +165,25 @@ public class HyvexaPurgePlugin extends JavaPlugin {
                 return;
             }
             playersInPurgeWorld.remove(playerId);
-            purgeHuds.remove(playerId);
+            sessionManager.cleanupPlayer(playerId);
+            hudManager.removePlayer(playerId);
             try { GemStore.getInstance().evictPlayer(playerId); }
             catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: GemStore"); }
             try { DiscordLinkStore.getInstance().evictPlayer(playerId); }
             catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: DiscordLinkStore"); }
+            try { PurgePlayerStore.getInstance().evictPlayer(playerId); }
+            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: PurgePlayerStore"); }
+            try { PurgeScrapStore.getInstance().evictPlayer(playerId); }
+            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: PurgeScrapStore"); }
         });
 
+        // Slow HUD updates (player count, gems, scrap) every 5 seconds
         hudUpdateTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(
-                this::tickHudUpdates, 5000L, 5000L, TimeUnit.MILLISECONDS
+                () -> {
+                    try { hudManager.tickSlowUpdates(); }
+                    catch (Exception e) { LOGGER.atWarning().log("HUD tick error: " + e.getMessage()); }
+                },
+                5000L, 5000L, TimeUnit.MILLISECONDS
         );
 
         LOGGER.atInfo().log("HyvexaPurge plugin loaded");
@@ -157,33 +191,31 @@ public class HyvexaPurgePlugin extends JavaPlugin {
 
     @Override
     protected void shutdown() {
+        if (sessionManager != null) {
+            sessionManager.shutdown();
+        }
         if (hudUpdateTask != null) {
             hudUpdateTask.cancel(false);
             hudUpdateTask = null;
         }
         playersInPurgeWorld.clear();
-        purgeHuds.clear();
     }
 
-    private void attachHud(PlayerRef playerRef, Player player) {
-        UUID playerId = playerRef.getUuid();
-        if (playerId == null) {
-            return;
-        }
-        PurgeHud hud = new PurgeHud(playerRef);
-        purgeHuds.put(playerId, hud);
-        player.getHudManager().setCustomHud(playerRef, hud);
-        player.getHudManager().hideHudComponents(playerRef, HudComponent.Compass);
-        hud.show();
+    // --- Public loadout methods for PurgeSessionManager ---
+
+    public void grantLoadout(Player player) {
+        InventoryUtils.clearAllContainers(player);
+        giveStartingWeapon(player);
+        giveStartingAmmo(player);
+        giveServerSelector(player);
     }
 
-    private void tickHudUpdates() {
-        for (var entry : purgeHuds.entrySet()) {
-            PurgeHud hud = entry.getValue();
-            hud.updatePlayerCount();
-            hud.updateGems(GemStore.getInstance().getGems(entry.getKey()));
-        }
+    public void removeLoadout(Player player) {
+        InventoryUtils.clearAllContainers(player);
+        giveServerSelector(player);
     }
+
+    // --- Private item grant methods ---
 
     private void giveServerSelector(Player player) {
         Inventory inventory = player.getInventory();
@@ -192,5 +224,25 @@ public class HyvexaPurgePlugin extends JavaPlugin {
         }
         inventory.getHotbar().setItemStackForSlot(SLOT_SERVER_SELECTOR,
                 new ItemStack(WorldConstants.ITEM_SERVER_SELECTOR, 1), false);
+    }
+
+    private void giveStartingWeapon(Player player) {
+        Inventory inventory = player.getInventory();
+        if (inventory == null || inventory.getHotbar() == null) {
+            return;
+        }
+        inventory.getHotbar().setItemStackForSlot(SLOT_PRIMARY_WEAPON, new ItemStack(ITEM_AK47, 1), false);
+    }
+
+    private void giveStartingAmmo(Player player) {
+        Inventory inventory = player.getInventory();
+        if (inventory == null || inventory.getHotbar() == null) {
+            return;
+        }
+        inventory.getHotbar().setItemStackForSlot(
+                SLOT_PRIMARY_AMMO,
+                new ItemStack(ITEM_BULLET, STARTING_BULLET_COUNT),
+                false
+        );
     }
 }
