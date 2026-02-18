@@ -10,6 +10,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
+import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.summit.SummitManager;
 import io.hyvexa.ascend.ParkourAscendPlugin;
@@ -80,12 +81,33 @@ public class AscendHudManager {
             List<AscendMap> mapList = mapStore != null ? mapStore.listMapsSorted() : List.of();
             BigNumber product = playerStore.getMultiplierProduct(playerId, mapList, AscendConstants.MULTIPLIER_SLOTS);
             BigNumber[] digits = playerStore.getMultiplierDisplayValues(playerId, mapList, AscendConstants.MULTIPLIER_SLOTS);
-            int elevationLevel = playerStore.getElevationLevel(playerId);
-            BigNumber accumulatedVexa = playerStore.getElevationAccumulatedVexa(playerId);
-            AscendConstants.ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(elevationLevel, accumulatedVexa);
-            int potentialElevation = elevationLevel + purchase.levels;
-            boolean showElevation = elevationLevel > 1 || purchase.levels > 0;
-            hud.updateEconomy(vexa, product, digits, elevationLevel, potentialElevation, showElevation);
+            if (playerStore.hasCompoundElevation(playerId)) {
+                AscendPlayerProgress progress = playerStore.getPlayer(playerId);
+                double compounded = progress != null ? progress.getCompoundedElevation() : 1.0;
+                int cycleLevel = progress != null ? progress.getCycleLevel() : 0;
+                BigNumber accumulatedVexa = playerStore.getElevationAccumulatedVexa(playerId);
+                AscendConstants.ElevationPurchaseResult purchase = AscendConstants.calculateCompoundPurchase(cycleLevel, accumulatedVexa);
+                int newCycleLevel = cycleLevel + purchase.levels;
+
+                double currentEffective = compounded * Math.max(1, cycleLevel);
+                String currentText = AscendConstants.formatCompoundedElevation(currentEffective);
+                String potentialText;
+                if (newCycleLevel > cycleLevel) {
+                    double projected = compounded * Math.pow(newCycleLevel, AscendConstants.COMPOUND_POWER);
+                    potentialText = AscendConstants.formatCompoundedElevation(projected);
+                } else {
+                    potentialText = currentText;
+                }
+                boolean showElevation = compounded > 1.0 || cycleLevel > 0 || purchase.levels > 0;
+                hud.updateCompoundEconomy(vexa, product, digits, currentText, potentialText, showElevation);
+            } else {
+                int elevationLevel = playerStore.getElevationLevel(playerId);
+                BigNumber accumulatedVexa = playerStore.getElevationAccumulatedVexa(playerId);
+                AscendConstants.ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(elevationLevel, accumulatedVexa);
+                int potentialElevation = elevationLevel + purchase.levels;
+                boolean showElevation = elevationLevel > 1 || purchase.levels > 0;
+                hud.updateEconomy(vexa, product, digits, elevationLevel, potentialElevation, showElevation);
+            }
 
             // Update prestige HUD
             var summitLevels = playerStore.getSummitLevels(playerId);
