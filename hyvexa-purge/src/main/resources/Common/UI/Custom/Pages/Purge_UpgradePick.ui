@@ -1,0 +1,291 @@
+$C = "../Common.ui";
+
+$C.@PageOverlay {
+  SceneBlur {}
+
+  Group #UpgradePickWindow {
+    Anchor: (Width: 780, Height: 320);
+    LayoutMode: Top;
+    Background: #0d1620(0.95);
+    OutlineColor: #ffffff(0.06);
+    OutlineSize: 1;
+
+    // === HEADER ===
+    Group #Header {
+      Anchor: (Left: 0, Right: 0, Height: 48);
+      LayoutMode: Full;
+      Background: #0a1018;
+
+      // Top accent line (green)
+      Group {
+        Anchor: (Left: 0, Right: 0, Top: 0, Height: 2);
+        Background: #4ade80;
+      }
+
+      Label {
+        Anchor: (Left: 20, Top: 14, Width: 300, Height: 22);
+        Style: (FontSize: 16, TextColor: #f0f4f8, RenderBold: true);
+        Text: "CHOOSE AN UPGRADE";
+      }
+
+      Label #WaveLabel {
+        Anchor: (Right: 20, Top: 14, Width: 200, Height: 22);
+        Style: (FontSize: 14, TextColor: #9fb0ba, HorizontalAlignment: End);
+        Text: "Wave 1 Complete";
+      }
+    }
+
+    // === CARDS ROW ===
+    Group #CardsRow {
+      Anchor: (Left: 0, Right: 0);
+      FlexWeight: 1;
+      LayoutMode: Left;
+      Padding: (Left: 14, Right: 14, Top: 10, Bottom: 14);
+
+      // --- Skip Card ---
+      Group #SkipCard {
+        FlexWeight: 1;
+        Anchor: (Top: 0, Bottom: 0, Right: 8);
+        LayoutMode: Top;
+        Background: #ffffff(0.03);
+        OutlineColor: #ffffff(0.04);
+        OutlineSize: 1;
+        Padding: (Left: 14, Right: 14, Top: 14, Bottom: 14);
+
+        Label {
+          Anchor: (Left: 0, Right: 0);
+          Style: (FontSize: 15, TextColor: #9fb0ba, RenderBold: true);
+          Text: "Skip";
+        }
+
+        Label {
+          Anchor: (Left: 0, Right: 0, Top: 6);
+          Style: (FontSize: 12, TextColor: #6b7280, Wrap: true);
+          Text: "Continue without an upgrade";
+        }
+
+        Group { FlexWeight: 1; }
+
+        Group #SkipButtonRow {
+          Anchor: (Left: 0, Right: 0, Height: 36);
+
+          TextButton #SkipButton {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Text: "SKIP";
+            Style: TextButtonStyle(
+              Default: (
+                Background: #ffffff(0.06),
+                LabelStyle: (FontSize: 13, TextColor: #9fb0ba, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Hovered: (
+                Background: #ffffff(0.1),
+                LabelStyle: (FontSize: 13, TextColor: #f0f4f8, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Pressed: (
+                Background: #ffffff(0.04),
+                LabelStyle: (FontSize: 13, TextColor: #9fb0ba, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Sounds: $C.@ButtonSounds,
+            );
+          }
+        }
+      }
+
+      // --- Upgrade Card 1 ---
+      Group #Card1 {
+        FlexWeight: 1;
+        Anchor: (Top: 0, Bottom: 0, Right: 8);
+        LayoutMode: Full;
+        Background: #ffffff(0.03);
+        OutlineColor: #ffffff(0.04);
+        OutlineSize: 1;
+
+        // Left accent bar
+        Group #Card1Accent {
+          Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
+          Background: #3b82f6;
+        }
+
+        Group #Card1Content {
+          Anchor: (Left: 4, Right: 0, Top: 0, Bottom: 0);
+          Padding: (Left: 12, Right: 12, Top: 14, Bottom: 14);
+          LayoutMode: Top;
+
+          Label #Card1Name {
+            Anchor: (Left: 0, Right: 0);
+            Style: (FontSize: 15, TextColor: #f0f4f8, RenderBold: true);
+            Text: "Upgrade";
+          }
+
+          Label #Card1Desc {
+            Anchor: (Left: 0, Right: 0, Top: 6);
+            Style: (FontSize: 12, TextColor: #9fb0ba, Wrap: true);
+            Text: "Description";
+          }
+
+          Label #Card1Stacks {
+            Anchor: (Left: 0, Right: 0, Top: 4);
+            Style: (FontSize: 12, TextColor: #4ade80, RenderBold: true);
+            Text: "";
+          }
+
+          Group { FlexWeight: 1; }
+
+          Group #Card1ButtonRow {
+            Anchor: (Left: 0, Right: 0, Height: 36);
+
+            TextButton #Card1Button {
+              Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+              Text: "SELECT";
+              Style: TextButtonStyle(
+                Default: (
+                  Background: #164e63,
+                  LabelStyle: (FontSize: 13, TextColor: #e0f2fe, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+                ),
+                Hovered: (
+                  Background: #1e6b8a,
+                  LabelStyle: (FontSize: 13, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+                ),
+                Pressed: (
+                  Background: #0e3a4a,
+                  LabelStyle: (FontSize: 13, TextColor: #e0f2fe, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+                ),
+                Sounds: $C.@ButtonSounds,
+              );
+            }
+          }
+        }
+      }
+
+      // --- Upgrade Card 2 ---
+      Group #Card2 {
+        FlexWeight: 1;
+        Anchor: (Top: 0, Bottom: 0, Right: 8);
+        LayoutMode: Full;
+        Background: #ffffff(0.03);
+        OutlineColor: #ffffff(0.04);
+        OutlineSize: 1;
+
+        Group #Card2Accent {
+          Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
+          Background: #3b82f6;
+        }
+
+        Group #Card2Content {
+          Anchor: (Left: 4, Right: 0, Top: 0, Bottom: 0);
+          Padding: (Left: 12, Right: 12, Top: 14, Bottom: 14);
+          LayoutMode: Top;
+
+          Label #Card2Name {
+            Anchor: (Left: 0, Right: 0);
+            Style: (FontSize: 15, TextColor: #f0f4f8, RenderBold: true);
+            Text: "Upgrade";
+          }
+
+          Label #Card2Desc {
+            Anchor: (Left: 0, Right: 0, Top: 6);
+            Style: (FontSize: 12, TextColor: #9fb0ba, Wrap: true);
+            Text: "Description";
+          }
+
+          Label #Card2Stacks {
+            Anchor: (Left: 0, Right: 0, Top: 4);
+            Style: (FontSize: 12, TextColor: #4ade80, RenderBold: true);
+            Text: "";
+          }
+
+          Group { FlexWeight: 1; }
+
+          Group #Card2ButtonRow {
+            Anchor: (Left: 0, Right: 0, Height: 36);
+
+            TextButton #Card2Button {
+              Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+              Text: "SELECT";
+              Style: TextButtonStyle(
+                Default: (
+                  Background: #164e63,
+                  LabelStyle: (FontSize: 13, TextColor: #e0f2fe, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+                ),
+                Hovered: (
+                  Background: #1e6b8a,
+                  LabelStyle: (FontSize: 13, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+                ),
+                Pressed: (
+                  Background: #0e3a4a,
+                  LabelStyle: (FontSize: 13, TextColor: #e0f2fe, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+                ),
+                Sounds: $C.@ButtonSounds,
+              );
+            }
+          }
+        }
+      }
+
+      // --- Upgrade Card 3 ---
+      Group #Card3 {
+        FlexWeight: 1;
+        Anchor: (Top: 0, Bottom: 0);
+        LayoutMode: Full;
+        Background: #ffffff(0.03);
+        OutlineColor: #ffffff(0.04);
+        OutlineSize: 1;
+
+        Group #Card3Accent {
+          Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
+          Background: #3b82f6;
+        }
+
+        Group #Card3Content {
+          Anchor: (Left: 4, Right: 0, Top: 0, Bottom: 0);
+          Padding: (Left: 12, Right: 12, Top: 14, Bottom: 14);
+          LayoutMode: Top;
+
+          Label #Card3Name {
+            Anchor: (Left: 0, Right: 0);
+            Style: (FontSize: 15, TextColor: #f0f4f8, RenderBold: true);
+            Text: "Upgrade";
+          }
+
+          Label #Card3Desc {
+            Anchor: (Left: 0, Right: 0, Top: 6);
+            Style: (FontSize: 12, TextColor: #9fb0ba, Wrap: true);
+            Text: "Description";
+          }
+
+          Label #Card3Stacks {
+            Anchor: (Left: 0, Right: 0, Top: 4);
+            Style: (FontSize: 12, TextColor: #4ade80, RenderBold: true);
+            Text: "";
+          }
+
+          Group { FlexWeight: 1; }
+
+          Group #Card3ButtonRow {
+            Anchor: (Left: 0, Right: 0, Height: 36);
+
+            TextButton #Card3Button {
+              Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+              Text: "SELECT";
+              Style: TextButtonStyle(
+                Default: (
+                  Background: #164e63,
+                  LabelStyle: (FontSize: 13, TextColor: #e0f2fe, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+                ),
+                Hovered: (
+                  Background: #1e6b8a,
+                  LabelStyle: (FontSize: 13, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+                ),
+                Pressed: (
+                  Background: #0e3a4a,
+                  LabelStyle: (FontSize: 13, TextColor: #e0f2fe, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+                ),
+                Sounds: $C.@ButtonSounds,
+              );
+            }
+          }
+        }
+      }
+    }
+  }
+}
