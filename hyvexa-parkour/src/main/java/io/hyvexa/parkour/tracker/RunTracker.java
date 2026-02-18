@@ -475,6 +475,11 @@ public class RunTracker {
             run.fallState.lastY = position.getY();
             fallTimeoutMs = 0L;
         }
+        if (run.practiceEnabled && run.flyActive) {
+            run.fallState.fallStartTime = null;
+            run.fallState.lastY = position.getY();
+            fallTimeoutMs = 0L;
+        }
         if (fallTimeoutMs > 0 && shouldRespawnFromFall(run, position.getY(), movementStates, fallTimeoutMs)) {
             run.fallState.fallStartTime = null;
             run.fallState.lastY = null;

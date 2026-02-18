@@ -21,6 +21,8 @@ import java.util.Set;
 
 public final class TrackerUtils {
 
+    private static final double FALL_Y_EPSILON = 1e-4;
+
     private TrackerUtils() {
     }
 
@@ -103,7 +105,8 @@ public final class TrackerUtils {
             return false;
         }
         long now = System.currentTimeMillis();
-        if (currentY < state.lastY) {
+        double deltaY = currentY - state.lastY;
+        if (deltaY <= FALL_Y_EPSILON) {
             if (state.fallStartTime == null) {
                 state.fallStartTime = now;
             }
@@ -111,7 +114,7 @@ public final class TrackerUtils {
                 state.lastY = currentY;
                 return true;
             }
-        } else {
+        } else if (deltaY > FALL_Y_EPSILON) {
             state.fallStartTime = null;
         }
         state.lastY = currentY;
