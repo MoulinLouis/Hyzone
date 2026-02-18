@@ -6,6 +6,8 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
+import com.hypixel.hytale.server.core.modules.entitystats.EntityStatMap;
+import com.hypixel.hytale.server.core.modules.entitystats.asset.DefaultEntityStatTypes;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.util.DamageBypassRegistry;
@@ -109,6 +111,16 @@ public class PurgeSessionManager {
                 um.cleanupPlayer(playerId);
             }
         });
+        runSafe("heal player", () -> {
+            Ref<EntityStore> ref = session.getPlayerRef();
+            if (ref != null && ref.isValid()) {
+                Store<EntityStore> store = ref.getStore();
+                EntityStatMap statMap = store.getComponent(ref, EntityStatMap.getComponentType());
+                if (statMap != null) {
+                    statMap.maximizeStatValue(DefaultEntityStatTypes.getHealth());
+                }
+            }
+        });
         runSafe("hide hud", () -> hudManager.hideRunHud(playerId));
         runSafe("persist", () -> persistResults(playerId, session));
         runSafe("remove loadout", () -> {
@@ -121,7 +133,7 @@ public class PurgeSessionManager {
                     if (player != null) {
                         plugin.removeLoadout(player);
                     }
-                    if ("voluntary stop".equalsIgnoreCase(reason)) {
+                    if ("voluntary stop".equalsIgnoreCase(reason) || "victory".equalsIgnoreCase(reason)) {
                         teleportToConfiguredExit(ref, store);
                     }
                 }
