@@ -16,6 +16,7 @@ import com.hypixel.hytale.server.core.modules.entitystats.EntityStatValue;
 import com.hypixel.hytale.server.core.modules.entitystats.asset.DefaultEntityStatTypes;
 import com.hypixel.hytale.server.core.modules.entitystats.modifier.Modifier;
 import com.hypixel.hytale.server.core.modules.entitystats.modifier.StaticModifier;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -24,10 +25,12 @@ import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import io.hyvexa.common.WorldConstants;
 import io.hyvexa.purge.data.PurgeSession;
 import io.hyvexa.purge.data.PurgeSpawnPoint;
+import io.hyvexa.purge.data.PurgeUpgradeType;
 import io.hyvexa.purge.data.PurgeWaveDefinition;
 import io.hyvexa.purge.data.PurgeZombieVariant;
 import io.hyvexa.purge.data.SessionState;
 import io.hyvexa.purge.hud.PurgeHudManager;
+import io.hyvexa.purge.ui.PurgeUpgradePickPage;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -42,6 +45,7 @@ public class PurgeWaveManager {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final String PURGE_HP_MODIFIER = "purge_wave_hp";
+    private static final String PURGE_THICK_HIDE_MODIFIER = "purge_thick_hide";
     private static final long WAVE_TICK_INTERVAL_MS = 200;
     private static final long SPAWN_STAGGER_MS = 500;
     private static final int SPAWN_BATCH_SIZE = 5;
@@ -56,6 +60,7 @@ public class PurgeWaveManager {
 
     // Set by PurgeSessionManager after construction
     private volatile PurgeSessionManager sessionManager;
+    private volatile PurgeUpgradeManager upgradeManager;
 
     public PurgeWaveManager(PurgeSpawnPointManager spawnPointManager,
                             PurgeWaveConfigManager waveConfigManager,
@@ -72,6 +77,10 @@ public class PurgeWaveManager {
 
     public void setSessionManager(PurgeSessionManager sessionManager) {
         this.sessionManager = sessionManager;
+    }
+
+    public void setUpgradeManager(PurgeUpgradeManager upgradeManager) {
+        this.upgradeManager = upgradeManager;
     }
 
     public boolean hasConfiguredWaves() {
@@ -282,6 +291,17 @@ public class PurgeWaveManager {
                                                     StaticModifier.CalculationType.MULTIPLICATIVE, (float) hpMult));
                                     statMap.update();
                                 }
+                                // Apply Thick Hide damage reduction (reduces zombie HP as proxy)
+                                PurgeUpgradeManager um = upgradeManager;
+                                if (um != null) {
+                                    double dmgMult = um.getZombieDamageMultiplier(session);
+                                    if (dmgMult < 1.0) {
+                                        statMap.putModifier(healthIndex, PURGE_THICK_HIDE_MODIFIER,
+                                                new StaticModifier(Modifier.ModifierTarget.MAX,
+                                                        StaticModifier.CalculationType.MULTIPLICATIVE, (float) dmgMult));
+                                        statMap.update();
+                                    }
+                                }
                                 statMap.maximizeStatValue(healthIndex);
                                 EntityStatValue health = statMap.get(healthIndex);
                                 if (health != null) {
@@ -346,6 +366,7 @@ public class PurgeWaveManager {
 
                 checkZombieDeaths(session);
                 updateZombieNameplates(session);
+                updatePlayerHealthHud(session);
 
                 // Update HUD with alive count
                 int alive = session.getAliveZombieCount();
@@ -410,6 +431,40 @@ public class PurgeWaveManager {
         });
     }
 
+    private void updatePlayerHealthHud(PurgeSession session) {
+        Ref<EntityStore> ref = session.getPlayerRef();
+        if (ref == null || !ref.isValid()) {
+            return;
+        }
+        World world = getPurgeWorld();
+        if (world == null) {
+            return;
+        }
+        world.execute(() -> {
+            try {
+                Store<EntityStore> store = world.getEntityStore().getStore();
+                if (store == null) {
+                    return;
+                }
+                Ref<EntityStore> playerRef = session.getPlayerRef();
+                if (playerRef == null || !playerRef.isValid()) {
+                    return;
+                }
+                EntityStatMap statMap = store.getComponent(playerRef, EntityStatMap.getComponentType());
+                if (statMap != null) {
+                    EntityStatValue health = statMap.get(DefaultEntityStatTypes.getHealth());
+                    if (health != null) {
+                        int current = Math.round(health.get());
+                        int max = Math.round(health.getMax());
+                        hudManager.updatePlayerHealth(session.getPlayerId(), current, max);
+                    }
+                }
+            } catch (Exception e) {
+                // Ignore health read errors
+            }
+        });
+    }
+
     private void onWaveComplete(PurgeSession session) {
         // Cancel wave tick
         ScheduledFuture<?> wt = session.getWaveTick();
@@ -425,8 +480,71 @@ public class PurgeWaveManager {
             return;
         }
 
-        session.setState(SessionState.INTERMISSION);
-        startIntermission(session);
+        session.setState(SessionState.UPGRADE_PICK);
+        showUpgradePopup(session);
+    }
+
+    private void showUpgradePopup(PurgeSession session) {
+        PurgeUpgradeManager um = upgradeManager;
+        if (um == null) {
+            // No upgrade manager wired — skip straight to intermission
+            session.setState(SessionState.INTERMISSION);
+            startIntermission(session);
+            return;
+        }
+
+        List<PurgeUpgradeType> offered = um.selectRandomUpgrades(3);
+        Ref<EntityStore> playerRef = session.getPlayerRef();
+        if (playerRef == null || !playerRef.isValid()) {
+            session.setState(SessionState.INTERMISSION);
+            startIntermission(session);
+            return;
+        }
+
+        World world = getPurgeWorld();
+        if (world == null) {
+            session.setState(SessionState.INTERMISSION);
+            startIntermission(session);
+            return;
+        }
+
+        world.execute(() -> {
+            try {
+                Store<EntityStore> store = world.getEntityStore().getStore();
+                if (store == null || session.getState() == SessionState.ENDED) {
+                    return;
+                }
+                Ref<EntityStore> ref = session.getPlayerRef();
+                if (ref == null || !ref.isValid()) {
+                    session.setState(SessionState.INTERMISSION);
+                    startIntermission(session);
+                    return;
+                }
+
+                Player player = store.getComponent(ref, Player.getComponentType());
+                PlayerRef pRef = store.getComponent(ref, PlayerRef.getComponentType());
+                if (player == null || pRef == null) {
+                    session.setState(SessionState.INTERMISSION);
+                    startIntermission(session);
+                    return;
+                }
+
+                Runnable onComplete = () -> {
+                    if (session.getState() == SessionState.ENDED) {
+                        return;
+                    }
+                    session.setState(SessionState.INTERMISSION);
+                    startIntermission(session);
+                };
+
+                PurgeUpgradePickPage page = new PurgeUpgradePickPage(pRef, session, um, offered, onComplete);
+                player.getPageManager().openCustomPage(ref, store, page);
+            } catch (Exception e) {
+                LOGGER.atWarning().log("Failed to show upgrade popup: " + e.getMessage());
+                session.setState(SessionState.INTERMISSION);
+                startIntermission(session);
+            }
+        });
     }
 
     private void handleVictory(PurgeSession session) {
