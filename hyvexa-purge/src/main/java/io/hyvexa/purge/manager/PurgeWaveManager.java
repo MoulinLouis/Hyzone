@@ -47,8 +47,6 @@ public class PurgeWaveManager {
     private static final String PURGE_HP_MODIFIER = "purge_wave_hp";
     private static final String PURGE_THICK_HIDE_MODIFIER = "purge_thick_hide";
     private static final long WAVE_TICK_INTERVAL_MS = 200;
-    private static final long SPAWN_STAGGER_MS = 500;
-    private static final int SPAWN_BATCH_SIZE = 5;
     private static final int INTERMISSION_SECONDS = 5;
     private static final int COUNTDOWN_SECONDS = 5;
     private static final double SPAWN_RANDOM_OFFSET = 2.0;
@@ -142,8 +140,8 @@ public class PurgeWaveManager {
         session.setSpawningComplete(false);
         session.setState(SessionState.SPAWNING);
 
-        sendMessage(session, "-- Wave " + nextWave + " -- (slow " + wave.slowCount()
-                + ", normal " + wave.normalCount() + ", fast " + wave.fastCount() + ")");
+        sendMessage(session, "-- Wave " + nextWave + " -- (" + wave.totalCount() + " zombies, "
+                + wave.spawnDelayMs() + "ms delay, batch " + wave.spawnBatchSize() + ")");
         hudManager.updateWaveStatus(session.getPlayerId(), nextWave, totalCount, totalCount);
 
         List<PurgeZombieVariant> spawnQueue = buildSpawnQueue(wave);
@@ -153,7 +151,7 @@ public class PurgeWaveManager {
             return;
         }
 
-        startSpawning(session, spawnQueue);
+        startSpawning(session, spawnQueue, wave);
         startWaveTick(session);
     }
 
@@ -180,7 +178,7 @@ public class PurgeWaveManager {
         return queue;
     }
 
-    private void startSpawning(PurgeSession session, List<PurgeZombieVariant> spawnQueue) {
+    private void startSpawning(PurgeSession session, List<PurgeZombieVariant> spawnQueue, PurgeWaveDefinition wave) {
         int totalCount = spawnQueue.size();
 
         AtomicInteger remaining = new AtomicInteger(totalCount);
@@ -192,7 +190,7 @@ public class PurgeWaveManager {
                     session.cancelSpawnTask();
                     return;
                 }
-                int batch = Math.min(SPAWN_BATCH_SIZE, remaining.get());
+                int batch = Math.min(wave.spawnBatchSize(), remaining.get());
                 if (batch <= 0) {
                     markSpawningComplete(session);
                     session.cancelSpawnTask();
@@ -214,7 +212,7 @@ public class PurgeWaveManager {
                         double spawnX = currentPos != null ? currentPos[0] : 0;
                         double spawnZ = currentPos != null ? currentPos[2] : 0;
 
-                        int toSpawn = Math.min(SPAWN_BATCH_SIZE, remaining.get());
+                        int toSpawn = Math.min(wave.spawnBatchSize(), remaining.get());
                         for (int i = 0; i < toSpawn && remaining.get() > 0; i++) {
                             int idx = queueIndex.getAndIncrement();
                             if (idx >= spawnQueue.size()) {
@@ -243,7 +241,7 @@ public class PurgeWaveManager {
             } catch (Exception e) {
                 LOGGER.atWarning().log("Spawn task error: " + e.getMessage());
             }
-        }, 0, SPAWN_STAGGER_MS, TimeUnit.MILLISECONDS);
+        }, 0, wave.spawnDelayMs(), TimeUnit.MILLISECONDS);
         session.setSpawnTask(task);
     }
 
