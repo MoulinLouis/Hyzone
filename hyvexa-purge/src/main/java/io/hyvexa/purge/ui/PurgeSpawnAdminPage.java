@@ -20,7 +20,9 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.purge.data.PurgeSpawnPoint;
+import io.hyvexa.purge.manager.PurgeSettingsManager;
 import io.hyvexa.purge.manager.PurgeSpawnPointManager;
+import io.hyvexa.purge.manager.PurgeWaveConfigManager;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
@@ -33,11 +35,18 @@ public class PurgeSpawnAdminPage extends InteractiveCustomUIPage<PurgeSpawnAdmin
     private static final String BUTTON_ADD = "Add";
     private static final String BUTTON_DELETE_PREFIX = "Delete:";
 
+    private final PurgeSettingsManager settingsManager;
     private final PurgeSpawnPointManager spawnPointManager;
+    private final PurgeWaveConfigManager waveConfigManager;
 
-    public PurgeSpawnAdminPage(@Nonnull PlayerRef playerRef, PurgeSpawnPointManager spawnPointManager) {
+    public PurgeSpawnAdminPage(@Nonnull PlayerRef playerRef,
+                               PurgeSpawnPointManager spawnPointManager,
+                               PurgeWaveConfigManager waveConfigManager,
+                               PurgeSettingsManager settingsManager) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, PurgeSpawnAdminData.CODEC);
+        this.settingsManager = settingsManager;
         this.spawnPointManager = spawnPointManager;
+        this.waveConfigManager = waveConfigManager;
     }
 
     @Override
@@ -75,7 +84,7 @@ public class PurgeSpawnAdminPage extends InteractiveCustomUIPage<PurgeSpawnAdmin
             return;
         }
         player.getPageManager().openCustomPage(ref, store,
-                new PurgeAdminIndexPage(playerRef, spawnPointManager));
+                new PurgeAdminIndexPage(playerRef, spawnPointManager, waveConfigManager, settingsManager));
     }
 
     private void handleAdd(Ref<EntityStore> ref, Store<EntityStore> store) {

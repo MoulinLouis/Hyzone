@@ -5,7 +5,7 @@
     "DropList": "Empty",
     "Appearance": "Zombie",
     "MaxHealth": 49,
-    "MaxWalkSpeed": 11,
+    "MaxWalkSpeed": 10,
     "AggroRange": 100,
     "AttackDistance": 1.5,
     "CombatRelativeTurnSpeed": 1.5,

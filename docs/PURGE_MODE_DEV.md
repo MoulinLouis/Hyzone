@@ -29,9 +29,9 @@ All under `hyvexa-purge/src/main/java/io/hyvexa/purge/`:
 
 **Zombie NPC roles (resources):**
 - `Server/NPC/Roles/Purge/Templates/Template_Purge_Zombie.json` (base template, `AggroRange` + `MaxWalkSpeed`)
-- `Server/NPC/Roles/Purge/Purge_Zombie_Slow.json` (`MaxWalkSpeed: 7`)
+- `Server/NPC/Roles/Purge/Purge_Zombie_Slow.json` (`MaxWalkSpeed: 8`)
 - `Server/NPC/Roles/Purge/Purge_Zombie_Normal.json` (`MaxWalkSpeed: 9`)
-- `Server/NPC/Roles/Purge/Purge_Zombie_Fast.json` (`MaxWalkSpeed: 11`)
+- `Server/NPC/Roles/Purge/Purge_Zombie_Fast.json` (`MaxWalkSpeed: 10`)
 - `Server/NPC/Roles/Purge/Purge_Zombie.json` (alias -> `Purge_Zombie_Normal`)
 
 ---

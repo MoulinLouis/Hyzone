@@ -14,27 +14,42 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.purge.manager.PurgeSettingsManager;
 import io.hyvexa.purge.manager.PurgeSpawnPointManager;
+import io.hyvexa.purge.manager.PurgeWaveConfigManager;
 
 import javax.annotation.Nonnull;
 
 public class PurgeAdminIndexPage extends InteractiveCustomUIPage<PurgeAdminIndexPage.PurgeAdminIndexData> {
 
+    private static final String BUTTON_SETTINGS = "Settings";
     private static final String BUTTON_SPAWNS = "Spawns";
+    private static final String BUTTON_WAVES = "Waves";
 
+    private final PurgeSettingsManager settingsManager;
     private final PurgeSpawnPointManager spawnPointManager;
+    private final PurgeWaveConfigManager waveConfigManager;
 
-    public PurgeAdminIndexPage(@Nonnull PlayerRef playerRef, PurgeSpawnPointManager spawnPointManager) {
+    public PurgeAdminIndexPage(@Nonnull PlayerRef playerRef,
+                               PurgeSpawnPointManager spawnPointManager,
+                               PurgeWaveConfigManager waveConfigManager,
+                               PurgeSettingsManager settingsManager) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, PurgeAdminIndexData.CODEC);
+        this.settingsManager = settingsManager;
         this.spawnPointManager = spawnPointManager;
+        this.waveConfigManager = waveConfigManager;
     }
 
     @Override
     public void build(@Nonnull Ref<EntityStore> ref, @Nonnull UICommandBuilder uiCommandBuilder,
                       @Nonnull UIEventBuilder uiEventBuilder, @Nonnull Store<EntityStore> store) {
         uiCommandBuilder.append("Pages/Purge_AdminIndex.ui");
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SettingsButton",
+                EventData.of(PurgeAdminIndexData.KEY_BUTTON, BUTTON_SETTINGS), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SpawnsButton",
                 EventData.of(PurgeAdminIndexData.KEY_BUTTON, BUTTON_SPAWNS), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#WavesButton",
+                EventData.of(PurgeAdminIndexData.KEY_BUTTON, BUTTON_WAVES), false);
     }
 
     @Override
@@ -49,9 +64,19 @@ public class PurgeAdminIndexPage extends InteractiveCustomUIPage<PurgeAdminIndex
         if (player == null || playerRef == null) {
             return;
         }
+        if (BUTTON_SETTINGS.equals(data.button)) {
+            player.getPageManager().openCustomPage(ref, store,
+                    new PurgeSettingsAdminPage(playerRef, spawnPointManager, waveConfigManager, settingsManager));
+            return;
+        }
         if (BUTTON_SPAWNS.equals(data.button)) {
             player.getPageManager().openCustomPage(ref, store,
-                    new PurgeSpawnAdminPage(playerRef, spawnPointManager));
+                    new PurgeSpawnAdminPage(playerRef, spawnPointManager, waveConfigManager, settingsManager));
+            return;
+        }
+        if (BUTTON_WAVES.equals(data.button)) {
+            player.getPageManager().openCustomPage(ref, store,
+                    new PurgeWaveAdminPage(playerRef, spawnPointManager, waveConfigManager, settingsManager));
         }
     }
 
