@@ -14,6 +14,7 @@
 
 ### Changed
 - **Parkour: Map Admin UI height increased** - Increased the Map Admin window height by 50px for more vertical space.
+- **Parkour: Practice start now auto-sets checkpoint** - Enabling practice now creates a practice checkpoint at the player's current position.
 - **Parkour: Leave Practice flow** - Added a separate Leave Practice item (same skin as Start Practice) that exits practice, returns players to their practice start position, and restores pre-practice checkpoint progression.
 - **Parkour: Removed struggle/practice hint popups** - The "Having Trouble?" and "Try Practice Mode" UI popups are fully removed and no longer shown.
 - **Ascend: Replaced Elevation Boost with Auto Ascend** - Skill tree node at tier 12R now skips the ascension popup and cinematic, instantly ascending when reaching 1Dc. Players who had Elevation Boost get Auto Ascend automatically.
@@ -48,6 +49,8 @@
 - **Ascend: Leaderboard system** - New `/ascend leaderboard` command with tabbed rankings for Vexa, Ascensions, and Manual Runs. Includes pagination (50 per page) and player search. Accessible via the Bolt of Stormsilk item.
 
 ### Fixed
+- **Parkour: Practice restart-to-checkpoint no longer resets run timer** - In practice mode, using "Restart to checkpoint" no longer falls back to full run reset when no checkpoint is available.
+- **Parkour: Practice fall respawn no longer resets run timer** - Falling during practice now respawns without rearming run start/timer reset.
 - **Parkour: Practice weapon slot priority** - In practice mode, map weapon items (Sword, Daggers, Glider) are now placed first in the hotbar and other practice items are shifted accordingly.
 - **Parkour: Fall respawn restored** - Fall respawn behavior is working again during parkour runs.
 - **Ascend: Challenge restore no longer rolls back manual run totals** - Exiting/completing a challenge now preserves any `totalManualRuns` gained during the challenge instead of restoring an older snapshot value.
