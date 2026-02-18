@@ -153,12 +153,22 @@ class RunTeleporter {
         boolean flyActive = previous != null && previous.flyActive;
         TransformData practiceCheckpoint = previous != null ? previous.practiceCheckpoint : null;
         Vector3f practiceHeadRotation = previous != null ? previous.practiceHeadRotation : null;
+        TransformData practiceStartPosition = previous != null ? previous.practiceStartPosition : null;
+        int practiceStartCheckpointIndex = previous != null ? previous.practiceStartCheckpointIndex : -1;
+        boolean practiceStartFinishTouched = previous != null && previous.practiceStartFinishTouched;
         RunTracker.ActiveRun run = runTracker.setActiveMap(playerRef.getUuid(), mapId, map.getStart());
         if (run != null) {
             run.practiceEnabled = practiceEnabled;
             run.flyActive = flyActive;
             run.practiceCheckpoint = practiceCheckpoint;
             run.practiceHeadRotation = practiceHeadRotation;
+            run.practiceStartPosition = practiceStartPosition;
+            run.practiceStartCheckpointIndex = practiceStartCheckpointIndex;
+            run.practiceStartFinishTouched = practiceStartFinishTouched;
+            if (previous != null) {
+                run.practiceStartTouchedCheckpoints.addAll(previous.practiceStartTouchedCheckpoints);
+                run.practiceStartCheckpointTouchTimes.putAll(previous.practiceStartCheckpointTouchTimes);
+            }
         }
         Vector3d position = new Vector3d(map.getStart().getX(), map.getStart().getY(), map.getStart().getZ());
         Vector3f rotation = new Vector3f(map.getStart().getRotX(), map.getStart().getRotY(),

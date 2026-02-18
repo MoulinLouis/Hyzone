@@ -12,6 +12,7 @@ public final class ParkourConstants {
     public static final String ITEM_LEAVE = "Ingredient_Void_Essence";
     public static final String ITEM_PRACTICE = "Ingredient_Water_Essence";
     public static final String ITEM_PRACTICE_CHECKPOINT = "Ingredient_Fire_Essence";
+    public static final String ITEM_LEAVE_PRACTICE = "Parkour_Leave_Practice_Block";
     public static final String ITEM_MENU = "Ingredient_Bolt_Prismaloom";
     public static final String ITEM_LEADERBOARD = "WinterHoliday_Snowflake";
     public static final String ITEM_STATS = "Food_Candy_Cane";

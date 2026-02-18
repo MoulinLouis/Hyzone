@@ -11,6 +11,8 @@
 - **Ascend: 4 new challenges** - Challenge 5 (50% Runner Speed + Multiplier Gain), Challenge 6 (all Summit bonuses at 50%), Challenge 7 (maps 4 & 5 locked), Challenge 8 (no Elevation or Summit, reward: +25% to both). Total: 8 challenges.
 
 ### Changed
+- **Parkour: Map Admin UI height increased** - Increased the Map Admin window height by 50px for more vertical space.
+- **Parkour: Leave Practice flow** - Added a separate Leave Practice item (same skin as Start Practice) that exits practice, returns players to their practice start position, and restores pre-practice checkpoint progression.
 - **Ascend: Replaced Elevation Boost with Auto Ascend** - Skill tree node at tier 12R now skips the ascension popup and cinematic, instantly ascending when reaching 1Dc. Players who had Elevation Boost get Auto Ascend automatically.
 - **Ascend: AP Multiplier system** - Each completed challenge grants +1 to AP multiplier (base x1, max x8). Replaces old per-challenge permanent bonuses. Displayed in the Challenges tab.
 - **Ascend: Summit XP softcap at level 1000** - Removed hard cap at level 1000 (unlimited levels). XP cost per level rises from level^2 to level^3 above 1000 — same vexa reaches fewer levels (old 5000 -> ~3591).
@@ -22,7 +24,7 @@
 - **Global: Discord account linking** - Players use `/link` in-game to get a code, enter it on Discord via `/link <code>`, and receive a one-time 100 gem reward on next login. Includes a Discord bot (`discord-bot/`) and shared MySQL tables for cross-system communication.
 
 ### Changed
-- **Ascend: Onboarding alignment overhaul** - Centralized all tutorial/welcome text into AscendOnboardingCopy.java. Fixed Ascension tutorial claiming "8 nodes" (actual: 11) and naming non-existent nodes. Fixed Welcome page saying "4 items" (actual: 5). Replaced placeholder text in all 6 tutorial .ui files. Added pre-reset explainer modal before auto-ascension cinematic. Added fallback tutorial triggers when opening elevation/summit/ascension pages. Standardized terminology to "Ascendancy Tree" + "AP" everywhere.
+- **AscendOnboarding alignment overhaul** - Centralized all tutorial/welcome text into AscendOnboardingCopy.java. Fixed Ascension tutorial claiming "8 nodes" (actual: 11) and naming non-existent nodes. Fixed Welcome page saying "4 items" (actual: 5). Replaced placeholder text in all 6 tutorial .ui files. Added pre-reset explainer modal before auto-ascension cinematic. Added fallback tutorial triggers when opening elevation/summit/ascension pages. Standardized terminology to "Ascendancy Tree" + "AP" everywhere.
 - **Ascend: Summit hard cap at level 1000 with deep cap nerf** - Each summit category now has a maximum level of 1000. Added a "deep cap" at level 500 where growth transitions from √ to ⁴√ (heavy diminishing returns). XP is capped, UI shows "MAX" state, and summiting is blocked once reached.
 - **Ascend: Elevation multiplier buff** - Elevation multiplier changed from level (1:1) to level^1.05 (slightly super-linear). Higher elevation levels now give progressively better multipliers, rewarding deeper elevation pushes.
 - **Ascend: Renamed "Coins" to "Vexa"** - All player-facing text, Java identifiers, UI element IDs, database columns, and documentation updated to use "Vexa" as the currency name
@@ -32,7 +34,7 @@
 ### Added
 - **Global: Gems currency** - Cross-mode currency stored in `hyvexa-core`, displayed on all HUDs with green gem icon. Admin command `/gems` for set/add/remove/check. Groundwork for future cosmetics and vote rewards.
 - **Ascend: Auto-Elevation skill tree node** - New AUTO_ELEVATION node (7 AP) unlocks configurable automatic elevation with multiplier target sequences and optional timer delay. Managed via the Automation page.
-- **Parkour: Advanced HUD toggle** - New "Advanced HUD" ON/OFF toggle in Player Settings that displays a compact panel above the right-side HUD showing real-time orientation (pitch, yaw, roll + cardinal direction), velocity (x, y, z), and speed
+- **Parkour: : Advanced HUD toggle** - New "Advanced HUD" ON/OFF toggle in Player Settings that displays a compact panel above the right-side HUD showing real-time orientation (pitch, yaw, roll + cardinal direction), velocity (x, y, z), and speed
 - **Ascend: My Profile hub page** - Silk item now opens a "My Profile" page with links to Stats, Achievements, and Settings. Also accessible via `/ascend profile`.
 - **Ascend: Expanded achievement system (9 -> 30 achievements)** - 6 categories (Milestones, Runners, Prestige, Skills, Challenges, Secret) with category headers, hidden/secret achievements showing "???" until unlocked, and a Completionist meta-achievement. Fixed First Elevation threshold (was >=1, now >=2).
 - **Ascend: Ascension Challenge system** - Players who unlock the Ascension Challenges skill tree node can start timed challenges that snapshot progress, reset state, and apply malus effects (e.g., blocking Evolution Power). Completing an ascension during a challenge records best time and grants bonus summit XP. Progress is fully restored on completion or quit. Crash recovery via DB-persisted snapshots.

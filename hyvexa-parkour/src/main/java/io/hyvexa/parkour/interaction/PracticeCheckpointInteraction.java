@@ -11,17 +11,15 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.HyvexaPlugin;
-import io.hyvexa.parkour.util.InventoryUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
-import io.hyvexa.parkour.data.Map;
 
 import javax.annotation.Nonnull;
 import java.util.concurrent.CompletableFuture;
 
-public class PracticeInteraction extends SimpleInteraction {
+public class PracticeCheckpointInteraction extends SimpleInteraction {
 
-    public static final BuilderCodec<PracticeInteraction> CODEC =
-            BuilderCodec.builder(PracticeInteraction.class, PracticeInteraction::new).build();
+    public static final BuilderCodec<PracticeCheckpointInteraction> CODEC =
+            BuilderCodec.builder(PracticeCheckpointInteraction.class, PracticeCheckpointInteraction::new).build();
 
     @Override
     public void handle(@Nonnull Ref<EntityStore> ref, boolean firstRun, float time,
@@ -49,20 +47,16 @@ public class PracticeInteraction extends SimpleInteraction {
             if (plugin.getRunTracker() == null) {
                 return;
             }
-            String mapId = plugin.getRunTracker().getActiveMapId(playerRef.getUuid());
-            if (mapId == null) {
-                player.sendMessage(SystemMessageUtils.parkourWarn("Start a run before enabling practice."));
-                return;
-            }
-            Map map = plugin.getMapStore() != null ? plugin.getMapStore().getMap(mapId) : null;
             if (!plugin.getRunTracker().isPracticeEnabled(playerRef.getUuid())) {
-                plugin.getRunTracker().enablePractice(ref, store, playerRef);
-                InventoryUtils.clearAllItems(player);
-                InventoryUtils.giveRunItems(player, map, true);
-                player.sendMessage(SystemMessageUtils.parkourInfo("Practice mode enabled."));
+                player.sendMessage(SystemMessageUtils.parkourWarn("Practice mode must be enabled to set a checkpoint."));
                 return;
             }
-            player.sendMessage(SystemMessageUtils.parkourWarn("Practice mode already enabled. Use Leave practice."));
+            boolean checkpointSet = plugin.getRunTracker().setPracticeCheckpoint(ref, store, playerRef);
+            if (checkpointSet) {
+                player.sendMessage(SystemMessageUtils.parkourInfo("Practice checkpoint set."));
+            } else {
+                player.sendMessage(SystemMessageUtils.parkourWarn("Unable to set a practice checkpoint here."));
+            }
         }, world);
     }
 }

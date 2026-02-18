@@ -32,6 +32,8 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Int
 import io.hyvexa.parkour.interaction.MenuInteraction;
 import io.hyvexa.parkour.interaction.LeaderboardInteraction;
 import io.hyvexa.parkour.interaction.LeaveInteraction;
+import io.hyvexa.parkour.interaction.LeavePracticeInteraction;
+import io.hyvexa.parkour.interaction.PracticeCheckpointInteraction;
 import io.hyvexa.parkour.interaction.PlayerSettingsInteraction;
 import io.hyvexa.parkour.interaction.PracticeInteraction;
 import io.hyvexa.parkour.interaction.ResetInteraction;
@@ -921,6 +923,10 @@ public class HyvexaPlugin extends JavaPlugin {
         registry.register("Parkour_Stats_Interaction", StatsInteraction.class, StatsInteraction.CODEC);
         registry.register("Parkour_Reset_Interaction", ResetInteraction.class, ResetInteraction.CODEC);
         registry.register("Parkour_Practice_Interaction", PracticeInteraction.class, PracticeInteraction.CODEC);
+        registry.register("Parkour_Leave_Practice_Interaction",
+                LeavePracticeInteraction.class, LeavePracticeInteraction.CODEC);
+        registry.register("Parkour_Practice_Checkpoint_Interaction",
+                PracticeCheckpointInteraction.class, PracticeCheckpointInteraction.CODEC);
         registry.register("Parkour_Restart_Checkpoint_Interaction",
                 RestartCheckpointInteraction.class, RestartCheckpointInteraction.CODEC);
         registry.register("Parkour_Leave_Interaction", LeaveInteraction.class, LeaveInteraction.CODEC);

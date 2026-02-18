@@ -11,17 +11,17 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.HyvexaPlugin;
-import io.hyvexa.parkour.util.InventoryUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.parkour.data.Map;
+import io.hyvexa.parkour.util.InventoryUtils;
 
 import javax.annotation.Nonnull;
 import java.util.concurrent.CompletableFuture;
 
-public class PracticeInteraction extends SimpleInteraction {
+public class LeavePracticeInteraction extends SimpleInteraction {
 
-    public static final BuilderCodec<PracticeInteraction> CODEC =
-            BuilderCodec.builder(PracticeInteraction.class, PracticeInteraction::new).build();
+    public static final BuilderCodec<LeavePracticeInteraction> CODEC =
+            BuilderCodec.builder(LeavePracticeInteraction.class, LeavePracticeInteraction::new).build();
 
     @Override
     public void handle(@Nonnull Ref<EntityStore> ref, boolean firstRun, float time,
@@ -42,27 +42,23 @@ public class PracticeInteraction extends SimpleInteraction {
             return;
         }
         CompletableFuture.runAsync(() -> {
-            if (plugin.getDuelTracker() != null && plugin.getDuelTracker().isInMatch(playerRef.getUuid())) {
-                player.sendMessage(SystemMessageUtils.parkourWarn("Practice is unavailable during duels."));
-                return;
-            }
             if (plugin.getRunTracker() == null) {
                 return;
             }
-            String mapId = plugin.getRunTracker().getActiveMapId(playerRef.getUuid());
-            if (mapId == null) {
-                player.sendMessage(SystemMessageUtils.parkourWarn("Start a run before enabling practice."));
-                return;
-            }
-            Map map = plugin.getMapStore() != null ? plugin.getMapStore().getMap(mapId) : null;
             if (!plugin.getRunTracker().isPracticeEnabled(playerRef.getUuid())) {
-                plugin.getRunTracker().enablePractice(ref, store, playerRef);
-                InventoryUtils.clearAllItems(player);
-                InventoryUtils.giveRunItems(player, map, true);
-                player.sendMessage(SystemMessageUtils.parkourInfo("Practice mode enabled."));
+                player.sendMessage(SystemMessageUtils.parkourWarn("Practice mode is not enabled."));
                 return;
             }
-            player.sendMessage(SystemMessageUtils.parkourWarn("Practice mode already enabled. Use Leave practice."));
+            boolean disabled = plugin.getRunTracker().disablePracticeAndRestore(ref, store, playerRef);
+            if (!disabled) {
+                player.sendMessage(SystemMessageUtils.parkourWarn("Unable to leave practice mode."));
+                return;
+            }
+            String mapId = plugin.getRunTracker().getActiveMapId(playerRef.getUuid());
+            Map map = mapId != null && plugin.getMapStore() != null ? plugin.getMapStore().getMap(mapId) : null;
+            InventoryUtils.clearAllItems(player);
+            InventoryUtils.giveRunItems(player, map, false);
+            player.sendMessage(SystemMessageUtils.parkourInfo("Practice mode disabled. Checkpoint progress restored."));
         }, world);
     }
 }
