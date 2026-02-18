@@ -541,6 +541,20 @@ public class AscendPlayerStore {
             int newCount = ascensionManager.performAscension(playerId);
             if (newCount < 0) return;
 
+            // Auto-buy map 1 runner so the player doesn't need any manual action
+            AscendMapStore mapStore = plugin.getMapStore();
+            if (mapStore != null) {
+                List<AscendMap> maps = mapStore.listMapsSorted();
+                if (!maps.isEmpty()) {
+                    String firstMapId = maps.get(0).getId();
+                    setMapUnlocked(playerId, firstMapId, true);
+                    io.hyvexa.common.ghost.GhostStore ghostStore = plugin.getGhostStore();
+                    if (ghostStore != null && ghostStore.getRecording(playerId, firstMapId) != null) {
+                        setHasRobot(playerId, firstMapId, true);
+                    }
+                }
+            }
+
             // Chat messages
             player.sendMessage(com.hypixel.hytale.server.core.Message.raw(
                 "[Ascension] You have Ascended! (x" + newCount + ")")
