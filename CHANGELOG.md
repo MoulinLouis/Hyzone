@@ -33,6 +33,7 @@
 - **RunOrFall: Edge-standing block bypass fixed** - Blocks now break from the player's full foot footprint, preventing side/edge standing exploits.
 - **RunOrFall: Single-block priority breaking** - A player now queues only one block at a time, always the closest block first.
 - **RunOrFall: My Stats item routing** - `Food_Candy_Cane` now opens RunOrFall Stats when used in the RunOrFall world (instead of Parkour Stats).
+- **RunOrFall: /rof status permission** - `/rof status` is now restricted to OP/admin users.
 - **Parkour: Fly-zone warning now only applies with practice fly enabled** - The "You don't have the right to go there." rollback protection no longer triggers when practice is enabled but fly is OFF.
 - **Purge: Deep-dive stability pass** - Fixed spawn/end race leaks, moved session teardown entity/inventory mutations onto world thread cleanup, replaced unsupported upgrade-card accent runtime background writes with visibility variants, added world-transfer HUD/loadout reconciliation, batched per-tick world work, improved purge error observability, and cleaned dead code/resources.
 

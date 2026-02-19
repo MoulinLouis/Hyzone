@@ -95,7 +95,12 @@ public class RunOrFallCommand extends AbstractAsyncCommand {
         switch (sub) {
             case "join" -> gameManager.joinLobby(playerId, world);
             case "leave" -> gameManager.leaveLobby(playerId, true);
-            case "status" -> sendStatus(player);
+            case "status" -> {
+                if (!requireOp(player)) {
+                    return;
+                }
+                sendStatus(player);
+            }
             case "admin" -> openAdminMenu(player, ref, store, playerRef);
             case "start" -> {
                 if (!requireOp(player)) {
