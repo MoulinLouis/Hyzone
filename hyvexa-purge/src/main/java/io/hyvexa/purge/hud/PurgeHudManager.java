@@ -29,6 +29,7 @@ public class PurgeHudManager {
         purgeHuds.put(playerId, hud);
         MultiHudBridge.setCustomHud(player, playerRef, hud);
         player.getHudManager().hideHudComponents(playerRef, HudComponent.Compass);
+        player.getHudManager().showHudComponents(playerRef, HudComponent.Health, HudComponent.Stamina);
         MultiHudBridge.showIfNeeded(hud);
     }
 
