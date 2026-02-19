@@ -5,6 +5,7 @@
 ### Added
 - **RunOrFall: New game mode module** - Added `hyvexa-runorfall` with lobby queue, fixed 10s pre-game countdown, destructible platform cuboids, void elimination, and last-player-standing winner flow via `/rof` commands.
 - **RunOrFall: Admin setup UI** - Added `/rof admin` page to configure lobby/spawns/platforms, tune void Y and break delay, and control start/stop from buttons.
+- **RunOrFall: Player stats page** - Added a RunOrFall stats UI (Win, Loose, Winrate, Best win streak, Longest time survived) opened from `Food_Candy_Cane`, with SQL persistence in `runorfall_player_stats`.
 - **Ascend: Cat Collector easter egg** - 5 hidden cat NPCs in Ascend world. Players find them via NPC dialog, tracked as a secret achievement (X/5 progress).
 - **Parkour: Map active toggle** - Admins can disable maps without deleting them via `/pk admin` Maps panel. Inactive maps block both start trigger and map selector entry with a warning message. New `active` column in `maps` table (defaults to TRUE).
 - **Purge: Configurable wave compositions** - `/purge admin` now has a Waves panel where staff define per-wave slow/normal/fast zombie counts. Sessions only start when at least one wave exists, spawns are distributed across configured spawn points, and clearing the final configured wave now ends with a win message.
@@ -31,6 +32,7 @@
 - **RunOrFall: Solo test start support** - `/rof start` can now launch with one player for testing, without immediately ending the round.
 - **RunOrFall: Edge-standing block bypass fixed** - Blocks now break from the player's full foot footprint, preventing side/edge standing exploits.
 - **RunOrFall: Single-block priority breaking** - A player now queues only one block at a time, always the closest block first.
+- **RunOrFall: My Stats item routing** - `Food_Candy_Cane` now opens RunOrFall Stats when used in the RunOrFall world (instead of Parkour Stats).
 - **Parkour: Fly-zone warning now only applies with practice fly enabled** - The "You don't have the right to go there." rollback protection no longer triggers when practice is enabled but fly is OFF.
 - **Purge: Deep-dive stability pass** - Fixed spawn/end race leaks, moved session teardown entity/inventory mutations onto world thread cleanup, replaced unsupported upgrade-card accent runtime background writes with visibility variants, added world-transfer HUD/loadout reconciliation, batched per-tick world work, improved purge error observability, and cleaned dead code/resources.
 

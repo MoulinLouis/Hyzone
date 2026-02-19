@@ -17,7 +17,6 @@ import javax.annotation.Nonnull;
 import java.util.concurrent.CompletableFuture;
 
 public class PracticeCheckpointInteraction extends SimpleInteraction {
-
     public static final BuilderCodec<PracticeCheckpointInteraction> CODEC =
             BuilderCodec.builder(PracticeCheckpointInteraction.class, PracticeCheckpointInteraction::new).build();
 
