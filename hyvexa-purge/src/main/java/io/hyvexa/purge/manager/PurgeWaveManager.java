@@ -141,11 +141,6 @@ public class PurgeWaveManager {
         session.setSpawningComplete(false);
         session.setState(SessionState.SPAWNING);
 
-        // Remove damage bypass so players can take damage during the wave
-        for (UUID pid : session.getConnectedParticipants()) {
-            DamageBypassRegistry.remove(pid);
-        }
-
         sendMessageToAll(session, "-- Wave " + nextWave + " -- (" + wave.totalCount() + " zombies, "
                 + wave.spawnDelayMs() + "ms delay, batch " + wave.spawnBatchSize() + ")");
         for (UUID pid : session.getConnectedParticipants()) {
