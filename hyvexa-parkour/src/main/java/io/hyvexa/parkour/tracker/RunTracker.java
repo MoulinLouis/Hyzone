@@ -515,7 +515,7 @@ public class RunTracker {
         if (checkLeaveTrigger(ref, store, player, playerRef, position, map, buffer)) {
             return;
         }
-        if (run.practiceEnabled && map.hasFlyZone()) {
+        if (run.practiceEnabled && run.flyActive && map.hasFlyZone()) {
             if (!isInsideFlyZone(position, map)) {
                 long now = System.currentTimeMillis();
                 if (now - run.lastFlyZoneRollbackMs >= ParkourConstants.FLY_ZONE_ROLLBACK_THROTTLE_MS) {

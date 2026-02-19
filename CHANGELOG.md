@@ -23,6 +23,7 @@
 - **Ascend: Summit XP softcap at level 1000** - Removed hard cap at level 1000 (unlimited levels). XP cost per level rises from level^2 to level^3 above 1000 — same vexa reaches fewer levels (old 5000 -> ~3591).
 
 ### Fixed
+- **Parkour: Fly-zone warning now only applies with practice fly enabled** - The "You don't have the right to go there." rollback protection no longer triggers when practice is enabled but fly is OFF.
 - **Purge: Deep-dive stability pass** - Fixed spawn/end race leaks, moved session teardown entity/inventory mutations onto world thread cleanup, replaced unsupported upgrade-card accent runtime background writes with visibility variants, added world-transfer HUD/loadout reconciliation, batched per-tick world work, improved purge error observability, and cleaned dead code/resources.
 
 ### Added
