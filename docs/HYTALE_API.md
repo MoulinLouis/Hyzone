@@ -82,6 +82,47 @@ world.execute(() -> {
 });
 ```
 
+### Plugin NPC Variant Templates Are Broken
+
+**Plugin-defined Variant role templates that reference vanilla Abstract templates fail builder validation.** This is a Hytale engine limitation — the `BuilderRoleVariant.validate()` delegates to the parent Abstract template's validate, which runs in a context plugin variants cannot satisfy.
+
+```json
+// ❌ This in a plugin's Server/NPC/Roles/ will ALWAYS fail validation:
+{
+  "Type": "Variant",
+  "Reference": "Template_Aggressive_Zombies",
+  "Modify": { "MaxHealth": 49 }
+}
+// Error: "Builder MyCustomZombie failed validation!"
+```
+
+**Workaround:** Spawn vanilla NPC types directly and apply customizations in code:
+```java
+// Spawn vanilla zombie
+Object result = npcPlugin.spawnNPC(store, "Zombie", "", position, rotation);
+
+// Override HP via EntityStatMap modifier (public API)
+EntityStatMap statMap = store.getComponent(ref, EntityStatMap.getComponentType());
+statMap.putModifier(healthIndex, "my_hp_mod",
+    new StaticModifier(Modifier.ModifierTarget.MAX,
+        StaticModifier.CalculationType.MULTIPLICATIVE, 0.5f));
+
+// Override walk speed via reflection (no public API)
+var controller = npcEntity.getRole().getActiveMotionController();
+Field field = controller.getClass().getDeclaredField("horizontalSpeedMultiplier");
+field.setAccessible(true);
+field.setDouble(controller, 0.8);
+
+// Override drop list via reflection (no public API, field is final)
+Field dropField = npcEntity.getRole().getClass().getDeclaredField("dropListId");
+dropField.setAccessible(true);
+dropField.set(npcEntity.getRole(), "Empty");
+
+// Override damage via DamageEventSystem (intercept and setAmount)
+```
+
+**Vanilla NPC types that work with `spawnNPC()`:** `"Zombie"`, `"Zombie_Burnt"`, `"Zombie_Frost"`, `"Zombie_Sand"`, `"Kweebec_Seedling"`, etc. — any concrete (non-Abstract) role from `Assets.zip`.
+
 ### Common Gotchas Summary
 
 1. **Entity refs expire** - Always check `ref.isValid()` before use

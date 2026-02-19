@@ -51,6 +51,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class PurgeWaveManager {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
+    private static final String VANILLA_ZOMBIE_NPC_TYPE = "Zombie";
     private static final String PURGE_HP_MODIFIER = "purge_wave_hp";
     private static final long WAVE_TICK_INTERVAL_MS = 200;
     private static final int INTERMISSION_SECONDS = 5;
@@ -292,72 +293,111 @@ public class PurgeWaveManager {
         Vector3d position = new Vector3d(x, point.y(), z);
         Vector3f rotation = new Vector3f(0, point.yaw(), 0);
 
-        for (String npcType : candidateNpcTypes(variant)) {
+        try {
+            Object result = npcPlugin.spawnNPC(store, VANILLA_ZOMBIE_NPC_TYPE, "", position, rotation);
+            if (result == null) {
+                return false;
+            }
+            Ref<EntityStore> entityRef = extractEntityRef(result);
+            if (entityRef == null) {
+                return false;
+            }
+            if (session.getState() == SessionState.ENDED) {
+                removeZombieEntity(store, entityRef);
+                return false;
+            }
+            session.addAliveZombie(entityRef, variant);
+
+            // Apply wave HP scaling + show HP on nameplate
+            applyZombieStats(store, entityRef, variant, wave);
+
+            // Apply speed multiplier + disable drops
+            applySpeedMultiplier(store, entityRef, variant);
+            clearDropList(store, entityRef);
+
+            // Force aggro on a random alive player
             try {
-                Object result = npcPlugin.spawnNPC(store, npcType, "", position, rotation);
-                if (result != null) {
-                    Ref<EntityStore> entityRef = extractEntityRef(result);
-                    if (entityRef != null) {
-                        if (session.getState() == SessionState.ENDED) {
-                            removeZombieEntity(store, entityRef);
-                            return false;
-                        }
-                        session.addAliveZombie(entityRef);
-                        // Apply wave HP scaling + show HP on nameplate
-                        try {
-                            EntityStatMap statMap = store.getComponent(entityRef, EntityStatMap.getComponentType());
-                            Nameplate nameplate = store.ensureAndGetComponent(entityRef, Nameplate.getComponentType());
-                            if (statMap != null) {
-                                int healthIndex = DefaultEntityStatTypes.getHealth();
-                                double hpMult = hpMultiplier(wave);
-                                if (hpMult > 1.0) {
-                                    statMap.putModifier(healthIndex, PURGE_HP_MODIFIER,
-                                            new StaticModifier(Modifier.ModifierTarget.MAX,
-                                                    StaticModifier.CalculationType.MULTIPLICATIVE, (float) hpMult));
-                                    statMap.update();
-                                }
-                                statMap.maximizeStatValue(healthIndex);
-                                EntityStatValue health = statMap.get(healthIndex);
-                                if (health != null) {
-                                    int hp = Math.round(health.getMax());
-                                    nameplate.setText(hp + " / " + hp);
-                                }
-                            } else {
-                                nameplate.setText("");
-                            }
-                        } catch (Exception e) {
-                            LOGGER.atWarning().withCause(e).log("Failed to apply zombie stats");
-                        }
-                        // Force aggro on a random alive player
-                        try {
-                            NPCEntity npcEntity = store.getComponent(entityRef, NPCEntity.getComponentType());
-                            if (npcEntity != null && npcEntity.getRole() != null) {
-                                Ref<EntityStore> targetRef = session.getRandomAlivePlayerRef();
-                                if (targetRef != null) {
-                                    npcEntity.getRole().setMarkedTarget("LockedTarget", targetRef);
-                                    npcEntity.getRole().getStateSupport().setState(entityRef, "Angry", "", store);
-                                }
-                            }
-                        } catch (Exception e) {
-                            LOGGER.atWarning().withCause(e).log("Failed to set zombie aggro");
-                        }
-                        return true;
+                NPCEntity npcEntity = store.getComponent(entityRef, NPCEntity.getComponentType());
+                if (npcEntity != null && npcEntity.getRole() != null) {
+                    Ref<EntityStore> targetRef = session.getRandomAlivePlayerRef();
+                    if (targetRef != null) {
+                        npcEntity.getRole().setMarkedTarget("LockedTarget", targetRef);
+                        npcEntity.getRole().getStateSupport().setState(entityRef, "Angry", "", store);
                     }
                 }
             } catch (Exception e) {
-                LOGGER.atWarning().withCause(e).log("Failed to spawn zombie with role "
-                        + npcType + " (variant " + variant.name() + ")");
+                LOGGER.atWarning().withCause(e).log("Failed to set zombie aggro");
             }
+            return true;
+        } catch (Exception e) {
+            LOGGER.atWarning().withCause(e).log("Failed to spawn zombie (variant " + variant.name() + ")");
         }
         return false;
     }
 
-    private List<String> candidateNpcTypes(PurgeZombieVariant variant) {
-        return switch (variant) {
-            case SLOW -> List.of(PurgeZombieVariant.SLOW.getNpcType(), PurgeZombieVariant.NORMAL.getNpcType());
-            case NORMAL -> List.of(PurgeZombieVariant.NORMAL.getNpcType(), "Purge_Zombie_Normal");
-            case FAST -> List.of(PurgeZombieVariant.FAST.getNpcType(), PurgeZombieVariant.NORMAL.getNpcType());
-        };
+    private void applyZombieStats(Store<EntityStore> store, Ref<EntityStore> entityRef,
+                                   PurgeZombieVariant variant, int wave) {
+        try {
+            EntityStatMap statMap = store.getComponent(entityRef, EntityStatMap.getComponentType());
+            Nameplate nameplate = store.ensureAndGetComponent(entityRef, Nameplate.getComponentType());
+            if (statMap != null) {
+                int healthIndex = DefaultEntityStatTypes.getHealth();
+                double hpMult = hpMultiplier(wave);
+                if (hpMult > 1.0) {
+                    statMap.putModifier(healthIndex, PURGE_HP_MODIFIER,
+                            new StaticModifier(Modifier.ModifierTarget.MAX,
+                                    StaticModifier.CalculationType.MULTIPLICATIVE, (float) hpMult));
+                    statMap.update();
+                }
+                statMap.maximizeStatValue(healthIndex);
+                EntityStatValue health = statMap.get(healthIndex);
+                if (health != null) {
+                    int hp = Math.round(health.getMax());
+                    nameplate.setText(hp + " / " + hp);
+                }
+            } else {
+                nameplate.setText("");
+            }
+        } catch (Exception e) {
+            LOGGER.atWarning().withCause(e).log("Failed to apply zombie stats");
+        }
+    }
+
+    private void applySpeedMultiplier(Store<EntityStore> store, Ref<EntityStore> entityRef,
+                                       PurgeZombieVariant variant) {
+        if (variant.getSpeedMultiplier() == 1.0) {
+            return;
+        }
+        try {
+            NPCEntity npcEntity = store.getComponent(entityRef, NPCEntity.getComponentType());
+            if (npcEntity == null || npcEntity.getRole() == null) {
+                return;
+            }
+            var controller = npcEntity.getRole().getActiveMotionController();
+            if (controller == null) {
+                return;
+            }
+            // MotionControllerWalk.horizontalSpeedMultiplier is a non-final protected field
+            java.lang.reflect.Field field = controller.getClass().getDeclaredField("horizontalSpeedMultiplier");
+            field.setAccessible(true);
+            field.setDouble(controller, variant.getSpeedMultiplier());
+        } catch (Exception e) {
+            LOGGER.atFine().log("Failed to apply speed multiplier for " + variant.name() + ": " + e.getMessage());
+        }
+    }
+
+    private void clearDropList(Store<EntityStore> store, Ref<EntityStore> entityRef) {
+        try {
+            NPCEntity npcEntity = store.getComponent(entityRef, NPCEntity.getComponentType());
+            if (npcEntity == null || npcEntity.getRole() == null) {
+                return;
+            }
+            java.lang.reflect.Field field = npcEntity.getRole().getClass().getDeclaredField("dropListId");
+            field.setAccessible(true);
+            field.set(npcEntity.getRole(), "Empty");
+        } catch (Exception e) {
+            LOGGER.atFine().log("Failed to clear drop list: " + e.getMessage());
+        }
     }
 
     private void startWaveTick(PurgeSession session) {

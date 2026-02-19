@@ -28,7 +28,7 @@ All under `hyvexa-purge/src/main/java/io/hyvexa/purge/`:
 | `data/PurgePlayerStore.java` | Player stats (singleton) | Lazy-load, immediate writes, single cache |
 | `data/PurgePlayerStats.java` | Stats POJO | bestWave, totalKills, totalSessions |
 | `data/PurgeSpawnPoint.java` | Record | `record(int id, double x, double y, double z, float yaw)` |
-| `data/PurgeZombieVariant.java` | Enum | SLOW/NORMAL/FAST with NPC type names |
+| `data/PurgeZombieVariant.java` | Enum | SLOW/NORMAL/FAST with baseHealth, baseDamage, speedMultiplier |
 | `data/PurgeLocation.java` | Record | Location data for spawn points |
 | `command/PurgeCommand.java` | `/purge` | start, stop, stats, admin |
 | `command/PurgeSpawnCommand.java` | `/purgespawn` | add, remove, list, clear (OP only) |
@@ -40,14 +40,19 @@ All under `hyvexa-purge/src/main/java/io/hyvexa/purge/`:
 
 **UI file:** `hyvexa-purge/src/main/resources/Common/UI/Custom/Pages/Purge_RunHud.ui`
 
-**Zombie NPC roles (resources):**
-All variants extend the **vanilla** `Template_Aggressive_Zombies` (Hytale built-in). Do NOT use custom abstract templates — they fail builder validation.
-- `Server/NPC/Roles/Purge/Purge_Zombie.json` — default variant (NORMAL speed)
-- `Server/NPC/Roles/Purge/Purge_Zombie_Normal.json` — same as Purge_Zombie (fallback)
-- `Server/NPC/Roles/Purge/Purge_Zombie_Slow.json` — `MaxWalkSpeed: 8`
-- `Server/NPC/Roles/Purge/Purge_Zombie_Fast.json` — `MaxWalkSpeed: 11`
+**Zombie spawning (code-driven, no custom JSON templates):**
+All zombies are spawned as vanilla `"Zombie"` NPC type. HP, damage, speed, and drops are overridden in code after spawning. See "NPC Role Template Limitations" section below for why.
 
-Each variant sets: `DropList: "Empty"`, `Appearance: "Zombie"`, `MaxHealth: 49`, `_InteractionVars` (18 physical melee damage). Only Slow/Fast override `MaxWalkSpeed`.
+Customization lives in `PurgeZombieVariant` enum:
+- `SLOW` — baseHealth: 49, baseDamage: 20, speedMultiplier: 8/9
+- `NORMAL` — baseHealth: 49, baseDamage: 20, speedMultiplier: 1.0
+- `FAST` — baseHealth: 49, baseDamage: 20, speedMultiplier: 11/9
+
+Post-spawn overrides (in `PurgeWaveManager.spawnZombie()`):
+1. **HP**: `EntityStatMap` modifier (`PURGE_HP_MODIFIER`, multiplicative wave scaling)
+2. **Damage**: `PurgeDamageModifierSystem` intercepts damage events, forces per-variant `baseDamage`
+3. **Speed**: Reflection on `MotionControllerWalk.horizontalSpeedMultiplier` (non-final protected field)
+4. **Drops**: Reflection on `Role.dropListId` (final field) → set to `"Empty"`
 
 ---
 
@@ -110,7 +115,7 @@ Plugin creates in this order:
 **Gameplay (PurgeWaveManager):**
 | Constant | Value | Controls |
 |----------|-------|----------|
-| _(no constant)_ | `candidateNpcTypes()` | Variant-specific NPC type + fallback |
+| `VANILLA_ZOMBIE_NPC_TYPE` | `"Zombie"` | Vanilla NPC type used for all variants |
 | `WAVE_TICK_INTERVAL_MS` | `200` | Death detection polling rate |
 | `INTERMISSION_SECONDS` | `5` | Rest between waves |
 | `COUNTDOWN_SECONDS` | `5` | Pre-game countdown |
@@ -282,7 +287,7 @@ All tables use `ENGINE=InnoDB`, are created with `CREATE TABLE IF NOT EXISTS`, a
 
 | Gap | Location | Impact |
 |-----|----------|--------|
-| Wave-native speed/damage scaling | `PurgeWaveManager` | WaveManager only applies HP scaling; movement speed remains role-defined, no native damage curve |
+| Wave-native damage scaling | `PurgeZombieVariant` / `PurgeDamageModifierSystem` | Damage is flat per-variant (20f for all). No wave-based damage curve yet |
 | Player healing on intermission | `PurgeWaveManager.startIntermission()` | No per-intermission heal is wired (explicit TODO in code) |
 | Player death detection | `PurgeWaveManager.startWaveTick()` / `updatePlayerHealthHud()` | Hybrid polling model (200ms session tick + stat checks), not event-driven |
 | Automatic ammo refill between waves | Not implemented | Ammo increases only via `AMMO_CACHE` upgrade (+60), no baseline inter-wave refill |
@@ -296,27 +301,40 @@ All tables use `ENGINE=InnoDB`, are created with `CREATE TABLE IF NOT EXISTS`, a
 3. Each tick: read player position, pick spawn point via `selectSpawnPoint(playerX, playerZ)`
 4. Spawn point selection: filter >= 15 blocks away, weight by distance², random pick
 5. Apply +/- 2 block random X/Z offset to chosen point
-6. `candidateNpcTypes(variant)` returns NPC type + fallback (e.g. SLOW -> `["Purge_Zombie_Slow", "Purge_Zombie"]`)
-7. `world.execute(() -> npcPlugin.spawnNPC(store, npcType, "", position, rotation))`
-8. Extract `Ref<EntityStore>` from result via reflection (getFirst/getLeft/getKey/first/left pattern)
-9. Apply wave HP scaling via `EntityStatMap` modifier; optionally apply Thick Hide zombie-health modifier; set nameplate to `"HP / HP"`
-10. Force aggro: `npcEntity.getRole().setMarkedTarget("LockedTarget", playerRef)` + set state "Angry"
-11. Add to `session.aliveZombies`
-12. When all spawned: set `spawningComplete = true`, transition SPAWNING → COMBAT
-13. Wave clear path: `onWaveComplete()` → `UPGRADE_PICK` page (if next wave exists) → INTERMISSION → next wave
+6. `world.execute(() -> npcPlugin.spawnNPC(store, "Zombie", "", position, rotation))`
+7. Extract `Ref<EntityStore>` from result via reflection (getFirst/getLeft/getKey/first/left pattern)
+8. `session.addAliveZombie(entityRef, variant)` — tracks ref + variant for damage lookup
+9. `applyZombieStats()` — wave HP scaling via `EntityStatMap` modifier, set nameplate to `"HP / HP"`
+10. `applySpeedMultiplier()` — reflection on `MotionControllerWalk.horizontalSpeedMultiplier`
+11. `clearDropList()` — reflection on `Role.dropListId` → `"Empty"`
+12. Force aggro: `npcEntity.getRole().setMarkedTarget("LockedTarget", playerRef)` + set state "Angry"
+13. When all spawned: set `spawningComplete = true`, transition SPAWNING → COMBAT
+14. Wave clear path: `onWaveComplete()` → `UPGRADE_PICK` page (if next wave exists) → INTERMISSION → next wave
 
-### NPC Role Template Rules
+### NPC Role Template Limitations (Hytale Engine)
 
-Zombie variants use Hytale's `Variant` / `Abstract` template system:
-```json
-{
-  "Type": "Variant",
-  "Reference": "Template_Aggressive_Zombies",
-  "Modify": { "MaxHealth": 49, "MaxWalkSpeed": 8, ... }
-}
+**Plugin-defined Variant templates DO NOT WORK.** Any JSON file in a plugin's asset pack using `"Type": "Variant"` with `"Reference": "Template_Aggressive_Zombies"` (or any vanilla Abstract template) will fail builder validation at load time:
+
+```
+IllegalStateException: Builder Purge_Zombie_Slow failed validation!
 ```
 
-**Critical**: Always reference **vanilla** abstract templates (e.g. `Template_Aggressive_Zombies`). Custom abstract templates fail builder validation at spawn time. The `Modify` block overrides properties from the vanilla template.
+**What was tried and failed:**
+1. Minimal `Modify` block (just `MaxHealth`) — still fails
+2. Matching vanilla `Zombie.json` structure exactly (with `Parameters`, `NameTranslationKey`, `IsMemory`) — still fails
+3. Stripping all optional fields — still fails
+
+**Root cause:** `BuilderRoleVariant.validate()` delegates to the referenced Abstract template's validate method. The Abstract template's validation runs in a context that plugin variants cannot satisfy (likely related to asset loading order or scope restrictions).
+
+**Workaround:** Spawn vanilla NPC types directly (e.g. `"Zombie"`) and apply all customizations in code:
+- HP: `EntityStatMap` modifiers (public API)
+- Speed: Reflection on `MotionControllerWalk.horizontalSpeedMultiplier` (protected, non-final)
+- Drops: Reflection on `Role.dropListId` (protected, final)
+- Damage: Intercept via `DamageEventSystem` and override `event.setAmount()`
+
+**Vanilla zombie reference** (from `Assets.zip`, `Server/NPC/Roles/Undead/Zombie/Zombie.json`):
+- HP: 49, Melee damage: 18 physical, Walk speed: 9 (from Abstract template)
+- Drop list: `"Drop_Zombie"`, Appearance: `"Zombie"`
 
 ---
 

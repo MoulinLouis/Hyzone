@@ -23,6 +23,7 @@ public class PurgeSession {
     private volatile SessionState state = SessionState.COUNTDOWN;
     private volatile boolean spawningComplete = false;
     private final Set<Ref<EntityStore>> aliveZombies = ConcurrentHashMap.newKeySet();
+    private final ConcurrentHashMap<Ref<EntityStore>, PurgeZombieVariant> zombieVariants = new ConcurrentHashMap<>();
     private volatile ScheduledFuture<?> waveTick;
     private volatile ScheduledFuture<?> spawnTask;
     private volatile ScheduledFuture<?> intermissionTask;
@@ -210,6 +211,17 @@ public class PurgeSession {
 
     public void addAliveZombie(Ref<EntityStore> ref) {
         aliveZombies.add(ref);
+    }
+
+    public void addAliveZombie(Ref<EntityStore> ref, PurgeZombieVariant variant) {
+        aliveZombies.add(ref);
+        if (variant != null) {
+            zombieVariants.put(ref, variant);
+        }
+    }
+
+    public PurgeZombieVariant getZombieVariant(Ref<EntityStore> ref) {
+        return ref != null ? zombieVariants.get(ref) : null;
     }
 
     // --- Task scheduling ---
