@@ -1,0 +1,118 @@
+package io.hyvexa.purge.system;
+
+import com.hypixel.hytale.component.ArchetypeChunk;
+import com.hypixel.hytale.component.CommandBuffer;
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.component.SystemGroup;
+import com.hypixel.hytale.component.query.Query;
+import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.entity.knockback.KnockbackComponent;
+import com.hypixel.hytale.server.core.modules.entity.damage.Damage;
+import com.hypixel.hytale.server.core.modules.entity.damage.DamageEventSystem;
+import com.hypixel.hytale.server.core.modules.entity.damage.DamageModule;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.purge.data.PurgeSession;
+import io.hyvexa.purge.data.PurgeSessionPlayerState;
+import io.hyvexa.purge.data.PurgeUpgradeState;
+import io.hyvexa.purge.data.PurgeUpgradeType;
+import io.hyvexa.purge.manager.PurgeSessionManager;
+
+import java.util.UUID;
+
+public class PurgeDamageModifierSystem extends DamageEventSystem {
+
+    private final PurgeSessionManager sessionManager;
+    private volatile SystemGroup<EntityStore> cachedGroup;
+
+    public PurgeDamageModifierSystem(PurgeSessionManager sessionManager) {
+        this.sessionManager = sessionManager;
+    }
+
+    @Override
+    public void handle(int entityId, ArchetypeChunk<EntityStore> chunk, Store<EntityStore> store,
+                       CommandBuffer<EntityStore> buffer, Damage event) {
+        // Only process damage to players
+        Player target = chunk.getComponent(entityId, Player.getComponentType());
+        if (target == null) {
+            return;
+        }
+        PlayerRef targetPlayerRef = chunk.getComponent(entityId, PlayerRef.getComponentType());
+        if (targetPlayerRef == null) {
+            return;
+        }
+        UUID targetId = targetPlayerRef.getUuid();
+        if (targetId == null) {
+            return;
+        }
+
+        PurgeSession session = sessionManager.getSessionByPlayer(targetId);
+        if (session == null) {
+            return;
+        }
+
+        PurgeSessionPlayerState targetState = session.getPlayerState(targetId);
+        if (targetState == null) {
+            return;
+        }
+
+        // 1. Friendly fire: if source is a player in the same session -> cancel
+        Damage.Source source = event.getSource();
+        if (source instanceof Damage.EntitySource entitySource) {
+            Ref<EntityStore> sourceRef = entitySource.getRef();
+            if (sourceRef != null && sourceRef.isValid()) {
+                PlayerRef sourcePlayerRef = store.getComponent(sourceRef, PlayerRef.getComponentType());
+                if (sourcePlayerRef != null) {
+                    UUID sourceId = sourcePlayerRef.getUuid();
+                    if (sourceId != null && session.getParticipants().contains(sourceId)) {
+                        cancelDamage(event, buffer, chunk, entityId);
+                        return;
+                    }
+                }
+            }
+        }
+
+        // 2. Dead immunity: if target is dead this wave -> cancel
+        if (targetState.isDeadThisWave()) {
+            cancelDamage(event, buffer, chunk, entityId);
+            return;
+        }
+
+        // 3. THICK_HIDE reduction: reduce damage for alive players
+        if (targetState.isAlive()) {
+            PurgeUpgradeState upgradeState = targetState.getUpgradeState();
+            int stacks = upgradeState.getStacks(PurgeUpgradeType.THICK_HIDE);
+            if (stacks > 0) {
+                float multiplier = Math.max(0.60f, 1.0f - 0.08f * stacks);
+                event.setAmount(event.getAmount() * multiplier);
+            }
+        }
+    }
+
+    private void cancelDamage(Damage event, CommandBuffer<EntityStore> buffer,
+                               ArchetypeChunk<EntityStore> chunk, int entityId) {
+        if (event.hasMetaObject(Damage.KNOCKBACK_COMPONENT)) {
+            event.removeMetaObject(Damage.KNOCKBACK_COMPONENT);
+        }
+        event.setCancelled(true);
+        event.setAmount(0f);
+        buffer.tryRemoveComponent(chunk.getReferenceTo(entityId), KnockbackComponent.getComponentType());
+    }
+
+    @Override
+    public Query<EntityStore> getQuery() {
+        return Query.any();
+    }
+
+    @Override
+    public SystemGroup<EntityStore> getGroup() {
+        SystemGroup<EntityStore> group = cachedGroup;
+        if (group != null) {
+            return group;
+        }
+        group = DamageModule.get().getFilterDamageGroup();
+        cachedGroup = group;
+        return group;
+    }
+}

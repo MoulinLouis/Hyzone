@@ -18,8 +18,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.purge.data.PurgeWaveDefinition;
 import io.hyvexa.purge.data.PurgeZombieVariant;
-import io.hyvexa.purge.manager.PurgeSettingsManager;
-import io.hyvexa.purge.manager.PurgeSpawnPointManager;
+import io.hyvexa.purge.manager.PurgeInstanceManager;
 import io.hyvexa.purge.manager.PurgeWaveConfigManager;
 
 import javax.annotation.Nonnull;
@@ -34,18 +33,15 @@ public class PurgeWaveAdminPage extends InteractiveCustomUIPage<PurgeWaveAdminPa
     private static final String BUTTON_ADJUST_PREFIX = "Adjust:";
     private static final String BUTTON_SPAWN_PREFIX = "Spawn:";
 
-    private final PurgeSettingsManager settingsManager;
-    private final PurgeSpawnPointManager spawnPointManager;
     private final PurgeWaveConfigManager waveConfigManager;
+    private final PurgeInstanceManager instanceManager;
 
     public PurgeWaveAdminPage(@Nonnull PlayerRef playerRef,
-                              PurgeSpawnPointManager spawnPointManager,
                               PurgeWaveConfigManager waveConfigManager,
-                              PurgeSettingsManager settingsManager) {
+                              PurgeInstanceManager instanceManager) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, PurgeWaveAdminData.CODEC);
-        this.settingsManager = settingsManager;
-        this.spawnPointManager = spawnPointManager;
         this.waveConfigManager = waveConfigManager;
+        this.instanceManager = instanceManager;
     }
 
     @Override
@@ -217,7 +213,7 @@ public class PurgeWaveAdminPage extends InteractiveCustomUIPage<PurgeWaveAdminPa
             return;
         }
         player.getPageManager().openCustomPage(ref, store,
-                new PurgeAdminIndexPage(playerRef, spawnPointManager, waveConfigManager, settingsManager));
+                new PurgeAdminIndexPage(playerRef, waveConfigManager, instanceManager));
     }
 
     private void sendRefresh() {
@@ -241,10 +237,8 @@ public class PurgeWaveAdminPage extends InteractiveCustomUIPage<PurgeWaveAdminPa
         commandBuilder.clear("#WaveCards");
 
         List<PurgeWaveDefinition> waves = waveConfigManager.getAllWaves();
-        int spawnCount = spawnPointManager.getAll().size();
 
         commandBuilder.set("#WaveCount.Text", waves.size() + " configured wave" + (waves.size() == 1 ? "" : "s"));
-        commandBuilder.set("#SpawnCount.Text", spawnCount + " spawn point" + (spawnCount == 1 ? "" : "s"));
 
         if (waves.isEmpty()) {
             commandBuilder.set("#EmptyText.Text", "No waves configured. Add at least one wave.");

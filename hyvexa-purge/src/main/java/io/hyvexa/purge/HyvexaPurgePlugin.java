@@ -17,6 +17,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.WorldConstants;
+import io.hyvexa.purge.system.PurgeDamageModifierSystem;
 import io.hyvexa.common.util.InventoryUtils;
 import io.hyvexa.common.util.ModeGate;
 import io.hyvexa.core.analytics.AnalyticsStore;
@@ -24,17 +25,16 @@ import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.core.discord.DiscordLinkStore;
 import io.hyvexa.core.economy.GemStore;
 import io.hyvexa.purge.command.PurgeCommand;
-import io.hyvexa.purge.command.PurgeSpawnCommand;
 import io.hyvexa.purge.data.PurgePlayerStore;
 import io.hyvexa.purge.data.PurgeScrapStore;
 import io.hyvexa.purge.hud.PurgeHudManager;
 import io.hyvexa.purge.interaction.PurgeOrangeOrbInteraction;
 import io.hyvexa.purge.interaction.PurgeRedOrbInteraction;
 import io.hyvexa.purge.interaction.PurgeStartInteraction;
+import io.hyvexa.purge.manager.PurgeInstanceManager;
+import io.hyvexa.purge.manager.PurgePartyManager;
 import io.hyvexa.purge.manager.PurgeSessionManager;
 import io.hyvexa.purge.manager.PurgeUpgradeManager;
-import io.hyvexa.purge.manager.PurgeSettingsManager;
-import io.hyvexa.purge.manager.PurgeSpawnPointManager;
 import io.hyvexa.purge.manager.PurgeWaveConfigManager;
 import io.hyvexa.purge.manager.PurgeWaveManager;
 
@@ -62,12 +62,12 @@ public class HyvexaPurgePlugin extends JavaPlugin {
 
     private ScheduledFuture<?> hudUpdateTask;
 
-    private PurgeSpawnPointManager spawnPointManager;
-    private PurgeSettingsManager settingsManager;
+    private PurgeInstanceManager instanceManager;
     private PurgeWaveConfigManager waveConfigManager;
     private PurgeWaveManager waveManager;
     private PurgeHudManager hudManager;
     private PurgeSessionManager sessionManager;
+    private PurgePartyManager partyManager;
 
     public HyvexaPurgePlugin(@Nonnull JavaPluginInit init) {
         super(init);
@@ -101,20 +101,24 @@ public class HyvexaPurgePlugin extends JavaPlugin {
         catch (Exception e) { LOGGER.atWarning().withCause(e).log("Failed to initialize PurgePlayerStore"); }
 
         // Create managers
-        spawnPointManager = new PurgeSpawnPointManager();
-        settingsManager = new PurgeSettingsManager();
+        instanceManager = new PurgeInstanceManager();
+        instanceManager.loadConfiguredInstances();
         waveConfigManager = new PurgeWaveConfigManager();
         hudManager = new PurgeHudManager();
-        waveManager = new PurgeWaveManager(spawnPointManager, waveConfigManager, hudManager);
-        sessionManager = new PurgeSessionManager(spawnPointManager, waveManager, hudManager, settingsManager);
+        waveManager = new PurgeWaveManager(instanceManager, waveConfigManager, hudManager);
+        partyManager = new PurgePartyManager();
+        sessionManager = new PurgeSessionManager(partyManager, instanceManager, waveManager, hudManager);
+        partyManager.setSessionManager(sessionManager);
         PurgeUpgradeManager upgradeManager = new PurgeUpgradeManager();
         waveManager.setUpgradeManager(upgradeManager);
         sessionManager.setUpgradeManager(upgradeManager);
 
+        // Register damage modifier system
+        registerPurgeDamageModifierSystem();
+
         // Register commands
         this.getCommandRegistry().registerCommand(
-                new PurgeCommand(sessionManager, spawnPointManager, waveConfigManager, settingsManager));
-        this.getCommandRegistry().registerCommand(new PurgeSpawnCommand(spawnPointManager));
+                new PurgeCommand(sessionManager, waveConfigManager, partyManager, instanceManager));
 
         // Register item interaction codecs
         registerInteractionCodecs();
@@ -173,7 +177,10 @@ public class HyvexaPurgePlugin extends JavaPlugin {
             }
             // Leaving Purge world
             if (playerId != null) {
-                sessionManager.cleanupPlayer(playerId);
+                if (sessionManager.hasActiveSession(playerId)) {
+                    sessionManager.leaveSession(playerId, "left world");
+                }
+                partyManager.cleanupPlayer(playerId);
                 hudManager.removePlayer(playerId);
             }
         });
@@ -188,6 +195,7 @@ public class HyvexaPurgePlugin extends JavaPlugin {
                 return;
             }
             sessionManager.cleanupPlayer(playerId);
+            partyManager.cleanupPlayer(playerId);
             hudManager.removePlayer(playerId);
             try { GemStore.getInstance().evictPlayer(playerId); }
             catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: GemStore"); }
@@ -234,6 +242,11 @@ public class HyvexaPurgePlugin extends JavaPlugin {
     public void removeLoadout(Player player) {
         InventoryUtils.clearAllContainers(player);
         giveBaseLoadout(player, true);
+    }
+
+    public void giveWaitingLoadout(Player player) {
+        InventoryUtils.clearAllContainers(player);
+        giveQuitOrb(player);
     }
 
     // --- Private item grant methods ---
@@ -315,6 +328,16 @@ public class HyvexaPurgePlugin extends JavaPlugin {
         }
         if (missingOrange) {
             inventory.getHotbar().setItemStackForSlot(SLOT_ORB_ORANGE, new ItemStack(ITEM_ORB_ORANGE, 1), false);
+        }
+    }
+
+    private void registerPurgeDamageModifierSystem() {
+        var registry = EntityStore.REGISTRY;
+        if (registry.getEntityEventTypeForClass(com.hypixel.hytale.server.core.modules.entity.damage.Damage.class) == null) {
+            registry.registerEntityEventType(com.hypixel.hytale.server.core.modules.entity.damage.Damage.class);
+        }
+        if (!registry.hasSystemClass(PurgeDamageModifierSystem.class)) {
+            registry.registerSystem(new PurgeDamageModifierSystem(sessionManager));
         }
     }
 

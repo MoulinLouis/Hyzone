@@ -46,11 +46,6 @@ public class PurgeStartInteraction extends SimpleInteraction {
             return;
         }
         // Defer to world thread so store.addComponent(Teleport) isn't blocked
-        CompletableFuture.runAsync(() -> {
-            boolean started = plugin.getSessionManager().startSession(playerId, ref);
-            if (started) {
-                player.sendMessage(Message.raw("Purge session starting..."));
-            }
-        }, world);
+        CompletableFuture.runAsync(() -> plugin.getSessionManager().startSession(playerId, ref), world);
     }
 }
