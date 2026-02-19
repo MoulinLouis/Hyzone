@@ -43,11 +43,13 @@ public class RunOrFallGameManager {
     }
 
     private final RunOrFallConfigStore configStore;
+    private final RunOrFallStatsStore statsStore;
     private final Set<UUID> lobbyPlayers = ConcurrentHashMap.newKeySet();
     private final Set<UUID> alivePlayers = ConcurrentHashMap.newKeySet();
     private final Map<BlockKey, PendingBlock> pendingBlocks = new ConcurrentHashMap<>();
     private final Map<BlockKey, Integer> removedBlocks = new ConcurrentHashMap<>();
     private final Map<UUID, BlockKey> playerPendingBlock = new ConcurrentHashMap<>();
+    private final Map<UUID, Long> roundStartTimesMs = new ConcurrentHashMap<>();
 
     private volatile GameState state = GameState.IDLE;
     private volatile int countdownRemaining = COUNTDOWN_SECONDS;
@@ -60,8 +62,9 @@ public class RunOrFallGameManager {
     private volatile int blockBreakCountdownLastAnnounced = -1;
     private final int airBlockId;
 
-    public RunOrFallGameManager(RunOrFallConfigStore configStore) {
+    public RunOrFallGameManager(RunOrFallConfigStore configStore, RunOrFallStatsStore statsStore) {
         this.configStore = configStore;
+        this.statsStore = statsStore;
         int resolvedAir = BlockType.getAssetMap().getIndex("Air");
         this.airBlockId = resolvedAir >= 0 ? resolvedAir : 0;
     }
@@ -106,6 +109,7 @@ public class RunOrFallGameManager {
         boolean wasInLobby = lobbyPlayers.remove(playerId);
         boolean wasAlive = alivePlayers.remove(playerId);
         playerPendingBlock.remove(playerId);
+        long survivedMs = takeSurvivedMs(playerId);
         if (!wasInLobby && !wasAlive) {
             return;
         }
@@ -116,6 +120,7 @@ public class RunOrFallGameManager {
             cancelCountdownInternal("Countdown cancelled: not enough players.");
         }
         if (state == GameState.RUNNING && wasAlive) {
+            statsStore.recordLoss(playerId, resolvePlayerName(playerId), survivedMs);
             broadcastLobby("A player was eliminated. " + alivePlayers.size() + " remaining.");
             checkWinnerInternal();
         }
@@ -165,6 +170,7 @@ public class RunOrFallGameManager {
         alivePlayers.clear();
         pendingBlocks.clear();
         playerPendingBlock.clear();
+        roundStartTimesMs.clear();
         lobbyPlayers.clear();
         activeWorld = null;
     }
@@ -248,6 +254,11 @@ public class RunOrFallGameManager {
 
         alivePlayers.clear();
         alivePlayers.addAll(onlinePlayers);
+        long roundStartMs = System.currentTimeMillis();
+        roundStartTimesMs.clear();
+        for (UUID onlinePlayerId : onlinePlayers) {
+            roundStartTimesMs.put(onlinePlayerId, roundStartMs);
+        }
         soloTestRound = countdownRequiredPlayers == 1 && onlinePlayers.size() == 1;
         pendingBlocks.clear();
         removedBlocks.clear();
@@ -316,7 +327,10 @@ public class RunOrFallGameManager {
             }
             processPendingBlocksInternal();
             for (UUID playerId : disconnected) {
-                alivePlayers.remove(playerId);
+                if (alivePlayers.remove(playerId)) {
+                    long survivedMs = takeSurvivedMs(playerId);
+                    statsStore.recordLoss(playerId, resolvePlayerName(playerId), survivedMs);
+                }
             }
             checkWinnerInternal();
         }
@@ -340,7 +354,9 @@ public class RunOrFallGameManager {
         UUID winner = alivePlayers.stream().findFirst().orElse(null);
         if (winner != null) {
             PlayerRef winnerRef = resolvePlayer(winner);
-            String winnerName = winner.toString();
+            long survivedMs = takeSurvivedMs(winner);
+            String winnerName = resolvePlayerName(winner);
+            statsStore.recordWin(winner, winnerName, survivedMs);
             if (winnerRef != null && winnerRef.getUsername() != null && !winnerRef.getUsername().isBlank()) {
                 winnerName = winnerRef.getUsername();
             }
@@ -355,6 +371,8 @@ public class RunOrFallGameManager {
         if (!alivePlayers.remove(playerId)) {
             return;
         }
+        long survivedMs = takeSurvivedMs(playerId);
+        statsStore.recordLoss(playerId, resolvePlayerName(playerId), survivedMs);
         playerPendingBlock.remove(playerId);
         teleportPlayerToLobby(playerId);
         sendToPlayer(playerId, "Eliminated: " + reason + ".");
@@ -366,6 +384,7 @@ public class RunOrFallGameManager {
         restoreAllBlocksInternal();
         alivePlayers.clear();
         playerPendingBlock.clear();
+        roundStartTimesMs.clear();
         state = GameState.IDLE;
         countdownRemaining = COUNTDOWN_SECONDS;
         countdownRequiredPlayers = 2;
@@ -508,6 +527,7 @@ public class RunOrFallGameManager {
             pendingBlocks.clear();
             removedBlocks.clear();
             playerPendingBlock.clear();
+            roundStartTimesMs.clear();
             return;
         }
         for (Map.Entry<BlockKey, Integer> entry : removedBlocks.entrySet()) {
@@ -521,6 +541,27 @@ public class RunOrFallGameManager {
         pendingBlocks.clear();
         removedBlocks.clear();
         playerPendingBlock.clear();
+        roundStartTimesMs.clear();
+    }
+
+    private long takeSurvivedMs(UUID playerId) {
+        if (playerId == null) {
+            return 0L;
+        }
+        Long roundStartMs = roundStartTimesMs.remove(playerId);
+        if (roundStartMs == null) {
+            return 0L;
+        }
+        long now = System.currentTimeMillis();
+        return Math.max(0L, now - roundStartMs);
+    }
+
+    private String resolvePlayerName(UUID playerId) {
+        PlayerRef playerRef = resolvePlayer(playerId);
+        if (playerRef != null && playerRef.getUsername() != null && !playerRef.getUsername().isBlank()) {
+            return playerRef.getUsername();
+        }
+        return "Unknown";
     }
 
     private static boolean isInsidePlatform(List<RunOrFallPlatform> platforms, int x, int y, int z) {
