@@ -46,7 +46,7 @@ $C.@PageOverlay {
             RenderBold: true,
             TextColor: #ef4444
           );
-          Text: "HP: 20 / 20";
+          Text: "HP: 100 / 100";
         }
       }
 
