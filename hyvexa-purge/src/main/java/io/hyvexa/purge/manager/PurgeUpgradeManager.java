@@ -43,9 +43,10 @@ public class PurgeUpgradeManager {
         return pool.subList(0, Math.min(count, pool.size()));
     }
 
-    public void applyUpgrade(PurgeSession session, PurgeUpgradeType type,
+    public void applyUpgrade(PurgeSession session, UUID playerId, PurgeUpgradeType type,
                              Ref<EntityStore> ref, Store<EntityStore> store) {
-        PurgeUpgradeState state = session.getUpgradeState();
+        PurgeUpgradeState state = session.getUpgradeState(playerId);
+        if (state == null) return;
         state.addStack(type);
         int stacks = state.getStacks(type);
 
@@ -53,31 +54,22 @@ public class PurgeUpgradeManager {
             case SWIFT_FEET -> applySwiftFeet(ref, store, stacks);
             case IRON_SKIN -> applyIronSkin(ref, store, stacks);
             case AMMO_CACHE -> applyAmmoCache(ref, store);
-            case SECOND_WIND -> applySecondWind(session.getPlayerId(), ref, store, stacks);
+            case SECOND_WIND -> applySecondWind(playerId, ref, store, stacks);
             case THICK_HIDE, SCAVENGER -> {} // Read at use-time, no immediate apply
         }
     }
 
-    public double getZombieHealthMultiplier(PurgeSession session) {
-        int stacks = session.getUpgradeState().getStacks(PurgeUpgradeType.THICK_HIDE);
-        return Math.max(0.2, 1.0 - stacks * 0.08);
-    }
-
-    /**
-     * @deprecated Use {@link #getZombieHealthMultiplier(PurgeSession)}.
-     */
-    @Deprecated
-    public double getZombieDamageMultiplier(PurgeSession session) {
-        return getZombieHealthMultiplier(session);
-    }
-
-    public double getScrapMultiplier(PurgeSession session) {
-        int stacks = session.getUpgradeState().getStacks(PurgeUpgradeType.SCAVENGER);
+    public double getScrapMultiplier(PurgeSession session, UUID playerId) {
+        PurgeUpgradeState state = session.getUpgradeState(playerId);
+        if (state == null) return 1.0;
+        int stacks = state.getStacks(PurgeUpgradeType.SCAVENGER);
         return 1.0 + stacks * 0.25;
     }
 
-    public void revertAllUpgrades(PurgeSession session, Ref<EntityStore> ref, Store<EntityStore> store) {
-        PurgeUpgradeState state = session.getUpgradeState();
+    public void revertPlayerUpgrades(PurgeSession session, UUID playerId,
+                                      Ref<EntityStore> ref, Store<EntityStore> store) {
+        PurgeUpgradeState state = session.getUpgradeState(playerId);
+        if (state == null) return;
 
         if (state.getStacks(PurgeUpgradeType.SWIFT_FEET) > 0) {
             revertSwiftFeet(ref, store);
@@ -85,7 +77,7 @@ public class PurgeUpgradeManager {
         if (state.getStacks(PurgeUpgradeType.IRON_SKIN) > 0) {
             revertIronSkin(ref, store);
         }
-        cancelRegenTask(session.getPlayerId());
+        cancelRegenTask(playerId);
     }
 
     public void cleanupPlayer(UUID playerId) {

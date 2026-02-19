@@ -1,20 +1,24 @@
 package io.hyvexa.purge.data;
 
 import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
-import java.util.Set;
-import java.util.UUID;
+import javax.annotation.Nullable;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 public class PurgeSession {
 
-    private final UUID playerId;
-    private volatile Ref<EntityStore> playerRef;
+    private final String sessionId;
+    private final String instanceId;
+    private final ConcurrentHashMap<UUID, PurgeSessionPlayerState> players = new ConcurrentHashMap<>();
+
+    // Unchanged fields
     private volatile int currentWave = 0;
-    private final AtomicInteger totalKills = new AtomicInteger(0);
     private volatile int waveZombieCount = 0;
     private volatile SessionState state = SessionState.COUNTDOWN;
     private volatile boolean spawningComplete = false;
@@ -22,24 +26,147 @@ public class PurgeSession {
     private volatile ScheduledFuture<?> waveTick;
     private volatile ScheduledFuture<?> spawnTask;
     private volatile ScheduledFuture<?> intermissionTask;
-    private final PurgeUpgradeState upgradeState = new PurgeUpgradeState();
 
-    public PurgeSession(UUID playerId, Ref<EntityStore> playerRef) {
-        this.playerId = playerId;
-        this.playerRef = playerRef;
+    // Upgrade phase
+    private final Set<UUID> pendingUpgradeChoices = ConcurrentHashMap.newKeySet();
+    private volatile ScheduledFuture<?> upgradeTimeoutTask;
+
+    public PurgeSession(String sessionId, String instanceId, Map<UUID, Ref<EntityStore>> playerRefs) {
+        this.sessionId = sessionId;
+        this.instanceId = instanceId;
+        for (var entry : playerRefs.entrySet()) {
+            players.put(entry.getKey(), new PurgeSessionPlayerState(entry.getKey(), entry.getValue()));
+        }
     }
 
-    public UUID getPlayerId() {
-        return playerId;
+    public String getSessionId() {
+        return sessionId;
     }
 
-    public Ref<EntityStore> getPlayerRef() {
-        return playerRef;
+    public String getInstanceId() {
+        return instanceId;
     }
 
-    public void setPlayerRef(Ref<EntityStore> playerRef) {
-        this.playerRef = playerRef;
+    // --- Player queries ---
+
+    public Set<UUID> getParticipants() {
+        return Set.copyOf(players.keySet());
     }
+
+    public Set<UUID> getConnectedParticipants() {
+        return players.values().stream()
+                .filter(PurgeSessionPlayerState::isConnected)
+                .map(PurgeSessionPlayerState::getPlayerId)
+                .collect(Collectors.toUnmodifiableSet());
+    }
+
+    public Set<UUID> getAliveParticipants() {
+        return players.values().stream()
+                .filter(PurgeSessionPlayerState::isAlive)
+                .map(PurgeSessionPlayerState::getPlayerId)
+                .collect(Collectors.toUnmodifiableSet());
+    }
+
+    public Set<UUID> getAliveConnectedParticipants() {
+        return players.values().stream()
+                .filter(s -> s.isAlive() && s.isConnected())
+                .map(PurgeSessionPlayerState::getPlayerId)
+                .collect(Collectors.toUnmodifiableSet());
+    }
+
+    public Set<UUID> getDeadThisWaveParticipants() {
+        return players.values().stream()
+                .filter(PurgeSessionPlayerState::isDeadThisWave)
+                .map(PurgeSessionPlayerState::getPlayerId)
+                .collect(Collectors.toUnmodifiableSet());
+    }
+
+    public int getConnectedCount() {
+        return (int) players.values().stream().filter(PurgeSessionPlayerState::isConnected).count();
+    }
+
+    public int getAliveConnectedCount() {
+        return (int) players.values().stream().filter(s -> s.isAlive() && s.isConnected()).count();
+    }
+
+    // --- Player state ---
+
+    public PurgeSessionPlayerState getPlayerState(UUID playerId) {
+        return playerId != null ? players.get(playerId) : null;
+    }
+
+    public void markDeadThisWave(UUID playerId) {
+        PurgeSessionPlayerState ps = players.get(playerId);
+        if (ps != null) {
+            ps.setDeadThisWave(true);
+            ps.setAlive(false);
+        }
+    }
+
+    public void disconnectPlayer(UUID playerId) {
+        PurgeSessionPlayerState ps = players.get(playerId);
+        if (ps != null) {
+            ps.setConnected(false);
+        }
+    }
+
+    public void removePlayer(UUID playerId) {
+        players.remove(playerId);
+    }
+
+    // --- Positions ---
+
+    @Nullable
+    public Ref<EntityStore> getRandomAlivePlayerRef() {
+        List<Ref<EntityStore>> alive = players.values().stream()
+                .filter(s -> s.isAlive() && s.isConnected())
+                .map(PurgeSessionPlayerState::getPlayerRef)
+                .filter(ref -> ref != null && ref.isValid())
+                .collect(Collectors.toList());
+        if (alive.isEmpty()) {
+            return null;
+        }
+        return alive.get(new Random().nextInt(alive.size()));
+    }
+
+    public List<double[]> getAlivePlayerPositions(Store<EntityStore> store) {
+        List<double[]> positions = new ArrayList<>();
+        for (PurgeSessionPlayerState ps : players.values()) {
+            if (!ps.isAlive() || !ps.isConnected()) continue;
+            Ref<EntityStore> ref = ps.getPlayerRef();
+            if (ref == null || !ref.isValid()) continue;
+            try {
+                TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
+                if (transform != null) {
+                    var pos = transform.getPosition();
+                    positions.add(new double[]{pos.getX(), pos.getY(), pos.getZ()});
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        return positions;
+    }
+
+    // --- Upgrades ---
+
+    public PurgeUpgradeState getUpgradeState(UUID playerId) {
+        PurgeSessionPlayerState ps = players.get(playerId);
+        return ps != null ? ps.getUpgradeState() : null;
+    }
+
+    public Set<UUID> getPendingUpgradeChoices() {
+        return pendingUpgradeChoices;
+    }
+
+    public ScheduledFuture<?> getUpgradeTimeoutTask() {
+        return upgradeTimeoutTask;
+    }
+
+    public void setUpgradeTimeoutTask(ScheduledFuture<?> upgradeTimeoutTask) {
+        this.upgradeTimeoutTask = upgradeTimeoutTask;
+    }
+
+    // --- Wave / zombie state (unchanged) ---
 
     public int getCurrentWave() {
         return currentWave;
@@ -47,10 +174,6 @@ public class PurgeSession {
 
     public void setCurrentWave(int currentWave) {
         this.currentWave = currentWave;
-    }
-
-    public int getTotalKills() {
-        return totalKills.get();
     }
 
     public int getWaveZombieCount() {
@@ -89,13 +212,7 @@ public class PurgeSession {
         aliveZombies.add(ref);
     }
 
-    public void incrementKills() {
-        totalKills.incrementAndGet();
-    }
-
-    public PurgeUpgradeState getUpgradeState() {
-        return upgradeState;
-    }
+    // --- Task scheduling ---
 
     public ScheduledFuture<?> getWaveTick() {
         return waveTick;
@@ -144,6 +261,11 @@ public class PurgeSession {
         if (it != null) {
             it.cancel(false);
             intermissionTask = null;
+        }
+        ScheduledFuture<?> ut = upgradeTimeoutTask;
+        if (ut != null) {
+            ut.cancel(false);
+            upgradeTimeoutTask = null;
         }
     }
 }

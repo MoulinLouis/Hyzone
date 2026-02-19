@@ -1,0 +1,111 @@
+$C = "../Common.ui";
+
+Group {
+  LayoutMode: Top;
+  Anchor: (Left: 2, Right: 2, Bottom: 8, Height: 120, Width: 668);
+  Background: $C.@InputBoxBackground;
+  Padding: (Left: 10, Right: 8, Top: 8, Bottom: 8);
+
+  // Row 1: Instance ID + Delete button
+  Group {
+    LayoutMode: Left;
+    Anchor: (Left: 0, Right: 0, Height: 30);
+
+    Label #InstanceIdLabel {
+      Anchor: (Width: 200);
+      Style: (FontSize: 15, RenderBold: true, TextColor: #38bdf8, VerticalAlignment: Center);
+      Text: "arena_1";
+    }
+
+    Group { FlexWeight: 1; }
+
+    TextButton #DeleteButton {
+      Anchor: (Width: 32, Height: 30);
+      Text: "X";
+      Style: TextButtonStyle(
+        Default: (Background: #3b1219, LabelStyle: (FontSize: 14, TextColor: #ef4444, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Hovered: (Background: #5c1d28, LabelStyle: (FontSize: 14, TextColor: #f87171, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Pressed: (Background: #2d0f14, LabelStyle: (FontSize: 14, TextColor: #ef4444, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Sounds: $C.@ButtonSounds,
+      );
+    }
+  }
+
+  // Row 2: Start + Exit
+  Group {
+    LayoutMode: Left;
+    Anchor: (Left: 0, Right: 0, Height: 30, Top: 4);
+
+    Label #StartLabel {
+      Anchor: (Width: 240);
+      Style: (FontSize: 12, TextColor: #86efac, VerticalAlignment: Center);
+      Text: "Start: (0, 80, 0)";
+    }
+
+    TextButton #SetStartButton {
+      Anchor: (Width: 72, Height: 26);
+      Text: "Set Here";
+      Style: TextButtonStyle(
+        Default: (Background: #0c2416, LabelStyle: (FontSize: 12, TextColor: #86efac, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Hovered: (Background: #124026, LabelStyle: (FontSize: 12, TextColor: #bbf7d0, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Pressed: (Background: #091a10, LabelStyle: (FontSize: 12, TextColor: #86efac, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Sounds: $C.@ButtonSounds,
+      );
+    }
+
+    Group { Anchor: (Width: 16); }
+
+    Label #ExitLabel {
+      Anchor: (Width: 240);
+      Style: (FontSize: 12, TextColor: #fbbf24, VerticalAlignment: Center);
+      Text: "Exit: (0, 80, 0)";
+    }
+
+    TextButton #SetExitButton {
+      Anchor: (Width: 72, Height: 26);
+      Text: "Set Here";
+      Style: TextButtonStyle(
+        Default: (Background: #2a1f0a, LabelStyle: (FontSize: 12, TextColor: #fbbf24, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Hovered: (Background: #3d2e0f, LabelStyle: (FontSize: 12, TextColor: #fcd34d, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Pressed: (Background: #1f1707, LabelStyle: (FontSize: 12, TextColor: #fbbf24, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Sounds: $C.@ButtonSounds,
+      );
+    }
+  }
+
+  // Row 3: Spawn points
+  Group {
+    LayoutMode: Left;
+    Anchor: (Left: 0, Right: 0, Height: 30, Top: 4);
+
+    Label #SpawnCountLabel {
+      Anchor: (Width: 140);
+      Style: (FontSize: 12, TextColor: #c4b5fd, VerticalAlignment: Center);
+      Text: "0 spawn points";
+    }
+
+    TextButton #AddSpawnButton {
+      Anchor: (Width: 90, Height: 26);
+      Text: "+ Add Here";
+      Style: TextButtonStyle(
+        Default: (Background: #1e1541, LabelStyle: (FontSize: 12, TextColor: #c4b5fd, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Hovered: (Background: #2e2060, LabelStyle: (FontSize: 12, TextColor: #ddd6fe, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Pressed: (Background: #160f30, LabelStyle: (FontSize: 12, TextColor: #c4b5fd, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Sounds: $C.@ButtonSounds,
+      );
+    }
+
+    Group { Anchor: (Width: 8); }
+
+    TextButton #ClearSpawnsButton {
+      Anchor: (Width: 72, Height: 26);
+      Text: "Clear";
+      Style: TextButtonStyle(
+        Default: (Background: #3b1219, LabelStyle: (FontSize: 12, TextColor: #ef4444, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Hovered: (Background: #5c1d28, LabelStyle: (FontSize: 12, TextColor: #f87171, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Pressed: (Background: #2d0f14, LabelStyle: (FontSize: 12, TextColor: #ef4444, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Sounds: $C.@ButtonSounds,
+      );
+    }
+  }
+}

@@ -9,21 +9,24 @@ import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractAsyncCommand;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.util.CommandUtils;
 import io.hyvexa.common.util.ModeGate;
 import io.hyvexa.common.util.PermissionUtils;
+import io.hyvexa.purge.data.PurgeParty;
 import io.hyvexa.purge.data.PurgePlayerStats;
 import io.hyvexa.purge.data.PurgePlayerStore;
 import io.hyvexa.purge.data.PurgeScrapStore;
+import io.hyvexa.purge.manager.PurgeInstanceManager;
+import io.hyvexa.purge.manager.PurgePartyManager;
 import io.hyvexa.purge.manager.PurgeSessionManager;
-import io.hyvexa.purge.manager.PurgeSettingsManager;
-import io.hyvexa.purge.manager.PurgeSpawnPointManager;
 import io.hyvexa.purge.manager.PurgeWaveConfigManager;
 import io.hyvexa.purge.ui.PurgeAdminIndexPage;
 
 import javax.annotation.Nonnull;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -32,21 +35,21 @@ public class PurgeCommand extends AbstractAsyncCommand {
     private static final Message MESSAGE_OP_REQUIRED = Message.raw("You must be OP to use /purge admin.");
 
     private final PurgeSessionManager sessionManager;
-    private final PurgeSettingsManager settingsManager;
-    private final PurgeSpawnPointManager spawnPointManager;
     private final PurgeWaveConfigManager waveConfigManager;
+    private final PurgePartyManager partyManager;
+    private final PurgeInstanceManager instanceManager;
 
     public PurgeCommand(PurgeSessionManager sessionManager,
-                        PurgeSpawnPointManager spawnPointManager,
                         PurgeWaveConfigManager waveConfigManager,
-                        PurgeSettingsManager settingsManager) {
+                        PurgePartyManager partyManager,
+                        PurgeInstanceManager instanceManager) {
         super("purge", "Purge zombie survival commands");
         this.setPermissionGroup(GameMode.Adventure);
         this.setAllowsExtraArguments(true);
         this.sessionManager = sessionManager;
-        this.settingsManager = settingsManager;
-        this.spawnPointManager = spawnPointManager;
         this.waveConfigManager = waveConfigManager;
+        this.partyManager = partyManager;
+        this.instanceManager = instanceManager;
     }
 
     @Override
@@ -91,8 +94,9 @@ public class PurgeCommand extends AbstractAsyncCommand {
             case "start" -> handleStart(player, ref, world, playerId);
             case "stop" -> handleStop(player, playerId);
             case "stats" -> handleStats(player, playerId);
+            case "party" -> handleParty(player, playerId, args);
             case "admin" -> openAdminMenu(player, ref, store);
-            default -> player.sendMessage(Message.raw("Usage: /purge <start|stop|stats|admin>"));
+            default -> player.sendMessage(Message.raw("Usage: /purge <start|stop|stats|party|admin>"));
         }
     }
 
@@ -106,7 +110,7 @@ public class PurgeCommand extends AbstractAsyncCommand {
             return;
         }
         player.getPageManager().openCustomPage(ref, store,
-                new PurgeAdminIndexPage(playerRef, spawnPointManager, waveConfigManager, settingsManager));
+                new PurgeAdminIndexPage(playerRef, waveConfigManager, instanceManager));
     }
 
     private void handleStart(Player player, Ref<EntityStore> ref, World world, UUID playerId) {
@@ -114,10 +118,7 @@ public class PurgeCommand extends AbstractAsyncCommand {
             player.sendMessage(Message.raw("You must be in the Purge world to start a session."));
             return;
         }
-        boolean started = sessionManager.startSession(playerId, ref);
-        if (started) {
-            player.sendMessage(Message.raw("Purge session starting..."));
-        }
+        sessionManager.startSession(playerId, ref);
     }
 
     private void handleStop(Player player, UUID playerId) {
@@ -125,7 +126,7 @@ public class PurgeCommand extends AbstractAsyncCommand {
             player.sendMessage(Message.raw("No active Purge session."));
             return;
         }
-        sessionManager.stopSession(playerId, "voluntary stop");
+        sessionManager.leaveSession(playerId, "voluntary stop");
     }
 
     private void handleStats(Player player, UUID playerId) {
@@ -136,5 +137,78 @@ public class PurgeCommand extends AbstractAsyncCommand {
         player.sendMessage(Message.raw("Total kills: " + stats.getTotalKills()));
         player.sendMessage(Message.raw("Total sessions: " + stats.getTotalSessions()));
         player.sendMessage(Message.raw("Scrap: " + scrap));
+    }
+
+    private void handleParty(Player player, UUID playerId, String[] args) {
+        if (args.length < 2) {
+            player.sendMessage(Message.raw("Usage: /purge party <create|invite|accept|leave|list>"));
+            return;
+        }
+        String action = args[1].toLowerCase();
+        switch (action) {
+            case "create" -> {
+                if (partyManager.getPartyByPlayer(playerId) != null) {
+                    player.sendMessage(Message.raw("You are already in a party."));
+                    return;
+                }
+                partyManager.createParty(playerId);
+                player.sendMessage(Message.raw("Party created."));
+            }
+            case "invite" -> {
+                if (args.length < 3) {
+                    player.sendMessage(Message.raw("Usage: /purge party invite <playerName>"));
+                    return;
+                }
+                String targetName = args[2];
+                PlayerRef targetRef = findOnlineByName(targetName);
+                if (targetRef == null) {
+                    player.sendMessage(Message.raw("Player not found."));
+                    return;
+                }
+                UUID targetId = targetRef.getUuid();
+                if (targetId == null || targetId.equals(playerId)) {
+                    player.sendMessage(Message.raw("You cannot invite yourself."));
+                    return;
+                }
+                partyManager.invite(playerId, targetId);
+            }
+            case "accept" -> partyManager.accept(playerId);
+            case "leave" -> {
+                if (partyManager.getPartyByPlayer(playerId) == null) {
+                    player.sendMessage(Message.raw("You are not in a party."));
+                    return;
+                }
+                partyManager.leaveParty(playerId);
+                player.sendMessage(Message.raw("You left the party."));
+            }
+            case "list" -> {
+                PurgeParty party = partyManager.getPartyByPlayer(playerId);
+                if (party == null) {
+                    player.sendMessage(Message.raw("You are not in a party."));
+                    return;
+                }
+                Set<UUID> members = party.getMembersSnapshot();
+                player.sendMessage(Message.raw("-- Party Members (" + members.size()
+                        + "/" + PurgeParty.MAX_SIZE + ") --"));
+                for (UUID memberId : members) {
+                    PlayerRef memberRef = Universe.get().getPlayer(memberId);
+                    String name = memberRef != null ? memberRef.getUsername() : memberId.toString();
+                    player.sendMessage(Message.raw("- " + name));
+                }
+            }
+            default -> player.sendMessage(Message.raw("Usage: /purge party <create|invite|accept|leave|list>"));
+        }
+    }
+
+    private PlayerRef findOnlineByName(String name) {
+        if (name == null || name.isBlank()) {
+            return null;
+        }
+        for (PlayerRef playerRef : Universe.get().getPlayers()) {
+            if (playerRef != null && name.equalsIgnoreCase(playerRef.getUsername())) {
+                return playerRef;
+            }
+        }
+        return null;
     }
 }
