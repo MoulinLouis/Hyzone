@@ -44,52 +44,6 @@ $C.@PageOverlay {
         Anchor: (Left: 2, Right: 2, Top: 10, Height: 46, Width: 390);
         Background: $C.@InputBoxBackground;
 
-        Button #SettingsButton {
-          Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-          LayoutMode: Left;
-          Padding: (Left: 10, Right: 10, Top: 8, Bottom: 8);
-          Background: #00000000;
-          Style: ButtonStyle(
-            Default: (Background: #00000000),
-            Hovered: (Background: #ffffff(0.08)),
-            Pressed: (Background: #ffffff(0.03)),
-            Sounds: $C.@ButtonSounds,
-          );
-
-          Label #SettingsLabel {
-            Style: (FontSize: 16, RenderBold: true, TextColor: #93844c);
-            Text: "Settings";
-          }
-        }
-      }
-
-      Group {
-        Anchor: (Left: 2, Right: 2, Top: 10, Height: 46, Width: 390);
-        Background: $C.@InputBoxBackground;
-
-        Button #SpawnsButton {
-          Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-          LayoutMode: Left;
-          Padding: (Left: 10, Right: 10, Top: 8, Bottom: 8);
-          Background: #00000000;
-          Style: ButtonStyle(
-            Default: (Background: #00000000),
-            Hovered: (Background: #ffffff(0.08)),
-            Pressed: (Background: #ffffff(0.03)),
-            Sounds: $C.@ButtonSounds,
-          );
-
-          Label #SpawnsLabel {
-            Style: (FontSize: 16, RenderBold: true, TextColor: #93844c);
-            Text: "Spawn Points";
-          }
-        }
-      }
-
-      Group {
-        Anchor: (Left: 2, Right: 2, Top: 10, Height: 46, Width: 390);
-        Background: $C.@InputBoxBackground;
-
         Button #WavesButton {
           Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
           LayoutMode: Left;
@@ -105,6 +59,29 @@ $C.@PageOverlay {
           Label #WavesLabel {
             Style: (FontSize: 16, RenderBold: true, TextColor: #93844c);
             Text: "Waves";
+          }
+        }
+      }
+
+      Group {
+        Anchor: (Left: 2, Right: 2, Top: 10, Height: 46, Width: 390);
+        Background: $C.@InputBoxBackground;
+
+        Button #InstancesButton {
+          Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+          LayoutMode: Left;
+          Padding: (Left: 10, Right: 10, Top: 8, Bottom: 8);
+          Background: #00000000;
+          Style: ButtonStyle(
+            Default: (Background: #00000000),
+            Hovered: (Background: #ffffff(0.08)),
+            Pressed: (Background: #ffffff(0.03)),
+            Sounds: $C.@ButtonSounds,
+          );
+
+          Label #InstancesLabel {
+            Style: (FontSize: 16, RenderBold: true, TextColor: #38bdf8);
+            Text: "Instances";
           }
         }
       }

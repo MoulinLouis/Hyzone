@@ -45,6 +45,6 @@ public class PurgeRedOrbInteraction extends SimpleInteraction {
             return;
         }
         var world = store.getExternalData().getWorld();
-        CompletableFuture.runAsync(() -> sessionManager.stopSession(playerId, "voluntary stop"), world);
+        CompletableFuture.runAsync(() -> sessionManager.leaveSession(playerId, "voluntary stop"), world);
     }
 }

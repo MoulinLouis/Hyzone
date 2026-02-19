@@ -1,9 +1,11 @@
 package io.hyvexa.purge.hud;
 
+import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.protocol.packets.interface_.HudComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.util.MultiHudBridge;
 import io.hyvexa.core.economy.GemStore;
 import io.hyvexa.purge.data.PurgeScrapStore;
@@ -32,6 +34,20 @@ public class PurgeHudManager {
 
     public PurgeHud getHud(UUID playerId) {
         return playerId != null ? purgeHuds.get(playerId) : null;
+    }
+
+    public Ref<EntityStore> getPlayerRef(UUID playerId) {
+        if (playerId == null) {
+            return null;
+        }
+        try {
+            PlayerRef playerRef = Universe.get().getPlayer(playerId);
+            if (playerRef != null) {
+                return playerRef.getReference();
+            }
+        } catch (Exception ignored) {
+        }
+        return null;
     }
 
     public void removePlayer(UUID playerId) {
