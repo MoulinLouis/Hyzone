@@ -8,35 +8,41 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.modules.entitystats.EntityStatMap;
 import com.hypixel.hytale.server.core.modules.entitystats.asset.DefaultEntityStatTypes;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.util.DamageBypassRegistry;
+import io.hyvexa.common.util.ModeGate;
 import io.hyvexa.purge.HyvexaPurgePlugin;
 import io.hyvexa.purge.data.*;
 import io.hyvexa.purge.hud.PurgeHudManager;
 
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class PurgeSessionManager {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
 
-    private final ConcurrentHashMap<UUID, PurgeSession> activeSessions = new ConcurrentHashMap<>();
-    private final PurgeSpawnPointManager spawnPointManager;
+    private final ConcurrentHashMap<String, PurgeSession> sessionsById = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, String> sessionIdByPlayer = new ConcurrentHashMap<>();
+    private final PurgePartyManager partyManager;
+    private final PurgeInstanceManager instanceManager;
     private final PurgeWaveManager waveManager;
     private final PurgeHudManager hudManager;
-    private final PurgeSettingsManager settingsManager;
     private volatile PurgeUpgradeManager upgradeManager;
+    private final AtomicInteger sessionCounter = new AtomicInteger(0);
 
-    public PurgeSessionManager(PurgeSpawnPointManager spawnPointManager,
+    public PurgeSessionManager(PurgePartyManager partyManager,
+                               PurgeInstanceManager instanceManager,
                                PurgeWaveManager waveManager,
-                               PurgeHudManager hudManager,
-                               PurgeSettingsManager settingsManager) {
-        this.spawnPointManager = spawnPointManager;
+                               PurgeHudManager hudManager) {
+        this.partyManager = partyManager;
+        this.instanceManager = instanceManager;
         this.waveManager = waveManager;
         this.hudManager = hudManager;
-        this.settingsManager = settingsManager;
         waveManager.setSessionManager(this);
     }
 
@@ -44,117 +50,297 @@ public class PurgeSessionManager {
         this.upgradeManager = upgradeManager;
     }
 
-    public boolean startSession(UUID playerId, Ref<EntityStore> playerRef) {
-        if (playerId == null || playerRef == null || !playerRef.isValid()) {
-            return false;
-        }
-        if (activeSessions.containsKey(playerId)) {
-            sendMessage(playerRef, "You already have an active Purge session. Use /purge stop to end it.");
-            return false;
-        }
-        if (!spawnPointManager.hasSpawnPoints()) {
-            sendMessage(playerRef, "No purge spawn points configured. Use /purgespawn add first.");
-            return false;
-        }
-        if (!waveManager.hasConfiguredWaves()) {
-            sendMessage(playerRef, "No purge waves configured. Ask an admin to set waves in /purge admin.");
-            return false;
-        }
-
-        PurgeSession session = new PurgeSession(playerId, playerRef);
-        activeSessions.put(playerId, session);
-        DamageBypassRegistry.add(playerId);
-
-        // Grant loadout
-        try {
-            HyvexaPurgePlugin plugin = HyvexaPurgePlugin.getInstance();
-            if (plugin != null) {
-                Store<EntityStore> store = playerRef.getStore();
-                Player player = store.getComponent(playerRef, Player.getComponentType());
-                if (player != null) {
-                    plugin.grantLoadout(player);
-                }
-                teleportToConfiguredStart(playerRef, store);
-            }
-        } catch (Exception e) {
-            LOGGER.atWarning().withCause(e).log("Failed to grant loadout");
-        }
-
-        // Show wave status HUD
-        hudManager.showRunHud(playerId);
-
-        // Start countdown
-        waveManager.startCountdown(session);
-
-        LOGGER.atInfo().log("Purge session started for " + playerId);
-        return true;
+    private String nextSessionId() {
+        return "purge-" + sessionCounter.incrementAndGet();
     }
 
-    public void stopSession(UUID playerId, String reason) {
-        PurgeSession session = activeSessions.remove(playerId);
-        if (session == null) {
+    // --- Public API ---
+
+    public boolean hasActiveSession(UUID playerId) {
+        return playerId != null && sessionIdByPlayer.containsKey(playerId);
+    }
+
+    public PurgeSession getSessionByPlayer(UUID playerId) {
+        if (playerId == null) {
+            return null;
+        }
+        String sessionId = sessionIdByPlayer.get(playerId);
+        return sessionId != null ? sessionsById.get(sessionId) : null;
+    }
+
+    // --- startSession ---
+
+    public void startSession(UUID requesterId, Ref<EntityStore> requesterRef) {
+        if (requesterId == null || requesterRef == null || !requesterRef.isValid()) {
             return;
         }
-        DamageBypassRegistry.remove(playerId);
-        session.setState(SessionState.ENDED);
 
-        runSafe("cancel tasks", session::cancelAllTasks);
+        // Phase 1 — Validation
+        if (hasActiveSession(requesterId)) {
+            sendMessage(requesterRef, "You already have an active Purge session. Use /purge stop to end it.");
+            return;
+        }
+        if (!waveManager.hasConfiguredWaves()) {
+            sendMessage(requesterRef, "No purge waves configured. Ask an admin to set waves in /purge admin.");
+            return;
+        }
+
+        // Collect valid players
+        Map<UUID, Ref<EntityStore>> validPlayers = new LinkedHashMap<>();
+        List<String> skipped = new ArrayList<>();
+
+        PurgeParty party = partyManager.getPartyByPlayer(requesterId);
+        if (party != null) {
+            for (UUID memberId : party.getMembersSnapshot()) {
+                validateAndCollect(memberId, validPlayers, skipped);
+            }
+        } else {
+            validateAndCollect(requesterId, validPlayers, skipped);
+        }
+
+        if (validPlayers.isEmpty()) {
+            sendMessage(requesterRef, "No valid players to start a session.");
+            return;
+        }
+
+        // Phase 2 — Atomic allocation
+        PurgeMapInstance instance = instanceManager.acquireAvailableInstance();
+        if (instance == null) {
+            sendMessage(requesterRef, "All lobbies are busy, try again later.");
+            return;
+        }
+
+        // Phase 3 — Point of no return
+        try {
+            // Dissolve party (consumed on launch)
+            if (party != null) {
+                partyManager.dissolveParty(party.getPartyId());
+            }
+
+            String sessionId = nextSessionId();
+            PurgeSession session = new PurgeSession(sessionId, instance.instanceId(), validPlayers);
+            sessionsById.put(sessionId, session);
+            for (UUID pid : validPlayers.keySet()) {
+                sessionIdByPlayer.put(pid, sessionId);
+            }
+
+            // Notify requester about skipped members
+            if (!skipped.isEmpty()) {
+                sendMessage(requesterRef, "Starting with " + validPlayers.size()
+                        + " player(s). Skipped: " + String.join(", ", skipped));
+            }
+
+            // Setup each player
+            HyvexaPurgePlugin plugin = HyvexaPurgePlugin.getInstance();
+            for (var entry : validPlayers.entrySet()) {
+                UUID pid = entry.getKey();
+                Ref<EntityStore> ref = entry.getValue();
+                DamageBypassRegistry.add(pid);
+                try {
+                    if (plugin != null && ref.isValid()) {
+                        Store<EntityStore> store = ref.getStore();
+                        Player player = store.getComponent(ref, Player.getComponentType());
+                        if (player != null) {
+                            plugin.grantLoadout(player);
+                        }
+                        teleportToStart(ref, store, instance);
+                    }
+                } catch (Exception e) {
+                    LOGGER.atWarning().withCause(e).log("Failed to setup player " + pid);
+                }
+                hudManager.showRunHud(pid);
+            }
+
+            // Start countdown
+            waveManager.startCountdown(session);
+
+            LOGGER.atInfo().log("Purge session " + sessionId + " started with "
+                    + validPlayers.size() + " player(s) in instance " + instance.instanceId());
+        } catch (Exception e) {
+            LOGGER.atWarning().withCause(e).log("Failed to start session, releasing instance");
+            runSafe("release instance", () -> instanceManager.releaseInstance(instance.instanceId()));
+        }
+    }
+
+    private void validateAndCollect(UUID memberId,
+                                    Map<UUID, Ref<EntityStore>> validPlayers,
+                                    List<String> skipped) {
+        if (hasActiveSession(memberId)) {
+            skipped.add(getPlayerName(memberId) + " (already in a session)");
+            return;
+        }
+        Ref<EntityStore> ref = hudManager.getPlayerRef(memberId);
+        if (ref == null || !ref.isValid()) {
+            skipped.add(getPlayerName(memberId) + " (not available)");
+            return;
+        }
+        // Verify player is in Purge world
+        try {
+            Store<EntityStore> store = ref.getStore();
+            World world = store.getExternalData() != null ? store.getExternalData().getWorld() : null;
+            if (world == null || !ModeGate.isPurgeWorld(world)) {
+                skipped.add(getPlayerName(memberId) + " (not in Purge world)");
+                return;
+            }
+        } catch (Exception e) {
+            skipped.add(getPlayerName(memberId) + " (not available)");
+            return;
+        }
+        validPlayers.put(memberId, ref);
+    }
+
+    // --- leaveSession (individual stop) ---
+
+    public void leaveSession(UUID playerId, String reason) {
+        if (playerId == null) {
+            return;
+        }
+        String sessionId = sessionIdByPlayer.get(playerId);
+        if (sessionId == null) {
+            return;
+        }
+        PurgeSession session = sessionsById.get(sessionId);
+        if (session == null) {
+            sessionIdByPlayer.remove(playerId);
+            return;
+        }
+
+        // Step 2: Handle upgrade phase before cleanup
+        if (session.getPendingUpgradeChoices().remove(playerId)) {
+            if (session.getPendingUpgradeChoices().isEmpty()) {
+                runSafe("cancel upgrade timeout", () -> {
+                    var task = session.getUpgradeTimeoutTask();
+                    if (task != null) {
+                        task.cancel(false);
+                        session.setUpgradeTimeoutTask(null);
+                    }
+                });
+                if (session.getState() == SessionState.UPGRADE_PICK) {
+                    session.setState(SessionState.INTERMISSION);
+                    waveManager.startIntermission(session);
+                }
+            }
+        }
+
+        // Step 3: Player cleanup
+        PurgeSessionPlayerState playerState = session.getPlayerState(playerId);
+        runSafe("persist results", () -> persistResults(playerId, session));
+        runSafe("remove bypass", () -> DamageBypassRegistry.remove(playerId));
         runSafe("hide hud", () -> hudManager.hideRunHud(playerId));
-        runSafe("persist", () -> persistResults(playerId, session));
 
-        // Send summary to player
+        // Build summary before world cleanup
+        int kills = playerState != null ? playerState.getKills() : 0;
         int summaryBaseScrap = calculateScrapReward(session.getCurrentWave());
-        PurgeUpgradeManager sumUm = upgradeManager;
-        double summaryMult = (sumUm != null) ? sumUm.getScrapMultiplier(session) : 1.0;
+        PurgeUpgradeManager um = upgradeManager;
+        double summaryMult = um != null ? um.getScrapMultiplier(session, playerId) : 1.0;
         int summaryScrap = (int) (summaryBaseScrap * summaryMult);
         String summary = "Purge ended - Wave " + session.getCurrentWave()
-                + " - " + session.getTotalKills() + " kills"
+                + " - " + kills + " kills"
                 + " - " + summaryScrap + " scrap earned"
                 + " (" + reason + ")";
 
-        runWorldCleanup(session, playerId, reason, summary);
+        // World-dependent cleanup for this player
+        // Pass playerState directly — world.execute() is async and session.removePlayer()
+        // below would delete the state before the world thread can access it.
+        runPlayerWorldCleanup(session, playerId, playerState, reason, summary);
 
-        LOGGER.atInfo().log("Purge session ended for " + playerId + " (" + reason + ")"
-                + " wave=" + session.getCurrentWave() + " kills=" + session.getTotalKills());
+        // Step 4: Remove player from session + index
+        session.removePlayer(playerId);
+        sessionIdByPlayer.remove(playerId);
+
+        LOGGER.atInfo().log("Player " + playerId + " left session " + sessionId + " (" + reason + ")");
+
+        // Step 5: Check session closure
+        if (session.getConnectedCount() == 0) {
+            stopSessionById(sessionId, "no players connected");
+        }
     }
 
-    public boolean hasActiveSession(UUID playerId) {
-        return playerId != null && activeSessions.containsKey(playerId);
+    // --- stopSessionById (global technical stop) ---
+
+    public void stopSessionById(String sessionId, String reason) {
+        if (sessionId == null) {
+            return;
+        }
+        PurgeSession session = sessionsById.remove(sessionId);
+        if (session == null) {
+            return;
+        }
+        session.setState(SessionState.ENDED);
+
+        // Step 1: Cancel all tasks
+        runSafe("cancel tasks", session::cancelAllTasks);
+
+        // Step 2: Remove all zombies
+        runSafe("remove zombies", () -> waveManager.removeAllZombies(session));
+
+        // Step 3: For each player still in session
+        Set<UUID> participants = session.getParticipants();
+        for (UUID pid : participants) {
+            runSafe("persist " + pid, () -> persistResults(pid, session));
+            runSafe("cleanup " + pid, () -> {
+                DamageBypassRegistry.remove(pid);
+                hudManager.hideRunHud(pid);
+            });
+
+            PurgeSessionPlayerState playerState = session.getPlayerState(pid);
+            int kills = playerState != null ? playerState.getKills() : 0;
+            int baseScrap = calculateScrapReward(session.getCurrentWave());
+            PurgeUpgradeManager um = upgradeManager;
+            double mult = um != null ? um.getScrapMultiplier(session, pid) : 1.0;
+            int scrap = (int) (baseScrap * mult);
+            String summary = "Purge ended - Wave " + session.getCurrentWave()
+                    + " - " + kills + " kills"
+                    + " - " + scrap + " scrap earned"
+                    + " (" + reason + ")";
+
+            runPlayerWorldCleanup(session, pid, playerState, reason, summary);
+            sessionIdByPlayer.remove(pid);
+        }
+
+        // Step 4: Release instance
+        runSafe("release instance", () -> instanceManager.releaseInstance(session.getInstanceId()));
+
+        LOGGER.atInfo().log("Session " + sessionId + " stopped (" + reason + ")");
     }
 
-    public PurgeSession getSession(UUID playerId) {
-        return playerId != null ? activeSessions.get(playerId) : null;
-    }
+    // --- cleanupPlayer ---
 
     public void cleanupPlayer(UUID playerId) {
-        if (playerId != null && activeSessions.containsKey(playerId)) {
-            stopSession(playerId, "disconnect");
+        if (playerId != null && sessionIdByPlayer.containsKey(playerId)) {
+            leaveSession(playerId, "disconnect");
         }
     }
+
+    // --- shutdown ---
 
     public void shutdown() {
-        for (UUID playerId : activeSessions.keySet()) {
+        for (String sessionId : sessionsById.keySet()) {
             try {
-                stopSession(playerId, "server shutdown");
+                stopSessionById(sessionId, "server shutdown");
             } catch (Exception e) {
-                LOGGER.atWarning().withCause(e).log("Shutdown cleanup failed for " + playerId);
+                LOGGER.atWarning().withCause(e).log("Shutdown cleanup failed for session " + sessionId);
             }
         }
-        activeSessions.clear();
+        sessionsById.clear();
+        sessionIdByPlayer.clear();
     }
 
+    // --- Private helpers ---
+
     private void persistResults(UUID playerId, PurgeSession session) {
-        // Update stats
+        PurgeSessionPlayerState playerState = session.getPlayerState(playerId);
+        int kills = playerState != null ? playerState.getKills() : 0;
+
         PurgePlayerStats stats = PurgePlayerStore.getInstance().getOrCreate(playerId);
         stats.updateBestWave(session.getCurrentWave());
-        stats.incrementKills(session.getTotalKills());
+        stats.incrementKills(kills);
         stats.incrementSessions();
         PurgePlayerStore.getInstance().save(playerId, stats);
 
-        // Award scrap (with Scavenger upgrade multiplier)
         int baseScrap = calculateScrapReward(session.getCurrentWave());
         PurgeUpgradeManager um = upgradeManager;
-        double scrapMult = (um != null) ? um.getScrapMultiplier(session) : 1.0;
+        double scrapMult = um != null ? um.getScrapMultiplier(session, playerId) : 1.0;
         int scrap = (int) (baseScrap * scrapMult);
         if (scrap > 0) {
             PurgeScrapStore.getInstance().addScrap(playerId, scrap);
@@ -175,6 +361,75 @@ public class PurgeSessionManager {
         } else {
             return 300 + 50 * ((wavesReached - 25) / 5);
         }
+    }
+
+    private void runPlayerWorldCleanup(PurgeSession session, UUID playerId,
+                                       PurgeSessionPlayerState playerState,
+                                       String reason, String summary) {
+        if (playerState == null) {
+            return;
+        }
+        Runnable cleanup = () -> performPlayerCleanup(session, playerId, playerState, reason, summary);
+        Ref<EntityStore> ref = playerState.getPlayerRef();
+        World world = resolveWorld(ref);
+        if (world != null) {
+            try {
+                world.execute(cleanup);
+            } catch (Exception e) {
+                LOGGER.atWarning().withCause(e).log("Failed to schedule world cleanup, running inline");
+                cleanup.run();
+            }
+        } else {
+            cleanup.run();
+        }
+    }
+
+    private void performPlayerCleanup(PurgeSession session, UUID playerId,
+                                       PurgeSessionPlayerState playerState,
+                                       String reason, String summary) {
+        Ref<EntityStore> ref = playerState.getPlayerRef();
+        runSafe("revert upgrades", () -> {
+            PurgeUpgradeManager um = upgradeManager;
+            if (um == null) {
+                return;
+            }
+            if (ref != null && ref.isValid()) {
+                Store<EntityStore> store = ref.getStore();
+                um.revertPlayerUpgrades(session, playerId, ref, store);
+            }
+            um.cleanupPlayer(playerId);
+        });
+        runSafe("heal player", () -> {
+            if (ref == null || !ref.isValid()) {
+                return;
+            }
+            Store<EntityStore> store = ref.getStore();
+            EntityStatMap statMap = store.getComponent(ref, EntityStatMap.getComponentType());
+            if (statMap != null) {
+                statMap.maximizeStatValue(DefaultEntityStatTypes.getHealth());
+            }
+        });
+        runSafe("remove loadout", () -> {
+            HyvexaPurgePlugin plugin = HyvexaPurgePlugin.getInstance();
+            if (plugin == null) {
+                return;
+            }
+            if (ref == null || !ref.isValid()) {
+                return;
+            }
+            Store<EntityStore> store = ref.getStore();
+            Player player = store.getComponent(ref, Player.getComponentType());
+            if (player != null) {
+                plugin.removeLoadout(player);
+            }
+            if ("voluntary stop".equalsIgnoreCase(reason) || "victory".equalsIgnoreCase(reason)) {
+                PurgeMapInstance instance = instanceManager.getInstance(session.getInstanceId());
+                if (instance != null) {
+                    teleportToExit(ref, store, instance);
+                }
+            }
+        });
+        runSafe("send summary", () -> sendMessage(ref, summary));
     }
 
     private void sendMessage(Ref<EntityStore> ref, String text) {
@@ -200,11 +455,8 @@ public class PurgeSessionManager {
         }
     }
 
-    private void teleportToConfiguredStart(Ref<EntityStore> ref, Store<EntityStore> store) {
-        if (settingsManager == null) {
-            return;
-        }
-        PurgeLocation location = settingsManager.getSessionStartPoint();
+    private void teleportToStart(Ref<EntityStore> ref, Store<EntityStore> store, PurgeMapInstance instance) {
+        PurgeLocation location = instance.startPoint();
         if (location == null) {
             return;
         }
@@ -216,11 +468,8 @@ public class PurgeSessionManager {
                 new Teleport(world, location.toPosition(), location.toRotation()));
     }
 
-    private void teleportToConfiguredExit(Ref<EntityStore> ref, Store<EntityStore> store) {
-        if (settingsManager == null) {
-            return;
-        }
-        PurgeLocation location = settingsManager.getSessionExitPoint();
+    private void teleportToExit(Ref<EntityStore> ref, Store<EntityStore> store, PurgeMapInstance instance) {
+        PurgeLocation location = instance.exitPoint();
         if (location == null) {
             return;
         }
@@ -232,66 +481,7 @@ public class PurgeSessionManager {
                 new Teleport(world, location.toPosition(), location.toRotation()));
     }
 
-    private void runWorldCleanup(PurgeSession session, UUID playerId, String reason, String summary) {
-        Runnable cleanup = () -> performWorldCleanup(session, playerId, reason, summary);
-        World world = resolvePlayerWorld(session);
-        if (world != null) {
-            try {
-                world.execute(cleanup);
-            } catch (Exception e) {
-                LOGGER.atWarning().withCause(e).log("Failed to schedule world cleanup, running inline");
-                cleanup.run();
-            }
-        } else {
-            cleanup.run();
-        }
-    }
-
-    private void performWorldCleanup(PurgeSession session, UUID playerId, String reason, String summary) {
-        runSafe("remove zombies", () -> waveManager.removeAllZombies(session));
-        runSafe("revert upgrades", () -> {
-            PurgeUpgradeManager um = upgradeManager;
-            if (um == null) {
-                return;
-            }
-            Ref<EntityStore> ref = session.getPlayerRef();
-            if (ref != null && ref.isValid()) {
-                Store<EntityStore> store = ref.getStore();
-                um.revertAllUpgrades(session, ref, store);
-            }
-            um.cleanupPlayer(playerId);
-        });
-        runSafe("heal player", () -> {
-            Ref<EntityStore> ref = session.getPlayerRef();
-            if (ref != null && ref.isValid()) {
-                Store<EntityStore> store = ref.getStore();
-                EntityStatMap statMap = store.getComponent(ref, EntityStatMap.getComponentType());
-                if (statMap != null) {
-                    statMap.maximizeStatValue(DefaultEntityStatTypes.getHealth());
-                }
-            }
-        });
-        runSafe("remove loadout", () -> {
-            HyvexaPurgePlugin plugin = HyvexaPurgePlugin.getInstance();
-            if (plugin != null) {
-                Ref<EntityStore> ref = session.getPlayerRef();
-                if (ref != null && ref.isValid()) {
-                    Store<EntityStore> store = ref.getStore();
-                    Player player = store.getComponent(ref, Player.getComponentType());
-                    if (player != null) {
-                        plugin.removeLoadout(player);
-                    }
-                    if ("voluntary stop".equalsIgnoreCase(reason) || "victory".equalsIgnoreCase(reason)) {
-                        teleportToConfiguredExit(ref, store);
-                    }
-                }
-            }
-        });
-        runSafe("send summary", () -> sendMessage(session.getPlayerRef(), summary));
-    }
-
-    private World resolvePlayerWorld(PurgeSession session) {
-        Ref<EntityStore> ref = session.getPlayerRef();
+    private World resolveWorld(Ref<EntityStore> ref) {
         if (ref == null || !ref.isValid()) {
             return null;
         }
@@ -300,5 +490,16 @@ public class PurgeSessionManager {
             return null;
         }
         return store.getExternalData().getWorld();
+    }
+
+    private String getPlayerName(UUID playerId) {
+        try {
+            PlayerRef playerRef = Universe.get().getPlayer(playerId);
+            if (playerRef != null) {
+                return playerRef.getUsername();
+            }
+        } catch (Exception ignored) {
+        }
+        return playerId.toString();
     }
 }
