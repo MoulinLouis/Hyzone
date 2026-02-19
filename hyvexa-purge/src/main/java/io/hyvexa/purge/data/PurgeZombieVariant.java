@@ -1,24 +1,37 @@
 package io.hyvexa.purge.data;
 
 public enum PurgeZombieVariant {
-    SLOW("Slow", "Purge_Zombie_Slow"),
-    NORMAL("Normal", "Purge_Zombie"),
-    FAST("Fast", "Purge_Zombie_Fast");
+    SLOW("Slow", 49, 20f, 8.0 / 9.0),
+    NORMAL("Normal", 49, 20f, 1.0),
+    FAST("Fast", 49, 20f, 11.0 / 9.0);
 
     private final String label;
-    private final String npcType;
+    private final int baseHealth;
+    private final float baseDamage;
+    /** Multiplier relative to vanilla zombie walk speed (9). */
+    private final double speedMultiplier;
 
-    PurgeZombieVariant(String label, String npcType) {
+    PurgeZombieVariant(String label, int baseHealth, float baseDamage, double speedMultiplier) {
         this.label = label;
-        this.npcType = npcType;
+        this.baseHealth = baseHealth;
+        this.baseDamage = baseDamage;
+        this.speedMultiplier = speedMultiplier;
     }
 
     public String getLabel() {
         return label;
     }
 
-    public String getNpcType() {
-        return npcType;
+    public int getBaseHealth() {
+        return baseHealth;
+    }
+
+    public float getBaseDamage() {
+        return baseDamage;
+    }
+
+    public double getSpeedMultiplier() {
+        return speedMultiplier;
     }
 
     public static PurgeZombieVariant fromKey(String key) {

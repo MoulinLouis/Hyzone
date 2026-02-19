@@ -17,6 +17,7 @@ import io.hyvexa.purge.data.PurgeSession;
 import io.hyvexa.purge.data.PurgeSessionPlayerState;
 import io.hyvexa.purge.data.PurgeUpgradeState;
 import io.hyvexa.purge.data.PurgeUpgradeType;
+import io.hyvexa.purge.data.PurgeZombieVariant;
 import io.hyvexa.purge.manager.PurgeSessionManager;
 
 import java.util.UUID;
@@ -58,6 +59,7 @@ public class PurgeDamageModifierSystem extends DamageEventSystem {
         }
 
         // 1. Friendly fire: if source is a player in the same session -> cancel
+        //    Also enforce zombie base damage when source is a session zombie
         Damage.Source source = event.getSource();
         if (source instanceof Damage.EntitySource entitySource) {
             Ref<EntityStore> sourceRef = entitySource.getRef();
@@ -69,6 +71,11 @@ public class PurgeDamageModifierSystem extends DamageEventSystem {
                         cancelDamage(event, buffer, chunk, entityId);
                         return;
                     }
+                } else if (session.getAliveZombies().contains(sourceRef)) {
+                    // Source is a Purge zombie — enforce per-variant damage
+                    PurgeZombieVariant variant = session.getZombieVariant(sourceRef);
+                    float damage = variant != null ? variant.getBaseDamage() : PurgeZombieVariant.NORMAL.getBaseDamage();
+                    event.setAmount(damage);
                 }
             }
         }
