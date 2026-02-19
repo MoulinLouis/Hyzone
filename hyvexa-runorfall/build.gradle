@@ -1,0 +1,37 @@
+plugins {
+    id 'java'
+}
+
+dependencies {
+    implementation project(':hyvexa-core')
+    compileOnly files("$hytaleHome/install/$patchline/package/game/latest/Server/HytaleServer.jar")
+    runtimeOnly files("$hytaleHome/install/$patchline/package/game/latest/Server/HytaleServer.jar")
+}
+
+tasks.register('updatePluginManifest') {
+    def manifestFile = file('src/main/resources/manifest.json')
+    doLast {
+        if (!manifestFile.exists()) {
+            throw new GradleException("Could not find manifest.json at ${manifestFile.path}!")
+        }
+        def manifestJson = new groovy.json.JsonSlurper().parseText(manifestFile.text)
+        manifestJson.Version = version
+        manifestJson.IncludesAssetPack = includes_pack.toBoolean()
+        manifestFile.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(manifestJson))
+    }
+}
+
+tasks.named('processResources') {
+    dependsOn 'updatePluginManifest'
+}
+
+tasks.named('jar') {
+    dependsOn ':hyvexa-core:jar'
+    archiveFileName = "HyvexaRunOrFall-${version}.jar"
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
+    from {
+        configurations.runtimeClasspath.findAll { it.name != 'HytaleServer.jar' }
+                .collect { it.isDirectory() ? it : zipTree(it) }
+    }
+}

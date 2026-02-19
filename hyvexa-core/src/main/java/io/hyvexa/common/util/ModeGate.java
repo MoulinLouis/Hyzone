@@ -33,4 +33,8 @@ public final class ModeGate {
     public static boolean isPurgeWorld(World world) {
         return isWorld(world, WorldConstants.WORLD_PURGE);
     }
+
+    public static boolean isRunOrFallWorld(World world) {
+        return isWorld(world, WorldConstants.WORLD_RUN_OR_FALL);
+    }
 }
