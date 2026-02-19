@@ -149,6 +149,7 @@ public class PurgeSessionManager {
                     LOGGER.atWarning().withCause(e).log("Failed to setup player " + pid);
                 }
                 hudManager.showRunHud(pid);
+                hudManager.updatePlayerHealth(pid, 100, 100);
             }
 
             // Start countdown
