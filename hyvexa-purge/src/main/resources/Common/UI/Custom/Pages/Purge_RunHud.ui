@@ -6,20 +6,20 @@ $C.@PageOverlay {
     Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
 
     Group #WaveStatusRow {
-      Anchor: (Top: 30, Left: 0, Right: 0, Height: 108);
+      Anchor: (Top: 30, Left: 0, Right: 0, Height: 120);
       LayoutMode: Left;
       Visible: false;
 
       Group { FlexWeight: 1; }
 
       Group #WaveStatusRoot {
-        Anchor: (Width: 300, Height: 108);
+        Anchor: (Width: 360, Height: 120);
         LayoutMode: Top;
 
         Label #WaveLabel {
-          Anchor: (Height: 40);
+          Anchor: (Height: 46);
           Style: (
-            FontSize: 28,
+            FontSize: 34,
             HorizontalAlignment: Center,
             RenderBold: true,
             TextColor: #e7f1f4
@@ -28,11 +28,12 @@ $C.@PageOverlay {
         }
 
         Label #ZombieCountLabel {
-          Anchor: (Top: 4, Height: 24);
+          Anchor: (Top: 4, Height: 32);
           Style: (
-            FontSize: 16,
+            FontSize: 24,
             HorizontalAlignment: Center,
-            TextColor: #9fb0ba
+            RenderBold: true,
+            TextColor: #d9e6ec
           );
           Text: "Zombies: 0/5";
         }
