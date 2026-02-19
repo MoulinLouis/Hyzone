@@ -17,26 +17,33 @@ import io.hyvexa.purge.data.PurgeSession;
 import io.hyvexa.purge.data.PurgeSessionPlayerState;
 import io.hyvexa.purge.data.PurgeUpgradeState;
 import io.hyvexa.purge.data.PurgeUpgradeType;
+import io.hyvexa.purge.data.PurgeWeaponUpgradeStore;
 import io.hyvexa.purge.data.PurgeZombieVariant;
 import io.hyvexa.purge.manager.PurgeSessionManager;
+import io.hyvexa.purge.manager.PurgeWeaponConfigManager;
 
 import java.util.UUID;
 
 public class PurgeDamageModifierSystem extends DamageEventSystem {
 
     private final PurgeSessionManager sessionManager;
+    private final PurgeWeaponConfigManager weaponConfigManager;
     private volatile SystemGroup<EntityStore> cachedGroup;
 
-    public PurgeDamageModifierSystem(PurgeSessionManager sessionManager) {
+    public PurgeDamageModifierSystem(PurgeSessionManager sessionManager,
+                                      PurgeWeaponConfigManager weaponConfigManager) {
         this.sessionManager = sessionManager;
+        this.weaponConfigManager = weaponConfigManager;
     }
 
     @Override
     public void handle(int entityId, ArchetypeChunk<EntityStore> chunk, Store<EntityStore> store,
                        CommandBuffer<EntityStore> buffer, Damage event) {
-        // Only process damage to players
+        // Check if target is a player
         Player target = chunk.getComponent(entityId, Player.getComponentType());
         if (target == null) {
+            // Target is not a player (e.g. zombie) — check for player damage overrides
+            applyPlayerDamageOverride(event, store);
             return;
         }
         PlayerRef targetPlayerRef = chunk.getComponent(entityId, PlayerRef.getComponentType());
@@ -94,6 +101,30 @@ public class PurgeDamageModifierSystem extends DamageEventSystem {
                 float multiplier = Math.max(0.60f, 1.0f - 0.08f * stacks);
                 event.setAmount(event.getAmount() * multiplier);
             }
+        }
+    }
+
+    private void applyPlayerDamageOverride(Damage event, Store<EntityStore> store) {
+        Damage.Source source = event.getSource();
+        if (!(source instanceof Damage.EntitySource entitySource)) {
+            return;
+        }
+        Ref<EntityStore> sourceRef = entitySource.getRef();
+        if (sourceRef == null || !sourceRef.isValid()) {
+            return;
+        }
+        PlayerRef sourcePlayerRef = store.getComponent(sourceRef, PlayerRef.getComponentType());
+        if (sourcePlayerRef == null) {
+            return;
+        }
+        UUID sourceId = sourcePlayerRef.getUuid();
+        if (sourceId == null) {
+            return;
+        }
+        int level = PurgeWeaponUpgradeStore.getInstance().getLevel(sourceId, "AK47");
+        if (level > 0) {
+            int damage = weaponConfigManager.getDamage("AK47", level);
+            event.setAmount(damage);
         }
     }
 

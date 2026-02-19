@@ -1,0 +1,85 @@
+$C = "../Common.ui";
+
+$C.@PageOverlay {
+  SceneBlur {}
+
+  Group #WeaponAdminWindow {
+    Anchor: (Width: 720, Height: 560);
+    LayoutMode: Top;
+    Background: #0d1620(0.95);
+    OutlineColor: #ffffff(0.06);
+    OutlineSize: 1;
+
+    // === HEADER ===
+    Group #Header {
+      Anchor: (Left: 0, Right: 0, Height: 52);
+      LayoutMode: Full;
+      Background: #0a1018;
+
+      Group {
+        Anchor: (Left: 0, Right: 0, Top: 0, Height: 2);
+        Background: #f59e0b;
+      }
+
+      Label {
+        Anchor: (Left: 20, Top: 16, Width: 400, Height: 24);
+        Style: (FontSize: 18, TextColor: #f0f4f8, RenderBold: true);
+        Text: "Weapon Configuration";
+      }
+
+      TextButton #BackButton {
+        Anchor: (Right: 12, Top: 12, Width: 28, Height: 28);
+        Text: "X";
+        Style: TextButtonStyle(
+          Default: (Background: #3b1219, LabelStyle: (FontSize: 14, TextColor: #ef4444, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Hovered: (Background: #5c1d28, LabelStyle: (FontSize: 14, TextColor: #f87171, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Pressed: (Background: #2d0f14, LabelStyle: (FontSize: 14, TextColor: #ef4444, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Sounds: $C.@ButtonSounds,
+        );
+      }
+    }
+
+    // === CONTENT ===
+    Group #Content {
+      Anchor: (Left: 0, Right: 0);
+      FlexWeight: 1;
+      LayoutMode: Top;
+      Padding: (Left: 14, Right: 14, Top: 10, Bottom: 10);
+
+      Label #WeaponSubtitle {
+        Style: (FontSize: 14, TextColor: #9fb0ba);
+        Text: "";
+      }
+
+      Label #EmptyText {
+        Style: (FontSize: 13, TextColor: #6b7b8a);
+        Text: "";
+      }
+
+      Group #LevelCards {
+        Anchor: (Left: 0, Right: 0, Top: 6);
+        FlexWeight: 1;
+        LayoutMode: TopScrolling;
+        ScrollbarStyle: $C.@DefaultScrollbarStyle;
+      }
+    }
+
+    // === FOOTER ===
+    Group #Footer {
+      Anchor: (Left: 0, Right: 0, Height: 50);
+      LayoutMode: Left;
+      Padding: (Left: 14, Right: 14, Top: 8, Bottom: 8);
+
+      TextButton #ResetButton {
+        Anchor: (Width: 140, Height: 34);
+        Text: "Reset Defaults";
+        Style: TextButtonStyle(
+          Default: (Background: #2a1f0a, LabelStyle: (FontSize: 13, RenderBold: true, TextColor: #fbbf24, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Hovered: (Background: #3d2e0f, LabelStyle: (FontSize: 13, RenderBold: true, TextColor: #fcd34d, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Pressed: (Background: #1f1707, LabelStyle: (FontSize: 13, RenderBold: true, TextColor: #fbbf24, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Sounds: $C.@ButtonSounds,
+        );
+      }
+    }
+  }
+}

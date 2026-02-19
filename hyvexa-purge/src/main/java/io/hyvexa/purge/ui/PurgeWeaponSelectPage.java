@@ -1,0 +1,332 @@
+package io.hyvexa.purge.ui;
+
+import com.hypixel.hytale.codec.Codec;
+import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
+import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
+import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
+import com.hypixel.hytale.server.core.ui.builder.EventData;
+import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
+import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.common.ui.ButtonEventData;
+import io.hyvexa.purge.data.PurgeScrapStore;
+import io.hyvexa.purge.data.PurgeWeaponUpgradeStore;
+import io.hyvexa.purge.manager.PurgeInstanceManager;
+import io.hyvexa.purge.manager.PurgeWaveConfigManager;
+import io.hyvexa.purge.manager.PurgeWeaponConfigManager;
+
+import javax.annotation.Nonnull;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
+public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSelectPage.PurgeWeaponSelectData> {
+
+    public enum Mode { ADMIN, PLAYER }
+
+    private static final String BUTTON_BACK = "Back";
+    private static final String BUTTON_SELECT_PREFIX = "Select:";
+    private static final String BUTTON_UPGRADE = "Upgrade";
+    private static final String BUTTON_RESET = "Reset";
+
+    private final Mode mode;
+    private final UUID playerId;
+    private final PurgeWeaponConfigManager weaponConfigManager;
+    private final PurgeWaveConfigManager waveConfigManager;
+    private final PurgeInstanceManager instanceManager;
+    private final boolean isOp;
+
+    // Track selected weapon for inline upgrade (PLAYER mode only)
+    private String selectedWeaponId;
+    // Ordered list of weapon IDs matching their card index in #WeaponList
+    private List<String> weaponIdOrder;
+
+    public PurgeWeaponSelectPage(@Nonnull PlayerRef playerRef,
+                                 Mode mode,
+                                 UUID playerId,
+                                 PurgeWeaponConfigManager weaponConfigManager,
+                                 PurgeWaveConfigManager waveConfigManager,
+                                 PurgeInstanceManager instanceManager,
+                                 boolean isOp) {
+        super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, PurgeWeaponSelectData.CODEC);
+        this.mode = mode;
+        this.playerId = playerId;
+        this.weaponConfigManager = weaponConfigManager;
+        this.waveConfigManager = waveConfigManager;
+        this.instanceManager = instanceManager;
+        this.isOp = isOp;
+    }
+
+    @Override
+    public void build(@Nonnull Ref<EntityStore> ref,
+                      @Nonnull UICommandBuilder uiCommandBuilder,
+                      @Nonnull UIEventBuilder uiEventBuilder,
+                      @Nonnull Store<EntityStore> store) {
+        uiCommandBuilder.append("Pages/Purge_WeaponSelect.ui");
+
+        if (mode == Mode.ADMIN) {
+            uiCommandBuilder.set("#Title.Text", "Weapon Configuration");
+            uiCommandBuilder.set("#Subtitle.Text", "Select a weapon to configure.");
+        }
+
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_BACK), false);
+
+        buildWeaponList(uiCommandBuilder, uiEventBuilder);
+    }
+
+    @Override
+    public void handleDataEvent(@Nonnull Ref<EntityStore> ref,
+                                @Nonnull Store<EntityStore> store,
+                                @Nonnull PurgeWeaponSelectData data) {
+        super.handleDataEvent(ref, store, data);
+        String button = data.getButton();
+        if (button == null) {
+            return;
+        }
+
+        if (BUTTON_BACK.equals(button)) {
+            handleBack(ref, store);
+            return;
+        }
+        if (button.startsWith(BUTTON_SELECT_PREFIX)) {
+            String weaponId = button.substring(BUTTON_SELECT_PREFIX.length());
+            handleSelect(weaponId, ref, store);
+            return;
+        }
+        if (BUTTON_UPGRADE.equals(button)) {
+            handleUpgrade(ref, store);
+            return;
+        }
+        if (BUTTON_RESET.equals(button)) {
+            handleReset(ref, store);
+        }
+    }
+
+    private void handleBack(Ref<EntityStore> ref, Store<EntityStore> store) {
+        if (mode == Mode.ADMIN) {
+            Player player = store.getComponent(ref, Player.getComponentType());
+            PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+            if (player != null && playerRef != null) {
+                player.getPageManager().openCustomPage(ref, store,
+                        new PurgeAdminIndexPage(playerRef, waveConfigManager, instanceManager, weaponConfigManager));
+            }
+        } else {
+            close();
+        }
+    }
+
+    private void handleSelect(String weaponId, Ref<EntityStore> ref, Store<EntityStore> store) {
+        if (mode == Mode.ADMIN) {
+            Player player = store.getComponent(ref, Player.getComponentType());
+            PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+            if (player == null || playerRef == null) {
+                return;
+            }
+            player.getPageManager().openCustomPage(ref, store,
+                    new PurgeWeaponAdminPage(playerRef, weaponId, weaponConfigManager, waveConfigManager, instanceManager));
+        } else {
+            // PLAYER mode: show detail panel inline
+            this.selectedWeaponId = weaponId;
+            sendRefresh();
+        }
+    }
+
+    private void handleUpgrade(Ref<EntityStore> ref, Store<EntityStore> store) {
+        if (selectedWeaponId == null) {
+            return;
+        }
+
+        Player player = store.getComponent(ref, Player.getComponentType());
+        PurgeWeaponUpgradeStore.UpgradeResult result =
+                PurgeWeaponUpgradeStore.getInstance().tryUpgrade(playerId, selectedWeaponId, weaponConfigManager);
+
+        String displayName = weaponConfigManager.getDisplayName(selectedWeaponId);
+        if (player != null) {
+            switch (result) {
+                case SUCCESS -> {
+                    int newLevel = PurgeWeaponUpgradeStore.getInstance().getLevel(playerId, selectedWeaponId);
+                    String stars = weaponConfigManager.getStarDisplay(newLevel);
+                    int dmg = weaponConfigManager.getDamage(selectedWeaponId, newLevel);
+                    player.sendMessage(Message.raw(displayName + " upgraded to " + stars + " star (" + dmg + " dmg)!"));
+                }
+                case MAX_LEVEL -> player.sendMessage(Message.raw(displayName + " is already at max level!"));
+                case NOT_ENOUGH_SCRAP -> player.sendMessage(Message.raw("Not enough scrap to upgrade."));
+            }
+        }
+        sendRefresh();
+    }
+
+    private void handleReset(Ref<EntityStore> ref, Store<EntityStore> store) {
+        if (selectedWeaponId == null) {
+            return;
+        }
+
+        PurgeWeaponUpgradeStore.getInstance().setLevel(playerId, selectedWeaponId, 0);
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player != null) {
+            player.sendMessage(Message.raw(weaponConfigManager.getDisplayName(selectedWeaponId) + " reset to level 0."));
+        }
+        sendRefresh();
+    }
+
+    private void sendRefresh() {
+        UICommandBuilder commandBuilder = new UICommandBuilder();
+        UIEventBuilder eventBuilder = new UIEventBuilder();
+
+        // Re-bind back button
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_BACK), false);
+
+        // Rebuild weapon list and bindings to avoid stale child indexes.
+        buildWeaponList(commandBuilder, eventBuilder);
+
+        // Highlight selected card
+        if (mode == Mode.PLAYER && weaponIdOrder != null) {
+            for (int i = 0; i < weaponIdOrder.size(); i++) {
+                String root = "#WeaponList[" + i + "]";
+                if (weaponIdOrder.get(i).equals(selectedWeaponId)) {
+                    commandBuilder.set(root + ".OutlineColor", "#f59e0b");
+                    commandBuilder.set(root + ".OutlineSize", 1);
+                } else {
+                    commandBuilder.set(root + ".OutlineColor", "#ffffff(0.08)");
+                    commandBuilder.set(root + ".OutlineSize", 1);
+                }
+            }
+        }
+
+        // Populate detail panel
+        if (selectedWeaponId != null && mode == Mode.PLAYER) {
+            populateDetailPanel(commandBuilder, eventBuilder);
+        }
+
+        this.sendUpdate(commandBuilder, eventBuilder, false);
+    }
+
+    private void populateDetailPanel(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
+        commandBuilder.set("#DetailPanel.Visible", true);
+        commandBuilder.set("#DetailName.Text", weaponConfigManager.getDisplayName(selectedWeaponId));
+
+        int currentLevel = PurgeWeaponUpgradeStore.getInstance().getLevel(playerId, selectedWeaponId);
+        int maxLevel = weaponConfigManager.getMaxLevel();
+        int currentDmg = weaponConfigManager.getDamage(selectedWeaponId, currentLevel);
+        long scrap = PurgeScrapStore.getInstance().getScrap(playerId);
+
+        // Detail star display
+        updateDetailStarDisplay(commandBuilder, currentLevel);
+
+        if (currentLevel >= maxLevel) {
+            commandBuilder.set("#DetailDamage.Text", currentDmg + " dmg - MAX LEVEL");
+            commandBuilder.set("#DetailDamage.Style.TextColor", "#fbbf24");
+            commandBuilder.set("#DetailUpgradeGroup.Visible", false);
+            commandBuilder.set("#DetailStatus.Text", "Max level reached!");
+            commandBuilder.set("#DetailStatus.Style.TextColor", "#fbbf24");
+        } else {
+            int nextLevel = currentLevel + 1;
+            int nextDmg = weaponConfigManager.getDamage(selectedWeaponId, nextLevel);
+            long nextCost = weaponConfigManager.getCost(selectedWeaponId, nextLevel);
+            commandBuilder.set("#DetailDamage.Text", currentDmg + " -> " + nextDmg + " dmg");
+            commandBuilder.set("#DetailDamage.Style.TextColor", "#9fb0ba");
+
+            if (scrap >= nextCost) {
+                commandBuilder.set("#DetailUpgradeGroup.Visible", true);
+                commandBuilder.set("#UpgradeButton.Text", "UPGRADE - " + nextCost + " scrap");
+                commandBuilder.set("#DetailStatus.Text", "");
+                eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#UpgradeButton",
+                        EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_UPGRADE), false);
+            } else {
+                commandBuilder.set("#DetailUpgradeGroup.Visible", false);
+                commandBuilder.set("#DetailStatus.Text", "Not enough scrap (" + scrap + "/" + nextCost + ")");
+                commandBuilder.set("#DetailStatus.Style.TextColor", "#ef4444");
+            }
+        }
+
+        // OP reset button
+        if (isOp && currentLevel > 0) {
+            commandBuilder.set("#DetailResetGroup.Visible", true);
+            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ResetButton",
+                    EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_RESET), false);
+        } else {
+            commandBuilder.set("#DetailResetGroup.Visible", false);
+        }
+    }
+
+    private void buildWeaponList(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
+        commandBuilder.clear("#WeaponList");
+        weaponIdOrder = new ArrayList<>();
+
+        List<String> weaponIds = new ArrayList<>(weaponConfigManager.getWeaponIds());
+        weaponIds.sort(String::compareTo);
+
+        int index = 0;
+        for (String weaponId : weaponIds) {
+            int playerLevel = 0;
+            if (mode == Mode.PLAYER && playerId != null) {
+                playerLevel = PurgeWeaponUpgradeStore.getInstance().getLevel(playerId, weaponId);
+                if (playerLevel < 1) {
+                    continue; // Only show owned weapons
+                }
+            }
+
+            String root = "#WeaponList[" + index + "]";
+            commandBuilder.append("#WeaponList", "Pages/Purge_WeaponSelectEntry.ui");
+
+            if (mode == Mode.ADMIN) {
+                commandBuilder.set(root + " #WeaponName.Visible", true);
+                commandBuilder.set(root + " #WeaponName.Text", weaponConfigManager.getDisplayName(weaponId));
+            } else {
+                commandBuilder.set(root + " #StarBar.Visible", true);
+                updateCardStarDisplay(commandBuilder, root, playerLevel);
+            }
+
+            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
+                    root + " #SelectButton",
+                    EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_SELECT_PREFIX + weaponId), false);
+
+            weaponIdOrder.add(weaponId);
+            index++;
+        }
+    }
+
+    private void updateCardStarDisplay(UICommandBuilder commandBuilder, String root, int level) {
+        int fullStars = level / 2;
+        boolean hasHalf = level % 2 == 1;
+        for (int p = 0; p < 5; p++) {
+            commandBuilder.set(root + " #S" + p + "F.Visible", p < fullStars);
+            commandBuilder.set(root + " #S" + p + "H.Visible", p == fullStars && hasHalf);
+            commandBuilder.set(root + " #S" + p + "E.Visible", p >= fullStars && !(p == fullStars && hasHalf));
+        }
+    }
+
+    private void updateDetailStarDisplay(UICommandBuilder commandBuilder, int level) {
+        int fullStars = level / 2;
+        boolean hasHalf = level % 2 == 1;
+        for (int p = 0; p < 5; p++) {
+            commandBuilder.set("#DS" + p + "F.Visible", p < fullStars);
+            commandBuilder.set("#DS" + p + "H.Visible", p == fullStars && hasHalf);
+            commandBuilder.set("#DS" + p + "E.Visible", p >= fullStars && !(p == fullStars && hasHalf));
+        }
+    }
+
+    public static class PurgeWeaponSelectData extends ButtonEventData {
+        public static final BuilderCodec<PurgeWeaponSelectData> CODEC =
+                BuilderCodec.<PurgeWeaponSelectData>builder(PurgeWeaponSelectData.class, PurgeWeaponSelectData::new)
+                        .addField(new KeyedCodec<>(ButtonEventData.KEY_BUTTON, Codec.STRING),
+                                (data, value) -> data.button = value, data -> data.button)
+                        .build();
+
+        private String button;
+
+        @Override
+        public String getButton() {
+            return button;
+        }
+    }
+}

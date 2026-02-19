@@ -16,6 +16,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.purge.manager.PurgeInstanceManager;
 import io.hyvexa.purge.manager.PurgeWaveConfigManager;
+import io.hyvexa.purge.manager.PurgeWeaponConfigManager;
 
 import javax.annotation.Nonnull;
 
@@ -23,16 +24,20 @@ public class PurgeAdminIndexPage extends InteractiveCustomUIPage<PurgeAdminIndex
 
     private static final String BUTTON_WAVES = "Waves";
     private static final String BUTTON_INSTANCES = "Instances";
+    private static final String BUTTON_WEAPONS = "Weapons";
 
     private final PurgeWaveConfigManager waveConfigManager;
     private final PurgeInstanceManager instanceManager;
+    private final PurgeWeaponConfigManager weaponConfigManager;
 
     public PurgeAdminIndexPage(@Nonnull PlayerRef playerRef,
                                PurgeWaveConfigManager waveConfigManager,
-                               PurgeInstanceManager instanceManager) {
+                               PurgeInstanceManager instanceManager,
+                               PurgeWeaponConfigManager weaponConfigManager) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, PurgeAdminIndexData.CODEC);
         this.waveConfigManager = waveConfigManager;
         this.instanceManager = instanceManager;
+        this.weaponConfigManager = weaponConfigManager;
     }
 
     @Override
@@ -43,6 +48,8 @@ public class PurgeAdminIndexPage extends InteractiveCustomUIPage<PurgeAdminIndex
                 EventData.of(PurgeAdminIndexData.KEY_BUTTON, BUTTON_WAVES), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#InstancesButton",
                 EventData.of(PurgeAdminIndexData.KEY_BUTTON, BUTTON_INSTANCES), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#WeaponsButton",
+                EventData.of(PurgeAdminIndexData.KEY_BUTTON, BUTTON_WEAPONS), false);
     }
 
     @Override
@@ -59,10 +66,14 @@ public class PurgeAdminIndexPage extends InteractiveCustomUIPage<PurgeAdminIndex
         }
         if (BUTTON_WAVES.equals(data.button)) {
             player.getPageManager().openCustomPage(ref, store,
-                    new PurgeWaveAdminPage(playerRef, waveConfigManager, instanceManager));
+                    new PurgeWaveAdminPage(playerRef, waveConfigManager, instanceManager, weaponConfigManager));
         } else if (BUTTON_INSTANCES.equals(data.button)) {
             player.getPageManager().openCustomPage(ref, store,
-                    new PurgeInstanceAdminPage(playerRef, instanceManager, waveConfigManager));
+                    new PurgeInstanceAdminPage(playerRef, instanceManager, waveConfigManager, weaponConfigManager));
+        } else if (BUTTON_WEAPONS.equals(data.button)) {
+            player.getPageManager().openCustomPage(ref, store,
+                    new PurgeWeaponSelectPage(playerRef, PurgeWeaponSelectPage.Mode.ADMIN, null,
+                            weaponConfigManager, waveConfigManager, instanceManager, false));
         }
     }
 

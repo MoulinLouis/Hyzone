@@ -1,0 +1,95 @@
+$C = "../Common.ui";
+
+Group {
+  LayoutMode: Left;
+  Anchor: (Left: 2, Right: 2, Bottom: 4, Height: 48, Width: 668);
+  Background: $C.@InputBoxBackground;
+  Padding: (Left: 10, Right: 8, Top: 8, Bottom: 8);
+
+  // Star display
+  Label #StarLabel {
+    Anchor: (Width: 60);
+    Style: (FontSize: 14, RenderBold: true, TextColor: #fbbf24, VerticalAlignment: Center);
+    Text: "0";
+  }
+
+  // Damage controls
+  Group {
+    Anchor: (Width: 200);
+    LayoutMode: Left;
+
+    Label {
+      Anchor: (Width: 38);
+      Style: (FontSize: 13, TextColor: #fca5a5, VerticalAlignment: Center);
+      Text: "Dmg";
+    }
+
+    TextButton #DmgMinusButton {
+      Anchor: (Width: 26, Height: 26);
+      Text: "-";
+      Style: TextButtonStyle(
+        Default: (Background: #32131a, LabelStyle: (FontSize: 15, RenderBold: true, TextColor: #fca5a5, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Hovered: (Background: #4a1f29, LabelStyle: (FontSize: 15, RenderBold: true, TextColor: #fecaca, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Pressed: (Background: #230d12, LabelStyle: (FontSize: 15, RenderBold: true, TextColor: #fca5a5, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Sounds: $C.@ButtonSounds,
+      );
+    }
+
+    Label #DmgValue {
+      Anchor: (Width: 40);
+      Style: (FontSize: 13, RenderBold: true, TextColor: #fee2e2, HorizontalAlignment: Center, VerticalAlignment: Center);
+      Text: "17";
+    }
+
+    TextButton #DmgPlusButton {
+      Anchor: (Width: 26, Height: 26);
+      Text: "+";
+      Style: TextButtonStyle(
+        Default: (Background: #32131a, LabelStyle: (FontSize: 15, RenderBold: true, TextColor: #fca5a5, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Hovered: (Background: #4a1f29, LabelStyle: (FontSize: 15, RenderBold: true, TextColor: #fecaca, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Pressed: (Background: #230d12, LabelStyle: (FontSize: 15, RenderBold: true, TextColor: #fca5a5, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Sounds: $C.@ButtonSounds,
+      );
+    }
+  }
+
+  // Cost controls
+  Group {
+    Anchor: (Width: 260);
+    LayoutMode: Left;
+
+    Label {
+      Anchor: (Width: 42);
+      Style: (FontSize: 13, TextColor: #86efac, VerticalAlignment: Center);
+      Text: "Cost";
+    }
+
+    TextButton #CostMinusButton {
+      Anchor: (Width: 26, Height: 26);
+      Text: "-";
+      Style: TextButtonStyle(
+        Default: (Background: #0c2416, LabelStyle: (FontSize: 15, RenderBold: true, TextColor: #86efac, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Hovered: (Background: #124026, LabelStyle: (FontSize: 15, RenderBold: true, TextColor: #bbf7d0, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Pressed: (Background: #091a10, LabelStyle: (FontSize: 15, RenderBold: true, TextColor: #86efac, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Sounds: $C.@ButtonSounds,
+      );
+    }
+
+    Label #CostValue {
+      Anchor: (Width: 64);
+      Style: (FontSize: 13, RenderBold: true, TextColor: #dcfce7, HorizontalAlignment: Center, VerticalAlignment: Center);
+      Text: "0";
+    }
+
+    TextButton #CostPlusButton {
+      Anchor: (Width: 26, Height: 26);
+      Text: "+";
+      Style: TextButtonStyle(
+        Default: (Background: #0c2416, LabelStyle: (FontSize: 15, RenderBold: true, TextColor: #86efac, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Hovered: (Background: #124026, LabelStyle: (FontSize: 15, RenderBold: true, TextColor: #bbf7d0, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Pressed: (Background: #091a10, LabelStyle: (FontSize: 15, RenderBold: true, TextColor: #86efac, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Sounds: $C.@ButtonSounds,
+      );
+    }
+  }
+}
