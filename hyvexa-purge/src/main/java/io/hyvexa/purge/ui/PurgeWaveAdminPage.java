@@ -20,6 +20,7 @@ import io.hyvexa.purge.data.PurgeWaveDefinition;
 import io.hyvexa.purge.data.PurgeZombieVariant;
 import io.hyvexa.purge.manager.PurgeInstanceManager;
 import io.hyvexa.purge.manager.PurgeWaveConfigManager;
+import io.hyvexa.purge.manager.PurgeWeaponConfigManager;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -35,13 +36,16 @@ public class PurgeWaveAdminPage extends InteractiveCustomUIPage<PurgeWaveAdminPa
 
     private final PurgeWaveConfigManager waveConfigManager;
     private final PurgeInstanceManager instanceManager;
+    private final PurgeWeaponConfigManager weaponConfigManager;
 
     public PurgeWaveAdminPage(@Nonnull PlayerRef playerRef,
                               PurgeWaveConfigManager waveConfigManager,
-                              PurgeInstanceManager instanceManager) {
+                              PurgeInstanceManager instanceManager,
+                              PurgeWeaponConfigManager weaponConfigManager) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, PurgeWaveAdminData.CODEC);
         this.waveConfigManager = waveConfigManager;
         this.instanceManager = instanceManager;
+        this.weaponConfigManager = weaponConfigManager;
     }
 
     @Override
@@ -213,7 +217,7 @@ public class PurgeWaveAdminPage extends InteractiveCustomUIPage<PurgeWaveAdminPa
             return;
         }
         player.getPageManager().openCustomPage(ref, store,
-                new PurgeAdminIndexPage(playerRef, waveConfigManager, instanceManager));
+                new PurgeAdminIndexPage(playerRef, waveConfigManager, instanceManager, weaponConfigManager));
     }
 
     private void sendRefresh() {

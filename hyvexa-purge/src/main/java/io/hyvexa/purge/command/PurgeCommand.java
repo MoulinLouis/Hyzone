@@ -23,7 +23,9 @@ import io.hyvexa.purge.manager.PurgeInstanceManager;
 import io.hyvexa.purge.manager.PurgePartyManager;
 import io.hyvexa.purge.manager.PurgeSessionManager;
 import io.hyvexa.purge.manager.PurgeWaveConfigManager;
+import io.hyvexa.purge.manager.PurgeWeaponConfigManager;
 import io.hyvexa.purge.ui.PurgeAdminIndexPage;
+import io.hyvexa.purge.ui.PurgeWeaponSelectPage;
 
 import javax.annotation.Nonnull;
 import java.util.Set;
@@ -38,11 +40,13 @@ public class PurgeCommand extends AbstractAsyncCommand {
     private final PurgeWaveConfigManager waveConfigManager;
     private final PurgePartyManager partyManager;
     private final PurgeInstanceManager instanceManager;
+    private final PurgeWeaponConfigManager weaponConfigManager;
 
     public PurgeCommand(PurgeSessionManager sessionManager,
                         PurgeWaveConfigManager waveConfigManager,
                         PurgePartyManager partyManager,
-                        PurgeInstanceManager instanceManager) {
+                        PurgeInstanceManager instanceManager,
+                        PurgeWeaponConfigManager weaponConfigManager) {
         super("purge", "Purge zombie survival commands");
         this.setPermissionGroup(GameMode.Adventure);
         this.setAllowsExtraArguments(true);
@@ -50,6 +54,7 @@ public class PurgeCommand extends AbstractAsyncCommand {
         this.waveConfigManager = waveConfigManager;
         this.partyManager = partyManager;
         this.instanceManager = instanceManager;
+        this.weaponConfigManager = weaponConfigManager;
     }
 
     @Override
@@ -78,7 +83,7 @@ public class PurgeCommand extends AbstractAsyncCommand {
                                Store<EntityStore> store, World world) {
         String[] args = CommandUtils.getArgs(ctx);
         if (args.length == 0) {
-            player.sendMessage(Message.raw("Usage: /purge <start|stop|stats|admin>"));
+            player.sendMessage(Message.raw("Usage: /purge <start|stop|stats|party|upgrade|scrap|admin>"));
             return;
         }
 
@@ -95,8 +100,10 @@ public class PurgeCommand extends AbstractAsyncCommand {
             case "stop" -> handleStop(player, playerId);
             case "stats" -> handleStats(player, playerId);
             case "party" -> handleParty(player, playerId, args);
+            case "upgrade" -> handleUpgrade(player, ref, store, playerId);
             case "admin" -> openAdminMenu(player, ref, store);
-            default -> player.sendMessage(Message.raw("Usage: /purge <start|stop|stats|party|admin>"));
+            case "scrap" -> handleScrap(player, playerId, args);
+            default -> player.sendMessage(Message.raw("Usage: /purge <start|stop|stats|party|upgrade|scrap|admin>"));
         }
     }
 
@@ -110,7 +117,7 @@ public class PurgeCommand extends AbstractAsyncCommand {
             return;
         }
         player.getPageManager().openCustomPage(ref, store,
-                new PurgeAdminIndexPage(playerRef, waveConfigManager, instanceManager));
+                new PurgeAdminIndexPage(playerRef, waveConfigManager, instanceManager, weaponConfigManager));
     }
 
     private void handleStart(Player player, Ref<EntityStore> ref, World world, UUID playerId) {
@@ -137,6 +144,80 @@ public class PurgeCommand extends AbstractAsyncCommand {
         player.sendMessage(Message.raw("Total kills: " + stats.getTotalKills()));
         player.sendMessage(Message.raw("Total sessions: " + stats.getTotalSessions()));
         player.sendMessage(Message.raw("Scrap: " + scrap));
+    }
+
+    private void handleUpgrade(Player player, Ref<EntityStore> ref, Store<EntityStore> store, UUID playerId) {
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        if (playerRef == null) {
+            return;
+        }
+        player.getPageManager().openCustomPage(ref, store,
+                new PurgeWeaponSelectPage(playerRef, PurgeWeaponSelectPage.Mode.PLAYER, playerId,
+                        weaponConfigManager, null, null, PermissionUtils.isOp(player)));
+    }
+
+    private void handleScrap(Player player, UUID callerPlayerId, String[] args) {
+        if (!PermissionUtils.isOp(player)) {
+            player.sendMessage(Message.raw("You must be OP to use /purge scrap."));
+            return;
+        }
+        if (args.length < 3) {
+            player.sendMessage(Message.raw("Usage: /purge scrap <add|remove|set|check> <player> [amount]"));
+            return;
+        }
+        String action = args[1].toLowerCase();
+        String targetName = args[2];
+        PlayerRef targetRef = findOnlineByName(targetName);
+        if (targetRef == null) {
+            player.sendMessage(Message.raw("Player not found: " + targetName));
+            return;
+        }
+        UUID targetId = targetRef.getUuid();
+
+        if ("check".equals(action)) {
+            long scrap = PurgeScrapStore.getInstance().getScrap(targetId);
+            player.sendMessage(Message.raw(targetName + " has " + scrap + " scrap."));
+            return;
+        }
+
+        if (args.length < 4) {
+            player.sendMessage(Message.raw("Usage: /purge scrap " + action + " <player> <amount>"));
+            return;
+        }
+        long amount;
+        try {
+            amount = Long.parseLong(args[3]);
+        } catch (NumberFormatException e) {
+            player.sendMessage(Message.raw("Invalid amount: " + args[3]));
+            return;
+        }
+        if (amount < 0) {
+            player.sendMessage(Message.raw("Amount must be positive."));
+            return;
+        }
+
+        switch (action) {
+            case "add" -> {
+                PurgeScrapStore.getInstance().addScrap(targetId, amount);
+                long newScrap = PurgeScrapStore.getInstance().getScrap(targetId);
+                player.sendMessage(Message.raw("Added " + amount + " scrap to " + targetName + ". New total: " + newScrap));
+            }
+            case "remove" -> {
+                PurgeScrapStore.getInstance().removeScrap(targetId, amount);
+                long newScrap = PurgeScrapStore.getInstance().getScrap(targetId);
+                player.sendMessage(Message.raw("Removed " + amount + " scrap from " + targetName + ". New total: " + newScrap));
+            }
+            case "set" -> {
+                long current = PurgeScrapStore.getInstance().getScrap(targetId);
+                if (amount > current) {
+                    PurgeScrapStore.getInstance().addScrap(targetId, amount - current);
+                } else if (amount < current) {
+                    PurgeScrapStore.getInstance().removeScrap(targetId, current - amount);
+                }
+                player.sendMessage(Message.raw("Set " + targetName + " scrap to " + amount + "."));
+            }
+            default -> player.sendMessage(Message.raw("Usage: /purge scrap <add|remove|set|check> <player> [amount]"));
+        }
     }
 
     private void handleParty(Player player, UUID playerId, String[] args) {

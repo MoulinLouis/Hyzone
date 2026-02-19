@@ -4,7 +4,7 @@ $C.@PageOverlay {
   SceneBlur {}
 
   Group #AdminIndexWindow {
-    Anchor: (Width: 420, Height: 400);
+    Anchor: (Width: 420, Height: 460);
     LayoutMode: Top;
     Background: #0d1620(0.95);
     OutlineColor: #ffffff(0.06);
@@ -82,6 +82,29 @@ $C.@PageOverlay {
           Label #InstancesLabel {
             Style: (FontSize: 16, RenderBold: true, TextColor: #38bdf8);
             Text: "Instances";
+          }
+        }
+      }
+
+      Group {
+        Anchor: (Left: 2, Right: 2, Top: 10, Height: 46, Width: 390);
+        Background: $C.@InputBoxBackground;
+
+        Button #WeaponsButton {
+          Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+          LayoutMode: Left;
+          Padding: (Left: 10, Right: 10, Top: 8, Bottom: 8);
+          Background: #00000000;
+          Style: ButtonStyle(
+            Default: (Background: #00000000),
+            Hovered: (Background: #ffffff(0.08)),
+            Pressed: (Background: #ffffff(0.03)),
+            Sounds: $C.@ButtonSounds,
+          );
+
+          Label #WeaponsLabel {
+            Style: (FontSize: 16, RenderBold: true, TextColor: #f59e0b);
+            Text: "Weapons";
           }
         }
       }
