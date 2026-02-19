@@ -1,0 +1,22 @@
+{
+    "Group": "io.hyvexa",
+    "Name": "HyvexaRunOrFall",
+    "Version": "1.0.0",
+    "Description": "Hyvexa RunOrFall - Last Player Standing",
+    "Authors": [
+        {
+            "Name": "Playfade"
+        }
+    ],
+    "Website": "",
+    "ServerVersion": "*",
+    "Dependencies": {
+        
+    },
+    "OptionalDependencies": {
+        
+    },
+    "DisabledByDefault": false,
+    "Main": "io.hyvexa.runorfall.HyvexaRunOrFallPlugin",
+    "IncludesAssetPack": true
+}

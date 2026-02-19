@@ -31,7 +31,7 @@ subprojects {
 }
 
 tasks.register('stagePlugins', Copy) {
-    dependsOn ':hyvexa-parkour:jar', ':hyvexa-hub:jar', ':hyvexa-parkour-ascend:jar', ':hyvexa-purge:jar'
+    dependsOn ':hyvexa-parkour:jar', ':hyvexa-hub:jar', ':hyvexa-parkour-ascend:jar', ':hyvexa-purge:jar', ':hyvexa-runorfall:jar'
     def modsDir = rootProject.file("run/mods")
     if (!modsDir.exists()) {
         modsDir.mkdirs()
@@ -40,11 +40,12 @@ tasks.register('stagePlugins', Copy) {
     from(project(':hyvexa-hub').tasks.named('jar').get().archiveFile)
     from(project(':hyvexa-parkour-ascend').tasks.named('jar').get().archiveFile)
     from(project(':hyvexa-purge').tasks.named('jar').get().archiveFile)
+    from(project(':hyvexa-runorfall').tasks.named('jar').get().archiveFile)
     into(modsDir)
 }
 
 tasks.register('stagePluginsNoHub', Copy) {
-    dependsOn ':hyvexa-parkour:jar', ':hyvexa-parkour-ascend:jar', ':hyvexa-purge:jar'
+    dependsOn ':hyvexa-parkour:jar', ':hyvexa-parkour-ascend:jar', ':hyvexa-purge:jar', ':hyvexa-runorfall:jar'
     def modsDir = rootProject.file("run/mods")
     if (!modsDir.exists()) {
         modsDir.mkdirs()
@@ -52,6 +53,7 @@ tasks.register('stagePluginsNoHub', Copy) {
     from(project(':hyvexa-parkour').tasks.named('jar').get().archiveFile)
     from(project(':hyvexa-parkour-ascend').tasks.named('jar').get().archiveFile)
     from(project(':hyvexa-purge').tasks.named('jar').get().archiveFile)
+    from(project(':hyvexa-runorfall').tasks.named('jar').get().archiveFile)
     into(modsDir)
     doLast {
         delete fileTree(modsDir) {
@@ -61,7 +63,7 @@ tasks.register('stagePluginsNoHub', Copy) {
 }
 
 tasks.register('collectPlugins', Copy) {
-    dependsOn ':hyvexa-parkour:jar', ':hyvexa-hub:jar', ':hyvexa-parkour-ascend:jar', ':hyvexa-purge:jar'
+    dependsOn ':hyvexa-parkour:jar', ':hyvexa-hub:jar', ':hyvexa-parkour-ascend:jar', ':hyvexa-purge:jar', ':hyvexa-runorfall:jar'
     def outputDir = rootProject.file("build/libs")
     if (!outputDir.exists()) {
         outputDir.mkdirs()
@@ -70,5 +72,6 @@ tasks.register('collectPlugins', Copy) {
     from(project(':hyvexa-hub').tasks.named('jar').get().archiveFile)
     from(project(':hyvexa-parkour-ascend').tasks.named('jar').get().archiveFile)
     from(project(':hyvexa-purge').tasks.named('jar').get().archiveFile)
+    from(project(':hyvexa-runorfall').tasks.named('jar').get().archiveFile)
     into(outputDir)
 }

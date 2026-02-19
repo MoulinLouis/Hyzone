@@ -3,6 +3,8 @@
 ## [Unreleased]
 
 ### Added
+- **RunOrFall: New game mode module** - Added `hyvexa-runorfall` with lobby queue, fixed 10s pre-game countdown, destructible platform cuboids, void elimination, and last-player-standing winner flow via `/rof` commands.
+- **RunOrFall: Admin setup UI** - Added `/rof admin` page to configure lobby/spawns/platforms, tune void Y and break delay, and control start/stop from buttons.
 - **Ascend: Cat Collector easter egg** - 5 hidden cat NPCs in Ascend world. Players find them via NPC dialog, tracked as a secret achievement (X/5 progress).
 - **Parkour: Map active toggle** - Admins can disable maps without deleting them via `/pk admin` Maps panel. Inactive maps block both start trigger and map selector entry with a warning message. New `active` column in `maps` table (defaults to TRUE).
 - **Purge: Configurable wave compositions** - `/purge admin` now has a Waves panel where staff define per-wave slow/normal/fast zombie counts. Sessions only start when at least one wave exists, spawns are distributed across configured spawn points, and clearing the final configured wave now ends with a win message.
@@ -14,6 +16,9 @@
 - **Ascend: 4 new challenges** - Challenge 5 (50% Runner Speed + Multiplier Gain), Challenge 6 (all Summit bonuses at 50%), Challenge 7 (maps 4 & 5 locked), Challenge 8 (no Elevation or Summit, reward: +25% to both). Total: 8 challenges.
 
 ### Changed
+- **RunOrFall: Configurable block break delay** - Added delayed block destruction with configurable delay (`/rof breakdelay <seconds>`, default `0.2s`).
+- **RunOrFall: Round-start grace before breaking blocks** - Block destruction now starts 3 seconds after the round begins, with chat countdown messages (3..2..1).
+- **RunOrFall: SQL-backed config persistence** - RunOrFall config now saves/loads from MySQL tables (`runorfall_settings`, `runorfall_spawns`, `runorfall_platforms`) instead of JSON, with one-time legacy migration support.
 - **Parkour: Map Admin UI height increased** - Increased the Map Admin window height by 50px for more vertical space.
 - **Parkour: Practice start now auto-sets checkpoint** - Enabling practice now creates a practice checkpoint at the player's current position.
 - **Parkour: Leave Practice flow** - Added a separate Leave Practice item (same skin as Start Practice) that exits practice, returns players to their practice start position, and restores pre-practice checkpoint progression.
@@ -23,6 +28,9 @@
 - **Ascend: Summit XP softcap at level 1000** - Removed hard cap at level 1000 (unlimited levels). XP cost per level rises from level^2 to level^3 above 1000 — same vexa reaches fewer levels (old 5000 -> ~3591).
 
 ### Fixed
+- **RunOrFall: Solo test start support** - `/rof start` can now launch with one player for testing, without immediately ending the round.
+- **RunOrFall: Edge-standing block bypass fixed** - Blocks now break from the player's full foot footprint, preventing side/edge standing exploits.
+- **RunOrFall: Single-block priority breaking** - A player now queues only one block at a time, always the closest block first.
 - **Parkour: Fly-zone warning now only applies with practice fly enabled** - The "You don't have the right to go there." rollback protection no longer triggers when practice is enabled but fly is OFF.
 - **Purge: Deep-dive stability pass** - Fixed spawn/end race leaks, moved session teardown entity/inventory mutations onto world thread cleanup, replaced unsupported upgrade-card accent runtime background writes with visibility variants, added world-transfer HUD/loadout reconciliation, batched per-tick world work, improved purge error observability, and cleaned dead code/resources.
 
