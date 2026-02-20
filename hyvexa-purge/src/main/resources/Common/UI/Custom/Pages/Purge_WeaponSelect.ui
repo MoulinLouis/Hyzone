@@ -4,36 +4,36 @@ $C.@PageOverlay {
   SceneBlur {}
 
   Group #WeaponSelectWindow {
-    Anchor: (Width: 420, Height: 380);
+    Anchor: (Width: 520, Height: 500);
     LayoutMode: Top;
-    Background: #0d1620(0.95);
-    OutlineColor: #ffffff(0.06);
-    OutlineSize: 1;
+    Background: #07101b(0.97);
+    OutlineColor: #ffffff(0.08);
+    OutlineSize: 2;
 
     // === HEADER ===
     Group #Header {
-      Anchor: (Left: 0, Right: 0, Height: 52);
+      Anchor: (Left: 0, Right: 0, Height: 68);
       LayoutMode: Full;
-      Background: #0a1018;
+      Background: #0f1f33;
 
       Group {
-        Anchor: (Left: 0, Right: 0, Top: 0, Height: 2);
-        Background: #f59e0b;
+        Anchor: (Left: 0, Right: 0, Top: 0, Height: 4);
+        Background: #ffd44d;
       }
 
       Label #Title {
-        Anchor: (Left: 20, Top: 16, Width: 300, Height: 24);
-        Style: (FontSize: 18, TextColor: #f0f4f8, RenderBold: true);
+        Anchor: (Left: 24, Top: 20, Width: 360, Height: 32);
+        Style: (FontSize: 24, TextColor: #f4f9ff, RenderBold: true);
         Text: "Weapon Upgrade";
       }
 
       TextButton #BackButton {
-        Anchor: (Right: 12, Top: 12, Width: 28, Height: 28);
+        Anchor: (Right: 14, Top: 12, Width: 42, Height: 42);
         Text: "X";
         Style: TextButtonStyle(
-          Default: (Background: #3b1219, LabelStyle: (FontSize: 14, TextColor: #ef4444, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
-          Hovered: (Background: #5c1d28, LabelStyle: (FontSize: 14, TextColor: #f87171, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
-          Pressed: (Background: #2d0f14, LabelStyle: (FontSize: 14, TextColor: #ef4444, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Default: (Background: #7a1f28, LabelStyle: (FontSize: 20, TextColor: #ffe8ea, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Hovered: (Background: #b32f3b, LabelStyle: (FontSize: 20, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Pressed: (Background: #5d1820, LabelStyle: (FontSize: 20, TextColor: #ffd8dc, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
           Sounds: $C.@ButtonSounds,
         );
       }
@@ -44,15 +44,15 @@ $C.@PageOverlay {
       Anchor: (Left: 0, Right: 0);
       FlexWeight: 1;
       LayoutMode: Top;
-      Padding: (Left: 14, Right: 14, Top: 10, Bottom: 10);
+      Padding: (Left: 18, Right: 18, Top: 14, Bottom: 14);
 
       Label #Subtitle {
-        Style: (FontSize: 14, TextColor: #9fb0ba);
-        Text: "Choose a weapon to upgrade.";
+        Style: (FontSize: 18, TextColor: #d5e6ff, RenderBold: true);
+        Text: "";
       }
 
       Group #WeaponList {
-        Anchor: (Left: 0, Right: 0, Top: 10);
+        Anchor: (Left: 0, Right: 0, Top: 12);
         FlexWeight: 1;
         LayoutMode: LeftCenterWrap;
       }
@@ -60,40 +60,49 @@ $C.@PageOverlay {
 
     // === DETAIL PANEL (hidden until weapon selected) ===
     Group #DetailPanel {
-      Anchor: (Left: 0, Right: 0, Height: 110);
+      Anchor: (Left: 0, Right: 0, Height: 118);
       LayoutMode: Full;
-      Background: #0a1018;
+      Background: #0f1f33;
       Visible: false;
 
-      // Top separator line
       Group {
-        Anchor: (Left: 0, Right: 0, Top: 0, Height: 1);
-        Background: #ffffff(0.06);
+        Anchor: (Left: 0, Right: 0, Top: 0, Height: 2);
+        Background: #ffffff(0.14);
       }
 
-      // Icon on the left
       Group #DetailIcon {
-        Anchor: (Left: 16, Top: 16, Width: 48, Height: 48);
-        Background: (TexturePath: "../Textures/golem_icon.png");
+        Anchor: (Left: 20, Top: 8, Width: 100, Height: 100);
+        Background: (TexturePath: "../Textures/AK47_icon.png");
+        OutlineColor: #ffffff(0.22);
+        OutlineSize: 2;
       }
 
-      // Info column (name + stars + damage)
+      TextButton #DetailCloseButton {
+        Anchor: (Right: 14, Top: 10, Width: 30, Height: 30);
+        Text: "X";
+        Style: TextButtonStyle(
+          Default: (Background: #2b3f5d, LabelStyle: (FontSize: 15, RenderBold: true, TextColor: #d5e6ff, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Hovered: (Background: #476995, LabelStyle: (FontSize: 15, RenderBold: true, TextColor: #ffffff, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Pressed: (Background: #213149, LabelStyle: (FontSize: 15, RenderBold: true, TextColor: #d5e6ff, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Sounds: $C.@ButtonSounds,
+        );
+      }
+
       Group #DetailInfo {
-        Anchor: (Left: 76, Top: 12, Width: 200, Height: 80);
+        Anchor: (Left: 132, Top: 14, Width: 174, Height: 96);
         LayoutMode: Top;
 
         Label #DetailName {
-          Style: (FontSize: 16, RenderBold: true, TextColor: #f0f4f8);
+          Style: (FontSize: 21, RenderBold: true, TextColor: #f4f9ff);
           Text: "";
         }
 
-        // Star rating
         Group #DetailStars {
-          Anchor: (Top: 4, Height: 20);
+          Anchor: (Top: 6, Height: 24);
           LayoutMode: Left;
 
           Group {
-            Anchor: (Width: 20, Height: 20);
+            Anchor: (Width: 22, Height: 22);
             LayoutMode: Full;
             Group #DS0F { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/star.png"); Visible: false; }
             Group #DS0H { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/half_star.png"); Visible: false; }
@@ -101,7 +110,7 @@ $C.@PageOverlay {
           }
 
           Group {
-            Anchor: (Left: 2, Width: 20, Height: 20);
+            Anchor: (Left: 3, Width: 22, Height: 22);
             LayoutMode: Full;
             Group #DS1F { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/star.png"); Visible: false; }
             Group #DS1H { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/half_star.png"); Visible: false; }
@@ -109,7 +118,7 @@ $C.@PageOverlay {
           }
 
           Group {
-            Anchor: (Left: 2, Width: 20, Height: 20);
+            Anchor: (Left: 3, Width: 22, Height: 22);
             LayoutMode: Full;
             Group #DS2F { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/star.png"); Visible: false; }
             Group #DS2H { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/half_star.png"); Visible: false; }
@@ -117,7 +126,7 @@ $C.@PageOverlay {
           }
 
           Group {
-            Anchor: (Left: 2, Width: 20, Height: 20);
+            Anchor: (Left: 3, Width: 22, Height: 22);
             LayoutMode: Full;
             Group #DS3F { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/star.png"); Visible: false; }
             Group #DS3H { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/half_star.png"); Visible: false; }
@@ -125,7 +134,7 @@ $C.@PageOverlay {
           }
 
           Group {
-            Anchor: (Left: 2, Width: 20, Height: 20);
+            Anchor: (Left: 3, Width: 22, Height: 22);
             LayoutMode: Full;
             Group #DS4F { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/star.png"); Visible: false; }
             Group #DS4H { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/half_star.png"); Visible: false; }
@@ -134,53 +143,51 @@ $C.@PageOverlay {
         }
 
         Label #DetailDamage {
-          Anchor: (Top: 4);
-          Style: (FontSize: 13, TextColor: #9fb0ba);
+          Anchor: (Top: 6);
+          Style: (FontSize: 16, TextColor: #d5e6ff, RenderBold: true);
           Text: "";
         }
       }
 
-      // Right side: upgrade button + status
       Group #DetailActions {
-        Anchor: (Right: 16, Top: 16, Width: 140, Height: 80);
-        LayoutMode: Top;
+        Anchor: (Right: 14, Top: 12, Width: 190, Height: 86);
+        LayoutMode: Full;
 
         Group #DetailUpgradeGroup {
-          Anchor: (Left: 0, Right: 0, Height: 36);
+          Anchor: (Right: 0, Top: 34, Width: 168, Height: 44);
 
           TextButton #UpgradeButton {
             Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-            Text: "UPGRADE";
+            Text: "";
             Style: TextButtonStyle(
-              Default: (Background: #0c2416, LabelStyle: (FontSize: 13, RenderBold: true, TextColor: #86efac, HorizontalAlignment: Center, VerticalAlignment: Center)),
-              Hovered: (Background: #124026, LabelStyle: (FontSize: 13, RenderBold: true, TextColor: #bbf7d0, HorizontalAlignment: Center, VerticalAlignment: Center)),
-              Pressed: (Background: #091a10, LabelStyle: (FontSize: 13, RenderBold: true, TextColor: #86efac, HorizontalAlignment: Center, VerticalAlignment: Center)),
+              Default: (Background: #1b5d2b, LabelStyle: (FontSize: 16, RenderBold: true, TextColor: #e8ffec, HorizontalAlignment: Center, VerticalAlignment: Center)),
+              Hovered: (Background: #2d9f49, LabelStyle: (FontSize: 16, RenderBold: true, TextColor: #ffffff, HorizontalAlignment: Center, VerticalAlignment: Center)),
+              Pressed: (Background: #164a22, LabelStyle: (FontSize: 16, RenderBold: true, TextColor: #d8ffe0, HorizontalAlignment: Center, VerticalAlignment: Center)),
               Sounds: $C.@ButtonSounds,
             );
+          }
+
+          Group #UpgradeCostRow {
+            Anchor: (Right: 14, Top: 9, Width: 126, Height: 28);
+            LayoutMode: Left;
+
+            Group #UpgradeScrapIcon {
+              Anchor: (Width: 24, Height: 24);
+              Background: (TexturePath: "../Textures/scrap.png");
+            }
+
+            Label #UpgradeCostValue {
+              Anchor: (Left: 6, Width: 92, Height: 26);
+              Style: (FontSize: 22, RenderBold: true, TextColor: #e8ffec, HorizontalAlignment: Start, VerticalAlignment: Center);
+              Text: "";
+            }
           }
         }
 
         Label #DetailStatus {
-          Anchor: (Top: 6);
-          Style: (FontSize: 12, TextColor: #6b7b8a, HorizontalAlignment: Center);
+          Anchor: (Left: 0, Right: 0, Top: 82, Height: 20);
+          Style: (FontSize: 14, TextColor: #9eb7d4, HorizontalAlignment: Center, RenderBold: true);
           Text: "";
-        }
-
-        // Reset button (OP only)
-        Group #DetailResetGroup {
-          Anchor: (Top: 6, Left: 0, Right: 0, Height: 28);
-          Visible: false;
-
-          TextButton #ResetButton {
-            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-            Text: "RESET";
-            Style: TextButtonStyle(
-              Default: (Background: #3b1219, LabelStyle: (FontSize: 11, RenderBold: true, TextColor: #ef4444, HorizontalAlignment: Center, VerticalAlignment: Center)),
-              Hovered: (Background: #5c1d28, LabelStyle: (FontSize: 11, RenderBold: true, TextColor: #f87171, HorizontalAlignment: Center, VerticalAlignment: Center)),
-              Pressed: (Background: #2d0f14, LabelStyle: (FontSize: 11, RenderBold: true, TextColor: #ef4444, HorizontalAlignment: Center, VerticalAlignment: Center)),
-              Sounds: $C.@ButtonSounds,
-            );
-          }
         }
       }
     }
