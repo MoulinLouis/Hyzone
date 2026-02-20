@@ -73,7 +73,7 @@ public class PurgeAdminIndexPage extends InteractiveCustomUIPage<PurgeAdminIndex
         } else if (BUTTON_WEAPONS.equals(data.button)) {
             player.getPageManager().openCustomPage(ref, store,
                     new PurgeWeaponSelectPage(playerRef, PurgeWeaponSelectPage.Mode.ADMIN, null,
-                            weaponConfigManager, waveConfigManager, instanceManager, false));
+                            weaponConfigManager, waveConfigManager, instanceManager));
         }
     }
 

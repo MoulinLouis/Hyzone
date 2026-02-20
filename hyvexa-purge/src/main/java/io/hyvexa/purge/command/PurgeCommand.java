@@ -19,6 +19,7 @@ import io.hyvexa.purge.data.PurgeParty;
 import io.hyvexa.purge.data.PurgePlayerStats;
 import io.hyvexa.purge.data.PurgePlayerStore;
 import io.hyvexa.purge.data.PurgeScrapStore;
+import io.hyvexa.purge.data.PurgeWeaponUpgradeStore;
 import io.hyvexa.purge.manager.PurgeInstanceManager;
 import io.hyvexa.purge.manager.PurgePartyManager;
 import io.hyvexa.purge.manager.PurgeSessionManager;
@@ -100,7 +101,7 @@ public class PurgeCommand extends AbstractAsyncCommand {
             case "stop" -> handleStop(player, playerId);
             case "stats" -> handleStats(player, playerId);
             case "party" -> handleParty(player, playerId, args);
-            case "upgrade" -> handleUpgrade(player, ref, store, playerId);
+            case "upgrade" -> handleUpgrade(player, ref, store, playerId, args);
             case "admin" -> openAdminMenu(player, ref, store);
             case "scrap" -> handleScrap(player, playerId, args);
             default -> player.sendMessage(Message.raw("Usage: /purge <start|stop|stats|party|upgrade|scrap|admin>"));
@@ -146,14 +147,31 @@ public class PurgeCommand extends AbstractAsyncCommand {
         player.sendMessage(Message.raw("Scrap: " + scrap));
     }
 
-    private void handleUpgrade(Player player, Ref<EntityStore> ref, Store<EntityStore> store, UUID playerId) {
+    private void handleUpgrade(Player player, Ref<EntityStore> ref, Store<EntityStore> store, UUID playerId, String[] args) {
+        if (args.length >= 2) {
+            String action = args[1].toLowerCase();
+            if (!"reset".equals(action)) {
+                player.sendMessage(Message.raw("Usage: /purge upgrade [reset]"));
+                return;
+            }
+            if (!PermissionUtils.isOp(player)) {
+                player.sendMessage(Message.raw("You must be OP to use /purge upgrade reset."));
+                return;
+            }
+            for (String weaponId : weaponConfigManager.getWeaponIds()) {
+                PurgeWeaponUpgradeStore.getInstance().setLevel(playerId, weaponId, 0);
+            }
+            player.sendMessage(Message.raw("All weapon upgrades reset to level 0."));
+            return;
+        }
+
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (playerRef == null) {
             return;
         }
         player.getPageManager().openCustomPage(ref, store,
                 new PurgeWeaponSelectPage(playerRef, PurgeWeaponSelectPage.Mode.PLAYER, playerId,
-                        weaponConfigManager, null, null, PermissionUtils.isOp(player)));
+                        weaponConfigManager, null, null));
     }
 
     private void handleScrap(Player player, UUID callerPlayerId, String[] args) {

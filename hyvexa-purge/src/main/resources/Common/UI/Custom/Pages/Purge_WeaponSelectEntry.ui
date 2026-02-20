@@ -1,36 +1,36 @@
 $C = "../Common.ui";
 
 Group {
-  Anchor: (Width: 90, Right: 8, Bottom: 8, Height: 90);
+  Anchor: (Width: 118, Right: 10, Bottom: 10, Height: 118);
   LayoutMode: Full;
-  Background: #1a2530;
-  OutlineColor: #ffffff(0.08);
-  OutlineSize: 1;
+  Background: #182941;
+  OutlineColor: #ffffff(0.16);
+  OutlineSize: 2;
 
   // Weapon icon (centered, fills upper area)
   Group #WeaponIcon {
-    Anchor: (Left: 15, Right: 15, Top: 10, Bottom: 24);
-    Background: (TexturePath: "../Textures/golem_icon.png");
+    Anchor: (Left: 19, Top: 10, Width: 80, Height: 80);
+    Background: (TexturePath: "../Textures/AK47_icon.png");
   }
 
   // Weapon name (hidden by default, shown in ADMIN mode)
   Label #WeaponName {
-    Anchor: (Left: 4, Right: 4, Bottom: 22, Height: 14);
-    Style: (FontSize: 10, TextColor: #9fb0ba, HorizontalAlignment: Center);
+    Anchor: (Left: 6, Right: 6, Bottom: 30, Height: 20);
+    Style: (FontSize: 12, TextColor: #d5e6ff, HorizontalAlignment: Center, RenderBold: true);
     Text: "";
     Visible: false;
   }
 
-  // Star rating bar at the bottom of the card (overlaps inward)
+  // Star rating bar at the bottom of the card
   Group #StarBar {
-    Anchor: (Left: 0, Right: 0, Bottom: 0, Height: 20);
-    Background: #0d1620(0.85);
+    Anchor: (Left: 0, Right: 0, Bottom: 0, Height: 28);
+    Background: #0b1727(0.94);
     LayoutMode: Center;
-    Padding: (Top: 4, Bottom: 4);
+    Padding: (Top: 5, Bottom: 5);
     Visible: false;
 
     Group {
-      Anchor: (Width: 12, Height: 12);
+      Anchor: (Width: 16, Height: 16);
       LayoutMode: Full;
       Group #S0F { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/star.png"); Visible: false; }
       Group #S0H { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/half_star.png"); Visible: false; }
@@ -38,7 +38,7 @@ Group {
     }
 
     Group {
-      Anchor: (Left: 2, Width: 12, Height: 12);
+      Anchor: (Left: 3, Width: 16, Height: 16);
       LayoutMode: Full;
       Group #S1F { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/star.png"); Visible: false; }
       Group #S1H { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/half_star.png"); Visible: false; }
@@ -46,7 +46,7 @@ Group {
     }
 
     Group {
-      Anchor: (Left: 2, Width: 12, Height: 12);
+      Anchor: (Left: 3, Width: 16, Height: 16);
       LayoutMode: Full;
       Group #S2F { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/star.png"); Visible: false; }
       Group #S2H { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/half_star.png"); Visible: false; }
@@ -54,7 +54,7 @@ Group {
     }
 
     Group {
-      Anchor: (Left: 2, Width: 12, Height: 12);
+      Anchor: (Left: 3, Width: 16, Height: 16);
       LayoutMode: Full;
       Group #S3F { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/star.png"); Visible: false; }
       Group #S3H { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/half_star.png"); Visible: false; }
@@ -62,7 +62,7 @@ Group {
     }
 
     Group {
-      Anchor: (Left: 2, Width: 12, Height: 12);
+      Anchor: (Left: 3, Width: 16, Height: 16);
       LayoutMode: Full;
       Group #S4F { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/star.png"); Visible: false; }
       Group #S4H { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/half_star.png"); Visible: false; }
@@ -70,14 +70,23 @@ Group {
     }
   }
 
-  // Clickable overlay
+  // Selection highlight overlay (toggled from Java)
+  Group #SelectedOverlay {
+    Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+    OutlineColor: #f59e0b;
+    OutlineSize: 3;
+    Visible: false;
+    HitTestVisible: false;
+  }
+
+  // Clickable overlay with strong hover/press visibility
   TextButton #SelectButton {
     Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
     Text: "";
     Style: TextButtonStyle(
       Default: (Background: #00000000, LabelStyle: (FontSize: 1, TextColor: #00000000)),
-      Hovered: (Background: #ffffff(0.08), LabelStyle: (FontSize: 1, TextColor: #00000000)),
-      Pressed: (Background: #ffffff(0.03), LabelStyle: (FontSize: 1, TextColor: #00000000)),
+      Hovered: (Background: #ffd44d(0.22), LabelStyle: (FontSize: 1, TextColor: #00000000)),
+      Pressed: (Background: #ffd44d(0.35), LabelStyle: (FontSize: 1, TextColor: #00000000)),
       Sounds: $C.@ButtonSounds,
     );
   }

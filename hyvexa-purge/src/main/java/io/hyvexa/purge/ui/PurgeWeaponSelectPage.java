@@ -16,7 +16,6 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.ui.ButtonEventData;
-import io.hyvexa.purge.data.PurgeScrapStore;
 import io.hyvexa.purge.data.PurgeWeaponUpgradeStore;
 import io.hyvexa.purge.manager.PurgeInstanceManager;
 import io.hyvexa.purge.manager.PurgeWaveConfigManager;
@@ -33,15 +32,14 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
 
     private static final String BUTTON_BACK = "Back";
     private static final String BUTTON_SELECT_PREFIX = "Select:";
+    private static final String BUTTON_CLOSE_DETAIL = "CloseDetail";
     private static final String BUTTON_UPGRADE = "Upgrade";
-    private static final String BUTTON_RESET = "Reset";
 
     private final Mode mode;
     private final UUID playerId;
     private final PurgeWeaponConfigManager weaponConfigManager;
     private final PurgeWaveConfigManager waveConfigManager;
     private final PurgeInstanceManager instanceManager;
-    private final boolean isOp;
 
     // Track selected weapon for inline upgrade (PLAYER mode only)
     private String selectedWeaponId;
@@ -53,15 +51,13 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
                                  UUID playerId,
                                  PurgeWeaponConfigManager weaponConfigManager,
                                  PurgeWaveConfigManager waveConfigManager,
-                                 PurgeInstanceManager instanceManager,
-                                 boolean isOp) {
+                                 PurgeInstanceManager instanceManager) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, PurgeWeaponSelectData.CODEC);
         this.mode = mode;
         this.playerId = playerId;
         this.weaponConfigManager = weaponConfigManager;
         this.waveConfigManager = waveConfigManager;
         this.instanceManager = instanceManager;
-        this.isOp = isOp;
     }
 
     @Override
@@ -101,12 +97,12 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
             handleSelect(weaponId, ref, store);
             return;
         }
-        if (BUTTON_UPGRADE.equals(button)) {
-            handleUpgrade(ref, store);
+        if (BUTTON_CLOSE_DETAIL.equals(button)) {
+            handleCloseDetail();
             return;
         }
-        if (BUTTON_RESET.equals(button)) {
-            handleReset(ref, store);
+        if (BUTTON_UPGRADE.equals(button)) {
+            handleUpgrade(ref, store);
         }
     }
 
@@ -133,10 +129,22 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
             player.getPageManager().openCustomPage(ref, store,
                     new PurgeWeaponAdminPage(playerRef, weaponId, weaponConfigManager, waveConfigManager, instanceManager));
         } else {
-            // PLAYER mode: show detail panel inline
-            this.selectedWeaponId = weaponId;
+            // PLAYER mode: toggle inline detail panel
+            if (weaponId.equals(this.selectedWeaponId)) {
+                this.selectedWeaponId = null;
+            } else {
+                this.selectedWeaponId = weaponId;
+            }
             sendRefresh();
         }
+    }
+
+    private void handleCloseDetail() {
+        if (mode != Mode.PLAYER) {
+            return;
+        }
+        this.selectedWeaponId = null;
+        sendRefresh();
     }
 
     private void handleUpgrade(Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -164,19 +172,6 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
         sendRefresh();
     }
 
-    private void handleReset(Ref<EntityStore> ref, Store<EntityStore> store) {
-        if (selectedWeaponId == null) {
-            return;
-        }
-
-        PurgeWeaponUpgradeStore.getInstance().setLevel(playerId, selectedWeaponId, 0);
-        Player player = store.getComponent(ref, Player.getComponentType());
-        if (player != null) {
-            player.sendMessage(Message.raw(weaponConfigManager.getDisplayName(selectedWeaponId) + " reset to level 0."));
-        }
-        sendRefresh();
-    }
-
     private void sendRefresh() {
         UICommandBuilder commandBuilder = new UICommandBuilder();
         UIEventBuilder eventBuilder = new UIEventBuilder();
@@ -188,17 +183,15 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
         // Rebuild weapon list and bindings to avoid stale child indexes.
         buildWeaponList(commandBuilder, eventBuilder);
 
+        // Hidden by default; shown only when a weapon is selected.
+        commandBuilder.set("#DetailPanel.Visible", false);
+
         // Highlight selected card
         if (mode == Mode.PLAYER && weaponIdOrder != null) {
             for (int i = 0; i < weaponIdOrder.size(); i++) {
                 String root = "#WeaponList[" + i + "]";
-                if (weaponIdOrder.get(i).equals(selectedWeaponId)) {
-                    commandBuilder.set(root + ".OutlineColor", "#f59e0b");
-                    commandBuilder.set(root + ".OutlineSize", 1);
-                } else {
-                    commandBuilder.set(root + ".OutlineColor", "#ffffff(0.08)");
-                    commandBuilder.set(root + ".OutlineSize", 1);
-                }
+                commandBuilder.set(root + " #SelectedOverlay.Visible",
+                        weaponIdOrder.get(i).equals(selectedWeaponId));
             }
         }
 
@@ -213,11 +206,12 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
     private void populateDetailPanel(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
         commandBuilder.set("#DetailPanel.Visible", true);
         commandBuilder.set("#DetailName.Text", weaponConfigManager.getDisplayName(selectedWeaponId));
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#DetailCloseButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE_DETAIL), false);
 
         int currentLevel = PurgeWeaponUpgradeStore.getInstance().getLevel(playerId, selectedWeaponId);
         int maxLevel = weaponConfigManager.getMaxLevel();
         int currentDmg = weaponConfigManager.getDamage(selectedWeaponId, currentLevel);
-        long scrap = PurgeScrapStore.getInstance().getScrap(playerId);
 
         // Detail star display
         updateDetailStarDisplay(commandBuilder, currentLevel);
@@ -234,27 +228,12 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
             long nextCost = weaponConfigManager.getCost(selectedWeaponId, nextLevel);
             commandBuilder.set("#DetailDamage.Text", currentDmg + " -> " + nextDmg + " dmg");
             commandBuilder.set("#DetailDamage.Style.TextColor", "#9fb0ba");
-
-            if (scrap >= nextCost) {
-                commandBuilder.set("#DetailUpgradeGroup.Visible", true);
-                commandBuilder.set("#UpgradeButton.Text", "UPGRADE - " + nextCost + " scrap");
-                commandBuilder.set("#DetailStatus.Text", "");
-                eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#UpgradeButton",
-                        EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_UPGRADE), false);
-            } else {
-                commandBuilder.set("#DetailUpgradeGroup.Visible", false);
-                commandBuilder.set("#DetailStatus.Text", "Not enough scrap (" + scrap + "/" + nextCost + ")");
-                commandBuilder.set("#DetailStatus.Style.TextColor", "#ef4444");
-            }
-        }
-
-        // OP reset button
-        if (isOp && currentLevel > 0) {
-            commandBuilder.set("#DetailResetGroup.Visible", true);
-            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ResetButton",
-                    EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_RESET), false);
-        } else {
-            commandBuilder.set("#DetailResetGroup.Visible", false);
+            commandBuilder.set("#DetailUpgradeGroup.Visible", true);
+            commandBuilder.set("#UpgradeCostValue.Text", String.valueOf(nextCost));
+            commandBuilder.set("#DetailStatus.Text", "");
+            commandBuilder.set("#DetailStatus.Style.TextColor", "#9eb7d4");
+            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#UpgradeButton",
+                    EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_UPGRADE), false);
         }
     }
 
