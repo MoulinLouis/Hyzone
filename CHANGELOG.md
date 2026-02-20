@@ -6,6 +6,7 @@
 - **RunOrFall: New game mode module** - Added `hyvexa-runorfall` with lobby queue, fixed 10s pre-game countdown, destructible platform cuboids, void elimination, and last-player-standing winner flow via `/rof` commands.
 - **RunOrFall: Admin setup UI** - Added `/rof admin` page to configure lobby/spawns/platforms, tune void Y and break delay, and control start/stop from buttons.
 - **RunOrFall: Player stats page** - Added a RunOrFall stats UI (Win, Loose, Winrate, Best win streak, Longest time survived) opened from `Food_Candy_Cane`, with SQL persistence in `runorfall_player_stats`.
+- **RunOrFall: Snowflake leaderboard UI** - `WinterHoliday_Snowflake` now opens a RunOrFall leaderboard with search, displaying wins, losses, and winrate (ranked by wins, tie-break by winrate).
 - **Ascend: Cat Collector easter egg** - 5 hidden cat NPCs in Ascend world. Players find them via NPC dialog, tracked as a secret achievement (X/5 progress).
 - **Parkour: Map active toggle** - Admins can disable maps without deleting them via `/pk admin` Maps panel. Inactive maps block both start trigger and map selector entry with a warning message. New `active` column in `maps` table (defaults to TRUE).
 - **Purge: Configurable wave compositions** - `/purge admin` now has a Waves panel where staff define per-wave slow/normal/fast zombie counts. Sessions only start when at least one wave exists, spawns are distributed across configured spawn points, and clearing the final configured wave now ends with a win message.

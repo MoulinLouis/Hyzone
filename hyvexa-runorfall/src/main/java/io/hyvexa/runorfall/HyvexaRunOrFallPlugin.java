@@ -35,9 +35,11 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
     private static final String ITEM_JOIN = "Ingredient_Life_Essence";
     private static final String ITEM_LEAVE = "Ingredient_Earth_Essence";
     private static final String ITEM_STATS = "Food_Candy_Cane";
+    private static final String ITEM_LEADERBOARD = "WinterHoliday_Snowflake";
     private static final short SLOT_STATS = 0;
     private static final short SLOT_JOIN = 1;
     private static final short SLOT_LEAVE = 2;
+    private static final short SLOT_LEADERBOARD = 3;
     private static final short SLOT_GAME_SELECTOR = 8;
     private static HyvexaRunOrFallPlugin INSTANCE;
 
@@ -169,6 +171,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
             }
             String itemId = stack.getItemId();
             if (ITEM_STATS.equals(itemId) || ITEM_JOIN.equals(itemId) || ITEM_LEAVE.equals(itemId)
+                    || ITEM_LEADERBOARD.equals(itemId)
                     || WorldConstants.ITEM_SERVER_SELECTOR.equals(itemId)) {
                 hotbar.setItemStackForSlot(slot, ItemStack.EMPTY, false);
             }
@@ -181,6 +184,9 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
         }
         if (SLOT_LEAVE >= 0 && SLOT_LEAVE < capacity) {
             hotbar.setItemStackForSlot(SLOT_LEAVE, new ItemStack(ITEM_LEAVE, 1), false);
+        }
+        if (SLOT_LEADERBOARD >= 0 && SLOT_LEADERBOARD < capacity) {
+            hotbar.setItemStackForSlot(SLOT_LEADERBOARD, new ItemStack(ITEM_LEADERBOARD, 1), false);
         }
         if (SLOT_GAME_SELECTOR >= 0 && SLOT_GAME_SELECTOR < capacity) {
             hotbar.setItemStackForSlot(SLOT_GAME_SELECTOR,

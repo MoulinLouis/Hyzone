@@ -11,6 +11,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Map;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -111,6 +112,12 @@ public class RunOrFallStatsStore {
         stats.setPlayerName(sanitizePlayerName(playerName));
         stats.applyLoss(Math.max(0L, survivedMs));
         save(stats);
+    }
+
+    public synchronized List<RunOrFallPlayerStats> listStats() {
+        return cache.values().stream()
+                .map(RunOrFallPlayerStats::copy)
+                .toList();
     }
 
     private void ensureTable() {
