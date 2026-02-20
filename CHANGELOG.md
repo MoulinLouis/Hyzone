@@ -21,6 +21,8 @@
 - **RunOrFall: Configurable block break delay** - Added delayed block destruction with configurable delay (`/rof breakdelay <seconds>`, default `0.2s`).
 - **RunOrFall: Round-start grace before breaking blocks** - Block destruction now starts 3 seconds after the round begins, with chat countdown messages (3..2..1).
 - **RunOrFall: SQL-backed config persistence** - RunOrFall config now saves/loads from MySQL tables (`runorfall_settings`, `runorfall_spawns`, `runorfall_platforms`) instead of JSON, with one-time legacy migration support.
+- **Purge: Expanded weapon upgrade/admin options to full Hyguns arsenal** - `/purge upgrade` and `/purge admin -> Weapons` now include Glock18, ColtRevolver, DesertEagle, Mac10, MP9, Thompson, AK47, M4A1s, Barret50, DoubleBarrel, and Flamethrower (Frag excluded).
+- **Purge: Weapon-specific icons in upgrade/admin pages** - Added per-weapon Hyguns icons for selection cards and the upgrade detail panel.
 - **Parkour: Map Admin UI height increased** - Increased the Map Admin window height by 50px for more vertical space.
 - **Parkour: Practice start now auto-sets checkpoint** - Enabling practice now creates a practice checkpoint at the player's current position.
 - **Parkour: Leave Practice flow** - Added a separate Leave Practice item (same skin as Start Practice) that exits practice, returns players to their practice start position, and restores pre-practice checkpoint progression.

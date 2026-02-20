@@ -34,6 +34,19 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
     private static final String BUTTON_SELECT_PREFIX = "Select:";
     private static final String BUTTON_CLOSE_DETAIL = "CloseDetail";
     private static final String BUTTON_UPGRADE = "Upgrade";
+    private static final List<String> ICON_WEAPON_IDS = List.of(
+            "AK47",
+            "Barret50",
+            "ColtRevolver",
+            "DesertEagle",
+            "DoubleBarrel",
+            "Flamethrower",
+            "Glock18",
+            "M4A1s",
+            "MP9",
+            "Mac10",
+            "Thompson"
+    );
 
     private final Mode mode;
     private final UUID playerId;
@@ -206,6 +219,7 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
     private void populateDetailPanel(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
         commandBuilder.set("#DetailPanel.Visible", true);
         commandBuilder.set("#DetailName.Text", weaponConfigManager.getDisplayName(selectedWeaponId));
+        updateDetailIconVariant(commandBuilder, selectedWeaponId);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#DetailCloseButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE_DETAIL), false);
 
@@ -256,6 +270,7 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
 
             String root = "#WeaponList[" + index + "]";
             commandBuilder.append("#WeaponList", "Pages/Purge_WeaponSelectEntry.ui");
+            updateCardIconVariant(commandBuilder, root, weaponId);
 
             if (mode == Mode.ADMIN) {
                 commandBuilder.set(root + " #WeaponName.Visible", true);
@@ -272,6 +287,29 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
             weaponIdOrder.add(weaponId);
             index++;
         }
+    }
+
+    private void updateCardIconVariant(UICommandBuilder commandBuilder, String root, String weaponId) {
+        String normalized = normalizeIconWeaponId(weaponId);
+        for (String iconWeaponId : ICON_WEAPON_IDS) {
+            commandBuilder.set(root + " #Icon" + iconWeaponId + ".Visible", false);
+        }
+        commandBuilder.set(root + " #Icon" + normalized + ".Visible", true);
+    }
+
+    private void updateDetailIconVariant(UICommandBuilder commandBuilder, String weaponId) {
+        String normalized = normalizeIconWeaponId(weaponId);
+        for (String iconWeaponId : ICON_WEAPON_IDS) {
+            commandBuilder.set("#DIcon" + iconWeaponId + ".Visible", false);
+        }
+        commandBuilder.set("#DIcon" + normalized + ".Visible", true);
+    }
+
+    private String normalizeIconWeaponId(String weaponId) {
+        if (weaponId != null && ICON_WEAPON_IDS.contains(weaponId)) {
+            return weaponId;
+        }
+        return "AK47";
     }
 
     private void updateCardStarDisplay(UICommandBuilder commandBuilder, String root, int level) {

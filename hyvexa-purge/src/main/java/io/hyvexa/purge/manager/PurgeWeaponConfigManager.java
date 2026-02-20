@@ -10,6 +10,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -19,26 +20,18 @@ public class PurgeWeaponConfigManager {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final int MAX_LEVEL = 10;
+    private static final long[] DEFAULT_COSTS = {
+            0L, 50L, 100L, 175L, 275L, 400L, 550L, 750L, 1000L, 1300L, 1700L
+    };
 
     private final ConcurrentHashMap<String, List<WeaponLevelEntry>> cache = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Map<Integer, WeaponLevelEntry>> cacheByLevel = new ConcurrentHashMap<>();
 
     public record WeaponLevelEntry(int level, int damage, long cost) {}
 
-    // Default AK47 seed values: level -> (damage, cost)
-    private static final int[][] AK47_DEFAULTS = {
-            {0,  17, 0},
-            {1,  19, 50},
-            {2,  21, 100},
-            {3,  23, 175},
-            {4,  25, 275},
-            {5,  28, 400},
-            {6,  31, 550},
-            {7,  34, 750},
-            {8,  38, 1000},
-            {9,  42, 1300},
-            {10, 47, 1700},
-    };
+    private record WeaponDefaults(String displayName, List<WeaponLevelEntry> levels) {}
+
+    private static final Map<String, WeaponDefaults> DEFAULT_WEAPONS = buildDefaultWeapons();
 
     public PurgeWeaponConfigManager() {
         createTable();
@@ -53,19 +46,19 @@ public class PurgeWeaponConfigManager {
     public int getDamage(String weaponId, int level) {
         Map<Integer, WeaponLevelEntry> levels = cacheByLevel.get(weaponId);
         if (levels == null) {
-            return 17;
+            return getDefaultDamage(weaponId, level);
         }
         WeaponLevelEntry entry = levels.get(level);
-        return entry != null ? entry.damage() : 17;
+        return entry != null ? entry.damage() : getDefaultDamage(weaponId, level);
     }
 
     public long getCost(String weaponId, int level) {
         Map<Integer, WeaponLevelEntry> levels = cacheByLevel.get(weaponId);
         if (levels == null) {
-            return 0;
+            return getDefaultCost(weaponId, level);
         }
         WeaponLevelEntry entry = levels.get(level);
-        return entry != null ? entry.cost() : 0;
+        return entry != null ? entry.cost() : getDefaultCost(weaponId, level);
     }
 
     public Set<String> getWeaponIds() {
@@ -73,10 +66,8 @@ public class PurgeWeaponConfigManager {
     }
 
     public String getDisplayName(String weaponId) {
-        return switch (weaponId) {
-            case "AK47" -> "AK-47";
-            default -> weaponId;
-        };
+        WeaponDefaults defaults = DEFAULT_WEAPONS.get(weaponId);
+        return defaults != null ? defaults.displayName() : weaponId;
     }
 
     public List<WeaponLevelEntry> getAllLevels(String weaponId) {
@@ -126,7 +117,8 @@ public class PurgeWeaponConfigManager {
     }
 
     public void resetDefaults(String weaponId) {
-        if (!"AK47".equals(weaponId) || !isPersistenceAvailable()) {
+        WeaponDefaults defaults = DEFAULT_WEAPONS.get(weaponId);
+        if (defaults == null || !isPersistenceAvailable()) {
             return;
         }
         synchronized (cache) {
@@ -134,11 +126,11 @@ public class PurgeWeaponConfigManager {
             try (Connection conn = DatabaseManager.getInstance().getConnection();
                  PreparedStatement stmt = conn.prepareStatement(sql)) {
                 DatabaseManager.applyQueryTimeout(stmt);
-                for (int[] row : AK47_DEFAULTS) {
+                for (WeaponLevelEntry row : defaults.levels()) {
                     stmt.setString(1, weaponId);
-                    stmt.setInt(2, row[0]);
-                    stmt.setInt(3, row[1]);
-                    stmt.setLong(4, row[2]);
+                    stmt.setInt(2, row.level());
+                    stmt.setInt(3, row.damage());
+                    stmt.setLong(4, row.cost());
                     stmt.addBatch();
                 }
                 stmt.executeBatch();
@@ -146,12 +138,7 @@ public class PurgeWeaponConfigManager {
                 LOGGER.atWarning().withCause(e).log("Failed to reset weapon defaults for " + weaponId);
                 return;
             }
-            // Reload cache
-            List<WeaponLevelEntry> levels = new ArrayList<>();
-            for (int[] row : AK47_DEFAULTS) {
-                levels.add(new WeaponLevelEntry(row[0], row[1], row[2]));
-            }
-            cacheWeaponLevels(weaponId, levels);
+            cacheWeaponLevels(weaponId, defaults.levels());
         }
     }
 
@@ -228,34 +215,23 @@ public class PurgeWeaponConfigManager {
         if (!isPersistenceAvailable()) {
             return;
         }
-        // Only seed if table is empty for AK47
-        String countSql = "SELECT COUNT(*) FROM purge_weapon_levels WHERE weapon_id = 'AK47'";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(countSql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next() && rs.getInt(1) > 0) {
-                    return; // Already seeded
-                }
-            }
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to check weapon level count");
-            return;
-        }
 
-        String insertSql = "INSERT INTO purge_weapon_levels (weapon_id, level, damage, cost) VALUES (?, ?, ?, ?)";
+        // Insert only missing rows so existing admin-tuned values are preserved.
+        String insertSql = "INSERT IGNORE INTO purge_weapon_levels (weapon_id, level, damage, cost) VALUES (?, ?, ?, ?)";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(insertSql)) {
             DatabaseManager.applyQueryTimeout(stmt);
-            for (int[] row : AK47_DEFAULTS) {
-                stmt.setString(1, "AK47");
-                stmt.setInt(2, row[0]);
-                stmt.setInt(3, row[1]);
-                stmt.setLong(4, row[2]);
-                stmt.addBatch();
+            for (Map.Entry<String, WeaponDefaults> weapon : DEFAULT_WEAPONS.entrySet()) {
+                for (WeaponLevelEntry row : weapon.getValue().levels()) {
+                    stmt.setString(1, weapon.getKey());
+                    stmt.setInt(2, row.level());
+                    stmt.setInt(3, row.damage());
+                    stmt.setLong(4, row.cost());
+                    stmt.addBatch();
+                }
             }
             stmt.executeBatch();
-            LOGGER.atInfo().log("Seeded default AK47 weapon levels (11 rows)");
+            LOGGER.atInfo().log("Ensured default weapon level seeds for " + DEFAULT_WEAPONS.size() + " Hyguns weapons");
         } catch (SQLException e) {
             LOGGER.atWarning().withCause(e).log("Failed to seed default weapon levels");
         }
@@ -263,6 +239,8 @@ public class PurgeWeaponConfigManager {
 
     private void loadAll() {
         if (!isPersistenceAvailable()) {
+            loadDefaultsIntoCache();
+            LOGGER.atWarning().log("Database unavailable, using in-memory default weapon levels");
             return;
         }
         String sql = "SELECT weapon_id, level, damage, cost FROM purge_weapon_levels ORDER BY weapon_id, level ASC";
@@ -279,6 +257,11 @@ public class PurgeWeaponConfigManager {
                     temp.computeIfAbsent(weaponId, k -> new ArrayList<>())
                             .add(new WeaponLevelEntry(level, damage, cost));
                 }
+                if (temp.isEmpty()) {
+                    loadDefaultsIntoCache();
+                    LOGGER.atWarning().log("No weapon levels found in DB, using defaults in memory");
+                    return;
+                }
                 cache.clear();
                 cacheByLevel.clear();
                 for (Map.Entry<String, List<WeaponLevelEntry>> entry : temp.entrySet()) {
@@ -289,7 +272,72 @@ public class PurgeWeaponConfigManager {
             LOGGER.atInfo().log("Loaded " + total + " weapon level definitions");
         } catch (SQLException e) {
             LOGGER.atWarning().withCause(e).log("Failed to load weapon levels");
+            loadDefaultsIntoCache();
         }
+    }
+
+    private int getDefaultDamage(String weaponId, int level) {
+        WeaponLevelEntry levelEntry = getDefaultLevel(weaponId, level);
+        return levelEntry != null ? levelEntry.damage() : 17;
+    }
+
+    private long getDefaultCost(String weaponId, int level) {
+        WeaponLevelEntry levelEntry = getDefaultLevel(weaponId, level);
+        return levelEntry != null ? levelEntry.cost() : 0L;
+    }
+
+    private WeaponLevelEntry getDefaultLevel(String weaponId, int level) {
+        WeaponDefaults defaults = DEFAULT_WEAPONS.get(weaponId);
+        if (defaults == null || level < 0 || level >= defaults.levels().size()) {
+            return null;
+        }
+        return defaults.levels().get(level);
+    }
+
+    private void loadDefaultsIntoCache() {
+        cache.clear();
+        cacheByLevel.clear();
+        for (Map.Entry<String, WeaponDefaults> entry : DEFAULT_WEAPONS.entrySet()) {
+            cacheWeaponLevels(entry.getKey(), entry.getValue().levels());
+        }
+    }
+
+    private static Map<String, WeaponDefaults> buildDefaultWeapons() {
+        LinkedHashMap<String, WeaponDefaults> defaults = new LinkedHashMap<>();
+        defaults.put("Glock18", createWeaponDefaults("Glock-18",
+                6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17));
+        defaults.put("ColtRevolver", createWeaponDefaults("Colt Revolver",
+                24, 27, 30, 32, 35, 40, 44, 48, 54, 59, 66));
+        defaults.put("DesertEagle", createWeaponDefaults("Desert Eagle",
+                25, 28, 31, 34, 37, 41, 46, 50, 56, 62, 69));
+        defaults.put("Mac10", createWeaponDefaults("Mac-10",
+                2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12));
+        defaults.put("MP9", createWeaponDefaults("MP9",
+                3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13));
+        defaults.put("Thompson", createWeaponDefaults("Thompson",
+                3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13));
+        defaults.put("AK47", createWeaponDefaults("AK-47",
+                17, 19, 21, 23, 25, 28, 31, 34, 38, 42, 47));
+        defaults.put("M4A1s", createWeaponDefaults("M4A1s",
+                14, 16, 17, 19, 21, 23, 26, 28, 31, 35, 39));
+        defaults.put("Barret50", createWeaponDefaults("Barret .50",
+                60, 67, 74, 81, 88, 99, 109, 120, 134, 148, 166));
+        defaults.put("DoubleBarrel", createWeaponDefaults("Double Barrel",
+                3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13));
+        defaults.put("Flamethrower", createWeaponDefaults("Flamethrower",
+                10, 11, 12, 14, 15, 16, 18, 20, 22, 25, 28));
+        return Map.copyOf(defaults);
+    }
+
+    private static WeaponDefaults createWeaponDefaults(String displayName, int... damagesByLevel) {
+        if (damagesByLevel.length != MAX_LEVEL + 1 || DEFAULT_COSTS.length != damagesByLevel.length) {
+            throw new IllegalArgumentException("Weapon defaults must provide exactly " + (MAX_LEVEL + 1) + " levels");
+        }
+        List<WeaponLevelEntry> levels = new ArrayList<>(damagesByLevel.length);
+        for (int level = 0; level < damagesByLevel.length; level++) {
+            levels.add(new WeaponLevelEntry(level, damagesByLevel[level], DEFAULT_COSTS[level]));
+        }
+        return new WeaponDefaults(displayName, List.copyOf(levels));
     }
 
     private void cacheWeaponLevels(String weaponId, List<WeaponLevelEntry> levels) {

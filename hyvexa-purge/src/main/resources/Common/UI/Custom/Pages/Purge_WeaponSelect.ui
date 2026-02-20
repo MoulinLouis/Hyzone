@@ -4,7 +4,7 @@ $C.@PageOverlay {
   SceneBlur {}
 
   Group #WeaponSelectWindow {
-    Anchor: (Width: 520, Height: 500);
+    Anchor: (Width: 720, Height: 640);
     LayoutMode: Top;
     Background: #07101b(0.97);
     OutlineColor: #ffffff(0.08);
@@ -72,9 +72,20 @@ $C.@PageOverlay {
 
       Group #DetailIcon {
         Anchor: (Left: 20, Top: 8, Width: 100, Height: 100);
-        Background: (TexturePath: "../Textures/AK47_icon.png");
+        LayoutMode: Full;
         OutlineColor: #ffffff(0.22);
         OutlineSize: 2;
+        Group #DIconAK47 { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/AK47_icon.png"); }
+        Group #DIconBarret50 { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/Barret50_icon.png"); Visible: false; }
+        Group #DIconColtRevolver { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/ColtRevolver_icon.png"); Visible: false; }
+        Group #DIconDesertEagle { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/DesertEagle_icon.png"); Visible: false; }
+        Group #DIconDoubleBarrel { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/DoubleBarrel_icon.png"); Visible: false; }
+        Group #DIconFlamethrower { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/Flamethrower_icon.png"); Visible: false; }
+        Group #DIconGlock18 { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/Glock18_icon.png"); Visible: false; }
+        Group #DIconM4A1s { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/M4A1s_icon.png"); Visible: false; }
+        Group #DIconMP9 { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/MP9_icon.png"); Visible: false; }
+        Group #DIconMac10 { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/Mac10_icon.png"); Visible: false; }
+        Group #DIconThompson { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/Thompson_icon.png"); Visible: false; }
       }
 
       TextButton #DetailCloseButton {
