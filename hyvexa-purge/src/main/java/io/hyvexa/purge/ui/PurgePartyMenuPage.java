@@ -20,9 +20,11 @@ import io.hyvexa.common.util.ModeGate;
 import io.hyvexa.purge.data.PurgeParty;
 import io.hyvexa.purge.manager.PurgePartyManager;
 import io.hyvexa.purge.manager.PurgeSessionManager;
+import io.hyvexa.purge.util.PurgePlayerNameResolver;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -243,13 +245,17 @@ public class PurgePartyMenuPage extends InteractiveCustomUIPage<PurgePartyMenuPa
     private void buildPartySection(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder, PurgeParty party) {
         boolean isLeader = party.isLeader(playerId);
         Set<UUID> members = party.getMembersSnapshot();
+        List<UUID> sortedMembers = new ArrayList<>(members);
+        sortedMembers.sort(Comparator.comparing(
+                memberId -> PurgePlayerNameResolver.resolve(memberId, PurgePlayerNameResolver.FallbackStyle.FULL_UUID),
+                String.CASE_INSENSITIVE_ORDER));
 
         commandBuilder.set("#PartyTitle.Text", "Party (" + members.size() + "/" + PurgeParty.MAX_SIZE + ")");
 
         // Build member list
         commandBuilder.clear("#MemberList");
         int index = 0;
-        for (UUID memberId : members) {
+        for (UUID memberId : sortedMembers) {
             String root = "#MemberList[" + index + "]";
             commandBuilder.append("#MemberList", "Pages/Purge_PartyMemberEntry.ui");
 
@@ -282,6 +288,7 @@ public class PurgePartyMenuPage extends InteractiveCustomUIPage<PurgePartyMenuPa
         } else {
             commandBuilder.set("#LeaderControls.Visible", false);
             commandBuilder.set("#WaitingLabel.Visible", true);
+            commandBuilder.set("#WaitingLabel.Text", "Waiting for leader. Any member can invite via /purge party invite.");
         }
 
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#LeavePartyButton",
@@ -372,14 +379,7 @@ public class PurgePartyMenuPage extends InteractiveCustomUIPage<PurgePartyMenuPa
     }
 
     private String getPlayerName(UUID targetId) {
-        try {
-            PlayerRef ref = Universe.get().getPlayer(targetId);
-            if (ref != null) {
-                return ref.getUsername();
-            }
-        } catch (Exception ignored) {
-        }
-        return targetId.toString();
+        return PurgePlayerNameResolver.resolve(targetId, PurgePlayerNameResolver.FallbackStyle.FULL_UUID);
     }
 
     public static class PartyMenuData extends ButtonEventData {

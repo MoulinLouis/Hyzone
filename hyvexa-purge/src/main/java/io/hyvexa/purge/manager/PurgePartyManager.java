@@ -5,6 +5,7 @@ import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import io.hyvexa.purge.data.PurgeParty;
+import io.hyvexa.purge.util.PurgePlayerNameResolver;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -281,13 +282,6 @@ public class PurgePartyManager {
     }
 
     private String getPlayerName(UUID playerId) {
-        try {
-            PlayerRef playerRef = Universe.get().getPlayer(playerId);
-            if (playerRef != null) {
-                return playerRef.getUsername();
-            }
-        } catch (Exception ignored) {
-        }
-        return playerId.toString();
+        return PurgePlayerNameResolver.resolve(playerId, PurgePlayerNameResolver.FallbackStyle.FULL_UUID);
     }
 }

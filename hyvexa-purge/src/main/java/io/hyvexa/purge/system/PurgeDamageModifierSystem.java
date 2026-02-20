@@ -43,7 +43,7 @@ public class PurgeDamageModifierSystem extends DamageEventSystem {
         Player target = chunk.getComponent(entityId, Player.getComponentType());
         if (target == null) {
             // Target is not a player (e.g. zombie) — check for player damage overrides
-            applyPlayerDamageOverride(event, store);
+            applyPlayerDamageOverride(event, store, chunk.getReferenceTo(entityId));
             return;
         }
         PlayerRef targetPlayerRef = chunk.getComponent(entityId, PlayerRef.getComponentType());
@@ -104,7 +104,10 @@ public class PurgeDamageModifierSystem extends DamageEventSystem {
         }
     }
 
-    private void applyPlayerDamageOverride(Damage event, Store<EntityStore> store) {
+    private void applyPlayerDamageOverride(Damage event, Store<EntityStore> store, Ref<EntityStore> targetRef) {
+        if (targetRef == null || !targetRef.isValid()) {
+            return;
+        }
         Damage.Source source = event.getSource();
         if (!(source instanceof Damage.EntitySource entitySource)) {
             return;
@@ -119,6 +122,13 @@ public class PurgeDamageModifierSystem extends DamageEventSystem {
         }
         UUID sourceId = sourcePlayerRef.getUuid();
         if (sourceId == null) {
+            return;
+        }
+        PurgeSession session = sessionManager.getSessionByPlayer(sourceId);
+        if (session == null) {
+            return;
+        }
+        if (!session.getAliveZombies().contains(targetRef)) {
             return;
         }
         int level = PurgeWeaponUpgradeStore.getInstance().getLevel(sourceId, "AK47");

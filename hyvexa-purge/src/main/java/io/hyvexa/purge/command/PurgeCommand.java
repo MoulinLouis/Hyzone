@@ -27,9 +27,12 @@ import io.hyvexa.purge.manager.PurgeWaveConfigManager;
 import io.hyvexa.purge.manager.PurgeWeaponConfigManager;
 import io.hyvexa.purge.ui.PurgeAdminIndexPage;
 import io.hyvexa.purge.ui.PurgeWeaponSelectPage;
+import io.hyvexa.purge.util.PurgePlayerNameResolver;
 
 import javax.annotation.Nonnull;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -159,9 +162,9 @@ public class PurgeCommand extends AbstractAsyncCommand {
                 return;
             }
             for (String weaponId : weaponConfigManager.getWeaponIds()) {
-                PurgeWeaponUpgradeStore.getInstance().setLevel(playerId, weaponId, 0);
+                PurgeWeaponUpgradeStore.getInstance().setLevel(playerId, weaponId, 1);
             }
-            player.sendMessage(Message.raw("All weapon upgrades reset to level 0."));
+            player.sendMessage(Message.raw("All weapon upgrades reset to level 1."));
             return;
         }
 
@@ -255,7 +258,7 @@ public class PurgeCommand extends AbstractAsyncCommand {
             }
             case "invite" -> {
                 if (args.length < 3) {
-                    player.sendMessage(Message.raw("Usage: /purge party invite <playerName>"));
+                    player.sendMessage(Message.raw("Usage: /purge party invite <playerName> (any party member can invite)"));
                     return;
                 }
                 String targetName = args[2];
@@ -286,12 +289,14 @@ public class PurgeCommand extends AbstractAsyncCommand {
                     player.sendMessage(Message.raw("You are not in a party."));
                     return;
                 }
-                Set<UUID> members = party.getMembersSnapshot();
+                List<UUID> members = new ArrayList<>(party.getMembersSnapshot());
+                members.sort(Comparator.comparing(
+                        memberId -> PurgePlayerNameResolver.resolve(memberId, PurgePlayerNameResolver.FallbackStyle.FULL_UUID),
+                        String.CASE_INSENSITIVE_ORDER));
                 player.sendMessage(Message.raw("-- Party Members (" + members.size()
                         + "/" + PurgeParty.MAX_SIZE + ") --"));
                 for (UUID memberId : members) {
-                    PlayerRef memberRef = Universe.get().getPlayer(memberId);
-                    String name = memberRef != null ? memberRef.getUsername() : memberId.toString();
+                    String name = PurgePlayerNameResolver.resolve(memberId, PurgePlayerNameResolver.FallbackStyle.FULL_UUID);
                     player.sendMessage(Message.raw("- " + name));
                 }
             }
