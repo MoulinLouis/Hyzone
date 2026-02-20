@@ -123,6 +123,10 @@ dropField.set(npcEntity.getRole(), "Empty");
 
 **Vanilla NPC types that work with `spawnNPC()`:** `"Zombie"`, `"Zombie_Burnt"`, `"Zombie_Frost"`, `"Zombie_Sand"`, `"Kweebec_Seedling"`, etc. — any concrete (non-Abstract) role from `Assets.zip`.
 
+### Player Base HP Is 100
+
+Player base HP in Hytale is **100** (not 20 like Minecraft). Don't add HP modifiers to reach 100 — it's already the default.
+
 ### Common Gotchas Summary
 
 1. **Entity refs expire** - Always check `ref.isValid()` before use
@@ -253,6 +257,47 @@ Location: `/mnt/c/Users/User/AppData/Roaming/Hytale/install/release/package/game
 
 Use `unzip -l Assets.zip | grep <pattern>` to list, `unzip -p Assets.zip <path>` to read contents.
 
+### Cosmetic System (EntityEffect + ModelVFX)
+
+Apply visual effects (glows, auras) to players via `EffectControllerComponent`:
+
+```java
+EffectControllerComponent ctrl = store.getComponent(ref, EffectControllerComponent.getComponentType());
+EntityEffect effect = EntityEffect.getAssetMap().get("Effects/Drop/Drop_Legendary");
+
+// CRITICAL: slot must be the asset index, NOT 0
+int effectIndex = EntityEffect.getAssetMap().getIndex(effect.getId());
+ctrl.addInfiniteEffect(ref, effectIndex, effect, store);
+
+// Or use auto-index overloads:
+ctrl.addEffect(ref, effect, store);  // uses effect's built-in duration/infinite
+ctrl.addEffect(ref, effect, duration, OverlapBehavior.OVERWRITE, store);
+```
+
+**Self-sync required:** The entity tracker only syncs effect updates to OTHER players. The player won't see their own effect changes unless you manually send the packet:
+
+```java
+EntityEffectUpdate[] updates = ctrl.createInitUpdates();
+ComponentUpdate cu = new ComponentUpdate();
+cu.type = ComponentUpdateType.EntityEffects;
+cu.entityEffectUpdates = updates;
+EntityUpdate eu = new EntityUpdate(player.getNetworkId(), null, new ComponentUpdate[]{cu});
+ph.writeNoCache(new EntityUpdates(null, new EntityUpdate[]{eu}));
+```
+
+**Best ModelVFX for cosmetics (glow effects):**
+
+| Effect | Color | Notes |
+|--------|-------|-------|
+| `Drop_Legendary` | Gold `#ffdb91` | Clean gold glow, bloom, looping |
+| `Drop_Epic` | Purple `#e07dff` | Elegant purple glow |
+| `Crown_Gold` | Gold `#ffdb91` | Intense (thickness 10), BottomUp pulse |
+| `Sword_Signature_Status` | Cyan `#94f9ff` | Blue-white glow |
+
+**Warning:** Status effects (`Burn`, `Freeze`, `Poison`) have `DamageCalculator`/`MovementEffects` — they cause gameplay side-effects. Use Drop/Weapon effects for pure cosmetics or create custom ones in `Server/Entity/ModelVFX/` + `Server/Entity/Effects/`.
+
+Test command: `/cosmetic` (registered in HyvexaPlugin).
+
 ### Camera System (via packets)
 
 Control player camera via `SetServerCamera` packet:
@@ -289,6 +334,13 @@ packetHandler.writeNoCache(new CameraShakeEffect(0, intensity, AccumulationMode.
 
 Key enums: `ClientCameraView` (FirstPerson, ThirdPerson, Custom), `RotationType` (AttachedToPlusOffset, Custom), `PositionDistanceOffsetType` (DistanceOffset, DistanceOffsetRaycast, None), `AttachedToType` (LocalPlayer, EntityId, None).
 
+**Camera gotchas:**
+- `Direction(yaw, pitch, roll)` — all values in **radians**, not degrees
+- `isLocked` flag in `SetServerCamera` does NOT lock mouse input — it only controls server-side camera retention
+- First-person via `ServerCameraSettings` (`isFirstPerson = true`) is glitchy (camera at feet level) — use `resetCamera()` instead
+- No way to remove spawned particles — fire-and-forget only, accept fade time
+- Entity light (`BuilderToolSetEntityLight`) has no visible effect on players
+
 ### Particles (via packets)
 
 Spawn particles at a world position:
@@ -304,6 +356,8 @@ packetHandler.writeNoCache(new SpawnParticleSystem(
     new Color((byte)255, (byte)255, (byte)255)
 ));
 ```
+
+**Particle ID formats:** Full paths (e.g., `"Spell/Fireworks/Firework_GS"`) work for `SpawnParticleSystem`. Short names (e.g., `"Firework_GS"`) also work in some contexts. For `SpawnModelParticles` (entity-attached), use short names only.
 
 #### Interesting Particle IDs (for cinematic use)
 
