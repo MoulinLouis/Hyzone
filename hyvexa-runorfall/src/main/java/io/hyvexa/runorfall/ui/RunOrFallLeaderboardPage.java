@@ -28,10 +28,15 @@ public class RunOrFallLeaderboardPage extends InteractiveCustomUIPage<RunOrFallL
     private static final String BUTTON_CLOSE = "Close";
     private static final String BUTTON_PREV = "PrevPage";
     private static final String BUTTON_NEXT = "NextPage";
+    private static final String BUTTON_CATEGORY_PREFIX = "Category:";
+    private static final String BUTTON_CATEGORY_TOTAL_WINS = BUTTON_CATEGORY_PREFIX + "TotalWins";
+    private static final String BUTTON_CATEGORY_BEST_STREAK = BUTTON_CATEGORY_PREFIX + "BestStreak";
+    private static final String BUTTON_CATEGORY_LONGEST_SURVIVED = BUTTON_CATEGORY_PREFIX + "LongestSurvived";
 
     private final RunOrFallStatsStore statsStore;
     private final PaginationState pagination = new PaginationState(50);
     private String searchText = "";
+    private LeaderboardCategory selectedCategory = LeaderboardCategory.TOTAL_WINS;
 
     public RunOrFallLeaderboardPage(@Nonnull PlayerRef playerRef, RunOrFallStatsStore statsStore) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, LeaderboardData.CODEC);
@@ -71,6 +76,15 @@ public class RunOrFallLeaderboardPage extends InteractiveCustomUIPage<RunOrFallL
             sendRefresh();
             return;
         }
+        LeaderboardCategory nextCategory = LeaderboardCategory.fromButton(data.getButton());
+        if (nextCategory != null) {
+            if (selectedCategory != nextCategory) {
+                selectedCategory = nextCategory;
+                pagination.reset();
+                sendRefresh();
+            }
+            return;
+        }
         if (BUTTON_CLOSE.equals(data.getButton())) {
             this.close();
         }
@@ -93,11 +107,18 @@ public class RunOrFallLeaderboardPage extends InteractiveCustomUIPage<RunOrFallL
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_PREV), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#NextPageButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_NEXT), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CategoryTotalWinsButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CATEGORY_TOTAL_WINS), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CategoryBestStreakButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CATEGORY_BEST_STREAK), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CategoryLongestSurvivedButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CATEGORY_LONGEST_SURVIVED), false);
     }
 
     private void buildLeaderboard(UICommandBuilder commandBuilder) {
         commandBuilder.clear("#LeaderboardCards");
         commandBuilder.set("#LeaderboardSearchField.Value", searchText);
+        applyCategoryUi(commandBuilder);
         if (statsStore == null) {
             commandBuilder.set("#EmptyText.Text", "RunOrFall stats unavailable.");
             commandBuilder.set("#PageLabel.Text", "");
@@ -114,10 +135,7 @@ public class RunOrFallLeaderboardPage extends InteractiveCustomUIPage<RunOrFallL
         String filter = searchText != null ? searchText.trim().toLowerCase(Locale.ROOT) : "";
         List<LeaderboardRow> rows = stats.stream()
                 .map(LeaderboardRow::new)
-                .sorted(Comparator.comparingInt(LeaderboardRow::wins).reversed()
-                        .thenComparing(Comparator.comparingDouble(LeaderboardRow::winRatePercent).reversed())
-                        .thenComparingInt(LeaderboardRow::losses)
-                        .thenComparing(row -> row.name.toLowerCase(Locale.ROOT)))
+                .sorted(selectedCategory.comparator())
                 .toList();
 
         List<LeaderboardRow> filtered = new java.util.ArrayList<>();
@@ -145,10 +163,98 @@ public class RunOrFallLeaderboardPage extends InteractiveCustomUIPage<RunOrFallL
             commandBuilder.set("#LeaderboardCards[" + index + "] #Rank.Text", String.valueOf(row.rank));
             commandBuilder.set("#LeaderboardCards[" + index + "] #PlayerName.Text", row.name);
             commandBuilder.set("#LeaderboardCards[" + index + "] #Stats.Text",
-                    row.wins + "W  " + row.losses + "L  " + String.format(Locale.US, "%.2f%%", row.winRatePercent));
+                    selectedCategory.formatStats(row));
             index++;
         }
         commandBuilder.set("#PageLabel.Text", slice.getLabel());
+    }
+
+    private void applyCategoryUi(UICommandBuilder commandBuilder) {
+        commandBuilder.set("#CategoryTotalWinsButton.Text",
+                selectedCategory == LeaderboardCategory.TOTAL_WINS ? "[x] Total wins" : "[ ] Total wins");
+        commandBuilder.set("#CategoryBestStreakButton.Text",
+                selectedCategory == LeaderboardCategory.BEST_WIN_STREAK ? "[x] Best win streak" : "[ ] Best win streak");
+        commandBuilder.set("#CategoryLongestSurvivedButton.Text",
+                selectedCategory == LeaderboardCategory.LONGEST_TIME_SURVIVED
+                        ? "[x] Longest time survived" : "[ ] Longest time survived");
+        commandBuilder.set("#CategoryHint.Text", selectedCategory.hintText);
+    }
+
+    private static String formatDuration(long millis) {
+        long safeMillis = Math.max(0L, millis);
+        long totalSeconds = safeMillis / 1000L;
+        long minutes = totalSeconds / 60L;
+        long seconds = totalSeconds % 60L;
+        long centiseconds = (safeMillis % 1000L) / 10L;
+        return String.format(Locale.US, "%02d:%02d.%02d", minutes, seconds, centiseconds);
+    }
+
+    private enum LeaderboardCategory {
+        TOTAL_WINS(BUTTON_CATEGORY_TOTAL_WINS, "Ranked by total wins.") {
+            @Override
+            Comparator<LeaderboardRow> comparator() {
+                return Comparator.comparingInt(LeaderboardRow::wins).reversed()
+                        .thenComparing(Comparator.comparingDouble(LeaderboardRow::winRatePercent).reversed())
+                        .thenComparingInt(LeaderboardRow::losses)
+                        .thenComparing(LeaderboardRow::nameLower);
+            }
+
+            @Override
+            String formatStats(LeaderboardRow row) {
+                return row.wins() + "W  " + row.losses() + "L  "
+                        + String.format(Locale.US, "%.2f%%", row.winRatePercent());
+            }
+        },
+        BEST_WIN_STREAK(BUTTON_CATEGORY_BEST_STREAK, "Ranked by best win streak.") {
+            @Override
+            Comparator<LeaderboardRow> comparator() {
+                return Comparator.comparingInt(LeaderboardRow::bestWinStreak).reversed()
+                        .thenComparing(Comparator.comparingInt(LeaderboardRow::wins).reversed())
+                        .thenComparing(Comparator.comparingDouble(LeaderboardRow::winRatePercent).reversed())
+                        .thenComparingInt(LeaderboardRow::losses)
+                        .thenComparing(LeaderboardRow::nameLower);
+            }
+
+            @Override
+            String formatStats(LeaderboardRow row) {
+                return "Streak " + row.bestWinStreak();
+            }
+        },
+        LONGEST_TIME_SURVIVED(BUTTON_CATEGORY_LONGEST_SURVIVED, "Ranked by longest survival time.") {
+            @Override
+            Comparator<LeaderboardRow> comparator() {
+                return Comparator.comparingLong(LeaderboardRow::longestSurvivedMs).reversed()
+                        .thenComparing(Comparator.comparingInt(LeaderboardRow::wins).reversed())
+                        .thenComparing(Comparator.comparingInt(LeaderboardRow::bestWinStreak).reversed())
+                        .thenComparing(LeaderboardRow::nameLower);
+            }
+
+            @Override
+            String formatStats(LeaderboardRow row) {
+                return formatDuration(row.longestSurvivedMs());
+            }
+        };
+
+        private final String buttonId;
+        private final String hintText;
+
+        LeaderboardCategory(String buttonId, String hintText) {
+            this.buttonId = buttonId;
+            this.hintText = hintText;
+        }
+
+        abstract Comparator<LeaderboardRow> comparator();
+
+        abstract String formatStats(LeaderboardRow row);
+
+        static LeaderboardCategory fromButton(String button) {
+            for (LeaderboardCategory category : values()) {
+                if (category.buttonId.equals(button)) {
+                    return category;
+                }
+            }
+            return null;
+        }
     }
 
     private static final class LeaderboardRow {
@@ -157,6 +263,8 @@ public class RunOrFallLeaderboardPage extends InteractiveCustomUIPage<RunOrFallL
         private final int wins;
         private final int losses;
         private final double winRatePercent;
+        private final int bestWinStreak;
+        private final long longestSurvivedMs;
 
         private LeaderboardRow(RunOrFallPlayerStats stats) {
             String rawName = stats != null ? stats.getPlayerName() : null;
@@ -164,6 +272,12 @@ public class RunOrFallLeaderboardPage extends InteractiveCustomUIPage<RunOrFallL
             this.wins = stats != null ? stats.getWins() : 0;
             this.losses = stats != null ? stats.getLosses() : 0;
             this.winRatePercent = stats != null ? stats.getWinRatePercent() : 0.0d;
+            this.bestWinStreak = stats != null ? stats.getBestWinStreak() : 0;
+            this.longestSurvivedMs = stats != null ? stats.getLongestSurvivedMs() : 0L;
+        }
+
+        private String nameLower() {
+            return name.toLowerCase(Locale.ROOT);
         }
 
         private int wins() {
@@ -176,6 +290,14 @@ public class RunOrFallLeaderboardPage extends InteractiveCustomUIPage<RunOrFallL
 
         private double winRatePercent() {
             return winRatePercent;
+        }
+
+        private int bestWinStreak() {
+            return bestWinStreak;
+        }
+
+        private long longestSurvivedMs() {
+            return longestSurvivedMs;
         }
     }
 

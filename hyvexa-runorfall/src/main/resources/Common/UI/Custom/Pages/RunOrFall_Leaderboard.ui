@@ -62,7 +62,41 @@ $C.@PageOverlay {
           FontSize: 14,
           TextColor: #9fb0ba
         );
-        Text: "Ranked by wins, tie-break by winrate.";
+        Text: "Choose a leaderboard category.";
+      }
+
+      Group #CategoryRow {
+        Anchor: (Top: 6, Width: 490, Height: 22);
+        LayoutMode: Left;
+
+        $C.@TextButton #CategoryTotalWinsButton {
+          Anchor: (Width: 156, Height: 22);
+          Text: "[x] Total wins";
+        }
+
+        Group {
+          Anchor: (Width: 11);
+        }
+
+        $C.@TextButton #CategoryBestStreakButton {
+          Anchor: (Width: 156, Height: 22);
+          Text: "[ ] Best win streak";
+        }
+
+        Group {
+          Anchor: (Width: 11);
+        }
+
+        $C.@TextButton #CategoryLongestSurvivedButton {
+          Anchor: (Width: 156, Height: 22);
+          Text: "[ ] Longest time survived";
+        }
+      }
+
+      Label #CategoryHint {
+        Anchor: (Top: 6);
+        Style: (FontSize: 12, TextColor: #9fb0ba);
+        Text: "Ranked by total wins.";
       }
 
       Label {
