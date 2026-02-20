@@ -3,6 +3,8 @@ package io.hyvexa.runorfall;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
+import com.hypixel.hytale.protocol.packets.interface_.HudComponent;
+import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.event.events.player.AddPlayerToWorldEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
@@ -18,8 +20,11 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.WorldConstants;
 import io.hyvexa.common.util.ModeGate;
+import io.hyvexa.common.util.MultiHudBridge;
 import io.hyvexa.core.db.DatabaseManager;
+import io.hyvexa.core.economy.GemStore;
 import io.hyvexa.runorfall.command.RunOrFallCommand;
+import io.hyvexa.runorfall.hud.RunOrFallHud;
 import io.hyvexa.runorfall.interaction.RunOrFallJoinInteraction;
 import io.hyvexa.runorfall.interaction.RunOrFallStatsInteraction;
 import io.hyvexa.runorfall.manager.RunOrFallConfigStore;
@@ -29,6 +34,9 @@ import io.hyvexa.runorfall.manager.RunOrFallStatsStore;
 import javax.annotation.Nonnull;
 import java.io.File;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.UUID;
 
 public class HyvexaRunOrFallPlugin extends JavaPlugin {
@@ -47,6 +55,8 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
     private RunOrFallConfigStore configStore;
     private RunOrFallStatsStore statsStore;
     private RunOrFallGameManager gameManager;
+    private final ConcurrentHashMap<UUID, RunOrFallHud> runOrFallHuds = new ConcurrentHashMap<>();
+    private ScheduledFuture<?> hudUpdateTask;
 
     public HyvexaRunOrFallPlugin(@Nonnull JavaPluginInit init) {
         super(init);
@@ -82,6 +92,11 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("RunOrFall database initialization failed.");
         }
+        try {
+            GemStore.getInstance().initialize();
+        } catch (Exception e) {
+            LOGGER.atWarning().withCause(e).log("RunOrFall GemStore initialization failed.");
+        }
 
         configStore = new RunOrFallConfigStore(new File(folder, "config.json"));
         statsStore = new RunOrFallStatsStore();
@@ -107,6 +122,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
             if (player == null) {
                 return;
             }
+            attachRunOrFallHud(playerRef, player);
             refreshRunOrFallHotbar(playerRef.getUuid());
             player.sendMessage(com.hypixel.hytale.server.core.Message.raw(
                     PREFIX + "Use /rof join to enter lobby. Admin setup: /rof admin"));
@@ -127,9 +143,17 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
             }
             World world = event.getWorld();
             if (ModeGate.isRunOrFallWorld(world)) {
+                Ref<EntityStore> ref = playerRef.getReference();
+                if (ref != null && ref.isValid()) {
+                    Player player = ref.getStore().getComponent(ref, Player.getComponentType());
+                    if (player != null) {
+                        attachRunOrFallHud(playerRef, player);
+                    }
+                }
                 refreshRunOrFallHotbar(playerId);
                 return;
             }
+            runOrFallHuds.remove(playerId);
             gameManager.leaveLobby(playerId, false);
         });
 
@@ -138,8 +162,15 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
             if (playerRef == null || playerRef.getUuid() == null) {
                 return;
             }
-            gameManager.handleDisconnect(playerRef.getUuid());
+            UUID playerId = playerRef.getUuid();
+            gameManager.handleDisconnect(playerId);
+            runOrFallHuds.remove(playerId);
+            GemStore.getInstance().evictPlayer(playerId);
         });
+
+        hudUpdateTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(
+                this::tickHudUpdates, 5000L, 5000L, TimeUnit.MILLISECONDS
+        );
 
         LOGGER.atInfo().log("HyvexaRunOrFall plugin loaded");
     }
@@ -230,8 +261,55 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
         }
     }
 
+    private void attachRunOrFallHud(PlayerRef playerRef, Player player) {
+        if (playerRef == null || player == null) {
+            return;
+        }
+        UUID playerId = playerRef.getUuid();
+        if (playerId == null) {
+            return;
+        }
+        RunOrFallHud hud = new RunOrFallHud(playerRef);
+        runOrFallHuds.put(playerId, hud);
+        MultiHudBridge.setCustomHud(player, playerRef, hud);
+        player.getHudManager().hideHudComponents(playerRef, HudComponent.Compass);
+        MultiHudBridge.showIfNeeded(hud);
+        hud.updatePlayerCount();
+        hud.updateGems(GemStore.getInstance().getGems(playerId));
+    }
+
+    private void tickHudUpdates() {
+        for (var entry : runOrFallHuds.entrySet()) {
+            UUID playerId = entry.getKey();
+            PlayerRef playerRef = Universe.get().getPlayer(playerId);
+            if (playerRef == null) {
+                runOrFallHuds.remove(playerId);
+                continue;
+            }
+            Ref<EntityStore> ref = playerRef.getReference();
+            if (ref == null || !ref.isValid()) {
+                runOrFallHuds.remove(playerId);
+                continue;
+            }
+            Store<EntityStore> store = ref.getStore();
+            World world = store.getExternalData() != null ? store.getExternalData().getWorld() : null;
+            if (!ModeGate.isRunOrFallWorld(world)) {
+                runOrFallHuds.remove(playerId);
+                continue;
+            }
+            RunOrFallHud hud = entry.getValue();
+            hud.updatePlayerCount();
+            hud.updateGems(GemStore.getInstance().getGems(playerId));
+        }
+    }
+
     @Override
     protected void shutdown() {
+        if (hudUpdateTask != null) {
+            hudUpdateTask.cancel(false);
+            hudUpdateTask = null;
+        }
+        runOrFallHuds.clear();
         if (gameManager != null) {
             gameManager.shutdown();
         }
