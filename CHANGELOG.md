@@ -24,6 +24,7 @@
 - **RunOrFall: SQL-backed config persistence** - RunOrFall config now saves/loads from MySQL tables (`runorfall_settings`, `runorfall_spawns`, `runorfall_platforms`) instead of JSON, with one-time legacy migration support.
 - **RunOrFall: Join/Leave hotbar items** - Added `Ingredient_Life_Essence` (join lobby) and `Ingredient_Earth_Essence` (leave lobby) shortcuts equivalent to `/rof join` and `/rof leave`.
 - **RunOrFall: Contextual hotbars by state** - Hotbar now switches per player state: default (`Join`, `Leaderboards`, `My Stats`, `Game Selector`), lobby (`Leave`, `Leaderboards`, `My Stats`), and active round (no RunOrFall items).
+- **RunOrFall: Coins currency + round rewards** - Added persistent RunOrFall coins shown in HUD, with gains of `+1` every 30s alive, `+5` per eliminated player, and `+25` for round winner (chat message on each gain).
 - **Hub: Game Selector RunOrFall card** - Added RunOrFall to the "Welcome to Hyvexa" selector, arranged modes in a 2x2 grid (Parkour/Ascend top row), and restricted RunOrFall routing to OP/staff for now.
 - **Purge: Expanded weapon upgrade/admin options to full Hyguns arsenal** - `/purge upgrade` and `/purge admin -> Weapons` now include Glock18, ColtRevolver, DesertEagle, Mac10, MP9, Thompson, AK47, M4A1s, Barret50, DoubleBarrel, and Flamethrower (Frag excluded).
 - **Purge: Weapon-specific icons in upgrade/admin pages** - Added per-weapon Hyguns icons for selection cards and the upgrade detail panel.
