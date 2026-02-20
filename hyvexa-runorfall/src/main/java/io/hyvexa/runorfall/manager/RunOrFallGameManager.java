@@ -14,6 +14,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.runorfall.HyvexaRunOrFallPlugin;
 import io.hyvexa.runorfall.data.RunOrFallConfig;
 import io.hyvexa.runorfall.data.RunOrFallLocation;
 import io.hyvexa.runorfall.data.RunOrFallPlatform;
@@ -73,6 +74,10 @@ public class RunOrFallGameManager {
         return playerId != null && lobbyPlayers.contains(playerId);
     }
 
+    public synchronized boolean isInActiveRound(UUID playerId) {
+        return playerId != null && state == GameState.RUNNING && alivePlayers.contains(playerId);
+    }
+
     public synchronized String statusLine() {
         return "state=" + state.name()
                 + ", lobby=" + lobbyPlayers.size()
@@ -98,6 +103,7 @@ public class RunOrFallGameManager {
         }
         sendToPlayer(playerId, "Joined the RunOrFall lobby.");
         teleportPlayerToLobby(playerId);
+        refreshPlayerHotbar(playerId);
         broadcastLobby("Lobby: " + lobbyPlayers.size() + " player(s).");
         startCountdownIfPossible(false);
     }
@@ -124,6 +130,7 @@ public class RunOrFallGameManager {
             broadcastLobby("A player was eliminated. " + alivePlayers.size() + " remaining.");
             checkWinnerInternal();
         }
+        refreshPlayerHotbar(playerId);
         if (lobbyPlayers.isEmpty()) {
             activeWorld = null;
         }
@@ -273,6 +280,9 @@ public class RunOrFallGameManager {
         state = GameState.RUNNING;
         blockBreakEnabledAtMs = System.currentTimeMillis() + START_BLOCK_BREAK_GRACE_MS;
         blockBreakCountdownLastAnnounced = (int) Math.ceil(START_BLOCK_BREAK_GRACE_MS / 1000.0d);
+        for (UUID onlinePlayerId : onlinePlayers) {
+            refreshPlayerHotbar(onlinePlayerId);
+        }
         gameTickTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleAtFixedRate(
                 () -> dispatchToWorld(this::tickGameInternal),
                 GAME_TICK_MS, GAME_TICK_MS, TimeUnit.MILLISECONDS
@@ -375,6 +385,7 @@ public class RunOrFallGameManager {
         statsStore.recordLoss(playerId, resolvePlayerName(playerId), survivedMs);
         playerPendingBlock.remove(playerId);
         teleportPlayerToLobby(playerId);
+        refreshPlayerHotbar(playerId);
         sendToPlayer(playerId, "Eliminated: " + reason + ".");
         broadcastLobby("A player was eliminated. " + alivePlayers.size() + " remaining.");
     }
@@ -391,6 +402,7 @@ public class RunOrFallGameManager {
         soloTestRound = false;
         blockBreakEnabledAtMs = 0L;
         blockBreakCountdownLastAnnounced = -1;
+        refreshLobbyHotbars();
         broadcastLobby(reason);
         startCountdownIfPossible(false);
     }
@@ -667,6 +679,23 @@ public class RunOrFallGameManager {
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("RunOrFall world dispatch failed.");
         }
+    }
+
+    private void refreshLobbyHotbars() {
+        for (UUID playerId : new ArrayList<>(lobbyPlayers)) {
+            refreshPlayerHotbar(playerId);
+        }
+    }
+
+    private void refreshPlayerHotbar(UUID playerId) {
+        if (playerId == null) {
+            return;
+        }
+        HyvexaRunOrFallPlugin plugin = HyvexaRunOrFallPlugin.getInstance();
+        if (plugin == null) {
+            return;
+        }
+        plugin.refreshRunOrFallHotbar(playerId);
     }
 
     private void cancelCountdownTask() {
