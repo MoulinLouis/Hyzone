@@ -66,6 +66,21 @@ $C.@PageOverlay {
               }
             }
 
+            Group #PlayerCoinsRow {
+              Anchor: (Left: 0, Right: 0, Top: 4, Height: 20);
+              LayoutMode: Left;
+
+              Label {
+                Style: (FontSize: 14, TextColor: #fbbf24, RenderBold: true);
+                Text: "Coins:";
+              }
+              Group { Anchor: (Width: 6); }
+              Label #PlayerCoinsValue {
+                Style: (FontSize: 14, TextColor: #fbbf24, RenderBold: true);
+                Text: "0";
+              }
+            }
+
             Label #InfoIpText {
               Anchor: (Top: 6);
               Style: (

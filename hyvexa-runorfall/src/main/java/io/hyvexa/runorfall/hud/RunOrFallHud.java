@@ -9,6 +9,7 @@ public class RunOrFallHud extends CustomUIHud {
 
     private int lastPlayerCount = -1;
     private long lastGems = -1;
+    private long lastCoins = -1;
 
     public RunOrFallHud(PlayerRef playerRef) {
         super(playerRef);
@@ -26,6 +27,16 @@ public class RunOrFallHud extends CustomUIHud {
         lastGems = gems;
         UICommandBuilder commandBuilder = new UICommandBuilder();
         commandBuilder.set("#PlayerGemsValue.Text", String.valueOf(gems));
+        update(false, commandBuilder);
+    }
+
+    public void updateCoins(long coins) {
+        if (coins == lastCoins) {
+            return;
+        }
+        lastCoins = coins;
+        UICommandBuilder commandBuilder = new UICommandBuilder();
+        commandBuilder.set("#PlayerCoinsValue.Text", String.valueOf(coins));
         update(false, commandBuilder);
     }
 
