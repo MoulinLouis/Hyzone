@@ -23,6 +23,7 @@
 - **RunOrFall: Round-start grace before breaking blocks** - Block destruction now starts 3 seconds after the round begins, with chat countdown messages (3..2..1).
 - **RunOrFall: SQL-backed config persistence** - RunOrFall config now saves/loads from MySQL tables (`runorfall_settings`, `runorfall_spawns`, `runorfall_platforms`) instead of JSON, with one-time legacy migration support.
 - **RunOrFall: Join/Leave hotbar items** - Added `Ingredient_Life_Essence` (join lobby) and `Ingredient_Earth_Essence` (leave lobby) shortcuts equivalent to `/rof join` and `/rof leave`.
+- **RunOrFall: Contextual hotbars by state** - Hotbar now switches per player state: default (`Join`, `Leaderboards`, `My Stats`, `Game Selector`), lobby (`Leave`, `Leaderboards`, `My Stats`), and active round (no RunOrFall items).
 - **Purge: Expanded weapon upgrade/admin options to full Hyguns arsenal** - `/purge upgrade` and `/purge admin -> Weapons` now include Glock18, ColtRevolver, DesertEagle, Mac10, MP9, Thompson, AK47, M4A1s, Barret50, DoubleBarrel, and Flamethrower (Frag excluded).
 - **Purge: Weapon-specific icons in upgrade/admin pages** - Added per-weapon Hyguns icons for selection cards and the upgrade detail panel.
 - **Parkour: Map Admin UI height increased** - Increased the Map Admin window height by 50px for more vertical space.

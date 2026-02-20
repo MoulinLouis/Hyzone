@@ -8,10 +8,12 @@ import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
+import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.WorldConstants;
@@ -36,10 +38,9 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
     private static final String ITEM_LEAVE = "Ingredient_Earth_Essence";
     private static final String ITEM_STATS = "Food_Candy_Cane";
     private static final String ITEM_LEADERBOARD = "WinterHoliday_Snowflake";
-    private static final short SLOT_STATS = 0;
-    private static final short SLOT_JOIN = 1;
-    private static final short SLOT_LEAVE = 2;
-    private static final short SLOT_LEADERBOARD = 3;
+    private static final short SLOT_PRIMARY = 0;
+    private static final short SLOT_LEADERBOARD = 1;
+    private static final short SLOT_STATS = 2;
     private static final short SLOT_GAME_SELECTOR = 8;
     private static HyvexaRunOrFallPlugin INSTANCE;
 
@@ -54,6 +55,12 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
 
     public static HyvexaRunOrFallPlugin getInstance() {
         return INSTANCE;
+    }
+
+    private enum HotbarState {
+        DEFAULT,
+        LOBBY,
+        IN_GAME
     }
 
     @Override
@@ -100,7 +107,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
             if (player == null) {
                 return;
             }
-            enforceRunOrFallHotbar(player);
+            refreshRunOrFallHotbar(playerRef.getUuid());
             player.sendMessage(com.hypixel.hytale.server.core.Message.raw(
                     PREFIX + "Use /rof join to enter lobby. Admin setup: /rof admin"));
         });
@@ -120,14 +127,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
             }
             World world = event.getWorld();
             if (ModeGate.isRunOrFallWorld(world)) {
-                Ref<EntityStore> playerEntityRef = playerRef.getReference();
-                if (playerEntityRef != null && playerEntityRef.isValid()) {
-                    Store<EntityStore> playerStore = playerEntityRef.getStore();
-                    Player player = playerStore.getComponent(playerEntityRef, Player.getComponentType());
-                    if (player != null) {
-                        enforceRunOrFallHotbar(player);
-                    }
-                }
+                refreshRunOrFallHotbar(playerId);
                 return;
             }
             gameManager.leaveLobby(playerId, false);
@@ -158,12 +158,58 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
         return gameManager;
     }
 
-    private void enforceRunOrFallHotbar(Player player) {
+    public void refreshRunOrFallHotbar(UUID playerId) {
+        if (playerId == null) {
+            return;
+        }
+        PlayerRef playerRef = Universe.get().getPlayer(playerId);
+        if (playerRef == null) {
+            return;
+        }
+        Ref<EntityStore> ref = playerRef.getReference();
+        if (ref == null || !ref.isValid()) {
+            return;
+        }
+        Store<EntityStore> store = ref.getStore();
+        World world = store.getExternalData() != null ? store.getExternalData().getWorld() : null;
+        if (!ModeGate.isRunOrFallWorld(world)) {
+            return;
+        }
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null) {
+            return;
+        }
+        HotbarState state = HotbarState.DEFAULT;
+        if (gameManager != null) {
+            if (gameManager.isInActiveRound(playerId)) {
+                state = HotbarState.IN_GAME;
+            } else if (gameManager.isJoined(playerId)) {
+                state = HotbarState.LOBBY;
+            }
+        }
+        applyRunOrFallHotbar(player, state);
+    }
+
+    private void applyRunOrFallHotbar(Player player, HotbarState state) {
         if (player == null || player.getInventory() == null || player.getInventory().getHotbar() == null) {
             return;
         }
         var hotbar = player.getInventory().getHotbar();
         short capacity = hotbar.getCapacity();
+        clearControlledItems(hotbar, capacity);
+        if (state == HotbarState.IN_GAME) {
+            return;
+        }
+        String primaryItem = state == HotbarState.LOBBY ? ITEM_LEAVE : ITEM_JOIN;
+        setHotbarItem(hotbar, capacity, SLOT_PRIMARY, primaryItem);
+        setHotbarItem(hotbar, capacity, SLOT_LEADERBOARD, ITEM_LEADERBOARD);
+        setHotbarItem(hotbar, capacity, SLOT_STATS, ITEM_STATS);
+        if (state == HotbarState.DEFAULT) {
+            setHotbarItem(hotbar, capacity, SLOT_GAME_SELECTOR, WorldConstants.ITEM_SERVER_SELECTOR);
+        }
+    }
+
+    private void clearControlledItems(ItemContainer hotbar, short capacity) {
         for (short slot = 0; slot < capacity; slot++) {
             ItemStack stack = hotbar.getItemStack(slot);
             if (stack == null || ItemStack.isEmpty(stack)) {
@@ -176,21 +222,11 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
                 hotbar.setItemStackForSlot(slot, ItemStack.EMPTY, false);
             }
         }
-        if (SLOT_STATS >= 0 && SLOT_STATS < capacity) {
-            hotbar.setItemStackForSlot(SLOT_STATS, new ItemStack(ITEM_STATS, 1), false);
-        }
-        if (SLOT_JOIN >= 0 && SLOT_JOIN < capacity) {
-            hotbar.setItemStackForSlot(SLOT_JOIN, new ItemStack(ITEM_JOIN, 1), false);
-        }
-        if (SLOT_LEAVE >= 0 && SLOT_LEAVE < capacity) {
-            hotbar.setItemStackForSlot(SLOT_LEAVE, new ItemStack(ITEM_LEAVE, 1), false);
-        }
-        if (SLOT_LEADERBOARD >= 0 && SLOT_LEADERBOARD < capacity) {
-            hotbar.setItemStackForSlot(SLOT_LEADERBOARD, new ItemStack(ITEM_LEADERBOARD, 1), false);
-        }
-        if (SLOT_GAME_SELECTOR >= 0 && SLOT_GAME_SELECTOR < capacity) {
-            hotbar.setItemStackForSlot(SLOT_GAME_SELECTOR,
-                    new ItemStack(WorldConstants.ITEM_SERVER_SELECTOR, 1), false);
+    }
+
+    private void setHotbarItem(ItemContainer hotbar, short capacity, short slot, String itemId) {
+        if (slot >= 0 && slot < capacity) {
+            hotbar.setItemStackForSlot(slot, new ItemStack(itemId, 1), false);
         }
     }
 
