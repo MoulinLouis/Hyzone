@@ -81,7 +81,7 @@ public class PurgeHud extends CustomUIHud {
         }
         lastScrap = scrap;
         UICommandBuilder cmd = new UICommandBuilder();
-        cmd.set("#PlayerScrapValue.Text", scrap + " scrap");
+        cmd.set("#ScrapHudValue.Text", String.format("%,d", scrap));
         update(false, cmd);
     }
 
