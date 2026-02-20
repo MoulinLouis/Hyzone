@@ -134,16 +134,25 @@ public class PurgePartyManager {
             return false;
         }
 
-        String partyId = partyIdByPlayer.remove(playerId);
+        String partyId = partyIdByPlayer.get(playerId);
         if (partyId == null) {
             return false;
         }
 
         PurgeParty party = partiesById.get(partyId);
         if (party == null) {
+            partyIdByPlayer.remove(playerId);
             return false;
         }
 
+        // If leader leaves, dissolve the entire party
+        if (party.isLeader(playerId)) {
+            broadcastToParty(party, "Party leader left. Party dissolved.");
+            dissolveParty(partyId);
+            return true;
+        }
+
+        partyIdByPlayer.remove(playerId);
         party.removeMember(playerId);
 
         String playerName = getPlayerName(playerId);
@@ -155,6 +164,26 @@ public class PurgePartyManager {
             cleanupInvitesForParty(partyId);
         }
 
+        return true;
+    }
+
+    public boolean kickPlayer(UUID kickerId, UUID targetId) {
+        if (kickerId == null || targetId == null) {
+            return false;
+        }
+        PurgeParty party = getPartyByPlayer(kickerId);
+        if (party == null || !party.isLeader(kickerId)) {
+            return false;
+        }
+        if (!party.contains(targetId)) {
+            return false;
+        }
+        partyIdByPlayer.remove(targetId);
+        party.removeMember(targetId);
+
+        String targetName = getPlayerName(targetId);
+        broadcastToParty(party, targetName + " was kicked from the party.");
+        sendMessageToPlayer(targetId, "You were kicked from the party.");
         return true;
     }
 
@@ -189,6 +218,39 @@ public class PurgePartyManager {
         }
         // Clean up pending invites referencing this party
         cleanupInvitesForParty(partyId);
+    }
+
+    // --- Query methods for UI ---
+
+    public boolean hasPendingInvite(UUID targetId) {
+        return targetId != null && pendingInvitePartyByTarget.containsKey(targetId);
+    }
+
+    public UUID getInviterForTarget(UUID targetId) {
+        if (targetId == null) {
+            return null;
+        }
+        String partyId = pendingInvitePartyByTarget.get(targetId);
+        if (partyId == null) {
+            return null;
+        }
+        PurgeParty party = partiesById.get(partyId);
+        return party != null ? party.getLeaderId() : null;
+    }
+
+    public boolean hasInviteFromParty(UUID targetId, String partyId) {
+        if (targetId == null || partyId == null) {
+            return false;
+        }
+        String invitePartyId = pendingInvitePartyByTarget.get(targetId);
+        return partyId.equals(invitePartyId);
+    }
+
+    public boolean declineInvite(UUID targetId) {
+        if (targetId == null) {
+            return false;
+        }
+        return pendingInvitePartyByTarget.remove(targetId) != null;
     }
 
     // --- Private helpers ---

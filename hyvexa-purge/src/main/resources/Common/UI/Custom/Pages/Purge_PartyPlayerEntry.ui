@@ -1,0 +1,34 @@
+$C = "../Common.ui";
+
+Group {
+  Anchor: (Left: 0, Right: 0, Height: 32);
+  LayoutMode: Full;
+  Background: #141e2e;
+
+  // Player name
+  Label #PlayerName {
+    Anchor: (Left: 12, Top: 0, Bottom: 0, Width: 240);
+    Style: (FontSize: 14, TextColor: #d5e6ff, VerticalAlignment: Center);
+    Text: "";
+  }
+
+  // Invite button
+  TextButton #InviteButton {
+    Anchor: (Right: 8, Top: 3, Width: 80, Height: 26);
+    Text: "Invite";
+    Style: TextButtonStyle(
+      Default: (Background: #1a4a5a, LabelStyle: (FontSize: 13, TextColor: #d0f0ff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+      Hovered: (Background: #2a7a9a, LabelStyle: (FontSize: 13, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+      Pressed: (Background: #143a48, LabelStyle: (FontSize: 13, TextColor: #b0e0f0, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+      Sounds: $C.@ButtonSounds,
+    );
+  }
+
+  // "Invited" label (hidden by default, shown after invite sent)
+  Label #InvitedLabel {
+    Anchor: (Right: 16, Top: 0, Bottom: 0, Width: 70);
+    Style: (FontSize: 13, TextColor: #4ade80, RenderBold: true, HorizontalAlignment: End, VerticalAlignment: Center);
+    Text: "Invited";
+    Visible: false;
+  }
+}

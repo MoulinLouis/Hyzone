@@ -1,0 +1,267 @@
+$C = "../Common.ui";
+
+$C.@PageOverlay {
+  SceneBlur {}
+
+  Group #PartyMenuWindow {
+    Anchor: (Width: 460, Height: 520);
+    LayoutMode: Top;
+    Background: #07101b(0.97);
+    OutlineColor: #f8d25c(0.45);
+    OutlineSize: 2;
+
+    // === HEADER ===
+    Group #Header {
+      Anchor: (Left: 0, Right: 0, Height: 62);
+      LayoutMode: Full;
+      Background: #0f1f33;
+
+      Group {
+        Anchor: (Left: 0, Right: 0, Top: 0, Height: 4);
+        Background: #ffd44d;
+      }
+
+      Label #Title {
+        Anchor: (Left: 24, Top: 18, Width: 300, Height: 30);
+        Style: (FontSize: 22, TextColor: #f4f9ff, RenderBold: true);
+        Text: "Purge";
+      }
+
+      TextButton #CloseButton {
+        Anchor: (Right: 14, Top: 12, Width: 38, Height: 38);
+        Text: "X";
+        Style: TextButtonStyle(
+          Default: (Background: #7a1f28, LabelStyle: (FontSize: 18, TextColor: #ffe8ea, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Hovered: (Background: #b32f3b, LabelStyle: (FontSize: 18, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Pressed: (Background: #5d1820, LabelStyle: (FontSize: 18, TextColor: #ffd8dc, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Sounds: $C.@ButtonSounds,
+        );
+      }
+    }
+
+    // === MAIN CONTENT ===
+    Group #Content {
+      Anchor: (Left: 0, Right: 0);
+      FlexWeight: 1;
+      LayoutMode: Top;
+      Padding: (Left: 20, Right: 20, Top: 16, Bottom: 16);
+
+      // --- SOLO SECTION (visible when not in party) ---
+      Group #SoloSection {
+        Anchor: (Left: 0, Right: 0);
+        LayoutMode: Top;
+
+        Label {
+          Style: (FontSize: 16, TextColor: #9fb0ba);
+          Text: "Start a solo game or create a party.";
+        }
+
+        TextButton #PlaySoloButton {
+          Anchor: (Left: 0, Right: 0, Top: 16, Height: 48);
+          Text: "PLAY SOLO";
+          Style: TextButtonStyle(
+            Default: (Background: #1b5d2b, LabelStyle: (FontSize: 18, TextColor: #e8ffec, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+            Hovered: (Background: #2d9f49, LabelStyle: (FontSize: 18, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+            Pressed: (Background: #164a22, LabelStyle: (FontSize: 18, TextColor: #d8ffe0, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+            Sounds: $C.@ButtonSounds,
+          );
+        }
+
+        TextButton #CreatePartyButton {
+          Anchor: (Left: 0, Right: 0, Top: 10, Height: 48);
+          Text: "CREATE PARTY";
+          Style: TextButtonStyle(
+            Default: (Background: #1a4a5a, LabelStyle: (FontSize: 18, TextColor: #d0f0ff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+            Hovered: (Background: #2a7a9a, LabelStyle: (FontSize: 18, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+            Pressed: (Background: #143a48, LabelStyle: (FontSize: 18, TextColor: #b0e0f0, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+            Sounds: $C.@ButtonSounds,
+          );
+        }
+      }
+
+      // --- INVITE SECTION (visible when has pending invite, not in party) ---
+      Group #InviteSection {
+        Anchor: (Left: 0, Right: 0);
+        LayoutMode: Top;
+        Visible: false;
+
+        Label {
+          Anchor: (Top: 8);
+          Style: (FontSize: 16, TextColor: #9fb0ba);
+          Text: "You have a party invitation!";
+        }
+
+        Group #InviteInfoRow {
+          Anchor: (Left: 0, Right: 0, Top: 12, Height: 36);
+          LayoutMode: Left;
+
+          Label {
+            Style: (FontSize: 15, TextColor: #d5e6ff);
+            Text: "From: ";
+          }
+
+          Label #InviterName {
+            Style: (FontSize: 15, TextColor: #ffd44d, RenderBold: true);
+            Text: "";
+          }
+        }
+
+        Group #InviteButtonRow {
+          Anchor: (Left: 0, Right: 0, Top: 8, Height: 44);
+          LayoutMode: Left;
+
+          TextButton #AcceptInviteButton {
+            Anchor: (Width: 195, Height: 44);
+            Text: "ACCEPT";
+            Style: TextButtonStyle(
+              Default: (Background: #1b5d2b, LabelStyle: (FontSize: 16, TextColor: #e8ffec, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+              Hovered: (Background: #2d9f49, LabelStyle: (FontSize: 16, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+              Pressed: (Background: #164a22, LabelStyle: (FontSize: 16, TextColor: #d8ffe0, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+              Sounds: $C.@ButtonSounds,
+            );
+          }
+
+          TextButton #DeclineInviteButton {
+            Anchor: (Left: 10, Width: 195, Height: 44);
+            Text: "DECLINE";
+            Style: TextButtonStyle(
+              Default: (Background: #5a1a1a, LabelStyle: (FontSize: 16, TextColor: #ffd8dc, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+              Hovered: (Background: #8a2a2a, LabelStyle: (FontSize: 16, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+              Pressed: (Background: #4a1414, LabelStyle: (FontSize: 16, TextColor: #ffc0c8, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+              Sounds: $C.@ButtonSounds,
+            );
+          }
+        }
+      }
+
+      // --- PARTY SECTION (visible when in a party) ---
+      Group #PartySection {
+        Anchor: (Left: 0, Right: 0);
+        FlexWeight: 1;
+        LayoutMode: Top;
+        Visible: false;
+
+        // Party title with member count
+        Label #PartyTitle {
+          Style: (FontSize: 16, TextColor: #d5e6ff, RenderBold: true);
+          Text: "Party (1/5)";
+        }
+
+        // Member list (scrollable)
+        Group #MemberList {
+          Anchor: (Left: 0, Right: 0, Top: 10);
+          FlexWeight: 1;
+          LayoutMode: Top;
+        }
+
+        // Leader controls
+        Group #LeaderControls {
+          Anchor: (Left: 0, Right: 0, Top: 12, Height: 48);
+          LayoutMode: Left;
+
+          TextButton #StartPartyButton {
+            Anchor: (Width: 195, Height: 48);
+            Text: "START PURGE";
+            Style: TextButtonStyle(
+              Default: (Background: #1b5d2b, LabelStyle: (FontSize: 16, TextColor: #e8ffec, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+              Hovered: (Background: #2d9f49, LabelStyle: (FontSize: 16, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+              Pressed: (Background: #164a22, LabelStyle: (FontSize: 16, TextColor: #d8ffe0, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+              Sounds: $C.@ButtonSounds,
+            );
+          }
+
+          TextButton #ShowInviteButton {
+            Anchor: (Left: 10, Width: 195, Height: 48);
+            Text: "INVITE PLAYERS";
+            Style: TextButtonStyle(
+              Default: (Background: #1a4a5a, LabelStyle: (FontSize: 16, TextColor: #d0f0ff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+              Hovered: (Background: #2a7a9a, LabelStyle: (FontSize: 16, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+              Pressed: (Background: #143a48, LabelStyle: (FontSize: 16, TextColor: #b0e0f0, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+              Sounds: $C.@ButtonSounds,
+            );
+          }
+        }
+
+        // Non-leader waiting label
+        Label #WaitingLabel {
+          Anchor: (Top: 12);
+          Style: (FontSize: 15, TextColor: #7a8fa0, HorizontalAlignment: Center);
+          Text: "Waiting for the party leader to start...";
+          Visible: false;
+        }
+
+        // Leave party button (all members)
+        TextButton #LeavePartyButton {
+          Anchor: (Left: 0, Right: 0, Top: 10, Height: 38);
+          Text: "LEAVE PARTY";
+          Style: TextButtonStyle(
+            Default: (Background: #3a1a1a, LabelStyle: (FontSize: 14, TextColor: #ffd0d4, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+            Hovered: (Background: #5a2a2a, LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+            Pressed: (Background: #2a1010, LabelStyle: (FontSize: 14, TextColor: #ffc0c8, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+            Sounds: $C.@ButtonSounds,
+          );
+        }
+      }
+
+      // --- INVITE PANEL (visible when leader toggles invite list) ---
+      Group #InvitePanel {
+        Anchor: (Left: 0, Right: 0);
+        FlexWeight: 1;
+        LayoutMode: Top;
+        Visible: false;
+
+        Group #InvitePanelHeader {
+          Anchor: (Left: 0, Right: 0, Height: 36);
+          LayoutMode: Left;
+
+          Label {
+            Anchor: (Width: 100, Height: 36);
+            Style: (FontSize: 16, TextColor: #d5e6ff, RenderBold: true, VerticalAlignment: Center);
+            Text: "Invite Players";
+          }
+
+          TextButton #HideInviteButton {
+            Anchor: (Right: 0, Width: 80, Height: 32);
+            Text: "Back";
+            Style: TextButtonStyle(
+              Default: (Background: #2b3f5d, LabelStyle: (FontSize: 14, TextColor: #d5e6ff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+              Hovered: (Background: #476995, LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+              Pressed: (Background: #213149, LabelStyle: (FontSize: 14, TextColor: #d5e6ff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+              Sounds: $C.@ButtonSounds,
+            );
+          }
+        }
+
+        Group #SearchRow {
+          Anchor: (Left: 0, Right: 0, Top: 8, Height: 30);
+          LayoutMode: Left;
+
+          Label {
+            Anchor: (Width: 60, Height: 30);
+            Style: (FontSize: 14, TextColor: #9fb0ba, VerticalAlignment: Center);
+            Text: "Search:";
+          }
+
+          $C.@TextField #SearchField {
+            Anchor: (Height: 26, Top: 2);
+            FlexWeight: 1;
+            Style: (FontSize: 13, TextColor: #ffffff(0.85));
+          }
+        }
+
+        Group #PlayerList {
+          Anchor: (Left: 0, Right: 0, Top: 10);
+          FlexWeight: 1;
+          LayoutMode: Top;
+        }
+
+        Label #NoPlayersLabel {
+          Anchor: (Top: 10);
+          Style: (FontSize: 14, TextColor: #7a8fa0, HorizontalAlignment: Center);
+          Text: "No players found.";
+          Visible: false;
+        }
+      }
+    }
+  }
+}
