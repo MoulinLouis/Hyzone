@@ -1,0 +1,45 @@
+$C = "../Common.ui";
+
+Group {
+  Anchor: (Left: 0, Right: 0, Height: 36);
+  LayoutMode: Full;
+  Background: #182941;
+
+  // Gold left accent bar
+  Group {
+    Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
+    Background: #ffd44d;
+  }
+
+  // Member name
+  Label #MemberName {
+    Anchor: (Left: 14, Top: 0, Bottom: 0, Width: 200);
+    Style: (FontSize: 15, TextColor: #d5e6ff, VerticalAlignment: Center);
+    Text: "";
+  }
+
+  // Leader badge (hidden by default)
+  Label #LeaderBadge {
+    Anchor: (Left: 220, Top: 0, Bottom: 0, Width: 70);
+    Style: (FontSize: 12, TextColor: #ffd44d, RenderBold: true, VerticalAlignment: Center);
+    Text: "LEADER";
+    Visible: false;
+  }
+
+  // Kick button group (hidden by default, leader only for non-leaders)
+  Group #KickGroup {
+    Anchor: (Right: 8, Top: 4, Width: 60, Height: 28);
+    Visible: false;
+
+    TextButton #KickButton {
+      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+      Text: "Kick";
+      Style: TextButtonStyle(
+        Default: (Background: #5a1a1a, LabelStyle: (FontSize: 13, TextColor: #ffd0d4, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Hovered: (Background: #8a2a2a, LabelStyle: (FontSize: 13, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Pressed: (Background: #4a1414, LabelStyle: (FontSize: 13, TextColor: #ffc0c8, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Sounds: $C.@ButtonSounds,
+      );
+    }
+  }
+}

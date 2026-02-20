@@ -89,6 +89,10 @@ public class HyvexaPurgePlugin extends JavaPlugin {
         return weaponConfigManager;
     }
 
+    public PurgePartyManager getPartyManager() {
+        return partyManager;
+    }
+
     @Override
     protected void setup() {
         // Initialize shared stores

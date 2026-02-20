@@ -12,10 +12,10 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.util.ModeGate;
 import io.hyvexa.purge.HyvexaPurgePlugin;
+import io.hyvexa.purge.ui.PurgePartyMenuPage;
 
 import javax.annotation.Nonnull;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
 public class PurgeStartInteraction extends SimpleInteraction {
 
@@ -45,7 +45,12 @@ public class PurgeStartInteraction extends SimpleInteraction {
         if (plugin == null) {
             return;
         }
-        // Defer to world thread so store.addComponent(Teleport) isn't blocked
-        CompletableFuture.runAsync(() -> plugin.getSessionManager().startSession(playerId, ref), world);
+        if (plugin.getSessionManager().hasActiveSession(playerId)) {
+            player.sendMessage(Message.raw("You already have an active Purge session."));
+            return;
+        }
+        player.getPageManager().openCustomPage(ref, store,
+                new PurgePartyMenuPage(playerRef, playerId,
+                        plugin.getPartyManager(), plugin.getSessionManager()));
     }
 }
