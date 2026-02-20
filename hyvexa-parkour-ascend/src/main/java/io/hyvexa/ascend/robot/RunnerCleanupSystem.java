@@ -73,8 +73,13 @@ public class RunnerCleanupSystem extends EntityTickingSystem<EntityStore> {
         if (robotManager.isActiveRunnerUuid(entityUuid)) {
             return; // This is a valid, active runner - don't remove
         }
+        // Only touch known orphan UUIDs loaded/queued by RobotManager.
+        // This prevents deleting unrelated entities that share the same signature.
+        if (!robotManager.isOrphanedRunner(entityUuid)) {
+            return;
+        }
 
-        // This is an orphaned runner (Frozen + Invulnerable but not in active list)
+        // This is a known orphaned runner UUID
         // Queue for deferred removal - we cannot call store.removeEntity() during tick
         Ref<EntityStore> ref = chunk.getReferenceTo(entityId);
         if (ref == null || !ref.isValid()) {

@@ -18,9 +18,11 @@ import io.hyvexa.common.math.BigNumber;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Queue;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 
 public class TutorialTriggerService {
@@ -41,7 +43,7 @@ public class TutorialTriggerService {
     private final AscendRunTracker runTracker;
 
     // Pending tutorials deferred because the player was in a run
-    private final ConcurrentHashMap<UUID, List<TutorialOpener>> pendingTutorials = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, ConcurrentLinkedQueue<TutorialOpener>> pendingTutorials = new ConcurrentHashMap<>();
 
     public TutorialTriggerService(AscendPlayerStore playerStore, AscendRunTracker runTracker) {
         this.playerStore = playerStore;
@@ -98,14 +100,20 @@ public class TutorialTriggerService {
      * Called from AscendRunTracker.completeRun() and cancelRun().
      */
     public void flushPendingTutorials(UUID playerId) {
-        List<TutorialOpener> pending = pendingTutorials.remove(playerId);
+        Queue<TutorialOpener> pending = pendingTutorials.remove(playerId);
         if (pending == null || pending.isEmpty()) {
             return;
         }
 
+        List<TutorialOpener> drained = new ArrayList<>();
+        TutorialOpener opener;
+        while ((opener = pending.poll()) != null) {
+            drained.add(opener);
+        }
+
         // Open each deferred tutorial with a small delay between them
-        for (int i = 0; i < pending.size(); i++) {
-            TutorialOpener opener = pending.get(i);
+        for (int i = 0; i < drained.size(); i++) {
+            TutorialOpener deferredOpener = drained.get(i);
             long delay = TRIGGER_DELAY_MS + (i * 300L);
             HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
                 ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
@@ -121,7 +129,7 @@ public class TutorialTriggerService {
                     if (!ref.isValid()) return;
                     Player player = store.getComponent(ref, Player.getComponentType());
                     if (player == null) return;
-                    opener.open(playerRef, ref, store, player);
+                    deferredOpener.open(playerRef, ref, store, player);
                 }, world);
             }, delay, TimeUnit.MILLISECONDS);
         }
@@ -177,7 +185,7 @@ public class TutorialTriggerService {
 
         // If player is in a run, defer the tutorial opening
         if (runTracker != null && (runTracker.isRunActive(playerId) || runTracker.isPendingRun(playerId))) {
-            pendingTutorials.computeIfAbsent(playerId, k -> new ArrayList<>()).add(opener);
+            pendingTutorials.computeIfAbsent(playerId, k -> new ConcurrentLinkedQueue<>()).offer(opener);
             return;
         }
 
