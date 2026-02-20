@@ -15,6 +15,16 @@ public class MyCommand extends AbstractAsyncCommand {
 // Register: getCommandRegistry().registerCommand(new MyCommand());
 ```
 
+**CRITICAL:** If your command accepts arguments (e.g., `/mycommand arg1 arg2`), you **must** call `setAllowsExtraArguments(true)` in the constructor. Without it, Hytale rejects with "wrong number of required arguments" error:
+
+```java
+public MyCommand() {
+    super("mycommand");
+    setAllowsExtraArguments(true);  // Required for commands with arguments
+}
+// Parse args with CommandUtils.getArgs(ctx), not ctx.args()
+```
+
 ## UI Pages
 
 ```java
@@ -270,6 +280,20 @@ TextButton is an **atomic** element. It does NOT support child elements (Group, 
 ```
 
 Use the **Group wrapper + TextButton overlay** pattern for any clickable element that needs custom visual content.
+
+### Dynamic Background Alpha Limitation
+
+**`commandBuilder.set()` does NOT support alpha notation** like `#1a2530(0.6)` for Background values. Setting a dynamic Background with alpha causes an error texture (white + red cross). Use pre-blended opaque hex instead:
+
+```java
+// ❌ WRONG - causes error texture:
+commandBuilder.set("#MyGroup", "Background", "#1a2530(0.6)");
+
+// ✅ CORRECT - use opaque hex (pre-blend the color):
+commandBuilder.set("#MyGroup", "Background", "#0f1720");
+```
+
+Alpha notation works in `.ui` files (static), just not in dynamic `commandBuilder.set()` calls.
 
 ### Disabled Button with Overlay Pattern
 
