@@ -898,8 +898,9 @@ class AscendPlayerPersistence {
             SELECT uuid, player_name, total_vexa_earned_mantissa, total_vexa_earned_exp10,
                    ascension_count, total_manual_runs, fastest_ascension_ms
             FROM ascend_players
+            WHERE total_vexa_earned_exp10 > 0 OR total_vexa_earned_mantissa > 0
+               OR ascension_count > 0 OR total_manual_runs > 0 OR fastest_ascension_ms IS NOT NULL
             ORDER BY total_vexa_earned_exp10 DESC, total_vexa_earned_mantissa DESC
-            LIMIT 100
             """;
 
         List<AscendPlayerStore.LeaderboardEntry> entries = new java.util.ArrayList<>();
@@ -1006,7 +1007,6 @@ class AscendPlayerPersistence {
             JOIN ascend_players p ON p.uuid = m.player_uuid
             WHERE m.map_id = ? AND m.best_time_ms IS NOT NULL
             ORDER BY m.best_time_ms ASC
-            LIMIT 50
             """;
 
         List<AscendPlayerStore.MapLeaderboardEntry> entries = new java.util.ArrayList<>();
