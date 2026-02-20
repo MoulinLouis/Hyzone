@@ -25,6 +25,9 @@ public class PurgeRedOrbInteraction extends SimpleInteraction {
     public void handle(@Nonnull Ref<EntityStore> ref, boolean firstRun, float time,
                        @Nonnull InteractionType type, @Nonnull InteractionContext interactionContext) {
         super.handle(ref, firstRun, time, type, interactionContext);
+        if (!ref.isValid()) {
+            return;
+        }
         var store = ref.getStore();
         Player player = store.getComponent(ref, Player.getComponentType());
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
@@ -44,7 +47,15 @@ public class PurgeRedOrbInteraction extends SimpleInteraction {
             player.sendMessage(Message.raw("No active Purge session."));
             return;
         }
+        if (store.getExternalData() == null) {
+            player.sendMessage(Message.raw("Could not resolve your world."));
+            return;
+        }
         var world = store.getExternalData().getWorld();
+        if (world == null) {
+            player.sendMessage(Message.raw("Could not resolve your world."));
+            return;
+        }
         CompletableFuture.runAsync(() -> sessionManager.leaveSession(playerId, "voluntary stop"), world);
     }
 }

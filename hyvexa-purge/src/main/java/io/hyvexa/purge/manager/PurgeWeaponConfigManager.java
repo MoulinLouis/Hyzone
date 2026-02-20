@@ -9,7 +9,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -19,6 +21,7 @@ public class PurgeWeaponConfigManager {
     private static final int MAX_LEVEL = 10;
 
     private final ConcurrentHashMap<String, List<WeaponLevelEntry>> cache = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Map<Integer, WeaponLevelEntry>> cacheByLevel = new ConcurrentHashMap<>();
 
     public record WeaponLevelEntry(int level, int damage, long cost) {}
 
@@ -48,29 +51,21 @@ public class PurgeWeaponConfigManager {
     }
 
     public int getDamage(String weaponId, int level) {
-        List<WeaponLevelEntry> levels = cache.get(weaponId);
+        Map<Integer, WeaponLevelEntry> levels = cacheByLevel.get(weaponId);
         if (levels == null) {
             return 17;
         }
-        for (WeaponLevelEntry entry : levels) {
-            if (entry.level() == level) {
-                return entry.damage();
-            }
-        }
-        return 17;
+        WeaponLevelEntry entry = levels.get(level);
+        return entry != null ? entry.damage() : 17;
     }
 
     public long getCost(String weaponId, int level) {
-        List<WeaponLevelEntry> levels = cache.get(weaponId);
+        Map<Integer, WeaponLevelEntry> levels = cacheByLevel.get(weaponId);
         if (levels == null) {
             return 0;
         }
-        for (WeaponLevelEntry entry : levels) {
-            if (entry.level() == level) {
-                return entry.cost();
-            }
-        }
-        return 0;
+        WeaponLevelEntry entry = levels.get(level);
+        return entry != null ? entry.cost() : 0;
     }
 
     public Set<String> getWeaponIds() {
@@ -156,7 +151,7 @@ public class PurgeWeaponConfigManager {
             for (int[] row : AK47_DEFAULTS) {
                 levels.add(new WeaponLevelEntry(row[0], row[1], row[2]));
             }
-            cache.put(weaponId, levels);
+            cacheWeaponLevels(weaponId, levels);
         }
     }
 
@@ -199,7 +194,7 @@ public class PurgeWeaponConfigManager {
                         updated.add(entry);
                     }
                 }
-                cache.put(weaponId, updated);
+                cacheWeaponLevels(weaponId, updated);
             }
             return true;
         }
@@ -284,16 +279,27 @@ public class PurgeWeaponConfigManager {
                     temp.computeIfAbsent(weaponId, k -> new ArrayList<>())
                             .add(new WeaponLevelEntry(level, damage, cost));
                 }
-                // Sort each weapon's levels
-                for (List<WeaponLevelEntry> levels : temp.values()) {
-                    levels.sort(Comparator.comparingInt(WeaponLevelEntry::level));
+                cache.clear();
+                cacheByLevel.clear();
+                for (Map.Entry<String, List<WeaponLevelEntry>> entry : temp.entrySet()) {
+                    cacheWeaponLevels(entry.getKey(), entry.getValue());
                 }
-                cache.putAll(temp);
             }
             int total = cache.values().stream().mapToInt(List::size).sum();
             LOGGER.atInfo().log("Loaded " + total + " weapon level definitions");
         } catch (SQLException e) {
             LOGGER.atWarning().withCause(e).log("Failed to load weapon levels");
         }
+    }
+
+    private void cacheWeaponLevels(String weaponId, List<WeaponLevelEntry> levels) {
+        List<WeaponLevelEntry> sorted = new ArrayList<>(levels);
+        sorted.sort(Comparator.comparingInt(WeaponLevelEntry::level));
+        cache.put(weaponId, sorted);
+        Map<Integer, WeaponLevelEntry> indexed = new HashMap<>();
+        for (WeaponLevelEntry levelEntry : sorted) {
+            indexed.put(levelEntry.level(), levelEntry);
+        }
+        cacheByLevel.put(weaponId, Map.copyOf(indexed));
     }
 }

@@ -26,13 +26,24 @@ public class PurgeStartInteraction extends SimpleInteraction {
     public void handle(@Nonnull Ref<EntityStore> ref, boolean firstRun, float time,
                        @Nonnull InteractionType type, @Nonnull InteractionContext interactionContext) {
         super.handle(ref, firstRun, time, type, interactionContext);
+        if (!ref.isValid()) {
+            return;
+        }
         var store = ref.getStore();
         Player player = store.getComponent(ref, Player.getComponentType());
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (player == null || playerRef == null) {
             return;
         }
+        if (store.getExternalData() == null) {
+            player.sendMessage(Message.raw("Could not resolve your world."));
+            return;
+        }
         World world = store.getExternalData().getWorld();
+        if (world == null) {
+            player.sendMessage(Message.raw("Could not resolve your world."));
+            return;
+        }
         if (!ModeGate.isPurgeWorld(world)) {
             player.sendMessage(Message.raw("You must be in the Purge world."));
             return;

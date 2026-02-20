@@ -37,12 +37,14 @@ import io.hyvexa.purge.data.PurgeZombieVariant;
 import io.hyvexa.purge.data.SessionState;
 import io.hyvexa.purge.hud.PurgeHudManager;
 import io.hyvexa.purge.ui.PurgeUpgradePickPage;
+import io.hyvexa.purge.util.PurgePlayerNameResolver;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
@@ -58,6 +60,10 @@ public class PurgeWaveManager {
     private static final int COUNTDOWN_SECONDS = 5;
     private static final int UPGRADE_TIMEOUT_SECONDS = 15;
     private static final double SPAWN_RANDOM_OFFSET = 2.0;
+    private static final ConcurrentHashMap<Class<?>, java.lang.reflect.Field> SPEED_FIELD_CACHE = new ConcurrentHashMap<>();
+    private static final Set<Class<?>> SPEED_FIELD_MISSING = ConcurrentHashMap.newKeySet();
+    private static final ConcurrentHashMap<Class<?>, java.lang.reflect.Field> DROP_LIST_FIELD_CACHE = new ConcurrentHashMap<>();
+    private static final Set<Class<?>> DROP_LIST_FIELD_MISSING = ConcurrentHashMap.newKeySet();
 
     private final PurgeInstanceManager instanceManager;
     private final PurgeWaveConfigManager waveConfigManager;
@@ -118,9 +124,7 @@ public class PurgeWaveManager {
                     return;
                 }
                 sendMessageToAll(session, "Wave " + (session.getCurrentWave() + 1) + " starting in " + remaining + "...");
-                for (UUID pid : session.getConnectedParticipants()) {
-                    hudManager.updateIntermission(pid, remaining);
-                }
+                session.forEachConnectedParticipant(pid -> hudManager.updateIntermission(pid, remaining));
             } catch (Exception e) {
                 LOGGER.atWarning().withCause(e).log("Countdown tick error");
             }
@@ -144,9 +148,7 @@ public class PurgeWaveManager {
 
         sendMessageToAll(session, "-- Wave " + nextWave + " -- (" + wave.totalCount() + " zombies, "
                 + wave.spawnDelayMs() + "ms delay, batch " + wave.spawnBatchSize() + ")");
-        for (UUID pid : session.getConnectedParticipants()) {
-            hudManager.updateWaveStatus(pid, nextWave, totalCount, totalCount);
-        }
+        session.forEachConnectedParticipant(pid -> hudManager.updateWaveStatus(pid, nextWave, totalCount, totalCount));
 
         List<PurgeZombieVariant> spawnQueue = buildSpawnQueue(wave);
         if (spawnQueue.isEmpty()) {
@@ -377,9 +379,10 @@ public class PurgeWaveManager {
             if (controller == null) {
                 return;
             }
-            // MotionControllerWalk.horizontalSpeedMultiplier is a non-final protected field
-            java.lang.reflect.Field field = controller.getClass().getDeclaredField("horizontalSpeedMultiplier");
-            field.setAccessible(true);
+            java.lang.reflect.Field field = resolveSpeedMultiplierField(controller);
+            if (field == null) {
+                return;
+            }
             field.setDouble(controller, variant.getSpeedMultiplier());
         } catch (Exception e) {
             LOGGER.atFine().log("Failed to apply speed multiplier for " + variant.name() + ": " + e.getMessage());
@@ -392,8 +395,10 @@ public class PurgeWaveManager {
             if (npcEntity == null || npcEntity.getRole() == null) {
                 return;
             }
-            java.lang.reflect.Field field = npcEntity.getRole().getClass().getDeclaredField("dropListId");
-            field.setAccessible(true);
+            java.lang.reflect.Field field = resolveDropListField(npcEntity.getRole());
+            if (field == null) {
+                return;
+            }
             field.set(npcEntity.getRole(), "Empty");
         } catch (Exception e) {
             LOGGER.atFine().log("Failed to clear drop list: " + e.getMessage());
@@ -426,9 +431,8 @@ public class PurgeWaveManager {
                 // Update HUD for all connected players
                 int alive = session.getAliveZombieCount();
                 int total = session.getWaveZombieCount();
-                for (UUID pid : session.getConnectedParticipants()) {
-                    hudManager.updateWaveStatus(pid, session.getCurrentWave(), alive, total);
-                }
+                session.forEachConnectedParticipant(
+                        pid -> hudManager.updateWaveStatus(pid, session.getCurrentWave(), alive, total));
 
                 if (session.isSpawningComplete() && alive == 0) {
                     onWaveComplete(session);
@@ -441,24 +445,24 @@ public class PurgeWaveManager {
     }
 
     private void checkZombieDeaths(PurgeSession session) {
-        Set<Ref<EntityStore>> dead = new HashSet<>();
+        List<Ref<EntityStore>> dead = null;
         for (Ref<EntityStore> ref : session.getAliveZombies()) {
             if (ref == null || !ref.isValid()) {
+                if (dead == null) {
+                    dead = new ArrayList<>();
+                }
                 dead.add(ref);
             }
         }
-        if (!dead.isEmpty()) {
-            session.getAliveZombies().removeAll(dead);
-            // Shared kills: all alive connected players get +1 per zombie death
-            Set<UUID> alivePlayers = session.getAliveConnectedParticipants();
-            for (int i = 0; i < dead.size(); i++) {
-                for (UUID pid : alivePlayers) {
-                    PurgeSessionPlayerState ps = session.getPlayerState(pid);
-                    if (ps != null) {
-                        ps.incrementKills();
-                    }
-                }
-            }
+        if (dead == null || dead.isEmpty()) {
+            return;
+        }
+        for (Ref<EntityStore> deadRef : dead) {
+            session.removeAliveZombie(deadRef);
+        }
+        // Shared kills: all alive connected players get +1 per zombie death
+        for (int i = 0; i < dead.size(); i++) {
+            session.forEachAliveConnectedPlayerState(PurgeSessionPlayerState::incrementKills);
         }
     }
 
@@ -507,11 +511,10 @@ public class PurgeWaveManager {
     private void updatePlayerHealthHud(PurgeSession session, Store<EntityStore> store, World world) {
         PurgeMapInstance instance = instanceManager.getInstance(session.getInstanceId());
         HyvexaPurgePlugin plugin = HyvexaPurgePlugin.getInstance();
-        boolean anyDied = false;
+        boolean[] anyDied = {false};
 
-        for (UUID pid : session.getAliveConnectedParticipants()) {
-            PurgeSessionPlayerState ps = session.getPlayerState(pid);
-            if (ps == null) continue;
+        session.forEachAliveConnectedPlayerState(ps -> {
+            UUID pid = ps.getPlayerId();
             Ref<EntityStore> ref = ps.getPlayerRef();
 
             boolean dead = false;
@@ -538,11 +541,11 @@ public class PurgeWaveManager {
 
             if (dead && session.getState() != SessionState.ENDED) {
                 handlePlayerDeath(session, pid, ps, store, world, instance, plugin);
-                anyDied = true;
+                anyDied[0] = true;
             }
-        }
+        });
 
-        if (anyDied) {
+        if (anyDied[0]) {
             retargetZombies(session, store);
         }
     }
@@ -558,7 +561,9 @@ public class PurgeWaveManager {
         if (ref != null && ref.isValid()) {
             try {
                 player = store.getComponent(ref, Player.getComponentType());
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                LOGGER.atFine().log("Failed to resolve dead player component for " + playerId + ": " + e.getMessage());
+            }
 
             // Heal full
             try {
@@ -596,12 +601,14 @@ public class PurgeWaveManager {
             if (player != null) {
                 try {
                     player.sendMessage(Message.raw("You died! Waiting for wave clear to revive..."));
-                } catch (Exception ignored) {}
+                } catch (Exception e) {
+                    LOGGER.atFine().log("Failed to send death message to " + playerId + ": " + e.getMessage());
+                }
             }
         }
 
         // Broadcast to alive teammates
-        String name = getPlayerName(playerId);
+        String name = PurgePlayerNameResolver.resolve(playerId, PurgePlayerNameResolver.FallbackStyle.SHORT_UUID);
         for (UUID teammatePid : session.getAliveConnectedParticipants()) {
             PurgeSessionPlayerState tps = session.getPlayerState(teammatePid);
             if (tps == null) continue;
@@ -612,7 +619,9 @@ public class PurgeWaveManager {
                 if (tp != null) {
                     tp.sendMessage(Message.raw(name + " is down!"));
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                LOGGER.atFine().log("Failed to notify teammate " + teammatePid + ": " + e.getMessage());
+            }
         }
     }
 
@@ -627,7 +636,9 @@ public class PurgeWaveManager {
                         npc.getRole().setMarkedTarget("LockedTarget", newTarget);
                     }
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                LOGGER.atFine().log("Failed to retarget zombie: " + e.getMessage());
+            }
         }
     }
 
@@ -760,60 +771,81 @@ public class PurgeWaveManager {
     }
 
     public void startIntermission(PurgeSession session) {
-        AtomicInteger countdown = new AtomicInteger(INTERMISSION_SECONDS);
-
-        ScheduledFuture<?> task = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(() -> {
-            try {
-                if (session.getState() == SessionState.ENDED) {
-                    session.cancelIntermissionTask();
-                    return;
-                }
-                int remaining = countdown.getAndDecrement();
-                if (remaining <= 0) {
-                    session.cancelIntermissionTask();
-                    startNextWave(session);
-                    return;
-                }
-                for (UUID pid : session.getConnectedParticipants()) {
-                    hudManager.updateIntermission(pid, remaining);
-                }
-                sendMessageToAll(session, "Next wave in " + remaining + "...");
-            } catch (Exception e) {
-                LOGGER.atWarning().withCause(e).log("Intermission tick error");
+        synchronized (session) {
+            if (session.getState() == SessionState.ENDED) {
+                return;
             }
-        }, 1000, 1000, TimeUnit.MILLISECONDS);
-        session.setIntermissionTask(task);
+            ScheduledFuture<?> existing = session.getIntermissionTask();
+            if (existing != null && !existing.isDone() && !existing.isCancelled()) {
+                return;
+            }
+            session.cancelIntermissionTask();
+            if (session.getState() != SessionState.INTERMISSION) {
+                session.setState(SessionState.INTERMISSION);
+            }
+            AtomicInteger countdown = new AtomicInteger(INTERMISSION_SECONDS);
+
+            ScheduledFuture<?> task = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(() -> {
+                try {
+                    if (session.getState() == SessionState.ENDED) {
+                        session.cancelIntermissionTask();
+                        return;
+                    }
+                    int remaining = countdown.getAndDecrement();
+                    if (remaining <= 0) {
+                        session.cancelIntermissionTask();
+                        startNextWave(session);
+                        return;
+                    }
+                    session.forEachConnectedParticipant(pid -> hudManager.updateIntermission(pid, remaining));
+                    sendMessageToAll(session, "Next wave in " + remaining + "...");
+                } catch (Exception e) {
+                    LOGGER.atWarning().withCause(e).log("Intermission tick error");
+                }
+            }, 1000, 1000, TimeUnit.MILLISECONDS);
+            session.setIntermissionTask(task);
+        }
     }
 
     // --- Cleanup ---
 
-    public void removeAllZombies(PurgeSession session) {
+    public CompletableFuture<Void> removeAllZombies(PurgeSession session) {
+        CompletableFuture<Void> cleanupFuture = new CompletableFuture<>();
         World world = getPurgeWorld();
-        Set<Ref<EntityStore>> toRemove = new HashSet<>(session.getAliveZombies());
-        session.getAliveZombies().clear();
+        Set<Ref<EntityStore>> toRemove = session.drainAliveZombies();
         if (world == null || toRemove.isEmpty()) {
-            return;
+            cleanupFuture.complete(null);
+            return cleanupFuture;
         }
-        world.execute(() -> {
-            try {
-                Store<EntityStore> store = world.getEntityStore().getStore();
-                if (store == null) {
-                    return;
-                }
-                for (Ref<EntityStore> ref : toRemove) {
-                    if (ref == null || !ref.isValid()) {
-                        continue;
+        try {
+            world.execute(() -> {
+                try {
+                    Store<EntityStore> store = world.getEntityStore().getStore();
+                    if (store == null) {
+                        cleanupFuture.complete(null);
+                        return;
                     }
-                    try {
-                        store.removeEntity(ref, RemoveReason.REMOVE);
-                    } catch (Exception e) {
-                        LOGGER.atFine().log("Failed to remove one zombie during cleanup: " + e.getMessage());
+                    for (Ref<EntityStore> ref : toRemove) {
+                        if (ref == null || !ref.isValid()) {
+                            continue;
+                        }
+                        try {
+                            store.removeEntity(ref, RemoveReason.REMOVE);
+                        } catch (Exception e) {
+                            LOGGER.atFine().log("Failed to remove one zombie during cleanup: " + e.getMessage());
+                        }
                     }
+                    cleanupFuture.complete(null);
+                } catch (Exception e) {
+                    LOGGER.atWarning().withCause(e).log("Failed to remove zombies");
+                    cleanupFuture.completeExceptionally(e);
                 }
-            } catch (Exception e) {
-                LOGGER.atWarning().withCause(e).log("Failed to remove zombies");
-            }
-        });
+            });
+        } catch (Exception e) {
+            LOGGER.atWarning().withCause(e).log("Failed to schedule zombie cleanup");
+            cleanupFuture.completeExceptionally(e);
+        }
+        return cleanupFuture;
     }
 
     // --- Revive ---
@@ -884,7 +916,9 @@ public class PurgeWaveManager {
                     if (player != null) {
                         try {
                             player.sendMessage(Message.raw("You have been revived!"));
-                        } catch (Exception ignored) {}
+                        } catch (Exception e) {
+                            LOGGER.atFine().log("Failed to send revive message to " + pid + ": " + e.getMessage());
+                        }
                     }
                 }
             } catch (Exception e) {
@@ -894,16 +928,6 @@ public class PurgeWaveManager {
     }
 
     // --- Utility ---
-
-    private String getPlayerName(UUID playerId) {
-        try {
-            PlayerRef playerRef = Universe.get().getPlayer(playerId);
-            if (playerRef != null) {
-                return playerRef.getUsername();
-            }
-        } catch (Exception ignored) {}
-        return playerId.toString().substring(0, 8);
-    }
 
     private double[] getRefPosition(Ref<EntityStore> ref) {
         if (ref == null || !ref.isValid()) {
@@ -923,11 +947,15 @@ public class PurgeWaveManager {
     }
 
     private void sendMessageToAll(PurgeSession session, String text) {
-        for (UUID pid : session.getConnectedParticipants()) {
+        session.forEachConnectedParticipant(pid -> {
             PurgeSessionPlayerState ps = session.getPlayerState(pid);
-            if (ps == null) continue;
+            if (ps == null) {
+                return;
+            }
             Ref<EntityStore> ref = ps.getPlayerRef();
-            if (ref == null || !ref.isValid()) continue;
+            if (ref == null || !ref.isValid()) {
+                return;
+            }
             try {
                 Store<EntityStore> store = ref.getStore();
                 Player player = store.getComponent(ref, Player.getComponentType());
@@ -937,7 +965,7 @@ public class PurgeWaveManager {
             } catch (Exception e) {
                 LOGGER.atFine().log("Failed to send wave message: " + e.getMessage());
             }
-        }
+        });
     }
 
     private World getPurgeWorld() {
@@ -978,6 +1006,48 @@ public class PurgeWaveManager {
             }
         } catch (Exception e) {
             LOGGER.atFine().log("Failed to remove late zombie spawn: " + e.getMessage());
+        }
+    }
+
+    private java.lang.reflect.Field resolveSpeedMultiplierField(Object controller) {
+        Class<?> controllerClass = controller.getClass();
+        java.lang.reflect.Field cached = SPEED_FIELD_CACHE.get(controllerClass);
+        if (cached != null) {
+            return cached;
+        }
+        if (SPEED_FIELD_MISSING.contains(controllerClass)) {
+            return null;
+        }
+        try {
+            java.lang.reflect.Field field = controllerClass.getDeclaredField("horizontalSpeedMultiplier");
+            field.setAccessible(true);
+            SPEED_FIELD_CACHE.put(controllerClass, field);
+            return field;
+        } catch (Exception e) {
+            SPEED_FIELD_MISSING.add(controllerClass);
+            LOGGER.atFine().log("Speed field not available for " + controllerClass.getName() + ": " + e.getMessage());
+            return null;
+        }
+    }
+
+    private java.lang.reflect.Field resolveDropListField(Object role) {
+        Class<?> roleClass = role.getClass();
+        java.lang.reflect.Field cached = DROP_LIST_FIELD_CACHE.get(roleClass);
+        if (cached != null) {
+            return cached;
+        }
+        if (DROP_LIST_FIELD_MISSING.contains(roleClass)) {
+            return null;
+        }
+        try {
+            java.lang.reflect.Field field = roleClass.getDeclaredField("dropListId");
+            field.setAccessible(true);
+            DROP_LIST_FIELD_CACHE.put(roleClass, field);
+            return field;
+        } catch (Exception e) {
+            DROP_LIST_FIELD_MISSING.add(roleClass);
+            LOGGER.atFine().log("Drop list field not available for " + roleClass.getName() + ": " + e.getMessage());
+            return null;
         }
     }
 }

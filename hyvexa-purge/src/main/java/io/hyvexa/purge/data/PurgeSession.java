@@ -1,15 +1,18 @@
 package io.hyvexa.purge.data;
 
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
-import javax.annotation.Nullable;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
-import java.util.stream.Collectors;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Consumer;
 
 public class PurgeSession {
 
@@ -55,39 +58,79 @@ public class PurgeSession {
     }
 
     public Set<UUID> getConnectedParticipants() {
-        return players.values().stream()
-                .filter(PurgeSessionPlayerState::isConnected)
-                .map(PurgeSessionPlayerState::getPlayerId)
-                .collect(Collectors.toUnmodifiableSet());
+        Set<UUID> connected = new HashSet<>();
+        for (PurgeSessionPlayerState playerState : players.values()) {
+            if (playerState.isConnected()) {
+                connected.add(playerState.getPlayerId());
+            }
+        }
+        return Set.copyOf(connected);
     }
 
     public Set<UUID> getAliveParticipants() {
-        return players.values().stream()
-                .filter(PurgeSessionPlayerState::isAlive)
-                .map(PurgeSessionPlayerState::getPlayerId)
-                .collect(Collectors.toUnmodifiableSet());
+        Set<UUID> alive = new HashSet<>();
+        for (PurgeSessionPlayerState playerState : players.values()) {
+            if (playerState.isAlive()) {
+                alive.add(playerState.getPlayerId());
+            }
+        }
+        return Set.copyOf(alive);
     }
 
     public Set<UUID> getAliveConnectedParticipants() {
-        return players.values().stream()
-                .filter(s -> s.isAlive() && s.isConnected())
-                .map(PurgeSessionPlayerState::getPlayerId)
-                .collect(Collectors.toUnmodifiableSet());
+        Set<UUID> aliveConnected = new HashSet<>();
+        for (PurgeSessionPlayerState playerState : players.values()) {
+            if (playerState.isAlive() && playerState.isConnected()) {
+                aliveConnected.add(playerState.getPlayerId());
+            }
+        }
+        return Set.copyOf(aliveConnected);
     }
 
     public Set<UUID> getDeadThisWaveParticipants() {
-        return players.values().stream()
-                .filter(PurgeSessionPlayerState::isDeadThisWave)
-                .map(PurgeSessionPlayerState::getPlayerId)
-                .collect(Collectors.toUnmodifiableSet());
+        Set<UUID> deadThisWave = new HashSet<>();
+        for (PurgeSessionPlayerState playerState : players.values()) {
+            if (playerState.isDeadThisWave()) {
+                deadThisWave.add(playerState.getPlayerId());
+            }
+        }
+        return Set.copyOf(deadThisWave);
     }
 
     public int getConnectedCount() {
-        return (int) players.values().stream().filter(PurgeSessionPlayerState::isConnected).count();
+        int count = 0;
+        for (PurgeSessionPlayerState playerState : players.values()) {
+            if (playerState.isConnected()) {
+                count++;
+            }
+        }
+        return count;
     }
 
     public int getAliveConnectedCount() {
-        return (int) players.values().stream().filter(s -> s.isAlive() && s.isConnected()).count();
+        int count = 0;
+        for (PurgeSessionPlayerState playerState : players.values()) {
+            if (playerState.isAlive() && playerState.isConnected()) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    public void forEachConnectedParticipant(Consumer<UUID> consumer) {
+        for (PurgeSessionPlayerState playerState : players.values()) {
+            if (playerState.isConnected()) {
+                consumer.accept(playerState.getPlayerId());
+            }
+        }
+    }
+
+    public void forEachAliveConnectedPlayerState(Consumer<PurgeSessionPlayerState> consumer) {
+        for (PurgeSessionPlayerState playerState : players.values()) {
+            if (playerState.isAlive() && playerState.isConnected()) {
+                consumer.accept(playerState);
+            }
+        }
     }
 
     // --- Player state ---
@@ -104,48 +147,27 @@ public class PurgeSession {
         }
     }
 
-    public void disconnectPlayer(UUID playerId) {
-        PurgeSessionPlayerState ps = players.get(playerId);
-        if (ps != null) {
-            ps.setConnected(false);
-        }
-    }
-
     public void removePlayer(UUID playerId) {
         players.remove(playerId);
     }
 
     // --- Positions ---
 
-    @Nullable
     public Ref<EntityStore> getRandomAlivePlayerRef() {
-        List<Ref<EntityStore>> alive = players.values().stream()
-                .filter(s -> s.isAlive() && s.isConnected())
-                .map(PurgeSessionPlayerState::getPlayerRef)
-                .filter(ref -> ref != null && ref.isValid())
-                .collect(Collectors.toList());
+        List<Ref<EntityStore>> alive = new ArrayList<>();
+        for (PurgeSessionPlayerState playerState : players.values()) {
+            if (!playerState.isAlive() || !playerState.isConnected()) {
+                continue;
+            }
+            Ref<EntityStore> playerRef = playerState.getPlayerRef();
+            if (playerRef != null && playerRef.isValid()) {
+                alive.add(playerRef);
+            }
+        }
         if (alive.isEmpty()) {
             return null;
         }
-        return alive.get(new Random().nextInt(alive.size()));
-    }
-
-    public List<double[]> getAlivePlayerPositions(Store<EntityStore> store) {
-        List<double[]> positions = new ArrayList<>();
-        for (PurgeSessionPlayerState ps : players.values()) {
-            if (!ps.isAlive() || !ps.isConnected()) continue;
-            Ref<EntityStore> ref = ps.getPlayerRef();
-            if (ref == null || !ref.isValid()) continue;
-            try {
-                TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
-                if (transform != null) {
-                    var pos = transform.getPosition();
-                    positions.add(new double[]{pos.getX(), pos.getY(), pos.getZ()});
-                }
-            } catch (Exception ignored) {
-            }
-        }
-        return positions;
+        return alive.get(ThreadLocalRandom.current().nextInt(alive.size()));
     }
 
     // --- Upgrades ---
@@ -209,15 +231,29 @@ public class PurgeSession {
         return aliveZombies.size();
     }
 
-    public void addAliveZombie(Ref<EntityStore> ref) {
-        aliveZombies.add(ref);
-    }
-
     public void addAliveZombie(Ref<EntityStore> ref, PurgeZombieVariant variant) {
+        if (ref == null) {
+            return;
+        }
         aliveZombies.add(ref);
         if (variant != null) {
             zombieVariants.put(ref, variant);
         }
+    }
+
+    public void removeAliveZombie(Ref<EntityStore> ref) {
+        if (ref == null) {
+            return;
+        }
+        aliveZombies.remove(ref);
+        zombieVariants.remove(ref);
+    }
+
+    public Set<Ref<EntityStore>> drainAliveZombies() {
+        Set<Ref<EntityStore>> snapshot = new HashSet<>(aliveZombies);
+        aliveZombies.clear();
+        zombieVariants.clear();
+        return snapshot;
     }
 
     public PurgeZombieVariant getZombieVariant(Ref<EntityStore> ref) {
@@ -240,6 +276,10 @@ public class PurgeSession {
 
     public void setIntermissionTask(ScheduledFuture<?> intermissionTask) {
         this.intermissionTask = intermissionTask;
+    }
+
+    public ScheduledFuture<?> getIntermissionTask() {
+        return intermissionTask;
     }
 
     public void cancelSpawnTask() {
