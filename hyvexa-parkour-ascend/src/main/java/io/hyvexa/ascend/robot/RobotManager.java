@@ -103,9 +103,8 @@ public class RobotManager {
             npcPlugin = null;
         }
 
-        // Always register cleanup system - it detects orphans by checking
-        // for Frozen+Invulnerable entities not in active robots list
-        cleanupPending = true;
+        // Cleanup only when we actually have known orphan UUIDs to remove.
+        cleanupPending = !orphanedRunnerUuids.isEmpty();
         registerCleanupSystem();
 
         tickTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(
@@ -149,7 +148,9 @@ public class RobotManager {
             if (key.startsWith(playerId.toString() + ":")) {
                 RobotState removed = robots.remove(key);
                 if (removed != null) {
+                    UUID entityUuid = removed.getEntityUuid();
                     despawnNpcForRobot(removed);
+                    queueOrphanIfDespawnFailed(entityUuid, removed);
                 }
             }
         }
@@ -286,7 +287,9 @@ public class RobotManager {
         String key = robotKey(ownerId, mapId);
         RobotState state = robots.remove(key);
         if (state != null) {
+            UUID entityUuid = state.getEntityUuid();
             despawnNpcForRobot(state);
+            queueOrphanIfDespawnFailed(entityUuid, state);
         }
     }
 
@@ -637,15 +640,23 @@ public class RobotManager {
                 if (removed != null) {
                     UUID entityUuid = removed.getEntityUuid();
                     despawnNpcForRobot(removed);
-                    // If entity UUID still exists after despawn attempt, it may have
-                    // failed (chunk unloaded, etc). Mark for orphan cleanup.
-                    if (entityUuid != null && removed.getEntityUuid() != null) {
-                        orphanedRunnerUuids.add(entityUuid);
-                        cleanupPending = true;
-                    }
+                    queueOrphanIfDespawnFailed(entityUuid, removed);
                 }
             }
         }
+    }
+
+    private void queueOrphanIfDespawnFailed(UUID previousEntityUuid, RobotState state) {
+        if (previousEntityUuid == null || state == null) {
+            return;
+        }
+        // If UUID remains after despawn attempt, despawn likely failed (invalid ref,
+        // chunk unload, etc). Queue for restart-safe orphan cleanup.
+        if (state.getEntityUuid() == null) {
+            return;
+        }
+        orphanedRunnerUuids.add(previousEntityUuid);
+        cleanupPending = true;
     }
 
     private void tickRobot(RobotState robot, long now) {

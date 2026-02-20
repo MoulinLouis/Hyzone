@@ -44,7 +44,11 @@ public class AscendPlayerStore {
             double totalVexaEarnedMantissa, int totalVexaEarnedExp10,
             int ascensionCount, int totalManualRuns, Long fastestAscensionMs) {}
 
-    public record MapLeaderboardEntry(String playerName, long bestTimeMs) {}
+    public record MapLeaderboardEntry(UUID playerId, String playerName, long bestTimeMs) {
+        public MapLeaderboardEntry(String playerName, long bestTimeMs) {
+            this(null, playerName, bestTimeMs);
+        }
+    }
 
     /**
      * Initialize the store. With lazy loading, we don't load all players upfront.
@@ -386,52 +390,84 @@ public class AscendPlayerStore {
         }
     }
 
+    private void clearAscensionCinematicState(UUID playerId) {
+        if (playerId != null) {
+            ascensionCinematicActive.remove(playerId);
+        }
+    }
+
+    private record ResolvedPlayerContext(
+        com.hypixel.hytale.server.core.universe.PlayerRef playerRef,
+        com.hypixel.hytale.component.Ref<com.hypixel.hytale.server.core.universe.world.storage.EntityStore> ref,
+        com.hypixel.hytale.component.Store<com.hypixel.hytale.server.core.universe.world.storage.EntityStore> store,
+        com.hypixel.hytale.server.core.universe.world.World world,
+        com.hypixel.hytale.server.core.entity.entities.Player player
+    ) {}
+
+    private void resolvePlayerContext(UUID playerId,
+                                      Runnable onFailure,
+                                      java.util.function.Consumer<ResolvedPlayerContext> onResolved) {
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin == null) {
+            onFailure.run();
+            return;
+        }
+
+        com.hypixel.hytale.server.core.universe.PlayerRef playerRef = plugin.getPlayerRef(playerId);
+        if (playerRef == null) {
+            onFailure.run();
+            return;
+        }
+
+        com.hypixel.hytale.component.Ref<com.hypixel.hytale.server.core.universe.world.storage.EntityStore> ref =
+            playerRef.getReference();
+        if (ref == null || !ref.isValid()) {
+            onFailure.run();
+            return;
+        }
+
+        com.hypixel.hytale.component.Store<com.hypixel.hytale.server.core.universe.world.storage.EntityStore> store =
+            ref.getStore();
+        if (store == null) {
+            onFailure.run();
+            return;
+        }
+
+        com.hypixel.hytale.server.core.universe.world.World world = store.getExternalData().getWorld();
+        if (world == null) {
+            onFailure.run();
+            return;
+        }
+
+        java.util.concurrent.CompletableFuture.runAsync(() -> {
+            if (!ref.isValid()) {
+                onFailure.run();
+                return;
+            }
+            com.hypixel.hytale.server.core.entity.entities.Player player =
+                store.getComponent(ref, com.hypixel.hytale.server.core.entity.entities.Player.getComponentType());
+            if (player == null) {
+                onFailure.run();
+                return;
+            }
+            onResolved.accept(new ResolvedPlayerContext(playerRef, ref, store, world, player));
+        }, world);
+    }
+
     private void showAscensionExplainer(UUID playerId) {
         if (!ascensionCinematicActive.add(playerId)) {
             return; // Already in progress for this player
         }
         HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
-            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-            if (plugin == null) {
-                ascensionCinematicActive.remove(playerId);
-                return;
-            }
-
-            com.hypixel.hytale.server.core.universe.PlayerRef playerRef = plugin.getPlayerRef(playerId);
-            if (playerRef == null) {
-                ascensionCinematicActive.remove(playerId);
-                return;
-            }
-
-            com.hypixel.hytale.component.Ref<com.hypixel.hytale.server.core.universe.world.storage.EntityStore> ref =
-                playerRef.getReference();
-            if (ref == null || !ref.isValid()) {
-                ascensionCinematicActive.remove(playerId);
-                return;
-            }
-
-            com.hypixel.hytale.component.Store<com.hypixel.hytale.server.core.universe.world.storage.EntityStore> store =
-                ref.getStore();
-            com.hypixel.hytale.server.core.universe.world.World world = store.getExternalData().getWorld();
-            if (world == null) {
-                ascensionCinematicActive.remove(playerId);
-                return;
-            }
-
-            java.util.concurrent.CompletableFuture.runAsync(() -> {
-                if (!ref.isValid()) {
-                    ascensionCinematicActive.remove(playerId);
-                    return;
-                }
-                com.hypixel.hytale.server.core.entity.entities.Player player =
-                    store.getComponent(ref, com.hypixel.hytale.server.core.entity.entities.Player.getComponentType());
-                if (player == null) {
-                    ascensionCinematicActive.remove(playerId);
-                    return;
-                }
-                player.getPageManager().openCustomPage(ref, store,
-                    new io.hyvexa.ascend.ui.AscendAscensionExplainerPage(playerRef));
-            }, world);
+            resolvePlayerContext(
+                playerId,
+                () -> clearAscensionCinematicState(playerId),
+                ctx -> ctx.player().getPageManager().openCustomPage(
+                    ctx.ref(),
+                    ctx.store(),
+                    new io.hyvexa.ascend.ui.AscendAscensionExplainerPage(ctx.playerRef())
+                )
+            );
         }, 500, TimeUnit.MILLISECONDS);
     }
 
@@ -443,46 +479,11 @@ public class AscendPlayerStore {
             return; // Already in progress
         }
         HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
-            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-            if (plugin == null) {
-                ascensionCinematicActive.remove(playerId);
-                return;
-            }
-
-            com.hypixel.hytale.server.core.universe.PlayerRef playerRef = plugin.getPlayerRef(playerId);
-            if (playerRef == null) {
-                ascensionCinematicActive.remove(playerId);
-                return;
-            }
-
-            com.hypixel.hytale.component.Ref<com.hypixel.hytale.server.core.universe.world.storage.EntityStore> ref =
-                playerRef.getReference();
-            if (ref == null || !ref.isValid()) {
-                ascensionCinematicActive.remove(playerId);
-                return;
-            }
-
-            com.hypixel.hytale.component.Store<com.hypixel.hytale.server.core.universe.world.storage.EntityStore> store =
-                ref.getStore();
-            com.hypixel.hytale.server.core.universe.world.World world = store.getExternalData().getWorld();
-            if (world == null) {
-                ascensionCinematicActive.remove(playerId);
-                return;
-            }
-
-            java.util.concurrent.CompletableFuture.runAsync(() -> {
-                if (!ref.isValid()) {
-                    ascensionCinematicActive.remove(playerId);
-                    return;
-                }
-                com.hypixel.hytale.server.core.entity.entities.Player player =
-                    store.getComponent(ref, com.hypixel.hytale.server.core.entity.entities.Player.getComponentType());
-                if (player == null) {
-                    ascensionCinematicActive.remove(playerId);
-                    return;
-                }
-                performAutoAscension(playerId, player, playerRef, ref, store);
-            }, world);
+            resolvePlayerContext(
+                playerId,
+                () -> clearAscensionCinematicState(playerId),
+                ctx -> performAutoAscension(playerId, ctx.player(), ctx.playerRef(), ctx.ref(), ctx.store())
+            );
         }, 500, TimeUnit.MILLISECONDS);
     }
 
@@ -497,35 +498,27 @@ public class AscendPlayerStore {
 
     private void triggerAscensionCinematic(UUID playerId) {
         HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
-            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-            if (plugin == null) return;
-
-            com.hypixel.hytale.server.core.universe.PlayerRef playerRef = plugin.getPlayerRef(playerId);
-            if (playerRef == null) return;
-
-            com.hypixel.hytale.component.Ref<com.hypixel.hytale.server.core.universe.world.storage.EntityStore> ref =
-                playerRef.getReference();
-            if (ref == null || !ref.isValid()) return;
-
-            com.hypixel.hytale.component.Store<com.hypixel.hytale.server.core.universe.world.storage.EntityStore> store =
-                ref.getStore();
-            com.hypixel.hytale.server.core.universe.world.World world = store.getExternalData().getWorld();
-            if (world == null) return;
-
-            java.util.concurrent.CompletableFuture.runAsync(() -> {
-                if (!ref.isValid()) return;
-                com.hypixel.hytale.server.core.entity.entities.Player player =
-                    store.getComponent(ref, com.hypixel.hytale.server.core.entity.entities.Player.getComponentType());
-                com.hypixel.hytale.server.core.io.PacketHandler ph = playerRef.getPacketHandler();
-                if (player == null || ph == null) return;
+            resolvePlayerContext(playerId, () -> clearAscensionCinematicState(playerId), ctx -> {
+                com.hypixel.hytale.server.core.io.PacketHandler ph = ctx.playerRef().getPacketHandler();
+                if (ph == null) {
+                    clearAscensionCinematicState(playerId);
+                    return;
+                }
 
                 // Auto-ascend after cinematic completes
-                Runnable onComplete = () -> {
-                    performAutoAscension(playerId, player, playerRef, ref, store);
-                };
+                Runnable onComplete = () ->
+                    performAutoAscension(playerId, ctx.player(), ctx.playerRef(), ctx.ref(), ctx.store());
 
-                io.hyvexa.ascend.ascension.AscensionCinematic.play(player, ph, playerRef, store, ref, world, onComplete);
-            }, world);
+                io.hyvexa.ascend.ascension.AscensionCinematic.play(
+                    ctx.player(),
+                    ph,
+                    ctx.playerRef(),
+                    ctx.store(),
+                    ctx.ref(),
+                    ctx.world(),
+                    onComplete
+                );
+            });
         }, 1500, TimeUnit.MILLISECONDS);
     }
 
@@ -1426,6 +1419,9 @@ public class AscendPlayerStore {
 
     public void setAutoElevationTargetIndex(UUID playerId, int index) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
+        if (progress.getAutoElevationTargetIndex() == index) {
+            return;
+        }
         progress.setAutoElevationTargetIndex(index);
         markDirty(playerId);
     }

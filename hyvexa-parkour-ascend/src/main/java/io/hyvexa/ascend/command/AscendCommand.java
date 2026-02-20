@@ -2,6 +2,7 @@ package io.hyvexa.ascend.command;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -51,6 +52,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class AscendCommand extends AbstractAsyncCommand {
 
+    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
+
     // Track active pages per player to ensure proper cleanup when switching pages
     private static final Map<UUID, BaseAscendPage> activePages = new ConcurrentHashMap<>();
     private static final String UNKNOWN_SUBCOMMAND_MESSAGE =
@@ -59,8 +62,20 @@ public class AscendCommand extends AbstractAsyncCommand {
                     + "/ascend maplb, /ascend transcend, /ascend help";
 
     // NPC-gated commands: only executable with the correct token (passed by NPC dialog buttons)
-    private static final String NPC_TOKEN = "hx7Kq9mW";
+    private static final String LEGACY_NPC_TOKEN = "hx7Kq9mW";
     private static final Set<String> NPC_GATED = Set.of("elevate", "summit", "skills");
+
+    private static String resolveNpcToken() {
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin == null || plugin.getRuntimeConfig() == null) {
+            return LEGACY_NPC_TOKEN;
+        }
+        String token = plugin.getRuntimeConfig().getNpcCommandToken();
+        if (token == null || token.isBlank()) {
+            return LEGACY_NPC_TOKEN;
+        }
+        return token;
+    }
 
     /**
      * Close any existing page for the player before opening a new one.
@@ -156,9 +171,13 @@ public class AscendCommand extends AbstractAsyncCommand {
 
             // NPC-gated commands require a secret token as second arg
             if (NPC_GATED.contains(subCommand)) {
-                if (args.length < 2 || !args[1].equals(NPC_TOKEN)) {
+                String expectedToken = resolveNpcToken();
+                if (args.length < 2 || !args[1].equals(expectedToken)) {
                     ctx.sendMessage(Message.raw(UNKNOWN_SUBCOMMAND_MESSAGE));
                     return;
+                }
+                if (LEGACY_NPC_TOKEN.equals(expectedToken)) {
+                    LOGGER.atInfo().log("AscendCommand used legacy NPC token for subcommand '" + subCommand + "' by " + playerRef.getUuid());
                 }
             }
 

@@ -461,6 +461,10 @@ public class ParkourAscendPlugin extends JavaPlugin {
         return tutorialTriggerService;
     }
 
+    public AscendRuntimeConfig getRuntimeConfig() {
+        return runtimeConfig;
+    }
+
     /**
      * Get a PlayerRef for a given player UUID.
      * Uses a cache populated on PlayerReadyEvent for O(1) lookup.
@@ -557,11 +561,15 @@ public class ParkourAscendPlugin extends JavaPlugin {
         }
         CompletableFuture.runAsync(() -> {
             World playerWorld = player.getWorld();
-            if (isAscendWorld(playerWorld)) {
+            String expectedName = expectedWorld.getName();
+            String playerWorldName = playerWorld != null ? playerWorld.getName() : null;
+            boolean inExpectedWorld = playerWorld == expectedWorld
+                || (expectedName != null && expectedName.equals(playerWorldName));
+            if (inExpectedWorld) {
                 AscendInventoryUtils.ensureMenuItems(player);
                 return;
             }
-            if (playerWorld != null || attemptsRemaining <= 0) {
+            if (attemptsRemaining <= 0) {
                 return;
             }
             HytaleServer.SCHEDULED_EXECUTOR.schedule(

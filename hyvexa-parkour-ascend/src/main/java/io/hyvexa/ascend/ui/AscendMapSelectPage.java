@@ -879,8 +879,9 @@ public class AscendMapSelectPage extends BaseAscendPage {
         cachedMapState.put(mapId, new int[]{snapshot.speedLevel(), snapshot.stars(), snapshot.hasRobot() ? 1 : 0});
 
         // Also update action button states (runner state may have changed)
-        updateBuyAllButtonState(commandBuilder, playerRef.getUuid());
-        updateEvolveAllButtonState(commandBuilder, playerRef.getUuid());
+        RefreshSnapshot refreshSnapshot = buildRefreshSnapshot(playerRef.getUuid());
+        updateBuyAllButtonState(commandBuilder, refreshSnapshot);
+        updateEvolveAllButtonState(commandBuilder, refreshSnapshot);
 
         if (!isCurrentPage()) {
             return;
@@ -1197,8 +1198,9 @@ public class AscendMapSelectPage extends BaseAscendPage {
 
         // Update action button states (may now be grayed out if no more eligible actions)
         UICommandBuilder buttonUpdateCmd = new UICommandBuilder();
-        updateBuyAllButtonState(buttonUpdateCmd, playerRef.getUuid());
-        updateEvolveAllButtonState(buttonUpdateCmd, playerRef.getUuid());
+        RefreshSnapshot refreshSnapshot = buildRefreshSnapshot(playerRef.getUuid());
+        updateBuyAllButtonState(buttonUpdateCmd, refreshSnapshot);
+        updateEvolveAllButtonState(buttonUpdateCmd, refreshSnapshot);
         if (isCurrentPage()) {
             try {
                 sendUpdate(buttonUpdateCmd, null, false);
@@ -1269,10 +1271,6 @@ public class AscendMapSelectPage extends BaseAscendPage {
     /**
      * Updates the Buy All button appearance based on whether any upgrade is available.
      */
-    private void updateBuyAllButtonState(UICommandBuilder commandBuilder, java.util.UUID playerId) {
-        updateBuyAllButtonState(commandBuilder, buildRefreshSnapshot(playerId));
-    }
-
     private void updateBuyAllButtonState(UICommandBuilder commandBuilder, RefreshSnapshot refreshSnapshot) {
         boolean hasAvailable = refreshSnapshot != null && refreshSnapshot.hasAvailableBuyAll();
         commandBuilder.set("#BuyAllOverlay.Visible", !hasAvailable);
@@ -1282,10 +1280,6 @@ public class AscendMapSelectPage extends BaseAscendPage {
      * Updates the Evolve All button appearance based on whether any runner can be evolved.
      * Shows/hides the gray overlay on the button.
      */
-    private void updateEvolveAllButtonState(UICommandBuilder commandBuilder, java.util.UUID playerId) {
-        updateEvolveAllButtonState(commandBuilder, buildRefreshSnapshot(playerId));
-    }
-
     private void updateEvolveAllButtonState(UICommandBuilder commandBuilder, RefreshSnapshot refreshSnapshot) {
         boolean hasEligible = refreshSnapshot != null && refreshSnapshot.hasEligibleEvolution();
         commandBuilder.set("#EvolveAllOverlay.Visible", !hasEligible);

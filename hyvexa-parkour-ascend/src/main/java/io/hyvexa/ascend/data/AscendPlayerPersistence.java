@@ -971,7 +971,7 @@ class AscendPlayerPersistence {
         // Merge online players' best times on top of the DB snapshot
         java.util.Map<String, AscendPlayerStore.MapLeaderboardEntry> merged = new java.util.LinkedHashMap<>();
         for (AscendPlayerStore.MapLeaderboardEntry entry : cached) {
-            merged.put(entry.playerName() != null ? entry.playerName().toLowerCase() : "", entry);
+            merged.put(buildMapLeaderboardMergeKey(entry.playerId(), entry.playerName()), entry);
         }
         for (java.util.Map.Entry<UUID, AscendPlayerProgress> e : players.entrySet()) {
             UUID id = e.getKey();
@@ -984,10 +984,10 @@ class AscendPlayerPersistence {
             if (name == null) {
                 name = id.toString().substring(0, 8) + "...";
             }
-            String key = name.toLowerCase();
+            String key = buildMapLeaderboardMergeKey(id, name);
             AscendPlayerStore.MapLeaderboardEntry existing = merged.get(key);
             if (existing == null || mapProgress.getBestTimeMs() < existing.bestTimeMs()) {
-                merged.put(key, new AscendPlayerStore.MapLeaderboardEntry(name, mapProgress.getBestTimeMs()));
+                merged.put(key, new AscendPlayerStore.MapLeaderboardEntry(id, name, mapProgress.getBestTimeMs()));
             }
         }
 
@@ -1020,17 +1020,24 @@ class AscendPlayerPersistence {
                 stmt.setString(1, mapId);
                 try (ResultSet rs = stmt.executeQuery()) {
                     while (rs.next()) {
+                        UUID playerId = null;
+                        try {
+                            String playerIdRaw = rs.getString("player_uuid");
+                            if (playerIdRaw != null && !playerIdRaw.isBlank()) {
+                                playerId = UUID.fromString(playerIdRaw);
+                            }
+                        } catch (IllegalArgumentException ignored) {
+                            // Keep null playerId and continue with name fallback.
+                        }
                         String name = rs.getString("player_name");
                         long bestTimeMs = rs.getLong("best_time_ms");
                         // Enrich null names from in-memory cache
                         if (name == null || name.isEmpty()) {
-                            try {
-                                UUID pid = UUID.fromString(rs.getString("player_uuid"));
-                                name = playerNames.get(pid);
-                            } catch (IllegalArgumentException ignored) {
+                            if (playerId != null) {
+                                name = playerNames.get(playerId);
                             }
                         }
-                        entries.add(new AscendPlayerStore.MapLeaderboardEntry(name, bestTimeMs));
+                        entries.add(new AscendPlayerStore.MapLeaderboardEntry(playerId, name, bestTimeMs));
                     }
                 }
             }
@@ -1039,6 +1046,16 @@ class AscendPlayerPersistence {
             return null;
         }
         return entries;
+    }
+
+    private static String buildMapLeaderboardMergeKey(UUID playerId, String playerName) {
+        if (playerId != null) {
+            return playerId.toString();
+        }
+        if (playerName == null) {
+            return "";
+        }
+        return playerName.toLowerCase(java.util.Locale.ROOT);
     }
 
     // ========================================

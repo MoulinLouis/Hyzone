@@ -734,7 +734,10 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
         while (newIndex < targets.size() && targets.get(newIndex) <= currentActualMultiplier) {
             newIndex++;
         }
-        playerStore.setAutoElevationTargetIndex(playerId, newIndex);
+        int currentIndex = playerStore.getAutoElevationTargetIndex(playerId);
+        if (newIndex != currentIndex) {
+            playerStore.setAutoElevationTargetIndex(playerId, newIndex);
+        }
     }
 
     private void handleClearAll(Ref<EntityStore> ref, Store<EntityStore> store) {

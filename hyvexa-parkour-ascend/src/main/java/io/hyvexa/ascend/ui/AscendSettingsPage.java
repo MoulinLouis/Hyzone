@@ -223,7 +223,6 @@ public class AscendSettingsPage extends BaseAscendPage {
         if (viewerRef.getReference() == null || !viewerRef.getReference().isValid()) {
             return;
         }
-        Store<EntityStore> store = viewerRef.getReference().getStore();
         for (PlayerRef targetRef : world.getPlayerRefs()) {
             if (viewerRef.equals(targetRef)) {
                 continue;
@@ -232,7 +231,11 @@ public class AscendSettingsPage extends BaseAscendPage {
             if (targetEntityRef == null || !targetEntityRef.isValid()) {
                 continue;
             }
-            UUIDComponent uuidComponent = store.getComponent(targetEntityRef, UUIDComponent.getComponentType());
+            Store<EntityStore> targetStore = targetEntityRef.getStore();
+            if (targetStore == null) {
+                continue;
+            }
+            UUIDComponent uuidComponent = targetStore.getComponent(targetEntityRef, UUIDComponent.getComponentType());
             if (uuidComponent == null) {
                 continue;
             }

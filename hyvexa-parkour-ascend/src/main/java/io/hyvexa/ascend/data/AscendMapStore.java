@@ -26,6 +26,7 @@ public class AscendMapStore {
     private final Map<String, AscendMap> maps = new LinkedHashMap<>();
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
     private volatile Runnable onChangeListener;
+    private volatile List<AscendMap> sortedMapsCache;
 
     public void syncLoad() {
         if (!DatabaseManager.getInstance().isInitialized()) {
@@ -44,6 +45,7 @@ public class AscendMapStore {
         lock.writeLock().lock();
         try {
             maps.clear();
+            invalidateSortedCache();
             try (Connection conn = DatabaseManager.getInstance().getConnection()) {
                 if (conn == null) {
                     LOGGER.atWarning().log("Failed to acquire database connection");
@@ -112,13 +114,23 @@ public class AscendMapStore {
     }
 
     public List<AscendMap> listMapsSorted() {
+        List<AscendMap> cached = sortedMapsCache;
+        if (cached != null) {
+            return cached;
+        }
+
         lock.readLock().lock();
         try {
+            if (sortedMapsCache != null) {
+                return sortedMapsCache;
+            }
             List<AscendMap> sorted = new ArrayList<>(maps.values());
             sorted.sort(Comparator.comparingInt(AscendMap::getDisplayOrder)
                 .thenComparing(map -> map.getName() != null ? map.getName() : map.getId(),
                     String.CASE_INSENSITIVE_ORDER));
-            return Collections.unmodifiableList(sorted);
+            List<AscendMap> unmodifiable = Collections.unmodifiableList(sorted);
+            sortedMapsCache = unmodifiable;
+            return unmodifiable;
         } finally {
             lock.readLock().unlock();
         }
@@ -132,6 +144,7 @@ public class AscendMapStore {
         lock.writeLock().lock();
         try {
             maps.put(map.getId(), map);
+            invalidateSortedCache();
         } finally {
             lock.writeLock().unlock();
         }
@@ -203,6 +216,9 @@ public class AscendMapStore {
         boolean removed;
         try {
             removed = maps.remove(id) != null;
+            if (removed) {
+                invalidateSortedCache();
+            }
         } finally {
             lock.writeLock().unlock();
         }
@@ -232,5 +248,9 @@ public class AscendMapStore {
         } catch (SQLException e) {
             LOGGER.atSevere().log("Failed to delete map: " + e.getMessage());
         }
+    }
+
+    private void invalidateSortedCache() {
+        sortedMapsCache = null;
     }
 }

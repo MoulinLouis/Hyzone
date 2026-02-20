@@ -181,7 +181,6 @@ public class StatsPage extends BaseAscendPage {
         double totalVexaPerSec = 0.0;
 
         BigNumber digitsProduct = playerStore.getMultiplierProduct(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
-        double elevation = playerStore.getCalculatedElevationMultiplier(playerId);
 
         for (AscendMap map : maps) {
             AscendPlayerProgress.MapProgress mapProgress = playerStore.getMapProgress(playerId, map.getId());
@@ -202,7 +201,7 @@ public class StatsPage extends BaseAscendPage {
             double runsPerSec = 1000.0 / intervalMs;
 
             long baseReward = map.getEffectiveBaseReward();
-            double vexaPerRun = baseReward * digitsProduct.toDouble() * elevation;
+            double vexaPerRun = baseReward * digitsProduct.toDouble();
 
             totalVexaPerSec += runsPerSec * vexaPerRun;
         }
