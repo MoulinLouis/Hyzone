@@ -70,9 +70,9 @@ $C.@PageOverlay {
               Anchor: (Left: 0, Right: 0, Top: 4, Height: 20);
               LayoutMode: Left;
 
-              Label {
-                Style: (FontSize: 14, TextColor: #fbbf24, RenderBold: true);
-                Text: "Coins:";
+              Group #CoinIcon {
+                Anchor: (Width: 16, Height: 16);
+                Background: (TexturePath: "../Textures/coin.png");
               }
               Group { Anchor: (Width: 6); }
               Label #PlayerCoinsValue {
