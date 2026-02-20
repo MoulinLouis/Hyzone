@@ -92,7 +92,7 @@ $C.@PageOverlay {
       Label #Description {
         Anchor: (Top: 14, Left: 0, Right: 0);
         Style: (FontSize: 14, TextColor: #b2c0c7, Wrap: true);
-        Text: "Test your skills with timed challenge runs. Each challenge applies a handicap - complete an Ascension under those conditions to earn permanent rewards.";
+        Text: "Test your skills with timed challenge runs. There are 7 progressive challenges, each with a handicap, and each completion permanently increases your AP multiplier.";
       }
 
       // Feature list with accent dots
@@ -107,7 +107,7 @@ $C.@PageOverlay {
 
           Group #Feature1Dot { Anchor: (Width: 8, Height: 8, Top: 6); Background: #10b981; }
           Group { Anchor: (Width: 10); }
-          Label #Feature1Label { Style: (FontSize: 13, TextColor: #cfd7dc); Text: "4 progressive challenges to complete"; }
+          Label #Feature1Label { Style: (FontSize: 13, TextColor: #cfd7dc); Text: "7 progressive challenges to complete"; }
         }
 
         // Feature 2
@@ -127,7 +127,7 @@ $C.@PageOverlay {
 
           Group #Feature3Dot { Anchor: (Width: 8, Height: 8, Top: 6); Background: #a855f7; }
           Group { Anchor: (Width: 10); }
-          Label #Feature3Label { Style: (FontSize: 13, TextColor: #cfd7dc); Text: "Permanent rewards for completion"; }
+          Label #Feature3Label { Style: (FontSize: 13, TextColor: #cfd7dc); Text: "Each completion increases AP multiplier"; }
         }
       }
 
