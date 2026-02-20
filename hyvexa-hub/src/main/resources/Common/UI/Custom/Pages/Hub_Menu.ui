@@ -4,7 +4,7 @@ $C.@PageOverlay {
   SceneBlur {}
 
   Group #HubMenuWindow {
-    Anchor: (Width: 860, Height: 300);
+    Anchor: (Width: 860, Height: 430);
     LayoutMode: Top;
     Background: #0d1620(0.95);
     OutlineColor: #ffffff(0.06);
@@ -71,61 +71,85 @@ $C.@PageOverlay {
       }
 
       Group #ModeButtons {
-        Anchor: (Top: 12, Left: 0, Right: 0, Height: 130);
-        LayoutMode: Left;
-        Padding: (Left: 57, Top: 6);
+        Anchor: (Top: 12, Left: 0, Right: 0, Height: 262);
+        LayoutMode: Top;
 
-        Group #ParkourCard {
-          Anchor: (Width: 258, Height: 120);
-          Background: (TexturePath: "../Textures/parkour.png");
+        Group #TopModeRow {
+          Anchor: (Left: 0, Right: 0, Height: 122);
+          LayoutMode: Left;
+          Padding: (Left: 126, Top: 6);
 
-          Button #ParkourButton {
-            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-            Background: #000000(0);
-            Style: ButtonStyle(
-              Sounds: $C.@ButtonSounds,
-            );
+          Group #ParkourCard {
+            Anchor: (Width: 280, Height: 116);
+            Background: (TexturePath: "../Textures/parkour.png");
+
+            Button #ParkourButton {
+              Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+              Background: #000000(0);
+              Style: ButtonStyle(
+                Sounds: $C.@ButtonSounds,
+              );
+            }
+          }
+
+          Group {
+            Anchor: (Width: 16);
+          }
+
+          Group #AscendCard {
+            Anchor: (Width: 280, Height: 116);
+            Background: (TexturePath: "../Textures/ascend.png");
+
+            Button #AscendButton {
+              Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+              Background: #000000(0);
+              Style: ButtonStyle(
+                Sounds: $C.@ButtonSounds,
+              );
+            }
           }
         }
 
-        Group {
-          Anchor: (Width: 12);
-        }
+        Group #BottomModeRow {
+          Anchor: (Left: 0, Right: 0, Top: 14, Height: 122);
+          LayoutMode: Left;
+          Padding: (Left: 126, Top: 6);
 
-        Group #AscendCard {
-          Anchor: (Width: 216, Height: 120);
-          Background: (TexturePath: "../Textures/ascend.png");
+          Group #PurgeCard {
+            Anchor: (Width: 280, Height: 116);
+            Background: (TexturePath: "../Textures/purge.png");
 
-          Button #AscendButton {
-            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-            Background: #000000(0);
-            Style: ButtonStyle(
-              Sounds: $C.@ButtonSounds,
-            );
+            Button #PurgeButton {
+              Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+              Background: #000000(0);
+              Style: ButtonStyle(
+                Sounds: $C.@ButtonSounds,
+              );
+            }
           }
-        }
 
-        Group {
-          Anchor: (Width: 12);
-        }
+          Group {
+            Anchor: (Width: 16);
+          }
 
-        Group #PurgeCard {
-          Anchor: (Width: 216, Height: 120);
-          Background: (TexturePath: "../Textures/purge.png");
+          Group #RunOrFallCard {
+            Anchor: (Width: 280, Height: 116);
+            Background: (TexturePath: "../Textures/runorfall.png");
 
-          Button #PurgeButton {
-            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-            Background: #000000(0);
-            Style: ButtonStyle(
-              Sounds: $C.@ButtonSounds,
-            );
+            Button #RunOrFallButton {
+              Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+              Background: #000000(0);
+              Style: ButtonStyle(
+                Sounds: $C.@ButtonSounds,
+              );
+            }
           }
         }
       }
 
 
       Group #BannerRow {
-        Anchor: (Top: 8, Left: 0, Right: 0, Height: 44);
+        Anchor: (Top: 10, Left: 0, Right: 0, Height: 44);
         LayoutMode: Left;
         Padding: (Left: 188);
 
