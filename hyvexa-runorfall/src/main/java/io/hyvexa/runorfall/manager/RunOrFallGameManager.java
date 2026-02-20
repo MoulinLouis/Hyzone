@@ -14,6 +14,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.runorfall.HyvexaRunOrFallPlugin;
 import io.hyvexa.runorfall.data.RunOrFallConfig;
 import io.hyvexa.runorfall.data.RunOrFallLocation;
 import io.hyvexa.runorfall.data.RunOrFallPlatform;
@@ -35,6 +36,10 @@ public class RunOrFallGameManager {
     private static final long GAME_TICK_MS = 50L;
     private static final long START_BLOCK_BREAK_GRACE_MS = 3000L;
     private static final double PLAYER_FOOTPRINT_RADIUS = 0.37d;
+    private static final long SURVIVAL_COIN_INTERVAL_MS = 30_000L;
+    private static final long SURVIVAL_COIN_REWARD = 1L;
+    private static final long ELIMINATION_COIN_REWARD = 5L;
+    private static final long WIN_COIN_REWARD = 25L;
 
     private enum GameState {
         IDLE,
@@ -50,6 +55,7 @@ public class RunOrFallGameManager {
     private final Map<BlockKey, Integer> removedBlocks = new ConcurrentHashMap<>();
     private final Map<UUID, BlockKey> playerPendingBlock = new ConcurrentHashMap<>();
     private final Map<UUID, Long> roundStartTimesMs = new ConcurrentHashMap<>();
+    private final Map<UUID, Long> nextSurvivalCoinRewardAtMs = new ConcurrentHashMap<>();
 
     private volatile GameState state = GameState.IDLE;
     private volatile int countdownRemaining = COUNTDOWN_SECONDS;
@@ -71,6 +77,10 @@ public class RunOrFallGameManager {
 
     public synchronized boolean isJoined(UUID playerId) {
         return playerId != null && lobbyPlayers.contains(playerId);
+    }
+
+    public synchronized boolean isInActiveRound(UUID playerId) {
+        return playerId != null && state == GameState.RUNNING && alivePlayers.contains(playerId);
     }
 
     public synchronized String statusLine() {
@@ -98,6 +108,7 @@ public class RunOrFallGameManager {
         }
         sendToPlayer(playerId, "Joined the RunOrFall lobby.");
         teleportPlayerToLobby(playerId);
+        refreshPlayerHotbar(playerId);
         broadcastLobby("Lobby: " + lobbyPlayers.size() + " player(s).");
         startCountdownIfPossible(false);
     }
@@ -109,6 +120,7 @@ public class RunOrFallGameManager {
         boolean wasInLobby = lobbyPlayers.remove(playerId);
         boolean wasAlive = alivePlayers.remove(playerId);
         playerPendingBlock.remove(playerId);
+        nextSurvivalCoinRewardAtMs.remove(playerId);
         long survivedMs = takeSurvivedMs(playerId);
         if (!wasInLobby && !wasAlive) {
             return;
@@ -121,9 +133,11 @@ public class RunOrFallGameManager {
         }
         if (state == GameState.RUNNING && wasAlive) {
             statsStore.recordLoss(playerId, resolvePlayerName(playerId), survivedMs);
+            rewardAlivePlayersForEliminationInternal(playerId);
             broadcastLobby("A player was eliminated. " + alivePlayers.size() + " remaining.");
             checkWinnerInternal();
         }
+        refreshPlayerHotbar(playerId);
         if (lobbyPlayers.isEmpty()) {
             activeWorld = null;
         }
@@ -171,6 +185,7 @@ public class RunOrFallGameManager {
         pendingBlocks.clear();
         playerPendingBlock.clear();
         roundStartTimesMs.clear();
+        nextSurvivalCoinRewardAtMs.clear();
         lobbyPlayers.clear();
         activeWorld = null;
     }
@@ -256,8 +271,10 @@ public class RunOrFallGameManager {
         alivePlayers.addAll(onlinePlayers);
         long roundStartMs = System.currentTimeMillis();
         roundStartTimesMs.clear();
+        nextSurvivalCoinRewardAtMs.clear();
         for (UUID onlinePlayerId : onlinePlayers) {
             roundStartTimesMs.put(onlinePlayerId, roundStartMs);
+            nextSurvivalCoinRewardAtMs.put(onlinePlayerId, roundStartMs + SURVIVAL_COIN_INTERVAL_MS);
         }
         soloTestRound = countdownRequiredPlayers == 1 && onlinePlayers.size() == 1;
         pendingBlocks.clear();
@@ -273,6 +290,9 @@ public class RunOrFallGameManager {
         state = GameState.RUNNING;
         blockBreakEnabledAtMs = System.currentTimeMillis() + START_BLOCK_BREAK_GRACE_MS;
         blockBreakCountdownLastAnnounced = (int) Math.ceil(START_BLOCK_BREAK_GRACE_MS / 1000.0d);
+        for (UUID onlinePlayerId : onlinePlayers) {
+            refreshPlayerHotbar(onlinePlayerId);
+        }
         gameTickTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleAtFixedRate(
                 () -> dispatchToWorld(this::tickGameInternal),
                 GAME_TICK_MS, GAME_TICK_MS, TimeUnit.MILLISECONDS
@@ -295,6 +315,7 @@ public class RunOrFallGameManager {
             if (!canBreakBlocks) {
                 broadcastBlockBreakCountdownIfNeeded(nowMs);
             }
+            processSurvivalCoinRewardsInternal(nowMs);
             RunOrFallConfig config = configStore.snapshot();
             Set<UUID> disconnected = new HashSet<>();
             for (UUID playerId : new ArrayList<>(alivePlayers)) {
@@ -328,8 +349,10 @@ public class RunOrFallGameManager {
             processPendingBlocksInternal();
             for (UUID playerId : disconnected) {
                 if (alivePlayers.remove(playerId)) {
+                    nextSurvivalCoinRewardAtMs.remove(playerId);
                     long survivedMs = takeSurvivedMs(playerId);
                     statsStore.recordLoss(playerId, resolvePlayerName(playerId), survivedMs);
+                    rewardAlivePlayersForEliminationInternal(playerId);
                 }
             }
             checkWinnerInternal();
@@ -357,6 +380,7 @@ public class RunOrFallGameManager {
             long survivedMs = takeSurvivedMs(winner);
             String winnerName = resolvePlayerName(winner);
             statsStore.recordWin(winner, winnerName, survivedMs);
+            awardCoinsToPlayerInternal(winner, WIN_COIN_REWARD, "for winning the round.");
             if (winnerRef != null && winnerRef.getUsername() != null && !winnerRef.getUsername().isBlank()) {
                 winnerName = winnerRef.getUsername();
             }
@@ -371,10 +395,13 @@ public class RunOrFallGameManager {
         if (!alivePlayers.remove(playerId)) {
             return;
         }
+        nextSurvivalCoinRewardAtMs.remove(playerId);
         long survivedMs = takeSurvivedMs(playerId);
         statsStore.recordLoss(playerId, resolvePlayerName(playerId), survivedMs);
+        rewardAlivePlayersForEliminationInternal(playerId);
         playerPendingBlock.remove(playerId);
         teleportPlayerToLobby(playerId);
+        refreshPlayerHotbar(playerId);
         sendToPlayer(playerId, "Eliminated: " + reason + ".");
         broadcastLobby("A player was eliminated. " + alivePlayers.size() + " remaining.");
     }
@@ -385,12 +412,14 @@ public class RunOrFallGameManager {
         alivePlayers.clear();
         playerPendingBlock.clear();
         roundStartTimesMs.clear();
+        nextSurvivalCoinRewardAtMs.clear();
         state = GameState.IDLE;
         countdownRemaining = COUNTDOWN_SECONDS;
         countdownRequiredPlayers = 2;
         soloTestRound = false;
         blockBreakEnabledAtMs = 0L;
         blockBreakCountdownLastAnnounced = -1;
+        refreshLobbyHotbars();
         broadcastLobby(reason);
         startCountdownIfPossible(false);
     }
@@ -528,6 +557,7 @@ public class RunOrFallGameManager {
             removedBlocks.clear();
             playerPendingBlock.clear();
             roundStartTimesMs.clear();
+            nextSurvivalCoinRewardAtMs.clear();
             return;
         }
         for (Map.Entry<BlockKey, Integer> entry : removedBlocks.entrySet()) {
@@ -542,6 +572,7 @@ public class RunOrFallGameManager {
         removedBlocks.clear();
         playerPendingBlock.clear();
         roundStartTimesMs.clear();
+        nextSurvivalCoinRewardAtMs.clear();
     }
 
     private long takeSurvivedMs(UUID playerId) {
@@ -667,6 +698,80 @@ public class RunOrFallGameManager {
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("RunOrFall world dispatch failed.");
         }
+    }
+
+    private void refreshLobbyHotbars() {
+        for (UUID playerId : new ArrayList<>(lobbyPlayers)) {
+            refreshPlayerHotbar(playerId);
+        }
+    }
+
+    private void refreshPlayerHotbar(UUID playerId) {
+        if (playerId == null) {
+            return;
+        }
+        HyvexaRunOrFallPlugin plugin = HyvexaRunOrFallPlugin.getInstance();
+        if (plugin == null) {
+            return;
+        }
+        plugin.refreshRunOrFallHotbar(playerId);
+    }
+
+    private void processSurvivalCoinRewardsInternal(long nowMs) {
+        for (UUID playerId : new ArrayList<>(alivePlayers)) {
+            Long nextRewardAt = nextSurvivalCoinRewardAtMs.get(playerId);
+            if (nextRewardAt == null) {
+                nextRewardAt = nowMs + SURVIVAL_COIN_INTERVAL_MS;
+            }
+            while (nowMs >= nextRewardAt && alivePlayers.contains(playerId)) {
+                awardCoinsToPlayerInternal(playerId, SURVIVAL_COIN_REWARD, "for surviving 30 seconds.");
+                nextRewardAt += SURVIVAL_COIN_INTERVAL_MS;
+            }
+            nextSurvivalCoinRewardAtMs.put(playerId, nextRewardAt);
+        }
+    }
+
+    private void rewardAlivePlayersForEliminationInternal(UUID eliminatedPlayerId) {
+        String eliminatedName = resolvePlayerName(eliminatedPlayerId);
+        for (UUID alivePlayerId : new ArrayList<>(alivePlayers)) {
+            awardCoinsToPlayerInternal(alivePlayerId, ELIMINATION_COIN_REWARD,
+                    "for elimination of " + eliminatedName + ".");
+        }
+    }
+
+    private void awardCoinsToPlayerInternal(UUID playerId, long amount, String reasonText) {
+        if (playerId == null || amount <= 0L) {
+            return;
+        }
+        RunOrFallCoinStore.getInstance().addCoins(playerId, amount);
+        sendCoinRewardToPlayer(playerId, amount, reasonText);
+        HyvexaRunOrFallPlugin plugin = HyvexaRunOrFallPlugin.getInstance();
+        if (plugin != null) {
+            plugin.refreshRunOrFallHudEconomy(playerId);
+        }
+    }
+
+    private void sendCoinRewardToPlayer(UUID playerId, long amount, String reasonText) {
+        PlayerRef playerRef = resolvePlayer(playerId);
+        if (playerRef == null) {
+            return;
+        }
+        var ref = playerRef.getReference();
+        if (ref == null || !ref.isValid()) {
+            return;
+        }
+        var store = ref.getStore();
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null) {
+            return;
+        }
+        String unit = amount == 1L ? "coin" : "coins";
+        player.sendMessage(Message.join(
+                Message.raw(PREFIX),
+                Message.raw("+" + amount + " ").color("#fbbf24"),
+                Message.raw(unit).color("#fbbf24"),
+                Message.raw(" " + reasonText)
+        ));
     }
 
     private void cancelCountdownTask() {

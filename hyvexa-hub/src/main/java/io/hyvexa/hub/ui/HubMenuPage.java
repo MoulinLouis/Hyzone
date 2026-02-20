@@ -27,6 +27,7 @@ public class HubMenuPage extends InteractiveCustomUIPage<ButtonEventData> {
     private static final String BUTTON_PARKOUR = "Parkour";
     private static final String BUTTON_ASCEND = "Parkour Ascend";
     private static final String BUTTON_PURGE = "Purge";
+    private static final String BUTTON_RUN_OR_FALL = "RunOrFall";
     private static final String BUTTON_DISCORD = "Discord";
     private static final String BUTTON_STORE = "Store";
     private static final String BUTTON_CLOSE = "Close";
@@ -49,6 +50,10 @@ public class HubMenuPage extends InteractiveCustomUIPage<ButtonEventData> {
             Message.raw("Hyvexa: ").color("#ff8a3d"),
             Message.raw("Purge is currently restricted to staff only.")
     );
+    private static final Message MESSAGE_RUN_OR_FALL_RESTRICTED = Message.join(
+            Message.raw("Hyvexa: ").color("#ff8a3d"),
+            Message.raw("RunOrFall is work in progress and currently restricted to staff only.")
+    );
 
     private static volatile AscendWhitelistManager cachedWhitelistManager;
     private static volatile long cachedWhitelistModified;
@@ -65,18 +70,14 @@ public class HubMenuPage extends InteractiveCustomUIPage<ButtonEventData> {
                       @Nonnull UIEventBuilder uiEventBuilder, @Nonnull Store<EntityStore> store) {
         uiCommandBuilder.append("Pages/Hub_Menu.ui");
 
-        Player player = store.getComponent(ref, Player.getComponentType());
-        boolean isOp = PermissionUtils.isOp(player);
-        if (!isOp) {
-            uiCommandBuilder.set("#PurgeCard.Visible", false);
-        }
-
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ParkourButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_PARKOUR), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#AscendButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_ASCEND), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#PurgeButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_PURGE), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#RunOrFallButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_RUN_OR_FALL), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#DiscordBannerButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_DISCORD), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#StoreBannerButton",
@@ -155,6 +156,20 @@ public class HubMenuPage extends InteractiveCustomUIPage<ButtonEventData> {
             }
             if (playerRef != null) {
                 router.routeToPurge(playerRef);
+            }
+            this.close();
+            return;
+        }
+        if (BUTTON_RUN_OR_FALL.equals(data.getButton())) {
+            if (!PermissionUtils.isOp(player)) {
+                if (player != null) {
+                    player.sendMessage(MESSAGE_RUN_OR_FALL_RESTRICTED);
+                }
+                this.close();
+                return;
+            }
+            if (playerRef != null) {
+                router.routeToRunOrFall(playerRef);
             }
             this.close();
             return;

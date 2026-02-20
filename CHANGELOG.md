@@ -6,6 +6,7 @@
 - **RunOrFall: New game mode module** - Added `hyvexa-runorfall` with lobby queue, fixed 10s pre-game countdown, destructible platform cuboids, void elimination, and last-player-standing winner flow via `/rof` commands.
 - **RunOrFall: Admin setup UI** - Added `/rof admin` page to configure lobby/spawns/platforms, tune void Y and break delay, and control start/stop from buttons.
 - **RunOrFall: Player stats page** - Added a RunOrFall stats UI (Win, Loose, Winrate, Best win streak, Longest time survived) opened from `Food_Candy_Cane`, with SQL persistence in `runorfall_player_stats`.
+- **RunOrFall: Snowflake leaderboard UI** - `WinterHoliday_Snowflake` now opens a RunOrFall leaderboard with search, displaying wins, losses, and winrate (ranked by wins, tie-break by winrate).
 - **Ascend: Cat Collector easter egg** - 5 hidden cat NPCs in Ascend world. Players find them via NPC dialog, tracked as a secret achievement (X/5 progress).
 - **Parkour: Map active toggle** - Admins can disable maps without deleting them via `/pk admin` Maps panel. Inactive maps block both start trigger and map selector entry with a warning message. New `active` column in `maps` table (defaults to TRUE).
 - **Purge: Configurable wave compositions** - `/purge admin` now has a Waves panel where staff define per-wave slow/normal/fast zombie counts. Sessions only start when at least one wave exists, spawns are distributed across configured spawn points, and clearing the final configured wave now ends with a win message.
@@ -21,6 +22,11 @@
 - **RunOrFall: Configurable block break delay** - Added delayed block destruction with configurable delay (`/rof breakdelay <seconds>`, default `0.2s`).
 - **RunOrFall: Round-start grace before breaking blocks** - Block destruction now starts 3 seconds after the round begins, with chat countdown messages (3..2..1).
 - **RunOrFall: SQL-backed config persistence** - RunOrFall config now saves/loads from MySQL tables (`runorfall_settings`, `runorfall_spawns`, `runorfall_platforms`) instead of JSON, with one-time legacy migration support.
+- **RunOrFall: Join/Leave hotbar items** - Added `Ingredient_Life_Essence` (join lobby) and `Ingredient_Earth_Essence` (leave lobby) shortcuts equivalent to `/rof join` and `/rof leave`.
+- **RunOrFall: Contextual hotbars by state** - Hotbar now switches per player state: default (`Join`, `Leaderboards`, `My Stats`, `Game Selector`), lobby (`Leave`, `Leaderboards`, `My Stats`), and active round (no RunOrFall items).
+- **RunOrFall: Coins currency + round rewards** - Added persistent RunOrFall coins shown in HUD, with gains of `+1` every 30s alive, `+5` per eliminated player, and `+25` for round winner (chat message on each gain).
+- **RunOrFall: Multi-category leaderboard** - RunOrFall leaderboard now has 3 clickable categories (`Total wins`, `Best win streak`, `Longest time survived`) with per-category ranking and display.
+- **Hub: Game Selector RunOrFall card** - Added RunOrFall to the "Welcome to Hyvexa" selector, arranged modes in a 2x2 grid (Parkour/Ascend top row), and restricted RunOrFall routing to OP/staff for now.
 - **Purge: Expanded weapon upgrade/admin options to full Hyguns arsenal** - `/purge upgrade` and `/purge admin -> Weapons` now include Glock18, ColtRevolver, DesertEagle, Mac10, MP9, Thompson, AK47, M4A1s, Barret50, DoubleBarrel, and Flamethrower (Frag excluded).
 - **Purge: Weapon-specific icons in upgrade/admin pages** - Added per-weapon Hyguns icons for selection cards and the upgrade detail panel.
 - **Parkour: Map Admin UI height increased** - Increased the Map Admin window height by 50px for more vertical space.

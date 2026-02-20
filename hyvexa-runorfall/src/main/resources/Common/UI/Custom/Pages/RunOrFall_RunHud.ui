@@ -1,0 +1,174 @@
+$C = "../Common.ui";
+
+$C.@PageOverlay {
+  Background: #000000(0.0);
+  Group #HudLayer {
+    Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+
+    Group #RunHudRoot {
+      Anchor: (Right: 20, Top: 400, Width: 284, Height: 396);
+      LayoutMode: Left;
+
+      Group #InfoAccentBar {
+        Anchor: (Width: 4, Top: 0, Bottom: 0);
+        Background: #ec4899;
+      }
+
+      Group #InfoBox {
+        FlexWeight: 1;
+        Anchor: (Top: 0, Bottom: 0);
+        Background: #0d1620(0.95);
+        OutlineColor: #ffffff(0.06);
+        OutlineSize: 1;
+
+        Group #InfoBoxFlow {
+          Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+          LayoutMode: Top;
+
+          Group #InfoImageBanner {
+            Anchor: (Width: 200, Height: 94, Top: 18);
+            Background: (TexturePath: "../Textures/runorfall.png");
+          }
+
+          Group #InfoContent {
+            Anchor: (Left: 0, Right: 0);
+            LayoutMode: Top;
+            Padding: (Left: 14, Right: 14, Top: 12, Bottom: 14);
+
+            Label #PlayerNameText {
+              Style: (
+                FontSize: 13,
+                TextColor: #ec4899(0.7),
+                RenderUppercase: true,
+                LetterSpacing: 2,
+                RenderBold: true
+              );
+              Text: "RunOrFall";
+            }
+
+            Group #InfoSep {
+              Anchor: (Left: 0, Width: 30, Height: 2, Top: 6);
+              Background: #ec4899;
+            }
+
+            Group #PlayerGemsRow {
+              Anchor: (Left: 0, Right: 0, Top: 6, Height: 20);
+              LayoutMode: Left;
+
+              Group #GemIcon {
+                Anchor: (Width: 16, Height: 16);
+                Background: (TexturePath: "../Textures/gem.png");
+              }
+              Group { Anchor: (Width: 6); }
+              Label #PlayerGemsValue {
+                Style: (FontSize: 14, TextColor: #62d96b, RenderBold: true);
+                Text: "0";
+              }
+            }
+
+            Group #PlayerCoinsRow {
+              Anchor: (Left: 0, Right: 0, Top: 4, Height: 20);
+              LayoutMode: Left;
+
+              Group #CoinIcon {
+                Anchor: (Width: 16, Height: 16);
+                Background: (TexturePath: "../Textures/coin.png");
+              }
+              Group { Anchor: (Width: 6); }
+              Label #PlayerCoinsValue {
+                Style: (FontSize: 14, TextColor: #fbbf24, RenderBold: true);
+                Text: "0";
+              }
+            }
+
+            Label #InfoIpText {
+              Anchor: (Top: 6);
+              Style: (
+                FontSize: 16,
+                TextColor: #ec4899(0.8),
+                RenderBold: true
+              );
+              Text: "play.hyvexa.com (/vote)";
+            }
+
+            Group #InfoDivider {
+              Anchor: (Left: 0, Right: 0, Height: 1, Top: 10);
+              Background: #ffffff(0.06);
+            }
+
+            Label #InfoSupportTitle {
+              Anchor: (Top: 10);
+              Style: (
+                FontSize: 15,
+                TextColor: #ffd166,
+                RenderBold: true
+              );
+              Text: "Support Hyvexa (/store)";
+            }
+
+            Group #InfoSupportRow1 {
+              Anchor: (Left: 0, Right: 0, Top: 6, Height: 20);
+              LayoutMode: Left;
+
+              Group {
+                Anchor: (Width: 18, Height: 18);
+                Background: (TexturePath: "../Textures/star.png");
+              }
+              Group { Anchor: (Width: 6); }
+              Label {
+                Style: (FontSize: 16, TextColor: #e7f1f4);
+                Text: "Exclusive Ranks";
+              }
+            }
+
+            Group #InfoSupportRow2 {
+              Anchor: (Left: 0, Right: 0, Top: 4, Height: 20);
+              LayoutMode: Left;
+
+              Group {
+                Anchor: (Width: 18, Height: 18);
+                Background: (TexturePath: "../Textures/storm.png");
+              }
+              Group { Anchor: (Width: 6); }
+              Label {
+                Style: (FontSize: 16, TextColor: #e7f1f4);
+                Text: "Speed Boost";
+              }
+            }
+
+            Label #InfoStoreLink {
+              Anchor: (Top: 8, Left: 0, Right: 0);
+              Style: (
+                FontSize: 16,
+                TextColor: #ffd166,
+                RenderBold: true,
+                HorizontalAlignment: Center
+              );
+              Text: "store.hyvexa.com";
+            }
+          }
+        }
+
+        Group #PlayerCountRow {
+          Anchor: (Left: 0, Right: 0, Top: 8, Height: 20);
+          LayoutMode: Right;
+          Padding: (Right: 12);
+
+          Label #PlayerCountText {
+            Style: (
+              FontSize: 14,
+              TextColor: #8b9db0,
+              RenderBold: true
+            );
+            Text: "0";
+          }
+          Group { Anchor: (Width: 4); }
+          Group #PlayerCountIcon {
+            Anchor: (Width: 14, Height: 14);
+            Background: (TexturePath: "../Textures/user.png");
+          }
+        }
+      }
+    }
+  }
+}
