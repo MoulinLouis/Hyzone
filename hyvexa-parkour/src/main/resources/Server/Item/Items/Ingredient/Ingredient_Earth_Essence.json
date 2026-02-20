@@ -1,7 +1,7 @@
 {
   "TranslationProperties": {
-    "Name": "Toggle fly",
-    "Description": "Right click to toggle fly."
+    "Name": "Leave Lobby",
+    "Description": "Right click to leave the RunOrFall lobby."
   },
   "Icon": "Icons/ItemsGenerated/Ingredient_Fire_Essence.png",
   "Quality": "Developer",
