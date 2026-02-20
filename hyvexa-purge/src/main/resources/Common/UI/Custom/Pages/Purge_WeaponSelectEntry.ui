@@ -10,7 +10,18 @@ Group {
   // Weapon icon (centered, fills upper area)
   Group #WeaponIcon {
     Anchor: (Left: 19, Top: 10, Width: 80, Height: 80);
-    Background: (TexturePath: "../Textures/AK47_icon.png");
+    LayoutMode: Full;
+    Group #IconAK47 { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/AK47_icon.png"); }
+    Group #IconBarret50 { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/Barret50_icon.png"); Visible: false; }
+    Group #IconColtRevolver { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/ColtRevolver_icon.png"); Visible: false; }
+    Group #IconDesertEagle { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/DesertEagle_icon.png"); Visible: false; }
+    Group #IconDoubleBarrel { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/DoubleBarrel_icon.png"); Visible: false; }
+    Group #IconFlamethrower { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/Flamethrower_icon.png"); Visible: false; }
+    Group #IconGlock18 { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/Glock18_icon.png"); Visible: false; }
+    Group #IconM4A1s { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/M4A1s_icon.png"); Visible: false; }
+    Group #IconMP9 { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/MP9_icon.png"); Visible: false; }
+    Group #IconMac10 { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/Mac10_icon.png"); Visible: false; }
+    Group #IconThompson { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/Thompson_icon.png"); Visible: false; }
   }
 
   // Weapon name (hidden by default, shown in ADMIN mode)
