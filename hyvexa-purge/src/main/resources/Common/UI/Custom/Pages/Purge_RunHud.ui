@@ -124,21 +124,6 @@ $C.@PageOverlay {
               }
             }
 
-            Group #PlayerScrapRow {
-              Anchor: (Left: 0, Right: 0, Top: 4, Height: 20);
-              LayoutMode: Left;
-
-              Group {
-                Anchor: (Width: 16, Height: 16);
-                Background: (TexturePath: "../Textures/scrap.png");
-              }
-              Group { Anchor: (Width: 6); }
-              Label #PlayerScrapValue {
-                Style: (FontSize: 14, TextColor: #f59e0b, RenderBold: true);
-                Text: "0 scrap";
-              }
-            }
-
             Label #InfoIpText {
               Anchor: (Top: 6);
               Style: (
@@ -226,6 +211,33 @@ $C.@PageOverlay {
             Background: (TexturePath: "../Textures/user.png");
           }
         }
+      }
+    }
+
+    Group #ScrapHudRoot {
+      Anchor: (Left: 26, Bottom: 28, Width: 420, Height: 104);
+      LayoutMode: Left;
+      Background: #0d1620(0.92);
+      OutlineColor: #ffffff(0.08);
+      OutlineSize: 1;
+      Padding: (Left: 18, Right: 18, Top: 10, Bottom: 10);
+
+      Group #ScrapHudIcon {
+        Anchor: (Width: 84, Height: 84);
+        Background: (TexturePath: "../Textures/scrap.png");
+      }
+
+      Group { Anchor: (Width: 16); }
+
+      Label #ScrapHudValue {
+        Anchor: (Top: 0, Bottom: 0);
+        Style: (
+          FontSize: 62,
+          TextColor: #f59e0b,
+          RenderBold: true,
+          VerticalAlignment: Center
+        );
+        Text: "0";
       }
     }
   }
