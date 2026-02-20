@@ -154,12 +154,12 @@ public final class AscendOnboardingCopy {
         return new TutorialCopy(
             new String[]{"Ascension Challenges", "How It Works"},
             new String[]{
-                "Test your skills with timed challenge runs. Each challenge applies a handicap - complete an Ascension under those conditions to earn permanent rewards.",
-                "Starting a challenge snapshots your progress and resets you. Reach " + ascensionThresholdDisplay() + " vexa to complete it. Your original progress is fully restored afterward - win or quit."
+                "Test your skills with timed challenge runs. There are 7 progressive challenges, each with a handicap, and each completion permanently increases your AP multiplier.",
+                "Starting a challenge snapshots your progress and resets you. Reach " + ascensionThresholdDisplay() + " vexa to complete it. Every completed challenge adds +1 AP multiplier, so each future Ascension grants more AP."
             },
             new String[][]{
-                {"4 progressive challenges to complete", "Each applies a unique handicap", "Permanent rewards for completion"},
-                {"Progress is snapshot and restored", "Quit anytime without losing progress", "Best times tracked per challenge"}
+                {"7 progressive challenges to complete", "Each applies a unique handicap", "Each completion increases AP multiplier"},
+                {"Progress is snapshot and restored", "Quit anytime without losing progress", "Higher AP multiplier = more AP per Ascension"}
             },
             new String[][]{
                 {"#10b981", "#f59e0b", "#a855f7"},
