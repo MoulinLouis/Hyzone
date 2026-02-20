@@ -18,6 +18,7 @@ import io.hyvexa.common.WorldConstants;
 import io.hyvexa.common.util.ModeGate;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.runorfall.command.RunOrFallCommand;
+import io.hyvexa.runorfall.interaction.RunOrFallJoinInteraction;
 import io.hyvexa.runorfall.interaction.RunOrFallStatsInteraction;
 import io.hyvexa.runorfall.manager.RunOrFallConfigStore;
 import io.hyvexa.runorfall.manager.RunOrFallGameManager;
@@ -31,8 +32,12 @@ import java.util.UUID;
 public class HyvexaRunOrFallPlugin extends JavaPlugin {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final String PREFIX = "[RunOrFall] ";
+    private static final String ITEM_JOIN = "Ingredient_Life_Essence";
+    private static final String ITEM_LEAVE = "Ingredient_Earth_Essence";
     private static final String ITEM_STATS = "Food_Candy_Cane";
     private static final short SLOT_STATS = 0;
+    private static final short SLOT_JOIN = 1;
+    private static final short SLOT_LEAVE = 2;
     private static final short SLOT_GAME_SELECTOR = 8;
     private static HyvexaRunOrFallPlugin INSTANCE;
 
@@ -139,11 +144,16 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
 
     private void registerInteractionCodecs() {
         var registry = this.getCodecRegistry(Interaction.CODEC);
+        registry.register("RunOrFall_Join_Interaction", RunOrFallJoinInteraction.class, RunOrFallJoinInteraction.CODEC);
         registry.register("RunOrFall_Stats_Interaction", RunOrFallStatsInteraction.class, RunOrFallStatsInteraction.CODEC);
     }
 
     public RunOrFallStatsStore getStatsStore() {
         return statsStore;
+    }
+
+    public RunOrFallGameManager getGameManager() {
+        return gameManager;
     }
 
     private void enforceRunOrFallHotbar(Player player) {
@@ -158,12 +168,19 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
                 continue;
             }
             String itemId = stack.getItemId();
-            if (ITEM_STATS.equals(itemId) || WorldConstants.ITEM_SERVER_SELECTOR.equals(itemId)) {
+            if (ITEM_STATS.equals(itemId) || ITEM_JOIN.equals(itemId) || ITEM_LEAVE.equals(itemId)
+                    || WorldConstants.ITEM_SERVER_SELECTOR.equals(itemId)) {
                 hotbar.setItemStackForSlot(slot, ItemStack.EMPTY, false);
             }
         }
         if (SLOT_STATS >= 0 && SLOT_STATS < capacity) {
             hotbar.setItemStackForSlot(SLOT_STATS, new ItemStack(ITEM_STATS, 1), false);
+        }
+        if (SLOT_JOIN >= 0 && SLOT_JOIN < capacity) {
+            hotbar.setItemStackForSlot(SLOT_JOIN, new ItemStack(ITEM_JOIN, 1), false);
+        }
+        if (SLOT_LEAVE >= 0 && SLOT_LEAVE < capacity) {
+            hotbar.setItemStackForSlot(SLOT_LEAVE, new ItemStack(ITEM_LEAVE, 1), false);
         }
         if (SLOT_GAME_SELECTOR >= 0 && SLOT_GAME_SELECTOR < capacity) {
             hotbar.setItemStackForSlot(SLOT_GAME_SELECTOR,

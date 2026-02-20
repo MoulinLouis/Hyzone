@@ -16,7 +16,7 @@ public final class ParkourConstants {
     public static final String ITEM_MENU = "Ingredient_Bolt_Prismaloom";
     public static final String ITEM_LEADERBOARD = "WinterHoliday_Snowflake";
     public static final String ITEM_STATS = "Food_Candy_Cane";
-    public static final String ITEM_TOGGLE_FLY = "Ingredient_Earth_Essence";
+    public static final String ITEM_TOGGLE_FLY = "Parkour_Toggle_Fly_Block";
     public static final String ITEM_ADMIN_REMOTE = "Recipe_Book_Magic_Air";
     public static final String ITEM_HUB_MENU = WorldConstants.ITEM_SERVER_SELECTOR;
     public static final String ITEM_RUN_MITHRIL_SWORD = "Weapon_Sword_Mithril";
