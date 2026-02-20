@@ -54,6 +54,10 @@ public class HubRouter {
         routeToWorld(playerRef, WorldConstants.WORLD_PURGE);
     }
 
+    public void routeToRunOrFall(PlayerRef playerRef) {
+        routeToWorld(playerRef, WorldConstants.WORLD_RUN_OR_FALL);
+    }
+
     private void routeToWorld(PlayerRef playerRef, String targetWorldName) {
         Ref<EntityStore> ref = playerRef.getReference();
         if (ref == null || !ref.isValid()) {
