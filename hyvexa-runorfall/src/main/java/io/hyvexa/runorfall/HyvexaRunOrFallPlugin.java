@@ -41,7 +41,6 @@ import java.util.UUID;
 
 public class HyvexaRunOrFallPlugin extends JavaPlugin {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final String PREFIX = "[RunOrFall] ";
     private static final String ITEM_JOIN = "Ingredient_Life_Essence";
     private static final String ITEM_LEAVE = "Ingredient_Earth_Essence";
     private static final String ITEM_STATS = "Food_Candy_Cane";
@@ -124,8 +123,6 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
             }
             attachRunOrFallHud(playerRef, player);
             refreshRunOrFallHotbar(playerRef.getUuid());
-            player.sendMessage(com.hypixel.hytale.server.core.Message.raw(
-                    PREFIX + "Use /rof join to enter lobby. Admin setup: /rof admin"));
         });
 
         this.getEventRegistry().registerGlobal(AddPlayerToWorldEvent.class, event -> {
