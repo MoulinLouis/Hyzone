@@ -6,11 +6,17 @@ import com.hypixel.hytale.server.core.entity.entities.player.hud.CustomUIHud;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 
 import java.lang.reflect.Method;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Bridge to MultipleHUD plugin. When MultipleHUD is present, routes HUD
  * registration through its API so multiple plugins' HUDs coexist (e.g. Hyguns ammo + Hyvexa).
  * Falls back to direct {@code player.getHudManager().setCustomHud()} when not available.
+ *
+ * <p>Caches the last-known composite HUD per player so it can be restored after
+ * world transitions (the engine resets the player's custom HUD on teleport, which
+ * would otherwise discard other plugins' HUD slots like Hyguns).
  */
 public final class MultiHudBridge {
 
@@ -28,6 +34,14 @@ public final class MultiHudBridge {
     // MultipleCustomUIHud class and get(String) method for skip-if-same optimization
     private static Class<?> multipleCustomUIHudClass;
     private static Method getHudMethod;
+
+    /**
+     * Cache of the last-known MultipleCustomUIHud composite per player UUID.
+     * When the engine clears the HUD on world switch, we restore this composite
+     * so MultipleHUD.setCustomHud sees an existing composite and preserves all keys
+     * (including Hyguns) instead of creating a fresh one.
+     */
+    private static final ConcurrentHashMap<UUID, CustomUIHud> compositeCache = new ConcurrentHashMap<>();
 
     private MultiHudBridge() {
     }
@@ -82,8 +96,9 @@ public final class MultiHudBridge {
         init();
         if (available) {
             try {
-                // Skip if the composite already has our exact HUD object registered
                 CustomUIHud current = player.getHudManager().getCustomHud();
+
+                // Skip if the composite already has our exact HUD object registered
                 if (current != null && multipleCustomUIHudClass.isInstance(current)) {
                     Object existing = getHudMethod.invoke(current, KEY);
                     if (existing == hud) {
@@ -91,8 +106,29 @@ public final class MultiHudBridge {
                     }
                 }
 
+                // After a world switch the engine resets the player's custom HUD,
+                // so the composite (with Hyguns etc.) is gone. Restore the cached
+                // composite first so MultipleHUD sees it and just updates our key
+                // instead of creating a brand-new composite without Hyguns.
+                UUID playerId = playerRef.getUuid();
+                if (playerId != null
+                        && (current == null || !multipleCustomUIHudClass.isInstance(current))) {
+                    CustomUIHud cached = compositeCache.get(playerId);
+                    if (cached != null && multipleCustomUIHudClass.isInstance(cached)) {
+                        player.getHudManager().setCustomHud(playerRef, cached);
+                    }
+                }
+
                 Object instance = getInstanceMethod.invoke(null);
                 setCustomHudMethod.invoke(instance, player, playerRef, KEY, hud);
+
+                // Cache the (possibly new) composite for future world transitions
+                if (playerId != null) {
+                    CustomUIHud afterSet = player.getHudManager().getCustomHud();
+                    if (afterSet != null && multipleCustomUIHudClass.isInstance(afterSet)) {
+                        compositeCache.put(playerId, afterSet);
+                    }
+                }
                 return;
             } catch (Exception e) {
                 LOGGER.atWarning().log("MultipleHUD call failed, falling back to direct HUD: " + e.getMessage());
@@ -108,6 +144,15 @@ public final class MultiHudBridge {
     public static void showIfNeeded(CustomUIHud hud) {
         if (!available) {
             hud.show();
+        }
+    }
+
+    /**
+     * Evicts cached composite for a disconnecting player to prevent memory leaks.
+     */
+    public static void evictPlayer(UUID playerId) {
+        if (playerId != null) {
+            compositeCache.remove(playerId);
         }
     }
 }

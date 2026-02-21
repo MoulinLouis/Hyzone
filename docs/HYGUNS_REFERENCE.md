@@ -30,7 +30,7 @@ Modpack location: `run/mods/Hyguns/` | Plugin: `HygunsPlugin-3.0.0.jar` | Depend
 
 ## Custom Interactions (Hyguns API)
 
-Deux interactions custom pour creer des armes : `Hyguns_Shoot` et `Hyguns_Reload`.
+Two custom interactions for creating weapons: `Hyguns_Shoot` and `Hyguns_Reload`.
 
 ### Hyguns_Shoot (Primary fire)
 ```json
@@ -43,14 +43,14 @@ Deux interactions custom pour creer des armes : `Hyguns_Shoot` et `Hyguns_Reload
 "Cooldown": { "Cooldown": 0.1 }
 ```
 
-| Champ | Description |
+| Field | Description |
 |-------|-------------|
-| `Hyguns_Damage` | Degats par projectile |
-| `Hyguns_NumProjectiles` | Nombre de projectiles par tir (1 = normal, 20 = shotgun) |
-| `Hyguns_Spread` | Dispersion (0 = parfaitement droit, 0.12 = shotgun) |
-| `Hyguns_MaxAmmo` | Taille du chargeur |
-| `Hyguns_ProjectileConfigId` | Config projectile : `Hyguns_Projectile_Config_Bullet` (builtin, pas de fichier) |
-| `Hyguns_ProjectileId` | Alternative : projectile entity custom (ex: `Flamethrower_Projectile`) |
+| `Hyguns_Damage` | Damage per projectile |
+| `Hyguns_NumProjectiles` | Number of projectiles per shot (1 = normal, 20 = shotgun) |
+| `Hyguns_Spread` | Spread (0 = perfectly straight, 0.12 = shotgun) |
+| `Hyguns_MaxAmmo` | Magazine size |
+| `Hyguns_ProjectileConfigId` | Projectile config: `Hyguns_Projectile_Config_Bullet` (built-in, no file needed) |
+| `Hyguns_ProjectileId` | Alternative: custom projectile entity (e.g., `Flamethrower_Projectile`) |
 
 ### Hyguns_Reload
 ```json
@@ -61,37 +61,37 @@ Deux interactions custom pour creer des armes : `Hyguns_Shoot` et `Hyguns_Reload
 "Hyguns_AmmoItemType": "Bullet"
 ```
 
-| Champ | Description |
+| Field | Description |
 |-------|-------------|
-| `Hyguns_ReloadAmountPerInteraction` | Munitions restaurees par reload |
-| `Hyguns_MaxAmmo` | Doit matcher la valeur dans Hyguns_Shoot |
-| `Hyguns_ReloadTime` | Duree du reload en secondes |
-| `Hyguns_AmmoItemType` | Item consomme (`Bullet` ou `Fuel_Tank`) |
+| `Hyguns_ReloadAmountPerInteraction` | Ammo restored per reload |
+| `Hyguns_MaxAmmo` | Must match the value in Hyguns_Shoot |
+| `Hyguns_ReloadTime` | Reload duration in seconds |
+| `Hyguns_AmmoItemType` | Item consumed (`Bullet` or `Fuel_Tank`) |
 
-### Shoot Fail (clip vide)
-Reference `Gun_Shoot_Fail` ou `Flamethrower_Shoot_Fail` dans le champ `FailInteractionId`.
+### Shoot Fail (empty clip)
+Reference `Gun_Shoot_Fail` or `Flamethrower_Shoot_Fail` in the `FailInteractionId` field.
 
-## Customisation possible via JSON
+## JSON Customization
 
-### Creer une arme custom
-1. Copier un item JSON existant depuis `run/mods/Hyguns/Server/Item/Items/` (ex: `AK47.json`)
-2. Modifier les stats (damage, fire rate, ammo, etc.)
-3. Changer le modele/texture dans `Common/Items/Weapons/`
-4. Optionnel : creer un son custom dans `Common/Sounds/` + sound event dans `Server/Audio/SoundEvents/`
-5. Le plugin fournit aussi 4 templates d'armes dans l'asset editor
+### Creating a custom weapon
+1. Copy an existing item JSON from `run/mods/Hyguns/Server/Item/Items/` (e.g., `AK47.json`)
+2. Modify the stats (damage, fire rate, ammo, etc.)
+3. Change the model/texture in `Common/Items/Weapons/`
+4. Optional: create a custom sound in `Common/Sounds/` + sound event in `Server/Audio/SoundEvents/`
+5. The plugin also provides 4 weapon templates in the asset editor
 
-### Ce qu'on peut changer sans toucher au plugin
-- **Stats de combat** : damage, fire rate, spread, mag size, reload time
-- **Visuels** : modele .blockymodel, texture .png (le DesertEagle a deja 3 skins: default, Gold, Ivory)
-- **Sons** : fire/reload/equip sounds (sound events JSON + fichiers .ogg)
-- **Camera** : shake intensity par arme (CameraEffect JSON)
-- **Particules** : systeme de particules au tir (muzzle flash, fumee, douilles)
-- **Projectiles** : vitesse, gravite, explosion radius/damage/falloff (pour Frag/Flamethrower)
-- **Animations** : chaque arme reference un set d'anims (.blockyanim), certains sont custom (Flamethrower, DesertEagle, Barret50, Mac10)
-- **Recettes craft** : via le champ `Recipe` dans l'item JSON
-- **Qualite/Rarete** : champ `Quality` (Common/Uncommon/Rare/Epic)
+### What can be changed without modifying the plugin
+- **Combat stats**: damage, fire rate, spread, mag size, reload time
+- **Visuals**: model .blockymodel, texture .png (the DesertEagle already has 3 skins: default, Gold, Ivory)
+- **Sounds**: fire/reload/equip sounds (sound event JSONs + .ogg files)
+- **Camera**: shake intensity per weapon (CameraEffect JSON)
+- **Particles**: particle systems on fire (muzzle flash, smoke, shell casings)
+- **Projectiles**: speed, gravity, explosion radius/damage/falloff (for Frag/Flamethrower)
+- **Animations**: each weapon references an animation set (.blockyanim), some are custom (Flamethrower, DesertEagle, Barret50, Mac10)
+- **Crafting recipes**: via the `Recipe` field in the item JSON
+- **Quality/Rarity**: `Quality` field (Common/Uncommon/Rare/Epic)
 
-### Scoping / Zoom (Barret .50 uniquement)
+### Scoping / Zoom (Barret .50 only)
 ```json
 "Secondary": {
   "Type": "Scope_Zoom",
@@ -103,32 +103,32 @@ Reference `Gun_Shoot_Fail` ou `Flamethrower_Shoot_Fail` dans le champ `FailInter
   "ZoomMultiplierStep": 1.0
 }
 ```
-Peut etre ajoute a n'importe quelle arme. `Ability1`/`Ability2` pour zoom in/out.
+Can be added to any weapon. `Ability1`/`Ability2` for zoom in/out.
 
-## Frag Grenade (detail)
+## Frag Grenade (details)
 
-- **Fuse** : 4.5s apres lancer (ou impact)
-- **Explosion** : 50 dmg, rayon 7, falloff 0.6
-- **Physique** : gravite 20, 3 rebonds, bounciness 0.5, rolling
-- **Note** : sons actuellement mutes (`AudioCat_Frag` volume: 0)
+- **Fuse**: 4.5s after throw (or on impact)
+- **Explosion**: 50 dmg, radius 7, falloff 0.6
+- **Physics**: gravity 20, 3 bounces, bounciness 0.5, rolling
+- **Note**: sounds are currently muted (`AudioCat_Frag` volume: 0)
 
-## Flamethrower (detail)
+## Flamethrower (details)
 
-- Tire des entites `Flamethrower_Projectile` (pas un raycast)
-- Damage direct: 0 — applique `Lava_Burn` (DoT) au contact
-- Vitesse projectile: 50, gravite: 5, rayon explosion: 4
-- Particule attachee : `FlamethrowerShooting` (fumee + etincelles)
-- Idle : particule `Torch_Fire` sur le noeud `Flame` (scale 0.15)
+- Fires `Flamethrower_Projectile` entities (not a raycast)
+- Direct damage: 0 — applies `Lava_Burn` (DoT) on contact
+- Projectile speed: 50, gravity: 5, explosion radius: 4
+- Attached particle: `FlamethrowerShooting` (smoke + sparks)
+- Idle: `Torch_Fire` particle on the `Flame` node (scale 0.15)
 
 ## Projectile Configs
 
-| Config | Usage | Vitesse | Gravite | Explosion |
-|--------|-------|---------|---------|-----------|
-| `Hyguns_Projectile_Config_Bullet` | Toutes les armes a feu | builtin | builtin | non |
-| `Flamethrower` | Flamethrower | 50 | 5 | oui (rayon 4, 10 dmg) |
-| `Frag` | Grenade | force 25 | 20 | oui (rayon 7, 50 dmg) |
+| Config | Usage | Speed | Gravity | Explosion |
+|--------|-------|-------|---------|-----------|
+| `Hyguns_Projectile_Config_Bullet` | All firearms | built-in | built-in | no |
+| `Flamethrower` | Flamethrower | 50 | 5 | yes (radius 4, 10 dmg) |
+| `Frag` | Grenade | force 25 | 20 | yes (radius 7, 50 dmg) |
 
-## Structure des fichiers
+## File Structure
 
 ```
 run/mods/Hyguns/
@@ -161,11 +161,11 @@ run/mods/Hyguns/
 
 ## HUD (ammo display)
 
-- Le plugin gere un HUD ammo via `AmmoUI` (element `#AmmoValue`)
-- Utilise MultipleHUD pour coexister avec d'autres HUDs custom
-- Notre `MultiHudBridge` assure la compatibilite
+- The plugin manages an ammo HUD via `AmmoUI` (element `#AmmoValue`)
+- Uses MultipleHUD to coexist with other custom HUDs
+- Our `MultiHudBridge` ensures compatibility
 
-## Item JSON Structure (exemple AK-47)
+## Item JSON Structure (AK-47 example)
 
 ```json
 {

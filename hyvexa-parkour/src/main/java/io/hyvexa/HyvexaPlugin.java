@@ -316,13 +316,13 @@ public class HyvexaPlugin extends JavaPlugin {
                     Store<EntityStore> store = ref.getStore();
                     Player player = store.getComponent(ref, Player.getComponentType());
                     PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-                    if (player != null && playerRef != null) {
+                    boolean parkourWorld = playerRef != null && shouldApplyParkourMode(playerRef, store);
+                    // Only modify HUD state on Parkour world to avoid racing MultipleHUD composite rebuild
+                    if (parkourWorld && player != null && playerRef != null) {
                         player.getHudManager().hideHudComponents(playerRef, HudComponent.Compass);
-                    }
-                    if (playerRef != null && shouldApplyParkourMode(playerRef, store)) {
                         hudManager.ensureRunHud(playerRef);
                     }
-                    // Check for pending Discord link vexa reward
+                    // Check for pending Discord link vexa reward (runs on any world)
                     if (player != null && playerRef != null) {
                         try {
                             DiscordLinkStore.getInstance().checkAndRewardVexa(playerRef.getUuid(), player);
@@ -330,30 +330,34 @@ public class HyvexaPlugin extends JavaPlugin {
                             LOGGER.atWarning().withCause(e).log("Discord link check failed");
                         }
                         // Sync parkour rank to Discord (if linked)
-                        try {
-                            if (DiscordLinkStore.getInstance().isLinked(playerRef.getUuid())) {
-                                MapStore ms = HyvexaPlugin.getInstance().getMapStore();
-                                ProgressStore ps = HyvexaPlugin.getInstance().getProgressStore();
-                                if (ms != null && ps != null) {
-                                    String rank = ps.getRankName(playerRef.getUuid(), ms);
-                                    DiscordLinkStore.getInstance().updateRank(playerRef.getUuid(), rank);
+                        if (parkourWorld) {
+                            try {
+                                if (DiscordLinkStore.getInstance().isLinked(playerRef.getUuid())) {
+                                    MapStore ms = HyvexaPlugin.getInstance().getMapStore();
+                                    ProgressStore ps = HyvexaPlugin.getInstance().getProgressStore();
+                                    if (ms != null && ps != null) {
+                                        String rank = ps.getRankName(playerRef.getUuid(), ms);
+                                        DiscordLinkStore.getInstance().updateRank(playerRef.getUuid(), rank);
+                                    }
                                 }
+                            } catch (Exception e) {
+                                LOGGER.atWarning().withCause(e).log("Discord rank sync failed");
+                            }
+                        }
+                    }
+                    // Re-apply equipped cosmetic on login (parkour world only)
+                    if (parkourWorld) {
+                        try {
+                            if (cosmeticManager != null) {
+                                cosmeticManager.reapplyOnLogin(ref, store);
                             }
                         } catch (Exception e) {
-                            LOGGER.atWarning().withCause(e).log("Discord rank sync failed");
+                            LOGGER.atWarning().withCause(e).log("Cosmetic reapply on login failed");
                         }
-                    }
-                    // Re-apply equipped cosmetic on login
-                    try {
-                        if (cosmeticManager != null) {
-                            cosmeticManager.reapplyOnLogin(ref, store);
+                        // Hide all existing ghost NPCs from the newly connected player
+                        if (ghostNpcManager != null && playerRef != null) {
+                            ghostNpcManager.hideGhostsFromPlayer(playerRef.getUuid());
                         }
-                    } catch (Exception e) {
-                        LOGGER.atWarning().withCause(e).log("Cosmetic reapply on login failed");
-                    }
-                    // Hide all existing ghost NPCs from the newly connected player
-                    if (ghostNpcManager != null && playerRef != null) {
-                        ghostNpcManager.hideGhostsFromPlayer(playerRef.getUuid());
                     }
                 }
             } catch (Exception e) {
