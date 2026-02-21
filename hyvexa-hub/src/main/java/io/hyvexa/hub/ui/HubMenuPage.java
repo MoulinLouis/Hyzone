@@ -69,15 +69,23 @@ public class HubMenuPage extends InteractiveCustomUIPage<ButtonEventData> {
     public void build(@Nonnull Ref<EntityStore> ref, @Nonnull UICommandBuilder uiCommandBuilder,
                       @Nonnull UIEventBuilder uiEventBuilder, @Nonnull Store<EntityStore> store) {
         uiCommandBuilder.append("Pages/Hub_Menu.ui");
+        Player player = store.getComponent(ref, Player.getComponentType());
+        boolean showStaffModes = PermissionUtils.isOp(player);
+
+        uiCommandBuilder.set("#BottomModeRow.Visible", showStaffModes);
+        uiCommandBuilder.set("#PurgeCard.Visible", showStaffModes);
+        uiCommandBuilder.set("#RunOrFallCard.Visible", showStaffModes);
 
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ParkourButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_PARKOUR), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#AscendButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_ASCEND), false);
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#PurgeButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_PURGE), false);
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#RunOrFallButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_RUN_OR_FALL), false);
+        if (showStaffModes) {
+            uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#PurgeButton",
+                    EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_PURGE), false);
+            uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#RunOrFallButton",
+                    EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_RUN_OR_FALL), false);
+        }
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#DiscordBannerButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_DISCORD), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#StoreBannerButton",
