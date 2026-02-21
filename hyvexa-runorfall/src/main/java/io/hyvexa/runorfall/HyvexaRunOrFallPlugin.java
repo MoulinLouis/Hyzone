@@ -28,7 +28,6 @@ import io.hyvexa.runorfall.hud.RunOrFallHud;
 import io.hyvexa.runorfall.interaction.RunOrFallJoinInteraction;
 import io.hyvexa.runorfall.interaction.RunOrFallStatsInteraction;
 import io.hyvexa.runorfall.manager.RunOrFallConfigStore;
-import io.hyvexa.runorfall.manager.RunOrFallCoinStore;
 import io.hyvexa.runorfall.manager.RunOrFallGameManager;
 import io.hyvexa.runorfall.manager.RunOrFallStatsStore;
 
@@ -97,11 +96,6 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
             VexaStore.getInstance().initialize();
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("RunOrFall VexaStore initialization failed.");
-        }
-        try {
-            RunOrFallCoinStore.getInstance().initialize();
-        } catch (Exception e) {
-            LOGGER.atWarning().withCause(e).log("RunOrFall coin store initialization failed.");
         }
 
         configStore = new RunOrFallConfigStore(new File(folder, "config.json"));
@@ -172,7 +166,6 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
             gameManager.handleDisconnect(playerId);
             runOrFallHuds.remove(playerId);
             VexaStore.getInstance().evictPlayer(playerId);
-            RunOrFallCoinStore.getInstance().evictPlayer(playerId);
         });
 
         hudUpdateTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(
@@ -283,7 +276,6 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
         MultiHudBridge.showIfNeeded(hud);
         hud.updatePlayerCount();
         hud.updateVexa(VexaStore.getInstance().getVexa(playerId));
-        hud.updateCoins(RunOrFallCoinStore.getInstance().getCoins(playerId));
     }
 
     private void tickHudUpdates() {
@@ -308,20 +300,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
             RunOrFallHud hud = entry.getValue();
             hud.updatePlayerCount();
             hud.updateVexa(VexaStore.getInstance().getVexa(playerId));
-            hud.updateCoins(RunOrFallCoinStore.getInstance().getCoins(playerId));
         }
-    }
-
-    public void refreshRunOrFallHudEconomy(UUID playerId) {
-        if (playerId == null) {
-            return;
-        }
-        RunOrFallHud hud = runOrFallHuds.get(playerId);
-        if (hud == null) {
-            return;
-        }
-        hud.updateVexa(VexaStore.getInstance().getVexa(playerId));
-        hud.updateCoins(RunOrFallCoinStore.getInstance().getCoins(playerId));
     }
 
     @Override
