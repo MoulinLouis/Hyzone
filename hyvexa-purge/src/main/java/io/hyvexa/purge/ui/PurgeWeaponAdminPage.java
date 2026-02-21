@@ -29,6 +29,10 @@ public class PurgeWeaponAdminPage extends InteractiveCustomUIPage<PurgeWeaponAdm
     private static final String BUTTON_RESET = "Reset";
     private static final String BUTTON_ADJ_DMG_PREFIX = "AdjDmg:";
     private static final String BUTTON_ADJ_COST_PREFIX = "AdjCost:";
+    private static final String BUTTON_TOGGLE_DEFAULT = "ToggleDefault";
+    private static final String BUTTON_TOGGLE_SESSION = "ToggleSession";
+    private static final String BUTTON_UNLOCK_COST_MINUS = "UnlockCostMinus";
+    private static final String BUTTON_UNLOCK_COST_PLUS = "UnlockCostPlus";
 
     private final String weaponId;
     private final PurgeWeaponConfigManager weaponConfigManager;
@@ -61,6 +65,7 @@ public class PurgeWeaponAdminPage extends InteractiveCustomUIPage<PurgeWeaponAdm
                 displayName + " -- " + levelCount + " levels (0 to " + maxStars + " stars)");
 
         bindStaticEvents(uiEventBuilder);
+        populateLoadoutConfig(uiCommandBuilder);
         buildLevelList(uiCommandBuilder, uiEventBuilder);
     }
 
@@ -88,6 +93,24 @@ public class PurgeWeaponAdminPage extends InteractiveCustomUIPage<PurgeWeaponAdm
         }
         if (button.startsWith(BUTTON_ADJ_COST_PREFIX)) {
             handleAdjustCost(button.substring(BUTTON_ADJ_COST_PREFIX.length()));
+            return;
+        }
+        if (BUTTON_TOGGLE_DEFAULT.equals(button)) {
+            handleToggleDefault();
+            return;
+        }
+        if (BUTTON_TOGGLE_SESSION.equals(button)) {
+            handleToggleSession();
+            return;
+        }
+        if (BUTTON_UNLOCK_COST_MINUS.equals(button)) {
+            weaponConfigManager.adjustUnlockCost(weaponId, -50);
+            sendRefresh();
+            return;
+        }
+        if (BUTTON_UNLOCK_COST_PLUS.equals(button)) {
+            weaponConfigManager.adjustUnlockCost(weaponId, 50);
+            sendRefresh();
         }
     }
 
@@ -130,6 +153,17 @@ public class PurgeWeaponAdminPage extends InteractiveCustomUIPage<PurgeWeaponAdm
         sendRefresh();
     }
 
+    private void handleToggleDefault() {
+        boolean current = weaponConfigManager.isDefaultUnlocked(weaponId);
+        weaponConfigManager.setDefaultUnlocked(weaponId, !current);
+        sendRefresh();
+    }
+
+    private void handleToggleSession() {
+        weaponConfigManager.setSessionWeapon(weaponId);
+        sendRefresh();
+    }
+
     private void openWeaponSelect(Ref<EntityStore> ref, Store<EntityStore> store) {
         Player player = store.getComponent(ref, Player.getComponentType());
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
@@ -145,8 +179,20 @@ public class PurgeWeaponAdminPage extends InteractiveCustomUIPage<PurgeWeaponAdm
         UICommandBuilder commandBuilder = new UICommandBuilder();
         UIEventBuilder eventBuilder = new UIEventBuilder();
         bindStaticEvents(eventBuilder);
+        populateLoadoutConfig(commandBuilder);
         buildLevelList(commandBuilder, eventBuilder);
         this.sendUpdate(commandBuilder, eventBuilder, false);
+    }
+
+    private void populateLoadoutConfig(UICommandBuilder commandBuilder) {
+        boolean isDefault = weaponConfigManager.isDefaultUnlocked(weaponId);
+        commandBuilder.set("#DefaultToggle.Text", isDefault ? "DEFAULT: ON" : "DEFAULT: OFF");
+
+        boolean isSession = weaponConfigManager.isSessionWeapon(weaponId);
+        commandBuilder.set("#SessionToggle.Text", isSession ? "SESSION WPN: ON" : "SESSION WPN: OFF");
+
+        long unlockCost = weaponConfigManager.getUnlockCost(weaponId);
+        commandBuilder.set("#UnlockCostValue.Text", String.valueOf(unlockCost));
     }
 
     private void bindStaticEvents(UIEventBuilder uiEventBuilder) {
@@ -154,6 +200,14 @@ public class PurgeWeaponAdminPage extends InteractiveCustomUIPage<PurgeWeaponAdm
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_BACK), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ResetButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_RESET), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#DefaultToggle",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TOGGLE_DEFAULT), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SessionToggle",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TOGGLE_SESSION), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#UnlockCostMinus",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_UNLOCK_COST_MINUS), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#UnlockCostPlus",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_UNLOCK_COST_PLUS), false);
     }
 
     private void buildLevelList(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {

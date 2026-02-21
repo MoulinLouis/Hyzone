@@ -8,8 +8,10 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,6 +29,11 @@ public class PurgeWeaponConfigManager {
     private final ConcurrentHashMap<String, List<WeaponLevelEntry>> cache = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Map<Integer, WeaponLevelEntry>> cacheByLevel = new ConcurrentHashMap<>();
 
+    // Weapon defaults (ownership config)
+    private final Set<String> defaultUnlocked = Collections.synchronizedSet(new HashSet<>());
+    private final ConcurrentHashMap<String, Long> unlockCosts = new ConcurrentHashMap<>();
+    private volatile String sessionWeaponId = "AK47";
+
     public record WeaponLevelEntry(int level, int damage, long cost) {}
 
     private record WeaponDefaults(String displayName, List<WeaponLevelEntry> levels) {}
@@ -35,8 +42,11 @@ public class PurgeWeaponConfigManager {
 
     public PurgeWeaponConfigManager() {
         createTable();
+        createDefaultsTable();
         seedDefaults();
+        seedWeaponDefaults();
         loadAll();
+        loadWeaponDefaults();
     }
 
     public int getMaxLevel() {
@@ -84,6 +94,96 @@ public class PurgeWeaponConfigManager {
             return String.valueOf(level / 2);
         }
         return level / 2 + ".5";
+    }
+
+    // --- Weapon ownership config methods ---
+
+    public boolean isDefaultUnlocked(String weaponId) {
+        return defaultUnlocked.contains(weaponId);
+    }
+
+    public void setDefaultUnlocked(String weaponId, boolean val) {
+        if (val) {
+            defaultUnlocked.add(weaponId);
+        } else {
+            defaultUnlocked.remove(weaponId);
+        }
+        if (isPersistenceAvailable()) {
+            String sql = "UPDATE purge_weapon_defaults SET default_unlocked = ? WHERE weapon_id = ?";
+            try (Connection conn = DatabaseManager.getInstance().getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setBoolean(1, val);
+                stmt.setString(2, weaponId);
+                stmt.executeUpdate();
+            } catch (SQLException e) {
+                LOGGER.atWarning().withCause(e).log("Failed to update default_unlocked for " + weaponId);
+            }
+        }
+    }
+
+    public long getUnlockCost(String weaponId) {
+        return unlockCosts.getOrDefault(weaponId, 500L);
+    }
+
+    public void adjustUnlockCost(String weaponId, long delta) {
+        if (delta == 0) {
+            return;
+        }
+        long current = getUnlockCost(weaponId);
+        long newCost = Math.max(0, current + delta);
+        unlockCosts.put(weaponId, newCost);
+        if (isPersistenceAvailable()) {
+            String sql = "UPDATE purge_weapon_defaults SET unlock_cost = ? WHERE weapon_id = ?";
+            try (Connection conn = DatabaseManager.getInstance().getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setLong(1, newCost);
+                stmt.setString(2, weaponId);
+                stmt.executeUpdate();
+            } catch (SQLException e) {
+                LOGGER.atWarning().withCause(e).log("Failed to update unlock_cost for " + weaponId);
+            }
+        }
+    }
+
+    public String getSessionWeaponId() {
+        return sessionWeaponId;
+    }
+
+    public void setSessionWeapon(String weaponId) {
+        String previousId = this.sessionWeaponId;
+        this.sessionWeaponId = weaponId;
+        if (isPersistenceAvailable()) {
+            try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+                // Unset previous
+                if (previousId != null && !previousId.equals(weaponId)) {
+                    try (PreparedStatement stmt = conn.prepareStatement(
+                            "UPDATE purge_weapon_defaults SET session_weapon = FALSE WHERE weapon_id = ?")) {
+                        DatabaseManager.applyQueryTimeout(stmt);
+                        stmt.setString(1, previousId);
+                        stmt.executeUpdate();
+                    }
+                }
+                // Set new
+                try (PreparedStatement stmt = conn.prepareStatement(
+                        "UPDATE purge_weapon_defaults SET session_weapon = TRUE WHERE weapon_id = ?")) {
+                    DatabaseManager.applyQueryTimeout(stmt);
+                    stmt.setString(1, weaponId);
+                    stmt.executeUpdate();
+                }
+            } catch (SQLException e) {
+                LOGGER.atWarning().withCause(e).log("Failed to update session weapon to " + weaponId);
+            }
+        }
+    }
+
+    public Set<String> getDefaultWeaponIds() {
+        return Set.copyOf(defaultUnlocked);
+    }
+
+    public boolean isSessionWeapon(String weaponId) {
+        return weaponId != null && weaponId.equals(sessionWeaponId);
     }
 
     public boolean setDamage(String weaponId, int level, int damage) {
@@ -338,6 +438,102 @@ public class PurgeWeaponConfigManager {
             levels.add(new WeaponLevelEntry(level, damagesByLevel[level], DEFAULT_COSTS[level]));
         }
         return new WeaponDefaults(displayName, List.copyOf(levels));
+    }
+
+    private void createDefaultsTable() {
+        if (!isPersistenceAvailable()) {
+            return;
+        }
+        String sql = "CREATE TABLE IF NOT EXISTS purge_weapon_defaults ("
+                + "weapon_id VARCHAR(32) NOT NULL PRIMARY KEY, "
+                + "default_unlocked BOOLEAN NOT NULL DEFAULT FALSE, "
+                + "unlock_cost BIGINT NOT NULL DEFAULT 500, "
+                + "session_weapon BOOLEAN NOT NULL DEFAULT FALSE"
+                + ") ENGINE=InnoDB";
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            LOGGER.atSevere().withCause(e).log("Failed to create purge_weapon_defaults table");
+        }
+    }
+
+    private void seedWeaponDefaults() {
+        if (!isPersistenceAvailable()) {
+            return;
+        }
+        // Seed all weapons with defaults, then ensure AK47 is default+session
+        String insertSql = "INSERT IGNORE INTO purge_weapon_defaults (weapon_id, default_unlocked, unlock_cost, session_weapon) VALUES (?, FALSE, 500, FALSE)";
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(insertSql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            for (String weaponId : DEFAULT_WEAPONS.keySet()) {
+                stmt.setString(1, weaponId);
+                stmt.addBatch();
+            }
+            stmt.executeBatch();
+        } catch (SQLException e) {
+            LOGGER.atWarning().withCause(e).log("Failed to seed weapon defaults");
+            return;
+        }
+        // Ensure AK47 is default unlocked and session weapon (only if no session weapon set)
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            // Check if any session weapon is already set
+            try (PreparedStatement check = conn.prepareStatement(
+                    "SELECT COUNT(*) FROM purge_weapon_defaults WHERE session_weapon = TRUE")) {
+                DatabaseManager.applyQueryTimeout(check);
+                try (ResultSet rs = check.executeQuery()) {
+                    if (rs.next() && rs.getInt(1) == 0) {
+                        // No session weapon set, default AK47
+                        try (PreparedStatement update = conn.prepareStatement(
+                                "UPDATE purge_weapon_defaults SET default_unlocked = TRUE, session_weapon = TRUE WHERE weapon_id = 'AK47'")) {
+                            DatabaseManager.applyQueryTimeout(update);
+                            update.executeUpdate();
+                        }
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.atWarning().withCause(e).log("Failed to set AK47 as default session weapon");
+        }
+    }
+
+    private void loadWeaponDefaults() {
+        defaultUnlocked.clear();
+        unlockCosts.clear();
+        sessionWeaponId = "AK47";
+
+        if (!isPersistenceAvailable()) {
+            // Fallback: AK47 default unlocked
+            defaultUnlocked.add("AK47");
+            for (String weaponId : DEFAULT_WEAPONS.keySet()) {
+                unlockCosts.put(weaponId, 500L);
+            }
+            return;
+        }
+
+        String sql = "SELECT weapon_id, default_unlocked, unlock_cost, session_weapon FROM purge_weapon_defaults";
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    String weaponId = rs.getString("weapon_id");
+                    if (rs.getBoolean("default_unlocked")) {
+                        defaultUnlocked.add(weaponId);
+                    }
+                    unlockCosts.put(weaponId, rs.getLong("unlock_cost"));
+                    if (rs.getBoolean("session_weapon")) {
+                        sessionWeaponId = weaponId;
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.atWarning().withCause(e).log("Failed to load weapon defaults");
+            defaultUnlocked.add("AK47");
+        }
+        LOGGER.atInfo().log("Loaded weapon defaults: " + defaultUnlocked.size() + " default unlocked, session weapon: " + sessionWeaponId);
     }
 
     private void cacheWeaponLevels(String weaponId, List<WeaponLevelEntry> levels) {

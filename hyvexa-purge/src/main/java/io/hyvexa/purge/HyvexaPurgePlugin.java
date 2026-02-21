@@ -51,7 +51,6 @@ public class HyvexaPurgePlugin extends JavaPlugin {
     private static final String ITEM_ORB_BLUE = "Purge_Orb_Blue";
     private static final String ITEM_ORB_ORANGE = "Purge_Orb_Orange";
     private static final String ITEM_ORB_RED = "Purge_Orb_Red";
-    private static final String ITEM_AK47 = "AK47";
     private static final String ITEM_BULLET = "Bullet";
     private static final int STARTING_BULLET_COUNT = 120;
     private static final short SLOT_ORB_BLUE = 0;
@@ -163,6 +162,9 @@ public class HyvexaPurgePlugin extends JavaPlugin {
             // Base idle loadout in Purge world.
             InventoryUtils.clearAllContainers(player);
             giveBaseLoadout(player, true);
+            // Initialize default weapons for this player
+            PurgeWeaponUpgradeStore.getInstance().initializeDefaults(
+                    playerId, weaponConfigManager.getDefaultWeaponIds());
             LOGGER.atInfo().log("Player entered Purge: " + (playerId != null ? playerId : "unknown"));
             try {
                 DiscordLinkStore.getInstance().checkAndRewardGems(playerId, player);
@@ -301,7 +303,8 @@ public class HyvexaPurgePlugin extends JavaPlugin {
         if (inventory == null || inventory.getHotbar() == null) {
             return;
         }
-        inventory.getHotbar().setItemStackForSlot(SLOT_PRIMARY_WEAPON, new ItemStack(ITEM_AK47, 1), false);
+        String weaponItem = weaponConfigManager.getSessionWeaponId();
+        inventory.getHotbar().setItemStackForSlot(SLOT_PRIMARY_WEAPON, new ItemStack(weaponItem, 1), false);
     }
 
     private void giveStartingAmmo(Player player) {

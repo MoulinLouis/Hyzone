@@ -81,6 +81,22 @@ Group {
     }
   }
 
+  // LOCKED label (shown instead of star bar for unowned weapons in LOADOUT mode)
+  Label #LockedLabel {
+    Anchor: (Left: 0, Right: 0, Bottom: 0, Height: 28);
+    Style: (FontSize: 11, TextColor: #8b9bb0, HorizontalAlignment: Center, VerticalAlignment: Center, RenderBold: true);
+    Text: "LOCKED";
+    Visible: false;
+  }
+
+  // Dim overlay for locked weapons
+  Group #LockedOverlay {
+    Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+    Background: #000000(0.4);
+    Visible: false;
+    HitTestVisible: false;
+  }
+
   // Selection highlight overlay (toggled from Java)
   Group #SelectedOverlay {
     Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
