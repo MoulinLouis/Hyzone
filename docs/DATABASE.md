@@ -228,21 +228,21 @@ CREATE TABLE player_count_samples (
 ) ENGINE=InnoDB;
 ```
 
-## player_gems
-Stores the global gems currency balance per player. Shared across all modules.
+## player_vexa
+Stores the global vexa currency balance per player. Shared across all modules.
 
 Suggested schema:
 ```sql
-CREATE TABLE player_gems (
+CREATE TABLE player_vexa (
   uuid VARCHAR(36) NOT NULL PRIMARY KEY,
-  gems BIGINT NOT NULL DEFAULT 0
+  vexa BIGINT NOT NULL DEFAULT 0
 ) ENGINE=InnoDB;
 ```
 
 Notes:
-- Auto-created by `GemStore.initialize()` on startup
-- Managed by `hyvexa-core/src/main/java/io/hyvexa/core/economy/GemStore.java`
-- Writes are immediate (no dirty tracking) since gems are rare/precious
+- Auto-created by `VexaStore.initialize()` on startup
+- Managed by `hyvexa-core/src/main/java/io/hyvexa/core/economy/VexaStore.java`
+- Writes are immediate (no dirty tracking) since vexa is rare/precious
 - Player cache is evicted on disconnect (lazy-loaded on next access)
 
 ## player_cosmetics
@@ -262,7 +262,7 @@ Notes:
 - Auto-created by `CosmeticStore.initialize()` on startup
 - Managed by `hyvexa-core/src/main/java/io/hyvexa/core/cosmetic/CosmeticStore.java`
 - At most one cosmetic can be `equipped = TRUE` per player at a time
-- Writes are immediate (same pattern as GemStore)
+- Writes are immediate (same pattern as VexaStore)
 - Player cache is evicted on disconnect (lazy-loaded on next access)
 
 ## Notes
@@ -286,13 +286,18 @@ Suggested schema:
 ```sql
 CREATE TABLE ascend_players (
   uuid VARCHAR(36) PRIMARY KEY,
-  vexa DECIMAL(65,2) NOT NULL DEFAULT 0,
+  volt_mantissa DOUBLE NOT NULL DEFAULT 0,
+  volt_exp10 INT NOT NULL DEFAULT 0,
   elevation_multiplier INT NOT NULL DEFAULT 1,
   ascension_count INT NOT NULL DEFAULT 0,
   skill_tree_points INT NOT NULL DEFAULT 0,
-  total_vexa_earned DECIMAL(65,2) NOT NULL DEFAULT 0,
+  total_volt_earned_mantissa DOUBLE NOT NULL DEFAULT 0,
+  total_volt_earned_exp10 INT NOT NULL DEFAULT 0,
   total_manual_runs INT NOT NULL DEFAULT 0,
-  summit_accumulated_vexa DECIMAL(65,2) NOT NULL DEFAULT 0,
+  summit_accumulated_volt_mantissa DOUBLE NOT NULL DEFAULT 0,
+  summit_accumulated_volt_exp10 INT NOT NULL DEFAULT 0,
+  elevation_accumulated_volt_mantissa DOUBLE NOT NULL DEFAULT 0,
+  elevation_accumulated_volt_exp10 INT NOT NULL DEFAULT 0,
   active_title VARCHAR(64) DEFAULT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -300,12 +305,12 @@ CREATE TABLE ascend_players (
 ```
 
 Notes:
-- `vexa`, `total_vexa_earned`, and `summit_accumulated_vexa` use DECIMAL(65,2) for precise fractional values (BigDecimal in code).
-- `summit_accumulated_vexa` tracks total vexa earned during the current Summit progress cycle (used for VEXA_FLOW progression).
+- Volt values are stored as scientific notation pairs (`*_mantissa` + `*_exp10`) for BigNumber support.
+- `summit_accumulated_volt_*` tracks total volt earned during the current Summit progress cycle.
 - `elevation_multiplier` stores the elevation **level** (not the actual multiplier). The actual multiplier is calculated as `1 + 0.1 × level^0.65`. Column name kept for backwards compatibility.
 - `ascension_count` tracks how many times the player has Ascended.
 - `skill_tree_points` is the total points earned (ascension_count, may differ if points are granted by other means).
-- `total_vexa_earned` is lifetime vexa for achievement tracking (never resets).
+- `total_volt_earned_*` is lifetime volt for achievement tracking (never resets).
 - `total_manual_runs` is lifetime manual completions for achievement tracking.
 - `active_title` is the currently selected title from achievements.
 
@@ -560,7 +565,7 @@ Notes:
 - Auto-created by `DiscordLinkStore.initialize()` on startup
 
 ## discord_links
-Stores permanent Discord-Minecraft account links and gem reward tracking.
+Stores permanent Discord-Minecraft account links and vexa reward tracking.
 
 Suggested schema:
 ```sql
@@ -568,7 +573,7 @@ CREATE TABLE discord_links (
   player_uuid VARCHAR(36) NOT NULL PRIMARY KEY,
   discord_id VARCHAR(20) NOT NULL UNIQUE,
   linked_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  gems_rewarded BOOLEAN NOT NULL DEFAULT FALSE,
+  vexa_rewarded BOOLEAN NOT NULL DEFAULT FALSE,
   current_rank VARCHAR(20) DEFAULT 'Unranked',
   last_synced_rank VARCHAR(20) DEFAULT NULL
 ) ENGINE=InnoDB;
@@ -576,7 +581,7 @@ CREATE TABLE discord_links (
 
 Notes:
 - One-to-one mapping: each game account links to exactly one Discord account and vice versa
-- `gems_rewarded` tracks whether the one-time 100 gem reward has been given
+- `vexa_rewarded` tracks whether the one-time 100 vexa reward has been given
 - `current_rank` is the player's parkour rank, written by the plugin on rank-up and login
 - `last_synced_rank` is the rank last synced to Discord by the bot; when it differs from `current_rank`, the bot knows to update roles
 - The Discord bot writes to this table; the plugin reads it on player login
@@ -643,7 +648,7 @@ Notes:
 /analytics ascend [days]   Manual runs, unique runners, elevations, summits,
                            ascensions, runners bought/evolved, achievements,
                            challenges (start/complete/rate), top summit categories
-/analytics economy [days]  Gems spent, purchases, unique buyers, discord links,
+/analytics economy [days]  Vexa spent, purchases, unique buyers, discord links,
                            top purchased items
 /analytics refresh         Recompute today's daily aggregates
 /analytics purge           Purge events older than 90 days
@@ -655,3 +660,32 @@ Days range: 1-365, default 7 for all subcommands.
 Two columns added to the existing `players` table via ALTER TABLE migration:
 - `first_join_ms BIGINT NULL` - Timestamp of player's first ever join (set once)
 - `last_seen_ms BIGINT NULL` - Timestamp of player's most recent join/leave (updated every session)
+
+## purge_zombie_variants
+Stores configurable zombie variant types for Purge mode. Seeded with SLOW/NORMAL/FAST on first load.
+
+```sql
+CREATE TABLE purge_zombie_variants (
+  variant_key VARCHAR(32) NOT NULL PRIMARY KEY,
+  label VARCHAR(64) NOT NULL,
+  base_health INT NOT NULL DEFAULT 49,
+  base_damage FLOAT NOT NULL DEFAULT 20,
+  speed_multiplier DOUBLE NOT NULL DEFAULT 1.0
+) ENGINE=InnoDB;
+```
+
+Manager: `PurgeVariantConfigManager` — in-memory cache, immediate DB writes.
+
+## purge_wave_variant_counts
+Join table linking waves to variant spawn counts (replaces old `slow_count`/`normal_count`/`fast_count` columns on `purge_waves`).
+
+```sql
+CREATE TABLE purge_wave_variant_counts (
+  wave_number INT NOT NULL,
+  variant_key VARCHAR(32) NOT NULL,
+  count INT NOT NULL DEFAULT 0,
+  PRIMARY KEY (wave_number, variant_key)
+) ENGINE=InnoDB;
+```
+
+Manager: `PurgeWaveConfigManager` — migrates from old columns on startup if they exist.

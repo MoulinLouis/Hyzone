@@ -18,6 +18,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.purge.data.PurgeWeaponUpgradeStore;
 import io.hyvexa.purge.manager.PurgeInstanceManager;
+import io.hyvexa.purge.manager.PurgeVariantConfigManager;
 import io.hyvexa.purge.manager.PurgeWaveConfigManager;
 import io.hyvexa.purge.manager.PurgeWeaponConfigManager;
 
@@ -56,6 +57,7 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
     private final PurgeWeaponConfigManager weaponConfigManager;
     private final PurgeWaveConfigManager waveConfigManager;
     private final PurgeInstanceManager instanceManager;
+    private final PurgeVariantConfigManager variantConfigManager;
 
     // Track selected weapon for inline detail panel
     private String selectedWeaponId;
@@ -69,13 +71,15 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
                                  UUID playerId,
                                  PurgeWeaponConfigManager weaponConfigManager,
                                  PurgeWaveConfigManager waveConfigManager,
-                                 PurgeInstanceManager instanceManager) {
+                                 PurgeInstanceManager instanceManager,
+                                 PurgeVariantConfigManager variantConfigManager) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, PurgeWeaponSelectData.CODEC);
         this.mode = mode;
         this.playerId = playerId;
         this.weaponConfigManager = weaponConfigManager;
         this.waveConfigManager = waveConfigManager;
         this.instanceManager = instanceManager;
+        this.variantConfigManager = variantConfigManager;
     }
 
     @Override
@@ -140,7 +144,7 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
             PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
             if (player != null && playerRef != null) {
                 player.getPageManager().openCustomPage(ref, store,
-                        new PurgeAdminIndexPage(playerRef, waveConfigManager, instanceManager, weaponConfigManager));
+                        new PurgeAdminIndexPage(playerRef, waveConfigManager, instanceManager, weaponConfigManager, variantConfigManager));
             }
         } else {
             close();
@@ -179,7 +183,7 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
                 return;
             }
             player.getPageManager().openCustomPage(ref, store,
-                    new PurgeWeaponAdminPage(playerRef, weaponId, weaponConfigManager, waveConfigManager, instanceManager));
+                    new PurgeWeaponAdminPage(playerRef, weaponId, weaponConfigManager, waveConfigManager, instanceManager, variantConfigManager));
         } else {
             // PLAYER/LOADOUT mode: toggle inline detail panel
             if (weaponId.equals(this.selectedWeaponId)) {

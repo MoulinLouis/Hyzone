@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Added
+- **Purge: Custom zombie variants admin system** - Replaced hardcoded Slow/Normal/Fast enum with DB-backed variant configs. Admins can create, delete, and customize zombie variants (health, damage, speed) via `/purge admin` -> Variants. Wave config now supports any number of variant types with dynamic +/- count rows.
 - **Purge: Lootbox weapon switch system** - Zombies have a 5% chance to drop a lootbox item. Right-click to roll a random owned weapon (excluding current) with a spinning animation UI. Accept to swap your hotbar weapon mid-run, or decline/timeout (10s) to discard. Per-player weapon tracking so each player can use a different weapon in the same session.
 - **RunOrFall: New game mode module** - Added `hyvexa-runorfall` with lobby queue, fixed 10s pre-game countdown, destructible platform cuboids, void elimination, and last-player-standing winner flow via `/rof` commands.
 - **RunOrFall: Admin setup UI** - Added `/rof admin` page to configure lobby/spawns/platforms, tune void Y and break delay, and control start/stop from buttons.
@@ -14,7 +15,7 @@
 - **Purge: Session start/stop points in admin settings** - `/purge admin` now has a Settings panel (before Spawn Points) to set start spawn (`/purge start`) and exit point (`/purge stop`) from current position.
 - **Purge: AK47 weapon upgrade system** - Players can permanently upgrade AK47 damage using scrap via `/purge upgrade`. 11 star levels (0-5 in 0.5 increments). Admins configure damage/cost per level via `/purge admin` -> Weapons page. Replaces the `/aktest` debug command.
 
-- **Ascend: Transcendence (4th prestige)** - Endgame prestige layer at 1e100 vexa with BREAK_ASCENSION active. Resets everything including skill tree and challenges. Permanent transcendence count; Milestone 1 unlocks Map 6. Gold-themed UI page, NPC interaction (challenge-gated), and `/transcend` command.
+- **Ascend: Transcendence (4th prestige)** - Endgame prestige layer at 1e100 volt with BREAK_ASCENSION active. Resets everything including skill tree and challenges. Permanent transcendence count; Milestone 1 unlocks Map 6. Gold-themed UI page, NPC interaction (challenge-gated), and `/transcend` command.
 - **Ascend: Map 6 support** - 6th parkour map slot with gold accent, gated behind Transcendence Milestone 1. Balance: 2500 base reward, 68s base time, x4.7 cost multiplier.
 - **Ascend: 6 new skill tree nodes** - Runner Speed IV/V, Evolution Power III, Momentum Mastery (x3.0 + 120s), Multiplier Boost II (+0.25), Auto Ascend. Costs 15-75 AP for late-game replay incentive.
 - **Ascend: 4 new challenges** - Challenge 5 (50% Runner Speed + Multiplier Gain), Challenge 6 (all Summit bonuses at 50%), Challenge 7 (maps 4 & 5 locked), Challenge 8 (no Elevation or Summit, reward: +25% to both). Total: 8 challenges.
@@ -36,7 +37,7 @@
 - **Parkour: Removed struggle/practice hint popups** - The "Having Trouble?" and "Try Practice Mode" UI popups are fully removed and no longer shown.
 - **Ascend: Replaced Elevation Boost with Auto Ascend** - Skill tree node at tier 12R now skips the ascension popup and cinematic, instantly ascending when reaching 1Dc. Players who had Elevation Boost get Auto Ascend automatically.
 - **Ascend: AP Multiplier system** - Each completed challenge grants +1 to AP multiplier (base x1, max x8). Replaces old per-challenge permanent bonuses. Displayed in the Challenges tab.
-- **Ascend: Summit XP softcap at level 1000** - Removed hard cap at level 1000 (unlimited levels). XP cost per level rises from level^2 to level^3 above 1000 — same vexa reaches fewer levels (old 5000 -> ~3591).
+- **Ascend: Summit XP softcap at level 1000** - Removed hard cap at level 1000 (unlimited levels). XP cost per level rises from level^2 to level^3 above 1000 — same volt reaches fewer levels (old 5000 -> ~3591).
 
 ### Fixed
 - **RunOrFall: Solo test start support** - `/rof start` can now launch with one player for testing, without immediately ending the round.
@@ -49,20 +50,20 @@
 
 ### Added
 - **Global: Analytics system** - Event-based analytics tracking gameplay events (joins, completions, duels, mode switches, purchases, Ascend progression). Daily aggregates computed into `analytics_daily` table. OP-only `/analytics` command shows DAU, retention, session length, and mode split. 90-day event retention with auto-purge.
-- **Global: Cosmetic Shop** - `/shop` command opens a UI to buy, equip, preview, and unequip 6 glow cosmetics (100 gems each). Equipped cosmetics persist across reconnects.
+- **Global: Cosmetic Shop** - `/shop` command opens a UI to buy, equip, preview, and unequip 6 glow cosmetics (100 vexa each). Equipped cosmetics persist across reconnects.
 - **Global: Discord rank role sync** - Linked players' parkour ranks (Unranked -> VexaGod) are automatically synced as Discord roles. Plugin writes rank on rank-up and login; bot polls every 30s and swaps roles.
-- **Global: Discord account linking** - Players use `/link` in-game to get a code, enter it on Discord via `/link <code>`, and receive a one-time 100 gem reward on next login. Includes a Discord bot (`discord-bot/`) and shared MySQL tables for cross-system communication.
+- **Global: Discord account linking** - Players use `/link` in-game to get a code, enter it on Discord via `/link <code>`, and receive a one-time 100 vexa reward on next login. Includes a Discord bot (`discord-bot/`) and shared MySQL tables for cross-system communication.
 
 ### Changed
 - **AscendOnboarding alignment overhaul** - Centralized all tutorial/welcome text into AscendOnboardingCopy.java. Fixed Ascension tutorial claiming "8 nodes" (actual: 11) and naming non-existent nodes. Fixed Welcome page saying "4 items" (actual: 5). Replaced placeholder text in all 6 tutorial .ui files. Added pre-reset explainer modal before auto-ascension cinematic. Added fallback tutorial triggers when opening elevation/summit/ascension pages. Standardized terminology to "Ascendancy Tree" + "AP" everywhere.
 - **Ascend: Summit hard cap at level 1000 with deep cap nerf** - Each summit category now has a maximum level of 1000. Added a "deep cap" at level 500 where growth transitions from √ to ⁴√ (heavy diminishing returns). XP is capped, UI shows "MAX" state, and summiting is blocked once reached.
 - **Ascend: Elevation multiplier buff** - Elevation multiplier changed from level (1:1) to level^1.05 (slightly super-linear). Higher elevation levels now give progressively better multipliers, rewarding deeper elevation pushes.
-- **Ascend: Renamed "Coins" to "Vexa"** - All player-facing text, Java identifiers, UI element IDs, database columns, and documentation updated to use "Vexa" as the currency name
+- **Ascend: Renamed "Coins" to "Volt"** - All player-facing text, Java identifiers, UI element IDs, database columns, and documentation updated to use "Volt" as the currency name
 - **Parkour/Ascend: Tick-path performance cleanup** - Optimized ghost playback sampling/interpolation and reduced per-tick map scanning overhead in run tracking
 - **Parkour/Ascend: Ghost stack moved to shared core wrappers** - Recorder/store/interpolation logic now lives in `hyvexa-core` with mode-specific table/resolver adapters and parity tests
 
 ### Added
-- **Global: Gems currency** - Cross-mode currency stored in `hyvexa-core`, displayed on all HUDs with green gem icon. Admin command `/gems` for set/add/remove/check. Groundwork for future cosmetics and vote rewards.
+- **Global: Vexa currency** - Cross-mode currency stored in `hyvexa-core`, displayed on all HUDs with green vexa icon. Admin command `/vexa` for set/add/remove/check. Groundwork for future cosmetics and vote rewards.
 - **Ascend: Auto-Elevation skill tree node** - New AUTO_ELEVATION node (7 AP) unlocks configurable automatic elevation with multiplier target sequences and optional timer delay. Managed via the Automation page.
 - **Parkour: : Advanced HUD toggle** - New "Advanced HUD" ON/OFF toggle in Player Settings that displays a compact panel above the right-side HUD showing real-time orientation (pitch, yaw, roll + cardinal direction), velocity (x, y, z), and speed
 - **Ascend: My Profile hub page** - Silk item now opens a "My Profile" page with links to Stats, Achievements, and Settings. Also accessible via `/ascend profile`.
@@ -72,7 +73,7 @@
 - **Ascend: Per-map leaderboard** - "Stats" button in map select replaced with "Leaderboard" showing best times per map with map tabs, search, and pagination. Also accessible via `/ascend maplb`.
 - **Ascend: Expanded skill tree (1 → 8 nodes)** - Tree now has Auto Runners, Auto-Evolution, Momentum, Runner Speed, Offline Boost, Summit Memory, Evolution Power+, and Ascension Challenges (teaser). Branch/converge structure with OR-logic prerequisites.
 - **Parkour: Fly zone per map** - Admins can define an AABB fly zone per map; players in practice mode are rolled back to their last valid position if they fly outside the zone
-- **Ascend: Leaderboard system** - New `/ascend leaderboard` command with tabbed rankings for Vexa, Ascensions, and Manual Runs. Includes pagination (50 per page) and player search. Accessible via the Bolt of Stormsilk item.
+- **Ascend: Leaderboard system** - New `/ascend leaderboard` command with tabbed rankings for Volt, Ascensions, and Manual Runs. Includes pagination (50 per page) and player search. Accessible via the Bolt of Stormsilk item.
 
 ### Fixed
 - **Parkour: Practice restart-to-checkpoint no longer resets run timer** - In practice mode, using "Restart to checkpoint" no longer falls back to full run reset when no checkpoint is available.

@@ -23,7 +23,7 @@ import io.hyvexa.common.util.ModeGate;
 import io.hyvexa.core.analytics.AnalyticsStore;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.core.discord.DiscordLinkStore;
-import io.hyvexa.core.economy.GemStore;
+import io.hyvexa.core.economy.VexaStore;
 import io.hyvexa.purge.command.PurgeCommand;
 import io.hyvexa.purge.data.PurgePlayerStore;
 import io.hyvexa.purge.data.PurgeScrapStore;
@@ -38,6 +38,7 @@ import io.hyvexa.purge.manager.PurgeInstanceManager;
 import io.hyvexa.purge.manager.PurgePartyManager;
 import io.hyvexa.purge.manager.PurgeSessionManager;
 import io.hyvexa.purge.manager.PurgeUpgradeManager;
+import io.hyvexa.purge.manager.PurgeVariantConfigManager;
 import io.hyvexa.purge.manager.PurgeWaveConfigManager;
 import io.hyvexa.purge.manager.PurgeWaveManager;
 import io.hyvexa.purge.manager.PurgeWeaponConfigManager;
@@ -68,6 +69,7 @@ public class HyvexaPurgePlugin extends JavaPlugin {
     private ScheduledFuture<?> hudUpdateTask;
 
     private PurgeInstanceManager instanceManager;
+    private PurgeVariantConfigManager variantConfigManager;
     private PurgeWaveConfigManager waveConfigManager;
     private PurgeWeaponConfigManager weaponConfigManager;
     private PurgeWaveManager waveManager;
@@ -101,8 +103,8 @@ public class HyvexaPurgePlugin extends JavaPlugin {
         // Initialize shared stores
         try { DatabaseManager.getInstance().initialize(); }
         catch (Exception e) { LOGGER.atWarning().withCause(e).log("Failed to initialize database for Purge"); }
-        try { GemStore.getInstance().initialize(); }
-        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Failed to initialize GemStore for Purge"); }
+        try { VexaStore.getInstance().initialize(); }
+        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Failed to initialize VexaStore for Purge"); }
         try { DiscordLinkStore.getInstance().initialize(); }
         catch (Exception e) { LOGGER.atWarning().withCause(e).log("Failed to initialize DiscordLinkStore for Purge"); }
         try { AnalyticsStore.getInstance().initialize(); }
@@ -119,10 +121,11 @@ public class HyvexaPurgePlugin extends JavaPlugin {
         // Create managers
         instanceManager = new PurgeInstanceManager();
         instanceManager.loadConfiguredInstances();
-        waveConfigManager = new PurgeWaveConfigManager();
+        variantConfigManager = new PurgeVariantConfigManager();
+        waveConfigManager = new PurgeWaveConfigManager(variantConfigManager);
         weaponConfigManager = new PurgeWeaponConfigManager();
         hudManager = new PurgeHudManager();
-        waveManager = new PurgeWaveManager(instanceManager, waveConfigManager, hudManager);
+        waveManager = new PurgeWaveManager(instanceManager, waveConfigManager, variantConfigManager, hudManager);
         partyManager = new PurgePartyManager();
         sessionManager = new PurgeSessionManager(partyManager, instanceManager, waveManager, hudManager);
         partyManager.setSessionManager(sessionManager);
@@ -135,7 +138,7 @@ public class HyvexaPurgePlugin extends JavaPlugin {
 
         // Register commands
         this.getCommandRegistry().registerCommand(
-                new PurgeCommand(sessionManager, waveConfigManager, partyManager, instanceManager, weaponConfigManager));
+                new PurgeCommand(sessionManager, waveConfigManager, partyManager, instanceManager, weaponConfigManager, variantConfigManager));
 
         // Register item interaction codecs
         registerInteractionCodecs();
@@ -171,7 +174,7 @@ public class HyvexaPurgePlugin extends JavaPlugin {
                     playerId, weaponConfigManager.getDefaultWeaponIds());
             LOGGER.atInfo().log("Player entered Purge: " + (playerId != null ? playerId : "unknown"));
             try {
-                DiscordLinkStore.getInstance().checkAndRewardGems(playerId, player);
+                DiscordLinkStore.getInstance().checkAndRewardVexa(playerId, player);
             } catch (Exception e) {
                 LOGGER.atWarning().withCause(e).log("Discord link check failed (purge)");
             }
@@ -217,8 +220,8 @@ public class HyvexaPurgePlugin extends JavaPlugin {
             sessionManager.cleanupPlayer(playerId);
             partyManager.cleanupPlayer(playerId);
             hudManager.removePlayer(playerId);
-            try { GemStore.getInstance().evictPlayer(playerId); }
-            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: GemStore"); }
+            try { VexaStore.getInstance().evictPlayer(playerId); }
+            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: VexaStore"); }
             try { DiscordLinkStore.getInstance().evictPlayer(playerId); }
             catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: DiscordLinkStore"); }
             try { PurgePlayerStore.getInstance().evictPlayer(playerId); }
@@ -229,7 +232,7 @@ public class HyvexaPurgePlugin extends JavaPlugin {
             catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: PurgeWeaponUpgradeStore"); }
         });
 
-        // Slow HUD updates (player count, gems, scrap) every 5 seconds
+        // Slow HUD updates (player count, vexa, scrap) every 5 seconds
         hudUpdateTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(
                 () -> {
                     try { hudManager.tickSlowUpdates(); }
@@ -385,7 +388,7 @@ public class HyvexaPurgePlugin extends JavaPlugin {
             registry.registerEntityEventType(com.hypixel.hytale.server.core.modules.entity.damage.Damage.class);
         }
         if (!registry.hasSystemClass(PurgeDamageModifierSystem.class)) {
-            registry.registerSystem(new PurgeDamageModifierSystem(sessionManager, weaponConfigManager));
+            registry.registerSystem(new PurgeDamageModifierSystem(sessionManager, variantConfigManager, weaponConfigManager));
         }
     }
 

@@ -1,0 +1,40 @@
+$C = "../Common.ui";
+
+Group {
+  LayoutMode: Left;
+  Anchor: (Left: 0, Right: 0, Height: 28);
+
+  Label #VariantLabel {
+    Anchor: (Width: 70);
+    Style: (FontSize: 13, TextColor: #9fb0ba, VerticalAlignment: Center);
+    Text: "Normal";
+  }
+
+  TextButton #MinusButton {
+    Anchor: (Width: 26, Height: 26);
+    Text: "-";
+    Style: TextButtonStyle(
+      Default: (Background: #0c2416, LabelStyle: (FontSize: 15, RenderBold: true, TextColor: #86efac, HorizontalAlignment: Center, VerticalAlignment: Center)),
+      Hovered: (Background: #124026, LabelStyle: (FontSize: 15, RenderBold: true, TextColor: #bbf7d0, HorizontalAlignment: Center, VerticalAlignment: Center)),
+      Pressed: (Background: #091a10, LabelStyle: (FontSize: 15, RenderBold: true, TextColor: #86efac, HorizontalAlignment: Center, VerticalAlignment: Center)),
+      Sounds: $C.@ButtonSounds,
+    );
+  }
+
+  Label #CountLabel {
+    Anchor: (Width: 28);
+    Style: (FontSize: 13, RenderBold: true, TextColor: #dcfce7, HorizontalAlignment: Center, VerticalAlignment: Center);
+    Text: "0";
+  }
+
+  TextButton #PlusButton {
+    Anchor: (Width: 26, Height: 26);
+    Text: "+";
+    Style: TextButtonStyle(
+      Default: (Background: #0c2416, LabelStyle: (FontSize: 15, RenderBold: true, TextColor: #86efac, HorizontalAlignment: Center, VerticalAlignment: Center)),
+      Hovered: (Background: #124026, LabelStyle: (FontSize: 15, RenderBold: true, TextColor: #bbf7d0, HorizontalAlignment: Center, VerticalAlignment: Center)),
+      Pressed: (Background: #091a10, LabelStyle: (FontSize: 15, RenderBold: true, TextColor: #86efac, HorizontalAlignment: Center, VerticalAlignment: Center)),
+      Sounds: $C.@ButtonSounds,
+    );
+  }
+}

@@ -17,9 +17,10 @@ import io.hyvexa.purge.data.PurgeSession;
 import io.hyvexa.purge.data.PurgeSessionPlayerState;
 import io.hyvexa.purge.data.PurgeUpgradeState;
 import io.hyvexa.purge.data.PurgeUpgradeType;
+import io.hyvexa.purge.data.PurgeVariantConfig;
 import io.hyvexa.purge.data.PurgeWeaponUpgradeStore;
-import io.hyvexa.purge.data.PurgeZombieVariant;
 import io.hyvexa.purge.manager.PurgeSessionManager;
+import io.hyvexa.purge.manager.PurgeVariantConfigManager;
 import io.hyvexa.purge.manager.PurgeWeaponConfigManager;
 
 import java.util.UUID;
@@ -27,12 +28,15 @@ import java.util.UUID;
 public class PurgeDamageModifierSystem extends DamageEventSystem {
 
     private final PurgeSessionManager sessionManager;
+    private final PurgeVariantConfigManager variantConfigManager;
     private final PurgeWeaponConfigManager weaponConfigManager;
     private volatile SystemGroup<EntityStore> cachedGroup;
 
     public PurgeDamageModifierSystem(PurgeSessionManager sessionManager,
+                                      PurgeVariantConfigManager variantConfigManager,
                                       PurgeWeaponConfigManager weaponConfigManager) {
         this.sessionManager = sessionManager;
+        this.variantConfigManager = variantConfigManager;
         this.weaponConfigManager = weaponConfigManager;
     }
 
@@ -80,8 +84,14 @@ public class PurgeDamageModifierSystem extends DamageEventSystem {
                     }
                 } else if (session.getAliveZombies().contains(sourceRef)) {
                     // Source is a Purge zombie — enforce per-variant damage
-                    PurgeZombieVariant variant = session.getZombieVariant(sourceRef);
-                    float damage = variant != null ? variant.getBaseDamage() : PurgeZombieVariant.NORMAL.getBaseDamage();
+                    String variantKey = session.getZombieVariantKey(sourceRef);
+                    float damage = 20f; // default
+                    if (variantKey != null) {
+                        PurgeVariantConfig config = variantConfigManager.getVariant(variantKey);
+                        if (config != null) {
+                            damage = config.baseDamage();
+                        }
+                    }
                     event.setAmount(damage);
                 }
             }

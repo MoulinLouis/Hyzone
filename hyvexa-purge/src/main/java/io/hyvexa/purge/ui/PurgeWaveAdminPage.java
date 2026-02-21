@@ -16,9 +16,10 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.ui.ButtonEventData;
+import io.hyvexa.purge.data.PurgeVariantConfig;
 import io.hyvexa.purge.data.PurgeWaveDefinition;
-import io.hyvexa.purge.data.PurgeZombieVariant;
 import io.hyvexa.purge.manager.PurgeInstanceManager;
+import io.hyvexa.purge.manager.PurgeVariantConfigManager;
 import io.hyvexa.purge.manager.PurgeWaveConfigManager;
 import io.hyvexa.purge.manager.PurgeWeaponConfigManager;
 
@@ -35,15 +36,18 @@ public class PurgeWaveAdminPage extends InteractiveCustomUIPage<PurgeWaveAdminPa
     private static final String BUTTON_SPAWN_PREFIX = "Spawn:";
 
     private final PurgeWaveConfigManager waveConfigManager;
+    private final PurgeVariantConfigManager variantConfigManager;
     private final PurgeInstanceManager instanceManager;
     private final PurgeWeaponConfigManager weaponConfigManager;
 
     public PurgeWaveAdminPage(@Nonnull PlayerRef playerRef,
                               PurgeWaveConfigManager waveConfigManager,
+                              PurgeVariantConfigManager variantConfigManager,
                               PurgeInstanceManager instanceManager,
                               PurgeWeaponConfigManager weaponConfigManager) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, PurgeWaveAdminData.CODEC);
         this.waveConfigManager = waveConfigManager;
+        this.variantConfigManager = variantConfigManager;
         this.instanceManager = instanceManager;
         this.weaponConfigManager = weaponConfigManager;
     }
@@ -98,7 +102,7 @@ public class PurgeWaveAdminPage extends InteractiveCustomUIPage<PurgeWaveAdminPa
         int waveNumber = waveConfigManager.addWave();
         if (player != null) {
             if (waveNumber > 0) {
-                player.sendMessage(Message.raw("Added wave " + waveNumber + " (default: slow 0, normal 5, fast 0)."));
+                player.sendMessage(Message.raw("Added wave " + waveNumber + " (empty)."));
             } else if (!waveConfigManager.isPersistenceAvailable()) {
                 player.sendMessage(Message.raw(waveConfigManager.getPersistenceDisabledMessage()));
             } else {
@@ -181,6 +185,7 @@ public class PurgeWaveAdminPage extends InteractiveCustomUIPage<PurgeWaveAdminPa
     }
 
     private void handleAdjust(String payload, Ref<EntityStore> ref, Store<EntityStore> store) {
+        // Format: <waveNumber>:<variantKey>:<delta>
         String[] parts = payload.split(":");
         if (parts.length != 3) {
             return;
@@ -195,12 +200,8 @@ public class PurgeWaveAdminPage extends InteractiveCustomUIPage<PurgeWaveAdminPa
             return;
         }
 
-        PurgeZombieVariant variant = PurgeZombieVariant.fromKey(parts[1]);
-        if (variant == null) {
-            return;
-        }
-
-        if (waveConfigManager.adjustVariantCount(waveNumber, variant, delta)) {
+        String variantKey = parts[1];
+        if (waveConfigManager.adjustVariantCount(waveNumber, variantKey, delta)) {
             sendRefresh();
         } else if (!waveConfigManager.isPersistenceAvailable()) {
             Player player = store.getComponent(ref, Player.getComponentType());
@@ -217,7 +218,7 @@ public class PurgeWaveAdminPage extends InteractiveCustomUIPage<PurgeWaveAdminPa
             return;
         }
         player.getPageManager().openCustomPage(ref, store,
-                new PurgeAdminIndexPage(playerRef, waveConfigManager, instanceManager, weaponConfigManager));
+                new PurgeAdminIndexPage(playerRef, waveConfigManager, instanceManager, weaponConfigManager, variantConfigManager));
     }
 
     private void sendRefresh() {
@@ -241,6 +242,7 @@ public class PurgeWaveAdminPage extends InteractiveCustomUIPage<PurgeWaveAdminPa
         commandBuilder.clear("#WaveCards");
 
         List<PurgeWaveDefinition> waves = waveConfigManager.getAllWaves();
+        List<PurgeVariantConfig> allVariants = variantConfigManager.getAllVariants();
 
         commandBuilder.set("#WaveCount.Text", waves.size() + " configured wave" + (waves.size() == 1 ? "" : "s"));
 
@@ -257,18 +259,22 @@ public class PurgeWaveAdminPage extends InteractiveCustomUIPage<PurgeWaveAdminPa
             commandBuilder.append("#WaveCards", "Pages/Purge_WaveEntry.ui");
             commandBuilder.set(root + " #WaveLabel.Text", "Wave " + wave.waveNumber());
             commandBuilder.set(root + " #TotalLabel.Text", "Total: " + wave.totalCount());
-            commandBuilder.set(root + " #SlowCount.Text", String.valueOf(Math.max(0, wave.slowCount())));
-            commandBuilder.set(root + " #NormalCount.Text", String.valueOf(Math.max(0, wave.normalCount())));
-            commandBuilder.set(root + " #FastCount.Text", String.valueOf(Math.max(0, wave.fastCount())));
             commandBuilder.set(root + " #DelayValue.Text", wave.spawnDelayMs() + "ms");
             commandBuilder.set(root + " #BatchValue.Text", String.valueOf(wave.spawnBatchSize()));
 
-            bindAdjust(eventBuilder, root + " #SlowMinusButton", wave.waveNumber(), PurgeZombieVariant.SLOW, -1);
-            bindAdjust(eventBuilder, root + " #SlowPlusButton", wave.waveNumber(), PurgeZombieVariant.SLOW, 1);
-            bindAdjust(eventBuilder, root + " #NormalMinusButton", wave.waveNumber(), PurgeZombieVariant.NORMAL, -1);
-            bindAdjust(eventBuilder, root + " #NormalPlusButton", wave.waveNumber(), PurgeZombieVariant.NORMAL, 1);
-            bindAdjust(eventBuilder, root + " #FastMinusButton", wave.waveNumber(), PurgeZombieVariant.FAST, -1);
-            bindAdjust(eventBuilder, root + " #FastPlusButton", wave.waveNumber(), PurgeZombieVariant.FAST, 1);
+            // Dynamic variant rows
+            String variantContainer = root + " #VariantRows";
+            for (int v = 0; v < allVariants.size(); v++) {
+                PurgeVariantConfig variant = allVariants.get(v);
+                String vRoot = variantContainer + "[" + v + "]";
+
+                commandBuilder.append(variantContainer, "Pages/Purge_WaveVariantRow.ui");
+                commandBuilder.set(vRoot + " #VariantLabel.Text", variant.label());
+                commandBuilder.set(vRoot + " #CountLabel.Text", String.valueOf(wave.getCount(variant.key())));
+
+                bindAdjust(eventBuilder, vRoot + " #MinusButton", wave.waveNumber(), variant.key(), -1);
+                bindAdjust(eventBuilder, vRoot + " #PlusButton", wave.waveNumber(), variant.key(), 1);
+            }
 
             bindSpawnAdjust(eventBuilder, root + " #DelayMinusButton", wave.waveNumber(), "delay", -100);
             bindSpawnAdjust(eventBuilder, root + " #DelayPlusButton", wave.waveNumber(), "delay", 100);
@@ -295,9 +301,9 @@ public class PurgeWaveAdminPage extends InteractiveCustomUIPage<PurgeWaveAdminPa
     private void bindAdjust(UIEventBuilder eventBuilder,
                             String target,
                             int waveNumber,
-                            PurgeZombieVariant variant,
+                            String variantKey,
                             int delta) {
-        String payload = BUTTON_ADJUST_PREFIX + waveNumber + ":" + variant.name() + ":" + delta;
+        String payload = BUTTON_ADJUST_PREFIX + waveNumber + ":" + variantKey + ":" + delta;
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
                 target,
                 EventData.of(ButtonEventData.KEY_BUTTON, payload), false);
