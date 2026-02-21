@@ -32,7 +32,7 @@ public class AscendLeaderboardPage extends InteractiveCustomUIPage<AscendLeaderb
     private static final String BUTTON_CLOSE = "Close";
     private static final String BUTTON_PREV = "PrevPage";
     private static final String BUTTON_NEXT = "NextPage";
-    private static final String BUTTON_TAB_VEXA = "TabVexa";
+    private static final String BUTTON_TAB_VOLT = "TabVolt";
     private static final String BUTTON_TAB_ASCENSIONS = "TabAscensions";
     private static final String BUTTON_TAB_RUNS = "TabRuns";
     private static final String BUTTON_TAB_FASTEST = "TabFastest";
@@ -44,7 +44,7 @@ public class AscendLeaderboardPage extends InteractiveCustomUIPage<AscendLeaderb
 
     private final AscendPlayerStore playerStore;
     private final PaginationState pagination = new PaginationState(50);
-    private LeaderboardCategory currentCategory = LeaderboardCategory.VEXA;
+    private LeaderboardCategory currentCategory = LeaderboardCategory.VOLT;
     private String searchText = "";
 
     public AscendLeaderboardPage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore) {
@@ -88,7 +88,7 @@ public class AscendLeaderboardPage extends InteractiveCustomUIPage<AscendLeaderb
                 pagination.next();
                 sendRefresh();
             }
-            case BUTTON_TAB_VEXA -> switchCategory(LeaderboardCategory.VEXA);
+            case BUTTON_TAB_VOLT -> switchCategory(LeaderboardCategory.VOLT);
             case BUTTON_TAB_ASCENSIONS -> switchCategory(LeaderboardCategory.ASCENSIONS);
             case BUTTON_TAB_RUNS -> switchCategory(LeaderboardCategory.MANUAL_RUNS);
             case BUTTON_TAB_FASTEST -> switchCategory(LeaderboardCategory.FASTEST_ASCENSION);
@@ -121,8 +121,8 @@ public class AscendLeaderboardPage extends InteractiveCustomUIPage<AscendLeaderb
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_PREV), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#NextPageButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_NEXT), false);
-        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#TabVexa",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TAB_VEXA), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#TabVolt",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TAB_VOLT), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#TabAscensions",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TAB_ASCENSIONS), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#TabRuns",
@@ -190,7 +190,7 @@ public class AscendLeaderboardPage extends InteractiveCustomUIPage<AscendLeaderb
     }
 
     private void updateTabStyles(UICommandBuilder commandBuilder) {
-        setTabActive(commandBuilder, "TabVexa", currentCategory == LeaderboardCategory.VEXA);
+        setTabActive(commandBuilder, "TabVolt", currentCategory == LeaderboardCategory.VOLT);
         setTabActive(commandBuilder, "TabAscensions", currentCategory == LeaderboardCategory.ASCENSIONS);
         setTabActive(commandBuilder, "TabRuns", currentCategory == LeaderboardCategory.MANUAL_RUNS);
         setTabActive(commandBuilder, "TabFastest", currentCategory == LeaderboardCategory.FASTEST_ASCENSION);
@@ -211,12 +211,12 @@ public class AscendLeaderboardPage extends InteractiveCustomUIPage<AscendLeaderb
         List<LeaderboardEntry> sorted = new ArrayList<>(entries);
 
         switch (currentCategory) {
-            case VEXA -> {
-                sorted.removeIf(e -> e.totalVexaEarnedExp10() == 0 && e.totalVexaEarnedMantissa() == 0);
+            case VOLT -> {
+                sorted.removeIf(e -> e.totalVoltEarnedExp10() == 0 && e.totalVoltEarnedMantissa() == 0);
                 sorted.sort((a, b) -> {
-                    int cmp = Integer.compare(b.totalVexaEarnedExp10(), a.totalVexaEarnedExp10());
+                    int cmp = Integer.compare(b.totalVoltEarnedExp10(), a.totalVoltEarnedExp10());
                     if (cmp != 0) return cmp;
-                    return Double.compare(b.totalVexaEarnedMantissa(), a.totalVexaEarnedMantissa());
+                    return Double.compare(b.totalVoltEarnedMantissa(), a.totalVoltEarnedMantissa());
                 });
             }
             case ASCENSIONS -> {
@@ -266,7 +266,7 @@ public class AscendLeaderboardPage extends InteractiveCustomUIPage<AscendLeaderb
 
     private String formatValue(LeaderboardEntry entry) {
         return switch (currentCategory) {
-            case VEXA -> formatVexa(BigNumber.of(entry.totalVexaEarnedMantissa(), entry.totalVexaEarnedExp10()));
+            case VOLT -> formatVolt(BigNumber.of(entry.totalVoltEarnedMantissa(), entry.totalVoltEarnedExp10()));
             case ASCENSIONS -> String.valueOf(entry.ascensionCount());
             case MANUAL_RUNS -> String.valueOf(entry.totalManualRuns());
             case FASTEST_ASCENSION -> entry.fastestAscensionMs() != null
@@ -275,8 +275,8 @@ public class AscendLeaderboardPage extends InteractiveCustomUIPage<AscendLeaderb
         };
     }
 
-    private String formatVexa(BigNumber vexa) {
-        return FormatUtils.formatBigNumber(vexa);
+    private String formatVolt(BigNumber volt) {
+        return FormatUtils.formatBigNumber(volt);
     }
 
     private String getRankAccentColor(int rank) {
@@ -289,7 +289,7 @@ public class AscendLeaderboardPage extends InteractiveCustomUIPage<AscendLeaderb
     }
 
     public enum LeaderboardCategory {
-        VEXA("Vexa", "#f59e0b"),
+        VOLT("Volt", "#f59e0b"),
         ASCENSIONS("Ascensions", "#8b5cf6"),
         MANUAL_RUNS("Manual Runs", "#10b981"),
         FASTEST_ASCENSION("Fastest Ascension", "#ef4444");

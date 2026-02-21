@@ -15,7 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Persistence layer for player cosmetics. Singleton shared across all modules.
- * Follows the same lazy-load + immediate-write pattern as GemStore.
+ * Follows the same lazy-load + immediate-write pattern as VexaStore.
  */
 public class CosmeticStore {
 

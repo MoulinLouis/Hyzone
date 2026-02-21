@@ -361,7 +361,7 @@ Group {
             FontSize: 13,
             TextColor: #f0f4f8
           );
-          Text: "100 vexa";
+          Text: "100 volt";
         }
 
         Group {

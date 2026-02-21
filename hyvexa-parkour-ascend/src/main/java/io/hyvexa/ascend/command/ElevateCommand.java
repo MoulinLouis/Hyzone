@@ -85,16 +85,16 @@ public class ElevateCommand extends AbstractAsyncCommand {
                 return;
             }
 
-            BigNumber accumulatedVexa = playerStore.getElevationAccumulatedVexa(playerId);
+            BigNumber accumulatedVolt = playerStore.getElevationAccumulatedVolt(playerId);
             int currentElevation = playerStore.getElevationLevel(playerId);
 
             ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(
-                currentElevation, accumulatedVexa, BigNumber.ONE);
+                currentElevation, accumulatedVolt, BigNumber.ONE);
 
             if (purchase.levels <= 0) {
                 BigNumber nextCost = AscendConstants.getElevationLevelUpCost(currentElevation, BigNumber.ONE);
                 player.sendMessage(Message.raw("[Ascend] You need "
-                    + FormatUtils.formatBigNumber(nextCost) + " accumulated vexa to elevate.")
+                    + FormatUtils.formatBigNumber(nextCost) + " accumulated volt to elevate.")
                     .color(SystemMessageUtils.SECONDARY));
                 return;
             }
@@ -107,7 +107,7 @@ public class ElevateCommand extends AbstractAsyncCommand {
 
             // Perform elevation
             int newElevation = currentElevation + purchase.levels;
-            playerStore.atomicSetElevationAndResetVexa(playerId, newElevation);
+            playerStore.atomicSetElevationAndResetVolt(playerId, newElevation);
 
             // Toast notification
             AscendHudManager hm = plugin.getHudManager();
@@ -117,7 +117,7 @@ public class ElevateCommand extends AbstractAsyncCommand {
                     + AscendConstants.formatElevationMultiplier(newElevation));
             }
 
-            // Reset progress (vexa, map unlocks, runners)
+            // Reset progress (volt, map unlocks, runners)
             AscendMapStore mapStore = plugin.getMapStore();
 
             String firstMapId = null;

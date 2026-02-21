@@ -7,7 +7,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.util.MultiHudBridge;
-import io.hyvexa.core.economy.GemStore;
+import io.hyvexa.core.economy.VexaStore;
 import io.hyvexa.purge.data.PurgeScrapStore;
 
 import java.util.UUID;
@@ -99,7 +99,7 @@ public class PurgeHudManager {
             UUID playerId = entry.getKey();
             PurgeHud hud = entry.getValue();
             hud.updatePlayerCount(playerCount);
-            hud.updateGems(GemStore.getInstance().getGems(playerId));
+            hud.updateVexa(VexaStore.getInstance().getVexa(playerId));
             hud.updateScrap(PurgeScrapStore.getInstance().getScrap(playerId));
         }
     }

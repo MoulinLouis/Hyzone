@@ -16,7 +16,7 @@ public class RunHud extends CustomUIHud {
     private String lastInfoKey;
     private String lastAnnouncementKey;
     private int lastPlayerCount = -1;
-    private long lastGems = -1;
+    private long lastVexa = -1;
     private String lastAdvancedHudKey;
     private Boolean lastAdvancedHudVisible;
 
@@ -170,13 +170,13 @@ public class RunHud extends CustomUIHud {
         update(false, commandBuilder);
     }
 
-    public void updateGems(long gems) {
-        if (gems == lastGems) {
+    public void updateVexa(long vexa) {
+        if (vexa == lastVexa) {
             return;
         }
-        lastGems = gems;
+        lastVexa = vexa;
         UICommandBuilder commandBuilder = new UICommandBuilder();
-        commandBuilder.set("#PlayerGemsValue.Text", String.valueOf(gems));
+        commandBuilder.set("#PlayerVexaValue.Text", String.valueOf(vexa));
         update(false, commandBuilder);
     }
 
@@ -200,7 +200,7 @@ public class RunHud extends CustomUIHud {
         lastInfoKey = null;
         lastAnnouncementKey = null;
         lastPlayerCount = -1;
-        lastGems = -1;
+        lastVexa = -1;
         lastAdvancedHudKey = null;
         lastAdvancedHudVisible = null;
     }

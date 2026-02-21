@@ -26,7 +26,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Plays the ascension cinematic (~10 seconds) with camera orbit, particles, and sounds.
- * Triggered automatically when a player crosses the ascension vexa threshold,
+ * Triggered automatically when a player crosses the ascension volt threshold,
  * and available via /ctest ascension for testing.
  */
 public class AscensionCinematic {

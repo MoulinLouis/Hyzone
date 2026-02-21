@@ -64,15 +64,15 @@ public final class AscendConstants {
         68000L    // Level 5 (Gold)   - 68 sec (Transcendence)
     };
 
-    // Base vexa rewards per manual completion (before multiplier)
+    // Base volt rewards per manual completion (before multiplier)
     // Actual reward = baseReward * totalMultiplier
     public static final long[] MAP_BASE_REWARDS = {
-        1L,       // Level 0 (Rouge)  - 1 vexa/run base
-        5L,       // Level 1 (Orange) - 5 vexa/run base
-        25L,      // Level 2 (Jaune)  - 25 vexa/run base
-        100L,     // Level 3 (Vert)   - 100 vexa/run base
-        500L,     // Level 4 (Bleu)   - 500 vexa/run base
-        2500L     // Level 5 (Gold)   - 2500 vexa/run base (Transcendence)
+        1L,       // Level 0 (Rouge)  - 1 volt/run base
+        5L,       // Level 1 (Orange) - 5 volt/run base
+        25L,      // Level 2 (Jaune)  - 25 volt/run base
+        100L,     // Level 3 (Vert)   - 100 volt/run base
+        500L,     // Level 4 (Bleu)   - 500 volt/run base
+        2500L     // Level 5 (Gold)   - 2500 volt/run base (Transcendence)
     };
 
     // Map unlock prices: first map free, then increasing
@@ -372,20 +372,20 @@ public final class AscendConstants {
     }
 
     /**
-     * Calculate how many levels can be purchased with given vexa at current level.
+     * Calculate how many levels can be purchased with given volt at current level.
      * Returns the number of levels affordable and the total cost.
      */
-    public static ElevationPurchaseResult calculateElevationPurchase(int currentLevel, BigNumber availableVexa) {
-        return calculateElevationPurchase(currentLevel, availableVexa, BigNumber.ONE);
+    public static ElevationPurchaseResult calculateElevationPurchase(int currentLevel, BigNumber availableVolt) {
+        return calculateElevationPurchase(currentLevel, availableVolt, BigNumber.ONE);
     }
 
     /**
-     * Calculate how many levels can be purchased with given vexa and cost multiplier.
+     * Calculate how many levels can be purchased with given volt and cost multiplier.
      * Uses exponential probing + binary search to find the upper bound, then iterates precisely.
      * No artificial cap — bounded naturally by exponential cost growth.
      */
-    public static ElevationPurchaseResult calculateElevationPurchase(int currentLevel, BigNumber availableVexa, BigNumber costMultiplier) {
-        if (availableVexa.lte(BigNumber.ZERO)
+    public static ElevationPurchaseResult calculateElevationPurchase(int currentLevel, BigNumber availableVolt, BigNumber costMultiplier) {
+        if (availableVolt.lte(BigNumber.ZERO)
                 || costMultiplier.lte(BigNumber.ZERO)) {
             return new ElevationPurchaseResult(0, BigNumber.ZERO);
         }
@@ -394,7 +394,7 @@ public final class AscendConstants {
         // Beyond this, no level can be afforded even individually.
         int upperBound = currentLevel;
         int step = 1;
-        while (getElevationLevelUpCost(upperBound + step, costMultiplier).lte(availableVexa)) {
+        while (getElevationLevelUpCost(upperBound + step, costMultiplier).lte(availableVolt)) {
             upperBound += step;
             step *= 2;
         }
@@ -402,7 +402,7 @@ public final class AscendConstants {
         int lo = upperBound, hi = upperBound + step;
         while (lo < hi) {
             int mid = lo + (hi - lo + 1) / 2;
-            if (getElevationLevelUpCost(mid, costMultiplier).lte(availableVexa)) {
+            if (getElevationLevelUpCost(mid, costMultiplier).lte(availableVolt)) {
                 lo = mid;
             } else {
                 hi = mid - 1;
@@ -419,7 +419,7 @@ public final class AscendConstants {
             BigNumber nextCost = getElevationLevelUpCost(level, costMultiplier);
             BigNumber newTotal = totalCost.add(nextCost);
 
-            if (newTotal.gt(availableVexa)) {
+            if (newTotal.gt(availableVolt)) {
                 break;
             }
 
@@ -528,39 +528,39 @@ public final class AscendConstants {
 
     public static final double SUMMIT_XP_LEVEL_EXPONENT = 2.0; // Exponent for level formula (below softcap)
     public static final double SUMMIT_XP_LATE_EXPONENT = 4.0; // Exponent for level formula (above softcap)
-    public static final long SUMMIT_MIN_VEXA = 1_000_000_000L; // Minimum vexa for 1 XP (1B)
+    public static final long SUMMIT_MIN_VOLT = 1_000_000_000L; // Minimum volt for 1 XP (1B)
     // Divisor for late zone continuity: SOFTCAP^(LATE_EXP - LEVEL_EXP) = 1000^2 = 1,000,000
     private static final double SUMMIT_XP_LATE_DIVISOR =
         Math.pow(SUMMIT_XP_SOFTCAP, SUMMIT_XP_LATE_EXPONENT - SUMMIT_XP_LEVEL_EXPONENT);
 
-    // Calibrated so 1 Decillion (10^33) accumulated vexa = exactly level 1000 (SUMMIT_XP_SOFTCAP)
-    // Derived: power = log(cumXp(1000)) / log(1Dc / MIN_VEXA)
-    public static final double SUMMIT_XP_VEXA_POWER =
-        Math.log(getCumulativeXpForLevel(SUMMIT_XP_SOFTCAP)) / Math.log(1e33 / SUMMIT_MIN_VEXA); // ~0.3552
+    // Calibrated so 1 Decillion (10^33) accumulated volt = exactly level 1000 (SUMMIT_XP_SOFTCAP)
+    // Derived: power = log(cumXp(1000)) / log(1Dc / MIN_VOLT)
+    public static final double SUMMIT_XP_VOLT_POWER =
+        Math.log(getCumulativeXpForLevel(SUMMIT_XP_SOFTCAP)) / Math.log(1e33 / SUMMIT_MIN_VOLT); // ~0.3552
 
     // Piecewise: above 1Dc, XP grows much slower (power 0.08 on the ratio above 1Dc)
-    // At 1e100 vexa -> ~level 13K. Keeps post-1000 progression meaningful but bounded.
+    // At 1e100 volt -> ~level 13K. Keeps post-1000 progression meaningful but bounded.
     private static final double SUMMIT_XP_POST_DC_POWER = 0.08;
     private static final double SUMMIT_XP_AT_1DC = getCumulativeXpForLevel(SUMMIT_XP_SOFTCAP); // ~333.8M
 
     /**
-     * Convert vexa to XP.
+     * Convert volt to XP.
      * Piecewise formula:
-     *   Below 1Dc: (vexa / MIN_VEXA)^0.3552  (calibrated for 1Dc = level 1000)
-     *   Above 1Dc: XP_at_1Dc + ((vexa / 1Dc)^0.08 - 1) × XP_at_1Dc
+     *   Below 1Dc: (volt / MIN_VOLT)^0.3552  (calibrated for 1Dc = level 1000)
+     *   Above 1Dc: XP_at_1Dc + ((volt / 1Dc)^0.08 - 1) × XP_at_1Dc
      */
-    public static double vexaToXp(BigNumber vexa) {
-        if (vexa.lte(BigNumber.ZERO)) {
+    public static double voltToXp(BigNumber volt) {
+        if (volt.lte(BigNumber.ZERO)) {
             return 0.0;
         }
-        double ratio = vexa.divide(BigNumber.fromLong(SUMMIT_MIN_VEXA)).toDouble();
+        double ratio = volt.divide(BigNumber.fromLong(SUMMIT_MIN_VOLT)).toDouble();
         if (!Double.isFinite(ratio) || ratio < 1.0) {
             return 0.0;
         }
         // Below 1Dc: original power formula
-        double dcRatio = 1e33 / SUMMIT_MIN_VEXA; // 1e24
+        double dcRatio = 1e33 / SUMMIT_MIN_VOLT; // 1e24
         if (ratio <= dcRatio) {
-            double xp = Math.pow(ratio, SUMMIT_XP_VEXA_POWER);
+            double xp = Math.pow(ratio, SUMMIT_XP_VOLT_POWER);
             if (!Double.isFinite(xp)) {
                 return Double.MAX_VALUE;
             }
@@ -577,26 +577,26 @@ public final class AscendConstants {
     }
 
     /**
-     * Calculate vexa needed to reach a given XP amount.
-     * Inverse of vexaToXp (piecewise).
+     * Calculate volt needed to reach a given XP amount.
+     * Inverse of voltToXp (piecewise).
      */
-    public static BigNumber xpToVexa(double xp) {
+    public static BigNumber xpToVolt(double xp) {
         if (xp <= 0) {
             return BigNumber.ZERO;
         }
         // Below 1Dc threshold (XP <= XP_at_1Dc): original inverse
         if (xp <= SUMMIT_XP_AT_1DC) {
-            double vexa = Math.pow(xp, 1.0 / SUMMIT_XP_VEXA_POWER) * SUMMIT_MIN_VEXA;
-            return BigNumber.fromDouble(vexa);
+            double volt = Math.pow(xp, 1.0 / SUMMIT_XP_VOLT_POWER) * SUMMIT_MIN_VOLT;
+            return BigNumber.fromDouble(volt);
         }
         // Above 1Dc: inverse of piecewise formula
         // xp = XP_at_1Dc + (aboveDcRatio^p - 1) * XP_at_1Dc
         // aboveDcRatio = ((xp - XP_at_1Dc) / XP_at_1Dc + 1)^(1/p)
-        // vexa = aboveDcRatio * 1Dc
+        // volt = aboveDcRatio * 1Dc
         double scaledExtra = (xp - SUMMIT_XP_AT_1DC) / SUMMIT_XP_AT_1DC + 1.0;
         double aboveDcRatio = Math.pow(scaledExtra, 1.0 / SUMMIT_XP_POST_DC_POWER);
-        double vexa = aboveDcRatio * 1e33;
-        return BigNumber.fromDouble(vexa);
+        double volt = aboveDcRatio * 1e33;
+        return BigNumber.fromDouble(volt);
     }
 
     /**
@@ -680,8 +680,8 @@ public final class AscendConstants {
     // Ascension System (Ultimate Prestige)
     // ========================================
 
-    public static final BigNumber ASCENSION_VEXA_THRESHOLD = BigNumber.of(1, 33); // 1 Decillion (10^33)
-    public static final BigNumber TRANSCENDENCE_VEXA_THRESHOLD = BigNumber.of(1, 100); // 1 Googol (10^100)
+    public static final BigNumber ASCENSION_VOLT_THRESHOLD = BigNumber.of(1, 33); // 1 Decillion (10^33)
+    public static final BigNumber TRANSCENDENCE_VOLT_THRESHOLD = BigNumber.of(1, 100); // 1 Googol (10^100)
 
     public enum SkillTreeNode {
         AUTO_RUNNERS("Auto-Upgrade + Momentum", "Auto-upgrade runners & momentum speed boost on manual runs"),

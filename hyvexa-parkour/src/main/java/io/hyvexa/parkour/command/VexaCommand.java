@@ -14,16 +14,16 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.util.CommandUtils;
 import io.hyvexa.common.util.PermissionUtils;
-import io.hyvexa.core.economy.GemStore;
+import io.hyvexa.core.economy.VexaStore;
 
 import javax.annotation.Nonnull;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
-public class GemsCommand extends AbstractAsyncCommand {
+public class VexaCommand extends AbstractAsyncCommand {
 
-    public GemsCommand() {
-        super("gems", "Manage player gems");
+    public VexaCommand() {
+        super("vexa", "Manage player vexa");
         this.setPermissionGroup(GameMode.Adventure);
         this.setAllowsExtraArguments(true);
     }
@@ -53,7 +53,7 @@ public class GemsCommand extends AbstractAsyncCommand {
     private void handleCommand(CommandContext ctx, Player player) {
         String[] args = CommandUtils.getArgs(ctx);
         if (args.length < 2) {
-            player.sendMessage(Message.raw("Usage: /gems <set|add|remove|check> <player> [amount]"));
+            player.sendMessage(Message.raw("Usage: /vexa <set|add|remove|check> <player> [amount]"));
             return;
         }
         String action = args[0].toLowerCase();
@@ -68,28 +68,28 @@ public class GemsCommand extends AbstractAsyncCommand {
 
         switch (action) {
             case "check" -> {
-                long gems = GemStore.getInstance().getGems(targetId);
-                player.sendMessage(Message.raw(targetName + " has " + gems + " gems."));
+                long vexa = VexaStore.getInstance().getVexa(targetId);
+                player.sendMessage(Message.raw(targetName + " has " + vexa + " vexa."));
             }
             case "set" -> {
                 long amount = parseAmount(player, args, 2);
                 if (amount < 0) return;
-                GemStore.getInstance().setGems(targetId, amount);
-                player.sendMessage(Message.raw("Set " + targetName + "'s gems to " + amount + "."));
+                VexaStore.getInstance().setVexa(targetId, amount);
+                player.sendMessage(Message.raw("Set " + targetName + "'s vexa to " + amount + "."));
             }
             case "add" -> {
                 long amount = parseAmount(player, args, 2);
                 if (amount < 0) return;
-                long newTotal = GemStore.getInstance().addGems(targetId, amount);
-                player.sendMessage(Message.raw("Added " + amount + " gems to " + targetName + ". New total: " + newTotal));
+                long newTotal = VexaStore.getInstance().addVexa(targetId, amount);
+                player.sendMessage(Message.raw("Added " + amount + " vexa to " + targetName + ". New total: " + newTotal));
             }
             case "remove" -> {
                 long amount = parseAmount(player, args, 2);
                 if (amount < 0) return;
-                long newTotal = GemStore.getInstance().removeGems(targetId, amount);
-                player.sendMessage(Message.raw("Removed " + amount + " gems from " + targetName + ". New total: " + newTotal));
+                long newTotal = VexaStore.getInstance().removeVexa(targetId, amount);
+                player.sendMessage(Message.raw("Removed " + amount + " vexa from " + targetName + ". New total: " + newTotal));
             }
-            default -> player.sendMessage(Message.raw("Usage: /gems <set|add|remove|check> <player> [amount]"));
+            default -> player.sendMessage(Message.raw("Usage: /vexa <set|add|remove|check> <player> [amount]"));
         }
     }
 

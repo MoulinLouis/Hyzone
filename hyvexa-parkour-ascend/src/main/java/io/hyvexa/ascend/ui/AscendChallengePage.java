@@ -238,8 +238,8 @@ public class AscendChallengePage extends BaseAscendPage {
 
         player.sendMessage(Message.raw("[Challenge] " + type.getDisplayName() + " started! All progress has been reset.")
             .color(SystemMessageUtils.SUCCESS));
-        player.sendMessage(Message.raw("[Challenge] Reach " + io.hyvexa.common.util.FormatUtils.formatBigNumber(AscendConstants.ASCENSION_VEXA_THRESHOLD)
-            + " vexa to complete the challenge.")
+        player.sendMessage(Message.raw("[Challenge] Reach " + io.hyvexa.common.util.FormatUtils.formatBigNumber(AscendConstants.ASCENSION_VOLT_THRESHOLD)
+            + " volt to complete the challenge.")
             .color(SystemMessageUtils.SECONDARY));
 
         this.close();

@@ -34,28 +34,28 @@ import io.hyvexa.common.util.SystemMessageUtils;
 import javax.annotation.Nonnull;
 import java.util.UUID;
 
-public class AscendAdminVexaPage extends InteractiveCustomUIPage<AscendAdminVexaPage.VexaData> {
+public class AscendAdminVoltPage extends InteractiveCustomUIPage<AscendAdminVoltPage.VoltData> {
 
     private String amountInput = "";
     private String skillPointsInput = "";
     private String voidYThresholdInput = "";
     private int resetAllClickCount = 0;
 
-    public AscendAdminVexaPage(@Nonnull PlayerRef playerRef) {
-        super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, VexaData.CODEC);
+    public AscendAdminVoltPage(@Nonnull PlayerRef playerRef) {
+        super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, VoltData.CODEC);
     }
 
     @Override
     public void build(@Nonnull Ref<EntityStore> ref, @Nonnull UICommandBuilder commandBuilder,
                       @Nonnull UIEventBuilder eventBuilder, @Nonnull Store<EntityStore> store) {
-        commandBuilder.append("Pages/Ascend_AdminVexa.ui");
+        commandBuilder.append("Pages/Ascend_AdminVolt.ui");
         bindEvents(eventBuilder);
         populateFields(commandBuilder, store, ref);
     }
 
     @Override
     public void handleDataEvent(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store,
-                                @Nonnull VexaData data) {
+                                @Nonnull VoltData data) {
         if (data.amount != null) {
             amountInput = data.amount;
         }
@@ -74,62 +74,62 @@ public class AscendAdminVexaPage extends InteractiveCustomUIPage<AscendAdminVexa
             return;
         }
         switch (data.button) {
-            case VexaData.BUTTON_CLOSE -> this.close();
-            case VexaData.BUTTON_BACK -> player.getPageManager().openCustomPage(ref, store, new AscendAdminPanelPage(playerRef));
-            case VexaData.BUTTON_ADD -> applyVexa(player, playerRef, store, true);
-            case VexaData.BUTTON_REMOVE -> applyVexa(player, playerRef, store, false);
-            case VexaData.BUTTON_RESET_PROGRESS -> resetProgress(player, playerRef, store);
-            case VexaData.BUTTON_RESET_ALL -> resetAllPlayers(player);
-            case VexaData.BUTTON_SET_SPAWN_LOCATION -> setSpawnLocation(ref, store, player);
-            case VexaData.BUTTON_SET_NPC_LOCATION -> setNpcLocation(ref, store, player);
-            case VexaData.BUTTON_ADD_SKILL_POINTS -> applySkillPoints(player, playerRef, true);
-            case VexaData.BUTTON_REMOVE_SKILL_POINTS -> applySkillPoints(player, playerRef, false);
-            case VexaData.BUTTON_SAVE_VOID_Y -> saveVoidYThreshold(player);
-            case VexaData.BUTTON_CLEAR_VOID_Y -> clearVoidYThreshold(player);
-            case VexaData.BUTTON_SIMULATE_ASCENSION -> simulateAscension(player, playerRef);
-            case VexaData.BUTTON_ENDGAME -> endgame(player, playerRef);
+            case VoltData.BUTTON_CLOSE -> this.close();
+            case VoltData.BUTTON_BACK -> player.getPageManager().openCustomPage(ref, store, new AscendAdminPanelPage(playerRef));
+            case VoltData.BUTTON_ADD -> applyVolt(player, playerRef, store, true);
+            case VoltData.BUTTON_REMOVE -> applyVolt(player, playerRef, store, false);
+            case VoltData.BUTTON_RESET_PROGRESS -> resetProgress(player, playerRef, store);
+            case VoltData.BUTTON_RESET_ALL -> resetAllPlayers(player);
+            case VoltData.BUTTON_SET_SPAWN_LOCATION -> setSpawnLocation(ref, store, player);
+            case VoltData.BUTTON_SET_NPC_LOCATION -> setNpcLocation(ref, store, player);
+            case VoltData.BUTTON_ADD_SKILL_POINTS -> applySkillPoints(player, playerRef, true);
+            case VoltData.BUTTON_REMOVE_SKILL_POINTS -> applySkillPoints(player, playerRef, false);
+            case VoltData.BUTTON_SAVE_VOID_Y -> saveVoidYThreshold(player);
+            case VoltData.BUTTON_CLEAR_VOID_Y -> clearVoidYThreshold(player);
+            case VoltData.BUTTON_SIMULATE_ASCENSION -> simulateAscension(player, playerRef);
+            case VoltData.BUTTON_ENDGAME -> endgame(player, playerRef);
             default -> {
             }
         }
     }
 
     private void bindEvents(UIEventBuilder eventBuilder) {
-        eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#VexaAmountField",
-            EventData.of(VexaData.KEY_AMOUNT, "#VexaAmountField.Value"), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#VoltAmountField",
+            EventData.of(VoltData.KEY_AMOUNT, "#VoltAmountField.Value"), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#AddButton",
-            EventData.of(VexaData.KEY_BUTTON, VexaData.BUTTON_ADD), false);
+            EventData.of(VoltData.KEY_BUTTON, VoltData.BUTTON_ADD), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#RemoveButton",
-            EventData.of(VexaData.KEY_BUTTON, VexaData.BUTTON_REMOVE), false);
+            EventData.of(VoltData.KEY_BUTTON, VoltData.BUTTON_REMOVE), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ResetProgressButton",
-            EventData.of(VexaData.KEY_BUTTON, VexaData.BUTTON_RESET_PROGRESS), false);
+            EventData.of(VoltData.KEY_BUTTON, VoltData.BUTTON_RESET_PROGRESS), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ResetAllPlayersButton",
-            EventData.of(VexaData.KEY_BUTTON, VexaData.BUTTON_RESET_ALL), false);
+            EventData.of(VoltData.KEY_BUTTON, VoltData.BUTTON_RESET_ALL), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SetSpawnLocationButton",
-            EventData.of(VexaData.KEY_BUTTON, VexaData.BUTTON_SET_SPAWN_LOCATION), false);
+            EventData.of(VoltData.KEY_BUTTON, VoltData.BUTTON_SET_SPAWN_LOCATION), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SetNpcLocationButton",
-            EventData.of(VexaData.KEY_BUTTON, VexaData.BUTTON_SET_NPC_LOCATION), false);
+            EventData.of(VoltData.KEY_BUTTON, VoltData.BUTTON_SET_NPC_LOCATION), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton",
-            EventData.of(VexaData.KEY_BUTTON, VexaData.BUTTON_BACK), false);
+            EventData.of(VoltData.KEY_BUTTON, VoltData.BUTTON_BACK), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CloseButton",
-            EventData.of(VexaData.KEY_BUTTON, VexaData.BUTTON_CLOSE), false);
+            EventData.of(VoltData.KEY_BUTTON, VoltData.BUTTON_CLOSE), false);
         // Skill points bindings
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#SkillPointsAmountField",
-            EventData.of(VexaData.KEY_SKILL_POINTS_AMOUNT, "#SkillPointsAmountField.Value"), false);
+            EventData.of(VoltData.KEY_SKILL_POINTS_AMOUNT, "#SkillPointsAmountField.Value"), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#AddSkillPointsButton",
-            EventData.of(VexaData.KEY_BUTTON, VexaData.BUTTON_ADD_SKILL_POINTS), false);
+            EventData.of(VoltData.KEY_BUTTON, VoltData.BUTTON_ADD_SKILL_POINTS), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#RemoveSkillPointsButton",
-            EventData.of(VexaData.KEY_BUTTON, VexaData.BUTTON_REMOVE_SKILL_POINTS), false);
+            EventData.of(VoltData.KEY_BUTTON, VoltData.BUTTON_REMOVE_SKILL_POINTS), false);
         // Void Y threshold bindings
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#VoidYThresholdField",
-            EventData.of(VexaData.KEY_VOID_Y_THRESHOLD, "#VoidYThresholdField.Value"), false);
+            EventData.of(VoltData.KEY_VOID_Y_THRESHOLD, "#VoidYThresholdField.Value"), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SaveVoidYButton",
-            EventData.of(VexaData.KEY_BUTTON, VexaData.BUTTON_SAVE_VOID_Y), false);
+            EventData.of(VoltData.KEY_BUTTON, VoltData.BUTTON_SAVE_VOID_Y), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ClearVoidYButton",
-            EventData.of(VexaData.KEY_BUTTON, VexaData.BUTTON_CLEAR_VOID_Y), false);
+            EventData.of(VoltData.KEY_BUTTON, VoltData.BUTTON_CLEAR_VOID_Y), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SimulateAscensionButton",
-            EventData.of(VexaData.KEY_BUTTON, VexaData.BUTTON_SIMULATE_ASCENSION), false);
+            EventData.of(VoltData.KEY_BUTTON, VoltData.BUTTON_SIMULATE_ASCENSION), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#EndgameButton",
-            EventData.of(VexaData.KEY_BUTTON, VexaData.BUTTON_ENDGAME), false);
+            EventData.of(VoltData.KEY_BUTTON, VoltData.BUTTON_ENDGAME), false);
     }
 
     private void resetProgress(Player player, PlayerRef playerRef, Store<EntityStore> store) {
@@ -158,7 +158,7 @@ public class AscendAdminVexaPage extends InteractiveCustomUIPage<AscendAdminVexa
         player.sendMessage(Message.raw("[Ascend] Your Ascend progress has been reset (first map unlocked).")
             .color(SystemMessageUtils.SECONDARY));
         UICommandBuilder commandBuilder = new UICommandBuilder();
-        commandBuilder.set("#CurrentVexaValue.Text", "0");
+        commandBuilder.set("#CurrentVoltValue.Text", "0");
         commandBuilder.set("#CurrentSkillPointsValue.Text", "0");
         sendUpdate(commandBuilder, null, false);
     }
@@ -186,7 +186,7 @@ public class AscendAdminVexaPage extends InteractiveCustomUIPage<AscendAdminVexa
             .color(SystemMessageUtils.SECONDARY));
 
         UICommandBuilder commandBuilder = new UICommandBuilder();
-        commandBuilder.set("#CurrentVexaValue.Text", "0");
+        commandBuilder.set("#CurrentVoltValue.Text", "0");
         commandBuilder.set("#CurrentSkillPointsValue.Text", "0");
         sendUpdate(commandBuilder, null, false);
     }
@@ -202,11 +202,11 @@ public class AscendAdminVexaPage extends InteractiveCustomUIPage<AscendAdminVexa
 
         UUID playerId = playerRef.getUuid();
 
-        // Bypass vexa threshold for admin simulation
-        BigNumber vexa = playerStore.getVexa(playerId);
-        if (vexa.lt(AscendConstants.ASCENSION_VEXA_THRESHOLD)) {
+        // Bypass volt threshold for admin simulation
+        BigNumber volt = playerStore.getVolt(playerId);
+        if (volt.lt(AscendConstants.ASCENSION_VOLT_THRESHOLD)) {
             AscendPlayerProgress progress = playerStore.getOrCreatePlayer(playerId);
-            progress.setVexa(AscendConstants.ASCENSION_VEXA_THRESHOLD);
+            progress.setVolt(AscendConstants.ASCENSION_VOLT_THRESHOLD);
         }
 
         // Despawn all robots before resetting data to prevent completions with pre-reset multipliers
@@ -229,7 +229,7 @@ public class AscendAdminVexaPage extends InteractiveCustomUIPage<AscendAdminVexa
                     .color(SystemMessageUtils.SUCCESS));
             }
             UICommandBuilder commandBuilder = new UICommandBuilder();
-            commandBuilder.set("#CurrentVexaValue.Text", FormatUtils.formatBigNumber(playerStore.getVexa(playerId)));
+            commandBuilder.set("#CurrentVoltValue.Text", FormatUtils.formatBigNumber(playerStore.getVolt(playerId)));
             commandBuilder.set("#CurrentSkillPointsValue.Text", String.valueOf(playerStore.getSkillTreePoints(playerId)));
             sendUpdate(commandBuilder, null, false);
             return;
@@ -249,7 +249,7 @@ public class AscendAdminVexaPage extends InteractiveCustomUIPage<AscendAdminVexa
         }
 
         UICommandBuilder commandBuilder = new UICommandBuilder();
-        commandBuilder.set("#CurrentVexaValue.Text", "0");
+        commandBuilder.set("#CurrentVoltValue.Text", "0");
         int skillPoints = playerStore.getSkillTreePoints(playerId);
         commandBuilder.set("#CurrentSkillPointsValue.Text", String.valueOf(skillPoints));
         sendUpdate(commandBuilder, null, false);
@@ -293,14 +293,14 @@ public class AscendAdminVexaPage extends InteractiveCustomUIPage<AscendAdminVexa
     }
 
     private void populateFields(UICommandBuilder commandBuilder, Store<EntityStore> store, Ref<EntityStore> ref) {
-        commandBuilder.set("#VexaAmountField.Value", amountInput != null ? amountInput : "");
+        commandBuilder.set("#VoltAmountField.Value", amountInput != null ? amountInput : "");
         commandBuilder.set("#SkillPointsAmountField.Value", skillPointsInput != null ? skillPointsInput : "");
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (playerRef != null) {
             AscendPlayerStore playerStore = ParkourAscendPlugin.getInstance().getPlayerStore();
-            BigNumber vexa = playerStore != null ? playerStore.getVexa(playerRef.getUuid()) : BigNumber.ZERO;
+            BigNumber volt = playerStore != null ? playerStore.getVolt(playerRef.getUuid()) : BigNumber.ZERO;
             int skillPoints = playerStore != null ? playerStore.getSkillTreePoints(playerRef.getUuid()) : 0;
-            commandBuilder.set("#CurrentVexaValue.Text", FormatUtils.formatBigNumber(vexa));
+            commandBuilder.set("#CurrentVoltValue.Text", FormatUtils.formatBigNumber(volt));
             commandBuilder.set("#CurrentSkillPointsValue.Text", String.valueOf(skillPoints));
         }
 
@@ -330,7 +330,7 @@ public class AscendAdminVexaPage extends InteractiveCustomUIPage<AscendAdminVexa
         }
     }
 
-    private void applyVexa(Player player, PlayerRef playerRef, Store<EntityStore> store, boolean add) {
+    private void applyVolt(Player player, PlayerRef playerRef, Store<EntityStore> store, boolean add) {
         BigNumber amount = parseAmount(player);
         if (amount == null) {
             return;
@@ -342,19 +342,19 @@ public class AscendAdminVexaPage extends InteractiveCustomUIPage<AscendAdminVexa
         }
         String formatted = FormatUtils.formatBigNumber(amount);
         if (add) {
-            playerStore.addVexa(playerRef.getUuid(), amount);
-            playerStore.addSummitAccumulatedVexa(playerRef.getUuid(), amount);
-            playerStore.addElevationAccumulatedVexa(playerRef.getUuid(), amount);
-            player.sendMessage(Message.raw("[Ascend] Added " + formatted + " vexa (counts toward Summit & Elevation).")
+            playerStore.addVolt(playerRef.getUuid(), amount);
+            playerStore.addSummitAccumulatedVolt(playerRef.getUuid(), amount);
+            playerStore.addElevationAccumulatedVolt(playerRef.getUuid(), amount);
+            player.sendMessage(Message.raw("[Ascend] Added " + formatted + " volt (counts toward Summit & Elevation).")
                 .color(SystemMessageUtils.SUCCESS));
         } else {
-            playerStore.addVexa(playerRef.getUuid(), amount.negate());
-            player.sendMessage(Message.raw("[Ascend] Removed " + formatted + " vexa.")
+            playerStore.addVolt(playerRef.getUuid(), amount.negate());
+            player.sendMessage(Message.raw("[Ascend] Removed " + formatted + " volt.")
                 .color(SystemMessageUtils.SECONDARY));
         }
         UICommandBuilder commandBuilder = new UICommandBuilder();
-        BigNumber vexa = playerStore.getVexa(playerRef.getUuid());
-        commandBuilder.set("#CurrentVexaValue.Text", FormatUtils.formatBigNumber(vexa));
+        BigNumber volt = playerStore.getVolt(playerRef.getUuid());
+        commandBuilder.set("#CurrentVoltValue.Text", FormatUtils.formatBigNumber(volt));
         sendUpdate(commandBuilder, null, false);
     }
 
@@ -405,7 +405,7 @@ public class AscendAdminVexaPage extends InteractiveCustomUIPage<AscendAdminVexa
     private BigNumber parseAmount(Player player) {
         String raw = amountInput != null ? amountInput.trim() : "";
         if (raw.isEmpty()) {
-            player.sendMessage(Message.raw("Enter a vexa amount."));
+            player.sendMessage(Message.raw("Enter a volt amount."));
             return null;
         }
         try {
@@ -531,13 +531,13 @@ public class AscendAdminVexaPage extends InteractiveCustomUIPage<AscendAdminVexa
         sendUpdate(commandBuilder, null, false);
     }
 
-    public static class VexaData {
+    public static class VoltData {
         static final String KEY_BUTTON = "Button";
-        static final String KEY_AMOUNT = "@VexaAmount";
+        static final String KEY_AMOUNT = "@VoltAmount";
         static final String KEY_SKILL_POINTS_AMOUNT = "@SkillPointsAmount";
         static final String KEY_VOID_Y_THRESHOLD = "@VoidYThreshold";
-        static final String BUTTON_ADD = "AddVexa";
-        static final String BUTTON_REMOVE = "RemoveVexa";
+        static final String BUTTON_ADD = "AddVolt";
+        static final String BUTTON_REMOVE = "RemoveVolt";
         static final String BUTTON_RESET_PROGRESS = "ResetProgress";
         static final String BUTTON_SET_SPAWN_LOCATION = "SetSpawnLocation";
         static final String BUTTON_SET_NPC_LOCATION = "SetNpcLocation";
@@ -551,7 +551,7 @@ public class AscendAdminVexaPage extends InteractiveCustomUIPage<AscendAdminVexa
         static final String BUTTON_BACK = "Back";
         static final String BUTTON_CLOSE = "Close";
 
-        public static final BuilderCodec<VexaData> CODEC = BuilderCodec.<VexaData>builder(VexaData.class, VexaData::new)
+        public static final BuilderCodec<VoltData> CODEC = BuilderCodec.<VoltData>builder(VoltData.class, VoltData::new)
             .addField(new KeyedCodec<>(KEY_BUTTON, Codec.STRING), (data, value) -> data.button = value, data -> data.button)
             .addField(new KeyedCodec<>(KEY_AMOUNT, Codec.STRING), (data, value) -> data.amount = value, data -> data.amount)
             .addField(new KeyedCodec<>(KEY_SKILL_POINTS_AMOUNT, Codec.STRING), (data, value) -> data.skillPointsAmount = value, data -> data.skillPointsAmount)

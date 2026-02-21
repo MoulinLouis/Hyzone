@@ -82,7 +82,7 @@ $C.@PageOverlay {
         Label #IncomeValue {
           Anchor: (Left: 180, Right: 16, Top: 0, Bottom: 0);
           Style: (FontSize: 15, TextColor: #10b981, RenderBold: true, VerticalAlignment: Center);
-          Text: "0 vexa/sec";
+          Text: "0 volt/sec";
         }
       }
 
@@ -140,7 +140,7 @@ $C.@PageOverlay {
         Label #LifetimeValue {
           Anchor: (Left: 180, Right: 16, Top: 0, Bottom: 0);
           Style: (FontSize: 15, TextColor: #ffd166, RenderBold: true, VerticalAlignment: Center);
-          Text: "0 vexa";
+          Text: "0 volt";
         }
       }
 

@@ -27,7 +27,7 @@ import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.core.analytics.AnalyticsStore;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.core.discord.DiscordLinkStore;
-import io.hyvexa.core.economy.GemStore;
+import io.hyvexa.core.economy.VexaStore;
 import io.hyvexa.hub.command.HubCommand;
 import io.hyvexa.hub.hud.HubHud;
 import io.hyvexa.hub.interaction.HubMenuInteraction;
@@ -96,9 +96,9 @@ public class HyvexaHubPlugin extends JavaPlugin {
             }
         }
         try {
-            GemStore.getInstance().initialize();
+            VexaStore.getInstance().initialize();
         } catch (Exception e) {
-            LOGGER.atWarning().withCause(e).log("Failed to initialize GemStore for Hub");
+            LOGGER.atWarning().withCause(e).log("Failed to initialize VexaStore for Hub");
         }
         try {
             DiscordLinkStore.getInstance().initialize();
@@ -151,7 +151,7 @@ public class HyvexaHubPlugin extends JavaPlugin {
                 giveHubItems(player);
                 requestHubHudAttach(ref, store, playerRef);
                 try {
-                    DiscordLinkStore.getInstance().checkAndRewardGems(playerRef.getUuid(), player);
+                    DiscordLinkStore.getInstance().checkAndRewardVexa(playerRef.getUuid(), player);
                 } catch (Exception e) {
                     LOGGER.atWarning().withCause(e).log("Discord link check failed (hub)");
                 }
@@ -200,8 +200,8 @@ public class HyvexaHubPlugin extends JavaPlugin {
                 return;
             }
             clearHubHudState(playerId);
-            try { GemStore.getInstance().evictPlayer(playerId); }
-            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: GemStore"); }
+            try { VexaStore.getInstance().evictPlayer(playerId); }
+            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: VexaStore"); }
             try { DiscordLinkStore.getInstance().evictPlayer(playerId); }
             catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: DiscordLinkStore"); }
         });
@@ -230,7 +230,7 @@ public class HyvexaHubPlugin extends JavaPlugin {
             HudLifecycle lifecycle = entry.getValue();
             if (lifecycle.hud() != null) {
                 lifecycle.hud().updatePlayerCount();
-                lifecycle.hud().updateGems(GemStore.getInstance().getGems(entry.getKey()));
+                lifecycle.hud().updateVexa(VexaStore.getInstance().getVexa(entry.getKey()));
             }
         }
     }

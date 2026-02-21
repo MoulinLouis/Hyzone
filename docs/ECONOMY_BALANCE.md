@@ -1,6 +1,6 @@
 # Ascend Mode - Economy Balance Documentation
 
-Last updated: 2026-02-05
+Last updated: 2026-02-21
 
 This document provides a factual overview of the economy balancing in Ascend mode, including all costs, multipliers, and progression formulas.
 
@@ -17,7 +17,7 @@ This document provides a factual overview of the economy balancing in Ascend mod
 7. [Strategic Evolution System](#strategic-evolution-system)
 8. [Transcendence System](#transcendence-system-4th-prestige)
 9. [Design Philosophy](#design-philosophy)
-10. [Gems (Global Currency)](#gems-global-currency)
+10. [Vexa (Global Currency)](#vexa-global-currency)
 
 ---
 
@@ -196,7 +196,7 @@ Elevation uses a level-based prestige system where higher levels give progressiv
 cost = 30,000 × 1.15^(currentLevel^0.72)
 ```
 
-**Base cost:** 30,000 vexa
+**Base cost:** 30,000 volt
 **Growth rate:** Non-linear — `1.15^(level^0.72)` flattens the curve at high levels
 **Cost curve exponent:** 0.72
 
@@ -216,11 +216,11 @@ At low levels this behaves almost identically to `1.15^level`. At high levels th
 
 **Discount support:** Formula accepts a `costMultiplier` parameter for Summit/Ascension skill tree discounts.
 
-### Accumulated Vexa
+### Accumulated Volt
 
-Elevation uses **accumulated vexa** (total vexa earned since last reset) instead of the player's current vexa balance. This means spending vexa on runner upgrades does NOT reduce your elevation potential — only earning matters.
+Elevation uses **accumulated volt** (total volt earned since last reset) instead of the player's current volt balance. This means spending volt on runner upgrades does NOT reduce your elevation potential — only earning matters.
 
-**Increment:** Every time vexa is earned (manual runs, runner completions, passive earnings, admin adds), the accumulated counter increases.
+**Increment:** Every time volt is earned (manual runs, runner completions, passive earnings, admin adds), the accumulated counter increases.
 
 **Reset to 0 on:**
 - Elevation (after purchasing levels)
@@ -231,16 +231,16 @@ Elevation uses **accumulated vexa** (total vexa earned since last reset) instead
 
 ## Map Economics
 
-### Base Vexa Rewards (Per Manual Completion)
+### Base Volt Rewards (Per Manual Completion)
 
 | Map | Display Order | Base Reward | With ×100 Multiplier |
 |-----|---------------|-------------|---------------------|
-| Rouge | 0 | 1 vexa | 100 vexa |
-| Orange | 1 | 5 vexa | 500 vexa |
-| Jaune | 2 | 25 vexa | 2,500 vexa |
-| Vert | 3 | 100 vexa | 10,000 vexa |
-| Bleu | 4 | 500 vexa | 50,000 vexa |
-| Gold | 5 | 2,500 vexa | 250,000 vexa |
+| Rouge | 0 | 1 volt | 100 volt |
+| Orange | 1 | 5 volt | 500 volt |
+| Jaune | 2 | 25 volt | 2,500 volt |
+| Vert | 3 | 100 volt | 10,000 volt |
+| Bleu | 4 | 500 volt | 50,000 volt |
+| Gold | 5 | 2,500 volt | 250,000 volt |
 
 **Actual reward formula:**
 ```
@@ -254,7 +254,7 @@ Where:
 
 ### Map Unlock System
 
-Maps unlock progressively based on runner level, not vexa price.
+Maps unlock progressively based on runner level, not volt price.
 
 **Unlock condition:** Maps unlock automatically when the runner on the **previous map** reaches level 5.
 
@@ -273,9 +273,9 @@ Maps unlock progressively based on runner level, not vexa price.
 
 ### Runner Purchase Prices
 
-**All maps:** Free (0 vexa)
+**All maps:** Free (0 volt)
 
-Runners have no vexa cost after map unlock. They can be purchased for free once:
+Runners have no volt cost after map unlock. They can be purchased for free once:
 - Map is unlocked (via runner level requirement)
 - Map has been completed manually at least once
 - Ghost recording exists (player's personal best time)
@@ -299,7 +299,7 @@ Runners have no vexa cost after map unlock. They can be purchased for free once:
 
 ### Offline Production
 
-When a player disconnects or switches worlds, their runners continue to earn vexa at a reduced rate.
+When a player disconnects or switches worlds, their runners continue to earn volt at a reduced rate.
 
 **Base offline rate:** 10% of normal production
 **Maximum accumulation time:** 24 hours
@@ -307,7 +307,7 @@ When a player disconnects or switches worlds, their runners continue to earn vex
 
 **How it works:**
 - Passive earnings are calculated based on runner production rates at the time of disconnect
-- Vexa and map multiplier gains accumulate at the reduced rate
+- Volt and map multiplier gains accumulate at the reduced rate
 - Players receive a summary popup on reconnect showing total passive earnings
 - There is no Ascendancy Tree node that boosts offline rate. Base rate is 10%.
 
@@ -326,8 +326,8 @@ When a player disconnects or switches worlds, their runners continue to earn vex
 
 - Complete Rouge map manually (~30 seconds)
 - Buy first runner (free)
-- Earn ~50-100 vexa from automatic completions
-- Purchase first 3 speed upgrades (~5 + 15 + 35 = 55 vexa)
+- Earn ~50-100 volt from automatic completions
+- Purchase first 3 speed upgrades (~5 + 15 + 35 = 55 volt)
 - Multiplier reaches ~2-4×
 
 **Design goal:** Smooth onboarding, visible progress every 30-60 seconds.
@@ -350,7 +350,7 @@ When a player disconnects or switches worlds, their runners continue to earn vex
 
 - Numbers reach millions (15-20 min mark)
 - Elevation ×100-500 range
-- Payouts per run: 1M-10M+ vexa
+- Payouts per run: 1M-10M+ volt
 - Upgrade costs: hundreds of thousands to millions
 - Multiple map multipliers at 50-100+
 
@@ -360,8 +360,8 @@ When a player disconnects or switches worlds, their runners continue to earn vex
 
 **Phase:** Prestige systems and meta progression
 
-- Summit threshold: 1 billion vexa minimum for first level
-- Ascension threshold: 1 Decillion (1Dc) vexa
+- Summit threshold: 1 billion volt minimum for first level
+- Ascension threshold: 1 Decillion (1Dc) volt
 - Permanent bonuses and skill trees
 - Long-term progression hooks
 
@@ -369,13 +369,13 @@ When a player disconnects or switches worlds, their runners continue to earn vex
 
 ## Summit System
 
-Summit converts vexa into XP for permanent category bonuses, resetting vexa, elevation, multipliers, runners, and map unlocks (preserves best times only).
+Summit converts volt into XP for permanent category bonuses, resetting volt, elevation, multipliers, runners, and map unlocks (preserves best times only).
 
 ### XP System
 
-**Vexa to XP conversion:** `(vexa / 1B)^power` where power is calibrated so 1Dc = level 1000
+**Volt to XP conversion:** `(volt / 1B)^power` where power is calibrated so 1Dc = level 1000
 
-| Vexa | XP Gained |
+| Volt | XP Gained |
 |-------|-----------|
 | 1B | 1 |
 | 10B | 2 |
@@ -391,8 +391,8 @@ Summit converts vexa into XP for permanent category bonuses, resetting vexa, ele
 | 1No | 28,713,668 |
 | 1Dc | 333,833,500 |
 
-**Minimum vexa for 1 XP:** 1 billion vexa (1B)
-**Level 1000 target:** 1 Decillion (10^33) accumulated vexa
+**Minimum volt for 1 XP:** 1 billion volt (1B)
+**Level 1000 target:** 1 Decillion (10^33) accumulated volt
 
 **XP per level formula:**
 - Below level 1000: `level^2`
@@ -408,9 +408,9 @@ Summit converts vexa into XP for permanent category bonuses, resetting vexa, ele
 | 5000 | 625,000,000 | 625B |
 | 10000 | 10,000,000,000 | 20T |
 
-**Expected level gains by vexa (from level 0):**
+**Expected level gains by volt (from level 0):**
 
-| Vexa | XP | Approx Level |
+| Volt | XP | Approx Level |
 |-------|-----|--------------|
 | 1B | 1 | 1 |
 | 10B | 2 | 1 |
@@ -438,7 +438,7 @@ Summit converts vexa into XP for permanent category bonuses, resetting vexa, ele
 Summit performs a full reset similar to Elevation:
 
 **Reset (lost):**
-- Vexa → 0
+- Volt → 0
 - Elevation → 1
 - Map multipliers → 1
 - Runners → removed
@@ -463,7 +463,7 @@ Summit performs a full reset similar to Elevation:
 - **Level 500-1000:** ⁴√ growth — heavy diminishing returns
 - **Level 1000+ (post-cap):** `anchorAt1000 × (level / 1000)^0.3` — soft diminishing returns
 
-**Piecewise vexa-to-XP:** Below 1Dc, the original power formula applies (`(vexa/1B)^0.3552`). Above 1Dc, XP growth slows drastically: `XP_at_1Dc + ((vexa/1Dc)^0.08 - 1) × XP_at_1Dc`. This keeps post-1000 progression meaningful (level 13K at 1e100 vexa) without runaway scaling. Combined with the ^0.3 bonus curve, a level 10000 player gets ~x33 Multiplier Gain vs x16.5 at level 1000 — a solid but bounded improvement.
+**Piecewise volt-to-XP:** Below 1Dc, the original power formula applies (`(volt/1B)^0.3552`). Above 1Dc, XP growth slows drastically: `XP_at_1Dc + ((volt/1Dc)^0.08 - 1) × XP_at_1Dc`. This keeps post-1000 progression meaningful (level 13K at 1e100 volt) without runaway scaling. Combined with the ^0.3 bonus curve, a level 10000 player gets ~x33 Multiplier Gain vs x16.5 at level 1000 — a solid but bounded improvement.
 
 ### Runner Speed
 
@@ -530,7 +530,7 @@ Each Summit level gives a flat EP boost up to level 25, then transitions to slow
 
 ## Ascension System
 
-Ascension is the ultimate prestige. Requires 1 Decillion (1Dc = 10^33) vexa. Resets everything except best times, skill tree, achievements, and challenge completions.
+Ascension is the ultimate prestige. Requires 1 Decillion (1Dc = 10^33) volt. Resets everything except best times, skill tree, achievements, and challenge completions.
 
 ### AP (Ascension Points)
 
@@ -632,7 +632,7 @@ Evolution provides a clear benefit with continuous cost progression.
 
 ### Example Scenario
 
-**Situation:** You have massive vexa, multiple runners at different levels
+**Situation:** You have massive volt, multiple runners at different levels
 
 **Option A: Focus on Map 0 (Rouge)**
 - Fast completion time = more runs = more multiplier gains
@@ -664,15 +664,15 @@ Evolution provides a clear benefit with continuous cost progression.
 
 ## Transcendence System (4th Prestige)
 
-Transcendence is the ultimate endgame prestige. Requires 1 Googol (1e100 = 10^100) vexa with BREAK_ASCENSION active and all 7 challenges completed.
+Transcendence is the ultimate endgame prestige. Requires 1 Googol (1e100 = 10^100) volt with BREAK_ASCENSION active and all 7 challenges completed.
 
 ### Trigger
 - **Manual opt-in** via Transcendence NPC or `/transcend` command
-- **Threshold:** 1e100 vexa (1 Googol)
+- **Threshold:** 1e100 volt (1 Googol)
 - **Requirements:** BREAK_ASCENSION active + all challenge rewards completed
 
 ### What Gets Reset
-- Vexa, elevation, ascension count
+- Volt, elevation, ascension count
 - Skill tree (AP + all unlocked nodes)
 - Summit XP (all categories)
 - Challenge completions and records
@@ -691,7 +691,7 @@ Transcendence is the ultimate endgame prestige. Requires 1 Googol (1e100 = 10^10
 | 1 | First Transcendence | Permanently unlock Map 6 (Gold) |
 
 ### Map 6 (Gold)
-- **Base reward:** 2,500 vexa
+- **Base reward:** 2,500 volt
 - **Base run time:** 68 seconds
 - **Cost multiplier:** x4.7
 - **Early-level boost:** x3.5
@@ -712,7 +712,7 @@ Transcendence is the ultimate endgame prestige. Requires 1 Googol (1e100 = 10^10
 
 ### Balance Constraints
 
-- **Minimum vexa generation:** Even idle players make progress
+- **Minimum volt generation:** Even idle players make progress
 - **Maximum speed:** Runners capped at level 20 per evolution cycle
 - **Cost scaling:** Exponential but continuous - no resets, no surprises
 - **Evolution benefit:** ×2 multiplier gain with no cost penalty
@@ -727,13 +727,13 @@ Transcendence is the ultimate endgame prestige. Requires 1 Googol (1e100 = 10^10
 
 ---
 
-## Gems (Global Currency)
+## Vexa (Global Currency)
 
-Gems are a **global cross-mode currency** stored in `hyvexa-core` and displayed on all HUDs (Parkour, Ascend, Hub).
+Vexa is a **global cross-mode currency** stored in `hyvexa-core` and displayed on all HUDs (Parkour, Ascend, Hub).
 
-- **Storage:** `player_gems` table, managed by `GemStore` singleton
-- **Display:** Green gem icon + count on right-side info box of every HUD
-- **Admin command:** `/gems <set|add|remove|check> <player> [amount]` (OP only)
+- **Storage:** `player_vexa` table, managed by `VexaStore` singleton
+- **Display:** Green vexa icon + count on right-side info box of every HUD
+- **Admin command:** `/vexa <set|add|remove|check> <player> [amount]` (OP only)
 - **Current sources:** Admin-granted only (future: vote rewards, cosmetics shop)
 - **Floor:** Balance cannot go below 0
 
@@ -744,7 +744,7 @@ Gems are a **global cross-mode currency** stored in `hyvexa-core` and displayed 
 ### Overflow Protection
 
 - Elevation costs capped at `Long.MAX_VALUE`
-- Vexa balances stored as `double` for high precision
+- Volt balances stored as `double` for high precision
 - All UI displays use abbreviated notation (K, M, B, T)
 
 ### Precision
@@ -773,18 +773,18 @@ Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure conti
 ## Version History
 
 - **2026-02-17 (v19):** Transcendence (4th Prestige) + Map 6 + Summit nerf
-  - 4th prestige layer: Transcendence at 1e100 vexa with BREAK_ASCENSION + all challenges
+  - 4th prestige layer: Transcendence at 1e100 volt with BREAK_ASCENSION + all challenges
   - Full reset including skill tree + challenges; preserves best times, achievements, transcendence count
   - Milestone 1 (first transcend) permanently unlocks Map 6 (Gold)
   - Map 6: 2500 base reward, 68s base time, x4.7 cost multiplier, x3.5 early-level boost
   - Summit XP storage: long -> double (removes ~136k level cap, unlimited progression)
   - Summit XP curve: level^4/1M above 1000 (steeper than previous level^3/1000)
-  - **Summit vexa->XP: piecewise formula** — unchanged below 1Dc, post-1Dc power 0.08 (1e100 = ~level 13K)
+  - **Summit volt->XP: piecewise formula** — unchanged below 1Dc, post-1Dc power 0.08 (1e100 = ~level 13K)
   - **Summit bonus curve: ^0.7 -> ^0.3** — soft diminishing returns (lvl 10K: x33 mult gain vs old x90)
 
 - **2026-02-16 (v18):** Summit XP softcap at level 1000
   - XP cost per level: level^2 (below 1000) -> level^3/1000 (above 1000, continuous)
-  - Same vexa reaches fewer levels: old 5000 -> ~3591, old 10000 -> ~6042
+  - Same volt reaches fewer levels: old 5000 -> ~3591, old 10000 -> ~6042
   - Summit level hard cap removed (was 1000, now unlimited)
   - Bonus growth zones unchanged: linear (0-25), √ (25-500), ⁴√ (500+)
 
@@ -794,16 +794,16 @@ Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure conti
   - More balanced offline vs. active play incentives
 
 - **2026-02-15 (v18):** Summit XP recalibration for 1Dc = level 1000
-  - Vexa→XP power: 3/7 (~0.4286) → ~0.3552 (derived from 1Dc target)
-  - 1 Decillion accumulated vexa now reaches exactly level 1000 (max)
+  - Volt→XP power: 3/7 (~0.4286) → ~0.3552 (derived from 1Dc target)
+  - 1 Decillion accumulated volt now reaches exactly level 1000 (max)
   - Early/mid game slower: 1Qa gives ~135 XP (was 372), 1Qi gives ~1,571 XP (was ~7,196)
   - Progression stretched to fill the full 1B → 1Dc range evenly
 
-- **2026-02-08 (v17):** Elevation accumulated vexa system
-  - Elevation now uses accumulated vexa (total earned since last reset) instead of current balance
-  - Spending vexa on upgrades no longer reduces elevation potential
-  - Accumulated vexa reset on: Elevation, Summit, Ascension
-  - Same pattern as Summit accumulated vexa (parallel tracking)
+- **2026-02-08 (v17):** Elevation accumulated volt system
+  - Elevation now uses accumulated volt (total earned since last reset) instead of current balance
+  - Spending volt on upgrades no longer reduces elevation potential
+  - Accumulated volt reset on: Elevation, Summit, Ascension
+  - Same pattern as Summit accumulated volt (parallel tracking)
 
 - **2026-02-16 (v17):** Ascend Verticality v1
   - AP multiplier: `1 + completed_challenges` AP per ascension (max x8 with 7 challenges)
@@ -829,8 +829,8 @@ Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure conti
 
 - **2026-02-06 (v14):** Summit XP number compression
   - Level exponent: 2.5 → 2.0 (level 50: 17,678 → 2,500 XP per level)
-  - Vexa→XP: sqrt → power 3/7 (compensates to preserve same vexa→level mapping)
-  - Same vexa still reach the same levels (within ~5%)
+  - Volt→XP: sqrt → power 3/7 (compensates to preserve same volt→level mapping)
+  - Same volt still reach the same levels (within ~5%)
   - DB migration: existing XP converted via `old_xp^(6/7)`
 
 - **2026-02-06 (v13):** Evolution Power asymptotic growth
@@ -842,10 +842,10 @@ Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure conti
 - **2026-02-06 (v12):** Elevation soft cap at level 300
   - Below 300: identical cost curve (1.15^(level^0.77))
   - Above 300: flatter late-game curve (exponent 0.63 instead of 0.77)
-  - Removes glass ceiling at high elevation — 100T vexa from level 600 gives +127 levels instead of +12
+  - Removes glass ceiling at high elevation — 100T volt from level 600 gives +127 levels instead of +12
 
-- **2026-02-06 (v11):** Summit XP based on accumulated vexa + reduced level cost
-  - Summit XP now based on vexa accumulated since last Summit/Elevation, not current balance
+- **2026-02-06 (v11):** Summit XP based on accumulated volt + reduced level cost
+  - Summit XP now based on volt accumulated since last Summit/Elevation, not current balance
   - Runner upgrades no longer reduce Summit XP potential (only earning matters)
   - Elevation resets the accumulator (strategic choice preserved)
   - Summit level cost: `level^2.5` (was `level^4`) — reduces gap between levels
@@ -857,14 +857,14 @@ Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure conti
   - Level = multiplier (1:1) unchanged — only the cost formula changed
 
 - **2026-02-06 (v9):** Summit and Ascension threshold rebalance
-  - Summit XP conversion: `sqrt(vexa / 1B)` (was `sqrt(vexa) / 1M`)
-  - Minimum vexa for Summit: 1B (was 1T)
+  - Summit XP conversion: `sqrt(volt / 1B)` (was `sqrt(volt) / 1M`)
+  - Minimum volt for Summit: 1B (was 1T)
   - Ascension threshold: 1Dc (was 10Q)
 
 - **2026-02-05 (v8):** Summit late-game rebalance
-  - Summit XP conversion: `sqrt(vexa) / 1,000,000` (was `/ 100`)
-  - Minimum vexa for Summit: 1T (was 10K)
-  - Summit is now a true late-game system (requires 1T vexa for level 1)
+  - Summit XP conversion: `sqrt(volt) / 1,000,000` (was `/ 100`)
+  - Minimum volt for Summit: 1T (was 10K)
+  - Summit is now a true late-game system (requires 1T volt for level 1)
   - Summit now resets everything like elevation (multipliers, runners, map unlocks), keeps only best times
 
 - **2026-02-05 (v7):** Linear elevation multiplier
@@ -874,18 +874,18 @@ Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure conti
 - **2026-02-05 (v6):** Evolution and Summit XP rebalance
   - Evolution now grants ×10 per-run multiplier gain (instead of one-time map multiplier boost)
   - Removed Evolution Power one-shot bonus (category kept for future use)
-  - Summit XP conversion: `sqrt(vexa) / 100` (diminishing returns, was linear)
+  - Summit XP conversion: `sqrt(volt) / 100` (diminishing returns, was linear)
   - Summit XP per level: `level^4` (steep scaling, was `100 × level^1.5`)
-  - Minimum vexa for Summit: 10,000 (for 1 XP)
-  - Late-game Summit scaling: 2T vexa → ~9 levels (was ~1,500+ levels)
+  - Minimum volt for Summit: 10,000 (for 1 XP)
+  - Late-game Summit scaling: 2T volt → ~9 levels (was ~1,500+ levels)
 
 - **2026-02-05 (v5):** XP-based Summit system
-  - Summit now uses XP instead of vexa thresholds (1000 vexa = 1 XP)
+  - Summit now uses XP instead of volt thresholds (1000 volt = 1 XP)
   - XP per level: 100 × level^1.5 (gradual scaling)
-  - Replaced Vexa Flow with Multiplier Gain (1 + 0.5 × level^0.8)
+  - Replaced Volt Flow with Multiplier Gain (1 + 0.5 × level^0.8)
   - Runner Speed: 1 + 0.45 × sqrt(level) (diminishing returns)
   - Evolution Power: 2 + 0.5 × level^0.8 (applied on runner evolution, multiplies map multiplier)
-  - Summit no longer resets multipliers, runners, or map unlocks (only vexa and elevation)
+  - Summit no longer resets multipliers, runners, or map unlocks (only volt and elevation)
 
 - **2026-02-05 (v4):** Early-game unlock pacing
   - Added decaying cost boost for levels 0-9 on maps 2+ (first evolution only)
@@ -895,7 +895,7 @@ Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure conti
 
 - **2026-02-04 (v3):** Exponential elevation and Summit refactoring
   - Elevation multiplier changed from `level` to `level × 1.02^level` *(reverted in v7)*
-  - Summit Vexa Flow changed from additive (+20%/level) to multiplicative (×1.20/level)
+  - Summit Volt Flow changed from additive (+20%/level) to multiplicative (×1.20/level)
   - Summit Manual Mastery renamed to Evolution Power (+0.20 evolution base/level)
   - Evolution Power affects runner multiplier gains via formula: `0.1 × (2 + bonus)^stars`
   - Simplified upgrade cost formula to `5 × 2^level + level × 10` (smooth ~2× growth, no boosts)

@@ -24,7 +24,7 @@ import io.hyvexa.ascend.data.AscendDatabaseSetup;
 import io.hyvexa.core.analytics.AnalyticsStore;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.core.discord.DiscordLinkStore;
-import io.hyvexa.core.economy.GemStore;
+import io.hyvexa.core.economy.VexaStore;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.data.AscendSettingsStore;
@@ -127,9 +127,9 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
         AscendDatabaseSetup.ensureTables();
         try {
-            GemStore.getInstance().initialize();
+            VexaStore.getInstance().initialize();
         } catch (Exception e) {
-            LOGGER.atWarning().withCause(e).log("Failed to initialize GemStore for Ascend");
+            LOGGER.atWarning().withCause(e).log("Failed to initialize VexaStore for Ascend");
         }
         try {
             DiscordLinkStore.getInstance().initialize();
@@ -303,7 +303,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     hudManager.attach(playerRef, player);
                     AscendMusicPage.applyStoredMusic(playerRef);
                     try {
-                        DiscordLinkStore.getInstance().checkAndRewardGems(playerId, player);
+                        DiscordLinkStore.getInstance().checkAndRewardVexa(playerId, player);
                     } catch (Exception e) {
                         LOGGER.atWarning().withCause(e).log("Discord link check failed (ascend)");
                     }
@@ -369,8 +369,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
             // Evict player from cache (lazy loading - saves memory)
             runSafe(() -> { if (playerStore != null) playerStore.removePlayer(playerId); },
                     "Disconnect cleanup: playerStore");
-            runSafe(() -> GemStore.getInstance().evictPlayer(playerId),
-                    "Disconnect cleanup: GemStore");
+            runSafe(() -> VexaStore.getInstance().evictPlayer(playerId),
+                    "Disconnect cleanup: VexaStore");
             runSafe(() -> DiscordLinkStore.getInstance().evictPlayer(playerId),
                     "Disconnect cleanup: DiscordLinkStore");
         });

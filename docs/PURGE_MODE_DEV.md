@@ -106,7 +106,7 @@ Plugin creates in this order:
 | Wave tick | `waveTick` | 200ms | Poll zombie deaths, update HUD, check wave complete, check player death | Wave complete or ENDED |
 | Intermission | `intermissionTask` | 1000ms | Countdown chat + HUD | Countdown hits 0 or ENDED |
 
-**HUD slow tick** (plugin-level, not per-session): 5000ms — computes player count once (`Universe.get().getPlayers().size()`), then updates player count, gems, and scrap for each attached purge HUD.
+**HUD slow tick** (plugin-level, not per-session): 5000ms — computes player count once (`Universe.get().getPlayers().size()`), then updates player count, vexa, and scrap for each attached purge HUD.
 
 ---
 
@@ -235,11 +235,11 @@ All tables use `ENGINE=InnoDB`, are created with `CREATE TABLE IF NOT EXISTS`, a
 | `#WaveLabel` | Label | `updateWaveStatus()` | `"WAVE 1"` |
 | `#ZombieCountLabel` | Label | `updateWaveStatus()` / `updateIntermission()` | `"Zombies: 0/5"` |
 | `#PlayerHealthLabel` | Label | `updatePlayerHealth()` | `"HP: 100 / 100"` |
-| `#PlayerGemsValue` | Label | `updateGems()` | `"0"` |
+| `#PlayerVexaValue` | Label | `updateVexa()` | `"0"` |
 | `#PlayerScrapValue` | Label | `updateScrap()` | `"0 scrap"` |
 | `#PlayerCountText` | Label | `updatePlayerCount()` | `"0"` |
 
-**Color scheme:** Green accent `#4ade80`, gem green `#62d96b`, scrap orange `#f59e0b`, text `#e7f1f4`, secondary `#9fb0ba`, background `#0d1620(0.95)`.
+**Color scheme:** Green accent `#4ade80`, vexa green `#62d96b`, scrap orange `#f59e0b`, text `#e7f1f4`, secondary `#9fb0ba`, background `#0d1620(0.95)`.
 
 ---
 
@@ -249,14 +249,14 @@ All tables use `ENGINE=InnoDB`, are created with `CREATE TABLE IF NOT EXISTS`, a
 1. Validate ref, world is Purge, get PlayerRef + Player
 2. `hudManager.attach(playerRef, player)` — base HUD, wave status hidden
 3. Clear inventory and apply idle base orbs
-4. `DiscordLinkStore.checkAndRewardGems()`
+4. `DiscordLinkStore.checkAndRewardVexa()`
 
 **AddPlayerToWorldEvent** (world change):
 - If entering Purge world: idempotently ensure HUD is attached and idle base orbs exist
 - If leaving Purge world: `sessionManager.cleanupPlayer()` (stop reason `"disconnect"`), `hudManager.removePlayer()`
 
 **PlayerDisconnectEvent:**
-- Cleanup session, remove HUD, evict all stores (Gem, Discord, PurgePlayer, PurgeScrap)
+- Cleanup session, remove HUD, evict all stores (Vexa, Discord, PurgePlayer, PurgeScrap)
 
 ---
 

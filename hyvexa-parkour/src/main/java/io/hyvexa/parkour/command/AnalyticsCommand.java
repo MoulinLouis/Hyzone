@@ -200,7 +200,7 @@ public class AnalyticsCommand extends AbstractAsyncCommand {
     private void showEconomy(Player player, int days) {
         AnalyticsStore store = AnalyticsStore.getInstance();
 
-        long gemsSpent = store.sumJsonLongField("gem_spend", "amount", days);
+        long vexaSpent = store.sumJsonLongField("gem_spend", "amount", days);
         int purchases = store.countEvents("gem_spend", days);
         int uniqueBuyers = store.countDistinctPlayers("gem_spend", days);
         int discordLinks = store.countEvents("discord_link", days);
@@ -208,7 +208,7 @@ public class AnalyticsCommand extends AbstractAsyncCommand {
         List<Map.Entry<String, Integer>> topItems = store.getTopJsonValues("gem_spend", "item", days, 5);
 
         player.sendMessage(Message.raw("--- Economy Analytics (" + days + "d) ---"));
-        player.sendMessage(Message.raw("Gems spent: " + gemsSpent + " | Purchases: " + purchases
+        player.sendMessage(Message.raw("Vexa spent: " + vexaSpent + " | Purchases: " + purchases
                 + " | Unique buyers: " + uniqueBuyers));
         player.sendMessage(Message.raw("Discord links: " + discordLinks));
         if (!topItems.isEmpty()) {

@@ -23,7 +23,7 @@ $C.@PageOverlay {
           );
         }
         $C.@Title {
-          @Text = "Ascend Admin Vexa";
+          @Text = "Ascend Admin Volt";
         }
       }
     }
@@ -34,7 +34,7 @@ $C.@PageOverlay {
 
       Label {
         Style: (FontSize: 16, TextColor: #93844c, RenderBold: true);
-        Text: "Adjust Vexa";
+        Text: "Adjust Volt";
       }
 
       Group {
@@ -44,10 +44,10 @@ $C.@PageOverlay {
         Label {
           Anchor: (Width: 140);
           Style: (FontSize: 14, TextColor: #cfd7dc);
-          Text: "Current Vexa:";
+          Text: "Current Volt:";
         }
 
-        Label #CurrentVexaValue {
+        Label #CurrentVoltValue {
           Style: (FontSize: 14, TextColor: #ffffff(0.9));
           Text: "0";
         }
@@ -56,10 +56,10 @@ $C.@PageOverlay {
       Label {
         Anchor: (Top: 10);
         Style: (FontSize: 13, TextColor: #cfd7dc);
-        Text: "Vexa Amount";
+        Text: "Volt Amount";
       }
 
-      $C.@TextField #VexaAmountField {
+      $C.@TextField #VoltAmountField {
         Anchor: (Height: 30);
         Style: (FontSize: 14, TextColor: #ffffff(0.85));
       }
@@ -70,12 +70,12 @@ $C.@PageOverlay {
 
         $C.@TextButton #AddButton {
           Anchor: (Width: 250, Height: 36);
-          Text: "Add Vexa";
+          Text: "Add Volt";
         }
 
         $C.@TextButton #RemoveButton {
           Anchor: (Left: 10, Width: 200, Height: 36);
-          Text: "Remove Vexa";
+          Text: "Remove Volt";
         }
       }
 

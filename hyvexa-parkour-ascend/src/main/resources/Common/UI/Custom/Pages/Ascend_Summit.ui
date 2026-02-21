@@ -97,7 +97,7 @@ $C.@PageOverlay {
         Label {
           Anchor: (Left: 28, Right: 16, Top: 0, Bottom: 0);
           Style: (FontSize: 12, TextColor: #fca5a5, VerticalAlignment: Center);
-          Text: "Warning: Summit resets vexa and elevation.";
+          Text: "Warning: Summit resets volt and elevation.";
         }
       }
     }

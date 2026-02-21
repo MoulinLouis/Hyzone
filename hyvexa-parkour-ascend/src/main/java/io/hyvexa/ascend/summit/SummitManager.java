@@ -14,7 +14,7 @@ import java.util.UUID;
 
 /**
  * Manages the Summit prestige system.
- * Summit converts vexa into XP-based category upgrades, resetting vexa, elevation,
+ * Summit converts volt into XP-based category upgrades, resetting volt, elevation,
  * multipliers, runners, and map unlocks (preserves best times only).
  */
 public class SummitManager {
@@ -31,22 +31,22 @@ public class SummitManager {
 
     /**
      * Checks if a player can perform a Summit in any category.
-     * Requires at least 1 XP worth of vexa (1B vexa = 1 XP).
+     * Requires at least 1 XP worth of volt (1B volt = 1 XP).
      */
     public boolean canSummit(UUID playerId) {
-        BigNumber accumulatedVexa = playerStore.getSummitAccumulatedVexa(playerId);
-        double potentialXp = AscendConstants.vexaToXp(accumulatedVexa);
+        BigNumber accumulatedVolt = playerStore.getSummitAccumulatedVolt(playerId);
+        double potentialXp = AscendConstants.voltToXp(accumulatedVolt);
         return potentialXp >= 1.0;
     }
 
     /**
      * Calculates the XP-based preview for a Summit in the given category.
      * Shows current level, projected level, XP gain, and bonus changes.
-     * XP is based on accumulated vexa since last Summit/Elevation.
+     * XP is based on accumulated volt since last Summit/Elevation.
      */
     public SummitPreview previewSummit(UUID playerId, SummitCategory category) {
-        BigNumber vexa = playerStore.getSummitAccumulatedVexa(playerId);
-        double xpToGain = AscendConstants.vexaToXp(vexa);
+        BigNumber volt = playerStore.getSummitAccumulatedVolt(playerId);
+        double xpToGain = AscendConstants.voltToXp(volt);
 
         double currentXp = playerStore.getSummitXp(playerId, category);
         int currentLevel = AscendConstants.calculateLevelFromXp(currentXp);
@@ -67,7 +67,7 @@ public class SummitManager {
             newLevel - currentLevel,
             currentBonus,
             newBonus,
-            vexa,
+            volt,
             xpToGain,
             currentProgress[0],
             currentProgress[1],
@@ -77,8 +77,8 @@ public class SummitManager {
     }
 
     /**
-     * Performs a Summit: converts vexa to XP in the specified category,
-     * resets vexa, elevation, multipliers, runners, and map unlocks (keeps best times only).
+     * Performs a Summit: converts volt to XP in the specified category,
+     * resets volt, elevation, multipliers, runners, and map unlocks (keeps best times only).
      *
      * @return SummitResult containing the new level, list of maps with runners (for despawn), and XP gained
      */
@@ -90,8 +90,8 @@ public class SummitManager {
             return new SummitResult(-1, List.of(), 0.0);
         }
 
-        BigNumber vexa = playerStore.getSummitAccumulatedVexa(playerId);
-        double xpToGain = AscendConstants.vexaToXp(vexa);
+        BigNumber volt = playerStore.getSummitAccumulatedVolt(playerId);
+        double xpToGain = AscendConstants.voltToXp(volt);
 
         if (xpToGain < 1.0) {
             return new SummitResult(-1, List.of(), 0.0);
@@ -119,7 +119,7 @@ public class SummitManager {
             }
         }
 
-        // Reset vexa, elevation, multipliers, and runners (keeps unlocks)
+        // Reset volt, elevation, multipliers, and runners (keeps unlocks)
         List<String> mapsWithRunners = playerStore.resetProgressForSummit(playerId, firstMapId);
 
         LOGGER.atInfo().log("[Summit] Player " + playerId + " summited " + category.name()
@@ -263,7 +263,7 @@ public class SummitManager {
         int levelGain,
         double currentBonus,
         double newBonus,
-        BigNumber vexaToSpend,
+        BigNumber voltToSpend,
         double xpToGain,
         double currentXpInLevel,
         double currentXpRequired,

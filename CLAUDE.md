@@ -30,7 +30,7 @@ Quick reference for AI agents working on this Hytale plugin project.
 | `hyvexa-parkour/src/main/resources/Common/UI/Custom/Pages/` | UI definitions |
 | `run/mods/Parkour/` | Runtime config (database.json) |
 | `docs/` | All documentation files |
-| `discord-bot/` | Discord bot: account linking + gem reward |
+| `discord-bot/` | Discord bot: account linking + vexa reward |
 
 ## Workflow Reminders
 
@@ -67,12 +67,12 @@ Quick reference for AI agents working on this Hytale plugin project.
 
 Node.js bot for Discord-Minecraft account linking. Shares the same MySQL database as the plugin.
 
-- **Flow**: Player runs `/link` in-game -> gets a code (e.g. `X7K-9M2`) -> enters `/link X7K-9M2` on Discord -> bot validates & creates permanent link -> next login, plugin awards 100 gems
+- **Flow**: Player runs `/link` in-game -> gets a code (e.g. `X7K-9M2`) -> enters `/link X7K-9M2` on Discord -> bot validates & creates permanent link -> next login, plugin awards 100 vexa
 - **Config**: `discord-bot/.env` (gitignored) - DB credentials, bot token, guild ID. See `.env.example`
 - **Run locally**: `cd discord-bot && npm install && npm run start`
 - **Production**: Hosted on game server panel (Helloserv) or separate VPS with `pm2`
-- **Plugin side**: `DiscordLinkStore` singleton in `hyvexa-core` handles code generation, link checking, and gem rewards. Initialized by all 3 plugin modules.
-- **DB tables**: `discord_link_codes` (temp codes, 5min expiry), `discord_links` (permanent links + `gems_rewarded` flag)
+- **Plugin side**: `DiscordLinkStore` singleton in `hyvexa-core` handles code generation, link checking, and vexa rewards. Initialized by all 3 plugin modules.
+- **DB tables**: `discord_link_codes` (temp codes, 5min expiry), `discord_links` (permanent links + `vexa_rewarded` flag)
 
 ## Reference Files (in docs/)
 

@@ -92,7 +92,7 @@ $C.@PageOverlay {
       Label #Description {
         Anchor: (Top: 14, Left: 0, Right: 0);
         Style: (FontSize: 14, TextColor: #b2c0c7, Wrap: true);
-        Text: "Convert vexa into permanent upgrades: Runner Speed, Multiplier Gain, and Evolution Power.";
+        Text: "Convert volt into permanent upgrades: Runner Speed, Multiplier Gain, and Evolution Power.";
       }
 
       // Feature list with accent dots

@@ -20,7 +20,7 @@ import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.data.ProgressStore;
 import io.hyvexa.parkour.util.PlayerSettingsStore;
 import io.hyvexa.duel.DuelTracker;
-import io.hyvexa.core.economy.GemStore;
+import io.hyvexa.core.economy.VexaStore;
 import io.hyvexa.parkour.ParkourTimingConstants;
 
 import java.util.ArrayList;
@@ -138,7 +138,7 @@ public class HudManager {
         int totalMaps = mapStore.getMapCount();
         hud.updateInfo(playerRef.getUsername(), rankName, completedMaps, totalMaps, SERVER_IP_DISPLAY);
         hud.updatePlayerCount();
-        hud.updateGems(GemStore.getInstance().getGems(playerId));
+        hud.updateVexa(VexaStore.getInstance().getVexa(playerId));
         updateAdvancedHudData(ref, store, playerRef, hud);
         if (!running) {
             if (wasRunning) {

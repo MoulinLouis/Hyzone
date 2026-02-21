@@ -137,8 +137,8 @@ public class StatsPage extends BaseAscendPage {
             "Digits: " + formatMultiplier(digitsProduct) + "  |  Elevation: " + formatMultiplier(elevation));
 
         // 3. Lifetime Earnings
-        BigNumber totalEarned = playerStore.getTotalVexaEarned(playerId);
-        commandBuilder.set("#LifetimeValue.Text", FormatUtils.formatBigNumber(totalEarned) + " vexa");
+        BigNumber totalEarned = playerStore.getTotalVoltEarned(playerId);
+        commandBuilder.set("#LifetimeValue.Text", FormatUtils.formatBigNumber(totalEarned) + " volt");
 
         // 4. Manual Runs
         int manualRuns = playerStore.getTotalManualRuns(playerId);
@@ -174,11 +174,11 @@ public class StatsPage extends BaseAscendPage {
 
     private String formatCombinedIncome(UUID playerId) {
         if (mapStore == null || ghostStore == null) {
-            return "0 vexa/sec";
+            return "0 volt/sec";
         }
 
         List<AscendMap> maps = mapStore.listMapsSorted();
-        double totalVexaPerSec = 0.0;
+        double totalVoltPerSec = 0.0;
 
         BigNumber digitsProduct = playerStore.getMultiplierProduct(playerId, maps, AscendConstants.MULTIPLIER_SLOTS);
 
@@ -201,15 +201,15 @@ public class StatsPage extends BaseAscendPage {
             double runsPerSec = 1000.0 / intervalMs;
 
             long baseReward = map.getEffectiveBaseReward();
-            double vexaPerRun = baseReward * digitsProduct.toDouble();
+            double voltPerRun = baseReward * digitsProduct.toDouble();
 
-            totalVexaPerSec += runsPerSec * vexaPerRun;
+            totalVoltPerSec += runsPerSec * voltPerRun;
         }
 
-        if (totalVexaPerSec < 0.01) {
-            return "0 vexa/sec";
+        if (totalVoltPerSec < 0.01) {
+            return "0 volt/sec";
         }
-        return FormatUtils.formatBigNumber(BigNumber.fromDouble(totalVexaPerSec)) + "/sec";
+        return FormatUtils.formatBigNumber(BigNumber.fromDouble(totalVoltPerSec)) + "/sec";
     }
 
     private String formatMultiplier(double value) {

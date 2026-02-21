@@ -711,11 +711,11 @@ public class RobotManager {
         BigNumber totalPayout = payoutPerRun.multiply(BigNumber.fromLong(completions));
 
         // Use atomic operations to prevent race conditions
-        if (!playerStore.atomicAddVexa(ownerId, totalPayout)) {
-            LOGGER.atWarning().log("Failed to add runner vexa for " + ownerId + " on map " + mapId);
+        if (!playerStore.atomicAddVolt(ownerId, totalPayout)) {
+            LOGGER.atWarning().log("Failed to add runner volt for " + ownerId + " on map " + mapId);
         }
-        if (!playerStore.atomicAddTotalVexaEarned(ownerId, totalPayout)) {
-            LOGGER.atWarning().log("Failed to add total vexa earned for " + ownerId);
+        if (!playerStore.atomicAddTotalVoltEarned(ownerId, totalPayout)) {
+            LOGGER.atWarning().log("Failed to add total volt earned for " + ownerId);
         }
         if (!playerStore.atomicAddMapMultiplier(ownerId, mapId, totalMultiplierBonus)) {
             LOGGER.atWarning().log("Failed to add map multiplier for " + ownerId + " on map " + mapId);
@@ -797,7 +797,7 @@ public class RobotManager {
         }
 
         // Speed upgrade: find cheapest across all maps (one per call for smooth visual)
-        BigNumber vexa = progress.getVexa();
+        BigNumber volt = progress.getVolt();
         String cheapestMapId = null;
         BigNumber cheapestCost = null;
 
@@ -817,8 +817,8 @@ public class RobotManager {
             }
         }
 
-        if (cheapestMapId != null && cheapestCost != null && vexa.gte(cheapestCost)) {
-            if (!playerStore.atomicSpendVexa(playerId, cheapestCost)) return;
+        if (cheapestMapId != null && cheapestCost != null && volt.gte(cheapestCost)) {
+            if (!playerStore.atomicSpendVolt(playerId, cheapestCost)) return;
             playerStore.incrementRobotSpeedLevel(playerId, cheapestMapId);
             playerStore.checkAndUnlockEligibleMaps(playerId, mapStore);
         }
@@ -869,8 +869,8 @@ public class RobotManager {
         }
 
         // Calculate purchasable levels
-        BigNumber accumulatedVexa = progress.getElevationAccumulatedVexa();
-        AscendConstants.ElevationPurchaseResult result = AscendConstants.calculateElevationPurchase(currentLevel, accumulatedVexa, BigNumber.ONE);
+        BigNumber accumulatedVolt = progress.getElevationAccumulatedVolt();
+        AscendConstants.ElevationPurchaseResult result = AscendConstants.calculateElevationPurchase(currentLevel, accumulatedVolt, BigNumber.ONE);
         if (result.levels <= 0) return;
 
         int newLevel = currentLevel + result.levels;
@@ -882,7 +882,7 @@ public class RobotManager {
         despawnRobotsForPlayer(playerId);
 
         // Execute elevation
-        playerStore.atomicSetElevationAndResetVexa(playerId, newLevel);
+        playerStore.atomicSetElevationAndResetVolt(playerId, newLevel);
 
         // Get first map ID for reset
         List<AscendMap> maps = mapStore.listMapsSorted();

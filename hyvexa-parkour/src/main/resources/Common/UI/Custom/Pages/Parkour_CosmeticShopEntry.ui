@@ -24,7 +24,7 @@ Group {
   Label #EntryPrice {
     Anchor: (Left: 150, Top: 0, Bottom: 0, Width: 70);
     Style: (FontSize: 12, TextColor: #6b7c8a, VerticalAlignment: Center);
-    Text: "10 Gems";
+    Text: "10 Vexa";
   }
 
   // Preview button (always visible)

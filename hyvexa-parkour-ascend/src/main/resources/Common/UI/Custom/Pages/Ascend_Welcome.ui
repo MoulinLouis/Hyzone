@@ -97,7 +97,7 @@ $C.@PageOverlay {
       Label #Description {
         Anchor: (Top: 14, Left: 0, Right: 0);
         Style: (FontSize: 14, TextColor: #b2c0c7, Wrap: true);
-        Text: "Ascend is a parkour idle game. Run maps, earn vexa, and build up an army of automated runners that play for you - even while you're offline.";
+        Text: "Ascend is a parkour idle game. Run maps, earn volt, and build up an army of automated runners that play for you - even while you're offline.";
       }
 
       // Feature list with accent dots
@@ -112,7 +112,7 @@ $C.@PageOverlay {
 
           Group #Feature1Dot { Anchor: (Width: 8, Height: 8, Top: 6); Background: #10b981; }
           Group { Anchor: (Width: 10); }
-          Label #Feature1Label { Style: (FontSize: 13, TextColor: #cfd7dc); Text: "Purchase and upgrade runners to earn vexa"; }
+          Label #Feature1Label { Style: (FontSize: 13, TextColor: #cfd7dc); Text: "Purchase and upgrade runners to earn volt"; }
         }
 
         // Feature 2

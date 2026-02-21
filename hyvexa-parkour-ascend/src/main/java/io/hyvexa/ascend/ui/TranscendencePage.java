@@ -79,9 +79,9 @@ public class TranscendencePage extends BaseAscendPage {
         UUID playerId = playerRef.getUuid();
 
         if (!transcendenceManager.isEligible(playerId)) {
-            BigNumber vexa = playerStore.getVexa(playerId);
-            player.sendMessage(Message.raw("[Transcendence] Need " + FormatUtils.formatBigNumber(AscendConstants.TRANSCENDENCE_VEXA_THRESHOLD)
-                + " vexa with BREAK_ASCENSION active. You have: " + FormatUtils.formatBigNumber(vexa))
+            BigNumber volt = playerStore.getVolt(playerId);
+            player.sendMessage(Message.raw("[Transcendence] Need " + FormatUtils.formatBigNumber(AscendConstants.TRANSCENDENCE_VOLT_THRESHOLD)
+                + " volt with BREAK_ASCENSION active. You have: " + FormatUtils.formatBigNumber(volt))
                 .color(SystemMessageUtils.SECONDARY));
             return;
         }
@@ -127,12 +127,12 @@ public class TranscendencePage extends BaseAscendPage {
         }
 
         UUID playerId = playerRef.getUuid();
-        BigNumber vexa = playerStore.getVexa(playerId);
+        BigNumber volt = playerStore.getVolt(playerId);
         int transcendenceCount = playerStore.getTranscendenceCount(playerId);
         boolean eligible = transcendenceManager.isEligible(playerId);
 
-        commandBuilder.set("#CurrentVexa.Text", FormatUtils.formatBigNumber(vexa));
-        commandBuilder.set("#RequiredVexa.Text", FormatUtils.formatBigNumber(AscendConstants.TRANSCENDENCE_VEXA_THRESHOLD));
+        commandBuilder.set("#CurrentVolt.Text", FormatUtils.formatBigNumber(volt));
+        commandBuilder.set("#RequiredVolt.Text", FormatUtils.formatBigNumber(AscendConstants.TRANSCENDENCE_VOLT_THRESHOLD));
         commandBuilder.set("#TranscendenceCountValue.Text", "x" + transcendenceCount);
 
         // Milestone 1 status
@@ -144,7 +144,7 @@ public class TranscendencePage extends BaseAscendPage {
         if (eligible) {
             commandBuilder.set("#TranscendButton.Text", "TRANSCEND");
         } else {
-            commandBuilder.set("#TranscendButton.Text", "NEED " + FormatUtils.formatBigNumber(AscendConstants.TRANSCENDENCE_VEXA_THRESHOLD));
+            commandBuilder.set("#TranscendButton.Text", "NEED " + FormatUtils.formatBigNumber(AscendConstants.TRANSCENDENCE_VOLT_THRESHOLD));
         }
     }
 }

@@ -85,9 +85,9 @@ $C.@PageOverlay {
           Padding: (Left: 14, Right: 14, Top: 10, Bottom: 10);
           LayoutMode: Top;
 
-          Label #TotalVexaLabel {
+          Label #TotalVoltLabel {
             Style: (FontSize: 20, TextColor: #ffd166, RenderBold: true);
-            Text: "0 VEXA";
+            Text: "0 VOLT";
           }
 
           Label #OfflineRateLabel {

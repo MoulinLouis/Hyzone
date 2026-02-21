@@ -69,7 +69,7 @@ public class PassiveEarningsManager {
         List<AscendMap> allMaps = mapStore.listMapsSorted();
         Map<String, PassiveRunnerEarnings> runnerEarnings = new HashMap<>();
 
-        BigNumber totalVexa = BigNumber.ZERO;
+        BigNumber totalVolt = BigNumber.ZERO;
         BigNumber totalMultiplierGain = BigNumber.ZERO;
 
         // Calculate for each map with an active runner
@@ -121,13 +121,13 @@ public class PassiveEarningsManager {
                 .multiply(BigNumber.fromDouble(theoreticalRuns))
                 .multiply(BigNumber.fromDouble(effectiveOfflineRate / 100.0));
 
-            // Vexa per run (same logic as RobotManager)
+            // Volt per run (same logic as RobotManager)
             BigNumber payoutPerRun = playerStore.getCompletionPayout(
                 playerId, allMaps, AscendConstants.MULTIPLIER_SLOTS, mapId, BigNumber.ZERO
             );
 
-            // Calculate total vexa for this runner
-            BigNumber mapVexa = payoutPerRun
+            // Calculate total volt for this runner
+            BigNumber mapVolt = payoutPerRun
                 .multiply(BigNumber.fromDouble(theoreticalRuns))
                 .multiply(BigNumber.fromDouble(effectiveOfflineRate / 100.0));
 
@@ -135,26 +135,26 @@ public class PassiveEarningsManager {
             runnerEarnings.put(mapId, new PassiveRunnerEarnings(
                 map.getName(),
                 (int) theoreticalRuns,
-                mapVexa,
+                mapVolt,
                 mapMultiplierGain,
                 speedLevel,
                 stars
             ));
 
-            totalVexa = totalVexa.add(mapVexa);
+            totalVolt = totalVolt.add(mapVolt);
             totalMultiplierGain = totalMultiplierGain.add(mapMultiplierGain);
         }
 
-        if (totalVexa.lte(BigNumber.ZERO)) {
+        if (totalVolt.lte(BigNumber.ZERO)) {
             return null; // No earnings (no runners)
         }
 
         // Apply earnings to player account
-        if (!playerStore.atomicAddVexa(playerId, totalVexa)) {
-            LOGGER.atSevere().log("Failed to add passive vexa for " + playerId + " (amount: " + totalVexa + ")");
+        if (!playerStore.atomicAddVolt(playerId, totalVolt)) {
+            LOGGER.atSevere().log("Failed to add passive volt for " + playerId + " (amount: " + totalVolt + ")");
         }
-        if (!playerStore.atomicAddTotalVexaEarned(playerId, totalVexa)) {
-            LOGGER.atSevere().log("Failed to add total vexa earned for " + playerId + " (amount: " + totalVexa + ")");
+        if (!playerStore.atomicAddTotalVoltEarned(playerId, totalVolt)) {
+            LOGGER.atSevere().log("Failed to add total volt earned for " + playerId + " (amount: " + totalVolt + ")");
         }
 
         // Apply multiplier gains to each map (at offline rate)
@@ -170,12 +170,12 @@ public class PassiveEarningsManager {
 
         LOGGER.atInfo().log(
             "Passive earnings for " + playerId + ": " +
-            totalVexa + " vexa, +" + totalMultiplierGain + " multiplier over " + (timeAwayMs / 1000 / 60) + " minutes"
+            totalVolt + " volt, +" + totalMultiplierGain + " multiplier over " + (timeAwayMs / 1000 / 60) + " minutes"
         );
 
         return new PassiveEarningsResult(
             timeAwayMs,
-            totalVexa,
+            totalVolt,
             totalMultiplierGain,
             runnerEarnings
         );
@@ -226,7 +226,7 @@ public class PassiveEarningsManager {
     // Data classes
     public record PassiveEarningsResult(
         long timeAwayMs,
-        BigNumber totalVexa,
+        BigNumber totalVolt,
         BigNumber totalMultiplier,
         Map<String, PassiveRunnerEarnings> runnerBreakdown
     ) {}
@@ -234,7 +234,7 @@ public class PassiveEarningsManager {
     public record PassiveRunnerEarnings(
         String mapName,
         int runsCompleted,
-        BigNumber vexaEarned,
+        BigNumber voltEarned,
         BigNumber multiplierGain,
         int speedLevel,
         int stars

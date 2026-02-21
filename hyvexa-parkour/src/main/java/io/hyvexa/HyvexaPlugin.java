@@ -22,7 +22,7 @@ import io.hyvexa.core.analytics.AnalyticsStore;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.core.discord.DiscordLinkStore;
 import io.hyvexa.core.cosmetic.CosmeticStore;
-import io.hyvexa.core.economy.GemStore;
+import io.hyvexa.core.economy.VexaStore;
 import io.hyvexa.parkour.data.GlobalMessageStore;
 import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.data.PlayerCountStore;
@@ -62,7 +62,7 @@ import io.hyvexa.parkour.ghost.GhostRecorder;
 import io.hyvexa.common.ghost.GhostStore;
 import io.hyvexa.parkour.command.CheckpointCommand;
 import io.hyvexa.parkour.command.CosmeticTestCommand;
-import io.hyvexa.parkour.command.GemsCommand;
+import io.hyvexa.parkour.command.VexaCommand;
 import io.hyvexa.parkour.command.AnalyticsCommand;
 import io.hyvexa.parkour.command.ShopCommand;
 import io.hyvexa.parkour.command.LinkCommand;
@@ -181,9 +181,9 @@ public class HyvexaPlugin extends JavaPlugin {
             LOGGER.atSevere().withCause(e).log("Failed to initialize database");
         }
         try {
-            GemStore.getInstance().initialize();
+            VexaStore.getInstance().initialize();
         } catch (Exception e) {
-            LOGGER.atWarning().withCause(e).log("Failed to initialize GemStore");
+            LOGGER.atWarning().withCause(e).log("Failed to initialize VexaStore");
         }
         try {
             DiscordLinkStore.getInstance().initialize();
@@ -281,7 +281,7 @@ public class HyvexaPlugin extends JavaPlugin {
         this.getCommandRegistry().registerCommand(new DatabaseTestCommand());
         this.getCommandRegistry().registerCommand(new MessageTestCommand());
         this.getCommandRegistry().registerCommand(new DuelCommand(this.duelTracker, this.runTracker));
-        this.getCommandRegistry().registerCommand(new GemsCommand());
+        this.getCommandRegistry().registerCommand(new VexaCommand());
         this.getCommandRegistry().registerCommand(new LinkCommand());
         this.getCommandRegistry().registerCommand(new UnlinkCommand());
         this.getCommandRegistry().registerCommand(new CosmeticTestCommand());
@@ -322,10 +322,10 @@ public class HyvexaPlugin extends JavaPlugin {
                     if (playerRef != null && shouldApplyParkourMode(playerRef, store)) {
                         hudManager.ensureRunHud(playerRef);
                     }
-                    // Check for pending Discord link gem reward
+                    // Check for pending Discord link vexa reward
                     if (player != null && playerRef != null) {
                         try {
-                            DiscordLinkStore.getInstance().checkAndRewardGems(playerRef.getUuid(), player);
+                            DiscordLinkStore.getInstance().checkAndRewardVexa(playerRef.getUuid(), player);
                         } catch (Exception e) {
                             LOGGER.atWarning().withCause(e).log("Discord link check failed");
                         }
@@ -395,8 +395,8 @@ public class HyvexaPlugin extends JavaPlugin {
                 try { cleanupManager.handleDisconnect(event.getPlayerRef()); }
                 catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: cleanupManager"); }
 
-                try { GemStore.getInstance().evictPlayer(playerId); }
-                catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: GemStore"); }
+                try { VexaStore.getInstance().evictPlayer(playerId); }
+                catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: VexaStore"); }
 
                 try { DiscordLinkStore.getInstance().evictPlayer(playerId); }
                 catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: DiscordLinkStore"); }

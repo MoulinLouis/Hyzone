@@ -90,15 +90,15 @@ public class ElevationPage extends BaseAscendPage {
             return;
         }
 
-        BigNumber accumulatedVexa = playerStore.getElevationAccumulatedVexa(playerId);
+        BigNumber accumulatedVolt = playerStore.getElevationAccumulatedVolt(playerId);
         int currentElevation = playerStore.getElevationLevel(playerId);
 
-        // Calculate how many levels can be purchased based on accumulated vexa
-        ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(currentElevation, accumulatedVexa, BigNumber.ONE);
+        // Calculate how many levels can be purchased based on accumulated volt
+        ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(currentElevation, accumulatedVolt, BigNumber.ONE);
 
         if (purchase.levels <= 0) {
             BigNumber nextCost = AscendConstants.getElevationLevelUpCost(currentElevation, BigNumber.ONE);
-            player.sendMessage(Message.raw("[Ascend] You need " + FormatUtils.formatBigNumber(nextCost) + " accumulated vexa to elevate.")
+            player.sendMessage(Message.raw("[Ascend] You need " + FormatUtils.formatBigNumber(nextCost) + " accumulated volt to elevate.")
                 .color(SystemMessageUtils.SECONDARY));
             return;
         }
@@ -111,15 +111,15 @@ public class ElevationPage extends BaseAscendPage {
             }
         }
 
-        // Set new elevation and reset vexa/accumulators atomically
+        // Set new elevation and reset volt/accumulators atomically
         int newElevation = currentElevation + purchase.levels;
-        playerStore.atomicSetElevationAndResetVexa(playerId, newElevation);
+        playerStore.atomicSetElevationAndResetVolt(playerId, newElevation);
 
         showToast(playerId, ToastType.ECONOMY, "Elevation: "
             + AscendConstants.formatElevationMultiplier(currentElevation) + " -> "
             + AscendConstants.formatElevationMultiplier(newElevation));
 
-        // Reset all progress (vexa, map unlocks, runners). Best times are preserved.
+        // Reset all progress (volt, map unlocks, runners). Best times are preserved.
         if (plugin != null) {
             AscendMapStore mapStore = plugin.getMapStore();
 
@@ -177,10 +177,10 @@ public class ElevationPage extends BaseAscendPage {
             return;
         }
 
-        BigNumber accumulatedVexa = playerStore.getElevationAccumulatedVexa(playerId);
+        BigNumber accumulatedVolt = playerStore.getElevationAccumulatedVolt(playerId);
 
-        // Calculate purchase info based on accumulated vexa
-        ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(currentElevation, accumulatedVexa, BigNumber.ONE);
+        // Calculate purchase info based on accumulated volt
+        ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(currentElevation, accumulatedVolt, BigNumber.ONE);
         int newElevation = currentElevation + purchase.levels;
         BigNumber nextCost = AscendConstants.getElevationLevelUpCost(currentElevation, BigNumber.ONE);
 
@@ -191,14 +191,14 @@ public class ElevationPage extends BaseAscendPage {
         int targetElevation = newElevation + 1;
         BigNumber targetCost = purchase.cost.add(nextLevelAfterPurchaseCost);
         String costText = "Progress to " + AscendConstants.formatElevationMultiplier(targetElevation) + ": " +
-                         FormatUtils.formatBigNumber(accumulatedVexa) + " / " +
-                         FormatUtils.formatBigNumber(targetCost) + " accumulated vexa";
+                         FormatUtils.formatBigNumber(accumulatedVolt) + " / " +
+                         FormatUtils.formatBigNumber(targetCost) + " accumulated volt";
         commandBuilder.set("#ConversionRate.Text", costText);
 
         // Update current elevation display
         commandBuilder.set("#MultiplierValue.Text", AscendConstants.formatElevationMultiplier(currentElevation));
-        BigNumber leftoverVexa = accumulatedVexa.subtract(purchase.cost);
-        BigNumber amountNeededForNextLevel = nextLevelAfterPurchaseCost.subtract(leftoverVexa).max(BigNumber.ZERO);
+        BigNumber leftoverVolt = accumulatedVolt.subtract(purchase.cost);
+        BigNumber amountNeededForNextLevel = nextLevelAfterPurchaseCost.subtract(leftoverVolt).max(BigNumber.ZERO);
 
         // Update new elevation display and gain
         if (purchase.levels > 0) {
@@ -210,7 +210,7 @@ public class ElevationPage extends BaseAscendPage {
             commandBuilder.set("#NewMultiplierValue.Text", AscendConstants.formatElevationMultiplier(currentElevation));
             commandBuilder.set("#NewMultiplierValue.Style.TextColor", "#6b7280");
             commandBuilder.set("#ArrowLabel.Style.TextColor", "#6b7280");
-            commandBuilder.set("#ElevateButton.Text", "NEED MORE VEXA");
+            commandBuilder.set("#ElevateButton.Text", "NEED MORE VOLT");
         }
 
         // Always show how much more is needed for the next level

@@ -18,8 +18,8 @@ public class AscendHud extends CustomUIHud {
     private final ToastManager toastManager = new ToastManager();
 
     private String lastStaticKey;
-    private String lastVexaText;
-    private String lastVexaPerRunText;
+    private String lastVoltText;
+    private String lastVoltPerRunText;
     private String lastDigitsKey;
     private String lastElevationValueText;
     private String lastElevationText;
@@ -33,11 +33,11 @@ public class AscendHud extends CustomUIHud {
     private String lastAscensionProgressKey;
     private String lastRunnerBarKey;
     private int lastPlayerCount = -1;
-    private long lastGems = -1;
+    private long lastVexa = -1;
 
     // Track previous values for effect triggering (converted to double for comparison)
     private double[] lastDigits;
-    private BigNumber lastVexa;
+    private BigNumber lastVolt;
 
     // Ascension quest bar constants
     private static final double ASCENSION_COST = 1e33; // 1 Decillion (1Dc)
@@ -64,13 +64,13 @@ public class AscendHud extends CustomUIHud {
         update(false, commandBuilder);
     }
 
-    public void updateGems(long gems) {
-        if (gems == lastGems) {
+    public void updateVexa(long vexa) {
+        if (vexa == lastVexa) {
             return;
         }
-        lastGems = gems;
+        lastVexa = vexa;
         UICommandBuilder commandBuilder = new UICommandBuilder();
-        commandBuilder.set("#PlayerGemsValue.Text", String.valueOf(gems));
+        commandBuilder.set("#PlayerVexaValue.Text", String.valueOf(vexa));
         update(false, commandBuilder);
     }
 
@@ -85,9 +85,9 @@ public class AscendHud extends CustomUIHud {
         update(false, commandBuilder);
     }
 
-    public void updateEconomy(BigNumber vexa, BigNumber product, BigNumber[] digits, int currentElevation, int potentialElevation, boolean showElevation) {
-        String vexaText = FormatUtils.formatBigNumber(vexa);
-        String vexaPerRunText = FormatUtils.formatBigNumber(product) + "/run";
+    public void updateEconomy(BigNumber volt, BigNumber product, BigNumber[] digits, int currentElevation, int potentialElevation, boolean showElevation) {
+        String voltText = FormatUtils.formatBigNumber(volt);
+        String voltPerRunText = FormatUtils.formatBigNumber(product) + "/run";
         String digitsKey = buildDigitsKey(digits);
         String elevationText;
         if (showElevation && potentialElevation > currentElevation) {
@@ -98,8 +98,8 @@ public class AscendHud extends CustomUIHud {
         }
         String elevationValueText = formatMultiplier(AscendConstants.getElevationMultiplier(currentElevation));
         // Check if values changed OR if we have active effects to process
-        boolean valuesChanged = !vexaText.equals(lastVexaText)
-            || !vexaPerRunText.equals(lastVexaPerRunText)
+        boolean valuesChanged = !voltText.equals(lastVoltText)
+            || !voltPerRunText.equals(lastVoltPerRunText)
             || !digitsKey.equals(lastDigitsKey)
             || !elevationValueText.equals(lastElevationValueText)
             || !elevationText.equals(lastElevationText)
@@ -128,14 +128,14 @@ public class AscendHud extends CustomUIHud {
             }
 
             // Update cached values
-            lastVexaText = vexaText;
-            lastVexaPerRunText = vexaPerRunText;
+            lastVoltText = voltText;
+            lastVoltPerRunText = voltPerRunText;
             lastDigitsKey = digitsKey;
             lastElevationValueText = elevationValueText;
             lastElevationText = elevationText;
             lastElevationVisible = showElevation;
             lastDigits = safeDigits.clone();
-            lastVexa = vexa;
+            lastVolt = volt;
         }
 
         // Create command builder
@@ -143,8 +143,8 @@ public class AscendHud extends CustomUIHud {
 
         // If values changed, set all UI text values
         if (valuesChanged) {
-            commandBuilder.set("#TopVexaValue.Text", vexaText);
-            commandBuilder.set("#TopVexaPerRunValue.Text", vexaPerRunText);
+            commandBuilder.set("#TopVoltValue.Text", voltText);
+            commandBuilder.set("#TopVoltPerRunValue.Text", voltPerRunText);
             commandBuilder.set("#TopRedValue.Text", formatMultiplier(safeDigits[0]));
             commandBuilder.set("#TopOrangeValue.Text", formatMultiplier(safeDigits[1]));
             commandBuilder.set("#TopYellowValue.Text", formatMultiplier(safeDigits[2]));
@@ -226,8 +226,8 @@ public class AscendHud extends CustomUIHud {
 
     public void resetCache() {
         lastStaticKey = null;
-        lastVexaText = null;
-        lastVexaPerRunText = null;
+        lastVoltText = null;
+        lastVoltPerRunText = null;
         lastDigitsKey = null;
         lastElevationValueText = null;
         lastElevationText = null;
@@ -241,9 +241,9 @@ public class AscendHud extends CustomUIHud {
         lastAscensionProgressKey = null;
         lastRunnerBarKey = null;
         lastPlayerCount = -1;
-        lastGems = -1;
+        lastVexa = -1;
         lastDigits = null;
-        lastVexa = null;
+        lastVolt = null;
         effectManager.clearEffects();
         toastManager.clear();
     }
@@ -304,14 +304,14 @@ public class AscendHud extends CustomUIHud {
         update(false, commandBuilder);
     }
 
-    public void updateAscensionQuest(BigNumber vexa) {
+    public void updateAscensionQuest(BigNumber volt) {
         // Calculate logarithmic progress (0 to 1)
-        // Using log10 scale: log10(vexa + 1) / log10(1Dc + 1) ≈ log10(vexa + 1) / 33
+        // Using log10 scale: log10(volt + 1) / log10(1Dc + 1) ≈ log10(volt + 1) / 33
         double progress = 0.0;
-        if (vexa.gt(BigNumber.ZERO)) {
+        if (volt.gt(BigNumber.ZERO)) {
             // Convert BigNumber to double for logarithmic calculation
-            double vexaDouble = vexa.toDouble();
-            progress = Math.log10(vexaDouble + 1) / Math.log10(ASCENSION_COST + 1);
+            double voltDouble = volt.toDouble();
+            progress = Math.log10(voltDouble + 1) / Math.log10(ASCENSION_COST + 1);
             progress = Math.min(1.0, Math.max(0.0, progress)); // Clamp between 0 and 1
         }
 

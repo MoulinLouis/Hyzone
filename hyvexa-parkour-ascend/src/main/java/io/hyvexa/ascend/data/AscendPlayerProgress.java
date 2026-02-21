@@ -16,15 +16,15 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class AscendPlayerProgress {
 
-    private final AtomicReference<BigNumber> vexa = new AtomicReference<>(BigNumber.ZERO);
+    private final AtomicReference<BigNumber> volt = new AtomicReference<>(BigNumber.ZERO);
     private final AtomicInteger elevationMultiplier = new AtomicInteger(1);
     private final Map<String, MapProgress> mapProgress = new ConcurrentHashMap<>();
 
     // Summit System - XP per category (level calculated from XP)
     private final Map<AscendConstants.SummitCategory, Double> summitXp = new ConcurrentHashMap<>();
-    private final AtomicReference<BigNumber> totalVexaEarned = new AtomicReference<>(BigNumber.ZERO);
-    private final AtomicReference<BigNumber> summitAccumulatedVexa = new AtomicReference<>(BigNumber.ZERO);
-    private final AtomicReference<BigNumber> elevationAccumulatedVexa = new AtomicReference<>(BigNumber.ZERO);
+    private final AtomicReference<BigNumber> totalVoltEarned = new AtomicReference<>(BigNumber.ZERO);
+    private final AtomicReference<BigNumber> summitAccumulatedVolt = new AtomicReference<>(BigNumber.ZERO);
+    private final AtomicReference<BigNumber> elevationAccumulatedVolt = new AtomicReference<>(BigNumber.ZERO);
 
     // Ascension System
     private final AtomicInteger ascensionCount = new AtomicInteger(0);
@@ -81,20 +81,20 @@ public class AscendPlayerProgress {
     // Transcendence System (4th Prestige)
     private final AtomicInteger transcendenceCount = new AtomicInteger(0);
 
-    public BigNumber getVexa() {
-        return vexa.get();
+    public BigNumber getVolt() {
+        return volt.get();
     }
 
-    public void setVexa(BigNumber value) {
-        this.vexa.set(value);
+    public void setVolt(BigNumber value) {
+        this.volt.set(value);
     }
 
-    public boolean casVexa(BigNumber expect, BigNumber update) {
-        return this.vexa.compareAndSet(expect, update);
+    public boolean casVolt(BigNumber expect, BigNumber update) {
+        return this.volt.compareAndSet(expect, update);
     }
 
-    public void addVexa(BigNumber amount) {
-        vexa.updateAndGet(c -> c.add(amount).max(BigNumber.ZERO));
+    public void addVolt(BigNumber amount) {
+        volt.updateAndGet(c -> c.add(amount).max(BigNumber.ZERO));
     }
 
     public int getElevationMultiplier() {
@@ -163,45 +163,45 @@ public class AscendPlayerProgress {
         return levels;
     }
 
-    public BigNumber getTotalVexaEarned() {
-        return totalVexaEarned.get();
+    public BigNumber getTotalVoltEarned() {
+        return totalVoltEarned.get();
     }
 
-    public void setTotalVexaEarned(BigNumber value) {
-        this.totalVexaEarned.set(value.max(BigNumber.ZERO));
+    public void setTotalVoltEarned(BigNumber value) {
+        this.totalVoltEarned.set(value.max(BigNumber.ZERO));
     }
 
-    public void addTotalVexaEarned(BigNumber amount) {
+    public void addTotalVoltEarned(BigNumber amount) {
         if (amount.gt(BigNumber.ZERO)) {
-            totalVexaEarned.updateAndGet(c -> c.add(amount).max(BigNumber.ZERO));
+            totalVoltEarned.updateAndGet(c -> c.add(amount).max(BigNumber.ZERO));
         }
     }
 
-    public BigNumber getSummitAccumulatedVexa() {
-        return summitAccumulatedVexa.get();
+    public BigNumber getSummitAccumulatedVolt() {
+        return summitAccumulatedVolt.get();
     }
 
-    public void setSummitAccumulatedVexa(BigNumber value) {
-        this.summitAccumulatedVexa.set(value.max(BigNumber.ZERO));
+    public void setSummitAccumulatedVolt(BigNumber value) {
+        this.summitAccumulatedVolt.set(value.max(BigNumber.ZERO));
     }
 
-    public void addSummitAccumulatedVexa(BigNumber amount) {
+    public void addSummitAccumulatedVolt(BigNumber amount) {
         if (amount.gt(BigNumber.ZERO)) {
-            summitAccumulatedVexa.updateAndGet(c -> c.add(amount).max(BigNumber.ZERO));
+            summitAccumulatedVolt.updateAndGet(c -> c.add(amount).max(BigNumber.ZERO));
         }
     }
 
-    public BigNumber getElevationAccumulatedVexa() {
-        return elevationAccumulatedVexa.get();
+    public BigNumber getElevationAccumulatedVolt() {
+        return elevationAccumulatedVolt.get();
     }
 
-    public void setElevationAccumulatedVexa(BigNumber value) {
-        this.elevationAccumulatedVexa.set(value.max(BigNumber.ZERO));
+    public void setElevationAccumulatedVolt(BigNumber value) {
+        this.elevationAccumulatedVolt.set(value.max(BigNumber.ZERO));
     }
 
-    public void addElevationAccumulatedVexa(BigNumber amount) {
+    public void addElevationAccumulatedVolt(BigNumber amount) {
         if (amount.gt(BigNumber.ZERO)) {
-            elevationAccumulatedVexa.updateAndGet(c -> c.add(amount).max(BigNumber.ZERO));
+            elevationAccumulatedVolt.updateAndGet(c -> c.add(amount).max(BigNumber.ZERO));
         }
     }
 

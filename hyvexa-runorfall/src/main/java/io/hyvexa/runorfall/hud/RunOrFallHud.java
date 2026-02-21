@@ -8,7 +8,7 @@ import com.hypixel.hytale.server.core.universe.Universe;
 public class RunOrFallHud extends CustomUIHud {
 
     private int lastPlayerCount = -1;
-    private long lastGems = -1;
+    private long lastVexa = -1;
     private long lastCoins = -1;
 
     public RunOrFallHud(PlayerRef playerRef) {
@@ -20,13 +20,13 @@ public class RunOrFallHud extends CustomUIHud {
         commandBuilder.append("Pages/RunOrFall_RunHud.ui");
     }
 
-    public void updateGems(long gems) {
-        if (gems == lastGems) {
+    public void updateVexa(long vexa) {
+        if (vexa == lastVexa) {
             return;
         }
-        lastGems = gems;
+        lastVexa = vexa;
         UICommandBuilder commandBuilder = new UICommandBuilder();
-        commandBuilder.set("#PlayerGemsValue.Text", String.valueOf(gems));
+        commandBuilder.set("#PlayerVexaValue.Text", String.valueOf(vexa));
         update(false, commandBuilder);
     }
 

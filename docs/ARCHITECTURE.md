@@ -521,19 +521,19 @@ Economy, progression, and system constants for Ascend mode. Key values:
 
 | Constant | Value | Purpose |
 |----------|-------|---------|
-| `MAP_BASE_RUN_TIMES_MS` | 5s-42s (5 tiers) | Base run time per map level |
-| `MAP_BASE_REWARDS` | 1-500 vexa (5 tiers) | Base vexa per manual completion |
-| `MAP_UNLOCK_PRICES` | 0-10,000 vexa (5 tiers) | Map unlock costs |
+| `MAP_BASE_RUN_TIMES_MS` | 5s-68s (6 tiers) | Base run time per map level |
+| `MAP_BASE_REWARDS` | 1-2,500 volt (6 tiers) | Base volt per manual completion |
+| `MAP_UNLOCK_PRICES` | 0-50,000 volt (6 tiers) | Map unlock costs |
 | `RUNNER_TICK_INTERVAL_MS` | 16ms | Ghost replay tick (~60fps) |
 | `MAX_ROBOT_STARS` | 5 | Max evolution level |
 | `MAX_SPEED_LEVEL` | 20 | Max runner speed level |
 | `ELEVATION_MULTIPLIER_EXPONENT` | 1.05 | Elevation level curve |
 | `ELEVATION_BASE_COST` | 30,000 | Starting elevation cost |
-| `ASCENSION_VEXA_THRESHOLD` | 10^33 | Vexa needed to Ascend |
+| `ASCENSION_VOLT_THRESHOLD` | 10^33 | Volt needed to Ascend |
 | `PASSIVE_OFFLINE_RATE_PERCENT` | 10% | Offline earning rate |
 | `PASSIVE_MAX_TIME_MS` | 24h | Max offline earning window |
 
-Also defines `SkillTreeNode` enum (12 nodes with AP costs 1-10) and `SummitCategory` enum (3 categories with scaling factors). See `docs/ECONOMY_BALANCE.md` for full formulas.
+Also defines `SkillTreeNode` enum (19 nodes with AP costs 1-1000) and `SummitCategory` enum (3 categories with scaling factors). See `docs/ECONOMY_BALANCE.md` for full formulas.
 
 ## Future Considerations
 

@@ -27,17 +27,17 @@ $C.@PageOverlay {
         Text: "Cosmetic Shop";
       }
 
-      // Gem balance
+      // Vexa balance
       Group {
         Anchor: (Right: 96, Top: 14, Width: 120, Height: 24);
         LayoutMode: Left;
 
         Group {
           Anchor: (Width: 18, Height: 18, Top: 2);
-          Background: (TexturePath: "../Textures/gem.png");
+          Background: (TexturePath: "../Textures/vexa.png");
         }
 
-        Label #GemBalance {
+        Label #VexaBalance {
           Anchor: (Left: 4, Width: 90, Height: 22);
           Style: (FontSize: 16, TextColor: #22c55e, RenderBold: true, VerticalAlignment: Center);
           Text: "0";

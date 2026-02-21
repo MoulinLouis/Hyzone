@@ -77,46 +77,46 @@ $C.@PageOverlay {
         Anchor: (Height: 38);
         LayoutMode: Left;
 
-        Group #TabVexaWrap {
+        Group #TabVoltWrap {
           Anchor: (Width: 120, Height: 34);
           OutlineColor: #ffffff(0.04);
           OutlineSize: 1;
 
-          Group #TabVexaInactiveBg {
+          Group #TabVoltInactiveBg {
             Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
             Background: #142029;
             Visible: false;
           }
 
-          Group #TabVexaActiveBg {
+          Group #TabVoltActiveBg {
             Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
             Background: #2d3f50;
             Visible: true;
           }
 
-          Group #TabVexaAccent {
+          Group #TabVoltAccent {
             Anchor: (Left: 0, Right: 0, Top: 0, Height: 3);
 
-            Group #TabVexaAccentInactive {
+            Group #TabVoltAccentInactive {
               Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
               Background: #142029;
               Visible: false;
             }
 
-            Group #TabVexaAccentActive {
+            Group #TabVoltAccentActive {
               Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
               Background: #f59e0b;
               Visible: true;
             }
           }
 
-          Label #TabVexaLabel {
+          Label #TabVoltLabel {
             Anchor: (Left: 0, Right: 0, Top: 6, Bottom: 0);
             Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, Alignment: Center);
-            Text: "Vexa";
+            Text: "Volt";
           }
 
-          TextButton #TabVexa {
+          TextButton #TabVolt {
             Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
             Text: "";
             Style: TextButtonStyle(

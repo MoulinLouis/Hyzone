@@ -105,18 +105,18 @@ public class SummitCommand extends AbstractAsyncCommand {
             }
 
             if (!summitManager.canSummit(playerId)) {
-                BigNumber vexa = playerStore.getVexa(playerId);
-                String minVexa = FormatUtils.formatBigNumber(
-                    BigNumber.fromLong(AscendConstants.SUMMIT_MIN_VEXA));
-                player.sendMessage(Message.raw("[Summit] Need " + minVexa
-                    + " vexa to Summit. You have: " + FormatUtils.formatBigNumber(vexa))
+                BigNumber volt = playerStore.getVolt(playerId);
+                String minVolt = FormatUtils.formatBigNumber(
+                    BigNumber.fromLong(AscendConstants.SUMMIT_MIN_VOLT));
+                player.sendMessage(Message.raw("[Summit] Need " + minVolt
+                    + " volt to Summit. You have: " + FormatUtils.formatBigNumber(volt))
                     .color(SystemMessageUtils.SECONDARY));
                 return;
             }
 
             SummitManager.SummitPreview preview = summitManager.previewSummit(playerId, category);
             if (!preview.hasGain()) {
-                player.sendMessage(Message.raw("[Summit] Insufficient vexa for level gain.")
+                player.sendMessage(Message.raw("[Summit] Insufficient volt for level gain.")
                     .color(SystemMessageUtils.SECONDARY));
                 return;
             }
@@ -151,7 +151,7 @@ public class SummitCommand extends AbstractAsyncCommand {
                 + " | " + formatBonus(category, preview.currentBonus())
                 + " -> " + formatBonus(category, preview.newBonus()))
                 .color(SystemMessageUtils.SUCCESS));
-            player.sendMessage(Message.raw("[Summit] Progress reset: vexa, elevation, multipliers, runners, map unlocks")
+            player.sendMessage(Message.raw("[Summit] Progress reset: volt, elevation, multipliers, runners, map unlocks")
                 .color(SystemMessageUtils.SECONDARY));
 
             // Achievements

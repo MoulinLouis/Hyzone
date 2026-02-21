@@ -22,7 +22,7 @@ import io.hyvexa.common.WorldConstants;
 import io.hyvexa.common.util.ModeGate;
 import io.hyvexa.common.util.MultiHudBridge;
 import io.hyvexa.core.db.DatabaseManager;
-import io.hyvexa.core.economy.GemStore;
+import io.hyvexa.core.economy.VexaStore;
 import io.hyvexa.runorfall.command.RunOrFallCommand;
 import io.hyvexa.runorfall.hud.RunOrFallHud;
 import io.hyvexa.runorfall.interaction.RunOrFallJoinInteraction;
@@ -94,9 +94,9 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
             LOGGER.atWarning().withCause(e).log("RunOrFall database initialization failed.");
         }
         try {
-            GemStore.getInstance().initialize();
+            VexaStore.getInstance().initialize();
         } catch (Exception e) {
-            LOGGER.atWarning().withCause(e).log("RunOrFall GemStore initialization failed.");
+            LOGGER.atWarning().withCause(e).log("RunOrFall VexaStore initialization failed.");
         }
         try {
             RunOrFallCoinStore.getInstance().initialize();
@@ -171,7 +171,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
             UUID playerId = playerRef.getUuid();
             gameManager.handleDisconnect(playerId);
             runOrFallHuds.remove(playerId);
-            GemStore.getInstance().evictPlayer(playerId);
+            VexaStore.getInstance().evictPlayer(playerId);
             RunOrFallCoinStore.getInstance().evictPlayer(playerId);
         });
 
@@ -282,7 +282,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
         player.getHudManager().hideHudComponents(playerRef, HudComponent.Compass);
         MultiHudBridge.showIfNeeded(hud);
         hud.updatePlayerCount();
-        hud.updateGems(GemStore.getInstance().getGems(playerId));
+        hud.updateVexa(VexaStore.getInstance().getVexa(playerId));
         hud.updateCoins(RunOrFallCoinStore.getInstance().getCoins(playerId));
     }
 
@@ -307,7 +307,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
             }
             RunOrFallHud hud = entry.getValue();
             hud.updatePlayerCount();
-            hud.updateGems(GemStore.getInstance().getGems(playerId));
+            hud.updateVexa(VexaStore.getInstance().getVexa(playerId));
             hud.updateCoins(RunOrFallCoinStore.getInstance().getCoins(playerId));
         }
     }
@@ -320,7 +320,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
         if (hud == null) {
             return;
         }
-        hud.updateGems(GemStore.getInstance().getGems(playerId));
+        hud.updateVexa(VexaStore.getInstance().getVexa(playerId));
         hud.updateCoins(RunOrFallCoinStore.getInstance().getCoins(playerId));
     }
 

@@ -16,7 +16,7 @@ import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.core.cosmetic.CosmeticDefinition;
 import io.hyvexa.core.cosmetic.CosmeticStore;
-import io.hyvexa.core.economy.GemStore;
+import io.hyvexa.core.economy.VexaStore;
 import io.hyvexa.parkour.cosmetic.CosmeticManager;
 
 import javax.annotation.Nonnull;
@@ -46,9 +46,9 @@ public class CosmeticShopPage extends BaseParkourPage {
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         UUID playerId = playerRef != null ? playerRef.getUuid() : null;
 
-        // Set gem balance
-        long gems = playerId != null ? GemStore.getInstance().getGems(playerId) : 0;
-        commandBuilder.set("#GemBalance.Text", String.valueOf(gems));
+        // Set vexa balance
+        long vexa = playerId != null ? VexaStore.getInstance().getVexa(playerId) : 0;
+        commandBuilder.set("#VexaBalance.Text", String.valueOf(vexa));
 
         String equippedId = playerId != null ? CosmeticStore.getInstance().getEquippedCosmeticId(playerId) : null;
 
@@ -66,7 +66,7 @@ public class CosmeticShopPage extends BaseParkourPage {
             // Set display name and accent color
             commandBuilder.set(prefix + "#EntryAccent.Background", def.getHexColor());
             commandBuilder.set(prefix + "#EntryName.Text", def.getDisplayName());
-            commandBuilder.set(prefix + "#EntryPrice.Text", def.getPrice() + " Gems");
+            commandBuilder.set(prefix + "#EntryPrice.Text", def.getPrice() + " Vexa");
 
             // Show/hide buttons based on ownership state
             commandBuilder.set(prefix + "#BuyGroup.Visible", !owned);
@@ -168,14 +168,14 @@ public class CosmeticShopPage extends BaseParkourPage {
         CosmeticDefinition def = CosmeticDefinition.fromId(cosmeticId);
         if (def == null) return;
 
-        long gems = GemStore.getInstance().getGems(playerId);
-        if (gems < def.getPrice()) {
-            player.sendMessage(Message.raw("[Shop] Not enough gems! You need " + def.getPrice()
-                    + " gems but have " + gems + ".").color(SystemMessageUtils.ERROR));
+        long vexa = VexaStore.getInstance().getVexa(playerId);
+        if (vexa < def.getPrice()) {
+            player.sendMessage(Message.raw("[Shop] Not enough vexa! You need " + def.getPrice()
+                    + " vexa but have " + vexa + ".").color(SystemMessageUtils.ERROR));
             return;
         }
 
-        GemStore.getInstance().removeGems(playerId, def.getPrice());
+        VexaStore.getInstance().removeVexa(playerId, def.getPrice());
         CosmeticStore.getInstance().purchaseCosmetic(playerId, cosmeticId);
         player.sendMessage(Message.raw("[Shop] Purchased " + def.getDisplayName() + "!")
                 .color(SystemMessageUtils.SUCCESS));

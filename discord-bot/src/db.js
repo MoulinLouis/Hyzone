@@ -63,7 +63,7 @@ async function createLink(playerUuid, discordId) {
   try {
     await conn.beginTransaction();
     await conn.execute(
-      'INSERT INTO discord_links (player_uuid, discord_id, gems_rewarded) VALUES (?, ?, FALSE)',
+      'INSERT INTO discord_links (player_uuid, discord_id, vexa_rewarded) VALUES (?, ?, FALSE)',
       [playerUuid, discordId]
     );
     await conn.execute(

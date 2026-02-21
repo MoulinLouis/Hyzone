@@ -8,7 +8,7 @@ import com.hypixel.hytale.server.core.universe.Universe;
 public class HubHud extends CustomUIHud {
 
     private int lastPlayerCount = -1;
-    private long lastGems = -1;
+    private long lastVexa = -1;
 
     public HubHud(PlayerRef playerRef) {
         super(playerRef);
@@ -19,13 +19,13 @@ public class HubHud extends CustomUIHud {
         commandBuilder.append("Pages/Hub_RunHud.ui");
     }
 
-    public void updateGems(long gems) {
-        if (gems == lastGems) {
+    public void updateVexa(long vexa) {
+        if (vexa == lastVexa) {
             return;
         }
-        lastGems = gems;
+        lastVexa = vexa;
         UICommandBuilder commandBuilder = new UICommandBuilder();
-        commandBuilder.set("#PlayerGemsValue.Text", String.valueOf(gems));
+        commandBuilder.set("#PlayerVexaValue.Text", String.valueOf(vexa));
         update(false, commandBuilder);
     }
 
