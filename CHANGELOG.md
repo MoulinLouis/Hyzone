@@ -43,7 +43,7 @@
 ### Fixed
 - **RunOrFall: Solo test start support** - `/rof start` can now launch with one player for testing, without immediately ending the round.
 - **RunOrFall: Edge-standing block bypass fixed** - Blocks now break from the player's full foot footprint, preventing side/edge standing exploits.
-- **RunOrFall: Single-block priority breaking** - A player now queues only one block at a time, always the closest block first.
+- **RunOrFall: Break-delay trail reliability** - Fast movement no longer skips walked blocks; each touched step starts its own delay while still targeting the closest footprint block first.
 - **RunOrFall: My Stats item routing** - `Food_Candy_Cane` now opens RunOrFall Stats when used in the RunOrFall world (instead of Parkour Stats).
 - **RunOrFall: /rof status permission** - `/rof status` is now restricted to OP/admin users.
 - **Parkour: Fly-zone warning now only applies with practice fly enabled** - The "You don't have the right to go there." rollback protection no longer triggers when practice is enabled but fly is OFF.
