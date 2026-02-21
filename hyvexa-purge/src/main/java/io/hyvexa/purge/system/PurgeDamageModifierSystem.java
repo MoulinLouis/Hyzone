@@ -131,11 +131,11 @@ public class PurgeDamageModifierSystem extends DamageEventSystem {
         if (!session.getAliveZombies().contains(targetRef)) {
             return;
         }
-        int level = PurgeWeaponUpgradeStore.getInstance().getLevel(sourceId, "AK47");
-        if (level > 0) {
-            int damage = weaponConfigManager.getDamage("AK47", level);
-            event.setAmount(damage);
-        }
+        String sessionWeapon = weaponConfigManager.getSessionWeaponId();
+        int level = PurgeWeaponUpgradeStore.getInstance().getLevel(sourceId, sessionWeapon);
+        int effectiveLevel = Math.max(level, 1);
+        int damage = weaponConfigManager.getDamage(sessionWeapon, effectiveLevel);
+        event.setAmount(damage);
     }
 
     private void cancelDamage(Damage event, CommandBuffer<EntityStore> buffer,

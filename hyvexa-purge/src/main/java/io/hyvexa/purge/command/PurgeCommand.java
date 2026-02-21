@@ -87,7 +87,7 @@ public class PurgeCommand extends AbstractAsyncCommand {
                                Store<EntityStore> store, World world) {
         String[] args = CommandUtils.getArgs(ctx);
         if (args.length == 0) {
-            player.sendMessage(Message.raw("Usage: /purge <start|stop|stats|party|upgrade|scrap|admin>"));
+            player.sendMessage(Message.raw("Usage: /purge <start|stop|stats|party|upgrade|loadout|scrap|admin>"));
             return;
         }
 
@@ -105,9 +105,10 @@ public class PurgeCommand extends AbstractAsyncCommand {
             case "stats" -> handleStats(player, playerId);
             case "party" -> handleParty(player, playerId, args);
             case "upgrade" -> handleUpgrade(player, ref, store, playerId, args);
+            case "loadout" -> handleLoadout(player, ref, store, playerId);
             case "admin" -> openAdminMenu(player, ref, store);
             case "scrap" -> handleScrap(player, playerId, args);
-            default -> player.sendMessage(Message.raw("Usage: /purge <start|stop|stats|party|upgrade|scrap|admin>"));
+            default -> player.sendMessage(Message.raw("Usage: /purge <start|stop|stats|party|upgrade|loadout|scrap|admin>"));
         }
     }
 
@@ -162,9 +163,12 @@ public class PurgeCommand extends AbstractAsyncCommand {
                 return;
             }
             for (String weaponId : weaponConfigManager.getWeaponIds()) {
-                PurgeWeaponUpgradeStore.getInstance().setLevel(playerId, weaponId, 1);
+                PurgeWeaponUpgradeStore.getInstance().setLevel(playerId, weaponId, 0);
             }
-            player.sendMessage(Message.raw("All weapon upgrades reset to level 1."));
+            // Re-initialize defaults so default weapons are level 1
+            PurgeWeaponUpgradeStore.getInstance().initializeDefaults(
+                    playerId, weaponConfigManager.getDefaultWeaponIds());
+            player.sendMessage(Message.raw("All weapon upgrades reset. Default weapons restored."));
             return;
         }
 
@@ -174,6 +178,16 @@ public class PurgeCommand extends AbstractAsyncCommand {
         }
         player.getPageManager().openCustomPage(ref, store,
                 new PurgeWeaponSelectPage(playerRef, PurgeWeaponSelectPage.Mode.PLAYER, playerId,
+                        weaponConfigManager, null, null));
+    }
+
+    private void handleLoadout(Player player, Ref<EntityStore> ref, Store<EntityStore> store, UUID playerId) {
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        if (playerRef == null) {
+            return;
+        }
+        player.getPageManager().openCustomPage(ref, store,
+                new PurgeWeaponSelectPage(playerRef, PurgeWeaponSelectPage.Mode.LOADOUT, playerId,
                         weaponConfigManager, null, null));
     }
 

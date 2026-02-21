@@ -8,6 +8,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -21,6 +22,13 @@ public class PurgeWeaponUpgradeStore {
     public enum UpgradeResult {
         SUCCESS,
         MAX_LEVEL,
+        NOT_ENOUGH_SCRAP,
+        NOT_OWNED
+    }
+
+    public enum PurchaseResult {
+        SUCCESS,
+        ALREADY_OWNED,
         NOT_ENOUGH_SCRAP
     }
 
@@ -50,9 +58,51 @@ public class PurgeWeaponUpgradeStore {
         } catch (SQLException e) {
             LOGGER.atSevere().withCause(e).log("Failed to create purge_weapon_upgrades table");
         }
+        runOwnershipMigration();
     }
 
-    private static final int DEFAULT_LEVEL = 1;
+    private void runOwnershipMigration() {
+        if (!DatabaseManager.getInstance().isInitialized()) {
+            return;
+        }
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            // Create migrations table if needed
+            try (PreparedStatement stmt = conn.prepareStatement(
+                    "CREATE TABLE IF NOT EXISTS purge_migrations ("
+                    + "migration_key VARCHAR(64) NOT NULL PRIMARY KEY"
+                    + ") ENGINE=InnoDB")) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.executeUpdate();
+            }
+            // Check if migration already applied
+            try (PreparedStatement stmt = conn.prepareStatement(
+                    "SELECT 1 FROM purge_migrations WHERE migration_key = 'weapon_ownership_v1'")) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        return; // Already migrated
+                    }
+                }
+            }
+            // Wipe existing upgrade data (fresh start)
+            try (PreparedStatement stmt = conn.prepareStatement("DELETE FROM purge_weapon_upgrades")) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                int deleted = stmt.executeUpdate();
+                LOGGER.atInfo().log("Weapon ownership migration: deleted " + deleted + " existing upgrade rows");
+            }
+            // Record migration
+            try (PreparedStatement stmt = conn.prepareStatement(
+                    "INSERT INTO purge_migrations (migration_key) VALUES ('weapon_ownership_v1')")) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.executeUpdate();
+            }
+            LOGGER.atInfo().log("Weapon ownership migration complete");
+        } catch (SQLException e) {
+            LOGGER.atWarning().withCause(e).log("Failed to run weapon ownership migration");
+        }
+    }
+
+    private static final int DEFAULT_LEVEL = 0;
 
     public int getLevel(UUID playerId, String weaponId) {
         if (playerId == null) {
@@ -78,8 +128,15 @@ public class PurgeWeaponUpgradeStore {
         persistToDatabase(playerId, weaponId, level);
     }
 
+    public boolean isOwned(UUID playerId, String weaponId) {
+        return getLevel(playerId, weaponId) >= 1;
+    }
+
     public UpgradeResult tryUpgrade(UUID playerId, String weaponId, PurgeWeaponConfigManager config) {
         int currentLevel = getLevel(playerId, weaponId);
+        if (currentLevel < 1) {
+            return UpgradeResult.NOT_OWNED;
+        }
         if (currentLevel >= config.getMaxLevel()) {
             return UpgradeResult.MAX_LEVEL;
         }
@@ -96,6 +153,32 @@ public class PurgeWeaponUpgradeStore {
         // Increment level
         setLevel(playerId, weaponId, nextLevel);
         return UpgradeResult.SUCCESS;
+    }
+
+    public PurchaseResult purchaseWeapon(UUID playerId, String weaponId, long cost) {
+        if (isOwned(playerId, weaponId)) {
+            return PurchaseResult.ALREADY_OWNED;
+        }
+        long scrap = PurgeScrapStore.getInstance().getScrap(playerId);
+        if (scrap < cost) {
+            return PurchaseResult.NOT_ENOUGH_SCRAP;
+        }
+        if (cost > 0) {
+            PurgeScrapStore.getInstance().removeScrap(playerId, cost);
+        }
+        setLevel(playerId, weaponId, 1);
+        return PurchaseResult.SUCCESS;
+    }
+
+    public void initializeDefaults(UUID playerId, Set<String> defaultWeaponIds) {
+        if (playerId == null || defaultWeaponIds == null || defaultWeaponIds.isEmpty()) {
+            return;
+        }
+        for (String weaponId : defaultWeaponIds) {
+            if (!isOwned(playerId, weaponId)) {
+                setLevel(playerId, weaponId, 1);
+            }
+        }
     }
 
     public void evictPlayer(UUID playerId) {

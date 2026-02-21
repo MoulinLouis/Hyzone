@@ -56,6 +56,37 @@ $C.@PageOverlay {
         FlexWeight: 1;
         LayoutMode: LeftCenterWrap;
       }
+
+      // Sectioned layout for LOADOUT mode (hidden by default)
+      Group #SectionedList {
+        Anchor: (Left: 0, Right: 0, Top: 12);
+        FlexWeight: 1;
+        LayoutMode: TopScrolling;
+        ScrollbarStyle: $C.@DefaultScrollbarStyle;
+        Visible: false;
+
+        Label #OwnedHeader {
+          Anchor: (Left: 0, Right: 0, Height: 24);
+          Style: (FontSize: 14, TextColor: #4ade80, RenderBold: true);
+          Text: "Owned";
+        }
+
+        Group #OwnedList {
+          Anchor: (Left: 0, Right: 0, Top: 4);
+          LayoutMode: LeftCenterWrap;
+        }
+
+        Label #UnownedHeader {
+          Anchor: (Left: 0, Right: 0, Top: 14, Height: 24);
+          Style: (FontSize: 14, TextColor: #8b9bb0, RenderBold: true);
+          Text: "Unowned";
+        }
+
+        Group #UnownedList {
+          Anchor: (Left: 0, Right: 0, Top: 4);
+          LayoutMode: LeftCenterWrap;
+        }
+      }
     }
 
     // === DETAIL PANEL (hidden until weapon selected) ===

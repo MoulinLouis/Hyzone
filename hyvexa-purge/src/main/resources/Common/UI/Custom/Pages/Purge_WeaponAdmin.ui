@@ -51,6 +51,75 @@ $C.@PageOverlay {
         Text: "";
       }
 
+      // === LOADOUT CONFIG ===
+      Group #LoadoutConfig {
+        Anchor: (Left: 0, Right: 0, Top: 8, Height: 40);
+        LayoutMode: Left;
+        Padding: (Left: 2, Top: 4);
+
+        // Default Unlocked toggle
+        TextButton #DefaultToggle {
+          Anchor: (Width: 126, Height: 32);
+          Text: "DEFAULT: OFF";
+          Style: TextButtonStyle(
+            Default: (Background: #1c2b3d, LabelStyle: (FontSize: 11, RenderBold: true, TextColor: #8b9bb0, HorizontalAlignment: Center, VerticalAlignment: Center)),
+            Hovered: (Background: #263b54, LabelStyle: (FontSize: 11, RenderBold: true, TextColor: #b0c4de, HorizontalAlignment: Center, VerticalAlignment: Center)),
+            Pressed: (Background: #162233, LabelStyle: (FontSize: 11, RenderBold: true, TextColor: #8b9bb0, HorizontalAlignment: Center, VerticalAlignment: Center)),
+            Sounds: $C.@ButtonSounds,
+          );
+        }
+
+        // Session Weapon toggle
+        TextButton #SessionToggle {
+          Anchor: (Left: 6, Width: 146, Height: 32);
+          Text: "SESSION WPN: OFF";
+          Style: TextButtonStyle(
+            Default: (Background: #1c2b3d, LabelStyle: (FontSize: 11, RenderBold: true, TextColor: #8b9bb0, HorizontalAlignment: Center, VerticalAlignment: Center)),
+            Hovered: (Background: #263b54, LabelStyle: (FontSize: 11, RenderBold: true, TextColor: #b0c4de, HorizontalAlignment: Center, VerticalAlignment: Center)),
+            Pressed: (Background: #162233, LabelStyle: (FontSize: 11, RenderBold: true, TextColor: #8b9bb0, HorizontalAlignment: Center, VerticalAlignment: Center)),
+            Sounds: $C.@ButtonSounds,
+          );
+        }
+
+        // Unlock Cost label
+        Label #UnlockCostLabel {
+          Anchor: (Left: 14, Width: 56, Height: 32);
+          Style: (FontSize: 12, TextColor: #8b9bb0, RenderBold: true, VerticalAlignment: Center);
+          Text: "Unlock:";
+        }
+
+        // Unlock Cost minus
+        TextButton #UnlockCostMinus {
+          Anchor: (Width: 28, Height: 32);
+          Text: "-";
+          Style: TextButtonStyle(
+            Default: (Background: #1c2b3d, LabelStyle: (FontSize: 14, RenderBold: true, TextColor: #ef4444, HorizontalAlignment: Center, VerticalAlignment: Center)),
+            Hovered: (Background: #263b54, LabelStyle: (FontSize: 14, RenderBold: true, TextColor: #f87171, HorizontalAlignment: Center, VerticalAlignment: Center)),
+            Pressed: (Background: #162233, LabelStyle: (FontSize: 14, RenderBold: true, TextColor: #ef4444, HorizontalAlignment: Center, VerticalAlignment: Center)),
+            Sounds: $C.@ButtonSounds,
+          );
+        }
+
+        // Unlock Cost value
+        Label #UnlockCostValue {
+          Anchor: (Left: 4, Width: 52, Height: 32);
+          Style: (FontSize: 13, TextColor: #fbbf24, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center);
+          Text: "500";
+        }
+
+        // Unlock Cost plus
+        TextButton #UnlockCostPlus {
+          Anchor: (Width: 28, Height: 32);
+          Text: "+";
+          Style: TextButtonStyle(
+            Default: (Background: #1c2b3d, LabelStyle: (FontSize: 14, RenderBold: true, TextColor: #4ade80, HorizontalAlignment: Center, VerticalAlignment: Center)),
+            Hovered: (Background: #263b54, LabelStyle: (FontSize: 14, RenderBold: true, TextColor: #86efac, HorizontalAlignment: Center, VerticalAlignment: Center)),
+            Pressed: (Background: #162233, LabelStyle: (FontSize: 14, RenderBold: true, TextColor: #4ade80, HorizontalAlignment: Center, VerticalAlignment: Center)),
+            Sounds: $C.@ButtonSounds,
+          );
+        }
+      }
+
       Label #EmptyText {
         Style: (FontSize: 13, TextColor: #6b7b8a);
         Text: "";
