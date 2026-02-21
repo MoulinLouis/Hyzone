@@ -9,7 +9,6 @@ public class RunOrFallHud extends CustomUIHud {
 
     private int lastPlayerCount = -1;
     private long lastVexa = -1;
-    private long lastCoins = -1;
 
     public RunOrFallHud(PlayerRef playerRef) {
         super(playerRef);
@@ -27,16 +26,6 @@ public class RunOrFallHud extends CustomUIHud {
         lastVexa = vexa;
         UICommandBuilder commandBuilder = new UICommandBuilder();
         commandBuilder.set("#PlayerVexaValue.Text", String.valueOf(vexa));
-        update(false, commandBuilder);
-    }
-
-    public void updateCoins(long coins) {
-        if (coins == lastCoins) {
-            return;
-        }
-        lastCoins = coins;
-        UICommandBuilder commandBuilder = new UICommandBuilder();
-        commandBuilder.set("#PlayerCoinsValue.Text", String.valueOf(coins));
         update(false, commandBuilder);
     }
 
