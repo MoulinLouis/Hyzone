@@ -138,12 +138,17 @@ public class PurgeSessionManager {
                 UUID pid = entry.getKey();
                 Ref<EntityStore> ref = entry.getValue();
                 DamageBypassRegistry.add(pid);
+                // Set initial weapon before granting loadout
+                PurgeSessionPlayerState ps = session.getPlayerState(pid);
+                if (ps != null && plugin != null) {
+                    ps.setCurrentWeaponId(plugin.getWeaponConfigManager().getSessionWeaponId());
+                }
                 try {
                     if (plugin != null && ref.isValid()) {
                         Store<EntityStore> store = ref.getStore();
                         Player player = store.getComponent(ref, Player.getComponentType());
                         if (player != null) {
-                            plugin.grantLoadout(player);
+                            plugin.grantLoadout(player, ps);
                         }
                         teleportToStart(ref, store, instance);
                     }

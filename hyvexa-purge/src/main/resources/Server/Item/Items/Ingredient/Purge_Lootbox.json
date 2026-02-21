@@ -1,0 +1,23 @@
+{
+  "TranslationProperties": {
+    "Name": "Weapon Lootbox",
+    "Description": "Right click to roll a random weapon."
+  },
+  "Icon": "Icons/ItemsGenerated/Furniture_Christmas_Chest_Small.png",
+  "IconProperties": {
+    "Rotation": [22.5, 45, 22.5],
+    "Scale": 0.55,
+    "Translation": [0, -15]
+  },
+  "Quality": "Developer",
+  "Categories": ["Items.Ingredients"],
+  "Model": "Blocks/Decorative_Sets/Christmas/Chest_Small.blockymodel",
+  "Texture": "Blocks/Decorative_Sets/Christmas/Chest_Small.png",
+  "PlayerAnimationsId": "Block",
+  "MaxStack": 10,
+  "ItemSoundSetId": "ISS_Items_Cloth",
+  "DropOnDeath": false,
+  "Interactions": {
+    "Secondary": "Purge_Lootbox"
+  }
+}

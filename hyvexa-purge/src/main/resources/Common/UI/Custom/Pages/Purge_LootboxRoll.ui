@@ -1,0 +1,146 @@
+$C = "../Common.ui";
+
+$C.@PageOverlay {
+  SceneBlur {}
+
+  Group #LootboxWindow {
+    Anchor: (Width: 420, Height: 300);
+    LayoutMode: Top;
+    Background: #0d1620(0.95);
+    OutlineColor: #ffffff(0.06);
+    OutlineSize: 1;
+
+    // === HEADER ===
+    Group #Header {
+      Anchor: (Left: 0, Right: 0, Height: 44);
+      LayoutMode: Full;
+      Background: #0a1018;
+
+      // Top accent line (amber)
+      Group {
+        Anchor: (Left: 0, Right: 0, Top: 0, Height: 2);
+        Background: #fbbf24;
+      }
+
+      Label {
+        Anchor: (Left: 20, Top: 12, Width: 250, Height: 22);
+        Style: (FontSize: 16, TextColor: #fbbf24, RenderBold: true);
+        Text: "WEAPON LOOTBOX";
+      }
+
+      Label #TimerLabel {
+        Anchor: (Right: 20, Top: 12, Width: 150, Height: 22);
+        Style: (FontSize: 13, TextColor: #9fb0ba, HorizontalAlignment: End);
+        Text: "10s remaining";
+      }
+    }
+
+    // === WEAPON DISPLAY ===
+    Group #WeaponDisplay {
+      Anchor: (Left: 0, Right: 0);
+      FlexWeight: 1;
+      LayoutMode: Top;
+      Padding: (Left: 30, Right: 30, Top: 20, Bottom: 10);
+
+      // Weapon name (animated during spin)
+      Label #WeaponName {
+        Anchor: (Left: 0, Right: 0, Height: 36);
+        Style: (FontSize: 26, TextColor: #9fb0ba, RenderBold: true, HorizontalAlignment: Center);
+        Text: "Rolling...";
+      }
+
+      // Star display row (absolute positioned to avoid hidden labels consuming space)
+      Group #StarRow {
+        Anchor: (Width: 120, Height: 20, Top: 8);
+        LayoutMode: Full;
+
+        Label #S0F { Anchor: (Left: 0, Width: 20, Height: 20); Style: (FontSize: 16, TextColor: #fbbf24, HorizontalAlignment: Center); Text: "*"; Visible: false; }
+        Label #S0H { Anchor: (Left: 0, Width: 20, Height: 20); Style: (FontSize: 16, TextColor: #fbbf24, HorizontalAlignment: Center); Text: "."; Visible: false; }
+        Label #S0E { Anchor: (Left: 0, Width: 20, Height: 20); Style: (FontSize: 16, TextColor: #374151, HorizontalAlignment: Center); Text: "*"; Visible: true; }
+
+        Label #S1F { Anchor: (Left: 24, Width: 20, Height: 20); Style: (FontSize: 16, TextColor: #fbbf24, HorizontalAlignment: Center); Text: "*"; Visible: false; }
+        Label #S1H { Anchor: (Left: 24, Width: 20, Height: 20); Style: (FontSize: 16, TextColor: #fbbf24, HorizontalAlignment: Center); Text: "."; Visible: false; }
+        Label #S1E { Anchor: (Left: 24, Width: 20, Height: 20); Style: (FontSize: 16, TextColor: #374151, HorizontalAlignment: Center); Text: "*"; Visible: true; }
+
+        Label #S2F { Anchor: (Left: 48, Width: 20, Height: 20); Style: (FontSize: 16, TextColor: #fbbf24, HorizontalAlignment: Center); Text: "*"; Visible: false; }
+        Label #S2H { Anchor: (Left: 48, Width: 20, Height: 20); Style: (FontSize: 16, TextColor: #fbbf24, HorizontalAlignment: Center); Text: "."; Visible: false; }
+        Label #S2E { Anchor: (Left: 48, Width: 20, Height: 20); Style: (FontSize: 16, TextColor: #374151, HorizontalAlignment: Center); Text: "*"; Visible: true; }
+
+        Label #S3F { Anchor: (Left: 72, Width: 20, Height: 20); Style: (FontSize: 16, TextColor: #fbbf24, HorizontalAlignment: Center); Text: "*"; Visible: false; }
+        Label #S3H { Anchor: (Left: 72, Width: 20, Height: 20); Style: (FontSize: 16, TextColor: #fbbf24, HorizontalAlignment: Center); Text: "."; Visible: false; }
+        Label #S3E { Anchor: (Left: 72, Width: 20, Height: 20); Style: (FontSize: 16, TextColor: #374151, HorizontalAlignment: Center); Text: "*"; Visible: true; }
+
+        Label #S4F { Anchor: (Left: 96, Width: 20, Height: 20); Style: (FontSize: 16, TextColor: #fbbf24, HorizontalAlignment: Center); Text: "*"; Visible: false; }
+        Label #S4H { Anchor: (Left: 96, Width: 20, Height: 20); Style: (FontSize: 16, TextColor: #fbbf24, HorizontalAlignment: Center); Text: "."; Visible: false; }
+        Label #S4E { Anchor: (Left: 96, Width: 20, Height: 20); Style: (FontSize: 16, TextColor: #374151, HorizontalAlignment: Center); Text: "*"; Visible: true; }
+      }
+
+      // Damage display
+      Label #DamageLabel {
+        Anchor: (Left: 0, Right: 0, Height: 22, Top: 8);
+        Style: (FontSize: 14, TextColor: #9fb0ba, HorizontalAlignment: Center);
+        Text: "";
+      }
+    }
+
+    // === BUTTON ROW ===
+    Group #ButtonRow {
+      Anchor: (Left: 0, Right: 0, Height: 56);
+      LayoutMode: Left;
+      Padding: (Left: 20, Right: 20, Top: 8, Bottom: 14);
+
+      // Accept button (hidden until spin completes)
+      Group #AcceptButtonWrap {
+        FlexWeight: 1;
+        Anchor: (Top: 0, Bottom: 0, Right: 8);
+
+        TextButton #AcceptButton {
+          Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+          Text: "ACCEPT";
+          Visible: false;
+          Style: TextButtonStyle(
+            Default: (
+              Background: #166534,
+              LabelStyle: (FontSize: 14, TextColor: #bbf7d0, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Hovered: (
+              Background: #15803d,
+              LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Pressed: (
+              Background: #14532d,
+              LabelStyle: (FontSize: 14, TextColor: #bbf7d0, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Sounds: $C.@ButtonSounds,
+          );
+        }
+      }
+
+      // Decline button
+      Group #DeclineButtonWrap {
+        FlexWeight: 1;
+        Anchor: (Top: 0, Bottom: 0);
+
+        TextButton #DeclineButton {
+          Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+          Text: "DECLINE";
+          Style: TextButtonStyle(
+            Default: (
+              Background: #ffffff(0.06),
+              LabelStyle: (FontSize: 14, TextColor: #9fb0ba, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Hovered: (
+              Background: #ffffff(0.1),
+              LabelStyle: (FontSize: 14, TextColor: #f0f4f8, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Pressed: (
+              Background: #ffffff(0.04),
+              LabelStyle: (FontSize: 14, TextColor: #9fb0ba, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Sounds: $C.@ButtonSounds,
+          );
+        }
+      }
+    }
+  }
+}

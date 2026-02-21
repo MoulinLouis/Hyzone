@@ -8,6 +8,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -130,6 +131,27 @@ public class PurgeWeaponUpgradeStore {
 
     public boolean isOwned(UUID playerId, String weaponId) {
         return getLevel(playerId, weaponId) >= 1;
+    }
+
+    public Set<String> getOwnedWeaponIds(UUID playerId) {
+        if (playerId == null) {
+            return Set.of();
+        }
+        ConcurrentHashMap<String, Integer> playerWeapons = cache.get(playerId);
+        if (playerWeapons == null) {
+            loadFromDatabase(playerId);
+            playerWeapons = cache.get(playerId);
+        }
+        if (playerWeapons == null) {
+            return Set.of();
+        }
+        Set<String> owned = new HashSet<>();
+        for (var entry : playerWeapons.entrySet()) {
+            if (entry.getValue() >= 1) {
+                owned.add(entry.getKey());
+            }
+        }
+        return owned;
     }
 
     public UpgradeResult tryUpgrade(UUID playerId, String weaponId, PurgeWeaponConfigManager config) {

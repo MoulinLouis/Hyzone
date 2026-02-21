@@ -29,6 +29,8 @@ import io.hyvexa.purge.data.PurgePlayerStore;
 import io.hyvexa.purge.data.PurgeScrapStore;
 import io.hyvexa.purge.data.PurgeWeaponUpgradeStore;
 import io.hyvexa.purge.hud.PurgeHudManager;
+import io.hyvexa.purge.data.PurgeSessionPlayerState;
+import io.hyvexa.purge.interaction.PurgeLootboxInteraction;
 import io.hyvexa.purge.interaction.PurgeOrangeOrbInteraction;
 import io.hyvexa.purge.interaction.PurgeRedOrbInteraction;
 import io.hyvexa.purge.interaction.PurgeStartInteraction;
@@ -52,11 +54,13 @@ public class HyvexaPurgePlugin extends JavaPlugin {
     private static final String ITEM_ORB_ORANGE = "Purge_Orb_Orange";
     private static final String ITEM_ORB_RED = "Purge_Orb_Red";
     private static final String ITEM_BULLET = "Bullet";
+    private static final String ITEM_LOOTBOX = "Purge_Lootbox";
     private static final int STARTING_BULLET_COUNT = 120;
     private static final short SLOT_ORB_BLUE = 0;
     private static final short SLOT_ORB_ORANGE = 1;
     private static final short SLOT_PRIMARY_WEAPON = 0;
     private static final short SLOT_PRIMARY_AMMO = 1;
+    private static final short SLOT_LOOTBOX = 2;
     private static final short SLOT_QUIT_ORB = 8;
     private static final short SLOT_SERVER_SELECTOR = 8;
     private static HyvexaPurgePlugin INSTANCE;
@@ -251,8 +255,12 @@ public class HyvexaPurgePlugin extends JavaPlugin {
     // --- Public loadout methods for PurgeSessionManager ---
 
     public void grantLoadout(Player player) {
+        grantLoadout(player, null);
+    }
+
+    public void grantLoadout(Player player, PurgeSessionPlayerState state) {
         InventoryUtils.clearAllContainers(player);
-        giveStartingWeapon(player);
+        giveStartingWeapon(player, state);
         giveStartingAmmo(player);
         giveQuitOrb(player);
     }
@@ -265,6 +273,25 @@ public class HyvexaPurgePlugin extends JavaPlugin {
     public void giveWaitingLoadout(Player player) {
         InventoryUtils.clearAllContainers(player);
         giveQuitOrb(player);
+    }
+
+    public void switchWeapon(Player player, PurgeSessionPlayerState state, String newWeaponId) {
+        state.setCurrentWeaponId(newWeaponId);
+        Inventory inventory = player.getInventory();
+        if (inventory != null && inventory.getHotbar() != null) {
+            inventory.getHotbar().setItemStackForSlot(SLOT_PRIMARY_WEAPON, new ItemStack(newWeaponId, 1), false);
+        }
+    }
+
+    public void grantLootbox(Player player, int count) {
+        Inventory inventory = player.getInventory();
+        if (inventory == null || inventory.getHotbar() == null) {
+            return;
+        }
+        ItemStack existing = inventory.getHotbar().getItemStack(SLOT_LOOTBOX);
+        int current = (existing != null && !existing.isEmpty()) ? existing.getQuantity() : 0;
+        int newCount = Math.min(current + count, 10);
+        inventory.getHotbar().setItemStackForSlot(SLOT_LOOTBOX, new ItemStack(ITEM_LOOTBOX, newCount), false);
     }
 
     // --- Private item grant methods ---
@@ -298,12 +325,14 @@ public class HyvexaPurgePlugin extends JavaPlugin {
         inventory.getHotbar().setItemStackForSlot(SLOT_QUIT_ORB, new ItemStack(ITEM_ORB_RED, 1), false);
     }
 
-    private void giveStartingWeapon(Player player) {
+    private void giveStartingWeapon(Player player, PurgeSessionPlayerState state) {
         Inventory inventory = player.getInventory();
         if (inventory == null || inventory.getHotbar() == null) {
             return;
         }
-        String weaponItem = weaponConfigManager.getSessionWeaponId();
+        String weaponItem = (state != null && state.getCurrentWeaponId() != null)
+                ? state.getCurrentWeaponId()
+                : weaponConfigManager.getSessionWeaponId();
         inventory.getHotbar().setItemStackForSlot(SLOT_PRIMARY_WEAPON, new ItemStack(weaponItem, 1), false);
     }
 
@@ -368,5 +397,7 @@ public class HyvexaPurgePlugin extends JavaPlugin {
                 PurgeOrangeOrbInteraction.class, PurgeOrangeOrbInteraction.CODEC);
         registry.register("Purge_Red_Orb_Interaction",
                 PurgeRedOrbInteraction.class, PurgeRedOrbInteraction.CODEC);
+        registry.register("Purge_Lootbox_Interaction",
+                PurgeLootboxInteraction.class, PurgeLootboxInteraction.CODEC);
     }
 }

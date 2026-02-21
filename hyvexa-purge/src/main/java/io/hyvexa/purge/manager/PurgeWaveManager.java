@@ -464,6 +464,35 @@ public class PurgeWaveManager {
         for (int i = 0; i < dead.size(); i++) {
             session.forEachAliveConnectedPlayerState(PurgeSessionPlayerState::incrementKills);
         }
+
+        // Lootbox drop: configurable % chance per dead zombie per alive player
+        HyvexaPurgePlugin plugin = HyvexaPurgePlugin.getInstance();
+        if (plugin != null) {
+            double dropChance = plugin.getWeaponConfigManager().getLootboxDropChance();
+            World world = getPurgeWorld();
+            if (world != null && dropChance > 0) {
+                for (int i = 0; i < dead.size(); i++) {
+                    session.forEachAliveConnectedPlayerState(ps -> {
+                        if (ThreadLocalRandom.current().nextDouble() < dropChance) {
+                            Ref<EntityStore> pRef = ps.getPlayerRef();
+                            if (pRef != null && pRef.isValid()) {
+                                world.execute(() -> {
+                                    try {
+                                        Store<EntityStore> store = pRef.getStore();
+                                        Player player = store.getComponent(pRef, Player.getComponentType());
+                                        if (player != null) {
+                                            plugin.grantLootbox(player, 1);
+                                        }
+                                    } catch (Exception e) {
+                                        LOGGER.atFine().log("Failed to grant lootbox: " + e.getMessage());
+                                    }
+                                });
+                            }
+                        }
+                    });
+                }
+            }
+        }
     }
 
     private void updateWaveWorldState(PurgeSession session) {
@@ -895,7 +924,7 @@ public class PurgeWaveManager {
                     try {
                         player = store.getComponent(ref, Player.getComponentType());
                         if (player != null && plugin != null) {
-                            plugin.grantLoadout(player);
+                            plugin.grantLoadout(player, ps);
                         }
                     } catch (Exception e) {
                         LOGGER.atFine().log("Failed to re-grant loadout: " + e.getMessage());
