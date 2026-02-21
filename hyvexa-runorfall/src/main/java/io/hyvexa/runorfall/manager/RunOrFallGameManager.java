@@ -715,7 +715,7 @@ public class RunOrFallGameManager {
             broadcastLobby("Elimination: " + eliminatedName + ". " + alivePlayers.size() + " remaining.");
             return;
         }
-        broadcastLobby("Elimination: " + eliminatedName + " (" + reason + "). " + alivePlayers.size() + " remaining.");
+        broadcastLobby("Elimination: " + eliminatedName + " " + reason + ". " + alivePlayers.size() + " remaining.");
     }
 
     private void cancelCountdownTask() {
