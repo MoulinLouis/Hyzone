@@ -7,7 +7,7 @@ Group {
 
   // Player name
   Label #PlayerName {
-    Anchor: (Left: 12, Top: 0, Bottom: 0, Width: 240);
+    Anchor: (Left: 12, Top: 0, Bottom: 0, Width: 215);
     Style: (FontSize: 14, TextColor: #d5e6ff, VerticalAlignment: Center);
     Text: "";
   }
@@ -26,9 +26,16 @@ Group {
 
   // "Invited" label (hidden by default, shown after invite sent)
   Label #InvitedLabel {
-    Anchor: (Right: 16, Top: 0, Bottom: 0, Width: 70);
+    Anchor: (Right: 12, Top: 0, Bottom: 0, Width: 80);
     Style: (FontSize: 13, TextColor: #4ade80, RenderBold: true, HorizontalAlignment: End, VerticalAlignment: Center);
     Text: "Invited";
+    Visible: false;
+  }
+
+  Label #UnavailableLabel {
+    Anchor: (Right: 12, Top: 0, Bottom: 0, Width: 86);
+    Style: (FontSize: 12, TextColor: #ff8b8b, RenderBold: true, HorizontalAlignment: End, VerticalAlignment: Center);
+    Text: "Unavailable";
     Visible: false;
   }
 }
