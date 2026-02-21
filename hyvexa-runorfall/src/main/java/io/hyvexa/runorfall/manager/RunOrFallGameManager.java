@@ -17,6 +17,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.runorfall.HyvexaRunOrFallPlugin;
 import io.hyvexa.runorfall.data.RunOrFallConfig;
 import io.hyvexa.runorfall.data.RunOrFallLocation;
+import io.hyvexa.runorfall.data.RunOrFallMapConfig;
 import io.hyvexa.runorfall.data.RunOrFallPlatform;
 
 import java.util.ArrayList;
@@ -80,6 +81,7 @@ public class RunOrFallGameManager {
 
     public synchronized String statusLine() {
         return "state=" + state.name()
+                + ", map=" + configStore.getSelectedMapId()
                 + ", lobby=" + lobbyPlayers.size()
                 + ", alive=" + alivePlayers.size()
                 + ", countdown=" + countdownRemaining
@@ -236,12 +238,18 @@ public class RunOrFallGameManager {
             return;
         }
         RunOrFallConfig config = configStore.snapshot();
-        if (config.platforms.isEmpty()) {
+        RunOrFallMapConfig selectedMap = resolveSelectedMap(config);
+        if (selectedMap == null) {
+            state = GameState.IDLE;
+            broadcastLobby("No map selected.");
+            return;
+        }
+        if (selectedMap.platforms.isEmpty()) {
             state = GameState.IDLE;
             broadcastLobby("No destructible platform configured. Use /rof platform ... first.");
             return;
         }
-        if (config.spawns.isEmpty()) {
+        if (selectedMap.spawns.isEmpty()) {
             state = GameState.IDLE;
             broadcastLobby("No game spawn configured. Use /rof spawn add first.");
             return;
@@ -273,7 +281,7 @@ public class RunOrFallGameManager {
 
         for (int i = 0; i < onlinePlayers.size(); i++) {
             UUID playerId = onlinePlayers.get(i);
-            RunOrFallLocation spawn = config.spawns.get(i % config.spawns.size());
+            RunOrFallLocation spawn = selectedMap.spawns.get(i % selectedMap.spawns.size());
             teleportPlayer(playerId, spawn);
         }
 
@@ -306,6 +314,8 @@ public class RunOrFallGameManager {
                 broadcastBlockBreakCountdownIfNeeded(nowMs);
             }
             RunOrFallConfig config = configStore.snapshot();
+            RunOrFallMapConfig selectedMap = resolveSelectedMap(config);
+            List<RunOrFallPlatform> platforms = selectedMap != null ? selectedMap.platforms : List.of();
             Set<UUID> disconnected = new HashSet<>();
             for (UUID playerId : new ArrayList<>(alivePlayers)) {
                 PlayerRef playerRef = resolvePlayer(playerId);
@@ -332,7 +342,7 @@ public class RunOrFallGameManager {
                 if (canBreakBlocks) {
                     int blockY = (int) Math.floor(position.getY() - 0.2d);
                     queueFootprintBlocksInternal(playerId, position.getX(), position.getZ(), blockY,
-                            config.platforms, config.blockBreakDelaySeconds);
+                            platforms, config.blockBreakDelaySeconds);
                 }
             }
             processPendingBlocksInternal();
@@ -591,6 +601,21 @@ public class RunOrFallGameManager {
             }
         }
         return false;
+    }
+
+    private static RunOrFallMapConfig resolveSelectedMap(RunOrFallConfig config) {
+        if (config == null || config.maps == null || config.maps.isEmpty()) {
+            return null;
+        }
+        String selectedMapId = config.selectedMapId;
+        if (selectedMapId != null && !selectedMapId.isBlank()) {
+            for (RunOrFallMapConfig map : config.maps) {
+                if (map != null && selectedMapId.equalsIgnoreCase(map.id)) {
+                    return map;
+                }
+            }
+        }
+        return config.maps.get(0);
     }
 
     private Integer readBlockId(World world, int x, int y, int z) {

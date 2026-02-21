@@ -4,7 +4,7 @@ $C.@PageOverlay {
   SceneBlur {}
 
   Group #RunOrFallAdminWindow {
-    Anchor: (Width: 560, Height: 760);
+    Anchor: (Width: 920, Height: 760);
     LayoutMode: Top;
     Background: #0d1620(0.95);
     OutlineColor: #ffffff(0.06);
@@ -50,198 +50,260 @@ $C.@PageOverlay {
     Group #Content {
       Anchor: (Left: 0, Right: 0);
       FlexWeight: 1;
-      LayoutMode: Top;
+      LayoutMode: Left;
       Padding: (Left: 12, Right: 12, Top: 8, Bottom: 12);
 
-      Label {
-        Style: (FontSize: 14, TextColor: #9fb0ba);
-        Text: "Configure lobby, spawns, platforms, and game values.";
-      }
+      Group #AdminColumn {
+        Anchor: (Width: 560);
+        LayoutMode: Top;
 
-      Label #StatusValue {
-        Anchor: (Top: 6);
-        Style: (FontSize: 12, TextColor: #cfd7dc);
-        Text: "";
-      }
-
-      Group {
-        Anchor: (Top: 8, Height: 24);
-        LayoutMode: Left;
-
-        $C.@TextButton #JoinButton {
-          Anchor: (Width: 120, Height: 22);
-          Text: "Join Lobby";
+        Label {
+          Style: (FontSize: 14, TextColor: #9fb0ba);
+          Text: "Configure selected map lobby, spawns, platforms, and game values.";
         }
 
-        $C.@TextButton #LeaveButton {
-          Anchor: (Width: 120, Height: 22, Left: 6);
-          Text: "Leave Lobby";
+        Label #StatusValue {
+          Anchor: (Top: 6);
+          Style: (FontSize: 12, TextColor: #cfd7dc);
+          Text: "";
         }
 
-        $C.@TextButton #StartButton {
-          Anchor: (Width: 120, Height: 22, Left: 6);
-          Text: "Start";
+        Label #SelectedMapValue {
+          Anchor: (Top: 4);
+          Style: (FontSize: 12, TextColor: #ffd166, RenderBold: true);
+          Text: "Selected map: none";
         }
 
-        $C.@TextButton #StopButton {
-          Anchor: (Width: 120, Height: 22, Left: 6);
-          Text: "Stop";
+        Group {
+          Anchor: (Top: 8, Height: 24);
+          LayoutMode: Left;
+
+          $C.@TextButton #JoinButton {
+            Anchor: (Width: 120, Height: 22);
+            Text: "Join Lobby";
+          }
+
+          $C.@TextButton #LeaveButton {
+            Anchor: (Width: 120, Height: 22, Left: 6);
+            Text: "Leave Lobby";
+          }
+
+          $C.@TextButton #StartButton {
+            Anchor: (Width: 120, Height: 22, Left: 6);
+            Text: "Start";
+          }
+
+          $C.@TextButton #StopButton {
+            Anchor: (Width: 120, Height: 22, Left: 6);
+            Text: "Stop";
+          }
+        }
+
+        $C.@TextButton #RefreshButton {
+          Anchor: (Top: 6, Width: 140, Height: 22);
+          Text: "Refresh";
+        }
+
+        Label #LobbyValue {
+          Anchor: (Top: 8);
+          Style: (FontSize: 12, TextColor: #9fb0ba);
+          Text: "";
+        }
+
+        Group {
+          Anchor: (Top: 4, Height: 24);
+          LayoutMode: Left;
+
+          $C.@TextButton #SetLobbyButton {
+            Anchor: (Width: 170, Height: 22);
+            Text: "Set Lobby Here";
+          }
+
+          $C.@TextButton #TpLobbyButton {
+            Anchor: (Width: 170, Height: 22, Left: 6);
+            Text: "TP Lobby";
+          }
+        }
+
+        Label #SpawnsValue {
+          Anchor: (Top: 8);
+          Style: (FontSize: 12, TextColor: #9fb0ba);
+          Text: "";
+        }
+
+        Group {
+          Anchor: (Top: 4, Height: 24);
+          LayoutMode: Left;
+
+          $C.@TextButton #AddSpawnButton {
+            Anchor: (Width: 170, Height: 22);
+            Text: "Add Spawn Here";
+          }
+
+          $C.@TextButton #ClearSpawnsButton {
+            Anchor: (Width: 170, Height: 22, Left: 6);
+            Text: "Clear Spawns";
+          }
+        }
+
+        Label #PlatformsValue {
+          Anchor: (Top: 8);
+          Style: (FontSize: 12, TextColor: #9fb0ba);
+          Text: "";
+        }
+
+        Label #Pos1Value {
+          Anchor: (Top: 6);
+          Style: (FontSize: 12, TextColor: #9fb0ba);
+          Text: "";
+        }
+
+        Label #Pos2Value {
+          Anchor: (Top: 2);
+          Style: (FontSize: 12, TextColor: #9fb0ba);
+          Text: "";
+        }
+
+        Group {
+          Anchor: (Top: 4, Height: 24);
+          LayoutMode: Left;
+
+          $C.@TextButton #SetPos1Button {
+            Anchor: (Width: 120, Height: 22);
+            Text: "Set Pos1";
+          }
+
+          $C.@TextButton #SetPos2Button {
+            Anchor: (Width: 120, Height: 22, Left: 6);
+            Text: "Set Pos2";
+          }
+
+          $C.@TextButton #SavePlatformButton {
+            Anchor: (Width: 140, Height: 22, Left: 6);
+            Text: "Save Platform";
+          }
+
+          $C.@TextButton #ClearPlatformsButton {
+            Anchor: (Width: 140, Height: 22, Left: 6);
+            Text: "Clear Platforms";
+          }
+        }
+
+        Label {
+          Anchor: (Top: 10);
+          Style: (FontSize: 13, TextColor: #cfd7dc);
+          Text: "Void Y";
+        }
+
+        Group {
+          Anchor: (Top: 2, Height: 26);
+          LayoutMode: Left;
+
+          $C.@TextField #VoidYField {
+            Anchor: (Width: 200, Height: 24);
+            Style: (FontSize: 13, TextColor: #ffffff(0.85));
+          }
+
+          $C.@TextButton #SaveVoidYButton {
+            Anchor: (Width: 120, Height: 22, Left: 6, Top: 1);
+            Text: "Save Void Y";
+          }
+        }
+
+        Label #VoidYCurrent {
+          Anchor: (Top: 4);
+          Style: (FontSize: 12, TextColor: #9fb0ba);
+          Text: "";
+        }
+
+        Label {
+          Anchor: (Top: 8);
+          Style: (FontSize: 13, TextColor: #cfd7dc);
+          Text: "Block break delay (seconds)";
+        }
+
+        Group {
+          Anchor: (Top: 2, Height: 26);
+          LayoutMode: Left;
+
+          $C.@TextField #BreakDelayField {
+            Anchor: (Width: 200, Height: 24);
+            Style: (FontSize: 13, TextColor: #ffffff(0.85));
+          }
+
+          $C.@TextButton #SaveBreakDelayButton {
+            Anchor: (Width: 120, Height: 22, Left: 6, Top: 1);
+            Text: "Save Delay";
+          }
+        }
+
+        Label #BreakDelayCurrent {
+          Anchor: (Top: 4);
+          Style: (FontSize: 12, TextColor: #9fb0ba);
+          Text: "";
         }
       }
 
-      $C.@TextButton #RefreshButton {
-        Anchor: (Top: 6, Width: 140, Height: 22);
-        Text: "Refresh";
+      Group #ColumnSpacer {
+        Anchor: (Width: 12);
       }
 
-      Label #LobbyValue {
-        Anchor: (Top: 8);
-        Style: (FontSize: 12, TextColor: #9fb0ba);
-        Text: "";
-      }
+      Group #MapColumn {
+        Anchor: (Width: 320);
+        LayoutMode: Top;
 
-      Group {
-        Anchor: (Top: 4, Height: 24);
-        LayoutMode: Left;
-
-        $C.@TextButton #SetLobbyButton {
-          Anchor: (Width: 170, Height: 22);
-          Text: "Set Lobby Here";
+        Label {
+          Style: (FontSize: 16, TextColor: #93844c, RenderBold: true);
+          Text: "Maps";
         }
 
-        $C.@TextButton #TpLobbyButton {
-          Anchor: (Width: 170, Height: 22, Left: 6);
-          Text: "TP Lobby";
-        }
-      }
-
-      Label #SpawnsValue {
-        Anchor: (Top: 8);
-        Style: (FontSize: 12, TextColor: #9fb0ba);
-        Text: "";
-      }
-
-      Group {
-        Anchor: (Top: 4, Height: 24);
-        LayoutMode: Left;
-
-        $C.@TextButton #AddSpawnButton {
-          Anchor: (Width: 170, Height: 22);
-          Text: "Add Spawn Here";
+        Label {
+          Anchor: (Top: 6);
+          Style: (FontSize: 12, TextColor: #9fb0ba);
+          Text: "Map Id";
         }
 
-        $C.@TextButton #ClearSpawnsButton {
-          Anchor: (Width: 170, Height: 22, Left: 6);
-          Text: "Clear Spawns";
-        }
-      }
-
-      Label #PlatformsValue {
-        Anchor: (Top: 8);
-        Style: (FontSize: 12, TextColor: #9fb0ba);
-        Text: "";
-      }
-
-      Label {
-        Anchor: (Top: 4);
-        Style: (FontSize: 13, TextColor: #cfd7dc);
-        Text: "Platform name";
-      }
-
-      $C.@TextField #PlatformNameField {
-        Anchor: (Top: 2, Height: 24, Width: 220);
-        Style: (FontSize: 13, TextColor: #ffffff(0.85));
-      }
-
-      Label #Pos1Value {
-        Anchor: (Top: 6);
-        Style: (FontSize: 12, TextColor: #9fb0ba);
-        Text: "";
-      }
-
-      Label #Pos2Value {
-        Anchor: (Top: 2);
-        Style: (FontSize: 12, TextColor: #9fb0ba);
-        Text: "";
-      }
-
-      Group {
-        Anchor: (Top: 4, Height: 24);
-        LayoutMode: Left;
-
-        $C.@TextButton #SetPos1Button {
-          Anchor: (Width: 120, Height: 22);
-          Text: "Set Pos1";
-        }
-
-        $C.@TextButton #SetPos2Button {
-          Anchor: (Width: 120, Height: 22, Left: 6);
-          Text: "Set Pos2";
-        }
-
-        $C.@TextButton #SavePlatformButton {
-          Anchor: (Width: 140, Height: 22, Left: 6);
-          Text: "Save Platform";
-        }
-
-        $C.@TextButton #ClearPlatformsButton {
-          Anchor: (Width: 140, Height: 22, Left: 6);
-          Text: "Clear Platforms";
-        }
-      }
-
-      Label {
-        Anchor: (Top: 10);
-        Style: (FontSize: 13, TextColor: #cfd7dc);
-        Text: "Void Y";
-      }
-
-      Group {
-        Anchor: (Top: 2, Height: 26);
-        LayoutMode: Left;
-
-        $C.@TextField #VoidYField {
-          Anchor: (Width: 200, Height: 24);
+        $C.@TextField #MapIdField {
+          Anchor: (Top: 4, Height: 24);
           Style: (FontSize: 13, TextColor: #ffffff(0.85));
         }
 
-        $C.@TextButton #SaveVoidYButton {
-          Anchor: (Width: 120, Height: 22, Left: 6, Top: 1);
-          Text: "Save Void Y";
+        Group {
+          Anchor: (Top: 6, Height: 24);
+          LayoutMode: Left;
+
+          $C.@TextButton #MapCreateButton {
+            Anchor: (Width: 150, Height: 22);
+            Text: "Create + Select";
+          }
+
+          $C.@TextButton #MapDeleteButton {
+            Anchor: (Width: 150, Height: 22, Left: 6);
+            Text: "Delete Selected";
+          }
         }
-      }
 
-      Label #VoidYCurrent {
-        Anchor: (Top: 4);
-        Style: (FontSize: 12, TextColor: #9fb0ba);
-        Text: "";
-      }
+        Label {
+          Anchor: (Top: 8);
+          Style: (FontSize: 12, TextColor: #9fb0ba);
+          Text: "Search";
+        }
 
-      Label {
-        Anchor: (Top: 8);
-        Style: (FontSize: 13, TextColor: #cfd7dc);
-        Text: "Block break delay (seconds)";
-      }
-
-      Group {
-        Anchor: (Top: 2, Height: 26);
-        LayoutMode: Left;
-
-        $C.@TextField #BreakDelayField {
-          Anchor: (Width: 200, Height: 24);
+        $C.@TextField #MapSearchField {
+          Anchor: (Top: 4, Height: 24);
           Style: (FontSize: 13, TextColor: #ffffff(0.85));
         }
 
-        $C.@TextButton #SaveBreakDelayButton {
-          Anchor: (Width: 120, Height: 22, Left: 6, Top: 1);
-          Text: "Save Delay";
-        }
-      }
+        Group #MapList {
+          Anchor: (Width: 320, Top: 8, Height: 560);
+          LayoutMode: TopScrolling;
+          Padding: (Left: 6, Right: 6);
+          ScrollbarStyle: $C.@DefaultScrollbarStyle;
 
-      Label #BreakDelayCurrent {
-        Anchor: (Top: 4);
-        Style: (FontSize: 12, TextColor: #9fb0ba);
-        Text: "";
+          Group #MapCards {
+            LayoutMode: Top;
+          }
+        }
       }
     }
   }

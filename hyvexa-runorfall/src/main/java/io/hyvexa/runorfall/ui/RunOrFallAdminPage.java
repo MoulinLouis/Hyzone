@@ -52,12 +52,16 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
     private static final String BUTTON_STOP = "Stop";
     private static final String BUTTON_JOIN = "Join";
     private static final String BUTTON_LEAVE = "Leave";
+    private static final String BUTTON_MAP_CREATE = "MapCreate";
+    private static final String BUTTON_MAP_DELETE = "MapDelete";
+    private static final String BUTTON_MAP_SELECT_PREFIX = "MapSelect:";
 
     private static final Map<UUID, Selection> SELECTIONS = new ConcurrentHashMap<>();
 
     private final RunOrFallConfigStore configStore;
     private final RunOrFallGameManager gameManager;
-    private String platformNameInput;
+    private String mapIdInput;
+    private String mapSearchInput;
     private String voidYInput;
     private String breakDelayInput;
 
@@ -67,7 +71,8 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, AdminData.CODEC);
         this.configStore = configStore;
         this.gameManager = gameManager;
-        this.platformNameInput = "";
+        this.mapIdInput = "";
+        this.mapSearchInput = "";
         this.voidYInput = formatDouble(configStore.getVoidY());
         this.breakDelayInput = formatDouble(configStore.getBlockBreakDelaySeconds());
     }
@@ -78,14 +83,19 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
         commandBuilder.append("Pages/RunOrFall_Admin.ui");
         bindEvents(eventBuilder);
         populateFields(ref, store, commandBuilder);
+        buildMapList(commandBuilder, eventBuilder);
     }
 
     @Override
     public void handleDataEvent(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store,
                                 @Nonnull AdminData data) {
         super.handleDataEvent(ref, store, data);
-        if (data.platformName != null) {
-            platformNameInput = data.platformName.trim();
+        String previousMapSearch = mapSearchInput;
+        if (data.mapId != null) {
+            mapIdInput = data.mapId.trim();
+        }
+        if (data.mapSearch != null) {
+            mapSearchInput = data.mapSearch.trim();
         }
         if (data.voidY != null) {
             voidYInput = data.voidY.trim();
@@ -94,6 +104,23 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
             breakDelayInput = data.breakDelay.trim();
         }
         if (data.button == null) {
+            if (previousMapSearch == null) {
+                previousMapSearch = "";
+            }
+            if (mapSearchInput == null) {
+                mapSearchInput = "";
+            }
+            if (!previousMapSearch.equals(mapSearchInput)) {
+                sendRefresh(ref, store);
+            }
+            return;
+        }
+        if (data.button.startsWith(BUTTON_MAP_SELECT_PREFIX)) {
+            String mapId = data.button.substring(BUTTON_MAP_SELECT_PREFIX.length());
+            if (!mapId.isBlank()) {
+                configStore.selectMap(mapId);
+            }
+            sendRefresh(ref, store);
             return;
         }
         switch (data.button) {
@@ -113,6 +140,8 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
             case BUTTON_STOP -> handleStop(ref, store);
             case BUTTON_JOIN -> handleJoin(ref, store);
             case BUTTON_LEAVE -> handleLeave(ref, store);
+            case BUTTON_MAP_CREATE -> handleCreateMap(ref, store);
+            case BUTTON_MAP_DELETE -> handleDeleteMap(ref, store);
             default -> {
             }
         }
@@ -130,6 +159,40 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
         }
         configStore.setLobby(location);
         player.sendMessage(Message.raw(PREFIX + "Lobby set."));
+        sendRefresh(ref, store);
+    }
+
+    private void handleCreateMap(Ref<EntityStore> ref, Store<EntityStore> store) {
+        Player player = resolvePlayer(ref, store);
+        if (player == null) {
+            return;
+        }
+        if (mapIdInput == null || mapIdInput.isBlank()) {
+            player.sendMessage(Message.raw(PREFIX + "Map id is required."));
+            return;
+        }
+        boolean created = configStore.createMap(mapIdInput);
+        if (!created) {
+            player.sendMessage(Message.raw(PREFIX + "Could not create map."));
+            return;
+        }
+        configStore.selectMap(mapIdInput);
+        player.sendMessage(Message.raw(PREFIX + "Map created and selected."));
+        sendRefresh(ref, store);
+    }
+
+    private void handleDeleteMap(Ref<EntityStore> ref, Store<EntityStore> store) {
+        Player player = resolvePlayer(ref, store);
+        if (player == null) {
+            return;
+        }
+        String selectedMapId = configStore.getSelectedMapId();
+        if (selectedMapId == null || selectedMapId.isBlank()) {
+            player.sendMessage(Message.raw(PREFIX + "No selected map."));
+            return;
+        }
+        boolean deleted = configStore.deleteMap(selectedMapId);
+        player.sendMessage(Message.raw(PREFIX + (deleted ? "Map deleted." : "Could not delete map.")));
         sendRefresh(ref, store);
     }
 
@@ -221,21 +284,14 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
             player.sendMessage(Message.raw(PREFIX + "Set pos1 and pos2 first."));
             return;
         }
-        String name = platformNameInput != null ? platformNameInput.trim() : "";
-        if (name.isBlank()) {
-            name = "platform-" + (configStore.getPlatforms().size() + 1);
-        }
-        RunOrFallPlatform platform = new RunOrFallPlatform(name,
+        RunOrFallPlatform platform = new RunOrFallPlatform(
                 selection.pos1.x, selection.pos1.y, selection.pos1.z,
                 selection.pos2.x, selection.pos2.y, selection.pos2.z);
-        if (!configStore.upsertPlatform(platform)) {
+        if (!configStore.addPlatform(platform)) {
             player.sendMessage(Message.raw(PREFIX + "Could not save platform."));
             return;
         }
-        player.sendMessage(Message.raw(PREFIX + "Platform '" + name + "' saved."));
-        if (platformNameInput != null && platformNameInput.isBlank()) {
-            platformNameInput = "";
-        }
+        player.sendMessage(Message.raw(PREFIX + "Platform saved (#" + configStore.getPlatforms().size() + ")."));
         sendRefresh(ref, store);
     }
 
@@ -336,6 +392,10 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
                 EventData.of(AdminData.KEY_BUTTON, BUTTON_CLOSE), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#RefreshButton",
                 EventData.of(AdminData.KEY_BUTTON, BUTTON_REFRESH), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#MapCreateButton",
+                EventData.of(AdminData.KEY_BUTTON, BUTTON_MAP_CREATE), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#MapDeleteButton",
+                EventData.of(AdminData.KEY_BUTTON, BUTTON_MAP_DELETE), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SetLobbyButton",
                 EventData.of(AdminData.KEY_BUTTON, BUTTON_SET_LOBBY), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#TpLobbyButton",
@@ -364,8 +424,10 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
                 EventData.of(AdminData.KEY_BUTTON, BUTTON_JOIN), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#LeaveButton",
                 EventData.of(AdminData.KEY_BUTTON, BUTTON_LEAVE), false);
-        eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#PlatformNameField",
-                EventData.of(AdminData.KEY_PLATFORM_NAME, "#PlatformNameField.Value"), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#MapIdField",
+                EventData.of(AdminData.KEY_MAP_ID, "#MapIdField.Value"), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#MapSearchField",
+                EventData.of(AdminData.KEY_MAP_SEARCH, "#MapSearchField.Value"), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#VoidYField",
                 EventData.of(AdminData.KEY_VOID_Y, "#VoidYField.Value"), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#BreakDelayField",
@@ -380,16 +442,23 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
         List<RunOrFallLocation> spawns = configStore.getSpawns();
         List<RunOrFallPlatform> platforms = configStore.getPlatforms();
         RunOrFallLocation lobby = configStore.getLobby();
+        String selectedMapId = configStore.getSelectedMapId();
         double voidY = configStore.getVoidY();
         double breakDelay = configStore.getBlockBreakDelaySeconds();
 
         voidYInput = formatDouble(voidY);
         breakDelayInput = formatDouble(breakDelay);
+        if (selectedMapId != null && !selectedMapId.isBlank() && (mapIdInput == null || mapIdInput.isBlank())) {
+            mapIdInput = selectedMapId;
+        }
 
-        commandBuilder.set("#PlatformNameField.Value", platformNameInput == null ? "" : platformNameInput);
+        commandBuilder.set("#MapIdField.Value", mapIdInput == null ? "" : mapIdInput);
+        commandBuilder.set("#MapSearchField.Value", mapSearchInput == null ? "" : mapSearchInput);
         commandBuilder.set("#VoidYField.Value", voidYInput);
         commandBuilder.set("#BreakDelayField.Value", breakDelayInput);
         commandBuilder.set("#StatusValue.Text", gameManager.statusLine());
+        commandBuilder.set("#SelectedMapValue.Text",
+                selectedMapId == null || selectedMapId.isBlank() ? "Selected map: none" : "Selected map: " + selectedMapId);
         commandBuilder.set("#LobbyValue.Text", lobby == null ? "Lobby: not set" : "Lobby: " + formatLocation(lobby));
         commandBuilder.set("#SpawnsValue.Text", "Spawns: " + spawns.size());
         commandBuilder.set("#PlatformsValue.Text", "Platforms: " + platforms.size());
@@ -399,11 +468,37 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
         commandBuilder.set("#Pos2Value.Text", "Pos2: " + formatSelection(selection != null ? selection.pos2 : null));
     }
 
+    private void buildMapList(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
+        commandBuilder.clear("#MapCards");
+        String selectedMapId = configStore.getSelectedMapId();
+        String filter = mapSearchInput != null ? mapSearchInput.trim().toLowerCase(Locale.ROOT) : "";
+        List<String> mapIds = configStore.listMapIds();
+        int index = 0;
+        for (String mapId : mapIds) {
+            if (mapId == null || mapId.isBlank()) {
+                continue;
+            }
+            String mapIdLower = mapId.toLowerCase(Locale.ROOT);
+            if (!filter.isEmpty() && !mapIdLower.startsWith(filter)) {
+                continue;
+            }
+            commandBuilder.append("#MapCards", "Pages/RunOrFall_MapEntry.ui");
+            boolean selected = selectedMapId != null && selectedMapId.equalsIgnoreCase(mapId);
+            commandBuilder.set("#MapCards[" + index + "] #MapName.Text", selected ? ">> " + mapId : mapId);
+            commandBuilder.set("#MapCards[" + index + "] #SelectedOverlay.Visible", selected);
+            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
+                    "#MapCards[" + index + "]",
+                    EventData.of(AdminData.KEY_BUTTON, BUTTON_MAP_SELECT_PREFIX + mapId), false);
+            index++;
+        }
+    }
+
     private void sendRefresh(Ref<EntityStore> ref, Store<EntityStore> store) {
         UICommandBuilder commandBuilder = new UICommandBuilder();
         UIEventBuilder eventBuilder = new UIEventBuilder();
         bindEvents(eventBuilder);
         populateFields(ref, store, commandBuilder);
+        buildMapList(commandBuilder, eventBuilder);
         this.sendUpdate(commandBuilder, eventBuilder, false);
     }
 
@@ -482,15 +577,18 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
 
     public static class AdminData {
         static final String KEY_BUTTON = "Button";
-        static final String KEY_PLATFORM_NAME = "@PlatformName";
+        static final String KEY_MAP_ID = "@MapId";
+        static final String KEY_MAP_SEARCH = "@MapSearch";
         static final String KEY_VOID_Y = "@VoidY";
         static final String KEY_BREAK_DELAY = "@BreakDelay";
 
         public static final BuilderCodec<AdminData> CODEC = BuilderCodec.<AdminData>builder(AdminData.class, AdminData::new)
                 .addField(new KeyedCodec<>(KEY_BUTTON, Codec.STRING),
                         (data, value) -> data.button = value, data -> data.button)
-                .addField(new KeyedCodec<>(KEY_PLATFORM_NAME, Codec.STRING),
-                        (data, value) -> data.platformName = value, data -> data.platformName)
+                .addField(new KeyedCodec<>(KEY_MAP_ID, Codec.STRING),
+                        (data, value) -> data.mapId = value, data -> data.mapId)
+                .addField(new KeyedCodec<>(KEY_MAP_SEARCH, Codec.STRING),
+                        (data, value) -> data.mapSearch = value, data -> data.mapSearch)
                 .addField(new KeyedCodec<>(KEY_VOID_Y, Codec.STRING),
                         (data, value) -> data.voidY = value, data -> data.voidY)
                 .addField(new KeyedCodec<>(KEY_BREAK_DELAY, Codec.STRING),
@@ -498,7 +596,8 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
                 .build();
 
         private String button;
-        private String platformName;
+        private String mapId;
+        private String mapSearch;
         private String voidY;
         private String breakDelay;
     }
