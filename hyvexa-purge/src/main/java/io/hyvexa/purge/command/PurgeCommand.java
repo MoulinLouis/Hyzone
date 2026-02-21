@@ -87,7 +87,7 @@ public class PurgeCommand extends AbstractAsyncCommand {
                                Store<EntityStore> store, World world) {
         String[] args = CommandUtils.getArgs(ctx);
         if (args.length == 0) {
-            player.sendMessage(Message.raw("Usage: /purge <start|stop|stats|party|upgrade|loadout|scrap|admin>"));
+            player.sendMessage(Message.raw("Usage: /purge <start|stop|stats|party|upgrade|loadout|shop|scrap|admin>"));
             return;
         }
 
@@ -106,9 +106,10 @@ public class PurgeCommand extends AbstractAsyncCommand {
             case "party" -> handleParty(player, playerId, args);
             case "upgrade" -> handleUpgrade(player, ref, store, playerId, args);
             case "loadout" -> handleLoadout(player, ref, store, playerId);
+            case "shop" -> handleShop(player, ref, store, playerId);
             case "admin" -> openAdminMenu(player, ref, store);
             case "scrap" -> handleScrap(player, playerId, args);
-            default -> player.sendMessage(Message.raw("Usage: /purge <start|stop|stats|party|upgrade|loadout|scrap|admin>"));
+            default -> player.sendMessage(Message.raw("Usage: /purge <start|stop|stats|party|upgrade|loadout|shop|scrap|admin>"));
         }
     }
 
@@ -188,6 +189,16 @@ public class PurgeCommand extends AbstractAsyncCommand {
         }
         player.getPageManager().openCustomPage(ref, store,
                 new PurgeWeaponSelectPage(playerRef, PurgeWeaponSelectPage.Mode.LOADOUT, playerId,
+                        weaponConfigManager, null, null));
+    }
+
+    private void handleShop(Player player, Ref<EntityStore> ref, Store<EntityStore> store, UUID playerId) {
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        if (playerRef == null) {
+            return;
+        }
+        player.getPageManager().openCustomPage(ref, store,
+                new PurgeWeaponSelectPage(playerRef, PurgeWeaponSelectPage.Mode.SHOP, playerId,
                         weaponConfigManager, null, null));
     }
 
