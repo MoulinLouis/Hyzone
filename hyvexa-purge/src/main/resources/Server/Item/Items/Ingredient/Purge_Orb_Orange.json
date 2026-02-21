@@ -1,7 +1,7 @@
 {
   "TranslationProperties": {
-    "Name": "Orange Orb",
-    "Description": "Right click to use."
+    "Name": "Loadout",
+    "Description": "Right click to manage weapons."
   },
   "Icon": "Icons/ItemsGenerated/Orange_Orb_Hyvexa.png",
   "Quality": "Developer",

@@ -59,31 +59,41 @@ $C.@PageOverlay {
 
       // Sectioned layout for LOADOUT mode (hidden by default)
       Group #SectionedList {
-        Anchor: (Left: 0, Right: 0, Top: 12);
+        Anchor: (Left: 0, Right: 0);
         FlexWeight: 1;
         LayoutMode: TopScrolling;
         ScrollbarStyle: $C.@DefaultScrollbarStyle;
         Visible: false;
 
         Label #OwnedHeader {
-          Anchor: (Left: 0, Right: 0, Height: 24);
-          Style: (FontSize: 14, TextColor: #4ade80, RenderBold: true);
+          Anchor: (Left: 0, Right: 0, Height: 22);
+          Style: (FontSize: 18, TextColor: #4ade80, RenderBold: true);
           Text: "Owned";
         }
 
+        Group #OwnedSep {
+          Anchor: (Left: 0, Right: 0, Top: 0, Height: 2);
+          Background: #4ade80(0.3);
+        }
+
         Group #OwnedList {
-          Anchor: (Left: 0, Right: 0, Top: 4);
+          Anchor: (Left: 0, Right: 0, Top: 8);
           LayoutMode: LeftCenterWrap;
         }
 
         Label #UnownedHeader {
-          Anchor: (Left: 0, Right: 0, Top: 14, Height: 24);
-          Style: (FontSize: 14, TextColor: #8b9bb0, RenderBold: true);
+          Anchor: (Left: 0, Right: 0, Top: 14, Height: 22);
+          Style: (FontSize: 18, TextColor: #8b9bb0, RenderBold: true);
           Text: "Unowned";
         }
 
+        Group #UnownedSep {
+          Anchor: (Left: 0, Right: 0, Top: 0, Height: 2);
+          Background: #8b9bb0(0.3);
+        }
+
         Group #UnownedList {
-          Anchor: (Left: 0, Right: 0, Top: 4);
+          Anchor: (Left: 0, Right: 0, Top: 6);
           LayoutMode: LeftCenterWrap;
         }
       }

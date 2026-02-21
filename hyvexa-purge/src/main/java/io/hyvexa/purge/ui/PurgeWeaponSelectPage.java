@@ -30,7 +30,7 @@ import java.util.UUID;
 
 public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSelectPage.PurgeWeaponSelectData> {
 
-    public enum Mode { ADMIN, PLAYER, LOADOUT }
+    public enum Mode { ADMIN, PLAYER, LOADOUT, SHOP }
 
     private static final String BUTTON_BACK = "Back";
     private static final String BUTTON_SELECT_PREFIX = "Select:";
@@ -90,7 +90,10 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
             uiCommandBuilder.set("#Subtitle.Text", "Select a weapon to configure.");
         } else if (mode == Mode.LOADOUT) {
             uiCommandBuilder.set("#Title.Text", "Weapon Loadout");
-            uiCommandBuilder.set("#Subtitle.Text", "View and unlock weapons.");
+            uiCommandBuilder.set("#Subtitle.Visible", false);
+        } else if (mode == Mode.SHOP) {
+            uiCommandBuilder.set("#Title.Text", "Weapon Shop");
+            uiCommandBuilder.set("#Subtitle.Text", "Purchase new weapons.");
         }
 
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton",
@@ -189,7 +192,7 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
     }
 
     private void handleCloseDetail() {
-        if (mode != Mode.PLAYER && mode != Mode.LOADOUT) {
+        if (mode != Mode.PLAYER && mode != Mode.LOADOUT && mode != Mode.SHOP) {
             return;
         }
         this.selectedWeaponId = null;
@@ -242,7 +245,7 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
                 commandBuilder.set(entry.getValue() + " #SelectedOverlay.Visible",
                         entry.getKey().equals(selectedWeaponId));
             }
-        } else if (mode == Mode.PLAYER && weaponIdOrder != null) {
+        } else if ((mode == Mode.PLAYER || mode == Mode.SHOP) && weaponIdOrder != null) {
             for (int i = 0; i < weaponIdOrder.size(); i++) {
                 String root = "#WeaponList[" + i + "]";
                 commandBuilder.set(root + " #SelectedOverlay.Visible",
@@ -251,7 +254,7 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
         }
 
         // Populate detail panel
-        if (selectedWeaponId != null && (mode == Mode.PLAYER || mode == Mode.LOADOUT)) {
+        if (selectedWeaponId != null && (mode == Mode.PLAYER || mode == Mode.LOADOUT || mode == Mode.SHOP)) {
             populateDetailPanel(commandBuilder, eventBuilder);
         }
 
@@ -268,8 +271,8 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
         int currentLevel = PurgeWeaponUpgradeStore.getInstance().getLevel(playerId, selectedWeaponId);
         int maxLevel = weaponConfigManager.getMaxLevel();
 
-        if (mode == Mode.LOADOUT && currentLevel < 1) {
-            // Unowned weapon in LOADOUT mode: show purchase option
+        if (currentLevel < 1) {
+            // Unowned weapon: show purchase option (LOADOUT unowned section or SHOP)
             int baseDmg = weaponConfigManager.getDamage(selectedWeaponId, 1);
             long unlockCost = weaponConfigManager.getUnlockCost(selectedWeaponId);
             updateDetailStarDisplay(commandBuilder, 0);
@@ -280,39 +283,30 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
             commandBuilder.set("#DetailStatus.Text", "");
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#UpgradeButton",
                     EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_PURCHASE), false);
-        } else if (mode == Mode.LOADOUT) {
-            // Owned weapon in LOADOUT mode: info only
+        } else if (currentLevel >= maxLevel) {
+            // Max level: info only
             int currentDmg = weaponConfigManager.getDamage(selectedWeaponId, currentLevel);
             updateDetailStarDisplay(commandBuilder, currentLevel);
-            commandBuilder.set("#DetailDamage.Text", currentDmg + " dmg");
-            commandBuilder.set("#DetailDamage.Style.TextColor", "#9fb0ba");
+            commandBuilder.set("#DetailDamage.Text", currentDmg + " dmg - MAX LEVEL");
+            commandBuilder.set("#DetailDamage.Style.TextColor", "#fbbf24");
             commandBuilder.set("#DetailUpgradeGroup.Visible", false);
-            commandBuilder.set("#DetailStatus.Text", "Owned");
-            commandBuilder.set("#DetailStatus.Style.TextColor", "#4ade80");
+            commandBuilder.set("#DetailStatus.Text", "Max level reached!");
+            commandBuilder.set("#DetailStatus.Style.TextColor", "#fbbf24");
         } else {
-            // PLAYER mode: upgrade flow
+            // Owned, upgradeable: show upgrade flow (PLAYER or LOADOUT owned)
             int currentDmg = weaponConfigManager.getDamage(selectedWeaponId, currentLevel);
             updateDetailStarDisplay(commandBuilder, currentLevel);
-
-            if (currentLevel >= maxLevel) {
-                commandBuilder.set("#DetailDamage.Text", currentDmg + " dmg - MAX LEVEL");
-                commandBuilder.set("#DetailDamage.Style.TextColor", "#fbbf24");
-                commandBuilder.set("#DetailUpgradeGroup.Visible", false);
-                commandBuilder.set("#DetailStatus.Text", "Max level reached!");
-                commandBuilder.set("#DetailStatus.Style.TextColor", "#fbbf24");
-            } else {
-                int nextLevel = currentLevel + 1;
-                int nextDmg = weaponConfigManager.getDamage(selectedWeaponId, nextLevel);
-                long nextCost = weaponConfigManager.getCost(selectedWeaponId, nextLevel);
-                commandBuilder.set("#DetailDamage.Text", currentDmg + " -> " + nextDmg + " dmg");
-                commandBuilder.set("#DetailDamage.Style.TextColor", "#9fb0ba");
-                commandBuilder.set("#DetailUpgradeGroup.Visible", true);
-                commandBuilder.set("#UpgradeCostValue.Text", String.valueOf(nextCost));
-                commandBuilder.set("#DetailStatus.Text", "");
-                commandBuilder.set("#DetailStatus.Style.TextColor", "#9eb7d4");
-                eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#UpgradeButton",
-                        EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_UPGRADE), false);
-            }
+            int nextLevel = currentLevel + 1;
+            int nextDmg = weaponConfigManager.getDamage(selectedWeaponId, nextLevel);
+            long nextCost = weaponConfigManager.getCost(selectedWeaponId, nextLevel);
+            commandBuilder.set("#DetailDamage.Text", currentDmg + " -> " + nextDmg + " dmg");
+            commandBuilder.set("#DetailDamage.Style.TextColor", "#9fb0ba");
+            commandBuilder.set("#DetailUpgradeGroup.Visible", true);
+            commandBuilder.set("#UpgradeCostValue.Text", String.valueOf(nextCost));
+            commandBuilder.set("#DetailStatus.Text", "");
+            commandBuilder.set("#DetailStatus.Style.TextColor", "#9eb7d4");
+            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#UpgradeButton",
+                    EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_UPGRADE), false);
         }
     }
 
@@ -331,12 +325,16 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
         int index = 0;
         for (String weaponId : weaponIds) {
             int playerLevel = 0;
-            if (playerId != null && mode == Mode.PLAYER) {
+            if (playerId != null && (mode == Mode.PLAYER || mode == Mode.SHOP)) {
                 playerLevel = PurgeWeaponUpgradeStore.getInstance().getLevel(playerId, weaponId);
             }
 
             // PLAYER mode: only show owned weapons
             if (mode == Mode.PLAYER && playerLevel < 1) {
+                continue;
+            }
+            // SHOP mode: only show unowned weapons
+            if (mode == Mode.SHOP && playerLevel >= 1) {
                 continue;
             }
 
@@ -355,6 +353,10 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
                     suffix += " [S]";
                 }
                 commandBuilder.set(root + " #WeaponName.Text", displayName + suffix);
+            } else if (mode == Mode.SHOP) {
+                // SHOP mode: show empty stars (level 0)
+                commandBuilder.set(root + " #StarBar.Visible", true);
+                updateCardStarDisplay(commandBuilder, root, 0);
             } else {
                 // PLAYER mode
                 commandBuilder.set(root + " #StarBar.Visible", true);
@@ -421,10 +423,12 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
 
         // Hide unowned section if empty
         commandBuilder.set("#UnownedHeader.Visible", !unowned.isEmpty());
+        commandBuilder.set("#UnownedSep.Visible", !unowned.isEmpty());
         commandBuilder.set("#UnownedList.Visible", !unowned.isEmpty());
 
         // Hide owned header if empty (edge case: no weapons owned yet)
         commandBuilder.set("#OwnedHeader.Visible", !owned.isEmpty());
+        commandBuilder.set("#OwnedSep.Visible", !owned.isEmpty());
 
         // Build unowned cards
         for (int i = 0; i < unowned.size(); i++) {
