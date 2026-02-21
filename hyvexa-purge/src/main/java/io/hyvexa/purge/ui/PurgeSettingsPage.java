@@ -16,6 +16,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.purge.manager.PurgeInstanceManager;
+import io.hyvexa.purge.manager.PurgeVariantConfigManager;
 import io.hyvexa.purge.manager.PurgeWaveConfigManager;
 import io.hyvexa.purge.manager.PurgeWeaponConfigManager;
 
@@ -30,15 +31,18 @@ public class PurgeSettingsPage extends InteractiveCustomUIPage<PurgeSettingsPage
     private final PurgeWeaponConfigManager weaponConfigManager;
     private final PurgeWaveConfigManager waveConfigManager;
     private final PurgeInstanceManager instanceManager;
+    private final PurgeVariantConfigManager variantConfigManager;
 
     public PurgeSettingsPage(@Nonnull PlayerRef playerRef,
                              PurgeWeaponConfigManager weaponConfigManager,
                              PurgeWaveConfigManager waveConfigManager,
-                             PurgeInstanceManager instanceManager) {
+                             PurgeInstanceManager instanceManager,
+                             PurgeVariantConfigManager variantConfigManager) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, PurgeSettingsData.CODEC);
         this.weaponConfigManager = weaponConfigManager;
         this.waveConfigManager = waveConfigManager;
         this.instanceManager = instanceManager;
+        this.variantConfigManager = variantConfigManager;
     }
 
     @Override
@@ -66,7 +70,7 @@ public class PurgeSettingsPage extends InteractiveCustomUIPage<PurgeSettingsPage
             PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
             if (player != null && playerRef != null) {
                 player.getPageManager().openCustomPage(ref, store,
-                        new PurgeAdminIndexPage(playerRef, waveConfigManager, instanceManager, weaponConfigManager));
+                        new PurgeAdminIndexPage(playerRef, waveConfigManager, instanceManager, weaponConfigManager, variantConfigManager));
             }
             return;
         }

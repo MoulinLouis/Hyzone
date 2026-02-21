@@ -17,6 +17,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.purge.manager.PurgeInstanceManager;
+import io.hyvexa.purge.manager.PurgeVariantConfigManager;
 import io.hyvexa.purge.manager.PurgeWaveConfigManager;
 import io.hyvexa.purge.manager.PurgeWeaponConfigManager;
 
@@ -38,17 +39,20 @@ public class PurgeWeaponAdminPage extends InteractiveCustomUIPage<PurgeWeaponAdm
     private final PurgeWeaponConfigManager weaponConfigManager;
     private final PurgeWaveConfigManager waveConfigManager;
     private final PurgeInstanceManager instanceManager;
+    private final PurgeVariantConfigManager variantConfigManager;
 
     public PurgeWeaponAdminPage(@Nonnull PlayerRef playerRef,
                                  String weaponId,
                                  PurgeWeaponConfigManager weaponConfigManager,
                                  PurgeWaveConfigManager waveConfigManager,
-                                 PurgeInstanceManager instanceManager) {
+                                 PurgeInstanceManager instanceManager,
+                                 PurgeVariantConfigManager variantConfigManager) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, PurgeWeaponAdminData.CODEC);
         this.weaponId = weaponId;
         this.weaponConfigManager = weaponConfigManager;
         this.waveConfigManager = waveConfigManager;
         this.instanceManager = instanceManager;
+        this.variantConfigManager = variantConfigManager;
     }
 
     @Override
@@ -172,7 +176,7 @@ public class PurgeWeaponAdminPage extends InteractiveCustomUIPage<PurgeWeaponAdm
         }
         player.getPageManager().openCustomPage(ref, store,
                 new PurgeWeaponSelectPage(playerRef, PurgeWeaponSelectPage.Mode.ADMIN, null,
-                        weaponConfigManager, waveConfigManager, instanceManager));
+                        weaponConfigManager, waveConfigManager, instanceManager, variantConfigManager));
     }
 
     private void sendRefresh() {

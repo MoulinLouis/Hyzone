@@ -32,8 +32,8 @@ import io.hyvexa.purge.data.PurgeSession;
 import io.hyvexa.purge.data.PurgeSessionPlayerState;
 import io.hyvexa.purge.data.PurgeSpawnPoint;
 import io.hyvexa.purge.data.PurgeUpgradeType;
+import io.hyvexa.purge.data.PurgeVariantConfig;
 import io.hyvexa.purge.data.PurgeWaveDefinition;
-import io.hyvexa.purge.data.PurgeZombieVariant;
 import io.hyvexa.purge.data.SessionState;
 import io.hyvexa.purge.hud.PurgeHudManager;
 import io.hyvexa.purge.ui.PurgeUpgradePickPage;
@@ -41,6 +41,7 @@ import io.hyvexa.purge.util.PurgePlayerNameResolver;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -67,6 +68,7 @@ public class PurgeWaveManager {
 
     private final PurgeInstanceManager instanceManager;
     private final PurgeWaveConfigManager waveConfigManager;
+    private final PurgeVariantConfigManager variantConfigManager;
     private final PurgeHudManager hudManager;
     private volatile NPCPlugin npcPlugin;
 
@@ -76,9 +78,11 @@ public class PurgeWaveManager {
 
     public PurgeWaveManager(PurgeInstanceManager instanceManager,
                             PurgeWaveConfigManager waveConfigManager,
+                            PurgeVariantConfigManager variantConfigManager,
                             PurgeHudManager hudManager) {
         this.instanceManager = instanceManager;
         this.waveConfigManager = waveConfigManager;
+        this.variantConfigManager = variantConfigManager;
         this.hudManager = hudManager;
         try {
             this.npcPlugin = NPCPlugin.get();
@@ -150,7 +154,7 @@ public class PurgeWaveManager {
                 + wave.spawnDelayMs() + "ms delay, batch " + wave.spawnBatchSize() + ")");
         session.forEachConnectedParticipant(pid -> hudManager.updateWaveStatus(pid, nextWave, totalCount, totalCount));
 
-        List<PurgeZombieVariant> spawnQueue = buildSpawnQueue(wave);
+        List<String> spawnQueue = buildSpawnQueue(wave);
         if (spawnQueue.isEmpty()) {
             markSpawningComplete(session);
             onWaveComplete(session);
@@ -161,30 +165,35 @@ public class PurgeWaveManager {
         startWaveTick(session);
     }
 
-    private List<PurgeZombieVariant> buildSpawnQueue(PurgeWaveDefinition wave) {
-        int slow = Math.max(0, wave.slowCount());
-        int normal = Math.max(0, wave.normalCount());
-        int fast = Math.max(0, wave.fastCount());
+    private List<String> buildSpawnQueue(PurgeWaveDefinition wave) {
+        // Build remaining counts map
+        Map<String, Integer> remaining = new java.util.LinkedHashMap<>();
+        for (String key : wave.getVariantKeys()) {
+            int count = Math.max(0, wave.getCount(key));
+            if (count > 0) {
+                remaining.put(key, count);
+            }
+        }
 
-        List<PurgeZombieVariant> queue = new ArrayList<>(wave.totalCount());
-        while (slow > 0 || normal > 0 || fast > 0) {
-            if (normal > 0) {
-                queue.add(PurgeZombieVariant.NORMAL);
-                normal--;
-            }
-            if (slow > 0) {
-                queue.add(PurgeZombieVariant.SLOW);
-                slow--;
-            }
-            if (fast > 0) {
-                queue.add(PurgeZombieVariant.FAST);
-                fast--;
+        List<String> queue = new ArrayList<>(wave.totalCount());
+        // Round-robin interleave variants
+        while (!remaining.isEmpty()) {
+            var it = remaining.entrySet().iterator();
+            while (it.hasNext()) {
+                var entry = it.next();
+                queue.add(entry.getKey());
+                int left = entry.getValue() - 1;
+                if (left <= 0) {
+                    it.remove();
+                } else {
+                    entry.setValue(left);
+                }
             }
         }
         return queue;
     }
 
-    private void startSpawning(PurgeSession session, List<PurgeZombieVariant> spawnQueue, PurgeWaveDefinition wave) {
+    private void startSpawning(PurgeSession session, List<String> spawnQueue, PurgeWaveDefinition wave) {
         int totalCount = spawnQueue.size();
 
         AtomicInteger remaining = new AtomicInteger(totalCount);
@@ -244,11 +253,11 @@ public class PurgeWaveManager {
                             }
 
                             PurgeSpawnPoint spawnPoint = instanceManager.selectSpawnPoint(instance, spawnX, spawnZ);
-                            PurgeZombieVariant variant = spawnQueue.get(idx);
-                            boolean spawned = spawnZombie(session, store, spawnPoint, variant, session.getCurrentWave());
+                            String variantKey = spawnQueue.get(idx);
+                            boolean spawned = spawnZombie(session, store, spawnPoint, variantKey, session.getCurrentWave());
                             if (!spawned) {
                                 LOGGER.atWarning().log("Wave spawn failed: wave=" + session.getCurrentWave()
-                                        + " variant=" + variant.name());
+                                        + " variant=" + variantKey);
                             }
                             remaining.decrementAndGet();
                         }
@@ -278,7 +287,7 @@ public class PurgeWaveManager {
     private boolean spawnZombie(PurgeSession session,
                                 Store<EntityStore> store,
                                 PurgeSpawnPoint point,
-                                PurgeZombieVariant variant,
+                                String variantKey,
                                 int wave) {
         if (session.getState() == SessionState.ENDED) {
             return false;
@@ -286,7 +295,13 @@ public class PurgeWaveManager {
         if (npcPlugin == null) {
             return false;
         }
-        if (point == null || variant == null) {
+        if (point == null || variantKey == null) {
+            return false;
+        }
+
+        PurgeVariantConfig variantConfig = variantConfigManager.getVariant(variantKey);
+        if (variantConfig == null) {
+            LOGGER.atWarning().log("Unknown variant key: " + variantKey);
             return false;
         }
 
@@ -308,13 +323,13 @@ public class PurgeWaveManager {
                 removeZombieEntity(store, entityRef);
                 return false;
             }
-            session.addAliveZombie(entityRef, variant);
+            session.addAliveZombie(entityRef, variantKey);
 
             // Apply wave HP scaling + show HP on nameplate
-            applyZombieStats(store, entityRef, variant, wave);
+            applyZombieStats(store, entityRef, variantConfig, wave);
 
             // Apply speed multiplier + disable drops
-            applySpeedMultiplier(store, entityRef, variant);
+            applySpeedMultiplier(store, entityRef, variantConfig);
             clearDropList(store, entityRef);
 
             // Force aggro on a random alive player
@@ -332,13 +347,13 @@ public class PurgeWaveManager {
             }
             return true;
         } catch (Exception e) {
-            LOGGER.atWarning().withCause(e).log("Failed to spawn zombie (variant " + variant.name() + ")");
+            LOGGER.atWarning().withCause(e).log("Failed to spawn zombie (variant " + variantKey + ")");
         }
         return false;
     }
 
     private void applyZombieStats(Store<EntityStore> store, Ref<EntityStore> entityRef,
-                                   PurgeZombieVariant variant, int wave) {
+                                   PurgeVariantConfig variant, int wave) {
         try {
             EntityStatMap statMap = store.getComponent(entityRef, EntityStatMap.getComponentType());
             Nameplate nameplate = store.ensureAndGetComponent(entityRef, Nameplate.getComponentType());
@@ -366,8 +381,8 @@ public class PurgeWaveManager {
     }
 
     private void applySpeedMultiplier(Store<EntityStore> store, Ref<EntityStore> entityRef,
-                                       PurgeZombieVariant variant) {
-        if (variant.getSpeedMultiplier() == 1.0) {
+                                       PurgeVariantConfig variant) {
+        if (variant.speedMultiplier() == 1.0) {
             return;
         }
         try {
@@ -383,9 +398,9 @@ public class PurgeWaveManager {
             if (field == null) {
                 return;
             }
-            field.setDouble(controller, variant.getSpeedMultiplier());
+            field.setDouble(controller, variant.speedMultiplier());
         } catch (Exception e) {
-            LOGGER.atFine().log("Failed to apply speed multiplier for " + variant.name() + ": " + e.getMessage());
+            LOGGER.atFine().log("Failed to apply speed multiplier for " + variant.key() + ": " + e.getMessage());
         }
     }
 

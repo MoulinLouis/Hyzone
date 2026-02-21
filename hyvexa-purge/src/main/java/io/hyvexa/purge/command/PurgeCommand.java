@@ -23,6 +23,7 @@ import io.hyvexa.purge.data.PurgeWeaponUpgradeStore;
 import io.hyvexa.purge.manager.PurgeInstanceManager;
 import io.hyvexa.purge.manager.PurgePartyManager;
 import io.hyvexa.purge.manager.PurgeSessionManager;
+import io.hyvexa.purge.manager.PurgeVariantConfigManager;
 import io.hyvexa.purge.manager.PurgeWaveConfigManager;
 import io.hyvexa.purge.manager.PurgeWeaponConfigManager;
 import io.hyvexa.purge.ui.PurgeAdminIndexPage;
@@ -45,12 +46,14 @@ public class PurgeCommand extends AbstractAsyncCommand {
     private final PurgePartyManager partyManager;
     private final PurgeInstanceManager instanceManager;
     private final PurgeWeaponConfigManager weaponConfigManager;
+    private final PurgeVariantConfigManager variantConfigManager;
 
     public PurgeCommand(PurgeSessionManager sessionManager,
                         PurgeWaveConfigManager waveConfigManager,
                         PurgePartyManager partyManager,
                         PurgeInstanceManager instanceManager,
-                        PurgeWeaponConfigManager weaponConfigManager) {
+                        PurgeWeaponConfigManager weaponConfigManager,
+                        PurgeVariantConfigManager variantConfigManager) {
         super("purge", "Purge zombie survival commands");
         this.setPermissionGroup(GameMode.Adventure);
         this.setAllowsExtraArguments(true);
@@ -59,6 +62,7 @@ public class PurgeCommand extends AbstractAsyncCommand {
         this.partyManager = partyManager;
         this.instanceManager = instanceManager;
         this.weaponConfigManager = weaponConfigManager;
+        this.variantConfigManager = variantConfigManager;
     }
 
     @Override
@@ -123,7 +127,7 @@ public class PurgeCommand extends AbstractAsyncCommand {
             return;
         }
         player.getPageManager().openCustomPage(ref, store,
-                new PurgeAdminIndexPage(playerRef, waveConfigManager, instanceManager, weaponConfigManager));
+                new PurgeAdminIndexPage(playerRef, waveConfigManager, instanceManager, weaponConfigManager, variantConfigManager));
     }
 
     private void handleStart(Player player, Ref<EntityStore> ref, World world, UUID playerId) {
@@ -179,7 +183,7 @@ public class PurgeCommand extends AbstractAsyncCommand {
         }
         player.getPageManager().openCustomPage(ref, store,
                 new PurgeWeaponSelectPage(playerRef, PurgeWeaponSelectPage.Mode.PLAYER, playerId,
-                        weaponConfigManager, null, null));
+                        weaponConfigManager, null, null, null));
     }
 
     private void handleLoadout(Player player, Ref<EntityStore> ref, Store<EntityStore> store, UUID playerId) {
@@ -189,7 +193,7 @@ public class PurgeCommand extends AbstractAsyncCommand {
         }
         player.getPageManager().openCustomPage(ref, store,
                 new PurgeWeaponSelectPage(playerRef, PurgeWeaponSelectPage.Mode.LOADOUT, playerId,
-                        weaponConfigManager, null, null));
+                        weaponConfigManager, null, null, null));
     }
 
     private void handleShop(Player player, Ref<EntityStore> ref, Store<EntityStore> store, UUID playerId) {
@@ -199,7 +203,7 @@ public class PurgeCommand extends AbstractAsyncCommand {
         }
         player.getPageManager().openCustomPage(ref, store,
                 new PurgeWeaponSelectPage(playerRef, PurgeWeaponSelectPage.Mode.SHOP, playerId,
-                        weaponConfigManager, null, null));
+                        weaponConfigManager, null, null, null));
     }
 
     private void handleScrap(Player player, UUID callerPlayerId, String[] args) {
