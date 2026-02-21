@@ -31,6 +31,8 @@ public class PurgeVariantAdminPage extends InteractiveCustomUIPage<PurgeVariantA
     private static final String BUTTON_ADD = "Add";
     private static final String BUTTON_DELETE_PREFIX = "Delete:";
     private static final String BUTTON_ADJUST_PREFIX = "Adjust:";
+    private static final String BUTTON_NPC_TYPE_PREFIX = "NpcType:";
+    private static final String[] NPC_TYPES = {"Zombie", "Zombie_Burnt", "Zombie_Frost", "Zombie_Sand"};
 
     private final PurgeVariantConfigManager variantConfigManager;
     private final PurgeWaveConfigManager waveConfigManager;
@@ -83,6 +85,10 @@ public class PurgeVariantAdminPage extends InteractiveCustomUIPage<PurgeVariantA
         }
         if (button.startsWith(BUTTON_ADJUST_PREFIX)) {
             handleAdjust(button.substring(BUTTON_ADJUST_PREFIX.length()), ref, store);
+            return;
+        }
+        if (button.startsWith(BUTTON_NPC_TYPE_PREFIX)) {
+            handleNpcTypeCycle(button.substring(BUTTON_NPC_TYPE_PREFIX.length()));
         }
     }
 
@@ -130,6 +136,25 @@ public class PurgeVariantAdminPage extends InteractiveCustomUIPage<PurgeVariantA
             }
         }
         sendRefresh();
+    }
+
+    private void handleNpcTypeCycle(String key) {
+        PurgeVariantConfig config = variantConfigManager.getVariant(key);
+        if (config == null) {
+            return;
+        }
+        String current = config.effectiveNpcType();
+        int currentIndex = -1;
+        for (int i = 0; i < NPC_TYPES.length; i++) {
+            if (NPC_TYPES[i].equals(current)) {
+                currentIndex = i;
+                break;
+            }
+        }
+        String next = NPC_TYPES[(currentIndex + 1) % NPC_TYPES.length];
+        if (variantConfigManager.setNpcType(key, next)) {
+            sendRefresh();
+        }
     }
 
     private void handleAdjust(String payload, Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -219,6 +244,12 @@ public class PurgeVariantAdminPage extends InteractiveCustomUIPage<PurgeVariantA
             // Speed adjust
             bindAdjust(eventBuilder, root + " #SpeedMinusButton", v.key(), "speed", "-0.1");
             bindAdjust(eventBuilder, root + " #SpeedPlusButton", v.key(), "speed", "0.1");
+
+            // NPC type
+            commandBuilder.set(root + " #NpcTypeButton.Text", v.effectiveNpcType());
+            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
+                    root + " #NpcTypeButton",
+                    EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_NPC_TYPE_PREFIX + v.key()), false);
         }
     }
 

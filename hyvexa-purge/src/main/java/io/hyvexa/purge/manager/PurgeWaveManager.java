@@ -54,8 +54,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class PurgeWaveManager {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final String VANILLA_ZOMBIE_NPC_TYPE = "Zombie";
+    private static final int VANILLA_ZOMBIE_HP = 49;
     private static final String PURGE_HP_MODIFIER = "purge_wave_hp";
+    private static final String PURGE_VARIANT_HP_MODIFIER = "purge_variant_hp";
     private static final long WAVE_TICK_INTERVAL_MS = 200;
     private static final int INTERMISSION_SECONDS = 5;
     private static final int COUNTDOWN_SECONDS = 5;
@@ -311,7 +312,7 @@ public class PurgeWaveManager {
         Vector3f rotation = new Vector3f(0, point.yaw(), 0);
 
         try {
-            Object result = npcPlugin.spawnNPC(store, VANILLA_ZOMBIE_NPC_TYPE, "", position, rotation);
+            Object result = npcPlugin.spawnNPC(store, variantConfig.effectiveNpcType(), "", position, rotation);
             if (result == null) {
                 return false;
             }
@@ -359,11 +360,27 @@ public class PurgeWaveManager {
             Nameplate nameplate = store.ensureAndGetComponent(entityRef, Nameplate.getComponentType());
             if (statMap != null) {
                 int healthIndex = DefaultEntityStatTypes.getHealth();
+                boolean modified = false;
+
+                // Apply variant base HP (adjust from vanilla 49 to variant's baseHealth)
+                if (variant.baseHealth() != VANILLA_ZOMBIE_HP) {
+                    float hpRatio = (float) variant.baseHealth() / VANILLA_ZOMBIE_HP;
+                    statMap.putModifier(healthIndex, PURGE_VARIANT_HP_MODIFIER,
+                            new StaticModifier(Modifier.ModifierTarget.MAX,
+                                    StaticModifier.CalculationType.MULTIPLICATIVE, hpRatio));
+                    modified = true;
+                }
+
+                // Apply wave HP scaling
                 double hpMult = hpMultiplier(wave);
                 if (hpMult > 1.0) {
                     statMap.putModifier(healthIndex, PURGE_HP_MODIFIER,
                             new StaticModifier(Modifier.ModifierTarget.MAX,
                                     StaticModifier.CalculationType.MULTIPLICATIVE, (float) hpMult));
+                    modified = true;
+                }
+
+                if (modified) {
                     statMap.update();
                 }
                 statMap.maximizeStatValue(healthIndex);

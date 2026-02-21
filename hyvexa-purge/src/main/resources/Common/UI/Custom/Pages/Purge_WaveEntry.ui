@@ -40,7 +40,7 @@ Group {
 
   // Dynamic variant rows container
   Group #VariantRows {
-    LayoutMode: Left;
+    LayoutMode: Top;
     Anchor: (Left: 0, Right: 0, Top: 2);
     Padding: (Left: 154);
   }
