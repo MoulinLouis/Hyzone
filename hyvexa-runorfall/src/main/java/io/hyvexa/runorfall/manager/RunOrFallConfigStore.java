@@ -5,29 +5,35 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.runorfall.data.RunOrFallConfig;
 import io.hyvexa.runorfall.data.RunOrFallLocation;
+import io.hyvexa.runorfall.data.RunOrFallMapConfig;
 import io.hyvexa.runorfall.data.RunOrFallPlatform;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class RunOrFallConfigStore {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final Gson GSON = new Gson();
     private static final int SETTINGS_ID = 1;
+    private static final String DEFAULT_MAP_ID = "default";
     private static final double DEFAULT_VOID_Y = 40.0d;
     private static final double DEFAULT_BREAK_DELAY_SECONDS = 0.2d;
+
     private static final String CREATE_SETTINGS_TABLE = """
             CREATE TABLE IF NOT EXISTS runorfall_settings (
               id TINYINT NOT NULL PRIMARY KEY,
@@ -38,35 +44,55 @@ public class RunOrFallConfigStore {
               lobby_rot_y FLOAT NULL,
               lobby_rot_z FLOAT NULL,
               void_y DOUBLE NOT NULL DEFAULT 40.0,
-              block_break_delay_seconds DOUBLE NOT NULL DEFAULT 0.2
+              block_break_delay_seconds DOUBLE NOT NULL DEFAULT 0.2,
+              active_map_id VARCHAR(64) NULL
             ) ENGINE=InnoDB
             """;
-    private static final String CREATE_SPAWNS_TABLE = """
-            CREATE TABLE IF NOT EXISTS runorfall_spawns (
-              spawn_order INT NOT NULL PRIMARY KEY,
+
+    private static final String CREATE_MAPS_TABLE = """
+            CREATE TABLE IF NOT EXISTS runorfall_maps (
+              map_id VARCHAR(64) NOT NULL PRIMARY KEY,
+              lobby_x DOUBLE NULL,
+              lobby_y DOUBLE NULL,
+              lobby_z DOUBLE NULL,
+              lobby_rot_x FLOAT NULL,
+              lobby_rot_y FLOAT NULL,
+              lobby_rot_z FLOAT NULL
+            ) ENGINE=InnoDB
+            """;
+
+    private static final String CREATE_MAP_SPAWNS_TABLE = """
+            CREATE TABLE IF NOT EXISTS runorfall_map_spawns (
+              map_id VARCHAR(64) NOT NULL,
+              spawn_order INT NOT NULL,
               x DOUBLE NOT NULL,
               y DOUBLE NOT NULL,
               z DOUBLE NOT NULL,
               rot_x FLOAT NOT NULL,
               rot_y FLOAT NOT NULL,
-              rot_z FLOAT NOT NULL
+              rot_z FLOAT NOT NULL,
+              PRIMARY KEY (map_id, spawn_order)
             ) ENGINE=InnoDB
             """;
-    private static final String CREATE_PLATFORMS_TABLE = """
-            CREATE TABLE IF NOT EXISTS runorfall_platforms (
-              name VARCHAR(64) NOT NULL PRIMARY KEY,
+
+    private static final String CREATE_MAP_PLATFORMS_TABLE = """
+            CREATE TABLE IF NOT EXISTS runorfall_map_platforms (
+              map_id VARCHAR(64) NOT NULL,
+              platform_order INT NOT NULL,
               min_x INT NOT NULL,
               min_y INT NOT NULL,
               min_z INT NOT NULL,
               max_x INT NOT NULL,
               max_y INT NOT NULL,
-              max_z INT NOT NULL
+              max_z INT NOT NULL,
+              PRIMARY KEY (map_id, platform_order)
             ) ENGINE=InnoDB
             """;
+
     private static final String UPSERT_SETTINGS_SQL = """
             INSERT INTO runorfall_settings (id, lobby_x, lobby_y, lobby_z, lobby_rot_x, lobby_rot_y, lobby_rot_z,
-                                            void_y, block_break_delay_seconds)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                            void_y, block_break_delay_seconds, active_map_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
               lobby_x = VALUES(lobby_x),
               lobby_y = VALUES(lobby_y),
@@ -75,7 +101,8 @@ public class RunOrFallConfigStore {
               lobby_rot_y = VALUES(lobby_rot_y),
               lobby_rot_z = VALUES(lobby_rot_z),
               void_y = VALUES(void_y),
-              block_break_delay_seconds = VALUES(block_break_delay_seconds)
+              block_break_delay_seconds = VALUES(block_break_delay_seconds),
+              active_map_id = VALUES(active_map_id)
             """;
 
     private final File legacyConfigFile;
@@ -83,7 +110,7 @@ public class RunOrFallConfigStore {
 
     public RunOrFallConfigStore(File legacyConfigFile) {
         this.legacyConfigFile = legacyConfigFile;
-        this.config = new RunOrFallConfig();
+        this.config = createDefaultConfig();
         initializeTables();
         loadFromDatabase();
         migrateLegacyJsonIfNeeded();
@@ -93,12 +120,82 @@ public class RunOrFallConfigStore {
         return config.copy();
     }
 
+    public synchronized List<String> listMapIds() {
+        List<String> ids = new ArrayList<>();
+        for (RunOrFallMapConfig map : config.maps) {
+            if (map != null && map.id != null && !map.id.isBlank()) {
+                ids.add(map.id);
+            }
+        }
+        return ids;
+    }
+
+    public synchronized String getSelectedMapId() {
+        return config.selectedMapId;
+    }
+
+    public synchronized boolean selectMap(String mapId) {
+        String normalized = normalizeMapId(mapId);
+        if (normalized.isEmpty()) {
+            return false;
+        }
+        RunOrFallMapConfig target = findMapByIdInternal(normalized);
+        if (target == null) {
+            return false;
+        }
+        config.selectedMapId = target.id;
+        saveSettingsToDatabase();
+        return true;
+    }
+
+    public synchronized boolean createMap(String mapId) {
+        String normalized = normalizeMapId(mapId);
+        if (normalized.isEmpty()) {
+            return false;
+        }
+        if (findMapByIdInternal(normalized) != null) {
+            return false;
+        }
+        RunOrFallMapConfig map = new RunOrFallMapConfig();
+        map.id = normalized;
+        config.maps.add(map);
+        if (config.selectedMapId == null || config.selectedMapId.isBlank()) {
+            config.selectedMapId = normalized;
+        }
+        saveMapsToDatabase();
+        saveSettingsToDatabase();
+        return true;
+    }
+
+    public synchronized boolean deleteMap(String mapId) {
+        String normalized = normalizeMapId(mapId);
+        if (normalized.isEmpty()) {
+            return false;
+        }
+        boolean removed = config.maps.removeIf(map -> map != null && normalized.equals(map.id));
+        if (!removed) {
+            return false;
+        }
+        if (config.maps.isEmpty()) {
+            RunOrFallMapConfig fallback = new RunOrFallMapConfig();
+            fallback.id = DEFAULT_MAP_ID;
+            config.maps.add(fallback);
+        }
+        RunOrFallMapConfig selected = getSelectedMapInternal();
+        config.selectedMapId = selected != null ? selected.id : DEFAULT_MAP_ID;
+        persistAllToDatabase();
+        return true;
+    }
+
     public synchronized RunOrFallLocation getLobby() {
-        return config.lobby != null ? config.lobby.copy() : null;
+        RunOrFallMapConfig map = getOrCreateSelectedMapInternal();
+        return map.lobby != null ? map.lobby.copy() : null;
     }
 
     public synchronized void setLobby(RunOrFallLocation location) {
-        config.lobby = location != null ? location.copy() : null;
+        RunOrFallMapConfig map = getOrCreateSelectedMapInternal();
+        map.lobby = location != null ? location.copy() : null;
+        saveMapsToDatabase();
         saveSettingsToDatabase();
     }
 
@@ -128,7 +225,8 @@ public class RunOrFallConfigStore {
 
     public synchronized List<RunOrFallLocation> getSpawns() {
         List<RunOrFallLocation> copy = new ArrayList<>();
-        for (RunOrFallLocation spawn : config.spawns) {
+        RunOrFallMapConfig map = getOrCreateSelectedMapInternal();
+        for (RunOrFallLocation spawn : map.spawns) {
             if (spawn != null) {
                 copy.add(spawn.copy());
             }
@@ -140,18 +238,21 @@ public class RunOrFallConfigStore {
         if (location == null) {
             return;
         }
-        config.spawns.add(location.copy());
+        RunOrFallMapConfig map = getOrCreateSelectedMapInternal();
+        map.spawns.add(location.copy());
         saveSpawnsToDatabase();
     }
 
     public synchronized void clearSpawns() {
-        config.spawns.clear();
+        RunOrFallMapConfig map = getOrCreateSelectedMapInternal();
+        map.spawns.clear();
         saveSpawnsToDatabase();
     }
 
     public synchronized List<RunOrFallPlatform> getPlatforms() {
         List<RunOrFallPlatform> copy = new ArrayList<>();
-        for (RunOrFallPlatform platform : config.platforms) {
+        RunOrFallMapConfig map = getOrCreateSelectedMapInternal();
+        for (RunOrFallPlatform platform : map.platforms) {
             if (platform != null) {
                 copy.add(platform.copy());
             }
@@ -159,47 +260,38 @@ public class RunOrFallConfigStore {
         return copy;
     }
 
-    public synchronized boolean upsertPlatform(RunOrFallPlatform platform) {
-        if (platform == null || platform.name == null || platform.name.isBlank()) {
+    public synchronized boolean addPlatform(RunOrFallPlatform platform) {
+        if (platform == null) {
             return false;
         }
-        String target = normalizeName(platform.name);
-        for (int i = 0; i < config.platforms.size(); i++) {
-            RunOrFallPlatform existing = config.platforms.get(i);
-            if (existing == null || existing.name == null) {
-                continue;
-            }
-            if (normalizeName(existing.name).equals(target)) {
-                config.platforms.set(i, platform.copy());
-                savePlatformsToDatabase();
-                return true;
-            }
-        }
-        config.platforms.add(platform.copy());
+        RunOrFallMapConfig map = getOrCreateSelectedMapInternal();
+        map.platforms.add(platform.copy());
         savePlatformsToDatabase();
         return true;
     }
 
+    public synchronized boolean upsertPlatform(RunOrFallPlatform platform) {
+        return addPlatform(platform);
+    }
+
     public synchronized boolean removePlatform(String name) {
-        if (name == null || name.isBlank()) {
+        return false;
+    }
+
+    public synchronized boolean removePlatformByIndex(int index) {
+        RunOrFallMapConfig map = getOrCreateSelectedMapInternal();
+        if (index < 0 || index >= map.platforms.size()) {
             return false;
         }
-        String target = normalizeName(name);
-        boolean removed = config.platforms.removeIf(platform ->
-                platform != null && platform.name != null && normalizeName(platform.name).equals(target));
-        if (removed) {
-            savePlatformsToDatabase();
-        }
-        return removed;
+        map.platforms.remove(index);
+        savePlatformsToDatabase();
+        return true;
     }
 
     public synchronized void clearPlatforms() {
-        config.platforms.clear();
+        RunOrFallMapConfig map = getOrCreateSelectedMapInternal();
+        map.platforms.clear();
         savePlatformsToDatabase();
-    }
-
-    private String normalizeName(String name) {
-        return name.trim().toLowerCase(Locale.ROOT);
     }
 
     private synchronized void initializeTables() {
@@ -210,16 +302,20 @@ public class RunOrFallConfigStore {
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
             try (Statement stmt = conn.createStatement()) {
                 stmt.executeUpdate(CREATE_SETTINGS_TABLE);
-                stmt.executeUpdate(CREATE_SPAWNS_TABLE);
-                stmt.executeUpdate(CREATE_PLATFORMS_TABLE);
+                stmt.executeUpdate(CREATE_MAPS_TABLE);
+                stmt.executeUpdate(CREATE_MAP_SPAWNS_TABLE);
+                stmt.executeUpdate(CREATE_MAP_PLATFORMS_TABLE);
             }
+            ensureColumnExists(conn, "runorfall_settings", "active_map_id",
+                    "ALTER TABLE runorfall_settings ADD COLUMN active_map_id VARCHAR(64) NULL");
             try (PreparedStatement stmt = conn.prepareStatement(
-                    "INSERT INTO runorfall_settings (id, void_y, block_break_delay_seconds) VALUES (?, ?, ?) "
+                    "INSERT INTO runorfall_settings (id, void_y, block_break_delay_seconds, active_map_id) VALUES (?, ?, ?, ?) "
                             + "ON DUPLICATE KEY UPDATE id = id")) {
                 DatabaseManager.applyQueryTimeout(stmt);
                 stmt.setInt(1, SETTINGS_ID);
                 stmt.setDouble(2, DEFAULT_VOID_Y);
                 stmt.setDouble(3, DEFAULT_BREAK_DELAY_SECONDS);
+                stmt.setString(4, DEFAULT_MAP_ID);
                 stmt.executeUpdate();
             }
         } catch (SQLException e) {
@@ -229,30 +325,35 @@ public class RunOrFallConfigStore {
 
     private synchronized void loadFromDatabase() {
         if (!DatabaseManager.getInstance().isInitialized()) {
+            config = createDefaultConfig();
             return;
         }
+
         RunOrFallConfig loaded = new RunOrFallConfig();
-        loaded.spawns = new ArrayList<>();
-        loaded.platforms = new ArrayList<>();
         loaded.voidY = DEFAULT_VOID_Y;
         loaded.blockBreakDelaySeconds = DEFAULT_BREAK_DELAY_SECONDS;
-
+        loaded.selectedMapId = "";
+        loaded.maps = new ArrayList<>();
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
             loadSettings(conn, loaded);
-            loadSpawns(conn, loaded);
-            loadPlatforms(conn, loaded);
+            loadMaps(conn, loaded);
+            loadMapSpawns(conn, loaded);
+            loadMapPlatforms(conn, loaded);
+            if (loaded.maps.isEmpty()) {
+                loadLegacySingleMap(conn, loaded);
+            }
             sanitizeLoadedConfig(loaded);
             config = loaded;
         } catch (SQLException e) {
             LOGGER.atWarning().withCause(e).log("Failed to load RunOrFall config from database.");
         }
     }
-
     private void loadSettings(Connection conn, RunOrFallConfig target) throws SQLException {
         String sql = """
                 SELECT lobby_x, lobby_y, lobby_z, lobby_rot_x, lobby_rot_y, lobby_rot_z,
-                       void_y, block_break_delay_seconds
-                FROM runorfall_settings WHERE id = ?
+                       void_y, block_break_delay_seconds, active_map_id
+                FROM runorfall_settings
+                WHERE id = ?
                 """;
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
@@ -261,15 +362,6 @@ public class RunOrFallConfigStore {
                 if (!rs.next()) {
                     return;
                 }
-                Double lobbyX = rs.getObject("lobby_x", Double.class);
-                if (lobbyX != null) {
-                    double lobbyY = rs.getDouble("lobby_y");
-                    double lobbyZ = rs.getDouble("lobby_z");
-                    float rotX = rs.getFloat("lobby_rot_x");
-                    float rotY = rs.getFloat("lobby_rot_y");
-                    float rotZ = rs.getFloat("lobby_rot_z");
-                    target.lobby = new RunOrFallLocation(lobbyX, lobbyY, lobbyZ, rotX, rotY, rotZ);
-                }
                 double loadedVoidY = rs.getDouble("void_y");
                 target.voidY = Double.isFinite(loadedVoidY) ? loadedVoidY : DEFAULT_VOID_Y;
                 double loadedBreakDelay = rs.getDouble("block_break_delay_seconds");
@@ -277,20 +369,71 @@ public class RunOrFallConfigStore {
                     loadedBreakDelay = DEFAULT_BREAK_DELAY_SECONDS;
                 }
                 target.blockBreakDelaySeconds = loadedBreakDelay;
+                String loadedActiveMapId = rs.getString("active_map_id");
+                target.selectedMapId = normalizeMapId(loadedActiveMapId);
+
+                Double lobbyX = rs.getObject("lobby_x", Double.class);
+                if (lobbyX != null) {
+                    target.lobby = new RunOrFallLocation(
+                            lobbyX,
+                            rs.getDouble("lobby_y"),
+                            rs.getDouble("lobby_z"),
+                            rs.getFloat("lobby_rot_x"),
+                            rs.getFloat("lobby_rot_y"),
+                            rs.getFloat("lobby_rot_z")
+                    );
+                }
             }
         }
     }
 
-    private void loadSpawns(Connection conn, RunOrFallConfig target) throws SQLException {
+    private void loadMaps(Connection conn, RunOrFallConfig target) throws SQLException {
         String sql = """
-                SELECT x, y, z, rot_x, rot_y, rot_z
-                FROM runorfall_spawns
-                ORDER BY spawn_order ASC
+                SELECT map_id, lobby_x, lobby_y, lobby_z, lobby_rot_x, lobby_rot_y, lobby_rot_z
+                FROM runorfall_maps
+                ORDER BY map_id ASC
                 """;
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
+                    String mapId = normalizeMapId(rs.getString("map_id"));
+                    if (mapId.isEmpty()) {
+                        continue;
+                    }
+                    RunOrFallMapConfig map = new RunOrFallMapConfig();
+                    map.id = mapId;
+                    Double lobbyX = rs.getObject("lobby_x", Double.class);
+                    if (lobbyX != null) {
+                        map.lobby = new RunOrFallLocation(
+                                lobbyX,
+                                rs.getDouble("lobby_y"),
+                                rs.getDouble("lobby_z"),
+                                rs.getFloat("lobby_rot_x"),
+                                rs.getFloat("lobby_rot_y"),
+                                rs.getFloat("lobby_rot_z")
+                        );
+                    }
+                    target.maps.add(map);
+                }
+            }
+        }
+    }
+
+    private void loadMapSpawns(Connection conn, RunOrFallConfig target) throws SQLException {
+        String sql = """
+                SELECT map_id, x, y, z, rot_x, rot_y, rot_z
+                FROM runorfall_map_spawns
+                ORDER BY map_id ASC, spawn_order ASC
+                """;
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    RunOrFallMapConfig map = findMapByIdInternal(target, normalizeMapId(rs.getString("map_id")));
+                    if (map == null) {
+                        continue;
+                    }
                     RunOrFallLocation spawn = new RunOrFallLocation(
                             rs.getDouble("x"),
                             rs.getDouble("y"),
@@ -300,42 +443,114 @@ public class RunOrFallConfigStore {
                             rs.getFloat("rot_z")
                     );
                     if (isFiniteLocation(spawn)) {
-                        target.spawns.add(spawn);
+                        map.spawns.add(spawn);
                     }
                 }
             }
         }
     }
 
-    private void loadPlatforms(Connection conn, RunOrFallConfig target) throws SQLException {
+    private void loadMapPlatforms(Connection conn, RunOrFallConfig target) throws SQLException {
         String sql = """
-                SELECT name, min_x, min_y, min_z, max_x, max_y, max_z
-                FROM runorfall_platforms
-                ORDER BY name ASC
+                SELECT map_id, min_x, min_y, min_z, max_x, max_y, max_z
+                FROM runorfall_map_platforms
+                ORDER BY map_id ASC, platform_order ASC
                 """;
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
-                    String name = rs.getString("name");
-                    if (name == null || name.isBlank()) {
+                    RunOrFallMapConfig map = findMapByIdInternal(target, normalizeMapId(rs.getString("map_id")));
+                    if (map == null) {
                         continue;
                     }
-                    RunOrFallPlatform platform = new RunOrFallPlatform(
-                            name,
+                    map.platforms.add(new RunOrFallPlatform(
                             rs.getInt("min_x"),
                             rs.getInt("min_y"),
                             rs.getInt("min_z"),
                             rs.getInt("max_x"),
                             rs.getInt("max_y"),
                             rs.getInt("max_z")
-                    );
-                    target.platforms.add(platform);
+                    ));
                 }
             }
         }
     }
 
+    private void loadLegacySingleMap(Connection conn, RunOrFallConfig target) {
+        try {
+            if (!tableExists(conn, "runorfall_spawns") && !tableExists(conn, "runorfall_platforms")) {
+                return;
+            }
+        } catch (SQLException e) {
+            LOGGER.atWarning().withCause(e).log("Failed checking legacy RunOrFall tables.");
+            return;
+        }
+
+        RunOrFallMapConfig legacyMap = new RunOrFallMapConfig();
+        legacyMap.id = DEFAULT_MAP_ID;
+        legacyMap.lobby = target.lobby != null ? target.lobby.copy() : null;
+
+        if (tableExistsSafe(conn, "runorfall_spawns")) {
+            String spawnsSql = """
+                    SELECT x, y, z, rot_x, rot_y, rot_z
+                    FROM runorfall_spawns
+                    ORDER BY spawn_order ASC
+                    """;
+            try (PreparedStatement stmt = conn.prepareStatement(spawnsSql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        RunOrFallLocation spawn = new RunOrFallLocation(
+                                rs.getDouble("x"),
+                                rs.getDouble("y"),
+                                rs.getDouble("z"),
+                                rs.getFloat("rot_x"),
+                                rs.getFloat("rot_y"),
+                                rs.getFloat("rot_z")
+                        );
+                        if (isFiniteLocation(spawn)) {
+                            legacyMap.spawns.add(spawn);
+                        }
+                    }
+                }
+            } catch (SQLException e) {
+                LOGGER.atWarning().withCause(e).log("Failed loading legacy RunOrFall spawns.");
+            }
+        }
+
+        if (tableExistsSafe(conn, "runorfall_platforms")) {
+            String platformsSql = """
+                    SELECT min_x, min_y, min_z, max_x, max_y, max_z
+                    FROM runorfall_platforms
+                    ORDER BY name ASC
+                    """;
+            try (PreparedStatement stmt = conn.prepareStatement(platformsSql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        legacyMap.platforms.add(new RunOrFallPlatform(
+                                rs.getInt("min_x"),
+                                rs.getInt("min_y"),
+                                rs.getInt("min_z"),
+                                rs.getInt("max_x"),
+                                rs.getInt("max_y"),
+                                rs.getInt("max_z")
+                        ));
+                    }
+                }
+            } catch (SQLException e) {
+                LOGGER.atWarning().withCause(e).log("Failed loading legacy RunOrFall platforms.");
+            }
+        }
+
+        if (legacyMap.lobby != null || !legacyMap.spawns.isEmpty() || !legacyMap.platforms.isEmpty()) {
+            target.maps.add(legacyMap);
+            if (target.selectedMapId == null || target.selectedMapId.isBlank()) {
+                target.selectedMapId = DEFAULT_MAP_ID;
+            }
+        }
+    }
     private synchronized void saveSettingsToDatabase() {
         if (!DatabaseManager.getInstance().isInitialized()) {
             return;
@@ -343,15 +558,18 @@ public class RunOrFallConfigStore {
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(UPSERT_SETTINGS_SQL)) {
             DatabaseManager.applyQueryTimeout(stmt);
+            RunOrFallMapConfig selectedMap = getSelectedMapInternal();
+            RunOrFallLocation selectedLobby = selectedMap != null ? selectedMap.lobby : null;
+
             int i = 1;
             stmt.setInt(i++, SETTINGS_ID);
-            if (config.lobby != null && isFiniteLocation(config.lobby)) {
-                stmt.setDouble(i++, config.lobby.x);
-                stmt.setDouble(i++, config.lobby.y);
-                stmt.setDouble(i++, config.lobby.z);
-                stmt.setFloat(i++, config.lobby.rotX);
-                stmt.setFloat(i++, config.lobby.rotY);
-                stmt.setFloat(i++, config.lobby.rotZ);
+            if (selectedLobby != null && isFiniteLocation(selectedLobby)) {
+                stmt.setDouble(i++, selectedLobby.x);
+                stmt.setDouble(i++, selectedLobby.y);
+                stmt.setDouble(i++, selectedLobby.z);
+                stmt.setFloat(i++, selectedLobby.rotX);
+                stmt.setFloat(i++, selectedLobby.rotY);
+                stmt.setFloat(i++, selectedLobby.rotZ);
             } else {
                 stmt.setNull(i++, java.sql.Types.DOUBLE);
                 stmt.setNull(i++, java.sql.Types.DOUBLE);
@@ -361,19 +579,23 @@ public class RunOrFallConfigStore {
                 stmt.setNull(i++, java.sql.Types.FLOAT);
             }
             stmt.setDouble(i++, config.voidY);
-            stmt.setDouble(i, config.blockBreakDelaySeconds);
+            stmt.setDouble(i++, config.blockBreakDelaySeconds);
+            stmt.setString(i, selectedMap != null ? selectedMap.id : DEFAULT_MAP_ID);
             stmt.executeUpdate();
         } catch (SQLException e) {
             LOGGER.atWarning().withCause(e).log("Failed to save RunOrFall settings.");
         }
     }
 
-    private synchronized void saveSpawnsToDatabase() {
+    private synchronized void saveMapsToDatabase() {
         if (!DatabaseManager.getInstance().isInitialized()) {
             return;
         }
-        String deleteSql = "DELETE FROM runorfall_spawns";
-        String insertSql = "INSERT INTO runorfall_spawns (spawn_order, x, y, z, rot_x, rot_y, rot_z) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        String deleteSql = "DELETE FROM runorfall_maps";
+        String insertSql = """
+                INSERT INTO runorfall_maps (map_id, lobby_x, lobby_y, lobby_z, lobby_rot_x, lobby_rot_y, lobby_rot_z)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """;
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
             boolean autoCommit = conn.getAutoCommit();
             conn.setAutoCommit(false);
@@ -383,19 +605,77 @@ public class RunOrFallConfigStore {
                 DatabaseManager.applyQueryTimeout(insertStmt);
                 deleteStmt.executeUpdate();
 
-                int index = 0;
-                for (RunOrFallLocation spawn : config.spawns) {
-                    if (spawn == null || !isFiniteLocation(spawn)) {
+                for (RunOrFallMapConfig map : config.maps) {
+                    if (map == null || map.id == null || map.id.isBlank()) {
                         continue;
                     }
-                    insertStmt.setInt(1, index++);
-                    insertStmt.setDouble(2, spawn.x);
-                    insertStmt.setDouble(3, spawn.y);
-                    insertStmt.setDouble(4, spawn.z);
-                    insertStmt.setFloat(5, spawn.rotX);
-                    insertStmt.setFloat(6, spawn.rotY);
-                    insertStmt.setFloat(7, spawn.rotZ);
+                    insertStmt.setString(1, map.id);
+                    if (map.lobby != null && isFiniteLocation(map.lobby)) {
+                        insertStmt.setDouble(2, map.lobby.x);
+                        insertStmt.setDouble(3, map.lobby.y);
+                        insertStmt.setDouble(4, map.lobby.z);
+                        insertStmt.setFloat(5, map.lobby.rotX);
+                        insertStmt.setFloat(6, map.lobby.rotY);
+                        insertStmt.setFloat(7, map.lobby.rotZ);
+                    } else {
+                        insertStmt.setNull(2, java.sql.Types.DOUBLE);
+                        insertStmt.setNull(3, java.sql.Types.DOUBLE);
+                        insertStmt.setNull(4, java.sql.Types.DOUBLE);
+                        insertStmt.setNull(5, java.sql.Types.FLOAT);
+                        insertStmt.setNull(6, java.sql.Types.FLOAT);
+                        insertStmt.setNull(7, java.sql.Types.FLOAT);
+                    }
                     insertStmt.executeUpdate();
+                }
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(autoCommit);
+            }
+        } catch (SQLException e) {
+            LOGGER.atWarning().withCause(e).log("Failed to save RunOrFall maps.");
+        }
+    }
+
+    private synchronized void saveSpawnsToDatabase() {
+        if (!DatabaseManager.getInstance().isInitialized()) {
+            return;
+        }
+        String deleteSql = "DELETE FROM runorfall_map_spawns";
+        String insertSql = """
+                INSERT INTO runorfall_map_spawns (map_id, spawn_order, x, y, z, rot_x, rot_y, rot_z)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """;
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            boolean autoCommit = conn.getAutoCommit();
+            conn.setAutoCommit(false);
+            try (PreparedStatement deleteStmt = conn.prepareStatement(deleteSql);
+                 PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
+                DatabaseManager.applyQueryTimeout(deleteStmt);
+                DatabaseManager.applyQueryTimeout(insertStmt);
+                deleteStmt.executeUpdate();
+
+                for (RunOrFallMapConfig map : config.maps) {
+                    if (map == null || map.id == null || map.id.isBlank()) {
+                        continue;
+                    }
+                    int index = 0;
+                    for (RunOrFallLocation spawn : map.spawns) {
+                        if (spawn == null || !isFiniteLocation(spawn)) {
+                            continue;
+                        }
+                        insertStmt.setString(1, map.id);
+                        insertStmt.setInt(2, index++);
+                        insertStmt.setDouble(3, spawn.x);
+                        insertStmt.setDouble(4, spawn.y);
+                        insertStmt.setDouble(5, spawn.z);
+                        insertStmt.setFloat(6, spawn.rotX);
+                        insertStmt.setFloat(7, spawn.rotY);
+                        insertStmt.setFloat(8, spawn.rotZ);
+                        insertStmt.executeUpdate();
+                    }
                 }
                 conn.commit();
             } catch (SQLException e) {
@@ -413,10 +693,10 @@ public class RunOrFallConfigStore {
         if (!DatabaseManager.getInstance().isInitialized()) {
             return;
         }
-        String deleteSql = "DELETE FROM runorfall_platforms";
+        String deleteSql = "DELETE FROM runorfall_map_platforms";
         String insertSql = """
-                INSERT INTO runorfall_platforms (name, min_x, min_y, min_z, max_x, max_y, max_z)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO runorfall_map_platforms (map_id, platform_order, min_x, min_y, min_z, max_x, max_y, max_z)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """;
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
             boolean autoCommit = conn.getAutoCommit();
@@ -427,18 +707,25 @@ public class RunOrFallConfigStore {
                 DatabaseManager.applyQueryTimeout(insertStmt);
                 deleteStmt.executeUpdate();
 
-                for (RunOrFallPlatform platform : config.platforms) {
-                    if (platform == null || platform.name == null || platform.name.isBlank()) {
+                for (RunOrFallMapConfig map : config.maps) {
+                    if (map == null || map.id == null || map.id.isBlank()) {
                         continue;
                     }
-                    insertStmt.setString(1, platform.name);
-                    insertStmt.setInt(2, platform.minX);
-                    insertStmt.setInt(3, platform.minY);
-                    insertStmt.setInt(4, platform.minZ);
-                    insertStmt.setInt(5, platform.maxX);
-                    insertStmt.setInt(6, platform.maxY);
-                    insertStmt.setInt(7, platform.maxZ);
-                    insertStmt.executeUpdate();
+                    int index = 0;
+                    for (RunOrFallPlatform platform : map.platforms) {
+                        if (platform == null) {
+                            continue;
+                        }
+                        insertStmt.setString(1, map.id);
+                        insertStmt.setInt(2, index++);
+                        insertStmt.setInt(3, platform.minX);
+                        insertStmt.setInt(4, platform.minY);
+                        insertStmt.setInt(5, platform.minZ);
+                        insertStmt.setInt(6, platform.maxX);
+                        insertStmt.setInt(7, platform.maxY);
+                        insertStmt.setInt(8, platform.maxZ);
+                        insertStmt.executeUpdate();
+                    }
                 }
                 conn.commit();
             } catch (SQLException e) {
@@ -454,6 +741,7 @@ public class RunOrFallConfigStore {
 
     private synchronized void persistAllToDatabase() {
         saveSettingsToDatabase();
+        saveMapsToDatabase();
         saveSpawnsToDatabase();
         savePlatformsToDatabase();
     }
@@ -487,7 +775,7 @@ public class RunOrFallConfigStore {
             }
             String json = Files.readString(filePath, StandardCharsets.UTF_8);
             RunOrFallConfig loaded = GSON.fromJson(json, RunOrFallConfig.class);
-            return loaded != null ? loaded : new RunOrFallConfig();
+            return loaded != null ? loaded : createDefaultConfig();
         } catch (IOException e) {
             LOGGER.atWarning().withCause(e).log("Failed reading legacy RunOrFall config JSON.");
             return null;
@@ -517,13 +805,23 @@ public class RunOrFallConfigStore {
         if (snapshot == null) {
             return true;
         }
-        if (snapshot.lobby != null) {
-            return false;
-        }
-        if (snapshot.spawns != null && !snapshot.spawns.isEmpty()) {
-            return false;
-        }
-        if (snapshot.platforms != null && !snapshot.platforms.isEmpty()) {
+        if (snapshot.maps != null && !snapshot.maps.isEmpty()) {
+            if (snapshot.maps.size() == 1) {
+                RunOrFallMapConfig only = snapshot.maps.get(0);
+                boolean emptyDefaultMap = only != null
+                        && DEFAULT_MAP_ID.equalsIgnoreCase(only.id)
+                        && only.lobby == null
+                        && (only.spawns == null || only.spawns.isEmpty())
+                        && (only.platforms == null || only.platforms.isEmpty());
+                boolean defaultSelection = snapshot.selectedMapId == null
+                        || snapshot.selectedMapId.isBlank()
+                        || DEFAULT_MAP_ID.equalsIgnoreCase(snapshot.selectedMapId);
+                if (emptyDefaultMap && defaultSelection
+                        && nearlyEqual(snapshot.voidY, DEFAULT_VOID_Y)
+                        && nearlyEqual(snapshot.blockBreakDelaySeconds, DEFAULT_BREAK_DELAY_SECONDS)) {
+                    return true;
+                }
+            }
             return false;
         }
         return nearlyEqual(snapshot.voidY, DEFAULT_VOID_Y)
@@ -533,43 +831,175 @@ public class RunOrFallConfigStore {
     private static boolean nearlyEqual(double a, double b) {
         return Math.abs(a - b) < 1.0e-9;
     }
-
     private void sanitizeLoadedConfig(RunOrFallConfig loaded) {
         if (loaded == null) {
             return;
         }
+
         if (!Double.isFinite(loaded.voidY)) {
             loaded.voidY = DEFAULT_VOID_Y;
         }
         if (!Double.isFinite(loaded.blockBreakDelaySeconds) || loaded.blockBreakDelaySeconds < 0.0d) {
             loaded.blockBreakDelaySeconds = DEFAULT_BREAK_DELAY_SECONDS;
         }
-        if (loaded.spawns == null) {
-            loaded.spawns = new ArrayList<>();
-        } else {
-            List<RunOrFallLocation> sanitizedSpawns = new ArrayList<>();
-            for (RunOrFallLocation spawn : loaded.spawns) {
-                if (spawn != null && isFiniteLocation(spawn)) {
-                    sanitizedSpawns.add(spawn.copy());
-                }
-            }
-            loaded.spawns = sanitizedSpawns;
-        }
-        if (loaded.platforms == null) {
-            loaded.platforms = new ArrayList<>();
-        } else {
-            List<RunOrFallPlatform> sanitizedPlatforms = new ArrayList<>();
-            for (RunOrFallPlatform platform : loaded.platforms) {
-                if (platform == null || platform.name == null || platform.name.isBlank()) {
+
+        List<RunOrFallMapConfig> sanitizedMaps = new ArrayList<>();
+        Map<String, RunOrFallMapConfig> uniqueMaps = new LinkedHashMap<>();
+        if (loaded.maps != null) {
+            for (RunOrFallMapConfig map : loaded.maps) {
+                if (map == null) {
                     continue;
                 }
-                sanitizedPlatforms.add(platform.copy());
+                String mapId = normalizeMapId(map.id);
+                if (mapId.isEmpty()) {
+                    continue;
+                }
+                RunOrFallMapConfig sanitized = new RunOrFallMapConfig();
+                sanitized.id = mapId;
+                sanitized.lobby = isFiniteLocation(map.lobby) ? map.lobby.copy() : null;
+                if (map.spawns != null) {
+                    for (RunOrFallLocation spawn : map.spawns) {
+                        if (spawn != null && isFiniteLocation(spawn)) {
+                            sanitized.spawns.add(spawn.copy());
+                        }
+                    }
+                }
+                if (map.platforms != null) {
+                    for (RunOrFallPlatform platform : map.platforms) {
+                        if (platform != null) {
+                            sanitized.platforms.add(platform.copy());
+                        }
+                    }
+                }
+                uniqueMaps.putIfAbsent(mapId, sanitized);
             }
-            loaded.platforms = sanitizedPlatforms;
         }
-        if (loaded.lobby != null && !isFiniteLocation(loaded.lobby)) {
-            loaded.lobby = null;
+
+        if (uniqueMaps.isEmpty()) {
+            RunOrFallMapConfig legacyMap = new RunOrFallMapConfig();
+            legacyMap.id = DEFAULT_MAP_ID;
+            legacyMap.lobby = isFiniteLocation(loaded.lobby) ? loaded.lobby.copy() : null;
+            if (loaded.spawns != null) {
+                for (RunOrFallLocation spawn : loaded.spawns) {
+                    if (spawn != null && isFiniteLocation(spawn)) {
+                        legacyMap.spawns.add(spawn.copy());
+                    }
+                }
+            }
+            if (loaded.platforms != null) {
+                for (RunOrFallPlatform platform : loaded.platforms) {
+                    if (platform != null) {
+                        legacyMap.platforms.add(platform.copy());
+                    }
+                }
+            }
+            uniqueMaps.put(legacyMap.id, legacyMap);
         }
+
+        sanitizedMaps.addAll(uniqueMaps.values());
+        loaded.maps = sanitizedMaps;
+
+        String selectedMapId = normalizeMapId(loaded.selectedMapId);
+        if (selectedMapId.isEmpty() || findMapByIdInternal(loaded, selectedMapId) == null) {
+            selectedMapId = loaded.maps.isEmpty() ? DEFAULT_MAP_ID : loaded.maps.get(0).id;
+        }
+        loaded.selectedMapId = selectedMapId;
+
+        loaded.lobby = null;
+        loaded.spawns = new ArrayList<>();
+        loaded.platforms = new ArrayList<>();
+    }
+
+    private RunOrFallConfig createDefaultConfig() {
+        RunOrFallConfig created = new RunOrFallConfig();
+        created.voidY = DEFAULT_VOID_Y;
+        created.blockBreakDelaySeconds = DEFAULT_BREAK_DELAY_SECONDS;
+        RunOrFallMapConfig map = new RunOrFallMapConfig();
+        map.id = DEFAULT_MAP_ID;
+        created.maps.add(map);
+        created.selectedMapId = DEFAULT_MAP_ID;
+        return created;
+    }
+
+    private RunOrFallMapConfig getOrCreateSelectedMapInternal() {
+        RunOrFallMapConfig selected = getSelectedMapInternal();
+        if (selected != null) {
+            return selected;
+        }
+        if (config.maps == null) {
+            config.maps = new ArrayList<>();
+        }
+        RunOrFallMapConfig map = new RunOrFallMapConfig();
+        map.id = DEFAULT_MAP_ID;
+        config.maps.add(map);
+        config.selectedMapId = map.id;
+        return map;
+    }
+
+    private RunOrFallMapConfig getSelectedMapInternal() {
+        if (config.maps == null || config.maps.isEmpty()) {
+            return null;
+        }
+        String selectedMapId = normalizeMapId(config.selectedMapId);
+        RunOrFallMapConfig selected = findMapByIdInternal(selectedMapId);
+        if (selected != null) {
+            return selected;
+        }
+        RunOrFallMapConfig fallback = config.maps.get(0);
+        config.selectedMapId = fallback != null ? fallback.id : DEFAULT_MAP_ID;
+        return fallback;
+    }
+
+    private RunOrFallMapConfig findMapByIdInternal(String mapId) {
+        return findMapByIdInternal(config, mapId);
+    }
+
+    private RunOrFallMapConfig findMapByIdInternal(RunOrFallConfig source, String mapId) {
+        if (source == null || source.maps == null || mapId == null || mapId.isBlank()) {
+            return null;
+        }
+        for (RunOrFallMapConfig map : source.maps) {
+            if (map != null && map.id != null && map.id.equals(mapId)) {
+                return map;
+            }
+        }
+        return null;
+    }
+
+    private static String normalizeMapId(String raw) {
+        if (raw == null) {
+            return "";
+        }
+        String value = raw.trim().toLowerCase(Locale.ROOT);
+        if (value.isEmpty()) {
+            return "";
+        }
+        StringBuilder builder = new StringBuilder();
+        boolean lastDash = false;
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            boolean isAlphaNum = (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9');
+            if (isAlphaNum || c == '_' || c == '-') {
+                builder.append(c);
+                lastDash = false;
+                continue;
+            }
+            if (!lastDash) {
+                builder.append('-');
+                lastDash = true;
+            }
+        }
+        String normalized = builder.toString();
+        while (normalized.startsWith("-")) {
+            normalized = normalized.substring(1);
+        }
+        while (normalized.endsWith("-")) {
+            normalized = normalized.substring(0, normalized.length() - 1);
+        }
+        if (normalized.length() > 64) {
+            normalized = normalized.substring(0, 64);
+        }
+        return normalized;
     }
 
     private boolean isFiniteLocation(RunOrFallLocation location) {
@@ -582,5 +1012,63 @@ public class RunOrFallConfigStore {
                 && Float.isFinite(location.rotX)
                 && Float.isFinite(location.rotY)
                 && Float.isFinite(location.rotZ);
+    }
+
+    private static boolean tableExists(Connection conn, String tableName) throws SQLException {
+        DatabaseMetaData metaData = conn.getMetaData();
+        try (ResultSet rs = metaData.getTables(conn.getCatalog(), null, tableName, null)) {
+            if (rs.next()) {
+                return true;
+            }
+        }
+        try (ResultSet rs = metaData.getTables(conn.getCatalog(), null, tableName.toUpperCase(Locale.ROOT), null)) {
+            if (rs.next()) {
+                return true;
+            }
+        }
+        try (ResultSet rs = metaData.getTables(conn.getCatalog(), null, tableName.toLowerCase(Locale.ROOT), null)) {
+            return rs.next();
+        }
+    }
+
+    private static boolean tableExistsSafe(Connection conn, String tableName) {
+        try {
+            return tableExists(conn, tableName);
+        } catch (SQLException ignored) {
+            return false;
+        }
+    }
+
+    private static boolean columnExists(Connection conn, String tableName, String columnName) throws SQLException {
+        DatabaseMetaData metaData = conn.getMetaData();
+        try (ResultSet rs = metaData.getColumns(conn.getCatalog(), null, tableName, columnName)) {
+            if (rs.next()) {
+                return true;
+            }
+        }
+        try (ResultSet rs = metaData.getColumns(conn.getCatalog(), null,
+                tableName.toUpperCase(Locale.ROOT), columnName.toUpperCase(Locale.ROOT))) {
+            if (rs.next()) {
+                return true;
+            }
+        }
+        try (ResultSet rs = metaData.getColumns(conn.getCatalog(), null,
+                tableName.toLowerCase(Locale.ROOT), columnName.toLowerCase(Locale.ROOT))) {
+            return rs.next();
+        }
+    }
+
+    private static void ensureColumnExists(Connection conn, String tableName, String columnName, String alterSql) {
+        try {
+            if (columnExists(conn, tableName, columnName)) {
+                return;
+            }
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate(alterSql);
+            }
+        } catch (SQLException e) {
+            LOGGER.atWarning().withCause(e)
+                    .log("Failed to ensure column " + columnName + " on table " + tableName + ".");
+        }
     }
 }

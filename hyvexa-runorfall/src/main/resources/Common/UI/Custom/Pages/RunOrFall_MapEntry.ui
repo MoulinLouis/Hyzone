@@ -1,0 +1,27 @@
+$C = "../Common.ui";
+
+Button {
+  LayoutMode: Top;
+  Anchor: (Left: 2, Right: 2, Bottom: 6, Height: 44, Width: 300);
+  Background: $C.@InputBoxBackground;
+  Padding: (Left: 10, Right: 10, Top: 8);
+  Style: ButtonStyle(
+    Sounds: $C.@ButtonSounds,
+  );
+
+  Group #SelectedOverlay {
+    Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+    Background: #253742;
+    Visible: false;
+  }
+
+  Label #MapName {
+    Style: (
+      FontSize: 14,
+      RenderBold: true,
+      TextColor: #93844c
+    );
+    Text: "map-id";
+  }
+}
+

@@ -119,6 +119,7 @@ public class RunOrFallCommand extends AbstractAsyncCommand {
             case "lobby" -> handleLobby(player, ref, store, world, args);
             case "spawn" -> handleSpawn(player, ref, store, args);
             case "platform" -> handlePlatform(player, ref, store, playerId, args);
+            case "map" -> handleMap(player, args);
             case "voidy" -> handleVoidY(player, args);
             case "breakdelay" -> handleBreakDelay(player, args);
             default -> sendUsage(player);
@@ -248,21 +249,16 @@ public class RunOrFallCommand extends AbstractAsyncCommand {
                 if (!requireOp(player)) {
                     return;
                 }
-                if (args.length < 3) {
-                    player.sendMessage(Message.raw(PREFIX + "Usage: /rof platform add <name>"));
-                    return;
-                }
                 Selection selection = selections.get(playerId);
                 if (selection == null || selection.pos1 == null || selection.pos2 == null) {
                     player.sendMessage(Message.raw(PREFIX + "Set pos1 and pos2 first."));
                     return;
                 }
-                String name = args[2];
-                RunOrFallPlatform platform = new RunOrFallPlatform(name,
+                RunOrFallPlatform platform = new RunOrFallPlatform(
                         selection.pos1.x, selection.pos1.y, selection.pos1.z,
                         selection.pos2.x, selection.pos2.y, selection.pos2.z);
-                configStore.upsertPlatform(platform);
-                player.sendMessage(Message.raw(PREFIX + "Platform '" + name + "' saved."));
+                configStore.addPlatform(platform);
+                player.sendMessage(Message.raw(PREFIX + "Platform saved (#" + configStore.getPlatforms().size() + ")."));
             }
             case "list" -> {
                 List<RunOrFallPlatform> platforms = configStore.getPlatforms();
@@ -271,8 +267,9 @@ public class RunOrFallCommand extends AbstractAsyncCommand {
                     return;
                 }
                 player.sendMessage(Message.raw(PREFIX + "Platforms: " + platforms.size()));
-                for (RunOrFallPlatform platform : platforms) {
-                    player.sendMessage(Message.raw(PREFIX + platform.name + " "
+                for (int i = 0; i < platforms.size(); i++) {
+                    RunOrFallPlatform platform = platforms.get(i);
+                    player.sendMessage(Message.raw(PREFIX + "#" + (i + 1) + " "
                             + "[" + platform.minX + "," + platform.minY + "," + platform.minZ + "] -> "
                             + "[" + platform.maxX + "," + platform.maxY + "," + platform.maxZ + "]"));
                 }
@@ -282,10 +279,17 @@ public class RunOrFallCommand extends AbstractAsyncCommand {
                     return;
                 }
                 if (args.length < 3) {
-                    player.sendMessage(Message.raw(PREFIX + "Usage: /rof platform remove <name>"));
+                    player.sendMessage(Message.raw(PREFIX + "Usage: /rof platform remove <index>"));
                     return;
                 }
-                boolean removed = configStore.removePlatform(args[2]);
+                int index;
+                try {
+                    index = Integer.parseInt(args[2]) - 1;
+                } catch (NumberFormatException ex) {
+                    player.sendMessage(Message.raw(PREFIX + "Index must be a number."));
+                    return;
+                }
+                boolean removed = configStore.removePlatformByIndex(index);
                 player.sendMessage(Message.raw(PREFIX + (removed ? "Platform removed." : "Platform not found.")));
             }
             case "clear" -> {
@@ -296,6 +300,65 @@ public class RunOrFallCommand extends AbstractAsyncCommand {
                 player.sendMessage(Message.raw(PREFIX + "All platforms cleared."));
             }
             default -> player.sendMessage(Message.raw(PREFIX + "Usage: /rof platform <pos1|pos2|add|list|remove|clear>"));
+        }
+    }
+
+    private void handleMap(Player player, String[] args) {
+        if (args.length < 2) {
+            player.sendMessage(Message.raw(PREFIX + "Usage: /rof map <list|create|select|delete>"));
+            return;
+        }
+        String action = args[1].toLowerCase(Locale.ROOT);
+        switch (action) {
+            case "list" -> {
+                List<String> mapIds = configStore.listMapIds();
+                if (mapIds.isEmpty()) {
+                    player.sendMessage(Message.raw(PREFIX + "No maps configured."));
+                    return;
+                }
+                String selectedMapId = configStore.getSelectedMapId();
+                player.sendMessage(Message.raw(PREFIX + "Maps: " + mapIds.size() + " (active: " + selectedMapId + ")"));
+                for (String mapId : mapIds) {
+                    String marker = mapId.equalsIgnoreCase(selectedMapId) ? " *" : "";
+                    player.sendMessage(Message.raw(PREFIX + "- " + mapId + marker));
+                }
+            }
+            case "create" -> {
+                if (!requireOp(player)) {
+                    return;
+                }
+                if (args.length < 3) {
+                    player.sendMessage(Message.raw(PREFIX + "Usage: /rof map create <id>"));
+                    return;
+                }
+                boolean created = configStore.createMap(args[2]);
+                player.sendMessage(Message.raw(PREFIX + (created ? "Map created." : "Could not create map.")));
+            }
+            case "select" -> {
+                if (!requireOp(player)) {
+                    return;
+                }
+                if (args.length < 3) {
+                    player.sendMessage(Message.raw(PREFIX + "Usage: /rof map select <id>"));
+                    return;
+                }
+                boolean selected = configStore.selectMap(args[2]);
+                player.sendMessage(Message.raw(PREFIX + (selected
+                        ? "Active map set to '" + configStore.getSelectedMapId() + "'."
+                        : "Map not found.")));
+            }
+            case "delete" -> {
+                if (!requireOp(player)) {
+                    return;
+                }
+                if (args.length < 3) {
+                    player.sendMessage(Message.raw(PREFIX + "Usage: /rof map delete <id>"));
+                    return;
+                }
+                boolean deleted = configStore.deleteMap(args[2]);
+                player.sendMessage(Message.raw(PREFIX + (deleted ? "Map deleted." : "Map not found.")));
+            }
+            default -> player.sendMessage(Message.raw(PREFIX + "Usage: /rof map <list|create|select|delete>"));
         }
     }
 
@@ -339,7 +402,8 @@ public class RunOrFallCommand extends AbstractAsyncCommand {
 
     private void sendStatus(Player player) {
         player.sendMessage(Message.raw(PREFIX + gameManager.statusLine()));
-        player.sendMessage(Message.raw(PREFIX + "voidY=" + configStore.getVoidY()
+        player.sendMessage(Message.raw(PREFIX + "map=" + configStore.getSelectedMapId()
+                + ", voidY=" + configStore.getVoidY()
                 + ", breakDelay=" + configStore.getBlockBreakDelaySeconds() + "s"
                 + ", spawns=" + configStore.getSpawns().size()
                 + ", platforms=" + configStore.getPlatforms().size()
@@ -380,9 +444,10 @@ public class RunOrFallCommand extends AbstractAsyncCommand {
     }
 
     private void sendUsage(Player player) {
-        player.sendMessage(Message.raw(PREFIX + "Usage: /rof <join|leave|status|admin>"));
+        player.sendMessage(Message.raw(PREFIX + "Usage: /rof <join|leave|status|admin|map>"));
         player.sendMessage(Message.raw(PREFIX + "Player: /rof join, /rof leave, /rof status"));
         player.sendMessage(Message.raw(PREFIX + "Admin UI: /rof admin"));
+        player.sendMessage(Message.raw(PREFIX + "Maps: /rof map list, /rof map create <id>, /rof map select <id>"));
         player.sendMessage(Message.raw(PREFIX + "Legacy admin commands remain available if needed."));
     }
 

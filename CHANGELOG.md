@@ -21,6 +21,7 @@
 - **Ascend: 4 new challenges** - Challenge 5 (50% Runner Speed + Multiplier Gain), Challenge 6 (all Summit bonuses at 50%), Challenge 7 (maps 4 & 5 locked), Challenge 8 (no Elevation or Summit, reward: +25% to both). Total: 8 challenges.
 
 ### Changed
+- **RunOrFall: Multi-map admin + map-linked setup** - Added map list management in `/rof admin` and `/rof map ...`, moved lobby/spawns/platforms to per-map config, and removed platform naming requirement.
 - **RunOrFall: Configurable block break delay** - Added delayed block destruction with configurable delay (`/rof breakdelay <seconds>`, default `0.2s`).
 - **RunOrFall: Round-start grace before breaking blocks** - Block destruction now starts 3 seconds after the round begins, with chat countdown messages (3..2..1).
 - **RunOrFall: SQL-backed config persistence** - RunOrFall config now saves/loads from MySQL tables (`runorfall_settings`, `runorfall_spawns`, `runorfall_platforms`) instead of JSON, with one-time legacy migration support.
