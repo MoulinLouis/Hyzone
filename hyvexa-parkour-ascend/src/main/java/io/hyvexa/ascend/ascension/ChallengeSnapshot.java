@@ -95,9 +95,10 @@ public class ChallengeSnapshot {
 
     public void restore(AscendPlayerProgress progress) {
         // Keep lifetime counters monotonic across challenge restore.
-        // Challenge runs can increment totalManualRuns; restoring the pre-challenge snapshot
-        // must not roll that global stat backward.
+        // Challenge runs can increment totalManualRuns and totalVoltEarned; restoring the
+        // pre-challenge snapshot must not roll these global stats backward.
         int currentManualRuns = progress.getTotalManualRuns();
+        BigNumber currentTotalVoltEarned = progress.getTotalVoltEarned();
 
         progress.setVolt(BigNumber.of(voltMantissa, voltExp10));
         progress.setElevationMultiplier(elevationMultiplier);
@@ -132,7 +133,7 @@ public class ChallengeSnapshot {
 
         progress.setSummitAccumulatedVolt(BigNumber.of(summitAccumulatedVoltMantissa, summitAccumulatedVoltExp10));
         progress.setElevationAccumulatedVolt(BigNumber.of(elevationAccumulatedVoltMantissa, elevationAccumulatedVoltExp10));
-        progress.setTotalVoltEarned(BigNumber.of(totalVoltEarnedMantissa, totalVoltEarnedExp10));
+        progress.setTotalVoltEarned(BigNumber.of(totalVoltEarnedMantissa, totalVoltEarnedExp10).max(currentTotalVoltEarned));
 
         progress.setTotalManualRuns(Math.max(totalManualRuns, currentManualRuns));
         progress.setConsecutiveManualRuns(consecutiveManualRuns);
