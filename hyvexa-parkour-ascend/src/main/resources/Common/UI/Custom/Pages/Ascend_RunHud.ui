@@ -116,27 +116,27 @@ $C.@PageOverlay {
       }
     }
 
-    Group #TopVexaHud {
+    Group #TopVoltHud {
       Anchor: (Left: 0, Right: 0, Top: 68, Height: 34);
 
-      Group #VexaBar {
+      Group #VoltBar {
         Anchor: (Width: 420, Height: 46);
         Background: #000000(0.60);
         LayoutMode: Top;
 
-        Group #VexaAccent {
+        Group #VoltAccent {
           Anchor: (Left: 0, Right: 0, Height: 3);
           Background: #22d3ee;
         }
 
-        Group #VexaContent {
+        Group #VoltContent {
           FlexWeight: 1;
           Anchor: (Left: 0, Right: 0);
           LayoutMode: Left;
 
           Group { FlexWeight: 1; }
 
-          Label #TopVexaValue {
+          Label #TopVoltValue {
             Anchor: (Top: 0, Bottom: 0);
             Style: (
               FontSize: 30,
@@ -149,14 +149,14 @@ $C.@PageOverlay {
 
           Group { Anchor: (Width: 16); }
 
-          Group #VexaIcon {
+          Group #VoltIcon {
             Anchor: (Width: 28, Height: 28, Top: 8);
-            Background: (TexturePath: "../Textures/vexa.png");
+            Background: (TexturePath: "../Textures/volt.png");
           }
 
           Group { Anchor: (Width: 16); }
 
-          Label #TopVexaPerRunValue {
+          Label #TopVoltPerRunValue {
             Anchor: (Top: 0, Bottom: 0);
             Style: (
               FontSize: 30,
@@ -261,16 +261,16 @@ $C.@PageOverlay {
             Text: "Right click the red book in your inventory";
           }
 
-          Group #PlayerGemsRow {
+          Group #PlayerVexaRow {
             Anchor: (Left: 0, Right: 0, Top: 6, Height: 20);
             LayoutMode: Left;
 
-            Group #GemIcon {
+            Group #VexaIcon {
               Anchor: (Width: 16, Height: 16);
-              Background: (TexturePath: "../Textures/gem.png");
+              Background: (TexturePath: "../Textures/vexa.png");
             }
             Group { Anchor: (Width: 6); }
-            Label #PlayerGemsValue {
+            Label #PlayerVexaValue {
               Style: (FontSize: 14, TextColor: #62d96b, RenderBold: true);
               Text: "0";
             }

@@ -81,7 +81,7 @@ Group {
         Text: "+0.0 mult";
       }
 
-      Label #Vexa {
+      Label #Volt {
         Anchor: (Left: 12);
         Style: (FontSize: 13, TextColor: #10b981, RenderBold: true);
         Text: "0";

@@ -14,7 +14,7 @@ import java.util.UUID;
 
 /**
  * Manages the Ascension prestige system.
- * Ascension grants skill tree points and resets progress (vexa, elevation, Summit levels) but preserves map PBs.
+ * Ascension grants skill tree points and resets progress (volt, elevation, Summit levels) but preserves map PBs.
  */
 public class AscensionManager {
 
@@ -32,18 +32,18 @@ public class AscensionManager {
      * Checks if a player can perform an Ascension.
      */
     public boolean canAscend(UUID playerId) {
-        io.hyvexa.common.math.BigNumber vexa = playerStore.getVexa(playerId);
-        return vexa.gte(AscendConstants.ASCENSION_VEXA_THRESHOLD);
+        io.hyvexa.common.math.BigNumber volt = playerStore.getVolt(playerId);
+        return volt.gte(AscendConstants.ASCENSION_VOLT_THRESHOLD);
     }
 
     /**
      * Performs an Ascension: grants AP (1 + completed challenges), resets progress (preserves map PBs).
      *
-     * @return the new Ascension count, or -1 if insufficient vexa
+     * @return the new Ascension count, or -1 if insufficient volt
      */
     public int performAscension(UUID playerId) {
-        io.hyvexa.common.math.BigNumber vexa = playerStore.getVexa(playerId);
-        if (vexa.lt(AscendConstants.ASCENSION_VEXA_THRESHOLD)) {
+        io.hyvexa.common.math.BigNumber volt = playerStore.getVolt(playerId);
+        if (volt.lt(AscendConstants.ASCENSION_VOLT_THRESHOLD)) {
             return -1;
         }
 
@@ -71,11 +71,11 @@ public class AscensionManager {
         runTracker.cancelRun(playerId);
 
         // Reset progress
-        progress.setVexa(io.hyvexa.common.math.BigNumber.ZERO);
+        progress.setVolt(io.hyvexa.common.math.BigNumber.ZERO);
         progress.setElevationMultiplier(1);
         progress.setAutoElevationTargetIndex(0);
-        progress.setSummitAccumulatedVexa(io.hyvexa.common.math.BigNumber.ZERO);
-        progress.setElevationAccumulatedVexa(io.hyvexa.common.math.BigNumber.ZERO);
+        progress.setSummitAccumulatedVolt(io.hyvexa.common.math.BigNumber.ZERO);
+        progress.setElevationAccumulatedVolt(io.hyvexa.common.math.BigNumber.ZERO);
 
         progress.clearSummitXp();
 

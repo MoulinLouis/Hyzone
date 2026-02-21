@@ -64,7 +64,7 @@ $C.@PageOverlay {
       Label #ConversionRate {
         Anchor: (Left: 0, Right: 0);
         Style: (FontSize: 13, TextColor: #9fb0ba);
-        Text: "1000 vexa = +1 elevation";
+        Text: "1000 volt = +1 elevation";
       }
 
       // --- Multiplier Card ---
@@ -192,7 +192,7 @@ $C.@PageOverlay {
         Label {
           Anchor: (Left: 28, Right: 16, Top: 0, Bottom: 0);
           Style: (FontSize: 12, TextColor: #fca5a5, VerticalAlignment: Center);
-          Text: "Warning: Elevation resets vexa to zero.";
+          Text: "Warning: Elevation resets volt to zero.";
         }
       }
 
@@ -200,7 +200,7 @@ $C.@PageOverlay {
       Label #TipText {
         Anchor: (Left: 0, Right: 0, Top: 8);
         Style: (FontSize: 12, TextColor: #6b7280, HorizontalAlignment: Center);
-        Text: "Higher elevation = more vexa from all sources.";
+        Text: "Higher elevation = more volt from all sources.";
       }
     }
   }

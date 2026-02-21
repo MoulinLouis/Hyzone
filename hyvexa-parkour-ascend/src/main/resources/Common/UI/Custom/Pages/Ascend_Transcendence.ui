@@ -114,12 +114,12 @@ $C.@PageOverlay {
               Label {
                 Anchor: (Width: 180, Top: 0, Bottom: 0);
                 Style: (FontSize: 13, TextColor: #9fb0ba, VerticalAlignment: Center);
-                Text: "Your Vexa";
+                Text: "Your Volt";
               }
 
               Group { FlexWeight: 1; }
 
-              Label #CurrentVexa {
+              Label #CurrentVolt {
                 Anchor: (Top: 0, Bottom: 0);
                 Style: (FontSize: 14, TextColor: #ffd166, RenderBold: true, VerticalAlignment: Center);
                 Text: "0";
@@ -138,7 +138,7 @@ $C.@PageOverlay {
 
               Group { FlexWeight: 1; }
 
-              Label #RequiredVexa {
+              Label #RequiredVolt {
                 Anchor: (Top: 0, Bottom: 0);
                 Style: (FontSize: 14, TextColor: #f59e0b, RenderBold: true, VerticalAlignment: Center);
                 Text: "1 Googol";

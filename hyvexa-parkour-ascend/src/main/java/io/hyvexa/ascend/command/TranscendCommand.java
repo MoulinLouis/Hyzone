@@ -74,7 +74,7 @@ public class TranscendCommand extends AbstractAsyncCommand {
             TranscendenceManager transcendenceManager = plugin.getTranscendenceManager();
 
             if (!transcendenceManager.isEligible(playerId)) {
-                player.sendMessage(Message.raw("[Transcendence] Not eligible. Need 1e100 vexa with BREAK_ASCENSION active and all challenges completed.")
+                player.sendMessage(Message.raw("[Transcendence] Not eligible. Need 1e100 volt with BREAK_ASCENSION active and all challenges completed.")
                     .color(SystemMessageUtils.SECONDARY));
                 return;
             }

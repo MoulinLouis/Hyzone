@@ -142,7 +142,7 @@ $C.@PageOverlay {
           Label #FirstCompletionSubtitle {
             Anchor: (Top: 4);
             Style: (FontSize: 12, TextColor: #9fb0ba);
-            Text: "Vexa, multipliers, and buying runners";
+            Text: "Volt, multipliers, and buying runners";
           }
         }
 
@@ -298,7 +298,7 @@ $C.@PageOverlay {
           Label #ElevationSubtitle {
             Anchor: (Top: 4);
             Style: (FontSize: 12, TextColor: #9fb0ba);
-            Text: "Spend vexa for a global multiplier";
+            Text: "Spend volt for a global multiplier";
           }
         }
 

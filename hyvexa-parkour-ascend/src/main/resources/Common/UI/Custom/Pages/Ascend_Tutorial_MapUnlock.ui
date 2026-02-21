@@ -87,7 +87,7 @@ $C.@PageOverlay {
       Label #Description {
         Anchor: (Top: 14, Left: 0, Right: 0);
         Style: (FontSize: 14, TextColor: #b2c0c7, Wrap: true);
-        Text: "Runner level 5 unlocks the next map. All map multipliers are multiplied together - more maps = way more vexa.";
+        Text: "Runner level 5 unlocks the next map. All map multipliers are multiplied together - more maps = way more volt.";
       }
 
       // Feature list with accent dots
@@ -122,7 +122,7 @@ $C.@PageOverlay {
 
           Group #Feature3Dot { Anchor: (Width: 8, Height: 8, Top: 6); Background: #a855f7; }
           Group { Anchor: (Width: 10); }
-          Label #Feature3Label { Style: (FontSize: 13, TextColor: #cfd7dc); Text: "More maps means exponential vexa growth"; }
+          Label #Feature3Label { Style: (FontSize: 13, TextColor: #cfd7dc); Text: "More maps means exponential volt growth"; }
         }
       }
 

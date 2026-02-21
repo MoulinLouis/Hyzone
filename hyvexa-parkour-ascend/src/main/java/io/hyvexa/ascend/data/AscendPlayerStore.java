@@ -41,7 +41,7 @@ public class AscendPlayerStore {
     }
 
     public record LeaderboardEntry(UUID playerId, String playerName,
-            double totalVexaEarnedMantissa, int totalVexaEarnedExp10,
+            double totalVoltEarnedMantissa, int totalVoltEarnedExp10,
             int ascensionCount, int totalManualRuns, Long fastestAscensionMs) {}
 
     public record MapLeaderboardEntry(UUID playerId, String playerName, long bestTimeMs) {
@@ -133,15 +133,15 @@ public class AscendPlayerStore {
 
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
         // Reset basic progression
-        progress.setVexa(BigNumber.ZERO);
+        progress.setVolt(BigNumber.ZERO);
         progress.setElevationMultiplier(1);
         progress.getMapProgress().clear();
 
         // Reset Summit system
         progress.clearSummitXp();
-        progress.setTotalVexaEarned(BigNumber.ZERO);
-        progress.setSummitAccumulatedVexa(BigNumber.ZERO);
-        progress.setElevationAccumulatedVexa(BigNumber.ZERO);
+        progress.setTotalVoltEarned(BigNumber.ZERO);
+        progress.setSummitAccumulatedVolt(BigNumber.ZERO);
+        progress.setElevationAccumulatedVolt(BigNumber.ZERO);
 
         // Reset Ascension/Skill Tree
         progress.setAscensionCount(0);
@@ -192,14 +192,14 @@ public class AscendPlayerStore {
         persistence.queueSave();
     }
 
-    public BigNumber getVexa(UUID playerId) {
+    public BigNumber getVolt(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
-        return progress != null ? progress.getVexa() : BigNumber.ZERO;
+        return progress != null ? progress.getVolt() : BigNumber.ZERO;
     }
 
-    public void setVexa(UUID playerId, BigNumber vexa) {
+    public void setVolt(UUID playerId, BigNumber volt) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        progress.setVexa(vexa.max(BigNumber.ZERO));
+        progress.setVolt(volt.max(BigNumber.ZERO));
         markDirty(playerId);
     }
 
@@ -291,47 +291,47 @@ public class AscendPlayerStore {
         return true;
     }
 
-    public void addVexa(UUID playerId, BigNumber amount) {
+    public void addVolt(UUID playerId, BigNumber amount) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        progress.addVexa(amount);
+        progress.addVolt(amount);
         markDirty(playerId);
     }
 
-    public boolean spendVexa(UUID playerId, BigNumber amount) {
+    public boolean spendVolt(UUID playerId, BigNumber amount) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        if (progress.getVexa().lt(amount)) {
+        if (progress.getVolt().lt(amount)) {
             return false;
         }
-        progress.addVexa(amount.negate());
+        progress.addVolt(amount.negate());
         markDirty(playerId);
         return true;
     }
 
     // ========================================
-    // Vexa Operations (In-memory CAS + debounced save)
+    // Volt Operations (In-memory CAS + debounced save)
     // ========================================
 
     /**
-     * Add vexa to a player. Updates in-memory state atomically
+     * Add volt to a player. Updates in-memory state atomically
      * and marks dirty for debounced DB save.
      *
      * @param playerId the player's UUID
      * @param amount the amount to add (can be negative to subtract)
      * @return true if the operation succeeded
      */
-    public boolean atomicAddVexa(UUID playerId, BigNumber amount) {
+    public boolean atomicAddVolt(UUID playerId, BigNumber amount) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        BigNumber oldBalance = progress.getVexa();
-        progress.addVexa(amount);
-        BigNumber newBalance = progress.getVexa();
+        BigNumber oldBalance = progress.getVolt();
+        progress.addVolt(amount);
+        BigNumber newBalance = progress.getVolt();
         markDirty(playerId);
-        checkVexaTutorialThresholds(playerId, oldBalance, newBalance);
+        checkVoltTutorialThresholds(playerId, oldBalance, newBalance);
         return true;
     }
 
-    private void checkVexaTutorialThresholds(UUID playerId, BigNumber oldBalance, BigNumber newBalance) {
-        boolean crossedAscension = oldBalance.lt(AscendConstants.ASCENSION_VEXA_THRESHOLD)
-                && newBalance.gte(AscendConstants.ASCENSION_VEXA_THRESHOLD);
+    private void checkVoltTutorialThresholds(UUID playerId, BigNumber oldBalance, BigNumber newBalance) {
+        boolean crossedAscension = oldBalance.lt(AscendConstants.ASCENSION_VOLT_THRESHOLD)
+                && newBalance.gte(AscendConstants.ASCENSION_VOLT_THRESHOLD);
 
         // Mark the ascension tutorial as seen BEFORE the tutorial check,
         // so the tutorial popup is suppressed in favor of the cinematic
@@ -345,7 +345,7 @@ public class AscendPlayerStore {
         }
         TutorialTriggerService triggerService = plugin.getTutorialTriggerService();
         if (triggerService != null) {
-            triggerService.checkVexaThresholds(playerId, oldBalance, newBalance);
+            triggerService.checkVoltThresholds(playerId, oldBalance, newBalance);
         }
 
         // Trigger ascension every time the threshold is crossed
@@ -373,8 +373,8 @@ public class AscendPlayerStore {
     }
 
     private void checkTranscendenceNotification(UUID playerId, BigNumber oldBalance, BigNumber newBalance, AscendPlayerProgress progress) {
-        boolean crossedTranscendence = oldBalance.lt(AscendConstants.TRANSCENDENCE_VEXA_THRESHOLD)
-                && newBalance.gte(AscendConstants.TRANSCENDENCE_VEXA_THRESHOLD);
+        boolean crossedTranscendence = oldBalance.lt(AscendConstants.TRANSCENDENCE_VOLT_THRESHOLD)
+                && newBalance.gte(AscendConstants.TRANSCENDENCE_VOLT_THRESHOLD);
         if (!crossedTranscendence) {
             return;
         }
@@ -615,38 +615,38 @@ public class AscendPlayerStore {
     }
 
     /**
-     * Spend vexa with balance check (prevents negative balance).
+     * Spend volt with balance check (prevents negative balance).
      * Uses in-memory CAS loop. Returns false if insufficient funds.
      *
      * @param playerId the player's UUID
      * @param amount the amount to spend (must be positive)
      * @return true if the purchase succeeded (sufficient balance)
      */
-    public boolean atomicSpendVexa(UUID playerId, BigNumber amount) {
+    public boolean atomicSpendVolt(UUID playerId, BigNumber amount) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
         BigNumber current;
         BigNumber updated;
         do {
-            current = progress.getVexa();
+            current = progress.getVolt();
             if (current.lt(amount)) {
                 return false;
             }
             updated = current.subtract(amount);
-        } while (!progress.casVexa(current, updated));
+        } while (!progress.casVolt(current, updated));
         markDirty(playerId);
         return true;
     }
 
     /**
-     * Add to total vexa earned (lifetime stat) + accumulated vexa trackers.
+     * Add to total volt earned (lifetime stat) + accumulated volt trackers.
      * In-memory update + debounced save.
      *
      * @param playerId the player's UUID
      * @param amount the amount to add
      * @return true if the operation succeeded
      */
-    public boolean atomicAddTotalVexaEarned(UUID playerId, BigNumber amount) {
-        addTotalVexaEarned(playerId, amount);
+    public boolean atomicAddTotalVoltEarned(UUID playerId, BigNumber amount) {
+        addTotalVoltEarned(playerId, amount);
         return true;
     }
 
@@ -664,19 +664,19 @@ public class AscendPlayerStore {
     }
 
     /**
-     * Set elevation level and reset vexa to 0 (for elevation purchase).
+     * Set elevation level and reset volt to 0 (for elevation purchase).
      * In-memory update + debounced save.
      *
      * @param playerId the player's UUID
      * @param newElevation the new elevation level
      * @return true if the operation succeeded
      */
-    public boolean atomicSetElevationAndResetVexa(UUID playerId, int newElevation) {
+    public boolean atomicSetElevationAndResetVolt(UUID playerId, int newElevation) {
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
         progress.setElevationMultiplier(newElevation);
-        progress.setVexa(BigNumber.ZERO);
-        progress.setSummitAccumulatedVexa(BigNumber.ZERO);
-        progress.setElevationAccumulatedVexa(BigNumber.ZERO);
+        progress.setVolt(BigNumber.ZERO);
+        progress.setSummitAccumulatedVolt(BigNumber.ZERO);
+        progress.setElevationAccumulatedVolt(BigNumber.ZERO);
         markDirty(playerId);
         return true;
     }
@@ -822,48 +822,48 @@ public class AscendPlayerStore {
         return category.getBonusForLevel(level);
     }
 
-    public BigNumber getTotalVexaEarned(UUID playerId) {
+    public BigNumber getTotalVoltEarned(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
-        return progress != null ? progress.getTotalVexaEarned() : BigNumber.ZERO;
+        return progress != null ? progress.getTotalVoltEarned() : BigNumber.ZERO;
     }
 
-    public BigNumber getSummitAccumulatedVexa(UUID playerId) {
+    public BigNumber getSummitAccumulatedVolt(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
-        return progress != null ? progress.getSummitAccumulatedVexa() : BigNumber.ZERO;
+        return progress != null ? progress.getSummitAccumulatedVolt() : BigNumber.ZERO;
     }
 
-    public void addSummitAccumulatedVexa(UUID playerId, BigNumber amount) {
+    public void addSummitAccumulatedVolt(UUID playerId, BigNumber amount) {
         if (amount.lte(BigNumber.ZERO)) {
             return;
         }
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        progress.addSummitAccumulatedVexa(amount);
+        progress.addSummitAccumulatedVolt(amount);
         markDirty(playerId);
     }
 
-    public void addElevationAccumulatedVexa(UUID playerId, BigNumber amount) {
+    public void addElevationAccumulatedVolt(UUID playerId, BigNumber amount) {
         if (amount.lte(BigNumber.ZERO)) {
             return;
         }
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        progress.addElevationAccumulatedVexa(amount);
+        progress.addElevationAccumulatedVolt(amount);
         markDirty(playerId);
     }
 
-    public void addTotalVexaEarned(UUID playerId, BigNumber amount) {
+    public void addTotalVoltEarned(UUID playerId, BigNumber amount) {
         if (amount.lte(BigNumber.ZERO)) {
             return;
         }
         AscendPlayerProgress progress = getOrCreatePlayer(playerId);
-        progress.addTotalVexaEarned(amount);
-        progress.addSummitAccumulatedVexa(amount);
-        progress.addElevationAccumulatedVexa(amount);
+        progress.addTotalVoltEarned(amount);
+        progress.addSummitAccumulatedVolt(amount);
+        progress.addElevationAccumulatedVolt(amount);
         markDirty(playerId);
     }
 
-    public BigNumber getElevationAccumulatedVexa(UUID playerId) {
+    public BigNumber getElevationAccumulatedVolt(UUID playerId) {
         AscendPlayerProgress progress = players.get(playerId);
-        return progress != null ? progress.getElevationAccumulatedVexa() : BigNumber.ZERO;
+        return progress != null ? progress.getElevationAccumulatedVolt() : BigNumber.ZERO;
     }
 
     // ========================================
@@ -984,16 +984,16 @@ public class AscendPlayerStore {
 
     /**
      * Shared reset logic for prestige operations.
-     * Resets vexa, map unlocks (except first), multipliers, manual completion, and runners.
+     * Resets volt, map unlocks (except first), multipliers, manual completion, and runners.
      * @param clearBestTimes whether to also clear best times (elevation does, summit doesn't)
      * @return list of map IDs that had runners (for despawn handling)
      */
     private List<String> resetMapProgress(AscendPlayerProgress progress, String firstMapId, boolean clearBestTimes, UUID playerId) {
         List<String> mapsWithRunners = new java.util.ArrayList<>();
 
-        progress.setVexa(BigNumber.ZERO);
-        progress.setSummitAccumulatedVexa(BigNumber.ZERO);
-        progress.setElevationAccumulatedVexa(BigNumber.ZERO);
+        progress.setVolt(BigNumber.ZERO);
+        progress.setSummitAccumulatedVolt(BigNumber.ZERO);
+        progress.setElevationAccumulatedVolt(BigNumber.ZERO);
 
         for (Map.Entry<String, AscendPlayerProgress.MapProgress> entry : progress.getMapProgress().entrySet()) {
             String mapId = entry.getKey();
@@ -1024,7 +1024,7 @@ public class AscendPlayerStore {
     }
 
     /**
-     * Resets player progress for elevation: clears vexa, map unlocks (except first map),
+     * Resets player progress for elevation: clears volt, map unlocks (except first map),
      * multipliers, and removes all runners. Best times are preserved.
      *
      * @param playerId the player's UUID
@@ -1043,7 +1043,7 @@ public class AscendPlayerStore {
     }
 
     /**
-     * Reset progress for Summit: vexa, elevation, multipliers, runners, and map unlocks.
+     * Reset progress for Summit: volt, elevation, multipliers, runners, and map unlocks.
      * Keeps best times and summit XP.
      * @return list of map IDs that had runners (for despawn handling)
      */
@@ -1064,7 +1064,7 @@ public class AscendPlayerStore {
 
     /**
      * Reset progress for a challenge: same as summit reset.
-     * Resets vexa, elevation, multipliers, runners, and map unlocks.
+     * Resets volt, elevation, multipliers, runners, and map unlocks.
      * Keeps best times.
      * @return list of map IDs that had runners (for despawn handling)
      */
@@ -1480,7 +1480,7 @@ public class AscendPlayerStore {
         markDirty(playerId);
 
         // If disabling break mode while above threshold, trigger ascension
-        if (!enabled && progress.getVexa().gte(AscendConstants.ASCENSION_VEXA_THRESHOLD)) {
+        if (!enabled && progress.getVolt().gte(AscendConstants.ASCENSION_VOLT_THRESHOLD)) {
             ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
             if (plugin != null && plugin.getAscensionManager() != null
                     && plugin.getAscensionManager().hasAutoAscend(playerId)

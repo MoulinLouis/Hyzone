@@ -297,11 +297,11 @@ public class AscendRunTracker {
         BigNumber payout = playerStore.getCompletionPayout(playerId, multiplierMaps, AscendConstants.MULTIPLIER_SLOTS, run.mapId, BigNumber.ZERO);
 
         // Use atomic operations to prevent race conditions
-        if (!playerStore.atomicAddVexa(playerId, payout)) {
-            LOGGER.atWarning().log("Failed to add vexa for manual run: " + playerId);
+        if (!playerStore.atomicAddVolt(playerId, payout)) {
+            LOGGER.atWarning().log("Failed to add volt for manual run: " + playerId);
         }
-        if (!playerStore.atomicAddTotalVexaEarned(playerId, payout)) {
-            LOGGER.atWarning().log("Failed to add total vexa earned for manual run: " + playerId);
+        if (!playerStore.atomicAddTotalVoltEarned(playerId, payout)) {
+            LOGGER.atWarning().log("Failed to add total volt earned for manual run: " + playerId);
         }
         if (!playerStore.atomicAddMapMultiplier(playerId, run.mapId, multiplierIncrement)) {
             LOGGER.atWarning().log("Failed to add map multiplier for manual run: " + playerId);
@@ -341,7 +341,7 @@ public class AscendRunTracker {
         String timeStr = String.format("%d.%03ds", seconds, millis);
 
         // Toast for run completion
-        String toastMsg = "+" + FormatUtils.formatBigNumber(payout) + " vexa | " + timeStr;
+        String toastMsg = "+" + FormatUtils.formatBigNumber(payout) + " volt | " + timeStr;
         if (isPersonalBest) {
             toastMsg += " | PB!";
         }

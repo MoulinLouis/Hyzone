@@ -4,7 +4,7 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import io.hyvexa.core.db.DatabaseManager;
-import io.hyvexa.core.economy.GemStore;
+import io.hyvexa.core.economy.VexaStore;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -18,7 +18,7 @@ import java.util.concurrent.ThreadLocalRandom;
 /**
  * Manages Discord-Minecraft account linking via shared MySQL database.
  * Singleton shared across all modules. Players generate a code in-game,
- * enter it on Discord, and receive a one-time gem reward on next login.
+ * enter it on Discord, and receive a one-time vexa reward on next login.
  */
 public class DiscordLinkStore {
 
@@ -27,7 +27,7 @@ public class DiscordLinkStore {
 
     private static final int CODE_LENGTH = 6;
     private static final long CODE_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
-    private static final long GEM_REWARD = 100;
+    private static final long VEXA_REWARD = 100;
     private static final String CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no I/O/0/1 for clarity
 
     private final ConcurrentHashMap<UUID, DiscordLink> cache = new ConcurrentHashMap<>();
@@ -60,7 +60,7 @@ public class DiscordLinkStore {
                 + "player_uuid VARCHAR(36) NOT NULL PRIMARY KEY, "
                 + "discord_id VARCHAR(20) NOT NULL UNIQUE, "
                 + "linked_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, "
-                + "gems_rewarded BOOLEAN NOT NULL DEFAULT FALSE, "
+                + "vexa_rewarded BOOLEAN NOT NULL DEFAULT FALSE, "
                 + "current_rank VARCHAR(20) DEFAULT 'Unranked', "
                 + "last_synced_rank VARCHAR(20) DEFAULT NULL"
                 + ") ENGINE=InnoDB";
@@ -74,6 +74,7 @@ public class DiscordLinkStore {
                 DatabaseManager.applyQueryTimeout(stmt);
                 stmt.executeUpdate();
             }
+            migrateGemsRewardedToVexa(conn);
             LOGGER.atInfo().log("DiscordLinkStore initialized (tables ensured)");
         } catch (SQLException e) {
             LOGGER.atSevere().withCause(e).log("Failed to create discord link tables");
@@ -186,16 +187,16 @@ public class DiscordLinkStore {
     }
 
     /**
-     * Check if the player has a pending gem reward for linking their Discord account.
-     * If so, awards the gems and sends a congratulation message.
+     * Check if the player has a pending vexa reward for linking their Discord account.
+     * If so, awards the vexa and sends a congratulation message.
      * Returns true if a reward was given.
      */
-    public boolean checkAndRewardGems(UUID playerId, Player player) {
+    public boolean checkAndRewardVexa(UUID playerId, Player player) {
         if (playerId == null || player == null || !DatabaseManager.getInstance().isInitialized()) {
             return false;
         }
 
-        String selectSql = "SELECT gems_rewarded FROM discord_links WHERE player_uuid = ? AND gems_rewarded = FALSE";
+        String selectSql = "SELECT vexa_rewarded FROM discord_links WHERE player_uuid = ? AND vexa_rewarded = FALSE";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(selectSql)) {
             DatabaseManager.applyQueryTimeout(stmt);
@@ -206,15 +207,15 @@ public class DiscordLinkStore {
                 }
             }
         } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to check gem reward for " + playerId);
+            LOGGER.atWarning().withCause(e).log("Failed to check vexa reward for " + playerId);
             return false;
         }
 
-        // Award gems
-        GemStore.getInstance().addGems(playerId, GEM_REWARD);
+        // Award vexa
+        VexaStore.getInstance().addVexa(playerId, VEXA_REWARD);
 
         // Mark as rewarded
-        String updateSql = "UPDATE discord_links SET gems_rewarded = TRUE WHERE player_uuid = ? AND gems_rewarded = FALSE";
+        String updateSql = "UPDATE discord_links SET vexa_rewarded = TRUE WHERE player_uuid = ? AND vexa_rewarded = FALSE";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(updateSql)) {
             DatabaseManager.applyQueryTimeout(stmt);
@@ -223,17 +224,17 @@ public class DiscordLinkStore {
             if (updated > 0) {
                 player.sendMessage(Message.join(
                         Message.raw("Discord linked! You received ").color("#a3e635"),
-                        Message.raw(GEM_REWARD + " gems").color("#4ade80").bold(true),
+                        Message.raw(VEXA_REWARD + " vexa").color("#4ade80").bold(true),
                         Message.raw(" as a reward!").color("#a3e635")
                 ));
-                LOGGER.atInfo().log("Awarded " + GEM_REWARD + " gems to " + playerId + " for Discord link");
+                LOGGER.atInfo().log("Awarded " + VEXA_REWARD + " vexa to " + playerId + " for Discord link");
                 try {
                     io.hyvexa.core.analytics.AnalyticsStore.getInstance().logEvent(playerId, "discord_link", "{}");
                 } catch (Exception e) { /* silent */ }
                 return true;
             }
         } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to mark gems rewarded for " + playerId);
+            LOGGER.atWarning().withCause(e).log("Failed to mark vexa rewarded for " + playerId);
         }
         return false;
     }
@@ -255,6 +256,31 @@ public class DiscordLinkStore {
             stmt.executeUpdate();
         } catch (SQLException e) {
             LOGGER.atWarning().withCause(e).log("Failed to update rank for " + playerId);
+        }
+    }
+
+    private void migrateGemsRewardedToVexa(Connection conn) {
+        if (conn == null) {
+            return;
+        }
+        try {
+            if (columnExists(conn, "discord_links", "gems_rewarded")
+                    && !columnExists(conn, "discord_links", "vexa_rewarded")) {
+                try (PreparedStatement stmt = conn.prepareStatement(
+                        "ALTER TABLE discord_links RENAME COLUMN gems_rewarded TO vexa_rewarded")) {
+                    DatabaseManager.applyQueryTimeout(stmt);
+                    stmt.executeUpdate();
+                    LOGGER.atInfo().log("Renamed discord_links.gems_rewarded -> discord_links.vexa_rewarded");
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.atWarning().withCause(e).log("Failed to migrate discord_links reward column");
+        }
+    }
+
+    private boolean columnExists(Connection conn, String tableName, String columnName) throws SQLException {
+        try (ResultSet rs = conn.getMetaData().getColumns(conn.getCatalog(), null, tableName, columnName)) {
+            return rs.next();
         }
     }
 
@@ -324,7 +350,7 @@ public class DiscordLinkStore {
         if (cached != null) {
             return cached;
         }
-        String sql = "SELECT discord_id, linked_at, gems_rewarded FROM discord_links WHERE player_uuid = ?";
+        String sql = "SELECT discord_id, linked_at, vexa_rewarded FROM discord_links WHERE player_uuid = ?";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
@@ -334,7 +360,7 @@ public class DiscordLinkStore {
                     DiscordLink link = new DiscordLink(
                             rs.getString("discord_id"),
                             rs.getTimestamp("linked_at").getTime(),
-                            rs.getBoolean("gems_rewarded")
+                            rs.getBoolean("vexa_rewarded")
                     );
                     cache.put(playerId, link);
                     return link;
@@ -373,6 +399,6 @@ public class DiscordLinkStore {
     /**
      * Represents a linked Discord account.
      */
-    public record DiscordLink(String discordId, long linkedAt, boolean gemsRewarded) {
+    public record DiscordLink(String discordId, long linkedAt, boolean vexaRewarded) {
     }
 }

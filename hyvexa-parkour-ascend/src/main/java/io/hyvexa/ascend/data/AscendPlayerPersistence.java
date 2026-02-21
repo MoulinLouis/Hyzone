@@ -218,11 +218,11 @@ class AscendPlayerPersistence {
 
     private void doSyncSave(Map<UUID, Long> toSave, Map<UUID, AscendPlayerProgress> progressOverrides) {
         String playerSql = """
-            INSERT INTO ascend_players (uuid, player_name, vexa_mantissa, vexa_exp10, elevation_multiplier, ascension_count,
-                skill_tree_points, total_vexa_earned_mantissa, total_vexa_earned_exp10, total_manual_runs, active_title,
+            INSERT INTO ascend_players (uuid, player_name, volt_mantissa, volt_exp10, elevation_multiplier, ascension_count,
+                skill_tree_points, total_volt_earned_mantissa, total_volt_earned_exp10, total_manual_runs, active_title,
                 ascension_started_at, fastest_ascension_ms, last_active_timestamp, has_unclaimed_passive,
-                summit_accumulated_vexa_mantissa, summit_accumulated_vexa_exp10,
-                elevation_accumulated_vexa_mantissa, elevation_accumulated_vexa_exp10,
+                summit_accumulated_volt_mantissa, summit_accumulated_volt_exp10,
+                elevation_accumulated_volt_mantissa, elevation_accumulated_volt_exp10,
                 auto_upgrade_enabled, auto_evolution_enabled, seen_tutorials, hide_other_runners,
                 break_ascension_enabled,
                 auto_elevation_enabled, auto_elevation_timer_seconds, auto_elevation_targets, auto_elevation_target_index,
@@ -231,20 +231,20 @@ class AscendPlayerPersistence {
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 player_name = VALUES(player_name),
-                vexa_mantissa = VALUES(vexa_mantissa), vexa_exp10 = VALUES(vexa_exp10),
+                volt_mantissa = VALUES(volt_mantissa), volt_exp10 = VALUES(volt_exp10),
                 elevation_multiplier = VALUES(elevation_multiplier),
                 ascension_count = VALUES(ascension_count), skill_tree_points = VALUES(skill_tree_points),
-                total_vexa_earned_mantissa = VALUES(total_vexa_earned_mantissa),
-                total_vexa_earned_exp10 = VALUES(total_vexa_earned_exp10),
+                total_volt_earned_mantissa = VALUES(total_volt_earned_mantissa),
+                total_volt_earned_exp10 = VALUES(total_volt_earned_exp10),
                 total_manual_runs = VALUES(total_manual_runs),
                 active_title = VALUES(active_title), ascension_started_at = VALUES(ascension_started_at),
                 fastest_ascension_ms = VALUES(fastest_ascension_ms),
                 last_active_timestamp = VALUES(last_active_timestamp),
                 has_unclaimed_passive = VALUES(has_unclaimed_passive),
-                summit_accumulated_vexa_mantissa = VALUES(summit_accumulated_vexa_mantissa),
-                summit_accumulated_vexa_exp10 = VALUES(summit_accumulated_vexa_exp10),
-                elevation_accumulated_vexa_mantissa = VALUES(elevation_accumulated_vexa_mantissa),
-                elevation_accumulated_vexa_exp10 = VALUES(elevation_accumulated_vexa_exp10),
+                summit_accumulated_volt_mantissa = VALUES(summit_accumulated_volt_mantissa),
+                summit_accumulated_volt_exp10 = VALUES(summit_accumulated_volt_exp10),
+                elevation_accumulated_volt_mantissa = VALUES(elevation_accumulated_volt_mantissa),
+                elevation_accumulated_volt_exp10 = VALUES(elevation_accumulated_volt_exp10),
                 auto_upgrade_enabled = VALUES(auto_upgrade_enabled),
                 auto_evolution_enabled = VALUES(auto_evolution_enabled),
                 hide_other_runners = VALUES(hide_other_runners),
@@ -354,13 +354,13 @@ class AscendPlayerPersistence {
                     // Save player base data
                     playerStmt.setString(1, playerId.toString());
                     playerStmt.setString(2, playerNames.get(playerId));
-                    playerStmt.setDouble(3, progress.getVexa().getMantissa());
-                    playerStmt.setInt(4, progress.getVexa().getExponent());
+                    playerStmt.setDouble(3, progress.getVolt().getMantissa());
+                    playerStmt.setInt(4, progress.getVolt().getExponent());
                     playerStmt.setInt(5, progress.getElevationMultiplier());
                     playerStmt.setInt(6, progress.getAscensionCount());
                     playerStmt.setInt(7, progress.getSkillTreePoints());
-                    playerStmt.setDouble(8, progress.getTotalVexaEarned().getMantissa());
-                    playerStmt.setInt(9, progress.getTotalVexaEarned().getExponent());
+                    playerStmt.setDouble(8, progress.getTotalVoltEarned().getMantissa());
+                    playerStmt.setInt(9, progress.getTotalVoltEarned().getExponent());
                     playerStmt.setInt(10, progress.getTotalManualRuns());
                     playerStmt.setNull(11, java.sql.Types.VARCHAR);
                     if (progress.getAscensionStartedAt() != null) {
@@ -379,10 +379,10 @@ class AscendPlayerPersistence {
                         playerStmt.setNull(14, java.sql.Types.BIGINT);
                     }
                     playerStmt.setBoolean(15, progress.hasUnclaimedPassive());
-                    playerStmt.setDouble(16, progress.getSummitAccumulatedVexa().getMantissa());
-                    playerStmt.setInt(17, progress.getSummitAccumulatedVexa().getExponent());
-                    playerStmt.setDouble(18, progress.getElevationAccumulatedVexa().getMantissa());
-                    playerStmt.setInt(19, progress.getElevationAccumulatedVexa().getExponent());
+                    playerStmt.setDouble(16, progress.getSummitAccumulatedVolt().getMantissa());
+                    playerStmt.setInt(17, progress.getSummitAccumulatedVolt().getExponent());
+                    playerStmt.setDouble(18, progress.getElevationAccumulatedVolt().getMantissa());
+                    playerStmt.setInt(19, progress.getElevationAccumulatedVolt().getExponent());
                     playerStmt.setBoolean(20, progress.isAutoUpgradeEnabled());
                     playerStmt.setBoolean(21, progress.isAutoEvolutionEnabled());
                     playerStmt.setInt(22, progress.getSeenTutorials());
@@ -565,12 +565,12 @@ class AscendPlayerPersistence {
 
         // Load base player data
         String playerSql = """
-            SELECT player_name, vexa_mantissa, vexa_exp10, elevation_multiplier, ascension_count, skill_tree_points,
-                   total_vexa_earned_mantissa, total_vexa_earned_exp10, total_manual_runs, active_title,
+            SELECT player_name, volt_mantissa, volt_exp10, elevation_multiplier, ascension_count, skill_tree_points,
+                   total_volt_earned_mantissa, total_volt_earned_exp10, total_manual_runs, active_title,
                    ascension_started_at, fastest_ascension_ms,
                    last_active_timestamp, has_unclaimed_passive,
-                   summit_accumulated_vexa_mantissa, summit_accumulated_vexa_exp10,
-                   elevation_accumulated_vexa_mantissa, elevation_accumulated_vexa_exp10,
+                   summit_accumulated_volt_mantissa, summit_accumulated_volt_exp10,
+                   elevation_accumulated_volt_mantissa, elevation_accumulated_volt_exp10,
                    auto_upgrade_enabled, auto_evolution_enabled, seen_tutorials, hide_other_runners,
                    break_ascension_enabled,
                    auto_elevation_enabled, auto_elevation_timer_seconds, auto_elevation_targets, auto_elevation_target_index,
@@ -595,12 +595,12 @@ class AscendPlayerPersistence {
                             playerNames.put(playerId, dbName);
                         }
                         progress = new AscendPlayerProgress();
-                        progress.setVexa(BigNumber.of(rs.getDouble("vexa_mantissa"), rs.getInt("vexa_exp10")));
+                        progress.setVolt(BigNumber.of(rs.getDouble("volt_mantissa"), rs.getInt("volt_exp10")));
                         progress.setElevationMultiplier(rs.getInt("elevation_multiplier"));
 
                         progress.setAscensionCount(safeGetInt(rs, "ascension_count", 0));
                         progress.setSkillTreePoints(safeGetInt(rs, "skill_tree_points", 0));
-                        progress.setTotalVexaEarned(safeGetBigNumber(rs, "total_vexa_earned_mantissa", "total_vexa_earned_exp10"));
+                        progress.setTotalVoltEarned(safeGetBigNumber(rs, "total_volt_earned_mantissa", "total_volt_earned_exp10"));
                         progress.setTotalManualRuns(safeGetInt(rs, "total_manual_runs", 0));
 
                         Long ascensionStartedAt = safeGetLong(rs, "ascension_started_at");
@@ -620,14 +620,14 @@ class AscendPlayerPersistence {
 
                         progress.setHasUnclaimedPassive(safeGetBoolean(rs, "has_unclaimed_passive", false));
 
-                        BigNumber summitAccumulated = safeGetBigNumber(rs, "summit_accumulated_vexa_mantissa", "summit_accumulated_vexa_exp10");
+                        BigNumber summitAccumulated = safeGetBigNumber(rs, "summit_accumulated_volt_mantissa", "summit_accumulated_volt_exp10");
                         if (!summitAccumulated.isZero()) {
-                            progress.setSummitAccumulatedVexa(summitAccumulated);
+                            progress.setSummitAccumulatedVolt(summitAccumulated);
                         }
 
-                        BigNumber elevationAccumulated = safeGetBigNumber(rs, "elevation_accumulated_vexa_mantissa", "elevation_accumulated_vexa_exp10");
+                        BigNumber elevationAccumulated = safeGetBigNumber(rs, "elevation_accumulated_volt_mantissa", "elevation_accumulated_volt_exp10");
                         if (!elevationAccumulated.isZero()) {
-                            progress.setElevationAccumulatedVexa(elevationAccumulated);
+                            progress.setElevationAccumulatedVolt(elevationAccumulated);
                         }
 
                         progress.setAutoUpgradeEnabled(safeGetBoolean(rs, "auto_upgrade_enabled", false));
@@ -870,7 +870,7 @@ class AscendPlayerPersistence {
                 String cachedName = playerNames.get(entry.playerId());
                 if (cachedName != null) {
                     entry = new AscendPlayerStore.LeaderboardEntry(entry.playerId(), cachedName,
-                            entry.totalVexaEarnedMantissa(), entry.totalVexaEarnedExp10(),
+                            entry.totalVoltEarnedMantissa(), entry.totalVoltEarnedExp10(),
                             entry.ascensionCount(), entry.totalManualRuns(), entry.fastestAscensionMs());
                 }
             }
@@ -882,7 +882,7 @@ class AscendPlayerPersistence {
             String name = playerNames.get(id);
             merged.put(id, new AscendPlayerStore.LeaderboardEntry(
                 id, name,
-                p.getTotalVexaEarned().getMantissa(), p.getTotalVexaEarned().getExponent(),
+                p.getTotalVoltEarned().getMantissa(), p.getTotalVoltEarned().getExponent(),
                 p.getAscensionCount(), p.getTotalManualRuns(), p.getFastestAscensionMs()
             ));
         }
@@ -895,12 +895,12 @@ class AscendPlayerPersistence {
         }
 
         String sql = """
-            SELECT uuid, player_name, total_vexa_earned_mantissa, total_vexa_earned_exp10,
+            SELECT uuid, player_name, total_volt_earned_mantissa, total_volt_earned_exp10,
                    ascension_count, total_manual_runs, fastest_ascension_ms
             FROM ascend_players
-            WHERE total_vexa_earned_exp10 > 0 OR total_vexa_earned_mantissa > 0
+            WHERE total_volt_earned_exp10 > 0 OR total_volt_earned_mantissa > 0
                OR ascension_count > 0 OR total_manual_runs > 0 OR fastest_ascension_ms IS NOT NULL
-            ORDER BY total_vexa_earned_exp10 DESC, total_vexa_earned_mantissa DESC
+            ORDER BY total_volt_earned_exp10 DESC, total_volt_earned_mantissa DESC
             """;
 
         List<AscendPlayerStore.LeaderboardEntry> entries = new java.util.ArrayList<>();
@@ -915,8 +915,8 @@ class AscendPlayerPersistence {
                     while (rs.next()) {
                         UUID playerId = UUID.fromString(rs.getString("uuid"));
                         String name = rs.getString("player_name");
-                        double mantissa = rs.getDouble("total_vexa_earned_mantissa");
-                        int exp10 = rs.getInt("total_vexa_earned_exp10");
+                        double mantissa = rs.getDouble("total_volt_earned_mantissa");
+                        int exp10 = rs.getInt("total_volt_earned_exp10");
                         int ascensions = rs.getInt("ascension_count");
                         int manualRuns = rs.getInt("total_manual_runs");
                         long fastest = rs.getLong("fastest_ascension_ms");

@@ -64,9 +64,9 @@ public class PassiveEarningsPage extends BaseAscendPage {
         }
         commandBuilder.set("#AwayTimeLabel.Text", awayText);
 
-        // Total vexa
-        String vexaStr = FormatUtils.formatBigNumber(result.totalVexa());
-        commandBuilder.set("#TotalVexaLabel.Text", vexaStr + " VEXA");
+        // Total volt
+        String voltStr = FormatUtils.formatBigNumber(result.totalVolt());
+        commandBuilder.set("#TotalVoltLabel.Text", voltStr + " VOLT");
 
         // Total multiplier
         String multStr = FormatUtils.formatBigNumber(result.totalMultiplier());
@@ -114,9 +114,9 @@ public class PassiveEarningsPage extends BaseAscendPage {
             String multStr = FormatUtils.formatBigNumber(earnings.multiplierGain());
             commandBuilder.set(selector + " #Multiplier.Text", "+" + multStr + " mult");
 
-            // Vexa earned
-            String vexaStr = FormatUtils.formatBigNumber(earnings.vexaEarned());
-            commandBuilder.set(selector + " #Vexa.Text", vexaStr);
+            // Volt earned
+            String voltStr = FormatUtils.formatBigNumber(earnings.voltEarned());
+            commandBuilder.set(selector + " #Volt.Text", voltStr);
 
             index++;
         }

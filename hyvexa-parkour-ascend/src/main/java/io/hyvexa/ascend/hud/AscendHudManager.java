@@ -17,7 +17,7 @@ import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 import io.hyvexa.common.math.BigNumber;
 import io.hyvexa.common.util.MultiHudBridge;
-import io.hyvexa.core.economy.GemStore;
+import io.hyvexa.core.economy.VexaStore;
 
 import java.util.List;
 import java.util.UUID;
@@ -77,16 +77,16 @@ public class AscendHudManager {
             return;
         }
         try {
-            BigNumber vexa = playerStore.getVexa(playerId);
+            BigNumber volt = playerStore.getVolt(playerId);
             List<AscendMap> mapList = mapStore != null ? mapStore.listMapsSorted() : List.of();
             BigNumber product = playerStore.getMultiplierProduct(playerId, mapList, AscendConstants.MULTIPLIER_SLOTS);
             BigNumber[] digits = playerStore.getMultiplierDisplayValues(playerId, mapList, AscendConstants.MULTIPLIER_SLOTS);
             int elevationLevel = playerStore.getElevationLevel(playerId);
-            BigNumber accumulatedVexa = playerStore.getElevationAccumulatedVexa(playerId);
-            AscendConstants.ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(elevationLevel, accumulatedVexa);
+            BigNumber accumulatedVolt = playerStore.getElevationAccumulatedVolt(playerId);
+            AscendConstants.ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(elevationLevel, accumulatedVolt);
             int potentialElevation = elevationLevel + purchase.levels;
             boolean showElevation = elevationLevel > 1 || purchase.levels > 0;
-            hud.updateEconomy(vexa, product, digits, elevationLevel, potentialElevation, showElevation);
+            hud.updateEconomy(volt, product, digits, elevationLevel, potentialElevation, showElevation);
 
             // Update prestige HUD
             var summitLevels = playerStore.getSummitLevels(playerId);
@@ -101,10 +101,10 @@ public class AscendHudManager {
             hud.updateAscension(ascensionCount, skillPoints);
 
             // Update ascension quest progress bar
-            hud.updateAscensionQuest(vexa);
+            hud.updateAscensionQuest(volt);
 
-            // Update gems display
-            hud.updateGems(GemStore.getInstance().getGems(playerId));
+            // Update vexa display
+            hud.updateVexa(VexaStore.getInstance().getVexa(playerId));
 
             // Runner bars are updated at higher frequency by updateRunnerBar()
         } catch (Exception e) {

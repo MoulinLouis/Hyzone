@@ -30,14 +30,14 @@ public class TranscendenceManager {
 
     /**
      * Checks if a player is eligible to Transcend.
-     * Requires: vexa >= 1e100, BREAK_ASCENSION active, all challenges completed.
+     * Requires: volt >= 1e100, BREAK_ASCENSION active, all challenges completed.
      */
     public boolean isEligible(UUID playerId) {
         AscendPlayerProgress progress = playerStore.getPlayer(playerId);
         if (progress == null) {
             return false;
         }
-        return progress.getVexa().gte(AscendConstants.TRANSCENDENCE_VEXA_THRESHOLD)
+        return progress.getVolt().gte(AscendConstants.TRANSCENDENCE_VOLT_THRESHOLD)
             && progress.isBreakAscensionEnabled()
             && progress.hasAllChallengeRewards();
     }
@@ -61,10 +61,10 @@ public class TranscendenceManager {
 
         // === Reset all prestige state ===
 
-        // Vexa
-        progress.setVexa(BigNumber.ZERO);
-        progress.setSummitAccumulatedVexa(BigNumber.ZERO);
-        progress.setElevationAccumulatedVexa(BigNumber.ZERO);
+        // Volt
+        progress.setVolt(BigNumber.ZERO);
+        progress.setSummitAccumulatedVolt(BigNumber.ZERO);
+        progress.setElevationAccumulatedVolt(BigNumber.ZERO);
 
         // Elevation
         progress.setElevationMultiplier(1);

@@ -92,7 +92,7 @@ $C.@PageOverlay {
       Label #Description {
         Anchor: (Top: 14, Left: 0, Right: 0);
         Style: (FontSize: 14, TextColor: #b2c0c7, Wrap: true);
-        Text: "Spend your vexa to gain elevation levels. Higher levels give bigger multipliers.";
+        Text: "Spend your volt to gain elevation levels. Higher levels give bigger multipliers.";
       }
 
       // Feature list with accent dots
@@ -107,7 +107,7 @@ $C.@PageOverlay {
 
           Group #Feature1Dot { Anchor: (Width: 8, Height: 8, Top: 6); Background: #10b981; }
           Group { Anchor: (Width: 10); }
-          Label #Feature1Label { Style: (FontSize: 13, TextColor: #cfd7dc); Text: "Spend vexa to gain elevation levels"; }
+          Label #Feature1Label { Style: (FontSize: 13, TextColor: #cfd7dc); Text: "Spend volt to gain elevation levels"; }
         }
 
         // Feature 2

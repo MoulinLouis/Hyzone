@@ -8,7 +8,7 @@ import com.hypixel.hytale.server.core.universe.Universe;
 public class PurgeHud extends CustomUIHud {
 
     private int lastPlayerCount = -1;
-    private long lastGems = -1;
+    private long lastVexa = -1;
     private int lastWave = -1;
     private int lastAlive = -1;
     private int lastTotal = -1;
@@ -26,13 +26,13 @@ public class PurgeHud extends CustomUIHud {
         commandBuilder.append("Pages/Purge_RunHud.ui");
     }
 
-    public void updateGems(long gems) {
-        if (gems == lastGems) {
+    public void updateVexa(long vexa) {
+        if (vexa == lastVexa) {
             return;
         }
-        lastGems = gems;
+        lastVexa = vexa;
         UICommandBuilder cmd = new UICommandBuilder();
-        cmd.set("#PlayerGemsValue.Text", String.valueOf(gems));
+        cmd.set("#PlayerVexaValue.Text", String.valueOf(vexa));
         update(false, cmd);
     }
 
@@ -108,7 +108,7 @@ public class PurgeHud extends CustomUIHud {
         lastTotal = -1;
         lastScrap = -1;
         lastPlayerCount = -1;
-        lastGems = -1;
+        lastVexa = -1;
         lastIntermissionText = null;
         lastHpCurrent = -1;
         lastHpMax = -1;

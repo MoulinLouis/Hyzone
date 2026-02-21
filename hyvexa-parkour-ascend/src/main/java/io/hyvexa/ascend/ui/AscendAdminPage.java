@@ -155,9 +155,9 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
         selectedMapId = id;
         String levelColor = order < LEVEL_COLORS.length ? LEVEL_COLORS[order] : "?";
         player.sendMessage(Message.raw("Map created: " + id + " (Level " + order + " - " + levelColor + ")"));
-        player.sendMessage(Message.raw("  -> Unlock: " + map.getEffectivePrice() + " vexa"));
-        player.sendMessage(Message.raw("  -> Runner: " + map.getEffectiveRobotPrice() + " vexa"));
-        player.sendMessage(Message.raw("  -> Reward: " + map.getEffectiveBaseReward() + " vexa/run"));
+        player.sendMessage(Message.raw("  -> Unlock: " + map.getEffectivePrice() + " volt"));
+        player.sendMessage(Message.raw("  -> Runner: " + map.getEffectiveRobotPrice() + " volt"));
+        player.sendMessage(Message.raw("  -> Reward: " + map.getEffectiveBaseReward() + " volt/run"));
         player.sendMessage(Message.raw("  -> Run time: " + formatTimeShort(map.getEffectiveBaseRunTimeMs())));
         player.sendMessage(Message.raw("Now use Set Start and Set Finish to configure the parkour."));
         sendRefresh(ref, store);
@@ -241,9 +241,9 @@ public class AscendAdminPage extends InteractiveCustomUIPage<AscendAdminPage.Map
         refreshMapHolos(map, store);
         String levelColor = order < LEVEL_COLORS.length ? LEVEL_COLORS[order] : "?";
         player.sendMessage(Message.raw("Order updated: " + map.getId() + " -> Level " + order + " (" + levelColor + ")"));
-        player.sendMessage(Message.raw("  -> Unlock: " + map.getEffectivePrice() + " vexa"));
-        player.sendMessage(Message.raw("  -> Runner: " + map.getEffectiveRobotPrice() + " vexa"));
-        player.sendMessage(Message.raw("  -> Reward: " + map.getEffectiveBaseReward() + " vexa/run"));
+        player.sendMessage(Message.raw("  -> Unlock: " + map.getEffectivePrice() + " volt"));
+        player.sendMessage(Message.raw("  -> Runner: " + map.getEffectiveRobotPrice() + " volt"));
+        player.sendMessage(Message.raw("  -> Reward: " + map.getEffectiveBaseReward() + " volt/run"));
         player.sendMessage(Message.raw("  -> Run time: " + formatTimeShort(map.getEffectiveBaseRunTimeMs())));
         sendRefresh(ref, store);
     }

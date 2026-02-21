@@ -16,9 +16,9 @@ This document defines the progressive tutorial system for Ascend mode. Tutorials
 | 2 | First manual map completion | First Completion | 2 |
 | 3 | Runner reaches level 5 (new map unlocks) | New Map Unlocked | 1 |
 | 4 | Runner reaches level 20 (evolution available) | Evolution | 2 |
-| 5 | Vexa reach first elevation cost (~30K) | Elevation | 2 |
-| 6 | Vexa reach 1B (Summit available) | Summit | 2 |
-| 7 | Vexa reach 1Dc (Ascension available) | Ascension | 2 |
+| 5 | Volt reaches first elevation cost (~30K) | Elevation | 2 |
+| 6 | Volt reaches 1B (Summit available) | Summit | 2 |
+| 7 | Volt reaches 1Dc (Ascension available) | Ascension | 2 |
 | 8 | Ascension Challenges skill unlocked | Challenges | 2 |
 
 ---
@@ -35,7 +35,7 @@ _Idea: Overview of the Ascend island/world._
 **Title:** Welcome to Ascend
 
 **Text:**
-> Ascend is a parkour idle game. Run maps, earn vexa, and build up an army of automated runners that play for you - even while you're offline.
+> Ascend is a parkour idle game. Run maps, earn volt, and build up an army of automated runners that play for you - even while you're offline.
 
 ### Step 2 — Your Shortcuts
 
@@ -61,7 +61,7 @@ _Idea: Map select menu with first map highlighted._
 **Title:** Play Your First Map
 
 **Text:**
-> Open the map menu and pick a map. Complete it to earn your first vexa and unlock new features along the way!
+> Open the map menu and pick a map. Complete it to earn your first volt and unlock new features along the way!
 
 ---
 
@@ -72,12 +72,12 @@ _Idea: Map select menu with first map highlighted._
 ### Step 1 — Nice Run!
 
 **Image:** `firstcompletion_step1.png`
-_Idea: HUD showing vexa earned and multiplier going up._
+_Idea: HUD showing volt earned and multiplier going up._
 
 **Title:** Nice Run!
 
 **Text:**
-> You earned vexa and your map multiplier went up! Manual runs give 5x the runner's multiplier gain.
+> You earned volt and your map multiplier went up! Manual runs give 5x the runner's multiplier gain.
 
 ### Step 2 — Buy a Runner
 
@@ -103,7 +103,7 @@ _Idea: Map select showing a new map appearing._
 **Title:** New Map Unlocked!
 
 **Text:**
-> Runner level 5 unlocks the next map. All map multipliers are **multiplied together** — more maps = way more vexa.
+> Runner level 5 unlocks the next map. All map multipliers are **multiplied together** — more maps = way more volt.
 
 ---
 
@@ -137,7 +137,7 @@ _Idea: Star progression with Kweebec variants (0★ → 5★)._
 
 ## 5. Elevation
 
-**Trigger:** Vexa reach first elevation cost (~30K).
+**Trigger:** Volt reaches first elevation cost (~30K).
 
 ### Step 1 — Elevation
 
@@ -147,7 +147,7 @@ _Idea: Elevation UI showing level and multiplier preview._
 **Title:** Elevation
 
 **Text:**
-> Spend your vexa to gain elevation levels. Higher levels give bigger multipliers: level 10 = ×11, level 100 = ×126.
+> Spend your volt to gain elevation levels. Higher levels give bigger multipliers: level 10 = ×11, level 100 = ×126.
 >
 > Open with **`/ascend elevate`**.
 
@@ -159,13 +159,13 @@ _Idea: Before/after multiplier comparison._
 **Title:** Elevate Often
 
 **Text:**
-> Elevation resets vexa, runners, multipliers, and map unlocks. You keep your **best times** and your new elevation level. Elevate often to grow faster.
+> Elevation resets volt, runners, multipliers, and map unlocks. You keep your **best times** and your new elevation level. Elevate often to grow faster.
 
 ---
 
 ## 6. Summit
 
-**Trigger:** Vexa reach 1 billion (1B).
+**Trigger:** Volt reaches 1 billion (1B).
 
 ### Step 1 — The Summit
 
@@ -175,7 +175,7 @@ _Idea: Summit UI with 3 category cards._
 **Title:** Summit
 
 **Text:**
-> Convert vexa into **permanent upgrades**: Runner Speed, Multiplier Gain, and Evolution Power. These stay forever.
+> Convert volt into **permanent upgrades**: Runner Speed, Multiplier Gain, and Evolution Power. These stay forever.
 >
 > Open with **`/ascend summit`**.
 
@@ -187,13 +187,13 @@ _Idea: Visual of what resets vs. what's kept._
 **Title:** The Reset
 
 **Text:**
-> Summit resets vexa, elevation, runners, and maps. You keep your **best times** and **Summit upgrades**. Each cycle you'll progress faster.
+> Summit resets volt, elevation, runners, and maps. You keep your **best times** and **Summit upgrades**. Each cycle you'll progress faster.
 
 ---
 
 ## 7. Ascension
 
-**Trigger:** Vexa reach 1 Decillion (1Dc).
+**Trigger:** Volt reaches 1 Decillion (1Dc).
 
 ### Step 1 — Ascension
 
@@ -243,7 +243,7 @@ _Idea: Snapshot/restore flow diagram._
 **Title:** How It Works
 
 **Text:**
-> Starting a challenge snapshots your progress and resets you. Reach **1Dc** vexa to complete it. Your original progress is fully restored afterward — win or quit.
+> Starting a challenge snapshots your progress and resets you. Reach **1Dc** volt to complete it. Your original progress is fully restored afterward — win or quit.
 
 ---
 
@@ -255,7 +255,7 @@ Each tutorial needs a **trigger condition** and a **"seen" flag** stored per pla
 
 Suggested approach:
 - Store a `Set<String>` of completed tutorial IDs in the player's data (e.g., `ascend_settings` table or a new `ascend_tutorials` table)
-- Check triggers at key moments (map completion, runner purchase, runner upgrade, vexa threshold reached)
+- Check triggers at key moments (map completion, runner purchase, runner upgrade, volt threshold reached)
 - Only show if the player hasn't seen that tutorial yet
 
 ### Trigger Checkpoints (where to hook)
@@ -266,9 +266,9 @@ Suggested approach:
 | First Completion | `AscendRunTracker` on manual completion |
 | New Map Unlocked | `MapUnlockHelper.checkAndEnsureUnlock()` |
 | Evolution | Evolution flow in map select page |
-| Elevation | `ElevationPage` open or HUD vexa threshold check |
-| Summit | HUD vexa threshold check or `/ascend summit` first open |
-| Ascension | HUD vexa threshold check or `/ascend ascension` first open |
+| Elevation | `ElevationPage` open or HUD volt threshold check |
+| Summit | HUD volt threshold check or `/ascend summit` first open |
+| Ascension | HUD volt threshold check or `/ascend ascension` first open |
 | Challenges | `SkillTreePage` on ASCENSION_CHALLENGES node unlock or `/ascend challenge` first open |
 
 ### Image Checklist
@@ -278,13 +278,13 @@ Suggested approach:
 | `welcome_step1.png` | 220×320 | Ascend world overview |
 | `welcome_step2.png` | 220×320 | Inventory items with labels |
 | `welcome_step3.png` | 220×320 | Map select menu / map start |
-| `firstcompletion_step1.png` | 220×320 | Vexa + multiplier earned |
+| `firstcompletion_step1.png` | 220×320 | Volt + multiplier earned |
 | `firstcompletion_step2.png` | 220×320 | Buy Runner button / Kweebec NPC |
 | `mapunlock_step1.png` | 220×320 | New map appearing in menu |
 | `evolution_step1.png` | 220×320 | Evolve button / NPC transformation |
 | `evolution_step2.png` | 220×320 | Star progression / Kweebec variants |
 | `elevation_step1.png` | 220×320 | Elevation UI page |
-| `elevation_step2.png` | 220×320 | Vexa → elevation level diagram |
+| `elevation_step2.png` | 220×320 | Volt → elevation level diagram |
 | `summit_step1.png` | 220×320 | Summit UI with 3 categories |
 | `summit_step2.png` | 220×320 | Reset vs. kept visual |
 | `ascension_step1.png` | 220×320 | Ascension UI / progress bar |

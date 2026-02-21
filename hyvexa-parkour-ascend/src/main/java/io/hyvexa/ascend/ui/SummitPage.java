@@ -126,13 +126,13 @@ public class SummitPage extends BaseAscendPage {
         UUID playerId = playerRef.getUuid();
 
         // Update progress text (shared across all categories)
-        BigNumber accumulatedVexa = playerStore.getSummitAccumulatedVexa(playerId);
-        double currentXp = AscendConstants.vexaToXp(accumulatedVexa);
+        BigNumber accumulatedVolt = playerStore.getSummitAccumulatedVolt(playerId);
+        double currentXp = AscendConstants.voltToXp(accumulatedVolt);
         double nextXp = currentXp + 1;
-        BigNumber vexaForNextXp = AscendConstants.xpToVexa(nextXp);
+        BigNumber voltForNextXp = AscendConstants.xpToVolt(nextXp);
         String progressText = "Progress to next EXP: " +
-            FormatUtils.formatBigNumber(accumulatedVexa) + " / " +
-            FormatUtils.formatBigNumber(vexaForNextXp) + " accumulated vexa";
+            FormatUtils.formatBigNumber(accumulatedVolt) + " / " +
+            FormatUtils.formatBigNumber(voltForNextXp) + " accumulated volt";
         commandBuilder.set("#ProgressText.Text", progressText);
 
         SummitCategory[] categories = {
@@ -292,19 +292,19 @@ public class SummitPage extends BaseAscendPage {
         }
 
         if (!summitManager.canSummit(playerId)) {
-            BigNumber vexa = playerStore.getVexa(playerId);
-            String minVexa = FormatUtils.formatBigNumber(
-                BigNumber.fromLong(AscendConstants.SUMMIT_MIN_VEXA));
-            String currentVexa = FormatUtils.formatBigNumber(vexa);
-            player.sendMessage(Message.raw("[Summit] Need " + minVexa
-                + " vexa to Summit. You have: " + currentVexa)
+            BigNumber volt = playerStore.getVolt(playerId);
+            String minVolt = FormatUtils.formatBigNumber(
+                BigNumber.fromLong(AscendConstants.SUMMIT_MIN_VOLT));
+            String currentVolt = FormatUtils.formatBigNumber(volt);
+            player.sendMessage(Message.raw("[Summit] Need " + minVolt
+                + " volt to Summit. You have: " + currentVolt)
                 .color(SystemMessageUtils.SECONDARY));
             return;
         }
 
         SummitManager.SummitPreview preview = summitManager.previewSummit(playerId, category);
         if (!preview.hasGain()) {
-            player.sendMessage(Message.raw("[Summit] Insufficient vexa for level gain.")
+            player.sendMessage(Message.raw("[Summit] Insufficient volt for level gain.")
                 .color(SystemMessageUtils.SECONDARY));
             return;
         }
@@ -328,7 +328,7 @@ public class SummitPage extends BaseAscendPage {
             category.getDisplayName() + " Lv." + FormatUtils.formatLong(preview.currentLevel())
             + " -> Lv." + FormatUtils.formatLong(result.newLevel()) + " | " + formatBonus(category, preview.currentBonus())
             + " -> " + formatBonus(category, preview.newBonus()));
-        player.sendMessage(Message.raw("[Summit] Progress reset: vexa, elevation, multipliers, runners, map unlocks")
+        player.sendMessage(Message.raw("[Summit] Progress reset: volt, elevation, multipliers, runners, map unlocks")
             .color(SystemMessageUtils.SECONDARY));
 
         // Check achievements

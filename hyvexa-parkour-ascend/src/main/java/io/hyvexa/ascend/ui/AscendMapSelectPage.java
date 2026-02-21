@@ -139,7 +139,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
             updateEvolveAllButtonState(uiCommandBuilder, refreshSnapshot);
         }
 
-        // Start affordability color updates (vexa changes frequently from passive income)
+        // Start affordability color updates (volt changes frequently from passive income)
         startAffordabilityUpdates(ref, store);
     }
 
@@ -245,7 +245,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
         RefreshSnapshot refreshSnapshot = buildRefreshSnapshot(playerRef.getUuid());
         List<MapRefreshState> maps = refreshSnapshot.mapStates();
         lastMapCount = maps.size();
-        BigNumber currentVexa = refreshSnapshot.currentVexa();
+        BigNumber currentVolt = refreshSnapshot.currentVolt();
         int index = 0;
         for (MapRefreshState mapState : maps) {
             AscendMap map = mapState.map();
@@ -261,7 +261,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
             commandBuilder.set("#MapCards[" + index + "] #MapName.Text", mapName);
 
             RunnerCardSnapshot snapshot = renderRunnerButton(
-                commandBuilder, index, map, mapProgress, playerRef.getUuid(), currentVexa);
+                commandBuilder, index, map, mapProgress, playerRef.getUuid(), currentVolt);
 
             // Event bindings
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
@@ -279,7 +279,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
     }
 
     private RefreshSnapshot buildRefreshSnapshot(UUID playerId) {
-        BigNumber currentVexa = playerStore.getVexa(playerId);
+        BigNumber currentVolt = playerStore.getVolt(playerId);
         List<MapRefreshState> mapStates = new ArrayList<>();
         boolean hasAvailableBuyAll = false;
         boolean hasEligibleEvolution = false;
@@ -300,7 +300,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
 
             if (hasRobot && speedLevel < MAX_SPEED_LEVEL) {
                 BigNumber upgradeCost = computeUpgradeCost(speedLevel, map.getDisplayOrder(), stars);
-                canAffordUpgrade = currentVexa.gte(upgradeCost);
+                canAffordUpgrade = currentVolt.gte(upgradeCost);
             }
 
             boolean canBuyAll = (!hasRobot && ghostStore.getRecording(playerId, map.getId()) != null)
@@ -323,7 +323,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
             ));
         }
 
-        return new RefreshSnapshot(currentVexa, mapStates, hasAvailableBuyAll, hasEligibleEvolution);
+        return new RefreshSnapshot(currentVolt, mapStates, hasAvailableBuyAll, hasEligibleEvolution);
     }
 
     private boolean isMapUnlockedForDisplay(UUID playerId, AscendMap map, AscendPlayerProgress.MapProgress mapProgress) {
@@ -400,7 +400,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
 
     private RunnerCardSnapshot renderRunnerButton(UICommandBuilder commandBuilder, int index, AscendMap map,
                                                   AscendPlayerProgress.MapProgress mapProgress, UUID playerId,
-                                                  BigNumber currentVexa) {
+                                                  BigNumber currentVolt) {
         boolean hasRobot = mapProgress != null && mapProgress.hasRobot();
         boolean hasGhostRecording = ghostStore.getRecording(playerId, map.getId()) != null;
         int speedLevel = mapProgress != null ? mapProgress.getRobotSpeedLevel() : 0;
@@ -428,10 +428,10 @@ public class AscendMapSelectPage extends BaseAscendPage {
         commandBuilder.set("#MapCards[" + index + "] #RunnerLevel.Style.TextColor", "#ffffff");
 
         RunnerStatusData runnerStatus = resolveRunnerStatusData(map, hasRobot, hasGhostRecording, speedLevel, stars, playerId);
-        BigNumber vexa = currentVexa != null
-            ? currentVexa
-            : (playerId != null ? playerStore.getVexa(playerId) : BigNumber.ZERO);
-        boolean canAfford = !runnerStatus.isUpgrade() || vexa.gte(runnerStatus.actionPrice());
+        BigNumber volt = currentVolt != null
+            ? currentVolt
+            : (playerId != null ? playerStore.getVolt(playerId) : BigNumber.ZERO);
+        boolean canAfford = !runnerStatus.isUpgrade() || volt.gte(runnerStatus.actionPrice());
         boolean showDisabledOverlay = runnerStatus.isUpgrade() && !canAfford;
         String secondaryTextColor = canAfford ? "#ffffff" : "#9fb0ba";
 
@@ -478,7 +478,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
 
         boolean isUpgrade = "Upgrade".equals(runnerButtonText) && actionPrice.gt(BigNumber.ZERO);
         String displayButtonText = isUpgrade ? "Cost:" : runnerButtonText;
-        String displayPriceText = isUpgrade ? FormatUtils.formatBigNumber(actionPrice) + " vexa" : "";
+        String displayPriceText = isUpgrade ? FormatUtils.formatBigNumber(actionPrice) + " volt" : "";
         return new RunnerStatusData(runnerStatusText, displayButtonText, displayPriceText, actionPrice, isUpgrade);
     }
 
@@ -656,7 +656,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
 
             // Normal speed upgrade
             BigNumber upgradeCost = computeUpgradeCost(currentLevel, map.getDisplayOrder(), currentStars);
-            if (!playerStore.atomicSpendVexa(playerRef.getUuid(), upgradeCost)) {
+            if (!playerStore.atomicSpendVolt(playerRef.getUuid(), upgradeCost)) {
                 return;
             }
             int newLevel = playerStore.incrementRobotSpeedLevel(playerRef.getUuid(), mapId);
@@ -702,7 +702,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
         if (world == null) {
             return;
         }
-        // Update affordability colors every 500ms to reflect vexa changes
+        // Update affordability colors every 500ms to reflect volt changes
         refreshTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(() -> {
             if (!isCurrentPage()) {
                 stopAffordabilityUpdates();
@@ -787,7 +787,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
             // addMapToUI sends its own update; continue with regular updates for existing maps
         }
 
-        BigNumber currentVexa = refreshSnapshot.currentVexa();
+        BigNumber currentVolt = refreshSnapshot.currentVolt();
         UICommandBuilder commandBuilder = new UICommandBuilder();
 
         int displayCount = Math.min(displayedMapIds.size(), maps.size());
@@ -812,7 +812,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
 
             if (dataChanged) {
                 RunnerCardSnapshot snapshot = renderRunnerButton(
-                    commandBuilder, i, map, mapProgress, playerRef.getUuid(), currentVexa);
+                    commandBuilder, i, map, mapProgress, playerRef.getUuid(), currentVolt);
                 cachedMapState.put(map.getId(), new int[]{snapshot.speedLevel(), snapshot.stars(), snapshot.hasRobot() ? 1 : 0});
             } else if (mapState.hasRobot() && speedLevel < MAX_SPEED_LEVEL) {
                 // No data change — affordability-only update for maps with upgrade buttons
@@ -872,7 +872,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
             selectedMap,
             mapProgress,
             playerRef.getUuid(),
-            playerStore.getVexa(playerRef.getUuid())
+            playerStore.getVolt(playerRef.getUuid())
         );
 
         // Keep cache in sync so the periodic refresh doesn't see a stale diff
@@ -928,7 +928,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
             map,
             mapProgress,
             playerRef.getUuid(),
-            playerStore.getVexa(playerRef.getUuid())
+            playerStore.getVolt(playerRef.getUuid())
         );
 
         // Event bindings
@@ -1033,8 +1033,8 @@ public class AscendMapSelectPage extends BaseAscendPage {
         List<String> updatedMapIds = new ArrayList<>();
 
         for (PurchaseOption option : options) {
-            BigNumber currentVexa = playerStore.getVexa(playerRef.getUuid());
-            if (option.price.gt(currentVexa)) {
+            BigNumber currentVolt = playerStore.getVolt(playerRef.getUuid());
+            if (option.price.gt(currentVolt)) {
                 continue;
             }
 
@@ -1042,7 +1042,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
             switch (option.type) {
                 case BUY_ROBOT -> {
                     if (option.price.gt(BigNumber.ZERO)) {
-                        if (!playerStore.atomicSpendVexa(playerRef.getUuid(), option.price)) {
+                        if (!playerStore.atomicSpendVolt(playerRef.getUuid(), option.price)) {
                             continue;
                         }
                     }
@@ -1050,7 +1050,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
                     success = true;
                 }
                 case UPGRADE_SPEED -> {
-                    if (!playerStore.atomicSpendVexa(playerRef.getUuid(), option.price)) {
+                    if (!playerStore.atomicSpendVolt(playerRef.getUuid(), option.price)) {
                         continue;
                     }
                     int newLevel = playerStore.incrementRobotSpeedLevel(playerRef.getUuid(), option.mapId);
@@ -1093,7 +1093,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
         }
 
         if (purchased == 0) {
-            showToast(playerRef.getUuid(), ToastType.ERROR, "Not enough vexa");
+            showToast(playerRef.getUuid(), ToastType.ERROR, "Not enough volt");
             return;
         }
 
@@ -1115,7 +1115,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
                                    boolean hasRobot, int speedLevel, int stars, boolean momentumActive,
                                    boolean canAffordUpgrade) {}
 
-    private record RefreshSnapshot(BigNumber currentVexa, List<MapRefreshState> mapStates,
+    private record RefreshSnapshot(BigNumber currentVolt, List<MapRefreshState> mapStates,
                                    boolean hasAvailableBuyAll, boolean hasEligibleEvolution) {}
 
     private record RunnerCardSnapshot(int speedLevel, int stars, boolean hasRobot) {}

@@ -13,9 +13,9 @@ import java.util.Map;
  */
 public class ChallengeSnapshot {
 
-    // Vexa (BigNumber as mantissa + exp10)
-    private double vexaMantissa;
-    private int vexaExp10;
+    // Volt (BigNumber as mantissa + exp10)
+    private double voltMantissa;
+    private int voltExp10;
 
     // Elevation
     private int elevationMultiplier;
@@ -26,13 +26,13 @@ public class ChallengeSnapshot {
     // Summit XP
     private Map<String, Double> summitXp;
 
-    // Accumulated vexa trackers (mantissa + exp10)
-    private double summitAccumulatedVexaMantissa;
-    private int summitAccumulatedVexaExp10;
-    private double elevationAccumulatedVexaMantissa;
-    private int elevationAccumulatedVexaExp10;
-    private double totalVexaEarnedMantissa;
-    private int totalVexaEarnedExp10;
+    // Accumulated volt trackers (mantissa + exp10)
+    private double summitAccumulatedVoltMantissa;
+    private int summitAccumulatedVoltExp10;
+    private double elevationAccumulatedVoltMantissa;
+    private int elevationAccumulatedVoltExp10;
+    private double totalVoltEarnedMantissa;
+    private int totalVoltEarnedExp10;
 
     // Stats
     private int totalManualRuns;
@@ -44,9 +44,9 @@ public class ChallengeSnapshot {
     public static ChallengeSnapshot capture(AscendPlayerProgress progress) {
         ChallengeSnapshot snapshot = new ChallengeSnapshot();
 
-        BigNumber vexa = progress.getVexa();
-        snapshot.vexaMantissa = vexa.getMantissa();
-        snapshot.vexaExp10 = vexa.getExponent();
+        BigNumber volt = progress.getVolt();
+        snapshot.voltMantissa = volt.getMantissa();
+        snapshot.voltExp10 = volt.getExponent();
 
         snapshot.elevationMultiplier = progress.getElevationMultiplier();
 
@@ -72,17 +72,17 @@ public class ChallengeSnapshot {
             snapshot.summitXp.put(cat.name(), progress.getSummitXp(cat));
         }
 
-        BigNumber summitAccum = progress.getSummitAccumulatedVexa();
-        snapshot.summitAccumulatedVexaMantissa = summitAccum.getMantissa();
-        snapshot.summitAccumulatedVexaExp10 = summitAccum.getExponent();
+        BigNumber summitAccum = progress.getSummitAccumulatedVolt();
+        snapshot.summitAccumulatedVoltMantissa = summitAccum.getMantissa();
+        snapshot.summitAccumulatedVoltExp10 = summitAccum.getExponent();
 
-        BigNumber elevAccum = progress.getElevationAccumulatedVexa();
-        snapshot.elevationAccumulatedVexaMantissa = elevAccum.getMantissa();
-        snapshot.elevationAccumulatedVexaExp10 = elevAccum.getExponent();
+        BigNumber elevAccum = progress.getElevationAccumulatedVolt();
+        snapshot.elevationAccumulatedVoltMantissa = elevAccum.getMantissa();
+        snapshot.elevationAccumulatedVoltExp10 = elevAccum.getExponent();
 
-        BigNumber totalEarned = progress.getTotalVexaEarned();
-        snapshot.totalVexaEarnedMantissa = totalEarned.getMantissa();
-        snapshot.totalVexaEarnedExp10 = totalEarned.getExponent();
+        BigNumber totalEarned = progress.getTotalVoltEarned();
+        snapshot.totalVoltEarnedMantissa = totalEarned.getMantissa();
+        snapshot.totalVoltEarnedExp10 = totalEarned.getExponent();
 
         snapshot.totalManualRuns = progress.getTotalManualRuns();
         snapshot.consecutiveManualRuns = progress.getConsecutiveManualRuns();
@@ -99,7 +99,7 @@ public class ChallengeSnapshot {
         // must not roll that global stat backward.
         int currentManualRuns = progress.getTotalManualRuns();
 
-        progress.setVexa(BigNumber.of(vexaMantissa, vexaExp10));
+        progress.setVolt(BigNumber.of(voltMantissa, voltExp10));
         progress.setElevationMultiplier(elevationMultiplier);
 
         // Restore map progress
@@ -130,9 +130,9 @@ public class ChallengeSnapshot {
             }
         }
 
-        progress.setSummitAccumulatedVexa(BigNumber.of(summitAccumulatedVexaMantissa, summitAccumulatedVexaExp10));
-        progress.setElevationAccumulatedVexa(BigNumber.of(elevationAccumulatedVexaMantissa, elevationAccumulatedVexaExp10));
-        progress.setTotalVexaEarned(BigNumber.of(totalVexaEarnedMantissa, totalVexaEarnedExp10));
+        progress.setSummitAccumulatedVolt(BigNumber.of(summitAccumulatedVoltMantissa, summitAccumulatedVoltExp10));
+        progress.setElevationAccumulatedVolt(BigNumber.of(elevationAccumulatedVoltMantissa, elevationAccumulatedVoltExp10));
+        progress.setTotalVoltEarned(BigNumber.of(totalVoltEarnedMantissa, totalVoltEarnedExp10));
 
         progress.setTotalManualRuns(Math.max(totalManualRuns, currentManualRuns));
         progress.setConsecutiveManualRuns(consecutiveManualRuns);

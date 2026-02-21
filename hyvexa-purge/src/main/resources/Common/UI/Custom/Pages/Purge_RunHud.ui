@@ -109,16 +109,16 @@ $C.@PageOverlay {
               Text: "Zombie Survival - Survive the waves!";
             }
 
-            Group #PlayerGemsRow {
+            Group #PlayerVexaRow {
               Anchor: (Left: 0, Right: 0, Top: 6, Height: 20);
               LayoutMode: Left;
 
-              Group #GemIcon {
+              Group #VexaIcon {
                 Anchor: (Width: 16, Height: 16);
-                Background: (TexturePath: "../Textures/gem.png");
+                Background: (TexturePath: "../Textures/vexa.png");
               }
               Group { Anchor: (Width: 6); }
-              Label #PlayerGemsValue {
+              Label #PlayerVexaValue {
                 Style: (FontSize: 14, TextColor: #62d96b, RenderBold: true);
                 Text: "0";
               }

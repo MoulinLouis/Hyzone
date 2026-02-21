@@ -157,7 +157,7 @@ client.on('interactionCreate', async (interaction) => {
     await db.createLink(playerUuid, discordId);
 
     await interaction.editReply(
-      'Account linked successfully! You\'ll receive **100 gems** next time you log in to the server.'
+      'Account linked successfully! You\'ll receive **100 vexa** next time you log in to the server.'
     );
   } catch (err) {
     console.error('Error handling /link:', err);
