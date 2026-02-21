@@ -15,6 +15,7 @@ public class PurgeSessionPlayerState {
     private volatile boolean deadThisWave = false;
     private final AtomicInteger kills = new AtomicInteger(0);
     private final PurgeUpgradeState upgradeState = new PurgeUpgradeState();
+    private volatile String currentWeaponId;
 
     public PurgeSessionPlayerState(UUID playerId, Ref<EntityStore> playerRef) {
         this.playerId = playerId;
@@ -38,4 +39,7 @@ public class PurgeSessionPlayerState {
     public void incrementKills() { kills.incrementAndGet(); }
 
     public PurgeUpgradeState getUpgradeState() { return upgradeState; }
+
+    public String getCurrentWeaponId() { return currentWeaponId; }
+    public void setCurrentWeaponId(String currentWeaponId) { this.currentWeaponId = currentWeaponId; }
 }

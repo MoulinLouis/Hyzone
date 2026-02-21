@@ -34,6 +34,9 @@ public class PurgeWeaponConfigManager {
     private final ConcurrentHashMap<String, Long> unlockCosts = new ConcurrentHashMap<>();
     private volatile String sessionWeaponId = "AK47";
 
+    // Lootbox settings
+    private volatile int lootboxDropPercent = 5;
+
     public record WeaponLevelEntry(int level, int damage, long cost) {}
 
     private record WeaponDefaults(String displayName, List<WeaponLevelEntry> levels) {}
@@ -43,10 +46,12 @@ public class PurgeWeaponConfigManager {
     public PurgeWeaponConfigManager() {
         createTable();
         createDefaultsTable();
+        createSettingsTable();
         seedDefaults();
         seedWeaponDefaults();
         loadAll();
         loadWeaponDefaults();
+        loadSettings();
     }
 
     public int getMaxLevel() {
@@ -184,6 +189,19 @@ public class PurgeWeaponConfigManager {
 
     public boolean isSessionWeapon(String weaponId) {
         return weaponId != null && weaponId.equals(sessionWeaponId);
+    }
+
+    public int getLootboxDropPercent() {
+        return lootboxDropPercent;
+    }
+
+    public double getLootboxDropChance() {
+        return lootboxDropPercent / 100.0;
+    }
+
+    public void setLootboxDropPercent(int percent) {
+        this.lootboxDropPercent = Math.max(0, Math.min(100, percent));
+        persistSetting("lootbox_drop_percent", String.valueOf(this.lootboxDropPercent));
     }
 
     public boolean setDamage(String weaponId, int level, int damage) {
@@ -534,6 +552,67 @@ public class PurgeWeaponConfigManager {
             defaultUnlocked.add("AK47");
         }
         LOGGER.atInfo().log("Loaded weapon defaults: " + defaultUnlocked.size() + " default unlocked, session weapon: " + sessionWeaponId);
+    }
+
+    private void createSettingsTable() {
+        if (!isPersistenceAvailable()) {
+            return;
+        }
+        String sql = "CREATE TABLE IF NOT EXISTS purge_settings ("
+                + "setting_key VARCHAR(64) NOT NULL PRIMARY KEY, "
+                + "setting_value VARCHAR(255) NOT NULL"
+                + ") ENGINE=InnoDB";
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            LOGGER.atSevere().withCause(e).log("Failed to create purge_settings table");
+        }
+    }
+
+    private void loadSettings() {
+        if (!isPersistenceAvailable()) {
+            return;
+        }
+        String sql = "SELECT setting_key, setting_value FROM purge_settings";
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    String key = rs.getString("setting_key");
+                    String value = rs.getString("setting_value");
+                    if ("lootbox_drop_percent".equals(key)) {
+                        try {
+                            lootboxDropPercent = Math.max(0, Math.min(100, Integer.parseInt(value)));
+                        } catch (NumberFormatException ignored) {
+                        }
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.atWarning().withCause(e).log("Failed to load purge settings");
+        }
+        LOGGER.atInfo().log("Purge settings loaded: lootbox_drop_percent=" + lootboxDropPercent);
+    }
+
+    private void persistSetting(String key, String value) {
+        if (!isPersistenceAvailable()) {
+            return;
+        }
+        String sql = "INSERT INTO purge_settings (setting_key, setting_value) VALUES (?, ?) "
+                + "ON DUPLICATE KEY UPDATE setting_value = ?";
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            stmt.setString(1, key);
+            stmt.setString(2, value);
+            stmt.setString(3, value);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            LOGGER.atWarning().withCause(e).log("Failed to persist setting " + key);
+        }
     }
 
     private void cacheWeaponLevels(String weaponId, List<WeaponLevelEntry> levels) {

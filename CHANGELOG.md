@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Added
+- **Purge: Lootbox weapon switch system** - Zombies have a 5% chance to drop a lootbox item. Right-click to roll a random owned weapon (excluding current) with a spinning animation UI. Accept to swap your hotbar weapon mid-run, or decline/timeout (10s) to discard. Per-player weapon tracking so each player can use a different weapon in the same session.
 - **RunOrFall: New game mode module** - Added `hyvexa-runorfall` with lobby queue, fixed 10s pre-game countdown, destructible platform cuboids, void elimination, and last-player-standing winner flow via `/rof` commands.
 - **RunOrFall: Admin setup UI** - Added `/rof admin` page to configure lobby/spawns/platforms, tune void Y and break delay, and control start/stop from buttons.
 - **RunOrFall: Player stats page** - Added a RunOrFall stats UI (Win, Loose, Winrate, Best win streak, Longest time survived) opened from `Food_Candy_Cane`, with SQL persistence in `runorfall_player_stats`.
