@@ -4,7 +4,7 @@ $C.@PageOverlay {
   SceneBlur {}
 
   Group #HubMenuWindow {
-    Anchor: (Width: 860, Height: 430);
+    Anchor: (Width: 860, Height: 486);
     LayoutMode: Top;
     Background: #0d1620(0.95);
     OutlineColor: #ffffff(0.06);
@@ -71,22 +71,41 @@ $C.@PageOverlay {
       }
 
       Group #ModeButtons {
-        Anchor: (Top: 12, Left: 0, Right: 0, Height: 262);
+        Anchor: (Top: 12, Left: 0, Right: 0, Height: 318);
         LayoutMode: Top;
 
         Group #TopModeRow {
-          Anchor: (Left: 0, Right: 0, Height: 122);
+          Anchor: (Left: 0, Right: 0, Height: 150);
           LayoutMode: Left;
           Padding: (Left: 126, Top: 6);
 
           Group #ParkourCard {
-            Anchor: (Width: 280, Height: 116);
-            Background: (TexturePath: "../Textures/parkour.png");
+            Anchor: (Width: 280, Height: 144);
+            OutlineColor: #ffffff(0.06);
+            OutlineSize: 1;
 
-            Button #ParkourButton {
+            Group {
+              Anchor: (Left: 0, Right: 0, Top: 0, Height: 116);
+              Background: (TexturePath: "../Textures/parkour.png");
+            }
+
+            Group {
+              Anchor: (Left: 0, Right: 0, Bottom: 0, Height: 28);
+              Background: #ffffff(0.03);
+              Label {
+                Anchor: (Left: 10, Right: 10, Top: 0, Bottom: 0);
+                Style: (FontSize: 11, TextColor: #8a9bae, HorizontalAlignment: Center, VerticalAlignment: Center);
+                Text: "Jump, run and climb through challenging obstacle courses";
+              }
+            }
+
+            TextButton #ParkourButton {
               Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-              Background: #000000(0);
-              Style: ButtonStyle(
+              Text: "";
+              Style: TextButtonStyle(
+                Default: (Background: #ffffff(0.0)),
+                Hovered: (Background: #ffffff(0.06)),
+                Pressed: (Background: #ffffff(0.03)),
                 Sounds: $C.@ButtonSounds,
               );
             }
@@ -97,13 +116,32 @@ $C.@PageOverlay {
           }
 
           Group #AscendCard {
-            Anchor: (Width: 280, Height: 116);
-            Background: (TexturePath: "../Textures/ascend.png");
+            Anchor: (Width: 280, Height: 144);
+            OutlineColor: #ffffff(0.06);
+            OutlineSize: 1;
 
-            Button #AscendButton {
+            Group {
+              Anchor: (Left: 0, Right: 0, Top: 0, Height: 116);
+              Background: (TexturePath: "../Textures/ascend.png");
+            }
+
+            Group {
+              Anchor: (Left: 0, Right: 0, Bottom: 0, Height: 28);
+              Background: #ffffff(0.03);
+              Label {
+                Anchor: (Left: 10, Right: 10, Top: 0, Bottom: 0);
+                Style: (FontSize: 11, TextColor: #8a9bae, HorizontalAlignment: Center, VerticalAlignment: Center);
+                Text: "Build your robot army and rise through the ascensions";
+              }
+            }
+
+            TextButton #AscendButton {
               Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-              Background: #000000(0);
-              Style: ButtonStyle(
+              Text: "";
+              Style: TextButtonStyle(
+                Default: (Background: #ffffff(0.0)),
+                Hovered: (Background: #ffffff(0.06)),
+                Pressed: (Background: #ffffff(0.03)),
                 Sounds: $C.@ButtonSounds,
               );
             }
@@ -111,18 +149,37 @@ $C.@PageOverlay {
         }
 
         Group #BottomModeRow {
-          Anchor: (Left: 0, Right: 0, Top: 14, Height: 122);
+          Anchor: (Left: 0, Right: 0, Top: 14, Height: 150);
           LayoutMode: Left;
           Padding: (Left: 126, Top: 6);
 
           Group #PurgeCard {
-            Anchor: (Width: 280, Height: 116);
-            Background: (TexturePath: "../Textures/purge.png");
+            Anchor: (Width: 280, Height: 144);
+            OutlineColor: #ffffff(0.06);
+            OutlineSize: 1;
 
-            Button #PurgeButton {
+            Group {
+              Anchor: (Left: 0, Right: 0, Top: 0, Height: 116);
+              Background: (TexturePath: "../Textures/purge.png");
+            }
+
+            Group {
+              Anchor: (Left: 0, Right: 0, Bottom: 0, Height: 28);
+              Background: #ffffff(0.03);
+              Label {
+                Anchor: (Left: 10, Right: 10, Top: 0, Bottom: 0);
+                Style: (FontSize: 11, TextColor: #8a9bae, HorizontalAlignment: Center, VerticalAlignment: Center);
+                Text: "Fight waves of zombies and loot powerful weapons";
+              }
+            }
+
+            TextButton #PurgeButton {
               Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-              Background: #000000(0);
-              Style: ButtonStyle(
+              Text: "";
+              Style: TextButtonStyle(
+                Default: (Background: #ffffff(0.0)),
+                Hovered: (Background: #ffffff(0.06)),
+                Pressed: (Background: #ffffff(0.03)),
                 Sounds: $C.@ButtonSounds,
               );
             }
@@ -133,13 +190,32 @@ $C.@PageOverlay {
           }
 
           Group #RunOrFallCard {
-            Anchor: (Width: 280, Height: 116);
-            Background: (TexturePath: "../Textures/runorfall.png");
+            Anchor: (Width: 280, Height: 144);
+            OutlineColor: #ffffff(0.06);
+            OutlineSize: 1;
 
-            Button #RunOrFallButton {
+            Group {
+              Anchor: (Left: 0, Right: 0, Top: 0, Height: 116);
+              Background: (TexturePath: "../Textures/runorfall.png");
+            }
+
+            Group {
+              Anchor: (Left: 0, Right: 0, Bottom: 0, Height: 28);
+              Background: #ffffff(0.03);
+              Label {
+                Anchor: (Left: 10, Right: 10, Top: 0, Bottom: 0);
+                Style: (FontSize: 11, TextColor: #8a9bae, HorizontalAlignment: Center, VerticalAlignment: Center);
+                Text: "Race against others on crumbling platforms";
+              }
+            }
+
+            TextButton #RunOrFallButton {
               Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-              Background: #000000(0);
-              Style: ButtonStyle(
+              Text: "";
+              Style: TextButtonStyle(
+                Default: (Background: #ffffff(0.0)),
+                Hovered: (Background: #ffffff(0.06)),
+                Pressed: (Background: #ffffff(0.03)),
                 Sounds: $C.@ButtonSounds,
               );
             }
