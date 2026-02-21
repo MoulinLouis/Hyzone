@@ -154,5 +154,30 @@ Group {
         Sounds: $C.@ButtonSounds,
       );
     }
+
+    Group {
+      Anchor: (Width: 16);
+    }
+
+    // NPC Type
+    Label {
+      Anchor: (Width: 32);
+      Style: (FontSize: 12, TextColor: #a78bfa, VerticalAlignment: Center);
+      Text: "NPC";
+    }
+
+    Group {
+      Anchor: (Width: 96, Height: 24);
+      TextButton #NpcTypeButton {
+        Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+        Text: "Zombie";
+        Style: TextButtonStyle(
+          Default: (Background: #1e1541, LabelStyle: (FontSize: 11, TextColor: #c4b5fd, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Hovered: (Background: #2e2060, LabelStyle: (FontSize: 11, TextColor: #ddd6fe, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Pressed: (Background: #160f30, LabelStyle: (FontSize: 11, TextColor: #c4b5fd, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Sounds: $C.@ButtonSounds,
+        );
+      }
+    }
   }
 }
