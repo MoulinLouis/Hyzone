@@ -20,47 +20,30 @@ import io.hyvexa.core.economy.VexaStore;
 import io.hyvexa.purge.data.PurgeSkinDefinition;
 import io.hyvexa.purge.data.PurgeSkinRegistry;
 import io.hyvexa.purge.data.PurgeSkinStore;
-import io.hyvexa.purge.manager.PurgeWeaponConfigManager;
+import io.hyvexa.purge.util.DailyShopRotation;
 
 import javax.annotation.Nonnull;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 public class PurgeSkinShopPage extends InteractiveCustomUIPage<PurgeSkinShopPage.SkinShopEventData> {
 
-    private static final String BUTTON_BACK = "Back";
-    private static final String BUTTON_DEFAULT = "Default";
+    private static final String BUTTON_CLOSE = "Close";
     private static final String BUTTON_CONFIRM = "Confirm";
     private static final String BUTTON_CANCEL = "Cancel";
-    private static final String PREFIX_WEAPON = "Weapon:";
     private static final String PREFIX_BUY = "Buy:";
-    private static final String PREFIX_SELECT = "Select:";
 
-    private static final List<String> ICON_WEAPON_IDS = List.of(
-            "AK47", "Barret50", "ColtRevolver", "DesertEagle", "DoubleBarrel",
-            "Flamethrower", "Glock18", "M4A1s", "MP9", "Mac10", "Thompson"
-    );
-
-    // UI element IDs for preview groups in the entry template (no underscores — UI IDs don't allow them)
     private static final List<String> PREVIEW_IDS = List.of(
             "AK47Default", "AK47Asimov", "AK47Blossom", "AK47CyberpunkNeon", "AK47FrozenVoltage"
     );
 
     private final UUID playerId;
-    private final PurgeWeaponConfigManager weaponConfigManager;
-    // null = show weapon list, non-null = show skins for this weapon
-    private String selectedWeaponId;
     // Pending buy confirmation — stores "weaponId:skinId" while confirm overlay is shown
     private String pendingBuyKey;
 
-    public PurgeSkinShopPage(@Nonnull PlayerRef playerRef, UUID playerId,
-                             PurgeWeaponConfigManager weaponConfigManager,
-                             String preselectedWeaponId) {
+    public PurgeSkinShopPage(@Nonnull PlayerRef playerRef, UUID playerId) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, SkinShopEventData.CODEC);
         this.playerId = playerId;
-        this.weaponConfigManager = weaponConfigManager;
-        this.selectedWeaponId = preselectedWeaponId;
     }
 
     @Override
@@ -74,13 +57,9 @@ public class PurgeSkinShopPage extends InteractiveCustomUIPage<PurgeSkinShopPage
         commandBuilder.set("#VexaBalance.Text", String.valueOf(vexa));
 
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_BACK), false);
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE), false);
 
-        if (selectedWeaponId != null) {
-            buildSkinList(commandBuilder, eventBuilder);
-        } else {
-            buildWeaponGrid(commandBuilder, eventBuilder);
-        }
+        buildDailyShop(commandBuilder, eventBuilder);
     }
 
     @Override
@@ -93,23 +72,8 @@ public class PurgeSkinShopPage extends InteractiveCustomUIPage<PurgeSkinShopPage
             return;
         }
 
-        if (BUTTON_BACK.equals(button)) {
-            if (selectedWeaponId != null) {
-                selectedWeaponId = null;
-                sendRefresh();
-            } else {
-                close();
-            }
-            return;
-        }
-        if (BUTTON_DEFAULT.equals(button)) {
-            handleDefault(ref, store);
-            return;
-        }
-        if (button.startsWith(PREFIX_WEAPON)) {
-            String weaponId = button.substring(PREFIX_WEAPON.length());
-            selectedWeaponId = weaponId;
-            sendRefresh();
+        if (BUTTON_CLOSE.equals(button)) {
+            close();
             return;
         }
         if (BUTTON_CONFIRM.equals(button)) {
@@ -129,16 +93,10 @@ public class PurgeSkinShopPage extends InteractiveCustomUIPage<PurgeSkinShopPage
             String skinKey = button.substring(PREFIX_BUY.length());
             pendingBuyKey = skinKey;
             showConfirmOverlay(skinKey);
-            return;
-        }
-        if (button.startsWith(PREFIX_SELECT)) {
-            String skinKey = button.substring(PREFIX_SELECT.length());
-            handleSelect(ref, store, skinKey);
         }
     }
 
     private void handleBuy(Ref<EntityStore> ref, Store<EntityStore> store, String skinKey) {
-        // skinKey = "weaponId:skinId"
         String[] parts = skinKey.split(":", 2);
         if (parts.length != 2) return;
         String weaponId = parts[0];
@@ -156,34 +114,6 @@ public class PurgeSkinShopPage extends InteractiveCustomUIPage<PurgeSkinShopPage
                 case ALREADY_OWNED -> player.sendMessage(Message.raw("You already own this skin."));
                 case NOT_ENOUGH_VEXA -> player.sendMessage(Message.raw("Not enough Vexa!"));
             }
-        }
-        sendRefresh();
-    }
-
-    private void handleSelect(Ref<EntityStore> ref, Store<EntityStore> store, String skinKey) {
-        String[] parts = skinKey.split(":", 2);
-        if (parts.length != 2) return;
-        String weaponId = parts[0];
-        String skinId = parts[1];
-
-        PurgeSkinStore.getInstance().selectSkin(playerId, weaponId, skinId);
-
-        Player player = store.getComponent(ref, Player.getComponentType());
-        PurgeSkinDefinition def = PurgeSkinRegistry.getSkin(weaponId, skinId);
-        String name = def != null ? def.getDisplayName() : skinId;
-        if (player != null) {
-            player.sendMessage(Message.raw("Selected " + name + " skin."));
-        }
-        sendRefresh();
-    }
-
-    private void handleDefault(Ref<EntityStore> ref, Store<EntityStore> store) {
-        if (selectedWeaponId == null) return;
-        PurgeSkinStore.getInstance().deselectSkin(playerId, selectedWeaponId);
-
-        Player player = store.getComponent(ref, Player.getComponentType());
-        if (player != null) {
-            player.sendMessage(Message.raw("Reverted to default skin."));
         }
         sendRefresh();
     }
@@ -224,135 +154,64 @@ public class PurgeSkinShopPage extends InteractiveCustomUIPage<PurgeSkinShopPage
         commandBuilder.set("#VexaBalance.Text", String.valueOf(vexa));
 
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_BACK), false);
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE), false);
 
-        // Reset visibility
         commandBuilder.set("#ConfirmOverlay.Visible", false);
         commandBuilder.set("#WeaponGrid.Visible", false);
-        commandBuilder.set("#SkinList.Visible", false);
-        commandBuilder.set("#Subtitle.Visible", false);
-        commandBuilder.clear("#WeaponGrid");
         commandBuilder.clear("#SkinList");
 
-        if (selectedWeaponId != null) {
-            buildSkinList(commandBuilder, eventBuilder);
-        } else {
-            buildWeaponGrid(commandBuilder, eventBuilder);
-        }
+        buildDailyShop(commandBuilder, eventBuilder);
 
         this.sendUpdate(commandBuilder, eventBuilder, false);
     }
 
-    private void buildWeaponGrid(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
-        commandBuilder.set("#WeaponGrid.Visible", true);
-        commandBuilder.set("#SkinList.Visible", false);
-        commandBuilder.set("#Subtitle.Visible", false);
-        commandBuilder.set("#Title.Text", "Weapon Skins");
-        commandBuilder.set("#BackButton.Text", "Close");
-
-        List<String> weaponIds = new ArrayList<>(weaponConfigManager.getWeaponIds());
-        weaponIds.sort(String::compareTo);
-
-        int index = 0;
-        for (String weaponId : weaponIds) {
-            if (!PurgeSkinRegistry.hasAnySkins(weaponId)) {
-                continue;
-            }
-
-            String root = "#WeaponGrid[" + index + "]";
-            commandBuilder.append("#WeaponGrid", "Pages/Purge_WeaponSelectEntry.ui");
-
-            // Show weapon icon
-            String normalized = ICON_WEAPON_IDS.contains(weaponId) ? weaponId : "AK47";
-            for (String iconId : ICON_WEAPON_IDS) {
-                commandBuilder.set(root + " #Icon" + iconId + ".Visible", false);
-            }
-            commandBuilder.set(root + " #Icon" + normalized + ".Visible", true);
-
-            // Show weapon name with skin count
-            int skinCount = PurgeSkinRegistry.getSkinsForWeapon(weaponId).size();
-            String displayName = weaponConfigManager.getDisplayName(weaponId);
-            commandBuilder.set(root + " #WeaponName.Visible", true);
-            commandBuilder.set(root + " #WeaponName.Text", displayName + " (" + skinCount + ")");
-
-            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
-                    root + " #SelectButton",
-                    EventData.of(ButtonEventData.KEY_BUTTON, PREFIX_WEAPON + weaponId), false);
-
-            index++;
-        }
-    }
-
-    private void buildSkinList(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
+    private void buildDailyShop(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
         commandBuilder.set("#WeaponGrid.Visible", false);
         commandBuilder.set("#SkinList.Visible", true);
         commandBuilder.set("#Subtitle.Visible", true);
-        commandBuilder.set("#BackButton.Text", "< Back");
+        commandBuilder.set("#Title.Text", "Daily Shop");
+        commandBuilder.set("#BackButton.Text", "Close");
 
-        String displayName = weaponConfigManager.getDisplayName(selectedWeaponId);
-        commandBuilder.set("#Title.Text", displayName + " Skins");
-        commandBuilder.set("#Subtitle.Text", "Choose a skin for your " + displayName);
+        List<PurgeSkinDefinition> rotation = DailyShopRotation.getRotation(playerId);
+
+        if (rotation.isEmpty()) {
+            commandBuilder.set("#Subtitle.Text", "You own all skins!");
+            return;
+        }
+
+        long seconds = DailyShopRotation.getSecondsUntilReset();
+        commandBuilder.set("#Subtitle.Text", "Resets in " + DailyShopRotation.formatTimeRemaining(seconds));
 
         long vexa = VexaStore.getInstance().getVexa(playerId);
-        String currentSelected = PurgeSkinStore.getInstance().getSelectedSkin(playerId, selectedWeaponId);
 
-        // Default skin card (first entry)
-        String defaultRoot = "#SkinList[0]";
-        commandBuilder.append("#SkinList", "Pages/Purge_SkinShopEntry.ui");
-        commandBuilder.set(defaultRoot + " #SkinName.Text", "Default");
-
-        String defaultPreviewKey = selectedWeaponId + "Default";
-        for (String previewId : PREVIEW_IDS) {
-            commandBuilder.set(defaultRoot + " #Prev" + previewId + ".Visible", previewId.equals(defaultPreviewKey));
-        }
-
-        if (currentSelected == null) {
-            commandBuilder.set(defaultRoot + " #EntrySelectedOverlay.Visible", true);
-            commandBuilder.set(defaultRoot + " #SelectedLabel.Visible", true);
-        } else {
-            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
-                    defaultRoot + " #ActionButton",
-                    EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_DEFAULT), false);
-        }
-
-        // Skin entries
-        List<PurgeSkinDefinition> skins = PurgeSkinRegistry.getSkinsForWeapon(selectedWeaponId);
-        for (int i = 0; i < skins.size(); i++) {
-            PurgeSkinDefinition def = skins.get(i);
-            String root = "#SkinList[" + (i + 1) + "]";
+        for (int i = 0; i < rotation.size(); i++) {
+            PurgeSkinDefinition def = rotation.get(i);
+            String root = "#SkinList[" + i + "]";
             commandBuilder.append("#SkinList", "Pages/Purge_SkinShopEntry.ui");
 
             commandBuilder.set(root + " #SkinName.Text", def.getDisplayName());
 
-            // Toggle preview image — hide all, show the matching one
+            // Show weapon badge
+            commandBuilder.set(root + " #WeaponBadge.Visible", true);
+            commandBuilder.set(root + " #WeaponBadge.Text", def.getWeaponId());
+
+            // Toggle preview image
             String previewKey = def.getWeaponId() + def.getSkinId();
             for (String previewId : PREVIEW_IDS) {
                 commandBuilder.set(root + " #Prev" + previewId + ".Visible", previewId.equals(previewKey));
             }
 
-            boolean owned = PurgeSkinStore.getInstance().ownsSkin(playerId, selectedWeaponId, def.getSkinId());
-            boolean selected = def.getSkinId().equals(currentSelected);
-
-            if (!owned) {
-                if (vexa >= def.getPrice()) {
-                    commandBuilder.set(root + " #PriceBuyBadge.Visible", true);
-                    commandBuilder.set(root + " #BuyPriceLabel.Text", String.valueOf(def.getPrice()));
-                    eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
-                            root + " #ActionButton",
-                            EventData.of(ButtonEventData.KEY_BUTTON,
-                                    PREFIX_BUY + selectedWeaponId + ":" + def.getSkinId()), false);
-                } else {
-                    commandBuilder.set(root + " #PriceCantAffordBadge.Visible", true);
-                    commandBuilder.set(root + " #CantAffordPrice.Text", String.valueOf(def.getPrice()));
-                }
-            } else if (selected) {
-                commandBuilder.set(root + " #EntrySelectedOverlay.Visible", true);
-                commandBuilder.set(root + " #SelectedLabel.Visible", true);
-            } else {
+            // Price badge (buy or can't afford)
+            if (vexa >= def.getPrice()) {
+                commandBuilder.set(root + " #PriceBuyBadge.Visible", true);
+                commandBuilder.set(root + " #BuyPriceLabel.Text", String.valueOf(def.getPrice()));
                 eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
                         root + " #ActionButton",
                         EventData.of(ButtonEventData.KEY_BUTTON,
-                                PREFIX_SELECT + selectedWeaponId + ":" + def.getSkinId()), false);
+                                PREFIX_BUY + def.getWeaponId() + ":" + def.getSkinId()), false);
+            } else {
+                commandBuilder.set(root + " #PriceCantAffordBadge.Visible", true);
+                commandBuilder.set(root + " #CantAffordPrice.Text", String.valueOf(def.getPrice()));
             }
         }
     }

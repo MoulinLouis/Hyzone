@@ -211,8 +211,9 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
         if (player == null || playerRef == null) {
             return;
         }
+        String displayName = weaponConfigManager.getDisplayName(selectedWeaponId);
         player.getPageManager().openCustomPage(ref, store,
-                new PurgeSkinShopPage(playerRef, playerId, weaponConfigManager, selectedWeaponId));
+                new PurgeSkinSelectPage(playerRef, playerId, selectedWeaponId, displayName));
     }
 
     private void handleCloseDetail() {

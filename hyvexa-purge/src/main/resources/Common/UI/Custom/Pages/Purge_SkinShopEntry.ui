@@ -65,6 +65,15 @@ Group {
     HitTestVisible: false;
   }
 
+  // Weapon badge (top left, for daily shop mixed-weapon view)
+  Label #WeaponBadge {
+    Anchor: (Left: 6, Top: 4, Width: 80, Height: 18);
+    Style: (FontSize: 11, TextColor: #8b9bb0, RenderBold: true, VerticalAlignment: Center);
+    Text: "";
+    Visible: false;
+    HitTestVisible: false;
+  }
+
   // Selected label (top right)
   Label #SelectedLabel {
     Anchor: (Right: 6, Top: 4, Width: 80, Height: 20);
