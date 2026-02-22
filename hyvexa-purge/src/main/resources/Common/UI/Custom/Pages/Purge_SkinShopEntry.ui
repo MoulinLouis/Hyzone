@@ -1,122 +1,97 @@
 $C = "../Common.ui";
 
 Group {
-  Anchor: (Left: 0, Right: 0, Height: 112, Top: 8);
+  Anchor: (Width: 270, Height: 148, Top: 8, Left: 8);
   LayoutMode: Full;
-  Background: #0d1a2e;
   OutlineColor: #ffffff(0.06);
   OutlineSize: 1;
 
-  // Preview image area (left side) — one group per skin, toggled from Java
+  // Preview image with gap
   Group #PreviewImage {
-    Anchor: (Left: 6, Top: 6, Width: 222, Height: 98);
+    Anchor: (Left: 10, Right: 10, Top: 18, Bottom: 18);
     LayoutMode: Full;
-    Background: #182941;
-    OutlineColor: #ffffff(0.08);
-    OutlineSize: 1;
+    Background: #07101b;
 
+    Group #PrevAK47Default { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/AK47_Preview.png"); Visible: false; }
     Group #PrevAK47Asimov { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/AK47_Asimov_Preview.png"); Visible: false; }
     Group #PrevAK47Blossom { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/AK47_Blossom_Preview.png"); Visible: false; }
     Group #PrevAK47CyberpunkNeon { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/AK47_CyberpunkNeon_Preview.png"); Visible: false; }
     Group #PrevAK47FrozenVoltage { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/AK47_FrozenVoltage_Preview.png"); Visible: false; }
   }
 
-  // Skin name (right of preview, top)
+  // Price - buyable (top right, green)
+  Group #PriceBuyBadge {
+    Anchor: (Right: 2, Top: 10, Width: 70, Height: 20);
+    LayoutMode: Left;
+    Visible: false;
+    HitTestVisible: false;
+
+    Group {
+      Anchor: (Width: 16, Height: 16, Top: 2);
+      Background: (TexturePath: "../Textures/vexa.png");
+    }
+    Group { Anchor: (Width: 4); }
+    Label #BuyPriceLabel {
+      Anchor: (Height: 20);
+      Style: (FontSize: 15, TextColor: #22c55e, RenderBold: true, VerticalAlignment: Center);
+      Text: "100";
+    }
+  }
+
+  // Price - can't afford (top right, red)
+  Group #PriceCantAffordBadge {
+    Anchor: (Right: 2, Top: 10, Width: 70, Height: 20);
+    LayoutMode: Left;
+    Visible: false;
+    HitTestVisible: false;
+
+    Group {
+      Anchor: (Width: 16, Height: 16, Top: 2);
+      Background: (TexturePath: "../Textures/vexa.png");
+    }
+    Group { Anchor: (Width: 4); }
+    Label #CantAffordPrice {
+      Anchor: (Height: 20);
+      Style: (FontSize: 15, TextColor: #ef4444, RenderBold: true, VerticalAlignment: Center);
+      Text: "100";
+    }
+  }
+
+  // Skin name (bottom left)
   Label #SkinName {
-    Anchor: (Left: 240, Top: 14, Right: 12, Height: 22);
-    Style: (FontSize: 17, TextColor: #f4f9ff, RenderBold: true);
-    Text: "Skin Name";
-  }
-
-  // Price label (right of preview, below name)
-  Label #SkinPrice {
-    Anchor: (Left: 240, Top: 40, Width: 100, Height: 18);
-    Style: (FontSize: 13, TextColor: #6b7c8a);
+    Anchor: (Left: 14, Bottom: 8, Width: 200, Height: 22);
+    Style: (FontSize: 16, TextColor: #cfd7dc, RenderBold: true, VerticalAlignment: Center);
     Text: "";
+    HitTestVisible: false;
   }
 
-  // Buy button (shown when not owned, enough vexa)
-  Group #BuyGroup {
-    Anchor: (Right: 12, Bottom: 12, Width: 110, Height: 32);
-    Visible: false;
-
-    TextButton #BuyButton {
-      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-      Text: "Buy";
-      Style: TextButtonStyle(
-        Default: (
-          Background: #22c55e(0.2),
-          LabelStyle: (FontSize: 14, TextColor: #22c55e, HorizontalAlignment: Center, VerticalAlignment: Center, RenderBold: true)
-        ),
-        Hovered: (
-          Background: #22c55e(0.35),
-          LabelStyle: (FontSize: 14, TextColor: #4ade80, HorizontalAlignment: Center, VerticalAlignment: Center, RenderBold: true)
-        ),
-        Pressed: (
-          Background: #22c55e(0.15),
-          LabelStyle: (FontSize: 14, TextColor: #22c55e, HorizontalAlignment: Center, VerticalAlignment: Center, RenderBold: true)
-        ),
-        Sounds: $C.@ButtonSounds,
-      );
-    }
-  }
-
-  // Cannot afford label (shown when not owned, not enough vexa)
-  Group #CantAffordGroup {
-    Anchor: (Right: 12, Bottom: 12, Width: 130, Height: 32);
-    Visible: false;
-
-    Label #CantAffordLabel {
-      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-      Style: (FontSize: 12, TextColor: #ef4444, HorizontalAlignment: Center, VerticalAlignment: Center, RenderBold: true);
-      Text: "NOT ENOUGH VEXA";
-    }
-  }
-
-  // Select button (shown when owned, not selected)
-  Group #SelectGroup {
-    Anchor: (Right: 12, Bottom: 12, Width: 110, Height: 32);
-    Visible: false;
-
-    TextButton #SelectButton {
-      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-      Text: "Select";
-      Style: TextButtonStyle(
-        Default: (
-          Background: #6366f1(0.2),
-          LabelStyle: (FontSize: 14, TextColor: #a5b4fc, HorizontalAlignment: Center, VerticalAlignment: Center, RenderBold: true)
-        ),
-        Hovered: (
-          Background: #6366f1(0.35),
-          LabelStyle: (FontSize: 14, TextColor: #c7d2fe, HorizontalAlignment: Center, VerticalAlignment: Center, RenderBold: true)
-        ),
-        Pressed: (
-          Background: #6366f1(0.15),
-          LabelStyle: (FontSize: 14, TextColor: #a5b4fc, HorizontalAlignment: Center, VerticalAlignment: Center, RenderBold: true)
-        ),
-        Sounds: $C.@ButtonSounds,
-      );
-    }
-  }
-
-  // Selected indicator (shown when owned and selected)
-  Group #SelectedGroup {
-    Anchor: (Right: 12, Bottom: 12, Width: 110, Height: 32);
-    Visible: false;
-
-    Label #SelectedLabel {
-      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-      Style: (FontSize: 13, TextColor: #fbbf24, HorizontalAlignment: Center, VerticalAlignment: Center, RenderBold: true);
-      Text: "SELECTED";
-    }
-  }
-
-  // Selection highlight outline
+  // Selected overlay (amber border)
   Group #EntrySelectedOverlay {
     Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
     OutlineColor: #fbbf24;
     OutlineSize: 2;
     Visible: false;
     HitTestVisible: false;
+  }
+
+  // Clickable overlay with hover
+  TextButton #ActionButton {
+    Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+    Text: "";
+    Style: TextButtonStyle(
+      Default: (
+        Background: #000000(0.01),
+        LabelStyle: (FontSize: 1, TextColor: #000000(0.01), HorizontalAlignment: Center, VerticalAlignment: Center)
+      ),
+      Hovered: (
+        Background: #ffffff(0.08),
+        LabelStyle: (FontSize: 1, TextColor: #000000(0.01), HorizontalAlignment: Center, VerticalAlignment: Center)
+      ),
+      Pressed: (
+        Background: #ffffff(0.03),
+        LabelStyle: (FontSize: 1, TextColor: #000000(0.01), HorizontalAlignment: Center, VerticalAlignment: Center)
+      ),
+      Sounds: $C.@ButtonSounds,
+    );
   }
 }
