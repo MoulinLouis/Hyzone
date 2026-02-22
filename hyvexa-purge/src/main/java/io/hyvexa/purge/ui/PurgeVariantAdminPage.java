@@ -32,7 +32,7 @@ public class PurgeVariantAdminPage extends InteractiveCustomUIPage<PurgeVariantA
     private static final String BUTTON_DELETE_PREFIX = "Delete:";
     private static final String BUTTON_ADJUST_PREFIX = "Adjust:";
     private static final String BUTTON_NPC_TYPE_PREFIX = "NpcType:";
-    private static final String[] NPC_TYPES = {"Zombie", "Zombie_Burnt", "Zombie_Frost", "Zombie_Sand"};
+    private static final String[] NPC_TYPES = {"Zombie", "Zombie_Burnt", "Zombie_Frost", "Zombie_Sand", "Zombie_Aberrant"};
 
     private final PurgeVariantConfigManager variantConfigManager;
     private final PurgeWaveConfigManager waveConfigManager;

@@ -369,12 +369,17 @@ public class PurgeWaveManager {
                 int healthIndex = DefaultEntityStatTypes.getHealth();
                 boolean modified = false;
 
-                // Apply variant base HP (adjust from vanilla 49 to variant's baseHealth)
-                if (variant.baseHealth() != VANILLA_ZOMBIE_HP) {
-                    float hpRatio = (float) variant.baseHealth() / VANILLA_ZOMBIE_HP;
+                // Force absolute variant HP regardless of NPC archetype base HP (e.g., Zombie_Aberrant).
+                EntityStatValue currentHealth = statMap.get(healthIndex);
+                float currentMaxHp = currentHealth != null ? currentHealth.getMax() : VANILLA_ZOMBIE_HP;
+                if (currentMaxHp <= 0f) {
+                    currentMaxHp = VANILLA_ZOMBIE_HP;
+                }
+                float variantHpDelta = variant.baseHealth() - currentMaxHp;
+                if (Math.abs(variantHpDelta) > 0.01f) {
                     statMap.putModifier(healthIndex, PURGE_VARIANT_HP_MODIFIER,
                             new StaticModifier(Modifier.ModifierTarget.MAX,
-                                    StaticModifier.CalculationType.MULTIPLICATIVE, hpRatio));
+                                    StaticModifier.CalculationType.ADDITIVE, variantHpDelta));
                     modified = true;
                 }
 
@@ -537,10 +542,25 @@ public class PurgeWaveManager {
         session.setWaveTick(task);
     }
 
-    private void checkZombieDeaths(PurgeSession session) {
+    private void checkZombieDeaths(PurgeSession session, Store<EntityStore> store) {
         List<Ref<EntityStore>> dead = null;
+        int healthIndex = DefaultEntityStatTypes.getHealth();
         for (Ref<EntityStore> ref : session.getAliveZombies()) {
-            if (ref == null || !ref.isValid()) {
+            boolean isDead = ref == null || !ref.isValid();
+            if (!isDead) {
+                try {
+                    EntityStatMap statMap = store.getComponent(ref, EntityStatMap.getComponentType());
+                    if (statMap != null) {
+                        EntityStatValue health = statMap.get(healthIndex);
+                        if (health != null && health.get() <= 0f) {
+                            isDead = true;
+                        }
+                    }
+                } catch (Exception e) {
+                    LOGGER.atFine().log("Failed to read zombie health for death check: " + e.getMessage());
+                }
+            }
+            if (isDead) {
                 if (dead == null) {
                     dead = new ArrayList<>();
                 }
@@ -551,6 +571,16 @@ public class PurgeWaveManager {
             return;
         }
         for (Ref<EntityStore> deadRef : dead) {
+            if (deadRef != null && deadRef.isValid()) {
+                try {
+                    Nameplate nameplate = store.getComponent(deadRef, Nameplate.getComponentType());
+                    if (nameplate != null) {
+                        nameplate.setText("");
+                    }
+                } catch (Exception e) {
+                    LOGGER.atFine().log("Failed to clear dead zombie nameplate: " + e.getMessage());
+                }
+            }
             session.removeAliveZombie(deadRef);
         }
         // Shared kills: all alive connected players get +1 per zombie death
@@ -571,8 +601,8 @@ public class PurgeWaveManager {
                             if (pRef != null && pRef.isValid()) {
                                 world.execute(() -> {
                                     try {
-                                        Store<EntityStore> store = pRef.getStore();
-                                        Player player = store.getComponent(pRef, Player.getComponentType());
+                                        Store<EntityStore> playerStore = pRef.getStore();
+                                        Player player = playerStore.getComponent(pRef, Player.getComponentType());
                                         if (player != null) {
                                             plugin.grantLootbox(player, 1);
                                         }
@@ -602,7 +632,7 @@ public class PurgeWaveManager {
                 if (store == null) {
                     return;
                 }
-                checkZombieDeaths(session);
+                checkZombieDeaths(session, store);
                 updateZombieNameplates(session, store);
                 updatePlayerHealthHud(session, store, world);
 
@@ -662,7 +692,13 @@ public class PurgeWaveManager {
                     if (health != null) {
                         int current = Math.round(health.get());
                         int max = Math.round(health.getMax());
-                        nameplate.setText(current + " / " + max);
+                        if (current <= 0) {
+                            nameplate.setText("");
+                        } else {
+                            nameplate.setText(current + " / " + max);
+                        }
+                    } else {
+                        nameplate.setText("");
                     }
                 }
             } catch (Exception e) {
