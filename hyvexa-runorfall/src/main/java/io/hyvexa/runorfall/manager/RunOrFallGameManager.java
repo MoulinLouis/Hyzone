@@ -52,6 +52,7 @@ public class RunOrFallGameManager {
     private final Map<BlockKey, Integer> removedBlocks = new ConcurrentHashMap<>();
     private final Map<UUID, BlockKey> playerLastFootBlock = new ConcurrentHashMap<>();
     private final Map<UUID, Long> roundStartTimesMs = new ConcurrentHashMap<>();
+    private final Map<UUID, Integer> brokenBlocksByPlayer = new ConcurrentHashMap<>();
     private final Map<String, Integer> blockItemIdCache = new ConcurrentHashMap<>();
 
     private volatile GameState state = GameState.IDLE;
@@ -87,6 +88,17 @@ public class RunOrFallGameManager {
         return configStore.getBlinkDistanceBlocks();
     }
 
+    public synchronized int getBrokenBlocksCount(UUID playerId) {
+        if (playerId == null) {
+            return 0;
+        }
+        Integer count = brokenBlocksByPlayer.get(playerId);
+        if (count == null) {
+            return 0;
+        }
+        return Math.max(0, count);
+    }
+
     public synchronized String statusLine() {
         return "state=" + state.name()
                 + ", map=" + configStore.getSelectedMapId()
@@ -113,18 +125,24 @@ public class RunOrFallGameManager {
                     sendToPlayer(playerId, "You are already in the current round.");
                     return;
                 }
+                ensureBrokenBlocksEntry(playerId);
                 teleportPlayerToLobby(playerId);
                 refreshPlayerHotbar(playerId);
+                updateBrokenBlocksHudForPlayer(playerId);
                 sendToPlayer(playerId, "Round already running. You are spectating from the lobby.");
                 return;
             }
             sendToPlayer(playerId, "You are already in the RunOrFall lobby.");
+            ensureBrokenBlocksEntry(playerId);
+            updateBrokenBlocksHudForPlayer(playerId);
             return;
         }
+        ensureBrokenBlocksEntry(playerId);
         sendToPlayer(playerId, "Joined the RunOrFall lobby.");
         teleportPlayerToLobby(playerId);
         refreshPlayerHotbar(playerId);
         updateCountdownHudForPlayer(playerId);
+        updateBrokenBlocksHudForPlayer(playerId);
         if (state == GameState.RUNNING) {
             sendToPlayer(playerId, "Round already running. You are spectating from the lobby.");
         }
@@ -143,6 +161,7 @@ public class RunOrFallGameManager {
         boolean wasInLobby = lobbyPlayers.remove(playerId);
         boolean wasAlive = alivePlayers.remove(playerId);
         playerLastFootBlock.remove(playerId);
+        brokenBlocksByPlayer.remove(playerId);
         long survivedMs = takeSurvivedMs(playerId);
         if (!wasInLobby && !wasAlive) {
             return;
@@ -152,6 +171,7 @@ public class RunOrFallGameManager {
             teleportPlayerToWorldSpawn(playerId);
         }
         updateCountdownHudForPlayer(playerId, null);
+        updateBrokenBlocksHudForPlayer(playerId, 0);
         if (state == GameState.COUNTDOWN && lobbyPlayers.size() < countdownRequiredPlayers) {
             cancelCountdownInternal("Countdown cancelled: not enough players.");
         }
@@ -227,6 +247,7 @@ public class RunOrFallGameManager {
         pendingBlocks.clear();
         playerLastFootBlock.clear();
         roundStartTimesMs.clear();
+        brokenBlocksByPlayer.clear();
         clearCountdownHudForLobbyPlayers();
         lobbyPlayers.clear();
         activeWorld = null;
@@ -239,6 +260,7 @@ public class RunOrFallGameManager {
         boolean wasInLobby = lobbyPlayers.remove(playerId);
         boolean wasAlive = alivePlayers.remove(playerId);
         playerLastFootBlock.remove(playerId);
+        brokenBlocksByPlayer.remove(playerId);
         long survivedMs = takeSurvivedMs(playerId);
         if (!wasInLobby && !wasAlive) {
             return;
@@ -252,6 +274,7 @@ public class RunOrFallGameManager {
             checkWinnerInternal();
         }
         updateCountdownHudForPlayer(playerId, null);
+        updateBrokenBlocksHudForPlayer(playerId, 0);
         if (lobbyPlayers.isEmpty()) {
             activeWorld = null;
         }
@@ -378,6 +401,8 @@ public class RunOrFallGameManager {
             return;
         }
 
+        resetBrokenBlocksForLobbyPlayers();
+
         alivePlayers.clear();
         alivePlayers.addAll(onlinePlayers);
         long roundStartMs = System.currentTimeMillis();
@@ -402,6 +427,7 @@ public class RunOrFallGameManager {
         blockBreakCountdownLastAnnounced = (int) Math.ceil(START_BLOCK_BREAK_GRACE_MS / 1000.0d);
         for (UUID onlinePlayerId : onlinePlayers) {
             refreshPlayerHotbar(onlinePlayerId);
+            updateBrokenBlocksHudForPlayer(onlinePlayerId, 0);
         }
         gameTickTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleAtFixedRate(
                 () -> dispatchToWorld(this::tickGameInternal),
@@ -510,6 +536,7 @@ public class RunOrFallGameManager {
         playerLastFootBlock.remove(playerId);
         teleportPlayerToLobby(playerId);
         refreshPlayerHotbar(playerId);
+        updateBrokenBlocksHudForPlayer(playerId);
         sendToPlayer(playerId, "Eliminated: " + reason + ". You are now spectating from the lobby.");
         broadcastEliminationInternal(playerId, reason);
     }
@@ -530,6 +557,7 @@ public class RunOrFallGameManager {
         blockBreakEnabledAtMs = 0L;
         blockBreakCountdownLastAnnounced = -1;
         clearCountdownHudForLobbyPlayers();
+        resetBrokenBlocksForLobbyPlayers();
         refreshLobbyHotbars();
         broadcastLobby(reason);
         startAutoCountdownIfPossible();
@@ -546,6 +574,7 @@ public class RunOrFallGameManager {
         blockBreakEnabledAtMs = 0L;
         blockBreakCountdownLastAnnounced = -1;
         clearCountdownHudForLobbyPlayers();
+        resetBrokenBlocksForLobbyPlayers();
         broadcastLobby(reason);
     }
 
@@ -562,7 +591,7 @@ public class RunOrFallGameManager {
         broadcastLobby("Blocks breaking in " + remainingSeconds + "...");
     }
 
-    private boolean queueBlockRemovalInternal(int x, int y, int z, double delaySeconds) {
+    private boolean queueBlockRemovalInternal(UUID playerId, int x, int y, int z, double delaySeconds) {
         BlockKey key = new BlockKey(x, y, z);
         if (removedBlocks.containsKey(key) || pendingBlocks.containsKey(key)) {
             return false;
@@ -577,7 +606,7 @@ public class RunOrFallGameManager {
         }
         long delayMs = Math.max(0L, Math.round(delaySeconds * 1000.0d));
         long dueAtMs = System.currentTimeMillis() + delayMs;
-        pendingBlocks.put(key, new PendingBlock(currentId, dueAtMs));
+        pendingBlocks.put(key, new PendingBlock(currentId, dueAtMs, playerId));
         return true;
     }
 
@@ -607,6 +636,7 @@ public class RunOrFallGameManager {
             if (writeBlockId(world, key.x, key.y, key.z, airBlockId)) {
                 removedBlocks.put(key, pending.originalBlockId);
                 pendingBlocks.remove(key);
+                incrementBrokenBlocksCountInternal(pending.playerId);
             }
         }
     }
@@ -670,7 +700,7 @@ public class RunOrFallGameManager {
         if (pendingBlocks.containsKey(closestKey)) {
             return;
         }
-        queueBlockRemovalInternal(closestKey.x, closestKey.y, closestKey.z, delaySeconds);
+        queueBlockRemovalInternal(playerId, closestKey.x, closestKey.y, closestKey.z, delaySeconds);
     }
 
     private void restoreAllBlocksInternal() {
@@ -680,6 +710,7 @@ public class RunOrFallGameManager {
             removedBlocks.clear();
             playerLastFootBlock.clear();
             roundStartTimesMs.clear();
+            brokenBlocksByPlayer.clear();
             return;
         }
         for (Map.Entry<BlockKey, Integer> entry : removedBlocks.entrySet()) {
@@ -694,6 +725,7 @@ public class RunOrFallGameManager {
         removedBlocks.clear();
         playerLastFootBlock.clear();
         roundStartTimesMs.clear();
+        brokenBlocksByPlayer.clear();
     }
 
     private long takeSurvivedMs(UUID playerId) {
@@ -932,6 +964,29 @@ public class RunOrFallGameManager {
         plugin.refreshRunOrFallHotbar(playerId);
     }
 
+    private void ensureBrokenBlocksEntry(UUID playerId) {
+        if (playerId == null) {
+            return;
+        }
+        brokenBlocksByPlayer.putIfAbsent(playerId, 0);
+    }
+
+    private void resetBrokenBlocksForLobbyPlayers() {
+        for (UUID playerId : new ArrayList<>(lobbyPlayers)) {
+            brokenBlocksByPlayer.put(playerId, 0);
+            updateBrokenBlocksHudForPlayer(playerId, 0);
+        }
+    }
+
+    private void incrementBrokenBlocksCountInternal(UUID playerId) {
+        if (playerId == null) {
+            return;
+        }
+        int nextCount = Math.max(0, brokenBlocksByPlayer.getOrDefault(playerId, 0)) + 1;
+        brokenBlocksByPlayer.put(playerId, nextCount);
+        updateBrokenBlocksHudForPlayer(playerId, nextCount);
+    }
+
     private void updateCountdownHudForLobbyPlayers() {
         String countdownText = buildCountdownHudText();
         for (UUID playerId : new ArrayList<>(lobbyPlayers)) {
@@ -958,6 +1013,21 @@ public class RunOrFallGameManager {
             return;
         }
         plugin.updateCountdownHud(playerId, countdownText);
+    }
+
+    private void updateBrokenBlocksHudForPlayer(UUID playerId) {
+        updateBrokenBlocksHudForPlayer(playerId, getBrokenBlocksCount(playerId));
+    }
+
+    private void updateBrokenBlocksHudForPlayer(UUID playerId, int brokenBlocks) {
+        if (playerId == null) {
+            return;
+        }
+        HyvexaRunOrFallPlugin plugin = HyvexaRunOrFallPlugin.getInstance();
+        if (plugin == null) {
+            return;
+        }
+        plugin.updateBrokenBlocksHud(playerId, Math.max(0, brokenBlocks));
     }
 
     private String buildCountdownHudText() {
@@ -998,10 +1068,12 @@ public class RunOrFallGameManager {
     private static final class PendingBlock {
         private final int originalBlockId;
         private final long dueAtMs;
+        private final UUID playerId;
 
-        private PendingBlock(int originalBlockId, long dueAtMs) {
+        private PendingBlock(int originalBlockId, long dueAtMs, UUID playerId) {
             this.originalBlockId = originalBlockId;
             this.dueAtMs = dueAtMs;
+            this.playerId = playerId;
         }
     }
 
@@ -1043,4 +1115,3 @@ public class RunOrFallGameManager {
         }
     }
 }
-

@@ -9,6 +9,8 @@ public class RunOrFallHud extends CustomUIHud {
 
     private int lastPlayerCount = -1;
     private long lastVexa = -1;
+    private int lastBrokenBlocks = -1;
+    private Boolean lastBrokenBlocksVisible = null;
     private String lastCountdownText = null;
     private Boolean lastCountdownVisible = null;
 
@@ -53,6 +55,19 @@ public class RunOrFallHud extends CustomUIHud {
         UICommandBuilder commandBuilder = new UICommandBuilder();
         commandBuilder.set("#StartingInText.Visible", visible);
         commandBuilder.set("#StartingInText.Text", safeText);
+        update(false, commandBuilder);
+    }
+
+    public void updateBrokenBlocks(int brokenBlocks, boolean visible) {
+        int safeValue = Math.max(0, brokenBlocks);
+        if (safeValue == lastBrokenBlocks && Boolean.valueOf(visible).equals(lastBrokenBlocksVisible)) {
+            return;
+        }
+        lastBrokenBlocks = safeValue;
+        lastBrokenBlocksVisible = visible;
+        UICommandBuilder commandBuilder = new UICommandBuilder();
+        commandBuilder.set("#BrokenBlocksText.Visible", visible);
+        commandBuilder.set("#BrokenBlocksText.Text", "Blocks broken: " + String.format("%,d", safeValue));
         update(false, commandBuilder);
     }
 }
