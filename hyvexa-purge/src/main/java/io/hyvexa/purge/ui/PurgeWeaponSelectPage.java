@@ -16,6 +16,8 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.ui.ButtonEventData;
+import io.hyvexa.purge.data.PurgeSkinRegistry;
+import io.hyvexa.purge.data.PurgeSkinStore;
 import io.hyvexa.purge.data.PurgeWeaponUpgradeStore;
 import io.hyvexa.purge.manager.PurgeInstanceManager;
 import io.hyvexa.purge.manager.PurgeVariantConfigManager;
@@ -38,6 +40,7 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
     private static final String BUTTON_CLOSE_DETAIL = "CloseDetail";
     private static final String BUTTON_UPGRADE = "Upgrade";
     private static final String BUTTON_PURCHASE = "Purchase";
+    private static final String BUTTON_SKINS = "Skins";
     private static final List<String> ICON_WEAPON_IDS = List.of(
             "AK47",
             "Barret50",
@@ -135,6 +138,10 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
         }
         if (BUTTON_PURCHASE.equals(button)) {
             handlePurchase(ref, store);
+            return;
+        }
+        if (BUTTON_SKINS.equals(button)) {
+            handleOpenSkins(ref, store);
         }
     }
 
@@ -193,6 +200,19 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
             }
             sendRefresh();
         }
+    }
+
+    private void handleOpenSkins(Ref<EntityStore> ref, Store<EntityStore> store) {
+        if (selectedWeaponId == null) {
+            return;
+        }
+        Player player = store.getComponent(ref, Player.getComponentType());
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        if (player == null || playerRef == null) {
+            return;
+        }
+        player.getPageManager().openCustomPage(ref, store,
+                new PurgeSkinShopPage(playerRef, playerId, weaponConfigManager, selectedWeaponId));
     }
 
     private void handleCloseDetail() {
@@ -311,6 +331,17 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
             commandBuilder.set("#DetailStatus.Style.TextColor", "#9eb7d4");
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#UpgradeButton",
                     EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_UPGRADE), false);
+        }
+
+        // Skins button — only shown if weapon has skins available
+        boolean hasSkins = PurgeSkinRegistry.hasAnySkins(selectedWeaponId);
+        commandBuilder.set("#SkinsButton.Visible", hasSkins);
+        if (hasSkins) {
+            String selectedSkin = PurgeSkinStore.getInstance().getSelectedSkin(playerId, selectedWeaponId);
+            String skinLabel = selectedSkin != null ? "Skin: " + selectedSkin : "Skins";
+            commandBuilder.set("#SkinsButton.Text", skinLabel);
+            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SkinsButton",
+                    EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_SKINS), false);
         }
     }
 

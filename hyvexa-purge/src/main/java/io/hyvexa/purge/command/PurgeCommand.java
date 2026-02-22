@@ -27,6 +27,7 @@ import io.hyvexa.purge.manager.PurgeVariantConfigManager;
 import io.hyvexa.purge.manager.PurgeWaveConfigManager;
 import io.hyvexa.purge.manager.PurgeWeaponConfigManager;
 import io.hyvexa.purge.ui.PurgeAdminIndexPage;
+import io.hyvexa.purge.ui.PurgeSkinShopPage;
 import io.hyvexa.purge.ui.PurgeWeaponSelectPage;
 import io.hyvexa.purge.util.PurgePlayerNameResolver;
 
@@ -93,7 +94,7 @@ public class PurgeCommand extends AbstractAsyncCommand {
                                Store<EntityStore> store, World world) {
         String[] args = CommandUtils.getArgs(ctx);
         if (args.length == 0) {
-            player.sendMessage(Message.raw("Usage: /purge <start|stop|stats|party|upgrade|loadout|shop|scrap|admin>"));
+            player.sendMessage(Message.raw("Usage: /purge <start|stop|stats|party|upgrade|loadout|shop|skins|scrap|admin>"));
             return;
         }
 
@@ -113,9 +114,10 @@ public class PurgeCommand extends AbstractAsyncCommand {
             case "upgrade" -> handleUpgrade(player, ref, store, playerId, args);
             case "loadout" -> handleLoadout(player, ref, store, playerId);
             case "shop" -> handleShop(player, ref, store, playerId);
+            case "skins" -> handleSkins(player, ref, store, playerId);
             case "admin" -> openAdminMenu(player, ref, store);
             case "scrap" -> handleScrap(player, playerId, args);
-            default -> player.sendMessage(Message.raw("Usage: /purge <start|stop|stats|party|upgrade|loadout|shop|scrap|admin>"));
+            default -> player.sendMessage(Message.raw("Usage: /purge <start|stop|stats|party|upgrade|loadout|shop|skins|scrap|admin>"));
         }
     }
 
@@ -211,6 +213,15 @@ public class PurgeCommand extends AbstractAsyncCommand {
         player.getPageManager().openCustomPage(ref, store,
                 new PurgeWeaponSelectPage(playerRef, PurgeWeaponSelectPage.Mode.SHOP, playerId,
                         weaponConfigManager, null, null, null));
+    }
+
+    private void handleSkins(Player player, Ref<EntityStore> ref, Store<EntityStore> store, UUID playerId) {
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        if (playerRef == null) {
+            return;
+        }
+        player.getPageManager().openCustomPage(ref, store,
+                new PurgeSkinShopPage(playerRef, playerId, weaponConfigManager, null));
     }
 
     private void handleScrap(Player player, UUID callerPlayerId, String[] args) {
