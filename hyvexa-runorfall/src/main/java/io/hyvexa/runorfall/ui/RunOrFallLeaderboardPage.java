@@ -25,6 +25,13 @@ import java.util.Locale;
 
 public class RunOrFallLeaderboardPage extends InteractiveCustomUIPage<RunOrFallLeaderboardPage.LeaderboardData> {
 
+    private static final String COLOR_STATS_WINS = "#34d399";
+    private static final String COLOR_STATS_LOSSES = "#f87171";
+    private static final String COLOR_STATS_WINRATE = "#60a5fa";
+    private static final String COLOR_STATS_BEST_STREAK = "#fbbf24";
+    private static final String COLOR_STATS_LONGEST_TIME = "#c084fc";
+    private static final String COLOR_STATS_DEFAULT = "#9fb0ba";
+
     private static final String BUTTON_CLOSE = "Close";
     private static final String BUTTON_PREV = "PrevPage";
     private static final String BUTTON_NEXT = "NextPage";
@@ -160,10 +167,24 @@ public class RunOrFallLeaderboardPage extends InteractiveCustomUIPage<RunOrFallL
         for (int i = slice.startIndex; i < slice.endIndex; i++) {
             LeaderboardRow row = filtered.get(i);
             commandBuilder.append("#LeaderboardCards", "Pages/RunOrFall_LeaderboardEntry.ui");
-            commandBuilder.set("#LeaderboardCards[" + index + "] #Rank.Text", String.valueOf(row.rank));
-            commandBuilder.set("#LeaderboardCards[" + index + "] #PlayerName.Text", row.name);
-            commandBuilder.set("#LeaderboardCards[" + index + "] #Stats.Text",
-                    selectedCategory.formatStats(row));
+            String prefix = "#LeaderboardCards[" + index + "]";
+            commandBuilder.set(prefix + " #Rank.Text", String.valueOf(row.rank));
+            commandBuilder.set(prefix + " #PlayerName.Text", row.name);
+            boolean totalWinsCategory = selectedCategory == LeaderboardCategory.TOTAL_WINS;
+            commandBuilder.set(prefix + " #StatsGeneric.Visible", !totalWinsCategory);
+            commandBuilder.set(prefix + " #StatsTotalWins.Visible", totalWinsCategory);
+            if (totalWinsCategory) {
+                commandBuilder.set(prefix + " #StatsWins.Text", row.wins() + "W");
+                commandBuilder.set(prefix + " #StatsLosses.Text", row.losses() + "L");
+                commandBuilder.set(prefix + " #StatsWinrate.Text",
+                        String.format(Locale.US, "%.2f%%", row.winRatePercent()));
+                commandBuilder.set(prefix + " #StatsWins.Style.TextColor", COLOR_STATS_WINS);
+                commandBuilder.set(prefix + " #StatsLosses.Style.TextColor", COLOR_STATS_LOSSES);
+                commandBuilder.set(prefix + " #StatsWinrate.Style.TextColor", COLOR_STATS_WINRATE);
+            } else {
+                commandBuilder.set(prefix + " #StatsGeneric.Text", selectedCategory.formatStats(row));
+                commandBuilder.set(prefix + " #StatsGeneric.Style.TextColor", selectedCategory.genericTextColor());
+            }
             index++;
         }
         commandBuilder.set("#PageLabel.Text", slice.getLabel());
@@ -203,6 +224,11 @@ public class RunOrFallLeaderboardPage extends InteractiveCustomUIPage<RunOrFallL
                 return row.wins() + "W  " + row.losses() + "L  "
                         + String.format(Locale.US, "%.2f%%", row.winRatePercent());
             }
+
+            @Override
+            String genericTextColor() {
+                return COLOR_STATS_DEFAULT;
+            }
         },
         BEST_WIN_STREAK(BUTTON_CATEGORY_BEST_STREAK, "Ranked by best win streak.") {
             @Override
@@ -216,7 +242,12 @@ public class RunOrFallLeaderboardPage extends InteractiveCustomUIPage<RunOrFallL
 
             @Override
             String formatStats(LeaderboardRow row) {
-                return "Streak " + row.bestWinStreak();
+                return String.valueOf(row.bestWinStreak());
+            }
+
+            @Override
+            String genericTextColor() {
+                return COLOR_STATS_BEST_STREAK;
             }
         },
         LONGEST_TIME_SURVIVED(BUTTON_CATEGORY_LONGEST_SURVIVED, "Ranked by longest time alive.") {
@@ -232,6 +263,11 @@ public class RunOrFallLeaderboardPage extends InteractiveCustomUIPage<RunOrFallL
             String formatStats(LeaderboardRow row) {
                 return formatDuration(row.longestSurvivedMs());
             }
+
+            @Override
+            String genericTextColor() {
+                return COLOR_STATS_LONGEST_TIME;
+            }
         };
 
         private final String buttonId;
@@ -245,6 +281,8 @@ public class RunOrFallLeaderboardPage extends InteractiveCustomUIPage<RunOrFallL
         abstract Comparator<LeaderboardRow> comparator();
 
         abstract String formatStats(LeaderboardRow row);
+
+        abstract String genericTextColor();
 
         static LeaderboardCategory fromButton(String button) {
             for (LeaderboardCategory category : values()) {
