@@ -37,6 +37,7 @@ public class RunOrFallConfigStore {
     private static final int DEFAULT_MIN_PLAYERS_TIME_SECONDS = 300;
     private static final int DEFAULT_OPTIMAL_PLAYERS = 4;
     private static final int DEFAULT_OPTIMAL_PLAYERS_TIME_SECONDS = 60;
+    private static final int DEFAULT_BLINK_DISTANCE_BLOCKS = 7;
 
     private static final String CREATE_SETTINGS_TABLE = """
             CREATE TABLE IF NOT EXISTS runorfall_settings (
@@ -53,6 +54,7 @@ public class RunOrFallConfigStore {
               min_players_time_seconds INT NOT NULL DEFAULT 300,
               optimal_players INT NOT NULL DEFAULT 4,
               optimal_players_time_seconds INT NOT NULL DEFAULT 60,
+              blink_distance_blocks INT NOT NULL DEFAULT 7,
               active_map_id VARCHAR(64) NULL
             ) ENGINE=InnoDB
             """;
@@ -101,8 +103,9 @@ public class RunOrFallConfigStore {
     private static final String UPSERT_SETTINGS_SQL = """
             INSERT INTO runorfall_settings (id, lobby_x, lobby_y, lobby_z, lobby_rot_x, lobby_rot_y, lobby_rot_z,
                                             void_y, block_break_delay_seconds, min_players, min_players_time_seconds,
-                                            optimal_players, optimal_players_time_seconds, active_map_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                            optimal_players, optimal_players_time_seconds, blink_distance_blocks,
+                                            active_map_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
               lobby_x = VALUES(lobby_x),
               lobby_y = VALUES(lobby_y),
@@ -116,6 +119,7 @@ public class RunOrFallConfigStore {
               min_players_time_seconds = VALUES(min_players_time_seconds),
               optimal_players = VALUES(optimal_players),
               optimal_players_time_seconds = VALUES(optimal_players_time_seconds),
+              blink_distance_blocks = VALUES(blink_distance_blocks),
               active_map_id = VALUES(active_map_id)
             """;
 
@@ -254,6 +258,10 @@ public class RunOrFallConfigStore {
         return sanitizeCountdownTime(config.optimalPlayersTimeSeconds, DEFAULT_OPTIMAL_PLAYERS_TIME_SECONDS);
     }
 
+    public synchronized int getBlinkDistanceBlocks() {
+        return sanitizeBlinkDistanceBlocks(config.blinkDistanceBlocks);
+    }
+
     public synchronized void setAutoStartSettings(int minPlayers, int minPlayersTimeSeconds,
                                                   int optimalPlayers, int optimalPlayersTimeSeconds) {
         int sanitizedMinPlayers = sanitizeMinPlayers(minPlayers);
@@ -266,6 +274,11 @@ public class RunOrFallConfigStore {
         config.minPlayersTimeSeconds = sanitizedMinPlayersTime;
         config.optimalPlayers = sanitizedOptimalPlayers;
         config.optimalPlayersTimeSeconds = sanitizedOptimalPlayersTime;
+        saveSettingsToDatabase();
+    }
+
+    public synchronized void setBlinkDistanceBlocks(int blinkDistanceBlocks) {
+        config.blinkDistanceBlocks = sanitizeBlinkDistanceBlocks(blinkDistanceBlocks);
         saveSettingsToDatabase();
     }
 
@@ -362,12 +375,14 @@ public class RunOrFallConfigStore {
                     "ALTER TABLE runorfall_settings ADD COLUMN optimal_players INT NOT NULL DEFAULT 4");
             ensureColumnExists(conn, "runorfall_settings", "optimal_players_time_seconds",
                     "ALTER TABLE runorfall_settings ADD COLUMN optimal_players_time_seconds INT NOT NULL DEFAULT 60");
+            ensureColumnExists(conn, "runorfall_settings", "blink_distance_blocks",
+                    "ALTER TABLE runorfall_settings ADD COLUMN blink_distance_blocks INT NOT NULL DEFAULT 7");
             ensureColumnExists(conn, "runorfall_map_platforms", "target_block_item_id",
                     "ALTER TABLE runorfall_map_platforms ADD COLUMN target_block_item_id VARCHAR(128) NULL");
             try (PreparedStatement stmt = conn.prepareStatement(
                     "INSERT INTO runorfall_settings "
-                            + "(id, void_y, block_break_delay_seconds, min_players, min_players_time_seconds, "
-                            + "optimal_players, optimal_players_time_seconds, active_map_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?) "
+                    + "(id, void_y, block_break_delay_seconds, min_players, min_players_time_seconds, "
+                            + "optimal_players, optimal_players_time_seconds, blink_distance_blocks, active_map_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) "
                             + "ON DUPLICATE KEY UPDATE id = id")) {
                 DatabaseManager.applyQueryTimeout(stmt);
                 stmt.setInt(1, SETTINGS_ID);
@@ -377,7 +392,8 @@ public class RunOrFallConfigStore {
                 stmt.setInt(5, DEFAULT_MIN_PLAYERS_TIME_SECONDS);
                 stmt.setInt(6, DEFAULT_OPTIMAL_PLAYERS);
                 stmt.setInt(7, DEFAULT_OPTIMAL_PLAYERS_TIME_SECONDS);
-                stmt.setString(8, DEFAULT_MAP_ID);
+                stmt.setInt(8, DEFAULT_BLINK_DISTANCE_BLOCKS);
+                stmt.setString(9, DEFAULT_MAP_ID);
                 stmt.executeUpdate();
             }
         } catch (SQLException e) {
@@ -398,6 +414,7 @@ public class RunOrFallConfigStore {
         loaded.minPlayersTimeSeconds = DEFAULT_MIN_PLAYERS_TIME_SECONDS;
         loaded.optimalPlayers = DEFAULT_OPTIMAL_PLAYERS;
         loaded.optimalPlayersTimeSeconds = DEFAULT_OPTIMAL_PLAYERS_TIME_SECONDS;
+        loaded.blinkDistanceBlocks = DEFAULT_BLINK_DISTANCE_BLOCKS;
         loaded.selectedMapId = "";
         loaded.maps = new ArrayList<>();
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
@@ -418,7 +435,7 @@ public class RunOrFallConfigStore {
         String sql = """
                 SELECT lobby_x, lobby_y, lobby_z, lobby_rot_x, lobby_rot_y, lobby_rot_z,
                        void_y, block_break_delay_seconds, min_players, min_players_time_seconds,
-                       optimal_players, optimal_players_time_seconds, active_map_id
+                       optimal_players, optimal_players_time_seconds, blink_distance_blocks, active_map_id
                 FROM runorfall_settings
                 WHERE id = ?
                 """;
@@ -442,6 +459,7 @@ public class RunOrFallConfigStore {
                 target.optimalPlayers = Math.max(target.minPlayers, sanitizeMinPlayers(rs.getInt("optimal_players")));
                 target.optimalPlayersTimeSeconds = sanitizeCountdownTime(
                         rs.getInt("optimal_players_time_seconds"), DEFAULT_OPTIMAL_PLAYERS_TIME_SECONDS);
+                target.blinkDistanceBlocks = sanitizeBlinkDistanceBlocks(rs.getInt("blink_distance_blocks"));
                 String loadedActiveMapId = rs.getString("active_map_id");
                 target.selectedMapId = normalizeMapId(loadedActiveMapId);
 
@@ -659,6 +677,7 @@ public class RunOrFallConfigStore {
             stmt.setInt(i++, sanitizeCountdownTime(config.minPlayersTimeSeconds, DEFAULT_MIN_PLAYERS_TIME_SECONDS));
             stmt.setInt(i++, Math.max(sanitizeMinPlayers(config.minPlayers), sanitizeMinPlayers(config.optimalPlayers)));
             stmt.setInt(i++, sanitizeCountdownTime(config.optimalPlayersTimeSeconds, DEFAULT_OPTIMAL_PLAYERS_TIME_SECONDS));
+            stmt.setInt(i++, sanitizeBlinkDistanceBlocks(config.blinkDistanceBlocks));
             stmt.setString(i, selectedMap != null ? selectedMap.id : DEFAULT_MAP_ID);
             stmt.executeUpdate();
         } catch (SQLException e) {
@@ -913,7 +932,8 @@ public class RunOrFallConfigStore {
                         && Math.max(sanitizeMinPlayers(snapshot.minPlayers), sanitizeMinPlayers(snapshot.optimalPlayers))
                         == DEFAULT_OPTIMAL_PLAYERS
                         && sanitizeCountdownTime(snapshot.optimalPlayersTimeSeconds, DEFAULT_OPTIMAL_PLAYERS_TIME_SECONDS)
-                        == DEFAULT_OPTIMAL_PLAYERS_TIME_SECONDS) {
+                        == DEFAULT_OPTIMAL_PLAYERS_TIME_SECONDS
+                        && sanitizeBlinkDistanceBlocks(snapshot.blinkDistanceBlocks) == DEFAULT_BLINK_DISTANCE_BLOCKS) {
                     return true;
                 }
             }
@@ -927,7 +947,8 @@ public class RunOrFallConfigStore {
                 && Math.max(sanitizeMinPlayers(snapshot.minPlayers), sanitizeMinPlayers(snapshot.optimalPlayers))
                 == DEFAULT_OPTIMAL_PLAYERS
                 && sanitizeCountdownTime(snapshot.optimalPlayersTimeSeconds, DEFAULT_OPTIMAL_PLAYERS_TIME_SECONDS)
-                == DEFAULT_OPTIMAL_PLAYERS_TIME_SECONDS;
+                == DEFAULT_OPTIMAL_PLAYERS_TIME_SECONDS
+                && sanitizeBlinkDistanceBlocks(snapshot.blinkDistanceBlocks) == DEFAULT_BLINK_DISTANCE_BLOCKS;
     }
 
     private static boolean nearlyEqual(double a, double b) {
@@ -950,6 +971,7 @@ public class RunOrFallConfigStore {
         loaded.optimalPlayers = Math.max(loaded.minPlayers, sanitizeMinPlayers(loaded.optimalPlayers));
         loaded.optimalPlayersTimeSeconds = sanitizeCountdownTime(loaded.optimalPlayersTimeSeconds,
                 DEFAULT_OPTIMAL_PLAYERS_TIME_SECONDS);
+        loaded.blinkDistanceBlocks = sanitizeBlinkDistanceBlocks(loaded.blinkDistanceBlocks);
 
         List<RunOrFallMapConfig> sanitizedMaps = new ArrayList<>();
         Map<String, RunOrFallMapConfig> uniqueMaps = new LinkedHashMap<>();
@@ -1026,6 +1048,7 @@ public class RunOrFallConfigStore {
         created.minPlayersTimeSeconds = DEFAULT_MIN_PLAYERS_TIME_SECONDS;
         created.optimalPlayers = DEFAULT_OPTIMAL_PLAYERS;
         created.optimalPlayersTimeSeconds = DEFAULT_OPTIMAL_PLAYERS_TIME_SECONDS;
+        created.blinkDistanceBlocks = DEFAULT_BLINK_DISTANCE_BLOCKS;
         RunOrFallMapConfig map = new RunOrFallMapConfig();
         map.id = DEFAULT_MAP_ID;
         created.maps.add(map);
@@ -1135,6 +1158,10 @@ public class RunOrFallConfigStore {
             return Math.max(1, fallback);
         }
         return value;
+    }
+
+    private static int sanitizeBlinkDistanceBlocks(int value) {
+        return Math.max(1, value);
     }
 
     private static boolean tableExists(Connection conn, String tableName) throws SQLException {

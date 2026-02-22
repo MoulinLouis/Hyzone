@@ -83,6 +83,10 @@ public class RunOrFallGameManager {
         return playerId != null && state == GameState.RUNNING && alivePlayers.contains(playerId);
     }
 
+    public synchronized int getBlinkDistanceBlocks() {
+        return configStore.getBlinkDistanceBlocks();
+    }
+
     public synchronized String statusLine() {
         return "state=" + state.name()
                 + ", map=" + configStore.getSelectedMapId()

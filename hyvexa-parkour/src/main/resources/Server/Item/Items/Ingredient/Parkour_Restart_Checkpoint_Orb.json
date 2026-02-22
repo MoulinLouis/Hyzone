@@ -1,7 +1,7 @@
 {
   "TranslationProperties": {
-    "Name": "Blink",
-    "Description": "Right click to blink 7 blocks in your look direction."
+    "Name": "Restart to checkpoint",
+    "Description": "Right click to restart from your last checkpoint."
   },
   "Icon": "Icons/ItemsGenerated/Blue_Orb_Hyvexa.png",
   "Quality": "Developer",
@@ -37,6 +37,6 @@
   "ItemSoundSetId": "ISS_Items_Gems",
   "DropOnDeath": true,
   "Interactions": {
-    "Secondary": "Ingredient_Lightning_Essence"
+    "Secondary": "Parkour_Restart_Checkpoint_Orb"
   }
 }
