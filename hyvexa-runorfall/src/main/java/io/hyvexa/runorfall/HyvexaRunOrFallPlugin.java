@@ -200,6 +200,18 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
         hud.updateCountdownText(text);
     }
 
+    public void updateBrokenBlocksHud(UUID playerId, int brokenBlocks) {
+        if (playerId == null) {
+            return;
+        }
+        RunOrFallHud hud = runOrFallHuds.get(playerId);
+        if (hud == null) {
+            return;
+        }
+        boolean visible = gameManager != null && gameManager.isInActiveRound(playerId);
+        hud.updateBrokenBlocks(brokenBlocks, visible);
+    }
+
     public void refreshRunOrFallHotbar(UUID playerId) {
         if (playerId == null) {
             return;
@@ -288,6 +300,9 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
         player.getHudManager().hideHudComponents(playerRef, HudComponent.Compass);
         MultiHudBridge.showIfNeeded(hud);
         hud.updateCountdownText(null);
+        int brokenBlocks = gameManager != null ? gameManager.getBrokenBlocksCount(playerId) : 0;
+        boolean showBrokenBlocks = gameManager != null && gameManager.isInActiveRound(playerId);
+        hud.updateBrokenBlocks(brokenBlocks, showBrokenBlocks);
         hud.updatePlayerCount();
         hud.updateVexa(VexaStore.getInstance().getVexa(playerId));
     }

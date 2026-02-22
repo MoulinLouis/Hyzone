@@ -156,6 +156,17 @@ $C.@PageOverlay {
       }
     }
 
+    Label #BrokenBlocksText {
+      Anchor: (Left: 50, Bottom: 50, Width: 420, Height: 38);
+      Visible: false;
+      Style: (
+        FontSize: 34,
+        TextColor: #e7f1f4,
+        RenderBold: true
+      );
+      Text: "Blocks broken: 0";
+    }
+
     Label #StartingInText {
       Anchor: (Left: 0, Right: 0, Top: 45, Height: 38);
       Visible: false;
