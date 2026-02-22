@@ -34,15 +34,71 @@ Group {
       Text: "Player";
     }
 
-    Label #Stats {
+    Group #StatsCell {
       FlexWeight: 1;
-      Style: (
-        FontSize: 13,
-        RenderBold: true,
-        TextColor: #9fb0ba,
-        HorizontalAlignment: End
-      );
-      Text: "0W  0L  0.00%";
+      LayoutMode: Full;
+
+      Label #StatsGeneric {
+        Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+        Style: (
+          FontSize: 13,
+          RenderBold: true,
+          TextColor: #9fb0ba,
+          HorizontalAlignment: End
+        );
+        Text: "0";
+      }
+
+      Group #StatsTotalWins {
+        Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+        LayoutMode: Left;
+        Visible: false;
+
+        Group {
+          FlexWeight: 1;
+        }
+
+        Label #StatsWins {
+          Anchor: (Width: 48);
+          Style: (
+            FontSize: 13,
+            RenderBold: true,
+            TextColor: #34d399,
+            HorizontalAlignment: End
+          );
+          Text: "0W";
+        }
+
+        Group {
+          Anchor: (Width: 8);
+        }
+
+        Label #StatsLosses {
+          Anchor: (Width: 48);
+          Style: (
+            FontSize: 13,
+            RenderBold: true,
+            TextColor: #f87171,
+            HorizontalAlignment: End
+          );
+          Text: "0L";
+        }
+
+        Group {
+          Anchor: (Width: 8);
+        }
+
+        Label #StatsWinrate {
+          Anchor: (Width: 72);
+          Style: (
+            FontSize: 13,
+            RenderBold: true,
+            TextColor: #60a5fa,
+            HorizontalAlignment: End
+          );
+          Text: "0.00%";
+        }
+      }
     }
   }
 }
