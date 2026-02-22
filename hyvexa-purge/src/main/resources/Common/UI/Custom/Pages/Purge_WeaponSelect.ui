@@ -242,6 +242,19 @@ $C.@PageOverlay {
           Text: "";
         }
       }
+
+      // Skins button (shown when weapon has skins available, to the left of the upgrade button)
+      TextButton #SkinsButton {
+        Anchor: (Right: 192, Top: 46, Width: 168, Height: 44);
+        Text: "Skins";
+        Visible: false;
+        Style: TextButtonStyle(
+          Default: (Background: #6366f1(0.2), LabelStyle: (FontSize: 16, RenderBold: true, TextColor: #a5b4fc, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Hovered: (Background: #6366f1(0.35), LabelStyle: (FontSize: 16, RenderBold: true, TextColor: #c7d2fe, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Pressed: (Background: #6366f1(0.15), LabelStyle: (FontSize: 16, RenderBold: true, TextColor: #a5b4fc, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Sounds: $C.@ButtonSounds,
+        );
+      }
     }
   }
 }

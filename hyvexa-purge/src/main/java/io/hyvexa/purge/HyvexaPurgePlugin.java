@@ -27,6 +27,8 @@ import io.hyvexa.core.economy.VexaStore;
 import io.hyvexa.purge.command.PurgeCommand;
 import io.hyvexa.purge.data.PurgePlayerStore;
 import io.hyvexa.purge.data.PurgeScrapStore;
+import io.hyvexa.purge.data.PurgeSkinRegistry;
+import io.hyvexa.purge.data.PurgeSkinStore;
 import io.hyvexa.purge.data.PurgeWeaponUpgradeStore;
 import io.hyvexa.purge.hud.PurgeHudManager;
 import io.hyvexa.purge.data.PurgeSessionPlayerState;
@@ -117,6 +119,8 @@ public class HyvexaPurgePlugin extends JavaPlugin {
         catch (Exception e) { LOGGER.atWarning().withCause(e).log("Failed to initialize PurgePlayerStore"); }
         try { PurgeWeaponUpgradeStore.getInstance().initialize(); }
         catch (Exception e) { LOGGER.atWarning().withCause(e).log("Failed to initialize PurgeWeaponUpgradeStore"); }
+        try { PurgeSkinStore.getInstance().initialize(); }
+        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Failed to initialize PurgeSkinStore"); }
 
         // Create managers
         instanceManager = new PurgeInstanceManager();
@@ -223,6 +227,8 @@ public class HyvexaPurgePlugin extends JavaPlugin {
             catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: PurgeScrapStore"); }
             try { PurgeWeaponUpgradeStore.getInstance().evictPlayer(playerId); }
             catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: PurgeWeaponUpgradeStore"); }
+            try { PurgeSkinStore.getInstance().evictPlayer(playerId); }
+            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: PurgeSkinStore"); }
         });
 
         // Slow HUD updates (player count, vexa, scrap) every 5 seconds
@@ -273,9 +279,10 @@ public class HyvexaPurgePlugin extends JavaPlugin {
 
     public void switchWeapon(Player player, PurgeSessionPlayerState state, String newWeaponId) {
         state.setCurrentWeaponId(newWeaponId);
+        String itemId = resolveSkinnedItemId(state.getPlayerId(), newWeaponId);
         Inventory inventory = player.getInventory();
         if (inventory != null && inventory.getHotbar() != null) {
-            inventory.getHotbar().setItemStackForSlot(SLOT_PRIMARY_WEAPON, new ItemStack(newWeaponId, 1), false);
+            inventory.getHotbar().setItemStackForSlot(SLOT_PRIMARY_WEAPON, new ItemStack(itemId, 1), false);
         }
     }
 
@@ -329,7 +336,20 @@ public class HyvexaPurgePlugin extends JavaPlugin {
         String weaponItem = (state != null && state.getCurrentWeaponId() != null)
                 ? state.getCurrentWeaponId()
                 : weaponConfigManager.getSessionWeaponId();
-        inventory.getHotbar().setItemStackForSlot(SLOT_PRIMARY_WEAPON, new ItemStack(weaponItem, 1), false);
+        UUID ownerId = (state != null) ? state.getPlayerId() : null;
+        String itemId = resolveSkinnedItemId(ownerId, weaponItem);
+        inventory.getHotbar().setItemStackForSlot(SLOT_PRIMARY_WEAPON, new ItemStack(itemId, 1), false);
+    }
+
+    private String resolveSkinnedItemId(UUID playerId, String weaponId) {
+        if (playerId == null || weaponId == null) {
+            return weaponId;
+        }
+        String skinId = PurgeSkinStore.getInstance().getSelectedSkin(playerId, weaponId);
+        if (skinId != null) {
+            return PurgeSkinRegistry.getSkinnedItemId(weaponId, skinId);
+        }
+        return weaponId;
     }
 
     private void giveStartingAmmo(Player player) {
