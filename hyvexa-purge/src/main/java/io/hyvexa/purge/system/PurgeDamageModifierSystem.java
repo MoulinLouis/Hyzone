@@ -6,11 +6,15 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.SystemGroup;
 import com.hypixel.hytale.component.query.Query;
+import com.hypixel.hytale.server.core.entity.nameplate.Nameplate;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.knockback.KnockbackComponent;
 import com.hypixel.hytale.server.core.modules.entity.damage.Damage;
 import com.hypixel.hytale.server.core.modules.entity.damage.DamageEventSystem;
 import com.hypixel.hytale.server.core.modules.entity.damage.DamageModule;
+import com.hypixel.hytale.server.core.modules.entitystats.EntityStatMap;
+import com.hypixel.hytale.server.core.modules.entitystats.EntityStatValue;
+import com.hypixel.hytale.server.core.modules.entitystats.asset.DefaultEntityStatTypes;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.purge.data.PurgeSession;
@@ -149,6 +153,25 @@ public class PurgeDamageModifierSystem extends DamageEventSystem {
         int effectiveLevel = Math.max(level, 1);
         int damage = weaponConfigManager.getDamage(playerWeapon, effectiveLevel);
         event.setAmount(damage);
+        clearZombieNameplateOnLethalHit(store, targetRef, damage);
+    }
+
+    private void clearZombieNameplateOnLethalHit(Store<EntityStore> store, Ref<EntityStore> zombieRef, float incomingDamage) {
+        if (zombieRef == null || !zombieRef.isValid() || incomingDamage <= 0f) {
+            return;
+        }
+        EntityStatMap statMap = store.getComponent(zombieRef, EntityStatMap.getComponentType());
+        Nameplate nameplate = store.getComponent(zombieRef, Nameplate.getComponentType());
+        if (statMap == null || nameplate == null) {
+            return;
+        }
+        EntityStatValue health = statMap.get(DefaultEntityStatTypes.getHealth());
+        if (health == null) {
+            return;
+        }
+        if (health.get() - incomingDamage <= 0f) {
+            nameplate.setText("");
+        }
     }
 
     private void cancelDamage(Damage event, CommandBuffer<EntityStore> buffer,
