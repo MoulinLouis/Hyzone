@@ -16,7 +16,7 @@ Group {
     LayoutMode: Left;
 
     Label #Rank {
-      Anchor: (Width: 46);
+      Anchor: (Width: 34);
       Style: (
         FontSize: 14,
         RenderBold: true,
@@ -26,9 +26,9 @@ Group {
     }
 
     Label #PlayerName {
-      Anchor: (Width: 190);
+      Anchor: (Width: 290);
       Style: (
-        FontSize: 14,
+        FontSize: 13,
         TextColor: #cfd7dc
       );
       Text: "Player";

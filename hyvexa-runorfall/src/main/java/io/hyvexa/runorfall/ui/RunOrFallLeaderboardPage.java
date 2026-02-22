@@ -107,11 +107,11 @@ public class RunOrFallLeaderboardPage extends InteractiveCustomUIPage<RunOrFallL
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_PREV), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#NextPageButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_NEXT), false);
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CategoryTotalWinsButton",
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CategoryTotalWinsToggle",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CATEGORY_TOTAL_WINS), false);
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CategoryBestStreakButton",
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CategoryBestStreakToggle",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CATEGORY_BEST_STREAK), false);
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CategoryLongestSurvivedButton",
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CategoryLongestSurvivedToggle",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CATEGORY_LONGEST_SURVIVED), false);
     }
 
@@ -170,13 +170,12 @@ public class RunOrFallLeaderboardPage extends InteractiveCustomUIPage<RunOrFallL
     }
 
     private void applyCategoryUi(UICommandBuilder commandBuilder) {
-        commandBuilder.set("#CategoryTotalWinsButton.Text",
-                selectedCategory == LeaderboardCategory.TOTAL_WINS ? "[x] Total wins" : "[ ] Total wins");
-        commandBuilder.set("#CategoryBestStreakButton.Text",
-                selectedCategory == LeaderboardCategory.BEST_WIN_STREAK ? "[x] Best win streak" : "[ ] Best win streak");
-        commandBuilder.set("#CategoryLongestSurvivedButton.Text",
-                selectedCategory == LeaderboardCategory.LONGEST_TIME_SURVIVED
-                        ? "[x] Longest time survived" : "[ ] Longest time survived");
+        commandBuilder.set("#CategoryTotalWinsCheckboxMark.Visible",
+                selectedCategory == LeaderboardCategory.TOTAL_WINS);
+        commandBuilder.set("#CategoryBestStreakCheckboxMark.Visible",
+                selectedCategory == LeaderboardCategory.BEST_WIN_STREAK);
+        commandBuilder.set("#CategoryLongestSurvivedCheckboxMark.Visible",
+                selectedCategory == LeaderboardCategory.LONGEST_TIME_SURVIVED);
         commandBuilder.set("#CategoryHint.Text", selectedCategory.hintText);
     }
 
@@ -220,7 +219,7 @@ public class RunOrFallLeaderboardPage extends InteractiveCustomUIPage<RunOrFallL
                 return "Streak " + row.bestWinStreak();
             }
         },
-        LONGEST_TIME_SURVIVED(BUTTON_CATEGORY_LONGEST_SURVIVED, "Ranked by longest survival time.") {
+        LONGEST_TIME_SURVIVED(BUTTON_CATEGORY_LONGEST_SURVIVED, "Ranked by longest time alive.") {
             @Override
             Comparator<LeaderboardRow> comparator() {
                 return Comparator.comparingLong(LeaderboardRow::longestSurvivedMs).reversed()
