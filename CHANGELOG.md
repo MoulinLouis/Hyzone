@@ -48,6 +48,7 @@
 - **Ascend: Summit XP softcap at level 1000** - Removed hard cap at level 1000 (unlimited levels). XP cost per level rises from level^2 to level^3 above 1000 — same volt reaches fewer levels (old 5000 -> ~3591).
 
 ### Fixed
+- **Purge: Variant HP now respects configured absolute value across NPC types** - Zombie variant health no longer over-scales for non-vanilla NPC types (e.g. `Zombie_Aberrant`); configured HP is applied correctly before wave scaling.
 - **RunOrFall: Spectator/Disconnect round flow** - Players joining during an active round now get teleported to lobby as spectators, and disconnects are counted as eliminations.
 - **RunOrFall: Leave lobby now returns to spawn** - Voluntary leave (`/rof leave` and leave hotbar flow) now teleports the player to the world spawn.
 - **RunOrFall: Countdown moved from chat to HUD** - `Starting in ...` is now displayed in the RunOrFall HUD instead of chat countdown spam.
