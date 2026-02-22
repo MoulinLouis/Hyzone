@@ -120,6 +120,7 @@ public class RunOrFallGameManager {
         sendToPlayer(playerId, "Joined the RunOrFall lobby.");
         teleportPlayerToLobby(playerId);
         refreshPlayerHotbar(playerId);
+        updateCountdownHudForPlayer(playerId);
         if (state == GameState.RUNNING) {
             sendToPlayer(playerId, "Round already running. You are spectating from the lobby.");
         }
@@ -146,6 +147,7 @@ public class RunOrFallGameManager {
             sendToPlayer(playerId, "You left the RunOrFall lobby.");
             teleportPlayerToWorldSpawn(playerId);
         }
+        updateCountdownHudForPlayer(playerId, null);
         if (state == GameState.COUNTDOWN && lobbyPlayers.size() < countdownRequiredPlayers) {
             cancelCountdownInternal("Countdown cancelled: not enough players.");
         }
@@ -177,6 +179,7 @@ public class RunOrFallGameManager {
             if (countdownRemaining > FORCED_COUNTDOWN_SECONDS) {
                 countdownRemaining = FORCED_COUNTDOWN_SECONDS;
                 broadcastLobby("Admin start: countdown forced to " + FORCED_COUNTDOWN_SECONDS + "s.");
+                updateCountdownHudForLobbyPlayers();
             }
             return;
         }
@@ -220,6 +223,7 @@ public class RunOrFallGameManager {
         pendingBlocks.clear();
         playerLastFootBlock.clear();
         roundStartTimesMs.clear();
+        clearCountdownHudForLobbyPlayers();
         lobbyPlayers.clear();
         activeWorld = null;
     }
@@ -243,6 +247,7 @@ public class RunOrFallGameManager {
             broadcastEliminationInternal(playerId, "disconnected");
             checkWinnerInternal();
         }
+        updateCountdownHudForPlayer(playerId, null);
         if (lobbyPlayers.isEmpty()) {
             activeWorld = null;
         }
@@ -266,11 +271,7 @@ public class RunOrFallGameManager {
         countdownRequiredPlayers = requiredPlayers;
         countdownOptimalPlayers = 0;
         countdownOptimalTimeSeconds = 0;
-        if (requiredPlayers == 1 && lobbyPlayers.size() == 1) {
-            broadcastLobby("Solo test starting in " + FORCED_COUNTDOWN_SECONDS + "s.");
-        } else {
-            broadcastLobby("Game starting in " + FORCED_COUNTDOWN_SECONDS + "s.");
-        }
+        updateCountdownHudForLobbyPlayers();
         startCountdownTask();
     }
 
@@ -293,7 +294,7 @@ public class RunOrFallGameManager {
         countdownOptimalPlayers = settings.optimalPlayers;
         countdownOptimalTimeSeconds = settings.optimalPlayersTimeSeconds;
         reduceAutoCountdownForOptimalPopulationIfNeeded();
-        broadcastLobby("Game starting in " + countdownRemaining + "s.");
+        updateCountdownHudForLobbyPlayers();
         startCountdownTask();
     }
 
@@ -315,6 +316,7 @@ public class RunOrFallGameManager {
             return;
         }
         countdownRemaining = countdownOptimalTimeSeconds;
+        updateCountdownHudForLobbyPlayers();
         broadcastLobby("Optimal players reached. Countdown reduced to " + countdownRemaining + "s.");
     }
 
@@ -334,7 +336,7 @@ public class RunOrFallGameManager {
                 startGameInternal();
                 return;
             }
-            broadcastLobby("Starting in " + countdownRemaining + "s...");
+            updateCountdownHudForLobbyPlayers();
         }
     }
 
@@ -391,6 +393,7 @@ public class RunOrFallGameManager {
         }
 
         state = GameState.RUNNING;
+        clearCountdownHudForLobbyPlayers();
         blockBreakEnabledAtMs = System.currentTimeMillis() + START_BLOCK_BREAK_GRACE_MS;
         blockBreakCountdownLastAnnounced = (int) Math.ceil(START_BLOCK_BREAK_GRACE_MS / 1000.0d);
         for (UUID onlinePlayerId : onlinePlayers) {
@@ -521,6 +524,7 @@ public class RunOrFallGameManager {
         soloTestRound = false;
         blockBreakEnabledAtMs = 0L;
         blockBreakCountdownLastAnnounced = -1;
+        clearCountdownHudForLobbyPlayers();
         refreshLobbyHotbars();
         broadcastLobby(reason);
         startAutoCountdownIfPossible();
@@ -536,6 +540,7 @@ public class RunOrFallGameManager {
         countdownForced = false;
         blockBreakEnabledAtMs = 0L;
         blockBreakCountdownLastAnnounced = -1;
+        clearCountdownHudForLobbyPlayers();
         broadcastLobby(reason);
     }
 
@@ -920,6 +925,41 @@ public class RunOrFallGameManager {
             return;
         }
         plugin.refreshRunOrFallHotbar(playerId);
+    }
+
+    private void updateCountdownHudForLobbyPlayers() {
+        String countdownText = buildCountdownHudText();
+        for (UUID playerId : new ArrayList<>(lobbyPlayers)) {
+            updateCountdownHudForPlayer(playerId, countdownText);
+        }
+    }
+
+    private void clearCountdownHudForLobbyPlayers() {
+        for (UUID playerId : new ArrayList<>(lobbyPlayers)) {
+            updateCountdownHudForPlayer(playerId, null);
+        }
+    }
+
+    private void updateCountdownHudForPlayer(UUID playerId) {
+        updateCountdownHudForPlayer(playerId, buildCountdownHudText());
+    }
+
+    private void updateCountdownHudForPlayer(UUID playerId, String countdownText) {
+        if (playerId == null) {
+            return;
+        }
+        HyvexaRunOrFallPlugin plugin = HyvexaRunOrFallPlugin.getInstance();
+        if (plugin == null) {
+            return;
+        }
+        plugin.updateCountdownHud(playerId, countdownText);
+    }
+
+    private String buildCountdownHudText() {
+        if (state != GameState.COUNTDOWN || countdownRemaining <= 0) {
+            return null;
+        }
+        return "Starting in " + countdownRemaining + "s";
     }
 
     private void broadcastEliminationInternal(UUID eliminatedPlayerId, String reason) {

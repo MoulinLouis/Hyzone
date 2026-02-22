@@ -186,6 +186,17 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
         return gameManager;
     }
 
+    public void updateCountdownHud(UUID playerId, String text) {
+        if (playerId == null) {
+            return;
+        }
+        RunOrFallHud hud = runOrFallHuds.get(playerId);
+        if (hud == null) {
+            return;
+        }
+        hud.updateCountdownText(text);
+    }
+
     public void refreshRunOrFallHotbar(UUID playerId) {
         if (playerId == null) {
             return;
@@ -271,6 +282,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
         MultiHudBridge.setCustomHud(player, playerRef, hud);
         player.getHudManager().hideHudComponents(playerRef, HudComponent.Compass);
         MultiHudBridge.showIfNeeded(hud);
+        hud.updateCountdownText(null);
         hud.updatePlayerCount();
         hud.updateVexa(VexaStore.getInstance().getVexa(playerId));
     }
