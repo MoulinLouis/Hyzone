@@ -35,7 +35,7 @@ Quick reference for AI agents working on this Hytale plugin project.
 ## Workflow Reminders
 
 1. **Update CHANGELOG.md** for significant changes only (new features, balance changes, bug fixes) - keep entries brief (1-2 lines), no implementation details
-2. **Update docs/ECONOMY_BALANCE.md** when modifying game economy (costs, rewards, multipliers, formulas)
+2. **Update docs/Ascend/ECONOMY_BALANCE.md** when modifying game economy (costs, rewards, multipliers, formulas)
 3. **Follow existing patterns** - check similar files before implementing
 4. **Reuse existing Managers** - 25+ Manager classes exist across modules. Check for existing ones before creating new ones (e.g., `HyvexaPlugin.getInstance().getHudManager()`, `ParkourAscendPlugin.getInstance().getRobotManager()`)
 5. **No build runs** - owner handles `./gradlew build`
@@ -84,8 +84,8 @@ Node.js bot for Discord-Minecraft account linking. Shares the same MySQL databas
 | Full instructions | `docs/codex/AGENTS.md`          |
 | System architecture | `docs/ARCHITECTURE.md`          |
 | Database schema | `docs/DATABASE.md`              |
-| Game balancing | `docs/ECONOMY_BALANCE.md`       |
-| Help & tutorial system | `docs/TUTORIAL_FLOW.md` |
+| Game balancing | `docs/Ascend/ECONOMY_BALANCE.md`       |
+| Help & tutorial system | `docs/Ascend/TUTORIAL_FLOW.md` |
 | Feature history | `CHANGELOG.md`                  |
 
 ### Hytale Custom UI Reference (`docs/hytale-custom-ui/`)

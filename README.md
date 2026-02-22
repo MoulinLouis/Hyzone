@@ -96,7 +96,7 @@ hyvexa-*/src/main/resources/
 | Architecture & threading | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
 | Database schema | [docs/DATABASE.md](docs/DATABASE.md) |
 | Code patterns | [docs/CODE_PATTERNS.md](docs/CODE_PATTERNS.md) |
-| Game economy balance | [docs/ECONOMY_BALANCE.md](docs/ECONOMY_BALANCE.md) |
+| Game economy balance | [docs/Ascend/ECONOMY_BALANCE.md](docs/Ascend/ECONOMY_BALANCE.md) |
 | Hytale API notes | [docs/HYTALE_API.md](docs/HYTALE_API.md) |
 | Changelog | [CHANGELOG.md](CHANGELOG.md) |
 
