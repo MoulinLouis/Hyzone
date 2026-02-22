@@ -533,7 +533,7 @@ Economy, progression, and system constants for Ascend mode. Key values:
 | `PASSIVE_OFFLINE_RATE_PERCENT` | 10% | Offline earning rate |
 | `PASSIVE_MAX_TIME_MS` | 24h | Max offline earning window |
 
-Also defines `SkillTreeNode` enum (19 nodes with AP costs 1-1000) and `SummitCategory` enum (3 categories with scaling factors). See `docs/ECONOMY_BALANCE.md` for full formulas.
+Also defines `SkillTreeNode` enum (19 nodes with AP costs 1-1000) and `SummitCategory` enum (3 categories with scaling factors). See `docs/Ascend/ECONOMY_BALANCE.md` for full formulas.
 
 ## Future Considerations
 
