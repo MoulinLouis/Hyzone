@@ -144,6 +144,7 @@ public class RunOrFallGameManager {
         }
         if (notify) {
             sendToPlayer(playerId, "You left the RunOrFall lobby.");
+            teleportPlayerToWorldSpawn(playerId);
         }
         if (state == GameState.COUNTDOWN && lobbyPlayers.size() < countdownRequiredPlayers) {
             cancelCountdownInternal("Countdown cancelled: not enough players.");
@@ -796,6 +797,48 @@ public class RunOrFallGameManager {
             return;
         }
         teleportPlayer(playerId, lobby);
+    }
+
+    private void teleportPlayerToWorldSpawn(UUID playerId) {
+        PlayerRef playerRef = resolvePlayer(playerId);
+        if (playerRef == null) {
+            return;
+        }
+        var ref = playerRef.getReference();
+        if (ref == null || !ref.isValid()) {
+            return;
+        }
+        var store = ref.getStore();
+        World world = store.getExternalData() != null ? store.getExternalData().getWorld() : null;
+        if (world == null) {
+            return;
+        }
+
+        com.hypixel.hytale.math.vector.Transform spawnTransform = null;
+        var worldConfig = world.getWorldConfig();
+        if (worldConfig != null && worldConfig.getSpawnProvider() != null) {
+            try {
+                spawnTransform = worldConfig.getSpawnProvider().getSpawnPoint(world, playerId);
+            } catch (Exception e) {
+                LOGGER.atWarning().withCause(e).log("Failed to resolve RunOrFall world spawn.");
+            }
+        }
+
+        Vector3d position;
+        Vector3f rotation;
+        if (spawnTransform != null) {
+            position = spawnTransform.getPosition();
+            rotation = spawnTransform.getRotation();
+        } else {
+            TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
+            position = transform != null && transform.getPosition() != null
+                    ? transform.getPosition()
+                    : new Vector3d(0.0d, 0.0d, 0.0d);
+            rotation = transform != null && transform.getRotation() != null
+                    ? transform.getRotation()
+                    : new Vector3f(0.0f, 0.0f, 0.0f);
+        }
+        store.addComponent(ref, Teleport.getComponentType(), new Teleport(world, position, rotation));
     }
 
     private void teleportPlayer(UUID playerId, RunOrFallLocation location) {
