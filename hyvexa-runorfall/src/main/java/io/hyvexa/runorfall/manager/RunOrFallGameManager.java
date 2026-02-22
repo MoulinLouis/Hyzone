@@ -100,12 +100,25 @@ public class RunOrFallGameManager {
         }
 
         if (!lobbyPlayers.add(playerId)) {
+            if (state == GameState.RUNNING) {
+                if (alivePlayers.contains(playerId)) {
+                    sendToPlayer(playerId, "You are already in the current round.");
+                    return;
+                }
+                teleportPlayerToLobby(playerId);
+                refreshPlayerHotbar(playerId);
+                sendToPlayer(playerId, "Round already running. You are spectating from the lobby.");
+                return;
+            }
             sendToPlayer(playerId, "You are already in the RunOrFall lobby.");
             return;
         }
         sendToPlayer(playerId, "Joined the RunOrFall lobby.");
         teleportPlayerToLobby(playerId);
         refreshPlayerHotbar(playerId);
+        if (state == GameState.RUNNING) {
+            sendToPlayer(playerId, "Round already running. You are spectating from the lobby.");
+        }
         broadcastLobby("Lobby: " + lobbyPlayers.size() + " player(s).");
         startCountdownIfPossible(false);
     }
@@ -185,7 +198,27 @@ public class RunOrFallGameManager {
     }
 
     public synchronized void handleDisconnect(UUID playerId) {
-        leaveLobby(playerId, false);
+        if (playerId == null) {
+            return;
+        }
+        boolean wasInLobby = lobbyPlayers.remove(playerId);
+        boolean wasAlive = alivePlayers.remove(playerId);
+        playerLastFootBlock.remove(playerId);
+        long survivedMs = takeSurvivedMs(playerId);
+        if (!wasInLobby && !wasAlive) {
+            return;
+        }
+        if (state == GameState.COUNTDOWN && lobbyPlayers.size() < countdownRequiredPlayers) {
+            cancelCountdownInternal("Countdown cancelled: not enough players.");
+        }
+        if (state == GameState.RUNNING && wasAlive) {
+            statsStore.recordLoss(playerId, resolvePlayerName(playerId), survivedMs);
+            broadcastEliminationInternal(playerId, "disconnected");
+            checkWinnerInternal();
+        }
+        if (lobbyPlayers.isEmpty()) {
+            activeWorld = null;
+        }
     }
 
     private void startCountdownIfPossible(boolean allowSoloStart) {
@@ -397,7 +430,7 @@ public class RunOrFallGameManager {
         playerLastFootBlock.remove(playerId);
         teleportPlayerToLobby(playerId);
         refreshPlayerHotbar(playerId);
-        sendToPlayer(playerId, "Eliminated: " + reason + ".");
+        sendToPlayer(playerId, "Eliminated: " + reason + ". You are now spectating from the lobby.");
         broadcastEliminationInternal(playerId, reason);
     }
 
