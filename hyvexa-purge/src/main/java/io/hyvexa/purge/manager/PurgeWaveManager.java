@@ -62,10 +62,11 @@ public class PurgeWaveManager {
     private static final int COUNTDOWN_SECONDS = 5;
     private static final int UPGRADE_TIMEOUT_SECONDS = 15;
     private static final double SPAWN_RANDOM_OFFSET = 2.0;
-    private static final ConcurrentHashMap<Class<?>, java.lang.reflect.Field> SPEED_FIELD_CACHE = new ConcurrentHashMap<>();
-    private static final Set<Class<?>> SPEED_FIELD_MISSING = ConcurrentHashMap.newKeySet();
+    private static final ConcurrentHashMap<Class<?>, Long> MAX_SPEED_OFFSET_CACHE = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<Class<?>, java.lang.reflect.Field> DROP_LIST_FIELD_CACHE = new ConcurrentHashMap<>();
     private static final Set<Class<?>> DROP_LIST_FIELD_MISSING = ConcurrentHashMap.newKeySet();
+    private static volatile java.lang.reflect.Field MOTION_CONTROLLERS_FIELD;
+    private static volatile sun.misc.Unsafe UNSAFE_INSTANCE;
 
     private final PurgeInstanceManager instanceManager;
     private final PurgeWaveConfigManager waveConfigManager;
@@ -329,8 +330,7 @@ public class PurgeWaveManager {
             // Apply wave HP scaling + show HP on nameplate
             applyZombieStats(store, entityRef, variantConfig, wave);
 
-            // Apply speed multiplier + disable drops
-            applySpeedMultiplier(store, entityRef, variantConfig);
+            // Disable drops
             clearDropList(store, entityRef);
 
             // Force aggro on a random alive player
@@ -346,6 +346,9 @@ public class PurgeWaveManager {
             } catch (Exception e) {
                 LOGGER.atWarning().withCause(e).log("Failed to set zombie aggro");
             }
+
+            // Apply speed multiplier to all motion controllers
+            applySpeedMultiplier(store, entityRef, variantConfig);
             return true;
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("Failed to spawn zombie (variant " + variantKey + ")");
@@ -407,17 +410,92 @@ public class PurgeWaveManager {
             if (npcEntity == null || npcEntity.getRole() == null) {
                 return;
             }
-            var controller = npcEntity.getRole().getActiveMotionController();
-            if (controller == null) {
+            // Modify maxHorizontalSpeed (final field) on all motion controllers.
+            // horizontalSpeedMultiplier is reset to 1.0 every tick by the engine, so we scale the base speed instead.
+            Map<String, ?> controllers = getMotionControllers(npcEntity.getRole());
+            if (controllers == null || controllers.isEmpty()) {
                 return;
             }
-            java.lang.reflect.Field field = resolveSpeedMultiplierField(controller);
-            if (field == null) {
+            sun.misc.Unsafe unsafe = getUnsafe();
+            if (unsafe == null) {
+                LOGGER.atWarning().log("Unsafe not available, cannot apply speed multiplier");
                 return;
             }
-            field.setDouble(controller, variant.speedMultiplier());
+            int applied = 0;
+            for (Map.Entry<String, ?> entry : controllers.entrySet()) {
+                long offset = resolveMaxSpeedFieldOffset(unsafe, entry.getValue());
+                if (offset >= 0) {
+                    double baseSpeed = unsafe.getDouble(entry.getValue(), offset);
+                    unsafe.putDouble(entry.getValue(), offset, baseSpeed * variant.speedMultiplier());
+                    applied++;
+                }
+            }
+            LOGGER.atInfo().log("Applied speed x" + variant.speedMultiplier() + " to " + applied + "/" + controllers.size()
+                    + " motion controllers for variant " + variant.key());
         } catch (Exception e) {
-            LOGGER.atFine().log("Failed to apply speed multiplier for " + variant.key() + ": " + e.getMessage());
+            LOGGER.atWarning().log("Failed to apply speed multiplier for " + variant.key() + ": " + e.getMessage());
+        }
+    }
+
+    private static sun.misc.Unsafe getUnsafe() {
+        if (UNSAFE_INSTANCE != null) return UNSAFE_INSTANCE;
+        try {
+            java.lang.reflect.Field f = sun.misc.Unsafe.class.getDeclaredField("theUnsafe");
+            f.setAccessible(true);
+            UNSAFE_INSTANCE = (sun.misc.Unsafe) f.get(null);
+        } catch (Exception e) {
+            LOGGER.atWarning().log("Failed to get Unsafe: " + e.getMessage());
+        }
+        return UNSAFE_INSTANCE;
+    }
+
+    private long resolveMaxSpeedFieldOffset(sun.misc.Unsafe unsafe, Object controller) {
+        Class<?> controllerClass = controller.getClass();
+        Long cached = MAX_SPEED_OFFSET_CACHE.get(controllerClass);
+        if (cached != null) {
+            return cached;
+        }
+        // maxHorizontalSpeed is declared on MotionControllerBase, search up hierarchy
+        Class<?> clazz = controllerClass;
+        while (clazz != null) {
+            try {
+                java.lang.reflect.Field field = clazz.getDeclaredField("maxHorizontalSpeed");
+                long offset = unsafe.objectFieldOffset(field);
+                MAX_SPEED_OFFSET_CACHE.put(controllerClass, offset);
+                return offset;
+            } catch (NoSuchFieldException e) {
+                clazz = clazz.getSuperclass();
+            }
+        }
+        MAX_SPEED_OFFSET_CACHE.put(controllerClass, -1L);
+        LOGGER.atWarning().log("maxHorizontalSpeed field not found in " + controllerClass.getName() + " hierarchy");
+        return -1;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, ?> getMotionControllers(Object role) {
+        try {
+            if (MOTION_CONTROLLERS_FIELD == null) {
+                // motionControllers is declared on Role parent class, not concrete subclass
+                Class<?> clazz = role.getClass();
+                while (clazz != null) {
+                    try {
+                        MOTION_CONTROLLERS_FIELD = clazz.getDeclaredField("motionControllers");
+                        MOTION_CONTROLLERS_FIELD.setAccessible(true);
+                        break;
+                    } catch (NoSuchFieldException e) {
+                        clazz = clazz.getSuperclass();
+                    }
+                }
+                if (MOTION_CONTROLLERS_FIELD == null) {
+                    LOGGER.atWarning().log("motionControllers field not found in " + role.getClass().getName() + " hierarchy");
+                    return null;
+                }
+            }
+            return (Map<String, ?>) MOTION_CONTROLLERS_FIELD.get(role);
+        } catch (Exception e) {
+            LOGGER.atWarning().log("Failed to access motionControllers map: " + e.getMessage());
+            return null;
         }
     }
 
@@ -1067,27 +1145,6 @@ public class PurgeWaveManager {
             }
         } catch (Exception e) {
             LOGGER.atFine().log("Failed to remove late zombie spawn: " + e.getMessage());
-        }
-    }
-
-    private java.lang.reflect.Field resolveSpeedMultiplierField(Object controller) {
-        Class<?> controllerClass = controller.getClass();
-        java.lang.reflect.Field cached = SPEED_FIELD_CACHE.get(controllerClass);
-        if (cached != null) {
-            return cached;
-        }
-        if (SPEED_FIELD_MISSING.contains(controllerClass)) {
-            return null;
-        }
-        try {
-            java.lang.reflect.Field field = controllerClass.getDeclaredField("horizontalSpeedMultiplier");
-            field.setAccessible(true);
-            SPEED_FIELD_CACHE.put(controllerClass, field);
-            return field;
-        } catch (Exception e) {
-            SPEED_FIELD_MISSING.add(controllerClass);
-            LOGGER.atFine().log("Speed field not available for " + controllerClass.getName() + ": " + e.getMessage());
-            return null;
         }
     }
 
