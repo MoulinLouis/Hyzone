@@ -489,6 +489,7 @@ public class RunOrFallGameManager {
             if (winnerRef != null && winnerRef.getUsername() != null && !winnerRef.getUsername().isBlank()) {
                 winnerName = winnerRef.getUsername();
             }
+            teleportPlayerToLobby(winner);
             broadcastLobby("Winner: " + winnerName + " wins the round.");
         } else {
             broadcastLobby("No winner this round.");
