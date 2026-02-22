@@ -7,6 +7,10 @@ public class RunOrFallConfig {
     public String selectedMapId = "";
     public double voidY = 40.0;
     public double blockBreakDelaySeconds = 0.2;
+    public int minPlayers = 2;
+    public int minPlayersTimeSeconds = 300;
+    public int optimalPlayers = 4;
+    public int optimalPlayersTimeSeconds = 60;
     public List<RunOrFallMapConfig> maps = new ArrayList<>();
 
     // Legacy fields (single-map format) kept for migration from older JSON configs.
@@ -19,6 +23,10 @@ public class RunOrFallConfig {
         copy.selectedMapId = selectedMapId;
         copy.voidY = voidY;
         copy.blockBreakDelaySeconds = blockBreakDelaySeconds;
+        copy.minPlayers = minPlayers;
+        copy.minPlayersTimeSeconds = minPlayersTimeSeconds;
+        copy.optimalPlayers = optimalPlayers;
+        copy.optimalPlayersTimeSeconds = optimalPlayersTimeSeconds;
         if (maps != null) {
             for (RunOrFallMapConfig map : maps) {
                 if (map != null) {

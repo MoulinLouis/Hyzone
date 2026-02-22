@@ -258,6 +258,77 @@ $C.@PageOverlay {
           Style: (FontSize: 12, TextColor: #9fb0ba);
           Text: "";
         }
+
+        Label {
+          Anchor: (Top: 10);
+          Style: (FontSize: 13, TextColor: #cfd7dc);
+          Text: "Auto-start countdown";
+        }
+
+        Group {
+          Anchor: (Top: 2, Height: 26);
+          LayoutMode: Left;
+
+          Label {
+            Anchor: (Width: 90, Height: 24, Top: 3);
+            Style: (FontSize: 12, TextColor: #9fb0ba);
+            Text: "Min players";
+          }
+
+          $C.@TextField #MinPlayersField {
+            Anchor: (Width: 60, Height: 24);
+            Style: (FontSize: 13, TextColor: #ffffff(0.85));
+          }
+
+          Label {
+            Anchor: (Width: 120, Height: 24, Left: 6, Top: 3);
+            Style: (FontSize: 12, TextColor: #9fb0ba);
+            Text: "Min players time";
+          }
+
+          $C.@TextField #MinPlayersTimeField {
+            Anchor: (Width: 75, Height: 24);
+            Style: (FontSize: 13, TextColor: #ffffff(0.85));
+          }
+        }
+
+        Group {
+          Anchor: (Top: 2, Height: 26);
+          LayoutMode: Left;
+
+          Label {
+            Anchor: (Width: 90, Height: 24, Top: 3);
+            Style: (FontSize: 12, TextColor: #9fb0ba);
+            Text: "Optimal players";
+          }
+
+          $C.@TextField #OptimalPlayersField {
+            Anchor: (Width: 60, Height: 24);
+            Style: (FontSize: 13, TextColor: #ffffff(0.85));
+          }
+
+          Label {
+            Anchor: (Width: 120, Height: 24, Left: 6, Top: 3);
+            Style: (FontSize: 12, TextColor: #9fb0ba);
+            Text: "Optimal players time";
+          }
+
+          $C.@TextField #OptimalPlayersTimeField {
+            Anchor: (Width: 75, Height: 24);
+            Style: (FontSize: 13, TextColor: #ffffff(0.85));
+          }
+        }
+
+        $C.@TextButton #SaveAutoStartButton {
+          Anchor: (Top: 4, Width: 160, Height: 22);
+          Text: "Save Auto-start";
+        }
+
+        Label #AutoStartCurrent {
+          Anchor: (Top: 4);
+          Style: (FontSize: 12, TextColor: #9fb0ba);
+          Text: "";
+        }
       }
 
       Group #ColumnSpacer {

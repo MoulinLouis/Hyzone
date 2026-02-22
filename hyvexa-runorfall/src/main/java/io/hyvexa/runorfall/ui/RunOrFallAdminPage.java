@@ -49,6 +49,7 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
     private static final String BUTTON_CLEAR_PLATFORMS = "ClearPlatforms";
     private static final String BUTTON_SAVE_VOIDY = "SaveVoidY";
     private static final String BUTTON_SAVE_BREAK_DELAY = "SaveBreakDelay";
+    private static final String BUTTON_SAVE_AUTO_START = "SaveAutoStart";
     private static final String BUTTON_START = "Start";
     private static final String BUTTON_STOP = "Stop";
     private static final String BUTTON_JOIN = "Join";
@@ -66,6 +67,10 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
     private String voidYInput;
     private String breakDelayInput;
     private String platformBlockIdInput;
+    private String minPlayersInput;
+    private String minPlayersTimeInput;
+    private String optimalPlayersInput;
+    private String optimalPlayersTimeInput;
 
     public RunOrFallAdminPage(@Nonnull PlayerRef playerRef,
                               RunOrFallConfigStore configStore,
@@ -78,6 +83,10 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
         this.voidYInput = formatDouble(configStore.getVoidY());
         this.breakDelayInput = formatDouble(configStore.getBlockBreakDelaySeconds());
         this.platformBlockIdInput = "";
+        this.minPlayersInput = Integer.toString(configStore.getMinPlayers());
+        this.minPlayersTimeInput = Integer.toString(configStore.getMinPlayersTimeSeconds());
+        this.optimalPlayersInput = Integer.toString(configStore.getOptimalPlayers());
+        this.optimalPlayersTimeInput = Integer.toString(configStore.getOptimalPlayersTimeSeconds());
     }
 
     @Override
@@ -108,6 +117,18 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
         }
         if (data.platformBlockId != null) {
             platformBlockIdInput = data.platformBlockId.trim();
+        }
+        if (data.minPlayers != null) {
+            minPlayersInput = data.minPlayers.trim();
+        }
+        if (data.minPlayersTime != null) {
+            minPlayersTimeInput = data.minPlayersTime.trim();
+        }
+        if (data.optimalPlayers != null) {
+            optimalPlayersInput = data.optimalPlayers.trim();
+        }
+        if (data.optimalPlayersTime != null) {
+            optimalPlayersTimeInput = data.optimalPlayersTime.trim();
         }
         if (data.button == null) {
             if (previousMapSearch == null) {
@@ -142,6 +163,7 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
             case BUTTON_CLEAR_PLATFORMS -> handleClearPlatforms(ref, store);
             case BUTTON_SAVE_VOIDY -> handleSaveVoidY(ref, store);
             case BUTTON_SAVE_BREAK_DELAY -> handleSaveBreakDelay(ref, store);
+            case BUTTON_SAVE_AUTO_START -> handleSaveAutoStart(ref, store);
             case BUTTON_START -> handleStart(ref, store);
             case BUTTON_STOP -> handleStop(ref, store);
             case BUTTON_JOIN -> handleJoin(ref, store);
@@ -365,6 +387,37 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
         sendRefresh(ref, store);
     }
 
+    private void handleSaveAutoStart(Ref<EntityStore> ref, Store<EntityStore> store) {
+        Player player = resolvePlayer(ref, store);
+        if (player == null) {
+            return;
+        }
+        int minPlayers;
+        int minPlayersTime;
+        int optimalPlayers;
+        int optimalPlayersTime;
+        try {
+            minPlayers = Integer.parseInt(minPlayersInput);
+            minPlayersTime = Integer.parseInt(minPlayersTimeInput);
+            optimalPlayers = Integer.parseInt(optimalPlayersInput);
+            optimalPlayersTime = Integer.parseInt(optimalPlayersTimeInput);
+        } catch (NumberFormatException ex) {
+            player.sendMessage(Message.raw(PREFIX + "Auto-start values must be whole numbers."));
+            return;
+        }
+        if (minPlayers < 1 || minPlayersTime < 1 || optimalPlayers < 1 || optimalPlayersTime < 1) {
+            player.sendMessage(Message.raw(PREFIX + "Values must be >= 1."));
+            return;
+        }
+        if (optimalPlayers < minPlayers) {
+            player.sendMessage(Message.raw(PREFIX + "Optimal players must be >= min players."));
+            return;
+        }
+        configStore.setAutoStartSettings(minPlayers, minPlayersTime, optimalPlayers, optimalPlayersTime);
+        player.sendMessage(Message.raw(PREFIX + "Auto-start settings saved."));
+        sendRefresh(ref, store);
+    }
+
     private void handleStart(Ref<EntityStore> ref, Store<EntityStore> store) {
         Player player = resolvePlayer(ref, store);
         if (player == null) {
@@ -434,6 +487,8 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
                 EventData.of(AdminData.KEY_BUTTON, BUTTON_SAVE_VOIDY), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SaveBreakDelayButton",
                 EventData.of(AdminData.KEY_BUTTON, BUTTON_SAVE_BREAK_DELAY), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SaveAutoStartButton",
+                EventData.of(AdminData.KEY_BUTTON, BUTTON_SAVE_AUTO_START), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#StartButton",
                 EventData.of(AdminData.KEY_BUTTON, BUTTON_START), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#StopButton",
@@ -452,6 +507,14 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
                 EventData.of(AdminData.KEY_BREAK_DELAY, "#BreakDelayField.Value"), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#PlatformBlockIdField",
                 EventData.of(AdminData.KEY_PLATFORM_BLOCK_ID, "#PlatformBlockIdField.Value"), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#MinPlayersField",
+                EventData.of(AdminData.KEY_MIN_PLAYERS, "#MinPlayersField.Value"), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#MinPlayersTimeField",
+                EventData.of(AdminData.KEY_MIN_PLAYERS_TIME, "#MinPlayersTimeField.Value"), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#OptimalPlayersField",
+                EventData.of(AdminData.KEY_OPTIMAL_PLAYERS, "#OptimalPlayersField.Value"), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#OptimalPlayersTimeField",
+                EventData.of(AdminData.KEY_OPTIMAL_PLAYERS_TIME, "#OptimalPlayersTimeField.Value"), false);
     }
 
     private void populateFields(Ref<EntityStore> ref, Store<EntityStore> store, UICommandBuilder commandBuilder) {
@@ -465,9 +528,17 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
         String selectedMapId = configStore.getSelectedMapId();
         double voidY = configStore.getVoidY();
         double breakDelay = configStore.getBlockBreakDelaySeconds();
+        int minPlayers = configStore.getMinPlayers();
+        int minPlayersTime = configStore.getMinPlayersTimeSeconds();
+        int optimalPlayers = configStore.getOptimalPlayers();
+        int optimalPlayersTime = configStore.getOptimalPlayersTimeSeconds();
 
         voidYInput = formatDouble(voidY);
         breakDelayInput = formatDouble(breakDelay);
+        minPlayersInput = Integer.toString(minPlayers);
+        minPlayersTimeInput = Integer.toString(minPlayersTime);
+        optimalPlayersInput = Integer.toString(optimalPlayers);
+        optimalPlayersTimeInput = Integer.toString(optimalPlayersTime);
         if (selectedMapId != null && !selectedMapId.isBlank() && (mapIdInput == null || mapIdInput.isBlank())) {
             mapIdInput = selectedMapId;
         }
@@ -477,6 +548,10 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
         commandBuilder.set("#VoidYField.Value", voidYInput);
         commandBuilder.set("#BreakDelayField.Value", breakDelayInput);
         commandBuilder.set("#PlatformBlockIdField.Value", platformBlockIdInput == null ? "" : platformBlockIdInput);
+        commandBuilder.set("#MinPlayersField.Value", minPlayersInput);
+        commandBuilder.set("#MinPlayersTimeField.Value", minPlayersTimeInput);
+        commandBuilder.set("#OptimalPlayersField.Value", optimalPlayersInput);
+        commandBuilder.set("#OptimalPlayersTimeField.Value", optimalPlayersTimeInput);
         commandBuilder.set("#StatusValue.Text", gameManager.statusLine());
         commandBuilder.set("#SelectedMapValue.Text",
                 selectedMapId == null || selectedMapId.isBlank() ? "Selected map: none" : "Selected map: " + selectedMapId);
@@ -485,6 +560,8 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
         commandBuilder.set("#PlatformsValue.Text", "Platforms: " + platforms.size());
         commandBuilder.set("#VoidYCurrent.Text", "Current: " + formatDouble(voidY));
         commandBuilder.set("#BreakDelayCurrent.Text", "Current: " + formatDouble(breakDelay) + "s");
+        commandBuilder.set("#AutoStartCurrent.Text", "Current: min " + minPlayers + " -> " + minPlayersTime
+                + "s, optimal " + optimalPlayers + " -> " + optimalPlayersTime + "s");
         commandBuilder.set("#Pos1Value.Text", "Pos1: " + formatSelection(selection != null ? selection.pos1 : null));
         commandBuilder.set("#Pos2Value.Text", "Pos2: " + formatSelection(selection != null ? selection.pos2 : null));
     }
@@ -603,6 +680,10 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
         static final String KEY_VOID_Y = "@VoidY";
         static final String KEY_BREAK_DELAY = "@BreakDelay";
         static final String KEY_PLATFORM_BLOCK_ID = "@PlatformBlockId";
+        static final String KEY_MIN_PLAYERS = "@MinPlayers";
+        static final String KEY_MIN_PLAYERS_TIME = "@MinPlayersTime";
+        static final String KEY_OPTIMAL_PLAYERS = "@OptimalPlayers";
+        static final String KEY_OPTIMAL_PLAYERS_TIME = "@OptimalPlayersTime";
 
         public static final BuilderCodec<AdminData> CODEC = BuilderCodec.<AdminData>builder(AdminData.class, AdminData::new)
                 .addField(new KeyedCodec<>(KEY_BUTTON, Codec.STRING),
@@ -617,6 +698,14 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
                         (data, value) -> data.breakDelay = value, data -> data.breakDelay)
                 .addField(new KeyedCodec<>(KEY_PLATFORM_BLOCK_ID, Codec.STRING),
                         (data, value) -> data.platformBlockId = value, data -> data.platformBlockId)
+                .addField(new KeyedCodec<>(KEY_MIN_PLAYERS, Codec.STRING),
+                        (data, value) -> data.minPlayers = value, data -> data.minPlayers)
+                .addField(new KeyedCodec<>(KEY_MIN_PLAYERS_TIME, Codec.STRING),
+                        (data, value) -> data.minPlayersTime = value, data -> data.minPlayersTime)
+                .addField(new KeyedCodec<>(KEY_OPTIMAL_PLAYERS, Codec.STRING),
+                        (data, value) -> data.optimalPlayers = value, data -> data.optimalPlayers)
+                .addField(new KeyedCodec<>(KEY_OPTIMAL_PLAYERS_TIME, Codec.STRING),
+                        (data, value) -> data.optimalPlayersTime = value, data -> data.optimalPlayersTime)
                 .build();
 
         private String button;
@@ -625,5 +714,9 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
         private String voidY;
         private String breakDelay;
         private String platformBlockId;
+        private String minPlayers;
+        private String minPlayersTime;
+        private String optimalPlayers;
+        private String optimalPlayersTime;
     }
 }
