@@ -48,6 +48,7 @@
 - **RunOrFall: Spectator/Disconnect round flow** - Players joining during an active round now get teleported to lobby as spectators, and disconnects are counted as eliminations.
 - **RunOrFall: Leave lobby now returns to spawn** - Voluntary leave (`/rof leave` and leave hotbar flow) now teleports the player to the world spawn.
 - **RunOrFall: Countdown moved from chat to HUD** - `Starting in ...` is now displayed in the RunOrFall HUD instead of chat countdown spam.
+- **RunOrFall: Winner return to lobby** - Round winner is now teleported back to lobby when the game ends.
 - **RunOrFall: Solo test start support** - `/rof start` can now launch with one player for testing, without immediately ending the round.
 - **RunOrFall: Edge-standing block bypass fixed** - Blocks now break from the player's full foot footprint, preventing side/edge standing exploits.
 - **RunOrFall: Break-delay trail reliability** - Fast movement no longer skips walked blocks; each touched step starts its own delay while still targeting the closest footprint block first.
