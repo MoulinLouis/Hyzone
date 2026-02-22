@@ -260,6 +260,33 @@ $C.@PageOverlay {
         }
 
         Label {
+          Anchor: (Top: 8);
+          Style: (FontSize: 13, TextColor: #cfd7dc);
+          Text: "Blink distance (blocks)";
+        }
+
+        Group {
+          Anchor: (Top: 2, Height: 26);
+          LayoutMode: Left;
+
+          $C.@TextField #BlinkDistanceField {
+            Anchor: (Width: 200, Height: 24);
+            Style: (FontSize: 13, TextColor: #ffffff(0.85));
+          }
+
+          $C.@TextButton #SaveBlinkDistanceButton {
+            Anchor: (Width: 120, Height: 22, Left: 6, Top: 1);
+            Text: "Save Blink";
+          }
+        }
+
+        Label #BlinkDistanceCurrent {
+          Anchor: (Top: 4);
+          Style: (FontSize: 12, TextColor: #9fb0ba);
+          Text: "";
+        }
+
+        Label {
           Anchor: (Top: 10);
           Style: (FontSize: 13, TextColor: #cfd7dc);
           Text: "Auto-start countdown";

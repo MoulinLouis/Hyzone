@@ -1,6 +1,6 @@
 {
   "Interactions": [
-    "RunOrFall_Blink"
+    "Parkour_Restart_Checkpoint"
   ],
   "Settings": {
     "Creative": {}

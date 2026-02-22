@@ -9,6 +9,7 @@
 - **RunOrFall: Admin setup UI** - Added `/rof admin` page to configure lobby/spawns/platforms, tune void Y and break delay, and control start/stop from buttons.
 - **RunOrFall: Player stats page** - Added a RunOrFall stats UI (Win, Loose, Winrate, Best win streak, Longest time survived) opened from `Food_Candy_Cane`, with SQL persistence in `runorfall_player_stats`.
 - **RunOrFall: Snowflake leaderboard UI** - `WinterHoliday_Snowflake` now opens a RunOrFall leaderboard with search, displaying wins, losses, and winrate (ranked by wins, tie-break by winrate).
+- **RunOrFall: Blink active-round ability** - During active rounds, players now get `Ingredient_Lightning_Essence` renamed to `Blink`, teleporting them 7 blocks in their look direction on use.
 - **Ascend: Cat Collector easter egg** - 5 hidden cat NPCs in Ascend world. Players find them via NPC dialog, tracked as a secret achievement (X/5 progress).
 - **Parkour: Map active toggle** - Admins can disable maps without deleting them via `/pk admin` Maps panel. Inactive maps block both start trigger and map selector entry with a warning message. New `active` column in `maps` table (defaults to TRUE).
 - **Purge: Configurable wave compositions** - `/purge admin` now has a Waves panel where staff define per-wave slow/normal/fast zombie counts. Sessions only start when at least one wave exists, spawns are distributed across configured spawn points, and clearing the final configured wave now ends with a win message.
@@ -22,6 +23,7 @@
 
 ### Changed
 - **RunOrFall: Multi-map admin + map-linked setup** - Added map list management in `/rof admin` and `/rof map ...`, moved lobby/spawns/platforms to per-map config, and removed platform naming requirement.
+- **RunOrFall: Admin-configurable blink distance** - Added a `/rof admin` field to set Blink teleport distance in blocks (used live by `Ingredient_Lightning_Essence`).
 - **RunOrFall: Platform block-item-id filter** - `/rof admin` platform save now requires a block item ID (e.g. `Rock_Marble_Brick_Smooth`), and platform destruction only applies to blocks matching that configured item ID.
 - **RunOrFall: Configurable auto-start countdown tiers** - Added `min players`, `min players time`, `optimal players`, and `optimal players time` settings in `/rof admin`; countdown auto-starts with min tier and drops to optimal tier when enough players join.
 - **RunOrFall: Leaderboard category checkboxes + wider layout** - Replaced text-based category toggles with checkbox controls (`Total wins`, `Best win streak`, `Longest time alive`), widened leaderboard rows/window to reduce text truncation (`...`), and colorized stats by category to match RunOrFall Stats colors (`W` green, `L` red, `%` blue, best streak yellow, longest time violet).
@@ -49,6 +51,13 @@
 - **RunOrFall: Leave lobby now returns to spawn** - Voluntary leave (`/rof leave` and leave hotbar flow) now teleports the player to the world spawn.
 - **RunOrFall: Countdown moved from chat to HUD** - `Starting in ...` is now displayed in the RunOrFall HUD instead of chat countdown spam.
 - **RunOrFall: Winner return to lobby** - Round winner is now teleported back to lobby when the game ends.
+- **RunOrFall: Blink item conflict with Parkour restart fixed** - `Ingredient_Lightning_Essence` now resolves to Blink behavior/name in RunOrFall, while Parkour restart uses its dedicated checkpoint item id.
+- **RunOrFall: Blink vertical direction/clamp fixed** - Blink now follows look pitch correctly (up goes up), and never teleports below the player's current Y.
+- **RunOrFall: Blink east/west direction fixed** - Horizontal X direction is now aligned with player look direction (east/west no longer inverted).
+- **RunOrFall: Blink now preserves full look orientation** - Teleport now keeps both vertical and horizontal head orientation after blink.
+- **RunOrFall: Blink wall-clip protection** - Blink now checks collisions along its path and stops at the last free point before a block, preventing phase-through.
+- **RunOrFall: Blink collision sweep hardened** - Path collision now sweeps a full player-like footprint/height to prevent diagonal edge clipping through walls.
+- **Parkour: Restart checkpoint orb skin restored** - Parkour restart now uses a dedicated orb item id again, so Blink changes no longer alter its appearance.
 - **RunOrFall: Solo test start support** - `/rof start` can now launch with one player for testing, without immediately ending the round.
 - **RunOrFall: Edge-standing block bypass fixed** - Blocks now break from the player's full foot footprint, preventing side/edge standing exploits.
 - **RunOrFall: Break-delay trail reliability** - Fast movement no longer skips walked blocks; each touched step starts its own delay while still targeting the closest footprint block first.

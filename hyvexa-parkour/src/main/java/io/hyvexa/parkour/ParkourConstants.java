@@ -8,7 +8,7 @@ public final class ParkourConstants {
     public static final String DEFAULT_CATEGORY = "Beginner";
 
     public static final String ITEM_RESET = "Ingredient_Ice_Essence";
-    public static final String ITEM_RESTART_CHECKPOINT = "Ingredient_Lightning_Essence";
+    public static final String ITEM_RESTART_CHECKPOINT = "Parkour_Restart_Checkpoint_Orb";
     public static final String ITEM_LEAVE = "Ingredient_Void_Essence";
     public static final String ITEM_PRACTICE = "Ingredient_Water_Essence";
     public static final String ITEM_PRACTICE_CHECKPOINT = "Ingredient_Fire_Essence";

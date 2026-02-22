@@ -25,6 +25,7 @@ import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.core.economy.VexaStore;
 import io.hyvexa.runorfall.command.RunOrFallCommand;
 import io.hyvexa.runorfall.hud.RunOrFallHud;
+import io.hyvexa.runorfall.interaction.RunOrFallBlinkInteraction;
 import io.hyvexa.runorfall.interaction.RunOrFallJoinInteraction;
 import io.hyvexa.runorfall.interaction.RunOrFallStatsInteraction;
 import io.hyvexa.runorfall.manager.RunOrFallConfigStore;
@@ -43,6 +44,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final String ITEM_JOIN = "Ingredient_Life_Essence";
     private static final String ITEM_LEAVE = "Ingredient_Earth_Essence";
+    private static final String ITEM_BLINK = "Ingredient_Lightning_Essence";
     private static final String ITEM_STATS = "Food_Candy_Cane";
     private static final String ITEM_LEADERBOARD = "WinterHoliday_Snowflake";
     private static final short SLOT_PRIMARY = 0;
@@ -175,6 +177,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
     private void registerInteractionCodecs() {
         var registry = this.getCodecRegistry(Interaction.CODEC);
         registry.register("RunOrFall_Join_Interaction", RunOrFallJoinInteraction.class, RunOrFallJoinInteraction.CODEC);
+        registry.register("RunOrFall_Blink_Interaction", RunOrFallBlinkInteraction.class, RunOrFallBlinkInteraction.CODEC);
         registry.register("RunOrFall_Stats_Interaction", RunOrFallStatsInteraction.class, RunOrFallStatsInteraction.CODEC);
     }
 
@@ -237,6 +240,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
         short capacity = hotbar.getCapacity();
         clearControlledItems(hotbar, capacity);
         if (state == HotbarState.IN_GAME) {
+            setHotbarItem(hotbar, capacity, SLOT_PRIMARY, ITEM_BLINK);
             return;
         }
         String primaryItem = state == HotbarState.LOBBY ? ITEM_LEAVE : ITEM_JOIN;
@@ -256,6 +260,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
             }
             String itemId = stack.getItemId();
             if (ITEM_STATS.equals(itemId) || ITEM_JOIN.equals(itemId) || ITEM_LEAVE.equals(itemId)
+                    || ITEM_BLINK.equals(itemId)
                     || ITEM_LEADERBOARD.equals(itemId)
                     || WorldConstants.ITEM_SERVER_SELECTOR.equals(itemId)) {
                 hotbar.setItemStackForSlot(slot, ItemStack.EMPTY, false);
