@@ -29,9 +29,10 @@ import java.util.UUID;
 
 public class PurgeSkinShopPage extends InteractiveCustomUIPage<PurgeSkinShopPage.SkinShopEventData> {
 
-    private static final String BUTTON_CLOSE = "Close";
     private static final String BUTTON_BACK = "Back";
     private static final String BUTTON_DEFAULT = "Default";
+    private static final String BUTTON_CONFIRM = "Confirm";
+    private static final String BUTTON_CANCEL = "Cancel";
     private static final String PREFIX_WEAPON = "Weapon:";
     private static final String PREFIX_BUY = "Buy:";
     private static final String PREFIX_SELECT = "Select:";
@@ -43,13 +44,15 @@ public class PurgeSkinShopPage extends InteractiveCustomUIPage<PurgeSkinShopPage
 
     // UI element IDs for preview groups in the entry template (no underscores — UI IDs don't allow them)
     private static final List<String> PREVIEW_IDS = List.of(
-            "AK47Asimov", "AK47Blossom", "AK47CyberpunkNeon", "AK47FrozenVoltage"
+            "AK47Default", "AK47Asimov", "AK47Blossom", "AK47CyberpunkNeon", "AK47FrozenVoltage"
     );
 
     private final UUID playerId;
     private final PurgeWeaponConfigManager weaponConfigManager;
     // null = show weapon list, non-null = show skins for this weapon
     private String selectedWeaponId;
+    // Pending buy confirmation — stores "weaponId:skinId" while confirm overlay is shown
+    private String pendingBuyKey;
 
     public PurgeSkinShopPage(@Nonnull PlayerRef playerRef, UUID playerId,
                              PurgeWeaponConfigManager weaponConfigManager,
@@ -70,8 +73,8 @@ public class PurgeSkinShopPage extends InteractiveCustomUIPage<PurgeSkinShopPage
         long vexa = VexaStore.getInstance().getVexa(playerId);
         commandBuilder.set("#VexaBalance.Text", String.valueOf(vexa));
 
-        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CloseButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_BACK), false);
 
         if (selectedWeaponId != null) {
             buildSkinList(commandBuilder, eventBuilder);
@@ -90,13 +93,13 @@ public class PurgeSkinShopPage extends InteractiveCustomUIPage<PurgeSkinShopPage
             return;
         }
 
-        if (BUTTON_CLOSE.equals(button)) {
-            close();
-            return;
-        }
         if (BUTTON_BACK.equals(button)) {
-            selectedWeaponId = null;
-            sendRefresh();
+            if (selectedWeaponId != null) {
+                selectedWeaponId = null;
+                sendRefresh();
+            } else {
+                close();
+            }
             return;
         }
         if (BUTTON_DEFAULT.equals(button)) {
@@ -109,9 +112,23 @@ public class PurgeSkinShopPage extends InteractiveCustomUIPage<PurgeSkinShopPage
             sendRefresh();
             return;
         }
+        if (BUTTON_CONFIRM.equals(button)) {
+            if (pendingBuyKey != null) {
+                String key = pendingBuyKey;
+                pendingBuyKey = null;
+                handleBuy(ref, store, key);
+            }
+            return;
+        }
+        if (BUTTON_CANCEL.equals(button)) {
+            pendingBuyKey = null;
+            hideConfirmOverlay();
+            return;
+        }
         if (button.startsWith(PREFIX_BUY)) {
             String skinKey = button.substring(PREFIX_BUY.length());
-            handleBuy(ref, store, skinKey);
+            pendingBuyKey = skinKey;
+            showConfirmOverlay(skinKey);
             return;
         }
         if (button.startsWith(PREFIX_SELECT)) {
@@ -171,6 +188,34 @@ public class PurgeSkinShopPage extends InteractiveCustomUIPage<PurgeSkinShopPage
         sendRefresh();
     }
 
+    private void showConfirmOverlay(String skinKey) {
+        String[] parts = skinKey.split(":", 2);
+        if (parts.length != 2) return;
+
+        PurgeSkinDefinition def = PurgeSkinRegistry.getSkin(parts[0], parts[1]);
+        if (def == null) return;
+
+        UICommandBuilder cmd = new UICommandBuilder();
+        UIEventBuilder evt = new UIEventBuilder();
+
+        cmd.set("#ConfirmOverlay.Visible", true);
+        cmd.set("#ConfirmSkinName.Text", def.getDisplayName());
+        cmd.set("#ConfirmPrice.Text", String.valueOf(def.getPrice()));
+
+        evt.addEventBinding(CustomUIEventBindingType.Activating, "#ConfirmButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CONFIRM), false);
+        evt.addEventBinding(CustomUIEventBindingType.Activating, "#CancelButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CANCEL), false);
+
+        this.sendUpdate(cmd, evt, false);
+    }
+
+    private void hideConfirmOverlay() {
+        UICommandBuilder cmd = new UICommandBuilder();
+        cmd.set("#ConfirmOverlay.Visible", false);
+        this.sendUpdate(cmd, new UIEventBuilder(), false);
+    }
+
     private void sendRefresh() {
         UICommandBuilder commandBuilder = new UICommandBuilder();
         UIEventBuilder eventBuilder = new UIEventBuilder();
@@ -178,14 +223,13 @@ public class PurgeSkinShopPage extends InteractiveCustomUIPage<PurgeSkinShopPage
         long vexa = VexaStore.getInstance().getVexa(playerId);
         commandBuilder.set("#VexaBalance.Text", String.valueOf(vexa));
 
-        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CloseButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_BACK), false);
 
         // Reset visibility
+        commandBuilder.set("#ConfirmOverlay.Visible", false);
         commandBuilder.set("#WeaponGrid.Visible", false);
         commandBuilder.set("#SkinList.Visible", false);
-        commandBuilder.set("#DefaultSkinEntry.Visible", false);
-        commandBuilder.set("#BackBar.Visible", false);
         commandBuilder.set("#Subtitle.Visible", false);
         commandBuilder.clear("#WeaponGrid");
         commandBuilder.clear("#SkinList");
@@ -202,8 +246,6 @@ public class PurgeSkinShopPage extends InteractiveCustomUIPage<PurgeSkinShopPage
     private void buildWeaponGrid(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
         commandBuilder.set("#WeaponGrid.Visible", true);
         commandBuilder.set("#SkinList.Visible", false);
-        commandBuilder.set("#DefaultSkinEntry.Visible", false);
-        commandBuilder.set("#BackBar.Visible", false);
         commandBuilder.set("#Subtitle.Visible", false);
         commandBuilder.set("#Title.Text", "Weapon Skins");
 
@@ -243,28 +285,30 @@ public class PurgeSkinShopPage extends InteractiveCustomUIPage<PurgeSkinShopPage
     private void buildSkinList(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
         commandBuilder.set("#WeaponGrid.Visible", false);
         commandBuilder.set("#SkinList.Visible", true);
-        commandBuilder.set("#BackBar.Visible", true);
         commandBuilder.set("#Subtitle.Visible", true);
 
         String displayName = weaponConfigManager.getDisplayName(selectedWeaponId);
         commandBuilder.set("#Title.Text", displayName + " Skins");
         commandBuilder.set("#Subtitle.Text", "Choose a skin for your " + displayName);
 
-        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_BACK), false);
-
         long vexa = VexaStore.getInstance().getVexa(playerId);
         String currentSelected = PurgeSkinStore.getInstance().getSelectedSkin(playerId, selectedWeaponId);
 
-        // Default skin option
-        commandBuilder.set("#DefaultSkinEntry.Visible", true);
+        // Default skin card (first entry)
+        String defaultRoot = "#SkinList[0]";
+        commandBuilder.append("#SkinList", "Pages/Purge_SkinShopEntry.ui");
+        commandBuilder.set(defaultRoot + " #SkinName.Text", "Default");
+
+        String defaultPreviewKey = selectedWeaponId + "Default";
+        for (String previewId : PREVIEW_IDS) {
+            commandBuilder.set(defaultRoot + " #Prev" + previewId + ".Visible", previewId.equals(defaultPreviewKey));
+        }
+
         if (currentSelected == null) {
-            commandBuilder.set("#DefaultSelectedGroup.Visible", true);
-            commandBuilder.set("#DefaultSelectGroup.Visible", false);
+            commandBuilder.set(defaultRoot + " #EntrySelectedOverlay.Visible", true);
         } else {
-            commandBuilder.set("#DefaultSelectedGroup.Visible", false);
-            commandBuilder.set("#DefaultSelectGroup.Visible", true);
-            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#DefaultSelectButton",
+            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
+                    defaultRoot + " #ActionButton",
                     EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_DEFAULT), false);
         }
 
@@ -272,7 +316,7 @@ public class PurgeSkinShopPage extends InteractiveCustomUIPage<PurgeSkinShopPage
         List<PurgeSkinDefinition> skins = PurgeSkinRegistry.getSkinsForWeapon(selectedWeaponId);
         for (int i = 0; i < skins.size(); i++) {
             PurgeSkinDefinition def = skins.get(i);
-            String root = "#SkinList[" + i + "]";
+            String root = "#SkinList[" + (i + 1) + "]";
             commandBuilder.append("#SkinList", "Pages/Purge_SkinShopEntry.ui");
 
             commandBuilder.set(root + " #SkinName.Text", def.getDisplayName());
@@ -287,23 +331,22 @@ public class PurgeSkinShopPage extends InteractiveCustomUIPage<PurgeSkinShopPage
             boolean selected = def.getSkinId().equals(currentSelected);
 
             if (!owned) {
-                commandBuilder.set(root + " #SkinPrice.Text", def.getPrice() + " Vexa");
                 if (vexa >= def.getPrice()) {
-                    commandBuilder.set(root + " #BuyGroup.Visible", true);
+                    commandBuilder.set(root + " #PriceBuyBadge.Visible", true);
+                    commandBuilder.set(root + " #BuyPriceLabel.Text", String.valueOf(def.getPrice()));
                     eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
-                            root + " #BuyButton",
+                            root + " #ActionButton",
                             EventData.of(ButtonEventData.KEY_BUTTON,
                                     PREFIX_BUY + selectedWeaponId + ":" + def.getSkinId()), false);
                 } else {
-                    commandBuilder.set(root + " #CantAffordGroup.Visible", true);
+                    commandBuilder.set(root + " #PriceCantAffordBadge.Visible", true);
+                    commandBuilder.set(root + " #CantAffordPrice.Text", String.valueOf(def.getPrice()));
                 }
             } else if (selected) {
-                commandBuilder.set(root + " #SelectedGroup.Visible", true);
                 commandBuilder.set(root + " #EntrySelectedOverlay.Visible", true);
             } else {
-                commandBuilder.set(root + " #SelectGroup.Visible", true);
                 eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
-                        root + " #SelectButton",
+                        root + " #ActionButton",
                         EventData.of(ButtonEventData.KEY_BUTTON,
                                 PREFIX_SELECT + selectedWeaponId + ":" + def.getSkinId()), false);
             }

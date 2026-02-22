@@ -29,24 +29,24 @@ $C.@PageOverlay {
 
       // Vexa balance
       Group {
-        Anchor: (Right: 96, Top: 14, Width: 120, Height: 24);
+        Anchor: (Right: 96, Top: 14, Width: 160, Height: 34);
         LayoutMode: Left;
 
         Group {
-          Anchor: (Width: 18, Height: 18, Top: 2);
+          Anchor: (Width: 28, Height: 28, Top: 3);
           Background: (TexturePath: "../Textures/vexa.png");
         }
 
         Label #VexaBalance {
-          Anchor: (Left: 4, Width: 90, Height: 22);
-          Style: (FontSize: 16, TextColor: #22c55e, RenderBold: true, VerticalAlignment: Center);
+          Anchor: (Left: 6, Width: 120, Height: 32);
+          Style: (FontSize: 22, TextColor: #22c55e, RenderBold: true, VerticalAlignment: Center);
           Text: "0";
         }
       }
 
-      TextButton #CloseButton {
-        Anchor: (Right: 14, Top: 10, Width: 72, Height: 32);
-        Text: "Close";
+      TextButton #BackButton {
+        Anchor: (Right: 14, Top: 14, Width: 80, Height: 32);
+        Text: "< Back";
         Style: TextButtonStyle(
           Default: (
             Background: #ffffff(0.06),
@@ -90,108 +90,107 @@ $C.@PageOverlay {
       // Skin list (shown when a weapon is selected)
       Group #SkinList {
         Anchor: (Left: 0, Right: 0, Top: 4);
-        LayoutMode: Top;
+        LayoutMode: LeftCenterWrap;
       }
 
-      // Default skin option (shown at top of skin list)
-      Group #DefaultSkinEntry {
-        Anchor: (Left: 0, Right: 0, Height: 48, Top: 6);
-        LayoutMode: Full;
-        Background: #ffffff(0.03);
-        OutlineColor: #ffffff(0.04);
-        OutlineSize: 1;
-        Visible: false;
-
-        Label #DefaultSkinName {
-          Anchor: (Left: 16, Top: 0, Bottom: 0, Width: 160);
-          Style: (FontSize: 14, TextColor: #9fb0ba, VerticalAlignment: Center, RenderBold: true);
-          Text: "Default";
-        }
-
-        // Selected indicator for default
-        Group #DefaultSelectedGroup {
-          Anchor: (Right: 12, Top: 10, Width: 96, Height: 28);
-          Visible: false;
-
-          TextButton #DefaultSelectedButton {
-            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-            Text: "SELECTED";
-            Style: TextButtonStyle(
-              Default: (
-                Background: #f59e0b(0.2),
-                LabelStyle: (FontSize: 12, TextColor: #fbbf24, HorizontalAlignment: Center, VerticalAlignment: Center, RenderBold: true)
-              ),
-              Hovered: (
-                Background: #f59e0b(0.2),
-                LabelStyle: (FontSize: 12, TextColor: #fbbf24, HorizontalAlignment: Center, VerticalAlignment: Center, RenderBold: true)
-              ),
-              Pressed: (
-                Background: #f59e0b(0.2),
-                LabelStyle: (FontSize: 12, TextColor: #fbbf24, HorizontalAlignment: Center, VerticalAlignment: Center, RenderBold: true)
-              ),
-              Sounds: $C.@ButtonSounds,
-            );
-          }
-        }
-
-        // Select button for default
-        Group #DefaultSelectGroup {
-          Anchor: (Right: 12, Top: 10, Width: 96, Height: 28);
-          Visible: false;
-
-          TextButton #DefaultSelectButton {
-            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-            Text: "Select";
-            Style: TextButtonStyle(
-              Default: (
-                Background: #6366f1(0.2),
-                LabelStyle: (FontSize: 12, TextColor: #a5b4fc, HorizontalAlignment: Center, VerticalAlignment: Center, RenderBold: true)
-              ),
-              Hovered: (
-                Background: #6366f1(0.35),
-                LabelStyle: (FontSize: 12, TextColor: #c7d2fe, HorizontalAlignment: Center, VerticalAlignment: Center, RenderBold: true)
-              ),
-              Pressed: (
-                Background: #6366f1(0.15),
-                LabelStyle: (FontSize: 12, TextColor: #a5b4fc, HorizontalAlignment: Center, VerticalAlignment: Center, RenderBold: true)
-              ),
-              Sounds: $C.@ButtonSounds,
-            );
-          }
-        }
-      }
     }
 
-    // === BACK BUTTON (shown when viewing skins for a weapon) ===
-    Group #BackBar {
-      Anchor: (Left: 0, Right: 0, Height: 44);
-      LayoutMode: Full;
-      Background: #0f1f33;
-      Visible: false;
+  }
+
+  // === CONFIRM PURCHASE OVERLAY ===
+  Group #ConfirmOverlay {
+    Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+    Background: #000000(0.6);
+    Visible: false;
+
+    Group #ConfirmBox {
+      Anchor: (Width: 280, Height: 190);
+      LayoutMode: Top;
+      Background: #0d1620;
+      OutlineColor: #ffffff(0.1);
+      OutlineSize: 1;
 
       Group {
-        Anchor: (Left: 0, Right: 0, Top: 0, Height: 1);
-        Background: #ffffff(0.08);
+        Anchor: (Left: 0, Right: 0, Height: 3);
+        Background: #22c55e;
       }
 
-      TextButton #BackButton {
-        Anchor: (Left: 14, Top: 8, Width: 80, Height: 30);
-        Text: "< Back";
-        Style: TextButtonStyle(
-          Default: (
-            Background: #ffffff(0.06),
-            LabelStyle: (FontSize: 13, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
-          ),
-          Hovered: (
-            Background: #ffffff(0.1),
-            LabelStyle: (FontSize: 13, TextColor: #f0f4f8, HorizontalAlignment: Center, VerticalAlignment: Center)
-          ),
-          Pressed: (
-            Background: #ffffff(0.04),
-            LabelStyle: (FontSize: 13, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
-          ),
-          Sounds: $C.@ButtonSounds,
-        );
+      Label {
+        Anchor: (Top: 18, Left: 0, Right: 0, Height: 24);
+        Style: (FontSize: 18, TextColor: #f4f9ff, RenderBold: true, HorizontalAlignment: Center);
+        Text: "Confirm Purchase";
+      }
+
+      Label #ConfirmSkinName {
+        Anchor: (Top: 6, Left: 0, Right: 0, Height: 22);
+        Style: (FontSize: 15, TextColor: #9fb0ba, HorizontalAlignment: Center);
+        Text: "";
+      }
+
+      Group {
+        Anchor: (Top: 8, Left: 0, Right: 0, Height: 26);
+        LayoutMode: Left;
+
+        Group { FlexWeight: 1; }
+        Group {
+          Anchor: (Width: 22, Height: 22, Top: 2);
+          Background: (TexturePath: "../Textures/vexa.png");
+        }
+        Group { Anchor: (Width: 6); }
+        Label #ConfirmPrice {
+          Anchor: (Height: 26);
+          Style: (FontSize: 20, TextColor: #22c55e, RenderBold: true, VerticalAlignment: Center);
+          Text: "100";
+        }
+        Group { FlexWeight: 1; }
+      }
+
+      Group {
+        Anchor: (Top: 18, Left: 0, Right: 0, Height: 36);
+        LayoutMode: Left;
+        Padding: (Left: 24, Right: 24);
+
+        TextButton #CancelButton {
+          Anchor: (Width: 100, Height: 36);
+          Text: "Cancel";
+          Style: TextButtonStyle(
+            Default: (
+              Background: #ffffff(0.06),
+              LabelStyle: (FontSize: 14, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Hovered: (
+              Background: #ffffff(0.12),
+              LabelStyle: (FontSize: 14, TextColor: #f0f4f8, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Pressed: (
+              Background: #ffffff(0.04),
+              LabelStyle: (FontSize: 14, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Sounds: $C.@ButtonSounds,
+          );
+        }
+
+        Group { FlexWeight: 1; }
+
+        TextButton #ConfirmButton {
+          Anchor: (Width: 100, Height: 36);
+          Text: "Buy";
+          Style: TextButtonStyle(
+            Default: (
+              Background: #22c55e(0.2),
+              LabelStyle: (FontSize: 14, TextColor: #22c55e, HorizontalAlignment: Center, VerticalAlignment: Center, RenderBold: true)
+            ),
+            Hovered: (
+              Background: #22c55e(0.35),
+              LabelStyle: (FontSize: 14, TextColor: #4ade80, HorizontalAlignment: Center, VerticalAlignment: Center, RenderBold: true)
+            ),
+            Pressed: (
+              Background: #22c55e(0.15),
+              LabelStyle: (FontSize: 14, TextColor: #22c55e, HorizontalAlignment: Center, VerticalAlignment: Center, RenderBold: true)
+            ),
+            Sounds: $C.@ButtonSounds,
+          );
+        }
       }
     }
   }
