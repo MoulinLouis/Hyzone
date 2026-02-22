@@ -65,6 +65,15 @@ Group {
     HitTestVisible: false;
   }
 
+  // Selected label (top right)
+  Label #SelectedLabel {
+    Anchor: (Right: 6, Top: 4, Width: 80, Height: 20);
+    Style: (FontSize: 13, TextColor: #fbbf24, RenderBold: true, HorizontalAlignment: End, VerticalAlignment: Center);
+    Text: "Selected";
+    Visible: false;
+    HitTestVisible: false;
+  }
+
   // Selected overlay (amber border)
   Group #EntrySelectedOverlay {
     Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
