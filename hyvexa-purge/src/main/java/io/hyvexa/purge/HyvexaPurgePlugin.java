@@ -151,7 +151,7 @@ public class HyvexaPurgePlugin extends JavaPlugin {
                 return;
             }
             Store<EntityStore> store = ref.getStore();
-            World world = store.getExternalData().getWorld();
+            World world = store.getExternalData() != null ? store.getExternalData().getWorld() : null;
             if (world == null || !ModeGate.isPurgeWorld(world)) {
                 return;
             }
@@ -164,14 +164,7 @@ public class HyvexaPurgePlugin extends JavaPlugin {
             if (player == null) {
                 return;
             }
-            // Attach HUD (base info panel, wave status hidden by default)
-            hudManager.attach(playerRef, player);
-            // Base idle loadout in Purge world.
-            InventoryUtils.clearAllContainers(player);
-            giveBaseLoadout(player, true);
-            // Initialize default weapons for this player
-            PurgeWeaponUpgradeStore.getInstance().initializeDefaults(
-                    playerId, weaponConfigManager.getDefaultWeaponIds());
+            ensurePurgeIdleState(playerRef, player);
             LOGGER.atInfo().log("Player entered Purge: " + (playerId != null ? playerId : "unknown"));
             try {
                 DiscordLinkStore.getInstance().checkAndRewardVexa(playerId, player);
@@ -194,7 +187,7 @@ public class HyvexaPurgePlugin extends JavaPlugin {
             if (ModeGate.isPurgeWorld(world)) {
                 Player player = holder.getComponent(Player.getComponentType());
                 if (playerRef != null && player != null) {
-                    ensurePurgeWorldSetup(playerRef, player);
+                    ensurePurgeIdleState(playerRef, player);
                 }
                 return;
             }
@@ -351,10 +344,14 @@ public class HyvexaPurgePlugin extends JavaPlugin {
         );
     }
 
-    private void ensurePurgeWorldSetup(PlayerRef playerRef, Player player) {
+    private void ensurePurgeIdleState(PlayerRef playerRef, Player player) {
         UUID playerId = playerRef.getUuid();
         if (playerId != null && hudManager.getHud(playerId) == null) {
             hudManager.attach(playerRef, player);
+        }
+        if (playerId != null) {
+            PurgeWeaponUpgradeStore.getInstance().initializeDefaults(
+                    playerId, weaponConfigManager.getDefaultWeaponIds());
         }
         if (playerId != null && sessionManager != null && sessionManager.hasActiveSession(playerId)) {
             return;
@@ -369,17 +366,26 @@ public class HyvexaPurgePlugin extends JavaPlugin {
         }
         ItemStack blueOrb = inventory.getHotbar().getItemStack(SLOT_ORB_BLUE);
         ItemStack orangeOrb = inventory.getHotbar().getItemStack(SLOT_ORB_ORANGE);
-        boolean missingBlue = blueOrb == null || blueOrb.isEmpty();
-        boolean missingOrange = orangeOrb == null || orangeOrb.isEmpty();
-        if (!missingBlue && !missingOrange) {
+        ItemStack serverSelector = inventory.getHotbar().getItemStack(SLOT_SERVER_SELECTOR);
+        boolean hasBlueOrb = hasExpectedItem(blueOrb, ITEM_ORB_BLUE);
+        boolean hasOrangeOrb = hasExpectedItem(orangeOrb, ITEM_ORB_ORANGE);
+        boolean hasServerSelector = hasExpectedItem(serverSelector, WorldConstants.ITEM_SERVER_SELECTOR);
+        if (hasBlueOrb && hasOrangeOrb && hasServerSelector) {
             return;
         }
-        if (missingBlue) {
+        if (!hasBlueOrb) {
             inventory.getHotbar().setItemStackForSlot(SLOT_ORB_BLUE, new ItemStack(ITEM_ORB_BLUE, 1), false);
         }
-        if (missingOrange) {
+        if (!hasOrangeOrb) {
             inventory.getHotbar().setItemStackForSlot(SLOT_ORB_ORANGE, new ItemStack(ITEM_ORB_ORANGE, 1), false);
         }
+        if (!hasServerSelector) {
+            giveServerSelector(player);
+        }
+    }
+
+    private boolean hasExpectedItem(ItemStack stack, String itemId) {
+        return stack != null && !stack.isEmpty() && itemId != null && itemId.equals(stack.getItemId());
     }
 
     private void registerPurgeDamageModifierSystem() {

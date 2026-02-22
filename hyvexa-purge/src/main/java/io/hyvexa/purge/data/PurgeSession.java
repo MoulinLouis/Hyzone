@@ -12,6 +12,8 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 public class PurgeSession {
@@ -25,6 +27,9 @@ public class PurgeSession {
     private volatile int waveZombieCount = 0;
     private volatile SessionState state = SessionState.COUNTDOWN;
     private volatile boolean spawningComplete = false;
+    private final AtomicInteger waveSpawnAttempts = new AtomicInteger();
+    private final AtomicInteger waveSpawnSuccesses = new AtomicInteger();
+    private final AtomicBoolean transitionGuard = new AtomicBoolean(false);
     private final Set<Ref<EntityStore>> aliveZombies = ConcurrentHashMap.newKeySet();
     private final ConcurrentHashMap<Ref<EntityStore>, String> zombieVariants = new ConcurrentHashMap<>();
     private volatile ScheduledFuture<?> waveTick;
@@ -221,6 +226,35 @@ public class PurgeSession {
 
     public void setSpawningComplete(boolean spawningComplete) {
         this.spawningComplete = spawningComplete;
+    }
+
+    public void resetWaveSpawnProgress() {
+        waveSpawnAttempts.set(0);
+        waveSpawnSuccesses.set(0);
+    }
+
+    public void incrementWaveSpawnAttempt() {
+        waveSpawnAttempts.incrementAndGet();
+    }
+
+    public void incrementWaveSpawnSuccess() {
+        waveSpawnSuccesses.incrementAndGet();
+    }
+
+    public int getWaveSpawnAttempts() {
+        return waveSpawnAttempts.get();
+    }
+
+    public int getWaveSpawnSuccesses() {
+        return waveSpawnSuccesses.get();
+    }
+
+    public boolean tryBeginTransition() {
+        return transitionGuard.compareAndSet(false, true);
+    }
+
+    public void resetTransitionGuard() {
+        transitionGuard.set(false);
     }
 
     public Set<Ref<EntityStore>> getAliveZombies() {

@@ -380,7 +380,14 @@ public class PurgePartyMenuPage extends InteractiveCustomUIPage<PurgePartyMenuPa
             if (ref == null || !ref.isValid()) {
                 continue;
             }
-            World world = ref.getStore().getExternalData().getWorld();
+            Store<EntityStore> store = ref.getStore();
+            if (store == null || store.getExternalData() == null) {
+                continue;
+            }
+            World world = store.getExternalData().getWorld();
+            if (world == null) {
+                continue;
+            }
             if (!ModeGate.isPurgeWorld(world)) {
                 continue;
             }

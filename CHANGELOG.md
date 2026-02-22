@@ -66,6 +66,8 @@
 - **RunOrFall: /rof status permission** - `/rof status` is now restricted to OP/admin users.
 - **Parkour: Fly-zone warning now only applies with practice fly enabled** - The "You don't have the right to go there." rollback protection no longer triggers when practice is enabled but fly is OFF.
 - **Purge: Deep-dive stability pass** - Fixed spawn/end race leaks, moved session teardown entity/inventory mutations onto world thread cleanup, replaced unsupported upgrade-card accent runtime background writes with visibility variants, added world-transfer HUD/loadout reconciliation, batched per-tick world work, improved purge error observability, and cleaned dead code/resources.
+- **Purge: Session and wave edge-case hardening** - Wave clear now requires successful spawns (except explicit zero-zombie waves), wipe/clear transitions run after world-thread death processing, `/purge start` now enforces party leader-only launch, and instance release waits for player + zombie cleanup futures with timeout fallback logging.
+- **Purge: Idle hotbar slot correctness on world entry** - Purge idle loadout now validates expected item IDs per slot and replaces mismatches, so slot `0` consistently restores the blue start orb after hub transfer.
 
 ### Added
 - **Global: Analytics system** - Event-based analytics tracking gameplay events (joins, completions, duels, mode switches, purchases, Ascend progression). Daily aggregates computed into `analytics_daily` table. OP-only `/analytics` command shows DAU, retention, session length, and mode split. 90-day event retention with auto-purge.
