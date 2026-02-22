@@ -28,7 +28,7 @@ $C.@PageOverlay {
       }
 
       // Vexa balance
-      Group {
+      Group #VexaGroup {
         Anchor: (Right: 96, Top: 14, Width: 160, Height: 34);
         LayoutMode: Left;
 

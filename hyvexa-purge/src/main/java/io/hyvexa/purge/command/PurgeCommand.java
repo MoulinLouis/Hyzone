@@ -221,7 +221,7 @@ public class PurgeCommand extends AbstractAsyncCommand {
             return;
         }
         player.getPageManager().openCustomPage(ref, store,
-                new PurgeSkinShopPage(playerRef, playerId, weaponConfigManager, null));
+                new PurgeSkinShopPage(playerRef, playerId));
     }
 
     private void handleScrap(Player player, UUID callerPlayerId, String[] args) {

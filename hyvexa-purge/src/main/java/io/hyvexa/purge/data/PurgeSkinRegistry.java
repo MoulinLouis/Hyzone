@@ -41,6 +41,14 @@ public final class PurgeSkinRegistry {
         return def != null ? def.getItemId() : weaponId;
     }
 
+    public static List<PurgeSkinDefinition> getAllSkins() {
+        List<PurgeSkinDefinition> all = new ArrayList<>();
+        for (List<PurgeSkinDefinition> weaponSkins : SKINS.values()) {
+            all.addAll(weaponSkins);
+        }
+        return all;
+    }
+
     public static boolean hasAnySkins(String weaponId) {
         return !getSkinsForWeapon(weaponId).isEmpty();
     }
