@@ -19,12 +19,16 @@ import io.hyvexa.purge.util.PurgePlayerNameResolver;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class PurgeSessionManager {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
+    private static final long CLEANUP_TIMEOUT_SECONDS = 8L;
 
     private final ConcurrentHashMap<String, PurgeSession> sessionsById = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, String> sessionIdByPlayer = new ConcurrentHashMap<>();
@@ -252,7 +256,8 @@ public class PurgeSessionManager {
         // World-dependent cleanup for this player
         // Pass playerState directly — world.execute() is async and session.removePlayer()
         // below would delete the state before the world thread can access it.
-        runPlayerWorldCleanup(session, playerId, playerState, endReason, summary);
+        CompletableFuture<Void> playerCleanupFuture =
+                runPlayerWorldCleanup(session, playerId, playerState, endReason, summary);
 
         // Step 4: Remove player from session + index
         session.removePlayer(playerId);
@@ -262,13 +267,17 @@ public class PurgeSessionManager {
 
         // Step 5: Check session closure
         if (session.getConnectedCount() == 0) {
-            stopSessionById(sessionId, "no players connected");
+            stopSessionById(sessionId, "no players connected", List.of(playerCleanupFuture));
         }
     }
 
     // --- stopSessionById (global technical stop) ---
 
     public void stopSessionById(String sessionId, String reason) {
+        stopSessionById(sessionId, reason, List.of());
+    }
+
+    private void stopSessionById(String sessionId, String reason, List<CompletableFuture<Void>> priorCleanupFutures) {
         if (sessionId == null) {
             return;
         }
@@ -284,6 +293,11 @@ public class PurgeSessionManager {
 
         // Step 2: Remove all zombies
         CompletableFuture<Void> zombieCleanup = waveManager.removeAllZombies(session);
+        List<CompletableFuture<Void>> cleanupFutures = new ArrayList<>();
+        cleanupFutures.add(zombieCleanup);
+        if (priorCleanupFutures != null && !priorCleanupFutures.isEmpty()) {
+            cleanupFutures.addAll(priorCleanupFutures);
+        }
 
         // Step 3: For each player still in session
         Set<UUID> participants = session.getParticipants();
@@ -305,14 +319,25 @@ public class PurgeSessionManager {
                     + " - " + scrap + " scrap earned"
                     + " (" + reason + ")";
 
-            runPlayerWorldCleanup(session, pid, playerState, endReason, summary);
+            CompletableFuture<Void> playerCleanupFuture =
+                    runPlayerWorldCleanup(session, pid, playerState, endReason, summary);
+            cleanupFutures.add(playerCleanupFuture);
             sessionIdByPlayer.remove(pid);
         }
 
-        // Step 4: Release instance only after world zombie cleanup is complete.
-        zombieCleanup.whenComplete((unused, throwable) -> {
+        // Step 4: Release instance only after all world cleanup completes.
+        CompletableFuture<Void> allCleanup = CompletableFuture.allOf(
+                cleanupFutures.toArray(new CompletableFuture[0]));
+        allCleanup.orTimeout(CLEANUP_TIMEOUT_SECONDS, TimeUnit.SECONDS).whenComplete((unused, throwable) -> {
             if (throwable != null) {
-                LOGGER.atWarning().withCause(throwable).log("Zombie cleanup failed for session " + sessionId);
+                Throwable cause = unwrapCompletionCause(throwable);
+                if (cause instanceof TimeoutException) {
+                    LOGGER.atWarning().log("Cleanup timeout for session " + sessionId
+                            + " after " + CLEANUP_TIMEOUT_SECONDS
+                            + "s; releasing instance with pending cleanup.");
+                } else {
+                    LOGGER.atWarning().withCause(cause).log("Cleanup failed for session " + sessionId);
+                }
             }
             runSafe("release instance", () -> instanceManager.releaseInstance(session.getInstanceId()));
             LOGGER.atInfo().log("Session " + sessionId + " stopped (" + reason + ")");
@@ -378,13 +403,22 @@ public class PurgeSessionManager {
         }
     }
 
-    private void runPlayerWorldCleanup(PurgeSession session, UUID playerId,
-                                       PurgeSessionPlayerState playerState,
-                                       SessionEndReason endReason, String summary) {
+    private CompletableFuture<Void> runPlayerWorldCleanup(PurgeSession session, UUID playerId,
+                                                          PurgeSessionPlayerState playerState,
+                                                          SessionEndReason endReason, String summary) {
+        CompletableFuture<Void> cleanupFuture = new CompletableFuture<>();
         if (playerState == null) {
-            return;
+            cleanupFuture.complete(null);
+            return cleanupFuture;
         }
-        Runnable cleanup = () -> performPlayerCleanup(session, playerId, playerState, endReason, summary);
+        Runnable cleanup = () -> {
+            try {
+                performPlayerCleanup(session, playerId, playerState, endReason, summary);
+                cleanupFuture.complete(null);
+            } catch (Exception e) {
+                cleanupFuture.completeExceptionally(e);
+            }
+        };
         Ref<EntityStore> ref = playerState.getPlayerRef();
         World world = resolveWorld(ref);
         if (world != null) {
@@ -397,6 +431,7 @@ public class PurgeSessionManager {
         } else {
             cleanup.run();
         }
+        return cleanupFuture;
     }
 
     private void performPlayerCleanup(PurgeSession session, UUID playerId,
@@ -471,6 +506,13 @@ public class PurgeSessionManager {
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("Cleanup failed [" + label + "]");
         }
+    }
+
+    private Throwable unwrapCompletionCause(Throwable throwable) {
+        if (throwable instanceof CompletionException ce && ce.getCause() != null) {
+            return ce.getCause();
+        }
+        return throwable;
     }
 
     private void teleportToStart(Ref<EntityStore> ref, Store<EntityStore> store, PurgeMapInstance instance) {

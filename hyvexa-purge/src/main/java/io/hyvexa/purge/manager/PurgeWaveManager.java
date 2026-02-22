@@ -150,6 +150,8 @@ public class PurgeWaveManager {
         int totalCount = wave.totalCount();
         session.setWaveZombieCount(totalCount);
         session.setSpawningComplete(false);
+        session.resetWaveSpawnProgress();
+        session.resetTransitionGuard();
         session.setState(SessionState.SPAWNING);
 
         sendMessageToAll(session, "-- Wave " + nextWave + " -- (" + wave.totalCount() + " zombies, "
@@ -159,7 +161,9 @@ public class PurgeWaveManager {
         List<String> spawnQueue = buildSpawnQueue(wave);
         if (spawnQueue.isEmpty()) {
             markSpawningComplete(session);
-            onWaveComplete(session);
+            if (tryBeginSessionTransition(session)) {
+                onWaveComplete(session);
+            }
             return;
         }
 
@@ -198,7 +202,6 @@ public class PurgeWaveManager {
     private void startSpawning(PurgeSession session, List<String> spawnQueue, PurgeWaveDefinition wave) {
         int totalCount = spawnQueue.size();
 
-        AtomicInteger remaining = new AtomicInteger(totalCount);
         AtomicInteger queueIndex = new AtomicInteger(0);
 
         ScheduledFuture<?> task = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(() -> {
@@ -207,7 +210,7 @@ public class PurgeWaveManager {
                     session.cancelSpawnTask();
                     return;
                 }
-                int batch = Math.min(wave.spawnBatchSize(), remaining.get());
+                int batch = Math.min(wave.spawnBatchSize(), totalCount - queueIndex.get());
                 if (batch <= 0) {
                     markSpawningComplete(session);
                     session.cancelSpawnTask();
@@ -243,28 +246,29 @@ public class PurgeWaveManager {
 
                         PurgeMapInstance instance = instanceManager.getInstance(session.getInstanceId());
 
-                        int toSpawn = Math.min(wave.spawnBatchSize(), remaining.get());
-                        for (int i = 0; i < toSpawn && remaining.get() > 0; i++) {
+                        int toSpawn = Math.min(wave.spawnBatchSize(), totalCount - queueIndex.get());
+                        for (int i = 0; i < toSpawn; i++) {
                             if (session.getState() == SessionState.ENDED) {
                                 return;
                             }
                             int idx = queueIndex.getAndIncrement();
                             if (idx >= spawnQueue.size()) {
-                                remaining.set(0);
                                 break;
                             }
 
+                            session.incrementWaveSpawnAttempt();
                             PurgeSpawnPoint spawnPoint = instanceManager.selectSpawnPoint(instance, spawnX, spawnZ);
                             String variantKey = spawnQueue.get(idx);
                             boolean spawned = spawnZombie(session, store, spawnPoint, variantKey, session.getCurrentWave());
                             if (!spawned) {
                                 LOGGER.atWarning().log("Wave spawn failed: wave=" + session.getCurrentWave()
                                         + " variant=" + variantKey);
+                            } else {
+                                session.incrementWaveSpawnSuccess();
                             }
-                            remaining.decrementAndGet();
                         }
 
-                        if (remaining.get() <= 0) {
+                        if (queueIndex.get() >= totalCount) {
                             markSpawningComplete(session);
                             session.cancelSpawnTask();
                         }
@@ -525,28 +529,7 @@ public class PurgeWaveManager {
                     }
                     return;
                 }
-
-                checkZombieDeaths(session);
                 updateWaveWorldState(session);
-
-                // Team wipe check (after HP loop processes deaths)
-                if (session.getAliveConnectedCount() == 0) {
-                    PurgeSessionManager sm = sessionManager;
-                    if (sm != null) {
-                        sm.stopSessionById(session.getSessionId(), "team wiped");
-                    }
-                    return;
-                }
-
-                // Update HUD for all connected players
-                int alive = session.getAliveZombieCount();
-                int total = session.getWaveZombieCount();
-                session.forEachConnectedParticipant(
-                        pid -> hudManager.updateWaveStatus(pid, session.getCurrentWave(), alive, total));
-
-                if (session.isSpawningComplete() && alive == 0) {
-                    onWaveComplete(session);
-                }
             } catch (Exception e) {
                 LOGGER.atWarning().withCause(e).log("Wave tick error");
             }
@@ -612,12 +595,53 @@ public class PurgeWaveManager {
         }
         world.execute(() -> {
             try {
+                if (session.getState() == SessionState.ENDED) {
+                    return;
+                }
                 Store<EntityStore> store = world.getEntityStore().getStore();
                 if (store == null) {
                     return;
                 }
+                checkZombieDeaths(session);
                 updateZombieNameplates(session, store);
                 updatePlayerHealthHud(session, store, world);
+
+                int alivePlayers = session.getAliveConnectedCount();
+                int aliveZombies = session.getAliveZombieCount();
+                int totalZombies = session.getWaveZombieCount();
+
+                if (alivePlayers == 0) {
+                    if (tryBeginSessionTransition(session)) {
+                        PurgeSessionManager sm = sessionManager;
+                        if (sm != null) {
+                            sm.stopSessionById(session.getSessionId(), "team wiped");
+                        }
+                    }
+                    return;
+                }
+
+                session.forEachConnectedParticipant(
+                        pid -> hudManager.updateWaveStatus(pid, session.getCurrentWave(), aliveZombies, totalZombies));
+
+                if (session.isSpawningComplete() && aliveZombies == 0) {
+                    if (totalZombies == 0 || session.getWaveSpawnSuccesses() > 0) {
+                        if (tryBeginSessionTransition(session)) {
+                            onWaveComplete(session);
+                        }
+                    } else if (tryBeginSessionTransition(session)) {
+                        sendMessageToAll(session,
+                                "Session ended due to a technical wave spawn failure. Please contact an admin.");
+                        LOGGER.atWarning().log("Ending session after spawn failure: session="
+                                + session.getSessionId()
+                                + " wave=" + session.getCurrentWave()
+                                + " attempted=" + session.getWaveSpawnAttempts()
+                                + " spawned=" + session.getWaveSpawnSuccesses());
+                        PurgeSessionManager sm = sessionManager;
+                        if (sm != null) {
+                            sm.stopSessionById(session.getSessionId(), "wave spawn failure");
+                        }
+                    }
+                }
             } catch (Exception e) {
                 LOGGER.atWarning().withCause(e).log("Failed to process wave world updates");
             }
@@ -798,7 +822,7 @@ public class PurgeWaveManager {
             PurgeSessionPlayerState ps = session.getPlayerState(pid);
             if (ps != null) totalKills += ps.getKills();
         }
-        sendMessageToAll(session, "Wave " + session.getCurrentWave() + " complete! (" + totalKills + " total kills)");
+        sendMessageToAll(session, "Wave " + session.getCurrentWave() + " complete! (" + totalKills + " team kill credits)");
 
         if (!waveConfigManager.hasWave(session.getCurrentWave() + 1)) {
             handleVictory(session);
@@ -1105,6 +1129,10 @@ public class PurgeWaveManager {
                 LOGGER.atFine().log("Failed to send wave message: " + e.getMessage());
             }
         });
+    }
+
+    private boolean tryBeginSessionTransition(PurgeSession session) {
+        return session.getState() != SessionState.ENDED && session.tryBeginTransition();
     }
 
     private World getPurgeWorld() {

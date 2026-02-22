@@ -40,6 +40,8 @@ import java.util.concurrent.CompletableFuture;
 public class PurgeCommand extends AbstractAsyncCommand {
 
     private static final Message MESSAGE_OP_REQUIRED = Message.raw("You must be OP to use /purge admin.");
+    private static final Message MESSAGE_PARTY_LEADER_START_REQUIRED =
+            Message.raw("Only the leader can start. Any party member can invite players.");
 
     private final PurgeSessionManager sessionManager;
     private final PurgeWaveConfigManager waveConfigManager;
@@ -133,6 +135,11 @@ public class PurgeCommand extends AbstractAsyncCommand {
     private void handleStart(Player player, Ref<EntityStore> ref, World world, UUID playerId) {
         if (!ModeGate.isPurgeWorld(world)) {
             player.sendMessage(Message.raw("You must be in the Purge world to start a session."));
+            return;
+        }
+        PurgeParty party = partyManager.getPartyByPlayer(playerId);
+        if (party != null && !party.isLeader(playerId)) {
+            player.sendMessage(MESSAGE_PARTY_LEADER_START_REQUIRED);
             return;
         }
         sessionManager.startSession(playerId, ref);
