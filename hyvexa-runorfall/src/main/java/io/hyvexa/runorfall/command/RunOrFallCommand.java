@@ -405,6 +405,10 @@ public class RunOrFallCommand extends AbstractAsyncCommand {
         player.sendMessage(Message.raw(PREFIX + "map=" + configStore.getSelectedMapId()
                 + ", voidY=" + configStore.getVoidY()
                 + ", breakDelay=" + configStore.getBlockBreakDelaySeconds() + "s"
+                + ", minPlayers=" + configStore.getMinPlayers()
+                + ", minPlayersTime=" + configStore.getMinPlayersTimeSeconds() + "s"
+                + ", optimalPlayers=" + configStore.getOptimalPlayers()
+                + ", optimalPlayersTime=" + configStore.getOptimalPlayersTimeSeconds() + "s"
                 + ", spawns=" + configStore.getSpawns().size()
                 + ", platforms=" + configStore.getPlatforms().size()
                 + ", lobbySet=" + (configStore.getLobby() != null)));

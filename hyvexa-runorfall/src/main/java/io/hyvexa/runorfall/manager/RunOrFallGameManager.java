@@ -33,7 +33,7 @@ import java.util.concurrent.TimeUnit;
 public class RunOrFallGameManager {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final String PREFIX = "[RunOrFall] ";
-    private static final int COUNTDOWN_SECONDS = 10;
+    private static final int FORCED_COUNTDOWN_SECONDS = 10;
     private static final long GAME_TICK_MS = 50L;
     private static final long START_BLOCK_BREAK_GRACE_MS = 3000L;
     private static final double PLAYER_FOOTPRINT_RADIUS = 0.37d;
@@ -55,8 +55,11 @@ public class RunOrFallGameManager {
     private final Map<String, Integer> blockItemIdCache = new ConcurrentHashMap<>();
 
     private volatile GameState state = GameState.IDLE;
-    private volatile int countdownRemaining = COUNTDOWN_SECONDS;
+    private volatile int countdownRemaining = FORCED_COUNTDOWN_SECONDS;
     private volatile int countdownRequiredPlayers = 2;
+    private volatile int countdownOptimalPlayers = 0;
+    private volatile int countdownOptimalTimeSeconds = 0;
+    private volatile boolean countdownForced = false;
     private volatile boolean soloTestRound = false;
     private volatile ScheduledFuture<?> countdownTask;
     private volatile ScheduledFuture<?> gameTickTask;
@@ -121,7 +124,11 @@ public class RunOrFallGameManager {
             sendToPlayer(playerId, "Round already running. You are spectating from the lobby.");
         }
         broadcastLobby("Lobby: " + lobbyPlayers.size() + " player(s).");
-        startCountdownIfPossible(false);
+        if (state == GameState.IDLE) {
+            startAutoCountdownIfPossible();
+        } else if (state == GameState.COUNTDOWN && !countdownForced) {
+            reduceAutoCountdownForOptimalPopulationIfNeeded();
+        }
     }
 
     public synchronized void leaveLobby(UUID playerId, boolean notify) {
@@ -153,11 +160,26 @@ public class RunOrFallGameManager {
     }
 
     public synchronized void requestStart() {
-        startCountdownIfPossible(false);
+        requestStart(false);
     }
 
     public synchronized void requestStart(boolean allowSolo) {
-        startCountdownIfPossible(allowSolo);
+        if (state == GameState.COUNTDOWN) {
+            int requiredPlayers = allowSolo ? 1 : 2;
+            if (lobbyPlayers.size() < requiredPlayers) {
+                return;
+            }
+            countdownForced = true;
+            countdownRequiredPlayers = requiredPlayers;
+            countdownOptimalPlayers = 0;
+            countdownOptimalTimeSeconds = 0;
+            if (countdownRemaining > FORCED_COUNTDOWN_SECONDS) {
+                countdownRemaining = FORCED_COUNTDOWN_SECONDS;
+                broadcastLobby("Admin start: countdown forced to " + FORCED_COUNTDOWN_SECONDS + "s.");
+            }
+            return;
+        }
+        startForcedCountdownIfPossible(allowSolo);
     }
 
     public synchronized void requestStop(String reason) {
@@ -185,8 +207,11 @@ public class RunOrFallGameManager {
             restoreAllBlocksInternal();
         }
         state = GameState.IDLE;
-        countdownRemaining = COUNTDOWN_SECONDS;
+        countdownRemaining = FORCED_COUNTDOWN_SECONDS;
         countdownRequiredPlayers = 2;
+        countdownOptimalPlayers = 0;
+        countdownOptimalTimeSeconds = 0;
+        countdownForced = false;
         soloTestRound = false;
         blockBreakEnabledAtMs = 0L;
         blockBreakCountdownLastAnnounced = -1;
@@ -222,7 +247,7 @@ public class RunOrFallGameManager {
         }
     }
 
-    private void startCountdownIfPossible(boolean allowSoloStart) {
+    private void startForcedCountdownIfPossible(boolean allowSoloStart) {
         if (state != GameState.IDLE) {
             return;
         }
@@ -235,17 +260,61 @@ public class RunOrFallGameManager {
             return;
         }
         state = GameState.COUNTDOWN;
-        countdownRemaining = COUNTDOWN_SECONDS;
+        countdownForced = true;
+        countdownRemaining = FORCED_COUNTDOWN_SECONDS;
         countdownRequiredPlayers = requiredPlayers;
+        countdownOptimalPlayers = 0;
+        countdownOptimalTimeSeconds = 0;
         if (requiredPlayers == 1 && lobbyPlayers.size() == 1) {
-            broadcastLobby("Solo test starting in " + COUNTDOWN_SECONDS + "s.");
+            broadcastLobby("Solo test starting in " + FORCED_COUNTDOWN_SECONDS + "s.");
         } else {
-            broadcastLobby("Game starting in " + COUNTDOWN_SECONDS + "s.");
+            broadcastLobby("Game starting in " + FORCED_COUNTDOWN_SECONDS + "s.");
         }
+        startCountdownTask();
+    }
+
+    private void startAutoCountdownIfPossible() {
+        if (state != GameState.IDLE) {
+            return;
+        }
+        CountdownSettings settings = resolveCountdownSettings(configStore.snapshot());
+        if (lobbyPlayers.size() < settings.minPlayers) {
+            return;
+        }
+        World world = activeWorld;
+        if (world == null) {
+            return;
+        }
+        state = GameState.COUNTDOWN;
+        countdownForced = false;
+        countdownRemaining = settings.minPlayersTimeSeconds;
+        countdownRequiredPlayers = settings.minPlayers;
+        countdownOptimalPlayers = settings.optimalPlayers;
+        countdownOptimalTimeSeconds = settings.optimalPlayersTimeSeconds;
+        reduceAutoCountdownForOptimalPopulationIfNeeded();
+        broadcastLobby("Game starting in " + countdownRemaining + "s.");
+        startCountdownTask();
+    }
+
+    private void startCountdownTask() {
         countdownTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleAtFixedRate(
                 () -> dispatchToWorld(this::tickCountdownInternal),
                 1000L, 1000L, TimeUnit.MILLISECONDS
         );
+    }
+
+    private void reduceAutoCountdownForOptimalPopulationIfNeeded() {
+        if (countdownForced || state != GameState.COUNTDOWN) {
+            return;
+        }
+        if (lobbyPlayers.size() < countdownOptimalPlayers) {
+            return;
+        }
+        if (countdownRemaining <= countdownOptimalTimeSeconds) {
+            return;
+        }
+        countdownRemaining = countdownOptimalTimeSeconds;
+        broadcastLobby("Optimal players reached. Countdown reduced to " + countdownRemaining + "s.");
     }
 
     private void tickCountdownInternal() {
@@ -257,6 +326,7 @@ public class RunOrFallGameManager {
                 cancelCountdownInternal("Countdown cancelled: not enough players.");
                 return;
             }
+            reduceAutoCountdownForOptimalPopulationIfNeeded();
             countdownRemaining--;
             if (countdownRemaining <= 0) {
                 cancelCountdownTask();
@@ -442,21 +512,27 @@ public class RunOrFallGameManager {
         playerLastFootBlock.clear();
         roundStartTimesMs.clear();
         state = GameState.IDLE;
-        countdownRemaining = COUNTDOWN_SECONDS;
+        countdownRemaining = FORCED_COUNTDOWN_SECONDS;
         countdownRequiredPlayers = 2;
+        countdownOptimalPlayers = 0;
+        countdownOptimalTimeSeconds = 0;
+        countdownForced = false;
         soloTestRound = false;
         blockBreakEnabledAtMs = 0L;
         blockBreakCountdownLastAnnounced = -1;
         refreshLobbyHotbars();
         broadcastLobby(reason);
-        startCountdownIfPossible(false);
+        startAutoCountdownIfPossible();
     }
 
     private void cancelCountdownInternal(String reason) {
         cancelCountdownTask();
         state = GameState.IDLE;
-        countdownRemaining = COUNTDOWN_SECONDS;
+        countdownRemaining = FORCED_COUNTDOWN_SECONDS;
         countdownRequiredPlayers = 2;
+        countdownOptimalPlayers = 0;
+        countdownOptimalTimeSeconds = 0;
+        countdownForced = false;
         blockBreakEnabledAtMs = 0L;
         blockBreakCountdownLastAnnounced = -1;
         broadcastLobby(reason);
@@ -661,6 +737,20 @@ public class RunOrFallGameManager {
         return blockItemIdCache.computeIfAbsent(key, ignored -> BlockType.getAssetMap().getIndex(key));
     }
 
+    private static CountdownSettings resolveCountdownSettings(RunOrFallConfig config) {
+        CountdownSettings settings = new CountdownSettings();
+        int minPlayers = config != null ? config.minPlayers : 2;
+        int minPlayersTimeSeconds = config != null ? config.minPlayersTimeSeconds : 300;
+        int optimalPlayers = config != null ? config.optimalPlayers : 4;
+        int optimalPlayersTimeSeconds = config != null ? config.optimalPlayersTimeSeconds : 60;
+
+        settings.minPlayers = Math.max(1, minPlayers);
+        settings.minPlayersTimeSeconds = Math.max(1, minPlayersTimeSeconds);
+        settings.optimalPlayers = Math.max(settings.minPlayers, Math.max(1, optimalPlayers));
+        settings.optimalPlayersTimeSeconds = Math.max(1, optimalPlayersTimeSeconds);
+        return settings;
+    }
+
     private static RunOrFallMapConfig resolveSelectedMap(RunOrFallConfig config) {
         if (config == null || config.maps == null || config.maps.isEmpty()) {
             return null;
@@ -825,6 +915,13 @@ public class RunOrFallGameManager {
             this.originalBlockId = originalBlockId;
             this.dueAtMs = dueAtMs;
         }
+    }
+
+    private static final class CountdownSettings {
+        private int minPlayers;
+        private int minPlayersTimeSeconds;
+        private int optimalPlayers;
+        private int optimalPlayersTimeSeconds;
     }
 
     private static final class BlockKey {

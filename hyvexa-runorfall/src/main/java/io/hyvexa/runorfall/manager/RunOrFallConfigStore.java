@@ -33,6 +33,10 @@ public class RunOrFallConfigStore {
     private static final String DEFAULT_MAP_ID = "default";
     private static final double DEFAULT_VOID_Y = 40.0d;
     private static final double DEFAULT_BREAK_DELAY_SECONDS = 0.2d;
+    private static final int DEFAULT_MIN_PLAYERS = 2;
+    private static final int DEFAULT_MIN_PLAYERS_TIME_SECONDS = 300;
+    private static final int DEFAULT_OPTIMAL_PLAYERS = 4;
+    private static final int DEFAULT_OPTIMAL_PLAYERS_TIME_SECONDS = 60;
 
     private static final String CREATE_SETTINGS_TABLE = """
             CREATE TABLE IF NOT EXISTS runorfall_settings (
@@ -45,6 +49,10 @@ public class RunOrFallConfigStore {
               lobby_rot_z FLOAT NULL,
               void_y DOUBLE NOT NULL DEFAULT 40.0,
               block_break_delay_seconds DOUBLE NOT NULL DEFAULT 0.2,
+              min_players INT NOT NULL DEFAULT 2,
+              min_players_time_seconds INT NOT NULL DEFAULT 300,
+              optimal_players INT NOT NULL DEFAULT 4,
+              optimal_players_time_seconds INT NOT NULL DEFAULT 60,
               active_map_id VARCHAR(64) NULL
             ) ENGINE=InnoDB
             """;
@@ -92,8 +100,9 @@ public class RunOrFallConfigStore {
 
     private static final String UPSERT_SETTINGS_SQL = """
             INSERT INTO runorfall_settings (id, lobby_x, lobby_y, lobby_z, lobby_rot_x, lobby_rot_y, lobby_rot_z,
-                                            void_y, block_break_delay_seconds, active_map_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                            void_y, block_break_delay_seconds, min_players, min_players_time_seconds,
+                                            optimal_players, optimal_players_time_seconds, active_map_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
               lobby_x = VALUES(lobby_x),
               lobby_y = VALUES(lobby_y),
@@ -103,6 +112,10 @@ public class RunOrFallConfigStore {
               lobby_rot_z = VALUES(lobby_rot_z),
               void_y = VALUES(void_y),
               block_break_delay_seconds = VALUES(block_break_delay_seconds),
+              min_players = VALUES(min_players),
+              min_players_time_seconds = VALUES(min_players_time_seconds),
+              optimal_players = VALUES(optimal_players),
+              optimal_players_time_seconds = VALUES(optimal_players_time_seconds),
               active_map_id = VALUES(active_map_id)
             """;
 
@@ -224,6 +237,38 @@ public class RunOrFallConfigStore {
         saveSettingsToDatabase();
     }
 
+    public synchronized int getMinPlayers() {
+        return sanitizeMinPlayers(config.minPlayers);
+    }
+
+    public synchronized int getMinPlayersTimeSeconds() {
+        return sanitizeCountdownTime(config.minPlayersTimeSeconds, DEFAULT_MIN_PLAYERS_TIME_SECONDS);
+    }
+
+    public synchronized int getOptimalPlayers() {
+        int minPlayers = getMinPlayers();
+        return Math.max(minPlayers, sanitizeMinPlayers(config.optimalPlayers));
+    }
+
+    public synchronized int getOptimalPlayersTimeSeconds() {
+        return sanitizeCountdownTime(config.optimalPlayersTimeSeconds, DEFAULT_OPTIMAL_PLAYERS_TIME_SECONDS);
+    }
+
+    public synchronized void setAutoStartSettings(int minPlayers, int minPlayersTimeSeconds,
+                                                  int optimalPlayers, int optimalPlayersTimeSeconds) {
+        int sanitizedMinPlayers = sanitizeMinPlayers(minPlayers);
+        int sanitizedMinPlayersTime = sanitizeCountdownTime(minPlayersTimeSeconds, DEFAULT_MIN_PLAYERS_TIME_SECONDS);
+        int sanitizedOptimalPlayers = Math.max(sanitizedMinPlayers, sanitizeMinPlayers(optimalPlayers));
+        int sanitizedOptimalPlayersTime = sanitizeCountdownTime(optimalPlayersTimeSeconds,
+                DEFAULT_OPTIMAL_PLAYERS_TIME_SECONDS);
+
+        config.minPlayers = sanitizedMinPlayers;
+        config.minPlayersTimeSeconds = sanitizedMinPlayersTime;
+        config.optimalPlayers = sanitizedOptimalPlayers;
+        config.optimalPlayersTimeSeconds = sanitizedOptimalPlayersTime;
+        saveSettingsToDatabase();
+    }
+
     public synchronized List<RunOrFallLocation> getSpawns() {
         List<RunOrFallLocation> copy = new ArrayList<>();
         RunOrFallMapConfig map = getOrCreateSelectedMapInternal();
@@ -309,16 +354,30 @@ public class RunOrFallConfigStore {
             }
             ensureColumnExists(conn, "runorfall_settings", "active_map_id",
                     "ALTER TABLE runorfall_settings ADD COLUMN active_map_id VARCHAR(64) NULL");
+            ensureColumnExists(conn, "runorfall_settings", "min_players",
+                    "ALTER TABLE runorfall_settings ADD COLUMN min_players INT NOT NULL DEFAULT 2");
+            ensureColumnExists(conn, "runorfall_settings", "min_players_time_seconds",
+                    "ALTER TABLE runorfall_settings ADD COLUMN min_players_time_seconds INT NOT NULL DEFAULT 300");
+            ensureColumnExists(conn, "runorfall_settings", "optimal_players",
+                    "ALTER TABLE runorfall_settings ADD COLUMN optimal_players INT NOT NULL DEFAULT 4");
+            ensureColumnExists(conn, "runorfall_settings", "optimal_players_time_seconds",
+                    "ALTER TABLE runorfall_settings ADD COLUMN optimal_players_time_seconds INT NOT NULL DEFAULT 60");
             ensureColumnExists(conn, "runorfall_map_platforms", "target_block_item_id",
                     "ALTER TABLE runorfall_map_platforms ADD COLUMN target_block_item_id VARCHAR(128) NULL");
             try (PreparedStatement stmt = conn.prepareStatement(
-                    "INSERT INTO runorfall_settings (id, void_y, block_break_delay_seconds, active_map_id) VALUES (?, ?, ?, ?) "
+                    "INSERT INTO runorfall_settings "
+                            + "(id, void_y, block_break_delay_seconds, min_players, min_players_time_seconds, "
+                            + "optimal_players, optimal_players_time_seconds, active_map_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?) "
                             + "ON DUPLICATE KEY UPDATE id = id")) {
                 DatabaseManager.applyQueryTimeout(stmt);
                 stmt.setInt(1, SETTINGS_ID);
                 stmt.setDouble(2, DEFAULT_VOID_Y);
                 stmt.setDouble(3, DEFAULT_BREAK_DELAY_SECONDS);
-                stmt.setString(4, DEFAULT_MAP_ID);
+                stmt.setInt(4, DEFAULT_MIN_PLAYERS);
+                stmt.setInt(5, DEFAULT_MIN_PLAYERS_TIME_SECONDS);
+                stmt.setInt(6, DEFAULT_OPTIMAL_PLAYERS);
+                stmt.setInt(7, DEFAULT_OPTIMAL_PLAYERS_TIME_SECONDS);
+                stmt.setString(8, DEFAULT_MAP_ID);
                 stmt.executeUpdate();
             }
         } catch (SQLException e) {
@@ -335,6 +394,10 @@ public class RunOrFallConfigStore {
         RunOrFallConfig loaded = new RunOrFallConfig();
         loaded.voidY = DEFAULT_VOID_Y;
         loaded.blockBreakDelaySeconds = DEFAULT_BREAK_DELAY_SECONDS;
+        loaded.minPlayers = DEFAULT_MIN_PLAYERS;
+        loaded.minPlayersTimeSeconds = DEFAULT_MIN_PLAYERS_TIME_SECONDS;
+        loaded.optimalPlayers = DEFAULT_OPTIMAL_PLAYERS;
+        loaded.optimalPlayersTimeSeconds = DEFAULT_OPTIMAL_PLAYERS_TIME_SECONDS;
         loaded.selectedMapId = "";
         loaded.maps = new ArrayList<>();
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
@@ -354,7 +417,8 @@ public class RunOrFallConfigStore {
     private void loadSettings(Connection conn, RunOrFallConfig target) throws SQLException {
         String sql = """
                 SELECT lobby_x, lobby_y, lobby_z, lobby_rot_x, lobby_rot_y, lobby_rot_z,
-                       void_y, block_break_delay_seconds, active_map_id
+                       void_y, block_break_delay_seconds, min_players, min_players_time_seconds,
+                       optimal_players, optimal_players_time_seconds, active_map_id
                 FROM runorfall_settings
                 WHERE id = ?
                 """;
@@ -372,6 +436,12 @@ public class RunOrFallConfigStore {
                     loadedBreakDelay = DEFAULT_BREAK_DELAY_SECONDS;
                 }
                 target.blockBreakDelaySeconds = loadedBreakDelay;
+                target.minPlayers = sanitizeMinPlayers(rs.getInt("min_players"));
+                target.minPlayersTimeSeconds = sanitizeCountdownTime(
+                        rs.getInt("min_players_time_seconds"), DEFAULT_MIN_PLAYERS_TIME_SECONDS);
+                target.optimalPlayers = Math.max(target.minPlayers, sanitizeMinPlayers(rs.getInt("optimal_players")));
+                target.optimalPlayersTimeSeconds = sanitizeCountdownTime(
+                        rs.getInt("optimal_players_time_seconds"), DEFAULT_OPTIMAL_PLAYERS_TIME_SECONDS);
                 String loadedActiveMapId = rs.getString("active_map_id");
                 target.selectedMapId = normalizeMapId(loadedActiveMapId);
 
@@ -585,6 +655,10 @@ public class RunOrFallConfigStore {
             }
             stmt.setDouble(i++, config.voidY);
             stmt.setDouble(i++, config.blockBreakDelaySeconds);
+            stmt.setInt(i++, sanitizeMinPlayers(config.minPlayers));
+            stmt.setInt(i++, sanitizeCountdownTime(config.minPlayersTimeSeconds, DEFAULT_MIN_PLAYERS_TIME_SECONDS));
+            stmt.setInt(i++, Math.max(sanitizeMinPlayers(config.minPlayers), sanitizeMinPlayers(config.optimalPlayers)));
+            stmt.setInt(i++, sanitizeCountdownTime(config.optimalPlayersTimeSeconds, DEFAULT_OPTIMAL_PLAYERS_TIME_SECONDS));
             stmt.setString(i, selectedMap != null ? selectedMap.id : DEFAULT_MAP_ID);
             stmt.executeUpdate();
         } catch (SQLException e) {
@@ -832,14 +906,28 @@ public class RunOrFallConfigStore {
                         || DEFAULT_MAP_ID.equalsIgnoreCase(snapshot.selectedMapId);
                 if (emptyDefaultMap && defaultSelection
                         && nearlyEqual(snapshot.voidY, DEFAULT_VOID_Y)
-                        && nearlyEqual(snapshot.blockBreakDelaySeconds, DEFAULT_BREAK_DELAY_SECONDS)) {
+                        && nearlyEqual(snapshot.blockBreakDelaySeconds, DEFAULT_BREAK_DELAY_SECONDS)
+                        && sanitizeMinPlayers(snapshot.minPlayers) == DEFAULT_MIN_PLAYERS
+                        && sanitizeCountdownTime(snapshot.minPlayersTimeSeconds, DEFAULT_MIN_PLAYERS_TIME_SECONDS)
+                        == DEFAULT_MIN_PLAYERS_TIME_SECONDS
+                        && Math.max(sanitizeMinPlayers(snapshot.minPlayers), sanitizeMinPlayers(snapshot.optimalPlayers))
+                        == DEFAULT_OPTIMAL_PLAYERS
+                        && sanitizeCountdownTime(snapshot.optimalPlayersTimeSeconds, DEFAULT_OPTIMAL_PLAYERS_TIME_SECONDS)
+                        == DEFAULT_OPTIMAL_PLAYERS_TIME_SECONDS) {
                     return true;
                 }
             }
             return false;
         }
         return nearlyEqual(snapshot.voidY, DEFAULT_VOID_Y)
-                && nearlyEqual(snapshot.blockBreakDelaySeconds, DEFAULT_BREAK_DELAY_SECONDS);
+                && nearlyEqual(snapshot.blockBreakDelaySeconds, DEFAULT_BREAK_DELAY_SECONDS)
+                && sanitizeMinPlayers(snapshot.minPlayers) == DEFAULT_MIN_PLAYERS
+                && sanitizeCountdownTime(snapshot.minPlayersTimeSeconds, DEFAULT_MIN_PLAYERS_TIME_SECONDS)
+                == DEFAULT_MIN_PLAYERS_TIME_SECONDS
+                && Math.max(sanitizeMinPlayers(snapshot.minPlayers), sanitizeMinPlayers(snapshot.optimalPlayers))
+                == DEFAULT_OPTIMAL_PLAYERS
+                && sanitizeCountdownTime(snapshot.optimalPlayersTimeSeconds, DEFAULT_OPTIMAL_PLAYERS_TIME_SECONDS)
+                == DEFAULT_OPTIMAL_PLAYERS_TIME_SECONDS;
     }
 
     private static boolean nearlyEqual(double a, double b) {
@@ -856,6 +944,12 @@ public class RunOrFallConfigStore {
         if (!Double.isFinite(loaded.blockBreakDelaySeconds) || loaded.blockBreakDelaySeconds < 0.0d) {
             loaded.blockBreakDelaySeconds = DEFAULT_BREAK_DELAY_SECONDS;
         }
+        loaded.minPlayers = sanitizeMinPlayers(loaded.minPlayers);
+        loaded.minPlayersTimeSeconds = sanitizeCountdownTime(loaded.minPlayersTimeSeconds,
+                DEFAULT_MIN_PLAYERS_TIME_SECONDS);
+        loaded.optimalPlayers = Math.max(loaded.minPlayers, sanitizeMinPlayers(loaded.optimalPlayers));
+        loaded.optimalPlayersTimeSeconds = sanitizeCountdownTime(loaded.optimalPlayersTimeSeconds,
+                DEFAULT_OPTIMAL_PLAYERS_TIME_SECONDS);
 
         List<RunOrFallMapConfig> sanitizedMaps = new ArrayList<>();
         Map<String, RunOrFallMapConfig> uniqueMaps = new LinkedHashMap<>();
@@ -928,6 +1022,10 @@ public class RunOrFallConfigStore {
         RunOrFallConfig created = new RunOrFallConfig();
         created.voidY = DEFAULT_VOID_Y;
         created.blockBreakDelaySeconds = DEFAULT_BREAK_DELAY_SECONDS;
+        created.minPlayers = DEFAULT_MIN_PLAYERS;
+        created.minPlayersTimeSeconds = DEFAULT_MIN_PLAYERS_TIME_SECONDS;
+        created.optimalPlayers = DEFAULT_OPTIMAL_PLAYERS;
+        created.optimalPlayersTimeSeconds = DEFAULT_OPTIMAL_PLAYERS_TIME_SECONDS;
         RunOrFallMapConfig map = new RunOrFallMapConfig();
         map.id = DEFAULT_MAP_ID;
         created.maps.add(map);
@@ -1026,6 +1124,17 @@ public class RunOrFallConfigStore {
                 && Float.isFinite(location.rotX)
                 && Float.isFinite(location.rotY)
                 && Float.isFinite(location.rotZ);
+    }
+
+    private static int sanitizeMinPlayers(int value) {
+        return Math.max(1, value);
+    }
+
+    private static int sanitizeCountdownTime(int value, int fallback) {
+        if (value <= 0) {
+            return Math.max(1, fallback);
+        }
+        return value;
     }
 
     private static boolean tableExists(Connection conn, String tableName) throws SQLException {
