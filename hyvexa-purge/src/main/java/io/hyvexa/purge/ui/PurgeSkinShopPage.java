@@ -248,6 +248,7 @@ public class PurgeSkinShopPage extends InteractiveCustomUIPage<PurgeSkinShopPage
         commandBuilder.set("#SkinList.Visible", false);
         commandBuilder.set("#Subtitle.Visible", false);
         commandBuilder.set("#Title.Text", "Weapon Skins");
+        commandBuilder.set("#BackButton.Text", "Close");
 
         List<String> weaponIds = new ArrayList<>(weaponConfigManager.getWeaponIds());
         weaponIds.sort(String::compareTo);
@@ -286,6 +287,7 @@ public class PurgeSkinShopPage extends InteractiveCustomUIPage<PurgeSkinShopPage
         commandBuilder.set("#WeaponGrid.Visible", false);
         commandBuilder.set("#SkinList.Visible", true);
         commandBuilder.set("#Subtitle.Visible", true);
+        commandBuilder.set("#BackButton.Text", "< Back");
 
         String displayName = weaponConfigManager.getDisplayName(selectedWeaponId);
         commandBuilder.set("#Title.Text", displayName + " Skins");
@@ -306,6 +308,7 @@ public class PurgeSkinShopPage extends InteractiveCustomUIPage<PurgeSkinShopPage
 
         if (currentSelected == null) {
             commandBuilder.set(defaultRoot + " #EntrySelectedOverlay.Visible", true);
+            commandBuilder.set(defaultRoot + " #SelectedLabel.Visible", true);
         } else {
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
                     defaultRoot + " #ActionButton",
@@ -344,6 +347,7 @@ public class PurgeSkinShopPage extends InteractiveCustomUIPage<PurgeSkinShopPage
                 }
             } else if (selected) {
                 commandBuilder.set(root + " #EntrySelectedOverlay.Visible", true);
+                commandBuilder.set(root + " #SelectedLabel.Visible", true);
             } else {
                 eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
                         root + " #ActionButton",
