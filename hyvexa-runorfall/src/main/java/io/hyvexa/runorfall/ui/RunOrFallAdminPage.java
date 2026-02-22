@@ -11,6 +11,7 @@ import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
 import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
@@ -64,6 +65,7 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
     private String mapSearchInput;
     private String voidYInput;
     private String breakDelayInput;
+    private String platformBlockIdInput;
 
     public RunOrFallAdminPage(@Nonnull PlayerRef playerRef,
                               RunOrFallConfigStore configStore,
@@ -75,6 +77,7 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
         this.mapSearchInput = "";
         this.voidYInput = formatDouble(configStore.getVoidY());
         this.breakDelayInput = formatDouble(configStore.getBlockBreakDelaySeconds());
+        this.platformBlockIdInput = "";
     }
 
     @Override
@@ -102,6 +105,9 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
         }
         if (data.breakDelay != null) {
             breakDelayInput = data.breakDelay.trim();
+        }
+        if (data.platformBlockId != null) {
+            platformBlockIdInput = data.platformBlockId.trim();
         }
         if (data.button == null) {
             if (previousMapSearch == null) {
@@ -284,14 +290,26 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
             player.sendMessage(Message.raw(PREFIX + "Set pos1 and pos2 first."));
             return;
         }
+        if (platformBlockIdInput == null || platformBlockIdInput.isBlank()) {
+            player.sendMessage(Message.raw(PREFIX + "Block item ID is required (example: Rock_Marble_Brick_Smooth)."));
+            return;
+        }
+        String targetBlockItemId = platformBlockIdInput.trim();
+        int resolvedBlockId = BlockType.getAssetMap().getIndex(targetBlockItemId);
+        if (resolvedBlockId < 0) {
+            player.sendMessage(Message.raw(PREFIX + "Unknown block item ID: " + targetBlockItemId + "."));
+            return;
+        }
         RunOrFallPlatform platform = new RunOrFallPlatform(
                 selection.pos1.x, selection.pos1.y, selection.pos1.z,
-                selection.pos2.x, selection.pos2.y, selection.pos2.z);
+                selection.pos2.x, selection.pos2.y, selection.pos2.z,
+                targetBlockItemId);
         if (!configStore.addPlatform(platform)) {
             player.sendMessage(Message.raw(PREFIX + "Could not save platform."));
             return;
         }
-        player.sendMessage(Message.raw(PREFIX + "Platform saved (#" + configStore.getPlatforms().size() + ")."));
+        player.sendMessage(Message.raw(PREFIX + "Platform saved (#" + configStore.getPlatforms().size()
+                + ", item ID " + targetBlockItemId + ")."));
         sendRefresh(ref, store);
     }
 
@@ -432,6 +450,8 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
                 EventData.of(AdminData.KEY_VOID_Y, "#VoidYField.Value"), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#BreakDelayField",
                 EventData.of(AdminData.KEY_BREAK_DELAY, "#BreakDelayField.Value"), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#PlatformBlockIdField",
+                EventData.of(AdminData.KEY_PLATFORM_BLOCK_ID, "#PlatformBlockIdField.Value"), false);
     }
 
     private void populateFields(Ref<EntityStore> ref, Store<EntityStore> store, UICommandBuilder commandBuilder) {
@@ -456,6 +476,7 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
         commandBuilder.set("#MapSearchField.Value", mapSearchInput == null ? "" : mapSearchInput);
         commandBuilder.set("#VoidYField.Value", voidYInput);
         commandBuilder.set("#BreakDelayField.Value", breakDelayInput);
+        commandBuilder.set("#PlatformBlockIdField.Value", platformBlockIdInput == null ? "" : platformBlockIdInput);
         commandBuilder.set("#StatusValue.Text", gameManager.statusLine());
         commandBuilder.set("#SelectedMapValue.Text",
                 selectedMapId == null || selectedMapId.isBlank() ? "Selected map: none" : "Selected map: " + selectedMapId);
@@ -581,6 +602,7 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
         static final String KEY_MAP_SEARCH = "@MapSearch";
         static final String KEY_VOID_Y = "@VoidY";
         static final String KEY_BREAK_DELAY = "@BreakDelay";
+        static final String KEY_PLATFORM_BLOCK_ID = "@PlatformBlockId";
 
         public static final BuilderCodec<AdminData> CODEC = BuilderCodec.<AdminData>builder(AdminData.class, AdminData::new)
                 .addField(new KeyedCodec<>(KEY_BUTTON, Codec.STRING),
@@ -593,6 +615,8 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
                         (data, value) -> data.voidY = value, data -> data.voidY)
                 .addField(new KeyedCodec<>(KEY_BREAK_DELAY, Codec.STRING),
                         (data, value) -> data.breakDelay = value, data -> data.breakDelay)
+                .addField(new KeyedCodec<>(KEY_PLATFORM_BLOCK_ID, Codec.STRING),
+                        (data, value) -> data.platformBlockId = value, data -> data.platformBlockId)
                 .build();
 
         private String button;
@@ -600,5 +624,6 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
         private String mapSearch;
         private String voidY;
         private String breakDelay;
+        private String platformBlockId;
     }
 }

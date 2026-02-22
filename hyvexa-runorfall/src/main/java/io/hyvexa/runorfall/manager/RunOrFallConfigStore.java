@@ -85,6 +85,7 @@ public class RunOrFallConfigStore {
               max_x INT NOT NULL,
               max_y INT NOT NULL,
               max_z INT NOT NULL,
+              target_block_item_id VARCHAR(128) NULL,
               PRIMARY KEY (map_id, platform_order)
             ) ENGINE=InnoDB
             """;
@@ -308,6 +309,8 @@ public class RunOrFallConfigStore {
             }
             ensureColumnExists(conn, "runorfall_settings", "active_map_id",
                     "ALTER TABLE runorfall_settings ADD COLUMN active_map_id VARCHAR(64) NULL");
+            ensureColumnExists(conn, "runorfall_map_platforms", "target_block_item_id",
+                    "ALTER TABLE runorfall_map_platforms ADD COLUMN target_block_item_id VARCHAR(128) NULL");
             try (PreparedStatement stmt = conn.prepareStatement(
                     "INSERT INTO runorfall_settings (id, void_y, block_break_delay_seconds, active_map_id) VALUES (?, ?, ?, ?) "
                             + "ON DUPLICATE KEY UPDATE id = id")) {
@@ -452,7 +455,7 @@ public class RunOrFallConfigStore {
 
     private void loadMapPlatforms(Connection conn, RunOrFallConfig target) throws SQLException {
         String sql = """
-                SELECT map_id, min_x, min_y, min_z, max_x, max_y, max_z
+                SELECT map_id, min_x, min_y, min_z, max_x, max_y, max_z, target_block_item_id
                 FROM runorfall_map_platforms
                 ORDER BY map_id ASC, platform_order ASC
                 """;
@@ -464,13 +467,15 @@ public class RunOrFallConfigStore {
                     if (map == null) {
                         continue;
                     }
+                    String targetBlockItemId = rs.getString("target_block_item_id");
                     map.platforms.add(new RunOrFallPlatform(
                             rs.getInt("min_x"),
                             rs.getInt("min_y"),
                             rs.getInt("min_z"),
                             rs.getInt("max_x"),
                             rs.getInt("max_y"),
-                            rs.getInt("max_z")
+                            rs.getInt("max_z"),
+                            targetBlockItemId
                     ));
                 }
             }
@@ -695,8 +700,9 @@ public class RunOrFallConfigStore {
         }
         String deleteSql = "DELETE FROM runorfall_map_platforms";
         String insertSql = """
-                INSERT INTO runorfall_map_platforms (map_id, platform_order, min_x, min_y, min_z, max_x, max_y, max_z)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO runorfall_map_platforms
+                (map_id, platform_order, min_x, min_y, min_z, max_x, max_y, max_z, target_block_item_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """;
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
             boolean autoCommit = conn.getAutoCommit();
@@ -724,6 +730,14 @@ public class RunOrFallConfigStore {
                         insertStmt.setInt(6, platform.maxX);
                         insertStmt.setInt(7, platform.maxY);
                         insertStmt.setInt(8, platform.maxZ);
+                        String targetBlockItemId = platform.targetBlockItemId != null
+                                ? platform.targetBlockItemId.trim()
+                                : "";
+                        if (targetBlockItemId.isBlank()) {
+                            insertStmt.setNull(9, java.sql.Types.VARCHAR);
+                        } else {
+                            insertStmt.setString(9, targetBlockItemId);
+                        }
                         insertStmt.executeUpdate();
                     }
                 }

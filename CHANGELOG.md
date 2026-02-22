@@ -22,6 +22,7 @@
 
 ### Changed
 - **RunOrFall: Multi-map admin + map-linked setup** - Added map list management in `/rof admin` and `/rof map ...`, moved lobby/spawns/platforms to per-map config, and removed platform naming requirement.
+- **RunOrFall: Platform block-item-id filter** - `/rof admin` platform save now requires a block item ID (e.g. `Rock_Marble_Brick_Smooth`), and platform destruction only applies to blocks matching that configured item ID.
 - **RunOrFall: Configurable block break delay** - Added delayed block destruction with configurable delay (`/rof breakdelay <seconds>`, default `0.2s`).
 - **RunOrFall: Round-start grace before breaking blocks** - Block destruction now starts 3 seconds after the round begins, with chat countdown messages (3..2..1).
 - **RunOrFall: SQL-backed config persistence** - RunOrFall config now saves/loads from MySQL tables (`runorfall_settings`, `runorfall_spawns`, `runorfall_platforms`) instead of JSON, with one-time legacy migration support.
