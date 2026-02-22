@@ -14,6 +14,7 @@ import com.hypixel.hytale.server.core.entity.entities.player.CameraManager;
 import com.hypixel.hytale.server.core.io.PacketHandler;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
+import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.util.CommandUtils;
 import io.hyvexa.common.util.PermissionUtils;
@@ -48,60 +49,64 @@ public class SpectatorCommand extends AbstractAsyncCommand {
             return CompletableFuture.completedFuture(null);
         }
 
-        PlayerRef playerRef = player.getPlayerRef();
-        if (playerRef == null) {
+        Ref<EntityStore> ref = player.getReference();
+        if (ref == null || !ref.isValid()) {
             return CompletableFuture.completedFuture(null);
         }
-        PacketHandler packetHandler = playerRef.getPacketHandler();
-        if (packetHandler == null) {
-            return CompletableFuture.completedFuture(null);
-        }
+        Store<EntityStore> store = ref.getStore();
+        World world = store.getExternalData().getWorld();
 
-        switch (args[0].toLowerCase()) {
-            case "on" -> {
-                packetHandler.writeNoCache(new SetFlyCameraMode(true));
-                ctx.sendMessage(Message.raw("Fly camera enabled."));
-            }
-            case "off" -> {
-                packetHandler.writeNoCache(new SetFlyCameraMode(false));
-                ctx.sendMessage(Message.raw("Fly camera disabled."));
-            }
-            case "watch" -> handleWatch(ctx, player, playerRef, packetHandler, args);
-            case "stop" -> handleStop(ctx, playerRef);
-            default -> sendUsage(ctx);
-        }
+        return CompletableFuture.runAsync(() -> {
+            PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+            if (playerRef == null) return;
 
-        return CompletableFuture.completedFuture(null);
+            PacketHandler packetHandler = playerRef.getPacketHandler();
+            if (packetHandler == null) return;
+
+            switch (args[0].toLowerCase()) {
+                case "on" -> {
+                    packetHandler.writeNoCache(new SetFlyCameraMode(true));
+                    player.sendMessage(Message.raw("Fly camera enabled."));
+                }
+                case "off" -> {
+                    packetHandler.writeNoCache(new SetFlyCameraMode(false));
+                    player.sendMessage(Message.raw("Fly camera disabled."));
+                }
+                case "watch" -> handleWatch(player, playerRef, packetHandler, store, ref, args);
+                case "stop" -> handleStop(player, playerRef, store, ref);
+                default -> sendUsage(ctx);
+            }
+        }, world);
     }
 
-    private void handleWatch(CommandContext ctx, Player player, PlayerRef playerRef,
-                             PacketHandler packetHandler, String[] args) {
+    private void handleWatch(Player player, PlayerRef playerRef, PacketHandler packetHandler,
+                             Store<EntityStore> store, Ref<EntityStore> ref, String[] args) {
         if (args.length < 2) {
-            ctx.sendMessage(Message.raw("Usage: /spec watch <player>"));
+            player.sendMessage(Message.raw("Usage: /spec watch <player>"));
             return;
         }
 
         String targetName = args[1];
         PlayerRef targetRef = findPlayer(targetName);
         if (targetRef == null) {
-            ctx.sendMessage(Message.raw("Player not found: " + targetName));
+            player.sendMessage(Message.raw("Player not found: " + targetName));
             return;
         }
         if (targetRef.getUuid().equals(playerRef.getUuid())) {
-            ctx.sendMessage(Message.raw("You cannot spectate yourself."));
+            player.sendMessage(Message.raw("You cannot spectate yourself."));
             return;
         }
 
         Ref<EntityStore> targetEntityRef = targetRef.getReference();
         if (targetEntityRef == null || !targetEntityRef.isValid()) {
-            ctx.sendMessage(Message.raw("Target player entity not available."));
+            player.sendMessage(Message.raw("Target player entity not available."));
             return;
         }
 
         Store<EntityStore> targetStore = targetEntityRef.getStore();
         Player targetPlayer = targetStore.getComponent(targetEntityRef, Player.getComponentType());
         if (targetPlayer == null) {
-            ctx.sendMessage(Message.raw("Target player entity not available."));
+            player.sendMessage(Message.raw("Target player entity not available."));
             return;
         }
 
@@ -119,20 +124,15 @@ public class SpectatorCommand extends AbstractAsyncCommand {
         s.positionDistanceOffsetType = PositionDistanceOffsetType.DistanceOffsetRaycast;
 
         packetHandler.writeNoCache(new SetServerCamera(ClientCameraView.Custom, false, s));
-        ctx.sendMessage(Message.raw("Now spectating " + targetRef.getUsername() + ". Use /spec stop to exit."));
+        player.sendMessage(Message.raw("Now spectating " + targetRef.getUsername() + ". Use /spec stop to exit."));
     }
 
-    private void handleStop(CommandContext ctx, PlayerRef playerRef) {
-        Ref<EntityStore> ref = playerRef.getReference();
-        if (ref == null || !ref.isValid()) {
-            return;
-        }
-        Store<EntityStore> store = ref.getStore();
+    private void handleStop(Player player, PlayerRef playerRef, Store<EntityStore> store, Ref<EntityStore> ref) {
         CameraManager camMgr = store.getComponent(ref, CameraManager.getComponentType());
         if (camMgr != null) {
             camMgr.resetCamera(playerRef);
         }
-        ctx.sendMessage(Message.raw("Spectating stopped."));
+        player.sendMessage(Message.raw("Spectating stopped."));
     }
 
     private PlayerRef findPlayer(String name) {
