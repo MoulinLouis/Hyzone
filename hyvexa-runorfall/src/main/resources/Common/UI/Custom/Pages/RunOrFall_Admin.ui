@@ -164,6 +164,22 @@ $C.@PageOverlay {
           Text: "";
         }
 
+        Label {
+          Anchor: (Top: 6);
+          Style: (FontSize: 12, TextColor: #9fb0ba);
+          Text: "Platform Block Item ID";
+        }
+
+        Group {
+          Anchor: (Top: 2, Height: 26);
+          LayoutMode: Left;
+
+          $C.@TextField #PlatformBlockIdField {
+            Anchor: (Width: 200, Height: 24);
+            Style: (FontSize: 13, TextColor: #ffffff(0.85));
+          }
+        }
+
         Group {
           Anchor: (Top: 4, Height: 24);
           LayoutMode: Left;

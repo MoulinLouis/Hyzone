@@ -52,6 +52,7 @@ public class RunOrFallGameManager {
     private final Map<BlockKey, Integer> removedBlocks = new ConcurrentHashMap<>();
     private final Map<UUID, BlockKey> playerLastFootBlock = new ConcurrentHashMap<>();
     private final Map<UUID, Long> roundStartTimesMs = new ConcurrentHashMap<>();
+    private final Map<String, Integer> blockItemIdCache = new ConcurrentHashMap<>();
 
     private volatile GameState state = GameState.IDLE;
     private volatile int countdownRemaining = COUNTDOWN_SECONDS;
@@ -541,10 +542,11 @@ public class RunOrFallGameManager {
         if (previousKey != null
                 && previousKey.y == blockY
                 && previousKey.x >= minX && previousKey.x <= maxX
-                && previousKey.z >= minZ && previousKey.z <= maxZ
-                && isInsidePlatform(platforms, previousKey.x, previousKey.y, previousKey.z)) {
+                && previousKey.z >= minZ && previousKey.z <= maxZ) {
             Integer previousBlockId = readBlockId(world, previousKey.x, previousKey.y, previousKey.z);
-            if (previousBlockId != null && previousBlockId != airBlockId) {
+            if (previousBlockId != null
+                    && previousBlockId != airBlockId
+                    && isInsidePlatform(platforms, previousKey.x, previousKey.y, previousKey.z, previousBlockId)) {
                 return;
             }
         }
@@ -553,15 +555,15 @@ public class RunOrFallGameManager {
         double closestDistanceSq = Double.MAX_VALUE;
         for (int x = minX; x <= maxX; x++) {
             for (int z = minZ; z <= maxZ; z++) {
-                if (!isInsidePlatform(platforms, x, blockY, z)) {
-                    continue;
-                }
                 BlockKey key = new BlockKey(x, blockY, z);
                 if (removedBlocks.containsKey(key)) {
                     continue;
                 }
                 Integer currentId = readBlockId(world, x, blockY, z);
                 if (currentId == null || currentId == airBlockId) {
+                    continue;
+                }
+                if (!isInsidePlatform(platforms, x, blockY, z, currentId)) {
                     continue;
                 }
                 double dx = centerX - (x + 0.5d);
@@ -627,13 +629,36 @@ public class RunOrFallGameManager {
         return "Unknown";
     }
 
-    private static boolean isInsidePlatform(List<RunOrFallPlatform> platforms, int x, int y, int z) {
+    private boolean isInsidePlatform(List<RunOrFallPlatform> platforms, int x, int y, int z, int blockId) {
         for (RunOrFallPlatform platform : platforms) {
-            if (platform != null && platform.contains(x, y, z)) {
+            if (platform != null && platform.contains(x, y, z) && matchesPlatformBlockId(platform, blockId)) {
                 return true;
             }
         }
         return false;
+    }
+
+    private boolean matchesPlatformBlockId(RunOrFallPlatform platform, int blockId) {
+        if (platform == null) {
+            return false;
+        }
+        String configuredItemId = platform.targetBlockItemId;
+        if (configuredItemId == null || configuredItemId.isBlank()) {
+            return true;
+        }
+        int configuredBlockId = resolveConfiguredBlockId(configuredItemId);
+        return configuredBlockId >= 0 && configuredBlockId == blockId;
+    }
+
+    private int resolveConfiguredBlockId(String blockItemId) {
+        if (blockItemId == null) {
+            return -1;
+        }
+        String key = blockItemId.trim();
+        if (key.isEmpty()) {
+            return -1;
+        }
+        return blockItemIdCache.computeIfAbsent(key, ignored -> BlockType.getAssetMap().getIndex(key));
     }
 
     private static RunOrFallMapConfig resolveSelectedMap(RunOrFallConfig config) {
