@@ -15,7 +15,9 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class PurgeHudManager {
 
+    private static final long HUD_READY_DELAY_MS = 250L;
     private final ConcurrentHashMap<UUID, PurgeHud> purgeHuds = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, Long> hudReadyAt = new ConcurrentHashMap<>();
 
     public void attach(PlayerRef playerRef, Player player) {
         if (playerRef == null || player == null) {
@@ -27,6 +29,7 @@ public class PurgeHudManager {
         }
         PurgeHud hud = new PurgeHud(playerRef);
         purgeHuds.put(playerId, hud);
+        hudReadyAt.put(playerId, System.currentTimeMillis() + HUD_READY_DELAY_MS);
         MultiHudBridge.setCustomHud(player, playerRef, hud);
         player.getHudManager().hideHudComponents(playerRef, HudComponent.Compass);
         player.getHudManager().showHudComponents(playerRef, HudComponent.Health, HudComponent.Stamina);
@@ -54,6 +57,7 @@ public class PurgeHudManager {
     public void removePlayer(UUID playerId) {
         if (playerId != null) {
             purgeHuds.remove(playerId);
+            hudReadyAt.remove(playerId);
         }
     }
 
@@ -94,9 +98,14 @@ public class PurgeHudManager {
     }
 
     public void tickSlowUpdates() {
+        long now = System.currentTimeMillis();
         int playerCount = Universe.get().getPlayers().size();
         for (var entry : purgeHuds.entrySet()) {
             UUID playerId = entry.getKey();
+            long readyAt = hudReadyAt.getOrDefault(playerId, Long.MAX_VALUE);
+            if (now < readyAt) {
+                continue;
+            }
             PurgeHud hud = entry.getValue();
             hud.updatePlayerCount(playerCount);
             hud.updateVexa(VexaStore.getInstance().getVexa(playerId));

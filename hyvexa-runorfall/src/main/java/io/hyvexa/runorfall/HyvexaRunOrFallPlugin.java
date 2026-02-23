@@ -56,7 +56,9 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
     private RunOrFallConfigStore configStore;
     private RunOrFallStatsStore statsStore;
     private RunOrFallGameManager gameManager;
+    private static final long HUD_READY_DELAY_MS = 250L;
     private final ConcurrentHashMap<UUID, RunOrFallHud> runOrFallHuds = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, Long> hudReadyAt = new ConcurrentHashMap<>();
     private ScheduledFuture<?> hudUpdateTask;
 
     public HyvexaRunOrFallPlugin(@Nonnull JavaPluginInit init) {
@@ -153,6 +155,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
                 return;
             }
             runOrFallHuds.remove(playerId);
+            hudReadyAt.remove(playerId);
             gameManager.leaveLobby(playerId, false);
         });
 
@@ -164,6 +167,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
             UUID playerId = playerRef.getUuid();
             gameManager.handleDisconnect(playerId);
             runOrFallHuds.remove(playerId);
+            hudReadyAt.remove(playerId);
             VexaStore.getInstance().evictPlayer(playerId);
         });
 
@@ -296,6 +300,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
         }
         RunOrFallHud hud = new RunOrFallHud(playerRef);
         runOrFallHuds.put(playerId, hud);
+        hudReadyAt.put(playerId, System.currentTimeMillis() + HUD_READY_DELAY_MS);
         MultiHudBridge.setCustomHud(player, playerRef, hud);
         player.getHudManager().hideHudComponents(playerRef, HudComponent.Compass);
         MultiHudBridge.showIfNeeded(hud);
@@ -308,22 +313,30 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
     }
 
     private void tickHudUpdates() {
+        long now = System.currentTimeMillis();
         for (var entry : runOrFallHuds.entrySet()) {
             UUID playerId = entry.getKey();
             PlayerRef playerRef = Universe.get().getPlayer(playerId);
             if (playerRef == null) {
                 runOrFallHuds.remove(playerId);
+                hudReadyAt.remove(playerId);
                 continue;
             }
             Ref<EntityStore> ref = playerRef.getReference();
             if (ref == null || !ref.isValid()) {
                 runOrFallHuds.remove(playerId);
+                hudReadyAt.remove(playerId);
                 continue;
             }
             Store<EntityStore> store = ref.getStore();
             World world = store.getExternalData() != null ? store.getExternalData().getWorld() : null;
             if (!ModeGate.isRunOrFallWorld(world)) {
                 runOrFallHuds.remove(playerId);
+                hudReadyAt.remove(playerId);
+                continue;
+            }
+            long readyAt = hudReadyAt.getOrDefault(playerId, Long.MAX_VALUE);
+            if (now < readyAt) {
                 continue;
             }
             RunOrFallHud hud = entry.getValue();
@@ -339,6 +352,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
             hudUpdateTask = null;
         }
         runOrFallHuds.clear();
+        hudReadyAt.clear();
         if (gameManager != null) {
             gameManager.shutdown();
         }
