@@ -226,9 +226,10 @@ public class HyvexaHubPlugin extends JavaPlugin {
     }
 
     private void tickPlayerCount() {
+        long now = System.currentTimeMillis();
         for (var entry : hubHudLifecycles.entrySet()) {
             HudLifecycle lifecycle = entry.getValue();
-            if (lifecycle.hud() != null) {
+            if (lifecycle.hud() != null && now >= lifecycle.readyAt()) {
                 lifecycle.hud().updatePlayerCount();
                 lifecycle.hud().updateVexa(VexaStore.getInstance().getVexa(entry.getKey()));
             }
