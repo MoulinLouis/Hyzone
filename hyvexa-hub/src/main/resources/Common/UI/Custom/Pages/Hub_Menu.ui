@@ -4,7 +4,7 @@ $C.@PageOverlay {
   SceneBlur {}
 
   Group #HubMenuWindow {
-    Anchor: (Width: 860, Height: 486);
+    Anchor: (Width: 860, Height: 520);
     LayoutMode: Top;
     Background: #0d1620(0.95);
     OutlineColor: #ffffff(0.06);
@@ -63,7 +63,7 @@ $C.@PageOverlay {
       Label {
         Anchor: (Top: 4, Left: 0, Right: 0);
         Style: (
-          FontSize: 14,
+          FontSize: 17,
           TextColor: #cfd7dc,
           HorizontalAlignment: Center
         );
@@ -71,21 +71,21 @@ $C.@PageOverlay {
       }
 
       Group #ModeButtons {
-        Anchor: (Top: 12, Left: 0, Right: 0, Height: 318);
+        Anchor: (Top: 12, Left: 0, Right: 0, Height: 354);
         LayoutMode: Top;
 
         Group #TopModeRow {
-          Anchor: (Left: 0, Right: 0, Height: 150);
+          Anchor: (Left: 0, Right: 0, Height: 170);
           LayoutMode: Left;
-          Padding: (Left: 126, Top: 6);
+          Padding: (Left: 86, Top: 6);
 
           Group #ParkourCard {
-            Anchor: (Width: 280, Height: 144);
+            Anchor: (Width: 320, Height: 164);
             OutlineColor: #ffffff(0.06);
             OutlineSize: 1;
 
             Group {
-              Anchor: (Left: 0, Right: 0, Top: 0, Height: 116);
+              Anchor: (Left: 10, Right: 10, Top: 10, Height: 116);
               Background: (TexturePath: "../Textures/parkour.png");
             }
 
@@ -116,12 +116,12 @@ $C.@PageOverlay {
           }
 
           Group #AscendCard {
-            Anchor: (Width: 280, Height: 144);
+            Anchor: (Width: 320, Height: 164);
             OutlineColor: #ffffff(0.06);
             OutlineSize: 1;
 
             Group {
-              Anchor: (Left: 0, Right: 0, Top: 0, Height: 116);
+              Anchor: (Left: 10, Right: 10, Top: 10, Height: 116);
               Background: (TexturePath: "../Textures/ascend.png");
             }
 
@@ -149,17 +149,17 @@ $C.@PageOverlay {
         }
 
         Group #BottomModeRow {
-          Anchor: (Left: 0, Right: 0, Top: 14, Height: 150);
+          Anchor: (Left: 0, Right: 0, Top: 14, Height: 170);
           LayoutMode: Left;
-          Padding: (Left: 126, Top: 6);
+          Padding: (Left: 86, Top: 6);
 
           Group #PurgeCard {
-            Anchor: (Width: 280, Height: 144);
+            Anchor: (Width: 320, Height: 164);
             OutlineColor: #ffffff(0.06);
             OutlineSize: 1;
 
             Group {
-              Anchor: (Left: 0, Right: 0, Top: 0, Height: 116);
+              Anchor: (Left: 10, Right: 10, Top: 10, Height: 116);
               Background: (TexturePath: "../Textures/purge.png");
             }
 
@@ -190,12 +190,12 @@ $C.@PageOverlay {
           }
 
           Group #RunOrFallCard {
-            Anchor: (Width: 280, Height: 144);
+            Anchor: (Width: 320, Height: 164);
             OutlineColor: #ffffff(0.06);
             OutlineSize: 1;
 
             Group {
-              Anchor: (Left: 0, Right: 0, Top: 0, Height: 116);
+              Anchor: (Left: 10, Right: 10, Top: 10, Height: 116);
               Background: (TexturePath: "../Textures/runorfall.png");
             }
 
