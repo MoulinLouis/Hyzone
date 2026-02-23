@@ -977,7 +977,7 @@ public class PurgeWaveManager {
                     };
 
                     session.getPendingUpgradeChoices().add(pid);
-                    PurgeUpgradePickPage page = new PurgeUpgradePickPage(pRef, pid, session, um, offered, onComplete);
+                    PurgeUpgradePickPage page = new PurgeUpgradePickPage(pRef, pid, session, um, offered, onComplete, hudManager);
                     player.getPageManager().openCustomPage(ref, store, page);
                     anyShown = true;
                 }

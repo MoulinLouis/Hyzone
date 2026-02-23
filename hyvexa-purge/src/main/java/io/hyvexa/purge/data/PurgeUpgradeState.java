@@ -17,6 +17,11 @@ public class PurgeUpgradeState {
         accumulated.merge(type, amount, Integer::sum);
     }
 
+    public int getLevel(PurgeUpgradeType type) {
+        int base = type.getBaseValue();
+        return base > 0 ? getAccumulated(type) / base : 0;
+    }
+
     public int getLuck() {
         return getAccumulated(PurgeUpgradeType.LUCK);
     }
