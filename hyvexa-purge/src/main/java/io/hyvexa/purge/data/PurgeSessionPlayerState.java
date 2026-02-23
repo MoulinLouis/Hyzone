@@ -16,6 +16,8 @@ public class PurgeSessionPlayerState {
     private final AtomicInteger kills = new AtomicInteger(0);
     private final PurgeUpgradeState upgradeState = new PurgeUpgradeState();
     private volatile String currentWeaponId;
+    private volatile long lastKillTimeMs;
+    private volatile int killStreak;
 
     public PurgeSessionPlayerState(UUID playerId, Ref<EntityStore> playerRef) {
         this.playerId = playerId;
@@ -42,4 +44,22 @@ public class PurgeSessionPlayerState {
 
     public String getCurrentWeaponId() { return currentWeaponId; }
     public void setCurrentWeaponId(String currentWeaponId) { this.currentWeaponId = currentWeaponId; }
+
+    public long getLastKillTimeMs() { return lastKillTimeMs; }
+    public int getKillStreak() { return killStreak; }
+
+    /**
+     * Records a kill and returns the current streak level (1-9).
+     * Streak resets to 1 if more than {@code streakWindowMs} has passed since last kill.
+     */
+    public int recordKillStreak(long streakWindowMs) {
+        long now = System.currentTimeMillis();
+        if (now - lastKillTimeMs <= streakWindowMs && killStreak > 0) {
+            killStreak = Math.min(killStreak + 1, 9);
+        } else {
+            killStreak = 1;
+        }
+        lastKillTimeMs = now;
+        return killStreak;
+    }
 }

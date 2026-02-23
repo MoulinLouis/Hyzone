@@ -71,6 +71,7 @@ public class HyvexaPurgePlugin extends JavaPlugin {
     private static HyvexaPurgePlugin INSTANCE;
 
     private ScheduledFuture<?> hudUpdateTask;
+    private ScheduledFuture<?> comboTickTask;
 
     private PurgeInstanceManager instanceManager;
     private PurgeVariantConfigManager variantConfigManager;
@@ -244,6 +245,15 @@ public class HyvexaPurgePlugin extends JavaPlugin {
                 5000L, 5000L, TimeUnit.MILLISECONDS
         );
 
+        // Fast combo bar ticker (50ms for smooth progress bar decay)
+        comboTickTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(
+                () -> {
+                    try { hudManager.tickComboBars(); }
+                    catch (Exception e) { LOGGER.atWarning().withCause(e).log("Combo tick error"); }
+                },
+                50L, 50L, TimeUnit.MILLISECONDS
+        );
+
         LOGGER.atInfo().log("HyvexaPurge plugin loaded");
     }
 
@@ -255,6 +265,10 @@ public class HyvexaPurgePlugin extends JavaPlugin {
         if (hudUpdateTask != null) {
             hudUpdateTask.cancel(false);
             hudUpdateTask = null;
+        }
+        if (comboTickTask != null) {
+            comboTickTask.cancel(false);
+            comboTickTask = null;
         }
     }
 
@@ -289,7 +303,7 @@ public class HyvexaPurgePlugin extends JavaPlugin {
             inventory.getHotbar().setItemStackForSlot(SLOT_PRIMARY_WEAPON, new ItemStack(itemId, 1), false);
         }
         // Re-apply ammo upgrade to the new weapon ItemStack
-        reapplyAmmoUpgrade(state.getPlayerId());
+        reapplyAmmoUpgrade(state.getPlayerId(), player);
     }
 
     public void grantLootbox(Player player, int count) {
@@ -307,16 +321,11 @@ public class HyvexaPurgePlugin extends JavaPlugin {
      * Re-applies ammo upgrade to the player's current weapon ItemStack.
      * Call after any operation that replaces the weapon (revive, weapon switch).
      */
-    public void reapplyAmmoUpgrade(UUID playerId) {
-        if (playerId == null || upgradeManager == null || sessionManager == null) return;
+    public void reapplyAmmoUpgrade(UUID playerId, Player player) {
+        if (playerId == null || player == null || upgradeManager == null || sessionManager == null) return;
         PurgeSession session = sessionManager.getSessionByPlayer(playerId);
         if (session == null) return;
-        PurgeSessionPlayerState ps = session.getPlayerState(playerId);
-        if (ps == null) return;
-        Ref<EntityStore> ref = ps.getPlayerRef();
-        if (ref == null || !ref.isValid()) return;
-        Store<EntityStore> store = ref.getStore();
-        upgradeManager.reapplyAmmoUpgrade(session, playerId, ref, store);
+        upgradeManager.reapplyAmmoUpgrade(session, playerId, player);
     }
 
     // --- Private item grant methods ---

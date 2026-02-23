@@ -16,6 +16,9 @@ public class PurgeHud extends CustomUIHud {
     private String lastIntermissionText = null;
     private int lastHpCurrent = -1;
     private int lastHpMax = -1;
+    private int lastCombo = -1;
+    private int lastComboBarQuantized = -1;
+    private boolean comboVisible = false;
 
     public PurgeHud(PlayerRef playerRef) {
         super(playerRef);
@@ -102,6 +105,33 @@ public class PurgeHud extends CustomUIHud {
         update(false, cmd);
     }
 
+    public void updateCombo(int combo, float barProgress) {
+        UICommandBuilder cmd = new UICommandBuilder();
+        boolean shouldShow = combo >= 2;
+        if (shouldShow != comboVisible) {
+            comboVisible = shouldShow;
+            cmd.set("#ComboRoot.Visible", shouldShow);
+        }
+        if (!shouldShow) {
+            if (lastCombo != -1 || lastComboBarQuantized != -1) {
+                lastCombo = -1;
+                lastComboBarQuantized = -1;
+                update(false, cmd);
+            }
+            return;
+        }
+        if (combo != lastCombo) {
+            lastCombo = combo;
+            cmd.set("#ComboLabel.Text", "COMBO x" + combo);
+        }
+        int quantized = (int) (barProgress * 1000);
+        if (quantized != lastComboBarQuantized) {
+            lastComboBarQuantized = quantized;
+            cmd.set("#ComboBar.Value", barProgress);
+        }
+        update(false, cmd);
+    }
+
     public void resetCache() {
         lastWave = -1;
         lastAlive = -1;
@@ -112,5 +142,8 @@ public class PurgeHud extends CustomUIHud {
         lastIntermissionText = null;
         lastHpCurrent = -1;
         lastHpMax = -1;
+        lastCombo = -1;
+        lastComboBarQuantized = -1;
+        comboVisible = false;
     }
 }

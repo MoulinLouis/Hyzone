@@ -12,6 +12,7 @@ import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCu
 import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
+import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.purge.data.PurgeSession;
@@ -112,7 +113,8 @@ public class PurgeUpgradePickPage extends InteractiveCustomUIPage<PurgeUpgradePi
                     PurgeUpgradeType type = PurgeUpgradeType.valueOf(parts[0]);
                     PurgeUpgradeRarity rarity = PurgeUpgradeRarity.valueOf(parts[1]);
                     PurgeUpgradeOffer offer = new PurgeUpgradeOffer(type, rarity);
-                    upgradeManager.applyUpgrade(session, playerId, offer, ref, store);
+                    Player player = store.getComponent(ref, Player.getComponentType());
+                    upgradeManager.applyUpgrade(session, playerId, offer, ref, store, player);
                 } else {
                     LOGGER.atWarning().log("Invalid upgrade choice format: " + data.choice);
                 }
