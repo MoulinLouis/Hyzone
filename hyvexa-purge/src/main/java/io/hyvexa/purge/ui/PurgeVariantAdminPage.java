@@ -30,14 +30,26 @@ public class PurgeVariantAdminPage extends InteractiveCustomUIPage<PurgeVariantA
     private static final String BUTTON_BACK = "Back";
     private static final String BUTTON_ADD = "Add";
     private static final String BUTTON_DELETE_PREFIX = "Delete:";
+    private static final String BUTTON_EDIT_PREFIX = "Edit:";
     private static final String BUTTON_ADJUST_PREFIX = "Adjust:";
     private static final String BUTTON_NPC_TYPE_PREFIX = "NpcType:";
-    private static final String[] NPC_TYPES = {"Zombie", "Zombie_Burnt", "Zombie_Frost", "Zombie_Sand", "Zombie_Aberrant"};
+    private static final String BUTTON_SAVE_NAME = "SaveName";
+    private static final String[] NPC_TYPES = {
+            "Zombie",
+            "Zombie_Burnt",
+            "Zombie_Frost",
+            "Zombie_Sand",
+            "Zombie_Aberrant",
+            "Wolf_Outlander_Priest",
+            "Wolf_Outlander_Sorcerer"
+    };
 
     private final PurgeVariantConfigManager variantConfigManager;
     private final PurgeWaveConfigManager waveConfigManager;
     private final PurgeInstanceManager instanceManager;
     private final PurgeWeaponConfigManager weaponConfigManager;
+    private String editingVariantKey = "";
+    private String variantNameInput = "";
 
     public PurgeVariantAdminPage(@Nonnull PlayerRef playerRef,
                                   PurgeVariantConfigManager variantConfigManager,
@@ -66,6 +78,9 @@ public class PurgeVariantAdminPage extends InteractiveCustomUIPage<PurgeVariantA
                                 @Nonnull Store<EntityStore> store,
                                 @Nonnull PurgeVariantAdminData data) {
         super.handleDataEvent(ref, store, data);
+        if (data.getVariantName() != null) {
+            variantNameInput = data.getVariantName();
+        }
         String button = data.getButton();
         if (button == null) {
             return;
@@ -83,12 +98,20 @@ public class PurgeVariantAdminPage extends InteractiveCustomUIPage<PurgeVariantA
             handleDelete(button.substring(BUTTON_DELETE_PREFIX.length()), ref, store);
             return;
         }
+        if (button.startsWith(BUTTON_EDIT_PREFIX)) {
+            handleEdit(button.substring(BUTTON_EDIT_PREFIX.length()));
+            return;
+        }
         if (button.startsWith(BUTTON_ADJUST_PREFIX)) {
             handleAdjust(button.substring(BUTTON_ADJUST_PREFIX.length()), ref, store);
             return;
         }
         if (button.startsWith(BUTTON_NPC_TYPE_PREFIX)) {
             handleNpcTypeCycle(button.substring(BUTTON_NPC_TYPE_PREFIX.length()));
+            return;
+        }
+        if (BUTTON_SAVE_NAME.equals(button)) {
+            handleSaveName(ref, store);
         }
     }
 
@@ -108,7 +131,7 @@ public class PurgeVariantAdminPage extends InteractiveCustomUIPage<PurgeVariantA
             key = "CUSTOM_" + index;
         }
         String label = "Custom " + index;
-        boolean added = variantConfigManager.addVariant(key, label, 49, 20f, 1.0);
+        boolean added = variantConfigManager.addVariant(key, label, 50, 20f, 1.0);
         if (player != null) {
             if (added) {
                 player.sendMessage(Message.raw("Added variant: " + label + " (" + key + ")"));
@@ -128,6 +151,10 @@ public class PurgeVariantAdminPage extends InteractiveCustomUIPage<PurgeVariantA
             return;
         }
         boolean removed = variantConfigManager.removeVariant(key);
+        if (removed && key.equals(editingVariantKey)) {
+            editingVariantKey = "";
+            variantNameInput = "";
+        }
         if (player != null) {
             if (removed) {
                 player.sendMessage(Message.raw("Removed variant: " + key));
@@ -157,6 +184,50 @@ public class PurgeVariantAdminPage extends InteractiveCustomUIPage<PurgeVariantA
         }
     }
 
+    private void handleEdit(String key) {
+        PurgeVariantConfig config = variantConfigManager.getVariant(key);
+        if (config == null) {
+            return;
+        }
+        editingVariantKey = key;
+        variantNameInput = config.label();
+        sendRefresh();
+    }
+
+    private void handleSaveName(Ref<EntityStore> ref, Store<EntityStore> store) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (editingVariantKey.isEmpty()) {
+            if (player != null) {
+                player.sendMessage(Message.raw("Select a variant to rename first."));
+            }
+            return;
+        }
+        String trimmed = variantNameInput != null ? variantNameInput.trim() : "";
+        if (trimmed.isEmpty()) {
+            if (player != null) {
+                player.sendMessage(Message.raw("Variant name cannot be empty."));
+            }
+            return;
+        }
+        if (trimmed.length() > 64) {
+            if (player != null) {
+                player.sendMessage(Message.raw("Variant name max length is 64."));
+            }
+            return;
+        }
+        if (variantConfigManager.setLabel(editingVariantKey, trimmed)) {
+            variantNameInput = trimmed;
+            if (player != null) {
+                player.sendMessage(Message.raw("Renamed variant " + editingVariantKey + " to " + trimmed + "."));
+            }
+            sendRefresh();
+            return;
+        }
+        if (player != null) {
+            player.sendMessage(Message.raw("Failed to rename variant."));
+        }
+    }
+
     private void handleAdjust(String payload, Ref<EntityStore> ref, Store<EntityStore> store) {
         // Format: <key>:<field>:<delta>
         String[] parts = payload.split(":");
@@ -171,6 +242,7 @@ public class PurgeVariantAdminPage extends InteractiveCustomUIPage<PurgeVariantA
                 case "hp" -> updated = variantConfigManager.adjustHealth(key, Integer.parseInt(parts[2]));
                 case "dmg" -> updated = variantConfigManager.adjustDamage(key, Integer.parseInt(parts[2]));
                 case "speed" -> updated = variantConfigManager.adjustSpeed(key, Double.parseDouble(parts[2]));
+                case "scrap" -> updated = variantConfigManager.adjustScrap(key, Integer.parseInt(parts[2]));
             }
         } catch (NumberFormatException ignored) {
         }
@@ -202,12 +274,30 @@ public class PurgeVariantAdminPage extends InteractiveCustomUIPage<PurgeVariantA
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_BACK), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#AddVariantButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_ADD), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#VariantNameField",
+                EventData.of(PurgeVariantAdminData.KEY_VARIANT_NAME, "#VariantNameField.Value"), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SaveVariantNameButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_SAVE_NAME), false);
     }
 
     private void buildVariantList(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
         commandBuilder.clear("#VariantCards");
 
         List<PurgeVariantConfig> variants = variantConfigManager.getAllVariants();
+        PurgeVariantConfig editingVariant = !editingVariantKey.isEmpty()
+                ? variantConfigManager.getVariant(editingVariantKey)
+                : null;
+        if (editingVariantKey.isEmpty() || editingVariant == null) {
+            editingVariantKey = "";
+            variantNameInput = "";
+            commandBuilder.set("#EditingVariantText.Text", "Select a variant below, then edit and save its name.");
+        } else {
+            commandBuilder.set("#EditingVariantText.Text", "Editing: " + editingVariant.label() + " (" + editingVariant.key() + ")");
+            if (variantNameInput == null || variantNameInput.isBlank()) {
+                variantNameInput = editingVariant.label();
+            }
+        }
+        commandBuilder.set("#VariantNameField.Value", variantNameInput != null ? variantNameInput : "");
 
         commandBuilder.set("#VariantCount.Text", variants.size() + " variant" + (variants.size() == 1 ? "" : "s"));
 
@@ -227,23 +317,31 @@ public class PurgeVariantAdminPage extends InteractiveCustomUIPage<PurgeVariantA
             commandBuilder.set(root + " #HpValue.Text", String.valueOf(v.baseHealth()));
             commandBuilder.set(root + " #DmgValue.Text", String.valueOf(Math.round(v.baseDamage())));
             commandBuilder.set(root + " #SpeedValue.Text", Math.round(v.speedMultiplier() * 100) + "%");
+            commandBuilder.set(root + " #ScrapValue.Text", String.valueOf(v.scrapReward()));
 
             // Delete
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
                     root + " #DeleteButton",
                     EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_DELETE_PREFIX + v.key()), false);
+            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
+                    root + " #EditNameButton",
+                    EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_EDIT_PREFIX + v.key()), false);
 
             // HP adjust
             bindAdjust(eventBuilder, root + " #HpMinusButton", v.key(), "hp", "-10");
             bindAdjust(eventBuilder, root + " #HpPlusButton", v.key(), "hp", "10");
 
             // DMG adjust
-            bindAdjust(eventBuilder, root + " #DmgMinusButton", v.key(), "dmg", "-5");
-            bindAdjust(eventBuilder, root + " #DmgPlusButton", v.key(), "dmg", "5");
+            bindAdjust(eventBuilder, root + " #DmgMinusButton", v.key(), "dmg", "-10");
+            bindAdjust(eventBuilder, root + " #DmgPlusButton", v.key(), "dmg", "10");
 
             // Speed adjust
             bindAdjust(eventBuilder, root + " #SpeedMinusButton", v.key(), "speed", "-0.1");
             bindAdjust(eventBuilder, root + " #SpeedPlusButton", v.key(), "speed", "0.1");
+
+            // Scrap adjust
+            bindAdjust(eventBuilder, root + " #ScrapMinusButton", v.key(), "scrap", "-10");
+            bindAdjust(eventBuilder, root + " #ScrapPlusButton", v.key(), "scrap", "10");
 
             // NPC type
             commandBuilder.set(root + " #NpcTypeButton.Text", v.effectiveNpcType());
@@ -261,17 +359,26 @@ public class PurgeVariantAdminPage extends InteractiveCustomUIPage<PurgeVariantA
     }
 
     public static class PurgeVariantAdminData extends ButtonEventData {
+        static final String KEY_VARIANT_NAME = "@VariantName";
+
         public static final BuilderCodec<PurgeVariantAdminData> CODEC =
                 BuilderCodec.<PurgeVariantAdminData>builder(PurgeVariantAdminData.class, PurgeVariantAdminData::new)
                         .addField(new KeyedCodec<>(ButtonEventData.KEY_BUTTON, Codec.STRING),
                                 (data, value) -> data.button = value, data -> data.button)
+                        .addField(new KeyedCodec<>(KEY_VARIANT_NAME, Codec.STRING),
+                                (data, value) -> data.variantName = value, data -> data.variantName)
                         .build();
 
         private String button;
+        private String variantName;
 
         @Override
         public String getButton() {
             return button;
+        }
+
+        public String getVariantName() {
+            return variantName;
         }
     }
 }

@@ -2,32 +2,30 @@ package io.hyvexa.purge.data;
 
 public enum PurgeUpgradeType {
 
-    SWIFT_FEET("Swift Feet", "+10% move speed per stack", "#3b82f6"),
-    IRON_SKIN("Iron Skin", "+20% max HP per stack", "#ef4444"),
-    AMMO_CACHE("Ammo Cache", "+60 bullets", "#f59e0b"),
-    SECOND_WIND("Second Wind", "Regen 1 HP/sec per stack", "#10b981"),
-    THICK_HIDE("Thick Hide", "-8% damage taken per stack", "#a855f7"),
-    SCAVENGER("Scavenger", "+25% bonus scrap per stack", "#eab308");
+    HP("HP", 1, "HP"),
+    AMMO("Ammo", 1, "Max Ammo"),
+    SPEED("Speed", 5, "% Speed"),
+    LUCK("Luck", 1, "Luck");
 
     private final String displayName;
-    private final String description;
-    private final String color;
+    private final int baseValue;
+    private final String unit;
 
-    PurgeUpgradeType(String displayName, String description, String color) {
+    PurgeUpgradeType(String displayName, int baseValue, String unit) {
         this.displayName = displayName;
-        this.description = description;
-        this.color = color;
+        this.baseValue = baseValue;
+        this.unit = unit;
     }
 
     public String getDisplayName() {
         return displayName;
     }
 
-    public String getDescription() {
-        return description;
+    public int getBaseValue() {
+        return baseValue;
     }
 
-    public String getColor() {
-        return color;
+    public String getUnit() {
+        return unit;
     }
 }

@@ -77,7 +77,48 @@ $C.@PageOverlay {
       }
 
       Group {
-        Anchor: (Top: 10, Height: 38, Left: 0, Right: 0);
+        Anchor: (Top: 8, Left: 0, Right: 0, Height: 64);
+        LayoutMode: Top;
+        Padding: (Left: 4, Right: 4, Top: 4, Bottom: 4);
+        Background: #0a1018(0.8);
+        OutlineColor: #ffffff(0.04);
+        OutlineSize: 1;
+
+        Label #EditingVariantText {
+          Anchor: (Height: 18);
+          Style: (FontSize: 12, TextColor: #9fb0ba);
+          Text: "Select a variant below, then edit and save its name.";
+        }
+
+        Group {
+          Anchor: (Top: 4, Left: 0, Right: 0, Height: 28);
+          LayoutMode: Left;
+
+          $C.@TextField #VariantNameField {
+            Anchor: (Height: 26);
+            FlexWeight: 1;
+            Style: (FontSize: 14, TextColor: #ffffff(0.85));
+          }
+
+          Group {
+            Anchor: (Width: 8);
+          }
+
+          TextButton #SaveVariantNameButton {
+            Anchor: (Width: 130, Height: 26);
+            Text: "Save Name";
+            Style: TextButtonStyle(
+              Default: (Background: #143042, LabelStyle: (FontSize: 12, TextColor: #7dd3fc, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+              Hovered: (Background: #1d4359, LabelStyle: (FontSize: 12, TextColor: #bae6fd, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+              Pressed: (Background: #102734, LabelStyle: (FontSize: 12, TextColor: #7dd3fc, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+              Sounds: $C.@ButtonSounds,
+            );
+          }
+        }
+      }
+
+      Group {
+        Anchor: (Top: 8, Height: 38, Left: 0, Right: 0);
         LayoutMode: Left;
         Padding: (Left: 2, Right: 2);
 

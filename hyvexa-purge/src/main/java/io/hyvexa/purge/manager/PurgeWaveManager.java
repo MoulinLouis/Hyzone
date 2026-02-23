@@ -31,15 +31,19 @@ import io.hyvexa.purge.data.PurgeMapInstance;
 import io.hyvexa.purge.data.PurgeSession;
 import io.hyvexa.purge.data.PurgeSessionPlayerState;
 import io.hyvexa.purge.data.PurgeSpawnPoint;
-import io.hyvexa.purge.data.PurgeUpgradeType;
+import io.hyvexa.purge.data.PurgeUpgradeOffer;
+import io.hyvexa.purge.data.PurgeUpgradeState;
+import io.hyvexa.purge.data.PurgeScrapStore;
 import io.hyvexa.purge.data.PurgeVariantConfig;
 import io.hyvexa.purge.data.PurgeWaveDefinition;
 import io.hyvexa.purge.data.SessionState;
+import io.hyvexa.purge.hud.PurgeHud;
 import io.hyvexa.purge.hud.PurgeHudManager;
 import io.hyvexa.purge.ui.PurgeUpgradePickPage;
 import io.hyvexa.purge.util.PurgePlayerNameResolver;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -62,6 +66,8 @@ public class PurgeWaveManager {
     private static final int COUNTDOWN_SECONDS = 5;
     private static final int UPGRADE_TIMEOUT_SECONDS = 15;
     private static final double SPAWN_RANDOM_OFFSET = 2.0;
+    /** Combat state names across NPC templates: "Angry" for zombies, "Attack" for companion wolves. */
+    private static final List<String> COMBAT_STATE_NAMES = List.of("Angry", "Attack");
     private static final ConcurrentHashMap<Class<?>, Long> MAX_SPEED_OFFSET_CACHE = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<Class<?>, java.lang.reflect.Field> DROP_LIST_FIELD_CACHE = new ConcurrentHashMap<>();
     private static final Set<Class<?>> DROP_LIST_FIELD_MISSING = ConcurrentHashMap.newKeySet();
@@ -151,6 +157,7 @@ public class PurgeWaveManager {
         session.setWaveZombieCount(totalCount);
         session.setSpawningComplete(false);
         session.resetWaveSpawnProgress();
+        session.clearPendingZombieDeaths();
         session.resetTransitionGuard();
         session.setState(SessionState.SPAWNING);
 
@@ -344,8 +351,13 @@ public class PurgeWaveManager {
                     Ref<EntityStore> targetRef = session.getRandomAlivePlayerRef();
                     if (targetRef != null) {
                         npcEntity.getRole().setMarkedTarget("LockedTarget", targetRef);
-                        npcEntity.getRole().getStateSupport().setState(entityRef, "Angry", "", store);
+                        setNpcCombatState(npcEntity, entityRef, store);
                     }
+                    // Override startState so activate() (called by NewSpawnStartTickingSystem)
+                    // puts the NPC into a combat state instead of Idle.
+                    // Companion NPCs (wolves) auto-despawn from Idle if not in a flock,
+                    // and the despawn action is atomic (can't be interrupted by later setState).
+                    overrideStartState(npcEntity);
                 }
             } catch (Exception e) {
                 LOGGER.atWarning().withCause(e).log("Failed to set zombie aggro");
@@ -543,33 +555,64 @@ public class PurgeWaveManager {
     }
 
     private void checkZombieDeaths(PurgeSession session, Store<EntityStore> store) {
-        List<Ref<EntityStore>> dead = null;
+        Set<Ref<EntityStore>> dead = null;
         int healthIndex = DefaultEntityStatTypes.getHealth();
         for (Ref<EntityStore> ref : session.getAliveZombies()) {
-            boolean isDead = ref == null || !ref.isValid();
-            if (!isDead) {
-                try {
-                    EntityStatMap statMap = store.getComponent(ref, EntityStatMap.getComponentType());
-                    if (statMap != null) {
-                        EntityStatValue health = statMap.get(healthIndex);
-                        if (health != null && health.get() <= 0f) {
-                            isDead = true;
-                        }
-                    }
-                } catch (Exception e) {
-                    LOGGER.atFine().log("Failed to read zombie health for death check: " + e.getMessage());
-                }
-            }
-            if (isDead) {
+            if (ref == null || !ref.isValid()) {
                 if (dead == null) {
-                    dead = new ArrayList<>();
+                    dead = new LinkedHashSet<>();
                 }
                 dead.add(ref);
+            }
+        }
+        for (Ref<EntityStore> ref : session.getPendingZombieDeathsSnapshot()) {
+            if (ref == null) {
+                continue;
+            }
+            if (!session.getAliveZombies().contains(ref)) {
+                session.clearZombiePendingDeath(ref);
+                continue;
+            }
+            if (!ref.isValid()) {
+                if (dead == null) {
+                    dead = new LinkedHashSet<>();
+                }
+                dead.add(ref);
+                session.clearZombiePendingDeath(ref);
+                continue;
+            }
+            try {
+                EntityStatMap statMap = store.getComponent(ref, EntityStatMap.getComponentType());
+                if (statMap == null) {
+                    continue;
+                }
+                EntityStatValue health = statMap.get(healthIndex);
+                if (health != null && health.get() <= 0f) {
+                    if (dead == null) {
+                        dead = new LinkedHashSet<>();
+                    }
+                    dead.add(ref);
+                    session.clearZombiePendingDeath(ref);
+                }
+            } catch (Exception e) {
+                LOGGER.atFine().log("Failed to read zombie health for pending death check: " + e.getMessage());
             }
         }
         if (dead == null || dead.isEmpty()) {
             return;
         }
+        // Collect scrap rewards per variant before removeAliveZombie clears variant keys
+        int totalScrapPerKill = 0;
+        for (Ref<EntityStore> deadRef : dead) {
+            String variantKey = session.getZombieVariantKey(deadRef);
+            if (variantKey != null) {
+                PurgeVariantConfig vc = variantConfigManager.getVariant(variantKey);
+                if (vc != null) {
+                    totalScrapPerKill += vc.scrapReward();
+                }
+            }
+        }
+
         for (Ref<EntityStore> deadRef : dead) {
             if (deadRef != null && deadRef.isValid()) {
                 try {
@@ -586,6 +629,19 @@ public class PurgeWaveManager {
         // Shared kills: all alive connected players get +1 per zombie death
         for (int i = 0; i < dead.size(); i++) {
             session.forEachAliveConnectedPlayerState(PurgeSessionPlayerState::incrementKills);
+        }
+
+        // Scrap reward per zombie kill based on variant config
+        if (totalScrapPerKill > 0) {
+            int scrapReward = totalScrapPerKill;
+            session.forEachAliveConnectedPlayerState(ps -> {
+                UUID playerId = ps.getPlayerId();
+                PurgeScrapStore.getInstance().addScrap(playerId, scrapReward);
+                PurgeHud hud = hudManager.getHud(playerId);
+                if (hud != null) {
+                    hud.updateScrap(PurgeScrapStore.getInstance().getScrap(playerId));
+                }
+            });
         }
 
         // Lootbox drop: configurable % chance per dead zombie per alive player
@@ -833,6 +889,7 @@ public class PurgeWaveManager {
                     Ref<EntityStore> newTarget = session.getRandomAlivePlayerRef();
                     if (newTarget != null) {
                         npc.getRole().setMarkedTarget("LockedTarget", newTarget);
+                        setNpcCombatState(npc, zombieRef, store);
                     }
                 }
             } catch (Exception e) {
@@ -902,8 +959,10 @@ public class PurgeWaveManager {
                     PlayerRef pRef = store.getComponent(ref, PlayerRef.getComponentType());
                     if (player == null || pRef == null) continue;
 
-                    // Per-player random upgrade selection
-                    List<PurgeUpgradeType> offered = um.selectRandomUpgrades(3);
+                    // Per-player random upgrade selection with luck-adjusted rarity
+                    PurgeUpgradeState upgradeState = session.getUpgradeState(pid);
+                    int playerLuck = upgradeState != null ? upgradeState.getLuck() : 0;
+                    List<PurgeUpgradeOffer> offered = um.selectRandomOffers(3, playerLuck);
 
                     Runnable onComplete = () -> {
                         if (session.getState() == SessionState.ENDED) {
@@ -1100,6 +1159,16 @@ public class PurgeWaveManager {
                         LOGGER.atFine().log("Failed to re-grant loadout: " + e.getMessage());
                     }
 
+                    // Re-apply ammo upgrade to the fresh weapon ItemStack
+                    try {
+                        PurgeUpgradeManager um = upgradeManager;
+                        if (um != null) {
+                            um.reapplyAmmoUpgrade(session, pid, ref, store);
+                        }
+                    } catch (Exception e) {
+                        LOGGER.atFine().log("Failed to re-apply ammo upgrade: " + e.getMessage());
+                    }
+
                     if (instance != null) {
                         try {
                             PurgeLocation loc = instance.startPoint();
@@ -1124,6 +1193,89 @@ public class PurgeWaveManager {
                 LOGGER.atWarning().withCause(e).log("Failed to revive players");
             }
         });
+    }
+
+    // --- NPC State ---
+
+    /**
+     * Sets the NPC into its combat state. Different NPC templates use different state names:
+     * Zombie templates use "Angry", companion templates (wolves) use "Attack".
+     * Tries both — only the valid one takes effect for a given NPC type.
+     */
+    private void setNpcCombatState(NPCEntity npcEntity, Ref<EntityStore> entityRef, Store<EntityStore> store) {
+        var stateSupport = npcEntity.getRole().getStateSupport();
+        for (String state : COMBAT_STATE_NAMES) {
+            try {
+                stateSupport.setState(entityRef, state, "", store);
+            } catch (Exception e) {
+                LOGGER.atFine().log("Combat state '" + state + "' not available: " + e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Override the NPC's startState field so that activate() (called by NewSpawnStartTickingSystem
+     * on the first tick) puts the NPC into a combat state instead of Idle.
+     * <p>
+     * Companion NPCs (wolves) auto-despawn from Idle if not in a flock via an atomic
+     * Timeout+Despawn action that cannot be interrupted by later setState calls.
+     * The only way to prevent this is to ensure the NPC never enters Idle in the first place.
+     */
+    private void overrideStartState(NPCEntity npcEntity) {
+        try {
+            var stateSupport = npcEntity.getRole().getStateSupport();
+            var stateHelper = stateSupport.getStateHelper();
+
+            // Find the first valid combat state index for this NPC template
+            int combatStateIndex = -1;
+            for (String name : COMBAT_STATE_NAMES) {
+                int idx = stateHelper.getStateIndex(name);
+                if (idx >= 0) {
+                    combatStateIndex = idx;
+                    break;
+                }
+            }
+            if (combatStateIndex < 0) {
+                return; // no combat state found, nothing to override
+            }
+
+            // startState is a final field — use Unsafe to overwrite it
+            sun.misc.Unsafe unsafe = getUnsafe();
+            if (unsafe == null) {
+                return;
+            }
+            long offset = resolveStartStateOffset(unsafe);
+            if (offset < 0) {
+                return;
+            }
+            int currentStart = unsafe.getInt(stateSupport, offset);
+            if (currentStart == combatStateIndex) {
+                return; // already a combat start state (e.g. Zombie with Angry)
+            }
+            unsafe.putInt(stateSupport, offset, combatStateIndex);
+        } catch (Exception e) {
+            LOGGER.atFine().log("Failed to override NPC start state: " + e.getMessage());
+        }
+    }
+
+    private static volatile long START_STATE_OFFSET = -2; // -2 = not resolved yet
+
+    private static long resolveStartStateOffset(sun.misc.Unsafe unsafe) {
+        long cached = START_STATE_OFFSET;
+        if (cached != -2) {
+            return cached;
+        }
+        try {
+            java.lang.reflect.Field field =
+                    com.hypixel.hytale.server.npc.role.support.StateSupport.class.getDeclaredField("startState");
+            long offset = unsafe.objectFieldOffset(field);
+            START_STATE_OFFSET = offset;
+            return offset;
+        } catch (NoSuchFieldException e) {
+            LOGGER.atWarning().log("startState field not found on StateSupport");
+            START_STATE_OFFSET = -1;
+            return -1;
+        }
     }
 
     // --- Utility ---

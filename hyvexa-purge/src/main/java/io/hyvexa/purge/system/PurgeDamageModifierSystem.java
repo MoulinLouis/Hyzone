@@ -19,8 +19,6 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.purge.data.PurgeSession;
 import io.hyvexa.purge.data.PurgeSessionPlayerState;
-import io.hyvexa.purge.data.PurgeUpgradeState;
-import io.hyvexa.purge.data.PurgeUpgradeType;
 import io.hyvexa.purge.data.PurgeVariantConfig;
 import io.hyvexa.purge.data.PurgeWeaponUpgradeStore;
 import io.hyvexa.purge.manager.PurgeSessionManager;
@@ -107,15 +105,6 @@ public class PurgeDamageModifierSystem extends DamageEventSystem {
             return;
         }
 
-        // 3. THICK_HIDE reduction: reduce damage for alive players
-        if (targetState.isAlive()) {
-            PurgeUpgradeState upgradeState = targetState.getUpgradeState();
-            int stacks = upgradeState.getStacks(PurgeUpgradeType.THICK_HIDE);
-            if (stacks > 0) {
-                float multiplier = Math.max(0.60f, 1.0f - 0.08f * stacks);
-                event.setAmount(event.getAmount() * multiplier);
-            }
-        }
     }
 
     private void applyPlayerDamageOverride(Damage event, Store<EntityStore> store, Ref<EntityStore> targetRef) {
@@ -153,10 +142,13 @@ public class PurgeDamageModifierSystem extends DamageEventSystem {
         int effectiveLevel = Math.max(level, 1);
         int damage = weaponConfigManager.getDamage(playerWeapon, effectiveLevel);
         event.setAmount(damage);
-        clearZombieNameplateOnLethalHit(store, targetRef, damage);
+        clearZombieNameplateOnLethalHit(store, session, targetRef, damage);
     }
 
-    private void clearZombieNameplateOnLethalHit(Store<EntityStore> store, Ref<EntityStore> zombieRef, float incomingDamage) {
+    private void clearZombieNameplateOnLethalHit(Store<EntityStore> store,
+                                                 PurgeSession session,
+                                                 Ref<EntityStore> zombieRef,
+                                                 float incomingDamage) {
         if (zombieRef == null || !zombieRef.isValid() || incomingDamage <= 0f) {
             return;
         }
@@ -171,6 +163,7 @@ public class PurgeDamageModifierSystem extends DamageEventSystem {
         }
         if (health.get() - incomingDamage <= 0f) {
             nameplate.setText("");
+            session.markZombiePendingDeath(zombieRef);
         }
     }
 

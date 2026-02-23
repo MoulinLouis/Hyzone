@@ -244,10 +244,7 @@ public class PurgeSessionManager {
 
         // Build summary before world cleanup
         int kills = playerState != null ? playerState.getKills() : 0;
-        int summaryBaseScrap = calculateScrapReward(session.getCurrentWave());
-        PurgeUpgradeManager um = upgradeManager;
-        double summaryMult = um != null ? um.getScrapMultiplier(session, playerId) : 1.0;
-        int summaryScrap = (int) (summaryBaseScrap * summaryMult);
+        int summaryScrap = calculateScrapReward(session.getCurrentWave());
         String summary = "Purge ended - Wave " + session.getCurrentWave()
                 + " - " + kills + " kills"
                 + " - " + summaryScrap + " scrap earned"
@@ -310,10 +307,7 @@ public class PurgeSessionManager {
 
             PurgeSessionPlayerState playerState = session.getPlayerState(pid);
             int kills = playerState != null ? playerState.getKills() : 0;
-            int baseScrap = calculateScrapReward(session.getCurrentWave());
-            PurgeUpgradeManager um = upgradeManager;
-            double mult = um != null ? um.getScrapMultiplier(session, pid) : 1.0;
-            int scrap = (int) (baseScrap * mult);
+            int scrap = calculateScrapReward(session.getCurrentWave());
             String summary = "Purge ended - Wave " + session.getCurrentWave()
                     + " - " + kills + " kills"
                     + " - " + scrap + " scrap earned"
@@ -378,10 +372,7 @@ public class PurgeSessionManager {
         stats.incrementSessions();
         PurgePlayerStore.getInstance().save(playerId, stats);
 
-        int baseScrap = calculateScrapReward(session.getCurrentWave());
-        PurgeUpgradeManager um = upgradeManager;
-        double scrapMult = um != null ? um.getScrapMultiplier(session, playerId) : 1.0;
-        int scrap = (int) (baseScrap * scrapMult);
+        int scrap = calculateScrapReward(session.getCurrentWave());
         if (scrap > 0) {
             PurgeScrapStore.getInstance().addScrap(playerId, scrap);
         }
@@ -447,7 +438,6 @@ public class PurgeSessionManager {
                 Store<EntityStore> store = ref.getStore();
                 um.revertPlayerUpgrades(session, playerId, ref, store);
             }
-            um.cleanupPlayer(playerId);
         });
         runSafe("heal player", () -> {
             if (ref == null || !ref.isValid()) {

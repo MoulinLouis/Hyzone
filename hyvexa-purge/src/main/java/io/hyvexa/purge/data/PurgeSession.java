@@ -31,6 +31,7 @@ public class PurgeSession {
     private final AtomicInteger waveSpawnSuccesses = new AtomicInteger();
     private final AtomicBoolean transitionGuard = new AtomicBoolean(false);
     private final Set<Ref<EntityStore>> aliveZombies = ConcurrentHashMap.newKeySet();
+    private final Set<Ref<EntityStore>> pendingZombieDeaths = ConcurrentHashMap.newKeySet();
     private final ConcurrentHashMap<Ref<EntityStore>, String> zombieVariants = new ConcurrentHashMap<>();
     private volatile ScheduledFuture<?> waveTick;
     private volatile ScheduledFuture<?> spawnTask;
@@ -270,9 +271,30 @@ public class PurgeSession {
             return;
         }
         aliveZombies.add(ref);
+        pendingZombieDeaths.remove(ref);
         if (variantKey != null) {
             zombieVariants.put(ref, variantKey);
         }
+    }
+
+    public void markZombiePendingDeath(Ref<EntityStore> ref) {
+        if (ref != null) {
+            pendingZombieDeaths.add(ref);
+        }
+    }
+
+    public void clearZombiePendingDeath(Ref<EntityStore> ref) {
+        if (ref != null) {
+            pendingZombieDeaths.remove(ref);
+        }
+    }
+
+    public Set<Ref<EntityStore>> getPendingZombieDeathsSnapshot() {
+        return new HashSet<>(pendingZombieDeaths);
+    }
+
+    public void clearPendingZombieDeaths() {
+        pendingZombieDeaths.clear();
     }
 
     public void removeAliveZombie(Ref<EntityStore> ref) {
@@ -280,12 +302,14 @@ public class PurgeSession {
             return;
         }
         aliveZombies.remove(ref);
+        pendingZombieDeaths.remove(ref);
         zombieVariants.remove(ref);
     }
 
     public Set<Ref<EntityStore>> drainAliveZombies() {
         Set<Ref<EntityStore>> snapshot = new HashSet<>(aliveZombies);
         aliveZombies.clear();
+        pendingZombieDeaths.clear();
         zombieVariants.clear();
         return snapshot;
     }

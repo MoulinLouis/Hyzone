@@ -5,6 +5,7 @@ plugins {
 dependencies {
     implementation project(':hyvexa-core')
     compileOnly files("$hytaleHome/install/$patchline/package/game/latest/Server/HytaleServer.jar")
+    compileOnly files("${rootProject.projectDir}/run/mods/HygunsPlugin-3.0.0.jar")
     runtimeOnly files("$hytaleHome/install/$patchline/package/game/latest/Server/HytaleServer.jar")
 }
 

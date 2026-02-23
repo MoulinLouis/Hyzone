@@ -2,7 +2,7 @@ $C = "../Common.ui";
 
 Group {
   LayoutMode: Top;
-  Anchor: (Left: 2, Right: 2, Bottom: 6, Height: 68, Width: 668);
+  Anchor: (Left: 2, Right: 2, Bottom: 6, Height: 96, Width: 668);
   Background: $C.@InputBoxBackground;
   Padding: (Left: 10, Right: 8, Top: 8, Bottom: 8);
 
@@ -24,6 +24,21 @@ Group {
 
     Group {
       FlexWeight: 1;
+    }
+
+    TextButton #EditNameButton {
+      Anchor: (Width: 52, Height: 26);
+      Text: "Edit";
+      Style: TextButtonStyle(
+        Default: (Background: #143042, LabelStyle: (FontSize: 11, TextColor: #7dd3fc, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Hovered: (Background: #1d4359, LabelStyle: (FontSize: 11, TextColor: #bae6fd, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Pressed: (Background: #102734, LabelStyle: (FontSize: 11, TextColor: #7dd3fc, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Sounds: $C.@ButtonSounds,
+      );
+    }
+
+    Group {
+      Anchor: (Width: 6);
     }
 
     TextButton #DeleteButton {
@@ -154,6 +169,46 @@ Group {
         Sounds: $C.@ButtonSounds,
       );
     }
+  }
+
+  Group {
+    LayoutMode: Left;
+    Anchor: (Left: 0, Right: 0, Height: 28, Top: 4);
+
+    // Scrap
+    Label {
+      Anchor: (Width: 40);
+      Style: (FontSize: 12, TextColor: #fbbf24, VerticalAlignment: Center);
+      Text: "Scrap";
+    }
+
+    TextButton #ScrapMinusButton {
+      Anchor: (Width: 24, Height: 24);
+      Text: "-";
+      Style: TextButtonStyle(
+        Default: (Background: #2a2008, LabelStyle: (FontSize: 14, RenderBold: true, TextColor: #fbbf24, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Hovered: (Background: #3d300c, LabelStyle: (FontSize: 14, RenderBold: true, TextColor: #fde68a, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Pressed: (Background: #1f1806, LabelStyle: (FontSize: 14, RenderBold: true, TextColor: #fbbf24, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Sounds: $C.@ButtonSounds,
+      );
+    }
+
+    Label #ScrapValue {
+      Anchor: (Width: 36);
+      Style: (FontSize: 12, RenderBold: true, TextColor: #fef3c7, HorizontalAlignment: Center, VerticalAlignment: Center);
+      Text: "10";
+    }
+
+    TextButton #ScrapPlusButton {
+      Anchor: (Width: 24, Height: 24);
+      Text: "+";
+      Style: TextButtonStyle(
+        Default: (Background: #2a2008, LabelStyle: (FontSize: 14, RenderBold: true, TextColor: #fbbf24, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Hovered: (Background: #3d300c, LabelStyle: (FontSize: 14, RenderBold: true, TextColor: #fde68a, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Pressed: (Background: #1f1806, LabelStyle: (FontSize: 14, RenderBold: true, TextColor: #fbbf24, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Sounds: $C.@ButtonSounds,
+      );
+    }
 
     Group {
       Anchor: (Width: 16);
@@ -167,7 +222,7 @@ Group {
     }
 
     Group {
-      Anchor: (Width: 96, Height: 24);
+      Anchor: (Width: 180, Height: 24);
       TextButton #NpcTypeButton {
         Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
         Text: "Zombie";
