@@ -10,8 +10,7 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.HyvexaPlugin;
-import io.hyvexa.parkour.ui.CosmeticShopPage;
+import io.hyvexa.parkour.ui.ShopPage;
 
 import javax.annotation.Nonnull;
 import java.util.concurrent.CompletableFuture;
@@ -21,7 +20,7 @@ import static com.hypixel.hytale.server.core.command.commands.player.inventory.I
 public class ShopCommand extends AbstractAsyncCommand {
 
     public ShopCommand() {
-        super("shop", "Open the cosmetics shop.");
+        super("shop", "Open the shop.");
         this.setPermissionGroup(GameMode.Adventure);
     }
 
@@ -43,7 +42,7 @@ public class ShopCommand extends AbstractAsyncCommand {
             PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
             if (playerRef == null) return;
             player.getPageManager().openCustomPage(ref, store,
-                    new CosmeticShopPage(playerRef, HyvexaPlugin.getInstance().getCosmeticManager()));
+                    new ShopPage(playerRef, playerRef.getUuid()));
         }, world);
     }
 }
