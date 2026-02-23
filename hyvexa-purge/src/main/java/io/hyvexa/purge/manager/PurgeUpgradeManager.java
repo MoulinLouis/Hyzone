@@ -15,7 +15,6 @@ import com.hypixel.hytale.server.core.modules.entitystats.modifier.StaticModifie
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.purge.data.PurgeSession;
-import io.hyvexa.purge.data.PurgeSessionPlayerState;
 import io.hyvexa.purge.data.PurgeUpgradeOffer;
 import io.hyvexa.purge.data.PurgeUpgradeRarity;
 import io.hyvexa.purge.data.PurgeUpgradeState;
@@ -67,7 +66,7 @@ public class PurgeUpgradeManager {
     }
 
     public void applyUpgrade(PurgeSession session, UUID playerId, PurgeUpgradeOffer offer,
-                              Ref<EntityStore> ref, Store<EntityStore> store) {
+                              Ref<EntityStore> ref, Store<EntityStore> store, Player player) {
         PurgeUpgradeState state = session.getUpgradeState(playerId);
         if (state == null) return;
 
@@ -76,7 +75,7 @@ public class PurgeUpgradeManager {
 
         switch (offer.type()) {
             case HP -> applyHp(ref, store, state.getAccumulated(PurgeUpgradeType.HP));
-            case AMMO -> applyAmmo(session, playerId, ref, store, state.getAccumulated(PurgeUpgradeType.AMMO));
+            case AMMO -> applyAmmoToPlayer(player, state.getAccumulated(PurgeUpgradeType.AMMO));
             case SPEED -> applySpeed(ref, store, state.getAccumulated(PurgeUpgradeType.SPEED));
             case LUCK -> {} // Read at rarity-roll time
         }
@@ -127,19 +126,19 @@ public class PurgeUpgradeManager {
      * Re-applies the accumulated ammo upgrade to the player's current weapon.
      * Call this after any operation that replaces the weapon ItemStack (revive, weapon switch).
      */
-    public void reapplyAmmoUpgrade(PurgeSession session, UUID playerId,
-                                    Ref<EntityStore> ref, Store<EntityStore> store) {
+    public void reapplyAmmoUpgrade(PurgeSession session, UUID playerId, Player player) {
         PurgeUpgradeState state = session.getUpgradeState(playerId);
         if (state == null) return;
         int totalBonusAmmo = state.getAccumulated(PurgeUpgradeType.AMMO);
         if (totalBonusAmmo <= 0) return;
-        applyAmmo(session, playerId, ref, store, totalBonusAmmo);
+        applyAmmoToPlayer(player, totalBonusAmmo);
     }
 
-    private void applyAmmo(PurgeSession session, UUID playerId,
-                            Ref<EntityStore> ref, Store<EntityStore> store, int totalBonusAmmo) {
-        if (ref == null || !ref.isValid()) return;
-        Player player = store.getComponent(ref, Player.getComponentType());
+    /**
+     * Sets max ammo on the weapon in slot 0, same mechanism as /setammo command.
+     * Takes Player directly — no ref/store resolution.
+     */
+    private void applyAmmoToPlayer(Player player, int bonusAmmo) {
         if (player == null) return;
 
         Inventory inventory = player.getInventory();
@@ -148,20 +147,13 @@ public class PurgeUpgradeManager {
         ItemStack weapon = inventory.getHotbar().getItemStack(SLOT_WEAPON);
         if (weapon == null || weapon.isEmpty()) return;
 
-        // Use the base weapon ID from session state for the GunRegistry lookup.
-        // getItemId() may return a skinned variant (e.g. "AK47_Asimov") that isn't in the registry.
-        PurgeSessionPlayerState ps = session.getPlayerState(playerId);
-        String baseWeaponId = (ps != null && ps.getCurrentWeaponId() != null)
-                ? ps.getCurrentWeaponId()
-                : weapon.getItemId();
-        Integer defaultMax = com.thescar.hygunsplugin.GunRegistry.getDefaultMaxAmmo(baseWeaponId);
+        String itemId = weapon.getItemId();
+        Integer defaultMax = com.thescar.hygunsplugin.GunRegistry.getDefaultMaxAmmo(itemId);
         if (defaultMax == null) return;
 
-        int newMax = defaultMax + totalBonusAmmo;
+        int newMax = defaultMax + bonusAmmo;
 
-        // Update Hyguns custom data on the weapon ItemStack
         weapon = com.thescar.hygunsplugin.ItemStackUtils.setCustomInt(weapon, "Hyguns_MaxAmmo", newMax);
-        // Also fill magazine to the new max
         weapon = com.thescar.hygunsplugin.ItemStackUtils.setCustomInt(weapon, "Hyguns_Ammo", newMax);
 
         inventory.getHotbar().setItemStackForSlot(SLOT_WEAPON, weapon, false);

@@ -17,6 +17,10 @@ import com.hypixel.hytale.server.core.modules.entitystats.EntityStatValue;
 import com.hypixel.hytale.server.core.modules.entitystats.asset.DefaultEntityStatTypes;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.protocol.SoundCategory;
+import com.hypixel.hytale.protocol.packets.world.PlaySoundEvent2D;
+import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
+import com.hypixel.hytale.server.core.io.PacketHandler;
 import io.hyvexa.purge.data.PurgeSession;
 import io.hyvexa.purge.data.PurgeSessionPlayerState;
 import io.hyvexa.purge.data.PurgeVariantConfig;
@@ -28,6 +32,10 @@ import io.hyvexa.purge.manager.PurgeWeaponConfigManager;
 import java.util.UUID;
 
 public class PurgeDamageModifierSystem extends DamageEventSystem {
+
+    private static final String KILL_SOUND_PREFIX = "SFX_Purge_Kill";
+    private static final int MAX_STREAK = 9;
+    private static final long STREAK_WINDOW_MS = 3000L;
 
     private final PurgeSessionManager sessionManager;
     private final PurgeVariantConfigManager variantConfigManager;
@@ -142,29 +150,43 @@ public class PurgeDamageModifierSystem extends DamageEventSystem {
         int effectiveLevel = Math.max(level, 1);
         int damage = weaponConfigManager.getDamage(playerWeapon, effectiveLevel);
         event.setAmount(damage);
-        clearZombieNameplateOnLethalHit(store, session, targetRef, damage);
+        if (clearZombieNameplateOnLethalHit(store, session, targetRef, damage)) {
+            playKillSound(sourcePlayerRef, playerState);
+        }
     }
 
-    private void clearZombieNameplateOnLethalHit(Store<EntityStore> store,
-                                                 PurgeSession session,
-                                                 Ref<EntityStore> zombieRef,
-                                                 float incomingDamage) {
+    private boolean clearZombieNameplateOnLethalHit(Store<EntityStore> store,
+                                                    PurgeSession session,
+                                                    Ref<EntityStore> zombieRef,
+                                                    float incomingDamage) {
         if (zombieRef == null || !zombieRef.isValid() || incomingDamage <= 0f) {
-            return;
+            return false;
         }
         EntityStatMap statMap = store.getComponent(zombieRef, EntityStatMap.getComponentType());
         Nameplate nameplate = store.getComponent(zombieRef, Nameplate.getComponentType());
         if (statMap == null || nameplate == null) {
-            return;
+            return false;
         }
         EntityStatValue health = statMap.get(DefaultEntityStatTypes.getHealth());
         if (health == null) {
-            return;
+            return false;
         }
         if (health.get() - incomingDamage <= 0f) {
             nameplate.setText("");
             session.markZombiePendingDeath(zombieRef);
+            return true;
         }
+        return false;
+    }
+
+    private void playKillSound(PlayerRef playerRef, PurgeSessionPlayerState playerState) {
+        if (playerRef == null) return;
+        int streak = (playerState != null) ? playerState.recordKillStreak(STREAK_WINDOW_MS) : 1;
+        int index = SoundEvent.getAssetMap().getIndex(KILL_SOUND_PREFIX + streak);
+        if (index <= SoundEvent.EMPTY_ID) return;
+        PacketHandler ph = playerRef.getPacketHandler();
+        if (ph == null) return;
+        ph.writeNoCache(new PlaySoundEvent2D(index, SoundCategory.SFX, 2.0f, 1.0f));
     }
 
     private void cancelDamage(Damage event, CommandBuffer<EntityStore> buffer,

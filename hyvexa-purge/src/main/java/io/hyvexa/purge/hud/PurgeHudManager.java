@@ -10,14 +10,18 @@ import io.hyvexa.common.util.MultiHudBridge;
 import io.hyvexa.core.economy.VexaStore;
 import io.hyvexa.purge.data.PurgeScrapStore;
 
+import io.hyvexa.purge.data.PurgeSessionPlayerState;
+
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class PurgeHudManager {
 
     private static final long HUD_READY_DELAY_MS = 250L;
+    private static final long STREAK_WINDOW_MS = 3000L;
     private final ConcurrentHashMap<UUID, PurgeHud> purgeHuds = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Long> hudReadyAt = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, PurgeSessionPlayerState> comboPlayers = new ConcurrentHashMap<>();
 
     public void attach(PlayerRef playerRef, Player player) {
         if (playerRef == null || player == null) {
@@ -58,6 +62,23 @@ public class PurgeHudManager {
         if (playerId != null) {
             purgeHuds.remove(playerId);
             hudReadyAt.remove(playerId);
+            comboPlayers.remove(playerId);
+        }
+    }
+
+    public void registerComboPlayer(UUID playerId, PurgeSessionPlayerState state) {
+        if (playerId != null && state != null) {
+            comboPlayers.put(playerId, state);
+        }
+    }
+
+    public void unregisterComboPlayer(UUID playerId) {
+        if (playerId != null) {
+            comboPlayers.remove(playerId);
+            PurgeHud hud = getHud(playerId);
+            if (hud != null) {
+                hud.updateCombo(0, 0f);
+            }
         }
     }
 
@@ -94,6 +115,29 @@ public class PurgeHudManager {
         PurgeHud hud = getHud(playerId);
         if (hud != null) {
             hud.updateIntermission(seconds);
+        }
+    }
+
+    public void tickComboBars() {
+        long now = System.currentTimeMillis();
+        for (var entry : comboPlayers.entrySet()) {
+            UUID playerId = entry.getKey();
+            PurgeHud hud = getHud(playerId);
+            if (hud == null) continue;
+            PurgeSessionPlayerState state = entry.getValue();
+            long lastKill = state.getLastKillTimeMs();
+            int streak = state.getKillStreak();
+            if (streak < 2 || lastKill == 0) {
+                hud.updateCombo(0, 0f);
+                continue;
+            }
+            long elapsed = now - lastKill;
+            if (elapsed >= STREAK_WINDOW_MS) {
+                hud.updateCombo(0, 0f);
+                continue;
+            }
+            float progress = 1f - (float) elapsed / STREAK_WINDOW_MS;
+            hud.updateCombo(streak, progress);
         }
     }
 

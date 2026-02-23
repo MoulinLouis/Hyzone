@@ -1,0 +1,12 @@
+{
+    "Layers": [
+        {
+            "Files": [
+                "Sounds/Purge/kill9.ogg"
+            ]
+        }
+    ],
+    "Volume": 1.0,
+    "MaxInstance": 10,
+    "PreventSoundInterruption": false
+}

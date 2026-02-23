@@ -1162,8 +1162,8 @@ public class PurgeWaveManager {
                     // Re-apply ammo upgrade to the fresh weapon ItemStack
                     try {
                         PurgeUpgradeManager um = upgradeManager;
-                        if (um != null) {
-                            um.reapplyAmmoUpgrade(session, pid, ref, store);
+                        if (um != null && player != null) {
+                            um.reapplyAmmoUpgrade(session, pid, player);
                         }
                     } catch (Exception e) {
                         LOGGER.atFine().log("Failed to re-apply ammo upgrade: " + e.getMessage());

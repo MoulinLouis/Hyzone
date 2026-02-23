@@ -160,6 +160,7 @@ public class PurgeSessionManager {
                     LOGGER.atWarning().withCause(e).log("Failed to setup player " + pid);
                 }
                 hudManager.showRunHud(pid);
+                hudManager.registerComboPlayer(pid, ps);
                 hudManager.updatePlayerHealth(pid, 100, 100);
             }
 
@@ -240,7 +241,10 @@ public class PurgeSessionManager {
         PurgeSessionPlayerState playerState = session.getPlayerState(playerId);
         runSafe("persist results", () -> persistResults(playerId, session));
         runSafe("remove bypass", () -> DamageBypassRegistry.remove(playerId));
-        runSafe("hide hud", () -> hudManager.hideRunHud(playerId));
+        runSafe("hide hud", () -> {
+            hudManager.unregisterComboPlayer(playerId);
+            hudManager.hideRunHud(playerId);
+        });
 
         // Build summary before world cleanup
         int kills = playerState != null ? playerState.getKills() : 0;
@@ -302,6 +306,7 @@ public class PurgeSessionManager {
             runSafe("persist " + pid, () -> persistResults(pid, session));
             runSafe("cleanup " + pid, () -> {
                 DamageBypassRegistry.remove(pid);
+                hudManager.unregisterComboPlayer(pid);
                 hudManager.hideRunHud(pid);
             });
 
@@ -563,7 +568,10 @@ public class PurgeSessionManager {
             Ref<EntityStore> ref = entry.getValue();
             sessionIdByPlayer.remove(pid);
             runSafe("remove bypass rollback " + pid, () -> DamageBypassRegistry.remove(pid));
-            runSafe("hide hud rollback " + pid, () -> hudManager.hideRunHud(pid));
+            runSafe("hide hud rollback " + pid, () -> {
+                hudManager.unregisterComboPlayer(pid);
+                hudManager.hideRunHud(pid);
+            });
             if (plugin != null) {
                 runSafe("restore idle loadout rollback " + pid,
                         () -> restoreIdleLoadoutIfInPurgeWorld(plugin, ref));

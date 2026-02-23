@@ -215,6 +215,39 @@ $C.@PageOverlay {
       }
     }
 
+    Group #ComboRoot {
+      Anchor: (Top: 160, Left: 0, Right: 0, Height: 50);
+      LayoutMode: Left;
+      Visible: false;
+
+      Group { FlexWeight: 1; }
+
+      Group #ComboBox {
+        Anchor: (Width: 200, Height: 50);
+        LayoutMode: Top;
+
+        Label #ComboLabel {
+          Anchor: (Height: 30);
+          Style: (
+            FontSize: 24,
+            HorizontalAlignment: Center,
+            RenderBold: true,
+            TextColor: #f59e0b
+          );
+          Text: "COMBO x2";
+        }
+
+        ProgressBar #ComboBar {
+          Anchor: (Left: 10, Right: 10, Height: 6);
+          Value: 1;
+          Bar: #f59e0b;
+          Background: #f59e0b(0.15);
+        }
+      }
+
+      Group { FlexWeight: 1; }
+    }
+
     Group #ScrapHudRoot {
       Anchor: (Left: 26, Bottom: 28, Width: 420, Height: 104);
       LayoutMode: Left;
