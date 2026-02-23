@@ -558,6 +558,20 @@ public class PurgeWeaponConfigManager {
         if (!isPersistenceAvailable()) {
             return;
         }
+        // Migrate: drop old table if it has wrong column names
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             ResultSet rs = conn.getMetaData().getColumns(null, null, "purge_settings", "setting_key")) {
+            if (!rs.next()) {
+                // Table exists but missing expected column — drop and recreate
+                try (PreparedStatement drop = conn.prepareStatement("DROP TABLE IF EXISTS purge_settings")) {
+                    DatabaseManager.applyQueryTimeout(drop);
+                    drop.executeUpdate();
+                    LOGGER.atInfo().log("Dropped purge_settings table with wrong schema, will recreate");
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.atWarning().withCause(e).log("Failed to check purge_settings schema");
+        }
         String sql = "CREATE TABLE IF NOT EXISTS purge_settings ("
                 + "setting_key VARCHAR(64) NOT NULL PRIMARY KEY, "
                 + "setting_value VARCHAR(255) NOT NULL"
