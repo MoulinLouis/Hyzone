@@ -35,18 +35,7 @@ $C.@PageOverlay {
             RenderBold: true,
             TextColor: #d9e6ec
           );
-          Text: "Zombies: 0/5";
-        }
-
-        Label #PlayerHealthLabel {
-          Anchor: (Top: 4, Height: 24);
-          Style: (
-            FontSize: 16,
-            HorizontalAlignment: Center,
-            RenderBold: true,
-            TextColor: #ef4444
-          );
-          Text: "HP: 100 / 100";
+          Text: "";
         }
       }
 
@@ -243,6 +232,26 @@ $C.@PageOverlay {
           Bar: #f59e0b;
           Background: #f59e0b(0.15);
         }
+      }
+
+      Group { FlexWeight: 1; }
+    }
+
+    Group #PlayerHealthRow {
+      Anchor: (Bottom: 135, Left: 0, Right: 320, Height: 24);
+      LayoutMode: Left;
+
+      Group { FlexWeight: 1; }
+
+      Label #PlayerHealthLabel {
+        Anchor: (Height: 24);
+        Style: (
+          FontSize: 16,
+          HorizontalAlignment: Center,
+          RenderBold: true,
+          TextColor: #ef4444
+        );
+        Text: "HP: 100 / 100";
       }
 
       Group { FlexWeight: 1; }

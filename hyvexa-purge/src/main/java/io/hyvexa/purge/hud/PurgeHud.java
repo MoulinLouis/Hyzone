@@ -63,7 +63,7 @@ public class PurgeHud extends CustomUIHud {
         lastIntermissionText = null;
         UICommandBuilder cmd = new UICommandBuilder();
         cmd.set("#WaveLabel.Text", "WAVE " + wave);
-        cmd.set("#ZombieCountLabel.Text", "Zombies: " + alive + "/" + total);
+        cmd.set("#ZombieCountLabel.Text", "");
         update(false, cmd);
     }
 
