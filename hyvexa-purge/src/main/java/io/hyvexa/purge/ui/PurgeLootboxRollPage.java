@@ -16,6 +16,7 @@ import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.purge.HyvexaPurgePlugin;
@@ -40,6 +41,10 @@ public class PurgeLootboxRollPage extends InteractiveCustomUIPage<PurgeLootboxRo
     private static final int SPIN_STEPS = 30;
     private static final long SPIN_BASE_DELAY_MS = 60;
     private static final int TIMEOUT_SECONDS = 10;
+    private static final List<String> ICON_WEAPON_IDS = List.of(
+            "AK47", "Barret50", "ColtRevolver", "DesertEagle", "DoubleBarrel",
+            "Flamethrower", "Glock18", "M4A1s", "MP9", "Mac10", "Thompson"
+    );
 
     private final UUID playerId;
     private final PurgeSessionPlayerState playerState;
@@ -48,6 +53,7 @@ public class PurgeLootboxRollPage extends InteractiveCustomUIPage<PurgeLootboxRo
 
     private volatile ScheduledFuture<?> spinTask;
     private volatile ScheduledFuture<?> timeoutTask;
+    private volatile World world;
     private final AtomicBoolean resolved = new AtomicBoolean(false);
 
     public PurgeLootboxRollPage(@Nonnull PlayerRef playerRef,
@@ -68,6 +74,7 @@ public class PurgeLootboxRollPage extends InteractiveCustomUIPage<PurgeLootboxRo
                       @Nonnull UIEventBuilder uiEventBuilder,
                       @Nonnull Store<EntityStore> store) {
         uiCommandBuilder.append("Pages/Purge_LootboxRoll.ui");
+        this.world = store.getExternalData().getWorld();
 
         // Hide buttons until spin completes
         uiCommandBuilder.set("#AcceptButton.Visible", false);
@@ -151,10 +158,9 @@ public class PurgeLootboxRollPage extends InteractiveCustomUIPage<PurgeLootboxRo
                     return;
                 }
 
-                // Pick a random weapon name to display during spin
+                // Pick a random weapon to display during spin
                 String displayWeapon;
                 if (currentStep >= SPIN_STEPS - 3) {
-                    // Last few steps: show the actual result
                     displayWeapon = rolledWeaponId;
                 } else {
                     displayWeapon = candidateWeapons.get(
@@ -167,13 +173,8 @@ public class PurgeLootboxRollPage extends InteractiveCustomUIPage<PurgeLootboxRo
                         : displayWeapon;
 
                 UICommandBuilder cmd = new UICommandBuilder();
+                updateWeaponIcon(cmd, displayWeapon);
                 cmd.set("#WeaponName.Text", displayName);
-                // Vary color during spin
-                if (currentStep < SPIN_STEPS - 3) {
-                    cmd.set("#WeaponName.Style.TextColor", "#9fb0ba");
-                } else {
-                    cmd.set("#WeaponName.Style.TextColor", "#fbbf24");
-                }
                 this.sendUpdate(cmd, new UIEventBuilder(), false);
             } catch (Exception e) {
                 LOGGER.atFine().log("Spin animation error: " + e.getMessage());
@@ -193,6 +194,7 @@ public class PurgeLootboxRollPage extends InteractiveCustomUIPage<PurgeLootboxRo
         UICommandBuilder cmd = new UICommandBuilder();
         UIEventBuilder evt = new UIEventBuilder();
 
+        updateWeaponIcon(cmd, rolledWeaponId);
         cmd.set("#WeaponName.Text", displayName);
         cmd.set("#WeaponName.Style.TextColor", "#fbbf24");
         cmd.set("#DamageLabel.Text", dmg + " dmg");
@@ -211,6 +213,14 @@ public class PurgeLootboxRollPage extends InteractiveCustomUIPage<PurgeLootboxRo
         this.sendUpdate(cmd, evt, false);
     }
 
+    private void updateWeaponIcon(UICommandBuilder cmd, String weaponId) {
+        String normalized = ICON_WEAPON_IDS.contains(weaponId) ? weaponId : "AK47";
+        for (String id : ICON_WEAPON_IDS) {
+            cmd.set("#Icon" + id + ".Visible", false);
+        }
+        cmd.set("#Icon" + normalized + ".Visible", true);
+    }
+
     private void updateStarDisplay(UICommandBuilder cmd, int level) {
         int fullStars = level / 2;
         boolean hasHalf = level % 2 == 1;
@@ -225,18 +235,19 @@ public class PurgeLootboxRollPage extends InteractiveCustomUIPage<PurgeLootboxRo
         AtomicInteger remaining = new AtomicInteger(TIMEOUT_SECONDS);
         timeoutTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(() -> {
             try {
-                int secs = remaining.getAndDecrement();
-                if (secs <= 0) {
-                    // Timeout: auto-close without accepting
-                    if (resolved.compareAndSet(false, true)) {
-                        cancelTasks();
-                        close();
-                    }
+                int secs = remaining.decrementAndGet();
+                if (secs < 0) {
                     return;
                 }
                 UICommandBuilder cmd = new UICommandBuilder();
                 cmd.set("#TimerLabel.Text", secs + "s remaining");
                 this.sendUpdate(cmd, new UIEventBuilder(), false);
+                if (secs == 0 && resolved.compareAndSet(false, true)) {
+                    World w = world;
+                    if (w != null) {
+                        w.execute(() -> close());
+                    }
+                }
             } catch (Exception e) {
                 LOGGER.atFine().log("Timeout tick error: " + e.getMessage());
             }
