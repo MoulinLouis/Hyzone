@@ -19,6 +19,10 @@ public class PurgeHud extends CustomUIHud {
     private int lastCombo = -1;
     private int lastComboBarQuantized = -1;
     private boolean comboVisible = false;
+    private int lastUpgHp = -1;
+    private int lastUpgAmmo = -1;
+    private int lastUpgSpeed = -1;
+    private int lastUpgLuck = -1;
 
     public PurgeHud(PlayerRef playerRef) {
         super(playerRef);
@@ -105,6 +109,12 @@ public class PurgeHud extends CustomUIHud {
         update(false, cmd);
     }
 
+    public void setPlayerHealthVisible(boolean visible) {
+        UICommandBuilder cmd = new UICommandBuilder();
+        cmd.set("#PlayerHealthRow.Visible", visible);
+        update(false, cmd);
+    }
+
     public void updateCombo(int combo, float barProgress) {
         UICommandBuilder cmd = new UICommandBuilder();
         boolean shouldShow = combo >= 2;
@@ -132,6 +142,38 @@ public class PurgeHud extends CustomUIHud {
         update(false, cmd);
     }
 
+    public void updateUpgradeLevels(int hp, int ammo, int speed, int luck) {
+        UICommandBuilder cmd = new UICommandBuilder();
+        boolean changed = false;
+        if (hp != lastUpgHp) {
+            lastUpgHp = hp;
+            cmd.set("#UpgHp.Visible", hp > 0);
+            cmd.set("#UpgHpLv.Text", "Lv " + hp);
+            changed = true;
+        }
+        if (ammo != lastUpgAmmo) {
+            lastUpgAmmo = ammo;
+            cmd.set("#UpgAmmo.Visible", ammo > 0);
+            cmd.set("#UpgAmmoLv.Text", "Lv " + ammo);
+            changed = true;
+        }
+        if (speed != lastUpgSpeed) {
+            lastUpgSpeed = speed;
+            cmd.set("#UpgSpeed.Visible", speed > 0);
+            cmd.set("#UpgSpeedLv.Text", "Lv " + speed);
+            changed = true;
+        }
+        if (luck != lastUpgLuck) {
+            lastUpgLuck = luck;
+            cmd.set("#UpgLuck.Visible", luck > 0);
+            cmd.set("#UpgLuckLv.Text", "Lv " + luck);
+            changed = true;
+        }
+        if (changed) {
+            update(false, cmd);
+        }
+    }
+
     public void resetCache() {
         lastWave = -1;
         lastAlive = -1;
@@ -145,5 +187,9 @@ public class PurgeHud extends CustomUIHud {
         lastCombo = -1;
         lastComboBarQuantized = -1;
         comboVisible = false;
+        lastUpgHp = -1;
+        lastUpgAmmo = -1;
+        lastUpgSpeed = -1;
+        lastUpgLuck = -1;
     }
 }

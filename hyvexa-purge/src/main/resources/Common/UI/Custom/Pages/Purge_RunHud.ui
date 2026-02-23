@@ -257,6 +257,109 @@ $C.@PageOverlay {
       Group { FlexWeight: 1; }
     }
 
+    Group #UpgradeTracker {
+      Anchor: (Left: 26, Bottom: 140, Width: 224, Height: 48);
+      LayoutMode: Left;
+
+      Group #UpgHp {
+        Anchor: (Width: 48, Height: 48);
+        Background: (TexturePath: "../Textures/golem_icon.png");
+        Visible: false;
+
+        Group #UpgHpOverlay {
+          Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+          Background: #0d1620(0.6);
+        }
+
+        Label #UpgHpLv {
+          Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+          Style: (
+            FontSize: 14,
+            HorizontalAlignment: Center,
+            VerticalAlignment: Center,
+            RenderBold: true,
+            TextColor: #e7f1f4
+          );
+          Text: "Lv 0";
+        }
+      }
+
+      Group { Anchor: (Width: 8); }
+
+      Group #UpgAmmo {
+        Anchor: (Width: 48, Height: 48);
+        Background: (TexturePath: "../Textures/golem_icon.png");
+        Visible: false;
+
+        Group #UpgAmmoOverlay {
+          Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+          Background: #0d1620(0.6);
+        }
+
+        Label #UpgAmmoLv {
+          Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+          Style: (
+            FontSize: 14,
+            HorizontalAlignment: Center,
+            VerticalAlignment: Center,
+            RenderBold: true,
+            TextColor: #e7f1f4
+          );
+          Text: "Lv 0";
+        }
+      }
+
+      Group { Anchor: (Width: 8); }
+
+      Group #UpgSpeed {
+        Anchor: (Width: 48, Height: 48);
+        Background: (TexturePath: "../Textures/golem_icon.png");
+        Visible: false;
+
+        Group #UpgSpeedOverlay {
+          Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+          Background: #0d1620(0.6);
+        }
+
+        Label #UpgSpeedLv {
+          Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+          Style: (
+            FontSize: 14,
+            HorizontalAlignment: Center,
+            VerticalAlignment: Center,
+            RenderBold: true,
+            TextColor: #e7f1f4
+          );
+          Text: "Lv 0";
+        }
+      }
+
+      Group { Anchor: (Width: 8); }
+
+      Group #UpgLuck {
+        Anchor: (Width: 48, Height: 48);
+        Background: (TexturePath: "../Textures/golem_icon.png");
+        Visible: false;
+
+        Group #UpgLuckOverlay {
+          Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+          Background: #0d1620(0.6);
+        }
+
+        Label #UpgLuckLv {
+          Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+          Style: (
+            FontSize: 14,
+            HorizontalAlignment: Center,
+            VerticalAlignment: Center,
+            RenderBold: true,
+            TextColor: #e7f1f4
+          );
+          Text: "Lv 0";
+        }
+      }
+    }
+
     Group #ScrapHudRoot {
       Anchor: (Left: 26, Bottom: 28, Width: 420, Height: 104);
       LayoutMode: Left;

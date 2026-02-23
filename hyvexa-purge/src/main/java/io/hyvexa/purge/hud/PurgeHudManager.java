@@ -9,6 +9,8 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.util.MultiHudBridge;
 import io.hyvexa.core.economy.VexaStore;
 import io.hyvexa.purge.data.PurgeScrapStore;
+import io.hyvexa.purge.data.PurgeUpgradeState;
+import io.hyvexa.purge.data.PurgeUpgradeType;
 
 import io.hyvexa.purge.data.PurgeSessionPlayerState;
 
@@ -82,16 +84,30 @@ public class PurgeHudManager {
         }
     }
 
+    public void updateUpgradeLevels(UUID playerId, PurgeUpgradeState state) {
+        PurgeHud hud = getHud(playerId);
+        if (hud == null || state == null) return;
+        hud.updateUpgradeLevels(
+                state.getLevel(PurgeUpgradeType.HP),
+                state.getLevel(PurgeUpgradeType.AMMO),
+                state.getLevel(PurgeUpgradeType.SPEED),
+                state.getLevel(PurgeUpgradeType.LUCK)
+        );
+    }
+
     public void showRunHud(UUID playerId) {
         PurgeHud hud = getHud(playerId);
         if (hud != null) {
             hud.setWaveStatusVisible(true);
+            hud.setPlayerHealthVisible(true);
         }
     }
 
     public void hideRunHud(UUID playerId) {
         PurgeHud hud = getHud(playerId);
         if (hud != null) {
+            hud.updateUpgradeLevels(0, 0, 0, 0);
+            hud.setPlayerHealthVisible(false);
             hud.setWaveStatusVisible(false);
             hud.resetCache();
         }

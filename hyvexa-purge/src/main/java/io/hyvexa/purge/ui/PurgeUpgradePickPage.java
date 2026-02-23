@@ -20,6 +20,7 @@ import io.hyvexa.purge.data.PurgeUpgradeOffer;
 import io.hyvexa.purge.data.PurgeUpgradeRarity;
 import io.hyvexa.purge.data.PurgeUpgradeState;
 import io.hyvexa.purge.data.PurgeUpgradeType;
+import io.hyvexa.purge.hud.PurgeHudManager;
 import io.hyvexa.purge.manager.PurgeUpgradeManager;
 
 import javax.annotation.Nonnull;
@@ -37,6 +38,7 @@ public class PurgeUpgradePickPage extends InteractiveCustomUIPage<PurgeUpgradePi
     private final PurgeUpgradeManager upgradeManager;
     private final List<PurgeUpgradeOffer> offered;
     private final Runnable onComplete;
+    private final PurgeHudManager hudManager;
     private final AtomicBoolean alreadyChosen = new AtomicBoolean(false);
 
     public PurgeUpgradePickPage(@Nonnull PlayerRef playerRef,
@@ -44,13 +46,15 @@ public class PurgeUpgradePickPage extends InteractiveCustomUIPage<PurgeUpgradePi
                                 PurgeSession session,
                                 PurgeUpgradeManager upgradeManager,
                                 List<PurgeUpgradeOffer> offered,
-                                Runnable onComplete) {
+                                Runnable onComplete,
+                                PurgeHudManager hudManager) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, PurgeUpgradePickData.CODEC);
         this.playerId = playerId;
         this.session = session;
         this.upgradeManager = upgradeManager;
         this.offered = offered;
         this.onComplete = onComplete;
+        this.hudManager = hudManager;
     }
 
     @Override
@@ -115,6 +119,10 @@ public class PurgeUpgradePickPage extends InteractiveCustomUIPage<PurgeUpgradePi
                     PurgeUpgradeOffer offer = new PurgeUpgradeOffer(type, rarity);
                     Player player = store.getComponent(ref, Player.getComponentType());
                     upgradeManager.applyUpgrade(session, playerId, offer, ref, store, player);
+                    PurgeUpgradeState state = session.getUpgradeState(playerId);
+                    if (state != null && hudManager != null) {
+                        hudManager.updateUpgradeLevels(playerId, state);
+                    }
                 } else {
                     LOGGER.atWarning().log("Invalid upgrade choice format: " + data.choice);
                 }
