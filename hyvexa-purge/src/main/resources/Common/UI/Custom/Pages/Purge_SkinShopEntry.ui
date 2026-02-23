@@ -3,6 +3,7 @@ $C = "../Common.ui";
 Group {
   Anchor: (Width: 270, Height: 148, Top: 8, Left: 8);
   LayoutMode: Full;
+  Background: #07101b;
   OutlineColor: #ffffff(0.06);
   OutlineSize: 1;
 

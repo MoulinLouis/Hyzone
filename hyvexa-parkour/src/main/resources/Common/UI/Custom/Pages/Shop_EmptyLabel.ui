@@ -1,0 +1,5 @@
+Label #EmptyLabel {
+  Anchor: (Left: 0, Right: 0, Height: 40, Top: 20);
+  Style: (FontSize: 16, TextColor: #6b7c8a, HorizontalAlignment: Center, VerticalAlignment: Center);
+  Text: "Nothing to show";
+}

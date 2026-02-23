@@ -1,0 +1,226 @@
+package io.hyvexa.parkour.ui;
+
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
+import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
+import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.ui.builder.EventData;
+import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
+import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.common.shop.ShopTab;
+import io.hyvexa.common.shop.ShopTabRegistry;
+import io.hyvexa.common.shop.ShopTabResult;
+import io.hyvexa.common.ui.ButtonEventData;
+import io.hyvexa.core.economy.VexaStore;
+
+import javax.annotation.Nonnull;
+import java.util.List;
+import java.util.UUID;
+
+public class ShopPage extends BaseParkourPage {
+
+    private static final String BUTTON_CLOSE = "Close";
+    private static final String BUTTON_CONFIRM = "ShopConfirm";
+    private static final String BUTTON_CANCEL = "ShopCancel";
+    private static final String TAB_PREFIX = "Tab:";
+
+    private final UUID playerId;
+    private String activeTabId;
+    private String pendingConfirmKey;
+    private String pendingConfirmTabId;
+
+    public ShopPage(@Nonnull PlayerRef playerRef, UUID playerId) {
+        super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
+        this.playerId = playerId;
+    }
+
+    @Override
+    public void build(@Nonnull Ref<EntityStore> ref, @Nonnull UICommandBuilder cmd,
+                      @Nonnull UIEventBuilder evt, @Nonnull Store<EntityStore> store) {
+        cmd.append("Pages/Shop.ui");
+
+        long vexa = VexaStore.getInstance().getVexa(playerId);
+        cmd.set("#VexaBalance.Text", String.valueOf(vexa));
+
+        // Close button
+        evt.addEventBinding(CustomUIEventBindingType.Activating, "#CloseButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE), false);
+
+        // Confirm/Cancel buttons
+        evt.addEventBinding(CustomUIEventBindingType.Activating, "#ShopConfirmButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CONFIRM), false);
+        evt.addEventBinding(CustomUIEventBindingType.Activating, "#ShopCancelButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CANCEL), false);
+
+        List<ShopTab> tabs = ShopTabRegistry.getTabs();
+        if (tabs.isEmpty()) return;
+
+        // Default to first tab
+        if (activeTabId == null) {
+            activeTabId = tabs.get(0).getId();
+        }
+
+        buildTabBar(cmd, evt, tabs);
+
+        // Build active tab content
+        ShopTab activeTab = ShopTabRegistry.getTab(activeTabId);
+        if (activeTab != null) {
+            activeTab.buildContent(cmd, evt, playerId, vexa);
+        }
+    }
+
+    @Override
+    public void handleDataEvent(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store,
+                                @Nonnull ButtonEventData data) {
+        super.handleDataEvent(ref, store, data);
+        String button = data.getButton();
+        if (button == null) return;
+
+        if (BUTTON_CLOSE.equals(button)) {
+            close();
+            return;
+        }
+
+        if (BUTTON_CONFIRM.equals(button)) {
+            handleConfirm(ref, store);
+            return;
+        }
+
+        if (BUTTON_CANCEL.equals(button)) {
+            handleCancel();
+            return;
+        }
+
+        // Tab switch
+        if (button.startsWith(TAB_PREFIX)) {
+            String tabId = button.substring(TAB_PREFIX.length());
+            if (!tabId.equals(activeTabId)) {
+                activeTabId = tabId;
+                pendingConfirmKey = null;
+                pendingConfirmTabId = null;
+                sendFullRefresh();
+            }
+            return;
+        }
+
+        // Route to active tab: button format is "tabId:action"
+        int colonIdx = button.indexOf(':');
+        if (colonIdx > 0) {
+            String tabId = button.substring(0, colonIdx);
+            String tabButton = button.substring(colonIdx + 1);
+            ShopTab tab = ShopTabRegistry.getTab(tabId);
+            if (tab != null) {
+                Player player = store.getComponent(ref, Player.getComponentType());
+                if (player == null) return;
+                ShopTabResult result = tab.handleEvent(tabButton, ref, store, player, playerId);
+                handleResult(result, tab);
+            }
+        }
+    }
+
+    private void handleResult(ShopTabResult result, ShopTab tab) {
+        switch (result.getType()) {
+            case NONE -> {}
+            case REFRESH -> sendFullRefresh();
+            case SHOW_CONFIRM -> showConfirmOverlay(tab, result.getConfirmKey());
+            case HIDE_CONFIRM -> hideConfirmOverlay();
+        }
+    }
+
+    private void handleConfirm(Ref<EntityStore> ref, Store<EntityStore> store) {
+        if (pendingConfirmKey == null || pendingConfirmTabId == null) return;
+        ShopTab tab = ShopTabRegistry.getTab(pendingConfirmTabId);
+        if (tab == null) return;
+
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null) return;
+
+        String key = pendingConfirmKey;
+        pendingConfirmKey = null;
+        pendingConfirmTabId = null;
+
+        boolean handled = tab.handleConfirm(key, ref, store, player, playerId);
+        if (handled) {
+            sendFullRefresh();
+        } else {
+            hideConfirmOverlay();
+        }
+    }
+
+    private void handleCancel() {
+        pendingConfirmKey = null;
+        pendingConfirmTabId = null;
+        hideConfirmOverlay();
+    }
+
+    private void sendFullRefresh() {
+        UICommandBuilder cmd = new UICommandBuilder();
+        UIEventBuilder evt = new UIEventBuilder();
+
+        long vexa = VexaStore.getInstance().getVexa(playerId);
+        cmd.set("#VexaBalance.Text", String.valueOf(vexa));
+        cmd.set("#ConfirmOverlay.Visible", false);
+
+        cmd.clear("#TabBar");
+        cmd.clear("#TabContent");
+
+        // Close button
+        evt.addEventBinding(CustomUIEventBindingType.Activating, "#CloseButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE), false);
+        evt.addEventBinding(CustomUIEventBindingType.Activating, "#ShopConfirmButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CONFIRM), false);
+        evt.addEventBinding(CustomUIEventBindingType.Activating, "#ShopCancelButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CANCEL), false);
+
+        List<ShopTab> tabs = ShopTabRegistry.getTabs();
+        buildTabBar(cmd, evt, tabs);
+
+        ShopTab activeTab = ShopTabRegistry.getTab(activeTabId);
+        if (activeTab != null) {
+            activeTab.buildContent(cmd, evt, playerId, vexa);
+        }
+
+        this.sendUpdate(cmd, evt, false);
+    }
+
+    private void buildTabBar(UICommandBuilder cmd, UIEventBuilder evt, List<ShopTab> tabs) {
+        for (int i = 0; i < tabs.size(); i++) {
+            ShopTab tab = tabs.get(i);
+            boolean active = tab.getId().equals(activeTabId);
+
+            cmd.append("#TabBar", "Pages/Shop_TabEntry.ui");
+            String root = "#TabBar[" + i + "] ";
+
+            cmd.set(root + "#TabLabel.Text", tab.getLabel());
+            if (active) {
+                cmd.set(root + "#TabLabel.Style.TextColor", "#f0f4f8");
+                cmd.set(root + "#TabLabel.Style.RenderBold", true);
+                cmd.set(root + "#TabAccent.Visible", true);
+                cmd.set(root + "#TabAccent.Background", tab.getAccentColor());
+            }
+
+            evt.addEventBinding(CustomUIEventBindingType.Activating,
+                    root + "#TabButton",
+                    EventData.of(ButtonEventData.KEY_BUTTON, TAB_PREFIX + tab.getId()), false);
+        }
+    }
+
+    private void showConfirmOverlay(ShopTab tab, String confirmKey) {
+        pendingConfirmKey = confirmKey;
+        pendingConfirmTabId = tab.getId();
+
+        UICommandBuilder cmd = new UICommandBuilder();
+        cmd.set("#ConfirmOverlay.Visible", true);
+        tab.populateConfirmOverlay(cmd, confirmKey);
+        this.sendUpdate(cmd, new UIEventBuilder(), false);
+    }
+
+    private void hideConfirmOverlay() {
+        UICommandBuilder cmd = new UICommandBuilder();
+        cmd.set("#ConfirmOverlay.Visible", false);
+        this.sendUpdate(cmd, new UIEventBuilder(), false);
+    }
+}

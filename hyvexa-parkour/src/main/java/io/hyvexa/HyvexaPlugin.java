@@ -65,6 +65,8 @@ import io.hyvexa.parkour.command.CosmeticTestCommand;
 import io.hyvexa.parkour.command.VexaCommand;
 import io.hyvexa.parkour.command.AnalyticsCommand;
 import io.hyvexa.parkour.command.ShopCommand;
+import io.hyvexa.common.shop.ShopTabRegistry;
+import io.hyvexa.parkour.ui.CosmeticsShopTab;
 import io.hyvexa.parkour.command.LinkCommand;
 import io.hyvexa.parkour.command.UnlinkCommand;
 import io.hyvexa.parkour.command.DatabaseClearCommand;
@@ -203,6 +205,7 @@ public class HyvexaPlugin extends JavaPlugin {
             LOGGER.atWarning().withCause(e).log("Failed to initialize AnalyticsStore");
         }
         this.cosmeticManager = new CosmeticManager();
+        ShopTabRegistry.register(new CosmeticsShopTab(cosmeticManager));
         this.collisionManager = new CollisionManager();
         this.mapStore = new MapStore();
         this.mapStore.syncLoad();
