@@ -137,6 +137,26 @@ public class PurgeSkinStore {
         }
     }
 
+    public void resetPlayer(UUID playerId) {
+        if (playerId == null) {
+            return;
+        }
+        ownedCache.remove(playerId);
+        selectedCache.remove(playerId);
+        if (!DatabaseManager.getInstance().isInitialized()) {
+            return;
+        }
+        String sql = "DELETE FROM purge_weapon_skins WHERE uuid = ?";
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            stmt.setString(1, playerId.toString());
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            LOGGER.atWarning().withCause(e).log("Failed to reset skins for " + playerId);
+        }
+    }
+
     public void evictPlayer(UUID playerId) {
         if (playerId != null) {
             ownedCache.remove(playerId);

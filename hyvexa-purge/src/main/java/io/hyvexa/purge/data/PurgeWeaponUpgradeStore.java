@@ -203,6 +203,27 @@ public class PurgeWeaponUpgradeStore {
         }
     }
 
+    public void resetPlayer(UUID playerId, Set<String> defaultWeaponIds) {
+        if (playerId == null) {
+            return;
+        }
+        cache.remove(playerId);
+        if (DatabaseManager.getInstance().isInitialized()) {
+            String sql = "DELETE FROM purge_weapon_upgrades WHERE uuid = ?";
+            try (Connection conn = DatabaseManager.getInstance().getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setString(1, playerId.toString());
+                stmt.executeUpdate();
+            } catch (SQLException e) {
+                LOGGER.atWarning().withCause(e).log("Failed to reset weapon upgrades for " + playerId);
+            }
+        }
+        if (defaultWeaponIds != null && !defaultWeaponIds.isEmpty()) {
+            initializeDefaults(playerId, defaultWeaponIds);
+        }
+    }
+
     public void evictPlayer(UUID playerId) {
         if (playerId != null) {
             cache.remove(playerId);
