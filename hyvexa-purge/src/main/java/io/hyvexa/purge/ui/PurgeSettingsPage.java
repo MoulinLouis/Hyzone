@@ -15,23 +15,31 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.ui.ButtonEventData;
+import io.hyvexa.purge.data.PurgePlayerStats;
+import io.hyvexa.purge.data.PurgePlayerStore;
+import io.hyvexa.purge.data.PurgeScrapStore;
+import io.hyvexa.purge.data.PurgeSkinStore;
+import io.hyvexa.purge.data.PurgeWeaponUpgradeStore;
 import io.hyvexa.purge.manager.PurgeInstanceManager;
 import io.hyvexa.purge.manager.PurgeVariantConfigManager;
 import io.hyvexa.purge.manager.PurgeWaveConfigManager;
 import io.hyvexa.purge.manager.PurgeWeaponConfigManager;
 
 import javax.annotation.Nonnull;
+import java.util.UUID;
 
 public class PurgeSettingsPage extends InteractiveCustomUIPage<PurgeSettingsPage.PurgeSettingsData> {
 
     private static final String BUTTON_BACK = "Back";
     private static final String BUTTON_LOOTBOX_MINUS = "LootboxMinus";
     private static final String BUTTON_LOOTBOX_PLUS = "LootboxPlus";
+    private static final String BUTTON_RESET = "ResetProgress";
 
     private final PurgeWeaponConfigManager weaponConfigManager;
     private final PurgeWaveConfigManager waveConfigManager;
     private final PurgeInstanceManager instanceManager;
     private final PurgeVariantConfigManager variantConfigManager;
+    private boolean pendingReset = false;
 
     public PurgeSettingsPage(@Nonnull PlayerRef playerRef,
                              PurgeWeaponConfigManager weaponConfigManager,
@@ -82,6 +90,24 @@ public class PurgeSettingsPage extends InteractiveCustomUIPage<PurgeSettingsPage
         if (BUTTON_LOOTBOX_PLUS.equals(button)) {
             weaponConfigManager.setLootboxDropPercent(weaponConfigManager.getLootboxDropPercent() + 1);
             sendRefresh();
+            return;
+        }
+        if (BUTTON_RESET.equals(button)) {
+            if (!pendingReset) {
+                pendingReset = true;
+                sendRefresh();
+            } else {
+                pendingReset = false;
+                PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+                if (playerRef != null) {
+                    UUID playerId = playerRef.getUuid();
+                    PurgePlayerStore.getInstance().save(playerId, new PurgePlayerStats(0, 0, 0));
+                    PurgeScrapStore.getInstance().resetPlayer(playerId);
+                    PurgeWeaponUpgradeStore.getInstance().resetPlayer(playerId, weaponConfigManager.getDefaultWeaponIds());
+                    PurgeSkinStore.getInstance().resetPlayer(playerId);
+                }
+                sendRefresh();
+            }
         }
     }
 
@@ -92,10 +118,19 @@ public class PurgeSettingsPage extends InteractiveCustomUIPage<PurgeSettingsPage
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_LOOTBOX_MINUS), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#LootboxPlus",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_LOOTBOX_PLUS), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ResetButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_RESET), false);
     }
 
     private void populateValues(UICommandBuilder commandBuilder) {
         commandBuilder.set("#LootboxValue.Text", weaponConfigManager.getLootboxDropPercent() + "%");
+        if (pendingReset) {
+            commandBuilder.set("#ResetButton.Text", "Click again to confirm");
+            commandBuilder.set("#ResetStatus.Text", "This will erase ALL your purge progress!");
+        } else {
+            commandBuilder.set("#ResetButton.Text", "Reset My Progress");
+            commandBuilder.set("#ResetStatus.Text", "");
+        }
     }
 
     private void sendRefresh() {

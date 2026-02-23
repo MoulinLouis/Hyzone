@@ -4,7 +4,7 @@ $C.@PageOverlay {
   SceneBlur {}
 
   Group #SettingsWindow {
-    Anchor: (Width: 420, Height: 300);
+    Anchor: (Width: 420, Height: 440);
     LayoutMode: Top;
     Background: #0d1620(0.95);
     OutlineColor: #ffffff(0.06);
@@ -103,6 +103,45 @@ $C.@PageOverlay {
               Sounds: $C.@ButtonSounds,
             );
           }
+        }
+      }
+
+      // === SEPARATOR ===
+      Group {
+        Anchor: (Left: 0, Right: 0, Height: 1, Top: 20);
+        Background: #ffffff(0.06);
+      }
+
+      // --- Reset Progress ---
+      Label {
+        Anchor: (Left: 0, Right: 0, Height: 20, Top: 20);
+        Style: (FontSize: 14, TextColor: #f87171, RenderBold: true);
+        Text: "Reset Progress";
+      }
+
+      Label {
+        Anchor: (Left: 0, Right: 0, Height: 16, Top: 4);
+        Style: (FontSize: 11, TextColor: #6b7280);
+        Text: "Wipe all your purge data: scrap, weapons, upgrades, skins, stats.";
+      }
+
+      Label #ResetStatus {
+        Anchor: (Left: 0, Right: 0, Height: 16, Top: 6);
+        Style: (FontSize: 11, TextColor: #fbbf24);
+        Text: "";
+      }
+
+      Group {
+        Anchor: (Left: 0, Width: 180, Height: 36, Top: 8);
+        TextButton #ResetButton {
+          Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+          Text: "Reset My Progress";
+          Style: TextButtonStyle(
+            Default: (Background: #991b1b, LabelStyle: (FontSize: 13, TextColor: #fca5a5, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+            Hovered: (Background: #b91c1c, LabelStyle: (FontSize: 13, TextColor: #fef2f2, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+            Pressed: (Background: #7f1d1d, LabelStyle: (FontSize: 13, TextColor: #fca5a5, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+            Sounds: $C.@ButtonSounds,
+          );
         }
       }
     }

@@ -93,6 +93,15 @@ public class PurgeScrapStore {
         persistToDatabase(playerId, newScrap, currentLifetime);
     }
 
+    public void resetPlayer(UUID playerId) {
+        if (playerId == null) {
+            return;
+        }
+        scrapCache.put(playerId, 0L);
+        lifetimeCache.put(playerId, 0L);
+        persistToDatabase(playerId, 0, 0);
+    }
+
     public void evictPlayer(UUID playerId) {
         if (playerId != null) {
             scrapCache.remove(playerId);
