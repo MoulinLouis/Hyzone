@@ -22,6 +22,7 @@ public class PurgeVariantConfigManager {
     public PurgeVariantConfigManager() {
         createTable();
         migrateAddNpcType();
+        migrateAddScrapReward();
         loadAll();
         seedDefaults();
     }
@@ -56,12 +57,12 @@ public class PurgeVariantConfigManager {
         if (safeKey.isEmpty() || variants.containsKey(safeKey)) {
             return false;
         }
-        int safeHp = Math.max(1, hp);
-        float safeDmg = Math.max(1f, dmg);
+        int safeHp = (int) Math.max(10, Math.round(hp / 10.0) * 10);
+        float safeDmg = (float) Math.max(10, Math.round(dmg / 10.0) * 10);
         double safeSpeed = Math.max(0.1, speed);
         String safeNpcType = (npcType != null && !npcType.isBlank()) ? npcType.trim() : "Zombie";
 
-        String sql = "INSERT INTO purge_zombie_variants (variant_key, label, base_health, base_damage, speed_multiplier, npc_type) VALUES (?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO purge_zombie_variants (variant_key, label, base_health, base_damage, speed_multiplier, npc_type, scrap_reward) VALUES (?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
@@ -71,8 +72,9 @@ public class PurgeVariantConfigManager {
             stmt.setFloat(4, safeDmg);
             stmt.setDouble(5, safeSpeed);
             stmt.setString(6, safeNpcType);
+            stmt.setInt(7, 10);
             stmt.executeUpdate();
-            variants.put(safeKey, new PurgeVariantConfig(safeKey, label, safeHp, safeDmg, safeSpeed, safeNpcType));
+            variants.put(safeKey, new PurgeVariantConfig(safeKey, label, safeHp, safeDmg, safeSpeed, safeNpcType, 10));
             return true;
         } catch (SQLException e) {
             LOGGER.atWarning().withCause(e).log("Failed to add variant " + safeKey);
@@ -108,15 +110,22 @@ public class PurgeVariantConfigManager {
 
     public boolean adjustHealth(String key, int delta) {
         return adjustField(key, "base_health", delta, (config, d) -> {
-            int newVal = Math.max(1, config.baseHealth() + d);
-            return new PurgeVariantConfig(config.key(), config.label(), newVal, config.baseDamage(), config.speedMultiplier(), config.npcType());
+            int newVal = (int) Math.max(10, Math.round((config.baseHealth() + d) / 10.0) * 10);
+            return new PurgeVariantConfig(config.key(), config.label(), newVal, config.baseDamage(), config.speedMultiplier(), config.npcType(), config.scrapReward());
         });
     }
 
     public boolean adjustDamage(String key, int delta) {
         return adjustField(key, "base_damage", delta, (config, d) -> {
-            float newVal = Math.max(1f, config.baseDamage() + d);
-            return new PurgeVariantConfig(config.key(), config.label(), config.baseHealth(), newVal, config.speedMultiplier(), config.npcType());
+            float newVal = (float) Math.max(10, Math.round((config.baseDamage() + d) / 10.0) * 10);
+            return new PurgeVariantConfig(config.key(), config.label(), config.baseHealth(), newVal, config.speedMultiplier(), config.npcType(), config.scrapReward());
+        });
+    }
+
+    public boolean adjustScrap(String key, int delta) {
+        return adjustField(key, "scrap_reward", delta, (config, d) -> {
+            int newVal = (int) Math.max(0, Math.round((config.scrapReward() + d) / 10.0) * 10);
+            return new PurgeVariantConfig(config.key(), config.label(), config.baseHealth(), config.baseDamage(), config.speedMultiplier(), config.npcType(), newVal);
         });
     }
 
@@ -128,7 +137,7 @@ public class PurgeVariantConfigManager {
         if (config == null) {
             return false;
         }
-        double newVal = Math.max(0.1, config.speedMultiplier() + delta);
+        double newVal = Math.max(0.1, Math.round((config.speedMultiplier() + delta) * 10.0) / 10.0);
         String sql = "UPDATE purge_zombie_variants SET speed_multiplier = ? WHERE variant_key = ?";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -137,7 +146,7 @@ public class PurgeVariantConfigManager {
             stmt.setString(2, key);
             int rows = stmt.executeUpdate();
             if (rows > 0) {
-                variants.put(key, new PurgeVariantConfig(config.key(), config.label(), config.baseHealth(), config.baseDamage(), newVal, config.npcType()));
+                variants.put(key, new PurgeVariantConfig(config.key(), config.label(), config.baseHealth(), config.baseDamage(), newVal, config.npcType(), config.scrapReward()));
                 return true;
             }
         } catch (SQLException e) {
@@ -159,7 +168,14 @@ public class PurgeVariantConfigManager {
             return false;
         }
         PurgeVariantConfig updated = updater.apply(config, delta);
-        Number newVal = "base_health".equals(column) ? updated.baseHealth() : updated.baseDamage();
+        Number newVal;
+        if ("base_health".equals(column)) {
+            newVal = updated.baseHealth();
+        } else if ("scrap_reward".equals(column)) {
+            newVal = updated.scrapReward();
+        } else {
+            newVal = updated.baseDamage();
+        }
         String sql = "UPDATE purge_zombie_variants SET " + column + " = ? WHERE variant_key = ?";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -199,11 +215,41 @@ public class PurgeVariantConfigManager {
             int rows = stmt.executeUpdate();
             if (rows > 0) {
                 variants.put(key, new PurgeVariantConfig(config.key(), config.label(), config.baseHealth(),
-                        config.baseDamage(), config.speedMultiplier(), safeType));
+                        config.baseDamage(), config.speedMultiplier(), safeType, config.scrapReward()));
                 return true;
             }
         } catch (SQLException e) {
             LOGGER.atWarning().withCause(e).log("Failed to set npc_type for " + key);
+        }
+        return false;
+    }
+
+    public boolean setLabel(String key, String label) {
+        if (!isPersistenceAvailable() || key == null) {
+            return false;
+        }
+        PurgeVariantConfig config = variants.get(key);
+        if (config == null) {
+            return false;
+        }
+        String safeLabel = label != null ? label.trim() : "";
+        if (safeLabel.isEmpty() || safeLabel.length() > 64) {
+            return false;
+        }
+        String sql = "UPDATE purge_zombie_variants SET label = ? WHERE variant_key = ?";
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            stmt.setString(1, safeLabel);
+            stmt.setString(2, key);
+            int rows = stmt.executeUpdate();
+            if (rows > 0) {
+                variants.put(key, new PurgeVariantConfig(config.key(), safeLabel, config.baseHealth(),
+                        config.baseDamage(), config.speedMultiplier(), config.npcType(), config.scrapReward()));
+                return true;
+            }
+        } catch (SQLException e) {
+            LOGGER.atWarning().withCause(e).log("Failed to set label for " + key);
         }
         return false;
     }
@@ -215,10 +261,11 @@ public class PurgeVariantConfigManager {
         String sql = "CREATE TABLE IF NOT EXISTS purge_zombie_variants ("
                 + "variant_key VARCHAR(32) NOT NULL PRIMARY KEY, "
                 + "label VARCHAR(64) NOT NULL, "
-                + "base_health INT NOT NULL DEFAULT 49, "
+                + "base_health INT NOT NULL DEFAULT 50, "
                 + "base_damage FLOAT NOT NULL DEFAULT 20, "
                 + "speed_multiplier DOUBLE NOT NULL DEFAULT 1.0, "
-                + "npc_type VARCHAR(64) NOT NULL DEFAULT 'Zombie'"
+                + "npc_type VARCHAR(64) NOT NULL DEFAULT 'Zombie', "
+                + "scrap_reward INT NOT NULL DEFAULT 10"
                 + ") ENGINE=InnoDB";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -252,11 +299,34 @@ public class PurgeVariantConfigManager {
         }
     }
 
+    private void migrateAddScrapReward() {
+        if (!DatabaseManager.getInstance().isInitialized()) {
+            return;
+        }
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             ResultSet rs = conn.getMetaData().getColumns(null, null, "purge_zombie_variants", "scrap_reward")) {
+            if (rs.next()) {
+                return; // column already exists
+            }
+        } catch (SQLException e) {
+            LOGGER.atFine().log("Could not check for scrap_reward column: " + e.getMessage());
+            return;
+        }
+        String sql = "ALTER TABLE purge_zombie_variants ADD COLUMN scrap_reward INT NOT NULL DEFAULT 10";
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.executeUpdate();
+            LOGGER.atInfo().log("Added scrap_reward column to purge_zombie_variants");
+        } catch (SQLException e) {
+            LOGGER.atWarning().withCause(e).log("Failed to add scrap_reward column");
+        }
+    }
+
     private void loadAll() {
         if (!DatabaseManager.getInstance().isInitialized()) {
             return;
         }
-        String sql = "SELECT variant_key, label, base_health, base_damage, speed_multiplier, npc_type FROM purge_zombie_variants ORDER BY variant_key ASC";
+        String sql = "SELECT variant_key, label, base_health, base_damage, speed_multiplier, npc_type, scrap_reward FROM purge_zombie_variants ORDER BY variant_key ASC";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
@@ -267,10 +337,11 @@ public class PurgeVariantConfigManager {
                     variants.put(key, new PurgeVariantConfig(
                             key,
                             rs.getString("label"),
-                            Math.max(1, rs.getInt("base_health")),
-                            Math.max(1f, rs.getFloat("base_damage")),
+                            Math.max(10, rs.getInt("base_health")),
+                            Math.max(10f, rs.getFloat("base_damage")),
                             Math.max(0.1, rs.getDouble("speed_multiplier")),
-                            npcType != null ? npcType : "Zombie"
+                            npcType != null ? npcType : "Zombie",
+                            Math.max(0, rs.getInt("scrap_reward"))
                     ));
                 }
             }
@@ -285,8 +356,8 @@ public class PurgeVariantConfigManager {
             return;
         }
         LOGGER.atInfo().log("Seeding default zombie variants (SLOW, NORMAL, FAST)");
-        addVariant("SLOW", "Slow", 49, 20f, 8.0 / 9.0);
-        addVariant("NORMAL", "Normal", 49, 20f, 1.0);
-        addVariant("FAST", "Fast", 49, 20f, 11.0 / 9.0);
+        addVariant("SLOW", "Slow", 50, 20f, 0.9);
+        addVariant("NORMAL", "Normal", 50, 20f, 1.0);
+        addVariant("FAST", "Fast", 50, 20f, 1.2);
     }
 }

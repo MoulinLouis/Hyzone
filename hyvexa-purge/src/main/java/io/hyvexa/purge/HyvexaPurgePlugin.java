@@ -25,12 +25,14 @@ import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.core.discord.DiscordLinkStore;
 import io.hyvexa.core.economy.VexaStore;
 import io.hyvexa.purge.command.PurgeCommand;
+import io.hyvexa.purge.command.SetAmmoCommand;
 import io.hyvexa.purge.data.PurgePlayerStore;
 import io.hyvexa.purge.data.PurgeScrapStore;
 import io.hyvexa.purge.data.PurgeSkinRegistry;
 import io.hyvexa.purge.data.PurgeSkinStore;
 import io.hyvexa.purge.data.PurgeWeaponUpgradeStore;
 import io.hyvexa.purge.hud.PurgeHudManager;
+import io.hyvexa.purge.data.PurgeSession;
 import io.hyvexa.purge.data.PurgeSessionPlayerState;
 import io.hyvexa.purge.interaction.PurgeLootboxInteraction;
 import io.hyvexa.purge.interaction.PurgeOrangeOrbInteraction;
@@ -78,6 +80,7 @@ public class HyvexaPurgePlugin extends JavaPlugin {
     private PurgeHudManager hudManager;
     private PurgeSessionManager sessionManager;
     private PurgePartyManager partyManager;
+    private PurgeUpgradeManager upgradeManager;
 
     public HyvexaPurgePlugin(@Nonnull JavaPluginInit init) {
         super(init);
@@ -133,7 +136,7 @@ public class HyvexaPurgePlugin extends JavaPlugin {
         partyManager = new PurgePartyManager();
         sessionManager = new PurgeSessionManager(partyManager, instanceManager, waveManager, hudManager);
         partyManager.setSessionManager(sessionManager);
-        PurgeUpgradeManager upgradeManager = new PurgeUpgradeManager();
+        upgradeManager = new PurgeUpgradeManager();
         waveManager.setUpgradeManager(upgradeManager);
         sessionManager.setUpgradeManager(upgradeManager);
 
@@ -143,6 +146,7 @@ public class HyvexaPurgePlugin extends JavaPlugin {
         // Register commands
         this.getCommandRegistry().registerCommand(
                 new PurgeCommand(sessionManager, waveConfigManager, partyManager, instanceManager, weaponConfigManager, variantConfigManager));
+        this.getCommandRegistry().registerCommand(new SetAmmoCommand());
 
         // Register item interaction codecs
         registerInteractionCodecs();
@@ -284,6 +288,8 @@ public class HyvexaPurgePlugin extends JavaPlugin {
         if (inventory != null && inventory.getHotbar() != null) {
             inventory.getHotbar().setItemStackForSlot(SLOT_PRIMARY_WEAPON, new ItemStack(itemId, 1), false);
         }
+        // Re-apply ammo upgrade to the new weapon ItemStack
+        reapplyAmmoUpgrade(state.getPlayerId());
     }
 
     public void grantLootbox(Player player, int count) {
@@ -295,6 +301,22 @@ public class HyvexaPurgePlugin extends JavaPlugin {
         int current = (existing != null && !existing.isEmpty()) ? existing.getQuantity() : 0;
         int newCount = Math.min(current + count, 10);
         inventory.getHotbar().setItemStackForSlot(SLOT_LOOTBOX, new ItemStack(ITEM_LOOTBOX, newCount), false);
+    }
+
+    /**
+     * Re-applies ammo upgrade to the player's current weapon ItemStack.
+     * Call after any operation that replaces the weapon (revive, weapon switch).
+     */
+    public void reapplyAmmoUpgrade(UUID playerId) {
+        if (playerId == null || upgradeManager == null || sessionManager == null) return;
+        PurgeSession session = sessionManager.getSessionByPlayer(playerId);
+        if (session == null) return;
+        PurgeSessionPlayerState ps = session.getPlayerState(playerId);
+        if (ps == null) return;
+        Ref<EntityStore> ref = ps.getPlayerRef();
+        if (ref == null || !ref.isValid()) return;
+        Store<EntityStore> store = ref.getStore();
+        upgradeManager.reapplyAmmoUpgrade(session, playerId, ref, store);
     }
 
     // --- Private item grant methods ---
