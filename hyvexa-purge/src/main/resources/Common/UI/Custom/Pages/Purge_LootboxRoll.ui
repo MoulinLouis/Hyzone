@@ -40,39 +40,76 @@ $C.@PageOverlay {
       Anchor: (Left: 0, Right: 0);
       FlexWeight: 1;
       LayoutMode: Top;
-      Padding: (Left: 30, Right: 30, Top: 20, Bottom: 10);
+      Padding: (Left: 30, Right: 30, Top: 12, Bottom: 10);
 
-      // Weapon name (animated during spin)
-      Label #WeaponName {
-        Anchor: (Left: 0, Right: 0, Height: 36);
-        Style: (FontSize: 26, TextColor: #9fb0ba, RenderBold: true, HorizontalAlignment: Center);
-        Text: "Rolling...";
+      // Weapon icon (animated during spin)
+      Group #IconContainer {
+        Anchor: (Width: 100, Height: 100);
+        LayoutMode: Full;
+        Group #IconAK47 { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/AK47_icon.png"); Visible: false; }
+        Group #IconBarret50 { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/Barret50_icon.png"); Visible: false; }
+        Group #IconColtRevolver { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/ColtRevolver_icon.png"); Visible: false; }
+        Group #IconDesertEagle { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/DesertEagle_icon.png"); Visible: false; }
+        Group #IconDoubleBarrel { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/DoubleBarrel_icon.png"); Visible: false; }
+        Group #IconFlamethrower { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/Flamethrower_icon.png"); Visible: false; }
+        Group #IconGlock18 { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/Glock18_icon.png"); Visible: false; }
+        Group #IconM4A1s { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/M4A1s_icon.png"); Visible: false; }
+        Group #IconMP9 { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/MP9_icon.png"); Visible: false; }
+        Group #IconMac10 { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/Mac10_icon.png"); Visible: false; }
+        Group #IconThompson { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/Thompson_icon.png"); Visible: false; }
       }
 
-      // Star display row (absolute positioned to avoid hidden labels consuming space)
+      // Weapon name (rolls with icon, turns amber on final result)
+      Label #WeaponName {
+        Anchor: (Left: 0, Right: 0, Height: 24, Top: 6);
+        Style: (FontSize: 16, TextColor: #9fb0ba, RenderBold: true, HorizontalAlignment: Center);
+        Text: "";
+      }
+
+      // Star display row
       Group #StarRow {
-        Anchor: (Width: 120, Height: 20, Top: 8);
-        LayoutMode: Full;
+        Anchor: (Width: 122, Height: 22, Top: 8);
+        LayoutMode: Left;
 
-        Label #S0F { Anchor: (Left: 0, Width: 20, Height: 20); Style: (FontSize: 16, TextColor: #fbbf24, HorizontalAlignment: Center); Text: "*"; Visible: false; }
-        Label #S0H { Anchor: (Left: 0, Width: 20, Height: 20); Style: (FontSize: 16, TextColor: #fbbf24, HorizontalAlignment: Center); Text: "."; Visible: false; }
-        Label #S0E { Anchor: (Left: 0, Width: 20, Height: 20); Style: (FontSize: 16, TextColor: #374151, HorizontalAlignment: Center); Text: "*"; Visible: true; }
+        Group {
+          Anchor: (Width: 22, Height: 22);
+          LayoutMode: Full;
+          Group #S0F { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/star.png"); Visible: false; }
+          Group #S0H { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/half_star.png"); Visible: false; }
+          Group #S0E { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/empty_star.png"); }
+        }
 
-        Label #S1F { Anchor: (Left: 24, Width: 20, Height: 20); Style: (FontSize: 16, TextColor: #fbbf24, HorizontalAlignment: Center); Text: "*"; Visible: false; }
-        Label #S1H { Anchor: (Left: 24, Width: 20, Height: 20); Style: (FontSize: 16, TextColor: #fbbf24, HorizontalAlignment: Center); Text: "."; Visible: false; }
-        Label #S1E { Anchor: (Left: 24, Width: 20, Height: 20); Style: (FontSize: 16, TextColor: #374151, HorizontalAlignment: Center); Text: "*"; Visible: true; }
+        Group {
+          Anchor: (Left: 3, Width: 22, Height: 22);
+          LayoutMode: Full;
+          Group #S1F { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/star.png"); Visible: false; }
+          Group #S1H { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/half_star.png"); Visible: false; }
+          Group #S1E { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/empty_star.png"); }
+        }
 
-        Label #S2F { Anchor: (Left: 48, Width: 20, Height: 20); Style: (FontSize: 16, TextColor: #fbbf24, HorizontalAlignment: Center); Text: "*"; Visible: false; }
-        Label #S2H { Anchor: (Left: 48, Width: 20, Height: 20); Style: (FontSize: 16, TextColor: #fbbf24, HorizontalAlignment: Center); Text: "."; Visible: false; }
-        Label #S2E { Anchor: (Left: 48, Width: 20, Height: 20); Style: (FontSize: 16, TextColor: #374151, HorizontalAlignment: Center); Text: "*"; Visible: true; }
+        Group {
+          Anchor: (Left: 3, Width: 22, Height: 22);
+          LayoutMode: Full;
+          Group #S2F { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/star.png"); Visible: false; }
+          Group #S2H { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/half_star.png"); Visible: false; }
+          Group #S2E { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/empty_star.png"); }
+        }
 
-        Label #S3F { Anchor: (Left: 72, Width: 20, Height: 20); Style: (FontSize: 16, TextColor: #fbbf24, HorizontalAlignment: Center); Text: "*"; Visible: false; }
-        Label #S3H { Anchor: (Left: 72, Width: 20, Height: 20); Style: (FontSize: 16, TextColor: #fbbf24, HorizontalAlignment: Center); Text: "."; Visible: false; }
-        Label #S3E { Anchor: (Left: 72, Width: 20, Height: 20); Style: (FontSize: 16, TextColor: #374151, HorizontalAlignment: Center); Text: "*"; Visible: true; }
+        Group {
+          Anchor: (Left: 3, Width: 22, Height: 22);
+          LayoutMode: Full;
+          Group #S3F { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/star.png"); Visible: false; }
+          Group #S3H { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/half_star.png"); Visible: false; }
+          Group #S3E { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/empty_star.png"); }
+        }
 
-        Label #S4F { Anchor: (Left: 96, Width: 20, Height: 20); Style: (FontSize: 16, TextColor: #fbbf24, HorizontalAlignment: Center); Text: "*"; Visible: false; }
-        Label #S4H { Anchor: (Left: 96, Width: 20, Height: 20); Style: (FontSize: 16, TextColor: #fbbf24, HorizontalAlignment: Center); Text: "."; Visible: false; }
-        Label #S4E { Anchor: (Left: 96, Width: 20, Height: 20); Style: (FontSize: 16, TextColor: #374151, HorizontalAlignment: Center); Text: "*"; Visible: true; }
+        Group {
+          Anchor: (Left: 3, Width: 22, Height: 22);
+          LayoutMode: Full;
+          Group #S4F { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/star.png"); Visible: false; }
+          Group #S4H { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/half_star.png"); Visible: false; }
+          Group #S4E { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/empty_star.png"); }
+        }
       }
 
       // Damage display
