@@ -1,0 +1,261 @@
+$C = "../Common.ui";
+
+Group {
+  Anchor: (Left: 0, Right: 0);
+  LayoutMode: Top;
+
+  // Header
+  Label {
+    Anchor: (Left: 0, Right: 0, Top: 16, Height: 28);
+    Style: (FontSize: 20, TextColor: #f0f4f8, RenderBold: true, HorizontalAlignment: Center);
+    Text: "Get Vexa";
+  }
+
+  // Pack cards row
+  Group {
+    Anchor: (Left: 0, Right: 0, Top: 20, Height: 200);
+    LayoutMode: Left;
+
+    // Pack 1: 500 vexa / 4.99 EUR
+    Group {
+      FlexWeight: 1;
+      Anchor: (Top: 0, Bottom: 0);
+      LayoutMode: Full;
+
+      Group {
+        Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+        Background: #0a1018;
+        OutlineColor: #ffffff(0.06);
+        OutlineSize: 1;
+        LayoutMode: Top;
+
+        Label {
+          Anchor: (Left: 0, Right: 0, Top: 24, Height: 32);
+          Style: (FontSize: 28, TextColor: #22c55e, RenderBold: true, HorizontalAlignment: Center);
+          Text: "500";
+        }
+
+        Label {
+          Anchor: (Left: 0, Right: 0, Top: 2, Height: 18);
+          Style: (FontSize: 12, TextColor: #8b9bb0, HorizontalAlignment: Center);
+          Text: "vexa";
+        }
+
+        Group {
+          Anchor: (Left: 0, Right: 0, Top: 12, Height: 36);
+          LayoutMode: Left;
+          Group { FlexWeight: 1; }
+          Group {
+            Anchor: (Width: 36, Height: 36);
+            Background: (TexturePath: "../Textures/vexa.png");
+          }
+          Group { FlexWeight: 1; }
+        }
+
+        Group {
+          Anchor: (Left: 20, Right: 20, Top: 16, Height: 1);
+          Background: #ffffff(0.06);
+        }
+
+        Label {
+          Anchor: (Left: 0, Right: 0, Top: 14, Height: 22);
+          Style: (FontSize: 16, TextColor: #cfd7dc, RenderBold: true, HorizontalAlignment: Center);
+          Text: "4.99 EUR";
+        }
+      }
+
+      TextButton #PackBtnA {
+        Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+        Text: "";
+        Style: TextButtonStyle(
+          Default: (
+            Background: #000000(0.01),
+            LabelStyle: (FontSize: 1, TextColor: #000000(0.01), HorizontalAlignment: Center, VerticalAlignment: Center)
+          ),
+          Hovered: (
+            Background: #ffffff(0.05),
+            LabelStyle: (FontSize: 1, TextColor: #000000(0.01), HorizontalAlignment: Center, VerticalAlignment: Center)
+          ),
+          Pressed: (
+            Background: #ffffff(0.02),
+            LabelStyle: (FontSize: 1, TextColor: #000000(0.01), HorizontalAlignment: Center, VerticalAlignment: Center)
+          ),
+          Sounds: $C.@ButtonSounds,
+        );
+      }
+    }
+
+    Group { Anchor: (Width: 12); }
+
+    // Pack 2: 1150 vexa / 9.99 EUR
+    Group {
+      FlexWeight: 1;
+      Anchor: (Top: 0, Bottom: 0);
+      LayoutMode: Full;
+
+      Group {
+        Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+        Background: #0a1018;
+        OutlineColor: #6366f1(0.3);
+        OutlineSize: 1;
+        LayoutMode: Top;
+
+        Group {
+          Anchor: (Left: 0, Right: 0, Top: 10, Height: 16);
+          LayoutMode: Left;
+          Group { FlexWeight: 1; }
+          Label {
+            Anchor: (Height: 16);
+            Style: (FontSize: 10, TextColor: #6366f1, RenderBold: true, RenderUppercase: true, LetterSpacing: 1);
+            Text: "Popular";
+          }
+          Group { FlexWeight: 1; }
+        }
+
+        Label {
+          Anchor: (Left: 0, Right: 0, Top: 2, Height: 32);
+          Style: (FontSize: 28, TextColor: #22c55e, RenderBold: true, HorizontalAlignment: Center);
+          Text: "1150";
+        }
+
+        Label {
+          Anchor: (Left: 0, Right: 0, Top: 2, Height: 18);
+          Style: (FontSize: 12, TextColor: #8b9bb0, HorizontalAlignment: Center);
+          Text: "vexa";
+        }
+
+        Group {
+          Anchor: (Left: 0, Right: 0, Top: 12, Height: 36);
+          LayoutMode: Left;
+          Group { FlexWeight: 1; }
+          Group {
+            Anchor: (Width: 36, Height: 36);
+            Background: (TexturePath: "../Textures/vexa.png");
+          }
+          Group { FlexWeight: 1; }
+        }
+
+        Group {
+          Anchor: (Left: 20, Right: 20, Top: 16, Height: 1);
+          Background: #ffffff(0.06);
+        }
+
+        Label {
+          Anchor: (Left: 0, Right: 0, Top: 14, Height: 22);
+          Style: (FontSize: 16, TextColor: #cfd7dc, RenderBold: true, HorizontalAlignment: Center);
+          Text: "9.99 EUR";
+        }
+      }
+
+      TextButton #PackBtnB {
+        Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+        Text: "";
+        Style: TextButtonStyle(
+          Default: (
+            Background: #000000(0.01),
+            LabelStyle: (FontSize: 1, TextColor: #000000(0.01), HorizontalAlignment: Center, VerticalAlignment: Center)
+          ),
+          Hovered: (
+            Background: #ffffff(0.05),
+            LabelStyle: (FontSize: 1, TextColor: #000000(0.01), HorizontalAlignment: Center, VerticalAlignment: Center)
+          ),
+          Pressed: (
+            Background: #ffffff(0.02),
+            LabelStyle: (FontSize: 1, TextColor: #000000(0.01), HorizontalAlignment: Center, VerticalAlignment: Center)
+          ),
+          Sounds: $C.@ButtonSounds,
+        );
+      }
+    }
+
+    Group { Anchor: (Width: 12); }
+
+    // Pack 3: 2500 vexa / 19.99 EUR
+    Group {
+      FlexWeight: 1;
+      Anchor: (Top: 0, Bottom: 0);
+      LayoutMode: Full;
+
+      Group {
+        Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+        Background: #0a1018;
+        OutlineColor: #22c55e(0.2);
+        OutlineSize: 1;
+        LayoutMode: Top;
+
+        Group {
+          Anchor: (Left: 0, Right: 0, Top: 10, Height: 16);
+          LayoutMode: Left;
+          Group { FlexWeight: 1; }
+          Label {
+            Anchor: (Height: 16);
+            Style: (FontSize: 10, TextColor: #22c55e, RenderBold: true, RenderUppercase: true, LetterSpacing: 1);
+            Text: "Best Value";
+          }
+          Group { FlexWeight: 1; }
+        }
+
+        Label {
+          Anchor: (Left: 0, Right: 0, Top: 2, Height: 32);
+          Style: (FontSize: 28, TextColor: #22c55e, RenderBold: true, HorizontalAlignment: Center);
+          Text: "2500";
+        }
+
+        Label {
+          Anchor: (Left: 0, Right: 0, Top: 2, Height: 18);
+          Style: (FontSize: 12, TextColor: #8b9bb0, HorizontalAlignment: Center);
+          Text: "vexa";
+        }
+
+        Group {
+          Anchor: (Left: 0, Right: 0, Top: 12, Height: 36);
+          LayoutMode: Left;
+          Group { FlexWeight: 1; }
+          Group {
+            Anchor: (Width: 36, Height: 36);
+            Background: (TexturePath: "../Textures/vexa.png");
+          }
+          Group { FlexWeight: 1; }
+        }
+
+        Group {
+          Anchor: (Left: 20, Right: 20, Top: 16, Height: 1);
+          Background: #ffffff(0.06);
+        }
+
+        Label {
+          Anchor: (Left: 0, Right: 0, Top: 14, Height: 22);
+          Style: (FontSize: 16, TextColor: #cfd7dc, RenderBold: true, HorizontalAlignment: Center);
+          Text: "19.99 EUR";
+        }
+      }
+
+      TextButton #PackBtnC {
+        Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+        Text: "";
+        Style: TextButtonStyle(
+          Default: (
+            Background: #000000(0.01),
+            LabelStyle: (FontSize: 1, TextColor: #000000(0.01), HorizontalAlignment: Center, VerticalAlignment: Center)
+          ),
+          Hovered: (
+            Background: #ffffff(0.05),
+            LabelStyle: (FontSize: 1, TextColor: #000000(0.01), HorizontalAlignment: Center, VerticalAlignment: Center)
+          ),
+          Pressed: (
+            Background: #ffffff(0.02),
+            LabelStyle: (FontSize: 1, TextColor: #000000(0.01), HorizontalAlignment: Center, VerticalAlignment: Center)
+          ),
+          Sounds: $C.@ButtonSounds,
+        );
+      }
+    }
+  }
+
+  // Support message
+  Label {
+    Anchor: (Left: 16, Right: 16, Top: 16, Height: 18);
+    Style: (FontSize: 11, TextColor: #8b9bb0(0.7), HorizontalAlignment: Center);
+    Text: "Your support directly helps develop and grow Hyvexa.";
+  }
+}

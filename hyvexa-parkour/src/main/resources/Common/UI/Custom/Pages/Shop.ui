@@ -4,49 +4,104 @@ $C.@PageOverlay {
   SceneBlur {}
 
   Group #ShopWindow {
-    Anchor: (Width: 600, Height: 560);
-    LayoutMode: Top;
+    Anchor: (Width: 800, Height: 380);
+    LayoutMode: Left;
     Background: #0d1620(0.95);
     OutlineColor: #ffffff(0.06);
     OutlineSize: 1;
 
-    // === HEADER ===
-    Group #Header {
-      Anchor: (Left: 0, Right: 0, Height: 52);
-      LayoutMode: Full;
-      Background: #0a1018;
+    // === LEFT SIDEBAR ===
+    Group #Sidebar {
+      Anchor: (Width: 170, Top: 0, Bottom: 0);
+      LayoutMode: Top;
+      Background: #080d14;
 
+      // Purple accent top line
       Group {
-        Anchor: (Left: 0, Right: 0, Top: 0, Height: 2);
+        Anchor: (Left: 0, Right: 0, Height: 2);
         Background: #6366f1;
       }
 
-      Label #ShopTitle {
-        Anchor: (Left: 20, Top: 16, Width: 200, Height: 24);
-        Style: (FontSize: 20, TextColor: #f0f4f8, RenderBold: true);
+      // Title
+      Label {
+        Anchor: (Left: 0, Right: 0, Top: 14, Height: 24);
+        Style: (FontSize: 18, TextColor: #f0f4f8, RenderBold: true, HorizontalAlignment: Center);
         Text: "Shop";
       }
 
-      // Vexa balance
+      // Divider
       Group {
-        Anchor: (Right: 96, Top: 10, Width: 140, Height: 32);
+        Anchor: (Left: 16, Right: 16, Top: 12, Height: 1);
+        Background: #ffffff(0.06);
+      }
+
+      // Vertical tab bar
+      Group #TabBar {
+        Anchor: (Left: 0, Right: 0, Top: 8);
+        FlexWeight: 1;
+        LayoutMode: Top;
+      }
+
+      // Divider
+      Group {
+        Anchor: (Left: 16, Right: 16, Height: 1);
+        Background: #ffffff(0.06);
+      }
+
+      // Vexa balance + "+" button to open packs
+      Group {
+        Anchor: (Left: 0, Right: 0, Height: 40);
         LayoutMode: Left;
+        Padding: (Left: 16, Right: 12);
 
         Group {
-          Anchor: (Width: 26, Height: 26, Top: 3);
+          Anchor: (Width: 22, Height: 22, Top: 9);
           Background: (TexturePath: "../Textures/vexa.png");
         }
 
         Label #VexaBalance {
-          Anchor: (Left: 6, Width: 100, Height: 32);
-          Style: (FontSize: 22, TextColor: #22c55e, RenderBold: true, VerticalAlignment: Center);
+          Anchor: (Left: 6, Height: 40);
+          FlexWeight: 1;
+          Style: (FontSize: 18, TextColor: #22c55e, RenderBold: true, VerticalAlignment: Center);
           Text: "0";
+        }
+
+        // "+" button (Group wrapper + TextButton overlay)
+        Group {
+          Anchor: (Width: 26, Height: 26, Top: 7);
+          LayoutMode: Full;
+
+          Label {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Style: (FontSize: 18, TextColor: #22c55e, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center);
+            Text: "+";
+          }
+
+          TextButton #VexaPacksButton {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Text: "";
+            Style: TextButtonStyle(
+              Default: (
+                Background: #22c55e(0.1),
+                LabelStyle: (FontSize: 1, TextColor: #000000(0.01), HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Hovered: (
+                Background: #22c55e(0.25),
+                LabelStyle: (FontSize: 1, TextColor: #000000(0.01), HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Pressed: (
+                Background: #22c55e(0.08),
+                LabelStyle: (FontSize: 1, TextColor: #000000(0.01), HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Sounds: $C.@ButtonSounds,
+            );
+          }
         }
       }
 
       // Close button
       Group {
-        Anchor: (Right: 16, Top: 10, Width: 72, Height: 32);
+        Anchor: (Left: 12, Right: 12, Height: 36);
 
         TextButton #CloseButton {
           Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
@@ -54,37 +109,53 @@ $C.@PageOverlay {
           Style: TextButtonStyle(
             Default: (
               Background: #ffffff(0.06),
-              LabelStyle: (FontSize: 14, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
+              LabelStyle: (FontSize: 13, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
             ),
             Hovered: (
               Background: #ffffff(0.1),
-              LabelStyle: (FontSize: 14, TextColor: #f0f4f8, HorizontalAlignment: Center, VerticalAlignment: Center)
+              LabelStyle: (FontSize: 13, TextColor: #f0f4f8, HorizontalAlignment: Center, VerticalAlignment: Center)
             ),
             Pressed: (
               Background: #ffffff(0.04),
-              LabelStyle: (FontSize: 14, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
+              LabelStyle: (FontSize: 13, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
             ),
             Sounds: $C.@ButtonSounds,
           );
         }
       }
+
+      // Bottom padding
+      Group {
+        Anchor: (Height: 10);
+      }
     }
 
-    // === TAB BAR ===
-    Group #TabBar {
-      Anchor: (Left: 0, Right: 0, Height: 40);
-      LayoutMode: Left;
-      Background: #0a1018(0.5);
-      Padding: (Left: 12, Right: 12);
+    // === VERTICAL SEPARATOR ===
+    Group {
+      Anchor: (Width: 1, Top: 0, Bottom: 0);
+      Background: #ffffff(0.06);
     }
 
-    // === SCROLLABLE CONTENT ===
-    Group #TabContent {
-      Anchor: (Left: 0, Right: 0);
+    // === RIGHT CONTENT ===
+    Group {
+      Anchor: (Top: 0, Bottom: 0);
       FlexWeight: 1;
-      LayoutMode: TopScrolling;
-      Padding: (Left: 12, Right: 12, Top: 10, Bottom: 12);
-      ScrollbarStyle: $C.@DefaultScrollbarStyle;
+      LayoutMode: Top;
+
+      // Purple accent top line
+      Group {
+        Anchor: (Left: 0, Right: 0, Height: 2);
+        Background: #6366f1;
+      }
+
+      // Scrollable tab content
+      Group #TabContent {
+        Anchor: (Left: 0, Right: 0);
+        FlexWeight: 1;
+        LayoutMode: TopScrolling;
+        Padding: (Left: 16, Right: 16, Top: 12, Bottom: 12);
+        ScrollbarStyle: $C.@DefaultScrollbarStyle;
+      }
     }
   }
 
