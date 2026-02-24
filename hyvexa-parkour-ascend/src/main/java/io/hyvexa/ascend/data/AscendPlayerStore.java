@@ -1149,6 +1149,50 @@ public class AscendPlayerStore {
         return product.multiply(elevation);
     }
 
+    /**
+     * Computes both the multiplier product and per-slot display values in a single pass.
+     */
+    public MultiplierResult getMultiplierProductAndValues(UUID playerId, List<AscendMap> maps, int slotCount) {
+        int slots = Math.max(0, slotCount);
+        BigNumber[] digits = new BigNumber[slots];
+        for (int i = 0; i < slots; i++) {
+            digits[i] = BigNumber.ONE;
+        }
+        BigNumber product = BigNumber.ONE;
+        if (maps != null && !maps.isEmpty() && slots > 0) {
+            int index = 0;
+            for (AscendMap map : maps) {
+                if (index >= slots) {
+                    break;
+                }
+                if (map == null || map.getId() == null) {
+                    continue;
+                }
+                BigNumber value = getMapMultiplier(playerId, map.getId());
+                double challengeMapBonus = getChallengeMapBonus(playerId, map.getDisplayOrder());
+                if (challengeMapBonus > 1.0) {
+                    value = value.multiply(BigNumber.fromDouble(challengeMapBonus));
+                }
+                digits[index] = value;
+                product = product.multiply(value.max(BigNumber.ONE));
+                index++;
+            }
+        }
+        BigNumber elevation = BigNumber.fromDouble(getCalculatedElevationMultiplier(playerId));
+        product = product.multiply(elevation);
+        return new MultiplierResult(product, digits);
+    }
+
+    public static final class MultiplierResult {
+        public final BigNumber product;
+        public final BigNumber[] values;
+
+        MultiplierResult(BigNumber product, BigNumber[] values) {
+            this.product = product;
+            this.values = values;
+        }
+    }
+
     public BigNumber getCompletionPayout(UUID playerId, List<AscendMap> maps, int slotCount, String mapId, BigNumber bonusAmount) {
         BigNumber product = BigNumber.ONE;
         int slots = Math.max(0, slotCount);

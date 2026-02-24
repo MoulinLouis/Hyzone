@@ -20,12 +20,14 @@ import io.hyvexa.common.util.MultiHudBridge;
 import io.hyvexa.core.economy.VexaStore;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class AscendHudManager {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
+    private static final long ECONOMY_CACHE_TTL_MS = 1000L;
 
     private final AscendPlayerStore playerStore;
     private final AscendMapStore mapStore;
@@ -37,6 +39,7 @@ public class AscendHudManager {
     private final ConcurrentHashMap<UUID, HiddenAscendHud> hiddenHuds = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Boolean> hudHidden = new ConcurrentHashMap<>();
     private final java.util.Set<UUID> previewPlayers = ConcurrentHashMap.newKeySet();
+    private final ConcurrentHashMap<UUID, CachedEconomyData> economyCache = new ConcurrentHashMap<>();
 
     public AscendHudManager(AscendPlayerStore playerStore, AscendMapStore mapStore, AscendRunTracker runTracker, SummitManager summitManager) {
         this.playerStore = playerStore;
@@ -77,36 +80,12 @@ public class AscendHudManager {
             return;
         }
         try {
-            BigNumber volt = playerStore.getVolt(playerId);
-            List<AscendMap> mapList = mapStore != null ? mapStore.listMapsSorted() : List.of();
-            BigNumber product = playerStore.getMultiplierProduct(playerId, mapList, AscendConstants.MULTIPLIER_SLOTS);
-            BigNumber[] digits = playerStore.getMultiplierDisplayValues(playerId, mapList, AscendConstants.MULTIPLIER_SLOTS);
-            int elevationLevel = playerStore.getElevationLevel(playerId);
-            BigNumber accumulatedVolt = playerStore.getElevationAccumulatedVolt(playerId);
-            AscendConstants.ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(elevationLevel, accumulatedVolt);
-            int potentialElevation = elevationLevel + purchase.levels;
-            boolean showElevation = elevationLevel > 1 || purchase.levels > 0;
-            hud.updateEconomy(volt, product, digits, elevationLevel, potentialElevation, showElevation);
-
-            // Update prestige HUD
-            var summitLevels = playerStore.getSummitLevels(playerId);
-            int ascensionCount = playerStore.getAscensionCount(playerId);
-            int skillPoints = playerStore.getAvailableSkillPoints(playerId);
-            SummitManager.SummitPreview multPreview = summitManager != null ? summitManager.previewSummit(playerId, AscendConstants.SummitCategory.MULTIPLIER_GAIN) : null;
-            SummitManager.SummitPreview speedPreview = summitManager != null ? summitManager.previewSummit(playerId, AscendConstants.SummitCategory.RUNNER_SPEED) : null;
-            SummitManager.SummitPreview evoPreview = summitManager != null ? summitManager.previewSummit(playerId, AscendConstants.SummitCategory.EVOLUTION_POWER) : null;
-            hud.updatePrestige(summitLevels, ascensionCount, skillPoints, multPreview, speedPreview, evoPreview);
-
-            // Update ascension HUD card
-            hud.updateAscension(ascensionCount, skillPoints);
-
-            // Update ascension quest progress bar
-            hud.updateAscensionQuest(volt);
-
-            // Update vexa display
-            hud.updateVexa(VexaStore.getInstance().getVexa(playerId));
-
-            // Runner bars are updated at higher frequency by updateRunnerBar()
+            CachedEconomyData cached = getOrRefreshEconomyCache(playerId);
+            hud.updateEconomy(cached.volt, cached.product, cached.digits, cached.elevationLevel, cached.potentialElevation, cached.showElevation);
+            hud.updatePrestige(cached.summitLevels, cached.ascensionCount, cached.skillPoints, cached.multPreview, cached.speedPreview, cached.evoPreview);
+            hud.updateAscension(cached.ascensionCount, cached.skillPoints);
+            hud.updateAscensionQuest(cached.volt);
+            hud.updateVexa(cached.vexa);
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("Failed to update Ascend HUD for player " + playerId);
         }
@@ -233,6 +212,7 @@ public class AscendHudManager {
         hiddenHuds.remove(playerId);
         hudHidden.remove(playerId);
         previewPlayers.remove(playerId);
+        economyCache.remove(playerId);
     }
 
     public void showToast(UUID playerId, ToastType type, String message) {
@@ -261,5 +241,90 @@ public class AscendHudManager {
 
     public AscendHud getHud(UUID playerId) {
         return ascendHuds.get(playerId);
+    }
+
+    /**
+     * Invalidate the economy cache for a player, forcing a fresh computation on next tick.
+     * Call this after actions that change multipliers, volt, summit, or elevation.
+     */
+    public void invalidateEconomyCache(UUID playerId) {
+        economyCache.remove(playerId);
+    }
+
+    private CachedEconomyData getOrRefreshEconomyCache(UUID playerId) {
+        long now = System.currentTimeMillis();
+        CachedEconomyData cached = economyCache.get(playerId);
+        if (cached != null && now - cached.timestamp < ECONOMY_CACHE_TTL_MS) {
+            return cached;
+        }
+
+        List<AscendMap> mapList = mapStore != null ? mapStore.listMapsSorted() : List.of();
+
+        // Single-pass multiplier computation
+        AscendPlayerStore.MultiplierResult mr = playerStore.getMultiplierProductAndValues(playerId, mapList, AscendConstants.MULTIPLIER_SLOTS);
+
+        BigNumber volt = playerStore.getVolt(playerId);
+        int elevationLevel = playerStore.getElevationLevel(playerId);
+        BigNumber accumulatedVolt = playerStore.getElevationAccumulatedVolt(playerId);
+        AscendConstants.ElevationPurchaseResult purchase = AscendConstants.calculateElevationPurchase(elevationLevel, accumulatedVolt);
+        int potentialElevation = elevationLevel + purchase.levels;
+        boolean showElevation = elevationLevel > 1 || purchase.levels > 0;
+
+        Map<AscendConstants.SummitCategory, Integer> summitLevels = playerStore.getSummitLevels(playerId);
+        int ascensionCount = playerStore.getAscensionCount(playerId);
+        int skillPoints = playerStore.getAvailableSkillPoints(playerId);
+        SummitManager.SummitPreview multPreview = summitManager != null ? summitManager.previewSummit(playerId, AscendConstants.SummitCategory.MULTIPLIER_GAIN) : null;
+        SummitManager.SummitPreview speedPreview = summitManager != null ? summitManager.previewSummit(playerId, AscendConstants.SummitCategory.RUNNER_SPEED) : null;
+        SummitManager.SummitPreview evoPreview = summitManager != null ? summitManager.previewSummit(playerId, AscendConstants.SummitCategory.EVOLUTION_POWER) : null;
+
+        long vexa = VexaStore.getInstance().getVexa(playerId);
+
+        cached = new CachedEconomyData(now, volt, mr.product, mr.values,
+                elevationLevel, potentialElevation, showElevation,
+                summitLevels, ascensionCount, skillPoints,
+                multPreview, speedPreview, evoPreview, vexa);
+        economyCache.put(playerId, cached);
+        return cached;
+    }
+
+    private static final class CachedEconomyData {
+        final long timestamp;
+        final BigNumber volt;
+        final BigNumber product;
+        final BigNumber[] digits;
+        final int elevationLevel;
+        final int potentialElevation;
+        final boolean showElevation;
+        final Map<AscendConstants.SummitCategory, Integer> summitLevels;
+        final int ascensionCount;
+        final int skillPoints;
+        final SummitManager.SummitPreview multPreview;
+        final SummitManager.SummitPreview speedPreview;
+        final SummitManager.SummitPreview evoPreview;
+        final long vexa;
+
+        CachedEconomyData(long timestamp, BigNumber volt, BigNumber product, BigNumber[] digits,
+                          int elevationLevel, int potentialElevation, boolean showElevation,
+                          Map<AscendConstants.SummitCategory, Integer> summitLevels,
+                          int ascensionCount, int skillPoints,
+                          SummitManager.SummitPreview multPreview,
+                          SummitManager.SummitPreview speedPreview,
+                          SummitManager.SummitPreview evoPreview,
+                          long vexa) {
+            this.timestamp = timestamp;
+            this.volt = volt;
+            this.product = product;
+            this.digits = digits;
+            this.elevationLevel = elevationLevel;
+            this.potentialElevation = potentialElevation;
+            this.showElevation = showElevation;
+            this.summitLevels = summitLevels;
+            this.ascensionCount = ascensionCount;
+            this.skillPoints = skillPoints;
+            this.multPreview = multPreview;
+            this.speedPreview = speedPreview;
+            this.evoPreview = evoPreview;
+            this.vexa = vexa;
+        }
     }
 }
