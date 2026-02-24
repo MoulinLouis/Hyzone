@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Added
+- **Parkour: Medal times and feather currency** - Maps can now have bronze/silver/gold medal time thresholds (set in `/pk admin` Maps). Beating a threshold earns the medal and feather currency (configurable per category via `/pk admin` -> Medal Rewards). Medals shown on map selection cards; feather balance displayed on parkour HUD next to vexa.
 - **Purge: Custom zombie variants admin system** - Replaced hardcoded Slow/Normal/Fast enum with DB-backed variant configs. Admins can create, delete, and customize zombie variants (health, damage, speed) via `/purge admin` -> Variants. Wave config now supports any number of variant types with dynamic +/- count rows.
 - **Purge: Lootbox weapon switch system** - Zombies have a 5% chance to drop a lootbox item. Right-click to roll a random owned weapon (excluding current) with a spinning animation UI. Accept to swap your hotbar weapon mid-run, or decline/timeout (10s) to discard. Per-player weapon tracking so each player can use a different weapon in the same session.
 - **RunOrFall: New game mode module** - Added `hyvexa-runorfall` with lobby queue, fixed 10s pre-game countdown, destructible platform cuboids, void elimination, and last-player-standing winner flow via `/rof` commands.

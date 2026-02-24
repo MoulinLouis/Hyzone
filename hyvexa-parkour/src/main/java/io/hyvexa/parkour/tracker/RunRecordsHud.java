@@ -2,12 +2,17 @@ package io.hyvexa.parkour.tracker;
 
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import io.hyvexa.common.util.FormatUtils;
+import io.hyvexa.parkour.data.Medal;
 
 import java.util.List;
+import java.util.Set;
 
 public class RunRecordsHud extends RunHud {
 
+    private static final String MEDAL_UNEARNED_COLOR = "#5a6a78";
     private String lastRecordsKey;
+    private String lastMedalsKey;
 
     public RunRecordsHud(PlayerRef playerRef) {
         super(playerRef);
@@ -59,10 +64,68 @@ public class RunRecordsHud extends RunHud {
         builder.append(line.rank).append('|').append(line.name).append('|').append(line.time).append('\n');
     }
 
+    public void updateMedals(io.hyvexa.parkour.data.Map map, Set<Medal> earned) {
+        if (map == null) {
+            String key = "hidden";
+            if (key.equals(lastMedalsKey)) {
+                return;
+            }
+            lastMedalsKey = key;
+            UICommandBuilder cmd = new UICommandBuilder();
+            cmd.set("#MedalHud.Visible", false);
+            update(false, cmd);
+            return;
+        }
+        Long bronzeMs = map.getBronzeTimeMs();
+        Long silverMs = map.getSilverTimeMs();
+        Long goldMs = map.getGoldTimeMs();
+        boolean hasMedals = bronzeMs != null || silverMs != null || goldMs != null;
+        if (!hasMedals) {
+            String key = "hidden";
+            if (key.equals(lastMedalsKey)) {
+                return;
+            }
+            lastMedalsKey = key;
+            UICommandBuilder cmd = new UICommandBuilder();
+            cmd.set("#MedalHud.Visible", false);
+            update(false, cmd);
+            return;
+        }
+        Set<Medal> safeEarned = earned != null ? earned : Set.of();
+        String key = bronzeMs + "|" + silverMs + "|" + goldMs + "|" + safeEarned;
+        if (key.equals(lastMedalsKey)) {
+            return;
+        }
+        lastMedalsKey = key;
+        UICommandBuilder cmd = new UICommandBuilder();
+        cmd.set("#MedalHud.Visible", true);
+        setMedalRow(cmd, "Bronze", bronzeMs, safeEarned.contains(Medal.BRONZE));
+        setMedalRow(cmd, "Silver", silverMs, safeEarned.contains(Medal.SILVER));
+        setMedalRow(cmd, "Gold", goldMs, safeEarned.contains(Medal.GOLD));
+        update(false, cmd);
+    }
+
+    private void setMedalRow(UICommandBuilder cmd, String tier, Long thresholdMs, boolean earned) {
+        String rowId = "#MedalHud" + tier;
+        if (thresholdMs == null || thresholdMs <= 0L) {
+            cmd.set(rowId + ".Visible", false);
+            return;
+        }
+        cmd.set(rowId + ".Visible", true);
+        String timeText = FormatUtils.formatDuration(thresholdMs);
+        cmd.set(rowId + "Time.Text", timeText);
+        String color = earned ? null : MEDAL_UNEARNED_COLOR;
+        if (color != null) {
+            cmd.set(rowId + "Name.Style.TextColor", color);
+            cmd.set(rowId + "Time.Style.TextColor", color);
+        }
+    }
+
     @Override
     public void resetCache() {
         super.resetCache();
         lastRecordsKey = null;
+        lastMedalsKey = null;
     }
 
     public static final class RecordLine {

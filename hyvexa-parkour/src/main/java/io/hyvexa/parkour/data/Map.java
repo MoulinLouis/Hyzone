@@ -30,6 +30,9 @@ public class Map {
     private Double flyZoneMaxX;
     private Double flyZoneMaxY;
     private Double flyZoneMaxZ;
+    private Long bronzeTimeMs;
+    private Long silverTimeMs;
+    private Long goldTimeMs;
     private long createdAt;
     private long updatedAt;
 
@@ -232,6 +235,30 @@ public class Map {
     public boolean hasFlyZone() {
         return flyZoneMinX != null && flyZoneMinY != null && flyZoneMinZ != null
             && flyZoneMaxX != null && flyZoneMaxY != null && flyZoneMaxZ != null;
+    }
+
+    public Long getBronzeTimeMs() {
+        return bronzeTimeMs;
+    }
+
+    public void setBronzeTimeMs(Long bronzeTimeMs) {
+        this.bronzeTimeMs = bronzeTimeMs;
+    }
+
+    public Long getSilverTimeMs() {
+        return silverTimeMs;
+    }
+
+    public void setSilverTimeMs(Long silverTimeMs) {
+        this.silverTimeMs = silverTimeMs;
+    }
+
+    public Long getGoldTimeMs() {
+        return goldTimeMs;
+    }
+
+    public void setGoldTimeMs(Long goldTimeMs) {
+        this.goldTimeMs = goldTimeMs;
     }
 
     public long getCreatedAt() {

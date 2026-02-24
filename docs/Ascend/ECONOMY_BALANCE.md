@@ -18,6 +18,7 @@ This document provides a factual overview of the economy balancing in Ascend mod
 8. [Transcendence System](#transcendence-system-4th-prestige)
 9. [Design Philosophy](#design-philosophy)
 10. [Vexa (Global Currency)](#vexa-global-currency)
+11. [Feathers (Parkour Currency)](#feathers-parkour-currency)
 
 ---
 
@@ -915,3 +916,29 @@ Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure conti
   - Early-game boost: ÷4 for levels 0-4
 
 - **Previous:** Original balance (slower progression, smaller numbers)
+
+---
+
+## Feathers (Parkour Currency)
+
+Feathers are a parkour-specific currency earned by beating medal time thresholds on maps.
+
+### Medal System
+- Each map can have **bronze**, **silver**, and **gold** medal time thresholds (set by admins)
+- Beating a threshold earns the medal for that map (once per tier per map)
+- All qualifying medals are awarded in a single run (e.g., gold time earns all 3)
+- Medal times are in seconds; gold < silver < bronze enforced
+
+### Feather Rewards
+- Configurable per category (Easy/Medium/Hard/Insane) via `/pk admin` -> Medal Rewards
+- Each medal tier has an independent feather reward amount
+- Rewards are granted once per medal per map (no repeats)
+
+### Storage
+- DB table: `player_feathers` (uuid, feathers)
+- DB table: `player_medals` (player_uuid, map_id, medal, earned_at)
+- DB table: `medal_rewards` (category, bronze_feathers, silver_feathers, gold_feathers)
+
+### Display
+- Feather balance shown on parkour HUD (below vexa, with feather icon)
+- Medal status shown on map selection cards (earned/unearned per tier)

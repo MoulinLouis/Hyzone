@@ -42,6 +42,9 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
     private String mapDifficulty = "0";
     private String mapOrder = String.valueOf(ParkourConstants.DEFAULT_MAP_ORDER);
     private String mapSearch = "";
+    private String medalBronzeSec = "";
+    private String medalSilverSec = "";
+    private String medalGoldSec = "";
     private boolean mapMithrilSwordEnabled = false;
     private boolean mapMithrilDaggersEnabled = false;
     private boolean mapGliderEnabled = false;
@@ -91,6 +94,15 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
         }
         if (data.mapSearch != null) {
             mapSearch = data.mapSearch.trim();
+        }
+        if (data.medalBronzeSec != null) {
+            medalBronzeSec = data.medalBronzeSec.trim();
+        }
+        if (data.medalSilverSec != null) {
+            medalSilverSec = data.medalSilverSec.trim();
+        }
+        if (data.medalGoldSec != null) {
+            medalGoldSec = data.medalGoldSec.trim();
         }
         if (data.button == null) {
             if (!previousSearch.equals(mapSearch)) {
@@ -154,6 +166,9 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
             mapFreeFallEnabled = map.isFreeFallEnabled();
             mapDuelEnabled = map.isDuelEnabled();
             mapActive = map.isActive();
+            medalBronzeSec = map.getBronzeTimeMs() != null ? String.valueOf(map.getBronzeTimeMs() / 1000) : "";
+            medalSilverSec = map.getSilverTimeMs() != null ? String.valueOf(map.getSilverTimeMs() / 1000) : "";
+            medalGoldSec = map.getGoldTimeMs() != null ? String.valueOf(map.getGoldTimeMs() / 1000) : "";
         }
         sendRefresh(ref, store);
     }
@@ -232,6 +247,15 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
         map.setFreeFallEnabled(mapFreeFallEnabled);
         map.setDuelEnabled(mapDuelEnabled);
         map.setActive(mapActive);
+        Long bronzeMs = parseMedalTime(player, medalBronzeSec, "Bronze");
+        Long silverMs = parseMedalTime(player, medalSilverSec, "Silver");
+        Long goldMs = parseMedalTime(player, medalGoldSec, "Gold");
+        if (bronzeMs != null && bronzeMs == -1L) { return; }
+        if (silverMs != null && silverMs == -1L) { return; }
+        if (goldMs != null && goldMs == -1L) { return; }
+        map.setBronzeTimeMs(bronzeMs);
+        map.setSilverTimeMs(silverMs);
+        map.setGoldTimeMs(goldMs);
         map.setStart(start);
         map.setCreatedAt(System.currentTimeMillis());
         map.setUpdatedAt(map.getCreatedAt());
@@ -400,6 +424,27 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
         map.setFreeFallEnabled(mapFreeFallEnabled);
         map.setDuelEnabled(mapDuelEnabled);
         map.setActive(mapActive);
+        Long bronzeMs = parseMedalTime(player, medalBronzeSec, "Bronze");
+        Long silverMs = parseMedalTime(player, medalSilverSec, "Silver");
+        Long goldMs = parseMedalTime(player, medalGoldSec, "Gold");
+        if (bronzeMs != null && bronzeMs == -1L) { return; }
+        if (silverMs != null && silverMs == -1L) { return; }
+        if (goldMs != null && goldMs == -1L) { return; }
+        if (goldMs != null && silverMs != null && goldMs >= silverMs) {
+            player.sendMessage(Message.raw("Gold time must be less than silver time."));
+            return;
+        }
+        if (silverMs != null && bronzeMs != null && silverMs >= bronzeMs) {
+            player.sendMessage(Message.raw("Silver time must be less than bronze time."));
+            return;
+        }
+        if (goldMs != null && bronzeMs != null && goldMs >= bronzeMs) {
+            player.sendMessage(Message.raw("Gold time must be less than bronze time."));
+            return;
+        }
+        map.setBronzeTimeMs(bronzeMs);
+        map.setSilverTimeMs(silverMs);
+        map.setGoldTimeMs(goldMs);
         map.setUpdatedAt(System.currentTimeMillis());
         try {
             mapStore.updateMap(map);
@@ -408,6 +453,24 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
             player.sendMessage(Message.raw(exception.getMessage()));
         }
         sendRefresh(ref, store);
+    }
+
+    /** Returns null if empty (unset), -1 on parse error, or the value in ms. */
+    private Long parseMedalTime(Player player, String raw, String label) {
+        if (raw == null || raw.trim().isEmpty()) {
+            return null;
+        }
+        try {
+            long sec = Long.parseLong(raw.trim());
+            if (sec <= 0) {
+                player.sendMessage(Message.raw(label + " time must be positive."));
+                return -1L;
+            }
+            return sec * 1000L;
+        } catch (NumberFormatException ignored) {
+            player.sendMessage(Message.raw(label + " time must be a number (seconds)."));
+            return -1L;
+        }
     }
 
     private void handleDelete(Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -628,6 +691,9 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
         commandBuilder.set("#MapDifficultyField.Value", mapDifficulty);
         commandBuilder.set("#MapOrderField.Value", mapOrder);
         commandBuilder.set("#MapSearchField.Value", mapSearch);
+        commandBuilder.set("#MedalBronzeField.Value", medalBronzeSec);
+        commandBuilder.set("#MedalSilverField.Value", medalSilverSec);
+        commandBuilder.set("#MedalGoldField.Value", medalGoldSec);
         commandBuilder.set("#MithrilSwordValue.Text", mapMithrilSwordEnabled ? "Enabled" : "Disabled");
         commandBuilder.set("#MithrilDaggersValue.Text", mapMithrilDaggersEnabled ? "Enabled" : "Disabled");
         commandBuilder.set("#GliderValue.Text", mapGliderEnabled ? "Enabled" : "Disabled");
@@ -695,6 +761,12 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
                 EventData.of(MapData.KEY_MAP_ORDER, "#MapOrderField.Value"), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#MapSearchField",
                 EventData.of(MapData.KEY_MAP_SEARCH, "#MapSearchField.Value"), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#MedalBronzeField",
+                EventData.of(MapData.KEY_MEDAL_BRONZE, "#MedalBronzeField.Value"), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#MedalSilverField",
+                EventData.of(MapData.KEY_MEDAL_SILVER, "#MedalSilverField.Value"), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#MedalGoldField",
+                EventData.of(MapData.KEY_MEDAL_GOLD, "#MedalGoldField.Value"), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CreateMapButton",
                 EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_CREATE), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SetStartButton",
@@ -834,6 +906,9 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
         static final String KEY_MAP_DIFFICULTY = "@MapDifficulty";
         static final String KEY_MAP_ORDER = "@MapOrder";
         static final String KEY_MAP_SEARCH = "@MapSearch";
+        static final String KEY_MEDAL_BRONZE = "@MedalBronze";
+        static final String KEY_MEDAL_SILVER = "@MedalSilver";
+        static final String KEY_MEDAL_GOLD = "@MedalGold";
         static final String BUTTON_SELECT_PREFIX = "Select:";
         static final String BUTTON_BACK = "BackButton";
         static final String BUTTON_CREATE = "CreateMap";
@@ -868,6 +943,9 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
                         (data, value) -> data.mapDifficulty = value, data -> data.mapDifficulty)
                 .addField(new KeyedCodec<>(KEY_MAP_ORDER, Codec.STRING), (data, value) -> data.mapOrder = value, data -> data.mapOrder)
                 .addField(new KeyedCodec<>(KEY_MAP_SEARCH, Codec.STRING), (data, value) -> data.mapSearch = value, data -> data.mapSearch)
+                .addField(new KeyedCodec<>(KEY_MEDAL_BRONZE, Codec.STRING), (data, value) -> data.medalBronzeSec = value, data -> data.medalBronzeSec)
+                .addField(new KeyedCodec<>(KEY_MEDAL_SILVER, Codec.STRING), (data, value) -> data.medalSilverSec = value, data -> data.medalSilverSec)
+                .addField(new KeyedCodec<>(KEY_MEDAL_GOLD, Codec.STRING), (data, value) -> data.medalGoldSec = value, data -> data.medalGoldSec)
                 .build();
 
         private String button;
@@ -878,5 +956,8 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
         private String mapDifficulty;
         private String mapOrder;
         private String mapSearch;
+        private String medalBronzeSec;
+        private String medalSilverSec;
+        private String medalGoldSec;
     }
 }

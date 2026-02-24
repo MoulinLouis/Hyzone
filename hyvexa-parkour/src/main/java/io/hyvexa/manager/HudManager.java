@@ -21,6 +21,8 @@ import io.hyvexa.parkour.data.ProgressStore;
 import io.hyvexa.parkour.util.PlayerSettingsStore;
 import io.hyvexa.duel.DuelTracker;
 import io.hyvexa.core.economy.VexaStore;
+import io.hyvexa.parkour.data.FeatherStore;
+import io.hyvexa.parkour.data.MedalStore;
 import io.hyvexa.parkour.ParkourTimingConstants;
 
 import java.util.ArrayList;
@@ -89,11 +91,17 @@ public class HudManager {
         if (player == null) {
             return;
         }
-        RunHud hud = getOrCreateHud(playerRef, false);
-        attachHud(playerRef, player, hud, false);
         PlayerHudState state = getState(playerRef.getUuid());
+        // Respect the current HUD mode (base vs records) to avoid rebuilding the
+        // MultipleHUD composite every tick. Only do full attach on first setup.
+        RunHud hud = getOrCreateHud(playerRef, state.isRecords);
         if (state.readyAt == 0) {
+            attachHud(playerRef, player, hud, state.isRecords);
             state.readyAt = System.currentTimeMillis() + 250L;
+        } else {
+            // Lightweight re-registration: handles engine HUD resets after teleport
+            // without resetting cache or triggering composite rebuilds
+            MultiHudBridge.setCustomHud(player, playerRef, hud);
         }
     }
 
@@ -139,6 +147,7 @@ public class HudManager {
         hud.updateInfo(playerRef.getUsername(), rankName, completedMaps, totalMaps, SERVER_IP_DISPLAY);
         hud.updatePlayerCount();
         hud.updateVexa(VexaStore.getInstance().getVexa(playerId));
+        hud.updateFeathers(FeatherStore.getInstance().getFeathers(playerId));
         updateAdvancedHudData(ref, store, playerRef, hud);
         if (!running) {
             if (wasRunning) {
@@ -149,18 +158,17 @@ public class HudManager {
             hud.updateCheckpointSplit("", null, false);
             if (hud instanceof RunRecordsHud recordsHud) {
                 recordsHud.updateTopTimes(List.of());
+                recordsHud.updateMedals(null, null);
             }
             state.checkpointSplit = null;
             return;
         }
         state.wasRunning = true;
         String mapId = duelActive ? duelTracker.getActiveMapId(playerId) : runTracker.getActiveMapId(playerId);
+        io.hyvexa.parkour.data.Map map = mapId != null ? mapStore.getMap(mapId) : null;
         String mapName = mapId;
-        if (mapId != null) {
-            var map = mapStore.getMap(mapId);
-            if (map != null && map.getName() != null && !map.getName().isBlank()) {
-                mapName = map.getName();
-            }
+        if (map != null && map.getName() != null && !map.getName().isBlank()) {
+            mapName = map.getName();
         }
         String timeText = (mapName == null ? "Map" : mapName) + " - " + FormatUtils.formatDuration(elapsedMs);
         RunTracker.CheckpointProgress checkpointProgress = duelActive
@@ -172,6 +180,7 @@ public class HudManager {
         }
         if (hud instanceof RunRecordsHud recordsHud) {
             recordsHud.updateRunDetails(timeText, buildTopTimes(mapId, playerRef.getUuid()));
+            recordsHud.updateMedals(map, MedalStore.getInstance().getEarnedMedals(playerId, mapId));
         } else {
             hud.updateText(timeText);
         }

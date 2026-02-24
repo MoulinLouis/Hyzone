@@ -18,8 +18,12 @@ import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.core.discord.DiscordLinkStore;
 import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.parkour.ParkourConstants;
+import io.hyvexa.parkour.data.FeatherStore;
 import io.hyvexa.parkour.data.Map;
 import io.hyvexa.parkour.data.MapStore;
+import io.hyvexa.parkour.data.Medal;
+import io.hyvexa.parkour.data.MedalRewardStore;
+import io.hyvexa.parkour.data.MedalStore;
 import io.hyvexa.parkour.data.ProgressStore;
 import io.hyvexa.parkour.data.TransformData;
 import io.hyvexa.parkour.ghost.GhostNpcManager;
@@ -211,6 +215,7 @@ class RunValidator {
                     broadcastVexaGod(playerName);
                 }
             }
+            awardMedals(playerId, map, durationMs, player);
             runTracker.recordFinishPing(run, playerRef);
             runTracker.sendLatencyWarning(run, player);
             teleporter.teleportToSpawn(ref, store, transform, buffer);
@@ -459,5 +464,34 @@ class RunValidator {
             return 0L;
         }
         return Math.max(0L, run.elapsedMs);
+    }
+
+    private void awardMedals(UUID playerId, Map map, long durationMs, Player player) {
+        MedalStore medalStore = MedalStore.getInstance();
+        MedalRewardStore rewardStore = MedalRewardStore.getInstance();
+        FeatherStore featherStore = FeatherStore.getInstance();
+        String category = map.getCategory();
+        // Award all qualifying medals (bronze, silver, gold) the player hasn't earned yet
+        for (Medal medal : Medal.values()) {
+            Long threshold = medal.getThreshold(map);
+            if (threshold == null || threshold <= 0L) {
+                continue;
+            }
+            if (durationMs > threshold) {
+                continue;
+            }
+            if (medalStore.hasEarnedMedal(playerId, map.getId(), medal)) {
+                continue;
+            }
+            medalStore.awardMedal(playerId, map.getId(), medal);
+            int featherReward = rewardStore.getReward(category, medal);
+            if (featherReward > 0) {
+                featherStore.addFeathers(playerId, featherReward);
+                player.sendMessage(SystemMessageUtils.parkourSuccess(
+                        medal.name() + " Medal! +" + featherReward + " feathers"));
+            } else {
+                player.sendMessage(SystemMessageUtils.parkourSuccess(medal.name() + " Medal!"));
+            }
+        }
     }
 }
