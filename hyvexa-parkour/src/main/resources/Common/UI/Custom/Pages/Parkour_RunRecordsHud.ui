@@ -5,6 +5,76 @@ $C.@PageOverlay {
   Group #HudLayer {
     Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
 
+    Group #MedalHud {
+      Anchor: (Left: 12, Top: 82, Width: 300, Height: 72);
+      Background: #000000(0.35);
+      Visible: false;
+      Padding: (Left: 6, Right: 6, Top: 4, Bottom: 4);
+
+      Group #MedalHudBronze {
+        Anchor: (Left: 0, Right: 0, Top: 0, Height: 20);
+        LayoutMode: Left;
+
+        Group {
+          Anchor: (Width: 18, Height: 18, Top: 1);
+          Background: (TexturePath: "../Textures/bronze_medal.png");
+        }
+        Group { Anchor: (Width: 10); }
+        Label #MedalHudBronzeName {
+          Anchor: (Width: 150, Height: 20);
+          Style: (FontSize: 16, TextColor: #e7f1f4, VerticalAlignment: Center);
+          Text: "Bronze";
+        }
+        Label #MedalHudBronzeTime {
+          Anchor: (Width: 110, Height: 20);
+          Style: (FontSize: 16, TextColor: #e7f1f4, VerticalAlignment: Center);
+          Text: "";
+        }
+      }
+
+      Group #MedalHudSilver {
+        Anchor: (Left: 0, Right: 0, Top: 22, Height: 20);
+        LayoutMode: Left;
+
+        Group {
+          Anchor: (Width: 18, Height: 18, Top: 1);
+          Background: (TexturePath: "../Textures/silver_medal.png");
+        }
+        Group { Anchor: (Width: 10); }
+        Label #MedalHudSilverName {
+          Anchor: (Width: 150, Height: 20);
+          Style: (FontSize: 16, TextColor: #e7f1f4, VerticalAlignment: Center);
+          Text: "Silver";
+        }
+        Label #MedalHudSilverTime {
+          Anchor: (Width: 110, Height: 20);
+          Style: (FontSize: 16, TextColor: #e7f1f4, VerticalAlignment: Center);
+          Text: "";
+        }
+      }
+
+      Group #MedalHudGold {
+        Anchor: (Left: 0, Right: 0, Top: 44, Height: 20);
+        LayoutMode: Left;
+
+        Group {
+          Anchor: (Width: 18, Height: 18, Top: 1);
+          Background: (TexturePath: "../Textures/gold_medal.png");
+        }
+        Group { Anchor: (Width: 10); }
+        Label #MedalHudGoldName {
+          Anchor: (Width: 150, Height: 20);
+          Style: (FontSize: 16, TextColor: #e7f1f4, VerticalAlignment: Center);
+          Text: "Gold";
+        }
+        Label #MedalHudGoldTime {
+          Anchor: (Width: 110, Height: 20);
+          Style: (FontSize: 16, TextColor: #e7f1f4, VerticalAlignment: Center);
+          Text: "";
+        }
+      }
+    }
+
     Group #RunRecords {
       Anchor: (Left: 12, Top: 160, Width: 300, Height: 142);
       Background: #000000(0.35);

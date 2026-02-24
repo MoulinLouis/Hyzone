@@ -17,6 +17,7 @@ public class RunHud extends CustomUIHud {
     private String lastAnnouncementKey;
     private int lastPlayerCount = -1;
     private long lastVexa = -1;
+    private long lastFeathers = -1;
     private String lastAdvancedHudKey;
     private Boolean lastAdvancedHudVisible;
 
@@ -180,6 +181,16 @@ public class RunHud extends CustomUIHud {
         update(false, commandBuilder);
     }
 
+    public void updateFeathers(long feathers) {
+        if (feathers == lastFeathers) {
+            return;
+        }
+        lastFeathers = feathers;
+        UICommandBuilder commandBuilder = new UICommandBuilder();
+        commandBuilder.set("#PlayerFeatherValue.Text", String.valueOf(feathers));
+        update(false, commandBuilder);
+    }
+
     public void updatePlayerCount() {
         int count = Universe.get().getPlayers().size();
         if (count == lastPlayerCount) {
@@ -201,6 +212,7 @@ public class RunHud extends CustomUIHud {
         lastAnnouncementKey = null;
         lastPlayerCount = -1;
         lastVexa = -1;
+        lastFeathers = -1;
         lastAdvancedHudKey = null;
         lastAdvancedHudVisible = null;
     }

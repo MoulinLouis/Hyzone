@@ -88,10 +88,16 @@ CREATE TABLE maps (
   fly_zone_max_x DOUBLE NULL,
   fly_zone_max_y DOUBLE NULL,
   fly_zone_max_z DOUBLE NULL,
+  bronze_time_ms BIGINT NULL,
+  silver_time_ms BIGINT NULL,
+  gold_time_ms BIGINT NULL,
   created_at TIMESTAMP NULL,
   updated_at TIMESTAMP NULL
 ) ENGINE=InnoDB;
 ```
+
+Notes:
+- `bronze_time_ms`, `silver_time_ms`, `gold_time_ms` — optional medal time thresholds in milliseconds. Set via `/pk admin` Maps panel. Gold < Silver < Bronze enforced by admin UI.
 
 ## map_checkpoints
 Stores checkpoint transforms per map.
@@ -689,3 +695,45 @@ CREATE TABLE purge_wave_variant_counts (
 ```
 
 Manager: `PurgeWaveConfigManager` — migrates from old columns on startup if they exist.
+
+## player_feathers
+Parkour feather currency per player. Follows VexaStore pattern (lazy-load, immediate writes, evict on disconnect).
+
+```sql
+CREATE TABLE player_feathers (
+  uuid VARCHAR(36) NOT NULL PRIMARY KEY,
+  feathers BIGINT NOT NULL DEFAULT 0
+) ENGINE=InnoDB;
+```
+
+Manager: `FeatherStore` (singleton in `hyvexa-parkour`)
+
+## medal_rewards
+Feather reward amounts per map category per medal tier. Max 4 rows (Easy, Medium, Hard, Insane).
+
+```sql
+CREATE TABLE medal_rewards (
+  category VARCHAR(32) NOT NULL PRIMARY KEY,
+  bronze_feathers INT NOT NULL DEFAULT 0,
+  silver_feathers INT NOT NULL DEFAULT 0,
+  gold_feathers INT NOT NULL DEFAULT 0
+) ENGINE=InnoDB;
+```
+
+Manager: `MedalRewardStore` (singleton in `hyvexa-parkour`) — loaded into memory on startup, edited via `/pk admin` -> Medal Rewards.
+
+## player_medals
+Tracks which medal tiers each player has earned per map. Medals are earned once per map per tier.
+
+```sql
+CREATE TABLE player_medals (
+  player_uuid VARCHAR(36) NOT NULL,
+  map_id VARCHAR(64) NOT NULL,
+  medal VARCHAR(6) NOT NULL,
+  earned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (player_uuid, map_id, medal)
+) ENGINE=InnoDB;
+```
+
+- `medal` values: `BRONZE`, `SILVER`, `GOLD`
+- Manager: `MedalStore` (singleton in `hyvexa-parkour`) — lazy-loads per player, evicts on disconnect.

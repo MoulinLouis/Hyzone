@@ -4,7 +4,7 @@ $C.@PageOverlay {
   SceneBlur {}
 
   Group #MapAdminWindow {
-    Anchor: (Width: 920, Height: 960);
+    Anchor: (Width: 920, Height: 1040);
     LayoutMode: Top;
     Background: #0d1620(0.95);
     OutlineColor: #ffffff(0.06);
@@ -275,6 +275,54 @@ $C.@PageOverlay {
           Anchor: (Top: 6);
           Style: (FontSize: 13, TextColor: #9fb0ba);
           Text: "Fly Zone: (none)";
+        }
+
+        Label {
+          Text: "Medal Times (seconds)";
+          Style: (FontSize: 13, TextColor: #cfd7dc);
+          Anchor: (Top: 6);
+        }
+
+        Group {
+          LayoutMode: Left;
+          Anchor: (Top: 4, Height: 26);
+
+          Label {
+            Anchor: (Width: 55);
+            Style: (FontSize: 12, TextColor: #cd7f32);
+            Text: "Bronze:";
+          }
+
+          $C.@TextField #MedalBronzeField {
+            Anchor: (Height: 26, Width: 70);
+            Style: (FontSize: 14, TextColor: #ffffff(0.85));
+          }
+
+          Group { Anchor: (Width: 10); }
+
+          Label {
+            Anchor: (Width: 45);
+            Style: (FontSize: 12, TextColor: #c0c0c0);
+            Text: "Silver:";
+          }
+
+          $C.@TextField #MedalSilverField {
+            Anchor: (Height: 26, Width: 70);
+            Style: (FontSize: 14, TextColor: #ffffff(0.85));
+          }
+
+          Group { Anchor: (Width: 10); }
+
+          Label {
+            Anchor: (Width: 40);
+            Style: (FontSize: 12, TextColor: #ffd700);
+            Text: "Gold:";
+          }
+
+          $C.@TextField #MedalGoldField {
+            Anchor: (Height: 26, Width: 70);
+            Style: (FontSize: 14, TextColor: #ffffff(0.85));
+          }
         }
 
         Label #SelectedMapText {

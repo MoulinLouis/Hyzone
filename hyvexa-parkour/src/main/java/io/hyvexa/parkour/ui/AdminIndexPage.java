@@ -37,6 +37,7 @@ public class AdminIndexPage extends InteractiveCustomUIPage<AdminIndexPage.Admin
     private static final String BUTTON_GLOBAL_MESSAGES = "GlobalMessages";
     private static final String BUTTON_BROADCAST = "Broadcast";
     private static final String BUTTON_PLAYERS = "Players";
+    private static final String BUTTON_MEDAL_REWARDS = "MedalRewards";
     private String announcementInput = "";
 
     public AdminIndexPage(@Nonnull PlayerRef playerRef, MapStore mapStore,
@@ -76,6 +77,8 @@ public class AdminIndexPage extends InteractiveCustomUIPage<AdminIndexPage.Admin
                 EventData.of(AdminIndexData.KEY_BUTTON, BUTTON_POPULATION), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#GlobalMessageButton",
                 EventData.of(AdminIndexData.KEY_BUTTON, BUTTON_GLOBAL_MESSAGES), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#MedalRewardsButton",
+                EventData.of(AdminIndexData.KEY_BUTTON, BUTTON_MEDAL_REWARDS), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#AnnouncementField",
                 EventData.of(AdminIndexData.KEY_ANNOUNCEMENT, "#AnnouncementField.Value"), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#AnnouncementSendButton",
@@ -128,6 +131,11 @@ public class AdminIndexPage extends InteractiveCustomUIPage<AdminIndexPage.Admin
             player.getPageManager().openCustomPage(ref, store, new PlayerCountAdminPage(playerRef, playerCountStore));
             return;
         }
+        if (BUTTON_MEDAL_REWARDS.equals(data.button)) {
+            player.getPageManager().openCustomPage(ref, store,
+                    new MedalRewardAdminPage(playerRef, mapStore, progressStore));
+            return;
+        }
         if (BUTTON_GLOBAL_MESSAGES.equals(data.button)) {
             HyvexaPlugin plugin = HyvexaPlugin.getInstance();
             if (plugin == null) {
@@ -172,6 +180,8 @@ public class AdminIndexPage extends InteractiveCustomUIPage<AdminIndexPage.Admin
                 EventData.of(AdminIndexData.KEY_BUTTON, BUTTON_POPULATION), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#GlobalMessageButton",
                 EventData.of(AdminIndexData.KEY_BUTTON, BUTTON_GLOBAL_MESSAGES), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#MedalRewardsButton",
+                EventData.of(AdminIndexData.KEY_BUTTON, BUTTON_MEDAL_REWARDS), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#AnnouncementField",
                 EventData.of(AdminIndexData.KEY_ANNOUNCEMENT, "#AnnouncementField.Value"), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#AnnouncementSendButton",

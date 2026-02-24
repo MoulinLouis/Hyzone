@@ -2,7 +2,7 @@ $C = "../Common.ui";
 
 Group {
   LayoutMode: Left;
-  Anchor: (Left: 0, Right: 0, Bottom: 8, Height: 60);
+  Anchor: (Left: 0, Right: 0, Bottom: 6, Height: 76);
   Background: #1a2530(0.95);
 
   Group #AccentBar {
@@ -12,7 +12,7 @@ Group {
 
   Button #SelectButton {
     FlexWeight: 1;
-    Padding: (Left: 12, Top: 10, Bottom: 10);
+    Padding: (Left: 12, Top: 8, Bottom: 8);
     Background: #00000000;
     LayoutMode: Top;
     Style: ButtonStyle(
@@ -38,6 +38,46 @@ Group {
         TextColor: #9fb0ba
       );
       Text: "Status";
+    }
+
+    Group #MedalRow {
+      Anchor: (Top: 3, Height: 24);
+      LayoutMode: Left;
+      Visible: false;
+
+      Group #BronzeMedalIcon {
+        Anchor: (Width: 20, Height: 20, Top: 2);
+        Background: (TexturePath: "../Textures/bronze_medal.png");
+      }
+      Label #BronzeMedalText {
+        Anchor: (Height: 24);
+        Style: (FontSize: 13, TextColor: #cd7f32, VerticalAlignment: Center);
+        Text: "";
+      }
+
+      Group { Anchor: (Width: 14); }
+
+      Group #SilverMedalIcon {
+        Anchor: (Width: 20, Height: 20, Top: 2);
+        Background: (TexturePath: "../Textures/silver_medal.png");
+      }
+      Label #SilverMedalText {
+        Anchor: (Height: 24);
+        Style: (FontSize: 13, TextColor: #c0c0c0, VerticalAlignment: Center);
+        Text: "";
+      }
+
+      Group { Anchor: (Width: 14); }
+
+      Group #GoldMedalIcon {
+        Anchor: (Width: 20, Height: 20, Top: 2);
+        Background: (TexturePath: "../Textures/gold_medal.png");
+      }
+      Label #GoldMedalText {
+        Anchor: (Height: 24);
+        Style: (FontSize: 13, TextColor: #ffd700, VerticalAlignment: Center);
+        Text: "";
+      }
     }
   }
 }

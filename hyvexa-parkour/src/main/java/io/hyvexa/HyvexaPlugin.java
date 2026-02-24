@@ -23,8 +23,12 @@ import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.core.discord.DiscordLinkStore;
 import io.hyvexa.core.cosmetic.CosmeticStore;
 import io.hyvexa.core.economy.VexaStore;
+
+import io.hyvexa.parkour.data.FeatherStore;
 import io.hyvexa.parkour.data.GlobalMessageStore;
 import io.hyvexa.parkour.data.MapStore;
+import io.hyvexa.parkour.data.MedalRewardStore;
+import io.hyvexa.parkour.data.MedalStore;
 import io.hyvexa.parkour.data.PlayerCountStore;
 import io.hyvexa.parkour.data.ProgressStore;
 import io.hyvexa.parkour.data.SettingsStore;
@@ -80,6 +84,7 @@ import io.hyvexa.parkour.command.ParkourMusicDebugCommand;
 import io.hyvexa.parkour.command.RulesCommand;
 import io.hyvexa.parkour.command.StoreCommand;
 import io.hyvexa.parkour.command.SpectatorCommand;
+
 import io.hyvexa.parkour.command.VoteCommand;
 import io.hyvexa.parkour.tracker.RunTracker;
 import io.hyvexa.parkour.system.NoDropSystem;
@@ -194,6 +199,21 @@ public class HyvexaPlugin extends JavaPlugin {
             LOGGER.atWarning().withCause(e).log("Failed to initialize DiscordLinkStore");
         }
         try {
+            FeatherStore.getInstance().initialize();
+        } catch (Exception e) {
+            LOGGER.atWarning().withCause(e).log("Failed to initialize FeatherStore");
+        }
+        try {
+            MedalRewardStore.getInstance().initialize();
+        } catch (Exception e) {
+            LOGGER.atWarning().withCause(e).log("Failed to initialize MedalRewardStore");
+        }
+        try {
+            MedalStore.getInstance().initialize();
+        } catch (Exception e) {
+            LOGGER.atWarning().withCause(e).log("Failed to initialize MedalStore");
+        }
+        try {
             CosmeticStore.getInstance().initialize();
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("Failed to initialize CosmeticStore");
@@ -293,6 +313,7 @@ public class HyvexaPlugin extends JavaPlugin {
         this.getCommandRegistry().registerCommand(new AnalyticsCommand());
         this.getCommandRegistry().registerCommand(new VoteCommand());
         this.getCommandRegistry().registerCommand(new SpectatorCommand());
+
 
         registerNoDropSystem();
         registerNoBreakSystem();
@@ -406,6 +427,12 @@ public class HyvexaPlugin extends JavaPlugin {
 
                 try { VexaStore.getInstance().evictPlayer(playerId); }
                 catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: VexaStore"); }
+
+                try { FeatherStore.getInstance().evictPlayer(playerId); }
+                catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: FeatherStore"); }
+
+                try { MedalStore.getInstance().evictPlayer(playerId); }
+                catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: MedalStore"); }
 
                 try { DiscordLinkStore.getInstance().evictPlayer(playerId); }
                 catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: DiscordLinkStore"); }

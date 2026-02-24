@@ -21,9 +21,13 @@ import io.hyvexa.parkour.util.InventoryUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.parkour.data.Map;
 import io.hyvexa.parkour.data.MapStore;
+import io.hyvexa.parkour.data.Medal;
+import io.hyvexa.parkour.data.MedalStore;
 import io.hyvexa.parkour.data.ProgressStore;
 import io.hyvexa.parkour.tracker.RunTracker;
 import io.hyvexa.parkour.util.ParkourUtils;
+
+import java.util.Set;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
@@ -175,10 +179,42 @@ public class MapSelectPage extends BaseParkourPage {
                 mapName += " | +" + rewardXp + " XP";
             }
             commandBuilder.set("#MapCards[" + index + "] #MapName.Text", mapName);
+            // Medal display
+            boolean hasMedalTimes = map.getBronzeTimeMs() != null || map.getSilverTimeMs() != null
+                    || map.getGoldTimeMs() != null;
+            if (hasMedalTimes) {
+                String prefix = "#MapCards[" + index + "] ";
+                commandBuilder.set(prefix + "#MedalRow.Visible", true);
+                Set<Medal> earned = MedalStore.getInstance().getEarnedMedals(playerRef.getUuid(), map.getId());
+                buildMedalLabel(commandBuilder, prefix, "Bronze", map.getBronzeTimeMs(),
+                        earned.contains(Medal.BRONZE));
+                buildMedalLabel(commandBuilder, prefix, "Silver", map.getSilverTimeMs(),
+                        earned.contains(Medal.SILVER));
+                buildMedalLabel(commandBuilder, prefix, "Gold", map.getGoldTimeMs(),
+                        earned.contains(Medal.GOLD));
+            }
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
                     "#MapCards[" + index + "] #SelectButton",
                     EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_SELECT_PREFIX + map.getId()), false);
             index++;
+        }
+    }
+
+    private static final String MEDAL_UNEARNED_COLOR = "#5a6a78";
+
+    private void buildMedalLabel(UICommandBuilder commandBuilder, String prefix, String tier,
+                                  Long thresholdMs, boolean earned) {
+        if (thresholdMs == null || thresholdMs <= 0L) {
+            commandBuilder.set(prefix + "#" + tier + "MedalText.Text", "");
+            commandBuilder.set(prefix + "#" + tier + "MedalIcon.Visible", false);
+            return;
+        }
+        commandBuilder.set(prefix + "#" + tier + "MedalText.Text",
+                "< " + FormatUtils.formatDuration(thresholdMs));
+        if (earned) {
+            commandBuilder.set(prefix + "#" + tier + "MedalText.Style.RenderBold", true);
+        } else {
+            commandBuilder.set(prefix + "#" + tier + "MedalText.Style.TextColor", MEDAL_UNEARNED_COLOR);
         }
     }
 
