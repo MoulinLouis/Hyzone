@@ -312,13 +312,13 @@ public class RunOrFallLeaderboardPage extends InteractiveCustomUIPage<RunOrFallL
         private final long longestSurvivedMs;
 
         private LeaderboardRow(RunOrFallPlayerStats stats) {
-            String rawName = stats != null ? stats.getPlayerName() : null;
+            String rawName = stats.getPlayerName();
             this.name = (rawName == null || rawName.isBlank()) ? "Player" : rawName;
-            this.wins = stats != null ? stats.getWins() : 0;
-            this.losses = stats != null ? stats.getLosses() : 0;
-            this.winRatePercent = stats != null ? stats.getWinRatePercent() : 0.0d;
-            this.bestWinStreak = stats != null ? stats.getBestWinStreak() : 0;
-            this.longestSurvivedMs = stats != null ? stats.getLongestSurvivedMs() : 0L;
+            this.wins = stats.getWins();
+            this.losses = stats.getLosses();
+            this.winRatePercent = stats.getWinRatePercent();
+            this.bestWinStreak = stats.getBestWinStreak();
+            this.longestSurvivedMs = stats.getLongestSurvivedMs();
         }
 
         private String nameLower() {

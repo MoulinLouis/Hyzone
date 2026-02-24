@@ -133,7 +133,7 @@ public class RunOrFallStatsStore {
         }
     }
 
-    private void save(RunOrFallPlayerStats stats) {
+    private synchronized void save(RunOrFallPlayerStats stats) {
         if (stats == null || !DatabaseManager.getInstance().isInitialized()) {
             return;
         }

@@ -907,43 +907,25 @@ public class RunOrFallConfigStore {
         if (snapshot == null) {
             return true;
         }
+        RunOrFallConfig defaults = createDefaultConfig();
         if (snapshot.maps != null && !snapshot.maps.isEmpty()) {
-            if (snapshot.maps.size() == 1) {
-                RunOrFallMapConfig only = snapshot.maps.get(0);
-                boolean emptyDefaultMap = only != null
-                        && DEFAULT_MAP_ID.equalsIgnoreCase(only.id)
-                        && only.lobby == null
-                        && (only.spawns == null || only.spawns.isEmpty())
-                        && (only.platforms == null || only.platforms.isEmpty());
-                boolean defaultSelection = snapshot.selectedMapId == null
-                        || snapshot.selectedMapId.isBlank()
-                        || DEFAULT_MAP_ID.equalsIgnoreCase(snapshot.selectedMapId);
-                if (emptyDefaultMap && defaultSelection
-                        && nearlyEqual(snapshot.voidY, DEFAULT_VOID_Y)
-                        && nearlyEqual(snapshot.blockBreakDelaySeconds, DEFAULT_BREAK_DELAY_SECONDS)
-                        && sanitizeMinPlayers(snapshot.minPlayers) == DEFAULT_MIN_PLAYERS
-                        && sanitizeCountdownTime(snapshot.minPlayersTimeSeconds, DEFAULT_MIN_PLAYERS_TIME_SECONDS)
-                        == DEFAULT_MIN_PLAYERS_TIME_SECONDS
-                        && Math.max(sanitizeMinPlayers(snapshot.minPlayers), sanitizeMinPlayers(snapshot.optimalPlayers))
-                        == DEFAULT_OPTIMAL_PLAYERS
-                        && sanitizeCountdownTime(snapshot.optimalPlayersTimeSeconds, DEFAULT_OPTIMAL_PLAYERS_TIME_SECONDS)
-                        == DEFAULT_OPTIMAL_PLAYERS_TIME_SECONDS
-                        && sanitizeBlinkDistanceBlocks(snapshot.blinkDistanceBlocks) == DEFAULT_BLINK_DISTANCE_BLOCKS) {
-                    return true;
-                }
-            }
-            return false;
+            if (snapshot.maps.size() != 1) return false;
+            RunOrFallMapConfig only = snapshot.maps.get(0);
+            if (only == null || !DEFAULT_MAP_ID.equalsIgnoreCase(only.id)) return false;
+            if (only.lobby != null || (only.spawns != null && !only.spawns.isEmpty())
+                    || (only.platforms != null && !only.platforms.isEmpty())) return false;
         }
-        return nearlyEqual(snapshot.voidY, DEFAULT_VOID_Y)
-                && nearlyEqual(snapshot.blockBreakDelaySeconds, DEFAULT_BREAK_DELAY_SECONDS)
-                && sanitizeMinPlayers(snapshot.minPlayers) == DEFAULT_MIN_PLAYERS
-                && sanitizeCountdownTime(snapshot.minPlayersTimeSeconds, DEFAULT_MIN_PLAYERS_TIME_SECONDS)
-                == DEFAULT_MIN_PLAYERS_TIME_SECONDS
-                && Math.max(sanitizeMinPlayers(snapshot.minPlayers), sanitizeMinPlayers(snapshot.optimalPlayers))
-                == DEFAULT_OPTIMAL_PLAYERS
-                && sanitizeCountdownTime(snapshot.optimalPlayersTimeSeconds, DEFAULT_OPTIMAL_PLAYERS_TIME_SECONDS)
-                == DEFAULT_OPTIMAL_PLAYERS_TIME_SECONDS
-                && sanitizeBlinkDistanceBlocks(snapshot.blinkDistanceBlocks) == DEFAULT_BLINK_DISTANCE_BLOCKS;
+        boolean defaultSelection = snapshot.selectedMapId == null
+                || snapshot.selectedMapId.isBlank()
+                || DEFAULT_MAP_ID.equalsIgnoreCase(snapshot.selectedMapId);
+        return defaultSelection
+                && nearlyEqual(snapshot.voidY, defaults.voidY)
+                && nearlyEqual(snapshot.blockBreakDelaySeconds, defaults.blockBreakDelaySeconds)
+                && snapshot.minPlayers == defaults.minPlayers
+                && snapshot.minPlayersTimeSeconds == defaults.minPlayersTimeSeconds
+                && snapshot.optimalPlayers == defaults.optimalPlayers
+                && snapshot.optimalPlayersTimeSeconds == defaults.optimalPlayersTimeSeconds
+                && snapshot.blinkDistanceBlocks == defaults.blinkDistanceBlocks;
     }
 
     private static boolean nearlyEqual(double a, double b) {
