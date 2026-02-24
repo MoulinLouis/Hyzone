@@ -13,6 +13,7 @@ import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCu
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.runorfall.data.RunOrFallPlayerStats;
 import io.hyvexa.runorfall.manager.RunOrFallStatsStore;
+import io.hyvexa.runorfall.util.RunOrFallUtils;
 
 import javax.annotation.Nonnull;
 import java.util.Locale;
@@ -67,15 +68,7 @@ public class RunOrFallStatsPage extends InteractiveCustomUIPage<ButtonEventData>
         commandBuilder.set("#StatsWinrateValue.Text",
                 String.format(Locale.US, "%.2f%%", stats.getWinRatePercent()));
         commandBuilder.set("#StatsBestStreakValue.Text", String.valueOf(stats.getBestWinStreak()));
-        commandBuilder.set("#StatsLongestTimeValue.Text", formatDuration(stats.getLongestSurvivedMs()));
+        commandBuilder.set("#StatsLongestTimeValue.Text", RunOrFallUtils.formatDuration(stats.getLongestSurvivedMs()));
     }
 
-    private static String formatDuration(long millis) {
-        long safeMillis = Math.max(0L, millis);
-        long totalSeconds = safeMillis / 1000L;
-        long minutes = totalSeconds / 60L;
-        long seconds = totalSeconds % 60L;
-        long centiseconds = (safeMillis % 1000L) / 10L;
-        return String.format(Locale.US, "%02d:%02d.%02d", minutes, seconds, centiseconds);
-    }
 }

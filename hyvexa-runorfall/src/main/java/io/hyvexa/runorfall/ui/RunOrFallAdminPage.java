@@ -14,7 +14,6 @@ import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
-import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
@@ -22,10 +21,12 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.runorfall.data.BlockSelection;
 import io.hyvexa.runorfall.data.RunOrFallLocation;
 import io.hyvexa.runorfall.data.RunOrFallPlatform;
 import io.hyvexa.runorfall.manager.RunOrFallConfigStore;
 import io.hyvexa.runorfall.manager.RunOrFallGameManager;
+import io.hyvexa.runorfall.util.RunOrFallUtils;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -59,7 +60,7 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
     private static final String BUTTON_MAP_DELETE = "MapDelete";
     private static final String BUTTON_MAP_SELECT_PREFIX = "MapSelect:";
 
-    private static final Map<UUID, Selection> SELECTIONS = new ConcurrentHashMap<>();
+    private static final Map<UUID, BlockSelection> SELECTIONS = new ConcurrentHashMap<>();
 
     private final RunOrFallConfigStore configStore;
     private final RunOrFallGameManager gameManager;
@@ -187,7 +188,7 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
         if (player == null) {
             return;
         }
-        RunOrFallLocation location = readLocation(ref, store);
+        RunOrFallLocation location = RunOrFallUtils.readLocation(ref, store);
         if (location == null) {
             player.sendMessage(Message.raw(PREFIX + "Could not read your position."));
             return;
@@ -254,7 +255,7 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
         if (player == null) {
             return;
         }
-        RunOrFallLocation spawn = readLocation(ref, store);
+        RunOrFallLocation spawn = RunOrFallUtils.readLocation(ref, store);
         if (spawn == null) {
             player.sendMessage(Message.raw(PREFIX + "Could not read your position."));
             return;
@@ -280,12 +281,12 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
         if (player == null || playerRef == null || playerRef.getUuid() == null) {
             return;
         }
-        Vector3i pos = readCurrentBlock(ref, store);
+        Vector3i pos = RunOrFallUtils.readCurrentBlock(ref, store);
         if (pos == null) {
             player.sendMessage(Message.raw(PREFIX + "Could not read your block position."));
             return;
         }
-        Selection selection = SELECTIONS.computeIfAbsent(playerRef.getUuid(), ignored -> new Selection());
+        BlockSelection selection = SELECTIONS.computeIfAbsent(playerRef.getUuid(), ignored -> new BlockSelection());
         selection.pos1 = pos;
         player.sendMessage(Message.raw(PREFIX + "pos1 = " + formatVector(pos)));
         sendRefresh(ref, store);
@@ -297,12 +298,12 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
         if (player == null || playerRef == null || playerRef.getUuid() == null) {
             return;
         }
-        Vector3i pos = readCurrentBlock(ref, store);
+        Vector3i pos = RunOrFallUtils.readCurrentBlock(ref, store);
         if (pos == null) {
             player.sendMessage(Message.raw(PREFIX + "Could not read your block position."));
             return;
         }
-        Selection selection = SELECTIONS.computeIfAbsent(playerRef.getUuid(), ignored -> new Selection());
+        BlockSelection selection = SELECTIONS.computeIfAbsent(playerRef.getUuid(), ignored -> new BlockSelection());
         selection.pos2 = pos;
         player.sendMessage(Message.raw(PREFIX + "pos2 = " + formatVector(pos)));
         sendRefresh(ref, store);
@@ -314,7 +315,7 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
         if (player == null || playerRef == null || playerRef.getUuid() == null) {
             return;
         }
-        Selection selection = SELECTIONS.get(playerRef.getUuid());
+        BlockSelection selection = SELECTIONS.get(playerRef.getUuid());
         if (selection == null || selection.pos1 == null || selection.pos2 == null) {
             player.sendMessage(Message.raw(PREFIX + "Set pos1 and pos2 first."));
             return;
@@ -552,7 +553,7 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
     private void populateFields(Ref<EntityStore> ref, Store<EntityStore> store, UICommandBuilder commandBuilder) {
         PlayerRef playerRef = resolvePlayerRef(ref, store);
         UUID playerId = playerRef != null ? playerRef.getUuid() : null;
-        Selection selection = playerId != null ? SELECTIONS.get(playerId) : null;
+        BlockSelection selection = playerId != null ? SELECTIONS.get(playerId) : null;
 
         List<RunOrFallLocation> spawns = configStore.getSpawns();
         List<RunOrFallPlatform> platforms = configStore.getPlatforms();
@@ -657,31 +658,6 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
         return store.getExternalData().getWorld();
     }
 
-    private static RunOrFallLocation readLocation(Ref<EntityStore> ref, Store<EntityStore> store) {
-        TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
-        if (transform == null || transform.getPosition() == null) {
-            return null;
-        }
-        Vector3d position = transform.getPosition();
-        Vector3f rotation = transform.getRotation();
-        float rotX = rotation != null ? rotation.getX() : 0f;
-        float rotY = rotation != null ? rotation.getY() : 0f;
-        float rotZ = rotation != null ? rotation.getZ() : 0f;
-        return new RunOrFallLocation(position.getX(), position.getY(), position.getZ(), rotX, rotY, rotZ);
-    }
-
-    private static Vector3i readCurrentBlock(Ref<EntityStore> ref, Store<EntityStore> store) {
-        TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
-        if (transform == null || transform.getPosition() == null) {
-            return null;
-        }
-        Vector3d position = transform.getPosition();
-        int x = (int) Math.floor(position.getX());
-        int y = (int) Math.floor(position.getY() - 0.2d);
-        int z = (int) Math.floor(position.getZ());
-        return new Vector3i(x, y, z);
-    }
-
     private static String formatDouble(double value) {
         return String.format(Locale.US, "%.2f", value);
     }
@@ -702,11 +678,6 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
 
     private static String formatVector(Vector3i pos) {
         return pos.x + ", " + pos.y + ", " + pos.z;
-    }
-
-    private static final class Selection {
-        private Vector3i pos1;
-        private Vector3i pos2;
     }
 
     public static class AdminData {

@@ -4,11 +4,9 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
-import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.protocol.InteractionType;
-import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
@@ -18,6 +16,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.util.ModeGate;
 import io.hyvexa.runorfall.HyvexaRunOrFallPlugin;
+import io.hyvexa.runorfall.util.RunOrFallUtils;
 
 import javax.annotation.Nonnull;
 import java.util.UUID;
@@ -41,7 +40,6 @@ public class RunOrFallBlinkInteraction extends SimpleInteraction {
             -BLINK_DIAGONAL_RADIUS, -BLINK_DIAGONAL_RADIUS
     };
     private static final double[] BLINK_HEIGHT_OFFSETS = new double[] {0.10d, 0.90d, 1.70d};
-    private static final int AIR_BLOCK_ID = resolveAirBlockId();
 
     public static final BuilderCodec<RunOrFallBlinkInteraction> CODEC =
             BuilderCodec.builder(RunOrFallBlinkInteraction.class, RunOrFallBlinkInteraction::new).build();
@@ -154,7 +152,7 @@ public class RunOrFallBlinkInteraction extends SimpleInteraction {
             int blockZ = (int) Math.floor(sampleZ);
             for (double yOffset : BLINK_HEIGHT_OFFSETS) {
                 int blockY = (int) Math.floor(position.getY() + yOffset);
-                Integer blockId = readBlockId(world, blockX, blockY, blockZ);
+                Integer blockId = RunOrFallUtils.readBlockId(world, blockX, blockY, blockZ);
                 if (isSolid(blockId)) {
                     return true;
                 }
@@ -163,25 +161,8 @@ public class RunOrFallBlinkInteraction extends SimpleInteraction {
         return false;
     }
 
-    private Integer readBlockId(World world, int x, int y, int z) {
-        long chunkIndex = ChunkUtil.indexChunkFromBlock(x, z);
-        var chunk = world.getChunkIfInMemory(chunkIndex);
-        if (chunk == null) {
-            chunk = world.loadChunkIfInMemory(chunkIndex);
-        }
-        if (chunk == null) {
-            return null;
-        }
-        return chunk.getBlock(x, y, z);
-    }
-
     private boolean isSolid(Integer blockId) {
-        return blockId == null || blockId != AIR_BLOCK_ID;
-    }
-
-    private static int resolveAirBlockId() {
-        int resolved = BlockType.getAssetMap().getIndex("Air");
-        return resolved >= 0 ? resolved : 0;
+        return blockId == null || blockId != RunOrFallUtils.AIR_BLOCK_ID;
     }
 
     private static double distanceSq(Vector3d a, Vector3d b) {
