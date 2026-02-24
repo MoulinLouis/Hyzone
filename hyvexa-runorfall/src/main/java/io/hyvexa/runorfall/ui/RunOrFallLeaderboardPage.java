@@ -17,6 +17,7 @@ import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.ui.PaginationState;
 import io.hyvexa.runorfall.data.RunOrFallPlayerStats;
 import io.hyvexa.runorfall.manager.RunOrFallStatsStore;
+import io.hyvexa.runorfall.util.RunOrFallUtils;
 
 import javax.annotation.Nonnull;
 import java.util.Comparator;
@@ -200,15 +201,6 @@ public class RunOrFallLeaderboardPage extends InteractiveCustomUIPage<RunOrFallL
         commandBuilder.set("#CategoryHint.Text", selectedCategory.hintText);
     }
 
-    private static String formatDuration(long millis) {
-        long safeMillis = Math.max(0L, millis);
-        long totalSeconds = safeMillis / 1000L;
-        long minutes = totalSeconds / 60L;
-        long seconds = totalSeconds % 60L;
-        long centiseconds = (safeMillis % 1000L) / 10L;
-        return String.format(Locale.US, "%02d:%02d.%02d", minutes, seconds, centiseconds);
-    }
-
     private enum LeaderboardCategory {
         TOTAL_WINS(BUTTON_CATEGORY_TOTAL_WINS, "Ranked by total wins.") {
             @Override
@@ -261,7 +253,7 @@ public class RunOrFallLeaderboardPage extends InteractiveCustomUIPage<RunOrFallL
 
             @Override
             String formatStats(LeaderboardRow row) {
-                return formatDuration(row.longestSurvivedMs());
+                return RunOrFallUtils.formatDuration(row.longestSurvivedMs());
             }
 
             @Override

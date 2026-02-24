@@ -11,7 +11,6 @@ import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractAsyncCommand;
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -19,11 +18,13 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.util.CommandUtils;
 import io.hyvexa.common.util.ModeGate;
 import io.hyvexa.common.util.PermissionUtils;
+import io.hyvexa.runorfall.data.BlockSelection;
 import io.hyvexa.runorfall.data.RunOrFallLocation;
 import io.hyvexa.runorfall.data.RunOrFallPlatform;
 import io.hyvexa.runorfall.manager.RunOrFallConfigStore;
 import io.hyvexa.runorfall.manager.RunOrFallGameManager;
 import io.hyvexa.runorfall.ui.RunOrFallAdminPage;
+import io.hyvexa.runorfall.util.RunOrFallUtils;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -38,7 +39,7 @@ public class RunOrFallCommand extends AbstractAsyncCommand {
 
     private final RunOrFallConfigStore configStore;
     private final RunOrFallGameManager gameManager;
-    private final Map<UUID, Selection> selections = new ConcurrentHashMap<>();
+    private final Map<UUID, BlockSelection> selections = new ConcurrentHashMap<>();
 
     public RunOrFallCommand(RunOrFallConfigStore configStore, RunOrFallGameManager gameManager) {
         super("rof", "RunOrFall lobby and admin commands");
@@ -144,7 +145,7 @@ public class RunOrFallCommand extends AbstractAsyncCommand {
                 if (!requireOp(player)) {
                     return;
                 }
-                RunOrFallLocation location = readLocation(ref, store);
+                RunOrFallLocation location = RunOrFallUtils.readLocation(ref, store);
                 if (location == null) {
                     player.sendMessage(Message.raw(PREFIX + "Could not read your position."));
                     return;
@@ -178,7 +179,7 @@ public class RunOrFallCommand extends AbstractAsyncCommand {
                 if (!requireOp(player)) {
                     return;
                 }
-                RunOrFallLocation spawn = readLocation(ref, store);
+                RunOrFallLocation spawn = RunOrFallUtils.readLocation(ref, store);
                 if (spawn == null) {
                     player.sendMessage(Message.raw(PREFIX + "Could not read your position."));
                     return;
@@ -223,12 +224,12 @@ public class RunOrFallCommand extends AbstractAsyncCommand {
                 if (!requireOp(player)) {
                     return;
                 }
-                Vector3i pos = readCurrentBlock(ref, store);
+                Vector3i pos = RunOrFallUtils.readCurrentBlock(ref, store);
                 if (pos == null) {
                     player.sendMessage(Message.raw(PREFIX + "Could not read your block position."));
                     return;
                 }
-                Selection selection = selections.computeIfAbsent(playerId, ignored -> new Selection());
+                BlockSelection selection = selections.computeIfAbsent(playerId, ignored -> new BlockSelection());
                 selection.pos1 = pos;
                 player.sendMessage(Message.raw(PREFIX + "pos1 = " + pos.x + ", " + pos.y + ", " + pos.z));
             }
@@ -236,12 +237,12 @@ public class RunOrFallCommand extends AbstractAsyncCommand {
                 if (!requireOp(player)) {
                     return;
                 }
-                Vector3i pos = readCurrentBlock(ref, store);
+                Vector3i pos = RunOrFallUtils.readCurrentBlock(ref, store);
                 if (pos == null) {
                     player.sendMessage(Message.raw(PREFIX + "Could not read your block position."));
                     return;
                 }
-                Selection selection = selections.computeIfAbsent(playerId, ignored -> new Selection());
+                BlockSelection selection = selections.computeIfAbsent(playerId, ignored -> new BlockSelection());
                 selection.pos2 = pos;
                 player.sendMessage(Message.raw(PREFIX + "pos2 = " + pos.x + ", " + pos.y + ", " + pos.z));
             }
@@ -249,7 +250,7 @@ public class RunOrFallCommand extends AbstractAsyncCommand {
                 if (!requireOp(player)) {
                     return;
                 }
-                Selection selection = selections.get(playerId);
+                BlockSelection selection = selections.get(playerId);
                 if (selection == null || selection.pos1 == null || selection.pos2 == null) {
                     player.sendMessage(Message.raw(PREFIX + "Set pos1 and pos2 first."));
                     return;
@@ -414,31 +415,6 @@ public class RunOrFallCommand extends AbstractAsyncCommand {
                 + ", lobbySet=" + (configStore.getLobby() != null)));
     }
 
-    private static RunOrFallLocation readLocation(Ref<EntityStore> ref, Store<EntityStore> store) {
-        TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
-        if (transform == null || transform.getPosition() == null) {
-            return null;
-        }
-        Vector3d position = transform.getPosition();
-        Vector3f rotation = transform.getRotation();
-        float rotX = rotation != null ? rotation.getX() : 0f;
-        float rotY = rotation != null ? rotation.getY() : 0f;
-        float rotZ = rotation != null ? rotation.getZ() : 0f;
-        return new RunOrFallLocation(position.getX(), position.getY(), position.getZ(), rotX, rotY, rotZ);
-    }
-
-    private static Vector3i readCurrentBlock(Ref<EntityStore> ref, Store<EntityStore> store) {
-        TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
-        if (transform == null || transform.getPosition() == null) {
-            return null;
-        }
-        Vector3d position = transform.getPosition();
-        int x = (int) Math.floor(position.getX());
-        int y = (int) Math.floor(position.getY() - 0.2d);
-        int z = (int) Math.floor(position.getZ());
-        return new Vector3i(x, y, z);
-    }
-
     private static boolean requireOp(Player player) {
         if (PermissionUtils.isOp(player)) {
             return true;
@@ -455,8 +431,4 @@ public class RunOrFallCommand extends AbstractAsyncCommand {
         player.sendMessage(Message.raw(PREFIX + "Legacy admin commands remain available if needed."));
     }
 
-    private static final class Selection {
-        private Vector3i pos1;
-        private Vector3i pos2;
-    }
 }

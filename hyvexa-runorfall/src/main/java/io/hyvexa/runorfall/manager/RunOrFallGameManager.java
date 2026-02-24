@@ -19,6 +19,7 @@ import io.hyvexa.runorfall.data.RunOrFallConfig;
 import io.hyvexa.runorfall.data.RunOrFallLocation;
 import io.hyvexa.runorfall.data.RunOrFallMapConfig;
 import io.hyvexa.runorfall.data.RunOrFallPlatform;
+import io.hyvexa.runorfall.util.RunOrFallUtils;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -67,13 +68,10 @@ public class RunOrFallGameManager {
     private volatile World activeWorld;
     private volatile long blockBreakEnabledAtMs;
     private volatile int blockBreakCountdownLastAnnounced = -1;
-    private final int airBlockId;
 
     public RunOrFallGameManager(RunOrFallConfigStore configStore, RunOrFallStatsStore statsStore) {
         this.configStore = configStore;
         this.statsStore = statsStore;
-        int resolvedAir = BlockType.getAssetMap().getIndex("Air");
-        this.airBlockId = resolvedAir >= 0 ? resolvedAir : 0;
     }
 
     public synchronized boolean isJoined(UUID playerId) {
@@ -158,12 +156,8 @@ public class RunOrFallGameManager {
         if (playerId == null) {
             return;
         }
-        boolean wasInLobby = lobbyPlayers.remove(playerId);
-        boolean wasAlive = alivePlayers.remove(playerId);
-        playerLastFootBlock.remove(playerId);
-        brokenBlocksByPlayer.remove(playerId);
-        long survivedMs = takeSurvivedMs(playerId);
-        if (!wasInLobby && !wasAlive) {
+        PlayerRemovalResult result = removePlayerInternal(playerId);
+        if (!result.wasInLobby() && !result.wasAlive()) {
             return;
         }
         if (notify) {
@@ -175,8 +169,8 @@ public class RunOrFallGameManager {
         if (state == GameState.COUNTDOWN && lobbyPlayers.size() < countdownRequiredPlayers) {
             cancelCountdownInternal("Countdown cancelled: not enough players.");
         }
-        if (state == GameState.RUNNING && wasAlive) {
-            statsStore.recordLoss(playerId, resolvePlayerName(playerId), survivedMs);
+        if (state == GameState.RUNNING && result.wasAlive()) {
+            statsStore.recordLoss(playerId, resolvePlayerName(playerId), result.survivedMs());
             broadcastEliminationInternal(playerId, "left the round");
             checkWinnerInternal();
         }
@@ -234,15 +228,7 @@ public class RunOrFallGameManager {
         } else {
             restoreAllBlocksInternal();
         }
-        state = GameState.IDLE;
-        countdownRemaining = FORCED_COUNTDOWN_SECONDS;
-        countdownRequiredPlayers = 2;
-        countdownOptimalPlayers = 0;
-        countdownOptimalTimeSeconds = 0;
-        countdownForced = false;
-        soloTestRound = false;
-        blockBreakEnabledAtMs = 0L;
-        blockBreakCountdownLastAnnounced = -1;
+        resetCountdownState();
         alivePlayers.clear();
         pendingBlocks.clear();
         playerLastFootBlock.clear();
@@ -257,19 +243,15 @@ public class RunOrFallGameManager {
         if (playerId == null) {
             return;
         }
-        boolean wasInLobby = lobbyPlayers.remove(playerId);
-        boolean wasAlive = alivePlayers.remove(playerId);
-        playerLastFootBlock.remove(playerId);
-        brokenBlocksByPlayer.remove(playerId);
-        long survivedMs = takeSurvivedMs(playerId);
-        if (!wasInLobby && !wasAlive) {
+        PlayerRemovalResult result = removePlayerInternal(playerId);
+        if (!result.wasInLobby() && !result.wasAlive()) {
             return;
         }
         if (state == GameState.COUNTDOWN && lobbyPlayers.size() < countdownRequiredPlayers) {
             cancelCountdownInternal("Countdown cancelled: not enough players.");
         }
-        if (state == GameState.RUNNING && wasAlive) {
-            statsStore.recordLoss(playerId, resolvePlayerName(playerId), survivedMs);
+        if (state == GameState.RUNNING && result.wasAlive()) {
+            statsStore.recordLoss(playerId, resolvePlayerName(playerId), result.survivedMs());
             broadcastEliminationInternal(playerId, "disconnected");
             checkWinnerInternal();
         }
@@ -278,6 +260,17 @@ public class RunOrFallGameManager {
         if (lobbyPlayers.isEmpty()) {
             activeWorld = null;
         }
+    }
+
+    private record PlayerRemovalResult(boolean wasInLobby, boolean wasAlive, long survivedMs) {}
+
+    private PlayerRemovalResult removePlayerInternal(UUID playerId) {
+        boolean wasInLobby = lobbyPlayers.remove(playerId);
+        boolean wasAlive = alivePlayers.remove(playerId);
+        playerLastFootBlock.remove(playerId);
+        brokenBlocksByPlayer.remove(playerId);
+        long survivedMs = takeSurvivedMs(playerId);
+        return new PlayerRemovalResult(wasInLobby, wasAlive, survivedMs);
     }
 
     private void startForcedCountdownIfPossible(boolean allowSoloStart) {
@@ -547,15 +540,7 @@ public class RunOrFallGameManager {
         alivePlayers.clear();
         playerLastFootBlock.clear();
         roundStartTimesMs.clear();
-        state = GameState.IDLE;
-        countdownRemaining = FORCED_COUNTDOWN_SECONDS;
-        countdownRequiredPlayers = 2;
-        countdownOptimalPlayers = 0;
-        countdownOptimalTimeSeconds = 0;
-        countdownForced = false;
-        soloTestRound = false;
-        blockBreakEnabledAtMs = 0L;
-        blockBreakCountdownLastAnnounced = -1;
+        resetCountdownState();
         clearCountdownHudForLobbyPlayers();
         resetBrokenBlocksForLobbyPlayers();
         refreshLobbyHotbars();
@@ -565,14 +550,7 @@ public class RunOrFallGameManager {
 
     private void cancelCountdownInternal(String reason) {
         cancelCountdownTask();
-        state = GameState.IDLE;
-        countdownRemaining = FORCED_COUNTDOWN_SECONDS;
-        countdownRequiredPlayers = 2;
-        countdownOptimalPlayers = 0;
-        countdownOptimalTimeSeconds = 0;
-        countdownForced = false;
-        blockBreakEnabledAtMs = 0L;
-        blockBreakCountdownLastAnnounced = -1;
+        resetCountdownState();
         clearCountdownHudForLobbyPlayers();
         resetBrokenBlocksForLobbyPlayers();
         broadcastLobby(reason);
@@ -600,8 +578,8 @@ public class RunOrFallGameManager {
         if (world == null) {
             return false;
         }
-        Integer currentId = readBlockId(world, x, y, z);
-        if (currentId == null || currentId == airBlockId) {
+        Integer currentId = RunOrFallUtils.readBlockId(world, x, y, z);
+        if (currentId == null || currentId == RunOrFallUtils.AIR_BLOCK_ID) {
             return false;
         }
         long delayMs = Math.max(0L, Math.round(delaySeconds * 1000.0d));
@@ -625,15 +603,15 @@ public class RunOrFallGameManager {
             if (pending == null || now < pending.dueAtMs) {
                 continue;
             }
-            Integer currentId = readBlockId(world, key.x, key.y, key.z);
+            Integer currentId = RunOrFallUtils.readBlockId(world, key.x, key.y, key.z);
             if (currentId == null) {
                 continue;
             }
-            if (currentId == airBlockId) {
+            if (currentId == RunOrFallUtils.AIR_BLOCK_ID) {
                 pendingBlocks.remove(key);
                 continue;
             }
-            if (writeBlockId(world, key.x, key.y, key.z, airBlockId)) {
+            if (writeBlockId(world, key.x, key.y, key.z, RunOrFallUtils.AIR_BLOCK_ID)) {
                 removedBlocks.put(key, pending.originalBlockId);
                 pendingBlocks.remove(key);
                 incrementBrokenBlocksCountInternal(pending.playerId);
@@ -660,9 +638,9 @@ public class RunOrFallGameManager {
                 && previousKey.y == blockY
                 && previousKey.x >= minX && previousKey.x <= maxX
                 && previousKey.z >= minZ && previousKey.z <= maxZ) {
-            Integer previousBlockId = readBlockId(world, previousKey.x, previousKey.y, previousKey.z);
+            Integer previousBlockId = RunOrFallUtils.readBlockId(world, previousKey.x, previousKey.y, previousKey.z);
             if (previousBlockId != null
-                    && previousBlockId != airBlockId
+                    && previousBlockId != RunOrFallUtils.AIR_BLOCK_ID
                     && isInsidePlatform(platforms, previousKey.x, previousKey.y, previousKey.z, previousBlockId)) {
                 return;
             }
@@ -676,8 +654,8 @@ public class RunOrFallGameManager {
                 if (removedBlocks.containsKey(key)) {
                     continue;
                 }
-                Integer currentId = readBlockId(world, x, blockY, z);
-                if (currentId == null || currentId == airBlockId) {
+                Integer currentId = RunOrFallUtils.readBlockId(world, x, blockY, z);
+                if (currentId == null || currentId == RunOrFallUtils.AIR_BLOCK_ID) {
                     continue;
                 }
                 if (!isInsidePlatform(platforms, x, blockY, z, currentId)) {
@@ -807,18 +785,6 @@ public class RunOrFallGameManager {
             }
         }
         return config.maps.get(0);
-    }
-
-    private Integer readBlockId(World world, int x, int y, int z) {
-        long chunkIndex = ChunkUtil.indexChunkFromBlock(x, z);
-        var chunk = world.getChunkIfInMemory(chunkIndex);
-        if (chunk == null) {
-            chunk = world.loadChunkIfInMemory(chunkIndex);
-        }
-        if (chunk == null) {
-            return null;
-        }
-        return chunk.getBlock(x, y, z);
     }
 
     private boolean writeBlockId(World world, int x, int y, int z, int blockId) {
@@ -1047,6 +1013,18 @@ public class RunOrFallGameManager {
             return;
         }
         broadcastLobby("Elimination: " + eliminatedName + " " + reason + ". " + alivePlayers.size() + " remaining.");
+    }
+
+    private void resetCountdownState() {
+        state = GameState.IDLE;
+        countdownRemaining = FORCED_COUNTDOWN_SECONDS;
+        countdownRequiredPlayers = 2;
+        countdownOptimalPlayers = 0;
+        countdownOptimalTimeSeconds = 0;
+        countdownForced = false;
+        soloTestRound = false;
+        blockBreakEnabledAtMs = 0L;
+        blockBreakCountdownLastAnnounced = -1;
     }
 
     private void cancelCountdownTask() {
