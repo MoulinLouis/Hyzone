@@ -109,23 +109,23 @@ public class RunOrFallLeaderboardPage extends InteractiveCustomUIPage<RunOrFallL
     private void bindEvents(UIEventBuilder uiEventBuilder) {
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CloseButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE), false);
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#LeaderboardSearchField",
-                EventData.of(LeaderboardData.KEY_SEARCH, "#LeaderboardSearchField.Value"), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#SearchField",
+                EventData.of(LeaderboardData.KEY_SEARCH, "#SearchField.Value"), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#PrevPageButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_PREV), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#NextPageButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_NEXT), false);
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CategoryTotalWinsToggle",
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#TabWins",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CATEGORY_TOTAL_WINS), false);
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CategoryBestStreakToggle",
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#TabStreak",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CATEGORY_BEST_STREAK), false);
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CategoryLongestSurvivedToggle",
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#TabLongest",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CATEGORY_LONGEST_SURVIVED), false);
     }
 
     private void buildLeaderboard(UICommandBuilder commandBuilder) {
         commandBuilder.clear("#LeaderboardCards");
-        commandBuilder.set("#LeaderboardSearchField.Value", searchText);
+        commandBuilder.set("#SearchField.Value", searchText);
         applyCategoryUi(commandBuilder);
         if (statsStore == null) {
             commandBuilder.set("#EmptyText.Text", "RunOrFall stats unavailable.");
@@ -169,7 +169,7 @@ public class RunOrFallLeaderboardPage extends InteractiveCustomUIPage<RunOrFallL
             LeaderboardRow row = filtered.get(i);
             commandBuilder.append("#LeaderboardCards", "Pages/RunOrFall_LeaderboardEntry.ui");
             String prefix = "#LeaderboardCards[" + index + "]";
-            commandBuilder.set(prefix + " #Rank.Text", String.valueOf(row.rank));
+            commandBuilder.set(prefix + " #Rank.Text", "#" + row.rank);
             commandBuilder.set(prefix + " #PlayerName.Text", row.name);
             boolean totalWinsCategory = selectedCategory == LeaderboardCategory.TOTAL_WINS;
             commandBuilder.set(prefix + " #StatsGeneric.Visible", !totalWinsCategory);
@@ -192,17 +192,35 @@ public class RunOrFallLeaderboardPage extends InteractiveCustomUIPage<RunOrFallL
     }
 
     private void applyCategoryUi(UICommandBuilder commandBuilder) {
-        commandBuilder.set("#CategoryTotalWinsCheckboxMark.Visible",
-                selectedCategory == LeaderboardCategory.TOTAL_WINS);
-        commandBuilder.set("#CategoryBestStreakCheckboxMark.Visible",
-                selectedCategory == LeaderboardCategory.BEST_WIN_STREAK);
-        commandBuilder.set("#CategoryLongestSurvivedCheckboxMark.Visible",
-                selectedCategory == LeaderboardCategory.LONGEST_TIME_SURVIVED);
-        commandBuilder.set("#CategoryHint.Text", selectedCategory.hintText);
+        boolean isWins = selectedCategory == LeaderboardCategory.TOTAL_WINS;
+        boolean isStreak = selectedCategory == LeaderboardCategory.BEST_WIN_STREAK;
+        boolean isTime = selectedCategory == LeaderboardCategory.LONGEST_TIME_SURVIVED;
+
+        // Total Wins tab
+        commandBuilder.set("#TabWinsActiveBg.Visible", isWins);
+        commandBuilder.set("#TabWinsInactiveBg.Visible", !isWins);
+        commandBuilder.set("#TabWinsAccentActive.Visible", isWins);
+        commandBuilder.set("#TabWinsAccentInactive.Visible", !isWins);
+        commandBuilder.set("#TabWinsLabel.Style.TextColor", isWins ? "#f0f4f8" : "#9fb0ba");
+
+        // Best Streak tab
+        commandBuilder.set("#TabStreakActiveBg.Visible", isStreak);
+        commandBuilder.set("#TabStreakInactiveBg.Visible", !isStreak);
+        commandBuilder.set("#TabStreakAccentActive.Visible", isStreak);
+        commandBuilder.set("#TabStreakAccentInactive.Visible", !isStreak);
+        commandBuilder.set("#TabStreakLabel.Style.TextColor", isStreak ? "#f0f4f8" : "#9fb0ba");
+
+        // Longest Survived tab
+        commandBuilder.set("#TabLongestActiveBg.Visible", isTime);
+        commandBuilder.set("#TabLongestInactiveBg.Visible", !isTime);
+        commandBuilder.set("#TabLongestAccentActive.Visible", isTime);
+        commandBuilder.set("#TabLongestAccentInactive.Visible", !isTime);
+        commandBuilder.set("#TabLongestLabel.Style.TextColor", isTime ? "#f0f4f8" : "#9fb0ba");
+
     }
 
     private enum LeaderboardCategory {
-        TOTAL_WINS(BUTTON_CATEGORY_TOTAL_WINS, "Ranked by total wins.") {
+        TOTAL_WINS(BUTTON_CATEGORY_TOTAL_WINS) {
             @Override
             Comparator<LeaderboardRow> comparator() {
                 return Comparator.comparingInt(LeaderboardRow::wins).reversed()
@@ -222,7 +240,7 @@ public class RunOrFallLeaderboardPage extends InteractiveCustomUIPage<RunOrFallL
                 return COLOR_STATS_DEFAULT;
             }
         },
-        BEST_WIN_STREAK(BUTTON_CATEGORY_BEST_STREAK, "Ranked by best win streak.") {
+        BEST_WIN_STREAK(BUTTON_CATEGORY_BEST_STREAK) {
             @Override
             Comparator<LeaderboardRow> comparator() {
                 return Comparator.comparingInt(LeaderboardRow::bestWinStreak).reversed()
@@ -242,7 +260,7 @@ public class RunOrFallLeaderboardPage extends InteractiveCustomUIPage<RunOrFallL
                 return COLOR_STATS_BEST_STREAK;
             }
         },
-        LONGEST_TIME_SURVIVED(BUTTON_CATEGORY_LONGEST_SURVIVED, "Ranked by longest time alive.") {
+        LONGEST_TIME_SURVIVED(BUTTON_CATEGORY_LONGEST_SURVIVED) {
             @Override
             Comparator<LeaderboardRow> comparator() {
                 return Comparator.comparingLong(LeaderboardRow::longestSurvivedMs).reversed()
@@ -263,11 +281,9 @@ public class RunOrFallLeaderboardPage extends InteractiveCustomUIPage<RunOrFallL
         };
 
         private final String buttonId;
-        private final String hintText;
 
-        LeaderboardCategory(String buttonId, String hintText) {
+        LeaderboardCategory(String buttonId) {
             this.buttonId = buttonId;
-            this.hintText = hintText;
         }
 
         abstract Comparator<LeaderboardRow> comparator();

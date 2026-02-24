@@ -262,16 +262,17 @@ $C.@PageOverlay {
           }
 
           Group #PlayerVexaRow {
-            Anchor: (Left: 0, Right: 0, Top: 6, Height: 20);
+            Anchor: (Left: 0, Right: 0, Top: 6, Height: 32);
             LayoutMode: Left;
 
             Group #VexaIcon {
-              Anchor: (Width: 16, Height: 16);
+              Anchor: (Width: 26, Height: 26, Top: 3);
               Background: (TexturePath: "../Textures/vexa.png");
             }
-            Group { Anchor: (Width: 6); }
+            Group { Anchor: (Width: 8); }
             Label #PlayerVexaValue {
-              Style: (FontSize: 14, TextColor: #62d96b, RenderBold: true);
+              Anchor: (Height: 30);
+              Style: (FontSize: 22, TextColor: #22c55e, RenderBold: true, VerticalAlignment: Center);
               Text: "0";
             }
           }
