@@ -19,6 +19,7 @@ import io.hyvexa.common.util.HylogramsBridge;
 import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.parkour.ParkourConstants;
+import io.hyvexa.core.economy.VexaStore;
 import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.data.PlayerCountStore;
 import io.hyvexa.parkour.data.ProgressStore;
@@ -81,11 +82,18 @@ public class ParkourCommand extends AbstractAsyncCommand {
 
     private void handleConsoleCommand(CommandContext ctx) {
         String[] tokens = CommandUtils.tokenize(ctx);
-        if (tokens.length >= 2 && tokens[0].equalsIgnoreCase("admin") && tokens[1].equalsIgnoreCase("rank")) {
-            handleAdminRank(ctx, null, tokens);
-            return;
+        if (tokens.length >= 2 && tokens[0].equalsIgnoreCase("admin")) {
+            if (tokens[1].equalsIgnoreCase("rank")) {
+                handleAdminRank(ctx, null, tokens);
+                return;
+            }
+            if (tokens[1].equalsIgnoreCase("vexa")) {
+                handleAdminVexa(ctx, null, tokens);
+                return;
+            }
         }
         ctx.sendMessage(Message.raw("Usage: /pk admin rank <give|remove|broadcast> <player|uuid> <vip|founder>"));
+        ctx.sendMessage(Message.raw("Usage: /pk admin vexa give <player|uuid> <amount>"));
     }
 
     private void handleCommand(CommandContext ctx, Player player, Ref<EntityStore> ref, Store<EntityStore> store, World world) {
@@ -120,6 +128,10 @@ public class ParkourCommand extends AbstractAsyncCommand {
         if (tokens[0].equalsIgnoreCase("admin")) {
             if (tokens.length >= 2 && tokens[1].equalsIgnoreCase("rank")) {
                 handleAdminRank(ctx, player, tokens);
+                return;
+            }
+            if (tokens.length >= 2 && tokens[1].equalsIgnoreCase("vexa")) {
+                handleAdminVexa(ctx, player, tokens);
                 return;
             }
             if (tokens.length >= 3 && tokens[1].equalsIgnoreCase("hologram")
@@ -275,6 +287,42 @@ public class ParkourCommand extends AbstractAsyncCommand {
         }
 
         broadcastSupporterMessage(resolved.name, isFounder);
+    }
+
+    private void handleAdminVexa(CommandContext ctx, Player player, String[] tokens) {
+        if (player != null && !PermissionUtils.isOp(player)) {
+            ctx.sendMessage(MESSAGE_OP_REQUIRED);
+            return;
+        }
+        if (tokens.length < 5) {
+            ctx.sendMessage(Message.raw("Usage: /pk admin vexa give <player|uuid> <amount>"));
+            return;
+        }
+        String action = tokens[2].toLowerCase(Locale.ROOT);
+        if (!"give".equals(action)) {
+            ctx.sendMessage(Message.raw("Unknown action: " + action + ". Use give."));
+            return;
+        }
+        String target = tokens[3];
+        long amount;
+        try {
+            amount = Long.parseLong(tokens[4]);
+        } catch (NumberFormatException e) {
+            ctx.sendMessage(Message.raw("Invalid amount: " + tokens[4]).color("#ff4444"));
+            return;
+        }
+        if (amount <= 0) {
+            ctx.sendMessage(Message.raw("Amount must be positive.").color("#ff4444"));
+            return;
+        }
+
+        ResolvedPlayer resolved = resolvePlayer(ctx, target);
+        if (resolved == null) {
+            return;
+        }
+
+        long newBalance = VexaStore.getInstance().addVexa(resolved.playerId, amount);
+        ctx.sendMessage(Message.raw("Gave " + amount + " vexa to " + resolved.name + " (balance: " + newBalance + ")").color("#44ff44"));
     }
 
     private void broadcastSupporterMessage(String playerName, boolean founder) {

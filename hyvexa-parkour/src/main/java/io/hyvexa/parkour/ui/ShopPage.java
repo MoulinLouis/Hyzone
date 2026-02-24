@@ -20,6 +20,7 @@ import io.hyvexa.core.economy.VexaStore;
 import javax.annotation.Nonnull;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 public class ShopPage extends BaseParkourPage {
 
@@ -64,13 +65,10 @@ public class ShopPage extends BaseParkourPage {
         evt.addEventBinding(CustomUIEventBindingType.Activating, "#VexaPacksButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_VEXA_PACKS), false);
 
-        List<ShopTab> tabs = ShopTabRegistry.getTabs();
+        List<ShopTab> tabs = getVisibleTabs();
         if (tabs.isEmpty()) return;
 
-        // Default to first tab
-        if (activeTabId == null) {
-            activeTabId = tabs.get(0).getId();
-        }
+        ShopTab activeTab = resolveActiveTab(tabs);
 
         buildTabBar(cmd, evt, tabs);
 
@@ -78,7 +76,6 @@ public class ShopPage extends BaseParkourPage {
         if (showingVexaPacks) {
             buildVexaPacksContent(cmd, evt);
         } else {
-            ShopTab activeTab = ShopTabRegistry.getTab(activeTabId);
             if (activeTab != null) {
                 activeTab.buildContent(cmd, evt, playerId, vexa);
             }
@@ -132,6 +129,9 @@ public class ShopPage extends BaseParkourPage {
         // Tab switch
         if (button.startsWith(TAB_PREFIX)) {
             String tabId = button.substring(TAB_PREFIX.length());
+            if (getVisibleTab(tabId) == null) {
+                return;
+            }
             if (showingVexaPacks || !tabId.equals(activeTabId)) {
                 activeTabId = tabId;
                 showingVexaPacks = false;
@@ -147,7 +147,7 @@ public class ShopPage extends BaseParkourPage {
         if (colonIdx > 0) {
             String tabId = button.substring(0, colonIdx);
             String tabButton = button.substring(colonIdx + 1);
-            ShopTab tab = ShopTabRegistry.getTab(tabId);
+            ShopTab tab = getVisibleTab(tabId);
             if (tab != null) {
                 Player player = store.getComponent(ref, Player.getComponentType());
                 if (player == null) return;
@@ -168,7 +168,7 @@ public class ShopPage extends BaseParkourPage {
 
     private void handleConfirm(Ref<EntityStore> ref, Store<EntityStore> store) {
         if (pendingConfirmKey == null || pendingConfirmTabId == null) return;
-        ShopTab tab = ShopTabRegistry.getTab(pendingConfirmTabId);
+        ShopTab tab = getVisibleTab(pendingConfirmTabId);
         if (tab == null) return;
 
         Player player = store.getComponent(ref, Player.getComponentType());
@@ -213,13 +213,13 @@ public class ShopPage extends BaseParkourPage {
         evt.addEventBinding(CustomUIEventBindingType.Activating, "#VexaPacksButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_VEXA_PACKS), false);
 
-        List<ShopTab> tabs = ShopTabRegistry.getTabs();
+        List<ShopTab> tabs = getVisibleTabs();
+        ShopTab activeTab = resolveActiveTab(tabs);
         buildTabBar(cmd, evt, tabs);
 
         if (showingVexaPacks) {
             buildVexaPacksContent(cmd, evt);
         } else {
-            ShopTab activeTab = ShopTabRegistry.getTab(activeTabId);
             if (activeTab != null) {
                 activeTab.buildContent(cmd, evt, playerId, vexa);
             }
@@ -275,6 +275,34 @@ public class ShopPage extends BaseParkourPage {
         UICommandBuilder cmd = new UICommandBuilder();
         cmd.set("#ConfirmOverlay.Visible", false);
         this.sendUpdate(cmd, new UIEventBuilder(), false);
+    }
+
+    private List<ShopTab> getVisibleTabs() {
+        return ShopTabRegistry.getTabs().stream()
+                .filter(tab -> tab.isVisibleTo(playerId))
+                .collect(Collectors.toList());
+    }
+
+    private ShopTab getVisibleTab(String tabId) {
+        ShopTab tab = ShopTabRegistry.getTab(tabId);
+        if (tab == null || !tab.isVisibleTo(playerId)) {
+            return null;
+        }
+        return tab;
+    }
+
+    private ShopTab resolveActiveTab(List<ShopTab> tabs) {
+        if (tabs.isEmpty()) {
+            activeTabId = null;
+            return null;
+        }
+
+        ShopTab activeTab = getVisibleTab(activeTabId);
+        if (activeTab == null) {
+            activeTab = tabs.get(0);
+            activeTabId = activeTab.getId();
+        }
+        return activeTab;
     }
 
 

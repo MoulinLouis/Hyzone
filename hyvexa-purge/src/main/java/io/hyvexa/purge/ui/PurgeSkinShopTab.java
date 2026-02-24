@@ -12,6 +12,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.shop.ShopTab;
 import io.hyvexa.common.shop.ShopTabResult;
 import io.hyvexa.common.ui.ButtonEventData;
+import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.purge.data.PurgeSkinDefinition;
 import io.hyvexa.purge.data.PurgeSkinRegistry;
 import io.hyvexa.purge.data.PurgeSkinStore;
@@ -46,6 +47,11 @@ public class PurgeSkinShopTab implements ShopTab {
     @Override
     public int getOrder() {
         return 10;
+    }
+
+    @Override
+    public boolean isVisibleTo(UUID playerId) {
+        return PermissionUtils.isOp(playerId);
     }
 
     @Override
