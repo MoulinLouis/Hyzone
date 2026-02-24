@@ -66,13 +66,28 @@ public class PurgeWaveManager {
     private static final int COUNTDOWN_SECONDS = 5;
     private static final int UPGRADE_TIMEOUT_SECONDS = 15;
     private static final double SPAWN_RANDOM_OFFSET = 2.0;
-    /** Combat state names across NPC templates: "Angry" for zombies, "Attack" for companion wolves. */
-    private static final List<String> COMBAT_STATE_NAMES = List.of("Angry", "Attack");
+    /** Detection range for purge zombies — covers entire arena. */
+    private static final double PURGE_AGGRO_RANGE = 80.0;
+    /** Zero delay for all instruction tree timeouts (eliminates Alerted->Search pause). */
+    private static final double[] PURGE_NO_DELAY = {0.0, 0.0};
+    /** Omni-directional view cone so zombies detect players in all directions. */
+    private static final float PURGE_VIEW_CONE = 360.0f;
     private static final ConcurrentHashMap<Class<?>, Long> MAX_SPEED_OFFSET_CACHE = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<Class<?>, java.lang.reflect.Field> DROP_LIST_FIELD_CACHE = new ConcurrentHashMap<>();
     private static final Set<Class<?>> DROP_LIST_FIELD_MISSING = ConcurrentHashMap.newKeySet();
     private static volatile java.lang.reflect.Field MOTION_CONTROLLERS_FIELD;
     private static volatile sun.misc.Unsafe UNSAFE_INSTANCE;
+    // Aggro boost: per-class Unsafe offsets for final-field writes on instruction tree nodes
+    private static final ConcurrentHashMap<Class<?>, Long> SENSOR_RANGE_OFFSETS = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<Class<?>, Long> DELAY_RANGE_OFFSETS = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<Class<?>, Long> VIEW_CONE_OFFSETS = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<Class<?>, Long> ABORT_DIST_OFFSETS = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<Class<?>, Long> ABORT_DIST_SQ_OFFSETS = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<Class<?>, Long> STEER_DIST_OFFSETS = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<Class<?>, Long> STEER_DIST_SQ_OFFSETS = new ConcurrentHashMap<>();
+    // Generic field read cache for instruction tree traversal (className#fieldName -> Field)
+    private static final ConcurrentHashMap<String, java.lang.reflect.Field> FIELD_READ_CACHE = new ConcurrentHashMap<>();
+    private static final Set<String> FIELD_READ_MISSING = ConcurrentHashMap.newKeySet();
 
     private final PurgeInstanceManager instanceManager;
     private final PurgeWaveConfigManager waveConfigManager;
@@ -344,27 +359,23 @@ public class PurgeWaveManager {
             // Disable drops
             clearDropList(store, entityRef);
 
-            // Force aggro on a random alive player
+            // Set target — the boosted sensor range (80 blocks) + LockedTarget should let
+            // the natural AI detect the player and transition through its own state machine.
+            // We do NOT force setState — forcing an unknown state paralyzes the NPC.
             try {
                 NPCEntity npcEntity = store.getComponent(entityRef, NPCEntity.getComponentType());
                 if (npcEntity != null && npcEntity.getRole() != null) {
                     Ref<EntityStore> targetRef = session.getRandomAlivePlayerRef();
                     if (targetRef != null) {
                         npcEntity.getRole().setMarkedTarget("LockedTarget", targetRef);
-                        setNpcCombatState(npcEntity, entityRef, store);
                     }
-                    // Override startState so activate() (called by NewSpawnStartTickingSystem)
-                    // puts the NPC into a combat state instead of Idle.
-                    // Companion NPCs (wolves) auto-despawn from Idle if not in a flock,
-                    // and the despawn action is atomic (can't be interrupted by later setState).
-                    overrideStartState(npcEntity);
                 }
             } catch (Exception e) {
-                LOGGER.atWarning().withCause(e).log("Failed to set zombie aggro");
+                LOGGER.atWarning().withCause(e).log("Failed to set zombie target");
             }
 
-            // Apply speed multiplier to all motion controllers
             applySpeedMultiplier(store, entityRef, variantConfig);
+            boostZombieAggro(store, entityRef);
             return true;
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("Failed to spawn zombie (variant " + variantKey + ")");
@@ -689,6 +700,7 @@ public class PurgeWaveManager {
                     return;
                 }
                 checkZombieDeaths(session, store);
+                refreshZombieAggro(session, store);
                 updateZombieNameplates(session, store);
                 updatePlayerHealthHud(session, store, world);
 
@@ -889,7 +901,6 @@ public class PurgeWaveManager {
                     Ref<EntityStore> newTarget = session.getRandomAlivePlayerRef();
                     if (newTarget != null) {
                         npc.getRole().setMarkedTarget("LockedTarget", newTarget);
-                        setNpcCombatState(npc, zombieRef, store);
                     }
                 }
             } catch (Exception e) {
@@ -1065,6 +1076,241 @@ public class PurgeWaveManager {
         }
     }
 
+    // --- Aggro Boost ---
+
+    /**
+     * Modifies the zombie's per-entity instruction tree to boost detection range,
+     * eliminate transition delays, and widen view cones. This makes purge zombies
+     * immediately and persistently pursue players across the entire arena.
+     * <p>
+     * The instruction tree is cloned per-entity, so these modifications only affect
+     * the specific zombie — other NPCs server-wide are unaffected.
+     */
+    private void boostZombieAggro(Store<EntityStore> store, Ref<EntityStore> entityRef) {
+        try {
+            NPCEntity npcEntity = store.getComponent(entityRef, NPCEntity.getComponentType());
+            if (npcEntity == null || npcEntity.getRole() == null) return;
+            Object rootInstruction = npcEntity.getRole().getRootInstruction();
+            if (rootInstruction == null) return;
+            sun.misc.Unsafe unsafe = getUnsafe();
+            if (unsafe == null) return;
+            traverseAndBoost(unsafe, rootInstruction);
+        } catch (Exception e) {
+            LOGGER.atWarning().withCause(e).log("Failed to boost zombie aggro");
+        }
+    }
+
+    private int traverseAndBoost(sun.misc.Unsafe unsafe, Object instruction) {
+        return traverseAndBoost(unsafe, instruction, 0);
+    }
+
+    private int traverseAndBoost(sun.misc.Unsafe unsafe, Object instruction, int depth) {
+        if (instruction == null) return 0;
+        int modified = 0;
+
+        Object sensor = readFieldCached(instruction, "sensor");
+        if (sensor != null) {
+            modified += boostSensorTree(unsafe, sensor, 0);
+        }
+
+        Object bodyMotion = readFieldCached(instruction, "bodyMotion");
+        if (bodyMotion != null) {
+            if (boostBodyMotionRange(unsafe, bodyMotion)) modified++;
+        }
+
+        Object actions = readFieldCached(instruction, "actions");
+        if (actions != null) {
+            modified += eliminateActionDelays(unsafe, actions);
+        }
+
+        // Recurse into child instructions
+        Object children = readFieldCached(instruction, "instructionList");
+        if (children == null) children = readFieldCached(instruction, "instructions");
+        if (children == null) children = readFieldCached(instruction, "children");
+        if (children instanceof Object[] arr) {
+            for (Object child : arr) {
+                modified += traverseAndBoost(unsafe, child, depth + 1);
+            }
+        }
+        return modified;
+    }
+
+    /**
+     * Recursively boosts a sensor and all nested inner sensors (handles Not/And/Or wrappers).
+     * Without this recursion, wrapped sensors like Not(Mob Range 5) keep their original small
+     * range, causing the zombie to immediately transition out of Angry state.
+     */
+    private int boostSensorTree(sun.misc.Unsafe unsafe, Object sensor, int depth) {
+        if (sensor == null || depth > 5) return 0;
+        int modified = 0;
+
+        // Boost range on this sensor (works if it's a SensorEntityBase subclass)
+        if (boostSensorRange(unsafe, sensor)) modified++;
+
+        // Boost view cone on this sensor's entity filters
+        boostSensorViewCone(unsafe, sensor);
+
+        // Recurse into wrapped inner sensors (Not, And, Or wrappers)
+        for (String name : List.of("sensor", "baseSensor", "inner", "wrapped",
+                                    "sensorA", "sensorB", "first", "second")) {
+            Object inner = readFieldCached(sensor, name);
+            if (inner != null && inner != sensor) {
+                modified += boostSensorTree(unsafe, inner, depth + 1);
+            }
+        }
+
+        // Handle composite sensors with a list of inner sensors
+        Object sensors = readFieldCached(sensor, "sensors");
+        if (sensors instanceof Object[] arr) {
+            for (Object s : arr) {
+                if (s != null && s != sensor) modified += boostSensorTree(unsafe, s, depth + 1);
+            }
+        } else if (sensors instanceof Iterable<?> it) {
+            for (Object s : it) {
+                if (s != null && s != sensor) modified += boostSensorTree(unsafe, s, depth + 1);
+            }
+        }
+
+        return modified;
+    }
+
+    private boolean boostSensorRange(sun.misc.Unsafe unsafe, Object sensor) {
+        long offset = resolveAggroFieldOffset(unsafe, sensor, "range", SENSOR_RANGE_OFFSETS);
+        if (offset < 0) return false;
+        double original = unsafe.getDouble(sensor, offset);
+        // Don't boost small-range sensors (< 5 blocks) — they're melee/proximity checks
+        // that may be used in NOT wrappers. Boosting them inverts critical logic.
+        if (original < 5.0) return false;
+        unsafe.putDouble(sensor, offset, PURGE_AGGRO_RANGE);
+        return true;
+    }
+
+    /**
+     * Boosts distance fields on BodyMotionFind objects so the pathfinder can handle
+     * long-range pursuit. Three critical fields:
+     * - abortDistance: prevents the pathfinder from giving up at range
+     * - switchToSteeringDistance: forces direct beeline pursuit instead of A* pathfinding,
+     *   bypassing the A* node budget limits that prevent long-range path computation
+     */
+    private boolean boostBodyMotionRange(sun.misc.Unsafe unsafe, Object bodyMotion) {
+        boolean modified = false;
+        double range = PURGE_AGGRO_RANGE;
+        double rangeSq = range * range;
+
+        long offset = resolveAggroFieldOffset(unsafe, bodyMotion, "abortDistance", ABORT_DIST_OFFSETS);
+        if (offset >= 0) {
+            unsafe.putDouble(bodyMotion, offset, range);
+            modified = true;
+        }
+        offset = resolveAggroFieldOffset(unsafe, bodyMotion, "abortDistanceSquared", ABORT_DIST_SQ_OFFSETS);
+        if (offset >= 0) {
+            unsafe.putDouble(bodyMotion, offset, rangeSq);
+        }
+
+        offset = resolveAggroFieldOffset(unsafe, bodyMotion, "switchToSteeringDistance", STEER_DIST_OFFSETS);
+        if (offset >= 0) {
+            unsafe.putDouble(bodyMotion, offset, range);
+            modified = true;
+        }
+        offset = resolveAggroFieldOffset(unsafe, bodyMotion, "switchToSteeringDistanceSquared", STEER_DIST_SQ_OFFSETS);
+        if (offset >= 0) {
+            unsafe.putDouble(bodyMotion, offset, rangeSq);
+        }
+
+        // If no fields found on this object, check for wrapped inner motion (e.g. BodyMotionTimer.motion)
+        if (!modified) {
+            for (String innerName : List.of("motion", "bodyMotion", "inner", "wrapped", "find")) {
+                Object inner = readFieldCached(bodyMotion, innerName);
+                if (inner != null && inner != bodyMotion) {
+                    if (boostBodyMotionRange(unsafe, inner)) {
+                        modified = true;
+                        break;
+                    }
+                }
+            }
+        }
+        return modified;
+    }
+
+    private void boostSensorViewCone(sun.misc.Unsafe unsafe, Object sensor) {
+        // Entity filters are stored inside SensorWithEntityFilters subclasses
+        Object filters = readFieldCached(sensor, "entityFilters");
+        if (filters == null) filters = readFieldCached(sensor, "filters");
+        if (filters instanceof Object[] arr) {
+            for (Object filter : arr) {
+                if (filter == null) continue;
+                long offset = resolveAggroFieldOffset(unsafe, filter, "viewCone", VIEW_CONE_OFFSETS);
+                if (offset >= 0) {
+                    unsafe.putFloat(filter, offset, PURGE_VIEW_CONE);
+                }
+            }
+        } else if (filters instanceof Iterable<?> it) {
+            for (Object filter : it) {
+                if (filter == null) continue;
+                long offset = resolveAggroFieldOffset(unsafe, filter, "viewCone", VIEW_CONE_OFFSETS);
+                if (offset >= 0) {
+                    unsafe.putFloat(filter, offset, PURGE_VIEW_CONE);
+                }
+            }
+        }
+    }
+
+    private int eliminateActionDelays(sun.misc.Unsafe unsafe, Object actions) {
+        int modified = 0;
+        // ActionList is a container — try iterating it or accessing its internal list
+        Iterable<?> actionIter = null;
+        if (actions instanceof Iterable<?> it) {
+            actionIter = it;
+        } else {
+            Object list = readFieldCached(actions, "actions");
+            if (list == null) list = readFieldCached(actions, "actionList");
+            if (list == null) list = readFieldCached(actions, "list");
+            if (list instanceof Iterable<?> it) {
+                actionIter = it;
+            } else if (list instanceof Object[] arr) {
+                for (Object action : arr) {
+                    if (action != null && zeroDelayRange(unsafe, action)) modified++;
+                }
+                return modified;
+            }
+        }
+        if (actionIter != null) {
+            for (Object action : actionIter) {
+                if (action != null && zeroDelayRange(unsafe, action)) modified++;
+            }
+        }
+        return modified;
+    }
+
+    private boolean zeroDelayRange(sun.misc.Unsafe unsafe, Object action) {
+        long offset = resolveAggroFieldOffset(unsafe, action, "delayRange", DELAY_RANGE_OFFSETS);
+        if (offset < 0) return false;
+        unsafe.putObject(action, offset, PURGE_NO_DELAY);
+        return true;
+    }
+
+    /**
+     * Safety-net re-aggro: forces zombies that dropped out of combat state back into
+     * Angry with a fresh target. Handles edge cases like LOS obstruction where the
+     * state machine might downgrade despite boosted instruction tree parameters.
+     */
+    private void refreshZombieAggro(PurgeSession session, Store<EntityStore> store) {
+        // Just refresh LockedTarget — don't force setState (paralyzes the NPC).
+        // The boosted sensors + natural AI handle state transitions.
+        Ref<EntityStore> targetRef = session.getRandomAlivePlayerRef();
+        if (targetRef == null) return;
+        for (Ref<EntityStore> zombieRef : session.getAliveZombies()) {
+            if (zombieRef == null || !zombieRef.isValid()) continue;
+            try {
+                NPCEntity npc = store.getComponent(zombieRef, NPCEntity.getComponentType());
+                if (npc == null || npc.getRole() == null) continue;
+                npc.getRole().setMarkedTarget("LockedTarget", targetRef);
+            } catch (Exception e) {
+                LOGGER.atFine().log("Failed to refresh zombie target: " + e.getMessage());
+            }
+        }
+    }
+
     // --- Cleanup ---
 
     public CompletableFuture<Void> removeAllZombies(PurgeSession session) {
@@ -1197,87 +1443,6 @@ public class PurgeWaveManager {
 
     // --- NPC State ---
 
-    /**
-     * Sets the NPC into its combat state. Different NPC templates use different state names:
-     * Zombie templates use "Angry", companion templates (wolves) use "Attack".
-     * Tries both — only the valid one takes effect for a given NPC type.
-     */
-    private void setNpcCombatState(NPCEntity npcEntity, Ref<EntityStore> entityRef, Store<EntityStore> store) {
-        var stateSupport = npcEntity.getRole().getStateSupport();
-        for (String state : COMBAT_STATE_NAMES) {
-            try {
-                stateSupport.setState(entityRef, state, "", store);
-            } catch (Exception e) {
-                LOGGER.atFine().log("Combat state '" + state + "' not available: " + e.getMessage());
-            }
-        }
-    }
-
-    /**
-     * Override the NPC's startState field so that activate() (called by NewSpawnStartTickingSystem
-     * on the first tick) puts the NPC into a combat state instead of Idle.
-     * <p>
-     * Companion NPCs (wolves) auto-despawn from Idle if not in a flock via an atomic
-     * Timeout+Despawn action that cannot be interrupted by later setState calls.
-     * The only way to prevent this is to ensure the NPC never enters Idle in the first place.
-     */
-    private void overrideStartState(NPCEntity npcEntity) {
-        try {
-            var stateSupport = npcEntity.getRole().getStateSupport();
-            var stateHelper = stateSupport.getStateHelper();
-
-            // Find the first valid combat state index for this NPC template
-            int combatStateIndex = -1;
-            for (String name : COMBAT_STATE_NAMES) {
-                int idx = stateHelper.getStateIndex(name);
-                if (idx >= 0) {
-                    combatStateIndex = idx;
-                    break;
-                }
-            }
-            if (combatStateIndex < 0) {
-                return; // no combat state found, nothing to override
-            }
-
-            // startState is a final field — use Unsafe to overwrite it
-            sun.misc.Unsafe unsafe = getUnsafe();
-            if (unsafe == null) {
-                return;
-            }
-            long offset = resolveStartStateOffset(unsafe);
-            if (offset < 0) {
-                return;
-            }
-            int currentStart = unsafe.getInt(stateSupport, offset);
-            if (currentStart == combatStateIndex) {
-                return; // already a combat start state (e.g. Zombie with Angry)
-            }
-            unsafe.putInt(stateSupport, offset, combatStateIndex);
-        } catch (Exception e) {
-            LOGGER.atFine().log("Failed to override NPC start state: " + e.getMessage());
-        }
-    }
-
-    private static volatile long START_STATE_OFFSET = -2; // -2 = not resolved yet
-
-    private static long resolveStartStateOffset(sun.misc.Unsafe unsafe) {
-        long cached = START_STATE_OFFSET;
-        if (cached != -2) {
-            return cached;
-        }
-        try {
-            java.lang.reflect.Field field =
-                    com.hypixel.hytale.server.npc.role.support.StateSupport.class.getDeclaredField("startState");
-            long offset = unsafe.objectFieldOffset(field);
-            START_STATE_OFFSET = offset;
-            return offset;
-        } catch (NoSuchFieldException e) {
-            LOGGER.atWarning().log("startState field not found on StateSupport");
-            START_STATE_OFFSET = -1;
-            return -1;
-        }
-    }
-
     // --- Utility ---
 
     private double[] getRefPosition(Ref<EntityStore> ref) {
@@ -1362,6 +1527,56 @@ public class PurgeWaveManager {
         } catch (Exception e) {
             LOGGER.atFine().log("Failed to remove late zombie spawn: " + e.getMessage());
         }
+    }
+
+    private static Object readFieldCached(Object target, String fieldName) {
+        if (target == null) return null;
+        String key = target.getClass().getName() + "#" + fieldName;
+        if (FIELD_READ_MISSING.contains(key)) return null;
+        java.lang.reflect.Field field = FIELD_READ_CACHE.get(key);
+        if (field == null) {
+            Class<?> clazz = target.getClass();
+            while (clazz != null) {
+                try {
+                    field = clazz.getDeclaredField(fieldName);
+                    field.setAccessible(true);
+                    FIELD_READ_CACHE.put(key, field);
+                    break;
+                } catch (NoSuchFieldException e) {
+                    clazz = clazz.getSuperclass();
+                }
+            }
+            if (field == null) {
+                FIELD_READ_MISSING.add(key);
+                return null;
+            }
+        }
+        try {
+            return field.get(target);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static long resolveAggroFieldOffset(sun.misc.Unsafe unsafe, Object target, String fieldName,
+                                                 ConcurrentHashMap<Class<?>, Long> cache) {
+        Class<?> targetClass = target.getClass();
+        Long cached = cache.get(targetClass);
+        if (cached != null) return cached;
+        Class<?> clazz = targetClass;
+        while (clazz != null) {
+            try {
+                java.lang.reflect.Field field = clazz.getDeclaredField(fieldName);
+                long offset = unsafe.objectFieldOffset(field);
+                cache.put(targetClass, offset);
+                return offset;
+            } catch (NoSuchFieldException e) {
+                clazz = clazz.getSuperclass();
+            }
+        }
+        cache.put(targetClass, -1L);
+        LOGGER.atFine().log(fieldName + " field not found in " + targetClass.getName() + " hierarchy");
+        return -1;
     }
 
     private java.lang.reflect.Field resolveDropListField(Object role) {

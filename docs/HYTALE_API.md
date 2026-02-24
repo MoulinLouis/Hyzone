@@ -107,11 +107,12 @@ statMap.putModifier(healthIndex, "my_hp_mod",
     new StaticModifier(Modifier.ModifierTarget.MAX,
         StaticModifier.CalculationType.MULTIPLICATIVE, 0.5f));
 
-// Override walk speed via reflection (no public API)
-var controller = npcEntity.getRole().getActiveMotionController();
-Field field = controller.getClass().getDeclaredField("horizontalSpeedMultiplier");
-field.setAccessible(true);
-field.setDouble(controller, 0.8);
+// Override walk speed via Unsafe on maxHorizontalSpeed (final field)
+// NOTE: horizontalSpeedMultiplier is RESET TO 1.0 every tick by the engine — useless.
+// Must modify maxHorizontalSpeed directly via Unsafe.
+long offset = unsafe.objectFieldOffset(controllerClass.getDeclaredField("maxHorizontalSpeed"));
+double baseSpeed = unsafe.getDouble(controller, offset);
+unsafe.putDouble(controller, offset, baseSpeed * 0.5); // half speed
 
 // Override drop list via reflection (no public API, field is final)
 Field dropField = npcEntity.getRole().getClass().getDeclaredField("dropListId");
@@ -122,6 +123,39 @@ dropField.set(npcEntity.getRole(), "Empty");
 ```
 
 **Vanilla NPC types that work with `spawnNPC()`:** `"Zombie"`, `"Zombie_Burnt"`, `"Zombie_Frost"`, `"Zombie_Sand"`, `"Kweebec_Seedling"`, etc. — any concrete (non-Abstract) role from `Assets.zip`.
+
+### NPC State Machine — Do NOT Force States
+
+**Never use `stateSupport.setState()` to force NPC behavior.** State names returned by `getStateIndex()` come from a **global registry**, not the NPC's template. Forcing a state that doesn't exist in the template paralyzes the NPC — it plays the animation but has **zero movement** because no behavior instructions are mapped to that state.
+
+The engine logs: `State 'Angry.' in 'Zombie' does not exist and was set by an external call`
+
+```java
+// ❌ WRONG — paralyzes the NPC:
+stateSupport.setState(entityRef, "Angry", "", store);  // phantom state, no movement
+
+// ✅ CORRECT — let the natural AI handle state transitions:
+npcEntity.getRole().setMarkedTarget("LockedTarget", playerRef);  // set who to target
+// + boost sensor detection range so the NPC detects the player from far away
+```
+
+### NPC Instruction Tree — Sensor Range Boosting
+
+NPC behavior is driven by an instruction tree with sensors, body motions, and actions. You can boost sensor detection range via Unsafe to make NPCs detect players from further away.
+
+**Critical rule: skip sensors with original range < 5 blocks.** These are proximity/melee checks (e.g. `SensorEntity` at 0.6 blocks) often used inside NOT wrappers. Boosting them to 80 inverts the logic and breaks the behavior tree (NPC stops moving).
+
+```java
+double original = unsafe.getDouble(sensor, rangeOffset);
+if (original < 5.0) return; // melee/proximity check — don't touch
+unsafe.putDouble(sensor, rangeOffset, 80.0); // boost detection range
+```
+
+**Instruction tree structure (Zombie template):**
+- `Instruction` nodes contain: `sensor`, `bodyMotion`, `headMotion`, `actions`, `instructionList` (children)
+- Sensor types: `NullSensor`, `SensorState`, `SensorEval`, `SensorEntity`, `SensorTarget`, `SensorPlayer`, `SensorLeash`, `SensorBeacon`
+- BodyMotion types: `BodyMotionTimer` (wraps `BodyMotionWander`), `BodyMotionSequence` (wraps `Motion[]`), `BodyMotionFind` (has `abortDistance`, `switchToSteeringDistance`)
+- `BodyMotionTimer` has a `motion` field — must recurse into it to find nested motions
 
 ### Player Base HP Is 100
 
