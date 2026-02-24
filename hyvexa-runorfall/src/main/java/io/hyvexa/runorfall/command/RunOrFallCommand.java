@@ -423,6 +423,12 @@ public class RunOrFallCommand extends AbstractAsyncCommand {
         return false;
     }
 
+    public void clearSelection(UUID playerId) {
+        if (playerId != null) {
+            selections.remove(playerId);
+        }
+    }
+
     private void sendUsage(Player player) {
         player.sendMessage(Message.raw(PREFIX + "Usage: /rof <join|leave|status|admin|map>"));
         player.sendMessage(Message.raw(PREFIX + "Player: /rof join, /rof leave, /rof status"));

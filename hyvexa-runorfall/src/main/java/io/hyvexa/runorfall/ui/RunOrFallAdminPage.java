@@ -62,6 +62,12 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
 
     private static final Map<UUID, BlockSelection> SELECTIONS = new ConcurrentHashMap<>();
 
+    public static void clearSelection(UUID playerId) {
+        if (playerId != null) {
+            SELECTIONS.remove(playerId);
+        }
+    }
+
     private final RunOrFallConfigStore configStore;
     private final RunOrFallGameManager gameManager;
     private String mapIdInput;

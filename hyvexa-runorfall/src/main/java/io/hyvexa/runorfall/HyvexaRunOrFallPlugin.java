@@ -28,6 +28,7 @@ import io.hyvexa.runorfall.hud.RunOrFallHud;
 import io.hyvexa.runorfall.interaction.RunOrFallBlinkInteraction;
 import io.hyvexa.runorfall.interaction.RunOrFallJoinInteraction;
 import io.hyvexa.runorfall.interaction.RunOrFallStatsInteraction;
+import io.hyvexa.runorfall.ui.RunOrFallAdminPage;
 import io.hyvexa.runorfall.manager.RunOrFallConfigStore;
 import io.hyvexa.runorfall.manager.RunOrFallGameManager;
 import io.hyvexa.runorfall.manager.RunOrFallStatsStore;
@@ -56,6 +57,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
     private RunOrFallConfigStore configStore;
     private RunOrFallStatsStore statsStore;
     private RunOrFallGameManager gameManager;
+    private RunOrFallCommand runOrFallCommand;
     private static final long HUD_READY_DELAY_MS = 250L;
     private final ConcurrentHashMap<UUID, RunOrFallHud> runOrFallHuds = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Long> hudReadyAt = new ConcurrentHashMap<>();
@@ -105,7 +107,8 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
         statsStore = new RunOrFallStatsStore();
         gameManager = new RunOrFallGameManager(configStore, statsStore);
 
-        this.getCommandRegistry().registerCommand(new RunOrFallCommand(configStore, gameManager));
+        runOrFallCommand = new RunOrFallCommand(configStore, gameManager);
+        this.getCommandRegistry().registerCommand(runOrFallCommand);
 
         this.getEventRegistry().registerGlobal(PlayerReadyEvent.class, event -> {
             Ref<EntityStore> ref = event.getPlayerRef();
@@ -168,6 +171,10 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
             gameManager.handleDisconnect(playerId);
             runOrFallHuds.remove(playerId);
             hudReadyAt.remove(playerId);
+            RunOrFallAdminPage.clearSelection(playerId);
+            if (runOrFallCommand != null) {
+                runOrFallCommand.clearSelection(playerId);
+            }
             VexaStore.getInstance().evictPlayer(playerId);
         });
 

@@ -715,8 +715,9 @@ public class RunOrFallConfigStore {
                         insertStmt.setNull(6, java.sql.Types.FLOAT);
                         insertStmt.setNull(7, java.sql.Types.FLOAT);
                     }
-                    insertStmt.executeUpdate();
+                    insertStmt.addBatch();
                 }
+                insertStmt.executeBatch();
                 conn.commit();
             } catch (SQLException e) {
                 conn.rollback();
@@ -764,9 +765,10 @@ public class RunOrFallConfigStore {
                         insertStmt.setFloat(6, spawn.rotX);
                         insertStmt.setFloat(7, spawn.rotY);
                         insertStmt.setFloat(8, spawn.rotZ);
-                        insertStmt.executeUpdate();
+                        insertStmt.addBatch();
                     }
                 }
+                insertStmt.executeBatch();
                 conn.commit();
             } catch (SQLException e) {
                 conn.rollback();
@@ -823,9 +825,10 @@ public class RunOrFallConfigStore {
                         } else {
                             insertStmt.setString(9, targetBlockItemId);
                         }
-                        insertStmt.executeUpdate();
+                        insertStmt.addBatch();
                     }
                 }
+                insertStmt.executeBatch();
                 conn.commit();
             } catch (SQLException e) {
                 conn.rollback();

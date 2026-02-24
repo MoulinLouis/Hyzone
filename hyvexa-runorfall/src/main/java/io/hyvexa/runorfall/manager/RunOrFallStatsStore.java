@@ -85,6 +85,7 @@ public class RunOrFallStatsStore {
         } catch (SQLException e) {
             LOGGER.atWarning().withCause(e).log("Failed loading RunOrFall player stats.");
         }
+        LOGGER.atInfo().log("RunOrFall stats loaded: " + cache.size() + " player(s) in cache.");
     }
 
     public synchronized RunOrFallPlayerStats getStats(@Nonnull UUID playerId, String playerName) {

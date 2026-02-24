@@ -22,7 +22,6 @@ import io.hyvexa.runorfall.data.RunOrFallPlatform;
 import io.hyvexa.runorfall.util.RunOrFallUtils;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -65,6 +64,7 @@ public class RunOrFallGameManager {
     private volatile boolean soloTestRound = false;
     private volatile ScheduledFuture<?> countdownTask;
     private volatile ScheduledFuture<?> gameTickTask;
+    private volatile RunOrFallConfig activeRoundConfig;
     private volatile World activeWorld;
     private volatile long blockBreakEnabledAtMs;
     private volatile int blockBreakCountdownLastAnnounced = -1;
@@ -228,6 +228,7 @@ public class RunOrFallGameManager {
         } else {
             restoreAllBlocksInternal();
         }
+        activeRoundConfig = null;
         resetCountdownState();
         alivePlayers.clear();
         pendingBlocks.clear();
@@ -365,19 +366,23 @@ public class RunOrFallGameManager {
             return;
         }
         RunOrFallConfig config = configStore.snapshot();
+        activeRoundConfig = config;
         RunOrFallMapConfig selectedMap = resolveSelectedMap(config);
         if (selectedMap == null) {
             state = GameState.IDLE;
+            activeRoundConfig = null;
             broadcastLobby("No map selected.");
             return;
         }
         if (selectedMap.platforms.isEmpty()) {
             state = GameState.IDLE;
+            activeRoundConfig = null;
             broadcastLobby("No destructible platform configured. Use /rof platform ... first.");
             return;
         }
         if (selectedMap.spawns.isEmpty()) {
             state = GameState.IDLE;
+            activeRoundConfig = null;
             broadcastLobby("No game spawn configured. Use /rof spawn add first.");
             return;
         }
@@ -390,6 +395,7 @@ public class RunOrFallGameManager {
         }
         if (onlinePlayers.size() < countdownRequiredPlayers) {
             state = GameState.IDLE;
+            activeRoundConfig = null;
             broadcastLobby("Not enough online players to start.");
             return;
         }
@@ -444,18 +450,28 @@ public class RunOrFallGameManager {
             if (!canBreakBlocks) {
                 broadcastBlockBreakCountdownIfNeeded(nowMs);
             }
-            RunOrFallConfig config = configStore.snapshot();
+            RunOrFallConfig config = activeRoundConfig;
+            if (config == null) {
+                config = configStore.snapshot();
+            }
             RunOrFallMapConfig selectedMap = resolveSelectedMap(config);
             List<RunOrFallPlatform> platforms = selectedMap != null ? selectedMap.platforms : List.of();
-            Set<UUID> disconnected = new HashSet<>();
-            for (UUID playerId : new ArrayList<>(alivePlayers)) {
+            List<UUID> toEliminate = null;
+            List<UUID> disconnected = null;
+            for (UUID playerId : alivePlayers) {
                 PlayerRef playerRef = resolvePlayer(playerId);
                 if (playerRef == null) {
+                    if (disconnected == null) {
+                        disconnected = new ArrayList<>();
+                    }
                     disconnected.add(playerId);
                     continue;
                 }
                 var ref = playerRef.getReference();
                 if (ref == null || !ref.isValid()) {
+                    if (disconnected == null) {
+                        disconnected = new ArrayList<>();
+                    }
                     disconnected.add(playerId);
                     continue;
                 }
@@ -466,7 +482,10 @@ public class RunOrFallGameManager {
                 }
                 Vector3d position = transform.getPosition();
                 if (position.getY() < config.voidY) {
-                    eliminatePlayerInternal(playerId, "fell into the void");
+                    if (toEliminate == null) {
+                        toEliminate = new ArrayList<>();
+                    }
+                    toEliminate.add(playerId);
                     continue;
                 }
 
@@ -476,12 +495,19 @@ public class RunOrFallGameManager {
                             platforms, config.blockBreakDelaySeconds);
                 }
             }
+            if (toEliminate != null) {
+                for (UUID playerId : toEliminate) {
+                    eliminatePlayerInternal(playerId, "fell into the void");
+                }
+            }
             processPendingBlocksInternal();
-            for (UUID playerId : disconnected) {
-                if (alivePlayers.remove(playerId)) {
-                    long survivedMs = takeSurvivedMs(playerId);
-                    statsStore.recordLoss(playerId, resolvePlayerName(playerId), survivedMs);
-                    broadcastEliminationInternal(playerId, "disconnected");
+            if (disconnected != null) {
+                for (UUID playerId : disconnected) {
+                    if (alivePlayers.remove(playerId)) {
+                        long survivedMs = takeSurvivedMs(playerId);
+                        statsStore.recordLoss(playerId, resolvePlayerName(playerId), survivedMs);
+                        broadcastEliminationInternal(playerId, "disconnected");
+                    }
                 }
             }
             checkWinnerInternal();
@@ -536,6 +562,7 @@ public class RunOrFallGameManager {
 
     private void endGameInternal(String reason) {
         cancelGameTickTask();
+        activeRoundConfig = null;
         restoreAllBlocksInternal();
         alivePlayers.clear();
         playerLastFootBlock.clear();
@@ -597,7 +624,7 @@ public class RunOrFallGameManager {
             return;
         }
         long now = System.currentTimeMillis();
-        for (Map.Entry<BlockKey, PendingBlock> entry : new ArrayList<>(pendingBlocks.entrySet())) {
+        for (Map.Entry<BlockKey, PendingBlock> entry : pendingBlocks.entrySet()) {
             BlockKey key = entry.getKey();
             PendingBlock pending = entry.getValue();
             if (pending == null || now < pending.dueAtMs) {
@@ -880,7 +907,7 @@ public class RunOrFallGameManager {
     }
 
     private void broadcastLobby(String text) {
-        for (UUID playerId : new HashSet<>(lobbyPlayers)) {
+        for (UUID playerId : lobbyPlayers) {
             sendToPlayer(playerId, text);
         }
     }
@@ -914,7 +941,7 @@ public class RunOrFallGameManager {
     }
 
     private void refreshLobbyHotbars() {
-        for (UUID playerId : new ArrayList<>(lobbyPlayers)) {
+        for (UUID playerId : lobbyPlayers) {
             refreshPlayerHotbar(playerId);
         }
     }
@@ -938,7 +965,7 @@ public class RunOrFallGameManager {
     }
 
     private void resetBrokenBlocksForLobbyPlayers() {
-        for (UUID playerId : new ArrayList<>(lobbyPlayers)) {
+        for (UUID playerId : lobbyPlayers) {
             brokenBlocksByPlayer.put(playerId, 0);
             updateBrokenBlocksHudForPlayer(playerId, 0);
         }
@@ -955,13 +982,13 @@ public class RunOrFallGameManager {
 
     private void updateCountdownHudForLobbyPlayers() {
         String countdownText = buildCountdownHudText();
-        for (UUID playerId : new ArrayList<>(lobbyPlayers)) {
+        for (UUID playerId : lobbyPlayers) {
             updateCountdownHudForPlayer(playerId, countdownText);
         }
     }
 
     private void clearCountdownHudForLobbyPlayers() {
-        for (UUID playerId : new ArrayList<>(lobbyPlayers)) {
+        for (UUID playerId : lobbyPlayers) {
             updateCountdownHudForPlayer(playerId, null);
         }
     }
