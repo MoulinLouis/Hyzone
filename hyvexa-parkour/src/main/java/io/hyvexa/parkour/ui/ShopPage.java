@@ -4,6 +4,7 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
+import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
@@ -25,10 +26,14 @@ public class ShopPage extends BaseParkourPage {
     private static final String BUTTON_CLOSE = "Close";
     private static final String BUTTON_CONFIRM = "ShopConfirm";
     private static final String BUTTON_CANCEL = "ShopCancel";
+    private static final String BUTTON_VEXA_PACKS = "VexaPacks";
+    private static final String BUTTON_PACK = "Pack";
+    private static final String STORE_URL = "https://store.hyvexa.com";
     private static final String TAB_PREFIX = "Tab:";
 
     private final UUID playerId;
     private String activeTabId;
+    private boolean showingVexaPacks;
     private String pendingConfirmKey;
     private String pendingConfirmTabId;
 
@@ -55,6 +60,10 @@ public class ShopPage extends BaseParkourPage {
         evt.addEventBinding(CustomUIEventBindingType.Activating, "#ShopCancelButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CANCEL), false);
 
+        // Vexa packs button
+        evt.addEventBinding(CustomUIEventBindingType.Activating, "#VexaPacksButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_VEXA_PACKS), false);
+
         List<ShopTab> tabs = ShopTabRegistry.getTabs();
         if (tabs.isEmpty()) return;
 
@@ -65,10 +74,14 @@ public class ShopPage extends BaseParkourPage {
 
         buildTabBar(cmd, evt, tabs);
 
-        // Build active tab content
-        ShopTab activeTab = ShopTabRegistry.getTab(activeTabId);
-        if (activeTab != null) {
-            activeTab.buildContent(cmd, evt, playerId, vexa);
+        // Build content: vexa packs or active tab
+        if (showingVexaPacks) {
+            buildVexaPacksContent(cmd, evt);
+        } else {
+            ShopTab activeTab = ShopTabRegistry.getTab(activeTabId);
+            if (activeTab != null) {
+                activeTab.buildContent(cmd, evt, playerId, vexa);
+            }
         }
     }
 
@@ -94,11 +107,34 @@ public class ShopPage extends BaseParkourPage {
             return;
         }
 
+        if (BUTTON_VEXA_PACKS.equals(button)) {
+            showingVexaPacks = true;
+            pendingConfirmKey = null;
+            pendingConfirmTabId = null;
+            sendFullRefresh();
+            return;
+        }
+
+        if (BUTTON_PACK.equals(button)) {
+            Player player = store.getComponent(ref, Player.getComponentType());
+            if (player != null) {
+                player.sendMessage(Message.raw(""));
+                player.sendMessage(Message.join(
+                        Message.raw("(NOT AVAILABLE) Continue your purchase here: ").color("#94a3b8"),
+                        Message.raw("store.hyvexa.com").color("#8ab4f8").link(STORE_URL)
+                ));
+                player.sendMessage(Message.raw(""));
+            }
+            close();
+            return;
+        }
+
         // Tab switch
         if (button.startsWith(TAB_PREFIX)) {
             String tabId = button.substring(TAB_PREFIX.length());
-            if (!tabId.equals(activeTabId)) {
+            if (showingVexaPacks || !tabId.equals(activeTabId)) {
                 activeTabId = tabId;
+                showingVexaPacks = false;
                 pendingConfirmKey = null;
                 pendingConfirmTabId = null;
                 sendFullRefresh();
@@ -174,13 +210,19 @@ public class ShopPage extends BaseParkourPage {
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CONFIRM), false);
         evt.addEventBinding(CustomUIEventBindingType.Activating, "#ShopCancelButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CANCEL), false);
+        evt.addEventBinding(CustomUIEventBindingType.Activating, "#VexaPacksButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_VEXA_PACKS), false);
 
         List<ShopTab> tabs = ShopTabRegistry.getTabs();
         buildTabBar(cmd, evt, tabs);
 
-        ShopTab activeTab = ShopTabRegistry.getTab(activeTabId);
-        if (activeTab != null) {
-            activeTab.buildContent(cmd, evt, playerId, vexa);
+        if (showingVexaPacks) {
+            buildVexaPacksContent(cmd, evt);
+        } else {
+            ShopTab activeTab = ShopTabRegistry.getTab(activeTabId);
+            if (activeTab != null) {
+                activeTab.buildContent(cmd, evt, playerId, vexa);
+            }
         }
 
         this.sendUpdate(cmd, evt, false);
@@ -189,7 +231,7 @@ public class ShopPage extends BaseParkourPage {
     private void buildTabBar(UICommandBuilder cmd, UIEventBuilder evt, List<ShopTab> tabs) {
         for (int i = 0; i < tabs.size(); i++) {
             ShopTab tab = tabs.get(i);
-            boolean active = tab.getId().equals(activeTabId);
+            boolean active = !showingVexaPacks && tab.getId().equals(activeTabId);
 
             cmd.append("#TabBar", "Pages/Shop_TabEntry.ui");
             String root = "#TabBar[" + i + "] ";
@@ -208,6 +250,17 @@ public class ShopPage extends BaseParkourPage {
         }
     }
 
+    private void buildVexaPacksContent(UICommandBuilder cmd, UIEventBuilder evt) {
+        cmd.append("#TabContent", "Pages/Shop_VexaPacks.ui");
+        String root = "#TabContent[0] ";
+        evt.addEventBinding(CustomUIEventBindingType.Activating, root + "#PackBtnA",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_PACK), false);
+        evt.addEventBinding(CustomUIEventBindingType.Activating, root + "#PackBtnB",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_PACK), false);
+        evt.addEventBinding(CustomUIEventBindingType.Activating, root + "#PackBtnC",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_PACK), false);
+    }
+
     private void showConfirmOverlay(ShopTab tab, String confirmKey) {
         pendingConfirmKey = confirmKey;
         pendingConfirmTabId = tab.getId();
@@ -223,4 +276,6 @@ public class ShopPage extends BaseParkourPage {
         cmd.set("#ConfirmOverlay.Visible", false);
         this.sendUpdate(cmd, new UIEventBuilder(), false);
     }
+
+
 }
