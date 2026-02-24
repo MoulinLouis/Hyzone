@@ -2,40 +2,42 @@ $C = "../Common.ui";
 
 Group {
   LayoutMode: Left;
-  Anchor: (Left: 0, Right: 0, Bottom: 6, Height: 44);
+  Anchor: (Left: 0, Right: 0, Bottom: 4, Height: 44);
   Background: #1a2530(0.95);
+  OutlineColor: #ffffff(0.03);
+  OutlineSize: 1;
 
   Group #AccentBar {
-    Anchor: (Width: 8, Top: 0, Bottom: 0);
+    Anchor: (Width: 4, Top: 0, Bottom: 0);
     Background: #34d399;
   }
 
   Group #ContentRow {
     FlexWeight: 1;
-    Padding: (Left: 12, Right: 12, Top: 12);
+    Padding: (Left: 14, Right: 14, Top: 12);
     LayoutMode: Left;
 
     Label #Rank {
-      Anchor: (Width: 34);
+      Anchor: (Width: 50);
       Style: (
         FontSize: 14,
         RenderBold: true,
         TextColor: #f0f4f8
       );
-      Text: "1";
+      Text: "#1";
     }
 
     Label #PlayerName {
-      Anchor: (Width: 290);
+      FlexWeight: 1;
       Style: (
-        FontSize: 13,
+        FontSize: 14,
         TextColor: #cfd7dc
       );
       Text: "Player";
     }
 
     Group #StatsCell {
-      FlexWeight: 1;
+      Anchor: (Width: 180);
       LayoutMode: Full;
 
       Label #StatsGeneric {
@@ -89,7 +91,7 @@ Group {
         }
 
         Label #StatsWinrate {
-          Anchor: (Width: 72);
+          Anchor: (Width: 60);
           Style: (
             FontSize: 13,
             RenderBold: true,
