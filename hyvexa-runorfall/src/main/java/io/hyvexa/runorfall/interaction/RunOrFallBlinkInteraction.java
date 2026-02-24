@@ -175,6 +175,12 @@ public class RunOrFallBlinkInteraction extends SimpleInteraction {
         return (dx * dx) + (dy * dy) + (dz * dz);
     }
 
+    /**
+     * Falls back to parkour's RestartCheckpointInteraction when the blink item is used
+     * outside the RunOrFall world. Uses reflection because hyvexa-runorfall cannot depend
+     * on hyvexa-parkour directly (circular dependency). If the parkour module changes
+     * the class name or method signature, this will silently fail with a log warning.
+     */
     private void invokeParkourRestartInteraction(Ref<EntityStore> ref, boolean firstRun, float time,
                                                  InteractionType type, InteractionContext interactionContext) {
         try {

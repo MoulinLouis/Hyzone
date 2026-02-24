@@ -10,9 +10,11 @@ public class RunOrFallHud extends CustomUIHud {
     private int lastPlayerCount = -1;
     private long lastVexa = -1;
     private int lastBrokenBlocks = -1;
-    private Boolean lastBrokenBlocksVisible = null;
+    private boolean lastBrokenBlocksVisible = false;
+    private boolean brokenBlocksInitialized = false;
     private String lastCountdownText = null;
-    private Boolean lastCountdownVisible = null;
+    private boolean lastCountdownVisible = false;
+    private boolean countdownInitialized = false;
 
     public RunOrFallHud(PlayerRef playerRef) {
         super(playerRef);
@@ -47,9 +49,10 @@ public class RunOrFallHud extends CustomUIHud {
     public void updateCountdownText(String text) {
         String safeText = text == null ? "" : text.trim();
         boolean visible = !safeText.isEmpty();
-        if (safeText.equals(lastCountdownText) && Boolean.valueOf(visible).equals(lastCountdownVisible)) {
+        if (countdownInitialized && safeText.equals(lastCountdownText) && visible == lastCountdownVisible) {
             return;
         }
+        countdownInitialized = true;
         lastCountdownText = safeText;
         lastCountdownVisible = visible;
         UICommandBuilder commandBuilder = new UICommandBuilder();
@@ -60,9 +63,10 @@ public class RunOrFallHud extends CustomUIHud {
 
     public void updateBrokenBlocks(int brokenBlocks, boolean visible) {
         int safeValue = Math.max(0, brokenBlocks);
-        if (safeValue == lastBrokenBlocks && Boolean.valueOf(visible).equals(lastBrokenBlocksVisible)) {
+        if (brokenBlocksInitialized && safeValue == lastBrokenBlocks && visible == lastBrokenBlocksVisible) {
             return;
         }
+        brokenBlocksInitialized = true;
         lastBrokenBlocks = safeValue;
         lastBrokenBlocksVisible = visible;
         UICommandBuilder commandBuilder = new UICommandBuilder();

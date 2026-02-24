@@ -30,6 +30,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+// Thread safety: all public methods are synchronized. Concurrent collections
+// are used as a safety net in case callbacks run outside the monitor.
 public class RunOrFallGameManager {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final String PREFIX = "[RunOrFall] ";
@@ -958,9 +960,6 @@ public class RunOrFallGameManager {
     }
 
     private void ensureBrokenBlocksEntry(UUID playerId) {
-        if (playerId == null) {
-            return;
-        }
         brokenBlocksByPlayer.putIfAbsent(playerId, 0);
     }
 
@@ -972,9 +971,6 @@ public class RunOrFallGameManager {
     }
 
     private void incrementBrokenBlocksCountInternal(UUID playerId) {
-        if (playerId == null) {
-            return;
-        }
         int nextCount = Math.max(0, brokenBlocksByPlayer.getOrDefault(playerId, 0)) + 1;
         brokenBlocksByPlayer.put(playerId, nextCount);
         updateBrokenBlocksHudForPlayer(playerId, nextCount);
@@ -998,9 +994,6 @@ public class RunOrFallGameManager {
     }
 
     private void updateCountdownHudForPlayer(UUID playerId, String countdownText) {
-        if (playerId == null) {
-            return;
-        }
         HyvexaRunOrFallPlugin plugin = HyvexaRunOrFallPlugin.getInstance();
         if (plugin == null) {
             return;
@@ -1013,9 +1006,6 @@ public class RunOrFallGameManager {
     }
 
     private void updateBrokenBlocksHudForPlayer(UUID playerId, int brokenBlocks) {
-        if (playerId == null) {
-            return;
-        }
         HyvexaRunOrFallPlugin plugin = HyvexaRunOrFallPlugin.getInstance();
         if (plugin == null) {
             return;
