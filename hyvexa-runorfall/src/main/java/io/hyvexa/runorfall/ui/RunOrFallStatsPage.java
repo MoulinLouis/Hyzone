@@ -63,7 +63,7 @@ public class RunOrFallStatsPage extends InteractiveCustomUIPage<ButtonEventData>
 
         commandBuilder.set("#StatsPlayerName.Text", stats.getPlayerName());
         commandBuilder.set("#StatsWinsValue.Text", String.valueOf(stats.getWins()));
-        commandBuilder.set("#StatsLooseValue.Text", String.valueOf(stats.getLosses()));
+        commandBuilder.set("#StatsLossValue.Text", String.valueOf(stats.getLosses()));
         commandBuilder.set("#StatsWinrateValue.Text",
                 String.format(Locale.US, "%.2f%%", stats.getWinRatePercent()));
         commandBuilder.set("#StatsBestStreakValue.Text", String.valueOf(stats.getBestWinStreak()));

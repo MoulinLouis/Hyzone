@@ -81,7 +81,7 @@ $C.@PageOverlay {
         }
       }
 
-      Group #CardLoose {
+      Group #CardLoss {
         Anchor: (Left: 0, Right: 0, Height: 42, Top: 6);
         LayoutMode: Full;
         Background: #ffffff(0.03);
@@ -90,9 +90,9 @@ $C.@PageOverlay {
         Label {
           Anchor: (Left: 16, Top: 0, Bottom: 0, Width: 200);
           Style: (FontSize: 13, TextColor: #9fb0ba, VerticalAlignment: Center);
-          Text: "Loose";
+          Text: "Losses";
         }
-        Label #StatsLooseValue {
+        Label #StatsLossValue {
           Anchor: (Left: 220, Right: 16, Top: 0, Bottom: 0);
           Style: (FontSize: 15, TextColor: #f87171, RenderBold: true, VerticalAlignment: Center);
           Text: "0";

@@ -329,14 +329,6 @@ public class RunOrFallConfigStore {
         return true;
     }
 
-    public synchronized boolean upsertPlatform(RunOrFallPlatform platform) {
-        return addPlatform(platform);
-    }
-
-    public synchronized boolean removePlatform(String name) {
-        return false;
-    }
-
     public synchronized boolean removePlatformByIndex(int index) {
         RunOrFallMapConfig map = getOrCreateSelectedMapInternal();
         if (index < 0 || index >= map.platforms.size()) {
