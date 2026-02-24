@@ -4,6 +4,26 @@ What's new in Hyvexa? All player-facing changes, newest first.
 
 ---
 
+## v0.1.7 - 2026-02-24
+
+### New
+- **Medal Times** - Maps now feature bronze, silver, and gold times. Beat one to unlock it permanently and earn **Feathers**, a new parkour currency shown on your HUD *(will be useful later)*
+- **Vexa Shop** - Fully redesigned shop with a horizontal layout and sidebar navigation *(more coming soon)*
+- **Cat Collector** - 5 hidden cat NPCs are scattered across the Ascend world. Find them all to unlock a secret achievement.
+
+### Improved
+- **Currency Update** - "Gems" are now called **Vexa** globally. In Ascend, the mode currency has been renamed to **Volt** to avoid confusion
+- **Hub Menu** - Wider mode cards with hover effects and short descriptions
+- **Practice Mode** - Automatically sets a checkpoint at your current position when activated
+
+### Fixed
+- **Practice Fly Zone** - Boundary warning no longer appears when practice is enabled but fly is off
+- **Practice Timer** - Restarting to checkpoint no longer resets your run timer
+- **Challenge Volt** - Fixed an issue where earned Volt could roll back after completing a challenge
+- **HUD Loading** - Resolved occasional HUD display issues when switching worlds
+
+---
+
 ## v0.1.6 - 2026-02-18
 
 ### New
