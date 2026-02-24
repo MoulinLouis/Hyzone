@@ -27,6 +27,7 @@ public class PurgeAdminIndexPage extends InteractiveCustomUIPage<PurgeAdminIndex
     private static final String BUTTON_VARIANTS = "Variants";
     private static final String BUTTON_INSTANCES = "Instances";
     private static final String BUTTON_WEAPONS = "Weapons";
+    private static final String BUTTON_SKINS = "Skins";
     private static final String BUTTON_SETTINGS = "Settings";
 
     private final PurgeWaveConfigManager waveConfigManager;
@@ -58,6 +59,8 @@ public class PurgeAdminIndexPage extends InteractiveCustomUIPage<PurgeAdminIndex
                 EventData.of(PurgeAdminIndexData.KEY_BUTTON, BUTTON_INSTANCES), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#WeaponsButton",
                 EventData.of(PurgeAdminIndexData.KEY_BUTTON, BUTTON_WEAPONS), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SkinsButton",
+                EventData.of(PurgeAdminIndexData.KEY_BUTTON, BUTTON_SKINS), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SettingsButton",
                 EventData.of(PurgeAdminIndexData.KEY_BUTTON, BUTTON_SETTINGS), false);
     }
@@ -87,6 +90,9 @@ public class PurgeAdminIndexPage extends InteractiveCustomUIPage<PurgeAdminIndex
             player.getPageManager().openCustomPage(ref, store,
                     new PurgeWeaponSelectPage(playerRef, PurgeWeaponSelectPage.Mode.ADMIN, null,
                             weaponConfigManager, waveConfigManager, instanceManager, variantConfigManager));
+        } else if (BUTTON_SKINS.equals(data.button)) {
+            player.getPageManager().openCustomPage(ref, store,
+                    new PurgeSkinAdminPage(playerRef, weaponConfigManager, waveConfigManager, instanceManager, variantConfigManager));
         } else if (BUTTON_SETTINGS.equals(data.button)) {
             player.getPageManager().openCustomPage(ref, store,
                     new PurgeSettingsPage(playerRef, weaponConfigManager, waveConfigManager, instanceManager, variantConfigManager));

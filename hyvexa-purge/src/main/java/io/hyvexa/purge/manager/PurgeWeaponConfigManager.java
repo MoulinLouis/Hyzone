@@ -2,6 +2,7 @@ package io.hyvexa.purge.manager;
 
 import com.hypixel.hytale.logger.HytaleLogger;
 import io.hyvexa.core.db.DatabaseManager;
+import io.hyvexa.purge.data.PurgeSkinRegistry;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -202,6 +203,15 @@ public class PurgeWeaponConfigManager {
     public void setLootboxDropPercent(int percent) {
         this.lootboxDropPercent = Math.max(0, Math.min(100, percent));
         persistSetting("lootbox_drop_percent", String.valueOf(this.lootboxDropPercent));
+    }
+
+    public boolean setSkinPrice(String weaponId, String skinId, int price) {
+        int clamped = Math.max(0, price);
+        if (!PurgeSkinRegistry.setSkinPrice(weaponId, skinId, clamped)) {
+            return false;
+        }
+        persistSetting("skin_price:" + weaponId + ":" + skinId, String.valueOf(clamped));
+        return true;
     }
 
     public boolean setDamage(String weaponId, int level, int damage) {
@@ -589,6 +599,7 @@ public class PurgeWeaponConfigManager {
         if (!isPersistenceAvailable()) {
             return;
         }
+        int skinPricesLoaded = 0;
         String sql = "SELECT setting_key, setting_value FROM purge_settings";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -602,13 +613,25 @@ public class PurgeWeaponConfigManager {
                             lootboxDropPercent = Math.max(0, Math.min(100, Integer.parseInt(value)));
                         } catch (NumberFormatException ignored) {
                         }
+                    } else if (key.startsWith("skin_price:")) {
+                        String[] parts = key.split(":", 3);
+                        if (parts.length == 3) {
+                            try {
+                                int price = Integer.parseInt(value);
+                                if (PurgeSkinRegistry.setSkinPrice(parts[1], parts[2], price)) {
+                                    skinPricesLoaded++;
+                                }
+                            } catch (NumberFormatException ignored) {
+                            }
+                        }
                     }
                 }
             }
         } catch (SQLException e) {
             LOGGER.atWarning().withCause(e).log("Failed to load purge settings");
         }
-        LOGGER.atInfo().log("Purge settings loaded: lootbox_drop_percent=" + lootboxDropPercent);
+        LOGGER.atInfo().log("Purge settings loaded: lootbox_drop_percent=" + lootboxDropPercent
+                + ", skin_prices=" + skinPricesLoaded);
     }
 
     private void persistSetting(String key, String value) {
