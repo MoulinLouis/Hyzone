@@ -19,6 +19,10 @@ public interface ShopTab {
 
     int getOrder();
 
+    default boolean isVisibleTo(UUID playerId) {
+        return true;
+    }
+
     void buildContent(UICommandBuilder cmd, UIEventBuilder evt, UUID playerId, long vexa);
 
     ShopTabResult handleEvent(String button, Ref<EntityStore> ref, Store<EntityStore> store,
