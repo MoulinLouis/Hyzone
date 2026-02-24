@@ -1,0 +1,90 @@
+$C = "../Common.ui";
+
+Group {
+  LayoutMode: Left;
+  Anchor: (Left: 2, Right: 2, Bottom: 4, Height: 44, Width: 508);
+  Background: $C.@InputBoxBackground;
+  Padding: (Left: 10, Right: 8, Top: 6, Bottom: 6);
+
+  // Weapon badge
+  Label #WeaponBadge {
+    Anchor: (Width: 42);
+    Style: (FontSize: 11, TextColor: #8b9bb0, VerticalAlignment: Center);
+    Text: "AK47";
+  }
+
+  // Skin name
+  Label #SkinName {
+    Anchor: (Width: 120);
+    Style: (FontSize: 14, RenderBold: true, TextColor: #f0f4f8, VerticalAlignment: Center);
+    Text: "Asimov";
+  }
+
+  // Price controls
+  Group {
+    Anchor: (Width: 320);
+    LayoutMode: Left;
+
+    // -100
+    TextButton #Minus100 {
+      Anchor: (Width: 38, Height: 28);
+      Text: "-100";
+      Style: TextButtonStyle(
+        Default: (Background: #32131a, LabelStyle: (FontSize: 11, RenderBold: true, TextColor: #fca5a5, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Hovered: (Background: #4a1f29, LabelStyle: (FontSize: 11, RenderBold: true, TextColor: #fecaca, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Pressed: (Background: #230d12, LabelStyle: (FontSize: 11, RenderBold: true, TextColor: #fca5a5, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Sounds: $C.@ButtonSounds,
+      );
+    }
+
+    // -10
+    TextButton #Minus10 {
+      Anchor: (Left: 4, Width: 32, Height: 28);
+      Text: "-10";
+      Style: TextButtonStyle(
+        Default: (Background: #32131a, LabelStyle: (FontSize: 11, RenderBold: true, TextColor: #fca5a5, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Hovered: (Background: #4a1f29, LabelStyle: (FontSize: 11, RenderBold: true, TextColor: #fecaca, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Pressed: (Background: #230d12, LabelStyle: (FontSize: 11, RenderBold: true, TextColor: #fca5a5, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Sounds: $C.@ButtonSounds,
+      );
+    }
+
+    // Price value
+    Label #PriceValue {
+      Anchor: (Left: 6, Width: 60);
+      Style: (FontSize: 14, RenderBold: true, TextColor: #fbbf24, HorizontalAlignment: Center, VerticalAlignment: Center);
+      Text: "100";
+    }
+
+    // +10
+    TextButton #Plus10 {
+      Anchor: (Width: 32, Height: 28);
+      Text: "+10";
+      Style: TextButtonStyle(
+        Default: (Background: #0c2416, LabelStyle: (FontSize: 11, RenderBold: true, TextColor: #86efac, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Hovered: (Background: #124026, LabelStyle: (FontSize: 11, RenderBold: true, TextColor: #bbf7d0, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Pressed: (Background: #091a10, LabelStyle: (FontSize: 11, RenderBold: true, TextColor: #86efac, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Sounds: $C.@ButtonSounds,
+      );
+    }
+
+    // +100
+    TextButton #Plus100 {
+      Anchor: (Left: 4, Width: 38, Height: 28);
+      Text: "+100";
+      Style: TextButtonStyle(
+        Default: (Background: #0c2416, LabelStyle: (FontSize: 11, RenderBold: true, TextColor: #86efac, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Hovered: (Background: #124026, LabelStyle: (FontSize: 11, RenderBold: true, TextColor: #bbf7d0, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Pressed: (Background: #091a10, LabelStyle: (FontSize: 11, RenderBold: true, TextColor: #86efac, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Sounds: $C.@ButtonSounds,
+      );
+    }
+
+    // Vexa label
+    Label {
+      Anchor: (Left: 6, Width: 40);
+      Style: (FontSize: 11, TextColor: #8b9bb0, VerticalAlignment: Center);
+      Text: "vexa";
+    }
+  }
+}

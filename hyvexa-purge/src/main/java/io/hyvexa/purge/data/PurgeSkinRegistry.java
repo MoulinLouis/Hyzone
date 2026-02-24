@@ -52,4 +52,13 @@ public final class PurgeSkinRegistry {
     public static boolean hasAnySkins(String weaponId) {
         return !getSkinsForWeapon(weaponId).isEmpty();
     }
+
+    public static boolean setSkinPrice(String weaponId, String skinId, int price) {
+        PurgeSkinDefinition def = getSkin(weaponId, skinId);
+        if (def == null) {
+            return false;
+        }
+        def.setPrice(price);
+        return true;
+    }
 }
