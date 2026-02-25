@@ -1,0 +1,17 @@
+{
+  "Properties": {
+    "Translation": {
+      "Name": "server.violet.wardrobe.cosmetics.headaccessories.LittleWood_Headband.name"
+    },
+    "PermissionNode": "hyvexa.cosmetic.violet.headaccessories.littlewood_headband",
+    "Visibility": "Always"
+  },
+  "CosmeticSlot": "HeadAccessory",
+  "Icon": "Icons/Wardrobe/Cosmetics/HeadAccessories/LittleWood_Headband.png",
+  "Appearance": {
+    "Model": "Characters/Wardrobe/Cosmetics/HeadAccessories/LittleWood_Headband.blockymodel",
+    "TextureConfig": {
+      "Texture": "Characters/Wardrobe/Cosmetics/HeadAccessories/LittleWood_Headband.png"
+    }
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "Properties": {
+    "Translation": {
+      "Name": "server.violet.wardrobe.cosmetics.headaccessories.Kweebec_Mask.name",
+      "Description": "server.violet.wardrobe.cosmetics.headaccessories.Kweebec_Mask.description"
+    },
+    "PermissionNode": "hyvexa.cosmetic.violet.headaccessories.kweebec_mask",
+    "Visibility": "Always"
+  },
+  "CosmeticSlot": "HeadAccessory",
+  "HiddenCosmeticSlots": [
+    "Ears",
+    "Haircut",
+    "FacialHair",
+    "FaceAccessory",
+    "EarAccessory"
+  ],
+  "Icon": "Icons/Wardrobe/Cosmetics/HeadAccessories/Kweebec_Mask.png",
+  "Appearance": {
+    "Type": "Variant",
+    "Variants": {
+      "Default": {
+        "Properties": {
+          "Translation": {
+            "Name": "server.violet.wardrobe.options.Default.name"
+          }
+        },
+        "Model": "Characters/Wardrobe/Cosmetics/HeadAccessories/Kweebec_Mask.blockymodel",
+        "TextureConfig": {
+          "Texture": "Characters/Wardrobe/Cosmetics/HeadAccessories/Kweebec_Mask.png"
+        }
+      },
+      "Straw": {
+        "Properties": {
+          "Translation": {
+            "Name": "server.violet.wardrobe.cosmetics.headaccessories.Kweebec_Mask_Straw.name"
+          }
+        },
+        "Icon": "Icons/Wardrobe/Cosmetics/HeadAccessories/Kweebec_Mask_Straw.png",
+        "Model": "Characters/Wardrobe/Cosmetics/HeadAccessories/Straw_Kweebec_Mask.blockymodel",
+        "TextureConfig": {
+          "Texture": "Characters/Wardrobe/Cosmetics/HeadAccessories/Straw_Kweebec_Mask.png"
+        }
+      }
+    }
+  }
+}

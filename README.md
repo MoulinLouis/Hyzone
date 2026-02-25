@@ -10,6 +10,7 @@ A multi-module Hytale server plugin suite for a parkour minigame server. Players
 | `hyvexa-parkour` | Classic parkour gameplay with maps, leaderboards, and ranks |
 | `hyvexa-parkour-ascend` | Idle parkour mode with prestige tiers, skill trees, and economy |
 | `hyvexa-hub` | Hub world with mode selection routing and UI |
+| `hyvexa-wardrobe` | Wardrobe cosmetics integration (`/wardrobe` visibility + `/shop` bridge) |
 | `hyvexa-launch` | Launch-only IntelliJ classpath module for `com.hypixel.hytale.Main` |
 
 ## Features

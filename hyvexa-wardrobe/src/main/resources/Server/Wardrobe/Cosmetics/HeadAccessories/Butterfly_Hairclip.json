@@ -1,0 +1,17 @@
+{
+  "Properties": {
+    "Translation": {
+      "Name": "server.violet.wardrobe.cosmetics.headaccessories.Butterfly_Hairclip.name"
+    },
+    "PermissionNode": "hyvexa.cosmetic.violet.headaccessories.butterfly_hairclip",
+    "Visibility": "Always"
+  },
+  "CosmeticSlot": "HeadAccessory",
+  "Icon": "Icons/Wardrobe/Cosmetics/HeadAccessories/Butterfly_Hairclip.png",
+  "Appearance": {
+    "Model": "Characters/Wardrobe/Cosmetics/HeadAccessories/Butterfly_Hairclip.blockymodel",
+    "TextureConfig": {
+      "Texture": "Characters/Wardrobe/Cosmetics/HeadAccessories/Butterfly_Hairclip.png"
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "Properties": {
+    "Translation": {
+      "Name": "server.violet.wardrobe.cosmetics.unertops.Shirt_Buddhacat.name"
+    },
+    "PermissionNode": "hyvexa.cosmetic.violet.undertops.shirt_buddhacat",
+    "Visibility": "Always"
+  },
+  "CosmeticSlot": "Undertop",
+  "Icon": "Icons/Wardrobe/Cosmetics/Undertops/Shirt_Buddhacat.png",
+  "Appearance": {
+    "Model": "Characters/Wardrobe/Cosmetics/Undertops/Shirt.blockymodel",
+    "TextureConfig": {
+      "Texture": "Characters/Wardrobe/Cosmetics/Undertops/Shirt_Buddhacat.png"
+    }
+  }
+}
