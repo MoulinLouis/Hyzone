@@ -276,6 +276,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
         clearControlledItems(hotbar, capacity);
         if (state == HotbarState.IN_GAME) {
             setHotbarItem(hotbar, capacity, SLOT_PRIMARY, ITEM_BLINK);
+            setHotbarItem(hotbar, capacity, SLOT_GAME_SELECTOR, ITEM_LEAVE);
             return;
         }
         String primaryItem = state == HotbarState.LOBBY ? ITEM_LEAVE : ITEM_JOIN;
