@@ -200,6 +200,7 @@ public class HyvexaHubPlugin extends JavaPlugin {
                 return;
             }
             clearHubHudState(playerId);
+            MultiHudBridge.evictPlayer(playerId);
             try { VexaStore.getInstance().evictPlayer(playerId); }
             catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: VexaStore"); }
             try { DiscordLinkStore.getInstance().evictPlayer(playerId); }
@@ -227,11 +228,45 @@ public class HyvexaHubPlugin extends JavaPlugin {
 
     private void tickPlayerCount() {
         long now = System.currentTimeMillis();
+        List<UUID> toRemove = null;
         for (var entry : hubHudLifecycles.entrySet()) {
+            UUID playerId = entry.getKey();
             HudLifecycle lifecycle = entry.getValue();
-            if (lifecycle.hud() != null && now >= lifecycle.readyAt()) {
+            if (lifecycle == null || lifecycle.hud() == null) {
+                continue;
+            }
+            PlayerRef playerRef = Universe.get().getPlayer(playerId);
+            if (playerRef == null || !playerRef.isValid()) {
+                if (toRemove == null) {
+                    toRemove = new java.util.ArrayList<>();
+                }
+                toRemove.add(playerId);
+                continue;
+            }
+            Ref<EntityStore> ref = playerRef.getReference();
+            if (ref == null || !ref.isValid()) {
+                if (toRemove == null) {
+                    toRemove = new java.util.ArrayList<>();
+                }
+                toRemove.add(playerId);
+                continue;
+            }
+            Store<EntityStore> store = ref.getStore();
+            if (!isHubWorld(store)) {
+                if (toRemove == null) {
+                    toRemove = new java.util.ArrayList<>();
+                }
+                toRemove.add(playerId);
+                continue;
+            }
+            if (now >= lifecycle.readyAt()) {
                 lifecycle.hud().updatePlayerCount();
-                lifecycle.hud().updateVexa(VexaStore.getInstance().getVexa(entry.getKey()));
+                lifecycle.hud().updateVexa(VexaStore.getInstance().getVexa(playerId));
+            }
+        }
+        if (toRemove != null) {
+            for (UUID playerId : toRemove) {
+                hubHudLifecycles.remove(playerId);
             }
         }
     }

@@ -39,6 +39,7 @@ import io.hyvexa.purge.interaction.PurgeOrangeOrbInteraction;
 import io.hyvexa.purge.interaction.PurgeRedOrbInteraction;
 import io.hyvexa.purge.interaction.PurgeStartInteraction;
 import io.hyvexa.common.shop.ShopTabRegistry;
+import io.hyvexa.common.util.MultiHudBridge;
 import io.hyvexa.purge.ui.PurgeSkinShopTab;
 import io.hyvexa.purge.manager.PurgeInstanceManager;
 import io.hyvexa.purge.manager.PurgePartyManager;
@@ -237,6 +238,8 @@ public class HyvexaPurgePlugin extends JavaPlugin {
             catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: PurgeWeaponUpgradeStore"); }
             try { PurgeSkinStore.getInstance().evictPlayer(playerId); }
             catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: PurgeSkinStore"); }
+            try { MultiHudBridge.evictPlayer(playerId); }
+            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: MultiHudBridge"); }
         });
 
         // Slow HUD updates (player count, vexa, scrap) every 5 seconds
@@ -400,7 +403,7 @@ public class HyvexaPurgePlugin extends JavaPlugin {
 
     private void ensurePurgeIdleState(PlayerRef playerRef, Player player) {
         UUID playerId = playerRef.getUuid();
-        if (playerId != null && hudManager.getHud(playerId) == null) {
+        if (playerId != null) {
             hudManager.attach(playerRef, player);
         }
         if (playerId != null) {

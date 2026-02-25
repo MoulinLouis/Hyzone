@@ -64,7 +64,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
     private RunOrFallStatsStore statsStore;
     private RunOrFallGameManager gameManager;
     private RunOrFallCommand runOrFallCommand;
-    private static final long HUD_READY_DELAY_MS = 250L;
+    private static final long HUD_READY_DELAY_MS = 1500L;
     private final ConcurrentHashMap<UUID, RunOrFallHud> runOrFallHuds = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, HiddenRunOrFallHud> hiddenRunOrFallHuds = new ConcurrentHashMap<>();
     private final Set<UUID> hiddenHudPlayers = ConcurrentHashMap.newKeySet();
@@ -460,6 +460,14 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
             hud.updatePlayerCount();
             hud.updateVexa(VexaStore.getInstance().getVexa(playerId));
             hud.updateFeathers(RunOrFallFeatherBridge.getFeathers(playerId));
+            int brokenBlocks = gameManager != null ? gameManager.getBrokenBlocksCount(playerId) : 0;
+            boolean showBrokenBlocks = gameManager != null && gameManager.isInActiveRound(playerId);
+            hud.updateBrokenBlocks(brokenBlocks, showBrokenBlocks);
+            int blinkCharges = gameManager != null ? gameManager.getBlinkCharges(playerId) : 0;
+            hud.updateBlinkCharges(blinkCharges, showBrokenBlocks);
+            if (!showBrokenBlocks) {
+                hud.updateCountdownText(null);
+            }
         }
     }
 
