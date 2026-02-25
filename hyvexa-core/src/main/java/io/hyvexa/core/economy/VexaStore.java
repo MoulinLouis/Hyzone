@@ -52,6 +52,18 @@ public class VexaStore {
         } catch (SQLException e) {
             LOGGER.atSevere().withCause(e).log("Failed to create player_vexa table");
         }
+
+        CurrencyBridge.register("vexa", new CurrencyBridge.CurrencyProvider() {
+            @Override
+            public long getBalance(UUID playerId) {
+                return getVexa(playerId);
+            }
+
+            @Override
+            public void deduct(UUID playerId, long amount) {
+                removeVexa(playerId, amount);
+            }
+        });
     }
 
     /**

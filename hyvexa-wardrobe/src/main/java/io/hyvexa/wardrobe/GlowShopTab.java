@@ -8,8 +8,6 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
-import com.hypixel.hytale.server.core.universe.PlayerRef;
-import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.shop.ShopTab;
 import io.hyvexa.common.shop.ShopTabResult;
@@ -23,7 +21,7 @@ import io.hyvexa.core.economy.VexaStore;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
-public class CosmeticsShopTab implements ShopTab {
+public class GlowShopTab implements ShopTab {
 
     private static final String ACTION_PREVIEW = "Preview:";
     private static final String ACTION_BUY = "Buy:";
@@ -32,12 +30,12 @@ public class CosmeticsShopTab implements ShopTab {
 
     @Override
     public String getId() {
-        return "cosmetics";
+        return "glow";
     }
 
     @Override
     public String getLabel() {
-        return "Cosmetics";
+        return "Glow";
     }
 
     @Override
@@ -47,14 +45,14 @@ public class CosmeticsShopTab implements ShopTab {
 
     @Override
     public int getOrder() {
-        return 0;
+        return 6;
     }
 
     @Override
     public void buildContent(UICommandBuilder cmd, UIEventBuilder evt, UUID playerId, long vexa) {
         String equippedId = playerId != null ? CosmeticStore.getInstance().getEquippedCosmeticId(playerId) : null;
-
         CosmeticDefinition[] defs = CosmeticDefinition.values();
+
         for (int i = 0; i < defs.length; i++) {
             CosmeticDefinition def = defs[i];
             String id = def.getId();
@@ -108,73 +106,55 @@ public class CosmeticsShopTab implements ShopTab {
 
         if (button.startsWith(ACTION_BUY)) {
             String cosmeticId = button.substring(ACTION_BUY.length());
-            return handleBuy(player, playerId, cosmeticId);
+            CosmeticDefinition def = CosmeticDefinition.fromId(cosmeticId);
+            if (def == null) return ShopTabResult.NONE;
+            long vexa = VexaStore.getInstance().getVexa(playerId);
+            if (vexa < def.getPrice()) {
+                player.sendMessage(Message.raw("[Shop] Not enough vexa! You need " + def.getPrice()
+                        + " vexa but have " + vexa + ".").color(SystemMessageUtils.ERROR));
+                return ShopTabResult.NONE;
+            }
+            VexaStore.getInstance().removeVexa(playerId, def.getPrice());
+            CosmeticStore.getInstance().purchaseCosmetic(playerId, cosmeticId);
+            player.sendMessage(Message.raw("[Shop] Purchased " + def.getDisplayName() + "!")
+                    .color(SystemMessageUtils.SUCCESS));
+            try {
+                io.hyvexa.core.analytics.AnalyticsStore.getInstance().logEvent(playerId, "gem_spend",
+                        "{\"amount\":" + def.getPrice() + ",\"item\":\"" + cosmeticId + "\"}");
+            } catch (Exception e) { /* silent */ }
+            return ShopTabResult.REFRESH;
         }
 
         if (button.startsWith(ACTION_EQUIP)) {
             String cosmeticId = button.substring(ACTION_EQUIP.length());
-            return handleEquip(player, playerId, cosmeticId);
+            CosmeticStore.getInstance().equipCosmetic(playerId, cosmeticId);
+            CosmeticDefinition def = CosmeticDefinition.fromId(cosmeticId);
+            String name = def != null ? def.getDisplayName() : cosmeticId;
+            player.sendMessage(Message.raw("[Shop] Equipped " + name + "!")
+                    .color(SystemMessageUtils.SUCCESS));
+            executeOnWorldThread(player, (wRef, wStore) ->
+                    CosmeticManager.getInstance().applyCosmetic(wRef, wStore, cosmeticId));
+            return ShopTabResult.REFRESH;
         }
 
         if (button.startsWith(ACTION_UNEQUIP)) {
-            return handleUnequip(player, playerId);
+            CosmeticStore.getInstance().unequipCosmetic(playerId);
+            player.sendMessage(Message.raw("[Shop] Cosmetic unequipped.")
+                    .color(SystemMessageUtils.SECONDARY));
+            executeOnWorldThread(player, (wRef, wStore) ->
+                    CosmeticManager.getInstance().removeCosmetic(wRef, wStore));
+            return ShopTabResult.REFRESH;
         }
 
         return ShopTabResult.NONE;
-    }
-
-    private ShopTabResult handleBuy(Player player, UUID playerId, String cosmeticId) {
-        CosmeticDefinition def = CosmeticDefinition.fromId(cosmeticId);
-        if (def == null) return ShopTabResult.NONE;
-
-        long vexa = VexaStore.getInstance().getVexa(playerId);
-        if (vexa < def.getPrice()) {
-            player.sendMessage(Message.raw("[Shop] Not enough vexa! You need " + def.getPrice()
-                    + " vexa but have " + vexa + ".").color(SystemMessageUtils.ERROR));
-            return ShopTabResult.NONE;
-        }
-
-        VexaStore.getInstance().removeVexa(playerId, def.getPrice());
-        CosmeticStore.getInstance().purchaseCosmetic(playerId, cosmeticId);
-        player.sendMessage(Message.raw("[Shop] Purchased " + def.getDisplayName() + "!")
-                .color(SystemMessageUtils.SUCCESS));
-        try {
-            io.hyvexa.core.analytics.AnalyticsStore.getInstance().logEvent(playerId, "gem_spend",
-                    "{\"amount\":" + def.getPrice() + ",\"item\":\"" + cosmeticId + "\"}");
-        } catch (Exception e) { /* silent */ }
-
-        return ShopTabResult.REFRESH;
-    }
-
-    private ShopTabResult handleEquip(Player player, UUID playerId, String cosmeticId) {
-        CosmeticStore.getInstance().equipCosmetic(playerId, cosmeticId);
-        CosmeticDefinition def = CosmeticDefinition.fromId(cosmeticId);
-        String name = def != null ? def.getDisplayName() : cosmeticId;
-        player.sendMessage(Message.raw("[Shop] Equipped " + name + "!")
-                .color(SystemMessageUtils.SUCCESS));
-
-        executeOnWorldThread(player, (wRef, wStore) ->
-                CosmeticManager.getInstance().applyCosmetic(wRef, wStore, cosmeticId));
-
-        return ShopTabResult.REFRESH;
-    }
-
-    private ShopTabResult handleUnequip(Player player, UUID playerId) {
-        CosmeticStore.getInstance().unequipCosmetic(playerId);
-        player.sendMessage(Message.raw("[Shop] Cosmetic unequipped.")
-                .color(SystemMessageUtils.SECONDARY));
-
-        executeOnWorldThread(player, (wRef, wStore) ->
-                CosmeticManager.getInstance().removeCosmetic(wRef, wStore));
-
-        return ShopTabResult.REFRESH;
     }
 
     private void executeOnWorldThread(Player player, WorldThreadAction action) {
         Ref<EntityStore> freshRef = player.getReference();
         if (freshRef == null || !freshRef.isValid()) return;
         Store<EntityStore> freshStore = freshRef.getStore();
-        World world = freshStore.getExternalData().getWorld();
+        com.hypixel.hytale.server.core.universe.world.World world =
+                freshStore.getExternalData().getWorld();
         if (world == null) return;
         CompletableFuture.runAsync(() -> {
             if (!freshRef.isValid()) return;

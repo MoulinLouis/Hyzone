@@ -14,6 +14,8 @@ import io.hyvexa.common.shop.ShopTabResult;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.core.cosmetic.CosmeticStore;
+import io.hyvexa.core.economy.CurrencyBridge;
+import io.hyvexa.core.wardrobe.CosmeticShopConfigStore;
 import io.hyvexa.core.wardrobe.WardrobeBridge;
 import io.hyvexa.core.wardrobe.WardrobeBridge.WardrobeCosmeticDef;
 
@@ -36,7 +38,7 @@ public class WardrobeShopTab implements ShopTab {
 
     @Override
     public String getLabel() {
-        return "Wardrobe";
+        return "Cosmetics";
     }
 
     @Override
@@ -88,13 +90,20 @@ public class WardrobeShopTab implements ShopTab {
         // Grid
         cmd.append("#TabContent", "Pages/Shop_WardrobeGrid.ui");
         List<WardrobeCosmeticDef> cosmetics = bridge.getCosmeticsByCategory(currentCategory);
+        CosmeticShopConfigStore configStore = CosmeticShopConfigStore.getInstance();
 
-        for (int i = 0; i < cosmetics.size(); i++) {
-            WardrobeCosmeticDef def = cosmetics.get(i);
+        int cardIndex = 0;
+        for (WardrobeCosmeticDef def : cosmetics) {
+            if (!configStore.isAvailable(def.id())) continue;
+
             boolean owned = playerId != null && CosmeticStore.getInstance().ownsCosmetic(playerId, def.id());
+            int price = configStore.getPrice(def.id());
+            String currency = configStore.getCurrency(def.id());
+            long balance = CurrencyBridge.getBalance(currency, playerId);
+            boolean isFeathers = "feathers".equals(currency);
 
             cmd.append("#WardrobeGrid", "Pages/Shop_WardrobeCard.ui");
-            String root = "#WardrobeGrid[" + i + "] ";
+            String root = "#WardrobeGrid[" + cardIndex + "] ";
 
             // Show icon
             cmd.set(root + "#Icon" + def.iconKey() + ".Visible", true);
@@ -104,15 +113,28 @@ public class WardrobeShopTab implements ShopTab {
 
             if (owned) {
                 cmd.set(root + "#OwnedBadge.Visible", true);
-            } else if (vexa >= def.price()) {
-                cmd.set(root + "#PriceBuyBadge.Visible", true);
-                cmd.set(root + "#BuyPriceLabel.Text", String.valueOf(def.price()));
-                evt.addEventBinding(CustomUIEventBindingType.Activating, root + "#CardButton",
-                        EventData.of(ButtonEventData.KEY_BUTTON, getId() + ":" + ACTION_BUY + def.id()), false);
+            } else if (isFeathers) {
+                if (balance >= price) {
+                    cmd.set(root + "#PriceFeatherBuyBadge.Visible", true);
+                    cmd.set(root + "#BuyFeatherPriceLabel.Text", String.valueOf(price));
+                    evt.addEventBinding(CustomUIEventBindingType.Activating, root + "#CardButton",
+                            EventData.of(ButtonEventData.KEY_BUTTON, getId() + ":" + ACTION_BUY + def.id()), false);
+                } else {
+                    cmd.set(root + "#PriceFeatherCantAffordBadge.Visible", true);
+                    cmd.set(root + "#CantAffordFeatherPrice.Text", String.valueOf(price));
+                }
             } else {
-                cmd.set(root + "#PriceCantAffordBadge.Visible", true);
-                cmd.set(root + "#CantAffordPrice.Text", String.valueOf(def.price()));
+                if (balance >= price) {
+                    cmd.set(root + "#PriceBuyBadge.Visible", true);
+                    cmd.set(root + "#BuyPriceLabel.Text", String.valueOf(price));
+                    evt.addEventBinding(CustomUIEventBindingType.Activating, root + "#CardButton",
+                            EventData.of(ButtonEventData.KEY_BUTTON, getId() + ":" + ACTION_BUY + def.id()), false);
+                } else {
+                    cmd.set(root + "#PriceCantAffordBadge.Visible", true);
+                    cmd.set(root + "#CantAffordPrice.Text", String.valueOf(price));
+                }
             }
+            cardIndex++;
         }
     }
 
@@ -141,8 +163,9 @@ public class WardrobeShopTab implements ShopTab {
     public void populateConfirmOverlay(UICommandBuilder cmd, String confirmKey) {
         WardrobeCosmeticDef def = WardrobeBridge.getInstance().findById(confirmKey);
         if (def == null) return;
+        CosmeticShopConfigStore configStore = CosmeticShopConfigStore.getInstance();
         cmd.set("#ConfirmSkinName.Text", def.displayName());
-        cmd.set("#ConfirmPrice.Text", String.valueOf(def.price()));
+        cmd.set("#ConfirmPrice.Text", String.valueOf(configStore.getPrice(def.id())));
     }
 
     @Override
@@ -151,7 +174,7 @@ public class WardrobeShopTab implements ShopTab {
         String result = WardrobeBridge.getInstance().purchase(playerId, confirmKey);
 
         boolean isError = result.startsWith("Not enough") || result.startsWith("Unknown")
-                || result.startsWith("You already");
+                || result.startsWith("You already") || result.startsWith("This cosmetic");
         String color = isError ? SystemMessageUtils.ERROR : SystemMessageUtils.SUCCESS;
         player.sendMessage(Message.raw("[Wardrobe] " + result).color(color));
         return true;

@@ -1,0 +1,178 @@
+$C = "../Common.ui";
+
+Group {
+  Anchor: (Left: 0, Right: 0, Height: 52);
+  LayoutMode: Full;
+  Background: #0a1520;
+  OutlineColor: #ffffff(0.06);
+  OutlineSize: 1;
+
+  // Status dot (green = available, red = unavailable)
+  Group #StatusDot {
+    Anchor: (Left: 12, Top: 18, Width: 12, Height: 12);
+    Background: #ef4444;
+  }
+
+  // Cosmetic name
+  Label #ConfigName {
+    Anchor: (Left: 32, Top: 0, Bottom: 0, Width: 160);
+    Style: (FontSize: 13, TextColor: #cfd7dc, RenderBold: true, VerticalAlignment: Center);
+    Text: "";
+    HitTestVisible: false;
+  }
+
+  // Price label
+  Label #ConfigPrice {
+    Anchor: (Left: 200, Top: 0, Bottom: 0, Width: 50);
+    Style: (FontSize: 13, TextColor: #f59e0b, VerticalAlignment: Center, HorizontalAlignment: End);
+    Text: "0";
+    HitTestVisible: false;
+  }
+
+  // Currency icon - vexa (shown by default)
+  Group #CurrencyVexa {
+    Anchor: (Left: 256, Top: 17, Width: 14, Height: 14);
+    Background: (TexturePath: "../Textures/vexa.png");
+    HitTestVisible: false;
+  }
+
+  // Currency icon - feather (hidden by default)
+  Group #CurrencyFeather {
+    Anchor: (Left: 256, Top: 17, Width: 14, Height: 14);
+    Background: (TexturePath: "../Textures/feather.png");
+    Visible: false;
+    HitTestVisible: false;
+  }
+
+  // Toggle button (Enable/Disable)
+  Group #ToggleWrap {
+    Anchor: (Left: 286, Top: 10, Width: 68, Height: 28);
+    LayoutMode: Full;
+
+    Label #ToggleLabel {
+      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+      Style: (FontSize: 11, TextColor: #22c55e, RenderBold: true, VerticalAlignment: Center, HorizontalAlignment: Center);
+      Text: "Enable";
+      HitTestVisible: false;
+    }
+
+    TextButton #ToggleBtn {
+      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+      Text: "";
+      Style: TextButtonStyle(
+        Default: (
+          Background: #22c55e(0.15),
+          LabelStyle: (FontSize: 1, TextColor: #000000(0.01), HorizontalAlignment: Center, VerticalAlignment: Center)
+        ),
+        Hovered: (
+          Background: #22c55e(0.30),
+          LabelStyle: (FontSize: 1, TextColor: #000000(0.01), HorizontalAlignment: Center, VerticalAlignment: Center)
+        ),
+        Pressed: (
+          Background: #22c55e(0.10),
+          LabelStyle: (FontSize: 1, TextColor: #000000(0.01), HorizontalAlignment: Center, VerticalAlignment: Center)
+        ),
+        Sounds: $C.@ButtonSounds,
+      );
+    }
+  }
+
+  // +50 button
+  Group #PriceUpWrap {
+    Anchor: (Left: 360, Top: 10, Width: 44, Height: 28);
+    LayoutMode: Full;
+
+    Label {
+      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+      Style: (FontSize: 11, TextColor: #22c55e, RenderBold: true, VerticalAlignment: Center, HorizontalAlignment: Center);
+      Text: "+50";
+      HitTestVisible: false;
+    }
+
+    TextButton #PriceUpBtn {
+      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+      Text: "";
+      Style: TextButtonStyle(
+        Default: (
+          Background: #ffffff(0.06),
+          LabelStyle: (FontSize: 1, TextColor: #000000(0.01), HorizontalAlignment: Center, VerticalAlignment: Center)
+        ),
+        Hovered: (
+          Background: #ffffff(0.12),
+          LabelStyle: (FontSize: 1, TextColor: #000000(0.01), HorizontalAlignment: Center, VerticalAlignment: Center)
+        ),
+        Pressed: (
+          Background: #ffffff(0.04),
+          LabelStyle: (FontSize: 1, TextColor: #000000(0.01), HorizontalAlignment: Center, VerticalAlignment: Center)
+        ),
+        Sounds: $C.@ButtonSounds,
+      );
+    }
+  }
+
+  // -50 button
+  Group #PriceDownWrap {
+    Anchor: (Left: 410, Top: 10, Width: 44, Height: 28);
+    LayoutMode: Full;
+
+    Label {
+      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+      Style: (FontSize: 11, TextColor: #ef4444, RenderBold: true, VerticalAlignment: Center, HorizontalAlignment: Center);
+      Text: "-50";
+      HitTestVisible: false;
+    }
+
+    TextButton #PriceDownBtn {
+      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+      Text: "";
+      Style: TextButtonStyle(
+        Default: (
+          Background: #ffffff(0.06),
+          LabelStyle: (FontSize: 1, TextColor: #000000(0.01), HorizontalAlignment: Center, VerticalAlignment: Center)
+        ),
+        Hovered: (
+          Background: #ffffff(0.12),
+          LabelStyle: (FontSize: 1, TextColor: #000000(0.01), HorizontalAlignment: Center, VerticalAlignment: Center)
+        ),
+        Pressed: (
+          Background: #ffffff(0.04),
+          LabelStyle: (FontSize: 1, TextColor: #000000(0.01), HorizontalAlignment: Center, VerticalAlignment: Center)
+        ),
+        Sounds: $C.@ButtonSounds,
+      );
+    }
+  }
+
+  // V/F currency toggle button
+  Group #CurrencyToggleWrap {
+    Anchor: (Left: 460, Top: 10, Width: 36, Height: 28);
+    LayoutMode: Full;
+
+    Label #CurrencyToggleLabel {
+      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+      Style: (FontSize: 11, TextColor: #a78bfa, RenderBold: true, VerticalAlignment: Center, HorizontalAlignment: Center);
+      Text: "V/F";
+      HitTestVisible: false;
+    }
+
+    TextButton #CurrencyToggleBtn {
+      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+      Text: "";
+      Style: TextButtonStyle(
+        Default: (
+          Background: #ffffff(0.06),
+          LabelStyle: (FontSize: 1, TextColor: #000000(0.01), HorizontalAlignment: Center, VerticalAlignment: Center)
+        ),
+        Hovered: (
+          Background: #ffffff(0.12),
+          LabelStyle: (FontSize: 1, TextColor: #000000(0.01), HorizontalAlignment: Center, VerticalAlignment: Center)
+        ),
+        Pressed: (
+          Background: #ffffff(0.04),
+          LabelStyle: (FontSize: 1, TextColor: #000000(0.01), HorizontalAlignment: Center, VerticalAlignment: Center)
+        ),
+        Sounds: $C.@ButtonSounds,
+      );
+    }
+  }
+}
