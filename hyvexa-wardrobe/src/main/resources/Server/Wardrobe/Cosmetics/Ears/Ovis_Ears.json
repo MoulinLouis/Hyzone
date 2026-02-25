@@ -1,0 +1,20 @@
+{
+  "Properties": {
+    "Icon": "Icons/Wardrobe/Ears/Ovis_Ears.png",
+    "Translation": {
+      "Name": "server.cechoo.animal.cosmetics.Ovis_Ears.name"
+    },
+    "PermissionNode": "hyvexa.cosmetic.cechoo.ears.ovis_ears",
+    "Visibility": "Always"
+  },
+  "CosmeticSlot": "Ears",
+  "Icon": "Icons/Wardrobe/Ears/Ovis_Ears.png",
+  "Appearance": {
+    "Model": "Characters/Ears/Ovis_Ears/Ovis_Ears.blockymodel",
+    "TextureConfig": {
+      "Type": "Gradient",
+      "GrayscaleTexture": "Characters/Ears/Ovis_Ears/Ovis_Ears.png",
+      "GradientSet": "Hair"
+    }
+  }
+}

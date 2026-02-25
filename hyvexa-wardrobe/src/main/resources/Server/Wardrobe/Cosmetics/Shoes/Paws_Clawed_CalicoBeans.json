@@ -1,0 +1,20 @@
+{
+  "Appearance": {
+    "Model": "Characters/Shoes/Paws_Clawed/Paws_Clawed.blockymodel",
+    "TextureConfig": {
+      "Type": "Gradient",
+      "GrayscaleTexture": "Characters/Shoes/Paws_Clawed/Paws_Clawed_CalicoBeans.png",
+      "GradientSet": "Hair"
+    }
+  },
+  "Icon": "Icons/Wardrobe/Feet/CalicoBeans.png",
+  "CosmeticSlot": "Shoes",
+  "Properties": {
+    "Icon": "Icons/Wardrobe/Feet/Paws_Clawed.png",
+    "Translation": {
+      "Name": "server.cechoo.animal.cosmetics.Paws_Clawed_CalicoBeans.name"
+    },
+    "PermissionNode": "hyvexa.cosmetic.cechoo.shoes.paws_clawed_calicobeans",
+    "Visibility": "Always"
+  }
+}

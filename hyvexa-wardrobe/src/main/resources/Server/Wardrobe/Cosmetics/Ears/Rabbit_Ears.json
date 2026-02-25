@@ -1,0 +1,20 @@
+{
+  "Properties": {
+    "Icon": "Icons/Wardrobe/Ears/Rabbit_Ears.png",
+    "Translation": {
+      "Name": "server.cechoo.animal.cosmetics.Rabbit_Ears.name"
+    },
+    "PermissionNode": "hyvexa.cosmetic.cechoo.ears.rabbit_ears",
+    "Visibility": "Always"
+  },
+  "CosmeticSlot": "Ears",
+  "Icon": "Icons/Wardrobe/Ears/Rabbit_Ears.png",
+  "Appearance": {
+    "Model": "Characters/Ears/Rabbit_Ears/Rabbit_Ears.blockymodel",
+    "TextureConfig": {
+      "Type": "Gradient",
+      "GrayscaleTexture": "Characters/Ears/Rabbit_Ears/Rabbit_Ears.png",
+      "GradientSet": "Hair"
+    }
+  }
+}

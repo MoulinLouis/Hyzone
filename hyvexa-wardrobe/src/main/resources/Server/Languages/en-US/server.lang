@@ -171,3 +171,33 @@ mobstar_capes.all = All Capes
 mobstar_capes.chest = Capes
 mobstar_capes.creators = Creators
 
+# Cechoo Animal Cosmetics pack
+cechoo.animal.cosmetics.Antelope_Ears.name = Antelope Ears
+cechoo.animal.cosmetics.Antelope_Horns.name = Antelope Horns
+cechoo.animal.cosmetics.Beak_Hawk.name = Beak Hawk
+cechoo.animal.cosmetics.Bird_Tail1.name = Bird Tail 1
+cechoo.animal.cosmetics.Bunny_Tail.name = Bunny Tail
+cechoo.animal.cosmetics.Cat_Ears.name = Cat Ears
+cechoo.animal.cosmetics.Cat_Tail.name = Cat Tail
+cechoo.animal.cosmetics.Feran_Ears.name = Feran Ears
+cechoo.animal.cosmetics.FoxEars_Big.name = Fox Ears Big
+cechoo.animal.cosmetics.Fox_Tail.name = Fox Tail
+cechoo.animal.cosmetics.Fur_Socks.name = Fur Socks
+cechoo.animal.cosmetics.Hooves_Cloven.name = Hooves Cloven
+cechoo.animal.cosmetics.Mouse_Ears.name = Mouse Ears
+cechoo.animal.cosmetics.Ovis_Ears.name = Ovis Ears
+cechoo.animal.cosmetics.Ovis_Horns.name = Ovis Horns
+cechoo.animal.cosmetics.Ovis_Horns_Low.name = Ovis Horns Low
+cechoo.animal.cosmetics.Paws_Clawed.name = Paws Clawed
+cechoo.animal.cosmetics.Paws_Clawed_CalicoBeans.name = Paws Clawed Calico Beans
+cechoo.animal.cosmetics.Paws_Clawed_PinkBeans.name = Paws Clawed Pink Beans
+cechoo.animal.cosmetics.Piggy_Ears.name = Piggy Ears
+cechoo.animal.cosmetics.Piggy_Snout.name = Piggy Snout
+cechoo.animal.cosmetics.Rabbit_Ears.name = Rabbit Ears
+cechoo.animal.cosmetics.Rat_Tail.name = Rat Tail
+cechoo.animal.cosmetics.ReptileLarge_Tail.name = Reptile Large Tail
+cechoo.animal.cosmetics.Reptile_Socks.name = Reptile Socks
+cechoo.animal.cosmetics.Tuft_Tail.name = Tuft Tail
+cechoo.animal.cosmetics.Wolf_Ears.name = Wolf Ears
+cechoo.animal.cosmetics.Wolf_Tail.name = Wolf Tail
+

@@ -1,0 +1,20 @@
+{
+  "Properties": {
+    "Icon": "Icons/Wardrobe/Ears/Wolf_Ears.png",
+    "Translation": {
+      "Name": "server.cechoo.animal.cosmetics.Wolf_Ears.name"
+    },
+    "PermissionNode": "hyvexa.cosmetic.cechoo.ears.wolf_ears",
+    "Visibility": "Always"
+  },
+  "CosmeticSlot": "Ears",
+  "Icon": "Icons/Wardrobe/Ears/Wolf_Ears.png",
+  "Appearance": {
+    "Model": "Characters/Ears/Wolf_Ears/Wolf_Ears.blockymodel",
+    "TextureConfig": {
+      "Type": "Gradient",
+      "GrayscaleTexture": "Characters/Ears/Wolf_Ears/Wolf_Ears.png",
+      "GradientSet": "Hair"
+    }
+  }
+}

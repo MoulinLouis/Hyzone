@@ -1,0 +1,67 @@
+{
+  "Properties": {
+    "Icon": "Icons/Wardrobe/Mouths/Beak/Beak_Hawk.png",
+    "Translation": {
+      "Name": "server.cechoo.animal.cosmetics.Beak_Hawk.name"
+    },
+    "PermissionNode": "hyvexa.cosmetic.cechoo.mouths.beak_hawk",
+    "Visibility": "Always"
+  },
+  "CosmeticSlot": "Mouth",
+  "Icon": "Icons/Wardrobe/Mouths/Beak/Beak_Hawk.png",
+  "Appearance": {
+    "Model": "Characters/Mouths/Beak_Hawk/Beak_Hawk.blockymodel",
+    "TextureConfig": {
+      "Type": "Variant",
+      "Variants": {
+        "Yellow": {
+          "Properties": {
+            "Translation": {
+              "Name": "Yellow"
+            }
+          },
+          "Texture": "Characters/Mouths/Beak_Hawk/Beak_Hawk.png",
+          "WardrobeColor": [
+            "#f3cf3a"
+          ]
+        },
+        "Black": {
+          "Properties": {
+            "Translation": {
+              "Name": "Black"
+            }
+          },
+          "Texture": "Characters/Mouths/Beak_Hawk/Beak_Hawk_Black.png",
+          "Icon": "Icons/Wardrobe/Mouths/Beak/Beak_Hawk_Black.png",
+          "WardrobeColor": [
+            "#151726"
+          ]
+        },
+        "Blue": {
+          "Properties": {
+            "Translation": {
+              "Name": "Blue"
+            }
+          },
+          "Texture": "Characters/Mouths/Beak_Hawk/Beak_Hawk_Blue.png",
+          "Icon": "Icons/Wardrobe/Mouths/Beak/Beak_Hawk_Blue.png",
+          "WardrobeColor": [
+            "#1887a9"
+          ]
+        },
+        "Grey": {
+          "Properties": {
+            "Translation": {
+              "Name": "Grey"
+            }
+          },
+          "Texture": "Characters/Mouths/Beak_Hawk/Beak_Hawk_Grey.png",
+          "Icon": "Icons/Wardrobe/Mouths/Beak/Beak_Hawk_Grey.png",
+          "WardrobeColor": [
+            "#cbcbcb"
+          ]
+        }
+      }
+    }
+  }
+}

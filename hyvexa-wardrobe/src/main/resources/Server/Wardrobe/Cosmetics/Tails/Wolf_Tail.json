@@ -1,0 +1,20 @@
+{
+  "Properties": {
+    "Icon": "Icons/Wardrobe/Tails/Wolf_Tail.png",
+    "Translation": {
+      "Name": "server.cechoo.animal.cosmetics.Wolf_Tail.name"
+    },
+    "PermissionNode": "hyvexa.cosmetic.cechoo.tails.wolf_tail",
+    "Visibility": "Always"
+  },
+  "CosmeticSlot": "Tails",
+  "Icon": "Icons/Wardrobe/Tails/Wolf_Tail.png",
+  "Appearance": {
+    "Model": "Characters/Tails/Wolf_Tail/Wolf_Tail.blockymodel",
+    "TextureConfig": {
+      "Type": "Gradient",
+      "GrayscaleTexture": "Characters/Tails/Wolf_Tail/Wolf_Tail.png",
+      "GradientSet": "Hair"
+    }
+  }
+}

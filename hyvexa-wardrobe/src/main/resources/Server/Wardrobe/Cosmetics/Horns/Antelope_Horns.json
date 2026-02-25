@@ -1,0 +1,139 @@
+{
+  "Properties": {
+    "Icon": "Icons/Wardrobe/Horns/Antelope/Antelope_Horns.png",
+    "Translation": {
+      "Name": "server.cechoo.animal.cosmetics.Antelope_Horns.name"
+    },
+    "PermissionNode": "hyvexa.cosmetic.cechoo.horns.antelope_horns",
+    "Visibility": "Always"
+  },
+  "CosmeticSlot": "Horns",
+  "Icon": "Icons/Wardrobe/Horns/Antelope/Antelope_Horns.png",
+  "Appearance": {
+    "Model": "Characters/Horns/Antelope_Horns/Antelope_Horns.blockymodel",
+    "TextureConfig": {
+      "Type": "Variant",
+      "Variants": {
+        "Olive": {
+          "Properties": {
+            "Translation": {
+              "Name": "Olive"
+            }
+          },
+          "Texture": "Characters/Horns/Antelope_Horns/Antelope_Horns.png",
+          "WardrobeColor": [
+            "#434332"
+          ]
+        },
+        "Berry": {
+          "Properties": {
+            "Translation": {
+              "Name": "Berry"
+            }
+          },
+          "Texture": "Characters/Horns/Antelope_Horns/Antelope_Horns_Berry.png",
+          "Icon": "Icons/Wardrobe/Horns/Antelope/Antelope_Horns_Berry.png",
+          "WardrobeColor": [
+            "#67162c"
+          ]
+        },
+        "Black": {
+          "Properties": {
+            "Translation": {
+              "Name": "Black"
+            }
+          },
+          "Texture": "Characters/Horns/Antelope_Horns/Antelope_Horns_Black.png",
+          "Icon": "Icons/Wardrobe/Horns/Antelope/Antelope_Horns_Black.png",
+          "WardrobeColor": [
+            "#171827"
+          ]
+        },
+        "Copper": {
+          "Properties": {
+            "Translation": {
+              "Name": "Copper"
+            }
+          },
+          "Texture": "Characters/Horns/Antelope_Horns/Antelope_Horns_Copper.png",
+          "Icon": "Icons/Wardrobe/Horns/Antelope/Antelope_Horns_Copper.png",
+          "WardrobeColor": [
+            "#b64020"
+          ]
+        },
+        "Ice": {
+          "Properties": {
+            "Translation": {
+              "Name": "Ice"
+            }
+          },
+          "Texture": "Characters/Horns/Antelope_Horns/Antelope_Horns_Ice.png",
+          "Icon": "Icons/Wardrobe/Horns/Antelope/Antelope_Horns_Ice.png",
+          "WardrobeColor": [
+            "#c3dddf"
+          ]
+        },
+        "Leather": {
+          "Properties": {
+            "Translation": {
+              "Name": "Leather"
+            }
+          },
+          "Texture": "Characters/Horns/Antelope_Horns/Antelope_Horns_LGrey.png",
+          "Icon": "Icons/Wardrobe/Horns/Antelope/Antelope_Horns_LGrey.png",
+          "WardrobeColor": [
+            "#635b58"
+          ]
+        },
+        "Purple": {
+          "Properties": {
+            "Translation": {
+              "Name": "Purple"
+            }
+          },
+          "Texture": "Characters/Horns/Antelope_Horns/Antelope_Horns_Purple.png",
+          "Icon": "Icons/Wardrobe/Horns/Antelope/Antelope_Horns_Purple.png",
+          "WardrobeColor": [
+            "#3c1e6d"
+          ]
+        },
+        "Sand": {
+          "Properties": {
+            "Translation": {
+              "Name": "Sand"
+            }
+          },
+          "Texture": "Characters/Horns/Antelope_Horns/Antelope_Horns_Sandr.png",
+          "Icon": "Icons/Wardrobe/Horns/Antelope/Antelope_Horns_Sandr.png",
+          "WardrobeColor": [
+            "#d3a878"
+          ]
+        },
+        "Toxic": {
+          "Properties": {
+            "Translation": {
+              "Name": "Toxic"
+            }
+          },
+          "Texture": "Characters/Horns/Antelope_Horns/Antelope_Horns_Toxic.png",
+          "Icon": "Icons/Wardrobe/Horns/Antelope/Antelope_Horns_Toxic.png",
+          "WardrobeColor": [
+            "#2a3021"
+          ]
+        },
+        "White": {
+          "Properties": {
+            "Translation": {
+              "Name": "White"
+            }
+          },
+          "Texture": "Characters/Horns/Antelope_Horns/Antelope_Horns_White.png",
+          "Icon": "Icons/Wardrobe/Horns/Antelope/Antelope_Horns_White.png",
+          "WardrobeColor": [
+            "#c9c9cb"
+          ]
+        }
+      }
+    }
+  }
+}

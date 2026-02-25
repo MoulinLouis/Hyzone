@@ -1,0 +1,11 @@
+{
+  "Properties": {
+    "Translation": {
+      "Name": "Horns"
+    }
+  },
+  "Category": "General",
+  "Icon": "Icons/Wardrobe/Slots/Horns_Icon.png",
+  "SelectedIcon": "Icons/Wardrobe/Slots/Horns_Icon_Selected.png",
+  "Order": 7
+}
