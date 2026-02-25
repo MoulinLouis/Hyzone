@@ -10,6 +10,8 @@ public class RunOrFallPlayerStats {
     private int currentWinStreak;
     private int bestWinStreak;
     private long longestSurvivedMs;
+    private long totalBlocksBroken;
+    private long totalBlinksUsed;
 
     public RunOrFallPlayerStats(UUID playerId, String playerName) {
         this.playerId = playerId;
@@ -68,6 +70,22 @@ public class RunOrFallPlayerStats {
         this.longestSurvivedMs = Math.max(0L, longestSurvivedMs);
     }
 
+    public long getTotalBlocksBroken() {
+        return totalBlocksBroken;
+    }
+
+    public void setTotalBlocksBroken(long totalBlocksBroken) {
+        this.totalBlocksBroken = Math.max(0L, totalBlocksBroken);
+    }
+
+    public long getTotalBlinksUsed() {
+        return totalBlinksUsed;
+    }
+
+    public void setTotalBlinksUsed(long totalBlinksUsed) {
+        this.totalBlinksUsed = Math.max(0L, totalBlinksUsed);
+    }
+
     public void applyWin(long survivedMs) {
         wins++;
         currentWinStreak++;
@@ -85,6 +103,20 @@ public class RunOrFallPlayerStats {
         if (survivedMs > longestSurvivedMs) {
             longestSurvivedMs = survivedMs;
         }
+    }
+
+    public void addBlocksBroken(int blocksBroken) {
+        if (blocksBroken <= 0) {
+            return;
+        }
+        totalBlocksBroken += blocksBroken;
+    }
+
+    public void addBlinksUsed(int blinksUsed) {
+        if (blinksUsed <= 0) {
+            return;
+        }
+        totalBlinksUsed += blinksUsed;
     }
 
     public int getTotalGames() {
@@ -106,6 +138,8 @@ public class RunOrFallPlayerStats {
         copy.currentWinStreak = currentWinStreak;
         copy.bestWinStreak = bestWinStreak;
         copy.longestSurvivedMs = longestSurvivedMs;
+        copy.totalBlocksBroken = totalBlocksBroken;
+        copy.totalBlinksUsed = totalBlinksUsed;
         return copy;
     }
 }

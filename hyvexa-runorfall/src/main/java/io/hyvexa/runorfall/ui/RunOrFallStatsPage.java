@@ -69,6 +69,8 @@ public class RunOrFallStatsPage extends InteractiveCustomUIPage<ButtonEventData>
                 String.format(Locale.US, "%.2f%%", stats.getWinRatePercent()));
         commandBuilder.set("#StatsBestStreakValue.Text", String.valueOf(stats.getBestWinStreak()));
         commandBuilder.set("#StatsLongestTimeValue.Text", RunOrFallUtils.formatDuration(stats.getLongestSurvivedMs()));
+        commandBuilder.set("#StatsBlocksBrokenValue.Text", String.format(Locale.US, "%,d", stats.getTotalBlocksBroken()));
+        commandBuilder.set("#StatsBlinksUsedValue.Text", String.format(Locale.US, "%,d", stats.getTotalBlinksUsed()));
     }
 
 }

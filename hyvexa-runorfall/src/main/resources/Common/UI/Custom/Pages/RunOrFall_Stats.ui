@@ -4,7 +4,7 @@ $C.@PageOverlay {
   SceneBlur {}
 
   Group #StatsWindow {
-    Anchor: (Width: 500, Height: 360);
+    Anchor: (Width: 500, Height: 460);
     LayoutMode: Top;
     Background: #0d1620(0.95);
     OutlineColor: #ffffff(0.06);
@@ -150,6 +150,42 @@ $C.@PageOverlay {
           Anchor: (Left: 220, Right: 16, Top: 0, Bottom: 0);
           Style: (FontSize: 15, TextColor: #c084fc, RenderBold: true, VerticalAlignment: Center);
           Text: "00:00.00";
+        }
+      }
+
+      Group #CardBlocksBroken {
+        Anchor: (Left: 0, Right: 0, Height: 42, Top: 6);
+        LayoutMode: Full;
+        Background: #ffffff(0.03);
+        OutlineColor: #ffffff(0.04);
+        OutlineSize: 1;
+        Label {
+          Anchor: (Left: 16, Top: 0, Bottom: 0, Width: 200);
+          Style: (FontSize: 13, TextColor: #9fb0ba, VerticalAlignment: Center);
+          Text: "Blocks broken";
+        }
+        Label #StatsBlocksBrokenValue {
+          Anchor: (Left: 220, Right: 16, Top: 0, Bottom: 0);
+          Style: (FontSize: 15, TextColor: #f0f4f8, RenderBold: true, VerticalAlignment: Center);
+          Text: "0";
+        }
+      }
+
+      Group #CardBlinksUsed {
+        Anchor: (Left: 0, Right: 0, Height: 42, Top: 6);
+        LayoutMode: Full;
+        Background: #ffffff(0.03);
+        OutlineColor: #ffffff(0.04);
+        OutlineSize: 1;
+        Label {
+          Anchor: (Left: 16, Top: 0, Bottom: 0, Width: 200);
+          Style: (FontSize: 13, TextColor: #9fb0ba, VerticalAlignment: Center);
+          Text: "Blinks used";
+        }
+        Label #StatsBlinksUsedValue {
+          Anchor: (Left: 220, Right: 16, Top: 0, Bottom: 0);
+          Style: (FontSize: 15, TextColor: #60a5fa, RenderBold: true, VerticalAlignment: Center);
+          Text: "0";
         }
       }
     }
