@@ -1,0 +1,155 @@
+{
+	"Properties": {
+		"Translation": {
+			"Name": "server.Mobstar_Capes_Undead.name"
+		},
+		"Icon": "Icons/ItemsGenerated/Mobstar_Capes_Undead_Murky.png",
+		"PermissionNode": "hyvexa.cosmetic.mobstar.capes.undead",
+		"Visibility": "Always"
+	},
+	"CosmeticSlot": "Cape",
+	"Appearance": {
+		"Type": "Variant",
+		"Variants": {
+			"Neck": {
+				"Properties": {
+					"Translation": {
+						"Name": "server.Mobstar_Capes_Undead.name"
+					},
+					"Icon": "Icons/ItemsGenerated/Mobstar_Capes_Undead_Murky.png"
+				},
+				"Model": "Items/Armor/Capes/Undead/Capes_Undead.blockymodel",
+				"TextureConfig": {
+					"Type": "Variant",
+					"Variants": {
+						"Purple": {
+							"Properties": {
+								"Translation": {
+									"Name": "server.Mobstar_Capes_Undead_Purple.name"
+								}
+							},
+							"Texture": "Items/Armor/Capes/Undead/Capes_Undead_Purple.png",
+							"WardrobeColor": [
+								"#a000e7"
+							]
+						},
+						"Teal": {
+							"Properties": {
+								"Translation": {
+									"Name": "server.Mobstar_Capes_Undead_Teal.name"
+								}
+							},
+							"Texture": "Items/Armor/Capes/Undead/Capes_Undead_Teal.png",
+							"WardrobeColor": [
+								"#00e7df"
+							]
+						},
+						"Murky": {
+							"Properties": {
+								"Translation": {
+									"Name": "server.Mobstar_Capes_Undead_Murky.name"
+								}
+							},
+							"Texture": "Items/Armor/Capes/Undead/Capes_Undead_Murky.png",
+							"WardrobeColor": [
+								"#3f5c41"
+							]
+						},
+						"White": {
+							"Properties": {
+								"Translation": {
+									"Name": "server.Mobstar_Capes_Undead_White.name"
+								}
+							},
+							"Texture": "Items/Armor/Capes/Undead/Capes_Undead_White.png",
+							"WardrobeColor": [
+								"#f7f7f7"
+							]
+						},
+						"Black": {
+							"Properties": {
+								"Translation": {
+									"Name": "server.Mobstar_Capes_Undead_Black.name"
+								}
+							},
+							"Texture": "Items/Armor/Capes/Undead/Capes_Undead_Black.png",
+							"WardrobeColor": [
+								"#0e0e0e"
+							]
+						}
+					}
+				}
+			},
+			"NoNeck": {
+				"Properties": {
+					"Translation": {
+						"Name": "server.Mobstar_Capes_Undead_NoNeck.name"
+					},
+					"Icon": "Icons/ItemsGenerated/Mobstar_Capes_Undead_Murky.png"
+				},
+				"Model": "Items/Armor/Capes/Undead/Capes_Undead_NoNeck.blockymodel",
+				"TextureConfig": {
+					"Type": "Variant",
+					"Variants": {
+						"Purple": {
+							"Properties": {
+								"Translation": {
+									"Name": "server.Mobstar_Capes_Undead_Purple_NoNeck.name"
+								}
+							},
+							"Texture": "Items/Armor/Capes/Undead/Capes_Undead_Purple.png",
+							"WardrobeColor": [
+								"#a000e7"
+							]
+						},
+						"Teal": {
+							"Properties": {
+								"Translation": {
+									"Name": "server.Mobstar_Capes_Undead_Teal_NoNeck.name"
+								}
+							},
+							"Texture": "Items/Armor/Capes/Undead/Capes_Undead_Teal.png",
+							"WardrobeColor": [
+								"#00e7df"
+							]
+						},
+						"Murky": {
+							"Properties": {
+								"Translation": {
+									"Name": "server.Mobstar_Capes_Undead_Murky_NoNeck.name"
+								}
+							},
+							"Texture": "Items/Armor/Capes/Undead/Capes_Undead_Murky.png",
+							"WardrobeColor": [
+								"#3f5c41"
+							]
+						},
+						"White": {
+							"Properties": {
+								"Translation": {
+									"Name": "server.Mobstar_Capes_Undead_White_NoNeck.name"
+								}
+							},
+							"Texture": "Items/Armor/Capes/Undead/Capes_Undead_White.png",
+							"WardrobeColor": [
+								"#f7f7f7"
+							]
+						},
+						"Black": {
+							"Properties": {
+								"Translation": {
+									"Name": "server.Mobstar_Capes_Undead_Black_NoNeck.name",
+									"Description": "server.Mobstar_Capes_Undead_Black.description"
+								}
+							},
+							"Texture": "Items/Armor/Capes/Undead/Capes_Undead_Black.png",
+							"WardrobeColor": [
+								"#0e0e0e"
+							]
+						}
+					}
+				}
+			}
+		}
+	}
+}

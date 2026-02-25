@@ -1,0 +1,132 @@
+{
+	"Properties": {
+		"Translation": {
+			"Name": "server.Mobstar_Capes_Creeper.name"
+		},
+		"Icon": "Icons/ItemsGenerated/Mobstar_Capes_Creeper_Green.png",
+		"PermissionNode": "hyvexa.cosmetic.mobstar.capes.creeper",
+		"Visibility": "Always"
+	},
+	"CosmeticSlot": "Cape",
+	"Appearance": {
+		"Type": "Variant",
+		"Variants": {
+			"Neck": {
+				"Properties": {
+					"Translation": {
+						"Name": "server.Mobstar_Capes_Creeper.name"
+					},
+					"Icon": "Icons/ItemsGenerated/Mobstar_Capes_Creeper_Green.png"
+				},
+				"Model": "Items/Armor/Capes/Creeper/Capes_Creeper.blockymodel",
+				"TextureConfig": {
+					"Type": "Variant",
+					"Variants": {
+						"Red": {
+							"Properties": {
+								"Translation": {
+									"Name": "server.Mobstar_Capes_Creeper_Red.name"
+								}
+							},
+							"Texture": "Items/Armor/Capes/Creeper/Capes_Creeper_Red.png",
+							"WardrobeColor": [
+								"#dd4400"
+							]
+						},
+						"Blue": {
+							"Properties": {
+								"Translation": {
+									"Name": "server.Mobstar_Capes_Creeper_Blue.name"
+								}
+							},
+							"Texture": "Items/Armor/Capes/Creeper/Capes_Creeper_Blue.png",
+							"WardrobeColor": [
+								"#0092dd"
+							]
+						},
+						"Green": {
+							"Properties": {
+								"Translation": {
+									"Name": "server.Mobstar_Capes_Creeper_Green.name"
+								}
+							},
+							"Texture": "Items/Armor/Capes/Creeper/Capes_Creeper_Green.png",
+							"WardrobeColor": [
+								"#00dd24"
+							]
+						},
+						"Gold": {
+							"Properties": {
+								"Translation": {
+									"Name": "server.Mobstar_Capes_Creeper_Gold.name"
+								}
+							},
+							"Texture": "Items/Armor/Capes/Creeper/Capes_Creeper_Gold.png",
+							"WardrobeColor": [
+								"#f2bc00"
+							]
+						}
+					}
+				}
+			},
+			"NoNeck": {
+				"Properties": {
+					"Translation": {
+						"Name": "server.Mobstar_Capes_Creeper_NoNeck.name"
+					},
+					"Icon": "Icons/ItemsGenerated/Mobstar_Capes_Creeper_Green.png"
+				},
+				"Model": "Items/Armor/Capes/Creeper/Capes_Creeper_NoNeck.blockymodel",
+				"TextureConfig": {
+					"Type": "Variant",
+					"Variants": {
+						"Red": {
+							"Properties": {
+								"Translation": {
+									"Name": "server.Mobstar_Capes_Creeper_Red.name"
+								}
+							},
+							"Texture": "Items/Armor/Capes/Creeper/Capes_Creeper_Red.png",
+							"WardrobeColor": [
+								"#dd4400"
+							]
+						},
+						"Blue": {
+							"Properties": {
+								"Translation": {
+									"Name": "server.Mobstar_Capes_Creeper_Blue.name"
+								}
+							},
+							"Texture": "Items/Armor/Capes/Creeper/Capes_Creeper_Blue.png",
+							"WardrobeColor": [
+								"#0092dd"
+							]
+						},
+						"Green": {
+							"Properties": {
+								"Translation": {
+									"Name": "server.Mobstar_Capes_Creeper_Green.name"
+								}
+							},
+							"Texture": "Items/Armor/Capes/Creeper/Capes_Creeper_Green.png",
+							"WardrobeColor": [
+								"#00dd24"
+							]
+						},
+						"Gold": {
+							"Properties": {
+								"Translation": {
+									"Name": "server.Mobstar_Capes_Creeper_Gold.name"
+								}
+							},
+							"Texture": "Items/Armor/Capes/Creeper/Capes_Creeper_Gold.png",
+							"WardrobeColor": [
+								"#f2bc00"
+							]
+						}
+					}
+				}
+			}
+		}
+	}
+}

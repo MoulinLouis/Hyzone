@@ -1,0 +1,66 @@
+{
+	"Properties": {
+		"Translation": {
+			"Name": "server.Mobstar_Capes_WIP.name"
+		},
+		"Icon": "Icons/ItemsGenerated/Mobstar_Capes_WIP.png",
+		"PermissionNode": "hyvexa.cosmetic.mobstar.capes.wip",
+		"Visibility": "Always"
+	},
+	"CosmeticSlot": "Cape",
+	"Appearance": {
+		"Type": "Variant",
+		"Variants": {
+			"Neck": {
+				"Properties": {
+					"Translation": {
+						"Name": "server.Mobstar_Capes_WIP.name"
+					},
+					"Icon": "Icons/ItemsGenerated/Mobstar_Capes_WIP.png"
+				},
+				"Model": "Items/Armor/Capes/WIP/Capes_WIP.blockymodel",
+				"TextureConfig": {
+					"Type": "Variant",
+					"Variants": {
+						"Gold": {
+							"Properties": {
+								"Translation": {
+									"Name": "server.Mobstar_Capes_WIP.name"
+								}
+							},
+							"Texture": "Items/Armor/Capes/WIP/Capes_WIP.png",
+							"WardrobeColor": [
+								"#f2bc00"
+							]
+						}
+					}
+				}
+			},
+			"NoNeck": {
+				"Properties": {
+					"Translation": {
+						"Name": "server.Mobstar_Capes_WIP_NoNeck.name"
+					},
+					"Icon": "Icons/ItemsGenerated/Mobstar_Capes_WIP.png"
+				},
+				"Model": "Items/Armor/Capes/WIP/Capes_WIP_NoNeck.blockymodel",
+				"TextureConfig": {
+					"Type": "Variant",
+					"Variants": {
+						"Gold": {
+							"Properties": {
+								"Translation": {
+									"Name": "server.Mobstar_Capes_WIP_NoNeck.name"
+								}
+							},
+							"Texture": "Items/Armor/Capes/WIP/Capes_WIP.png",
+							"WardrobeColor": [
+								"#f2bc00"
+							]
+						}
+					}
+				}
+			}
+		}
+	}
+}
