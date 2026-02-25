@@ -65,6 +65,9 @@ public class RunOrFallBlinkInteraction extends SimpleInteraction {
         if (playerId == null || !gameManager.isInActiveRound(playerId)) {
             return;
         }
+        if (gameManager.getBlinkCharges(playerId) <= 0) {
+            return;
+        }
         int blinkDistanceBlocks = gameManager.getBlinkDistanceBlocks();
 
         CompletableFuture.runAsync(() -> performBlink(ref, store, playerRef, world, gameManager, blinkDistanceBlocks), world);
@@ -105,14 +108,14 @@ public class RunOrFallBlinkInteraction extends SimpleInteraction {
         if (safeTarget == null || distanceSq(origin, safeTarget) <= MIN_BLINK_DISTANCE_SQ) {
             return;
         }
+        UUID playerId = playerRef.getUuid();
+        if (gameManager == null || playerId == null || !gameManager.tryConsumeBlinkCharge(playerId)) {
+            return;
+        }
 
         float roll = bodyRotation != null ? bodyRotation.getZ() : 0.0f;
         Vector3f rotation = new Vector3f(pitch, yaw, roll);
         store.addComponent(ref, Teleport.getComponentType(), new Teleport(world, safeTarget, rotation));
-        UUID playerId = playerRef.getUuid();
-        if (gameManager != null && playerId != null) {
-            gameManager.recordBlinkUse(playerId);
-        }
     }
 
     private Vector3d resolveSafeBlinkTarget(World world, Vector3d origin, Vector3d requestedTarget,
