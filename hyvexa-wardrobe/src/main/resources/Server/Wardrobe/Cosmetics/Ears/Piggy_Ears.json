@@ -1,0 +1,20 @@
+{
+  "Properties": {
+    "Icon": "Icons/Wardrobe/Ears/Piggy_Ears.png",
+    "Translation": {
+      "Name": "server.cechoo.animal.cosmetics.Piggy_Ears.name"
+    },
+    "PermissionNode": "hyvexa.cosmetic.cechoo.ears.piggy_ears",
+    "Visibility": "Always"
+  },
+  "CosmeticSlot": "Ears",
+  "Icon": "Icons/Wardrobe/Ears/Piggy_Ears.png",
+  "Appearance": {
+    "Model": "Characters/Ears/Piggy_Ears/Piggy_Ears.blockymodel",
+    "TextureConfig": {
+      "Type": "Gradient",
+      "GrayscaleTexture": "Characters/Ears/Piggy_Ears/Piggy_Ears.png",
+      "GradientSet": "Skin"
+    }
+  }
+}

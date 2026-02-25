@@ -19,6 +19,7 @@ It recreates and extends Hytale’s native cosmetic system.
 
 - Violet cosmetics are integrated directly in `hyvexa-wardrobe/src/main/resources/` (Common + Server/Wardrobe/Cosmetics).
 - Mobstar capes are integrated directly in the same module resources.
+- Cechoo Animal Cosmetics are integrated directly in the same module resources (including Horns/Tails slot definitions).
 - All imported cosmetics use permission-based locking (`Properties.PermissionNode`) and `Visibility: Always`.
 - Result: players see these cosmetics in `/wardrobe` as locked until permission is granted.
 - `/shop` is intentionally separate and currently exposes only cosmetics declared in `WardrobeBridge`.

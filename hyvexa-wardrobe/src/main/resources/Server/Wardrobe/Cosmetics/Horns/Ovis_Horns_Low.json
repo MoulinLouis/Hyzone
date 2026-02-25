@@ -1,0 +1,80 @@
+{
+  "Properties": {
+    "Icon": "Icons/Wardrobe/Horns/Ovis/Ovis_Horns_Low.png",
+    "Translation": {
+      "Name": "server.cechoo.animal.cosmetics.Ovis_Horns_Low.name"
+    },
+    "PermissionNode": "hyvexa.cosmetic.cechoo.horns.ovis_horns_low",
+    "Visibility": "Always"
+  },
+  "CosmeticSlot": "Horns",
+  "Icon": "Icons/Wardrobe/Horns/Ovis/Ovis_Horns_Low.png",
+  "Appearance": {
+    "Model": "Characters/Horns/Ovis_Horns_Low/Ovis_Horns_Low.blockymodel",
+    "TextureConfig": {
+      "Type": "Variant",
+      "Variants": {
+        "Black": {
+          "Properties": {
+            "Translation": {
+              "Name": "Black"
+            }
+          },
+          "Texture": "Characters/Horns/Ovis_Horns/Ovis_Horns_Black.png",
+          "Icon": "Icons/Wardrobe/Horns/Ovis/Ovis_Horns_Black.png",
+          "WardrobeColor": [
+            "#171827"
+          ]
+        },
+        "Gray": {
+          "Properties": {
+            "Translation": {
+              "Name": "Grey"
+            }
+          },
+          "Texture": "Characters/Horns/Ovis_Horns/Ovis_Horns_Grey.png",
+          "Icon": "Icons/Wardrobe/Horns/Ovis/Ovis_Horns_Grey.png",
+          "WardrobeColor": [
+            "#79828d"
+          ]
+        },
+        "White": {
+          "Properties": {
+            "Translation": {
+              "Name": "White"
+            }
+          },
+          "Texture": "Characters/Horns/Ovis_Horns/Ovis_Horns_White.png",
+          "Icon": "Icons/Wardrobe/Horns/Ovis/Ovis_Horns_White.png",
+          "WardrobeColor": [
+            "#c9c9cb"
+          ]
+        },
+        "Sand": {
+          "Properties": {
+            "Translation": {
+              "Name": "Sand"
+            }
+          },
+          "Texture": "Characters/Horns/Ovis_Horns/Ovis_Horns_Tan.png",
+          "Icon": "Icons/Wardrobe/Horns/Ovis/Ovis_Horns_Tan.png",
+          "WardrobeColor": [
+            "#d3a878"
+          ]
+        },
+        "Berry": {
+          "Properties": {
+            "Translation": {
+              "Name": "Berry"
+            }
+          },
+          "Texture": "Characters/Horns/Ovis_Horns/Ovis_Horns_Berry.png",
+          "Icon": "Icons/Wardrobe/Horns/Ovis/Ovis_Horns_Berry.png",
+          "WardrobeColor": [
+            "#67162c"
+          ]
+        }
+      }
+    }
+  }
+}

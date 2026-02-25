@@ -1,0 +1,20 @@
+{
+  "Properties": {
+    "Icon": "Icons/Wardrobe/Socks/Fur_Socks.png",
+    "Translation": {
+      "Name": "server.cechoo.animal.cosmetics.Fur_Socks.name"
+    },
+    "PermissionNode": "hyvexa.cosmetic.cechoo.overpants.fur_socks",
+    "Visibility": "Always"
+  },
+  "CosmeticSlot": "Overpants",
+  "Icon": "Icons/Wardrobe/Socks/Fur_Socks.png",
+  "Appearance": {
+    "Model": "Characters/Overpants/Fur_Socks/Fur_Socks.blockymodel",
+    "TextureConfig": {
+      "Type": "Gradient",
+      "GrayscaleTexture": "Characters/Overpants/Fur_Socks/Fur_Socks.png",
+      "GradientSet": "Hair"
+    }
+  }
+}

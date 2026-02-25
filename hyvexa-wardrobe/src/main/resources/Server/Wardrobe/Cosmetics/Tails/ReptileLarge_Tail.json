@@ -1,0 +1,20 @@
+{
+  "Properties": {
+    "Icon": "Icons/Wardrobe/Tails/ReptileLarge_Tail.png",
+    "Translation": {
+      "Name": "server.cechoo.animal.cosmetics.ReptileLarge_Tail.name"
+    },
+    "PermissionNode": "hyvexa.cosmetic.cechoo.tails.reptilelarge_tail",
+    "Visibility": "Always"
+  },
+  "CosmeticSlot": "Tails",
+  "Icon": "Icons/Wardrobe/Tails/ReptileLarge_Tail.png",
+  "Appearance": {
+    "Model": "Characters/Tails/ReptileLarge_Tail/ReptileLarge_Tail.blockymodel",
+    "TextureConfig": {
+      "Type": "Gradient",
+      "GrayscaleTexture": "Characters/Tails/ReptileLarge_Tail/ReptileLarge_Tail.png",
+      "GradientSet": "Faded_Leather"
+    }
+  }
+}

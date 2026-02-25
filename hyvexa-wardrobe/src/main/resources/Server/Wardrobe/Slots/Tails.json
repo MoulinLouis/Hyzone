@@ -1,0 +1,11 @@
+{
+  "Properties": {
+    "Translation": {
+      "Name": "Tails"
+    }
+  },
+  "Category": "General",
+  "Icon": "Icons/Wardrobe/Slots/Tails_Icon.png",
+  "SelectedIcon": "Icons/Wardrobe/Slots/Tails_Icon_Selected.png",
+  "Order": 8
+}

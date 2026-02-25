@@ -1,0 +1,20 @@
+{
+  "Properties": {
+    "Icon": "Icons/Wardrobe/Socks/Reptile_Socks.png",
+    "Translation": {
+      "Name": "server.cechoo.animal.cosmetics.Reptile_Socks.name"
+    },
+    "PermissionNode": "hyvexa.cosmetic.cechoo.overpants.reptile_socks",
+    "Visibility": "Always"
+  },
+  "CosmeticSlot": "Overpants",
+  "Icon": "Icons/Wardrobe/Socks/Reptile_Socks.png",
+  "Appearance": {
+    "Model": "Characters/Overpants/Reptile_Socks/Reptile_Socks.blockymodel",
+    "TextureConfig": {
+      "Type": "Gradient",
+      "GrayscaleTexture": "Characters/Overpants/Reptile_Socks/Reptile_Socks.png",
+      "GradientSet": "Faded_Leather"
+    }
+  }
+}

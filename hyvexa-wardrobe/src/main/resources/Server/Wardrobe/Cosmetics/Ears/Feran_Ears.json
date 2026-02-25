@@ -1,0 +1,20 @@
+{
+  "Properties": {
+    "Icon": "Icons/Wardrobe/Ears/Fox_Ears_Blond.png",
+    "Translation": {
+      "Name": "server.cechoo.animal.cosmetics.Feran_Ears.name"
+    },
+    "PermissionNode": "hyvexa.cosmetic.cechoo.ears.feran_ears",
+    "Visibility": "Always"
+  },
+  "CosmeticSlot": "Ears",
+  "Icon": "Icons/Wardrobe/Ears/Fox_Ears_Blond.png",
+  "Appearance": {
+    "Model": "Characters/Ears/Feran_Ears/Fox_Ears.blockymodel",
+    "TextureConfig": {
+      "Type": "Gradient",
+      "GrayscaleTexture": "Characters/Ears/Feran_Ears/Fox_Ears.png",
+      "GradientSet": "Hair"
+    }
+  }
+}

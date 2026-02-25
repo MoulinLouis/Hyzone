@@ -1,0 +1,59 @@
+{
+  "Properties": {
+    "Icon": "Icons/Wardrobe/Ears/Mouse_Ears.png",
+    "Translation": {
+      "Name": "server.cechoo.animal.cosmetics.Mouse_Ears.name"
+    },
+    "PermissionNode": "hyvexa.cosmetic.cechoo.ears.mouse_ears",
+    "Visibility": "Always"
+  },
+  "CosmeticSlot": "Ears",
+  "Icon": "Icons/Wardrobe/Ears/Mouse_Ears.png",
+  "Appearance": {
+    "Type": "Variant",
+    "Variants": {
+      "InnerFur": {
+        "Properties": {
+          "Translation": {
+            "Name": "InnerFur"
+          },
+          "Icon": "Icons/Wardrobe/Ears/Mouse_Ears_gradient.png"
+        },
+        "Model": "Characters/Ears/Mouse_Ears/Mouse_Ears.blockymodel",
+        "TextureConfig": {
+          "Type": "Gradient",
+          "GrayscaleTexture": "Characters/Ears/Mouse_Ears/Mouse_Ears_grayscale.png",
+          "GradientSet": "Hair"
+        }
+      },
+      "InnerSkin1": {
+        "Properties": {
+          "Translation": {
+            "Name": "InnerSkin1"
+          },
+          "Icon": "Icons/Wardrobe/Ears/Mouse_Ears_1.png"
+        },
+        "Model": "Characters/Ears/Mouse_Ears/Mouse_Ears.blockymodel",
+        "TextureConfig": {
+          "Type": "Gradient",
+          "GrayscaleTexture": "Characters/Ears/Mouse_Ears/Mouse_Ears.png",
+          "GradientSet": "Hair"
+        }
+      },
+      "InnerSkin2": {
+        "Properties": {
+          "Translation": {
+            "Name": "InnerSkin2"
+          },
+          "Icon": "Icons/Wardrobe/Ears/Mouse_Ears_2.png"
+        },
+        "Model": "Characters/Ears/Mouse_Ears/Mouse_Ears.blockymodel",
+        "TextureConfig": {
+          "Type": "Gradient",
+          "GrayscaleTexture": "Characters/Ears/Mouse_Ears/Mouse_Ears_innerdark.png",
+          "GradientSet": "Hair"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "Properties": {
+    "Icon": "Icons/Wardrobe/Ears/Antelope_Ears.png",
+    "Translation": {
+      "Name": "server.cechoo.animal.cosmetics.Antelope_Ears.name"
+    },
+    "PermissionNode": "hyvexa.cosmetic.cechoo.ears.antelope_ears",
+    "Visibility": "Always"
+  },
+  "CosmeticSlot": "Ears",
+  "Icon": "Icons/Wardrobe/Ears/Antelope_Ears.png",
+  "Appearance": {
+    "Model": "Characters/Ears/Antelope_Ears/Antelope_Ears.blockymodel",
+    "TextureConfig": {
+      "Type": "Gradient",
+      "GrayscaleTexture": "Characters/Ears/Antelope_Ears/Antelope_Ears.png",
+      "GradientSet": "Hair"
+    }
+  }
+}

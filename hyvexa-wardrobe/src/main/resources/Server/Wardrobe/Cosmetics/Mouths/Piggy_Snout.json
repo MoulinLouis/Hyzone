@@ -1,0 +1,20 @@
+{
+  "Properties": {
+    "Icon": "Icons/Wardrobe/Mouths/Piggy_Snout.png",
+    "Translation": {
+      "Name": "server.cechoo.animal.cosmetics.Piggy_Snout.name"
+    },
+    "PermissionNode": "hyvexa.cosmetic.cechoo.mouths.piggy_snout",
+    "Visibility": "Always"
+  },
+  "CosmeticSlot": "Mouth",
+  "Icon": "Icons/Wardrobe/Mouths/Piggy_Snout.png",
+  "Appearance": {
+    "Model": "Characters/Mouths/Piggy_Snout/Piggy_Snout.blockymodel",
+    "TextureConfig": {
+      "Type": "Gradient",
+      "GradientSet": "Skin",
+      "GrayscaleTexture": "Characters/Mouths/Piggy_Snout/Piggy_Snout.png"
+    }
+  }
+}

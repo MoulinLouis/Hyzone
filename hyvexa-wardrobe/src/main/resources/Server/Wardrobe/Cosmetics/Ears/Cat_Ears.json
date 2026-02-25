@@ -1,0 +1,59 @@
+{
+  "Properties": {
+    "Icon": "Icons/Wardrobe/Ears/Cat_Ears.png",
+    "Translation": {
+      "Name": "server.cechoo.animal.cosmetics.Cat_Ears.name"
+    },
+    "PermissionNode": "hyvexa.cosmetic.cechoo.ears.cat_ears",
+    "Visibility": "Always"
+  },
+  "CosmeticSlot": "Ears",
+  "Icon": "Icons/Wardrobe/Ears/Cat_Ears.png",
+  "Appearance": {
+    "Type": "Variant",
+    "Variants": {
+      "InnerFur": {
+        "Properties": {
+          "Translation": {
+            "Name": "InnerFur"
+          },
+          "Icon": "Icons/Wardrobe/Ears/Cat_Ears_gradient.png"
+        },
+        "Model": "Characters/Ears/Cat_Ears/Cat_Ears.blockymodel",
+        "TextureConfig": {
+          "Type": "Gradient",
+          "GrayscaleTexture": "Characters/Ears/Cat_Ears/Cat_Ears_gradient.png",
+          "GradientSet": "Hair"
+        }
+      },
+      "InnerSkin1": {
+        "Properties": {
+          "Translation": {
+            "Name": "InnerSkin1"
+          },
+          "Icon": "Icons/Wardrobe/Ears/Cat_Ears_1.png"
+        },
+        "Model": "Characters/Ears/Cat_Ears/Cat_Ears.blockymodel",
+        "TextureConfig": {
+          "Type": "Gradient",
+          "GrayscaleTexture": "Characters/Ears/Cat_Ears/Cat_Ears.png",
+          "GradientSet": "Hair"
+        }
+      },
+      "InnerSkin2": {
+        "Properties": {
+          "Translation": {
+            "Name": "InnerSkin2"
+          },
+          "Icon": "Icons/Wardrobe/Ears/Cat_Ears_2.png"
+        },
+        "Model": "Characters/Ears/Cat_Ears/Cat_Ears.blockymodel",
+        "TextureConfig": {
+          "Type": "Gradient",
+          "GrayscaleTexture": "Characters/Ears/Cat_Ears/Cat_Ears_innerdark.png",
+          "GradientSet": "Hair"
+        }
+      }
+    }
+  }
+}

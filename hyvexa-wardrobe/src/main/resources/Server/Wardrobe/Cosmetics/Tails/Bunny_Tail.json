@@ -1,0 +1,20 @@
+{
+  "Properties": {
+    "Icon": "Icons/Wardrobe/Tails/Bunny_Tail.png",
+    "Translation": {
+      "Name": "server.cechoo.animal.cosmetics.Bunny_Tail.name"
+    },
+    "PermissionNode": "hyvexa.cosmetic.cechoo.tails.bunny_tail",
+    "Visibility": "Always"
+  },
+  "CosmeticSlot": "Tails",
+  "Icon": "Icons/Wardrobe/Tails/Bunny_Tail.png",
+  "Appearance": {
+    "Model": "Characters/Tails/Bunny_Tail/Bunny_Tail.blockymodel",
+    "TextureConfig": {
+      "Type": "Gradient",
+      "GrayscaleTexture": "Characters/Tails/Bunny_Tail/Bunny_Tail.png",
+      "GradientSet": "Hair"
+    }
+  }
+}

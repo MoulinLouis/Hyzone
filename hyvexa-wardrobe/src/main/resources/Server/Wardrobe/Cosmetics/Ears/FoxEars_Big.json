@@ -1,0 +1,20 @@
+{
+  "Properties": {
+    "Icon": "Icons/Wardrobe/Ears/FoxEars_Big.png",
+    "Translation": {
+      "Name": "server.cechoo.animal.cosmetics.FoxEars_Big.name"
+    },
+    "PermissionNode": "hyvexa.cosmetic.cechoo.ears.foxears_big",
+    "Visibility": "Always"
+  },
+  "CosmeticSlot": "Ears",
+  "Icon": "Icons/Wardrobe/Ears/FoxEars_Big.png",
+  "Appearance": {
+    "Model": "Characters/Ears/FoxEars_Big/FoxEars_Big.blockymodel",
+    "TextureConfig": {
+      "Type": "Gradient",
+      "GrayscaleTexture": "Characters/Ears/FoxEars_Big/FoxEars_Big.png",
+      "GradientSet": "Hair"
+    }
+  }
+}
