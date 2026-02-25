@@ -1,0 +1,154 @@
+{
+	"Properties": {
+		"Translation": {
+			"Name": "server.Mobstar_Capes_Void.name"
+		},
+		"Icon": "Icons/ItemsGenerated/Mobstar_Capes_Void_Blue.png",
+		"PermissionNode": "hyvexa.cosmetic.mobstar.capes.void",
+		"Visibility": "Always"
+	},
+	"CosmeticSlot": "Cape",
+	"Appearance": {
+		"Type": "Variant",
+		"Variants": {
+			"Neck": {
+				"Properties": {
+					"Translation": {
+						"Name": "server.Mobstar_Capes_Void.name"
+					},
+					"Icon": "Icons/ItemsGenerated/Mobstar_Capes_Void_Blue.png"
+				},
+				"Model": "Items/Armor/Capes/Void/Capes_Void.blockymodel",
+				"TextureConfig": {
+					"Type": "Variant",
+					"Variants": {
+						"Red": {
+							"Properties": {
+								"Translation": {
+									"Name": "server.Mobstar_Capes_Void_Red.name"
+								}
+							},
+							"Texture": "Items/Armor/Capes/Void/Capes_Void_Red.png",
+							"WardrobeColor": [
+								"#dd4400"
+							]
+						},
+						"Blue": {
+							"Properties": {
+								"Translation": {
+									"Name": "server.Mobstar_Capes_Void_Blue.name"
+								}
+							},
+							"Texture": "Items/Armor/Capes/Void/Capes_Void_Blue.png",
+							"WardrobeColor": [
+								"#0092dd"
+							]
+						},
+						"Green": {
+							"Properties": {
+								"Translation": {
+									"Name": "server.Mobstar_Capes_Void_Green.name"
+								}
+							},
+							"Texture": "Items/Armor/Capes/Void/Capes_Void_Green.png",
+							"WardrobeColor": [
+								"#00dd24"
+							]
+						},
+						"White": {
+							"Properties": {
+								"Translation": {
+									"Name": "server.Mobstar_Capes_Void_White.name"
+								}
+							},
+							"Texture": "Items/Armor/Capes/Void/Capes_Void_White.png",
+							"WardrobeColor": [
+								"#f7f7f7"
+							]
+						},
+						"Black": {
+							"Properties": {
+								"Translation": {
+									"Name": "server.Mobstar_Capes_Void_Black.name"
+								}
+							},
+							"Texture": "Items/Armor/Capes/Void/Capes_Void_Black.png",
+							"WardrobeColor": [
+								"#0e0e0e"
+							]
+						}
+					}
+				}
+			},
+			"NoNeck": {
+				"Properties": {
+					"Translation": {
+						"Name": "server.Mobstar_Capes_Void_NoNeck.name"
+					},
+					"Icon": "Icons/ItemsGenerated/Mobstar_Capes_Void_Blue.png"
+				},
+				"Model": "Items/Armor/Capes/Void/Capes_Void_NoNeck.blockymodel",
+				"TextureConfig": {
+					"Type": "Variant",
+					"Variants": {
+						"Red": {
+							"Properties": {
+								"Translation": {
+									"Name": "server.Mobstar_Capes_Void_Red_NoNeck.name"
+								}
+							},
+							"Texture": "Items/Armor/Capes/Void/Capes_Void_Red.png",
+							"WardrobeColor": [
+								"#dd4400"
+							]
+						},
+						"Blue": {
+							"Properties": {
+								"Translation": {
+									"Name": "server.Mobstar_Capes_Void_Blue_NoNeck.name"
+								}
+							},
+							"Texture": "Items/Armor/Capes/Void/Capes_Void_Blue.png",
+							"WardrobeColor": [
+								"#0092dd"
+							]
+						},
+						"Green": {
+							"Properties": {
+								"Translation": {
+									"Name": "server.Mobstar_Capes_Void_Green_NoNeck.name"
+								}
+							},
+							"Texture": "Items/Armor/Capes/Void/Capes_Void_Green.png",
+							"WardrobeColor": [
+								"#00dd24"
+							]
+						},
+						"White": {
+							"Properties": {
+								"Translation": {
+									"Name": "server.Mobstar_Capes_Void_White_NoNeck.name"
+								}
+							},
+							"Texture": "Items/Armor/Capes/Void/Capes_Void_White.png",
+							"WardrobeColor": [
+								"#f7f7f7"
+							]
+						},
+						"Black": {
+							"Properties": {
+								"Translation": {
+									"Name": "server.Mobstar_Capes_Void_Black_NoNeck.name"
+								}
+							},
+							"Texture": "Items/Armor/Capes/Void/Capes_Void_Black.png",
+							"WardrobeColor": [
+								"#0e0e0e"
+							]
+						}
+					}
+				}
+			}
+		}
+	}
+}

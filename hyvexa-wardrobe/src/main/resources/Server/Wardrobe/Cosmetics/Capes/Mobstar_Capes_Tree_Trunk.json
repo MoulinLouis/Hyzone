@@ -1,0 +1,66 @@
+{
+	"Properties": {
+		"Translation": {
+			"Name": "server.Mobstar_Capes_Tree_Trunks.name"
+		},
+		"Icon": "Icons/ItemsGenerated/Mobstar_Capes_Tree_Trunks.png",
+		"PermissionNode": "hyvexa.cosmetic.mobstar.capes.tree_trunk",
+		"Visibility": "Always"
+	},
+	"CosmeticSlot": "Cape",
+	"Appearance": {
+		"Type": "Variant",
+		"Variants": {
+			"Neck": {
+				"Properties": {
+					"Translation": {
+						"Name": "server.Mobstar_Capes_Tree_Trunks.name"
+					},
+					"Icon": "Icons/ItemsGenerated/Mobstar_Capes_Tree_Trunks.png"
+				},
+				"Model": "Items/Armor/Capes/TreeTrunk/Capes_Tree_Trunk.blockymodel",
+				"TextureConfig": {
+					"Type": "Variant",
+					"Variants": {
+						"Brown": {
+							"Properties": {
+								"Translation": {
+									"Name": "server.Mobstar_Capes_Tree_Trunks.name"
+								}
+							},
+							"Texture": "Items/Armor/Capes/TreeTrunk/Capes_Tree_Trunks.png",
+							"WardrobeColor": [
+								"#71412b"
+							]
+						}
+					}
+				}
+			},
+			"NoNeck": {
+				"Properties": {
+					"Translation": {
+						"Name": "server.Mobstar_Capes_Tree_Trunks_NoNeck.name"
+					},
+					"Icon": "Icons/ItemsGenerated/Mobstar_Capes_Tree_Trunks.png"
+				},
+				"Model": "Items/Armor/Capes/TreeTrunk/Capes_Tree_Trunk_NoNeck.blockymodel",
+				"TextureConfig": {
+					"Type": "Variant",
+					"Variants": {
+						"Brown": {
+							"Properties": {
+								"Translation": {
+									"Name": "server.Mobstar_Capes_Tree_Trunks_NoNeck.name"
+								}
+							},
+							"Texture": "Items/Armor/Capes/TreeTrunk/Capes_Tree_Trunks.png",
+							"WardrobeColor": [
+								"#71412b"
+							]
+						}
+					}
+				}
+			}
+		}
+	}
+}

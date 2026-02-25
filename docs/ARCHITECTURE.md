@@ -58,6 +58,7 @@ Module boundaries:
 - Wardrobe cosmetics/assets are shipped directly in `hyvexa-wardrobe/src/main/resources` (not in `docs/`).
 - `/wardrobe` visibility is data-driven by Wardrobe cosmetic JSON files in `Server/Wardrobe/Cosmetics/`.
 - Violet cosmetics are present with `Properties.Visibility = "Always"` and `Properties.PermissionNode = hyvexa.cosmetic.violet.*`, so players can see them as locked by default.
+- Mobstar capes are also integrated with `Properties.Visibility = "Always"` and `Properties.PermissionNode = hyvexa.cosmetic.mobstar.capes.*` for locked-by-default wardrobe display.
 - `/shop` remains independent: purchasable wardrobe entries come only from `WardrobeBridge.COSMETICS` in core.
 
 ## Threading Model
