@@ -1,0 +1,17 @@
+{
+  "Properties": {
+    "Translation": {
+      "Name": "server.items.HayHay_Head_Warthog_Mask.name"
+    },
+    "PermissionNode": "hyvexa.cosmetic.hayhay.headaccessories.hayhay_head_warthog_mask",
+    "Visibility": "Always"
+  },
+  "CosmeticSlot": "HeadAccessory",
+  "Icon": "Icons/ItemsGenerated/HayHay_Head_Warthog_Mask.png",
+  "Appearance": {
+    "Model": "Items/Armor/Warthog_Mask/HayHay_Head_Warthog_Mask.blockymodel",
+    "TextureConfig": {
+      "Texture": "Items/Armor/Warthog_Mask/HayHay_Head_Warthog_Mask_Texture.png"
+    }
+  }
+}

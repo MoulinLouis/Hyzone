@@ -60,6 +60,7 @@ Module boundaries:
 - Violet cosmetics are present with `Properties.Visibility = "Always"` and `Properties.PermissionNode = hyvexa.cosmetic.violet.*`, so players can see them as locked by default.
 - Mobstar capes are also integrated with `Properties.Visibility = "Always"` and `Properties.PermissionNode = hyvexa.cosmetic.mobstar.capes.*` for locked-by-default wardrobe display.
 - Cechoo Animal Cosmetics are integrated with `Properties.Visibility = "Always"` and `Properties.PermissionNode = hyvexa.cosmetic.cechoo.*`, including custom Wardrobe slots (`Horns`, `Tails`).
+- HayHays Animal Masks are integrated as Wardrobe `HeadAccessory` cosmetics with `Properties.Visibility = "Always"` and `Properties.PermissionNode = hyvexa.cosmetic.hayhay.headaccessories.*`.
 - `/shop` remains independent: purchasable wardrobe entries come only from `WardrobeBridge.COSMETICS` in core.
 
 ## Threading Model

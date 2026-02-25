@@ -27,6 +27,7 @@
 - **Wardrobe: Violet pack integrated in module resources** - Violet cosmetics/assets are now integrated directly in `hyvexa-wardrobe` resources with permission locks, so they appear in `/wardrobe` as locked without being added to `/shop`.
 - **Wardrobe: Mobstar capes integrated in module resources** - Mobstar cape cosmetics/assets are now integrated directly in `hyvexa-wardrobe` resources with permission locks for `/wardrobe` (no `/shop` exposure).
 - **Wardrobe: Cechoo Animal Cosmetics integrated in module resources** - Cechoo cosmetics/assets (+ Horns/Tails custom slots) are now integrated directly in `hyvexa-wardrobe` resources with permission locks for `/wardrobe` only.
+- **Wardrobe: HayHays Animal Masks integrated in module resources** - HayHays masks are now exposed in `/wardrobe` as locked `HeadAccessory` cosmetics with permission locks, without `/shop` integration.
 - **RunOrFall: Multi-map admin + map-linked setup** - Added map list management in `/rof admin` and `/rof map ...`, moved lobby/spawns/platforms to per-map config, and removed platform naming requirement.
 - **RunOrFall: Admin-configurable blink distance** - Added a `/rof admin` field to set Blink teleport distance in blocks (used live by `Ingredient_Lightning_Essence`).
 - **RunOrFall: Admin-configurable blink charge economy** - Added `/rof admin` fields for blink start charges and blocks broken per extra blink charge.

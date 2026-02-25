@@ -1,0 +1,17 @@
+{
+  "Properties": {
+    "Translation": {
+      "Name": "server.items.HayHay_Head_Feran_Mask.name"
+    },
+    "PermissionNode": "hyvexa.cosmetic.hayhay.headaccessories.hayhay_head_feran_mask",
+    "Visibility": "Always"
+  },
+  "CosmeticSlot": "HeadAccessory",
+  "Icon": "Icons/ItemsGenerated/HayHay_Head_Feran_Mask.png",
+  "Appearance": {
+    "Model": "Items/Armor/Feran_Mask/HayHay_Head_Feran_Mask.blockymodel",
+    "TextureConfig": {
+      "Texture": "Items/Armor/Feran_Mask/Model_Foxy.png"
+    }
+  }
+}

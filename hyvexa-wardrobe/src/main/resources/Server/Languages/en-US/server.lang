@@ -201,3 +201,36 @@ cechoo.animal.cosmetics.Tuft_Tail.name = Tuft Tail
 cechoo.animal.cosmetics.Wolf_Ears.name = Wolf Ears
 cechoo.animal.cosmetics.Wolf_Tail.name = Wolf Tail
 
+# HayHays Animal Masks pack
+items.HayHay_Head_Masks_Description.description = Adds slight health and stamina regen. Also adds a glow at night.
+items.HayHay_Head_Bear_Mask.name = Bear Mask
+items.HayHay_Head_Mosshorn_Mask.name = Mosshorn Mask
+items.HayHay_Head_White_Wolf_Mask.name = White Wolf Mask
+items.HayHay_Head_Black_Wolf_Mask.name = Black Wolf Mask
+items.HayHay_Head_Grey_Wolf_Mask.name = Grey Trork Wolf Mask
+items.HayHay_Head_Polar_Bear_Mask.name = Polar Bear Mask
+items.HayHay_Head_Sabertooth_Tiger_Snow_Mask.name = Snow Sabertooth Tiger Mask
+items.HayHay_Head_Sabertooth_Tiger_Snow2_Mask.name = Snow Sabertooth Tiger Mask
+items.HayHay_Head_Sabertooth_Tiger_Mask.name = Sabertooth Tiger Mask
+items.HayHay_Head_Cat_Mask.name = Cat Mask
+items.HayHay_Head_Fox_Mask.name = Fox Mask
+items.HayHay_Head_Cactee_Mask.name = Cactee Mask
+items.HayHay_Head_Cow_Mask.name = Cow Mask
+items.HayHay_Head_Pig_Pink_Mask.name = Pig Mask
+items.HayHay_Head_Warthog_Mask.name = Warthog Mask
+items.HayHay_Head_Feran_Mask.name = Foxy Feran Mask
+items.HayHay_Head_Ram_Mask.name = Ram Mask
+items.HayHay_Head_Undead_Pig_Mask.name = Undead Pig Mask
+items.HayHay_Head_Pig_Wild_Mask.name = Wild Pig Mask
+items.HayHay_Head_Kweebec_Sapling_Mask.name = Kweebec Sapling Mask
+items.HayHay_Head_Kweebec_Sapling_Brown_Mask.description = A brown kweebec sapling mask
+items.HayHay_Head_Kweebec_Sapling_Yellow_Mask.description = A yellow kweebec sapling mask
+items.HayHay_Head_Kweebec_Sapling_Pink_Mask.description = A pink kweebec sapling mask
+items.HayHay_Head_Kweebec_Sapling_Dark_Brown_Mask.description = A dark brown kweebec sapling mask
+items.HayHay_Head_Kweebec_Sapling_Green_Mask.description = A green kweebec sapling mask
+items.HayHay_Head_Kweebec_Sapling_Red_Mask.description = A red kweebec sapling mask
+items.HayHay_Head_Kweebec_Sapling_Orange_Mask.description = An orange kweebec sapling mask
+items.HayHay_Head_Klops_Mask.name = Klops Mask
+items.HayHay_Head_Klops_Mask.description = A green klops mask
+items.HayHay_Head_Klops_Orange_Mask.description = An orange klops mask
+

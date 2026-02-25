@@ -1,0 +1,17 @@
+{
+  "Properties": {
+    "Translation": {
+      "Name": "server.items.HayHay_Head_White_Wolf_Mask.name"
+    },
+    "PermissionNode": "hyvexa.cosmetic.hayhay.headaccessories.hayhay_head_white_wolf_mask",
+    "Visibility": "Always"
+  },
+  "CosmeticSlot": "HeadAccessory",
+  "Icon": "Icons/ItemsGenerated/HayHay_Head_White_Wolf_Mask.png",
+  "Appearance": {
+    "Model": "Resources/Characters/Haircuts/HayHay_White_Wolf_Mask/HayHay_White_Wolf_Mask.blockymodel",
+    "TextureConfig": {
+      "Texture": "Resources/Characters/Haircuts/HayHay_White_Wolf_Mask/HayHay_White_Wolf_Mask.png"
+    }
+  }
+}

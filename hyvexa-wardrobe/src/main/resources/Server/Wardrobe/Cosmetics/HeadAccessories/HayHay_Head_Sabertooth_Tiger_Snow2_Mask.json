@@ -1,0 +1,17 @@
+{
+  "Properties": {
+    "Translation": {
+      "Name": "server.items.HayHay_Head_Sabertooth_Tiger_Snow_Mask.name"
+    },
+    "PermissionNode": "hyvexa.cosmetic.hayhay.headaccessories.hayhay_head_sabertooth_tiger_snow2_mask",
+    "Visibility": "Always"
+  },
+  "CosmeticSlot": "HeadAccessory",
+  "Icon": "Icons/ItemsGenerated/HayHay_Head_Sabertooth_Tiger_Snow2_Mask.png",
+  "Appearance": {
+    "Model": "Items/Armor/Sabertooth_Tiger_Mask/HayHay_Sabertooth_Tiger_Head_Mask.blockymodel",
+    "TextureConfig": {
+      "Texture": "Items/Armor/Sabertooth_Tiger_Mask/HayHay_Sabertooth_Tiger_Head_Mask_Snow_Leopard_Blue_Texture.png"
+    }
+  }
+}
