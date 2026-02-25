@@ -1,0 +1,61 @@
+$C = "../Common.ui";
+
+Group {
+  Anchor: (Left: 0, Right: 0, Height: 100, Top: 6);
+  LayoutMode: Full;
+  Background: #ffffff(0.03);
+  OutlineColor: #ffffff(0.04);
+  OutlineSize: 1;
+
+  Group #UnlockedTint {
+    Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+    Background: #0d2818;
+    Visible: false;
+  }
+
+  Group #AccentBar {
+    Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
+    Background: #4b5563;
+  }
+
+  Group {
+    Anchor: (Left: 16, Top: 18, Width: 64, Height: 64);
+    LayoutMode: Full;
+    Background: #1e293b;
+
+    Group #UnlockedIcon {
+      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+      Background: (TexturePath: "../Textures/golem_icon.png");
+      Visible: false;
+    }
+
+    Group #LockIcon {
+      Anchor: (Width: 32, Height: 32);
+      Background: (TexturePath: "../Textures/lock.png");
+    }
+  }
+
+  Group #ContentArea {
+    Anchor: (Left: 92, Right: 16, Top: 14, Bottom: 14);
+    LayoutMode: Top;
+
+    Label #Name {
+      Anchor: (Left: 0, Right: 0, Height: 20);
+      Style: (FontSize: 15, TextColor: #6b7280, RenderBold: true);
+      Text: "Achievement Name";
+    }
+
+    Label #Description {
+      Anchor: (Left: 0, Right: 0, Height: 18, Top: 2);
+      Style: (FontSize: 12, TextColor: #6b7280);
+      Text: "Achievement description";
+    }
+
+    Label #Progress {
+      Anchor: (Left: 0, Right: 0, Height: 16, Top: 4);
+      Style: (FontSize: 11, TextColor: #9ca3af);
+      Text: "";
+      Visible: false;
+    }
+  }
+}

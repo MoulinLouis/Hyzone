@@ -48,6 +48,7 @@
 - **RunOrFall: My Profile menu + trimmed settings** - Added a `My Profile` silk hotbar item (Ascend skin) with links to RunOrFall stats, placeholder achievements, and a reduced settings page containing only music options and HUD visibility.
 - **RunOrFall: Feather currency shown in HUD** - Added Parkour-style feather display (icon + value) in the RunOrFall HUD.
 - **RunOrFall: Feather rewards during rounds** - Players now earn `+1 feather/min` alive, `+5 feathers` per player eliminated (for survivors), and `+25 feathers` on win, with chat gain messages highlighting `feather` in gold.
+- **RunOrFall: Achievement page + progression set** - Added an Ascend-style achievement UI with 16 achievements across `Wins`, `Blocks Broken`, `Time Survived`, and `Blink Usage`, driven by RunOrFall lifetime stats.
 - **Hub: Game Selector RunOrFall card** - Added RunOrFall to the "Welcome to Hyvexa" selector, arranged modes in a 2x2 grid (Parkour/Ascend top row), and restricted RunOrFall routing to OP/staff for now.
 - **Purge: Expanded weapon upgrade/admin options to full Hyguns arsenal** - `/purge upgrade` and `/purge admin -> Weapons` now include Glock18, ColtRevolver, DesertEagle, Mac10, MP9, Thompson, AK47, M4A1s, Barret50, DoubleBarrel, and Flamethrower (Frag excluded).
 - **Purge: Weapon-specific icons in upgrade/admin pages** - Added per-weapon Hyguns icons for selection cards and the upgrade detail panel.
