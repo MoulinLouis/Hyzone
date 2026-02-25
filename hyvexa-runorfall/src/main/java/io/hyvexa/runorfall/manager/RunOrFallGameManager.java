@@ -45,6 +45,7 @@ public class RunOrFallGameManager {
     private static final long FEATHER_SURVIVAL_INTERVAL_MS = 60_000L;
     private static final String FEATHER_WORD_COLOR = "#f0c040";
     private static final double PLAYER_FOOTPRINT_RADIUS = 0.37d;
+    private static final double PLAYER_BLOCK_DETECTION_Y_OFFSET = 1d;
     private static final String SFX_BLINK_CHARGE_EARNED = "SFX_Avatar_Powers_Enable_Local";
     private static final String SFX_ROUND_WIN = "SFX_Parkour_Victory";
 
@@ -553,7 +554,7 @@ public class RunOrFallGameManager {
                 rewardAliveTimeFeathersInternal(playerId, nowMs);
 
                 if (canBreakBlocks) {
-                    int blockY = (int) Math.floor(position.getY() - 0.2d);
+                    int blockY = (int) Math.floor(position.getY() - PLAYER_BLOCK_DETECTION_Y_OFFSET);
                     queueFootprintBlocksInternal(playerId, position.getX(), position.getZ(), blockY,
                             platforms, config.blockBreakDelaySeconds);
                 }
