@@ -1,0 +1,17 @@
+{
+  "Properties": {
+    "Translation": {
+      "Name": "server.items.HayHay_Head_Klops_Mask.name"
+    },
+    "PermissionNode": "hyvexa.cosmetic.hayhay.headaccessories.hayhay_head_klops_orange_mask",
+    "Visibility": "Always"
+  },
+  "CosmeticSlot": "HeadAccessory",
+  "Icon": "Icons/ItemsGenerated/HayHay_Head_Klops_Orange_Mask.png",
+  "Appearance": {
+    "Model": "Resources/Characters/Haircuts/HayHay_Klops_Orange_Mask/HayHay_Klops_Orange_Mask.blockymodel",
+    "TextureConfig": {
+      "Texture": "Resources/Characters/Haircuts/HayHay_Klops_Orange_Mask/HayHay_Klops_Orange_Mask.png"
+    }
+  }
+}

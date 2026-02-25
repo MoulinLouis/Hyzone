@@ -1,0 +1,17 @@
+{
+  "Properties": {
+    "Translation": {
+      "Name": "server.items.HayHay_Head_Fox_Mask.name"
+    },
+    "PermissionNode": "hyvexa.cosmetic.hayhay.headaccessories.hayhay_head_fox_mask",
+    "Visibility": "Always"
+  },
+  "CosmeticSlot": "HeadAccessory",
+  "Icon": "Icons/ItemsGenerated/HayHay_Head_Fox_Mask.png",
+  "Appearance": {
+    "Model": "Items/Armor/Fox_Mask/HayHay_Fox_Head_Mask.blockymodel",
+    "TextureConfig": {
+      "Texture": "Items/Armor/Fox_Mask/HayHay_Fox_Head_Mask_Texture.png"
+    }
+  }
+}

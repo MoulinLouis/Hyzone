@@ -1,0 +1,17 @@
+{
+  "Properties": {
+    "Translation": {
+      "Name": "server.items.HayHay_Head_Mosshorn_Mask.name"
+    },
+    "PermissionNode": "hyvexa.cosmetic.hayhay.headaccessories.hayhay_head_mosshorn2_mask",
+    "Visibility": "Always"
+  },
+  "CosmeticSlot": "HeadAccessory",
+  "Icon": "Icons/ItemsGenerated/HayHay_Head_Mosshorn2_Mask.png",
+  "Appearance": {
+    "Model": "Items/Armor/Mosshorn_Mask/HayHay_Mosshorn_Mask.blockymodel",
+    "TextureConfig": {
+      "Texture": "Items/Armor/Mosshorn_Mask/HayHay_Mosshorn_Mask_Texture.png"
+    }
+  }
+}

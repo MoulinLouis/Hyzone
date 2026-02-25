@@ -1,0 +1,17 @@
+{
+  "Properties": {
+    "Translation": {
+      "Name": "server.items.HayHay_Head_Cow_Mask.name"
+    },
+    "PermissionNode": "hyvexa.cosmetic.hayhay.headaccessories.hayhay_head_cow_mask",
+    "Visibility": "Always"
+  },
+  "CosmeticSlot": "HeadAccessory",
+  "Icon": "Icons/ItemsGenerated/HayHay_Head_Cow_Mask.png",
+  "Appearance": {
+    "Model": "Items/Armor/Cow_Mask/HayHay_Cow_Head_Mask.blockymodel",
+    "TextureConfig": {
+      "Texture": "Items/Armor/Cow_Mask/HayHay_Cow_Head_Mask_Texture.png"
+    }
+  }
+}

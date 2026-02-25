@@ -1,0 +1,17 @@
+{
+  "Properties": {
+    "Translation": {
+      "Name": "server.items.HayHay_Head_Polar_Bear_Mask.name"
+    },
+    "PermissionNode": "hyvexa.cosmetic.hayhay.headaccessories.hayhay_head_polar_bear_mask",
+    "Visibility": "Always"
+  },
+  "CosmeticSlot": "HeadAccessory",
+  "Icon": "Icons/ItemsGenerated/HayHay_Head_Polar_Bear_Mask.png",
+  "Appearance": {
+    "Model": "Items/Armor/Polar_Bear_Mask/HayHay_Polar_Bear_Head_Mask.blockymodel",
+    "TextureConfig": {
+      "Texture": "Items/Armor/Polar_Bear_Mask/HayHay_Polar_Bear_Head_Mask_Texture.png"
+    }
+  }
+}
