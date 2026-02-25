@@ -42,6 +42,7 @@ public class RunOrFallGameManager {
     private static final long START_BLOCK_BREAK_GRACE_MS = 3000L;
     private static final double PLAYER_FOOTPRINT_RADIUS = 0.37d;
     private static final String SFX_BLINK_CHARGE_EARNED = "SFX_Avatar_Powers_Enable_Local";
+    private static final String SFX_ROUND_WIN = "SFX_Parkour_Victory";
 
     private enum GameState {
         IDLE,
@@ -599,6 +600,7 @@ public class RunOrFallGameManager {
             String winnerName = resolvePlayerName(winner);
             statsStore.recordWin(winner, winnerName, survivedMs,
                     getRoundBrokenBlocksCount(winner), getRoundBlinksUsedCount(winner));
+            playSfxForPlayer(winner, SFX_ROUND_WIN);
             if (winnerRef != null && winnerRef.getUsername() != null && !winnerRef.getUsername().isBlank()) {
                 winnerName = winnerRef.getUsername();
             }
