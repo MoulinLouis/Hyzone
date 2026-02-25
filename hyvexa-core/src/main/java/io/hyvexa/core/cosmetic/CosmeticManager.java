@@ -1,4 +1,4 @@
-package io.hyvexa.parkour.cosmetic;
+package io.hyvexa.core.cosmetic;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
@@ -17,8 +17,6 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.util.AsyncExecutionHelper;
-import io.hyvexa.core.cosmetic.CosmeticDefinition;
-import io.hyvexa.core.cosmetic.CosmeticStore;
 
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -31,11 +29,18 @@ import java.util.concurrent.TimeUnit;
  */
 public class CosmeticManager {
 
+    private static final CosmeticManager INSTANCE = new CosmeticManager();
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final float PREVIEW_DURATION_SECONDS = 5f;
 
     /** Tracks active preview timers so we can cancel on disconnect. */
     private final ConcurrentHashMap<UUID, ScheduledFuture<?>> previewTimers = new ConcurrentHashMap<>();
+
+    private CosmeticManager() {}
+
+    public static CosmeticManager getInstance() {
+        return INSTANCE;
+    }
 
     /**
      * Apply a cosmetic effect to a player. Must be called from world thread.

@@ -1,4 +1,4 @@
-package io.hyvexa.parkour.command;
+package io.hyvexa.wardrobe.command;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
@@ -10,7 +10,7 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.parkour.ui.ShopPage;
+import io.hyvexa.wardrobe.ui.ShopPage;
 
 import javax.annotation.Nonnull;
 import java.util.concurrent.CompletableFuture;

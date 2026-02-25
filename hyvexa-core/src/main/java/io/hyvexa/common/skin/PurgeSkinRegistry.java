@@ -1,4 +1,4 @@
-package io.hyvexa.purge.data;
+package io.hyvexa.common.skin;
 
 import java.util.ArrayList;
 import java.util.Collections;

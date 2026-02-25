@@ -1,4 +1,4 @@
-package io.hyvexa.parkour.ui;
+package io.hyvexa.wardrobe.ui;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
@@ -6,6 +6,7 @@ import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
 import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
@@ -22,7 +23,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-public class ShopPage extends BaseParkourPage {
+public class ShopPage extends InteractiveCustomUIPage<ButtonEventData> {
 
     private static final String BUTTON_CLOSE = "Close";
     private static final String BUTTON_CONFIRM = "ShopConfirm";
@@ -39,7 +40,7 @@ public class ShopPage extends BaseParkourPage {
     private String pendingConfirmTabId;
 
     public ShopPage(@Nonnull PlayerRef playerRef, UUID playerId) {
-        super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
+        super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, ButtonEventData.CODEC);
         this.playerId = playerId;
     }
 

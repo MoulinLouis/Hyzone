@@ -1,8 +1,4 @@
-package io.hyvexa.purge.util;
-
-import io.hyvexa.purge.data.PurgeSkinDefinition;
-import io.hyvexa.purge.data.PurgeSkinRegistry;
-import io.hyvexa.purge.data.PurgeSkinStore;
+package io.hyvexa.common.skin;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;

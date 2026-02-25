@@ -221,10 +221,8 @@ class RunValidator {
                     plugin.getHudManager().showMedalNotification(
                             playerId, medalResult.medal(), medalResult.featherReward());
                 }
-                if (plugin.getCosmeticManager() != null) {
-                    plugin.getCosmeticManager().applyCelebrationEffect(
-                            ref, store, medalResult.medal().getEffectId(), 4.0f);
-                }
+                io.hyvexa.core.cosmetic.CosmeticManager.getInstance().applyCelebrationEffect(
+                        ref, store, medalResult.medal().getEffectId(), 4.0f);
             }
             runTracker.recordFinishPing(run, playerRef);
             runTracker.sendLatencyWarning(run, player);

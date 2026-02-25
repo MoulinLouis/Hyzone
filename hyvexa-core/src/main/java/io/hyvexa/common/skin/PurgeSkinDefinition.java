@@ -1,4 +1,4 @@
-package io.hyvexa.purge.data;
+package io.hyvexa.common.skin;
 
 public class PurgeSkinDefinition {
 

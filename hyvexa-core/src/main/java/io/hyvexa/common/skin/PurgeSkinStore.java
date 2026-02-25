@@ -1,4 +1,4 @@
-package io.hyvexa.purge.data;
+package io.hyvexa.common.skin;
 
 import com.hypixel.hytale.logger.HytaleLogger;
 import io.hyvexa.core.db.DatabaseManager;
