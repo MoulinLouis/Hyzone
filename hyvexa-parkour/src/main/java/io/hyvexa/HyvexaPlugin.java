@@ -24,6 +24,7 @@ import io.hyvexa.core.discord.DiscordLinkStore;
 import io.hyvexa.core.cosmetic.CosmeticStore;
 import io.hyvexa.core.economy.VexaStore;
 
+
 import io.hyvexa.parkour.data.FeatherStore;
 import io.hyvexa.parkour.data.GlobalMessageStore;
 import io.hyvexa.parkour.data.MapStore;

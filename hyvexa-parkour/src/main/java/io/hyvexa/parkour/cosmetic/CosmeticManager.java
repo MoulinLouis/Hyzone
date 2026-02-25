@@ -151,6 +151,34 @@ public class CosmeticManager {
     }
 
     /**
+     * Apply a timed celebration effect on top of any equipped cosmetic. Must be called from world thread.
+     */
+    public void applyCelebrationEffect(Ref<EntityStore> ref, Store<EntityStore> store,
+                                       String effectName, float durationSeconds) {
+        if (ref == null || !ref.isValid()) return;
+
+        EntityEffect effect = resolveEffect(effectName);
+        if (effect == null) {
+            LOGGER.atWarning().log("Could not resolve celebration effect: " + effectName);
+            return;
+        }
+
+        EffectControllerComponent ctrl = store.getComponent(ref, EffectControllerComponent.getComponentType());
+        if (ctrl == null) return;
+
+        int effectIndex = EntityEffect.getAssetMap().getIndex(effect.getId());
+        if (effectIndex < 0) return;
+
+        ctrl.addEffect(ref, effectIndex, effect, durationSeconds, OverlapBehavior.OVERWRITE, store);
+
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (playerRef != null && player != null) {
+            sendEffectSyncToSelf(playerRef.getPacketHandler(), player, ctrl);
+        }
+    }
+
+    /**
      * Clean up preview timers on disconnect.
      */
     public void cleanupOnDisconnect(UUID playerId) {

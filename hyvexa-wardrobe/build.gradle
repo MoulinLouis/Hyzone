@@ -16,7 +16,6 @@ tasks.register('updatePluginManifest') {
         }
         def manifestJson = new groovy.json.JsonSlurper().parseText(manifestFile.text)
         manifestJson.Version = version
-        // Hub assets are served via directory pack, not classpath
         manifestJson.IncludesAssetPack = false
         manifestFile.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(manifestJson))
     }
@@ -28,7 +27,7 @@ tasks.named('processResources') {
 
 tasks.named('jar') {
     dependsOn ':hyvexa-core:jar'
-    archiveFileName = "HyvexaHub-${version}.jar"
+    archiveFileName = "HyvexaWardrobe-${version}.jar"
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
     from {

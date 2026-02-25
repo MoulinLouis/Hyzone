@@ -1,0 +1,18 @@
+{
+  "Properties": {
+    "Translation": {
+      "Name": "server.hyvexa.wardrobe.cosmetics.Badge_Hyvexa.name",
+      "Description": "server.hyvexa.wardrobe.cosmetics.Badge_Hyvexa.description"
+    },
+    "Icon": "Icons/Wardrobe/Cosmetics/Badges/Hyvexa.png",
+    "Visibility": "Always",
+    "PermissionNode": "hyvexa.cosmetic.badge_hyvexa"
+  },
+  "CosmeticSlot": "Badge",
+  "Appearance": {
+    "Model": "Characters/Wardrobe/Cosmetics/Badges/Badge.blockymodel",
+    "TextureConfig": {
+      "Texture": "Characters/Wardrobe/Cosmetics/Badges/Hyvexa.png"
+    }
+  }
+}

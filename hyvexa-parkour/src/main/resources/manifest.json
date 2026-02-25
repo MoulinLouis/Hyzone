@@ -14,7 +14,7 @@
         "ehko:Hylograms": "*"
     },
     "OptionalDependencies": {
-        
+        "Hardaway:Wardrobe": "*"
     },
     "DisabledByDefault": false,
     "Main": "io.hyvexa.HyvexaPlugin",

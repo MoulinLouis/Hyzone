@@ -7,6 +7,7 @@ import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.util.AsyncExecutionHelper;
@@ -22,6 +23,7 @@ import io.hyvexa.parkour.util.PlayerSettingsStore;
 import io.hyvexa.duel.DuelTracker;
 import io.hyvexa.core.economy.VexaStore;
 import io.hyvexa.parkour.data.FeatherStore;
+import io.hyvexa.parkour.data.Medal;
 import io.hyvexa.parkour.data.MedalStore;
 import io.hyvexa.parkour.ParkourTimingConstants;
 
@@ -161,6 +163,7 @@ public class HudManager {
                 recordsHud.updateMedals(null, null);
             }
             state.checkpointSplit = null;
+            updateMedalNotifHud(hud, playerId);
             return;
         }
         state.wasRunning = true;
@@ -516,6 +519,7 @@ public class HudManager {
         volatile boolean wasRunning;
         volatile boolean hidden;
         volatile CheckpointSplitHudState checkpointSplit;
+        volatile MedalNotifState medalNotif;
         volatile PositionSample lastPositionSample;
     }
 
@@ -543,5 +547,112 @@ public class HudManager {
             this.z = z;
             this.timeMs = timeMs;
         }
+    }
+
+    private static final class MedalNotifState {
+        final Medal medal;
+        final int feathers;
+        final long startedAt;
+
+        MedalNotifState(Medal medal, int feathers, long startedAt) {
+            this.medal = medal;
+            this.feathers = feathers;
+            this.startedAt = startedAt;
+        }
+    }
+
+    public void showMedalNotification(UUID playerId, Medal medal, int feathers) {
+        if (playerId == null || medal == null) {
+            return;
+        }
+        PlayerHudState state = getState(playerId);
+        state.medalNotif = new MedalNotifState(medal, feathers, System.currentTimeMillis());
+    }
+
+    private void updateMedalNotifHud(RunHud hud, UUID playerId) {
+        if (hud == null || playerId == null) {
+            return;
+        }
+        PlayerHudState state = playerStates.get(playerId);
+        MedalNotifState notif = state != null ? state.medalNotif : null;
+
+        if (notif == null) {
+            UICommandBuilder cmd = new UICommandBuilder();
+            cmd.set("#MedalNotif.Visible", false);
+            hud.updateMedalNotif(null, cmd);
+            return;
+        }
+
+        long elapsed = System.currentTimeMillis() - notif.startedAt;
+        if (elapsed >= ParkourTimingConstants.MEDAL_NOTIF_DURATION_MS) {
+            state.medalNotif = null;
+            UICommandBuilder cmd = new UICommandBuilder();
+            cmd.set("#MedalNotif.Visible", false);
+            hud.updateMedalNotif(null, cmd);
+            return;
+        }
+
+        boolean iconVisible = elapsed >= 200;
+        boolean titleVisible = elapsed >= 500;
+        boolean featherVisible = elapsed >= 800 && notif.feathers > 0;
+        boolean barVisible = elapsed >= 800;
+
+        // Flash: alternate white/medal color every 100ms during 500-1100ms
+        String titleColor;
+        if (titleVisible && elapsed < 1100) {
+            boolean flashWhite = ((elapsed - 500) / 100) % 2 == 0;
+            titleColor = flashWhite ? "#ffffff" : notif.medal.getColor();
+        } else {
+            titleColor = notif.medal.getColor();
+        }
+
+        // Progress bar drains from 800ms to DURATION
+        float barValue = 0f;
+        if (barVisible) {
+            long barElapsed = elapsed - 800;
+            long barTotal = ParkourTimingConstants.MEDAL_NOTIF_DURATION_MS - 800;
+            barValue = Math.max(0f, 1f - (float) barElapsed / barTotal);
+        }
+
+        // Cache key uses elapsed ms directly so every tick sends a fresh bar value
+        String cacheKey = notif.medal.name() + "|" + iconVisible + "|" + titleVisible + "|"
+                + titleColor + "|" + featherVisible + "|" + barVisible + "|" + elapsed;
+
+        UICommandBuilder cmd = new UICommandBuilder();
+        cmd.set("#MedalNotif.Visible", true);
+
+        // Icon: show only the correct medal's icon
+        cmd.set("#MedalNotifBronzeIcon.Visible", iconVisible && notif.medal == Medal.BRONZE);
+        cmd.set("#MedalNotifSilverIcon.Visible", iconVisible && notif.medal == Medal.SILVER);
+        cmd.set("#MedalNotifGoldIcon.Visible", iconVisible && notif.medal == Medal.GOLD);
+
+        // Title
+        cmd.set("#MedalNotifTitle.Visible", titleVisible);
+        if (titleVisible) {
+            cmd.set("#MedalNotifTitle.Text", notif.medal.name() + " MEDAL!");
+            cmd.set("#MedalNotifTitle.Style.TextColor", titleColor);
+        }
+
+        // Feather row
+        cmd.set("#MedalNotifFeatherRow.Visible", featherVisible);
+        if (featherVisible) {
+            cmd.set("#MedalNotifFeathers.Text", "+" + notif.feathers + " feathers");
+        }
+
+        // Progress bar: show only the correct medal's bar
+        cmd.set("#MedalNotifBarBronze.Visible", barVisible && notif.medal == Medal.BRONZE);
+        cmd.set("#MedalNotifBarSilver.Visible", barVisible && notif.medal == Medal.SILVER);
+        cmd.set("#MedalNotifBarGold.Visible", barVisible && notif.medal == Medal.GOLD);
+        if (barVisible) {
+            String barId = "#MedalNotifBar" + capitalize(notif.medal.name()) + ".Value";
+            cmd.set(barId, barValue);
+        }
+
+        hud.updateMedalNotif(cacheKey, cmd);
+    }
+
+    private static String capitalize(String s) {
+        if (s == null || s.isEmpty()) return s;
+        return s.charAt(0) + s.substring(1).toLowerCase();
     }
 }

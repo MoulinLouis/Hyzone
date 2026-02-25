@@ -1,0 +1,4 @@
+Group #WardrobeGrid {
+  Anchor: (Left: 0, Right: 0);
+  LayoutMode: LeftCenterWrap;
+}

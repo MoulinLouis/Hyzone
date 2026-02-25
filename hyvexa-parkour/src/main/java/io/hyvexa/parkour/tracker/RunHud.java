@@ -20,6 +20,7 @@ public class RunHud extends CustomUIHud {
     private long lastFeathers = -1;
     private String lastAdvancedHudKey;
     private Boolean lastAdvancedHudVisible;
+    private String lastMedalNotifKey;
 
     public RunHud(PlayerRef playerRef) {
         super(playerRef);
@@ -30,6 +31,7 @@ public class RunHud extends CustomUIHud {
         commandBuilder.append("Pages/Parkour_RunHud.ui");
         commandBuilder.append("Pages/Parkour_RunCheckpointHud.ui");
         commandBuilder.append("Pages/Parkour_AdvancedHud.ui");
+        commandBuilder.append("Pages/Parkour_MedalNotif.ui");
     }
 
     public void updateText(String timeText) {
@@ -202,6 +204,21 @@ public class RunHud extends CustomUIHud {
         update(false, commandBuilder);
     }
 
+    public void updateMedalNotif(String cacheKey, UICommandBuilder commandBuilder) {
+        if (cacheKey == null) {
+            if (lastMedalNotifKey == null) {
+                return;
+            }
+            lastMedalNotifKey = null;
+        } else {
+            if (cacheKey.equals(lastMedalNotifKey)) {
+                return;
+            }
+            lastMedalNotifKey = cacheKey;
+        }
+        update(false, commandBuilder);
+    }
+
     public void resetCache() {
         lastTimeText = null;
         lastCheckpointText = null;
@@ -215,5 +232,6 @@ public class RunHud extends CustomUIHud {
         lastFeathers = -1;
         lastAdvancedHudKey = null;
         lastAdvancedHudVisible = null;
+        lastMedalNotifKey = null;
     }
 }

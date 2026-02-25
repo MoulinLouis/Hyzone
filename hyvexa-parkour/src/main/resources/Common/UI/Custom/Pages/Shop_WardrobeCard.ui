@@ -1,0 +1,97 @@
+$C = "../Common.ui";
+
+Group {
+  Anchor: (Width: 130, Height: 120, Left: 8, Top: 8);
+  LayoutMode: Full;
+  Background: #07101b;
+  OutlineColor: #ffffff(0.06);
+  OutlineSize: 1;
+
+  // Icon area - one Group per cosmetic icon, toggled by code
+  Group #IconArea {
+    Anchor: (Left: 10, Right: 10, Top: 10, Bottom: 40);
+    LayoutMode: Full;
+
+    Group #IconBadgeHyvexa {
+      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+      Background: (TexturePath: "../Textures/wardrobe/BadgeHyvexa.png");
+      Visible: false;
+    }
+  }
+
+  // Cosmetic name (bottom)
+  Label #CardName {
+    Anchor: (Left: 8, Right: 8, Bottom: 4, Height: 18);
+    Style: (FontSize: 12, TextColor: #cfd7dc, RenderBold: true, VerticalAlignment: Center, HorizontalAlignment: Center);
+    Text: "";
+    HitTestVisible: false;
+  }
+
+  // Price - buyable (top right, green)
+  Group #PriceBuyBadge {
+    Anchor: (Right: 2, Top: 4, Width: 60, Height: 18);
+    LayoutMode: Left;
+    Visible: false;
+    HitTestVisible: false;
+
+    Group {
+      Anchor: (Width: 14, Height: 14, Top: 2);
+      Background: (TexturePath: "../Textures/vexa.png");
+    }
+    Group { Anchor: (Width: 3); }
+    Label #BuyPriceLabel {
+      Anchor: (Height: 18);
+      Style: (FontSize: 13, TextColor: #22c55e, RenderBold: true, VerticalAlignment: Center);
+      Text: "100";
+    }
+  }
+
+  // Price - can't afford (top right, red)
+  Group #PriceCantAffordBadge {
+    Anchor: (Right: 2, Top: 4, Width: 60, Height: 18);
+    LayoutMode: Left;
+    Visible: false;
+    HitTestVisible: false;
+
+    Group {
+      Anchor: (Width: 14, Height: 14, Top: 2);
+      Background: (TexturePath: "../Textures/vexa.png");
+    }
+    Group { Anchor: (Width: 3); }
+    Label #CantAffordPrice {
+      Anchor: (Height: 18);
+      Style: (FontSize: 13, TextColor: #ef4444, RenderBold: true, VerticalAlignment: Center);
+      Text: "100";
+    }
+  }
+
+  // Owned badge (top right, green)
+  Label #OwnedBadge {
+    Anchor: (Right: 6, Top: 4, Width: 60, Height: 18);
+    Style: (FontSize: 12, TextColor: #22c55e, RenderBold: true, HorizontalAlignment: End, VerticalAlignment: Center);
+    Text: "Owned";
+    Visible: false;
+    HitTestVisible: false;
+  }
+
+  // Clickable overlay with hover
+  TextButton #CardButton {
+    Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+    Text: "";
+    Style: TextButtonStyle(
+      Default: (
+        Background: #000000(0.01),
+        LabelStyle: (FontSize: 1, TextColor: #000000(0.01), HorizontalAlignment: Center, VerticalAlignment: Center)
+      ),
+      Hovered: (
+        Background: #ffffff(0.08),
+        LabelStyle: (FontSize: 1, TextColor: #000000(0.01), HorizontalAlignment: Center, VerticalAlignment: Center)
+      ),
+      Pressed: (
+        Background: #ffffff(0.03),
+        LabelStyle: (FontSize: 1, TextColor: #000000(0.01), HorizontalAlignment: Center, VerticalAlignment: Center)
+      ),
+      Sounds: $C.@ButtonSounds,
+    );
+  }
+}

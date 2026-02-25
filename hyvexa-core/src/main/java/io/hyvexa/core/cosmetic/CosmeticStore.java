@@ -124,6 +124,26 @@ public class CosmeticStore {
         equippedCache.put(playerId, NONE_EQUIPPED);
     }
 
+    /**
+     * Delete all cosmetics for a player from DB and cache.
+     */
+    public void resetAllCosmetics(UUID playerId) {
+        if (playerId == null) return;
+        ownedCache.put(playerId, Collections.synchronizedList(new ArrayList<>()));
+        equippedCache.put(playerId, NONE_EQUIPPED);
+        if (DatabaseManager.getInstance().isInitialized()) {
+            String sql = "DELETE FROM player_cosmetics WHERE player_uuid = ?";
+            try (Connection conn = DatabaseManager.getInstance().getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setString(1, playerId.toString());
+                stmt.executeUpdate();
+            } catch (SQLException e) {
+                LOGGER.atWarning().withCause(e).log("Failed to reset cosmetics for " + playerId);
+            }
+        }
+    }
+
     public void evictPlayer(UUID playerId) {
         if (playerId == null) return;
         ownedCache.remove(playerId);

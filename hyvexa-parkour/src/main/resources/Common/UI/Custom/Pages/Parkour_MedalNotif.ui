@@ -1,0 +1,88 @@
+$C = "../Common.ui";
+
+$C.@PageOverlay {
+  Background: #000000(0.0);
+  Group #MedalNotif {
+    Anchor: (Width: 340, Height: 210, Top: 140);
+    Background: #0a0f14(0.75);
+    OutlineColor: #ffffff(0.08);
+    OutlineSize: 1;
+    Visible: false;
+    LayoutMode: Top;
+    Padding: (Left: 20, Right: 20, Top: 20, Bottom: 0);
+
+    Group #MedalNotifBronzeIcon {
+      Anchor: (Width: 64, Height: 64);
+      Background: (TexturePath: "../Textures/bronze_medal.png");
+      Visible: false;
+    }
+
+    Group #MedalNotifSilverIcon {
+      Anchor: (Width: 64, Height: 64);
+      Background: (TexturePath: "../Textures/silver_medal.png");
+      Visible: false;
+    }
+
+    Group #MedalNotifGoldIcon {
+      Anchor: (Width: 64, Height: 64);
+      Background: (TexturePath: "../Textures/gold_medal.png");
+      Visible: false;
+    }
+
+    Label #MedalNotifTitle {
+      Anchor: (Left: 0, Right: 0, Top: 8);
+      Style: (
+        FontSize: 32,
+        TextColor: #ffffff,
+        RenderBold: true,
+        HorizontalAlignment: Center
+      );
+      Text: "";
+      Visible: false;
+    }
+
+    Group #MedalNotifFeatherRow {
+      Anchor: (Left: 0, Right: 0, Top: 8, Height: 30);
+      LayoutMode: Left;
+      Visible: false;
+
+      Group #MedalNotifFeatherIcon {
+        Anchor: (Width: 28, Height: 28, Top: 1);
+        Background: (TexturePath: "../Textures/feather.png");
+      }
+      Group { Anchor: (Width: 6); }
+      Label #MedalNotifFeathers {
+        Style: (FontSize: 22, TextColor: #f0c040, RenderBold: true);
+        Text: "";
+      }
+    }
+
+    Group #MedalNotifBarWrap {
+      Anchor: (Left: 0, Right: 0, Top: 8, Height: 6);
+
+      ProgressBar #MedalNotifBarBronze {
+        Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+        Bar: #cd7f32;
+        Background: #cd7f32(0.15);
+        Value: 1;
+        Visible: false;
+      }
+
+      ProgressBar #MedalNotifBarSilver {
+        Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+        Bar: #c0c0c0;
+        Background: #c0c0c0(0.15);
+        Value: 1;
+        Visible: false;
+      }
+
+      ProgressBar #MedalNotifBarGold {
+        Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+        Bar: #ffd700;
+        Background: #ffd700(0.15);
+        Value: 1;
+        Visible: false;
+      }
+    }
+  }
+}

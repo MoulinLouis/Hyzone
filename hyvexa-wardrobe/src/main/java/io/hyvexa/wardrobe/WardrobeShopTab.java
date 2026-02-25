@@ -1,0 +1,164 @@
+package io.hyvexa.wardrobe;
+
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
+import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.ui.builder.EventData;
+import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
+import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.common.shop.ShopTab;
+import io.hyvexa.common.shop.ShopTabResult;
+import io.hyvexa.common.ui.ButtonEventData;
+import io.hyvexa.common.util.SystemMessageUtils;
+import io.hyvexa.core.cosmetic.CosmeticStore;
+import io.hyvexa.core.wardrobe.WardrobeBridge;
+import io.hyvexa.core.wardrobe.WardrobeBridge.WardrobeCosmeticDef;
+
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
+public class WardrobeShopTab implements ShopTab {
+
+    private static final String ACTION_FILTER = "Filter:";
+    private static final String ACTION_BUY = "Buy:";
+    private static final String FILTER_ALL = "All";
+
+    private final ConcurrentHashMap<UUID, String> selectedCategory = new ConcurrentHashMap<>();
+
+    @Override
+    public String getId() {
+        return "wardrobe";
+    }
+
+    @Override
+    public String getLabel() {
+        return "Wardrobe";
+    }
+
+    @Override
+    public String getAccentColor() {
+        return "#e879f9";
+    }
+
+    @Override
+    public int getOrder() {
+        return 5;
+    }
+
+    @Override
+    public void buildContent(UICommandBuilder cmd, UIEventBuilder evt, UUID playerId, long vexa) {
+        WardrobeBridge bridge = WardrobeBridge.getInstance();
+        String currentCategory = selectedCategory.get(playerId);
+
+        // Pill bar
+        cmd.append("#TabContent", "Pages/Shop_WardrobePills.ui");
+        List<String> categories = bridge.getCategories();
+
+        // "All" pill
+        int pillIndex = 0;
+        cmd.append("#PillBar", "Pages/Shop_WardrobePill.ui");
+        String allRoot = "#PillBar[" + pillIndex + "] ";
+        cmd.set(allRoot + "#PillLabel.Text", FILTER_ALL);
+        if (currentCategory == null) {
+            cmd.set(allRoot + "#PillActive.Visible", true);
+            cmd.set(allRoot + "#PillLabel.Style.TextColor", "#e879f9");
+        }
+        evt.addEventBinding(CustomUIEventBindingType.Activating, allRoot + "#PillButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, getId() + ":" + ACTION_FILTER + FILTER_ALL), false);
+        pillIndex++;
+
+        // Category pills
+        for (String cat : categories) {
+            cmd.append("#PillBar", "Pages/Shop_WardrobePill.ui");
+            String pillRoot = "#PillBar[" + pillIndex + "] ";
+            cmd.set(pillRoot + "#PillLabel.Text", cat);
+            if (cat.equals(currentCategory)) {
+                cmd.set(pillRoot + "#PillActive.Visible", true);
+                cmd.set(pillRoot + "#PillLabel.Style.TextColor", "#e879f9");
+            }
+            evt.addEventBinding(CustomUIEventBindingType.Activating, pillRoot + "#PillButton",
+                    EventData.of(ButtonEventData.KEY_BUTTON, getId() + ":" + ACTION_FILTER + cat), false);
+            pillIndex++;
+        }
+
+        // Grid
+        cmd.append("#TabContent", "Pages/Shop_WardrobeGrid.ui");
+        List<WardrobeCosmeticDef> cosmetics = bridge.getCosmeticsByCategory(currentCategory);
+
+        for (int i = 0; i < cosmetics.size(); i++) {
+            WardrobeCosmeticDef def = cosmetics.get(i);
+            boolean owned = playerId != null && CosmeticStore.getInstance().ownsCosmetic(playerId, def.id());
+
+            cmd.append("#WardrobeGrid", "Pages/Shop_WardrobeCard.ui");
+            String root = "#WardrobeGrid[" + i + "] ";
+
+            // Show icon
+            cmd.set(root + "#Icon" + def.iconKey() + ".Visible", true);
+
+            // Name
+            cmd.set(root + "#CardName.Text", def.displayName());
+
+            if (owned) {
+                cmd.set(root + "#OwnedBadge.Visible", true);
+            } else if (vexa >= def.price()) {
+                cmd.set(root + "#PriceBuyBadge.Visible", true);
+                cmd.set(root + "#BuyPriceLabel.Text", String.valueOf(def.price()));
+                evt.addEventBinding(CustomUIEventBindingType.Activating, root + "#CardButton",
+                        EventData.of(ButtonEventData.KEY_BUTTON, getId() + ":" + ACTION_BUY + def.id()), false);
+            } else {
+                cmd.set(root + "#PriceCantAffordBadge.Visible", true);
+                cmd.set(root + "#CantAffordPrice.Text", String.valueOf(def.price()));
+            }
+        }
+    }
+
+    @Override
+    public ShopTabResult handleEvent(String button, Ref<EntityStore> ref, Store<EntityStore> store,
+                                     Player player, UUID playerId) {
+        if (button.startsWith(ACTION_FILTER)) {
+            String filter = button.substring(ACTION_FILTER.length());
+            if (FILTER_ALL.equals(filter)) {
+                selectedCategory.remove(playerId);
+            } else {
+                selectedCategory.put(playerId, filter);
+            }
+            return ShopTabResult.REFRESH;
+        }
+
+        if (button.startsWith(ACTION_BUY)) {
+            String cosmeticId = button.substring(ACTION_BUY.length());
+            return ShopTabResult.showConfirm(cosmeticId);
+        }
+
+        return ShopTabResult.NONE;
+    }
+
+    @Override
+    public void populateConfirmOverlay(UICommandBuilder cmd, String confirmKey) {
+        WardrobeCosmeticDef def = WardrobeBridge.getInstance().findById(confirmKey);
+        if (def == null) return;
+        cmd.set("#ConfirmSkinName.Text", def.displayName());
+        cmd.set("#ConfirmPrice.Text", String.valueOf(def.price()));
+    }
+
+    @Override
+    public boolean handleConfirm(String confirmKey, Ref<EntityStore> ref, Store<EntityStore> store,
+                                 Player player, UUID playerId) {
+        String result = WardrobeBridge.getInstance().purchase(playerId, confirmKey);
+
+        boolean isError = result.startsWith("Not enough") || result.startsWith("Unknown")
+                || result.startsWith("You already");
+        String color = isError ? SystemMessageUtils.ERROR : SystemMessageUtils.SUCCESS;
+        player.sendMessage(Message.raw("[Wardrobe] " + result).color(color));
+        return true;
+    }
+
+    /** Evict per-player state on disconnect. */
+    public void evictPlayer(UUID playerId) {
+        selectedCategory.remove(playerId);
+    }
+}

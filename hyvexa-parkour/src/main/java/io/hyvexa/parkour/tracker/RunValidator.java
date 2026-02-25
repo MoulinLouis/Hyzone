@@ -215,7 +215,17 @@ class RunValidator {
                     broadcastVexaGod(playerName);
                 }
             }
-            awardMedals(playerId, map, durationMs, player);
+            MedalAwardResult medalResult = awardMedals(playerId, map, durationMs, player);
+            if (medalResult != null && plugin != null) {
+                if (plugin.getHudManager() != null) {
+                    plugin.getHudManager().showMedalNotification(
+                            playerId, medalResult.medal(), medalResult.featherReward());
+                }
+                if (plugin.getCosmeticManager() != null) {
+                    plugin.getCosmeticManager().applyCelebrationEffect(
+                            ref, store, medalResult.medal().getEffectId(), 4.0f);
+                }
+            }
             runTracker.recordFinishPing(run, playerRef);
             runTracker.sendLatencyWarning(run, player);
             teleporter.teleportToSpawn(ref, store, transform, buffer);
@@ -466,11 +476,15 @@ class RunValidator {
         return Math.max(0L, run.elapsedMs);
     }
 
-    private void awardMedals(UUID playerId, Map map, long durationMs, Player player) {
+    private record MedalAwardResult(Medal medal, int featherReward) {}
+
+    private MedalAwardResult awardMedals(UUID playerId, Map map, long durationMs, Player player) {
         MedalStore medalStore = MedalStore.getInstance();
         MedalRewardStore rewardStore = MedalRewardStore.getInstance();
         FeatherStore featherStore = FeatherStore.getInstance();
         String category = map.getCategory();
+        Medal highestEarned = null;
+        int highestFeathers = 0;
         // Award all qualifying medals (bronze, silver, gold) the player hasn't earned yet
         for (Medal medal : Medal.values()) {
             Long threshold = medal.getThreshold(map);
@@ -492,6 +506,10 @@ class RunValidator {
             } else {
                 player.sendMessage(SystemMessageUtils.parkourSuccess(medal.name() + " Medal!"));
             }
+            // Medal.values() goes BRONZE -> SILVER -> GOLD, so last assigned is always highest
+            highestEarned = medal;
+            highestFeathers = featherReward;
         }
+        return highestEarned != null ? new MedalAwardResult(highestEarned, highestFeathers) : null;
     }
 }

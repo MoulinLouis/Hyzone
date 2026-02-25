@@ -1,0 +1,15 @@
+Group {
+  Anchor: (Left: 0, Right: 0, Height: 36);
+  LayoutMode: Full;
+
+  Group #PillBar {
+    Anchor: (Left: 8, Right: 8, Top: 4, Bottom: 4);
+    LayoutMode: Left;
+  }
+
+  // Bottom divider
+  Group {
+    Anchor: (Left: 0, Right: 0, Bottom: 0, Height: 1);
+    Background: #ffffff(0.06);
+  }
+}
