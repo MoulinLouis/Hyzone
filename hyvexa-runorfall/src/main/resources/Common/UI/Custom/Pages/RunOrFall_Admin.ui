@@ -4,7 +4,7 @@ $C.@PageOverlay {
   SceneBlur {}
 
   Group #RunOrFallAdminWindow {
-    Anchor: (Width: 920, Height: 820);
+    Anchor: (Width: 1012, Height: 984);
     LayoutMode: Top;
     Background: #0d1620(0.95);
     OutlineColor: #ffffff(0.06);
