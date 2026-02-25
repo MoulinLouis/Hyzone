@@ -16,7 +16,7 @@ tasks.register('updatePluginManifest') {
         }
         def manifestJson = new groovy.json.JsonSlurper().parseText(manifestFile.text)
         manifestJson.Version = version
-        manifestJson.IncludesAssetPack = false
+        manifestJson.IncludesAssetPack = includes_pack.toBoolean()
         manifestFile.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(manifestJson))
     }
 }
