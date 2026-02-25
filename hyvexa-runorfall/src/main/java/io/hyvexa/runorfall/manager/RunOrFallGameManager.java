@@ -39,6 +39,8 @@ public class RunOrFallGameManager {
     private static final long GAME_TICK_MS = 50L;
     private static final long START_BLOCK_BREAK_GRACE_MS = 3000L;
     private static final double PLAYER_FOOTPRINT_RADIUS = 0.37d;
+    private static final int STARTING_BLINK_CHARGES = 1;
+    private static final int BLOCKS_PER_EXTRA_BLINK = 100;
 
     private enum GameState {
         IDLE,
@@ -55,6 +57,7 @@ public class RunOrFallGameManager {
     private final Map<UUID, BlockKey> playerLastFootBlock = new ConcurrentHashMap<>();
     private final Map<UUID, Long> roundStartTimesMs = new ConcurrentHashMap<>();
     private final Map<UUID, Integer> brokenBlocksByPlayer = new ConcurrentHashMap<>();
+    private final Map<UUID, Integer> blinkChargesByPlayer = new ConcurrentHashMap<>();
     private final Map<UUID, Integer> blinksUsedByPlayer = new ConcurrentHashMap<>();
     private final Map<String, Integer> blockItemIdCache = new ConcurrentHashMap<>();
 
@@ -115,12 +118,27 @@ public class RunOrFallGameManager {
         return Math.max(0, count);
     }
 
-    public synchronized void recordBlinkUse(UUID playerId) {
-        if (playerId == null || state != GameState.RUNNING || !alivePlayers.contains(playerId)) {
-            return;
+    public synchronized int getBlinkCharges(UUID playerId) {
+        if (playerId == null) {
+            return 0;
         }
-        int nextCount = Math.max(0, blinksUsedByPlayer.getOrDefault(playerId, 0)) + 1;
-        blinksUsedByPlayer.put(playerId, nextCount);
+        return Math.max(0, blinkChargesByPlayer.getOrDefault(playerId, 0));
+    }
+
+    public synchronized boolean tryConsumeBlinkCharge(UUID playerId) {
+        if (playerId == null || state != GameState.RUNNING || !alivePlayers.contains(playerId)) {
+            return false;
+        }
+        int currentCharges = Math.max(0, blinkChargesByPlayer.getOrDefault(playerId, 0));
+        if (currentCharges <= 0) {
+            return false;
+        }
+        int nextCharges = currentCharges - 1;
+        blinkChargesByPlayer.put(playerId, nextCharges);
+        int nextUsedCount = Math.max(0, blinksUsedByPlayer.getOrDefault(playerId, 0)) + 1;
+        blinksUsedByPlayer.put(playerId, nextUsedCount);
+        updateBlinkChargesHudForPlayer(playerId, nextCharges);
+        return true;
     }
 
     public synchronized String statusLine() {
@@ -153,12 +171,14 @@ public class RunOrFallGameManager {
                 teleportPlayerToLobby(playerId);
                 refreshPlayerHotbar(playerId);
                 updateBrokenBlocksHudForPlayer(playerId);
+                updateBlinkChargesHudForPlayer(playerId);
                 sendToPlayer(playerId, "Round already running. You are spectating from the lobby.");
                 return;
             }
             sendToPlayer(playerId, "You are already in the RunOrFall lobby.");
             ensureBrokenBlocksEntry(playerId);
             updateBrokenBlocksHudForPlayer(playerId);
+            updateBlinkChargesHudForPlayer(playerId);
             return;
         }
         ensureBrokenBlocksEntry(playerId);
@@ -167,6 +187,7 @@ public class RunOrFallGameManager {
         refreshPlayerHotbar(playerId);
         updateCountdownHudForPlayer(playerId);
         updateBrokenBlocksHudForPlayer(playerId);
+        updateBlinkChargesHudForPlayer(playerId);
         if (state == GameState.RUNNING) {
             sendToPlayer(playerId, "Round already running. You are spectating from the lobby.");
         }
@@ -192,6 +213,7 @@ public class RunOrFallGameManager {
         }
         updateCountdownHudForPlayer(playerId, null);
         updateBrokenBlocksHudForPlayer(playerId, 0);
+        updateBlinkChargesHudForPlayer(playerId, 0);
         if (state == GameState.COUNTDOWN && lobbyPlayers.size() < countdownRequiredPlayers) {
             cancelCountdownInternal("Countdown cancelled: not enough players.");
         }
@@ -262,6 +284,7 @@ public class RunOrFallGameManager {
         playerLastFootBlock.clear();
         roundStartTimesMs.clear();
         brokenBlocksByPlayer.clear();
+        blinkChargesByPlayer.clear();
         blinksUsedByPlayer.clear();
         clearCountdownHudForLobbyPlayers();
         lobbyPlayers.clear();
@@ -287,6 +310,7 @@ public class RunOrFallGameManager {
         }
         updateCountdownHudForPlayer(playerId, null);
         updateBrokenBlocksHudForPlayer(playerId, 0);
+        updateBlinkChargesHudForPlayer(playerId, 0);
         if (lobbyPlayers.isEmpty()) {
             activeWorld = null;
         }
@@ -302,6 +326,7 @@ public class RunOrFallGameManager {
         int brokenBlocks = getRoundBrokenBlocksCount(playerId);
         int blinksUsed = getRoundBlinksUsedCount(playerId);
         brokenBlocksByPlayer.remove(playerId);
+        blinkChargesByPlayer.remove(playerId);
         blinksUsedByPlayer.remove(playerId);
         long survivedMs = takeSurvivedMs(playerId);
         return new PlayerRemovalResult(wasInLobby, wasAlive, survivedMs, brokenBlocks, blinksUsed);
@@ -441,6 +466,7 @@ public class RunOrFallGameManager {
         roundStartTimesMs.clear();
         for (UUID onlinePlayerId : onlinePlayers) {
             roundStartTimesMs.put(onlinePlayerId, roundStartMs);
+            blinkChargesByPlayer.put(onlinePlayerId, STARTING_BLINK_CHARGES);
         }
         soloTestRound = countdownRequiredPlayers == 1 && onlinePlayers.size() == 1;
         pendingBlocks.clear();
@@ -460,6 +486,7 @@ public class RunOrFallGameManager {
         for (UUID onlinePlayerId : onlinePlayers) {
             refreshPlayerHotbar(onlinePlayerId);
             updateBrokenBlocksHudForPlayer(onlinePlayerId, 0);
+            updateBlinkChargesHudForPlayer(onlinePlayerId, STARTING_BLINK_CHARGES);
         }
         gameTickTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleAtFixedRate(
                 () -> dispatchToWorld(this::tickGameInternal),
@@ -592,6 +619,7 @@ public class RunOrFallGameManager {
         teleportPlayerToLobby(playerId);
         refreshPlayerHotbar(playerId);
         updateBrokenBlocksHudForPlayer(playerId);
+        updateBlinkChargesHudForPlayer(playerId);
         sendToPlayer(playerId, "Eliminated: " + reason + ". You are now spectating from the lobby.");
         broadcastEliminationInternal(playerId, reason);
     }
@@ -603,6 +631,7 @@ public class RunOrFallGameManager {
         alivePlayers.clear();
         playerLastFootBlock.clear();
         roundStartTimesMs.clear();
+        blinkChargesByPlayer.clear();
         blinksUsedByPlayer.clear();
         resetCountdownState();
         clearCountdownHudForLobbyPlayers();
@@ -753,6 +782,7 @@ public class RunOrFallGameManager {
             playerLastFootBlock.clear();
             roundStartTimesMs.clear();
             brokenBlocksByPlayer.clear();
+            blinkChargesByPlayer.clear();
             blinksUsedByPlayer.clear();
             return;
         }
@@ -769,6 +799,7 @@ public class RunOrFallGameManager {
         playerLastFootBlock.clear();
         roundStartTimesMs.clear();
         brokenBlocksByPlayer.clear();
+        blinkChargesByPlayer.clear();
         blinksUsedByPlayer.clear();
     }
 
@@ -998,21 +1029,40 @@ public class RunOrFallGameManager {
 
     private void ensureBrokenBlocksEntry(UUID playerId) {
         brokenBlocksByPlayer.putIfAbsent(playerId, 0);
+        blinkChargesByPlayer.putIfAbsent(playerId, 0);
         blinksUsedByPlayer.putIfAbsent(playerId, 0);
     }
 
     private void resetBrokenBlocksForLobbyPlayers() {
         for (UUID playerId : lobbyPlayers) {
             brokenBlocksByPlayer.put(playerId, 0);
+            blinkChargesByPlayer.put(playerId, 0);
             blinksUsedByPlayer.put(playerId, 0);
             updateBrokenBlocksHudForPlayer(playerId, 0);
+            updateBlinkChargesHudForPlayer(playerId, 0);
         }
     }
 
     private void incrementBrokenBlocksCountInternal(UUID playerId) {
-        int nextCount = Math.max(0, brokenBlocksByPlayer.getOrDefault(playerId, 0)) + 1;
+        int previousCount = Math.max(0, brokenBlocksByPlayer.getOrDefault(playerId, 0));
+        int nextCount = previousCount + 1;
         brokenBlocksByPlayer.put(playerId, nextCount);
         updateBrokenBlocksHudForPlayer(playerId, nextCount);
+        int rewardsBefore = previousCount / BLOCKS_PER_EXTRA_BLINK;
+        int rewardsAfter = nextCount / BLOCKS_PER_EXTRA_BLINK;
+        int rewardedCharges = Math.max(0, rewardsAfter - rewardsBefore);
+        if (rewardedCharges <= 0) {
+            return;
+        }
+        int reachedMilestoneBlocks = rewardsAfter * BLOCKS_PER_EXTRA_BLINK;
+        int nextCharges = Math.max(0, blinkChargesByPlayer.getOrDefault(playerId, 0)) + rewardedCharges;
+        blinkChargesByPlayer.put(playerId, nextCharges);
+        updateBlinkChargesHudForPlayer(playerId, nextCharges);
+        if (rewardedCharges == 1) {
+            sendToPlayer(playerId, "Blink charge earned: " + reachedMilestoneBlocks + " blocks broken.");
+        } else {
+            sendToPlayer(playerId, "Blink charges earned: +" + rewardedCharges + " (" + reachedMilestoneBlocks + " blocks broken).");
+        }
     }
 
     private int getRoundBrokenBlocksCount(UUID playerId) {
@@ -1027,6 +1077,13 @@ public class RunOrFallGameManager {
             return 0;
         }
         return Math.max(0, blinksUsedByPlayer.getOrDefault(playerId, 0));
+    }
+
+    private int getRoundBlinkChargesCount(UUID playerId) {
+        if (playerId == null) {
+            return 0;
+        }
+        return Math.max(0, blinkChargesByPlayer.getOrDefault(playerId, 0));
     }
 
     private void updateCountdownHudForLobbyPlayers() {
@@ -1064,6 +1121,18 @@ public class RunOrFallGameManager {
             return;
         }
         plugin.updateBrokenBlocksHud(playerId, Math.max(0, brokenBlocks));
+    }
+
+    private void updateBlinkChargesHudForPlayer(UUID playerId) {
+        updateBlinkChargesHudForPlayer(playerId, getRoundBlinkChargesCount(playerId));
+    }
+
+    private void updateBlinkChargesHudForPlayer(UUID playerId, int blinkCharges) {
+        HyvexaRunOrFallPlugin plugin = HyvexaRunOrFallPlugin.getInstance();
+        if (plugin == null) {
+            return;
+        }
+        plugin.updateBlinkChargesHud(playerId, Math.max(0, blinkCharges));
     }
 
     private String buildCountdownHudText() {

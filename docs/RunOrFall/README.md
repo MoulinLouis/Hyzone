@@ -21,8 +21,8 @@ Entry point: `hyvexa-runorfall/src/main/java/io/hyvexa/runorfall/HyvexaRunOrFall
 - Default: join, leaderboard, stats, server selector.
 - Lobby: leave, leaderboard, stats.
 - In-game: blink item only.
-- Blink uses a collision-safe forward teleport with configurable distance (`blinkDistanceBlocks`).
-- HUD (`RunOrFall_RunHud.ui`) shows player count, vexa, countdown text, and broken-block counter.
+- Blink uses a collision-safe forward teleport with configurable distance (`blinkDistanceBlocks`), starts each round with 1 charge, and gains +1 charge every 100 broken platform blocks.
+- HUD (`RunOrFall_RunHud.ui`) shows player count, vexa, countdown text, broken-block counter, and available blink charges.
 - Stats page shows wins, losses, winrate, best streak, longest survival time, total blocks broken, and total blinks used.
 - Leaderboard supports categories: total wins, best streak, longest survived.
 

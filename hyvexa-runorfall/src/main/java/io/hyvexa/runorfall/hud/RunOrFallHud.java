@@ -12,6 +12,9 @@ public class RunOrFallHud extends CustomUIHud {
     private int lastBrokenBlocks = -1;
     private boolean lastBrokenBlocksVisible = false;
     private boolean brokenBlocksInitialized = false;
+    private int lastBlinkCharges = -1;
+    private boolean lastBlinkChargesVisible = false;
+    private boolean blinkChargesInitialized = false;
     private String lastCountdownText = null;
     private boolean lastCountdownVisible = false;
     private boolean countdownInitialized = false;
@@ -72,6 +75,20 @@ public class RunOrFallHud extends CustomUIHud {
         UICommandBuilder commandBuilder = new UICommandBuilder();
         commandBuilder.set("#BrokenBlocksText.Visible", visible);
         commandBuilder.set("#BrokenBlocksText.Text", "Blocks broken: " + String.format("%,d", safeValue));
+        update(false, commandBuilder);
+    }
+
+    public void updateBlinkCharges(int blinkCharges, boolean visible) {
+        int safeValue = Math.max(0, blinkCharges);
+        if (blinkChargesInitialized && safeValue == lastBlinkCharges && visible == lastBlinkChargesVisible) {
+            return;
+        }
+        blinkChargesInitialized = true;
+        lastBlinkCharges = safeValue;
+        lastBlinkChargesVisible = visible;
+        UICommandBuilder commandBuilder = new UICommandBuilder();
+        commandBuilder.set("#BlinkChargesText.Visible", visible);
+        commandBuilder.set("#BlinkChargesText.Text", "Blinks: " + String.format("%,d", safeValue));
         update(false, commandBuilder);
     }
 }
