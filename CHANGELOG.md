@@ -23,6 +23,7 @@
 - **Ascend: 4 new challenges** - Challenge 5 (50% Runner Speed + Multiplier Gain), Challenge 6 (all Summit bonuses at 50%), Challenge 7 (maps 4 & 5 locked), Challenge 8 (no Elevation or Summit, reward: +25% to both). Total: 8 challenges.
 
 ### Changed
+- **Dev tooling: Dedicated launch module** - Added `hyvexa-launch` as the IntelliJ classpath anchor for `com.hypixel.hytale.Main`, removing the need to launch the server from `hyvexa-hub` classpath.
 - **RunOrFall: Multi-map admin + map-linked setup** - Added map list management in `/rof admin` and `/rof map ...`, moved lobby/spawns/platforms to per-map config, and removed platform naming requirement.
 - **RunOrFall: Admin-configurable blink distance** - Added a `/rof admin` field to set Blink teleport distance in blocks (used live by `Ingredient_Lightning_Essence`).
 - **RunOrFall: Admin-configurable blink charge economy** - Added `/rof admin` fields for blink start charges and blocks broken per extra blink charge.
@@ -52,6 +53,7 @@
 - **Ascend: Summit XP softcap at level 1000** - Removed hard cap at level 1000 (unlimited levels). XP cost per level rises from level^2 to level^3 above 1000 — same volt reaches fewer levels (old 5000 -> ~3591).
 
 ### Fixed
+- **Hub/Wardrobe: Classpath asset-pack conflict** - Server launch is now decoupled to `hyvexa-launch`, and `hyvexa-hub` is packaged again as a normal plugin asset-pack (`IncludesAssetPack` from `includes_pack`), so Hub UI/items ship in `HyvexaHub-*.jar` without separate `HubAssets` staging.
 - **Purge: Variant HP now respects configured absolute value across NPC types** - Zombie variant health no longer over-scales for non-vanilla NPC types (e.g. `Zombie_Aberrant`); configured HP is applied correctly before wave scaling.
 - **RunOrFall: Spectator/Disconnect round flow** - Players joining during an active round now get teleported to lobby as spectators, and disconnects are counted as eliminations.
 - **RunOrFall: Leave lobby now returns to spawn** - Voluntary leave (`/rof leave` and leave hotbar flow) now teleports the player to the world spawn.

@@ -20,6 +20,7 @@ Quick reference for AI agents working on this Hytale plugin project.
 | `hyvexa-parkour` | Main parkour gameplay | `io.hyvexa.HyvexaPlugin` |
 | `hyvexa-parkour-ascend` | Ascend idle mode | `io.hyvexa.ascend.ParkourAscendPlugin` |
 | `hyvexa-hub` | Hub routing + mode selection | `io.hyvexa.hub.HyvexaHubPlugin` |
+| `hyvexa-launch` | IntelliJ launch classpath module | `com.hypixel.hytale.Main` |
 | `discord-bot` | Discord bot (Node.js) for account linking | `src/index.js` |
 
 ## Key Directories
