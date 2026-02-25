@@ -18,5 +18,5 @@
     },
     "DisabledByDefault": false,
     "Main": "io.hyvexa.wardrobe.WardrobePlugin",
-    "IncludesAssetPack": false
+    "IncludesAssetPack": true
 }
