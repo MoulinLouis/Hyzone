@@ -1,0 +1,200 @@
+{
+  "Properties": {
+    "Translation": {
+      "Name": "server.violet.wardrobe.cosmetics.overtops.Sweater.name"
+    },
+    "PermissionNode": "hyvexa.cosmetic.violet.overtops.sweater",
+    "Visibility": "Always"
+  },
+  "CosmeticSlot": "Overtop",
+  "HiddenCosmeticSlots": [
+    "Undertop"
+  ],
+  "Icon": "Icons/Wardrobe/Cosmetics/Overtops/Sweater_Pride.png",
+  "Appearance": {
+    "Type": "Variant",
+    "Variants": {
+      "Pride": {
+        "Properties": {
+          "Translation": {
+            "Name": "server.violet.wardrobe.cosmetics.overtops.Sweater_Pride.name"
+          }
+        },
+        "Model": "Characters/Wardrobe/Cosmetics/Overtops/Sweater.blockymodel",
+        "TextureConfig": {
+          "Type": "Variant",
+          "Variants": {
+            "Pride": {
+              "Properties": {
+                "Translation": {
+                  "Name": "server.violet.wardrobe.variants.Pride.name"
+                }
+              },
+              "Texture": "Characters/Wardrobe/Cosmetics/Overtops/Sweater_Pride.png",
+              "WardrobeColor": [
+                "#bc282e",
+                "#da6a2e",
+                "#dcc534",
+                "#24763d",
+                "#325fc5",
+                "#7328a1"
+              ]
+            },
+            "Asexual": {
+              "Properties": {
+                "Translation": {
+                  "Name": "server.violet.wardrobe.variants.Asexual.name"
+                }
+              },
+              "Texture": "Characters/Wardrobe/Cosmetics/Overtops/Sweater_Asexual.png",
+              "WardrobeColor": [
+                "#322523",
+                "#9d827c",
+                "#d8c3b9",
+                "#7e1347"
+              ]
+            },
+            "Bisexual": {
+              "Properties": {
+                "Translation": {
+                  "Name": "server.violet.wardrobe.variants.Bisexual.name"
+                }
+              },
+              "Texture": "Characters/Wardrobe/Cosmetics/Overtops/Sweater_Bisexual.png",
+              "WardrobeColor": [
+                "#d8226d",
+                "#9647b2",
+                "#103c8e"
+              ]
+            },
+            "Genderfluid": {
+              "Properties": {
+                "Translation": {
+                  "Name": "server.violet.wardrobe.variants.Genderfluid.name"
+                }
+              },
+              "Texture": "Characters/Wardrobe/Cosmetics/Overtops/Sweater_Genderfluid.png",
+              "WardrobeColor": [
+                "#cc4155",
+                "#cac3bc",
+                "#941081",
+                "#312826",
+                "#3b3da2"
+              ]
+            },
+            "Intersex": {
+              "Properties": {
+                "Translation": {
+                  "Name": "server.violet.wardrobe.variants.Intersex.name"
+                }
+              },
+              "Texture": "Characters/Wardrobe/Cosmetics/Overtops/Sweater_Intersex.png",
+              "WardrobeColor": [
+                "#e0a00b",
+                "#930d84"
+              ]
+            },
+            "MLM": {
+              "Properties": {
+                "Translation": {
+                  "Name": "server.violet.wardrobe.variants.MLM.name"
+                }
+              },
+              "Texture": "Characters/Wardrobe/Cosmetics/Overtops/Sweater_MLM.png",
+              "WardrobeColor": [
+                "#007457",
+                "#1fb18b",
+                "#99d9ab",
+                "#f1e5d8",
+                "#6f86a9",
+                "#4d40b4",
+                "#37115b"
+              ]
+            },
+            "Nonbinary": {
+              "Properties": {
+                "Translation": {
+                  "Name": "server.violet.wardrobe.variants.Nonbinary.name"
+                }
+              },
+              "Texture": "Characters/Wardrobe/Cosmetics/Overtops/Sweater_Nonbinary.png",
+              "WardrobeColor": [
+                "#deb41e",
+                "#ded6ce",
+                "#8d4494",
+                "#282120"
+              ]
+            },
+            "Pansexual": {
+              "Properties": {
+                "Translation": {
+                  "Name": "server.violet.wardrobe.variants.Pansexual.name"
+                }
+              },
+              "Texture": "Characters/Wardrobe/Cosmetics/Overtops/Sweater_Pansexual.png",
+              "WardrobeColor": [
+                "#db1153",
+                "#e3aa00",
+                "#1e8dbf"
+              ]
+            },
+            "Transgender": {
+              "Properties": {
+                "Translation": {
+                  "Name": "server.violet.wardrobe.variants.Transgender.name"
+                }
+              },
+              "Texture": "Characters/Wardrobe/Cosmetics/Overtops/Sweater_Transgender.png",
+              "WardrobeColor": [
+                "#6a96e5",
+                "#e687c2",
+                "#fef7f1",
+                "#e687c2",
+                "#6a96e5"
+              ]
+            },
+            "WLW": {
+              "Properties": {
+                "Translation": {
+                  "Name": "server.violet.wardrobe.variants.WLW.name"
+                }
+              },
+              "Texture": "Characters/Wardrobe/Cosmetics/Overtops/Sweater_WLW.png",
+              "WardrobeColor": [
+                "#b4220b",
+                "#de7144",
+                "#ffe0cb",
+                "#d76690",
+                "#aa2964"
+              ]
+            }
+          }
+        }
+      },
+      "Bee": {
+        "Properties": {
+          "Translation": {
+            "Name": "server.violet.wardrobe.cosmetics.overtops.Sweater_Bee.name"
+          }
+        },
+        "Icon": "Icons/Wardrobe/Cosmetics/Overtops/Sweater_Bee.png",
+        "Model": "Characters/Wardrobe/Cosmetics/Overtops/Sweater.blockymodel",
+        "TextureConfig": {
+          "Texture": "Characters/Wardrobe/Cosmetics/Overtops/Sweater_Bee.png"
+        }
+      },
+      "Hanerpop": {
+        "Properties": {
+          "Translation": {
+            "Name": "server.violet.wardrobe.cosmetics.overtops.Sweater_Hanerpop.name"
+          }
+        },
+        "Icon": "Icons/Wardrobe/Cosmetics/Overtops/Sweater_Hanerpop.png",
+        "Model": "Characters/Wardrobe/Cosmetics/Overtops/Sweater.blockymodel",
+        "TextureConfig": {
+          "Texture": "Characters/Wardrobe/Cosmetics/Overtops/Sweater_Hanerpop.png"
+        }
+      }
+    }
+  }
+}

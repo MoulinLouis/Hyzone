@@ -1,0 +1,17 @@
+{
+  "Properties": {
+    "Translation": {
+      "Name": "server.violet.wardrobe.cosmetics.headaccessories.ITMG.name"
+    },
+    "PermissionNode": "hyvexa.cosmetic.violet.headaccessories.itmg",
+    "Visibility": "Always"
+  },
+  "CosmeticSlot": "HeadAccessory",
+  "Icon": "Icons/Wardrobe/Cosmetics/HeadAccessories/Creature.png",
+  "Appearance": {
+    "Model": "Characters/Wardrobe/Cosmetics/HeadAccessories/Creature.blockymodel",
+    "TextureConfig": {
+      "Texture": "Characters/Wardrobe/Cosmetics/HeadAccessories/Creature.png"
+    }
+  }
+}

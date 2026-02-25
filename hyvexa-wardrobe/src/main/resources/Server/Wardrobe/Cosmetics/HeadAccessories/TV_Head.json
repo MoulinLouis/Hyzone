@@ -1,0 +1,92 @@
+{
+  "Properties": {
+    "Translation": {
+      "Name": "server.violet.wardrobe.cosmetics.headaccessories.TV_Head.name"
+    },
+    "PermissionNode": "hyvexa.cosmetic.violet.headaccessories.tv_head",
+    "Visibility": "Always"
+  },
+  "CosmeticSlot": "HeadAccessory",
+  "HiddenCosmeticSlots": [
+    "Ears",
+    "Haircut",
+    "FacialHair",
+    "FaceAccessory",
+    "EarAccessory"
+  ],
+  "Icon": "Icons/Wardrobe/Cosmetics/HeadAccessories/TV_Head_Grey.png",
+  "Appearance": {
+    "Type": "Variant",
+    "Variants": {
+      "Default": {
+        "Properties": {
+          "Translation": {
+            "Name": "server.violet.wardrobe.options.Default.name"
+          }
+        },
+        "Model": "Characters/Wardrobe/Cosmetics/HeadAccessories/TV_Head.blockymodel",
+        "TextureConfig": {
+          "Type": "Variant",
+          "Variants": {
+            "Grey": {
+              "Properties": {
+                "Translation": {
+                  "Name": "server.violet.wardrobe.variants.Grey.name"
+                }
+              },
+              "Texture": "Characters/Wardrobe/Cosmetics/HeadAccessories/TV_Head_Grey.png",
+              "WardrobeColor": [
+                "#8993a6"
+              ]
+            },
+            "Pink": {
+              "Properties": {
+                "Translation": {
+                  "Name": "server.violet.wardrobe.variants.Pink.name"
+                }
+              },
+              "Texture": "Characters/Wardrobe/Cosmetics/HeadAccessories/TV_Head_Pink.png",
+              "WardrobeColor": [
+                "#d65b99"
+              ]
+            },
+            "Purple": {
+              "Properties": {
+                "Translation": {
+                  "Name": "server.violet.wardrobe.variants.Purple.name"
+                }
+              },
+              "Texture": "Characters/Wardrobe/Cosmetics/HeadAccessories/TV_Head_Purple.png",
+              "WardrobeColor": [
+                "#8140be"
+              ]
+            },
+            "Yellow": {
+              "Properties": {
+                "Translation": {
+                  "Name": "server.violet.wardrobe.variants.Yellow.name"
+                }
+              },
+              "Texture": "Characters/Wardrobe/Cosmetics/HeadAccessories/TV_Head_Yellow.png",
+              "WardrobeColor": [
+                "#e39e30"
+              ]
+            }
+          }
+        }
+      },
+      "Vailahteir": {
+        "Properties": {
+          "Translation": {
+            "Name": "server.violet.wardrobe.cosmetics.headaccessories.Vailahteir_TV_Head.name"
+          }
+        },
+        "Icon": "Icons/Wardrobe/Cosmetics/HeadAccessories/Vailahteir_TV_Head.png",
+        "Model": "Characters/Wardrobe/Cosmetics/HeadAccessories/Vailahteir_TV_Head.blockymodel",
+        "TextureConfig": {
+          "Texture": "Characters/Wardrobe/Cosmetics/HeadAccessories/Vailahteir_TV_Head.png"
+        }
+      }
+    }
+  }
+}

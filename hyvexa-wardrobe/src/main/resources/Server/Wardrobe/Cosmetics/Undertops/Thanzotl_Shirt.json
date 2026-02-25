@@ -1,0 +1,17 @@
+{
+  "Properties": {
+    "Translation": {
+      "Name": "server.violet.wardrobe.cosmetics.unertops.Thanzotl_Shirt.name"
+    },
+    "PermissionNode": "hyvexa.cosmetic.violet.undertops.thanzotl_shirt",
+    "Visibility": "Always"
+  },
+  "CosmeticSlot": "Undertop",
+  "Icon": "Icons/Wardrobe/Cosmetics/Undertops/Thanzotl_Shirt.png",
+  "Appearance": {
+    "Model": "Characters/Wardrobe/Cosmetics/Undertops/Thanzotl_Shirt.blockymodel",
+    "TextureConfig": {
+      "Texture": "Characters/Wardrobe/Cosmetics/Undertops/Thanzotl_Shirt.png"
+    }
+  }
+}

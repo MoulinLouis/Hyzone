@@ -1,0 +1,65 @@
+{
+  "Properties": {
+    "Translation": {
+      "Name": "server.violet.wardrobe.cosmetics.headaccessories.Cat_Headphones.name"
+    },
+    "PermissionNode": "hyvexa.cosmetic.violet.headaccessories.cat_headphones",
+    "Visibility": "Always"
+  },
+  "CosmeticSlot": "HeadAccessory",
+  "Icon": "Icons/Wardrobe/Cosmetics/HeadAccessories/Cat_Headphones_Blue.png",
+  "Appearance": {
+    "Type": "Variant",
+    "Variants": {
+      "Default": {
+        "Properties": {
+          "Translation": {
+            "Name": "server.violet.wardrobe.options.Default.name"
+          }
+        },
+        "Model": "Characters/Wardrobe/Cosmetics/HeadAccessories/Cat_Headphones.blockymodel",
+        "TextureConfig": {
+          "Type": "Variant",
+          "Variants": {
+            "Pink": {
+              "Properties": {
+                "Translation": {
+                  "Name": "server.violet.wardrobe.variants.Pink.name"
+                }
+              },
+              "Texture": "Characters/Wardrobe/Cosmetics/HeadAccessories/Cat_Headphones_Pink.png",
+              "WardrobeColor": [
+                "#f68992",
+                "#70c9f9"
+              ]
+            },
+            "Blue": {
+              "Properties": {
+                "Translation": {
+                  "Name": "server.violet.wardrobe.variants.Blue.name"
+                }
+              },
+              "Texture": "Characters/Wardrobe/Cosmetics/HeadAccessories/Cat_Headphones_Blue.png",
+              "WardrobeColor": [
+                "#70c9f9",
+                "#f68992"
+              ]
+            }
+          }
+        }
+      },
+      "Slamma": {
+        "Properties": {
+          "Translation": {
+            "Name": "server.violet.wardrobe.cosmetics.headaccessories.Slamma_Headphones.name"
+          },
+          "Icon": "Icons/Wardrobe/Cosmetics/HeadAccessories/Slamma_Headphones.png"
+        },
+        "Model": "Characters/Wardrobe/Cosmetics/HeadAccessories/Slamma_Headphones.blockymodel",
+        "TextureConfig": {
+          "Texture": "Characters/Wardrobe/Cosmetics/HeadAccessories/Slamma_Headphones.png"
+        }
+      }
+    }
+  }
+}

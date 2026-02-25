@@ -1,0 +1,17 @@
+{
+  "Properties": {
+    "Translation": {
+      "Name": "server.violet.wardrobe.cosmetics.badges.Kweebec.name"
+    },
+    "PermissionNode": "hyvexa.cosmetic.violet.badges.badge_kweebec",
+    "Visibility": "Always"
+  },
+  "CosmeticSlot": "Badge",
+  "Icon": "Icons/Wardrobe/Cosmetics/Badges/Kweebec.png",
+  "Appearance": {
+    "Model": "Characters/Wardrobe/Cosmetics/Badges/Badge.blockymodel",
+    "TextureConfig": {
+      "Texture": "Characters/Wardrobe/Cosmetics/Badges/Kweebec.png"
+    }
+  }
+}

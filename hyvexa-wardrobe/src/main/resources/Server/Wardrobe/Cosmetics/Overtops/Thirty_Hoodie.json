@@ -1,0 +1,17 @@
+{
+  "Properties": {
+    "Translation": {
+      "Name": "server.violet.wardrobe.cosmetics.overtops.Thirty_Hoodie.name"
+    },
+    "PermissionNode": "hyvexa.cosmetic.violet.overtops.thirty_hoodie",
+    "Visibility": "Always"
+  },
+  "CosmeticSlot": "Overtop",
+  "Icon": "Icons/Wardrobe/Cosmetics/Overtops/Thirty_Hoodie.png",
+  "Appearance": {
+    "Model": "Characters/Wardrobe/Cosmetics/Overtops/Thirty_Hoodie.blockymodel",
+    "TextureConfig": {
+      "Texture": "Characters/Wardrobe/Cosmetics/Overtops/Thirty_Hoodie.png"
+    }
+  }
+}

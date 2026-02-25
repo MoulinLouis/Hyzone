@@ -1,0 +1,74 @@
+{
+  "Properties": {
+    "Translation": {
+      "Name": "server.violet.wardrobe.cosmetics.unertops.Shirt.name"
+    },
+    "PermissionNode": "hyvexa.cosmetic.violet.undertops.shirt",
+    "Visibility": "Always"
+  },
+  "CosmeticSlot": "Undertop",
+  "Icon": "Icons/Wardrobe/Cosmetics/Undertops/Shirt_Alien.png",
+  "Appearance": {
+    "Model": "Characters/Wardrobe/Cosmetics/Undertops/Shirt.blockymodel",
+    "TextureConfig": {
+      "Type": "Variant",
+      "Variants": {
+        "Green": {
+          "Properties": {
+            "Translation": {
+              "Name": "server.violet.wardrobe.variants.Alien.name"
+            }
+          },
+          "Texture": "Characters/Wardrobe/Cosmetics/Undertops/Shirt_Alien.png",
+          "WardrobeColor": [
+            "#1cb848"
+          ]
+        },
+        "Yellow": {
+          "Properties": {
+            "Translation": {
+              "Name": "server.violet.wardrobe.variants.Burger.name"
+            }
+          },
+          "Texture": "Characters/Wardrobe/Cosmetics/Undertops/Shirt_Burger.png",
+          "WardrobeColor": [
+            "#c06042"
+          ]
+        },
+        "Orange": {
+          "Properties": {
+            "Translation": {
+              "Name": "server.violet.wardrobe.variants.Burn_Kweebec.name"
+            }
+          },
+          "Texture": "Characters/Wardrobe/Cosmetics/Undertops/Shirt_Burn_Kweebec.png",
+          "WardrobeColor": [
+            "#af3c20"
+          ]
+        },
+        "Red": {
+          "Properties": {
+            "Translation": {
+              "Name": "server.violet.wardrobe.variants.Red_Trork.name"
+            }
+          },
+          "Texture": "Characters/Wardrobe/Cosmetics/Undertops/Shirt_Red_Trork.png",
+          "WardrobeColor": [
+            "#b12137"
+          ]
+        },
+        "Purple": {
+          "Properties": {
+            "Translation": {
+              "Name": "server.violet.wardrobe.variants.Varyn.name"
+            }
+          },
+          "Texture": "Characters/Wardrobe/Cosmetics/Undertops/Shirt_Varyn.png",
+          "WardrobeColor": [
+            "#885ca8"
+          ]
+        }
+      }
+    }
+  }
+}

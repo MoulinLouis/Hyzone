@@ -1,0 +1,50 @@
+{
+  "Properties": {
+    "Translation": {
+      "Name": "server.violet.wardrobe.cosmetics.badges.Pride.name"
+    },
+    "PermissionNode": "hyvexa.cosmetic.violet.badges.badge_pride",
+    "Visibility": "Always"
+  },
+  "CosmeticSlot": "Badge",
+  "Icon": "Icons/Wardrobe/Cosmetics/Badges/Pride.png",
+  "Appearance": {
+    "Model": "Characters/Wardrobe/Cosmetics/Badges/Badge.blockymodel",
+    "TextureConfig": {
+      "Type": "Variant",
+      "Variants": {
+        "Pride": {
+          "Properties": {
+            "Translation": {
+              "Name": "server.violet.wardrobe.variants.Pride.name"
+            }
+          },
+          "Texture": "Characters/Wardrobe/Cosmetics/Badges/Pride.png",
+          "WardrobeColor": [
+            "#bc282e",
+            "#da6a2e",
+            "#dcc534",
+            "#24763d",
+            "#325fc5",
+            "#7328a1"
+          ]
+        },
+        "Transgender": {
+          "Properties": {
+            "Translation": {
+              "Name": "server.violet.wardrobe.variants.Transgender.name"
+            }
+          },
+          "Texture": "Characters/Wardrobe/Cosmetics/Badges/Pride_Transgender.png",
+          "WardrobeColor": [
+            "#6a96e5",
+            "#e687c2",
+            "#fef7f1",
+            "#e687c2",
+            "#6a96e5"
+          ]
+        }
+      }
+    }
+  }
+}

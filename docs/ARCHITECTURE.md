@@ -35,6 +35,8 @@ Technical design documentation for the Hyvexa multi-module plugin suite.
 - `hyvexa-parkour`: current Parkour gameplay plugin
 - `hyvexa-parkour-ascend`: Parkour Ascend idle mode with prestige progression
 - `hyvexa-hub`: hub routing + UI (mode switching, teleport routing)
+- `hyvexa-wardrobe`: Wardrobe shop integration + Wardrobe permission bridge
+- `hyvexa-launch`: launch-only IntelliJ classpath module for `com.hypixel.hytale.Main`
 - Hub routing targets the capitalized world names: `Hub`, `Parkour`, `Ascend`
 
 ### Ascend Plugin Lifecycle
@@ -49,8 +51,14 @@ Technical design documentation for the Hyvexa multi-module plugin suite.
 - Schedules a 200ms tick that runs run tracking + HUD updates on the Ascend world thread.
 
 Module boundaries:
-- Parkour/Ascend/Hub depend on Core only
+- Parkour/Ascend/Hub/Wardrobe depend on Core only
 - No dependencies between Parkour and Parkour Ascend
+
+### Wardrobe Content Strategy
+- Wardrobe cosmetics/assets are shipped directly in `hyvexa-wardrobe/src/main/resources` (not in `docs/`).
+- `/wardrobe` visibility is data-driven by Wardrobe cosmetic JSON files in `Server/Wardrobe/Cosmetics/`.
+- Violet cosmetics are present with `Properties.Visibility = "Always"` and `Properties.PermissionNode = hyvexa.cosmetic.violet.*`, so players can see them as locked by default.
+- `/shop` remains independent: purchasable wardrobe entries come only from `WardrobeBridge.COSMETICS` in core.
 
 ## Threading Model
 

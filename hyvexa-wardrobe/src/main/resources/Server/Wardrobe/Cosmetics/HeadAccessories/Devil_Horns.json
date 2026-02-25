@@ -1,0 +1,41 @@
+{
+  "Properties": {
+    "Translation": {
+      "Name": "server.violet.wardrobe.cosmetics.headaccessories.Devil_Horns.name"
+    },
+    "PermissionNode": "hyvexa.cosmetic.violet.headaccessories.devil_horns",
+    "Visibility": "Always"
+  },
+  "CosmeticSlot": "HeadAccessory",
+  "Icon": "Icons/Wardrobe/Cosmetics/HeadAccessories/Devil_Horns_Red.png",
+  "Appearance": {
+    "Model": "Characters/Wardrobe/Cosmetics/HeadAccessories/Devil_Horns.blockymodel",
+    "TextureConfig": {
+      "Type": "Variant",
+      "Variants": {
+        "Red": {
+          "Properties": {
+            "Translation": {
+              "Name": "server.violet.wardrobe.variants.Red.name"
+            }
+          },
+          "Texture": "Characters/Wardrobe/Cosmetics/HeadAccessories/Devil_Horns_Red.png",
+          "WardrobeColor": [
+            "#7a0128"
+          ]
+        },
+        "Black": {
+          "Properties": {
+            "Translation": {
+              "Name": "server.violet.wardrobe.variants.Black.name"
+            }
+          },
+          "Texture": "Characters/Wardrobe/Cosmetics/HeadAccessories/Devil_Horns_Black.png",
+          "WardrobeColor": [
+            "#24213c"
+          ]
+        }
+      }
+    }
+  }
+}

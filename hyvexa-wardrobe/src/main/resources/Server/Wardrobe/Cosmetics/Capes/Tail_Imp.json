@@ -1,0 +1,41 @@
+{
+  "Properties": {
+    "Translation": {
+      "Name": "server.violet.wardrobe.cosmetics.capes.Tail_Imp.name"
+    },
+    "PermissionNode": "hyvexa.cosmetic.violet.capes.tail_imp",
+    "Visibility": "Always"
+  },
+  "CosmeticSlot": "Cape",
+  "Icon": "Icons/Wardrobe/Cosmetics/Capes/Tail_Imp_Red.png",
+  "Appearance": {
+    "Model": "Characters/Wardrobe/Cosmetics/Capes/Tail_Imp.blockymodel",
+    "TextureConfig": {
+      "Type": "Variant",
+      "Variants": {
+        "Red": {
+          "Properties": {
+            "Translation": {
+              "Name": "server.violet.wardrobe.variants.Red.name"
+            }
+          },
+          "Texture": "Characters/Wardrobe/Cosmetics/Capes/Tail_Imp_Red.png",
+          "WardrobeColor": [
+            "#7a0128"
+          ]
+        },
+        "Black": {
+          "Properties": {
+            "Translation": {
+              "Name": "server.violet.wardrobe.variants.Black.name"
+            }
+          },
+          "Texture": "Characters/Wardrobe/Cosmetics/Capes/Tail_Imp_Black.png",
+          "WardrobeColor": [
+            "#24213c"
+          ]
+        }
+      }
+    }
+  }
+}

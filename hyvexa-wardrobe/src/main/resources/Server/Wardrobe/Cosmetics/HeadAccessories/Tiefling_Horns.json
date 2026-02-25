@@ -1,0 +1,52 @@
+{
+  "Properties": {
+    "Translation": {
+      "Name": "server.violet.wardrobe.cosmetics.headaccessories.Tiefling_Horns.name"
+    },
+    "PermissionNode": "hyvexa.cosmetic.violet.headaccessories.tiefling_horns",
+    "Visibility": "Always"
+  },
+  "CosmeticSlot": "HeadAccessory",
+  "Icon": "Icons/Wardrobe/Cosmetics/HeadAccessories/Tiefling_Horns_Purple.png",
+  "Appearance": {
+    "Model": "Characters/Wardrobe/Cosmetics/HeadAccessories/Tiefling_Horns.blockymodel",
+    "TextureConfig": {
+      "Type": "Variant",
+      "Variants": {
+        "Purple": {
+          "Properties": {
+            "Translation": {
+              "Name": "server.violet.wardrobe.variants.Purple.name"
+            }
+          },
+          "Texture": "Characters/Wardrobe/Cosmetics/HeadAccessories/Tiefling_Horns_Purple.png",
+          "WardrobeColor": [
+            "#553f6d"
+          ]
+        },
+        "Red": {
+          "Properties": {
+            "Translation": {
+              "Name": "server.violet.wardrobe.variants.Red.name"
+            }
+          },
+          "Texture": "Characters/Wardrobe/Cosmetics/HeadAccessories/Tiefling_Horns_Red.png",
+          "WardrobeColor": [
+            "#93143c"
+          ]
+        },
+        "Yellow": {
+          "Properties": {
+            "Translation": {
+              "Name": "server.violet.wardrobe.variants.Gold.name"
+            }
+          },
+          "Texture": "Characters/Wardrobe/Cosmetics/HeadAccessories/Tiefling_Horns_Yellow.png",
+          "WardrobeColor": [
+            "#c8a754"
+          ]
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "Properties": {
+    "Translation": {
+      "Name": "server.violet.wardrobe.cosmetics.headaccessories.Chippy_Hat.name"
+    },
+    "PermissionNode": "hyvexa.cosmetic.violet.headaccessories.chippy_hat",
+    "Visibility": "Always"
+  },
+  "CosmeticSlot": "HeadAccessory",
+  "Icon": "Icons/Wardrobe/Cosmetics/HeadAccessories/Chippy_Hat.png",
+  "Appearance": {
+    "Model": "Characters/Wardrobe/Cosmetics/HeadAccessories/Chippy_Hat.blockymodel",
+    "TextureConfig": {
+      "Texture": "Characters/Wardrobe/Cosmetics/HeadAccessories/Chippy_Hat.png"
+    }
+  }
+}
