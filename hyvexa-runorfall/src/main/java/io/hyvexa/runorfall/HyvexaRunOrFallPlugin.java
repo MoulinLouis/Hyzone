@@ -24,17 +24,21 @@ import io.hyvexa.common.util.MultiHudBridge;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.core.economy.VexaStore;
 import io.hyvexa.runorfall.command.RunOrFallCommand;
+import io.hyvexa.runorfall.hud.HiddenRunOrFallHud;
 import io.hyvexa.runorfall.hud.RunOrFallHud;
 import io.hyvexa.runorfall.interaction.RunOrFallBlinkInteraction;
 import io.hyvexa.runorfall.interaction.RunOrFallJoinInteraction;
+import io.hyvexa.runorfall.interaction.RunOrFallProfileInteraction;
 import io.hyvexa.runorfall.interaction.RunOrFallStatsInteraction;
 import io.hyvexa.runorfall.ui.RunOrFallAdminPage;
+import io.hyvexa.runorfall.ui.RunOrFallMusicPage;
 import io.hyvexa.runorfall.manager.RunOrFallConfigStore;
 import io.hyvexa.runorfall.manager.RunOrFallGameManager;
 import io.hyvexa.runorfall.manager.RunOrFallStatsStore;
 
 import javax.annotation.Nonnull;
 import java.io.File;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
@@ -46,11 +50,12 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
     private static final String ITEM_JOIN = "Ingredient_Life_Essence";
     private static final String ITEM_LEAVE = "Ingredient_Earth_Essence";
     private static final String ITEM_BLINK = "Ingredient_Lightning_Essence";
+    private static final String ITEM_PROFILE = "RunOrFall_Profile_Silk";
     private static final String ITEM_STATS = "Food_Candy_Cane";
     private static final String ITEM_LEADERBOARD = "WinterHoliday_Snowflake";
     private static final short SLOT_PRIMARY = 0;
     private static final short SLOT_LEADERBOARD = 1;
-    private static final short SLOT_STATS = 2;
+    private static final short SLOT_PROFILE = 2;
     private static final short SLOT_GAME_SELECTOR = 8;
     private static HyvexaRunOrFallPlugin INSTANCE;
 
@@ -60,6 +65,8 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
     private RunOrFallCommand runOrFallCommand;
     private static final long HUD_READY_DELAY_MS = 250L;
     private final ConcurrentHashMap<UUID, RunOrFallHud> runOrFallHuds = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, HiddenRunOrFallHud> hiddenRunOrFallHuds = new ConcurrentHashMap<>();
+    private final Set<UUID> hiddenHudPlayers = ConcurrentHashMap.newKeySet();
     private final ConcurrentHashMap<UUID, Long> hudReadyAt = new ConcurrentHashMap<>();
     private ScheduledFuture<?> hudUpdateTask;
 
@@ -128,7 +135,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
             if (player == null) {
                 return;
             }
-            attachRunOrFallHud(playerRef, player);
+            attachPreferredRunOrFallHud(playerRef, player);
             refreshRunOrFallHotbar(playerRef.getUuid());
         });
 
@@ -151,13 +158,14 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
                 if (ref != null && ref.isValid()) {
                     Player player = ref.getStore().getComponent(ref, Player.getComponentType());
                     if (player != null) {
-                        attachRunOrFallHud(playerRef, player);
+                        attachPreferredRunOrFallHud(playerRef, player);
                     }
                 }
                 refreshRunOrFallHotbar(playerId);
                 return;
             }
             runOrFallHuds.remove(playerId);
+            hiddenRunOrFallHuds.remove(playerId);
             hudReadyAt.remove(playerId);
             gameManager.leaveLobby(playerId, false);
         });
@@ -170,8 +178,11 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
             UUID playerId = playerRef.getUuid();
             gameManager.handleDisconnect(playerId);
             runOrFallHuds.remove(playerId);
+            hiddenRunOrFallHuds.remove(playerId);
+            hiddenHudPlayers.remove(playerId);
             hudReadyAt.remove(playerId);
             RunOrFallAdminPage.clearSelection(playerId);
+            RunOrFallMusicPage.clearPlayer(playerId);
             if (runOrFallCommand != null) {
                 runOrFallCommand.clearSelection(playerId);
             }
@@ -190,6 +201,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
         registry.register("RunOrFall_Join_Interaction", RunOrFallJoinInteraction.class, RunOrFallJoinInteraction.CODEC);
         registry.register("RunOrFall_Blink_Interaction", RunOrFallBlinkInteraction.class, RunOrFallBlinkInteraction.CODEC);
         registry.register("RunOrFall_Stats_Interaction", RunOrFallStatsInteraction.class, RunOrFallStatsInteraction.CODEC);
+        registry.register("RunOrFall_Profile_Interaction", RunOrFallProfileInteraction.class, RunOrFallProfileInteraction.CODEC);
     }
 
     public RunOrFallStatsStore getStatsStore() {
@@ -198,6 +210,18 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
 
     public RunOrFallGameManager getGameManager() {
         return gameManager;
+    }
+
+    public void hideHud(UUID playerId) {
+        setHudHidden(playerId, true);
+    }
+
+    public void showHud(UUID playerId) {
+        setHudHidden(playerId, false);
+    }
+
+    public boolean isHudHidden(UUID playerId) {
+        return playerId != null && hiddenHudPlayers.contains(playerId);
     }
 
     public void updateCountdownHud(UUID playerId, String text) {
@@ -282,7 +306,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
         String primaryItem = state == HotbarState.LOBBY ? ITEM_LEAVE : ITEM_JOIN;
         setHotbarItem(hotbar, capacity, SLOT_PRIMARY, primaryItem);
         setHotbarItem(hotbar, capacity, SLOT_LEADERBOARD, ITEM_LEADERBOARD);
-        setHotbarItem(hotbar, capacity, SLOT_STATS, ITEM_STATS);
+        setHotbarItem(hotbar, capacity, SLOT_PROFILE, ITEM_PROFILE);
         if (state == HotbarState.DEFAULT) {
             setHotbarItem(hotbar, capacity, SLOT_GAME_SELECTOR, WorldConstants.ITEM_SERVER_SELECTOR);
         }
@@ -297,6 +321,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
             String itemId = stack.getItemId();
             if (ITEM_STATS.equals(itemId) || ITEM_JOIN.equals(itemId) || ITEM_LEAVE.equals(itemId)
                     || ITEM_BLINK.equals(itemId)
+                    || ITEM_PROFILE.equals(itemId)
                     || ITEM_LEADERBOARD.equals(itemId)
                     || WorldConstants.ITEM_SERVER_SELECTOR.equals(itemId)) {
                 hotbar.setItemStackForSlot(slot, ItemStack.EMPTY, false);
@@ -318,6 +343,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
         if (playerId == null) {
             return;
         }
+        hiddenRunOrFallHuds.remove(playerId);
         RunOrFallHud hud = new RunOrFallHud(playerRef);
         runOrFallHuds.put(playerId, hud);
         hudReadyAt.put(playerId, System.currentTimeMillis() + HUD_READY_DELAY_MS);
@@ -334,6 +360,69 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
         hud.updateVexa(VexaStore.getInstance().getVexa(playerId));
     }
 
+    private void attachHiddenRunOrFallHud(PlayerRef playerRef, Player player) {
+        if (playerRef == null || player == null) {
+            return;
+        }
+        UUID playerId = playerRef.getUuid();
+        if (playerId == null) {
+            return;
+        }
+        runOrFallHuds.remove(playerId);
+        hudReadyAt.remove(playerId);
+        HiddenRunOrFallHud hiddenHud = hiddenRunOrFallHuds.computeIfAbsent(playerId,
+                ignored -> new HiddenRunOrFallHud(playerRef));
+        MultiHudBridge.setCustomHud(player, playerRef, hiddenHud);
+        player.getHudManager().hideHudComponents(playerRef, HudComponent.Compass);
+        MultiHudBridge.showIfNeeded(hiddenHud);
+    }
+
+    private void attachPreferredRunOrFallHud(PlayerRef playerRef, Player player) {
+        if (playerRef == null || player == null) {
+            return;
+        }
+        UUID playerId = playerRef.getUuid();
+        if (isHudHidden(playerId)) {
+            attachHiddenRunOrFallHud(playerRef, player);
+        } else {
+            attachRunOrFallHud(playerRef, player);
+        }
+        RunOrFallMusicPage.applyStoredMusic(playerRef);
+    }
+
+    private void setHudHidden(UUID playerId, boolean hidden) {
+        if (playerId == null) {
+            return;
+        }
+        if (hidden) {
+            hiddenHudPlayers.add(playerId);
+        } else {
+            hiddenHudPlayers.remove(playerId);
+        }
+        PlayerRef playerRef = Universe.get().getPlayer(playerId);
+        if (playerRef == null) {
+            return;
+        }
+        Ref<EntityStore> ref = playerRef.getReference();
+        if (ref == null || !ref.isValid()) {
+            return;
+        }
+        Store<EntityStore> store = ref.getStore();
+        World world = store.getExternalData() != null ? store.getExternalData().getWorld() : null;
+        if (!ModeGate.isRunOrFallWorld(world)) {
+            return;
+        }
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null) {
+            return;
+        }
+        if (hidden) {
+            attachHiddenRunOrFallHud(playerRef, player);
+            return;
+        }
+        attachRunOrFallHud(playerRef, player);
+    }
+
     private void tickHudUpdates() {
         long now = System.currentTimeMillis();
         for (var entry : runOrFallHuds.entrySet()) {
@@ -341,12 +430,14 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
             PlayerRef playerRef = Universe.get().getPlayer(playerId);
             if (playerRef == null) {
                 runOrFallHuds.remove(playerId);
+                hiddenRunOrFallHuds.remove(playerId);
                 hudReadyAt.remove(playerId);
                 continue;
             }
             Ref<EntityStore> ref = playerRef.getReference();
             if (ref == null || !ref.isValid()) {
                 runOrFallHuds.remove(playerId);
+                hiddenRunOrFallHuds.remove(playerId);
                 hudReadyAt.remove(playerId);
                 continue;
             }
@@ -354,6 +445,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
             World world = store.getExternalData() != null ? store.getExternalData().getWorld() : null;
             if (!ModeGate.isRunOrFallWorld(world)) {
                 runOrFallHuds.remove(playerId);
+                hiddenRunOrFallHuds.remove(playerId);
                 hudReadyAt.remove(playerId);
                 continue;
             }
@@ -374,6 +466,8 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
             hudUpdateTask = null;
         }
         runOrFallHuds.clear();
+        hiddenRunOrFallHuds.clear();
+        hiddenHudPlayers.clear();
         hudReadyAt.clear();
         if (gameManager != null) {
             gameManager.shutdown();
