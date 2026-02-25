@@ -1,0 +1,44 @@
+$C = "../Common.ui";
+
+Group {
+  Anchor: (Width: 76, Height: 28, Left: 4);
+  LayoutMode: Full;
+
+  // Active accent overlay (hidden by default)
+  Group #PillActive {
+    Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+    Background: #e879f9(0.2);
+    OutlineColor: #e879f9(0.4);
+    OutlineSize: 1;
+    Visible: false;
+  }
+
+  // Pill label
+  Label #PillLabel {
+    Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+    Style: (FontSize: 13, TextColor: #8b9bb0, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center);
+    Text: "";
+    HitTestVisible: false;
+  }
+
+  // Clickable button overlay
+  TextButton #PillButton {
+    Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+    Text: "";
+    Style: TextButtonStyle(
+      Default: (
+        Background: #000000(0.01),
+        LabelStyle: (FontSize: 1, TextColor: #000000(0.01), HorizontalAlignment: Center, VerticalAlignment: Center)
+      ),
+      Hovered: (
+        Background: #ffffff(0.06),
+        LabelStyle: (FontSize: 1, TextColor: #000000(0.01), HorizontalAlignment: Center, VerticalAlignment: Center)
+      ),
+      Pressed: (
+        Background: #ffffff(0.03),
+        LabelStyle: (FontSize: 1, TextColor: #000000(0.01), HorizontalAlignment: Center, VerticalAlignment: Center)
+      ),
+      Sounds: $C.@ButtonSounds,
+    );
+  }
+}

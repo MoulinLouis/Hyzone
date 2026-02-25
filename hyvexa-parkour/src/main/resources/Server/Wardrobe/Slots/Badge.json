@@ -1,0 +1,11 @@
+{
+  "Properties": {
+    "Translation": {
+      "Name": "server.hyvexa.wardrobe.slot.badge.name"
+    },
+    "Icon": "Icons/Wardrobe/Slots/Badge@2x.png"
+  },
+  "Category": "Torso",
+  "SelectedIcon": "Icons/Wardrobe/Slots/BadgeSelected@2x.png",
+  "Order": 3
+}

@@ -18,6 +18,7 @@ public final class ParkourTimingConstants {
     public static final int MAP_HOLOGRAM_TOP_LIMIT = 5;
     public static final int MAP_HOLOGRAM_NAME_MAX = 16;
     public static final int MAP_HOLOGRAM_POS_WIDTH = 3;
+    public static final long MEDAL_NOTIF_DURATION_MS = 4000L;
 
     private ParkourTimingConstants() {
     }

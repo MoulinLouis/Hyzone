@@ -1,8 +1,8 @@
 {
     "Group": "io.hyvexa",
-    "Name": "HyvexaHub",
+    "Name": "HyvexaWardrobe",
     "Version": "1.0.0",
-    "Description": "Hyvexa hub routing plugin",
+    "Description": "Wardrobe cosmetics shop",
     "Authors": [
         {
             "Name": "Playfade"
@@ -17,6 +17,6 @@
         
     },
     "DisabledByDefault": false,
-    "Main": "io.hyvexa.hub.HyvexaHubPlugin",
+    "Main": "io.hyvexa.wardrobe.WardrobePlugin",
     "IncludesAssetPack": false
 }
