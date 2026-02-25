@@ -7,11 +7,13 @@ import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
+import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
+import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.runorfall.HyvexaRunOrFallPlugin;
@@ -39,6 +41,7 @@ public class RunOrFallGameManager {
     private static final long GAME_TICK_MS = 50L;
     private static final long START_BLOCK_BREAK_GRACE_MS = 3000L;
     private static final double PLAYER_FOOTPRINT_RADIUS = 0.37d;
+    private static final String SFX_BLINK_CHARGE_EARNED = "SFX_Avatar_Powers_Enable_Local";
 
     private enum GameState {
         IDLE,
@@ -1007,6 +1010,21 @@ public class RunOrFallGameManager {
         }
     }
 
+    private void playSfxForPlayer(UUID playerId, String soundEventId) {
+        if (playerId == null || soundEventId == null || soundEventId.isBlank()) {
+            return;
+        }
+        PlayerRef playerRef = resolvePlayer(playerId);
+        if (playerRef == null) {
+            return;
+        }
+        int soundIndex = SoundEvent.getAssetMap().getIndex(soundEventId);
+        if (soundIndex <= SoundEvent.EMPTY_ID) {
+            return;
+        }
+        SoundUtil.playSoundEvent2dToPlayer(playerRef, soundIndex, com.hypixel.hytale.protocol.SoundCategory.SFX);
+    }
+
     private void dispatchToWorld(Runnable action) {
         World world = activeWorld;
         if (world == null) {
@@ -1068,6 +1086,7 @@ public class RunOrFallGameManager {
         int nextCharges = Math.max(0, blinkChargesByPlayer.getOrDefault(playerId, 0)) + rewardedCharges;
         blinkChargesByPlayer.put(playerId, nextCharges);
         updateBlinkChargesHudForPlayer(playerId, nextCharges);
+        playSfxForPlayer(playerId, SFX_BLINK_CHARGE_EARNED);
         if (rewardedCharges == 1) {
             sendToPlayer(playerId, "Blink charge earned: " + reachedMilestoneBlocks + " blocks broken.");
         } else {

@@ -8,10 +8,12 @@ import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
+import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.SimpleInteraction;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.util.ModeGate;
@@ -29,6 +31,7 @@ public class RunOrFallBlinkInteraction extends SimpleInteraction {
     private static final double MIN_BLINK_DISTANCE_SQ = 0.0001d;
     private static final double BLINK_PLAYER_RADIUS = 0.35d;
     private static final double BLINK_DIAGONAL_RADIUS = BLINK_PLAYER_RADIUS * 0.7071067811865476d;
+    private static final String SFX_BLINK_USED = "SFX_Skeleton_Mage_Spellbook_Impact";
     private static final double[] BLINK_XZ_OFFSETS = new double[] {
             0.0d, 0.0d,
             BLINK_PLAYER_RADIUS, 0.0d,
@@ -112,6 +115,7 @@ public class RunOrFallBlinkInteraction extends SimpleInteraction {
         if (gameManager == null || playerId == null || !gameManager.tryConsumeBlinkCharge(playerId)) {
             return;
         }
+        playSfx(playerRef, SFX_BLINK_USED);
 
         float roll = bodyRotation != null ? bodyRotation.getZ() : 0.0f;
         Vector3f rotation = new Vector3f(pitch, yaw, roll);
@@ -192,6 +196,17 @@ public class RunOrFallBlinkInteraction extends SimpleInteraction {
         double dy = b.getY() - a.getY();
         double dz = b.getZ() - a.getZ();
         return (dx * dx) + (dy * dy) + (dz * dz);
+    }
+
+    private void playSfx(PlayerRef playerRef, String soundEventId) {
+        if (playerRef == null || soundEventId == null || soundEventId.isBlank()) {
+            return;
+        }
+        int soundIndex = SoundEvent.getAssetMap().getIndex(soundEventId);
+        if (soundIndex <= SoundEvent.EMPTY_ID) {
+            return;
+        }
+        SoundUtil.playSoundEvent2dToPlayer(playerRef, soundIndex, com.hypixel.hytale.protocol.SoundCategory.SFX);
     }
 
     /**

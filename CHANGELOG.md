@@ -42,6 +42,7 @@
 - **RunOrFall: Broken-block HUD counter** - Added a per-player `Blocks broken` counter in the RunOrFall HUD, displayed at the bottom-left and updated in real time during rounds.
 - **RunOrFall: Stats now track blocks broken + blinks used** - `/rof stats` now shows lifetime totals for broken platform blocks and successful blinks, with SQL persistence and automatic DB column migration.
 - **RunOrFall: Blink charge system + HUD counter** - Players now use blink charges, see available blinks in HUD next to `Blocks broken`, and earn extra charges from broken platform blocks based on admin-configured settings.
+- **RunOrFall: Blink SFX feedback** - Added `SFX_Avatar_Powers_Enable_Local` when earning a blink charge and `SFX_Skeleton_Mage_Spellbook_Impact` when using blink.
 - **Hub: Game Selector RunOrFall card** - Added RunOrFall to the "Welcome to Hyvexa" selector, arranged modes in a 2x2 grid (Parkour/Ascend top row), and restricted RunOrFall routing to OP/staff for now.
 - **Purge: Expanded weapon upgrade/admin options to full Hyguns arsenal** - `/purge upgrade` and `/purge admin -> Weapons` now include Glock18, ColtRevolver, DesertEagle, Mac10, MP9, Thompson, AK47, M4A1s, Barret50, DoubleBarrel, and Flamethrower (Frag excluded).
 - **Purge: Weapon-specific icons in upgrade/admin pages** - Added per-weapon Hyguns icons for selection cards and the upgrade detail panel.
