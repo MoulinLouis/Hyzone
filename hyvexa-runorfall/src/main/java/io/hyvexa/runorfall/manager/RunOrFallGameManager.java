@@ -30,6 +30,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 // Thread safety: all public methods are synchronized. Concurrent collections
@@ -144,8 +145,9 @@ public class RunOrFallGameManager {
     }
 
     public synchronized String statusLine() {
+        String mapId = activeRoundConfig != null ? activeRoundConfig.selectedMapId : configStore.getSelectedMapId();
         return "state=" + state.name()
-                + ", map=" + configStore.getSelectedMapId()
+                + ", map=" + mapId
                 + ", lobby=" + lobbyPlayers.size()
                 + ", alive=" + alivePlayers.size()
                 + ", countdown=" + countdownRemaining
@@ -425,29 +427,6 @@ public class RunOrFallGameManager {
         if (state != GameState.COUNTDOWN) {
             return;
         }
-        RunOrFallConfig config = configStore.snapshot();
-        activeRoundConfig = config;
-        int startingBlinkCharges = resolveBlinkStartCharges(config);
-        RunOrFallMapConfig selectedMap = resolveSelectedMap(config);
-        if (selectedMap == null) {
-            state = GameState.IDLE;
-            activeRoundConfig = null;
-            broadcastLobby("No map selected.");
-            return;
-        }
-        if (selectedMap.platforms.isEmpty()) {
-            state = GameState.IDLE;
-            activeRoundConfig = null;
-            broadcastLobby("No destructible platform configured. Use /rof platform ... first.");
-            return;
-        }
-        if (selectedMap.spawns.isEmpty()) {
-            state = GameState.IDLE;
-            activeRoundConfig = null;
-            broadcastLobby("No game spawn configured. Use /rof spawn add first.");
-            return;
-        }
-
         List<UUID> onlinePlayers = new ArrayList<>();
         for (UUID playerId : lobbyPlayers) {
             if (resolvePlayer(playerId) != null) {
@@ -460,6 +439,17 @@ public class RunOrFallGameManager {
             broadcastLobby("Not enough online players to start.");
             return;
         }
+        RunOrFallConfig config = configStore.snapshot();
+        RunOrFallMapConfig selectedMap = resolveAutoSelectedMap(config, onlinePlayers.size());
+        if (selectedMap == null) {
+            state = GameState.IDLE;
+            activeRoundConfig = null;
+            broadcastLobby("No playable map available for lobby size " + onlinePlayers.size() + ".");
+            return;
+        }
+        config.selectedMapId = selectedMap.id;
+        activeRoundConfig = config;
+        int startingBlinkCharges = resolveBlinkStartCharges(config);
 
         resetBrokenBlocksForLobbyPlayers();
 
@@ -898,6 +888,53 @@ public class RunOrFallGameManager {
         return config.maps.get(0);
     }
 
+    private static RunOrFallMapConfig resolveAutoSelectedMap(RunOrFallConfig config, int playerCount) {
+        if (config == null || config.maps == null || config.maps.isEmpty()) {
+            return null;
+        }
+        int eligiblePlayers = Math.max(0, playerCount);
+        int bestMinPlayers = Integer.MIN_VALUE;
+        List<RunOrFallMapConfig> candidates = new ArrayList<>();
+        for (RunOrFallMapConfig map : config.maps) {
+            if (!isMapPlayable(map)) {
+                continue;
+            }
+            int mapMinPlayers = sanitizeMapMinPlayers(map.minPlayers);
+            if (mapMinPlayers > eligiblePlayers) {
+                continue;
+            }
+            if (mapMinPlayers > bestMinPlayers) {
+                bestMinPlayers = mapMinPlayers;
+                candidates.clear();
+            }
+            if (mapMinPlayers == bestMinPlayers) {
+                candidates.add(map);
+            }
+        }
+        if (candidates.isEmpty()) {
+            return null;
+        }
+        if (candidates.size() == 1) {
+            return candidates.get(0);
+        }
+        int randomIndex = ThreadLocalRandom.current().nextInt(candidates.size());
+        return candidates.get(randomIndex);
+    }
+
+    private static boolean isMapPlayable(RunOrFallMapConfig map) {
+        if (map == null || map.id == null || map.id.isBlank()) {
+            return false;
+        }
+        if (map.spawns == null || map.spawns.isEmpty()) {
+            return false;
+        }
+        return map.platforms != null && !map.platforms.isEmpty();
+    }
+
+    private static int sanitizeMapMinPlayers(int value) {
+        return Math.max(1, value);
+    }
+
     private boolean writeBlockId(World world, int x, int y, int z, int blockId) {
         long chunkIndex = ChunkUtil.indexChunkFromBlock(x, z);
         var chunk = world.getChunkIfInMemory(chunkIndex);
@@ -911,7 +948,16 @@ public class RunOrFallGameManager {
     }
 
     private void teleportPlayerToLobby(UUID playerId) {
-        RunOrFallLocation lobby = configStore.getLobby();
+        RunOrFallLocation lobby = null;
+        RunOrFallConfig roundConfig = activeRoundConfig;
+        if (roundConfig != null) {
+            RunOrFallMapConfig selectedMap = resolveSelectedMap(roundConfig);
+            if (selectedMap != null && selectedMap.lobby != null) {
+                lobby = selectedMap.lobby.copy();
+            }
+        } else {
+            lobby = configStore.getLobby();
+        }
         if (lobby == null) {
             return;
         }
