@@ -67,6 +67,7 @@ import io.hyvexa.parkour.ghost.GhostRecorder;
 import io.hyvexa.common.ghost.GhostStore;
 import io.hyvexa.parkour.command.CheckpointCommand;
 import io.hyvexa.parkour.command.CosmeticTestCommand;
+import io.hyvexa.parkour.command.CreditsCommand;
 import io.hyvexa.parkour.command.VexaCommand;
 import io.hyvexa.parkour.command.AnalyticsCommand;
 import io.hyvexa.parkour.command.ShopCommand;
@@ -313,6 +314,7 @@ public class HyvexaPlugin extends JavaPlugin {
         this.getCommandRegistry().registerCommand(new ShopCommand());
         this.getCommandRegistry().registerCommand(new AnalyticsCommand());
         this.getCommandRegistry().registerCommand(new VoteCommand());
+        this.getCommandRegistry().registerCommand(new CreditsCommand());
         this.getCommandRegistry().registerCommand(new SpectatorCommand());
 
 
