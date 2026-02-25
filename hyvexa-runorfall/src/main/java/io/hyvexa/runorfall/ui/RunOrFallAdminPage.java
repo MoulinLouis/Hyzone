@@ -52,6 +52,7 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
     private static final String BUTTON_SAVE_BREAK_DELAY = "SaveBreakDelay";
     private static final String BUTTON_SAVE_BLINK_DISTANCE = "SaveBlinkDistance";
     private static final String BUTTON_SAVE_BLINK_CHARGE_SETTINGS = "SaveBlinkChargeSettings";
+    private static final String BUTTON_SAVE_FEATHER_REWARDS = "SaveFeatherRewards";
     private static final String BUTTON_SAVE_AUTO_START = "SaveAutoStart";
     private static final String BUTTON_START = "Start";
     private static final String BUTTON_STOP = "Stop";
@@ -80,6 +81,9 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
     private String blinkDistanceInput;
     private String blinkStartChargesInput;
     private String blinkChargeEveryBlocksInput;
+    private String feathersPerMinuteInput;
+    private String feathersPerEliminationInput;
+    private String feathersForWinInput;
     private String platformBlockIdInput;
     private String minPlayersInput;
     private String minPlayersTimeInput;
@@ -100,6 +104,9 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
         this.blinkDistanceInput = Integer.toString(configStore.getBlinkDistanceBlocks());
         this.blinkStartChargesInput = Integer.toString(configStore.getBlinkStartCharges());
         this.blinkChargeEveryBlocksInput = Integer.toString(configStore.getBlinkChargeEveryBlocksBroken());
+        this.feathersPerMinuteInput = Integer.toString(configStore.getFeathersPerMinuteAlive());
+        this.feathersPerEliminationInput = Integer.toString(configStore.getFeathersPerPlayerEliminated());
+        this.feathersForWinInput = Integer.toString(configStore.getFeathersForWin());
         this.platformBlockIdInput = "";
         this.minPlayersInput = Integer.toString(configStore.getMinPlayers());
         this.minPlayersTimeInput = Integer.toString(configStore.getMinPlayersTimeSeconds());
@@ -144,6 +151,15 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
         }
         if (data.blinkChargeEveryBlocks != null) {
             blinkChargeEveryBlocksInput = data.blinkChargeEveryBlocks.trim();
+        }
+        if (data.feathersPerMinute != null) {
+            feathersPerMinuteInput = data.feathersPerMinute.trim();
+        }
+        if (data.feathersPerElimination != null) {
+            feathersPerEliminationInput = data.feathersPerElimination.trim();
+        }
+        if (data.feathersForWin != null) {
+            feathersForWinInput = data.feathersForWin.trim();
         }
         if (data.platformBlockId != null) {
             platformBlockIdInput = data.platformBlockId.trim();
@@ -195,6 +211,7 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
             case BUTTON_SAVE_BREAK_DELAY -> handleSaveBreakDelay(ref, store);
             case BUTTON_SAVE_BLINK_DISTANCE -> handleSaveBlinkDistance(ref, store);
             case BUTTON_SAVE_BLINK_CHARGE_SETTINGS -> handleSaveBlinkChargeSettings(ref, store);
+            case BUTTON_SAVE_FEATHER_REWARDS -> handleSaveFeatherRewards(ref, store);
             case BUTTON_SAVE_AUTO_START -> handleSaveAutoStart(ref, store);
             case BUTTON_START -> handleStart(ref, store);
             case BUTTON_STOP -> handleStop(ref, store);
@@ -492,6 +509,31 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
         sendRefresh(ref, store);
     }
 
+    private void handleSaveFeatherRewards(Ref<EntityStore> ref, Store<EntityStore> store) {
+        Player player = resolvePlayer(ref, store);
+        if (player == null) {
+            return;
+        }
+        int perMinuteAlive;
+        int perElimination;
+        int forWin;
+        try {
+            perMinuteAlive = Integer.parseInt(feathersPerMinuteInput);
+            perElimination = Integer.parseInt(feathersPerEliminationInput);
+            forWin = Integer.parseInt(feathersForWinInput);
+        } catch (NumberFormatException ex) {
+            player.sendMessage(Message.raw(PREFIX + "Feather reward values must be whole numbers."));
+            return;
+        }
+        if (perMinuteAlive < 0 || perElimination < 0 || forWin < 0) {
+            player.sendMessage(Message.raw(PREFIX + "Feather reward values must be >= 0."));
+            return;
+        }
+        configStore.setFeatherRewardSettings(perMinuteAlive, perElimination, forWin);
+        player.sendMessage(Message.raw(PREFIX + "Feather reward settings saved."));
+        sendRefresh(ref, store);
+    }
+
     private void handleSaveAutoStart(Ref<EntityStore> ref, Store<EntityStore> store) {
         Player player = resolvePlayer(ref, store);
         if (player == null) {
@@ -598,6 +640,8 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
                 EventData.of(AdminData.KEY_BUTTON, BUTTON_SAVE_BLINK_DISTANCE), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SaveBlinkChargeSettingsButton",
                 EventData.of(AdminData.KEY_BUTTON, BUTTON_SAVE_BLINK_CHARGE_SETTINGS), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SaveFeatherRewardsButton",
+                EventData.of(AdminData.KEY_BUTTON, BUTTON_SAVE_FEATHER_REWARDS), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SaveAutoStartButton",
                 EventData.of(AdminData.KEY_BUTTON, BUTTON_SAVE_AUTO_START), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#StartButton",
@@ -624,6 +668,12 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
                 EventData.of(AdminData.KEY_BLINK_START_CHARGES, "#BlinkStartChargesField.Value"), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#BlinkChargeEveryBlocksField",
                 EventData.of(AdminData.KEY_BLINK_CHARGE_EVERY_BLOCKS, "#BlinkChargeEveryBlocksField.Value"), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#FeathersPerMinuteField",
+                EventData.of(AdminData.KEY_FEATHERS_PER_MINUTE, "#FeathersPerMinuteField.Value"), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#FeathersPerEliminationField",
+                EventData.of(AdminData.KEY_FEATHERS_PER_ELIMINATION, "#FeathersPerEliminationField.Value"), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#FeathersForWinField",
+                EventData.of(AdminData.KEY_FEATHERS_FOR_WIN, "#FeathersForWinField.Value"), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#PlatformBlockIdField",
                 EventData.of(AdminData.KEY_PLATFORM_BLOCK_ID, "#PlatformBlockIdField.Value"), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#MinPlayersField",
@@ -650,6 +700,9 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
         int blinkDistance = configStore.getBlinkDistanceBlocks();
         int blinkStartCharges = configStore.getBlinkStartCharges();
         int blinkChargeEveryBlocks = configStore.getBlinkChargeEveryBlocksBroken();
+        int feathersPerMinute = configStore.getFeathersPerMinuteAlive();
+        int feathersPerElimination = configStore.getFeathersPerPlayerEliminated();
+        int feathersForWin = configStore.getFeathersForWin();
         int minPlayers = configStore.getMinPlayers();
         int minPlayersTime = configStore.getMinPlayersTimeSeconds();
         int optimalPlayers = configStore.getOptimalPlayers();
@@ -661,6 +714,9 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
         blinkDistanceInput = Integer.toString(blinkDistance);
         blinkStartChargesInput = Integer.toString(blinkStartCharges);
         blinkChargeEveryBlocksInput = Integer.toString(blinkChargeEveryBlocks);
+        feathersPerMinuteInput = Integer.toString(feathersPerMinute);
+        feathersPerEliminationInput = Integer.toString(feathersPerElimination);
+        feathersForWinInput = Integer.toString(feathersForWin);
         minPlayersInput = Integer.toString(minPlayers);
         minPlayersTimeInput = Integer.toString(minPlayersTime);
         optimalPlayersInput = Integer.toString(optimalPlayers);
@@ -678,6 +734,9 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
         commandBuilder.set("#BlinkDistanceField.Value", blinkDistanceInput);
         commandBuilder.set("#BlinkStartChargesField.Value", blinkStartChargesInput);
         commandBuilder.set("#BlinkChargeEveryBlocksField.Value", blinkChargeEveryBlocksInput);
+        commandBuilder.set("#FeathersPerMinuteField.Value", feathersPerMinuteInput);
+        commandBuilder.set("#FeathersPerEliminationField.Value", feathersPerEliminationInput);
+        commandBuilder.set("#FeathersForWinField.Value", feathersForWinInput);
         commandBuilder.set("#PlatformBlockIdField.Value", platformBlockIdInput == null ? "" : platformBlockIdInput);
         commandBuilder.set("#MinPlayersField.Value", minPlayersInput);
         commandBuilder.set("#MinPlayersTimeField.Value", minPlayersTimeInput);
@@ -695,6 +754,8 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
         commandBuilder.set("#BlinkDistanceCurrent.Text", "Current: " + blinkDistance + " blocks");
         commandBuilder.set("#BlinkChargeSettingsCurrent.Text", "Current: start " + blinkStartCharges
                 + ", +1 every " + blinkChargeEveryBlocks + " blocks");
+        commandBuilder.set("#FeatherRewardsCurrent.Text", "Current: +" + feathersPerMinute + "/min alive, +"
+                + feathersPerElimination + "/elimination, +" + feathersForWin + "/win");
         commandBuilder.set("#AutoStartCurrent.Text", "Current: min " + minPlayers + " -> " + minPlayersTime
                 + "s, optimal " + optimalPlayers + " -> " + optimalPlayersTime + "s");
         commandBuilder.set("#Pos1Value.Text", "Pos1: " + formatSelection(selection != null ? selection.pos1 : null));
@@ -790,6 +851,9 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
         static final String KEY_BLINK_DISTANCE = "@BlinkDistance";
         static final String KEY_BLINK_START_CHARGES = "@BlinkStartCharges";
         static final String KEY_BLINK_CHARGE_EVERY_BLOCKS = "@BlinkChargeEveryBlocks";
+        static final String KEY_FEATHERS_PER_MINUTE = "@FeathersPerMinute";
+        static final String KEY_FEATHERS_PER_ELIMINATION = "@FeathersPerElimination";
+        static final String KEY_FEATHERS_FOR_WIN = "@FeathersForWin";
         static final String KEY_PLATFORM_BLOCK_ID = "@PlatformBlockId";
         static final String KEY_MIN_PLAYERS = "@MinPlayers";
         static final String KEY_MIN_PLAYERS_TIME = "@MinPlayersTime";
@@ -815,6 +879,12 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
                         (data, value) -> data.blinkStartCharges = value, data -> data.blinkStartCharges)
                 .addField(new KeyedCodec<>(KEY_BLINK_CHARGE_EVERY_BLOCKS, Codec.STRING),
                         (data, value) -> data.blinkChargeEveryBlocks = value, data -> data.blinkChargeEveryBlocks)
+                .addField(new KeyedCodec<>(KEY_FEATHERS_PER_MINUTE, Codec.STRING),
+                        (data, value) -> data.feathersPerMinute = value, data -> data.feathersPerMinute)
+                .addField(new KeyedCodec<>(KEY_FEATHERS_PER_ELIMINATION, Codec.STRING),
+                        (data, value) -> data.feathersPerElimination = value, data -> data.feathersPerElimination)
+                .addField(new KeyedCodec<>(KEY_FEATHERS_FOR_WIN, Codec.STRING),
+                        (data, value) -> data.feathersForWin = value, data -> data.feathersForWin)
                 .addField(new KeyedCodec<>(KEY_PLATFORM_BLOCK_ID, Codec.STRING),
                         (data, value) -> data.platformBlockId = value, data -> data.platformBlockId)
                 .addField(new KeyedCodec<>(KEY_MIN_PLAYERS, Codec.STRING),
@@ -836,6 +906,9 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
         private String blinkDistance;
         private String blinkStartCharges;
         private String blinkChargeEveryBlocks;
+        private String feathersPerMinute;
+        private String feathersPerElimination;
+        private String feathersForWin;
         private String platformBlockId;
         private String minPlayers;
         private String minPlayersTime;

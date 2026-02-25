@@ -14,6 +14,9 @@ public class RunOrFallConfig {
     public int blinkDistanceBlocks = 7;
     public int blinkStartCharges = 1;
     public int blinkChargeEveryBlocksBroken = 100;
+    public int feathersPerMinuteAlive = 1;
+    public int feathersPerPlayerEliminated = 5;
+    public int feathersForWin = 25;
     public List<RunOrFallMapConfig> maps = new ArrayList<>();
 
     // Legacy fields (single-map format) kept for migration from older JSON configs.
@@ -33,6 +36,9 @@ public class RunOrFallConfig {
         copy.blinkDistanceBlocks = blinkDistanceBlocks;
         copy.blinkStartCharges = blinkStartCharges;
         copy.blinkChargeEveryBlocksBroken = blinkChargeEveryBlocksBroken;
+        copy.feathersPerMinuteAlive = feathersPerMinuteAlive;
+        copy.feathersPerPlayerEliminated = feathersPerPlayerEliminated;
+        copy.feathersForWin = feathersForWin;
         if (maps != null) {
             for (RunOrFallMapConfig map : maps) {
                 if (map != null) {
