@@ -9,6 +9,7 @@ public class RunOrFallHud extends CustomUIHud {
 
     private int lastPlayerCount = -1;
     private long lastVexa = -1;
+    private long lastFeathers = -1;
     private int lastBrokenBlocks = -1;
     private boolean lastBrokenBlocksVisible = false;
     private boolean brokenBlocksInitialized = false;
@@ -46,6 +47,16 @@ public class RunOrFallHud extends CustomUIHud {
         lastPlayerCount = count;
         UICommandBuilder commandBuilder = new UICommandBuilder();
         commandBuilder.set("#PlayerCountText.Text", String.format("%,d", count));
+        update(false, commandBuilder);
+    }
+
+    public void updateFeathers(long feathers) {
+        if (feathers == lastFeathers) {
+            return;
+        }
+        lastFeathers = feathers;
+        UICommandBuilder commandBuilder = new UICommandBuilder();
+        commandBuilder.set("#PlayerFeatherValue.Text", String.valueOf(feathers));
         update(false, commandBuilder);
     }
 
