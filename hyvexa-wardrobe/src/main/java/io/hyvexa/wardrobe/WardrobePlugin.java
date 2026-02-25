@@ -13,6 +13,7 @@ import io.hyvexa.common.shop.ShopTabRegistry;
 import io.hyvexa.common.skin.PurgeSkinStore;
 import io.hyvexa.core.cosmetic.CosmeticManager;
 import io.hyvexa.core.cosmetic.CosmeticStore;
+import io.hyvexa.core.economy.VexaStore;
 import io.hyvexa.core.wardrobe.WardrobeBridge;
 import io.hyvexa.wardrobe.command.ShopCommand;
 import io.hyvexa.wardrobe.command.WardrobeBuyCommand;
@@ -40,6 +41,11 @@ public class WardrobePlugin extends JavaPlugin {
     protected void setup() {
         LOGGER.atInfo().log("Setting up " + this.getName());
 
+        try {
+            VexaStore.getInstance().initialize();
+        } catch (Exception e) {
+            LOGGER.atWarning().withCause(e).log("Failed to initialize VexaStore");
+        }
         try {
             CosmeticStore.getInstance().initialize();
         } catch (Exception e) {
@@ -98,6 +104,12 @@ public class WardrobePlugin extends JavaPlugin {
                 CosmeticStore.getInstance().evictPlayer(playerId);
             } catch (Exception e) {
                 LOGGER.atWarning().withCause(e).log("Disconnect cleanup: CosmeticStore");
+            }
+
+            try {
+                VexaStore.getInstance().evictPlayer(playerId);
+            } catch (Exception e) {
+                LOGGER.atWarning().withCause(e).log("Disconnect cleanup: VexaStore");
             }
 
             try {
