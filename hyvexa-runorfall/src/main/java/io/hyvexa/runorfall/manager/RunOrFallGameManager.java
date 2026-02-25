@@ -21,6 +21,7 @@ import io.hyvexa.runorfall.data.RunOrFallConfig;
 import io.hyvexa.runorfall.data.RunOrFallLocation;
 import io.hyvexa.runorfall.data.RunOrFallMapConfig;
 import io.hyvexa.runorfall.data.RunOrFallPlatform;
+import io.hyvexa.runorfall.util.RunOrFallFeatherBridge;
 import io.hyvexa.runorfall.util.RunOrFallUtils;
 
 import java.util.ArrayList;
@@ -41,6 +42,11 @@ public class RunOrFallGameManager {
     private static final int FORCED_COUNTDOWN_SECONDS = 10;
     private static final long GAME_TICK_MS = 50L;
     private static final long START_BLOCK_BREAK_GRACE_MS = 3000L;
+    private static final long FEATHER_SURVIVAL_INTERVAL_MS = 60_000L;
+    private static final long FEATHERS_PER_MINUTE_ALIVE = 1L;
+    private static final long FEATHERS_PER_PLAYER_ELIMINATED = 5L;
+    private static final long FEATHERS_FOR_WIN = 25L;
+    private static final String FEATHER_WORD_COLOR = "#f0c040";
     private static final double PLAYER_FOOTPRINT_RADIUS = 0.37d;
     private static final String SFX_BLINK_CHARGE_EARNED = "SFX_Avatar_Powers_Enable_Local";
     private static final String SFX_ROUND_WIN = "SFX_Parkour_Victory";
@@ -59,6 +65,7 @@ public class RunOrFallGameManager {
     private final Map<BlockKey, Integer> removedBlocks = new ConcurrentHashMap<>();
     private final Map<UUID, BlockKey> playerLastFootBlock = new ConcurrentHashMap<>();
     private final Map<UUID, Long> roundStartTimesMs = new ConcurrentHashMap<>();
+    private final Map<UUID, Long> nextAliveFeatherRewardAtMs = new ConcurrentHashMap<>();
     private final Map<UUID, Integer> brokenBlocksByPlayer = new ConcurrentHashMap<>();
     private final Map<UUID, Integer> blinkChargesByPlayer = new ConcurrentHashMap<>();
     private final Map<UUID, Integer> blinksUsedByPlayer = new ConcurrentHashMap<>();
@@ -224,6 +231,7 @@ public class RunOrFallGameManager {
         if (state == GameState.RUNNING && result.wasAlive()) {
             statsStore.recordLoss(playerId, resolvePlayerName(playerId), result.survivedMs(),
                     result.brokenBlocks(), result.blinksUsed());
+            rewardAlivePlayersForEliminationInternal(playerId);
             broadcastEliminationInternal(playerId, "left the round");
             checkWinnerInternal();
         }
@@ -287,6 +295,7 @@ public class RunOrFallGameManager {
         pendingBlocks.clear();
         playerLastFootBlock.clear();
         roundStartTimesMs.clear();
+        nextAliveFeatherRewardAtMs.clear();
         brokenBlocksByPlayer.clear();
         blinkChargesByPlayer.clear();
         blinksUsedByPlayer.clear();
@@ -309,6 +318,7 @@ public class RunOrFallGameManager {
         if (state == GameState.RUNNING && result.wasAlive()) {
             statsStore.recordLoss(playerId, resolvePlayerName(playerId), result.survivedMs(),
                     result.brokenBlocks(), result.blinksUsed());
+            rewardAlivePlayersForEliminationInternal(playerId);
             broadcastEliminationInternal(playerId, "disconnected");
             checkWinnerInternal();
         }
@@ -327,6 +337,7 @@ public class RunOrFallGameManager {
         boolean wasInLobby = lobbyPlayers.remove(playerId);
         boolean wasAlive = alivePlayers.remove(playerId);
         playerLastFootBlock.remove(playerId);
+        nextAliveFeatherRewardAtMs.remove(playerId);
         int brokenBlocks = getRoundBrokenBlocksCount(playerId);
         int blinksUsed = getRoundBlinksUsedCount(playerId);
         brokenBlocksByPlayer.remove(playerId);
@@ -459,6 +470,7 @@ public class RunOrFallGameManager {
         roundStartTimesMs.clear();
         for (UUID onlinePlayerId : onlinePlayers) {
             roundStartTimesMs.put(onlinePlayerId, roundStartMs);
+            nextAliveFeatherRewardAtMs.put(onlinePlayerId, roundStartMs + FEATHER_SURVIVAL_INTERVAL_MS);
             blinkChargesByPlayer.put(onlinePlayerId, startingBlinkCharges);
         }
         soloTestRound = countdownRequiredPlayers == 1 && onlinePlayers.size() == 1;
@@ -541,6 +553,7 @@ public class RunOrFallGameManager {
                     toEliminate.add(playerId);
                     continue;
                 }
+                rewardAliveTimeFeathersInternal(playerId, nowMs);
 
                 if (canBreakBlocks) {
                     int blockY = (int) Math.floor(position.getY() - 0.2d);
@@ -560,6 +573,7 @@ public class RunOrFallGameManager {
                         long survivedMs = takeSurvivedMs(playerId);
                         statsStore.recordLoss(playerId, resolvePlayerName(playerId), survivedMs,
                                 getRoundBrokenBlocksCount(playerId), getRoundBlinksUsedCount(playerId));
+                        rewardAlivePlayersForEliminationInternal(playerId);
                         broadcastEliminationInternal(playerId, "disconnected");
                     }
                 }
@@ -590,6 +604,7 @@ public class RunOrFallGameManager {
             String winnerName = resolvePlayerName(winner);
             statsStore.recordWin(winner, winnerName, survivedMs,
                     getRoundBrokenBlocksCount(winner), getRoundBlinksUsedCount(winner));
+            grantFeathersToPlayer(winner, FEATHERS_FOR_WIN, "for winning the round");
             playSfxForPlayer(winner, SFX_ROUND_WIN);
             if (winnerRef != null && winnerRef.getUsername() != null && !winnerRef.getUsername().isBlank()) {
                 winnerName = winnerRef.getUsername();
@@ -609,6 +624,7 @@ public class RunOrFallGameManager {
         long survivedMs = takeSurvivedMs(playerId);
         statsStore.recordLoss(playerId, resolvePlayerName(playerId), survivedMs,
                 getRoundBrokenBlocksCount(playerId), getRoundBlinksUsedCount(playerId));
+        rewardAlivePlayersForEliminationInternal(playerId);
         playerLastFootBlock.remove(playerId);
         teleportPlayerToLobby(playerId);
         refreshPlayerHotbar(playerId);
@@ -625,6 +641,7 @@ public class RunOrFallGameManager {
         alivePlayers.clear();
         playerLastFootBlock.clear();
         roundStartTimesMs.clear();
+        nextAliveFeatherRewardAtMs.clear();
         blinkChargesByPlayer.clear();
         blinksUsedByPlayer.clear();
         resetCountdownState();
@@ -775,6 +792,7 @@ public class RunOrFallGameManager {
             removedBlocks.clear();
             playerLastFootBlock.clear();
             roundStartTimesMs.clear();
+            nextAliveFeatherRewardAtMs.clear();
             brokenBlocksByPlayer.clear();
             blinkChargesByPlayer.clear();
             blinksUsedByPlayer.clear();
@@ -792,6 +810,7 @@ public class RunOrFallGameManager {
         removedBlocks.clear();
         playerLastFootBlock.clear();
         roundStartTimesMs.clear();
+        nextAliveFeatherRewardAtMs.clear();
         brokenBlocksByPlayer.clear();
         blinkChargesByPlayer.clear();
         blinksUsedByPlayer.clear();
@@ -801,6 +820,7 @@ public class RunOrFallGameManager {
         if (playerId == null) {
             return 0L;
         }
+        nextAliveFeatherRewardAtMs.remove(playerId);
         Long roundStartMs = roundStartTimesMs.remove(playerId);
         if (roundStartMs == null) {
             return 0L;
@@ -1056,6 +1076,74 @@ public class RunOrFallGameManager {
         if (player != null) {
             player.sendMessage(Message.raw(PREFIX + text));
         }
+    }
+
+    private void rewardAliveTimeFeathersInternal(UUID playerId, long nowMs) {
+        if (playerId == null || state != GameState.RUNNING || !alivePlayers.contains(playerId)) {
+            return;
+        }
+        long nextRewardAt = nextAliveFeatherRewardAtMs
+                .computeIfAbsent(playerId, ignored -> nowMs + FEATHER_SURVIVAL_INTERVAL_MS);
+        if (nowMs < nextRewardAt) {
+            return;
+        }
+        long elapsedIntervals = 1L + ((nowMs - nextRewardAt) / FEATHER_SURVIVAL_INTERVAL_MS);
+        if (elapsedIntervals <= 0L) {
+            return;
+        }
+        nextAliveFeatherRewardAtMs.put(playerId, nextRewardAt + (elapsedIntervals * FEATHER_SURVIVAL_INTERVAL_MS));
+        long rewardAmount = elapsedIntervals * FEATHERS_PER_MINUTE_ALIVE;
+        grantFeathersToPlayer(playerId, rewardAmount, "for staying alive");
+    }
+
+    private void rewardAlivePlayersForEliminationInternal(UUID eliminatedPlayerId) {
+        if (state != GameState.RUNNING || alivePlayers.isEmpty()) {
+            return;
+        }
+        for (UUID survivorId : alivePlayers) {
+            if (survivorId == null || survivorId.equals(eliminatedPlayerId)) {
+                continue;
+            }
+            grantFeathersToPlayer(survivorId, FEATHERS_PER_PLAYER_ELIMINATED, "for a player elimination");
+        }
+    }
+
+    private void grantFeathersToPlayer(UUID playerId, long amount, String reason) {
+        if (playerId == null || amount <= 0L) {
+            return;
+        }
+        if (!RunOrFallFeatherBridge.addFeathers(playerId, amount)) {
+            return;
+        }
+        sendFeatherGainMessage(playerId, amount, reason);
+    }
+
+    private void sendFeatherGainMessage(UUID playerId, long amount, String reason) {
+        PlayerRef playerRef = resolvePlayer(playerId);
+        if (playerRef == null) {
+            return;
+        }
+        var ref = playerRef.getReference();
+        if (ref == null || !ref.isValid()) {
+            return;
+        }
+        var store = ref.getStore();
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null) {
+            return;
+        }
+        Message reasonMessage = (reason == null || reason.isBlank())
+                ? Message.raw(".")
+                : Message.raw(" " + reason + ".");
+        Message featherWord = amount == 1L
+                ? Message.raw("feather").color(FEATHER_WORD_COLOR)
+                : Message.raw("feathers").color(FEATHER_WORD_COLOR);
+        Message message = Message.join(
+                Message.raw(PREFIX + "+" + amount + " "),
+                featherWord,
+                reasonMessage
+        );
+        player.sendMessage(message);
     }
 
     private void playSfxForPlayer(UUID playerId, String soundEventId) {
