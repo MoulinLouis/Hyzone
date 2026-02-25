@@ -10,6 +10,7 @@ A multi-module Hytale server plugin suite for a parkour minigame server. Players
 | `hyvexa-parkour` | Classic parkour gameplay with maps, leaderboards, and ranks |
 | `hyvexa-parkour-ascend` | Idle parkour mode with prestige tiers, skill trees, and economy |
 | `hyvexa-hub` | Hub world with mode selection routing and UI |
+| `hyvexa-launch` | Launch-only IntelliJ classpath module for `com.hypixel.hytale.Main` |
 
 ## Features
 
@@ -61,7 +62,7 @@ Produces shaded plugin JARs per module that bundle runtime dependencies.
 ```
 
 ### Run
-Use the `HytaleServer` IntelliJ run config, which launches from the `run/` directory.
+Use the `HytaleServerLaunch` IntelliJ run config (generated from `hyvexa-launch`) or set your existing `HytaleServer` config to module `hyvexa-launch.main`; both must launch from the `run/` directory.
 
 The Hytale server JAR is expected at:
 ```

@@ -1,0 +1,47 @@
+plugins {
+    id 'java'
+    id 'idea'
+    id 'org.jetbrains.gradle.plugin.idea-ext'
+}
+
+dependencies {
+    // Launch-only module: provides HytaleServer on classpath for IntelliJ run configs.
+    compileOnly files("$hytaleHome/install/$patchline/package/game/latest/Server/HytaleServer.jar")
+    runtimeOnly files("$hytaleHome/install/$patchline/package/game/latest/Server/HytaleServer.jar")
+}
+
+def serverRunDir = rootProject.file("run")
+if (!serverRunDir.exists()) {
+    serverRunDir.mkdirs()
+}
+
+// This module is only a launcher classpath anchor; no plugin artifact should be produced.
+tasks.named('jar') { enabled = false }
+tasks.named('sourcesJar') { enabled = false }
+tasks.named('javadocJar') { enabled = false }
+
+if (project.extensions.findByName('idea') != null && idea.project != null) {
+    idea.project.settings.runConfigurations {
+        'HytaleServerLaunch'(org.jetbrains.gradle.ext.Application) {
+            mainClass = 'com.hypixel.hytale.Main'
+            moduleName = project.idea.module.name + '.main'
+            programParameters = "--allow-op --assets=$hytaleHome/install/$patchline/package/game/latest/Assets.zip"
+            if (load_user_mods.toBoolean()) {
+                programParameters += " --mods=$hytaleHome/UserData/Mods"
+            }
+            workingDirectory = serverRunDir.absolutePath
+        }
+    }
+}
+
+tasks.register('HytaleServer', JavaExec) {
+    group = 'application'
+    description = 'Runs the Hytale server from the launcher module classpath.'
+    classpath = files("$hytaleHome/install/$patchline/package/game/latest/Server/HytaleServer.jar")
+    mainClass = 'com.hypixel.hytale.Main'
+    args "--allow-op", "--assets=$hytaleHome/install/$patchline/package/game/latest/Assets.zip"
+    if (load_user_mods.toBoolean()) {
+        args "--mods=$hytaleHome/UserData/Mods"
+    }
+    workingDir = serverRunDir
+}
