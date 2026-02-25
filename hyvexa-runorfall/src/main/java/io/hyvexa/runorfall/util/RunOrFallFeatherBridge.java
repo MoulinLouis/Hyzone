@@ -14,6 +14,7 @@ public final class RunOrFallFeatherBridge {
     private static volatile boolean available;
     private static Object featherStoreInstance;
     private static Method getFeathersMethod;
+    private static Method addFeathersMethod;
     private static Method evictPlayerMethod;
 
     private RunOrFallFeatherBridge() {
@@ -55,6 +56,24 @@ public final class RunOrFallFeatherBridge {
         }
     }
 
+    public static boolean addFeathers(UUID playerId, long amount) {
+        if (playerId == null || amount <= 0L) {
+            return false;
+        }
+        ensureResolved();
+        if (!available) {
+            return false;
+        }
+        try {
+            addFeathersMethod.invoke(featherStoreInstance, playerId, amount);
+            return true;
+        } catch (Exception e) {
+            available = false;
+            LOGGER.atWarning().withCause(e).log("RunOrFall Feather bridge add failed.");
+            return false;
+        }
+    }
+
     private static void ensureResolved() {
         if (resolved) {
             return;
@@ -68,8 +87,12 @@ public final class RunOrFallFeatherBridge {
                 Method getInstanceMethod = featherStoreClass.getMethod("getInstance");
                 featherStoreInstance = getInstanceMethod.invoke(null);
                 getFeathersMethod = featherStoreClass.getMethod("getFeathers", UUID.class);
+                addFeathersMethod = featherStoreClass.getMethod("addFeathers", UUID.class, long.class);
                 evictPlayerMethod = featherStoreClass.getMethod("evictPlayer", UUID.class);
-                available = featherStoreInstance != null && getFeathersMethod != null && evictPlayerMethod != null;
+                available = featherStoreInstance != null
+                        && getFeathersMethod != null
+                        && addFeathersMethod != null
+                        && evictPlayerMethod != null;
             } catch (Exception e) {
                 available = false;
                 LOGGER.atInfo().log("RunOrFall Feather bridge unavailable (Parkour FeatherStore not found).");
