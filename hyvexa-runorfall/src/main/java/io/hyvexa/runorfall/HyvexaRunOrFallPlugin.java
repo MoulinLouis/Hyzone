@@ -35,6 +35,7 @@ import io.hyvexa.runorfall.ui.RunOrFallMusicPage;
 import io.hyvexa.runorfall.manager.RunOrFallConfigStore;
 import io.hyvexa.runorfall.manager.RunOrFallGameManager;
 import io.hyvexa.runorfall.manager.RunOrFallStatsStore;
+import io.hyvexa.runorfall.util.RunOrFallFeatherBridge;
 
 import javax.annotation.Nonnull;
 import java.io.File;
@@ -183,6 +184,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
             hudReadyAt.remove(playerId);
             RunOrFallAdminPage.clearSelection(playerId);
             RunOrFallMusicPage.clearPlayer(playerId);
+            RunOrFallFeatherBridge.evictPlayer(playerId);
             if (runOrFallCommand != null) {
                 runOrFallCommand.clearSelection(playerId);
             }
@@ -358,6 +360,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
         hud.updateBlinkCharges(blinkCharges, showBrokenBlocks);
         hud.updatePlayerCount();
         hud.updateVexa(VexaStore.getInstance().getVexa(playerId));
+        hud.updateFeathers(RunOrFallFeatherBridge.getFeathers(playerId));
     }
 
     private void attachHiddenRunOrFallHud(PlayerRef playerRef, Player player) {
@@ -456,6 +459,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
             RunOrFallHud hud = entry.getValue();
             hud.updatePlayerCount();
             hud.updateVexa(VexaStore.getInstance().getVexa(playerId));
+            hud.updateFeathers(RunOrFallFeatherBridge.getFeathers(playerId));
         }
     }
 
