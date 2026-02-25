@@ -43,9 +43,6 @@ public class RunOrFallGameManager {
     private static final long GAME_TICK_MS = 50L;
     private static final long START_BLOCK_BREAK_GRACE_MS = 3000L;
     private static final long FEATHER_SURVIVAL_INTERVAL_MS = 60_000L;
-    private static final long FEATHERS_PER_MINUTE_ALIVE = 1L;
-    private static final long FEATHERS_PER_PLAYER_ELIMINATED = 5L;
-    private static final long FEATHERS_FOR_WIN = 25L;
     private static final String FEATHER_WORD_COLOR = "#f0c040";
     private static final double PLAYER_FOOTPRINT_RADIUS = 0.37d;
     private static final String SFX_BLINK_CHARGE_EARNED = "SFX_Avatar_Powers_Enable_Local";
@@ -604,7 +601,7 @@ public class RunOrFallGameManager {
             String winnerName = resolvePlayerName(winner);
             statsStore.recordWin(winner, winnerName, survivedMs,
                     getRoundBrokenBlocksCount(winner), getRoundBlinksUsedCount(winner));
-            grantFeathersToPlayer(winner, FEATHERS_FOR_WIN, "for winning the round");
+            grantFeathersToPlayer(winner, resolveFeathersForWin(), "for winning the round");
             playSfxForPlayer(winner, SFX_ROUND_WIN);
             if (winnerRef != null && winnerRef.getUsername() != null && !winnerRef.getUsername().isBlank()) {
                 winnerName = winnerRef.getUsername();
@@ -1092,7 +1089,7 @@ public class RunOrFallGameManager {
             return;
         }
         nextAliveFeatherRewardAtMs.put(playerId, nextRewardAt + (elapsedIntervals * FEATHER_SURVIVAL_INTERVAL_MS));
-        long rewardAmount = elapsedIntervals * FEATHERS_PER_MINUTE_ALIVE;
+        long rewardAmount = elapsedIntervals * resolveFeathersPerMinuteAlive();
         grantFeathersToPlayer(playerId, rewardAmount, "for staying alive");
     }
 
@@ -1104,8 +1101,32 @@ public class RunOrFallGameManager {
             if (survivorId == null || survivorId.equals(eliminatedPlayerId)) {
                 continue;
             }
-            grantFeathersToPlayer(survivorId, FEATHERS_PER_PLAYER_ELIMINATED, "for a player elimination");
+            grantFeathersToPlayer(survivorId, resolveFeathersPerPlayerEliminated(), "for a player elimination");
         }
+    }
+
+    private long resolveFeathersPerMinuteAlive() {
+        RunOrFallConfig config = activeRoundConfig;
+        if (config == null) {
+            return configStore.getFeathersPerMinuteAlive();
+        }
+        return Math.max(0L, config.feathersPerMinuteAlive);
+    }
+
+    private long resolveFeathersPerPlayerEliminated() {
+        RunOrFallConfig config = activeRoundConfig;
+        if (config == null) {
+            return configStore.getFeathersPerPlayerEliminated();
+        }
+        return Math.max(0L, config.feathersPerPlayerEliminated);
+    }
+
+    private long resolveFeathersForWin() {
+        RunOrFallConfig config = activeRoundConfig;
+        if (config == null) {
+            return configStore.getFeathersForWin();
+        }
+        return Math.max(0L, config.feathersForWin);
     }
 
     private void grantFeathersToPlayer(UUID playerId, long amount, String reason) {

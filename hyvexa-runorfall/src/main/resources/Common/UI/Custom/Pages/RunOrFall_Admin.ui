@@ -331,6 +331,61 @@ $C.@PageOverlay {
         }
 
         Label {
+          Anchor: (Top: 8);
+          Style: (FontSize: 13, TextColor: #cfd7dc);
+          Text: "Feather rewards";
+        }
+
+        Group {
+          Anchor: (Top: 2, Height: 26);
+          LayoutMode: Left;
+
+          Label {
+            Anchor: (Width: 90, Height: 24, Top: 3);
+            Style: (FontSize: 12, TextColor: #9fb0ba);
+            Text: "Per minute";
+          }
+
+          $C.@TextField #FeathersPerMinuteField {
+            Anchor: (Width: 60, Height: 24);
+            Style: (FontSize: 13, TextColor: #ffffff(0.85));
+          }
+
+          Label {
+            Anchor: (Width: 100, Height: 24, Left: 6, Top: 3);
+            Style: (FontSize: 12, TextColor: #9fb0ba);
+            Text: "Elimination";
+          }
+
+          $C.@TextField #FeathersPerEliminationField {
+            Anchor: (Width: 60, Height: 24);
+            Style: (FontSize: 13, TextColor: #ffffff(0.85));
+          }
+
+          Label {
+            Anchor: (Width: 45, Height: 24, Left: 6, Top: 3);
+            Style: (FontSize: 12, TextColor: #9fb0ba);
+            Text: "Win";
+          }
+
+          $C.@TextField #FeathersForWinField {
+            Anchor: (Width: 60, Height: 24);
+            Style: (FontSize: 13, TextColor: #ffffff(0.85));
+          }
+        }
+
+        $C.@TextButton #SaveFeatherRewardsButton {
+          Anchor: (Top: 4, Width: 220, Height: 22);
+          Text: "Save Feather Rewards";
+        }
+
+        Label #FeatherRewardsCurrent {
+          Anchor: (Top: 4);
+          Style: (FontSize: 12, TextColor: #9fb0ba);
+          Text: "";
+        }
+
+        Label {
           Anchor: (Top: 10);
           Style: (FontSize: 13, TextColor: #cfd7dc);
           Text: "Auto-start countdown";

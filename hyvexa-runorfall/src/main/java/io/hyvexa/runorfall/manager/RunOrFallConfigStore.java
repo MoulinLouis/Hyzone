@@ -41,6 +41,9 @@ public class RunOrFallConfigStore {
     private static final int DEFAULT_BLINK_DISTANCE_BLOCKS = 7;
     private static final int DEFAULT_BLINK_START_CHARGES = 1;
     private static final int DEFAULT_BLINK_CHARGE_EVERY_BLOCKS_BROKEN = 100;
+    private static final int DEFAULT_FEATHERS_PER_MINUTE_ALIVE = 1;
+    private static final int DEFAULT_FEATHERS_PER_PLAYER_ELIMINATED = 5;
+    private static final int DEFAULT_FEATHERS_FOR_WIN = 25;
 
     private static final String CREATE_SETTINGS_TABLE = """
             CREATE TABLE IF NOT EXISTS runorfall_settings (
@@ -60,6 +63,9 @@ public class RunOrFallConfigStore {
               blink_distance_blocks INT NOT NULL DEFAULT 7,
               blink_start_charges INT NOT NULL DEFAULT 1,
               blink_charge_every_blocks_broken INT NOT NULL DEFAULT 100,
+              feathers_per_minute_alive INT NOT NULL DEFAULT 1,
+              feathers_per_player_eliminated INT NOT NULL DEFAULT 5,
+              feathers_for_win INT NOT NULL DEFAULT 25,
               active_map_id VARCHAR(64) NULL
             ) ENGINE=InnoDB
             """;
@@ -110,8 +116,10 @@ public class RunOrFallConfigStore {
             INSERT INTO runorfall_settings (id, lobby_x, lobby_y, lobby_z, lobby_rot_x, lobby_rot_y, lobby_rot_z,
                                             void_y, block_break_delay_seconds, min_players, min_players_time_seconds,
                                             optimal_players, optimal_players_time_seconds, blink_distance_blocks,
-                                            blink_start_charges, blink_charge_every_blocks_broken, active_map_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                            blink_start_charges, blink_charge_every_blocks_broken,
+                                            feathers_per_minute_alive, feathers_per_player_eliminated,
+                                            feathers_for_win, active_map_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
               lobby_x = VALUES(lobby_x),
               lobby_y = VALUES(lobby_y),
@@ -128,6 +136,9 @@ public class RunOrFallConfigStore {
               blink_distance_blocks = VALUES(blink_distance_blocks),
               blink_start_charges = VALUES(blink_start_charges),
               blink_charge_every_blocks_broken = VALUES(blink_charge_every_blocks_broken),
+              feathers_per_minute_alive = VALUES(feathers_per_minute_alive),
+              feathers_per_player_eliminated = VALUES(feathers_per_player_eliminated),
+              feathers_for_win = VALUES(feathers_for_win),
               active_map_id = VALUES(active_map_id)
             """;
 
@@ -305,6 +316,18 @@ public class RunOrFallConfigStore {
         return sanitizeBlinkChargeEveryBlocksBroken(config.blinkChargeEveryBlocksBroken);
     }
 
+    public synchronized int getFeathersPerMinuteAlive() {
+        return sanitizeFeatherReward(config.feathersPerMinuteAlive);
+    }
+
+    public synchronized int getFeathersPerPlayerEliminated() {
+        return sanitizeFeatherReward(config.feathersPerPlayerEliminated);
+    }
+
+    public synchronized int getFeathersForWin() {
+        return sanitizeFeatherReward(config.feathersForWin);
+    }
+
     public synchronized void setAutoStartSettings(int minPlayers, int minPlayersTimeSeconds,
                                                   int optimalPlayers, int optimalPlayersTimeSeconds) {
         int sanitizedMinPlayers = sanitizeMinPlayers(minPlayers);
@@ -328,6 +351,15 @@ public class RunOrFallConfigStore {
     public synchronized void setBlinkChargeSettings(int startCharges, int chargeEveryBlocksBroken) {
         config.blinkStartCharges = sanitizeBlinkStartCharges(startCharges);
         config.blinkChargeEveryBlocksBroken = sanitizeBlinkChargeEveryBlocksBroken(chargeEveryBlocksBroken);
+        saveSettingsToDatabase();
+    }
+
+    public synchronized void setFeatherRewardSettings(int feathersPerMinuteAlive,
+                                                      int feathersPerPlayerEliminated,
+                                                      int feathersForWin) {
+        config.feathersPerMinuteAlive = sanitizeFeatherReward(feathersPerMinuteAlive);
+        config.feathersPerPlayerEliminated = sanitizeFeatherReward(feathersPerPlayerEliminated);
+        config.feathersForWin = sanitizeFeatherReward(feathersForWin);
         saveSettingsToDatabase();
     }
 
@@ -422,6 +454,12 @@ public class RunOrFallConfigStore {
                     "ALTER TABLE runorfall_settings ADD COLUMN blink_start_charges INT NOT NULL DEFAULT 1");
             ensureColumnExists(conn, "runorfall_settings", "blink_charge_every_blocks_broken",
                     "ALTER TABLE runorfall_settings ADD COLUMN blink_charge_every_blocks_broken INT NOT NULL DEFAULT 100");
+            ensureColumnExists(conn, "runorfall_settings", "feathers_per_minute_alive",
+                    "ALTER TABLE runorfall_settings ADD COLUMN feathers_per_minute_alive INT NOT NULL DEFAULT 1");
+            ensureColumnExists(conn, "runorfall_settings", "feathers_per_player_eliminated",
+                    "ALTER TABLE runorfall_settings ADD COLUMN feathers_per_player_eliminated INT NOT NULL DEFAULT 5");
+            ensureColumnExists(conn, "runorfall_settings", "feathers_for_win",
+                    "ALTER TABLE runorfall_settings ADD COLUMN feathers_for_win INT NOT NULL DEFAULT 25");
             ensureColumnExists(conn, "runorfall_maps", "min_players",
                     "ALTER TABLE runorfall_maps ADD COLUMN min_players INT NOT NULL DEFAULT 2");
             ensureColumnExists(conn, "runorfall_map_platforms", "target_block_item_id",
@@ -430,7 +468,9 @@ public class RunOrFallConfigStore {
                     "INSERT INTO runorfall_settings "
                     + "(id, void_y, block_break_delay_seconds, min_players, min_players_time_seconds, "
                             + "optimal_players, optimal_players_time_seconds, blink_distance_blocks, "
-                            + "blink_start_charges, blink_charge_every_blocks_broken, active_map_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                            + "blink_start_charges, blink_charge_every_blocks_broken, "
+                            + "feathers_per_minute_alive, feathers_per_player_eliminated, "
+                            + "feathers_for_win, active_map_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
                             + "ON DUPLICATE KEY UPDATE id = id")) {
                 DatabaseManager.applyQueryTimeout(stmt);
                 stmt.setInt(1, SETTINGS_ID);
@@ -443,7 +483,10 @@ public class RunOrFallConfigStore {
                 stmt.setInt(8, DEFAULT_BLINK_DISTANCE_BLOCKS);
                 stmt.setInt(9, DEFAULT_BLINK_START_CHARGES);
                 stmt.setInt(10, DEFAULT_BLINK_CHARGE_EVERY_BLOCKS_BROKEN);
-                stmt.setString(11, DEFAULT_MAP_ID);
+                stmt.setInt(11, DEFAULT_FEATHERS_PER_MINUTE_ALIVE);
+                stmt.setInt(12, DEFAULT_FEATHERS_PER_PLAYER_ELIMINATED);
+                stmt.setInt(13, DEFAULT_FEATHERS_FOR_WIN);
+                stmt.setString(14, DEFAULT_MAP_ID);
                 stmt.executeUpdate();
             }
         } catch (SQLException e) {
@@ -467,6 +510,9 @@ public class RunOrFallConfigStore {
         loaded.blinkDistanceBlocks = DEFAULT_BLINK_DISTANCE_BLOCKS;
         loaded.blinkStartCharges = DEFAULT_BLINK_START_CHARGES;
         loaded.blinkChargeEveryBlocksBroken = DEFAULT_BLINK_CHARGE_EVERY_BLOCKS_BROKEN;
+        loaded.feathersPerMinuteAlive = DEFAULT_FEATHERS_PER_MINUTE_ALIVE;
+        loaded.feathersPerPlayerEliminated = DEFAULT_FEATHERS_PER_PLAYER_ELIMINATED;
+        loaded.feathersForWin = DEFAULT_FEATHERS_FOR_WIN;
         loaded.selectedMapId = "";
         loaded.maps = new ArrayList<>();
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
@@ -488,7 +534,9 @@ public class RunOrFallConfigStore {
                 SELECT lobby_x, lobby_y, lobby_z, lobby_rot_x, lobby_rot_y, lobby_rot_z,
                        void_y, block_break_delay_seconds, min_players, min_players_time_seconds,
                        optimal_players, optimal_players_time_seconds, blink_distance_blocks,
-                       blink_start_charges, blink_charge_every_blocks_broken, active_map_id
+                       blink_start_charges, blink_charge_every_blocks_broken,
+                       feathers_per_minute_alive, feathers_per_player_eliminated,
+                       feathers_for_win, active_map_id
                 FROM runorfall_settings
                 WHERE id = ?
                 """;
@@ -516,6 +564,9 @@ public class RunOrFallConfigStore {
                 target.blinkStartCharges = sanitizeBlinkStartCharges(rs.getInt("blink_start_charges"));
                 target.blinkChargeEveryBlocksBroken = sanitizeBlinkChargeEveryBlocksBroken(
                         rs.getInt("blink_charge_every_blocks_broken"));
+                target.feathersPerMinuteAlive = sanitizeFeatherReward(rs.getInt("feathers_per_minute_alive"));
+                target.feathersPerPlayerEliminated = sanitizeFeatherReward(rs.getInt("feathers_per_player_eliminated"));
+                target.feathersForWin = sanitizeFeatherReward(rs.getInt("feathers_for_win"));
                 String loadedActiveMapId = rs.getString("active_map_id");
                 target.selectedMapId = normalizeMapId(loadedActiveMapId);
 
@@ -737,6 +788,9 @@ public class RunOrFallConfigStore {
             stmt.setInt(i++, sanitizeBlinkDistanceBlocks(config.blinkDistanceBlocks));
             stmt.setInt(i++, sanitizeBlinkStartCharges(config.blinkStartCharges));
             stmt.setInt(i++, sanitizeBlinkChargeEveryBlocksBroken(config.blinkChargeEveryBlocksBroken));
+            stmt.setInt(i++, sanitizeFeatherReward(config.feathersPerMinuteAlive));
+            stmt.setInt(i++, sanitizeFeatherReward(config.feathersPerPlayerEliminated));
+            stmt.setInt(i++, sanitizeFeatherReward(config.feathersForWin));
             stmt.setString(i, selectedMap != null ? selectedMap.id : DEFAULT_MAP_ID);
             stmt.executeUpdate();
         } catch (SQLException e) {
@@ -996,7 +1050,10 @@ public class RunOrFallConfigStore {
                 && snapshot.optimalPlayersTimeSeconds == defaults.optimalPlayersTimeSeconds
                 && snapshot.blinkDistanceBlocks == defaults.blinkDistanceBlocks
                 && snapshot.blinkStartCharges == defaults.blinkStartCharges
-                && snapshot.blinkChargeEveryBlocksBroken == defaults.blinkChargeEveryBlocksBroken;
+                && snapshot.blinkChargeEveryBlocksBroken == defaults.blinkChargeEveryBlocksBroken
+                && snapshot.feathersPerMinuteAlive == defaults.feathersPerMinuteAlive
+                && snapshot.feathersPerPlayerEliminated == defaults.feathersPerPlayerEliminated
+                && snapshot.feathersForWin == defaults.feathersForWin;
     }
 
     private static boolean nearlyEqual(double a, double b) {
@@ -1022,6 +1079,9 @@ public class RunOrFallConfigStore {
         loaded.blinkDistanceBlocks = sanitizeBlinkDistanceBlocks(loaded.blinkDistanceBlocks);
         loaded.blinkStartCharges = sanitizeBlinkStartCharges(loaded.blinkStartCharges);
         loaded.blinkChargeEveryBlocksBroken = sanitizeBlinkChargeEveryBlocksBroken(loaded.blinkChargeEveryBlocksBroken);
+        loaded.feathersPerMinuteAlive = sanitizeFeatherReward(loaded.feathersPerMinuteAlive);
+        loaded.feathersPerPlayerEliminated = sanitizeFeatherReward(loaded.feathersPerPlayerEliminated);
+        loaded.feathersForWin = sanitizeFeatherReward(loaded.feathersForWin);
 
         List<RunOrFallMapConfig> sanitizedMaps = new ArrayList<>();
         Map<String, RunOrFallMapConfig> uniqueMaps = new LinkedHashMap<>();
@@ -1103,6 +1163,9 @@ public class RunOrFallConfigStore {
         created.blinkDistanceBlocks = DEFAULT_BLINK_DISTANCE_BLOCKS;
         created.blinkStartCharges = DEFAULT_BLINK_START_CHARGES;
         created.blinkChargeEveryBlocksBroken = DEFAULT_BLINK_CHARGE_EVERY_BLOCKS_BROKEN;
+        created.feathersPerMinuteAlive = DEFAULT_FEATHERS_PER_MINUTE_ALIVE;
+        created.feathersPerPlayerEliminated = DEFAULT_FEATHERS_PER_PLAYER_ELIMINATED;
+        created.feathersForWin = DEFAULT_FEATHERS_FOR_WIN;
         RunOrFallMapConfig map = new RunOrFallMapConfig();
         map.id = DEFAULT_MAP_ID;
         map.minPlayers = sanitizeMapMinPlayers(DEFAULT_MAP_MIN_PLAYERS);
@@ -1230,6 +1293,10 @@ public class RunOrFallConfigStore {
 
     private static int sanitizeBlinkChargeEveryBlocksBroken(int value) {
         return Math.max(1, value);
+    }
+
+    private static int sanitizeFeatherReward(int value) {
+        return Math.max(0, value);
     }
 
     private static boolean tableExists(Connection conn, String tableName) throws SQLException {
