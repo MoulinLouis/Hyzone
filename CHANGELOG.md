@@ -60,6 +60,7 @@
 - **RunOrFall: Blink now preserves full look orientation** - Teleport now keeps both vertical and horizontal head orientation after blink.
 - **RunOrFall: Blink wall-clip protection** - Blink now checks collisions along its path and stops at the last free point before a block, preventing phase-through.
 - **RunOrFall: Blink collision sweep hardened** - Path collision now sweeps a full player-like footprint/height to prevent diagonal edge clipping through walls.
+- **RunOrFall: Blink can pass through configured platform blocks** - Blink collision now treats blocks matching the active map platform definitions as pass-through, while keeping wall collision against other solids.
 - **Parkour: Restart checkpoint orb skin restored** - Parkour restart now uses a dedicated orb item id again, so Blink changes no longer alter its appearance.
 - **RunOrFall: Solo test start support** - `/rof start` can now launch with one player for testing, without immediately ending the round.
 - **RunOrFall: Edge-standing block bypass fixed** - Blocks now break from the player's full foot footprint, preventing side/edge standing exploits.

@@ -88,6 +88,21 @@ public class RunOrFallGameManager {
         return configStore.getBlinkDistanceBlocks();
     }
 
+    public synchronized boolean canBlinkPassThrough(int x, int y, int z, int blockId) {
+        if (blockId == RunOrFallUtils.AIR_BLOCK_ID) {
+            return true;
+        }
+        RunOrFallConfig config = activeRoundConfig;
+        if (config == null) {
+            config = configStore.snapshot();
+        }
+        RunOrFallMapConfig selectedMap = resolveSelectedMap(config);
+        if (selectedMap == null || selectedMap.platforms == null || selectedMap.platforms.isEmpty()) {
+            return false;
+        }
+        return isInsidePlatform(selectedMap.platforms, x, y, z, blockId);
+    }
+
     public synchronized int getBrokenBlocksCount(UUID playerId) {
         if (playerId == null) {
             return 0;
