@@ -12,6 +12,8 @@ public class RunOrFallConfig {
     public int optimalPlayers = 4;
     public int optimalPlayersTimeSeconds = 60;
     public int blinkDistanceBlocks = 7;
+    public int blinkStartCharges = 1;
+    public int blinkChargeEveryBlocksBroken = 100;
     public List<RunOrFallMapConfig> maps = new ArrayList<>();
 
     // Legacy fields (single-map format) kept for migration from older JSON configs.
@@ -29,6 +31,8 @@ public class RunOrFallConfig {
         copy.optimalPlayers = optimalPlayers;
         copy.optimalPlayersTimeSeconds = optimalPlayersTimeSeconds;
         copy.blinkDistanceBlocks = blinkDistanceBlocks;
+        copy.blinkStartCharges = blinkStartCharges;
+        copy.blinkChargeEveryBlocksBroken = blinkChargeEveryBlocksBroken;
         if (maps != null) {
             for (RunOrFallMapConfig map : maps) {
                 if (map != null) {

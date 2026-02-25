@@ -25,6 +25,7 @@
 ### Changed
 - **RunOrFall: Multi-map admin + map-linked setup** - Added map list management in `/rof admin` and `/rof map ...`, moved lobby/spawns/platforms to per-map config, and removed platform naming requirement.
 - **RunOrFall: Admin-configurable blink distance** - Added a `/rof admin` field to set Blink teleport distance in blocks (used live by `Ingredient_Lightning_Essence`).
+- **RunOrFall: Admin-configurable blink charge economy** - Added `/rof admin` fields for blink start charges and blocks broken per extra blink charge.
 - **RunOrFall: Platform block-item-id filter** - `/rof admin` platform save now requires a block item ID (e.g. `Rock_Marble_Brick_Smooth`), and platform destruction only applies to blocks matching that configured item ID.
 - **RunOrFall: Configurable auto-start countdown tiers** - Added `min players`, `min players time`, `optimal players`, and `optimal players time` settings in `/rof admin`; countdown auto-starts with min tier and drops to optimal tier when enough players join.
 - **RunOrFall: Leaderboard category checkboxes + wider layout** - Replaced text-based category toggles with checkbox controls (`Total wins`, `Best win streak`, `Longest time alive`), widened leaderboard rows/window to reduce text truncation (`...`), and colorized stats by category to match RunOrFall Stats colors (`W` green, `L` red, `%` blue, best streak yellow, longest time violet).
@@ -38,7 +39,7 @@
 - **RunOrFall: Multi-category leaderboard** - RunOrFall leaderboard now has 3 clickable categories (`Total wins`, `Best win streak`, `Longest time survived`) with per-category ranking and display.
 - **RunOrFall: Broken-block HUD counter** - Added a per-player `Blocks broken` counter in the RunOrFall HUD, displayed at the bottom-left and updated in real time during rounds.
 - **RunOrFall: Stats now track blocks broken + blinks used** - `/rof stats` now shows lifetime totals for broken platform blocks and successful blinks, with SQL persistence and automatic DB column migration.
-- **RunOrFall: Blink charge system + HUD counter** - Players now start rounds with 1 blink charge, earn +1 blink every 100 platform blocks broken, and see available blinks in HUD next to `Blocks broken`.
+- **RunOrFall: Blink charge system + HUD counter** - Players now use blink charges, see available blinks in HUD next to `Blocks broken`, and earn extra charges from broken platform blocks based on admin-configured settings.
 - **Hub: Game Selector RunOrFall card** - Added RunOrFall to the "Welcome to Hyvexa" selector, arranged modes in a 2x2 grid (Parkour/Ascend top row), and restricted RunOrFall routing to OP/staff for now.
 - **Purge: Expanded weapon upgrade/admin options to full Hyguns arsenal** - `/purge upgrade` and `/purge admin -> Weapons` now include Glock18, ColtRevolver, DesertEagle, Mac10, MP9, Thompson, AK47, M4A1s, Barret50, DoubleBarrel, and Flamethrower (Frag excluded).
 - **Purge: Weapon-specific icons in upgrade/admin pages** - Added per-weapon Hyguns icons for selection cards and the upgrade detail panel.

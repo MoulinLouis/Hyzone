@@ -4,7 +4,7 @@ $C.@PageOverlay {
   SceneBlur {}
 
   Group #RunOrFallAdminWindow {
-    Anchor: (Width: 920, Height: 760);
+    Anchor: (Width: 920, Height: 820);
     LayoutMode: Top;
     Background: #0d1620(0.95);
     OutlineColor: #ffffff(0.06);
@@ -281,6 +281,50 @@ $C.@PageOverlay {
         }
 
         Label #BlinkDistanceCurrent {
+          Anchor: (Top: 4);
+          Style: (FontSize: 12, TextColor: #9fb0ba);
+          Text: "";
+        }
+
+        Label {
+          Anchor: (Top: 8);
+          Style: (FontSize: 13, TextColor: #cfd7dc);
+          Text: "Blink charges";
+        }
+
+        Group {
+          Anchor: (Top: 2, Height: 26);
+          LayoutMode: Left;
+
+          Label {
+            Anchor: (Width: 110, Height: 24, Top: 3);
+            Style: (FontSize: 12, TextColor: #9fb0ba);
+            Text: "Start charges";
+          }
+
+          $C.@TextField #BlinkStartChargesField {
+            Anchor: (Width: 70, Height: 24);
+            Style: (FontSize: 13, TextColor: #ffffff(0.85));
+          }
+
+          Label {
+            Anchor: (Width: 150, Height: 24, Left: 6, Top: 3);
+            Style: (FontSize: 12, TextColor: #9fb0ba);
+            Text: "Blocks per +1";
+          }
+
+          $C.@TextField #BlinkChargeEveryBlocksField {
+            Anchor: (Width: 80, Height: 24);
+            Style: (FontSize: 13, TextColor: #ffffff(0.85));
+          }
+        }
+
+        $C.@TextButton #SaveBlinkChargeSettingsButton {
+          Anchor: (Top: 4, Width: 220, Height: 22);
+          Text: "Save Blink Charges";
+        }
+
+        Label #BlinkChargeSettingsCurrent {
           Anchor: (Top: 4);
           Style: (FontSize: 12, TextColor: #9fb0ba);
           Text: "";
