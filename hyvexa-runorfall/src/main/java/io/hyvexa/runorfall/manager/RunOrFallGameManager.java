@@ -55,6 +55,7 @@ public class RunOrFallGameManager {
     private final Map<UUID, BlockKey> playerLastFootBlock = new ConcurrentHashMap<>();
     private final Map<UUID, Long> roundStartTimesMs = new ConcurrentHashMap<>();
     private final Map<UUID, Integer> brokenBlocksByPlayer = new ConcurrentHashMap<>();
+    private final Map<UUID, Integer> blinksUsedByPlayer = new ConcurrentHashMap<>();
     private final Map<String, Integer> blockItemIdCache = new ConcurrentHashMap<>();
 
     private volatile GameState state = GameState.IDLE;
@@ -112,6 +113,14 @@ public class RunOrFallGameManager {
             return 0;
         }
         return Math.max(0, count);
+    }
+
+    public synchronized void recordBlinkUse(UUID playerId) {
+        if (playerId == null || state != GameState.RUNNING || !alivePlayers.contains(playerId)) {
+            return;
+        }
+        int nextCount = Math.max(0, blinksUsedByPlayer.getOrDefault(playerId, 0)) + 1;
+        blinksUsedByPlayer.put(playerId, nextCount);
     }
 
     public synchronized String statusLine() {
@@ -187,7 +196,8 @@ public class RunOrFallGameManager {
             cancelCountdownInternal("Countdown cancelled: not enough players.");
         }
         if (state == GameState.RUNNING && result.wasAlive()) {
-            statsStore.recordLoss(playerId, resolvePlayerName(playerId), result.survivedMs());
+            statsStore.recordLoss(playerId, resolvePlayerName(playerId), result.survivedMs(),
+                    result.brokenBlocks(), result.blinksUsed());
             broadcastEliminationInternal(playerId, "left the round");
             checkWinnerInternal();
         }
@@ -252,6 +262,7 @@ public class RunOrFallGameManager {
         playerLastFootBlock.clear();
         roundStartTimesMs.clear();
         brokenBlocksByPlayer.clear();
+        blinksUsedByPlayer.clear();
         clearCountdownHudForLobbyPlayers();
         lobbyPlayers.clear();
         activeWorld = null;
@@ -269,7 +280,8 @@ public class RunOrFallGameManager {
             cancelCountdownInternal("Countdown cancelled: not enough players.");
         }
         if (state == GameState.RUNNING && result.wasAlive()) {
-            statsStore.recordLoss(playerId, resolvePlayerName(playerId), result.survivedMs());
+            statsStore.recordLoss(playerId, resolvePlayerName(playerId), result.survivedMs(),
+                    result.brokenBlocks(), result.blinksUsed());
             broadcastEliminationInternal(playerId, "disconnected");
             checkWinnerInternal();
         }
@@ -280,15 +292,19 @@ public class RunOrFallGameManager {
         }
     }
 
-    private record PlayerRemovalResult(boolean wasInLobby, boolean wasAlive, long survivedMs) {}
+    private record PlayerRemovalResult(boolean wasInLobby, boolean wasAlive, long survivedMs,
+                                       int brokenBlocks, int blinksUsed) {}
 
     private PlayerRemovalResult removePlayerInternal(UUID playerId) {
         boolean wasInLobby = lobbyPlayers.remove(playerId);
         boolean wasAlive = alivePlayers.remove(playerId);
         playerLastFootBlock.remove(playerId);
+        int brokenBlocks = getRoundBrokenBlocksCount(playerId);
+        int blinksUsed = getRoundBlinksUsedCount(playerId);
         brokenBlocksByPlayer.remove(playerId);
+        blinksUsedByPlayer.remove(playerId);
         long survivedMs = takeSurvivedMs(playerId);
-        return new PlayerRemovalResult(wasInLobby, wasAlive, survivedMs);
+        return new PlayerRemovalResult(wasInLobby, wasAlive, survivedMs, brokenBlocks, blinksUsed);
     }
 
     private void startForcedCountdownIfPossible(boolean allowSoloStart) {
@@ -522,7 +538,8 @@ public class RunOrFallGameManager {
                 for (UUID playerId : disconnected) {
                     if (alivePlayers.remove(playerId)) {
                         long survivedMs = takeSurvivedMs(playerId);
-                        statsStore.recordLoss(playerId, resolvePlayerName(playerId), survivedMs);
+                        statsStore.recordLoss(playerId, resolvePlayerName(playerId), survivedMs,
+                                getRoundBrokenBlocksCount(playerId), getRoundBlinksUsedCount(playerId));
                         broadcastEliminationInternal(playerId, "disconnected");
                     }
                 }
@@ -551,7 +568,8 @@ public class RunOrFallGameManager {
             PlayerRef winnerRef = resolvePlayer(winner);
             long survivedMs = takeSurvivedMs(winner);
             String winnerName = resolvePlayerName(winner);
-            statsStore.recordWin(winner, winnerName, survivedMs);
+            statsStore.recordWin(winner, winnerName, survivedMs,
+                    getRoundBrokenBlocksCount(winner), getRoundBlinksUsedCount(winner));
             if (winnerRef != null && winnerRef.getUsername() != null && !winnerRef.getUsername().isBlank()) {
                 winnerName = winnerRef.getUsername();
             }
@@ -568,7 +586,8 @@ public class RunOrFallGameManager {
             return;
         }
         long survivedMs = takeSurvivedMs(playerId);
-        statsStore.recordLoss(playerId, resolvePlayerName(playerId), survivedMs);
+        statsStore.recordLoss(playerId, resolvePlayerName(playerId), survivedMs,
+                getRoundBrokenBlocksCount(playerId), getRoundBlinksUsedCount(playerId));
         playerLastFootBlock.remove(playerId);
         teleportPlayerToLobby(playerId);
         refreshPlayerHotbar(playerId);
@@ -584,6 +603,7 @@ public class RunOrFallGameManager {
         alivePlayers.clear();
         playerLastFootBlock.clear();
         roundStartTimesMs.clear();
+        blinksUsedByPlayer.clear();
         resetCountdownState();
         clearCountdownHudForLobbyPlayers();
         resetBrokenBlocksForLobbyPlayers();
@@ -733,6 +753,7 @@ public class RunOrFallGameManager {
             playerLastFootBlock.clear();
             roundStartTimesMs.clear();
             brokenBlocksByPlayer.clear();
+            blinksUsedByPlayer.clear();
             return;
         }
         for (Map.Entry<BlockKey, Integer> entry : removedBlocks.entrySet()) {
@@ -748,6 +769,7 @@ public class RunOrFallGameManager {
         playerLastFootBlock.clear();
         roundStartTimesMs.clear();
         brokenBlocksByPlayer.clear();
+        blinksUsedByPlayer.clear();
     }
 
     private long takeSurvivedMs(UUID playerId) {
@@ -976,11 +998,13 @@ public class RunOrFallGameManager {
 
     private void ensureBrokenBlocksEntry(UUID playerId) {
         brokenBlocksByPlayer.putIfAbsent(playerId, 0);
+        blinksUsedByPlayer.putIfAbsent(playerId, 0);
     }
 
     private void resetBrokenBlocksForLobbyPlayers() {
         for (UUID playerId : lobbyPlayers) {
             brokenBlocksByPlayer.put(playerId, 0);
+            blinksUsedByPlayer.put(playerId, 0);
             updateBrokenBlocksHudForPlayer(playerId, 0);
         }
     }
@@ -989,6 +1013,20 @@ public class RunOrFallGameManager {
         int nextCount = Math.max(0, brokenBlocksByPlayer.getOrDefault(playerId, 0)) + 1;
         brokenBlocksByPlayer.put(playerId, nextCount);
         updateBrokenBlocksHudForPlayer(playerId, nextCount);
+    }
+
+    private int getRoundBrokenBlocksCount(UUID playerId) {
+        if (playerId == null) {
+            return 0;
+        }
+        return Math.max(0, brokenBlocksByPlayer.getOrDefault(playerId, 0));
+    }
+
+    private int getRoundBlinksUsedCount(UUID playerId) {
+        if (playerId == null) {
+            return 0;
+        }
+        return Math.max(0, blinksUsedByPlayer.getOrDefault(playerId, 0));
     }
 
     private void updateCountdownHudForLobbyPlayers() {

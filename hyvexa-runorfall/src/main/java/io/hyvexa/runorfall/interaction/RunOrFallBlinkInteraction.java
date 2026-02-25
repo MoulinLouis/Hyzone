@@ -109,6 +109,10 @@ public class RunOrFallBlinkInteraction extends SimpleInteraction {
         float roll = bodyRotation != null ? bodyRotation.getZ() : 0.0f;
         Vector3f rotation = new Vector3f(pitch, yaw, roll);
         store.addComponent(ref, Teleport.getComponentType(), new Teleport(world, safeTarget, rotation));
+        UUID playerId = playerRef.getUuid();
+        if (gameManager != null && playerId != null) {
+            gameManager.recordBlinkUse(playerId);
+        }
     }
 
     private Vector3d resolveSafeBlinkTarget(World world, Vector3d origin, Vector3d requestedTarget,

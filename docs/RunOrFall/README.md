@@ -23,7 +23,7 @@ Entry point: `hyvexa-runorfall/src/main/java/io/hyvexa/runorfall/HyvexaRunOrFall
 - In-game: blink item only.
 - Blink uses a collision-safe forward teleport with configurable distance (`blinkDistanceBlocks`).
 - HUD (`RunOrFall_RunHud.ui`) shows player count, vexa, countdown text, and broken-block counter.
-- Stats page shows wins, losses, winrate, best streak, and longest survival time.
+- Stats page shows wins, losses, winrate, best streak, longest survival time, total blocks broken, and total blinks used.
 - Leaderboard supports categories: total wins, best streak, longest survived.
 
 ## Admin Controls
