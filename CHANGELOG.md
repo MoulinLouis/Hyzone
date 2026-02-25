@@ -36,6 +36,7 @@
 - **RunOrFall: Join/Leave hotbar items** - Added `Ingredient_Life_Essence` (join lobby) and `Ingredient_Earth_Essence` (leave lobby) shortcuts equivalent to `/rof join` and `/rof leave`.
 - **RunOrFall: Contextual hotbars by state** - Hotbar now switches per player state: default (`Join`, `Leaderboards`, `My Stats`, `Game Selector`), lobby (`Leave`, `Leaderboards`, `My Stats`), and active round (no RunOrFall items).
 - **RunOrFall: In-round leave item on slot 9** - Active rounds now keep `Leave Lobby` in hotbar slot 9 (with Blink), and leaving mid-round is treated as an elimination for that player.
+- **RunOrFall: Auto map selection by lobby size** - Each map now has its own minimum player setting; round start picks the eligible map with the highest minimum <= lobby size, with random choice when multiple maps share that same minimum.
 - **RunOrFall: Coins currency + round rewards** - Added persistent RunOrFall coins shown in HUD, with gains of `+1` every 30s alive, `+5` per eliminated player, and `+25` for round winner (chat message on each gain).
 - **RunOrFall: Coins feature removed + round outcome chat updates** - Removed RunOrFall coins backend/HUD rewards, added explicit chat announcements for in-round eliminations and winner.
 - **RunOrFall: Multi-category leaderboard** - RunOrFall leaderboard now has 3 clickable categories (`Total wins`, `Best win streak`, `Longest time survived`) with per-category ranking and display.

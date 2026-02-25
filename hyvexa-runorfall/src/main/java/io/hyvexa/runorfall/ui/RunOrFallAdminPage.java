@@ -59,6 +59,7 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
     private static final String BUTTON_LEAVE = "Leave";
     private static final String BUTTON_MAP_CREATE = "MapCreate";
     private static final String BUTTON_MAP_DELETE = "MapDelete";
+    private static final String BUTTON_SAVE_MAP_MIN_PLAYERS = "SaveMapMinPlayers";
     private static final String BUTTON_MAP_SELECT_PREFIX = "MapSelect:";
 
     private static final Map<UUID, BlockSelection> SELECTIONS = new ConcurrentHashMap<>();
@@ -72,6 +73,7 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
     private final RunOrFallConfigStore configStore;
     private final RunOrFallGameManager gameManager;
     private String mapIdInput;
+    private String mapMinPlayersInput;
     private String mapSearchInput;
     private String voidYInput;
     private String breakDelayInput;
@@ -91,6 +93,7 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
         this.configStore = configStore;
         this.gameManager = gameManager;
         this.mapIdInput = "";
+        this.mapMinPlayersInput = Integer.toString(configStore.getSelectedMapMinPlayers());
         this.mapSearchInput = "";
         this.voidYInput = formatDouble(configStore.getVoidY());
         this.breakDelayInput = formatDouble(configStore.getBlockBreakDelaySeconds());
@@ -120,6 +123,9 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
         String previousMapSearch = mapSearchInput;
         if (data.mapId != null) {
             mapIdInput = data.mapId.trim();
+        }
+        if (data.mapMinPlayers != null) {
+            mapMinPlayersInput = data.mapMinPlayers.trim();
         }
         if (data.mapSearch != null) {
             mapSearchInput = data.mapSearch.trim();
@@ -196,6 +202,7 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
             case BUTTON_LEAVE -> handleLeave(ref, store);
             case BUTTON_MAP_CREATE -> handleCreateMap(ref, store);
             case BUTTON_MAP_DELETE -> handleDeleteMap(ref, store);
+            case BUTTON_SAVE_MAP_MIN_PLAYERS -> handleSaveMapMinPlayers(ref, store);
             default -> {
             }
         }
@@ -247,6 +254,30 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
         }
         boolean deleted = configStore.deleteMap(selectedMapId);
         player.sendMessage(Message.raw(PREFIX + (deleted ? "Map deleted." : "Could not delete map.")));
+        sendRefresh(ref, store);
+    }
+
+    private void handleSaveMapMinPlayers(Ref<EntityStore> ref, Store<EntityStore> store) {
+        Player player = resolvePlayer(ref, store);
+        if (player == null) {
+            return;
+        }
+        int minPlayers;
+        try {
+            minPlayers = Integer.parseInt(mapMinPlayersInput);
+        } catch (NumberFormatException ex) {
+            player.sendMessage(Message.raw(PREFIX + "Map min players must be a whole number."));
+            return;
+        }
+        if (minPlayers < 1) {
+            player.sendMessage(Message.raw(PREFIX + "Map min players must be >= 1."));
+            return;
+        }
+        if (!configStore.setSelectedMapMinPlayers(minPlayers)) {
+            player.sendMessage(Message.raw(PREFIX + "No selected map."));
+            return;
+        }
+        player.sendMessage(Message.raw(PREFIX + "Map min players saved."));
         sendRefresh(ref, store);
     }
 
@@ -541,6 +572,8 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
                 EventData.of(AdminData.KEY_BUTTON, BUTTON_MAP_CREATE), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#MapDeleteButton",
                 EventData.of(AdminData.KEY_BUTTON, BUTTON_MAP_DELETE), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SaveMapMinPlayersButton",
+                EventData.of(AdminData.KEY_BUTTON, BUTTON_SAVE_MAP_MIN_PLAYERS), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SetLobbyButton",
                 EventData.of(AdminData.KEY_BUTTON, BUTTON_SET_LOBBY), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#TpLobbyButton",
@@ -577,6 +610,8 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
                 EventData.of(AdminData.KEY_BUTTON, BUTTON_LEAVE), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#MapIdField",
                 EventData.of(AdminData.KEY_MAP_ID, "#MapIdField.Value"), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#MapMinPlayersField",
+                EventData.of(AdminData.KEY_MAP_MIN_PLAYERS, "#MapMinPlayersField.Value"), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#MapSearchField",
                 EventData.of(AdminData.KEY_MAP_SEARCH, "#MapSearchField.Value"), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#VoidYField",
@@ -619,6 +654,7 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
         int minPlayersTime = configStore.getMinPlayersTimeSeconds();
         int optimalPlayers = configStore.getOptimalPlayers();
         int optimalPlayersTime = configStore.getOptimalPlayersTimeSeconds();
+        int selectedMapMinPlayers = configStore.getSelectedMapMinPlayers();
 
         voidYInput = formatDouble(voidY);
         breakDelayInput = formatDouble(breakDelay);
@@ -629,11 +665,13 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
         minPlayersTimeInput = Integer.toString(minPlayersTime);
         optimalPlayersInput = Integer.toString(optimalPlayers);
         optimalPlayersTimeInput = Integer.toString(optimalPlayersTime);
+        mapMinPlayersInput = Integer.toString(selectedMapMinPlayers);
         if (selectedMapId != null && !selectedMapId.isBlank() && (mapIdInput == null || mapIdInput.isBlank())) {
             mapIdInput = selectedMapId;
         }
 
         commandBuilder.set("#MapIdField.Value", mapIdInput == null ? "" : mapIdInput);
+        commandBuilder.set("#MapMinPlayersField.Value", mapMinPlayersInput == null ? "" : mapMinPlayersInput);
         commandBuilder.set("#MapSearchField.Value", mapSearchInput == null ? "" : mapSearchInput);
         commandBuilder.set("#VoidYField.Value", voidYInput);
         commandBuilder.set("#BreakDelayField.Value", breakDelayInput);
@@ -648,6 +686,7 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
         commandBuilder.set("#StatusValue.Text", gameManager.statusLine());
         commandBuilder.set("#SelectedMapValue.Text",
                 selectedMapId == null || selectedMapId.isBlank() ? "Selected map: none" : "Selected map: " + selectedMapId);
+        commandBuilder.set("#MapMinPlayersCurrent.Text", "Current map min players: " + selectedMapMinPlayers);
         commandBuilder.set("#LobbyValue.Text", lobby == null ? "Lobby: not set" : "Lobby: " + formatLocation(lobby));
         commandBuilder.set("#SpawnsValue.Text", "Spawns: " + spawns.size());
         commandBuilder.set("#PlatformsValue.Text", "Platforms: " + platforms.size());
@@ -678,7 +717,9 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
             }
             commandBuilder.append("#MapCards", "Pages/RunOrFall_MapEntry.ui");
             boolean selected = selectedMapId != null && selectedMapId.equalsIgnoreCase(mapId);
-            commandBuilder.set("#MapCards[" + index + "] #MapName.Text", selected ? ">> " + mapId : mapId);
+            int mapMinPlayers = configStore.getMapMinPlayers(mapId);
+            String displayName = mapId + " [min " + mapMinPlayers + "]";
+            commandBuilder.set("#MapCards[" + index + "] #MapName.Text", selected ? ">> " + displayName : displayName);
             commandBuilder.set("#MapCards[" + index + "] #SelectedOverlay.Visible", selected);
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
                     "#MapCards[" + index + "]",
@@ -742,6 +783,7 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
     public static class AdminData {
         static final String KEY_BUTTON = "Button";
         static final String KEY_MAP_ID = "@MapId";
+        static final String KEY_MAP_MIN_PLAYERS = "@MapMinPlayers";
         static final String KEY_MAP_SEARCH = "@MapSearch";
         static final String KEY_VOID_Y = "@VoidY";
         static final String KEY_BREAK_DELAY = "@BreakDelay";
@@ -759,6 +801,8 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
                         (data, value) -> data.button = value, data -> data.button)
                 .addField(new KeyedCodec<>(KEY_MAP_ID, Codec.STRING),
                         (data, value) -> data.mapId = value, data -> data.mapId)
+                .addField(new KeyedCodec<>(KEY_MAP_MIN_PLAYERS, Codec.STRING),
+                        (data, value) -> data.mapMinPlayers = value, data -> data.mapMinPlayers)
                 .addField(new KeyedCodec<>(KEY_MAP_SEARCH, Codec.STRING),
                         (data, value) -> data.mapSearch = value, data -> data.mapSearch)
                 .addField(new KeyedCodec<>(KEY_VOID_Y, Codec.STRING),
@@ -785,6 +829,7 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
 
         private String button;
         private String mapId;
+        private String mapMinPlayers;
         private String mapSearch;
         private String voidY;
         private String breakDelay;

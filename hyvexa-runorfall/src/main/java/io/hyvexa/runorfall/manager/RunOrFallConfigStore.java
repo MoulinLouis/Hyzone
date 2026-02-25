@@ -34,6 +34,7 @@ public class RunOrFallConfigStore {
     private static final double DEFAULT_VOID_Y = 40.0d;
     private static final double DEFAULT_BREAK_DELAY_SECONDS = 0.2d;
     private static final int DEFAULT_MIN_PLAYERS = 2;
+    private static final int DEFAULT_MAP_MIN_PLAYERS = 2;
     private static final int DEFAULT_MIN_PLAYERS_TIME_SECONDS = 300;
     private static final int DEFAULT_OPTIMAL_PLAYERS = 4;
     private static final int DEFAULT_OPTIMAL_PLAYERS_TIME_SECONDS = 60;
@@ -66,6 +67,7 @@ public class RunOrFallConfigStore {
     private static final String CREATE_MAPS_TABLE = """
             CREATE TABLE IF NOT EXISTS runorfall_maps (
               map_id VARCHAR(64) NOT NULL PRIMARY KEY,
+              min_players INT NOT NULL DEFAULT 2,
               lobby_x DOUBLE NULL,
               lobby_y DOUBLE NULL,
               lobby_z DOUBLE NULL,
@@ -158,6 +160,32 @@ public class RunOrFallConfigStore {
         return config.selectedMapId;
     }
 
+    public synchronized int getSelectedMapMinPlayers() {
+        RunOrFallMapConfig selectedMap = getSelectedMapInternal();
+        if (selectedMap == null) {
+            return sanitizeMapMinPlayers(DEFAULT_MAP_MIN_PLAYERS);
+        }
+        return sanitizeMapMinPlayers(selectedMap.minPlayers);
+    }
+
+    public synchronized int getMapMinPlayers(String mapId) {
+        RunOrFallMapConfig map = findMapByIdInternal(normalizeMapId(mapId));
+        if (map == null) {
+            return sanitizeMapMinPlayers(DEFAULT_MAP_MIN_PLAYERS);
+        }
+        return sanitizeMapMinPlayers(map.minPlayers);
+    }
+
+    public synchronized boolean setSelectedMapMinPlayers(int minPlayers) {
+        RunOrFallMapConfig selectedMap = getSelectedMapInternal();
+        if (selectedMap == null) {
+            return false;
+        }
+        selectedMap.minPlayers = sanitizeMapMinPlayers(minPlayers);
+        saveMapsToDatabase();
+        return true;
+    }
+
     public synchronized boolean selectMap(String mapId) {
         String normalized = normalizeMapId(mapId);
         if (normalized.isEmpty()) {
@@ -182,6 +210,7 @@ public class RunOrFallConfigStore {
         }
         RunOrFallMapConfig map = new RunOrFallMapConfig();
         map.id = normalized;
+        map.minPlayers = sanitizeMapMinPlayers(DEFAULT_MAP_MIN_PLAYERS);
         config.maps.add(map);
         if (config.selectedMapId == null || config.selectedMapId.isBlank()) {
             config.selectedMapId = normalized;
@@ -393,6 +422,8 @@ public class RunOrFallConfigStore {
                     "ALTER TABLE runorfall_settings ADD COLUMN blink_start_charges INT NOT NULL DEFAULT 1");
             ensureColumnExists(conn, "runorfall_settings", "blink_charge_every_blocks_broken",
                     "ALTER TABLE runorfall_settings ADD COLUMN blink_charge_every_blocks_broken INT NOT NULL DEFAULT 100");
+            ensureColumnExists(conn, "runorfall_maps", "min_players",
+                    "ALTER TABLE runorfall_maps ADD COLUMN min_players INT NOT NULL DEFAULT 2");
             ensureColumnExists(conn, "runorfall_map_platforms", "target_block_item_id",
                     "ALTER TABLE runorfall_map_platforms ADD COLUMN target_block_item_id VARCHAR(128) NULL");
             try (PreparedStatement stmt = conn.prepareStatement(
@@ -505,7 +536,7 @@ public class RunOrFallConfigStore {
 
     private void loadMaps(Connection conn, RunOrFallConfig target) throws SQLException {
         String sql = """
-                SELECT map_id, lobby_x, lobby_y, lobby_z, lobby_rot_x, lobby_rot_y, lobby_rot_z
+                SELECT map_id, min_players, lobby_x, lobby_y, lobby_z, lobby_rot_x, lobby_rot_y, lobby_rot_z
                 FROM runorfall_maps
                 ORDER BY map_id ASC
                 """;
@@ -519,6 +550,7 @@ public class RunOrFallConfigStore {
                     }
                     RunOrFallMapConfig map = new RunOrFallMapConfig();
                     map.id = mapId;
+                    map.minPlayers = sanitizeMapMinPlayers(rs.getInt("min_players"));
                     Double lobbyX = rs.getObject("lobby_x", Double.class);
                     if (lobbyX != null) {
                         map.lobby = new RunOrFallLocation(
@@ -718,8 +750,9 @@ public class RunOrFallConfigStore {
         }
         String deleteSql = "DELETE FROM runorfall_maps";
         String insertSql = """
-                INSERT INTO runorfall_maps (map_id, lobby_x, lobby_y, lobby_z, lobby_rot_x, lobby_rot_y, lobby_rot_z)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO runorfall_maps
+                (map_id, min_players, lobby_x, lobby_y, lobby_z, lobby_rot_x, lobby_rot_y, lobby_rot_z)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """;
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
             boolean autoCommit = conn.getAutoCommit();
@@ -735,20 +768,21 @@ public class RunOrFallConfigStore {
                         continue;
                     }
                     insertStmt.setString(1, map.id);
+                    insertStmt.setInt(2, sanitizeMapMinPlayers(map.minPlayers));
                     if (map.lobby != null && isFiniteLocation(map.lobby)) {
-                        insertStmt.setDouble(2, map.lobby.x);
-                        insertStmt.setDouble(3, map.lobby.y);
-                        insertStmt.setDouble(4, map.lobby.z);
-                        insertStmt.setFloat(5, map.lobby.rotX);
-                        insertStmt.setFloat(6, map.lobby.rotY);
-                        insertStmt.setFloat(7, map.lobby.rotZ);
+                        insertStmt.setDouble(3, map.lobby.x);
+                        insertStmt.setDouble(4, map.lobby.y);
+                        insertStmt.setDouble(5, map.lobby.z);
+                        insertStmt.setFloat(6, map.lobby.rotX);
+                        insertStmt.setFloat(7, map.lobby.rotY);
+                        insertStmt.setFloat(8, map.lobby.rotZ);
                     } else {
-                        insertStmt.setNull(2, java.sql.Types.DOUBLE);
                         insertStmt.setNull(3, java.sql.Types.DOUBLE);
                         insertStmt.setNull(4, java.sql.Types.DOUBLE);
-                        insertStmt.setNull(5, java.sql.Types.FLOAT);
+                        insertStmt.setNull(5, java.sql.Types.DOUBLE);
                         insertStmt.setNull(6, java.sql.Types.FLOAT);
                         insertStmt.setNull(7, java.sql.Types.FLOAT);
+                        insertStmt.setNull(8, java.sql.Types.FLOAT);
                     }
                     insertStmt.addBatch();
                 }
@@ -1002,6 +1036,7 @@ public class RunOrFallConfigStore {
                 }
                 RunOrFallMapConfig sanitized = new RunOrFallMapConfig();
                 sanitized.id = mapId;
+                sanitized.minPlayers = sanitizeMapMinPlayers(map.minPlayers);
                 sanitized.lobby = isFiniteLocation(map.lobby) ? map.lobby.copy() : null;
                 if (map.spawns != null) {
                     for (RunOrFallLocation spawn : map.spawns) {
@@ -1024,6 +1059,7 @@ public class RunOrFallConfigStore {
         if (uniqueMaps.isEmpty()) {
             RunOrFallMapConfig legacyMap = new RunOrFallMapConfig();
             legacyMap.id = DEFAULT_MAP_ID;
+            legacyMap.minPlayers = sanitizeMapMinPlayers(DEFAULT_MAP_MIN_PLAYERS);
             legacyMap.lobby = isFiniteLocation(loaded.lobby) ? loaded.lobby.copy() : null;
             if (loaded.spawns != null) {
                 for (RunOrFallLocation spawn : loaded.spawns) {
@@ -1069,6 +1105,7 @@ public class RunOrFallConfigStore {
         created.blinkChargeEveryBlocksBroken = DEFAULT_BLINK_CHARGE_EVERY_BLOCKS_BROKEN;
         RunOrFallMapConfig map = new RunOrFallMapConfig();
         map.id = DEFAULT_MAP_ID;
+        map.minPlayers = sanitizeMapMinPlayers(DEFAULT_MAP_MIN_PLAYERS);
         created.maps.add(map);
         created.selectedMapId = DEFAULT_MAP_ID;
         return created;
@@ -1084,6 +1121,7 @@ public class RunOrFallConfigStore {
         }
         RunOrFallMapConfig map = new RunOrFallMapConfig();
         map.id = DEFAULT_MAP_ID;
+        map.minPlayers = sanitizeMapMinPlayers(DEFAULT_MAP_MIN_PLAYERS);
         config.maps.add(map);
         config.selectedMapId = map.id;
         return map;
@@ -1168,6 +1206,10 @@ public class RunOrFallConfigStore {
     }
 
     private static int sanitizeMinPlayers(int value) {
+        return Math.max(1, value);
+    }
+
+    private static int sanitizeMapMinPlayers(int value) {
         return Math.max(1, value);
     }
 
