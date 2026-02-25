@@ -1,4 +1,4 @@
-package io.hyvexa.parkour.ui;
+package io.hyvexa.wardrobe;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
@@ -16,9 +16,9 @@ import io.hyvexa.common.shop.ShopTabResult;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.core.cosmetic.CosmeticDefinition;
+import io.hyvexa.core.cosmetic.CosmeticManager;
 import io.hyvexa.core.cosmetic.CosmeticStore;
 import io.hyvexa.core.economy.VexaStore;
-import io.hyvexa.parkour.cosmetic.CosmeticManager;
 
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -29,12 +29,6 @@ public class CosmeticsShopTab implements ShopTab {
     private static final String ACTION_BUY = "Buy:";
     private static final String ACTION_EQUIP = "Equip:";
     private static final String ACTION_UNEQUIP = "Unequip:";
-
-    private final CosmeticManager cosmeticManager;
-
-    public CosmeticsShopTab(CosmeticManager cosmeticManager) {
-        this.cosmeticManager = cosmeticManager;
-    }
 
     @Override
     public String getId() {
@@ -108,7 +102,7 @@ public class CosmeticsShopTab implements ShopTab {
             player.sendMessage(Message.raw("[Shop] Previewing " + name + " for 5 seconds...")
                     .color(SystemMessageUtils.SECONDARY));
             executeOnWorldThread(player, (wRef, wStore) ->
-                    cosmeticManager.previewCosmetic(wRef, wStore, cosmeticId));
+                    CosmeticManager.getInstance().previewCosmetic(wRef, wStore, cosmeticId));
             return ShopTabResult.NONE;
         }
 
@@ -160,7 +154,7 @@ public class CosmeticsShopTab implements ShopTab {
                 .color(SystemMessageUtils.SUCCESS));
 
         executeOnWorldThread(player, (wRef, wStore) ->
-                cosmeticManager.applyCosmetic(wRef, wStore, cosmeticId));
+                CosmeticManager.getInstance().applyCosmetic(wRef, wStore, cosmeticId));
 
         return ShopTabResult.REFRESH;
     }
@@ -171,7 +165,7 @@ public class CosmeticsShopTab implements ShopTab {
                 .color(SystemMessageUtils.SECONDARY));
 
         executeOnWorldThread(player, (wRef, wStore) ->
-                cosmeticManager.removeCosmetic(wRef, wStore));
+                CosmeticManager.getInstance().removeCosmetic(wRef, wStore));
 
         return ShopTabResult.REFRESH;
     }

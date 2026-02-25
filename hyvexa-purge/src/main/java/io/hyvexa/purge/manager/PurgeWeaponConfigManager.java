@@ -2,7 +2,7 @@ package io.hyvexa.purge.manager;
 
 import com.hypixel.hytale.logger.HytaleLogger;
 import io.hyvexa.core.db.DatabaseManager;
-import io.hyvexa.purge.data.PurgeSkinRegistry;
+import io.hyvexa.common.skin.PurgeSkinRegistry;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;

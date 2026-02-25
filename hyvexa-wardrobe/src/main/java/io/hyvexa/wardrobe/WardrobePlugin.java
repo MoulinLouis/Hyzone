@@ -10,8 +10,11 @@ import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.shop.ShopTabRegistry;
+import io.hyvexa.common.skin.PurgeSkinStore;
+import io.hyvexa.core.cosmetic.CosmeticManager;
 import io.hyvexa.core.cosmetic.CosmeticStore;
 import io.hyvexa.core.wardrobe.WardrobeBridge;
+import io.hyvexa.wardrobe.command.ShopCommand;
 import io.hyvexa.wardrobe.command.WardrobeBuyCommand;
 import io.hyvexa.wardrobe.command.WardrobeResetCommand;
 
@@ -42,10 +45,18 @@ public class WardrobePlugin extends JavaPlugin {
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("Failed to initialize CosmeticStore");
         }
+        try {
+            PurgeSkinStore.getInstance().initialize();
+        } catch (Exception e) {
+            LOGGER.atWarning().withCause(e).log("Failed to initialize PurgeSkinStore");
+        }
 
         wardrobeShopTab = new WardrobeShopTab();
         ShopTabRegistry.register(wardrobeShopTab);
+        ShopTabRegistry.register(new CosmeticsShopTab());
+        ShopTabRegistry.register(new PurgeSkinShopTab());
 
+        this.getCommandRegistry().registerCommand(new ShopCommand());
         this.getCommandRegistry().registerCommand(new WardrobeBuyCommand());
         this.getCommandRegistry().registerCommand(new WardrobeResetCommand());
 
@@ -60,6 +71,11 @@ public class WardrobePlugin extends JavaPlugin {
             } catch (Exception e) {
                 LOGGER.atWarning().withCause(e).log("Wardrobe permission re-grant failed");
             }
+            try {
+                CosmeticManager.getInstance().reapplyOnLogin(ref, store);
+            } catch (Exception e) {
+                LOGGER.atWarning().withCause(e).log("Cosmetic reapply on login failed");
+            }
         });
 
         this.getEventRegistry().registerGlobal(PlayerDisconnectEvent.class, event -> {
@@ -73,9 +89,21 @@ public class WardrobePlugin extends JavaPlugin {
             }
 
             try {
+                CosmeticManager.getInstance().cleanupOnDisconnect(playerId);
+            } catch (Exception e) {
+                LOGGER.atWarning().withCause(e).log("Disconnect cleanup: CosmeticManager");
+            }
+
+            try {
                 CosmeticStore.getInstance().evictPlayer(playerId);
             } catch (Exception e) {
                 LOGGER.atWarning().withCause(e).log("Disconnect cleanup: CosmeticStore");
+            }
+
+            try {
+                PurgeSkinStore.getInstance().evictPlayer(playerId);
+            } catch (Exception e) {
+                LOGGER.atWarning().withCause(e).log("Disconnect cleanup: PurgeSkinStore");
             }
         });
 

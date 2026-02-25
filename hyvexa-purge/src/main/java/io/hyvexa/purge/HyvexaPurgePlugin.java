@@ -28,8 +28,8 @@ import io.hyvexa.purge.command.PurgeCommand;
 import io.hyvexa.purge.command.SetAmmoCommand;
 import io.hyvexa.purge.data.PurgePlayerStore;
 import io.hyvexa.purge.data.PurgeScrapStore;
-import io.hyvexa.purge.data.PurgeSkinRegistry;
-import io.hyvexa.purge.data.PurgeSkinStore;
+import io.hyvexa.common.skin.PurgeSkinRegistry;
+import io.hyvexa.common.skin.PurgeSkinStore;
 import io.hyvexa.purge.data.PurgeWeaponUpgradeStore;
 import io.hyvexa.purge.hud.PurgeHudManager;
 import io.hyvexa.purge.data.PurgeSession;
@@ -38,9 +38,7 @@ import io.hyvexa.purge.interaction.PurgeLootboxInteraction;
 import io.hyvexa.purge.interaction.PurgeOrangeOrbInteraction;
 import io.hyvexa.purge.interaction.PurgeRedOrbInteraction;
 import io.hyvexa.purge.interaction.PurgeStartInteraction;
-import io.hyvexa.common.shop.ShopTabRegistry;
 import io.hyvexa.common.util.MultiHudBridge;
-import io.hyvexa.purge.ui.PurgeSkinShopTab;
 import io.hyvexa.purge.manager.PurgeInstanceManager;
 import io.hyvexa.purge.manager.PurgePartyManager;
 import io.hyvexa.purge.manager.PurgeSessionManager;
@@ -128,7 +126,6 @@ public class HyvexaPurgePlugin extends JavaPlugin {
         catch (Exception e) { LOGGER.atWarning().withCause(e).log("Failed to initialize PurgeWeaponUpgradeStore"); }
         try { PurgeSkinStore.getInstance().initialize(); }
         catch (Exception e) { LOGGER.atWarning().withCause(e).log("Failed to initialize PurgeSkinStore"); }
-        ShopTabRegistry.register(new PurgeSkinShopTab());
 
         // Create managers
         instanceManager = new PurgeInstanceManager();
@@ -177,6 +174,8 @@ public class HyvexaPurgePlugin extends JavaPlugin {
             if (player == null) {
                 return;
             }
+            // Evict stale skin cache (wardrobe purchases happen in a different classloader)
+            PurgeSkinStore.getInstance().evictPlayer(playerId);
             ensurePurgeIdleState(playerRef, player);
             LOGGER.atInfo().log("Player entered Purge: " + (playerId != null ? playerId : "unknown"));
             try {
@@ -198,6 +197,10 @@ public class HyvexaPurgePlugin extends JavaPlugin {
             PlayerRef playerRef = holder.getComponent(PlayerRef.getComponentType());
             UUID playerId = playerRef != null ? playerRef.getUuid() : null;
             if (ModeGate.isPurgeWorld(world)) {
+                // Evict stale skin cache (wardrobe purchases happen in a different classloader)
+                if (playerId != null) {
+                    PurgeSkinStore.getInstance().evictPlayer(playerId);
+                }
                 Player player = holder.getComponent(Player.getComponentType());
                 if (playerRef != null && player != null) {
                     ensurePurgeIdleState(playerRef, player);

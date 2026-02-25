@@ -1,4 +1,4 @@
-package io.hyvexa.purge.ui;
+package io.hyvexa.wardrobe;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
@@ -13,10 +13,10 @@ import io.hyvexa.common.shop.ShopTab;
 import io.hyvexa.common.shop.ShopTabResult;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.util.PermissionUtils;
-import io.hyvexa.purge.data.PurgeSkinDefinition;
-import io.hyvexa.purge.data.PurgeSkinRegistry;
-import io.hyvexa.purge.data.PurgeSkinStore;
-import io.hyvexa.purge.util.DailyShopRotation;
+import io.hyvexa.common.skin.PurgeSkinDefinition;
+import io.hyvexa.common.skin.PurgeSkinRegistry;
+import io.hyvexa.common.skin.PurgeSkinStore;
+import io.hyvexa.common.skin.DailyShopRotation;
 
 import java.util.List;
 import java.util.UUID;

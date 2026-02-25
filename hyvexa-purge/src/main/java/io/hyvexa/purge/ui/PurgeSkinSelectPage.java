@@ -16,9 +16,9 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.ui.ButtonEventData;
-import io.hyvexa.purge.data.PurgeSkinDefinition;
-import io.hyvexa.purge.data.PurgeSkinRegistry;
-import io.hyvexa.purge.data.PurgeSkinStore;
+import io.hyvexa.common.skin.PurgeSkinDefinition;
+import io.hyvexa.common.skin.PurgeSkinRegistry;
+import io.hyvexa.common.skin.PurgeSkinStore;
 
 import javax.annotation.Nonnull;
 import java.util.List;

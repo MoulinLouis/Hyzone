@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Changed
+- **Wardrobe: Centralized cosmetics hub** - Moved all 3 shop tabs (Cosmetics, Weapon Skins, Wardrobe) into wardrobe module so `/shop` shows them all. CosmeticManager and PurgeSkin data classes moved to core for cross-module access.
+
 ### Added
 - **Parkour: Medal times and feather currency** - Maps can now have bronze/silver/gold medal time thresholds (set in `/pk admin` Maps). Beating a threshold earns the medal and feather currency (configurable per category via `/pk admin` -> Medal Rewards). Medals shown on map selection cards; feather balance displayed on parkour HUD next to vexa.
 - **Purge: Custom zombie variants admin system** - Replaced hardcoded Slow/Normal/Fast enum with DB-backed variant configs. Admins can create, delete, and customize zombie variants (health, damage, speed) via `/purge admin` -> Variants. Wave config now supports any number of variant types with dynamic +/- count rows.
@@ -68,6 +71,7 @@
 
 ### Fixed
 - **Hub/Wardrobe: Classpath asset-pack conflict** - Server launch is now decoupled to `hyvexa-launch`, and `hyvexa-hub` is packaged again as a normal plugin asset-pack (`IncludesAssetPack` from `includes_pack`), so Hub UI/items ship in `HyvexaHub-*.jar` without separate `HubAssets` staging.
+- **Purge/Hub/RunOrFall: Intermittent HUD selector crashes on login/transfer** - Reworked HUD lifecycle guards (ready delay refresh + stale/world validation + disconnect HUD cache eviction + deferred first updates) to prevent random `Selected element in CustomUI command was not found` disconnects.
 - **Purge: Variant HP now respects configured absolute value across NPC types** - Zombie variant health no longer over-scales for non-vanilla NPC types (e.g. `Zombie_Aberrant`); configured HP is applied correctly before wave scaling.
 - **RunOrFall: Spectator/Disconnect round flow** - Players joining during an active round now get teleported to lobby as spectators, and disconnects are counted as eliminations.
 - **RunOrFall: Leave lobby now returns to spawn** - Voluntary leave (`/rof leave` and leave hotbar flow) now teleports the player to the world spawn.

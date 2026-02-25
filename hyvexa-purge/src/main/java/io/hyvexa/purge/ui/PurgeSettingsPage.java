@@ -18,7 +18,7 @@ import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.purge.data.PurgePlayerStats;
 import io.hyvexa.purge.data.PurgePlayerStore;
 import io.hyvexa.purge.data.PurgeScrapStore;
-import io.hyvexa.purge.data.PurgeSkinStore;
+import io.hyvexa.common.skin.PurgeSkinStore;
 import io.hyvexa.purge.data.PurgeWeaponUpgradeStore;
 import io.hyvexa.purge.manager.PurgeInstanceManager;
 import io.hyvexa.purge.manager.PurgeVariantConfigManager;
