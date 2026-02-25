@@ -51,6 +51,7 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
     private static final String BUTTON_SAVE_VOIDY = "SaveVoidY";
     private static final String BUTTON_SAVE_BREAK_DELAY = "SaveBreakDelay";
     private static final String BUTTON_SAVE_BLINK_DISTANCE = "SaveBlinkDistance";
+    private static final String BUTTON_SAVE_BLINK_CHARGE_SETTINGS = "SaveBlinkChargeSettings";
     private static final String BUTTON_SAVE_AUTO_START = "SaveAutoStart";
     private static final String BUTTON_START = "Start";
     private static final String BUTTON_STOP = "Stop";
@@ -75,6 +76,8 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
     private String voidYInput;
     private String breakDelayInput;
     private String blinkDistanceInput;
+    private String blinkStartChargesInput;
+    private String blinkChargeEveryBlocksInput;
     private String platformBlockIdInput;
     private String minPlayersInput;
     private String minPlayersTimeInput;
@@ -92,6 +95,8 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
         this.voidYInput = formatDouble(configStore.getVoidY());
         this.breakDelayInput = formatDouble(configStore.getBlockBreakDelaySeconds());
         this.blinkDistanceInput = Integer.toString(configStore.getBlinkDistanceBlocks());
+        this.blinkStartChargesInput = Integer.toString(configStore.getBlinkStartCharges());
+        this.blinkChargeEveryBlocksInput = Integer.toString(configStore.getBlinkChargeEveryBlocksBroken());
         this.platformBlockIdInput = "";
         this.minPlayersInput = Integer.toString(configStore.getMinPlayers());
         this.minPlayersTimeInput = Integer.toString(configStore.getMinPlayersTimeSeconds());
@@ -127,6 +132,12 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
         }
         if (data.blinkDistance != null) {
             blinkDistanceInput = data.blinkDistance.trim();
+        }
+        if (data.blinkStartCharges != null) {
+            blinkStartChargesInput = data.blinkStartCharges.trim();
+        }
+        if (data.blinkChargeEveryBlocks != null) {
+            blinkChargeEveryBlocksInput = data.blinkChargeEveryBlocks.trim();
         }
         if (data.platformBlockId != null) {
             platformBlockIdInput = data.platformBlockId.trim();
@@ -177,6 +188,7 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
             case BUTTON_SAVE_VOIDY -> handleSaveVoidY(ref, store);
             case BUTTON_SAVE_BREAK_DELAY -> handleSaveBreakDelay(ref, store);
             case BUTTON_SAVE_BLINK_DISTANCE -> handleSaveBlinkDistance(ref, store);
+            case BUTTON_SAVE_BLINK_CHARGE_SETTINGS -> handleSaveBlinkChargeSettings(ref, store);
             case BUTTON_SAVE_AUTO_START -> handleSaveAutoStart(ref, store);
             case BUTTON_START -> handleStart(ref, store);
             case BUTTON_STOP -> handleStop(ref, store);
@@ -422,6 +434,33 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
         sendRefresh(ref, store);
     }
 
+    private void handleSaveBlinkChargeSettings(Ref<EntityStore> ref, Store<EntityStore> store) {
+        Player player = resolvePlayer(ref, store);
+        if (player == null) {
+            return;
+        }
+        int startCharges;
+        int everyBlocksBroken;
+        try {
+            startCharges = Integer.parseInt(blinkStartChargesInput);
+            everyBlocksBroken = Integer.parseInt(blinkChargeEveryBlocksInput);
+        } catch (NumberFormatException ex) {
+            player.sendMessage(Message.raw(PREFIX + "Blink charge values must be whole numbers."));
+            return;
+        }
+        if (startCharges < 0) {
+            player.sendMessage(Message.raw(PREFIX + "Start blink charges must be >= 0."));
+            return;
+        }
+        if (everyBlocksBroken < 1) {
+            player.sendMessage(Message.raw(PREFIX + "Blocks per blink charge must be >= 1."));
+            return;
+        }
+        configStore.setBlinkChargeSettings(startCharges, everyBlocksBroken);
+        player.sendMessage(Message.raw(PREFIX + "Blink charge settings saved."));
+        sendRefresh(ref, store);
+    }
+
     private void handleSaveAutoStart(Ref<EntityStore> ref, Store<EntityStore> store) {
         Player player = resolvePlayer(ref, store);
         if (player == null) {
@@ -524,6 +563,8 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
                 EventData.of(AdminData.KEY_BUTTON, BUTTON_SAVE_BREAK_DELAY), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SaveBlinkDistanceButton",
                 EventData.of(AdminData.KEY_BUTTON, BUTTON_SAVE_BLINK_DISTANCE), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SaveBlinkChargeSettingsButton",
+                EventData.of(AdminData.KEY_BUTTON, BUTTON_SAVE_BLINK_CHARGE_SETTINGS), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SaveAutoStartButton",
                 EventData.of(AdminData.KEY_BUTTON, BUTTON_SAVE_AUTO_START), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#StartButton",
@@ -544,6 +585,10 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
                 EventData.of(AdminData.KEY_BREAK_DELAY, "#BreakDelayField.Value"), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#BlinkDistanceField",
                 EventData.of(AdminData.KEY_BLINK_DISTANCE, "#BlinkDistanceField.Value"), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#BlinkStartChargesField",
+                EventData.of(AdminData.KEY_BLINK_START_CHARGES, "#BlinkStartChargesField.Value"), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#BlinkChargeEveryBlocksField",
+                EventData.of(AdminData.KEY_BLINK_CHARGE_EVERY_BLOCKS, "#BlinkChargeEveryBlocksField.Value"), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#PlatformBlockIdField",
                 EventData.of(AdminData.KEY_PLATFORM_BLOCK_ID, "#PlatformBlockIdField.Value"), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#MinPlayersField",
@@ -568,6 +613,8 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
         double voidY = configStore.getVoidY();
         double breakDelay = configStore.getBlockBreakDelaySeconds();
         int blinkDistance = configStore.getBlinkDistanceBlocks();
+        int blinkStartCharges = configStore.getBlinkStartCharges();
+        int blinkChargeEveryBlocks = configStore.getBlinkChargeEveryBlocksBroken();
         int minPlayers = configStore.getMinPlayers();
         int minPlayersTime = configStore.getMinPlayersTimeSeconds();
         int optimalPlayers = configStore.getOptimalPlayers();
@@ -576,6 +623,8 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
         voidYInput = formatDouble(voidY);
         breakDelayInput = formatDouble(breakDelay);
         blinkDistanceInput = Integer.toString(blinkDistance);
+        blinkStartChargesInput = Integer.toString(blinkStartCharges);
+        blinkChargeEveryBlocksInput = Integer.toString(blinkChargeEveryBlocks);
         minPlayersInput = Integer.toString(minPlayers);
         minPlayersTimeInput = Integer.toString(minPlayersTime);
         optimalPlayersInput = Integer.toString(optimalPlayers);
@@ -589,6 +638,8 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
         commandBuilder.set("#VoidYField.Value", voidYInput);
         commandBuilder.set("#BreakDelayField.Value", breakDelayInput);
         commandBuilder.set("#BlinkDistanceField.Value", blinkDistanceInput);
+        commandBuilder.set("#BlinkStartChargesField.Value", blinkStartChargesInput);
+        commandBuilder.set("#BlinkChargeEveryBlocksField.Value", blinkChargeEveryBlocksInput);
         commandBuilder.set("#PlatformBlockIdField.Value", platformBlockIdInput == null ? "" : platformBlockIdInput);
         commandBuilder.set("#MinPlayersField.Value", minPlayersInput);
         commandBuilder.set("#MinPlayersTimeField.Value", minPlayersTimeInput);
@@ -603,6 +654,8 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
         commandBuilder.set("#VoidYCurrent.Text", "Current: " + formatDouble(voidY));
         commandBuilder.set("#BreakDelayCurrent.Text", "Current: " + formatDouble(breakDelay) + "s");
         commandBuilder.set("#BlinkDistanceCurrent.Text", "Current: " + blinkDistance + " blocks");
+        commandBuilder.set("#BlinkChargeSettingsCurrent.Text", "Current: start " + blinkStartCharges
+                + ", +1 every " + blinkChargeEveryBlocks + " blocks");
         commandBuilder.set("#AutoStartCurrent.Text", "Current: min " + minPlayers + " -> " + minPlayersTime
                 + "s, optimal " + optimalPlayers + " -> " + optimalPlayersTime + "s");
         commandBuilder.set("#Pos1Value.Text", "Pos1: " + formatSelection(selection != null ? selection.pos1 : null));
@@ -693,6 +746,8 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
         static final String KEY_VOID_Y = "@VoidY";
         static final String KEY_BREAK_DELAY = "@BreakDelay";
         static final String KEY_BLINK_DISTANCE = "@BlinkDistance";
+        static final String KEY_BLINK_START_CHARGES = "@BlinkStartCharges";
+        static final String KEY_BLINK_CHARGE_EVERY_BLOCKS = "@BlinkChargeEveryBlocks";
         static final String KEY_PLATFORM_BLOCK_ID = "@PlatformBlockId";
         static final String KEY_MIN_PLAYERS = "@MinPlayers";
         static final String KEY_MIN_PLAYERS_TIME = "@MinPlayersTime";
@@ -712,6 +767,10 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
                         (data, value) -> data.breakDelay = value, data -> data.breakDelay)
                 .addField(new KeyedCodec<>(KEY_BLINK_DISTANCE, Codec.STRING),
                         (data, value) -> data.blinkDistance = value, data -> data.blinkDistance)
+                .addField(new KeyedCodec<>(KEY_BLINK_START_CHARGES, Codec.STRING),
+                        (data, value) -> data.blinkStartCharges = value, data -> data.blinkStartCharges)
+                .addField(new KeyedCodec<>(KEY_BLINK_CHARGE_EVERY_BLOCKS, Codec.STRING),
+                        (data, value) -> data.blinkChargeEveryBlocks = value, data -> data.blinkChargeEveryBlocks)
                 .addField(new KeyedCodec<>(KEY_PLATFORM_BLOCK_ID, Codec.STRING),
                         (data, value) -> data.platformBlockId = value, data -> data.platformBlockId)
                 .addField(new KeyedCodec<>(KEY_MIN_PLAYERS, Codec.STRING),
@@ -730,6 +789,8 @@ public class RunOrFallAdminPage extends InteractiveCustomUIPage<RunOrFallAdminPa
         private String voidY;
         private String breakDelay;
         private String blinkDistance;
+        private String blinkStartCharges;
+        private String blinkChargeEveryBlocks;
         private String platformBlockId;
         private String minPlayers;
         private String minPlayersTime;

@@ -39,8 +39,6 @@ public class RunOrFallGameManager {
     private static final long GAME_TICK_MS = 50L;
     private static final long START_BLOCK_BREAK_GRACE_MS = 3000L;
     private static final double PLAYER_FOOTPRINT_RADIUS = 0.37d;
-    private static final int STARTING_BLINK_CHARGES = 1;
-    private static final int BLOCKS_PER_EXTRA_BLINK = 100;
 
     private enum GameState {
         IDLE,
@@ -425,6 +423,7 @@ public class RunOrFallGameManager {
         }
         RunOrFallConfig config = configStore.snapshot();
         activeRoundConfig = config;
+        int startingBlinkCharges = resolveBlinkStartCharges(config);
         RunOrFallMapConfig selectedMap = resolveSelectedMap(config);
         if (selectedMap == null) {
             state = GameState.IDLE;
@@ -466,7 +465,7 @@ public class RunOrFallGameManager {
         roundStartTimesMs.clear();
         for (UUID onlinePlayerId : onlinePlayers) {
             roundStartTimesMs.put(onlinePlayerId, roundStartMs);
-            blinkChargesByPlayer.put(onlinePlayerId, STARTING_BLINK_CHARGES);
+            blinkChargesByPlayer.put(onlinePlayerId, startingBlinkCharges);
         }
         soloTestRound = countdownRequiredPlayers == 1 && onlinePlayers.size() == 1;
         pendingBlocks.clear();
@@ -486,7 +485,7 @@ public class RunOrFallGameManager {
         for (UUID onlinePlayerId : onlinePlayers) {
             refreshPlayerHotbar(onlinePlayerId);
             updateBrokenBlocksHudForPlayer(onlinePlayerId, 0);
-            updateBlinkChargesHudForPlayer(onlinePlayerId, STARTING_BLINK_CHARGES);
+            updateBlinkChargesHudForPlayer(onlinePlayerId, startingBlinkCharges);
         }
         gameTickTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleAtFixedRate(
                 () -> dispatchToWorld(this::tickGameInternal),
@@ -869,6 +868,16 @@ public class RunOrFallGameManager {
         return settings;
     }
 
+    private int resolveBlinkStartCharges(RunOrFallConfig config) {
+        int configured = config != null ? config.blinkStartCharges : configStore.getBlinkStartCharges();
+        return Math.max(0, configured);
+    }
+
+    private int resolveBlinkChargeEveryBlocksBroken(RunOrFallConfig config) {
+        int configured = config != null ? config.blinkChargeEveryBlocksBroken : configStore.getBlinkChargeEveryBlocksBroken();
+        return Math.max(1, configured);
+    }
+
     private static RunOrFallMapConfig resolveSelectedMap(RunOrFallConfig config) {
         if (config == null || config.maps == null || config.maps.isEmpty()) {
             return null;
@@ -1048,13 +1057,14 @@ public class RunOrFallGameManager {
         int nextCount = previousCount + 1;
         brokenBlocksByPlayer.put(playerId, nextCount);
         updateBrokenBlocksHudForPlayer(playerId, nextCount);
-        int rewardsBefore = previousCount / BLOCKS_PER_EXTRA_BLINK;
-        int rewardsAfter = nextCount / BLOCKS_PER_EXTRA_BLINK;
+        int blocksPerExtraBlink = resolveBlinkChargeEveryBlocksBroken(activeRoundConfig);
+        int rewardsBefore = previousCount / blocksPerExtraBlink;
+        int rewardsAfter = nextCount / blocksPerExtraBlink;
         int rewardedCharges = Math.max(0, rewardsAfter - rewardsBefore);
         if (rewardedCharges <= 0) {
             return;
         }
-        int reachedMilestoneBlocks = rewardsAfter * BLOCKS_PER_EXTRA_BLINK;
+        int reachedMilestoneBlocks = rewardsAfter * blocksPerExtraBlink;
         int nextCharges = Math.max(0, blinkChargesByPlayer.getOrDefault(playerId, 0)) + rewardedCharges;
         blinkChargesByPlayer.put(playerId, nextCharges);
         updateBlinkChargesHudForPlayer(playerId, nextCharges);
