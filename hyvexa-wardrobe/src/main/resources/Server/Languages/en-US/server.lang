@@ -5,8 +5,6 @@ hyvexa.wardrobe.cosmetics.Badge_Hyvexa.description = A test badge for Hyvexa
 
 # Violet wardrobe pack
 violet.wardrobe.slot.badges.name = Badge
-violet.wardrobe.cosmetics.badges.Hypixel.name = Hypixel Badge
-violet.wardrobe.cosmetics.badges.Kweebec.name = Kweebec Badge
 violet.wardrobe.cosmetics.badges.Pride.name = Pride Badge
 violet.wardrobe.cosmetics.capes.Cloak_Chippy.name = Chippy's Cloak
 violet.wardrobe.cosmetics.capes.Cloak_Snifferish.name = Snifferish's Cloak
@@ -26,7 +24,6 @@ violet.wardrobe.cosmetics.headaccessories.Mushroom_Hat.name = Mushroom Hat
 violet.wardrobe.cosmetics.headaccessories.Tiefling_Horns.name = Tiefling Horns
 violet.wardrobe.cosmetics.headaccessories.Ram_Horns.name = Ram Horns
 violet.wardrobe.cosmetics.headaccessories.Devil_Horns.name = Devil Horns
-violet.wardrobe.cosmetics.headaccessories.Dragonfly_Hairclip.name = Dragonfly Hairclip
 violet.wardrobe.cosmetics.headaccessories.Butterfly_Hairclip.name = Butterfly Hairclip
 violet.wardrobe.cosmetics.headaccessories.Heart_Hairclip.name = Heart Hairclip
 violet.wardrobe.cosmetics.headaccessories.Bee_Hairclip.name = Bee Hairclip
@@ -223,14 +220,7 @@ items.HayHay_Head_Ram_Mask.name = Ram Mask
 items.HayHay_Head_Undead_Pig_Mask.name = Undead Pig Mask
 items.HayHay_Head_Pig_Wild_Mask.name = Wild Pig Mask
 items.HayHay_Head_Kweebec_Sapling_Mask.name = Kweebec Sapling Mask
-items.HayHay_Head_Kweebec_Sapling_Brown_Mask.description = A brown kweebec sapling mask
-items.HayHay_Head_Kweebec_Sapling_Yellow_Mask.description = A yellow kweebec sapling mask
 items.HayHay_Head_Kweebec_Sapling_Pink_Mask.description = A pink kweebec sapling mask
-items.HayHay_Head_Kweebec_Sapling_Dark_Brown_Mask.description = A dark brown kweebec sapling mask
-items.HayHay_Head_Kweebec_Sapling_Green_Mask.description = A green kweebec sapling mask
-items.HayHay_Head_Kweebec_Sapling_Red_Mask.description = A red kweebec sapling mask
 items.HayHay_Head_Kweebec_Sapling_Orange_Mask.description = An orange kweebec sapling mask
 items.HayHay_Head_Klops_Mask.name = Klops Mask
 items.HayHay_Head_Klops_Mask.description = A green klops mask
-items.HayHay_Head_Klops_Orange_Mask.description = An orange klops mask
-
