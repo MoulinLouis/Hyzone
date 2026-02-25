@@ -16,6 +16,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.util.ModeGate;
 import io.hyvexa.runorfall.HyvexaRunOrFallPlugin;
+import io.hyvexa.runorfall.manager.RunOrFallGameManager;
 import io.hyvexa.runorfall.util.RunOrFallUtils;
 
 import javax.annotation.Nonnull;
@@ -49,7 +50,8 @@ public class RunOrFallBlinkInteraction extends SimpleInteraction {
                        @Nonnull InteractionType type, @Nonnull InteractionContext interactionContext) {
         super.handle(ref, firstRun, time, type, interactionContext);
         HyvexaRunOrFallPlugin plugin = HyvexaRunOrFallPlugin.getInstance();
-        if (plugin == null || plugin.getGameManager() == null) {
+        RunOrFallGameManager gameManager = plugin != null ? plugin.getGameManager() : null;
+        if (plugin == null || gameManager == null) {
             return;
         }
         Store<EntityStore> store = ref.getStore();
@@ -60,16 +62,16 @@ public class RunOrFallBlinkInteraction extends SimpleInteraction {
         }
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         UUID playerId = playerRef != null ? playerRef.getUuid() : null;
-        if (playerId == null || !plugin.getGameManager().isInActiveRound(playerId)) {
+        if (playerId == null || !gameManager.isInActiveRound(playerId)) {
             return;
         }
-        int blinkDistanceBlocks = plugin.getGameManager().getBlinkDistanceBlocks();
+        int blinkDistanceBlocks = gameManager.getBlinkDistanceBlocks();
 
-        CompletableFuture.runAsync(() -> performBlink(ref, store, playerRef, world, blinkDistanceBlocks), world);
+        CompletableFuture.runAsync(() -> performBlink(ref, store, playerRef, world, gameManager, blinkDistanceBlocks), world);
     }
 
     private void performBlink(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef,
-                              World world, int blinkDistanceBlocks) {
+                              World world, RunOrFallGameManager gameManager, int blinkDistanceBlocks) {
         if (ref == null || !ref.isValid() || store == null || playerRef == null || world == null) {
             return;
         }
@@ -99,7 +101,7 @@ public class RunOrFallBlinkInteraction extends SimpleInteraction {
                 targetY,
                 origin.getZ() + (dirZ * blinkDistance)
         );
-        Vector3d safeTarget = resolveSafeBlinkTarget(world, origin, target);
+        Vector3d safeTarget = resolveSafeBlinkTarget(world, origin, target, gameManager);
         if (safeTarget == null || distanceSq(origin, safeTarget) <= MIN_BLINK_DISTANCE_SQ) {
             return;
         }
@@ -109,7 +111,8 @@ public class RunOrFallBlinkInteraction extends SimpleInteraction {
         store.addComponent(ref, Teleport.getComponentType(), new Teleport(world, safeTarget, rotation));
     }
 
-    private Vector3d resolveSafeBlinkTarget(World world, Vector3d origin, Vector3d requestedTarget) {
+    private Vector3d resolveSafeBlinkTarget(World world, Vector3d origin, Vector3d requestedTarget,
+                                            RunOrFallGameManager gameManager) {
         if (world == null || origin == null || requestedTarget == null) {
             return null;
         }
@@ -133,7 +136,7 @@ public class RunOrFallBlinkInteraction extends SimpleInteraction {
                     origin.getY() + (stepY * length),
                     origin.getZ() + (stepZ * length)
             );
-            if (isBlockedAt(world, probe)) {
+            if (isBlockedAt(world, probe, gameManager)) {
                 break;
             }
             lastFree = probe;
@@ -141,7 +144,7 @@ public class RunOrFallBlinkInteraction extends SimpleInteraction {
         return lastFree;
     }
 
-    private boolean isBlockedAt(World world, Vector3d position) {
+    private boolean isBlockedAt(World world, Vector3d position, RunOrFallGameManager gameManager) {
         if (world == null || position == null) {
             return true;
         }
@@ -153,7 +156,7 @@ public class RunOrFallBlinkInteraction extends SimpleInteraction {
             for (double yOffset : BLINK_HEIGHT_OFFSETS) {
                 int blockY = (int) Math.floor(position.getY() + yOffset);
                 Integer blockId = RunOrFallUtils.readBlockId(world, blockX, blockY, blockZ);
-                if (isSolid(blockId)) {
+                if (isSolid(blockId, gameManager, blockX, blockY, blockZ)) {
                     return true;
                 }
             }
@@ -161,8 +164,17 @@ public class RunOrFallBlinkInteraction extends SimpleInteraction {
         return false;
     }
 
-    private boolean isSolid(Integer blockId) {
-        return blockId == null || blockId != RunOrFallUtils.AIR_BLOCK_ID;
+    private boolean isSolid(Integer blockId, RunOrFallGameManager gameManager, int blockX, int blockY, int blockZ) {
+        if (blockId == null) {
+            return true;
+        }
+        if (blockId == RunOrFallUtils.AIR_BLOCK_ID) {
+            return false;
+        }
+        if (gameManager != null && gameManager.canBlinkPassThrough(blockX, blockY, blockZ, blockId)) {
+            return false;
+        }
+        return true;
     }
 
     private static double distanceSq(Vector3d a, Vector3d b) {
