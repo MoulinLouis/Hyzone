@@ -3,7 +3,7 @@ package io.hyvexa.core.wardrobe;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.permissions.PermissionsModule;
 import io.hyvexa.core.cosmetic.CosmeticStore;
-import io.hyvexa.core.economy.VexaStore;
+import io.hyvexa.core.economy.CurrencyBridge;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -65,28 +65,36 @@ public class WardrobeBridge {
     }
 
     /**
-     * Purchase a wardrobe cosmetic: deduct vexa, record ownership, grant permission.
+     * Purchase a wardrobe cosmetic: deduct currency, record ownership, grant permission.
+     * Uses CosmeticShopConfigStore for price/currency and CurrencyBridge for deduction.
      * Returns a result message for the player.
      */
     public String purchase(UUID playerId, String cosmeticId) {
         WardrobeCosmeticDef def = findById(cosmeticId);
         if (def == null) return "Unknown cosmetic: " + cosmeticId;
 
+        CosmeticShopConfigStore configStore = CosmeticShopConfigStore.getInstance();
+        if (!configStore.isAvailable(cosmeticId)) {
+            return "This cosmetic is not currently available for purchase.";
+        }
+
         if (CosmeticStore.getInstance().ownsCosmetic(playerId, cosmeticId)) {
             return "You already own " + def.displayName() + "!";
         }
 
-        long vexa = VexaStore.getInstance().getVexa(playerId);
-        if (vexa < def.price()) {
-            return "Not enough vexa! You need " + def.price() + " but have " + vexa + ".";
+        int price = configStore.getPrice(cosmeticId);
+        String currency = configStore.getCurrency(cosmeticId);
+        long balance = CurrencyBridge.getBalance(currency, playerId);
+        if (balance < price) {
+            return "Not enough " + currency + "! You need " + price + " but have " + balance + ".";
         }
 
-        VexaStore.getInstance().removeVexa(playerId, def.price());
+        CurrencyBridge.deduct(currency, playerId, price);
         CosmeticStore.getInstance().purchaseCosmetic(playerId, cosmeticId);
         grantPermission(playerId, def.permissionNode());
 
         LOGGER.atInfo().log("Player " + playerId + " purchased wardrobe cosmetic: " + cosmeticId);
-        return "Purchased " + def.displayName() + " for " + def.price() + " vexa! Open /wardrobe to equip it.";
+        return "Purchased " + def.displayName() + " for " + price + " " + currency + "! Open /wardrobe to equip it.";
     }
 
     /**

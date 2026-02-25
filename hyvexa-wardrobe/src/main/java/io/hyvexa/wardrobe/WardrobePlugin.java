@@ -15,6 +15,7 @@ import io.hyvexa.core.cosmetic.CosmeticManager;
 import io.hyvexa.core.cosmetic.CosmeticStore;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.core.economy.VexaStore;
+import io.hyvexa.core.wardrobe.CosmeticShopConfigStore;
 import io.hyvexa.core.wardrobe.WardrobeBridge;
 import io.hyvexa.wardrobe.command.ShopCommand;
 import io.hyvexa.wardrobe.command.WardrobeBuyCommand;
@@ -62,11 +63,17 @@ public class WardrobePlugin extends JavaPlugin {
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("Failed to initialize PurgeSkinStore");
         }
+        try {
+            CosmeticShopConfigStore.getInstance().initialize();
+        } catch (Exception e) {
+            LOGGER.atWarning().withCause(e).log("Failed to initialize CosmeticShopConfigStore");
+        }
 
         wardrobeShopTab = new WardrobeShopTab();
         ShopTabRegistry.register(wardrobeShopTab);
-        ShopTabRegistry.register(new CosmeticsShopTab());
+        ShopTabRegistry.register(new GlowShopTab());
         ShopTabRegistry.register(new PurgeSkinShopTab());
+        ShopTabRegistry.register(new ShopConfigTab());
 
         this.getCommandRegistry().registerCommand(new ShopCommand());
         this.getCommandRegistry().registerCommand(new WardrobeBuyCommand());
