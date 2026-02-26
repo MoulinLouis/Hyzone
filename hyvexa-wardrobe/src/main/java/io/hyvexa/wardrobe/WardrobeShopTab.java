@@ -27,9 +27,11 @@ public class WardrobeShopTab implements ShopTab {
 
     private static final String ACTION_FILTER = "Filter:";
     private static final String ACTION_BUY = "Buy:";
+    private static final String ACTION_FREE_TOGGLE = "FreeToggle";
     private static final String FILTER_ALL = "All";
 
     private final ConcurrentHashMap<UUID, String> selectedCategory = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, Boolean> freeOnly = new ConcurrentHashMap<>();
 
     @Override
     public String getId() {
@@ -87,6 +89,17 @@ public class WardrobeShopTab implements ShopTab {
             pillIndex++;
         }
 
+        // "Free" toggle checkbox
+        boolean isFreeOnly = freeOnly.getOrDefault(playerId, false);
+        cmd.append("#PillBar", "Pages/Shop_WardrobeFreeToggle.ui");
+        String freeRoot = "#PillBar[" + pillIndex + "] ";
+        if (isFreeOnly) {
+            cmd.set(freeRoot + "#FreeBox.Background", "#22c55e");
+            cmd.set(freeRoot + "#FreeLabel.Style.TextColor", "#22c55e");
+        }
+        evt.addEventBinding(CustomUIEventBindingType.Activating, freeRoot + "#FreeToggleBtn",
+                EventData.of(ButtonEventData.KEY_BUTTON, getId() + ":" + ACTION_FREE_TOGGLE), false);
+
         // Grid
         cmd.append("#TabContent", "Pages/Shop_WardrobeGrid.ui");
         List<WardrobeCosmeticDef> cosmetics = bridge.getCosmeticsByCategory(currentCategory);
@@ -96,18 +109,23 @@ public class WardrobeShopTab implements ShopTab {
         for (WardrobeCosmeticDef def : cosmetics) {
             if (!configStore.isAvailable(def.id())) continue;
 
+            String currency = configStore.getCurrency(def.id());
+            boolean isFeathers = "feathers".equals(currency);
+            if (isFreeOnly && !isFeathers) continue;
+
             boolean owned = playerId != null && CosmeticStore.getInstance().ownsCosmetic(playerId, def.id());
             int price = configStore.getPrice(def.id());
-            String currency = configStore.getCurrency(def.id());
             long balance = CurrencyBridge.getBalance(currency, playerId);
-            boolean isFeathers = "feathers".equals(currency);
 
             cmd.append("#WardrobeGrid", "Pages/Shop_WardrobeCard.ui");
             String root = "#WardrobeGrid[" + cardIndex + "] ";
 
-            // Show icon (only for cosmetics with a matching UI element)
-            if (def.iconKey() != null) {
-                cmd.set(root + "#Icon" + def.iconKey() + ".Visible", true);
+            // Icon
+            String iconAssetPath = toAssetPath(def.iconPath());
+            if (iconAssetPath != null) {
+                cmd.set(root + "#CardIcon.AssetPath", iconAssetPath);
+            } else {
+                cmd.set(root + "#CardIcon.Visible", false);
             }
 
             // Name
@@ -153,6 +171,16 @@ public class WardrobeShopTab implements ShopTab {
             return ShopTabResult.REFRESH;
         }
 
+        if (ACTION_FREE_TOGGLE.equals(button)) {
+            boolean current = freeOnly.getOrDefault(playerId, false);
+            if (current) {
+                freeOnly.remove(playerId);
+            } else {
+                freeOnly.put(playerId, true);
+            }
+            return ShopTabResult.REFRESH;
+        }
+
         if (button.startsWith(ACTION_BUY)) {
             String cosmeticId = button.substring(ACTION_BUY.length());
             return ShopTabResult.showConfirm(cosmeticId);
@@ -182,8 +210,33 @@ public class WardrobeShopTab implements ShopTab {
         return true;
     }
 
-    /** Evict per-player state on disconnect. */
+    @Override
     public void evictPlayer(UUID playerId) {
         selectedCategory.remove(playerId);
+        freeOnly.remove(playerId);
+    }
+
+    /**
+     * Normalize icon asset paths for AssetImage.AssetPath.
+     */
+    private static String toAssetPath(String iconPath) {
+        if (iconPath == null || iconPath.isBlank()) {
+            return null;
+        }
+
+        String normalized = iconPath.replace('\\', '/');
+        while (normalized.startsWith("../")) {
+            normalized = normalized.substring(3);
+        }
+
+        if (normalized.startsWith("Common/")) {
+            normalized = normalized.substring("Common/".length());
+        }
+
+        if (normalized.startsWith("Textures/")) {
+            return "UI/Custom/" + normalized;
+        }
+
+        return normalized;
     }
 }

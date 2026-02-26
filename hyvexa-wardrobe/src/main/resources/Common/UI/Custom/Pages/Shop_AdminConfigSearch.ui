@@ -1,0 +1,12 @@
+$C = "../Common.ui";
+
+Group {
+  Anchor: (Left: 0, Right: 0, Height: 34);
+  Padding: (Top: 4, Bottom: 4);
+
+  $C.@TextField #ConfigSearchField {
+    Anchor: (Left: 0, Right: 0, Height: 26);
+    Style: (FontSize: 13, TextColor: #ffffff(0.85));
+    PlaceholderText: "Search cosmetics...";
+  }
+}

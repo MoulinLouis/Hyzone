@@ -1,5 +1,8 @@
 package io.hyvexa.wardrobe.ui;
 
+import com.hypixel.hytale.codec.Codec;
+import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
@@ -23,7 +26,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-public class ShopPage extends InteractiveCustomUIPage<ButtonEventData> {
+public class ShopPage extends InteractiveCustomUIPage<ShopPage.ShopEventData> {
 
     private static final String BUTTON_CLOSE = "Close";
     private static final String BUTTON_CONFIRM = "ShopConfirm";
@@ -40,7 +43,7 @@ public class ShopPage extends InteractiveCustomUIPage<ButtonEventData> {
     private String pendingConfirmTabId;
 
     public ShopPage(@Nonnull PlayerRef playerRef, UUID playerId) {
-        super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, ButtonEventData.CODEC);
+        super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, ShopEventData.CODEC);
         this.playerId = playerId;
     }
 
@@ -85,8 +88,20 @@ public class ShopPage extends InteractiveCustomUIPage<ButtonEventData> {
 
     @Override
     public void handleDataEvent(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store,
-                                @Nonnull ButtonEventData data) {
+                                @Nonnull ShopEventData data) {
         super.handleDataEvent(ref, store, data);
+
+        // Handle search text changes (button may be null for ValueChanged events)
+        String search = data.getSearch();
+        if (search != null) {
+            ShopTab activeTab = !showingVexaPacks ? getVisibleTab(activeTabId) : null;
+            if (activeTab != null) {
+                ShopTabResult result = activeTab.handleSearch(search, playerId);
+                handleResult(result, activeTab);
+            }
+            if (data.getButton() == null) return;
+        }
+
         String button = data.getButton();
         if (button == null) return;
 
@@ -306,5 +321,27 @@ public class ShopPage extends InteractiveCustomUIPage<ButtonEventData> {
         return activeTab;
     }
 
+    public static class ShopEventData extends ButtonEventData {
+        public static final String KEY_SEARCH = "@Search";
 
+        public static final BuilderCodec<ShopEventData> CODEC =
+                BuilderCodec.<ShopEventData>builder(ShopEventData.class, ShopEventData::new)
+                        .addField(new KeyedCodec<>(KEY_BUTTON, Codec.STRING),
+                                (data, value) -> data.button = value, data -> data.button)
+                        .addField(new KeyedCodec<>(KEY_SEARCH, Codec.STRING),
+                                (data, value) -> data.search = value, data -> data.search)
+                        .build();
+
+        private String button;
+        private String search;
+
+        @Override
+        public String getButton() {
+            return button;
+        }
+
+        public String getSearch() {
+            return search;
+        }
+    }
 }
