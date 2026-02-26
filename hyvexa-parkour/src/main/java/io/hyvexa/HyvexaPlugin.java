@@ -68,6 +68,8 @@ import io.hyvexa.parkour.ghost.GhostRecorder;
 import io.hyvexa.common.ghost.GhostStore;
 import io.hyvexa.parkour.command.CheckpointCommand;
 import io.hyvexa.parkour.command.CosmeticTestCommand;
+import io.hyvexa.parkour.command.PetTestCommand;
+import io.hyvexa.parkour.pet.PetManager;
 import io.hyvexa.parkour.command.CreditsCommand;
 import io.hyvexa.parkour.command.VexaCommand;
 import io.hyvexa.parkour.command.AnalyticsCommand;
@@ -161,6 +163,7 @@ public class HyvexaPlugin extends JavaPlugin {
     private GhostStore ghostStore;
     private GhostRecorder ghostRecorder;
     private GhostNpcManager ghostNpcManager;
+    private PetManager petManager;
 
     public HyvexaPlugin(@Nonnull JavaPluginInit init) {
         super(init);
@@ -253,6 +256,8 @@ public class HyvexaPlugin extends JavaPlugin {
         this.ghostRecorder.start();
         this.ghostNpcManager = new GhostNpcManager(this.ghostStore, this.mapStore);
         this.ghostNpcManager.start();
+        this.petManager = new PetManager();
+        this.petManager.start();
         this.runTracker.setGhostRecorder(this.ghostRecorder);
         this.runTracker.setGhostNpcManager(this.ghostNpcManager);
         this.duelStatsStore = new DuelStatsStore();
@@ -317,6 +322,7 @@ public class HyvexaPlugin extends JavaPlugin {
         this.getCommandRegistry().registerCommand(new LinkCommand());
         this.getCommandRegistry().registerCommand(new UnlinkCommand());
         this.getCommandRegistry().registerCommand(new CosmeticTestCommand());
+        this.getCommandRegistry().registerCommand(new PetTestCommand());
         this.getCommandRegistry().registerCommand(new AnalyticsCommand());
         this.getCommandRegistry().registerCommand(new VoteCommand());
         this.getCommandRegistry().registerCommand(new CreditsCommand());
@@ -442,6 +448,9 @@ public class HyvexaPlugin extends JavaPlugin {
 
                 try { TrailManager.getInstance().stopTrail(playerId); }
                 catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: TrailManager"); }
+
+                try { if (petManager != null) { petManager.despawnPet(playerId); } }
+                catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: PetManager"); }
 
                 try {
                     Long sessionStart = playtimeManager.getSessionStart(playerId);
@@ -989,6 +998,9 @@ public class HyvexaPlugin extends JavaPlugin {
 
         try { if (ghostNpcManager != null) { ghostNpcManager.stop(); } }
         catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: ghostNpcManager"); }
+
+        try { if (petManager != null) { petManager.stop(); } }
+        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: petManager"); }
 
         try { if (announcementManager != null) { announcementManager.shutdown(); } }
         catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: announcementManager"); }
