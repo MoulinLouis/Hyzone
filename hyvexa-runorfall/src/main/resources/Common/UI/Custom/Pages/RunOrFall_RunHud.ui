@@ -173,26 +173,48 @@ $C.@PageOverlay {
       }
     }
 
-    Label #BrokenBlocksText {
+    Group #BrokenBlocksRow {
       Anchor: (Left: 50, Bottom: 50, Width: 420, Height: 38);
       Visible: false;
-      Style: (
-        FontSize: 34,
-        TextColor: #e7f1f4,
-        RenderBold: true
-      );
-      Text: "Blocks broken: 0";
+      LayoutMode: Left;
+
+      Group #BrokenBlocksIcon {
+        Anchor: (Width: 34, Height: 34, Top: 2);
+        Background: (TexturePath: "../Textures/blockbroken.png");
+      }
+      Group { Anchor: (Width: 8); }
+      Label #BrokenBlocksValue {
+        Anchor: (Height: 38);
+        Style: (
+          FontSize: 34,
+          TextColor: #e7f1f4,
+          RenderBold: true,
+          VerticalAlignment: Center
+        );
+        Text: "0";
+      }
     }
 
-    Label #BlinkChargesText {
+    Group #BlinkChargesRow {
       Anchor: (Left: 50, Bottom: 90, Width: 420, Height: 38);
       Visible: false;
-      Style: (
-        FontSize: 34,
-        TextColor: #e7f1f4,
-        RenderBold: true
-      );
-      Text: "Blinks: 0";
+      LayoutMode: Left;
+
+      Group #BlinkChargesIcon {
+        Anchor: (Width: 34, Height: 34, Top: 2);
+        Background: (TexturePath: "../Textures/blink.png");
+      }
+      Group { Anchor: (Width: 8); }
+      Label #BlinkChargesValue {
+        Anchor: (Height: 38);
+        Style: (
+          FontSize: 34,
+          TextColor: #e7f1f4,
+          RenderBold: true,
+          VerticalAlignment: Center
+        );
+        Text: "0";
+      }
     }
 
     Label #StartingInText {
