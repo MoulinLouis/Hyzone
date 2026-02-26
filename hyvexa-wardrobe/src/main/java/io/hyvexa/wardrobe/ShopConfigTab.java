@@ -76,8 +76,11 @@ public class ShopConfigTab implements ShopTab {
             }
 
             // Icon
-            if (def.iconPath() != null) {
-                cmd.set(root + "#ConfigIcon.Background", "(TexturePath: \"" + def.iconPath() + "\")");
+            String iconAssetPath = toAssetPath(def.iconPath());
+            if (iconAssetPath != null) {
+                cmd.set(root + "#ConfigIcon.AssetPath", iconAssetPath);
+            } else {
+                cmd.set(root + "#ConfigIcon.Visible", false);
             }
 
             // Name
@@ -137,5 +140,29 @@ public class ShopConfigTab implements ShopTab {
         }
 
         return ShopTabResult.NONE;
+    }
+
+    /**
+     * Normalize icon asset paths for AssetImage.AssetPath.
+     */
+    private static String toAssetPath(String iconPath) {
+        if (iconPath == null || iconPath.isBlank()) {
+            return null;
+        }
+
+        String normalized = iconPath.replace('\\', '/');
+        while (normalized.startsWith("../")) {
+            normalized = normalized.substring(3);
+        }
+
+        if (normalized.startsWith("Common/")) {
+            normalized = normalized.substring("Common/".length());
+        }
+
+        if (normalized.startsWith("Textures/")) {
+            return "UI/Custom/" + normalized;
+        }
+
+        return normalized;
     }
 }
