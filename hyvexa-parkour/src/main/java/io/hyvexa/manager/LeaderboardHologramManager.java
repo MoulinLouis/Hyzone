@@ -10,11 +10,11 @@ import io.hyvexa.common.util.HylogramsBridge;
 import io.hyvexa.common.util.ModeGate;
 import io.hyvexa.parkour.ParkourTimingConstants;
 import io.hyvexa.parkour.data.MapStore;
+import io.hyvexa.parkour.data.MedalStore;
 import io.hyvexa.parkour.data.ProgressStore;
 import io.hyvexa.parkour.util.ParkourUtils;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -144,38 +144,20 @@ public class LeaderboardHologramManager {
     private List<String> buildLeaderboardHologramLines() {
         List<String> lines = new ArrayList<>();
         lines.add(formatLeaderboardHeader());
-        if (progressStore == null) {
+        List<MedalStore.MedalScoreEntry> snapshot = MedalStore.getInstance().getLeaderboardSnapshot();
+        if (snapshot.isEmpty()) {
             return lines;
         }
-        Map<UUID, Integer> counts = progressStore.getMapCompletionCounts();
-        if (counts.isEmpty()) {
-            return lines;
-        }
-        List<CompletionRow> rows = buildLeaderboardRows(counts);
-        int entries = Math.min(rows.size(), ParkourTimingConstants.LEADERBOARD_HOLOGRAM_ENTRIES);
+        int entries = Math.min(snapshot.size(), ParkourTimingConstants.LEADERBOARD_HOLOGRAM_ENTRIES);
         for (int i = 0; i < entries; i++) {
-            CompletionRow row = rows.get(i);
-            String name = formatLeaderboardName(row.name);
+            MedalStore.MedalScoreEntry entry = snapshot.get(i);
+            String name = ParkourUtils.resolveName(entry.getPlayerId(), progressStore);
+            name = formatLeaderboardName(name);
             String position = formatLeaderboardPosition(i + 1);
-            String count = formatLeaderboardCount(row.count);
-            lines.add(formatLeaderboardLine(position, name, count));
+            String score = formatLeaderboardCount(entry.getTotalScore());
+            lines.add(formatLeaderboardLine(position, name, score));
         }
         return lines;
-    }
-
-    private List<CompletionRow> buildLeaderboardRows(Map<UUID, Integer> counts) {
-        List<CompletionRow> rows = new ArrayList<>(counts.size());
-        for (Map.Entry<UUID, Integer> entry : counts.entrySet()) {
-            UUID playerId = entry.getKey();
-            if (playerId == null) {
-                continue;
-            }
-            int count = entry.getValue() != null ? entry.getValue() : 0;
-            String name = ParkourUtils.resolveName(playerId, progressStore);
-            rows.add(new CompletionRow(playerId, name, count));
-        }
-        rows.sort(CompletionRow.COMPARATOR);
-        return rows;
     }
 
     public List<String> buildMapLeaderboardHologramLines(String mapId) {
@@ -235,7 +217,7 @@ public class LeaderboardHologramManager {
     }
 
     private static String formatLeaderboardHeader() {
-        return formatLeaderboardLine("Pos", "Name", "Maps");
+        return formatLeaderboardLine("Pos", "Name", "Score");
     }
 
     private static String formatLeaderboardPosition(int position) {
@@ -288,22 +270,4 @@ public class LeaderboardHologramManager {
                 safePosition, safeName, time);
     }
 
-    private static final class CompletionRow {
-        private static final Comparator<CompletionRow> COMPARATOR = Comparator
-                .comparingInt((CompletionRow row) -> row.count).reversed()
-                .thenComparing(row -> row.sortName)
-                .thenComparing(row -> row.playerId.toString());
-
-        private final UUID playerId;
-        private final String name;
-        private final String sortName;
-        private final int count;
-
-        private CompletionRow(UUID playerId, String name, int count) {
-            this.playerId = playerId;
-            this.name = name != null ? name : "";
-            this.sortName = this.name.toLowerCase(Locale.ROOT);
-            this.count = count;
-        }
-    }
 }

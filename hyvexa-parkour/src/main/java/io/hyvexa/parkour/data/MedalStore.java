@@ -9,6 +9,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Tracks which medals each player has earned per map.
@@ -21,6 +22,7 @@ public class MedalStore {
 
     // player -> mapId -> set of earned medal names
     private final ConcurrentHashMap<UUID, java.util.Map<String, Set<Medal>>> cache = new ConcurrentHashMap<>();
+    private final AtomicReference<List<MedalScoreEntry>> leaderboardSnapshot = new AtomicReference<>(List.of());
 
     private MedalStore() {
     }
@@ -49,6 +51,7 @@ public class MedalStore {
         } catch (SQLException e) {
             LOGGER.atSevere().withCause(e).log("Failed to create player_medals table");
         }
+        loadLeaderboardSnapshot();
     }
 
     public Set<Medal> getEarnedMedals(UUID playerId, String mapId) {
@@ -74,6 +77,7 @@ public class MedalStore {
         java.util.Map<String, Set<Medal>> playerMedals = ensurePlayerLoaded(playerId);
         playerMedals.computeIfAbsent(mapId, k -> EnumSet.noneOf(Medal.class)).add(medal);
         persistMedal(playerId, mapId, medal);
+        refreshLeaderboardEntry(playerId);
     }
 
     public void evictPlayer(UUID playerId) {
@@ -129,5 +133,93 @@ public class MedalStore {
         } catch (SQLException e) {
             LOGGER.atWarning().withCause(e).log("Failed to persist medal for " + playerId + " map=" + mapId);
         }
+    }
+
+    public List<MedalScoreEntry> getLeaderboardSnapshot() {
+        return leaderboardSnapshot.get();
+    }
+
+    private void loadLeaderboardSnapshot() {
+        if (!DatabaseManager.getInstance().isInitialized()) {
+            return;
+        }
+        String sql = "SELECT player_uuid, medal, COUNT(*) as cnt FROM player_medals GROUP BY player_uuid, medal";
+        java.util.Map<UUID, int[]> aggregated = new HashMap<>();
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    UUID playerId = UUID.fromString(rs.getString("player_uuid"));
+                    String medalStr = rs.getString("medal");
+                    int cnt = rs.getInt("cnt");
+                    try {
+                        Medal medal = Medal.valueOf(medalStr);
+                        int[] counts = aggregated.computeIfAbsent(playerId, k -> new int[4]);
+                        counts[medal.ordinal()] = cnt;
+                    } catch (IllegalArgumentException ignored) {
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.atWarning().withCause(e).log("Failed to load leaderboard snapshot");
+            return;
+        }
+        List<MedalScoreEntry> entries = new ArrayList<>(aggregated.size());
+        for (java.util.Map.Entry<UUID, int[]> e : aggregated.entrySet()) {
+            int[] c = e.getValue();
+            entries.add(new MedalScoreEntry(e.getKey(), c[0], c[1], c[2], c[3]));
+        }
+        entries.sort(Comparator.comparingInt(MedalScoreEntry::getTotalScore).reversed());
+        leaderboardSnapshot.set(List.copyOf(entries));
+        LOGGER.atInfo().log("Leaderboard snapshot loaded: " + entries.size() + " players");
+    }
+
+    private void refreshLeaderboardEntry(UUID playerId) {
+        java.util.Map<String, Set<Medal>> playerMedals = cache.get(playerId);
+        int[] counts = new int[4];
+        if (playerMedals != null) {
+            for (Set<Medal> medals : playerMedals.values()) {
+                for (Medal m : medals) {
+                    counts[m.ordinal()]++;
+                }
+            }
+        }
+        MedalScoreEntry updated = new MedalScoreEntry(playerId, counts[0], counts[1], counts[2], counts[3]);
+        List<MedalScoreEntry> current = new ArrayList<>(leaderboardSnapshot.get());
+        current.removeIf(e -> e.getPlayerId().equals(playerId));
+        if (updated.getTotalScore() > 0) {
+            current.add(updated);
+        }
+        current.sort(Comparator.comparingInt(MedalScoreEntry::getTotalScore).reversed());
+        leaderboardSnapshot.set(List.copyOf(current));
+    }
+
+    public static class MedalScoreEntry {
+        private final UUID playerId;
+        private final int bronzeCount;
+        private final int silverCount;
+        private final int goldCount;
+        private final int authorCount;
+        private final int totalScore;
+
+        public MedalScoreEntry(UUID playerId, int bronzeCount, int silverCount, int goldCount, int authorCount) {
+            this.playerId = playerId;
+            this.bronzeCount = bronzeCount;
+            this.silverCount = silverCount;
+            this.goldCount = goldCount;
+            this.authorCount = authorCount;
+            this.totalScore = bronzeCount * Medal.BRONZE.getPoints()
+                    + silverCount * Medal.SILVER.getPoints()
+                    + goldCount * Medal.GOLD.getPoints()
+                    + authorCount * Medal.AUTHOR.getPoints();
+        }
+
+        public UUID getPlayerId() { return playerId; }
+        public int getBronzeCount() { return bronzeCount; }
+        public int getSilverCount() { return silverCount; }
+        public int getGoldCount() { return goldCount; }
+        public int getAuthorCount() { return authorCount; }
+        public int getTotalScore() { return totalScore; }
     }
 }

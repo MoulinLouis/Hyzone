@@ -1,17 +1,19 @@
 package io.hyvexa.parkour.data;
 
 public enum Medal {
-    BRONZE("#cd7f32", "Sword_Signature_Status"),
-    SILVER("#c0c0c0", "Drop_Epic"),
-    GOLD("#ffd700", "Drop_Legendary"),
-    AUTHOR("#50C878", "Crown_Gold");
+    BRONZE("#cd7f32", "Sword_Signature_Status", 1),
+    SILVER("#c0c0c0", "Drop_Epic", 2),
+    GOLD("#ffd700", "Drop_Legendary", 3),
+    AUTHOR("#50C878", "Crown_Gold", 4);
 
     private final String color;
     private final String effectId;
+    private final int points;
 
-    Medal(String color, String effectId) {
+    Medal(String color, String effectId, int points) {
         this.color = color;
         this.effectId = effectId;
+        this.points = points;
     }
 
     public String getColor() {
@@ -20,6 +22,10 @@ public enum Medal {
 
     public String getEffectId() {
         return effectId;
+    }
+
+    public int getPoints() {
+        return points;
     }
 
     public Long getThreshold(Map map) {
