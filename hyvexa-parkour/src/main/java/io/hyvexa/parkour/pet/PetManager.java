@@ -13,11 +13,13 @@ import com.hypixel.hytale.server.core.modules.entity.component.EntityScaleCompon
 import com.hypixel.hytale.server.core.modules.entity.component.Invulnerable;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
+import com.hypixel.hytale.server.core.entity.AnimationUtils;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.NPCPlugin;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
+import com.hypixel.hytale.protocol.AnimationSlot;
 
 import java.util.List;
 import java.util.UUID;
@@ -34,8 +36,18 @@ public class PetManager {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final long TICK_INTERVAL_MS = 50;
     private static final double FOLLOW_DISTANCE = 2.0;
+    private static final double FOLLOW_TOLERANCE = 0.35;
     private static final double TELEPORT_SNAP_DISTANCE = 15.0;
-    private static final float ROTATION_LERP_FACTOR = 0.15f;
+    private static final double FOLLOW_MOVE_FACTOR = 0.35;
+    private static final double MIN_MOVE_STEP = 0.08;
+    private static final double MAX_MOVE_STEP = 0.45;
+    private static final double MAX_VERTICAL_STEP = 0.45;
+    private static final double TELEPORT_MOVE_EPSILON = 0.02;
+    private static final float IDLE_ROTATION_EPSILON_DEGREES = 0.2f;
+    private static final long ROTATION_LOG_INTERVAL_MS = 800L;
+    private static final float ROTATION_SPIKE_DELTA_DEGREES = 120.0f;
+    private static final boolean ROTATION_DEBUG_LOGS = false;
+    private static final long IDLE_MOVEMENT_STOP_REFRESH_MS = 200L;
 
     private static PetManager instance;
 
@@ -241,46 +253,63 @@ public class PetManager {
 
                 Vector3d playerPos = playerTransform.getPosition();
                 Vector3d petPos = petTransform.getPosition();
-                double distance = playerPos.distanceTo(petPos);
+                double toPlayerDx = playerPos.getX() - petPos.getX();
+                double toPlayerDz = playerPos.getZ() - petPos.getZ();
+                double horizontalDistance = Math.sqrt(toPlayerDx * toPlayerDx + toPlayerDz * toPlayerDz);
+                double yDelta = playerPos.getY() - petPos.getY();
 
-                // Don't move if already within follow range
-                if (distance <= FOLLOW_DISTANCE) return;
+                double targetX = petPos.getX();
+                double targetY = petPos.getY();
+                double targetZ = petPos.getZ();
 
-                // Lerp directly toward the player — the lag naturally creates trailing
-                Vector3d targetPos;
-                if (distance > TELEPORT_SNAP_DISTANCE) {
-                    // Snap: teleport to FOLLOW_DISTANCE from player
-                    double dx = playerPos.getX() - petPos.getX();
-                    double dz = playerPos.getZ() - petPos.getZ();
-                    double hDist = Math.sqrt(dx * dx + dz * dz);
-                    double dirX = hDist > 0.01 ? dx / hDist : 0;
-                    double dirZ = hDist > 0.01 ? dz / hDist : 1;
-                    targetPos = new Vector3d(
-                        playerPos.getX() - dirX * FOLLOW_DISTANCE,
-                        playerPos.getY(),
-                        playerPos.getZ() - dirZ * FOLLOW_DISTANCE
-                    );
+                if (horizontalDistance > TELEPORT_SNAP_DISTANCE) {
+                    double dirX = horizontalDistance > 0.001 ? toPlayerDx / horizontalDistance : 0.0;
+                    double dirZ = horizontalDistance > 0.001 ? toPlayerDz / horizontalDistance : 1.0;
+                    targetX = playerPos.getX() - dirX * FOLLOW_DISTANCE;
+                    targetY = playerPos.getY();
+                    targetZ = playerPos.getZ() - dirZ * FOLLOW_DISTANCE;
                 } else {
-                    double lerpFactor = Math.min(0.25, distance / 10.0);
-                    targetPos = new Vector3d(
-                        petPos.getX() + (playerPos.getX() - petPos.getX()) * lerpFactor,
-                        petPos.getY() + (playerPos.getY() - petPos.getY()) * lerpFactor,
-                        petPos.getZ() + (playerPos.getZ() - petPos.getZ()) * lerpFactor
-                    );
+                    if (horizontalDistance > FOLLOW_DISTANCE + FOLLOW_TOLERANCE) {
+                        double dirX = horizontalDistance > 0.001 ? toPlayerDx / horizontalDistance : 0.0;
+                        double dirZ = horizontalDistance > 0.001 ? toPlayerDz / horizontalDistance : 1.0;
+                        double moveStep = Math.min(MAX_MOVE_STEP,
+                            Math.max(MIN_MOVE_STEP, (horizontalDistance - FOLLOW_DISTANCE) * FOLLOW_MOVE_FACTOR));
+                        targetX = petPos.getX() + dirX * moveStep;
+                        targetZ = petPos.getZ() + dirZ * moveStep;
+                    }
+                    if (Math.abs(yDelta) > 0.2) {
+                        targetY = petPos.getY() + clamp(yDelta, -MAX_VERTICAL_STEP, MAX_VERTICAL_STEP);
+                    }
                 }
 
-                // Face direction of movement (not toward player)
-                double moveDx = targetPos.getX() - petPos.getX();
-                double moveDz = targetPos.getZ() - petPos.getZ();
-                double moveDist = Math.sqrt(moveDx * moveDx + moveDz * moveDz);
-
-                if (moveDist > 0.01) {
-                    float targetYaw = (float) Math.toDegrees(Math.atan2(moveDx, moveDz));
-                    float yawDelta = targetYaw - state.currentYaw;
-                    while (yawDelta > 180f) yawDelta -= 360f;
-                    while (yawDelta < -180f) yawDelta += 360f;
-                    state.currentYaw += yawDelta * ROTATION_LERP_FACTOR;
+                Vector3d targetPos = new Vector3d(targetX, targetY, targetZ);
+                double moveDx = targetX - petPos.getX();
+                double moveDy = targetY - petPos.getY();
+                double moveDz = targetZ - petPos.getZ();
+                double moveDistance = Math.sqrt(moveDx * moveDx + moveDy * moveDy + moveDz * moveDz);
+                // Always face the owner player position.
+                float previousYaw = normalizeYawSigned(state.currentYaw);
+                float targetYawWrapped = previousYaw;
+                if (horizontalDistance > 0.001) {
+                    targetYawWrapped = normalizeYawSigned((float) Math.toDegrees(Math.atan2(toPlayerDx, toPlayerDz)));
                 }
+                float yawDelta = angleDeltaDegrees(targetYawWrapped, previousYaw);
+                state.currentYaw = targetYawWrapped;
+
+                boolean rotatedInPlace = Math.abs(yawDelta) > IDLE_ROTATION_EPSILON_DEGREES;
+                if (moveDistance <= TELEPORT_MOVE_EPSILON) {
+                    // Keep pet fully idle when no positional motion is needed.
+                    forceIdleMovementStop(state, entityRef, store, rotatedInPlace);
+                    if (!rotatedInPlace) {
+                        return;
+                    }
+                    maybeLogRotation(state, previousYaw, targetYawWrapped, yawDelta, horizontalDistance);
+                    store.addComponent(entityRef, Teleport.getComponentType(),
+                        new Teleport(world, petPos, new Vector3f(0, state.currentYaw, 0)));
+                    return;
+                }
+                clearIdleMovementStop(state, entityRef, store);
+                maybeLogRotation(state, previousYaw, targetYawWrapped, yawDelta, horizontalDistance);
 
                 store.addComponent(entityRef, Teleport.getComponentType(),
                     new Teleport(world, targetPos, new Vector3f(0, state.currentYaw, 0)));
@@ -338,6 +367,83 @@ public class PetManager {
         return null;
     }
 
+    private static double clamp(double value, double min, double max) {
+        return Math.max(min, Math.min(max, value));
+    }
+
+    private static float angleDeltaDegrees(float targetYaw, float currentYaw) {
+        return normalizeYawSigned(targetYaw - currentYaw);
+    }
+
+    private static float normalizeYawSigned(float yaw) {
+        float normalized = yaw % 360f;
+        if (normalized > 180f) normalized -= 360f;
+        if (normalized < -180f) normalized += 360f;
+        return normalized;
+    }
+
+    private void forceIdleMovementStop(PetState state, Ref<EntityStore> entityRef, Store<EntityStore> store,
+                                       boolean bypassThrottle) {
+        if (entityRef == null || !entityRef.isValid() || store == null) {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        if (!bypassThrottle
+            && state.idleMovementStopForced
+            && now - state.lastIdleMovementStopApplyMs < IDLE_MOVEMENT_STOP_REFRESH_MS) {
+            return;
+        }
+        try {
+            AnimationUtils.stopAnimation(entityRef, AnimationSlot.Movement, store);
+            state.idleMovementStopForced = true;
+            state.lastIdleMovementStopApplyMs = now;
+        } catch (Exception e) {
+            LOGGER.atWarning().log("Failed to force pet movement-stop animation: " + e.getMessage());
+        }
+    }
+
+    private void clearIdleMovementStop(PetState state, Ref<EntityStore> entityRef, Store<EntityStore> store) {
+        if (!state.idleMovementStopForced || entityRef == null || !entityRef.isValid() || store == null) {
+            return;
+        }
+        try {
+            AnimationUtils.stopAnimation(entityRef, AnimationSlot.Movement, store);
+            state.idleMovementStopForced = false;
+            state.lastIdleMovementStopApplyMs = 0L;
+        } catch (Exception e) {
+            LOGGER.atWarning().log("Failed to clear pet movement-stop animation: " + e.getMessage());
+        }
+    }
+
+    private void maybeLogRotation(PetState state, float previousYaw, float targetYaw, float yawDelta,
+                                  double horizontalDistance) {
+        if (!ROTATION_DEBUG_LOGS) {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        boolean spike = Math.abs(yawDelta) >= ROTATION_SPIKE_DELTA_DEGREES;
+        if (!spike && now - state.lastRotationLogMs < ROTATION_LOG_INTERVAL_MS) {
+            return;
+        }
+        state.lastRotationLogMs = now;
+        LOGGER.atInfo().log(String.format(
+            "PetRot owner=%s yawPrev=%.1f yawNow=%.1f yawTarget=%.1f delta=%.1f dist=%.2f%s",
+            shortOwner(state.ownerId),
+            previousYaw,
+            state.currentYaw,
+            targetYaw,
+            yawDelta,
+            horizontalDistance,
+            spike ? " spike=true" : ""
+        ));
+    }
+
+    private static String shortOwner(UUID ownerId) {
+        if (ownerId == null) return "null";
+        String value = ownerId.toString();
+        return value.length() <= 8 ? value : value.substring(0, 8);
+    }
+
     // --- State ---
 
     public static class PetState {
@@ -348,6 +454,9 @@ public class PetManager {
         public volatile String npcType;
         public volatile float scale;
         public volatile float currentYaw;
+        public volatile long lastRotationLogMs;
+        public volatile long lastIdleMovementStopApplyMs;
+        public volatile boolean idleMovementStopForced;
 
         PetState(UUID ownerId, String worldName, String npcType, float scale) {
             this.ownerId = ownerId;
