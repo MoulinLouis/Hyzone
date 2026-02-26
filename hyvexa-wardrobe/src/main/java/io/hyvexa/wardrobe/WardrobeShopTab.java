@@ -105,8 +105,10 @@ public class WardrobeShopTab implements ShopTab {
             cmd.append("#WardrobeGrid", "Pages/Shop_WardrobeCard.ui");
             String root = "#WardrobeGrid[" + cardIndex + "] ";
 
-            // Show icon
-            cmd.set(root + "#Icon" + def.iconKey() + ".Visible", true);
+            // Show icon (only for cosmetics with a matching UI element)
+            if (def.iconKey() != null) {
+                cmd.set(root + "#Icon" + def.iconKey() + ".Visible", true);
+            }
 
             // Name
             cmd.set(root + "#CardName.Text", def.displayName());
