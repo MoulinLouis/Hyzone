@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Changed
+- **Parkour: Global leaderboard ranked by medal score** - Global leaderboard now ranks players by medal points (Bronze=1, Silver=2, Gold=3, Author=4) instead of map completions. Each row shows individual medal counts and total score.
 - **Wardrobe: Centralized cosmetics hub** - Moved all 3 shop tabs (Cosmetics, Weapon Skins, Wardrobe) into wardrobe module so `/shop` shows them all. CosmeticManager and PurgeSkin data classes moved to core for cross-module access.
 - **Trails: movement-gated emission** - Active trails now emit particles only while the player is moving, so equipped trails stay visually off when idle.
 
@@ -93,6 +94,7 @@
 - **RunOrFall: My Stats item routing** - `Food_Candy_Cane` now opens RunOrFall Stats when used in the RunOrFall world (instead of Parkour Stats).
 - **RunOrFall: /rof status permission** - `/rof status` is now restricted to OP/admin users.
 - **Parkour: Fly-zone warning now only applies with practice fly enabled** - The "You don't have the right to go there." rollback protection no longer triggers when practice is enabled but fly is OFF.
+- **Parkour: Pet follow rotation + idle/walk behavior** - `/pet spawn` companions now always orient toward their owner player position, and refresh a Movement-slot stop override while idle so walk no longer sticks when stationary.
 - **Purge: Deep-dive stability pass** - Fixed spawn/end race leaks, moved session teardown entity/inventory mutations onto world thread cleanup, replaced unsupported upgrade-card accent runtime background writes with visibility variants, added world-transfer HUD/loadout reconciliation, batched per-tick world work, improved purge error observability, and cleaned dead code/resources.
 - **Purge: Session and wave edge-case hardening** - Wave clear now requires successful spawns (except explicit zero-zombie waves), wipe/clear transitions run after world-thread death processing, `/purge start` now enforces party leader-only launch, and instance release waits for player + zombie cleanup futures with timeout fallback logging.
 - **Purge: Idle hotbar slot correctness on world entry** - Purge idle loadout now validates expected item IDs per slot and replaces mismatches, so slot `0` consistently restores the blue start orb after hub transfer.

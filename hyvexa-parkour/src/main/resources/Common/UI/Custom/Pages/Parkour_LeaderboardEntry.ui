@@ -2,27 +2,29 @@ $C = "../Common.ui";
 
 Group {
   LayoutMode: Left;
-  Anchor: (Left: 0, Right: 0, Bottom: 6, Height: 44);
+  Anchor: (Left: 0, Right: 0, Top: 4, Height: 44);
   Background: #1a2530(0.95);
+  OutlineColor: #ffffff(0.03);
+  OutlineSize: 1;
 
   Group #AccentBar {
-    Anchor: (Width: 8, Top: 0, Bottom: 0);
+    Anchor: (Width: 4, Top: 0, Bottom: 0);
     Background: #9fb0ba;
   }
 
   Group #ContentRow {
     FlexWeight: 1;
-    Padding: (Left: 12, Right: 12, Top: 12);
+    Padding: (Left: 14, Right: 14, Top: 12);
     LayoutMode: Left;
 
     Label #Rank {
-      Anchor: (Width: 46);
+      Anchor: (Width: 50);
       Style: (
         FontSize: 14,
         RenderBold: true,
         TextColor: #f0f4f8
       );
-      Text: "1";
+      Text: "#1";
     }
 
     Label #PlayerName {
@@ -34,14 +36,34 @@ Group {
       Text: "Player";
     }
 
-    Label #Completion {
-      Anchor: (Width: 76, Right: 0);
-      Style: (
-        FontSize: 13,
-        RenderBold: true,
-        TextColor: #9fb0ba
-      );
-      Text: "0/0";
+    Label #BronzeCount {
+      Anchor: (Width: 34);
+      Style: (FontSize: 12, TextColor: #cd7f32, HorizontalAlignment: Center);
+      Text: "0";
+    }
+
+    Label #SilverCount {
+      Anchor: (Width: 34);
+      Style: (FontSize: 12, TextColor: #c0c0c0, HorizontalAlignment: Center);
+      Text: "0";
+    }
+
+    Label #GoldCount {
+      Anchor: (Width: 34);
+      Style: (FontSize: 12, TextColor: #ffd700, HorizontalAlignment: Center);
+      Text: "0";
+    }
+
+    Label #AuthorCount {
+      Anchor: (Width: 34);
+      Style: (FontSize: 12, TextColor: #50C878, HorizontalAlignment: Center);
+      Text: "0";
+    }
+
+    Label #TotalScore {
+      Anchor: (Width: 48);
+      Style: (FontSize: 13, RenderBold: true, TextColor: #f59e0b, HorizontalAlignment: Center);
+      Text: "0";
     }
   }
 }

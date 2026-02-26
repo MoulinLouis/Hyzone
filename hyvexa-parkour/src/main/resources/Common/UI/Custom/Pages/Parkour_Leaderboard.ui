@@ -4,7 +4,7 @@ $C.@PageOverlay {
   SceneBlur {}
 
   Group #LeaderboardWindow {
-    Anchor: (Width: 520, Height: 560);
+    Anchor: (Width: 560, Height: 580);
     LayoutMode: Top;
     Background: #0d1620(0.95);
     OutlineColor: #ffffff(0.06);
@@ -12,24 +12,33 @@ $C.@PageOverlay {
 
     // === HEADER ===
     Group #Header {
-      Anchor: (Left: 0, Right: 0, Height: 52);
-      LayoutMode: Full;
-      Background: #0a1018;
+      Anchor: (Left: 0, Right: 0, Height: 80);
+      Padding: (Left: 20, Right: 20, Top: 16);
+      LayoutMode: Left;
 
-      // Top accent line
-      Group {
-        Anchor: (Left: 0, Right: 0, Top: 0, Height: 2);
-        Background: #f59e0b;
+      Group #TitleBlock {
+        FlexWeight: 1;
+        LayoutMode: Top;
+
+        Label {
+          Style: (FontSize: 11, TextColor: #f59e0b(0.7), RenderUppercase: true, LetterSpacing: 2, RenderBold: true);
+          Text: "Rankings";
+        }
+
+        Label {
+          Anchor: (Top: 6);
+          Style: (FontSize: 20, TextColor: #f0f4f8, RenderBold: true);
+          Text: "Parkour Leaderboard";
+        }
+
+        Group {
+          Anchor: (Left: 0, Width: 40, Height: 2, Top: 10);
+          Background: #f59e0b;
+        }
       }
 
-      Label {
-        Anchor: (Left: 20, Top: 16, Width: 300, Height: 24);
-        Style: (FontSize: 18, TextColor: #f0f4f8, RenderBold: true);
-        Text: "Parkour Leaderboard";
-      }
-
       Group {
-        Anchor: (Right: 16, Top: 10, Width: 72, Height: 32);
+        Anchor: (Width: 72, Height: 32, Top: 4);
 
         TextButton #BackButton {
           Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
@@ -55,43 +64,69 @@ $C.@PageOverlay {
 
     // === CONTENT ===
     Group #Content {
-      Anchor: (Left: 0, Right: 0);
+      Anchor: (Left: 0, Right: 0, Top: 0);
       FlexWeight: 1;
       LayoutMode: Top;
-      Padding: (Left: 12, Right: 12, Top: 6, Bottom: 12);
+      Padding: (Left: 20, Right: 20, Top: 0, Bottom: 16);
 
-      Label {
-        Style: (
-          FontSize: 14,
-          TextColor: #9fb0ba
-        );
-        Text: "Overall completions across all maps.";
+      // --- Search ---
+      Group #SearchArea {
+        Anchor: (Left: 0, Right: 0, Height: 52, Top: 10);
+        LayoutMode: Top;
+
+        Label {
+          Style: (FontSize: 10, TextColor: #9fb0ba(0.6), RenderUppercase: true, LetterSpacing: 2);
+          Text: "Search Player";
+        }
+
+        $C.@TextField #LeaderboardSearchField {
+          Anchor: (Height: 26, Top: 4);
+          Style: (FontSize: 13, TextColor: #ffffff(0.85));
+        }
       }
 
-      Label {
-        Anchor: (Top: 6);
-        Style: (FontSize: 12, TextColor: #9fb0ba);
-        Text: "Search";
-      }
-
-      $C.@TextField #LeaderboardSearchField {
-        Anchor: (Height: 24, Top: 4);
-        Style: (FontSize: 13, TextColor: #ffffff(0.85));
-      }
-
+      // --- Empty State ---
       Label #EmptyText {
-        Style: (
-          FontSize: 14,
-          TextColor: #9fb0ba
-        );
+        Style: (FontSize: 14, TextColor: #9fb0ba);
         Text: "";
       }
 
+      // --- Column Headers ---
+      Group #ColumnHeaders {
+        Anchor: (Left: 6, Right: 6, Height: 18);
+        LayoutMode: Left;
+        Padding: (Left: 16, Right: 22);
+
+        Label {
+          Anchor: (Width: 50);
+          Style: (FontSize: 10, TextColor: #9fb0ba(0.5), RenderUppercase: true, LetterSpacing: 1, RenderBold: true);
+          Text: "Rank";
+        }
+
+        Label {
+          FlexWeight: 1;
+          Style: (FontSize: 10, TextColor: #9fb0ba(0.5), RenderUppercase: true, LetterSpacing: 1, RenderBold: true);
+          Text: "Player";
+        }
+
+        Group { Anchor: (Width: 34); LayoutMode: CenterMiddle; Group #HeaderBronze { Anchor: (Width: 16, Height: 16); Background: (TexturePath: "../Textures/bronze_medal.png"); } }
+        Group { Anchor: (Width: 34); LayoutMode: CenterMiddle; Group #HeaderSilver { Anchor: (Width: 16, Height: 16); Background: (TexturePath: "../Textures/silver_medal.png"); } }
+        Group { Anchor: (Width: 34); LayoutMode: CenterMiddle; Group #HeaderGold { Anchor: (Width: 16, Height: 16); Background: (TexturePath: "../Textures/gold_medal.png"); } }
+        Group { Anchor: (Width: 34); LayoutMode: CenterMiddle; Group #HeaderAuthor { Anchor: (Width: 16, Height: 16); Background: (TexturePath: "../Textures/author_medal.png"); } }
+
+        Label {
+          Anchor: (Width: 48);
+          Style: (FontSize: 10, TextColor: #9fb0ba(0.5), RenderUppercase: true, LetterSpacing: 1, RenderBold: true, HorizontalAlignment: Center);
+          Text: "Score";
+        }
+      }
+
+      // --- Leaderboard List ---
       Group #LeaderboardList {
-        Anchor: (Width: 490, Top: 8);
+        Anchor: (Left: 0, Right: 0);
         FlexWeight: 1;
         LayoutMode: TopScrolling;
-        Padding: (Left: 6, Right: 6);
+        Padding: (Left: 2, Right: 2);
         ScrollbarStyle: $C.@DefaultScrollbarStyle;
 
         Group #LeaderboardCards {
@@ -99,48 +134,65 @@ $C.@PageOverlay {
         }
       }
 
+      // --- Pagination ---
       Group #Pagination {
-        Anchor: (Top: 6, Height: 22, Width: 490);
+        Anchor: (Top: 8, Height: 36, Left: 0, Right: 0);
         LayoutMode: Left;
 
-        Group {
-          Anchor: (Width: 65);
-        }
+        Group { FlexWeight: 1; }
 
-        $C.@TextButton #PrevPageButton {
-          Anchor: (Width: 110, Height: 22);
+        TextButton #PrevPageButton {
+          Anchor: (Width: 100, Height: 32);
           Text: "< Prev";
+          Style: TextButtonStyle(
+            Default: (
+              Background: #ffffff(0.06),
+              LabelStyle: (FontSize: 13, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Hovered: (
+              Background: #ffffff(0.1),
+              LabelStyle: (FontSize: 13, TextColor: #f0f4f8, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Pressed: (
+              Background: #ffffff(0.04),
+              LabelStyle: (FontSize: 13, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Sounds: $C.@ButtonSounds,
+          );
         }
 
-        Group #PageLabelWrap {
-          Anchor: (Width: 140, Height: 22);
-          LayoutMode: Left;
+        Group { Anchor: (Width: 12); }
 
-          Group {
-            Anchor: (Width: 35);
-          }
-
-          Label #PageLabel {
-            Anchor: (Width: 70);
-            Style: (FontSize: 12, TextColor: #9fb0ba);
-            Text: "";
-          }
-
-          Group {
-            Anchor: (Width: 35);
-          }
+        Label #PageLabel {
+          Anchor: (Width: 80, Top: 8);
+          Style: (FontSize: 12, TextColor: #9fb0ba);
+          Text: "";
         }
 
-        $C.@TextButton #NextPageButton {
-          Anchor: (Width: 110, Height: 22);
+        Group { Anchor: (Width: 12); }
+
+        TextButton #NextPageButton {
+          Anchor: (Width: 100, Height: 32);
           Text: "Next >";
+          Style: TextButtonStyle(
+            Default: (
+              Background: #f59e0b,
+              LabelStyle: (FontSize: 13, TextColor: #1a1a2a, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Hovered: (
+              Background: #fbbf24,
+              LabelStyle: (FontSize: 13, TextColor: #1a1a2a, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Pressed: (
+              Background: #d97706,
+              LabelStyle: (FontSize: 13, TextColor: #1a1a2a, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Sounds: $C.@ButtonSounds,
+          );
         }
 
-        Group {
-          Anchor: (Width: 65);
-        }
+        Group { FlexWeight: 1; }
       }
-
     }
   }
 }

@@ -17,14 +17,13 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.ui.PaginationState;
 import io.hyvexa.parkour.data.MapStore;
+import io.hyvexa.parkour.data.MedalStore;
 import io.hyvexa.parkour.data.ProgressStore;
 import io.hyvexa.parkour.tracker.RunTracker;
 import io.hyvexa.parkour.util.ParkourUtils;
 
 import javax.annotation.Nonnull;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 public class LeaderboardPage extends InteractiveCustomUIPage<LeaderboardPage.LeaderboardData> {
@@ -111,26 +110,17 @@ public class LeaderboardPage extends InteractiveCustomUIPage<LeaderboardPage.Lea
     private void buildLeaderboard(UICommandBuilder commandBuilder) {
         commandBuilder.clear("#LeaderboardCards");
         commandBuilder.set("#LeaderboardSearchField.Value", searchText);
-        int totalMaps = mapStore.listMaps().size();
-        if (totalMaps == 0) {
-            commandBuilder.set("#EmptyText.Text", "No maps available.");
-            commandBuilder.set("#PageLabel.Text", "");
-            return;
-        }
-        Map<UUID, Integer> counts = progressStore.getMapCompletionCounts();
-        if (counts.isEmpty()) {
-            commandBuilder.set("#EmptyText.Text", "No completions yet.");
+        List<MedalStore.MedalScoreEntry> snapshot = MedalStore.getInstance().getLeaderboardSnapshot();
+        if (snapshot.isEmpty()) {
+            commandBuilder.set("#EmptyText.Text", "No medals earned yet.");
             commandBuilder.set("#PageLabel.Text", "");
             return;
         }
         String filter = searchText != null ? searchText.trim().toLowerCase() : "";
-        List<Map.Entry<UUID, Integer>> sorted = counts.entrySet().stream()
-                .sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
-                .toList();
         List<LeaderboardRow> filtered = new java.util.ArrayList<>();
-        for (int i = 0; i < sorted.size(); i++) {
-            Map.Entry<UUID, Integer> entry = sorted.get(i);
-            String name = ParkourUtils.resolveName(entry.getKey(), progressStore);
+        for (int i = 0; i < snapshot.size(); i++) {
+            MedalStore.MedalScoreEntry entry = snapshot.get(i);
+            String name = ParkourUtils.resolveName(entry.getPlayerId(), progressStore);
             if (!filter.isEmpty()) {
                 String safeName = name != null ? name : "";
                 if (!safeName.toLowerCase().startsWith(filter)) {
@@ -154,10 +144,13 @@ public class LeaderboardPage extends InteractiveCustomUIPage<LeaderboardPage.Lea
             commandBuilder.append("#LeaderboardCards", "Pages/Parkour_LeaderboardEntry.ui");
             String accentColor = UIColorUtils.getRankAccentColor(row.rank);
             commandBuilder.set("#LeaderboardCards[" + index + "] #AccentBar.Background", accentColor);
-            commandBuilder.set("#LeaderboardCards[" + index + "] #Rank.Text", String.valueOf(row.rank));
+            commandBuilder.set("#LeaderboardCards[" + index + "] #Rank.Text", "#" + row.rank);
             commandBuilder.set("#LeaderboardCards[" + index + "] #PlayerName.Text", row.name);
-            commandBuilder.set("#LeaderboardCards[" + index + "] #Completion.Text",
-                    row.entry.getValue() + "/" + totalMaps);
+            commandBuilder.set("#LeaderboardCards[" + index + "] #BronzeCount.Text", String.valueOf(row.entry.getBronzeCount()));
+            commandBuilder.set("#LeaderboardCards[" + index + "] #SilverCount.Text", String.valueOf(row.entry.getSilverCount()));
+            commandBuilder.set("#LeaderboardCards[" + index + "] #GoldCount.Text", String.valueOf(row.entry.getGoldCount()));
+            commandBuilder.set("#LeaderboardCards[" + index + "] #AuthorCount.Text", String.valueOf(row.entry.getAuthorCount()));
+            commandBuilder.set("#LeaderboardCards[" + index + "] #TotalScore.Text", String.valueOf(row.entry.getTotalScore()));
             index++;
         }
         commandBuilder.set("#PageLabel.Text", slice.getLabel());
@@ -165,10 +158,10 @@ public class LeaderboardPage extends InteractiveCustomUIPage<LeaderboardPage.Lea
 
     private static final class LeaderboardRow {
         private final int rank;
-        private final Map.Entry<UUID, Integer> entry;
+        private final MedalStore.MedalScoreEntry entry;
         private final String name;
 
-        private LeaderboardRow(int rank, Map.Entry<UUID, Integer> entry, String name) {
+        private LeaderboardRow(int rank, MedalStore.MedalScoreEntry entry, String name) {
             this.rank = rank;
             this.entry = entry;
             this.name = name != null ? name : "";
