@@ -22,7 +22,7 @@ Group {
 
   // Price label
   Label #EntryPrice {
-    Anchor: (Left: 150, Top: 0, Bottom: 0, Width: 70);
+    Anchor: (Left: 150, Top: 0, Bottom: 0, Width: 110);
     Style: (FontSize: 12, TextColor: #6b7c8a, VerticalAlignment: Center);
     Text: "10 Vexa";
   }
