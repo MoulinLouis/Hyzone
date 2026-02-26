@@ -84,8 +84,8 @@ public class RunOrFallHud extends CustomUIHud {
         lastBrokenBlocks = safeValue;
         lastBrokenBlocksVisible = visible;
         UICommandBuilder commandBuilder = new UICommandBuilder();
-        commandBuilder.set("#BrokenBlocksText.Visible", visible);
-        commandBuilder.set("#BrokenBlocksText.Text", "Blocks broken: " + String.format("%,d", safeValue));
+        commandBuilder.set("#BrokenBlocksRow.Visible", visible);
+        commandBuilder.set("#BrokenBlocksValue.Text", String.format("%,d", safeValue));
         update(false, commandBuilder);
     }
 
@@ -98,8 +98,8 @@ public class RunOrFallHud extends CustomUIHud {
         lastBlinkCharges = safeValue;
         lastBlinkChargesVisible = visible;
         UICommandBuilder commandBuilder = new UICommandBuilder();
-        commandBuilder.set("#BlinkChargesText.Visible", visible);
-        commandBuilder.set("#BlinkChargesText.Text", "Blinks: " + String.format("%,d", safeValue));
+        commandBuilder.set("#BlinkChargesRow.Visible", visible);
+        commandBuilder.set("#BlinkChargesValue.Text", String.format("%,d", safeValue));
         update(false, commandBuilder);
     }
 }

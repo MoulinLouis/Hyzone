@@ -24,6 +24,14 @@ import io.hyvexa.runorfall.data.RunOrFallPlatform;
 import io.hyvexa.runorfall.util.RunOrFallFeatherBridge;
 import io.hyvexa.runorfall.util.RunOrFallUtils;
 
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+
+import java.io.File;
+import java.io.IOException;
+import java.lang.reflect.Type;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +41,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 // Thread safety: all public methods are synchronized. Concurrent collections
 // are used as a safety net in case callbacks run outside the monitor.
@@ -48,6 +57,10 @@ public class RunOrFallGameManager {
     private static final double PLAYER_BLOCK_DETECTION_Y_OFFSET = 1d;
     private static final String SFX_BLINK_CHARGE_EARNED = "SFX_Avatar_Powers_Enable_Local";
     private static final String SFX_ROUND_WIN = "SFX_Parkour_Victory";
+    private static final File BROKEN_BLOCKS_FILE = new File("mods/RunOrFall/broken_blocks.json");
+    private static final Gson GSON = new Gson();
+    private static final Type BROKEN_BLOCKS_LIST_TYPE = new TypeToken<List<BrokenBlockEntry>>() {}.getType();
+    private static final long SAVE_DEBOUNCE_MS = 2000L;
 
     private enum GameState {
         IDLE,
@@ -82,6 +95,8 @@ public class RunOrFallGameManager {
     private volatile World activeWorld;
     private volatile long blockBreakEnabledAtMs;
     private volatile int blockBreakCountdownLastAnnounced = -1;
+    private final AtomicBoolean brokenBlocksDirty = new AtomicBoolean(false);
+    private volatile ScheduledFuture<?> brokenBlocksSaveTask;
 
     public RunOrFallGameManager(RunOrFallConfigStore configStore, RunOrFallStatsStore statsStore) {
         this.configStore = configStore;
@@ -276,6 +291,7 @@ public class RunOrFallGameManager {
     public synchronized void shutdown() {
         cancelCountdownTask();
         cancelGameTickTask();
+        flushBrokenBlocksSave();
         World world = activeWorld;
         if (world != null) {
             try {
@@ -474,6 +490,7 @@ public class RunOrFallGameManager {
         soloTestRound = countdownRequiredPlayers == 1 && onlinePlayers.size() == 1;
         pendingBlocks.clear();
         removedBlocks.clear();
+        deleteBrokenBlocksFile();
         playerLastFootBlock.clear();
 
         for (int i = 0; i < onlinePlayers.size(); i++) {
@@ -717,6 +734,7 @@ public class RunOrFallGameManager {
                 removedBlocks.put(key, pending.originalBlockId);
                 pendingBlocks.remove(key);
                 incrementBrokenBlocksCountInternal(pending.playerId);
+                scheduleBrokenBlocksSave();
             }
         }
     }
@@ -812,6 +830,118 @@ public class RunOrFallGameManager {
         brokenBlocksByPlayer.clear();
         blinkChargesByPlayer.clear();
         blinksUsedByPlayer.clear();
+        deleteBrokenBlocksFile();
+    }
+
+    private void scheduleBrokenBlocksSave() {
+        brokenBlocksDirty.set(true);
+        if (brokenBlocksSaveTask != null) {
+            return;
+        }
+        brokenBlocksSaveTask = HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
+            brokenBlocksSaveTask = null;
+            if (!brokenBlocksDirty.compareAndSet(true, false)) {
+                return;
+            }
+            saveBrokenBlocksToFile();
+        }, SAVE_DEBOUNCE_MS, TimeUnit.MILLISECONDS);
+    }
+
+    private void saveBrokenBlocksToFile() {
+        Map<BlockKey, Integer> snapshot = Map.copyOf(removedBlocks);
+        if (snapshot.isEmpty()) {
+            deleteBrokenBlocksFile();
+            return;
+        }
+        List<BrokenBlockEntry> entries = new ArrayList<>(snapshot.size());
+        for (Map.Entry<BlockKey, Integer> entry : snapshot.entrySet()) {
+            BlockKey key = entry.getKey();
+            entries.add(new BrokenBlockEntry(key.x, key.y, key.z, entry.getValue()));
+        }
+        try {
+            String json = GSON.toJson(entries);
+            Files.writeString(BROKEN_BLOCKS_FILE.toPath(), json, StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            LOGGER.atWarning().withCause(e).log("Failed to save broken blocks file.");
+        }
+    }
+
+    private void flushBrokenBlocksSave() {
+        ScheduledFuture<?> task = brokenBlocksSaveTask;
+        if (task != null) {
+            task.cancel(false);
+            brokenBlocksSaveTask = null;
+        }
+        if (brokenBlocksDirty.compareAndSet(true, false)) {
+            saveBrokenBlocksToFile();
+        }
+    }
+
+    private void deleteBrokenBlocksFile() {
+        brokenBlocksDirty.set(false);
+        ScheduledFuture<?> task = brokenBlocksSaveTask;
+        if (task != null) {
+            task.cancel(false);
+            brokenBlocksSaveTask = null;
+        }
+        try {
+            Files.deleteIfExists(BROKEN_BLOCKS_FILE.toPath());
+        } catch (IOException e) {
+            LOGGER.atWarning().withCause(e).log("Failed to delete broken blocks file.");
+        }
+    }
+
+    public void restoreBrokenBlocksFromFile(World world) {
+        if (!BROKEN_BLOCKS_FILE.exists()) {
+            return;
+        }
+        List<BrokenBlockEntry> entries;
+        try {
+            String json = Files.readString(BROKEN_BLOCKS_FILE.toPath(), StandardCharsets.UTF_8);
+            entries = GSON.fromJson(json, BROKEN_BLOCKS_LIST_TYPE);
+        } catch (Exception e) {
+            LOGGER.atWarning().withCause(e).log("Failed to read broken blocks file.");
+            deleteBrokenBlocksFile();
+            return;
+        }
+        if (entries == null || entries.isEmpty()) {
+            deleteBrokenBlocksFile();
+            return;
+        }
+        LOGGER.atInfo().log("Crash recovery: %d broken blocks to restore.", entries.size());
+        restoreBrokenBlocksWithRetry(world, entries, 0);
+    }
+
+    private void restoreBrokenBlocksWithRetry(World world, List<BrokenBlockEntry> entries, int attempt) {
+        List<BrokenBlockEntry> failed = new ArrayList<>();
+        int restored = 0;
+        for (BrokenBlockEntry entry : entries) {
+            if (writeBlockId(world, entry.x, entry.y, entry.z, entry.blockId)) {
+                restored++;
+            } else {
+                failed.add(entry);
+            }
+        }
+        if (restored > 0) {
+            LOGGER.atInfo().log("Crash recovery: restored %d blocks (attempt %d).", restored, attempt + 1);
+        }
+        if (failed.isEmpty() || attempt >= 5) {
+            if (!failed.isEmpty()) {
+                LOGGER.atWarning().log("Crash recovery: %d blocks could not be restored after %d attempts (chunks not loaded).",
+                        failed.size(), attempt + 1);
+            }
+            deleteBrokenBlocksFile();
+            return;
+        }
+        long delayMs = attempt == 0 ? 3000L : 5000L;
+        HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
+            try {
+                world.execute(() -> restoreBrokenBlocksWithRetry(world, failed, attempt + 1));
+            } catch (Exception e) {
+                LOGGER.atWarning().withCause(e).log("Crash recovery: retry failed.");
+                deleteBrokenBlocksFile();
+            }
+        }, delayMs, TimeUnit.MILLISECONDS);
     }
 
     private long takeSurvivedMs(UUID playerId) {
@@ -1416,6 +1546,22 @@ public class RunOrFallGameManager {
             result = 31 * result + Integer.hashCode(y);
             result = 31 * result + Integer.hashCode(z);
             return result;
+        }
+    }
+
+    private static final class BrokenBlockEntry {
+        int x;
+        int y;
+        int z;
+        int blockId;
+
+        BrokenBlockEntry() {}
+
+        BrokenBlockEntry(int x, int y, int z, int blockId) {
+            this.x = x;
+            this.y = y;
+            this.z = z;
+            this.blockId = blockId;
         }
     }
 }

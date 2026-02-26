@@ -44,6 +44,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.UUID;
 
 public class HyvexaRunOrFallPlugin extends JavaPlugin {
@@ -70,6 +71,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
     private final Set<UUID> hiddenHudPlayers = ConcurrentHashMap.newKeySet();
     private final ConcurrentHashMap<UUID, Long> hudReadyAt = new ConcurrentHashMap<>();
     private ScheduledFuture<?> hudUpdateTask;
+    private final AtomicBoolean crashRecoveryDone = new AtomicBoolean(false);
 
     public HyvexaRunOrFallPlugin(@Nonnull JavaPluginInit init) {
         super(init);
@@ -155,6 +157,17 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
             }
             World world = event.getWorld();
             if (ModeGate.isRunOrFallWorld(world)) {
+                if (crashRecoveryDone.compareAndSet(false, true) && gameManager != null) {
+                    World recoveryWorld = world;
+                    RunOrFallGameManager gm = gameManager;
+                    HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
+                        try {
+                            recoveryWorld.execute(() -> gm.restoreBrokenBlocksFromFile(recoveryWorld));
+                        } catch (Exception e) {
+                            // world not available yet, ignore
+                        }
+                    }, 3000L, TimeUnit.MILLISECONDS);
+                }
                 Ref<EntityStore> ref = playerRef.getReference();
                 if (ref != null && ref.isValid()) {
                     Player player = ref.getStore().getComponent(ref, Player.getComponentType());
