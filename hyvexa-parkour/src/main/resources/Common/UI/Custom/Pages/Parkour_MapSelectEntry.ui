@@ -78,6 +78,18 @@ Group {
         Style: (FontSize: 13, TextColor: #ffd700, VerticalAlignment: Center);
         Text: "";
       }
+
+      Group { Anchor: (Width: 14); }
+
+      Group #AuthorMedalIcon {
+        Anchor: (Width: 20, Height: 20, Top: 2);
+        Background: (TexturePath: "../Textures/author_medal.png");
+      }
+      Label #AuthorMedalText {
+        Anchor: (Height: 24);
+        Style: (FontSize: 13, TextColor: #50C878, VerticalAlignment: Center);
+        Text: "";
+      }
     }
   }
 }

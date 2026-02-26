@@ -30,8 +30,8 @@ public class MedalRewardAdminPage extends InteractiveCustomUIPage<MedalRewardAdm
     private final MapStore mapStore;
     private final ProgressStore progressStore;
 
-    // 4 categories x 3 tiers = 12 fields
-    private final String[][] values = new String[4][3]; // [category][bronze/silver/gold]
+    // 4 categories x 4 tiers = 16 fields
+    private final String[][] values = new String[4][4]; // [category][bronze/silver/gold/author]
 
     public MedalRewardAdminPage(@Nonnull PlayerRef playerRef, MapStore mapStore, ProgressStore progressStore) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, RewardData.CODEC);
@@ -48,10 +48,12 @@ public class MedalRewardAdminPage extends InteractiveCustomUIPage<MedalRewardAdm
                 values[i][0] = String.valueOf(r.bronze);
                 values[i][1] = String.valueOf(r.silver);
                 values[i][2] = String.valueOf(r.gold);
+                values[i][3] = String.valueOf(r.author);
             } else {
                 values[i][0] = "0";
                 values[i][1] = "0";
                 values[i][2] = "0";
+                values[i][3] = "0";
             }
         }
     }
@@ -73,6 +75,7 @@ public class MedalRewardAdminPage extends InteractiveCustomUIPage<MedalRewardAdm
             if (data.values[i][0] != null) values[i][0] = data.values[i][0].trim();
             if (data.values[i][1] != null) values[i][1] = data.values[i][1].trim();
             if (data.values[i][2] != null) values[i][2] = data.values[i][2].trim();
+            if (data.values[i][3] != null) values[i][3] = data.values[i][3].trim();
         }
         if (data.button == null) {
             return;
@@ -102,11 +105,12 @@ public class MedalRewardAdminPage extends InteractiveCustomUIPage<MedalRewardAdm
             int bronze = parseNonNegative(values[i][0]);
             int silver = parseNonNegative(values[i][1]);
             int gold = parseNonNegative(values[i][2]);
-            if (bronze < 0 || silver < 0 || gold < 0) {
+            int author = parseNonNegative(values[i][3]);
+            if (bronze < 0 || silver < 0 || gold < 0 || author < 0) {
                 player.sendMessage(Message.raw(CATEGORY_PREFIXES[i] + ": values must be non-negative integers."));
                 return;
             }
-            rewardStore.setRewards(CATEGORIES[i], bronze, silver, gold);
+            rewardStore.setRewards(CATEGORIES[i], bronze, silver, gold, author);
         }
         player.sendMessage(Message.raw("Medal rewards saved."));
         UICommandBuilder commandBuilder = new UICommandBuilder();
@@ -134,6 +138,7 @@ public class MedalRewardAdminPage extends InteractiveCustomUIPage<MedalRewardAdm
             commandBuilder.set("#" + CATEGORY_PREFIXES[i] + "Bronze.Value", values[i][0]);
             commandBuilder.set("#" + CATEGORY_PREFIXES[i] + "Silver.Value", values[i][1]);
             commandBuilder.set("#" + CATEGORY_PREFIXES[i] + "Gold.Value", values[i][2]);
+            commandBuilder.set("#" + CATEGORY_PREFIXES[i] + "Author.Value", values[i][3]);
         }
     }
 
@@ -150,20 +155,22 @@ public class MedalRewardAdminPage extends InteractiveCustomUIPage<MedalRewardAdm
                     EventData.of(RewardData.KEYS[i][1], "#" + prefix + "Silver.Value"), false);
             uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#" + prefix + "Gold",
                     EventData.of(RewardData.KEYS[i][2], "#" + prefix + "Gold.Value"), false);
+            uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#" + prefix + "Author",
+                    EventData.of(RewardData.KEYS[i][3], "#" + prefix + "Author.Value"), false);
         }
     }
 
     public static class RewardData {
         static final String KEY_BUTTON = "Button";
         static final String[][] KEYS = {
-                {"@EasyBronze", "@EasySilver", "@EasyGold"},
-                {"@MediumBronze", "@MediumSilver", "@MediumGold"},
-                {"@HardBronze", "@HardSilver", "@HardGold"},
-                {"@InsaneBronze", "@InsaneSilver", "@InsaneGold"}
+                {"@EasyBronze", "@EasySilver", "@EasyGold", "@EasyAuthor"},
+                {"@MediumBronze", "@MediumSilver", "@MediumGold", "@MediumAuthor"},
+                {"@HardBronze", "@HardSilver", "@HardGold", "@HardAuthor"},
+                {"@InsaneBronze", "@InsaneSilver", "@InsaneGold", "@InsaneAuthor"}
         };
 
         String button;
-        final String[][] values = new String[4][3];
+        final String[][] values = new String[4][4];
 
         public static final BuilderCodec<RewardData> CODEC;
 
@@ -172,7 +179,7 @@ public class MedalRewardAdminPage extends InteractiveCustomUIPage<MedalRewardAdm
                     .addField(new KeyedCodec<>(KEY_BUTTON, Codec.STRING),
                             (data, value) -> data.button = value, data -> data.button);
             for (int i = 0; i < 4; i++) {
-                for (int j = 0; j < 3; j++) {
+                for (int j = 0; j < 4; j++) {
                     final int ci = i;
                     final int cj = j;
                     builder.addField(new KeyedCodec<>(KEYS[i][j], Codec.STRING),

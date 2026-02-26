@@ -181,7 +181,7 @@ public class MapSelectPage extends BaseParkourPage {
             commandBuilder.set("#MapCards[" + index + "] #MapName.Text", mapName);
             // Medal display
             boolean hasMedalTimes = map.getBronzeTimeMs() != null || map.getSilverTimeMs() != null
-                    || map.getGoldTimeMs() != null;
+                    || map.getGoldTimeMs() != null || map.getAuthorTimeMs() != null;
             if (hasMedalTimes) {
                 String prefix = "#MapCards[" + index + "] ";
                 commandBuilder.set(prefix + "#MedalRow.Visible", true);
@@ -192,6 +192,8 @@ public class MapSelectPage extends BaseParkourPage {
                         earned.contains(Medal.SILVER));
                 buildMedalLabel(commandBuilder, prefix, "Gold", map.getGoldTimeMs(),
                         earned.contains(Medal.GOLD));
+                buildMedalLabel(commandBuilder, prefix, "Author", map.getAuthorTimeMs(),
+                        earned.contains(Medal.AUTHOR));
             }
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
                     "#MapCards[" + index + "] #SelectButton",

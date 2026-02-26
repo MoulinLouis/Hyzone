@@ -6,7 +6,7 @@ $C.@PageOverlay {
     Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
 
     Group #MedalHud {
-      Anchor: (Left: 12, Top: 82, Width: 300, Height: 72);
+      Anchor: (Left: 12, Top: 82, Width: 300, Height: 94);
       Background: #000000(0.35);
       Visible: false;
       Padding: (Left: 6, Right: 6, Top: 4, Bottom: 4);
@@ -73,10 +73,31 @@ $C.@PageOverlay {
           Text: "";
         }
       }
+
+      Group #MedalHudAuthor {
+        Anchor: (Left: 0, Right: 0, Top: 66, Height: 20);
+        LayoutMode: Left;
+
+        Group {
+          Anchor: (Width: 18, Height: 18, Top: 1);
+          Background: (TexturePath: "../Textures/author_medal.png");
+        }
+        Group { Anchor: (Width: 10); }
+        Label #MedalHudAuthorName {
+          Anchor: (Width: 150, Height: 20);
+          Style: (FontSize: 16, TextColor: #e7f1f4, VerticalAlignment: Center);
+          Text: "Author";
+        }
+        Label #MedalHudAuthorTime {
+          Anchor: (Width: 110, Height: 20);
+          Style: (FontSize: 16, TextColor: #e7f1f4, VerticalAlignment: Center);
+          Text: "";
+        }
+      }
     }
 
     Group #RunRecords {
-      Anchor: (Left: 12, Top: 160, Width: 300, Height: 142);
+      Anchor: (Left: 12, Top: 182, Width: 300, Height: 142);
       Background: #000000(0.35);
       Padding: (Left: 6, Right: 6, Top: 4, Bottom: 4);
 

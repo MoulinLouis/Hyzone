@@ -625,6 +625,7 @@ public class HudManager {
         cmd.set("#MedalNotifBronzeIcon.Visible", iconVisible && notif.medal == Medal.BRONZE);
         cmd.set("#MedalNotifSilverIcon.Visible", iconVisible && notif.medal == Medal.SILVER);
         cmd.set("#MedalNotifGoldIcon.Visible", iconVisible && notif.medal == Medal.GOLD);
+        cmd.set("#MedalNotifAuthorIcon.Visible", iconVisible && notif.medal == Medal.AUTHOR);
 
         // Title
         cmd.set("#MedalNotifTitle.Visible", titleVisible);
@@ -643,6 +644,7 @@ public class HudManager {
         cmd.set("#MedalNotifBarBronze.Visible", barVisible && notif.medal == Medal.BRONZE);
         cmd.set("#MedalNotifBarSilver.Visible", barVisible && notif.medal == Medal.SILVER);
         cmd.set("#MedalNotifBarGold.Visible", barVisible && notif.medal == Medal.GOLD);
+        cmd.set("#MedalNotifBarAuthor.Visible", barVisible && notif.medal == Medal.AUTHOR);
         if (barVisible) {
             String barId = "#MedalNotifBar" + capitalize(notif.medal.name()) + ".Value";
             cmd.set(barId, barValue);
