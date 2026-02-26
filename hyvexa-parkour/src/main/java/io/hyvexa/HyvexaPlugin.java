@@ -24,6 +24,7 @@ import io.hyvexa.core.discord.DiscordLinkStore;
 import io.hyvexa.core.cosmetic.CosmeticStore;
 import io.hyvexa.core.economy.CurrencyBridge;
 import io.hyvexa.core.economy.VexaStore;
+import io.hyvexa.core.trail.TrailManager;
 
 
 import io.hyvexa.parkour.data.FeatherStore;
@@ -83,6 +84,8 @@ import io.hyvexa.parkour.command.ParkourMusicDebugCommand;
 import io.hyvexa.parkour.command.RulesCommand;
 import io.hyvexa.parkour.command.StoreCommand;
 import io.hyvexa.parkour.command.SpectatorCommand;
+import io.hyvexa.parkour.command.TrailCommand;
+import io.hyvexa.parkour.command.TrailTestCommand;
 
 import io.hyvexa.parkour.command.VoteCommand;
 import io.hyvexa.parkour.tracker.RunTracker;
@@ -316,6 +319,8 @@ public class HyvexaPlugin extends JavaPlugin {
         this.getCommandRegistry().registerCommand(new LinkCommand());
         this.getCommandRegistry().registerCommand(new UnlinkCommand());
         this.getCommandRegistry().registerCommand(new CosmeticTestCommand());
+        this.getCommandRegistry().registerCommand(new TrailTestCommand());
+        this.getCommandRegistry().registerCommand(new TrailCommand());
         this.getCommandRegistry().registerCommand(new AnalyticsCommand());
         this.getCommandRegistry().registerCommand(new VoteCommand());
         this.getCommandRegistry().registerCommand(new CreditsCommand());
@@ -438,6 +443,9 @@ public class HyvexaPlugin extends JavaPlugin {
 
                 try { CosmeticStore.getInstance().evictPlayer(playerId); }
                 catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: CosmeticStore"); }
+
+                try { TrailManager.getInstance().stopTrail(playerId); }
+                catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: TrailManager"); }
 
                 try {
                     Long sessionStart = playtimeManager.getSessionStart(playerId);

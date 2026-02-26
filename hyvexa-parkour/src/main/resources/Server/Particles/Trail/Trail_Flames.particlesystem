@@ -1,0 +1,8 @@
+{
+  "Spawners": [
+    {
+      "SpawnerId": "Trail_Flame",
+      "FixedRotation": true
+    }
+  ]
+}
