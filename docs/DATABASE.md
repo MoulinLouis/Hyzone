@@ -707,7 +707,7 @@ CREATE TABLE player_feathers (
 ) ENGINE=InnoDB;
 ```
 
-Manager: `FeatherStore` (singleton in `hyvexa-parkour`)
+Manager: `FeatherStore` (singleton in `hyvexa-core`)
 
 ## medal_rewards
 Feather reward amounts per map category per medal tier. Max 4 rows (Easy, Medium, Hard, Insane).

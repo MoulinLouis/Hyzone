@@ -22,12 +22,11 @@ import io.hyvexa.core.analytics.AnalyticsStore;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.core.discord.DiscordLinkStore;
 import io.hyvexa.core.cosmetic.CosmeticStore;
-import io.hyvexa.core.economy.CurrencyBridge;
 import io.hyvexa.core.economy.VexaStore;
 import io.hyvexa.core.trail.TrailManager;
 
 
-import io.hyvexa.parkour.data.FeatherStore;
+import io.hyvexa.core.economy.FeatherStore;
 import io.hyvexa.parkour.data.GlobalMessageStore;
 import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.data.MedalRewardStore;
@@ -205,17 +204,6 @@ public class HyvexaPlugin extends JavaPlugin {
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("Failed to initialize FeatherStore");
         }
-        CurrencyBridge.register("feathers", new CurrencyBridge.CurrencyProvider() {
-            @Override
-            public long getBalance(UUID playerId) {
-                return FeatherStore.getInstance().getFeathers(playerId);
-            }
-
-            @Override
-            public void deduct(UUID playerId, long amount) {
-                FeatherStore.getInstance().removeFeathers(playerId, amount);
-            }
-        });
         try {
             MedalRewardStore.getInstance().initialize();
         } catch (Exception e) {

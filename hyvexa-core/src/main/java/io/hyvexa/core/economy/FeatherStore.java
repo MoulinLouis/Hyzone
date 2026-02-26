@@ -1,4 +1,4 @@
-package io.hyvexa.parkour.data;
+package io.hyvexa.core.economy;
 
 import com.hypixel.hytale.logger.HytaleLogger;
 import io.hyvexa.core.db.DatabaseManager;
@@ -11,15 +11,16 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Parkour feather currency store. Singleton, lazy-load, immediate writes.
- * Follows VexaStore pattern exactly.
+ * Feather currency store. Singleton, lazy-load, immediate writes.
+ * Cache entries expire after {@link #CACHE_TTL_MS} to pick up cross-module DB writes.
  */
 public class FeatherStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final FeatherStore INSTANCE = new FeatherStore();
+    private static final long CACHE_TTL_MS = 5_000;
 
-    private final ConcurrentHashMap<UUID, Long> cache = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, CachedBalance> cache = new ConcurrentHashMap<>();
 
     private FeatherStore() {
     }
@@ -45,19 +46,31 @@ public class FeatherStore {
         } catch (SQLException e) {
             LOGGER.atSevere().withCause(e).log("Failed to create player_feathers table");
         }
+
+        CurrencyBridge.register("feathers", new CurrencyBridge.CurrencyProvider() {
+            @Override
+            public long getBalance(UUID playerId) {
+                return getFeathers(playerId);
+            }
+
+            @Override
+            public void deduct(UUID playerId, long amount) {
+                removeFeathers(playerId, amount);
+            }
+        });
     }
 
     public long getFeathers(UUID playerId) {
         if (playerId == null) {
             return 0;
         }
-        Long cached = cache.get(playerId);
-        if (cached != null) {
-            return cached;
+        CachedBalance cached = cache.get(playerId);
+        if (cached != null && !cached.isStale()) {
+            return cached.value;
         }
         long fromDb = loadFromDatabase(playerId);
-        cache.putIfAbsent(playerId, fromDb);
-        return cache.get(playerId);
+        cache.put(playerId, new CachedBalance(fromDb));
+        return fromDb;
     }
 
     public void setFeathers(UUID playerId, long feathers) {
@@ -65,7 +78,7 @@ public class FeatherStore {
             return;
         }
         long safe = Math.max(0, feathers);
-        cache.put(playerId, safe);
+        cache.put(playerId, new CachedBalance(safe));
         persistToDatabase(playerId, safe);
     }
 
@@ -130,6 +143,20 @@ public class FeatherStore {
             stmt.executeUpdate();
         } catch (SQLException e) {
             LOGGER.atWarning().withCause(e).log("Failed to persist feathers for " + playerId);
+        }
+    }
+
+    private static final class CachedBalance {
+        final long value;
+        final long cachedAt;
+
+        CachedBalance(long value) {
+            this.value = value;
+            this.cachedAt = System.currentTimeMillis();
+        }
+
+        boolean isStale() {
+            return System.currentTimeMillis() - cachedAt > CACHE_TTL_MS;
         }
     }
 }

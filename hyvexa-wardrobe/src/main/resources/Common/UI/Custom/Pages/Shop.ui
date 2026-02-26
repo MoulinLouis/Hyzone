@@ -105,6 +105,25 @@ $C.@PageOverlay {
         }
       }
 
+      // Feather balance
+      Group {
+        Anchor: (Left: 0, Right: 0, Height: 32);
+        LayoutMode: Left;
+        Padding: (Left: 16, Right: 12);
+
+        Group {
+          Anchor: (Width: 18, Height: 18, Top: 7);
+          Background: (TexturePath: "../Textures/feather.png");
+        }
+
+        Label #FeatherBalance {
+          Anchor: (Left: 6, Height: 32);
+          FlexWeight: 1;
+          Style: (FontSize: 16, TextColor: #f59e0b, RenderBold: true, VerticalAlignment: Center);
+          Text: "0";
+        }
+      }
+
       // Close button
       Group {
         Anchor: (Left: 12, Right: 12, Height: 36);
@@ -200,9 +219,14 @@ $C.@PageOverlay {
         LayoutMode: Left;
 
         Group { FlexWeight: 1; }
-        Group {
+        Group #ConfirmVexaIcon {
           Anchor: (Width: 22, Height: 22, Top: 2);
           Background: (TexturePath: "../Textures/vexa.png");
+        }
+        Group #ConfirmFeatherIcon {
+          Anchor: (Width: 22, Height: 22, Top: 2);
+          Background: (TexturePath: "../Textures/feather.png");
+          Visible: false;
         }
         Group { Anchor: (Width: 6); }
         Label #ConfirmPrice {

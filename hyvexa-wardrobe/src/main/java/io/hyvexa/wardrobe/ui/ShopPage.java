@@ -19,6 +19,7 @@ import io.hyvexa.common.shop.ShopTab;
 import io.hyvexa.common.shop.ShopTabRegistry;
 import io.hyvexa.common.shop.ShopTabResult;
 import io.hyvexa.common.ui.ButtonEventData;
+import io.hyvexa.core.economy.FeatherStore;
 import io.hyvexa.core.economy.VexaStore;
 import com.hypixel.hytale.server.core.command.system.CommandManager;
 
@@ -56,6 +57,8 @@ public class ShopPage extends InteractiveCustomUIPage<ShopPage.ShopEventData> {
 
         long vexa = VexaStore.getInstance().getVexa(playerId);
         cmd.set("#VexaBalance.Text", String.valueOf(vexa));
+        long feathers = FeatherStore.getInstance().getFeathers(playerId);
+        cmd.set("#FeatherBalance.Text", String.valueOf(feathers));
 
         // Close button
         evt.addEventBinding(CustomUIEventBindingType.Activating, "#CloseButton",
@@ -228,6 +231,8 @@ public class ShopPage extends InteractiveCustomUIPage<ShopPage.ShopEventData> {
 
         long vexa = VexaStore.getInstance().getVexa(playerId);
         cmd.set("#VexaBalance.Text", String.valueOf(vexa));
+        long feathers = FeatherStore.getInstance().getFeathers(playerId);
+        cmd.set("#FeatherBalance.Text", String.valueOf(feathers));
         cmd.set("#ConfirmOverlay.Visible", false);
 
         cmd.clear("#TabBar");
