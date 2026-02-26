@@ -174,19 +174,19 @@ $C.@PageOverlay {
     }
 
     Group #BrokenBlocksRow {
-      Anchor: (Left: 50, Bottom: 50, Width: 420, Height: 38);
+      Anchor: (Left: 50, Bottom: 50, Width: 600, Height: 86);
       Visible: false;
       LayoutMode: Left;
 
       Group #BrokenBlocksIcon {
-        Anchor: (Width: 34, Height: 34, Top: 2);
+        Anchor: (Width: 78, Height: 78, Top: 4);
         Background: (TexturePath: "../Textures/blockbroken.png");
       }
-      Group { Anchor: (Width: 8); }
+      Group { Anchor: (Width: 16); }
       Label #BrokenBlocksValue {
-        Anchor: (Height: 38);
+        Anchor: (Height: 86);
         Style: (
-          FontSize: 34,
+          FontSize: 78,
           TextColor: #e7f1f4,
           RenderBold: true,
           VerticalAlignment: Center
@@ -196,19 +196,19 @@ $C.@PageOverlay {
     }
 
     Group #BlinkChargesRow {
-      Anchor: (Left: 50, Bottom: 90, Width: 420, Height: 38);
+      Anchor: (Left: 50, Bottom: 140, Width: 600, Height: 86);
       Visible: false;
       LayoutMode: Left;
 
       Group #BlinkChargesIcon {
-        Anchor: (Width: 34, Height: 34, Top: 2);
+        Anchor: (Width: 78, Height: 78, Top: 4);
         Background: (TexturePath: "../Textures/blink.png");
       }
-      Group { Anchor: (Width: 8); }
+      Group { Anchor: (Width: 16); }
       Label #BlinkChargesValue {
-        Anchor: (Height: 38);
+        Anchor: (Height: 86);
         Style: (
-          FontSize: 34,
+          FontSize: 78,
           TextColor: #e7f1f4,
           RenderBold: true,
           VerticalAlignment: Center
