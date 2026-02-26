@@ -10,7 +10,7 @@ import java.util.Set;
 
 public class RunRecordsHud extends RunHud {
 
-    private static final String MEDAL_UNEARNED_COLOR = "#5a6a78";
+    private static final String MEDAL_DEFAULT_COLOR = "#e7f1f4";
     private String lastRecordsKey;
     private String lastMedalsKey;
 
@@ -92,22 +92,21 @@ public class RunRecordsHud extends RunHud {
             update(false, cmd);
             return;
         }
-        Set<Medal> safeEarned = earned != null ? earned : Set.of();
-        String key = bronzeMs + "|" + silverMs + "|" + goldMs + "|" + authorMs + "|" + safeEarned;
+        String key = bronzeMs + "|" + silverMs + "|" + goldMs + "|" + authorMs;
         if (key.equals(lastMedalsKey)) {
             return;
         }
         lastMedalsKey = key;
         UICommandBuilder cmd = new UICommandBuilder();
         cmd.set("#MedalHud.Visible", true);
-        setMedalRow(cmd, "Bronze", bronzeMs, safeEarned.contains(Medal.BRONZE));
-        setMedalRow(cmd, "Silver", silverMs, safeEarned.contains(Medal.SILVER));
-        setMedalRow(cmd, "Gold", goldMs, safeEarned.contains(Medal.GOLD));
-        setMedalRow(cmd, "Author", authorMs, safeEarned.contains(Medal.AUTHOR));
+        setMedalRow(cmd, "Bronze", bronzeMs);
+        setMedalRow(cmd, "Silver", silverMs);
+        setMedalRow(cmd, "Gold", goldMs);
+        setMedalRow(cmd, "Author", authorMs);
         update(false, cmd);
     }
 
-    private void setMedalRow(UICommandBuilder cmd, String tier, Long thresholdMs, boolean earned) {
+    private void setMedalRow(UICommandBuilder cmd, String tier, Long thresholdMs) {
         String rowId = "#MedalHud" + tier;
         if (thresholdMs == null || thresholdMs <= 0L) {
             cmd.set(rowId + ".Visible", false);
@@ -116,11 +115,8 @@ public class RunRecordsHud extends RunHud {
         cmd.set(rowId + ".Visible", true);
         String timeText = FormatUtils.formatDuration(thresholdMs);
         cmd.set(rowId + "Time.Text", timeText);
-        String color = earned ? null : MEDAL_UNEARNED_COLOR;
-        if (color != null) {
-            cmd.set(rowId + "Name.Style.TextColor", color);
-            cmd.set(rowId + "Time.Style.TextColor", color);
-        }
+        cmd.set(rowId + "Name.Style.TextColor", MEDAL_DEFAULT_COLOR);
+        cmd.set(rowId + "Time.Style.TextColor", MEDAL_DEFAULT_COLOR);
     }
 
     @Override
