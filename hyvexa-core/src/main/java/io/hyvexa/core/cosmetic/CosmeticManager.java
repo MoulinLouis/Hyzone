@@ -10,6 +10,7 @@ import com.hypixel.hytale.protocol.packets.entities.EntityUpdates;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.asset.type.entityeffect.config.EntityEffect;
 import com.hypixel.hytale.server.core.asset.type.entityeffect.config.OverlapBehavior;
+import com.hypixel.hytale.server.core.asset.type.particle.config.ParticleSystem;
 import com.hypixel.hytale.server.core.entity.effect.EffectControllerComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.io.PacketHandler;
@@ -17,15 +18,18 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.util.AsyncExecutionHelper;
+import io.hyvexa.core.trail.ModelParticleTrailManager;
+import io.hyvexa.core.trail.TrailManager;
 
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Handles applying / removing cosmetic EntityEffects on players.
- * Must be called from the world thread for entity operations.
+ * Handles applying/removing cosmetic visuals on players.
+ * Must be called from world thread for entity operations.
  */
 public class CosmeticManager {
 
@@ -43,55 +47,36 @@ public class CosmeticManager {
     }
 
     /**
-     * Apply a cosmetic effect to a player. Must be called from world thread.
+     * Apply an equipped cosmetic. Must be called from world thread.
      */
     public void applyCosmetic(Ref<EntityStore> ref, Store<EntityStore> store, String cosmeticId) {
         if (ref == null || !ref.isValid()) return;
         CosmeticDefinition def = CosmeticDefinition.fromId(cosmeticId);
-        if (def == null) return;
 
-        EntityEffect effect = resolveEffect(def.getEffectId());
-        if (effect == null) {
-            LOGGER.atWarning().log("Could not resolve effect for cosmetic: " + cosmeticId);
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        if (playerRef == null) return;
+
+        if (def == null) {
+            clearCosmeticChannels(ref, store, playerRef.getUuid());
             return;
         }
 
-        EffectControllerComponent ctrl = store.getComponent(ref, EffectControllerComponent.getComponentType());
-        if (ctrl == null) return;
-
-        int effectIndex = EntityEffect.getAssetMap().getIndex(effect.getId());
-        if (effectIndex < 0) return;
-
-        ctrl.addInfiniteEffect(ref, effectIndex, effect, store);
-
-        // Self-sync: entity tracker only sends to OTHER players
-        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-        Player player = store.getComponent(ref, Player.getComponentType());
-        if (playerRef != null && player != null) {
-            sendEffectSyncToSelf(playerRef.getPacketHandler(), player, ctrl);
-        }
+        clearCosmeticChannels(ref, store, playerRef.getUuid());
+        applyDefinition(ref, store, playerRef, def, false);
     }
 
     /**
-     * Remove all cosmetic effects from a player. Must be called from world thread.
+     * Remove all cosmetic visuals from a player. Must be called from world thread.
      */
     public void removeCosmetic(Ref<EntityStore> ref, Store<EntityStore> store) {
         if (ref == null || !ref.isValid()) return;
-
-        EffectControllerComponent ctrl = store.getComponent(ref, EffectControllerComponent.getComponentType());
-        if (ctrl == null) return;
-
-        ctrl.clearEffects(ref, store);
-
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-        Player player = store.getComponent(ref, Player.getComponentType());
-        if (playerRef != null && player != null) {
-            sendEffectSyncToSelf(playerRef.getPacketHandler(), player, ctrl);
-        }
+        UUID playerId = playerRef != null ? playerRef.getUuid() : null;
+        clearCosmeticChannels(ref, store, playerId);
     }
 
     /**
-     * Preview a cosmetic for PREVIEW_DURATION_SECONDS, then re-apply equipped cosmetic (if any).
+     * Preview a cosmetic for PREVIEW_DURATION_SECONDS, then restore equipped cosmetic (if any).
      * Must be called from world thread.
      */
     public void previewCosmetic(Ref<EntityStore> ref, Store<EntityStore> store, String cosmeticId) {
@@ -104,37 +89,25 @@ public class CosmeticManager {
         UUID playerId = playerRef.getUuid();
 
         cancelPreviewTimer(playerId);
+        clearCosmeticChannels(ref, store, playerId);
+        applyDefinition(ref, store, playerRef, def, true);
 
-        EffectControllerComponent ctrl = store.getComponent(ref, EffectControllerComponent.getComponentType());
-        if (ctrl == null) return;
-
-        EntityEffect effect = resolveEffect(def.getEffectId());
-        if (effect == null) return;
-
-        int effectIndex = EntityEffect.getAssetMap().getIndex(effect.getId());
-        if (effectIndex < 0) return;
-
-        ctrl.clearEffects(ref, store);
-        ctrl.addEffect(ref, effectIndex, effect, PREVIEW_DURATION_SECONDS, OverlapBehavior.OVERWRITE, store);
-
-        Player player = store.getComponent(ref, Player.getComponentType());
-        if (player != null) {
-            sendEffectSyncToSelf(playerRef.getPacketHandler(), player, ctrl);
-        }
-
-        // Schedule re-apply of equipped cosmetic after preview ends
         World world = store.getExternalData().getWorld();
+        if (world == null) return;
+
         ScheduledFuture<?> timer = HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
             previewTimers.remove(playerId);
-            if (ref.isValid()) {
-                AsyncExecutionHelper.runBestEffort(world, () -> {
-                    if (!ref.isValid()) return;
-                    String equipped = CosmeticStore.getInstance().getEquippedCosmeticId(playerId);
-                    if (equipped != null) {
-                        applyCosmetic(ref, store, equipped);
-                    }
-                }, "cosmetic.preview.restore", "restore cosmetic after preview", "player=" + playerId);
-            }
+            if (!ref.isValid()) return;
+
+            AsyncExecutionHelper.runBestEffort(world, () -> {
+                if (!ref.isValid()) return;
+                String equipped = CosmeticStore.getInstance().getEquippedCosmeticId(playerId);
+                if (equipped != null) {
+                    applyCosmetic(ref, store, equipped);
+                } else {
+                    removeCosmetic(ref, store);
+                }
+            }, "cosmetic.preview.restore", "restore cosmetic after preview", "player=" + playerId);
         }, (long) (PREVIEW_DURATION_SECONDS * 1000), TimeUnit.MILLISECONDS);
 
         previewTimers.put(playerId, timer);
@@ -151,12 +124,18 @@ public class CosmeticManager {
 
         String equipped = CosmeticStore.getInstance().getEquippedCosmeticId(playerRef.getUuid());
         if (equipped != null) {
-            applyCosmetic(ref, store, equipped);
+            if (CosmeticDefinition.fromId(equipped) == null) {
+                CosmeticStore.getInstance().unequipCosmetic(playerRef.getUuid());
+                removeCosmetic(ref, store);
+            } else {
+                applyCosmetic(ref, store, equipped);
+            }
         }
     }
 
     /**
-     * Apply a timed celebration effect on top of any equipped cosmetic. Must be called from world thread.
+     * Apply a timed celebration effect on top of any equipped cosmetic.
+     * Must be called from world thread.
      */
     public void applyCelebrationEffect(Ref<EntityStore> ref, Store<EntityStore> store,
                                        String effectName, float durationSeconds) {
@@ -184,14 +163,82 @@ public class CosmeticManager {
     }
 
     /**
-     * Clean up preview timers on disconnect.
+     * Clean up preview timers/trails on disconnect.
      */
     public void cleanupOnDisconnect(UUID playerId) {
         if (playerId == null) return;
         cancelPreviewTimer(playerId);
+        TrailManager.getInstance().stopTrail(playerId);
+        ModelParticleTrailManager.getInstance().stopTrail(playerId);
     }
 
-    // ── Internal helpers ─────────────────────────────────────────────────
+    private void applyDefinition(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef,
+                                 CosmeticDefinition def, boolean preview) {
+        switch (def.getType()) {
+            case ENTITY_EFFECT -> {
+                String effectId = def.getEffectId();
+                if (effectId == null) return;
+                if (preview) {
+                    applyTimedEffect(ref, store, effectId, PREVIEW_DURATION_SECONDS);
+                } else {
+                    applyInfiniteEffect(ref, store, effectId);
+                }
+            }
+            case WORLD_PARTICLE_TRAIL ->
+                    startWorldTrail(playerRef, ref, store, def.getParticleId(), def.getScale(), def.getIntervalMs());
+            case MODEL_PARTICLE_TRAIL -> {
+                World world = store.getExternalData().getWorld();
+                if (world == null) return;
+                ModelParticleTrailManager.getInstance().startTrail(playerRef.getUuid(), ref, store, world,
+                        def.getParticleId(), def.getScale(), def.getIntervalMs(),
+                        def.getXOffset(), def.getYOffset(), def.getZOffset());
+            }
+            default -> {}
+        }
+    }
+
+    private void startWorldTrail(PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store,
+                                 String particleId, float scale, long intervalMs) {
+        if (particleId == null || particleId.isBlank()) return;
+        String resolvedParticleId = resolveParticleId(particleId);
+        String finalParticleId = resolvedParticleId != null ? resolvedParticleId : particleId;
+        World world = store.getExternalData().getWorld();
+        if (world == null) return;
+        TrailManager.getInstance().startTrail(playerRef.getUuid(), ref, store, world,
+                finalParticleId, scale, intervalMs);
+    }
+
+    private String resolveParticleId(String id) {
+        var map = ParticleSystem.getAssetMap().getAssetMap();
+        if (map.containsKey(id)) return id;
+
+        String idLower = id.toLowerCase();
+        for (String key : map.keySet()) {
+            String keyLower = key.toLowerCase();
+            if (keyLower.equals(idLower) || keyLower.endsWith("/" + idLower) || keyLower.endsWith(idLower)) {
+                return key;
+            }
+        }
+        return null;
+    }
+
+    private void clearCosmeticChannels(Ref<EntityStore> ref, Store<EntityStore> store, UUID playerId) {
+        EffectControllerComponent ctrl = store.getComponent(ref, EffectControllerComponent.getComponentType());
+        if (ctrl != null) {
+            ctrl.clearEffects(ref, store);
+
+            PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+            Player player = store.getComponent(ref, Player.getComponentType());
+            if (playerRef != null && player != null) {
+                sendEffectSyncToSelf(playerRef.getPacketHandler(), player, ctrl);
+            }
+        }
+
+        if (playerId != null) {
+            TrailManager.getInstance().stopTrail(playerId);
+            ModelParticleTrailManager.getInstance().stopTrail(playerId);
+        }
+    }
 
     private void cancelPreviewTimer(UUID playerId) {
         ScheduledFuture<?> timer = previewTimers.remove(playerId);
@@ -200,25 +247,65 @@ public class CosmeticManager {
         }
     }
 
+    private void applyInfiniteEffect(Ref<EntityStore> ref, Store<EntityStore> store, String effectName) {
+        EntityEffect effect = resolveEffect(effectName);
+        if (effect == null) {
+            LOGGER.atWarning().log("Could not resolve effect for cosmetic: " + effectName);
+            return;
+        }
+
+        EffectControllerComponent ctrl = store.getComponent(ref, EffectControllerComponent.getComponentType());
+        if (ctrl == null) return;
+
+        int effectIndex = EntityEffect.getAssetMap().getIndex(effect.getId());
+        if (effectIndex < 0) return;
+
+        ctrl.addInfiniteEffect(ref, effectIndex, effect, store);
+        syncEffectsToSelf(ref, store, ctrl);
+    }
+
+    private void applyTimedEffect(Ref<EntityStore> ref, Store<EntityStore> store, String effectName,
+                                  float durationSeconds) {
+        EntityEffect effect = resolveEffect(effectName);
+        if (effect == null) {
+            LOGGER.atWarning().log("Could not resolve effect for cosmetic preview: " + effectName);
+            return;
+        }
+
+        EffectControllerComponent ctrl = store.getComponent(ref, EffectControllerComponent.getComponentType());
+        if (ctrl == null) return;
+
+        int effectIndex = EntityEffect.getAssetMap().getIndex(effect.getId());
+        if (effectIndex < 0) return;
+
+        ctrl.addEffect(ref, effectIndex, effect, durationSeconds, OverlapBehavior.OVERWRITE, store);
+        syncEffectsToSelf(ref, store, ctrl);
+    }
+
+    private void syncEffectsToSelf(Ref<EntityStore> ref, Store<EntityStore> store, EffectControllerComponent ctrl) {
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (playerRef != null && player != null) {
+            sendEffectSyncToSelf(playerRef.getPacketHandler(), player, ctrl);
+        }
+    }
+
     private EntityEffect resolveEffect(String name) {
         var assetMap = EntityEffect.getAssetMap();
         var map = assetMap.getAssetMap();
 
-        // Try exact match first
         EntityEffect effect = map.get(name);
         if (effect != null) return effect;
 
-        // Try case-insensitive match
-        for (var entry : map.entrySet()) {
+        for (Map.Entry<String, EntityEffect> entry : map.entrySet()) {
             if (entry.getKey().equalsIgnoreCase(name)) {
                 return entry.getValue();
             }
         }
 
-        // Try partial match (key ends with the name)
-        for (var entry : map.entrySet()) {
+        String nameLower = name.toLowerCase();
+        for (Map.Entry<String, EntityEffect> entry : map.entrySet()) {
             String key = entry.getKey().toLowerCase();
-            String nameLower = name.toLowerCase();
             if (key.endsWith("/" + nameLower) || key.endsWith(nameLower)) {
                 return entry.getValue();
             }
@@ -236,13 +323,7 @@ public class CosmeticManager {
             }
 
             EntityEffectsUpdate cu = new EntityEffectsUpdate(updates);
-
-            EntityUpdate eu = new EntityUpdate(
-                    player.getNetworkId(),
-                    null,
-                    new EntityEffectsUpdate[]{cu}
-            );
-
+            EntityUpdate eu = new EntityUpdate(player.getNetworkId(), null, new EntityEffectsUpdate[]{cu});
             ph.writeNoCache(new EntityUpdates(null, new EntityUpdate[]{eu}));
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("Failed to sync effect to self");

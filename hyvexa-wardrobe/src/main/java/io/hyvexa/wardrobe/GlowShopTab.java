@@ -27,6 +27,8 @@ public class GlowShopTab implements ShopTab {
     private static final String ACTION_BUY = "Buy:";
     private static final String ACTION_EQUIP = "Equip:";
     private static final String ACTION_UNEQUIP = "Unequip:";
+    private static final String SECTION_GLOW = "Glow Effects";
+    private static final String SECTION_TRAILS = "Trails";
 
     @Override
     public String getId() {
@@ -51,43 +53,12 @@ public class GlowShopTab implements ShopTab {
     @Override
     public void buildContent(UICommandBuilder cmd, UIEventBuilder evt, UUID playerId, long vexa) {
         String equippedId = playerId != null ? CosmeticStore.getInstance().getEquippedCosmeticId(playerId) : null;
-        CosmeticDefinition[] defs = CosmeticDefinition.values();
+        int contentIndex = 0;
+        contentIndex = appendSection(cmd, contentIndex, SECTION_GLOW, "#d5e6ff");
+        contentIndex = appendByKind(cmd, evt, playerId, equippedId, CosmeticDefinition.Kind.GLOW, contentIndex);
 
-        for (int i = 0; i < defs.length; i++) {
-            CosmeticDefinition def = defs[i];
-            String id = def.getId();
-            boolean owned = playerId != null && CosmeticStore.getInstance().ownsCosmetic(playerId, id);
-            boolean equipped = id.equals(equippedId);
-
-            cmd.append("#TabContent", "Pages/Parkour_CosmeticShopEntry.ui");
-            String root = "#TabContent[" + i + "] ";
-
-            cmd.set(root + "#EntryAccent.Background", def.getHexColor());
-            cmd.set(root + "#EntryName.Text", def.getDisplayName());
-            cmd.set(root + "#EntryPrice.Text", def.getPrice() + " Vexa");
-
-            cmd.set(root + "#BuyGroup.Visible", !owned);
-            cmd.set(root + "#EquipGroup.Visible", owned && !equipped);
-            cmd.set(root + "#UnequipGroup.Visible", owned && equipped);
-
-            evt.addEventBinding(CustomUIEventBindingType.Activating,
-                    root + "#PreviewButton",
-                    EventData.of(ButtonEventData.KEY_BUTTON, getId() + ":" + ACTION_PREVIEW + id), false);
-
-            if (!owned) {
-                evt.addEventBinding(CustomUIEventBindingType.Activating,
-                        root + "#BuyButton",
-                        EventData.of(ButtonEventData.KEY_BUTTON, getId() + ":" + ACTION_BUY + id), false);
-            } else if (!equipped) {
-                evt.addEventBinding(CustomUIEventBindingType.Activating,
-                        root + "#EquipButton",
-                        EventData.of(ButtonEventData.KEY_BUTTON, getId() + ":" + ACTION_EQUIP + id), false);
-            } else {
-                evt.addEventBinding(CustomUIEventBindingType.Activating,
-                        root + "#UnequipButton",
-                        EventData.of(ButtonEventData.KEY_BUTTON, getId() + ":" + ACTION_UNEQUIP + id), false);
-            }
-        }
+        contentIndex = appendSection(cmd, contentIndex, SECTION_TRAILS, "#facc15");
+        appendByKind(cmd, evt, playerId, equippedId, CosmeticDefinition.Kind.TRAIL, contentIndex);
     }
 
     @Override
@@ -147,6 +118,61 @@ public class GlowShopTab implements ShopTab {
         }
 
         return ShopTabResult.NONE;
+    }
+
+    private int appendSection(UICommandBuilder cmd, int index, String text, String color) {
+        cmd.append("#TabContent", "Pages/Shop_GlowSectionHeader.ui");
+        String root = "#TabContent[" + index + "] ";
+        cmd.set(root + "#SectionLabel.Text", text);
+        cmd.set(root + "#SectionLabel.Style.TextColor", color);
+        return index + 1;
+    }
+
+    private int appendByKind(UICommandBuilder cmd, UIEventBuilder evt, UUID playerId, String equippedId,
+                             CosmeticDefinition.Kind kind, int startIndex) {
+        int index = startIndex;
+        for (CosmeticDefinition def : CosmeticDefinition.values()) {
+            if (def.getKind() != kind) continue;
+            index = appendEntry(cmd, evt, playerId, equippedId, def, index);
+        }
+        return index;
+    }
+
+    private int appendEntry(UICommandBuilder cmd, UIEventBuilder evt, UUID playerId, String equippedId,
+                            CosmeticDefinition def, int index) {
+        String id = def.getId();
+        boolean owned = playerId != null && CosmeticStore.getInstance().ownsCosmetic(playerId, id);
+        boolean equipped = id.equals(equippedId);
+
+        cmd.append("#TabContent", "Pages/Parkour_CosmeticShopEntry.ui");
+        String root = "#TabContent[" + index + "] ";
+
+        cmd.set(root + "#EntryAccent.Background", def.getHexColor());
+        cmd.set(root + "#EntryName.Text", def.getDisplayName());
+        cmd.set(root + "#EntryPrice.Text", def.getPrice() + " Vexa");
+
+        cmd.set(root + "#BuyGroup.Visible", !owned);
+        cmd.set(root + "#EquipGroup.Visible", owned && !equipped);
+        cmd.set(root + "#UnequipGroup.Visible", owned && equipped);
+
+        evt.addEventBinding(CustomUIEventBindingType.Activating,
+                root + "#PreviewButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, getId() + ":" + ACTION_PREVIEW + id), false);
+
+        if (!owned) {
+            evt.addEventBinding(CustomUIEventBindingType.Activating,
+                    root + "#BuyButton",
+                    EventData.of(ButtonEventData.KEY_BUTTON, getId() + ":" + ACTION_BUY + id), false);
+        } else if (!equipped) {
+            evt.addEventBinding(CustomUIEventBindingType.Activating,
+                    root + "#EquipButton",
+                    EventData.of(ButtonEventData.KEY_BUTTON, getId() + ":" + ACTION_EQUIP + id), false);
+        } else {
+            evt.addEventBinding(CustomUIEventBindingType.Activating,
+                    root + "#UnequipButton",
+                    EventData.of(ButtonEventData.KEY_BUTTON, getId() + ":" + ACTION_UNEQUIP + id), false);
+        }
+        return index + 1;
     }
 
     private void executeOnWorldThread(Player player, WorldThreadAction action) {

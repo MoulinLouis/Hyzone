@@ -1,0 +1,9 @@
+Group {
+  Anchor: (Left: 0, Right: 0, Height: 28);
+
+  Label #SectionLabel {
+    Anchor: (Left: 0, Right: 0, Height: 28);
+    Style: (FontSize: 18, TextColor: #d5e6ff, RenderBold: true, HorizontalAlignment: Center);
+    Text: "";
+  }
+}

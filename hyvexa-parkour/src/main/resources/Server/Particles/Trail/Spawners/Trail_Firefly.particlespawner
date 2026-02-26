@@ -1,0 +1,151 @@
+{
+  "RenderMode": "BlendAdd",
+  "EmitOffset": {
+    "X": {
+      "Min": -1.5,
+      "Max": 1.5
+    },
+    "Y": {
+      "Min": 0.0,
+      "Max": 2.0
+    },
+    "Z": {
+      "Min": -1.5,
+      "Max": 1.5
+    }
+  },
+  "ParticleRotationInfluence": "Billboard",
+  "LinearFiltering": true,
+  "LightInfluence": 0,
+  "ParticleRotateWithSpawner": false,
+  "TrailSpawnerPositionMultiplier": 1,
+  "TrailSpawnerRotationMultiplier": 1,
+  "MaxConcurrentParticles": 30,
+  "ParticleLifeSpan": {
+    "Min": 1.2,
+    "Max": 1.8
+  },
+  "SpawnRate": {
+    "Min": 8,
+    "Max": 15
+  },
+  "SpawnBurst": false,
+  "InitialVelocity": {
+    "Speed": {
+      "Min": 0.05,
+      "Max": 0.15
+    },
+    "Yaw": {
+      "Min": -180,
+      "Max": 180
+    },
+    "Pitch": {
+      "Min": -30,
+      "Max": 60
+    }
+  },
+  "Attractors": [
+    {
+      "DampingMultiplier": {
+        "X": 0.95,
+        "Y": 0.95,
+        "Z": 0.95
+      },
+      "Radius": 2.0
+    }
+  ],
+  "Particle": {
+    "Texture": "Particles/Textures/Weather/Firefly.png",
+    "FrameSize": {
+      "Width": 16,
+      "Height": 16
+    },
+    "ScaleRatioConstraint": "OneToOne",
+    "UVOption": "None",
+    "UVMotion": {
+      "U": 0.0,
+      "V": 0.5
+    },
+    "Animation": {
+      "0": {
+        "Color": "#ffffaa",
+        "Scale": {
+          "X": {
+            "Min": 0.15,
+            "Max": 0.25
+          },
+          "Y": {
+            "Min": 0.15,
+            "Max": 0.25
+          }
+        },
+        "Opacity": 0.0,
+        "Rotation": {
+          "Z": {
+            "Min": -180,
+            "Max": 180
+          }
+        },
+        "FrameIndex": {
+          "Min": 0,
+          "Max": 0
+        }
+      },
+      "10": {
+        "Opacity": 0.9
+      },
+      "30": {
+        "Opacity": 0.3
+      },
+      "50": {
+        "Opacity": 0.95
+      },
+      "70": {
+        "Opacity": 0.2
+      },
+      "85": {
+        "Opacity": 0.8
+      },
+      "95": {
+        "Opacity": 0.3
+      },
+      "100": {
+        "Opacity": 0.0,
+        "Scale": {
+          "X": {
+            "Min": 0.05,
+            "Max": 0.1
+          },
+          "Y": {
+            "Min": 0.05,
+            "Max": 0.1
+          }
+        }
+      }
+    },
+    "InitialAnimationFrame": {
+      "Opacity": 0.0,
+      "Color": "#ffffcc",
+      "FrameIndex": {
+        "Min": 0,
+        "Max": 0
+      },
+      "Scale": {
+        "X": {
+          "Min": 0.1,
+          "Max": 0.2
+        },
+        "Y": {
+          "Min": 0.1,
+          "Max": 0.2
+        }
+      },
+      "Rotation": {
+        "Z": {
+          "Min": -180,
+          "Max": 180
+        }
+      }
+    }
+  }
+}
