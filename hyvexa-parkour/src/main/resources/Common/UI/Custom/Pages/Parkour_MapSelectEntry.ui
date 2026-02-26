@@ -12,9 +12,8 @@ Group {
 
   Button #SelectButton {
     FlexWeight: 1;
-    Padding: (Left: 12, Top: 8, Bottom: 8);
     Background: #00000000;
-    LayoutMode: Top;
+    LayoutMode: Left;
     Style: ButtonStyle(
       Default: (Background: #00000000),
       Hovered: (Background: #ffffff(0.05)),
@@ -22,99 +21,105 @@ Group {
       Sounds: $C.@ButtonSounds,
     );
 
-    Label #MapName {
-      Style: (
-        FontSize: 15,
-        RenderBold: true,
-        TextColor: #f0f4f8
-      );
-      Text: "Map";
+    Group {
+      FlexWeight: 1;
+      LayoutMode: Top;
+      Padding: (Left: 12, Top: 8, Bottom: 8);
+
+      Label #MapName {
+        Style: (
+          FontSize: 15,
+          RenderBold: true,
+          TextColor: #f0f4f8
+        );
+        Text: "Map";
+      }
+
+      Label #MapStatus {
+        Anchor: (Top: 2);
+        Style: (
+          FontSize: 12,
+          TextColor: #9fb0ba
+        );
+        Text: "Status";
+      }
+
+      Group #MedalRow {
+        Anchor: (Top: 3, Height: 24);
+        LayoutMode: Left;
+        Visible: false;
+
+        Group #BronzeMedalIcon {
+          Anchor: (Width: 20, Height: 20, Top: 2);
+          Background: (TexturePath: "../Textures/bronze_medal.png");
+        }
+        Label #BronzeMedalText {
+          Anchor: (Height: 24);
+          Style: (FontSize: 13, TextColor: #cd7f32, VerticalAlignment: Center);
+          Text: "";
+        }
+
+        Group { Anchor: (Width: 14); }
+
+        Group #SilverMedalIcon {
+          Anchor: (Width: 20, Height: 20, Top: 2);
+          Background: (TexturePath: "../Textures/silver_medal.png");
+        }
+        Label #SilverMedalText {
+          Anchor: (Height: 24);
+          Style: (FontSize: 13, TextColor: #c0c0c0, VerticalAlignment: Center);
+          Text: "";
+        }
+
+        Group { Anchor: (Width: 14); }
+
+        Group #GoldMedalIcon {
+          Anchor: (Width: 20, Height: 20, Top: 2);
+          Background: (TexturePath: "../Textures/gold_medal.png");
+        }
+        Label #GoldMedalText {
+          Anchor: (Height: 24);
+          Style: (FontSize: 13, TextColor: #ffd700, VerticalAlignment: Center);
+          Text: "";
+        }
+
+        Group { Anchor: (Width: 14); }
+
+        Group #AuthorMedalIcon {
+          Anchor: (Width: 20, Height: 20, Top: 2);
+          Background: (TexturePath: "../Textures/author_medal.png");
+        }
+        Label #AuthorMedalText {
+          Anchor: (Height: 24);
+          Style: (FontSize: 13, TextColor: #50C878, VerticalAlignment: Center);
+          Text: "";
+        }
+      }
     }
 
-    Label #MapStatus {
-      Anchor: (Top: 2);
-      Style: (
-        FontSize: 12,
-        TextColor: #9fb0ba
-      );
-      Text: "Status";
-    }
+    Group #PlayerMedal {
+      Anchor: (Width: 60, Top: 0, Bottom: 0);
 
-    Group #MedalRow {
-      Anchor: (Top: 3, Height: 24);
-      LayoutMode: Left;
-      Visible: false;
-
-      Group #BronzeMedalIcon {
-        Anchor: (Width: 20, Height: 20, Top: 2);
+      Group #MedalBronze {
+        Anchor: (Left: 10, Top: 18, Width: 40, Height: 40);
         Background: (TexturePath: "../Textures/bronze_medal.png");
+        Visible: false;
       }
-      Label #BronzeMedalText {
-        Anchor: (Height: 24);
-        Style: (FontSize: 13, TextColor: #cd7f32, VerticalAlignment: Center);
-        Text: "";
-      }
-
-      Group { Anchor: (Width: 14); }
-
-      Group #SilverMedalIcon {
-        Anchor: (Width: 20, Height: 20, Top: 2);
+      Group #MedalSilver {
+        Anchor: (Left: 10, Top: 18, Width: 40, Height: 40);
         Background: (TexturePath: "../Textures/silver_medal.png");
+        Visible: false;
       }
-      Label #SilverMedalText {
-        Anchor: (Height: 24);
-        Style: (FontSize: 13, TextColor: #c0c0c0, VerticalAlignment: Center);
-        Text: "";
-      }
-
-      Group { Anchor: (Width: 14); }
-
-      Group #GoldMedalIcon {
-        Anchor: (Width: 20, Height: 20, Top: 2);
+      Group #MedalGold {
+        Anchor: (Left: 10, Top: 18, Width: 40, Height: 40);
         Background: (TexturePath: "../Textures/gold_medal.png");
+        Visible: false;
       }
-      Label #GoldMedalText {
-        Anchor: (Height: 24);
-        Style: (FontSize: 13, TextColor: #ffd700, VerticalAlignment: Center);
-        Text: "";
-      }
-
-      Group { Anchor: (Width: 14); }
-
-      Group #AuthorMedalIcon {
-        Anchor: (Width: 20, Height: 20, Top: 2);
+      Group #MedalAuthor {
+        Anchor: (Left: 10, Top: 18, Width: 40, Height: 40);
         Background: (TexturePath: "../Textures/author_medal.png");
+        Visible: false;
       }
-      Label #AuthorMedalText {
-        Anchor: (Height: 24);
-        Style: (FontSize: 13, TextColor: #50C878, VerticalAlignment: Center);
-        Text: "";
-      }
-    }
-  }
-
-  Group #PlayerMedal {
-    Anchor: (Width: 60, Top: 0, Bottom: 0);
-
-    Group #MedalBronze {
-      Anchor: (Left: 10, Top: 18, Width: 40, Height: 40);
-      Background: (TexturePath: "../Textures/bronze_medal.png");
-      Visible: false;
-    }
-    Group #MedalSilver {
-      Anchor: (Left: 10, Top: 18, Width: 40, Height: 40);
-      Background: (TexturePath: "../Textures/silver_medal.png");
-      Visible: false;
-    }
-    Group #MedalGold {
-      Anchor: (Left: 10, Top: 18, Width: 40, Height: 40);
-      Background: (TexturePath: "../Textures/gold_medal.png");
-      Visible: false;
-    }
-    Group #MedalAuthor {
-      Anchor: (Left: 10, Top: 18, Width: 40, Height: 40);
-      Background: (TexturePath: "../Textures/author_medal.png");
-      Visible: false;
     }
   }
 }
