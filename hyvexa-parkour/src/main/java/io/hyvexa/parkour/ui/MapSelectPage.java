@@ -180,12 +180,12 @@ public class MapSelectPage extends BaseParkourPage {
             }
             commandBuilder.set("#MapCards[" + index + "] #MapName.Text", mapName);
             // Medal display
+            String prefix = "#MapCards[" + index + "] ";
+            Set<Medal> earned = MedalStore.getInstance().getEarnedMedals(playerRef.getUuid(), map.getId());
             boolean hasMedalTimes = map.getBronzeTimeMs() != null || map.getSilverTimeMs() != null
                     || map.getGoldTimeMs() != null || map.getAuthorTimeMs() != null;
             if (hasMedalTimes) {
-                String prefix = "#MapCards[" + index + "] ";
                 commandBuilder.set(prefix + "#MedalRow.Visible", true);
-                Set<Medal> earned = MedalStore.getInstance().getEarnedMedals(playerRef.getUuid(), map.getId());
                 buildMedalLabel(commandBuilder, prefix, "Bronze", map.getBronzeTimeMs(),
                         earned.contains(Medal.BRONZE));
                 buildMedalLabel(commandBuilder, prefix, "Silver", map.getSilverTimeMs(),
@@ -195,11 +195,26 @@ public class MapSelectPage extends BaseParkourPage {
                 buildMedalLabel(commandBuilder, prefix, "Author", map.getAuthorTimeMs(),
                         earned.contains(Medal.AUTHOR));
             }
+            // Show player's highest earned medal on the right
+            Medal highest = getHighestMedal(earned);
+            if (highest != null) {
+                String medalName = highest.name().charAt(0)
+                        + highest.name().substring(1).toLowerCase();
+                commandBuilder.set(prefix + "#Medal" + medalName + ".Visible", true);
+            }
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
                     "#MapCards[" + index + "] #SelectButton",
                     EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_SELECT_PREFIX + map.getId()), false);
             index++;
         }
+    }
+
+    private static Medal getHighestMedal(Set<Medal> earned) {
+        if (earned.contains(Medal.AUTHOR)) return Medal.AUTHOR;
+        if (earned.contains(Medal.GOLD)) return Medal.GOLD;
+        if (earned.contains(Medal.SILVER)) return Medal.SILVER;
+        if (earned.contains(Medal.BRONZE)) return Medal.BRONZE;
+        return null;
     }
 
     private static final String MEDAL_UNEARNED_COLOR = "#5a6a78";
