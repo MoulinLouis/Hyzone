@@ -14,10 +14,16 @@ Group {
   }
 
   // Cosmetic icon
-  Group #ConfigIcon {
+  Group #ConfigIconFrame {
     Anchor: (Left: 30, Top: 6, Width: 36, Height: 36);
     Background: #0f1d2b;
     HitTestVisible: false;
+
+    AssetImage #ConfigIcon {
+      Anchor: (Left: 2, Right: 2, Top: 2, Bottom: 2);
+      AssetPath: "Icons/Wardrobe/Cosmetics/Badges/Hyvexa.png";
+      HitTestVisible: false;
+    }
   }
 
   // Cosmetic name
