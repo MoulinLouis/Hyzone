@@ -39,16 +39,16 @@ public class WardrobeBridge {
             wd("Wings_Bee", "Bee Wings", "hyvexa.cosmetic.violet.capes.wings_bee", "Cape", null, "Icons/Wardrobe/Cosmetics/Capes/Bee_Wings.png"),
             wd("Wings_Butterfly", "Butterfly Wings", "hyvexa.cosmetic.violet.capes.wings_butterfly", "Cape", null, "Icons/Wardrobe/Cosmetics/Capes/Butterfly_Wings_Orange.png"),
 
-            // Ears
-            wd("Antelope_Ears", "Antelope Ears", "hyvexa.cosmetic.cechoo.ears.antelope_ears", "Ears", null, "Icons/Wardrobe/Ears/Antelope_Ears.png"),
-            wd("Cat_Ears", "Cat Ears", "hyvexa.cosmetic.cechoo.ears.cat_ears", "Ears", null, "Icons/Wardrobe/Ears/Cat_Ears.png"),
-            wd("Feran_Ears", "Feran Ears", "hyvexa.cosmetic.cechoo.ears.feran_ears", "Ears", null, "Icons/Wardrobe/Ears/Fox_Ears_Blond.png"),
-            wd("FoxEars_Big", "Fox Ears", "hyvexa.cosmetic.cechoo.ears.foxears_big", "Ears", null, "Icons/Wardrobe/Ears/FoxEars_Big.png"),
-            wd("Mouse_Ears", "Mouse Ears", "hyvexa.cosmetic.cechoo.ears.mouse_ears", "Ears", null, "Icons/Wardrobe/Ears/Mouse_Ears.png"),
-            wd("Ovis_Ears", "Ovis Ears", "hyvexa.cosmetic.cechoo.ears.ovis_ears", "Ears", null, "Icons/Wardrobe/Ears/Ovis_Ears.png"),
-            wd("Piggy_Ears", "Piggy Ears", "hyvexa.cosmetic.cechoo.ears.piggy_ears", "Ears", null, "Icons/Wardrobe/Ears/Piggy_Ears.png"),
-            wd("Rabbit_Ears", "Rabbit Ears", "hyvexa.cosmetic.cechoo.ears.rabbit_ears", "Ears", null, "Icons/Wardrobe/Ears/Rabbit_Ears.png"),
-            wd("Wolf_Ears", "Wolf Ears", "hyvexa.cosmetic.cechoo.ears.wolf_ears", "Ears", null, "Icons/Wardrobe/Ears/Wolf_Ears.png"),
+            // Ears (icons from Cechoo mod, not in this plugin)
+            wd("Antelope_Ears", "Antelope Ears", "hyvexa.cosmetic.cechoo.ears.antelope_ears", "Ears", null, null),
+            wd("Cat_Ears", "Cat Ears", "hyvexa.cosmetic.cechoo.ears.cat_ears", "Ears", null, null),
+            wd("Feran_Ears", "Feran Ears", "hyvexa.cosmetic.cechoo.ears.feran_ears", "Ears", null, null),
+            wd("FoxEars_Big", "Fox Ears", "hyvexa.cosmetic.cechoo.ears.foxears_big", "Ears", null, null),
+            wd("Mouse_Ears", "Mouse Ears", "hyvexa.cosmetic.cechoo.ears.mouse_ears", "Ears", null, null),
+            wd("Ovis_Ears", "Ovis Ears", "hyvexa.cosmetic.cechoo.ears.ovis_ears", "Ears", null, null),
+            wd("Piggy_Ears", "Piggy Ears", "hyvexa.cosmetic.cechoo.ears.piggy_ears", "Ears", null, null),
+            wd("Rabbit_Ears", "Rabbit Ears", "hyvexa.cosmetic.cechoo.ears.rabbit_ears", "Ears", null, null),
+            wd("Wolf_Ears", "Wolf Ears", "hyvexa.cosmetic.cechoo.ears.wolf_ears", "Ears", null, null),
 
             // Face Accessories
             wd("Moody_Mask", "Moody Mask", "hyvexa.cosmetic.violet.faceaccessories.moody_mask", "Face", null, "Icons/Wardrobe/Cosmetics/FaceAccessories/Moody_Mask.png"),
@@ -106,18 +106,18 @@ public class WardrobeBridge {
             wd("HayHay_Head_Warthog_Mask", "Warthog Mask", "hyvexa.cosmetic.hayhay.headaccessories.hayhay_head_warthog_mask", "Mask", null, "Icons/ItemsGenerated/HayHay_Head_Warthog_Mask.png"),
             wd("HayHay_Head_White_Wolf_Mask", "White Wolf Mask", "hyvexa.cosmetic.hayhay.headaccessories.hayhay_head_white_wolf_mask", "Mask", null, "Icons/ItemsGenerated/HayHay_Head_White_Wolf_Mask.png"),
 
-            // Horns
-            wd("Antelope_Horns", "Antelope Horns", "hyvexa.cosmetic.cechoo.horns.antelope_horns", "Horns", null, "Icons/Wardrobe/Horns/Antelope/Antelope_Horns.png"),
-            wd("Ovis_Horns", "Ovis Horns", "hyvexa.cosmetic.cechoo.horns.ovis_horns", "Horns", null, "Icons/Wardrobe/Horns/Ovis/Ovis_Horns_Black.png"),
-            wd("Ovis_Horns_Low", "Ovis Horns Low", "hyvexa.cosmetic.cechoo.horns.ovis_horns_low", "Horns", null, "Icons/Wardrobe/Horns/Ovis/Ovis_Horns_Low.png"),
+            // Horns (icons from Cechoo mod, not in this plugin)
+            wd("Antelope_Horns", "Antelope Horns", "hyvexa.cosmetic.cechoo.horns.antelope_horns", "Horns", null, null),
+            wd("Ovis_Horns", "Ovis Horns", "hyvexa.cosmetic.cechoo.horns.ovis_horns", "Horns", null, null),
+            wd("Ovis_Horns_Low", "Ovis Horns Low", "hyvexa.cosmetic.cechoo.horns.ovis_horns_low", "Horns", null, null),
 
-            // Mouths
-            wd("Beak_Hawk", "Hawk Beak", "hyvexa.cosmetic.cechoo.mouths.beak_hawk", "Mouth", null, "Icons/Wardrobe/Mouths/Beak/Beak_Hawk.png"),
-            wd("Piggy_Snout", "Piggy Snout", "hyvexa.cosmetic.cechoo.mouths.piggy_snout", "Mouth", null, "Icons/Wardrobe/Mouths/Piggy_Snout.png"),
+            // Mouths (icons from Cechoo mod, not in this plugin)
+            wd("Beak_Hawk", "Hawk Beak", "hyvexa.cosmetic.cechoo.mouths.beak_hawk", "Mouth", null, null),
+            wd("Piggy_Snout", "Piggy Snout", "hyvexa.cosmetic.cechoo.mouths.piggy_snout", "Mouth", null, null),
 
-            // Overpants
-            wd("Fur_Socks", "Fur Socks", "hyvexa.cosmetic.cechoo.overpants.fur_socks", "Overpants", null, "Icons/Wardrobe/Socks/Fur_Socks.png"),
-            wd("Reptile_Socks", "Reptile Socks", "hyvexa.cosmetic.cechoo.overpants.reptile_socks", "Overpants", null, "Icons/Wardrobe/Socks/Reptile_Socks.png"),
+            // Overpants (icons from Cechoo mod, not in this plugin)
+            wd("Fur_Socks", "Fur Socks", "hyvexa.cosmetic.cechoo.overpants.fur_socks", "Overpants", null, null),
+            wd("Reptile_Socks", "Reptile Socks", "hyvexa.cosmetic.cechoo.overpants.reptile_socks", "Overpants", null, null),
 
             // Overtops
             wd("Jacket_Racing", "Racing Jacket", "hyvexa.cosmetic.violet.overtops.jacket_racing", "Overtop", null, "Icons/Wardrobe/Cosmetics/Overtops/Jacket_Racing_Cyan.png"),
@@ -127,21 +127,21 @@ public class WardrobeBridge {
             // Pants
             wd("Overalls", "Overalls", "hyvexa.cosmetic.violet.pants.overalls", "Pants", null, "Icons/Wardrobe/Cosmetics/Pants/Overalls_Washed.png"),
 
-            // Shoes
-            wd("Hooves_Cloven", "Cloven Hooves", "hyvexa.cosmetic.cechoo.shoes.hooves_cloven", "Shoes", null, "Icons/Wardrobe/Feet/Hooves_Cloven.png"),
-            wd("Paws_Clawed", "Clawed Paws", "hyvexa.cosmetic.cechoo.shoes.paws_clawed", "Shoes", null, "Icons/Wardrobe/Feet/Paws_Clawed.png"),
-            wd("Paws_Clawed_CalicoBeans", "Calico Paws", "hyvexa.cosmetic.cechoo.shoes.paws_clawed_calicobeans", "Shoes", null, "Icons/Wardrobe/Feet/Paws_Clawed.png"),
-            wd("Paws_Clawed_PinkBeans", "Pink Paws", "hyvexa.cosmetic.cechoo.shoes.paws_clawed_pinkbeans", "Shoes", null, "Icons/Wardrobe/Feet/Paws_Clawed.png"),
+            // Shoes (icons from Cechoo mod, not in this plugin)
+            wd("Hooves_Cloven", "Cloven Hooves", "hyvexa.cosmetic.cechoo.shoes.hooves_cloven", "Shoes", null, null),
+            wd("Paws_Clawed", "Clawed Paws", "hyvexa.cosmetic.cechoo.shoes.paws_clawed", "Shoes", null, null),
+            wd("Paws_Clawed_CalicoBeans", "Calico Paws", "hyvexa.cosmetic.cechoo.shoes.paws_clawed_calicobeans", "Shoes", null, null),
+            wd("Paws_Clawed_PinkBeans", "Pink Paws", "hyvexa.cosmetic.cechoo.shoes.paws_clawed_pinkbeans", "Shoes", null, null),
 
-            // Tails
-            wd("Bird_Tail1", "Bird Tail", "hyvexa.cosmetic.cechoo.tails.bird_tail1", "Tail", null, "Icons/Wardrobe/Tails/Bird_Tail1.png"),
-            wd("Bunny_Tail", "Bunny Tail", "hyvexa.cosmetic.cechoo.tails.bunny_tail", "Tail", null, "Icons/Wardrobe/Tails/Bunny_Tail.png"),
-            wd("Cat_Tail", "Cat Tail", "hyvexa.cosmetic.cechoo.tails.cat_tail", "Tail", null, "Icons/Wardrobe/Tails/Cat_Tail.png"),
-            wd("Fox_Tail", "Fox Tail", "hyvexa.cosmetic.cechoo.tails.fox_tail", "Tail", null, "Icons/Wardrobe/Tails/Fox_Tail.png"),
-            wd("Rat_Tail", "Rat Tail", "hyvexa.cosmetic.cechoo.tails.rat_tail", "Tail", null, "Icons/Wardrobe/Tails/Rat_Tail.png"),
-            wd("ReptileLarge_Tail", "Reptile Tail", "hyvexa.cosmetic.cechoo.tails.reptilelarge_tail", "Tail", null, "Icons/Wardrobe/Tails/ReptileLarge_Tail.png"),
-            wd("Tuft_Tail", "Tuft Tail", "hyvexa.cosmetic.cechoo.tails.tuft_tail", "Tail", null, "Icons/Wardrobe/Tails/Tuft_Tail.png"),
-            wd("Wolf_Tail", "Wolf Tail", "hyvexa.cosmetic.cechoo.tails.wolf_tail", "Tail", null, "Icons/Wardrobe/Tails/Wolf_Tail.png"),
+            // Tails (icons from Cechoo mod, not in this plugin)
+            wd("Bird_Tail1", "Bird Tail", "hyvexa.cosmetic.cechoo.tails.bird_tail1", "Tail", null, null),
+            wd("Bunny_Tail", "Bunny Tail", "hyvexa.cosmetic.cechoo.tails.bunny_tail", "Tail", null, null),
+            wd("Cat_Tail", "Cat Tail", "hyvexa.cosmetic.cechoo.tails.cat_tail", "Tail", null, null),
+            wd("Fox_Tail", "Fox Tail", "hyvexa.cosmetic.cechoo.tails.fox_tail", "Tail", null, null),
+            wd("Rat_Tail", "Rat Tail", "hyvexa.cosmetic.cechoo.tails.rat_tail", "Tail", null, null),
+            wd("ReptileLarge_Tail", "Reptile Tail", "hyvexa.cosmetic.cechoo.tails.reptilelarge_tail", "Tail", null, null),
+            wd("Tuft_Tail", "Tuft Tail", "hyvexa.cosmetic.cechoo.tails.tuft_tail", "Tail", null, null),
+            wd("Wolf_Tail", "Wolf Tail", "hyvexa.cosmetic.cechoo.tails.wolf_tail", "Tail", null, null),
 
             // Undertops
             wd("Shirt", "Shirt", "hyvexa.cosmetic.violet.undertops.shirt", "Undertop", null, "Icons/Wardrobe/Cosmetics/Undertops/Shirt_Alien.png"),
