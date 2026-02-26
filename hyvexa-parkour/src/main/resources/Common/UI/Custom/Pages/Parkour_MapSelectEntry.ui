@@ -92,4 +92,29 @@ Group {
       }
     }
   }
+
+  Group #PlayerMedal {
+    Anchor: (Width: 60, Top: 0, Bottom: 0);
+
+    Group #MedalBronze {
+      Anchor: (Left: 10, Top: 18, Width: 40, Height: 40);
+      Background: (TexturePath: "../Textures/bronze_medal.png");
+      Visible: false;
+    }
+    Group #MedalSilver {
+      Anchor: (Left: 10, Top: 18, Width: 40, Height: 40);
+      Background: (TexturePath: "../Textures/silver_medal.png");
+      Visible: false;
+    }
+    Group #MedalGold {
+      Anchor: (Left: 10, Top: 18, Width: 40, Height: 40);
+      Background: (TexturePath: "../Textures/gold_medal.png");
+      Visible: false;
+    }
+    Group #MedalAuthor {
+      Anchor: (Left: 10, Top: 18, Width: 40, Height: 40);
+      Background: (TexturePath: "../Textures/author_medal.png");
+      Visible: false;
+    }
+  }
 }
