@@ -13,9 +13,16 @@ Group {
     Background: #ef4444;
   }
 
+  // Cosmetic icon
+  Group #ConfigIcon {
+    Anchor: (Left: 30, Top: 6, Width: 36, Height: 36);
+    Background: #0f1d2b;
+    HitTestVisible: false;
+  }
+
   // Cosmetic name
   Label #ConfigName {
-    Anchor: (Left: 32, Top: 0, Bottom: 0, Width: 160);
+    Anchor: (Left: 72, Top: 0, Bottom: 0, Width: 130);
     Style: (FontSize: 13, TextColor: #cfd7dc, RenderBold: true, VerticalAlignment: Center);
     Text: "";
     HitTestVisible: false;

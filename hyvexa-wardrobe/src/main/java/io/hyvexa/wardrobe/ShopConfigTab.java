@@ -75,6 +75,11 @@ public class ShopConfigTab implements ShopTab {
                 cmd.set(root + "#StatusDot.Background", "#22c55e");
             }
 
+            // Icon
+            if (def.iconPath() != null) {
+                cmd.set(root + "#ConfigIcon.Background", "(TexturePath: \"" + def.iconPath() + "\")");
+            }
+
             // Name
             cmd.set(root + "#ConfigName.Text", def.displayName());
 
