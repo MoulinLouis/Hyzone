@@ -53,7 +53,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
     private static final String ITEM_LEAVE = "Ingredient_Earth_Essence";
     private static final String ITEM_BLINK = "Ingredient_Lightning_Essence";
     private static final String ITEM_PROFILE = "RunOrFall_Profile_Silk";
-    private static final String ITEM_STATS = "Food_Candy_Cane";
+    private static final String ITEM_STATS = "Parkour_Stats_Block";
     private static final String ITEM_LEADERBOARD = "WinterHoliday_Snowflake";
     private static final short SLOT_PRIMARY = 0;
     private static final short SLOT_LEADERBOARD = 1;

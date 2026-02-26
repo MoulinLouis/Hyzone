@@ -89,7 +89,7 @@ public class StatsInteraction extends SimpleInteraction {
             player.getPageManager().openCustomPage(ref, store, (InteractiveCustomUIPage<?>) page);
             return true;
         } catch (Exception e) {
-            LOGGER.atWarning().withCause(e).log("Failed to open RunOrFall stats page from Food_Candy_Cane interaction.");
+            LOGGER.atWarning().withCause(e).log("Failed to open RunOrFall stats page from Stats interaction.");
             return false;
         }
     }
