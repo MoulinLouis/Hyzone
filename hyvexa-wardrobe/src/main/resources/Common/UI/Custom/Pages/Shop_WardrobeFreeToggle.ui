@@ -1,0 +1,42 @@
+$C = "../Common.ui";
+
+Group {
+  Anchor: (Width: 70, Height: 28, Left: 12);
+  LayoutMode: Full;
+
+  // Checkbox box (unchecked default: outline only)
+  Group #FreeBox {
+    Anchor: (Left: 8, Top: 6, Width: 16, Height: 16);
+    OutlineColor: #ffffff(0.2);
+    OutlineSize: 1;
+  }
+
+  // "Free" label
+  Label #FreeLabel {
+    Anchor: (Left: 29, Top: 0, Bottom: 0, Right: 0);
+    Style: (FontSize: 12, TextColor: #8b9bb0, RenderBold: true, VerticalAlignment: Center);
+    Text: "Free";
+    HitTestVisible: false;
+  }
+
+  // Clickable overlay
+  TextButton #FreeToggleBtn {
+    Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+    Text: "";
+    Style: TextButtonStyle(
+      Default: (
+        Background: #000000(0.01),
+        LabelStyle: (FontSize: 1, TextColor: #000000(0.01), HorizontalAlignment: Center, VerticalAlignment: Center)
+      ),
+      Hovered: (
+        Background: #ffffff(0.06),
+        LabelStyle: (FontSize: 1, TextColor: #000000(0.01), HorizontalAlignment: Center, VerticalAlignment: Center)
+      ),
+      Pressed: (
+        Background: #ffffff(0.03),
+        LabelStyle: (FontSize: 1, TextColor: #000000(0.01), HorizontalAlignment: Center, VerticalAlignment: Center)
+      ),
+      Sounds: $C.@ButtonSounds,
+    );
+  }
+}

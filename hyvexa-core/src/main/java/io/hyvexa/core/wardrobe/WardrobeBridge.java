@@ -6,8 +6,8 @@ import io.hyvexa.core.cosmetic.CosmeticStore;
 import io.hyvexa.core.economy.CurrencyBridge;
 
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -47,7 +47,7 @@ public class WardrobeBridge {
             wd("Mouse_Ears", "Mouse Ears", "hyvexa.cosmetic.cechoo.ears.mouse_ears", "Ears", null, "Icons/Wardrobe/Ears/Mouse_Ears.png"),
             wd("Ovis_Ears", "Ovis Ears", "hyvexa.cosmetic.cechoo.ears.ovis_ears", "Ears", null, "Icons/Wardrobe/Ears/Ovis_Ears.png"),
             wd("Piggy_Ears", "Piggy Ears", "hyvexa.cosmetic.cechoo.ears.piggy_ears", "Ears", null, "Icons/Wardrobe/Ears/Piggy_Ears.png"),
-            wd("Rabbit_Ears", "Rabbit Ears", "hyvexa.cosmetic.cechoo.ears.rabbit_ears", "Ears", null, null),
+            wd("Rabbit_Ears", "Rabbit Ears", "hyvexa.cosmetic.cechoo.ears.rabbit_ears", "Ears", null, "Icons/Wardrobe/Ears/Rabbit_Ears.png"),
             wd("Wolf_Ears", "Wolf Ears", "hyvexa.cosmetic.cechoo.ears.wolf_ears", "Ears", null, "Icons/Wardrobe/Ears/Wolf_Ears.png"),
 
             // Face Accessories
@@ -153,6 +153,30 @@ public class WardrobeBridge {
             wd("Thanzotl_Shirt", "Thanzotl Shirt", "hyvexa.cosmetic.violet.undertops.thanzotl_shirt", "Undertop", null, "Icons/Wardrobe/Cosmetics/Undertops/Thanzotl_Shirt.png")
     );
 
+    /** Maps fine-grained categories to broad shop groups. */
+    private static final Map<String, String> CATEGORY_GROUPS = Map.ofEntries(
+            Map.entry("Face", "Head"),
+            Map.entry("Head", "Head"),
+            Map.entry("Mask", "Head"),
+            Map.entry("Horns", "Head"),
+            Map.entry("Mouth", "Head"),
+            Map.entry("Ears", "Head"),
+            Map.entry("Overpants", "Clothes"),
+            Map.entry("Overtop", "Clothes"),
+            Map.entry("Pants", "Clothes"),
+            Map.entry("Shoes", "Clothes"),
+            Map.entry("Undertop", "Clothes"),
+            Map.entry("Badge", "Accessories"),
+            Map.entry("Tail", "Accessories"),
+            Map.entry("Cape", "Accessories")
+    );
+
+    private static final List<String> GROUP_ORDER = List.of("Head", "Clothes", "Accessories");
+
+    private static String getCategoryGroup(String category) {
+        return CATEGORY_GROUPS.getOrDefault(category, category);
+    }
+
     private static WardrobeCosmeticDef wd(String fileName, String displayName, String permissionNode,
                                            String category, String iconKey, String iconPath) {
         return new WardrobeCosmeticDef("WD_" + fileName, displayName, 0, permissionNode, category, iconKey, iconPath);
@@ -176,21 +200,17 @@ public class WardrobeBridge {
         return null;
     }
 
-    /** Returns distinct ordered category list. */
+    /** Returns the broad group names in display order. */
     public List<String> getCategories() {
-        LinkedHashSet<String> cats = new LinkedHashSet<>();
-        for (WardrobeCosmeticDef def : COSMETICS) {
-            cats.add(def.category());
-        }
-        return new ArrayList<>(cats);
+        return GROUP_ORDER;
     }
 
-    /** Returns cosmetics filtered by category (null = all). */
-    public List<WardrobeCosmeticDef> getCosmeticsByCategory(String category) {
-        if (category == null) return COSMETICS;
+    /** Returns cosmetics filtered by broad group (null = all). */
+    public List<WardrobeCosmeticDef> getCosmeticsByCategory(String group) {
+        if (group == null) return COSMETICS;
         List<WardrobeCosmeticDef> result = new ArrayList<>();
         for (WardrobeCosmeticDef def : COSMETICS) {
-            if (def.category().equals(category)) result.add(def);
+            if (group.equals(getCategoryGroup(def.category()))) result.add(def);
         }
         return result;
     }

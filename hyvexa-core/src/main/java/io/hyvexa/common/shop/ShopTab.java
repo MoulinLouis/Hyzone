@@ -28,6 +28,12 @@ public interface ShopTab {
     ShopTabResult handleEvent(String button, Ref<EntityStore> ref, Store<EntityStore> store,
                               Player player, UUID playerId);
 
+    default ShopTabResult handleSearch(String searchText, UUID playerId) {
+        return ShopTabResult.NONE;
+    }
+
+    default void evictPlayer(UUID playerId) {}
+
     default void populateConfirmOverlay(UICommandBuilder cmd, String confirmKey) {}
 
     default boolean handleConfirm(String confirmKey, Ref<EntityStore> ref, Store<EntityStore> store,

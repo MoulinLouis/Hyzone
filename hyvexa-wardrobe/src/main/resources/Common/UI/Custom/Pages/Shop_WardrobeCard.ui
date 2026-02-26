@@ -1,21 +1,21 @@
 $C = "../Common.ui";
 
 Group {
-  Anchor: (Width: 130, Height: 120, Left: 8, Top: 8);
+  Anchor: (Width: 130, Height: 150, Left: 8, Top: 8);
   LayoutMode: Full;
   Background: #07101b;
   OutlineColor: #ffffff(0.06);
   OutlineSize: 1;
 
-  // Icon area - one Group per cosmetic icon, toggled by code
+  // Icon area
   Group #IconArea {
-    Anchor: (Left: 10, Right: 10, Top: 10, Bottom: 40);
-    LayoutMode: Full;
+    Anchor: (Left: 10, Right: 10, Top: 14, Bottom: 24);
+    LayoutMode: CenterMiddle;
 
-    Group #IconBadgeHyvexa {
-      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-      Background: (TexturePath: "../Textures/wardrobe/BadgeHyvexa.png");
-      Visible: false;
+    AssetImage #CardIcon {
+      Anchor: (Width: 92, Height: 92);
+      AssetPath: "Icons/Wardrobe/Cosmetics/Badges/Hyvexa.png";
+      HitTestVisible: false;
     }
   }
 
@@ -29,16 +29,17 @@ Group {
 
   // Price - buyable (top right, green)
   Group #PriceBuyBadge {
-    Anchor: (Right: 2, Top: 4, Width: 60, Height: 18);
+    Anchor: (Right: 20, Top: 4, Width: 64, Height: 18);
     LayoutMode: Left;
     Visible: false;
     HitTestVisible: false;
 
+    Group { Anchor: (Width: 3); }
     Group {
-      Anchor: (Width: 14, Height: 14, Top: 2);
+      Anchor: (Width: 16, Height: 16, Top: 1);
       Background: (TexturePath: "../Textures/vexa.png");
     }
-    Group { Anchor: (Width: 3); }
+    Group { Anchor: (Width: 4); }
     Label #BuyPriceLabel {
       Anchor: (Height: 18);
       Style: (FontSize: 13, TextColor: #22c55e, RenderBold: true, VerticalAlignment: Center);
@@ -48,16 +49,17 @@ Group {
 
   // Price - can't afford (top right, red)
   Group #PriceCantAffordBadge {
-    Anchor: (Right: 2, Top: 4, Width: 60, Height: 18);
+    Anchor: (Right: 20, Top: 4, Width: 64, Height: 18);
     LayoutMode: Left;
     Visible: false;
     HitTestVisible: false;
 
+    Group { Anchor: (Width: 3); }
     Group {
-      Anchor: (Width: 14, Height: 14, Top: 2);
+      Anchor: (Width: 16, Height: 16, Top: 1);
       Background: (TexturePath: "../Textures/vexa.png");
     }
-    Group { Anchor: (Width: 3); }
+    Group { Anchor: (Width: 4); }
     Label #CantAffordPrice {
       Anchor: (Height: 18);
       Style: (FontSize: 13, TextColor: #ef4444, RenderBold: true, VerticalAlignment: Center);
@@ -67,16 +69,17 @@ Group {
 
   // Price - feather buyable (top right, green)
   Group #PriceFeatherBuyBadge {
-    Anchor: (Right: 2, Top: 4, Width: 60, Height: 18);
+    Anchor: (Right: 20, Top: 4, Width: 64, Height: 18);
     LayoutMode: Left;
     Visible: false;
     HitTestVisible: false;
 
+    Group { Anchor: (Width: 3); }
     Group {
-      Anchor: (Width: 14, Height: 14, Top: 2);
+      Anchor: (Width: 16, Height: 16, Top: 1);
       Background: (TexturePath: "../Textures/feather.png");
     }
-    Group { Anchor: (Width: 3); }
+    Group { Anchor: (Width: 4); }
     Label #BuyFeatherPriceLabel {
       Anchor: (Height: 18);
       Style: (FontSize: 13, TextColor: #22c55e, RenderBold: true, VerticalAlignment: Center);
@@ -86,16 +89,17 @@ Group {
 
   // Price - feather can't afford (top right, red)
   Group #PriceFeatherCantAffordBadge {
-    Anchor: (Right: 2, Top: 4, Width: 60, Height: 18);
+    Anchor: (Right: 20, Top: 4, Width: 64, Height: 18);
     LayoutMode: Left;
     Visible: false;
     HitTestVisible: false;
 
+    Group { Anchor: (Width: 3); }
     Group {
-      Anchor: (Width: 14, Height: 14, Top: 2);
+      Anchor: (Width: 16, Height: 16, Top: 1);
       Background: (TexturePath: "../Textures/feather.png");
     }
-    Group { Anchor: (Width: 3); }
+    Group { Anchor: (Width: 4); }
     Label #CantAffordFeatherPrice {
       Anchor: (Height: 18);
       Style: (FontSize: 13, TextColor: #ef4444, RenderBold: true, VerticalAlignment: Center);
