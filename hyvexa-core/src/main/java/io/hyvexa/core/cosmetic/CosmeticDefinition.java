@@ -12,11 +12,8 @@ public enum CosmeticDefinition {
     CYAN_PULSE(Kind.GLOW, Type.ENTITY_EFFECT, "Cosmetic_CyanPulse", "Cyan Pulse", "#06B6D4", 100),
     STONESKIN(Kind.GLOW, Type.ENTITY_EFFECT, "Cosmetic_Stoneskin", "Stoneskin", "#888C8D", 100),
 
-    TRAIL_GOLD(Kind.TRAIL, Type.WORLD_PARTICLE_TRAIL, "Firework_GS", "Gold", "#FFD700", 100, 0.5f, 200L, 0f, 0.1f, 0f),
-    TRAIL_FIREWORK_MIX(Kind.TRAIL, Type.WORLD_PARTICLE_TRAIL, "Firework_Mix2", "Firework 1", "#f472b6", 100, 0.5f, 200L, 0f, 0.1f, 0f),
-    TRAIL_FIREWORK_MIX3(Kind.TRAIL, Type.WORLD_PARTICLE_TRAIL, "Firework_Mix3", "Firework 2", "#f472b6", 100, 0.5f, 200L, 0f, 0.1f, 0f),
-    TRAIL_FIREWORK_MIX4(Kind.TRAIL, Type.WORLD_PARTICLE_TRAIL, "Firework_Mix4", "Firework 3", "#f472b6", 100, 0.5f, 200L, 0f, 0.1f, 0f),
-    TRAIL_RINGS(Kind.TRAIL, Type.WORLD_PARTICLE_TRAIL, "Rings_Rings", "Rings", "#a78bfa", 100, 0.6f, 220L, 0f, 0.1f, 0f);
+    TRAIL_GOLD(Kind.TRAIL, Type.WORLD_PARTICLE_TRAIL, "Firework_GS", "Gold", "#FFD700", 1000, 0.5f, 200L, 0f, 0.1f, 0f),
+    TRAIL_FIREWORK(Kind.TRAIL, Type.WORLD_PARTICLE_TRAIL, "Firework_Mix4", "Firework", "#f472b6", 1000, 0.5f, 200L, 0f, 0.1f, 0f);
 
     private final Kind kind;
     private final Type type;

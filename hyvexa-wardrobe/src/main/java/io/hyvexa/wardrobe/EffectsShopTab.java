@@ -16,6 +16,7 @@ import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.core.cosmetic.CosmeticDefinition;
 import io.hyvexa.core.cosmetic.CosmeticManager;
 import io.hyvexa.core.cosmetic.CosmeticStore;
+import io.hyvexa.core.economy.CurrencyBridge;
 import io.hyvexa.core.economy.VexaStore;
 
 import java.util.UUID;
@@ -120,13 +121,21 @@ public class EffectsShopTab implements ShopTab {
             String cosmeticId = button.substring(ACTION_BUY.length());
             CosmeticDefinition def = CosmeticDefinition.fromId(cosmeticId);
             if (def == null) return ShopTabResult.NONE;
-            long vexa = VexaStore.getInstance().getVexa(playerId);
-            if (vexa < def.getPrice()) {
-                player.sendMessage(Message.raw("[Shop] Not enough vexa! You need " + def.getPrice()
-                        + " vexa but have " + vexa + ".").color(SystemMessageUtils.ERROR));
+            boolean isTrail = def.getKind() == CosmeticDefinition.Kind.TRAIL;
+            String currencyName = isTrail ? "feathers" : "vexa";
+            long balance = isTrail
+                    ? CurrencyBridge.getBalance("feathers", playerId)
+                    : VexaStore.getInstance().getVexa(playerId);
+            if (balance < def.getPrice()) {
+                player.sendMessage(Message.raw("[Shop] Not enough " + currencyName + "! You need " + def.getPrice()
+                        + " " + currencyName + " but have " + balance + ".").color(SystemMessageUtils.ERROR));
                 return ShopTabResult.NONE;
             }
-            VexaStore.getInstance().removeVexa(playerId, def.getPrice());
+            if (isTrail) {
+                CurrencyBridge.deduct("feathers", playerId, def.getPrice());
+            } else {
+                VexaStore.getInstance().removeVexa(playerId, def.getPrice());
+            }
             CosmeticStore.getInstance().purchaseCosmetic(playerId, cosmeticId);
             player.sendMessage(Message.raw("[Shop] Purchased " + def.getDisplayName() + "!")
                     .color(SystemMessageUtils.SUCCESS));
@@ -177,7 +186,8 @@ public class EffectsShopTab implements ShopTab {
 
         cmd.set(root + "#EntryAccent.Background", def.getHexColor());
         cmd.set(root + "#EntryName.Text", def.getDisplayName());
-        cmd.set(root + "#EntryPrice.Text", def.getPrice() + " Vexa");
+        String currency = def.getKind() == CosmeticDefinition.Kind.TRAIL ? "Feathers" : "Vexa";
+        cmd.set(root + "#EntryPrice.Text", def.getPrice() + " " + currency);
 
         cmd.set(root + "#BuyGroup.Visible", !owned);
         cmd.set(root + "#EquipGroup.Visible", owned && !equipped);

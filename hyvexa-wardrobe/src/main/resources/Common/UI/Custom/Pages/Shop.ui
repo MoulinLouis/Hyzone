@@ -42,6 +42,12 @@ $C.@PageOverlay {
         LayoutMode: Top;
       }
 
+      // Bottom tab bar (pinned above vexa balance)
+      Group #BottomTabBar {
+        Anchor: (Left: 0, Right: 0);
+        LayoutMode: Top;
+      }
+
       // Divider
       Group {
         Anchor: (Left: 16, Right: 16, Height: 1);

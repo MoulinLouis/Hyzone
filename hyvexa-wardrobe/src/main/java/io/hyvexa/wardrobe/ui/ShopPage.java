@@ -20,6 +20,7 @@ import io.hyvexa.common.shop.ShopTabRegistry;
 import io.hyvexa.common.shop.ShopTabResult;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.core.economy.VexaStore;
+import com.hypixel.hytale.server.core.command.system.CommandManager;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -32,6 +33,7 @@ public class ShopPage extends InteractiveCustomUIPage<ShopPage.ShopEventData> {
     private static final String BUTTON_CONFIRM = "ShopConfirm";
     private static final String BUTTON_CANCEL = "ShopCancel";
     private static final String BUTTON_VEXA_PACKS = "VexaPacks";
+    private static final String BUTTON_WARDROBE = "Wardrobe";
     private static final String BUTTON_PACK = "Pack";
     private static final String STORE_URL = "https://store.hyvexa.com";
     private static final String TAB_PREFIX = "Tab:";
@@ -75,6 +77,7 @@ public class ShopPage extends InteractiveCustomUIPage<ShopPage.ShopEventData> {
         ShopTab activeTab = resolveActiveTab(tabs);
 
         buildTabBar(cmd, evt, tabs);
+        buildBottomTabBar(cmd, evt);
 
         // Build content: vexa packs or active tab
         if (showingVexaPacks) {
@@ -125,6 +128,17 @@ public class ShopPage extends InteractiveCustomUIPage<ShopPage.ShopEventData> {
             pendingConfirmKey = null;
             pendingConfirmTabId = null;
             sendFullRefresh();
+            return;
+        }
+
+        if (BUTTON_WARDROBE.equals(button)) {
+            Player player = store.getComponent(ref, Player.getComponentType());
+            if (player != null) {
+                // Don't call close() — the wardrobe command calls openCustomPage()
+                // which properly dismisses the current page and opens the new one
+                // in a single packet, avoiding a visual flash.
+                CommandManager.get().handleCommand(player, "wardrobe");
+            }
             return;
         }
 
@@ -217,6 +231,7 @@ public class ShopPage extends InteractiveCustomUIPage<ShopPage.ShopEventData> {
         cmd.set("#ConfirmOverlay.Visible", false);
 
         cmd.clear("#TabBar");
+        cmd.clear("#BottomTabBar");
         cmd.clear("#TabContent");
 
         // Close button
@@ -232,6 +247,7 @@ public class ShopPage extends InteractiveCustomUIPage<ShopPage.ShopEventData> {
         List<ShopTab> tabs = getVisibleTabs();
         ShopTab activeTab = resolveActiveTab(tabs);
         buildTabBar(cmd, evt, tabs);
+        buildBottomTabBar(cmd, evt);
 
         if (showingVexaPacks) {
             buildVexaPacksContent(cmd, evt);
@@ -264,6 +280,15 @@ public class ShopPage extends InteractiveCustomUIPage<ShopPage.ShopEventData> {
                     root + "#TabButton",
                     EventData.of(ButtonEventData.KEY_BUTTON, TAB_PREFIX + tab.getId()), false);
         }
+    }
+
+    private void buildBottomTabBar(UICommandBuilder cmd, UIEventBuilder evt) {
+        cmd.append("#BottomTabBar", "Pages/Shop_TabEntry.ui");
+        String root = "#BottomTabBar[0] ";
+        cmd.set(root + "#TabLabel.Text", "Wardrobe");
+        evt.addEventBinding(CustomUIEventBindingType.Activating,
+                root + "#TabButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_WARDROBE), false);
     }
 
     private void buildVexaPacksContent(UICommandBuilder cmd, UIEventBuilder evt) {
