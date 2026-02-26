@@ -14,8 +14,12 @@ public final class FormatUtils {
     }
 
     public static String formatDuration(long durationMs) {
-        double seconds = durationMs / 1000.0;
-        return String.format(Locale.ROOT, "%.2fs", seconds);
+        long totalMs = Math.max(0L, durationMs);
+        long totalSeconds = totalMs / 1000L;
+        long centis = (totalMs % 1000L) / 10L;
+        long minutes = totalSeconds / 60L;
+        long seconds = totalSeconds % 60L;
+        return String.format(Locale.ROOT, "%d:%02d.%02d", minutes, seconds, centis);
     }
 
     public static String formatDurationLong(long durationMs) {
