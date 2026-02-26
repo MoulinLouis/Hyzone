@@ -969,6 +969,9 @@ public class HyvexaPlugin extends JavaPlugin {
         registry.register("Parkour_Toggle_Fly_Interaction", ToggleFlyInteraction.class, ToggleFlyInteraction.CODEC);
         registry.register("RunOrFall_Join_Bridge_Interaction",
                 RunOrFallJoinBridgeInteraction.class, RunOrFallJoinBridgeInteraction.CODEC);
+        registry.register("Shop_Item_Interaction",
+                io.hyvexa.common.interaction.ShopItemInteraction.class,
+                io.hyvexa.common.interaction.ShopItemInteraction.CODEC);
     }
 
     @Override

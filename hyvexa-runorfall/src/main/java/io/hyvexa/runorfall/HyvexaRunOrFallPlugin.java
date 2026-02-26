@@ -58,6 +58,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
     private static final short SLOT_PRIMARY = 0;
     private static final short SLOT_LEADERBOARD = 1;
     private static final short SLOT_PROFILE = 2;
+    private static final short SLOT_SHOP = 3;
     private static final short SLOT_GAME_SELECTOR = 8;
     private static HyvexaRunOrFallPlugin INSTANCE;
 
@@ -217,6 +218,9 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
         registry.register("RunOrFall_Blink_Interaction", RunOrFallBlinkInteraction.class, RunOrFallBlinkInteraction.CODEC);
         registry.register("RunOrFall_Stats_Interaction", RunOrFallStatsInteraction.class, RunOrFallStatsInteraction.CODEC);
         registry.register("RunOrFall_Profile_Interaction", RunOrFallProfileInteraction.class, RunOrFallProfileInteraction.CODEC);
+        registry.register("Shop_Item_Interaction",
+                io.hyvexa.common.interaction.ShopItemInteraction.class,
+                io.hyvexa.common.interaction.ShopItemInteraction.CODEC);
     }
 
     public RunOrFallStatsStore getStatsStore() {
@@ -322,6 +326,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
         setHotbarItem(hotbar, capacity, SLOT_PRIMARY, primaryItem);
         setHotbarItem(hotbar, capacity, SLOT_LEADERBOARD, ITEM_LEADERBOARD);
         setHotbarItem(hotbar, capacity, SLOT_PROFILE, ITEM_PROFILE);
+        setHotbarItem(hotbar, capacity, SLOT_SHOP, WorldConstants.ITEM_SHOP);
         if (state == HotbarState.DEFAULT) {
             setHotbarItem(hotbar, capacity, SLOT_GAME_SELECTOR, WorldConstants.ITEM_SERVER_SELECTOR);
         }
@@ -338,6 +343,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
                     || ITEM_BLINK.equals(itemId)
                     || ITEM_PROFILE.equals(itemId)
                     || ITEM_LEADERBOARD.equals(itemId)
+                    || WorldConstants.ITEM_SHOP.equals(itemId)
                     || WorldConstants.ITEM_SERVER_SELECTOR.equals(itemId)) {
                 hotbar.setItemStackForSlot(slot, ItemStack.EMPTY, false);
             }

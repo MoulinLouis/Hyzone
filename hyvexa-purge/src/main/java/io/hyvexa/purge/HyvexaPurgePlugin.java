@@ -67,6 +67,7 @@ public class HyvexaPurgePlugin extends JavaPlugin {
     private static final short SLOT_PRIMARY_WEAPON = 0;
     private static final short SLOT_PRIMARY_AMMO = 1;
     private static final short SLOT_LOOTBOX = 2;
+    private static final short SLOT_SHOP = 2;
     private static final short SLOT_QUIT_ORB = 8;
     private static final short SLOT_SERVER_SELECTOR = 8;
     private static HyvexaPurgePlugin INSTANCE;
@@ -426,11 +427,13 @@ public class HyvexaPurgePlugin extends JavaPlugin {
         }
         ItemStack blueOrb = inventory.getHotbar().getItemStack(SLOT_ORB_BLUE);
         ItemStack orangeOrb = inventory.getHotbar().getItemStack(SLOT_ORB_ORANGE);
+        ItemStack shopItem = inventory.getHotbar().getItemStack(SLOT_SHOP);
         ItemStack serverSelector = inventory.getHotbar().getItemStack(SLOT_SERVER_SELECTOR);
         boolean hasBlueOrb = hasExpectedItem(blueOrb, ITEM_ORB_BLUE);
         boolean hasOrangeOrb = hasExpectedItem(orangeOrb, ITEM_ORB_ORANGE);
+        boolean hasShop = hasExpectedItem(shopItem, WorldConstants.ITEM_SHOP);
         boolean hasServerSelector = hasExpectedItem(serverSelector, WorldConstants.ITEM_SERVER_SELECTOR);
-        if (hasBlueOrb && hasOrangeOrb && hasServerSelector) {
+        if (hasBlueOrb && hasOrangeOrb && hasShop && hasServerSelector) {
             return;
         }
         if (!hasBlueOrb) {
@@ -438,6 +441,9 @@ public class HyvexaPurgePlugin extends JavaPlugin {
         }
         if (!hasOrangeOrb) {
             inventory.getHotbar().setItemStackForSlot(SLOT_ORB_ORANGE, new ItemStack(ITEM_ORB_ORANGE, 1), false);
+        }
+        if (!hasShop) {
+            inventory.getHotbar().setItemStackForSlot(SLOT_SHOP, new ItemStack(WorldConstants.ITEM_SHOP, 1), false);
         }
         if (!hasServerSelector) {
             giveServerSelector(player);
@@ -468,5 +474,8 @@ public class HyvexaPurgePlugin extends JavaPlugin {
                 PurgeRedOrbInteraction.class, PurgeRedOrbInteraction.CODEC);
         registry.register("Purge_Lootbox_Interaction",
                 PurgeLootboxInteraction.class, PurgeLootboxInteraction.CODEC);
+        registry.register("Shop_Item_Interaction",
+                io.hyvexa.common.interaction.ShopItemInteraction.class,
+                io.hyvexa.common.interaction.ShopItemInteraction.CODEC);
     }
 }

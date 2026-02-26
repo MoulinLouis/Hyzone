@@ -6,6 +6,7 @@ import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.inventory.container.filter.FilterActionType;
 import com.hypixel.hytale.server.core.inventory.container.filter.SlotFilter;
+import io.hyvexa.common.WorldConstants;
 import io.hyvexa.common.util.PlayerUtils;
 import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.duel.DuelConstants;
@@ -116,6 +117,7 @@ public final class InventoryUtils {
         setHotbarItem(inventory, 2, new ItemStack(ParkourConstants.ITEM_LEADERBOARD, 1));
         setHotbarItem(inventory, 3, new ItemStack(ParkourConstants.ITEM_STATS, 1));
         setHotbarItem(inventory, 4, new ItemStack(ParkourConstants.ITEM_ADMIN_REMOTE, 1));
+        setHotbarItem(inventory, 5, new ItemStack(WorldConstants.ITEM_SHOP, 1));
         setHotbarItem(inventory, 8, new ItemStack(ParkourConstants.ITEM_HUB_MENU, 1));
         finalizeInventory(inventory, isOp);
     }
