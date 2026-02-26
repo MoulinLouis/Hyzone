@@ -8,6 +8,7 @@ public final class WorldConstants {
     public static final String WORLD_PURGE = "Purge";
     public static final String WORLD_RUN_OR_FALL = "RunOrFall";
     public static final String ITEM_SERVER_SELECTOR = "Hub_Server_Selector";
+    public static final String ITEM_SHOP = "Shop_Item";
 
     private WorldConstants() {
     }

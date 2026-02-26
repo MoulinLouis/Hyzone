@@ -627,5 +627,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
             AscendDevSilkInteraction.class, AscendDevSilkInteraction.CODEC);
         registry.register("Ascend_Transcendence_Interaction",
             AscendTranscendenceInteraction.class, AscendTranscendenceInteraction.CODEC);
+        registry.register("Shop_Item_Interaction",
+            io.hyvexa.common.interaction.ShopItemInteraction.class,
+            io.hyvexa.common.interaction.ShopItemInteraction.CODEC);
     }
 }
