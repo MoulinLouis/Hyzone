@@ -72,7 +72,7 @@ public class WardrobePlugin extends JavaPlugin {
 
         wardrobeShopTab = new WardrobeShopTab();
         ShopTabRegistry.register(wardrobeShopTab);
-        ShopTabRegistry.register(new GlowShopTab());
+        ShopTabRegistry.register(new EffectsShopTab());
         ShopTabRegistry.register(new PurgeSkinShopTab());
         shopConfigTab = new ShopConfigTab();
         ShopTabRegistry.register(shopConfigTab);

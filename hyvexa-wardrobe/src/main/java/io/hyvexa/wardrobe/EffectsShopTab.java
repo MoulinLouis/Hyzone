@@ -20,24 +20,28 @@ import io.hyvexa.core.economy.VexaStore;
 
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 
-public class GlowShopTab implements ShopTab {
+public class EffectsShopTab implements ShopTab {
 
+    private static final String ACTION_FILTER = "Filter:";
     private static final String ACTION_PREVIEW = "Preview:";
     private static final String ACTION_BUY = "Buy:";
     private static final String ACTION_EQUIP = "Equip:";
     private static final String ACTION_UNEQUIP = "Unequip:";
-    private static final String SECTION_GLOW = "Glow Effects";
-    private static final String SECTION_TRAILS = "Trails";
+    private static final String FILTER_GLOW = "Glow";
+    private static final String FILTER_TRAIL = "Trail";
+
+    private final ConcurrentHashMap<UUID, String> selectedFilter = new ConcurrentHashMap<>();
 
     @Override
     public String getId() {
-        return "glow";
+        return "effects";
     }
 
     @Override
     public String getLabel() {
-        return "Glow";
+        return "Effects";
     }
 
     @Override
@@ -53,17 +57,54 @@ public class GlowShopTab implements ShopTab {
     @Override
     public void buildContent(UICommandBuilder cmd, UIEventBuilder evt, UUID playerId, long vexa) {
         String equippedId = playerId != null ? CosmeticStore.getInstance().getEquippedCosmeticId(playerId) : null;
-        int contentIndex = 0;
-        contentIndex = appendSection(cmd, contentIndex, SECTION_GLOW, "#d5e6ff");
-        contentIndex = appendByKind(cmd, evt, playerId, equippedId, CosmeticDefinition.Kind.GLOW, contentIndex);
+        String filter = selectedFilter.getOrDefault(playerId, FILTER_GLOW);
 
-        contentIndex = appendSection(cmd, contentIndex, SECTION_TRAILS, "#facc15");
-        appendByKind(cmd, evt, playerId, equippedId, CosmeticDefinition.Kind.TRAIL, contentIndex);
+        // Pill bar
+        cmd.append("#TabContent", "Pages/Shop_WardrobePills.ui");
+        int pillIndex = 0;
+
+        // "Glow" pill
+        cmd.append("#PillBar", "Pages/Shop_WardrobePill.ui");
+        String glowRoot = "#PillBar[" + pillIndex + "] ";
+        cmd.set(glowRoot + "#PillLabel.Text", FILTER_GLOW);
+        if (FILTER_GLOW.equals(filter)) {
+            cmd.set(glowRoot + "#PillActive.Visible", true);
+            cmd.set(glowRoot + "#PillLabel.Style.TextColor", "#6366f1");
+        }
+        evt.addEventBinding(CustomUIEventBindingType.Activating, glowRoot + "#PillButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, getId() + ":" + ACTION_FILTER + FILTER_GLOW), false);
+        pillIndex++;
+
+        // "Trail" pill
+        cmd.append("#PillBar", "Pages/Shop_WardrobePill.ui");
+        String trailRoot = "#PillBar[" + pillIndex + "] ";
+        cmd.set(trailRoot + "#PillLabel.Text", FILTER_TRAIL);
+        if (FILTER_TRAIL.equals(filter)) {
+            cmd.set(trailRoot + "#PillActive.Visible", true);
+            cmd.set(trailRoot + "#PillLabel.Style.TextColor", "#6366f1");
+        }
+        evt.addEventBinding(CustomUIEventBindingType.Activating, trailRoot + "#PillButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, getId() + ":" + ACTION_FILTER + FILTER_TRAIL), false);
+
+        // Entries
+        CosmeticDefinition.Kind kind = FILTER_TRAIL.equals(filter)
+                ? CosmeticDefinition.Kind.TRAIL : CosmeticDefinition.Kind.GLOW;
+        int contentIndex = 1; // pill bar is index 0
+        for (CosmeticDefinition def : CosmeticDefinition.values()) {
+            if (def.getKind() != kind) continue;
+            contentIndex = appendEntry(cmd, evt, playerId, equippedId, def, contentIndex);
+        }
     }
 
     @Override
     public ShopTabResult handleEvent(String button, Ref<EntityStore> ref, Store<EntityStore> store,
                                      Player player, UUID playerId) {
+        if (button.startsWith(ACTION_FILTER)) {
+            String filter = button.substring(ACTION_FILTER.length());
+            selectedFilter.put(playerId, filter);
+            return ShopTabResult.REFRESH;
+        }
+
         if (button.startsWith(ACTION_PREVIEW)) {
             String cosmeticId = button.substring(ACTION_PREVIEW.length());
             CosmeticDefinition def = CosmeticDefinition.fromId(cosmeticId);
@@ -120,22 +161,9 @@ public class GlowShopTab implements ShopTab {
         return ShopTabResult.NONE;
     }
 
-    private int appendSection(UICommandBuilder cmd, int index, String text, String color) {
-        cmd.append("#TabContent", "Pages/Shop_GlowSectionHeader.ui");
-        String root = "#TabContent[" + index + "] ";
-        cmd.set(root + "#SectionLabel.Text", text);
-        cmd.set(root + "#SectionLabel.Style.TextColor", color);
-        return index + 1;
-    }
-
-    private int appendByKind(UICommandBuilder cmd, UIEventBuilder evt, UUID playerId, String equippedId,
-                             CosmeticDefinition.Kind kind, int startIndex) {
-        int index = startIndex;
-        for (CosmeticDefinition def : CosmeticDefinition.values()) {
-            if (def.getKind() != kind) continue;
-            index = appendEntry(cmd, evt, playerId, equippedId, def, index);
-        }
-        return index;
+    @Override
+    public void evictPlayer(UUID playerId) {
+        selectedFilter.remove(playerId);
     }
 
     private int appendEntry(UICommandBuilder cmd, UIEventBuilder evt, UUID playerId, String equippedId,
