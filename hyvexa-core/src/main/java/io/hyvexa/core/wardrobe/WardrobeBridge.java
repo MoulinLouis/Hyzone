@@ -24,8 +24,8 @@ public class WardrobeBridge {
     /** All wardrobe cosmetics available for purchase. */
     private static final List<WardrobeCosmeticDef> COSMETICS = List.of(
             // Badges
-            wd("Badge_Hyvexa", "Hyvexa Badge", "hyvexa.cosmetic.badge_hyvexa", "Badge", "BadgeHyvexa", "Icons/Wardrobe/Cosmetics/Badges/Hyvexa.png"),
-            wd("Badge_Pride", "Pride Badge", "hyvexa.cosmetic.violet.badges.badge_pride", "Badge", null, "Icons/Wardrobe/Cosmetics/Badges/Pride.png"),
+            wd("Badge_Hyvexa", "Hyvexa Badge", "hyvexa.cosmetic.badge_hyvexa", "Badge", "BadgeHyvexa", "../../../Icons/Wardrobe/Cosmetics/Badges/Hyvexa.png"),
+            wd("Badge_Pride", "Pride Badge", "hyvexa.cosmetic.violet.badges.badge_pride", "Badge", null, "Icons/Wardrobe/Cosmetics/Badges/Pride.png"), // test: absolute asset path
 
             // Capes
             wd("Cloak_Chippy", "Chippy Cloak", "hyvexa.cosmetic.violet.capes.cloak_chippy", "Cape", null, "Icons/Wardrobe/Cosmetics/Capes/Cloak_Chippy.png"),
