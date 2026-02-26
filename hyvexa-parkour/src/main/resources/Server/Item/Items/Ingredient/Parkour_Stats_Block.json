@@ -3,12 +3,12 @@
     "Name": "My Stats",
     "Description": "Right click to view your parkour stats."
   },
-  "Icon": "Icons/ItemsGenerated/Ingredient_Stick.png",
+  "Icon": "Icons/ItemsGenerated/Food_Candy_Cane.png",
   "Categories": [
     "Items.Tools"
   ],
-  "Model": "Items/Ingredients/Stick.blockymodel",
-  "Texture": "Items/Ingredients/Stick_Texture.png",
+  "Model": "Items/Consumables/Food/Candy_Cane.blockymodel",
+  "Texture": "Items/Consumables/Food/Candy_Cane_Texture.png",
   "PlayerAnimationsId": "Item",
   "ResourceTypes": [
     {
@@ -16,15 +16,15 @@
     }
   ],
   "IconProperties": {
-    "Scale": 1.21,
+    "Scale": 0.7,
     "Rotation": [
-      67.0,
-      330.0,
-      0.0
+      0,
+      0,
+      0
     ],
     "Translation": [
-      1.3,
-      -1.0
+      0,
+      -8
     ]
   },
   "ItemEntity": {
