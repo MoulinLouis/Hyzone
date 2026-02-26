@@ -125,6 +125,8 @@ public class PurgeSkinShopTab implements ShopTab {
 
         cmd.set("#ConfirmSkinName.Text", def.getDisplayName());
         cmd.set("#ConfirmPrice.Text", String.valueOf(def.getPrice()));
+        cmd.set("#ConfirmVexaIcon.Visible", true);
+        cmd.set("#ConfirmFeatherIcon.Visible", false);
     }
 
     @Override

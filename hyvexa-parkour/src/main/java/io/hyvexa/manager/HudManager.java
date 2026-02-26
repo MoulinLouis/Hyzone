@@ -22,7 +22,7 @@ import io.hyvexa.parkour.data.ProgressStore;
 import io.hyvexa.parkour.util.PlayerSettingsStore;
 import io.hyvexa.duel.DuelTracker;
 import io.hyvexa.core.economy.VexaStore;
-import io.hyvexa.parkour.data.FeatherStore;
+import io.hyvexa.core.economy.FeatherStore;
 import io.hyvexa.parkour.data.Medal;
 import io.hyvexa.parkour.data.MedalStore;
 import io.hyvexa.parkour.ParkourTimingConstants;

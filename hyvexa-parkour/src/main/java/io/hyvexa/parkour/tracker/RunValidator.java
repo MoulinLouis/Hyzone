@@ -18,7 +18,7 @@ import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.core.discord.DiscordLinkStore;
 import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.parkour.ParkourConstants;
-import io.hyvexa.parkour.data.FeatherStore;
+import io.hyvexa.core.economy.FeatherStore;
 import io.hyvexa.parkour.data.Map;
 import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.data.Medal;

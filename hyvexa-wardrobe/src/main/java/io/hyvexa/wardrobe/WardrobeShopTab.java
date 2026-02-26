@@ -194,8 +194,12 @@ public class WardrobeShopTab implements ShopTab {
         WardrobeCosmeticDef def = WardrobeBridge.getInstance().findById(confirmKey);
         if (def == null) return;
         CosmeticShopConfigStore configStore = CosmeticShopConfigStore.getInstance();
+        String currency = configStore.getCurrency(def.id());
+        boolean isFeathers = "feathers".equals(currency);
         cmd.set("#ConfirmSkinName.Text", def.displayName());
         cmd.set("#ConfirmPrice.Text", String.valueOf(configStore.getPrice(def.id())));
+        cmd.set("#ConfirmVexaIcon.Visible", !isFeathers);
+        cmd.set("#ConfirmFeatherIcon.Visible", isFeathers);
     }
 
     @Override

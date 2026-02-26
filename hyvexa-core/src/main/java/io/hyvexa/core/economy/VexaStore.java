@@ -13,14 +13,15 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Global vexa currency store. Singleton shared across all modules.
  * Lazy-loads per-player vexa counts from MySQL, evicts on disconnect.
- * Writes are immediate (no dirty tracking) since vexa are rare/precious.
+ * Cache entries expire after {@link #CACHE_TTL_MS} to pick up cross-module DB writes.
  */
 public class VexaStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final VexaStore INSTANCE = new VexaStore();
+    private static final long CACHE_TTL_MS = 5_000;
 
-    private final ConcurrentHashMap<UUID, Long> cache = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, CachedBalance> cache = new ConcurrentHashMap<>();
 
     private VexaStore() {
     }
@@ -67,20 +68,19 @@ public class VexaStore {
     }
 
     /**
-     * Get the vexa count for a player. Lazy-loads from DB on cache miss.
+     * Get the vexa count for a player. Lazy-loads from DB on cache miss or stale entry.
      */
     public long getVexa(UUID playerId) {
         if (playerId == null) {
             return 0;
         }
-        Long cached = cache.get(playerId);
-        if (cached != null) {
-            return cached;
+        CachedBalance cached = cache.get(playerId);
+        if (cached != null && !cached.isStale()) {
+            return cached.value;
         }
-        // Slow path: load from DB
         long fromDb = loadFromDatabase(playerId);
-        cache.putIfAbsent(playerId, fromDb);
-        return cache.get(playerId);
+        cache.put(playerId, new CachedBalance(fromDb));
+        return fromDb;
     }
 
     /**
@@ -91,7 +91,7 @@ public class VexaStore {
             return;
         }
         long safe = Math.max(0, vexa);
-        cache.put(playerId, safe);
+        cache.put(playerId, new CachedBalance(safe));
         persistToDatabase(playerId, safe);
     }
 
@@ -204,6 +204,20 @@ public class VexaStore {
     private boolean columnExists(Connection conn, String tableName, String columnName) throws SQLException {
         try (ResultSet rs = conn.getMetaData().getColumns(conn.getCatalog(), null, tableName, columnName)) {
             return rs.next();
+        }
+    }
+
+    private static final class CachedBalance {
+        final long value;
+        final long cachedAt;
+
+        CachedBalance(long value) {
+            this.value = value;
+            this.cachedAt = System.currentTimeMillis();
+        }
+
+        boolean isStale() {
+            return System.currentTimeMillis() - cachedAt > CACHE_TTL_MS;
         }
     }
 }

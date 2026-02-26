@@ -8,7 +8,7 @@ import java.util.UUID;
 public final class RunOrFallFeatherBridge {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final String FEATHER_STORE_CLASS = "io.hyvexa.parkour.data.FeatherStore";
+    private static final String FEATHER_STORE_CLASS = "io.hyvexa.core.economy.FeatherStore";
 
     private static volatile boolean resolved;
     private static volatile boolean available;
