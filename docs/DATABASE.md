@@ -91,13 +91,14 @@ CREATE TABLE maps (
   bronze_time_ms BIGINT NULL,
   silver_time_ms BIGINT NULL,
   gold_time_ms BIGINT NULL,
+  author_time_ms BIGINT NULL,
   created_at TIMESTAMP NULL,
   updated_at TIMESTAMP NULL
 ) ENGINE=InnoDB;
 ```
 
 Notes:
-- `bronze_time_ms`, `silver_time_ms`, `gold_time_ms` — optional medal time thresholds in milliseconds. Set via `/pk admin` Maps panel. Gold < Silver < Bronze enforced by admin UI.
+- `bronze_time_ms`, `silver_time_ms`, `gold_time_ms`, `author_time_ms` — optional medal time thresholds in milliseconds. Set via `/pk admin` Maps panel. Author < Gold < Silver < Bronze enforced by admin UI.
 
 ## map_checkpoints
 Stores checkpoint transforms per map.
@@ -716,7 +717,8 @@ CREATE TABLE medal_rewards (
   category VARCHAR(32) NOT NULL PRIMARY KEY,
   bronze_feathers INT NOT NULL DEFAULT 0,
   silver_feathers INT NOT NULL DEFAULT 0,
-  gold_feathers INT NOT NULL DEFAULT 0
+  gold_feathers INT NOT NULL DEFAULT 0,
+  author_feathers INT NOT NULL DEFAULT 0
 ) ENGINE=InnoDB;
 ```
 
@@ -735,5 +737,5 @@ CREATE TABLE player_medals (
 ) ENGINE=InnoDB;
 ```
 
-- `medal` values: `BRONZE`, `SILVER`, `GOLD`
+- `medal` values: `BRONZE`, `SILVER`, `GOLD`, `AUTHOR`
 - Manager: `MedalStore` (singleton in `hyvexa-parkour`) — lazy-loads per player, evicts on disconnect.

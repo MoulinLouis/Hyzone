@@ -29,6 +29,12 @@ $C.@PageOverlay {
       Visible: false;
     }
 
+    Group #MedalNotifAuthorIcon {
+      Anchor: (Width: 64, Height: 64);
+      Background: (TexturePath: "../Textures/author_medal.png");
+      Visible: false;
+    }
+
     Label #MedalNotifTitle {
       Anchor: (Left: 0, Right: 0, Top: 8);
       Style: (
@@ -80,6 +86,14 @@ $C.@PageOverlay {
         Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
         Bar: #ffd700;
         Background: #ffd700(0.15);
+        Value: 1;
+        Visible: false;
+      }
+
+      ProgressBar #MedalNotifBarAuthor {
+        Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+        Bar: #50C878;
+        Background: #50C878(0.15);
         Value: 1;
         Visible: false;
       }

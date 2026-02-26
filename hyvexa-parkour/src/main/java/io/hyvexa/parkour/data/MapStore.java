@@ -46,7 +46,7 @@ public class MapStore {
                    leave_trigger_x, leave_trigger_y, leave_trigger_z, leave_trigger_rot_x, leave_trigger_rot_y, leave_trigger_rot_z,
                    leave_teleport_x, leave_teleport_y, leave_teleport_z, leave_teleport_rot_x, leave_teleport_rot_y, leave_teleport_rot_z,
                    fly_zone_min_x, fly_zone_min_y, fly_zone_min_z, fly_zone_max_x, fly_zone_max_y, fly_zone_max_z,
-                   bronze_time_ms, silver_time_ms, gold_time_ms,
+                   bronze_time_ms, silver_time_ms, gold_time_ms, author_time_ms,
                    created_at, updated_at
             FROM maps ORDER BY display_order, id
             """;
@@ -69,6 +69,7 @@ public class MapStore {
                 addColumnIfMissing(conn, "maps", "bronze_time_ms", "BIGINT DEFAULT NULL");
                 addColumnIfMissing(conn, "maps", "silver_time_ms", "BIGINT DEFAULT NULL");
                 addColumnIfMissing(conn, "maps", "gold_time_ms", "BIGINT DEFAULT NULL");
+                addColumnIfMissing(conn, "maps", "author_time_ms", "BIGINT DEFAULT NULL");
 
                 // Load all maps
                 try (PreparedStatement stmt = conn.prepareStatement(mapSql)) {
@@ -106,6 +107,7 @@ public class MapStore {
                             map.setBronzeTimeMs(rs.getObject("bronze_time_ms", Long.class));
                             map.setSilverTimeMs(rs.getObject("silver_time_ms", Long.class));
                             map.setGoldTimeMs(rs.getObject("gold_time_ms", Long.class));
+                            map.setAuthorTimeMs(rs.getObject("author_time_ms", Long.class));
 
                             java.sql.Timestamp createdAt = rs.getTimestamp("created_at");
                             java.sql.Timestamp updatedAt = rs.getTimestamp("updated_at");
@@ -320,9 +322,9 @@ public class MapStore {
                 leave_trigger_x, leave_trigger_y, leave_trigger_z, leave_trigger_rot_x, leave_trigger_rot_y, leave_trigger_rot_z,
                 leave_teleport_x, leave_teleport_y, leave_teleport_z, leave_teleport_rot_x, leave_teleport_rot_y, leave_teleport_rot_z,
                 fly_zone_min_x, fly_zone_min_y, fly_zone_min_z, fly_zone_max_x, fly_zone_max_y, fly_zone_max_z,
-                bronze_time_ms, silver_time_ms, gold_time_ms,
+                bronze_time_ms, silver_time_ms, gold_time_ms, author_time_ms,
                 created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 name = VALUES(name), category = VALUES(category), world = VALUES(world),
                 difficulty = VALUES(difficulty), display_order = VALUES(display_order),
@@ -343,7 +345,7 @@ public class MapStore {
                 leave_teleport_rot_x = VALUES(leave_teleport_rot_x), leave_teleport_rot_y = VALUES(leave_teleport_rot_y), leave_teleport_rot_z = VALUES(leave_teleport_rot_z),
                 fly_zone_min_x = VALUES(fly_zone_min_x), fly_zone_min_y = VALUES(fly_zone_min_y), fly_zone_min_z = VALUES(fly_zone_min_z),
                 fly_zone_max_x = VALUES(fly_zone_max_x), fly_zone_max_y = VALUES(fly_zone_max_y), fly_zone_max_z = VALUES(fly_zone_max_z),
-                bronze_time_ms = VALUES(bronze_time_ms), silver_time_ms = VALUES(silver_time_ms), gold_time_ms = VALUES(gold_time_ms),
+                bronze_time_ms = VALUES(bronze_time_ms), silver_time_ms = VALUES(silver_time_ms), gold_time_ms = VALUES(gold_time_ms), author_time_ms = VALUES(author_time_ms),
                 updated_at = VALUES(updated_at)
             """;
 
@@ -399,6 +401,7 @@ public class MapStore {
                 mapStmt.setObject(idx++, map.getBronzeTimeMs(), java.sql.Types.BIGINT);
                 mapStmt.setObject(idx++, map.getSilverTimeMs(), java.sql.Types.BIGINT);
                 mapStmt.setObject(idx++, map.getGoldTimeMs(), java.sql.Types.BIGINT);
+                mapStmt.setObject(idx++, map.getAuthorTimeMs(), java.sql.Types.BIGINT);
 
                 mapStmt.setTimestamp(idx++, new java.sql.Timestamp(map.getCreatedAt()));
                 mapStmt.setTimestamp(idx, new java.sql.Timestamp(map.getUpdatedAt()));
@@ -567,6 +570,7 @@ public class MapStore {
         copy.setBronzeTimeMs(source.getBronzeTimeMs());
         copy.setSilverTimeMs(source.getSilverTimeMs());
         copy.setGoldTimeMs(source.getGoldTimeMs());
+        copy.setAuthorTimeMs(source.getAuthorTimeMs());
         copy.setCreatedAt(source.getCreatedAt());
         copy.setUpdatedAt(source.getUpdatedAt());
         if (source.getCheckpoints() != null) {

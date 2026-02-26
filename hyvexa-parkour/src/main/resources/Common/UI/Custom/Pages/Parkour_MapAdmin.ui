@@ -323,6 +323,19 @@ $C.@PageOverlay {
             Anchor: (Height: 26, Width: 70);
             Style: (FontSize: 14, TextColor: #ffffff(0.85));
           }
+
+          Group { Anchor: (Width: 10); }
+
+          Label {
+            Anchor: (Width: 50);
+            Style: (FontSize: 12, TextColor: #50C878);
+            Text: "Author:";
+          }
+
+          $C.@TextField #MedalAuthorField {
+            Anchor: (Height: 26, Width: 70);
+            Style: (FontSize: 14, TextColor: #ffffff(0.85));
+          }
         }
 
         Label #SelectedMapText {
