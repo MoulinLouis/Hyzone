@@ -10,6 +10,7 @@ import com.hypixel.hytale.protocol.packets.entities.SpawnModelParticles;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.io.PacketHandler;
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -40,6 +41,8 @@ public class ModelParticleTrailManager {
                            String particleId, float scale, long intervalMs,
                            float xOffset, float yOffset, float zOffset) {
         stopTrail(playerId);
+        final double[] lastPos = new double[]{Double.NaN, 0d, 0d};
+        final double movementThresholdSq = 0.0009d; // ~0.03 blocks
 
         ScheduledFuture<?> future = HytaleServer.SCHEDULED_EXECUTOR.scheduleAtFixedRate(() -> {
             try {
@@ -58,6 +61,27 @@ public class ModelParticleTrailManager {
                         Player source = store.getComponent(ref, Player.getComponentType());
                         if (source == null) {
                             stopTrail(playerId);
+                            return;
+                        }
+                        TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
+                        if (transform == null || transform.getPosition() == null) return;
+                        var position = transform.getPosition();
+                        if (position == null) return;
+                        if (Double.isNaN(lastPos[0])) {
+                            lastPos[0] = position.getX();
+                            lastPos[1] = position.getY();
+                            lastPos[2] = position.getZ();
+                            return;
+                        }
+
+                        double dx = position.getX() - lastPos[0];
+                        double dy = position.getY() - lastPos[1];
+                        double dz = position.getZ() - lastPos[2];
+                        double distSq = (dx * dx) + (dy * dy) + (dz * dz);
+                        lastPos[0] = position.getX();
+                        lastPos[1] = position.getY();
+                        lastPos[2] = position.getZ();
+                        if (distSq <= movementThresholdSq) {
                             return;
                         }
 

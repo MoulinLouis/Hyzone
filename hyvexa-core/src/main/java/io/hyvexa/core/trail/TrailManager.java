@@ -43,6 +43,8 @@ public class TrailManager {
     public void startTrail(UUID playerId, Ref<EntityStore> ref, Store<EntityStore> store,
                            World world, String particleId, float scale, long intervalMs) {
         stopTrail(playerId);
+        final double[] lastPos = new double[]{Double.NaN, 0d, 0d};
+        final double movementThresholdSq = 0.0009d; // ~0.03 blocks
 
         ScheduledFuture<?> future = HytaleServer.SCHEDULED_EXECUTOR.scheduleAtFixedRate(() -> {
             try {
@@ -60,6 +62,24 @@ public class TrailManager {
                         if (transform == null || transform.getPosition() == null) return;
 
                         var pos = transform.getPosition();
+                        if (Double.isNaN(lastPos[0])) {
+                            lastPos[0] = pos.getX();
+                            lastPos[1] = pos.getY();
+                            lastPos[2] = pos.getZ();
+                            return;
+                        }
+
+                        double dx = pos.getX() - lastPos[0];
+                        double dy = pos.getY() - lastPos[1];
+                        double dz = pos.getZ() - lastPos[2];
+                        double distSq = (dx * dx) + (dy * dy) + (dz * dz);
+                        lastPos[0] = pos.getX();
+                        lastPos[1] = pos.getY();
+                        lastPos[2] = pos.getZ();
+                        if (distSq <= movementThresholdSq) {
+                            return;
+                        }
+
                         SpawnParticleSystem packet = new SpawnParticleSystem(
                                 particleId,
                                 new Position(pos.getX(), pos.getY() + 0.1, pos.getZ()),

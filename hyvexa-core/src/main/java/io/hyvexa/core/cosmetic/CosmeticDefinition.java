@@ -14,7 +14,6 @@ public enum CosmeticDefinition {
 
     TRAIL_GOLD(Kind.TRAIL, Type.WORLD_PARTICLE_TRAIL, "Firework_GS", "Gold Trail", "#FFD700", 100, 0.5f, 200L, 0f, 0.1f, 0f),
     TRAIL_FIREWORK_MIX(Kind.TRAIL, Type.WORLD_PARTICLE_TRAIL, "Firework_Mix2", "Firework Mix Trail", "#f472b6", 100, 0.5f, 200L, 0f, 0.1f, 0f),
-    TRAIL_BUTTERFLIES(Kind.TRAIL, Type.WORLD_PARTICLE_TRAIL, "Butterflies_GS", "Butterflies Trail", "#f9a8d4", 100, 0.7f, 220L, 0f, 0.2f, 0f),
     TRAIL_FIREWORK_MIX3(Kind.TRAIL, Type.WORLD_PARTICLE_TRAIL, "Firework_Mix3", "Firework Mix 3 Trail", "#f472b6", 100, 0.5f, 200L, 0f, 0.1f, 0f),
     TRAIL_FIREWORK_MIX4(Kind.TRAIL, Type.WORLD_PARTICLE_TRAIL, "Firework_Mix4", "Firework Mix 4 Trail", "#f472b6", 100, 0.5f, 200L, 0f, 0.1f, 0f),
     TRAIL_RINGS(Kind.TRAIL, Type.WORLD_PARTICLE_TRAIL, "Rings_Rings", "Rings Trail", "#a78bfa", 100, 0.6f, 220L, 0f, 0.1f, 0f);
