@@ -217,7 +217,7 @@ $C.@PageOverlay {
 - `LayoutMode: Left` - Horizontal stacking
 - `LayoutMode: TopScrolling` - Vertical with scroll
 
-**INVALID:** `LayoutMode: Center` does NOT exist!
+**NOTE:** `LayoutMode: Center` does NOT exist as a standalone value. Use `CenterMiddle` (both axes) or the FlexWeight pattern below for horizontal centering.
 
 **Centering content horizontally:**
 ```
@@ -233,7 +233,7 @@ Group {
 ```
 
 **Common mistakes to avoid:**
-1. `LayoutMode: Center` - Does not exist, use FlexWeight pattern above
+1. `LayoutMode: Center` - Does not exist; use `CenterMiddle` or FlexWeight pattern above
 2. Multiline text with `\n` - Use separate Labels instead
 3. Complex inline styles - Use `$C.@TextButton` template instead
 4. Putting UI files in wrong location (must be in `Common/UI/Custom/Pages/`)

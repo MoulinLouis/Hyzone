@@ -276,6 +276,7 @@ Notes:
 - Foreign keys are not required by the current code, but you can add them if desired.
 - All reads/writes are performed by the stores in `hyvexa-parkour/src/main/java/io/hyvexa/parkour/data/`.
 - Hub state is stored in `hyvexa-core/src/main/java/io/hyvexa/core/state/PlayerModeStateStore.java`.
+- Some tables (`players`, `maps`, `map_checkpoints`, `player_completions`, `settings`, `global_messages`, `global_message_settings`, `player_count_samples`, `player_mode_state`) are not created programmatically by the plugin — they are created manually or by an external migration script.
 
 ## Shared Database
 
@@ -289,7 +290,7 @@ Parkour and Parkour Ascend will share the same MySQL database. Each module owns 
 ## ascend_players
 Stores Ascend player state including prestige progress.
 
-Suggested schema:
+Suggested schema (base CREATE TABLE + all migration columns):
 ```sql
 CREATE TABLE ascend_players (
   uuid VARCHAR(36) PRIMARY KEY,
@@ -306,6 +307,27 @@ CREATE TABLE ascend_players (
   elevation_accumulated_volt_mantissa DOUBLE NOT NULL DEFAULT 0,
   elevation_accumulated_volt_exp10 INT NOT NULL DEFAULT 0,
   active_title VARCHAR(64) DEFAULT NULL,
+  -- Migration columns (added via ALTER TABLE):
+  ascension_started_at BIGINT DEFAULT NULL,
+  fastest_ascension_ms BIGINT DEFAULT NULL,
+  last_active_timestamp BIGINT DEFAULT NULL,
+  has_unclaimed_passive BOOLEAN NOT NULL DEFAULT FALSE,
+  auto_upgrade_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  auto_evolution_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  auto_elevation_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  auto_elevation_timer_seconds INT NOT NULL DEFAULT 0,
+  auto_elevation_targets TEXT DEFAULT '[]',
+  auto_elevation_target_index INT NOT NULL DEFAULT 0,
+  auto_summit_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  auto_summit_timer_seconds INT NOT NULL DEFAULT 0,
+  auto_summit_config TEXT DEFAULT '[...]',
+  auto_summit_rotation_index INT NOT NULL DEFAULT 0,
+  auto_ascend_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  break_ascension_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  hide_other_runners BOOLEAN NOT NULL DEFAULT FALSE,
+  player_name VARCHAR(32) DEFAULT NULL,
+  seen_tutorials INT NOT NULL DEFAULT 0,
+  transcendence_count INT NOT NULL DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
@@ -314,12 +336,16 @@ CREATE TABLE ascend_players (
 Notes:
 - Volt values are stored as scientific notation pairs (`*_mantissa` + `*_exp10`) for BigNumber support.
 - `summit_accumulated_volt_*` tracks total volt earned during the current Summit progress cycle.
-- `elevation_multiplier` stores the elevation **level** (not the actual multiplier). The actual multiplier is calculated as `1 + 0.1 × level^0.65`. Column name kept for backwards compatibility.
+- `elevation_multiplier` stores the elevation **level** (not the actual multiplier). The actual multiplier is `max(1, level)` (linear). Column name kept for backwards compatibility.
 - `ascension_count` tracks how many times the player has Ascended.
+- `transcendence_count` tracks how many times the player has Transcended (4th prestige).
 - `skill_tree_points` is the total points earned (ascension_count, may differ if points are granted by other means).
 - `total_volt_earned_*` is lifetime volt for achievement tracking (never resets).
 - `total_manual_runs` is lifetime manual completions for achievement tracking.
 - `active_title` is the currently selected title from achievements.
+- `auto_*` columns store automation settings from the Ascendancy skill tree.
+- `seen_tutorials` is a bitmask tracking which tutorials the player has seen.
+- Migration columns are added automatically by `AscendDatabaseSetup` on startup.
 
 ## ascend_maps
 Stores Ascend map definitions.
@@ -370,7 +396,8 @@ CREATE TABLE ascend_player_maps (
   has_robot BOOLEAN NOT NULL DEFAULT FALSE,
   robot_speed_level INT NOT NULL DEFAULT 0,
   robot_stars INT NOT NULL DEFAULT 0,
-  multiplier DECIMAL(65,20) NOT NULL DEFAULT 1.0,
+  multiplier_mantissa DOUBLE NOT NULL DEFAULT 1.0,
+  multiplier_exp10 INT NOT NULL DEFAULT 0,
   best_time_ms BIGINT NULL,
   last_collection_at TIMESTAMP NULL,
   PRIMARY KEY (player_uuid, map_id),
@@ -380,6 +407,7 @@ CREATE TABLE ascend_player_maps (
 ```
 
 Notes:
+- `multiplier_mantissa` + `multiplier_exp10` store the multiplier as scientific notation (mantissa × 10^exp10) for BigNumber support. Migrated from a single `multiplier DOUBLE` column.
 - `robot_stars` tracks evolution level (0-5). Each star doubles the multiplier increment per completion.
 - `robot_speed_level` resets to 0 when evolving to a new star level.
 - `best_time_ms` stores the player's personal best time for this map (used for ghost recordings and PB display).
@@ -405,7 +433,7 @@ Suggested schema:
 CREATE TABLE ascend_player_summit (
   player_uuid VARCHAR(36) NOT NULL,
   category VARCHAR(32) NOT NULL,
-  xp BIGINT NOT NULL DEFAULT 0,
+  xp DOUBLE NOT NULL DEFAULT 0,
   xp_scale_v2 TINYINT NOT NULL DEFAULT 1,
   PRIMARY KEY (player_uuid, category),
   FOREIGN KEY (player_uuid) REFERENCES ascend_players(uuid) ON DELETE CASCADE
@@ -739,3 +767,328 @@ CREATE TABLE player_medals (
 
 - `medal` values: `BRONZE`, `SILVER`, `GOLD`, `AUTHOR`
 - Manager: `MedalStore` (singleton in `hyvexa-parkour`) — lazy-loads per player, evicts on disconnect.
+
+## cosmetic_shop_config
+Stores shop availability and pricing for wardrobe cosmetics.
+
+```sql
+CREATE TABLE IF NOT EXISTS cosmetic_shop_config (
+  cosmetic_id VARCHAR(64) NOT NULL PRIMARY KEY,
+  available BOOLEAN NOT NULL DEFAULT FALSE,
+  price INT NOT NULL DEFAULT 0,
+  currency VARCHAR(16) NOT NULL DEFAULT 'vexa'
+) ENGINE=InnoDB;
+```
+
+Notes:
+- Auto-created by `CosmeticShopConfigStore.initialize()` on startup
+- Manager: `CosmeticShopConfigStore` (singleton in `hyvexa-core`)
+- `currency` toggles between `'vexa'` and `'feathers'`
+
+---
+
+# Duel Tables
+
+## duel_category_prefs
+Stores per-player duel category preferences.
+
+```sql
+CREATE TABLE IF NOT EXISTS duel_category_prefs (
+  player_uuid VARCHAR(36) PRIMARY KEY,
+  easy_enabled BOOLEAN DEFAULT TRUE,
+  medium_enabled BOOLEAN DEFAULT TRUE,
+  hard_enabled BOOLEAN DEFAULT FALSE,
+  insane_enabled BOOLEAN DEFAULT FALSE,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+```
+
+Manager: `DuelPreferenceStore` (in `hyvexa-parkour`)
+
+## duel_matches
+Stores completed duel match history.
+
+```sql
+CREATE TABLE IF NOT EXISTS duel_matches (
+  id VARCHAR(36) PRIMARY KEY,
+  player1_uuid VARCHAR(36) NOT NULL,
+  player2_uuid VARCHAR(36) NOT NULL,
+  map_id VARCHAR(64) NOT NULL,
+  winner_uuid VARCHAR(36),
+  player1_time_ms BIGINT,
+  player2_time_ms BIGINT,
+  finish_reason VARCHAR(20),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+Manager: `DuelMatchStore` (in `hyvexa-parkour`)
+
+## duel_player_stats
+Stores duel win/loss statistics per player.
+
+```sql
+CREATE TABLE IF NOT EXISTS duel_player_stats (
+  player_uuid VARCHAR(36) PRIMARY KEY,
+  player_name VARCHAR(64),
+  wins INT DEFAULT 0,
+  losses INT DEFAULT 0,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+```
+
+Manager: `DuelStatsStore` (in `hyvexa-parkour`)
+
+---
+
+# Purge Tables
+
+## purge_player_stats
+Stores per-player Purge mode statistics.
+
+```sql
+CREATE TABLE IF NOT EXISTS purge_player_stats (
+  uuid VARCHAR(36) NOT NULL PRIMARY KEY,
+  best_wave INT NOT NULL DEFAULT 0,
+  total_kills INT NOT NULL DEFAULT 0,
+  total_sessions INT NOT NULL DEFAULT 0
+) ENGINE=InnoDB;
+```
+
+Manager: `PurgePlayerStore` (in `hyvexa-purge`)
+
+## purge_player_scrap
+Stores per-player scrap currency for Purge mode.
+
+```sql
+CREATE TABLE IF NOT EXISTS purge_player_scrap (
+  uuid VARCHAR(36) NOT NULL PRIMARY KEY,
+  scrap BIGINT NOT NULL DEFAULT 0,
+  lifetime_scrap_earned BIGINT NOT NULL DEFAULT 0
+) ENGINE=InnoDB;
+```
+
+Manager: `PurgeScrapStore` (in `hyvexa-purge`)
+
+## purge_weapon_upgrades
+Stores per-player weapon upgrade levels in Purge mode.
+
+```sql
+CREATE TABLE IF NOT EXISTS purge_weapon_upgrades (
+  uuid VARCHAR(36) NOT NULL,
+  weapon_id VARCHAR(32) NOT NULL,
+  level INT NOT NULL DEFAULT 0,
+  PRIMARY KEY (uuid, weapon_id)
+) ENGINE=InnoDB;
+```
+
+Manager: `PurgeWeaponUpgradeStore` (in `hyvexa-purge`)
+
+## purge_weapon_levels
+Stores configurable weapon level stats (damage, cost per level).
+
+```sql
+CREATE TABLE IF NOT EXISTS purge_weapon_levels (
+  weapon_id VARCHAR(32) NOT NULL,
+  level INT NOT NULL,
+  damage INT NOT NULL,
+  cost BIGINT NOT NULL DEFAULT 0,
+  PRIMARY KEY (weapon_id, level)
+) ENGINE=InnoDB;
+```
+
+Manager: `PurgeWeaponConfigManager` (in `hyvexa-purge`)
+
+## purge_weapon_defaults
+Stores weapon unlock configuration defaults.
+
+```sql
+CREATE TABLE IF NOT EXISTS purge_weapon_defaults (
+  weapon_id VARCHAR(32) NOT NULL PRIMARY KEY,
+  default_unlocked BOOLEAN NOT NULL DEFAULT FALSE,
+  unlock_cost BIGINT NOT NULL DEFAULT 500,
+  session_weapon BOOLEAN NOT NULL DEFAULT FALSE
+) ENGINE=InnoDB;
+```
+
+Manager: `PurgeWeaponConfigManager` (in `hyvexa-purge`)
+
+## purge_weapon_skins
+Stores per-player weapon skin ownership and selection in Purge mode.
+
+```sql
+CREATE TABLE IF NOT EXISTS purge_weapon_skins (
+  uuid VARCHAR(36) NOT NULL,
+  weapon_id VARCHAR(32) NOT NULL,
+  skin_id VARCHAR(64) NOT NULL,
+  selected BOOLEAN NOT NULL DEFAULT FALSE,
+  PRIMARY KEY (uuid, weapon_id, skin_id)
+) ENGINE=InnoDB;
+```
+
+Manager: `PurgeSkinStore` (singleton in `hyvexa-core`)
+
+## purge_waves
+Stores wave configuration for Purge mode.
+
+```sql
+CREATE TABLE IF NOT EXISTS purge_waves (
+  wave_number INT NOT NULL PRIMARY KEY,
+  spawn_delay_ms INT NOT NULL DEFAULT 500,
+  spawn_batch_size INT NOT NULL DEFAULT 5
+) ENGINE=InnoDB;
+```
+
+Manager: `PurgeWaveConfigManager` (in `hyvexa-purge`)
+
+## purge_settings
+Stores key-value settings for Purge mode.
+
+```sql
+CREATE TABLE IF NOT EXISTS purge_settings (
+  setting_key VARCHAR(64) NOT NULL PRIMARY KEY,
+  setting_value VARCHAR(255) NOT NULL
+) ENGINE=InnoDB;
+```
+
+Manager: `PurgeWeaponConfigManager` (in `hyvexa-purge`)
+
+## purge_migrations
+Tracks applied migration keys for Purge mode.
+
+```sql
+CREATE TABLE IF NOT EXISTS purge_migrations (
+  migration_key VARCHAR(64) NOT NULL PRIMARY KEY
+) ENGINE=InnoDB;
+```
+
+Manager: `PurgeWeaponUpgradeStore` (in `hyvexa-purge`)
+
+---
+
+# RunOrFall Tables
+
+## runorfall_settings
+Stores global RunOrFall mode settings (single row, id = 1).
+
+```sql
+CREATE TABLE IF NOT EXISTS runorfall_settings (
+  id TINYINT NOT NULL PRIMARY KEY,
+  lobby_x DOUBLE NULL,
+  lobby_y DOUBLE NULL,
+  lobby_z DOUBLE NULL,
+  lobby_rot_x FLOAT NULL,
+  lobby_rot_y FLOAT NULL,
+  lobby_rot_z FLOAT NULL,
+  void_y DOUBLE NOT NULL DEFAULT 40.0,
+  block_break_delay_seconds DOUBLE NOT NULL DEFAULT 0.2,
+  min_players INT NOT NULL DEFAULT 2,
+  min_players_time_seconds INT NOT NULL DEFAULT 300,
+  optimal_players INT NOT NULL DEFAULT 4,
+  optimal_players_time_seconds INT NOT NULL DEFAULT 60,
+  blink_distance_blocks INT NOT NULL DEFAULT 7,
+  blink_start_charges INT NOT NULL DEFAULT 1,
+  blink_charge_every_blocks_broken INT NOT NULL DEFAULT 100,
+  feathers_per_minute_alive INT NOT NULL DEFAULT 1,
+  feathers_per_player_eliminated INT NOT NULL DEFAULT 5,
+  feathers_for_win INT NOT NULL DEFAULT 25,
+  active_map_id VARCHAR(64) NULL
+) ENGINE=InnoDB;
+```
+
+Manager: `RunOrFallConfigStore` (in `hyvexa-runorfall`)
+
+## runorfall_maps
+Stores RunOrFall map definitions.
+
+```sql
+CREATE TABLE IF NOT EXISTS runorfall_maps (
+  map_id VARCHAR(64) NOT NULL PRIMARY KEY,
+  min_players INT NOT NULL DEFAULT 2,
+  lobby_x DOUBLE NULL,
+  lobby_y DOUBLE NULL,
+  lobby_z DOUBLE NULL,
+  lobby_rot_x FLOAT NULL,
+  lobby_rot_y FLOAT NULL,
+  lobby_rot_z FLOAT NULL
+) ENGINE=InnoDB;
+```
+
+Manager: `RunOrFallConfigStore` (in `hyvexa-runorfall`)
+
+## runorfall_map_spawns
+Stores player spawn positions per RunOrFall map.
+
+```sql
+CREATE TABLE IF NOT EXISTS runorfall_map_spawns (
+  map_id VARCHAR(64) NOT NULL,
+  spawn_order INT NOT NULL,
+  x DOUBLE NOT NULL,
+  y DOUBLE NOT NULL,
+  z DOUBLE NOT NULL,
+  rot_x FLOAT NOT NULL,
+  rot_y FLOAT NOT NULL,
+  rot_z FLOAT NOT NULL,
+  PRIMARY KEY (map_id, spawn_order)
+) ENGINE=InnoDB;
+```
+
+Manager: `RunOrFallConfigStore` (in `hyvexa-runorfall`)
+
+## runorfall_map_platforms
+Stores platform regions per RunOrFall map.
+
+```sql
+CREATE TABLE IF NOT EXISTS runorfall_map_platforms (
+  map_id VARCHAR(64) NOT NULL,
+  platform_order INT NOT NULL,
+  min_x INT NOT NULL,
+  min_y INT NOT NULL,
+  min_z INT NOT NULL,
+  max_x INT NOT NULL,
+  max_y INT NOT NULL,
+  max_z INT NOT NULL,
+  target_block_item_id VARCHAR(128) NULL,
+  PRIMARY KEY (map_id, platform_order)
+) ENGINE=InnoDB;
+```
+
+Manager: `RunOrFallConfigStore` (in `hyvexa-runorfall`)
+
+## runorfall_player_stats
+Stores per-player RunOrFall statistics.
+
+```sql
+CREATE TABLE IF NOT EXISTS runorfall_player_stats (
+  player_uuid CHAR(36) NOT NULL PRIMARY KEY,
+  player_name VARCHAR(32) NOT NULL,
+  wins INT NOT NULL DEFAULT 0,
+  losses INT NOT NULL DEFAULT 0,
+  current_win_streak INT NOT NULL DEFAULT 0,
+  best_win_streak INT NOT NULL DEFAULT 0,
+  longest_survived_ms BIGINT NOT NULL DEFAULT 0,
+  total_blocks_broken BIGINT NOT NULL DEFAULT 0,
+  total_blinks_used BIGINT NOT NULL DEFAULT 0
+) ENGINE=InnoDB;
+```
+
+Manager: `RunOrFallStatsStore` (in `hyvexa-runorfall`)
+
+---
+
+# Ascend Additional Tables
+
+## ascend_player_cats
+Stores collectible cat tokens found per player in Ascend mode.
+
+```sql
+CREATE TABLE IF NOT EXISTS ascend_player_cats (
+  player_uuid VARCHAR(36) NOT NULL,
+  cat_token VARCHAR(16) NOT NULL,
+  found_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (player_uuid, cat_token),
+  FOREIGN KEY (player_uuid) REFERENCES ascend_players(uuid) ON DELETE CASCADE
+) ENGINE=InnoDB;
+```
+
+Auto-created by `AscendDatabaseSetup` on startup.

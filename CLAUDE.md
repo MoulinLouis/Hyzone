@@ -20,6 +20,9 @@ Quick reference for AI agents working on this Hytale plugin project.
 | `hyvexa-parkour` | Main parkour gameplay | `io.hyvexa.HyvexaPlugin` |
 | `hyvexa-parkour-ascend` | Ascend idle mode | `io.hyvexa.ascend.ParkourAscendPlugin` |
 | `hyvexa-hub` | Hub routing + mode selection | `io.hyvexa.hub.HyvexaHubPlugin` |
+| `hyvexa-purge` | Zombie survival PvE mode | `io.hyvexa.purge.HyvexaPurgePlugin` |
+| `hyvexa-runorfall` | Platforming minigame mode | `io.hyvexa.runorfall.HyvexaRunOrFallPlugin` |
+| `hyvexa-wardrobe` | Cosmetics shop module | `io.hyvexa.wardrobe.WardrobePlugin` |
 | `hyvexa-launch` | IntelliJ launch classpath module | `com.hypixel.hytale.Main` |
 | `discord-bot` | Discord bot (Node.js) for account linking | `src/index.js` |
 
@@ -38,7 +41,7 @@ Quick reference for AI agents working on this Hytale plugin project.
 1. **Update CHANGELOG.md** for significant changes only (new features, balance changes, bug fixes) - keep entries brief (1-2 lines), no implementation details
 2. **Update docs/Ascend/ECONOMY_BALANCE.md** when modifying game economy (costs, rewards, multipliers, formulas)
 3. **Follow existing patterns** - check similar files before implementing
-4. **Reuse existing Managers** - 25+ Manager classes exist across modules. Check for existing ones before creating new ones (e.g., `HyvexaPlugin.getInstance().getHudManager()`, `ParkourAscendPlugin.getInstance().getRobotManager()`)
+4. **Reuse existing Managers** - 35+ Manager classes exist across modules. Check for existing ones before creating new ones (e.g., `HyvexaPlugin.getInstance().getHudManager()`, `ParkourAscendPlugin.getInstance().getRobotManager()`)
 5. **No build runs** - owner handles `./gradlew build`
 6. **UI paths** - Code uses `"Pages/X.ui"`, files go in `Common/UI/Custom/Pages/`
 7. **Check ref validity** - `if (ref == null || !ref.isValid()) return;`
@@ -82,7 +85,7 @@ Node.js bot for Discord-Minecraft account linking. Shares the same MySQL databas
 | Code patterns | `docs/CODE_PATTERNS.md`         |
 | Hytale API gotchas | `docs/HYTALE_API.md`            |
 | **Hytale Custom UI docs** | `docs/hytale-custom-ui/` (official reference) |
-| Full instructions | `docs/codex/AGENTS.md`          |
+| Full instructions | `AGENTS.md`          |
 | System architecture | `docs/ARCHITECTURE.md`          |
 | Database schema | `docs/DATABASE.md`              |
 | Game balancing | `docs/Ascend/ECONOMY_BALANCE.md`       |
