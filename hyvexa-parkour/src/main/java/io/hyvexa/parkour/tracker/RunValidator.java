@@ -502,8 +502,23 @@ class RunValidator {
             } else {
                 player.sendMessage(SystemMessageUtils.parkourSuccess(medal.name() + " Medal!"));
             }
-            // Medal.values() goes BRONZE -> SILVER -> GOLD -> PLATINUM, so last assigned is always highest
+            // Medal.values() goes BRONZE -> SILVER -> GOLD -> EMERALD, so last assigned is always highest
             highestEarned = medal;
+            highestFeathers = featherReward;
+        }
+        // Award insane medal on any completion of an insane-category map
+        if (category != null && category.trim().equalsIgnoreCase("insane")
+                && !medalStore.hasEarnedMedal(playerId, map.getId(), Medal.INSANE)) {
+            medalStore.awardMedal(playerId, map.getId(), Medal.INSANE);
+            int featherReward = rewardStore.getReward(category, Medal.INSANE);
+            if (featherReward > 0) {
+                featherStore.addFeathers(playerId, featherReward);
+                player.sendMessage(SystemMessageUtils.parkourSuccess(
+                        "INSANE Medal! +" + featherReward + " feathers"));
+            } else {
+                player.sendMessage(SystemMessageUtils.parkourSuccess("INSANE Medal!"));
+            }
+            highestEarned = Medal.INSANE;
             highestFeathers = featherReward;
         }
         return highestEarned != null ? new MedalAwardResult(highestEarned, highestFeathers) : null;

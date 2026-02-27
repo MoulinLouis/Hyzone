@@ -92,7 +92,7 @@ $C.@PageOverlay {
         Label {
           Anchor: (Width: 140);
           Style: (FontSize: 13, TextColor: #50C878, RenderBold: true);
-          Text: "Platinum";
+          Text: "Emerald";
         }
       }
 
@@ -121,7 +121,7 @@ $C.@PageOverlay {
           Style: (FontSize: 14, TextColor: #ffffff(0.85));
         }
         Group { Anchor: (Width: 20); }
-        $C.@TextField #EasyPlatinum {
+        $C.@TextField #EasyEmerald {
           Anchor: (Height: 26, Width: 120);
           Style: (FontSize: 14, TextColor: #ffffff(0.85));
         }
@@ -152,7 +152,7 @@ $C.@PageOverlay {
           Style: (FontSize: 14, TextColor: #ffffff(0.85));
         }
         Group { Anchor: (Width: 20); }
-        $C.@TextField #MediumPlatinum {
+        $C.@TextField #MediumEmerald {
           Anchor: (Height: 26, Width: 120);
           Style: (FontSize: 14, TextColor: #ffffff(0.85));
         }
@@ -183,7 +183,7 @@ $C.@PageOverlay {
           Style: (FontSize: 14, TextColor: #ffffff(0.85));
         }
         Group { Anchor: (Width: 20); }
-        $C.@TextField #HardPlatinum {
+        $C.@TextField #HardEmerald {
           Anchor: (Height: 26, Width: 120);
           Style: (FontSize: 14, TextColor: #ffffff(0.85));
         }
@@ -214,9 +214,36 @@ $C.@PageOverlay {
           Style: (FontSize: 14, TextColor: #ffffff(0.85));
         }
         Group { Anchor: (Width: 20); }
-        $C.@TextField #InsanePlatinum {
+        $C.@TextField #InsaneEmerald {
           Anchor: (Height: 26, Width: 120);
           Style: (FontSize: 14, TextColor: #ffffff(0.85));
+        }
+      }
+
+      // --- Insane Completion Reward ---
+      Group {
+        Anchor: (Top: 16, Height: 2, Left: 0, Right: 0);
+        Background: #ffffff(0.06);
+      }
+
+      Group {
+        Anchor: (Top: 12, Height: 30);
+        LayoutMode: Left;
+
+        Label {
+          Anchor: (Width: 260, Height: 30);
+          Style: (FontSize: 14, TextColor: #ff4d6d, RenderBold: true, VerticalAlignment: Center);
+          Text: "Insane Completion Reward";
+        }
+        $C.@TextField #InsaneRewardField {
+          Anchor: (Height: 26, Width: 120);
+          Style: (FontSize: 14, TextColor: #ffffff(0.85));
+        }
+        Group { Anchor: (Width: 12); }
+        Label {
+          Anchor: (Height: 30);
+          Style: (FontSize: 12, TextColor: #9fb0ba(0.6), VerticalAlignment: Center);
+          Text: "feathers per insane map completed";
         }
       }
 

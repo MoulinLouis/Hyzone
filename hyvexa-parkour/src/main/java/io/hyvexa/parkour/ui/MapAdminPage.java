@@ -45,7 +45,7 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
     private String medalBronzeSec = "";
     private String medalSilverSec = "";
     private String medalGoldSec = "";
-    private String medalPlatinumSec = "";
+    private String medalEmeraldSec = "";
     private boolean mapMithrilSwordEnabled = false;
     private boolean mapMithrilDaggersEnabled = false;
     private boolean mapGliderEnabled = false;
@@ -105,8 +105,8 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
         if (data.medalGoldSec != null) {
             medalGoldSec = data.medalGoldSec.trim();
         }
-        if (data.medalPlatinumSec != null) {
-            medalPlatinumSec = data.medalPlatinumSec.trim();
+        if (data.medalEmeraldSec != null) {
+            medalEmeraldSec = data.medalEmeraldSec.trim();
         }
         if (data.button == null) {
             if (!previousSearch.equals(mapSearch)) {
@@ -173,7 +173,7 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
             medalBronzeSec = map.getBronzeTimeMs() != null ? String.valueOf(map.getBronzeTimeMs() / 1000) : "";
             medalSilverSec = map.getSilverTimeMs() != null ? String.valueOf(map.getSilverTimeMs() / 1000) : "";
             medalGoldSec = map.getGoldTimeMs() != null ? String.valueOf(map.getGoldTimeMs() / 1000) : "";
-            medalPlatinumSec = map.getPlatinumTimeMs() != null ? String.valueOf(map.getPlatinumTimeMs() / 1000) : "";
+            medalEmeraldSec = map.getEmeraldTimeMs() != null ? String.valueOf(map.getEmeraldTimeMs() / 1000) : "";
         }
         sendRefresh(ref, store);
     }
@@ -255,11 +255,11 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
         Long bronzeMs = parseMedalTime(player, medalBronzeSec, "Bronze");
         Long silverMs = parseMedalTime(player, medalSilverSec, "Silver");
         Long goldMs = parseMedalTime(player, medalGoldSec, "Gold");
-        Long platinumMs = parseMedalTime(player, medalPlatinumSec, "Platinum");
+        Long emeraldMs = parseMedalTime(player, medalEmeraldSec, "Emerald");
         if (bronzeMs != null && bronzeMs == -1L) { return; }
         if (silverMs != null && silverMs == -1L) { return; }
         if (goldMs != null && goldMs == -1L) { return; }
-        if (platinumMs != null && platinumMs == -1L) { return; }
+        if (emeraldMs != null && emeraldMs == -1L) { return; }
         if (goldMs != null && silverMs != null && goldMs >= silverMs) {
             player.sendMessage(Message.raw("Gold time must be less than silver time."));
             return;
@@ -272,14 +272,14 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
             player.sendMessage(Message.raw("Gold time must be less than bronze time."));
             return;
         }
-        if (platinumMs != null && goldMs != null && platinumMs >= goldMs) {
-            player.sendMessage(Message.raw("Platinum time must be less than gold time."));
+        if (emeraldMs != null && goldMs != null && emeraldMs >= goldMs) {
+            player.sendMessage(Message.raw("Emerald time must be less than gold time."));
             return;
         }
         map.setBronzeTimeMs(bronzeMs);
         map.setSilverTimeMs(silverMs);
         map.setGoldTimeMs(goldMs);
-        map.setPlatinumTimeMs(platinumMs);
+        map.setEmeraldTimeMs(emeraldMs);
         map.setStart(start);
         map.setCreatedAt(System.currentTimeMillis());
         map.setUpdatedAt(map.getCreatedAt());
@@ -451,11 +451,11 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
         Long bronzeMs = parseMedalTime(player, medalBronzeSec, "Bronze");
         Long silverMs = parseMedalTime(player, medalSilverSec, "Silver");
         Long goldMs = parseMedalTime(player, medalGoldSec, "Gold");
-        Long platinumMs = parseMedalTime(player, medalPlatinumSec, "Platinum");
+        Long emeraldMs = parseMedalTime(player, medalEmeraldSec, "Emerald");
         if (bronzeMs != null && bronzeMs == -1L) { return; }
         if (silverMs != null && silverMs == -1L) { return; }
         if (goldMs != null && goldMs == -1L) { return; }
-        if (platinumMs != null && platinumMs == -1L) { return; }
+        if (emeraldMs != null && emeraldMs == -1L) { return; }
         if (goldMs != null && silverMs != null && goldMs >= silverMs) {
             player.sendMessage(Message.raw("Gold time must be less than silver time."));
             return;
@@ -468,14 +468,14 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
             player.sendMessage(Message.raw("Gold time must be less than bronze time."));
             return;
         }
-        if (platinumMs != null && goldMs != null && platinumMs >= goldMs) {
-            player.sendMessage(Message.raw("Platinum time must be less than gold time."));
+        if (emeraldMs != null && goldMs != null && emeraldMs >= goldMs) {
+            player.sendMessage(Message.raw("Emerald time must be less than gold time."));
             return;
         }
         map.setBronzeTimeMs(bronzeMs);
         map.setSilverTimeMs(silverMs);
         map.setGoldTimeMs(goldMs);
-        map.setPlatinumTimeMs(platinumMs);
+        map.setEmeraldTimeMs(emeraldMs);
         map.setUpdatedAt(System.currentTimeMillis());
         try {
             mapStore.updateMap(map);
@@ -725,7 +725,7 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
         commandBuilder.set("#MedalBronzeField.Value", medalBronzeSec);
         commandBuilder.set("#MedalSilverField.Value", medalSilverSec);
         commandBuilder.set("#MedalGoldField.Value", medalGoldSec);
-        commandBuilder.set("#MedalPlatinumField.Value", medalPlatinumSec);
+        commandBuilder.set("#MedalEmeraldField.Value", medalEmeraldSec);
         commandBuilder.set("#MithrilSwordValue.Text", mapMithrilSwordEnabled ? "Enabled" : "Disabled");
         commandBuilder.set("#MithrilDaggersValue.Text", mapMithrilDaggersEnabled ? "Enabled" : "Disabled");
         commandBuilder.set("#GliderValue.Text", mapGliderEnabled ? "Enabled" : "Disabled");
@@ -799,8 +799,8 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
                 EventData.of(MapData.KEY_MEDAL_SILVER, "#MedalSilverField.Value"), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#MedalGoldField",
                 EventData.of(MapData.KEY_MEDAL_GOLD, "#MedalGoldField.Value"), false);
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#MedalPlatinumField",
-                EventData.of(MapData.KEY_MEDAL_PLATINUM, "#MedalPlatinumField.Value"), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#MedalEmeraldField",
+                EventData.of(MapData.KEY_MEDAL_EMERALD, "#MedalEmeraldField.Value"), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CreateMapButton",
                 EventData.of(MapData.KEY_BUTTON, MapData.BUTTON_CREATE), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SetStartButton",
@@ -943,7 +943,7 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
         static final String KEY_MEDAL_BRONZE = "@MedalBronze";
         static final String KEY_MEDAL_SILVER = "@MedalSilver";
         static final String KEY_MEDAL_GOLD = "@MedalGold";
-        static final String KEY_MEDAL_PLATINUM = "@MedalPlatinum";
+        static final String KEY_MEDAL_EMERALD = "@MedalEmerald";
         static final String BUTTON_SELECT_PREFIX = "Select:";
         static final String BUTTON_BACK = "BackButton";
         static final String BUTTON_CREATE = "CreateMap";
@@ -981,7 +981,7 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
                 .addField(new KeyedCodec<>(KEY_MEDAL_BRONZE, Codec.STRING), (data, value) -> data.medalBronzeSec = value, data -> data.medalBronzeSec)
                 .addField(new KeyedCodec<>(KEY_MEDAL_SILVER, Codec.STRING), (data, value) -> data.medalSilverSec = value, data -> data.medalSilverSec)
                 .addField(new KeyedCodec<>(KEY_MEDAL_GOLD, Codec.STRING), (data, value) -> data.medalGoldSec = value, data -> data.medalGoldSec)
-                .addField(new KeyedCodec<>(KEY_MEDAL_PLATINUM, Codec.STRING), (data, value) -> data.medalPlatinumSec = value, data -> data.medalPlatinumSec)
+                .addField(new KeyedCodec<>(KEY_MEDAL_EMERALD, Codec.STRING), (data, value) -> data.medalEmeraldSec = value, data -> data.medalEmeraldSec)
                 .build();
 
         private String button;
@@ -995,6 +995,6 @@ public class MapAdminPage extends InteractiveCustomUIPage<MapAdminPage.MapData> 
         private String medalBronzeSec;
         private String medalSilverSec;
         private String medalGoldSec;
-        private String medalPlatinumSec;
+        private String medalEmeraldSec;
     }
 }

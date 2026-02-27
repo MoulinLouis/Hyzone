@@ -54,9 +54,15 @@ Group {
       Text: "0";
     }
 
-    Label #PlatinumCount {
+    Label #EmeraldCount {
       Anchor: (Width: 34);
       Style: (FontSize: 12, TextColor: #50C878, HorizontalAlignment: Center);
+      Text: "0";
+    }
+
+    Label #InsaneCount {
+      Anchor: (Width: 34);
+      Style: (FontSize: 12, TextColor: #ff4d6d, HorizontalAlignment: Center);
       Text: "0";
     }
 

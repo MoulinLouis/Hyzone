@@ -85,11 +85,11 @@ Group {
 
         Group { Anchor: (Width: 14); }
 
-        Group #PlatinumMedalIcon {
+        Group #EmeraldMedalIcon {
           Anchor: (Width: 20, Height: 20, Top: 2);
-          Background: (TexturePath: "../Textures/platinum_medal.png");
+          Background: (TexturePath: "../Textures/emerald_medal.png");
         }
-        Label #PlatinumMedalText {
+        Label #EmeraldMedalText {
           Anchor: (Height: 24);
           Style: (FontSize: 13, TextColor: #50C878, VerticalAlignment: Center);
           Text: "";
@@ -115,9 +115,14 @@ Group {
         Background: (TexturePath: "../Textures/gold_medal.png");
         Visible: false;
       }
-      Group #MedalPlatinum {
+      Group #MedalEmerald {
         Anchor: (Left: 10, Top: 18, Width: 40, Height: 40);
-        Background: (TexturePath: "../Textures/platinum_medal.png");
+        Background: (TexturePath: "../Textures/emerald_medal.png");
+        Visible: false;
+      }
+      Group #MedalInsane {
+        Anchor: (Left: 10, Top: 18, Width: 40, Height: 40);
+        Background: (TexturePath: "../Textures/insane_medal.png");
         Visible: false;
       }
     }

@@ -79,8 +79,8 @@ public class RunRecordsHud extends RunHud {
         Long bronzeMs = map.getBronzeTimeMs();
         Long silverMs = map.getSilverTimeMs();
         Long goldMs = map.getGoldTimeMs();
-        Long platinumMs = map.getPlatinumTimeMs();
-        boolean hasMedals = bronzeMs != null || silverMs != null || goldMs != null || platinumMs != null;
+        Long emeraldMs = map.getEmeraldTimeMs();
+        boolean hasMedals = bronzeMs != null || silverMs != null || goldMs != null || emeraldMs != null;
         if (!hasMedals) {
             String key = "hidden";
             if (key.equals(lastMedalsKey)) {
@@ -92,7 +92,7 @@ public class RunRecordsHud extends RunHud {
             update(false, cmd);
             return;
         }
-        String key = bronzeMs + "|" + silverMs + "|" + goldMs + "|" + platinumMs;
+        String key = bronzeMs + "|" + silverMs + "|" + goldMs + "|" + emeraldMs;
         if (key.equals(lastMedalsKey)) {
             return;
         }
@@ -102,7 +102,7 @@ public class RunRecordsHud extends RunHud {
         setMedalRow(cmd, "Bronze", bronzeMs);
         setMedalRow(cmd, "Silver", silverMs);
         setMedalRow(cmd, "Gold", goldMs);
-        setMedalRow(cmd, "Platinum", platinumMs);
+        setMedalRow(cmd, "Emerald", emeraldMs);
         update(false, cmd);
     }
 

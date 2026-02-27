@@ -37,14 +37,15 @@ public class MedalRewardStore {
                 + "bronze_feathers INT NOT NULL DEFAULT 0, "
                 + "silver_feathers INT NOT NULL DEFAULT 0, "
                 + "gold_feathers INT NOT NULL DEFAULT 0, "
-                + "platinum_feathers INT NOT NULL DEFAULT 0"
+                + "emerald_feathers INT NOT NULL DEFAULT 0"
                 + ") ENGINE=InnoDB";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(createSql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             stmt.executeUpdate();
-            renameColumnIfExists(conn, "medal_rewards", "author_feathers", "platinum_feathers", "INT NOT NULL DEFAULT 0");
-            addColumnIfMissing(conn, "medal_rewards", "platinum_feathers", "INT NOT NULL DEFAULT 0");
+            renameColumnIfExists(conn, "medal_rewards", "author_feathers", "emerald_feathers", "INT NOT NULL DEFAULT 0");
+            addColumnIfMissing(conn, "medal_rewards", "emerald_feathers", "INT NOT NULL DEFAULT 0");
+            addColumnIfMissing(conn, "medal_rewards", "insane_feathers", "INT NOT NULL DEFAULT 0");
         } catch (SQLException e) {
             LOGGER.atSevere().withCause(e).log("Failed to create medal_rewards table");
             return;
@@ -65,17 +66,29 @@ public class MedalRewardStore {
             case BRONZE -> r.bronze;
             case SILVER -> r.silver;
             case GOLD -> r.gold;
-            case PLATINUM -> r.platinum;
+            case EMERALD -> r.emerald;
+            case INSANE -> r.insane;
         };
     }
 
-    public void setRewards(String category, int bronze, int silver, int gold, int platinum) {
+    public void setRewards(String category, int bronze, int silver, int gold, int emerald) {
         if (category == null) {
             return;
         }
         String key = normalizeCategory(category);
-        rewards.put(key, new MedalRewards(Math.max(0, bronze), Math.max(0, silver), Math.max(0, gold), Math.max(0, platinum)));
-        persistToDatabase(key, bronze, silver, gold, platinum);
+        MedalRewards existing = rewards.get(key);
+        int insane = existing != null ? existing.insane : 0;
+        setRewards(category, bronze, silver, gold, emerald, insane);
+    }
+
+    public void setRewards(String category, int bronze, int silver, int gold, int emerald, int insane) {
+        if (category == null) {
+            return;
+        }
+        String key = normalizeCategory(category);
+        rewards.put(key, new MedalRewards(Math.max(0, bronze), Math.max(0, silver),
+                Math.max(0, gold), Math.max(0, emerald), Math.max(0, insane)));
+        persistToDatabase(key, bronze, silver, gold, emerald, insane);
     }
 
     public ConcurrentHashMap<String, MedalRewards> getAllRewards() {
@@ -93,7 +106,7 @@ public class MedalRewardStore {
         if (!DatabaseManager.getInstance().isInitialized()) {
             return;
         }
-        String sql = "SELECT category, bronze_feathers, silver_feathers, gold_feathers, platinum_feathers FROM medal_rewards";
+        String sql = "SELECT category, bronze_feathers, silver_feathers, gold_feathers, emerald_feathers, insane_feathers FROM medal_rewards";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
@@ -103,8 +116,9 @@ public class MedalRewardStore {
                     int bronze = rs.getInt("bronze_feathers");
                     int silver = rs.getInt("silver_feathers");
                     int gold = rs.getInt("gold_feathers");
-                    int platinum = rs.getInt("platinum_feathers");
-                    rewards.put(normalizeCategory(category), new MedalRewards(bronze, silver, gold, platinum));
+                    int emerald = rs.getInt("emerald_feathers");
+                    int insane = rs.getInt("insane_feathers");
+                    rewards.put(normalizeCategory(category), new MedalRewards(bronze, silver, gold, emerald, insane));
                 }
             }
         } catch (SQLException e) {
@@ -112,13 +126,13 @@ public class MedalRewardStore {
         }
     }
 
-    private void persistToDatabase(String category, int bronze, int silver, int gold, int platinum) {
+    private void persistToDatabase(String category, int bronze, int silver, int gold, int emerald, int insane) {
         if (!DatabaseManager.getInstance().isInitialized()) {
             return;
         }
-        String sql = "INSERT INTO medal_rewards (category, bronze_feathers, silver_feathers, gold_feathers, platinum_feathers) "
-                + "VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE "
-                + "bronze_feathers = ?, silver_feathers = ?, gold_feathers = ?, platinum_feathers = ?";
+        String sql = "INSERT INTO medal_rewards (category, bronze_feathers, silver_feathers, gold_feathers, emerald_feathers, insane_feathers) "
+                + "VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE "
+                + "bronze_feathers = ?, silver_feathers = ?, gold_feathers = ?, emerald_feathers = ?, insane_feathers = ?";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
@@ -126,11 +140,13 @@ public class MedalRewardStore {
             stmt.setInt(2, bronze);
             stmt.setInt(3, silver);
             stmt.setInt(4, gold);
-            stmt.setInt(5, platinum);
-            stmt.setInt(6, bronze);
-            stmt.setInt(7, silver);
-            stmt.setInt(8, gold);
-            stmt.setInt(9, platinum);
+            stmt.setInt(5, emerald);
+            stmt.setInt(6, insane);
+            stmt.setInt(7, bronze);
+            stmt.setInt(8, silver);
+            stmt.setInt(9, gold);
+            stmt.setInt(10, emerald);
+            stmt.setInt(11, insane);
             stmt.executeUpdate();
         } catch (SQLException e) {
             LOGGER.atWarning().withCause(e).log("Failed to persist medal rewards for " + category);
@@ -185,13 +201,15 @@ public class MedalRewardStore {
         public final int bronze;
         public final int silver;
         public final int gold;
-        public final int platinum;
+        public final int emerald;
+        public final int insane;
 
-        public MedalRewards(int bronze, int silver, int gold, int platinum) {
+        public MedalRewards(int bronze, int silver, int gold, int emerald, int insane) {
             this.bronze = bronze;
             this.silver = silver;
             this.gold = gold;
-            this.platinum = platinum;
+            this.emerald = emerald;
+            this.insane = insane;
         }
     }
 }

@@ -29,9 +29,15 @@ $C.@PageOverlay {
       Visible: false;
     }
 
-    Group #MedalNotifPlatinumIcon {
+    Group #MedalNotifEmeraldIcon {
       Anchor: (Width: 64, Height: 64);
-      Background: (TexturePath: "../Textures/platinum_medal.png");
+      Background: (TexturePath: "../Textures/emerald_medal.png");
+      Visible: false;
+    }
+
+    Group #MedalNotifInsaneIcon {
+      Anchor: (Width: 64, Height: 64);
+      Background: (TexturePath: "../Textures/insane_medal.png");
       Visible: false;
     }
 
@@ -90,10 +96,18 @@ $C.@PageOverlay {
         Visible: false;
       }
 
-      ProgressBar #MedalNotifBarPlatinum {
+      ProgressBar #MedalNotifBarEmerald {
         Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
         Bar: #50C878;
         Background: #50C878(0.15);
+        Value: 1;
+        Visible: false;
+      }
+
+      ProgressBar #MedalNotifBarInsane {
+        Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+        Bar: #ff4d6d;
+        Background: #ff4d6d(0.15);
         Value: 1;
         Visible: false;
       }
