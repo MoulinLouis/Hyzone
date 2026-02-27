@@ -7,6 +7,7 @@ import com.hypixel.hytale.server.core.entity.nameplate.Nameplate;
 import com.hypixel.hytale.server.core.entity.entities.player.movement.MovementManager;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.MovementSettings;
@@ -175,8 +176,18 @@ public class PlayerPerksManager {
         if (position == null) {
             return false;
         }
+        World world = store.getExternalData() != null ? store.getExternalData().getWorld() : null;
+        if (world == null || world.getName() == null || world.getName().isBlank()) {
+            return false;
+        }
         double touchRadiusSq = ParkourConstants.TOUCH_RADIUS * ParkourConstants.TOUCH_RADIUS;
-        return mapStore.findMapByStartTrigger(position.getX(), position.getY(), position.getZ(), touchRadiusSq) != null;
+        return mapStore.findMapByStartTriggerReadonly(
+                world.getName(),
+                position.getX(),
+                position.getY(),
+                position.getZ(),
+                touchRadiusSq
+        ) != null;
     }
 
     public void updatePlayerNameplate(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef,

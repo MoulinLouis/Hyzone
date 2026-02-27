@@ -1,6 +1,7 @@
 package io.hyvexa.core.discord;
 
 import com.hypixel.hytale.logger.HytaleLogger;
+import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import io.hyvexa.core.db.DatabaseManager;
@@ -12,6 +13,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -75,6 +77,7 @@ public class DiscordLinkStore {
                 stmt.executeUpdate();
             }
             migrateGemsRewardedToVexa(conn);
+            ensureIndexes(conn);
             LOGGER.atInfo().log("DiscordLinkStore initialized (tables ensured)");
         } catch (SQLException e) {
             LOGGER.atSevere().withCause(e).log("Failed to create discord link tables");
@@ -200,10 +203,51 @@ public class DiscordLinkStore {
      * Returns true if a reward was given.
      */
     public boolean checkAndRewardVexa(UUID playerId, Player player) {
-        if (playerId == null || player == null || !DatabaseManager.getInstance().isInitialized()) {
+        if (playerId == null || player == null) {
             return false;
         }
+        boolean rewarded = claimAndRewardVexa(playerId);
+        if (rewarded) {
+            sendRewardGrantedMessage(player);
+        }
+        return rewarded;
+    }
 
+    public CompletableFuture<Boolean> checkAndRewardVexaAsync(UUID playerId) {
+        if (playerId == null || !DatabaseManager.getInstance().isInitialized()) {
+            return CompletableFuture.completedFuture(false);
+        }
+        return CompletableFuture.supplyAsync(() -> claimAndRewardVexa(playerId), HytaleServer.SCHEDULED_EXECUTOR);
+    }
+
+    public CompletableFuture<Boolean> updateRankIfLinkedAsync(UUID playerId, String rankName) {
+        if (playerId == null || rankName == null || !DatabaseManager.getInstance().isInitialized()) {
+            return CompletableFuture.completedFuture(false);
+        }
+        return CompletableFuture.supplyAsync(() -> {
+            if (!isLinked(playerId)) {
+                return false;
+            }
+            updateRank(playerId, rankName);
+            return true;
+        }, HytaleServer.SCHEDULED_EXECUTOR);
+    }
+
+    public void sendRewardGrantedMessage(Player player) {
+        if (player == null) {
+            return;
+        }
+        player.sendMessage(Message.join(
+                Message.raw("Discord linked! You received ").color("#a3e635"),
+                Message.raw(VEXA_REWARD + " vexa").color("#4ade80").bold(true),
+                Message.raw(" as a reward!").color("#a3e635")
+        ));
+    }
+
+    private boolean claimAndRewardVexa(UUID playerId) {
+        if (playerId == null || !DatabaseManager.getInstance().isInitialized()) {
+            return false;
+        }
         // Atomic claim: only one caller can succeed for a given player
         String claimSql = "UPDATE discord_links SET vexa_rewarded = TRUE WHERE player_uuid = ? AND vexa_rewarded = FALSE";
         int updated;
@@ -223,12 +267,6 @@ public class DiscordLinkStore {
 
         // Award vexa after successful atomic claim
         VexaStore.getInstance().addVexa(playerId, VEXA_REWARD);
-
-        player.sendMessage(Message.join(
-                Message.raw("Discord linked! You received ").color("#a3e635"),
-                Message.raw(VEXA_REWARD + " vexa").color("#4ade80").bold(true),
-                Message.raw(" as a reward!").color("#a3e635")
-        ));
         LOGGER.atInfo().log("Awarded " + VEXA_REWARD + " vexa to " + playerId + " for Discord link");
         try {
             io.hyvexa.core.analytics.AnalyticsStore.getInstance().logEvent(playerId, "discord_link", "{}");
@@ -277,11 +315,32 @@ public class DiscordLinkStore {
         }
     }
 
+    private void ensureIndexes(Connection conn) {
+        if (conn == null) {
+            return;
+        }
+        try (PreparedStatement stmt = conn.prepareStatement(
+                "CREATE INDEX idx_discord_link_codes_player_uuid_expires_at ON discord_link_codes (player_uuid, expires_at)")) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            if (isDuplicateIndex(e)) {
+                LOGGER.atFine().log("Migration: discord_link_codes player/expires index already exists");
+            } else {
+                LOGGER.atWarning().withCause(e).log("Failed to add discord_link_codes player/expires index");
+            }
+        }
+    }
+
     /**
      * Check if a SQLException indicates a duplicate column (MySQL error 1060, SQL state 42S21).
      */
     private static boolean isDuplicateColumn(SQLException e) {
         return e.getErrorCode() == 1060 || "42S21".equals(e.getSQLState());
+    }
+
+    private static boolean isDuplicateIndex(SQLException e) {
+        return e.getErrorCode() == 1061 || "42000".equals(e.getSQLState());
     }
 
     private boolean columnExists(Connection conn, String tableName, String columnName) throws SQLException {

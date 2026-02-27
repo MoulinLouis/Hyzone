@@ -33,8 +33,10 @@ import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -73,6 +75,8 @@ public class RunOrFallGameManager {
     private final Set<UUID> lobbyPlayers = ConcurrentHashMap.newKeySet();
     private final Set<UUID> alivePlayers = ConcurrentHashMap.newKeySet();
     private final Map<BlockKey, PendingBlock> pendingBlocks = new ConcurrentHashMap<>();
+    private final PriorityQueue<PendingBlockQueueEntry> pendingBlockQueue =
+            new PriorityQueue<>(Comparator.comparingLong(entry -> entry.nextAttemptAtMs));
     private final Map<BlockKey, Integer> removedBlocks = new ConcurrentHashMap<>();
     private final Map<UUID, BlockKey> playerLastFootBlock = new ConcurrentHashMap<>();
     private final Map<UUID, Long> roundStartTimesMs = new ConcurrentHashMap<>();
@@ -306,7 +310,7 @@ public class RunOrFallGameManager {
         activeRoundConfig = null;
         resetCountdownState();
         alivePlayers.clear();
-        pendingBlocks.clear();
+        clearPendingBlocksInternal();
         playerLastFootBlock.clear();
         roundStartTimesMs.clear();
         nextAliveFeatherRewardAtMs.clear();
@@ -488,7 +492,7 @@ public class RunOrFallGameManager {
             blinkChargesByPlayer.put(onlinePlayerId, startingBlinkCharges);
         }
         soloTestRound = countdownRequiredPlayers == 1 && onlinePlayers.size() == 1;
-        pendingBlocks.clear();
+        clearPendingBlocksInternal();
         removedBlocks.clear();
         deleteBrokenBlocksFile();
         playerLastFootBlock.clear();
@@ -703,12 +707,15 @@ public class RunOrFallGameManager {
         }
         long delayMs = Math.max(0L, Math.round(delaySeconds * 1000.0d));
         long dueAtMs = System.currentTimeMillis() + delayMs;
-        pendingBlocks.put(key, new PendingBlock(currentId, dueAtMs, playerId));
+        PendingBlock pending = new PendingBlock(currentId, dueAtMs, playerId);
+        pendingBlocks.put(key, pending);
+        pendingBlockQueue.add(new PendingBlockQueueEntry(key, pending, dueAtMs));
         return true;
     }
 
     private void processPendingBlocksInternal() {
         if (pendingBlocks.isEmpty()) {
+            pendingBlockQueue.clear();
             return;
         }
         World world = activeWorld;
@@ -716,26 +723,34 @@ public class RunOrFallGameManager {
             return;
         }
         long now = System.currentTimeMillis();
-        for (Map.Entry<BlockKey, PendingBlock> entry : pendingBlocks.entrySet()) {
-            BlockKey key = entry.getKey();
-            PendingBlock pending = entry.getValue();
-            if (pending == null || now < pending.dueAtMs) {
+        while (true) {
+            PendingBlockQueueEntry entry = pendingBlockQueue.peek();
+            if (entry == null || entry.nextAttemptAtMs > now) {
+                return;
+            }
+            pendingBlockQueue.poll();
+            PendingBlock pending = pendingBlocks.get(entry.key);
+            if (pending == null || pending != entry.pending) {
                 continue;
             }
+            BlockKey key = entry.key;
             Integer currentId = RunOrFallUtils.readBlockId(world, key.x, key.y, key.z);
             if (currentId == null) {
+                pendingBlockQueue.add(entry.retryAt(now + GAME_TICK_MS));
                 continue;
             }
             if (currentId == RunOrFallUtils.AIR_BLOCK_ID) {
-                pendingBlocks.remove(key);
+                pendingBlocks.remove(key, pending);
                 continue;
             }
             if (writeBlockId(world, key.x, key.y, key.z, RunOrFallUtils.AIR_BLOCK_ID)) {
                 removedBlocks.put(key, pending.originalBlockId);
-                pendingBlocks.remove(key);
+                pendingBlocks.remove(key, pending);
                 incrementBrokenBlocksCountInternal(pending.playerId);
                 scheduleBrokenBlocksSave();
+                continue;
             }
+            pendingBlockQueue.add(entry.retryAt(now + GAME_TICK_MS));
         }
     }
 
@@ -804,7 +819,7 @@ public class RunOrFallGameManager {
     private void restoreAllBlocksInternal() {
         World world = activeWorld;
         if (world == null) {
-            pendingBlocks.clear();
+            clearPendingBlocksInternal();
             removedBlocks.clear();
             playerLastFootBlock.clear();
             roundStartTimesMs.clear();
@@ -822,7 +837,7 @@ public class RunOrFallGameManager {
             }
             writeBlockId(world, key.x, key.y, key.z, original);
         }
-        pendingBlocks.clear();
+        clearPendingBlocksInternal();
         removedBlocks.clear();
         playerLastFootBlock.clear();
         roundStartTimesMs.clear();
@@ -831,6 +846,11 @@ public class RunOrFallGameManager {
         blinkChargesByPlayer.clear();
         blinksUsedByPlayer.clear();
         deleteBrokenBlocksFile();
+    }
+
+    private void clearPendingBlocksInternal() {
+        pendingBlocks.clear();
+        pendingBlockQueue.clear();
     }
 
     private void scheduleBrokenBlocksSave() {
@@ -1508,6 +1528,22 @@ public class RunOrFallGameManager {
             this.originalBlockId = originalBlockId;
             this.dueAtMs = dueAtMs;
             this.playerId = playerId;
+        }
+    }
+
+    private static final class PendingBlockQueueEntry {
+        private final BlockKey key;
+        private final PendingBlock pending;
+        private final long nextAttemptAtMs;
+
+        private PendingBlockQueueEntry(BlockKey key, PendingBlock pending, long nextAttemptAtMs) {
+            this.key = key;
+            this.pending = pending;
+            this.nextAttemptAtMs = nextAttemptAtMs;
+        }
+
+        private PendingBlockQueueEntry retryAt(long nextAttemptAtMs) {
+            return new PendingBlockQueueEntry(key, pending, nextAttemptAtMs);
         }
     }
 

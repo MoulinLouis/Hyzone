@@ -5,6 +5,7 @@ const db = require('./db');
 
 const TOKEN = process.env.DISCORD_TOKEN;
 const GUILD_ID = process.env.GUILD_ID;
+const RANK_SYNC_BATCH_SIZE = Math.max(1, parseInt(process.env.RANK_SYNC_BATCH_SIZE || '50', 10) || 50);
 
 if (!TOKEN) {
   console.error('DISCORD_TOKEN is required in .env');
@@ -66,7 +67,7 @@ async function syncRankRoles() {
 
   let rows;
   try {
-    rows = await db.getDesyncedRanks();
+    rows = await db.getDesyncedRanks(RANK_SYNC_BATCH_SIZE);
   } catch (err) {
     console.error('Rank sync: DB query failed:', err.message);
     return;

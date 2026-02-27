@@ -28,6 +28,7 @@ public class AscendHudManager {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final long ECONOMY_CACHE_TTL_MS = 1000L;
+    private static final long RUNNER_BAR_CACHE_TTL_MS = 150L;
 
     private final AscendPlayerStore playerStore;
     private final AscendMapStore mapStore;
@@ -40,6 +41,7 @@ public class AscendHudManager {
     private final ConcurrentHashMap<UUID, Boolean> hudHidden = new ConcurrentHashMap<>();
     private final java.util.Set<UUID> previewPlayers = ConcurrentHashMap.newKeySet();
     private final ConcurrentHashMap<UUID, CachedEconomyData> economyCache = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, RunnerBarCache> runnerBarCache = new ConcurrentHashMap<>();
 
     public AscendHudManager(AscendPlayerStore playerStore, AscendMapStore mapStore, AscendRunTracker runTracker, SummitManager summitManager) {
         this.playerStore = playerStore;
@@ -137,6 +139,12 @@ public class AscendHudManager {
             return;
         }
         try {
+            long now = System.currentTimeMillis();
+            RunnerBarCache cachedBars = runnerBarCache.get(playerId);
+            if (cachedBars != null && now - cachedBars.computedAtMs < RUNNER_BAR_CACHE_TTL_MS) {
+                hud.updateRunnerBars(cachedBars.bars);
+                return;
+            }
             ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
             RobotManager robotManager = plugin != null ? plugin.getRobotManager() : null;
             if (robotManager == null) {
@@ -150,6 +158,7 @@ public class AscendHudManager {
                     bars[i] = (float) progress;
                 }
             }
+            runnerBarCache.put(playerId, new RunnerBarCache(now, bars));
             hud.updateRunnerBars(bars);
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("Failed to update runner bars for player " + playerId);
@@ -213,6 +222,7 @@ public class AscendHudManager {
         hudHidden.remove(playerId);
         previewPlayers.remove(playerId);
         economyCache.remove(playerId);
+        runnerBarCache.remove(playerId);
     }
 
     public void showToast(UUID playerId, ToastType type, String message) {
@@ -325,6 +335,16 @@ public class AscendHudManager {
             this.speedPreview = speedPreview;
             this.evoPreview = evoPreview;
             this.vexa = vexa;
+        }
+    }
+
+    private static final class RunnerBarCache {
+        final long computedAtMs;
+        final float[] bars;
+
+        RunnerBarCache(long computedAtMs, float[] bars) {
+            this.computedAtMs = computedAtMs;
+            this.bars = bars;
         }
     }
 }

@@ -10,6 +10,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -25,6 +26,7 @@ public class MapStore {
     private static final double MAX_COORDINATE = 30000000.0;
 
     private final java.util.Map<String, Map> maps = new LinkedHashMap<>();
+    private final java.util.Map<String, List<Map>> activeStartTriggerMapsByWorld = new HashMap<>();
     private final ReadWriteLock fileLock = new ReentrantReadWriteLock();
     private volatile Runnable onChangeListener;
 
@@ -59,6 +61,7 @@ public class MapStore {
         fileLock.writeLock().lock();
         try {
             maps.clear();
+            activeStartTriggerMapsByWorld.clear();
 
             try (Connection conn = DatabaseManager.getInstance().getConnection()) {
                 if (conn == null) {
@@ -142,6 +145,7 @@ public class MapStore {
                 }
 
                 LOGGER.atInfo().log("MapStore loaded " + maps.size() + " maps from database");
+                rebuildRuntimeIndexesLocked();
 
             } catch (SQLException e) {
                 LOGGER.atSevere().log("Failed to load MapStore from database: " + e.getMessage());
@@ -190,6 +194,15 @@ public class MapStore {
         fileLock.readLock().lock();
         try {
             return copyMap(this.maps.get(id));
+        } finally {
+            fileLock.readLock().unlock();
+        }
+    }
+
+    public Map getMapReadonly(String id) {
+        fileLock.readLock().lock();
+        try {
+            return this.maps.get(id);
         } finally {
             fileLock.readLock().unlock();
         }
@@ -254,6 +267,34 @@ public class MapStore {
         return null;
     }
 
+    public Map findMapByStartTriggerReadonly(String worldName, double x, double y, double z, double touchRadiusSq) {
+        if (worldName == null || worldName.isBlank()) {
+            return null;
+        }
+        fileLock.readLock().lock();
+        try {
+            List<Map> mapsInWorld = activeStartTriggerMapsByWorld.get(worldName);
+            if (mapsInWorld == null || mapsInWorld.isEmpty()) {
+                return null;
+            }
+            for (Map map : mapsInWorld) {
+                TransformData trigger = map.getStartTrigger();
+                if (trigger == null) {
+                    continue;
+                }
+                double dx = x - trigger.getX();
+                double dy = y - trigger.getY();
+                double dz = z - trigger.getZ();
+                if (dx * dx + dy * dy + dz * dz <= touchRadiusSq) {
+                    return map;
+                }
+            }
+        } finally {
+            fileLock.readLock().unlock();
+        }
+        return null;
+    }
+
     public int getMapCount() {
         fileLock.readLock().lock();
         try {
@@ -270,6 +311,7 @@ public class MapStore {
         fileLock.writeLock().lock();
         try {
             this.maps.put(stored.getId(), stored);
+            rebuildRuntimeIndexesLocked();
         } finally {
             fileLock.writeLock().unlock();
         }
@@ -285,6 +327,7 @@ public class MapStore {
         fileLock.writeLock().lock();
         try {
             this.maps.put(stored.getId(), stored);
+            rebuildRuntimeIndexesLocked();
         } finally {
             fileLock.writeLock().unlock();
         }
@@ -298,6 +341,9 @@ public class MapStore {
         boolean removed;
         try {
             removed = this.maps.remove(id) != null;
+            if (removed) {
+                rebuildRuntimeIndexesLocked();
+            }
         } finally {
             fileLock.writeLock().unlock();
         }
@@ -537,6 +583,21 @@ public class MapStore {
             return -MAX_COORDINATE;
         }
         return value;
+    }
+
+    private void rebuildRuntimeIndexesLocked() {
+        activeStartTriggerMapsByWorld.clear();
+        for (Map map : maps.values()) {
+            if (map == null || !map.isActive()) {
+                continue;
+            }
+            String world = map.getWorld();
+            TransformData trigger = map.getStartTrigger();
+            if (world == null || world.isBlank() || trigger == null) {
+                continue;
+            }
+            activeStartTriggerMapsByWorld.computeIfAbsent(world, ignored -> new ArrayList<>()).add(map);
+        }
     }
 
     private static Map copyMap(Map source) {

@@ -142,7 +142,7 @@ public class DuelTracker {
         if (state == null) {
             return null;
         }
-        Map map = mapStore.getMap(state.mapId);
+        Map map = mapStore.getMapReadonly(state.mapId);
         if (map == null) {
             return null;
         }
@@ -363,7 +363,7 @@ public class DuelTracker {
             player.sendMessage(SystemMessageUtils.duelError("No active duel match."));
             return false;
         }
-        Map map = mapStore.getMap(match.getMapId());
+        Map map = mapStore.getMapReadonly(match.getMapId());
         if (map == null || map.getStart() == null) {
             player.sendMessage(SystemMessageUtils.duelError("Map start not available."));
             return false;
@@ -395,7 +395,7 @@ public class DuelTracker {
         if (state == null) {
             return false;
         }
-        Map map = mapStore.getMap(match.getMapId());
+        Map map = mapStore.getMapReadonly(match.getMapId());
         if (map == null) {
             return false;
         }
@@ -441,7 +441,7 @@ public class DuelTracker {
         if (state == null) {
             return;
         }
-        Map map = mapStore.getMap(match.getMapId());
+        Map map = mapStore.getMapReadonly(match.getMapId());
         if (map == null) {
             cancelMatch(match);
             return;
@@ -467,7 +467,7 @@ public class DuelTracker {
     }
 
     private void ensureCountdownPosition(DuelPlayerContext context) {
-        Map map = mapStore.getMap(context.match.getMapId());
+        Map map = mapStore.getMapReadonly(context.match.getMapId());
         if (map == null || map.getStart() == null) {
             return;
         }

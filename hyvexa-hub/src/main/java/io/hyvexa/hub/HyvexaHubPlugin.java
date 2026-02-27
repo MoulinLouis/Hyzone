@@ -150,11 +150,17 @@ public class HyvexaHubPlugin extends JavaPlugin {
                 InventoryUtils.clearAllContainers(player);
                 giveHubItems(player);
                 requestHubHudAttach(ref, store, playerRef);
-                try {
-                    DiscordLinkStore.getInstance().checkAndRewardVexa(playerRef.getUuid(), player);
-                } catch (Exception e) {
-                    LOGGER.atWarning().withCause(e).log("Discord link check failed (hub)");
-                }
+                DiscordLinkStore linkStore = DiscordLinkStore.getInstance();
+                linkStore.checkAndRewardVexaAsync(playerRef.getUuid())
+                        .thenAcceptAsync(rewarded -> {
+                            if (rewarded && ref.isValid()) {
+                                linkStore.sendRewardGrantedMessage(player);
+                            }
+                        }, world)
+                        .exceptionally(ex -> {
+                            LOGGER.atWarning().withCause(ex).log("Discord link check failed (hub)");
+                            return null;
+                        });
             }, "hub.player_ready.setup", "hub player ready setup",
                     "player=" + playerIdText + ", world=" + worldName);
         });

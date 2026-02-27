@@ -179,11 +179,17 @@ public class HyvexaPurgePlugin extends JavaPlugin {
             PurgeSkinStore.getInstance().evictPlayer(playerId);
             ensurePurgeIdleState(playerRef, player);
             LOGGER.atInfo().log("Player entered Purge: " + (playerId != null ? playerId : "unknown"));
-            try {
-                DiscordLinkStore.getInstance().checkAndRewardVexa(playerId, player);
-            } catch (Exception e) {
-                LOGGER.atWarning().withCause(e).log("Discord link check failed (purge)");
-            }
+            DiscordLinkStore linkStore = DiscordLinkStore.getInstance();
+            linkStore.checkAndRewardVexaAsync(playerId)
+                    .thenAcceptAsync(rewarded -> {
+                        if (rewarded && ref.isValid()) {
+                            linkStore.sendRewardGrantedMessage(player);
+                        }
+                    }, world)
+                    .exceptionally(ex -> {
+                        LOGGER.atWarning().withCause(ex).log("Discord link check failed (purge)");
+                        return null;
+                    });
         });
 
         this.getEventRegistry().registerGlobal(AddPlayerToWorldEvent.class, event -> {

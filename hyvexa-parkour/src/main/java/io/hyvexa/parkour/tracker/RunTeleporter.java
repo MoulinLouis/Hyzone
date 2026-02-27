@@ -78,7 +78,7 @@ class RunTeleporter {
         if (run.practiceEnabled) {
             return teleportToPracticeCheckpoint(ref, store, playerRef, run);
         }
-        Map map = mapStore.getMap(run.mapId);
+        Map map = mapStore.getMapReadonly(run.mapId);
         if (map == null) {
             return false;
         }
@@ -143,7 +143,7 @@ class RunTeleporter {
             player.sendMessage(SystemMessageUtils.parkourWarn("No active map to reset."));
             return false;
         }
-        Map map = mapStore.getMap(mapId);
+        Map map = mapStore.getMapReadonly(mapId);
         if (map == null || map.getStart() == null) {
             player.sendMessage(SystemMessageUtils.parkourError("Map start not available."));
             return false;

@@ -72,9 +72,10 @@ class RunValidator {
         if (checkpoints == null || checkpoints.isEmpty()) {
             return;
         }
-        List<Long> personalBestSplits = progressStore != null
-                ? progressStore.getCheckpointTimes(playerRef.getUuid(), map.getId())
-                : List.of();
+        if (run.touchedCheckpoints.size() >= checkpoints.size()) {
+            return;
+        }
+        List<Long> personalBestSplits = run.personalBestSplits;
         for (int i = 0; i < checkpoints.size(); i++) {
             if (run.touchedCheckpoints.contains(i)) {
                 continue;
@@ -200,14 +201,11 @@ class RunValidator {
                 }
                 String rankName = progressStore.getRankName(playerId, mapStore);
                 player.sendMessage(SystemMessageUtils.parkourSuccess("Rank up! You are now " + rankName + "."));
-                // Sync new rank to Discord (if linked)
-                try {
-                    if (DiscordLinkStore.getInstance().isLinked(playerId)) {
-                        DiscordLinkStore.getInstance().updateRank(playerId, rankName);
-                    }
-                } catch (Exception e) {
-                    LOGGER.atWarning().withCause(e).log("Discord rank sync failed for " + playerId);
-                }
+                DiscordLinkStore.getInstance().updateRankIfLinkedAsync(playerId, rankName)
+                        .exceptionally(ex -> {
+                            LOGGER.atWarning().withCause(ex).log("Discord rank sync failed for " + playerId);
+                            return null;
+                        });
             }
             if (result.newBest) {
                 broadcastCompletion(playerId, playerName, map, durationMs, leaderboardPosition);
