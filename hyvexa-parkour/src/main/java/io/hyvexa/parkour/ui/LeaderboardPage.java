@@ -149,7 +149,7 @@ public class LeaderboardPage extends InteractiveCustomUIPage<LeaderboardPage.Lea
             commandBuilder.set("#LeaderboardCards[" + index + "] #BronzeCount.Text", String.valueOf(row.entry.getBronzeCount()));
             commandBuilder.set("#LeaderboardCards[" + index + "] #SilverCount.Text", String.valueOf(row.entry.getSilverCount()));
             commandBuilder.set("#LeaderboardCards[" + index + "] #GoldCount.Text", String.valueOf(row.entry.getGoldCount()));
-            commandBuilder.set("#LeaderboardCards[" + index + "] #AuthorCount.Text", String.valueOf(row.entry.getAuthorCount()));
+            commandBuilder.set("#LeaderboardCards[" + index + "] #PlatinumCount.Text", String.valueOf(row.entry.getPlatinumCount()));
             commandBuilder.set("#LeaderboardCards[" + index + "] #TotalScore.Text", String.valueOf(row.entry.getTotalScore()));
             index++;
         }

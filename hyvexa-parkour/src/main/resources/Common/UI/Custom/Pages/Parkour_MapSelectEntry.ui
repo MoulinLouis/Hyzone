@@ -85,11 +85,11 @@ Group {
 
         Group { Anchor: (Width: 14); }
 
-        Group #AuthorMedalIcon {
+        Group #PlatinumMedalIcon {
           Anchor: (Width: 20, Height: 20, Top: 2);
-          Background: (TexturePath: "../Textures/author_medal.png");
+          Background: (TexturePath: "../Textures/platinum_medal.png");
         }
-        Label #AuthorMedalText {
+        Label #PlatinumMedalText {
           Anchor: (Height: 24);
           Style: (FontSize: 13, TextColor: #50C878, VerticalAlignment: Center);
           Text: "";
@@ -115,9 +115,9 @@ Group {
         Background: (TexturePath: "../Textures/gold_medal.png");
         Visible: false;
       }
-      Group #MedalAuthor {
+      Group #MedalPlatinum {
         Anchor: (Left: 10, Top: 18, Width: 40, Height: 40);
-        Background: (TexturePath: "../Textures/author_medal.png");
+        Background: (TexturePath: "../Textures/platinum_medal.png");
         Visible: false;
       }
     }

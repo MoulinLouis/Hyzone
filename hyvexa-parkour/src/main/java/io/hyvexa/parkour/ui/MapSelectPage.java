@@ -183,7 +183,7 @@ public class MapSelectPage extends BaseParkourPage {
             String prefix = "#MapCards[" + index + "] ";
             Set<Medal> earned = MedalStore.getInstance().getEarnedMedals(playerRef.getUuid(), map.getId());
             boolean hasMedalTimes = map.getBronzeTimeMs() != null || map.getSilverTimeMs() != null
-                    || map.getGoldTimeMs() != null || map.getAuthorTimeMs() != null;
+                    || map.getGoldTimeMs() != null || map.getPlatinumTimeMs() != null;
             if (hasMedalTimes) {
                 commandBuilder.set(prefix + "#MedalRow.Visible", true);
                 buildMedalLabel(commandBuilder, prefix, "Bronze", map.getBronzeTimeMs(),
@@ -192,8 +192,8 @@ public class MapSelectPage extends BaseParkourPage {
                         earned.contains(Medal.SILVER));
                 buildMedalLabel(commandBuilder, prefix, "Gold", map.getGoldTimeMs(),
                         earned.contains(Medal.GOLD));
-                buildMedalLabel(commandBuilder, prefix, "Author", map.getAuthorTimeMs(),
-                        earned.contains(Medal.AUTHOR));
+                buildMedalLabel(commandBuilder, prefix, "Platinum", map.getPlatinumTimeMs(),
+                        earned.contains(Medal.PLATINUM));
             }
             // Show player's highest earned medal on the right
             Medal highest = getHighestMedal(earned);
@@ -210,7 +210,7 @@ public class MapSelectPage extends BaseParkourPage {
     }
 
     private static Medal getHighestMedal(Set<Medal> earned) {
-        if (earned.contains(Medal.AUTHOR)) return Medal.AUTHOR;
+        if (earned.contains(Medal.PLATINUM)) return Medal.PLATINUM;
         if (earned.contains(Medal.GOLD)) return Medal.GOLD;
         if (earned.contains(Medal.SILVER)) return Medal.SILVER;
         if (earned.contains(Medal.BRONZE)) return Medal.BRONZE;

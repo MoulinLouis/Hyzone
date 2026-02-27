@@ -504,7 +504,7 @@ class RunValidator {
             } else {
                 player.sendMessage(SystemMessageUtils.parkourSuccess(medal.name() + " Medal!"));
             }
-            // Medal.values() goes BRONZE -> SILVER -> GOLD -> AUTHOR, so last assigned is always highest
+            // Medal.values() goes BRONZE -> SILVER -> GOLD -> PLATINUM, so last assigned is always highest
             highestEarned = medal;
             highestFeathers = featherReward;
         }

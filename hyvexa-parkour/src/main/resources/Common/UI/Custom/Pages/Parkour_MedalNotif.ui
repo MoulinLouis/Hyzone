@@ -29,9 +29,9 @@ $C.@PageOverlay {
       Visible: false;
     }
 
-    Group #MedalNotifAuthorIcon {
+    Group #MedalNotifPlatinumIcon {
       Anchor: (Width: 64, Height: 64);
-      Background: (TexturePath: "../Textures/author_medal.png");
+      Background: (TexturePath: "../Textures/platinum_medal.png");
       Visible: false;
     }
 
@@ -90,7 +90,7 @@ $C.@PageOverlay {
         Visible: false;
       }
 
-      ProgressBar #MedalNotifBarAuthor {
+      ProgressBar #MedalNotifBarPlatinum {
         Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
         Bar: #50C878;
         Background: #50C878(0.15);

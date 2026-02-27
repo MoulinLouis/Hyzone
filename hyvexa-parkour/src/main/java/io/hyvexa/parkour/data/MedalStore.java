@@ -47,6 +47,15 @@ public class MedalStore {
              PreparedStatement stmt = conn.prepareStatement(createSql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             stmt.executeUpdate();
+            // Migrate old AUTHOR medal values to PLATINUM
+            try (PreparedStatement migStmt = conn.prepareStatement(
+                    "UPDATE player_medals SET medal = 'PLATINUM' WHERE medal = 'AUTHOR'")) {
+                DatabaseManager.applyQueryTimeout(migStmt);
+                int migrated = migStmt.executeUpdate();
+                if (migrated > 0) {
+                    LOGGER.atInfo().log("Migrated " + migrated + " AUTHOR medals to PLATINUM");
+                }
+            }
             LOGGER.atInfo().log("MedalStore initialized (player_medals table ensured)");
         } catch (SQLException e) {
             LOGGER.atSevere().withCause(e).log("Failed to create player_medals table");
@@ -200,26 +209,26 @@ public class MedalStore {
         private final int bronzeCount;
         private final int silverCount;
         private final int goldCount;
-        private final int authorCount;
+        private final int platinumCount;
         private final int totalScore;
 
-        public MedalScoreEntry(UUID playerId, int bronzeCount, int silverCount, int goldCount, int authorCount) {
+        public MedalScoreEntry(UUID playerId, int bronzeCount, int silverCount, int goldCount, int platinumCount) {
             this.playerId = playerId;
             this.bronzeCount = bronzeCount;
             this.silverCount = silverCount;
             this.goldCount = goldCount;
-            this.authorCount = authorCount;
+            this.platinumCount = platinumCount;
             this.totalScore = bronzeCount * Medal.BRONZE.getPoints()
                     + silverCount * Medal.SILVER.getPoints()
                     + goldCount * Medal.GOLD.getPoints()
-                    + authorCount * Medal.AUTHOR.getPoints();
+                    + platinumCount * Medal.PLATINUM.getPoints();
         }
 
         public UUID getPlayerId() { return playerId; }
         public int getBronzeCount() { return bronzeCount; }
         public int getSilverCount() { return silverCount; }
         public int getGoldCount() { return goldCount; }
-        public int getAuthorCount() { return authorCount; }
+        public int getPlatinumCount() { return platinumCount; }
         public int getTotalScore() { return totalScore; }
     }
 }

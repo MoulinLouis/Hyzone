@@ -4,7 +4,7 @@ public enum Medal {
     BRONZE("#cd7f32", "Sword_Signature_Status", 1),
     SILVER("#c0c0c0", "Drop_Epic", 2),
     GOLD("#ffd700", "Drop_Legendary", 3),
-    AUTHOR("#50C878", "Crown_Gold", 4);
+    PLATINUM("#50C878", "Crown_Gold", 4);
 
     private final String color;
     private final String effectId;
@@ -33,7 +33,7 @@ public enum Medal {
             case BRONZE -> map.getBronzeTimeMs();
             case SILVER -> map.getSilverTimeMs();
             case GOLD -> map.getGoldTimeMs();
-            case AUTHOR -> map.getAuthorTimeMs();
+            case PLATINUM -> map.getPlatinumTimeMs();
         };
     }
 }
