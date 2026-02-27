@@ -24,24 +24,34 @@ import io.hyvexa.parkour.data.Map;
 import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.util.PlayerSettingsStore;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 public class GhostNpcManager {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final long TICK_INTERVAL_MS = 50;
+    private static final String GHOST_UUIDS_FILE = "ghost_uuids.txt";
     private static final String NPC_ENTITY_TYPE = "Kweebec_Seedling";
     private static final String NPC_DISPLAY_NAME = "Ghost";
 
     private final GhostStore ghostStore;
     private final MapStore mapStore;
     private final ConcurrentHashMap<UUID, GhostNpcState> activeGhosts = new ConcurrentHashMap<>();
+    private final Set<UUID> orphanedGhostUuids = ConcurrentHashMap.newKeySet();
+    private final ConcurrentHashMap<UUID, Ref<EntityStore>> pendingRemovals = new ConcurrentHashMap<>();
     private ScheduledFuture<?> tickTask;
     private volatile NPCPlugin npcPlugin;
+    private volatile boolean cleanupPending;
 
     public GhostNpcManager(GhostStore ghostStore, MapStore mapStore) {
         this.ghostStore = ghostStore;
@@ -49,6 +59,10 @@ public class GhostNpcManager {
     }
 
     public void start() {
+        loadOrphanedGhostUuids();
+        cleanupPending = !orphanedGhostUuids.isEmpty();
+        registerCleanupSystem();
+
         try {
             npcPlugin = NPCPlugin.get();
         } catch (Exception e) {
@@ -69,6 +83,7 @@ public class GhostNpcManager {
             tickTask.cancel(false);
             tickTask = null;
         }
+        saveGhostUuidsForCleanup();
         for (UUID playerId : List.copyOf(activeGhosts.keySet())) {
             despawnGhost(playerId);
         }
@@ -249,6 +264,7 @@ public class GhostNpcManager {
         }
         Ref<EntityStore> entityRef = state.entityRef;
         if (entityRef == null || !entityRef.isValid()) {
+            queueOrphanIfDespawnFailed(state.entityUuid);
             state.entityRef = null;
             return;
         }
@@ -267,20 +283,27 @@ public class GhostNpcManager {
     }
 
     private void removeEntityOnWorldThread(GhostNpcState state, Ref<EntityStore> entityRef) {
+        boolean despawnSuccess = false;
         try {
             Store<EntityStore> store = entityRef.getStore();
             if (store != null) {
                 store.removeEntity(entityRef, RemoveReason.REMOVE);
+                despawnSuccess = true;
             }
         } catch (Exception e) {
             LOGGER.atWarning().log("Failed to despawn ghost NPC: " + e.getMessage());
         }
         state.entityRef = null;
-        state.entityUuid = null;
+        if (despawnSuccess) {
+            state.entityUuid = null;
+        } else {
+            queueOrphanIfDespawnFailed(state.entityUuid);
+        }
     }
 
     private void tick() {
         try {
+            processPendingRemovals();
             long now = System.currentTimeMillis();
             for (GhostNpcState state : activeGhosts.values()) {
                 tickGhost(state, now);
@@ -373,5 +396,183 @@ public class GhostNpcManager {
             this.ownerId = ownerId;
             this.mapId = mapId;
         }
+    }
+
+    private Path getGhostUuidsPath() {
+        return Path.of("mods", "Parkour", GHOST_UUIDS_FILE);
+    }
+
+    private void saveGhostUuidsForCleanup() {
+        Set<UUID> uuids = new HashSet<>(orphanedGhostUuids);
+        for (GhostNpcState state : activeGhosts.values()) {
+            UUID entityUuid = state.entityUuid;
+            if (entityUuid != null) {
+                uuids.add(entityUuid);
+            }
+        }
+        if (uuids.isEmpty()) {
+            try {
+                Files.deleteIfExists(getGhostUuidsPath());
+            } catch (IOException ignored) {
+            }
+            return;
+        }
+        try {
+            Path path = getGhostUuidsPath();
+            Files.createDirectories(path.getParent());
+            List<String> lines = uuids.stream()
+                    .map(UUID::toString)
+                    .collect(Collectors.toList());
+            Files.write(path, lines);
+        } catch (IOException e) {
+            LOGGER.atWarning().log("Failed to save ghost UUIDs: " + e.getMessage());
+        }
+    }
+
+    private void loadOrphanedGhostUuids() {
+        Path path = getGhostUuidsPath();
+        if (!Files.exists(path)) {
+            return;
+        }
+        try {
+            List<String> lines = Files.readAllLines(path);
+            for (String line : lines) {
+                String trimmed = line.trim();
+                if (trimmed.isEmpty()) {
+                    continue;
+                }
+                try {
+                    orphanedGhostUuids.add(UUID.fromString(trimmed));
+                } catch (IllegalArgumentException ignored) {
+                }
+            }
+            Files.delete(path);
+        } catch (IOException e) {
+            LOGGER.atWarning().log("Failed to load ghost UUIDs: " + e.getMessage());
+        }
+    }
+
+    private void registerCleanupSystem() {
+        var registry = EntityStore.REGISTRY;
+        if (!registry.hasSystemClass(GhostCleanupSystem.class)) {
+            registry.registerSystem(new GhostCleanupSystem(this));
+        }
+    }
+
+    private void queueOrphanIfDespawnFailed(UUID entityUuid) {
+        if (entityUuid == null) {
+            return;
+        }
+        orphanedGhostUuids.add(entityUuid);
+        cleanupPending = true;
+    }
+
+    public boolean isOrphanedGhost(UUID entityUuid) {
+        return orphanedGhostUuids.contains(entityUuid);
+    }
+
+    public boolean isActiveGhostUuid(UUID entityUuid) {
+        if (entityUuid == null) {
+            return false;
+        }
+        if (pendingRemovals.containsKey(entityUuid)) {
+            return true;
+        }
+        for (GhostNpcState state : activeGhosts.values()) {
+            if (entityUuid.equals(state.entityUuid)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public void queueOrphanForRemoval(UUID entityUuid, Ref<EntityStore> entityRef) {
+        if (entityUuid == null || entityRef == null) {
+            return;
+        }
+        pendingRemovals.putIfAbsent(entityUuid, entityRef);
+        cleanupPending = true;
+    }
+
+    public boolean hasPendingSpawn() {
+        for (GhostNpcState state : activeGhosts.values()) {
+            if (state.spawning) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void processPendingRemovals() {
+        if (pendingRemovals.isEmpty()) {
+            return;
+        }
+        for (UUID entityUuid : List.copyOf(pendingRemovals.keySet())) {
+            Ref<EntityStore> ref = pendingRemovals.remove(entityUuid);
+            if (ref == null) {
+                continue;
+            }
+            if (!ref.isValid()) {
+                markOrphanCleaned(entityUuid);
+                continue;
+            }
+            Store<EntityStore> store = ref.getStore();
+            if (store == null) {
+                markOrphanCleaned(entityUuid);
+                continue;
+            }
+            World world = store.getExternalData().getWorld();
+            if (world == null) {
+                removeOrphanDirect(entityUuid, ref, store);
+                continue;
+            }
+            world.execute(() -> removeOrphanOnWorldThread(entityUuid, ref));
+        }
+    }
+
+    private void removeOrphanOnWorldThread(UUID entityUuid, Ref<EntityStore> ref) {
+        try {
+            if (ref == null || !ref.isValid()) {
+                markOrphanCleaned(entityUuid);
+                return;
+            }
+            Store<EntityStore> store = ref.getStore();
+            if (store == null) {
+                markOrphanCleaned(entityUuid);
+                return;
+            }
+            store.removeEntity(ref, RemoveReason.REMOVE);
+            markOrphanCleaned(entityUuid);
+        } catch (Exception e) {
+            LOGGER.atWarning().log("Failed to remove orphaned ghost " + entityUuid + ": " + e.getMessage());
+            if (ref != null && ref.isValid()) {
+                pendingRemovals.put(entityUuid, ref);
+                cleanupPending = true;
+            } else {
+                markOrphanCleaned(entityUuid);
+            }
+        }
+    }
+
+    private void removeOrphanDirect(UUID entityUuid, Ref<EntityStore> ref, Store<EntityStore> store) {
+        try {
+            store.removeEntity(ref, RemoveReason.REMOVE);
+            markOrphanCleaned(entityUuid);
+        } catch (Exception e) {
+            LOGGER.atWarning().log("Failed to remove orphaned ghost " + entityUuid + ": " + e.getMessage());
+            markOrphanCleaned(entityUuid);
+        }
+    }
+
+    public void markOrphanCleaned(UUID entityUuid) {
+        orphanedGhostUuids.remove(entityUuid);
+        pendingRemovals.remove(entityUuid);
+        if (orphanedGhostUuids.isEmpty() && pendingRemovals.isEmpty()) {
+            cleanupPending = false;
+        }
+    }
+
+    public boolean isCleanupPending() {
+        return cleanupPending || !pendingRemovals.isEmpty();
     }
 }
