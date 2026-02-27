@@ -112,7 +112,7 @@ $C.@PageOverlay {
         Group { Anchor: (Width: 34); LayoutMode: CenterMiddle; Group #HeaderBronze { Anchor: (Width: 16, Height: 16); Background: (TexturePath: "../Textures/bronze_medal.png"); } }
         Group { Anchor: (Width: 34); LayoutMode: CenterMiddle; Group #HeaderSilver { Anchor: (Width: 16, Height: 16); Background: (TexturePath: "../Textures/silver_medal.png"); } }
         Group { Anchor: (Width: 34); LayoutMode: CenterMiddle; Group #HeaderGold { Anchor: (Width: 16, Height: 16); Background: (TexturePath: "../Textures/gold_medal.png"); } }
-        Group { Anchor: (Width: 34); LayoutMode: CenterMiddle; Group #HeaderAuthor { Anchor: (Width: 16, Height: 16); Background: (TexturePath: "../Textures/author_medal.png"); } }
+        Group { Anchor: (Width: 34); LayoutMode: CenterMiddle; Group #HeaderPlatinum { Anchor: (Width: 16, Height: 16); Background: (TexturePath: "../Textures/platinum_medal.png"); } }
 
         Label {
           Anchor: (Width: 48);

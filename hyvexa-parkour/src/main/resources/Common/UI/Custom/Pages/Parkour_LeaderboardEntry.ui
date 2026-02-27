@@ -54,7 +54,7 @@ Group {
       Text: "0";
     }
 
-    Label #AuthorCount {
+    Label #PlatinumCount {
       Anchor: (Width: 34);
       Style: (FontSize: 12, TextColor: #50C878, HorizontalAlignment: Center);
       Text: "0";

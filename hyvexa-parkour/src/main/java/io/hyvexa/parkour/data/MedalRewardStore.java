@@ -37,13 +37,14 @@ public class MedalRewardStore {
                 + "bronze_feathers INT NOT NULL DEFAULT 0, "
                 + "silver_feathers INT NOT NULL DEFAULT 0, "
                 + "gold_feathers INT NOT NULL DEFAULT 0, "
-                + "author_feathers INT NOT NULL DEFAULT 0"
+                + "platinum_feathers INT NOT NULL DEFAULT 0"
                 + ") ENGINE=InnoDB";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(createSql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             stmt.executeUpdate();
-            addColumnIfMissing(conn, "medal_rewards", "author_feathers", "INT NOT NULL DEFAULT 0");
+            renameColumnIfExists(conn, "medal_rewards", "author_feathers", "platinum_feathers", "INT NOT NULL DEFAULT 0");
+            addColumnIfMissing(conn, "medal_rewards", "platinum_feathers", "INT NOT NULL DEFAULT 0");
         } catch (SQLException e) {
             LOGGER.atSevere().withCause(e).log("Failed to create medal_rewards table");
             return;
@@ -64,17 +65,17 @@ public class MedalRewardStore {
             case BRONZE -> r.bronze;
             case SILVER -> r.silver;
             case GOLD -> r.gold;
-            case AUTHOR -> r.author;
+            case PLATINUM -> r.platinum;
         };
     }
 
-    public void setRewards(String category, int bronze, int silver, int gold, int author) {
+    public void setRewards(String category, int bronze, int silver, int gold, int platinum) {
         if (category == null) {
             return;
         }
         String key = normalizeCategory(category);
-        rewards.put(key, new MedalRewards(Math.max(0, bronze), Math.max(0, silver), Math.max(0, gold), Math.max(0, author)));
-        persistToDatabase(key, bronze, silver, gold, author);
+        rewards.put(key, new MedalRewards(Math.max(0, bronze), Math.max(0, silver), Math.max(0, gold), Math.max(0, platinum)));
+        persistToDatabase(key, bronze, silver, gold, platinum);
     }
 
     public ConcurrentHashMap<String, MedalRewards> getAllRewards() {
@@ -92,7 +93,7 @@ public class MedalRewardStore {
         if (!DatabaseManager.getInstance().isInitialized()) {
             return;
         }
-        String sql = "SELECT category, bronze_feathers, silver_feathers, gold_feathers, author_feathers FROM medal_rewards";
+        String sql = "SELECT category, bronze_feathers, silver_feathers, gold_feathers, platinum_feathers FROM medal_rewards";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
@@ -102,8 +103,8 @@ public class MedalRewardStore {
                     int bronze = rs.getInt("bronze_feathers");
                     int silver = rs.getInt("silver_feathers");
                     int gold = rs.getInt("gold_feathers");
-                    int author = rs.getInt("author_feathers");
-                    rewards.put(normalizeCategory(category), new MedalRewards(bronze, silver, gold, author));
+                    int platinum = rs.getInt("platinum_feathers");
+                    rewards.put(normalizeCategory(category), new MedalRewards(bronze, silver, gold, platinum));
                 }
             }
         } catch (SQLException e) {
@@ -111,13 +112,13 @@ public class MedalRewardStore {
         }
     }
 
-    private void persistToDatabase(String category, int bronze, int silver, int gold, int author) {
+    private void persistToDatabase(String category, int bronze, int silver, int gold, int platinum) {
         if (!DatabaseManager.getInstance().isInitialized()) {
             return;
         }
-        String sql = "INSERT INTO medal_rewards (category, bronze_feathers, silver_feathers, gold_feathers, author_feathers) "
+        String sql = "INSERT INTO medal_rewards (category, bronze_feathers, silver_feathers, gold_feathers, platinum_feathers) "
                 + "VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE "
-                + "bronze_feathers = ?, silver_feathers = ?, gold_feathers = ?, author_feathers = ?";
+                + "bronze_feathers = ?, silver_feathers = ?, gold_feathers = ?, platinum_feathers = ?";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
@@ -125,11 +126,11 @@ public class MedalRewardStore {
             stmt.setInt(2, bronze);
             stmt.setInt(3, silver);
             stmt.setInt(4, gold);
-            stmt.setInt(5, author);
+            stmt.setInt(5, platinum);
             stmt.setInt(6, bronze);
             stmt.setInt(7, silver);
             stmt.setInt(8, gold);
-            stmt.setInt(9, author);
+            stmt.setInt(9, platinum);
             stmt.executeUpdate();
         } catch (SQLException e) {
             LOGGER.atWarning().withCause(e).log("Failed to persist medal rewards for " + category);
@@ -141,6 +142,24 @@ public class MedalRewardStore {
             return "easy";
         }
         return category.trim().toLowerCase();
+    }
+
+    private void renameColumnIfExists(Connection conn, String table, String oldColumn, String newColumn, String definition) {
+        try (ResultSet rs = conn.getMetaData().getColumns(conn.getCatalog(), null, table, oldColumn)) {
+            if (!rs.next()) {
+                return;
+            }
+        } catch (SQLException e) {
+            return;
+        }
+        String sql = "ALTER TABLE " + table + " CHANGE COLUMN " + oldColumn + " " + newColumn + " " + definition;
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            stmt.executeUpdate();
+            LOGGER.atInfo().log("Renamed column " + table + "." + oldColumn + " to " + newColumn);
+        } catch (SQLException e) {
+            LOGGER.atWarning().log("Failed to rename column " + table + "." + oldColumn + ": " + e.getMessage());
+        }
     }
 
     private void addColumnIfMissing(Connection conn, String table, String column, String definition) {
@@ -166,13 +185,13 @@ public class MedalRewardStore {
         public final int bronze;
         public final int silver;
         public final int gold;
-        public final int author;
+        public final int platinum;
 
-        public MedalRewards(int bronze, int silver, int gold, int author) {
+        public MedalRewards(int bronze, int silver, int gold, int platinum) {
             this.bronze = bronze;
             this.silver = silver;
             this.gold = gold;
-            this.author = author;
+            this.platinum = platinum;
         }
     }
 }

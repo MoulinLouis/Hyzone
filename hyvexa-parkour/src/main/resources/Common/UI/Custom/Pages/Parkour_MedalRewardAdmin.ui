@@ -92,7 +92,7 @@ $C.@PageOverlay {
         Label {
           Anchor: (Width: 140);
           Style: (FontSize: 13, TextColor: #50C878, RenderBold: true);
-          Text: "Author";
+          Text: "Platinum";
         }
       }
 
@@ -121,7 +121,7 @@ $C.@PageOverlay {
           Style: (FontSize: 14, TextColor: #ffffff(0.85));
         }
         Group { Anchor: (Width: 20); }
-        $C.@TextField #EasyAuthor {
+        $C.@TextField #EasyPlatinum {
           Anchor: (Height: 26, Width: 120);
           Style: (FontSize: 14, TextColor: #ffffff(0.85));
         }
@@ -152,7 +152,7 @@ $C.@PageOverlay {
           Style: (FontSize: 14, TextColor: #ffffff(0.85));
         }
         Group { Anchor: (Width: 20); }
-        $C.@TextField #MediumAuthor {
+        $C.@TextField #MediumPlatinum {
           Anchor: (Height: 26, Width: 120);
           Style: (FontSize: 14, TextColor: #ffffff(0.85));
         }
@@ -183,7 +183,7 @@ $C.@PageOverlay {
           Style: (FontSize: 14, TextColor: #ffffff(0.85));
         }
         Group { Anchor: (Width: 20); }
-        $C.@TextField #HardAuthor {
+        $C.@TextField #HardPlatinum {
           Anchor: (Height: 26, Width: 120);
           Style: (FontSize: 14, TextColor: #ffffff(0.85));
         }
@@ -214,7 +214,7 @@ $C.@PageOverlay {
           Style: (FontSize: 14, TextColor: #ffffff(0.85));
         }
         Group { Anchor: (Width: 20); }
-        $C.@TextField #InsaneAuthor {
+        $C.@TextField #InsanePlatinum {
           Anchor: (Height: 26, Width: 120);
           Style: (FontSize: 14, TextColor: #ffffff(0.85));
         }

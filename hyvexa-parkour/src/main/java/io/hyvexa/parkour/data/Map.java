@@ -33,7 +33,7 @@ public class Map {
     private Long bronzeTimeMs;
     private Long silverTimeMs;
     private Long goldTimeMs;
-    private Long authorTimeMs;
+    private Long platinumTimeMs;
     private long createdAt;
     private long updatedAt;
 
@@ -262,12 +262,12 @@ public class Map {
         this.goldTimeMs = goldTimeMs;
     }
 
-    public Long getAuthorTimeMs() {
-        return authorTimeMs;
+    public Long getPlatinumTimeMs() {
+        return platinumTimeMs;
     }
 
-    public void setAuthorTimeMs(Long authorTimeMs) {
-        this.authorTimeMs = authorTimeMs;
+    public void setPlatinumTimeMs(Long platinumTimeMs) {
+        this.platinumTimeMs = platinumTimeMs;
     }
 
     public long getCreatedAt() {

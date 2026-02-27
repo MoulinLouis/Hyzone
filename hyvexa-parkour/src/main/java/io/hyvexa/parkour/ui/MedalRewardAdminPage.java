@@ -48,7 +48,7 @@ public class MedalRewardAdminPage extends InteractiveCustomUIPage<MedalRewardAdm
                 values[i][0] = String.valueOf(r.bronze);
                 values[i][1] = String.valueOf(r.silver);
                 values[i][2] = String.valueOf(r.gold);
-                values[i][3] = String.valueOf(r.author);
+                values[i][3] = String.valueOf(r.platinum);
             } else {
                 values[i][0] = "0";
                 values[i][1] = "0";
@@ -105,12 +105,12 @@ public class MedalRewardAdminPage extends InteractiveCustomUIPage<MedalRewardAdm
             int bronze = parseNonNegative(values[i][0]);
             int silver = parseNonNegative(values[i][1]);
             int gold = parseNonNegative(values[i][2]);
-            int author = parseNonNegative(values[i][3]);
-            if (bronze < 0 || silver < 0 || gold < 0 || author < 0) {
+            int platinum = parseNonNegative(values[i][3]);
+            if (bronze < 0 || silver < 0 || gold < 0 || platinum < 0) {
                 player.sendMessage(Message.raw(CATEGORY_PREFIXES[i] + ": values must be non-negative integers."));
                 return;
             }
-            rewardStore.setRewards(CATEGORIES[i], bronze, silver, gold, author);
+            rewardStore.setRewards(CATEGORIES[i], bronze, silver, gold, platinum);
         }
         player.sendMessage(Message.raw("Medal rewards saved."));
         UICommandBuilder commandBuilder = new UICommandBuilder();
@@ -138,7 +138,7 @@ public class MedalRewardAdminPage extends InteractiveCustomUIPage<MedalRewardAdm
             commandBuilder.set("#" + CATEGORY_PREFIXES[i] + "Bronze.Value", values[i][0]);
             commandBuilder.set("#" + CATEGORY_PREFIXES[i] + "Silver.Value", values[i][1]);
             commandBuilder.set("#" + CATEGORY_PREFIXES[i] + "Gold.Value", values[i][2]);
-            commandBuilder.set("#" + CATEGORY_PREFIXES[i] + "Author.Value", values[i][3]);
+            commandBuilder.set("#" + CATEGORY_PREFIXES[i] + "Platinum.Value", values[i][3]);
         }
     }
 
@@ -155,18 +155,18 @@ public class MedalRewardAdminPage extends InteractiveCustomUIPage<MedalRewardAdm
                     EventData.of(RewardData.KEYS[i][1], "#" + prefix + "Silver.Value"), false);
             uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#" + prefix + "Gold",
                     EventData.of(RewardData.KEYS[i][2], "#" + prefix + "Gold.Value"), false);
-            uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#" + prefix + "Author",
-                    EventData.of(RewardData.KEYS[i][3], "#" + prefix + "Author.Value"), false);
+            uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#" + prefix + "Platinum",
+                    EventData.of(RewardData.KEYS[i][3], "#" + prefix + "Platinum.Value"), false);
         }
     }
 
     public static class RewardData {
         static final String KEY_BUTTON = "Button";
         static final String[][] KEYS = {
-                {"@EasyBronze", "@EasySilver", "@EasyGold", "@EasyAuthor"},
-                {"@MediumBronze", "@MediumSilver", "@MediumGold", "@MediumAuthor"},
-                {"@HardBronze", "@HardSilver", "@HardGold", "@HardAuthor"},
-                {"@InsaneBronze", "@InsaneSilver", "@InsaneGold", "@InsaneAuthor"}
+                {"@EasyBronze", "@EasySilver", "@EasyGold", "@EasyPlatinum"},
+                {"@MediumBronze", "@MediumSilver", "@MediumGold", "@MediumPlatinum"},
+                {"@HardBronze", "@HardSilver", "@HardGold", "@HardPlatinum"},
+                {"@InsaneBronze", "@InsaneSilver", "@InsaneGold", "@InsanePlatinum"}
         };
 
         String button;

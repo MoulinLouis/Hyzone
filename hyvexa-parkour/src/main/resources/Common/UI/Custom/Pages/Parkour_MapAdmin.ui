@@ -329,10 +329,10 @@ $C.@PageOverlay {
           Label {
             Anchor: (Width: 50);
             Style: (FontSize: 12, TextColor: #50C878);
-            Text: "Author:";
+            Text: "Platinum:";
           }
 
-          $C.@TextField #MedalAuthorField {
+          $C.@TextField #MedalPlatinumField {
             Anchor: (Height: 26, Width: 70);
             Style: (FontSize: 14, TextColor: #ffffff(0.85));
           }
