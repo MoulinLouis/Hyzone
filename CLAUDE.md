@@ -51,7 +51,7 @@ Quick reference for AI agents working on this Hytale plugin project.
 11. **Track online players** - only spawn per-player entities for connected players
 12. **Disable NPC AI** - use `Frozen` component to prevent autonomous movement
 13. **Avoid Unicode in chat messages** - Hytale client displays many Unicode characters as `?`. Use ASCII alternatives: `->` instead of `→`, `x` instead of `×`, `-` instead of `–`/`—`
-14. **No auto-memory for project knowledge** - Multiple agents work on this repo. Store discoveries in `docs/` (e.g., `HYTALE_API.md`, `CODE_PATTERNS.md`) not in Claude's auto-memory, so all agents benefit.
+14. **No auto-memory for project knowledge** - Multiple agents work on this repo. Store discoveries in `docs/` not in Claude's auto-memory, so all agents benefit.
 
 ## UI Patterns
 - Never use dynamic Background property changes on UI elements — they don't work in Hytale's UI system
