@@ -473,3 +473,21 @@ packetHandler.writeNoCache(new BuilderToolSetEntityLight(networkId, new ColorLig
 ```
 
 Note: `getNetworkId()` is deprecated. Entity light may only work for builder tool entities, not players.
+
+### ECS / EntityTickingSystem Rules
+
+**Cannot call `store.addComponent()`/`store.removeComponent()` from inside `EntityTickingSystem.tick()`** — store is locked during system processing → `IllegalStateException: Store is currently processing`.
+
+- **Reads** via `store.getComponent()` or `chunk.getComponent()` ARE safe inside tick
+- **Writes** inside tick: use `CommandBuffer` (`buffer.tryRemoveComponent()`, etc.)
+- **Fallback**: use `ScheduledExecutor` at faster intervals (50ms) instead of tick system when store write access is needed
+
+### Pet / NPC Follow Pattern
+
+Working teleport-follow for companion NPCs:
+- Frozen + Teleport every 50ms, all logic inside `world.execute()`
+- **Critical**: resolve player ref fresh each tick via `world.getEntityStore().getRefFromUUID(uuid)` — never store `Ref<EntityStore>` for later use
+- **Critical**: all reads AND writes must happen on world thread (inside `world.execute()`)
+- **Critical**: use `world.getEntityStore().getStore()` as canonical store — not `ref.getStore()`
+- AI follow (LockedTarget) only works for aggressive NPCs. Passive NPCs (Kweebecs) need custom role or Flock system.
+- **Companion NPCs auto-despawn in Idle state** if not part of a flock (`FlockStatus: "NotMember"`)
