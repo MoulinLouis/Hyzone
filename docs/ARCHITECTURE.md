@@ -5,28 +5,27 @@ Technical design documentation for the Hyvexa multi-module plugin suite.
 ## System Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                            hyvexa-core                              │
-│  (Shared APIs/utilities + DatabaseManager + mode events/state)       │
-└─────────────────────────────────────────────────────────────────────┘
-             │                   │                     │
-             ▼                   ▼                     ▼
-┌────────────────────┐  ┌────────────────────┐  ┌────────────────────┐
-│  hyvexa-parkour    │  │ hyvexa-parkour-ascend │  │     hyvexa-hub      │
-│  (Parkour plugin)  │  │ (Parkour Ascend)   │  │ (Routing + UI)      │
-└────────────────────┘  └────────────────────┘  └────────────────────┘
-             │                   │                     │
-             ▼                   ▼                     ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                       DatabaseManager                               │
-│ (HikariCP connection pool - mods/Parkour/database.json credentials) │
-└─────────────────────────────────────────────────────────────────────┘
-                             │
-                             ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                         MySQL Database                              │
-│  parkour_* tables + ascend_* tables (shared DB)                     │
-└─────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│                              hyvexa-core                                │
+│    (Shared APIs/utilities + DatabaseManager + mode events/state)        │
+└─────────────────────────────────────────────────────────────────────────┘
+      │            │              │            │          │          │
+      ▼            ▼              ▼            ▼          ▼          ▼
+┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌────────┐ ┌─────────┐
+│ parkour  │ │  ascend   │ │   hub    │ │  purge   │ │runorfall│ │wardrobe │
+└──────────┘ └──────────┘ └──────────┘ └──────────┘ └────────┘ └─────────┘
+      │            │              │            │          │          │
+      ▼            ▼              ▼            ▼          ▼          ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                          DatabaseManager                                │
+│   (HikariCP connection pool - mods/Parkour/database.json credentials)   │
+└─────────────────────────────────────────────────────────────────────────┘
+                                  │
+                                  ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                           MySQL Database                                │
+│  parkour_* + ascend_* + purge_* + runorfall_* tables (shared DB)        │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Module Layout
@@ -35,6 +34,8 @@ Technical design documentation for the Hyvexa multi-module plugin suite.
 - `hyvexa-parkour`: current Parkour gameplay plugin
 - `hyvexa-parkour-ascend`: Parkour Ascend idle mode with prestige progression
 - `hyvexa-hub`: hub routing + UI (mode switching, teleport routing)
+- `hyvexa-purge`: zombie survival PvE mode with wave-based combat, weapon upgrades, and scrap economy
+- `hyvexa-runorfall`: platforming minigame with block-breaking, blink mechanic, and feather rewards
 - `hyvexa-wardrobe`: Wardrobe shop integration + Wardrobe permission bridge
 - `hyvexa-launch`: launch-only IntelliJ classpath module for `com.hypixel.hytale.Main`
 - Hub routing targets the capitalized world names: `Hub`, `Parkour`, `Ascend`
@@ -51,8 +52,32 @@ Technical design documentation for the Hyvexa multi-module plugin suite.
 - Schedules a 200ms tick that runs run tracking + HUD updates on the Ascend world thread.
 
 Module boundaries:
-- Parkour/Ascend/Hub/Wardrobe depend on Core only
-- No dependencies between Parkour and Parkour Ascend
+- All gameplay modules (Parkour/Ascend/Hub/Purge/RunOrFall/Wardrobe) depend on Core only
+- No dependencies between gameplay modules
+
+### Purge Plugin Lifecycle
+- Zombie survival PvE mode with wave-based combat
+- Entry point: `HyvexaPurgePlugin`
+- Key managers: `PurgeSessionManager` (game flow), `PurgeWaveManager` (wave spawning), `PurgeInstanceManager` (instance management), `PurgePartyManager` (party system), `PurgeUpgradeManager` (in-session upgrades), `PurgeWeaponConfigManager` (weapon config), `PurgeWaveConfigManager` (wave config), `PurgeVariantConfigManager` (zombie variants), `PurgeHudManager` (HUD)
+- Economy: Scrap currency (`PurgeScrapStore`) for weapon upgrades (`PurgeWeaponUpgradeStore`), weapon skins (`PurgeSkinStore`)
+- Database tables: `purge_player_stats`, `purge_player_scrap`, `purge_weapon_upgrades`, `purge_weapon_levels`, `purge_weapon_defaults`, `purge_weapon_skins`, `purge_waves`, `purge_settings`, `purge_migrations`, `purge_zombie_variants`, `purge_wave_variant_counts`
+
+### RunOrFall Plugin Lifecycle
+- Multiplayer platforming minigame where platforms break beneath players
+- Entry point: `HyvexaRunOrFallPlugin`
+- Key managers: `RunOrFallGameManager` (game flow, matchmaking, scoring)
+- Config: `RunOrFallConfigStore` (maps, spawns, platforms, settings)
+- Stats: `RunOrFallStatsStore` (wins, losses, streaks, blocks broken, blinks used)
+- Database tables: `runorfall_settings`, `runorfall_maps`, `runorfall_map_spawns`, `runorfall_map_platforms`, `runorfall_player_stats`
+
+### Duel System (Parkour)
+- 1v1 race duels within the Parkour module
+- `DuelQueue`: thread-safe FIFO matchmaking — `tryMatch()` dequeues first two players
+- `DuelTracker`: central orchestrator — active matches, visibility hiding, state management
+- `duelTickTask`: scheduled at 100ms — sweeps queued players in run + ticks active matches
+- `RunTrackerTickSystem` skips `checkPlayer()` for players in active duel matches
+- Data stores: `DuelPreferenceStore` (category prefs), `DuelMatchStore` (match history), `DuelStatsStore` (win/loss)
+- Database tables: `duel_category_prefs`, `duel_matches`, `duel_player_stats`
 
 ### Wardrobe Content Strategy
 - Wardrobe cosmetics/assets are shipped directly in `hyvexa-wardrobe/src/main/resources` (not in `docs/`).
@@ -62,6 +87,8 @@ Module boundaries:
 - Cechoo Animal Cosmetics are integrated with `Properties.Visibility = "Always"` and `Properties.PermissionNode = hyvexa.cosmetic.cechoo.*`, including custom Wardrobe slots (`Horns`, `Tails`).
 - HayHays Animal Masks are integrated as Wardrobe `HeadAccessory` cosmetics with `Properties.Visibility = "Always"` and `Properties.PermissionNode = hyvexa.cosmetic.hayhay.headaccessories.*`.
 - `/shop` remains independent: purchasable wardrobe entries come only from `WardrobeBridge.COSMETICS` in core.
+- Shop system: `CosmeticShopConfigStore` (availability + pricing per cosmetic), `WardrobeBridge` (purchase flow — checks availability, deducts currency, records ownership, grants Hytale permission), `CurrencyBridge` (abstracts vexa/feather payments)
+- Login: `WardrobeBridge.regrantPermissions()` re-grants permissions for all owned cosmetics
 
 ## Threading Model
 
@@ -103,11 +130,13 @@ Module boundaries:
 
 | Task | Interval | Purpose |
 |------|----------|---------|
-| `tickMapDetection` | 200ms | Check player positions for triggers |
+| `RunTrackerTickSystem` | ECS tick | Check player positions for triggers (EntityTickingSystem) |
 | `tickHudUpdates` | 100ms | Update run timer display |
 | `tickPlaytime` | 60s | Accumulate player session time |
 | `tickCollisionRemoval` | 2s | Re-disable player collision |
 | `tickPlayerCounts` | 600s | Sample online player count |
+| `tickStalePlayerSweep` | 120s | Evict stale cached data for disconnected players |
+| `duelTickTask` | 100ms | Sweep queued players in run + tick active duel matches |
 
 #### Ascend Module
 
@@ -320,7 +349,6 @@ Credentials stored in `mods/Parkour/database.json` (gitignored, relative to serv
 | `maps` | Map definitions with all transform positions |
 | `map_checkpoints` | Checkpoint positions per map |
 | `player_completions` | Completed maps with best times per player |
-| `player_mode_state` | Hub-owned mode state + return locations per player |
 | `settings` | Global server settings (single row) |
 | `global_messages` | Broadcast messages |
 | `global_message_settings` | Message interval (single row) |
@@ -331,6 +359,38 @@ Credentials stored in `mods/Parkour/database.json` (gitignored, relative to serv
 | `ascend_player_summit` | Summit levels per category per player |
 | `ascend_player_skills` | Skill tree unlocks per player |
 | `ascend_player_achievements` | Achievement unlocks per player |
+| `ascend_player_cats` | Collectible cat tokens per player |
+| `ascend_challenges` | Active challenge state per player |
+| `ascend_challenge_records` | Best times and completions per challenge type |
+| `ascend_ghost_recordings` | Ghost replay recordings per player per map |
+| `player_vexa` | Global vexa currency balance per player |
+| `player_feathers` | Parkour feather currency per player |
+| `player_cosmetics` | Purchased cosmetics and equipped state |
+| `cosmetic_shop_config` | Shop availability and pricing for cosmetics |
+| `player_medals` | Medal tiers earned per map per player |
+| `medal_rewards` | Feather reward amounts per category per medal tier |
+| `discord_link_codes` | Temporary Discord link codes (5min expiry) |
+| `discord_links` | Permanent Discord-Minecraft account links |
+| `analytics_events` | Append-only gameplay event log |
+| `analytics_daily` | Pre-computed daily aggregate statistics |
+| `duel_category_prefs` | Per-player duel category preferences |
+| `duel_matches` | Duel match history |
+| `duel_player_stats` | Duel win/loss statistics |
+| `purge_player_stats` | Purge player statistics |
+| `purge_player_scrap` | Purge scrap currency per player |
+| `purge_weapon_upgrades` | Purge weapon upgrade levels per player |
+| `purge_weapon_levels` | Purge weapon level config (damage, cost) |
+| `purge_weapon_defaults` | Purge weapon unlock config |
+| `purge_weapon_skins` | Purge weapon skin ownership |
+| `purge_waves` | Purge wave spawn configuration |
+| `purge_settings` | Purge key-value settings |
+| `purge_zombie_variants` | Purge zombie variant types |
+| `purge_wave_variant_counts` | Purge wave-to-variant spawn counts |
+| `runorfall_settings` | RunOrFall global settings |
+| `runorfall_maps` | RunOrFall map definitions |
+| `runorfall_map_spawns` | RunOrFall spawn positions per map |
+| `runorfall_map_platforms` | RunOrFall platform regions per map |
+| `runorfall_player_stats` | RunOrFall player statistics |
 
 #### Data Flow Pattern
 

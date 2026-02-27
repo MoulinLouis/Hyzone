@@ -179,17 +179,17 @@ Smooth ~2× growth per level, no artificial boosts or jumps:
 
 ### Multiplier Formula
 
-**Elevation multiplier = level^1.05** (slightly super-linear)
+**Elevation multiplier = level** (direct linear, `max(1, level)`)
 
-Elevation uses a level-based prestige system where higher levels give progressively better multipliers:
-- Level 1 → ×1 multiplier
-- Level 10 → ×11 multiplier
-- Level 50 → ×61 multiplier
-- Level 100 → ×126 multiplier
-- Level 200 → ×261 multiplier
-- Level 500 → ×695 multiplier
+Elevation uses a level-based prestige system where higher levels give proportionally better multipliers:
+- Level 1 → x1 multiplier
+- Level 10 → x10 multiplier
+- Level 50 → x50 multiplier
+- Level 100 → x100 multiplier
+- Level 200 → x200 multiplier
+- Level 500 → x500 multiplier
 
-**Note:** This rewards players for pushing higher elevation levels rather than stopping early.
+**Note:** Simple and predictable. Double the level = double the multiplier.
 
 ### Cost Formula
 

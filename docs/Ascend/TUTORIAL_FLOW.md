@@ -215,7 +215,13 @@ _Idea: Ascendancy Tree overview._
 **Title:** Ascendancy Tree
 
 **Text:**
-> 12 ascendancy nodes to unlock: **Auto-Upgrade + Momentum**, **Auto-Evolution**, **Runner Speed Boost**, **Evolution Power+**, **Runner Speed II**, **Momentum Surge**, **Elevation Remnant**, **Ascension Challenges**, **Multiplier Boost**, **Runner Speed III**, **Evolution Power II**, **Momentum Endurance**.
+> 19 ascendancy nodes to unlock:
+>
+> **Tier 1 (1 AP):** Auto-Upgrade + Momentum, Auto-Evolution, Runner Speed Boost, Evolution Power+, Runner Speed II, Auto-Summit, Auto-Elevation, Ascension Challenges
+>
+> **Tier 2 (10-50 AP):** Momentum Surge, Momentum Endurance, Multiplier Boost, Runner Speed III, Evolution Power II
+>
+> **Tier 3 (100-1000 AP):** Runner Speed IV, Evolution Power III, Momentum Mastery, Multiplier Boost II, Auto Ascend, Runner Speed V
 >
 > AP are permanent across all future Ascensions.
 
