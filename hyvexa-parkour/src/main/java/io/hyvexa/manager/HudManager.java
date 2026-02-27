@@ -168,7 +168,7 @@ public class HudManager {
         }
         state.wasRunning = true;
         String mapId = duelActive ? duelTracker.getActiveMapId(playerId) : runTracker.getActiveMapId(playerId);
-        io.hyvexa.parkour.data.Map map = mapId != null ? mapStore.getMap(mapId) : null;
+        io.hyvexa.parkour.data.Map map = mapId != null ? mapStore.getMapReadonly(mapId) : null;
         String mapName = mapId;
         if (map != null && map.getName() != null && !map.getName().isBlank()) {
             mapName = map.getName();

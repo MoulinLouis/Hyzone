@@ -32,6 +32,7 @@ import io.hyvexa.parkour.data.TransformData;
 import io.hyvexa.parkour.ghost.GhostNpcManager;
 import io.hyvexa.parkour.ghost.GhostRecorder;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -93,6 +94,7 @@ public class RunTracker {
             ghostNpcManager.despawnGhost(playerId);
         }
         ActiveRun run = new ActiveRun(mapId, System.currentTimeMillis());
+        populatePersonalBestSplits(playerId, run);
         activeRuns.put(playerId, run);
         idleFalls.remove(playerId);
         armStartOnMovement(run, start);
@@ -187,7 +189,7 @@ public class RunTracker {
         if (run == null) {
             return null;
         }
-        Map map = mapStore.getMap(run.mapId);
+        Map map = mapStore.getMapReadonly(run.mapId);
         if (map == null) {
             return null;
         }
@@ -293,7 +295,7 @@ public class RunTracker {
         if (run.lastPosition != null) {
             run.lastValidFlyPosition = new double[]{run.lastPosition.getX(), run.lastPosition.getY(), run.lastPosition.getZ()};
         } else {
-            Map map = mapStore.getMap(run.mapId);
+            Map map = mapStore.getMapReadonly(run.mapId);
             if (map != null && map.getStart() != null) {
                 run.lastValidFlyPosition = new double[]{map.getStart().getX(), map.getStart().getY(), map.getStart().getZ()};
             }
@@ -473,7 +475,7 @@ public class RunTracker {
                 teleporter.recordTeleport(playerRef.getUuid(), RunTeleporter.TeleportCause.IDLE_RESPAWN);
                 return;
             }
-            Map map = mapStore.getMap(run.mapId);
+            Map map = mapStore.getMapReadonly(run.mapId);
             if (map != null) {
                 teleporter.teleportToRespawn(ref, store, run, map, buffer);
                 run.fallState.fallStartTime = null;
@@ -496,13 +498,14 @@ public class RunTracker {
                 teleporter.recordTeleport(playerRef.getUuid(), RunTeleporter.TeleportCause.IDLE_RESPAWN);
                 return;
             }
-            Map triggerMap = findStartTriggerMap(position);
+            World world = store.getExternalData() != null ? store.getExternalData().getWorld() : null;
+            Map triggerMap = findStartTriggerMap(world, position);
             if (triggerMap != null) {
                 startRunFromTrigger(ref, store, playerRef, player, triggerMap, buffer);
             }
             return;
         }
-        Map map = mapStore.getMap(run.mapId);
+        Map map = mapStore.getMapReadonly(run.mapId);
         if (map == null) {
             return;
         }
@@ -572,11 +575,16 @@ public class RunTracker {
         }
     }
 
-    private Map findStartTriggerMap(Vector3d position) {
-        if (position == null) {
+    private Map findStartTriggerMap(World world, Vector3d position) {
+        if (world == null || position == null) {
             return null;
         }
-        return mapStore.findMapByStartTrigger(
+        String worldName = world.getName();
+        if (worldName == null || worldName.isBlank()) {
+            return null;
+        }
+        return mapStore.findMapByStartTriggerReadonly(
+                worldName,
                 position.getX(),
                 position.getY(),
                 position.getZ(),
@@ -710,6 +718,7 @@ public class RunTracker {
         Long finishPingMs;
         double[] lastValidFlyPosition;
         long lastFlyZoneRollbackMs;
+        List<Long> personalBestSplits = List.of();
 
         ActiveRun(String mapId, long startTimeMs) {
             this.mapId = mapId;
@@ -790,11 +799,19 @@ public class RunTracker {
             data.setRotZ(0f);
             return data;
         }
-        Map map = mapStore.getMap(run.mapId);
+        Map map = mapStore.getMapReadonly(run.mapId);
         if (map == null || map.getStart() == null) {
             return null;
         }
         return copyTransformData(map.getStart());
+    }
+
+    private void populatePersonalBestSplits(UUID playerId, ActiveRun run) {
+        if (run == null || playerId == null || progressStore == null) {
+            return;
+        }
+        List<Long> checkpointTimes = progressStore.getCheckpointTimes(playerId, run.mapId);
+        run.personalBestSplits = checkpointTimes.isEmpty() ? List.of() : checkpointTimes;
     }
 
     private static TransformData copyTransformData(TransformData source) {

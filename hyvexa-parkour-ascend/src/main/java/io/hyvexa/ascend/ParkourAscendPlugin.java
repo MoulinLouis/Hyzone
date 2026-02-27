@@ -302,11 +302,17 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     AscendInventoryUtils.giveMenuItems(player);
                     hudManager.attach(playerRef, player);
                     AscendMusicPage.applyStoredMusic(playerRef);
-                    try {
-                        DiscordLinkStore.getInstance().checkAndRewardVexa(playerId, player);
-                    } catch (Exception e) {
-                        LOGGER.atWarning().withCause(e).log("Discord link check failed (ascend)");
-                    }
+                    DiscordLinkStore linkStore = DiscordLinkStore.getInstance();
+                    linkStore.checkAndRewardVexaAsync(playerId)
+                            .thenAcceptAsync(rewarded -> {
+                                if (rewarded && ref.isValid()) {
+                                    linkStore.sendRewardGrantedMessage(player);
+                                }
+                            }, world)
+                            .exceptionally(ex -> {
+                                LOGGER.atWarning().withCause(ex).log("Discord link check failed (ascend)");
+                                return null;
+                            });
                 }, world).orTimeout(5, TimeUnit.SECONDS).exceptionally(ex -> {
                     LOGGER.atWarning().withCause(ex).log("Exception in PlayerReadyEvent async task");
                     return null;

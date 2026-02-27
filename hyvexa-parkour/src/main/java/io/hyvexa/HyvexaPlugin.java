@@ -117,8 +117,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class HyvexaPlugin extends JavaPlugin {
 
@@ -163,6 +165,7 @@ public class HyvexaPlugin extends JavaPlugin {
     private GhostRecorder ghostRecorder;
     private GhostNpcManager ghostNpcManager;
     private PetManager petManager;
+    private final Map<World, AtomicBoolean> hudTickInFlight = new ConcurrentHashMap<>();
 
     public HyvexaPlugin(@Nonnull JavaPluginInit init) {
         super(init);
@@ -350,28 +353,8 @@ public class HyvexaPlugin extends JavaPlugin {
                         player.getHudManager().hideHudComponents(playerRef, HudComponent.Compass);
                         hudManager.ensureRunHud(playerRef);
                     }
-                    // Check for pending Discord link vexa reward (runs on any world)
-                    if (player != null && playerRef != null) {
-                        try {
-                            DiscordLinkStore.getInstance().checkAndRewardVexa(playerRef.getUuid(), player);
-                        } catch (Exception e) {
-                            LOGGER.atWarning().withCause(e).log("Discord link check failed");
-                        }
-                        // Sync parkour rank to Discord (if linked)
-                        if (parkourWorld) {
-                            try {
-                                if (DiscordLinkStore.getInstance().isLinked(playerRef.getUuid())) {
-                                    MapStore ms = HyvexaPlugin.getInstance().getMapStore();
-                                    ProgressStore ps = HyvexaPlugin.getInstance().getProgressStore();
-                                    if (ms != null && ps != null) {
-                                        String rank = ps.getRankName(playerRef.getUuid(), ms);
-                                        DiscordLinkStore.getInstance().updateRank(playerRef.getUuid(), rank);
-                                    }
-                                }
-                            } catch (Exception e) {
-                                LOGGER.atWarning().withCause(e).log("Discord rank sync failed");
-                            }
-                        }
+                    if (playerRef != null) {
+                        scheduleDiscordReadyTasks(ref, store, playerRef, parkourWorld);
                     }
                     // Hide all existing ghost NPCs from the newly connected player
                     if (parkourWorld) {
@@ -702,6 +685,45 @@ public class HyvexaPlugin extends JavaPlugin {
         return cleanupManager;
     }
 
+    private void scheduleDiscordReadyTasks(Ref<EntityStore> ref, Store<EntityStore> store,
+                                           PlayerRef playerRef, boolean parkourWorld) {
+        if (ref == null || store == null || playerRef == null) {
+            return;
+        }
+        UUID playerId = playerRef.getUuid();
+        World world = store.getExternalData() != null ? store.getExternalData().getWorld() : null;
+        if (playerId == null || world == null) {
+            return;
+        }
+        DiscordLinkStore linkStore = DiscordLinkStore.getInstance();
+        linkStore.checkAndRewardVexaAsync(playerId)
+                .thenAcceptAsync(rewarded -> {
+                    if (!rewarded || !ref.isValid()) {
+                        return;
+                    }
+                    Store<EntityStore> currentStore = ref.getStore();
+                    Player player = currentStore != null
+                            ? currentStore.getComponent(ref, Player.getComponentType())
+                            : null;
+                    if (player != null) {
+                        linkStore.sendRewardGrantedMessage(player);
+                    }
+                }, world)
+                .exceptionally(ex -> {
+                    LOGGER.atWarning().withCause(ex).log("Discord link check failed");
+                    return null;
+                });
+        if (!parkourWorld || mapStore == null || progressStore == null) {
+            return;
+        }
+        String rank = progressStore.getRankName(playerId, mapStore);
+        linkStore.updateRankIfLinkedAsync(playerId, rank)
+                .exceptionally(ex -> {
+                    LOGGER.atWarning().withCause(ex).log("Discord rank sync failed");
+                    return null;
+                });
+    }
+
     private void tickHudUpdates() {
         Map<World, List<PlayerTickContext>> playersByWorld = collectPlayersByWorld();
         for (Map.Entry<World, List<PlayerTickContext>> entry : playersByWorld.entrySet()) {
@@ -711,22 +733,49 @@ public class HyvexaPlugin extends JavaPlugin {
             }
             List<PlayerTickContext> players = entry.getValue();
             String worldName = world.getName() != null ? world.getName() : "unknown";
-            AsyncExecutionHelper.runBestEffort(world, () -> {
-                for (PlayerTickContext context : players) {
-                    if (context.ref == null || !context.ref.isValid()) {
-                        continue;
+            String contextText = "world=" + worldName + ", players=" + players.size();
+            AtomicBoolean inFlight = hudTickInFlight.computeIfAbsent(world, ignored -> new AtomicBoolean(false));
+            if (!inFlight.compareAndSet(false, true)) {
+                continue;
+            }
+            try {
+                CompletableFuture.runAsync(() -> {
+                    try {
+                        for (PlayerTickContext context : players) {
+                            if (context.ref == null || !context.ref.isValid()) {
+                                continue;
+                            }
+                            UUID playerId = context.playerRef != null ? context.playerRef.getUuid() : null;
+                            if (!shouldApplyParkourMode(playerId, world)) {
+                                continue;
+                            }
+                            if (hudManager != null) {
+                                hudManager.ensureRunHudNow(context.ref, context.store, context.playerRef);
+                                hudManager.updateRunHud(context.ref, context.store);
+                            }
+                        }
+                    } finally {
+                        inFlight.set(false);
                     }
-                    UUID playerId = context.playerRef != null ? context.playerRef.getUuid() : null;
-                    if (!shouldApplyParkourMode(playerId, world)) {
-                        continue;
-                    }
-                    if (hudManager != null) {
-                        hudManager.ensureRunHudNow(context.ref, context.store, context.playerRef);
-                        hudManager.updateRunHud(context.ref, context.store);
-                    }
-                }
-            }, "parkour.hud.tick", "parkour HUD tick update",
-                    "world=" + worldName + ", players=" + players.size());
+                }, world).orTimeout(5, TimeUnit.SECONDS).exceptionally(ex -> {
+                    inFlight.set(false);
+                    AsyncExecutionHelper.logThrottledWarning(
+                            "parkour.hud.tick",
+                            "parkour HUD tick update",
+                            contextText,
+                            ex
+                    );
+                    return null;
+                });
+            } catch (Exception e) {
+                inFlight.set(false);
+                AsyncExecutionHelper.logThrottledWarning(
+                        "parkour.hud.tick",
+                        "parkour HUD tick update",
+                        contextText,
+                        e
+                );
+            }
         }
     }
 

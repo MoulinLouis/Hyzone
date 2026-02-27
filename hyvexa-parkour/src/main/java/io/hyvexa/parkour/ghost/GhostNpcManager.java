@@ -89,7 +89,7 @@ public class GhostNpcManager {
             return; // No recording, no ghost
         }
 
-        Map map = mapStore.getMap(mapId);
+        Map map = mapStore.getMapReadonly(mapId);
         if (map == null || map.getStart() == null) {
             return;
         }
@@ -253,7 +253,7 @@ public class GhostNpcManager {
             return;
         }
 
-        Map map = mapStore.getMap(state.mapId);
+        Map map = mapStore.getMapReadonly(state.mapId);
         if (map != null && map.getWorld() != null) {
             World world = Universe.get().getWorld(map.getWorld());
             if (world != null) {
@@ -306,7 +306,7 @@ public class GhostNpcManager {
             return;
         }
 
-        Map map = mapStore.getMap(state.mapId);
+        Map map = mapStore.getMapReadonly(state.mapId);
         if (map == null) {
             return;
         }

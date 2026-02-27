@@ -68,6 +68,8 @@ public class RobotManager {
     private static final String RUNNER_UUIDS_FILE = "runner_uuids.txt";
     private static final long AUTO_UPGRADE_INTERVAL_MS = 50L;
     private static final long TELEPORT_WARNING_THROTTLE_MS = 10_000L;
+    private static final long TELEPORT_WARNING_CACHE_TTL_MS = TimeUnit.MINUTES.toMillis(30L);
+    private static final long TELEPORT_WARNING_CLEANUP_INTERVAL_MS = TimeUnit.MINUTES.toMillis(5L);
 
     private final AscendMapStore mapStore;
     private final AscendPlayerStore playerStore;
@@ -83,6 +85,7 @@ public class RobotManager {
     private volatile NPCPlugin npcPlugin;
     private volatile boolean cleanupPending = false;
     private volatile long lastAutoUpgradeMs = 0;
+    private volatile long lastTeleportWarningCleanupMs = 0L;
     private final Map<UUID, Long> lastAutoElevationMs = new ConcurrentHashMap<>();
     private final Map<UUID, Long> lastAutoSummitMs = new ConcurrentHashMap<>();
 
@@ -149,6 +152,7 @@ public class RobotManager {
                 RobotState removed = robots.remove(key);
                 if (removed != null) {
                     UUID entityUuid = removed.getEntityUuid();
+                    clearTeleportWarning(removed);
                     despawnNpcForRobot(removed);
                     queueOrphanIfDespawnFailed(entityUuid, removed);
                 }
@@ -288,6 +292,7 @@ public class RobotManager {
         RobotState state = robots.remove(key);
         if (state != null) {
             UUID entityUuid = state.getEntityUuid();
+            clearTeleportWarning(state);
             despawnNpcForRobot(state);
             queueOrphanIfDespawnFailed(entityUuid, state);
         }
@@ -340,6 +345,7 @@ public class RobotManager {
 
     public void despawnAllRobots() {
         for (RobotState state : robots.values()) {
+            clearTeleportWarning(state);
             despawnNpcForRobot(state);
         }
         robots.clear();
@@ -405,6 +411,10 @@ public class RobotManager {
     private void tick() {
         try {
             long now = System.currentTimeMillis();
+            if (now - lastTeleportWarningCleanupMs >= TELEPORT_WARNING_CLEANUP_INTERVAL_MS) {
+                cleanupTeleportWarningCache(now);
+                lastTeleportWarningCleanupMs = now;
+            }
             // Process any pending orphan removals first (queued from ECS tick)
             processPendingRemovals();
             refreshRobots(now);
@@ -528,6 +538,18 @@ public class RobotManager {
         );
     }
 
+    private void clearTeleportWarning(RobotState state) {
+        if (state == null) {
+            return;
+        }
+        teleportWarningByRobot.remove(robotKey(state.getOwnerId(), state.getMapId()));
+    }
+
+    private void cleanupTeleportWarningCache(long now) {
+        teleportWarningByRobot.entrySet().removeIf(entry ->
+                now - entry.getValue() >= TELEPORT_WARNING_CACHE_TTL_MS || !robots.containsKey(entry.getKey()));
+    }
+
     private String formatPosition(double[] position) {
         if (position == null || position.length < 3) {
             return "n/a";
@@ -639,6 +661,7 @@ public class RobotManager {
                 RobotState removed = robots.remove(key);
                 if (removed != null) {
                     UUID entityUuid = removed.getEntityUuid();
+                    clearTeleportWarning(removed);
                     despawnNpcForRobot(removed);
                     queueOrphanIfDespawnFailed(entityUuid, removed);
                 }

@@ -1,6 +1,7 @@
 package io.hyvexa.core.economy;
 
 import com.hypixel.hytale.logger.HytaleLogger;
+import com.hypixel.hytale.server.core.HytaleServer;
 import io.hyvexa.core.db.DatabaseManager;
 
 import java.sql.Connection;
@@ -8,6 +9,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -22,6 +24,7 @@ public class VexaStore {
     private static final long CACHE_TTL_MS = 5_000;
 
     private final ConcurrentHashMap<UUID, CachedBalance> cache = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, Boolean> refreshInFlight = new ConcurrentHashMap<>();
 
     private VexaStore() {
     }
@@ -75,12 +78,13 @@ public class VexaStore {
             return 0;
         }
         CachedBalance cached = cache.get(playerId);
-        if (cached != null && !cached.isStale()) {
-            return cached.value;
+        if (cached == null) {
+            return loadAndCacheBalance(playerId);
         }
-        long fromDb = loadFromDatabase(playerId);
-        cache.put(playerId, new CachedBalance(fromDb));
-        return fromDb;
+        if (cached.isStale()) {
+            refreshFromDatabaseAsync(playerId, cached.cachedAt);
+        }
+        return cached.value;
     }
 
     /**
@@ -137,7 +141,41 @@ public class VexaStore {
     public void evictPlayer(UUID playerId) {
         if (playerId != null) {
             cache.remove(playerId);
+            refreshInFlight.remove(playerId);
         }
+    }
+
+    private long loadAndCacheBalance(UUID playerId) {
+        long fromDb = loadFromDatabase(playerId);
+        cache.put(playerId, new CachedBalance(fromDb));
+        return fromDb;
+    }
+
+    private void refreshFromDatabaseAsync(UUID playerId, long staleCachedAt) {
+        if (playerId == null || refreshInFlight.putIfAbsent(playerId, Boolean.TRUE) != null) {
+            return;
+        }
+        CompletableFuture.supplyAsync(() -> loadFromDatabase(playerId), HytaleServer.SCHEDULED_EXECUTOR)
+                .handle((value, throwable) -> {
+                    try {
+                        if (throwable != null) {
+                            LOGGER.atWarning().withCause(throwable).log("Failed to refresh vexa cache for " + playerId);
+                            return null;
+                        }
+                        cache.compute(playerId, (uuid, current) -> {
+                            if (current == null) {
+                                return null;
+                            }
+                            if (current.cachedAt > staleCachedAt) {
+                                return current;
+                            }
+                            return new CachedBalance(value);
+                        });
+                        return null;
+                    } finally {
+                        refreshInFlight.remove(playerId);
+                    }
+                });
     }
 
     private long loadFromDatabase(UUID playerId) {
