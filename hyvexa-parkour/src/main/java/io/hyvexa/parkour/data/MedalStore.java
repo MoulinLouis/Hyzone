@@ -47,14 +47,22 @@ public class MedalStore {
              PreparedStatement stmt = conn.prepareStatement(createSql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             stmt.executeUpdate();
-            // Migrate old AUTHOR medal values to PLATINUM
+            // Migrate old AUTHOR medal values to EMERALD
             try (PreparedStatement migStmt = conn.prepareStatement(
-                    "UPDATE player_medals SET medal = 'PLATINUM' WHERE medal = 'AUTHOR'")) {
+                    "UPDATE player_medals SET medal = 'EMERALD' WHERE medal = 'AUTHOR'")) {
                 DatabaseManager.applyQueryTimeout(migStmt);
                 int migrated = migStmt.executeUpdate();
                 if (migrated > 0) {
-                    LOGGER.atInfo().log("Migrated " + migrated + " AUTHOR medals to PLATINUM");
+                    LOGGER.atInfo().log("Migrated " + migrated + " AUTHOR medals to EMERALD");
                 }
+            }
+            // Widen medal column to fit EMERALD/INSANE (8 chars)
+            try (PreparedStatement alterStmt = conn.prepareStatement(
+                    "ALTER TABLE player_medals MODIFY COLUMN medal VARCHAR(8) NOT NULL")) {
+                DatabaseManager.applyQueryTimeout(alterStmt);
+                alterStmt.executeUpdate();
+            } catch (SQLException ignored) {
+                // May fail if already widened
             }
             LOGGER.atInfo().log("MedalStore initialized (player_medals table ensured)");
         } catch (SQLException e) {
@@ -164,7 +172,7 @@ public class MedalStore {
                     int cnt = rs.getInt("cnt");
                     try {
                         Medal medal = Medal.valueOf(medalStr);
-                        int[] counts = aggregated.computeIfAbsent(playerId, k -> new int[4]);
+                        int[] counts = aggregated.computeIfAbsent(playerId, k -> new int[Medal.values().length]);
                         counts[medal.ordinal()] = cnt;
                     } catch (IllegalArgumentException ignored) {
                     }
@@ -177,7 +185,8 @@ public class MedalStore {
         List<MedalScoreEntry> entries = new ArrayList<>(aggregated.size());
         for (java.util.Map.Entry<UUID, int[]> e : aggregated.entrySet()) {
             int[] c = e.getValue();
-            entries.add(new MedalScoreEntry(e.getKey(), c[0], c[1], c[2], c[3]));
+            entries.add(new MedalScoreEntry(e.getKey(), c[0], c[1], c[2], c[3],
+                    c.length > 4 ? c[4] : 0));
         }
         entries.sort(Comparator.comparingInt(MedalScoreEntry::getTotalScore).reversed());
         leaderboardSnapshot.set(List.copyOf(entries));
@@ -186,7 +195,7 @@ public class MedalStore {
 
     private void refreshLeaderboardEntry(UUID playerId) {
         java.util.Map<String, Set<Medal>> playerMedals = cache.get(playerId);
-        int[] counts = new int[4];
+        int[] counts = new int[Medal.values().length];
         if (playerMedals != null) {
             for (Set<Medal> medals : playerMedals.values()) {
                 for (Medal m : medals) {
@@ -194,7 +203,8 @@ public class MedalStore {
                 }
             }
         }
-        MedalScoreEntry updated = new MedalScoreEntry(playerId, counts[0], counts[1], counts[2], counts[3]);
+        MedalScoreEntry updated = new MedalScoreEntry(playerId, counts[0], counts[1], counts[2], counts[3],
+                counts.length > 4 ? counts[4] : 0);
         List<MedalScoreEntry> current = new ArrayList<>(leaderboardSnapshot.get());
         current.removeIf(e -> e.getPlayerId().equals(playerId));
         if (updated.getTotalScore() > 0) {
@@ -209,26 +219,31 @@ public class MedalStore {
         private final int bronzeCount;
         private final int silverCount;
         private final int goldCount;
-        private final int platinumCount;
+        private final int emeraldCount;
+        private final int insaneCount;
         private final int totalScore;
 
-        public MedalScoreEntry(UUID playerId, int bronzeCount, int silverCount, int goldCount, int platinumCount) {
+        public MedalScoreEntry(UUID playerId, int bronzeCount, int silverCount, int goldCount,
+                               int emeraldCount, int insaneCount) {
             this.playerId = playerId;
             this.bronzeCount = bronzeCount;
             this.silverCount = silverCount;
             this.goldCount = goldCount;
-            this.platinumCount = platinumCount;
+            this.emeraldCount = emeraldCount;
+            this.insaneCount = insaneCount;
             this.totalScore = bronzeCount * Medal.BRONZE.getPoints()
                     + silverCount * Medal.SILVER.getPoints()
                     + goldCount * Medal.GOLD.getPoints()
-                    + platinumCount * Medal.PLATINUM.getPoints();
+                    + emeraldCount * Medal.EMERALD.getPoints()
+                    + insaneCount * Medal.INSANE.getPoints();
         }
 
         public UUID getPlayerId() { return playerId; }
         public int getBronzeCount() { return bronzeCount; }
         public int getSilverCount() { return silverCount; }
         public int getGoldCount() { return goldCount; }
-        public int getPlatinumCount() { return platinumCount; }
+        public int getEmeraldCount() { return emeraldCount; }
+        public int getInsaneCount() { return insaneCount; }
         public int getTotalScore() { return totalScore; }
     }
 }

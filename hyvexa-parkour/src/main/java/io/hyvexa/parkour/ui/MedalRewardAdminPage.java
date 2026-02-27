@@ -30,8 +30,10 @@ public class MedalRewardAdminPage extends InteractiveCustomUIPage<MedalRewardAdm
     private final MapStore mapStore;
     private final ProgressStore progressStore;
 
-    // 4 categories x 4 tiers = 16 fields
-    private final String[][] values = new String[4][4]; // [category][bronze/silver/gold/author]
+    // 4 categories x 4 tiers (bronze/silver/gold/emerald)
+    private final String[][] values = new String[4][4];
+    // Separate insane completion reward (only for insane category)
+    private String insaneRewardValue = "0";
 
     public MedalRewardAdminPage(@Nonnull PlayerRef playerRef, MapStore mapStore, ProgressStore progressStore) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, RewardData.CODEC);
@@ -48,7 +50,7 @@ public class MedalRewardAdminPage extends InteractiveCustomUIPage<MedalRewardAdm
                 values[i][0] = String.valueOf(r.bronze);
                 values[i][1] = String.valueOf(r.silver);
                 values[i][2] = String.valueOf(r.gold);
-                values[i][3] = String.valueOf(r.platinum);
+                values[i][3] = String.valueOf(r.emerald);
             } else {
                 values[i][0] = "0";
                 values[i][1] = "0";
@@ -56,6 +58,9 @@ public class MedalRewardAdminPage extends InteractiveCustomUIPage<MedalRewardAdm
                 values[i][3] = "0";
             }
         }
+        // Load insane reward from the insane category
+        MedalRewardStore.MedalRewards insaneRewards = store.getRewards("insane");
+        insaneRewardValue = insaneRewards != null ? String.valueOf(insaneRewards.insane) : "0";
     }
 
     @Override
@@ -76,6 +81,9 @@ public class MedalRewardAdminPage extends InteractiveCustomUIPage<MedalRewardAdm
             if (data.values[i][1] != null) values[i][1] = data.values[i][1].trim();
             if (data.values[i][2] != null) values[i][2] = data.values[i][2].trim();
             if (data.values[i][3] != null) values[i][3] = data.values[i][3].trim();
+        }
+        if (data.insaneReward != null) {
+            insaneRewardValue = data.insaneReward.trim();
         }
         if (data.button == null) {
             return;
@@ -101,16 +109,23 @@ public class MedalRewardAdminPage extends InteractiveCustomUIPage<MedalRewardAdm
 
     private void handleSave(Player player, Ref<EntityStore> ref, Store<EntityStore> store) {
         MedalRewardStore rewardStore = MedalRewardStore.getInstance();
+        int insaneReward = parseNonNegative(insaneRewardValue);
+        if (insaneReward < 0) {
+            player.sendMessage(Message.raw("Insane completion reward must be a non-negative integer."));
+            return;
+        }
         for (int i = 0; i < CATEGORIES.length; i++) {
             int bronze = parseNonNegative(values[i][0]);
             int silver = parseNonNegative(values[i][1]);
             int gold = parseNonNegative(values[i][2]);
-            int platinum = parseNonNegative(values[i][3]);
-            if (bronze < 0 || silver < 0 || gold < 0 || platinum < 0) {
+            int emerald = parseNonNegative(values[i][3]);
+            if (bronze < 0 || silver < 0 || gold < 0 || emerald < 0) {
                 player.sendMessage(Message.raw(CATEGORY_PREFIXES[i] + ": values must be non-negative integers."));
                 return;
             }
-            rewardStore.setRewards(CATEGORIES[i], bronze, silver, gold, platinum);
+            // Only the insane category gets the insane completion reward
+            int insane = CATEGORIES[i].equals("insane") ? insaneReward : 0;
+            rewardStore.setRewards(CATEGORIES[i], bronze, silver, gold, emerald, insane);
         }
         player.sendMessage(Message.raw("Medal rewards saved."));
         UICommandBuilder commandBuilder = new UICommandBuilder();
@@ -138,8 +153,9 @@ public class MedalRewardAdminPage extends InteractiveCustomUIPage<MedalRewardAdm
             commandBuilder.set("#" + CATEGORY_PREFIXES[i] + "Bronze.Value", values[i][0]);
             commandBuilder.set("#" + CATEGORY_PREFIXES[i] + "Silver.Value", values[i][1]);
             commandBuilder.set("#" + CATEGORY_PREFIXES[i] + "Gold.Value", values[i][2]);
-            commandBuilder.set("#" + CATEGORY_PREFIXES[i] + "Platinum.Value", values[i][3]);
+            commandBuilder.set("#" + CATEGORY_PREFIXES[i] + "Emerald.Value", values[i][3]);
         }
+        commandBuilder.set("#InsaneRewardField.Value", insaneRewardValue);
     }
 
     private void bindEvents(UIEventBuilder uiEventBuilder) {
@@ -155,21 +171,25 @@ public class MedalRewardAdminPage extends InteractiveCustomUIPage<MedalRewardAdm
                     EventData.of(RewardData.KEYS[i][1], "#" + prefix + "Silver.Value"), false);
             uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#" + prefix + "Gold",
                     EventData.of(RewardData.KEYS[i][2], "#" + prefix + "Gold.Value"), false);
-            uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#" + prefix + "Platinum",
-                    EventData.of(RewardData.KEYS[i][3], "#" + prefix + "Platinum.Value"), false);
+            uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#" + prefix + "Emerald",
+                    EventData.of(RewardData.KEYS[i][3], "#" + prefix + "Emerald.Value"), false);
         }
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#InsaneRewardField",
+                EventData.of(RewardData.KEY_INSANE_REWARD, "#InsaneRewardField.Value"), false);
     }
 
     public static class RewardData {
         static final String KEY_BUTTON = "Button";
+        static final String KEY_INSANE_REWARD = "@InsaneReward";
         static final String[][] KEYS = {
-                {"@EasyBronze", "@EasySilver", "@EasyGold", "@EasyPlatinum"},
-                {"@MediumBronze", "@MediumSilver", "@MediumGold", "@MediumPlatinum"},
-                {"@HardBronze", "@HardSilver", "@HardGold", "@HardPlatinum"},
-                {"@InsaneBronze", "@InsaneSilver", "@InsaneGold", "@InsanePlatinum"}
+                {"@EasyBronze", "@EasySilver", "@EasyGold", "@EasyEmerald"},
+                {"@MediumBronze", "@MediumSilver", "@MediumGold", "@MediumEmerald"},
+                {"@HardBronze", "@HardSilver", "@HardGold", "@HardEmerald"},
+                {"@InsaneBronze", "@InsaneSilver", "@InsaneGold", "@InsaneEmerald"}
         };
 
         String button;
+        String insaneReward;
         final String[][] values = new String[4][4];
 
         public static final BuilderCodec<RewardData> CODEC;
@@ -177,7 +197,9 @@ public class MedalRewardAdminPage extends InteractiveCustomUIPage<MedalRewardAdm
         static {
             var builder = BuilderCodec.<RewardData>builder(RewardData.class, RewardData::new)
                     .addField(new KeyedCodec<>(KEY_BUTTON, Codec.STRING),
-                            (data, value) -> data.button = value, data -> data.button);
+                            (data, value) -> data.button = value, data -> data.button)
+                    .addField(new KeyedCodec<>(KEY_INSANE_REWARD, Codec.STRING),
+                            (data, value) -> data.insaneReward = value, data -> data.insaneReward);
             for (int i = 0; i < 4; i++) {
                 for (int j = 0; j < 4; j++) {
                     final int ci = i;

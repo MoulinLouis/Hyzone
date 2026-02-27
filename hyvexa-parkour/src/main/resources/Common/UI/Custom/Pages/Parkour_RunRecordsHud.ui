@@ -74,21 +74,21 @@ $C.@PageOverlay {
         }
       }
 
-      Group #MedalHudPlatinum {
+      Group #MedalHudEmerald {
         Anchor: (Left: 0, Right: 0, Top: 66, Height: 20);
         LayoutMode: Left;
 
         Group {
           Anchor: (Width: 18, Height: 18, Top: 1);
-          Background: (TexturePath: "../Textures/platinum_medal.png");
+          Background: (TexturePath: "../Textures/emerald_medal.png");
         }
         Group { Anchor: (Width: 10); }
-        Label #MedalHudPlatinumName {
+        Label #MedalHudEmeraldName {
           Anchor: (Width: 150, Height: 20);
           Style: (FontSize: 16, TextColor: #e7f1f4, VerticalAlignment: Center);
-          Text: "Platinum";
+          Text: "Emerald";
         }
-        Label #MedalHudPlatinumTime {
+        Label #MedalHudEmeraldTime {
           Anchor: (Width: 110, Height: 20);
           Style: (FontSize: 16, TextColor: #e7f1f4, VerticalAlignment: Center);
           Text: "";
