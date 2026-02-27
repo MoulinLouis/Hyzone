@@ -73,6 +73,7 @@ public class MapStore {
                 addColumnIfMissing(conn, "maps", "silver_time_ms", "BIGINT DEFAULT NULL");
                 addColumnIfMissing(conn, "maps", "gold_time_ms", "BIGINT DEFAULT NULL");
                 renameColumnIfExists(conn, "maps", "author_time_ms", "emerald_time_ms", "BIGINT DEFAULT NULL");
+                renameColumnIfExists(conn, "maps", "platinum_time_ms", "emerald_time_ms", "BIGINT DEFAULT NULL");
                 addColumnIfMissing(conn, "maps", "emerald_time_ms", "BIGINT DEFAULT NULL");
 
                 // Load all maps

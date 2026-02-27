@@ -44,6 +44,7 @@ public class MedalRewardStore {
             DatabaseManager.applyQueryTimeout(stmt);
             stmt.executeUpdate();
             renameColumnIfExists(conn, "medal_rewards", "author_feathers", "emerald_feathers", "INT NOT NULL DEFAULT 0");
+            renameColumnIfExists(conn, "medal_rewards", "platinum_feathers", "emerald_feathers", "INT NOT NULL DEFAULT 0");
             addColumnIfMissing(conn, "medal_rewards", "emerald_feathers", "INT NOT NULL DEFAULT 0");
             addColumnIfMissing(conn, "medal_rewards", "insane_feathers", "INT NOT NULL DEFAULT 0");
         } catch (SQLException e) {
