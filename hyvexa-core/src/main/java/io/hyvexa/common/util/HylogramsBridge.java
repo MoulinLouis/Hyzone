@@ -2,6 +2,7 @@ package io.hyvexa.common.util;
 
 import com.hypixel.hytale.common.plugin.PluginIdentifier;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.command.system.CommandManager;
@@ -18,6 +19,7 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class HylogramsBridge {
+    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final String HYLOGRAMS_GROUP = "ehko";
     private static final String HYLOGRAMS_NAME = "Hylograms";
     private static final String HYLOGRAMS_API_CLASS = "dev.ehko.hylograms.api.HologramsAPI";
@@ -111,7 +113,8 @@ public final class HylogramsBridge {
         }
         try {
             CommandManager.get().handleCommand(ConsoleSender.INSTANCE, "holo respawnHolograms --confirm");
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            LOGGER.atWarning().withCause(e).log("Failed to respawn holograms via console command");
         }
         return true;
     }

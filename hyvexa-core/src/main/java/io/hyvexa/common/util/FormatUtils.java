@@ -95,11 +95,17 @@ public final class FormatUtils {
     /**
      * Format a plain long value with suffix notation (K, M, B, ...).
      */
+    /** Max exponent that fits in a long: 10^18 = 1,000,000,000,000,000,000. */
+    private static final int MAX_LONG_EXPONENT = 18;
+
     public static String formatLong(long value) {
         if (value < 1_000L) {
             return String.valueOf(value);
         }
         for (int i = SUFFIX_EXPONENTS.length - 1; i >= 0; i--) {
+            if (SUFFIX_EXPONENTS[i] > MAX_LONG_EXPONENT) {
+                continue;
+            }
             long threshold = (long) Math.pow(10, SUFFIX_EXPONENTS[i]);
             if (value >= threshold) {
                 double display = value / (double) threshold;

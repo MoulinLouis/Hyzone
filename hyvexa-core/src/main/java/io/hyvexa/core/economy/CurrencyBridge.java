@@ -37,6 +37,9 @@ public class CurrencyBridge {
      * Deduct currency from player. Returns true if successful, false if insufficient balance.
      */
     public static boolean deduct(String currency, UUID playerId, long amount) {
+        if (amount <= 0) {
+            return false;
+        }
         CurrencyProvider provider = providers.get(currency);
         if (provider == null) {
             LOGGER.atWarning().log("CurrencyBridge: unknown currency '" + currency + "'");

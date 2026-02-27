@@ -87,8 +87,12 @@ public class DiscordLinkStore {
                 DatabaseManager.applyQueryTimeout(stmt);
                 stmt.executeUpdate();
             }
-        } catch (SQLException ignored) {
-            // Column already exists — expected on repeat startup
+        } catch (SQLException e) {
+            if (isDuplicateColumn(e)) {
+                LOGGER.atFine().log("Migration: current_rank column already exists");
+            } else {
+                LOGGER.atWarning().withCause(e).log("Failed to add current_rank column to discord_links");
+            }
         }
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
             try (PreparedStatement stmt = conn.prepareStatement(
@@ -96,8 +100,12 @@ public class DiscordLinkStore {
                 DatabaseManager.applyQueryTimeout(stmt);
                 stmt.executeUpdate();
             }
-        } catch (SQLException ignored) {
-            // Column already exists — expected on repeat startup
+        } catch (SQLException e) {
+            if (isDuplicateColumn(e)) {
+                LOGGER.atFine().log("Migration: last_synced_rank column already exists");
+            } else {
+                LOGGER.atWarning().withCause(e).log("Failed to add last_synced_rank column to discord_links");
+            }
         }
 
         cleanExpiredCodes();
@@ -196,47 +204,38 @@ public class DiscordLinkStore {
             return false;
         }
 
-        String selectSql = "SELECT vexa_rewarded FROM discord_links WHERE player_uuid = ? AND vexa_rewarded = FALSE";
+        // Atomic claim: only one caller can succeed for a given player
+        String claimSql = "UPDATE discord_links SET vexa_rewarded = TRUE WHERE player_uuid = ? AND vexa_rewarded = FALSE";
+        int updated;
         try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(selectSql)) {
+             PreparedStatement stmt = conn.prepareStatement(claimSql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             stmt.setString(1, playerId.toString());
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (!rs.next()) {
-                    return false;
-                }
-            }
+            updated = stmt.executeUpdate();
         } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to check vexa reward for " + playerId);
+            LOGGER.atWarning().withCause(e).log("Failed to claim vexa reward for " + playerId);
             return false;
         }
 
-        // Award vexa
+        if (updated == 0) {
+            return false;
+        }
+
+        // Award vexa after successful atomic claim
         VexaStore.getInstance().addVexa(playerId, VEXA_REWARD);
 
-        // Mark as rewarded
-        String updateSql = "UPDATE discord_links SET vexa_rewarded = TRUE WHERE player_uuid = ? AND vexa_rewarded = FALSE";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(updateSql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.setString(1, playerId.toString());
-            int updated = stmt.executeUpdate();
-            if (updated > 0) {
-                player.sendMessage(Message.join(
-                        Message.raw("Discord linked! You received ").color("#a3e635"),
-                        Message.raw(VEXA_REWARD + " vexa").color("#4ade80").bold(true),
-                        Message.raw(" as a reward!").color("#a3e635")
-                ));
-                LOGGER.atInfo().log("Awarded " + VEXA_REWARD + " vexa to " + playerId + " for Discord link");
-                try {
-                    io.hyvexa.core.analytics.AnalyticsStore.getInstance().logEvent(playerId, "discord_link", "{}");
-                } catch (Exception e) { /* silent */ }
-                return true;
-            }
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to mark vexa rewarded for " + playerId);
+        player.sendMessage(Message.join(
+                Message.raw("Discord linked! You received ").color("#a3e635"),
+                Message.raw(VEXA_REWARD + " vexa").color("#4ade80").bold(true),
+                Message.raw(" as a reward!").color("#a3e635")
+        ));
+        LOGGER.atInfo().log("Awarded " + VEXA_REWARD + " vexa to " + playerId + " for Discord link");
+        try {
+            io.hyvexa.core.analytics.AnalyticsStore.getInstance().logEvent(playerId, "discord_link", "{}");
+        } catch (Exception e) {
+            LOGGER.atWarning().withCause(e).log("Failed to log discord_link analytics event for " + playerId);
         }
-        return false;
+        return true;
     }
 
     /**
@@ -276,6 +275,13 @@ public class DiscordLinkStore {
         } catch (SQLException e) {
             LOGGER.atWarning().withCause(e).log("Failed to migrate discord_links reward column");
         }
+    }
+
+    /**
+     * Check if a SQLException indicates a duplicate column (MySQL error 1060, SQL state 42S21).
+     */
+    private static boolean isDuplicateColumn(SQLException e) {
+        return e.getErrorCode() == 1060 || "42S21".equals(e.getSQLState());
     }
 
     private boolean columnExists(Connection conn, String tableName, String columnName) throws SQLException {

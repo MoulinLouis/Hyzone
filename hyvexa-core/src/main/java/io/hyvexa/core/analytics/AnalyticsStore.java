@@ -1,5 +1,9 @@
 package io.hyvexa.core.analytics;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonSyntaxException;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.HytaleServer;
 import io.hyvexa.core.db.DatabaseManager;
@@ -25,6 +29,7 @@ public class AnalyticsStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final AnalyticsStore INSTANCE = new AnalyticsStore();
+    private static final Gson GSON = new Gson();
 
     private AnalyticsStore() {
     }
@@ -183,11 +188,21 @@ public class AnalyticsStore {
                     dayStartMs, dayEndMs);
 
             // New players: player_join with is_new=true
-            int newPlayers = queryIntScalar(conn,
-                    "SELECT COUNT(*) FROM analytics_events "
-                    + "WHERE event_type = 'player_join' AND timestamp_ms >= ? AND timestamp_ms < ? "
-                    + "AND data_json LIKE '%\"is_new\":true%'",
-                    dayStartMs, dayEndMs);
+            int newPlayers = 0;
+            try (PreparedStatement npStmt = conn.prepareStatement(
+                    "SELECT data_json FROM analytics_events "
+                    + "WHERE event_type = 'player_join' AND timestamp_ms >= ? AND timestamp_ms < ?")) {
+                DatabaseManager.applyQueryTimeout(npStmt);
+                npStmt.setLong(1, dayStartMs);
+                npStmt.setLong(2, dayEndMs);
+                try (ResultSet npRs = npStmt.executeQuery()) {
+                    while (npRs.next()) {
+                        if (getBooleanFromJson(npRs.getString("data_json"), "is_new")) {
+                            newPlayers++;
+                        }
+                    }
+                }
+            }
 
             // Session stats from player_leave events
             long totalSessionMs = 0;
@@ -212,16 +227,25 @@ public class AnalyticsStore {
             long avgSessionMs = totalSessions > 0 ? totalSessionMs / totalSessions : 0;
 
             // Mode split from mode_switch events
-            int parkourSwitches = queryIntScalar(conn,
-                    "SELECT COUNT(*) FROM analytics_events "
-                    + "WHERE event_type = 'mode_switch' AND timestamp_ms >= ? AND timestamp_ms < ? "
-                    + "AND data_json LIKE '%\"to\":\"parkour\"%'",
-                    dayStartMs, dayEndMs);
-            int ascendSwitches = queryIntScalar(conn,
-                    "SELECT COUNT(*) FROM analytics_events "
-                    + "WHERE event_type = 'mode_switch' AND timestamp_ms >= ? AND timestamp_ms < ? "
-                    + "AND data_json LIKE '%\"to\":\"ascend\"%'",
-                    dayStartMs, dayEndMs);
+            int parkourSwitches = 0;
+            int ascendSwitches = 0;
+            try (PreparedStatement msStmt = conn.prepareStatement(
+                    "SELECT data_json FROM analytics_events "
+                    + "WHERE event_type = 'mode_switch' AND timestamp_ms >= ? AND timestamp_ms < ?")) {
+                DatabaseManager.applyQueryTimeout(msStmt);
+                msStmt.setLong(1, dayStartMs);
+                msStmt.setLong(2, dayEndMs);
+                try (ResultSet msRs = msStmt.executeQuery()) {
+                    while (msRs.next()) {
+                        String toMode = extractStringFromJson(msRs.getString("data_json"), "to");
+                        if ("parkour".equals(toMode)) {
+                            parkourSwitches++;
+                        } else if ("ascend".equals(toMode)) {
+                            ascendSwitches++;
+                        }
+                    }
+                }
+            }
             int totalSwitches = parkourSwitches + ascendSwitches;
             float parkourPct = totalSwitches > 0 ? (float) parkourSwitches / totalSwitches * 100f : 0f;
             float ascendPct = totalSwitches > 0 ? (float) ascendSwitches / totalSwitches * 100f : 0f;
@@ -269,7 +293,7 @@ public class AnalyticsStore {
         if (!DatabaseManager.getInstance().isInitialized()) {
             return results;
         }
-        LocalDate cutoff = LocalDate.now().minusDays(days);
+        LocalDate cutoff = LocalDate.now(ZoneOffset.UTC).minusDays(days);
         String sql = "SELECT date, dau, new_players, avg_session_ms, total_sessions, "
                 + "parkour_time_pct, ascend_time_pct, peak_concurrent "
                 + "FROM analytics_daily WHERE date >= ? ORDER BY date DESC";
@@ -305,7 +329,7 @@ public class AnalyticsStore {
         if (!DatabaseManager.getInstance().isInitialized()) {
             return 0f;
         }
-        LocalDate cohortDate = LocalDate.now().minusDays(daysAgo);
+        LocalDate cohortDate = LocalDate.now(ZoneOffset.UTC).minusDays(daysAgo);
         long cohortStartMs = cohortDate.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli();
         long cohortEndMs = cohortDate.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli();
         long checkEndMs = cohortDate.plusDays(checkDays + 1).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli();
@@ -341,7 +365,7 @@ public class AnalyticsStore {
         if (!DatabaseManager.getInstance().isInitialized()) {
             return;
         }
-        long cutoffMs = LocalDate.now().minusDays(retentionDays)
+        long cutoffMs = LocalDate.now(ZoneOffset.UTC).minusDays(retentionDays)
                 .atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli();
         HytaleServer.SCHEDULED_EXECUTOR.execute(() -> {
             String sql = "DELETE FROM analytics_events WHERE timestamp_ms < ?";
@@ -473,7 +497,7 @@ public class AnalyticsStore {
     }
 
     private long dayStartMs(int daysAgo) {
-        return LocalDate.now().minusDays(daysAgo)
+        return LocalDate.now(ZoneOffset.UTC).minusDays(daysAgo)
                 .atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli();
     }
 
@@ -505,49 +529,63 @@ public class AnalyticsStore {
     }
 
     /**
-     * Extract a long value from a simple JSON string like {"key":123}.
+     * Parse JSON string into a JsonObject, returning null for malformed input.
+     */
+    private JsonObject parseJson(String json) {
+        if (json == null || json.isEmpty()) {
+            return null;
+        }
+        try {
+            JsonElement element = GSON.fromJson(json, JsonElement.class);
+            return element != null && element.isJsonObject() ? element.getAsJsonObject() : null;
+        } catch (JsonSyntaxException e) {
+            return null;
+        }
+    }
+
+    /**
+     * Extract a long value from a JSON string like {"key":123}. Returns 0 for missing/malformed.
      */
     private long extractLongFromJson(String json, String key) {
-        if (json == null) {
-            return 0;
-        }
-        String search = "\"" + key + "\":";
-        int idx = json.indexOf(search);
-        if (idx < 0) {
-            return 0;
-        }
-        int start = idx + search.length();
-        int end = start;
-        while (end < json.length() && (Character.isDigit(json.charAt(end)) || json.charAt(end) == '-')) {
-            end++;
-        }
-        if (end == start) {
+        JsonObject obj = parseJson(json);
+        if (obj == null || !obj.has(key)) {
             return 0;
         }
         try {
-            return Long.parseLong(json.substring(start, end));
-        } catch (NumberFormatException e) {
+            return obj.get(key).getAsLong();
+        } catch (NumberFormatException | ClassCastException | IllegalStateException | UnsupportedOperationException e) {
             return 0;
         }
     }
 
     /**
-     * Extract a string value from a simple JSON string like {"key":"value"}.
+     * Extract a string value from a JSON string like {"key":"value"}. Returns null for missing/malformed.
      */
     private String extractStringFromJson(String json, String key) {
-        if (json == null) {
+        JsonObject obj = parseJson(json);
+        if (obj == null || !obj.has(key)) {
             return null;
         }
-        String search = "\"" + key + "\":\"";
-        int idx = json.indexOf(search);
-        if (idx < 0) {
+        try {
+            JsonElement el = obj.get(key);
+            return el.isJsonNull() ? null : el.getAsString();
+        } catch (ClassCastException | IllegalStateException | UnsupportedOperationException e) {
             return null;
         }
-        int start = idx + search.length();
-        int end = json.indexOf('"', start);
-        if (end < 0) {
-            return null;
+    }
+
+    /**
+     * Extract a boolean value from a JSON string like {"key":true}. Returns false for missing/malformed.
+     */
+    private boolean getBooleanFromJson(String json, String key) {
+        JsonObject obj = parseJson(json);
+        if (obj == null || !obj.has(key)) {
+            return false;
         }
-        return json.substring(start, end);
+        try {
+            return obj.get(key).getAsBoolean();
+        } catch (ClassCastException | IllegalStateException | UnsupportedOperationException e) {
+            return false;
+        }
     }
 }

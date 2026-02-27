@@ -1,6 +1,7 @@
 package io.hyvexa.common.ghost;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class GhostRecording {
@@ -46,7 +47,7 @@ public class GhostRecording {
     }
 
     public List<GhostSample> getSamples() {
-        return samples;
+        return Collections.unmodifiableList(samples);
     }
 
     public long getCompletionTimeMs() {

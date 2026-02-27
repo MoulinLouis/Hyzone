@@ -105,6 +105,11 @@ public class CosmeticStore {
 
     public void equipCosmetic(UUID playerId, String cosmeticId) {
         if (playerId == null || cosmeticId == null) return;
+        // Guard: player must own the cosmetic before equipping
+        if (!ownsCosmetic(playerId, cosmeticId)) {
+            LOGGER.atWarning().log("Player " + playerId + " tried to equip unowned cosmetic: " + cosmeticId);
+            return;
+        }
         // Unequip previous in DB
         String prev = getEquippedCosmeticId(playerId);
         if (prev != null) {

@@ -59,11 +59,14 @@ public class PurgeSkinStore {
     }
 
     public boolean ownsSkin(UUID playerId, String weaponId, String skinId) {
+        if (weaponId == null || weaponId.isBlank() || skinId == null || skinId.isBlank()) {
+            return false;
+        }
         return getOwnedSkins(playerId, weaponId).contains(skinId);
     }
 
     public List<String> getOwnedSkins(UUID playerId, String weaponId) {
-        if (playerId == null) {
+        if (playerId == null || weaponId == null || weaponId.isBlank()) {
             return List.of();
         }
         ConcurrentHashMap<String, List<String>> playerOwned = ownedCache.get(playerId);
@@ -79,7 +82,7 @@ public class PurgeSkinStore {
     }
 
     public String getSelectedSkin(UUID playerId, String weaponId) {
-        if (playerId == null) {
+        if (playerId == null || weaponId == null || weaponId.isBlank()) {
             return null;
         }
         ConcurrentHashMap<String, String> playerSelected = selectedCache.get(playerId);
@@ -95,6 +98,9 @@ public class PurgeSkinStore {
     }
 
     public synchronized PurchaseResult purchaseSkin(UUID playerId, String weaponId, String skinId) {
+        if (playerId == null || weaponId == null || weaponId.isBlank() || skinId == null || skinId.isBlank()) {
+            return PurchaseResult.NOT_ENOUGH_VEXA;
+        }
         if (ownsSkin(playerId, weaponId, skinId)) {
             return PurchaseResult.ALREADY_OWNED;
         }
@@ -118,7 +124,11 @@ public class PurgeSkinStore {
     }
 
     public void selectSkin(UUID playerId, String weaponId, String skinId) {
-        if (playerId == null) {
+        if (playerId == null || weaponId == null || weaponId.isBlank() || skinId == null || skinId.isBlank()) {
+            return;
+        }
+        // Verify the skin exists in the registry and the player owns it
+        if (PurgeSkinRegistry.getSkin(weaponId, skinId) == null || !ownsSkin(playerId, weaponId, skinId)) {
             return;
         }
         persistSelection(playerId, weaponId, skinId);
@@ -127,7 +137,7 @@ public class PurgeSkinStore {
     }
 
     public void deselectSkin(UUID playerId, String weaponId) {
-        if (playerId == null) {
+        if (playerId == null || weaponId == null || weaponId.isBlank()) {
             return;
         }
         persistDeselection(playerId, weaponId);
