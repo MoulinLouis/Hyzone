@@ -47,22 +47,22 @@ public class MedalStore {
              PreparedStatement stmt = conn.prepareStatement(createSql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             stmt.executeUpdate();
-            // Migrate old AUTHOR medal values to EMERALD
-            try (PreparedStatement migStmt = conn.prepareStatement(
-                    "UPDATE player_medals SET medal = 'EMERALD' WHERE medal = 'AUTHOR'")) {
-                DatabaseManager.applyQueryTimeout(migStmt);
-                int migrated = migStmt.executeUpdate();
-                if (migrated > 0) {
-                    LOGGER.atInfo().log("Migrated " + migrated + " AUTHOR medals to EMERALD");
-                }
-            }
-            // Widen medal column to fit EMERALD/INSANE (8 chars)
+            // Widen medal column to fit EMERALD/INSANE before any data migrations
             try (PreparedStatement alterStmt = conn.prepareStatement(
                     "ALTER TABLE player_medals MODIFY COLUMN medal VARCHAR(8) NOT NULL")) {
                 DatabaseManager.applyQueryTimeout(alterStmt);
                 alterStmt.executeUpdate();
             } catch (SQLException ignored) {
                 // May fail if already widened
+            }
+            // Migrate old AUTHOR/PLATINUM medal values to EMERALD
+            try (PreparedStatement migStmt = conn.prepareStatement(
+                    "UPDATE player_medals SET medal = 'EMERALD' WHERE medal IN ('AUTHOR', 'PLATINUM', 'PLATIN', 'EMERAL')")) {
+                DatabaseManager.applyQueryTimeout(migStmt);
+                int migrated = migStmt.executeUpdate();
+                if (migrated > 0) {
+                    LOGGER.atInfo().log("Migrated " + migrated + " AUTHOR/PLATINUM medals to EMERALD");
+                }
             }
             LOGGER.atInfo().log("MedalStore initialized (player_medals table ensured)");
         } catch (SQLException e) {
