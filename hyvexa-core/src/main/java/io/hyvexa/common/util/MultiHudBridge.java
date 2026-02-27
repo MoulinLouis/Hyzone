@@ -142,6 +142,7 @@ public final class MultiHudBridge {
      * With MultipleHUD, {@code add()} already builds and sends the HUD to the client.
      */
     public static void showIfNeeded(CustomUIHud hud) {
+        init();
         if (!available) {
             hud.show();
         }

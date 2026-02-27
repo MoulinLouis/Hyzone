@@ -25,12 +25,12 @@ public class PaginationState {
 
     public PageSlice slice(int totalEntries) {
         int totalPages = Math.max(1, (int) Math.ceil(totalEntries / (double) pageSize));
-        int clampedIndex = pageIndex;
-        if (clampedIndex < 0) {
-            clampedIndex = 0;
-        } else if (clampedIndex >= totalPages) {
-            clampedIndex = totalPages - 1;
+        if (pageIndex < 0) {
+            pageIndex = 0;
+        } else if (pageIndex >= totalPages) {
+            pageIndex = totalPages - 1;
         }
+        int clampedIndex = pageIndex;
         int startIndex = clampedIndex * pageSize;
         int endIndex = Math.min(startIndex + pageSize, totalEntries);
         return new PageSlice(startIndex, endIndex, clampedIndex, totalPages);

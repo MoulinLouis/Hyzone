@@ -24,8 +24,8 @@ public class WardrobeBridge {
     /** All wardrobe cosmetics available for purchase. */
     private static final List<WardrobeCosmeticDef> COSMETICS = List.of(
             // Badges
-            wd("Badge_Hyvexa", "Hyvexa Badge", "hyvexa.cosmetic.badge_hyvexa", "Badge", "BadgeHyvexa", "../../../Icons/Wardrobe/Cosmetics/Badges/Hyvexa.png"),
-            wd("Badge_Pride", "Pride Badge", "hyvexa.cosmetic.violet.badges.badge_pride", "Badge", null, "Icons/Wardrobe/Cosmetics/Badges/Pride.png"), // test: absolute asset path
+            wd("Badge_Hyvexa", "Hyvexa Badge", "hyvexa.cosmetic.badge_hyvexa", "Badge", "BadgeHyvexa", "Icons/Wardrobe/Cosmetics/Badges/Hyvexa.png"),
+            wd("Badge_Pride", "Pride Badge", "hyvexa.cosmetic.violet.badges.badge_pride", "Badge", null, "Icons/Wardrobe/Cosmetics/Badges/Pride.png"),
 
             // Capes
             wd("Cloak_Chippy", "Chippy Cloak", "hyvexa.cosmetic.violet.capes.cloak_chippy", "Cape", null, "Icons/Wardrobe/Cosmetics/Capes/Cloak_Chippy.png"),
@@ -240,7 +240,9 @@ public class WardrobeBridge {
             return "Not enough " + currency + "! You need " + price + " but have " + balance + ".";
         }
 
-        CurrencyBridge.deduct(currency, playerId, price);
+        if (!CurrencyBridge.deduct(currency, playerId, price)) {
+            return "Not enough " + currency + "! You need " + price + " but have " + CurrencyBridge.getBalance(currency, playerId) + ".";
+        }
         CosmeticStore.getInstance().purchaseCosmetic(playerId, cosmeticId);
         grantPermission(playerId, def.permissionNode());
 

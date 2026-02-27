@@ -197,6 +197,10 @@ public abstract class AbstractGhostStore<TSample, TRecording> {
              DataInputStream dataIn = new DataInputStream(gzipIn)) {
 
             int sampleCount = dataIn.readInt();
+            if (sampleCount < 0 || sampleCount > MAX_SAMPLES) {
+                throw new IllegalArgumentException(
+                        "Invalid sample count: " + sampleCount + " (max " + MAX_SAMPLES + ")");
+            }
             List<TSample> samples = new ArrayList<>(sampleCount);
 
             for (int i = 0; i < sampleCount; i++) {

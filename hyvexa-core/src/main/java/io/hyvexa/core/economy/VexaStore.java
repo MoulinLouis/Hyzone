@@ -102,10 +102,7 @@ public class VexaStore {
         if (playerId == null) {
             return 0;
         }
-        long current = getVexa(playerId);
-        long newTotal = current + amount;
-        setVexa(playerId, newTotal);
-        return newTotal;
+        return modifyVexa(playerId, current -> current + amount);
     }
 
     /**
@@ -115,10 +112,23 @@ public class VexaStore {
         if (playerId == null) {
             return 0;
         }
-        long current = getVexa(playerId);
-        long newTotal = Math.max(0, current - amount);
-        setVexa(playerId, newTotal);
-        return newTotal;
+        return modifyVexa(playerId, current -> Math.max(0, current - amount));
+    }
+
+    /**
+     * Atomically modify a player's vexa balance. The compute function receives the current
+     * balance and returns the desired new balance. Persists the result to the database.
+     */
+    private long modifyVexa(UUID playerId, java.util.function.LongUnaryOperator compute) {
+        long[] result = new long[1];
+        cache.compute(playerId, (uuid, cached) -> {
+            long current = (cached != null && !cached.isStale()) ? cached.value : loadFromDatabase(uuid);
+            long newTotal = Math.max(0, compute.applyAsLong(current));
+            result[0] = newTotal;
+            return new CachedBalance(newTotal);
+        });
+        persistToDatabase(playerId, result[0]);
+        return result[0];
     }
 
     /**

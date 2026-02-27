@@ -52,6 +52,8 @@ public class CosmeticShopConfigStore {
 
     private void loadAll() {
         if (!DatabaseManager.getInstance().isInitialized()) return;
+        // Clear stale entries so removed DB rows don't linger in cache
+        configs.clear();
         String sql = "SELECT cosmetic_id, available, price, currency FROM cosmetic_shop_config";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {

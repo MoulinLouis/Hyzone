@@ -165,9 +165,10 @@ public class AscendWhitelistManager {
                 LOGGER.atInfo().log("Loaded " + whitelistedPlayers.size() + " whitelisted players (enabled: " + enabled + ")");
             }
         } catch (IOException | com.google.gson.JsonSyntaxException e) {
-            LOGGER.atSevere().withCause(e).log("Failed to load whitelist file, resetting");
+            LOGGER.atSevere().withCause(e).log("Failed to load whitelist file, resetting to safe mode (access restricted to OPs only)");
             whitelistedPlayers.clear();
-            enabled = true;
+            enabled = false;
+            publicMode = false;
             save();
         }
     }

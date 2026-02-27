@@ -1,6 +1,7 @@
 package io.hyvexa.common.visibility;
 
 import javax.annotation.Nonnull;
+import java.util.Collections;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -40,7 +41,7 @@ public final class EntityVisibilityManager {
         if (hidden == null) {
             return Set.of();
         }
-        return hidden;
+        return Collections.unmodifiableSet(hidden);
     }
 
     public void clearHidden(@Nonnull UUID viewerId) {
