@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Changed
+- **Parkour: Ghost orphan cleanup hardening** - Parkour PB ghosts now persist failed despawns for deferred cleanup and next-start removal, preventing frozen Kweebec ghosts from lingering in the world.
 - **Parkour: Global leaderboard ranked by medal score** - Global leaderboard now ranks players by medal points (Bronze=1, Silver=2, Gold=3, Author=4) instead of map completions. Each row shows individual medal counts and total score.
 - **Wardrobe: Centralized cosmetics hub** - Moved all 3 shop tabs (Cosmetics, Weapon Skins, Wardrobe) into wardrobe module so `/shop` shows them all. CosmeticManager and PurgeSkin data classes moved to core for cross-module access.
 - **Trails: movement-gated emission** - Active trails now emit particles only while the player is moving, so equipped trails stay visually off when idle.
