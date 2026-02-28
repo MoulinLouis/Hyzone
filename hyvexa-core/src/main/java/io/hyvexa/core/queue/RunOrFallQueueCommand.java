@@ -12,6 +12,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.util.CommandUtils;
+import io.hyvexa.common.util.ModeGate;
 
 import javax.annotation.Nonnull;
 import java.util.UUID;
@@ -60,6 +61,12 @@ public class RunOrFallQueueCommand extends AbstractAsyncCommand {
         }
 
         UUID playerId = playerRef.getUuid();
+
+        if (ModeGate.isRunOrFallWorld(world)) {
+            player.sendMessage(Message.raw(PREFIX + "You are already in RunOrFall. Use lobby items to join or leave."));
+            return;
+        }
+
         String worldName = world.getName() != null ? world.getName() : "unknown";
         RunOrFallQueueStore queueStore = RunOrFallQueueStore.getInstance();
 
