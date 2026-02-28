@@ -220,7 +220,7 @@ $C.@PageOverlay {
           }
 
           Group #RunOrFallSection {
-            Anchor: (Width: 320, Height: 200);
+            Anchor: (Width: 320, Height: 164);
             LayoutMode: Top;
 
             Group #RunOrFallCard {
@@ -260,52 +260,6 @@ $C.@PageOverlay {
                   Default: (Background: #ffffff(0.0)),
                   Hovered: (Background: #ffffff(0.06)),
                   Pressed: (Background: #ffffff(0.03)),
-                  Sounds: $C.@ButtonSounds,
-                );
-              }
-            }
-
-            Group {
-              Anchor: (Left: 0, Right: 0, Top: 2, Height: 34);
-
-              TextButton #QueueRofButton {
-                Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-                Visible: true;
-                Text: "QUEUE FOR RUNORFALL";
-                Style: TextButtonStyle(
-                  Default: (
-                    Background: #f59e0b(0.15),
-                    LabelStyle: (FontSize: 13, TextColor: #f59e0b, HorizontalAlignment: Center, VerticalAlignment: Center)
-                  ),
-                  Hovered: (
-                    Background: #f59e0b(0.25),
-                    LabelStyle: (FontSize: 13, TextColor: #fbbf24, HorizontalAlignment: Center, VerticalAlignment: Center)
-                  ),
-                  Pressed: (
-                    Background: #f59e0b(0.1),
-                    LabelStyle: (FontSize: 13, TextColor: #f59e0b, HorizontalAlignment: Center, VerticalAlignment: Center)
-                  ),
-                  Sounds: $C.@ButtonSounds,
-                );
-              }
-
-              TextButton #LeaveQueueRofButton {
-                Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-                Visible: false;
-                Text: "Leave Queue";
-                Style: TextButtonStyle(
-                  Default: (
-                    Background: #ef4444(0.15),
-                    LabelStyle: (FontSize: 11, TextColor: #ef4444, HorizontalAlignment: Center, VerticalAlignment: Center)
-                  ),
-                  Hovered: (
-                    Background: #ef4444(0.25),
-                    LabelStyle: (FontSize: 11, TextColor: #f87171, HorizontalAlignment: Center, VerticalAlignment: Center)
-                  ),
-                  Pressed: (
-                    Background: #ef4444(0.1),
-                    LabelStyle: (FontSize: 11, TextColor: #ef4444, HorizontalAlignment: Center, VerticalAlignment: Center)
-                  ),
                   Sounds: $C.@ButtonSounds,
                 );
               }
