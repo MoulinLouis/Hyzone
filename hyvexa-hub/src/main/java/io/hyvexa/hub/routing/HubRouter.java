@@ -28,14 +28,10 @@ public class HubRouter {
 
     public void openMenuOrRoute(Ref<EntityStore> ref, Store<EntityStore> store,
                                 PlayerRef playerRef, World world) {
-        if (world != null && WorldConstants.WORLD_HUB.equalsIgnoreCase(world.getName())) {
-            Player player = store.getComponent(ref, Player.getComponentType());
-            if (player != null) {
-                player.getPageManager().openCustomPage(ref, store, new HubMenuPage(playerRef, this));
-            }
-            return;
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player != null) {
+            player.getPageManager().openCustomPage(ref, store, new HubMenuPage(playerRef, this));
         }
-        routeToHub(playerRef);
     }
 
     public void routeToHub(PlayerRef playerRef) {
