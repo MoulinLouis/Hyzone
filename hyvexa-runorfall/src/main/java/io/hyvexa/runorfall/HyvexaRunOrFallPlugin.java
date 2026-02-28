@@ -19,6 +19,7 @@ import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.WorldConstants;
+import io.hyvexa.common.util.InventoryUtils;
 import io.hyvexa.common.util.ModeGate;
 import io.hyvexa.common.util.MultiHudBridge;
 import io.hyvexa.core.db.DatabaseManager;
@@ -142,6 +143,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
             if (player == null) {
                 return;
             }
+            InventoryUtils.clearAllContainers(player);
             attachPreferredRunOrFallHud(playerRef, player);
             refreshRunOrFallHotbar(playerRef.getUuid());
         });
@@ -185,6 +187,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
                 if (ref != null && ref.isValid()) {
                     Player player = ref.getStore().getComponent(ref, Player.getComponentType());
                     if (player != null) {
+                        InventoryUtils.clearAllContainers(player);
                         attachPreferredRunOrFallHud(playerRef, player);
                     }
                 }

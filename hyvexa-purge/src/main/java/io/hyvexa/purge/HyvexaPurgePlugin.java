@@ -431,33 +431,11 @@ public class HyvexaPurgePlugin extends JavaPlugin {
         if (inventory == null || inventory.getHotbar() == null) {
             return;
         }
-        ItemStack blueOrb = inventory.getHotbar().getItemStack(SLOT_ORB_BLUE);
-        ItemStack orangeOrb = inventory.getHotbar().getItemStack(SLOT_ORB_ORANGE);
-        ItemStack shopItem = inventory.getHotbar().getItemStack(SLOT_SHOP);
-        ItemStack serverSelector = inventory.getHotbar().getItemStack(SLOT_SERVER_SELECTOR);
-        boolean hasBlueOrb = hasExpectedItem(blueOrb, ITEM_ORB_BLUE);
-        boolean hasOrangeOrb = hasExpectedItem(orangeOrb, ITEM_ORB_ORANGE);
-        boolean hasShop = hasExpectedItem(shopItem, WorldConstants.ITEM_SHOP);
-        boolean hasServerSelector = hasExpectedItem(serverSelector, WorldConstants.ITEM_SERVER_SELECTOR);
-        if (hasBlueOrb && hasOrangeOrb && hasShop && hasServerSelector) {
-            return;
-        }
-        if (!hasBlueOrb) {
-            inventory.getHotbar().setItemStackForSlot(SLOT_ORB_BLUE, new ItemStack(ITEM_ORB_BLUE, 1), false);
-        }
-        if (!hasOrangeOrb) {
-            inventory.getHotbar().setItemStackForSlot(SLOT_ORB_ORANGE, new ItemStack(ITEM_ORB_ORANGE, 1), false);
-        }
-        if (!hasShop) {
-            inventory.getHotbar().setItemStackForSlot(SLOT_SHOP, new ItemStack(WorldConstants.ITEM_SHOP, 1), false);
-        }
-        if (!hasServerSelector) {
-            giveServerSelector(player);
-        }
-    }
-
-    private boolean hasExpectedItem(ItemStack stack, String itemId) {
-        return stack != null && !stack.isEmpty() && itemId != null && itemId.equals(stack.getItemId());
+        InventoryUtils.clearAllContainers(player);
+        inventory.getHotbar().setItemStackForSlot(SLOT_ORB_BLUE, new ItemStack(ITEM_ORB_BLUE, 1), false);
+        inventory.getHotbar().setItemStackForSlot(SLOT_ORB_ORANGE, new ItemStack(ITEM_ORB_ORANGE, 1), false);
+        inventory.getHotbar().setItemStackForSlot(SLOT_SHOP, new ItemStack(WorldConstants.ITEM_SHOP, 1), false);
+        giveServerSelector(player);
     }
 
     private void registerPurgeDamageModifierSystem() {
