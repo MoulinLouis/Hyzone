@@ -29,6 +29,9 @@ import io.hyvexa.runorfall.data.RunOrFallPlatform;
 import io.hyvexa.runorfall.util.RunOrFallFeatherBridge;
 import io.hyvexa.runorfall.util.RunOrFallUtils;
 
+import com.hypixel.hytale.protocol.packets.camera.SetFlyCameraMode;
+import com.hypixel.hytale.server.core.io.PacketHandler;
+
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
@@ -81,6 +84,7 @@ public class RunOrFallGameManager {
     private final RunOrFallStatsStore statsStore;
     private final Set<UUID> lobbyPlayers = ConcurrentHashMap.newKeySet();
     private final Set<UUID> alivePlayers = ConcurrentHashMap.newKeySet();
+    private final Set<UUID> spectatingPlayers = ConcurrentHashMap.newKeySet();
     private final Map<BlockKey, PendingBlock> pendingBlocks = new ConcurrentHashMap<>();
     private final PriorityQueue<PendingBlockQueueEntry> pendingBlockQueue =
             new PriorityQueue<>(Comparator.comparingLong(entry -> entry.nextAttemptAtMs));
@@ -293,6 +297,7 @@ public class RunOrFallGameManager {
         if (playerId == null) {
             return;
         }
+        disableSpectatorFly(playerId);
         PlayerRemovalResult result = removePlayerInternal(playerId);
         if (!result.wasInLobby() && !result.wasAlive()) {
             return;
@@ -367,6 +372,7 @@ public class RunOrFallGameManager {
         cancelCountdownTask();
         cancelGameTickTask();
         cancelAssemblingTask();
+        disableAllSpectatorFly();
         assemblingPlayerIds.clear();
         flushBrokenBlocksSave();
         World world = activeWorld;
@@ -434,6 +440,7 @@ public class RunOrFallGameManager {
     private PlayerRemovalResult removePlayerInternal(UUID playerId) {
         boolean wasInLobby = lobbyPlayers.remove(playerId);
         boolean wasAlive = alivePlayers.remove(playerId);
+        spectatingPlayers.remove(playerId);
         playerLastFootBlock.remove(playerId);
         nextAliveFeatherRewardAtMs.remove(playerId);
         int brokenBlocks = getRoundBrokenBlocksCount(playerId);
@@ -591,6 +598,7 @@ public class RunOrFallGameManager {
         int startingBlinkCharges = resolveBlinkStartCharges(config);
 
         resetBrokenBlocksForLobbyPlayers();
+        spectatingPlayers.clear();
 
         alivePlayers.clear();
         alivePlayers.addAll(onlinePlayers);
@@ -759,12 +767,43 @@ public class RunOrFallGameManager {
         refreshPlayerHotbar(playerId);
         updateBrokenBlocksHudForPlayer(playerId);
         updateBlinkChargesHudForPlayer(playerId);
-        sendToPlayer(playerId, "Eliminated: " + reason + ". You are now spectating from the lobby.");
+        sendToPlayer(playerId, "Eliminated: " + reason + ". Fly around to spectate!");
+        enableSpectatorFly(playerId);
         broadcastEliminationInternal(playerId, reason);
+    }
+
+    private void enableSpectatorFly(UUID playerId) {
+        PlayerRef playerRef = resolvePlayer(playerId);
+        if (playerRef == null) return;
+        PacketHandler packetHandler = playerRef.getPacketHandler();
+        if (packetHandler == null) return;
+        packetHandler.writeNoCache(new SetFlyCameraMode(true));
+        spectatingPlayers.add(playerId);
+    }
+
+    private void disableSpectatorFly(UUID playerId) {
+        if (!spectatingPlayers.remove(playerId)) return;
+        PlayerRef playerRef = resolvePlayer(playerId);
+        if (playerRef == null) return;
+        PacketHandler packetHandler = playerRef.getPacketHandler();
+        if (packetHandler == null) return;
+        packetHandler.writeNoCache(new SetFlyCameraMode(false));
+    }
+
+    private void disableAllSpectatorFly() {
+        for (UUID playerId : spectatingPlayers) {
+            PlayerRef playerRef = resolvePlayer(playerId);
+            if (playerRef == null) continue;
+            PacketHandler packetHandler = playerRef.getPacketHandler();
+            if (packetHandler == null) continue;
+            packetHandler.writeNoCache(new SetFlyCameraMode(false));
+        }
+        spectatingPlayers.clear();
     }
 
     private void endGameInternal(String reason) {
         cancelGameTickTask();
+        disableAllSpectatorFly();
         activeRoundConfig = null;
         restoreAllBlocksInternal();
         alivePlayers.clear();
