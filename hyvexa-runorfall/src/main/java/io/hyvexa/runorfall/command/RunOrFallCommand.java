@@ -18,6 +18,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.util.CommandUtils;
 import io.hyvexa.common.util.ModeGate;
 import io.hyvexa.common.util.PermissionUtils;
+import io.hyvexa.core.queue.RunOrFallQueueStore;
 import io.hyvexa.runorfall.data.BlockSelection;
 import io.hyvexa.runorfall.data.RunOrFallLocation;
 import io.hyvexa.runorfall.data.RunOrFallPlatform;
@@ -123,6 +124,14 @@ public class RunOrFallCommand extends AbstractAsyncCommand {
             case "map" -> handleMap(player, args);
             case "voidy" -> handleVoidY(player, args);
             case "breakdelay" -> handleBreakDelay(player, args);
+            case "queue" -> {
+                if (RunOrFallQueueStore.getInstance().isQueued(playerId)) {
+                    RunOrFallQueueStore.getInstance().dequeue(playerId);
+                    player.sendMessage(Message.raw(PREFIX + "Removed from RunOrFall queue."));
+                } else {
+                    gameManager.joinLobby(playerId, world);
+                }
+            }
             default -> sendUsage(player);
         }
     }

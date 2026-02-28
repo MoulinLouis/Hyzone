@@ -318,6 +318,7 @@ public class HyvexaPlugin extends JavaPlugin {
         this.getCommandRegistry().registerCommand(new VoteCommand());
         this.getCommandRegistry().registerCommand(new CreditsCommand());
         this.getCommandRegistry().registerCommand(new SpectatorCommand());
+        this.getCommandRegistry().registerCommand(new io.hyvexa.core.queue.RunOrFallQueueCommand());
 
 
         registerNoDropSystem();
