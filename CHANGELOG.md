@@ -74,6 +74,7 @@
 - **Ascend: Summit XP softcap at level 1000** - Removed hard cap at level 1000 (unlimited levels). XP cost per level rises from level^2 to level^3 above 1000 — same volt reaches fewer levels (old 5000 -> ~3591).
 
 ### Fixed
+- **Wardrobe: Shop review cleanup pass** - Centralized wardrobe/effects purchase result handling, analytics, and asset-path normalization; cleaned disconnect eviction and shop message consistency across tabs.
 - **Core: Tick-path performance hardening** - Reduced avoidable HUD/login/trail/update overhead across Parkour, Ascend, and RunOrFall to cut lag spikes under load.
 - **Hub/Wardrobe: Classpath asset-pack conflict** - Server launch is now decoupled to `hyvexa-launch`, and `hyvexa-hub` is packaged again as a normal plugin asset-pack (`IncludesAssetPack` from `includes_pack`), so Hub UI/items ship in `HyvexaHub-*.jar` without separate `HubAssets` staging.
 - **Purge/Hub/RunOrFall: Intermittent HUD selector crashes on login/transfer** - Reworked HUD lifecycle guards (ready delay refresh + stale/world validation + disconnect HUD cache eviction + deferred first updates) to prevent random `Selected element in CustomUI command was not found` disconnects.

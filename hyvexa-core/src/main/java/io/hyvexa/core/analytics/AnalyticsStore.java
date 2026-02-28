@@ -119,6 +119,21 @@ public class AnalyticsStore {
         HytaleServer.SCHEDULED_EXECUTOR.execute(() -> insertEvent(playerId, eventType, dataJson, timestampMs));
     }
 
+    public void logPurchase(UUID playerId, String itemId, long amount, String currency, String source) {
+        JsonObject data = new JsonObject();
+        data.addProperty("amount", amount);
+        if (itemId != null) {
+            data.addProperty("item", itemId);
+        }
+        if (currency != null) {
+            data.addProperty("currency", currency);
+        }
+        if (source != null) {
+            data.addProperty("source", source);
+        }
+        logEvent(playerId, "purchase", GSON.toJson(data));
+    }
+
     private void insertEvent(UUID playerId, String eventType, String dataJson, long timestampMs) {
         String sql = "INSERT INTO analytics_events (timestamp_ms, player_uuid, event_type, data_json) "
                 + "VALUES (?, ?, ?, ?)";

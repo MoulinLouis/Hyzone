@@ -26,7 +26,6 @@ import com.hypixel.hytale.server.core.command.system.CommandManager;
 import javax.annotation.Nonnull;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 public class ShopPage extends InteractiveCustomUIPage<ShopPage.ShopEventData> {
 
@@ -60,19 +59,7 @@ public class ShopPage extends InteractiveCustomUIPage<ShopPage.ShopEventData> {
         long feathers = FeatherStore.getInstance().getFeathers(playerId);
         cmd.set("#FeatherBalance.Text", String.valueOf(feathers));
 
-        // Close button
-        evt.addEventBinding(CustomUIEventBindingType.Activating, "#CloseButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE), false);
-
-        // Confirm/Cancel buttons
-        evt.addEventBinding(CustomUIEventBindingType.Activating, "#ShopConfirmButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CONFIRM), false);
-        evt.addEventBinding(CustomUIEventBindingType.Activating, "#ShopCancelButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CANCEL), false);
-
-        // Vexa packs button
-        evt.addEventBinding(CustomUIEventBindingType.Activating, "#VexaPacksButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_VEXA_PACKS), false);
+        registerBaseEventBindings(evt);
 
         List<ShopTab> tabs = getVisibleTabs();
         if (tabs.isEmpty()) return;
@@ -239,15 +226,7 @@ public class ShopPage extends InteractiveCustomUIPage<ShopPage.ShopEventData> {
         cmd.clear("#BottomTabBar");
         cmd.clear("#TabContent");
 
-        // Close button
-        evt.addEventBinding(CustomUIEventBindingType.Activating, "#CloseButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE), false);
-        evt.addEventBinding(CustomUIEventBindingType.Activating, "#ShopConfirmButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CONFIRM), false);
-        evt.addEventBinding(CustomUIEventBindingType.Activating, "#ShopCancelButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CANCEL), false);
-        evt.addEventBinding(CustomUIEventBindingType.Activating, "#VexaPacksButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_VEXA_PACKS), false);
+        registerBaseEventBindings(evt);
 
         List<ShopTab> tabs = getVisibleTabs();
         ShopTab activeTab = resolveActiveTab(tabs);
@@ -323,10 +302,21 @@ public class ShopPage extends InteractiveCustomUIPage<ShopPage.ShopEventData> {
         this.sendUpdate(cmd, new UIEventBuilder(), false);
     }
 
+    private void registerBaseEventBindings(UIEventBuilder evt) {
+        evt.addEventBinding(CustomUIEventBindingType.Activating, "#CloseButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE), false);
+        evt.addEventBinding(CustomUIEventBindingType.Activating, "#ShopConfirmButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CONFIRM), false);
+        evt.addEventBinding(CustomUIEventBindingType.Activating, "#ShopCancelButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CANCEL), false);
+        evt.addEventBinding(CustomUIEventBindingType.Activating, "#VexaPacksButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_VEXA_PACKS), false);
+    }
+
     private List<ShopTab> getVisibleTabs() {
         return ShopTabRegistry.getTabs().stream()
                 .filter(tab -> tab.isVisibleTo(playerId))
-                .collect(Collectors.toList());
+                .toList();
     }
 
     private ShopTab getVisibleTab(String tabId) {

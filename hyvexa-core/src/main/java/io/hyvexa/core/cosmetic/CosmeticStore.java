@@ -1,7 +1,9 @@
 package io.hyvexa.core.cosmetic;
 
 import com.hypixel.hytale.logger.HytaleLogger;
+import io.hyvexa.core.analytics.AnalyticsStore;
 import io.hyvexa.core.db.DatabaseManager;
+import io.hyvexa.core.economy.CurrencyBridge;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -34,6 +36,9 @@ public class CosmeticStore {
 
     public static CosmeticStore getInstance() {
         return INSTANCE;
+    }
+
+    public record PurchaseResult(boolean success, String message) {
     }
 
     public void initialize() {
@@ -101,6 +106,35 @@ public class CosmeticStore {
         }
         // Persist
         persistPurchase(playerId, cosmeticId);
+    }
+
+    public synchronized PurchaseResult purchaseShopCosmetic(UUID playerId, CosmeticDefinition def) {
+        if (playerId == null || def == null) {
+            return new PurchaseResult(false, "Unknown cosmetic.");
+        }
+
+        String cosmeticId = def.getId();
+        if (ownsCosmetic(playerId, cosmeticId)) {
+            return new PurchaseResult(false, "You already own " + def.getDisplayName() + "!");
+        }
+
+        String currency = def.getKind() == CosmeticDefinition.Kind.TRAIL ? "feathers" : "vexa";
+        int price = def.getPrice();
+        long balance = CurrencyBridge.getBalance(currency, playerId);
+        if (balance < price) {
+            return new PurchaseResult(false, "Not enough " + currency + "! You need " + price
+                    + " but have " + balance + ".");
+        }
+
+        if (!CurrencyBridge.deduct(currency, playerId, price)) {
+            long currentBalance = CurrencyBridge.getBalance(currency, playerId);
+            return new PurchaseResult(false, "Not enough " + currency + "! You need " + price
+                    + " but have " + currentBalance + ".");
+        }
+
+        purchaseCosmetic(playerId, cosmeticId);
+        AnalyticsStore.getInstance().logPurchase(playerId, cosmeticId, price, currency, "effects");
+        return new PurchaseResult(true, "Purchased " + def.getDisplayName() + "!");
     }
 
     public void equipCosmetic(UUID playerId, String cosmeticId) {

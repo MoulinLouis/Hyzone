@@ -30,6 +30,7 @@ public class WardrobePlugin extends JavaPlugin {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static WardrobePlugin INSTANCE;
     private WardrobeShopTab wardrobeShopTab;
+    private EffectsShopTab effectsShopTab;
     private ShopConfigTab shopConfigTab;
 
     public WardrobePlugin(@Nonnull JavaPluginInit init) {
@@ -78,7 +79,8 @@ public class WardrobePlugin extends JavaPlugin {
 
         wardrobeShopTab = new WardrobeShopTab();
         ShopTabRegistry.register(wardrobeShopTab);
-        ShopTabRegistry.register(new EffectsShopTab());
+        effectsShopTab = new EffectsShopTab();
+        ShopTabRegistry.register(effectsShopTab);
         ShopTabRegistry.register(new PurgeSkinShopTab());
         shopConfigTab = new ShopConfigTab();
         ShopTabRegistry.register(shopConfigTab);
@@ -119,6 +121,12 @@ public class WardrobePlugin extends JavaPlugin {
                 shopConfigTab.evictPlayer(playerId);
             } catch (Exception e) {
                 LOGGER.atWarning().withCause(e).log("Disconnect cleanup: ShopConfigTab");
+            }
+
+            try {
+                effectsShopTab.evictPlayer(playerId);
+            } catch (Exception e) {
+                LOGGER.atWarning().withCause(e).log("Disconnect cleanup: EffectsShopTab");
             }
 
             try {

@@ -13,6 +13,7 @@ import io.hyvexa.common.shop.ShopTab;
 import io.hyvexa.common.shop.ShopTabResult;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.util.PermissionUtils;
+import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.common.skin.PurgeSkinDefinition;
 import io.hyvexa.common.skin.PurgeSkinRegistry;
 import io.hyvexa.common.skin.PurgeSkinStore;
@@ -142,9 +143,12 @@ public class PurgeSkinShopTab implements ShopTab {
         String name = def != null ? def.getDisplayName() : skinId;
 
         switch (result) {
-            case SUCCESS -> player.sendMessage(Message.raw("Purchased " + name + " skin!"));
-            case ALREADY_OWNED -> player.sendMessage(Message.raw("You already own this skin."));
-            case NOT_ENOUGH_VEXA -> player.sendMessage(Message.raw("Not enough Vexa!"));
+            case SUCCESS -> player.sendMessage(
+                    Message.raw("[Shop] Purchased " + name + " skin!").color(SystemMessageUtils.SUCCESS));
+            case ALREADY_OWNED -> player.sendMessage(
+                    Message.raw("[Shop] You already own this skin.").color(SystemMessageUtils.ERROR));
+            case NOT_ENOUGH_VEXA -> player.sendMessage(
+                    Message.raw("[Shop] Not enough Vexa!").color(SystemMessageUtils.ERROR));
         }
         return true;
     }

@@ -52,12 +52,9 @@ public class WardrobeBuyCommand extends AbstractAsyncCommand {
         }
 
         String cosmeticId = args[0];
-        String result = WardrobeBridge.getInstance().purchase(playerRef.getUuid(), cosmeticId);
-
-        boolean isError = result.startsWith("Not enough") || result.startsWith("Unknown")
-                || result.startsWith("You already");
-        String color = isError ? SystemMessageUtils.ERROR : SystemMessageUtils.SUCCESS;
-        player.sendMessage(Message.raw("[Wardrobe] " + result).color(color));
+        WardrobeBridge.PurchaseResult result = WardrobeBridge.getInstance().purchase(playerRef.getUuid(), cosmeticId);
+        String color = result.success() ? SystemMessageUtils.SUCCESS : SystemMessageUtils.ERROR;
+        player.sendMessage(Message.raw("[Wardrobe] " + result.message()).color(color));
 
         return CompletableFuture.completedFuture(null);
     }

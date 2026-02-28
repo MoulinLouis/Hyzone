@@ -16,8 +16,6 @@ import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.core.cosmetic.CosmeticDefinition;
 import io.hyvexa.core.cosmetic.CosmeticManager;
 import io.hyvexa.core.cosmetic.CosmeticStore;
-import io.hyvexa.core.economy.CurrencyBridge;
-import io.hyvexa.core.economy.VexaStore;
 
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -57,7 +55,7 @@ public class EffectsShopTab implements ShopTab {
 
     @Override
     public void buildContent(UICommandBuilder cmd, UIEventBuilder evt, UUID playerId, long vexa) {
-        String equippedId = playerId != null ? CosmeticStore.getInstance().getEquippedCosmeticId(playerId) : null;
+        String equippedId = CosmeticStore.getInstance().getEquippedCosmeticId(playerId);
         String filter = selectedFilter.getOrDefault(playerId, FILTER_GLOW);
 
         // Pill bar
@@ -121,29 +119,10 @@ public class EffectsShopTab implements ShopTab {
             String cosmeticId = button.substring(ACTION_BUY.length());
             CosmeticDefinition def = CosmeticDefinition.fromId(cosmeticId);
             if (def == null) return ShopTabResult.NONE;
-            boolean isTrail = def.getKind() == CosmeticDefinition.Kind.TRAIL;
-            String currencyName = isTrail ? "feathers" : "vexa";
-            long balance = isTrail
-                    ? CurrencyBridge.getBalance("feathers", playerId)
-                    : VexaStore.getInstance().getVexa(playerId);
-            if (balance < def.getPrice()) {
-                player.sendMessage(Message.raw("[Shop] Not enough " + currencyName + "! You need " + def.getPrice()
-                        + " " + currencyName + " but have " + balance + ".").color(SystemMessageUtils.ERROR));
-                return ShopTabResult.NONE;
-            }
-            if (isTrail) {
-                CurrencyBridge.deduct("feathers", playerId, def.getPrice());
-            } else {
-                VexaStore.getInstance().removeVexa(playerId, def.getPrice());
-            }
-            CosmeticStore.getInstance().purchaseCosmetic(playerId, cosmeticId);
-            player.sendMessage(Message.raw("[Shop] Purchased " + def.getDisplayName() + "!")
-                    .color(SystemMessageUtils.SUCCESS));
-            try {
-                io.hyvexa.core.analytics.AnalyticsStore.getInstance().logEvent(playerId, "gem_spend",
-                        "{\"amount\":" + def.getPrice() + ",\"item\":\"" + cosmeticId + "\"}");
-            } catch (Exception e) { /* silent */ }
-            return ShopTabResult.REFRESH;
+            CosmeticStore.PurchaseResult result = CosmeticStore.getInstance().purchaseShopCosmetic(playerId, def);
+            String color = result.success() ? SystemMessageUtils.SUCCESS : SystemMessageUtils.ERROR;
+            player.sendMessage(Message.raw("[Shop] " + result.message()).color(color));
+            return result.success() ? ShopTabResult.REFRESH : ShopTabResult.NONE;
         }
 
         if (button.startsWith(ACTION_EQUIP)) {
@@ -178,7 +157,7 @@ public class EffectsShopTab implements ShopTab {
     private int appendEntry(UICommandBuilder cmd, UIEventBuilder evt, UUID playerId, String equippedId,
                             CosmeticDefinition def, int index) {
         String id = def.getId();
-        boolean owned = playerId != null && CosmeticStore.getInstance().ownsCosmetic(playerId, id);
+        boolean owned = CosmeticStore.getInstance().ownsCosmetic(playerId, id);
         boolean equipped = id.equals(equippedId);
 
         cmd.append("#TabContent", "Pages/Parkour_CosmeticShopEntry.ui");

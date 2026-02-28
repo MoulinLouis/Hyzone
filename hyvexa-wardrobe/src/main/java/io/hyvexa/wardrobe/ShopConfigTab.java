@@ -11,6 +11,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.shop.ShopTab;
 import io.hyvexa.common.shop.ShopTabResult;
 import io.hyvexa.common.ui.ButtonEventData;
+import io.hyvexa.common.util.AssetPathUtils;
 import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.core.wardrobe.CosmeticShopConfigStore;
 import io.hyvexa.core.wardrobe.CosmeticShopConfigStore.CosmeticConfig;
@@ -28,12 +29,12 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class ShopConfigTab implements ShopTab {
 
-    private static final String ACTION_FILTER = "Filter:";
+    private static final String ACTION_FILTER = WardrobeShopUiUtils.ACTION_FILTER;
     private static final String ACTION_TOGGLE = "Toggle:";
     private static final String ACTION_PRICE_UP = "PriceUp:";
     private static final String ACTION_PRICE_DOWN = "PriceDown:";
     private static final String ACTION_CURRENCY = "Currency:";
-    private static final String FILTER_ALL = "All";
+    private static final String FILTER_ALL = WardrobeShopUiUtils.FILTER_ALL;
 
     private final ConcurrentHashMap<UUID, String> selectedCategory = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, String> searchText = new ConcurrentHashMap<>();
@@ -74,33 +75,7 @@ public class ShopConfigTab implements ShopTab {
         // --- Pill bar ---
         cmd.append("#TabContent", "Pages/Shop_WardrobePills.ui");
         List<String> categories = bridge.getCategories();
-
-        int pillIndex = 0;
-        // "All" pill
-        cmd.append("#PillBar", "Pages/Shop_WardrobePill.ui");
-        String allRoot = "#PillBar[" + pillIndex + "] ";
-        cmd.set(allRoot + "#PillLabel.Text", FILTER_ALL);
-        if (currentCategory == null) {
-            cmd.set(allRoot + "#PillActive.Visible", true);
-            cmd.set(allRoot + "#PillLabel.Style.TextColor", "#f59e0b");
-        }
-        evt.addEventBinding(CustomUIEventBindingType.Activating, allRoot + "#PillButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, prefix + ACTION_FILTER + FILTER_ALL), false);
-        pillIndex++;
-
-        // Category pills
-        for (String cat : categories) {
-            cmd.append("#PillBar", "Pages/Shop_WardrobePill.ui");
-            String pillRoot = "#PillBar[" + pillIndex + "] ";
-            cmd.set(pillRoot + "#PillLabel.Text", cat);
-            if (cat.equals(currentCategory)) {
-                cmd.set(pillRoot + "#PillActive.Visible", true);
-                cmd.set(pillRoot + "#PillLabel.Style.TextColor", "#f59e0b");
-            }
-            evt.addEventBinding(CustomUIEventBindingType.Activating, pillRoot + "#PillButton",
-                    EventData.of(ButtonEventData.KEY_BUTTON, prefix + ACTION_FILTER + cat), false);
-            pillIndex++;
-        }
+        WardrobeShopUiUtils.buildCategoryPills(cmd, evt, getId(), getAccentColor(), categories, currentCategory);
 
         // --- Search field ---
         cmd.append("#TabContent", "Pages/Shop_AdminConfigSearch.ui");
@@ -134,7 +109,7 @@ public class ShopConfigTab implements ShopTab {
             }
 
             // Icon
-            String iconAssetPath = toAssetPath(def.iconPath());
+            String iconAssetPath = AssetPathUtils.normalizeIconAssetPath(def.iconPath());
             if (iconAssetPath != null) {
                 cmd.set(root + "#ConfigIcon.AssetPath", iconAssetPath);
             } else {
@@ -227,29 +202,5 @@ public class ShopConfigTab implements ShopTab {
     public void evictPlayer(UUID playerId) {
         selectedCategory.remove(playerId);
         searchText.remove(playerId);
-    }
-
-    /**
-     * Normalize icon asset paths for AssetImage.AssetPath.
-     */
-    private static String toAssetPath(String iconPath) {
-        if (iconPath == null || iconPath.isBlank()) {
-            return null;
-        }
-
-        String normalized = iconPath.replace('\\', '/');
-        while (normalized.startsWith("../")) {
-            normalized = normalized.substring(3);
-        }
-
-        if (normalized.startsWith("Common/")) {
-            normalized = normalized.substring("Common/".length());
-        }
-
-        if (normalized.startsWith("Textures/")) {
-            return "UI/Custom/" + normalized;
-        }
-
-        return normalized;
     }
 }

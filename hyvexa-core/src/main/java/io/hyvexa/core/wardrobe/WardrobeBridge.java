@@ -2,6 +2,7 @@ package io.hyvexa.core.wardrobe;
 
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.permissions.PermissionsModule;
+import io.hyvexa.core.analytics.AnalyticsStore;
 import io.hyvexa.core.cosmetic.CosmeticStore;
 import io.hyvexa.core.economy.CurrencyBridge;
 
@@ -218,36 +219,39 @@ public class WardrobeBridge {
     /**
      * Purchase a wardrobe cosmetic: deduct currency, record ownership, grant permission.
      * Uses CosmeticShopConfigStore for price/currency and CurrencyBridge for deduction.
-     * Returns a result message for the player.
+     * Returns a typed result for the caller.
      */
-    public String purchase(UUID playerId, String cosmeticId) {
+    public PurchaseResult purchase(UUID playerId, String cosmeticId) {
         WardrobeCosmeticDef def = findById(cosmeticId);
-        if (def == null) return "Unknown cosmetic: " + cosmeticId;
+        if (def == null) return error("Unknown cosmetic: " + cosmeticId);
 
         CosmeticShopConfigStore configStore = CosmeticShopConfigStore.getInstance();
         if (!configStore.isAvailable(cosmeticId)) {
-            return "This cosmetic is not currently available for purchase.";
+            return error("This cosmetic is not currently available for purchase.");
         }
 
         if (CosmeticStore.getInstance().ownsCosmetic(playerId, cosmeticId)) {
-            return "You already own " + def.displayName() + "!";
+            return error("You already own " + def.displayName() + "!");
         }
 
         int price = configStore.getPrice(cosmeticId);
         String currency = configStore.getCurrency(cosmeticId);
         long balance = CurrencyBridge.getBalance(currency, playerId);
         if (balance < price) {
-            return "Not enough " + currency + "! You need " + price + " but have " + balance + ".";
+            return error("Not enough " + currency + "! You need " + price + " but have " + balance + ".");
         }
 
         if (!CurrencyBridge.deduct(currency, playerId, price)) {
-            return "Not enough " + currency + "! You need " + price + " but have " + CurrencyBridge.getBalance(currency, playerId) + ".";
+            return error("Not enough " + currency + "! You need " + price + " but have "
+                    + CurrencyBridge.getBalance(currency, playerId) + ".");
         }
         CosmeticStore.getInstance().purchaseCosmetic(playerId, cosmeticId);
         grantPermission(playerId, def.permissionNode());
+        AnalyticsStore.getInstance().logPurchase(playerId, cosmeticId, price, currency, "wardrobe");
 
         LOGGER.atInfo().log("Player " + playerId + " purchased wardrobe cosmetic: " + cosmeticId);
-        return "Purchased " + def.displayName() + " for " + price + " " + currency + "! Open /wardrobe to equip it.";
+        return success("Purchased " + def.displayName() + " for " + price + " "
+                + currency + "! Open /wardrobe to equip it.");
     }
 
     /**
@@ -287,6 +291,17 @@ public class WardrobeBridge {
             return;
         }
         permissions.addUserPermission(playerId, Set.of(permissionNode));
+    }
+
+    private static PurchaseResult success(String message) {
+        return new PurchaseResult(true, message);
+    }
+
+    private static PurchaseResult error(String message) {
+        return new PurchaseResult(false, message);
+    }
+
+    public record PurchaseResult(boolean success, String message) {
     }
 
     public record WardrobeCosmeticDef(String id, String displayName, int price,

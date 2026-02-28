@@ -12,6 +12,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.shop.ShopTab;
 import io.hyvexa.common.shop.ShopTabResult;
 import io.hyvexa.common.ui.ButtonEventData;
+import io.hyvexa.common.util.AssetPathUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.core.cosmetic.CosmeticStore;
 import io.hyvexa.core.economy.CurrencyBridge;
@@ -25,10 +26,10 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class WardrobeShopTab implements ShopTab {
 
-    private static final String ACTION_FILTER = "Filter:";
+    private static final String ACTION_FILTER = WardrobeShopUiUtils.ACTION_FILTER;
     private static final String ACTION_BUY = "Buy:";
     private static final String ACTION_FREE_TOGGLE = "FreeToggle";
-    private static final String FILTER_ALL = "All";
+    private static final String FILTER_ALL = WardrobeShopUiUtils.FILTER_ALL;
 
     private final ConcurrentHashMap<UUID, String> selectedCategory = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Boolean> freeOnly = new ConcurrentHashMap<>();
@@ -61,33 +62,8 @@ public class WardrobeShopTab implements ShopTab {
         // Pill bar
         cmd.append("#TabContent", "Pages/Shop_WardrobePills.ui");
         List<String> categories = bridge.getCategories();
-
-        // "All" pill
-        int pillIndex = 0;
-        cmd.append("#PillBar", "Pages/Shop_WardrobePill.ui");
-        String allRoot = "#PillBar[" + pillIndex + "] ";
-        cmd.set(allRoot + "#PillLabel.Text", FILTER_ALL);
-        if (currentCategory == null) {
-            cmd.set(allRoot + "#PillActive.Visible", true);
-            cmd.set(allRoot + "#PillLabel.Style.TextColor", "#e879f9");
-        }
-        evt.addEventBinding(CustomUIEventBindingType.Activating, allRoot + "#PillButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, getId() + ":" + ACTION_FILTER + FILTER_ALL), false);
-        pillIndex++;
-
-        // Category pills
-        for (String cat : categories) {
-            cmd.append("#PillBar", "Pages/Shop_WardrobePill.ui");
-            String pillRoot = "#PillBar[" + pillIndex + "] ";
-            cmd.set(pillRoot + "#PillLabel.Text", cat);
-            if (cat.equals(currentCategory)) {
-                cmd.set(pillRoot + "#PillActive.Visible", true);
-                cmd.set(pillRoot + "#PillLabel.Style.TextColor", "#e879f9");
-            }
-            evt.addEventBinding(CustomUIEventBindingType.Activating, pillRoot + "#PillButton",
-                    EventData.of(ButtonEventData.KEY_BUTTON, getId() + ":" + ACTION_FILTER + cat), false);
-            pillIndex++;
-        }
+        int pillIndex = WardrobeShopUiUtils.buildCategoryPills(cmd, evt, getId(), getAccentColor(),
+                categories, currentCategory);
 
         // "Free" toggle checkbox
         boolean isFreeOnly = freeOnly.getOrDefault(playerId, false);
@@ -113,7 +89,7 @@ public class WardrobeShopTab implements ShopTab {
             boolean isFeathers = "feathers".equals(currency);
             if (isFreeOnly && !isFeathers) continue;
 
-            boolean owned = playerId != null && CosmeticStore.getInstance().ownsCosmetic(playerId, def.id());
+            boolean owned = CosmeticStore.getInstance().ownsCosmetic(playerId, def.id());
             int price = configStore.getPrice(def.id());
             long balance = CurrencyBridge.getBalance(currency, playerId);
 
@@ -121,7 +97,7 @@ public class WardrobeShopTab implements ShopTab {
             String root = "#WardrobeGrid[" + cardIndex + "] ";
 
             // Icon
-            String iconAssetPath = toAssetPath(def.iconPath());
+            String iconAssetPath = AssetPathUtils.normalizeIconAssetPath(def.iconPath());
             if (iconAssetPath != null) {
                 cmd.set(root + "#CardIcon.AssetPath", iconAssetPath);
             } else {
@@ -205,12 +181,9 @@ public class WardrobeShopTab implements ShopTab {
     @Override
     public boolean handleConfirm(String confirmKey, Ref<EntityStore> ref, Store<EntityStore> store,
                                  Player player, UUID playerId) {
-        String result = WardrobeBridge.getInstance().purchase(playerId, confirmKey);
-
-        boolean isError = result.startsWith("Not enough") || result.startsWith("Unknown")
-                || result.startsWith("You already") || result.startsWith("This cosmetic");
-        String color = isError ? SystemMessageUtils.ERROR : SystemMessageUtils.SUCCESS;
-        player.sendMessage(Message.raw("[Wardrobe] " + result).color(color));
+        WardrobeBridge.PurchaseResult result = WardrobeBridge.getInstance().purchase(playerId, confirmKey);
+        String color = result.success() ? SystemMessageUtils.SUCCESS : SystemMessageUtils.ERROR;
+        player.sendMessage(Message.raw("[Wardrobe] " + result.message()).color(color));
         return true;
     }
 
@@ -218,29 +191,5 @@ public class WardrobeShopTab implements ShopTab {
     public void evictPlayer(UUID playerId) {
         selectedCategory.remove(playerId);
         freeOnly.remove(playerId);
-    }
-
-    /**
-     * Normalize icon asset paths for AssetImage.AssetPath.
-     */
-    private static String toAssetPath(String iconPath) {
-        if (iconPath == null || iconPath.isBlank()) {
-            return null;
-        }
-
-        String normalized = iconPath.replace('\\', '/');
-        while (normalized.startsWith("../")) {
-            normalized = normalized.substring(3);
-        }
-
-        if (normalized.startsWith("Common/")) {
-            normalized = normalized.substring("Common/".length());
-        }
-
-        if (normalized.startsWith("Textures/")) {
-            return "UI/Custom/" + normalized;
-        }
-
-        return normalized;
     }
 }
