@@ -177,6 +177,9 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
                     if (gameManager.joinLobbyFromQueue(playerId, world)) {
                         gameManager.markAssemblingPlayerArrived(playerId);
                     }
+                } else if (RunOrFallQueueStore.getInstance().isQueued(playerId)) {
+                    RunOrFallQueueStore.getInstance().dequeue(playerId);
+                    gameManager.joinLobby(playerId, world);
                 }
                 Ref<EntityStore> ref = playerRef.getReference();
                 if (ref != null && ref.isValid()) {
