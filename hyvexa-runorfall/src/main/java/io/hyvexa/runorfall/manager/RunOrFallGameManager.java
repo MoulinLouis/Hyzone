@@ -92,6 +92,7 @@ public class RunOrFallGameManager {
     private volatile int countdownOptimalPlayers = 0;
     private volatile int countdownOptimalTimeSeconds = 0;
     private volatile boolean countdownForced = false;
+    private volatile RunOrFallMapConfig countdownSelectedMap;
     private volatile boolean soloTestRound = false;
     private volatile ScheduledFuture<?> countdownTask;
     private volatile ScheduledFuture<?> gameTickTask;
@@ -224,6 +225,7 @@ public class RunOrFallGameManager {
             startAutoCountdownIfPossible();
         } else if (state == GameState.COUNTDOWN && !countdownForced) {
             reduceAutoCountdownForOptimalPopulationIfNeeded();
+            updateCountdownMapSelection();
         }
     }
 
@@ -244,6 +246,8 @@ public class RunOrFallGameManager {
         updateBlinkChargesHudForPlayer(playerId, 0);
         if (state == GameState.COUNTDOWN && lobbyPlayers.size() < countdownRequiredPlayers) {
             cancelCountdownInternal("Countdown cancelled: not enough players.");
+        } else if (state == GameState.COUNTDOWN) {
+            updateCountdownMapSelection();
         }
         if (state == GameState.RUNNING && result.wasAlive()) {
             statsStore.recordLoss(playerId, resolvePlayerName(playerId), result.survivedMs(),
@@ -332,6 +336,8 @@ public class RunOrFallGameManager {
         }
         if (state == GameState.COUNTDOWN && lobbyPlayers.size() < countdownRequiredPlayers) {
             cancelCountdownInternal("Countdown cancelled: not enough players.");
+        } else if (state == GameState.COUNTDOWN) {
+            updateCountdownMapSelection();
         }
         if (state == GameState.RUNNING && result.wasAlive()) {
             statsStore.recordLoss(playerId, resolvePlayerName(playerId), result.survivedMs(),
@@ -383,6 +389,7 @@ public class RunOrFallGameManager {
         countdownRequiredPlayers = requiredPlayers;
         countdownOptimalPlayers = 0;
         countdownOptimalTimeSeconds = 0;
+        updateCountdownMapSelection();
         updateCountdownHudForLobbyPlayers();
         startCountdownTask();
     }
@@ -406,6 +413,7 @@ public class RunOrFallGameManager {
         countdownOptimalPlayers = settings.optimalPlayers;
         countdownOptimalTimeSeconds = settings.optimalPlayersTimeSeconds;
         reduceAutoCountdownForOptimalPopulationIfNeeded();
+        updateCountdownMapSelection();
         updateCountdownHudForLobbyPlayers();
         startCountdownTask();
     }
@@ -430,6 +438,27 @@ public class RunOrFallGameManager {
         countdownRemaining = countdownOptimalTimeSeconds;
         updateCountdownHudForLobbyPlayers();
         broadcastLobby("Optimal players reached. Countdown reduced to " + countdownRemaining + "s.");
+    }
+
+    private void updateCountdownMapSelection() {
+        if (state != GameState.COUNTDOWN) {
+            return;
+        }
+        RunOrFallConfig config = configStore.snapshot();
+        RunOrFallMapConfig bestMap = resolveAutoSelectedMap(config, lobbyPlayers.size());
+        if (bestMap == null || bestMap.lobby == null) {
+            return;
+        }
+        RunOrFallMapConfig currentMap = countdownSelectedMap;
+        if (currentMap != null && bestMap.id.equalsIgnoreCase(currentMap.id)) {
+            return;
+        }
+        countdownSelectedMap = bestMap;
+        broadcastLobby("Map selected: " + bestMap.id);
+        RunOrFallLocation mapLobby = bestMap.lobby.copy();
+        for (UUID playerId : lobbyPlayers) {
+            teleportPlayer(playerId, mapLobby);
+        }
     }
 
     private void tickCountdownInternal() {
@@ -1124,7 +1153,12 @@ public class RunOrFallGameManager {
                 lobby = selectedMap.lobby.copy();
             }
         } else {
-            lobby = configStore.getLobby();
+            RunOrFallMapConfig countdownMap = countdownSelectedMap;
+            if (countdownMap != null && countdownMap.lobby != null) {
+                lobby = countdownMap.lobby.copy();
+            } else {
+                lobby = configStore.getLobby();
+            }
         }
         if (lobby == null) {
             return;
@@ -1498,6 +1532,7 @@ public class RunOrFallGameManager {
         countdownOptimalPlayers = 0;
         countdownOptimalTimeSeconds = 0;
         countdownForced = false;
+        countdownSelectedMap = null;
         soloTestRound = false;
         blockBreakEnabledAtMs = 0L;
         blockBreakCountdownLastAnnounced = -1;
