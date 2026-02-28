@@ -226,6 +226,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
             getCommandRegistry().registerCommand(new CinematicTestCommand());
             getCommandRegistry().registerCommand(new HudPreviewCommand());
         }
+        getCommandRegistry().registerCommand(new io.hyvexa.core.queue.RunOrFallQueueCommand());
         registerInteractionCodecs();
 
         // Register entity visibility filter system if not already registered

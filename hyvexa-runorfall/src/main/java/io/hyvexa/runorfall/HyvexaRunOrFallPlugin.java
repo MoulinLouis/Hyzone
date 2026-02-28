@@ -23,6 +23,8 @@ import io.hyvexa.common.util.ModeGate;
 import io.hyvexa.common.util.MultiHudBridge;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.core.economy.VexaStore;
+import io.hyvexa.core.queue.RunOrFallQueueCommand;
+import io.hyvexa.core.queue.RunOrFallQueueStore;
 import io.hyvexa.runorfall.command.RunOrFallCommand;
 import io.hyvexa.runorfall.hud.HiddenRunOrFallHud;
 import io.hyvexa.runorfall.hud.RunOrFallHud;
@@ -120,6 +122,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
 
         runOrFallCommand = new RunOrFallCommand(configStore, gameManager);
         this.getCommandRegistry().registerCommand(runOrFallCommand);
+        this.getCommandRegistry().registerCommand(new RunOrFallQueueCommand());
 
         this.getEventRegistry().registerGlobal(PlayerReadyEvent.class, event -> {
             Ref<EntityStore> ref = event.getPlayerRef();
@@ -168,6 +171,12 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
                             // world not available yet, ignore
                         }
                     }, 3000L, TimeUnit.MILLISECONDS);
+                }
+                if (gameManager.isAssemblingPlayer(playerId)) {
+                    RunOrFallQueueStore.getInstance().dequeue(playerId);
+                    if (gameManager.joinLobbyFromQueue(playerId, world)) {
+                        gameManager.markAssemblingPlayerArrived(playerId);
+                    }
                 }
                 Ref<EntityStore> ref = playerRef.getReference();
                 if (ref != null && ref.isValid()) {

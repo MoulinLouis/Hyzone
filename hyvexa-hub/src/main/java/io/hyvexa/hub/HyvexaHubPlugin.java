@@ -115,6 +115,7 @@ public class HyvexaHubPlugin extends JavaPlugin {
 
         registerInteractionCodecs();
         this.getCommandRegistry().registerCommand(new HubCommand(this));
+        this.getCommandRegistry().registerCommand(new io.hyvexa.core.queue.RunOrFallQueueCommand());
 
         this.getEventRegistry().registerGlobal(PlayerReadyEvent.class, event -> {
             Ref<EntityStore> ref = event.getPlayerRef();

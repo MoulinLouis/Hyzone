@@ -1,5 +1,7 @@
 package io.hyvexa.runorfall.manager;
 
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.vector.Vector3d;
@@ -16,6 +18,9 @@ import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.common.WorldConstants;
+import io.hyvexa.common.util.AsyncExecutionHelper;
+import io.hyvexa.core.queue.RunOrFallQueueStore;
 import io.hyvexa.runorfall.HyvexaRunOrFallPlugin;
 import io.hyvexa.runorfall.data.RunOrFallConfig;
 import io.hyvexa.runorfall.data.RunOrFallLocation;
@@ -63,10 +68,12 @@ public class RunOrFallGameManager {
     private static final Gson GSON = new Gson();
     private static final Type BROKEN_BLOCKS_LIST_TYPE = new TypeToken<List<BrokenBlockEntry>>() {}.getType();
     private static final long SAVE_DEBOUNCE_MS = 2000L;
+    private static final long ASSEMBLING_TIMEOUT_MS = 5000L;
 
     private enum GameState {
         IDLE,
         COUNTDOWN,
+        ASSEMBLING,
         RUNNING
     }
 
@@ -102,10 +109,30 @@ public class RunOrFallGameManager {
     private volatile int blockBreakCountdownLastAnnounced = -1;
     private final AtomicBoolean brokenBlocksDirty = new AtomicBoolean(false);
     private volatile ScheduledFuture<?> brokenBlocksSaveTask;
+    private volatile long assemblingStartedAtMs;
+    private volatile ScheduledFuture<?> assemblingTask;
+    private final Set<UUID> assemblingPlayerIds = ConcurrentHashMap.newKeySet();
 
     public RunOrFallGameManager(RunOrFallConfigStore configStore, RunOrFallStatsStore statsStore) {
         this.configStore = configStore;
         this.statsStore = statsStore;
+        RunOrFallQueueStore.getInstance().setOnQueueChanged(() -> {
+            dispatchToWorld(() -> {
+                synchronized (this) {
+                    if (state == GameState.IDLE) {
+                        startAutoCountdownIfPossible();
+                    } else if (state == GameState.COUNTDOWN && !countdownForced) {
+                        reduceAutoCountdownForOptimalPopulationIfNeeded();
+                        updateCountdownMapSelection();
+                    }
+                }
+            });
+        });
+        RunOrFallQueueStore.getInstance().setLobbyInfoProvider(new RunOrFallQueueStore.LobbyInfoProvider() {
+            @Override public int getLobbySize() { return lobbyPlayers.size(); }
+            @Override public int getQueueSize() { return RunOrFallQueueStore.getInstance().getQueueSize(); }
+            @Override public String getGameState() { return state.name(); }
+        });
     }
 
     public synchronized boolean isJoined(UUID playerId) {
@@ -114,6 +141,29 @@ public class RunOrFallGameManager {
 
     public synchronized boolean isInActiveRound(UUID playerId) {
         return playerId != null && state == GameState.RUNNING && alivePlayers.contains(playerId);
+    }
+
+    public boolean isAssemblingPlayer(UUID playerId) {
+        return playerId != null && assemblingPlayerIds.contains(playerId);
+    }
+
+    public synchronized void markAssemblingPlayerArrived(UUID playerId) {
+        assemblingPlayerIds.remove(playerId);
+    }
+
+    public synchronized boolean joinLobbyFromQueue(UUID playerId, World world) {
+        if (playerId == null || world == null) return false;
+        if (activeWorld == null) {
+            activeWorld = world;
+        }
+        if (!lobbyPlayers.add(playerId)) return false;
+        ensureBrokenBlocksEntry(playerId);
+        teleportPlayerToLobby(playerId);
+        refreshPlayerHotbar(playerId);
+        updateCountdownHudForPlayer(playerId);
+        updateBrokenBlocksHudForPlayer(playerId);
+        updateBlinkChargesHudForPlayer(playerId);
+        return true;
     }
 
     public synchronized int getBlinkDistanceBlocks() {
@@ -169,11 +219,16 @@ public class RunOrFallGameManager {
         return true;
     }
 
+    private int getTotalPendingPlayerCount() {
+        return lobbyPlayers.size() + RunOrFallQueueStore.getInstance().getQueueSize();
+    }
+
     public synchronized String statusLine() {
         String mapId = activeRoundConfig != null ? activeRoundConfig.selectedMapId : configStore.getSelectedMapId();
         return "state=" + state.name()
                 + ", map=" + mapId
                 + ", lobby=" + lobbyPlayers.size()
+                + ", queue=" + RunOrFallQueueStore.getInstance().getQueueSize()
                 + ", alive=" + alivePlayers.size()
                 + ", countdown=" + countdownRemaining
                 + "s";
@@ -220,7 +275,12 @@ public class RunOrFallGameManager {
         if (state == GameState.RUNNING) {
             sendToPlayer(playerId, "Round already running. You are spectating from the lobby.");
         }
-        broadcastLobby("Lobby: " + lobbyPlayers.size() + " player(s).");
+        int queueSize = RunOrFallQueueStore.getInstance().getQueueSize();
+        if (queueSize > 0) {
+            broadcastLobby("Lobby: " + lobbyPlayers.size() + " in lobby, " + queueSize + " in queue.");
+        } else {
+            broadcastLobby("Lobby: " + lobbyPlayers.size() + " player(s).");
+        }
         if (state == GameState.IDLE) {
             startAutoCountdownIfPossible();
         } else if (state == GameState.COUNTDOWN && !countdownForced) {
@@ -244,10 +304,13 @@ public class RunOrFallGameManager {
         updateCountdownHudForPlayer(playerId, null);
         updateBrokenBlocksHudForPlayer(playerId, 0);
         updateBlinkChargesHudForPlayer(playerId, 0);
-        if (state == GameState.COUNTDOWN && lobbyPlayers.size() < countdownRequiredPlayers) {
+        if (state == GameState.COUNTDOWN && getTotalPendingPlayerCount() < countdownRequiredPlayers) {
             cancelCountdownInternal("Countdown cancelled: not enough players.");
         } else if (state == GameState.COUNTDOWN) {
             updateCountdownMapSelection();
+        }
+        if (state == GameState.ASSEMBLING && lobbyPlayers.size() < countdownRequiredPlayers) {
+            cancelAssemblingInternal("Assembly cancelled: not enough players in lobby.");
         }
         if (state == GameState.RUNNING && result.wasAlive()) {
             statsStore.recordLoss(playerId, resolvePlayerName(playerId), result.survivedMs(),
@@ -257,7 +320,7 @@ public class RunOrFallGameManager {
             checkWinnerInternal();
         }
         refreshPlayerHotbar(playerId);
-        if (lobbyPlayers.isEmpty()) {
+        if (lobbyPlayers.isEmpty() && RunOrFallQueueStore.getInstance().getQueueSize() == 0) {
             activeWorld = null;
         }
     }
@@ -291,6 +354,10 @@ public class RunOrFallGameManager {
             cancelCountdownInternal("Countdown stopped: " + reason);
             return;
         }
+        if (state == GameState.ASSEMBLING) {
+            cancelAssemblingInternal("Assembly stopped: " + reason);
+            return;
+        }
         if (state == GameState.RUNNING) {
             endGameInternal("Game stopped: " + reason);
         }
@@ -299,6 +366,8 @@ public class RunOrFallGameManager {
     public synchronized void shutdown() {
         cancelCountdownTask();
         cancelGameTickTask();
+        cancelAssemblingTask();
+        assemblingPlayerIds.clear();
         flushBrokenBlocksSave();
         World world = activeWorld;
         if (world != null) {
@@ -330,14 +399,19 @@ public class RunOrFallGameManager {
         if (playerId == null) {
             return;
         }
+        RunOrFallQueueStore.getInstance().dequeue(playerId);
+        assemblingPlayerIds.remove(playerId);
         PlayerRemovalResult result = removePlayerInternal(playerId);
         if (!result.wasInLobby() && !result.wasAlive()) {
             return;
         }
-        if (state == GameState.COUNTDOWN && lobbyPlayers.size() < countdownRequiredPlayers) {
+        if (state == GameState.COUNTDOWN && getTotalPendingPlayerCount() < countdownRequiredPlayers) {
             cancelCountdownInternal("Countdown cancelled: not enough players.");
         } else if (state == GameState.COUNTDOWN) {
             updateCountdownMapSelection();
+        }
+        if (state == GameState.ASSEMBLING && lobbyPlayers.size() < countdownRequiredPlayers) {
+            cancelAssemblingInternal("Assembly cancelled: not enough players.");
         }
         if (state == GameState.RUNNING && result.wasAlive()) {
             statsStore.recordLoss(playerId, resolvePlayerName(playerId), result.survivedMs(),
@@ -349,7 +423,7 @@ public class RunOrFallGameManager {
         updateCountdownHudForPlayer(playerId, null);
         updateBrokenBlocksHudForPlayer(playerId, 0);
         updateBlinkChargesHudForPlayer(playerId, 0);
-        if (lobbyPlayers.isEmpty()) {
+        if (lobbyPlayers.isEmpty() && RunOrFallQueueStore.getInstance().getQueueSize() == 0) {
             activeWorld = null;
         }
     }
@@ -376,8 +450,11 @@ public class RunOrFallGameManager {
             return;
         }
         int requiredPlayers = allowSoloStart ? 1 : 2;
-        if (lobbyPlayers.size() < requiredPlayers) {
+        if (getTotalPendingPlayerCount() < requiredPlayers) {
             return;
+        }
+        if (activeWorld == null) {
+            activeWorld = resolveRunOrFallWorld();
         }
         World world = activeWorld;
         if (world == null) {
@@ -399,8 +476,11 @@ public class RunOrFallGameManager {
             return;
         }
         CountdownSettings settings = resolveCountdownSettings(configStore.snapshot());
-        if (lobbyPlayers.size() < settings.minPlayers) {
+        if (getTotalPendingPlayerCount() < settings.minPlayers) {
             return;
+        }
+        if (activeWorld == null) {
+            activeWorld = resolveRunOrFallWorld();
         }
         World world = activeWorld;
         if (world == null) {
@@ -429,7 +509,7 @@ public class RunOrFallGameManager {
         if (countdownForced || state != GameState.COUNTDOWN) {
             return;
         }
-        if (lobbyPlayers.size() < countdownOptimalPlayers) {
+        if (getTotalPendingPlayerCount() < countdownOptimalPlayers) {
             return;
         }
         if (countdownRemaining <= countdownOptimalTimeSeconds) {
@@ -445,7 +525,7 @@ public class RunOrFallGameManager {
             return;
         }
         RunOrFallConfig config = configStore.snapshot();
-        RunOrFallMapConfig bestMap = resolveAutoSelectedMap(config, lobbyPlayers.size());
+        RunOrFallMapConfig bestMap = resolveAutoSelectedMap(config, getTotalPendingPlayerCount());
         if (bestMap == null || bestMap.lobby == null) {
             return;
         }
@@ -466,7 +546,7 @@ public class RunOrFallGameManager {
             if (state != GameState.COUNTDOWN) {
                 return;
             }
-            if (lobbyPlayers.size() < countdownRequiredPlayers) {
+            if (getTotalPendingPlayerCount() < countdownRequiredPlayers) {
                 cancelCountdownInternal("Countdown cancelled: not enough players.");
                 return;
             }
@@ -474,7 +554,12 @@ public class RunOrFallGameManager {
             countdownRemaining--;
             if (countdownRemaining <= 0) {
                 cancelCountdownTask();
-                startGameInternal();
+                int queueSize = RunOrFallQueueStore.getInstance().getQueueSize();
+                if (queueSize > 0) {
+                    beginAssemblingPhase();
+                } else {
+                    startGameInternal();
+                }
                 return;
             }
             updateCountdownHudForLobbyPlayers();
@@ -482,7 +567,7 @@ public class RunOrFallGameManager {
     }
 
     private void startGameInternal() {
-        if (state != GameState.COUNTDOWN) {
+        if (state != GameState.COUNTDOWN && state != GameState.ASSEMBLING) {
             return;
         }
         List<UUID> onlinePlayers = new ArrayList<>();
@@ -492,17 +577,13 @@ public class RunOrFallGameManager {
             }
         }
         if (onlinePlayers.size() < countdownRequiredPlayers) {
-            state = GameState.IDLE;
-            activeRoundConfig = null;
-            broadcastLobby("Not enough online players to start.");
+            cancelAssemblingInternal("Not enough online players to start.");
             return;
         }
         RunOrFallConfig config = configStore.snapshot();
         RunOrFallMapConfig selectedMap = resolveAutoSelectedMap(config, onlinePlayers.size());
         if (selectedMap == null) {
-            state = GameState.IDLE;
-            activeRoundConfig = null;
-            broadcastLobby("No playable map available for lobby size " + onlinePlayers.size() + ".");
+            cancelAssemblingInternal("No playable map available for lobby size " + onlinePlayers.size() + ".");
             return;
         }
         config.selectedMapId = selectedMap.id;
@@ -706,6 +787,112 @@ public class RunOrFallGameManager {
         clearCountdownHudForLobbyPlayers();
         resetBrokenBlocksForLobbyPlayers();
         broadcastLobby(reason);
+    }
+
+    private void beginAssemblingPhase() {
+        World rofWorld = resolveRunOrFallWorld();
+        if (rofWorld == null) {
+            startGameInternal();
+            return;
+        }
+        if (activeWorld == null) {
+            activeWorld = rofWorld;
+        }
+
+        state = GameState.ASSEMBLING;
+        assemblingStartedAtMs = System.currentTimeMillis();
+
+        assemblingPlayerIds.clear();
+        Set<UUID> queuedIds = RunOrFallQueueStore.getInstance().getQueuedPlayerIds();
+        assemblingPlayerIds.addAll(queuedIds);
+
+        for (UUID playerId : assemblingPlayerIds) {
+            sendToPlayer(playerId, "Teleporting you to RunOrFall...");
+            teleportPlayerCrossWorld(playerId, rofWorld);
+        }
+
+        broadcastLobby("Waiting for " + assemblingPlayerIds.size() + " queued player(s) to arrive...");
+
+        assemblingTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleAtFixedRate(
+                () -> dispatchToWorld(this::tickAssemblingInternal),
+                500L, 500L, TimeUnit.MILLISECONDS
+        );
+    }
+
+    private void teleportPlayerCrossWorld(UUID playerId, World targetWorld) {
+        PlayerRef playerRef = resolvePlayer(playerId);
+        if (playerRef == null) return;
+        Ref<EntityStore> ref = playerRef.getReference();
+        if (ref == null || !ref.isValid()) return;
+        Store<EntityStore> store = ref.getStore();
+        World currentWorld = store.getExternalData() != null
+                ? store.getExternalData().getWorld() : null;
+        if (currentWorld == null) return;
+
+        RunOrFallLocation lobby = resolveLobbyLocation();
+        if (lobby == null) return;
+
+        AsyncExecutionHelper.runBestEffort(currentWorld, () -> {
+            if (!ref.isValid()) return;
+            store.addComponent(ref, Teleport.getComponentType(),
+                    new Teleport(targetWorld,
+                            new Vector3d(lobby.x, lobby.y, lobby.z),
+                            new Vector3f(lobby.rotX, lobby.rotY, lobby.rotZ)));
+        }, "rof.queue.teleport", "rof cross-world teleport", "player=" + playerId);
+    }
+
+    private RunOrFallLocation resolveLobbyLocation() {
+        RunOrFallMapConfig countdownMap = countdownSelectedMap;
+        if (countdownMap != null && countdownMap.lobby != null) {
+            return countdownMap.lobby.copy();
+        }
+        return configStore.getLobby();
+    }
+
+    private void tickAssemblingInternal() {
+        synchronized (this) {
+            if (state != GameState.ASSEMBLING) return;
+
+            long elapsed = System.currentTimeMillis() - assemblingStartedAtMs;
+            boolean timedOut = elapsed >= ASSEMBLING_TIMEOUT_MS;
+
+            if (assemblingPlayerIds.isEmpty() || timedOut) {
+                for (UUID stuckId : assemblingPlayerIds) {
+                    sendToPlayer(stuckId, "Failed to arrive in time. Removed from queue.");
+                    RunOrFallQueueStore.getInstance().dequeue(stuckId);
+                }
+                assemblingPlayerIds.clear();
+                cancelAssemblingTask();
+
+                if (lobbyPlayers.size() < countdownRequiredPlayers) {
+                    cancelAssemblingInternal("Not enough players arrived. Returning to lobby.");
+                    return;
+                }
+                startGameInternal();
+            }
+        }
+    }
+
+    private void cancelAssemblingInternal(String reason) {
+        cancelAssemblingTask();
+        for (UUID playerId : assemblingPlayerIds) {
+            RunOrFallQueueStore.getInstance().dequeue(playerId);
+        }
+        assemblingPlayerIds.clear();
+        state = GameState.IDLE;
+        activeRoundConfig = null;
+        resetCountdownState();
+        clearCountdownHudForLobbyPlayers();
+        resetBrokenBlocksForLobbyPlayers();
+        broadcastLobby(reason);
+    }
+
+    private void cancelAssemblingTask() {
+        ScheduledFuture<?> task = assemblingTask;
+        if (task != null) {
+            task.cancel(false);
+            assemblingTask = null;
+        }
     }
 
     private void broadcastBlockBreakCountdownIfNeeded(long nowMs) {
@@ -1367,8 +1554,28 @@ public class RunOrFallGameManager {
         SoundUtil.playSoundEvent2dToPlayer(playerRef, soundIndex, com.hypixel.hytale.protocol.SoundCategory.SFX);
     }
 
+    private World resolveRunOrFallWorld() {
+        World world = activeWorld;
+        if (world != null) {
+            return world;
+        }
+        world = Universe.get().getWorld(WorldConstants.WORLD_RUN_OR_FALL);
+        if (world != null) {
+            return world;
+        }
+        try {
+            Universe.get().loadWorld(WorldConstants.WORLD_RUN_OR_FALL);
+        } catch (Exception e) {
+            LOGGER.atWarning().log("Failed to load RunOrFall world: " + e.getMessage());
+        }
+        return Universe.get().getWorld(WorldConstants.WORLD_RUN_OR_FALL);
+    }
+
     private void dispatchToWorld(Runnable action) {
         World world = activeWorld;
+        if (world == null) {
+            world = resolveRunOrFallWorld();
+        }
         if (world == null) {
             return;
         }
