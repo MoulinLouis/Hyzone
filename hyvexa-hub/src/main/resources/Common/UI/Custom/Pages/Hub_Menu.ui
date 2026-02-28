@@ -4,7 +4,7 @@ $C.@PageOverlay {
   SceneBlur {}
 
   Group #HubMenuWindow {
-    Anchor: (Width: 860, Height: 520);
+    Anchor: (Width: 860, Height: 556);
     LayoutMode: Top;
     Background: #0d1620(0.95);
     OutlineColor: #ffffff(0.06);
@@ -29,10 +29,35 @@ $C.@PageOverlay {
       }
 
       Group {
-        Anchor: (Right: 16, Top: 10, Width: 72, Height: 32);
+        Anchor: (Right: 16, Top: 10, Width: 152, Height: 32);
+        LayoutMode: Left;
+
+        TextButton #HubButton {
+          Anchor: (Width: 72, Height: 32);
+          Text: "Hub";
+          Style: TextButtonStyle(
+            Default: (
+              Background: #f59e0b(0.15),
+              LabelStyle: (FontSize: 13, TextColor: #f59e0b, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Hovered: (
+              Background: #f59e0b(0.25),
+              LabelStyle: (FontSize: 13, TextColor: #fbbf24, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Pressed: (
+              Background: #f59e0b(0.1),
+              LabelStyle: (FontSize: 13, TextColor: #f59e0b, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Sounds: $C.@ButtonSounds,
+          );
+        }
+
+        Group {
+          Anchor: (Width: 8);
+        }
 
         TextButton #CloseButton {
-          Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+          Anchor: (Width: 72, Height: 32);
           Text: "Close";
           Style: TextButtonStyle(
             Default: (
@@ -71,7 +96,7 @@ $C.@PageOverlay {
       }
 
       Group #ModeButtons {
-        Anchor: (Top: 12, Left: 0, Right: 0, Height: 354);
+        Anchor: (Top: 12, Left: 0, Right: 0, Height: 390);
         LayoutMode: Top;
 
         Group #TopModeRow {
@@ -149,39 +174,44 @@ $C.@PageOverlay {
         }
 
         Group #BottomModeRow {
-          Anchor: (Left: 0, Right: 0, Top: 14, Height: 170);
+          Anchor: (Left: 0, Right: 0, Top: 14, Height: 206);
           LayoutMode: Left;
           Padding: (Left: 86, Top: 6);
 
-          Group #PurgeCard {
-            Anchor: (Width: 320, Height: 164);
-            OutlineColor: #ffffff(0.06);
-            OutlineSize: 1;
+          Group #PurgeSection {
+            Anchor: (Width: 320, Height: 200);
+            LayoutMode: Top;
 
-            Group {
-              Anchor: (Left: 10, Right: 10, Top: 10, Height: 116);
-              Background: (TexturePath: "../Textures/purge.png");
-            }
+            Group #PurgeCard {
+              Anchor: (Width: 320, Height: 164);
+              OutlineColor: #ffffff(0.06);
+              OutlineSize: 1;
 
-            Group {
-              Anchor: (Left: 0, Right: 0, Bottom: 0, Height: 28);
-              Background: #ffffff(0.03);
-              Label {
-                Anchor: (Left: 10, Right: 10, Top: 0, Bottom: 0);
-                Style: (FontSize: 11, TextColor: #8a9bae, HorizontalAlignment: Center, VerticalAlignment: Center);
-                Text: "Fight waves of zombies and loot powerful weapons";
+              Group {
+                Anchor: (Left: 10, Right: 10, Top: 10, Height: 116);
+                Background: (TexturePath: "../Textures/purge.png");
               }
-            }
 
-            TextButton #PurgeButton {
-              Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-              Text: "";
-              Style: TextButtonStyle(
-                Default: (Background: #ffffff(0.0)),
-                Hovered: (Background: #ffffff(0.06)),
-                Pressed: (Background: #ffffff(0.03)),
-                Sounds: $C.@ButtonSounds,
-              );
+              Group {
+                Anchor: (Left: 0, Right: 0, Bottom: 0, Height: 28);
+                Background: #ffffff(0.03);
+                Label {
+                  Anchor: (Left: 10, Right: 10, Top: 0, Bottom: 0);
+                  Style: (FontSize: 11, TextColor: #8a9bae, HorizontalAlignment: Center, VerticalAlignment: Center);
+                  Text: "Fight waves of zombies and loot powerful weapons";
+                }
+              }
+
+              TextButton #PurgeButton {
+                Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+                Text: "";
+                Style: TextButtonStyle(
+                  Default: (Background: #ffffff(0.0)),
+                  Hovered: (Background: #ffffff(0.06)),
+                  Pressed: (Background: #ffffff(0.03)),
+                  Sounds: $C.@ButtonSounds,
+                );
+              }
             }
           }
 
@@ -189,35 +219,96 @@ $C.@PageOverlay {
             Anchor: (Width: 16);
           }
 
-          Group #RunOrFallCard {
-            Anchor: (Width: 320, Height: 164);
-            OutlineColor: #ffffff(0.06);
-            OutlineSize: 1;
+          Group #RunOrFallSection {
+            Anchor: (Width: 320, Height: 200);
+            LayoutMode: Top;
 
-            Group {
-              Anchor: (Left: 10, Right: 10, Top: 10, Height: 116);
-              Background: (TexturePath: "../Textures/runorfall.png");
-            }
+            Group #RunOrFallCard {
+              Anchor: (Width: 320, Height: 164);
+              OutlineColor: #ffffff(0.06);
+              OutlineSize: 1;
 
-            Group {
-              Anchor: (Left: 0, Right: 0, Bottom: 0, Height: 28);
-              Background: #ffffff(0.03);
-              Label {
-                Anchor: (Left: 10, Right: 10, Top: 0, Bottom: 0);
-                Style: (FontSize: 11, TextColor: #8a9bae, HorizontalAlignment: Center, VerticalAlignment: Center);
-                Text: "Race against others on crumbling platforms";
+              Group {
+                Anchor: (Left: 10, Right: 10, Top: 10, Height: 116);
+                Background: (TexturePath: "../Textures/runorfall.png");
+              }
+
+              Group #NewBadge {
+                Anchor: (Right: 8, Top: 8, Width: 42, Height: 20);
+                Background: #ef4444;
+                Label {
+                  Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+                  Style: (FontSize: 11, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center);
+                  Text: "NEW";
+                }
+              }
+
+              Group {
+                Anchor: (Left: 0, Right: 0, Bottom: 0, Height: 28);
+                Background: #ffffff(0.03);
+                Label {
+                  Anchor: (Left: 10, Right: 10, Top: 0, Bottom: 0);
+                  Style: (FontSize: 11, TextColor: #8a9bae, HorizontalAlignment: Center, VerticalAlignment: Center);
+                  Text: "Race against others on crumbling platforms";
+                }
+              }
+
+              TextButton #RunOrFallButton {
+                Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+                Text: "";
+                Style: TextButtonStyle(
+                  Default: (Background: #ffffff(0.0)),
+                  Hovered: (Background: #ffffff(0.06)),
+                  Pressed: (Background: #ffffff(0.03)),
+                  Sounds: $C.@ButtonSounds,
+                );
               }
             }
 
-            TextButton #RunOrFallButton {
-              Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-              Text: "";
-              Style: TextButtonStyle(
-                Default: (Background: #ffffff(0.0)),
-                Hovered: (Background: #ffffff(0.06)),
-                Pressed: (Background: #ffffff(0.03)),
-                Sounds: $C.@ButtonSounds,
-              );
+            Group {
+              Anchor: (Left: 0, Right: 0, Top: 2, Height: 34);
+
+              TextButton #QueueRofButton {
+                Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+                Visible: true;
+                Text: "QUEUE FOR RUNORFALL";
+                Style: TextButtonStyle(
+                  Default: (
+                    Background: #f59e0b(0.15),
+                    LabelStyle: (FontSize: 13, TextColor: #f59e0b, HorizontalAlignment: Center, VerticalAlignment: Center)
+                  ),
+                  Hovered: (
+                    Background: #f59e0b(0.25),
+                    LabelStyle: (FontSize: 13, TextColor: #fbbf24, HorizontalAlignment: Center, VerticalAlignment: Center)
+                  ),
+                  Pressed: (
+                    Background: #f59e0b(0.1),
+                    LabelStyle: (FontSize: 13, TextColor: #f59e0b, HorizontalAlignment: Center, VerticalAlignment: Center)
+                  ),
+                  Sounds: $C.@ButtonSounds,
+                );
+              }
+
+              TextButton #LeaveQueueRofButton {
+                Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+                Visible: false;
+                Text: "Leave Queue";
+                Style: TextButtonStyle(
+                  Default: (
+                    Background: #ef4444(0.15),
+                    LabelStyle: (FontSize: 11, TextColor: #ef4444, HorizontalAlignment: Center, VerticalAlignment: Center)
+                  ),
+                  Hovered: (
+                    Background: #ef4444(0.25),
+                    LabelStyle: (FontSize: 11, TextColor: #f87171, HorizontalAlignment: Center, VerticalAlignment: Center)
+                  ),
+                  Pressed: (
+                    Background: #ef4444(0.1),
+                    LabelStyle: (FontSize: 11, TextColor: #ef4444, HorizontalAlignment: Center, VerticalAlignment: Center)
+                  ),
+                  Sounds: $C.@ButtonSounds,
+                );
+              }
             }
           }
         }

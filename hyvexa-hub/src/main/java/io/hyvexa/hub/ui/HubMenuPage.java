@@ -11,16 +11,19 @@ import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.common.whitelist.AscendWhitelistManager;
 import io.hyvexa.common.whitelist.WhitelistRegistry;
+import io.hyvexa.core.queue.RunOrFallQueueStore;
 import io.hyvexa.hub.routing.HubRouter;
 
 import javax.annotation.Nonnull;
 import java.io.File;
 import java.nio.file.Path;
+import java.util.UUID;
 
 public class HubMenuPage extends InteractiveCustomUIPage<ButtonEventData> {
 
@@ -28,8 +31,11 @@ public class HubMenuPage extends InteractiveCustomUIPage<ButtonEventData> {
     private static final String BUTTON_ASCEND = "Parkour Ascend";
     private static final String BUTTON_PURGE = "Purge";
     private static final String BUTTON_RUN_OR_FALL = "RunOrFall";
+    private static final String BUTTON_QUEUE_ROF = "QueueRoF";
+    private static final String BUTTON_LEAVE_QUEUE_ROF = "LeaveQueueRoF";
     private static final String BUTTON_DISCORD = "Discord";
     private static final String BUTTON_STORE = "Store";
+    private static final String BUTTON_HUB = "Hub";
     private static final String BUTTON_CLOSE = "Close";
     private static final String LINK_COLOR = "#8ab4f8";
     private static final Message MESSAGE_DISCORD = Message.join(
@@ -85,11 +91,24 @@ public class HubMenuPage extends InteractiveCustomUIPage<ButtonEventData> {
                     EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_PURGE), false);
             uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#RunOrFallButton",
                     EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_RUN_OR_FALL), false);
+            uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#QueueRofButton",
+                    EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_QUEUE_ROF), false);
+            uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#LeaveQueueRofButton",
+                    EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_LEAVE_QUEUE_ROF), false);
+
+            // Queue button visibility
+            PlayerRef buildPlayerRef = store.getComponent(ref, PlayerRef.getComponentType());
+            UUID buildPlayerId = buildPlayerRef != null ? buildPlayerRef.getUuid() : null;
+            boolean isQueued = buildPlayerId != null && RunOrFallQueueStore.getInstance().isQueued(buildPlayerId);
+            uiCommandBuilder.set("#QueueRofButton.Visible", !isQueued);
+            uiCommandBuilder.set("#LeaveQueueRofButton.Visible", isQueued);
         }
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#DiscordBannerButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_DISCORD), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#StoreBannerButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_STORE), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#HubButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_HUB), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CloseButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE), false);
     }
@@ -103,6 +122,13 @@ public class HubMenuPage extends InteractiveCustomUIPage<ButtonEventData> {
         }
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         Player player = store.getComponent(ref, Player.getComponentType());
+        if (BUTTON_HUB.equals(data.getButton())) {
+            if (playerRef != null) {
+                router.routeToHub(playerRef);
+            }
+            this.close();
+            return;
+        }
         if (BUTTON_CLOSE.equals(data.getButton())) {
             this.close();
             return;
@@ -178,6 +204,28 @@ public class HubMenuPage extends InteractiveCustomUIPage<ButtonEventData> {
             }
             if (playerRef != null) {
                 router.routeToRunOrFall(playerRef);
+            }
+            this.close();
+            return;
+        }
+        if (BUTTON_QUEUE_ROF.equals(data.getButton())) {
+            if (playerRef != null && playerRef.getUuid() != null) {
+                World world = store.getExternalData() != null ? store.getExternalData().getWorld() : null;
+                String worldName = world != null && world.getName() != null ? world.getName() : "unknown";
+                RunOrFallQueueStore.getInstance().enqueue(playerRef.getUuid(), worldName);
+                if (player != null) {
+                    player.sendMessage(Message.raw("[RunOrFall] Queued! You'll be teleported when the game starts."));
+                }
+            }
+            this.close();
+            return;
+        }
+        if (BUTTON_LEAVE_QUEUE_ROF.equals(data.getButton())) {
+            if (playerRef != null && playerRef.getUuid() != null) {
+                RunOrFallQueueStore.getInstance().dequeue(playerRef.getUuid());
+                if (player != null) {
+                    player.sendMessage(Message.raw("[RunOrFall] Removed from queue."));
+                }
             }
             this.close();
             return;
