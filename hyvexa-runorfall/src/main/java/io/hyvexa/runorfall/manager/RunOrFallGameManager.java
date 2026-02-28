@@ -768,17 +768,17 @@ public class RunOrFallGameManager {
         updateBrokenBlocksHudForPlayer(playerId);
         updateBlinkChargesHudForPlayer(playerId);
         sendToPlayer(playerId, "Eliminated: " + reason + ". Fly around to spectate!");
-        enableSpectatorFly(playerId);
+        scheduleSpectatorFly(playerId);
         broadcastEliminationInternal(playerId, reason);
     }
 
     private void enableSpectatorFly(UUID playerId) {
+        if (!spectatingPlayers.contains(playerId)) return;
         PlayerRef playerRef = resolvePlayer(playerId);
         if (playerRef == null) return;
         PacketHandler packetHandler = playerRef.getPacketHandler();
         if (packetHandler == null) return;
         packetHandler.writeNoCache(new SetFlyCameraMode(true));
-        spectatingPlayers.add(playerId);
     }
 
     private void disableSpectatorFly(UUID playerId) {
@@ -1390,6 +1390,14 @@ public class RunOrFallGameManager {
             return;
         }
         teleportPlayer(playerId, lobby);
+    }
+
+    private void scheduleSpectatorFly(UUID playerId) {
+        spectatingPlayers.add(playerId);
+        HytaleServer.SCHEDULED_EXECUTOR.schedule(
+                () -> dispatchToWorld(() -> enableSpectatorFly(playerId)),
+                500L, TimeUnit.MILLISECONDS
+        );
     }
 
     private void teleportPlayerToWorldSpawn(UUID playerId) {
