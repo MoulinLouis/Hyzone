@@ -3,6 +3,8 @@
 ## [Unreleased]
 
 ### Changed
+- **Purge: Session player HP normalized to 100** - Purge now forces session base player health to `100` before wave combat, preventing stray `102/102` max HP reads while still letting run HP upgrades add on top.
+- **Purge: Zombie melee now respects variant damage config** - Purge session players now correctly bypass the global god-mode filter, so zombie hits apply the `Variants` admin `damage` value again.
 - **Parkour: Ghost orphan cleanup hardening** - Parkour PB ghosts now persist failed despawns for deferred cleanup and next-start removal, preventing frozen Kweebec ghosts from lingering in the world.
 - **Parkour: Global leaderboard ranked by medal score** - Global leaderboard now ranks players by medal points (Bronze=1, Silver=2, Gold=3, Author=4) instead of map completions. Each row shows individual medal counts and total score.
 - **Wardrobe: Centralized cosmetics hub** - Moved all 3 shop tabs (Cosmetics, Weapon Skins, Wardrobe) into wardrobe module so `/shop` shows them all. CosmeticManager and PurgeSkin data classes moved to core for cross-module access.

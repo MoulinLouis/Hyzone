@@ -7,7 +7,10 @@ import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.modules.entitystats.EntityStatMap;
+import com.hypixel.hytale.server.core.modules.entitystats.EntityStatValue;
 import com.hypixel.hytale.server.core.modules.entitystats.asset.DefaultEntityStatTypes;
+import com.hypixel.hytale.server.core.modules.entitystats.modifier.Modifier;
+import com.hypixel.hytale.server.core.modules.entitystats.modifier.StaticModifier;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.util.DamageBypassRegistry;
@@ -43,6 +46,8 @@ public class PurgeSessionManager {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final long CLEANUP_TIMEOUT_SECONDS = 8L;
+    private static final float PURGE_SESSION_BASE_PLAYER_HP = 100f;
+    private static final String PURGE_SESSION_BASE_HP_MODIFIER = "purge_session_base_hp";
 
     private final ConcurrentHashMap<String, PurgeSession> sessionsById = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, String> sessionIdByPlayer = new ConcurrentHashMap<>();
@@ -168,6 +173,7 @@ public class PurgeSessionManager {
                         if (player != null) {
                             plugin.grantLoadout(player, ps);
                         }
+                        applySessionBaseHealth(ref, store);
                         teleportToStart(ref, store, instance);
                     }
                 } catch (Exception e) {
@@ -175,7 +181,7 @@ public class PurgeSessionManager {
                 }
                 hudManager.showRunHud(pid);
                 hudManager.registerComboPlayer(pid, ps);
-                hudManager.updatePlayerHealth(pid, 100, 100);
+                syncPlayerHealthHud(pid, ref);
             }
 
             // Start countdown
@@ -458,15 +464,12 @@ public class PurgeSessionManager {
                 um.revertPlayerUpgrades(session, playerId, ref, store);
             }
         });
-        runSafe("heal player", () -> {
+        runSafe("restore base health", () -> {
             if (ref == null || !ref.isValid()) {
                 return;
             }
             Store<EntityStore> store = ref.getStore();
-            EntityStatMap statMap = store.getComponent(ref, EntityStatMap.getComponentType());
-            if (statMap != null) {
-                statMap.maximizeStatValue(DefaultEntityStatTypes.getHealth());
-            }
+            clearSessionBaseHealth(ref, store, true);
         });
         runSafe("remove loadout", () -> {
             if (!endReason.shouldRestoreIdleLoadout() || !isPurgeWorldRef(ref)) {
@@ -582,6 +585,11 @@ public class PurgeSessionManager {
             Ref<EntityStore> ref = entry.getValue();
             sessionIdByPlayer.remove(pid);
             runSafe("remove bypass rollback " + pid, () -> DamageBypassRegistry.remove(pid));
+            runSafe("restore base health rollback " + pid, () -> {
+                if (ref != null && ref.isValid()) {
+                    clearSessionBaseHealth(ref, ref.getStore(), true);
+                }
+            });
             runSafe("hide hud rollback " + pid, () -> {
                 hudManager.unregisterComboPlayer(pid);
                 hudManager.hideRunHud(pid);
@@ -606,6 +614,70 @@ public class PurgeSessionManager {
 
     private String getPlayerName(UUID playerId) {
         return PurgePlayerNameResolver.resolve(playerId, PurgePlayerNameResolver.FallbackStyle.FULL_UUID);
+    }
+
+    private void applySessionBaseHealth(Ref<EntityStore> ref, Store<EntityStore> store) {
+        if (ref == null || !ref.isValid() || store == null) {
+            return;
+        }
+        EntityStatMap statMap = store.getComponent(ref, EntityStatMap.getComponentType());
+        if (statMap == null) {
+            return;
+        }
+        int healthIndex = DefaultEntityStatTypes.getHealth();
+        statMap.removeModifier(healthIndex, PURGE_SESSION_BASE_HP_MODIFIER);
+        statMap.update();
+
+        EntityStatValue health = statMap.get(healthIndex);
+        float currentMax = health != null ? health.getMax() : PURGE_SESSION_BASE_PLAYER_HP;
+        if (currentMax <= 0f) {
+            currentMax = PURGE_SESSION_BASE_PLAYER_HP;
+        }
+        float delta = PURGE_SESSION_BASE_PLAYER_HP - currentMax;
+        if (Math.abs(delta) > 0.01f) {
+            statMap.putModifier(healthIndex, PURGE_SESSION_BASE_HP_MODIFIER,
+                    new StaticModifier(Modifier.ModifierTarget.MAX,
+                            StaticModifier.CalculationType.ADDITIVE, delta));
+        }
+        statMap.update();
+        statMap.maximizeStatValue(healthIndex);
+        statMap.update();
+    }
+
+    private void clearSessionBaseHealth(Ref<EntityStore> ref, Store<EntityStore> store, boolean healToFull) {
+        if (ref == null || !ref.isValid() || store == null) {
+            return;
+        }
+        EntityStatMap statMap = store.getComponent(ref, EntityStatMap.getComponentType());
+        if (statMap == null) {
+            return;
+        }
+        int healthIndex = DefaultEntityStatTypes.getHealth();
+        statMap.removeModifier(healthIndex, PURGE_SESSION_BASE_HP_MODIFIER);
+        statMap.update();
+        if (healToFull) {
+            statMap.maximizeStatValue(healthIndex);
+            statMap.update();
+        }
+    }
+
+    private void syncPlayerHealthHud(UUID playerId, Ref<EntityStore> ref) {
+        if (playerId == null || ref == null || !ref.isValid()) {
+            return;
+        }
+        Store<EntityStore> store = ref.getStore();
+        if (store == null) {
+            return;
+        }
+        EntityStatMap statMap = store.getComponent(ref, EntityStatMap.getComponentType());
+        if (statMap == null) {
+            return;
+        }
+        EntityStatValue health = statMap.get(DefaultEntityStatTypes.getHealth());
+        if (health == null) {
+            return;
+        }
+        hudManager.updatePlayerHealth(playerId, Math.round(health.get()), Math.round(health.getMax()));
     }
 
     private enum SessionEndReason {

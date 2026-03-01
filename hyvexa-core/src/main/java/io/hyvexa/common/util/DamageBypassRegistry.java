@@ -1,32 +1,34 @@
 package io.hyvexa.common.util;
 
-import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Global registry of players who should bypass the NoPlayerDamageSystem.
- * Used by modules (e.g. Purge) that need players to take damage during gameplay.
+ * Uses JVM system properties so the flag is visible across plugin classloaders.
  */
 public final class DamageBypassRegistry {
 
-    private static final Set<UUID> bypassed = ConcurrentHashMap.newKeySet();
+    private static final String KEY_PREFIX = "hyvexa.damage-bypass.";
 
     private DamageBypassRegistry() {}
 
     public static void add(UUID playerId) {
         if (playerId != null) {
-            bypassed.add(playerId);
+            System.setProperty(key(playerId), "1");
         }
     }
 
     public static void remove(UUID playerId) {
         if (playerId != null) {
-            bypassed.remove(playerId);
+            System.clearProperty(key(playerId));
         }
     }
 
     public static boolean isBypassed(UUID playerId) {
-        return playerId != null && bypassed.contains(playerId);
+        return playerId != null && System.getProperty(key(playerId)) != null;
+    }
+
+    private static String key(UUID playerId) {
+        return KEY_PREFIX + playerId;
     }
 }
