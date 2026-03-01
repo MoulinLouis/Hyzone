@@ -172,6 +172,18 @@ public class CosmeticManager {
         ModelParticleTrailManager.getInstance().stopTrail(playerId);
     }
 
+    /**
+     * Cancel all preview timers and shut down trail managers. Call on plugin shutdown.
+     */
+    public void shutdown() {
+        for (ScheduledFuture<?> timer : previewTimers.values()) {
+            if (timer != null) timer.cancel(false);
+        }
+        previewTimers.clear();
+        TrailManager.getInstance().shutdown();
+        ModelParticleTrailManager.getInstance().shutdown();
+    }
+
     private void applyDefinition(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef,
                                  CosmeticDefinition def, boolean preview) {
         switch (def.getType()) {

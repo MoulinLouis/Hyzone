@@ -436,5 +436,7 @@ public class HyvexaHubPlugin extends JavaPlugin {
             playerCountTask = null;
         }
         hubHudLifecycles.clear();
+        try { DatabaseManager.getInstance().shutdown(); }
+        catch (Exception e) { /* Hub DB shutdown */ }
     }
 }

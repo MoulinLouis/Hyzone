@@ -286,6 +286,8 @@ public class HyvexaPurgePlugin extends JavaPlugin {
             comboTickTask.cancel(false);
             comboTickTask = null;
         }
+        try { DatabaseManager.getInstance().shutdown(); }
+        catch (Exception e) { /* Purge DB shutdown */ }
     }
 
     // --- Public loadout methods for PurgeSessionManager ---

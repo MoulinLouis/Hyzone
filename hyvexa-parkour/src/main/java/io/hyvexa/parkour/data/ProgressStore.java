@@ -61,9 +61,24 @@ public class ProgressStore {
             leaderboardCache.clear();
             dirtyPlayerVersions.clear();
 
-            loadPlayers();
-            loadCompletions();
-            loadCheckpointTimes();
+            long totalStart = System.nanoTime();
+            try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+                long start = System.nanoTime();
+                loadPlayers(conn);
+                DatabaseManager.logSlowQuery("ProgressStore.loadPlayers", start);
+
+                start = System.nanoTime();
+                loadCompletions(conn);
+                DatabaseManager.logSlowQuery("ProgressStore.loadCompletions", start);
+
+                start = System.nanoTime();
+                loadCheckpointTimes(conn);
+                DatabaseManager.logSlowQuery("ProgressStore.loadCheckpointTimes", start);
+            } catch (SQLException e) {
+                LOGGER.atSevere().withCause(e).log("Failed to acquire connection for syncLoad");
+                return;
+            }
+            DatabaseManager.logSlowQuery("ProgressStore.syncLoad (total)", totalStart);
 
             LOGGER.atInfo().log("ProgressStore loaded " + progress.size() + " players from database");
 
@@ -72,35 +87,29 @@ public class ProgressStore {
         }
     }
 
-    private void loadPlayers() {
+    private void loadPlayers(Connection conn) {
         String sql = "SELECT uuid, name, xp, level, welcome_shown, playtime_ms, vip, founder, teleport_item_use_count, jump_count FROM players";
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
-            if (conn == null) {
-                LOGGER.atWarning().log("Failed to acquire database connection");
-                return;
-            }
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                try (ResultSet rs = stmt.executeQuery()) {
-                    while (rs.next()) {
-                        UUID uuid = UUID.fromString(rs.getString("uuid"));
-                        PlayerProgress playerProgress = new PlayerProgress();
-                        playerProgress.xp = rs.getLong("xp");
-                        playerProgress.level = rs.getInt("level");
-                        playerProgress.welcomeShown = rs.getBoolean("welcome_shown");
-                        playerProgress.playtimeMs = rs.getLong("playtime_ms");
-                        playerProgress.vip = rs.getBoolean("vip");
-                        playerProgress.founder = rs.getBoolean("founder");
-                        playerProgress.teleportItemUseCount = rs.getInt("teleport_item_use_count");
-                        playerProgress.jumpCount = rs.getLong("jump_count");
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    UUID uuid = UUID.fromString(rs.getString("uuid"));
+                    PlayerProgress playerProgress = new PlayerProgress();
+                    playerProgress.xp = rs.getLong("xp");
+                    playerProgress.level = rs.getInt("level");
+                    playerProgress.welcomeShown = rs.getBoolean("welcome_shown");
+                    playerProgress.playtimeMs = rs.getLong("playtime_ms");
+                    playerProgress.vip = rs.getBoolean("vip");
+                    playerProgress.founder = rs.getBoolean("founder");
+                    playerProgress.teleportItemUseCount = rs.getInt("teleport_item_use_count");
+                    playerProgress.jumpCount = rs.getLong("jump_count");
 
-                        progress.put(uuid, playerProgress);
+                    progress.put(uuid, playerProgress);
 
-                        String name = rs.getString("name");
-                        if (name != null && !name.isBlank()) {
-                            lastKnownNames.put(uuid, name);
-                        }
+                    String name = rs.getString("name");
+                    if (name != null && !name.isBlank()) {
+                        lastKnownNames.put(uuid, name);
                     }
                 }
             }
@@ -109,28 +118,22 @@ public class ProgressStore {
         }
     }
 
-    private void loadCompletions() {
+    private void loadCompletions(Connection conn) {
         String sql = "SELECT player_uuid, map_id, best_time_ms FROM player_completions";
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
-            if (conn == null) {
-                LOGGER.atWarning().log("Failed to acquire database connection");
-                return;
-            }
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                try (ResultSet rs = stmt.executeQuery()) {
-                    while (rs.next()) {
-                        UUID uuid = UUID.fromString(rs.getString("player_uuid"));
-                        String mapId = rs.getString("map_id");
-                        long bestTime = rs.getLong("best_time_ms");
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    UUID uuid = UUID.fromString(rs.getString("player_uuid"));
+                    String mapId = rs.getString("map_id");
+                    long bestTime = rs.getLong("best_time_ms");
 
-                        PlayerProgress playerProgress = progress.get(uuid);
-                        if (playerProgress != null) {
-                            playerProgress.completedMaps.add(mapId);
-                            if (bestTime > 0) {
-                                playerProgress.bestMapTimes.put(mapId, bestTime);
-                            }
+                    PlayerProgress playerProgress = progress.get(uuid);
+                    if (playerProgress != null) {
+                        playerProgress.completedMaps.add(mapId);
+                        if (bestTime > 0) {
+                            playerProgress.bestMapTimes.put(mapId, bestTime);
                         }
                     }
                 }
@@ -140,33 +143,27 @@ public class ProgressStore {
         }
     }
 
-    private void loadCheckpointTimes() {
+    private void loadCheckpointTimes(Connection conn) {
         String sql = "SELECT player_uuid, map_id, checkpoint_index, time_ms FROM player_checkpoint_times"
                 + " ORDER BY checkpoint_index";
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
-            if (conn == null) {
-                LOGGER.atWarning().log("Failed to acquire database connection");
-                return;
-            }
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                try (ResultSet rs = stmt.executeQuery()) {
-                    while (rs.next()) {
-                        UUID uuid = UUID.fromString(rs.getString("player_uuid"));
-                        String mapId = rs.getString("map_id");
-                        int checkpointIndex = rs.getInt("checkpoint_index");
-                        long timeMs = rs.getLong("time_ms");
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    UUID uuid = UUID.fromString(rs.getString("player_uuid"));
+                    String mapId = rs.getString("map_id");
+                    int checkpointIndex = rs.getInt("checkpoint_index");
+                    long timeMs = rs.getLong("time_ms");
 
-                        PlayerProgress playerProgress = progress.get(uuid);
-                        if (playerProgress != null) {
-                            List<Long> times = playerProgress.checkpointTimes
-                                    .computeIfAbsent(mapId, k -> new ArrayList<>());
-                            while (times.size() <= checkpointIndex) {
-                                times.add(0L);
-                            }
-                            times.set(checkpointIndex, timeMs);
+                    PlayerProgress playerProgress = progress.get(uuid);
+                    if (playerProgress != null) {
+                        List<Long> times = playerProgress.checkpointTimes
+                                .computeIfAbsent(mapId, k -> new ArrayList<>());
+                        while (times.size() <= checkpointIndex) {
+                            times.add(0L);
                         }
+                        times.set(checkpointIndex, timeMs);
                     }
                 }
             }

@@ -66,6 +66,18 @@ public class ModelParticleTrailManager {
         return activeTrails.containsKey(playerId);
     }
 
+    /**
+     * Cancel the tick task and clear all trails. Call on plugin shutdown.
+     */
+    public void shutdown() {
+        ScheduledFuture<?> task = tickTask;
+        if (task != null) {
+            task.cancel(false);
+            tickTask = null;
+        }
+        activeTrails.clear();
+    }
+
     private synchronized void ensureTickTask() {
         if (tickTask != null && !tickTask.isCancelled() && !tickTask.isDone()) {
             return;

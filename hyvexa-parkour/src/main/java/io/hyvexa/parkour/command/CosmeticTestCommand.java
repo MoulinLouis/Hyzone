@@ -2,7 +2,14 @@ package io.hyvexa.parkour.command;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.protocol.*;
+import com.hypixel.hytale.protocol.Color;
+import com.hypixel.hytale.protocol.EntityEffectUpdate;
+import com.hypixel.hytale.protocol.EntityEffectsUpdate;
+import com.hypixel.hytale.protocol.EntityPart;
+import com.hypixel.hytale.protocol.EntityUpdate;
+import com.hypixel.hytale.protocol.GameMode;
+import com.hypixel.hytale.protocol.ModelParticle;
+import com.hypixel.hytale.protocol.Vector3f;
 import com.hypixel.hytale.protocol.packets.entities.EntityUpdates;
 import com.hypixel.hytale.protocol.packets.entities.SpawnModelParticles;
 import com.hypixel.hytale.server.core.Message;

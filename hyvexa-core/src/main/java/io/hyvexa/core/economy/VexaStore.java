@@ -25,6 +25,7 @@ public class VexaStore {
 
     private final ConcurrentHashMap<UUID, CachedBalance> cache = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Boolean> refreshInFlight = new ConcurrentHashMap<>();
+    private final java.util.concurrent.atomic.AtomicLong versionCounter = new java.util.concurrent.atomic.AtomicLong(0);
 
     private VexaStore() {
     }
@@ -95,7 +96,7 @@ public class VexaStore {
             return;
         }
         long safe = Math.max(0, vexa);
-        cache.put(playerId, new CachedBalance(safe));
+        cache.put(playerId, new CachedBalance(safe, versionCounter.incrementAndGet()));
         persistToDatabase(playerId, safe);
     }
 
@@ -129,7 +130,7 @@ public class VexaStore {
             long current = (cached != null && !cached.isStale()) ? cached.value : loadFromDatabase(uuid);
             long newTotal = Math.max(0, compute.applyAsLong(current));
             result[0] = newTotal;
-            return new CachedBalance(newTotal);
+            return new CachedBalance(newTotal, versionCounter.incrementAndGet());
         });
         persistToDatabase(playerId, result[0]);
         return result[0];
@@ -147,7 +148,7 @@ public class VexaStore {
 
     private long loadAndCacheBalance(UUID playerId) {
         long fromDb = loadFromDatabase(playerId);
-        cache.put(playerId, new CachedBalance(fromDb));
+        cache.put(playerId, new CachedBalance(fromDb, versionCounter.incrementAndGet()));
         return fromDb;
     }
 
@@ -155,6 +156,8 @@ public class VexaStore {
         if (playerId == null || refreshInFlight.putIfAbsent(playerId, Boolean.TRUE) != null) {
             return;
         }
+        CachedBalance snapshot = cache.get(playerId);
+        long snapshotVersion = snapshot != null ? snapshot.version : -1;
         CompletableFuture.supplyAsync(() -> loadFromDatabase(playerId), HytaleServer.SCHEDULED_EXECUTOR)
                 .handle((value, throwable) -> {
                     try {
@@ -166,10 +169,10 @@ public class VexaStore {
                             if (current == null) {
                                 return null;
                             }
-                            if (current.cachedAt > staleCachedAt) {
+                            if (current.version != snapshotVersion) {
                                 return current;
                             }
-                            return new CachedBalance(value);
+                            return new CachedBalance(value, versionCounter.incrementAndGet());
                         });
                         return null;
                     } finally {
@@ -258,10 +261,12 @@ public class VexaStore {
     private static final class CachedBalance {
         final long value;
         final long cachedAt;
+        final long version;
 
-        CachedBalance(long value) {
+        CachedBalance(long value, long version) {
             this.value = value;
             this.cachedAt = System.currentTimeMillis();
+            this.version = version;
         }
 
         boolean isStale() {

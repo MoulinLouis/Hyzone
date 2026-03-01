@@ -2,7 +2,11 @@ package io.hyvexa.parkour.command;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.protocol.*;
+import com.hypixel.hytale.protocol.AttachedToType;
+import com.hypixel.hytale.protocol.ClientCameraView;
+import com.hypixel.hytale.protocol.GameMode;
+import com.hypixel.hytale.protocol.PositionDistanceOffsetType;
+import com.hypixel.hytale.protocol.ServerCameraSettings;
 import com.hypixel.hytale.protocol.packets.camera.SetFlyCameraMode;
 import com.hypixel.hytale.protocol.packets.camera.SetServerCamera;
 import com.hypixel.hytale.server.core.Message;

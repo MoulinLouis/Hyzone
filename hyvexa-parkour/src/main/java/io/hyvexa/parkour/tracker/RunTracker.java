@@ -42,6 +42,7 @@ import java.util.concurrent.TimeUnit;
 /** Tracks active parkour runs, checkpoint detection, and finish logic. */
 public class RunTracker {
 
+    private static final com.hypixel.hytale.logger.HytaleLogger LOGGER = com.hypixel.hytale.logger.HytaleLogger.forEnclosingClass();
     private static final double TOUCH_RADIUS_SQ = ParkourConstants.TOUCH_RADIUS * ParkourConstants.TOUCH_RADIUS;
     private static final double START_MOVE_THRESHOLD_SQ = 0.0025;
     private static final long OFFLINE_RUN_EXPIRY_MS = TimeUnit.MINUTES.toMillis(30L);
@@ -104,7 +105,9 @@ public class RunTracker {
         try {
             io.hyvexa.core.analytics.AnalyticsStore.getInstance().logEvent(playerId, "map_start",
                     "{\"map_id\":\"" + mapId + "\"}");
-        } catch (Exception e) { /* silent */ }
+        } catch (Exception e) {
+            LOGGER.atWarning().withCause(e).log("Failed to log map_start analytics event");
+        }
         return run;
     }
 

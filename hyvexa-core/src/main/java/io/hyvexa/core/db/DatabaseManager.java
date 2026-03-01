@@ -115,6 +115,15 @@ public class DatabaseManager {
             LOGGER.atInfo().log("Database connection pool initialized successfully");
             ensureCheckpointTimesTable();
             ensureDuelEnabledColumn();
+            // Verify database is reachable
+            try (Connection conn = getConnection();
+                 PreparedStatement stmt = conn.prepareStatement("SELECT 1")) {
+                applyQueryTimeout(stmt);
+                stmt.executeQuery();
+                LOGGER.atInfo().log("Database health check passed");
+            } catch (SQLException healthEx) {
+                LOGGER.atSevere().withCause(healthEx).log("DATABASE HEALTH CHECK FAILED - database may be unreachable");
+            }
         } catch (Exception e) {
             LOGGER.atSevere().withCause(e).log("Failed to initialize database connection pool");
             throw new RuntimeException("Database initialization failed", e);
@@ -264,6 +273,19 @@ public class DatabaseManager {
     public static void applyQueryTimeout(PreparedStatement stmt) throws SQLException {
         if (stmt != null) {
             stmt.setQueryTimeout(QUERY_TIMEOUT_SECONDS);
+        }
+    }
+
+    private static final long SLOW_QUERY_THRESHOLD_MS = 500;
+
+    /**
+     * Log a warning if a query took longer than the slow query threshold.
+     * Call after executing any query with the elapsed time.
+     */
+    public static void logSlowQuery(String context, long startNanos) {
+        long elapsedMs = (System.nanoTime() - startNanos) / 1_000_000;
+        if (elapsedMs > SLOW_QUERY_THRESHOLD_MS) {
+            LOGGER.atWarning().log("Slow query (" + elapsedMs + "ms): " + context);
         }
     }
 

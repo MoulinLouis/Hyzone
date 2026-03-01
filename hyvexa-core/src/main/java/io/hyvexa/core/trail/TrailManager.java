@@ -3,7 +3,9 @@ package io.hyvexa.core.trail;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
-import com.hypixel.hytale.protocol.*;
+import com.hypixel.hytale.protocol.Color;
+import com.hypixel.hytale.protocol.Direction;
+import com.hypixel.hytale.protocol.Position;
 import com.hypixel.hytale.protocol.packets.world.SpawnParticleSystem;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.io.PacketHandler;
@@ -69,6 +71,18 @@ public class TrailManager {
      */
     public boolean hasTrail(UUID playerId) {
         return activeTrails.containsKey(playerId);
+    }
+
+    /**
+     * Cancel the tick task and clear all trails. Call on plugin shutdown.
+     */
+    public void shutdown() {
+        ScheduledFuture<?> task = tickTask;
+        if (task != null) {
+            task.cancel(false);
+            tickTask = null;
+        }
+        activeTrails.clear();
     }
 
     private synchronized void ensureTickTask() {

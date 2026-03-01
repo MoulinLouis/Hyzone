@@ -518,5 +518,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
         if (gameManager != null) {
             gameManager.shutdown();
         }
+        try { DatabaseManager.getInstance().shutdown(); }
+        catch (Exception e) { /* RunOrFall DB shutdown */ }
     }
 }

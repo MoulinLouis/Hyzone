@@ -7,7 +7,8 @@ import com.hypixel.hytale.server.core.universe.Universe;
 import io.hyvexa.purge.data.PurgeParty;
 import io.hyvexa.purge.util.PurgePlayerNameResolver;
 
-import java.util.*;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class PurgePartyManager {

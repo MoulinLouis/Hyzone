@@ -32,6 +32,7 @@ public class WardrobePlugin extends JavaPlugin {
     private WardrobeShopTab wardrobeShopTab;
     private EffectsShopTab effectsShopTab;
     private ShopConfigTab shopConfigTab;
+    private PurgeSkinShopTab purgeSkinShopTab;
 
     public WardrobePlugin(@Nonnull JavaPluginInit init) {
         super(init);
@@ -81,7 +82,8 @@ public class WardrobePlugin extends JavaPlugin {
         ShopTabRegistry.register(wardrobeShopTab);
         effectsShopTab = new EffectsShopTab();
         ShopTabRegistry.register(effectsShopTab);
-        ShopTabRegistry.register(new PurgeSkinShopTab());
+        purgeSkinShopTab = new PurgeSkinShopTab();
+        ShopTabRegistry.register(purgeSkinShopTab);
         shopConfigTab = new ShopConfigTab();
         ShopTabRegistry.register(shopConfigTab);
 
@@ -130,6 +132,12 @@ public class WardrobePlugin extends JavaPlugin {
             }
 
             try {
+                if (purgeSkinShopTab != null) purgeSkinShopTab.evictPlayer(playerId);
+            } catch (Exception e) {
+                LOGGER.atWarning().withCause(e).log("Disconnect cleanup: PurgeSkinShopTab");
+            }
+
+            try {
                 CosmeticManager.getInstance().cleanupOnDisconnect(playerId);
             } catch (Exception e) {
                 LOGGER.atWarning().withCause(e).log("Disconnect cleanup: CosmeticManager");
@@ -166,6 +174,13 @@ public class WardrobePlugin extends JavaPlugin {
     @Override
     protected void shutdown() {
         LOGGER.atInfo().log("Shutting down " + this.getName());
+        try {
+            CosmeticManager.getInstance().shutdown();
+        } catch (Exception e) {
+            LOGGER.atWarning().withCause(e).log("Shutdown: CosmeticManager");
+        }
+        try { DatabaseManager.getInstance().shutdown(); }
+        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: DatabaseManager"); }
         super.shutdown();
     }
 }

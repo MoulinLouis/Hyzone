@@ -201,7 +201,9 @@ public class PetManager {
                     if (npcEntity != null) {
                         npcEntity.setInitialModelScale(state.scale);
                     }
-                } catch (Exception ignored) {}
+                } catch (Exception e) {
+                    LOGGER.atWarning().withCause(e).log("Failed to set pet model scale");
+                }
             }
 
             // Remove Interactable so players can't interact with pet
@@ -210,7 +212,9 @@ public class PetManager {
                 if (archetype.contains(com.hypixel.hytale.server.core.modules.entity.component.Interactable.getComponentType())) {
                     store.removeComponent(entityRef, com.hypixel.hytale.server.core.modules.entity.component.Interactable.getComponentType());
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                LOGGER.atWarning().withCause(e).log("Failed to remove pet interactable component");
+            }
 
         } catch (Exception e) {
             LOGGER.atWarning().log("Failed to spawn pet: " + e.getMessage());
