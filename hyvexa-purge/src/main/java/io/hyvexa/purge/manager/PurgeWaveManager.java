@@ -43,6 +43,7 @@ import io.hyvexa.purge.ui.PurgeUpgradePickPage;
 import io.hyvexa.purge.util.PurgePlayerNameResolver;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -66,6 +67,8 @@ public class PurgeWaveManager {
     private static final int COUNTDOWN_SECONDS = 5;
     private static final int UPGRADE_TIMEOUT_SECONDS = 15;
     private static final double SPAWN_RANDOM_OFFSET = 2.0;
+    /** Spawn count multiplier added per extra player above 1. */
+    private static final double PLAYER_SCALE_PER_EXTRA = 0.75;
     /** Detection range for purge zombies — covers entire arena. */
     private static final double PURGE_AGGRO_RANGE = 80.0;
     /** Zero delay for all instruction tree timeouts (eliminates Alerted->Search pause). */
@@ -168,7 +171,13 @@ public class PurgeWaveManager {
         }
 
         session.setCurrentWave(nextWave);
-        int totalCount = wave.totalCount();
+
+        // Scale spawn counts by connected player count
+        int playerCount = session.getConnectedCount();
+        Map<String, Integer> scaledCounts = scaleVariantCounts(wave, playerCount);
+        int totalCount = 0;
+        for (int c : scaledCounts.values()) totalCount += c;
+
         session.setWaveZombieCount(totalCount);
         session.setSpawningComplete(false);
         session.resetWaveSpawnProgress();
@@ -176,11 +185,11 @@ public class PurgeWaveManager {
         session.resetTransitionGuard();
         session.setState(SessionState.SPAWNING);
 
-        sendMessageToAll(session, "-- Wave " + nextWave + " -- (" + wave.totalCount() + " zombies, "
+        sendMessageToAll(session, "-- Wave " + nextWave + " -- (" + totalCount + " zombies, "
                 + wave.spawnDelayMs() + "ms delay, batch " + wave.spawnBatchSize() + ")");
         session.forEachConnectedParticipant(pid -> hudManager.updateWaveStatus(pid, nextWave, totalCount, totalCount));
 
-        List<String> spawnQueue = buildSpawnQueue(wave);
+        List<String> spawnQueue = buildSpawnQueue(scaledCounts);
         if (spawnQueue.isEmpty()) {
             markSpawningComplete(session);
             if (tryBeginSessionTransition(session)) {
@@ -193,17 +202,12 @@ public class PurgeWaveManager {
         startWaveTick(session);
     }
 
-    private List<String> buildSpawnQueue(PurgeWaveDefinition wave) {
-        // Build remaining counts map
-        Map<String, Integer> remaining = new java.util.LinkedHashMap<>();
-        for (String key : wave.getVariantKeys()) {
-            int count = Math.max(0, wave.getCount(key));
-            if (count > 0) {
-                remaining.put(key, count);
-            }
-        }
+    private List<String> buildSpawnQueue(Map<String, Integer> variantCounts) {
+        Map<String, Integer> remaining = new LinkedHashMap<>(variantCounts);
 
-        List<String> queue = new ArrayList<>(wave.totalCount());
+        int total = 0;
+        for (int c : remaining.values()) total += c;
+        List<String> queue = new ArrayList<>(total);
         // Round-robin interleave variants
         while (!remaining.isEmpty()) {
             var it = remaining.entrySet().iterator();
@@ -219,6 +223,18 @@ public class PurgeWaveManager {
             }
         }
         return queue;
+    }
+
+    private static Map<String, Integer> scaleVariantCounts(PurgeWaveDefinition wave, int playerCount) {
+        Map<String, Integer> scaled = new LinkedHashMap<>();
+        double multiplier = 1.0 + PLAYER_SCALE_PER_EXTRA * Math.max(0, playerCount - 1);
+        for (String key : wave.getVariantKeys()) {
+            int base = Math.max(0, wave.getCount(key));
+            if (base > 0) {
+                scaled.put(key, (int) Math.round(base * multiplier));
+            }
+        }
+        return scaled;
     }
 
     private void startSpawning(PurgeSession session, List<String> spawnQueue, PurgeWaveDefinition wave) {
