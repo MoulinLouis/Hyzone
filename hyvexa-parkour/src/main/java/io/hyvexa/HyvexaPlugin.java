@@ -73,6 +73,7 @@ import io.hyvexa.parkour.command.CreditsCommand;
 import io.hyvexa.parkour.command.VexaCommand;
 import io.hyvexa.parkour.command.AnalyticsCommand;
 import io.hyvexa.parkour.command.LinkCommand;
+import io.hyvexa.parkour.command.MobGalleryCommand;
 import io.hyvexa.parkour.command.UnlinkCommand;
 import io.hyvexa.parkour.command.DatabaseClearCommand;
 import io.hyvexa.parkour.command.DatabaseReloadCommand;
@@ -314,6 +315,7 @@ public class HyvexaPlugin extends JavaPlugin {
         this.getCommandRegistry().registerCommand(new UnlinkCommand());
         this.getCommandRegistry().registerCommand(new CosmeticTestCommand());
         this.getCommandRegistry().registerCommand(new PetTestCommand());
+        this.getCommandRegistry().registerCommand(new MobGalleryCommand());
         this.getCommandRegistry().registerCommand(new AnalyticsCommand());
         this.getCommandRegistry().registerCommand(new VoteCommand());
         this.getCommandRegistry().registerCommand(new CreditsCommand());
