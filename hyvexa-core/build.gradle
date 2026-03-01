@@ -8,6 +8,7 @@ dependencies {
     api 'com.mysql:mysql-connector-j:8.2.0'
     compileOnlyApi files("$rootDir/libs/hylograms-1.0.7.jar")
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 tasks.named('test') {

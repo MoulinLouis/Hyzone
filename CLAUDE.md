@@ -5,9 +5,10 @@ Quick reference for AI agents working on this Hytale plugin project.
 ## Quick Commands
 
 ```bash
-# Do NOT run builds - owner handles builds/tests
+# Do NOT run builds - owner handles builds
 # ./gradlew stagePlugins - copy jars to run/mods
 # ./gradlew collectPlugins - copy jars to build/libs
+# cmd.exe /c "gradlew.bat test"  (use cmd.exe — WSL2 has I/O issues with gradlew)
 ```
 
 ## Project Overview
@@ -43,6 +44,7 @@ Quick reference for AI agents working on this Hytale plugin project.
 3. **Follow existing patterns** - check similar files before implementing
 4. **Reuse existing Managers** - 35+ Manager classes exist across modules. Check for existing ones before creating new ones (e.g., `HyvexaPlugin.getInstance().getHudManager()`, `ParkourAscendPlugin.getInstance().getRobotManager()`)
 5. **No build runs** - owner handles `./gradlew build`
+15. **Run tests selectively** - only run tests when explicitly asked OR after large/significant changes (new features, multi-file refactors). Do NOT run tests after every small task. Only pure-logic classes with zero Hytale imports are testable — classes importing Hytale types (e.g. `Message`, `HytaleLogger`, `EntityRef`) cannot be tested without `HytaleServer.jar` on the test classpath (not yet configured).
 6. **UI paths** - Code uses `"Pages/X.ui"`, files go in `Common/UI/Custom/Pages/`
 7. **Check ref validity** - `if (ref == null || !ref.isValid()) return;`
 8. **World thread for entity ops** - use `world.execute(() -> ...)` or `CompletableFuture.runAsync(..., world)`
