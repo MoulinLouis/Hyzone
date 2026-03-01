@@ -2,6 +2,7 @@ package io.hyvexa.purge.system;
 
 import com.hypixel.hytale.component.ArchetypeChunk;
 import com.hypixel.hytale.component.CommandBuffer;
+import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.SystemGroup;
@@ -21,14 +22,18 @@ import com.hypixel.hytale.protocol.SoundCategory;
 import com.hypixel.hytale.protocol.packets.world.PlaySoundEvent2D;
 import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
 import com.hypixel.hytale.server.core.io.PacketHandler;
+import io.hyvexa.purge.HyvexaPurgePlugin;
 import io.hyvexa.purge.data.PurgeSession;
 import io.hyvexa.purge.data.PurgeSessionPlayerState;
 import io.hyvexa.purge.data.PurgeVariantConfig;
 import io.hyvexa.purge.data.PurgeWeaponUpgradeStore;
+import io.hyvexa.purge.hud.PurgeHudManager;
 import io.hyvexa.purge.manager.PurgeSessionManager;
 import io.hyvexa.purge.manager.PurgeVariantConfigManager;
 import io.hyvexa.purge.manager.PurgeWeaponConfigManager;
+import io.hyvexa.purge.manager.WeaponXpManager;
 
+import java.util.Locale;
 import java.util.UUID;
 
 public class PurgeDamageModifierSystem extends DamageEventSystem {
@@ -40,14 +45,17 @@ public class PurgeDamageModifierSystem extends DamageEventSystem {
     private final PurgeSessionManager sessionManager;
     private final PurgeVariantConfigManager variantConfigManager;
     private final PurgeWeaponConfigManager weaponConfigManager;
+    private final WeaponXpManager weaponXpManager;
     private volatile SystemGroup<EntityStore> cachedGroup;
 
     public PurgeDamageModifierSystem(PurgeSessionManager sessionManager,
                                       PurgeVariantConfigManager variantConfigManager,
-                                      PurgeWeaponConfigManager weaponConfigManager) {
+                                      PurgeWeaponConfigManager weaponConfigManager,
+                                      WeaponXpManager weaponXpManager) {
         this.sessionManager = sessionManager;
         this.variantConfigManager = variantConfigManager;
         this.weaponConfigManager = weaponConfigManager;
+        this.weaponXpManager = weaponXpManager;
     }
 
     @Override
@@ -148,10 +156,12 @@ public class PurgeDamageModifierSystem extends DamageEventSystem {
                 : weaponConfigManager.getSessionWeaponId();
         int level = PurgeWeaponUpgradeStore.getInstance().getLevel(sourceId, playerWeapon);
         int effectiveLevel = Math.max(level, 1);
-        int damage = weaponConfigManager.getDamage(playerWeapon, effectiveLevel);
+        int baseDamage = weaponConfigManager.getDamage(playerWeapon, effectiveLevel);
+        float damage = (float) (baseDamage * weaponXpManager.getDamageMultiplier(sourceId, playerWeapon));
         event.setAmount(damage);
         if (clearZombieNameplateOnLethalHit(store, session, targetRef, damage)) {
             playKillSound(sourcePlayerRef, playerState);
+            handleKillXp(sourceId, playerWeapon, store, sourceRef);
         }
     }
 
@@ -187,6 +197,33 @@ public class PurgeDamageModifierSystem extends DamageEventSystem {
         PacketHandler ph = playerRef.getPacketHandler();
         if (ph == null) return;
         ph.writeNoCache(new PlaySoundEvent2D(index, SoundCategory.SFX, 2.0f, 1.0f));
+    }
+
+    private void handleKillXp(UUID playerId, String weaponId, Store<EntityStore> store, Ref<EntityStore> playerRef) {
+        if (weaponXpManager == null) return;
+        int newLevel = weaponXpManager.addKillXp(playerId, weaponId);
+        // Update HUD XP bar on every kill
+        String displayName = weaponConfigManager.getDisplayName(weaponId);
+        HyvexaPurgePlugin plugin = HyvexaPurgePlugin.getInstance();
+        if (plugin != null) {
+            PurgeHudManager hudManager = plugin.getHudManager();
+            if (hudManager != null) {
+                hudManager.updateWeaponXpHud(playerId, weaponId, displayName);
+            }
+        }
+        // Send level-up chat message
+        if (newLevel > 0 && playerRef != null && playerRef.isValid()) {
+            Player player = store.getComponent(playerRef, Player.getComponentType());
+            if (player != null) {
+                double dmgBonus = 1.5 * newLevel;
+                int scrapBonus = (int) (0.5 * newLevel);
+                int ammoBonus = 5 * newLevel;
+                String msg = displayName + " reached Mastery Lv " + newLevel + "! +"
+                        + String.format(Locale.US, "%.1f", dmgBonus) + "% DMG, +"
+                        + scrapBonus + " scrap/kill, +" + ammoBonus + "% ammo";
+                player.sendMessage(Message.raw(msg));
+            }
+        }
     }
 
     private void cancelDamage(Damage event, CommandBuffer<EntityStore> buffer,

@@ -19,15 +19,18 @@ import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.skin.PurgeSkinRegistry;
 import io.hyvexa.common.skin.PurgeSkinStore;
 import io.hyvexa.purge.data.PurgeWeaponUpgradeStore;
+import io.hyvexa.purge.data.WeaponXpStore;
 import io.hyvexa.purge.manager.PurgeInstanceManager;
 import io.hyvexa.purge.manager.PurgeVariantConfigManager;
 import io.hyvexa.purge.manager.PurgeWaveConfigManager;
 import io.hyvexa.purge.manager.PurgeWeaponConfigManager;
+import io.hyvexa.purge.manager.WeaponXpManager;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
@@ -344,6 +347,43 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SkinsButton",
                     EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_SKINS), false);
         }
+
+        // Weapon XP mastery section (only shown for owned weapons)
+        boolean isOwned = PurgeWeaponUpgradeStore.getInstance().getLevel(playerId, selectedWeaponId) >= 1;
+        commandBuilder.set("#XpSection.Visible", isOwned);
+        if (isOwned) {
+            populateXpSection(commandBuilder);
+        }
+    }
+
+    private void populateXpSection(UICommandBuilder commandBuilder) {
+        int[] xpData = WeaponXpStore.getInstance().getXpData(playerId, selectedWeaponId);
+        int xp = xpData[0];
+        int xpLevel = xpData[1];
+        int maxXpLevel = WeaponXpManager.MAX_LEVEL;
+
+        if (xpLevel >= maxXpLevel) {
+            commandBuilder.set("#XpLevelLabel.Text", "Mastery MAX");
+            commandBuilder.set("#XpBar.Value", 1.0f);
+            commandBuilder.set("#XpText.Text", "MAX");
+        } else {
+            commandBuilder.set("#XpLevelLabel.Text", "Mastery Lv " + xpLevel);
+            int cumCurrent = WeaponXpManager.cumulativeXp(xpLevel);
+            int cumNext = WeaponXpManager.cumulativeXp(xpLevel + 1);
+            int xpInLevel = xp - cumCurrent;
+            int xpNeeded = cumNext - cumCurrent;
+            float progress = xpNeeded > 0 ? (float) xpInLevel / xpNeeded : 0f;
+            commandBuilder.set("#XpBar.Value", progress);
+            commandBuilder.set("#XpText.Text", xpInLevel + " / " + xpNeeded + " XP");
+        }
+
+        double dmgBonus = 1.5 * xpLevel;
+        int scrapBonus = (int) (0.5 * xpLevel);
+        int ammoBonus = 5 * xpLevel;
+        commandBuilder.set("#XpBoosts.Text",
+                "+" + String.format(Locale.US, "%.1f", dmgBonus) + "% DMG   "
+                + "+" + scrapBonus + " Scrap/kill   "
+                + "+" + ammoBonus + "% Ammo");
     }
 
     private void buildWeaponList(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {

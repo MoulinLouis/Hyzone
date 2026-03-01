@@ -14,6 +14,8 @@ import io.hyvexa.core.economy.VexaStore;
 import io.hyvexa.purge.data.PurgeScrapStore;
 import io.hyvexa.purge.data.PurgeUpgradeState;
 import io.hyvexa.purge.data.PurgeUpgradeType;
+import io.hyvexa.purge.data.WeaponXpStore;
+import io.hyvexa.purge.manager.WeaponXpManager;
 
 import io.hyvexa.purge.data.PurgeSessionPlayerState;
 
@@ -112,8 +114,35 @@ public class PurgeHudManager {
             hud.updateUpgradeLevels(0, 0, 0, 0);
             hud.setPlayerHealthVisible(false);
             hud.setWaveStatusVisible(false);
+            hud.hideWeaponXp();
             hud.resetCache();
         }
+    }
+
+    public void updateWeaponXpHud(UUID playerId, String weaponId, String displayName) {
+        PurgeHud hud = getHud(playerId);
+        if (hud == null || weaponId == null) return;
+        int[] xpData = WeaponXpStore.getInstance().getXpData(playerId, weaponId);
+        int xp = xpData[0];
+        int level = xpData[1];
+
+        String nameText;
+        String xpText;
+        float barProgress;
+        if (level >= WeaponXpManager.MAX_LEVEL) {
+            nameText = displayName + " Lv MAX";
+            xpText = "MAX";
+            barProgress = 1.0f;
+        } else {
+            nameText = displayName + " Lv " + level;
+            int cumCurrent = WeaponXpManager.cumulativeXp(level);
+            int cumNext = WeaponXpManager.cumulativeXp(level + 1);
+            int xpInLevel = xp - cumCurrent;
+            int xpNeeded = cumNext - cumCurrent;
+            barProgress = xpNeeded > 0 ? (float) xpInLevel / xpNeeded : 0f;
+            xpText = xpInLevel + "/" + xpNeeded;
+        }
+        hud.updateWeaponXp(nameText, xpText, barProgress);
     }
 
     public void updateWaveStatus(UUID playerId, int wave, int alive, int total) {

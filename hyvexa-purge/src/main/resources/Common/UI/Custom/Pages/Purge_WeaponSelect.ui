@@ -101,7 +101,7 @@ $C.@PageOverlay {
 
     // === DETAIL PANEL (hidden until weapon selected) ===
     Group #DetailPanel {
-      Anchor: (Left: 0, Right: 0, Height: 118);
+      Anchor: (Left: 0, Right: 0, Height: 156);
       LayoutMode: Full;
       Background: #0f1f33;
       Visible: false;
@@ -254,6 +254,43 @@ $C.@PageOverlay {
           Pressed: (Background: #6366f1(0.15), LabelStyle: (FontSize: 16, RenderBold: true, TextColor: #a5b4fc, HorizontalAlignment: Center, VerticalAlignment: Center)),
           Sounds: $C.@ButtonSounds,
         );
+      }
+
+      // === WEAPON XP SECTION ===
+      Group #XpSection {
+        Anchor: (Left: 132, Right: 200, Bottom: 6, Height: 36);
+        LayoutMode: Top;
+
+        Group #XpRow {
+          Anchor: (Left: 0, Right: 0, Height: 16);
+          LayoutMode: Left;
+
+          Label #XpLevelLabel {
+            Anchor: (Width: 90, Height: 16);
+            Style: (FontSize: 13, TextColor: #ffd44d, RenderBold: true, VerticalAlignment: Center);
+            Text: "Mastery Lv 0";
+          }
+
+          ProgressBar #XpBar {
+            Anchor: (Left: 4, Height: 10, Top: 3);
+            FlexWeight: 1;
+            Value: 0;
+            Bar: #ffd44d;
+            Background: #ffd44d(0.12);
+          }
+
+          Label #XpText {
+            Anchor: (Left: 8, Width: 86, Height: 16);
+            Style: (FontSize: 12, TextColor: #9eb7d4, VerticalAlignment: Center);
+            Text: "0 / 25 XP";
+          }
+        }
+
+        Label #XpBoosts {
+          Anchor: (Left: 0, Right: 0, Top: 2, Height: 14);
+          Style: (FontSize: 11, TextColor: #8b9bb0);
+          Text: "+0% DMG   +0 Scrap/kill   +0% Ammo";
+        }
       }
     }
   }

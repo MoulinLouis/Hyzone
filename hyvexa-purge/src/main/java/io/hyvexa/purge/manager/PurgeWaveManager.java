@@ -101,6 +101,7 @@ public class PurgeWaveManager {
     // Set by PurgeSessionManager after construction
     private volatile PurgeSessionManager sessionManager;
     private volatile PurgeUpgradeManager upgradeManager;
+    private volatile WeaponXpManager weaponXpManager;
 
     public PurgeWaveManager(PurgeInstanceManager instanceManager,
                             PurgeWaveConfigManager waveConfigManager,
@@ -123,6 +124,10 @@ public class PurgeWaveManager {
 
     public void setUpgradeManager(PurgeUpgradeManager upgradeManager) {
         this.upgradeManager = upgradeManager;
+    }
+
+    public void setWeaponXpManager(WeaponXpManager weaponXpManager) {
+        this.weaponXpManager = weaponXpManager;
     }
 
     public boolean hasConfiguredWaves() {
@@ -659,15 +664,22 @@ public class PurgeWaveManager {
             session.forEachAliveConnectedPlayerState(PurgeSessionPlayerState::incrementKills);
         }
 
-        // Scrap reward per zombie kill based on variant config
-        if (totalScrapPerKill > 0) {
-            int scrapReward = totalScrapPerKill;
+        // Scrap reward per zombie kill based on variant config + weapon XP bonus
+        {
+            int baseScrapReward = totalScrapPerKill;
+            int deadCount = dead.size();
             session.forEachAliveConnectedPlayerState(ps -> {
                 UUID playerId = ps.getPlayerId();
-                PurgeScrapStore.getInstance().addScrap(playerId, scrapReward);
-                PurgeHud hud = hudManager.getHud(playerId);
-                if (hud != null) {
-                    hud.updateScrap(PurgeScrapStore.getInstance().getScrap(playerId));
+                int bonusScrap = (weaponXpManager != null)
+                        ? weaponXpManager.getBonusScrap(playerId, ps.getCurrentWeaponId()) * deadCount
+                        : 0;
+                int reward = baseScrapReward + bonusScrap;
+                if (reward > 0) {
+                    PurgeScrapStore.getInstance().addScrap(playerId, reward);
+                    PurgeHud hud = hudManager.getHud(playerId);
+                    if (hud != null) {
+                        hud.updateScrap(PurgeScrapStore.getInstance().getScrap(playerId));
+                    }
                 }
             });
         }

@@ -15,10 +15,12 @@ import com.hypixel.hytale.server.core.modules.entitystats.modifier.StaticModifie
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.purge.data.PurgeSession;
+import io.hyvexa.purge.data.PurgeSessionPlayerState;
 import io.hyvexa.purge.data.PurgeUpgradeOffer;
 import io.hyvexa.purge.data.PurgeUpgradeRarity;
 import io.hyvexa.purge.data.PurgeUpgradeState;
 import io.hyvexa.purge.data.PurgeUpgradeType;
+import io.hyvexa.purge.data.WeaponXpStore;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -75,7 +77,11 @@ public class PurgeUpgradeManager {
 
         switch (offer.type()) {
             case HP -> applyHp(ref, store, state.getAccumulated(PurgeUpgradeType.HP));
-            case AMMO -> applyAmmoToPlayer(player, state.getAccumulated(PurgeUpgradeType.AMMO));
+            case AMMO -> {
+                PurgeSessionPlayerState ps = session.getPlayerState(playerId);
+                String weaponId = ps != null ? ps.getCurrentWeaponId() : null;
+                applyAmmoToPlayer(player, state.getAccumulated(PurgeUpgradeType.AMMO), playerId, weaponId);
+            }
             case SPEED -> applySpeed(ref, store, state.getAccumulated(PurgeUpgradeType.SPEED));
             case LUCK -> {} // Read at rarity-roll time
         }
@@ -130,15 +136,16 @@ public class PurgeUpgradeManager {
         PurgeUpgradeState state = session.getUpgradeState(playerId);
         if (state == null) return;
         int totalBonusAmmo = state.getAccumulated(PurgeUpgradeType.AMMO);
-        if (totalBonusAmmo <= 0) return;
-        applyAmmoToPlayer(player, totalBonusAmmo);
+        PurgeSessionPlayerState ps = session.getPlayerState(playerId);
+        String weaponId = ps != null ? ps.getCurrentWeaponId() : null;
+        applyAmmoToPlayer(player, totalBonusAmmo, playerId, weaponId);
     }
 
     /**
      * Sets max ammo on the weapon in slot 0, same mechanism as /setammo command.
-     * Takes Player directly — no ref/store resolution.
+     * Applies weapon XP ammo multiplier to base magazine before adding upgrade bonus.
      */
-    private void applyAmmoToPlayer(Player player, int bonusAmmo) {
+    private void applyAmmoToPlayer(Player player, int bonusAmmo, UUID playerId, String weaponId) {
         if (player == null) return;
 
         Inventory inventory = player.getInventory();
@@ -151,7 +158,13 @@ public class PurgeUpgradeManager {
         Integer defaultMax = com.thescar.hygunsplugin.GunRegistry.getDefaultMaxAmmo(itemId);
         if (defaultMax == null) return;
 
-        int newMax = defaultMax + bonusAmmo;
+        // Apply weapon XP ammo multiplier to base magazine size
+        int effectiveBase = defaultMax;
+        if (playerId != null && weaponId != null) {
+            int xpLevel = WeaponXpStore.getInstance().getXpData(playerId, weaponId)[1];
+            effectiveBase = (int) (defaultMax * (1.0 + 0.05 * xpLevel));
+        }
+        int newMax = effectiveBase + bonusAmmo;
 
         weapon = com.thescar.hygunsplugin.ItemStackUtils.setCustomInt(weapon, "Hyguns_MaxAmmo", newMax);
         weapon = com.thescar.hygunsplugin.ItemStackUtils.setCustomInt(weapon, "Hyguns_Ammo", newMax);

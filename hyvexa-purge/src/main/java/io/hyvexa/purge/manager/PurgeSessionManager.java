@@ -180,6 +180,11 @@ public class PurgeSessionManager {
                     LOGGER.atWarning().withCause(e).log("Failed to setup player " + pid);
                 }
                 hudManager.showRunHud(pid);
+                if (ps != null && plugin != null) {
+                    String weaponId = ps.getCurrentWeaponId();
+                    String displayName = plugin.getWeaponConfigManager().getDisplayName(weaponId);
+                    hudManager.updateWeaponXpHud(pid, weaponId, displayName);
+                }
                 hudManager.registerComboPlayer(pid, ps);
                 syncPlayerHealthHud(pid, ref);
             }
