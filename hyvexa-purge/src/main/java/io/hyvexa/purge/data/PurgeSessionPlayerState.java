@@ -18,6 +18,10 @@ public class PurgeSessionPlayerState {
     private volatile String currentWeaponId;
     private volatile long lastKillTimeMs;
     private volatile int killStreak;
+    private volatile PurgeClass activeClass;
+    private volatile int bonusScrapFromClass;
+    private volatile float classSpeedFactor = 1.0f;
+    private volatile int regenTickCounter;
 
     public PurgeSessionPlayerState(UUID playerId, Ref<EntityStore> playerRef) {
         this.playerId = playerId;
@@ -47,6 +51,18 @@ public class PurgeSessionPlayerState {
 
     public long getLastKillTimeMs() { return lastKillTimeMs; }
     public int getKillStreak() { return killStreak; }
+
+    public PurgeClass getActiveClass() { return activeClass; }
+    public void setActiveClass(PurgeClass activeClass) { this.activeClass = activeClass; }
+
+    public int getBonusScrapFromClass() { return bonusScrapFromClass; }
+    public void addBonusScrap(int amount) { this.bonusScrapFromClass += amount; }
+
+    public float getClassSpeedFactor() { return classSpeedFactor; }
+    public void setClassSpeedFactor(float classSpeedFactor) { this.classSpeedFactor = classSpeedFactor; }
+
+    public int incrementRegenTickCounter() { return ++regenTickCounter; }
+    public void resetRegenTickCounter() { regenTickCounter = 0; }
 
     /**
      * Records a kill and returns the current streak level (1-9).

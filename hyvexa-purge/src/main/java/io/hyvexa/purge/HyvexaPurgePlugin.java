@@ -27,6 +27,7 @@ import io.hyvexa.core.economy.VexaStore;
 import io.hyvexa.purge.command.PurgeCommand;
 import io.hyvexa.purge.command.CamTestCommand;
 import io.hyvexa.purge.command.SetAmmoCommand;
+import io.hyvexa.purge.data.PurgeClassStore;
 import io.hyvexa.purge.data.PurgePlayerStore;
 import io.hyvexa.purge.data.PurgeScrapStore;
 import io.hyvexa.common.skin.PurgeSkinRegistry;
@@ -41,6 +42,7 @@ import io.hyvexa.purge.interaction.PurgeOrangeOrbInteraction;
 import io.hyvexa.purge.interaction.PurgeRedOrbInteraction;
 import io.hyvexa.purge.interaction.PurgeStartInteraction;
 import io.hyvexa.common.util.MultiHudBridge;
+import io.hyvexa.purge.manager.PurgeClassManager;
 import io.hyvexa.purge.manager.PurgeInstanceManager;
 import io.hyvexa.purge.manager.PurgePartyManager;
 import io.hyvexa.purge.manager.PurgeSessionManager;
@@ -87,6 +89,7 @@ public class HyvexaPurgePlugin extends JavaPlugin {
     private PurgeSessionManager sessionManager;
     private PurgePartyManager partyManager;
     private PurgeUpgradeManager upgradeManager;
+    private PurgeClassManager classManager;
     private WeaponXpManager weaponXpManager;
 
     public HyvexaPurgePlugin(@Nonnull JavaPluginInit init) {
@@ -141,6 +144,8 @@ public class HyvexaPurgePlugin extends JavaPlugin {
         catch (Exception e) { LOGGER.atWarning().withCause(e).log("Failed to initialize PurgeSkinStore"); }
         try { WeaponXpStore.getInstance().initialize(); }
         catch (Exception e) { LOGGER.atWarning().withCause(e).log("Failed to initialize WeaponXpStore"); }
+        try { PurgeClassStore.getInstance().initialize(); }
+        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Failed to initialize PurgeClassStore"); }
 
         // Create managers
         instanceManager = new PurgeInstanceManager();
@@ -155,9 +160,12 @@ public class HyvexaPurgePlugin extends JavaPlugin {
         partyManager.setSessionManager(sessionManager);
         upgradeManager = new PurgeUpgradeManager();
         weaponXpManager = new WeaponXpManager();
+        classManager = new PurgeClassManager(upgradeManager);
         waveManager.setUpgradeManager(upgradeManager);
         waveManager.setWeaponXpManager(weaponXpManager);
+        waveManager.setClassManager(classManager);
         sessionManager.setUpgradeManager(upgradeManager);
+        sessionManager.setClassManager(classManager);
 
         // Register damage modifier system
         registerPurgeDamageModifierSystem();
@@ -267,6 +275,8 @@ public class HyvexaPurgePlugin extends JavaPlugin {
             catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: PurgeSkinStore"); }
             try { WeaponXpStore.getInstance().evictPlayer(playerId); }
             catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: WeaponXpStore"); }
+            try { PurgeClassStore.getInstance().evictPlayer(playerId); }
+            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: PurgeClassStore"); }
             try { MultiHudBridge.evictPlayer(playerId); }
             catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: MultiHudBridge"); }
         });
@@ -484,7 +494,9 @@ public class HyvexaPurgePlugin extends JavaPlugin {
             registry.registerEntityEventType(com.hypixel.hytale.server.core.modules.entity.damage.Damage.class);
         }
         if (!registry.hasSystemClass(PurgeDamageModifierSystem.class)) {
-            registry.registerSystem(new PurgeDamageModifierSystem(sessionManager, variantConfigManager, weaponConfigManager, weaponXpManager));
+            PurgeDamageModifierSystem dmgSystem = new PurgeDamageModifierSystem(sessionManager, variantConfigManager, weaponConfigManager, weaponXpManager);
+            dmgSystem.setClassManager(classManager);
+            registry.registerSystem(dmgSystem);
         }
     }
 

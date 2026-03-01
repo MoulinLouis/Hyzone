@@ -56,6 +56,7 @@ public class PurgeSessionManager {
     private final PurgeWaveManager waveManager;
     private final PurgeHudManager hudManager;
     private volatile PurgeUpgradeManager upgradeManager;
+    private volatile PurgeClassManager classManager;
     private final AtomicInteger sessionCounter = new AtomicInteger(0);
 
     public PurgeSessionManager(PurgePartyManager partyManager,
@@ -71,6 +72,10 @@ public class PurgeSessionManager {
 
     public void setUpgradeManager(PurgeUpgradeManager upgradeManager) {
         this.upgradeManager = upgradeManager;
+    }
+
+    public void setClassManager(PurgeClassManager classManager) {
+        this.classManager = classManager;
     }
 
     private String nextSessionId() {
@@ -174,6 +179,10 @@ public class PurgeSessionManager {
                             plugin.grantLoadout(player, ps);
                         }
                         applySessionBaseHealth(ref, store);
+                        PurgeClassManager cm = classManager;
+                        if (cm != null) {
+                            cm.applyClassEffects(session, pid, ref, store);
+                        }
                         teleportToStart(ref, store, instance);
                     }
                 } catch (Exception e) {
@@ -273,10 +282,15 @@ public class PurgeSessionManager {
 
         // Build summary before world cleanup
         int kills = playerState != null ? playerState.getKills() : 0;
-        int summaryScrap = calculateScrapReward(session.getCurrentWave());
+        int summaryBaseScrap = calculateScrapReward(session.getCurrentWave());
+        PurgeClassManager cmSummary = classManager;
+        double summaryMult = cmSummary != null && playerState != null ? cmSummary.getScrapMultiplier(playerState) : 1.0;
+        int summaryScrap = (int) (summaryBaseScrap * summaryMult);
+        int summaryBonus = playerState != null ? playerState.getBonusScrapFromClass() : 0;
+        int summaryTotal = summaryScrap + summaryBonus;
         String summary = "Purge ended - Wave " + session.getCurrentWave()
                 + " - " + kills + " kills"
-                + " - " + summaryScrap + " scrap earned"
+                + " - " + summaryTotal + " scrap earned"
                 + " (" + reason + ")";
 
         // World-dependent cleanup for this player
@@ -337,10 +351,15 @@ public class PurgeSessionManager {
 
             PurgeSessionPlayerState playerState = session.getPlayerState(pid);
             int kills = playerState != null ? playerState.getKills() : 0;
-            int scrap = calculateScrapReward(session.getCurrentWave());
+            int stopBaseScrap = calculateScrapReward(session.getCurrentWave());
+            PurgeClassManager cmStop = classManager;
+            double stopMult = cmStop != null && playerState != null ? cmStop.getScrapMultiplier(playerState) : 1.0;
+            int stopScrap = (int) (stopBaseScrap * stopMult);
+            int stopBonus = playerState != null ? playerState.getBonusScrapFromClass() : 0;
+            int stopTotal = stopScrap + stopBonus;
             String summary = "Purge ended - Wave " + session.getCurrentWave()
                     + " - " + kills + " kills"
-                    + " - " + scrap + " scrap earned"
+                    + " - " + stopTotal + " scrap earned"
                     + " (" + reason + ")";
 
             CompletableFuture<Void> playerCleanupFuture =
@@ -402,9 +421,14 @@ public class PurgeSessionManager {
         stats.incrementSessions();
         PurgePlayerStore.getInstance().save(playerId, stats);
 
-        int scrap = calculateScrapReward(session.getCurrentWave());
-        if (scrap > 0) {
-            PurgeScrapStore.getInstance().addScrap(playerId, scrap);
+        int baseScrap = calculateScrapReward(session.getCurrentWave());
+        PurgeClassManager cm = classManager;
+        double scrapMult = cm != null ? cm.getScrapMultiplier(playerState) : 1.0;
+        int scrap = (int) (baseScrap * scrapMult);
+        int bonusScrap = playerState != null ? playerState.getBonusScrapFromClass() : 0;
+        int totalScrap = scrap + bonusScrap;
+        if (totalScrap > 0) {
+            PurgeScrapStore.getInstance().addScrap(playerId, totalScrap);
         }
     }
 
@@ -459,6 +483,13 @@ public class PurgeSessionManager {
                                        PurgeSessionPlayerState playerState,
                                        SessionEndReason endReason, String summary) {
         Ref<EntityStore> ref = playerState.getPlayerRef();
+        runSafe("revert class effects", () -> {
+            PurgeClassManager cm = classManager;
+            if (cm != null && ref != null && ref.isValid()) {
+                Store<EntityStore> store = ref.getStore();
+                cm.revertClassEffects(session, playerId, ref, store);
+            }
+        });
         runSafe("revert upgrades", () -> {
             PurgeUpgradeManager um = upgradeManager;
             if (um == null) {

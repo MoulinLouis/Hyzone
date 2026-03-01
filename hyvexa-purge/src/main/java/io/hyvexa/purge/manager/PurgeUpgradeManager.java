@@ -82,9 +82,26 @@ public class PurgeUpgradeManager {
                 String weaponId = ps != null ? ps.getCurrentWeaponId() : null;
                 applyAmmoToPlayer(player, state.getAccumulated(PurgeUpgradeType.AMMO), playerId, weaponId);
             }
-            case SPEED -> applySpeed(ref, store, state.getAccumulated(PurgeUpgradeType.SPEED));
+            case SPEED -> {
+                PurgeSessionPlayerState speedPs = session.getPlayerState(playerId);
+                float classFactor = speedPs != null ? speedPs.getClassSpeedFactor() : 1.0f;
+                applySpeed(ref, store, state.getAccumulated(PurgeUpgradeType.SPEED), classFactor);
+            }
             case LUCK -> {} // Read at rarity-roll time
         }
+    }
+
+    /**
+     * Applies combined upgrade + class speed modifiers. Used by PurgeClassManager
+     * to apply class speed when no upgrades have been picked yet.
+     */
+    public void applySpeedForClass(PurgeSession session, UUID playerId,
+                                    Ref<EntityStore> ref, Store<EntityStore> store) {
+        PurgeUpgradeState upgradeState = session.getUpgradeState(playerId);
+        int totalSpeed = upgradeState != null ? upgradeState.getAccumulated(PurgeUpgradeType.SPEED) : 0;
+        PurgeSessionPlayerState ps = session.getPlayerState(playerId);
+        float classFactor = ps != null ? ps.getClassSpeedFactor() : 1.0f;
+        applySpeed(ref, store, totalSpeed, classFactor);
     }
 
     public void revertPlayerUpgrades(PurgeSession session, UUID playerId,
@@ -92,7 +109,9 @@ public class PurgeUpgradeManager {
         PurgeUpgradeState state = session.getUpgradeState(playerId);
         if (state == null) return;
 
-        if (state.getAccumulated(PurgeUpgradeType.SPEED) > 0) {
+        PurgeSessionPlayerState ps = session.getPlayerState(playerId);
+        boolean hasClassSpeed = ps != null && ps.getClassSpeedFactor() != 1.0f;
+        if (state.getAccumulated(PurgeUpgradeType.SPEED) > 0 || hasClassSpeed) {
             revertSpeed(ref, store);
         }
         if (state.getAccumulated(PurgeUpgradeType.HP) > 0) {
@@ -174,7 +193,8 @@ public class PurgeUpgradeManager {
 
     // --- SPEED ---
 
-    private void applySpeed(Ref<EntityStore> ref, Store<EntityStore> store, int totalSpeedPercent) {
+    private void applySpeed(Ref<EntityStore> ref, Store<EntityStore> store,
+                            int totalSpeedPercent, float classSpeedFactor) {
         if (ref == null || !ref.isValid()) return;
         MovementManager movementManager = store.getComponent(ref, MovementManager.getComponentType());
         if (movementManager == null) return;
@@ -184,7 +204,7 @@ public class PurgeUpgradeManager {
         MovementSettings settings = movementManager.getSettings();
         if (settings == null) return;
 
-        float multiplier = 1.0f + totalSpeedPercent / 100.0f;
+        float multiplier = (1.0f + totalSpeedPercent / 100.0f) * classSpeedFactor;
         settings.maxSpeedMultiplier *= multiplier;
         settings.forwardRunSpeedMultiplier *= multiplier;
         settings.backwardRunSpeedMultiplier *= multiplier;

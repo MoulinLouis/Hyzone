@@ -102,6 +102,7 @@ public class PurgeWaveManager {
     private volatile PurgeSessionManager sessionManager;
     private volatile PurgeUpgradeManager upgradeManager;
     private volatile WeaponXpManager weaponXpManager;
+    private volatile PurgeClassManager classManager;
 
     public PurgeWaveManager(PurgeInstanceManager instanceManager,
                             PurgeWaveConfigManager waveConfigManager,
@@ -128,6 +129,10 @@ public class PurgeWaveManager {
 
     public void setWeaponXpManager(WeaponXpManager weaponXpManager) {
         this.weaponXpManager = weaponXpManager;
+    }
+
+    public void setClassManager(PurgeClassManager classManager) {
+        this.classManager = classManager;
     }
 
     public boolean hasConfiguredWaves() {
@@ -732,6 +737,10 @@ public class PurgeWaveManager {
                 refreshZombieAggro(session, store);
                 updateZombieNameplates(session, store);
                 updatePlayerHealthHud(session, store, world);
+                PurgeClassManager cm = classManager;
+                if (cm != null) {
+                    cm.tickMedicRegen(session, store);
+                }
 
                 int alivePlayers = session.getAliveConnectedCount();
                 int aliveZombies = session.getAliveZombieCount();

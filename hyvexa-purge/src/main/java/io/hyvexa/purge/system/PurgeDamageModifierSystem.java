@@ -28,6 +28,7 @@ import io.hyvexa.purge.data.PurgeSessionPlayerState;
 import io.hyvexa.purge.data.PurgeVariantConfig;
 import io.hyvexa.purge.data.PurgeWeaponUpgradeStore;
 import io.hyvexa.purge.hud.PurgeHudManager;
+import io.hyvexa.purge.manager.PurgeClassManager;
 import io.hyvexa.purge.manager.PurgeSessionManager;
 import io.hyvexa.purge.manager.PurgeVariantConfigManager;
 import io.hyvexa.purge.manager.PurgeWeaponConfigManager;
@@ -46,6 +47,7 @@ public class PurgeDamageModifierSystem extends DamageEventSystem {
     private final PurgeVariantConfigManager variantConfigManager;
     private final PurgeWeaponConfigManager weaponConfigManager;
     private final WeaponXpManager weaponXpManager;
+    private volatile PurgeClassManager classManager;
     private volatile SystemGroup<EntityStore> cachedGroup;
 
     public PurgeDamageModifierSystem(PurgeSessionManager sessionManager,
@@ -56,6 +58,10 @@ public class PurgeDamageModifierSystem extends DamageEventSystem {
         this.variantConfigManager = variantConfigManager;
         this.weaponConfigManager = weaponConfigManager;
         this.weaponXpManager = weaponXpManager;
+    }
+
+    public void setClassManager(PurgeClassManager classManager) {
+        this.classManager = classManager;
     }
 
     @Override
@@ -110,6 +116,11 @@ public class PurgeDamageModifierSystem extends DamageEventSystem {
                             damage = config.baseDamage();
                         }
                     }
+                    // Apply Tank damage reduction
+                    PurgeClassManager cm = classManager;
+                    if (cm != null) {
+                        damage *= (float) cm.getDamageReduction(targetState);
+                    }
                     event.setAmount(damage);
                 }
             }
@@ -158,10 +169,19 @@ public class PurgeDamageModifierSystem extends DamageEventSystem {
         int effectiveLevel = Math.max(level, 1);
         int baseDamage = weaponConfigManager.getDamage(playerWeapon, effectiveLevel);
         float damage = (float) (baseDamage * weaponXpManager.getDamageMultiplier(sourceId, playerWeapon));
+        // Apply Assault class damage multiplier
+        PurgeClassManager cm = classManager;
+        if (cm != null) {
+            damage *= (float) cm.getDamageMultiplier(playerState);
+        }
         event.setAmount(damage);
         if (clearZombieNameplateOnLethalHit(store, session, targetRef, damage)) {
             playKillSound(sourcePlayerRef, playerState);
             handleKillXp(sourceId, playerWeapon, store, sourceRef);
+            // Class kill effects (Medic heal, Scavenger streak scrap)
+            if (cm != null) {
+                cm.onZombieKill(playerState, sourceRef, store);
+            }
         }
     }
 

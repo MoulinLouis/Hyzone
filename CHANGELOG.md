@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Added
+- **Purge: Class system** - 4 unlockable classes (Scavenger, Tank, Assault, Medic) purchased with scrap. Each provides passive stat boosts and a unique perk. Scavenger earns +30% scrap with kill streak bonuses; Tank gets +40 HP with 20% damage reduction; Assault deals +20% damage with streak ramp; Medic has passive regen and heal-on-kill. Managed via `/purge class` commands.
+
 ### Changed
 - **Purge: Session player HP normalized to 100** - Purge now forces session base player health to `100` before wave combat, preventing stray `102/102` max HP reads while still letting run HP upgrades add on top.
 - **Purge: Zombie melee now respects variant damage config** - Purge session players now correctly bypass the global god-mode filter, so zombie hits apply the `Variants` admin `damage` value again.
