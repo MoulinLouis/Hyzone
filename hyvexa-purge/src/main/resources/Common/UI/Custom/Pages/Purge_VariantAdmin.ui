@@ -4,7 +4,7 @@ $C.@PageOverlay {
   SceneBlur {}
 
   Group #VariantAdminWindow {
-    Anchor: (Width: 700, Height: 560);
+    Anchor: (Width: 940, Height: 640);
     LayoutMode: Top;
     Background: #0d1620(0.95);
     OutlineColor: #ffffff(0.06);
@@ -65,14 +65,14 @@ $C.@PageOverlay {
       }
 
       Group #VariantList {
-        Anchor: (Top: 8, Width: 676);
+        Anchor: (Top: 8, Left: 0, Right: 0);
         FlexWeight: 1;
         LayoutMode: TopScrolling;
         Padding: (Left: 4, Right: 4, Top: 2, Bottom: 2);
         ScrollbarStyle: $C.@DefaultScrollbarStyle;
 
         Group #VariantCards {
-          LayoutMode: Top;
+          LayoutMode: LeftCenterWrap;
         }
       }
 
@@ -143,7 +143,7 @@ $C.@PageOverlay {
     Visible: false;
 
     Group #MobTypePickerBox {
-      Anchor: (Width: 320, Height: 380);
+      Anchor: (Width: 320, Height: 500);
       LayoutMode: Top;
       Background: #0d1620;
       OutlineColor: #ffffff(0.1);

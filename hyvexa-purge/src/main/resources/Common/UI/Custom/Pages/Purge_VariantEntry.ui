@@ -1,235 +1,220 @@
 $C = "../Common.ui";
 
 Group {
-  LayoutMode: Top;
-  Anchor: (Left: 2, Right: 2, Bottom: 6, Height: 96, Width: 668);
-  Background: $C.@InputBoxBackground;
-  Padding: (Left: 10, Right: 8, Top: 8, Bottom: 8);
+  Anchor: (Width: 290, Height: 132);
+  Padding: (Left: 3, Right: 3, Top: 3, Bottom: 3);
 
   Group {
-    LayoutMode: Left;
-    Anchor: (Left: 0, Right: 0, Height: 22);
+    Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+    LayoutMode: Top;
+    Background: $C.@InputBoxBackground;
+    Padding: (Left: 8, Right: 8, Top: 6, Bottom: 6);
 
-    Label #VariantLabel {
-      Anchor: (Width: 120);
-      Style: (FontSize: 14, RenderBold: true, TextColor: #10b981, VerticalAlignment: Center);
-      Text: "Normal";
+    // Row 1: Name + Edit + Delete
+    Group {
+      LayoutMode: Left;
+      Anchor: (Left: 0, Right: 0, Height: 22);
+
+      Label #VariantLabel {
+        FlexWeight: 1;
+        Style: (FontSize: 13, RenderBold: true, TextColor: #10b981, VerticalAlignment: Center);
+        Text: "Normal";
+      }
+
+      TextButton #EditNameButton {
+        Anchor: (Width: 40, Height: 20);
+        Text: "Edit";
+        Style: TextButtonStyle(
+          Default: (Background: #143042, LabelStyle: (FontSize: 10, TextColor: #7dd3fc, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Hovered: (Background: #1d4359, LabelStyle: (FontSize: 10, TextColor: #bae6fd, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Pressed: (Background: #102734, LabelStyle: (FontSize: 10, TextColor: #7dd3fc, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Sounds: $C.@ButtonSounds,
+        );
+      }
+
+      Group { Anchor: (Width: 4); }
+
+      TextButton #DeleteButton {
+        Anchor: (Width: 24, Height: 20);
+        Text: "X";
+        Style: TextButtonStyle(
+          Default: (Background: #3b1219, LabelStyle: (FontSize: 11, TextColor: #ef4444, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Hovered: (Background: #5c1d28, LabelStyle: (FontSize: 11, TextColor: #f87171, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Pressed: (Background: #2d0f14, LabelStyle: (FontSize: 11, TextColor: #ef4444, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Sounds: $C.@ButtonSounds,
+        );
+      }
     }
 
+    // Row 2: Key
     Label #VariantKey {
-      Anchor: (Width: 100);
-      Style: (FontSize: 12, TextColor: #6b7b8a, VerticalAlignment: Center);
+      Anchor: (Top: 1, Height: 14);
+      Style: (FontSize: 10, TextColor: #6b7b8a);
       Text: "NORMAL";
     }
 
+    // Row 3: HP + DMG
     Group {
-      FlexWeight: 1;
+      LayoutMode: Left;
+      Anchor: (Left: 0, Right: 0, Height: 22, Top: 4);
+
+      Label {
+        Anchor: (Width: 22);
+        Style: (FontSize: 11, TextColor: #fca5a5, VerticalAlignment: Center);
+        Text: "HP";
+      }
+
+      TextButton #HpMinusButton {
+        Anchor: (Width: 20, Height: 20);
+        Text: "-";
+        Style: TextButtonStyle(
+          Default: (Background: #32131a, LabelStyle: (FontSize: 13, RenderBold: true, TextColor: #fca5a5, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Hovered: (Background: #4a1f29, LabelStyle: (FontSize: 13, RenderBold: true, TextColor: #fecaca, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Pressed: (Background: #230d12, LabelStyle: (FontSize: 13, RenderBold: true, TextColor: #fca5a5, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Sounds: $C.@ButtonSounds,
+        );
+      }
+
+      Label #HpValue {
+        Anchor: (Width: 30);
+        Style: (FontSize: 11, RenderBold: true, TextColor: #fee2e2, HorizontalAlignment: Center, VerticalAlignment: Center);
+        Text: "50";
+      }
+
+      TextButton #HpPlusButton {
+        Anchor: (Width: 20, Height: 20);
+        Text: "+";
+        Style: TextButtonStyle(
+          Default: (Background: #32131a, LabelStyle: (FontSize: 13, RenderBold: true, TextColor: #fca5a5, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Hovered: (Background: #4a1f29, LabelStyle: (FontSize: 13, RenderBold: true, TextColor: #fecaca, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Pressed: (Background: #230d12, LabelStyle: (FontSize: 13, RenderBold: true, TextColor: #fca5a5, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Sounds: $C.@ButtonSounds,
+        );
+      }
+
+      Group { Anchor: (Width: 12); }
+
+      Label {
+        Anchor: (Width: 28);
+        Style: (FontSize: 11, TextColor: #fdba74, VerticalAlignment: Center);
+        Text: "DMG";
+      }
+
+      TextButton #DmgMinusButton {
+        Anchor: (Width: 20, Height: 20);
+        Text: "-";
+        Style: TextButtonStyle(
+          Default: (Background: #2a1f0a, LabelStyle: (FontSize: 13, RenderBold: true, TextColor: #fdba74, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Hovered: (Background: #3d2e0f, LabelStyle: (FontSize: 13, RenderBold: true, TextColor: #fed7aa, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Pressed: (Background: #1f1707, LabelStyle: (FontSize: 13, RenderBold: true, TextColor: #fdba74, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Sounds: $C.@ButtonSounds,
+        );
+      }
+
+      Label #DmgValue {
+        Anchor: (Width: 30);
+        Style: (FontSize: 11, RenderBold: true, TextColor: #ffedd5, HorizontalAlignment: Center, VerticalAlignment: Center);
+        Text: "20";
+      }
+
+      TextButton #DmgPlusButton {
+        Anchor: (Width: 20, Height: 20);
+        Text: "+";
+        Style: TextButtonStyle(
+          Default: (Background: #2a1f0a, LabelStyle: (FontSize: 13, RenderBold: true, TextColor: #fdba74, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Hovered: (Background: #3d2e0f, LabelStyle: (FontSize: 13, RenderBold: true, TextColor: #fed7aa, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Pressed: (Background: #1f1707, LabelStyle: (FontSize: 13, RenderBold: true, TextColor: #fdba74, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Sounds: $C.@ButtonSounds,
+        );
+      }
     }
 
-    TextButton #EditNameButton {
-      Anchor: (Width: 52, Height: 26);
-      Text: "Edit";
-      Style: TextButtonStyle(
-        Default: (Background: #143042, LabelStyle: (FontSize: 11, TextColor: #7dd3fc, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
-        Hovered: (Background: #1d4359, LabelStyle: (FontSize: 11, TextColor: #bae6fd, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
-        Pressed: (Background: #102734, LabelStyle: (FontSize: 11, TextColor: #7dd3fc, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
-        Sounds: $C.@ButtonSounds,
-      );
-    }
-
+    // Row 4: Speed + Scrap
     Group {
-      Anchor: (Width: 6);
+      LayoutMode: Left;
+      Anchor: (Left: 0, Right: 0, Height: 22, Top: 2);
+
+      Label {
+        Anchor: (Width: 22);
+        Style: (FontSize: 11, TextColor: #93c5fd, VerticalAlignment: Center);
+        Text: "Spd";
+      }
+
+      TextButton #SpeedMinusButton {
+        Anchor: (Width: 20, Height: 20);
+        Text: "-";
+        Style: TextButtonStyle(
+          Default: (Background: #0b1e33, LabelStyle: (FontSize: 13, RenderBold: true, TextColor: #93c5fd, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Hovered: (Background: #123154, LabelStyle: (FontSize: 13, RenderBold: true, TextColor: #bfdbfe, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Pressed: (Background: #081625, LabelStyle: (FontSize: 13, RenderBold: true, TextColor: #93c5fd, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Sounds: $C.@ButtonSounds,
+        );
+      }
+
+      Label #SpeedValue {
+        Anchor: (Width: 36);
+        Style: (FontSize: 11, RenderBold: true, TextColor: #dbeafe, HorizontalAlignment: Center, VerticalAlignment: Center);
+        Text: "100%";
+      }
+
+      TextButton #SpeedPlusButton {
+        Anchor: (Width: 20, Height: 20);
+        Text: "+";
+        Style: TextButtonStyle(
+          Default: (Background: #0b1e33, LabelStyle: (FontSize: 13, RenderBold: true, TextColor: #93c5fd, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Hovered: (Background: #123154, LabelStyle: (FontSize: 13, RenderBold: true, TextColor: #bfdbfe, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Pressed: (Background: #081625, LabelStyle: (FontSize: 13, RenderBold: true, TextColor: #93c5fd, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Sounds: $C.@ButtonSounds,
+        );
+      }
+
+      Group { Anchor: (Width: 6); }
+
+      Label {
+        Anchor: (Width: 28);
+        Style: (FontSize: 11, TextColor: #fbbf24, VerticalAlignment: Center);
+        Text: "Scr";
+      }
+
+      TextButton #ScrapMinusButton {
+        Anchor: (Width: 20, Height: 20);
+        Text: "-";
+        Style: TextButtonStyle(
+          Default: (Background: #2a2008, LabelStyle: (FontSize: 13, RenderBold: true, TextColor: #fbbf24, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Hovered: (Background: #3d300c, LabelStyle: (FontSize: 13, RenderBold: true, TextColor: #fde68a, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Pressed: (Background: #1f1806, LabelStyle: (FontSize: 13, RenderBold: true, TextColor: #fbbf24, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Sounds: $C.@ButtonSounds,
+        );
+      }
+
+      Label #ScrapValue {
+        Anchor: (Width: 30);
+        Style: (FontSize: 11, RenderBold: true, TextColor: #fef3c7, HorizontalAlignment: Center, VerticalAlignment: Center);
+        Text: "10";
+      }
+
+      TextButton #ScrapPlusButton {
+        Anchor: (Width: 20, Height: 20);
+        Text: "+";
+        Style: TextButtonStyle(
+          Default: (Background: #2a2008, LabelStyle: (FontSize: 13, RenderBold: true, TextColor: #fbbf24, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Hovered: (Background: #3d300c, LabelStyle: (FontSize: 13, RenderBold: true, TextColor: #fde68a, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Pressed: (Background: #1f1806, LabelStyle: (FontSize: 13, RenderBold: true, TextColor: #fbbf24, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Sounds: $C.@ButtonSounds,
+        );
+      }
     }
 
-    TextButton #DeleteButton {
-      Anchor: (Width: 32, Height: 26);
-      Text: "X";
-      Style: TextButtonStyle(
-        Default: (Background: #3b1219, LabelStyle: (FontSize: 13, TextColor: #ef4444, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
-        Hovered: (Background: #5c1d28, LabelStyle: (FontSize: 13, TextColor: #f87171, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
-        Pressed: (Background: #2d0f14, LabelStyle: (FontSize: 13, TextColor: #ef4444, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
-        Sounds: $C.@ButtonSounds,
-      );
-    }
-  }
-
-  Group {
-    LayoutMode: Left;
-    Anchor: (Left: 0, Right: 0, Height: 28, Top: 4);
-
-    // Health
-    Label {
-      Anchor: (Width: 32);
-      Style: (FontSize: 12, TextColor: #fca5a5, VerticalAlignment: Center);
-      Text: "HP";
-    }
-
-    TextButton #HpMinusButton {
-      Anchor: (Width: 24, Height: 24);
-      Text: "-";
-      Style: TextButtonStyle(
-        Default: (Background: #32131a, LabelStyle: (FontSize: 14, RenderBold: true, TextColor: #fca5a5, HorizontalAlignment: Center, VerticalAlignment: Center)),
-        Hovered: (Background: #4a1f29, LabelStyle: (FontSize: 14, RenderBold: true, TextColor: #fecaca, HorizontalAlignment: Center, VerticalAlignment: Center)),
-        Pressed: (Background: #230d12, LabelStyle: (FontSize: 14, RenderBold: true, TextColor: #fca5a5, HorizontalAlignment: Center, VerticalAlignment: Center)),
-        Sounds: $C.@ButtonSounds,
-      );
-    }
-
-    Label #HpValue {
-      Anchor: (Width: 36);
-      Style: (FontSize: 12, RenderBold: true, TextColor: #fee2e2, HorizontalAlignment: Center, VerticalAlignment: Center);
-      Text: "49";
-    }
-
-    TextButton #HpPlusButton {
-      Anchor: (Width: 24, Height: 24);
-      Text: "+";
-      Style: TextButtonStyle(
-        Default: (Background: #32131a, LabelStyle: (FontSize: 14, RenderBold: true, TextColor: #fca5a5, HorizontalAlignment: Center, VerticalAlignment: Center)),
-        Hovered: (Background: #4a1f29, LabelStyle: (FontSize: 14, RenderBold: true, TextColor: #fecaca, HorizontalAlignment: Center, VerticalAlignment: Center)),
-        Pressed: (Background: #230d12, LabelStyle: (FontSize: 14, RenderBold: true, TextColor: #fca5a5, HorizontalAlignment: Center, VerticalAlignment: Center)),
-        Sounds: $C.@ButtonSounds,
-      );
-    }
-
+    // Row 5: Mob type button
     Group {
-      Anchor: (Width: 16);
-    }
-
-    // Damage
-    Label {
-      Anchor: (Width: 36);
-      Style: (FontSize: 12, TextColor: #fdba74, VerticalAlignment: Center);
-      Text: "DMG";
-    }
-
-    TextButton #DmgMinusButton {
-      Anchor: (Width: 24, Height: 24);
-      Text: "-";
-      Style: TextButtonStyle(
-        Default: (Background: #2a1f0a, LabelStyle: (FontSize: 14, RenderBold: true, TextColor: #fdba74, HorizontalAlignment: Center, VerticalAlignment: Center)),
-        Hovered: (Background: #3d2e0f, LabelStyle: (FontSize: 14, RenderBold: true, TextColor: #fed7aa, HorizontalAlignment: Center, VerticalAlignment: Center)),
-        Pressed: (Background: #1f1707, LabelStyle: (FontSize: 14, RenderBold: true, TextColor: #fdba74, HorizontalAlignment: Center, VerticalAlignment: Center)),
-        Sounds: $C.@ButtonSounds,
-      );
-    }
-
-    Label #DmgValue {
-      Anchor: (Width: 36);
-      Style: (FontSize: 12, RenderBold: true, TextColor: #ffedd5, HorizontalAlignment: Center, VerticalAlignment: Center);
-      Text: "20";
-    }
-
-    TextButton #DmgPlusButton {
-      Anchor: (Width: 24, Height: 24);
-      Text: "+";
-      Style: TextButtonStyle(
-        Default: (Background: #2a1f0a, LabelStyle: (FontSize: 14, RenderBold: true, TextColor: #fdba74, HorizontalAlignment: Center, VerticalAlignment: Center)),
-        Hovered: (Background: #3d2e0f, LabelStyle: (FontSize: 14, RenderBold: true, TextColor: #fed7aa, HorizontalAlignment: Center, VerticalAlignment: Center)),
-        Pressed: (Background: #1f1707, LabelStyle: (FontSize: 14, RenderBold: true, TextColor: #fdba74, HorizontalAlignment: Center, VerticalAlignment: Center)),
-        Sounds: $C.@ButtonSounds,
-      );
-    }
-
-    Group {
-      Anchor: (Width: 16);
-    }
-
-    // Speed
-    Label {
-      Anchor: (Width: 40);
-      Style: (FontSize: 12, TextColor: #93c5fd, VerticalAlignment: Center);
-      Text: "Speed";
-    }
-
-    TextButton #SpeedMinusButton {
-      Anchor: (Width: 24, Height: 24);
-      Text: "-";
-      Style: TextButtonStyle(
-        Default: (Background: #0b1e33, LabelStyle: (FontSize: 14, RenderBold: true, TextColor: #93c5fd, HorizontalAlignment: Center, VerticalAlignment: Center)),
-        Hovered: (Background: #123154, LabelStyle: (FontSize: 14, RenderBold: true, TextColor: #bfdbfe, HorizontalAlignment: Center, VerticalAlignment: Center)),
-        Pressed: (Background: #081625, LabelStyle: (FontSize: 14, RenderBold: true, TextColor: #93c5fd, HorizontalAlignment: Center, VerticalAlignment: Center)),
-        Sounds: $C.@ButtonSounds,
-      );
-    }
-
-    Label #SpeedValue {
-      Anchor: (Width: 46);
-      Style: (FontSize: 12, RenderBold: true, TextColor: #dbeafe, HorizontalAlignment: Center, VerticalAlignment: Center);
-      Text: "100%";
-    }
-
-    TextButton #SpeedPlusButton {
-      Anchor: (Width: 24, Height: 24);
-      Text: "+";
-      Style: TextButtonStyle(
-        Default: (Background: #0b1e33, LabelStyle: (FontSize: 14, RenderBold: true, TextColor: #93c5fd, HorizontalAlignment: Center, VerticalAlignment: Center)),
-        Hovered: (Background: #123154, LabelStyle: (FontSize: 14, RenderBold: true, TextColor: #bfdbfe, HorizontalAlignment: Center, VerticalAlignment: Center)),
-        Pressed: (Background: #081625, LabelStyle: (FontSize: 14, RenderBold: true, TextColor: #93c5fd, HorizontalAlignment: Center, VerticalAlignment: Center)),
-        Sounds: $C.@ButtonSounds,
-      );
-    }
-  }
-
-  Group {
-    LayoutMode: Left;
-    Anchor: (Left: 0, Right: 0, Height: 28, Top: 4);
-
-    // Scrap
-    Label {
-      Anchor: (Width: 40);
-      Style: (FontSize: 12, TextColor: #fbbf24, VerticalAlignment: Center);
-      Text: "Scrap";
-    }
-
-    TextButton #ScrapMinusButton {
-      Anchor: (Width: 24, Height: 24);
-      Text: "-";
-      Style: TextButtonStyle(
-        Default: (Background: #2a2008, LabelStyle: (FontSize: 14, RenderBold: true, TextColor: #fbbf24, HorizontalAlignment: Center, VerticalAlignment: Center)),
-        Hovered: (Background: #3d300c, LabelStyle: (FontSize: 14, RenderBold: true, TextColor: #fde68a, HorizontalAlignment: Center, VerticalAlignment: Center)),
-        Pressed: (Background: #1f1806, LabelStyle: (FontSize: 14, RenderBold: true, TextColor: #fbbf24, HorizontalAlignment: Center, VerticalAlignment: Center)),
-        Sounds: $C.@ButtonSounds,
-      );
-    }
-
-    Label #ScrapValue {
-      Anchor: (Width: 36);
-      Style: (FontSize: 12, RenderBold: true, TextColor: #fef3c7, HorizontalAlignment: Center, VerticalAlignment: Center);
-      Text: "10";
-    }
-
-    TextButton #ScrapPlusButton {
-      Anchor: (Width: 24, Height: 24);
-      Text: "+";
-      Style: TextButtonStyle(
-        Default: (Background: #2a2008, LabelStyle: (FontSize: 14, RenderBold: true, TextColor: #fbbf24, HorizontalAlignment: Center, VerticalAlignment: Center)),
-        Hovered: (Background: #3d300c, LabelStyle: (FontSize: 14, RenderBold: true, TextColor: #fde68a, HorizontalAlignment: Center, VerticalAlignment: Center)),
-        Pressed: (Background: #1f1806, LabelStyle: (FontSize: 14, RenderBold: true, TextColor: #fbbf24, HorizontalAlignment: Center, VerticalAlignment: Center)),
-        Sounds: $C.@ButtonSounds,
-      );
-    }
-
-    Group {
-      Anchor: (Width: 16);
-    }
-
-    // NPC Type
-    Label {
-      Anchor: (Width: 32);
-      Style: (FontSize: 12, TextColor: #a78bfa, VerticalAlignment: Center);
-      Text: "NPC";
-    }
-
-    Group {
-      Anchor: (Width: 180, Height: 24);
+      Anchor: (Left: 0, Right: 0, Height: 22, Top: 4);
       TextButton #NpcTypeButton {
         Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
         Text: "Zombie";
         Style: TextButtonStyle(
-          Default: (Background: #1e1541, LabelStyle: (FontSize: 11, TextColor: #c4b5fd, HorizontalAlignment: Center, VerticalAlignment: Center)),
-          Hovered: (Background: #2e2060, LabelStyle: (FontSize: 11, TextColor: #ddd6fe, HorizontalAlignment: Center, VerticalAlignment: Center)),
-          Pressed: (Background: #160f30, LabelStyle: (FontSize: 11, TextColor: #c4b5fd, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Default: (Background: #1e1541, LabelStyle: (FontSize: 10, TextColor: #c4b5fd, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Hovered: (Background: #2e2060, LabelStyle: (FontSize: 10, TextColor: #ddd6fe, HorizontalAlignment: Center, VerticalAlignment: Center)),
+          Pressed: (Background: #160f30, LabelStyle: (FontSize: 10, TextColor: #c4b5fd, HorizontalAlignment: Center, VerticalAlignment: Center)),
           Sounds: $C.@ButtonSounds,
         );
       }
