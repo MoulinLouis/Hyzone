@@ -175,8 +175,9 @@ public class PurgeWaveManager {
         // Scale spawn counts by connected player count
         int playerCount = session.getConnectedCount();
         Map<String, Integer> scaledCounts = scaleVariantCounts(wave, playerCount);
-        int totalCount = 0;
-        for (int c : scaledCounts.values()) totalCount += c;
+        int total = 0;
+        for (int c : scaledCounts.values()) total += c;
+        final int totalCount = total;
 
         session.setWaveZombieCount(totalCount);
         session.setSpawningComplete(false);

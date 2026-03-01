@@ -1,0 +1,27 @@
+$C = "../Common.ui";
+
+Group {
+  Anchor: (Left: 0, Right: 0, Height: 34, Bottom: 4);
+  LayoutMode: Full;
+
+  TextButton #MobTypeButton {
+    Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+    Text: "Zombie";
+    Style: TextButtonStyle(
+      Default: (Background: #1e1541, LabelStyle: (FontSize: 13, TextColor: #c4b5fd, HorizontalAlignment: Center, VerticalAlignment: Center)),
+      Hovered: (Background: #2e2060, LabelStyle: (FontSize: 13, TextColor: #ddd6fe, HorizontalAlignment: Center, VerticalAlignment: Center)),
+      Pressed: (Background: #160f30, LabelStyle: (FontSize: 13, TextColor: #c4b5fd, HorizontalAlignment: Center, VerticalAlignment: Center)),
+      Sounds: $C.@ButtonSounds,
+    );
+  }
+
+  // Selected highlight overlay (shown for current type)
+  Group #SelectedOverlay {
+    Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+    Background: #a78bfa(0.15);
+    OutlineColor: #a78bfa(0.5);
+    OutlineSize: 1;
+    Visible: false;
+    HitTestVisible: false;
+  }
+}

@@ -33,6 +33,8 @@ public class PurgeVariantAdminPage extends InteractiveCustomUIPage<PurgeVariantA
     private static final String BUTTON_EDIT_PREFIX = "Edit:";
     private static final String BUTTON_ADJUST_PREFIX = "Adjust:";
     private static final String BUTTON_NPC_TYPE_PREFIX = "NpcType:";
+    private static final String BUTTON_PICK_TYPE_PREFIX = "PickType:";
+    private static final String BUTTON_PICKER_CANCEL = "PickerCancel";
     private static final String BUTTON_SAVE_NAME = "SaveName";
     private static final String[] NPC_TYPES = {
             "Zombie",
@@ -50,6 +52,7 @@ public class PurgeVariantAdminPage extends InteractiveCustomUIPage<PurgeVariantA
     private final PurgeWeaponConfigManager weaponConfigManager;
     private String editingVariantKey = "";
     private String variantNameInput = "";
+    private String pickingTypeForKey = "";
 
     public PurgeVariantAdminPage(@Nonnull PlayerRef playerRef,
                                   PurgeVariantConfigManager variantConfigManager,
@@ -71,6 +74,7 @@ public class PurgeVariantAdminPage extends InteractiveCustomUIPage<PurgeVariantA
         uiCommandBuilder.append("Pages/Purge_VariantAdmin.ui");
         bindStaticEvents(uiEventBuilder);
         buildVariantList(uiCommandBuilder, uiEventBuilder);
+        buildMobTypePicker(uiCommandBuilder, uiEventBuilder);
     }
 
     @Override
@@ -107,7 +111,16 @@ public class PurgeVariantAdminPage extends InteractiveCustomUIPage<PurgeVariantA
             return;
         }
         if (button.startsWith(BUTTON_NPC_TYPE_PREFIX)) {
-            handleNpcTypeCycle(button.substring(BUTTON_NPC_TYPE_PREFIX.length()));
+            handleNpcTypeOpen(button.substring(BUTTON_NPC_TYPE_PREFIX.length()));
+            return;
+        }
+        if (button.startsWith(BUTTON_PICK_TYPE_PREFIX)) {
+            handleNpcTypePick(button.substring(BUTTON_PICK_TYPE_PREFIX.length()));
+            return;
+        }
+        if (BUTTON_PICKER_CANCEL.equals(button)) {
+            pickingTypeForKey = "";
+            sendRefresh();
             return;
         }
         if (BUTTON_SAVE_NAME.equals(button)) {
@@ -165,23 +178,22 @@ public class PurgeVariantAdminPage extends InteractiveCustomUIPage<PurgeVariantA
         sendRefresh();
     }
 
-    private void handleNpcTypeCycle(String key) {
+    private void handleNpcTypeOpen(String key) {
         PurgeVariantConfig config = variantConfigManager.getVariant(key);
         if (config == null) {
             return;
         }
-        String current = config.effectiveNpcType();
-        int currentIndex = -1;
-        for (int i = 0; i < NPC_TYPES.length; i++) {
-            if (NPC_TYPES[i].equals(current)) {
-                currentIndex = i;
-                break;
-            }
+        pickingTypeForKey = key;
+        sendRefresh();
+    }
+
+    private void handleNpcTypePick(String type) {
+        if (pickingTypeForKey.isEmpty()) {
+            return;
         }
-        String next = NPC_TYPES[(currentIndex + 1) % NPC_TYPES.length];
-        if (variantConfigManager.setNpcType(key, next)) {
-            sendRefresh();
-        }
+        variantConfigManager.setNpcType(pickingTypeForKey, type);
+        pickingTypeForKey = "";
+        sendRefresh();
     }
 
     private void handleEdit(String key) {
@@ -266,6 +278,7 @@ public class PurgeVariantAdminPage extends InteractiveCustomUIPage<PurgeVariantA
         UIEventBuilder eventBuilder = new UIEventBuilder();
         bindStaticEvents(eventBuilder);
         buildVariantList(commandBuilder, eventBuilder);
+        buildMobTypePicker(commandBuilder, eventBuilder);
         this.sendUpdate(commandBuilder, eventBuilder, false);
     }
 
@@ -349,6 +362,41 @@ public class PurgeVariantAdminPage extends InteractiveCustomUIPage<PurgeVariantA
                     root + " #NpcTypeButton",
                     EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_NPC_TYPE_PREFIX + v.key()), false);
         }
+    }
+
+    private void buildMobTypePicker(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
+        boolean showPicker = !pickingTypeForKey.isEmpty();
+        commandBuilder.set("#MobTypePicker.Visible", showPicker);
+        if (!showPicker) {
+            return;
+        }
+
+        PurgeVariantConfig config = variantConfigManager.getVariant(pickingTypeForKey);
+        if (config == null) {
+            pickingTypeForKey = "";
+            commandBuilder.set("#MobTypePicker.Visible", false);
+            return;
+        }
+
+        commandBuilder.set("#PickerVariantLabel.Text", "for " + config.label() + " (" + config.key() + ")");
+        commandBuilder.clear("#MobTypeItems");
+
+        String currentType = config.effectiveNpcType();
+        for (int i = 0; i < NPC_TYPES.length; i++) {
+            String type = NPC_TYPES[i];
+            String root = "#MobTypeItems[" + i + "]";
+
+            commandBuilder.append("#MobTypeItems", "Pages/Purge_MobTypeEntry.ui");
+            commandBuilder.set(root + " #MobTypeButton.Text", type);
+            commandBuilder.set(root + " #SelectedOverlay.Visible", type.equals(currentType));
+
+            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
+                    root + " #MobTypeButton",
+                    EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_PICK_TYPE_PREFIX + type), false);
+        }
+
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#PickerCancelButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_PICKER_CANCEL), false);
     }
 
     private void bindAdjust(UIEventBuilder eventBuilder, String target,
