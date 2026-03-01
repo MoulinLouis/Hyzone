@@ -25,6 +25,7 @@ import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.core.discord.DiscordLinkStore;
 import io.hyvexa.core.economy.VexaStore;
 import io.hyvexa.purge.command.PurgeCommand;
+import io.hyvexa.purge.command.CamTestCommand;
 import io.hyvexa.purge.command.SetAmmoCommand;
 import io.hyvexa.purge.data.PurgePlayerStore;
 import io.hyvexa.purge.data.PurgeScrapStore;
@@ -150,6 +151,7 @@ public class HyvexaPurgePlugin extends JavaPlugin {
         this.getCommandRegistry().registerCommand(
                 new PurgeCommand(sessionManager, waveConfigManager, partyManager, instanceManager, weaponConfigManager, variantConfigManager));
         this.getCommandRegistry().registerCommand(new SetAmmoCommand());
+        this.getCommandRegistry().registerCommand(new CamTestCommand());
 
         // Register item interaction codecs
         registerInteractionCodecs();
