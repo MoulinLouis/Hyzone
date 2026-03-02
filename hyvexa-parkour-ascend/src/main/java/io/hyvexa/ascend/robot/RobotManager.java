@@ -86,6 +86,8 @@ public class RobotManager {
     private volatile boolean cleanupPending = false;
     private volatile long lastAutoUpgradeMs = 0;
     private volatile long lastTeleportWarningCleanupMs = 0L;
+    private volatile long lastHealthLogMs = 0L;
+    private static final long HEALTH_LOG_INTERVAL_MS = TimeUnit.MINUTES.toMillis(5L);
     private final Map<UUID, Long> lastAutoElevationMs = new ConcurrentHashMap<>();
     private final Map<UUID, Long> lastAutoSummitMs = new ConcurrentHashMap<>();
 
@@ -422,8 +424,16 @@ public class RobotManager {
             // Process auto-elevation/summit BEFORE robot ticking so that
             // robots are despawned before they can earn with pre-reset multipliers
             if (doAutoOps) {
-                performAutoElevation(now);
-                performAutoSummit(now);
+                try {
+                    performAutoElevation(now);
+                } catch (Exception e) {
+                    LOGGER.atWarning().withCause(e).log("Error in auto-elevation");
+                }
+                try {
+                    performAutoSummit(now);
+                } catch (Exception e) {
+                    LOGGER.atWarning().withCause(e).log("Error in auto-summit");
+                }
             }
             for (RobotState robot : robots.values()) {
                 tickRobot(robot, now);
@@ -432,10 +442,16 @@ public class RobotManager {
             // Auto-upgrade runners for players with the skill (throttled)
             if (doAutoOps) {
                 lastAutoUpgradeMs = now;
-                performAutoRunnerUpgrades();
+                try {
+                    performAutoRunnerUpgrades();
+                } catch (Exception e) {
+                    LOGGER.atWarning().withCause(e).log("Error in auto-upgrades");
+                }
             }
-        } catch (Exception e) {
-            LOGGER.atWarning().log("Error in robot tick: " + e.getMessage());
+        } catch (Throwable t) {
+            // Catch Throwable (not just Exception) to prevent scheduleWithFixedDelay from dying.
+            // An uncaught Error would silently kill the scheduler, stopping ALL runner processing.
+            LOGGER.atSevere().withCause(t).log("Critical error in robot tick: " + t.getClass().getSimpleName());
         }
     }
 
@@ -652,6 +668,19 @@ public class RobotManager {
                 activeKeys.add(key);
             }
         }
+        // Periodic health log
+        if (now - lastHealthLogMs >= HEALTH_LOG_INTERVAL_MS) {
+            lastHealthLogMs = now;
+            int ghostCount = 0;
+            for (RobotState r : robots.values()) {
+                if (ghostStore.getRecording(r.getOwnerId(), r.getMapId()) != null) {
+                    ghostCount++;
+                }
+            }
+            LOGGER.atInfo().log("Runner health: robots=%d, activeKeys=%d, online=%d, cachedPlayers=%d, withGhost=%d, npc=%s",
+                    robots.size(), activeKeys.size(), onlinePlayers.size(), players.size(),
+                    ghostCount, npcPlugin != null ? "available" : "NULL");
+        }
         if (activeKeys.isEmpty()) {
             despawnAllRobots();
             return;
@@ -783,13 +812,14 @@ public class RobotManager {
 
         List<AscendMap> maps = mapStore.listMapsSorted();
 
-        // First priority: buy runners on unlocked maps that have a ghost recording (free)
+        // First priority: buy runners on unlocked maps that have been completed (free)
         for (AscendMap map : maps) {
             AscendPlayerProgress.MapProgress mp = progress.getMapProgress().get(map.getId());
             if (mp == null || !mp.isUnlocked() || mp.hasRobot()) continue;
 
+            // Accept ghost recording OR best time as proof of completion
             GhostRecording ghost = ghostStore.getRecording(playerId, map.getId());
-            if (ghost == null) continue;
+            if (ghost == null && mp.getBestTimeMs() == null) continue;
 
             playerStore.setHasRobot(playerId, map.getId(), true);
             return; // One action per call for smooth visual
@@ -1138,11 +1168,14 @@ public class RobotManager {
         }
 
         // Use player's PB time as base (from ghost recording)
+        long base;
         GhostRecording ghost = ghostStore.getRecording(ownerId, map.getId());
-        if (ghost == null) {
-            return -1L;
+        if (ghost != null) {
+            base = ghost.getCompletionTimeMs();
+        } else {
+            // Fallback: use map's base run time so runners still earn without a ghost
+            base = map.getEffectiveBaseRunTimeMs();
         }
-        long base = ghost.getCompletionTimeMs();
         if (base <= 0L) {
             return -1L;
         }

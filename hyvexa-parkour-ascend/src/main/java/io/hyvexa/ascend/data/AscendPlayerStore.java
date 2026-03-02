@@ -569,8 +569,11 @@ public class AscendPlayerStore {
                 if (!maps.isEmpty()) {
                     String firstMapId = maps.get(0).getId();
                     setMapUnlocked(playerId, firstMapId, true);
+                    // Auto-buy runner if player has completed map 1 before (ghost or best time)
                     io.hyvexa.common.ghost.GhostStore ghostStore = plugin.getGhostStore();
-                    if (ghostStore != null && ghostStore.getRecording(playerId, firstMapId) != null) {
+                    boolean hasGhost = ghostStore != null && ghostStore.getRecording(playerId, firstMapId) != null;
+                    boolean hasBestTime = getBestTimeMs(playerId, firstMapId) != null;
+                    if (hasGhost || hasBestTime) {
                         setHasRobot(playerId, firstMapId, true);
                     }
                 }

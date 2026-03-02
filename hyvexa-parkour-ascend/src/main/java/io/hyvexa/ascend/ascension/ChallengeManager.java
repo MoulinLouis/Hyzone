@@ -414,16 +414,20 @@ public class ChallengeManager {
 
                         ChallengeType type = ChallengeType.fromId(typeId);
                         if (type == null) {
-                            LOGGER.atWarning().log("[Challenge] Unknown challenge type ID " + typeId + " for player " + playerId);
+                            LOGGER.atSevere().log("[Challenge] Unknown challenge type ID " + typeId
+                                    + " for player " + playerId + " — force-restoring snapshot to prevent data loss");
+                            forceRestoreSnapshot(playerId, json);
                             deleteActiveChallenge(playerId);
                         } else {
                             ChallengeSnapshot snapshot;
                             try {
                                 snapshot = GSON.fromJson(json, ChallengeSnapshot.class);
                             } catch (Exception e) {
-                                LOGGER.atWarning().withCause(e)
-                                        .log("[Challenge] Failed to deserialize snapshot for " + playerId + ", clearing challenge");
-                                deleteActiveChallenge(playerId);
+                                LOGGER.atSevere().withCause(e)
+                                        .log("[Challenge] Failed to deserialize snapshot for " + playerId
+                                                + " — preserving challenge row for retry on next login");
+                                // DON'T delete the challenge row — player will retry on next login.
+                                // Deleting would permanently lose their pre-challenge progress.
                                 snapshot = null;
                             }
                             if (snapshot != null) {
@@ -443,11 +447,44 @@ public class ChallengeManager {
                 }
             }
         } catch (SQLException e) {
-            LOGGER.atSevere().log("[Challenge] Failed to load challenge for " + playerId + ": " + e.getMessage());
+            // DB failure means the challenge row was NOT loaded. If the player was in a challenge,
+            // their progress is in the reset state and we can't recover right now.
+            // On next reconnect the load will be retried (the row is still in DB).
+            LOGGER.atSevere().log("[Challenge] Failed to load challenge for " + playerId
+                    + " — if player was in a challenge, they will appear stuck until next successful login: "
+                    + e.getMessage());
         }
 
         // Load permanent challenge rewards (any challenge with completions > 0)
         loadChallengeRewards(playerId);
+    }
+
+    /**
+     * Emergency restore: parse snapshot JSON and restore progress directly,
+     * bypassing the challenge system. Used when the challenge type is unknown
+     * but the snapshot data is still recoverable.
+     */
+    private void forceRestoreSnapshot(UUID playerId, String json) {
+        if (json == null || json.isEmpty()) {
+            return;
+        }
+        try {
+            ChallengeSnapshot snapshot = GSON.fromJson(json, ChallengeSnapshot.class);
+            if (snapshot == null) {
+                return;
+            }
+            AscendPlayerProgress progress = playerStore.getPlayer(playerId);
+            if (progress == null) {
+                return;
+            }
+            snapshot.restore(progress);
+            playerStore.markDirty(playerId);
+            playerStore.flushPendingSave();
+            LOGGER.atInfo().log("[Challenge] Force-restored snapshot for " + playerId);
+        } catch (Exception e) {
+            LOGGER.atSevere().withCause(e).log("[Challenge] Force-restore also failed for " + playerId
+                    + " — player progress may be lost");
+        }
     }
 
     /**

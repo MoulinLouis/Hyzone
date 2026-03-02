@@ -81,13 +81,17 @@ public class PassiveEarningsManager {
                 continue; // No runner on this map
             }
 
-            // Get ghost recording to calculate completion time
+            // Get ghost recording to calculate completion time (fallback to map base time)
+            long baseTimeMs;
             GhostRecording ghost = ghostStore.getRecording(playerId, mapId);
-            if (ghost == null) {
-                continue; // No ghost = can't calculate
+            if (ghost != null) {
+                baseTimeMs = ghost.getCompletionTimeMs();
+            } else {
+                baseTimeMs = map.getEffectiveBaseRunTimeMs();
             }
-
-            long baseTimeMs = ghost.getCompletionTimeMs();
+            if (baseTimeMs <= 0) {
+                continue;
+            }
             int speedLevel = mapProgress.getRobotSpeedLevel();
             int stars = mapProgress.getRobotStars();
 

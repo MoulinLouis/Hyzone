@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Fixed
+- **Ascend: Runners not working** - Runners now fall back to map base run time when ghost recording is missing, preventing silent zero-earnings. Auto-buy runner gate relaxed to accept best time as proof of completion. Tick scheduler hardened against silent death (catches Throwable). Auto-elevation/summit/upgrade exceptions now isolated so they don't block runner ticking. Challenge reconnect recovery hardened: snapshot deserialization failure no longer deletes the challenge row (preserves for retry), unknown challenge types force-restore the snapshot before cleanup, and DB failures are logged at SEVERE with recovery guidance.
+
 ### Added
 - **Purge: Class system** - 4 unlockable classes (Scavenger, Tank, Assault, Medic) purchased with scrap. Each provides passive stat boosts and a unique perk. Scavenger earns +30% scrap with kill streak bonuses; Tank gets +40 HP with 20% damage reduction; Assault deals +20% damage with streak ramp; Medic has passive regen and heal-on-kill. Managed via `/purge class` commands.
 
