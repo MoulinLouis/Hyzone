@@ -890,7 +890,11 @@ public class RobotManager {
             if (runTracker != null && runTracker.getActiveMapId(playerId) != null) continue;
             // Skip if elevation is blocked by active challenge
             if (challengeMgr != null && challengeMgr.isElevationBlocked(playerId)) continue;
-            autoElevatePlayer(playerId, now);
+            try {
+                autoElevatePlayer(playerId, now);
+            } catch (Exception e) {
+                LOGGER.atWarning().withCause(e).log("Auto-elevation failed for " + playerId);
+            }
         }
     }
 
@@ -931,10 +935,11 @@ public class RobotManager {
         long nextTarget = targets.get(targetIndex);
         if (newMultiplier < nextTarget) return;
 
-        // Despawn all robots before resetting data to prevent completions with pre-reset multipliers
-        despawnRobotsForPlayer(playerId);
-
-        // Execute elevation
+        // Execute elevation — reset progress first, then despawn robots.
+        // resetProgressForElevation sets hasRobot=false, so refreshRobots() will clean up stale
+        // robots on the next cycle. We despawn after to accelerate cleanup, but the critical part
+        // is that the reset happens first — if despawn fails or throws, robots won't be re-created
+        // because hasRobot is already false.
         playerStore.atomicSetElevationAndResetVolt(playerId, newLevel);
 
         // Get first map ID for reset
@@ -942,6 +947,9 @@ public class RobotManager {
         String firstMapId = maps.isEmpty() ? null : maps.get(0).getId();
 
         playerStore.resetProgressForElevation(playerId, firstMapId);
+
+        // Now despawn robot NPCs (safe — even if this fails, hasRobot=false prevents re-creation)
+        despawnRobotsForPlayer(playerId);
 
         // Send chat message
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
@@ -989,7 +997,11 @@ public class RobotManager {
             if (runTracker != null && runTracker.getActiveMapId(playerId) != null) continue;
             // Skip if all summit is blocked by active challenge
             if (challengeMgr != null && challengeMgr.isAllSummitBlocked(playerId)) continue;
-            autoSummitPlayer(playerId, now);
+            try {
+                autoSummitPlayer(playerId, now);
+            } catch (Exception e) {
+                LOGGER.atWarning().withCause(e).log("Auto-summit failed for " + playerId);
+            }
         }
     }
 
@@ -1037,12 +1049,15 @@ public class RobotManager {
             // Only summit if projected level reaches the target
             if (preview.newLevel() < targetLevel) continue;
 
-            // Despawn all robots before resetting data to prevent completions with pre-reset multipliers
-            despawnRobotsForPlayer(playerId);
-
-            // Perform summit
+            // Perform summit — this calls resetProgressForSummit which sets hasRobot=false,
+            // so refreshRobots() won't re-create them. We despawn NPCs after to accelerate cleanup.
+            // Critical: reset BEFORE despawn — if despawn throws, robots won't be re-created
+            // because hasRobot is already false (prevents infinite despawn-recreate loop).
             SummitManager.SummitResult result = summitManager.performSummit(playerId, category);
             if (!result.succeeded()) continue;
+
+            // Now despawn robot NPCs (safe — even if this fails, hasRobot=false prevents re-creation)
+            despawnRobotsForPlayer(playerId);
 
             // Send chat message
             PlayerRef playerRef = plugin.getPlayerRef(playerId);
