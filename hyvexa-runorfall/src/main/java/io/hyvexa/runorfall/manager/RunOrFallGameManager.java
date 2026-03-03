@@ -331,10 +331,6 @@ public class RunOrFallGameManager {
         }
     }
 
-    public synchronized void requestStart() {
-        requestStart(false);
-    }
-
     public synchronized void requestStart(boolean allowSolo) {
         if (state == GameState.COUNTDOWN) {
             int requiredPlayers = allowSolo ? 1 : 2;
@@ -1327,7 +1323,7 @@ public class RunOrFallGameManager {
             if (!isMapPlayable(map)) {
                 continue;
             }
-            int mapMinPlayers = sanitizeMapMinPlayers(map.minPlayers);
+            int mapMinPlayers = Math.max(1, map.minPlayers);
             if (mapMinPlayers > eligiblePlayers) {
                 continue;
             }
@@ -1357,10 +1353,6 @@ public class RunOrFallGameManager {
             return false;
         }
         return map.platforms != null && !map.platforms.isEmpty();
-    }
-
-    private static int sanitizeMapMinPlayers(int value) {
-        return Math.max(1, value);
     }
 
     private boolean writeBlockId(World world, int x, int y, int z, int blockId) {
@@ -1722,13 +1714,6 @@ public class RunOrFallGameManager {
         return Math.max(0, blinksUsedByPlayer.getOrDefault(playerId, 0));
     }
 
-    private int getRoundBlinkChargesCount(UUID playerId) {
-        if (playerId == null) {
-            return 0;
-        }
-        return Math.max(0, blinkChargesByPlayer.getOrDefault(playerId, 0));
-    }
-
     private void updateCountdownHudForLobbyPlayers() {
         String countdownText = buildCountdownHudText();
         for (UUID playerId : lobbyPlayers) {
@@ -1767,7 +1752,7 @@ public class RunOrFallGameManager {
     }
 
     private void updateBlinkChargesHudForPlayer(UUID playerId) {
-        updateBlinkChargesHudForPlayer(playerId, getRoundBlinkChargesCount(playerId));
+        updateBlinkChargesHudForPlayer(playerId, getBlinkCharges(playerId));
     }
 
     private void updateBlinkChargesHudForPlayer(UUID playerId, int blinkCharges) {

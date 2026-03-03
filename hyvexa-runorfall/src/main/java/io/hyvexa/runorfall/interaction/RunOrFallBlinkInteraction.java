@@ -78,7 +78,7 @@ public class RunOrFallBlinkInteraction extends SimpleInteraction {
 
     private void performBlink(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef,
                               World world, RunOrFallGameManager gameManager, int blinkDistanceBlocks) {
-        if (ref == null || !ref.isValid() || store == null || playerRef == null || world == null) {
+        if (!ref.isValid()) {
             return;
         }
         TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
@@ -112,7 +112,7 @@ public class RunOrFallBlinkInteraction extends SimpleInteraction {
             return;
         }
         UUID playerId = playerRef.getUuid();
-        if (gameManager == null || playerId == null || !gameManager.tryConsumeBlinkCharge(playerId)) {
+        if (!gameManager.tryConsumeBlinkCharge(playerId)) {
             return;
         }
         playSfx(playerRef, SFX_BLINK_USED);
@@ -124,9 +124,6 @@ public class RunOrFallBlinkInteraction extends SimpleInteraction {
 
     private Vector3d resolveSafeBlinkTarget(World world, Vector3d origin, Vector3d requestedTarget,
                                             RunOrFallGameManager gameManager) {
-        if (world == null || origin == null || requestedTarget == null) {
-            return null;
-        }
         double dx = requestedTarget.getX() - origin.getX();
         double dy = requestedTarget.getY() - origin.getY();
         double dz = requestedTarget.getZ() - origin.getZ();
@@ -156,9 +153,6 @@ public class RunOrFallBlinkInteraction extends SimpleInteraction {
     }
 
     private boolean isBlockedAt(World world, Vector3d position, RunOrFallGameManager gameManager) {
-        if (world == null || position == null) {
-            return true;
-        }
         for (int i = 0; i < BLINK_XZ_OFFSETS.length; i += 2) {
             double sampleX = position.getX() + BLINK_XZ_OFFSETS[i];
             double sampleZ = position.getZ() + BLINK_XZ_OFFSETS[i + 1];
@@ -182,16 +176,13 @@ public class RunOrFallBlinkInteraction extends SimpleInteraction {
         if (blockId == RunOrFallUtils.AIR_BLOCK_ID) {
             return false;
         }
-        if (gameManager != null && gameManager.canBlinkPassThrough(blockX, blockY, blockZ, blockId)) {
+        if (gameManager.canBlinkPassThrough(blockX, blockY, blockZ, blockId)) {
             return false;
         }
         return true;
     }
 
     private static double distanceSq(Vector3d a, Vector3d b) {
-        if (a == null || b == null) {
-            return 0.0d;
-        }
         double dx = b.getX() - a.getX();
         double dy = b.getY() - a.getY();
         double dz = b.getZ() - a.getZ();
@@ -199,9 +190,6 @@ public class RunOrFallBlinkInteraction extends SimpleInteraction {
     }
 
     private void playSfx(PlayerRef playerRef, String soundEventId) {
-        if (playerRef == null || soundEventId == null || soundEventId.isBlank()) {
-            return;
-        }
         int soundIndex = SoundEvent.getAssetMap().getIndex(soundEventId);
         if (soundIndex <= SoundEvent.EMPTY_ID) {
             return;

@@ -443,7 +443,6 @@ public class RunOrFallCommand extends AbstractAsyncCommand {
         player.sendMessage(Message.raw(PREFIX + "Player: /rof join, /rof leave, /rof status"));
         player.sendMessage(Message.raw(PREFIX + "Admin UI: /rof admin"));
         player.sendMessage(Message.raw(PREFIX + "Maps: /rof map list, /rof map create <id>, /rof map select <id>"));
-        player.sendMessage(Message.raw(PREFIX + "Legacy admin commands remain available if needed."));
     }
 
 }

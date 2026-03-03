@@ -6,14 +6,12 @@ import io.hyvexa.runorfall.data.RunOrFallPlayerStats;
 
 import javax.annotation.Nonnull;
 import java.sql.Connection;
-import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Map;
 import java.util.List;
-import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -171,9 +169,9 @@ public class RunOrFallStatsStore {
             return;
         }
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
-            ensureColumnExists(conn, "runorfall_player_stats", "total_blocks_broken",
+            DatabaseManager.ensureColumnExists(conn, "runorfall_player_stats", "total_blocks_broken",
                     "ALTER TABLE runorfall_player_stats ADD COLUMN total_blocks_broken BIGINT NOT NULL DEFAULT 0");
-            ensureColumnExists(conn, "runorfall_player_stats", "total_blinks_used",
+            DatabaseManager.ensureColumnExists(conn, "runorfall_player_stats", "total_blinks_used",
                     "ALTER TABLE runorfall_player_stats ADD COLUMN total_blinks_used BIGINT NOT NULL DEFAULT 0");
         } catch (SQLException e) {
             LOGGER.atWarning().withCause(e).log("Failed ensuring RunOrFall stats columns.");
@@ -201,39 +199,6 @@ public class RunOrFallStatsStore {
         } catch (SQLException e) {
             LOGGER.atWarning().withCause(e).log("Failed saving RunOrFall stats for " + stats.getPlayerId() + ".");
             return false;
-        }
-    }
-
-    private static boolean columnExists(Connection conn, String tableName, String columnName) throws SQLException {
-        DatabaseMetaData metaData = conn.getMetaData();
-        try (ResultSet rs = metaData.getColumns(conn.getCatalog(), null, tableName, columnName)) {
-            if (rs.next()) {
-                return true;
-            }
-        }
-        try (ResultSet rs = metaData.getColumns(conn.getCatalog(), null,
-                tableName.toUpperCase(Locale.ROOT), columnName.toUpperCase(Locale.ROOT))) {
-            if (rs.next()) {
-                return true;
-            }
-        }
-        try (ResultSet rs = metaData.getColumns(conn.getCatalog(), null,
-                tableName.toLowerCase(Locale.ROOT), columnName.toLowerCase(Locale.ROOT))) {
-            return rs.next();
-        }
-    }
-
-    private static void ensureColumnExists(Connection conn, String tableName, String columnName, String alterSql) {
-        try {
-            if (columnExists(conn, tableName, columnName)) {
-                return;
-            }
-            try (Statement stmt = conn.createStatement()) {
-                stmt.executeUpdate(alterSql);
-            }
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e)
-                    .log("Failed to ensure column " + columnName + " on table " + tableName + ".");
         }
     }
 

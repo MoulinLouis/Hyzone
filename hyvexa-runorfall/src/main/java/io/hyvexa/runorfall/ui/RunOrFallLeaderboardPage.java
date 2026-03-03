@@ -140,7 +140,7 @@ public class RunOrFallLeaderboardPage extends InteractiveCustomUIPage<RunOrFallL
             return;
         }
 
-        String filter = searchText != null ? searchText.trim().toLowerCase(Locale.ROOT) : "";
+        String filter = searchText.trim().toLowerCase(Locale.ROOT);
         List<LeaderboardRow> rows = stats.stream()
                 .map(LeaderboardRow::new)
                 .sorted(selectedCategory.comparator())
@@ -196,21 +196,18 @@ public class RunOrFallLeaderboardPage extends InteractiveCustomUIPage<RunOrFallL
         boolean isStreak = selectedCategory == LeaderboardCategory.BEST_WIN_STREAK;
         boolean isTime = selectedCategory == LeaderboardCategory.LONGEST_TIME_SURVIVED;
 
-        // Total Wins tab
         commandBuilder.set("#TabWinsActiveBg.Visible", isWins);
         commandBuilder.set("#TabWinsInactiveBg.Visible", !isWins);
         commandBuilder.set("#TabWinsAccentActive.Visible", isWins);
         commandBuilder.set("#TabWinsAccentInactive.Visible", !isWins);
         commandBuilder.set("#TabWinsLabel.Style.TextColor", isWins ? "#f0f4f8" : "#9fb0ba");
 
-        // Best Streak tab
         commandBuilder.set("#TabStreakActiveBg.Visible", isStreak);
         commandBuilder.set("#TabStreakInactiveBg.Visible", !isStreak);
         commandBuilder.set("#TabStreakAccentActive.Visible", isStreak);
         commandBuilder.set("#TabStreakAccentInactive.Visible", !isStreak);
         commandBuilder.set("#TabStreakLabel.Style.TextColor", isStreak ? "#f0f4f8" : "#9fb0ba");
 
-        // Longest Survived tab
         commandBuilder.set("#TabLongestActiveBg.Visible", isTime);
         commandBuilder.set("#TabLongestInactiveBg.Visible", !isTime);
         commandBuilder.set("#TabLongestAccentActive.Visible", isTime);

@@ -21,6 +21,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.WorldConstants;
 import io.hyvexa.common.util.InventoryUtils;
 import io.hyvexa.common.util.ModeGate;
+import io.hyvexa.common.util.StoreInitializer;
 import io.hyvexa.common.util.MultiHudBridge;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.core.economy.VexaStore;
@@ -104,18 +105,10 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
         if (!folder.exists()) {
             folder.mkdirs();
         }
-        try {
-            if (!DatabaseManager.getInstance().isInitialized()) {
-                DatabaseManager.getInstance().initialize();
-            }
-        } catch (Exception e) {
-            LOGGER.atWarning().withCause(e).log("RunOrFall database initialization failed.");
-        }
-        try {
-            VexaStore.getInstance().initialize();
-        } catch (Exception e) {
-            LOGGER.atWarning().withCause(e).log("RunOrFall VexaStore initialization failed.");
-        }
+        StoreInitializer.initialize(LOGGER,
+                () -> { if (!DatabaseManager.getInstance().isInitialized()) DatabaseManager.getInstance().initialize(); },
+                () -> VexaStore.getInstance().initialize()
+        );
 
         configStore = new RunOrFallConfigStore(new File(folder, "config.json"));
         statsStore = new RunOrFallStatsStore();
@@ -194,9 +187,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
                 refreshRunOrFallHotbar(playerId);
                 return;
             }
-            runOrFallHuds.remove(playerId);
-            hiddenRunOrFallHuds.remove(playerId);
-            hudReadyAt.remove(playerId);
+            cleanupHudForPlayer(playerId);
             gameManager.leaveLobby(playerId, false);
         });
 
@@ -207,10 +198,8 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
             }
             UUID playerId = playerRef.getUuid();
             gameManager.handleDisconnect(playerId);
-            runOrFallHuds.remove(playerId);
-            hiddenRunOrFallHuds.remove(playerId);
+            cleanupHudForPlayer(playerId);
             hiddenHudPlayers.remove(playerId);
-            hudReadyAt.remove(playerId);
             RunOrFallAdminPage.clearSelection(playerId);
             RunOrFallMusicPage.clearPlayer(playerId);
             RunOrFallFeatherBridge.evictPlayer(playerId);
@@ -460,30 +449,30 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
         attachRunOrFallHud(playerRef, player);
     }
 
+    private void cleanupHudForPlayer(UUID playerId) {
+        runOrFallHuds.remove(playerId);
+        hiddenRunOrFallHuds.remove(playerId);
+        hudReadyAt.remove(playerId);
+    }
+
     private void tickHudUpdates() {
         long now = System.currentTimeMillis();
         for (var entry : runOrFallHuds.entrySet()) {
             UUID playerId = entry.getKey();
             PlayerRef playerRef = Universe.get().getPlayer(playerId);
             if (playerRef == null) {
-                runOrFallHuds.remove(playerId);
-                hiddenRunOrFallHuds.remove(playerId);
-                hudReadyAt.remove(playerId);
+                cleanupHudForPlayer(playerId);
                 continue;
             }
             Ref<EntityStore> ref = playerRef.getReference();
             if (ref == null || !ref.isValid()) {
-                runOrFallHuds.remove(playerId);
-                hiddenRunOrFallHuds.remove(playerId);
-                hudReadyAt.remove(playerId);
+                cleanupHudForPlayer(playerId);
                 continue;
             }
             Store<EntityStore> store = ref.getStore();
             World world = store.getExternalData() != null ? store.getExternalData().getWorld() : null;
             if (!ModeGate.isRunOrFallWorld(world)) {
-                runOrFallHuds.remove(playerId);
-                hiddenRunOrFallHuds.remove(playerId);
-                hudReadyAt.remove(playerId);
+                cleanupHudForPlayer(playerId);
                 continue;
             }
             long readyAt = hudReadyAt.getOrDefault(playerId, Long.MAX_VALUE);

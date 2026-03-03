@@ -174,17 +174,17 @@ public class RunOrFallConfigStore {
     public synchronized int getSelectedMapMinPlayers() {
         RunOrFallMapConfig selectedMap = getSelectedMapInternal();
         if (selectedMap == null) {
-            return sanitizeMapMinPlayers(DEFAULT_MAP_MIN_PLAYERS);
+            return Math.max(1, DEFAULT_MAP_MIN_PLAYERS);
         }
-        return sanitizeMapMinPlayers(selectedMap.minPlayers);
+        return Math.max(1, selectedMap.minPlayers);
     }
 
     public synchronized int getMapMinPlayers(String mapId) {
         RunOrFallMapConfig map = findMapByIdInternal(normalizeMapId(mapId));
         if (map == null) {
-            return sanitizeMapMinPlayers(DEFAULT_MAP_MIN_PLAYERS);
+            return Math.max(1, DEFAULT_MAP_MIN_PLAYERS);
         }
-        return sanitizeMapMinPlayers(map.minPlayers);
+        return Math.max(1, map.minPlayers);
     }
 
     public synchronized boolean setSelectedMapMinPlayers(int minPlayers) {
@@ -192,7 +192,7 @@ public class RunOrFallConfigStore {
         if (selectedMap == null) {
             return false;
         }
-        selectedMap.minPlayers = sanitizeMapMinPlayers(minPlayers);
+        selectedMap.minPlayers = Math.max(1, minPlayers);
         saveMapsToDatabase();
         return true;
     }
@@ -221,7 +221,7 @@ public class RunOrFallConfigStore {
         }
         RunOrFallMapConfig map = new RunOrFallMapConfig();
         map.id = normalized;
-        map.minPlayers = sanitizeMapMinPlayers(DEFAULT_MAP_MIN_PLAYERS);
+        map.minPlayers = Math.max(1, DEFAULT_MAP_MIN_PLAYERS);
         config.maps.add(map);
         if (config.selectedMapId == null || config.selectedMapId.isBlank()) {
             config.selectedMapId = normalized;
@@ -438,31 +438,31 @@ public class RunOrFallConfigStore {
                 stmt.executeUpdate(CREATE_MAP_SPAWNS_TABLE);
                 stmt.executeUpdate(CREATE_MAP_PLATFORMS_TABLE);
             }
-            ensureColumnExists(conn, "runorfall_settings", "active_map_id",
+            DatabaseManager.ensureColumnExists(conn, "runorfall_settings", "active_map_id",
                     "ALTER TABLE runorfall_settings ADD COLUMN active_map_id VARCHAR(64) NULL");
-            ensureColumnExists(conn, "runorfall_settings", "min_players",
+            DatabaseManager.ensureColumnExists(conn, "runorfall_settings", "min_players",
                     "ALTER TABLE runorfall_settings ADD COLUMN min_players INT NOT NULL DEFAULT 2");
-            ensureColumnExists(conn, "runorfall_settings", "min_players_time_seconds",
+            DatabaseManager.ensureColumnExists(conn, "runorfall_settings", "min_players_time_seconds",
                     "ALTER TABLE runorfall_settings ADD COLUMN min_players_time_seconds INT NOT NULL DEFAULT 300");
-            ensureColumnExists(conn, "runorfall_settings", "optimal_players",
+            DatabaseManager.ensureColumnExists(conn, "runorfall_settings", "optimal_players",
                     "ALTER TABLE runorfall_settings ADD COLUMN optimal_players INT NOT NULL DEFAULT 4");
-            ensureColumnExists(conn, "runorfall_settings", "optimal_players_time_seconds",
+            DatabaseManager.ensureColumnExists(conn, "runorfall_settings", "optimal_players_time_seconds",
                     "ALTER TABLE runorfall_settings ADD COLUMN optimal_players_time_seconds INT NOT NULL DEFAULT 60");
-            ensureColumnExists(conn, "runorfall_settings", "blink_distance_blocks",
+            DatabaseManager.ensureColumnExists(conn, "runorfall_settings", "blink_distance_blocks",
                     "ALTER TABLE runorfall_settings ADD COLUMN blink_distance_blocks INT NOT NULL DEFAULT 7");
-            ensureColumnExists(conn, "runorfall_settings", "blink_start_charges",
+            DatabaseManager.ensureColumnExists(conn, "runorfall_settings", "blink_start_charges",
                     "ALTER TABLE runorfall_settings ADD COLUMN blink_start_charges INT NOT NULL DEFAULT 1");
-            ensureColumnExists(conn, "runorfall_settings", "blink_charge_every_blocks_broken",
+            DatabaseManager.ensureColumnExists(conn, "runorfall_settings", "blink_charge_every_blocks_broken",
                     "ALTER TABLE runorfall_settings ADD COLUMN blink_charge_every_blocks_broken INT NOT NULL DEFAULT 100");
-            ensureColumnExists(conn, "runorfall_settings", "feathers_per_minute_alive",
+            DatabaseManager.ensureColumnExists(conn, "runorfall_settings", "feathers_per_minute_alive",
                     "ALTER TABLE runorfall_settings ADD COLUMN feathers_per_minute_alive INT NOT NULL DEFAULT 1");
-            ensureColumnExists(conn, "runorfall_settings", "feathers_per_player_eliminated",
+            DatabaseManager.ensureColumnExists(conn, "runorfall_settings", "feathers_per_player_eliminated",
                     "ALTER TABLE runorfall_settings ADD COLUMN feathers_per_player_eliminated INT NOT NULL DEFAULT 5");
-            ensureColumnExists(conn, "runorfall_settings", "feathers_for_win",
+            DatabaseManager.ensureColumnExists(conn, "runorfall_settings", "feathers_for_win",
                     "ALTER TABLE runorfall_settings ADD COLUMN feathers_for_win INT NOT NULL DEFAULT 25");
-            ensureColumnExists(conn, "runorfall_maps", "min_players",
+            DatabaseManager.ensureColumnExists(conn, "runorfall_maps", "min_players",
                     "ALTER TABLE runorfall_maps ADD COLUMN min_players INT NOT NULL DEFAULT 2");
-            ensureColumnExists(conn, "runorfall_map_platforms", "target_block_item_id",
+            DatabaseManager.ensureColumnExists(conn, "runorfall_map_platforms", "target_block_item_id",
                     "ALTER TABLE runorfall_map_platforms ADD COLUMN target_block_item_id VARCHAR(128) NULL");
             try (PreparedStatement stmt = conn.prepareStatement(
                     "INSERT INTO runorfall_settings "
@@ -601,7 +601,7 @@ public class RunOrFallConfigStore {
                     }
                     RunOrFallMapConfig map = new RunOrFallMapConfig();
                     map.id = mapId;
-                    map.minPlayers = sanitizeMapMinPlayers(rs.getInt("min_players"));
+                    map.minPlayers = Math.max(1, rs.getInt("min_players"));
                     Double lobbyX = rs.getObject("lobby_x", Double.class);
                     if (lobbyX != null) {
                         map.lobby = new RunOrFallLocation(
@@ -822,7 +822,7 @@ public class RunOrFallConfigStore {
                         continue;
                     }
                     insertStmt.setString(1, map.id);
-                    insertStmt.setInt(2, sanitizeMapMinPlayers(map.minPlayers));
+                    insertStmt.setInt(2, Math.max(1, map.minPlayers));
                     if (map.lobby != null && isFiniteLocation(map.lobby)) {
                         insertStmt.setDouble(3, map.lobby.x);
                         insertStmt.setDouble(4, map.lobby.y);
@@ -1096,7 +1096,7 @@ public class RunOrFallConfigStore {
                 }
                 RunOrFallMapConfig sanitized = new RunOrFallMapConfig();
                 sanitized.id = mapId;
-                sanitized.minPlayers = sanitizeMapMinPlayers(map.minPlayers);
+                sanitized.minPlayers = Math.max(1, map.minPlayers);
                 sanitized.lobby = isFiniteLocation(map.lobby) ? map.lobby.copy() : null;
                 if (map.spawns != null) {
                     for (RunOrFallLocation spawn : map.spawns) {
@@ -1119,7 +1119,7 @@ public class RunOrFallConfigStore {
         if (uniqueMaps.isEmpty()) {
             RunOrFallMapConfig legacyMap = new RunOrFallMapConfig();
             legacyMap.id = DEFAULT_MAP_ID;
-            legacyMap.minPlayers = sanitizeMapMinPlayers(DEFAULT_MAP_MIN_PLAYERS);
+            legacyMap.minPlayers = Math.max(1, DEFAULT_MAP_MIN_PLAYERS);
             legacyMap.lobby = isFiniteLocation(loaded.lobby) ? loaded.lobby.copy() : null;
             if (loaded.spawns != null) {
                 for (RunOrFallLocation spawn : loaded.spawns) {
@@ -1168,7 +1168,7 @@ public class RunOrFallConfigStore {
         created.feathersForWin = DEFAULT_FEATHERS_FOR_WIN;
         RunOrFallMapConfig map = new RunOrFallMapConfig();
         map.id = DEFAULT_MAP_ID;
-        map.minPlayers = sanitizeMapMinPlayers(DEFAULT_MAP_MIN_PLAYERS);
+        map.minPlayers = Math.max(1, DEFAULT_MAP_MIN_PLAYERS);
         created.maps.add(map);
         created.selectedMapId = DEFAULT_MAP_ID;
         return created;
@@ -1184,7 +1184,7 @@ public class RunOrFallConfigStore {
         }
         RunOrFallMapConfig map = new RunOrFallMapConfig();
         map.id = DEFAULT_MAP_ID;
-        map.minPlayers = sanitizeMapMinPlayers(DEFAULT_MAP_MIN_PLAYERS);
+        map.minPlayers = Math.max(1, DEFAULT_MAP_MIN_PLAYERS);
         config.maps.add(map);
         config.selectedMapId = map.id;
         return map;
@@ -1272,10 +1272,6 @@ public class RunOrFallConfigStore {
         return Math.max(1, value);
     }
 
-    private static int sanitizeMapMinPlayers(int value) {
-        return Math.max(1, value);
-    }
-
     private static int sanitizeCountdownTime(int value, int fallback) {
         if (value <= 0) {
             return Math.max(1, fallback);
@@ -1324,36 +1320,4 @@ public class RunOrFallConfigStore {
         }
     }
 
-    private static boolean columnExists(Connection conn, String tableName, String columnName) throws SQLException {
-        DatabaseMetaData metaData = conn.getMetaData();
-        try (ResultSet rs = metaData.getColumns(conn.getCatalog(), null, tableName, columnName)) {
-            if (rs.next()) {
-                return true;
-            }
-        }
-        try (ResultSet rs = metaData.getColumns(conn.getCatalog(), null,
-                tableName.toUpperCase(Locale.ROOT), columnName.toUpperCase(Locale.ROOT))) {
-            if (rs.next()) {
-                return true;
-            }
-        }
-        try (ResultSet rs = metaData.getColumns(conn.getCatalog(), null,
-                tableName.toLowerCase(Locale.ROOT), columnName.toLowerCase(Locale.ROOT))) {
-            return rs.next();
-        }
-    }
-
-    private static void ensureColumnExists(Connection conn, String tableName, String columnName, String alterSql) {
-        try {
-            if (columnExists(conn, tableName, columnName)) {
-                return;
-            }
-            try (Statement stmt = conn.createStatement()) {
-                stmt.executeUpdate(alterSql);
-            }
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e)
-                    .log("Failed to ensure column " + columnName + " on table " + tableName + ".");
-        }
-    }
 }
