@@ -10,6 +10,8 @@ import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.shop.ShopTabRegistry;
+import io.hyvexa.common.util.PlayerCleanupHelper;
+import io.hyvexa.common.util.StoreInitializer;
 import io.hyvexa.common.skin.PurgeSkinStore;
 import io.hyvexa.core.cosmetic.CosmeticManager;
 import io.hyvexa.core.cosmetic.CosmeticStore;
@@ -47,36 +49,14 @@ public class WardrobePlugin extends JavaPlugin {
     protected void setup() {
         LOGGER.atInfo().log("Setting up " + this.getName());
 
-        try {
-            DatabaseManager.getInstance().initialize();
-        } catch (Exception e) {
-            LOGGER.atWarning().withCause(e).log("Failed to initialize DatabaseManager");
-        }
-        try {
-            VexaStore.getInstance().initialize();
-        } catch (Exception e) {
-            LOGGER.atWarning().withCause(e).log("Failed to initialize VexaStore");
-        }
-        try {
-            FeatherStore.getInstance().initialize();
-        } catch (Exception e) {
-            LOGGER.atWarning().withCause(e).log("Failed to initialize FeatherStore");
-        }
-        try {
-            CosmeticStore.getInstance().initialize();
-        } catch (Exception e) {
-            LOGGER.atWarning().withCause(e).log("Failed to initialize CosmeticStore");
-        }
-        try {
-            PurgeSkinStore.getInstance().initialize();
-        } catch (Exception e) {
-            LOGGER.atWarning().withCause(e).log("Failed to initialize PurgeSkinStore");
-        }
-        try {
-            CosmeticShopConfigStore.getInstance().initialize();
-        } catch (Exception e) {
-            LOGGER.atWarning().withCause(e).log("Failed to initialize CosmeticShopConfigStore");
-        }
+        StoreInitializer.initialize(LOGGER,
+                () -> DatabaseManager.getInstance().initialize(),
+                () -> VexaStore.getInstance().initialize(),
+                () -> FeatherStore.getInstance().initialize(),
+                () -> CosmeticStore.getInstance().initialize(),
+                () -> PurgeSkinStore.getInstance().initialize(),
+                () -> CosmeticShopConfigStore.getInstance().initialize()
+        );
 
         wardrobeShopTab = new WardrobeShopTab();
         ShopTabRegistry.register(wardrobeShopTab);
@@ -113,59 +93,17 @@ public class WardrobePlugin extends JavaPlugin {
             if (event.getPlayerRef() == null) return;
             UUID playerId = event.getPlayerRef().getUuid();
 
-            try {
-                wardrobeShopTab.evictPlayer(playerId);
-            } catch (Exception e) {
-                LOGGER.atWarning().withCause(e).log("Disconnect cleanup: WardrobeShopTab");
-            }
-
-            try {
-                shopConfigTab.evictPlayer(playerId);
-            } catch (Exception e) {
-                LOGGER.atWarning().withCause(e).log("Disconnect cleanup: ShopConfigTab");
-            }
-
-            try {
-                effectsShopTab.evictPlayer(playerId);
-            } catch (Exception e) {
-                LOGGER.atWarning().withCause(e).log("Disconnect cleanup: EffectsShopTab");
-            }
-
-            try {
-                if (purgeSkinShopTab != null) purgeSkinShopTab.evictPlayer(playerId);
-            } catch (Exception e) {
-                LOGGER.atWarning().withCause(e).log("Disconnect cleanup: PurgeSkinShopTab");
-            }
-
-            try {
-                CosmeticManager.getInstance().cleanupOnDisconnect(playerId);
-            } catch (Exception e) {
-                LOGGER.atWarning().withCause(e).log("Disconnect cleanup: CosmeticManager");
-            }
-
-            try {
-                CosmeticStore.getInstance().evictPlayer(playerId);
-            } catch (Exception e) {
-                LOGGER.atWarning().withCause(e).log("Disconnect cleanup: CosmeticStore");
-            }
-
-            try {
-                VexaStore.getInstance().evictPlayer(playerId);
-            } catch (Exception e) {
-                LOGGER.atWarning().withCause(e).log("Disconnect cleanup: VexaStore");
-            }
-
-            try {
-                FeatherStore.getInstance().evictPlayer(playerId);
-            } catch (Exception e) {
-                LOGGER.atWarning().withCause(e).log("Disconnect cleanup: FeatherStore");
-            }
-
-            try {
-                PurgeSkinStore.getInstance().evictPlayer(playerId);
-            } catch (Exception e) {
-                LOGGER.atWarning().withCause(e).log("Disconnect cleanup: PurgeSkinStore");
-            }
+            PlayerCleanupHelper.cleanup(playerId, LOGGER,
+                    id -> wardrobeShopTab.evictPlayer(id),
+                    id -> shopConfigTab.evictPlayer(id),
+                    id -> effectsShopTab.evictPlayer(id),
+                    id -> { if (purgeSkinShopTab != null) purgeSkinShopTab.evictPlayer(id); },
+                    id -> CosmeticManager.getInstance().cleanupOnDisconnect(id),
+                    id -> CosmeticStore.getInstance().evictPlayer(id),
+                    id -> VexaStore.getInstance().evictPlayer(id),
+                    id -> FeatherStore.getInstance().evictPlayer(id),
+                    id -> PurgeSkinStore.getInstance().evictPlayer(id)
+            );
         });
 
         LOGGER.atInfo().log(this.getName() + " setup complete");

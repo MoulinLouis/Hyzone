@@ -186,7 +186,7 @@ public class WardrobeBridge {
 
     private static WardrobeCosmeticDef wd(String fileName, String displayName, String permissionNode,
                                            String category, String iconKey, String iconPath) {
-        return new WardrobeCosmeticDef("WD_" + fileName, displayName, 0, permissionNode, category, iconKey, iconPath);
+        return new WardrobeCosmeticDef("WD_" + fileName, displayName, permissionNode, category, iconKey, iconPath);
     }
 
     private WardrobeBridge() {
@@ -364,7 +364,7 @@ public class WardrobeBridge {
     public record PurchaseResult(boolean success, String message) {
     }
 
-    public record WardrobeCosmeticDef(String id, String displayName, int price,
+    public record WardrobeCosmeticDef(String id, String displayName,
                                        String permissionNode, String category, String iconKey,
                                        String iconPath) {
     }

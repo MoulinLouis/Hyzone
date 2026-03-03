@@ -23,7 +23,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class EffectsShopTab implements ShopTab {
 
-    private static final String ACTION_FILTER = "Filter:";
     private static final String ACTION_PREVIEW = "Preview:";
     private static final String ACTION_BUY = "Buy:";
     private static final String ACTION_EQUIP = "Equip:";
@@ -71,7 +70,7 @@ public class EffectsShopTab implements ShopTab {
             cmd.set(glowRoot + "#PillLabel.Style.TextColor", "#6366f1");
         }
         evt.addEventBinding(CustomUIEventBindingType.Activating, glowRoot + "#PillButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, getId() + ":" + ACTION_FILTER + FILTER_GLOW), false);
+                EventData.of(ButtonEventData.KEY_BUTTON, getId() + ":" + WardrobeShopUiUtils.ACTION_FILTER + FILTER_GLOW), false);
         pillIndex++;
 
         // "Trail" pill
@@ -83,7 +82,7 @@ public class EffectsShopTab implements ShopTab {
             cmd.set(trailRoot + "#PillLabel.Style.TextColor", "#6366f1");
         }
         evt.addEventBinding(CustomUIEventBindingType.Activating, trailRoot + "#PillButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, getId() + ":" + ACTION_FILTER + FILTER_TRAIL), false);
+                EventData.of(ButtonEventData.KEY_BUTTON, getId() + ":" + WardrobeShopUiUtils.ACTION_FILTER + FILTER_TRAIL), false);
 
         // Entries
         CosmeticDefinition.Kind kind = FILTER_TRAIL.equals(filter)
@@ -98,8 +97,8 @@ public class EffectsShopTab implements ShopTab {
     @Override
     public ShopTabResult handleEvent(String button, Ref<EntityStore> ref, Store<EntityStore> store,
                                      Player player, UUID playerId) {
-        if (button.startsWith(ACTION_FILTER)) {
-            String filter = button.substring(ACTION_FILTER.length());
+        if (button.startsWith(WardrobeShopUiUtils.ACTION_FILTER)) {
+            String filter = button.substring(WardrobeShopUiUtils.ACTION_FILTER.length());
             selectedFilter.put(playerId, filter);
             return ShopTabResult.REFRESH;
         }

@@ -11,7 +11,6 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.shop.ShopTab;
 import io.hyvexa.common.shop.ShopTabResult;
 import io.hyvexa.common.ui.ButtonEventData;
-import io.hyvexa.common.util.AssetPathUtils;
 import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.core.wardrobe.CosmeticShopConfigStore;
 import io.hyvexa.core.wardrobe.CosmeticShopConfigStore.CosmeticConfig;
@@ -29,12 +28,10 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class ShopConfigTab implements ShopTab {
 
-    private static final String ACTION_FILTER = WardrobeShopUiUtils.ACTION_FILTER;
     private static final String ACTION_TOGGLE = "Toggle:";
     private static final String ACTION_PRICE_UP = "PriceUp:";
     private static final String ACTION_PRICE_DOWN = "PriceDown:";
     private static final String ACTION_CURRENCY = "Currency:";
-    private static final String FILTER_ALL = WardrobeShopUiUtils.FILTER_ALL;
 
     private final ConcurrentHashMap<UUID, String> selectedCategory = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, String> searchText = new ConcurrentHashMap<>();
@@ -103,37 +100,25 @@ public class ShopConfigTab implements ShopTab {
             cmd.append("#TabContent", "Pages/Shop_AdminConfigRow.ui");
             String root = "#TabContent[" + (2 + rowIndex) + "] ";
 
-            // Status dot color
             if (available) {
                 cmd.set(root + "#StatusDot.Background", "#22c55e");
             }
 
-            // Icon
-            String iconAssetPath = AssetPathUtils.normalizeIconAssetPath(def.iconPath());
-            if (iconAssetPath != null) {
-                cmd.set(root + "#ConfigIcon.AssetPath", iconAssetPath);
-            } else {
-                cmd.set(root + "#ConfigIcon.Visible", false);
-            }
+            WardrobeShopUiUtils.setIcon(cmd, root, "#ConfigIcon", def.iconPath());
 
-            // Name
             cmd.set(root + "#ConfigName.Text", def.displayName());
 
-            // Price
             cmd.set(root + "#ConfigPrice.Text", price > 0 ? String.valueOf(price) : "--");
 
-            // Currency icon
             boolean isFeathers = "feathers".equals(currency);
             cmd.set(root + "#CurrencyVexa.Visible", !isFeathers);
             cmd.set(root + "#CurrencyFeather.Visible", isFeathers);
 
-            // Toggle button text/color
             if (available) {
                 cmd.set(root + "#ToggleLabel.Text", "Disable");
                 cmd.set(root + "#ToggleLabel.Style.TextColor", "#ef4444");
             }
 
-            // Event bindings
             evt.addEventBinding(CustomUIEventBindingType.Activating, root + "#ToggleBtn",
                     EventData.of(ButtonEventData.KEY_BUTTON, prefix + ACTION_TOGGLE + def.id()), false);
             evt.addEventBinding(CustomUIEventBindingType.Activating, root + "#PriceUpBtn",
@@ -151,13 +136,7 @@ public class ShopConfigTab implements ShopTab {
                                      Player player, UUID playerId) {
         CosmeticShopConfigStore configStore = CosmeticShopConfigStore.getInstance();
 
-        if (button.startsWith(ACTION_FILTER)) {
-            String filter = button.substring(ACTION_FILTER.length());
-            if (FILTER_ALL.equals(filter)) {
-                selectedCategory.remove(playerId);
-            } else {
-                selectedCategory.put(playerId, filter);
-            }
+        if (WardrobeShopUiUtils.handleCategoryFilter(button, playerId, selectedCategory)) {
             return ShopTabResult.REFRESH;
         }
         if (button.startsWith(ACTION_TOGGLE)) {

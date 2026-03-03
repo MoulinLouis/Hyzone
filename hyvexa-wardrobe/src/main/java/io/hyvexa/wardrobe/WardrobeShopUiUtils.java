@@ -5,8 +5,11 @@ import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import io.hyvexa.common.ui.ButtonEventData;
+import io.hyvexa.common.util.AssetPathUtils;
 
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 final class WardrobeShopUiUtils {
 
@@ -14,6 +17,26 @@ final class WardrobeShopUiUtils {
     static final String FILTER_ALL = "All";
 
     private WardrobeShopUiUtils() {
+    }
+
+    static void setIcon(UICommandBuilder cmd, String root, String elementId, String iconPath) {
+        String assetPath = AssetPathUtils.normalizeIconAssetPath(iconPath);
+        if (assetPath != null) {
+            cmd.set(root + elementId + ".AssetPath", assetPath);
+        } else {
+            cmd.set(root + elementId + ".Visible", false);
+        }
+    }
+
+    static boolean handleCategoryFilter(String button, UUID playerId, Map<UUID, String> selectedCategory) {
+        if (!button.startsWith(ACTION_FILTER)) return false;
+        String filter = button.substring(ACTION_FILTER.length());
+        if (FILTER_ALL.equals(filter)) {
+            selectedCategory.remove(playerId);
+        } else {
+            selectedCategory.put(playerId, filter);
+        }
+        return true;
     }
 
     static int buildCategoryPills(UICommandBuilder cmd, UIEventBuilder evt, String tabId,

@@ -42,7 +42,7 @@ public class WardrobeBuyCommand extends AbstractAsyncCommand {
         String[] args = CommandUtils.getArgs(ctx);
         if (args.length == 0) {
             String available = WardrobeBridge.getInstance().getAllCosmetics().stream()
-                    .map(d -> d.id() + " (" + d.price() + " vexa)")
+                    .map(WardrobeBridge.WardrobeCosmeticDef::id)
                     .collect(Collectors.joining(", "));
             player.sendMessage(Message.raw("[Wardrobe] Available: " + available)
                     .color(SystemMessageUtils.SECONDARY));

@@ -12,7 +12,6 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.shop.ShopTab;
 import io.hyvexa.common.shop.ShopTabResult;
 import io.hyvexa.common.ui.ButtonEventData;
-import io.hyvexa.common.util.AssetPathUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.core.cosmetic.CosmeticStore;
 import io.hyvexa.core.economy.CurrencyBridge;
@@ -26,10 +25,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class WardrobeShopTab implements ShopTab {
 
-    private static final String ACTION_FILTER = WardrobeShopUiUtils.ACTION_FILTER;
     private static final String ACTION_BUY = "Buy:";
     private static final String ACTION_FREE_TOGGLE = "FreeToggle";
-    private static final String FILTER_ALL = WardrobeShopUiUtils.FILTER_ALL;
 
     private final ConcurrentHashMap<UUID, String> selectedCategory = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Boolean> freeOnly = new ConcurrentHashMap<>();
@@ -96,15 +93,8 @@ public class WardrobeShopTab implements ShopTab {
             cmd.append("#WardrobeGrid", "Pages/Shop_WardrobeCard.ui");
             String root = "#WardrobeGrid[" + cardIndex + "] ";
 
-            // Icon
-            String iconAssetPath = AssetPathUtils.normalizeIconAssetPath(def.iconPath());
-            if (iconAssetPath != null) {
-                cmd.set(root + "#CardIcon.AssetPath", iconAssetPath);
-            } else {
-                cmd.set(root + "#CardIcon.Visible", false);
-            }
+            WardrobeShopUiUtils.setIcon(cmd, root, "#CardIcon", def.iconPath());
 
-            // Name
             cmd.set(root + "#CardName.Text", def.displayName());
 
             if (owned) {
@@ -137,13 +127,7 @@ public class WardrobeShopTab implements ShopTab {
     @Override
     public ShopTabResult handleEvent(String button, Ref<EntityStore> ref, Store<EntityStore> store,
                                      Player player, UUID playerId) {
-        if (button.startsWith(ACTION_FILTER)) {
-            String filter = button.substring(ACTION_FILTER.length());
-            if (FILTER_ALL.equals(filter)) {
-                selectedCategory.remove(playerId);
-            } else {
-                selectedCategory.put(playerId, filter);
-            }
+        if (WardrobeShopUiUtils.handleCategoryFilter(button, playerId, selectedCategory)) {
             return ShopTabResult.REFRESH;
         }
 

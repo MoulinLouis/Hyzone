@@ -84,16 +84,7 @@ public class ShopPage extends InteractiveCustomUIPage<ShopPage.ShopEventData> {
                                 @Nonnull ShopEventData data) {
         super.handleDataEvent(ref, store, data);
 
-        // Handle search text changes (button may be null for ValueChanged events)
-        String search = data.getSearch();
-        if (search != null) {
-            ShopTab activeTab = !showingVexaPacks ? getVisibleTab(activeTabId) : null;
-            if (activeTab != null) {
-                ShopTabResult result = activeTab.handleSearch(search, playerId);
-                handleResult(result, activeTab);
-            }
-            if (data.getButton() == null) return;
-        }
+        if (handleSearch(data)) return;
 
         String button = data.getButton();
         if (button == null) return;
@@ -114,55 +105,88 @@ public class ShopPage extends InteractiveCustomUIPage<ShopPage.ShopEventData> {
         }
 
         if (BUTTON_VEXA_PACKS.equals(button)) {
-            showingVexaPacks = true;
-            pendingConfirmKey = null;
-            pendingConfirmTabId = null;
-            sendFullRefresh();
+            handleVexaPacks();
             return;
         }
 
         if (BUTTON_WARDROBE.equals(button)) {
-            Player player = store.getComponent(ref, Player.getComponentType());
-            if (player != null) {
-                // Don't call close() — the wardrobe command calls openCustomPage()
-                // which properly dismisses the current page and opens the new one
-                // in a single packet, avoiding a visual flash.
-                CommandManager.get().handleCommand(player, "wardrobe");
-            }
+            handleWardrobe(ref, store);
             return;
         }
 
         if (BUTTON_PACK.equals(button)) {
-            Player player = store.getComponent(ref, Player.getComponentType());
-            if (player != null) {
-                player.sendMessage(Message.raw(""));
-                player.sendMessage(Message.join(
-                        Message.raw("(NOT AVAILABLE) Continue your purchase here: ").color("#94a3b8"),
-                        Message.raw("store.hyvexa.com").color("#8ab4f8").link(STORE_URL)
-                ));
-                player.sendMessage(Message.raw(""));
-            }
-            close();
+            handlePack(ref, store);
             return;
         }
 
-        // Tab switch
         if (button.startsWith(TAB_PREFIX)) {
-            String tabId = button.substring(TAB_PREFIX.length());
-            if (getVisibleTab(tabId) == null) {
-                return;
-            }
-            if (showingVexaPacks || !tabId.equals(activeTabId)) {
-                activeTabId = tabId;
-                showingVexaPacks = false;
-                pendingConfirmKey = null;
-                pendingConfirmTabId = null;
-                sendFullRefresh();
-            }
+            handleTabSwitch(button);
             return;
         }
 
-        // Route to active tab: button format is "tabId:action"
+        routeToTab(button, ref, store);
+    }
+
+    /**
+     * @return true if the event was fully handled (no button to process)
+     */
+    private boolean handleSearch(ShopEventData data) {
+        String search = data.getSearch();
+        if (search == null) return false;
+
+        ShopTab activeTab = !showingVexaPacks ? getVisibleTab(activeTabId) : null;
+        if (activeTab != null) {
+            ShopTabResult result = activeTab.handleSearch(search, playerId);
+            handleResult(result, activeTab);
+        }
+        return data.getButton() == null;
+    }
+
+    private void handleVexaPacks() {
+        showingVexaPacks = true;
+        pendingConfirmKey = null;
+        pendingConfirmTabId = null;
+        sendFullRefresh();
+    }
+
+    private void handleWardrobe(Ref<EntityStore> ref, Store<EntityStore> store) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player != null) {
+            // Don't call close() — the wardrobe command calls openCustomPage()
+            // which properly dismisses the current page and opens the new one
+            // in a single packet, avoiding a visual flash.
+            CommandManager.get().handleCommand(player, "wardrobe");
+        }
+    }
+
+    private void handlePack(Ref<EntityStore> ref, Store<EntityStore> store) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player != null) {
+            player.sendMessage(Message.raw(""));
+            player.sendMessage(Message.join(
+                    Message.raw("(NOT AVAILABLE) Continue your purchase here: ").color("#94a3b8"),
+                    Message.raw("store.hyvexa.com").color("#8ab4f8").link(STORE_URL)
+            ));
+            player.sendMessage(Message.raw(""));
+        }
+        close();
+    }
+
+    private void handleTabSwitch(String button) {
+        String tabId = button.substring(TAB_PREFIX.length());
+        if (getVisibleTab(tabId) == null) {
+            return;
+        }
+        if (showingVexaPacks || !tabId.equals(activeTabId)) {
+            activeTabId = tabId;
+            showingVexaPacks = false;
+            pendingConfirmKey = null;
+            pendingConfirmTabId = null;
+            sendFullRefresh();
+        }
+    }
+
+    private void routeToTab(String button, Ref<EntityStore> ref, Store<EntityStore> store) {
         int colonIdx = button.indexOf(':');
         if (colonIdx > 0) {
             String tabId = button.substring(0, colonIdx);
