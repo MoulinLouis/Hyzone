@@ -215,7 +215,8 @@ public class PurgeDamageModifierSystem extends DamageEventSystem {
     private void playKillSound(PlayerRef playerRef, PurgeSessionPlayerState playerState) {
         if (playerRef == null) return;
         int streak = (playerState != null) ? playerState.recordKillStreak(STREAK_WINDOW_MS) : 1;
-        int index = SoundEvent.getAssetMap().getIndex(KILL_SOUND_PREFIX + streak);
+        int soundStreak = Math.min(streak, MAX_STREAK);
+        int index = SoundEvent.getAssetMap().getIndex(KILL_SOUND_PREFIX + soundStreak);
         if (index <= SoundEvent.EMPTY_ID) return;
         PacketHandler ph = playerRef.getPacketHandler();
         if (ph == null) return;

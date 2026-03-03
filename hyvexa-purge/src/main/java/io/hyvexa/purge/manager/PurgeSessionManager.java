@@ -11,6 +11,7 @@ import com.hypixel.hytale.server.core.modules.entitystats.EntityStatValue;
 import com.hypixel.hytale.server.core.modules.entitystats.asset.DefaultEntityStatTypes;
 import com.hypixel.hytale.server.core.modules.entitystats.modifier.Modifier;
 import com.hypixel.hytale.server.core.modules.entitystats.modifier.StaticModifier;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.util.DamageBypassRegistry;
@@ -26,6 +27,7 @@ import io.hyvexa.purge.data.PurgeSession;
 import io.hyvexa.purge.data.PurgeSessionPlayerState;
 import io.hyvexa.purge.data.SessionState;
 import io.hyvexa.purge.hud.PurgeHudManager;
+import io.hyvexa.purge.ui.PurgeGameOverPage;
 import io.hyvexa.purge.util.PurgePlayerNameResolver;
 
 import java.util.ArrayList;
@@ -282,24 +284,23 @@ public class PurgeSessionManager {
             hudManager.hideRunHud(playerId);
         });
 
-        // Build summary before world cleanup
+        // Build stats before world cleanup
         int kills = playerState != null ? playerState.getKills() : 0;
+        int bestCombo = playerState != null ? playerState.getBestCombo() : 0;
         int summaryBaseScrap = calculateScrapReward(session.getCurrentWave());
         PurgeClassManager cmSummary = classManager;
         double summaryMult = cmSummary != null && playerState != null ? cmSummary.getScrapMultiplier(playerState) : 1.0;
         int summaryScrap = (int) (summaryBaseScrap * summaryMult);
         int summaryBonus = playerState != null ? playerState.getBonusScrapFromClass() : 0;
         int summaryTotal = summaryScrap + summaryBonus;
-        String summary = "Purge ended - Wave " + session.getCurrentWave()
-                + " - " + kills + " kills"
-                + " - " + summaryTotal + " scrap earned"
-                + " (" + reason + ")";
+        int wave = session.getCurrentWave();
 
         // World-dependent cleanup for this player
         // Pass playerState directly — world.execute() is async and session.removePlayer()
         // below would delete the state before the world thread can access it.
         CompletableFuture<Void> playerCleanupFuture =
-                runPlayerWorldCleanup(session, playerId, playerState, endReason, summary);
+                runPlayerWorldCleanup(session, playerId, playerState, endReason,
+                        wave, kills, summaryTotal, bestCombo, reason);
 
         // Step 4: Remove player from session + index
         session.removePlayer(playerId);
@@ -354,19 +355,18 @@ public class PurgeSessionManager {
 
             PurgeSessionPlayerState playerState = session.getPlayerState(pid);
             int kills = playerState != null ? playerState.getKills() : 0;
+            int bestCombo = playerState != null ? playerState.getBestCombo() : 0;
             int stopBaseScrap = calculateScrapReward(session.getCurrentWave());
             PurgeClassManager cmStop = classManager;
             double stopMult = cmStop != null && playerState != null ? cmStop.getScrapMultiplier(playerState) : 1.0;
             int stopScrap = (int) (stopBaseScrap * stopMult);
             int stopBonus = playerState != null ? playerState.getBonusScrapFromClass() : 0;
             int stopTotal = stopScrap + stopBonus;
-            String summary = "Purge ended - Wave " + session.getCurrentWave()
-                    + " - " + kills + " kills"
-                    + " - " + stopTotal + " scrap earned"
-                    + " (" + reason + ")";
+            int wave = session.getCurrentWave();
 
             CompletableFuture<Void> playerCleanupFuture =
-                    runPlayerWorldCleanup(session, pid, playerState, endReason, summary);
+                    runPlayerWorldCleanup(session, pid, playerState, endReason,
+                            wave, kills, stopTotal, bestCombo, reason);
             cleanupFutures.add(playerCleanupFuture);
             sessionIdByPlayer.remove(pid);
         }
@@ -453,7 +453,9 @@ public class PurgeSessionManager {
 
     private CompletableFuture<Void> runPlayerWorldCleanup(PurgeSession session, UUID playerId,
                                                           PurgeSessionPlayerState playerState,
-                                                          SessionEndReason endReason, String summary) {
+                                                          SessionEndReason endReason,
+                                                          int wave, int kills, int totalScrap,
+                                                          int bestCombo, String reason) {
         CompletableFuture<Void> cleanupFuture = new CompletableFuture<>();
         if (playerState == null) {
             cleanupFuture.complete(null);
@@ -461,7 +463,8 @@ public class PurgeSessionManager {
         }
         Runnable cleanup = () -> {
             try {
-                performPlayerCleanup(session, playerId, playerState, endReason, summary);
+                performPlayerCleanup(session, playerId, playerState, endReason,
+                        wave, kills, totalScrap, bestCombo, reason);
                 cleanupFuture.complete(null);
             } catch (Exception e) {
                 cleanupFuture.completeExceptionally(e);
@@ -484,7 +487,9 @@ public class PurgeSessionManager {
 
     private void performPlayerCleanup(PurgeSession session, UUID playerId,
                                        PurgeSessionPlayerState playerState,
-                                       SessionEndReason endReason, String summary) {
+                                       SessionEndReason endReason,
+                                       int wave, int kills, int totalScrap,
+                                       int bestCombo, String reason) {
         Ref<EntityStore> ref = playerState.getPlayerRef();
         runSafe("revert class effects", () -> {
             PurgeClassManager cm = classManager;
@@ -533,7 +538,26 @@ public class PurgeSessionManager {
                 }
             }
         });
-        runSafe("send summary", () -> sendMessage(ref, summary));
+        runSafe("show summary", () -> {
+            if (endReason.shouldShowGameOverPage() && ref != null && ref.isValid()) {
+                Store<EntityStore> store = ref.getStore();
+                PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+                if (playerRef != null) {
+                    Player player = store.getComponent(ref, Player.getComponentType());
+                    if (player != null) {
+                        player.openCustomUIPage(new PurgeGameOverPage(
+                                playerRef, wave, kills, totalScrap, bestCombo, reason));
+                        return;
+                    }
+                }
+            }
+            // Fallback to chat message
+            String summary = "Purge ended - Wave " + wave
+                    + " - " + kills + " kills"
+                    + " - " + totalScrap + " scrap earned"
+                    + " (" + reason + ")";
+            sendMessage(ref, summary);
+        });
     }
 
     private void sendMessage(Ref<EntityStore> ref, String text) {
@@ -744,6 +768,10 @@ public class PurgeSessionManager {
                 case "server shutdown" -> SERVER_SHUTDOWN;
                 default -> OTHER;
             };
+        }
+
+        boolean shouldShowGameOverPage() {
+            return this == VOLUNTARY_STOP || this == VICTORY || this == TEAM_WIPED;
         }
 
         boolean shouldRestoreIdleLoadout() {

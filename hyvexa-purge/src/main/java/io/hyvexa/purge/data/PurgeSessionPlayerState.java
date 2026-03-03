@@ -19,6 +19,7 @@ public class PurgeSessionPlayerState {
     private volatile String currentWeaponId;
     private volatile long lastKillTimeMs;
     private volatile int killStreak;
+    private volatile int bestCombo;
     private volatile PurgeClass activeClass;
     private volatile int bonusScrapFromClass;
     private volatile float classSpeedFactor = 1.0f;
@@ -55,6 +56,7 @@ public class PurgeSessionPlayerState {
 
     public long getLastKillTimeMs() { return lastKillTimeMs; }
     public int getKillStreak() { return killStreak; }
+    public int getBestCombo() { return bestCombo; }
 
     public PurgeClass getActiveClass() { return activeClass; }
     public void setActiveClass(PurgeClass activeClass) { this.activeClass = activeClass; }
@@ -69,15 +71,18 @@ public class PurgeSessionPlayerState {
     public void resetRegenTickCounter() { regenTickCounter = 0; }
 
     /**
-     * Records a kill and returns the current streak level (1-9).
+     * Records a kill and returns the current streak level (unbounded).
      * Streak resets to 1 if more than {@code streakWindowMs} has passed since last kill.
      */
     public int recordKillStreak(long streakWindowMs) {
         long now = System.currentTimeMillis();
         if (now - lastKillTimeMs <= streakWindowMs && killStreak > 0) {
-            killStreak = Math.min(killStreak + 1, 9);
+            killStreak++;
         } else {
             killStreak = 1;
+        }
+        if (killStreak > bestCombo) {
+            bestCombo = killStreak;
         }
         lastKillTimeMs = now;
         return killStreak;
