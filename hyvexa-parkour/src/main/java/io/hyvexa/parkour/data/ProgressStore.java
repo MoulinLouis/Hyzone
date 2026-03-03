@@ -2,7 +2,6 @@ package io.hyvexa.parkour.data;
 
 import com.hypixel.hytale.logger.HytaleLogger;
 import io.hyvexa.core.db.DatabaseManager;
-import io.hyvexa.core.db.DatabaseRetry;
 import com.hypixel.hytale.server.core.HytaleServer;
 import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.parkour.ParkourConstants;
@@ -379,10 +378,62 @@ public class ProgressStore {
         if (request == null || !DatabaseManager.getInstance().isInitialized()) {
             return false;
         }
-        if (!request.checkpointTimes.isEmpty()) {
-            saveCheckpointTimes(request.playerId, request.mapId, request.checkpointTimes);
+
+        String completionSql = """
+            INSERT INTO player_completions (player_uuid, map_id, best_time_ms)
+            VALUES (?, ?, ?)
+            ON DUPLICATE KEY UPDATE best_time_ms = LEAST(best_time_ms, VALUES(best_time_ms))
+            """;
+        String deleteCheckpointSql = "DELETE FROM player_checkpoint_times WHERE player_uuid = ? AND map_id = ?";
+        String insertCheckpointSql = """
+            INSERT INTO player_checkpoint_times (player_uuid, map_id, checkpoint_index, time_ms)
+            VALUES (?, ?, ?, ?)
+            """;
+
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) {
+                LOGGER.atWarning().log("Failed to acquire database connection for completion save");
+                return false;
+            }
+            conn.setAutoCommit(false);
+            try (PreparedStatement completionStmt = conn.prepareStatement(completionSql)) {
+                DatabaseManager.applyQueryTimeout(completionStmt);
+                completionStmt.setString(1, request.playerId.toString());
+                completionStmt.setString(2, request.mapId);
+                completionStmt.setLong(3, request.timeMs);
+                completionStmt.executeUpdate();
+
+                if (!request.checkpointTimes.isEmpty()) {
+                    try (PreparedStatement deleteStmt = conn.prepareStatement(deleteCheckpointSql);
+                         PreparedStatement insertStmt = conn.prepareStatement(insertCheckpointSql)) {
+                        DatabaseManager.applyQueryTimeout(deleteStmt);
+                        DatabaseManager.applyQueryTimeout(insertStmt);
+                        deleteStmt.setString(1, request.playerId.toString());
+                        deleteStmt.setString(2, request.mapId);
+                        deleteStmt.executeUpdate();
+
+                        for (int i = 0; i < request.checkpointTimes.size(); i++) {
+                            insertStmt.setString(1, request.playerId.toString());
+                            insertStmt.setString(2, request.mapId);
+                            insertStmt.setInt(3, i);
+                            insertStmt.setLong(4, request.checkpointTimes.get(i));
+                            insertStmt.addBatch();
+                        }
+                        insertStmt.executeBatch();
+                    }
+                }
+
+                conn.commit();
+                return true;
+            } catch (SQLException e) {
+                try { conn.rollback(); } catch (SQLException re) { /* ignore */ }
+                LOGGER.atSevere().log("Failed to save completion (rolled back): " + e.getMessage());
+                return false;
+            }
+        } catch (SQLException e) {
+            LOGGER.atSevere().log("Failed to save completion: " + e.getMessage());
+            return false;
         }
-        return saveCompletion(request.playerId, request.mapId, request.timeMs);
     }
 
     private void notifyCompletionSaveResult(Consumer<Boolean> completionSavedCallback, boolean completionSaved) {
@@ -393,83 +444,6 @@ public class ProgressStore {
             completionSavedCallback.accept(completionSaved);
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("Completion save callback failed");
-        }
-    }
-
-    private boolean saveCompletion(UUID playerId, String mapId, long timeMs) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
-            return false;
-        }
-
-        String sql = """
-            INSERT INTO player_completions (player_uuid, map_id, best_time_ms)
-            VALUES (?, ?, ?)
-            ON DUPLICATE KEY UPDATE best_time_ms = LEAST(best_time_ms, VALUES(best_time_ms))
-            """;
-
-        try {
-            DatabaseRetry.executeWithRetryVoid(() -> {
-                try (Connection conn = DatabaseManager.getInstance().getConnection()) {
-                    if (conn == null) {
-                        LOGGER.atWarning().log("Failed to acquire database connection");
-                        return;
-                    }
-                    try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                        DatabaseManager.applyQueryTimeout(stmt);
-                        stmt.setString(1, playerId.toString());
-                        stmt.setString(2, mapId);
-                        stmt.setLong(3, timeMs);
-                        stmt.executeUpdate();
-                    }
-                }
-            }, "save completion for " + playerId);
-            return true;
-        } catch (SQLException e) {
-            LOGGER.atSevere().withCause(e).log("Failed to save completion after retries");
-            return false;
-        }
-    }
-
-    private void saveCheckpointTimes(UUID playerId, String mapId, List<Long> times) {
-        if (!DatabaseManager.getInstance().isInitialized()) return;
-        if (times == null || times.isEmpty()) return;
-
-        String deleteSql = "DELETE FROM player_checkpoint_times WHERE player_uuid = ? AND map_id = ?";
-        String insertSql = """
-            INSERT INTO player_checkpoint_times (player_uuid, map_id, checkpoint_index, time_ms)
-            VALUES (?, ?, ?, ?)
-            """;
-
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
-            if (conn == null) {
-                LOGGER.atWarning().log("Failed to acquire database connection for checkpoint save");
-                return;
-            }
-            conn.setAutoCommit(false);
-            try (PreparedStatement deleteStmt = conn.prepareStatement(deleteSql);
-                 PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
-                DatabaseManager.applyQueryTimeout(deleteStmt);
-                DatabaseManager.applyQueryTimeout(insertStmt);
-
-                deleteStmt.setString(1, playerId.toString());
-                deleteStmt.setString(2, mapId);
-                deleteStmt.executeUpdate();
-
-                for (int i = 0; i < times.size(); i++) {
-                    insertStmt.setString(1, playerId.toString());
-                    insertStmt.setString(2, mapId);
-                    insertStmt.setInt(3, i);
-                    insertStmt.setLong(4, times.get(i));
-                    insertStmt.addBatch();
-                }
-                insertStmt.executeBatch();
-                conn.commit();
-            } catch (SQLException e) {
-                try { conn.rollback(); } catch (SQLException re) { /* ignore */ }
-                LOGGER.atWarning().log("Failed to save checkpoint times (rolled back): " + e.getMessage());
-            }
-        } catch (SQLException e) {
-            LOGGER.atWarning().log("Failed to save checkpoint times: " + e.getMessage());
         }
     }
 

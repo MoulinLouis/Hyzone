@@ -13,6 +13,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -192,6 +193,33 @@ class AscendPlayerPersistence {
     // Sync Save
     // ========================================
 
+    /**
+     * Synchronously save a single player's data and return whether it succeeded.
+     * Used for idempotency-sensitive operations (e.g. passive earnings claim)
+     * where we need confirmation before proceeding.
+     */
+    boolean savePlayerSync(UUID playerId) {
+        if (playerId == null || !DatabaseManager.getInstance().isInitialized()) {
+            return false;
+        }
+        Long dirtyVersion = dirtyPlayerVersions.get(playerId);
+        if (dirtyVersion == null) {
+            return true; // Nothing to save — already clean
+        }
+        saveLock.writeLock().lock();
+        try {
+            doSyncSave(Map.of(playerId, dirtyVersion), Map.of());
+            // If the version was cleared by doSyncSave, the save succeeded
+            return !dirtyPlayerVersions.containsKey(playerId)
+                    || !dirtyVersion.equals(dirtyPlayerVersions.get(playerId));
+        } catch (Exception e) {
+            LOGGER.atSevere().withCause(e).log("savePlayerSync failed for " + playerId);
+            return false;
+        } finally {
+            saveLock.writeLock().unlock();
+        }
+    }
+
     void syncSave() {
         syncSave(Map.copyOf(dirtyPlayerVersions), Map.of());
     }
@@ -327,6 +355,8 @@ class AscendPlayerPersistence {
                 DatabaseManager.applyQueryTimeout(catStmt);
 
                 Map<UUID, Long> persistedVersions = new HashMap<>();
+                List<UUID> committedResets = new ArrayList<>();
+                List<UUID> committedChallengeResets = new ArrayList<>();
                 for (Map.Entry<UUID, Long> dirtyEntry : toSave.entrySet()) {
                     UUID playerId = dirtyEntry.getKey();
                     AscendPlayerProgress progress = resolveProgressForSave(playerId, progressOverrides);
@@ -336,19 +366,22 @@ class AscendPlayerPersistence {
                     persistedVersions.put(playerId, dirtyEntry.getValue());
 
                     // If this player was recently reset, delete all child rows first
-                    // to prevent stale upserts from re-inserting deleted data
-                    if (resetPendingPlayers.remove(playerId)) {
+                    // to prevent stale upserts from re-inserting deleted data.
+                    // Only remove flags after successful commit to avoid losing reset intent on rollback.
+                    if (resetPendingPlayers.contains(playerId)) {
                         String pid = playerId.toString();
                         for (PreparedStatement delStmt : new PreparedStatement[]{delMaps, delSummit, delSkills, delAchievements, delCats}) {
                             delStmt.setString(1, pid);
                             delStmt.executeUpdate();
                         }
+                        committedResets.add(playerId);
                     }
 
                     // Transcendence reset: additionally delete challenge records
-                    if (transcendenceResetPending.remove(playerId)) {
+                    if (transcendenceResetPending.contains(playerId)) {
                         delChallengeRecords.setString(1, playerId.toString());
                         delChallengeRecords.executeUpdate();
+                        committedChallengeResets.add(playerId);
                     }
 
                     // Save player base data
@@ -463,6 +496,10 @@ class AscendPlayerPersistence {
                 catStmt.executeBatch();
 
                 conn.commit(); // Commit transaction
+
+                // Commit succeeded — now safe to clear reset flags
+                committedResets.forEach(resetPendingPlayers::remove);
+                committedChallengeResets.forEach(transcendenceResetPending::remove);
 
                 // Save succeeded - remove only IDs that were not marked dirty again mid-save.
                 for (Map.Entry<UUID, Long> entry : persistedVersions.entrySet()) {

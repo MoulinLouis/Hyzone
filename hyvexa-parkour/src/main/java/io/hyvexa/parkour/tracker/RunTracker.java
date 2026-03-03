@@ -905,14 +905,14 @@ public class RunTracker {
                 return;
             }
             PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-            if (playerRef == null) {
+            if (playerRef == null || playerRef.getUuid() == null) {
                 return;
             }
-            UUID playerId = playerRef.getUuid();
-            if (playerId != null) {
-                readyPlayers.add(playerId);
-            }
-        }, world).orTimeout(5, TimeUnit.SECONDS).exceptionally(ex -> null);
+            readyPlayers.add(playerRef.getUuid());
+        }, world).orTimeout(5, TimeUnit.SECONDS).exceptionally(ex -> {
+            LOGGER.atWarning().withCause(ex).log("Failed to mark parkour player ready");
+            return null;
+        });
     }
 
     private boolean isPlayerReady(UUID playerId) {

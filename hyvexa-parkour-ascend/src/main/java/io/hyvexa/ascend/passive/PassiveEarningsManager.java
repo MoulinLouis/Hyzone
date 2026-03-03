@@ -202,25 +202,39 @@ public class PassiveEarningsManager {
         }
 
         PassiveEarningsResult result = calculateAndApplyPassiveEarnings(playerId);
+        if (result == null) {
+            // No actual earnings — still clear the flag
+            playerStore.setHasUnclaimedPassive(playerId, false);
+            playerStore.setLastActiveTimestamp(playerId, System.currentTimeMillis());
+            return;
+        }
 
         // Mark as claimed
+        Long previousTimestamp = playerStore.getLastActiveTimestamp(playerId);
         playerStore.setHasUnclaimedPassive(playerId, false);
         playerStore.setLastActiveTimestamp(playerId, System.currentTimeMillis());
 
-        if (result != null) {
-            // Open PassiveEarningsPage UI
-            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-            if (plugin != null) {
-                PlayerRef playerRef = plugin.getPlayerRef(playerId);
-                if (playerRef != null) {
-                    Ref<EntityStore> ref = playerRef.getReference();
-                    if (ref != null && ref.isValid()) {
-                        Store<EntityStore> store = ref.getStore();
-                        Player player = store.getComponent(ref, Player.getComponentType());
-                        if (player != null) {
-                            PassiveEarningsPage page = new PassiveEarningsPage(playerRef, result);
-                            player.getPageManager().openCustomPage(ref, store, page);
-                        }
+        // Persist immediately to prevent duplicate payouts on crash
+        if (!playerStore.savePlayerSync(playerId)) {
+            // Save failed — roll back claim markers so the next login retries
+            playerStore.setHasUnclaimedPassive(playerId, true);
+            playerStore.setLastActiveTimestamp(playerId, previousTimestamp);
+            LOGGER.atWarning().log("Failed to persist passive earnings claim for " + playerId);
+            return;
+        }
+
+        // Open PassiveEarningsPage UI
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin != null) {
+            PlayerRef playerRef = plugin.getPlayerRef(playerId);
+            if (playerRef != null) {
+                Ref<EntityStore> ref = playerRef.getReference();
+                if (ref != null && ref.isValid()) {
+                    Store<EntityStore> store = ref.getStore();
+                    Player player = store.getComponent(ref, Player.getComponentType());
+                    if (player != null) {
+                        PassiveEarningsPage page = new PassiveEarningsPage(playerRef, result);
+                        player.getPageManager().openCustomPage(ref, store, page);
                     }
                 }
             }

@@ -1338,6 +1338,15 @@ public class AscendPlayerStore {
         persistence.flushPendingSave();
     }
 
+    /**
+     * Synchronously save a single player's dirty data and return whether it succeeded.
+     * Used for idempotency-sensitive operations where we must confirm persistence
+     * before proceeding (e.g. passive earnings claim).
+     */
+    public boolean savePlayerSync(UUID playerId) {
+        return persistence.savePlayerSync(playerId);
+    }
+
     // ========================================
     // Leaderboard (delegated to persistence)
     // ========================================
