@@ -10,10 +10,10 @@ import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
+import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.runorfall.data.RunOrFallPlayerStats;
 import io.hyvexa.runorfall.manager.RunOrFallStatsStore;
-import io.hyvexa.runorfall.util.RunOrFallUtils;
 
 import javax.annotation.Nonnull;
 import java.util.Locale;
@@ -68,7 +68,7 @@ public class RunOrFallStatsPage extends InteractiveCustomUIPage<ButtonEventData>
         commandBuilder.set("#StatsWinrateValue.Text",
                 String.format(Locale.US, "%.2f%%", stats.getWinRatePercent()));
         commandBuilder.set("#StatsBestStreakValue.Text", String.valueOf(stats.getBestWinStreak()));
-        commandBuilder.set("#StatsLongestTimeValue.Text", RunOrFallUtils.formatDuration(stats.getLongestSurvivedMs()));
+        commandBuilder.set("#StatsLongestTimeValue.Text", FormatUtils.formatDurationPadded(stats.getLongestSurvivedMs()));
         commandBuilder.set("#StatsBlocksBrokenValue.Text", String.format(Locale.US, "%,d", stats.getTotalBlocksBroken()));
         commandBuilder.set("#StatsBlinksUsedValue.Text", String.format(Locale.US, "%,d", stats.getTotalBlinksUsed()));
     }

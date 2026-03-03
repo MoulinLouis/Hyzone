@@ -13,11 +13,11 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.ui.PaginationState;
 import io.hyvexa.runorfall.data.RunOrFallPlayerStats;
 import io.hyvexa.runorfall.manager.RunOrFallStatsStore;
-import io.hyvexa.runorfall.util.RunOrFallUtils;
 
 import javax.annotation.Nonnull;
 import java.util.Comparator;
@@ -271,7 +271,7 @@ public class RunOrFallLeaderboardPage extends InteractiveCustomUIPage<RunOrFallL
 
             @Override
             String formatStats(LeaderboardRow row) {
-                return RunOrFallUtils.formatDuration(row.longestSurvivedMs());
+                return FormatUtils.formatDurationPadded(row.longestSurvivedMs());
             }
 
             @Override

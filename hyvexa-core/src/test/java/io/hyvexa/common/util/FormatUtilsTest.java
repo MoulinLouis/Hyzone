@@ -32,6 +32,16 @@ class FormatUtilsTest {
         assertEquals("0:00.50", FormatUtils.formatDuration(500));
     }
 
+    @Test
+    void formatDurationPaddedZero() {
+        assertEquals("00:00.50", FormatUtils.formatDurationPadded(500));
+    }
+
+    @Test
+    void formatDurationPaddedTypical() {
+        assertEquals("01:01.23", FormatUtils.formatDurationPadded(61230));
+    }
+
     // --- formatDurationLong ---
 
     @Test

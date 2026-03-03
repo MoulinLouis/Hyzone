@@ -12,8 +12,6 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.runorfall.data.RunOrFallLocation;
 
-import java.util.Locale;
-
 public final class RunOrFallUtils {
 
     public static final int AIR_BLOCK_ID = resolveAirBlockId();
@@ -44,15 +42,6 @@ public final class RunOrFallUtils {
         int y = (int) Math.floor(position.getY() - 0.2d);
         int z = (int) Math.floor(position.getZ());
         return new Vector3i(x, y, z);
-    }
-
-    public static String formatDuration(long millis) {
-        long safeMillis = Math.max(0L, millis);
-        long totalSeconds = safeMillis / 1000L;
-        long minutes = totalSeconds / 60L;
-        long seconds = totalSeconds % 60L;
-        long centiseconds = (safeMillis % 1000L) / 10L;
-        return String.format(Locale.US, "%02d:%02d.%02d", minutes, seconds, centiseconds);
     }
 
     public static Integer readBlockId(World world, int x, int y, int z) {
