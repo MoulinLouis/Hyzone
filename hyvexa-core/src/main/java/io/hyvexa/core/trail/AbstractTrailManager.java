@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
@@ -29,11 +30,19 @@ import java.util.concurrent.TimeUnit;
  */
 abstract class AbstractTrailManager<TState> {
 
+    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final long SCHEDULER_INTERVAL_MS = 50L;
+    private static final double VIEWER_CULL_DISTANCE_SQ = 96.0d * 96.0d;
     static final double MOVEMENT_THRESHOLD_SQ = 0.0009d; // ~0.03 blocks
+    private static final Set<AbstractTrailManager<?>> MANAGERS = ConcurrentHashMap.newKeySet();
+    private static final Object SCHEDULER_LOCK = new Object();
 
     final ConcurrentHashMap<UUID, TState> activeTrails = new ConcurrentHashMap<>();
-    private volatile ScheduledFuture<?> tickTask;
+    private static volatile ScheduledFuture<?> tickTask;
+
+    protected AbstractTrailManager() {
+        MANAGERS.add(this);
+    }
 
     protected abstract HytaleLogger logger();
 
@@ -55,10 +64,11 @@ abstract class AbstractTrailManager<TState> {
      * Called on the world thread to emit a trail for the given state.
      * The caller has already verified the trail is still active.
      */
-    protected abstract void emitTrailOnWorldThread(TState state, List<PlayerRef> viewers);
+    protected abstract void emitTrailOnWorldThread(TState state, List<ViewerState> viewers);
 
     public void stopTrail(UUID playerId) {
         activeTrails.remove(playerId);
+        cancelTickTaskIfIdle();
     }
 
     public boolean hasTrail(UUID playerId) {
@@ -66,47 +76,116 @@ abstract class AbstractTrailManager<TState> {
     }
 
     public void shutdown() {
-        ScheduledFuture<?> task = tickTask;
-        if (task != null) {
-            task.cancel(false);
-            tickTask = null;
-        }
         activeTrails.clear();
+        cancelTickTaskIfIdle();
     }
 
-    synchronized void ensureTickTask() {
-        if (tickTask != null && !tickTask.isCancelled() && !tickTask.isDone()) {
-            return;
+    void ensureTickTask() {
+        MANAGERS.add(this);
+        synchronized (SCHEDULER_LOCK) {
+            if (tickTask != null && !tickTask.isCancelled() && !tickTask.isDone()) {
+                return;
+            }
+            tickTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(
+                    AbstractTrailManager::tickAllManagers,
+                    0L,
+                    SCHEDULER_INTERVAL_MS,
+                    TimeUnit.MILLISECONDS
+            );
         }
-        tickTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(
-                this::tickTrails,
-                0L,
-                SCHEDULER_INTERVAL_MS,
-                TimeUnit.MILLISECONDS
-        );
     }
 
-    private void tickTrails() {
+    private static void tickAllManagers() {
         try {
-            if (activeTrails.isEmpty()) {
+            if (!hasActiveTrails()) {
+                cancelTickTaskIfIdle();
                 return;
             }
             long now = System.currentTimeMillis();
-            Map<World, List<PlayerRef>> viewersByWorld = collectWorldViewers();
-            for (TState state : activeTrails.values()) {
-                if (state == null || now < getNextEmissionAtMs(state)) {
-                    continue;
+            ViewerSnapshot viewerSnapshot = collectViewerSnapshot();
+            for (AbstractTrailManager<?> manager : MANAGERS) {
+                try {
+                    manager.tickTrails(now, viewerSnapshot);
+                } catch (Exception e) {
+                    manager.logger().atWarning().withCause(e).log("Trail scheduler tick failed");
                 }
-                setNextEmissionAtMs(state, now + Math.max(1L, getIntervalMs(state)));
-                tickTrail(state, viewersByWorld.getOrDefault(getWorld(state), List.of()));
             }
         } catch (Exception e) {
-            logger().atWarning().withCause(e).log("Trail scheduler tick failed");
+            LOGGER.atWarning().withCause(e).log("Trail scheduler tick failed");
+        } finally {
+            cancelTickTaskIfIdle();
         }
     }
 
-    Map<World, List<PlayerRef>> collectWorldViewers() {
-        Map<World, List<PlayerRef>> viewersByWorld = new HashMap<>();
+    private void tickTrails(long now, ViewerSnapshot viewerSnapshot) {
+        if (activeTrails.isEmpty()) {
+            return;
+        }
+        Map<World, List<TState>> dueByWorld = new HashMap<>();
+        for (TState state : activeTrails.values()) {
+            if (state == null || now < getNextEmissionAtMs(state)) {
+                continue;
+            }
+            Ref<EntityStore> ref = getRef(state);
+            if (ref == null || !ref.isValid()) {
+                stopTrail(getPlayerId(state));
+                continue;
+            }
+            World world = getWorld(state);
+            if (world == null) {
+                stopTrail(getPlayerId(state));
+                continue;
+            }
+            setNextEmissionAtMs(state, now + Math.max(1L, getIntervalMs(state)));
+            dueByWorld.computeIfAbsent(world, ignored -> new ArrayList<>()).add(state);
+        }
+
+        for (Map.Entry<World, List<TState>> entry : dueByWorld.entrySet()) {
+            World world = entry.getKey();
+            List<TState> states = entry.getValue();
+            List<ViewerState> viewers = viewerSnapshot.viewersForWorld(world);
+            if (world == null || states.isEmpty()) {
+                continue;
+            }
+            try {
+                world.execute(() -> emitWorldTrails(world, states, viewers));
+            } catch (Exception e) {
+                logger().atWarning().withCause(e).log("Trail schedule error for world " + world.getName());
+            }
+        }
+    }
+
+    private void emitWorldTrails(World world, List<TState> states, List<ViewerState> viewers) {
+        for (TState state : states) {
+            UUID playerId = getPlayerId(state);
+            try {
+                if (activeTrails.get(playerId) != state) {
+                    continue;
+                }
+                Ref<EntityStore> ref = getRef(state);
+                if (ref == null || !ref.isValid()) {
+                    stopTrail(playerId);
+                    continue;
+                }
+                Store<EntityStore> store = getStore(state);
+                if (store == null) {
+                    stopTrail(playerId);
+                    continue;
+                }
+                World currentWorld = store.getExternalData().getWorld();
+                if (currentWorld != world || currentWorld != getWorld(state)) {
+                    stopTrail(playerId);
+                    continue;
+                }
+                emitTrailOnWorldThread(state, viewers);
+            } catch (Exception e) {
+                logger().atWarning().withCause(e).log("Trail tick error for " + playerId);
+            }
+        }
+    }
+
+    static ViewerSnapshot collectViewerSnapshot() {
+        Map<World, List<ViewerState>> viewersByWorld = new HashMap<>();
         for (PlayerRef viewer : Universe.get().getPlayers()) {
             if (viewer == null || !viewer.isValid()) {
                 continue;
@@ -120,48 +199,51 @@ abstract class AbstractTrailManager<TState> {
             if (viewerWorld == null) {
                 continue;
             }
-            viewersByWorld.computeIfAbsent(viewerWorld, ignored -> new ArrayList<>()).add(viewer);
-        }
-        return viewersByWorld;
-    }
-
-    private void tickTrail(TState state, List<PlayerRef> viewers) {
-        try {
-            Ref<EntityStore> ref = getRef(state);
-            if (ref == null || !ref.isValid()) {
-                stopTrail(getPlayerId(state));
-                return;
-            }
-            getWorld(state).execute(() -> {
-                try {
-                    if (activeTrails.get(getPlayerId(state)) != state) {
-                        return;
-                    }
-                    if (!getRef(state).isValid()) {
-                        stopTrail(getPlayerId(state));
-                        return;
-                    }
-                    World currentWorld = getStore(state).getExternalData().getWorld();
-                    if (currentWorld != getWorld(state)) {
-                        stopTrail(getPlayerId(state));
-                        return;
-                    }
-                    emitTrailOnWorldThread(state, viewers);
-                } catch (Exception e) {
-                    logger().atWarning().withCause(e).log("Trail tick error for " + getPlayerId(state));
-                }
-            });
-        } catch (Exception e) {
-            logger().atWarning().withCause(e).log("Trail schedule error for " + getPlayerId(state));
-        }
-    }
-
-    void broadcastPacket(World world, List<PlayerRef> viewers, ToClientPacket packet) {
-        for (PlayerRef viewer : viewers) {
-            if (viewer == null || !viewer.isValid()) {
+            TransformComponent transform = viewerStore.getComponent(viewerRef, TransformComponent.getComponentType());
+            if (transform == null || transform.getPosition() == null) {
                 continue;
             }
-            Ref<EntityStore> viewerRef = viewer.getReference();
+            var position = transform.getPosition();
+            viewersByWorld.computeIfAbsent(viewerWorld, ignored -> new ArrayList<>()).add(
+                    new ViewerState(viewer, position.getX(), position.getY(), position.getZ())
+            );
+        }
+        return new ViewerSnapshot(viewersByWorld);
+    }
+
+    private static boolean hasActiveTrails() {
+        for (AbstractTrailManager<?> manager : MANAGERS) {
+            if (!manager.activeTrails.isEmpty()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static void cancelTickTaskIfIdle() {
+        synchronized (SCHEDULER_LOCK) {
+            if (hasActiveTrails()) {
+                return;
+            }
+            ScheduledFuture<?> task = tickTask;
+            if (task == null) {
+                return;
+            }
+            task.cancel(false);
+            tickTask = null;
+        }
+    }
+
+    void broadcastPacket(World world, List<ViewerState> viewers, ToClientPacket packet) {
+        for (ViewerState viewer : viewers) {
+            if (viewer == null) {
+                continue;
+            }
+            PlayerRef playerRef = viewer.playerRef();
+            if (playerRef == null || !playerRef.isValid()) {
+                continue;
+            }
+            Ref<EntityStore> viewerRef = playerRef.getReference();
             if (viewerRef == null || !viewerRef.isValid()) {
                 continue;
             }
@@ -169,7 +251,39 @@ abstract class AbstractTrailManager<TState> {
             if (viewerStore.getExternalData().getWorld() != world) {
                 continue;
             }
-            PacketHandler packetHandler = viewer.getPacketHandler();
+            PacketHandler packetHandler = playerRef.getPacketHandler();
+            if (packetHandler == null) {
+                continue;
+            }
+            packetHandler.writeNoCache(packet);
+        }
+    }
+
+    void broadcastPacket(World world, List<ViewerState> viewers, ToClientPacket packet,
+                         double sourceX, double sourceY, double sourceZ) {
+        for (ViewerState viewer : viewers) {
+            if (viewer == null) {
+                continue;
+            }
+            double dx = viewer.x() - sourceX;
+            double dy = viewer.y() - sourceY;
+            double dz = viewer.z() - sourceZ;
+            if ((dx * dx) + (dy * dy) + (dz * dz) > VIEWER_CULL_DISTANCE_SQ) {
+                continue;
+            }
+            PlayerRef playerRef = viewer.playerRef();
+            if (playerRef == null || !playerRef.isValid()) {
+                continue;
+            }
+            Ref<EntityStore> viewerRef = playerRef.getReference();
+            if (viewerRef == null || !viewerRef.isValid()) {
+                continue;
+            }
+            Store<EntityStore> viewerStore = viewerRef.getStore();
+            if (viewerStore.getExternalData().getWorld() != world) {
+                continue;
+            }
+            PacketHandler packetHandler = playerRef.getPacketHandler();
             if (packetHandler == null) {
                 continue;
             }
@@ -206,5 +320,13 @@ abstract class AbstractTrailManager<TState> {
             return null;
         }
         return new double[]{pos.getX(), pos.getY(), pos.getZ()};
+    }
+
+    record ViewerState(PlayerRef playerRef, double x, double y, double z) {}
+
+    record ViewerSnapshot(Map<World, List<ViewerState>> viewersByWorld) {
+        List<ViewerState> viewersForWorld(World world) {
+            return viewersByWorld.getOrDefault(world, List.of());
+        }
     }
 }

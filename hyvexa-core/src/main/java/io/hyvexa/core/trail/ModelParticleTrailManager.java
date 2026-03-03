@@ -8,7 +8,6 @@ import com.hypixel.hytale.protocol.ModelParticle;
 import com.hypixel.hytale.protocol.Vector3f;
 import com.hypixel.hytale.protocol.packets.entities.SpawnModelParticles;
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
@@ -86,10 +85,11 @@ public class ModelParticleTrailManager extends AbstractTrailManager<ModelParticl
     public void stopTrail(UUID playerId) {
         TrailState removed = activeTrails.remove(playerId);
         sendClearPacket(removed);
+        super.stopTrail(playerId);
     }
 
     @Override
-    protected void emitTrailOnWorldThread(TrailState state, List<PlayerRef> viewers) {
+    protected void emitTrailOnWorldThread(TrailState state, List<AbstractTrailManager.ViewerState> viewers) {
         Player source = state.store.getComponent(state.ref, Player.getComponentType());
         if (source == null) {
             stopTrail(state.playerId);
@@ -101,21 +101,11 @@ public class ModelParticleTrailManager extends AbstractTrailManager<ModelParticl
             return;
         }
 
-        ModelParticle particle = new ModelParticle(
-                state.particleId,
-                state.scale,
-                null,
-                EntityPart.Entity,
-                null,
-                new Vector3f(state.xOffset, state.yOffset, state.zOffset),
-                null,
-                false
-        );
         SpawnModelParticles packet = new SpawnModelParticles(
                 source.getNetworkId(),
-                new ModelParticle[]{particle}
+                state.particlePayload
         );
-        broadcastPacket(state.world, viewers, packet);
+        broadcastPacket(state.world, viewers, packet, pos[0], pos[1], pos[2]);
     }
 
     private void sendClearPacket(TrailState state) {
@@ -132,7 +122,7 @@ public class ModelParticleTrailManager extends AbstractTrailManager<ModelParticl
                 source.getNetworkId(),
                 new ModelParticle[0]
         );
-        broadcastPacket(world, collectWorldViewers().getOrDefault(world, List.of()), clearPacket);
+        broadcastPacket(world, collectViewerSnapshot().viewersForWorld(world), clearPacket);
     }
 
     static final class TrailState {
@@ -146,6 +136,7 @@ public class ModelParticleTrailManager extends AbstractTrailManager<ModelParticl
         final float xOffset;
         final float yOffset;
         final float zOffset;
+        final ModelParticle[] particlePayload;
         final double[] lastPos = new double[]{Double.NaN, 0d, 0d};
         volatile long nextEmissionAtMs;
 
@@ -162,6 +153,18 @@ public class ModelParticleTrailManager extends AbstractTrailManager<ModelParticl
             this.xOffset = xOffset;
             this.yOffset = yOffset;
             this.zOffset = zOffset;
+            this.particlePayload = new ModelParticle[]{
+                    new ModelParticle(
+                            particleId,
+                            scale,
+                            null,
+                            EntityPart.Entity,
+                            null,
+                            new Vector3f(xOffset, yOffset, zOffset),
+                            null,
+                            false
+                    )
+            };
             this.nextEmissionAtMs = 0L;
         }
     }

@@ -7,7 +7,6 @@ import com.hypixel.hytale.protocol.Color;
 import com.hypixel.hytale.protocol.Direction;
 import com.hypixel.hytale.protocol.Position;
 import com.hypixel.hytale.protocol.packets.world.SpawnParticleSystem;
-import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
@@ -23,6 +22,7 @@ public class TrailManager extends AbstractTrailManager<TrailManager.TrailState> 
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final TrailManager INSTANCE = new TrailManager();
+    private static final Color WHITE = new Color((byte) 255, (byte) 255, (byte) 255);
 
     private TrailManager() {}
 
@@ -85,7 +85,7 @@ public class TrailManager extends AbstractTrailManager<TrailManager.TrailState> 
     }
 
     @Override
-    protected void emitTrailOnWorldThread(TrailState state, List<PlayerRef> viewers) {
+    protected void emitTrailOnWorldThread(TrailState state, List<AbstractTrailManager.ViewerState> viewers) {
         double[] pos = updatePositionAndCheckMovement(state.store, state.ref, state.lastPos);
         if (pos == null) {
             return;
@@ -96,9 +96,9 @@ public class TrailManager extends AbstractTrailManager<TrailManager.TrailState> 
                 new Position(pos[0], pos[1] + 0.1, pos[2]),
                 new Direction(0f, 0f, 0f),
                 state.scale,
-                new Color((byte) 255, (byte) 255, (byte) 255)
+                WHITE
         );
-        broadcastPacket(state.world, viewers, packet);
+        broadcastPacket(state.world, viewers, packet, pos[0], pos[1], pos[2]);
     }
 
     static final class TrailState {
