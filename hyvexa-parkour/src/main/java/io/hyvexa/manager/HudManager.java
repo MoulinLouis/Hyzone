@@ -578,6 +578,20 @@ public class HudManager {
             return;
         }
 
+        MedalVisibility vis = calculateMedalVisibility(elapsed, notif);
+
+        String cacheKey = notif.medal.name() + "|" + vis.iconVisible + "|" + vis.titleVisible + "|"
+                + vis.titleColor + "|" + vis.featherVisible + "|" + vis.barVisible + "|" + elapsed;
+
+        UICommandBuilder cmd = new UICommandBuilder();
+        cmd.set("#MedalNotif.Visible", true);
+        buildMedalIconAndTextCommands(cmd, notif, vis);
+        buildMedalBarCommands(cmd, notif.medal, vis.barVisible, vis.barValue);
+
+        hud.updateMedalNotif(cacheKey, cmd);
+    }
+
+    private static MedalVisibility calculateMedalVisibility(long elapsed, MedalNotifState notif) {
         boolean iconVisible = elapsed >= 200;
         boolean titleVisible = elapsed >= 500;
         boolean featherVisible = elapsed >= 800 && notif.feathers > 0;
@@ -600,45 +614,62 @@ public class HudManager {
             barValue = Math.max(0f, 1f - (float) barElapsed / barTotal);
         }
 
-        // Cache key uses elapsed ms directly so every tick sends a fresh bar value
-        String cacheKey = notif.medal.name() + "|" + iconVisible + "|" + titleVisible + "|"
-                + titleColor + "|" + featherVisible + "|" + barVisible + "|" + elapsed;
+        return new MedalVisibility(iconVisible, titleVisible, titleColor, featherVisible, barVisible, barValue);
+    }
 
-        UICommandBuilder cmd = new UICommandBuilder();
-        cmd.set("#MedalNotif.Visible", true);
-
+    private static void buildMedalIconAndTextCommands(UICommandBuilder cmd, MedalNotifState notif,
+                                                      MedalVisibility vis) {
         // Icon: show only the correct medal's icon
-        cmd.set("#MedalNotifBronzeIcon.Visible", iconVisible && notif.medal == Medal.BRONZE);
-        cmd.set("#MedalNotifSilverIcon.Visible", iconVisible && notif.medal == Medal.SILVER);
-        cmd.set("#MedalNotifGoldIcon.Visible", iconVisible && notif.medal == Medal.GOLD);
-        cmd.set("#MedalNotifEmeraldIcon.Visible", iconVisible && notif.medal == Medal.EMERALD);
-        cmd.set("#MedalNotifInsaneIcon.Visible", iconVisible && notif.medal == Medal.INSANE);
+        cmd.set("#MedalNotifBronzeIcon.Visible", vis.iconVisible && notif.medal == Medal.BRONZE);
+        cmd.set("#MedalNotifSilverIcon.Visible", vis.iconVisible && notif.medal == Medal.SILVER);
+        cmd.set("#MedalNotifGoldIcon.Visible", vis.iconVisible && notif.medal == Medal.GOLD);
+        cmd.set("#MedalNotifEmeraldIcon.Visible", vis.iconVisible && notif.medal == Medal.EMERALD);
+        cmd.set("#MedalNotifInsaneIcon.Visible", vis.iconVisible && notif.medal == Medal.INSANE);
 
         // Title
-        cmd.set("#MedalNotifTitle.Visible", titleVisible);
-        if (titleVisible) {
+        cmd.set("#MedalNotifTitle.Visible", vis.titleVisible);
+        if (vis.titleVisible) {
             cmd.set("#MedalNotifTitle.Text", notif.medal.name() + " MEDAL!");
-            cmd.set("#MedalNotifTitle.Style.TextColor", titleColor);
+            cmd.set("#MedalNotifTitle.Style.TextColor", vis.titleColor);
         }
 
         // Feather row
-        cmd.set("#MedalNotifFeatherRow.Visible", featherVisible);
-        if (featherVisible) {
+        cmd.set("#MedalNotifFeatherRow.Visible", vis.featherVisible);
+        if (vis.featherVisible) {
             cmd.set("#MedalNotifFeathers.Text", "+" + notif.feathers + " feathers");
         }
+    }
 
-        // Progress bar: show only the correct medal's bar
-        cmd.set("#MedalNotifBarBronze.Visible", barVisible && notif.medal == Medal.BRONZE);
-        cmd.set("#MedalNotifBarSilver.Visible", barVisible && notif.medal == Medal.SILVER);
-        cmd.set("#MedalNotifBarGold.Visible", barVisible && notif.medal == Medal.GOLD);
-        cmd.set("#MedalNotifBarEmerald.Visible", barVisible && notif.medal == Medal.EMERALD);
-        cmd.set("#MedalNotifBarInsane.Visible", barVisible && notif.medal == Medal.INSANE);
+    private static void buildMedalBarCommands(UICommandBuilder cmd, Medal medal, boolean barVisible,
+                                              float barValue) {
+        cmd.set("#MedalNotifBarBronze.Visible", barVisible && medal == Medal.BRONZE);
+        cmd.set("#MedalNotifBarSilver.Visible", barVisible && medal == Medal.SILVER);
+        cmd.set("#MedalNotifBarGold.Visible", barVisible && medal == Medal.GOLD);
+        cmd.set("#MedalNotifBarEmerald.Visible", barVisible && medal == Medal.EMERALD);
+        cmd.set("#MedalNotifBarInsane.Visible", barVisible && medal == Medal.INSANE);
         if (barVisible) {
-            String barId = "#MedalNotifBar" + capitalize(notif.medal.name()) + ".Value";
+            String barId = "#MedalNotifBar" + capitalize(medal.name()) + ".Value";
             cmd.set(barId, barValue);
         }
+    }
 
-        hud.updateMedalNotif(cacheKey, cmd);
+    private static final class MedalVisibility {
+        final boolean iconVisible;
+        final boolean titleVisible;
+        final String titleColor;
+        final boolean featherVisible;
+        final boolean barVisible;
+        final float barValue;
+
+        MedalVisibility(boolean iconVisible, boolean titleVisible, String titleColor,
+                        boolean featherVisible, boolean barVisible, float barValue) {
+            this.iconVisible = iconVisible;
+            this.titleVisible = titleVisible;
+            this.titleColor = titleColor;
+            this.featherVisible = featherVisible;
+            this.barVisible = barVisible;
+            this.barValue = barValue;
+        }
     }
 
     private static String capitalize(String s) {

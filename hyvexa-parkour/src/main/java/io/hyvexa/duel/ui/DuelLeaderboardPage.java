@@ -116,7 +116,7 @@ public class DuelLeaderboardPage extends InteractiveCustomUIPage<DuelLeaderboard
             commandBuilder.set("#PageLabel.Text", "");
             return;
         }
-        String filter = searchText != null ? searchText.trim().toLowerCase() : "";
+        String filter = searchText.trim().toLowerCase();
         List<LeaderboardRow> rows = stats.stream()
                 .sorted(Comparator.comparingInt(DuelStats::getWins).reversed()
                         .thenComparingInt(DuelStats::getLosses)

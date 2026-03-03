@@ -19,33 +19,30 @@ import java.util.concurrent.CompletableFuture;
 
 public class VoteCommand extends AbstractAsyncCommand {
 
-    private static final String LINK_COLOR = "#8ab4f8";
-    private static final String ACCENT_COLOR = "#f0c674";
-
-    private static final Message HEADER = Message.raw("Vote for Hyvexa!").color(ACCENT_COLOR);
+    private static final Message HEADER = Message.raw("Vote for Hyvexa!").color(ChatColors.ACCENT_COLOR);
     private static final Message SUBTITLE = Message.raw("Each site takes just a few seconds:");
 
     private static final Message LINK_1 = Message.join(
             Message.raw(" - "),
-            Message.raw("hytale.game").color(LINK_COLOR).link("https://hytale.game/en/servers/?sid=hyvexa"),
-            Message.raw(" (+50 feathers)").color(ACCENT_COLOR)
+            Message.raw("hytale.game").color(ChatColors.LINK_COLOR).link("https://hytale.game/en/servers/?sid=hyvexa"),
+            Message.raw(" (+50 feathers)").color(ChatColors.ACCENT_COLOR)
     );
     private static final Message LINK_2 = Message.join(
             Message.raw(" - "),
-            Message.raw("hytalecharts.com").color(LINK_COLOR).link("https://hytalecharts.com/servers/hyvexa")
+            Message.raw("hytalecharts.com").color(ChatColors.LINK_COLOR).link("https://hytalecharts.com/servers/hyvexa")
     );
     private static final Message LINK_3 = Message.join(
             Message.raw(" - "),
-            Message.raw("hytale-servers.com").color(LINK_COLOR).link("https://hytale-servers.com/server/hyvexa/vote")
+            Message.raw("hytale-servers.com").color(ChatColors.LINK_COLOR).link("https://hytale-servers.com/server/hyvexa/vote")
     );
     private static final Message LINK_4 = Message.join(
             Message.raw(" - "),
-            Message.raw("hytaleonlineservers.com").color(LINK_COLOR).link("https://hytaleonlineservers.com/server-hyvexa.945")
+            Message.raw("hytaleonlineservers.com").color(ChatColors.LINK_COLOR).link("https://hytaleonlineservers.com/server-hyvexa.945")
     );
 
-    private static final Message THANKS = Message.raw("Thank you for supporting the server!").color(ACCENT_COLOR);
+    private static final Message THANKS = Message.raw("Thank you for supporting the server!").color(ChatColors.ACCENT_COLOR);
     private static final Message CHECKING = Message.raw("Checking for unclaimed votes...").color("#a3e635");
-    private static final Message NO_VOTES = Message.raw("No unclaimed votes found.").color(ACCENT_COLOR);
+    private static final Message NO_VOTES = Message.raw("No unclaimed votes found.").color(ChatColors.ACCENT_COLOR);
 
     public VoteCommand() {
         super("vote", "Show voting links or claim vote rewards.");

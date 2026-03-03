@@ -10,11 +10,10 @@ import java.util.concurrent.CompletableFuture;
 
 public class StoreCommand extends AbstractAsyncCommand {
 
-    private static final String LINK_COLOR = "#8ab4f8";
     private static final String STORE_URL = "https://store.hyvexa.com";
     private static final Message STORE_MESSAGE = Message.join(
             Message.raw("Store: "),
-            Message.raw("store.hyvexa.com").color(LINK_COLOR).link(STORE_URL)
+            Message.raw("store.hyvexa.com").color(ChatColors.LINK_COLOR).link(STORE_URL)
     );
 
     public StoreCommand() {

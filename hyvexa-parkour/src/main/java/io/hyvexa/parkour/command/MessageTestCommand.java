@@ -10,11 +10,13 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.common.WorldConstants;
 import io.hyvexa.common.util.FormatUtils;
+import io.hyvexa.common.util.ModeGate;
 import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
+import io.hyvexa.core.state.ModeMessages;
 import io.hyvexa.duel.DuelConstants;
-import io.hyvexa.parkour.util.ParkourModeGate;
 
 import javax.annotation.Nonnull;
 
@@ -28,7 +30,7 @@ public class MessageTestCommand extends AbstractPlayerCommand {
     @Override
     protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref,
                            @Nonnull PlayerRef playerRef, @Nonnull World world) {
-        if (ParkourModeGate.denyIfNotParkour(ctx, world)) {
+        if (ModeGate.denyIfNot(ctx, world, WorldConstants.WORLD_PARKOUR, ModeMessages.MESSAGE_ENTER_PARKOUR)) {
             return;
         }
         Player player = store.getComponent(ref, Player.getComponentType());

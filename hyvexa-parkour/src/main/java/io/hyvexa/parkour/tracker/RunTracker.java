@@ -31,6 +31,7 @@ import io.hyvexa.parkour.data.SettingsStore;
 import io.hyvexa.parkour.data.TransformData;
 import io.hyvexa.parkour.ghost.GhostNpcManager;
 import io.hyvexa.parkour.ghost.GhostRecorder;
+import io.hyvexa.parkour.util.ParkourUtils;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -280,7 +281,7 @@ public class RunTracker {
         run.practiceStartCheckpointIndex = run.lastCheckpointIndex;
         run.practiceStartFinishTouched = run.finishTouched;
         run.practiceStartPosition = resolvePracticeStartPosition(run, ref, store, playerRef);
-        TransformData initialPracticeCheckpoint = copyTransformData(run.practiceStartPosition);
+        TransformData initialPracticeCheckpoint = ParkourUtils.copyTransformData(run.practiceStartPosition);
         Vector3f initialPracticeHeadRotation = null;
         if (playerRef != null) {
             Vector3f headRotation = playerRef.getHeadRotation();
@@ -806,7 +807,7 @@ public class RunTracker {
         if (map == null || map.getStart() == null) {
             return null;
         }
-        return copyTransformData(map.getStart());
+        return ParkourUtils.copyTransformData(map.getStart());
     }
 
     private void populatePersonalBestSplits(UUID playerId, ActiveRun run) {
@@ -815,20 +816,6 @@ public class RunTracker {
         }
         List<Long> checkpointTimes = progressStore.getCheckpointTimes(playerId, run.mapId);
         run.personalBestSplits = checkpointTimes.isEmpty() ? List.of() : checkpointTimes;
-    }
-
-    private static TransformData copyTransformData(TransformData source) {
-        if (source == null) {
-            return null;
-        }
-        TransformData copy = new TransformData();
-        copy.setX(source.getX());
-        copy.setY(source.getY());
-        copy.setZ(source.getZ());
-        copy.setRotX(source.getRotX());
-        copy.setRotY(source.getRotY());
-        copy.setRotZ(source.getRotZ());
-        return copy;
     }
 
     private void armStartOnMovement(ActiveRun run, TransformData start) {

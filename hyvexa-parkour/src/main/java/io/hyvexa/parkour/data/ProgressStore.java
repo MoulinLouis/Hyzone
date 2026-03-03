@@ -44,9 +44,6 @@ public class ProgressStore {
     private final ReadWriteLock fileLock = new ReentrantReadWriteLock();
     private final AtomicLong cachedTotalXp = new AtomicLong(-1L);
 
-    public ProgressStore() {
-    }
-
     public void syncLoad() {
         if (!DatabaseManager.getInstance().isInitialized()) {
             LOGGER.atWarning().log("Database not initialized, ProgressStore will be empty");

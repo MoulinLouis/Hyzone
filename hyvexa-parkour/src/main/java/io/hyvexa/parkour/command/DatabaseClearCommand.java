@@ -11,9 +11,11 @@ import com.hypixel.hytale.server.core.command.system.basecommands.AbstractAsyncC
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.common.WorldConstants;
+import io.hyvexa.common.util.ModeGate;
 import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.core.db.DatabaseManager;
-import io.hyvexa.parkour.util.ParkourModeGate;
+import io.hyvexa.core.state.ModeMessages;
 
 import javax.annotation.Nonnull;
 import java.sql.Connection;
@@ -43,7 +45,7 @@ public class DatabaseClearCommand extends AbstractAsyncCommand {
         if (ref != null && ref.isValid()) {
             Store<EntityStore> store = ref.getStore();
             World world = store.getExternalData().getWorld();
-            if (ParkourModeGate.denyIfNotParkour(commandContext, world)) {
+            if (ModeGate.denyIfNot(commandContext, world, WorldConstants.WORLD_PARKOUR, ModeMessages.MESSAGE_ENTER_PARKOUR)) {
                 return CompletableFuture.completedFuture(null);
             }
         }

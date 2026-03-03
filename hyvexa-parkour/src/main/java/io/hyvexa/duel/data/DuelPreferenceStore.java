@@ -31,15 +31,9 @@ public class DuelPreferenceStore {
         }
 
         public static String labelFor(DuelCategory category) {
-            if (category == null) {
-                return "";
-            }
-            return switch (category) {
-                case EASY -> "Easy";
-                case MEDIUM -> "Medium";
-                case HARD -> "Hard";
-                case INSANE -> "Insane";
-            };
+            if (category == null) return "";
+            String name = category.name();
+            return name.charAt(0) + name.substring(1).toLowerCase();
         }
 
         public static DuelCategory fromKey(String key) {

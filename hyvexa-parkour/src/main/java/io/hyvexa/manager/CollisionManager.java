@@ -12,9 +12,6 @@ import java.util.concurrent.CompletableFuture;
 
 public class CollisionManager {
 
-    public CollisionManager() {
-    }
-
     public void disableAllCollisions() {
         for (PlayerRef playerRef : Universe.get().getPlayers()) {
             disablePlayerCollision(playerRef);

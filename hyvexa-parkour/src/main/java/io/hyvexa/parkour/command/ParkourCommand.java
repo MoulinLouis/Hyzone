@@ -29,7 +29,9 @@ import io.hyvexa.parkour.ui.AdminIndexPage;
 import io.hyvexa.parkour.ui.CategorySelectPage;
 import io.hyvexa.parkour.ui.LeaderboardMenuPage;
 import io.hyvexa.parkour.ui.StatsPage;
-import io.hyvexa.parkour.util.ParkourModeGate;
+import io.hyvexa.common.WorldConstants;
+import io.hyvexa.common.util.ModeGate;
+import io.hyvexa.core.state.ModeMessages;
 import javax.annotation.Nonnull;
 import java.util.List;
 import java.util.Locale;
@@ -98,7 +100,7 @@ public class ParkourCommand extends AbstractAsyncCommand {
 
     private void handleCommand(CommandContext ctx, Player player, Ref<EntityStore> ref, Store<EntityStore> store, World world) {
         PlayerRef playerRefComponent = store.getComponent(ref, PlayerRef.getComponentType());
-        if (ParkourModeGate.denyIfNotParkour(ctx, world)) {
+        if (ModeGate.denyIfNot(ctx, world, WorldConstants.WORLD_PARKOUR, ModeMessages.MESSAGE_ENTER_PARKOUR)) {
             return;
         }
         if (playerRefComponent != null) {

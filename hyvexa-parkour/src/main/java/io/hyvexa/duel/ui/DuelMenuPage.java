@@ -9,7 +9,6 @@ import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
-import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.common.ui.ButtonEventData;
@@ -24,6 +23,7 @@ import io.hyvexa.parkour.data.ProgressStore;
 import io.hyvexa.parkour.tracker.RunTracker;
 import io.hyvexa.parkour.util.PlayerSettingsStore;
 import io.hyvexa.parkour.ui.BaseParkourPage;
+import io.hyvexa.parkour.util.ParkourUtils;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -49,18 +49,7 @@ public class DuelMenuPage extends BaseParkourPage {
         applyOpponentState(ref, store, uiCommandBuilder);
         applyCategoryState(ref, store, uiCommandBuilder);
         applyAdminState(ref, store, uiCommandBuilder);
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#QueueButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_QUEUE), false);
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#OpponentButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_OPPONENT), false);
-        bindCategory(uiEventBuilder, "#EasyToggleButton", DuelCategory.EASY);
-        bindCategory(uiEventBuilder, "#MediumToggleButton", DuelCategory.MEDIUM);
-        bindCategory(uiEventBuilder, "#HardToggleButton", DuelCategory.HARD);
-        bindCategory(uiEventBuilder, "#InsaneToggleButton", DuelCategory.INSANE);
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ActiveMatchesButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_ACTIVE_MATCHES), false);
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#LeaderboardButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_LEADERBOARD), false);
+        bindAllEvents(uiEventBuilder);
     }
 
     @Override
@@ -164,6 +153,11 @@ public class DuelMenuPage extends BaseParkourPage {
         applyCategoryState(ref, store, commandBuilder);
         applyAdminState(ref, store, commandBuilder);
         UIEventBuilder eventBuilder = new UIEventBuilder();
+        bindAllEvents(eventBuilder);
+        sendUpdate(commandBuilder, eventBuilder, false);
+    }
+
+    private void bindAllEvents(UIEventBuilder eventBuilder) {
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#QueueButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_QUEUE), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#OpponentButton",
@@ -176,7 +170,6 @@ public class DuelMenuPage extends BaseParkourPage {
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_ACTIVE_MATCHES), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#LeaderboardButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_LEADERBOARD), false);
-        sendUpdate(commandBuilder, eventBuilder, false);
     }
 
     private void bindCategory(UIEventBuilder eventBuilder, String selector, DuelCategory category) {
@@ -297,9 +290,6 @@ public class DuelMenuPage extends BaseParkourPage {
         if (playerRef == null || player == null) {
             return;
         }
-        if (button == null || !button.startsWith(BUTTON_CATEGORY_PREFIX)) {
-            return;
-        }
         DuelCategory category = DuelCategory.fromKey(button.substring(BUTTON_CATEGORY_PREFIX.length()));
         if (category == null) {
             return;
@@ -339,8 +329,8 @@ public class DuelMenuPage extends BaseParkourPage {
         }
         player.sendMessage(SystemMessageUtils.duelInfo("Active matches (" + matches.size() + "):"));
         for (DuelMatch match : matches) {
-            String p1 = resolveName(match.getPlayer1());
-            String p2 = resolveName(match.getPlayer2());
+            String p1 = ParkourUtils.resolveName(match.getPlayer1());
+            String p2 = ParkourUtils.resolveName(match.getPlayer2());
             player.sendMessage(SystemMessageUtils.duelInfo("- " + match.getMatchId() + ": " + p1 + " vs " + p2
                     + " on " + match.getMapId() + " (" + match.getState() + ")"));
         }
@@ -355,8 +345,4 @@ public class DuelMenuPage extends BaseParkourPage {
         player.getPageManager().openCustomPage(ref, store, new DuelLeaderboardPage(playerRef));
     }
 
-    private String resolveName(UUID playerId) {
-        var ref = Universe.get().getPlayer(playerId);
-        return ref != null ? ref.getUsername() : playerId.toString();
-    }
 }

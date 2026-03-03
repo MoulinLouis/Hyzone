@@ -43,10 +43,10 @@ public class MedalRewardStore {
              PreparedStatement stmt = conn.prepareStatement(createSql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             stmt.executeUpdate();
-            renameColumnIfExists(conn, "medal_rewards", "author_feathers", "emerald_feathers", "INT NOT NULL DEFAULT 0");
-            renameColumnIfExists(conn, "medal_rewards", "platinum_feathers", "emerald_feathers", "INT NOT NULL DEFAULT 0");
-            addColumnIfMissing(conn, "medal_rewards", "emerald_feathers", "INT NOT NULL DEFAULT 0");
-            addColumnIfMissing(conn, "medal_rewards", "insane_feathers", "INT NOT NULL DEFAULT 0");
+            DatabaseManager.renameColumnIfExists(conn, "medal_rewards", "author_feathers", "emerald_feathers", "INT NOT NULL DEFAULT 0");
+            DatabaseManager.renameColumnIfExists(conn, "medal_rewards", "platinum_feathers", "emerald_feathers", "INT NOT NULL DEFAULT 0");
+            DatabaseManager.addColumnIfMissing(conn, "medal_rewards", "emerald_feathers", "INT NOT NULL DEFAULT 0");
+            DatabaseManager.addColumnIfMissing(conn, "medal_rewards", "insane_feathers", "INT NOT NULL DEFAULT 0");
         } catch (SQLException e) {
             LOGGER.atSevere().withCause(e).log("Failed to create medal_rewards table");
             return;
@@ -159,43 +159,6 @@ public class MedalRewardStore {
             return "easy";
         }
         return category.trim().toLowerCase();
-    }
-
-    private void renameColumnIfExists(Connection conn, String table, String oldColumn, String newColumn, String definition) {
-        try (ResultSet rs = conn.getMetaData().getColumns(conn.getCatalog(), null, table, oldColumn)) {
-            if (!rs.next()) {
-                return;
-            }
-        } catch (SQLException e) {
-            return;
-        }
-        String sql = "ALTER TABLE " + table + " CHANGE COLUMN " + oldColumn + " " + newColumn + " " + definition;
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.executeUpdate();
-            LOGGER.atInfo().log("Renamed column " + table + "." + oldColumn + " to " + newColumn);
-        } catch (SQLException e) {
-            LOGGER.atWarning().log("Failed to rename column " + table + "." + oldColumn + ": " + e.getMessage());
-        }
-    }
-
-    private void addColumnIfMissing(Connection conn, String table, String column, String definition) {
-        try (ResultSet rs = conn.getMetaData().getColumns(conn.getCatalog(), null, table, column)) {
-            if (rs.next()) {
-                return;
-            }
-        } catch (SQLException e) {
-            LOGGER.atWarning().log("Failed to check column " + table + "." + column + ": " + e.getMessage());
-            return;
-        }
-        String sql = "ALTER TABLE " + table + " ADD COLUMN " + column + " " + definition;
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.executeUpdate();
-            LOGGER.atInfo().log("Added column " + table + "." + column);
-        } catch (SQLException e) {
-            LOGGER.atWarning().log("Failed to add column " + table + "." + column + ": " + e.getMessage());
-        }
     }
 
     public static class MedalRewards {

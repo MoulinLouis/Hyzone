@@ -107,13 +107,6 @@ public final class PlayerSettingsStore {
     }
 
     public static void clear(UUID playerId) {
-        if (playerId == null) {
-            return;
-        }
-        RESET_ITEM_ENABLED.remove(playerId);
-        DUEL_HIDE_OPPONENT.remove(playerId);
-        GHOST_VISIBLE.remove(playerId);
-        PLAYERS_HIDDEN.remove(playerId);
-        ADVANCED_HUD_ENABLED.remove(playerId);
+        clearSession(playerId);
     }
 }

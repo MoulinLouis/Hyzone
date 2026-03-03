@@ -810,7 +810,7 @@ public class DuelTracker {
                 return;
             }
             TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
-            teleportToSpawn(ref, store, transform);
+            TrackerUtils.teleportToSpawn(ref, store, transform, null);
             InventoryUtils.clearAllItems(player);
             InventoryUtils.giveMenuItems(player);
             restoreVipSpeedAfterDuel(ref, store, playerRef);
@@ -911,10 +911,6 @@ public class DuelTracker {
             }
             visibility.hideEntity(viewerId, targetId);
         }
-    }
-
-    private void teleportToSpawn(Ref<EntityStore> ref, Store<EntityStore> store, TransformComponent transform) {
-        TrackerUtils.teleportToSpawn(ref, store, transform, null);
     }
 
     private double getVoidY() {

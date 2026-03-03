@@ -20,9 +20,6 @@ import java.util.concurrent.CompletableFuture;
 public class LinkCommand extends AbstractAsyncCommand {
 
     private static final String DISCORD_URL = "https://discord.gg/2PAygkyFnK";
-    private static final String LINK_COLOR = "#8ab4f8";
-    private static final String HIGHLIGHT_COLOR = "#fbbf24";
-    private static final String MUTED_COLOR = "#94a3b8";
 
     public LinkCommand() {
         super("link", "Link your Discord account");
@@ -80,17 +77,17 @@ public class LinkCommand extends AbstractAsyncCommand {
         // Display formatted message
         player.sendMessage(Message.raw(""));
         player.sendMessage(Message.join(
-                Message.raw("Your link code: ").color(MUTED_COLOR),
-                Message.raw(code).color(HIGHLIGHT_COLOR).bold(true)
+                Message.raw("Your link code: ").color(ChatColors.MUTED_COLOR),
+                Message.raw(code).color(ChatColors.HIGHLIGHT_COLOR).bold(true)
         ));
         player.sendMessage(Message.join(
-                Message.raw("Go to Discord and type ").color(MUTED_COLOR),
-                Message.raw("/link " + code).color(HIGHLIGHT_COLOR)
+                Message.raw("Go to Discord and type ").color(ChatColors.MUTED_COLOR),
+                Message.raw("/link " + code).color(ChatColors.HIGHLIGHT_COLOR)
         ));
-        player.sendMessage(Message.raw("Code expires in 5 minutes.").color(MUTED_COLOR));
+        player.sendMessage(Message.raw("Code expires in 5 minutes.").color(ChatColors.MUTED_COLOR));
         player.sendMessage(Message.join(
-                Message.raw("Discord: ").color(MUTED_COLOR),
-                Message.raw("discord.gg/2PAygkyFnK").color(LINK_COLOR).link(DISCORD_URL)
+                Message.raw("Discord: ").color(ChatColors.MUTED_COLOR),
+                Message.raw("discord.gg/2PAygkyFnK").color(ChatColors.LINK_COLOR).link(DISCORD_URL)
         ));
         player.sendMessage(Message.raw(""));
     }

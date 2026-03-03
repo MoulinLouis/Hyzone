@@ -23,6 +23,7 @@ import io.hyvexa.duel.data.DuelStats;
 import io.hyvexa.duel.data.DuelStatsStore;
 import io.hyvexa.parkour.data.Map;
 import io.hyvexa.parkour.tracker.RunTracker;
+import io.hyvexa.parkour.util.ParkourUtils;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -252,8 +253,8 @@ public class DuelCommand extends AbstractAsyncCommand {
         }
         ctx.sendMessage(SystemMessageUtils.duelInfo("Active matches (" + matches.size() + "):"));
         for (DuelMatch match : matches) {
-            String p1 = resolveName(match.getPlayer1());
-            String p2 = resolveName(match.getPlayer2());
+            String p1 = ParkourUtils.resolveName(match.getPlayer1());
+            String p2 = ParkourUtils.resolveName(match.getPlayer2());
             ctx.sendMessage(SystemMessageUtils.duelInfo("- " + match.getMatchId() + ": " + p1 + " vs " + p2
                     + " on " + match.getMapId() + " (" + match.getState() + ")"));
         }
@@ -304,11 +305,6 @@ public class DuelCommand extends AbstractAsyncCommand {
             return;
         }
         ctx.sendMessage(SystemMessageUtils.duelSuccess("Forced duel started with " + targetRef.getUsername() + "."));
-    }
-
-    private String resolveName(UUID playerId) {
-        PlayerRef ref = Universe.get().getPlayer(playerId);
-        return ref != null ? ref.getUsername() : playerId.toString();
     }
 
     private PlayerRef findOnlineByName(String name) {

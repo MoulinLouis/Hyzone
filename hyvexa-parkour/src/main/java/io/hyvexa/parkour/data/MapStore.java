@@ -3,6 +3,7 @@ package io.hyvexa.parkour.data;
 import com.hypixel.hytale.logger.HytaleLogger;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.parkour.ParkourConstants;
+import io.hyvexa.parkour.util.ParkourUtils;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -69,11 +70,11 @@ public class MapStore {
                     return;
                 }
                 // Add medal time columns if missing
-                addColumnIfMissing(conn, "maps", "bronze_time_ms", "BIGINT DEFAULT NULL");
-                addColumnIfMissing(conn, "maps", "silver_time_ms", "BIGINT DEFAULT NULL");
-                addColumnIfMissing(conn, "maps", "gold_time_ms", "BIGINT DEFAULT NULL");
-                renameColumnIfExists(conn, "maps", "author_time_ms", "emerald_time_ms", "BIGINT DEFAULT NULL");
-                addColumnIfMissing(conn, "maps", "emerald_time_ms", "BIGINT DEFAULT NULL");
+                DatabaseManager.addColumnIfMissing(conn, "maps", "bronze_time_ms", "BIGINT DEFAULT NULL");
+                DatabaseManager.addColumnIfMissing(conn, "maps", "silver_time_ms", "BIGINT DEFAULT NULL");
+                DatabaseManager.addColumnIfMissing(conn, "maps", "gold_time_ms", "BIGINT DEFAULT NULL");
+                DatabaseManager.renameColumnIfExists(conn, "maps", "author_time_ms", "emerald_time_ms", "BIGINT DEFAULT NULL");
+                DatabaseManager.addColumnIfMissing(conn, "maps", "emerald_time_ms", "BIGINT DEFAULT NULL");
 
                 // Load all maps
                 try (PreparedStatement stmt = conn.prepareStatement(mapSql)) {
@@ -609,11 +610,11 @@ public class MapStore {
         copy.setName(source.getName());
         copy.setCategory(source.getCategory());
         copy.setWorld(source.getWorld());
-        copy.setStart(copyTransform(source.getStart()));
-        copy.setFinish(copyTransform(source.getFinish()));
-        copy.setStartTrigger(copyTransform(source.getStartTrigger()));
-        copy.setLeaveTrigger(copyTransform(source.getLeaveTrigger()));
-        copy.setLeaveTeleport(copyTransform(source.getLeaveTeleport()));
+        copy.setStart(ParkourUtils.copyTransformData(source.getStart()));
+        copy.setFinish(ParkourUtils.copyTransformData(source.getFinish()));
+        copy.setStartTrigger(ParkourUtils.copyTransformData(source.getStartTrigger()));
+        copy.setLeaveTrigger(ParkourUtils.copyTransformData(source.getLeaveTrigger()));
+        copy.setLeaveTeleport(ParkourUtils.copyTransformData(source.getLeaveTeleport()));
         copy.setFirstCompletionXp(source.getFirstCompletionXp());
         copy.setDifficulty(source.getDifficulty());
         copy.setOrder(source.getOrder());
@@ -637,60 +638,10 @@ public class MapStore {
         copy.setUpdatedAt(source.getUpdatedAt());
         if (source.getCheckpoints() != null) {
             for (TransformData checkpoint : source.getCheckpoints()) {
-                copy.getCheckpoints().add(copyTransform(checkpoint));
+                copy.getCheckpoints().add(ParkourUtils.copyTransformData(checkpoint));
             }
         }
         return copy;
     }
 
-    private static TransformData copyTransform(TransformData source) {
-        if (source == null) {
-            return null;
-        }
-        TransformData copy = new TransformData();
-        copy.setX(source.getX());
-        copy.setY(source.getY());
-        copy.setZ(source.getZ());
-        copy.setRotX(source.getRotX());
-        copy.setRotY(source.getRotY());
-        copy.setRotZ(source.getRotZ());
-        return copy;
-    }
-
-    private void renameColumnIfExists(Connection conn, String table, String oldColumn, String newColumn, String definition) {
-        try (ResultSet rs = conn.getMetaData().getColumns(conn.getCatalog(), null, table, oldColumn)) {
-            if (!rs.next()) {
-                return;
-            }
-        } catch (SQLException e) {
-            return;
-        }
-        String sql = "ALTER TABLE " + table + " CHANGE COLUMN " + oldColumn + " " + newColumn + " " + definition;
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.executeUpdate();
-            LOGGER.atInfo().log("Renamed column " + table + "." + oldColumn + " to " + newColumn);
-        } catch (SQLException e) {
-            LOGGER.atWarning().log("Failed to rename column " + table + "." + oldColumn + ": " + e.getMessage());
-        }
-    }
-
-    private void addColumnIfMissing(Connection conn, String table, String column, String definition) {
-        try (ResultSet rs = conn.getMetaData().getColumns(conn.getCatalog(), null, table, column)) {
-            if (rs.next()) {
-                return;
-            }
-        } catch (SQLException e) {
-            LOGGER.atWarning().log("Failed to check column " + table + "." + column + ": " + e.getMessage());
-            return;
-        }
-        String sql = "ALTER TABLE " + table + " ADD COLUMN " + column + " " + definition;
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.executeUpdate();
-            LOGGER.atInfo().log("Added column " + table + "." + column);
-        } catch (SQLException e) {
-            LOGGER.atWarning().log("Failed to add column " + table + "." + column + ": " + e.getMessage());
-        }
-    }
 }

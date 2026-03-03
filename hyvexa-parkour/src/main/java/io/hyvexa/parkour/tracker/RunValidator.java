@@ -113,122 +113,174 @@ class RunValidator {
         if (run.practiceEnabled || run.finishTouched || map.getFinish() == null) {
             return;
         }
-        if (distanceSqWithVerticalBonus(position, map.getFinish()) <= TOUCH_RADIUS_SQ) {
-            List<TransformData> checkpoints = map.getCheckpoints();
-            int checkpointCount = checkpoints != null ? checkpoints.size() : 0;
-            if (checkpointCount > 0 && run.touchedCheckpoints.size() < checkpointCount) {
-                long now = System.currentTimeMillis();
-                if (now - run.lastFinishWarningMs >= 2000L) {
-                    run.lastFinishWarningMs = now;
-                    player.sendMessage(SystemMessageUtils.parkourWarn("You did not reach all checkpoints."));
-                }
-                return;
-            }
-            run.finishTouched = true;
-            TrackerUtils.playFinishSound(playerRef);
-            long durationMs = resolveInterpolatedTimeMs(run, previousPosition, position, map.getFinish(),
-                    previousElapsedMs, deltaMs);
-            List<Long> checkpointTimes = new ArrayList<>();
-            for (int i = 0; i < checkpointCount; i++) {
-                Long time = run.checkpointTouchTimes.get(i);
-                checkpointTimes.add(time != null ? time : 0L);
-            }
-            UUID playerId = playerRef.getUuid();
-            String playerName = playerRef.getUsername();
-            Long previousBestMs = progressStore.getBestTimeMs(playerId, map.getId());
-            int oldRank = progressStore.getCompletionRank(playerId, mapStore);
-            ProgressStore.ProgressionResult result = progressStore.recordMapCompletion(playerId, playerName,
-                    map.getId(), durationMs, mapStore, checkpointTimes,
-                    completionSaved -> {
-                        if (!completionSaved) {
-                            warnCompletionSaveFailure(playerId, ref, store);
-                        }
-                    });
-            if (ghostRecorder != null) {
-                ghostRecorder.stopRecording(playerId, durationMs, result.firstCompletion || result.newBest);
-            }
-            if (ghostNpcManager != null) {
-                ghostNpcManager.despawnGhost(playerId);
-            }
-            if (result.firstCompletion) {
-                HyvexaPlugin plugin = HyvexaPlugin.getInstance();
-                if (plugin != null) {
-                    plugin.refreshLeaderboardHologram(store);
-                }
-            }
-            int leaderboardPosition = progressStore.getLeaderboardPosition(map.getId(), playerId);
-            if (leaderboardPosition <= 0) {
-                leaderboardPosition = 1;
-            }
-            HyvexaPlugin plugin = HyvexaPlugin.getInstance();
-            if (plugin != null) {
-                plugin.refreshMapLeaderboardHologram(map.getId(), store);
-                plugin.logMapHologramDebug("Map holo refresh fired for '" + map.getId()
-                        + "' (player " + playerName + ").");
-            }
-
-            int attempts = sessionTracker.getAttempts(playerId, map.getId()) + 1;
-            sessionTracker.recordAttempt(playerId, map.getId());
-
-            String mapName = getMapDisplayName(map);
-            player.sendMessage(SystemMessageUtils.withParkourPrefix(
-                    Message.raw("MAP COMPLETED: ").color(SystemMessageUtils.SUCCESS).bold(true),
-                    Message.raw(mapName).color(SystemMessageUtils.PRIMARY_TEXT)
-            ));
-
-            Message finishSplitPart = buildFinishSplitPart(durationMs, previousBestMs);
-            player.sendMessage(SystemMessageUtils.withParkourPrefix(
-                    Message.raw("Time: ").color(SystemMessageUtils.SECONDARY),
-                    Message.raw(FormatUtils.formatDuration(durationMs)).color(SystemMessageUtils.PRIMARY_TEXT),
-                    finishSplitPart != null ? finishSplitPart : Message.raw("")
-            ));
-
-            if (attempts > 1) {
-                player.sendMessage(SystemMessageUtils.withParkourPrefix(
-                        Message.raw("Attempts: ").color(SystemMessageUtils.SECONDARY),
-                        Message.raw(String.valueOf(attempts)).color(SystemMessageUtils.PRIMARY_TEXT)
-                ));
-            }
-
-            if (result.xpAwarded > 0L) {
-                player.sendMessage(SystemMessageUtils.parkourSuccess("You earned " + result.xpAwarded + " XP."));
-            }
-            int newRank = progressStore.getCompletionRank(playerId, mapStore);
-            boolean reachedVexaGod = newRank == ParkourConstants.COMPLETION_RANK_NAMES.length && oldRank < newRank;
-            if (newRank > oldRank) {
-                if (plugin != null) {
-                    plugin.invalidateRankCache(playerId);
-                }
-                String rankName = progressStore.getRankName(playerId, mapStore);
-                player.sendMessage(SystemMessageUtils.parkourSuccess("Rank up! You are now " + rankName + "."));
-                DiscordLinkStore.getInstance().updateRankIfLinkedAsync(playerId, rankName)
-                        .exceptionally(ex -> {
-                            LOGGER.atWarning().withCause(ex).log("Discord rank sync failed for " + playerId);
-                            return null;
-                        });
-            }
-            if (result.newBest) {
-                broadcastCompletion(playerId, playerName, map, durationMs, leaderboardPosition);
-                if (reachedVexaGod) {
-                    broadcastVexaGod(playerName);
-                }
-            }
-            MedalAwardResult medalResult = awardMedals(playerId, map, durationMs, player);
-            if (medalResult != null && plugin != null) {
-                if (plugin.getHudManager() != null) {
-                    plugin.getHudManager().showMedalNotification(
-                            playerId, medalResult.medal(), medalResult.featherReward());
-                }
-                io.hyvexa.core.cosmetic.CosmeticManager.getInstance().applyCelebrationEffect(
-                        ref, store, medalResult.medal().getEffectId(), 4.0f);
-            }
-            runTracker.recordFinishPing(run, playerRef);
-            runTracker.sendLatencyWarning(run, player);
-            teleporter.teleportToSpawn(ref, store, transform, buffer);
-            teleporter.recordTeleport(playerId, RunTeleporter.TeleportCause.FINISH);
-            runTracker.clearActiveMap(playerId);
-            InventoryUtils.giveMenuItems(player);
+        if (distanceSqWithVerticalBonus(position, map.getFinish()) > TOUCH_RADIUS_SQ) {
+            return;
         }
+        if (!validateCheckpoints(run, map, player)) {
+            return;
+        }
+        run.finishTouched = true;
+        TrackerUtils.playFinishSound(playerRef);
+        long durationMs = resolveInterpolatedTimeMs(run, previousPosition, position, map.getFinish(),
+                previousElapsedMs, deltaMs);
+
+        UUID playerId = playerRef.getUuid();
+        String playerName = playerRef.getUsername();
+        Long previousBestMs = progressStore.getBestTimeMs(playerId, map.getId());
+        int oldRank = progressStore.getCompletionRank(playerId, mapStore);
+
+        ProgressStore.ProgressionResult result = recordCompletion(run, map, playerId, playerName,
+                durationMs, ref, store);
+
+        HyvexaPlugin plugin = HyvexaPlugin.getInstance();
+        refreshHolograms(plugin, result, map, playerId, playerName, store);
+
+        int leaderboardPosition = progressStore.getLeaderboardPosition(map.getId(), playerId);
+        if (leaderboardPosition <= 0) {
+            leaderboardPosition = 1;
+        }
+
+        int attempts = sessionTracker.getAttempts(playerId, map.getId()) + 1;
+        sessionTracker.recordAttempt(playerId, map.getId());
+
+        String mapName = getMapDisplayName(map);
+        sendCompletionMessages(player, mapName, durationMs, previousBestMs, attempts, result.xpAwarded);
+        int newRank = handleRankUp(plugin, playerId, player, oldRank);
+
+        broadcastFinish(plugin, result, playerId, playerName, map, durationMs, leaderboardPosition,
+                oldRank, newRank);
+
+        awardMedalAndNotify(plugin, playerId, map, durationMs, player, ref, store);
+
+        runTracker.recordFinishPing(run, playerRef);
+        runTracker.sendLatencyWarning(run, player);
+        teleporter.teleportToSpawn(ref, store, transform, buffer);
+        teleporter.recordTeleport(playerId, RunTeleporter.TeleportCause.FINISH);
+        runTracker.clearActiveMap(playerId);
+        InventoryUtils.giveMenuItems(player);
+    }
+
+    private boolean validateCheckpoints(RunTracker.ActiveRun run, Map map, Player player) {
+        List<TransformData> checkpoints = map.getCheckpoints();
+        int checkpointCount = checkpoints != null ? checkpoints.size() : 0;
+        if (checkpointCount > 0 && run.touchedCheckpoints.size() < checkpointCount) {
+            long now = System.currentTimeMillis();
+            if (now - run.lastFinishWarningMs >= 2000L) {
+                run.lastFinishWarningMs = now;
+                player.sendMessage(SystemMessageUtils.parkourWarn("You did not reach all checkpoints."));
+            }
+            return false;
+        }
+        return true;
+    }
+
+    private ProgressStore.ProgressionResult recordCompletion(RunTracker.ActiveRun run, Map map,
+                                                              UUID playerId, String playerName,
+                                                              long durationMs, Ref<EntityStore> ref,
+                                                              Store<EntityStore> store) {
+        List<TransformData> checkpoints = map.getCheckpoints();
+        int checkpointCount = checkpoints != null ? checkpoints.size() : 0;
+        List<Long> checkpointTimes = new ArrayList<>();
+        for (int i = 0; i < checkpointCount; i++) {
+            Long time = run.checkpointTouchTimes.get(i);
+            checkpointTimes.add(time != null ? time : 0L);
+        }
+        ProgressStore.ProgressionResult result = progressStore.recordMapCompletion(playerId, playerName,
+                map.getId(), durationMs, mapStore, checkpointTimes,
+                completionSaved -> {
+                    if (!completionSaved) {
+                        warnCompletionSaveFailure(playerId, ref, store);
+                    }
+                });
+        if (ghostRecorder != null) {
+            ghostRecorder.stopRecording(playerId, durationMs, result.firstCompletion || result.newBest);
+        }
+        if (ghostNpcManager != null) {
+            ghostNpcManager.despawnGhost(playerId);
+        }
+        return result;
+    }
+
+    private void refreshHolograms(HyvexaPlugin plugin, ProgressStore.ProgressionResult result,
+                                   Map map, UUID playerId, String playerName, Store<EntityStore> store) {
+        if (result.firstCompletion && plugin != null) {
+            plugin.refreshLeaderboardHologram(store);
+        }
+        if (plugin != null) {
+            plugin.refreshMapLeaderboardHologram(map.getId(), store);
+            plugin.logMapHologramDebug("Map holo refresh fired for '" + map.getId()
+                    + "' (player " + playerName + ").");
+        }
+    }
+
+    private void broadcastFinish(HyvexaPlugin plugin, ProgressStore.ProgressionResult result,
+                                  UUID playerId, String playerName, Map map, long durationMs,
+                                  int leaderboardPosition, int oldRank, int newRank) {
+        if (!result.newBest) {
+            return;
+        }
+        broadcastCompletion(playerId, playerName, map, durationMs, leaderboardPosition);
+        boolean reachedVexaGod = newRank == ParkourConstants.COMPLETION_RANK_NAMES.length && oldRank < newRank;
+        if (reachedVexaGod) {
+            broadcastVexaGod(playerName);
+        }
+    }
+
+    private void awardMedalAndNotify(HyvexaPlugin plugin, UUID playerId, Map map, long durationMs,
+                                      Player player, Ref<EntityStore> ref, Store<EntityStore> store) {
+        MedalAwardResult medalResult = awardMedals(playerId, map, durationMs, player);
+        if (medalResult == null || plugin == null) {
+            return;
+        }
+        if (plugin.getHudManager() != null) {
+            plugin.getHudManager().showMedalNotification(
+                    playerId, medalResult.medal(), medalResult.featherReward());
+        }
+        io.hyvexa.core.cosmetic.CosmeticManager.getInstance().applyCelebrationEffect(
+                ref, store, medalResult.medal().getEffectId(), 4.0f);
+    }
+
+    private void sendCompletionMessages(Player player, String mapName, long durationMs,
+                                        Long previousBestMs, int attempts, long xpAwarded) {
+        player.sendMessage(SystemMessageUtils.withParkourPrefix(
+                Message.raw("MAP COMPLETED: ").color(SystemMessageUtils.SUCCESS).bold(true),
+                Message.raw(mapName).color(SystemMessageUtils.PRIMARY_TEXT)
+        ));
+
+        Message finishSplitPart = buildFinishSplitPart(durationMs, previousBestMs);
+        player.sendMessage(SystemMessageUtils.withParkourPrefix(
+                Message.raw("Time: ").color(SystemMessageUtils.SECONDARY),
+                Message.raw(FormatUtils.formatDuration(durationMs)).color(SystemMessageUtils.PRIMARY_TEXT),
+                finishSplitPart != null ? finishSplitPart : Message.raw("")
+        ));
+
+        if (attempts > 1) {
+            player.sendMessage(SystemMessageUtils.withParkourPrefix(
+                    Message.raw("Attempts: ").color(SystemMessageUtils.SECONDARY),
+                    Message.raw(String.valueOf(attempts)).color(SystemMessageUtils.PRIMARY_TEXT)
+            ));
+        }
+
+        if (xpAwarded > 0L) {
+            player.sendMessage(SystemMessageUtils.parkourSuccess("You earned " + xpAwarded + " XP."));
+        }
+    }
+
+    private int handleRankUp(HyvexaPlugin plugin, UUID playerId, Player player, int oldRank) {
+        int newRank = progressStore.getCompletionRank(playerId, mapStore);
+        if (newRank > oldRank) {
+            if (plugin != null) {
+                plugin.invalidateRankCache(playerId);
+            }
+            String rankName = progressStore.getRankName(playerId, mapStore);
+            player.sendMessage(SystemMessageUtils.parkourSuccess("Rank up! You are now " + rankName + "."));
+            DiscordLinkStore.getInstance().updateRankIfLinkedAsync(playerId, rankName)
+                    .exceptionally(ex -> {
+                        LOGGER.atWarning().withCause(ex).log("Discord rank sync failed for " + playerId);
+                        return null;
+                    });
+        }
+        return newRank;
     }
 
     private CheckpointSplitInfo buildCheckpointSplitInfo(int checkpointIndex, long elapsedMs,

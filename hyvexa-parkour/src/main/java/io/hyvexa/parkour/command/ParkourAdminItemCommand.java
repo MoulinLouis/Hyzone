@@ -12,9 +12,11 @@ import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.common.WorldConstants;
+import io.hyvexa.common.util.ModeGate;
 import io.hyvexa.common.util.PermissionUtils;
+import io.hyvexa.core.state.ModeMessages;
 import io.hyvexa.parkour.ParkourConstants;
-import io.hyvexa.parkour.util.ParkourModeGate;
 
 import javax.annotation.Nonnull;
 import java.util.concurrent.CompletableFuture;
@@ -59,7 +61,7 @@ public class ParkourAdminItemCommand extends AbstractAsyncCommand {
         if (player == null || playerRef == null) {
             return;
         }
-        if (ParkourModeGate.denyIfNotParkour(ctx, world)) {
+        if (ModeGate.denyIfNot(ctx, world, WorldConstants.WORLD_PARKOUR, ModeMessages.MESSAGE_ENTER_PARKOUR)) {
             return;
         }
         var inventory = player.getInventory();
