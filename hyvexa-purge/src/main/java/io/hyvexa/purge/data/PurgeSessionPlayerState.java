@@ -14,6 +14,7 @@ public class PurgeSessionPlayerState {
     private volatile boolean alive = true;
     private volatile boolean deadThisWave = false;
     private final AtomicInteger kills = new AtomicInteger(0);
+    private final AtomicInteger soloKills = new AtomicInteger(0);
     private final PurgeUpgradeState upgradeState = new PurgeUpgradeState();
     private volatile String currentWeaponId;
     private volatile long lastKillTimeMs;
@@ -43,6 +44,9 @@ public class PurgeSessionPlayerState {
 
     public int getKills() { return kills.get(); }
     public void incrementKills() { kills.incrementAndGet(); }
+
+    public int getSoloKills() { return soloKills.get(); }
+    public void incrementSoloKills() { soloKills.incrementAndGet(); }
 
     public PurgeUpgradeState getUpgradeState() { return upgradeState; }
 

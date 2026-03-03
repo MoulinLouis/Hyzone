@@ -195,6 +195,7 @@ public class PurgeSessionManager {
                     hudManager.updateWeaponXpHud(pid, weaponId, displayName);
                 }
                 hudManager.registerComboPlayer(pid, ps);
+                hudManager.registerKillMeter(pid, session);
                 syncPlayerHealthHud(pid, ref);
             }
 
@@ -277,6 +278,7 @@ public class PurgeSessionManager {
         runSafe("remove bypass", () -> DamageBypassRegistry.remove(playerId));
         runSafe("hide hud", () -> {
             hudManager.unregisterComboPlayer(playerId);
+            hudManager.unregisterKillMeter(playerId);
             hudManager.hideRunHud(playerId);
         });
 
@@ -346,6 +348,7 @@ public class PurgeSessionManager {
             runSafe("cleanup " + pid, () -> {
                 DamageBypassRegistry.remove(pid);
                 hudManager.unregisterComboPlayer(pid);
+                hudManager.unregisterKillMeter(pid);
                 hudManager.hideRunHud(pid);
             });
 
@@ -628,6 +631,7 @@ public class PurgeSessionManager {
             });
             runSafe("hide hud rollback " + pid, () -> {
                 hudManager.unregisterComboPlayer(pid);
+                hudManager.unregisterKillMeter(pid);
                 hudManager.hideRunHud(pid);
             });
             if (plugin != null) {

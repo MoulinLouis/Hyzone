@@ -42,6 +42,123 @@ $C.@PageOverlay {
       Group { FlexWeight: 1; }
     }
 
+    Group #KillMeter {
+      Anchor: (Left: 20, Top: 170, Width: 200, Height: 200);
+      LayoutMode: Top;
+      Background: #0d1620(0.92);
+      OutlineColor: #ffffff(0.06);
+      OutlineSize: 1;
+      Padding: (Left: 12, Right: 12, Top: 8, Bottom: 8);
+      Visible: false;
+
+      Label #KmTitle {
+        Anchor: (Height: 18);
+        Style: (
+          FontSize: 13,
+          TextColor: #4ade80(0.7),
+          RenderUppercase: true,
+          LetterSpacing: 2,
+          RenderBold: true
+        );
+        Text: "KILLS";
+      }
+
+      Group #KmSep {
+        Anchor: (Left: 0, Width: 30, Height: 2, Top: 4);
+        Background: #4ade80;
+      }
+
+      Group #KmRow0 {
+        Anchor: (Left: 0, Right: 0, Top: 6, Height: 22);
+        LayoutMode: Left;
+        Visible: false;
+
+        Label #KmName0 {
+          FlexWeight: 1;
+          Anchor: (Height: 22);
+          Style: (FontSize: 15, TextColor: #e7f1f4, VerticalAlignment: Center);
+          Text: "";
+        }
+        Label #KmKills0 {
+          Anchor: (Height: 22);
+          Style: (FontSize: 15, TextColor: #4ade80, RenderBold: true, VerticalAlignment: Center);
+          Text: "0";
+        }
+      }
+
+      Group #KmRow1 {
+        Anchor: (Left: 0, Right: 0, Top: 2, Height: 22);
+        LayoutMode: Left;
+        Visible: false;
+
+        Label #KmName1 {
+          FlexWeight: 1;
+          Anchor: (Height: 22);
+          Style: (FontSize: 15, TextColor: #e7f1f4, VerticalAlignment: Center);
+          Text: "";
+        }
+        Label #KmKills1 {
+          Anchor: (Height: 22);
+          Style: (FontSize: 15, TextColor: #4ade80, RenderBold: true, VerticalAlignment: Center);
+          Text: "0";
+        }
+      }
+
+      Group #KmRow2 {
+        Anchor: (Left: 0, Right: 0, Top: 2, Height: 22);
+        LayoutMode: Left;
+        Visible: false;
+
+        Label #KmName2 {
+          FlexWeight: 1;
+          Anchor: (Height: 22);
+          Style: (FontSize: 15, TextColor: #e7f1f4, VerticalAlignment: Center);
+          Text: "";
+        }
+        Label #KmKills2 {
+          Anchor: (Height: 22);
+          Style: (FontSize: 15, TextColor: #4ade80, RenderBold: true, VerticalAlignment: Center);
+          Text: "0";
+        }
+      }
+
+      Group #KmRow3 {
+        Anchor: (Left: 0, Right: 0, Top: 2, Height: 22);
+        LayoutMode: Left;
+        Visible: false;
+
+        Label #KmName3 {
+          FlexWeight: 1;
+          Anchor: (Height: 22);
+          Style: (FontSize: 15, TextColor: #e7f1f4, VerticalAlignment: Center);
+          Text: "";
+        }
+        Label #KmKills3 {
+          Anchor: (Height: 22);
+          Style: (FontSize: 15, TextColor: #4ade80, RenderBold: true, VerticalAlignment: Center);
+          Text: "0";
+        }
+      }
+
+      Group #KmRow4 {
+        Anchor: (Left: 0, Right: 0, Top: 2, Height: 22);
+        LayoutMode: Left;
+        Visible: false;
+
+        Label #KmName4 {
+          FlexWeight: 1;
+          Anchor: (Height: 22);
+          Style: (FontSize: 15, TextColor: #e7f1f4, VerticalAlignment: Center);
+          Text: "";
+        }
+        Label #KmKills4 {
+          Anchor: (Height: 22);
+          Style: (FontSize: 15, TextColor: #4ade80, RenderBold: true, VerticalAlignment: Center);
+          Text: "0";
+        }
+      }
+    }
+
     Group #RunHudRoot {
       Anchor: (Right: 20, Top: 400, Width: 284, Height: 406);
       LayoutMode: Left;

@@ -176,6 +176,9 @@ public class PurgeDamageModifierSystem extends DamageEventSystem {
         }
         event.setAmount(damage);
         if (clearZombieNameplateOnLethalHit(store, session, targetRef, damage)) {
+            if (playerState != null) {
+                playerState.incrementSoloKills();
+            }
             playKillSound(sourcePlayerRef, playerState);
             handleKillXp(sourceId, playerWeapon, store, sourceRef);
             // Class kill effects (Medic heal, Scavenger streak scrap)

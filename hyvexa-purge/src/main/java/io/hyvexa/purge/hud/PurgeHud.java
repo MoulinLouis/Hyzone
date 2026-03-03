@@ -27,6 +27,10 @@ public class PurgeHud extends CustomUIHud {
     private String lastWxpXpText = null;
     private int lastWxpBarQuantized = -1;
     private boolean wxpVisible = false;
+    private boolean killMeterVisible = false;
+    private int lastKmPlayerCount = -1;
+    private final String[] lastKmNames = new String[5];
+    private final int[] lastKmKills = new int[]{-1, -1, -1, -1, -1};
 
     public PurgeHud(PlayerRef playerRef) {
         super(playerRef);
@@ -219,6 +223,56 @@ public class PurgeHud extends CustomUIHud {
         }
     }
 
+    public void updateKillMeter(String[] names, int[] kills, int count) {
+        UICommandBuilder cmd = new UICommandBuilder();
+        boolean changed = false;
+        if (!killMeterVisible) {
+            killMeterVisible = true;
+            cmd.set("#KillMeter.Visible", true);
+            changed = true;
+        }
+        if (count != lastKmPlayerCount) {
+            for (int i = 0; i < 5; i++) {
+                boolean visible = i < count;
+                boolean wasVisible = i < lastKmPlayerCount || lastKmPlayerCount == -1;
+                if (visible != wasVisible || lastKmPlayerCount == -1) {
+                    cmd.set("#KmRow" + i + ".Visible", visible);
+                    changed = true;
+                }
+            }
+            lastKmPlayerCount = count;
+        }
+        for (int i = 0; i < count && i < 5; i++) {
+            if (!names[i].equals(lastKmNames[i])) {
+                lastKmNames[i] = names[i];
+                cmd.set("#KmName" + i + ".Text", names[i]);
+                changed = true;
+            }
+            if (kills[i] != lastKmKills[i]) {
+                lastKmKills[i] = kills[i];
+                cmd.set("#KmKills" + i + ".Text", String.valueOf(kills[i]));
+                changed = true;
+            }
+        }
+        if (changed) {
+            update(false, cmd);
+        }
+    }
+
+    public void hideKillMeter() {
+        if (killMeterVisible) {
+            killMeterVisible = false;
+            lastKmPlayerCount = -1;
+            for (int i = 0; i < 5; i++) {
+                lastKmNames[i] = null;
+                lastKmKills[i] = -1;
+            }
+            UICommandBuilder cmd = new UICommandBuilder();
+            cmd.set("#KillMeter.Visible", false);
+            update(false, cmd);
+        }
+    }
+
     public void resetCache() {
         lastWave = -1;
         lastAlive = -1;
@@ -240,5 +294,11 @@ public class PurgeHud extends CustomUIHud {
         lastWxpXpText = null;
         lastWxpBarQuantized = -1;
         wxpVisible = false;
+        killMeterVisible = false;
+        lastKmPlayerCount = -1;
+        for (int i = 0; i < 5; i++) {
+            lastKmNames[i] = null;
+            lastKmKills[i] = -1;
+        }
     }
 }

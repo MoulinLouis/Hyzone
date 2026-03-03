@@ -17,8 +17,12 @@ import io.hyvexa.purge.data.PurgeUpgradeType;
 import io.hyvexa.purge.data.WeaponXpStore;
 import io.hyvexa.purge.manager.WeaponXpManager;
 
+import io.hyvexa.purge.data.PurgeSession;
 import io.hyvexa.purge.data.PurgeSessionPlayerState;
+import io.hyvexa.purge.util.PurgePlayerNameResolver;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -29,6 +33,8 @@ public class PurgeHudManager {
     private final ConcurrentHashMap<UUID, PurgeHud> purgeHuds = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Long> hudReadyAt = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, PurgeSessionPlayerState> comboPlayers = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, PurgeSession> killMeterPlayers = new ConcurrentHashMap<>();
+    private volatile long lastKillMeterTickMs;
 
     public void attach(PlayerRef playerRef, Player player) {
         if (playerRef == null || player == null) {
@@ -70,6 +76,7 @@ public class PurgeHudManager {
             purgeHuds.remove(playerId);
             hudReadyAt.remove(playerId);
             comboPlayers.remove(playerId);
+            killMeterPlayers.remove(playerId);
         }
     }
 
@@ -85,6 +92,22 @@ public class PurgeHudManager {
             PurgeHud hud = getHud(playerId);
             if (hud != null) {
                 hud.updateCombo(0, 0f);
+            }
+        }
+    }
+
+    public void registerKillMeter(UUID playerId, PurgeSession session) {
+        if (playerId != null && session != null) {
+            killMeterPlayers.put(playerId, session);
+        }
+    }
+
+    public void unregisterKillMeter(UUID playerId) {
+        if (playerId != null) {
+            killMeterPlayers.remove(playerId);
+            PurgeHud hud = getHud(playerId);
+            if (hud != null) {
+                hud.hideKillMeter();
             }
         }
     }
@@ -167,6 +190,7 @@ public class PurgeHudManager {
     }
 
     public void tickComboBars() {
+        tickKillMeters();
         long now = System.currentTimeMillis();
         for (var entry : comboPlayers.entrySet()) {
             UUID playerId = entry.getKey();
@@ -186,6 +210,43 @@ public class PurgeHudManager {
             }
             float progress = 1f - (float) elapsed / STREAK_WINDOW_MS;
             hud.updateCombo(streak, progress);
+        }
+    }
+
+    private static final long KILL_METER_INTERVAL_MS = 500L;
+
+    public void tickKillMeters() {
+        long now = System.currentTimeMillis();
+        if (now - lastKillMeterTickMs < KILL_METER_INTERVAL_MS) {
+            return;
+        }
+        lastKillMeterTickMs = now;
+        for (var entry : killMeterPlayers.entrySet()) {
+            UUID playerId = entry.getKey();
+            PurgeHud hud = getHud(playerId);
+            if (hud == null) continue;
+            PurgeSession session = entry.getValue();
+
+            // Collect all participants' soloKills
+            List<UUID> participants = new ArrayList<>(session.getParticipants());
+            participants.sort((a, b) -> {
+                PurgeSessionPlayerState sa = session.getPlayerState(a);
+                PurgeSessionPlayerState sb = session.getPlayerState(b);
+                int ka = sa != null ? sa.getSoloKills() : 0;
+                int kb = sb != null ? sb.getSoloKills() : 0;
+                return Integer.compare(kb, ka); // desc
+            });
+
+            int count = Math.min(participants.size(), 5);
+            String[] names = new String[count];
+            int[] kills = new int[count];
+            for (int i = 0; i < count; i++) {
+                UUID pid = participants.get(i);
+                PurgeSessionPlayerState ps = session.getPlayerState(pid);
+                names[i] = PurgePlayerNameResolver.resolve(pid, PurgePlayerNameResolver.FallbackStyle.SHORT_UUID);
+                kills[i] = ps != null ? ps.getSoloKills() : 0;
+            }
+            hud.updateKillMeter(names, kills, count);
         }
     }
 
@@ -234,6 +295,7 @@ public class PurgeHudManager {
                 purgeHuds.remove(playerId);
                 hudReadyAt.remove(playerId);
                 comboPlayers.remove(playerId);
+                killMeterPlayers.remove(playerId);
             }
         }
     }
