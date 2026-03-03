@@ -38,6 +38,7 @@ import io.hyvexa.common.visibility.EntityVisibilityManager;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -51,11 +52,12 @@ public class RobotManager {
 
     /*
      * Threading model:
-     * - robots, onlinePlayers, teleportWarningByRobot:
+     * - robots, onlinePlayers, dirtyPlayers, teleportWarningByRobot:
      *   ConcurrentHashMap/newKeySet collections (thread-safe by construction).
      * - orphanCleanup: owns orphan UUID + pending-removal concurrency state.
      * - npcPlugin: volatile, set once in start(), thereafter read-only.
-     * - lastRefreshMs, lastAutoUpgradeMs: volatile, read/written from scheduled executor tick.
+     * - lastRefreshMs, lastAutoUpgradeMs, viewerContext:
+     *   volatile, read/written from scheduled executor tick.
      * - tickTask: only accessed in start()/stop() (single-threaded lifecycle).
      *
      * Entity operations (spawn/despawn) must run on the World thread via world.execute().
@@ -64,6 +66,13 @@ public class RobotManager {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final String RUNNER_UUIDS_FILE = "runner_uuids.txt";
     private static final long AUTO_UPGRADE_INTERVAL_MS = 50L;
+    private static final long HEADLESS_MOVEMENT_INTERVAL_MS = 50L;
+    private static final long VISIBLE_MOVEMENT_INTERVAL_MS = AscendConstants.RUNNER_TICK_INTERVAL_MS;
+    private static final long CACHE_REFRESH_INTERVAL_MS = 1000L;
+    private static final long VIEWER_CONTEXT_REFRESH_INTERVAL_MS = 250L;
+    private static final long FULL_REFRESH_INTERVAL_MS = TimeUnit.SECONDS.toMillis(30L);
+    private static final double RELEVANT_MAP_DISTANCE = 96.0d;
+    private static final double FAST_MAP_DISTANCE = 48.0d;
     private static final long TELEPORT_WARNING_THROTTLE_MS = 10_000L;
     private static final long TELEPORT_WARNING_CACHE_TTL_MS = TimeUnit.MINUTES.toMillis(30L);
     private static final long TELEPORT_WARNING_CLEANUP_INTERVAL_MS = TimeUnit.MINUTES.toMillis(5L);
@@ -73,10 +82,13 @@ public class RobotManager {
     private final GhostStore ghostStore;
     private final Map<String, RobotState> robots = new ConcurrentHashMap<>();
     private final Set<UUID> onlinePlayers = ConcurrentHashMap.newKeySet();
+    private final Set<UUID> dirtyPlayers = ConcurrentHashMap.newKeySet();
     private final OrphanedEntityCleanup orphanCleanup;
     private final Map<String, Long> teleportWarningByRobot = new ConcurrentHashMap<>();
     private ScheduledFuture<?> tickTask;
     private volatile long lastRefreshMs;
+    private volatile long lastFullRefreshMs;
+    private volatile long lastViewerContextRefreshMs;
     private volatile NPCPlugin npcPlugin;
     private volatile long lastAutoUpgradeMs = 0;
     private volatile long lastTeleportWarningCleanupMs = 0L;
@@ -84,6 +96,7 @@ public class RobotManager {
     private static final long HEALTH_LOG_INTERVAL_MS = TimeUnit.MINUTES.toMillis(5L);
     private final Map<UUID, Long> lastAutoElevationMs = new ConcurrentHashMap<>();
     private final Map<UUID, Long> lastAutoSummitMs = new ConcurrentHashMap<>();
+    private volatile ViewerContext viewerContext = ViewerContext.empty();
 
     public RobotManager(AscendMapStore mapStore, AscendPlayerStore playerStore, GhostStore ghostStore) {
         this.mapStore = mapStore;
@@ -129,11 +142,14 @@ public class RobotManager {
         orphanCleanup.saveUuidsForCleanup(activeUuids);
         despawnAllRobots();
         onlinePlayers.clear();
+        dirtyPlayers.clear();
+        viewerContext = ViewerContext.empty();
     }
 
     public void onPlayerJoin(UUID playerId) {
         if (playerId != null) {
             onlinePlayers.add(playerId);
+            markPlayerDirty(playerId);
             applyRunnerVisibility(playerId);
         }
     }
@@ -141,28 +157,27 @@ public class RobotManager {
     public void onPlayerLeave(UUID playerId) {
         if (playerId != null) {
             onlinePlayers.remove(playerId);
+            dirtyPlayers.remove(playerId);
             lastAutoElevationMs.remove(playerId);
             lastAutoSummitMs.remove(playerId);
             // Despawn all robots for this player
-            despawnRobotsForPlayer(playerId);
+            removeTrackedRobotsForPlayer(playerId);
+        }
+    }
+
+    public void markPlayerDirty(UUID playerId) {
+        if (playerId != null) {
+            dirtyPlayers.add(playerId);
         }
     }
 
     public void despawnRobotsForPlayer(UUID playerId) {
-        for (String key : List.copyOf(robots.keySet())) {
-            if (key.startsWith(playerId.toString() + ":")) {
-                RobotState removed = robots.remove(key);
-                if (removed != null) {
-                    UUID entityUuid = removed.getEntityUuid();
-                    clearTeleportWarning(removed);
-                    despawnNpcForRobot(removed);
-                    queueOrphanIfDespawnFailed(entityUuid, removed);
-                }
-            }
-        }
+        markPlayerDirty(playerId);
+        removeTrackedRobotsForPlayer(playerId);
     }
 
     public void spawnRobot(UUID ownerId, String mapId) {
+        markPlayerDirty(ownerId);
         String key = robotKey(ownerId, mapId);
         RobotState state = new RobotState(ownerId, mapId);
         if (robots.putIfAbsent(key, state) != null) {
@@ -290,6 +305,7 @@ public class RobotManager {
     }
 
     public void despawnRobot(UUID ownerId, String mapId) {
+        markPlayerDirty(ownerId);
         String key = robotKey(ownerId, mapId);
         RobotState state = robots.remove(key);
         if (state != null) {
@@ -392,6 +408,7 @@ public class RobotManager {
     }
 
     public void respawnRobot(UUID ownerId, String mapId, int newStars) {
+        markPlayerDirty(ownerId);
         String key = robotKey(ownerId, mapId);
         RobotState state = robots.get(key);
         if (state == null) {
@@ -405,7 +422,11 @@ public class RobotManager {
         if (npcPlugin != null && mapStore != null) {
             AscendMap map = mapStore.getMap(mapId);
             if (map != null) {
-                spawnNpcForRobot(state, map);
+                long now = System.currentTimeMillis();
+                refreshRobotCache(state, map, now);
+                if (getViewerContext(now).isRelevantMap(mapId)) {
+                    spawnNpcForRobot(state, map);
+                }
             }
         }
     }
@@ -417,12 +438,10 @@ public class RobotManager {
                 cleanupTeleportWarningCache(now);
                 lastTeleportWarningCleanupMs = now;
             }
-            // Process any pending orphan removals first (queued from ECS tick)
             orphanCleanup.processPendingRemovals();
             refreshRobots(now);
+
             boolean doAutoOps = now - lastAutoUpgradeMs >= AUTO_UPGRADE_INTERVAL_MS;
-            // Process auto-elevation/summit BEFORE robot ticking so that
-            // robots are despawned before they can earn with pre-reset multipliers
             if (doAutoOps) {
                 try {
                     performAutoElevation(now);
@@ -435,11 +454,18 @@ public class RobotManager {
                     LOGGER.atWarning().withCause(e).log("Error in auto-summit");
                 }
             }
+
+            ViewerContext currentViewerContext = getViewerContext(now);
+            syncRobotNpcState(currentViewerContext, now);
+
+            List<AscendMap> sortedMaps = mapStore != null ? mapStore.listMapsSorted() : List.of();
+            Map<World, List<PendingTeleport>> teleportsByWorld = new HashMap<>();
             for (RobotState robot : robots.values()) {
-                tickRobot(robot, now);
-                tickRobotMovement(robot, now);
+                tickRobot(robot, now, sortedMaps, teleportsByWorld);
+                tickRobotMovement(robot, now, currentViewerContext, teleportsByWorld);
             }
-            // Auto-upgrade runners for players with the skill (throttled)
+            flushTeleportBatches(teleportsByWorld);
+
             if (doAutoOps) {
                 lastAutoUpgradeMs = now;
                 try {
@@ -449,41 +475,40 @@ public class RobotManager {
                 }
             }
         } catch (Throwable t) {
-            // Catch Throwable (not just Exception) to prevent scheduleWithFixedDelay from dying.
-            // An uncaught Error would silently kill the scheduler, stopping ALL runner processing.
             LOGGER.atSevere().withCause(t).log("Critical error in robot tick: " + t.getClass().getSimpleName());
         }
     }
 
-    private void tickRobotMovement(RobotState robot, long now) {
+    private void tickRobotMovement(RobotState robot, long now, ViewerContext currentViewerContext,
+                                   Map<World, List<PendingTeleport>> teleportsByWorld) {
+        if (!robot.isEntityDesired()) {
+            return;
+        }
         Ref<EntityStore> entityRef = robot.getEntityRef();
         if (entityRef == null || !entityRef.isValid()) {
             return;
         }
 
-        // Get ghost recording
-        GhostRecording ghost = ghostStore.getRecording(robot.getOwnerId(), robot.getMapId());
-        if (ghost == null) {
-            return; // No ghost = no movement (player hasn't completed manually)
-        }
-
-        AscendMap map = mapStore.getMap(robot.getMapId());
-        if (map == null) {
+        AscendMap map = getCachedMap(robot, now);
+        GhostRecording ghost = getCachedGhost(robot, now);
+        World world = getCachedWorld(robot, now);
+        if (map == null || ghost == null || world == null) {
             return;
         }
 
-        String worldName = map.getWorld();
-        if (worldName == null || worldName.isEmpty()) {
+        long targetMovementIntervalMs = currentViewerContext.isHighFrequencyMap(robot.getMapId())
+                ? VISIBLE_MOVEMENT_INTERVAL_MS
+                : HEADLESS_MOVEMENT_INTERVAL_MS;
+        if (robot.getMovementIntervalMs() != targetMovementIntervalMs) {
+            robot.setMovementIntervalMs(targetMovementIntervalMs);
+            robot.setNextMovementAtMs(now);
+        }
+        if (now < robot.getNextMovementAtMs()) {
             return;
         }
+        robot.setNextMovementAtMs(now + targetMovementIntervalMs);
 
-        World world = Universe.get().getWorld(worldName);
-        if (world == null) {
-            return;
-        }
-
-        // Calculate progress through the run with speed multiplier
-        long intervalMs = computeCompletionIntervalMs(map, robot.getSpeedLevel(), robot.getOwnerId());
+        long intervalMs = computeCompletionIntervalMs(map, ghost, robot.getSpeedLevel(), robot.getOwnerId());
         if (intervalMs <= 0L) {
             return;
         }
@@ -494,26 +519,14 @@ public class RobotManager {
         }
 
         long elapsed = now - lastCompletionMs;
-        double progress = Math.min(1.0, (double) elapsed / (double) intervalMs);
-
-        // Calculate speed multiplier for time compression
-        double baseTime = ghost.getCompletionTimeMs();
-        double speedMultiplier = (double) baseTime / intervalMs;
-
-        // Interpolate ghost position at current progress
+        double progress = Math.min(1.0d, (double) elapsed / (double) intervalMs);
         GhostSample sample = ghost.interpolateAt(progress);
-        double[] targetPos = sample.toPositionArray();
-        float yaw = sample.yaw();
-
-        // Teleport NPC to interpolated position with recorded rotation
-        world.execute(() -> teleportNpcWithRecordedRotation(robot, entityRef, world, targetPos, yaw));
-
-        // Update previous position for next tick
-        robot.setPreviousPosition(targetPos);
+        queueTeleport(teleportsByWorld, world, robot, entityRef, sample.x(), sample.y(), sample.z(), sample.yaw());
+        updatePreviousPosition(robot, sample.x(), sample.y(), sample.z());
     }
 
     private void teleportNpcWithRecordedRotation(RobotState robot, Ref<EntityStore> entityRef, World world,
-                                                  double[] targetPos, float yaw) {
+                                                 double x, double y, double z, float yaw) {
         if (entityRef == null || !entityRef.isValid()) {
             return;
         }
@@ -524,16 +537,17 @@ public class RobotManager {
                 return;
             }
 
-            Vector3d targetVec = new Vector3d(targetPos[0], targetPos[1], targetPos[2]);
+            Vector3d targetVec = new Vector3d(x, y, z);
             Vector3f rotation = new Vector3f(0, yaw, 0);
             store.addComponent(entityRef, Teleport.getComponentType(),
-                new Teleport(world, targetVec, rotation));
+                    new Teleport(world, targetVec, rotation));
         } catch (Exception e) {
-            logTeleportWarning(robot, world, targetPos, yaw, e);
+            logTeleportWarning(robot, world, x, y, z, yaw, e);
         }
     }
 
-    private void logTeleportWarning(RobotState robot, World world, double[] targetPos, float yaw, Exception error) {
+    private void logTeleportWarning(RobotState robot, World world, double x, double y, double z,
+                                    float yaw, Exception error) {
         UUID ownerId = robot != null ? robot.getOwnerId() : null;
         String mapId = robot != null ? robot.getMapId() : null;
         String key = (ownerId != null ? ownerId.toString() : "unknown-owner")
@@ -549,7 +563,7 @@ public class RobotManager {
                 "Runner teleport failed owner=" + ownerId
                         + " map=" + mapId
                         + " world=" + worldName
-                        + " target=" + formatPosition(targetPos)
+                        + " target=" + formatPosition(x, y, z)
                         + " yaw=" + yaw
         );
     }
@@ -566,11 +580,8 @@ public class RobotManager {
                 now - entry.getValue() >= TELEPORT_WARNING_CACHE_TTL_MS || !robots.containsKey(entry.getKey()));
     }
 
-    private String formatPosition(double[] position) {
-        if (position == null || position.length < 3) {
-            return "n/a";
-        }
-        return String.format("(%.2f, %.2f, %.2f)", position[0], position[1], position[2]);
+    private String formatPosition(double x, double y, double z) {
+        return String.format("(%.2f, %.2f, %.2f)", x, y, z);
     }
 
     private void refreshRobots(long now) {
@@ -581,145 +592,357 @@ public class RobotManager {
             return;
         }
         lastRefreshMs = now;
-        Map<UUID, AscendPlayerProgress> players = playerStore.getPlayersSnapshot();
-        Set<String> activeKeys = new HashSet<>();
-        for (Map.Entry<UUID, AscendPlayerProgress> entry : players.entrySet()) {
-            UUID playerId = entry.getKey();
-            AscendPlayerProgress progress = entry.getValue();
-            if (playerId == null || progress == null) {
-                continue;
-            }
-            // Only spawn robots for players currently in the Ascend world.
-            // This handles world transitions correctly (e.g., player went to Hub).
-            if (!isPlayerInAscendWorld(playerId)) {
-                continue;
-            }
-            for (Map.Entry<String, AscendPlayerProgress.MapProgress> mapEntry : progress.getMapProgress().entrySet()) {
-                String mapId = mapEntry.getKey();
-                AscendPlayerProgress.MapProgress mapProgress = mapEntry.getValue();
-                if (mapId == null || mapProgress == null) {
-                    continue;
-                }
-                if (!mapProgress.hasRobot()) {
-                    continue;
-                }
-                AscendMap map = mapStore.getMap(mapId);
-                if (map == null) {
-                    continue;
-                }
-                String key = robotKey(playerId, mapId);
-                RobotState existing = robots.get(key);
-                if (existing == null) {
-                    RobotState state = new RobotState(playerId, mapId);
-                    state.setSpeedLevel(mapProgress.getRobotSpeedLevel());
-                    state.setStars(mapProgress.getRobotStars());
-                    state.setLastCompletionMs(now);
-                    robots.put(key, state);
-                    // Spawn NPC for newly created robot
-                    if (npcPlugin != null) {
-                        spawnNpcForRobot(state, map);
-                    }
-                } else {
-                    existing.setSpeedLevel(mapProgress.getRobotSpeedLevel());
-                    existing.setStars(mapProgress.getRobotStars());
-                    if (existing.getLastCompletionMs() <= 0L) {
-                        existing.setLastCompletionMs(now);
-                    }
-                    // Skip if already spawning to prevent duplicates
-                    if (existing.isSpawning()) {
-                        continue;
-                    }
-                    Ref<EntityStore> existingRef = existing.getEntityRef();
-                    boolean refIsValid = existingRef != null && existingRef.isValid();
-                    boolean hasExistingEntity = existing.getEntityUuid() != null;
 
-                    if (refIsValid) {
-                        // Entity is healthy, clear any invalid timestamp
-                        existing.clearInvalid();
-                    } else if (hasExistingEntity) {
-                        // Entity was spawned but ref is now invalid (chunk unloaded?)
-                        existing.markInvalid(now);
-                        // Only force respawn if:
-                        // 1. Invalid for long enough (chunk had time to reload)
-                        // 2. Player is close to spawn point (chunk should be loaded)
-                        // This prevents respawning while the entity is just in an unloaded chunk
-                        if (existing.isInvalidForTooLong(now, AscendConstants.RUNNER_INVALID_RECOVERY_MS)) {
-                            if (isPlayerNearMapSpawn(playerId, map)) {
-                                // Mark old entity for orphan cleanup before spawning new one
-                                UUID oldUuid = existing.getEntityUuid();
-                                if (oldUuid != null) {
-                                    orphanCleanup.addOrphan(oldUuid);
-                                }
-                                existing.setEntityRef(null);
-                                existing.setEntityUuid(null);
-                                existing.clearInvalid();
-                                if (npcPlugin != null) {
-                                    spawnNpcForRobot(existing, map);
-                                }
-                            }
-                            // If player is far, don't respawn - entity might still be in unloaded chunk
-                        }
-                    } else if (npcPlugin != null && existingRef == null) {
-                        // Never spawned, spawn now
-                        spawnNpcForRobot(existing, map);
-                    }
-                }
-                activeKeys.add(key);
-            }
+        Set<UUID> playersToRefresh = drainDirtyPlayers();
+        if (now - lastFullRefreshMs >= FULL_REFRESH_INTERVAL_MS) {
+            playersToRefresh.addAll(onlinePlayers);
+            lastFullRefreshMs = now;
         }
-        // Periodic health log
-        if (now - lastHealthLogMs >= HEALTH_LOG_INTERVAL_MS) {
-            lastHealthLogMs = now;
-            int ghostCount = 0;
-            for (RobotState r : robots.values()) {
-                if (ghostStore.getRecording(r.getOwnerId(), r.getMapId()) != null) {
-                    ghostCount++;
-                }
-            }
-            LOGGER.atInfo().log("Runner health: robots=%d, activeKeys=%d, online=%d, cachedPlayers=%d, withGhost=%d, npc=%s",
-                    robots.size(), activeKeys.size(), onlinePlayers.size(), players.size(),
-                    ghostCount, npcPlugin != null ? "available" : "NULL");
-        }
-        if (activeKeys.isEmpty()) {
-            despawnAllRobots();
+        if (playersToRefresh.isEmpty()) {
+            logRobotHealth(now);
             return;
         }
+
+        for (UUID playerId : playersToRefresh) {
+            refreshPlayerRobots(playerId, now);
+        }
+        logRobotHealth(now);
+    }
+
+    private Set<UUID> drainDirtyPlayers() {
+        Set<UUID> drained = new HashSet<>();
+        for (UUID playerId : new HashSet<>(dirtyPlayers)) {
+            if (playerId != null && dirtyPlayers.remove(playerId)) {
+                drained.add(playerId);
+            }
+        }
+        return drained;
+    }
+
+    private void refreshPlayerRobots(UUID playerId, long now) {
+        if (playerId == null) {
+            return;
+        }
+        if (!onlinePlayers.contains(playerId) || !isPlayerInAscendWorld(playerId)) {
+            removeTrackedRobotsForPlayer(playerId);
+            return;
+        }
+
+        AscendPlayerProgress progress = playerStore.getPlayer(playerId);
+        if (progress == null) {
+            removeTrackedRobotsForPlayer(playerId);
+            return;
+        }
+
+        Set<String> activeKeys = new HashSet<>();
+        for (Map.Entry<String, AscendPlayerProgress.MapProgress> mapEntry : progress.getMapProgress().entrySet()) {
+            String mapId = mapEntry.getKey();
+            AscendPlayerProgress.MapProgress mapProgress = mapEntry.getValue();
+            if (mapId == null || mapProgress == null || !mapProgress.hasRobot()) {
+                continue;
+            }
+
+            AscendMap map = mapStore.getMap(mapId);
+            if (map == null) {
+                continue;
+            }
+
+            String key = robotKey(playerId, mapId);
+            RobotState state = robots.computeIfAbsent(key, ignored -> new RobotState(playerId, mapId));
+            state.setSpeedLevel(mapProgress.getRobotSpeedLevel());
+            state.setStars(mapProgress.getRobotStars());
+            if (state.getLastCompletionMs() <= 0L) {
+                state.setLastCompletionMs(now);
+            }
+            refreshRobotCache(state, map, now);
+
+            Ref<EntityStore> existingRef = state.getEntityRef();
+            boolean refIsValid = existingRef != null && existingRef.isValid();
+            boolean hasExistingEntity = state.getEntityUuid() != null;
+            if (refIsValid) {
+                state.clearInvalid();
+            } else if (hasExistingEntity) {
+                state.markInvalid(now);
+                if (state.isInvalidForTooLong(now, AscendConstants.RUNNER_INVALID_RECOVERY_MS)
+                        && isPlayerNearMapSpawn(playerId, map)) {
+                    UUID oldUuid = state.getEntityUuid();
+                    if (oldUuid != null) {
+                        orphanCleanup.addOrphan(oldUuid);
+                    }
+                    state.setEntityRef(null);
+                    state.setEntityUuid(null);
+                    state.clearInvalid();
+                }
+            }
+
+            activeKeys.add(key);
+        }
+
+        pruneStaleRobotsForPlayer(playerId, activeKeys);
+    }
+
+    private void pruneStaleRobotsForPlayer(UUID playerId, Set<String> activeKeys) {
+        String prefix = playerId.toString() + ":";
         for (String key : List.copyOf(robots.keySet())) {
-            if (!activeKeys.contains(key)) {
-                RobotState removed = robots.remove(key);
-                if (removed != null) {
-                    UUID entityUuid = removed.getEntityUuid();
-                    clearTeleportWarning(removed);
-                    despawnNpcForRobot(removed);
-                    queueOrphanIfDespawnFailed(entityUuid, removed);
+            if (!key.startsWith(prefix) || activeKeys.contains(key)) {
+                continue;
+            }
+            removeRobotState(key);
+        }
+    }
+
+    private void removeTrackedRobotsForPlayer(UUID playerId) {
+        String prefix = playerId.toString() + ":";
+        for (String key : List.copyOf(robots.keySet())) {
+            if (key.startsWith(prefix)) {
+                removeRobotState(key);
+            }
+        }
+    }
+
+    private void removeRobotState(String key) {
+        RobotState removed = robots.remove(key);
+        if (removed == null) {
+            return;
+        }
+        UUID entityUuid = removed.getEntityUuid();
+        clearTeleportWarning(removed);
+        despawnNpcForRobot(removed);
+        queueOrphanIfDespawnFailed(entityUuid, removed);
+    }
+
+    private void logRobotHealth(long now) {
+        if (now - lastHealthLogMs < HEALTH_LOG_INTERVAL_MS) {
+            return;
+        }
+        lastHealthLogMs = now;
+
+        int ghostCount = 0;
+        int visibleNpcCount = 0;
+        for (RobotState robot : robots.values()) {
+            if (getCachedGhost(robot, now) != null) {
+                ghostCount++;
+            }
+            if (robot.getEntityUuid() != null) {
+                visibleNpcCount++;
+            }
+        }
+        LOGGER.atInfo().log("Runner health: robots=%d, visibleNpcs=%d, online=%d, dirty=%d, withGhost=%d, npc=%s",
+                robots.size(), visibleNpcCount, onlinePlayers.size(), dirtyPlayers.size(),
+                ghostCount, npcPlugin != null ? "available" : "NULL");
+    }
+
+    private ViewerContext getViewerContext(long now) {
+        ViewerContext current = viewerContext;
+        if (current != null && now - lastViewerContextRefreshMs < VIEWER_CONTEXT_REFRESH_INTERVAL_MS) {
+            return current;
+        }
+        ViewerContext refreshed = buildViewerContext();
+        viewerContext = refreshed;
+        lastViewerContextRefreshMs = now;
+        return refreshed;
+    }
+
+    private ViewerContext buildViewerContext() {
+        if (mapStore == null || onlinePlayers.isEmpty()) {
+            return ViewerContext.empty();
+        }
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin == null) {
+            return ViewerContext.empty();
+        }
+
+        AscendRunTracker runTracker = plugin.getRunTracker();
+        List<AscendMap> maps = mapStore.listMapsSorted();
+        Set<String> relevantMapIds = new HashSet<>();
+        Set<String> highFrequencyMapIds = new HashSet<>();
+        double relevantDistanceSq = RELEVANT_MAP_DISTANCE * RELEVANT_MAP_DISTANCE;
+        double fastDistanceSq = FAST_MAP_DISTANCE * FAST_MAP_DISTANCE;
+
+        for (UUID playerId : onlinePlayers) {
+            PlayerRef playerRef = plugin.getPlayerRef(playerId);
+            if (playerRef == null) {
+                continue;
+            }
+            Ref<EntityStore> ref = playerRef.getReference();
+            if (ref == null || !ref.isValid()) {
+                continue;
+            }
+            Store<EntityStore> store = ref.getStore();
+            if (store == null) {
+                continue;
+            }
+            World world = store.getExternalData().getWorld();
+            if (!ModeGate.isAscendWorld(world)) {
+                continue;
+            }
+            TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
+            if (transform == null || transform.getPosition() == null) {
+                continue;
+            }
+
+            String activeMapId = runTracker != null ? runTracker.getActiveMapId(playerId) : null;
+            if (activeMapId != null) {
+                relevantMapIds.add(activeMapId);
+                highFrequencyMapIds.add(activeMapId);
+            }
+
+            Vector3d position = transform.getPosition();
+            String worldName = world != null ? world.getName() : null;
+            for (AscendMap map : maps) {
+                if (map == null || map.getId() == null) {
+                    continue;
+                }
+                if (worldName == null || !worldName.equals(map.getWorld())) {
+                    continue;
+                }
+                double dx = position.getX() - map.getStartX();
+                double dy = position.getY() - map.getStartY();
+                double dz = position.getZ() - map.getStartZ();
+                double distSq = (dx * dx) + (dy * dy) + (dz * dz);
+                if (distSq <= relevantDistanceSq) {
+                    relevantMapIds.add(map.getId());
+                }
+                if (distSq <= fastDistanceSq) {
+                    highFrequencyMapIds.add(map.getId());
                 }
             }
         }
+
+        return new ViewerContext(relevantMapIds, highFrequencyMapIds);
+    }
+
+    private void syncRobotNpcState(ViewerContext currentViewerContext, long now) {
+        for (RobotState robot : robots.values()) {
+            syncRobotNpcState(robot, currentViewerContext, now);
+        }
+    }
+
+    private void syncRobotNpcState(RobotState robot, ViewerContext currentViewerContext, long now) {
+        AscendMap map = getCachedMap(robot, now);
+        World world = getCachedWorld(robot, now);
+        boolean shouldHaveNpc = npcPlugin != null
+                && map != null
+                && world != null
+                && currentViewerContext.isRelevantMap(robot.getMapId());
+        robot.setEntityDesired(shouldHaveNpc);
+
+        Ref<EntityStore> entityRef = robot.getEntityRef();
+        boolean refIsValid = entityRef != null && entityRef.isValid();
+        boolean hasEntityUuid = robot.getEntityUuid() != null;
+
+        if (shouldHaveNpc) {
+            if (refIsValid) {
+                robot.clearInvalid();
+                return;
+            }
+            if (!hasEntityUuid && !robot.isSpawning()) {
+                spawnNpcForRobot(robot, map);
+            }
+            return;
+        }
+
+        if (!refIsValid && !hasEntityUuid) {
+            return;
+        }
+        UUID entityUuid = robot.getEntityUuid();
+        clearTeleportWarning(robot);
+        despawnNpcForRobot(robot);
+        queueOrphanIfDespawnFailed(entityUuid, robot);
+    }
+
+    private void flushTeleportBatches(Map<World, List<PendingTeleport>> teleportsByWorld) {
+        for (Map.Entry<World, List<PendingTeleport>> entry : teleportsByWorld.entrySet()) {
+            World world = entry.getKey();
+            List<PendingTeleport> teleports = entry.getValue();
+            if (world == null || teleports == null || teleports.isEmpty()) {
+                continue;
+            }
+            world.execute(() -> {
+                for (PendingTeleport teleport : teleports) {
+                    teleportNpcWithRecordedRotation(teleport.robot(), teleport.entityRef(), world,
+                            teleport.x(), teleport.y(), teleport.z(), teleport.yaw());
+                }
+            });
+        }
+    }
+
+    private void queueTeleport(Map<World, List<PendingTeleport>> teleportsByWorld, World world, RobotState robot,
+                               Ref<EntityStore> entityRef, double x, double y, double z, float yaw) {
+        if (world == null || entityRef == null || !entityRef.isValid()) {
+            return;
+        }
+        teleportsByWorld.computeIfAbsent(world, ignored -> new ArrayList<>())
+                .add(new PendingTeleport(robot, entityRef, x, y, z, yaw));
+    }
+
+    private void updatePreviousPosition(RobotState robot, double x, double y, double z) {
+        double[] previousPosition = robot.getPreviousPosition();
+        if (previousPosition == null || previousPosition.length < 3) {
+            previousPosition = new double[3];
+            robot.setPreviousPosition(previousPosition);
+        }
+        previousPosition[0] = x;
+        previousPosition[1] = y;
+        previousPosition[2] = z;
+    }
+
+    private void refreshRobotCache(RobotState robot, AscendMap resolvedMap, long now) {
+        if (robot == null) {
+            return;
+        }
+        if (resolvedMap == null && now - robot.getCacheRefreshedAtMs() < CACHE_REFRESH_INTERVAL_MS) {
+            return;
+        }
+
+        AscendMap map = resolvedMap != null ? resolvedMap : mapStore.getMap(robot.getMapId());
+        robot.setCachedMap(map);
+        if (map == null || map.getWorld() == null || map.getWorld().isEmpty()) {
+            robot.setCachedWorld(null);
+        } else {
+            robot.setCachedWorld(Universe.get().getWorld(map.getWorld()));
+        }
+        robot.setCachedGhost(ghostStore.getRecording(robot.getOwnerId(), robot.getMapId()));
+        robot.setCacheRefreshedAtMs(now);
+    }
+
+    private AscendMap getCachedMap(RobotState robot, long now) {
+        refreshRobotCache(robot, null, now);
+        return robot.getCachedMap();
+    }
+
+    private World getCachedWorld(RobotState robot, long now) {
+        refreshRobotCache(robot, null, now);
+        return robot.getCachedWorld();
+    }
+
+    private GhostRecording getCachedGhost(RobotState robot, long now) {
+        refreshRobotCache(robot, null, now);
+        return robot.getCachedGhost();
     }
 
     private void queueOrphanIfDespawnFailed(UUID previousEntityUuid, RobotState state) {
         if (previousEntityUuid == null || state == null) {
             return;
         }
-        // If UUID remains after despawn attempt, despawn likely failed (invalid ref,
-        // chunk unload, etc). Queue for restart-safe orphan cleanup.
         if (state.getEntityUuid() == null) {
             return;
         }
         orphanCleanup.addOrphan(previousEntityUuid);
     }
 
-    private void tickRobot(RobotState robot, long now) {
+    private void tickRobot(RobotState robot, long now, List<AscendMap> maps,
+                           Map<World, List<PendingTeleport>> teleportsByWorld) {
         if (robot.isWaiting()) {
             return;
         }
-        AscendMap map = mapStore.getMap(robot.getMapId());
+        AscendMap map = getCachedMap(robot, now);
         if (map == null) {
             return;
         }
         UUID ownerId = robot.getOwnerId();
-        int speedLevel = robot.getSpeedLevel();
-        long intervalMs = computeCompletionIntervalMs(map, speedLevel, ownerId);
+        GhostRecording ghost = getCachedGhost(robot, now);
+        long intervalMs = computeCompletionIntervalMs(map, ghost, robot.getSpeedLevel(), ownerId);
         if (intervalMs <= 0L) {
             return;
         }
@@ -755,7 +978,6 @@ public class RobotManager {
         BigNumber totalMultiplierBonus = multiplierIncrement.multiply(BigNumber.fromLong(completions));
 
         // Calculate payout BEFORE adding multiplier (use current multiplier, not the new one)
-        List<AscendMap> maps = mapStore.listMapsSorted();
         BigNumber payoutPerRun = playerStore.getCompletionPayout(ownerId, maps, AscendConstants.MULTIPLIER_SLOTS, mapId, BigNumber.ZERO);
 
         BigNumber totalPayout = payoutPerRun.multiply(BigNumber.fromLong(completions));
@@ -776,16 +998,11 @@ public class RobotManager {
 
         // Teleport NPC back to start after completion and reset previous position
         Ref<EntityStore> entityRef = robot.getEntityRef();
-        if (entityRef != null && entityRef.isValid()) {
-            String worldName = map.getWorld();
-            if (worldName != null && !worldName.isEmpty()) {
-                World world = Universe.get().getWorld(worldName);
-                if (world != null) {
-                    double[] startPosArr = {map.getStartX(), map.getStartY(), map.getStartZ()};
-                    world.execute(() -> teleportNpcWithRecordedRotation(robot, entityRef, world, startPosArr, map.getStartRotY()));
-                    robot.setPreviousPosition(null);  // Reset for new run
-                }
-            }
+        World world = getCachedWorld(robot, now);
+        if (entityRef != null && entityRef.isValid() && world != null) {
+            queueTeleport(teleportsByWorld, world, robot, entityRef,
+                    map.getStartX(), map.getStartY(), map.getStartZ(), map.getStartRotY());
+            robot.setPreviousPosition(null);
         }
     }
 
@@ -1179,10 +1396,17 @@ public class RobotManager {
         if (map == null) {
             return -1L;
         }
+        GhostRecording ghost = ghostStore.getRecording(ownerId, map.getId());
+        return computeCompletionIntervalMs(map, ghost, speedLevel, ownerId);
+    }
+
+    private long computeCompletionIntervalMs(AscendMap map, GhostRecording ghost, int speedLevel, UUID ownerId) {
+        if (map == null) {
+            return -1L;
+        }
 
         // Use player's PB time as base (from ghost recording)
         long base;
-        GhostRecording ghost = ghostStore.getRecording(ownerId, map.getId());
         if (ghost != null) {
             base = ghost.getCompletionTimeMs();
         } else {
@@ -1315,6 +1539,23 @@ public class RobotManager {
         double pz = pos.getZ();
         double distSq = (px - mapX) * (px - mapX) + (py - mapY) * (py - mapY) + (pz - mapZ) * (pz - mapZ);
         return distSq <= CHUNK_LOAD_DISTANCE * CHUNK_LOAD_DISTANCE;
+    }
+
+    private record PendingTeleport(RobotState robot, Ref<EntityStore> entityRef,
+                                   double x, double y, double z, float yaw) {}
+
+    private record ViewerContext(Set<String> relevantMapIds, Set<String> highFrequencyMapIds) {
+        static ViewerContext empty() {
+            return new ViewerContext(Set.of(), Set.of());
+        }
+
+        boolean isRelevantMap(String mapId) {
+            return mapId != null && relevantMapIds.contains(mapId);
+        }
+
+        boolean isHighFrequencyMap(String mapId) {
+            return mapId != null && highFrequencyMapIds.contains(mapId);
+        }
     }
 
     // Runner Cleanup (Server Restart Handling)

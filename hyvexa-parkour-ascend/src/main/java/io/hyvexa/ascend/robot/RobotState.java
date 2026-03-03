@@ -1,7 +1,10 @@
 package io.hyvexa.ascend.robot;
 
 import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.ascend.data.AscendMap;
+import io.hyvexa.common.ghost.GhostRecording;
 
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -24,6 +27,13 @@ public class RobotState {
     private final AtomicLong lastCompletionMs = new AtomicLong(0);
     private volatile double[] previousPosition;  // For calculating movement direction/rotation [x, y, z]
     private final AtomicLong invalidSinceMs = new AtomicLong(0);  // When entityRef became invalid (0 = valid)
+    private volatile AscendMap cachedMap;
+    private volatile World cachedWorld;
+    private volatile GhostRecording cachedGhost;
+    private final AtomicLong cacheRefreshedAtMs = new AtomicLong(0);
+    private final AtomicLong nextMovementAtMs = new AtomicLong(0);
+    private final AtomicLong movementIntervalMs = new AtomicLong(50L);
+    private volatile boolean entityDesired;
 
     public RobotState(UUID ownerId, String mapId) {
         this.ownerId = ownerId;
@@ -173,5 +183,61 @@ public class RobotState {
     public boolean isInvalidForTooLong(long nowMs, long thresholdMs) {
         long since = invalidSinceMs.get();
         return since > 0 && (nowMs - since) > thresholdMs;
+    }
+
+    public AscendMap getCachedMap() {
+        return cachedMap;
+    }
+
+    public void setCachedMap(AscendMap cachedMap) {
+        this.cachedMap = cachedMap;
+    }
+
+    public World getCachedWorld() {
+        return cachedWorld;
+    }
+
+    public void setCachedWorld(World cachedWorld) {
+        this.cachedWorld = cachedWorld;
+    }
+
+    public GhostRecording getCachedGhost() {
+        return cachedGhost;
+    }
+
+    public void setCachedGhost(GhostRecording cachedGhost) {
+        this.cachedGhost = cachedGhost;
+    }
+
+    public long getCacheRefreshedAtMs() {
+        return cacheRefreshedAtMs.get();
+    }
+
+    public void setCacheRefreshedAtMs(long cacheRefreshedAtMs) {
+        this.cacheRefreshedAtMs.set(cacheRefreshedAtMs);
+    }
+
+    public long getNextMovementAtMs() {
+        return nextMovementAtMs.get();
+    }
+
+    public void setNextMovementAtMs(long nextMovementAtMs) {
+        this.nextMovementAtMs.set(nextMovementAtMs);
+    }
+
+    public long getMovementIntervalMs() {
+        return movementIntervalMs.get();
+    }
+
+    public void setMovementIntervalMs(long movementIntervalMs) {
+        this.movementIntervalMs.set(Math.max(1L, movementIntervalMs));
+    }
+
+    public boolean isEntityDesired() {
+        return entityDesired;
+    }
+
+    public void setEntityDesired(boolean entityDesired) {
+        this.entityDesired = entityDesired;
     }
 }

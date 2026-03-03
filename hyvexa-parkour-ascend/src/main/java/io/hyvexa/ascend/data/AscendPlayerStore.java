@@ -708,6 +708,7 @@ public class AscendPlayerStore {
         AscendPlayerProgress.MapProgress mapProgress = getOrCreateMapProgress(playerId, mapId);
         mapProgress.setHasRobot(hasRobot);
         markDirty(playerId);
+        notifyRobotManager(playerId);
     }
 
     public int getRobotSpeedLevel(UUID playerId, String mapId) {
@@ -722,6 +723,7 @@ public class AscendPlayerStore {
         AscendPlayerProgress.MapProgress mapProgress = getOrCreateMapProgress(playerId, mapId);
         int value = mapProgress.incrementRobotSpeedLevel();
         markDirty(playerId);
+        notifyRobotManager(playerId);
         return value;
     }
 
@@ -782,6 +784,7 @@ public class AscendPlayerStore {
         int newStars = mapProgress.incrementRobotStars();
         // Evolution Power applied per star (handled in AscendConstants.getRunnerMultiplierIncrement)
         markDirty(playerId);
+        notifyRobotManager(playerId);
         return newStars;
     }
 
@@ -1042,6 +1045,7 @@ public class AscendPlayerStore {
 
         List<String> mapsWithRunners = resetMapProgress(progress, firstMapId, false, playerId);
         markDirty(playerId);
+        notifyRobotManager(playerId);
         return mapsWithRunners;
     }
 
@@ -1062,6 +1066,7 @@ public class AscendPlayerStore {
         List<String> mapsWithRunners = resetMapProgress(progress, firstMapId, false, playerId);
 
         markDirty(playerId);
+        notifyRobotManager(playerId);
         return mapsWithRunners;
     }
 
@@ -1083,7 +1088,16 @@ public class AscendPlayerStore {
 
         List<String> mapsWithRunners = resetMapProgress(progress, firstMapId, false, playerId);
         markDirty(playerId);
+        notifyRobotManager(playerId);
         return mapsWithRunners;
+    }
+
+    private void notifyRobotManager(UUID playerId) {
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin == null || plugin.getRobotManager() == null) {
+            return;
+        }
+        plugin.getRobotManager().markPlayerDirty(playerId);
     }
 
     public boolean isSessionFirstRunClaimed(UUID playerId) {
