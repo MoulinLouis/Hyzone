@@ -96,6 +96,7 @@ public class RunOrFallGameManager {
     private final Map<UUID, Integer> blinkChargesByPlayer = new ConcurrentHashMap<>();
     private final Map<UUID, Integer> blinksUsedByPlayer = new ConcurrentHashMap<>();
     private final Map<String, Integer> blockItemIdCache = new ConcurrentHashMap<>();
+    private volatile PlatformQueryIndex platformQueryIndex = PlatformQueryIndex.empty();
 
     private volatile GameState state = GameState.IDLE;
     private volatile int countdownRemaining = FORCED_COUNTDOWN_SECONDS;
@@ -187,7 +188,7 @@ public class RunOrFallGameManager {
         if (selectedMap == null || selectedMap.platforms == null || selectedMap.platforms.isEmpty()) {
             return false;
         }
-        return isInsidePlatform(selectedMap.platforms, x, y, z, blockId);
+        return isInsidePlatform(getPlatformQueryIndex(selectedMap), x, y, z, blockId);
     }
 
     public synchronized int getBrokenBlocksCount(UUID playerId) {
@@ -658,7 +659,7 @@ public class RunOrFallGameManager {
                 config = configStore.snapshot();
             }
             RunOrFallMapConfig selectedMap = resolveSelectedMap(config);
-            List<RunOrFallPlatform> platforms = selectedMap != null ? selectedMap.platforms : List.of();
+            PlatformQueryIndex platformIndex = getPlatformQueryIndex(selectedMap);
             List<UUID> toEliminate = null;
             List<UUID> disconnected = null;
             for (UUID playerId : alivePlayers) {
@@ -696,7 +697,7 @@ public class RunOrFallGameManager {
                 if (canBreakBlocks) {
                     int blockY = (int) Math.floor(position.getY() - PLAYER_BLOCK_DETECTION_Y_OFFSET);
                     queueFootprintBlocksInternal(playerId, position.getX(), position.getZ(), blockY,
-                            platforms, config.blockBreakDelaySeconds);
+                            platformIndex, config.blockBreakDelaySeconds);
                 }
             }
             if (toEliminate != null) {
@@ -1011,7 +1012,7 @@ public class RunOrFallGameManager {
     }
 
     private void queueFootprintBlocksInternal(UUID playerId, double centerX, double centerZ, int blockY,
-                                              List<RunOrFallPlatform> platforms, double delaySeconds) {
+                                              PlatformQueryIndex platformIndex, double delaySeconds) {
         if (playerId == null) {
             return;
         }
@@ -1032,7 +1033,7 @@ public class RunOrFallGameManager {
             Integer previousBlockId = RunOrFallUtils.readBlockId(world, previousKey.x, previousKey.y, previousKey.z);
             if (previousBlockId != null
                     && previousBlockId != RunOrFallUtils.AIR_BLOCK_ID
-                    && isInsidePlatform(platforms, previousKey.x, previousKey.y, previousKey.z, previousBlockId)) {
+                    && isInsidePlatform(platformIndex, previousKey.x, previousKey.y, previousKey.z, previousBlockId)) {
                 return;
             }
         }
@@ -1049,7 +1050,7 @@ public class RunOrFallGameManager {
                 if (currentId == null || currentId == RunOrFallUtils.AIR_BLOCK_ID) {
                     continue;
                 }
-                if (!isInsidePlatform(platforms, x, blockY, z, currentId)) {
+                if (!isInsidePlatform(platformIndex, x, blockY, z, currentId)) {
                     continue;
                 }
                 double dx = centerX - (x + 0.5d);
@@ -1241,25 +1242,94 @@ public class RunOrFallGameManager {
         return "Unknown";
     }
 
-    private boolean isInsidePlatform(List<RunOrFallPlatform> platforms, int x, int y, int z, int blockId) {
-        for (RunOrFallPlatform platform : platforms) {
-            if (platform != null && platform.contains(x, y, z) && matchesPlatformBlockId(platform, blockId)) {
+    private PlatformQueryIndex getPlatformQueryIndex(RunOrFallMapConfig map) {
+        int signature = computePlatformSignature(map);
+        String mapId = map != null ? map.id : null;
+        PlatformQueryIndex cached = platformQueryIndex;
+        if (cached.matches(mapId, signature)) {
+            return cached;
+        }
+        PlatformQueryIndex rebuilt = buildPlatformQueryIndex(map, mapId, signature);
+        platformQueryIndex = rebuilt;
+        return rebuilt;
+    }
+
+    private PlatformQueryIndex buildPlatformQueryIndex(RunOrFallMapConfig map, String mapId, int signature) {
+        if (map == null || map.platforms == null || map.platforms.isEmpty()) {
+            return PlatformQueryIndex.empty();
+        }
+        Map<Integer, Map<Long, List<IndexedPlatform>>> byLayer = new ConcurrentHashMap<>();
+        for (RunOrFallPlatform platform : map.platforms) {
+            if (platform == null) {
+                continue;
+            }
+            IndexedPlatform indexedPlatform = new IndexedPlatform(platform, resolvePlatformTargetBlockId(platform));
+            int minChunkX = Math.floorDiv(platform.minX, 16);
+            int maxChunkX = Math.floorDiv(platform.maxX, 16);
+            int minChunkZ = Math.floorDiv(platform.minZ, 16);
+            int maxChunkZ = Math.floorDiv(platform.maxZ, 16);
+            for (int y = platform.minY; y <= platform.maxY; y++) {
+                Map<Long, List<IndexedPlatform>> byChunk =
+                        byLayer.computeIfAbsent(y, ignored -> new ConcurrentHashMap<>());
+                for (int chunkX = minChunkX; chunkX <= maxChunkX; chunkX++) {
+                    for (int chunkZ = minChunkZ; chunkZ <= maxChunkZ; chunkZ++) {
+                        long chunkKey = ChunkUtil.indexChunkFromBlock(chunkX * 16, chunkZ * 16);
+                        byChunk.computeIfAbsent(chunkKey, ignored -> new ArrayList<>()).add(indexedPlatform);
+                    }
+                }
+            }
+        }
+        Map<Integer, Map<Long, List<IndexedPlatform>>> immutableByLayer = new ConcurrentHashMap<>();
+        for (Map.Entry<Integer, Map<Long, List<IndexedPlatform>>> layerEntry : byLayer.entrySet()) {
+            Map<Long, List<IndexedPlatform>> immutableByChunk = new ConcurrentHashMap<>();
+            for (Map.Entry<Long, List<IndexedPlatform>> chunkEntry : layerEntry.getValue().entrySet()) {
+                immutableByChunk.put(chunkEntry.getKey(), List.copyOf(chunkEntry.getValue()));
+            }
+            immutableByLayer.put(layerEntry.getKey(), Map.copyOf(immutableByChunk));
+        }
+        return new PlatformQueryIndex(mapId, signature, Map.copyOf(immutableByLayer));
+    }
+
+    private Integer resolvePlatformTargetBlockId(RunOrFallPlatform platform) {
+        if (platform == null) {
+            return null;
+        }
+        String configuredItemId = platform.targetBlockItemId;
+        if (configuredItemId == null || configuredItemId.isBlank()) {
+            return null;
+        }
+        return resolveConfiguredBlockId(configuredItemId);
+    }
+
+    private int computePlatformSignature(RunOrFallMapConfig map) {
+        if (map == null || map.platforms == null || map.platforms.isEmpty()) {
+            return 0;
+        }
+        int signature = map.id != null ? map.id.hashCode() : 0;
+        signature = 31 * signature + map.platforms.size();
+        for (RunOrFallPlatform platform : map.platforms) {
+            if (platform == null) {
+                signature = 31 * signature;
+                continue;
+            }
+            signature = 31 * signature + platform.minX;
+            signature = 31 * signature + platform.minY;
+            signature = 31 * signature + platform.minZ;
+            signature = 31 * signature + platform.maxX;
+            signature = 31 * signature + platform.maxY;
+            signature = 31 * signature + platform.maxZ;
+            signature = 31 * signature + (platform.targetBlockItemId != null ? platform.targetBlockItemId.hashCode() : 0);
+        }
+        return signature;
+    }
+
+    private boolean isInsidePlatform(PlatformQueryIndex platformIndex, int x, int y, int z, int blockId) {
+        for (IndexedPlatform platform : platformIndex.getPlatformsAt(x, y, z)) {
+            if (platform.contains(x, y, z, blockId)) {
                 return true;
             }
         }
         return false;
-    }
-
-    private boolean matchesPlatformBlockId(RunOrFallPlatform platform, int blockId) {
-        if (platform == null) {
-            return false;
-        }
-        String configuredItemId = platform.targetBlockItemId;
-        if (configuredItemId == null || configuredItemId.isBlank()) {
-            return true;
-        }
-        int configuredBlockId = resolveConfiguredBlockId(configuredItemId);
-        return configuredBlockId >= 0 && configuredBlockId == blockId;
     }
 
     private int resolveConfiguredBlockId(String blockItemId) {
@@ -1271,6 +1341,56 @@ public class RunOrFallGameManager {
             return -1;
         }
         return blockItemIdCache.computeIfAbsent(key, ignored -> BlockType.getAssetMap().getIndex(key));
+    }
+
+    private static final class PlatformQueryIndex {
+        private static final PlatformQueryIndex EMPTY = new PlatformQueryIndex(null, 0, Map.of());
+
+        private final String mapId;
+        private final int signature;
+        private final Map<Integer, Map<Long, List<IndexedPlatform>>> platformsByLayer;
+
+        private PlatformQueryIndex(String mapId, int signature, Map<Integer, Map<Long, List<IndexedPlatform>>> platformsByLayer) {
+            this.mapId = mapId;
+            this.signature = signature;
+            this.platformsByLayer = platformsByLayer;
+        }
+
+        private static PlatformQueryIndex empty() {
+            return EMPTY;
+        }
+
+        private boolean matches(String otherMapId, int otherSignature) {
+            if (mapId == null) {
+                return otherMapId == null && otherSignature == 0;
+            }
+            return mapId.equals(otherMapId) && signature == otherSignature;
+        }
+
+        private List<IndexedPlatform> getPlatformsAt(int x, int y, int z) {
+            Map<Long, List<IndexedPlatform>> byChunk = platformsByLayer.get(y);
+            if (byChunk == null) {
+                return List.of();
+            }
+            return byChunk.getOrDefault(ChunkUtil.indexChunkFromBlock(x, z), List.of());
+        }
+    }
+
+    private static final class IndexedPlatform {
+        private final RunOrFallPlatform platform;
+        private final Integer targetBlockId;
+
+        private IndexedPlatform(RunOrFallPlatform platform, Integer targetBlockId) {
+            this.platform = platform;
+            this.targetBlockId = targetBlockId;
+        }
+
+        private boolean contains(int x, int y, int z, int blockId) {
+            if (platform == null || !platform.contains(x, y, z)) {
+                return false;
+            }
+            return targetBlockId == null || targetBlockId == blockId;
+        }
     }
 
     private static CountdownSettings resolveCountdownSettings(RunOrFallConfig config) {
