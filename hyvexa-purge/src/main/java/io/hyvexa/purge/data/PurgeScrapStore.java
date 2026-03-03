@@ -109,6 +109,49 @@ public class PurgeScrapStore {
         }
     }
 
+    /**
+     * Update the cached scrap value directly. Used after transactional purchases
+     * where the DB write already succeeded.
+     */
+    public void setCachedScrap(UUID playerId, long scrap) {
+        if (playerId != null) {
+            scrapCache.put(playerId, scrap);
+        }
+    }
+
+    /**
+     * Lock and read the current scrap balance within a transaction.
+     * Caller must have called {@code conn.setAutoCommit(false)} first.
+     */
+    long selectScrapForUpdate(Connection conn, UUID playerId) throws SQLException {
+        String sql = "SELECT scrap FROM purge_player_scrap WHERE uuid = ? FOR UPDATE";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            stmt.setString(1, playerId.toString());
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getLong("scrap");
+                }
+            }
+        }
+        return 0L;
+    }
+
+    /**
+     * Update the scrap value within an existing transaction (does not touch lifetime).
+     */
+    void updateScrap(Connection conn, UUID playerId, long newScrap) throws SQLException {
+        String sql = "INSERT INTO purge_player_scrap (uuid, scrap, lifetime_scrap_earned) VALUES (?, ?, 0) "
+                + "ON DUPLICATE KEY UPDATE scrap = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            stmt.setString(1, playerId.toString());
+            stmt.setLong(2, newScrap);
+            stmt.setLong(3, newScrap);
+            stmt.executeUpdate();
+        }
+    }
+
     private void loadFromDatabase(UUID playerId) {
         if (!DatabaseManager.getInstance().isInitialized()) {
             return;

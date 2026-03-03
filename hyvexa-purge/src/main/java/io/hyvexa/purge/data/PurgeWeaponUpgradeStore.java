@@ -164,32 +164,94 @@ public class PurgeWeaponUpgradeStore {
         }
         int nextLevel = currentLevel + 1;
         long cost = config.getCost(weaponId, nextLevel);
-        long scrap = PurgeScrapStore.getInstance().getScrap(playerId);
-        if (scrap < cost) {
+
+        if (cost <= 0) {
+            setLevel(playerId, weaponId, nextLevel);
+            return UpgradeResult.SUCCESS;
+        }
+
+        if (!DatabaseManager.getInstance().isInitialized()) {
+            long scrap = PurgeScrapStore.getInstance().getScrap(playerId);
+            if (scrap < cost) {
+                return UpgradeResult.NOT_ENOUGH_SCRAP;
+            }
+            PurgeScrapStore.getInstance().removeScrap(playerId, cost);
+            setLevel(playerId, weaponId, nextLevel);
+            return UpgradeResult.SUCCESS;
+        }
+
+        PurgeScrapStore scrapStore = PurgeScrapStore.getInstance();
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                long currentScrap = scrapStore.selectScrapForUpdate(conn, playerId);
+                if (currentScrap < cost) {
+                    conn.rollback();
+                    return UpgradeResult.NOT_ENOUGH_SCRAP;
+                }
+                scrapStore.updateScrap(conn, playerId, currentScrap - cost);
+                upsertWeaponLevel(conn, playerId, weaponId, nextLevel);
+                conn.commit();
+
+                scrapStore.setCachedScrap(playerId, currentScrap - cost);
+                cache.computeIfAbsent(playerId, k -> new ConcurrentHashMap<>()).put(weaponId, nextLevel);
+                return UpgradeResult.SUCCESS;
+            } catch (SQLException e) {
+                conn.rollback();
+                LOGGER.atWarning().withCause(e).log("Failed to upgrade weapon for " + playerId);
+                return UpgradeResult.NOT_ENOUGH_SCRAP;
+            }
+        } catch (SQLException e) {
+            LOGGER.atWarning().withCause(e).log("Failed to get connection for weapon upgrade");
             return UpgradeResult.NOT_ENOUGH_SCRAP;
         }
-        // Deduct scrap
-        if (cost > 0) {
-            PurgeScrapStore.getInstance().removeScrap(playerId, cost);
-        }
-        // Increment level
-        setLevel(playerId, weaponId, nextLevel);
-        return UpgradeResult.SUCCESS;
     }
 
     public PurchaseResult purchaseWeapon(UUID playerId, String weaponId, long cost) {
         if (isOwned(playerId, weaponId)) {
             return PurchaseResult.ALREADY_OWNED;
         }
-        long scrap = PurgeScrapStore.getInstance().getScrap(playerId);
-        if (scrap < cost) {
+
+        if (cost <= 0) {
+            setLevel(playerId, weaponId, 1);
+            return PurchaseResult.SUCCESS;
+        }
+
+        if (!DatabaseManager.getInstance().isInitialized()) {
+            long scrap = PurgeScrapStore.getInstance().getScrap(playerId);
+            if (scrap < cost) {
+                return PurchaseResult.NOT_ENOUGH_SCRAP;
+            }
+            PurgeScrapStore.getInstance().removeScrap(playerId, cost);
+            setLevel(playerId, weaponId, 1);
+            return PurchaseResult.SUCCESS;
+        }
+
+        PurgeScrapStore scrapStore = PurgeScrapStore.getInstance();
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                long currentScrap = scrapStore.selectScrapForUpdate(conn, playerId);
+                if (currentScrap < cost) {
+                    conn.rollback();
+                    return PurchaseResult.NOT_ENOUGH_SCRAP;
+                }
+                scrapStore.updateScrap(conn, playerId, currentScrap - cost);
+                upsertWeaponLevel(conn, playerId, weaponId, 1);
+                conn.commit();
+
+                scrapStore.setCachedScrap(playerId, currentScrap - cost);
+                cache.computeIfAbsent(playerId, k -> new ConcurrentHashMap<>()).put(weaponId, 1);
+                return PurchaseResult.SUCCESS;
+            } catch (SQLException e) {
+                conn.rollback();
+                LOGGER.atWarning().withCause(e).log("Failed to purchase weapon for " + playerId);
+                return PurchaseResult.NOT_ENOUGH_SCRAP;
+            }
+        } catch (SQLException e) {
+            LOGGER.atWarning().withCause(e).log("Failed to get connection for weapon purchase");
             return PurchaseResult.NOT_ENOUGH_SCRAP;
         }
-        if (cost > 0) {
-            PurgeScrapStore.getInstance().removeScrap(playerId, cost);
-        }
-        setLevel(playerId, weaponId, 1);
-        return PurchaseResult.SUCCESS;
     }
 
     public void initializeDefaults(UUID playerId, Set<String> defaultWeaponIds) {
@@ -248,6 +310,19 @@ public class PurgeWeaponUpgradeStore {
             }
         } catch (SQLException e) {
             LOGGER.atWarning().withCause(e).log("Failed to load weapon upgrades for " + playerId);
+        }
+    }
+
+    private void upsertWeaponLevel(Connection conn, UUID playerId, String weaponId, int level) throws SQLException {
+        String sql = "INSERT INTO purge_weapon_upgrades (uuid, weapon_id, level) VALUES (?, ?, ?) "
+                + "ON DUPLICATE KEY UPDATE level = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            stmt.setString(1, playerId.toString());
+            stmt.setString(2, weaponId);
+            stmt.setInt(3, level);
+            stmt.setInt(4, level);
+            stmt.executeUpdate();
         }
     }
 

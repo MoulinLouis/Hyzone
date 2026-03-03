@@ -116,13 +116,17 @@ public class RunOrFallStatsStore {
 
     public synchronized void recordWin(@Nonnull UUID playerId, String playerName, long survivedMs,
                                        int blocksBroken, int blinksUsed) {
-        RunOrFallPlayerStats stats = cache.computeIfAbsent(playerId,
+        RunOrFallPlayerStats current = cache.computeIfAbsent(playerId,
                 ignored -> new RunOrFallPlayerStats(playerId, sanitizePlayerName(playerName)));
-        stats.setPlayerName(sanitizePlayerName(playerName));
-        stats.applyWin(Math.max(0L, survivedMs));
-        stats.addBlocksBroken(Math.max(0, blocksBroken));
-        stats.addBlinksUsed(Math.max(0, blinksUsed));
-        save(stats);
+        RunOrFallPlayerStats next = current.copy();
+        next.setPlayerName(sanitizePlayerName(playerName));
+        next.applyWin(Math.max(0L, survivedMs));
+        next.addBlocksBroken(Math.max(0, blocksBroken));
+        next.addBlinksUsed(Math.max(0, blinksUsed));
+
+        if (save(next)) {
+            cache.put(playerId, next);
+        }
     }
 
     public synchronized void recordLoss(@Nonnull UUID playerId, String playerName, long survivedMs) {
@@ -131,13 +135,17 @@ public class RunOrFallStatsStore {
 
     public synchronized void recordLoss(@Nonnull UUID playerId, String playerName, long survivedMs,
                                         int blocksBroken, int blinksUsed) {
-        RunOrFallPlayerStats stats = cache.computeIfAbsent(playerId,
+        RunOrFallPlayerStats current = cache.computeIfAbsent(playerId,
                 ignored -> new RunOrFallPlayerStats(playerId, sanitizePlayerName(playerName)));
-        stats.setPlayerName(sanitizePlayerName(playerName));
-        stats.applyLoss(Math.max(0L, survivedMs));
-        stats.addBlocksBroken(Math.max(0, blocksBroken));
-        stats.addBlinksUsed(Math.max(0, blinksUsed));
-        save(stats);
+        RunOrFallPlayerStats next = current.copy();
+        next.setPlayerName(sanitizePlayerName(playerName));
+        next.applyLoss(Math.max(0L, survivedMs));
+        next.addBlocksBroken(Math.max(0, blocksBroken));
+        next.addBlinksUsed(Math.max(0, blinksUsed));
+
+        if (save(next)) {
+            cache.put(playerId, next);
+        }
     }
 
     public synchronized List<RunOrFallPlayerStats> listStats() {
@@ -172,9 +180,9 @@ public class RunOrFallStatsStore {
         }
     }
 
-    private synchronized void save(RunOrFallPlayerStats stats) {
+    private synchronized boolean save(RunOrFallPlayerStats stats) {
         if (stats == null || !DatabaseManager.getInstance().isInitialized()) {
-            return;
+            return stats != null;
         }
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(UPSERT_SQL)) {
@@ -189,8 +197,10 @@ public class RunOrFallStatsStore {
             stmt.setLong(8, stats.getTotalBlocksBroken());
             stmt.setLong(9, stats.getTotalBlinksUsed());
             stmt.executeUpdate();
+            return true;
         } catch (SQLException e) {
             LOGGER.atWarning().withCause(e).log("Failed saving RunOrFall stats for " + stats.getPlayerId() + ".");
+            return false;
         }
     }
 

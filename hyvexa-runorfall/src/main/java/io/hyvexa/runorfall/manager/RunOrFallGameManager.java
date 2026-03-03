@@ -116,6 +116,7 @@ public class RunOrFallGameManager {
     private volatile long assemblingStartedAtMs;
     private volatile ScheduledFuture<?> assemblingTask;
     private final Set<UUID> assemblingPlayerIds = ConcurrentHashMap.newKeySet();
+    private final Map<UUID, Long> pendingFeatherRewards = new ConcurrentHashMap<>();
 
     public RunOrFallGameManager(RunOrFallConfigStore configStore, RunOrFallStatsStore statsStore) {
         this.configStore = configStore;
@@ -448,6 +449,10 @@ public class RunOrFallGameManager {
         brokenBlocksByPlayer.remove(playerId);
         blinkChargesByPlayer.remove(playerId);
         blinksUsedByPlayer.remove(playerId);
+        Long lostFeathers = pendingFeatherRewards.remove(playerId);
+        if (lostFeathers != null && lostFeathers > 0L) {
+            LOGGER.atWarning().log("Discarding " + lostFeathers + " pending feathers for " + playerId);
+        }
         long survivedMs = takeSurvivedMs(playerId);
         return new PlayerRemovalResult(wasInLobby, wasAlive, survivedMs, brokenBlocks, blinksUsed);
     }
@@ -1553,7 +1558,20 @@ public class RunOrFallGameManager {
             return;
         }
         if (!RunOrFallFeatherBridge.addFeathers(playerId, amount)) {
+            LOGGER.atWarning().log("RunOrFall feather reward failed for " + playerId
+                    + " (" + amount + " feathers, " + reason + ")");
+            sendToPlayer(playerId, "Reward delivery failed. Your feathers were not granted.");
+            pendingFeatherRewards.merge(playerId, amount, Long::sum);
             return;
+        }
+        // Drain any previously pending rewards for this player
+        Long pending = pendingFeatherRewards.remove(playerId);
+        if (pending != null && pending > 0L) {
+            if (RunOrFallFeatherBridge.addFeathers(playerId, pending)) {
+                sendFeatherGainMessage(playerId, amount + pending, reason + " (includes pending)");
+                return;
+            }
+            pendingFeatherRewards.merge(playerId, pending, Long::sum);
         }
         sendFeatherGainMessage(playerId, amount, reason);
     }

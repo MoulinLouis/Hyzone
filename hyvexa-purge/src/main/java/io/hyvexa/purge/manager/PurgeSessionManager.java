@@ -24,6 +24,8 @@ import io.hyvexa.purge.data.PurgePlayerStats;
 import io.hyvexa.purge.data.PurgePlayerStore;
 import io.hyvexa.purge.data.PurgeScrapStore;
 import io.hyvexa.purge.data.PurgeSession;
+
+import com.hypixel.hytale.server.core.HytaleServer;
 import io.hyvexa.purge.data.PurgeSessionPlayerState;
 import io.hyvexa.purge.data.SessionState;
 import io.hyvexa.purge.hud.PurgeHudManager;
@@ -42,7 +44,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class PurgeSessionManager {
@@ -170,6 +172,8 @@ public class PurgeSessionManager {
 
             // Setup each player
             HyvexaPurgePlugin plugin = HyvexaPurgePlugin.getInstance();
+            List<UUID> setupFailures = new ArrayList<>();
+
             for (var entry : validPlayers.entrySet()) {
                 UUID pid = entry.getKey();
                 Ref<EntityStore> ref = entry.getValue();
@@ -193,18 +197,23 @@ public class PurgeSessionManager {
                         }
                         teleportToStart(ref, store, instance);
                     }
+                    hudManager.showRunHud(pid);
+                    if (ps != null && plugin != null) {
+                        String weaponId = ps.getCurrentWeaponId();
+                        String displayName = plugin.getWeaponConfigManager().getDisplayName(weaponId);
+                        hudManager.updateWeaponXpHud(pid, weaponId, displayName);
+                    }
+                    hudManager.registerComboPlayer(pid, ps);
+                    hudManager.registerKillMeter(pid, session);
+                    syncPlayerHealthHud(pid, ref);
                 } catch (Exception e) {
+                    setupFailures.add(pid);
                     LOGGER.atWarning().withCause(e).log("Failed to setup player " + pid);
                 }
-                hudManager.showRunHud(pid);
-                if (ps != null && plugin != null) {
-                    String weaponId = ps.getCurrentWeaponId();
-                    String displayName = plugin.getWeaponConfigManager().getDisplayName(weaponId);
-                    hudManager.updateWeaponXpHud(pid, weaponId, displayName);
-                }
-                hudManager.registerComboPlayer(pid, ps);
-                hudManager.registerKillMeter(pid, session);
-                syncPlayerHealthHud(pid, ref);
+            }
+
+            if (!setupFailures.isEmpty()) {
+                throw new IllegalStateException("Aborting purge start; failed players: " + setupFailures);
             }
 
             // Start countdown
@@ -380,20 +389,22 @@ public class PurgeSessionManager {
         // Step 4: Release instance only after all world cleanup completes.
         CompletableFuture<Void> allCleanup = CompletableFuture.allOf(
                 cleanupFutures.toArray(new CompletableFuture[0]));
-        allCleanup.orTimeout(CLEANUP_TIMEOUT_SECONDS, TimeUnit.SECONDS).whenComplete((unused, throwable) -> {
+
+        allCleanup.whenComplete((unused, throwable) -> {
             if (throwable != null) {
-                Throwable cause = unwrapCompletionCause(throwable);
-                if (cause instanceof TimeoutException) {
-                    LOGGER.atWarning().log("Cleanup timeout for session " + sessionId
-                            + " after " + CLEANUP_TIMEOUT_SECONDS
-                            + "s; releasing instance with pending cleanup.");
-                } else {
-                    LOGGER.atWarning().withCause(cause).log("Cleanup failed for session " + sessionId);
-                }
+                LOGGER.atWarning().withCause(unwrapCompletionCause(throwable))
+                        .log("Cleanup failed for session " + sessionId);
             }
             runSafe("release instance", () -> instanceManager.releaseInstance(session.getInstanceId()));
             LOGGER.atInfo().log("Session " + sessionId + " stopped (" + reason + ")");
         });
+
+        HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
+            if (!allCleanup.isDone()) {
+                LOGGER.atWarning().log("Cleanup still running for session " + sessionId
+                        + " after " + CLEANUP_TIMEOUT_SECONDS + "s");
+            }
+        }, CLEANUP_TIMEOUT_SECONDS, TimeUnit.SECONDS);
     }
 
     // --- cleanupPlayer ---
@@ -557,8 +568,8 @@ public class PurgeSessionManager {
                 if (playerRef != null) {
                     Player player = store.getComponent(ref, Player.getComponentType());
                     if (player != null) {
-                        player.openCustomUIPage(new PurgeGameOverPage(
-                                playerRef, wave, kills, totalScrap, bestCombo, reason));
+                        player.getPageManager().openCustomPage(ref, store,
+                                new PurgeGameOverPage(playerRef, wave, kills, totalScrap, bestCombo, reason));
                         return;
                     }
                 }

@@ -117,13 +117,45 @@ public class PurgeClassStore {
         if (isUnlocked(playerId, purgeClass)) {
             return PurchaseResult.ALREADY_UNLOCKED;
         }
-        long scrap = PurgeScrapStore.getInstance().getScrap(playerId);
-        if (scrap < purgeClass.getUnlockCost()) {
+        long cost = purgeClass.getUnlockCost();
+
+        if (!DatabaseManager.getInstance().isInitialized()) {
+            // In-memory fallback (dev/testing)
+            long scrap = PurgeScrapStore.getInstance().getScrap(playerId);
+            if (scrap < cost) {
+                return PurchaseResult.NOT_ENOUGH_SCRAP;
+            }
+            PurgeScrapStore.getInstance().removeScrap(playerId, cost);
+            unlockClass(playerId, purgeClass);
+            return PurchaseResult.SUCCESS;
+        }
+
+        PurgeScrapStore scrapStore = PurgeScrapStore.getInstance();
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                long currentScrap = scrapStore.selectScrapForUpdate(conn, playerId);
+                if (currentScrap < cost) {
+                    conn.rollback();
+                    return PurchaseResult.NOT_ENOUGH_SCRAP;
+                }
+                scrapStore.updateScrap(conn, playerId, currentScrap - cost);
+                insertClassUnlock(conn, playerId, purgeClass);
+                conn.commit();
+
+                // Update caches only after successful commit
+                scrapStore.setCachedScrap(playerId, currentScrap - cost);
+                unlockedCache.computeIfAbsent(playerId, k -> ConcurrentHashMap.newKeySet()).add(purgeClass);
+                return PurchaseResult.SUCCESS;
+            } catch (SQLException e) {
+                conn.rollback();
+                LOGGER.atWarning().withCause(e).log("Failed to purchase class for " + playerId);
+                return PurchaseResult.NOT_ENOUGH_SCRAP;
+            }
+        } catch (SQLException e) {
+            LOGGER.atWarning().withCause(e).log("Failed to get connection for class purchase");
             return PurchaseResult.NOT_ENOUGH_SCRAP;
         }
-        PurgeScrapStore.getInstance().removeScrap(playerId, purgeClass.getUnlockCost());
-        unlockClass(playerId, purgeClass);
-        return PurchaseResult.SUCCESS;
     }
 
     public void evictPlayer(UUID playerId) {
@@ -183,6 +215,16 @@ public class PurgeClassStore {
             LOGGER.atWarning().withCause(e).log("Failed to load selected class for " + playerId);
         }
         selectedLoaded.put(playerId, Boolean.TRUE);
+    }
+
+    private void insertClassUnlock(Connection conn, UUID playerId, PurgeClass purgeClass) throws SQLException {
+        String sql = "INSERT IGNORE INTO purge_player_classes (uuid, class_id) VALUES (?, ?)";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            stmt.setString(1, playerId.toString());
+            stmt.setString(2, purgeClass.name());
+            stmt.executeUpdate();
+        }
     }
 
     private void persistUnlock(UUID playerId, PurgeClass purgeClass) {
