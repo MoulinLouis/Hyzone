@@ -248,25 +248,42 @@ public class DiscordLinkStore {
         if (playerId == null || !DatabaseManager.getInstance().isInitialized()) {
             return false;
         }
-        // Atomic claim: only one caller can succeed for a given player
+        // Atomic: claim flag + vexa grant in one transaction so neither can succeed alone
         String claimSql = "UPDATE discord_links SET vexa_rewarded = TRUE WHERE player_uuid = ? AND vexa_rewarded = FALSE";
-        int updated;
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(claimSql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.setString(1, playerId.toString());
-            updated = stmt.executeUpdate();
+        String awardSql = "INSERT INTO player_vexa (uuid, vexa) VALUES (?, ?) "
+                + "ON DUPLICATE KEY UPDATE vexa = vexa + ?";
+
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement claimStmt = conn.prepareStatement(claimSql);
+                 PreparedStatement awardStmt = conn.prepareStatement(awardSql)) {
+                DatabaseManager.applyQueryTimeout(claimStmt);
+                DatabaseManager.applyQueryTimeout(awardStmt);
+
+                claimStmt.setString(1, playerId.toString());
+                if (claimStmt.executeUpdate() == 0) {
+                    conn.rollback();
+                    return false;
+                }
+
+                awardStmt.setString(1, playerId.toString());
+                awardStmt.setLong(2, VEXA_REWARD);
+                awardStmt.setLong(3, VEXA_REWARD);
+                awardStmt.executeUpdate();
+
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            }
         } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to claim vexa reward for " + playerId);
+            LOGGER.atWarning().withCause(e).log("Failed to claim discord reward for " + playerId);
             return false;
         }
 
-        if (updated == 0) {
-            return false;
-        }
+        // Evict VexaStore cache so next balance read picks up the committed DB value
+        VexaStore.getInstance().evictPlayer(playerId);
 
-        // Award vexa after successful atomic claim
-        VexaStore.getInstance().addVexa(playerId, VEXA_REWARD);
         LOGGER.atInfo().log("Awarded " + VEXA_REWARD + " vexa to " + playerId + " for Discord link");
         try {
             io.hyvexa.core.analytics.AnalyticsStore.getInstance().logEvent(playerId, "discord_link", "{}");

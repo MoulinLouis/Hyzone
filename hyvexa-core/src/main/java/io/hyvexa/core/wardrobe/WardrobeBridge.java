@@ -4,8 +4,14 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.permissions.PermissionsModule;
 import io.hyvexa.core.analytics.AnalyticsStore;
 import io.hyvexa.core.cosmetic.CosmeticStore;
+import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.core.economy.CurrencyBridge;
+import io.hyvexa.core.economy.FeatherStore;
+import io.hyvexa.core.economy.VexaStore;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -217,9 +223,8 @@ public class WardrobeBridge {
     }
 
     /**
-     * Purchase a wardrobe cosmetic: deduct currency, record ownership, grant permission.
-     * Uses CosmeticShopConfigStore for price/currency and CurrencyBridge for deduction.
-     * Returns a typed result for the caller.
+     * Purchase a wardrobe cosmetic: deduct currency + record ownership atomically in one
+     * DB transaction, then grant permission and log analytics outside the transaction.
      */
     public PurchaseResult purchase(UUID playerId, String cosmeticId) {
         WardrobeCosmeticDef def = findById(cosmeticId);
@@ -241,17 +246,72 @@ public class WardrobeBridge {
             return error("Not enough " + currency + "! You need " + price + " but have " + balance + ".");
         }
 
-        if (!CurrencyBridge.deduct(currency, playerId, price)) {
-            return error("Not enough " + currency + "! You need " + price + " but have "
-                    + CurrencyBridge.getBalance(currency, playerId) + ".");
+        // Atomic: deduct currency + insert cosmetic ownership in one transaction
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                if (!deductCurrencyRow(conn, currency, playerId, price)) {
+                    conn.rollback();
+                    return error("Not enough " + currency + "! You need " + price + " but have "
+                            + CurrencyBridge.getBalance(currency, playerId) + ".");
+                }
+                insertOwnedCosmetic(conn, playerId, cosmeticId);
+                conn.commit();
+            } catch (Exception e) {
+                conn.rollback();
+                throw e;
+            }
+        } catch (SQLException e) {
+            LOGGER.atWarning().withCause(e).log("Failed to purchase cosmetic " + cosmeticId + " for " + playerId);
+            return error("Purchase failed, please try again.");
         }
+
+        // Update in-memory caches after successful commit
+        evictCurrencyCache(currency, playerId);
         CosmeticStore.getInstance().purchaseCosmetic(playerId, cosmeticId);
+
         grantPermission(playerId, def.permissionNode());
         AnalyticsStore.getInstance().logPurchase(playerId, cosmeticId, price, currency, "wardrobe");
 
         LOGGER.atInfo().log("Player " + playerId + " purchased wardrobe cosmetic: " + cosmeticId);
         return success("Purchased " + def.displayName() + " for " + price + " "
                 + currency + "! Open /wardrobe to equip it.");
+    }
+
+    private boolean deductCurrencyRow(Connection conn, String currency, UUID playerId, long price) throws SQLException {
+        String table;
+        String column;
+        switch (currency) {
+            case "vexa" -> { table = "player_vexa"; column = "vexa"; }
+            case "feathers" -> { table = "player_feathers"; column = "feathers"; }
+            default -> throw new IllegalArgumentException("Unknown currency: " + currency);
+        }
+        String sql = "UPDATE " + table + " SET " + column + " = " + column + " - ? "
+                + "WHERE uuid = ? AND " + column + " >= ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            stmt.setLong(1, price);
+            stmt.setString(2, playerId.toString());
+            stmt.setLong(3, price);
+            return stmt.executeUpdate() > 0;
+        }
+    }
+
+    private void insertOwnedCosmetic(Connection conn, UUID playerId, String cosmeticId) throws SQLException {
+        String sql = "INSERT IGNORE INTO player_cosmetics (player_uuid, cosmetic_id, equipped) VALUES (?, ?, FALSE)";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            stmt.setString(1, playerId.toString());
+            stmt.setString(2, cosmeticId);
+            stmt.executeUpdate();
+        }
+    }
+
+    private void evictCurrencyCache(String currency, UUID playerId) {
+        switch (currency) {
+            case "vexa" -> VexaStore.getInstance().evictPlayer(playerId);
+            case "feathers" -> FeatherStore.getInstance().evictPlayer(playerId);
+        }
     }
 
     /**

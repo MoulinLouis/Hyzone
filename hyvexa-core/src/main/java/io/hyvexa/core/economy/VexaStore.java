@@ -90,14 +90,22 @@ public class VexaStore {
 
     /**
      * Set the vexa count for a player. Updates cache and persists immediately.
+     * Rolls back cache if persistence fails.
      */
     public void setVexa(UUID playerId, long vexa) {
         if (playerId == null) {
             return;
         }
         long safe = Math.max(0, vexa);
+        CachedBalance previous = cache.get(playerId);
         cache.put(playerId, new CachedBalance(safe, versionCounter.incrementAndGet()));
-        persistToDatabase(playerId, safe);
+        if (!persistToDatabase(playerId, safe)) {
+            if (previous == null) {
+                cache.remove(playerId);
+            } else {
+                cache.put(playerId, previous);
+            }
+        }
     }
 
     /**
@@ -123,16 +131,25 @@ public class VexaStore {
     /**
      * Atomically modify a player's vexa balance. The compute function receives the current
      * balance and returns the desired new balance. Persists the result to the database.
+     * Rolls back cache if persistence fails.
      */
     private long modifyVexa(UUID playerId, java.util.function.LongUnaryOperator compute) {
         long[] result = new long[1];
+        CachedBalance previous = cache.get(playerId);
         cache.compute(playerId, (uuid, cached) -> {
             long current = (cached != null && !cached.isStale()) ? cached.value : loadFromDatabase(uuid);
             long newTotal = Math.max(0, compute.applyAsLong(current));
             result[0] = newTotal;
             return new CachedBalance(newTotal, versionCounter.incrementAndGet());
         });
-        persistToDatabase(playerId, result[0]);
+        if (!persistToDatabase(playerId, result[0])) {
+            if (previous == null) {
+                cache.remove(playerId);
+            } else {
+                cache.put(playerId, previous);
+            }
+            return previous != null ? previous.value : 0;
+        }
         return result[0];
     }
 
@@ -201,9 +218,9 @@ public class VexaStore {
         return 0;
     }
 
-    private void persistToDatabase(UUID playerId, long vexa) {
+    private boolean persistToDatabase(UUID playerId, long vexa) {
         if (!DatabaseManager.getInstance().isInitialized()) {
-            return;
+            return false;
         }
         String sql = "INSERT INTO player_vexa (uuid, vexa) VALUES (?, ?) "
                 + "ON DUPLICATE KEY UPDATE vexa = ?";
@@ -214,8 +231,10 @@ public class VexaStore {
             stmt.setLong(2, vexa);
             stmt.setLong(3, vexa);
             stmt.executeUpdate();
+            return true;
         } catch (SQLException e) {
             LOGGER.atWarning().withCause(e).log("Failed to persist vexa for " + playerId);
+            return false;
         }
     }
 
