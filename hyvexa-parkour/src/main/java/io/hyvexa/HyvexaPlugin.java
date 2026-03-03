@@ -27,6 +27,8 @@ import io.hyvexa.core.trail.TrailManager;
 
 
 import io.hyvexa.core.economy.FeatherStore;
+import io.hyvexa.core.vote.VoteConfig;
+import io.hyvexa.core.vote.VoteManager;
 import io.hyvexa.parkour.data.GlobalMessageStore;
 import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.data.MedalRewardStore;
@@ -162,6 +164,7 @@ public class HyvexaPlugin extends JavaPlugin {
     private ScheduledFuture<?> stalePlayerSweepTask;
     private ScheduledFuture<?> teleportDebugTask;
     private ScheduledFuture<?> duelTickTask;
+    private ScheduledFuture<?> votePollingTask;
     private GhostStore ghostStore;
     private GhostRecorder ghostRecorder;
     private GhostNpcManager ghostNpcManager;
@@ -229,6 +232,12 @@ public class HyvexaPlugin extends JavaPlugin {
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("Failed to initialize AnalyticsStore");
         }
+        try {
+            VoteConfig voteConfig = VoteConfig.load();
+            VoteManager.getInstance().initialize(voteConfig);
+        } catch (Exception e) {
+            LOGGER.atWarning().withCause(e).log("Failed to initialize VoteManager");
+        }
         this.collisionManager = new CollisionManager();
         this.mapStore = new MapStore();
         this.mapStore.syncLoad();
@@ -293,6 +302,9 @@ public class HyvexaPlugin extends JavaPlugin {
         duelTickTask = scheduleTick("duel tick", this::tickDuel,
                 ParkourTimingConstants.DUEL_TICK_INTERVAL_MS, ParkourTimingConstants.DUEL_TICK_INTERVAL_MS,
                 TimeUnit.MILLISECONDS);
+        int votePollInterval = VoteManager.getInstance().getPollIntervalSeconds();
+        votePollingTask = scheduleTick("vote polling", VoteManager.getInstance()::pollAllPlayers,
+                votePollInterval, votePollInterval, TimeUnit.SECONDS);
         announcementManager.refreshChatAnnouncements();
         scheduleLeaderboardHologramRefresh();
 
@@ -358,6 +370,7 @@ public class HyvexaPlugin extends JavaPlugin {
                     }
                     if (playerRef != null) {
                         scheduleDiscordReadyTasks(ref, store, playerRef, parkourWorld);
+                        scheduleVoteReadyTasks(ref, store, playerRef);
                     }
                     // Hide all existing ghost NPCs from the newly connected player
                     if (parkourWorld) {
@@ -425,6 +438,9 @@ public class HyvexaPlugin extends JavaPlugin {
 
                 try { if (petManager != null) { petManager.despawnPet(playerId); } }
                 catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: PetManager"); }
+
+                try { VoteManager.getInstance().unregisterPlayer(playerId); }
+                catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: VoteManager"); }
 
                 try {
                     Long sessionStart = playtimeManager.getSessionStart(playerId);
@@ -723,6 +739,43 @@ public class HyvexaPlugin extends JavaPlugin {
         linkStore.updateRankIfLinkedAsync(playerId, rank)
                 .exceptionally(ex -> {
                     LOGGER.atWarning().withCause(ex).log("Discord rank sync failed");
+                    return null;
+                });
+    }
+
+    private void scheduleVoteReadyTasks(Ref<EntityStore> ref, Store<EntityStore> store,
+                                        PlayerRef playerRef) {
+        if (ref == null || store == null || playerRef == null) {
+            return;
+        }
+        UUID playerId = playerRef.getUuid();
+        String username = playerRef.getUsername();
+        if (playerId == null || username == null) {
+            return;
+        }
+        World world = store.getExternalData() != null ? store.getExternalData().getWorld() : null;
+        if (world == null) {
+            return;
+        }
+        VoteManager.getInstance().registerPlayer(playerId, username);
+        VoteManager.getInstance().checkAndRewardAsync(playerId)
+                .thenAcceptAsync(count -> {
+                    if (count <= 0 || !ref.isValid()) {
+                        return;
+                    }
+                    Player player = ref.getStore().getComponent(ref, Player.getComponentType());
+                    if (player != null) {
+                        int total = count * VoteManager.getInstance().getRewardPerVote();
+                        String suffix = count > 1 ? " (x" + count + ")" : "";
+                        player.sendMessage(Message.join(
+                                Message.raw("You received ").color("#a3e635"),
+                                Message.raw(total + " feathers").color("#4ade80").bold(true),
+                                Message.raw(" for voting!" + suffix).color("#a3e635")
+                        ));
+                    }
+                }, world)
+                .exceptionally(ex -> {
+                    LOGGER.atWarning().withCause(ex).log("Vote check on login failed");
                     return null;
                 });
     }
@@ -1035,6 +1088,10 @@ public class HyvexaPlugin extends JavaPlugin {
         try { cancelScheduled(stalePlayerSweepTask); } catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: stalePlayerSweepTask"); }
         try { cancelScheduled(teleportDebugTask); } catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: teleportDebugTask"); }
         try { cancelScheduled(duelTickTask); } catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: duelTickTask"); }
+        try { cancelScheduled(votePollingTask); } catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: votePollingTask"); }
+
+        try { VoteManager.getInstance().shutdown(); }
+        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: VoteManager"); }
 
         try { if (ghostRecorder != null) { ghostRecorder.stop(); } }
         catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: ghostRecorder"); }
