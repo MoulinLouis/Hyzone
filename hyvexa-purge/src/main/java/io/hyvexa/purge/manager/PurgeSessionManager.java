@@ -27,6 +27,7 @@ import io.hyvexa.purge.data.PurgeSession;
 import io.hyvexa.purge.data.PurgeSessionPlayerState;
 import io.hyvexa.purge.data.SessionState;
 import io.hyvexa.purge.hud.PurgeHudManager;
+import io.hyvexa.purge.mission.PurgeMissionManager;
 import io.hyvexa.purge.ui.PurgeGameOverPage;
 import io.hyvexa.purge.util.PurgePlayerNameResolver;
 
@@ -59,6 +60,7 @@ public class PurgeSessionManager {
     private final PurgeHudManager hudManager;
     private volatile PurgeUpgradeManager upgradeManager;
     private volatile PurgeClassManager classManager;
+    private volatile PurgeMissionManager missionManager;
     private final AtomicInteger sessionCounter = new AtomicInteger(0);
 
     public PurgeSessionManager(PurgePartyManager partyManager,
@@ -78,6 +80,10 @@ public class PurgeSessionManager {
 
     public void setClassManager(PurgeClassManager classManager) {
         this.classManager = classManager;
+    }
+
+    public void setMissionManager(PurgeMissionManager missionManager) {
+        this.missionManager = missionManager;
     }
 
     private String nextSessionId() {
@@ -432,6 +438,12 @@ public class PurgeSessionManager {
         int totalScrap = scrap + bonusScrap;
         if (totalScrap > 0) {
             PurgeScrapStore.getInstance().addScrap(playerId, totalScrap);
+        }
+
+        PurgeMissionManager mm = missionManager;
+        if (mm != null) {
+            int bestCombo = playerState != null ? playerState.getBestCombo() : 0;
+            mm.recordSessionResult(playerId, session.getCurrentWave(), kills, bestCombo);
         }
     }
 

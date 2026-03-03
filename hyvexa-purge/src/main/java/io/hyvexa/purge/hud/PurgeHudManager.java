@@ -16,6 +16,8 @@ import io.hyvexa.purge.data.PurgeUpgradeState;
 import io.hyvexa.purge.data.PurgeUpgradeType;
 import io.hyvexa.purge.data.WeaponXpStore;
 import io.hyvexa.purge.manager.WeaponXpManager;
+import io.hyvexa.purge.mission.DailyMissionRotation;
+import io.hyvexa.purge.mission.PurgeMissionManager;
 
 import io.hyvexa.purge.data.PurgeSession;
 import io.hyvexa.purge.data.PurgeSessionPlayerState;
@@ -35,6 +37,7 @@ public class PurgeHudManager {
     private final ConcurrentHashMap<UUID, PurgeSessionPlayerState> comboPlayers = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, PurgeSession> killMeterPlayers = new ConcurrentHashMap<>();
     private volatile long lastKillMeterTickMs;
+    private volatile PurgeMissionManager missionManager;
 
     public void attach(PlayerRef playerRef, Player player) {
         if (playerRef == null || player == null) {
@@ -51,6 +54,10 @@ public class PurgeHudManager {
         player.getHudManager().hideHudComponents(playerRef, HudComponent.Compass);
         player.getHudManager().showHudComponents(playerRef, HudComponent.Health, HudComponent.Stamina);
         MultiHudBridge.showIfNeeded(hud);
+    }
+
+    public void setMissionManager(PurgeMissionManager missionManager) {
+        this.missionManager = missionManager;
     }
 
     public PurgeHud getHud(UUID playerId) {
@@ -126,6 +133,7 @@ public class PurgeHudManager {
     public void showRunHud(UUID playerId) {
         PurgeHud hud = getHud(playerId);
         if (hud != null) {
+            hud.setMissionPanelVisible(false);
             hud.setWaveStatusVisible(true);
             hud.setPlayerHealthVisible(true);
         }
@@ -138,6 +146,7 @@ public class PurgeHudManager {
             hud.setPlayerHealthVisible(false);
             hud.setWaveStatusVisible(false);
             hud.hideWeaponXp();
+            hud.setMissionPanelVisible(true);
             hud.resetCache();
         }
     }
@@ -289,6 +298,11 @@ public class PurgeHudManager {
             hud.updatePlayerCount(playerCount);
             hud.updateVexa(VexaStore.getInstance().getVexa(playerId));
             hud.updateScrap(PurgeScrapStore.getInstance().getScrap(playerId));
+            // Update mission panel for idle players (not in a session)
+            PurgeMissionManager mm = missionManager;
+            if (mm != null && !comboPlayers.containsKey(playerId)) {
+                updateMissionHud(hud, mm, playerId);
+            }
         }
         if (toRemove != null) {
             for (UUID playerId : toRemove) {
@@ -298,5 +312,27 @@ public class PurgeHudManager {
                 killMeterPlayers.remove(playerId);
             }
         }
+    }
+
+    private void updateMissionHud(PurgeHud hud, PurgeMissionManager mm, UUID playerId) {
+        PurgeMissionManager.MissionStatus[] statuses = mm.getMissionStatus(playerId);
+        String[] descs = new String[3];
+        String[] progress = new String[3];
+        String[] rewards = new String[3];
+        for (int i = 0; i < 3; i++) {
+            PurgeMissionManager.MissionStatus s = statuses[i];
+            descs[i] = s.mission().description();
+            if (s.claimed()) {
+                progress[i] = "DONE";
+                rewards[i] = "";
+            } else {
+                int current = Math.min(s.currentProgress(), s.mission().target());
+                progress[i] = current + " / " + s.mission().target();
+                rewards[i] = "+" + s.mission().scrapReward() + "s";
+            }
+        }
+        long seconds = DailyMissionRotation.getSecondsUntilReset();
+        String timer = DailyMissionRotation.formatTimeRemaining(seconds);
+        hud.updateMissions(descs, progress, rewards, timer);
     }
 }

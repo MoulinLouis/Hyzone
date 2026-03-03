@@ -31,6 +31,11 @@ public class PurgeHud extends CustomUIHud {
     private int lastKmPlayerCount = -1;
     private final String[] lastKmNames = new String[5];
     private final int[] lastKmKills = new int[]{-1, -1, -1, -1, -1};
+    private boolean missionPanelVisible = true;
+    private final String[] lastMissionDesc = new String[3];
+    private final String[] lastMissionProg = new String[3];
+    private final String[] lastMissionReward = new String[3];
+    private String lastMissionTimer = null;
 
     public PurgeHud(PlayerRef playerRef) {
         super(playerRef);
@@ -273,6 +278,46 @@ public class PurgeHud extends CustomUIHud {
         }
     }
 
+    public void updateMissions(String[] descs, String[] progress, String[] rewards, String timer) {
+        UICommandBuilder cmd = new UICommandBuilder();
+        boolean changed = false;
+        for (int i = 0; i < 3; i++) {
+            if (!descs[i].equals(lastMissionDesc[i])) {
+                lastMissionDesc[i] = descs[i];
+                cmd.set("#MissionDesc" + i + ".Text", descs[i]);
+                changed = true;
+            }
+            if (!progress[i].equals(lastMissionProg[i])) {
+                lastMissionProg[i] = progress[i];
+                cmd.set("#MissionProg" + i + ".Text", progress[i]);
+                changed = true;
+            }
+            if (!rewards[i].equals(lastMissionReward[i])) {
+                lastMissionReward[i] = rewards[i];
+                cmd.set("#MissionReward" + i + ".Text", rewards[i]);
+                changed = true;
+            }
+        }
+        if (!timer.equals(lastMissionTimer)) {
+            lastMissionTimer = timer;
+            cmd.set("#MissionTimer.Text", timer);
+            changed = true;
+        }
+        if (changed) {
+            update(false, cmd);
+        }
+    }
+
+    public void setMissionPanelVisible(boolean visible) {
+        if (visible == missionPanelVisible) {
+            return;
+        }
+        missionPanelVisible = visible;
+        UICommandBuilder cmd = new UICommandBuilder();
+        cmd.set("#MissionPanel.Visible", visible);
+        update(false, cmd);
+    }
+
     public void resetCache() {
         lastWave = -1;
         lastAlive = -1;
@@ -299,6 +344,13 @@ public class PurgeHud extends CustomUIHud {
         for (int i = 0; i < 5; i++) {
             lastKmNames[i] = null;
             lastKmKills[i] = -1;
+        }
+        missionPanelVisible = true;
+        lastMissionTimer = null;
+        for (int i = 0; i < 3; i++) {
+            lastMissionDesc[i] = null;
+            lastMissionProg[i] = null;
+            lastMissionReward[i] = null;
         }
     }
 }

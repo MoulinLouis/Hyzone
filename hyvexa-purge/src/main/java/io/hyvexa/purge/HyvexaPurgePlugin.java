@@ -42,6 +42,8 @@ import io.hyvexa.purge.interaction.PurgeOrangeOrbInteraction;
 import io.hyvexa.purge.interaction.PurgeRedOrbInteraction;
 import io.hyvexa.purge.interaction.PurgeStartInteraction;
 import io.hyvexa.common.util.MultiHudBridge;
+import io.hyvexa.purge.mission.PurgeMissionManager;
+import io.hyvexa.purge.mission.PurgeMissionStore;
 import io.hyvexa.purge.manager.PurgeClassManager;
 import io.hyvexa.purge.manager.PurgeInstanceManager;
 import io.hyvexa.purge.manager.PurgePartyManager;
@@ -146,6 +148,8 @@ public class HyvexaPurgePlugin extends JavaPlugin {
         catch (Exception e) { LOGGER.atWarning().withCause(e).log("Failed to initialize WeaponXpStore"); }
         try { PurgeClassStore.getInstance().initialize(); }
         catch (Exception e) { LOGGER.atWarning().withCause(e).log("Failed to initialize PurgeClassStore"); }
+        try { PurgeMissionStore.getInstance().initialize(); }
+        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Failed to initialize PurgeMissionStore"); }
 
         // Create managers
         instanceManager = new PurgeInstanceManager();
@@ -166,6 +170,9 @@ public class HyvexaPurgePlugin extends JavaPlugin {
         waveManager.setClassManager(classManager);
         sessionManager.setUpgradeManager(upgradeManager);
         sessionManager.setClassManager(classManager);
+        PurgeMissionManager missionManager = new PurgeMissionManager();
+        sessionManager.setMissionManager(missionManager);
+        hudManager.setMissionManager(missionManager);
 
         // Register damage modifier system
         registerPurgeDamageModifierSystem();
@@ -277,6 +284,8 @@ public class HyvexaPurgePlugin extends JavaPlugin {
             catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: WeaponXpStore"); }
             try { PurgeClassStore.getInstance().evictPlayer(playerId); }
             catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: PurgeClassStore"); }
+            try { PurgeMissionStore.getInstance().evictPlayer(playerId); }
+            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: PurgeMissionStore"); }
             try { MultiHudBridge.evictPlayer(playerId); }
             catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: MultiHudBridge"); }
         });
