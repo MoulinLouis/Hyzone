@@ -284,7 +284,7 @@ public class PurgeHudManager {
             }
             PurgeHud hud = entry.getValue();
             hud.updatePlayerCount(playerCount);
-            hud.updateVexa(VexaStore.getInstance().getVexa(playerId));
+            hud.updateVexa(VexaStore.getInstance().getCachedVexa(playerId));
             hud.updateScrap(PurgeScrapStore.getInstance().getScrap(playerId));
             // Update mission panel for idle players (not in a session)
             PurgeMissionManager mm = missionManager;

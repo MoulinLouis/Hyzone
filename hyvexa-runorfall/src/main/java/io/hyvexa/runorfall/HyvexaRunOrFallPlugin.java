@@ -382,8 +382,8 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
         int blinkCharges = gameManager != null ? gameManager.getBlinkCharges(playerId) : 0;
         hud.updateBlinkCharges(blinkCharges, showBrokenBlocks);
         hud.updatePlayerCount();
-        hud.updateVexa(VexaStore.getInstance().getVexa(playerId));
-        hud.updateFeathers(RunOrFallFeatherBridge.getFeathers(playerId));
+        hud.updateVexa(VexaStore.getInstance().getCachedVexa(playerId));
+        hud.updateFeathers(RunOrFallFeatherBridge.getCachedFeathers(playerId));
     }
 
     private void attachHiddenRunOrFallHud(PlayerRef playerRef, Player player) {
@@ -481,8 +481,8 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
             }
             RunOrFallHud hud = entry.getValue();
             hud.updatePlayerCount();
-            hud.updateVexa(VexaStore.getInstance().getVexa(playerId));
-            hud.updateFeathers(RunOrFallFeatherBridge.getFeathers(playerId));
+            hud.updateVexa(VexaStore.getInstance().getCachedVexa(playerId));
+            hud.updateFeathers(RunOrFallFeatherBridge.getCachedFeathers(playerId));
             int brokenBlocks = gameManager != null ? gameManager.getBrokenBlocksCount(playerId) : 0;
             boolean showBrokenBlocks = gameManager != null && gameManager.isInActiveRound(playerId);
             hud.updateBrokenBlocks(brokenBlocks, showBrokenBlocks);

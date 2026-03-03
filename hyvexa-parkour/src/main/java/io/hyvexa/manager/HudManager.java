@@ -148,8 +148,8 @@ public class HudManager {
         int totalMaps = mapStore.getMapCount();
         hud.updateInfo(playerRef.getUsername(), rankName, completedMaps, totalMaps, SERVER_IP_DISPLAY);
         hud.updatePlayerCount();
-        hud.updateVexa(VexaStore.getInstance().getVexa(playerId));
-        hud.updateFeathers(FeatherStore.getInstance().getFeathers(playerId));
+        hud.updateVexa(VexaStore.getInstance().getCachedVexa(playerId));
+        hud.updateFeathers(FeatherStore.getInstance().getCachedFeathers(playerId));
         updateAdvancedHudData(ref, store, playerRef, hud);
         if (!running) {
             if (wasRunning) {

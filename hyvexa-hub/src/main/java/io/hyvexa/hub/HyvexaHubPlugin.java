@@ -259,7 +259,7 @@ public class HyvexaHubPlugin extends JavaPlugin {
             }
             if (now >= lifecycle.readyAt()) {
                 lifecycle.hud().updatePlayerCount();
-                lifecycle.hud().updateVexa(VexaStore.getInstance().getVexa(playerId));
+                lifecycle.hud().updateVexa(VexaStore.getInstance().getCachedVexa(playerId));
             }
         }
         for (UUID playerId : toRemove) {

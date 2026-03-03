@@ -71,6 +71,10 @@ public class VexaStore extends CachedCurrencyStore {
         return getBalance(playerId);
     }
 
+    public long getCachedVexa(UUID playerId) {
+        return getCachedBalance(playerId);
+    }
+
     public void setVexa(UUID playerId, long vexa) {
         setBalance(playerId, vexa);
     }

@@ -60,6 +60,10 @@ public class FeatherStore extends CachedCurrencyStore {
         return getBalance(playerId);
     }
 
+    public long getCachedFeathers(UUID playerId) {
+        return getCachedBalance(playerId);
+    }
+
     public void setFeathers(UUID playerId, long feathers) {
         setBalance(playerId, feathers);
     }

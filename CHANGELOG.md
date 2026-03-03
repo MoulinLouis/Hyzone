@@ -7,6 +7,7 @@
 - **Ascend: Runner tick load reduced under concurrency** - Runner state now refreshes from dirty player updates instead of a constant full snapshot scan, caches map/world/ghost data per robot, batches teleports per world tick, and only keeps NPCs spawned near active viewers while preserving runner payouts.
 - **Core: Trail fan-out load reduced under concurrency** - World particle and model particle trails now share one 50 ms scheduler/viewer snapshot, batch each world's emissions into one world-thread closure, cull distant viewers, reuse constant payloads, and stop the scheduler when no active trails remain.
 - **Purge: Scrap rewards no longer persist on the zombie-death hot path** - Kill rewards now accumulate in memory, flush on a short background interval and session boundaries, and reconcile safely with transactional class/weapon purchases.
+- **Core: HUD currency reads no longer cause periodic DB refresh storms** - HUDs now use cache-only balance reads for active players, refresh TTL is much longer, and any remaining balance refreshes run on dedicated threads instead of the shared scheduler.
 
 ### Added
 - **Purge: Class system** - 4 unlockable classes (Scavenger, Tank, Assault, Medic) purchased with scrap. Each provides passive stat boosts and a unique perk. Scavenger earns +30% scrap with kill streak bonuses; Tank gets +40 HP with 20% damage reduction; Assault deals +20% damage with streak ramp; Medic has passive regen and heal-on-kill. Managed via `/purge class` commands.

@@ -1,7 +1,6 @@
 package io.hyvexa.core.economy;
 
 import com.hypixel.hytale.logger.HytaleLogger;
-import com.hypixel.hytale.server.core.HytaleServer;
 import io.hyvexa.core.db.DatabaseManager;
 
 import java.sql.Connection;
@@ -11,6 +10,9 @@ import java.sql.SQLException;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.LongUnaryOperator;
 
 /**
@@ -19,7 +21,13 @@ import java.util.function.LongUnaryOperator;
  */
 abstract class CachedCurrencyStore {
 
-    private static final long CACHE_TTL_MS = 5_000;
+    private static final long CACHE_TTL_MS = 30 * 60 * 1_000L;
+    private static final AtomicInteger REFRESH_THREAD_ID = new AtomicInteger(1);
+    private static final ExecutorService DB_REFRESH_EXECUTOR = Executors.newFixedThreadPool(2, runnable -> {
+        Thread t = new Thread(runnable, "CurrencyRefresh-" + REFRESH_THREAD_ID.getAndIncrement());
+        t.setDaemon(true);
+        return t;
+    });
 
     private final ConcurrentHashMap<UUID, CachedBalance> cache = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Boolean> refreshInFlight = new ConcurrentHashMap<>();
@@ -75,14 +83,12 @@ abstract class CachedCurrencyStore {
         if (playerId == null) {
             return 0;
         }
+        long value = getCachedBalance(playerId);
         CachedBalance cached = cache.get(playerId);
-        if (cached == null) {
-            return loadAndCacheBalance(playerId);
-        }
-        if (cached.isStale()) {
+        if (cached != null && cached.isStale()) {
             refreshFromDatabaseAsync(playerId, cached.cachedAt);
         }
-        return cached.value;
+        return value;
     }
 
     public void setBalance(UUID playerId, long amount) {
@@ -122,6 +128,17 @@ abstract class CachedCurrencyStore {
         }
     }
 
+    protected long getCachedBalance(UUID playerId) {
+        if (playerId == null) {
+            return 0;
+        }
+        CachedBalance cached = cache.get(playerId);
+        if (cached != null) {
+            return cached.value;
+        }
+        return loadAndCacheBalance(playerId);
+    }
+
     // ── Internal ─────────────────────────────────────────────────────────
 
     private long loadAndCacheBalance(UUID playerId) {
@@ -134,7 +151,7 @@ abstract class CachedCurrencyStore {
         if (playerId == null || refreshInFlight.putIfAbsent(playerId, Boolean.TRUE) != null) {
             return;
         }
-        CompletableFuture.supplyAsync(() -> loadFromDatabase(playerId), HytaleServer.SCHEDULED_EXECUTOR)
+        CompletableFuture.supplyAsync(() -> loadFromDatabase(playerId), DB_REFRESH_EXECUTOR)
                 .handle((value, throwable) -> {
                     try {
                         if (throwable != null) {

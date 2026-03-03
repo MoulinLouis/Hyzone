@@ -14,6 +14,7 @@ public final class RunOrFallFeatherBridge {
     private static volatile boolean available;
     private static Object featherStoreInstance;
     private static Method getFeathersMethod;
+    private static Method getCachedFeathersMethod;
     private static Method addFeathersMethod;
     private static Method evictPlayerMethod;
 
@@ -36,6 +37,26 @@ public final class RunOrFallFeatherBridge {
         } catch (Exception e) {
             available = false;
             LOGGER.atWarning().withCause(e).log("RunOrFall Feather bridge read failed.");
+        }
+        return 0L;
+    }
+
+    public static long getCachedFeathers(UUID playerId) {
+        if (playerId == null) {
+            return 0L;
+        }
+        ensureResolved();
+        if (!available) {
+            return 0L;
+        }
+        try {
+            Object value = getCachedFeathersMethod.invoke(featherStoreInstance, playerId);
+            if (value instanceof Number number) {
+                return Math.max(0L, number.longValue());
+            }
+        } catch (Exception e) {
+            available = false;
+            LOGGER.atWarning().withCause(e).log("RunOrFall Feather bridge cached read failed.");
         }
         return 0L;
     }
@@ -87,10 +108,16 @@ public final class RunOrFallFeatherBridge {
                 Method getInstanceMethod = featherStoreClass.getMethod("getInstance");
                 featherStoreInstance = getInstanceMethod.invoke(null);
                 getFeathersMethod = featherStoreClass.getMethod("getFeathers", UUID.class);
+                try {
+                    getCachedFeathersMethod = featherStoreClass.getMethod("getCachedFeathers", UUID.class);
+                } catch (NoSuchMethodException ignored) {
+                    getCachedFeathersMethod = getFeathersMethod;
+                }
                 addFeathersMethod = featherStoreClass.getMethod("addFeathers", UUID.class, long.class);
                 evictPlayerMethod = featherStoreClass.getMethod("evictPlayer", UUID.class);
                 available = featherStoreInstance != null
                         && getFeathersMethod != null
+                        && getCachedFeathersMethod != null
                         && addFeathersMethod != null
                         && evictPlayerMethod != null;
             } catch (Exception e) {
