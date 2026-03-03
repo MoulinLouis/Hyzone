@@ -79,9 +79,6 @@ public final class MapUnlockHelper {
         return new UnlockResult(false, mapProgress);
     }
 
-    /**
-     * Check if a map is the first map (lowest displayOrder).
-     */
     public static boolean isFirstMap(AscendMap map, AscendMapStore mapStore) {
         if (map == null || mapStore == null) {
             return false;

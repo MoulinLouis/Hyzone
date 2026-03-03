@@ -122,25 +122,11 @@ public class AscensionManager {
      * @return true if successfully unlocked, false otherwise
      */
     public boolean tryUnlockSkillNode(UUID playerId, SkillTreeNode node) {
+        if (!canUnlockSkillNode(playerId, node)) {
+            return false;
+        }
+
         AscendPlayerProgress progress = playerStore.getPlayer(playerId);
-        if (progress == null) {
-            return false;
-        }
-
-        // Already unlocked?
-        if (progress.hasSkillNode(node)) {
-            return false;
-        }
-
-        // Has enough points for this node?
-        if (progress.getAvailableSkillPoints() < node.getCost()) {
-            return false;
-        }
-
-        // Check prerequisites (OR logic)
-        if (!node.hasPrerequisitesSatisfied(progress.getUnlockedSkillNodes())) {
-            return false;
-        }
 
         // Unlock the node
         progress.unlockSkillNode(node);
@@ -164,9 +150,6 @@ public class AscensionManager {
         return true;
     }
 
-    /**
-     * Checks if a skill node can be unlocked by the player.
-     */
     public boolean canUnlockSkillNode(UUID playerId, SkillTreeNode node) {
         AscendPlayerProgress progress = playerStore.getPlayer(playerId);
         if (progress == null) {

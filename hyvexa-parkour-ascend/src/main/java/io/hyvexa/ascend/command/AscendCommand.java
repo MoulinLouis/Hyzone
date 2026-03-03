@@ -16,6 +16,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.achievement.AchievementManager;
+import io.hyvexa.ascend.interaction.AbstractAscendPageInteraction;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.common.ghost.GhostStore;
@@ -38,12 +39,13 @@ import io.hyvexa.ascend.ui.SkillTreePage;
 import io.hyvexa.ascend.ui.StatsPage;
 import io.hyvexa.ascend.ui.SummitPage;
 import io.hyvexa.ascend.ui.TranscendencePage;
-import io.hyvexa.ascend.util.AscendModeGate;
+import io.hyvexa.common.WorldConstants;
 import io.hyvexa.common.util.CommandUtils;
+import io.hyvexa.common.util.ModeGate;
 import io.hyvexa.common.util.SystemMessageUtils;
+import io.hyvexa.core.state.ModeMessages;
 
 import javax.annotation.Nonnull;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -121,7 +123,7 @@ public class AscendCommand extends AbstractAsyncCommand {
     private static ParkourAscendPlugin requirePlugin(Player player) {
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         if (plugin == null) {
-            player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading."));
+            player.sendMessage(AbstractAscendPageInteraction.LOADING_MESSAGE);
             return null;
         }
         return plugin;
@@ -156,7 +158,7 @@ public class AscendCommand extends AbstractAsyncCommand {
             if (playerRef == null) {
                 return;
             }
-            if (AscendModeGate.denyIfNotAscend(ctx, world)) {
+            if (ModeGate.denyIfNot(ctx, world, WorldConstants.WORLD_ASCEND, ModeMessages.MESSAGE_ENTER_ASCEND)) {
                 return;
             }
 
@@ -181,36 +183,24 @@ public class AscendCommand extends AbstractAsyncCommand {
                 }
             }
 
-            Runnable handler = buildSubCommandHandlers(player, playerRef, ref, store, args).get(subCommand);
-            if (handler != null) {
-                handler.run();
-                return;
+            switch (subCommand) {
+                case "stats" -> openStatsPage(player, playerRef, ref, store);
+                case "elevate" -> openElevationPage(player, playerRef, ref, store);
+                case "summit" -> openSummitPage(player, playerRef, ref, store, args);
+                case "ascension", "ascend" -> openAscensionPage(player, playerRef, ref, store);
+                case "skills" -> openSkillTreePage(player, playerRef, ref, store);
+                case "automation" -> openAutomationPage(player, playerRef, ref, store);
+                case "achievements" -> showAchievements(player, playerRef);
+                case "leaderboard" -> openLeaderboardPage(player, playerRef, ref, store);
+                case "maplb" -> openMapLeaderboardPage(player, playerRef, ref, store);
+                case "settings" -> openSettingsPage(player, playerRef, ref, store);
+                case "profile" -> openProfilePage(player, playerRef, ref, store);
+                case "help" -> openHelpPage(player, playerRef, ref, store);
+                case "challenge" -> openChallengePage(player, playerRef, ref, store);
+                case "transcend", "transcendence" -> openTranscendencePage(player, playerRef, ref, store);
+                default -> ctx.sendMessage(Message.raw(UNKNOWN_SUBCOMMAND_MESSAGE));
             }
-            ctx.sendMessage(Message.raw(UNKNOWN_SUBCOMMAND_MESSAGE));
         }, world);
-    }
-
-    private Map<String, Runnable> buildSubCommandHandlers(Player player, PlayerRef playerRef,
-                                                          Ref<EntityStore> ref, Store<EntityStore> store,
-                                                          String[] args) {
-        Map<String, Runnable> handlers = new HashMap<>();
-        handlers.put("stats", () -> openStatsPage(player, playerRef, ref, store));
-        handlers.put("elevate", () -> openElevationPage(player, playerRef, ref, store));
-        handlers.put("summit", () -> openSummitPage(player, playerRef, ref, store, args));
-        handlers.put("ascension", () -> openAscensionPage(player, playerRef, ref, store));
-        handlers.put("ascend", () -> openAscensionPage(player, playerRef, ref, store));
-        handlers.put("skills", () -> openSkillTreePage(player, playerRef, ref, store));
-        handlers.put("automation", () -> openAutomationPage(player, playerRef, ref, store));
-        handlers.put("achievements", () -> showAchievements(player, playerRef));
-        handlers.put("leaderboard", () -> openLeaderboardPage(player, playerRef, ref, store));
-        handlers.put("maplb", () -> openMapLeaderboardPage(player, playerRef, ref, store));
-        handlers.put("settings", () -> openSettingsPage(player, playerRef, ref, store));
-        handlers.put("profile", () -> openProfilePage(player, playerRef, ref, store));
-        handlers.put("help", () -> openHelpPage(player, playerRef, ref, store));
-        handlers.put("challenge", () -> openChallengePage(player, playerRef, ref, store));
-        handlers.put("transcend", () -> openTranscendencePage(player, playerRef, ref, store));
-        handlers.put("transcendence", () -> openTranscendencePage(player, playerRef, ref, store));
-        return handlers;
     }
 
     private void openTrackedPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store,
@@ -386,7 +376,7 @@ public class AscendCommand extends AbstractAsyncCommand {
         RobotManager robotManager = plugin.getRobotManager();
         GhostStore ghostStore = plugin.getGhostStore();
         if (mapStore == null || playerStore == null || runTracker == null || ghostStore == null) {
-            player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading."));
+            player.sendMessage(AbstractAscendPageInteraction.LOADING_MESSAGE);
             return;
         }
         AscendMapSelectPage page = new AscendMapSelectPage(playerRef, mapStore, playerStore, runTracker, robotManager, ghostStore);

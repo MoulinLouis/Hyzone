@@ -12,9 +12,12 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.ParkourAscendPlugin;
+import io.hyvexa.ascend.interaction.AbstractAscendPageInteraction;
 import io.hyvexa.ascend.transcendence.TranscendenceManager;
-import io.hyvexa.ascend.util.AscendModeGate;
+import io.hyvexa.common.WorldConstants;
+import io.hyvexa.common.util.ModeGate;
 import io.hyvexa.common.util.PermissionUtils;
+import io.hyvexa.core.state.ModeMessages;
 import io.hyvexa.common.util.SystemMessageUtils;
 
 import javax.annotation.Nonnull;
@@ -59,14 +62,13 @@ public class TranscendCommand extends AbstractAsyncCommand {
             if (playerRef == null) {
                 return;
             }
-            if (AscendModeGate.denyIfNotAscend(ctx, world)) {
+            if (ModeGate.denyIfNot(ctx, world, WorldConstants.WORLD_ASCEND, ModeMessages.MESSAGE_ENTER_ASCEND)) {
                 return;
             }
 
             ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
             if (plugin == null || plugin.getPlayerStore() == null || plugin.getTranscendenceManager() == null) {
-                player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading.")
-                    .color(SystemMessageUtils.SECONDARY));
+                player.sendMessage(AbstractAscendPageInteraction.LOADING_MESSAGE);
                 return;
             }
 

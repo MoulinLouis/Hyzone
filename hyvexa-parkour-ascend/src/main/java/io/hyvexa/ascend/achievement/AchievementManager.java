@@ -68,9 +68,6 @@ public class AchievementManager {
         return newlyUnlocked;
     }
 
-    /**
-     * Checks if a specific achievement's requirements are met.
-     */
     private boolean isAchievementEarned(UUID playerId, AscendPlayerProgress progress, AchievementType achievement) {
         return switch (achievement) {
             // Milestones
@@ -232,9 +229,6 @@ public class AchievementManager {
         return count;
     }
 
-    /**
-     * Gets achievement progress for display.
-     */
     public AchievementProgress getProgress(UUID playerId, AchievementType achievement) {
         AscendPlayerProgress progress = playerStore.getPlayer(playerId);
         if (progress == null) {

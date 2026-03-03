@@ -15,8 +15,10 @@ import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.hud.AscendHudManager;
 import io.hyvexa.ascend.hud.ToastType;
-import io.hyvexa.ascend.util.AscendModeGate;
+import io.hyvexa.common.WorldConstants;
 import io.hyvexa.common.util.CommandUtils;
+import io.hyvexa.common.util.ModeGate;
+import io.hyvexa.core.state.ModeMessages;
 
 import javax.annotation.Nonnull;
 import java.util.Map;
@@ -74,7 +76,7 @@ public class CatCommand extends AbstractAsyncCommand {
             if (playerRef == null) {
                 return;
             }
-            if (AscendModeGate.denyIfNotAscend(ctx, world)) {
+            if (ModeGate.denyIfNot(ctx, world, WorldConstants.WORLD_ASCEND, ModeMessages.MESSAGE_ENTER_ASCEND)) {
                 return;
             }
 

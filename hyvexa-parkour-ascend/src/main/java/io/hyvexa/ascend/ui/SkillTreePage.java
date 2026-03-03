@@ -287,12 +287,6 @@ public class SkillTreePage extends BaseAscendPage {
         }
     }
 
-    private void refreshNodeStates(Ref<EntityStore> ref, Store<EntityStore> store) {
-        UICommandBuilder updateBuilder = new UICommandBuilder();
-        updateAllNodeStates(ref, store, updateBuilder);
-        sendUpdate(updateBuilder, null, false);
-    }
-
     /**
      * Converts ENUM_NAME to PascalCase (e.g. AUTO_RUNNERS -> AutoRunners).
      */

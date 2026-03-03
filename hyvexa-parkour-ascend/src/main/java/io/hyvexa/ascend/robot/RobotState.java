@@ -166,16 +166,10 @@ public class RobotState {
         invalidSinceMs.compareAndSet(0, nowMs);
     }
 
-    /**
-     * Clear the invalid timestamp (entity is valid again).
-     */
     public void clearInvalid() {
         invalidSinceMs.set(0);
     }
 
-    /**
-     * Check if the entity has been invalid for longer than the given threshold.
-     */
     public boolean isInvalidForTooLong(long nowMs, long thresholdMs) {
         long since = invalidSinceMs.get();
         return since > 0 && (nowMs - since) > thresholdMs;

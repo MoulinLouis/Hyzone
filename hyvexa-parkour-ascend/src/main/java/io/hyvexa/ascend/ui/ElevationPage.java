@@ -115,7 +115,7 @@ public class ElevationPage extends BaseAscendPage {
         int newElevation = currentElevation + purchase.levels;
         playerStore.atomicSetElevationAndResetVolt(playerId, newElevation);
 
-        showToast(playerId, ToastType.ECONOMY, "Elevation: "
+        AscendHudManager.showToastSafe(playerId, ToastType.ECONOMY, "Elevation: "
             + AscendConstants.formatElevationMultiplier(currentElevation) + " -> "
             + AscendConstants.formatElevationMultiplier(newElevation));
 
@@ -218,13 +218,4 @@ public class ElevationPage extends BaseAscendPage {
         commandBuilder.set("#GainValue.Style.TextColor", "#9ca3af");
     }
 
-    private void showToast(UUID playerId, ToastType type, String message) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin != null) {
-            AscendHudManager hm = plugin.getHudManager();
-            if (hm != null) {
-                hm.showToast(playerId, type, message);
-            }
-        }
-    }
 }

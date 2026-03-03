@@ -76,10 +76,6 @@ public class AscendAdminCommand extends AbstractAsyncCommand {
             }
             return;
         }
-        if (args.length < 2) {
-            player.sendMessage(Message.raw("Usage: /as admin map <create|setstart|setfinish|setorder|setname|list> ... | /as admin holo <map|delete> ... | /as admin whitelist <add|remove|list> ..."));
-            return;
-        }
         String category = args[1].toLowerCase();
         if (!"map".equals(category) && !"holo".equals(category) && !"whitelist".equals(category)) {
             player.sendMessage(Message.raw("Unknown admin category. Use: /as admin map ..., /as admin holo ..., or /as admin whitelist ..."));

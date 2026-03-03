@@ -6,12 +6,13 @@ import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
+import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.SimpleInteraction;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.ParkourAscendPlugin;
-import io.hyvexa.ascend.util.AscendModeGate;
+import io.hyvexa.common.util.ModeGate;
 import io.hyvexa.core.state.ModeMessages;
 
 import javax.annotation.Nonnull;
@@ -19,7 +20,9 @@ import javax.annotation.Nonnull;
 // NOTE: Interaction handlers are instantiated by Hytale's BuilderCodec framework
 // (no-arg constructor required). Constructor injection is not possible.
 // ParkourAscendPlugin.getInstance() is centralized here instead of in each handler.
-abstract class AbstractAscendPageInteraction extends SimpleInteraction {
+public abstract class AbstractAscendPageInteraction extends SimpleInteraction {
+
+    public static final Message LOADING_MESSAGE = Message.raw("[Ascend] Ascend systems are still loading.");
 
     @Override
     public void handle(@Nonnull Ref<EntityStore> ref, boolean firstRun, float time,
@@ -33,7 +36,7 @@ abstract class AbstractAscendPageInteraction extends SimpleInteraction {
         }
         if (requiresAscendWorld()) {
             World world = store.getExternalData().getWorld();
-            if (!AscendModeGate.isAscendWorld(world)) {
+            if (!ModeGate.isAscendWorld(world)) {
                 player.sendMessage(ModeMessages.MESSAGE_ENTER_ASCEND);
                 return;
             }

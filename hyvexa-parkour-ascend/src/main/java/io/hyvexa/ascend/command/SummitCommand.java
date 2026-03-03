@@ -14,13 +14,16 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.AscendConstants.SummitCategory;
 import io.hyvexa.ascend.ParkourAscendPlugin;
+import io.hyvexa.ascend.interaction.AbstractAscendPageInteraction;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.hud.AscendHudManager;
 import io.hyvexa.ascend.hud.ToastType;
 import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.summit.SummitManager;
-import io.hyvexa.ascend.util.AscendModeGate;
+import io.hyvexa.common.WorldConstants;
 import io.hyvexa.common.math.BigNumber;
+import io.hyvexa.common.util.ModeGate;
+import io.hyvexa.core.state.ModeMessages;
 import io.hyvexa.common.util.CommandUtils;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
@@ -65,7 +68,7 @@ public class SummitCommand extends AbstractAsyncCommand {
             if (playerRef == null) {
                 return;
             }
-            if (AscendModeGate.denyIfNotAscend(ctx, world)) {
+            if (ModeGate.denyIfNot(ctx, world, WorldConstants.WORLD_ASCEND, ModeMessages.MESSAGE_ENTER_ASCEND)) {
                 return;
             }
 
@@ -86,8 +89,7 @@ public class SummitCommand extends AbstractAsyncCommand {
 
             ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
             if (plugin == null || plugin.getSummitManager() == null) {
-                player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading.")
-                    .color(SystemMessageUtils.SECONDARY));
+                player.sendMessage(AbstractAscendPageInteraction.LOADING_MESSAGE);
                 return;
             }
 

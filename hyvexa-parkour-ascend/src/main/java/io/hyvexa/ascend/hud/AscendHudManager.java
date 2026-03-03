@@ -8,11 +8,11 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants;
+import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.summit.SummitManager;
-import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 import io.hyvexa.common.math.BigNumber;
@@ -223,6 +223,16 @@ public class AscendHudManager {
         previewPlayers.remove(playerId);
         economyCache.remove(playerId);
         runnerBarCache.remove(playerId);
+    }
+
+    public static void showToastSafe(UUID playerId, ToastType type, String message) {
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin != null) {
+            AscendHudManager hm = plugin.getHudManager();
+            if (hm != null) {
+                hm.showToast(playerId, type, message);
+            }
+        }
     }
 
     public void showToast(UUID playerId, ToastType type, String message) {

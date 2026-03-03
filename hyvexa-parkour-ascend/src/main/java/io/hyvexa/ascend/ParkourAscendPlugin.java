@@ -35,11 +35,8 @@ import io.hyvexa.ascend.ascension.AscensionManager;
 import io.hyvexa.ascend.ascension.ChallengeManager;
 import io.hyvexa.ascend.holo.AscendHologramManager;
 import io.hyvexa.ascend.hud.AscendHudManager;
-import io.hyvexa.ascend.interaction.AscendDevCinderclothInteraction;
-import io.hyvexa.ascend.interaction.AscendDevCottonInteraction;
-import io.hyvexa.ascend.interaction.AscendDevShadoweaveInteraction;
-import io.hyvexa.ascend.interaction.AscendDevSilkInteraction;
-import io.hyvexa.ascend.interaction.AscendDevStormsilkInteraction;
+import io.hyvexa.ascend.interaction.AbstractAscendPageInteraction;
+import io.hyvexa.ascend.interaction.AscendDevInteraction;
 import io.hyvexa.ascend.interaction.AscendLeaveInteraction;
 import io.hyvexa.ascend.interaction.AscendResetInteraction;
 import io.hyvexa.ascend.interaction.AscendTranscendenceInteraction;
@@ -50,12 +47,16 @@ import io.hyvexa.ascend.transcendence.TranscendenceManager;
 import io.hyvexa.ascend.tutorial.TutorialTriggerService;
 import io.hyvexa.ascend.passive.PassiveEarningsManager;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
+import io.hyvexa.ascend.ui.AscendHelpPage;
+import io.hyvexa.ascend.ui.AscendLeaderboardPage;
 import io.hyvexa.ascend.ui.AscendMapSelectPage;
 import io.hyvexa.ascend.ui.AscendMusicPage;
+import io.hyvexa.ascend.ui.AscendProfilePage;
+import io.hyvexa.ascend.ui.AutomationPage;
 import io.hyvexa.ascend.ui.AscendSettingsPage;
 import io.hyvexa.ascend.ui.BaseAscendPage;
 import io.hyvexa.ascend.util.AscendInventoryUtils;
-import io.hyvexa.ascend.util.AscendModeGate;
+import io.hyvexa.common.util.ModeGate;
 import io.hyvexa.common.whitelist.AscendWhitelistManager;
 import io.hyvexa.common.whitelist.WhitelistRegistry;
 import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
@@ -559,7 +560,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
     }
 
     public boolean isAscendWorld(World world) {
-        return AscendModeGate.isAscendWorld(world);
+        return ModeGate.isAscendWorld(world);
     }
 
     private void ensureMenuItemsWhenReady(Player player, World expectedWorld, int attemptsRemaining) {
@@ -618,20 +619,65 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
     private void registerInteractionCodecs() {
         var registry = this.getCodecRegistry(Interaction.CODEC);
+        // Cindercloth -> AscendMapSelectPage
         registry.register("Ascend_Dev_Cindercloth_Interaction",
-            AscendDevCinderclothInteraction.class, AscendDevCinderclothInteraction.CODEC);
+            AscendDevInteraction.class, AscendDevInteraction.codec(() -> new AscendDevInteraction(
+                (ref, store, playerRef, plugin) -> new AscendMapSelectPage(playerRef,
+                    plugin.getMapStore(), plugin.getPlayerStore(), plugin.getRunTracker(),
+                    plugin.getRobotManager(), plugin.getGhostStore()),
+                (plugin, player) -> {
+                    if (plugin.getMapStore() == null || plugin.getPlayerStore() == null
+                            || plugin.getRunTracker() == null || plugin.getGhostStore() == null) {
+                        player.sendMessage(AbstractAscendPageInteraction.LOADING_MESSAGE);
+                        return false;
+                    }
+                    return true;
+                }, true, true)));
+        // Stormsilk -> AscendLeaderboardPage
         registry.register("Ascend_Dev_Stormsilk_Interaction",
-            AscendDevStormsilkInteraction.class, AscendDevStormsilkInteraction.CODEC);
+            AscendDevInteraction.class, AscendDevInteraction.codec(() -> new AscendDevInteraction(
+                (ref, store, playerRef, plugin) -> new AscendLeaderboardPage(playerRef,
+                    plugin.getPlayerStore()),
+                (plugin, player) -> {
+                    if (plugin.getPlayerStore() == null) {
+                        player.sendMessage(AbstractAscendPageInteraction.LOADING_MESSAGE);
+                        return false;
+                    }
+                    return true;
+                }, false, true)));
+        // Cotton -> AutomationPage
         registry.register("Ascend_Dev_Cotton_Interaction",
-            AscendDevCottonInteraction.class, AscendDevCottonInteraction.CODEC);
+            AscendDevInteraction.class, AscendDevInteraction.codec(() -> new AscendDevInteraction(
+                (ref, store, playerRef, plugin) -> new AutomationPage(playerRef,
+                    plugin.getPlayerStore(), plugin.getAscensionManager()),
+                (plugin, player) -> {
+                    if (plugin.getPlayerStore() == null || plugin.getAscensionManager() == null) {
+                        player.sendMessage(AbstractAscendPageInteraction.LOADING_MESSAGE);
+                        return false;
+                    }
+                    return true;
+                }, true, true)));
+        // Shadoweave -> AscendHelpPage
         registry.register("Ascend_Dev_Shadoweave_Interaction",
-            AscendDevShadoweaveInteraction.class, AscendDevShadoweaveInteraction.CODEC);
+            AscendDevInteraction.class, AscendDevInteraction.codec(() -> new AscendDevInteraction(
+                (ref, store, playerRef, plugin) -> new AscendHelpPage(playerRef),
+                (plugin, player) -> true, false, false)));
         registry.register("Ascend_Reset_Interaction",
             AscendResetInteraction.class, AscendResetInteraction.CODEC);
         registry.register("Ascend_Leave_Interaction",
             AscendLeaveInteraction.class, AscendLeaveInteraction.CODEC);
+        // Silk -> AscendProfilePage
         registry.register("Ascend_Dev_Silk_Interaction",
-            AscendDevSilkInteraction.class, AscendDevSilkInteraction.CODEC);
+            AscendDevInteraction.class, AscendDevInteraction.codec(() -> new AscendDevInteraction(
+                (ref, store, playerRef, plugin) -> new AscendProfilePage(playerRef,
+                    plugin.getPlayerStore(), plugin.getRobotManager()),
+                (plugin, player) -> {
+                    if (plugin.getPlayerStore() == null || plugin.getRobotManager() == null) {
+                        player.sendMessage(AbstractAscendPageInteraction.LOADING_MESSAGE);
+                        return false;
+                    }
+                    return true;
+                }, true, true)));
         registry.register("Ascend_Transcendence_Interaction",
             AscendTranscendenceInteraction.class, AscendTranscendenceInteraction.CODEC);
         registry.register("Shop_Item_Interaction",

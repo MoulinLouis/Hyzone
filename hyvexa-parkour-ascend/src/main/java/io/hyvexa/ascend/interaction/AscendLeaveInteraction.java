@@ -17,7 +17,7 @@ import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendSettingsStore;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 import io.hyvexa.ascend.util.AscendInventoryUtils;
-import io.hyvexa.ascend.util.AscendModeGate;
+import io.hyvexa.common.util.ModeGate;
 import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.core.state.ModeMessages;
 
@@ -52,7 +52,7 @@ public class AscendLeaveInteraction extends SimpleInteraction {
             return;
         }
         World world = store.getExternalData().getWorld();
-        if (!AscendModeGate.isAscendWorld(world)) {
+        if (!ModeGate.isAscendWorld(world)) {
             player.sendMessage(ModeMessages.MESSAGE_ENTER_ASCEND);
             return;
         }
@@ -62,7 +62,7 @@ public class AscendLeaveInteraction extends SimpleInteraction {
         }
         AscendRunTracker runTracker = plugin.getRunTracker();
         if (runTracker == null) {
-            player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading."));
+            player.sendMessage(AbstractAscendPageInteraction.LOADING_MESSAGE);
             return;
         }
         String mapId = runTracker.getActiveMapId(playerRef.getUuid());

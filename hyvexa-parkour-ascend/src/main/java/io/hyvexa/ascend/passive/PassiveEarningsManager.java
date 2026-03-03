@@ -15,6 +15,7 @@ import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.common.ghost.GhostRecording;
 import io.hyvexa.common.ghost.GhostStore;
 import io.hyvexa.ascend.robot.RobotManager;
+import io.hyvexa.ascend.summit.SummitManager;
 import io.hyvexa.ascend.ui.PassiveEarningsPage;
 import io.hyvexa.common.math.BigNumber;
 
@@ -25,9 +26,6 @@ import java.util.UUID;
 
 public class PassiveEarningsManager {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final long OFFLINE_RATE_PERCENT = AscendConstants.PASSIVE_OFFLINE_RATE_PERCENT;
-    private static final long MAX_OFFLINE_TIME_MS = AscendConstants.PASSIVE_MAX_TIME_MS;
-    private static final long MIN_AWAY_TIME_MS = AscendConstants.PASSIVE_MIN_TIME_MS;
 
     private final AscendPlayerStore playerStore;
     private final AscendMapStore mapStore;
@@ -53,12 +51,12 @@ public class PassiveEarningsManager {
         long now = System.currentTimeMillis();
         long timeAwayMs = now - lastActive;
 
-        if (timeAwayMs < MIN_AWAY_TIME_MS) {
+        if (timeAwayMs < AscendConstants.PASSIVE_MIN_TIME_MS) {
             return null; // Less than 1 minute away, skip
         }
 
         // Cap at 24 hours
-        timeAwayMs = Math.min(timeAwayMs, MAX_OFFLINE_TIME_MS);
+        timeAwayMs = Math.min(timeAwayMs, AscendConstants.PASSIVE_MAX_TIME_MS);
 
         // Get all active runners for this player
         AscendPlayerProgress progress = playerStore.getPlayer(playerId);
@@ -105,21 +103,13 @@ public class PassiveEarningsManager {
             double theoreticalRuns = (double) timeAwayMs / completionTimeMs;
 
             // Get Summit bonuses (Multiplier Gain + Evolution Power)
-            ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-            double multiplierGainBonus = 1.0;
-            double evolutionPowerBonus = 3.0;
-            double baseMultiplierBonus = 0.0;
-            if (plugin != null && plugin.getSummitManager() != null) {
-                multiplierGainBonus = plugin.getSummitManager().getMultiplierGainBonus(playerId);
-                evolutionPowerBonus = plugin.getSummitManager().getEvolutionPowerBonus(playerId);
-                baseMultiplierBonus = plugin.getSummitManager().getBaseMultiplierBonus(playerId);
-            }
+            SummitManager.BonusTriplet bonuses = SummitManager.getSafeBonuses(playerId);
 
             // Offline rate: always base 10%
-            long effectiveOfflineRate = OFFLINE_RATE_PERCENT;
+            long effectiveOfflineRate = AscendConstants.PASSIVE_OFFLINE_RATE_PERCENT;
 
             // Multiplier gain per run (with Summit bonuses) - at offline rate
-            BigNumber multiplierIncrement = AscendConstants.getRunnerMultiplierIncrement(stars, multiplierGainBonus, evolutionPowerBonus, baseMultiplierBonus);
+            BigNumber multiplierIncrement = AscendConstants.getRunnerMultiplierIncrement(stars, bonuses.multiplierGain(), bonuses.evolutionPower(), bonuses.baseMultiplier());
 
             BigNumber mapMultiplierGain = multiplierIncrement
                 .multiply(BigNumber.fromDouble(theoreticalRuns))
@@ -185,17 +175,11 @@ public class PassiveEarningsManager {
         );
     }
 
-    /**
-     * Mark player as having left Ascend world
-     */
     public void onPlayerLeaveAscend(UUID playerId) {
         playerStore.setLastActiveTimestamp(playerId, System.currentTimeMillis());
         playerStore.setHasUnclaimedPassive(playerId, true);
     }
 
-    /**
-     * Check and show passive earnings popup if needed
-     */
     public void checkPassiveEarningsOnJoin(UUID playerId) {
         if (!playerStore.hasUnclaimedPassive(playerId)) {
             return; // No unclaimed earnings

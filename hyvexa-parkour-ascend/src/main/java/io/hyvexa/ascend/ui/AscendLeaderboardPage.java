@@ -37,11 +37,6 @@ public class AscendLeaderboardPage extends InteractiveCustomUIPage<AscendLeaderb
     private static final String BUTTON_TAB_RUNS = "TabRuns";
     private static final String BUTTON_TAB_FASTEST = "TabFastest";
 
-    private static final String COLOR_RANK_1 = "#ffd700";
-    private static final String COLOR_RANK_2 = "#c0c0c0";
-    private static final String COLOR_RANK_3 = "#cd7f32";
-    private static final String COLOR_RANK_DEFAULT = "#9fb0ba";
-
     private final AscendPlayerStore playerStore;
     private final PaginationState pagination = new PaginationState(50);
     private LeaderboardCategory currentCategory = LeaderboardCategory.VOLT;
@@ -178,7 +173,7 @@ public class AscendLeaderboardPage extends InteractiveCustomUIPage<AscendLeaderb
         for (int i = start; i < end; i++) {
             LeaderboardRow row = filtered.get(i);
             commandBuilder.append("#LeaderboardCards", "Pages/Ascend_LeaderboardEntry.ui");
-            String accentColor = getRankAccentColor(row.rank);
+            String accentColor = AscendUIUtils.getRankAccentColor(row.rank);
             commandBuilder.set("#LeaderboardCards[" + index + "] #AccentBar.Background", accentColor);
             commandBuilder.set("#LeaderboardCards[" + index + "] #Rank.Text", "#" + row.rank);
             commandBuilder.set("#LeaderboardCards[" + index + "] #PlayerName.Text", row.name);
@@ -266,7 +261,7 @@ public class AscendLeaderboardPage extends InteractiveCustomUIPage<AscendLeaderb
 
     private String formatValue(LeaderboardEntry entry) {
         return switch (currentCategory) {
-            case VOLT -> formatVolt(BigNumber.of(entry.totalVoltEarnedMantissa(), entry.totalVoltEarnedExp10()));
+            case VOLT -> FormatUtils.formatBigNumber(BigNumber.of(entry.totalVoltEarnedMantissa(), entry.totalVoltEarnedExp10()));
             case ASCENSIONS -> String.valueOf(entry.ascensionCount());
             case MANUAL_RUNS -> String.valueOf(entry.totalManualRuns());
             case FASTEST_ASCENSION -> entry.fastestAscensionMs() != null
@@ -275,40 +270,11 @@ public class AscendLeaderboardPage extends InteractiveCustomUIPage<AscendLeaderb
         };
     }
 
-    private String formatVolt(BigNumber volt) {
-        return FormatUtils.formatBigNumber(volt);
-    }
-
-    private String getRankAccentColor(int rank) {
-        return switch (rank) {
-            case 1 -> COLOR_RANK_1;
-            case 2 -> COLOR_RANK_2;
-            case 3 -> COLOR_RANK_3;
-            default -> COLOR_RANK_DEFAULT;
-        };
-    }
-
     public enum LeaderboardCategory {
-        VOLT("Volt", "#f59e0b"),
-        ASCENSIONS("Ascensions", "#8b5cf6"),
-        MANUAL_RUNS("Manual Runs", "#10b981"),
-        FASTEST_ASCENSION("Fastest Ascension", "#ef4444");
-
-        private final String label;
-        private final String color;
-
-        LeaderboardCategory(String label, String color) {
-            this.label = label;
-            this.color = color;
-        }
-
-        public String getLabel() {
-            return label;
-        }
-
-        public String getColor() {
-            return color;
-        }
+        VOLT,
+        ASCENSIONS,
+        MANUAL_RUNS,
+        FASTEST_ASCENSION
     }
 
     private record LeaderboardRow(int rank, UUID playerId, String name, String formattedValue) {

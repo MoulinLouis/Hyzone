@@ -16,7 +16,6 @@ import com.hypixel.hytale.protocol.SoundCategory;
 import com.hypixel.hytale.protocol.Vector2f;
 import com.hypixel.hytale.protocol.packets.camera.CameraShakeEffect;
 import com.hypixel.hytale.protocol.packets.camera.SetServerCamera;
-import com.hypixel.hytale.protocol.packets.world.PlaySoundEvent2D;
 import com.hypixel.hytale.protocol.packets.world.PlaySoundEvent3D;
 import com.hypixel.hytale.protocol.packets.world.SpawnParticleSystem;
 import com.hypixel.hytale.server.core.Message;
@@ -112,7 +111,6 @@ public class CinematicTestCommand extends AbstractAsyncCommand {
                 case "listparticles" -> listParticles(player, args);
                 case "sound" -> testSound(player, ph, store, ref, args);
                 case "listsounds" -> listSounds(player, args);
-                case "light" -> testLight(player, ph, args);
                 case "help" -> showHelp(player);
                 default -> player.sendMessage(Message.raw("[CTest] Unknown: " + args[0] + ". Use /ctest help"));
             }
@@ -386,34 +384,6 @@ public class CinematicTestCommand extends AbstractAsyncCommand {
         io.hyvexa.ascend.ascension.AscensionCinematic.play(player, ph, playerRef, store, ref, world);
     }
 
-    // ── Cinematic helpers ────────────────────────────────────────────────
-
-    private void spawnParticleAtPlayer(Store<EntityStore> store, Ref<EntityStore> ref,
-                                        PacketHandler ph, String particleId, float scale) {
-        TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
-        if (transform == null) return;
-        var pos = transform.getPosition();
-        ph.writeNoCache(new SpawnParticleSystem(
-            particleId,
-            new Position(pos.getX(), pos.getY() + 1.0, pos.getZ()),
-            new Direction(0f, 0f, 0f),
-            scale,
-            new Color((byte) 255, (byte) 255, (byte) 255)
-        ));
-    }
-
-    private void playSound2D(PacketHandler ph, String soundId, float volume, float pitch) {
-        try {
-            int index = SoundEvent.getAssetMap().getIndex(soundId);
-            if (index >= 0) {
-                ph.writeNoCache(new PlaySoundEvent2D(index, SoundCategory.SFX, volume, pitch));
-            }
-        } catch (Exception e) {
-            AsyncExecutionHelper.logThrottledWarning("ctest.sound.2d", "ctest play 2D sound",
-                    "sound=" + soundId, e);
-        }
-    }
-
     // ── Test: Particle ──────────────────────────────────────────────────
 
     private void testParticle(Player player, PacketHandler ph, Store<EntityStore> store, Ref<EntityStore> ref, String[] args) {
@@ -558,12 +528,6 @@ public class CinematicTestCommand extends AbstractAsyncCommand {
         }
     }
 
-    // ── Test: Entity light ───────────────────────────────────────────────
-
-    private void testLight(Player player, PacketHandler ph, String[] args) {
-        player.sendMessage(Message.raw("[CTest] Entity light is no longer supported - BuilderToolSetEntityLight is now a server-bound packet."));
-    }
-
     private void scheduleCamera(PacketHandler ph, World world, Ref<EntityStore> ref,
                                 long delayMs, java.util.function.Supplier<ServerCameraSettings> settingsFactory) {
         scheduleWorldAction(world, delayMs, "ctest.schedule.camera", "ctest schedule camera",
@@ -606,6 +570,5 @@ public class CinematicTestCommand extends AbstractAsyncCommand {
         player.sendMessage(Message.raw("  /ctest listparticles [filter]    - List particle IDs"));
         player.sendMessage(Message.raw("  /ctest sound <id|index> [vol] [pitch] - Play sound"));
         player.sendMessage(Message.raw("  /ctest listsounds [filter]       - List sound IDs"));
-        player.sendMessage(Message.raw("  /ctest light [r] [g] [b] [radius] - Entity glow"));
     }
 }

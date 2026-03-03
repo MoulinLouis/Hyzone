@@ -220,37 +220,58 @@ public class SummitManager {
     public double getEvolutionPowerBonus(UUID playerId) {
         double fullBonus = playerStore.getSummitBonusDouble(playerId, SummitCategory.EVOLUTION_POWER);
 
-        // Challenge malus: divide full value by evolution power divisor
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin != null && plugin.getChallengeManager() != null) {
-            double divisor = plugin.getChallengeManager().getEvolutionPowerDivisor(playerId);
+        var cm = plugin != null ? plugin.getChallengeManager() : null;
+        var am = plugin != null ? plugin.getAscensionManager() : null;
+
+        // Challenge malus: divide full value by evolution power divisor
+        if (cm != null) {
+            double divisor = cm.getEvolutionPowerDivisor(playerId);
             if (divisor > 1.0) {
                 fullBonus /= divisor;
             }
         }
 
         // Skill tree: Evolution Power+ adds +1.0 to base evolution power
-        if (plugin != null && plugin.getAscensionManager() != null
-                && plugin.getAscensionManager().hasEvolutionPowerBoost(playerId)) {
+        if (am != null && am.hasEvolutionPowerBoost(playerId)) {
             fullBonus += 1.0;
         }
         // Skill tree: Evolution Power II adds +1.0 to base evolution power
-        if (plugin != null && plugin.getAscensionManager() != null
-                && plugin.getAscensionManager().hasEvolutionPowerBoost2(playerId)) {
+        if (am != null && am.hasEvolutionPowerBoost2(playerId)) {
             fullBonus += 1.0;
         }
         // Skill tree: Evolution Power III adds +2.0 to base evolution power
-        if (plugin != null && plugin.getAscensionManager() != null
-                && plugin.getAscensionManager().hasEvolutionPowerBoost3(playerId)) {
+        if (am != null && am.hasEvolutionPowerBoost3(playerId)) {
             fullBonus += 2.0;
         }
         // Challenge reward: permanent evo power bonus from completed challenges
-        if (plugin != null && plugin.getChallengeManager() != null) {
-            fullBonus += plugin.getChallengeManager().getChallengeEvolutionPowerBonus(playerId);
+        if (cm != null) {
+            fullBonus += cm.getChallengeEvolutionPowerBonus(playerId);
             // C8 reward: permanent summit bonus (multiplicative on final value)
-            fullBonus *= plugin.getChallengeManager().getChallengeSummitBonus(playerId);
+            fullBonus *= cm.getChallengeSummitBonus(playerId);
         }
         return fullBonus;
+    }
+
+    public record BonusTriplet(double multiplierGain, double evolutionPower, double baseMultiplier) {}
+
+    public BonusTriplet getAllBonuses(UUID playerId) {
+        return new BonusTriplet(
+            getMultiplierGainBonus(playerId),
+            getEvolutionPowerBonus(playerId),
+            getBaseMultiplierBonus(playerId)
+        );
+    }
+
+    public static BonusTriplet getSafeBonuses(UUID playerId) {
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin != null) {
+            SummitManager sm = plugin.getSummitManager();
+            if (sm != null && playerId != null) {
+                return sm.getAllBonuses(playerId);
+            }
+        }
+        return new BonusTriplet(1.0, 3.0, 0.0);
     }
 
     /**

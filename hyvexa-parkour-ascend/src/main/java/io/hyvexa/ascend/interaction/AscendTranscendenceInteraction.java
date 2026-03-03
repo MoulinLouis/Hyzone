@@ -30,7 +30,7 @@ public class AscendTranscendenceInteraction extends AbstractAscendPageInteractio
         }
 
         if (plugin.getPlayerStore() == null || plugin.getTranscendenceManager() == null) {
-            player.sendMessage(Message.raw("[Ascend] Ascend systems are still loading."));
+            player.sendMessage(LOADING_MESSAGE);
             return false;
         }
 

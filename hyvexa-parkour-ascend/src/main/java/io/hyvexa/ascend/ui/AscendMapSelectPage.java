@@ -356,31 +356,42 @@ public class AscendMapSelectPage extends BaseAscendPage {
         return "Lv." + speedLevel;
     }
 
+    private enum AccentColor {
+        VIOLET("#7c3aed", "AccentViolet"),
+        RED("#ef4444", "AccentRed"),
+        ORANGE("#f59e0b", "AccentOrange"),
+        GREEN("#10b981", "AccentGreen"),
+        BLUE("#3b82f6", "AccentBlue"),
+        GOLD("#f59e0b", "AccentGold");
+
+        final String hex;
+        final String elementSuffix;
+
+        AccentColor(String hex, String elementSuffix) {
+            this.hex = hex;
+            this.elementSuffix = elementSuffix;
+        }
+
+        static AccentColor forIndex(int index) {
+            AccentColor[] values = values();
+            return index < values.length - 1 ? values[index] : GOLD;
+        }
+
+        String buttonBgElementId() {
+            return "#ButtonBg" + elementSuffix.substring("Accent".length());
+        }
+    }
+
     private String resolveMapAccentColor(int index) {
-        return switch (index) {
-            case 0 -> "#7c3aed";  // Violet
-            case 1 -> "#ef4444";  // Red
-            case 2 -> "#f59e0b";  // Orange
-            case 3 -> "#10b981";  // Green
-            case 4 -> "#3b82f6";  // Blue
-            default -> "#f59e0b"; // Gold (Transcendence)
-        };
+        return AccentColor.forIndex(index).hex;
     }
 
     private void applyAccentBarVariant(UICommandBuilder commandBuilder, int cardIndex, int mapIndex) {
-        boolean violet = mapIndex == 0;
-        boolean red = mapIndex == 1;
-        boolean orange = mapIndex == 2;
-        boolean green = mapIndex == 3;
-        boolean blue = mapIndex == 4;
-        boolean gold = mapIndex >= 5;
+        AccentColor active = AccentColor.forIndex(mapIndex);
         String basePath = "#MapCards[" + cardIndex + "] #AccentBar";
-        commandBuilder.set(basePath + " #AccentViolet.Visible", violet);
-        commandBuilder.set(basePath + " #AccentRed.Visible", red);
-        commandBuilder.set(basePath + " #AccentOrange.Visible", orange);
-        commandBuilder.set(basePath + " #AccentGreen.Visible", green);
-        commandBuilder.set(basePath + " #AccentBlue.Visible", blue);
-        commandBuilder.set(basePath + " #AccentGold.Visible", gold);
+        for (AccentColor color : AccentColor.values()) {
+            commandBuilder.set(basePath + " #" + color.elementSuffix + ".Visible", color == active);
+        }
     }
 
     private boolean isDisplayedMapId(String mapId) {
@@ -388,14 +399,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
     }
 
     private String resolveButtonBgElementId(int index) {
-        return switch (index) {
-            case 0 -> "#ButtonBgViolet";
-            case 1 -> "#ButtonBgRed";
-            case 2 -> "#ButtonBgOrange";
-            case 3 -> "#ButtonBgGreen";
-            case 4 -> "#ButtonBgBlue";
-            default -> "#ButtonBgGold";
-        };
+        return AccentColor.forIndex(index).buttonBgElementId();
     }
 
     private RunnerCardSnapshot renderRunnerButton(UICommandBuilder commandBuilder, int index, AscendMap map,
@@ -518,20 +522,8 @@ public class AscendMapSelectPage extends BaseAscendPage {
     }
 
     private String formatMultiplierGain(int stars, java.util.UUID playerId) {
-        // Get Summit bonuses (Multiplier Gain + Evolution Power)
-        double multiplierGainBonus = 1.0;
-        double evolutionPowerBonus = 3.0;
-        double baseMultiplierBonus = 0.0;
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin != null) {
-            SummitManager summitManager = plugin.getSummitManager();
-            if (summitManager != null && playerId != null) {
-                multiplierGainBonus = summitManager.getMultiplierGainBonus(playerId);
-                evolutionPowerBonus = summitManager.getEvolutionPowerBonus(playerId);
-                baseMultiplierBonus = summitManager.getBaseMultiplierBonus(playerId);
-            }
-        }
-        BigNumber increment = AscendConstants.getRunnerMultiplierIncrement(stars, multiplierGainBonus, evolutionPowerBonus, baseMultiplierBonus);
+        SummitManager.BonusTriplet bonuses = SummitManager.getSafeBonuses(playerId);
+        BigNumber increment = AscendConstants.getRunnerMultiplierIncrement(stars, bonuses.multiplierGain(), bonuses.evolutionPower(), bonuses.baseMultiplier());
         return "+" + FormatUtils.formatBigNumber(increment) + "x";
     }
 
@@ -540,19 +532,8 @@ public class AscendMapSelectPage extends BaseAscendPage {
      * Shows current → next multiplier increment per run.
      */
     private String formatEvolveGain(int stars, java.util.UUID playerId) {
-        double multiplierGainBonus = 1.0;
-        double evolutionPowerBonus = 3.0;
-        double baseMultiplierBonus = 0.0;
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin != null) {
-            SummitManager summitManager = plugin.getSummitManager();
-            if (summitManager != null && playerId != null) {
-                multiplierGainBonus = summitManager.getMultiplierGainBonus(playerId);
-                evolutionPowerBonus = summitManager.getEvolutionPowerBonus(playerId);
-                baseMultiplierBonus = summitManager.getBaseMultiplierBonus(playerId);
-            }
-        }
-        BigNumber nextIncrement = AscendConstants.getRunnerMultiplierIncrement(stars + 1, multiplierGainBonus, evolutionPowerBonus, baseMultiplierBonus);
+        SummitManager.BonusTriplet bonuses = SummitManager.getSafeBonuses(playerId);
+        BigNumber nextIncrement = AscendConstants.getRunnerMultiplierIncrement(stars + 1, bonuses.multiplierGain(), bonuses.evolutionPower(), bonuses.baseMultiplier());
         double val = nextIncrement.toDouble();
         String formatted;
         if (val < 1.0) {

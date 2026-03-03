@@ -31,12 +31,11 @@ import io.hyvexa.common.ghost.GhostRecording;
 import io.hyvexa.common.ghost.GhostSample;
 import io.hyvexa.ascend.summit.SummitManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
-import io.hyvexa.ascend.util.AscendModeGate;
 import io.hyvexa.common.math.BigNumber;
+import io.hyvexa.common.util.ModeGate;
+import io.hyvexa.common.util.OrphanedEntityCleanup;
 import io.hyvexa.common.visibility.EntityVisibilityManager;
 
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -48,16 +47,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-import java.util.stream.Collectors;
-
 public class RobotManager {
 
     /*
      * Threading model:
-     * - robots, onlinePlayers, orphanedRunnerUuids, teleportWarningByRobot, pendingRemovals:
-     *   ConcurrentHashMap (thread-safe by construction).
+     * - robots, onlinePlayers, teleportWarningByRobot:
+     *   ConcurrentHashMap/newKeySet collections (thread-safe by construction).
+     * - orphanCleanup: owns orphan UUID + pending-removal concurrency state.
      * - npcPlugin: volatile, set once in start(), thereafter read-only.
-     * - cleanupPending: volatile flag.
      * - lastRefreshMs, lastAutoUpgradeMs: volatile, read/written from scheduled executor tick.
      * - tickTask: only accessed in start()/stop() (single-threaded lifecycle).
      *
@@ -76,14 +73,11 @@ public class RobotManager {
     private final GhostStore ghostStore;
     private final Map<String, RobotState> robots = new ConcurrentHashMap<>();
     private final Set<UUID> onlinePlayers = ConcurrentHashMap.newKeySet();
-    private final Set<UUID> orphanedRunnerUuids = ConcurrentHashMap.newKeySet();
+    private final OrphanedEntityCleanup orphanCleanup;
     private final Map<String, Long> teleportWarningByRobot = new ConcurrentHashMap<>();
-    // Pending removals: entityUuid -> entityRef (queued during ECS tick, processed outside)
-    private final Map<UUID, Ref<EntityStore>> pendingRemovals = new ConcurrentHashMap<>();
     private ScheduledFuture<?> tickTask;
     private volatile long lastRefreshMs;
     private volatile NPCPlugin npcPlugin;
-    private volatile boolean cleanupPending = false;
     private volatile long lastAutoUpgradeMs = 0;
     private volatile long lastTeleportWarningCleanupMs = 0L;
     private volatile long lastHealthLogMs = 0L;
@@ -95,11 +89,12 @@ public class RobotManager {
         this.mapStore = mapStore;
         this.playerStore = playerStore;
         this.ghostStore = ghostStore;
+        this.orphanCleanup = new OrphanedEntityCleanup(LOGGER,
+                Path.of("mods", "Parkour", RUNNER_UUIDS_FILE));
     }
 
     public void start() {
-        // Load orphaned runner UUIDs from previous shutdown for cleanup
-        loadOrphanedRunnerUuids();
+        orphanCleanup.loadOrphanedUuids();
 
         try {
             npcPlugin = NPCPlugin.get();
@@ -108,8 +103,6 @@ public class RobotManager {
             npcPlugin = null;
         }
 
-        // Cleanup only when we actually have known orphan UUIDs to remove.
-        cleanupPending = !orphanedRunnerUuids.isEmpty();
         registerCleanupSystem();
 
         tickTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(
@@ -126,7 +119,14 @@ public class RobotManager {
             tickTask = null;
         }
         // Save current runner UUIDs before despawning (in case despawn fails)
-        saveRunnerUuidsForCleanup();
+        Set<UUID> activeUuids = new HashSet<>();
+        for (RobotState state : robots.values()) {
+            UUID entityUuid = state.getEntityUuid();
+            if (entityUuid != null) {
+                activeUuids.add(entityUuid);
+            }
+        }
+        orphanCleanup.saveUuidsForCleanup(activeUuids);
         despawnAllRobots();
         onlinePlayers.clear();
     }
@@ -418,7 +418,7 @@ public class RobotManager {
                 lastTeleportWarningCleanupMs = now;
             }
             // Process any pending orphan removals first (queued from ECS tick)
-            processPendingRemovals();
+            orphanCleanup.processPendingRemovals();
             refreshRobots(now);
             boolean doAutoOps = now - lastAutoUpgradeMs >= AUTO_UPGRADE_INTERVAL_MS;
             // Process auto-elevation/summit BEFORE robot ticking so that
@@ -648,8 +648,7 @@ public class RobotManager {
                                 // Mark old entity for orphan cleanup before spawning new one
                                 UUID oldUuid = existing.getEntityUuid();
                                 if (oldUuid != null) {
-                                    orphanedRunnerUuids.add(oldUuid);
-                                    cleanupPending = true;
+                                    orphanCleanup.addOrphan(oldUuid);
                                 }
                                 existing.setEntityRef(null);
                                 existing.setEntityUuid(null);
@@ -707,8 +706,7 @@ public class RobotManager {
         if (state.getEntityUuid() == null) {
             return;
         }
-        orphanedRunnerUuids.add(previousEntityUuid);
-        cleanupPending = true;
+        orphanCleanup.addOrphan(previousEntityUuid);
     }
 
     private void tickRobot(RobotState robot, long now) {
@@ -1273,7 +1271,7 @@ public class RobotManager {
             return false;
         }
         World world = store.getExternalData().getWorld();
-        return AscendModeGate.isAscendWorld(world);
+        return ModeGate.isAscendWorld(world);
     }
 
     /**
@@ -1321,76 +1319,6 @@ public class RobotManager {
 
     // Runner Cleanup (Server Restart Handling)
 
-    private Path getRunnerUuidsPath() {
-        return Path.of("mods", "Parkour", RUNNER_UUIDS_FILE);
-    }
-
-    /**
-     * Save current runner entity UUIDs to a file.
-     * Called at shutdown so we can clean them up on next startup.
-     */
-    private void saveRunnerUuidsForCleanup() {
-        Set<UUID> uuids = new HashSet<>();
-        for (RobotState state : robots.values()) {
-            UUID entityUuid = state.getEntityUuid();
-            if (entityUuid != null) {
-                uuids.add(entityUuid);
-            }
-        }
-        if (uuids.isEmpty()) {
-            // No runners to save, delete file if exists
-            try {
-                Files.deleteIfExists(getRunnerUuidsPath());
-            } catch (IOException e) {
-                // Ignore
-            }
-            return;
-        }
-        try {
-            Path path = getRunnerUuidsPath();
-            Files.createDirectories(path.getParent());
-            List<String> lines = uuids.stream()
-                .map(UUID::toString)
-                .collect(Collectors.toList());
-            Files.write(path, lines);
-        } catch (IOException e) {
-            LOGGER.atWarning().log("Failed to save runner UUIDs: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Load orphaned runner UUIDs from previous shutdown.
-     */
-    private void loadOrphanedRunnerUuids() {
-        Path path = getRunnerUuidsPath();
-        if (!Files.exists(path)) {
-            return;
-        }
-        try {
-            List<String> lines = Files.readAllLines(path);
-            for (String line : lines) {
-                String trimmed = line.trim();
-                if (trimmed.isEmpty()) {
-                    continue;
-                }
-                try {
-                    UUID uuid = UUID.fromString(trimmed);
-                    orphanedRunnerUuids.add(uuid);
-                } catch (IllegalArgumentException e) {
-                    // Invalid UUID, skip
-                }
-            }
-            // Delete file after loading
-            Files.delete(path);
-        } catch (IOException e) {
-            LOGGER.atWarning().log("Failed to load orphaned runner UUIDs: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Register the cleanup system to remove orphaned runners.
-     * This is called once at startup if there are UUIDs to clean.
-     */
     private void registerCleanupSystem() {
         var registry = EntityStore.REGISTRY;
         if (!registry.hasSystemClass(RunnerCleanupSystem.class)) {
@@ -1398,24 +1326,15 @@ public class RobotManager {
         }
     }
 
-    /**
-     * Check if a UUID is an orphaned runner that should be removed.
-     * Called by RunnerCleanupSystem.
-     */
     public boolean isOrphanedRunner(UUID entityUuid) {
-        return orphanedRunnerUuids.contains(entityUuid);
+        return orphanCleanup.isOrphaned(entityUuid);
     }
 
-    /**
-     * Check if a UUID belongs to an active runner managed by this RobotManager.
-     * Used by cleanup system to avoid removing valid runners.
-     */
     public boolean isActiveRunnerUuid(UUID entityUuid) {
         if (entityUuid == null) {
             return false;
         }
-        // Also skip if already pending removal (avoid re-queueing)
-        if (pendingRemovals.containsKey(entityUuid)) {
+        if (orphanCleanup.isPendingRemoval(entityUuid)) {
             return true;
         }
         for (RobotState state : robots.values()) {
@@ -1426,111 +1345,16 @@ public class RobotManager {
         return false;
     }
 
-    /**
-     * Queue an orphaned runner for deferred removal.
-     * Called from RunnerCleanupSystem during ECS tick - actual removal
-     * happens in processPendingRemovals() which runs outside the tick.
-     */
     public void queueOrphanForRemoval(UUID entityUuid, Ref<EntityStore> entityRef) {
-        if (entityUuid == null || entityRef == null) {
-            return;
-        }
-        // Only queue if not already pending
-        pendingRemovals.putIfAbsent(entityUuid, entityRef);
+        orphanCleanup.queueForRemoval(entityUuid, entityRef);
     }
 
-    /**
-     * Process pending orphan removals. Called from tick() which runs
-     * outside ECS processing, so store mutations are safe.
-     */
-    private void processPendingRemovals() {
-        if (pendingRemovals.isEmpty()) {
-            return;
-        }
-
-        // Copy keys to avoid concurrent modification
-        for (UUID entityUuid : List.copyOf(pendingRemovals.keySet())) {
-            Ref<EntityStore> ref = pendingRemovals.remove(entityUuid);
-            if (ref == null) {
-                continue;
-            }
-
-            // Get world from ref's store for world-thread execution
-            if (!ref.isValid()) {
-                // Ref became invalid - entity might already be gone
-                markOrphanCleaned(entityUuid);
-                continue;
-            }
-
-            Store<EntityStore> store = ref.getStore();
-            if (store == null) {
-                markOrphanCleaned(entityUuid);
-                continue;
-            }
-
-            World world = store.getExternalData().getWorld();
-            if (world == null) {
-                // Try direct removal as fallback
-                removeOrphanDirect(entityUuid, ref, store);
-                continue;
-            }
-
-            // Execute removal on world thread
-            world.execute(() -> removeOrphanOnWorldThread(entityUuid, ref));
-        }
-    }
-
-    private void removeOrphanOnWorldThread(UUID entityUuid, Ref<EntityStore> ref) {
-        try {
-            if (ref == null || !ref.isValid()) {
-                markOrphanCleaned(entityUuid);
-                return;
-            }
-            Store<EntityStore> store = ref.getStore();
-            if (store == null) {
-                markOrphanCleaned(entityUuid);
-                return;
-            }
-            store.removeEntity(ref, RemoveReason.REMOVE);
-            markOrphanCleaned(entityUuid);
-        } catch (Exception e) {
-            LOGGER.atWarning().log("Failed to remove orphaned runner " + entityUuid + ": " + e.getMessage());
-            // Re-queue for retry on next tick
-            if (ref != null && ref.isValid()) {
-                pendingRemovals.put(entityUuid, ref);
-            } else {
-                // Ref is invalid, consider it cleaned
-                markOrphanCleaned(entityUuid);
-            }
-        }
-    }
-
-    private void removeOrphanDirect(UUID entityUuid, Ref<EntityStore> ref, Store<EntityStore> store) {
-        try {
-            store.removeEntity(ref, RemoveReason.REMOVE);
-            markOrphanCleaned(entityUuid);
-        } catch (Exception e) {
-            LOGGER.atWarning().log("Failed to remove orphaned runner " + entityUuid + ": " + e.getMessage());
-            markOrphanCleaned(entityUuid); // Don't retry direct removals
-        }
-    }
-
-    /**
-     * Mark an orphaned runner as cleaned up.
-     */
     public void markOrphanCleaned(UUID entityUuid) {
-        orphanedRunnerUuids.remove(entityUuid);
-        pendingRemovals.remove(entityUuid);
-        if (orphanedRunnerUuids.isEmpty() && pendingRemovals.isEmpty()) {
-            cleanupPending = false;
-        }
+        orphanCleanup.markCleaned(entityUuid);
     }
 
-    /**
-     * Check if cleanup is still pending.
-     */
     public boolean isCleanupPending() {
-        return cleanupPending || !pendingRemovals.isEmpty();
+        return orphanCleanup.isCleanupPending();
     }
 
     /**

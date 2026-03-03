@@ -324,7 +324,7 @@ public class SummitPage extends BaseAscendPage {
             return;
         }
 
-        showToast(playerId, ToastType.EVOLUTION,
+        AscendHudManager.showToastSafe(playerId, ToastType.EVOLUTION,
             category.getDisplayName() + " Lv." + FormatUtils.formatLong(preview.currentLevel())
             + " -> Lv." + FormatUtils.formatLong(result.newLevel()) + " | " + formatBonus(category, preview.currentBonus())
             + " -> " + formatBonus(category, preview.newBonus()));
@@ -380,13 +380,4 @@ public class SummitPage extends BaseAscendPage {
         return String.format(Locale.US, "x%.2f", value);
     }
 
-    private void showToast(UUID playerId, ToastType type, String message) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin != null) {
-            AscendHudManager hm = plugin.getHudManager();
-            if (hm != null) {
-                hm.showToast(playerId, type, message);
-            }
-        }
-    }
 }

@@ -35,11 +35,6 @@ public class ChallengeLeaderboardPage extends InteractiveCustomUIPage<ChallengeL
 
     private static final int MAX_TABS = 8;
 
-    private static final String COLOR_RANK_1 = "#ffd700";
-    private static final String COLOR_RANK_2 = "#c0c0c0";
-    private static final String COLOR_RANK_3 = "#cd7f32";
-    private static final String COLOR_RANK_DEFAULT = "#9fb0ba";
-
     private static final String COLOR_TAB_ACTIVE = "#2d3f50";
     private static final String COLOR_TAB_INACTIVE = "#142029";
 
@@ -230,7 +225,7 @@ public class ChallengeLeaderboardPage extends InteractiveCustomUIPage<ChallengeL
             ChallengeLeaderboardEntry entry = filtered.get(i);
             int rank = i + 1;
             commandBuilder.append("#LeaderboardCards", "Pages/Ascend_LeaderboardEntry.ui");
-            String accentColor = getRankAccentColor(rank);
+            String accentColor = AscendUIUtils.getRankAccentColor(rank);
             commandBuilder.set("#LeaderboardCards[" + index + "] #AccentBar.Background", accentColor);
             commandBuilder.set("#LeaderboardCards[" + index + "] #Rank.Text", "#" + rank);
             commandBuilder.set("#LeaderboardCards[" + index + "] #PlayerName.Text",
@@ -241,15 +236,6 @@ public class ChallengeLeaderboardPage extends InteractiveCustomUIPage<ChallengeL
         }
 
         commandBuilder.set("#PageLabel.Text", slice.getLabel());
-    }
-
-    private String getRankAccentColor(int rank) {
-        return switch (rank) {
-            case 1 -> COLOR_RANK_1;
-            case 2 -> COLOR_RANK_2;
-            case 3 -> COLOR_RANK_3;
-            default -> COLOR_RANK_DEFAULT;
-        };
     }
 
     public static class ChallengeLeaderboardData extends ButtonEventData {

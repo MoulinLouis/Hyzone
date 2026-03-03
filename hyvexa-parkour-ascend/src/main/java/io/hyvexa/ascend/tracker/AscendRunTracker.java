@@ -21,6 +21,7 @@ import io.hyvexa.ascend.tutorial.TutorialTriggerService;
 
 import io.hyvexa.ascend.hud.AscendHudManager;
 import io.hyvexa.ascend.hud.ToastType;
+import io.hyvexa.ascend.summit.SummitManager;
 import io.hyvexa.common.math.BigNumber;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.ascend.data.AscendMap;
@@ -280,15 +281,8 @@ public class AscendRunTracker {
 
         // Manual multiplier increment = runner's multiplier increment for this map × 5
         int runnerStars = playerStore.getRobotStars(playerId, run.mapId);
-        double multiplierGainBonus = 1.0;
-        double evolutionPowerBonus = 3.0;
-        double baseMultiplierBonus = 0.0;
-        if (plugin != null && plugin.getSummitManager() != null) {
-            multiplierGainBonus = plugin.getSummitManager().getMultiplierGainBonus(playerId);
-            evolutionPowerBonus = plugin.getSummitManager().getEvolutionPowerBonus(playerId);
-            baseMultiplierBonus = plugin.getSummitManager().getBaseMultiplierBonus(playerId);
-        }
-        BigNumber runnerIncrement = AscendConstants.getRunnerMultiplierIncrement(runnerStars, multiplierGainBonus, evolutionPowerBonus, baseMultiplierBonus);
+        SummitManager.BonusTriplet bonuses = SummitManager.getSafeBonuses(playerId);
+        BigNumber runnerIncrement = AscendConstants.getRunnerMultiplierIncrement(runnerStars, bonuses.multiplierGain(), bonuses.evolutionPower(), bonuses.baseMultiplier());
 
         BigNumber multiplierIncrement = runnerIncrement.multiply(BigNumber.fromDouble(5.0));
 
@@ -345,7 +339,7 @@ public class AscendRunTracker {
         if (isPersonalBest) {
             toastMsg += " | PB!";
         }
-        showToast(playerId, ToastType.SUCCESS, toastMsg);
+        AscendHudManager.showToastSafe(playerId, ToastType.SUCCESS, toastMsg);
 
         // Check achievements
         if (plugin != null && plugin.getAchievementManager() != null) {
@@ -370,7 +364,7 @@ public class AscendRunTracker {
                 boolean hasMastery = plugin.getAscensionManager().hasMomentumMastery(playerId);
                 boolean hasSurge = plugin.getAscensionManager().hasMomentumSurge(playerId);
                 String momentumText = hasMastery ? "3" : (hasSurge ? "2.5" : "2");
-                showToast(playerId, ToastType.ECONOMY, "Momentum: x" + momentumText + " speed on " + mapName);
+                AscendHudManager.showToastSafe(playerId, ToastType.ECONOMY, "Momentum: x" + momentumText + " speed on " + mapName);
             }
         }
 
@@ -564,16 +558,6 @@ public class AscendRunTracker {
         Vector3f spawnRot = settingsStore.getSpawnRotation();
         store.addComponent(ref, Teleport.getComponentType(),
             new Teleport(store.getExternalData().getWorld(), spawnPos, spawnRot));
-    }
-
-    private void showToast(UUID playerId, ToastType type, String message) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin != null) {
-            AscendHudManager hm = plugin.getHudManager();
-            if (hm != null) {
-                hm.showToast(playerId, type, message);
-            }
-        }
     }
 
     private void hideRunnersForMap(UUID viewerId, String mapId) {
