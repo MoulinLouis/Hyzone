@@ -144,7 +144,7 @@ public class PurgeClassStore {
                 conn.commit();
 
                 // Update caches only after successful commit
-                scrapStore.setCachedScrap(playerId, currentScrap - cost);
+                scrapStore.applyTransactionalScrapCommit(playerId, currentScrap, currentScrap - cost);
                 unlockedCache.computeIfAbsent(playerId, k -> ConcurrentHashMap.newKeySet()).add(purgeClass);
                 return PurchaseResult.SUCCESS;
             } catch (SQLException e) {

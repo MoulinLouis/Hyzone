@@ -193,7 +193,7 @@ public class PurgeWeaponUpgradeStore {
                 upsertWeaponLevel(conn, playerId, weaponId, nextLevel);
                 conn.commit();
 
-                scrapStore.setCachedScrap(playerId, currentScrap - cost);
+                scrapStore.applyTransactionalScrapCommit(playerId, currentScrap, currentScrap - cost);
                 cache.computeIfAbsent(playerId, k -> new ConcurrentHashMap<>()).put(weaponId, nextLevel);
                 return UpgradeResult.SUCCESS;
             } catch (SQLException e) {
@@ -240,7 +240,7 @@ public class PurgeWeaponUpgradeStore {
                 upsertWeaponLevel(conn, playerId, weaponId, 1);
                 conn.commit();
 
-                scrapStore.setCachedScrap(playerId, currentScrap - cost);
+                scrapStore.applyTransactionalScrapCommit(playerId, currentScrap, currentScrap - cost);
                 cache.computeIfAbsent(playerId, k -> new ConcurrentHashMap<>()).put(weaponId, 1);
                 return PurchaseResult.SUCCESS;
             } catch (SQLException e) {

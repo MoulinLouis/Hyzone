@@ -432,6 +432,7 @@ public class PurgeSessionManager {
         int totalScrap = calculateTotalScrap(session.getCurrentWave(), playerState);
         if (totalScrap > 0) {
             PurgeScrapStore.getInstance().addScrap(playerId, totalScrap);
+            PurgeScrapStore.getInstance().flushPlayerAsync(playerId);
         }
 
         PurgeMissionManager mm = missionManager;

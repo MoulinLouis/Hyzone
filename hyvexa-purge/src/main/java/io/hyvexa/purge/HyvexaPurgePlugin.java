@@ -307,6 +307,8 @@ public class HyvexaPurgePlugin extends JavaPlugin {
             comboTickTask.cancel(false);
             comboTickTask = null;
         }
+        try { PurgeScrapStore.getInstance().shutdown(); }
+        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: PurgeScrapStore"); }
         try { DatabaseManager.getInstance().shutdown(); }
         catch (Exception e) { /* Purge DB shutdown */ }
     }
