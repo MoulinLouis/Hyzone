@@ -27,9 +27,7 @@ import io.hyvexa.parkour.data.Medal;
 import io.hyvexa.parkour.data.MedalStore;
 import io.hyvexa.parkour.ParkourTimingConstants;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -69,6 +67,8 @@ public class HudManager {
         state.runHud = null;
         state.readyAt = 0;
         state.wasRunning = false;
+        state.recordsMapId = null;
+        state.recordsLeaderboardVersion = -1L;
         var ref = playerRef.getReference();
         if (ref == null || !ref.isValid()) {
             return;
@@ -138,10 +138,14 @@ public class HudManager {
         if (!running && wasRunning) {
             RunHud baseHud = getOrCreateHud(playerRef, false);
             attachHud(playerRef, player, baseHud, false);
+            state.recordsMapId = null;
+            state.recordsLeaderboardVersion = -1L;
             hud = baseHud;
         } else if (running && !state.isRecords) {
             RunHud recordsHud = getOrCreateHud(playerRef, true);
             attachHud(playerRef, player, recordsHud, true);
+            state.recordsMapId = null;
+            state.recordsLeaderboardVersion = -1L;
             hud = recordsHud;
         }
         int completedMaps = progressStore.getCompletedMapCount(playerRef.getUuid());
@@ -157,6 +161,8 @@ public class HudManager {
                 hud.updateCheckpointText("");
                 state.wasRunning = false;
             }
+            state.recordsMapId = null;
+            state.recordsLeaderboardVersion = -1L;
             hud.updateCheckpointSplit("", null, false);
             if (hud instanceof RunRecordsHud recordsHud) {
                 recordsHud.updateTopTimes(List.of());
@@ -182,7 +188,8 @@ public class HudManager {
             checkpointText = checkpointProgress.touched + "/" + checkpointProgress.total;
         }
         if (hud instanceof RunRecordsHud recordsHud) {
-            recordsHud.updateRunDetails(timeText, buildTopTimes(mapId, playerRef.getUuid()));
+            recordsHud.updateText(timeText);
+            updateRecordRowsIfNeeded(recordsHud, state, mapId, playerRef.getUuid());
             recordsHud.updateMedals(map, MedalStore.getInstance().getEarnedMedals(playerId, mapId));
         } else {
             hud.updateText(timeText);
@@ -260,6 +267,8 @@ public class HudManager {
         state.wasRunning = false;
         state.isRecords = false;
         state.checkpointSplit = null;
+        state.recordsMapId = null;
+        state.recordsLeaderboardVersion = -1L;
         var ref = playerRef.getReference();
         if (ref == null || !ref.isValid()) {
             return;
@@ -309,52 +318,31 @@ public class HudManager {
         return hud;
     }
 
-    private List<RunRecordsHud.RecordLine> buildTopTimes(String mapId, UUID playerId) {
-        if (mapId == null || progressStore == null) {
+    private void updateRecordRowsIfNeeded(RunRecordsHud recordsHud, PlayerHudState state, String mapId, UUID playerId) {
+        if (recordsHud == null || state == null || progressStore == null) {
+            return;
+        }
+        ProgressStore.LeaderboardHudSnapshot snapshot = progressStore.getLeaderboardHudSnapshot(mapId, playerId);
+        if (snapshot.getVersion() == state.recordsLeaderboardVersion
+                && ((mapId == null && state.recordsMapId == null)
+                || (mapId != null && mapId.equals(state.recordsMapId)))) {
+            return;
+        }
+        recordsHud.updateTopTimes(toRecordLines(snapshot));
+        state.recordsMapId = mapId;
+        state.recordsLeaderboardVersion = snapshot.getVersion();
+    }
+
+    private List<RunRecordsHud.RecordLine> toRecordLines(ProgressStore.LeaderboardHudSnapshot snapshot) {
+        if (snapshot == null) {
             return List.of();
         }
-        List<Map.Entry<UUID, Long>> entries = progressStore.getLeaderboardEntries(mapId);
-        if (entries.isEmpty()) {
-            return List.of();
+        List<RunRecordsHud.RecordLine> lines = new java.util.ArrayList<>(6);
+        for (ProgressStore.LeaderboardHudRow row : snapshot.getTopRows()) {
+            lines.add(new RunRecordsHud.RecordLine(row.getRank(), row.getName(), row.getTime()));
         }
-        List<RunRecordsHud.RecordLine> lines = new ArrayList<>();
-        for (int i = 0; i < 5; i++) {
-            if (i < entries.size()) {
-                UUID entryPlayerId = entries.get(i).getKey();
-                Long time = entries.get(i).getValue();
-                String name = progressStore.getPlayerName(entryPlayerId);
-                if (name == null || name.isBlank()) {
-                    name = "Player";
-                }
-                String trimmed = FormatUtils.truncate(name, 14);
-                lines.add(new RunRecordsHud.RecordLine(String.valueOf(i + 1), trimmed,
-                        FormatUtils.formatDuration(time)));
-            } else {
-                lines.add(RunRecordsHud.RecordLine.empty(i + 1));
-            }
-        }
-        int selfIndex = -1;
-        long selfTime = 0L;
-        if (progressStore.getBestTimeMs(playerId, mapId) != null) {
-            for (int i = 0; i < entries.size(); i++) {
-                if (entries.get(i).getKey().equals(playerId)) {
-                    selfIndex = i;
-                    selfTime = entries.get(i).getValue();
-                    break;
-                }
-            }
-        }
-        if (selfIndex >= 0) {
-            String name = progressStore.getPlayerName(playerId);
-            if (name == null || name.isBlank()) {
-                name = "Player";
-            }
-            String trimmed = FormatUtils.truncate(name, 14);
-            lines.add(new RunRecordsHud.RecordLine(String.valueOf(selfIndex + 1), trimmed,
-                    FormatUtils.formatDuration(selfTime)));
-        } else {
-            lines.add(RunRecordsHud.RecordLine.empty(0));
-        }
+        ProgressStore.LeaderboardHudRow selfRow = snapshot.getSelfRow();
+        lines.add(new RunRecordsHud.RecordLine(selfRow.getRank(), selfRow.getName(), selfRow.getTime()));
         return lines;
     }
 
@@ -507,6 +495,8 @@ public class HudManager {
         volatile CheckpointSplitHudState checkpointSplit;
         volatile MedalNotifState medalNotif;
         volatile PositionSample lastPositionSample;
+        volatile String recordsMapId;
+        volatile long recordsLeaderboardVersion = -1L;
     }
 
     private static final class CheckpointSplitHudState {

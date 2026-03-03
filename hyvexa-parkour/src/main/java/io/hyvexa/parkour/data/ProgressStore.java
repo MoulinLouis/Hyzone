@@ -4,6 +4,7 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import io.hyvexa.core.db.DatabaseManager;
 import com.hypixel.hytale.server.core.HytaleServer;
 import io.hyvexa.HyvexaPlugin;
+import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.parkour.ParkourConstants;
 
 import java.sql.Connection;
@@ -38,6 +39,7 @@ public class ProgressStore {
     private final java.util.Map<UUID, PlayerProgress> progress = new ConcurrentHashMap<>();
     private final java.util.Map<UUID, String> lastKnownNames = new ConcurrentHashMap<>();
     private final java.util.Map<String, LeaderboardCache> leaderboardCache = new ConcurrentHashMap<>();
+    private final java.util.Map<String, Long> leaderboardVersions = new ConcurrentHashMap<>();
     private final java.util.Map<UUID, Long> dirtyPlayerVersions = new ConcurrentHashMap<>();
     private final AtomicBoolean saveQueued = new AtomicBoolean(false);
     private final AtomicReference<ScheduledFuture<?>> saveFuture = new AtomicReference<>();
@@ -55,6 +57,7 @@ public class ProgressStore {
             progress.clear();
             lastKnownNames.clear();
             leaderboardCache.clear();
+            leaderboardVersions.clear();
             dirtyPlayerVersions.clear();
 
             long totalStart = System.nanoTime();
@@ -457,11 +460,7 @@ public class ProgressStore {
             return java.util.Map.of();
         }
         LeaderboardCache cache = leaderboardCache.computeIfAbsent(mapId, this::buildLeaderboardCache);
-        java.util.Map<UUID, Long> times = new HashMap<>(cache.entries.size());
-        for (java.util.Map.Entry<UUID, Long> entry : cache.entries) {
-            times.put(entry.getKey(), entry.getValue());
-        }
-        return times;
+        return new HashMap<>(cache.timesByPlayer);
     }
 
     public List<java.util.Map.Entry<UUID, Long>> getLeaderboardEntries(String mapId) {
@@ -487,6 +486,23 @@ public class ProgressStore {
         }
         LeaderboardCache cache = leaderboardCache.computeIfAbsent(mapId, this::buildLeaderboardCache);
         return cache.worldRecordMs;
+    }
+
+    public LeaderboardHudSnapshot getLeaderboardHudSnapshot(String mapId, UUID playerId) {
+        if (mapId == null) {
+            return LeaderboardHudSnapshot.empty();
+        }
+        LeaderboardCache cache = leaderboardCache.computeIfAbsent(mapId, this::buildLeaderboardCache);
+        LeaderboardHudRow selfRow = LeaderboardHudRow.empty();
+        if (playerId != null) {
+            Integer ordinalPosition = cache.ordinalPositions.get(playerId);
+            Long selfTime = cache.timesByPlayer.get(playerId);
+            if (ordinalPosition != null && selfTime != null) {
+                selfRow = new LeaderboardHudRow(String.valueOf(ordinalPosition),
+                        getDisplayPlayerName(playerId), FormatUtils.formatDuration(selfTime));
+            }
+        }
+        return new LeaderboardHudSnapshot(cache.version, cache.topRows, selfRow);
     }
 
     public long getXp(UUID playerId) {
@@ -583,15 +599,19 @@ public class ProgressStore {
     public boolean clearProgress(UUID playerId) {
         fileLock.writeLock().lock();
         boolean removed;
+        PlayerProgress removedProgress;
         try {
-            removed = progress.remove(playerId) != null;
+            removedProgress = progress.remove(playerId);
+            removed = removedProgress != null;
             lastKnownNames.remove(playerId);
             dirtyPlayerVersions.remove(playerId);
         } finally {
             fileLock.writeLock().unlock();
         }
         if (removed) {
-            leaderboardCache.clear();
+            for (String mapId : removedProgress.bestMapTimes.keySet()) {
+                invalidateLeaderboardCache(mapId);
+            }
             deletePlayerFromDatabase(playerId);
             HyvexaPlugin plugin = HyvexaPlugin.getInstance();
             if (plugin != null) {
@@ -882,7 +902,17 @@ public class ProgressStore {
         if (trimmedName.length() > MAX_PLAYER_NAME_LENGTH) {
             trimmedName = trimmedName.substring(0, MAX_PLAYER_NAME_LENGTH);
         }
-        lastKnownNames.put(playerId, trimmedName);
+        String previousName = lastKnownNames.put(playerId, trimmedName);
+        if (previousName == null || previousName.equals(trimmedName)) {
+            return;
+        }
+        PlayerProgress playerProgress = progress.get(playerId);
+        if (playerProgress == null) {
+            return;
+        }
+        for (String mapId : playerProgress.bestMapTimes.keySet()) {
+            invalidateLeaderboardCache(mapId);
+        }
     }
 
     private void markDirty(UUID playerId) {
@@ -996,14 +1026,16 @@ public class ProgressStore {
     }
 
     private void invalidateLeaderboardCache(String mapId) {
-        if (mapId != null) {
-            leaderboardCache.remove(mapId);
+        if (mapId == null) {
+            return;
         }
+        leaderboardVersions.merge(mapId, 1L, Long::sum);
+        leaderboardCache.remove(mapId);
     }
 
     private LeaderboardCache buildLeaderboardCache(String mapId) {
         if (mapId == null) {
-            return new LeaderboardCache(List.of(), java.util.Map.of(), null);
+            return LeaderboardCache.empty();
         }
         List<java.util.Map.Entry<UUID, Long>> entries = new ArrayList<>();
         for (java.util.Map.Entry<UUID, PlayerProgress> entry : progress.entrySet()) {
@@ -1014,22 +1046,53 @@ public class ProgressStore {
         }
         entries.sort(Comparator.comparingLong(java.util.Map.Entry::getValue));
         java.util.Map<UUID, Integer> positions = new HashMap<>();
+        java.util.Map<UUID, Integer> ordinalPositions = new HashMap<>();
+        java.util.Map<UUID, Long> timesByPlayer = new HashMap<>(entries.size());
         Long worldRecordMs = entries.isEmpty() ? null : entries.get(0).getValue();
         long lastTime = Long.MIN_VALUE;
         int rank = 0;
         for (int i = 0; i < entries.size(); i++) {
-            long time = toDisplayedCentiseconds(entries.get(i).getValue());
+            java.util.Map.Entry<UUID, Long> leaderboardEntry = entries.get(i);
+            long time = toDisplayedCentiseconds(leaderboardEntry.getValue());
             if (i == 0 || time > lastTime) {
                 rank = i + 1;
                 lastTime = time;
             }
-            positions.put(entries.get(i).getKey(), rank);
+            UUID playerId = leaderboardEntry.getKey();
+            positions.put(playerId, rank);
+            ordinalPositions.put(playerId, i + 1);
+            timesByPlayer.put(playerId, leaderboardEntry.getValue());
         }
-        return new LeaderboardCache(List.copyOf(entries), java.util.Map.copyOf(positions), worldRecordMs);
+        long version = leaderboardVersions.getOrDefault(mapId, 0L);
+        return new LeaderboardCache(List.copyOf(entries), java.util.Map.copyOf(positions),
+                java.util.Map.copyOf(ordinalPositions), java.util.Map.copyOf(timesByPlayer),
+                buildTopRows(entries), worldRecordMs, version);
     }
 
     private static long toDisplayedCentiseconds(long durationMs) {
         return Math.round(durationMs / 10.0);
+    }
+
+    private List<LeaderboardHudRow> buildTopRows(List<java.util.Map.Entry<UUID, Long>> entries) {
+        List<LeaderboardHudRow> topRows = new ArrayList<>(5);
+        for (int i = 0; i < 5; i++) {
+            if (i < entries.size()) {
+                java.util.Map.Entry<UUID, Long> entry = entries.get(i);
+                topRows.add(new LeaderboardHudRow(String.valueOf(i + 1), getDisplayPlayerName(entry.getKey()),
+                        FormatUtils.formatDuration(entry.getValue())));
+            } else {
+                topRows.add(LeaderboardHudRow.empty(i + 1));
+            }
+        }
+        return List.copyOf(topRows);
+    }
+
+    private String getDisplayPlayerName(UUID playerId) {
+        String name = getPlayerName(playerId);
+        if (name == null || name.isBlank()) {
+            return "Player";
+        }
+        return FormatUtils.truncate(name, 14);
     }
 
     private static class PlayerProgress {
@@ -1049,13 +1112,97 @@ public class ProgressStore {
     private static class LeaderboardCache {
         final List<java.util.Map.Entry<UUID, Long>> entries;
         final java.util.Map<UUID, Integer> positions;
+        final java.util.Map<UUID, Integer> ordinalPositions;
+        final java.util.Map<UUID, Long> timesByPlayer;
+        final List<LeaderboardHudRow> topRows;
         final Long worldRecordMs;
+        final long version;
 
         LeaderboardCache(List<java.util.Map.Entry<UUID, Long>> entries, java.util.Map<UUID, Integer> positions,
-                         Long worldRecordMs) {
+                         java.util.Map<UUID, Integer> ordinalPositions, java.util.Map<UUID, Long> timesByPlayer,
+                         List<LeaderboardHudRow> topRows, Long worldRecordMs, long version) {
             this.entries = entries;
             this.positions = positions;
+            this.ordinalPositions = ordinalPositions;
+            this.timesByPlayer = timesByPlayer;
+            this.topRows = topRows;
             this.worldRecordMs = worldRecordMs;
+            this.version = version;
+        }
+
+        private static LeaderboardCache empty() {
+            return new LeaderboardCache(List.of(), java.util.Map.of(), java.util.Map.of(), java.util.Map.of(),
+                    List.of(
+                            LeaderboardHudRow.empty(1),
+                            LeaderboardHudRow.empty(2),
+                            LeaderboardHudRow.empty(3),
+                            LeaderboardHudRow.empty(4),
+                            LeaderboardHudRow.empty(5)
+                    ), null, 0L);
+        }
+    }
+
+    public static final class LeaderboardHudSnapshot {
+        private static final LeaderboardHudSnapshot EMPTY =
+                new LeaderboardHudSnapshot(0L, List.of(), LeaderboardHudRow.empty());
+
+        private final long version;
+        private final List<LeaderboardHudRow> topRows;
+        private final LeaderboardHudRow selfRow;
+
+        private LeaderboardHudSnapshot(long version, List<LeaderboardHudRow> topRows, LeaderboardHudRow selfRow) {
+            this.version = version;
+            this.topRows = topRows;
+            this.selfRow = selfRow;
+        }
+
+        public static LeaderboardHudSnapshot empty() {
+            return EMPTY;
+        }
+
+        public long getVersion() {
+            return version;
+        }
+
+        public List<LeaderboardHudRow> getTopRows() {
+            return topRows;
+        }
+
+        public LeaderboardHudRow getSelfRow() {
+            return selfRow;
+        }
+    }
+
+    public static final class LeaderboardHudRow {
+        private static final LeaderboardHudRow EMPTY_SELF = new LeaderboardHudRow("", "", "");
+        private final String rank;
+        private final String name;
+        private final String time;
+
+        private LeaderboardHudRow(String rank, String name, String time) {
+            this.rank = rank;
+            this.name = name;
+            this.time = time;
+        }
+
+        public static LeaderboardHudRow empty(int rank) {
+            return new LeaderboardHudRow(String.valueOf(rank), "", "");
+        }
+
+        public static LeaderboardHudRow empty() {
+            return EMPTY_SELF;
+        }
+
+        public String getRank() {
+            return rank;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public String getTime() {
+            return time;
         }
     }
 
