@@ -297,7 +297,8 @@ public class HyvexaHubPlugin extends JavaPlugin {
     }
 
     private void attachHubHud(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef, UUID playerId) {
-        var world = store.getExternalData().getWorld();
+        var externalData = store != null ? store.getExternalData() : null;
+        var world = externalData != null ? externalData.getWorld() : null;
         if (world == null) {
             hubHudLifecycles.compute(playerId, (id, existing) ->
                 existing != null && existing.phase() == HudPhase.ATTACHING ? HudLifecycle.pending() : existing);

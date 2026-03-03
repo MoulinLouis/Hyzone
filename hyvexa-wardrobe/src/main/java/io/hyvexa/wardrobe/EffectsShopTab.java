@@ -108,10 +108,14 @@ public class EffectsShopTab implements ShopTab {
             String cosmeticId = button.substring(ACTION_PREVIEW.length());
             CosmeticDefinition def = CosmeticDefinition.fromId(cosmeticId);
             String name = def != null ? def.getDisplayName() : cosmeticId;
+            if (!executeOnWorldThread(player, (wRef, wStore) ->
+                    CosmeticManager.getInstance().previewCosmetic(wRef, wStore, cosmeticId))) {
+                player.sendMessage(Message.raw("[Shop] Could not preview right now. Try again.")
+                        .color(SystemMessageUtils.ERROR));
+                return ShopTabResult.NONE;
+            }
             player.sendMessage(Message.raw("[Shop] Previewing " + name + " for 5 seconds...")
                     .color(SystemMessageUtils.SECONDARY));
-            executeOnWorldThread(player, (wRef, wStore) ->
-                    CosmeticManager.getInstance().previewCosmetic(wRef, wStore, cosmeticId));
             return ShopTabResult.NONE;
         }
 
@@ -130,19 +134,27 @@ public class EffectsShopTab implements ShopTab {
             CosmeticStore.getInstance().equipCosmetic(playerId, cosmeticId);
             CosmeticDefinition def = CosmeticDefinition.fromId(cosmeticId);
             String name = def != null ? def.getDisplayName() : cosmeticId;
+            if (!executeOnWorldThread(player, (wRef, wStore) ->
+                    CosmeticManager.getInstance().applyCosmetic(wRef, wStore, cosmeticId))) {
+                player.sendMessage(Message.raw("[Shop] Could not apply that cosmetic right now. Try again.")
+                        .color(SystemMessageUtils.ERROR));
+                return ShopTabResult.REFRESH;
+            }
             player.sendMessage(Message.raw("[Shop] Equipped " + name + "!")
                     .color(SystemMessageUtils.SUCCESS));
-            executeOnWorldThread(player, (wRef, wStore) ->
-                    CosmeticManager.getInstance().applyCosmetic(wRef, wStore, cosmeticId));
             return ShopTabResult.REFRESH;
         }
 
         if (button.startsWith(ACTION_UNEQUIP)) {
             CosmeticStore.getInstance().unequipCosmetic(playerId);
+            if (!executeOnWorldThread(player, (wRef, wStore) ->
+                    CosmeticManager.getInstance().removeCosmetic(wRef, wStore))) {
+                player.sendMessage(Message.raw("[Shop] Could not remove cosmetic visual right now. Try again.")
+                        .color(SystemMessageUtils.ERROR));
+                return ShopTabResult.REFRESH;
+            }
             player.sendMessage(Message.raw("[Shop] Cosmetic unequipped.")
                     .color(SystemMessageUtils.SECONDARY));
-            executeOnWorldThread(player, (wRef, wStore) ->
-                    CosmeticManager.getInstance().removeCosmetic(wRef, wStore));
             return ShopTabResult.REFRESH;
         }
 
@@ -192,17 +204,18 @@ public class EffectsShopTab implements ShopTab {
         return index + 1;
     }
 
-    private void executeOnWorldThread(Player player, WorldThreadAction action) {
+    private boolean executeOnWorldThread(Player player, WorldThreadAction action) {
         Ref<EntityStore> freshRef = player.getReference();
-        if (freshRef == null || !freshRef.isValid()) return;
+        if (freshRef == null || !freshRef.isValid()) return false;
         Store<EntityStore> freshStore = freshRef.getStore();
-        com.hypixel.hytale.server.core.universe.world.World world =
-                freshStore.getExternalData().getWorld();
-        if (world == null) return;
+        if (freshStore == null || freshStore.getExternalData() == null) return false;
+        var world = freshStore.getExternalData().getWorld();
+        if (world == null) return false;
         CompletableFuture.runAsync(() -> {
             if (!freshRef.isValid()) return;
             action.run(freshRef, freshStore);
         }, world);
+        return true;
     }
 
     @FunctionalInterface

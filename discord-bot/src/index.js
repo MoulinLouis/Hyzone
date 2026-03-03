@@ -130,35 +130,14 @@ client.on('interactionCreate', async (interaction) => {
       return;
     }
 
-    // Look up the code
-    const codeRow = await db.findValidCode(code);
-    if (!codeRow) {
-      await interaction.editReply('Invalid or expired code. Generate a new one with `/link` in-game.');
+    const result = await db.claimCodeAndCreateLink(code, interaction.user.id);
+    if (!result.ok) {
+      await interaction.editReply(result.message);
       return;
     }
-
-    const playerUuid = codeRow.player_uuid;
-    const discordId = interaction.user.id;
-
-    // Check if this Discord account is already linked
-    const existingByDiscord = await db.findLinkByDiscordId(discordId);
-    if (existingByDiscord) {
-      await interaction.editReply('Your Discord account is already linked to a game account.');
-      return;
-    }
-
-    // Check if this game account is already linked
-    const existingByPlayer = await db.findLinkByPlayerUuid(playerUuid);
-    if (existingByPlayer) {
-      await interaction.editReply('This game account is already linked to another Discord account.');
-      return;
-    }
-
-    // Create the link
-    await db.createLink(playerUuid, discordId);
 
     await interaction.editReply(
-      'Account linked successfully! You\'ll receive **100 vexa** next time you log in to the server.'
+      'Account linked successfully! You will receive **100 vexa** next time you log in.'
     );
   } catch (err) {
     console.error('Error handling /link:', err);

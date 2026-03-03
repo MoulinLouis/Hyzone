@@ -80,6 +80,70 @@ async function createLink(playerUuid, discordId) {
 }
 
 /**
+ * Atomically claim a link code and create the permanent link.
+ * Locks the code row, re-checks uniqueness, deletes the code, and inserts
+ * the link all inside one transaction to prevent TOCTOU races.
+ * Returns { ok: true, playerUuid } on success, or { ok: false, message } on failure.
+ */
+async function claimCodeAndCreateLink(code, discordId) {
+  const conn = await getPool().getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const [codes] = await conn.execute(
+      'SELECT player_uuid FROM discord_link_codes WHERE code = ? AND expires_at > NOW() FOR UPDATE',
+      [code]
+    );
+    if (codes.length === 0) {
+      await conn.rollback();
+      return { ok: false, message: 'Invalid or expired code. Generate a new one with `/link` in-game.' };
+    }
+
+    const playerUuid = codes[0].player_uuid;
+
+    const [discordRows] = await conn.execute(
+      'SELECT 1 FROM discord_links WHERE discord_id = ? FOR UPDATE',
+      [discordId]
+    );
+    if (discordRows.length > 0) {
+      await conn.rollback();
+      return { ok: false, message: 'Your Discord account is already linked.' };
+    }
+
+    const [playerRows] = await conn.execute(
+      'SELECT 1 FROM discord_links WHERE player_uuid = ? FOR UPDATE',
+      [playerUuid]
+    );
+    if (playerRows.length > 0) {
+      await conn.rollback();
+      return { ok: false, message: 'This game account is already linked.' };
+    }
+
+    const [deleteResult] = await conn.execute(
+      'DELETE FROM discord_link_codes WHERE code = ?',
+      [code]
+    );
+    if (deleteResult.affectedRows !== 1) {
+      await conn.rollback();
+      return { ok: false, message: 'That code was already used. Generate a new one with `/link`.' };
+    }
+
+    await conn.execute(
+      'INSERT INTO discord_links (player_uuid, discord_id, vexa_rewarded) VALUES (?, ?, FALSE)',
+      [playerUuid, discordId]
+    );
+
+    await conn.commit();
+    return { ok: true, playerUuid };
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+}
+
+/**
  * Find all linked players whose current_rank differs from last_synced_rank.
  * Returns an array of { player_uuid, discord_id, current_rank, last_synced_rank }.
  */
@@ -122,6 +186,7 @@ module.exports = {
   findLinkByDiscordId,
   findLinkByPlayerUuid,
   createLink,
+  claimCodeAndCreateLink,
   getDesyncedRanks,
   markRankSynced,
   shutdown,

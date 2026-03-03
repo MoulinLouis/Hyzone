@@ -60,6 +60,10 @@ public class HubRouter {
             return;
         }
         Store<EntityStore> store = ref.getStore();
+        if (store == null || store.getExternalData() == null) {
+            LOGGER.atWarning().log("Hub route skipped: store has no world context");
+            return;
+        }
         World currentWorld = store.getExternalData().getWorld();
         if (currentWorld == null) {
             return;
