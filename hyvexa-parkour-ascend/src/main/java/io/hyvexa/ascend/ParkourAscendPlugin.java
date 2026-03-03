@@ -9,6 +9,7 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Int
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.command.AscendCommand;
@@ -67,9 +68,6 @@ import io.hyvexa.ascend.system.AscendFinishDetectionSystem;
 import io.hyvexa.common.visibility.EntityVisibilityFilterSystem;
 
 import javax.annotation.Nonnull;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -110,6 +108,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
     private int tickCounter;
     private final ConcurrentHashMap<UUID, PlayerRef> playerRefCache = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<World, AtomicBoolean> worldTickInFlight = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<World, Set<UUID>> tickPlayersByWorld = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, World> playerTickWorlds = new ConcurrentHashMap<>();
     private final Set<UUID> playersInAscendWorld = ConcurrentHashMap.newKeySet();
 
     public ParkourAscendPlugin(@Nonnull JavaPluginInit init) {
@@ -261,7 +261,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
                 UUID playerId = playerRef.getUuid();
                 if (playerId != null) {
                     playersInAscendWorld.add(playerId);
-                    playerRefCache.put(playerId, playerRef);
+                    cacheTickPlayer(playerRef);
                 }
                 // Register player as online for robot spawning
                 if (playerId != null && robotManager != null) {
@@ -341,6 +341,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     if (playerId != null) {
                         playersInAscendWorld.add(playerId);
                     }
+                    cacheTickPlayer(playerRef);
                     // If joining Ascend world, ensure items are present
                     Player player = holder.getComponent(Player.getComponentType());
                     if (player == null) {
@@ -383,6 +384,21 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     "Disconnect cleanup: DiscordLinkStore");
         });
 
+        for (PlayerRef playerRef : Universe.get().getPlayers()) {
+            UUID playerId = playerRef != null ? playerRef.getUuid() : null;
+            if (playerId != null) {
+                Ref<EntityStore> ref = playerRef.getReference();
+                if (ref != null && ref.isValid()) {
+                    Store<EntityStore> store = ref.getStore();
+                    World world = store != null && store.getExternalData() != null ? store.getExternalData().getWorld() : null;
+                    if (isAscendWorld(world)) {
+                        playersInAscendWorld.add(playerId);
+                        cacheTickPlayer(playerRef);
+                    }
+                }
+            }
+        }
+
         tickTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(
             this::tick,
             50, 50, TimeUnit.MILLISECONDS
@@ -394,6 +410,9 @@ public class ParkourAscendPlugin extends JavaPlugin {
         runSafe(() -> { if (tickTask != null) { tickTask.cancel(false); tickTask = null; } },
                 "Shutdown: tickTask cancel");
         runSafe(() -> worldTickInFlight.clear(), "Shutdown: worldTickInFlight clear");
+        runSafe(() -> tickPlayersByWorld.clear(), "Shutdown: tickPlayersByWorld clear");
+        runSafe(() -> playerTickWorlds.clear(), "Shutdown: playerTickWorlds clear");
+        runSafe(() -> playerRefCache.clear(), "Shutdown: playerRefCache clear");
         runSafe(() -> playersInAscendWorld.clear(), "Shutdown: playersInAscendWorld clear");
         runSafe(() -> { if (ghostRecorder != null) ghostRecorder.stop(); }, "Shutdown: ghostRecorder stop");
         runSafe(() -> { if (robotManager != null) robotManager.stop(); }, "Shutdown: robotManager stop");
@@ -484,6 +503,76 @@ public class ParkourAscendPlugin extends JavaPlugin {
         return playerRefCache.get(playerId);
     }
 
+    private void cacheTickPlayer(PlayerRef playerRef) {
+        if (playerRef == null) {
+            return;
+        }
+        UUID playerId = playerRef.getUuid();
+        if (playerId == null) {
+            return;
+        }
+        playerRefCache.put(playerId, playerRef);
+        syncTickPlayerWorld(playerRef, playerId);
+    }
+
+    private void syncTickPlayerWorld(PlayerRef playerRef, UUID playerId) {
+        if (playerId == null) {
+            return;
+        }
+        Ref<EntityStore> ref = playerRef != null ? playerRef.getReference() : null;
+        if (ref == null || !ref.isValid()) {
+            removeTickPlayerFromWorld(playerId);
+            return;
+        }
+        Store<EntityStore> store = ref.getStore();
+        if (store == null || store.getExternalData() == null) {
+            removeTickPlayerFromWorld(playerId);
+            return;
+        }
+        World world = store.getExternalData().getWorld();
+        if (!isAscendWorld(world)) {
+            removeTickPlayerFromWorld(playerId);
+            return;
+        }
+        World previousWorld = playerTickWorlds.put(playerId, world);
+        if (previousWorld != null && previousWorld != world) {
+            removeTickPlayerFromWorld(previousWorld, playerId);
+        }
+        tickPlayersByWorld.computeIfAbsent(world, ignored -> ConcurrentHashMap.newKeySet()).add(playerId);
+    }
+
+    private void removeTickPlayer(UUID playerId) {
+        if (playerId == null) {
+            return;
+        }
+        playerRefCache.remove(playerId);
+        removeTickPlayerFromWorld(playerId);
+    }
+
+    private void removeTickPlayerFromWorld(UUID playerId) {
+        if (playerId == null) {
+            return;
+        }
+        World previousWorld = playerTickWorlds.remove(playerId);
+        if (previousWorld != null) {
+            removeTickPlayerFromWorld(previousWorld, playerId);
+        }
+    }
+
+    private void removeTickPlayerFromWorld(World world, UUID playerId) {
+        if (world == null || playerId == null) {
+            return;
+        }
+        Set<UUID> playerIds = tickPlayersByWorld.get(world);
+        if (playerIds == null) {
+            return;
+        }
+        playerIds.remove(playerId);
+        if (playerIds.isEmpty()) {
+            tickPlayersByWorld.remove(world, playerIds);
+        }
+    }
+
     private void tick() {
         if (runTracker == null) {
             return;
@@ -491,30 +580,53 @@ public class ParkourAscendPlugin extends JavaPlugin {
         tickCounter++;
         boolean fullTick = tickCounter % FULL_TICK_INTERVAL == 0;
 
-        Map<World, List<PlayerTickContext>> playersByWorld = collectPlayersByWorld();
-        for (Map.Entry<World, List<PlayerTickContext>> entry : playersByWorld.entrySet()) {
+        for (Map.Entry<World, Set<UUID>> entry : tickPlayersByWorld.entrySet()) {
             World world = entry.getKey();
             if (!isAscendWorld(world)) {
                 continue;
             }
-            List<PlayerTickContext> players = entry.getValue();
+            Set<UUID> playerIds = entry.getValue();
+            if (playerIds == null) {
+                continue;
+            }
+            if (playerIds.isEmpty()) {
+                tickPlayersByWorld.remove(world, playerIds);
+                continue;
+            }
             AtomicBoolean inFlight = worldTickInFlight.computeIfAbsent(world, key -> new AtomicBoolean(false));
             if (!inFlight.compareAndSet(false, true)) {
                 continue;
             }
             CompletableFuture.runAsync(() -> {
                 try {
-                    for (PlayerTickContext context : players) {
-                        if (context.ref == null || !context.ref.isValid()) {
+                    for (UUID playerId : playerIds) {
+                        PlayerRef playerRef = playerRefCache.get(playerId);
+                        if (playerRef == null) {
+                            removeTickPlayer(playerId);
+                            continue;
+                        }
+                        Ref<EntityStore> ref = playerRef.getReference();
+                        if (ref == null || !ref.isValid()) {
+                            removeTickPlayerFromWorld(playerId);
+                            continue;
+                        }
+                        Store<EntityStore> store = ref.getStore();
+                        if (store == null || store.getExternalData() == null) {
+                            removeTickPlayerFromWorld(playerId);
+                            continue;
+                        }
+                        World playerWorld = store.getExternalData().getWorld();
+                        if (playerWorld != world) {
+                            syncTickPlayerWorld(playerRef, playerId);
                             continue;
                         }
                         if (fullTick) {
-                            runTracker.checkPlayer(context.ref, context.store);
-                            hudManager.updateFull(context.ref, context.store, context.playerRef);
+                            runTracker.checkPlayer(ref, store);
+                            hudManager.updateFull(ref, store, playerRef);
                         }
-                        hudManager.updateTimer(context.playerRef);
-                        hudManager.updateRunnerBars(context.playerRef);
-                        hudManager.updateToasts(context.playerRef.getUuid());
+                        hudManager.updateTimer(playerRef);
+                        hudManager.updateRunnerBars(playerRef);
+                        hudManager.updateToasts(playerRef.getUuid());
                     }
                 } finally {
                     inFlight.set(false);
@@ -523,39 +635,6 @@ public class ParkourAscendPlugin extends JavaPlugin {
                 LOGGER.atWarning().withCause(ex).log("Exception in tick async task");
                 return null;
             });
-        }
-    }
-
-    private Map<World, List<PlayerTickContext>> collectPlayersByWorld() {
-        Map<World, List<PlayerTickContext>> playersByWorld = new HashMap<>();
-        for (PlayerRef playerRef : playerRefCache.values()) {
-            Ref<EntityStore> ref = playerRef != null ? playerRef.getReference() : null;
-            if (ref == null || !ref.isValid()) {
-                continue;
-            }
-            Store<EntityStore> store = ref.getStore();
-            if (store == null) {
-                continue;
-            }
-            World world = store.getExternalData().getWorld();
-            if (world == null) {
-                continue;
-            }
-            playersByWorld.computeIfAbsent(world, key -> new ArrayList<>())
-                .add(new PlayerTickContext(ref, store, playerRef));
-        }
-        return playersByWorld;
-    }
-
-    private static class PlayerTickContext {
-        private final Ref<EntityStore> ref;
-        private final Store<EntityStore> store;
-        private final PlayerRef playerRef;
-
-        private PlayerTickContext(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef) {
-            this.ref = ref;
-            this.store = store;
-            this.playerRef = playerRef;
         }
     }
 
@@ -600,7 +679,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
         runSafe(() -> { if (passiveEarningsManager != null) passiveEarningsManager.onPlayerLeaveAscend(playerId); },
                 "Leave cleanup: passiveEarnings");
         runSafe(() -> AscendCommand.onPlayerDisconnect(playerId), "Leave cleanup: AscendCommand");
-        runSafe(() -> playerRefCache.remove(playerId), "Leave cleanup: playerRefCache");
+        runSafe(() -> removeTickPlayer(playerId), "Leave cleanup: playerRefCache");
         runSafe(() -> BaseAscendPage.removeCurrentPage(playerId), "Leave cleanup: removeCurrentPage");
         runSafe(() -> AscendLeaveInteraction.clearPendingLeave(playerId), "Leave cleanup: clearPendingLeave");
         runSafe(() -> AscendSettingsPage.clearPlayer(playerId), "Leave cleanup: AscendSettingsPage");

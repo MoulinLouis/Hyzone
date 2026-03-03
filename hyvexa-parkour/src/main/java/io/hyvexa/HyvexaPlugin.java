@@ -118,6 +118,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -169,7 +170,10 @@ public class HyvexaPlugin extends JavaPlugin {
     private GhostRecorder ghostRecorder;
     private GhostNpcManager ghostNpcManager;
     private PetManager petManager;
+    private final Map<UUID, PlayerRef> playerRefCache = new ConcurrentHashMap<>();
     private final Map<World, AtomicBoolean> hudTickInFlight = new ConcurrentHashMap<>();
+    private final Map<World, Set<UUID>> hudPlayersByWorld = new ConcurrentHashMap<>();
+    private final Map<UUID, World> playerHudWorlds = new ConcurrentHashMap<>();
 
     public HyvexaPlugin(@Nonnull JavaPluginInit init) {
         super(init);
@@ -362,6 +366,7 @@ public class HyvexaPlugin extends JavaPlugin {
                     Store<EntityStore> store = ref.getStore();
                     Player player = store.getComponent(ref, Player.getComponentType());
                     PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+                    cacheHudPlayer(playerRef);
                     boolean parkourWorld = playerRef != null && shouldApplyParkourMode(playerRef, store);
                     // Only modify HUD state on Parkour world to avoid racing MultipleHUD composite rebuild
                     if (parkourWorld && player != null && playerRef != null) {
@@ -386,6 +391,7 @@ public class HyvexaPlugin extends JavaPlugin {
         collisionManager.disableAllCollisions();
 
         for (PlayerRef playerRef : Universe.get().getPlayers()) {
+            cacheHudPlayer(playerRef);
             Ref<EntityStore> ref = playerRef != null ? playerRef.getReference() : null;
             if (ref != null && ref.isValid()) {
                 Store<EntityStore> store = ref.getStore();
@@ -403,6 +409,10 @@ public class HyvexaPlugin extends JavaPlugin {
         this.getEventRegistry().registerGlobal(AddPlayerToWorldEvent.class, event -> {
             try {
                 event.setBroadcastJoinMessage(false);
+                var holder = event.getHolder();
+                if (holder != null) {
+                    cacheHudPlayer(holder.getComponent(PlayerRef.getComponentType()));
+                }
             } catch (Exception e) {
                 LOGGER.atWarning().withCause(e).log("Exception in AddPlayerToWorldEvent");
             }
@@ -441,6 +451,9 @@ public class HyvexaPlugin extends JavaPlugin {
 
                 try { VoteManager.getInstance().unregisterPlayer(playerId); }
                 catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: VoteManager"); }
+
+                try { removeHudPlayer(playerId); }
+                catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: HUD buckets"); }
 
                 try {
                     Long sessionStart = playtimeManager.getSessionStart(playerId);
@@ -659,9 +672,6 @@ public class HyvexaPlugin extends JavaPlugin {
         }
     }
 
-    private record PlayerTickContext(PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
-    }
-
     public RunTracker getRunTracker() {
         return runTracker;
     }
@@ -779,15 +789,21 @@ public class HyvexaPlugin extends JavaPlugin {
     }
 
     private void tickHudUpdates() {
-        Map<World, List<PlayerTickContext>> playersByWorld = collectPlayersByWorld();
-        for (Map.Entry<World, List<PlayerTickContext>> entry : playersByWorld.entrySet()) {
+        for (Map.Entry<World, Set<UUID>> entry : hudPlayersByWorld.entrySet()) {
             World world = entry.getKey();
             if (!isParkourWorld(world)) {
                 continue;
             }
-            List<PlayerTickContext> players = entry.getValue();
+            Set<UUID> playerIds = entry.getValue();
+            if (playerIds == null) {
+                continue;
+            }
+            if (playerIds.isEmpty()) {
+                hudPlayersByWorld.remove(world, playerIds);
+                continue;
+            }
             String worldName = world.getName() != null ? world.getName() : "unknown";
-            String contextText = "world=" + worldName + ", players=" + players.size();
+            String contextText = "world=" + worldName + ", players=" + playerIds.size();
             AtomicBoolean inFlight = hudTickInFlight.computeIfAbsent(world, ignored -> new AtomicBoolean(false));
             if (!inFlight.compareAndSet(false, true)) {
                 continue;
@@ -795,17 +811,33 @@ public class HyvexaPlugin extends JavaPlugin {
             try {
                 CompletableFuture.runAsync(() -> {
                     try {
-                        for (PlayerTickContext context : players) {
-                            if (context.ref == null || !context.ref.isValid()) {
+                        for (UUID playerId : playerIds) {
+                            PlayerRef playerRef = playerRefCache.get(playerId);
+                            if (playerRef == null) {
+                                removeHudPlayer(playerId);
                                 continue;
                             }
-                            UUID playerId = context.playerRef != null ? context.playerRef.getUuid() : null;
+                            Ref<EntityStore> ref = playerRef.getReference();
+                            if (ref == null || !ref.isValid()) {
+                                removeHudPlayerFromWorld(playerId);
+                                continue;
+                            }
+                            Store<EntityStore> store = ref.getStore();
+                            if (store == null || store.getExternalData() == null) {
+                                removeHudPlayerFromWorld(playerId);
+                                continue;
+                            }
+                            World playerWorld = store.getExternalData().getWorld();
+                            if (playerWorld != world) {
+                                syncHudPlayerWorld(playerRef, playerId);
+                                continue;
+                            }
                             if (!shouldApplyParkourMode(playerId, world)) {
                                 continue;
                             }
                             if (hudManager != null) {
-                                hudManager.ensureRunHudNow(context.ref, context.store, context.playerRef);
-                                hudManager.updateRunHud(context.ref, context.store);
+                                hudManager.ensureRunHudNow(ref, store, playerRef);
+                                hudManager.updateRunHud(ref, store);
                             }
                         }
                     } finally {
@@ -843,6 +875,7 @@ public class HyvexaPlugin extends JavaPlugin {
 
     private void handlePlayerConnect(PlayerConnectEvent event) {
         PlayerRef playerRef = event.getPlayerRef();
+        cacheHudPlayer(playerRef);
         try {
             collisionManager.disablePlayerCollision(playerRef);
         } catch (Exception e) {
@@ -883,25 +916,74 @@ public class HyvexaPlugin extends JavaPlugin {
         }
     }
 
-    private Map<World, List<PlayerTickContext>> collectPlayersByWorld() {
-        Map<World, List<PlayerTickContext>> playersByWorld = new HashMap<>();
-        for (PlayerRef playerRef : Universe.get().getPlayers()) {
-            if (playerRef == null) {
-                continue;
-            }
-            Ref<EntityStore> ref = playerRef.getReference();
-            if (ref == null || !ref.isValid()) {
-                continue;
-            }
-            Store<EntityStore> store = ref.getStore();
-            World world = store.getExternalData().getWorld();
-            if (world == null) {
-                continue;
-            }
-            playersByWorld.computeIfAbsent(world, ignored -> new ArrayList<>())
-                    .add(new PlayerTickContext(playerRef, ref, store));
+    private void cacheHudPlayer(PlayerRef playerRef) {
+        if (playerRef == null) {
+            return;
         }
-        return playersByWorld;
+        UUID playerId = playerRef.getUuid();
+        if (playerId == null) {
+            return;
+        }
+        playerRefCache.put(playerId, playerRef);
+        syncHudPlayerWorld(playerRef, playerId);
+    }
+
+    private void syncHudPlayerWorld(PlayerRef playerRef, UUID playerId) {
+        if (playerId == null) {
+            return;
+        }
+        Ref<EntityStore> ref = playerRef != null ? playerRef.getReference() : null;
+        if (ref == null || !ref.isValid()) {
+            removeHudPlayerFromWorld(playerId);
+            return;
+        }
+        Store<EntityStore> store = ref.getStore();
+        if (store == null || store.getExternalData() == null) {
+            removeHudPlayerFromWorld(playerId);
+            return;
+        }
+        World world = store.getExternalData().getWorld();
+        if (world == null) {
+            removeHudPlayerFromWorld(playerId);
+            return;
+        }
+        World previousWorld = playerHudWorlds.put(playerId, world);
+        if (previousWorld != null && previousWorld != world) {
+            removeHudPlayerFromWorld(previousWorld, playerId);
+        }
+        hudPlayersByWorld.computeIfAbsent(world, ignored -> ConcurrentHashMap.newKeySet()).add(playerId);
+    }
+
+    private void removeHudPlayer(UUID playerId) {
+        if (playerId == null) {
+            return;
+        }
+        playerRefCache.remove(playerId);
+        removeHudPlayerFromWorld(playerId);
+    }
+
+    private void removeHudPlayerFromWorld(UUID playerId) {
+        if (playerId == null) {
+            return;
+        }
+        World previousWorld = playerHudWorlds.remove(playerId);
+        if (previousWorld != null) {
+            removeHudPlayerFromWorld(previousWorld, playerId);
+        }
+    }
+
+    private void removeHudPlayerFromWorld(World world, UUID playerId) {
+        if (world == null || playerId == null) {
+            return;
+        }
+        Set<UUID> playerIds = hudPlayersByWorld.get(world);
+        if (playerIds == null) {
+            return;
+        }
+        playerIds.remove(playerId);
+        if (playerIds.isEmpty()) {
+            hudPlayersByWorld.remove(world, playerIds);
+        }
     }
 
     private void tickCollisionRemoval() {
@@ -1102,6 +1184,15 @@ public class HyvexaPlugin extends JavaPlugin {
 
         try { if (announcementManager != null) { announcementManager.shutdown(); } }
         catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: announcementManager"); }
+
+        try { playerRefCache.clear(); }
+        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: playerRefCache"); }
+
+        try { hudPlayersByWorld.clear(); }
+        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: hudPlayersByWorld"); }
+
+        try { playerHudWorlds.clear(); }
+        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: playerHudWorlds"); }
 
         try { if (progressStore != null) { progressStore.flushPendingSave(); } }
         catch (Exception e) { LOGGER.atWarning().withCause(e).log("Shutdown: progressStore flush"); }
