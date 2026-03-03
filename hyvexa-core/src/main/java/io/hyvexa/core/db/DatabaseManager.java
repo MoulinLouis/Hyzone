@@ -125,6 +125,7 @@ public class DatabaseManager {
                 LOGGER.atSevere().withCause(healthEx).log("DATABASE HEALTH CHECK FAILED - database may be unreachable");
             }
         } catch (Exception e) {
+            // Init failure is fatal -- propagate as RuntimeException to prevent startup with broken DB
             LOGGER.atSevere().withCause(e).log("Failed to initialize database connection pool");
             throw new RuntimeException("Database initialization failed", e);
         }
@@ -240,7 +241,7 @@ public class DatabaseManager {
         }
     }
 
-    private boolean columnExists(Connection conn, String table, String column) throws SQLException {
+    public static boolean columnExists(Connection conn, String table, String column) throws SQLException {
         String sql = """
             SELECT 1 FROM information_schema.columns
             WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?
@@ -252,6 +253,51 @@ public class DatabaseManager {
             try (ResultSet rs = stmt.executeQuery()) {
                 return rs.next();
             }
+        }
+    }
+
+    public static void addColumnIfMissing(Connection conn, String table, String column, String definition) {
+        try {
+            if (columnExists(conn, table, column)) {
+                return;
+            }
+            String sql = "ALTER TABLE " + table + " ADD COLUMN " + column + " " + definition;
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                applyQueryTimeout(stmt);
+                stmt.executeUpdate();
+                LOGGER.atInfo().log("Added column " + table + "." + column);
+            }
+        } catch (SQLException e) {
+            LOGGER.atWarning().log("Failed to add column " + table + "." + column + ": " + e.getMessage());
+        }
+    }
+
+    public static void renameColumnIfExists(Connection conn, String table, String oldColumn, String newColumn, String definition) {
+        try {
+            if (!columnExists(conn, table, oldColumn)) {
+                return;
+            }
+            String sql = "ALTER TABLE " + table + " CHANGE COLUMN " + oldColumn + " " + newColumn + " " + definition;
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                applyQueryTimeout(stmt);
+                stmt.executeUpdate();
+                LOGGER.atInfo().log("Renamed column " + table + "." + oldColumn + " to " + newColumn);
+            }
+        } catch (SQLException e) {
+            LOGGER.atWarning().log("Failed to rename column " + table + "." + oldColumn + ": " + e.getMessage());
+        }
+    }
+
+    public static void ensureColumnExists(Connection conn, String table, String column, String alterSql) {
+        try {
+            if (columnExists(conn, table, column)) {
+                return;
+            }
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate(alterSql);
+            }
+        } catch (SQLException e) {
+            LOGGER.atWarning().log("Failed to ensure column " + column + " on table " + table + ": " + e.getMessage());
         }
     }
 

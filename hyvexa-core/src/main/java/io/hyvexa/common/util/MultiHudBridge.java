@@ -40,6 +40,9 @@ public final class MultiHudBridge {
      * When the engine clears the HUD on world switch, we restore this composite
      * so MultipleHUD.setCustomHud sees an existing composite and preserves all keys
      * (including Hyguns) instead of creating a fresh one.
+     *
+     * <p>Callers MUST call {@link #evictPlayer(UUID)} on player disconnect to prevent leaks.
+     * All plugin modules (parkour, hub, purge) already do this in their disconnect handlers.
      */
     private static final ConcurrentHashMap<UUID, CustomUIHud> compositeCache = new ConcurrentHashMap<>();
 

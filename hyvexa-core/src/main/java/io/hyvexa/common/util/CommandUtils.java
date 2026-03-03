@@ -24,9 +24,6 @@ public final class CommandUtils {
             return new String[0];
         }
         String[] tokens = input.trim().split("\\s+");
-        if (tokens.length == 0) {
-            return tokens;
-        }
         String first = tokens[0];
         if (first.startsWith("/")) {
             first = first.substring(1);
@@ -42,10 +39,7 @@ public final class CommandUtils {
     }
 
     /**
-     * Parse command arguments from a CommandContext, stripping the command name.
-     *
-     * @param ctx The command context
-     * @return Array of arguments (empty if none)
+     * Alias for {@link #tokenize(CommandContext)}.
      */
     public static String[] getArgs(CommandContext ctx) {
         return tokenize(ctx);

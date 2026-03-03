@@ -1,7 +1,6 @@
 package io.hyvexa.core.economy;
 
 import com.hypixel.hytale.logger.HytaleLogger;
-import com.hypixel.hytale.server.core.HytaleServer;
 import io.hyvexa.core.db.DatabaseManager;
 
 import java.sql.Connection;
@@ -9,23 +8,15 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Global vexa currency store. Singleton shared across all modules.
  * Lazy-loads per-player vexa counts from MySQL, evicts on disconnect.
- * Cache entries expire after {@link #CACHE_TTL_MS} to pick up cross-module DB writes.
  */
-public class VexaStore {
+public class VexaStore extends CachedCurrencyStore {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final VexaStore INSTANCE = new VexaStore();
-    private static final long CACHE_TTL_MS = 5_000;
-
-    private final ConcurrentHashMap<UUID, CachedBalance> cache = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<UUID, Boolean> refreshInFlight = new ConcurrentHashMap<>();
-    private final java.util.concurrent.atomic.AtomicLong versionCounter = new java.util.concurrent.atomic.AtomicLong(0);
 
     private VexaStore() {
     }
@@ -34,30 +25,33 @@ public class VexaStore {
         return INSTANCE;
     }
 
-    /**
-     * Create the player_vexa table if it does not exist.
-     * Safe to call multiple times (idempotent).
-     */
-    public void initialize() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
-            LOGGER.atWarning().log("Database not initialized, VexaStore will use in-memory mode");
-            return;
-        }
-        String createSql = "CREATE TABLE IF NOT EXISTS player_vexa ("
-                + "uuid VARCHAR(36) NOT NULL PRIMARY KEY, "
-                + "vexa BIGINT NOT NULL DEFAULT 0"
-                + ") ENGINE=InnoDB";
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
-            migratePlayerGemsToVexa(conn);
-            try (PreparedStatement stmt = conn.prepareStatement(createSql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.executeUpdate();
-            }
-            LOGGER.atInfo().log("VexaStore initialized (player_vexa table ensured)");
-        } catch (SQLException e) {
-            LOGGER.atSevere().withCause(e).log("Failed to create player_vexa table");
-        }
+    @Override
+    protected HytaleLogger logger() {
+        return LOGGER;
+    }
 
+    @Override
+    protected String tableName() {
+        return "player_vexa";
+    }
+
+    @Override
+    protected String columnName() {
+        return "vexa";
+    }
+
+    @Override
+    protected String currencyLabel() {
+        return "vexa";
+    }
+
+    @Override
+    protected void preMigrate(Connection conn) throws SQLException {
+        migratePlayerGemsToVexa(conn);
+    }
+
+    @Override
+    protected void registerBridge() {
         CurrencyBridge.register("vexa", new CurrencyBridge.CurrencyProvider() {
             @Override
             public long getBalance(UUID playerId) {
@@ -71,172 +65,25 @@ public class VexaStore {
         });
     }
 
-    /**
-     * Get the vexa count for a player. Lazy-loads from DB on cache miss or stale entry.
-     */
+    // ── Convenience methods preserving existing public API ───────────────
+
     public long getVexa(UUID playerId) {
-        if (playerId == null) {
-            return 0;
-        }
-        CachedBalance cached = cache.get(playerId);
-        if (cached == null) {
-            return loadAndCacheBalance(playerId);
-        }
-        if (cached.isStale()) {
-            refreshFromDatabaseAsync(playerId, cached.cachedAt);
-        }
-        return cached.value;
+        return getBalance(playerId);
     }
 
-    /**
-     * Set the vexa count for a player. Updates cache and persists immediately.
-     * Rolls back cache if persistence fails.
-     */
     public void setVexa(UUID playerId, long vexa) {
-        if (playerId == null) {
-            return;
-        }
-        long safe = Math.max(0, vexa);
-        CachedBalance previous = cache.get(playerId);
-        cache.put(playerId, new CachedBalance(safe, versionCounter.incrementAndGet()));
-        if (!persistToDatabase(playerId, safe)) {
-            if (previous == null) {
-                cache.remove(playerId);
-            } else {
-                cache.put(playerId, previous);
-            }
-        }
+        setBalance(playerId, vexa);
     }
 
-    /**
-     * Add vexa to a player's balance. Returns new total.
-     */
     public long addVexa(UUID playerId, long amount) {
-        if (playerId == null) {
-            return 0;
-        }
-        return modifyVexa(playerId, current -> current + amount);
+        return addBalance(playerId, amount);
     }
 
-    /**
-     * Remove vexa from a player's balance, flooring at 0. Returns new total.
-     */
     public long removeVexa(UUID playerId, long amount) {
-        if (playerId == null) {
-            return 0;
-        }
-        return modifyVexa(playerId, current -> Math.max(0, current - amount));
+        return removeBalance(playerId, amount);
     }
 
-    /**
-     * Atomically modify a player's vexa balance. The compute function receives the current
-     * balance and returns the desired new balance. Persists the result to the database.
-     * Rolls back cache if persistence fails.
-     */
-    private long modifyVexa(UUID playerId, java.util.function.LongUnaryOperator compute) {
-        long[] result = new long[1];
-        CachedBalance previous = cache.get(playerId);
-        cache.compute(playerId, (uuid, cached) -> {
-            long current = (cached != null && !cached.isStale()) ? cached.value : loadFromDatabase(uuid);
-            long newTotal = Math.max(0, compute.applyAsLong(current));
-            result[0] = newTotal;
-            return new CachedBalance(newTotal, versionCounter.incrementAndGet());
-        });
-        if (!persistToDatabase(playerId, result[0])) {
-            if (previous == null) {
-                cache.remove(playerId);
-            } else {
-                cache.put(playerId, previous);
-            }
-            return previous != null ? previous.value : 0;
-        }
-        return result[0];
-    }
-
-    /**
-     * Evict a player from cache. Called on disconnect.
-     */
-    public void evictPlayer(UUID playerId) {
-        if (playerId != null) {
-            cache.remove(playerId);
-            refreshInFlight.remove(playerId);
-        }
-    }
-
-    private long loadAndCacheBalance(UUID playerId) {
-        long fromDb = loadFromDatabase(playerId);
-        cache.put(playerId, new CachedBalance(fromDb, versionCounter.incrementAndGet()));
-        return fromDb;
-    }
-
-    private void refreshFromDatabaseAsync(UUID playerId, long staleCachedAt) {
-        if (playerId == null || refreshInFlight.putIfAbsent(playerId, Boolean.TRUE) != null) {
-            return;
-        }
-        CachedBalance snapshot = cache.get(playerId);
-        long snapshotVersion = snapshot != null ? snapshot.version : -1;
-        CompletableFuture.supplyAsync(() -> loadFromDatabase(playerId), HytaleServer.SCHEDULED_EXECUTOR)
-                .handle((value, throwable) -> {
-                    try {
-                        if (throwable != null) {
-                            LOGGER.atWarning().withCause(throwable).log("Failed to refresh vexa cache for " + playerId);
-                            return null;
-                        }
-                        cache.compute(playerId, (uuid, current) -> {
-                            if (current == null) {
-                                return null;
-                            }
-                            if (current.version != snapshotVersion) {
-                                return current;
-                            }
-                            return new CachedBalance(value, versionCounter.incrementAndGet());
-                        });
-                        return null;
-                    } finally {
-                        refreshInFlight.remove(playerId);
-                    }
-                });
-    }
-
-    private long loadFromDatabase(UUID playerId) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
-            return 0;
-        }
-        String sql = "SELECT vexa FROM player_vexa WHERE uuid = ?";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.setString(1, playerId.toString());
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getLong("vexa");
-                }
-            }
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to load vexa for " + playerId);
-        }
-        return 0;
-    }
-
-    private boolean persistToDatabase(UUID playerId, long vexa) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
-            return false;
-        }
-        String sql = "INSERT INTO player_vexa (uuid, vexa) VALUES (?, ?) "
-                + "ON DUPLICATE KEY UPDATE vexa = ?";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.setString(1, playerId.toString());
-            stmt.setLong(2, vexa);
-            stmt.setLong(3, vexa);
-            stmt.executeUpdate();
-            return true;
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to persist vexa for " + playerId);
-            return false;
-        }
-    }
+    // ── Migration ────────────────────────────────────────────────────────
 
     private void migratePlayerGemsToVexa(Connection conn) {
         if (conn == null) {
@@ -274,22 +121,6 @@ public class VexaStore {
     private boolean columnExists(Connection conn, String tableName, String columnName) throws SQLException {
         try (ResultSet rs = conn.getMetaData().getColumns(conn.getCatalog(), null, tableName, columnName)) {
             return rs.next();
-        }
-    }
-
-    private static final class CachedBalance {
-        final long value;
-        final long cachedAt;
-        final long version;
-
-        CachedBalance(long value, long version) {
-            this.value = value;
-            this.cachedAt = System.currentTimeMillis();
-            this.version = version;
-        }
-
-        boolean isStale() {
-            return System.currentTimeMillis() - cachedAt > CACHE_TTL_MS;
         }
     }
 }

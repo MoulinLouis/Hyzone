@@ -1,7 +1,8 @@
 package io.hyvexa.common.skin;
 
+import io.hyvexa.common.util.DailyResetUtils;
+
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -40,14 +41,10 @@ public final class DailyShopRotation {
     }
 
     public static long getSecondsUntilReset() {
-        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
-        LocalDateTime midnight = now.toLocalDate().plusDays(1).atStartOfDay();
-        return java.time.Duration.between(now, midnight).getSeconds();
+        return DailyResetUtils.getSecondsUntilReset();
     }
 
     public static String formatTimeRemaining(long seconds) {
-        long hours = seconds / 3600;
-        long minutes = (seconds % 3600) / 60;
-        return hours + "h " + minutes + "m";
+        return DailyResetUtils.formatTimeRemaining(seconds);
     }
 }

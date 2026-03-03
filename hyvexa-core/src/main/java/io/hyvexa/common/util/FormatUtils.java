@@ -143,9 +143,6 @@ public final class FormatUtils {
             return "Beginner";
         }
         String trimmed = category.trim();
-        if (trimmed.isEmpty()) {
-            return "Beginner";
-        }
         return trimmed.substring(0, 1).toUpperCase(Locale.ROOT) + trimmed.substring(1);
     }
 
@@ -171,10 +168,12 @@ public final class FormatUtils {
     }
 
     public static Message getRankMessage(String rank) {
-        if (!"VexaGod".equals(rank)) {
-            return Message.raw(rank != null ? rank : "").color(getRankColor(rank));
+        if (rank == null) {
+            return Message.raw("");
         }
-        String safeRank = rank;
+        if (!"VexaGod".equals(rank)) {
+            return Message.raw(rank).color(getRankColor(rank));
+        }
         String[] colors = {
                 "#ff4d4d",
                 "#ffa94d",
@@ -184,9 +183,9 @@ public final class FormatUtils {
                 "#5e5ce6",
                 "#b76cff"
         };
-        Message[] parts = new Message[safeRank.length()];
-        for (int i = 0; i < safeRank.length(); i++) {
-            String letter = String.valueOf(safeRank.charAt(i));
+        Message[] parts = new Message[rank.length()];
+        for (int i = 0; i < rank.length(); i++) {
+            String letter = String.valueOf(rank.charAt(i));
             parts[i] = Message.raw(letter).color(colors[i % colors.length]);
         }
         return Message.join(parts);

@@ -28,7 +28,7 @@ public class CosmeticStore {
     private final ConcurrentHashMap<UUID, List<String>> ownedCache = new ConcurrentHashMap<>();
     /** Per-player cache: currently equipped cosmetic ID (null = none). */
     private final ConcurrentHashMap<UUID, String> equippedCache = new ConcurrentHashMap<>();
-    /** Sentinel value for "loaded but nothing equipped". */
+    /** Sentinel value meaning no cosmetic is equipped. Empty string rather than null for safe map operations. */
     private static final String NONE_EQUIPPED = "";
 
     private CosmeticStore() {

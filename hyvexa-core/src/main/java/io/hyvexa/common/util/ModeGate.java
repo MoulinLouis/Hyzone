@@ -1,5 +1,7 @@
 package io.hyvexa.common.util;
 
+import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.universe.world.World;
 import io.hyvexa.common.WorldConstants;
 
@@ -36,5 +38,15 @@ public final class ModeGate {
 
     public static boolean isRunOrFallWorld(World world) {
         return isWorld(world, WorldConstants.WORLD_RUN_OR_FALL);
+    }
+
+    public static boolean denyIfNot(CommandContext context, World world, String expectedMode, Message denyMessage) {
+        if (!isWorld(world, expectedMode)) {
+            if (context != null) {
+                context.sendMessage(denyMessage);
+            }
+            return true;
+        }
+        return false;
     }
 }
