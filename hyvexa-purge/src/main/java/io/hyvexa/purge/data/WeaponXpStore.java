@@ -73,9 +73,7 @@ public class WeaponXpStore {
         return new int[]{0, 0};
     }
 
-    /**
-     * Increments XP by 1 and updates cache + DB. Returns the new [xp, level].
-     */
+    /** Sets the given xp/level in cache and persists async. */
     public int[] incrementXp(UUID playerId, String weaponId, int newXp, int newLevel) {
         if (playerId == null || weaponId == null) {
             return new int[]{0, 0};

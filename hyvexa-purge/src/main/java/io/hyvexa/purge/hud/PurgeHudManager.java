@@ -68,12 +68,9 @@ public class PurgeHudManager {
         if (playerId == null) {
             return null;
         }
-        try {
-            PlayerRef playerRef = Universe.get().getPlayer(playerId);
-            if (playerRef != null) {
-                return playerRef.getReference();
-            }
-        } catch (Exception ignored) {
+        PlayerRef playerRef = Universe.get().getPlayer(playerId);
+        if (playerRef != null) {
+            return playerRef.getReference();
         }
         return null;
     }
@@ -262,31 +259,22 @@ public class PurgeHudManager {
     public void tickSlowUpdates() {
         long now = System.currentTimeMillis();
         int playerCount = Universe.get().getPlayers().size();
-        java.util.List<UUID> toRemove = null;
+        List<UUID> toRemove = new ArrayList<>();
         for (var entry : purgeHuds.entrySet()) {
             UUID playerId = entry.getKey();
             PlayerRef playerRef = Universe.get().getPlayer(playerId);
             if (playerRef == null || !playerRef.isValid()) {
-                if (toRemove == null) {
-                    toRemove = new java.util.ArrayList<>();
-                }
                 toRemove.add(playerId);
                 continue;
             }
             Ref<EntityStore> ref = playerRef.getReference();
             if (ref == null || !ref.isValid()) {
-                if (toRemove == null) {
-                    toRemove = new java.util.ArrayList<>();
-                }
                 toRemove.add(playerId);
                 continue;
             }
             Store<EntityStore> store = ref.getStore();
             World world = store.getExternalData() != null ? store.getExternalData().getWorld() : null;
             if (!ModeGate.isPurgeWorld(world)) {
-                if (toRemove == null) {
-                    toRemove = new java.util.ArrayList<>();
-                }
                 toRemove.add(playerId);
                 continue;
             }
@@ -304,13 +292,11 @@ public class PurgeHudManager {
                 updateMissionHud(hud, mm, playerId);
             }
         }
-        if (toRemove != null) {
-            for (UUID playerId : toRemove) {
-                purgeHuds.remove(playerId);
-                hudReadyAt.remove(playerId);
-                comboPlayers.remove(playerId);
-                killMeterPlayers.remove(playerId);
-            }
+        for (UUID playerId : toRemove) {
+            purgeHuds.remove(playerId);
+            hudReadyAt.remove(playerId);
+            comboPlayers.remove(playerId);
+            killMeterPlayers.remove(playerId);
         }
     }
 

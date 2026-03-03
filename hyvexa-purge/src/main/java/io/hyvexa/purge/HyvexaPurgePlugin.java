@@ -20,6 +20,8 @@ import io.hyvexa.common.WorldConstants;
 import io.hyvexa.purge.system.PurgeDamageModifierSystem;
 import io.hyvexa.common.util.InventoryUtils;
 import io.hyvexa.common.util.ModeGate;
+import io.hyvexa.common.util.PlayerCleanupHelper;
+import io.hyvexa.common.util.StoreInitializer;
 import io.hyvexa.core.analytics.AnalyticsStore;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.core.discord.DiscordLinkStore;
@@ -125,31 +127,20 @@ public class HyvexaPurgePlugin extends JavaPlugin {
 
     @Override
     protected void setup() {
-        // Initialize shared stores
-        try { DatabaseManager.getInstance().initialize(); }
-        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Failed to initialize database for Purge"); }
-        try { VexaStore.getInstance().initialize(); }
-        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Failed to initialize VexaStore for Purge"); }
-        try { DiscordLinkStore.getInstance().initialize(); }
-        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Failed to initialize DiscordLinkStore for Purge"); }
-        try { AnalyticsStore.getInstance().initialize(); }
-        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Failed to initialize AnalyticsStore for Purge"); }
-
-        // Initialize Purge-specific stores
-        try { PurgeScrapStore.getInstance().initialize(); }
-        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Failed to initialize PurgeScrapStore"); }
-        try { PurgePlayerStore.getInstance().initialize(); }
-        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Failed to initialize PurgePlayerStore"); }
-        try { PurgeWeaponUpgradeStore.getInstance().initialize(); }
-        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Failed to initialize PurgeWeaponUpgradeStore"); }
-        try { PurgeSkinStore.getInstance().initialize(); }
-        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Failed to initialize PurgeSkinStore"); }
-        try { WeaponXpStore.getInstance().initialize(); }
-        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Failed to initialize WeaponXpStore"); }
-        try { PurgeClassStore.getInstance().initialize(); }
-        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Failed to initialize PurgeClassStore"); }
-        try { PurgeMissionStore.getInstance().initialize(); }
-        catch (Exception e) { LOGGER.atWarning().withCause(e).log("Failed to initialize PurgeMissionStore"); }
+        // Initialize all stores
+        StoreInitializer.initialize(LOGGER,
+                () -> DatabaseManager.getInstance().initialize(),
+                () -> VexaStore.getInstance().initialize(),
+                () -> DiscordLinkStore.getInstance().initialize(),
+                () -> AnalyticsStore.getInstance().initialize(),
+                () -> PurgeScrapStore.getInstance().initialize(),
+                () -> PurgePlayerStore.getInstance().initialize(),
+                () -> PurgeWeaponUpgradeStore.getInstance().initialize(),
+                () -> PurgeSkinStore.getInstance().initialize(),
+                () -> WeaponXpStore.getInstance().initialize(),
+                () -> PurgeClassStore.getInstance().initialize(),
+                () -> PurgeMissionStore.getInstance().initialize()
+        );
 
         // Create managers
         instanceManager = new PurgeInstanceManager();
@@ -268,26 +259,18 @@ public class HyvexaPurgePlugin extends JavaPlugin {
             sessionManager.cleanupPlayer(playerId);
             partyManager.cleanupPlayer(playerId);
             hudManager.removePlayer(playerId);
-            try { VexaStore.getInstance().evictPlayer(playerId); }
-            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: VexaStore"); }
-            try { DiscordLinkStore.getInstance().evictPlayer(playerId); }
-            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: DiscordLinkStore"); }
-            try { PurgePlayerStore.getInstance().evictPlayer(playerId); }
-            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: PurgePlayerStore"); }
-            try { PurgeScrapStore.getInstance().evictPlayer(playerId); }
-            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: PurgeScrapStore"); }
-            try { PurgeWeaponUpgradeStore.getInstance().evictPlayer(playerId); }
-            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: PurgeWeaponUpgradeStore"); }
-            try { PurgeSkinStore.getInstance().evictPlayer(playerId); }
-            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: PurgeSkinStore"); }
-            try { WeaponXpStore.getInstance().evictPlayer(playerId); }
-            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: WeaponXpStore"); }
-            try { PurgeClassStore.getInstance().evictPlayer(playerId); }
-            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: PurgeClassStore"); }
-            try { PurgeMissionStore.getInstance().evictPlayer(playerId); }
-            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: PurgeMissionStore"); }
-            try { MultiHudBridge.evictPlayer(playerId); }
-            catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: MultiHudBridge"); }
+            PlayerCleanupHelper.cleanup(playerId, LOGGER,
+                    id -> VexaStore.getInstance().evictPlayer(id),
+                    id -> DiscordLinkStore.getInstance().evictPlayer(id),
+                    id -> PurgePlayerStore.getInstance().evictPlayer(id),
+                    id -> PurgeScrapStore.getInstance().evictPlayer(id),
+                    id -> PurgeWeaponUpgradeStore.getInstance().evictPlayer(id),
+                    id -> PurgeSkinStore.getInstance().evictPlayer(id),
+                    id -> WeaponXpStore.getInstance().evictPlayer(id),
+                    id -> PurgeClassStore.getInstance().evictPlayer(id),
+                    id -> PurgeMissionStore.getInstance().evictPlayer(id),
+                    id -> MultiHudBridge.evictPlayer(id)
+            );
         });
 
         // Slow HUD updates (player count, vexa, scrap) every 5 seconds
@@ -347,7 +330,7 @@ public class HyvexaPurgePlugin extends JavaPlugin {
 
     public void removeLoadout(Player player) {
         InventoryUtils.clearAllContainers(player);
-        giveBaseLoadout(player, true);
+        giveBaseLoadout(player);
     }
 
     public void giveWaitingLoadout(Player player) {
@@ -393,16 +376,14 @@ public class HyvexaPurgePlugin extends JavaPlugin {
 
     // --- Private item grant methods ---
 
-    private void giveBaseLoadout(Player player, boolean includeServerSelector) {
+    private void giveBaseLoadout(Player player) {
         Inventory inventory = player.getInventory();
         if (inventory == null || inventory.getHotbar() == null) {
             return;
         }
         inventory.getHotbar().setItemStackForSlot(SLOT_ORB_BLUE, new ItemStack(ITEM_ORB_BLUE, 1), false);
         inventory.getHotbar().setItemStackForSlot(SLOT_ORB_ORANGE, new ItemStack(ITEM_ORB_ORANGE, 1), false);
-        if (includeServerSelector) {
-            giveServerSelector(player);
-        }
+        giveServerSelector(player);
     }
 
     private void giveServerSelector(Player player) {
@@ -460,14 +441,13 @@ public class HyvexaPurgePlugin extends JavaPlugin {
 
     private void ensurePurgeIdleState(PlayerRef playerRef, Player player) {
         UUID playerId = playerRef.getUuid();
-        if (playerId != null) {
-            hudManager.attach(playerRef, player);
+        if (playerId == null) {
+            return;
         }
-        if (playerId != null) {
-            PurgeWeaponUpgradeStore.getInstance().initializeDefaults(
-                    playerId, weaponConfigManager.getDefaultWeaponIds());
-        }
-        if (playerId != null && sessionManager != null && sessionManager.hasActiveSession(playerId)) {
+        hudManager.attach(playerRef, player);
+        PurgeWeaponUpgradeStore.getInstance().initializeDefaults(
+                playerId, weaponConfigManager.getDefaultWeaponIds());
+        if (sessionManager != null && sessionManager.hasActiveSession(playerId)) {
             return;
         }
         // PlayerReadyEvent can run before the entity is fully attached to a world.

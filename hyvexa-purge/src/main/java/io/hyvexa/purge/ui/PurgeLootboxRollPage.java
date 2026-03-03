@@ -214,21 +214,11 @@ public class PurgeLootboxRollPage extends InteractiveCustomUIPage<PurgeLootboxRo
     }
 
     private void updateWeaponIcon(UICommandBuilder cmd, String weaponId) {
-        String normalized = ICON_WEAPON_IDS.contains(weaponId) ? weaponId : "AK47";
-        for (String id : ICON_WEAPON_IDS) {
-            cmd.set("#Icon" + id + ".Visible", false);
-        }
-        cmd.set("#Icon" + normalized + ".Visible", true);
+        PurgeWeaponSelectPage.setIconVariant(cmd, ICON_WEAPON_IDS, "#Icon", weaponId);
     }
 
     private void updateStarDisplay(UICommandBuilder cmd, int level) {
-        int fullStars = level / 2;
-        boolean hasHalf = level % 2 == 1;
-        for (int p = 0; p < 5; p++) {
-            cmd.set("#S" + p + "F.Visible", p < fullStars);
-            cmd.set("#S" + p + "H.Visible", p == fullStars && hasHalf);
-            cmd.set("#S" + p + "E.Visible", p >= fullStars && !(p == fullStars && hasHalf));
-        }
+        PurgeWeaponSelectPage.setStarDisplay(cmd, "#S", level);
     }
 
     private void startTimeout() {

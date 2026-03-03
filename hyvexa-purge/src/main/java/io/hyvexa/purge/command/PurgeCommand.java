@@ -293,65 +293,14 @@ public class PurgeCommand extends AbstractAsyncCommand {
 
     private void handleClass(Player player, UUID playerId, String[] args) {
         if (args.length < 2) {
-            // Default: list all classes with unlock status
             showClassList(player, playerId);
             return;
         }
         String action = args[1].toLowerCase();
         switch (action) {
-            case "select" -> {
-                if (args.length < 3) {
-                    player.sendMessage(Message.raw("Usage: /purge class select <name>"));
-                    return;
-                }
-                PurgeClass target = PurgeClass.fromName(args[2]);
-                if (target == null) {
-                    player.sendMessage(Message.raw("Unknown class: " + args[2] + ". Options: Scavenger, Tank, Assault, Medic"));
-                    return;
-                }
-                if (!PurgeClassStore.getInstance().isUnlocked(playerId, target)) {
-                    player.sendMessage(Message.raw(target.getDisplayName() + " is not unlocked. Use /purge class unlock " + target.getDisplayName()));
-                    return;
-                }
-                if (sessionManager.hasActiveSession(playerId)) {
-                    player.sendMessage(Message.raw("Cannot change class during an active session."));
-                    return;
-                }
-                PurgeClassStore.getInstance().selectClass(playerId, target);
-                player.sendMessage(Message.raw("Class set to " + target.getDisplayName() + "."));
-            }
-            case "unlock" -> {
-                if (args.length < 3) {
-                    player.sendMessage(Message.raw("Usage: /purge class unlock <name>"));
-                    return;
-                }
-                PurgeClass target = PurgeClass.fromName(args[2]);
-                if (target == null) {
-                    player.sendMessage(Message.raw("Unknown class: " + args[2] + ". Options: Scavenger, Tank, Assault, Medic"));
-                    return;
-                }
-                PurgeClassStore.PurchaseResult result = PurgeClassStore.getInstance().purchaseClass(playerId, target);
-                switch (result) {
-                    case SUCCESS -> player.sendMessage(Message.raw("Unlocked " + target.getDisplayName() + "! Use /purge class select " + target.getDisplayName() + " to equip it."));
-                    case ALREADY_UNLOCKED -> player.sendMessage(Message.raw(target.getDisplayName() + " is already unlocked."));
-                    case NOT_ENOUGH_SCRAP -> {
-                        long have = PurgeScrapStore.getInstance().getScrap(playerId);
-                        player.sendMessage(Message.raw("Not enough scrap. Need " + target.getUnlockCost() + ", have " + have + "."));
-                    }
-                }
-            }
-            case "info" -> {
-                if (args.length < 3) {
-                    player.sendMessage(Message.raw("Usage: /purge class info <name>"));
-                    return;
-                }
-                PurgeClass target = PurgeClass.fromName(args[2]);
-                if (target == null) {
-                    player.sendMessage(Message.raw("Unknown class: " + args[2] + ". Options: Scavenger, Tank, Assault, Medic"));
-                    return;
-                }
-                showClassInfo(player, playerId, target);
-            }
+            case "select" -> handleClassSelect(player, playerId, args);
+            case "unlock" -> handleClassUnlock(player, playerId, args);
+            case "info" -> handleClassInfo(player, playerId, args);
             case "none" -> {
                 if (sessionManager.hasActiveSession(playerId)) {
                     player.sendMessage(Message.raw("Cannot change class during an active session."));
@@ -362,6 +311,62 @@ public class PurgeCommand extends AbstractAsyncCommand {
             }
             default -> player.sendMessage(Message.raw("Usage: /purge class [select|unlock|info|none]"));
         }
+    }
+
+    private void handleClassSelect(Player player, UUID playerId, String[] args) {
+        if (args.length < 3) {
+            player.sendMessage(Message.raw("Usage: /purge class select <name>"));
+            return;
+        }
+        PurgeClass target = PurgeClass.fromName(args[2]);
+        if (target == null) {
+            player.sendMessage(Message.raw("Unknown class: " + args[2] + ". Options: Scavenger, Tank, Assault, Medic"));
+            return;
+        }
+        if (!PurgeClassStore.getInstance().isUnlocked(playerId, target)) {
+            player.sendMessage(Message.raw(target.getDisplayName() + " is not unlocked. Use /purge class unlock " + target.getDisplayName()));
+            return;
+        }
+        if (sessionManager.hasActiveSession(playerId)) {
+            player.sendMessage(Message.raw("Cannot change class during an active session."));
+            return;
+        }
+        PurgeClassStore.getInstance().selectClass(playerId, target);
+        player.sendMessage(Message.raw("Class set to " + target.getDisplayName() + "."));
+    }
+
+    private void handleClassUnlock(Player player, UUID playerId, String[] args) {
+        if (args.length < 3) {
+            player.sendMessage(Message.raw("Usage: /purge class unlock <name>"));
+            return;
+        }
+        PurgeClass target = PurgeClass.fromName(args[2]);
+        if (target == null) {
+            player.sendMessage(Message.raw("Unknown class: " + args[2] + ". Options: Scavenger, Tank, Assault, Medic"));
+            return;
+        }
+        PurgeClassStore.PurchaseResult result = PurgeClassStore.getInstance().purchaseClass(playerId, target);
+        switch (result) {
+            case SUCCESS -> player.sendMessage(Message.raw("Unlocked " + target.getDisplayName() + "! Use /purge class select " + target.getDisplayName() + " to equip it."));
+            case ALREADY_UNLOCKED -> player.sendMessage(Message.raw(target.getDisplayName() + " is already unlocked."));
+            case NOT_ENOUGH_SCRAP -> {
+                long have = PurgeScrapStore.getInstance().getScrap(playerId);
+                player.sendMessage(Message.raw("Not enough scrap. Need " + target.getUnlockCost() + ", have " + have + "."));
+            }
+        }
+    }
+
+    private void handleClassInfo(Player player, UUID playerId, String[] args) {
+        if (args.length < 3) {
+            player.sendMessage(Message.raw("Usage: /purge class info <name>"));
+            return;
+        }
+        PurgeClass target = PurgeClass.fromName(args[2]);
+        if (target == null) {
+            player.sendMessage(Message.raw("Unknown class: " + args[2] + ". Options: Scavenger, Tank, Assault, Medic"));
+            return;
+        }
+        showClassInfo(player, playerId, target);
     }
 
     private void showClassList(Player player, UUID playerId) {

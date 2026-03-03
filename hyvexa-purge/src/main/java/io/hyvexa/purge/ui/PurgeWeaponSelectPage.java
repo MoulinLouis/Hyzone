@@ -526,45 +526,36 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
     }
 
     private void updateCardIconVariant(UICommandBuilder commandBuilder, String root, String weaponId) {
-        String normalized = normalizeIconWeaponId(weaponId);
-        for (String iconWeaponId : ICON_WEAPON_IDS) {
-            commandBuilder.set(root + " #Icon" + iconWeaponId + ".Visible", false);
-        }
-        commandBuilder.set(root + " #Icon" + normalized + ".Visible", true);
+        setIconVariant(commandBuilder, ICON_WEAPON_IDS, root + " #Icon", weaponId);
     }
 
     private void updateDetailIconVariant(UICommandBuilder commandBuilder, String weaponId) {
-        String normalized = normalizeIconWeaponId(weaponId);
-        for (String iconWeaponId : ICON_WEAPON_IDS) {
-            commandBuilder.set("#DIcon" + iconWeaponId + ".Visible", false);
-        }
-        commandBuilder.set("#DIcon" + normalized + ".Visible", true);
+        setIconVariant(commandBuilder, ICON_WEAPON_IDS, "#DIcon", weaponId);
     }
 
-    private String normalizeIconWeaponId(String weaponId) {
-        if (weaponId != null && ICON_WEAPON_IDS.contains(weaponId)) {
-            return weaponId;
+    static void setIconVariant(UICommandBuilder cmd, List<String> iconIds, String prefix, String weaponId) {
+        String normalized = (weaponId != null && iconIds.contains(weaponId)) ? weaponId : "AK47";
+        for (String id : iconIds) {
+            cmd.set(prefix + id + ".Visible", false);
         }
-        return "AK47";
+        cmd.set(prefix + normalized + ".Visible", true);
     }
 
     private void updateCardStarDisplay(UICommandBuilder commandBuilder, String root, int level) {
-        int fullStars = level / 2;
-        boolean hasHalf = level % 2 == 1;
-        for (int p = 0; p < 5; p++) {
-            commandBuilder.set(root + " #S" + p + "F.Visible", p < fullStars);
-            commandBuilder.set(root + " #S" + p + "H.Visible", p == fullStars && hasHalf);
-            commandBuilder.set(root + " #S" + p + "E.Visible", p >= fullStars && !(p == fullStars && hasHalf));
-        }
+        setStarDisplay(commandBuilder, root + " #S", level);
     }
 
     private void updateDetailStarDisplay(UICommandBuilder commandBuilder, int level) {
+        setStarDisplay(commandBuilder, "#DS", level);
+    }
+
+    static void setStarDisplay(UICommandBuilder cmd, String prefix, int level) {
         int fullStars = level / 2;
         boolean hasHalf = level % 2 == 1;
         for (int p = 0; p < 5; p++) {
-            commandBuilder.set("#DS" + p + "F.Visible", p < fullStars);
-            commandBuilder.set("#DS" + p + "H.Visible", p == fullStars && hasHalf);
-            commandBuilder.set("#DS" + p + "E.Visible", p >= fullStars && !(p == fullStars && hasHalf));
+            cmd.set(prefix + p + "F.Visible", p < fullStars);
+            cmd.set(prefix + p + "H.Visible", p == fullStars && hasHalf);
+            cmd.set(prefix + p + "E.Visible", p >= fullStars && !(p == fullStars && hasHalf));
         }
     }
 

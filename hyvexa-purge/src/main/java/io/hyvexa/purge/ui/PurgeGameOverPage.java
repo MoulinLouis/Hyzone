@@ -56,11 +56,6 @@ public class PurgeGameOverPage extends InteractiveCustomUIPage<PurgeGameOverPage
         close();
     }
 
-    @Override
-    public void onDismiss(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store) {
-        super.onDismiss(ref, store);
-    }
-
     public static class PurgeGameOverData {
         static final String KEY_CLOSE = "Close";
 

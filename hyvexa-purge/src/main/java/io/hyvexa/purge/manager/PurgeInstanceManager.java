@@ -13,6 +13,7 @@ import com.google.gson.GsonBuilder;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.function.Function;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -172,35 +173,35 @@ public class PurgeInstanceManager {
     }
 
     public boolean setStartPoint(String instanceId, PurgeLocation location) {
-        PurgeMapInstance old = instancesById.get(instanceId);
-        if (old == null || location == null) return false;
-        instancesById.put(instanceId, new PurgeMapInstance(old.instanceId(), location, old.exitPoint(), old.spawnPoints()));
-        saveToFile();
-        return true;
+        if (location == null) return false;
+        return updateInstance(instanceId, old ->
+                new PurgeMapInstance(old.instanceId(), location, old.exitPoint(), old.spawnPoints()));
     }
 
     public boolean setExitPoint(String instanceId, PurgeLocation location) {
-        PurgeMapInstance old = instancesById.get(instanceId);
-        if (old == null || location == null) return false;
-        instancesById.put(instanceId, new PurgeMapInstance(old.instanceId(), old.startPoint(), location, old.spawnPoints()));
-        saveToFile();
-        return true;
+        if (location == null) return false;
+        return updateInstance(instanceId, old ->
+                new PurgeMapInstance(old.instanceId(), old.startPoint(), location, old.spawnPoints()));
     }
 
     public boolean addSpawnPoint(String instanceId, PurgeSpawnPoint point) {
-        PurgeMapInstance old = instancesById.get(instanceId);
-        if (old == null || point == null) return false;
-        List<PurgeSpawnPoint> newPoints = new ArrayList<>(old.spawnPoints());
-        newPoints.add(point);
-        instancesById.put(instanceId, new PurgeMapInstance(old.instanceId(), old.startPoint(), old.exitPoint(), List.copyOf(newPoints)));
-        saveToFile();
-        return true;
+        if (point == null) return false;
+        return updateInstance(instanceId, old -> {
+            List<PurgeSpawnPoint> newPoints = new ArrayList<>(old.spawnPoints());
+            newPoints.add(point);
+            return new PurgeMapInstance(old.instanceId(), old.startPoint(), old.exitPoint(), List.copyOf(newPoints));
+        });
     }
 
     public boolean clearSpawnPoints(String instanceId) {
+        return updateInstance(instanceId, old ->
+                new PurgeMapInstance(old.instanceId(), old.startPoint(), old.exitPoint(), List.of()));
+    }
+
+    private boolean updateInstance(String instanceId, Function<PurgeMapInstance, PurgeMapInstance> updater) {
         PurgeMapInstance old = instancesById.get(instanceId);
         if (old == null) return false;
-        instancesById.put(instanceId, new PurgeMapInstance(old.instanceId(), old.startPoint(), old.exitPoint(), List.of()));
+        instancesById.put(instanceId, updater.apply(old));
         saveToFile();
         return true;
     }

@@ -195,7 +195,7 @@ public class PurgeSessionManager {
                         if (cm != null) {
                             cm.applyClassEffects(session, pid, ref, store);
                         }
-                        teleportToStart(ref, store, instance);
+                        teleportTo(ref, store, instance.startPoint());
                     }
                     hudManager.showRunHud(pid);
                     if (ps != null && plugin != null) {
@@ -291,24 +291,13 @@ public class PurgeSessionManager {
 
         // Step 3: Player cleanup
         PurgeSessionPlayerState playerState = session.getPlayerState(playerId);
-        runSafe("persist results", () -> persistResults(playerId, session));
-        runSafe("remove bypass", () -> DamageBypassRegistry.remove(playerId));
-        runSafe("hide hud", () -> {
-            hudManager.unregisterComboPlayer(playerId);
-            hudManager.unregisterKillMeter(playerId);
-            hudManager.hideRunHud(playerId);
-        });
+        performPlayerSessionCleanup(playerId, session);
 
         // Build stats before world cleanup
         int kills = playerState != null ? playerState.getKills() : 0;
         int bestCombo = playerState != null ? playerState.getBestCombo() : 0;
-        int summaryBaseScrap = calculateScrapReward(session.getCurrentWave());
-        PurgeClassManager cmSummary = classManager;
-        double summaryMult = cmSummary != null && playerState != null ? cmSummary.getScrapMultiplier(playerState) : 1.0;
-        int summaryScrap = (int) (summaryBaseScrap * summaryMult);
-        int summaryBonus = playerState != null ? playerState.getBonusScrapFromClass() : 0;
-        int summaryTotal = summaryScrap + summaryBonus;
         int wave = session.getCurrentWave();
+        int summaryTotal = calculateTotalScrap(wave, playerState);
 
         // World-dependent cleanup for this player
         // Pass playerState directly — world.execute() is async and session.removePlayer()
@@ -360,24 +349,13 @@ public class PurgeSessionManager {
         // Step 3: For each player still in session
         Set<UUID> participants = session.getParticipants();
         for (UUID pid : participants) {
-            runSafe("persist " + pid, () -> persistResults(pid, session));
-            runSafe("cleanup " + pid, () -> {
-                DamageBypassRegistry.remove(pid);
-                hudManager.unregisterComboPlayer(pid);
-                hudManager.unregisterKillMeter(pid);
-                hudManager.hideRunHud(pid);
-            });
+            performPlayerSessionCleanup(pid, session);
 
             PurgeSessionPlayerState playerState = session.getPlayerState(pid);
             int kills = playerState != null ? playerState.getKills() : 0;
             int bestCombo = playerState != null ? playerState.getBestCombo() : 0;
-            int stopBaseScrap = calculateScrapReward(session.getCurrentWave());
-            PurgeClassManager cmStop = classManager;
-            double stopMult = cmStop != null && playerState != null ? cmStop.getScrapMultiplier(playerState) : 1.0;
-            int stopScrap = (int) (stopBaseScrap * stopMult);
-            int stopBonus = playerState != null ? playerState.getBonusScrapFromClass() : 0;
-            int stopTotal = stopScrap + stopBonus;
             int wave = session.getCurrentWave();
+            int stopTotal = calculateTotalScrap(wave, playerState);
 
             CompletableFuture<Void> playerCleanupFuture =
                     runPlayerWorldCleanup(session, pid, playerState, endReason,
@@ -431,6 +409,16 @@ public class PurgeSessionManager {
 
     // --- Private helpers ---
 
+    private void performPlayerSessionCleanup(UUID playerId, PurgeSession session) {
+        runSafe("persist results", () -> persistResults(playerId, session));
+        runSafe("remove bypass", () -> DamageBypassRegistry.remove(playerId));
+        runSafe("hide hud", () -> {
+            hudManager.unregisterComboPlayer(playerId);
+            hudManager.unregisterKillMeter(playerId);
+            hudManager.hideRunHud(playerId);
+        });
+    }
+
     private void persistResults(UUID playerId, PurgeSession session) {
         PurgeSessionPlayerState playerState = session.getPlayerState(playerId);
         int kills = playerState != null ? playerState.getKills() : 0;
@@ -441,12 +429,7 @@ public class PurgeSessionManager {
         stats.incrementSessions();
         PurgePlayerStore.getInstance().save(playerId, stats);
 
-        int baseScrap = calculateScrapReward(session.getCurrentWave());
-        PurgeClassManager cm = classManager;
-        double scrapMult = cm != null ? cm.getScrapMultiplier(playerState) : 1.0;
-        int scrap = (int) (baseScrap * scrapMult);
-        int bonusScrap = playerState != null ? playerState.getBonusScrapFromClass() : 0;
-        int totalScrap = scrap + bonusScrap;
+        int totalScrap = calculateTotalScrap(session.getCurrentWave(), playerState);
         if (totalScrap > 0) {
             PurgeScrapStore.getInstance().addScrap(playerId, totalScrap);
         }
@@ -458,20 +441,35 @@ public class PurgeSessionManager {
         }
     }
 
+    private static final int SCRAP_TIER_1_WAVE = 5;
+    private static final int SCRAP_TIER_2_WAVE = 10;
+    private static final int SCRAP_TIER_3_WAVE = 15;
+    private static final int SCRAP_TIER_4_WAVE = 20;
+    private static final int SCRAP_TIER_5_WAVE = 25;
+
     static int calculateScrapReward(int wavesReached) {
-        if (wavesReached < 5) {
+        if (wavesReached < SCRAP_TIER_1_WAVE) {
             return 0;
-        } else if (wavesReached < 10) {
+        } else if (wavesReached < SCRAP_TIER_2_WAVE) {
             return 20;
-        } else if (wavesReached < 15) {
+        } else if (wavesReached < SCRAP_TIER_3_WAVE) {
             return 60;
-        } else if (wavesReached < 20) {
+        } else if (wavesReached < SCRAP_TIER_4_WAVE) {
             return 120;
-        } else if (wavesReached < 25) {
+        } else if (wavesReached < SCRAP_TIER_5_WAVE) {
             return 200;
         } else {
-            return 300 + 50 * ((wavesReached - 25) / 5);
+            return 300 + 50 * ((wavesReached - SCRAP_TIER_5_WAVE) / 5);
         }
+    }
+
+    private int calculateTotalScrap(int wave, PurgeSessionPlayerState playerState) {
+        int base = calculateScrapReward(wave);
+        PurgeClassManager cm = classManager;
+        double mult = cm != null && playerState != null
+                ? cm.getScrapMultiplier(playerState) : 1.0;
+        int bonus = playerState != null ? playerState.getBonusScrapFromClass() : 0;
+        return (int) (base * mult) + bonus;
     }
 
     private CompletableFuture<Void> runPlayerWorldCleanup(PurgeSession session, UUID playerId,
@@ -557,7 +555,7 @@ public class PurgeSessionManager {
             if (endReason.shouldTeleportToExit()) {
                 PurgeMapInstance instance = instanceManager.getInstance(session.getInstanceId());
                 if (instance != null) {
-                    teleportToExit(ref, store, instance);
+                    teleportTo(ref, store, instance.exitPoint());
                 }
             }
         });
@@ -613,21 +611,7 @@ public class PurgeSessionManager {
         return throwable;
     }
 
-    private void teleportToStart(Ref<EntityStore> ref, Store<EntityStore> store, PurgeMapInstance instance) {
-        PurgeLocation location = instance.startPoint();
-        if (location == null) {
-            return;
-        }
-        World world = store.getExternalData() != null ? store.getExternalData().getWorld() : null;
-        if (world == null) {
-            return;
-        }
-        store.addComponent(ref, Teleport.getComponentType(),
-                new Teleport(world, location.toPosition(), location.toRotation()));
-    }
-
-    private void teleportToExit(Ref<EntityStore> ref, Store<EntityStore> store, PurgeMapInstance instance) {
-        PurgeLocation location = instance.exitPoint();
+    private void teleportTo(Ref<EntityStore> ref, Store<EntityStore> store, PurgeLocation location) {
         if (location == null) {
             return;
         }

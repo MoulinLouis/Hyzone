@@ -45,19 +45,11 @@ public class WeaponXpManager {
         return 1.0 + 0.05 * level;
     }
 
-    public int[] getXpData(UUID playerId, String weaponId) {
-        return WeaponXpStore.getInstance().getXpData(playerId, weaponId);
-    }
-
     public int getLevel(UUID playerId, String weaponId) {
         if (playerId == null || weaponId == null) {
             return 0;
         }
         return WeaponXpStore.getInstance().getXpData(playerId, weaponId)[1];
-    }
-
-    public int getMaxLevel() {
-        return MAX_LEVEL;
     }
 
     // --- XP formulas ---
