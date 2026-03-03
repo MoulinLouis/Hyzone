@@ -57,6 +57,9 @@ $C.@PageOverlay {
         Group #IconMP9 { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/MP9_icon.png"); Visible: false; }
         Group #IconMac10 { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/Mac10_icon.png"); Visible: false; }
         Group #IconThompson { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/Thompson_icon.png"); Visible: false; }
+        Group #IconWoodSword { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/WoodSword_icon.png"); Visible: false; }
+        Group #IconKatana { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/Katana_icon.png"); Visible: false; }
+        Group #IconScarabSword { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/ScarabSword_icon.png"); Visible: false; }
       }
 
       // Weapon name (rolls with icon, turns amber on final result)

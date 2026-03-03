@@ -1,0 +1,12 @@
+{
+  "Parent": "Weapon_Longsword_Scarab",
+  "TranslationProperties": {
+    "Name": "Scarab Sword",
+    "Description": "Purge melee weapon."
+  },
+  "Quality": "Developer",
+  "Model": "Items/PurgeWeapons/ScarabSword.blockymodel",
+  "Texture": "Items/PurgeWeapons/ScarabSword_Texture.png",
+  "Icon": "Icons/ItemsGenerated/Purge_ScarabSword.png",
+  "DropOnDeath": false
+}

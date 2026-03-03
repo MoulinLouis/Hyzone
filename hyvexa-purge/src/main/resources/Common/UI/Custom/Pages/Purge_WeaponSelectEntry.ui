@@ -22,12 +22,15 @@ Group {
     Group #IconMP9 { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/MP9_icon.png"); Visible: false; }
     Group #IconMac10 { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/Mac10_icon.png"); Visible: false; }
     Group #IconThompson { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/Thompson_icon.png"); Visible: false; }
+    Group #IconWoodSword { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/WoodSword_icon.png"); Visible: false; }
+    Group #IconKatana { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/Katana_icon.png"); Visible: false; }
+    Group #IconScarabSword { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/ScarabSword_icon.png"); Visible: false; }
   }
 
   // Weapon name (hidden by default, shown in ADMIN mode)
   Label #WeaponName {
-    Anchor: (Left: 6, Right: 6, Bottom: 30, Height: 20);
-    Style: (FontSize: 12, TextColor: #d5e6ff, HorizontalAlignment: Center, RenderBold: true);
+    Anchor: (Left: 6, Right: 6, Bottom: 28, Height: 24);
+    Style: (FontSize: 10, TextColor: #d5e6ff, HorizontalAlignment: Center, RenderBold: true);
     Text: "";
     Visible: false;
   }

@@ -14,13 +14,13 @@ public record MissionDefinition(String id, MissionCategory category, String desc
             new MissionDefinition("wave_medium", MissionCategory.WAVE, "Reach wave 10", 10, 30),
             new MissionDefinition("wave_hard", MissionCategory.WAVE, "Reach wave 15", 15, 60),
             // Kill missions
-            new MissionDefinition("kill_easy", MissionCategory.KILL, "Kill 25 zombies", 25, 15),
-            new MissionDefinition("kill_medium", MissionCategory.KILL, "Kill 50 zombies", 50, 30),
-            new MissionDefinition("kill_hard", MissionCategory.KILL, "Kill 100 zombies", 100, 60),
+            new MissionDefinition("kill_easy", MissionCategory.KILL, "Kill 150 zombies", 150, 100),
+            new MissionDefinition("kill_medium", MissionCategory.KILL, "Kill 300 zombies", 300, 200),
+            new MissionDefinition("kill_hard", MissionCategory.KILL, "Kill 500 zombies", 500, 300),
             // Combo missions
-            new MissionDefinition("combo_easy", MissionCategory.COMBO, "Get a 3x combo", 3, 15),
-            new MissionDefinition("combo_medium", MissionCategory.COMBO, "Get a 5x combo", 5, 30),
-            new MissionDefinition("combo_hard", MissionCategory.COMBO, "Get a 7x combo", 7, 60)
+            new MissionDefinition("combo_easy", MissionCategory.COMBO, "Get a 5x combo", 5, 100),
+            new MissionDefinition("combo_medium", MissionCategory.COMBO, "Get a 10x combo", 10, 200),
+            new MissionDefinition("combo_hard", MissionCategory.COMBO, "Get a 15x combo", 15, 300)
     );
 
     public static List<MissionDefinition> getPool() {

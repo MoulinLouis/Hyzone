@@ -1,0 +1,62 @@
+{
+  "Parent": "Weapon_Sword_Wood",
+  "TranslationProperties": {
+    "Name": "Wooden Sword",
+    "Description": "Purge melee weapon."
+  },
+  "Quality": "Developer",
+  "Model": "Items/PurgeWeapons/WoodSword.blockymodel",
+  "Texture": "Items/PurgeWeapons/WoodSword_Texture.png",
+  "Icon": "Icons/ItemsGenerated/Purge_WoodSword.png",
+  "DropOnDeath": false,
+  "InteractionVars": {
+    "Swing_Left_Damage": {
+      "Interactions": [
+        {
+          "Parent": "Weapon_Sword_Primary_Swing_Left_Damage",
+          "DamageCalculator": {
+            "BaseDamage": {
+              "Physical": 1
+            }
+          }
+        }
+      ]
+    },
+    "Swing_Right_Damage": {
+      "Interactions": [
+        {
+          "Parent": "Weapon_Sword_Primary_Swing_Right_Damage",
+          "DamageCalculator": {
+            "BaseDamage": {
+              "Physical": 1
+            }
+          }
+        }
+      ]
+    },
+    "Swing_Down_Damage": {
+      "Interactions": [
+        {
+          "Parent": "Weapon_Sword_Primary_Swing_Down_Damage",
+          "DamageCalculator": {
+            "BaseDamage": {
+              "Physical": 1
+            }
+          }
+        }
+      ]
+    },
+    "Thrust_Damage": {
+      "Interactions": [
+        {
+          "Parent": "Weapon_Sword_Primary_Thrust_Damage",
+          "DamageCalculator": {
+            "BaseDamage": {
+              "Physical": 1
+            }
+          }
+        }
+      ]
+    }
+  }
+}

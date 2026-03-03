@@ -7,6 +7,8 @@
 - **Ascend: Runner tick load reduced under concurrency** - Runner state now refreshes from dirty player updates instead of a constant full snapshot scan, caches map/world/ghost data per robot, batches teleports per world tick, and only keeps NPCs spawned near active viewers while preserving runner payouts.
 - **Core: Trail fan-out load reduced under concurrency** - World particle and model particle trails now share one 50 ms scheduler/viewer snapshot, batch each world's emissions into one world-thread closure, cull distant viewers, reuse constant payloads, and stop the scheduler when no active trails remain.
 - **Purge: Scrap rewards no longer persist on the zombie-death hot path** - Kill rewards now accumulate in memory, flush on a short background interval and session boundaries, and reconcile safely with transactional class/weapon purchases.
+- **Purge: Melee zombie hits no longer fall through to 0 damage** - Purge now resolves attached melee damage refs back to the owning player and tracked zombie before applying custom weapon damage.
+- **Purge: Custom swords now inject direct zombie hits on primary melee use** - Purge melee weapons now trigger root-zombie damage from the item interaction path instead of depending on the broken vanilla sword hit target.
 - **Core: HUD currency reads no longer cause periodic DB refresh storms** - HUDs now use cache-only balance reads for active players, refresh TTL is much longer, and any remaining balance refreshes run on dedicated threads instead of the shared scheduler.
 - **Core: Vote polling no longer blocks the shared scheduler** - Vote checks now use bounded async HTTP workers, separate reward persistence threads, and temporary poll backoff after repeated backend failures.
 
@@ -14,6 +16,9 @@
 - **Purge: Class system** - 4 unlockable classes (Scavenger, Tank, Assault, Medic) purchased with scrap. Each provides passive stat boosts and a unique perk. Scavenger earns +30% scrap with kill streak bonuses; Tank gets +40 HP with 20% damage reduction; Assault deals +20% damage with streak ramp; Medic has passive regen and heal-on-kill. Managed via `/purge class` commands.
 
 ### Changed
+- **Purge: Melee swords now use Purge-owned item assets** - Wood Sword, Katana, and Scarab Sword now use plugin item IDs with local models/textures/icons, so later melee visual or behavior changes no longer depend on vanilla item IDs.
+- **Purge: Daily kill/combo missions rebalanced** - Kill missions now require 150/300/500 zombies for 100/200/300 scrap, and combo missions now require 5x/10x/15x combos for 100/200/300 scrap.
+- **Purge: Melee weapons added to loadouts and lootboxes** - Purge sessions now grant a secondary melee slot, lootboxes can roll melee or gun swaps, and melee mastery/damage/admin config use the same upgrade pipeline as ranged weapons.
 - **Purge: Session player HP normalized to 100** - Purge now forces session base player health to `100` before wave combat, preventing stray `102/102` max HP reads while still letting run HP upgrades add on top.
 - **Purge: Zombie melee now respects variant damage config** - Purge session players now correctly bypass the global god-mode filter, so zombie hits apply the `Variants` admin `damage` value again.
 - **Parkour: Ghost orphan cleanup hardening** - Parkour PB ghosts now persist failed despawns for deferred cleanup and next-start removal, preventing frozen Kweebec ghosts from lingering in the world.

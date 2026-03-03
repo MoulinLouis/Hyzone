@@ -74,7 +74,8 @@ public class HyvexaPurgePlugin extends JavaPlugin {
     private static final short SLOT_ORB_BLUE = 0;
     private static final short SLOT_ORB_ORANGE = 1;
     private static final short SLOT_PRIMARY_WEAPON = 0;
-    private static final short SLOT_PRIMARY_AMMO = 1;
+    private static final short SLOT_MELEE_WEAPON = 1;
+    private static final short SLOT_PRIMARY_AMMO = 3;
     private static final short SLOT_LOOTBOX = 2;
     private static final short SLOT_SHOP = 2;
     private static final short SLOT_QUIT_ORB = 8;
@@ -322,6 +323,7 @@ public class HyvexaPurgePlugin extends JavaPlugin {
     public void grantLoadout(Player player, PurgeSessionPlayerState state) {
         InventoryUtils.clearAllContainers(player);
         giveStartingWeapon(player, state);
+        giveStartingMeleeWeapon(player, state);
         giveStartingAmmo(player);
         giveQuitOrb(player);
         // Apply weapon XP ammo multiplier to starting weapon
@@ -342,7 +344,7 @@ public class HyvexaPurgePlugin extends JavaPlugin {
 
     public void switchWeapon(Player player, PurgeSessionPlayerState state, String newWeaponId) {
         state.setCurrentWeaponId(newWeaponId);
-        String itemId = resolveSkinnedItemId(state.getPlayerId(), newWeaponId);
+        String itemId = resolveWeaponItemId(state.getPlayerId(), newWeaponId);
         Inventory inventory = player.getInventory();
         if (inventory != null && inventory.getHotbar() != null) {
             inventory.getHotbar().setItemStackForSlot(SLOT_PRIMARY_WEAPON, new ItemStack(itemId, 1), false);
@@ -352,6 +354,21 @@ public class HyvexaPurgePlugin extends JavaPlugin {
         // Update weapon XP HUD for the new weapon
         String displayName = weaponConfigManager.getDisplayName(newWeaponId);
         hudManager.updateWeaponXpHud(state.getPlayerId(), newWeaponId, displayName);
+    }
+
+    public void switchMeleeWeapon(Player player, PurgeSessionPlayerState state, String newMeleeId) {
+        state.setCurrentMeleeWeaponId(newMeleeId);
+        String itemId = weaponConfigManager.getMeleeItemId(newMeleeId);
+        Inventory inventory = player.getInventory();
+        if (inventory != null && inventory.getHotbar() != null) {
+            inventory.getHotbar().setItemStackForSlot(
+                    SLOT_MELEE_WEAPON,
+                    new ItemStack(itemId != null ? itemId : newMeleeId, 1),
+                    false
+            );
+        }
+        String displayName = weaponConfigManager.getDisplayName(newMeleeId);
+        hudManager.updateWeaponXpHud(state.getPlayerId(), newMeleeId, displayName);
     }
 
     public void grantLootbox(Player player, int count) {
@@ -414,12 +431,35 @@ public class HyvexaPurgePlugin extends JavaPlugin {
                 ? state.getCurrentWeaponId()
                 : weaponConfigManager.getSessionWeaponId();
         UUID ownerId = (state != null) ? state.getPlayerId() : null;
-        String itemId = resolveSkinnedItemId(ownerId, weaponItem);
+        String itemId = resolveWeaponItemId(ownerId, weaponItem);
         inventory.getHotbar().setItemStackForSlot(SLOT_PRIMARY_WEAPON, new ItemStack(itemId, 1), false);
     }
 
-    private String resolveSkinnedItemId(UUID playerId, String weaponId) {
-        if (playerId == null || weaponId == null) {
+    private void giveStartingMeleeWeapon(Player player, PurgeSessionPlayerState state) {
+        Inventory inventory = player.getInventory();
+        if (inventory == null || inventory.getHotbar() == null) {
+            return;
+        }
+        String meleeWeaponId = (state != null && state.getCurrentMeleeWeaponId() != null)
+                ? state.getCurrentMeleeWeaponId()
+                : weaponConfigManager.getSessionMeleeWeaponId();
+        String itemId = weaponConfigManager.getMeleeItemId(meleeWeaponId);
+        inventory.getHotbar().setItemStackForSlot(
+                SLOT_MELEE_WEAPON,
+                new ItemStack(itemId != null ? itemId : meleeWeaponId, 1),
+                false
+        );
+    }
+
+    private String resolveWeaponItemId(UUID playerId, String weaponId) {
+        if (weaponId == null) {
+            return null;
+        }
+        if (weaponConfigManager.isMeleeWeapon(weaponId)) {
+            String meleeItemId = weaponConfigManager.getMeleeItemId(weaponId);
+            return meleeItemId != null ? meleeItemId : weaponId;
+        }
+        if (playerId == null) {
             return weaponId;
         }
         String skinId = PurgeSkinStore.getInstance().getSelectedSkin(playerId, weaponId);

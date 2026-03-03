@@ -72,7 +72,7 @@ $C.@PageOverlay {
         // Session Weapon toggle
         TextButton #SessionToggle {
           Anchor: (Left: 6, Width: 146, Height: 32);
-          Text: "SESSION WPN: OFF";
+          Text: "SESSION GUN: OFF";
           Style: TextButtonStyle(
             Default: (Background: #1c2b3d, LabelStyle: (FontSize: 11, RenderBold: true, TextColor: #8b9bb0, HorizontalAlignment: Center, VerticalAlignment: Center)),
             Hovered: (Background: #263b54, LabelStyle: (FontSize: 11, RenderBold: true, TextColor: #b0c4de, HorizontalAlignment: Center, VerticalAlignment: Center)),

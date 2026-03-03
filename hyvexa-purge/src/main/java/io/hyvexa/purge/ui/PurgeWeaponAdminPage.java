@@ -62,7 +62,7 @@ public class PurgeWeaponAdminPage extends InteractiveCustomUIPage<PurgeWeaponAdm
                       @Nonnull Store<EntityStore> store) {
         uiCommandBuilder.append("Pages/Purge_WeaponAdmin.ui");
 
-        String displayName = weaponConfigManager.getDisplayName(weaponId);
+        String displayName = getWeaponLabel();
         int levelCount = weaponConfigManager.getAllLevels(weaponId).size();
         String maxStars = weaponConfigManager.getStarDisplay(weaponConfigManager.getMaxLevel());
         uiCommandBuilder.set("#WeaponSubtitle.Text",
@@ -164,7 +164,11 @@ public class PurgeWeaponAdminPage extends InteractiveCustomUIPage<PurgeWeaponAdm
     }
 
     private void handleToggleSession() {
-        weaponConfigManager.setSessionWeapon(weaponId);
+        if (weaponConfigManager.isMeleeWeapon(weaponId)) {
+            weaponConfigManager.setSessionMeleeWeapon(weaponId);
+        } else {
+            weaponConfigManager.setSessionWeapon(weaponId);
+        }
         sendRefresh();
     }
 
@@ -192,11 +196,24 @@ public class PurgeWeaponAdminPage extends InteractiveCustomUIPage<PurgeWeaponAdm
         boolean isDefault = weaponConfigManager.isDefaultUnlocked(weaponId);
         commandBuilder.set("#DefaultToggle.Text", isDefault ? "DEFAULT: ON" : "DEFAULT: OFF");
 
-        boolean isSession = weaponConfigManager.isSessionWeapon(weaponId);
-        commandBuilder.set("#SessionToggle.Text", isSession ? "SESSION WPN: ON" : "SESSION WPN: OFF");
+        boolean isMelee = weaponConfigManager.isMeleeWeapon(weaponId);
+        boolean isSession = isMelee
+                ? weaponConfigManager.isSessionMeleeWeapon(weaponId)
+                : weaponConfigManager.isSessionWeapon(weaponId);
+        commandBuilder.set("#SessionToggle.Text",
+                isSession
+                        ? (isMelee ? "SESSION MELEE: ON" : "SESSION GUN: ON")
+                        : (isMelee ? "SESSION MELEE: OFF" : "SESSION GUN: OFF"));
 
         long unlockCost = weaponConfigManager.getUnlockCost(weaponId);
         commandBuilder.set("#UnlockCostValue.Text", String.valueOf(unlockCost));
+    }
+
+    private String getWeaponLabel() {
+        if (weaponConfigManager.isMeleeWeapon(weaponId)) {
+            return weaponConfigManager.getDisplayName(weaponId) + " [Melee]";
+        }
+        return weaponConfigManager.getDisplayName(weaponId);
     }
 
     private void bindStaticEvents(UIEventBuilder uiEventBuilder) {

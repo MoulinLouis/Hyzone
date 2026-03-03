@@ -1,5 +1,6 @@
 package io.hyvexa.purge.system;
 
+import com.hypixel.hytale.builtin.mounts.MountedComponent;
 import com.hypixel.hytale.component.ArchetypeChunk;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.server.core.Message;
@@ -10,14 +11,20 @@ import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.server.core.entity.nameplate.Nameplate;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.knockback.KnockbackComponent;
+import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.modules.entity.damage.Damage;
 import com.hypixel.hytale.server.core.modules.entity.damage.DamageEventSystem;
 import com.hypixel.hytale.server.core.modules.entity.damage.DamageModule;
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entitystats.EntityStatMap;
 import com.hypixel.hytale.server.core.modules.entitystats.EntityStatValue;
 import com.hypixel.hytale.server.core.modules.entitystats.asset.DefaultEntityStatTypes;
+import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector4d;
 import com.hypixel.hytale.protocol.SoundCategory;
 import com.hypixel.hytale.protocol.packets.world.PlaySoundEvent2D;
 import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
@@ -39,9 +46,14 @@ import java.util.UUID;
 
 public class PurgeDamageModifierSystem extends DamageEventSystem {
 
+    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final String KILL_SOUND_PREFIX = "SFX_Purge_Kill";
+    private static final byte SLOT_MELEE_WEAPON = 1;
     private static final int MAX_STREAK = 9;
     private static final long STREAK_WINDOW_MS = 3000L;
+    private static final int MAX_MOUNT_RESOLUTION_DEPTH = 4;
+    private static final double MELEE_TARGET_RESOLVE_MAX_HORIZONTAL_DISTANCE_SQUARED = 2.25d;
+    private static final double MELEE_TARGET_RESOLVE_MAX_VERTICAL_DISTANCE = 4.0d;
 
     private final PurgeSessionManager sessionManager;
     private final PurgeVariantConfigManager variantConfigManager;
@@ -67,8 +79,20 @@ public class PurgeDamageModifierSystem extends DamageEventSystem {
     @Override
     public void handle(int entityId, ArchetypeChunk<EntityStore> chunk, Store<EntityStore> store,
                        CommandBuffer<EntityStore> buffer, Damage event) {
+        Damage.Source src = event.getSource();
+        String srcType = src != null ? src.getClass().getSimpleName() : "null";
+        LOGGER.atInfo().log("[DMG-TRACE] handle called, amount=" + event.getAmount()
+                + " source=" + srcType + " cause=" + event.getCause()
+                + " cancelled=" + event.isCancelled());
         // Check if target is a player
         Player target = chunk.getComponent(entityId, Player.getComponentType());
+        // Safety net: un-cancel damage for non-player targets (e.g. zombies).
+        // Engine filters like FilterNPCWorldConfig may pre-cancel NPC damage events.
+        if (event.isCancelled() && target == null) {
+            event.setCancelled(false);
+            event.setAmount(event.getInitialAmount());
+            LOGGER.atInfo().log("[DMG-TRACE] un-cancelled non-player damage, restored amount=" + event.getInitialAmount());
+        }
         if (target == null) {
             // Target is not a player (e.g. zombie) — check for player damage overrides
             applyPlayerDamageOverride(event, store, chunk.getReferenceTo(entityId));
@@ -99,29 +123,35 @@ public class PurgeDamageModifierSystem extends DamageEventSystem {
         if (source instanceof Damage.EntitySource entitySource) {
             Ref<EntityStore> sourceRef = entitySource.getRef();
             if (sourceRef != null && sourceRef.isValid()) {
-                PlayerRef sourcePlayerRef = store.getComponent(sourceRef, PlayerRef.getComponentType());
-                if (sourcePlayerRef != null) {
-                    UUID sourceId = sourcePlayerRef.getUuid();
-                    if (sourceId != null && session.getParticipants().contains(sourceId)) {
-                        cancelDamage(event, buffer, chunk, entityId);
-                        return;
-                    }
-                } else if (session.getAliveZombies().contains(sourceRef)) {
-                    // Source is a Purge zombie — enforce per-variant damage
-                    String variantKey = session.getZombieVariantKey(sourceRef);
-                    float damage = 20f; // default
-                    if (variantKey != null) {
-                        PurgeVariantConfig config = variantConfigManager.getVariant(variantKey);
-                        if (config != null) {
-                            damage = config.baseDamage();
+                Ref<EntityStore> sourcePlayerEntityRef = resolvePlayerEntityRef(store, sourceRef);
+                if (sourcePlayerEntityRef != null) {
+                    PlayerRef sourcePlayerRef = store.getComponent(sourcePlayerEntityRef, PlayerRef.getComponentType());
+                    if (sourcePlayerRef != null) {
+                        UUID sourceId = sourcePlayerRef.getUuid();
+                        if (sourceId != null && session.getParticipants().contains(sourceId)) {
+                            cancelDamage(event, buffer, chunk, entityId);
+                            return;
                         }
                     }
-                    // Apply Tank damage reduction
-                    PurgeClassManager cm = classManager;
-                    if (cm != null) {
-                        damage *= (float) cm.getDamageReduction(targetState);
+                } else {
+                    Ref<EntityStore> zombieSourceRef = resolveTrackedZombieRef(store, session, sourceRef);
+                    if (zombieSourceRef != null) {
+                        // Source is a Purge zombie — enforce per-variant damage
+                        String variantKey = session.getZombieVariantKey(zombieSourceRef);
+                        float damage = 20f; // default
+                        if (variantKey != null) {
+                            PurgeVariantConfig config = variantConfigManager.getVariant(variantKey);
+                            if (config != null) {
+                                damage = config.baseDamage();
+                            }
+                        }
+                        // Apply Tank damage reduction
+                        PurgeClassManager cm = classManager;
+                        if (cm != null) {
+                            damage *= (float) cm.getDamageReduction(targetState);
+                        }
+                        event.setAmount(damage);
                     }
-                    event.setAmount(damage);
                 }
             }
         }
@@ -140,13 +170,19 @@ public class PurgeDamageModifierSystem extends DamageEventSystem {
         }
         Damage.Source source = event.getSource();
         if (!(source instanceof Damage.EntitySource entitySource)) {
+            LOGGER.atInfo().log("[DMG-DBG] source not EntitySource: " + (source != null ? source.getClass().getSimpleName() : "null")
+                    + " amount=" + event.getAmount());
             return;
         }
         Ref<EntityStore> sourceRef = entitySource.getRef();
         if (sourceRef == null || !sourceRef.isValid()) {
             return;
         }
-        PlayerRef sourcePlayerRef = store.getComponent(sourceRef, PlayerRef.getComponentType());
+        Ref<EntityStore> sourcePlayerEntityRef = resolvePlayerEntityRef(store, sourceRef);
+        if (sourcePlayerEntityRef == null) {
+            return;
+        }
+        PlayerRef sourcePlayerRef = store.getComponent(sourcePlayerEntityRef, PlayerRef.getComponentType());
         if (sourcePlayerRef == null) {
             return;
         }
@@ -158,13 +194,21 @@ public class PurgeDamageModifierSystem extends DamageEventSystem {
         if (session == null) {
             return;
         }
-        if (!session.getAliveZombies().contains(targetRef)) {
+        PurgeSessionPlayerState playerState = session.getPlayerState(sourceId);
+        String playerWeapon = resolveActiveWeaponId(store, sourcePlayerEntityRef, playerState);
+        boolean meleeAttack = weaponConfigManager.isMeleeWeapon(playerWeapon);
+        Ref<EntityStore> zombieRef = resolveTrackedZombieTargetRef(
+                store,
+                session,
+                targetRef,
+                event.getIfPresentMetaObject(Damage.HIT_LOCATION),
+                meleeAttack
+        );
+        if (zombieRef == null) {
+            LOGGER.atInfo().log("[DMG-DBG] zombieRef null, weapon=" + playerWeapon
+                    + " melee=" + meleeAttack + " aliveZombies=" + session.getAliveZombieCount());
             return;
         }
-        PurgeSessionPlayerState playerState = session.getPlayerState(sourceId);
-        String playerWeapon = (playerState != null && playerState.getCurrentWeaponId() != null)
-                ? playerState.getCurrentWeaponId()
-                : weaponConfigManager.getSessionWeaponId();
         int level = PurgeWeaponUpgradeStore.getInstance().getLevel(sourceId, playerWeapon);
         int effectiveLevel = Math.max(level, 1);
         int baseDamage = weaponConfigManager.getDamage(playerWeapon, effectiveLevel);
@@ -174,18 +218,145 @@ public class PurgeDamageModifierSystem extends DamageEventSystem {
         if (cm != null) {
             damage *= (float) cm.getDamageMultiplier(playerState);
         }
+        LOGGER.atInfo().log("[DMG-DBG] setting damage=" + damage + " weapon=" + playerWeapon
+                + " level=" + effectiveLevel + " base=" + baseDamage);
         event.setAmount(damage);
-        if (clearZombieNameplateOnLethalHit(store, session, targetRef, damage)) {
+        if (clearZombieNameplateOnLethalHit(store, session, zombieRef, damage)) {
             if (playerState != null) {
                 playerState.incrementSoloKills();
             }
             playKillSound(sourcePlayerRef, playerState);
-            handleKillXp(sourceId, playerWeapon, store, sourceRef);
+            handleKillXp(sourceId, playerWeapon, store, sourcePlayerEntityRef);
             // Class kill effects (Medic heal, Scavenger streak scrap)
             if (cm != null) {
-                cm.onZombieKill(playerState, sourceRef, store);
+                cm.onZombieKill(playerState, sourcePlayerEntityRef, store);
             }
         }
+    }
+
+    public static Ref<EntityStore> resolvePlayerEntityRef(Store<EntityStore> store, Ref<EntityStore> entityRef) {
+        Ref<EntityStore> currentRef = entityRef;
+        for (int depth = 0; depth < MAX_MOUNT_RESOLUTION_DEPTH; depth++) {
+            if (currentRef == null || !currentRef.isValid()) {
+                return null;
+            }
+            PlayerRef playerRef = store.getComponent(currentRef, PlayerRef.getComponentType());
+            if (playerRef != null && playerRef.getUuid() != null) {
+                return currentRef;
+            }
+            MountedComponent mounted = store.getComponent(currentRef, MountedComponent.getComponentType());
+            if (mounted == null) {
+                return null;
+            }
+            currentRef = mounted.getMountedToEntity();
+        }
+        return null;
+    }
+
+    public static Ref<EntityStore> resolveTrackedZombieRef(Store<EntityStore> store,
+                                                           PurgeSession session,
+                                                           Ref<EntityStore> entityRef) {
+        Ref<EntityStore> currentRef = entityRef;
+        for (int depth = 0; depth < MAX_MOUNT_RESOLUTION_DEPTH; depth++) {
+            if (currentRef == null || !currentRef.isValid()) {
+                return null;
+            }
+            if (session.getAliveZombies().contains(currentRef)) {
+                return currentRef;
+            }
+            MountedComponent mounted = store.getComponent(currentRef, MountedComponent.getComponentType());
+            if (mounted == null) {
+                return null;
+            }
+            currentRef = mounted.getMountedToEntity();
+        }
+        return null;
+    }
+
+    public static Ref<EntityStore> resolveTrackedZombieTargetRef(Store<EntityStore> store,
+                                                                 PurgeSession session,
+                                                                 Ref<EntityStore> targetRef,
+                                                                 Vector4d hitLocation,
+                                                                 boolean allowNearestFallback) {
+        Ref<EntityStore> resolvedRef = resolveTrackedZombieRef(store, session, targetRef);
+        if (resolvedRef != null || !allowNearestFallback) {
+            return resolvedRef;
+        }
+
+        if (hitLocation != null) {
+            resolvedRef = findNearestTrackedZombie(store, session, hitLocation.x, hitLocation.y, hitLocation.z);
+            if (resolvedRef != null) {
+                return resolvedRef;
+            }
+        }
+
+        if (targetRef == null || !targetRef.isValid()) {
+            return null;
+        }
+        TransformComponent transform = store.getComponent(targetRef, TransformComponent.getComponentType());
+        Vector3d targetPosition = transform != null ? transform.getPosition() : null;
+        if (targetPosition == null) {
+            return null;
+        }
+        return findNearestTrackedZombie(store, session, targetPosition.x, targetPosition.y, targetPosition.z);
+    }
+
+    private static Ref<EntityStore> findNearestTrackedZombie(Store<EntityStore> store,
+                                                             PurgeSession session,
+                                                             double x,
+                                                             double y,
+                                                             double z) {
+        Ref<EntityStore> bestRef = null;
+        double bestDistanceSquared = MELEE_TARGET_RESOLVE_MAX_HORIZONTAL_DISTANCE_SQUARED;
+        for (Ref<EntityStore> zombieRef : session.getAliveZombies()) {
+            if (zombieRef == null || !zombieRef.isValid()) {
+                continue;
+            }
+            TransformComponent transform = store.getComponent(zombieRef, TransformComponent.getComponentType());
+            Vector3d zombiePos = transform != null ? transform.getPosition() : null;
+            if (zombiePos == null || Math.abs(zombiePos.y - y) > MELEE_TARGET_RESOLVE_MAX_VERTICAL_DISTANCE) {
+                continue;
+            }
+            double dx = zombiePos.x - x;
+            double dz = zombiePos.z - z;
+            double horizontalDistanceSquared = dx * dx + dz * dz;
+            if (horizontalDistanceSquared > bestDistanceSquared) {
+                continue;
+            }
+            bestDistanceSquared = horizontalDistanceSquared;
+            bestRef = zombieRef;
+        }
+        return bestRef;
+    }
+
+    private String resolveActiveWeaponId(Store<EntityStore> store,
+                                         Ref<EntityStore> sourceRef,
+                                         PurgeSessionPlayerState playerState) {
+        boolean meleeSelected = false;
+        Player player = store.getComponent(sourceRef, Player.getComponentType());
+        if (player != null) {
+            Inventory inventory = player.getInventory();
+            if (inventory != null) {
+                if (inventory.getActiveHotbarSlot() == SLOT_MELEE_WEAPON) {
+                    meleeSelected = true;
+                } else {
+                    ItemStack heldItem = inventory.getItemInHand();
+                    String heldItemId = heldItem != null && !heldItem.isEmpty() ? heldItem.getItemId() : null;
+                    meleeSelected = weaponConfigManager.isMeleeWeapon(heldItemId);
+                }
+            }
+        }
+
+        if (meleeSelected) {
+            String meleeWeaponId = playerState != null && playerState.getCurrentMeleeWeaponId() != null
+                    ? playerState.getCurrentMeleeWeaponId()
+                    : weaponConfigManager.getSessionMeleeWeaponId();
+            return meleeWeaponId != null ? meleeWeaponId : "WoodSword";
+        }
+        String rangedWeaponId = playerState != null && playerState.getCurrentWeaponId() != null
+                ? playerState.getCurrentWeaponId()
+                : weaponConfigManager.getSessionWeaponId();
+        return rangedWeaponId != null ? rangedWeaponId : "AK47";
     }
 
     private boolean clearZombieNameplateOnLethalHit(Store<EntityStore> store,

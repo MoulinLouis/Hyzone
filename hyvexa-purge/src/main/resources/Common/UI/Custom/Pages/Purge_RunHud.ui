@@ -160,21 +160,21 @@ $C.@PageOverlay {
     }
 
     Group #MissionPanel {
-      Anchor: (Left: 20, Top: 40, Width: 280, Height: 180);
+      Anchor: (Left: 20, Top: 40, Width: 360, Height: 244);
       LayoutMode: Top;
       Background: #0d1620(0.92);
       OutlineColor: #ffffff(0.06);
       OutlineSize: 1;
-      Padding: (Left: 12, Right: 12, Top: 8, Bottom: 8);
+      Padding: (Left: 16, Right: 16, Top: 12, Bottom: 12);
 
       Group #MissionHeader {
-        Anchor: (Left: 0, Right: 0, Height: 18);
+        Anchor: (Left: 0, Right: 0, Height: 24);
         LayoutMode: Left;
 
         Label #MissionTitle {
-          Anchor: (Height: 18);
+          Anchor: (Height: 24);
           Style: (
-            FontSize: 13,
+            FontSize: 17,
             TextColor: #f59e0b(0.7),
             RenderUppercase: true,
             LetterSpacing: 2,
@@ -186,97 +186,97 @@ $C.@PageOverlay {
         Group { FlexWeight: 1; }
 
         Label #MissionTimer {
-          Anchor: (Height: 18);
-          Style: (FontSize: 12, TextColor: #8b9db0, VerticalAlignment: Center);
+          Anchor: (Height: 24);
+          Style: (FontSize: 15, TextColor: #8b9db0, VerticalAlignment: Center);
           Text: "";
         }
       }
 
       Group #MissionSep {
-        Anchor: (Left: 0, Width: 30, Height: 2, Top: 4);
+        Anchor: (Left: 0, Width: 42, Height: 3, Top: 6);
         Background: #f59e0b;
       }
 
       Group #MissionRow0 {
-        Anchor: (Left: 0, Right: 0, Top: 6, Height: 36);
+        Anchor: (Left: 0, Right: 0, Top: 10, Height: 46);
         LayoutMode: Top;
 
         Group #MissionRow0Top {
-          Anchor: (Left: 0, Right: 0, Height: 18);
+          Anchor: (Left: 0, Right: 0, Height: 22);
           LayoutMode: Left;
 
           Label #MissionDesc0 {
             FlexWeight: 1;
-            Anchor: (Height: 18);
-            Style: (FontSize: 14, TextColor: #e7f1f4, VerticalAlignment: Center);
+            Anchor: (Height: 22);
+            Style: (FontSize: 17, TextColor: #e7f1f4, VerticalAlignment: Center);
             Text: "";
           }
           Label #MissionReward0 {
-            Anchor: (Height: 18);
-            Style: (FontSize: 13, TextColor: #f59e0b, RenderBold: true, VerticalAlignment: Center);
+            Anchor: (Height: 22);
+            Style: (FontSize: 16, TextColor: #f59e0b, RenderBold: true, VerticalAlignment: Center);
             Text: "";
           }
         }
 
         Label #MissionProg0 {
-          Anchor: (Left: 0, Top: 2, Height: 16);
-          Style: (FontSize: 12, TextColor: #8b9db0);
+          Anchor: (Left: 0, Top: 4, Height: 18);
+          Style: (FontSize: 15, TextColor: #8b9db0, RenderBold: true);
           Text: "";
         }
       }
 
       Group #MissionRow1 {
-        Anchor: (Left: 0, Right: 0, Top: 4, Height: 36);
+        Anchor: (Left: 0, Right: 0, Top: 8, Height: 46);
         LayoutMode: Top;
 
         Group #MissionRow1Top {
-          Anchor: (Left: 0, Right: 0, Height: 18);
+          Anchor: (Left: 0, Right: 0, Height: 22);
           LayoutMode: Left;
 
           Label #MissionDesc1 {
             FlexWeight: 1;
-            Anchor: (Height: 18);
-            Style: (FontSize: 14, TextColor: #e7f1f4, VerticalAlignment: Center);
+            Anchor: (Height: 22);
+            Style: (FontSize: 17, TextColor: #e7f1f4, VerticalAlignment: Center);
             Text: "";
           }
           Label #MissionReward1 {
-            Anchor: (Height: 18);
-            Style: (FontSize: 13, TextColor: #f59e0b, RenderBold: true, VerticalAlignment: Center);
+            Anchor: (Height: 22);
+            Style: (FontSize: 16, TextColor: #f59e0b, RenderBold: true, VerticalAlignment: Center);
             Text: "";
           }
         }
 
         Label #MissionProg1 {
-          Anchor: (Left: 0, Top: 2, Height: 16);
-          Style: (FontSize: 12, TextColor: #8b9db0);
+          Anchor: (Left: 0, Top: 4, Height: 18);
+          Style: (FontSize: 15, TextColor: #8b9db0, RenderBold: true);
           Text: "";
         }
       }
 
       Group #MissionRow2 {
-        Anchor: (Left: 0, Right: 0, Top: 4, Height: 36);
+        Anchor: (Left: 0, Right: 0, Top: 8, Height: 46);
         LayoutMode: Top;
 
         Group #MissionRow2Top {
-          Anchor: (Left: 0, Right: 0, Height: 18);
+          Anchor: (Left: 0, Right: 0, Height: 22);
           LayoutMode: Left;
 
           Label #MissionDesc2 {
             FlexWeight: 1;
-            Anchor: (Height: 18);
-            Style: (FontSize: 14, TextColor: #e7f1f4, VerticalAlignment: Center);
+            Anchor: (Height: 22);
+            Style: (FontSize: 17, TextColor: #e7f1f4, VerticalAlignment: Center);
             Text: "";
           }
           Label #MissionReward2 {
-            Anchor: (Height: 18);
-            Style: (FontSize: 13, TextColor: #f59e0b, RenderBold: true, VerticalAlignment: Center);
+            Anchor: (Height: 22);
+            Style: (FontSize: 16, TextColor: #f59e0b, RenderBold: true, VerticalAlignment: Center);
             Text: "";
           }
         }
 
         Label #MissionProg2 {
-          Anchor: (Left: 0, Top: 2, Height: 16);
-          Style: (FontSize: 12, TextColor: #8b9db0);
+          Anchor: (Left: 0, Top: 4, Height: 18);
+          Style: (FontSize: 15, TextColor: #8b9db0, RenderBold: true);
           Text: "";
         }
       }

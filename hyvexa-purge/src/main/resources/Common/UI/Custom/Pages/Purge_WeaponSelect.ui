@@ -127,6 +127,9 @@ $C.@PageOverlay {
         Group #DIconMP9 { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/MP9_icon.png"); Visible: false; }
         Group #DIconMac10 { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/Mac10_icon.png"); Visible: false; }
         Group #DIconThompson { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/Thompson_icon.png"); Visible: false; }
+        Group #DIconWoodSword { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/WoodSword_icon.png"); Visible: false; }
+        Group #DIconKatana { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/Katana_icon.png"); Visible: false; }
+        Group #DIconScarabSword { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/ScarabSword_icon.png"); Visible: false; }
       }
 
       TextButton #DetailCloseButton {

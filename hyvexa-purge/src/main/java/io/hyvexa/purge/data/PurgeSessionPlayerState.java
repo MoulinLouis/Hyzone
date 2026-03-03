@@ -17,6 +17,7 @@ public class PurgeSessionPlayerState {
     private final AtomicInteger soloKills = new AtomicInteger(0);
     private final PurgeUpgradeState upgradeState = new PurgeUpgradeState();
     private volatile String currentWeaponId;
+    private volatile String currentMeleeWeaponId;
     private volatile long lastKillTimeMs;
     private volatile int killStreak;
     private volatile int bestCombo;
@@ -53,6 +54,9 @@ public class PurgeSessionPlayerState {
 
     public String getCurrentWeaponId() { return currentWeaponId; }
     public void setCurrentWeaponId(String currentWeaponId) { this.currentWeaponId = currentWeaponId; }
+
+    public String getCurrentMeleeWeaponId() { return currentMeleeWeaponId; }
+    public void setCurrentMeleeWeaponId(String currentMeleeWeaponId) { this.currentMeleeWeaponId = currentMeleeWeaponId; }
 
     public long getLastKillTimeMs() { return lastKillTimeMs; }
     public int getKillStreak() { return killStreak; }

@@ -43,7 +43,8 @@ public class PurgeLootboxRollPage extends InteractiveCustomUIPage<PurgeLootboxRo
     private static final int TIMEOUT_SECONDS = 10;
     private static final List<String> ICON_WEAPON_IDS = List.of(
             "AK47", "Barret50", "ColtRevolver", "DesertEagle", "DoubleBarrel",
-            "Flamethrower", "Glock18", "M4A1s", "MP9", "Mac10", "Thompson"
+            "Flamethrower", "Glock18", "M4A1s", "MP9", "Mac10", "Thompson",
+            "WoodSword", "Katana", "ScarabSword"
     );
 
     private final UUID playerId;
@@ -121,8 +122,12 @@ public class PurgeLootboxRollPage extends InteractiveCustomUIPage<PurgeLootboxRo
         if (plugin != null && ref.isValid()) {
             Player player = store.getComponent(ref, Player.getComponentType());
             if (player != null) {
-                plugin.switchWeapon(player, playerState, rolledWeaponId);
                 PurgeWeaponConfigManager config = plugin.getWeaponConfigManager();
+                if (config.isMeleeWeapon(rolledWeaponId)) {
+                    plugin.switchMeleeWeapon(player, playerState, rolledWeaponId);
+                } else {
+                    plugin.switchWeapon(player, playerState, rolledWeaponId);
+                }
                 String displayName = config.getDisplayName(rolledWeaponId);
                 int level = PurgeWeaponUpgradeStore.getInstance().getLevel(playerId, rolledWeaponId);
                 int effectiveLevel = Math.max(level, 1);

@@ -64,12 +64,13 @@ public class PurgeLootboxInteraction extends SimpleInteraction {
             return;
         }
 
-        // Get owned weapons, exclude current
+        // Get owned weapons, exclude current gun + melee.
         Set<String> owned = PurgeWeaponUpgradeStore.getInstance().getOwnedWeaponIds(playerId);
         String currentWeapon = playerState.getCurrentWeaponId();
+        String currentMeleeWeapon = playerState.getCurrentMeleeWeaponId();
         List<String> candidates = new ArrayList<>();
         for (String weaponId : owned) {
-            if (!weaponId.equals(currentWeapon)) {
+            if (!weaponId.equals(currentWeapon) && !weaponId.equals(currentMeleeWeapon)) {
                 candidates.add(weaponId);
             }
         }

@@ -18,6 +18,9 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.skin.PurgeSkinRegistry;
 import io.hyvexa.common.skin.PurgeSkinStore;
+import io.hyvexa.purge.HyvexaPurgePlugin;
+import io.hyvexa.purge.data.PurgeSession;
+import io.hyvexa.purge.data.PurgeSessionPlayerState;
 import io.hyvexa.purge.data.PurgeWeaponUpgradeStore;
 import io.hyvexa.purge.data.WeaponXpStore;
 import io.hyvexa.purge.manager.PurgeInstanceManager;
@@ -55,7 +58,10 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
             "M4A1s",
             "MP9",
             "Mac10",
-            "Thompson"
+            "Thompson",
+            "WoodSword",
+            "Katana",
+            "ScarabSword"
     );
 
     private final Mode mode;
@@ -200,6 +206,9 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
                 this.selectedWeaponId = null;
             } else {
                 this.selectedWeaponId = weaponId;
+                if (mode == Mode.LOADOUT) {
+                    trySwitchLoadoutWeapon(weaponId, ref, store);
+                }
             }
             sendRefresh();
         }
@@ -291,7 +300,7 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
 
     private void populateDetailPanel(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
         commandBuilder.set("#DetailPanel.Visible", true);
-        commandBuilder.set("#DetailName.Text", weaponConfigManager.getDisplayName(selectedWeaponId));
+        commandBuilder.set("#DetailName.Text", getWeaponLabel(selectedWeaponId));
         updateDetailIconVariant(commandBuilder, selectedWeaponId);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#DetailCloseButton",
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE_DETAIL), false);
@@ -420,13 +429,16 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
 
             if (mode == Mode.ADMIN) {
                 commandBuilder.set(root + " #WeaponName.Visible", true);
-                String displayName = weaponConfigManager.getDisplayName(weaponId);
+                String displayName = getWeaponLabel(weaponId);
                 String suffix = "";
                 if (weaponConfigManager.isDefaultUnlocked(weaponId)) {
                     suffix += " [D]";
                 }
                 if (weaponConfigManager.isSessionWeapon(weaponId)) {
-                    suffix += " [S]";
+                    suffix += " [SG]";
+                }
+                if (weaponConfigManager.isSessionMeleeWeapon(weaponId)) {
+                    suffix += " [SM]";
                 }
                 commandBuilder.set(root + " #WeaponName.Text", displayName + suffix);
             } else if (mode == Mode.SHOP) {
@@ -484,6 +496,8 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
             String root = "#OwnedList[" + i + "]";
             commandBuilder.append("#OwnedList", "Pages/Purge_WeaponSelectEntry.ui");
             updateCardIconVariant(commandBuilder, root, weaponId);
+            commandBuilder.set(root + " #WeaponName.Visible", true);
+            commandBuilder.set(root + " #WeaponName.Text", getWeaponLabel(weaponId));
 
             int playerLevel = PurgeWeaponUpgradeStore.getInstance().getLevel(playerId, weaponId);
             commandBuilder.set(root + " #StarBar.Visible", true);
@@ -512,6 +526,8 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
             String root = "#UnownedList[" + i + "]";
             commandBuilder.append("#UnownedList", "Pages/Purge_WeaponSelectEntry.ui");
             updateCardIconVariant(commandBuilder, root, weaponId);
+            commandBuilder.set(root + " #WeaponName.Visible", true);
+            commandBuilder.set(root + " #WeaponName.Text", getWeaponLabel(weaponId));
 
             commandBuilder.set(root + " #LockedLabel.Visible", true);
             commandBuilder.set(root + " #LockedOverlay.Visible", true);
@@ -557,6 +573,40 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
             cmd.set(prefix + p + "H.Visible", p == fullStars && hasHalf);
             cmd.set(prefix + p + "E.Visible", p >= fullStars && !(p == fullStars && hasHalf));
         }
+    }
+
+    private void trySwitchLoadoutWeapon(String weaponId, Ref<EntityStore> ref, Store<EntityStore> store) {
+        if (playerId == null || weaponId == null) {
+            return;
+        }
+        if (PurgeWeaponUpgradeStore.getInstance().getLevel(playerId, weaponId) < 1) {
+            return;
+        }
+        HyvexaPurgePlugin plugin = HyvexaPurgePlugin.getInstance();
+        if (plugin == null) {
+            return;
+        }
+        PurgeSession session = plugin.getSessionManager().getSessionByPlayer(playerId);
+        if (session == null) {
+            return;
+        }
+        PurgeSessionPlayerState playerState = session.getPlayerState(playerId);
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null || playerState == null) {
+            return;
+        }
+        if (weaponConfigManager.isMeleeWeapon(weaponId)) {
+            plugin.switchMeleeWeapon(player, playerState, weaponId);
+        } else {
+            plugin.switchWeapon(player, playerState, weaponId);
+        }
+    }
+
+    private String getWeaponLabel(String weaponId) {
+        if (weaponConfigManager.isMeleeWeapon(weaponId)) {
+            return weaponConfigManager.getDisplayName(weaponId) + " [Melee]";
+        }
+        return weaponConfigManager.getDisplayName(weaponId);
     }
 
     public static class PurgeWeaponSelectData extends ButtonEventData {

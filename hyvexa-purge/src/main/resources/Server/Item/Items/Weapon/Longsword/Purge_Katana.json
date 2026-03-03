@@ -1,0 +1,12 @@
+{
+  "Parent": "Weapon_Longsword_Katana",
+  "TranslationProperties": {
+    "Name": "Katana",
+    "Description": "Purge melee weapon."
+  },
+  "Quality": "Developer",
+  "Model": "Items/PurgeWeapons/Katana.blockymodel",
+  "Texture": "Items/PurgeWeapons/Katana_Texture.png",
+  "Icon": "Icons/ItemsGenerated/Purge_Katana.png",
+  "DropOnDeath": false
+}

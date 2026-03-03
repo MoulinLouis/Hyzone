@@ -34,6 +34,7 @@ public class PurgeWeaponConfigManager {
     private final Set<String> defaultUnlocked = Collections.synchronizedSet(new HashSet<>());
     private final ConcurrentHashMap<String, Long> unlockCosts = new ConcurrentHashMap<>();
     private volatile String sessionWeaponId = "AK47";
+    private volatile String sessionMeleeWeaponId = "WoodSword";
 
     // Lootbox settings
     private volatile int lootboxDropPercent = 5;
@@ -42,6 +43,12 @@ public class PurgeWeaponConfigManager {
 
     private record WeaponDefaults(String displayName, List<WeaponLevelEntry> levels) {}
 
+    private static final Map<String, String> MELEE_WEAPON_TO_ITEM = Map.of(
+            "WoodSword", "Purge_WoodSword",
+            "Katana", "Purge_Katana",
+            "ScarabSword", "Purge_ScarabSword"
+    );
+    private static final Map<String, String> MELEE_ITEM_TO_WEAPON = buildMeleeItemMap();
     private static final Map<String, WeaponDefaults> DEFAULT_WEAPONS = buildDefaultWeapons();
 
     public PurgeWeaponConfigManager() {
@@ -79,6 +86,31 @@ public class PurgeWeaponConfigManager {
 
     public Set<String> getWeaponIds() {
         return Set.copyOf(cache.keySet());
+    }
+
+    public boolean isMeleeWeapon(String weaponId) {
+        return weaponId != null
+                && (MELEE_WEAPON_TO_ITEM.containsKey(weaponId) || MELEE_ITEM_TO_WEAPON.containsKey(weaponId));
+    }
+
+    public String getMeleeItemId(String weaponId) {
+        if (weaponId == null) {
+            return null;
+        }
+        String itemId = MELEE_WEAPON_TO_ITEM.get(weaponId);
+        if (itemId != null) {
+            return itemId;
+        }
+        String mappedWeaponId = MELEE_ITEM_TO_WEAPON.get(weaponId);
+        return mappedWeaponId != null ? MELEE_WEAPON_TO_ITEM.get(mappedWeaponId) : null;
+    }
+
+    public String getMeleeWeaponId(String itemId) {
+        if (itemId == null) {
+            return null;
+        }
+        String weaponId = MELEE_ITEM_TO_WEAPON.get(itemId);
+        return weaponId != null ? weaponId : (MELEE_WEAPON_TO_ITEM.containsKey(itemId) ? itemId : null);
     }
 
     public String getDisplayName(String weaponId) {
@@ -158,6 +190,9 @@ public class PurgeWeaponConfigManager {
     }
 
     public void setSessionWeapon(String weaponId) {
+        if (weaponId == null || isMeleeWeapon(weaponId)) {
+            return;
+        }
         String previousId = this.sessionWeaponId;
         this.sessionWeaponId = weaponId;
         if (isPersistenceAvailable()) {
@@ -184,12 +219,28 @@ public class PurgeWeaponConfigManager {
         }
     }
 
+    public String getSessionMeleeWeaponId() {
+        return sessionMeleeWeaponId;
+    }
+
+    public void setSessionMeleeWeapon(String weaponId) {
+        if (!isMeleeWeapon(weaponId)) {
+            return;
+        }
+        sessionMeleeWeaponId = getMeleeWeaponId(weaponId);
+        persistSetting("session_melee_weapon", sessionMeleeWeaponId);
+    }
+
     public Set<String> getDefaultWeaponIds() {
         return Set.copyOf(defaultUnlocked);
     }
 
     public boolean isSessionWeapon(String weaponId) {
         return weaponId != null && weaponId.equals(sessionWeaponId);
+    }
+
+    public boolean isSessionMeleeWeapon(String weaponId) {
+        return weaponId != null && weaponId.equals(sessionMeleeWeaponId);
     }
 
     public int getLootboxDropPercent() {
@@ -359,7 +410,7 @@ public class PurgeWeaponConfigManager {
                 }
             }
             stmt.executeBatch();
-            LOGGER.atInfo().log("Ensured default weapon level seeds for " + DEFAULT_WEAPONS.size() + " Hyguns weapons");
+            LOGGER.atInfo().log("Ensured default weapon level seeds for " + DEFAULT_WEAPONS.size() + " Purge weapons");
         } catch (SQLException e) {
             LOGGER.atWarning().withCause(e).log("Failed to seed default weapon levels");
         }
@@ -454,7 +505,24 @@ public class PurgeWeaponConfigManager {
                 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13));
         defaults.put("Flamethrower", createWeaponDefaults("Flamethrower",
                 10, 11, 12, 14, 15, 16, 18, 20, 22, 25, 28));
+        defaults.put("WoodSword", createWeaponDefaults("Wooden Sword",
+                15, 17, 19, 21, 23, 26, 29, 32, 35, 38, 42));
+        defaults.put("Katana", createWeaponDefaults("Katana",
+                25, 28, 31, 34, 38, 42, 47, 52, 57, 63, 70));
+        defaults.put("ScarabSword", createWeaponDefaults("Scarab Sword",
+                35, 39, 43, 48, 53, 59, 65, 72, 80, 88, 98));
         return Map.copyOf(defaults);
+    }
+
+    private static Map<String, String> buildMeleeItemMap() {
+        LinkedHashMap<String, String> items = new LinkedHashMap<>();
+        items.put("Purge_WoodSword", "WoodSword");
+        items.put("Purge_Katana", "Katana");
+        items.put("Purge_ScarabSword", "ScarabSword");
+        items.put("Weapon_Sword_Wood", "WoodSword");
+        items.put("Weapon_Longsword_Katana", "Katana");
+        items.put("Weapon_Longsword_Scarab", "ScarabSword");
+        return Map.copyOf(items);
     }
 
     private static WeaponDefaults createWeaponDefaults(String displayName, int... damagesByLevel) {
@@ -491,7 +559,7 @@ public class PurgeWeaponConfigManager {
         if (!isPersistenceAvailable()) {
             return;
         }
-        // Seed all weapons with defaults, then ensure AK47 is default+session
+        // Seed all weapons with defaults, then ensure AK47/WoodSword session defaults exist.
         String insertSql = "INSERT IGNORE INTO purge_weapon_defaults (weapon_id, default_unlocked, unlock_cost, session_weapon) VALUES (?, FALSE, 500, FALSE)";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(insertSql)) {
@@ -505,7 +573,8 @@ public class PurgeWeaponConfigManager {
             LOGGER.atWarning().withCause(e).log("Failed to seed weapon defaults");
             return;
         }
-        // Ensure AK47 is default unlocked and session weapon (only if no session weapon set)
+        // Ensure AK47 is default unlocked and session weapon (only if no session weapon set).
+        // Ensure WoodSword is default unlocked and a session melee default exists.
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
             // Check if any session weapon is already set
             try (PreparedStatement check = conn.prepareStatement(
@@ -522,8 +591,18 @@ public class PurgeWeaponConfigManager {
                     }
                 }
             }
+            try (PreparedStatement update = conn.prepareStatement(
+                    "UPDATE purge_weapon_defaults SET default_unlocked = TRUE WHERE weapon_id = 'WoodSword'")) {
+                DatabaseManager.applyQueryTimeout(update);
+                update.executeUpdate();
+            }
+            try (PreparedStatement insertSetting = conn.prepareStatement(
+                    "INSERT IGNORE INTO purge_settings (setting_key, setting_value) VALUES ('session_melee_weapon', 'WoodSword')")) {
+                DatabaseManager.applyQueryTimeout(insertSetting);
+                insertSetting.executeUpdate();
+            }
         } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to set AK47 as default session weapon");
+            LOGGER.atWarning().withCause(e).log("Failed to seed Purge session weapon defaults");
         }
     }
 
@@ -531,10 +610,12 @@ public class PurgeWeaponConfigManager {
         defaultUnlocked.clear();
         unlockCosts.clear();
         sessionWeaponId = "AK47";
+        sessionMeleeWeaponId = "WoodSword";
 
         if (!isPersistenceAvailable()) {
-            // Fallback: AK47 default unlocked
+            // Fallback: AK47 + WoodSword default unlocked.
             defaultUnlocked.add("AK47");
+            defaultUnlocked.add("WoodSword");
             for (String weaponId : DEFAULT_WEAPONS.keySet()) {
                 unlockCosts.put(weaponId, 500L);
             }
@@ -560,6 +641,7 @@ public class PurgeWeaponConfigManager {
         } catch (SQLException e) {
             LOGGER.atWarning().withCause(e).log("Failed to load weapon defaults");
             defaultUnlocked.add("AK47");
+            defaultUnlocked.add("WoodSword");
         }
         LOGGER.atInfo().log("Loaded weapon defaults: " + defaultUnlocked.size() + " default unlocked, session weapon: " + sessionWeaponId);
     }
@@ -613,6 +695,11 @@ public class PurgeWeaponConfigManager {
                             lootboxDropPercent = Math.max(0, Math.min(100, Integer.parseInt(value)));
                         } catch (NumberFormatException ignored) {
                         }
+                    } else if ("session_melee_weapon".equals(key)) {
+                        String meleeWeaponId = getMeleeWeaponId(value);
+                        if (meleeWeaponId != null) {
+                            sessionMeleeWeaponId = meleeWeaponId;
+                        }
                     } else if (key.startsWith("skin_price:")) {
                         String[] parts = key.split(":", 3);
                         if (parts.length == 3) {
@@ -631,6 +718,7 @@ public class PurgeWeaponConfigManager {
             LOGGER.atWarning().withCause(e).log("Failed to load purge settings");
         }
         LOGGER.atInfo().log("Purge settings loaded: lootbox_drop_percent=" + lootboxDropPercent
+                + ", session_melee_weapon=" + sessionMeleeWeaponId
                 + ", skin_prices=" + skinPricesLoaded);
     }
 

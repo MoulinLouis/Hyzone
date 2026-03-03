@@ -182,6 +182,7 @@ public class PurgeSessionManager {
                 PurgeSessionPlayerState ps = session.getPlayerState(pid);
                 if (ps != null && plugin != null) {
                     ps.setCurrentWeaponId(plugin.getWeaponConfigManager().getSessionWeaponId());
+                    ps.setCurrentMeleeWeaponId(plugin.getWeaponConfigManager().getSessionMeleeWeaponId());
                 }
                 try {
                     if (plugin != null && ref.isValid()) {
