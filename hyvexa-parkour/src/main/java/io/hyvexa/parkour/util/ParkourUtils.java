@@ -2,14 +2,21 @@ package io.hyvexa.parkour.util;
 
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
+import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.parkour.data.Map;
 import io.hyvexa.parkour.data.ProgressStore;
+import io.hyvexa.parkour.data.TransformData;
 
 import java.util.UUID;
 
 public final class ParkourUtils {
 
     private ParkourUtils() {
+    }
+
+    public static String resolveName(UUID playerId) {
+        PlayerRef ref = Universe.get().getPlayer(playerId);
+        return ref != null ? ref.getUsername() : playerId.toString();
     }
 
     public static String resolveName(UUID uuid, ProgressStore progressStore) {
@@ -26,6 +33,10 @@ public final class ParkourUtils {
         return uuid.toString();
     }
 
+    public static String truncateName(String name, int maxLength) {
+        return FormatUtils.truncate(name, maxLength);
+    }
+
     public static String formatMapName(Map map) {
         if (map == null) {
             return "";
@@ -39,5 +50,12 @@ public final class ParkourUtils {
             return name;
         }
         return name + " - " + difficulty;
+    }
+
+    public static TransformData copyTransformData(TransformData source) {
+        if (source == null) {
+            return null;
+        }
+        return source.copy();
     }
 }

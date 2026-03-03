@@ -326,7 +326,7 @@ public class HudManager {
                 if (name == null || name.isBlank()) {
                     name = "Player";
                 }
-                String trimmed = trimName(name, 14);
+                String trimmed = FormatUtils.truncate(name, 14);
                 lines.add(new RunRecordsHud.RecordLine(String.valueOf(i + 1), trimmed,
                         FormatUtils.formatDuration(time)));
             } else {
@@ -349,27 +349,13 @@ public class HudManager {
             if (name == null || name.isBlank()) {
                 name = "Player";
             }
-            String trimmed = trimName(name, 14);
+            String trimmed = FormatUtils.truncate(name, 14);
             lines.add(new RunRecordsHud.RecordLine(String.valueOf(selfIndex + 1), trimmed,
                     FormatUtils.formatDuration(selfTime)));
         } else {
             lines.add(RunRecordsHud.RecordLine.empty(0));
         }
         return lines;
-    }
-
-    private static String trimName(String name, int maxLength) {
-        if (name == null) {
-            return "";
-        }
-        String trimmed = name.trim();
-        if (trimmed.length() <= maxLength) {
-            return trimmed;
-        }
-        if (maxLength <= 3) {
-            return trimmed.substring(0, maxLength);
-        }
-        return trimmed.substring(0, maxLength - 3) + "...";
     }
 
     public void clearPlayer(UUID playerId) {

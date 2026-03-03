@@ -77,14 +77,14 @@ public class LeaderboardHologramManager {
         }
         World storeWorld = store.getExternalData().getWorld();
         String storeWorldName = storeWorld != null ? storeWorld.getName() : "unknown";
-        logMapHologramDebug("Map holo refresh requested for '" + mapId + "' from world '" + storeWorldName + "'.");
+        LOGGER.atFine().log("Map holo refresh requested for '" + mapId + "' from world '" + storeWorldName + "'.");
         if (!HylogramsBridge.isAvailable()) {
-            logMapHologramDebug("Map holo refresh skipped: Hylograms not available.");
+            LOGGER.atFine().log("Map holo refresh skipped: Hylograms not available.");
             return;
         }
         String holoName = mapId + "_holo";
         if (!HylogramsBridge.exists(holoName)) {
-            logMapHologramDebug("Map holo refresh skipped: '" + holoName + "' does not exist.");
+            LOGGER.atFine().log("Map holo refresh skipped: '" + holoName + "' does not exist.");
             return;
         }
         HylogramsBridge.Hologram holo = HylogramsBridge.get(holoName);
@@ -105,7 +105,7 @@ public class LeaderboardHologramManager {
             targetWorld = store.getExternalData().getWorld();
         }
         if (targetWorld != null) {
-            logMapHologramDebug("Map holo '" + holoName + "' target world resolved to '"
+            LOGGER.atFine().log("Map holo '" + holoName + "' target world resolved to '"
                     + targetWorld.getName() + "'.");
             targetStore = targetWorld.getEntityStore().getStore();
             Store<EntityStore> finalStore = targetStore != null ? targetStore : store;
@@ -133,7 +133,7 @@ public class LeaderboardHologramManager {
             return;
         }
         List<String> lines = buildMapLeaderboardHologramLines(mapId);
-        logMapHologramDebug("Updating map holo '" + holoName + "' with " + lines.size() + " lines.");
+        LOGGER.atFine().log("Updating map holo '" + holoName + "' with " + lines.size() + " lines.");
         try {
             HylogramsBridge.updateHologramLines(holoName, lines, store);
         } catch (Exception e) {
@@ -152,7 +152,7 @@ public class LeaderboardHologramManager {
         for (int i = 0; i < entries; i++) {
             MedalStore.MedalScoreEntry entry = snapshot.get(i);
             String name = ParkourUtils.resolveName(entry.getPlayerId(), progressStore);
-            name = formatLeaderboardName(name);
+            name = FormatUtils.truncate(name, ParkourTimingConstants.LEADERBOARD_NAME_MAX);
             String position = formatLeaderboardPosition(i + 1);
             String score = formatLeaderboardCount(entry.getTotalScore());
             lines.add(formatLeaderboardLine(position, name, score));
@@ -181,7 +181,7 @@ public class LeaderboardHologramManager {
         for (int i = 0; i < limit; i++) {
             Map.Entry<UUID, Long> entry = entries.get(i);
             String name = ParkourUtils.resolveName(entry.getKey(), progressStore);
-            String safeName = clampToWidth(name, ParkourTimingConstants.MAP_HOLOGRAM_NAME_MAX);
+            String safeName = FormatUtils.truncate(name, ParkourTimingConstants.MAP_HOLOGRAM_NAME_MAX);
             String time = entry.getValue() != null ? FormatUtils.formatDuration(entry.getValue()) : "--";
             String position = String.valueOf(i + 1) + ".";
             lines.add(formatMapHologramLine(position, safeName, time));
@@ -209,13 +209,6 @@ public class LeaderboardHologramManager {
         return ModeGate.isParkourWorld(world);
     }
 
-    public void logMapHologramDebug(String message) {
-        if (message == null || message.isBlank()) {
-            return;
-        }
-        LOGGER.atFine().log(message);
-    }
-
     private static String formatLeaderboardHeader() {
         return formatLeaderboardLine("Pos", "Name", "Score");
     }
@@ -232,30 +225,12 @@ public class LeaderboardHologramManager {
     }
 
     private static String formatLeaderboardLine(String position, String name, String count) {
-        String safePosition = clampToWidth(position, ParkourTimingConstants.LEADERBOARD_POSITION_WIDTH);
-        String safeName = clampToWidth(name, ParkourTimingConstants.LEADERBOARD_NAME_MAX);
-        String safeCount = clampToWidth(count, ParkourTimingConstants.LEADERBOARD_COUNT_WIDTH);
+        String safePosition = FormatUtils.truncate(position, ParkourTimingConstants.LEADERBOARD_POSITION_WIDTH);
+        String safeName = FormatUtils.truncate(name, ParkourTimingConstants.LEADERBOARD_NAME_MAX);
+        String safeCount = FormatUtils.truncate(count, ParkourTimingConstants.LEADERBOARD_COUNT_WIDTH);
         return String.format(Locale.ROOT, "%-" + ParkourTimingConstants.LEADERBOARD_POSITION_WIDTH + "s | %-"
                         + ParkourTimingConstants.LEADERBOARD_NAME_MAX + "s | %" + ParkourTimingConstants.LEADERBOARD_COUNT_WIDTH + "s",
                 safePosition, safeName, safeCount);
-    }
-
-    private static String formatLeaderboardName(String name) {
-        return clampToWidth(name, ParkourTimingConstants.LEADERBOARD_NAME_MAX);
-    }
-
-    private static String clampToWidth(String value, int width) {
-        if (value == null || value.isBlank()) {
-            return "";
-        }
-        String trimmed = value.trim();
-        if (trimmed.length() <= width) {
-            return trimmed;
-        }
-        if (width <= 3) {
-            return trimmed.substring(0, width);
-        }
-        return trimmed.substring(0, width - 3) + "...";
     }
 
     private static String formatMapHologramHeader() {
@@ -263,8 +238,8 @@ public class LeaderboardHologramManager {
     }
 
     private static String formatMapHologramLine(String position, String name, String time) {
-        String safePosition = clampToWidth(position, ParkourTimingConstants.MAP_HOLOGRAM_POS_WIDTH);
-        String safeName = clampToWidth(name, ParkourTimingConstants.MAP_HOLOGRAM_NAME_MAX);
+        String safePosition = FormatUtils.truncate(position, ParkourTimingConstants.MAP_HOLOGRAM_POS_WIDTH);
+        String safeName = FormatUtils.truncate(name, ParkourTimingConstants.MAP_HOLOGRAM_NAME_MAX);
         return String.format(Locale.ROOT, "%-" + ParkourTimingConstants.MAP_HOLOGRAM_POS_WIDTH + "s | %-"
                         + ParkourTimingConstants.MAP_HOLOGRAM_NAME_MAX + "s | %s",
                 safePosition, safeName, time);

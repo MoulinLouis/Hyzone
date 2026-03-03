@@ -532,9 +532,7 @@ public class HyvexaPlugin extends JavaPlugin {
     }
 
     public void logMapHologramDebug(String message) {
-        if (leaderboardHologramManager != null) {
-            leaderboardHologramManager.logMapHologramDebug(message);
-        }
+        LOGGER.atFine().log(message);
     }
 
     public List<String> buildMapLeaderboardHologramLines(String mapId) {

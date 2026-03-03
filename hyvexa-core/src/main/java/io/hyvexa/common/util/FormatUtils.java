@@ -53,6 +53,20 @@ public final class FormatUtils {
         return String.format(Locale.ROOT, "%ds", seconds);
     }
 
+    public static String truncate(String value, int maxLength) {
+        if (value == null) {
+            return "";
+        }
+        String trimmed = value.trim();
+        if (trimmed.length() <= maxLength) {
+            return trimmed;
+        }
+        if (maxLength <= 3) {
+            return trimmed.substring(0, maxLength);
+        }
+        return trimmed.substring(0, maxLength - 3) + "...";
+    }
+
     /**
      * Format a BigNumber for HUD display with suffix notation.
      * Uses mantissa/exponent directly — no double overflow for large values.

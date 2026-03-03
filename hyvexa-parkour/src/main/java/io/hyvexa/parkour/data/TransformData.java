@@ -55,4 +55,15 @@ public class TransformData {
     public void setRotZ(float rotZ) {
         this.rotZ = rotZ;
     }
+
+    public TransformData copy() {
+        TransformData copy = new TransformData();
+        copy.setX(x);
+        copy.setY(y);
+        copy.setZ(z);
+        copy.setRotX(rotX);
+        copy.setRotY(rotY);
+        copy.setRotZ(rotZ);
+        return copy;
+    }
 }
