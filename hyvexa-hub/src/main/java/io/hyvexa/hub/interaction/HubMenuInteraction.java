@@ -25,9 +25,6 @@ public class HubMenuInteraction extends SimpleInteraction {
             return;
         }
         var router = plugin.getRouter();
-        if (router == null) {
-            return;
-        }
         var store = ref.getStore();
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (playerRef == null) {

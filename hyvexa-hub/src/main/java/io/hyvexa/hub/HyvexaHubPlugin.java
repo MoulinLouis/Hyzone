@@ -35,6 +35,7 @@ import io.hyvexa.hub.routing.HubRouter;
 
 import javax.annotation.Nonnull;
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -123,15 +124,12 @@ public class HyvexaHubPlugin extends JavaPlugin {
                 return;
             }
             Store<EntityStore> store = ref.getStore();
-            if (!isHubWorld(store)) {
+            World world = store.getExternalData() != null ? store.getExternalData().getWorld() : null;
+            if (!ModeGate.isHubWorld(world)) {
                 return;
             }
             PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
             if (playerRef == null) {
-                return;
-            }
-            World world = store.getExternalData().getWorld();
-            if (world == null) {
                 return;
             }
             String playerIdText = playerRef.getUuid() != null ? playerRef.getUuid().toString() : "unknown";
@@ -183,8 +181,8 @@ public class HyvexaHubPlugin extends JavaPlugin {
                 if (playerId == null) {
                     return;
                 }
-                if (!isHubWorld(world)) {
-                    clearHubHudState(playerId);
+                if (!ModeGate.isHubWorld(world)) {
+                    hubHudLifecycles.remove(playerId);
                     return;
                 }
                 hubHudLifecycles.putIfAbsent(playerId, HudLifecycle.pending());
@@ -206,7 +204,7 @@ public class HyvexaHubPlugin extends JavaPlugin {
             if (playerId == null) {
                 return;
             }
-            clearHubHudState(playerId);
+            hubHudLifecycles.remove(playerId);
             MultiHudBridge.evictPlayer(playerId);
             try { VexaStore.getInstance().evictPlayer(playerId); }
             catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: VexaStore"); }
@@ -220,7 +218,8 @@ public class HyvexaHubPlugin extends JavaPlugin {
                 continue;
             }
             Store<EntityStore> store = ref.getStore();
-            if (isHubWorld(store)) {
+            World hudWorld = store.getExternalData() != null ? store.getExternalData().getWorld() : null;
+            if (ModeGate.isHubWorld(hudWorld)) {
                 requestHubHudAttach(ref, store, playerRef);
             }
         }
@@ -235,7 +234,7 @@ public class HyvexaHubPlugin extends JavaPlugin {
 
     private void tickPlayerCount() {
         long now = System.currentTimeMillis();
-        List<UUID> toRemove = null;
+        List<UUID> toRemove = new ArrayList<>();
         for (var entry : hubHudLifecycles.entrySet()) {
             UUID playerId = entry.getKey();
             HudLifecycle lifecycle = entry.getValue();
@@ -244,25 +243,17 @@ public class HyvexaHubPlugin extends JavaPlugin {
             }
             PlayerRef playerRef = Universe.get().getPlayer(playerId);
             if (playerRef == null || !playerRef.isValid()) {
-                if (toRemove == null) {
-                    toRemove = new java.util.ArrayList<>();
-                }
                 toRemove.add(playerId);
                 continue;
             }
             Ref<EntityStore> ref = playerRef.getReference();
             if (ref == null || !ref.isValid()) {
-                if (toRemove == null) {
-                    toRemove = new java.util.ArrayList<>();
-                }
                 toRemove.add(playerId);
                 continue;
             }
             Store<EntityStore> store = ref.getStore();
-            if (!isHubWorld(store)) {
-                if (toRemove == null) {
-                    toRemove = new java.util.ArrayList<>();
-                }
+            World world = store != null && store.getExternalData() != null ? store.getExternalData().getWorld() : null;
+            if (!ModeGate.isHubWorld(world)) {
                 toRemove.add(playerId);
                 continue;
             }
@@ -271,10 +262,8 @@ public class HyvexaHubPlugin extends JavaPlugin {
                 lifecycle.hud().updateVexa(VexaStore.getInstance().getVexa(playerId));
             }
         }
-        if (toRemove != null) {
-            for (UUID playerId : toRemove) {
-                hubHudLifecycles.remove(playerId);
-            }
+        for (UUID playerId : toRemove) {
+            hubHudLifecycles.remove(playerId);
         }
     }
 
@@ -305,7 +294,7 @@ public class HyvexaHubPlugin extends JavaPlugin {
             return;
         }
         String worldName = world.getName() != null ? world.getName() : "unknown";
-        String playerIdText = playerId != null ? playerId.toString() : "unknown";
+        String playerIdText = playerId.toString();
         AsyncExecutionHelper.runBestEffort(world, () -> {
             try {
                 if (!ref.isValid() || !playerRef.isValid()) {
@@ -364,7 +353,7 @@ public class HyvexaHubPlugin extends JavaPlugin {
 
     private void tickHubHudRecovery() {
         long now = System.currentTimeMillis();
-        List<UUID> toRemove = null;
+        List<UUID> toRemove = new ArrayList<>();
         for (var entry : hubHudLifecycles.entrySet()) {
             UUID playerId = entry.getKey();
             HudLifecycle lifecycle = entry.getValue();
@@ -383,47 +372,25 @@ public class HyvexaHubPlugin extends JavaPlugin {
             // PENDING phase — attempt recovery
             PlayerRef playerRef = Universe.get().getPlayer(playerId);
             if (playerRef == null || !playerRef.isValid()) {
-                if (toRemove == null) toRemove = new java.util.ArrayList<>();
                 toRemove.add(playerId);
                 continue;
             }
             Ref<EntityStore> ref = playerRef.getReference();
             if (ref == null || !ref.isValid()) {
-                if (toRemove == null) toRemove = new java.util.ArrayList<>();
                 toRemove.add(playerId);
                 continue;
             }
             Store<EntityStore> store = ref.getStore();
-            if (!isHubWorld(store)) {
-                if (toRemove == null) toRemove = new java.util.ArrayList<>();
+            World recoveryWorld = store != null && store.getExternalData() != null ? store.getExternalData().getWorld() : null;
+            if (!ModeGate.isHubWorld(recoveryWorld)) {
                 toRemove.add(playerId);
                 continue;
             }
             requestHubHudAttach(ref, store, playerRef);
         }
-        if (toRemove != null) {
-            for (UUID id : toRemove) {
-                hubHudLifecycles.remove(id);
-            }
+        for (UUID id : toRemove) {
+            hubHudLifecycles.remove(id);
         }
-    }
-
-    private void clearHubHudState(UUID playerId) {
-        if (playerId == null) {
-            return;
-        }
-        hubHudLifecycles.remove(playerId);
-    }
-
-    private boolean isHubWorld(World world) {
-        return ModeGate.isHubWorld(world);
-    }
-
-    private boolean isHubWorld(Store<EntityStore> store) {
-        if (store == null || store.getExternalData() == null) {
-            return false;
-        }
-        return isHubWorld(store.getExternalData().getWorld());
     }
 
     @Override

@@ -34,27 +34,7 @@ public class HubRouter {
         }
     }
 
-    public void routeToHub(PlayerRef playerRef) {
-        routeToWorld(playerRef, WorldConstants.WORLD_HUB);
-    }
-
-    public void routeToParkour(PlayerRef playerRef) {
-        routeToWorld(playerRef, WorldConstants.WORLD_PARKOUR);
-    }
-
-    public void routeToAscend(PlayerRef playerRef) {
-        routeToWorld(playerRef, WorldConstants.WORLD_ASCEND);
-    }
-
-    public void routeToPurge(PlayerRef playerRef) {
-        routeToWorld(playerRef, WorldConstants.WORLD_PURGE);
-    }
-
-    public void routeToRunOrFall(PlayerRef playerRef) {
-        routeToWorld(playerRef, WorldConstants.WORLD_RUN_OR_FALL);
-    }
-
-    private void routeToWorld(PlayerRef playerRef, String targetWorldName) {
+    public void routeToWorld(PlayerRef playerRef, String targetWorldName) {
         Ref<EntityStore> ref = playerRef.getReference();
         if (ref == null || !ref.isValid()) {
             return;

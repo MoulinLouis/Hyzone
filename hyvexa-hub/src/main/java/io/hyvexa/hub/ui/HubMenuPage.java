@@ -12,6 +12,7 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.common.WorldConstants;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.common.whitelist.AscendWhitelistManager;
@@ -102,7 +103,7 @@ public class HubMenuPage extends InteractiveCustomUIPage<ButtonEventData> {
         Player player = store.getComponent(ref, Player.getComponentType());
         if (BUTTON_HUB.equals(data.getButton())) {
             if (playerRef != null) {
-                router.routeToHub(playerRef);
+                router.routeToWorld(playerRef, WorldConstants.WORLD_HUB);
             }
             this.close();
             return;
@@ -113,7 +114,7 @@ public class HubMenuPage extends InteractiveCustomUIPage<ButtonEventData> {
         }
         if (BUTTON_PARKOUR.equals(data.getButton())) {
             if (playerRef != null) {
-                router.routeToParkour(playerRef);
+                router.routeToWorld(playerRef, WorldConstants.WORLD_PARKOUR);
             }
             this.close();
             return;
@@ -141,9 +142,6 @@ public class HubMenuPage extends InteractiveCustomUIPage<ButtonEventData> {
             } else if (whitelistManager != null && whitelistManager.isEnabled() && playerRef != null) {
                 String username = playerRef.getUsername();
                 isAllowed = username != null && whitelistManager.contains(username);
-            } else if (whitelistManager == null) {
-                // No whitelist configured at all — default to OP-only
-                isAllowed = false;
             } else {
                 isAllowed = false;
             }
@@ -153,7 +151,7 @@ public class HubMenuPage extends InteractiveCustomUIPage<ButtonEventData> {
                 return;
             }
             if (playerRef != null) {
-                router.routeToAscend(playerRef);
+                router.routeToWorld(playerRef, WorldConstants.WORLD_ASCEND);
             }
             this.close();
             return;
@@ -167,14 +165,14 @@ public class HubMenuPage extends InteractiveCustomUIPage<ButtonEventData> {
                 return;
             }
             if (playerRef != null) {
-                router.routeToPurge(playerRef);
+                router.routeToWorld(playerRef, WorldConstants.WORLD_PURGE);
             }
             this.close();
             return;
         }
         if (BUTTON_RUN_OR_FALL.equals(data.getButton())) {
             if (playerRef != null) {
-                router.routeToRunOrFall(playerRef);
+                router.routeToWorld(playerRef, WorldConstants.WORLD_RUN_OR_FALL);
             }
             this.close();
             return;
