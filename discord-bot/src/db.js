@@ -18,10 +18,7 @@ function getPool() {
   return pool;
 }
 
-/**
- * Look up a non-expired link code.
- * Returns { code, player_uuid, expires_at } or null.
- */
+/** Returns { code, player_uuid, expires_at } or null. */
 async function findValidCode(code) {
   const [rows] = await getPool().execute(
     'SELECT code, player_uuid, expires_at FROM discord_link_codes WHERE code = ? AND expires_at > NOW()',
@@ -30,10 +27,6 @@ async function findValidCode(code) {
   return rows.length > 0 ? rows[0] : null;
 }
 
-/**
- * Check if a Discord user is already linked to any game account.
- * Returns the player_uuid or null.
- */
 async function findLinkByDiscordId(discordId) {
   const [rows] = await getPool().execute(
     'SELECT player_uuid FROM discord_links WHERE discord_id = ?',
@@ -42,10 +35,6 @@ async function findLinkByDiscordId(discordId) {
   return rows.length > 0 ? rows[0].player_uuid : null;
 }
 
-/**
- * Check if a game account is already linked to any Discord user.
- * Returns the discord_id or null.
- */
 async function findLinkByPlayerUuid(playerUuid) {
   const [rows] = await getPool().execute(
     'SELECT discord_id FROM discord_links WHERE player_uuid = ?',
@@ -54,10 +43,6 @@ async function findLinkByPlayerUuid(playerUuid) {
   return rows.length > 0 ? rows[0].discord_id : null;
 }
 
-/**
- * Create a permanent link between a game account and Discord user.
- * Deletes the used code afterwards.
- */
 async function createLink(playerUuid, discordId) {
   const conn = await getPool().getConnection();
   try {
@@ -157,9 +142,6 @@ async function getDesyncedRanks(limit = 50) {
   return rows;
 }
 
-/**
- * Mark a player's rank as synced after the Discord role has been updated.
- */
 async function markRankSynced(playerUuid, rank) {
   await getPool().execute(
     'UPDATE discord_links SET last_synced_rank = ? WHERE player_uuid = ?',
@@ -167,9 +149,6 @@ async function markRankSynced(playerUuid, rank) {
   );
 }
 
-/**
- * Gracefully close the connection pool.
- */
 async function shutdown() {
   if (pool) {
     await pool.end();

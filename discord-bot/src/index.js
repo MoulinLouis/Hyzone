@@ -6,6 +6,7 @@ const db = require('./db');
 const TOKEN = process.env.DISCORD_TOKEN;
 const GUILD_ID = process.env.GUILD_ID;
 const RANK_SYNC_BATCH_SIZE = Math.max(1, parseInt(process.env.RANK_SYNC_BATCH_SIZE || '50', 10) || 50);
+const RANK_SYNC_INTERVAL_MS = parseInt(process.env.RANK_SYNC_INTERVAL_MS || '30000', 10) || 30_000;
 
 if (!TOKEN) {
   console.error('DISCORD_TOKEN is required in .env');
@@ -29,7 +30,6 @@ for (const name of RANK_NAMES) {
 }
 
 
-// Register the /link slash command
 async function registerCommands() {
   const command = new SlashCommandBuilder()
     .setName('link')
@@ -53,7 +53,6 @@ async function registerCommands() {
   }
 }
 
-// Poll for rank changes and sync Discord roles
 async function syncRankRoles() {
   if (!GUILD_ID || RANK_ROLES.size === 0) return;
 
@@ -77,7 +76,6 @@ async function syncRankRoles() {
     try {
       const member = await guild.members.fetch(row.discord_id);
 
-      // Remove old rank role
       if (row.last_synced_rank && RANK_ROLES.has(row.last_synced_rank)) {
         const oldRoleId = RANK_ROLES.get(row.last_synced_rank);
         if (member.roles.cache.has(oldRoleId)) {
@@ -85,7 +83,6 @@ async function syncRankRoles() {
         }
       }
 
-      // Add new rank role
       const newRoleId = RANK_ROLES.get(row.current_rank);
       if (newRoleId) {
         await member.roles.add(newRoleId);
@@ -106,10 +103,9 @@ client.once('ready', async () => {
     console.error('Failed to register commands:', err);
   }
 
-  // Start rank role sync polling (every 30 seconds)
   if (GUILD_ID && RANK_ROLES.size > 0) {
-    setInterval(syncRankRoles, 30_000);
-    console.log(`Rank role sync enabled (${RANK_ROLES.size} roles configured, polling every 30s)`);
+    setInterval(syncRankRoles, RANK_SYNC_INTERVAL_MS);
+    console.log(`Rank role sync enabled (${RANK_ROLES.size} roles configured, polling every ${RANK_SYNC_INTERVAL_MS / 1000}s)`);
   }
 });
 
@@ -122,7 +118,6 @@ client.on('interactionCreate', async (interaction) => {
 
   try {
     const rawCode = interaction.options.getString('code', true);
-    // Normalize: uppercase, strip spaces/dashes
     const code = rawCode.toUpperCase().replace(/[-\s]/g, '');
 
     if (code.length !== 6) {
@@ -141,11 +136,12 @@ client.on('interactionCreate', async (interaction) => {
     );
   } catch (err) {
     console.error('Error handling /link:', err);
-    await interaction.editReply('Something went wrong. Please try again later.').catch(() => {});
+    await interaction.editReply('Something went wrong. Please try again later.').catch((editErr) => {
+      console.debug('editReply failed:', editErr);
+    });
   }
 });
 
-// Graceful shutdown
 process.on('SIGINT', async () => {
   console.log('Shutting down...');
   await db.shutdown();
