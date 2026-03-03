@@ -61,7 +61,7 @@ async function syncRankRoles() {
   try {
     guild = await client.guilds.fetch(GUILD_ID);
   } catch (err) {
-    console.error('Rank sync: failed to fetch guild:', err.message);
+    console.error('Rank sync: failed to fetch guild:', err);
     return;
   }
 
@@ -69,7 +69,7 @@ async function syncRankRoles() {
   try {
     rows = await db.getDesyncedRanks(RANK_SYNC_BATCH_SIZE);
   } catch (err) {
-    console.error('Rank sync: DB query failed:', err.message);
+    console.error('Rank sync: DB query failed:', err);
     return;
   }
 
@@ -93,7 +93,7 @@ async function syncRankRoles() {
 
       await db.markRankSynced(row.player_uuid, row.current_rank);
     } catch (err) {
-      console.warn(`Rank sync: failed for ${row.discord_id} (${row.player_uuid}):`, err.message);
+      console.warn(`Rank sync: failed for ${row.discord_id} (${row.player_uuid}):`, err);
     }
   }
 }

@@ -214,7 +214,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
         Player player = store.getComponent(ref, Player.getComponentType());
         if (player != null) {
             String mapName = map.getName() != null && !map.getName().isBlank() ? map.getName() : map.getId();
-            showToast(playerRef.getUuid(), ToastType.INFO, "Ready: " + mapName + " - Move to start!");
+            AscendHudManager.showToastSafe(playerRef.getUuid(), ToastType.INFO, "Ready: " + mapName + " - Move to start!");
             // Give run items (reset + leave)
             AscendInventoryUtils.giveRunItems(player);
         }
@@ -608,7 +608,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
 
             // Buying a runner is now free
             playerStore.setHasRobot(playerRef.getUuid(), mapId, true);
-            showToast(playerRef.getUuid(), ToastType.SUCCESS, "Runner purchased!");
+            AscendHudManager.showToastSafe(playerRef.getUuid(), ToastType.SUCCESS, "Runner purchased!");
             try {
                 io.hyvexa.core.analytics.AnalyticsStore.getInstance().logEvent(playerRef.getUuid(), "ascend_runner_buy",
                         "{\"map_id\":\"" + mapId + "\"}");
@@ -620,7 +620,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
 
             // Check if fully maxed (max stars and max level)
             if (currentStars >= AscendConstants.MAX_ROBOT_STARS && currentLevel >= MAX_SPEED_LEVEL) {
-                showToast(playerRef.getUuid(), ToastType.INFO, "Runner already maxed!");
+                AscendHudManager.showToastSafe(playerRef.getUuid(), ToastType.INFO, "Runner already maxed!");
                 return;
             }
 
@@ -649,7 +649,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
                 }
 
                 String evoMsg = "Runner evolved! Now at " + newStars + " star" + (newStars > 1 ? "s" : "") + "!";
-                showToast(playerRef.getUuid(), ToastType.EVOLUTION, evoMsg);
+                AscendHudManager.showToastSafe(playerRef.getUuid(), ToastType.EVOLUTION, evoMsg);
                 updateRobotRow(ref, store, mapId);
                 return;
             }
@@ -961,16 +961,6 @@ public class AscendMapSelectPage extends BaseAscendPage {
         }
     }
 
-    private void showToast(UUID playerId, ToastType type, String message) {
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin != null) {
-            AscendHudManager hm = plugin.getHudManager();
-            if (hm != null) {
-                hm.showToast(playerId, type, message);
-            }
-        }
-    }
-
     private void handleBuyAll(Ref<EntityStore> ref, Store<EntityStore> store) {
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (playerRef == null) {
@@ -1093,12 +1083,12 @@ public class AscendMapSelectPage extends BaseAscendPage {
         }
 
         if (purchased == 0) {
-            showToast(playerRef.getUuid(), ToastType.ERROR, "Not enough volt");
+            AscendHudManager.showToastSafe(playerRef.getUuid(), ToastType.ERROR, "Not enough volt");
             return;
         }
 
         String buyAllMsg = "Buy All: " + purchased + " upgrade" + (purchased > 1 ? "s" : "");
-        showToast(playerRef.getUuid(), ToastType.BATCH, buyAllMsg);
+        AscendHudManager.showToastSafe(playerRef.getUuid(), ToastType.BATCH, buyAllMsg);
 
         // Update UI for all affected maps
         for (String mapId : updatedMapIds) {
@@ -1194,7 +1184,7 @@ public class AscendMapSelectPage extends BaseAscendPage {
         }
 
         String evolveAllMsg = "Evolve All: " + evolved + " runner" + (evolved > 1 ? "s" : "");
-        showToast(playerRef.getUuid(), ToastType.EVOLUTION, evolveAllMsg);
+        AscendHudManager.showToastSafe(playerRef.getUuid(), ToastType.EVOLUTION, evolveAllMsg);
 
         // Update action button states (may now be grayed out if no more eligible actions)
         UICommandBuilder buttonUpdateCmd = new UICommandBuilder();

@@ -143,10 +143,6 @@ async function claimCodeAndCreateLink(code, discordId) {
   }
 }
 
-/**
- * Find all linked players whose current_rank differs from last_synced_rank.
- * Returns an array of { player_uuid, discord_id, current_rank, last_synced_rank }.
- */
 async function getDesyncedRanks(limit = 50) {
   const safeLimit = Number.isInteger(limit) && limit > 0 ? limit : 50;
   const [rows] = await getPool().execute(

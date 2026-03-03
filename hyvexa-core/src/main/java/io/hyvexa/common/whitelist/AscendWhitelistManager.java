@@ -36,11 +36,7 @@ public class AscendWhitelistManager {
         load();
     }
 
-    /**
-     * Adds a player to the whitelist.
-     * @param username The player's username (case-insensitive)
-     * @return true if the player was added, false if already whitelisted
-     */
+    /** @return true if added, false if already whitelisted */
     public boolean add(String username) {
         if (username == null || username.trim().isEmpty()) {
             return false;
@@ -54,11 +50,7 @@ public class AscendWhitelistManager {
         return true;
     }
 
-    /**
-     * Removes a player from the whitelist.
-     * @param username The player's username (case-insensitive)
-     * @return true if the player was removed, false if not whitelisted
-     */
+    /** @return true if removed, false if not whitelisted */
     public boolean remove(String username) {
         if (username == null || username.trim().isEmpty()) {
             return false;
@@ -72,11 +64,6 @@ public class AscendWhitelistManager {
         return true;
     }
 
-    /**
-     * Checks if a player is whitelisted.
-     * @param username The player's username (case-insensitive)
-     * @return true if the player is whitelisted
-     */
     public boolean contains(String username) {
         if (username == null || username.trim().isEmpty()) {
             return false;
@@ -84,46 +71,29 @@ public class AscendWhitelistManager {
         return whitelistedPlayers.contains(username.toLowerCase());
     }
 
-    /**
-     * Gets a list of all whitelisted players.
-     * @return List of whitelisted usernames (sorted alphabetically)
-     */
     public List<String> list() {
         return new ArrayList<>(whitelistedPlayers);
     }
 
-    /**
-     * Checks if the whitelist is enabled.
-     * @return true if whitelist is enabled
-     */
     public boolean isEnabled() {
         return enabled;
     }
 
     /**
-     * Enables or disables the whitelist.
-     * When enabled, whitelisted players + OPs can access.
-     * When disabled, only OPs can access (default secure behavior).
-     * @param enabled true to enable whitelist, false to disable
+     * When enabled, whitelisted players plus OPs can access.
+     * When disabled, only OPs can access.
      */
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
         save();
     }
 
-    /**
-     * Checks if public mode is active.
-     * When true, any player can access Ascend — no whitelist check at all.
-     * @return true if public mode is active
-     */
     public boolean isPublicMode() {
         return publicMode;
     }
 
     /**
-     * Enables or disables public mode.
      * When enabled, all players can access Ascend without restriction.
-     * @param publicMode true to open to public, false to re-enable whitelist restrictions
      */
     public void setPublicMode(boolean publicMode) {
         this.publicMode = publicMode;
