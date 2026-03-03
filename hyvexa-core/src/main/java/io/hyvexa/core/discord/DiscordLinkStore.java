@@ -33,6 +33,7 @@ public class DiscordLinkStore {
     private static final String CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no I/O/0/1 for clarity
 
     private final ConcurrentHashMap<UUID, DiscordLink> cache = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, Boolean> rewardCheckedThisSession = new ConcurrentHashMap<>();
 
     private DiscordLinkStore() {
     }
@@ -220,6 +221,20 @@ public class DiscordLinkStore {
         return CompletableFuture.supplyAsync(() -> claimAndRewardVexa(playerId), HytaleServer.SCHEDULED_EXECUTOR);
     }
 
+    /**
+     * Claims the Discord link reward at most once per connected session.
+     * Mode transfers should use this instead of the raw async claim path.
+     */
+    public CompletableFuture<Boolean> checkAndRewardVexaOnLoginAsync(UUID playerId) {
+        if (playerId == null || !DatabaseManager.getInstance().isInitialized()) {
+            return CompletableFuture.completedFuture(false);
+        }
+        if (rewardCheckedThisSession.putIfAbsent(playerId, Boolean.TRUE) != null) {
+            return CompletableFuture.completedFuture(false);
+        }
+        return CompletableFuture.supplyAsync(() -> claimAndRewardVexa(playerId), HytaleServer.SCHEDULED_EXECUTOR);
+    }
+
     public CompletableFuture<Boolean> updateRankIfLinkedAsync(UUID playerId, String rankName) {
         if (playerId == null || rankName == null || !DatabaseManager.getInstance().isInitialized()) {
             return CompletableFuture.completedFuture(false);
@@ -375,6 +390,7 @@ public class DiscordLinkStore {
             return false;
         }
         cache.remove(playerId);
+        rewardCheckedThisSession.remove(playerId);
         boolean deleted = false;
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
             try (PreparedStatement stmt = conn.prepareStatement(
@@ -401,6 +417,7 @@ public class DiscordLinkStore {
     public void evictPlayer(UUID playerId) {
         if (playerId != null) {
             cache.remove(playerId);
+            rewardCheckedThisSession.remove(playerId);
         }
     }
 

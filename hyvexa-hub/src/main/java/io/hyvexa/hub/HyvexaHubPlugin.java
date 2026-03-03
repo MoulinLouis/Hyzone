@@ -150,7 +150,7 @@ public class HyvexaHubPlugin extends JavaPlugin {
                 giveHubItems(player);
                 requestHubHudAttach(ref, store, playerRef);
                 DiscordLinkStore linkStore = DiscordLinkStore.getInstance();
-                linkStore.checkAndRewardVexaAsync(playerRef.getUuid())
+                linkStore.checkAndRewardVexaOnLoginAsync(playerRef.getUuid())
                         .thenAcceptAsync(rewarded -> {
                             if (rewarded && ref.isValid()) {
                                 linkStore.sendRewardGrantedMessage(player);

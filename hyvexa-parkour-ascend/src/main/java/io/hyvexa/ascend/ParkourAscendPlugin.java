@@ -305,7 +305,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     hudManager.attach(playerRef, player);
                     AscendMusicPage.applyStoredMusic(playerRef);
                     DiscordLinkStore linkStore = DiscordLinkStore.getInstance();
-                    linkStore.checkAndRewardVexaAsync(playerId)
+                    linkStore.checkAndRewardVexaOnLoginAsync(playerId)
                             .thenAcceptAsync(rewarded -> {
                                 if (rewarded && ref.isValid()) {
                                     linkStore.sendRewardGrantedMessage(player);

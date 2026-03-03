@@ -203,7 +203,7 @@ public class HyvexaPurgePlugin extends JavaPlugin {
             ensurePurgeIdleState(playerRef, player);
             LOGGER.atInfo().log("Player entered Purge: " + (playerId != null ? playerId : "unknown"));
             DiscordLinkStore linkStore = DiscordLinkStore.getInstance();
-            linkStore.checkAndRewardVexaAsync(playerId)
+            linkStore.checkAndRewardVexaOnLoginAsync(playerId)
                     .thenAcceptAsync(rewarded -> {
                         if (rewarded && ref.isValid()) {
                             linkStore.sendRewardGrantedMessage(player);

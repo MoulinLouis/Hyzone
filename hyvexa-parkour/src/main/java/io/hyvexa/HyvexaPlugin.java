@@ -723,7 +723,7 @@ public class HyvexaPlugin extends JavaPlugin {
             return;
         }
         DiscordLinkStore linkStore = DiscordLinkStore.getInstance();
-        linkStore.checkAndRewardVexaAsync(playerId)
+        linkStore.checkAndRewardVexaOnLoginAsync(playerId)
                 .thenAcceptAsync(rewarded -> {
                     if (!rewarded || !ref.isValid()) {
                         return;
