@@ -27,6 +27,10 @@ public class PurgeHud extends CustomUIHud {
     private String lastWxpXpText = null;
     private int lastWxpBarQuantized = -1;
     private boolean wxpVisible = false;
+    private String lastMxpName = null;
+    private String lastMxpXpText = null;
+    private int lastMxpBarQuantized = -1;
+    private boolean mxpVisible = false;
     private boolean killMeterVisible = false;
     private int lastKmPlayerCount = -1;
     private final String[] lastKmNames = new String[5];
@@ -228,6 +232,47 @@ public class PurgeHud extends CustomUIHud {
         }
     }
 
+    public void updateMeleeXp(String nameText, String xpText, float barProgress) {
+        UICommandBuilder cmd = new UICommandBuilder();
+        boolean changed = false;
+        if (!mxpVisible) {
+            mxpVisible = true;
+            cmd.set("#MeleeXpHud.Visible", true);
+            changed = true;
+        }
+        if (!nameText.equals(lastMxpName)) {
+            lastMxpName = nameText;
+            cmd.set("#MxpWeaponName.Text", nameText);
+            changed = true;
+        }
+        if (!xpText.equals(lastMxpXpText)) {
+            lastMxpXpText = xpText;
+            cmd.set("#MxpXpText.Text", xpText);
+            changed = true;
+        }
+        int quantized = (int) (barProgress * 1000);
+        if (quantized != lastMxpBarQuantized) {
+            lastMxpBarQuantized = quantized;
+            cmd.set("#MxpBar.Value", barProgress);
+            changed = true;
+        }
+        if (changed) {
+            update(false, cmd);
+        }
+    }
+
+    public void hideMeleeXp() {
+        if (mxpVisible) {
+            mxpVisible = false;
+            lastMxpName = null;
+            lastMxpXpText = null;
+            lastMxpBarQuantized = -1;
+            UICommandBuilder cmd = new UICommandBuilder();
+            cmd.set("#MeleeXpHud.Visible", false);
+            update(false, cmd);
+        }
+    }
+
     public void updateKillMeter(String[] names, int[] kills, int count) {
         UICommandBuilder cmd = new UICommandBuilder();
         boolean changed = false;
@@ -339,6 +384,10 @@ public class PurgeHud extends CustomUIHud {
         lastWxpXpText = null;
         lastWxpBarQuantized = -1;
         wxpVisible = false;
+        lastMxpName = null;
+        lastMxpXpText = null;
+        lastMxpBarQuantized = -1;
+        mxpVisible = false;
         killMeterVisible = false;
         lastKmPlayerCount = -1;
         for (int i = 0; i < 5; i++) {

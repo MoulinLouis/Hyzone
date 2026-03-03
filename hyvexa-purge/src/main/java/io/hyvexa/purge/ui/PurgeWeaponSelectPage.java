@@ -603,9 +603,6 @@ public class PurgeWeaponSelectPage extends InteractiveCustomUIPage<PurgeWeaponSe
     }
 
     private String getWeaponLabel(String weaponId) {
-        if (weaponConfigManager.isMeleeWeapon(weaponId)) {
-            return weaponConfigManager.getDisplayName(weaponId) + " [Melee]";
-        }
         return weaponConfigManager.getDisplayName(weaponId);
     }
 

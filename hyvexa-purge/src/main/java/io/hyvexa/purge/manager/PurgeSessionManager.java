@@ -203,6 +203,11 @@ public class PurgeSessionManager {
                         String weaponId = ps.getCurrentWeaponId();
                         String displayName = plugin.getWeaponConfigManager().getDisplayName(weaponId);
                         hudManager.updateWeaponXpHud(pid, weaponId, displayName);
+                        String meleeId = ps.getCurrentMeleeWeaponId();
+                        if (meleeId != null) {
+                            String meleeName = plugin.getWeaponConfigManager().getDisplayName(meleeId);
+                            hudManager.updateMeleeXpHud(pid, meleeId, meleeName);
+                        }
                     }
                     hudManager.registerComboPlayer(pid, ps);
                     hudManager.registerKillMeter(pid, session);

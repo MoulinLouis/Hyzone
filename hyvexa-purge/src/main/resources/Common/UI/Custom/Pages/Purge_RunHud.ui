@@ -600,6 +600,42 @@ $C.@PageOverlay {
       }
     }
 
+    Group #MeleeXpHud {
+      Anchor: (Left: 26, Bottom: 244, Width: 260, Height: 42);
+      LayoutMode: Top;
+      Background: #0d1620(0.88);
+      OutlineColor: #ffffff(0.06);
+      OutlineSize: 1;
+      Padding: (Left: 12, Right: 12, Top: 6, Bottom: 6);
+      Visible: false;
+
+      Group #MxpTopRow {
+        Anchor: (Left: 0, Right: 0, Height: 16);
+        LayoutMode: Left;
+
+        Label #MxpWeaponName {
+          Anchor: (Height: 16);
+          Style: (FontSize: 13, TextColor: #ffd44d, RenderBold: true, VerticalAlignment: Center);
+          Text: "Sword Lv 0";
+        }
+
+        Group { FlexWeight: 1; }
+
+        Label #MxpXpText {
+          Anchor: (Height: 16);
+          Style: (FontSize: 12, TextColor: #9eb7d4, VerticalAlignment: Center);
+          Text: "0 / 25";
+        }
+      }
+
+      ProgressBar #MxpBar {
+        Anchor: (Left: 0, Right: 0, Top: 4, Height: 8);
+        Value: 0;
+        Bar: #ffd44d;
+        Background: #ffd44d(0.12);
+      }
+    }
+
     Group #WeaponXpHud {
       Anchor: (Left: 26, Bottom: 196, Width: 260, Height: 42);
       LayoutMode: Top;

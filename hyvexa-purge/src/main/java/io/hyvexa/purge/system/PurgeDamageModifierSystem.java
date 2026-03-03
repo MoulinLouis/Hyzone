@@ -403,7 +403,11 @@ public class PurgeDamageModifierSystem extends DamageEventSystem {
         if (plugin != null) {
             PurgeHudManager hudManager = plugin.getHudManager();
             if (hudManager != null) {
-                hudManager.updateWeaponXpHud(playerId, weaponId, displayName);
+                if (weaponConfigManager.isMeleeWeapon(weaponId)) {
+                    hudManager.updateMeleeXpHud(playerId, weaponId, displayName);
+                } else {
+                    hudManager.updateWeaponXpHud(playerId, weaponId, displayName);
+                }
             }
         }
         // Send level-up chat message

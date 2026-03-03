@@ -368,7 +368,7 @@ public class HyvexaPurgePlugin extends JavaPlugin {
             );
         }
         String displayName = weaponConfigManager.getDisplayName(newMeleeId);
-        hudManager.updateWeaponXpHud(state.getPlayerId(), newMeleeId, displayName);
+        hudManager.updateMeleeXpHud(state.getPlayerId(), newMeleeId, displayName);
     }
 
     public void grantLootbox(Player player, int count) {

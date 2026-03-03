@@ -101,7 +101,7 @@ $C.@PageOverlay {
 
     // === DETAIL PANEL (hidden until weapon selected) ===
     Group #DetailPanel {
-      Anchor: (Left: 0, Right: 0, Height: 156);
+      Anchor: (Left: 0, Right: 0, Height: 120);
       LayoutMode: Full;
       Background: #0f1f33;
       Visible: false;
@@ -259,23 +259,23 @@ $C.@PageOverlay {
         );
       }
 
-      // === WEAPON XP SECTION ===
+      // === WEAPON XP SECTION (to the right of weapon name) ===
       Group #XpSection {
-        Anchor: (Left: 132, Right: 200, Bottom: 6, Height: 36);
+        Anchor: (Left: 280, Top: 44, Right: 196, Height: 34);
         LayoutMode: Top;
 
         Group #XpRow {
-          Anchor: (Left: 0, Right: 0, Height: 16);
+          Anchor: (Left: 0, Right: 0, Height: 14);
           LayoutMode: Left;
 
           Label #XpLevelLabel {
-            Anchor: (Width: 90, Height: 16);
-            Style: (FontSize: 13, TextColor: #ffd44d, RenderBold: true, VerticalAlignment: Center);
+            Anchor: (Width: 76, Height: 14);
+            Style: (FontSize: 12, TextColor: #ffd44d, RenderBold: true, VerticalAlignment: Center);
             Text: "Mastery Lv 0";
           }
 
           ProgressBar #XpBar {
-            Anchor: (Left: 4, Height: 10, Top: 3);
+            Anchor: (Left: 4, Height: 8, Top: 3);
             FlexWeight: 1;
             Value: 0;
             Bar: #ffd44d;
@@ -283,15 +283,15 @@ $C.@PageOverlay {
           }
 
           Label #XpText {
-            Anchor: (Left: 8, Width: 86, Height: 16);
-            Style: (FontSize: 12, TextColor: #9eb7d4, VerticalAlignment: Center);
+            Anchor: (Left: 6, Width: 68, Height: 14);
+            Style: (FontSize: 11, TextColor: #9eb7d4, VerticalAlignment: Center);
             Text: "0 / 25 XP";
           }
         }
 
         Label #XpBoosts {
           Anchor: (Left: 0, Right: 0, Top: 2, Height: 14);
-          Style: (FontSize: 11, TextColor: #8b9bb0);
+          Style: (FontSize: 10, TextColor: #8b9bb0);
           Text: "+0% DMG   +0 Scrap/kill   +0% Ammo";
         }
       }
