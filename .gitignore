@@ -50,3 +50,4 @@ discord-bot/.env
 ### Claude ###
 .claude/
 .grepai/
+.worktrees/
