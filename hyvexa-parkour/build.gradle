@@ -6,6 +6,7 @@ plugins {
 
 dependencies {
     implementation project(':hyvexa-core')
+    compileOnly project(':hyvexa-votifier')
     compileOnly files("$hytaleHome/install/$patchline/package/game/latest/Server/HytaleServer.jar")
     runtimeOnly files("$hytaleHome/install/$patchline/package/game/latest/Server/HytaleServer.jar")
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'

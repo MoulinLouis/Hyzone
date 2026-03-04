@@ -29,6 +29,8 @@ import io.hyvexa.core.trail.TrailManager;
 import io.hyvexa.core.economy.FeatherStore;
 import io.hyvexa.core.vote.VoteConfig;
 import io.hyvexa.core.vote.VoteManager;
+import io.hyvexa.core.vote.VoteStore;
+
 import io.hyvexa.parkour.data.GlobalMessageStore;
 import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.data.MedalRewardStore;
@@ -88,8 +90,8 @@ import io.hyvexa.parkour.command.ParkourMusicDebugCommand;
 import io.hyvexa.parkour.command.RulesCommand;
 import io.hyvexa.parkour.command.StoreCommand;
 import io.hyvexa.parkour.command.SpectatorCommand;
+import io.hyvexa.parkour.command.FeatherCommand;
 
-import io.hyvexa.parkour.command.VoteCommand;
 import io.hyvexa.parkour.tracker.RunTracker;
 import io.hyvexa.parkour.system.NoDropSystem;
 import io.hyvexa.parkour.system.NoBreakSystem;
@@ -166,6 +168,7 @@ public class HyvexaPlugin extends JavaPlugin {
     private ScheduledFuture<?> teleportDebugTask;
     private ScheduledFuture<?> duelTickTask;
     private ScheduledFuture<?> votePollingTask;
+
     private GhostStore ghostStore;
     private GhostRecorder ghostRecorder;
     private GhostNpcManager ghostNpcManager;
@@ -214,6 +217,11 @@ public class HyvexaPlugin extends JavaPlugin {
             FeatherStore.getInstance().initialize();
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("Failed to initialize FeatherStore");
+        }
+        try {
+            VoteStore.getInstance().initialize();
+        } catch (Exception e) {
+            LOGGER.atWarning().withCause(e).log("Failed to initialize VoteStore");
         }
         try {
             MedalRewardStore.getInstance().initialize();
@@ -333,7 +341,7 @@ public class HyvexaPlugin extends JavaPlugin {
         this.getCommandRegistry().registerCommand(new PetTestCommand());
         this.getCommandRegistry().registerCommand(new MobGalleryCommand());
         this.getCommandRegistry().registerCommand(new AnalyticsCommand());
-        this.getCommandRegistry().registerCommand(new VoteCommand());
+        this.getCommandRegistry().registerCommand(new FeatherCommand());
         this.getCommandRegistry().registerCommand(new CreditsCommand());
         this.getCommandRegistry().registerCommand(new SpectatorCommand());
         this.getCommandRegistry().registerCommand(new io.hyvexa.core.queue.RunOrFallQueueCommand());
@@ -452,6 +460,9 @@ public class HyvexaPlugin extends JavaPlugin {
                 try { VoteManager.getInstance().unregisterPlayer(playerId); }
                 catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: VoteManager"); }
 
+                try { VoteStore.getInstance().evictPlayer(playerId); }
+                catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: VoteStore"); }
+
                 try { removeHudPlayer(playerId); }
                 catch (Exception e) { LOGGER.atWarning().withCause(e).log("Disconnect cleanup: HUD buckets"); }
 
@@ -480,6 +491,8 @@ public class HyvexaPlugin extends JavaPlugin {
                 LOGGER.atWarning().withCause(e).log("Exception in PlayerChatEvent");
             }
         });
+
+        registerVotifierListener();
 
         for (PlayerRef playerRef : Universe.get().getPlayers()) {
             var ref = playerRef.getReference();
@@ -786,6 +799,36 @@ public class HyvexaPlugin extends JavaPlugin {
                     LOGGER.atWarning().withCause(ex).log("Vote check on login failed");
                     return null;
                 });
+    }
+
+    private void registerVotifierListener() {
+        try {
+            Class.forName("org.hyvote.plugins.votifier.event.VoteEvent");
+        } catch (ClassNotFoundException e) {
+            LOGGER.atInfo().log("Votifier not present, skipping VoteEvent listener");
+            return;
+        }
+        this.getEventRegistry().registerGlobal(
+                org.hyvote.plugins.votifier.event.VoteEvent.class, event -> {
+                    try {
+                        String username = event.getUsername();
+                        if (username == null || username.isBlank()) {
+                            return;
+                        }
+                        // Find the online player by username to get their UUID
+                        for (PlayerRef playerRef : Universe.get().getPlayers()) {
+                            if (playerRef != null && username.equalsIgnoreCase(playerRef.getUsername())) {
+                                VoteStore.getInstance().recordVote(
+                                        playerRef.getUuid(), username, "votifier");
+                                return;
+                            }
+                        }
+                        LOGGER.atFine().log("VoteEvent for offline player: " + username);
+                    } catch (Exception e) {
+                        LOGGER.atWarning().withCause(e).log("Failed to handle VoteEvent");
+                    }
+                });
+        LOGGER.atInfo().log("VoteEvent listener registered for votifier integration");
     }
 
     private void tickHudUpdates() {
