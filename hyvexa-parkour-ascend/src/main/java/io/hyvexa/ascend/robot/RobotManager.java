@@ -97,6 +97,7 @@ public class RobotManager {
     private final Map<UUID, Long> lastAutoElevationMs = new ConcurrentHashMap<>();
     private final Map<UUID, Long> lastAutoSummitMs = new ConcurrentHashMap<>();
     private volatile ViewerContext viewerContext = ViewerContext.empty();
+    private volatile boolean viewerContextRefreshPending = false;
 
     public RobotManager(AscendMapStore mapStore, AscendPlayerStore playerStore, GhostStore ghostStore) {
         this.mapStore = mapStore;
@@ -737,10 +738,26 @@ public class RobotManager {
         if (current != null && now - lastViewerContextRefreshMs < VIEWER_CONTEXT_REFRESH_INTERVAL_MS) {
             return current;
         }
-        ViewerContext refreshed = buildViewerContext();
-        viewerContext = refreshed;
-        lastViewerContextRefreshMs = now;
-        return refreshed;
+        if (!viewerContextRefreshPending) {
+            viewerContextRefreshPending = true;
+            World ascendWorld = Universe.get().getWorld("Ascend");
+            if (ascendWorld != null) {
+                ascendWorld.execute(() -> {
+                    try {
+                        ViewerContext refreshed = buildViewerContext();
+                        viewerContext = refreshed;
+                        lastViewerContextRefreshMs = System.currentTimeMillis();
+                    } catch (Exception e) {
+                        LOGGER.atWarning().withCause(e).log("Error refreshing viewer context");
+                    } finally {
+                        viewerContextRefreshPending = false;
+                    }
+                });
+            } else {
+                viewerContextRefreshPending = false;
+            }
+        }
+        return current != null ? current : ViewerContext.empty();
     }
 
     private ViewerContext buildViewerContext() {
