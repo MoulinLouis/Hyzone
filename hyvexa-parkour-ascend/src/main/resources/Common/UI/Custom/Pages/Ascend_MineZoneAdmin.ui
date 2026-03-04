@@ -1,0 +1,224 @@
+$C = "../Common.ui";
+
+$C.@PageOverlay {
+  $C.@Container {
+    Anchor: (Width: 920, Height: 780);
+
+    #Title {
+      Group {
+        TextButton #BackButton {
+          Anchor: (Left: 12, Top: 4, Width: 64, Height: 24);
+          Padding: (Left: 8, Top: 2);
+          Text: "Back";
+          Style: TextButtonStyle(
+            Default: (
+              Background: #000000(0.13),
+              LabelStyle: (FontSize: 14, TextColor: #93844c, RenderBold: true)
+            ),
+            Hovered: (
+              Background: #000000(0.22),
+              LabelStyle: (FontSize: 14, TextColor: #93844c, RenderBold: true)
+            ),
+            Sounds: $C.@ButtonSounds,
+          );
+        }
+        $C.@Title {
+          @Text = "Mine Zone Admin";
+        }
+      }
+    }
+
+    #Content {
+      LayoutMode: Left;
+      Padding: (Left: 12, Right: 12, Top: 6, Bottom: 12);
+
+      Group #FormColumn {
+        Anchor: (Width: 300);
+        LayoutMode: Top;
+
+        Label #MineNameTitle {
+          Style: (FontSize: 16, TextColor: #93844c, RenderBold: true);
+          Text: "Mine: (none)";
+        }
+
+        Label #SelectedZoneText {
+          Anchor: (Top: 8);
+          Style: (FontSize: 13, TextColor: #9fb0ba, RenderBold: true);
+          Text: "Selected: (none)";
+        }
+
+        Label #ZoneInfoText {
+          Anchor: (Top: 2);
+          Style: (FontSize: 12, TextColor: #7a9aa8);
+          Text: "";
+        }
+
+        Label {
+          Text: "Zone ID";
+          Style: (FontSize: 13, TextColor: #cfd7dc);
+          Anchor: (Top: 8);
+        }
+
+        $C.@TextField #ZoneIdField {
+          Anchor: (Height: 28);
+          Style: (FontSize: 14, TextColor: #ffffff(0.85));
+        }
+
+        Label {
+          Text: "Position (at your feet)";
+          Style: (FontSize: 14, TextColor: #93844c, RenderBold: true);
+          Anchor: (Top: 12);
+        }
+
+        Label #Pos1Text {
+          Anchor: (Top: 2);
+          Style: (FontSize: 12, TextColor: #9fb0ba);
+          Text: "Pos1: (not set)";
+        }
+
+        Label #Pos2Text {
+          Anchor: (Top: 2);
+          Style: (FontSize: 12, TextColor: #9fb0ba);
+          Text: "Pos2: (not set)";
+        }
+
+        Group {
+          LayoutMode: Left;
+          Anchor: (Top: 6, Height: 32);
+
+          $C.@TextButton #Pos1Button {
+            Anchor: (Width: 140, Height: 30);
+            Text: "Set Pos1";
+          }
+
+          $C.@TextButton #Pos2Button {
+            Anchor: (Left: 8, Width: 140, Height: 30);
+            Text: "Set Pos2";
+          }
+        }
+
+        Group {
+          LayoutMode: Left;
+          Anchor: (Top: 6, Height: 32);
+
+          $C.@TextButton #CreateZoneButton {
+            Anchor: (Width: 140, Height: 30);
+            Text: "Create Zone";
+          }
+
+          $C.@TextButton #DeleteZoneButton {
+            Anchor: (Left: 8, Width: 140, Height: 30);
+            Text: "Delete Zone";
+          }
+        }
+
+        Label {
+          Text: "Block Table";
+          Style: (FontSize: 14, TextColor: #93844c, RenderBold: true);
+          Anchor: (Top: 12);
+        }
+
+        Label {
+          Text: "Block ID";
+          Style: (FontSize: 13, TextColor: #cfd7dc);
+          Anchor: (Top: 4);
+        }
+
+        $C.@TextField #BlockIdField {
+          Anchor: (Height: 28);
+          Style: (FontSize: 14, TextColor: #ffffff(0.85));
+        }
+
+        Label {
+          Text: "Probability (0.0-1.0)";
+          Style: (FontSize: 13, TextColor: #cfd7dc);
+          Anchor: (Top: 4);
+        }
+
+        $C.@TextField #BlockProbField {
+          Anchor: (Height: 28);
+          Style: (FontSize: 14, TextColor: #ffffff(0.85));
+        }
+
+        Group {
+          LayoutMode: Left;
+          Anchor: (Top: 6, Height: 32);
+
+          $C.@TextButton #AddBlockButton {
+            Anchor: (Width: 140, Height: 30);
+            Text: "Add Block";
+          }
+
+          $C.@TextButton #RemoveBlockButton {
+            Anchor: (Left: 8, Width: 140, Height: 30);
+            Text: "Remove Block";
+          }
+        }
+
+        Label {
+          Text: "Regeneration";
+          Style: (FontSize: 14, TextColor: #93844c, RenderBold: true);
+          Anchor: (Top: 12);
+        }
+
+        Label {
+          Text: "Threshold (0.0-1.0)";
+          Style: (FontSize: 13, TextColor: #cfd7dc);
+          Anchor: (Top: 4);
+        }
+
+        $C.@TextField #ThresholdField {
+          Anchor: (Height: 28);
+          Style: (FontSize: 14, TextColor: #ffffff(0.85));
+        }
+
+        Label {
+          Text: "Cooldown (seconds)";
+          Style: (FontSize: 13, TextColor: #cfd7dc);
+          Anchor: (Top: 4);
+        }
+
+        $C.@TextField #CooldownField {
+          Anchor: (Height: 28);
+          Style: (FontSize: 14, TextColor: #ffffff(0.85));
+        }
+
+        Group {
+          LayoutMode: Left;
+          Anchor: (Top: 6, Height: 32);
+
+          $C.@TextButton #SetThresholdButton {
+            Anchor: (Width: 140, Height: 30);
+            Text: "Set Threshold";
+          }
+
+          $C.@TextButton #SetCooldownButton {
+            Anchor: (Left: 8, Width: 140, Height: 30);
+            Text: "Set Cooldown";
+          }
+        }
+      }
+
+      Group #ListColumn {
+        Anchor: (Left: 16, Width: 560);
+        LayoutMode: Top;
+
+        Label {
+          Style: (FontSize: 16, TextColor: #93844c, RenderBold: true);
+          Text: "Zones";
+        }
+
+        Group #ZoneList {
+          Anchor: (Top: 6, Width: 540, Height: 660);
+          LayoutMode: TopScrolling;
+          Padding: (Left: 6, Right: 6);
+          ScrollbarStyle: $C.@DefaultScrollbarStyle;
+
+          Group #ZoneCards {
+            LayoutMode: Top;
+          }
+        }
+      }
+    }
+  }
+}
