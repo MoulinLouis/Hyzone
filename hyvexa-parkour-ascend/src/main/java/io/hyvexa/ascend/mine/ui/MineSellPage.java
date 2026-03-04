@@ -133,7 +133,7 @@ public class MineSellPage extends BaseAscendPage {
         if (player == null) return;
 
         if (mineProgress.getInventory().isEmpty()) {
-            player.sendMessage(Message.create("Nothing to sell."));
+            player.sendMessage(Message.raw("Nothing to sell."));
             return;
         }
 
@@ -145,7 +145,7 @@ public class MineSellPage extends BaseAscendPage {
             mineStore.markDirty(playerRef.getUuid());
         }
 
-        player.sendMessage(Message.create("Sold all blocks for " + earned.toString() + " crystals!"));
+        player.sendMessage(Message.raw("Sold all blocks for " + earned.toString() + " crystals!"));
 
         sendRefresh(ref, store);
     }

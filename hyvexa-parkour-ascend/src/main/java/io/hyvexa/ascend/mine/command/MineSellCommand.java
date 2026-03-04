@@ -55,7 +55,7 @@ public class MineSellCommand extends AbstractAsyncCommand {
 
             MinePlayerStore mineStore = plugin.getMinePlayerStore();
             if (mineStore == null) {
-                player.sendMessage(Message.create("Mine system not available."));
+                player.sendMessage(Message.raw("Mine system not available."));
                 return;
             }
 
