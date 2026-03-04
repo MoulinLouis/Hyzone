@@ -85,8 +85,8 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
                 mineName = mine.getName() != null ? mine.getName() : "";
                 mineOrder = String.valueOf(mine.getDisplayOrder());
                 BigNumber cost = mine.getUnlockCost();
-                if (cost != null && !cost.equals(BigNumber.ZERO)) {
-                    mineCost = cost.getMantissa() + "," + cost.getExponent();
+                if (cost != null && !cost.isZero()) {
+                    mineCost = String.valueOf(cost.toDouble());
                 } else {
                     mineCost = "";
                 }
@@ -203,24 +203,18 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
         if (mine == null) return;
         String raw = mineCost.trim();
         if (raw.isEmpty()) {
-            player.sendMessage(Message.raw("Enter cost as mantissa,exponent (e.g. 1.5,6 = 1.5e6)."));
-            return;
-        }
-        String[] parts = raw.split(",");
-        if (parts.length != 2) {
-            player.sendMessage(Message.raw("Format: mantissa,exponent (e.g. 1.5,6)."));
+            player.sendMessage(Message.raw("Enter a cost value (e.g. 1500000)."));
             return;
         }
         try {
-            double mantissa = Double.parseDouble(parts[0].trim());
-            int exponent = Integer.parseInt(parts[1].trim());
-            BigNumber cost = BigNumber.of(mantissa, exponent);
+            double value = Double.parseDouble(raw);
+            BigNumber cost = BigNumber.fromDouble(value);
             mine.setUnlockCost(cost);
             mineConfigStore.saveMine(mine);
             player.sendMessage(Message.raw("Cost updated: " + mine.getId() + " -> " + cost));
             sendRefresh(ref, store);
         } catch (NumberFormatException e) {
-            player.sendMessage(Message.raw("Invalid cost format. Use: mantissa,exponent (e.g. 1.5,6)."));
+            player.sendMessage(Message.raw("Invalid number. Enter a cost value (e.g. 1500000)."));
         }
     }
 
