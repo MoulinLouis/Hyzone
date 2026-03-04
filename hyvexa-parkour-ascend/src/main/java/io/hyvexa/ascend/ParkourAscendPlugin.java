@@ -43,6 +43,8 @@ import io.hyvexa.ascend.interaction.AscendResetInteraction;
 import io.hyvexa.ascend.interaction.AscendTranscendenceInteraction;
 import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.summit.SummitManager;
+import io.hyvexa.ascend.mine.MineGateChecker;
+import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 import io.hyvexa.ascend.transcendence.TranscendenceManager;
 import io.hyvexa.ascend.tutorial.TutorialTriggerService;
@@ -102,6 +104,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
     private AchievementManager achievementManager;
     private PassiveEarningsManager passiveEarningsManager;
     private TutorialTriggerService tutorialTriggerService;
+    private MineConfigStore mineConfigStore;
+    private MineGateChecker mineGateChecker;
     private AscendWhitelistManager whitelistManager;
     private AscendRuntimeConfig runtimeConfig;
     private ScheduledFuture<?> tickTask;
@@ -167,6 +171,15 @@ public class ParkourAscendPlugin extends JavaPlugin {
         } catch (Exception e) {
             LOGGER.atSevere().withCause(e).log("Failed to initialize core stores for Ascend — plugin will not function");
             return;
+        }
+
+        // Mine config
+        try {
+            mineConfigStore = new MineConfigStore();
+            mineConfigStore.syncLoad();
+            mineGateChecker = new MineGateChecker(mineConfigStore, playerStore);
+        } catch (Exception e) {
+            LOGGER.atWarning().withCause(e).log("Failed to initialize mine config store");
         }
 
         // Ghost system
@@ -488,6 +501,10 @@ public class ParkourAscendPlugin extends JavaPlugin {
         return tutorialTriggerService;
     }
 
+    public MineConfigStore getMineConfigStore() {
+        return mineConfigStore;
+    }
+
     public AscendRuntimeConfig getRuntimeConfig() {
         return runtimeConfig;
     }
@@ -622,6 +639,9 @@ public class ParkourAscendPlugin extends JavaPlugin {
                         }
                         if (fullTick) {
                             runTracker.checkPlayer(ref, store);
+                            if (mineGateChecker != null) {
+                                mineGateChecker.checkPlayer(playerId, ref, store);
+                            }
                             hudManager.updateFull(ref, store, playerRef);
                         }
                         hudManager.updateTimer(playerRef);
