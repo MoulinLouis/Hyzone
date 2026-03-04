@@ -16,7 +16,10 @@ import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.ascend.ParkourAscendPlugin;
+import io.hyvexa.ascend.mine.MineManager;
 import io.hyvexa.ascend.mine.data.Mine;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MineZone;
@@ -122,6 +125,10 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         }
         if (data.button.equals(ZoneData.BUTTON_SET_COOLDOWN)) {
             handleSetCooldown(ref, store);
+            return;
+        }
+        if (data.button.equals(ZoneData.BUTTON_REGEN)) {
+            handleRegen(ref, store);
             return;
         }
     }
@@ -304,6 +311,30 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         sendRefresh(ref, store);
     }
 
+    private void handleRegen(Ref<EntityStore> ref, Store<EntityStore> store) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null) return;
+        MineZone zone = resolveSelectedZone(player);
+        if (zone == null) return;
+
+        MineManager mineManager = ParkourAscendPlugin.getInstance().getMineManager();
+        if (mineManager == null) {
+            player.sendMessage(Message.raw("Mine manager not initialized."));
+            return;
+        }
+
+        World world = store.getExternalData().getWorld();
+        if (world == null) {
+            player.sendMessage(Message.raw("Unable to get world."));
+            return;
+        }
+
+        world.execute(() -> {
+            mineManager.generateZone(world, zone);
+        });
+        player.sendMessage(Message.raw("Zone regenerating: " + zone.getId() + " (" + zone.getTotalBlocks() + " blocks)"));
+    }
+
     private void handleBack(Ref<EntityStore> ref, Store<EntityStore> store) {
         Player player = store.getComponent(ref, Player.getComponentType());
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
@@ -361,6 +392,8 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
             EventData.of(ZoneData.KEY_BUTTON, ZoneData.BUTTON_SET_THRESHOLD), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SetCooldownButton",
             EventData.of(ZoneData.KEY_BUTTON, ZoneData.BUTTON_SET_COOLDOWN), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#RegenButton",
+            EventData.of(ZoneData.KEY_BUTTON, ZoneData.BUTTON_REGEN), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton",
             EventData.of(ZoneData.KEY_BUTTON, ZoneData.BUTTON_BACK), false);
     }
@@ -485,6 +518,7 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         static final String BUTTON_REMOVE_BLOCK = "RemoveBlock";
         static final String BUTTON_SET_THRESHOLD = "SetThreshold";
         static final String BUTTON_SET_COOLDOWN = "SetCooldown";
+        static final String BUTTON_REGEN = "Regen";
         static final String BUTTON_BACK = "Back";
 
         public static final BuilderCodec<ZoneData> CODEC = BuilderCodec.<ZoneData>builder(ZoneData.class, ZoneData::new)
