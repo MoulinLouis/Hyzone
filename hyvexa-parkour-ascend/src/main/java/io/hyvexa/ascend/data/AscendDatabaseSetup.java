@@ -218,6 +218,49 @@ public final class AscendDatabaseSetup {
             // Summit XP column: BIGINT -> DOUBLE (uncapped progression)
             migrateSummitXpToDouble(conn);
 
+            // Mine system tables
+            stmt.executeUpdate("""
+                CREATE TABLE IF NOT EXISTS mine_definitions (
+                    id VARCHAR(32) PRIMARY KEY,
+                    name VARCHAR(64) NOT NULL,
+                    display_order INT NOT NULL DEFAULT 0,
+                    unlock_cost_mantissa DOUBLE NOT NULL DEFAULT 0,
+                    unlock_cost_exp10 INT NOT NULL DEFAULT 0,
+                    world VARCHAR(64) NOT NULL DEFAULT '',
+                    spawn_x DOUBLE NOT NULL DEFAULT 0,
+                    spawn_y DOUBLE NOT NULL DEFAULT 0,
+                    spawn_z DOUBLE NOT NULL DEFAULT 0,
+                    spawn_rot_x FLOAT NOT NULL DEFAULT 0,
+                    spawn_rot_y FLOAT NOT NULL DEFAULT 0,
+                    spawn_rot_z FLOAT NOT NULL DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                ) ENGINE=InnoDB
+                """);
+
+            stmt.executeUpdate("""
+                CREATE TABLE IF NOT EXISTS mine_zones (
+                    id VARCHAR(32) NOT NULL,
+                    mine_id VARCHAR(32) NOT NULL,
+                    min_x INT NOT NULL, min_y INT NOT NULL, min_z INT NOT NULL,
+                    max_x INT NOT NULL, max_y INT NOT NULL, max_z INT NOT NULL,
+                    block_table_json TEXT NOT NULL DEFAULT '{}',
+                    regen_threshold DOUBLE NOT NULL DEFAULT 0.8,
+                    regen_cooldown_seconds INT NOT NULL DEFAULT 45,
+                    PRIMARY KEY (id),
+                    FOREIGN KEY (mine_id) REFERENCES mine_definitions(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB
+                """);
+
+            stmt.executeUpdate("""
+                CREATE TABLE IF NOT EXISTS mine_gate (
+                    id INT NOT NULL PRIMARY KEY DEFAULT 1,
+                    min_x DOUBLE NOT NULL DEFAULT 0, min_y DOUBLE NOT NULL DEFAULT 0, min_z DOUBLE NOT NULL DEFAULT 0,
+                    max_x DOUBLE NOT NULL DEFAULT 0, max_y DOUBLE NOT NULL DEFAULT 0, max_z DOUBLE NOT NULL DEFAULT 0,
+                    fallback_x DOUBLE NOT NULL DEFAULT 0, fallback_y DOUBLE NOT NULL DEFAULT 0, fallback_z DOUBLE NOT NULL DEFAULT 0,
+                    fallback_rot_x FLOAT NOT NULL DEFAULT 0, fallback_rot_y FLOAT NOT NULL DEFAULT 0, fallback_rot_z FLOAT NOT NULL DEFAULT 0
+                ) ENGINE=InnoDB
+                """);
+
             LOGGER.atInfo().log("Ascend database tables ensured");
             } // close try (Statement stmt)
 
