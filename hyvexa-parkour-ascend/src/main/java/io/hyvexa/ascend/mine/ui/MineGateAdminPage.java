@@ -27,8 +27,10 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class MineGateAdminPage extends InteractiveCustomUIPage<MineGateAdminPage.GateData> {
 
-    private static final Map<UUID, double[]> gatePos1 = new ConcurrentHashMap<>();
-    private static final Map<UUID, double[]> gatePos2 = new ConcurrentHashMap<>();
+    private static final Map<UUID, double[]> entryPos1 = new ConcurrentHashMap<>();
+    private static final Map<UUID, double[]> entryPos2 = new ConcurrentHashMap<>();
+    private static final Map<UUID, double[]> exitPos1 = new ConcurrentHashMap<>();
+    private static final Map<UUID, double[]> exitPos2 = new ConcurrentHashMap<>();
 
     private final PlayerRef playerRef;
     private final MineConfigStore mineConfigStore;
@@ -51,71 +53,74 @@ public class MineGateAdminPage extends InteractiveCustomUIPage<MineGateAdminPage
     public void handleDataEvent(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store,
                                 @Nonnull GateData data) {
         super.handleDataEvent(ref, store, data);
-        if (data.button == null) {
-            return;
-        }
+        if (data.button == null) return;
         Player player = store.getComponent(ref, Player.getComponentType());
         if (player == null) return;
         switch (data.button) {
             case GateData.BUTTON_CLOSE -> this.close();
-            case GateData.BUTTON_POS1 -> handlePos1(ref, store, player);
-            case GateData.BUTTON_POS2 -> handlePos2(ref, store, player);
-            case GateData.BUTTON_SAVE_GATE -> handleSaveGate(player);
-            case GateData.BUTTON_SET_FALLBACK -> handleSetFallback(ref, store, player);
+            // Entry gate
+            case GateData.BUTTON_ENTRY_POS1 -> handleSetPos(ref, store, player, entryPos1, "Entry Pos1");
+            case GateData.BUTTON_ENTRY_POS2 -> handleSetPos(ref, store, player, entryPos2, "Entry Pos2");
+            case GateData.BUTTON_SAVE_ENTRY -> handleSaveEntry(player);
+            case GateData.BUTTON_SET_ENTRY_DEST -> handleSetDest(ref, store, player, true);
+            // Exit gate
+            case GateData.BUTTON_EXIT_POS1 -> handleSetPos(ref, store, player, exitPos1, "Exit Pos1");
+            case GateData.BUTTON_EXIT_POS2 -> handleSetPos(ref, store, player, exitPos2, "Exit Pos2");
+            case GateData.BUTTON_SAVE_EXIT -> handleSaveExit(player);
+            case GateData.BUTTON_SET_EXIT_DEST -> handleSetDest(ref, store, player, false);
             case GateData.BUTTON_BACK -> handleBack(ref, store);
-            default -> {
-            }
+            default -> {}
         }
     }
 
-    private void handlePos1(Ref<EntityStore> ref, Store<EntityStore> store, Player player) {
+    private void handleSetPos(Ref<EntityStore> ref, Store<EntityStore> store, Player player,
+                              Map<UUID, double[]> posMap, String label) {
         TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
         if (transform == null) {
             player.sendMessage(Message.raw("Unable to read player position."));
             return;
         }
         Vector3d pos = transform.getPosition();
-        gatePos1.put(playerRef.getUuid(), new double[]{pos.getX(), pos.getY(), pos.getZ()});
-        player.sendMessage(Message.raw("Gate Pos1 set: " + String.format("%.2f, %.2f, %.2f", pos.getX(), pos.getY(), pos.getZ())));
-        updateGateBoundsLabel();
+        posMap.put(playerRef.getUuid(), new double[]{pos.getX(), pos.getY(), pos.getZ()});
+        player.sendMessage(Message.raw(label + " set: " + formatPos(pos.getX(), pos.getY(), pos.getZ())));
+        updateAllLabels();
     }
 
-    private void handlePos2(Ref<EntityStore> ref, Store<EntityStore> store, Player player) {
-        TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
-        if (transform == null) {
-            player.sendMessage(Message.raw("Unable to read player position."));
-            return;
-        }
-        Vector3d pos = transform.getPosition();
-        gatePos2.put(playerRef.getUuid(), new double[]{pos.getX(), pos.getY(), pos.getZ()});
-        player.sendMessage(Message.raw("Gate Pos2 set: " + String.format("%.2f, %.2f, %.2f", pos.getX(), pos.getY(), pos.getZ())));
-        updateGateBoundsLabel();
-    }
-
-    private void handleSaveGate(Player player) {
+    private void handleSaveEntry(Player player) {
         UUID uuid = playerRef.getUuid();
-        double[] p1 = gatePos1.get(uuid);
-        double[] p2 = gatePos2.get(uuid);
+        double[] p1 = entryPos1.get(uuid);
+        double[] p2 = entryPos2.get(uuid);
         if (p1 == null || p2 == null) {
-            player.sendMessage(Message.raw("Set both Pos1 and Pos2 first."));
+            player.sendMessage(Message.raw("Set both Entry Pos1 and Pos2 first."));
             return;
         }
-        double minX = Math.min(p1[0], p2[0]);
-        double minY = Math.min(p1[1], p2[1]);
-        double minZ = Math.min(p1[2], p2[2]);
-        double maxX = Math.max(p1[0], p2[0]);
-        double maxY = Math.max(p1[1], p2[1]);
-        double maxZ = Math.max(p1[2], p2[2]);
-        mineConfigStore.saveGate(minX, minY, minZ, maxX, maxY, maxZ,
-            mineConfigStore.getFallbackX(), mineConfigStore.getFallbackY(), mineConfigStore.getFallbackZ(),
-            mineConfigStore.getFallbackRotX(), mineConfigStore.getFallbackRotY(), mineConfigStore.getFallbackRotZ());
-        player.sendMessage(Message.raw("Gate saved!"));
-        player.sendMessage(Message.raw("  Bounds: " + String.format("(%.1f, %.1f, %.1f) to (%.1f, %.1f, %.1f)",
-            minX, minY, minZ, maxX, maxY, maxZ)));
-        updateStatusLabels();
+        double minX = Math.min(p1[0], p2[0]), minY = Math.min(p1[1], p2[1]), minZ = Math.min(p1[2], p2[2]);
+        double maxX = Math.max(p1[0], p2[0]), maxY = Math.max(p1[1], p2[1]), maxZ = Math.max(p1[2], p2[2]);
+        mineConfigStore.saveEntryGate(minX, minY, minZ, maxX, maxY, maxZ,
+            mineConfigStore.getEntryDestX(), mineConfigStore.getEntryDestY(), mineConfigStore.getEntryDestZ(),
+            mineConfigStore.getEntryDestRotX(), mineConfigStore.getEntryDestRotY(), mineConfigStore.getEntryDestRotZ());
+        player.sendMessage(Message.raw("Entry gate AABB saved!"));
+        updateAllLabels();
     }
 
-    private void handleSetFallback(Ref<EntityStore> ref, Store<EntityStore> store, Player player) {
+    private void handleSaveExit(Player player) {
+        UUID uuid = playerRef.getUuid();
+        double[] p1 = exitPos1.get(uuid);
+        double[] p2 = exitPos2.get(uuid);
+        if (p1 == null || p2 == null) {
+            player.sendMessage(Message.raw("Set both Exit Pos1 and Pos2 first."));
+            return;
+        }
+        double minX = Math.min(p1[0], p2[0]), minY = Math.min(p1[1], p2[1]), minZ = Math.min(p1[2], p2[2]);
+        double maxX = Math.max(p1[0], p2[0]), maxY = Math.max(p1[1], p2[1]), maxZ = Math.max(p1[2], p2[2]);
+        mineConfigStore.saveExitGate(minX, minY, minZ, maxX, maxY, maxZ,
+            mineConfigStore.getExitDestX(), mineConfigStore.getExitDestY(), mineConfigStore.getExitDestZ(),
+            mineConfigStore.getExitDestRotX(), mineConfigStore.getExitDestRotY(), mineConfigStore.getExitDestRotZ());
+        player.sendMessage(Message.raw("Exit gate AABB saved!"));
+        updateAllLabels();
+    }
+
+    private void handleSetDest(Ref<EntityStore> ref, Store<EntityStore> store, Player player, boolean isEntry) {
         TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
         if (transform == null) {
             player.sendMessage(Message.raw("Unable to read player position."));
@@ -126,14 +131,23 @@ public class MineGateAdminPage extends InteractiveCustomUIPage<MineGateAdminPage
         PlayerRef pRef = store.getComponent(ref, PlayerRef.getComponentType());
         Vector3f headRot = pRef != null ? pRef.getHeadRotation() : null;
         Vector3f rot = headRot != null ? headRot : bodyRot;
-        mineConfigStore.saveGate(
-            mineConfigStore.getGateMinX(), mineConfigStore.getGateMinY(), mineConfigStore.getGateMinZ(),
-            mineConfigStore.getGateMaxX(), mineConfigStore.getGateMaxY(), mineConfigStore.getGateMaxZ(),
-            pos.getX(), pos.getY(), pos.getZ(),
-            rot.getX(), rot.getY(), rot.getZ());
-        player.sendMessage(Message.raw("Fallback position set!"));
-        player.sendMessage(Message.raw("  Pos: " + String.format("%.2f, %.2f, %.2f", pos.getX(), pos.getY(), pos.getZ())));
-        updateStatusLabels();
+
+        if (isEntry) {
+            mineConfigStore.saveEntryGate(
+                mineConfigStore.getEntryMinX(), mineConfigStore.getEntryMinY(), mineConfigStore.getEntryMinZ(),
+                mineConfigStore.getEntryMaxX(), mineConfigStore.getEntryMaxY(), mineConfigStore.getEntryMaxZ(),
+                pos.getX(), pos.getY(), pos.getZ(),
+                rot.getX(), rot.getY(), rot.getZ());
+            player.sendMessage(Message.raw("Entry destination set: " + formatPos(pos.getX(), pos.getY(), pos.getZ())));
+        } else {
+            mineConfigStore.saveExitGate(
+                mineConfigStore.getExitMinX(), mineConfigStore.getExitMinY(), mineConfigStore.getExitMinZ(),
+                mineConfigStore.getExitMaxX(), mineConfigStore.getExitMaxY(), mineConfigStore.getExitMaxZ(),
+                pos.getX(), pos.getY(), pos.getZ(),
+                rot.getX(), rot.getY(), rot.getZ());
+            player.sendMessage(Message.raw("Exit destination set: " + formatPos(pos.getX(), pos.getY(), pos.getZ())));
+        }
+        updateAllLabels();
     }
 
     private void handleBack(Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -144,85 +158,85 @@ public class MineGateAdminPage extends InteractiveCustomUIPage<MineGateAdminPage
     }
 
     private void bindEvents(UIEventBuilder eventBuilder) {
-        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#GatePos1Button",
-            EventData.of(GateData.KEY_BUTTON, GateData.BUTTON_POS1), false);
-        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#GatePos2Button",
-            EventData.of(GateData.KEY_BUTTON, GateData.BUTTON_POS2), false);
-        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SaveGateButton",
-            EventData.of(GateData.KEY_BUTTON, GateData.BUTTON_SAVE_GATE), false);
-        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SetFallbackButton",
-            EventData.of(GateData.KEY_BUTTON, GateData.BUTTON_SET_FALLBACK), false);
+        // Entry gate
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#EntryPos1Button",
+            EventData.of(GateData.KEY_BUTTON, GateData.BUTTON_ENTRY_POS1), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#EntryPos2Button",
+            EventData.of(GateData.KEY_BUTTON, GateData.BUTTON_ENTRY_POS2), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SaveEntryButton",
+            EventData.of(GateData.KEY_BUTTON, GateData.BUTTON_SAVE_ENTRY), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SetEntryDestButton",
+            EventData.of(GateData.KEY_BUTTON, GateData.BUTTON_SET_ENTRY_DEST), false);
+        // Exit gate
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ExitPos1Button",
+            EventData.of(GateData.KEY_BUTTON, GateData.BUTTON_EXIT_POS1), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ExitPos2Button",
+            EventData.of(GateData.KEY_BUTTON, GateData.BUTTON_EXIT_POS2), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SaveExitButton",
+            EventData.of(GateData.KEY_BUTTON, GateData.BUTTON_SAVE_EXIT), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SetExitDestButton",
+            EventData.of(GateData.KEY_BUTTON, GateData.BUTTON_SET_EXIT_DEST), false);
+        // Navigation
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton",
             EventData.of(GateData.KEY_BUTTON, GateData.BUTTON_BACK), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CloseButton",
             EventData.of(GateData.KEY_BUTTON, GateData.BUTTON_CLOSE), false);
     }
 
-    private void populateFields(UICommandBuilder commandBuilder) {
-        // Gate bounds
-        double gMinX = mineConfigStore.getGateMinX();
-        double gMinY = mineConfigStore.getGateMinY();
-        double gMinZ = mineConfigStore.getGateMinZ();
-        double gMaxX = mineConfigStore.getGateMaxX();
-        double gMaxY = mineConfigStore.getGateMaxY();
-        double gMaxZ = mineConfigStore.getGateMaxZ();
-        boolean hasGate = gMinX != 0 || gMinY != 0 || gMinZ != 0 || gMaxX != 0 || gMaxY != 0 || gMaxZ != 0;
-        if (hasGate) {
-            commandBuilder.set("#GateBoundsText.Text", String.format("Gate: (%.1f, %.1f, %.1f) to (%.1f, %.1f, %.1f)",
-                gMinX, gMinY, gMinZ, gMaxX, gMaxY, gMaxZ));
-        } else {
-            commandBuilder.set("#GateBoundsText.Text", "Gate: Not set");
-        }
+    private void populateFields(UICommandBuilder cmd) {
+        // Entry gate
+        populateGateSection(cmd, "#EntryBoundsText", "#EntryDestText", "#EntryStatusText",
+            mineConfigStore.getEntryMinX(), mineConfigStore.getEntryMinY(), mineConfigStore.getEntryMinZ(),
+            mineConfigStore.getEntryMaxX(), mineConfigStore.getEntryMaxY(), mineConfigStore.getEntryMaxZ(),
+            mineConfigStore.getEntryDestX(), mineConfigStore.getEntryDestY(), mineConfigStore.getEntryDestZ(),
+            "Entry");
 
-        // Fallback
-        double fbX = mineConfigStore.getFallbackX();
-        double fbY = mineConfigStore.getFallbackY();
-        double fbZ = mineConfigStore.getFallbackZ();
-        boolean hasFallback = fbX != 0 || fbY != 0 || fbZ != 0;
-        if (hasFallback) {
-            commandBuilder.set("#FallbackText.Text", String.format("Fallback: (%.1f, %.1f, %.1f)", fbX, fbY, fbZ));
-        } else {
-            commandBuilder.set("#FallbackText.Text", "Fallback: Not set");
-        }
-
-        // Status
-        String status = (hasGate && hasFallback) ? "Gate: CONFIGURED" : "Gate: NOT CONFIGURED";
-        commandBuilder.set("#GateStatusText.Text", status);
+        // Exit gate
+        populateGateSection(cmd, "#ExitBoundsText", "#ExitDestText", "#ExitStatusText",
+            mineConfigStore.getExitMinX(), mineConfigStore.getExitMinY(), mineConfigStore.getExitMinZ(),
+            mineConfigStore.getExitMaxX(), mineConfigStore.getExitMaxY(), mineConfigStore.getExitMaxZ(),
+            mineConfigStore.getExitDestX(), mineConfigStore.getExitDestY(), mineConfigStore.getExitDestZ(),
+            "Exit");
     }
 
-    private void updateGateBoundsLabel() {
-        UICommandBuilder commandBuilder = new UICommandBuilder();
-        UUID uuid = playerRef.getUuid();
-        double[] p1 = gatePos1.get(uuid);
-        double[] p2 = gatePos2.get(uuid);
-        StringBuilder sb = new StringBuilder("Gate: ");
-        if (p1 != null) {
-            sb.append(String.format("Pos1(%.1f, %.1f, %.1f)", p1[0], p1[1], p1[2]));
-        } else {
-            sb.append("Pos1(-)");
-        }
-        sb.append(" ");
-        if (p2 != null) {
-            sb.append(String.format("Pos2(%.1f, %.1f, %.1f)", p2[0], p2[1], p2[2]));
-        } else {
-            sb.append("Pos2(-)");
-        }
-        commandBuilder.set("#GateBoundsText.Text", sb.toString());
-        sendUpdate(commandBuilder, null, false);
+    private void populateGateSection(UICommandBuilder cmd, String boundsId, String destId, String statusId,
+                                     double minX, double minY, double minZ,
+                                     double maxX, double maxY, double maxZ,
+                                     double destX, double destY, double destZ, String label) {
+        boolean hasBounds = minX != 0 || minY != 0 || minZ != 0 || maxX != 0 || maxY != 0 || maxZ != 0;
+        boolean hasDest = destX != 0 || destY != 0 || destZ != 0;
+
+        cmd.set(boundsId + ".Text", hasBounds
+            ? String.format("AABB: (%.1f, %.1f, %.1f) to (%.1f, %.1f, %.1f)", minX, minY, minZ, maxX, maxY, maxZ)
+            : "AABB: Not set");
+        cmd.set(destId + ".Text", hasDest
+            ? String.format("Dest: (%.1f, %.1f, %.1f)", destX, destY, destZ)
+            : "Dest: Not set");
+        cmd.set(statusId + ".Text", (hasBounds && hasDest)
+            ? label + ": CONFIGURED"
+            : label + ": NOT CONFIGURED");
     }
 
-    private void updateStatusLabels() {
-        UICommandBuilder commandBuilder = new UICommandBuilder();
-        populateFields(commandBuilder);
-        sendUpdate(commandBuilder, null, false);
+    private void updateAllLabels() {
+        UICommandBuilder cmd = new UICommandBuilder();
+        populateFields(cmd);
+        sendUpdate(cmd, null, false);
+    }
+
+    private static String formatPos(double x, double y, double z) {
+        return String.format("%.2f, %.2f, %.2f", x, y, z);
     }
 
     public static class GateData {
         static final String KEY_BUTTON = "Button";
-        static final String BUTTON_POS1 = "GatePos1";
-        static final String BUTTON_POS2 = "GatePos2";
-        static final String BUTTON_SAVE_GATE = "SaveGate";
-        static final String BUTTON_SET_FALLBACK = "SetFallback";
+        static final String BUTTON_ENTRY_POS1 = "EntryPos1";
+        static final String BUTTON_ENTRY_POS2 = "EntryPos2";
+        static final String BUTTON_SAVE_ENTRY = "SaveEntry";
+        static final String BUTTON_SET_ENTRY_DEST = "SetEntryDest";
+        static final String BUTTON_EXIT_POS1 = "ExitPos1";
+        static final String BUTTON_EXIT_POS2 = "ExitPos2";
+        static final String BUTTON_SAVE_EXIT = "SaveExit";
+        static final String BUTTON_SET_EXIT_DEST = "SetExitDest";
         static final String BUTTON_BACK = "Back";
         static final String BUTTON_CLOSE = "Close";
 

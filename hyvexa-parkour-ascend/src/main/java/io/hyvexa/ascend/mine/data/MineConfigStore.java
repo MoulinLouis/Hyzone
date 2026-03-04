@@ -23,12 +23,19 @@ public class MineConfigStore {
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
     private volatile List<Mine> sortedCache;
 
-    // Gate
-    private volatile double gateMinX, gateMinY, gateMinZ;
-    private volatile double gateMaxX, gateMaxY, gateMaxZ;
-    private volatile double fallbackX, fallbackY, fallbackZ;
-    private volatile float fallbackRotX, fallbackRotY, fallbackRotZ;
-    private volatile boolean gateConfigured;
+    // Entry gate (id=1): teleports ascended players INTO the mine
+    private volatile double entryMinX, entryMinY, entryMinZ;
+    private volatile double entryMaxX, entryMaxY, entryMaxZ;
+    private volatile double entryDestX, entryDestY, entryDestZ;
+    private volatile float entryDestRotX, entryDestRotY, entryDestRotZ;
+    private volatile boolean entryGateConfigured;
+
+    // Exit gate (id=2): teleports players OUT of the mine
+    private volatile double exitMinX, exitMinY, exitMinZ;
+    private volatile double exitMaxX, exitMaxY, exitMaxZ;
+    private volatile double exitDestX, exitDestY, exitDestZ;
+    private volatile float exitDestRotX, exitDestRotY, exitDestRotZ;
+    private volatile boolean exitGateConfigured;
 
     public void syncLoad() {
         if (!DatabaseManager.getInstance().isInitialized()) {
@@ -121,25 +128,43 @@ public class MineConfigStore {
     }
 
     private void loadGate(Connection conn) throws SQLException {
-        String sql = "SELECT min_x, min_y, min_z, max_x, max_y, max_z, " +
-            "fallback_x, fallback_y, fallback_z, fallback_rot_x, fallback_rot_y, fallback_rot_z FROM mine_gate WHERE id = 1";
+        String sql = "SELECT id, min_x, min_y, min_z, max_x, max_y, max_z, " +
+            "fallback_x, fallback_y, fallback_z, fallback_rot_x, fallback_rot_y, fallback_rot_z " +
+            "FROM mine_gate WHERE id IN (1, 2)";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    gateMinX = rs.getDouble("min_x");
-                    gateMinY = rs.getDouble("min_y");
-                    gateMinZ = rs.getDouble("min_z");
-                    gateMaxX = rs.getDouble("max_x");
-                    gateMaxY = rs.getDouble("max_y");
-                    gateMaxZ = rs.getDouble("max_z");
-                    fallbackX = rs.getDouble("fallback_x");
-                    fallbackY = rs.getDouble("fallback_y");
-                    fallbackZ = rs.getDouble("fallback_z");
-                    fallbackRotX = rs.getFloat("fallback_rot_x");
-                    fallbackRotY = rs.getFloat("fallback_rot_y");
-                    fallbackRotZ = rs.getFloat("fallback_rot_z");
-                    gateConfigured = true;
+                while (rs.next()) {
+                    int id = rs.getInt("id");
+                    if (id == 1) {
+                        entryMinX = rs.getDouble("min_x");
+                        entryMinY = rs.getDouble("min_y");
+                        entryMinZ = rs.getDouble("min_z");
+                        entryMaxX = rs.getDouble("max_x");
+                        entryMaxY = rs.getDouble("max_y");
+                        entryMaxZ = rs.getDouble("max_z");
+                        entryDestX = rs.getDouble("fallback_x");
+                        entryDestY = rs.getDouble("fallback_y");
+                        entryDestZ = rs.getDouble("fallback_z");
+                        entryDestRotX = rs.getFloat("fallback_rot_x");
+                        entryDestRotY = rs.getFloat("fallback_rot_y");
+                        entryDestRotZ = rs.getFloat("fallback_rot_z");
+                        entryGateConfigured = true;
+                    } else if (id == 2) {
+                        exitMinX = rs.getDouble("min_x");
+                        exitMinY = rs.getDouble("min_y");
+                        exitMinZ = rs.getDouble("min_z");
+                        exitMaxX = rs.getDouble("max_x");
+                        exitMaxY = rs.getDouble("max_y");
+                        exitMaxZ = rs.getDouble("max_z");
+                        exitDestX = rs.getDouble("fallback_x");
+                        exitDestY = rs.getDouble("fallback_y");
+                        exitDestZ = rs.getDouble("fallback_z");
+                        exitDestRotX = rs.getFloat("fallback_rot_x");
+                        exitDestRotY = rs.getFloat("fallback_rot_y");
+                        exitDestRotZ = rs.getFloat("fallback_rot_z");
+                        exitGateConfigured = true;
+                    }
                 }
             }
         }
@@ -353,34 +378,60 @@ public class MineConfigStore {
 
     // --- Gate ---
 
-    public void saveGate(double minX, double minY, double minZ,
-                         double maxX, double maxY, double maxZ,
-                         double fbX, double fbY, double fbZ,
-                         float fbRotX, float fbRotY, float fbRotZ) {
-        this.gateMinX = minX;
-        this.gateMinY = minY;
-        this.gateMinZ = minZ;
-        this.gateMaxX = maxX;
-        this.gateMaxY = maxY;
-        this.gateMaxZ = maxZ;
-        this.fallbackX = fbX;
-        this.fallbackY = fbY;
-        this.fallbackZ = fbZ;
-        this.fallbackRotX = fbRotX;
-        this.fallbackRotY = fbRotY;
-        this.fallbackRotZ = fbRotZ;
-        this.gateConfigured = true;
+    public void saveEntryGate(double minX, double minY, double minZ,
+                              double maxX, double maxY, double maxZ,
+                              double destX, double destY, double destZ,
+                              float destRotX, float destRotY, float destRotZ) {
+        this.entryMinX = minX;
+        this.entryMinY = minY;
+        this.entryMinZ = minZ;
+        this.entryMaxX = maxX;
+        this.entryMaxY = maxY;
+        this.entryMaxZ = maxZ;
+        this.entryDestX = destX;
+        this.entryDestY = destY;
+        this.entryDestZ = destZ;
+        this.entryDestRotX = destRotX;
+        this.entryDestRotY = destRotY;
+        this.entryDestRotZ = destRotZ;
+        this.entryGateConfigured = true;
 
-        saveGateToDatabase();
+        saveGateToDatabase(1, minX, minY, minZ, maxX, maxY, maxZ,
+            destX, destY, destZ, destRotX, destRotY, destRotZ);
     }
 
-    private void saveGateToDatabase() {
+    public void saveExitGate(double minX, double minY, double minZ,
+                             double maxX, double maxY, double maxZ,
+                             double destX, double destY, double destZ,
+                             float destRotX, float destRotY, float destRotZ) {
+        this.exitMinX = minX;
+        this.exitMinY = minY;
+        this.exitMinZ = minZ;
+        this.exitMaxX = maxX;
+        this.exitMaxY = maxY;
+        this.exitMaxZ = maxZ;
+        this.exitDestX = destX;
+        this.exitDestY = destY;
+        this.exitDestZ = destZ;
+        this.exitDestRotX = destRotX;
+        this.exitDestRotY = destRotY;
+        this.exitDestRotZ = destRotZ;
+        this.exitGateConfigured = true;
+
+        saveGateToDatabase(2, minX, minY, minZ, maxX, maxY, maxZ,
+            destX, destY, destZ, destRotX, destRotY, destRotZ);
+    }
+
+    private void saveGateToDatabase(int gateId, double minX, double minY, double minZ,
+                                    double maxX, double maxY, double maxZ,
+                                    double destX, double destY, double destZ,
+                                    float destRotX, float destRotY, float destRotZ) {
         if (!DatabaseManager.getInstance().isInitialized()) return;
 
         String sql = """
             INSERT INTO mine_gate (id, min_x, min_y, min_z, max_x, max_y, max_z,
                 fallback_x, fallback_y, fallback_z, fallback_rot_x, fallback_rot_y, fallback_rot_z)
-            VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 min_x = VALUES(min_x), min_y = VALUES(min_y), min_z = VALUES(min_z),
                 max_x = VALUES(max_x), max_y = VALUES(max_y), max_z = VALUES(max_z),
@@ -394,45 +445,69 @@ public class MineConfigStore {
             try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                 DatabaseManager.applyQueryTimeout(stmt);
                 int i = 1;
-                stmt.setDouble(i++, gateMinX);
-                stmt.setDouble(i++, gateMinY);
-                stmt.setDouble(i++, gateMinZ);
-                stmt.setDouble(i++, gateMaxX);
-                stmt.setDouble(i++, gateMaxY);
-                stmt.setDouble(i++, gateMaxZ);
-                stmt.setDouble(i++, fallbackX);
-                stmt.setDouble(i++, fallbackY);
-                stmt.setDouble(i++, fallbackZ);
-                stmt.setFloat(i++, fallbackRotX);
-                stmt.setFloat(i++, fallbackRotY);
-                stmt.setFloat(i, fallbackRotZ);
+                stmt.setInt(i++, gateId);
+                stmt.setDouble(i++, minX);
+                stmt.setDouble(i++, minY);
+                stmt.setDouble(i++, minZ);
+                stmt.setDouble(i++, maxX);
+                stmt.setDouble(i++, maxY);
+                stmt.setDouble(i++, maxZ);
+                stmt.setDouble(i++, destX);
+                stmt.setDouble(i++, destY);
+                stmt.setDouble(i++, destZ);
+                stmt.setFloat(i++, destRotX);
+                stmt.setFloat(i++, destRotY);
+                stmt.setFloat(i, destRotZ);
                 stmt.executeUpdate();
             }
         } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to save mine gate: " + e.getMessage());
+            LOGGER.atSevere().log("Failed to save mine gate (id=" + gateId + "): " + e.getMessage());
         }
     }
 
-    public boolean isInsideGate(double x, double y, double z) {
-        if (!gateConfigured) return false;
-        return x >= gateMinX && x <= gateMaxX
-            && y >= gateMinY && y <= gateMaxY
-            && z >= gateMinZ && z <= gateMaxZ;
+    public boolean isInsideEntryGate(double x, double y, double z) {
+        if (!entryGateConfigured) return false;
+        return x >= entryMinX && x <= entryMaxX
+            && y >= entryMinY && y <= entryMaxY
+            && z >= entryMinZ && z <= entryMaxZ;
     }
 
-    public boolean isGateConfigured() { return gateConfigured; }
-    public double getGateMinX() { return gateMinX; }
-    public double getGateMinY() { return gateMinY; }
-    public double getGateMinZ() { return gateMinZ; }
-    public double getGateMaxX() { return gateMaxX; }
-    public double getGateMaxY() { return gateMaxY; }
-    public double getGateMaxZ() { return gateMaxZ; }
-    public double getFallbackX() { return fallbackX; }
-    public double getFallbackY() { return fallbackY; }
-    public double getFallbackZ() { return fallbackZ; }
-    public float getFallbackRotX() { return fallbackRotX; }
-    public float getFallbackRotY() { return fallbackRotY; }
-    public float getFallbackRotZ() { return fallbackRotZ; }
+    public boolean isInsideExitGate(double x, double y, double z) {
+        if (!exitGateConfigured) return false;
+        return x >= exitMinX && x <= exitMaxX
+            && y >= exitMinY && y <= exitMaxY
+            && z >= exitMinZ && z <= exitMaxZ;
+    }
+
+    // Entry gate
+    public boolean isEntryGateConfigured() { return entryGateConfigured; }
+    public double getEntryMinX() { return entryMinX; }
+    public double getEntryMinY() { return entryMinY; }
+    public double getEntryMinZ() { return entryMinZ; }
+    public double getEntryMaxX() { return entryMaxX; }
+    public double getEntryMaxY() { return entryMaxY; }
+    public double getEntryMaxZ() { return entryMaxZ; }
+    public double getEntryDestX() { return entryDestX; }
+    public double getEntryDestY() { return entryDestY; }
+    public double getEntryDestZ() { return entryDestZ; }
+    public float getEntryDestRotX() { return entryDestRotX; }
+    public float getEntryDestRotY() { return entryDestRotY; }
+    public float getEntryDestRotZ() { return entryDestRotZ; }
+
+    // Exit gate
+    public boolean isExitGateConfigured() { return exitGateConfigured; }
+    public double getExitMinX() { return exitMinX; }
+    public double getExitMinY() { return exitMinY; }
+    public double getExitMinZ() { return exitMinZ; }
+    public double getExitMaxX() { return exitMaxX; }
+    public double getExitMaxY() { return exitMaxY; }
+    public double getExitMaxZ() { return exitMaxZ; }
+    public double getExitDestX() { return exitDestX; }
+    public double getExitDestY() { return exitDestY; }
+    public double getExitDestZ() { return exitDestZ; }
+    public float getExitDestRotX() { return exitDestRotX; }
+    public float getExitDestRotY() { return exitDestRotY; }
+    public float getExitDestRotZ() { return exitDestRotZ; }
 
     private void invalidateSortedCache() {
         sortedCache = null;

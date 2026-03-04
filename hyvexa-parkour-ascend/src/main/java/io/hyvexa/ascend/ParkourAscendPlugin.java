@@ -417,6 +417,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     "Disconnect cleanup: playerStore");
             runSafe(() -> { if (minePlayerStore != null) minePlayerStore.evict(playerId); },
                     "Disconnect cleanup: minePlayerStore");
+            runSafe(() -> { if (mineGateChecker != null) mineGateChecker.evict(playerId); },
+                    "Disconnect cleanup: mineGateChecker");
             runSafe(() -> VexaStore.getInstance().evictPlayer(playerId),
                     "Disconnect cleanup: VexaStore");
             runSafe(() -> DiscordLinkStore.getInstance().evictPlayer(playerId),
@@ -672,11 +674,12 @@ public class ParkourAscendPlugin extends JavaPlugin {
                             syncTickPlayerWorld(playerRef, playerId);
                             continue;
                         }
+                        // Gate check every tick (50ms) to prevent fast players from passing through
+                        if (mineGateChecker != null) {
+                            mineGateChecker.checkPlayer(playerId, ref, store);
+                        }
                         if (fullTick) {
                             runTracker.checkPlayer(ref, store);
-                            if (mineGateChecker != null) {
-                                mineGateChecker.checkPlayer(playerId, ref, store);
-                            }
                             hudManager.updateFull(ref, store, playerRef);
                         }
                         hudManager.updateTimer(playerRef);

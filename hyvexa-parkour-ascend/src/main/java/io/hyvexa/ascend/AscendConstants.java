@@ -25,6 +25,9 @@ public final class AscendConstants {
     public static final String ITEM_RESET = "Ascend_Reset_Block";
     public static final String ITEM_LEAVE = "Ascend_Leave_Block";
 
+    // Items - Mine
+    public static final String ITEM_MINE_PICKAXE = "Tool_Pickaxe_Wood";
+
     // Economy
     public static final double RUNNER_MULTIPLIER_INCREMENT = 0.1; // +0.1 per runner completion (base, scaled by stars+summit)
     public static final int MULTIPLIER_SLOTS = 5;

@@ -2,7 +2,7 @@ $C = "../Common.ui";
 
 $C.@PageOverlay {
   $C.@Container {
-    Anchor: (Width: 650, Height: 580);
+    Anchor: (Width: 650, Height: 680);
 
     #Title {
       Group {
@@ -34,72 +34,109 @@ $C.@PageOverlay {
 
       Label {
         Style: (FontSize: 16, TextColor: #93844c, RenderBold: true);
-        Text: "Gate AABB";
+        Text: "Entry Gate (into mine)";
       }
 
-      Label #GateBoundsText {
-        Anchor: (Top: 8);
+      Label #EntryBoundsText {
+        Anchor: (Top: 6);
         Style: (FontSize: 13, TextColor: #9fb0ba);
-        Text: "Gate: Not set";
+        Text: "AABB: Not set";
+      }
+
+      Label #EntryDestText {
+        Anchor: (Top: 4);
+        Style: (FontSize: 13, TextColor: #9fb0ba);
+        Text: "Dest: Not set";
       }
 
       Group {
         LayoutMode: Left;
-        Anchor: (Top: 8, Height: 36);
+        Anchor: (Top: 6, Height: 32);
 
-        $C.@TextButton #GatePos1Button {
-          Anchor: (Width: 200, Height: 36);
+        $C.@TextButton #EntryPos1Button {
+          Anchor: (Width: 140, Height: 32);
           Text: "Set Pos1";
         }
 
-        $C.@TextButton #GatePos2Button {
-          Anchor: (Left: 10, Width: 200, Height: 36);
+        $C.@TextButton #EntryPos2Button {
+          Anchor: (Left: 8, Width: 140, Height: 32);
           Text: "Set Pos2";
         }
       }
 
       Group {
         LayoutMode: Left;
-        Anchor: (Top: 8, Height: 36);
+        Anchor: (Top: 6, Height: 32);
 
-        $C.@TextButton #SaveGateButton {
-          Anchor: (Width: 200, Height: 36);
-          Text: "Save Gate";
+        $C.@TextButton #SaveEntryButton {
+          Anchor: (Width: 140, Height: 32);
+          Text: "Save AABB";
         }
+
+        $C.@TextButton #SetEntryDestButton {
+          Anchor: (Left: 8, Width: 140, Height: 32);
+          Text: "Set Dest";
+        }
+      }
+
+      Label #EntryStatusText {
+        Anchor: (Top: 6);
+        Style: (FontSize: 13, TextColor: #9fb0ba, RenderBold: true);
+        Text: "Entry: NOT CONFIGURED";
       }
 
       Label {
         Anchor: (Top: 16);
         Style: (FontSize: 16, TextColor: #93844c, RenderBold: true);
-        Text: "Fallback Position";
+        Text: "Exit Gate (out of mine)";
       }
 
-      Label #FallbackText {
-        Anchor: (Top: 8);
+      Label #ExitBoundsText {
+        Anchor: (Top: 6);
         Style: (FontSize: 13, TextColor: #9fb0ba);
-        Text: "Fallback: Not set";
+        Text: "AABB: Not set";
+      }
+
+      Label #ExitDestText {
+        Anchor: (Top: 4);
+        Style: (FontSize: 13, TextColor: #9fb0ba);
+        Text: "Dest: Not set";
       }
 
       Group {
         LayoutMode: Left;
-        Anchor: (Top: 8, Height: 36);
+        Anchor: (Top: 6, Height: 32);
 
-        $C.@TextButton #SetFallbackButton {
-          Anchor: (Width: 200, Height: 36);
-          Text: "Set Fallback";
+        $C.@TextButton #ExitPos1Button {
+          Anchor: (Width: 140, Height: 32);
+          Text: "Set Pos1";
+        }
+
+        $C.@TextButton #ExitPos2Button {
+          Anchor: (Left: 8, Width: 140, Height: 32);
+          Text: "Set Pos2";
         }
       }
 
-      Label {
-        Anchor: (Top: 16);
-        Style: (FontSize: 16, TextColor: #93844c, RenderBold: true);
-        Text: "Status";
+      Group {
+        LayoutMode: Left;
+        Anchor: (Top: 6, Height: 32);
+
+        $C.@TextButton #SaveExitButton {
+          Anchor: (Width: 140, Height: 32);
+          Text: "Save AABB";
+        }
+
+        $C.@TextButton #SetExitDestButton {
+          Anchor: (Left: 8, Width: 140, Height: 32);
+          Text: "Set Dest";
+        }
       }
 
-      Label #GateStatusText {
-        Anchor: (Top: 8);
-        Style: (FontSize: 14, TextColor: #9fb0ba, RenderBold: true);
-        Text: "Gate: NOT CONFIGURED";
+      Label #ExitStatusText {
+        Anchor: (Top: 6);
+        Style: (FontSize: 13, TextColor: #9fb0ba, RenderBold: true);
+        Text: "Exit: NOT CONFIGURED";
       }
 
       Group {
