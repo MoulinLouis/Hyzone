@@ -829,11 +829,6 @@ public class HyvexaPlugin extends JavaPlugin {
                         }
                         if (resolvedId != null) {
                             VoteStore.getInstance().recordVote(resolvedId, username, "votifier");
-                            int reward = VoteManager.getInstance().getRewardPerVote();
-                            if (reward > 0) {
-                                FeatherStore.getInstance().addFeathers(resolvedId, reward);
-                                sendVoteRewardMessage(resolvedId, 1);
-                            }
                         } else {
                             LOGGER.atFine().log("VoteEvent for unknown player: " + username);
                         }
@@ -842,43 +837,6 @@ public class HyvexaPlugin extends JavaPlugin {
                     }
                 });
         LOGGER.atInfo().log("VoteEvent listener registered for votifier integration");
-    }
-
-    private void sendVoteRewardMessage(UUID playerId, int voteCount) {
-        int rewardPerVote = VoteManager.getInstance().getRewardPerVote();
-        for (PlayerRef playerRef : Universe.get().getPlayers()) {
-            if (playerRef == null || !playerId.equals(playerRef.getUuid())) {
-                continue;
-            }
-            Ref<EntityStore> ref = playerRef.getReference();
-            if (ref == null || !ref.isValid()) {
-                return;
-            }
-            Store<EntityStore> store = ref.getStore();
-            World world = store.getExternalData() != null ? store.getExternalData().getWorld() : null;
-            if (world == null) {
-                return;
-            }
-            CompletableFuture.runAsync(() -> {
-                if (!ref.isValid()) {
-                    return;
-                }
-                Player player = ref.getStore().getComponent(ref, Player.getComponentType());
-                if (player != null) {
-                    int totalFeathers = voteCount * rewardPerVote;
-                    String suffix = voteCount > 1 ? " (x" + voteCount + ")" : "";
-                    player.sendMessage(Message.join(
-                            Message.raw("You received ").color("#a3e635"),
-                            Message.raw(totalFeathers + " feathers").color("#4ade80").bold(true),
-                            Message.raw(" for voting!" + suffix).color("#a3e635")
-                    ));
-                }
-            }, world).exceptionally(ex -> {
-                LOGGER.atWarning().log("Failed to send vote reward message: " + ex.getMessage());
-                return null;
-            });
-            return;
-        }
     }
 
     private void tickHudUpdates() {
