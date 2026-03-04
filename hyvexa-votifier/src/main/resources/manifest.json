@@ -1,0 +1,17 @@
+{
+    "Group": "Hyvexa",
+    "Name": "HyvexaVotifier",
+    "Version": "1.0.0",
+    "Authors": [
+        {
+            "Name": "HytaleVotifier Contributors",
+            "Url": "https://github.com/hyvote/hytale-votifier"
+        }
+    ],
+    "Website": "https://github.com/hyvote/hytale-votifier",
+    "Main": "org.hyvote.plugins.votifier.HytaleVotifierPlugin",
+    "ServerVersion": "*",
+    "SoftDependencies": {
+        "Nitrado:WebServer": "*"
+    }
+}

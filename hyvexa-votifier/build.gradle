@@ -1,0 +1,47 @@
+plugins {
+    id 'java'
+}
+
+repositories {
+    maven { url 'https://jitpack.io' }
+}
+
+dependencies {
+    compileOnly files("$hytaleHome/install/$patchline/package/game/latest/Server/HytaleServer.jar")
+    runtimeOnly files("$hytaleHome/install/$patchline/package/game/latest/Server/HytaleServer.jar")
+
+    // TaleMessage - MiniMessage-style formatting for Hytale
+    implementation 'com.github.InsiderAnh:TaleMessage:1.0.2'
+
+    // SQLite JDBC - for persistent vote storage
+    implementation 'org.xerial:sqlite-jdbc:3.47.2.0'
+
+    // Nitrado WebServer - optional, soft dependency (HTTP servlet support)
+    compileOnly fileTree(dir: "${rootProject.projectDir}/libs", include: 'nitrado-webserver-*.jar')
+}
+
+tasks.register('updatePluginManifest') {
+    def manifestFile = file('src/main/resources/manifest.json')
+    doLast {
+        if (!manifestFile.exists()) {
+            throw new GradleException("Could not find manifest.json at ${manifestFile.path}!")
+        }
+        def manifestJson = new groovy.json.JsonSlurper().parseText(manifestFile.text)
+        manifestJson.Version = version
+        manifestFile.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(manifestJson))
+    }
+}
+
+tasks.named('processResources') {
+    dependsOn 'updatePluginManifest'
+}
+
+tasks.named('jar') {
+    archiveFileName = "HyvexaVotifier-${version}.jar"
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
+    from {
+        configurations.runtimeClasspath.findAll { it.name != 'HytaleServer.jar' }
+                .collect { it.isDirectory() ? it : zipTree(it) }
+    }
+}
