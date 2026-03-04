@@ -6,6 +6,7 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.EntityEventSystem;
 import com.hypixel.hytale.math.util.ChunkUtil;
+import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.event.events.ecs.BreakBlockEvent;
@@ -21,12 +22,15 @@ import io.hyvexa.ascend.mine.data.MineZone;
 import io.hyvexa.common.util.PermissionUtils;
 import com.hypixel.hytale.logger.HytaleLogger;
 
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class MineBreakSystem extends EntityEventSystem<EntityStore, BreakBlockEvent> {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private final MineManager mineManager;
     private final MinePlayerStore minePlayerStore;
+    private final Map<UUID, Long> lastBagFullMessage = new ConcurrentHashMap<>();
 
     public MineBreakSystem(MineManager mineManager, MinePlayerStore minePlayerStore) {
         super(BreakBlockEvent.class);
@@ -93,8 +97,13 @@ public class MineBreakSystem extends EntityEventSystem<EntityStore, BreakBlockEv
         LOGGER.atInfo().log("[MineBreak] inventory %d/%d", mineProgress.getInventoryTotal(), mineProgress.getBagCapacity());
         if (mineProgress.isInventoryFull()) {
             LOGGER.atInfo().log("[MineBreak] bag full, denied");
+            long now = System.currentTimeMillis();
+            Long last = lastBagFullMessage.get(playerId);
+            if (last == null || now - last > 3000) {
+                lastBagFullMessage.put(playerId, now);
+                player.sendMessage(Message.create("Bag full! Sell your blocks with /minesell"));
+            }
             return;
-            // TODO Phase 3: send "bag full" message
         }
 
         // Resolve block type name
