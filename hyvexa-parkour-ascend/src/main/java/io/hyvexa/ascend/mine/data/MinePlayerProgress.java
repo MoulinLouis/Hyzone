@@ -31,6 +31,33 @@ public class MinePlayerProgress {
         return getInventoryTotal() >= bagCapacity;
     }
 
+    /**
+     * Sells all blocks in inventory, returns total crystals earned.
+     */
+    public BigNumber sellAll(Map<String, BigNumber> blockPrices) {
+        BigNumber total = BigNumber.ZERO;
+        for (var entry : inventory.entrySet()) {
+            BigNumber price = blockPrices.getOrDefault(entry.getKey(), BigNumber.ONE);
+            BigNumber earned = price.multiply(BigNumber.of(entry.getValue(), 0));
+            total = total.add(earned);
+        }
+        crystals.set(crystals.get().add(total));
+        inventory.clear();
+        return total;
+    }
+
+    /**
+     * Calculate total value without selling.
+     */
+    public BigNumber calculateInventoryValue(Map<String, BigNumber> blockPrices) {
+        BigNumber total = BigNumber.ZERO;
+        for (var entry : inventory.entrySet()) {
+            BigNumber price = blockPrices.getOrDefault(entry.getKey(), BigNumber.ONE);
+            total = total.add(price.multiply(BigNumber.of(entry.getValue(), 0)));
+        }
+        return total;
+    }
+
     public Map<String, Integer> getInventory() { return inventory; }
     public void clearInventory() { inventory.clear(); }
     public int getBagCapacity() { return bagCapacity; }
