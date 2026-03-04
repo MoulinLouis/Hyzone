@@ -1,0 +1,38 @@
+$C = "../Common.ui";
+
+Group {
+  Anchor: (Width: 100, Height: 110);
+  LayoutMode: Top;
+  Padding: (Left: 8, Right: 8, Top: 6, Bottom: 6);
+
+  // Icon container
+  Group #IconWrap {
+    Anchor: (Width: 64, Height: 64);
+    LayoutMode: Full;
+    Background: #ffffff(0.04);
+    OutlineColor: #ffffff(0.06);
+    OutlineSize: 1;
+
+    Group #IconStone { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/Rock_Stone.png"); Visible: false; }
+    Group #IconBlue { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/Rock_Crystal_Blue.png"); Visible: false; }
+    Group #IconGreen { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/Rock_Crystal_Green.png"); Visible: false; }
+    Group #IconPink { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/Rock_Crystal_Pink.png"); Visible: false; }
+    Group #IconRed { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/Rock_Crystal_Red.png"); Visible: false; }
+    Group #IconWhite { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/Rock_Crystal_White.png"); Visible: false; }
+    Group #IconYellow { Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0); Background: (TexturePath: "../Textures/Rock_Crystal_Yellow.png"); Visible: false; }
+  }
+
+  // Amount badge
+  Label #Amount {
+    Anchor: (Left: 0, Right: 0, Top: 2);
+    Style: (FontSize: 14, TextColor: #f59e0b, RenderBold: true, HorizontalAlignment: Center);
+    Text: "x0";
+  }
+
+  // Block name
+  Label #BlockName {
+    Anchor: (Left: 0, Right: 0, Top: 1);
+    Style: (FontSize: 10, TextColor: #9fb0ba, HorizontalAlignment: Center);
+    Text: "Block";
+  }
+}
