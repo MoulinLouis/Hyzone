@@ -78,7 +78,7 @@ public class MinePlayerStore {
                         progress = new MinePlayerProgress(playerId);
                         double mantissa = rs.getDouble("crystals_mantissa");
                         int exp10 = rs.getInt("crystals_exp10");
-                        progress.setCrystals(new BigNumber(mantissa, exp10));
+                        progress.setCrystals(BigNumber.of(mantissa, exp10));
                     }
                 }
             }
