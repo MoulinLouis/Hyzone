@@ -1,0 +1,36 @@
+$C = "../Common.ui";
+
+Group {
+  Anchor: (Height: 28, Left: 0, Right: 0);
+  LayoutMode: Left;
+  Padding: (Left: 4, Top: 2);
+
+  Label #BlockName {
+    Anchor: (Width: 200, Height: 24);
+    Style: (FontSize: 13, TextColor: #9fb0ba);
+    Text: "Block";
+  }
+
+  Label #BlockProb {
+    Anchor: (Left: 4, Width: 80, Height: 24);
+    Style: (FontSize: 13, TextColor: #7a9aa8);
+    Text: "0.0";
+  }
+
+  TextButton #RemoveBtn {
+    Anchor: (Left: 8, Width: 24, Height: 24);
+    Padding: (Left: 6, Top: 2);
+    Text: "X";
+    Style: TextButtonStyle(
+      Default: (
+        Background: #550000(0.6),
+        LabelStyle: (FontSize: 13, TextColor: #ff6666, RenderBold: true)
+      ),
+      Hovered: (
+        Background: #880000(0.8),
+        LabelStyle: (FontSize: 13, TextColor: #ff9999, RenderBold: true)
+      ),
+      Sounds: $C.@ButtonSounds,
+    );
+  }
+}

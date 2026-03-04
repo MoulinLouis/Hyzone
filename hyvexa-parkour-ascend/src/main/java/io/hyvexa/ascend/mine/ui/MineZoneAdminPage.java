@@ -25,10 +25,33 @@ import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MineZone;
 
 import javax.annotation.Nonnull;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
 public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage.ZoneData> {
+
+    // Predefined blocks: buttonId -> blockTypeId
+    private static final Map<String, String> PREDEFINED_BLOCKS = new LinkedHashMap<>();
+    // Display names for block type IDs
+    private static final Map<String, String> BLOCK_DISPLAY_NAMES = new LinkedHashMap<>();
+    static {
+        PREDEFINED_BLOCKS.put("BlockStone", "Rock_Stone");
+        PREDEFINED_BLOCKS.put("BlockBlue", "Rock_Crystal_Blue_Block");
+        PREDEFINED_BLOCKS.put("BlockGreen", "Rock_Crystal_Green_Block");
+        PREDEFINED_BLOCKS.put("BlockPink", "Rock_Crystal_Pink_Block");
+        PREDEFINED_BLOCKS.put("BlockRed", "Rock_Crystal_Red_Block");
+        PREDEFINED_BLOCKS.put("BlockWhite", "Rock_Crystal_White_Block");
+        PREDEFINED_BLOCKS.put("BlockYellow", "Rock_Crystal_Yellow_Block");
+
+        BLOCK_DISPLAY_NAMES.put("Rock_Stone", "Stone");
+        BLOCK_DISPLAY_NAMES.put("Rock_Crystal_Blue_Block", "Blue Crystal");
+        BLOCK_DISPLAY_NAMES.put("Rock_Crystal_Green_Block", "Green Crystal");
+        BLOCK_DISPLAY_NAMES.put("Rock_Crystal_Pink_Block", "Pink Crystal");
+        BLOCK_DISPLAY_NAMES.put("Rock_Crystal_Red_Block", "Red Crystal");
+        BLOCK_DISPLAY_NAMES.put("Rock_Crystal_White_Block", "White Crystal");
+        BLOCK_DISPLAY_NAMES.put("Rock_Crystal_Yellow_Block", "Yellow Crystal");
+    }
 
     // Shared with AscendAdminCommand so chat pos1/pos2 and UI are synchronized
     private static Map<UUID, int[]> pos1Selections() { return io.hyvexa.ascend.command.AscendAdminCommand.minePos1; }
@@ -57,6 +80,7 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         uiCommandBuilder.append("Pages/Ascend_MineZoneAdmin.ui");
         bindEvents(uiEventBuilder);
         populateFields(uiCommandBuilder);
+        buildBlockTable(uiCommandBuilder, uiEventBuilder);
         buildZoneList(uiCommandBuilder, uiEventBuilder);
     }
 
@@ -66,9 +90,6 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         super.handleDataEvent(ref, store, data);
         if (data.zoneId != null) {
             zoneId = data.zoneId.trim();
-        }
-        if (data.blockId != null) {
-            blockId = data.blockId.trim();
         }
         if (data.blockProb != null) {
             blockProb = data.blockProb.trim();
@@ -111,12 +132,17 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
             handleDeleteZone(ref, store);
             return;
         }
+        if (PREDEFINED_BLOCKS.containsKey(data.button)) {
+            blockId = PREDEFINED_BLOCKS.get(data.button);
+            sendRefresh(ref, store);
+            return;
+        }
         if (data.button.equals(ZoneData.BUTTON_ADD_BLOCK)) {
             handleAddBlock(ref, store);
             return;
         }
-        if (data.button.equals(ZoneData.BUTTON_REMOVE_BLOCK)) {
-            handleRemoveBlock(ref, store);
+        if (data.button.startsWith(ZoneData.BUTTON_REMOVE_BLOCK_PREFIX)) {
+            handleRemoveBlock(ref, store, data.button.substring(ZoneData.BUTTON_REMOVE_BLOCK_PREFIX.length()));
             return;
         }
         if (data.button.equals(ZoneData.BUTTON_SET_THRESHOLD)) {
@@ -228,7 +254,7 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         MineZone zone = resolveSelectedZone(player);
         if (zone == null) return;
         if (blockId.isEmpty()) {
-            player.sendMessage(Message.raw("Block ID is required."));
+            player.sendMessage(Message.raw("Select a block first."));
             return;
         }
         double prob;
@@ -242,27 +268,23 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
             player.sendMessage(Message.raw("Probability must be between 0.0 and 1.0."));
             return;
         }
+        String displayName = BLOCK_DISPLAY_NAMES.getOrDefault(blockId, blockId);
         zone.getBlockTable().put(blockId, prob);
         mineConfigStore.saveZone(zone);
-        player.sendMessage(Message.raw("Block added: " + blockId + " = " + prob));
+        player.sendMessage(Message.raw("Block added: " + displayName + " = " + prob));
         sendRefresh(ref, store);
     }
 
-    private void handleRemoveBlock(Ref<EntityStore> ref, Store<EntityStore> store) {
+    private void handleRemoveBlock(Ref<EntityStore> ref, Store<EntityStore> store, String removeBlockId) {
         Player player = store.getComponent(ref, Player.getComponentType());
         if (player == null) return;
         MineZone zone = resolveSelectedZone(player);
         if (zone == null) return;
-        if (blockId.isEmpty()) {
-            player.sendMessage(Message.raw("Block ID is required."));
-            return;
-        }
-        Double removed = zone.getBlockTable().remove(blockId);
+        Double removed = zone.getBlockTable().remove(removeBlockId);
         if (removed != null) {
             mineConfigStore.saveZone(zone);
-            player.sendMessage(Message.raw("Block removed: " + blockId));
-        } else {
-            player.sendMessage(Message.raw("Block not found: " + blockId));
+            String displayName = BLOCK_DISPLAY_NAMES.getOrDefault(removeBlockId, removeBlockId);
+            player.sendMessage(Message.raw("Block removed: " + displayName));
         }
         sendRefresh(ref, store);
     }
@@ -368,10 +390,12 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
     private void bindEvents(UIEventBuilder uiEventBuilder) {
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#ZoneIdField",
             EventData.of(ZoneData.KEY_ZONE_ID, "#ZoneIdField.Value"), false);
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#BlockIdField",
-            EventData.of(ZoneData.KEY_BLOCK_ID, "#BlockIdField.Value"), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#BlockProbField",
             EventData.of(ZoneData.KEY_BLOCK_PROB, "#BlockProbField.Value"), false);
+        for (String btnId : PREDEFINED_BLOCKS.keySet()) {
+            uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#" + btnId,
+                EventData.of(ZoneData.KEY_BUTTON, btnId), false);
+        }
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#ThresholdField",
             EventData.of(ZoneData.KEY_THRESHOLD, "#ThresholdField.Value"), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#CooldownField",
@@ -386,8 +410,6 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
             EventData.of(ZoneData.KEY_BUTTON, ZoneData.BUTTON_DELETE_ZONE), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#AddBlockButton",
             EventData.of(ZoneData.KEY_BUTTON, ZoneData.BUTTON_ADD_BLOCK), false);
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#RemoveBlockButton",
-            EventData.of(ZoneData.KEY_BUTTON, ZoneData.BUTTON_REMOVE_BLOCK), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SetThresholdButton",
             EventData.of(ZoneData.KEY_BUTTON, ZoneData.BUTTON_SET_THRESHOLD), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SetCooldownButton",
@@ -404,8 +426,9 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         commandBuilder.set("#MineNameTitle.Text", "Mine: " + mineName);
 
         commandBuilder.set("#ZoneIdField.Value", zoneId != null ? zoneId : "");
-        commandBuilder.set("#BlockIdField.Value", blockId != null ? blockId : "");
         commandBuilder.set("#BlockProbField.Value", blockProb != null ? blockProb : "");
+        String selectedBlockDisplay = blockId.isEmpty() ? "(none)" : BLOCK_DISPLAY_NAMES.getOrDefault(blockId, blockId);
+        commandBuilder.set("#SelectedBlockText.Text", "Selected: " + selectedBlockDisplay);
         commandBuilder.set("#ThresholdField.Value", threshold != null ? threshold : "");
         commandBuilder.set("#CooldownField.Value", cooldown != null ? cooldown : "");
 
@@ -423,12 +446,6 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
                 sb.append(" | Blocks: ").append(zone.getBlockTable().size()).append(" types");
                 sb.append(" | Regen: ").append(formatPercent(zone.getRegenThreshold()));
                 sb.append("/").append(zone.getRegenCooldownSeconds()).append("s");
-                if (!zone.getBlockTable().isEmpty()) {
-                    sb.append("\n");
-                    for (Map.Entry<String, Double> entry : zone.getBlockTable().entrySet()) {
-                        sb.append("  ").append(entry.getKey()).append(": ").append(formatProb(entry.getValue())).append("\n");
-                    }
-                }
                 zoneInfo = sb.toString();
             } else {
                 selectedInfo = selectedZoneId + " (not found)";
@@ -484,10 +501,31 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         }
     }
 
+    private void buildBlockTable(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
+        commandBuilder.clear("#BlockEntries");
+        if (selectedZoneId == null || selectedZoneId.isEmpty()) return;
+        MineZone zone = findZone(selectedZoneId);
+        if (zone == null || zone.getBlockTable().isEmpty()) return;
+
+        int index = 0;
+        for (Map.Entry<String, Double> entry : zone.getBlockTable().entrySet()) {
+            commandBuilder.append("#BlockEntries", "Pages/Ascend_MineBlockEntry.ui");
+            String sel = "#BlockEntries[" + index + "]";
+            String displayName = BLOCK_DISPLAY_NAMES.getOrDefault(entry.getKey(), entry.getKey());
+            commandBuilder.set(sel + " #BlockName.Text", displayName);
+            commandBuilder.set(sel + " #BlockProb.Text", formatProb(entry.getValue()));
+            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
+                sel + " #RemoveBtn",
+                EventData.of(ZoneData.KEY_BUTTON, ZoneData.BUTTON_REMOVE_BLOCK_PREFIX + entry.getKey()), false);
+            index++;
+        }
+    }
+
     private void sendRefresh(Ref<EntityStore> ref, Store<EntityStore> store) {
         UICommandBuilder commandBuilder = new UICommandBuilder();
         UIEventBuilder eventBuilder = new UIEventBuilder();
         populateFields(commandBuilder);
+        buildBlockTable(commandBuilder, eventBuilder);
         buildZoneList(commandBuilder, eventBuilder);
         bindEvents(eventBuilder);
         this.sendUpdate(commandBuilder, eventBuilder, false);
@@ -505,7 +543,6 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
     public static class ZoneData {
         static final String KEY_BUTTON = "Button";
         static final String KEY_ZONE_ID = "@ZoneId";
-        static final String KEY_BLOCK_ID = "@BlockId";
         static final String KEY_BLOCK_PROB = "@BlockProb";
         static final String KEY_THRESHOLD = "@Threshold";
         static final String KEY_COOLDOWN = "@Cooldown";
@@ -515,7 +552,7 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         static final String BUTTON_CREATE_ZONE = "CreateZone";
         static final String BUTTON_DELETE_ZONE = "DeleteZone";
         static final String BUTTON_ADD_BLOCK = "AddBlock";
-        static final String BUTTON_REMOVE_BLOCK = "RemoveBlock";
+        static final String BUTTON_REMOVE_BLOCK_PREFIX = "RemoveBlock:";
         static final String BUTTON_SET_THRESHOLD = "SetThreshold";
         static final String BUTTON_SET_COOLDOWN = "SetCooldown";
         static final String BUTTON_REGEN = "Regen";
@@ -524,7 +561,6 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         public static final BuilderCodec<ZoneData> CODEC = BuilderCodec.<ZoneData>builder(ZoneData.class, ZoneData::new)
             .addField(new KeyedCodec<>(KEY_BUTTON, Codec.STRING), (data, value) -> data.button = value, data -> data.button)
             .addField(new KeyedCodec<>(KEY_ZONE_ID, Codec.STRING), (data, value) -> data.zoneId = value, data -> data.zoneId)
-            .addField(new KeyedCodec<>(KEY_BLOCK_ID, Codec.STRING), (data, value) -> data.blockId = value, data -> data.blockId)
             .addField(new KeyedCodec<>(KEY_BLOCK_PROB, Codec.STRING), (data, value) -> data.blockProb = value, data -> data.blockProb)
             .addField(new KeyedCodec<>(KEY_THRESHOLD, Codec.STRING), (data, value) -> data.threshold = value, data -> data.threshold)
             .addField(new KeyedCodec<>(KEY_COOLDOWN, Codec.STRING), (data, value) -> data.cooldown = value, data -> data.cooldown)
@@ -532,7 +568,6 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
 
         private String button;
         private String zoneId;
-        private String blockId;
         private String blockProb;
         private String threshold;
         private String cooldown;

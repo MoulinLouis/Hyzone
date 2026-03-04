@@ -33,8 +33,9 @@ $C.@PageOverlay {
       Padding: (Left: 12, Right: 12, Top: 6, Bottom: 12);
 
       Group #FormColumn {
-        Anchor: (Width: 300);
-        LayoutMode: Top;
+        Anchor: (Width: 380);
+        LayoutMode: TopScrolling;
+        ScrollbarStyle: $C.@DefaultScrollbarStyle;
 
         Label #MineNameTitle {
           Style: (FontSize: 16, TextColor: #93844c, RenderBold: true);
@@ -118,15 +119,55 @@ $C.@PageOverlay {
           Anchor: (Top: 12);
         }
 
-        Label {
-          Text: "Block ID";
-          Style: (FontSize: 13, TextColor: #cfd7dc);
-          Anchor: (Top: 4);
+        Label #SelectedBlockText {
+          Anchor: (Top: 2);
+          Style: (FontSize: 12, TextColor: #9fb0ba);
+          Text: "Selected: (none)";
         }
 
-        $C.@TextField #BlockIdField {
-          Anchor: (Height: 28);
-          Style: (FontSize: 14, TextColor: #ffffff(0.85));
+        Group {
+          LayoutMode: Left;
+          Anchor: (Top: 4, Height: 28);
+
+          $C.@TextButton #BlockStone {
+            Anchor: (Width: 88, Height: 26);
+            Text: "Stone";
+          }
+
+          $C.@TextButton #BlockBlue {
+            Anchor: (Left: 4, Width: 88, Height: 26);
+            Text: "Blue";
+          }
+
+          $C.@TextButton #BlockGreen {
+            Anchor: (Left: 4, Width: 88, Height: 26);
+            Text: "Green";
+          }
+
+          $C.@TextButton #BlockPink {
+            Anchor: (Left: 4, Width: 88, Height: 26);
+            Text: "Pink";
+          }
+        }
+
+        Group {
+          LayoutMode: Left;
+          Anchor: (Top: 4, Height: 28);
+
+          $C.@TextButton #BlockRed {
+            Anchor: (Width: 88, Height: 26);
+            Text: "Red";
+          }
+
+          $C.@TextButton #BlockWhite {
+            Anchor: (Left: 4, Width: 88, Height: 26);
+            Text: "White";
+          }
+
+          $C.@TextButton #BlockYellow {
+            Anchor: (Left: 4, Width: 88, Height: 26);
+            Text: "Yellow";
+          }
         }
 
         Label {
@@ -140,18 +181,18 @@ $C.@PageOverlay {
           Style: (FontSize: 14, TextColor: #ffffff(0.85));
         }
 
-        Group {
-          LayoutMode: Left;
-          Anchor: (Top: 6, Height: 32);
+        $C.@TextButton #AddBlockButton {
+          Anchor: (Top: 6, Width: 140, Height: 30);
+          Text: "Add Block";
+        }
 
-          $C.@TextButton #AddBlockButton {
-            Anchor: (Width: 140, Height: 30);
-            Text: "Add Block";
-          }
+        Group #BlockTableList {
+          Anchor: (Top: 8, Height: 120);
+          LayoutMode: TopScrolling;
+          ScrollbarStyle: $C.@DefaultScrollbarStyle;
 
-          $C.@TextButton #RemoveBlockButton {
-            Anchor: (Left: 8, Width: 140, Height: 30);
-            Text: "Remove Block";
+          Group #BlockEntries {
+            LayoutMode: Top;
           }
         }
 
@@ -197,10 +238,15 @@ $C.@PageOverlay {
             Text: "Set Cooldown";
           }
         }
+
+        $C.@TextButton #RegenButton {
+          Anchor: (Top: 8, Width: 140, Height: 30);
+          Text: "Regen Zone";
+        }
       }
 
       Group #ListColumn {
-        Anchor: (Left: 16, Width: 560);
+        Anchor: (Left: 16, Width: 480);
         LayoutMode: Top;
 
         Label {
@@ -209,7 +255,7 @@ $C.@PageOverlay {
         }
 
         Group #ZoneList {
-          Anchor: (Top: 6, Width: 540, Height: 660);
+          Anchor: (Top: 6, Width: 460, Height: 660);
           LayoutMode: TopScrolling;
           Padding: (Left: 6, Right: 6);
           ScrollbarStyle: $C.@DefaultScrollbarStyle;
