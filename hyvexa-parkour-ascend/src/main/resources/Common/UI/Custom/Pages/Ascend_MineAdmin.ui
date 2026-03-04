@@ -171,6 +171,16 @@ $C.@PageOverlay {
 
         Group {
           LayoutMode: Left;
+          Anchor: (Top: 6, Height: 32);
+
+          $C.@TextButton #BlockPricesButton {
+            Anchor: (Width: 140, Height: 30);
+            Text: "Block Prices";
+          }
+        }
+
+        Group {
+          LayoutMode: Left;
           Anchor: (Top: 10, Height: 32);
 
           $C.@TextButton #BackButton {
