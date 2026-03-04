@@ -44,7 +44,11 @@ import io.hyvexa.ascend.interaction.AscendTranscendenceInteraction;
 import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.summit.SummitManager;
 import io.hyvexa.ascend.mine.MineGateChecker;
+import io.hyvexa.ascend.mine.MineManager;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
+import io.hyvexa.ascend.mine.data.MinePlayerStore;
+import io.hyvexa.ascend.mine.system.MineBreakSystem;
+import com.hypixel.hytale.server.core.event.events.ecs.BreakBlockEvent;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 import io.hyvexa.ascend.transcendence.TranscendenceManager;
 import io.hyvexa.ascend.tutorial.TutorialTriggerService;
@@ -106,6 +110,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
     private TutorialTriggerService tutorialTriggerService;
     private MineConfigStore mineConfigStore;
     private MineGateChecker mineGateChecker;
+    private MineManager mineManager;
+    private MinePlayerStore minePlayerStore;
     private AscendWhitelistManager whitelistManager;
     private AscendRuntimeConfig runtimeConfig;
     private ScheduledFuture<?> tickTask;
@@ -182,6 +188,14 @@ public class ParkourAscendPlugin extends JavaPlugin {
             LOGGER.atWarning().withCause(e).log("Failed to initialize mine config store");
         }
 
+        // Mine player store + manager
+        try {
+            minePlayerStore = new MinePlayerStore();
+            mineManager = new MineManager(mineConfigStore);
+        } catch (Exception e) {
+            LOGGER.atWarning().withCause(e).log("Failed to initialize mine manager");
+        }
+
         // Ghost system
         try {
             ghostStore = new GhostStore("ascend_ghost_recordings", "ascend");
@@ -252,6 +266,16 @@ public class ParkourAscendPlugin extends JavaPlugin {
         // Per-tick finish line detection (defers store work to world thread)
         if (!registry.hasSystemClass(AscendFinishDetectionSystem.class)) {
             registry.registerSystem(new AscendFinishDetectionSystem(this, runTracker));
+        }
+
+        // Mine break system — allows block breaking inside mining zones (overrides NoBreakSystem)
+        if (mineManager != null && minePlayerStore != null) {
+            if (registry.getEntityEventTypeForClass(BreakBlockEvent.class) == null) {
+                registry.registerEntityEventType(BreakBlockEvent.class);
+            }
+            if (!registry.hasSystemClass(MineBreakSystem.class)) {
+                registry.registerSystem(new MineBreakSystem(mineManager, minePlayerStore));
+            }
         }
 
         this.getEventRegistry().registerGlobal(PlayerReadyEvent.class, event -> {
@@ -391,6 +415,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
             // Evict player from cache (lazy loading - saves memory)
             runSafe(() -> { if (playerStore != null) playerStore.removePlayer(playerId); },
                     "Disconnect cleanup: playerStore");
+            runSafe(() -> { if (minePlayerStore != null) minePlayerStore.evict(playerId); },
+                    "Disconnect cleanup: minePlayerStore");
             runSafe(() -> VexaStore.getInstance().evictPlayer(playerId),
                     "Disconnect cleanup: VexaStore");
             runSafe(() -> DiscordLinkStore.getInstance().evictPlayer(playerId),
@@ -430,6 +456,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
         runSafe(() -> { if (ghostRecorder != null) ghostRecorder.stop(); }, "Shutdown: ghostRecorder stop");
         runSafe(() -> { if (robotManager != null) robotManager.stop(); }, "Shutdown: robotManager stop");
         runSafe(() -> { if (playerStore != null) playerStore.flushPendingSave(); }, "Shutdown: playerStore flush");
+        runSafe(() -> { if (minePlayerStore != null) minePlayerStore.flushAll(); }, "Shutdown: minePlayerStore flush");
         runSafe(() -> WhitelistRegistry.unregister(), "Shutdown: whitelist unregister");
     }
 
@@ -503,6 +530,14 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
     public MineConfigStore getMineConfigStore() {
         return mineConfigStore;
+    }
+
+    public MineManager getMineManager() {
+        return mineManager;
+    }
+
+    public MinePlayerStore getMinePlayerStore() {
+        return minePlayerStore;
     }
 
     public AscendRuntimeConfig getRuntimeConfig() {
