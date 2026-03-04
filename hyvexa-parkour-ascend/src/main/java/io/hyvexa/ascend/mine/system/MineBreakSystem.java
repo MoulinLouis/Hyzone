@@ -5,9 +5,12 @@ import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.EntityEventSystem;
+import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.event.events.ecs.BreakBlockEvent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
@@ -16,10 +19,12 @@ import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.data.MineZone;
 import io.hyvexa.common.util.PermissionUtils;
+import com.hypixel.hytale.logger.HytaleLogger;
 
 import java.util.UUID;
 
 public class MineBreakSystem extends EntityEventSystem<EntityStore, BreakBlockEvent> {
+    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private final MineManager mineManager;
     private final MinePlayerStore minePlayerStore;
 
@@ -32,40 +37,86 @@ public class MineBreakSystem extends EntityEventSystem<EntityStore, BreakBlockEv
     @Override
     public void handle(int entityId, ArchetypeChunk<EntityStore> chunk, Store<EntityStore> store,
                        CommandBuffer<EntityStore> buffer, BreakBlockEvent event) {
-        Player player = chunk.getComponent(entityId, Player.getComponentType());
-        if (player == null) return;
-        if (PermissionUtils.isOp(player)) return; // OPs handled by NoBreakSystem (allowed)
+        LOGGER.atInfo().log("[MineBreak] handle() called, cancelled=%s", event.isCancelled());
 
-        int bx = event.getBlockX();
-        int by = event.getBlockY();
-        int bz = event.getBlockZ();
+        Player player = chunk.getComponent(entityId, Player.getComponentType());
+        if (player == null) {
+            LOGGER.atInfo().log("[MineBreak] player is null, skipping");
+            return;
+        }
+        boolean isOp = PermissionUtils.isOp(player);
+
+        Vector3i target = event.getTargetBlock();
+        if (target == null) {
+            LOGGER.atInfo().log("[MineBreak] targetBlock is null, skipping");
+            return;
+        }
+        int bx = target.getX();
+        int by = target.getY();
+        int bz = target.getZ();
+        LOGGER.atInfo().log("[MineBreak] block at (%d, %d, %d)", bx, by, bz);
 
         MineZone zone = mineManager.findZoneAt(bx, by, bz);
-        if (zone == null) return; // Not in a mining zone — let NoBreakSystem's cancel stand
+        if (zone == null) {
+            if (!isOp) {
+                LOGGER.atInfo().log("[MineBreak] not in any zone, keeping cancelled");
+            }
+            return;
+        }
+        LOGGER.atInfo().log("[MineBreak] in zone '%s'", zone.getId());
 
         // Block is in a mining zone — check if player can mine
         PlayerRef playerRef = chunk.getComponent(entityId, PlayerRef.getComponentType());
-        if (playerRef == null) return;
+        if (playerRef == null) {
+            LOGGER.atInfo().log("[MineBreak] playerRef is null");
+            return;
+        }
         UUID playerId = playerRef.getUuid();
-        if (playerId == null) return;
+        if (playerId == null) {
+            LOGGER.atInfo().log("[MineBreak] playerId is null");
+            return;
+        }
 
         AscendPlayerProgress ascendProgress = ParkourAscendPlugin.getInstance()
             .getPlayerStore().getPlayer(playerId);
-        if (ascendProgress == null || ascendProgress.getAscensionCount() < 1) {
-            return; // No ascension — keep break cancelled
+        if (ascendProgress == null) {
+            LOGGER.atInfo().log("[MineBreak] ascendProgress is null, denied");
+            return;
+        }
+        LOGGER.atInfo().log("[MineBreak] ascensionCount=%d", ascendProgress.getAscensionCount());
+        if (ascendProgress.getAscensionCount() < 1) {
+            LOGGER.atInfo().log("[MineBreak] no ascension, denied");
+            return;
         }
 
         MinePlayerProgress mineProgress = minePlayerStore.getOrCreatePlayer(playerId);
+        LOGGER.atInfo().log("[MineBreak] inventory %d/%d", mineProgress.getInventoryTotal(), mineProgress.getBagCapacity());
         if (mineProgress.isInventoryFull()) {
-            return; // Bag full — keep break cancelled
+            LOGGER.atInfo().log("[MineBreak] bag full, denied");
+            return;
             // TODO Phase 3: send "bag full" message
         }
 
-        // Allow the break — override NoBreakSystem's cancellation
-        event.setCancelled(false);
-
-        // Resolve block type name and add to inventory
+        // Resolve block type name
         String blockTypeName = event.getBlockType() != null ? event.getBlockType().getId() : null;
+        LOGGER.atInfo().log("[MineBreak] blockType=%s", blockTypeName);
+
+        // For non-OP: manually remove the block (set to air) — we can't rely on setCancelled(false)
+        // because NoBreakSystem may run after us and re-cancel the event.
+        // For OP: NoBreakSystem already allows the break, no manual removal needed.
+        if (!isOp) {
+            World world = store.getExternalData().getWorld();
+            long chunkIndex = ChunkUtil.indexChunkFromBlock(bx, bz);
+            var worldChunk = world.getChunkIfInMemory(chunkIndex);
+            if (worldChunk == null) worldChunk = world.loadChunkIfInMemory(chunkIndex);
+            if (worldChunk == null) {
+                LOGGER.atInfo().log("[MineBreak] chunk not loaded, cannot break");
+                return;
+            }
+            worldChunk.setBlock(bx, by, bz, 0);
+        }
+        LOGGER.atInfo().log("[MineBreak] ALLOWED break (op=%s)", isOp);
+
         if (blockTypeName != null) {
             mineProgress.addToInventory(blockTypeName, 1);
             minePlayerStore.markDirty(playerId);
