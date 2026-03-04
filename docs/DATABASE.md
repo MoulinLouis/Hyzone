@@ -625,6 +625,51 @@ Notes:
 
 ---
 
+# Vote Tables
+
+## player_votes
+Append-only log of every individual vote, for analytics and time-based leaderboards.
+
+```sql
+CREATE TABLE player_votes (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  player_uuid VARCHAR(36) NOT NULL,
+  player_name VARCHAR(32) NOT NULL,
+  source VARCHAR(32) NOT NULL,
+  voted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_player (player_uuid),
+  INDEX idx_voted_at (voted_at),
+  INDEX idx_player_voted (player_uuid, voted_at)
+) ENGINE=InnoDB;
+```
+
+Notes:
+- `source` values: `hytale.game` (polling), `votifier` (Votifier V1/V2)
+- Used for time-period leaderboards (weekly, monthly) via `GROUP BY` + `COUNT(*)`
+- Auto-created by `VoteStore.initialize()` on startup
+- Managed by `hyvexa-core/src/main/java/io/hyvexa/core/vote/VoteStore.java`
+
+## player_vote_counts
+Denormalized aggregate vote counter per player for fast leaderboard reads.
+
+```sql
+CREATE TABLE player_vote_counts (
+  player_uuid VARCHAR(36) NOT NULL PRIMARY KEY,
+  player_name VARCHAR(32) NOT NULL,
+  total_votes INT NOT NULL DEFAULT 0,
+  last_voted_at TIMESTAMP NULL
+) ENGINE=InnoDB;
+```
+
+Notes:
+- Incremented atomically alongside each `player_votes` INSERT (same transaction)
+- Avoids `COUNT(*)` on `player_votes` for all-time leaderboard queries
+- `player_name` updated on each vote to keep current username
+- Auto-created by `VoteStore.initialize()` on startup
+- Managed by `hyvexa-core/src/main/java/io/hyvexa/core/vote/VoteStore.java`
+
+---
+
 # Analytics Tables
 
 ## analytics_events

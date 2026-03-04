@@ -13,6 +13,7 @@
 - **Core: Vote polling no longer blocks the shared scheduler** - Vote checks now use bounded async HTTP workers, separate reward persistence threads, and temporary poll backoff after repeated backend failures.
 
 ### Added
+- **Core: Centralized vote tracking** - All votes (hytale.game polling + Votifier) are now recorded in MySQL (`player_votes` + `player_vote_counts`) for leaderboards, milestones, and analytics
 - **Purge: Class system** - 4 unlockable classes (Scavenger, Tank, Assault, Medic) purchased with scrap. Each provides passive stat boosts and a unique perk. Scavenger earns +30% scrap with kill streak bonuses; Tank gets +40 HP with 20% damage reduction; Assault deals +20% damage with streak ramp; Medic has passive regen and heal-on-kill. Managed via `/purge class` commands.
 
 ### Changed
