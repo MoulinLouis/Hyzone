@@ -284,6 +284,18 @@ public final class AscendDatabaseSetup {
                 ) ENGINE=InnoDB
                 """);
 
+            // Mine block sell prices
+            stmt.executeUpdate("""
+                CREATE TABLE IF NOT EXISTS mine_block_prices (
+                    mine_id VARCHAR(32) NOT NULL,
+                    block_type_id VARCHAR(64) NOT NULL,
+                    price_mantissa DOUBLE NOT NULL DEFAULT 1,
+                    price_exp10 INT NOT NULL DEFAULT 0,
+                    PRIMARY KEY (mine_id, block_type_id),
+                    FOREIGN KEY (mine_id) REFERENCES mine_definitions(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB
+                """);
+
             LOGGER.atInfo().log("Ascend database tables ensured");
             } // close try (Statement stmt)
 

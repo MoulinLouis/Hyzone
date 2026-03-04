@@ -11,6 +11,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -22,6 +23,9 @@ public class MineConfigStore {
     private final Map<String, Mine> mines = new LinkedHashMap<>();
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
     private volatile List<Mine> sortedCache;
+
+    // mineId -> blockTypeId -> price
+    private final Map<String, Map<String, BigNumber>> blockPrices = new ConcurrentHashMap<>();
 
     // Entry gate (id=1): teleports ascended players INTO the mine
     private volatile double entryMinX, entryMinY, entryMinZ;
@@ -56,6 +60,7 @@ public class MineConfigStore {
                 loadMines(conn);
                 loadZones(conn);
                 loadGate(conn);
+                loadBlockPrices(conn);
             } catch (SQLException e) {
                 LOGGER.atSevere().log("Failed to load MineConfigStore: " + e.getMessage());
             }
@@ -508,6 +513,91 @@ public class MineConfigStore {
     public float getExitDestRotX() { return exitDestRotX; }
     public float getExitDestRotY() { return exitDestRotY; }
     public float getExitDestRotZ() { return exitDestRotZ; }
+
+    // --- Block Prices ---
+
+    private void loadBlockPrices(Connection conn) throws SQLException {
+        blockPrices.clear();
+        String sql = "SELECT mine_id, block_type_id, price_mantissa, price_exp10 FROM mine_block_prices";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    String mineId = rs.getString("mine_id");
+                    String blockTypeId = rs.getString("block_type_id");
+                    BigNumber price = BigNumber.of(rs.getDouble("price_mantissa"), rs.getInt("price_exp10"));
+                    blockPrices.computeIfAbsent(mineId, k -> new ConcurrentHashMap<>())
+                        .put(blockTypeId, price);
+                }
+            }
+        }
+    }
+
+    public void saveBlockPrice(String mineId, String blockTypeId, BigNumber price) {
+        if (mineId == null || blockTypeId == null || price == null) return;
+
+        blockPrices.computeIfAbsent(mineId, k -> new ConcurrentHashMap<>())
+            .put(blockTypeId, price);
+
+        if (!DatabaseManager.getInstance().isInitialized()) return;
+
+        String sql = """
+            INSERT INTO mine_block_prices (mine_id, block_type_id, price_mantissa, price_exp10)
+            VALUES (?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+                price_mantissa = VALUES(price_mantissa), price_exp10 = VALUES(price_exp10)
+            """;
+
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) return;
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setString(1, mineId);
+                stmt.setString(2, blockTypeId);
+                stmt.setDouble(3, price.getMantissa());
+                stmt.setInt(4, price.getExponent());
+                stmt.executeUpdate();
+            }
+        } catch (SQLException e) {
+            LOGGER.atSevere().log("Failed to save block price: " + e.getMessage());
+        }
+    }
+
+    public void removeBlockPrice(String mineId, String blockTypeId) {
+        if (mineId == null || blockTypeId == null) return;
+
+        Map<String, BigNumber> prices = blockPrices.get(mineId);
+        if (prices != null) {
+            prices.remove(blockTypeId);
+        }
+
+        if (!DatabaseManager.getInstance().isInitialized()) return;
+
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) return;
+            try (PreparedStatement stmt = conn.prepareStatement(
+                    "DELETE FROM mine_block_prices WHERE mine_id = ? AND block_type_id = ?")) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setString(1, mineId);
+                stmt.setString(2, blockTypeId);
+                stmt.executeUpdate();
+            }
+        } catch (SQLException e) {
+            LOGGER.atSevere().log("Failed to remove block price: " + e.getMessage());
+        }
+    }
+
+    public BigNumber getBlockPrice(String mineId, String blockTypeId) {
+        Map<String, BigNumber> prices = blockPrices.get(mineId);
+        if (prices == null) return BigNumber.ONE;
+        return prices.getOrDefault(blockTypeId, BigNumber.ONE);
+    }
+
+    public Map<String, BigNumber> getBlockPrices(String mineId) {
+        Map<String, BigNumber> prices = blockPrices.get(mineId);
+        if (prices == null) return Collections.emptyMap();
+        return Collections.unmodifiableMap(prices);
+    }
 
     private void invalidateSortedCache() {
         sortedCache = null;
