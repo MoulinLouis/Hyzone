@@ -180,7 +180,12 @@ public class VoteManager {
                 continue;
             }
             claimedCountFuture = claimedCountFuture.thenCompose(claimedCount ->
-                    claimVoteAsync(voteId).thenApply(claimed -> claimed ? claimedCount + 1 : claimedCount));
+                    claimVoteAsync(voteId).thenApply(claimed -> {
+                        if (claimed) {
+                            VoteStore.getInstance().recordVote(playerId, username, "hytale.game");
+                        }
+                        return claimed ? claimedCount + 1 : claimedCount;
+                    }));
         }
         return claimedCountFuture.thenCompose(claimedCount ->
                 persistRewardAsync(playerId, claimedCount).thenApply(ignored -> claimedCount))
