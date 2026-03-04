@@ -261,6 +261,29 @@ public final class AscendDatabaseSetup {
                 ) ENGINE=InnoDB
                 """);
 
+            // Mine player progress
+            stmt.executeUpdate("""
+                CREATE TABLE IF NOT EXISTS mine_players (
+                    uuid VARCHAR(36) PRIMARY KEY,
+                    crystals_mantissa DOUBLE NOT NULL DEFAULT 0,
+                    crystals_exp10 INT NOT NULL DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    FOREIGN KEY (uuid) REFERENCES ascend_players(uuid) ON DELETE CASCADE
+                ) ENGINE=InnoDB
+                """);
+
+            // Mine player inventory (virtual block counts)
+            stmt.executeUpdate("""
+                CREATE TABLE IF NOT EXISTS mine_player_inventory (
+                    player_uuid VARCHAR(36) NOT NULL,
+                    block_type_id VARCHAR(64) NOT NULL,
+                    amount INT NOT NULL DEFAULT 0,
+                    PRIMARY KEY (player_uuid, block_type_id),
+                    FOREIGN KEY (player_uuid) REFERENCES mine_players(uuid) ON DELETE CASCADE
+                ) ENGINE=InnoDB
+                """);
+
             LOGGER.atInfo().log("Ascend database tables ensured");
             } // close try (Statement stmt)
 
