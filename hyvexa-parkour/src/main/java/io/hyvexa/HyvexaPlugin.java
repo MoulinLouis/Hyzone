@@ -815,15 +815,23 @@ public class HyvexaPlugin extends JavaPlugin {
                         if (username == null || username.isBlank()) {
                             return;
                         }
-                        // Find the online player by username to get their UUID
+                        // Try online players first (fast path)
+                        UUID resolvedId = null;
                         for (PlayerRef playerRef : Universe.get().getPlayers()) {
                             if (playerRef != null && username.equalsIgnoreCase(playerRef.getUsername())) {
-                                VoteStore.getInstance().recordVote(
-                                        playerRef.getUuid(), username, "votifier");
-                                return;
+                                resolvedId = playerRef.getUuid();
+                                break;
                             }
                         }
-                        LOGGER.atFine().log("VoteEvent for offline player: " + username);
+                        // Fallback to ProgressStore cache for offline players
+                        if (resolvedId == null && progressStore != null) {
+                            resolvedId = progressStore.getPlayerIdByName(username);
+                        }
+                        if (resolvedId != null) {
+                            VoteStore.getInstance().recordVote(resolvedId, username, "votifier");
+                        } else {
+                            LOGGER.atFine().log("VoteEvent for unknown player: " + username);
+                        }
                     } catch (Exception e) {
                         LOGGER.atWarning().withCause(e).log("Failed to handle VoteEvent");
                     }
