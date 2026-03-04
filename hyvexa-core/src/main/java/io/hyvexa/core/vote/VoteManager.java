@@ -188,7 +188,12 @@ public class VoteManager {
                     }));
         }
         return claimedCountFuture.thenCompose(claimedCount ->
-                persistRewardAsync(playerId, claimedCount).thenApply(ignored -> claimedCount))
+                persistRewardAsync(playerId, claimedCount).thenApply(ignored -> {
+                    if (claimedCount > 0) {
+                        broadcastVoteMessage(username, "hytale.game");
+                    }
+                    return claimedCount;
+                }))
                 .exceptionally(ex -> {
                     LOGGER.atWarning().withCause(ex).log("Vote reward flow failed for " + username);
                     return 0;
@@ -412,6 +417,38 @@ public class VoteManager {
                 return null;
             });
             return;
+        }
+    }
+
+    private void broadcastVoteMessage(String username, String source) {
+        Message msg = Message.join(
+                Message.raw(username).color("#f97316"),
+                Message.raw(" voted on ").color("#9ca3af"),
+                Message.raw(source).color("#f97316"),
+                Message.raw("!").color("#9ca3af")
+        );
+        for (PlayerRef playerRef : Universe.get().getPlayers()) {
+            if (playerRef == null) {
+                continue;
+            }
+            Ref<EntityStore> ref = playerRef.getReference();
+            if (ref == null || !ref.isValid()) {
+                continue;
+            }
+            Store<EntityStore> store = ref.getStore();
+            World world = store.getExternalData() != null ? store.getExternalData().getWorld() : null;
+            if (world == null) {
+                continue;
+            }
+            CompletableFuture.runAsync(() -> {
+                if (!ref.isValid()) {
+                    return;
+                }
+                Player player = store.getComponent(ref, Player.getComponentType());
+                if (player != null) {
+                    player.sendMessage(msg);
+                }
+            }, world).exceptionally(ex -> null);
         }
     }
 }
