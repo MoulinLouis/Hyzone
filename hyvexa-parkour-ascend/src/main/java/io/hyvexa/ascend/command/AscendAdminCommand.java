@@ -23,13 +23,21 @@ import io.hyvexa.common.whitelist.AscendWhitelistManager;
 import io.hyvexa.common.util.CommandUtils;
 import io.hyvexa.common.util.HylogramsBridge;
 import io.hyvexa.common.util.PermissionUtils;
+import io.hyvexa.ascend.mine.data.Mine;
+import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.common.util.SystemMessageUtils;
 
 import javax.annotation.Nonnull;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class AscendAdminCommand extends AbstractAsyncCommand {
+
+    public static final Map<UUID, int[]> minePos1 = new ConcurrentHashMap<>();
+    public static final Map<UUID, int[]> minePos2 = new ConcurrentHashMap<>();
 
     public AscendAdminCommand() {
         super("as", "Ascend admin tools");
@@ -66,7 +74,7 @@ public class AscendAdminCommand extends AbstractAsyncCommand {
             return;
         }
         if (args.length < 1 || !"admin".equalsIgnoreCase(args[0])) {
-            player.sendMessage(Message.raw("Usage: /as holograms | /as admin map <create|setstart|setfinish|setorder|setname|list> ... | /as admin holo <map|delete> ... | /as admin whitelist <add|remove|list> ..."));
+            player.sendMessage(Message.raw("Usage: /as holograms | /as admin map ... | /as admin holo ... | /as admin whitelist ... | /as admin mine ..."));
             return;
         }
         if (args.length == 1) {
@@ -77,12 +85,16 @@ public class AscendAdminCommand extends AbstractAsyncCommand {
             return;
         }
         String category = args[1].toLowerCase();
-        if (!"map".equals(category) && !"holo".equals(category) && !"whitelist".equals(category)) {
-            player.sendMessage(Message.raw("Unknown admin category. Use: /as admin map ..., /as admin holo ..., or /as admin whitelist ..."));
+        if (!"map".equals(category) && !"holo".equals(category) && !"whitelist".equals(category) && !"mine".equals(category)) {
+            player.sendMessage(Message.raw("Unknown admin category. Use: /as admin map ..., /as admin holo ..., /as admin whitelist ..., or /as admin mine ..."));
             return;
         }
         ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
         if (plugin == null) {
+            return;
+        }
+        if ("mine".equals(category)) {
+            handleMine(args, player, ref, store);
             return;
         }
         if ("whitelist".equals(category)) {
@@ -414,6 +426,69 @@ public class AscendAdminCommand extends AbstractAsyncCommand {
     private String resolveWorldName(Store<EntityStore> store) {
         World world = store.getExternalData().getWorld();
         return world != null ? world.getName() : null;
+    }
+
+    private void handleMine(String[] args, Player player, Ref<EntityStore> ref, Store<EntityStore> store) {
+        if (args.length < 3) {
+            player.sendMessage(Message.raw("Usage: /as admin mine <pos1|pos2|list>"));
+            return;
+        }
+        String action = args[2].toLowerCase();
+        switch (action) {
+            case "pos1" -> handleMinePos(player, ref, store, true);
+            case "pos2" -> handleMinePos(player, ref, store, false);
+            case "list" -> handleMineList(player);
+            default -> player.sendMessage(Message.raw("Usage: /as admin mine <pos1|pos2|list>"));
+        }
+    }
+
+    private void handleMinePos(Player player, Ref<EntityStore> ref, Store<EntityStore> store, boolean isPos1) {
+        TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
+        if (transform == null || transform.getPosition() == null) {
+            player.sendMessage(Message.raw("Unable to read player position."));
+            return;
+        }
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        if (playerRef == null || playerRef.getUuid() == null) {
+            player.sendMessage(Message.raw("Unable to resolve player identity."));
+            return;
+        }
+        Vector3d position = transform.getPosition();
+        int x = (int) Math.floor(position.getX());
+        int y = (int) Math.floor(position.getY() - 0.2d);
+        int z = (int) Math.floor(position.getZ());
+        UUID uuid = playerRef.getUuid();
+        if (isPos1) {
+            minePos1.put(uuid, new int[]{x, y, z});
+            player.sendMessage(Message.raw("[Mine] Pos1 set: (" + x + ", " + y + ", " + z + ")"));
+        } else {
+            minePos2.put(uuid, new int[]{x, y, z});
+            player.sendMessage(Message.raw("[Mine] Pos2 set: (" + x + ", " + y + ", " + z + ")"));
+        }
+    }
+
+    private void handleMineList(Player player) {
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin == null) {
+            return;
+        }
+        MineConfigStore mineStore = plugin.getMineConfigStore();
+        if (mineStore == null) {
+            player.sendMessage(Message.raw("[Mine] Mine config store not available."));
+            return;
+        }
+        List<Mine> mines = mineStore.listMinesSorted();
+        if (mines.isEmpty()) {
+            player.sendMessage(Message.raw("[Mine] No mines created yet."));
+            return;
+        }
+        player.sendMessage(Message.raw("[Mine] Mines:"));
+        for (Mine mine : mines) {
+            int zoneCount = mine.getZones() != null ? mine.getZones().size() : 0;
+            String spawnStatus = mine.hasSpawn() ? "OK" : "NO";
+            player.sendMessage(Message.raw("- " + mine.getId() + ": " + mine.getName()
+                    + " (Order: " + mine.getDisplayOrder() + ", Zones: " + zoneCount + ", Spawn: " + spawnStatus + ")"));
+        }
     }
 
     private void handleWhitelistCommand(Player player, AscendWhitelistManager whitelistManager, String[] args) {
