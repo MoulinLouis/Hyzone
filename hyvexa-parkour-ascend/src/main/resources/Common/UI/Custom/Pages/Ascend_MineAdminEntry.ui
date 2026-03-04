@@ -1,0 +1,32 @@
+$C = "../Common.ui";
+
+Button {
+  Anchor: (Left: 2, Right: 2, Bottom: 6, Height: 52, Width: 520);
+  Background: $C.@InputBoxBackground;
+  Padding: (Left: 12, Right: 12, Top: 8);
+  Style: ButtonStyle(
+    Default: (Background: $C.@InputBoxBackground),
+    Hovered: (Background: #253742),
+    Pressed: (Background: #1a2830),
+    Sounds: $C.@ButtonSounds,
+  );
+
+  Label #MineName {
+    Anchor: (Top: 0);
+    Style: (
+      FontSize: 15,
+      RenderBold: true,
+      TextColor: #93844c
+    );
+    Text: "Mine";
+  }
+
+  Label #MineStatus {
+    Anchor: (Top: 20);
+    Style: (
+      FontSize: 12,
+      TextColor: #9fb0ba
+    );
+    Text: "Status";
+  }
+}

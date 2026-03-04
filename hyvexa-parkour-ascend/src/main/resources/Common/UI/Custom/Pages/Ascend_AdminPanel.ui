@@ -2,7 +2,7 @@ $C = "../Common.ui";
 
 $C.@PageOverlay {
   $C.@Container {
-    Anchor: (Width: 460, Height: 320);
+    Anchor: (Width: 480, Height: 320);
 
     #Title {
       Group {
@@ -42,18 +42,23 @@ $C.@PageOverlay {
         Anchor: (Top: 12, Height: 38);
 
         $C.@TextButton #MapsButton {
-          Anchor: (Width: 130, Height: 36);
+          Anchor: (Width: 96, Height: 36);
           Text: "Maps";
         }
 
         $C.@TextButton #AdminButton {
-          Anchor: (Left: 10, Width: 130, Height: 36);
-          Text: "Admin Panel";
+          Anchor: (Left: 10, Width: 96, Height: 36);
+          Text: "Admin";
         }
 
         $C.@TextButton #WhitelistButton {
-          Anchor: (Left: 10, Width: 130, Height: 36);
+          Anchor: (Left: 10, Width: 96, Height: 36);
           Text: "Whitelist";
+        }
+
+        $C.@TextButton #MinesButton {
+          Anchor: (Left: 10, Width: 96, Height: 36);
+          Text: "Mines";
         }
       }
     }

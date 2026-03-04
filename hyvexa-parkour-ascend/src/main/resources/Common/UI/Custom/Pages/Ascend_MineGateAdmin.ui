@@ -1,0 +1,116 @@
+$C = "../Common.ui";
+
+$C.@PageOverlay {
+  $C.@Container {
+    Anchor: (Width: 650, Height: 580);
+
+    #Title {
+      Group {
+        TextButton #CloseButton {
+          Anchor: (Left: 12, Top: 4, Width: 64, Height: 24);
+          Padding: (Left: 8, Top: 2);
+          Text: "Close";
+          Style: TextButtonStyle(
+            Default: (
+              Background: #000000(0.13),
+              LabelStyle: (FontSize: 14, TextColor: #93844c, RenderBold: true)
+            ),
+            Hovered: (
+              Background: #000000(0.22),
+              LabelStyle: (FontSize: 14, TextColor: #93844c, RenderBold: true)
+            ),
+            Sounds: $C.@ButtonSounds,
+          );
+        }
+        $C.@Title {
+          @Text = "Mine Gate Admin";
+        }
+      }
+    }
+
+    #Content {
+      LayoutMode: Top;
+      Padding: (Left: 18, Right: 18, Top: 12, Bottom: 12);
+
+      Label {
+        Style: (FontSize: 16, TextColor: #93844c, RenderBold: true);
+        Text: "Gate AABB";
+      }
+
+      Label #GateBoundsText {
+        Anchor: (Top: 8);
+        Style: (FontSize: 13, TextColor: #9fb0ba);
+        Text: "Gate: Not set";
+      }
+
+      Group {
+        LayoutMode: Left;
+        Anchor: (Top: 8, Height: 36);
+
+        $C.@TextButton #GatePos1Button {
+          Anchor: (Width: 200, Height: 36);
+          Text: "Set Pos1";
+        }
+
+        $C.@TextButton #GatePos2Button {
+          Anchor: (Left: 10, Width: 200, Height: 36);
+          Text: "Set Pos2";
+        }
+      }
+
+      Group {
+        LayoutMode: Left;
+        Anchor: (Top: 8, Height: 36);
+
+        $C.@TextButton #SaveGateButton {
+          Anchor: (Width: 200, Height: 36);
+          Text: "Save Gate";
+        }
+      }
+
+      Label {
+        Anchor: (Top: 16);
+        Style: (FontSize: 16, TextColor: #93844c, RenderBold: true);
+        Text: "Fallback Position";
+      }
+
+      Label #FallbackText {
+        Anchor: (Top: 8);
+        Style: (FontSize: 13, TextColor: #9fb0ba);
+        Text: "Fallback: Not set";
+      }
+
+      Group {
+        LayoutMode: Left;
+        Anchor: (Top: 8, Height: 36);
+
+        $C.@TextButton #SetFallbackButton {
+          Anchor: (Width: 200, Height: 36);
+          Text: "Set Fallback";
+        }
+      }
+
+      Label {
+        Anchor: (Top: 16);
+        Style: (FontSize: 16, TextColor: #93844c, RenderBold: true);
+        Text: "Status";
+      }
+
+      Label #GateStatusText {
+        Anchor: (Top: 8);
+        Style: (FontSize: 14, TextColor: #9fb0ba, RenderBold: true);
+        Text: "Gate: NOT CONFIGURED";
+      }
+
+      Group {
+        LayoutMode: Left;
+        Anchor: (Top: 16, Height: 32);
+
+        $C.@TextButton #BackButton {
+          Anchor: (Width: 140, Height: 32);
+          Text: "Back";
+        }
+      }
+    }
+  }
+}

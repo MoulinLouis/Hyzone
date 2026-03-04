@@ -1,0 +1,427 @@
+package io.hyvexa.ascend.mine.ui;
+
+import com.hypixel.hytale.codec.Codec;
+import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
+import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
+import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
+import com.hypixel.hytale.server.core.ui.builder.EventData;
+import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
+import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.ascend.mine.data.Mine;
+import io.hyvexa.ascend.mine.data.MineConfigStore;
+import io.hyvexa.ascend.ui.AscendAdminPanelPage;
+import io.hyvexa.common.math.BigNumber;
+
+import javax.annotation.Nonnull;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+
+public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineData> {
+
+    private final PlayerRef playerRef;
+    private final MineConfigStore mineConfigStore;
+    private String mineId = "";
+    private String mineName = "";
+    private String mineOrder = "0";
+    private String mineCost = "";
+    private String selectedMineId = "";
+
+    public MineAdminPage(@Nonnull PlayerRef playerRef, MineConfigStore mineConfigStore) {
+        super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, MineData.CODEC);
+        this.playerRef = playerRef;
+        this.mineConfigStore = mineConfigStore;
+    }
+
+    @Override
+    public void build(@Nonnull Ref<EntityStore> ref, @Nonnull UICommandBuilder commandBuilder,
+                      @Nonnull UIEventBuilder eventBuilder, @Nonnull Store<EntityStore> store) {
+        commandBuilder.append("Pages/Ascend_MineAdmin.ui");
+        bindEvents(eventBuilder);
+        populateFields(commandBuilder);
+        buildMineList(commandBuilder, eventBuilder);
+    }
+
+    @Override
+    public void handleDataEvent(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store,
+                                @Nonnull MineData data) {
+        super.handleDataEvent(ref, store, data);
+        if (data.mineId != null) {
+            mineId = data.mineId.trim();
+        }
+        if (data.mineName != null) {
+            mineName = data.mineName.trim();
+        }
+        if (data.mineOrder != null) {
+            mineOrder = data.mineOrder.trim();
+        }
+        if (data.mineCost != null) {
+            mineCost = data.mineCost.trim();
+        }
+        if (data.button == null) {
+            return;
+        }
+        if (data.button.equals(MineData.BUTTON_CLOSE)) {
+            this.close();
+            return;
+        }
+        if (data.button.startsWith(MineData.BUTTON_SELECT_PREFIX)) {
+            selectedMineId = data.button.substring(MineData.BUTTON_SELECT_PREFIX.length());
+            Mine mine = mineConfigStore.getMine(selectedMineId);
+            if (mine != null) {
+                mineId = mine.getId();
+                mineName = mine.getName() != null ? mine.getName() : "";
+                mineOrder = String.valueOf(mine.getDisplayOrder());
+                BigNumber cost = mine.getUnlockCost();
+                if (cost != null && !cost.equals(BigNumber.ZERO)) {
+                    mineCost = cost.getMantissa() + "," + cost.getExponent();
+                } else {
+                    mineCost = "";
+                }
+            }
+            sendRefresh(ref, store);
+            return;
+        }
+        switch (data.button) {
+            case MineData.BUTTON_CREATE -> handleCreate(ref, store);
+            case MineData.BUTTON_SET_NAME -> handleSetName(ref, store);
+            case MineData.BUTTON_SET_ORDER -> handleSetOrder(ref, store);
+            case MineData.BUTTON_SET_SPAWN -> handleSetSpawn(ref, store);
+            case MineData.BUTTON_SET_COST -> handleSetCost(ref, store);
+            case MineData.BUTTON_DELETE -> handleDelete(ref, store);
+            case MineData.BUTTON_ZONES -> handleZones(ref, store);
+            case MineData.BUTTON_GATE -> handleGate(ref, store);
+            case MineData.BUTTON_BACK -> handleBack(ref, store);
+            default -> {
+            }
+        }
+    }
+
+    private void handleCreate(Ref<EntityStore> ref, Store<EntityStore> store) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null) return;
+        String id = mineId.trim();
+        if (id.isEmpty()) {
+            player.sendMessage(Message.raw("Mine ID is required."));
+            return;
+        }
+        String name = mineName.trim();
+        if (name.isEmpty()) {
+            player.sendMessage(Message.raw("Mine name is required."));
+            return;
+        }
+        if (mineConfigStore.getMine(id) != null) {
+            player.sendMessage(Message.raw("Mine already exists: " + id));
+            return;
+        }
+        Mine mine = new Mine(id, name);
+        int order = parseOrder(player);
+        if (order >= 0) {
+            mine.setDisplayOrder(order);
+        }
+        mineConfigStore.saveMine(mine);
+        selectedMineId = id;
+        player.sendMessage(Message.raw("Mine created: " + id + " (" + name + ")"));
+        sendRefresh(ref, store);
+    }
+
+    private void handleSetName(Ref<EntityStore> ref, Store<EntityStore> store) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null) return;
+        Mine mine = resolveSelectedMine(player);
+        if (mine == null) return;
+        String name = mineName.trim();
+        if (name.isEmpty()) {
+            player.sendMessage(Message.raw("Name cannot be empty."));
+            return;
+        }
+        mine.setName(name);
+        mineConfigStore.saveMine(mine);
+        player.sendMessage(Message.raw("Name updated: " + mine.getId() + " -> " + name));
+        sendRefresh(ref, store);
+    }
+
+    private void handleSetOrder(Ref<EntityStore> ref, Store<EntityStore> store) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null) return;
+        Mine mine = resolveSelectedMine(player);
+        if (mine == null) return;
+        int order = parseOrder(player);
+        if (order < 0) return;
+        mine.setDisplayOrder(order);
+        mineConfigStore.saveMine(mine);
+        player.sendMessage(Message.raw("Order updated: " + mine.getId() + " -> " + order));
+        sendRefresh(ref, store);
+    }
+
+    private void handleSetSpawn(Ref<EntityStore> ref, Store<EntityStore> store) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null) return;
+        Mine mine = resolveSelectedMine(player);
+        if (mine == null) return;
+        TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
+        if (transform == null) {
+            player.sendMessage(Message.raw("Unable to read player position."));
+            return;
+        }
+        Vector3d pos = transform.getPosition();
+        Vector3f bodyRot = transform.getRotation();
+        PlayerRef pRef = store.getComponent(ref, PlayerRef.getComponentType());
+        Vector3f headRot = pRef != null ? pRef.getHeadRotation() : null;
+        Vector3f rot = headRot != null ? headRot : bodyRot;
+        mine.setSpawnX(pos.getX());
+        mine.setSpawnY(pos.getY());
+        mine.setSpawnZ(pos.getZ());
+        mine.setSpawnRotX(rot.getX());
+        mine.setSpawnRotY(rot.getY());
+        mine.setSpawnRotZ(rot.getZ());
+        World world = store.getExternalData().getWorld();
+        mine.setWorld(world != null ? world.getName() : "");
+        mineConfigStore.saveMine(mine);
+        player.sendMessage(Message.raw("Spawn set for mine: " + mine.getId()));
+        player.sendMessage(Message.raw("  Pos: " + String.format("%.2f, %.2f, %.2f", pos.getX(), pos.getY(), pos.getZ())));
+        player.sendMessage(Message.raw("  Rot: " + String.format("%.2f, %.2f, %.2f", rot.getX(), rot.getY(), rot.getZ())));
+        sendRefresh(ref, store);
+    }
+
+    private void handleSetCost(Ref<EntityStore> ref, Store<EntityStore> store) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null) return;
+        Mine mine = resolveSelectedMine(player);
+        if (mine == null) return;
+        String raw = mineCost.trim();
+        if (raw.isEmpty()) {
+            player.sendMessage(Message.raw("Enter cost as mantissa,exponent (e.g. 1.5,6 = 1.5e6)."));
+            return;
+        }
+        String[] parts = raw.split(",");
+        if (parts.length != 2) {
+            player.sendMessage(Message.raw("Format: mantissa,exponent (e.g. 1.5,6)."));
+            return;
+        }
+        try {
+            double mantissa = Double.parseDouble(parts[0].trim());
+            int exponent = Integer.parseInt(parts[1].trim());
+            BigNumber cost = BigNumber.of(mantissa, exponent);
+            mine.setUnlockCost(cost);
+            mineConfigStore.saveMine(mine);
+            player.sendMessage(Message.raw("Cost updated: " + mine.getId() + " -> " + cost));
+            sendRefresh(ref, store);
+        } catch (NumberFormatException e) {
+            player.sendMessage(Message.raw("Invalid cost format. Use: mantissa,exponent (e.g. 1.5,6)."));
+        }
+    }
+
+    private void handleDelete(Ref<EntityStore> ref, Store<EntityStore> store) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null) return;
+        Mine mine = resolveSelectedMine(player);
+        if (mine == null) return;
+        String id = mine.getId();
+        boolean deleted = mineConfigStore.deleteMine(id);
+        if (deleted) {
+            player.sendMessage(Message.raw("Mine deleted: " + id));
+            selectedMineId = "";
+            mineId = "";
+            mineName = "";
+            mineOrder = "0";
+            mineCost = "";
+        } else {
+            player.sendMessage(Message.raw("Failed to delete mine: " + id));
+        }
+        sendRefresh(ref, store);
+    }
+
+    private void handleZones(Ref<EntityStore> ref, Store<EntityStore> store) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null) return;
+        if (selectedMineId.isEmpty()) {
+            player.sendMessage(Message.raw("Select a mine first."));
+            return;
+        }
+        PlayerRef pRef = store.getComponent(ref, PlayerRef.getComponentType());
+        if (pRef == null) return;
+        player.getPageManager().openCustomPage(ref, store,
+            new MineZoneAdminPage(pRef, mineConfigStore, selectedMineId));
+    }
+
+    private void handleGate(Ref<EntityStore> ref, Store<EntityStore> store) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null) return;
+        PlayerRef pRef = store.getComponent(ref, PlayerRef.getComponentType());
+        if (pRef == null) return;
+        player.getPageManager().openCustomPage(ref, store,
+            new MineGateAdminPage(pRef, mineConfigStore));
+    }
+
+    private void handleBack(Ref<EntityStore> ref, Store<EntityStore> store) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        PlayerRef pRef = store.getComponent(ref, PlayerRef.getComponentType());
+        if (player == null || pRef == null) return;
+        player.getPageManager().openCustomPage(ref, store, new AscendAdminPanelPage(pRef));
+    }
+
+    private Mine resolveSelectedMine(Player player) {
+        String id = mineId != null && !mineId.isBlank() ? mineId : selectedMineId;
+        if (id == null || id.isBlank()) {
+            player.sendMessage(Message.raw("Select a mine or enter a mine ID first."));
+            return null;
+        }
+        Mine mine = mineConfigStore.getMine(id);
+        if (mine == null) {
+            player.sendMessage(Message.raw("Mine not found: " + id));
+        }
+        return mine;
+    }
+
+    private int parseOrder(Player player) {
+        String raw = mineOrder != null ? mineOrder.trim() : "";
+        if (raw.isEmpty()) {
+            return 0;
+        }
+        try {
+            return Integer.parseInt(raw);
+        } catch (NumberFormatException e) {
+            player.sendMessage(Message.raw("Order must be a number."));
+            return -1;
+        }
+    }
+
+    private void bindEvents(UIEventBuilder eventBuilder) {
+        eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#MineIdField",
+            EventData.of(MineData.KEY_MINE_ID, "#MineIdField.Value"), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#MineNameField",
+            EventData.of(MineData.KEY_MINE_NAME, "#MineNameField.Value"), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#MineOrderField",
+            EventData.of(MineData.KEY_MINE_ORDER, "#MineOrderField.Value"), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#MineCostField",
+            EventData.of(MineData.KEY_MINE_COST, "#MineCostField.Value"), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CreateButton",
+            EventData.of(MineData.KEY_BUTTON, MineData.BUTTON_CREATE), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SetNameButton",
+            EventData.of(MineData.KEY_BUTTON, MineData.BUTTON_SET_NAME), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SetOrderButton",
+            EventData.of(MineData.KEY_BUTTON, MineData.BUTTON_SET_ORDER), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SetSpawnButton",
+            EventData.of(MineData.KEY_BUTTON, MineData.BUTTON_SET_SPAWN), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SetCostButton",
+            EventData.of(MineData.KEY_BUTTON, MineData.BUTTON_SET_COST), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#DeleteButton",
+            EventData.of(MineData.KEY_BUTTON, MineData.BUTTON_DELETE), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ZonesButton",
+            EventData.of(MineData.KEY_BUTTON, MineData.BUTTON_ZONES), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#GateButton",
+            EventData.of(MineData.KEY_BUTTON, MineData.BUTTON_GATE), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton",
+            EventData.of(MineData.KEY_BUTTON, MineData.BUTTON_BACK), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CloseButton",
+            EventData.of(MineData.KEY_BUTTON, MineData.BUTTON_CLOSE), false);
+    }
+
+    private void populateFields(UICommandBuilder commandBuilder) {
+        commandBuilder.set("#MineIdField.Value", mineId != null ? mineId : "");
+        commandBuilder.set("#MineNameField.Value", mineName != null ? mineName : "");
+        commandBuilder.set("#MineOrderField.Value", mineOrder != null ? mineOrder : "0");
+        commandBuilder.set("#MineCostField.Value", mineCost != null ? mineCost : "");
+
+        String selectedInfo = "No mine selected";
+        String mineInfo = "";
+        if (selectedMineId != null && !selectedMineId.isBlank()) {
+            Mine mine = mineConfigStore.getMine(selectedMineId);
+            if (mine != null) {
+                selectedInfo = mine.getId() + " (" + mine.getName() + ")";
+                boolean hasSpawn = mine.getSpawnX() != 0 || mine.getSpawnY() != 0 || mine.getSpawnZ() != 0;
+                int zoneCount = mine.getZones() != null ? mine.getZones().size() : 0;
+                BigNumber cost = mine.getUnlockCost();
+                String costStr = cost != null && !cost.equals(BigNumber.ZERO) ? cost.toString() : "Free";
+                mineInfo = "Zones: " + zoneCount + " | Spawn: " + (hasSpawn ? "OK" : "NO")
+                    + " | Order: " + mine.getDisplayOrder() + " | Cost: " + costStr;
+            } else {
+                selectedInfo = selectedMineId + " (not found)";
+            }
+        }
+        commandBuilder.set("#SelectedMineText.Text", "Selected: " + selectedInfo);
+        commandBuilder.set("#MineInfoText.Text", mineInfo);
+    }
+
+    private void buildMineList(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
+        commandBuilder.clear("#MineCards");
+        List<Mine> mines = new ArrayList<>(mineConfigStore.listMinesSorted());
+        int index = 0;
+        for (Mine mine : mines) {
+            commandBuilder.append("#MineCards", "Pages/Ascend_MineAdminEntry.ui");
+            String entrySelector = "#MineCards[" + index + "]";
+            String nameLabel = mine.getName() != null && !mine.getName().isBlank() ? mine.getName() : mine.getId();
+            boolean isSelected = mine.getId().equals(selectedMineId);
+            if (isSelected) {
+                nameLabel = ">> " + nameLabel;
+                commandBuilder.set(entrySelector + ".Background", "#253742");
+                commandBuilder.set(entrySelector + ".Style.Default.Background", "#253742");
+            }
+            commandBuilder.set(entrySelector + " #MineName.Text", nameLabel);
+            boolean hasSpawn = mine.getSpawnX() != 0 || mine.getSpawnY() != 0 || mine.getSpawnZ() != 0;
+            int zoneCount = mine.getZones() != null ? mine.getZones().size() : 0;
+            String status = "Zones: " + zoneCount + " | Spawn: " + (hasSpawn ? "OK" : "NO")
+                + " | Order: " + mine.getDisplayOrder();
+            commandBuilder.set(entrySelector + " #MineStatus.Text", status);
+            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
+                entrySelector,
+                EventData.of(MineData.KEY_BUTTON, MineData.BUTTON_SELECT_PREFIX + mine.getId()), false);
+            index++;
+        }
+    }
+
+    private void sendRefresh(Ref<EntityStore> ref, Store<EntityStore> store) {
+        UICommandBuilder commandBuilder = new UICommandBuilder();
+        UIEventBuilder eventBuilder = new UIEventBuilder();
+        populateFields(commandBuilder);
+        buildMineList(commandBuilder, eventBuilder);
+        bindEvents(eventBuilder);
+        this.sendUpdate(commandBuilder, eventBuilder, false);
+    }
+
+    public static class MineData {
+        static final String KEY_BUTTON = "Button";
+        static final String KEY_MINE_ID = "@MineId";
+        static final String KEY_MINE_NAME = "@MineName";
+        static final String KEY_MINE_ORDER = "@MineOrder";
+        static final String KEY_MINE_COST = "@MineCost";
+        static final String BUTTON_SELECT_PREFIX = "Select:";
+        static final String BUTTON_CREATE = "CreateMine";
+        static final String BUTTON_SET_NAME = "SetName";
+        static final String BUTTON_SET_ORDER = "SetOrder";
+        static final String BUTTON_SET_SPAWN = "SetSpawn";
+        static final String BUTTON_SET_COST = "SetCost";
+        static final String BUTTON_DELETE = "DeleteMine";
+        static final String BUTTON_ZONES = "Zones";
+        static final String BUTTON_GATE = "Gate";
+        static final String BUTTON_BACK = "Back";
+        static final String BUTTON_CLOSE = "Close";
+
+        public static final BuilderCodec<MineData> CODEC = BuilderCodec.<MineData>builder(MineData.class, MineData::new)
+            .addField(new KeyedCodec<>(KEY_BUTTON, Codec.STRING), (data, value) -> data.button = value, data -> data.button)
+            .addField(new KeyedCodec<>(KEY_MINE_ID, Codec.STRING), (data, value) -> data.mineId = value, data -> data.mineId)
+            .addField(new KeyedCodec<>(KEY_MINE_NAME, Codec.STRING), (data, value) -> data.mineName = value, data -> data.mineName)
+            .addField(new KeyedCodec<>(KEY_MINE_ORDER, Codec.STRING), (data, value) -> data.mineOrder = value, data -> data.mineOrder)
+            .addField(new KeyedCodec<>(KEY_MINE_COST, Codec.STRING), (data, value) -> data.mineCost = value, data -> data.mineCost)
+            .build();
+
+        private String button;
+        private String mineId;
+        private String mineName;
+        private String mineOrder;
+        private String mineCost;
+    }
+}
