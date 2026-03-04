@@ -22,14 +22,14 @@ import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MineZone;
 
 import javax.annotation.Nonnull;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
 public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage.ZoneData> {
 
-    private static final Map<UUID, int[]> pos1Selections = new HashMap<>();
-    private static final Map<UUID, int[]> pos2Selections = new HashMap<>();
+    // Shared with AscendAdminCommand so chat pos1/pos2 and UI are synchronized
+    private static Map<UUID, int[]> pos1Selections() { return io.hyvexa.ascend.command.AscendAdminCommand.minePos1; }
+    private static Map<UUID, int[]> pos2Selections() { return io.hyvexa.ascend.command.AscendAdminCommand.minePos2; }
 
     private final MineConfigStore mineConfigStore;
     private final String mineId;
@@ -45,7 +45,7 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, ZoneData.CODEC);
         this.mineConfigStore = mineConfigStore;
         this.mineId = mineId;
-        this.playerUuid = playerRef.getUUID();
+        this.playerUuid = playerRef.getUuid();
     }
 
     @Override
@@ -139,9 +139,9 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         int y = (int) Math.floor(position.getY() - 0.2d);
         int z = (int) Math.floor(position.getZ());
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-        UUID uuid = playerRef != null ? playerRef.getUUID() : null;
+        UUID uuid = playerRef != null ? playerRef.getUuid() : null;
         if (uuid == null) return;
-        pos1Selections.put(uuid, new int[]{x, y, z});
+        pos1Selections().put(uuid, new int[]{x, y, z});
         player.sendMessage(Message.raw("Pos1: (" + x + ", " + y + ", " + z + ")"));
         sendRefresh(ref, store);
     }
@@ -159,9 +159,9 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         int y = (int) Math.floor(position.getY() - 0.2d);
         int z = (int) Math.floor(position.getZ());
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-        UUID uuid = playerRef != null ? playerRef.getUUID() : null;
+        UUID uuid = playerRef != null ? playerRef.getUuid() : null;
         if (uuid == null) return;
-        pos2Selections.put(uuid, new int[]{x, y, z});
+        pos2Selections().put(uuid, new int[]{x, y, z});
         player.sendMessage(Message.raw("Pos2: (" + x + ", " + y + ", " + z + ")"));
         sendRefresh(ref, store);
     }
@@ -175,10 +175,10 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
             return;
         }
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-        UUID uuid = playerRef != null ? playerRef.getUUID() : null;
+        UUID uuid = playerRef != null ? playerRef.getUuid() : null;
         if (uuid == null) return;
-        int[] p1 = pos1Selections.get(uuid);
-        int[] p2 = pos2Selections.get(uuid);
+        int[] p1 = pos1Selections().get(uuid);
+        int[] p2 = pos2Selections().get(uuid);
         if (p1 == null || p2 == null) {
             player.sendMessage(Message.raw("Set both Pos1 and Pos2 first."));
             return;
@@ -190,8 +190,8 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         }
         MineZone zone = new MineZone(id, mineId, p1[0], p1[1], p1[2], p2[0], p2[1], p2[2]);
         mineConfigStore.saveZone(zone);
-        pos1Selections.remove(uuid);
-        pos2Selections.remove(uuid);
+        pos1Selections().remove(uuid);
+        pos2Selections().remove(uuid);
         selectedZoneId = id;
         player.sendMessage(Message.raw("Zone created: " + id + " (" + zone.getTotalBlocks() + " blocks)"));
         sendRefresh(ref, store);
@@ -305,13 +305,10 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
     }
 
     private void handleBack(Ref<EntityStore> ref, Store<EntityStore> store) {
-        this.close();
         Player player = store.getComponent(ref, Player.getComponentType());
-        if (player == null) return;
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-        if (playerRef == null) return;
-        MineAdminPage page = new MineAdminPage(playerRef, mineConfigStore);
-        player.openCustomUIPage(page);
+        if (player == null || playerRef == null) return;
+        player.getPageManager().openCustomPage(ref, store, new MineAdminPage(playerRef, mineConfigStore));
     }
 
     private MineZone resolveSelectedZone(Player player) {
@@ -409,8 +406,8 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
 
         // Show pos1/pos2 if set
         if (playerUuid != null) {
-            int[] p1 = pos1Selections.get(playerUuid);
-            int[] p2 = pos2Selections.get(playerUuid);
+            int[] p1 = pos1Selections().get(playerUuid);
+            int[] p2 = pos2Selections().get(playerUuid);
             commandBuilder.set("#Pos1Text.Text", p1 != null
                 ? "Pos1: (" + p1[0] + ", " + p1[1] + ", " + p1[2] + ")"
                 : "Pos1: (not set)");
