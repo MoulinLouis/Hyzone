@@ -15,6 +15,7 @@ import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.ui.MineSellPage;
+import io.hyvexa.ascend.mine.ui.MineUpgradePage;
 import io.hyvexa.ascend.ui.MineBagPage;
 import io.hyvexa.common.WorldConstants;
 import io.hyvexa.common.util.CommandUtils;
@@ -84,7 +85,11 @@ public class MineCommand extends AbstractAsyncCommand {
                     MineSellPage page = new MineSellPage(playerRef, progress);
                     player.getPageManager().openCustomPage(ref, store, page);
                 }
-                default -> player.sendMessage(Message.raw("Unknown subcommand. Use: /mine, /mine sell"));
+                case "upgrades" -> {
+                    MineUpgradePage page = new MineUpgradePage(playerRef, progress);
+                    player.getPageManager().openCustomPage(ref, store, page);
+                }
+                default -> player.sendMessage(Message.raw("Unknown subcommand. Use: /mine, /mine sell, /mine upgrades"));
             }
         }, world);
     }
