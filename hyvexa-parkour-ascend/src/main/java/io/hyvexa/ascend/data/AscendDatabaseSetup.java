@@ -284,6 +284,8 @@ public final class AscendDatabaseSetup {
                 ) ENGINE=InnoDB
                 """);
 
+            ensureMineUpgradeColumns(conn);
+
             // Mine block sell prices
             stmt.executeUpdate("""
                 CREATE TABLE IF NOT EXISTS mine_block_prices (
@@ -1205,6 +1207,27 @@ public final class AscendDatabaseSetup {
                 LOGGER.atInfo().log("Added auto_ascend_enabled column to ascend_players");
             } catch (SQLException e) {
                 LOGGER.atSevere().log("Failed to add auto_ascend_enabled column: " + e.getMessage());
+            }
+        }
+    }
+
+    private static void ensureMineUpgradeColumns(Connection conn) {
+        if (conn == null) {
+            return;
+        }
+        String[][] columns = {
+            {"mining_speed_level", "INT NOT NULL DEFAULT 0"},
+            {"bag_capacity_level", "INT NOT NULL DEFAULT 0"},
+            {"multi_break_level", "INT NOT NULL DEFAULT 0"},
+            {"auto_sell_level", "INT NOT NULL DEFAULT 0"}
+        };
+        for (String[] col : columns) {
+            if (!columnExists(conn, "mine_players", col[0])) {
+                try (Statement stmt = conn.createStatement()) {
+                    stmt.executeUpdate("ALTER TABLE mine_players ADD COLUMN " + col[0] + " " + col[1]);
+                } catch (SQLException e) {
+                    LOGGER.atSevere().log("Failed to add %s column to mine_players: %s", col[0], e.getMessage());
+                }
             }
         }
     }
