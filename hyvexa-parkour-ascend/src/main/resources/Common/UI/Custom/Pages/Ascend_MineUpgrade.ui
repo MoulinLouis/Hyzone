@@ -16,7 +16,6 @@ $C.@PageOverlay {
       LayoutMode: Full;
       Background: #0a1018;
 
-      // Top accent line (amber = mine/economy)
       Group {
         Anchor: (Left: 0, Right: 0, Top: 0, Height: 2);
         Background: #f59e0b;
@@ -61,7 +60,7 @@ $C.@PageOverlay {
       Padding: (Left: 16, Right: 16, Top: 12, Bottom: 12);
 
       // Crystals card
-      Group #CardCrystals {
+      Group {
         Anchor: (Left: 0, Right: 0, Height: 36);
         LayoutMode: Full;
         Background: #ffffff(0.03);
@@ -86,8 +85,8 @@ $C.@PageOverlay {
         }
       }
 
-      // Scrollable upgrade list
-      Group #ScrollArea {
+      // Upgrade list
+      Group {
         Anchor: (Left: 0, Right: 0, Top: 10);
         FlexWeight: 1;
         LayoutMode: TopScrolling;

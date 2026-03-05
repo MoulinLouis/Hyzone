@@ -1,49 +1,42 @@
 $C = "../Common.ui";
 
 Group {
-  Anchor: (Left: 0, Right: 0, Height: 64, Top: 6);
+  Anchor: (Left: 0, Right: 0, Height: 56);
   LayoutMode: Full;
   Background: #ffffff(0.03);
-  OutlineColor: #ffffff(0.04);
-  OutlineSize: 1;
+  Padding: (Top: 4);
 
-  // Left accent bar
   Group {
     Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
     Background: #f59e0b;
   }
 
-  // Upgrade name
   Label #UpgradeName {
-    Anchor: (Left: 16, Top: 8, Width: 200, Height: 20);
+    Anchor: (Left: 16, Top: 6, Width: 180, Height: 20);
     Style: (FontSize: 14, TextColor: #f0f4f8, RenderBold: true);
     Text: "Upgrade";
   }
 
-  // Level text
   Label #LevelText {
-    Anchor: (Left: 16, Top: 30, Width: 120, Height: 18);
+    Anchor: (Left: 16, Top: 28, Width: 100, Height: 18);
     Style: (FontSize: 12, TextColor: #9fb0ba);
     Text: "Lv 0 / 100";
   }
 
-  // Effect text
   Label #EffectText {
-    Anchor: (Left: 140, Top: 30, Width: 140, Height: 18);
+    Anchor: (Left: 120, Top: 28, Width: 120, Height: 18);
     Style: (FontSize: 12, TextColor: #f59e0b);
     Text: "Speed: 1.0x";
   }
 
-  // Cost text
   Label #CostText {
-    Anchor: (Right: 110, Top: 8, Width: 120, Height: 18);
+    Anchor: (Right: 100, Top: 6, Width: 110, Height: 18);
     Style: (FontSize: 12, TextColor: #a78bfa, HorizontalAlignment: Right);
     Text: "Cost: 10";
   }
 
-  // Buy button
   Group #BuyWrap {
-    Anchor: (Right: 8, Top: 10, Width: 90, Height: 44);
+    Anchor: (Right: 6, Top: 6, Width: 84, Height: 40);
 
     TextButton #BuyButton {
       Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
@@ -66,9 +59,8 @@ Group {
     }
   }
 
-  // Maxed label (hidden by default, shown when upgrade is maxed)
   Label #MaxedLabel {
-    Anchor: (Right: 20, Top: 10, Width: 90, Height: 44);
+    Anchor: (Right: 16, Top: 6, Width: 84, Height: 40);
     Style: (FontSize: 14, TextColor: #4ade80, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center);
     Text: "MAXED";
     Visible: false;
