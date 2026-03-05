@@ -1,0 +1,233 @@
+$C = "../Common.ui";
+
+$C.@PageOverlay {
+  Background: #000000(0.0);
+  Group #MineHudLayer {
+    Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+
+    Group #CrystalHud {
+      Anchor: (Left: 0, Right: 0, Top: 68, Height: 34);
+
+      Group #CrystalBar {
+        Anchor: (Width: 320, Height: 46);
+        Background: #000000(0.60);
+        LayoutMode: Top;
+
+        Group #CrystalAccent {
+          Anchor: (Left: 0, Right: 0, Height: 3);
+          Background: #22d3ee;
+        }
+
+        Group #CrystalContent {
+          FlexWeight: 1;
+          Anchor: (Left: 0, Right: 0);
+          LayoutMode: Left;
+
+          Group { FlexWeight: 1; }
+
+          Label #CrystalLabel {
+            Anchor: (Top: 0, Bottom: 0);
+            Style: (
+              FontSize: 30,
+              TextColor: #22d3ee,
+              RenderBold: true,
+              VerticalAlignment: Center
+            );
+            Text: "0";
+          }
+
+          Group { Anchor: (Width: 10); }
+
+          Label #CrystalSuffix {
+            Anchor: (Top: 0, Bottom: 0);
+            Style: (
+              FontSize: 22,
+              TextColor: #9fb0ba,
+              RenderBold: true,
+              VerticalAlignment: Center
+            );
+            Text: "Crystals";
+          }
+
+          Group { FlexWeight: 1; }
+        }
+      }
+    }
+
+    Group #BagHud {
+      Anchor: (Left: 20, Top: 130, Width: 260, Height: 280);
+      LayoutMode: Left;
+
+      Group #BagAccentBar {
+        Anchor: (Width: 4, Top: 0, Bottom: 0);
+        Background: #f59e0b;
+      }
+
+      Group #BagBox {
+        FlexWeight: 1;
+        Anchor: (Top: 0, Bottom: 0);
+        Background: #0d1620(0.95);
+        OutlineColor: #ffffff(0.06);
+        OutlineSize: 1;
+        LayoutMode: Top;
+        Padding: (Left: 14, Right: 14, Top: 12, Bottom: 12);
+
+        Label #BagTitle {
+          Style: (FontSize: 12, TextColor: #f59e0b(0.7), RenderUppercase: true, LetterSpacing: 2, RenderBold: true);
+          Text: "Inventory";
+        }
+
+        Group #BagSep {
+          Anchor: (Left: 0, Width: 30, Height: 2, Top: 6);
+          Background: #f59e0b;
+        }
+
+        Group #BagCountRow {
+          Anchor: (Left: 0, Right: 0, Top: 10, Height: 30);
+          LayoutMode: Left;
+
+          Label #BagCountLabel {
+            Anchor: (Top: 0, Bottom: 0);
+            Style: (FontSize: 24, TextColor: #f0f4f8, RenderBold: true, VerticalAlignment: Center);
+            Text: "0";
+          }
+
+          Label #BagSlash {
+            Anchor: (Top: 0, Bottom: 0);
+            Style: (FontSize: 24, TextColor: #9fb0ba, RenderBold: true, VerticalAlignment: Center);
+            Text: "/";
+          }
+
+          Label #BagCapLabel {
+            Anchor: (Top: 0, Bottom: 0);
+            Style: (FontSize: 24, TextColor: #9fb0ba, RenderBold: true, VerticalAlignment: Center);
+            Text: "50";
+          }
+        }
+
+        Group #BlockList {
+          Anchor: (Left: 0, Right: 0, Top: 8);
+          LayoutMode: Top;
+
+          Group #BlockEntry0 {
+            Anchor: (Left: 0, Right: 0, Height: 22);
+            LayoutMode: Left;
+            Visible: false;
+
+            Label #BlockName0 {
+              Anchor: (Top: 0, Bottom: 0);
+              Style: (FontSize: 16, TextColor: #cfd7dc, VerticalAlignment: Center);
+              Text: "";
+            }
+            Group { FlexWeight: 1; }
+            Label #BlockCount0 {
+              Anchor: (Top: 0, Bottom: 0);
+              Style: (FontSize: 16, TextColor: #f0f4f8, RenderBold: true, VerticalAlignment: Center);
+              Text: "0";
+            }
+          }
+
+          Group #BlockEntry1 {
+            Anchor: (Left: 0, Right: 0, Top: 2, Height: 22);
+            LayoutMode: Left;
+            Visible: false;
+
+            Label #BlockName1 {
+              Anchor: (Top: 0, Bottom: 0);
+              Style: (FontSize: 16, TextColor: #cfd7dc, VerticalAlignment: Center);
+              Text: "";
+            }
+            Group { FlexWeight: 1; }
+            Label #BlockCount1 {
+              Anchor: (Top: 0, Bottom: 0);
+              Style: (FontSize: 16, TextColor: #f0f4f8, RenderBold: true, VerticalAlignment: Center);
+              Text: "0";
+            }
+          }
+
+          Group #BlockEntry2 {
+            Anchor: (Left: 0, Right: 0, Top: 2, Height: 22);
+            LayoutMode: Left;
+            Visible: false;
+
+            Label #BlockName2 {
+              Anchor: (Top: 0, Bottom: 0);
+              Style: (FontSize: 16, TextColor: #cfd7dc, VerticalAlignment: Center);
+              Text: "";
+            }
+            Group { FlexWeight: 1; }
+            Label #BlockCount2 {
+              Anchor: (Top: 0, Bottom: 0);
+              Style: (FontSize: 16, TextColor: #f0f4f8, RenderBold: true, VerticalAlignment: Center);
+              Text: "0";
+            }
+          }
+
+          Group #BlockEntry3 {
+            Anchor: (Left: 0, Right: 0, Top: 2, Height: 22);
+            LayoutMode: Left;
+            Visible: false;
+
+            Label #BlockName3 {
+              Anchor: (Top: 0, Bottom: 0);
+              Style: (FontSize: 16, TextColor: #cfd7dc, VerticalAlignment: Center);
+              Text: "";
+            }
+            Group { FlexWeight: 1; }
+            Label #BlockCount3 {
+              Anchor: (Top: 0, Bottom: 0);
+              Style: (FontSize: 16, TextColor: #f0f4f8, RenderBold: true, VerticalAlignment: Center);
+              Text: "0";
+            }
+          }
+
+          Group #BlockEntry4 {
+            Anchor: (Left: 0, Right: 0, Top: 2, Height: 22);
+            LayoutMode: Left;
+            Visible: false;
+
+            Label #BlockName4 {
+              Anchor: (Top: 0, Bottom: 0);
+              Style: (FontSize: 16, TextColor: #cfd7dc, VerticalAlignment: Center);
+              Text: "";
+            }
+            Group { FlexWeight: 1; }
+            Label #BlockCount4 {
+              Anchor: (Top: 0, Bottom: 0);
+              Style: (FontSize: 16, TextColor: #f0f4f8, RenderBold: true, VerticalAlignment: Center);
+              Text: "0";
+            }
+          }
+        }
+
+        Group #CooldownSection {
+          Anchor: (Left: 0, Right: 0, Top: 10);
+          LayoutMode: Top;
+          Visible: false;
+
+          Group #CooldownDivider {
+            Anchor: (Left: 0, Right: 0, Height: 1);
+            Background: #ffffff(0.06);
+          }
+
+          Group #CooldownRow {
+            Anchor: (Left: 0, Right: 0, Top: 8, Height: 22);
+            LayoutMode: Left;
+
+            Label #CooldownLabel {
+              Anchor: (Top: 0, Bottom: 0);
+              Style: (FontSize: 16, TextColor: #ef4444, RenderBold: true, VerticalAlignment: Center);
+              Text: "Regen";
+            }
+            Group { FlexWeight: 1; }
+            Label #CooldownTimer {
+              Anchor: (Top: 0, Bottom: 0);
+              Style: (FontSize: 16, TextColor: #ef4444, RenderBold: true, VerticalAlignment: Center);
+              Text: "0s";
+            }
+          }
+        }
+      }
+    }
+  }
+}
