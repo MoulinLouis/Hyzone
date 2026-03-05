@@ -94,7 +94,21 @@ public class MineCommand extends AbstractAsyncCommand {
                     MineSelectPage page = new MineSelectPage(playerRef, progress);
                     player.getPageManager().openCustomPage(ref, store, page);
                 }
-                default -> player.sendMessage(Message.raw("Unknown subcommand. Use: /mine, /mine sell, /mine upgrades, /mine select"));
+                case "addcrystals" -> {
+                    if (args.length < 2) {
+                        player.sendMessage(Message.raw("[Mine] Usage: /mine addcrystals <amount>").color(SystemMessageUtils.SECONDARY));
+                        return;
+                    }
+                    try {
+                        long amount = Long.parseLong(args[1]);
+                        progress.addCrystals(amount);
+                        mineStore.markDirty(playerRef.getUuid());
+                        player.sendMessage(Message.raw("[Mine] Added " + amount + " crystals. Total: " + progress.getCrystals()).color(SystemMessageUtils.SECONDARY));
+                    } catch (NumberFormatException e) {
+                        player.sendMessage(Message.raw("[Mine] Invalid number: " + args[1]).color(SystemMessageUtils.SECONDARY));
+                    }
+                }
+                default -> player.sendMessage(Message.raw("Unknown subcommand. Use: /mine, /mine sell, /mine upgrades, /mine select, /mine addcrystals <amount>"));
             }
         }, world);
     }
