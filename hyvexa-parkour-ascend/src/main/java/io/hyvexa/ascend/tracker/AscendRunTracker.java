@@ -17,6 +17,8 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.achievement.AchievementManager;
+import io.hyvexa.ascend.mine.MineBonusCalculator;
+import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.tutorial.TutorialTriggerService;
 
 import io.hyvexa.ascend.hud.AscendHudManager;
@@ -286,9 +288,32 @@ public class AscendRunTracker {
 
         BigNumber multiplierIncrement = runnerIncrement.multiply(BigNumber.fromDouble(5.0));
 
+        // Mine cross-progression bonuses
+        MineBonusCalculator mineBonusCalc = plugin != null ? plugin.getMineBonusCalculator() : null;
+        MinePlayerProgress mineProgress = null;
+        if (mineBonusCalc != null && plugin.getMinePlayerStore() != null) {
+            mineProgress = plugin.getMinePlayerStore().getPlayer(playerId);
+        }
+
+        // Mine cross-progression: multiplier gain bonus
+        if (mineBonusCalc != null && mineProgress != null) {
+            double multBonus = mineBonusCalc.getMultiplierGainMultiplier(mineProgress);
+            if (multBonus > 1.0) {
+                multiplierIncrement = multiplierIncrement.multiply(BigNumber.fromDouble(multBonus));
+            }
+        }
+
         // Calculate payout BEFORE adding multiplier (use current multiplier, not the new one)
         List<AscendMap> multiplierMaps = mapStore.listMapsSorted();
         BigNumber payout = playerStore.getCompletionPayout(playerId, multiplierMaps, AscendConstants.MULTIPLIER_SLOTS, run.mapId, BigNumber.ZERO);
+
+        // Mine cross-progression: volt gain bonus
+        if (mineBonusCalc != null && mineProgress != null) {
+            double voltBonus = mineBonusCalc.getVoltGainMultiplier(mineProgress);
+            if (voltBonus > 1.0) {
+                payout = payout.multiply(BigNumber.fromDouble(voltBonus));
+            }
+        }
 
         // Use atomic operations to prevent race conditions
         if (!playerStore.atomicAddVolt(playerId, payout)) {
