@@ -16,15 +16,20 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.mine.MineManager;
+import io.hyvexa.ascend.mine.data.Mine;
+import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.data.MineZone;
+import io.hyvexa.common.math.BigNumber;
 import io.hyvexa.common.util.PermissionUtils;
 import com.hypixel.hytale.logger.HytaleLogger;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class MineBreakSystem extends EntityEventSystem<EntityStore, BreakBlockEvent> {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
@@ -32,6 +37,7 @@ public class MineBreakSystem extends EntityEventSystem<EntityStore, BreakBlockEv
     private final MinePlayerStore minePlayerStore;
     private final Map<UUID, Long> lastBagFullMessage = new ConcurrentHashMap<>();
     private final Map<UUID, Long> lastRegenMessage = new ConcurrentHashMap<>();
+    private final Map<UUID, Long> lastBreakTime = new ConcurrentHashMap<>();
 
     public MineBreakSystem(MineManager mineManager, MinePlayerStore minePlayerStore) {
         super(BreakBlockEvent.class);
@@ -120,6 +126,16 @@ public class MineBreakSystem extends EntityEventSystem<EntityStore, BreakBlockEv
             return;
         }
 
+        // Mining speed cooldown
+        long now = System.currentTimeMillis();
+        Long lastBreak = lastBreakTime.get(playerId);
+        double speedMult = mineProgress.getMiningSpeedMultiplier();
+        long cooldownMs = (long) (500 / speedMult);
+        if (lastBreak != null && now - lastBreak < cooldownMs) {
+            return;
+        }
+        lastBreakTime.put(playerId, now);
+
         // Resolve block type name
         String blockTypeName = event.getBlockType() != null ? event.getBlockType().getId() : null;
         LOGGER.atInfo().log("[MineBreak] blockType=%s", blockTypeName);
@@ -141,7 +157,26 @@ public class MineBreakSystem extends EntityEventSystem<EntityStore, BreakBlockEv
         LOGGER.atInfo().log("[MineBreak] ALLOWED break (op=%s)", isOp);
 
         if (blockTypeName != null) {
-            mineProgress.addToInventory(blockTypeName, 1);
+            int blocksGained = 1;
+            double multiBreakChance = mineProgress.getMultiBreakChance();
+            if (multiBreakChance > 0 && ThreadLocalRandom.current().nextDouble() < multiBreakChance) {
+                blocksGained = 2;
+            }
+
+            if (mineProgress.isAutoSellEnabled()) {
+                MineConfigStore configStore = ParkourAscendPlugin.getInstance().getMineConfigStore();
+                if (configStore != null) {
+                    HashMap<String, BigNumber> prices = new HashMap<>();
+                    for (Mine mine : configStore.listMinesSorted()) {
+                        prices.putAll(configStore.getBlockPrices(mine.getId()));
+                    }
+                    BigNumber price = prices.getOrDefault(blockTypeName, BigNumber.ONE);
+                    BigNumber earned = price.multiply(BigNumber.of(blocksGained, 0));
+                    mineProgress.setCrystals(mineProgress.getCrystals().add(earned));
+                }
+            } else {
+                mineProgress.addToInventory(blockTypeName, blocksGained);
+            }
             minePlayerStore.markDirty(playerId);
         }
 
