@@ -11,6 +11,7 @@ public class MinePlayerProgress {
     private final Map<String, Integer> inventory = new ConcurrentHashMap<>(); // blockTypeId -> count
     private final AtomicLong crystals = new AtomicLong(0);
     private final Map<MineUpgradeType, Integer> upgradeLevels = new ConcurrentHashMap<>();
+    private final Map<String, MineProgress> mineStates = new ConcurrentHashMap<>();
 
     public MinePlayerProgress(UUID playerId) {
         this.playerId = playerId;
@@ -103,5 +104,34 @@ public class MinePlayerProgress {
         return getUpgradeLevel(MineUpgradeType.AUTO_SELL) >= 1;
     }
 
-    // Per-mine state (unlocked, completed, etc.) will be added in Phase 6
+    // --- Per-mine state ---
+
+    public static class MineProgress {
+        volatile boolean unlocked;
+        volatile boolean completedManually;
+
+        public MineProgress() {}
+        public boolean isUnlocked() { return unlocked; }
+        public void setUnlocked(boolean u) { unlocked = u; }
+        public boolean isCompletedManually() { return completedManually; }
+        public void setCompletedManually(boolean c) { completedManually = c; }
+    }
+
+    public MineProgress getMineState(String mineId) {
+        return mineStates.computeIfAbsent(mineId, k -> new MineProgress());
+    }
+
+    public Map<String, MineProgress> getMineStates() { return mineStates; }
+
+    public boolean unlockMine(String mineId, BigNumber cost) {
+        MineProgress state = getMineState(mineId);
+        if (state.isUnlocked()) return false;
+
+        long current = crystals.get();
+        if (current < cost.toLong()) return false;
+
+        crystals.set(current - cost.toLong());
+        state.setUnlocked(true);
+        return true;
+    }
 }

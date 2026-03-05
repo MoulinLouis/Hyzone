@@ -298,6 +298,19 @@ public final class AscendDatabaseSetup {
                 ) ENGINE=InnoDB
                 """);
 
+            // Per-mine player state (unlocked, completed)
+            stmt.executeUpdate("""
+                CREATE TABLE IF NOT EXISTS mine_player_mines (
+                    player_uuid VARCHAR(36) NOT NULL,
+                    mine_id VARCHAR(32) NOT NULL,
+                    unlocked BOOLEAN NOT NULL DEFAULT FALSE,
+                    completed_manually BOOLEAN NOT NULL DEFAULT FALSE,
+                    PRIMARY KEY (player_uuid, mine_id),
+                    FOREIGN KEY (player_uuid) REFERENCES mine_players(uuid) ON DELETE CASCADE,
+                    FOREIGN KEY (mine_id) REFERENCES mine_definitions(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB
+                """);
+
             LOGGER.atInfo().log("Ascend database tables ensured");
             } // close try (Statement stmt)
 

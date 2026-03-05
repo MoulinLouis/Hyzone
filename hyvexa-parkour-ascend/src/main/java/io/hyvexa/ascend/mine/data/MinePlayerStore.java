@@ -2,12 +2,14 @@ package io.hyvexa.ascend.mine.data;
 
 import com.google.common.flogger.FluentLogger;
 import com.hypixel.hytale.server.core.HytaleServer;
+import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.core.db.DatabaseManager;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -34,6 +36,17 @@ public class MinePlayerStore {
             ensurePlayerRow(playerId);
         }
         players.put(playerId, progress);
+
+        // Auto-unlock first mine for all players
+        List<Mine> mines = ParkourAscendPlugin.getInstance().getMineConfigStore().listMinesSorted();
+        if (!mines.isEmpty()) {
+            MinePlayerProgress.MineProgress firstMineState = progress.getMineState(mines.get(0).getId());
+            if (!firstMineState.isUnlocked()) {
+                firstMineState.setUnlocked(true);
+                markDirty(playerId);
+            }
+        }
+
         return progress;
     }
 
@@ -96,6 +109,19 @@ public class MinePlayerStore {
                             rs.getString("block_type_id"),
                             rs.getInt("amount")
                         );
+                    }
+                }
+            }
+
+            // Load mine states
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "SELECT mine_id, unlocked, completed_manually FROM mine_player_mines WHERE player_uuid = ?")) {
+                ps.setString(1, playerId.toString());
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        MinePlayerProgress.MineProgress ms = progress.getMineState(rs.getString("mine_id"));
+                        ms.setUnlocked(rs.getBoolean("unlocked"));
+                        ms.setCompletedManually(rs.getBoolean("completed_manually"));
                     }
                 }
             }
@@ -165,6 +191,26 @@ public class MinePlayerStore {
                         ps.setString(1, playerId.toString());
                         ps.setString(2, entry.getKey());
                         ps.setInt(3, entry.getValue());
+                        ps.addBatch();
+                    }
+                    ps.executeBatch();
+                }
+            }
+
+            // Save mine states
+            Map<String, MinePlayerProgress.MineProgress> mineStates = progress.getMineStates();
+            if (!mineStates.isEmpty()) {
+                try (PreparedStatement ps = conn.prepareStatement("""
+                        INSERT INTO mine_player_mines (player_uuid, mine_id, unlocked, completed_manually)
+                        VALUES (?, ?, ?, ?)
+                        ON DUPLICATE KEY UPDATE unlocked = VALUES(unlocked),
+                                                completed_manually = VALUES(completed_manually)
+                        """)) {
+                    for (var entry : mineStates.entrySet()) {
+                        ps.setString(1, playerId.toString());
+                        ps.setString(2, entry.getKey());
+                        ps.setBoolean(3, entry.getValue().isUnlocked());
+                        ps.setBoolean(4, entry.getValue().isCompletedManually());
                         ps.addBatch();
                     }
                     ps.executeBatch();
