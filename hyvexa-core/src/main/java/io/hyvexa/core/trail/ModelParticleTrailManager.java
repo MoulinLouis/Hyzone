@@ -84,7 +84,11 @@ public class ModelParticleTrailManager extends AbstractTrailManager<ModelParticl
     @Override
     public void stopTrail(UUID playerId) {
         TrailState removed = activeTrails.remove(playerId);
-        sendClearPacket(removed);
+        if (removed != null && removed.world != null) {
+            try {
+                removed.world.execute(() -> sendClearPacket(removed));
+            } catch (Exception ignored) {}
+        }
         super.stopTrail(playerId);
     }
 
@@ -122,7 +126,7 @@ public class ModelParticleTrailManager extends AbstractTrailManager<ModelParticl
                 source.getNetworkId(),
                 new ModelParticle[0]
         );
-        broadcastPacket(world, collectViewerSnapshot().viewersForWorld(world), clearPacket);
+        broadcastPacket(world, collectViewersForWorld(world), clearPacket);
     }
 
     static final class TrailState {

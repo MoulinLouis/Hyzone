@@ -102,10 +102,9 @@ abstract class AbstractTrailManager<TState> {
                 return;
             }
             long now = System.currentTimeMillis();
-            ViewerSnapshot viewerSnapshot = collectViewerSnapshot();
             for (AbstractTrailManager<?> manager : MANAGERS) {
                 try {
-                    manager.tickTrails(now, viewerSnapshot);
+                    manager.tickTrails(now);
                 } catch (Exception e) {
                     manager.logger().atWarning().withCause(e).log("Trail scheduler tick failed");
                 }
@@ -117,7 +116,7 @@ abstract class AbstractTrailManager<TState> {
         }
     }
 
-    private void tickTrails(long now, ViewerSnapshot viewerSnapshot) {
+    private void tickTrails(long now) {
         if (activeTrails.isEmpty()) {
             return;
         }
@@ -143,12 +142,14 @@ abstract class AbstractTrailManager<TState> {
         for (Map.Entry<World, List<TState>> entry : dueByWorld.entrySet()) {
             World world = entry.getKey();
             List<TState> states = entry.getValue();
-            List<ViewerState> viewers = viewerSnapshot.viewersForWorld(world);
             if (world == null || states.isEmpty()) {
                 continue;
             }
             try {
-                world.execute(() -> emitWorldTrails(world, states, viewers));
+                world.execute(() -> {
+                    List<ViewerState> viewers = collectViewersForWorld(world);
+                    emitWorldTrails(world, states, viewers);
+                });
             } catch (Exception e) {
                 logger().atWarning().withCause(e).log("Trail schedule error for world " + world.getName());
             }
@@ -184,8 +185,11 @@ abstract class AbstractTrailManager<TState> {
         }
     }
 
-    static ViewerSnapshot collectViewerSnapshot() {
-        Map<World, List<ViewerState>> viewersByWorld = new HashMap<>();
+    /**
+     * Collect viewer positions for a specific world. Must be called on that world's thread.
+     */
+    static List<ViewerState> collectViewersForWorld(World world) {
+        List<ViewerState> viewers = new ArrayList<>();
         for (PlayerRef viewer : Universe.get().getPlayers()) {
             if (viewer == null || !viewer.isValid()) {
                 continue;
@@ -195,8 +199,7 @@ abstract class AbstractTrailManager<TState> {
                 continue;
             }
             Store<EntityStore> viewerStore = viewerRef.getStore();
-            World viewerWorld = viewerStore.getExternalData().getWorld();
-            if (viewerWorld == null) {
+            if (viewerStore.getExternalData().getWorld() != world) {
                 continue;
             }
             TransformComponent transform = viewerStore.getComponent(viewerRef, TransformComponent.getComponentType());
@@ -204,11 +207,9 @@ abstract class AbstractTrailManager<TState> {
                 continue;
             }
             var position = transform.getPosition();
-            viewersByWorld.computeIfAbsent(viewerWorld, ignored -> new ArrayList<>()).add(
-                    new ViewerState(viewer, position.getX(), position.getY(), position.getZ())
-            );
+            viewers.add(new ViewerState(viewer, position.getX(), position.getY(), position.getZ()));
         }
-        return new ViewerSnapshot(viewersByWorld);
+        return viewers;
     }
 
     private static boolean hasActiveTrails() {
@@ -323,10 +324,4 @@ abstract class AbstractTrailManager<TState> {
     }
 
     record ViewerState(PlayerRef playerRef, double x, double y, double z) {}
-
-    record ViewerSnapshot(Map<World, List<ViewerState>> viewersByWorld) {
-        List<ViewerState> viewersForWorld(World world) {
-            return viewersByWorld.getOrDefault(world, List.of());
-        }
-    }
 }
