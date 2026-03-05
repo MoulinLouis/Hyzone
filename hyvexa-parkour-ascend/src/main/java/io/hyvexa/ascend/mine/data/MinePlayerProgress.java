@@ -12,6 +12,7 @@ public class MinePlayerProgress {
     private final AtomicLong crystals = new AtomicLong(0);
     private final Map<MineUpgradeType, Integer> upgradeLevels = new ConcurrentHashMap<>();
     private final Map<String, MineProgress> mineStates = new ConcurrentHashMap<>();
+    private final Map<String, MinerProgress> minerStates = new ConcurrentHashMap<>();
 
     public MinePlayerProgress(UUID playerId) {
         this.playerId = playerId;
@@ -122,6 +123,28 @@ public class MinePlayerProgress {
     }
 
     public Map<String, MineProgress> getMineStates() { return mineStates; }
+
+    // --- Per-mine miner state ---
+
+    public static class MinerProgress {
+        volatile boolean hasMiner;
+        volatile int speedLevel;
+        volatile int stars;
+
+        public MinerProgress() {}
+        public boolean isHasMiner() { return hasMiner; }
+        public void setHasMiner(boolean h) { hasMiner = h; }
+        public int getSpeedLevel() { return speedLevel; }
+        public void setSpeedLevel(int s) { speedLevel = s; }
+        public int getStars() { return stars; }
+        public void setStars(int s) { stars = s; }
+    }
+
+    public MinerProgress getMinerState(String mineId) {
+        return minerStates.computeIfAbsent(mineId, k -> new MinerProgress());
+    }
+
+    public Map<String, MinerProgress> getMinerStates() { return minerStates; }
 
     public boolean unlockMine(String mineId, BigNumber cost) {
         MineProgress state = getMineState(mineId);

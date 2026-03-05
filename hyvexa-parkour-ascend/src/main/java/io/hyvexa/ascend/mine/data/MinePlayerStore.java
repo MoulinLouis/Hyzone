@@ -126,6 +126,20 @@ public class MinePlayerStore {
                 }
             }
 
+            // Load miner states
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "SELECT mine_id, has_miner, speed_level, stars FROM mine_player_miners WHERE player_uuid = ?")) {
+                ps.setString(1, playerId.toString());
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        MinePlayerProgress.MinerProgress mp = progress.getMinerState(rs.getString("mine_id"));
+                        mp.setHasMiner(rs.getBoolean("has_miner"));
+                        mp.setSpeedLevel(rs.getInt("speed_level"));
+                        mp.setStars(rs.getInt("stars"));
+                    }
+                }
+            }
+
             return progress;
         } catch (SQLException e) {
             LOGGER.atSevere().log("Failed to load mine player %s: %s", playerId, e.getMessage());
@@ -211,6 +225,28 @@ public class MinePlayerStore {
                         ps.setString(2, entry.getKey());
                         ps.setBoolean(3, entry.getValue().isUnlocked());
                         ps.setBoolean(4, entry.getValue().isCompletedManually());
+                        ps.addBatch();
+                    }
+                    ps.executeBatch();
+                }
+            }
+
+            // Save miner states
+            Map<String, MinePlayerProgress.MinerProgress> minerStates = progress.getMinerStates();
+            if (!minerStates.isEmpty()) {
+                try (PreparedStatement ps = conn.prepareStatement("""
+                        INSERT INTO mine_player_miners (player_uuid, mine_id, has_miner, speed_level, stars)
+                        VALUES (?, ?, ?, ?, ?)
+                        ON DUPLICATE KEY UPDATE has_miner = VALUES(has_miner),
+                                                speed_level = VALUES(speed_level),
+                                                stars = VALUES(stars)
+                        """)) {
+                    for (var entry : minerStates.entrySet()) {
+                        ps.setString(1, playerId.toString());
+                        ps.setString(2, entry.getKey());
+                        ps.setBoolean(3, entry.getValue().isHasMiner());
+                        ps.setInt(4, entry.getValue().getSpeedLevel());
+                        ps.setInt(5, entry.getValue().getStars());
                         ps.addBatch();
                     }
                     ps.executeBatch();

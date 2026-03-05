@@ -311,6 +311,20 @@ public final class AscendDatabaseSetup {
                 ) ENGINE=InnoDB
                 """);
 
+            // Per-mine miner state (hired miner, speed, stars)
+            stmt.executeUpdate("""
+                CREATE TABLE IF NOT EXISTS mine_player_miners (
+                    player_uuid VARCHAR(36) NOT NULL,
+                    mine_id VARCHAR(32) NOT NULL,
+                    has_miner BOOLEAN NOT NULL DEFAULT FALSE,
+                    speed_level INT NOT NULL DEFAULT 0,
+                    stars INT NOT NULL DEFAULT 0,
+                    PRIMARY KEY (player_uuid, mine_id),
+                    FOREIGN KEY (player_uuid) REFERENCES mine_players(uuid) ON DELETE CASCADE,
+                    FOREIGN KEY (mine_id) REFERENCES mine_definitions(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB
+                """);
+
             LOGGER.atInfo().log("Ascend database tables ensured");
             } // close try (Statement stmt)
 
