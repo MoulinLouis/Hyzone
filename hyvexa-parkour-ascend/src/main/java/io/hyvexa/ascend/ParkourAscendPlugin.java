@@ -840,6 +840,15 @@ public class ParkourAscendPlugin extends JavaPlugin {
         registry.register("Shop_Item_Interaction",
             io.hyvexa.common.interaction.ShopItemInteraction.class,
             io.hyvexa.common.interaction.ShopItemInteraction.CODEC);
+        // Mine Select -> MineSelectPage
+        registry.register("Mine_Select_Interaction",
+            AscendDevInteraction.class, AscendDevInteraction.codec(() -> new AscendDevInteraction(
+                (ref, store, playerRef, plugin) -> {
+                    MinePlayerProgress progress = plugin.getMinePlayerStore().getOrCreatePlayer(playerRef.getUuid());
+                    return new io.hyvexa.ascend.mine.ui.MineSelectPage(playerRef, progress);
+                },
+                (plugin, player) -> plugin.getMinePlayerStore() != null && plugin.getMineConfigStore() != null,
+                true, true)));
         // Mine Sell -> MineSellPage
         registry.register("Mine_Sell_Interaction",
             AscendDevInteraction.class, AscendDevInteraction.codec(() -> new AscendDevInteraction(

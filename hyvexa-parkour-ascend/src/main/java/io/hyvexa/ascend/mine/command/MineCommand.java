@@ -14,6 +14,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
+import io.hyvexa.ascend.mine.ui.MineSelectPage;
 import io.hyvexa.ascend.mine.ui.MineSellPage;
 import io.hyvexa.ascend.mine.ui.MineUpgradePage;
 import io.hyvexa.ascend.ui.MineBagPage;
@@ -89,7 +90,11 @@ public class MineCommand extends AbstractAsyncCommand {
                     MineUpgradePage page = new MineUpgradePage(playerRef, progress);
                     player.getPageManager().openCustomPage(ref, store, page);
                 }
-                default -> player.sendMessage(Message.raw("Unknown subcommand. Use: /mine, /mine sell, /mine upgrades"));
+                case "select" -> {
+                    MineSelectPage page = new MineSelectPage(playerRef, progress);
+                    player.getPageManager().openCustomPage(ref, store, page);
+                }
+                default -> player.sendMessage(Message.raw("Unknown subcommand. Use: /mine, /mine sell, /mine upgrades, /mine select"));
             }
         }, world);
     }
