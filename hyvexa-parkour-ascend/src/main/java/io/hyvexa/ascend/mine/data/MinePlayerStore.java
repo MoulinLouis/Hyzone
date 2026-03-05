@@ -2,7 +2,6 @@ package io.hyvexa.ascend.mine.data;
 
 import com.google.common.flogger.FluentLogger;
 import com.hypixel.hytale.server.core.HytaleServer;
-import io.hyvexa.common.math.BigNumber;
 import io.hyvexa.core.db.DatabaseManager;
 
 import java.sql.Connection;
@@ -71,14 +70,12 @@ public class MinePlayerStore {
             // Load player crystals + upgrades
             MinePlayerProgress progress = null;
             try (PreparedStatement ps = conn.prepareStatement(
-                    "SELECT crystals_mantissa, crystals_exp10, mining_speed_level, bag_capacity_level, multi_break_level, auto_sell_level FROM mine_players WHERE uuid = ?")) {
+                    "SELECT crystals, mining_speed_level, bag_capacity_level, multi_break_level, auto_sell_level FROM mine_players WHERE uuid = ?")) {
                 ps.setString(1, playerId.toString());
                 try (ResultSet rs = ps.executeQuery()) {
                     if (rs.next()) {
                         progress = new MinePlayerProgress(playerId);
-                        double mantissa = rs.getDouble("crystals_mantissa");
-                        int exp10 = rs.getInt("crystals_exp10");
-                        progress.setCrystals(BigNumber.of(mantissa, exp10));
+                        progress.setCrystals(rs.getLong("crystals"));
                         progress.setUpgradeLevel(MineUpgradeType.MINING_SPEED, rs.getInt("mining_speed_level"));
                         progress.setUpgradeLevel(MineUpgradeType.BAG_CAPACITY, rs.getInt("bag_capacity_level"));
                         progress.setUpgradeLevel(MineUpgradeType.MULTI_BREAK, rs.getInt("multi_break_level"));
@@ -133,25 +130,23 @@ public class MinePlayerStore {
             if (conn == null) return;
 
             // Save crystals + upgrades
-            BigNumber crystals = progress.getCrystals();
+            long crystals = progress.getCrystals();
             try (PreparedStatement ps = conn.prepareStatement("""
-                    INSERT INTO mine_players (uuid, crystals_mantissa, crystals_exp10,
+                    INSERT INTO mine_players (uuid, crystals,
                         mining_speed_level, bag_capacity_level, multi_break_level, auto_sell_level)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                    ON DUPLICATE KEY UPDATE crystals_mantissa = VALUES(crystals_mantissa),
-                                            crystals_exp10 = VALUES(crystals_exp10),
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    ON DUPLICATE KEY UPDATE crystals = VALUES(crystals),
                                             mining_speed_level = VALUES(mining_speed_level),
                                             bag_capacity_level = VALUES(bag_capacity_level),
                                             multi_break_level = VALUES(multi_break_level),
                                             auto_sell_level = VALUES(auto_sell_level)
                     """)) {
                 ps.setString(1, playerId.toString());
-                ps.setDouble(2, crystals.getMantissa());
-                ps.setInt(3, crystals.getExponent());
-                ps.setInt(4, progress.getUpgradeLevel(MineUpgradeType.MINING_SPEED));
-                ps.setInt(5, progress.getUpgradeLevel(MineUpgradeType.BAG_CAPACITY));
-                ps.setInt(6, progress.getUpgradeLevel(MineUpgradeType.MULTI_BREAK));
-                ps.setInt(7, progress.getUpgradeLevel(MineUpgradeType.AUTO_SELL));
+                ps.setLong(2, crystals);
+                ps.setInt(3, progress.getUpgradeLevel(MineUpgradeType.MINING_SPEED));
+                ps.setInt(4, progress.getUpgradeLevel(MineUpgradeType.BAG_CAPACITY));
+                ps.setInt(5, progress.getUpgradeLevel(MineUpgradeType.MULTI_BREAK));
+                ps.setInt(6, progress.getUpgradeLevel(MineUpgradeType.AUTO_SELL));
                 ps.executeUpdate();
             }
 

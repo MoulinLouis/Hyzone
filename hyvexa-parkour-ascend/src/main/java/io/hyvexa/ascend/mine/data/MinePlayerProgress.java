@@ -4,12 +4,12 @@ import io.hyvexa.common.math.BigNumber;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class MinePlayerProgress {
     private final UUID playerId;
     private final Map<String, Integer> inventory = new ConcurrentHashMap<>(); // blockTypeId -> count
-    private final AtomicReference<BigNumber> crystals = new AtomicReference<>(BigNumber.ZERO);
+    private final AtomicLong crystals = new AtomicLong(0);
     private final Map<MineUpgradeType, Integer> upgradeLevels = new ConcurrentHashMap<>();
 
     public MinePlayerProgress(UUID playerId) {
@@ -34,14 +34,13 @@ public class MinePlayerProgress {
     /**
      * Sells all blocks in inventory, returns total crystals earned.
      */
-    public BigNumber sellAll(Map<String, BigNumber> blockPrices) {
-        BigNumber total = BigNumber.ZERO;
+    public long sellAll(Map<String, BigNumber> blockPrices) {
+        long total = 0;
         for (var entry : inventory.entrySet()) {
             BigNumber price = blockPrices.getOrDefault(entry.getKey(), BigNumber.ONE);
-            BigNumber earned = price.multiply(BigNumber.of(entry.getValue(), 0));
-            total = total.add(earned);
+            total += price.multiply(BigNumber.of(entry.getValue(), 0)).toLong();
         }
-        crystals.set(crystals.get().add(total));
+        crystals.addAndGet(total);
         inventory.clear();
         return total;
     }
@@ -49,19 +48,20 @@ public class MinePlayerProgress {
     /**
      * Calculate total value without selling.
      */
-    public BigNumber calculateInventoryValue(Map<String, BigNumber> blockPrices) {
-        BigNumber total = BigNumber.ZERO;
+    public long calculateInventoryValue(Map<String, BigNumber> blockPrices) {
+        long total = 0;
         for (var entry : inventory.entrySet()) {
             BigNumber price = blockPrices.getOrDefault(entry.getKey(), BigNumber.ONE);
-            total = total.add(price.multiply(BigNumber.of(entry.getValue(), 0)));
+            total += price.multiply(BigNumber.of(entry.getValue(), 0)).toLong();
         }
         return total;
     }
 
     public Map<String, Integer> getInventory() { return inventory; }
     public void clearInventory() { inventory.clear(); }
-    public BigNumber getCrystals() { return crystals.get(); }
-    public void setCrystals(BigNumber value) { crystals.set(value); }
+    public long getCrystals() { return crystals.get(); }
+    public void setCrystals(long value) { crystals.set(value); }
+    public void addCrystals(long amount) { crystals.addAndGet(amount); }
     public UUID getPlayerId() { return playerId; }
 
     // --- Upgrades ---
@@ -78,11 +78,11 @@ public class MinePlayerProgress {
         int currentLevel = getUpgradeLevel(type);
         if (currentLevel >= type.getMaxLevel()) return false;
 
-        BigNumber cost = type.getCost(currentLevel);
-        BigNumber current = crystals.get();
-        if (current.compareTo(cost) < 0) return false;
+        long cost = type.getCost(currentLevel);
+        long current = crystals.get();
+        if (current < cost) return false;
 
-        crystals.set(current.subtract(cost));
+        crystals.set(current - cost);
         upgradeLevels.put(type, currentLevel + 1);
         return true;
     }

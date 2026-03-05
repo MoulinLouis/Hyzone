@@ -54,7 +54,7 @@ public class MineUpgradePage extends BaseAscendPage {
     }
 
     private void populateContent(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
-        commandBuilder.set("#CrystalsValue.Text", mineProgress.getCrystals().toString());
+        commandBuilder.set("#CrystalsValue.Text", String.valueOf(mineProgress.getCrystals()));
 
         MineUpgradeType[] types = MineUpgradeType.values();
         for (int i = 0; i < types.length; i++) {
@@ -75,7 +75,7 @@ public class MineUpgradePage extends BaseAscendPage {
                 commandBuilder.set(sel + " #BuyWrap.Visible", false);
                 commandBuilder.set(sel + " #MaxedLabel.Visible", true);
             } else {
-                commandBuilder.set(sel + " #CostText.Text", "Cost: " + type.getCost(level).toString());
+                commandBuilder.set(sel + " #CostText.Text", "Cost: " + type.getCost(level));
                 commandBuilder.set(sel + " #MaxedLabel.Visible", false);
 
                 String buttonId = BUTTON_BUY_PREFIX + type.name();

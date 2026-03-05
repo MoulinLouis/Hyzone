@@ -68,11 +68,11 @@ public class MineSellPage extends BaseAscendPage {
         int capacity = mineProgress.getBagCapacity();
 
         commandBuilder.set("#CapacityValue.Text", total + " / " + capacity + " blocks");
-        commandBuilder.set("#CrystalsValue.Text", mineProgress.getCrystals().toString());
+        commandBuilder.set("#CrystalsValue.Text", String.valueOf(mineProgress.getCrystals()));
 
         Map<String, BigNumber> prices = gatherAllPrices();
-        BigNumber totalValue = mineProgress.calculateInventoryValue(prices);
-        commandBuilder.set("#TotalValue.Text", totalValue.toString() + " crystals");
+        long totalValue = mineProgress.calculateInventoryValue(prices);
+        commandBuilder.set("#TotalValue.Text", totalValue + " crystals");
 
         Map<String, Integer> inventory = mineProgress.getInventory();
         if (inventory.isEmpty()) {
@@ -92,8 +92,8 @@ public class MineSellPage extends BaseAscendPage {
                 commandBuilder.set(sel + " #Quantity.Text", "x" + entry.getValue());
 
                 BigNumber price = prices.getOrDefault(entry.getKey(), BigNumber.ONE);
-                BigNumber lineValue = price.multiply(BigNumber.of(entry.getValue(), 0));
-                commandBuilder.set(sel + " #Value.Text", lineValue.toString() + " crystals");
+                long lineValue = price.multiply(BigNumber.of(entry.getValue(), 0)).toLong();
+                commandBuilder.set(sel + " #Value.Text", lineValue + " crystals");
 
                 index++;
             }
@@ -123,14 +123,14 @@ public class MineSellPage extends BaseAscendPage {
         }
 
         Map<String, BigNumber> prices = gatherAllPrices();
-        BigNumber earned = mineProgress.sellAll(prices);
+        long earned = mineProgress.sellAll(prices);
 
         MinePlayerStore mineStore = ParkourAscendPlugin.getInstance().getMinePlayerStore();
         if (mineStore != null) {
             mineStore.markDirty(playerRef.getUuid());
         }
 
-        player.sendMessage(Message.raw("Sold all blocks for " + earned.toString() + " crystals!"));
+        player.sendMessage(Message.raw("Sold all blocks for " + earned + " crystals!"));
 
         sendRefresh(ref, store);
     }

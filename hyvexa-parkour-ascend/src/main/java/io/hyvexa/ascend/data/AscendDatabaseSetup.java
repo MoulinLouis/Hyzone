@@ -265,8 +265,7 @@ public final class AscendDatabaseSetup {
             stmt.executeUpdate("""
                 CREATE TABLE IF NOT EXISTS mine_players (
                     uuid VARCHAR(36) PRIMARY KEY,
-                    crystals_mantissa DOUBLE NOT NULL DEFAULT 0,
-                    crystals_exp10 INT NOT NULL DEFAULT 0,
+                    crystals BIGINT NOT NULL DEFAULT 0,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                     FOREIGN KEY (uuid) REFERENCES ascend_players(uuid) ON DELETE CASCADE
@@ -285,6 +284,7 @@ public final class AscendDatabaseSetup {
                 """);
 
             ensureMineUpgradeColumns(conn);
+            migrateCrystalsToBigint(conn);
 
             // Mine block sell prices
             stmt.executeUpdate("""
@@ -1229,6 +1229,28 @@ public final class AscendDatabaseSetup {
                     LOGGER.atSevere().log("Failed to add %s column to mine_players: %s", col[0], e.getMessage());
                 }
             }
+        }
+    }
+
+    /**
+     * Migrate crystals from mantissa+exp10 (DOUBLE+INT) to a single BIGINT column.
+     * Idempotent: only runs if crystals_mantissa column still exists.
+     */
+    private static void migrateCrystalsToBigint(Connection conn) {
+        if (conn == null) return;
+        if (!columnExists(conn, "mine_players", "crystals_mantissa")) return;
+        try (Statement stmt = conn.createStatement()) {
+            // Add new column if it doesn't exist
+            if (!columnExists(conn, "mine_players", "crystals")) {
+                stmt.executeUpdate("ALTER TABLE mine_players ADD COLUMN crystals BIGINT NOT NULL DEFAULT 0");
+            }
+            // Convert existing data: crystals = ROUND(crystals_mantissa * POW(10, crystals_exp10))
+            stmt.executeUpdate("UPDATE mine_players SET crystals = ROUND(crystals_mantissa * POW(10, crystals_exp10))");
+            // Drop old columns
+            stmt.executeUpdate("ALTER TABLE mine_players DROP COLUMN crystals_mantissa, DROP COLUMN crystals_exp10");
+            LOGGER.atInfo().log("Migrated mine_players crystals from mantissa+exp10 to BIGINT");
+        } catch (SQLException e) {
+            LOGGER.atSevere().log("Failed to migrate crystals to BIGINT: " + e.getMessage());
         }
     }
 

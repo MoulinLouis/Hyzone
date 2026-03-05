@@ -64,7 +64,7 @@ public class MineBagPage extends BaseAscendPage {
         commandBuilder.set("#CapacityValue.Text", total + " / " + capacity + " blocks");
 
         // Crystals
-        commandBuilder.set("#CrystalsValue.Text", mineProgress.getCrystals().toString());
+        commandBuilder.set("#CrystalsValue.Text", String.valueOf(mineProgress.getCrystals()));
 
         // Block grid
         Map<String, Integer> inventory = mineProgress.getInventory();

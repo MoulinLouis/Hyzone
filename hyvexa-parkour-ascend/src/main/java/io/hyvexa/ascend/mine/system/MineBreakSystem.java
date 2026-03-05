@@ -171,8 +171,8 @@ public class MineBreakSystem extends EntityEventSystem<EntityStore, BreakBlockEv
                         prices.putAll(configStore.getBlockPrices(mine.getId()));
                     }
                     BigNumber price = prices.getOrDefault(blockTypeName, BigNumber.ONE);
-                    BigNumber earned = price.multiply(BigNumber.of(blocksGained, 0));
-                    mineProgress.setCrystals(mineProgress.getCrystals().add(earned));
+                    long earned = price.multiply(BigNumber.of(blocksGained, 0)).toLong();
+                    mineProgress.addCrystals(earned);
                 }
             } else {
                 mineProgress.addToInventory(blockTypeName, blocksGained);

@@ -1,7 +1,5 @@
 package io.hyvexa.ascend.mine.data;
 
-import io.hyvexa.common.math.BigNumber;
-
 public enum MineUpgradeType {
     MINING_SPEED(100),
     BAG_CAPACITY(50),
@@ -16,12 +14,12 @@ public enum MineUpgradeType {
 
     public int getMaxLevel() { return maxLevel; }
 
-    public BigNumber getCost(int currentLevel) {
+    public long getCost(int currentLevel) {
         return switch (this) {
-            case MINING_SPEED -> BigNumber.of(10 * Math.pow(1.15, currentLevel), 0);
-            case BAG_CAPACITY -> BigNumber.of(25 * Math.pow(1.2, currentLevel), 0);
-            case MULTI_BREAK -> BigNumber.of(100 * Math.pow(1.5, currentLevel), 0);
-            case AUTO_SELL -> BigNumber.of(500, 0);
+            case MINING_SPEED -> Math.round(10 * Math.pow(1.15, currentLevel));
+            case BAG_CAPACITY -> Math.round(25 * Math.pow(1.2, currentLevel));
+            case MULTI_BREAK -> Math.round(100 * Math.pow(1.5, currentLevel));
+            case AUTO_SELL -> 500L;
         };
     }
 
