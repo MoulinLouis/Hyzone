@@ -101,7 +101,7 @@ public class MineBreakSystem extends EntityEventSystem<EntityStore, BreakBlockEv
             Long last = lastBagFullMessage.get(playerId);
             if (last == null || now - last > 3000) {
                 lastBagFullMessage.put(playerId, now);
-                player.sendMessage(Message.raw("Bag full! Sell your blocks with /minesell"));
+                player.sendMessage(Message.raw("Bag full! Sell your blocks with /mine sell"));
             }
             return;
         }

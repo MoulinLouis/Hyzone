@@ -15,15 +15,22 @@ import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.ui.MineSellPage;
+import io.hyvexa.ascend.ui.MineBagPage;
+import io.hyvexa.common.WorldConstants;
+import io.hyvexa.common.util.CommandUtils;
+import io.hyvexa.common.util.ModeGate;
+import io.hyvexa.common.util.SystemMessageUtils;
+import io.hyvexa.core.state.ModeMessages;
 
 import javax.annotation.Nonnull;
 import java.util.concurrent.CompletableFuture;
 
-public class MineSellCommand extends AbstractAsyncCommand {
+public class MineCommand extends AbstractAsyncCommand {
 
-    public MineSellCommand() {
-        super("minesell", "Sell mined blocks");
+    public MineCommand() {
+        super("mine", "Mine commands");
         this.setPermissionGroup(GameMode.Adventure);
+        this.setAllowsExtraArguments(true);
     }
 
     @Override
@@ -47,6 +54,9 @@ public class MineSellCommand extends AbstractAsyncCommand {
             if (playerRef == null) {
                 return;
             }
+            if (ModeGate.denyIfNot(ctx, world, WorldConstants.WORLD_ASCEND, ModeMessages.MESSAGE_ENTER_ASCEND)) {
+                return;
+            }
 
             ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
             if (plugin == null) {
@@ -55,13 +65,27 @@ public class MineSellCommand extends AbstractAsyncCommand {
 
             MinePlayerStore mineStore = plugin.getMinePlayerStore();
             if (mineStore == null) {
-                player.sendMessage(Message.raw("Mine system not available."));
+                player.sendMessage(Message.raw("[Mine] Mining system not available.").color(SystemMessageUtils.SECONDARY));
                 return;
             }
 
+            String[] args = CommandUtils.getArgs(ctx);
             MinePlayerProgress progress = mineStore.getOrCreatePlayer(playerRef.getUuid());
-            MineSellPage page = new MineSellPage(playerRef, progress);
-            player.getPageManager().openCustomPage(ref, store, page);
+
+            if (args.length == 0) {
+                MineBagPage page = new MineBagPage(playerRef, progress);
+                player.getPageManager().openCustomPage(ref, store, page);
+                return;
+            }
+
+            String subCommand = args[0].toLowerCase();
+            switch (subCommand) {
+                case "sell" -> {
+                    MineSellPage page = new MineSellPage(playerRef, progress);
+                    player.getPageManager().openCustomPage(ref, store, page);
+                }
+                default -> player.sendMessage(Message.raw("Unknown subcommand. Use: /mine, /mine sell"));
+            }
         }, world);
     }
 }

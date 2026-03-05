@@ -19,9 +19,6 @@ import io.hyvexa.ascend.achievement.AchievementManager;
 import io.hyvexa.ascend.interaction.AbstractAscendPageInteraction;
 import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerStore;
-import io.hyvexa.ascend.mine.data.MinePlayerProgress;
-import io.hyvexa.ascend.mine.data.MinePlayerStore;
-import io.hyvexa.ascend.ui.MineBagPage;
 import io.hyvexa.common.ghost.GhostStore;
 import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
@@ -201,7 +198,6 @@ public class AscendCommand extends AbstractAsyncCommand {
                 case "help" -> openHelpPage(player, playerRef, ref, store);
                 case "challenge" -> openChallengePage(player, playerRef, ref, store);
                 case "transcend", "transcendence" -> openTranscendencePage(player, playerRef, ref, store);
-                case "mine" -> openMineBagPage(player, playerRef, ref, store);
                 default -> ctx.sendMessage(Message.raw(UNKNOWN_SUBCOMMAND_MESSAGE));
             }
         }, world);
@@ -369,19 +365,6 @@ public class AscendCommand extends AbstractAsyncCommand {
             player.sendMessage(Message.raw("  " + status + " " + achievement.getName() + progressText)
                 .color(progress.unlocked() ? SystemMessageUtils.SUCCESS : SystemMessageUtils.SECONDARY));
         }
-    }
-
-    private void openMineBagPage(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {
-        ParkourAscendPlugin plugin = requirePlugin(player);
-        if (plugin == null) return;
-        MinePlayerStore mineStore = plugin.getMinePlayerStore();
-        if (mineStore == null) {
-            player.sendMessage(Message.raw("[Mine] Mining system not available.").color(SystemMessageUtils.SECONDARY));
-            return;
-        }
-        MinePlayerProgress progress = mineStore.getOrCreatePlayer(playerRef.getUuid());
-        MineBagPage page = new MineBagPage(playerRef, progress);
-        openTrackedPage(player, playerRef, ref, store, page);
     }
 
     private void openMapMenu(Player player, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store) {

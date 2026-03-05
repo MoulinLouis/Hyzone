@@ -250,7 +250,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
         getCommandRegistry().registerCommand(new SkillCommand());
         getCommandRegistry().registerCommand(new TranscendCommand());
         getCommandRegistry().registerCommand(new CatCommand());
-        getCommandRegistry().registerCommand(new io.hyvexa.ascend.mine.command.MineSellCommand());
+        getCommandRegistry().registerCommand(new io.hyvexa.ascend.mine.command.MineCommand());
         if (runtimeConfig.isEnableTestCommands()) {
             getCommandRegistry().registerCommand(new CinematicTestCommand());
             getCommandRegistry().registerCommand(new HudPreviewCommand());
