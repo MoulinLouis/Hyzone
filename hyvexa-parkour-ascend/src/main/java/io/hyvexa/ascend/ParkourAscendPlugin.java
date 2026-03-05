@@ -52,7 +52,9 @@ import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.robot.MineRobotManager;
 import io.hyvexa.ascend.mine.hud.MineHudManager;
 import io.hyvexa.ascend.mine.system.MineBreakSystem;
+import io.hyvexa.ascend.mine.system.MineDamageSystem;
 import com.hypixel.hytale.server.core.event.events.ecs.BreakBlockEvent;
+import com.hypixel.hytale.server.core.event.events.ecs.DamageBlockEvent;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 import io.hyvexa.ascend.transcendence.TranscendenceManager;
 import io.hyvexa.ascend.tutorial.TutorialTriggerService;
@@ -302,6 +304,13 @@ public class ParkourAscendPlugin extends JavaPlugin {
             if (!registry.hasSystemClass(MineBreakSystem.class)) {
                 registry.registerSystem(new MineBreakSystem(mineManager, minePlayerStore));
             }
+            // Mine damage system — scales block damage by mining speed upgrade
+            if (registry.getEntityEventTypeForClass(DamageBlockEvent.class) == null) {
+                registry.registerEntityEventType(DamageBlockEvent.class);
+            }
+            if (!registry.hasSystemClass(MineDamageSystem.class)) {
+                registry.registerSystem(new MineDamageSystem(mineManager, minePlayerStore));
+            }
         }
 
         this.getEventRegistry().registerGlobal(PlayerReadyEvent.class, event -> {
@@ -376,13 +385,6 @@ public class ParkourAscendPlugin extends JavaPlugin {
                         return;
                     }
                     AscendInventoryUtils.giveMenuItems(player);
-                    // Add mine access item for ascended players (Task 7)
-                    if (playerId != null && playerStore != null) {
-                        AscendPlayerProgress ap = playerStore.getPlayer(playerId);
-                        if (ap != null && ap.getAscensionCount() >= 1) {
-                            AscendInventoryUtils.addMineItem(player);
-                        }
-                    }
                     hudManager.attach(playerRef, player);
                     AscendMusicPage.applyStoredMusic(playerRef);
                     DiscordLinkStore linkStore = DiscordLinkStore.getInstance();
@@ -752,6 +754,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
                             if (tickCounter % 20 == 0) {
                                 mineHudManager.updateCooldowns(playerId);
                             }
+                            mineHudManager.updateToasts(playerId);
                         } else {
                             if (fullTick) {
                                 runTracker.checkPlayer(ref, store);

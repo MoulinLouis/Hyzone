@@ -96,6 +96,32 @@ $C.@PageOverlay {
           LayoutMode: Top;
         }
       }
+
+      // OP-only reset button (hidden by default)
+      Group #ResetWrap {
+        Anchor: (Left: 0, Right: 0, Height: 36, Top: 8);
+        Visible: false;
+
+        TextButton #ResetButton {
+          Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+          Text: "Reset All Upgrades (OP)";
+          Style: TextButtonStyle(
+            Default: (
+              Background: #dc2626(0.6),
+              LabelStyle: (FontSize: 13, TextColor: #fca5a5, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Hovered: (
+              Background: #dc2626(0.8),
+              LabelStyle: (FontSize: 13, TextColor: #ffffff, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Pressed: (
+              Background: #dc2626(0.4),
+              LabelStyle: (FontSize: 13, TextColor: #fca5a5, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Sounds: $C.@ButtonSounds,
+          );
+        }
+      }
     }
   }
 }

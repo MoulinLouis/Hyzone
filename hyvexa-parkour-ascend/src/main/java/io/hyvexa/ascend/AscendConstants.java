@@ -27,10 +27,6 @@ public final class AscendConstants {
 
     // Items - Mine
     public static final String ITEM_MINE_PICKAXE = "Tool_Pickaxe_Wood";
-    public static final String ITEM_MINE_SELECT = "Ingredient_Bolt_Burlap";
-    public static final String ITEM_MINE_SELL = "Ingredient_Bolt_Linen";
-    public static final String ITEM_MINE_UPGRADES = "Ingredient_Bolt_Satin";
-    public static final String ITEM_MINE_RETURN = "Ingredient_Bolt_Velvet";
 
     // Economy
     public static final double RUNNER_MULTIPLIER_INCREMENT = 0.1; // +0.1 per runner completion (base, scaled by stars+summit)

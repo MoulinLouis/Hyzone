@@ -229,5 +229,165 @@ $C.@PageOverlay {
         }
       }
     }
+
+    Group #MineToastContainer {
+      Anchor: (Right: 0, Bottom: 0, Width: 300, Height: 400);
+
+      Group #MineToast0 {
+        Anchor: (Right: 20, Bottom: 170, Width: 280, Height: 44);
+        Visible: false;
+        LayoutMode: Left;
+
+        Group #MineToast0Accent { Anchor: (Width: 4, Top: 0, Bottom: 0); Background: #22d3ee; }
+
+        Group #MineToast0Content {
+          FlexWeight: 1;
+          Background: #0a1219(0.95);
+          OutlineColor: #ffffff(0.1);
+          OutlineSize: 1;
+          LayoutMode: Top;
+
+          Group #MineToast0Row {
+            FlexWeight: 1;
+            Anchor: (Left: 0, Right: 0);
+            LayoutMode: Left;
+
+            Group { Anchor: (Width: 6); }
+            ItemIcon #MineToast0Icon { Anchor: (Width: 32, Top: 3, Bottom: 3); }
+            Group { Anchor: (Width: 6); }
+            Label #MineToast0Text {
+              FlexWeight: 1;
+              Anchor: (Top: 0, Bottom: 0);
+              Style: (FontSize: 15, TextColor: #f0f4f8, RenderBold: true, VerticalAlignment: Center);
+              Text: "";
+            }
+          }
+
+          ProgressBar #MineToast0Bar {
+            Anchor: (Left: 0, Right: 0, Height: 3);
+            Bar: #22d3ee;
+            Background: #22d3ee(0.15);
+            Value: 1;
+          }
+        }
+      }
+
+      Group #MineToast1 {
+        Anchor: (Right: 20, Bottom: 218, Width: 280, Height: 44);
+        Visible: false;
+        LayoutMode: Left;
+
+        Group #MineToast1Accent { Anchor: (Width: 4, Top: 0, Bottom: 0); Background: #22d3ee; }
+
+        Group #MineToast1Content {
+          FlexWeight: 1;
+          Background: #0a1219(0.95);
+          OutlineColor: #ffffff(0.1);
+          OutlineSize: 1;
+          LayoutMode: Top;
+
+          Group #MineToast1Row {
+            FlexWeight: 1;
+            Anchor: (Left: 0, Right: 0);
+            LayoutMode: Left;
+
+            Group { Anchor: (Width: 6); }
+            ItemIcon #MineToast1Icon { Anchor: (Width: 32, Top: 3, Bottom: 3); }
+            Group { Anchor: (Width: 6); }
+            Label #MineToast1Text {
+              FlexWeight: 1;
+              Anchor: (Top: 0, Bottom: 0);
+              Style: (FontSize: 15, TextColor: #f0f4f8, RenderBold: true, VerticalAlignment: Center);
+              Text: "";
+            }
+          }
+
+          ProgressBar #MineToast1Bar {
+            Anchor: (Left: 0, Right: 0, Height: 3);
+            Bar: #22d3ee;
+            Background: #22d3ee(0.15);
+            Value: 1;
+          }
+        }
+      }
+
+      Group #MineToast2 {
+        Anchor: (Right: 20, Bottom: 266, Width: 280, Height: 44);
+        Visible: false;
+        LayoutMode: Left;
+
+        Group #MineToast2Accent { Anchor: (Width: 4, Top: 0, Bottom: 0); Background: #22d3ee; }
+
+        Group #MineToast2Content {
+          FlexWeight: 1;
+          Background: #0a1219(0.95);
+          OutlineColor: #ffffff(0.1);
+          OutlineSize: 1;
+          LayoutMode: Top;
+
+          Group #MineToast2Row {
+            FlexWeight: 1;
+            Anchor: (Left: 0, Right: 0);
+            LayoutMode: Left;
+
+            Group { Anchor: (Width: 6); }
+            ItemIcon #MineToast2Icon { Anchor: (Width: 32, Top: 3, Bottom: 3); }
+            Group { Anchor: (Width: 6); }
+            Label #MineToast2Text {
+              FlexWeight: 1;
+              Anchor: (Top: 0, Bottom: 0);
+              Style: (FontSize: 15, TextColor: #f0f4f8, RenderBold: true, VerticalAlignment: Center);
+              Text: "";
+            }
+          }
+
+          ProgressBar #MineToast2Bar {
+            Anchor: (Left: 0, Right: 0, Height: 3);
+            Bar: #22d3ee;
+            Background: #22d3ee(0.15);
+            Value: 1;
+          }
+        }
+      }
+
+      Group #MineToast3 {
+        Anchor: (Right: 20, Bottom: 314, Width: 280, Height: 44);
+        Visible: false;
+        LayoutMode: Left;
+
+        Group #MineToast3Accent { Anchor: (Width: 4, Top: 0, Bottom: 0); Background: #22d3ee; }
+
+        Group #MineToast3Content {
+          FlexWeight: 1;
+          Background: #0a1219(0.95);
+          OutlineColor: #ffffff(0.1);
+          OutlineSize: 1;
+          LayoutMode: Top;
+
+          Group #MineToast3Row {
+            FlexWeight: 1;
+            Anchor: (Left: 0, Right: 0);
+            LayoutMode: Left;
+
+            Group { Anchor: (Width: 6); }
+            ItemIcon #MineToast3Icon { Anchor: (Width: 32, Top: 3, Bottom: 3); }
+            Group { Anchor: (Width: 6); }
+            Label #MineToast3Text {
+              FlexWeight: 1;
+              Anchor: (Top: 0, Bottom: 0);
+              Style: (FontSize: 15, TextColor: #f0f4f8, RenderBold: true, VerticalAlignment: Center);
+              Text: "";
+            }
+          }
+
+          ProgressBar #MineToast3Bar {
+            Anchor: (Left: 0, Right: 0, Height: 3);
+            Bar: #22d3ee;
+            Background: #22d3ee(0.15);
+            Value: 1;
+          }
+        }
+      }
+    }
   }
 }

@@ -21,6 +21,7 @@ import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.data.MineZone;
+import io.hyvexa.ascend.mine.hud.MineHudManager;
 import io.hyvexa.common.math.BigNumber;
 import io.hyvexa.common.util.PermissionUtils;
 import com.hypixel.hytale.logger.HytaleLogger;
@@ -37,7 +38,6 @@ public class MineBreakSystem extends EntityEventSystem<EntityStore, BreakBlockEv
     private final MinePlayerStore minePlayerStore;
     private final Map<UUID, Long> lastBagFullMessage = new ConcurrentHashMap<>();
     private final Map<UUID, Long> lastRegenMessage = new ConcurrentHashMap<>();
-    private final Map<UUID, Long> lastBreakTime = new ConcurrentHashMap<>();
 
     public MineBreakSystem(MineManager mineManager, MinePlayerStore minePlayerStore) {
         super(BreakBlockEvent.class);
@@ -132,16 +132,6 @@ public class MineBreakSystem extends EntityEventSystem<EntityStore, BreakBlockEv
             return;
         }
 
-        // Mining speed cooldown
-        long now = System.currentTimeMillis();
-        Long lastBreak = lastBreakTime.get(playerId);
-        double speedMult = mineProgress.getMiningSpeedMultiplier();
-        long cooldownMs = (long) (500 / speedMult);
-        if (lastBreak != null && now - lastBreak < cooldownMs) {
-            return;
-        }
-        lastBreakTime.put(playerId, now);
-
         // Resolve block type name
         String blockTypeName = event.getBlockType() != null ? event.getBlockType().getId() : null;
         LOGGER.atInfo().log("[MineBreak] blockType=%s", blockTypeName);
@@ -184,6 +174,11 @@ public class MineBreakSystem extends EntityEventSystem<EntityStore, BreakBlockEv
                 mineProgress.addToInventory(blockTypeName, blocksGained);
             }
             minePlayerStore.markDirty(playerId);
+
+            MineHudManager mineHudManager = ParkourAscendPlugin.getInstance().getMineHudManager();
+            if (mineHudManager != null) {
+                mineHudManager.showMineToast(playerId, blockTypeName, blocksGained);
+            }
         }
 
         // Track broken block in zone

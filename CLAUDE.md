@@ -63,6 +63,7 @@ Quick reference for AI agents working on this Hytale plugin project.
 
 **CRITICAL - These cause parsing errors:**
 - **No underscores in element IDs** - Use `#StatLabel` not `#Stat_Label`
+- **LabelAlignment values are `Start`, `Center`, `End`** - NOT `Left`/`Right`. Using invalid enum values crashes the global UI parser, breaking ALL .ui files
 
 ## Database
 

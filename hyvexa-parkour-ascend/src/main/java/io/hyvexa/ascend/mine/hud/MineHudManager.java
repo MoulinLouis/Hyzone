@@ -224,8 +224,33 @@ public class MineHudManager {
 
     // --- Inner state class ---
 
+    public void showMineToast(UUID playerId, String blockTypeId, int count) {
+        MineHudState state = huds.get(playerId);
+        if (state == null) {
+            return;
+        }
+        state.toastManager.onBlockMined(blockTypeId, count);
+    }
+
+    public void updateToasts(UUID playerId) {
+        MineHudState state = huds.get(playerId);
+        if (state == null) {
+            return;
+        }
+        if (System.currentTimeMillis() < state.readyAtMs) {
+            return;
+        }
+        if (!state.toastManager.hasActiveToasts()) {
+            return;
+        }
+        UICommandBuilder cb = new UICommandBuilder();
+        state.toastManager.update(cb);
+        state.hud.update(false, cb);
+    }
+
     private static final class MineHudState {
         final MineHud hud;
+        final MineToastManager toastManager = new MineToastManager();
         long readyAtMs;
         long lastCrystals = -1;
         String lastInventoryKey;
@@ -239,6 +264,7 @@ public class MineHudManager {
             lastCrystals = -1;
             lastInventoryKey = null;
             lastCooldownKey = null;
+            toastManager.clear();
         }
     }
 }

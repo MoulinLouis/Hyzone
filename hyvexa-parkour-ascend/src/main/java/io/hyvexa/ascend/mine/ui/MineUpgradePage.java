@@ -22,6 +22,7 @@ import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.data.MineUpgradeType;
 import io.hyvexa.ascend.ui.BaseAscendPage;
 import io.hyvexa.common.ui.ButtonEventData;
+import io.hyvexa.common.util.PermissionUtils;
 
 import java.util.List;
 
@@ -32,6 +33,7 @@ public class MineUpgradePage extends BaseAscendPage {
     private static final String BUTTON_BUY_MINER_PREFIX = "BuyMiner_";
     private static final String BUTTON_MINER_SPEED_PREFIX = "MinerSpeed_";
     private static final String BUTTON_MINER_EVOLVE_PREFIX = "MinerEvolve_";
+    private static final String BUTTON_RESET = "ResetAll";
 
     private static final int MINER_MAX_SPEED_PER_STAR = 25;
     private static final int MINER_MAX_STARS = 5;
@@ -65,6 +67,13 @@ public class MineUpgradePage extends BaseAscendPage {
 
     private void populateContent(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
         commandBuilder.set("#CrystalsValue.Text", String.valueOf(mineProgress.getCrystals()));
+
+        // Show reset button for OP players
+        if (PermissionUtils.isOp(playerRef.getUuid())) {
+            commandBuilder.set("#ResetWrap.Visible", true);
+            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ResetButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_RESET), false);
+        }
 
         MineUpgradeType[] types = MineUpgradeType.values();
         for (int i = 0; i < types.length; i++) {
@@ -177,6 +186,11 @@ public class MineUpgradePage extends BaseAscendPage {
             return;
         }
 
+        if (BUTTON_RESET.equals(button)) {
+            handleResetAll(ref, store);
+            return;
+        }
+
         if (button.startsWith(BUTTON_BUY_MINER_PREFIX)) {
             String mineId = button.substring(BUTTON_BUY_MINER_PREFIX.length());
             handleBuyMiner(ref, store, mineId);
@@ -199,6 +213,24 @@ public class MineUpgradePage extends BaseAscendPage {
             String typeName = button.substring(BUTTON_BUY_PREFIX.length());
             handleBuy(ref, store, typeName);
         }
+    }
+
+    private void handleResetAll(Ref<EntityStore> ref, Store<EntityStore> store) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null) return;
+        if (!PermissionUtils.isOp(playerRef.getUuid())) return;
+
+        for (MineUpgradeType type : MineUpgradeType.values()) {
+            mineProgress.setUpgradeLevel(type, 0);
+        }
+
+        MinePlayerStore mineStore = ParkourAscendPlugin.getInstance().getMinePlayerStore();
+        if (mineStore != null) {
+            mineStore.markDirty(playerRef.getUuid());
+        }
+
+        player.sendMessage(Message.raw("All upgrades have been reset."));
+        sendRefresh(ref, store);
     }
 
     private void handleBuy(Ref<EntityStore> ref, Store<EntityStore> store, String typeName) {
@@ -363,6 +395,7 @@ public class MineUpgradePage extends BaseAscendPage {
     private void sendRefresh(Ref<EntityStore> ref, Store<EntityStore> store) {
         UICommandBuilder commandBuilder = new UICommandBuilder();
         UIEventBuilder eventBuilder = new UIEventBuilder();
+        commandBuilder.clear("#UpgradeItems");
         populateContent(commandBuilder, eventBuilder);
         this.sendUpdate(commandBuilder, eventBuilder, false);
     }

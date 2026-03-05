@@ -109,11 +109,6 @@ public class MineGateChecker {
                     }
                 }
                 AscendInventoryUtils.giveMenuItems(player);
-                // Add mine hotbar item for ascended players
-                AscendPlayerProgress ascendProgress = playerStore.getPlayer(playerId);
-                if (ascendProgress != null && ascendProgress.getAscensionCount() >= 1) {
-                    AscendInventoryUtils.addMineItem(player);
-                }
             }
         }
     }
@@ -128,17 +123,11 @@ public class MineGateChecker {
 
     private void giveMineItems(Player player) {
         if (player.getWorld() == null) return;
-        io.hyvexa.common.util.InventoryUtils.clearAllContainers(player);
         Inventory inventory = player.getInventory();
         if (inventory == null) return;
         ItemContainer hotbar = inventory.getHotbar();
         if (hotbar == null || hotbar.getCapacity() <= 0) return;
         hotbar.setItemStackForSlot((short) 0, new ItemStack(AscendConstants.ITEM_MINE_PICKAXE, 1), false);
-        hotbar.setItemStackForSlot((short) 1, new ItemStack(AscendConstants.ITEM_MINE_SELECT, 1), false);
-        hotbar.setItemStackForSlot((short) 2, new ItemStack(AscendConstants.ITEM_MINE_SELL, 1), false);
-        hotbar.setItemStackForSlot((short) 3, new ItemStack(AscendConstants.ITEM_MINE_UPGRADES, 1), false);
-        short lastSlot = (short) (hotbar.getCapacity() - 1);
-        hotbar.setItemStackForSlot(lastSlot, new ItemStack(AscendConstants.ITEM_MINE_RETURN, 1), false);
     }
 
     private boolean isOnCooldown(UUID playerId) {
