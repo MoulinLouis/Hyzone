@@ -115,7 +115,7 @@ public class MineBreakSystem extends EntityEventSystem<EntityStore, BreakBlockEv
 
         MinePlayerProgress mineProgress = minePlayerStore.getOrCreatePlayer(playerId);
         LOGGER.atInfo().log("[MineBreak] inventory %d/%d", mineProgress.getInventoryTotal(), mineProgress.getBagCapacity());
-        if (mineProgress.isInventoryFull()) {
+        if (!mineProgress.isAutoSellEnabled() && mineProgress.isInventoryFull()) {
             LOGGER.atInfo().log("[MineBreak] bag full, denied");
             long now = System.currentTimeMillis();
             Long last = lastBagFullMessage.get(playerId);
