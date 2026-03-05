@@ -1,12 +1,11 @@
 $C = "../Common.ui";
 
 Group {
-  Anchor: (Left: 0, Right: 0, Height: 48);
+  Anchor: (Left: 0, Right: 0, Top: 6, Height: 48);
   LayoutMode: Full;
   Background: #ffffff(0.03);
   OutlineColor: #ffffff(0.04);
   OutlineSize: 1;
-  Margin: (Bottom: 6);
 
   // Left accent bar (amber)
   Group {
