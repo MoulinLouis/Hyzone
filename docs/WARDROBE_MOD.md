@@ -1,5 +1,7 @@
 # Wardrobe Integration Guide for Hyvexa
 
+> **Note:** The canonical Wardrobe module landing page is at `docs/Wardrobe/README.md`. This file covers the Wardrobe mod integration details (asset packs, cosmetic JSON format, variants).
+
 ## Overview
 
 Wardrobe is a cosmetics framework for Hytale.

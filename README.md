@@ -1,6 +1,6 @@
 # Hyvexa
 
-A multi-module Hytale server plugin suite for a parkour minigame server. Players join a hub and choose between two game modes: classic Parkour and Parkour Ascend (an idle/incremental progression mode).
+A multi-module Hytale server plugin suite for a parkour minigame server. Players join a hub and choose between game modes: classic Parkour, Parkour Ascend (idle/incremental progression), Purge (zombie wave survival), and Run or Fall (platforming minigame).
 
 ## Modules
 
@@ -10,8 +10,17 @@ A multi-module Hytale server plugin suite for a parkour minigame server. Players
 | `hyvexa-parkour` | Classic parkour gameplay with maps, leaderboards, and ranks |
 | `hyvexa-parkour-ascend` | Idle parkour mode with prestige tiers, skill trees, and economy |
 | `hyvexa-hub` | Hub world with mode selection routing and UI |
+| `hyvexa-purge` | Zombie wave survival PvE mode with classes and weapon progression |
+| `hyvexa-runorfall` | Last-player-standing minigame where platforms break beneath players |
 | `hyvexa-wardrobe` | Wardrobe cosmetics integration (`/wardrobe` visibility + `/shop` bridge) |
+| `hyvexa-votifier` | Standalone vote notification receiver (Votifier protocol) |
 | `hyvexa-launch` | Launch-only IntelliJ classpath module for `com.hypixel.hytale.Main` |
+
+**Services:**
+
+| Service | Purpose |
+|---------|---------|
+| `discord-bot` | Node.js Discord bot for account linking and vexa rewards |
 
 ## Features
 
@@ -46,6 +55,14 @@ A multi-module Hytale server plugin suite for a parkour minigame server. Players
 - **Per-Map Leaderboard** - Best times per map with tabs, search, and pagination
 - **Toast Notifications** - HUD-based notifications for upgrades, evolutions, and economy events
 - **Cinematic System** - Camera, particles, and sounds for ascension events
+- **Mine Subsystem** - Mining progression area within Ascend where players mine blocks, collect crystals, upgrade tools, and hire robot miners for passive income
+
+### Purge
+- **Zombie Wave Survival** - PvE mode where players fight waves of zombies with class-based abilities and weapon XP progression
+- **Daily Missions** - Rotating mission objectives for bonus rewards
+
+### Run or Fall
+- **Last Player Standing** - Players stand on platforms that break when stepped on; last player alive wins. Includes blink ability, stats, and leaderboards.
 
 ## Quick Start
 
@@ -74,14 +91,23 @@ Where `<patchline>` is configured in `gradle.properties`.
 ## Project Layout
 
 ```
-hyvexa-core/src/main/java/io/hyvexa/       # Shared utilities, DB, mode state
-hyvexa-parkour/src/main/java/io/hyvexa/     # Parkour gameplay
-hyvexa-parkour-ascend/src/main/java/io/hyvexa/ascend/  # Ascend idle mode
-hyvexa-hub/src/main/java/io/hyvexa/hub/     # Hub routing + UI
+hyvexa-core/                    # Shared utilities, DB, mode state
+hyvexa-parkour/                 # Classic parkour gameplay
+hyvexa-parkour-ascend/          # Ascend idle mode (includes Mine subsystem)
+hyvexa-hub/                     # Hub routing + UI
+hyvexa-purge/                   # Zombie wave survival PvE
+hyvexa-runorfall/               # Platforming minigame
+hyvexa-wardrobe/                # Cosmetics shop
+hyvexa-votifier/                # Vote receiver plugin
+hyvexa-launch/                  # IntelliJ launch classpath module
+discord-bot/                    # Node.js Discord bot for account linking
+docs/                           # All documentation and module landing pages
+run/                            # Working directory and runtime config
 
+hyvexa-*/src/main/java/         # Java sources
 hyvexa-*/src/main/resources/
-  manifest.json                              # Plugin manifest
-  Common/UI/Custom/Pages/                    # UI definition files
+  manifest.json                 # Plugin manifest
+  Common/UI/Custom/Pages/       # UI definition files
 ```
 
 ## Configuration
@@ -93,14 +119,32 @@ hyvexa-*/src/main/resources/
 
 ## Documentation
 
+### Module Guides
+
+| Module | Guide |
+|--------|-------|
+| Core | [docs/Core/README.md](docs/Core/README.md) |
+| Parkour | [docs/Parkour/README.md](docs/Parkour/README.md) |
+| Ascend | [docs/Ascend/README.md](docs/Ascend/README.md) |
+| Hub | [docs/Hub/README.md](docs/Hub/README.md) |
+| Purge | [docs/Purge/README.md](docs/Purge/README.md) |
+| Run or Fall | [docs/RunOrFall/README.md](docs/RunOrFall/README.md) |
+| Wardrobe | [docs/Wardrobe/README.md](docs/Wardrobe/README.md) |
+| Votifier | [docs/Votifier/README.md](docs/Votifier/README.md) |
+| Discord Bot | [docs/DiscordBot/README.md](docs/DiscordBot/README.md) |
+
+### Technical References
+
 | Topic | File |
 |-------|------|
 | Architecture & threading | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
 | Database schema | [docs/DATABASE.md](docs/DATABASE.md) |
 | Code patterns | [docs/CODE_PATTERNS.md](docs/CODE_PATTERNS.md) |
-| Game economy balance | [docs/Ascend/ECONOMY_BALANCE.md](docs/Ascend/ECONOMY_BALANCE.md) |
 | Hytale API notes | [docs/HYTALE_API.md](docs/HYTALE_API.md) |
+| Game economy balance | [docs/Ascend/ECONOMY_BALANCE.md](docs/Ascend/ECONOMY_BALANCE.md) |
 | Changelog | [CHANGELOG.md](CHANGELOG.md) |
+
+For AI agent instructions, see [CLAUDE.md](CLAUDE.md).
 
 ## License
 

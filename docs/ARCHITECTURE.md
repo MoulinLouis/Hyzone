@@ -24,7 +24,12 @@ Technical design documentation for the Hyvexa multi-module plugin suite.
                                   ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                           MySQL Database                                │
-│  parkour_* + ascend_* + purge_* + runorfall_* tables (shared DB)        │
+│  parkour_* + ascend_* + mine_* + purge_* + runorfall_* tables           │
+└─────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                          hyvexa-votifier                                │
+│  (Standalone vote receiver — own config + SQLite, no core dependency)   │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -32,11 +37,12 @@ Technical design documentation for the Hyvexa multi-module plugin suite.
 
 - `hyvexa-core`: shared APIs/utilities, shared DB connection, mode events/state, shared mode gating/messages
 - `hyvexa-parkour`: current Parkour gameplay plugin
-- `hyvexa-parkour-ascend`: Parkour Ascend idle mode with prestige progression
+- `hyvexa-parkour-ascend`: Parkour Ascend idle mode with prestige progression (includes Mine subsystem)
 - `hyvexa-hub`: hub routing + UI (mode switching, teleport routing)
 - `hyvexa-purge`: zombie survival PvE mode with wave-based combat, weapon upgrades, and scrap economy
 - `hyvexa-runorfall`: platforming minigame with block-breaking, blink mechanic, and feather rewards
 - `hyvexa-wardrobe`: Wardrobe shop integration + Wardrobe permission bridge
+- `hyvexa-votifier`: standalone Votifier-style vote receiver for voting site integration
 - `hyvexa-launch`: launch-only IntelliJ classpath module for `com.hypixel.hytale.Main`
 - Hub routing targets the capitalized world names: `Hub`, `Parkour`, `Ascend`
 
@@ -54,13 +60,64 @@ Technical design documentation for the Hyvexa multi-module plugin suite.
 Module boundaries:
 - All gameplay modules (Parkour/Ascend/Hub/Purge/RunOrFall/Wardrobe) depend on Core only
 - No dependencies between gameplay modules
+- Votifier is fully standalone — depends only on HytaleServer.jar, has no dependency on hyvexa-core or any other module
+
+### Mine Subsystem (Ascend)
+- Block-mining economy layered on top of Ascend, gated behind at least 1 ascension
+- All Mine code lives under `io.hyvexa.ascend.mine.*` within the `hyvexa-parkour-ascend` module
+- Currency: **crystals** (earned by mining blocks or selling inventory)
+
+**Managers and key classes:**
+
+| Class | Role |
+|-------|------|
+| `MineManager` | Zone lifecycle — tracks broken blocks per zone, cooldown/regen timers, generates zones on world thread |
+| `MineConfigStore` | Loads mine definitions, zones, gates, and block prices from DB into memory (`ReadWriteLock`-protected) |
+| `MinePlayerStore` | Per-player progress (crystals, upgrade levels, inventory, mine unlocks, miner states) — lazy-loaded, evicted on disconnect, 5s debounced saves |
+| `MineGateChecker` | Tick-based AABB gate detection — teleports players in/out of the mine area, swaps HUD and inventory items |
+| `MineHudManager` | Custom HUD showing crystal count, bag contents, zone cooldown timer, and block-mined toasts |
+| `MineRobotManager` | Automated miner NPCs (Kweebec variants) — spawns per-player per-mine, ticks production on a 50ms scheduled executor, evolves appearance by star level |
+| `MineBonusCalculator` | Cross-progression bonuses from mining milestones that apply to parkour systems (runner speed, multiplier gain, volt gain) |
+| `MineBreakSystem` | ECS `EntityEventSystem<BreakBlockEvent>` — intercepts block breaks inside mining zones, adds blocks to inventory or auto-sells, shows toast |
+| `MineDamageSystem` | ECS `EntityEventSystem<DamageBlockEvent>` — scales block damage by mining speed upgrade multiplier |
+| `MineCommand` | `/mine` command with subcommands: `sell`, `upgrades`, `select`, `addcrystals` (admin) |
+
+**Upgrades** (`MineUpgradeType` enum):
+
+| Upgrade | Max Level | Effect |
+|---------|-----------|--------|
+| `MINING_SPEED` | 100 | +10% block damage per level |
+| `BAG_CAPACITY` | 50 | +10 bag slots per level (base 50) |
+| `MULTI_BREAK` | 20 | +5% chance to mine 2 blocks per level |
+| `AUTO_SELL` | 1 | Toggle: auto-sell blocks for crystals instead of storing |
+
+**Database tables** (owned by Ascend, created via `AscendDatabaseSetup`):
+
+| Table | Purpose |
+|-------|---------|
+| `mine_definitions` | Mine ID, name, display order, unlock cost, world, spawn position |
+| `mine_zones` | Zone AABB bounds, block table JSON (weighted random), regen threshold/cooldown |
+| `mine_gate` | Entry/exit gate AABB bounds + teleport destinations (id=1 entry, id=2 exit) |
+| `mine_players` | Per-player crystals + upgrade levels |
+| `mine_player_inventory` | Per-player block inventory (block type ID + amount) |
+| `mine_block_prices` | Per-mine block sell prices (BigNumber mantissa + exponent) |
+| `mine_player_mines` | Per-player mine unlock + manual completion state |
+| `mine_player_miners` | Per-player automated miner state (has_miner, speed_level, stars) |
+
+**Runtime flow:**
+1. On startup, `ParkourAscendPlugin.setup()` initializes `MineConfigStore.syncLoad()`, then creates `MinePlayerStore`, `MineManager`, `MineHudManager`, and `MineRobotManager`
+2. Registers `MineBreakSystem` and `MineDamageSystem` as ECS event systems on the entity store registry
+3. On first player entering the Ascend world, `MineManager.generateAllZones()` fills all zone regions with weighted-random blocks on the world thread
+4. `MineManager.tick()` runs every 1000ms — checks each zone's broken-block ratio against its regen threshold, starts cooldown, and regenerates on the world thread when cooldown expires
+5. `MineGateChecker.checkPlayer()` runs every 50ms tick — detects player position inside entry/exit gate AABBs, teleports, swaps HUD between Ascend HUD and Mine HUD
+6. On disconnect, `MinePlayerStore.evict()` flushes dirty state to MySQL and removes player from memory
 
 ### Purge Plugin Lifecycle
 - Zombie survival PvE mode with wave-based combat
 - Entry point: `HyvexaPurgePlugin`
 - Key managers: `PurgeSessionManager` (game flow), `PurgeWaveManager` (wave spawning), `PurgeInstanceManager` (instance management), `PurgePartyManager` (party system), `PurgeUpgradeManager` (in-session upgrades), `PurgeWeaponConfigManager` (weapon config), `PurgeWaveConfigManager` (wave config), `PurgeVariantConfigManager` (zombie variants), `PurgeHudManager` (HUD)
 - Economy: Scrap currency (`PurgeScrapStore`) for weapon upgrades (`PurgeWeaponUpgradeStore`), weapon skins (`PurgeSkinStore`)
-- Database tables: `purge_player_stats`, `purge_player_scrap`, `purge_weapon_upgrades`, `purge_weapon_levels`, `purge_weapon_defaults`, `purge_weapon_skins`, `purge_waves`, `purge_settings`, `purge_migrations`, `purge_zombie_variants`, `purge_wave_variant_counts`
+- Database tables: `purge_player_stats`, `purge_player_scrap`, `purge_weapon_upgrades`, `purge_weapon_xp`, `purge_daily_missions`, `purge_player_classes`, `purge_player_selected_class`, `purge_weapon_levels`, `purge_weapon_defaults`, `purge_weapon_skins`, `purge_waves`, `purge_settings`, `purge_migrations`, `purge_zombie_variants`, `purge_wave_variant_counts`
 
 ### RunOrFall Plugin Lifecycle
 - Multiplayer platforming minigame where platforms break beneath players
@@ -69,6 +126,22 @@ Module boundaries:
 - Config: `RunOrFallConfigStore` (maps, spawns, platforms, settings)
 - Stats: `RunOrFallStatsStore` (wins, losses, streaks, blocks broken, blinks used)
 - Database tables: `runorfall_settings`, `runorfall_maps`, `runorfall_map_spawns`, `runorfall_map_platforms`, `runorfall_player_stats`
+
+### Votifier Plugin Lifecycle
+- Standalone vote receiver — receives vote notifications from voting websites and fires events for other plugins to handle rewards
+- Entry point: `org.hyvote.plugins.votifier.HytaleVotifierPlugin` (package: `org.hyvote.plugins.votifier`)
+- **No dependency on hyvexa-core** — this module is fully self-contained with its own config and storage
+- Config: `config.json` in the plugin data directory (auto-generated with defaults on first run)
+- Storage: vote tracking uses SQLite (`sqlite-jdbc`) or in-memory backend for vote reminders — not the shared MySQL database
+- RSA key management: `RSAKeyManager` generates/loads 2048-bit key pair for V1 protocol decryption
+- Protocol support:
+  - V1 (RSA-encrypted): received via HTTP endpoints (Nitrado WebServer plugin or built-in fallback HTTP server)
+  - V2 (HMAC-SHA256 signed JSON): received via `VotifierSocketServer` on a configurable port
+- Vote processing flow: `VoteProcessor.processPayload()` detects protocol, parses vote, then `dispatchVote()` fires `VoteEvent` on the Hytale event bus, sends player notifications, broadcasts to server, and executes configurable reward commands
+- `VoteReminderService`: tracks vote timestamps and sends reminders to players on join if they haven't voted recently
+- Commands: `/vote` (shows voting site links), `/testvote` (admin testing)
+- PlayerReady: sends vote reminders on join, notifies admins of available updates
+- Key classes: `VoteProcessor` (shared processing logic), `VoteEvent` (plugin event for reward hooks), `VotifierSocketServer` (V2 protocol), `FallbackHttpServer` (V1 when Nitrado unavailable), `VoteReminderService` (reminder scheduling)
 
 ### Duel System (Parkour)
 - 1v1 race duels within the Parkour module
@@ -144,6 +217,10 @@ Module boundaries:
 |------|----------|---------|
 | `RUNNER_TICK_INTERVAL_MS` | 16ms | Ghost replay tick system (~60fps for smooth movement) |
 | `RUNNER_REFRESH_INTERVAL_MS` | 1000ms | Runner state refresh and validation |
+| `MineManager.tick()` | 1000ms | Zone regen threshold check + cooldown expiry + world-thread regeneration |
+| `MineRobotManager.tick()` | 50ms | Automated miner NPC production + orphan entity cleanup |
+| `MineGateChecker` (via main tick) | 50ms | AABB gate detection for mine entry/exit teleportation |
+| `MineHudManager` (via main tick) | 200ms full / 1000ms cooldowns / 50ms toasts | Mine HUD crystal, inventory, cooldown, and toast updates |
 
 ## Data Flow
 
@@ -349,6 +426,7 @@ Credentials stored in `mods/Parkour/database.json` (gitignored, relative to serv
 | `maps` | Map definitions with all transform positions |
 | `map_checkpoints` | Checkpoint positions per map |
 | `player_completions` | Completed maps with best times per player |
+| `player_checkpoint_times` | Best checkpoint split times per player per map |
 | `settings` | Global server settings (single row) |
 | `global_messages` | Broadcast messages |
 | `global_message_settings` | Message interval (single row) |
@@ -356,13 +434,23 @@ Credentials stored in `mods/Parkour/database.json` (gitignored, relative to serv
 | `ascend_players` | Ascend player state + prestige progress |
 | `ascend_maps` | Ascend map definitions |
 | `ascend_player_maps` | Per-player map progress (unlocks, runners, multipliers) |
+| `ascend_upgrade_costs` | Configurable upgrade cost overrides |
 | `ascend_player_summit` | Summit levels per category per player |
 | `ascend_player_skills` | Skill tree unlocks per player |
 | `ascend_player_achievements` | Achievement unlocks per player |
 | `ascend_player_cats` | Collectible cat tokens per player |
 | `ascend_challenges` | Active challenge state per player |
 | `ascend_challenge_records` | Best times and completions per challenge type |
+| `ascend_settings` | Ascend global settings |
 | `ascend_ghost_recordings` | Ghost replay recordings per player per map |
+| `mine_definitions` | Mine ID, name, display order, unlock cost, world, spawn |
+| `mine_zones` | Zone AABB bounds, block table JSON, regen config |
+| `mine_gate` | Entry/exit gate bounds + teleport destinations |
+| `mine_players` | Per-player crystals + upgrade levels |
+| `mine_player_inventory` | Per-player block inventory (type + amount) |
+| `mine_block_prices` | Per-mine block sell prices |
+| `mine_player_mines` | Per-player mine unlock + completion state |
+| `mine_player_miners` | Per-player automated miner state |
 | `player_vexa` | Global vexa currency balance per player |
 | `player_feathers` | Parkour feather currency per player |
 | `player_cosmetics` | Purchased cosmetics and equipped state |
@@ -373,12 +461,18 @@ Credentials stored in `mods/Parkour/database.json` (gitignored, relative to serv
 | `discord_links` | Permanent Discord-Minecraft account links |
 | `analytics_events` | Append-only gameplay event log |
 | `analytics_daily` | Pre-computed daily aggregate statistics |
+| `player_votes` | Per-player vote log |
+| `player_vote_counts` | Denormalized vote counters per player |
 | `duel_category_prefs` | Per-player duel category preferences |
 | `duel_matches` | Duel match history |
 | `duel_player_stats` | Duel win/loss statistics |
 | `purge_player_stats` | Purge player statistics |
 | `purge_player_scrap` | Purge scrap currency per player |
 | `purge_weapon_upgrades` | Purge weapon upgrade levels per player |
+| `purge_weapon_xp` | Purge per-player per-weapon XP |
+| `purge_daily_missions` | Purge daily mission progress |
+| `purge_player_classes` | Purge class unlocks per player |
+| `purge_player_selected_class` | Purge currently selected class |
 | `purge_weapon_levels` | Purge weapon level config (damage, cost) |
 | `purge_weapon_defaults` | Purge weapon unlock config |
 | `purge_weapon_skins` | Purge weapon skin ownership |
@@ -386,6 +480,7 @@ Credentials stored in `mods/Parkour/database.json` (gitignored, relative to serv
 | `purge_settings` | Purge key-value settings |
 | `purge_zombie_variants` | Purge zombie variant types |
 | `purge_wave_variant_counts` | Purge wave-to-variant spawn counts |
+| `purge_migrations` | Purge migration tracking |
 | `runorfall_settings` | RunOrFall global settings |
 | `runorfall_maps` | RunOrFall map definitions |
 | `runorfall_map_spawns` | RunOrFall spawn positions per map |
@@ -440,7 +535,7 @@ Server Stop: flushPendingSave() + connection pool shutdown
 
 **Parkour** cleans up HUD, perks, announcements, playtime, settings, visibility, and run state via `PlayerCleanupManager.handleDisconnect()`. All state is ephemeral.
 
-**Ascend** additionally evicts player data from memory after persisting dirty changes (`AscendPlayerStore.removePlayer()` snapshots, saves, then removes from cache). This lazy-load + evict pattern keeps memory bounded.
+**Ascend** additionally evicts player data from memory after persisting dirty changes (`AscendPlayerStore.removePlayer()` snapshots, saves, then removes from cache). The Mine subsystem follows the same pattern: `MinePlayerStore.evict()` flushes dirty state and removes the player from cache, `MineGateChecker.evict()` clears cooldown state, `MineRobotManager.onPlayerLeave()` despawns miner NPCs, and `MineHudManager.removePlayer()` detaches the mine HUD. This lazy-load + evict pattern keeps memory bounded.
 
 | Scenario | Current Behavior | Notes |
 |----------|------------------|-------|

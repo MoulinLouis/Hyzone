@@ -72,3 +72,11 @@ Legacy migration:
 - Stats storage: `hyvexa-runorfall/src/main/java/io/hyvexa/runorfall/manager/RunOrFallStatsStore.java`
 - Command: `hyvexa-runorfall/src/main/java/io/hyvexa/runorfall/command/RunOrFallCommand.java`
 - Admin page: `hyvexa-runorfall/src/main/java/io/hyvexa/runorfall/ui/RunOrFallAdminPage.java`
+- UI pages: `hyvexa-runorfall/src/main/java/io/hyvexa/runorfall/ui/`
+- Interactions: `hyvexa-runorfall/src/main/java/io/hyvexa/runorfall/interaction/`
+- HUD: `hyvexa-runorfall/src/main/java/io/hyvexa/runorfall/hud/RunOrFallHud.java`
+
+## Related Docs
+
+- Architecture overview: `docs/ARCHITECTURE.md`
+- Database schema: `docs/DATABASE.md`

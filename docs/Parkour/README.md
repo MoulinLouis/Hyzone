@@ -56,6 +56,29 @@ All state is MySQL-backed and loaded in-memory on startup.
 
 `ProgressStore` uses debounced saves (`5s`) for player state writes.
 
+## Owned Tables
+
+- `maps` -- map definitions (via `MapStore`; triggers stored as columns)
+- `map_checkpoints` -- map checkpoint geometry
+- `players` -- player progress, XP, rank
+- `player_completions` -- per-player per-map completion records
+- `player_checkpoint_times` -- best checkpoint split times
+- `settings` -- global settings
+- `global_messages` / `global_message_settings` -- rotating announcement messages
+- `player_count_samples` -- online count history
+- `duel_player_stats` -- duel win/loss stats
+- `duel_matches` -- duel match history
+- `duel_category_prefs` -- duel category preferences
+- `player_medals` -- medal awards
+- `medal_rewards` -- medal reward configuration
+- `parkour_ghost_recordings` -- ghost replay data (via `GhostStore`)
+
+Shared tables (in `hyvexa-core`):
+- `player_vexa` -- vexa currency
+- `player_feathers` -- feather currency
+- `discord_link_codes` / `discord_links` -- Discord account linking
+- `analytics_events` / `analytics_daily` -- analytics
+
 ## Where To Edit What
 - Run logic/checkpoint behavior:
   `hyvexa-parkour/src/main/java/io/hyvexa/parkour/tracker/`

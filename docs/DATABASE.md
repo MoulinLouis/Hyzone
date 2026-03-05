@@ -1,7 +1,8 @@
-# Database Schema
+# Hyvexa Suite -- Database Schema
 
-This project stores parkour data in MySQL. The tables below reflect the current code paths
-(read/write queries) in the parkour plugin. Types are recommended defaults that match usage.
+This document is the suite-wide schema reference for the Hyvexa plugin family.
+All modules share a single MySQL database via `DatabaseManager` (in `hyvexa-core`), with one exception: `hyvexa-votifier` uses its own local SQLite/in-memory storage (see Votifier section below).
+Tables are grouped by the subsystem that owns them.
 
 Runtime notes:
 - Server working directory is `run/`, so runtime config lives in `mods/Parkour/`
@@ -9,10 +10,246 @@ Runtime notes:
 - MySQL is the source of truth for persisted state; some runtime values are intentionally computed from constants (for example Ascend map balance values from `display_order`)
 - `DatabaseManager` lives in `hyvexa-core` and is shared across modules
 
+---
+
+# Core / Shared Tables
+
+Tables in this section are owned by `hyvexa-core` and used across multiple modules.
+
+## player_vexa
+Stores the global vexa currency balance per player. Shared across all modules.
+
+```sql
+CREATE TABLE IF NOT EXISTS player_vexa (
+  uuid VARCHAR(36) NOT NULL PRIMARY KEY,
+  vexa BIGINT NOT NULL DEFAULT 0
+) ENGINE=InnoDB;
+```
+
+Notes:
+- Auto-created by `VexaStore.initialize()` (extends `CachedCurrencyStore`) on startup
+- Managed by `hyvexa-core/src/main/java/io/hyvexa/core/economy/VexaStore.java`
+- Writes are immediate (no dirty tracking) since vexa is rare/precious
+- Player cache is evicted on disconnect (lazy-loaded on next access)
+
+## player_feathers
+Parkour feather currency per player. Follows VexaStore pattern (lazy-load, immediate writes, evict on disconnect).
+
+```sql
+CREATE TABLE IF NOT EXISTS player_feathers (
+  uuid VARCHAR(36) NOT NULL PRIMARY KEY,
+  feathers BIGINT NOT NULL DEFAULT 0
+) ENGINE=InnoDB;
+```
+
+Manager: `FeatherStore` (singleton in `hyvexa-core`, extends `CachedCurrencyStore`)
+
+## player_cosmetics
+Stores purchased cosmetics and equipped state per player.
+
+```sql
+CREATE TABLE IF NOT EXISTS player_cosmetics (
+  player_uuid VARCHAR(36) NOT NULL,
+  cosmetic_id VARCHAR(64) NOT NULL,
+  equipped BOOLEAN NOT NULL DEFAULT FALSE,
+  PRIMARY KEY (player_uuid, cosmetic_id)
+) ENGINE=InnoDB;
+```
+
+Notes:
+- Auto-created by `CosmeticStore.initialize()` on startup
+- Managed by `hyvexa-core/src/main/java/io/hyvexa/core/cosmetic/CosmeticStore.java`
+- At most one cosmetic can be `equipped = TRUE` per player at a time
+- Writes are immediate (same pattern as VexaStore)
+- Player cache is evicted on disconnect (lazy-loaded on next access)
+
+## cosmetic_shop_config
+Stores shop availability and pricing for wardrobe cosmetics.
+
+```sql
+CREATE TABLE IF NOT EXISTS cosmetic_shop_config (
+  cosmetic_id VARCHAR(64) NOT NULL PRIMARY KEY,
+  available BOOLEAN NOT NULL DEFAULT FALSE,
+  price INT NOT NULL DEFAULT 0,
+  currency VARCHAR(16) NOT NULL DEFAULT 'vexa'
+) ENGINE=InnoDB;
+```
+
+Notes:
+- Auto-created by `CosmeticShopConfigStore.initialize()` on startup
+- Manager: `CosmeticShopConfigStore` (singleton in `hyvexa-core`)
+- `currency` toggles between `'vexa'` and `'feathers'`
+
+---
+
+# Analytics Tables
+
+Owned by `hyvexa-core`, used for cross-module gameplay analytics.
+
+## analytics_events
+Append-only event log for gameplay analytics. Purged after 90 days.
+
+```sql
+CREATE TABLE IF NOT EXISTS analytics_events (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  timestamp_ms BIGINT NOT NULL,
+  player_uuid VARCHAR(36) NOT NULL,
+  event_type VARCHAR(32) NOT NULL,
+  data_json TEXT NULL,
+  INDEX idx_timestamp (timestamp_ms),
+  INDEX idx_player (player_uuid),
+  INDEX idx_type_timestamp (event_type, timestamp_ms)
+) ENGINE=InnoDB;
+```
+
+Notes:
+- Auto-created by `AnalyticsStore.initialize()` on startup
+- Event types: `player_join`, `player_leave`, `map_start`, `map_complete`, `level_up`, `duel_finish`, `mode_switch`, `gem_spend`, `discord_link`, `ascend_manual_run`, `ascend_elevation_up`, `ascend_summit_up`, `ascend_ascension`, `ascend_runner_buy`, `ascend_runner_evolve`, `ascend_challenge_start`, `ascend_challenge_complete`, `ascend_achievement`
+- `data_json` contains event-specific payload (e.g., `{"map_id":"...", "time_ms":1234}`)
+- Events older than 90 days are purged on startup
+
+## analytics_daily
+Pre-computed daily aggregate statistics. Kept indefinitely.
+
+```sql
+CREATE TABLE IF NOT EXISTS analytics_daily (
+  date DATE NOT NULL PRIMARY KEY,
+  dau INT NOT NULL,
+  new_players INT NOT NULL,
+  avg_session_ms BIGINT NOT NULL,
+  total_sessions INT NOT NULL,
+  parkour_time_pct FLOAT NOT NULL,
+  ascend_time_pct FLOAT NOT NULL,
+  peak_concurrent INT NOT NULL,
+  data_json TEXT NULL
+) ENGINE=InnoDB;
+```
+
+Notes:
+- One row per day, computed by `AnalyticsStore.computeDailyAggregates()`
+- Computed on server shutdown and on-demand via `/analytics refresh`
+- `dau` = distinct players with `player_join` events that day
+- `parkour_time_pct` / `ascend_time_pct` = percentage of `mode_switch` events to each mode
+
+## /analytics Command (OP-only)
+
+```
+/analytics [days]          Overview: DAU, retention, sessions, mode split (default 7d)
+/analytics parkour [days]  Map starts/completions/rate, PBs, first completions,
+                           level ups, unique players, duels (by reason), top maps
+/analytics ascend [days]   Manual runs, unique runners, elevations, summits,
+                           ascensions, runners bought/evolved, achievements,
+                           challenges (start/complete/rate), top summit categories
+/analytics economy [days]  Vexa spent, purchases, unique buyers, discord links,
+                           top purchased items
+/analytics refresh         Recompute today's daily aggregates
+/analytics purge           Purge events older than 90 days
+```
+
+Days range: 1-365, default 7 for all subcommands.
+
+---
+
+# Discord Linking Tables
+
+Owned by `hyvexa-core`, shared between the plugin and the Discord bot.
+
+## discord_link_codes
+Stores temporary link codes generated in-game. Codes expire after 5 minutes.
+
+```sql
+CREATE TABLE IF NOT EXISTS discord_link_codes (
+  code VARCHAR(7) NOT NULL PRIMARY KEY,
+  player_uuid VARCHAR(36) NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  expires_at TIMESTAMP NOT NULL
+) ENGINE=InnoDB;
+```
+
+Notes:
+- Codes are 6 alphanumeric characters, displayed as XXX-XXX (stored without dash)
+- Expired codes are cleaned on startup and replaced when a player generates a new code
+- Auto-created by `DiscordLinkStore.initialize()` on startup
+
+## discord_links
+Stores permanent Discord-Minecraft account links and vexa reward tracking.
+
+```sql
+CREATE TABLE IF NOT EXISTS discord_links (
+  player_uuid VARCHAR(36) NOT NULL PRIMARY KEY,
+  discord_id VARCHAR(20) NOT NULL UNIQUE,
+  linked_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  vexa_rewarded BOOLEAN NOT NULL DEFAULT FALSE,
+  current_rank VARCHAR(20) DEFAULT 'Unranked',
+  last_synced_rank VARCHAR(20) DEFAULT NULL
+) ENGINE=InnoDB;
+```
+
+Notes:
+- One-to-one mapping: each game account links to exactly one Discord account and vice versa
+- `vexa_rewarded` tracks whether the one-time 100 vexa reward has been given
+- `current_rank` is the player's parkour rank, written by the plugin on rank-up and login
+- `last_synced_rank` is the rank last synced to Discord by the bot; when it differs from `current_rank`, the bot knows to update roles
+- The Discord bot writes to this table; the plugin reads it on player login
+- Auto-created by `DiscordLinkStore.initialize()` on startup (columns added via ALTER TABLE migration for existing installs)
+- Managed by `hyvexa-core/src/main/java/io/hyvexa/core/discord/DiscordLinkStore.java`
+
+---
+
+# Vote Tables
+
+Owned by `hyvexa-core`.
+
+## player_votes
+Append-only log of every individual vote, for analytics and time-based leaderboards.
+
+```sql
+CREATE TABLE IF NOT EXISTS player_votes (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  player_uuid VARCHAR(36) NOT NULL,
+  player_name VARCHAR(32) NOT NULL,
+  source VARCHAR(32) NOT NULL,
+  voted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_player (player_uuid),
+  INDEX idx_voted_at (voted_at),
+  INDEX idx_player_voted (player_uuid, voted_at)
+) ENGINE=InnoDB;
+```
+
+Notes:
+- `source` values: `hytale.game` (polling), `votifier` (Votifier V1/V2)
+- Used for time-period leaderboards (weekly, monthly) via `GROUP BY` + `COUNT(*)`
+- Auto-created by `VoteStore.initialize()` on startup
+- Managed by `hyvexa-core/src/main/java/io/hyvexa/core/vote/VoteStore.java`
+
+## player_vote_counts
+Denormalized aggregate vote counter per player for fast leaderboard reads.
+
+```sql
+CREATE TABLE IF NOT EXISTS player_vote_counts (
+  player_uuid VARCHAR(36) NOT NULL PRIMARY KEY,
+  player_name VARCHAR(32) NOT NULL,
+  total_votes INT NOT NULL DEFAULT 0,
+  last_voted_at TIMESTAMP NULL
+) ENGINE=InnoDB;
+```
+
+Notes:
+- Incremented atomically alongside each `player_votes` INSERT (same transaction)
+- Avoids `COUNT(*)` on `player_votes` for all-time leaderboard queries
+- `player_name` updated on each vote to keep current username
+- Auto-created by `VoteStore.initialize()` on startup
+- Managed by `hyvexa-core/src/main/java/io/hyvexa/core/vote/VoteStore.java`
+
+---
+
+# Parkour Tables
+
+Tables owned by `hyvexa-parkour` for the core parkour gameplay mode.
+
 ## players
 Stores player progression and profile state.
 
-Suggested schema:
 ```sql
 CREATE TABLE players (
   uuid CHAR(36) NOT NULL PRIMARY KEY,
@@ -24,18 +261,20 @@ CREATE TABLE players (
   vip BOOLEAN NOT NULL DEFAULT FALSE,
   founder BOOLEAN NOT NULL DEFAULT FALSE,
   teleport_item_use_count INT NOT NULL DEFAULT 0,
-  jump_count BIGINT NOT NULL DEFAULT 0
+  jump_count BIGINT NOT NULL DEFAULT 0,
+  first_join_ms BIGINT NULL,
+  last_seen_ms BIGINT NULL
 ) ENGINE=InnoDB;
 ```
 
 Notes:
 - `teleport_item_use_count` tracks how many times the player has used the Map Selector teleport item (for showing hints during first 5 uses)
 - `jump_count` tracks the total number of jumps the player has ever made (cumulative)
+- `first_join_ms` / `last_seen_ms` added via ALTER TABLE migration for analytics
 
 ## maps
 Stores map definitions and primary transforms.
 
-Suggested schema:
 ```sql
 CREATE TABLE maps (
   id VARCHAR(64) NOT NULL PRIMARY KEY,
@@ -98,12 +337,11 @@ CREATE TABLE maps (
 ```
 
 Notes:
-- `bronze_time_ms`, `silver_time_ms`, `gold_time_ms`, `author_time_ms` — optional medal time thresholds in milliseconds. Set via `/pk admin` Maps panel. Author < Gold < Silver < Bronze enforced by admin UI.
+- `bronze_time_ms`, `silver_time_ms`, `gold_time_ms`, `author_time_ms` -- optional medal time thresholds in milliseconds. Set via `/pk admin` Maps panel. Author < Gold < Silver < Bronze enforced by admin UI.
 
 ## map_checkpoints
 Stores checkpoint transforms per map.
 
-Suggested schema:
 ```sql
 CREATE TABLE map_checkpoints (
   map_id VARCHAR(64) NOT NULL,
@@ -121,7 +359,6 @@ CREATE TABLE map_checkpoints (
 ## player_completions
 Stores completed maps and best times per player.
 
-Suggested schema:
 ```sql
 CREATE TABLE player_completions (
   player_uuid CHAR(36) NOT NULL,
@@ -134,9 +371,8 @@ CREATE TABLE player_completions (
 ## player_checkpoint_times
 Stores checkpoint split times for each player's personal best run on each map.
 
-Suggested schema:
 ```sql
-CREATE TABLE player_checkpoint_times (
+CREATE TABLE IF NOT EXISTS player_checkpoint_times (
   player_uuid CHAR(36) NOT NULL,
   map_id VARCHAR(64) NOT NULL,
   checkpoint_index INT NOT NULL,
@@ -149,40 +385,11 @@ Notes:
 - `time_ms` is the elapsed time from run start to reaching that checkpoint.
 - Only updated when a player achieves a new personal best.
 - `checkpoint_index` is 0-based.
-
-## player_mode_state
-Stores per-player mode state and hub return locations (owned by the hub).
-
-Suggested schema:
-```sql
-CREATE TABLE player_mode_state (
-  player_uuid CHAR(36) PRIMARY KEY,
-  current_mode VARCHAR(16) NOT NULL,
-  parkour_world VARCHAR(64) NULL,
-  parkour_x DOUBLE NULL,
-  parkour_y DOUBLE NULL,
-  parkour_z DOUBLE NULL,
-  parkour_rot_x FLOAT NULL,
-  parkour_rot_y FLOAT NULL,
-  parkour_rot_z FLOAT NULL,
-  ascend_world VARCHAR(64) NULL,
-  ascend_x DOUBLE NULL,
-  ascend_y DOUBLE NULL,
-  ascend_z DOUBLE NULL,
-  ascend_rot_x FLOAT NULL,
-  ascend_rot_y FLOAT NULL,
-  ascend_rot_z FLOAT NULL,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB;
-```
-
-Notes:
-- If you previously created `depths_*` columns, the hub will migrate them to `ascend_*` on startup.
+- Auto-created by `DatabaseManager.createPlayerCheckpointTimesTable()` on startup.
 
 ## settings
 Stores global server settings (single row, id = 1).
 
-Suggested schema:
 ```sql
 CREATE TABLE settings (
   id INT NOT NULL PRIMARY KEY,
@@ -204,7 +411,6 @@ CREATE TABLE settings (
 ## global_messages
 Stores broadcast messages.
 
-Suggested schema:
 ```sql
 CREATE TABLE global_messages (
   id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -216,7 +422,6 @@ CREATE TABLE global_messages (
 ## global_message_settings
 Stores the global message interval (single row, id = 1).
 
-Suggested schema:
 ```sql
 CREATE TABLE global_message_settings (
   id INT NOT NULL PRIMARY KEY,
@@ -227,7 +432,6 @@ CREATE TABLE global_message_settings (
 ## player_count_samples
 Stores player count analytics samples.
 
-Suggested schema:
 ```sql
 CREATE TABLE player_count_samples (
   timestamp_ms BIGINT NOT NULL PRIMARY KEY,
@@ -235,64 +439,110 @@ CREATE TABLE player_count_samples (
 ) ENGINE=InnoDB;
 ```
 
-## player_vexa
-Stores the global vexa currency balance per player. Shared across all modules.
+## medal_rewards
+Feather reward amounts per map category per medal tier.
 
-Suggested schema:
 ```sql
-CREATE TABLE player_vexa (
-  uuid VARCHAR(36) NOT NULL PRIMARY KEY,
-  vexa BIGINT NOT NULL DEFAULT 0
+CREATE TABLE IF NOT EXISTS medal_rewards (
+  category VARCHAR(32) NOT NULL PRIMARY KEY,
+  bronze_feathers INT NOT NULL DEFAULT 0,
+  silver_feathers INT NOT NULL DEFAULT 0,
+  gold_feathers INT NOT NULL DEFAULT 0,
+  emerald_feathers INT NOT NULL DEFAULT 0,
+  -- Migration column (added via ALTER TABLE):
+  insane_feathers INT NOT NULL DEFAULT 0
 ) ENGINE=InnoDB;
 ```
 
 Notes:
-- Auto-created by `VexaStore.initialize()` on startup
-- Managed by `hyvexa-core/src/main/java/io/hyvexa/core/economy/VexaStore.java`
-- Writes are immediate (no dirty tracking) since vexa is rare/precious
-- Player cache is evicted on disconnect (lazy-loaded on next access)
+- Column was renamed from `author_feathers` to `emerald_feathers` via migration
+- `insane_feathers` added via migration for the Insane difficulty category
+- Manager: `MedalRewardStore` (singleton in `hyvexa-parkour`) -- loaded into memory on startup, edited via `/pk admin` -> Medal Rewards.
 
-## player_cosmetics
-Stores purchased cosmetics and equipped state per player.
+## player_medals
+Tracks which medal tiers each player has earned per map. Medals are earned once per map per tier.
 
-Suggested schema:
 ```sql
-CREATE TABLE player_cosmetics (
+CREATE TABLE IF NOT EXISTS player_medals (
   player_uuid VARCHAR(36) NOT NULL,
-  cosmetic_id VARCHAR(64) NOT NULL,
-  equipped BOOLEAN NOT NULL DEFAULT FALSE,
-  PRIMARY KEY (player_uuid, cosmetic_id)
+  map_id VARCHAR(64) NOT NULL,
+  medal VARCHAR(7) NOT NULL,
+  earned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (player_uuid, map_id, medal)
 ) ENGINE=InnoDB;
 ```
 
-Notes:
-- Auto-created by `CosmeticStore.initialize()` on startup
-- Managed by `hyvexa-core/src/main/java/io/hyvexa/core/cosmetic/CosmeticStore.java`
-- At most one cosmetic can be `equipped = TRUE` per player at a time
-- Writes are immediate (same pattern as VexaStore)
-- Player cache is evicted on disconnect (lazy-loaded on next access)
+- `medal` values: `BRONZE`, `SILVER`, `GOLD`, `EMERALD`, `INSANE`
+- Manager: `MedalStore` (singleton in `hyvexa-parkour`) -- lazy-loads per player, evicts on disconnect.
 
-## Notes
-- Foreign keys are not required by the current code, but you can add them if desired.
-- All reads/writes are performed by the stores in `hyvexa-parkour/src/main/java/io/hyvexa/parkour/data/`.
-- Hub state is stored in `hyvexa-core/src/main/java/io/hyvexa/core/state/PlayerModeStateStore.java`.
-- Some tables (`players`, `maps`, `map_checkpoints`, `player_completions`, `settings`, `global_messages`, `global_message_settings`, `player_count_samples`, `player_mode_state`) are not created programmatically by the plugin — they are created manually or by an external migration script.
+---
 
-## Shared Database
+# Duel Tables
 
-Parkour and Parkour Ascend will share the same MySQL database. Each module owns its own tables
-(e.g., `parkour_*` vs `ascend_*`) to avoid collisions.
+Owned by `hyvexa-parkour` for the duel minigame subsystem.
+
+## duel_category_prefs
+Stores per-player duel category preferences.
+
+```sql
+CREATE TABLE IF NOT EXISTS duel_category_prefs (
+  player_uuid VARCHAR(36) PRIMARY KEY,
+  easy_enabled BOOLEAN DEFAULT TRUE,
+  medium_enabled BOOLEAN DEFAULT TRUE,
+  hard_enabled BOOLEAN DEFAULT FALSE,
+  insane_enabled BOOLEAN DEFAULT FALSE,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+```
+
+Manager: `DuelPreferenceStore` (in `hyvexa-parkour`)
+
+## duel_matches
+Stores completed duel match history.
+
+```sql
+CREATE TABLE IF NOT EXISTS duel_matches (
+  id VARCHAR(36) PRIMARY KEY,
+  player1_uuid VARCHAR(36) NOT NULL,
+  player2_uuid VARCHAR(36) NOT NULL,
+  map_id VARCHAR(64) NOT NULL,
+  winner_uuid VARCHAR(36),
+  player1_time_ms BIGINT,
+  player2_time_ms BIGINT,
+  finish_reason VARCHAR(20),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+Manager: `DuelMatchStore` (in `hyvexa-parkour`)
+
+## duel_player_stats
+Stores duel win/loss statistics per player.
+
+```sql
+CREATE TABLE IF NOT EXISTS duel_player_stats (
+  player_uuid VARCHAR(36) PRIMARY KEY,
+  player_name VARCHAR(64),
+  wins INT DEFAULT 0,
+  losses INT DEFAULT 0,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+```
+
+Manager: `DuelStatsStore` (in `hyvexa-parkour`)
 
 ---
 
 # Ascend Tables
+
+Tables owned by `hyvexa-parkour-ascend` for the Ascend idle mode.
 
 ## ascend_players
 Stores Ascend player state including prestige progress.
 
 Suggested schema (base CREATE TABLE + all migration columns):
 ```sql
-CREATE TABLE ascend_players (
+CREATE TABLE IF NOT EXISTS ascend_players (
   uuid VARCHAR(36) PRIMARY KEY,
   volt_mantissa DOUBLE NOT NULL DEFAULT 0,
   volt_exp10 INT NOT NULL DEFAULT 0,
@@ -350,9 +600,8 @@ Notes:
 ## ascend_maps
 Stores Ascend map definitions.
 
-Suggested schema:
 ```sql
-CREATE TABLE ascend_maps (
+CREATE TABLE IF NOT EXISTS ascend_maps (
   id VARCHAR(32) PRIMARY KEY,
   name VARCHAR(64) NOT NULL,
   price BIGINT NOT NULL DEFAULT 0,
@@ -386,9 +635,8 @@ Notes:
 ## ascend_player_maps
 Stores per-player progress on each Ascend map.
 
-Suggested schema:
 ```sql
-CREATE TABLE ascend_player_maps (
+CREATE TABLE IF NOT EXISTS ascend_player_maps (
   player_uuid VARCHAR(36) NOT NULL,
   map_id VARCHAR(32) NOT NULL,
   unlocked BOOLEAN NOT NULL DEFAULT FALSE,
@@ -407,7 +655,7 @@ CREATE TABLE ascend_player_maps (
 ```
 
 Notes:
-- `multiplier_mantissa` + `multiplier_exp10` store the multiplier as scientific notation (mantissa × 10^exp10) for BigNumber support. Migrated from a single `multiplier DOUBLE` column.
+- `multiplier_mantissa` + `multiplier_exp10` store the multiplier as scientific notation (mantissa x 10^exp10) for BigNumber support. Migrated from a single `multiplier DOUBLE` column.
 - `robot_stars` tracks evolution level (0-5). Each star doubles the multiplier increment per completion.
 - `robot_speed_level` resets to 0 when evolving to a new star level.
 - `best_time_ms` stores the player's personal best time for this map (used for ghost recordings and PB display).
@@ -415,9 +663,8 @@ Notes:
 ## ascend_upgrade_costs
 Stores upgrade cost tiers (optional, can use calculated values instead).
 
-Suggested schema:
 ```sql
-CREATE TABLE ascend_upgrade_costs (
+CREATE TABLE IF NOT EXISTS ascend_upgrade_costs (
   upgrade_type VARCHAR(32) NOT NULL,
   level INT NOT NULL,
   cost BIGINT NOT NULL,
@@ -428,9 +675,8 @@ CREATE TABLE ascend_upgrade_costs (
 ## ascend_player_summit
 Stores Summit XP per category per player.
 
-Suggested schema:
 ```sql
-CREATE TABLE ascend_player_summit (
+CREATE TABLE IF NOT EXISTS ascend_player_summit (
   player_uuid VARCHAR(36) NOT NULL,
   category VARCHAR(32) NOT NULL,
   xp DOUBLE NOT NULL DEFAULT 0,
@@ -450,9 +696,8 @@ Notes:
 ## ascend_player_skills
 Stores unlocked skill tree nodes per player.
 
-Suggested schema:
 ```sql
-CREATE TABLE ascend_player_skills (
+CREATE TABLE IF NOT EXISTS ascend_player_skills (
   player_uuid VARCHAR(36) NOT NULL,
   skill_node VARCHAR(64) NOT NULL,
   unlocked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -469,9 +714,8 @@ Notes:
 ## ascend_player_achievements
 Stores unlocked achievements per player.
 
-Suggested schema:
 ```sql
-CREATE TABLE ascend_player_achievements (
+CREATE TABLE IF NOT EXISTS ascend_player_achievements (
   player_uuid VARCHAR(36) NOT NULL,
   achievement VARCHAR(64) NOT NULL,
   unlocked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -488,9 +732,8 @@ Notes:
 ## ascend_settings
 Stores global Ascend settings (single row, id = 1).
 
-Suggested schema:
 ```sql
-CREATE TABLE ascend_settings (
+CREATE TABLE IF NOT EXISTS ascend_settings (
   id INT NOT NULL PRIMARY KEY,
   spawn_x DOUBLE NOT NULL DEFAULT 0,
   spawn_y DOUBLE NOT NULL DEFAULT 0,
@@ -517,9 +760,8 @@ Notes:
 ## ascend_challenges
 Stores active challenge state per player (one active challenge at a time).
 
-Suggested schema:
 ```sql
-CREATE TABLE ascend_challenges (
+CREATE TABLE IF NOT EXISTS ascend_challenges (
   player_uuid VARCHAR(36) PRIMARY KEY,
   challenge_type_id INT NOT NULL,
   started_at_ms BIGINT NOT NULL,
@@ -537,9 +779,8 @@ Notes:
 ## ascend_challenge_records
 Stores permanent best times and completion counts per challenge type per player.
 
-Suggested schema:
 ```sql
-CREATE TABLE ascend_challenge_records (
+CREATE TABLE IF NOT EXISTS ascend_challenge_records (
   player_uuid VARCHAR(36) NOT NULL,
   challenge_type_id INT NOT NULL,
   best_time_ms BIGINT DEFAULT NULL,
@@ -557,9 +798,8 @@ Notes:
 ## ascend_ghost_recordings
 Stores ghost recordings for runner replay (personal best movement paths).
 
-Suggested schema:
 ```sql
-CREATE TABLE ascend_ghost_recordings (
+CREATE TABLE IF NOT EXISTS ascend_ghost_recordings (
   player_uuid VARCHAR(36) NOT NULL,
   map_id VARCHAR(32) NOT NULL,
   recording_blob MEDIUMBLOB NOT NULL,
@@ -577,316 +817,200 @@ Notes:
 - Recordings are only saved when achieving a new personal best
 - Table is created automatically by `GhostStore.ensureGhostTableExists()` on startup
 
----
+## ascend_player_cats
+Stores collectible cat tokens found per player in Ascend mode.
 
-# Discord Linking Tables
-
-## discord_link_codes
-Stores temporary link codes generated in-game. Codes expire after 5 minutes.
-
-Suggested schema:
 ```sql
-CREATE TABLE discord_link_codes (
-  code VARCHAR(7) NOT NULL PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS ascend_player_cats (
   player_uuid VARCHAR(36) NOT NULL,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  expires_at TIMESTAMP NOT NULL
+  cat_token VARCHAR(16) NOT NULL,
+  found_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (player_uuid, cat_token),
+  FOREIGN KEY (player_uuid) REFERENCES ascend_players(uuid) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 ```
 
-Notes:
-- Codes are 6 alphanumeric characters, displayed as XXX-XXX (stored without dash)
-- Expired codes are cleaned on startup and replaced when a player generates a new code
-- Auto-created by `DiscordLinkStore.initialize()` on startup
-
-## discord_links
-Stores permanent Discord-Minecraft account links and vexa reward tracking.
-
-Suggested schema:
-```sql
-CREATE TABLE discord_links (
-  player_uuid VARCHAR(36) NOT NULL PRIMARY KEY,
-  discord_id VARCHAR(20) NOT NULL UNIQUE,
-  linked_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  vexa_rewarded BOOLEAN NOT NULL DEFAULT FALSE,
-  current_rank VARCHAR(20) DEFAULT 'Unranked',
-  last_synced_rank VARCHAR(20) DEFAULT NULL
-) ENGINE=InnoDB;
-```
-
-Notes:
-- One-to-one mapping: each game account links to exactly one Discord account and vice versa
-- `vexa_rewarded` tracks whether the one-time 100 vexa reward has been given
-- `current_rank` is the player's parkour rank, written by the plugin on rank-up and login
-- `last_synced_rank` is the rank last synced to Discord by the bot; when it differs from `current_rank`, the bot knows to update roles
-- The Discord bot writes to this table; the plugin reads it on player login
-- Auto-created by `DiscordLinkStore.initialize()` on startup (columns added via ALTER TABLE migration for existing installs)
-- Managed by `hyvexa-core/src/main/java/io/hyvexa/core/discord/DiscordLinkStore.java`
+Auto-created by `AscendDatabaseSetup` on startup.
 
 ---
 
-# Vote Tables
+# Ascend Mine Tables
 
-## player_votes
-Append-only log of every individual vote, for analytics and time-based leaderboards.
+Tables owned by `hyvexa-parkour-ascend` for the Mine subsystem within Ascend mode.
+All created by `AscendDatabaseSetup.ensureTables()` on startup.
+
+## mine_definitions
+Stores mine configuration definitions.
 
 ```sql
-CREATE TABLE player_votes (
-  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS mine_definitions (
+  id VARCHAR(32) PRIMARY KEY,
+  name VARCHAR(64) NOT NULL,
+  display_order INT NOT NULL DEFAULT 0,
+  unlock_cost_mantissa DOUBLE NOT NULL DEFAULT 0,
+  unlock_cost_exp10 INT NOT NULL DEFAULT 0,
+  world VARCHAR(64) NOT NULL DEFAULT '',
+  spawn_x DOUBLE NOT NULL DEFAULT 0,
+  spawn_y DOUBLE NOT NULL DEFAULT 0,
+  spawn_z DOUBLE NOT NULL DEFAULT 0,
+  spawn_rot_x FLOAT NOT NULL DEFAULT 0,
+  spawn_rot_y FLOAT NOT NULL DEFAULT 0,
+  spawn_rot_z FLOAT NOT NULL DEFAULT 0
+) ENGINE=InnoDB;
+```
+
+Notes:
+- Unlock cost stored as BigNumber pair (`unlock_cost_mantissa` x 10^`unlock_cost_exp10`)
+- `display_order` controls the order in which mines appear in the UI
+- Manager: `MineConfigStore` (in `hyvexa-parkour-ascend`)
+
+## mine_zones
+Stores mineable zone regions within each mine.
+
+```sql
+CREATE TABLE IF NOT EXISTS mine_zones (
+  id VARCHAR(32) NOT NULL,
+  mine_id VARCHAR(32) NOT NULL,
+  min_x INT NOT NULL, min_y INT NOT NULL, min_z INT NOT NULL,
+  max_x INT NOT NULL, max_y INT NOT NULL, max_z INT NOT NULL,
+  block_table_json TEXT NOT NULL DEFAULT '{}',
+  regen_threshold DOUBLE NOT NULL DEFAULT 0.8,
+  regen_cooldown_seconds INT NOT NULL DEFAULT 45,
+  PRIMARY KEY (id),
+  FOREIGN KEY (mine_id) REFERENCES mine_definitions(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+```
+
+Notes:
+- `block_table_json` is a JSON object mapping block type IDs to spawn weight probabilities (e.g., `{"hytale:stone": 0.7, "hytale:iron_ore": 0.3}`)
+- `regen_threshold` is the fraction of blocks that must be mined before the zone regenerates (0.0-1.0)
+- `regen_cooldown_seconds` is the cooldown between zone regenerations
+- Manager: `MineConfigStore` (in `hyvexa-parkour-ascend`)
+
+## mine_gate
+Stores entry/exit gate regions for teleporting players in/out of the mine area.
+
+```sql
+CREATE TABLE IF NOT EXISTS mine_gate (
+  id INT NOT NULL PRIMARY KEY DEFAULT 1,
+  min_x DOUBLE NOT NULL DEFAULT 0, min_y DOUBLE NOT NULL DEFAULT 0, min_z DOUBLE NOT NULL DEFAULT 0,
+  max_x DOUBLE NOT NULL DEFAULT 0, max_y DOUBLE NOT NULL DEFAULT 0, max_z DOUBLE NOT NULL DEFAULT 0,
+  fallback_x DOUBLE NOT NULL DEFAULT 0, fallback_y DOUBLE NOT NULL DEFAULT 0, fallback_z DOUBLE NOT NULL DEFAULT 0,
+  fallback_rot_x FLOAT NOT NULL DEFAULT 0, fallback_rot_y FLOAT NOT NULL DEFAULT 0, fallback_rot_z FLOAT NOT NULL DEFAULT 0
+) ENGINE=InnoDB;
+```
+
+Notes:
+- Two rows: `id = 1` for entry gate (ascend area -> mine), `id = 2` for exit gate (mine -> ascend area)
+- `min_*` / `max_*` define the AABB trigger region
+- `fallback_*` define the teleport destination position and rotation
+- Manager: `MineConfigStore` (in `hyvexa-parkour-ascend`)
+
+## mine_players
+Stores per-player mine progress including crystal currency and upgrade levels.
+
+```sql
+CREATE TABLE IF NOT EXISTS mine_players (
+  uuid VARCHAR(36) PRIMARY KEY,
+  crystals BIGINT NOT NULL DEFAULT 0,
+  -- Migration columns (added via ALTER TABLE):
+  mining_speed_level INT NOT NULL DEFAULT 0,
+  bag_capacity_level INT NOT NULL DEFAULT 0,
+  multi_break_level INT NOT NULL DEFAULT 0,
+  auto_sell_level INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (uuid) REFERENCES ascend_players(uuid) ON DELETE CASCADE
+) ENGINE=InnoDB;
+```
+
+Notes:
+- `crystals` is the mine-specific currency (migrated from BigNumber mantissa+exp10 to plain BIGINT)
+- Upgrade level columns added via `ensureMineUpgradeColumns()` migration
+- Manager: `MinePlayerStore` (in `hyvexa-parkour-ascend`) -- dirty-tracking with 5-second batched saves
+
+## mine_player_inventory
+Stores virtual block counts per player (mined blocks awaiting sale).
+
+```sql
+CREATE TABLE IF NOT EXISTS mine_player_inventory (
   player_uuid VARCHAR(36) NOT NULL,
-  player_name VARCHAR(32) NOT NULL,
-  source VARCHAR(32) NOT NULL,
-  voted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  INDEX idx_player (player_uuid),
-  INDEX idx_voted_at (voted_at),
-  INDEX idx_player_voted (player_uuid, voted_at)
+  block_type_id VARCHAR(64) NOT NULL,
+  amount INT NOT NULL DEFAULT 0,
+  PRIMARY KEY (player_uuid, block_type_id),
+  FOREIGN KEY (player_uuid) REFERENCES mine_players(uuid) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 ```
 
 Notes:
-- `source` values: `hytale.game` (polling), `votifier` (Votifier V1/V2)
-- Used for time-period leaderboards (weekly, monthly) via `GROUP BY` + `COUNT(*)`
-- Auto-created by `VoteStore.initialize()` on startup
-- Managed by `hyvexa-core/src/main/java/io/hyvexa/core/vote/VoteStore.java`
+- Stored blocks are sold for crystals at prices defined in `mine_block_prices`
+- Inventory is delete+re-insert on save (full replace strategy)
+- Manager: `MinePlayerStore` (in `hyvexa-parkour-ascend`)
 
-## player_vote_counts
-Denormalized aggregate vote counter per player for fast leaderboard reads.
+## mine_block_prices
+Stores sell prices for each block type per mine.
 
 ```sql
-CREATE TABLE player_vote_counts (
-  player_uuid VARCHAR(36) NOT NULL PRIMARY KEY,
-  player_name VARCHAR(32) NOT NULL,
-  total_votes INT NOT NULL DEFAULT 0,
-  last_voted_at TIMESTAMP NULL
+CREATE TABLE IF NOT EXISTS mine_block_prices (
+  mine_id VARCHAR(32) NOT NULL,
+  block_type_id VARCHAR(64) NOT NULL,
+  price_mantissa DOUBLE NOT NULL DEFAULT 1,
+  price_exp10 INT NOT NULL DEFAULT 0,
+  PRIMARY KEY (mine_id, block_type_id),
+  FOREIGN KEY (mine_id) REFERENCES mine_definitions(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 ```
 
 Notes:
-- Incremented atomically alongside each `player_votes` INSERT (same transaction)
-- Avoids `COUNT(*)` on `player_votes` for all-time leaderboard queries
-- `player_name` updated on each vote to keep current username
-- Auto-created by `VoteStore.initialize()` on startup
-- Managed by `hyvexa-core/src/main/java/io/hyvexa/core/vote/VoteStore.java`
+- Price stored as BigNumber pair (`price_mantissa` x 10^`price_exp10`)
+- Default price is 1 crystal per block if no row exists
+- Manager: `MineConfigStore` (in `hyvexa-parkour-ascend`)
 
----
+## mine_player_mines
+Stores per-player per-mine unlock and completion state.
 
-# Analytics Tables
-
-## analytics_events
-Append-only event log for gameplay analytics. Purged after 90 days.
-
-Suggested schema:
 ```sql
-CREATE TABLE analytics_events (
-  id BIGINT AUTO_INCREMENT PRIMARY KEY,
-  timestamp_ms BIGINT NOT NULL,
+CREATE TABLE IF NOT EXISTS mine_player_mines (
   player_uuid VARCHAR(36) NOT NULL,
-  event_type VARCHAR(32) NOT NULL,
-  data_json TEXT NULL,
-  INDEX idx_timestamp (timestamp_ms),
-  INDEX idx_player (player_uuid),
-  INDEX idx_type_timestamp (event_type, timestamp_ms)
+  mine_id VARCHAR(32) NOT NULL,
+  unlocked BOOLEAN NOT NULL DEFAULT FALSE,
+  completed_manually BOOLEAN NOT NULL DEFAULT FALSE,
+  PRIMARY KEY (player_uuid, mine_id),
+  FOREIGN KEY (player_uuid) REFERENCES mine_players(uuid) ON DELETE CASCADE,
+  FOREIGN KEY (mine_id) REFERENCES mine_definitions(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 ```
 
 Notes:
-- Auto-created by `AnalyticsStore.initialize()` on startup
-- Event types: `player_join`, `player_leave`, `map_start`, `map_complete`, `level_up`, `duel_finish`, `mode_switch`, `gem_spend`, `discord_link`, `ascend_manual_run`, `ascend_elevation_up`, `ascend_summit_up`, `ascend_ascension`, `ascend_runner_buy`, `ascend_runner_evolve`, `ascend_challenge_start`, `ascend_challenge_complete`, `ascend_achievement`
-- `data_json` contains event-specific payload (e.g., `{"map_id":"...", "time_ms":1234}`)
-- Events older than 90 days are purged on startup
+- First mine is auto-unlocked for all players on first load
+- Manager: `MinePlayerStore` (in `hyvexa-parkour-ascend`)
 
-## analytics_daily
-Pre-computed daily aggregate statistics. Kept indefinitely.
-
-Suggested schema:
-```sql
-CREATE TABLE analytics_daily (
-  date DATE NOT NULL PRIMARY KEY,
-  dau INT NOT NULL,
-  new_players INT NOT NULL,
-  avg_session_ms BIGINT NOT NULL,
-  total_sessions INT NOT NULL,
-  parkour_time_pct FLOAT NOT NULL,
-  ascend_time_pct FLOAT NOT NULL,
-  peak_concurrent INT NOT NULL,
-  data_json TEXT NULL
-) ENGINE=InnoDB;
-```
-
-Notes:
-- One row per day, computed by `AnalyticsStore.computeDailyAggregates()`
-- Computed on server shutdown and on-demand via `/analytics refresh`
-- `dau` = distinct players with `player_join` events that day
-- `parkour_time_pct` / `ascend_time_pct` = percentage of `mode_switch` events to each mode
-
-## /analytics Command (OP-only)
-
-```
-/analytics [days]          Overview: DAU, retention, sessions, mode split (default 7d)
-/analytics parkour [days]  Map starts/completions/rate, PBs, first completions,
-                           level ups, unique players, duels (by reason), top maps
-/analytics ascend [days]   Manual runs, unique runners, elevations, summits,
-                           ascensions, runners bought/evolved, achievements,
-                           challenges (start/complete/rate), top summit categories
-/analytics economy [days]  Vexa spent, purchases, unique buyers, discord links,
-                           top purchased items
-/analytics refresh         Recompute today's daily aggregates
-/analytics purge           Purge events older than 90 days
-```
-
-Days range: 1-365, default 7 for all subcommands.
-
-## players table additions
-Two columns added to the existing `players` table via ALTER TABLE migration:
-- `first_join_ms BIGINT NULL` - Timestamp of player's first ever join (set once)
-- `last_seen_ms BIGINT NULL` - Timestamp of player's most recent join/leave (updated every session)
-
-## purge_zombie_variants
-Stores configurable zombie variant types for Purge mode. Seeded with SLOW/NORMAL/FAST on first load.
+## mine_player_miners
+Stores per-player per-mine automated miner (NPC) state.
 
 ```sql
-CREATE TABLE purge_zombie_variants (
-  variant_key VARCHAR(32) NOT NULL PRIMARY KEY,
-  label VARCHAR(64) NOT NULL,
-  base_health INT NOT NULL DEFAULT 49,
-  base_damage FLOAT NOT NULL DEFAULT 20,
-  speed_multiplier DOUBLE NOT NULL DEFAULT 1.0
-) ENGINE=InnoDB;
-```
-
-Manager: `PurgeVariantConfigManager` — in-memory cache, immediate DB writes.
-
-## purge_wave_variant_counts
-Join table linking waves to variant spawn counts (replaces old `slow_count`/`normal_count`/`fast_count` columns on `purge_waves`).
-
-```sql
-CREATE TABLE purge_wave_variant_counts (
-  wave_number INT NOT NULL,
-  variant_key VARCHAR(32) NOT NULL,
-  count INT NOT NULL DEFAULT 0,
-  PRIMARY KEY (wave_number, variant_key)
-) ENGINE=InnoDB;
-```
-
-Manager: `PurgeWaveConfigManager` — migrates from old columns on startup if they exist.
-
-## player_feathers
-Parkour feather currency per player. Follows VexaStore pattern (lazy-load, immediate writes, evict on disconnect).
-
-```sql
-CREATE TABLE player_feathers (
-  uuid VARCHAR(36) NOT NULL PRIMARY KEY,
-  feathers BIGINT NOT NULL DEFAULT 0
-) ENGINE=InnoDB;
-```
-
-Manager: `FeatherStore` (singleton in `hyvexa-core`)
-
-## medal_rewards
-Feather reward amounts per map category per medal tier. Max 4 rows (Easy, Medium, Hard, Insane).
-
-```sql
-CREATE TABLE medal_rewards (
-  category VARCHAR(32) NOT NULL PRIMARY KEY,
-  bronze_feathers INT NOT NULL DEFAULT 0,
-  silver_feathers INT NOT NULL DEFAULT 0,
-  gold_feathers INT NOT NULL DEFAULT 0,
-  author_feathers INT NOT NULL DEFAULT 0
-) ENGINE=InnoDB;
-```
-
-Manager: `MedalRewardStore` (singleton in `hyvexa-parkour`) — loaded into memory on startup, edited via `/pk admin` -> Medal Rewards.
-
-## player_medals
-Tracks which medal tiers each player has earned per map. Medals are earned once per map per tier.
-
-```sql
-CREATE TABLE player_medals (
+CREATE TABLE IF NOT EXISTS mine_player_miners (
   player_uuid VARCHAR(36) NOT NULL,
-  map_id VARCHAR(64) NOT NULL,
-  medal VARCHAR(6) NOT NULL,
-  earned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (player_uuid, map_id, medal)
-) ENGINE=InnoDB;
-```
-
-- `medal` values: `BRONZE`, `SILVER`, `GOLD`, `AUTHOR`
-- Manager: `MedalStore` (singleton in `hyvexa-parkour`) — lazy-loads per player, evicts on disconnect.
-
-## cosmetic_shop_config
-Stores shop availability and pricing for wardrobe cosmetics.
-
-```sql
-CREATE TABLE IF NOT EXISTS cosmetic_shop_config (
-  cosmetic_id VARCHAR(64) NOT NULL PRIMARY KEY,
-  available BOOLEAN NOT NULL DEFAULT FALSE,
-  price INT NOT NULL DEFAULT 0,
-  currency VARCHAR(16) NOT NULL DEFAULT 'vexa'
+  mine_id VARCHAR(32) NOT NULL,
+  has_miner BOOLEAN NOT NULL DEFAULT FALSE,
+  speed_level INT NOT NULL DEFAULT 0,
+  stars INT NOT NULL DEFAULT 0,
+  PRIMARY KEY (player_uuid, mine_id),
+  FOREIGN KEY (player_uuid) REFERENCES mine_players(uuid) ON DELETE CASCADE,
+  FOREIGN KEY (mine_id) REFERENCES mine_definitions(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 ```
 
 Notes:
-- Auto-created by `CosmeticShopConfigStore.initialize()` on startup
-- Manager: `CosmeticShopConfigStore` (singleton in `hyvexa-core`)
-- `currency` toggles between `'vexa'` and `'feathers'`
-
----
-
-# Duel Tables
-
-## duel_category_prefs
-Stores per-player duel category preferences.
-
-```sql
-CREATE TABLE IF NOT EXISTS duel_category_prefs (
-  player_uuid VARCHAR(36) PRIMARY KEY,
-  easy_enabled BOOLEAN DEFAULT TRUE,
-  medium_enabled BOOLEAN DEFAULT TRUE,
-  hard_enabled BOOLEAN DEFAULT FALSE,
-  insane_enabled BOOLEAN DEFAULT FALSE,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
-```
-
-Manager: `DuelPreferenceStore` (in `hyvexa-parkour`)
-
-## duel_matches
-Stores completed duel match history.
-
-```sql
-CREATE TABLE IF NOT EXISTS duel_matches (
-  id VARCHAR(36) PRIMARY KEY,
-  player1_uuid VARCHAR(36) NOT NULL,
-  player2_uuid VARCHAR(36) NOT NULL,
-  map_id VARCHAR(64) NOT NULL,
-  winner_uuid VARCHAR(36),
-  player1_time_ms BIGINT,
-  player2_time_ms BIGINT,
-  finish_reason VARCHAR(20),
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
-
-Manager: `DuelMatchStore` (in `hyvexa-parkour`)
-
-## duel_player_stats
-Stores duel win/loss statistics per player.
-
-```sql
-CREATE TABLE IF NOT EXISTS duel_player_stats (
-  player_uuid VARCHAR(36) PRIMARY KEY,
-  player_name VARCHAR(64),
-  wins INT DEFAULT 0,
-  losses INT DEFAULT 0,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
-```
-
-Manager: `DuelStatsStore` (in `hyvexa-parkour`)
+- `stars` tracks evolution level (similar to Ascend runners)
+- `speed_level` is the miner's speed upgrade level
+- Manager: `MinePlayerStore` (in `hyvexa-parkour-ascend`)
 
 ---
 
 # Purge Tables
+
+Tables owned by `hyvexa-purge` for the zombie survival PvE mode.
 
 ## purge_player_stats
 Stores per-player Purge mode statistics.
@@ -928,6 +1052,78 @@ CREATE TABLE IF NOT EXISTS purge_weapon_upgrades (
 ```
 
 Manager: `PurgeWeaponUpgradeStore` (in `hyvexa-purge`)
+
+## purge_weapon_xp
+Stores per-player weapon XP and level progression.
+
+```sql
+CREATE TABLE IF NOT EXISTS purge_weapon_xp (
+  uuid VARCHAR(36) NOT NULL,
+  weapon_id VARCHAR(32) NOT NULL,
+  xp INT NOT NULL DEFAULT 0,
+  level INT NOT NULL DEFAULT 0,
+  PRIMARY KEY (uuid, weapon_id)
+) ENGINE=InnoDB;
+```
+
+Notes:
+- XP increments on every kill; persisted asynchronously to avoid blocking the world thread
+- Auto-created by `WeaponXpStore.initialize()` on startup
+- Manager: `WeaponXpStore` (singleton in `hyvexa-purge`)
+
+## purge_daily_missions
+Stores daily mission progress per player per day.
+
+```sql
+CREATE TABLE IF NOT EXISTS purge_daily_missions (
+  uuid VARCHAR(36) NOT NULL,
+  mission_date DATE NOT NULL,
+  total_kills INT NOT NULL DEFAULT 0,
+  best_wave INT NOT NULL DEFAULT 0,
+  best_combo INT NOT NULL DEFAULT 0,
+  claimed_wave TINYINT NOT NULL DEFAULT 0,
+  claimed_combo TINYINT NOT NULL DEFAULT 0,
+  claimed_kill TINYINT NOT NULL DEFAULT 0,
+  PRIMARY KEY (uuid, mission_date)
+) ENGINE=InnoDB;
+```
+
+Notes:
+- One row per player per day; stale rows are ignored (fresh day = fresh progress)
+- `claimed_*` columns track whether the player has collected each mission reward
+- Auto-created by `PurgeMissionStore.initialize()` on startup
+- Manager: `PurgeMissionStore` (singleton in `hyvexa-purge`)
+
+## purge_player_classes
+Stores unlocked combat classes per player.
+
+```sql
+CREATE TABLE IF NOT EXISTS purge_player_classes (
+  uuid VARCHAR(36) NOT NULL,
+  class_id VARCHAR(32) NOT NULL,
+  PRIMARY KEY (uuid, class_id)
+) ENGINE=InnoDB;
+```
+
+Notes:
+- `class_id` is the enum name from `PurgeClass`
+- Auto-created by `PurgeClassStore.initialize()` on startup
+- Manager: `PurgeClassStore` (singleton in `hyvexa-purge`)
+
+## purge_player_selected_class
+Stores the currently selected combat class per player.
+
+```sql
+CREATE TABLE IF NOT EXISTS purge_player_selected_class (
+  uuid VARCHAR(36) NOT NULL PRIMARY KEY,
+  selected_class VARCHAR(32) DEFAULT NULL
+) ENGINE=InnoDB;
+```
+
+Notes:
+- `selected_class` is NULL if no class is selected
+- Auto-created by `PurgeClassStore.initialize()` on startup
+- Manager: `PurgeClassStore` (singleton in `hyvexa-purge`)
 
 ## purge_weapon_levels
 Stores configurable weapon level stats (damage, cost per level).
@@ -973,6 +1169,37 @@ CREATE TABLE IF NOT EXISTS purge_weapon_skins (
 
 Manager: `PurgeSkinStore` (singleton in `hyvexa-core`)
 
+## purge_zombie_variants
+Stores configurable zombie variant types for Purge mode. Seeded with SLOW/NORMAL/FAST on first load.
+
+```sql
+CREATE TABLE IF NOT EXISTS purge_zombie_variants (
+  variant_key VARCHAR(32) NOT NULL PRIMARY KEY,
+  label VARCHAR(64) NOT NULL,
+  base_health INT NOT NULL DEFAULT 50,
+  base_damage FLOAT NOT NULL DEFAULT 20,
+  speed_multiplier DOUBLE NOT NULL DEFAULT 1.0,
+  npc_type VARCHAR(64) NOT NULL DEFAULT 'Zombie',
+  scrap_reward INT NOT NULL DEFAULT 10
+) ENGINE=InnoDB;
+```
+
+Manager: `PurgeVariantConfigManager` -- in-memory cache, immediate DB writes.
+
+## purge_wave_variant_counts
+Join table linking waves to variant spawn counts (replaces old `slow_count`/`normal_count`/`fast_count` columns on `purge_waves`).
+
+```sql
+CREATE TABLE IF NOT EXISTS purge_wave_variant_counts (
+  wave_number INT NOT NULL,
+  variant_key VARCHAR(32) NOT NULL,
+  count INT NOT NULL DEFAULT 0,
+  PRIMARY KEY (wave_number, variant_key)
+) ENGINE=InnoDB;
+```
+
+Manager: `PurgeWaveConfigManager` -- migrates from old columns on startup if they exist.
+
 ## purge_waves
 Stores wave configuration for Purge mode.
 
@@ -1012,6 +1239,8 @@ Manager: `PurgeWeaponUpgradeStore` (in `hyvexa-purge`)
 ---
 
 # RunOrFall Tables
+
+Tables owned by `hyvexa-runorfall` for the platforming minigame mode.
 
 ## runorfall_settings
 Stores global RunOrFall mode settings (single row, id = 1).
@@ -1121,19 +1350,34 @@ Manager: `RunOrFallStatsStore` (in `hyvexa-runorfall`)
 
 ---
 
-# Ascend Additional Tables
+# Votifier Tables (SQLite -- separate from shared MySQL)
 
-## ascend_player_cats
-Stores collectible cat tokens found per player in Ascend mode.
+The `hyvexa-votifier` module uses a **local SQLite database** (not the shared MySQL).
+This table is documented for completeness but lives in a separate file on disk.
+
+## player_votes (SQLite)
+Tracks the last vote timestamp per username for duplicate-vote prevention.
 
 ```sql
-CREATE TABLE IF NOT EXISTS ascend_player_cats (
-  player_uuid VARCHAR(36) NOT NULL,
-  cat_token VARCHAR(16) NOT NULL,
-  found_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (player_uuid, cat_token),
-  FOREIGN KEY (player_uuid) REFERENCES ascend_players(uuid) ON DELETE CASCADE
-) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS player_votes (
+  username TEXT PRIMARY KEY NOT NULL,
+  last_vote_timestamp INTEGER NOT NULL
+);
+-- Additional index:
+CREATE INDEX IF NOT EXISTS idx_last_vote ON player_votes (last_vote_timestamp);
 ```
 
-Auto-created by `AscendDatabaseSetup` on startup.
+Notes:
+- This is a **SQLite** table, not MySQL. Managed by `SQLiteVoteStorage` in `hyvexa-votifier`.
+- Uses SQLite WAL mode for concurrent performance.
+- Expired votes are cleaned via `cleanupExpiredVotes()`.
+- **Not to be confused** with the MySQL `player_votes` table in `hyvexa-core` (VoteStore) which logs all votes for leaderboards.
+
+---
+
+# Notes
+
+- Foreign keys are not required by the current code on all tables, but some (Ascend, Mine) use them explicitly.
+- Most tables are auto-created on startup by their respective Store or DatabaseSetup class.
+- Some parkour tables (`players`, `maps`, `map_checkpoints`, `player_completions`, `settings`, `global_messages`, `global_message_settings`, `player_count_samples`) are not created programmatically by the plugin -- they are created manually or by an external migration script.
+- The Hub module (`hyvexa-hub`) and Wardrobe module (`hyvexa-wardrobe`) do not own any database tables. Hub routing is runtime-only; wardrobe cosmetics use the shared `player_cosmetics` and `cosmetic_shop_config` tables from `hyvexa-core`.
