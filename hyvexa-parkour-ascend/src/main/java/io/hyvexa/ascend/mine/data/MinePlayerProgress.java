@@ -18,7 +18,7 @@ public class MinePlayerProgress {
 
     public boolean addToInventory(String blockTypeId, int amount) {
         int total = inventory.values().stream().mapToInt(Integer::intValue).sum();
-        if (total + amount > bagCapacity) return false; // bag full
+        if (total + amount > getBagCapacity()) return false; // bag full
         inventory.merge(blockTypeId, amount, Integer::sum);
         return true;
     }
@@ -28,7 +28,7 @@ public class MinePlayerProgress {
     }
 
     public boolean isInventoryFull() {
-        return getInventoryTotal() >= bagCapacity;
+        return getInventoryTotal() >= getBagCapacity();
     }
 
     /**
