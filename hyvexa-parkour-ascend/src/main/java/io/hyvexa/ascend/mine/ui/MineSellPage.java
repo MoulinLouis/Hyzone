@@ -31,16 +31,6 @@ public class MineSellPage extends BaseAscendPage {
     private static final String BUTTON_CLOSE = "Close";
     private static final String BUTTON_SELL_ALL = "SellAll";
 
-    private static final Map<String, String> BLOCK_ICONS = Map.of(
-        "Rock_Stone", "#IconStone",
-        "Rock_Crystal_Blue_Block", "#IconBlue",
-        "Rock_Crystal_Green_Block", "#IconGreen",
-        "Rock_Crystal_Pink_Block", "#IconPink",
-        "Rock_Crystal_Red_Block", "#IconRed",
-        "Rock_Crystal_White_Block", "#IconWhite",
-        "Rock_Crystal_Yellow_Block", "#IconYellow"
-    );
-
     private static final Map<String, String> BLOCK_DISPLAY_NAMES = Map.of(
         "Rock_Stone", "Stone",
         "Rock_Crystal_Blue_Block", "Blue Crystal",
@@ -96,11 +86,6 @@ public class MineSellPage extends BaseAscendPage {
                 commandBuilder.append("#SellItems", "Pages/Ascend_MineSellEntry.ui");
                 String sel = "#SellItems[" + index + "]";
 
-                String iconId = BLOCK_ICONS.get(entry.getKey());
-                if (iconId != null) {
-                    commandBuilder.set(sel + " " + iconId + ".Visible", true);
-                }
-
                 String displayName = BLOCK_DISPLAY_NAMES.getOrDefault(
                     entry.getKey(), entry.getKey().replace('_', ' '));
                 commandBuilder.set(sel + " #BlockName.Text", displayName);
@@ -154,7 +139,6 @@ public class MineSellPage extends BaseAscendPage {
         UICommandBuilder commandBuilder = new UICommandBuilder();
         UIEventBuilder eventBuilder = new UIEventBuilder();
         populateContent(commandBuilder);
-        // Re-bind sell all button since content was refreshed
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SellAllButton",
             EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_SELL_ALL), false);
         this.sendUpdate(commandBuilder, eventBuilder, false);

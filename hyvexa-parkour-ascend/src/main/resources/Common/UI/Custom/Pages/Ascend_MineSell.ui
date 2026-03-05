@@ -4,17 +4,19 @@ $C.@PageOverlay {
   SceneBlur {}
 
   Group #MineSellWindow {
-    Anchor: (Width: 480, Height: 560);
+    Anchor: (Width: 460, Height: 480);
     LayoutMode: Top;
     Background: #0d1620(0.95);
     OutlineColor: #ffffff(0.06);
     OutlineSize: 1;
 
+    // === HEADER ===
     Group #Header {
       Anchor: (Left: 0, Right: 0, Height: 52);
       LayoutMode: Full;
       Background: #0a1018;
 
+      // Top accent line (amber = mine/economy)
       Group {
         Anchor: (Left: 0, Right: 0, Top: 0, Height: 2);
         Background: #f59e0b;
@@ -51,13 +53,14 @@ $C.@PageOverlay {
       }
     }
 
+    // === CONTENT ===
     Group #Content {
       Anchor: (Left: 0, Right: 0);
       FlexWeight: 1;
       LayoutMode: Top;
       Padding: (Left: 16, Right: 16, Top: 12, Bottom: 12);
 
-      // Capacity
+      // Bag Capacity card
       Group #CardCapacity {
         Anchor: (Left: 0, Right: 0, Height: 36);
         LayoutMode: Full;
@@ -83,7 +86,7 @@ $C.@PageOverlay {
         }
       }
 
-      // Crystals
+      // Crystals card
       Group #CardCrystals {
         Anchor: (Left: 0, Right: 0, Height: 36, Top: 6);
         LayoutMode: Full;
@@ -109,8 +112,8 @@ $C.@PageOverlay {
         }
       }
 
-      // Total value
-      Group #CardTotalValue {
+      // Total Value card
+      Group #CardTotal {
         Anchor: (Left: 0, Right: 0, Height: 36, Top: 6);
         LayoutMode: Full;
         Background: #ffffff(0.03);
@@ -119,7 +122,7 @@ $C.@PageOverlay {
 
         Group {
           Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
-          Background: #34d399;
+          Background: #4ade80;
         }
 
         Label {
@@ -130,7 +133,7 @@ $C.@PageOverlay {
 
         Label #TotalValue {
           Anchor: (Left: 120, Right: 16, Top: 0, Bottom: 0);
-          Style: (FontSize: 15, TextColor: #34d399, RenderBold: true, VerticalAlignment: Center);
+          Style: (FontSize: 15, TextColor: #4ade80, RenderBold: true, VerticalAlignment: Center);
           Text: "0 crystals";
         }
       }
@@ -142,7 +145,7 @@ $C.@PageOverlay {
         Text: "Bag is empty";
       }
 
-      // Block list
+      // Scrollable item list
       Group #ScrollArea {
         Anchor: (Left: 0, Right: 0, Top: 10);
         FlexWeight: 1;
@@ -151,34 +154,37 @@ $C.@PageOverlay {
 
         Group #SellItems {
           LayoutMode: Top;
-          Padding: (Top: 4);
         }
       }
 
       // Sell All button
       Group #SellAllWrap {
-        Anchor: (Left: 0, Right: 0, Height: 44, Top: 10);
-        LayoutMode: Full;
+        Anchor: (Left: 0, Right: 0, Top: 10, Height: 40);
+        LayoutMode: Left;
+
+        Group { FlexWeight: 1; }
 
         TextButton #SellAllButton {
-          Anchor: (Left: 60, Right: 60, Top: 0, Bottom: 0);
+          Anchor: (Width: 160, Height: 38);
           Text: "Sell All";
           Style: TextButtonStyle(
             Default: (
-              Background: #f59e0b,
-              LabelStyle: (FontSize: 16, TextColor: #0d1620, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+              Background: #3d6b5a,
+              LabelStyle: (FontSize: 14, TextColor: #e0fef0, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
             ),
             Hovered: (
-              Background: #fbbf24,
-              LabelStyle: (FontSize: 16, TextColor: #0d1620, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+              Background: #4d8f7a,
+              LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
             ),
             Pressed: (
-              Background: #d97706,
-              LabelStyle: (FontSize: 16, TextColor: #0d1620, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+              Background: #2d5a4a,
+              LabelStyle: (FontSize: 14, TextColor: #e0fef0, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
             ),
             Sounds: $C.@ButtonSounds,
           );
         }
+
+        Group { FlexWeight: 1; }
       }
     }
   }
