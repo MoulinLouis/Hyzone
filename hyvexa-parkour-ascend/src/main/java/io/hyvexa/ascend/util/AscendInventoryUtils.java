@@ -76,6 +76,32 @@ public final class AscendInventoryUtils {
         hotbar.setItemStackForSlot((short) 2, new ItemStack(AscendConstants.ITEM_DEV_CINDERCLOTH, 1), false);
     }
 
+    /**
+     * Adds the mine access item to slot 6 if the hotbar has room.
+     * Does NOT check ascension eligibility — caller must verify.
+     */
+    public static void addMineItem(Player player) {
+        if (!isInventoryWriteSafe(player)) return;
+        Inventory inventory = player.getInventory();
+        if (inventory == null) return;
+        ItemContainer hotbar = inventory.getHotbar();
+        if (hotbar == null || hotbar.getCapacity() <= 6) return;
+        hotbar.setItemStackForSlot((short) 6, new ItemStack(AscendConstants.ITEM_MINE_SELECT, 1), false);
+    }
+
+    /**
+     * Ensures the mine access item is in slot 6 (setIfMissing).
+     * Does NOT check ascension eligibility — caller must verify.
+     */
+    public static void ensureMineItem(Player player) {
+        if (!isInventoryWriteSafe(player)) return;
+        Inventory inventory = player.getInventory();
+        if (inventory == null) return;
+        ItemContainer hotbar = inventory.getHotbar();
+        if (hotbar == null || hotbar.getCapacity() <= 6) return;
+        InventoryUtils.setIfMissing(hotbar, (short) 6, AscendConstants.ITEM_MINE_SELECT);
+    }
+
     private static boolean isInventoryWriteSafe(Player player) {
         return player != null && player.getWorld() != null;
     }

@@ -12,10 +12,13 @@ import com.hypixel.hytale.server.core.modules.entity.component.TransformComponen
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import io.hyvexa.ascend.AscendConstants;
+import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
+import io.hyvexa.ascend.mine.hud.MineHudManager;
 import io.hyvexa.ascend.util.AscendInventoryUtils;
 
 import java.util.Map;
@@ -65,6 +68,18 @@ public class MineGateChecker {
             Player player = store.getComponent(ref, Player.getComponentType());
             if (player != null) {
                 giveMineItems(player);
+                // Swap HUD: Ascend -> Mine
+                ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+                if (plugin != null) {
+                    plugin.getHudManager().removePlayer(playerId);
+                    MineHudManager mhm = plugin.getMineHudManager();
+                    if (mhm != null) {
+                        PlayerRef pRef = store.getComponent(ref, PlayerRef.getComponentType());
+                        if (pRef != null) {
+                            mhm.attachHud(pRef, player);
+                        }
+                    }
+                }
             }
             return;
         }
@@ -81,7 +96,24 @@ public class MineGateChecker {
 
             Player player = store.getComponent(ref, Player.getComponentType());
             if (player != null) {
+                // Swap HUD: Mine -> Ascend
+                ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+                if (plugin != null) {
+                    MineHudManager mhm = plugin.getMineHudManager();
+                    if (mhm != null) {
+                        mhm.detachHud(playerId);
+                    }
+                    PlayerRef pRef = store.getComponent(ref, PlayerRef.getComponentType());
+                    if (pRef != null) {
+                        plugin.getHudManager().attach(pRef, player);
+                    }
+                }
                 AscendInventoryUtils.giveMenuItems(player);
+                // Add mine hotbar item for ascended players
+                AscendPlayerProgress ascendProgress = playerStore.getPlayer(playerId);
+                if (ascendProgress != null && ascendProgress.getAscensionCount() >= 1) {
+                    AscendInventoryUtils.addMineItem(player);
+                }
             }
         }
     }

@@ -21,6 +21,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
 import io.hyvexa.ascend.ParkourAscendPlugin;
+import io.hyvexa.ascend.mine.hud.MineHudManager;
 import io.hyvexa.ascend.mine.data.Mine;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
@@ -177,6 +178,18 @@ public class MineSelectPage extends BaseAscendPage {
         world.execute(() -> {
             if (ref.isValid()) {
                 store.addComponent(ref, Teleport.getComponentType(), new Teleport(world, destPos, destRot));
+                // Swap HUD: Ascend -> Mine
+                ParkourAscendPlugin p = ParkourAscendPlugin.getInstance();
+                if (p != null) {
+                    p.getHudManager().removePlayer(playerRef.getUuid());
+                    MineHudManager mhm = p.getMineHudManager();
+                    if (mhm != null) {
+                        Player player = store.getComponent(ref, Player.getComponentType());
+                        if (player != null) {
+                            mhm.attachHud(playerRef, player);
+                        }
+                    }
+                }
             }
         });
     }

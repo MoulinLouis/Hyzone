@@ -50,6 +50,7 @@ import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.robot.MineRobotManager;
+import io.hyvexa.ascend.mine.hud.MineHudManager;
 import io.hyvexa.ascend.mine.system.MineBreakSystem;
 import com.hypixel.hytale.server.core.event.events.ecs.BreakBlockEvent;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
@@ -117,6 +118,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
     private MineManager mineManager;
     private MinePlayerStore minePlayerStore;
     private MineRobotManager mineRobotManager;
+    private MineHudManager mineHudManager;
     private AscendWhitelistManager whitelistManager;
     private AscendRuntimeConfig runtimeConfig;
     private ScheduledFuture<?> tickTask;
@@ -202,6 +204,11 @@ public class ParkourAscendPlugin extends JavaPlugin {
             mineManager = new MineManager(mineConfigStore);
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("Failed to initialize mine manager");
+        }
+
+        // Mine HUD manager
+        if (minePlayerStore != null && mineManager != null && mineConfigStore != null) {
+            mineHudManager = new MineHudManager(minePlayerStore, mineManager, mineConfigStore);
         }
 
         // Mine robot manager (automated miners)
@@ -369,6 +376,13 @@ public class ParkourAscendPlugin extends JavaPlugin {
                         return;
                     }
                     AscendInventoryUtils.giveMenuItems(player);
+                    // Add mine access item for ascended players (Task 7)
+                    if (playerId != null && playerStore != null) {
+                        AscendPlayerProgress ap = playerStore.getPlayer(playerId);
+                        if (ap != null && ap.getAscensionCount() >= 1) {
+                            AscendInventoryUtils.addMineItem(player);
+                        }
+                    }
                     hudManager.attach(playerRef, player);
                     AscendMusicPage.applyStoredMusic(playerRef);
                     DiscordLinkStore linkStore = DiscordLinkStore.getInstance();
@@ -590,6 +604,10 @@ public class ParkourAscendPlugin extends JavaPlugin {
         return mineRobotManager;
     }
 
+    public MineHudManager getMineHudManager() {
+        return mineHudManager;
+    }
+
     public AscendRuntimeConfig getRuntimeConfig() {
         return runtimeConfig;
     }
@@ -726,13 +744,23 @@ public class ParkourAscendPlugin extends JavaPlugin {
                         if (mineGateChecker != null) {
                             mineGateChecker.checkPlayer(playerId, ref, store);
                         }
-                        if (fullTick) {
-                            runTracker.checkPlayer(ref, store);
-                            hudManager.updateFull(ref, store, playerRef);
+                        // Mine HUD or Ascend HUD (never both simultaneously)
+                        if (mineHudManager != null && mineHudManager.hasHud(playerId)) {
+                            if (fullTick) {
+                                mineHudManager.updateFull(playerId);
+                            }
+                            if (tickCounter % 20 == 0) {
+                                mineHudManager.updateCooldowns(playerId);
+                            }
+                        } else {
+                            if (fullTick) {
+                                runTracker.checkPlayer(ref, store);
+                                hudManager.updateFull(ref, store, playerRef);
+                            }
+                            hudManager.updateTimer(playerRef);
+                            hudManager.updateRunnerBars(playerRef);
+                            hudManager.updateToasts(playerRef.getUuid());
                         }
-                        hudManager.updateTimer(playerRef);
-                        hudManager.updateRunnerBars(playerRef);
-                        hudManager.updateToasts(playerRef.getUuid());
                     }
                 } finally {
                     inFlight.set(false);
@@ -790,6 +818,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
         runSafe(() -> AscendLeaveInteraction.clearPendingLeave(playerId), "Leave cleanup: clearPendingLeave");
         runSafe(() -> AscendSettingsPage.clearPlayer(playerId), "Leave cleanup: AscendSettingsPage");
         runSafe(() -> AscendMusicPage.clearPlayer(playerId), "Leave cleanup: AscendMusicPage");
+        runSafe(() -> { if (mineHudManager != null) mineHudManager.removePlayer(playerId); },
+                "Leave cleanup: mineHudManager");
         runSafe(() -> hudManager.removePlayer(playerId), "Leave cleanup: hudManager");
         runSafe(() -> { if (runTracker != null) runTracker.cancelRun(playerId); }, "Leave cleanup: runTracker");
         runSafe(() -> { if (robotManager != null) robotManager.onPlayerLeave(playerId); }, "Leave cleanup: robotManager");
