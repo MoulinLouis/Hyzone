@@ -46,6 +46,7 @@ import io.hyvexa.ascend.summit.SummitManager;
 import io.hyvexa.ascend.mine.MineGateChecker;
 import io.hyvexa.ascend.mine.MineManager;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
+import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.system.MineBreakSystem;
 import com.hypixel.hytale.server.core.event.events.ecs.BreakBlockEvent;
@@ -839,5 +840,23 @@ public class ParkourAscendPlugin extends JavaPlugin {
         registry.register("Shop_Item_Interaction",
             io.hyvexa.common.interaction.ShopItemInteraction.class,
             io.hyvexa.common.interaction.ShopItemInteraction.CODEC);
+        // Mine Sell -> MineSellPage
+        registry.register("Mine_Sell_Interaction",
+            AscendDevInteraction.class, AscendDevInteraction.codec(() -> new AscendDevInteraction(
+                (ref, store, playerRef, plugin) -> {
+                    MinePlayerProgress progress = plugin.getMinePlayerStore().getOrCreatePlayer(playerRef.getUuid());
+                    return new io.hyvexa.ascend.mine.ui.MineSellPage(playerRef, progress);
+                },
+                (plugin, player) -> plugin.getMinePlayerStore() != null,
+                true, true)));
+        // Mine Upgrades -> MineUpgradePage
+        registry.register("Mine_Upgrades_Interaction",
+            AscendDevInteraction.class, AscendDevInteraction.codec(() -> new AscendDevInteraction(
+                (ref, store, playerRef, plugin) -> {
+                    MinePlayerProgress progress = plugin.getMinePlayerStore().getOrCreatePlayer(playerRef.getUuid());
+                    return new io.hyvexa.ascend.mine.ui.MineUpgradePage(playerRef, progress);
+                },
+                (plugin, player) -> plugin.getMinePlayerStore() != null,
+                true, true)));
     }
 }
