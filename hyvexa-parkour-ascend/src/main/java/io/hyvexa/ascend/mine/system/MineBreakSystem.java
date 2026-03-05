@@ -31,6 +31,7 @@ public class MineBreakSystem extends EntityEventSystem<EntityStore, BreakBlockEv
     private final MineManager mineManager;
     private final MinePlayerStore minePlayerStore;
     private final Map<UUID, Long> lastBagFullMessage = new ConcurrentHashMap<>();
+    private final Map<UUID, Long> lastRegenMessage = new ConcurrentHashMap<>();
 
     public MineBreakSystem(MineManager mineManager, MinePlayerStore minePlayerStore) {
         super(BreakBlockEvent.class);
@@ -78,6 +79,19 @@ public class MineBreakSystem extends EntityEventSystem<EntityStore, BreakBlockEv
         UUID playerId = playerRef.getUuid();
         if (playerId == null) {
             LOGGER.atInfo().log("[MineBreak] playerId is null");
+            return;
+        }
+
+        // Check if zone is regenerating
+        if (mineManager.isZoneInCooldown(zone.getId())) {
+            long now = System.currentTimeMillis();
+            Long last = lastRegenMessage.get(playerId);
+            if (last == null || now - last > 3000) {
+                lastRegenMessage.put(playerId, now);
+                long remaining = mineManager.getZoneCooldownRemainingMs(zone.getId());
+                int secondsLeft = (int) Math.ceil(remaining / 1000.0);
+                player.sendMessage(Message.raw("Zone regenerating... " + secondsLeft + "s remaining"));
+            }
             return;
         }
 

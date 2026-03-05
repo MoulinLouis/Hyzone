@@ -20,6 +20,11 @@ public class MineManager {
     // zoneId -> set of broken block positions (encoded as long: x<<40 | y<<20 | z)
     private final Map<String, Set<Long>> brokenBlocks = new ConcurrentHashMap<>();
 
+    // zoneId -> timestamp when cooldown started (0 = not in cooldown)
+    private final Map<String, Long> zoneCooldownStart = new ConcurrentHashMap<>();
+
+    private volatile World mineWorld;
+
     public MineManager(MineConfigStore configStore) {
         this.configStore = configStore;
     }
@@ -53,6 +58,21 @@ public class MineManager {
         return (double) broken.size() / zone.getTotalBlocks();
     }
 
+    public boolean isZoneInCooldown(String zoneId) {
+        Long start = zoneCooldownStart.get(zoneId);
+        return start != null && start > 0;
+    }
+
+    public long getZoneCooldownRemainingMs(String zoneId) {
+        Long start = zoneCooldownStart.get(zoneId);
+        if (start == null || start == 0) return 0;
+        MineZone zone = findZoneById(zoneId);
+        if (zone == null) return 0;
+        long elapsed = System.currentTimeMillis() - start;
+        long cooldownMs = zone.getRegenCooldownSeconds() * 1000L;
+        return Math.max(0, cooldownMs - elapsed);
+    }
+
     private MineZone findZoneById(String zoneId) {
         for (Mine mine : configStore.listMinesSorted()) {
             for (MineZone zone : mine.getZones()) {
@@ -66,6 +86,51 @@ public class MineManager {
 
     public MineConfigStore getConfigStore() {
         return configStore;
+    }
+
+    public void setWorld(World world) { this.mineWorld = world; }
+
+    public void tick() {
+        long now = System.currentTimeMillis();
+
+        for (Mine mine : configStore.listMinesSorted()) {
+            for (MineZone zone : mine.getZones()) {
+                String zoneId = zone.getId();
+
+                // Check if zone is in cooldown
+                Long cooldownStart = zoneCooldownStart.get(zoneId);
+                if (cooldownStart != null && cooldownStart > 0) {
+                    // Check if cooldown is over
+                    long cooldownMs = zone.getRegenCooldownSeconds() * 1000L;
+                    if (now - cooldownStart >= cooldownMs) {
+                        // Regenerate on world thread
+                        World world = mineWorld;
+                        if (world != null) {
+                            world.execute(() -> {
+                                generateZone(world, zone);
+                            });
+                        }
+                        zoneCooldownStart.remove(zoneId);
+                    }
+                    continue; // skip threshold check while in cooldown
+                }
+
+                // Check if threshold is reached
+                double ratio = getBrokenRatio(zoneId);
+                if (ratio >= zone.getRegenThreshold()) {
+                    // Start cooldown
+                    zoneCooldownStart.put(zoneId, now);
+                }
+            }
+        }
+    }
+
+    public void generateAllZones(World world) {
+        for (Mine mine : configStore.listMinesSorted()) {
+            for (MineZone zone : mine.getZones()) {
+                generateZone(world, zone);
+            }
+        }
     }
 
     public void generateZone(World world, MineZone zone) {

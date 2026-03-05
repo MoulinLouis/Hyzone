@@ -115,7 +115,9 @@ public class ParkourAscendPlugin extends JavaPlugin {
     private AscendWhitelistManager whitelistManager;
     private AscendRuntimeConfig runtimeConfig;
     private ScheduledFuture<?> tickTask;
+    private ScheduledFuture<?> mineTickTask;
     private int tickCounter;
+    private final AtomicBoolean mineZonesGenerated = new AtomicBoolean(false);
     private final ConcurrentHashMap<UUID, PlayerRef> playerRefCache = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<World, AtomicBoolean> worldTickInFlight = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<World, Set<UUID>> tickPlayersByWorld = new ConcurrentHashMap<>();
@@ -291,6 +293,13 @@ public class ParkourAscendPlugin extends JavaPlugin {
                 if (world == null || !isAscendWorld(world)) {
                     return;
                 }
+                // Set mine world reference and generate zones on first ascend world discovery
+                if (mineManager != null) {
+                    mineManager.setWorld(world);
+                    if (mineZonesGenerated.compareAndSet(false, true)) {
+                        world.execute(() -> mineManager.generateAllZones(world));
+                    }
+                }
                 PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
                 if (playerRef == null) {
                     return;
@@ -445,12 +454,21 @@ public class ParkourAscendPlugin extends JavaPlugin {
             this::tick,
             50, 50, TimeUnit.MILLISECONDS
         );
+
+        if (mineManager != null) {
+            mineTickTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleAtFixedRate(
+                () -> mineManager.tick(),
+                1000, 1000, TimeUnit.MILLISECONDS
+            );
+        }
     }
 
     @Override
     protected void shutdown() {
         runSafe(() -> { if (tickTask != null) { tickTask.cancel(false); tickTask = null; } },
                 "Shutdown: tickTask cancel");
+        runSafe(() -> { if (mineTickTask != null) { mineTickTask.cancel(false); mineTickTask = null; } },
+                "Shutdown: mineTickTask cancel");
         runSafe(() -> worldTickInFlight.clear(), "Shutdown: worldTickInFlight clear");
         runSafe(() -> tickPlayersByWorld.clear(), "Shutdown: tickPlayersByWorld clear");
         runSafe(() -> playerTickWorlds.clear(), "Shutdown: playerTickWorlds clear");
