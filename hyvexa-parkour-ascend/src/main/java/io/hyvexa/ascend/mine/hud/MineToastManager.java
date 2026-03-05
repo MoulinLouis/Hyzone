@@ -1,6 +1,7 @@
 package io.hyvexa.ascend.mine.hud;
 
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
+import io.hyvexa.ascend.mine.MineBlockDisplay;
 
 public class MineToastManager {
 
@@ -15,7 +16,6 @@ public class MineToastManager {
             if (slots[i] != null && slots[i].blockTypeId.equals(blockTypeId)) {
                 slots[i].count += count;
                 slots[i].createdAt = System.currentTimeMillis();
-                slots[i].dirty = true;
                 return;
             }
         }
@@ -54,7 +54,6 @@ public class MineToastManager {
 
             float progress = 1.0f - (float) elapsed / TOAST_DURATION_MS;
             showSlot(cmd, i, entry, progress);
-            entry.dirty = false;
         }
     }
 
@@ -103,36 +102,13 @@ public class MineToastManager {
         final String displayName;
         int count;
         long createdAt;
-        boolean dirty;
 
         MineToastEntry(String blockTypeId, int count, long createdAt) {
             this.blockTypeId = blockTypeId;
-            this.itemId = stripNamespace(blockTypeId);
-            this.displayName = formatBlockName(blockTypeId);
+            this.itemId = MineBlockDisplay.getItemId(blockTypeId);
+            this.displayName = MineBlockDisplay.getDisplayName(blockTypeId);
             this.count = count;
             this.createdAt = createdAt;
-            this.dirty = true;
         }
-    }
-
-    static String stripNamespace(String blockTypeId) {
-        if (blockTypeId == null) return "";
-        int colonIndex = blockTypeId.indexOf(':');
-        return colonIndex >= 0 ? blockTypeId.substring(colonIndex + 1) : blockTypeId;
-    }
-
-    static String formatBlockName(String blockTypeId) {
-        if (blockTypeId == null || blockTypeId.isEmpty()) return "Unknown";
-        String name = stripNamespace(blockTypeId);
-        String[] parts = name.split("_");
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < parts.length; i++) {
-            if (i > 0) sb.append(' ');
-            if (!parts[i].isEmpty()) {
-                sb.append(Character.toUpperCase(parts[i].charAt(0)));
-                if (parts[i].length() > 1) sb.append(parts[i].substring(1));
-            }
-        }
-        return sb.toString();
     }
 }

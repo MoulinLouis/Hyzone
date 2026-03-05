@@ -6,22 +6,18 @@ import javax.annotation.Nonnull;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
-import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
 import io.hyvexa.ascend.ParkourAscendPlugin;
-import io.hyvexa.ascend.mine.hud.MineHudManager;
+import io.hyvexa.ascend.mine.MineGateChecker;
 import io.hyvexa.ascend.mine.data.Mine;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
@@ -80,8 +76,7 @@ public class MineSelectPage extends BaseAscendPage {
                 ? mine.getName() : mine.getId();
             commandBuilder.set(sel + " #MineName.Text", displayName);
 
-            MinePlayerProgress.MineProgress state = mineProgress.getMineState(mine.getId());
-            boolean unlocked = state.isUnlocked();
+            boolean unlocked = mineProgress.getMineSnapshot(mine.getId()).isUnlocked();
 
             if (unlocked) {
                 commandBuilder.set(sel + " #UnlockedGroup.Visible", true);
@@ -165,33 +160,28 @@ public class MineSelectPage extends BaseAscendPage {
             return;
         }
 
-        MinePlayerProgress.MineProgress state = mineProgress.getMineState(mineId);
-        if (!state.isUnlocked()) return;
+        if (!mineProgress.getMineSnapshot(mineId).isUnlocked()) return;
+
+        Player player = store.getComponent(ref, Player.getComponentType());
+        MineGateChecker gateChecker = plugin.getMineGateChecker();
+        if (gateChecker == null || gateChecker.denyMineAccess(playerRef.getUuid(), player)) {
+            return;
+        }
 
         this.close();
-
-        World world = store.getExternalData().getWorld();
-        if (world == null) return;
-
-        Vector3d destPos = new Vector3d(mine.getSpawnX(), mine.getSpawnY(), mine.getSpawnZ());
-        Vector3f destRot = new Vector3f(mine.getSpawnRotX(), mine.getSpawnRotY(), mine.getSpawnRotZ());
-        world.execute(() -> {
-            if (ref.isValid()) {
-                store.addComponent(ref, Teleport.getComponentType(), new Teleport(world, destPos, destRot));
-                // Swap HUD: Ascend -> Mine
-                ParkourAscendPlugin p = ParkourAscendPlugin.getInstance();
-                if (p != null) {
-                    p.getHudManager().removePlayer(playerRef.getUuid());
-                    MineHudManager mhm = p.getMineHudManager();
-                    if (mhm != null) {
-                        Player player = store.getComponent(ref, Player.getComponentType());
-                        if (player != null) {
-                            mhm.attachHud(playerRef, player);
-                        }
-                    }
-                }
-            }
-        });
+        gateChecker.enterMine(
+            playerRef.getUuid(),
+            playerRef,
+            ref,
+            store,
+            mine.getSpawnX(),
+            mine.getSpawnY(),
+            mine.getSpawnZ(),
+            mine.getSpawnRotX(),
+            mine.getSpawnRotY(),
+            mine.getSpawnRotZ(),
+            false
+        );
     }
 
     private void handleUnlock(Ref<EntityStore> ref, Store<EntityStore> store, String mineId) {

@@ -16,7 +16,6 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.mine.MineManager;
-import io.hyvexa.ascend.mine.data.Mine;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
@@ -24,16 +23,13 @@ import io.hyvexa.ascend.mine.data.MineZone;
 import io.hyvexa.ascend.mine.hud.MineHudManager;
 import io.hyvexa.common.math.BigNumber;
 import io.hyvexa.common.util.PermissionUtils;
-import com.hypixel.hytale.logger.HytaleLogger;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class MineBreakSystem extends EntityEventSystem<EntityStore, BreakBlockEvent> {
-    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private final MineManager mineManager;
     private final MinePlayerStore minePlayerStore;
     private final Map<UUID, Long> lastBagFullMessage = new ConcurrentHashMap<>();
@@ -48,43 +44,32 @@ public class MineBreakSystem extends EntityEventSystem<EntityStore, BreakBlockEv
     @Override
     public void handle(int entityId, ArchetypeChunk<EntityStore> chunk, Store<EntityStore> store,
                        CommandBuffer<EntityStore> buffer, BreakBlockEvent event) {
-        LOGGER.atInfo().log("[MineBreak] handle() called, cancelled=%s", event.isCancelled());
-
         Player player = chunk.getComponent(entityId, Player.getComponentType());
         if (player == null) {
-            LOGGER.atInfo().log("[MineBreak] player is null, skipping");
             return;
         }
         boolean isOp = PermissionUtils.isOp(player);
 
         Vector3i target = event.getTargetBlock();
         if (target == null) {
-            LOGGER.atInfo().log("[MineBreak] targetBlock is null, skipping");
             return;
         }
         int bx = target.getX();
         int by = target.getY();
         int bz = target.getZ();
-        LOGGER.atInfo().log("[MineBreak] block at (%d, %d, %d)", bx, by, bz);
 
         MineZone zone = mineManager.findZoneAt(bx, by, bz);
         if (zone == null) {
-            if (!isOp) {
-                LOGGER.atInfo().log("[MineBreak] not in any zone, keeping cancelled");
-            }
             return;
         }
-        LOGGER.atInfo().log("[MineBreak] in zone '%s'", zone.getId());
 
         // Block is in a mining zone — check if player can mine
         PlayerRef playerRef = chunk.getComponent(entityId, PlayerRef.getComponentType());
         if (playerRef == null) {
-            LOGGER.atInfo().log("[MineBreak] playerRef is null");
             return;
         }
         UUID playerId = playerRef.getUuid();
         if (playerId == null) {
-            LOGGER.atInfo().log("[MineBreak] playerId is null");
             return;
         }
 
@@ -110,31 +95,30 @@ public class MineBreakSystem extends EntityEventSystem<EntityStore, BreakBlockEv
         AscendPlayerProgress ascendProgress = ParkourAscendPlugin.getInstance()
             .getPlayerStore().getPlayer(playerId);
         if (ascendProgress == null) {
-            LOGGER.atInfo().log("[MineBreak] ascendProgress is null, denied");
             return;
         }
-        LOGGER.atInfo().log("[MineBreak] ascensionCount=%d", ascendProgress.getAscensionCount());
         if (ascendProgress.getAscensionCount() < 1) {
-            LOGGER.atInfo().log("[MineBreak] no ascension, denied");
             return;
         }
 
         MinePlayerProgress mineProgress = minePlayerStore.getOrCreatePlayer(playerId);
-        LOGGER.atInfo().log("[MineBreak] inventory %d/%d", mineProgress.getInventoryTotal(), mineProgress.getBagCapacity());
-        if (!mineProgress.isAutoSellEnabled() && mineProgress.isInventoryFull()) {
-            LOGGER.atInfo().log("[MineBreak] bag full, denied");
-            long now = System.currentTimeMillis();
-            Long last = lastBagFullMessage.get(playerId);
-            if (last == null || now - last > 3000) {
-                lastBagFullMessage.put(playerId, now);
-                player.sendMessage(Message.raw("Bag full! Sell your blocks with /mine sell"));
-            }
+        // Resolve block type name
+        String blockTypeName = event.getBlockType() != null ? event.getBlockType().getId() : null;
+        if (blockTypeName == null) {
             return;
         }
 
-        // Resolve block type name
-        String blockTypeName = event.getBlockType() != null ? event.getBlockType().getId() : null;
-        LOGGER.atInfo().log("[MineBreak] blockType=%s", blockTypeName);
+        int blocksGained = 1;
+        double multiBreakChance = mineProgress.getMultiBreakChance();
+        if (multiBreakChance > 0 && ThreadLocalRandom.current().nextDouble() < multiBreakChance) {
+            blocksGained = 2;
+        }
+
+        boolean autoSell = mineProgress.isAutoSellEnabled();
+        if (!autoSell && !mineProgress.canAddToInventory(blocksGained)) {
+            sendBagFullMessage(playerId, player);
+            return;
+        }
 
         // For non-OP: manually remove the block (set to air) — we can't rely on setCancelled(false)
         // because NoBreakSystem may run after us and re-cancel the event.
@@ -145,44 +129,43 @@ public class MineBreakSystem extends EntityEventSystem<EntityStore, BreakBlockEv
             var worldChunk = world.getChunkIfInMemory(chunkIndex);
             if (worldChunk == null) worldChunk = world.loadChunkIfInMemory(chunkIndex);
             if (worldChunk == null) {
-                LOGGER.atInfo().log("[MineBreak] chunk not loaded, cannot break");
                 return;
             }
             worldChunk.setBlock(bx, by, bz, 0);
         }
-        LOGGER.atInfo().log("[MineBreak] ALLOWED break (op=%s)", isOp);
 
-        if (blockTypeName != null) {
-            int blocksGained = 1;
-            double multiBreakChance = mineProgress.getMultiBreakChance();
-            if (multiBreakChance > 0 && ThreadLocalRandom.current().nextDouble() < multiBreakChance) {
-                blocksGained = 2;
-            }
+        MineConfigStore configStore = mineManager.getConfigStore();
+        BigNumber blockPrice = configStore.getBlockPrice(zone.getMineId(), blockTypeName);
 
-            if (mineProgress.isAutoSellEnabled()) {
-                MineConfigStore configStore = ParkourAscendPlugin.getInstance().getMineConfigStore();
-                if (configStore != null) {
-                    HashMap<String, BigNumber> prices = new HashMap<>();
-                    for (Mine mine : configStore.listMinesSorted()) {
-                        prices.putAll(configStore.getBlockPrices(mine.getId()));
-                    }
-                    BigNumber price = prices.getOrDefault(blockTypeName, BigNumber.ONE);
-                    long earned = price.multiply(BigNumber.of(blocksGained, 0)).toLong();
-                    mineProgress.addCrystals(earned);
-                }
-            } else {
-                mineProgress.addToInventory(blockTypeName, blocksGained);
+        if (autoSell) {
+            long earned = blockPrice.multiply(BigNumber.of(blocksGained, 0)).toLong();
+            mineProgress.addCrystals(earned);
+        } else {
+            int stored = mineProgress.addToInventoryUpTo(blockTypeName, blocksGained);
+            if (stored < blocksGained) {
+                int overflow = blocksGained - stored;
+                long fallbackCrystals = blockPrice.multiply(BigNumber.of(overflow, 0)).toLong();
+                mineProgress.addCrystals(fallbackCrystals);
             }
-            minePlayerStore.markDirty(playerId);
+        }
+        minePlayerStore.markDirty(playerId);
 
-            MineHudManager mineHudManager = ParkourAscendPlugin.getInstance().getMineHudManager();
-            if (mineHudManager != null) {
-                mineHudManager.showMineToast(playerId, blockTypeName, blocksGained);
-            }
+        MineHudManager mineHudManager = ParkourAscendPlugin.getInstance().getMineHudManager();
+        if (mineHudManager != null) {
+            mineHudManager.showMineToast(playerId, blockTypeName, blocksGained);
         }
 
         // Track broken block in zone
         mineManager.markBlockBroken(zone.getId(), bx, by, bz);
+    }
+
+    private void sendBagFullMessage(UUID playerId, Player player) {
+        long now = System.currentTimeMillis();
+        Long last = lastBagFullMessage.get(playerId);
+        if (last == null || now - last > 3000) {
+            lastBagFullMessage.put(playerId, now);
+            player.sendMessage(Message.raw("Bag full! Sell your blocks with /mine sell"));
+        }
     }
 
     @Override

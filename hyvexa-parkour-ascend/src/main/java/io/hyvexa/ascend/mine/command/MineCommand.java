@@ -14,6 +14,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
+import io.hyvexa.ascend.mine.MineGateChecker;
 import io.hyvexa.ascend.mine.ui.MineSelectPage;
 import io.hyvexa.ascend.mine.ui.MineSellPage;
 import io.hyvexa.ascend.mine.ui.MineUpgradePage;
@@ -21,6 +22,7 @@ import io.hyvexa.ascend.ui.MineBagPage;
 import io.hyvexa.common.WorldConstants;
 import io.hyvexa.common.util.CommandUtils;
 import io.hyvexa.common.util.ModeGate;
+import io.hyvexa.common.util.PermissionUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
 import io.hyvexa.core.state.ModeMessages;
 
@@ -64,6 +66,14 @@ public class MineCommand extends AbstractAsyncCommand {
             if (plugin == null) {
                 return;
             }
+            MineGateChecker mineGateChecker = plugin.getMineGateChecker();
+            if (mineGateChecker == null) {
+                player.sendMessage(Message.raw("[Mine] Mining system not available.").color(SystemMessageUtils.SECONDARY));
+                return;
+            }
+            if (mineGateChecker.denyMineAccess(playerRef.getUuid(), player)) {
+                return;
+            }
 
             MinePlayerStore mineStore = plugin.getMinePlayerStore();
             if (mineStore == null) {
@@ -95,12 +105,20 @@ public class MineCommand extends AbstractAsyncCommand {
                     player.getPageManager().openCustomPage(ref, store, page);
                 }
                 case "addcrystals" -> {
+                    if (!PermissionUtils.isOp(player)) {
+                        player.sendMessage(Message.raw("[Mine] You do not have permission to use this command.").color(SystemMessageUtils.SECONDARY));
+                        return;
+                    }
                     if (args.length < 2) {
                         player.sendMessage(Message.raw("[Mine] Usage: /mine addcrystals <amount>").color(SystemMessageUtils.SECONDARY));
                         return;
                     }
                     try {
                         long amount = Long.parseLong(args[1]);
+                        if (amount < 0) {
+                            player.sendMessage(Message.raw("[Mine] Crystal amount must be 0 or higher.").color(SystemMessageUtils.SECONDARY));
+                            return;
+                        }
                         progress.addCrystals(amount);
                         mineStore.markDirty(playerRef.getUuid());
                         player.sendMessage(Message.raw("[Mine] Added " + amount + " crystals. Total: " + progress.getCrystals()).color(SystemMessageUtils.SECONDARY));

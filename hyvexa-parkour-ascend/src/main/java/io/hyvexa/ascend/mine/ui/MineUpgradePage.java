@@ -20,6 +20,8 @@ import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.data.MineUpgradeType;
+import io.hyvexa.ascend.mine.robot.MineRobotManager;
+import io.hyvexa.ascend.mine.robot.MinerRobotState;
 import io.hyvexa.ascend.ui.BaseAscendPage;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.util.PermissionUtils;
@@ -110,10 +112,9 @@ public class MineUpgradePage extends BaseAscendPage {
             List<Mine> mines = configStore.listMinesSorted();
             int entryIndex = types.length;
             for (Mine mine : mines) {
-                MinePlayerProgress.MineProgress mineState = mineProgress.getMineState(mine.getId());
-                if (!mineState.isUnlocked()) continue;
+                if (!mineProgress.getMineSnapshot(mine.getId()).isUnlocked()) continue;
 
-                MinePlayerProgress.MinerProgress minerState = mineProgress.getMinerState(mine.getId());
+                MinePlayerProgress.MinerProgressSnapshot minerState = mineProgress.getMinerSnapshot(mine.getId());
                 commandBuilder.append("#UpgradeItems", "Pages/Ascend_MineUpgradeEntry.ui");
                 String sel = "#UpgradeItems[" + entryIndex + "]";
 
@@ -134,7 +135,7 @@ public class MineUpgradePage extends BaseAscendPage {
                     boolean fullyMaxed = stars >= MINER_MAX_STARS && speedLevel >= MINER_MAX_SPEED_PER_STAR;
 
                     commandBuilder.set(sel + " #LevelText.Text", "Speed Lv " + speedLevel + " | Star " + stars);
-                    double blocksPerMin = (stars + 1) * (1.0 + speedLevel * 0.1);
+                    double blocksPerMin = MinerRobotState.getProductionRate(speedLevel, stars);
                     commandBuilder.set(sel + " #EffectText.Text", String.format("%.1f", blocksPerMin) + " blocks/min");
 
                     if (fullyMaxed) {
@@ -270,26 +271,23 @@ public class MineUpgradePage extends BaseAscendPage {
         Player player = store.getComponent(ref, Player.getComponentType());
         if (player == null) return;
 
-        MinePlayerProgress.MinerProgress minerState = mineProgress.getMinerState(mineId);
-        if (minerState.isHasMiner()) {
+        long cost = getMinerBuyCost();
+        MinePlayerProgress.MinerPurchaseResult result = mineProgress.purchaseMiner(mineId, cost);
+        if (result == MinePlayerProgress.MinerPurchaseResult.ALREADY_OWNED) {
             player.sendMessage(Message.raw("Already own this miner!"));
             return;
         }
-
-        long cost = getMinerBuyCost();
-        long current = mineProgress.getCrystals();
-        if (current < cost) {
+        if (result == MinePlayerProgress.MinerPurchaseResult.INSUFFICIENT_CRYSTALS) {
             player.sendMessage(Message.raw("Not enough crystals!"));
             return;
         }
-
-        mineProgress.setCrystals(current - cost);
-        minerState.setHasMiner(true);
 
         MinePlayerStore mineStore = ParkourAscendPlugin.getInstance().getMinePlayerStore();
         if (mineStore != null) {
             mineStore.markDirty(playerRef.getUuid());
         }
+
+        syncBoughtMiner(store, mineId);
 
         String mineName = getMineName(mineId);
         player.sendMessage(Message.raw("Bought miner for " + mineName + "!"));
@@ -300,29 +298,30 @@ public class MineUpgradePage extends BaseAscendPage {
         Player player = store.getComponent(ref, Player.getComponentType());
         if (player == null) return;
 
-        MinePlayerProgress.MinerProgress minerState = mineProgress.getMinerState(mineId);
-        if (!minerState.isHasMiner()) return;
-
+        MinePlayerProgress.MinerProgressSnapshot minerState = mineProgress.getMinerSnapshot(mineId);
         int speedLevel = minerState.getSpeedLevel();
-        if (speedLevel >= MINER_MAX_SPEED_PER_STAR) {
+
+        long cost = getMinerSpeedCost(speedLevel, minerState.getStars());
+        MinePlayerProgress.MinerSpeedUpgradeResult result =
+            mineProgress.upgradeMinerSpeed(mineId, cost, MINER_MAX_SPEED_PER_STAR);
+        if (result == MinePlayerProgress.MinerSpeedUpgradeResult.NO_MINER) {
+            return;
+        }
+        if (result == MinePlayerProgress.MinerSpeedUpgradeResult.SPEED_MAXED) {
             player.sendMessage(Message.raw("Speed maxed! Evolve to continue."));
             return;
         }
-
-        long cost = getMinerSpeedCost(speedLevel, minerState.getStars());
-        long current = mineProgress.getCrystals();
-        if (current < cost) {
+        if (result == MinePlayerProgress.MinerSpeedUpgradeResult.INSUFFICIENT_CRYSTALS) {
             player.sendMessage(Message.raw("Not enough crystals!"));
             return;
         }
-
-        mineProgress.setCrystals(current - cost);
-        minerState.setSpeedLevel(speedLevel + 1);
 
         MinePlayerStore mineStore = ParkourAscendPlugin.getInstance().getMinePlayerStore();
         if (mineStore != null) {
             mineStore.markDirty(playerRef.getUuid());
         }
+
+        syncMinerSpeed(mineId);
 
         String mineName = getMineName(mineId);
         player.sendMessage(Message.raw(mineName + " Miner speed -> Lv " + (speedLevel + 1) + "!"));
@@ -333,37 +332,35 @@ public class MineUpgradePage extends BaseAscendPage {
         Player player = store.getComponent(ref, Player.getComponentType());
         if (player == null) return;
 
-        MinePlayerProgress.MinerProgress minerState = mineProgress.getMinerState(mineId);
-        if (!minerState.isHasMiner()) return;
-
+        MinePlayerProgress.MinerProgressSnapshot minerState = mineProgress.getMinerSnapshot(mineId);
         int speedLevel = minerState.getSpeedLevel();
         int stars = minerState.getStars();
 
-        if (speedLevel < MINER_MAX_SPEED_PER_STAR) {
+        long cost = getMinerEvolveCost(stars);
+        MinePlayerProgress.MinerEvolutionResult result =
+            mineProgress.evolveMiner(mineId, cost, MINER_MAX_SPEED_PER_STAR, MINER_MAX_STARS);
+        if (result == MinePlayerProgress.MinerEvolutionResult.NO_MINER) {
+            return;
+        }
+        if (result == MinePlayerProgress.MinerEvolutionResult.SPEED_NOT_MAXED) {
             player.sendMessage(Message.raw("Max speed first before evolving!"));
             return;
         }
-
-        if (stars >= MINER_MAX_STARS) {
+        if (result == MinePlayerProgress.MinerEvolutionResult.STAR_MAXED) {
             player.sendMessage(Message.raw("Already max stars!"));
             return;
         }
-
-        long cost = getMinerEvolveCost(stars);
-        long current = mineProgress.getCrystals();
-        if (current < cost) {
+        if (result == MinePlayerProgress.MinerEvolutionResult.INSUFFICIENT_CRYSTALS) {
             player.sendMessage(Message.raw("Not enough crystals!"));
             return;
         }
-
-        mineProgress.setCrystals(current - cost);
-        minerState.setSpeedLevel(0);
-        minerState.setStars(stars + 1);
 
         MinePlayerStore mineStore = ParkourAscendPlugin.getInstance().getMinePlayerStore();
         if (mineStore != null) {
             mineStore.markDirty(playerRef.getUuid());
         }
+
+        syncMinerEvolution(store, mineId);
 
         String mineName = getMineName(mineId);
         player.sendMessage(Message.raw(mineName + " Miner evolved to Star " + (stars + 1) + "!"));
@@ -390,6 +387,50 @@ public class MineUpgradePage extends BaseAscendPage {
             if (mine != null) return mine.getName();
         }
         return mineId;
+    }
+
+    private void syncBoughtMiner(Store<EntityStore> store, String mineId) {
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin == null) {
+            return;
+        }
+        MineRobotManager robotManager = plugin.getMineRobotManager();
+        if (robotManager == null || store.getExternalData() == null) {
+            return;
+        }
+        robotManager.syncPurchasedMiner(playerRef.getUuid(), mineId, store.getExternalData().getWorld());
+    }
+
+    private void syncMinerSpeed(String mineId) {
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin == null) {
+            return;
+        }
+        MineRobotManager robotManager = plugin.getMineRobotManager();
+        if (robotManager == null) {
+            return;
+        }
+        MinePlayerProgress.MinerProgressSnapshot minerState = mineProgress.getMinerSnapshot(mineId);
+        robotManager.syncMinerSpeed(playerRef.getUuid(), mineId, minerState.getSpeedLevel());
+    }
+
+    private void syncMinerEvolution(Store<EntityStore> store, String mineId) {
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin == null) {
+            return;
+        }
+        MineRobotManager robotManager = plugin.getMineRobotManager();
+        if (robotManager == null || store.getExternalData() == null) {
+            return;
+        }
+        MinePlayerProgress.MinerProgressSnapshot minerState = mineProgress.getMinerSnapshot(mineId);
+        robotManager.syncMinerEvolution(
+            playerRef.getUuid(),
+            mineId,
+            minerState.getSpeedLevel(),
+            minerState.getStars(),
+            store.getExternalData().getWorld()
+        );
     }
 
     private void sendRefresh(Ref<EntityStore> ref, Store<EntityStore> store) {

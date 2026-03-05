@@ -1,13 +1,15 @@
 package io.hyvexa.ascend.mine.hud;
 
 import com.hypixel.hytale.logger.HytaleLogger;
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.protocol.packets.interface_.HudComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.hud.CustomUIHud;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import io.hyvexa.ascend.ParkourAscendPlugin;
+import io.hyvexa.ascend.mine.MineBlockDisplay;
 import io.hyvexa.ascend.mine.MineManager;
-import io.hyvexa.ascend.mine.data.Mine;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
@@ -42,7 +44,7 @@ public class MineHudManager {
             return;
         }
         UUID playerId = playerRef.getUuid();
-        MineHudState state = huds.computeIfAbsent(playerId, id -> new MineHudState(new MineHud(playerRef)));
+        MineHudState state = huds.computeIfAbsent(playerId, id -> new MineHudState(playerId, new MineHud(playerRef)));
         MultiHudBridge.setCustomHud(player, playerRef, state.hud);
         player.getHudManager().hideHudComponents(playerRef, HudComponent.Compass, HudComponent.Health, HudComponent.Stamina);
         state.resetCache();
@@ -114,8 +116,10 @@ public class MineHudManager {
         int total = progress.getInventoryTotal();
         int capacity = progress.getBagCapacity();
         Map<String, Integer> inventory = progress.getInventory();
+        List<Map.Entry<String, Integer>> sorted = new ArrayList<>(inventory.entrySet());
+        sorted.sort((a, b) -> Integer.compare(b.getValue(), a.getValue()));
 
-        String invKey = buildInventoryKey(total, capacity, inventory);
+        String invKey = buildInventoryKey(total, capacity, sorted);
         if (invKey.equals(state.lastInventoryKey)) {
             return;
         }
@@ -125,15 +129,11 @@ public class MineHudManager {
         cb.set("#BagCountLabel.Text", String.valueOf(total));
         cb.set("#BagCapLabel.Text", String.valueOf(capacity));
 
-        // Sort entries by count descending, show top MAX_BLOCK_ENTRIES
-        List<Map.Entry<String, Integer>> sorted = new ArrayList<>(inventory.entrySet());
-        sorted.sort((a, b) -> Integer.compare(b.getValue(), a.getValue()));
-
         for (int i = 0; i < MAX_BLOCK_ENTRIES; i++) {
             if (i < sorted.size()) {
                 Map.Entry<String, Integer> entry = sorted.get(i);
                 cb.set("#BlockEntry" + i + ".Visible", true);
-                cb.set("#BlockName" + i + ".Text", formatBlockName(entry.getKey()));
+                cb.set("#BlockName" + i + ".Text", MineBlockDisplay.getDisplayName(entry.getKey()));
                 cb.set("#BlockCount" + i + ".Text", String.valueOf(entry.getValue()));
             } else {
                 cb.set("#BlockEntry" + i + ".Visible", false);
@@ -144,21 +144,14 @@ public class MineHudManager {
     }
 
     private void updateZoneCooldown(MineHudState state) {
-        // Find any zone currently in cooldown
-        long maxRemainingMs = 0;
-        for (Mine mine : configStore.listMinesSorted()) {
-            for (MineZone zone : mine.getZones()) {
-                if (mineManager.isZoneInCooldown(zone.getId())) {
-                    long remaining = mineManager.getZoneCooldownRemainingMs(zone.getId());
-                    if (remaining > maxRemainingMs) {
-                        maxRemainingMs = remaining;
-                    }
-                }
-            }
+        MineZone currentZone = findCurrentZone(state.playerId);
+        long remainingMs = 0;
+        if (currentZone != null && mineManager.isZoneInCooldown(currentZone.getId())) {
+            remainingMs = mineManager.getZoneCooldownRemainingMs(currentZone.getId());
         }
 
-        boolean showCooldown = maxRemainingMs > 0;
-        int remainingSeconds = (int) Math.ceil(maxRemainingMs / 1000.0);
+        boolean showCooldown = remainingMs > 0;
+        int remainingSeconds = (int) Math.ceil(remainingMs / 1000.0);
         String cooldownKey = showCooldown + "|" + remainingSeconds;
 
         if (cooldownKey.equals(state.lastCooldownKey)) {
@@ -174,36 +167,38 @@ public class MineHudManager {
         state.hud.update(false, cb);
     }
 
-    private static String buildInventoryKey(int total, int capacity, Map<String, Integer> inventory) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(total).append('/').append(capacity);
-        for (Map.Entry<String, Integer> entry : inventory.entrySet()) {
-            sb.append('|').append(entry.getKey()).append(':').append(entry.getValue());
+    private MineZone findCurrentZone(UUID playerId) {
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin == null) {
+            return null;
         }
-        return sb.toString();
+        PlayerRef playerRef = plugin.getPlayerRef(playerId);
+        if (playerRef == null) {
+            return null;
+        }
+        var ref = playerRef.getReference();
+        if (ref == null || !ref.isValid()) {
+            return null;
+        }
+        var store = ref.getStore();
+        if (store == null) {
+            return null;
+        }
+        TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
+        if (transform == null || transform.getPosition() == null) {
+            return null;
+        }
+        int x = (int) Math.floor(transform.getPosition().getX());
+        int y = (int) Math.floor(transform.getPosition().getY());
+        int z = (int) Math.floor(transform.getPosition().getZ());
+        return mineManager.findZoneAt(x, y, z);
     }
 
-    private static String formatBlockName(String blockTypeId) {
-        if (blockTypeId == null || blockTypeId.isEmpty()) {
-            return "Unknown";
-        }
-        // Strip namespace prefix (e.g., "hytale:stone_block" -> "stone_block")
-        String name = blockTypeId;
-        int colonIndex = name.indexOf(':');
-        if (colonIndex >= 0 && colonIndex < name.length() - 1) {
-            name = name.substring(colonIndex + 1);
-        }
-        // Replace underscores with spaces and capitalize each word
-        String[] parts = name.split("_");
+    private static String buildInventoryKey(int total, int capacity, List<Map.Entry<String, Integer>> inventory) {
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < parts.length; i++) {
-            if (i > 0) sb.append(' ');
-            if (!parts[i].isEmpty()) {
-                sb.append(Character.toUpperCase(parts[i].charAt(0)));
-                if (parts[i].length() > 1) {
-                    sb.append(parts[i].substring(1));
-                }
-            }
+        sb.append(total).append('/').append(capacity);
+        for (Map.Entry<String, Integer> entry : inventory) {
+            sb.append('|').append(entry.getKey()).append(':').append(entry.getValue());
         }
         return sb.toString();
     }
@@ -249,6 +244,7 @@ public class MineHudManager {
     }
 
     private static final class MineHudState {
+        final UUID playerId;
         final MineHud hud;
         final MineToastManager toastManager = new MineToastManager();
         long readyAtMs;
@@ -256,7 +252,8 @@ public class MineHudManager {
         String lastInventoryKey;
         String lastCooldownKey;
 
-        MineHudState(MineHud hud) {
+        MineHudState(UUID playerId, MineHud hud) {
+            this.playerId = playerId;
             this.hud = hud;
         }
 

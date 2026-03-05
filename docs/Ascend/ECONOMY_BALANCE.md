@@ -1042,7 +1042,7 @@ Mine progression provides permanent bonuses to the core Ascend parkour loop. The
 | Runner Speed | Mine 2 unlock | +5% |
 | Runner Speed | Max mining speed upgrade (level 100) | +10% |
 | Multiplier Gain | Mine 3 unlock | +10% |
-| Multiplier Gain | All miners unlocked | +20% |
+| Multiplier Gain | All unlocked mines have miners | +20% |
 | Volt Gain | Mine 4 unlock | +15% |
 
 **Design intent:** Reward mine investment without making it mandatory. Bonuses are meaningful but not dominant compared to core parkour systems.

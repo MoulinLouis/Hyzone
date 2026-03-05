@@ -14,6 +14,7 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
+import io.hyvexa.ascend.mine.MineBlockDisplay;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.common.ui.ButtonEventData;
 
@@ -30,16 +31,6 @@ public class MineBagPage extends BaseAscendPage {
         "Rock_Crystal_Red_Block", "#IconRed",
         "Rock_Crystal_White_Block", "#IconWhite",
         "Rock_Crystal_Yellow_Block", "#IconYellow"
-    );
-
-    private static final Map<String, String> BLOCK_DISPLAY_NAMES = Map.of(
-        "Rock_Stone", "Stone",
-        "Rock_Crystal_Blue_Block", "Blue Crystal",
-        "Rock_Crystal_Green_Block", "Green Crystal",
-        "Rock_Crystal_Pink_Block", "Pink Crystal",
-        "Rock_Crystal_Red_Block", "Red Crystal",
-        "Rock_Crystal_White_Block", "White Crystal",
-        "Rock_Crystal_Yellow_Block", "Yellow Crystal"
     );
 
     private final MinePlayerProgress mineProgress;
@@ -86,8 +77,7 @@ public class MineBagPage extends BaseAscendPage {
 
                 // Set amount and name
                 commandBuilder.set(sel + " #Amount.Text", "x" + entry.getValue());
-                String displayName = BLOCK_DISPLAY_NAMES.getOrDefault(entry.getKey(), entry.getKey().replace('_', ' '));
-                commandBuilder.set(sel + " #BlockName.Text", displayName);
+                commandBuilder.set(sel + " #BlockName.Text", MineBlockDisplay.getDisplayName(entry.getKey()));
 
                 index++;
             }

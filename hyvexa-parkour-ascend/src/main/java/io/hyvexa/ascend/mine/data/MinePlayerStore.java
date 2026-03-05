@@ -9,6 +9,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -56,16 +57,18 @@ public class MinePlayerStore {
     }
 
     public void evict(UUID playerId) {
-        savePlayerSync(playerId);
+        if (!flushPlayer(playerId)) {
+            LOGGER.atSevere().log("Skipping mine player eviction for %s because state is still dirty after save", playerId);
+            return;
+        }
         players.remove(playerId);
         dirtyVersions.remove(playerId);
     }
 
     public void flushAll() {
-        for (UUID playerId : dirtyVersions.keySet()) {
-            savePlayerSync(playerId);
+        for (UUID playerId : new ArrayList<>(dirtyVersions.keySet())) {
+            flushPlayer(playerId);
         }
-        dirtyVersions.clear();
     }
 
     private void queueSave() {
@@ -105,10 +108,9 @@ public class MinePlayerStore {
                 ps.setString(1, playerId.toString());
                 try (ResultSet rs = ps.executeQuery()) {
                     while (rs.next()) {
-                        progress.getInventory().put(
+                        progress.loadInventoryItem(
                             rs.getString("block_type_id"),
-                            rs.getInt("amount")
-                        );
+                            rs.getInt("amount"));
                     }
                 }
             }
@@ -119,9 +121,11 @@ public class MinePlayerStore {
                 ps.setString(1, playerId.toString());
                 try (ResultSet rs = ps.executeQuery()) {
                     while (rs.next()) {
-                        MinePlayerProgress.MineProgress ms = progress.getMineState(rs.getString("mine_id"));
-                        ms.setUnlocked(rs.getBoolean("unlocked"));
-                        ms.setCompletedManually(rs.getBoolean("completed_manually"));
+                        progress.loadMineState(
+                            rs.getString("mine_id"),
+                            rs.getBoolean("unlocked"),
+                            rs.getBoolean("completed_manually")
+                        );
                     }
                 }
             }
@@ -132,10 +136,12 @@ public class MinePlayerStore {
                 ps.setString(1, playerId.toString());
                 try (ResultSet rs = ps.executeQuery()) {
                     while (rs.next()) {
-                        MinePlayerProgress.MinerProgress mp = progress.getMinerState(rs.getString("mine_id"));
-                        mp.setHasMiner(rs.getBoolean("has_miner"));
-                        mp.setSpeedLevel(rs.getInt("speed_level"));
-                        mp.setStars(rs.getInt("stars"));
+                        progress.loadMinerState(
+                            rs.getString("mine_id"),
+                            rs.getBoolean("has_miner"),
+                            rs.getInt("speed_level"),
+                            rs.getInt("stars")
+                        );
                     }
                 }
             }
@@ -161,16 +167,28 @@ public class MinePlayerStore {
         }
     }
 
-    private void savePlayerSync(UUID playerId) {
+    private boolean flushPlayer(UUID playerId) {
+        Long dirtyVersion = dirtyVersions.get(playerId);
+        if (dirtyVersion == null) {
+            return true;
+        }
+        if (!savePlayerSync(playerId)) {
+            return false;
+        }
+        return dirtyVersions.remove(playerId, dirtyVersion);
+    }
+
+    private boolean savePlayerSync(UUID playerId) {
         MinePlayerProgress progress = players.get(playerId);
-        if (progress == null) return;
-        if (!DatabaseManager.getInstance().isInitialized()) return;
+        if (progress == null) return true;
+        if (!DatabaseManager.getInstance().isInitialized()) return true;
+
+        MinePlayerProgress.PlayerSaveSnapshot snapshot = progress.createSaveSnapshot();
 
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
-            if (conn == null) return;
+            if (conn == null) return false;
 
             // Save crystals + upgrades
-            long crystals = progress.getCrystals();
             try (PreparedStatement ps = conn.prepareStatement("""
                     INSERT INTO mine_players (uuid, crystals,
                         mining_speed_level, bag_capacity_level, multi_break_level, auto_sell_level)
@@ -182,11 +200,11 @@ public class MinePlayerStore {
                                             auto_sell_level = VALUES(auto_sell_level)
                     """)) {
                 ps.setString(1, playerId.toString());
-                ps.setLong(2, crystals);
-                ps.setInt(3, progress.getUpgradeLevel(MineUpgradeType.MINING_SPEED));
-                ps.setInt(4, progress.getUpgradeLevel(MineUpgradeType.BAG_CAPACITY));
-                ps.setInt(5, progress.getUpgradeLevel(MineUpgradeType.MULTI_BREAK));
-                ps.setInt(6, progress.getUpgradeLevel(MineUpgradeType.AUTO_SELL));
+                ps.setLong(2, snapshot.getCrystals());
+                ps.setInt(3, snapshot.getUpgradeLevels().getOrDefault(MineUpgradeType.MINING_SPEED, 0));
+                ps.setInt(4, snapshot.getUpgradeLevels().getOrDefault(MineUpgradeType.BAG_CAPACITY, 0));
+                ps.setInt(5, snapshot.getUpgradeLevels().getOrDefault(MineUpgradeType.MULTI_BREAK, 0));
+                ps.setInt(6, snapshot.getUpgradeLevels().getOrDefault(MineUpgradeType.AUTO_SELL, 0));
                 ps.executeUpdate();
             }
 
@@ -197,7 +215,7 @@ public class MinePlayerStore {
                 ps.executeUpdate();
             }
 
-            Map<String, Integer> inventory = progress.getInventory();
+            Map<String, Integer> inventory = snapshot.getInventory();
             if (!inventory.isEmpty()) {
                 try (PreparedStatement ps = conn.prepareStatement(
                         "INSERT INTO mine_player_inventory (player_uuid, block_type_id, amount) VALUES (?, ?, ?)")) {
@@ -212,7 +230,7 @@ public class MinePlayerStore {
             }
 
             // Save mine states
-            Map<String, MinePlayerProgress.MineProgress> mineStates = progress.getMineStates();
+            Map<String, MinePlayerProgress.MineProgressSnapshot> mineStates = snapshot.getMineStates();
             if (!mineStates.isEmpty()) {
                 try (PreparedStatement ps = conn.prepareStatement("""
                         INSERT INTO mine_player_mines (player_uuid, mine_id, unlocked, completed_manually)
@@ -223,8 +241,9 @@ public class MinePlayerStore {
                     for (var entry : mineStates.entrySet()) {
                         ps.setString(1, playerId.toString());
                         ps.setString(2, entry.getKey());
-                        ps.setBoolean(3, entry.getValue().isUnlocked());
-                        ps.setBoolean(4, entry.getValue().isCompletedManually());
+                        MinePlayerProgress.MineProgressSnapshot state = entry.getValue();
+                        ps.setBoolean(3, state.isUnlocked());
+                        ps.setBoolean(4, state.isCompletedManually());
                         ps.addBatch();
                     }
                     ps.executeBatch();
@@ -232,7 +251,7 @@ public class MinePlayerStore {
             }
 
             // Save miner states
-            Map<String, MinePlayerProgress.MinerProgress> minerStates = progress.getMinerStates();
+            Map<String, MinePlayerProgress.MinerProgressSnapshot> minerStates = snapshot.getMinerStates();
             if (!minerStates.isEmpty()) {
                 try (PreparedStatement ps = conn.prepareStatement("""
                         INSERT INTO mine_player_miners (player_uuid, mine_id, has_miner, speed_level, stars)
@@ -244,16 +263,19 @@ public class MinePlayerStore {
                     for (var entry : minerStates.entrySet()) {
                         ps.setString(1, playerId.toString());
                         ps.setString(2, entry.getKey());
-                        ps.setBoolean(3, entry.getValue().isHasMiner());
-                        ps.setInt(4, entry.getValue().getSpeedLevel());
-                        ps.setInt(5, entry.getValue().getStars());
+                        MinePlayerProgress.MinerProgressSnapshot state = entry.getValue();
+                        ps.setBoolean(3, state.isHasMiner());
+                        ps.setInt(4, state.getSpeedLevel());
+                        ps.setInt(5, state.getStars());
                         ps.addBatch();
                     }
                     ps.executeBatch();
                 }
             }
+            return true;
         } catch (SQLException e) {
             LOGGER.atSevere().log("Failed to save mine player %s: %s", playerId, e.getMessage());
+            return false;
         }
     }
 }

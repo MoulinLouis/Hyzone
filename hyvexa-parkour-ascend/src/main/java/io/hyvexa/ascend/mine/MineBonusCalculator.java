@@ -6,6 +6,7 @@ import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MineUpgradeType;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * Calculates cross-progression bonuses from mining milestones
@@ -25,6 +26,9 @@ public class MineBonusCalculator {
 
     // Volt gain bonuses
     private static final double VOLT_BONUS_MINE4_UNLOCKED = 0.15;
+    private static final Set<String> MINE2_IDS = Set.of("mine2", "mine_2");
+    private static final Set<String> MINE3_IDS = Set.of("mine3", "mine_3");
+    private static final Set<String> MINE4_IDS = Set.of("mine4", "mine_4");
 
     private final MineConfigStore mineConfigStore;
 
@@ -41,7 +45,7 @@ public class MineBonusCalculator {
 
         double multiplier = 1.0;
 
-        String mine2Id = getMineIdByIndex(1);
+        String mine2Id = findMineId(MINE2_IDS, "Mine 2");
         if (mine2Id != null && progress.getMineState(mine2Id).isUnlocked()) {
             multiplier += SPEED_BONUS_MINE2_UNLOCKED;
         }
@@ -62,7 +66,7 @@ public class MineBonusCalculator {
 
         double multiplier = 1.0;
 
-        String mine3Id = getMineIdByIndex(2);
+        String mine3Id = findMineId(MINE3_IDS, "Mine 3");
         if (mine3Id != null && progress.getMineState(mine3Id).isUnlocked()) {
             multiplier += MULT_BONUS_MINE3_UNLOCKED;
         }
@@ -83,7 +87,7 @@ public class MineBonusCalculator {
 
         double multiplier = 1.0;
 
-        String mine4Id = getMineIdByIndex(3);
+        String mine4Id = findMineId(MINE4_IDS, "Mine 4");
         if (mine4Id != null && progress.getMineState(mine4Id).isUnlocked()) {
             multiplier += VOLT_BONUS_MINE4_UNLOCKED;
         }
@@ -91,29 +95,37 @@ public class MineBonusCalculator {
         return multiplier;
     }
 
-    /**
-     * Returns the mine ID at the given index (0-based) from the sorted mine list,
-     * or null if the index is out of bounds.
-     */
-    private String getMineIdByIndex(int index) {
-        List<Mine> mines = mineConfigStore.listMinesSorted();
-        if (index < 0 || index >= mines.size()) return null;
-        return mines.get(index).getId();
+    private String findMineId(Set<String> explicitIds, String expectedName) {
+        for (Mine mine : mineConfigStore.listMinesSorted()) {
+            String mineId = mine.getId();
+            if (mineId != null && explicitIds.contains(mineId.toLowerCase())) {
+                return mineId;
+            }
+            String mineName = mine.getName();
+            if (mineName != null && mineName.equalsIgnoreCase(expectedName)) {
+                return mineId;
+            }
+        }
+        return null;
     }
 
     /**
      * Checks whether all configured mines have a miner assigned for the given player.
-     * Returns false if there are no mines configured.
+     * Only unlocked/current mines count toward the bonus.
      */
     private boolean allMinesHaveMiners(MinePlayerProgress progress) {
         List<Mine> mines = mineConfigStore.listMinesSorted();
-        if (mines.isEmpty()) return false;
+        boolean anyUnlocked = false;
 
         for (Mine mine : mines) {
-            if (!progress.getMinerState(mine.getId()).isHasMiner()) {
+            if (!progress.getMineState(mine.getId()).isUnlocked()) {
+                continue;
+            }
+            anyUnlocked = true;
+            if (!progress.getMinerSnapshot(mine.getId()).isHasMiner()) {
                 return false;
             }
         }
-        return true;
+        return anyUnlocked;
     }
 }

@@ -106,7 +106,7 @@ public class MineRobotManager {
 
         List<Mine> allMines = configStore.listMinesSorted();
         for (Mine mine : allMines) {
-            MinePlayerProgress.MinerProgress minerProg = progress.getMinerState(mine.getId());
+            MinePlayerProgress.MinerProgressSnapshot minerProg = progress.getMinerSnapshot(mine.getId());
             if (minerProg.isHasMiner()) {
                 spawnMiner(playerId, mine.getId(), world);
             }
@@ -142,8 +142,8 @@ public class MineRobotManager {
 
         // Load speed/star levels from player progress
         MinePlayerProgress progress = playerStore.getOrCreatePlayer(ownerId);
-        MinePlayerProgress.MinerProgress minerProg = progress != null
-                ? progress.getMinerState(mineId)
+        MinePlayerProgress.MinerProgressSnapshot minerProg = progress != null
+                ? progress.getMinerSnapshot(mineId)
                 : null;
 
         MinerRobotState state = new MinerRobotState(ownerId, mineId);
@@ -229,6 +229,52 @@ public class MineRobotManager {
         if (entityUuid != null && state.getEntityUuid() != null) {
             orphanCleanup.addOrphan(entityUuid);
         }
+    }
+
+    public void syncPurchasedMiner(UUID ownerId, String mineId, World world) {
+        if (getMinerState(ownerId, mineId) == null) {
+            spawnMiner(ownerId, mineId, world);
+        }
+    }
+
+    public void syncMinerSpeed(UUID ownerId, String mineId, int speedLevel) {
+        MinerRobotState state = getMinerState(ownerId, mineId);
+        if (state == null) {
+            return;
+        }
+        state.setSpeedLevel(speedLevel);
+    }
+
+    public void syncMinerEvolution(UUID ownerId, String mineId, int speedLevel, int stars, World world) {
+        MinerRobotState state = getMinerState(ownerId, mineId);
+        if (state == null) {
+            spawnMiner(ownerId, mineId, world);
+            return;
+        }
+
+        int previousStars = state.getStars();
+        state.setSpeedLevel(speedLevel);
+        state.setStars(stars);
+        if (previousStars == stars || world == null) {
+            return;
+        }
+
+        UUID entityUuid = state.getEntityUuid();
+        despawnNpc(state);
+        if (entityUuid != null && state.getEntityUuid() != null) {
+            orphanCleanup.addOrphan(entityUuid);
+        }
+
+        Mine mine = configStore.getMine(mineId);
+        if (mine == null || mine.getZones().isEmpty()) {
+            return;
+        }
+        MineZone zone = mine.getZones().get(0);
+        double cx = (zone.getMinX() + zone.getMaxX()) / 2.0;
+        double cy = zone.getMinY();
+        double cz = (zone.getMinZ() + zone.getMaxZ()) / 2.0;
+        String entityType = getMinerEntityType(stars);
+        world.execute(() -> spawnNpcOnWorldThread(state, entityType, world, cx, cy, cz));
     }
 
     private void despawnNpc(MinerRobotState state) {

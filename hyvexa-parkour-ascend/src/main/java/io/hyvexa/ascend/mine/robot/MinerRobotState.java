@@ -22,6 +22,10 @@ public class MinerRobotState {
 
     /** Blocks produced per minute at current speed/star level. */
     public double getProductionRate() {
+        return getProductionRate(speedLevel, stars);
+    }
+
+    public static double getProductionRate(int speedLevel, int stars) {
         double base = 6.0;
         double speedMult = 1.0 + speedLevel * 0.10;
         double starMult = 1.0 + stars * 0.5;

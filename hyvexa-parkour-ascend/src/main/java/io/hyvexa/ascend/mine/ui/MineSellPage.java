@@ -18,6 +18,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
 import io.hyvexa.ascend.ParkourAscendPlugin;
+import io.hyvexa.ascend.mine.MineBlockDisplay;
 import io.hyvexa.ascend.mine.data.Mine;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
@@ -30,16 +31,6 @@ public class MineSellPage extends BaseAscendPage {
 
     private static final String BUTTON_CLOSE = "Close";
     private static final String BUTTON_SELL_ALL = "SellAll";
-
-    private static final Map<String, String> BLOCK_DISPLAY_NAMES = Map.of(
-        "Rock_Stone", "Stone",
-        "Rock_Crystal_Blue_Block", "Blue Crystal",
-        "Rock_Crystal_Green_Block", "Green Crystal",
-        "Rock_Crystal_Pink_Block", "Pink Crystal",
-        "Rock_Crystal_Red_Block", "Red Crystal",
-        "Rock_Crystal_White_Block", "White Crystal",
-        "Rock_Crystal_Yellow_Block", "Yellow Crystal"
-    );
 
     private final MinePlayerProgress mineProgress;
     private final PlayerRef playerRef;
@@ -86,9 +77,7 @@ public class MineSellPage extends BaseAscendPage {
                 commandBuilder.append("#SellItems", "Pages/Ascend_MineSellEntry.ui");
                 String sel = "#SellItems[" + index + "]";
 
-                String displayName = BLOCK_DISPLAY_NAMES.getOrDefault(
-                    entry.getKey(), entry.getKey().replace('_', ' '));
-                commandBuilder.set(sel + " #BlockName.Text", displayName);
+                commandBuilder.set(sel + " #BlockName.Text", MineBlockDisplay.getDisplayName(entry.getKey()));
                 commandBuilder.set(sel + " #Quantity.Text", "x" + entry.getValue());
 
                 BigNumber price = prices.getOrDefault(entry.getKey(), BigNumber.ONE);
@@ -117,7 +106,7 @@ public class MineSellPage extends BaseAscendPage {
         Player player = store.getComponent(ref, Player.getComponentType());
         if (player == null) return;
 
-        if (mineProgress.getInventory().isEmpty()) {
+        if (!mineProgress.hasInventoryItems()) {
             player.sendMessage(Message.raw("Nothing to sell."));
             return;
         }

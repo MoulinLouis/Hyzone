@@ -22,6 +22,7 @@ public class MineManager {
 
     // zoneId -> timestamp when cooldown started (0 = not in cooldown)
     private final Map<String, Long> zoneCooldownStart = new ConcurrentHashMap<>();
+    private final Map<String, ResolvedZoneTable> resolvedZoneTables = new ConcurrentHashMap<>();
 
     private volatile World mineWorld;
 
@@ -107,10 +108,11 @@ public class MineManager {
                         World world = mineWorld;
                         if (world != null) {
                             world.execute(() -> {
-                                generateZone(world, zone);
+                                if (generateZone(world, zone)) {
+                                    zoneCooldownStart.remove(zoneId, cooldownStart);
+                                }
                             });
                         }
-                        zoneCooldownStart.remove(zoneId);
                     }
                     continue; // skip threshold check while in cooldown
                 }
@@ -133,8 +135,50 @@ public class MineManager {
         }
     }
 
-    public void generateZone(World world, MineZone zone) {
-        // Pre-resolve block IDs from names
+    public boolean generateZone(World world, MineZone zone) {
+        ResolvedZoneTable resolvedTable = resolvedZoneTables.computeIfAbsent(zone.getId(), ignored -> resolveZoneTable(zone));
+        if (resolvedTable == null || resolvedTable.blockIds.length == 0) return false;
+
+        // Fill all positions in the zone
+        ThreadLocalRandom random = ThreadLocalRandom.current();
+        long currentChunkIndex = ChunkUtil.indexChunkFromBlock(zone.getMinX(), zone.getMinZ());
+        var currentChunk = world.getChunkIfInMemory(currentChunkIndex);
+        if (currentChunk == null) {
+            currentChunk = world.loadChunkIfInMemory(currentChunkIndex);
+        }
+        for (int x = zone.getMinX(); x <= zone.getMaxX(); x++) {
+            for (int z = zone.getMinZ(); z <= zone.getMaxZ(); z++) {
+                long chunkIndex = ChunkUtil.indexChunkFromBlock(x, z);
+                if (chunkIndex != currentChunkIndex) {
+                    currentChunkIndex = chunkIndex;
+                    currentChunk = world.getChunkIfInMemory(chunkIndex);
+                    if (currentChunk == null) {
+                        currentChunk = world.loadChunkIfInMemory(chunkIndex);
+                    }
+                }
+                if (currentChunk == null) {
+                    continue;
+                }
+                for (int y = zone.getMinY(); y <= zone.getMaxY(); y++) {
+                    double roll = random.nextDouble() * resolvedTable.totalWeight;
+                    int selectedBlockId = resolvedTable.blockIds[resolvedTable.blockIds.length - 1];
+                    for (int j = 0; j < resolvedTable.cumulativeWeights.length; j++) {
+                        if (roll < resolvedTable.cumulativeWeights[j]) {
+                            selectedBlockId = resolvedTable.blockIds[j];
+                            break;
+                        }
+                    }
+                    currentChunk.setBlock(x, y, z, selectedBlockId);
+                }
+            }
+        }
+
+        // Clear broken blocks tracking for this zone
+        brokenBlocks.remove(zone.getId());
+        return true;
+    }
+
+    private ResolvedZoneTable resolveZoneTable(MineZone zone) {
         Map<Integer, Double> resolvedTable = new LinkedHashMap<>();
         for (var entry : zone.getBlockTable().entrySet()) {
             int blockId = BlockType.getAssetMap().getIndex(entry.getKey());
@@ -142,59 +186,36 @@ public class MineManager {
                 resolvedTable.put(blockId, entry.getValue());
             }
         }
-        if (resolvedTable.isEmpty()) return;
+        if (resolvedTable.isEmpty()) {
+            return new ResolvedZoneTable(new int[0], new double[0], 0.0);
+        }
 
-        // Build cumulative probability array for weighted random
         int[] blockIds = new int[resolvedTable.size()];
-        double[] cumulativeProbs = new double[resolvedTable.size()];
+        double[] cumulativeWeights = new double[resolvedTable.size()];
         int i = 0;
-        double cumulative = 0;
+        double totalWeight = 0.0;
         for (var entry : resolvedTable.entrySet()) {
             blockIds[i] = entry.getKey();
-            cumulative += entry.getValue();
-            cumulativeProbs[i] = cumulative;
+            totalWeight += entry.getValue();
+            cumulativeWeights[i] = totalWeight;
             i++;
         }
-
-        // Fill all positions in the zone
-        ThreadLocalRandom random = ThreadLocalRandom.current();
-        for (int x = zone.getMinX(); x <= zone.getMaxX(); x++) {
-            for (int y = zone.getMinY(); y <= zone.getMaxY(); y++) {
-                for (int z = zone.getMinZ(); z <= zone.getMaxZ(); z++) {
-                    double roll = random.nextDouble() * cumulative;
-                    int selectedBlockId = blockIds[blockIds.length - 1]; // fallback
-                    for (int j = 0; j < cumulativeProbs.length; j++) {
-                        if (roll < cumulativeProbs[j]) {
-                            selectedBlockId = blockIds[j];
-                            break;
-                        }
-                    }
-                    writeBlock(world, x, y, z, selectedBlockId);
-                }
-            }
-        }
-
-        // Clear broken blocks tracking for this zone
-        brokenBlocks.remove(zone.getId());
-    }
-
-    private boolean writeBlock(World world, int x, int y, int z, int blockId) {
-        long chunkIndex = ChunkUtil.indexChunkFromBlock(x, z);
-        var chunk = world.getChunkIfInMemory(chunkIndex);
-        if (chunk == null) chunk = world.loadChunkIfInMemory(chunkIndex);
-        if (chunk == null) return false;
-        return chunk.setBlock(x, y, z, blockId);
-    }
-
-    private int readBlock(World world, int x, int y, int z) {
-        long chunkIndex = ChunkUtil.indexChunkFromBlock(x, z);
-        var chunk = world.getChunkIfInMemory(chunkIndex);
-        if (chunk == null) chunk = world.loadChunkIfInMemory(chunkIndex);
-        if (chunk == null) return -1;
-        return chunk.getBlock(x, y, z);
+        return new ResolvedZoneTable(blockIds, cumulativeWeights, totalWeight);
     }
 
     static long encodePosition(int x, int y, int z) {
         return ((long) (x & 0xFFFFF) << 40) | ((long) (y & 0xFFFFF) << 20) | (z & 0xFFFFF);
+    }
+
+    private static final class ResolvedZoneTable {
+        final int[] blockIds;
+        final double[] cumulativeWeights;
+        final double totalWeight;
+
+        private ResolvedZoneTable(int[] blockIds, double[] cumulativeWeights, double totalWeight) {
+            this.blockIds = blockIds;
+            this.cumulativeWeights = cumulativeWeights;
+            this.totalWeight = totalWeight;
+        }
     }
 }

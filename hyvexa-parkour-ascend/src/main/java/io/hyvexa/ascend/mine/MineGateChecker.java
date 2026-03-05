@@ -8,6 +8,7 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
+import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -54,63 +55,91 @@ public class MineGateChecker {
 
         // Entry gate: ascend >= 1 -> teleport inside mine + give pickaxe
         if (configStore.isInsideEntryGate(x, y, z)) {
-            AscendPlayerProgress progress = playerStore.getPlayer(playerId);
-            if (progress == null || progress.getAscensionCount() < 1) return;
-
-            World world = store.getExternalData().getWorld();
-            if (world == null) return;
-
-            teleportPlayer(ref, store, world,
-                configStore.getEntryDestX(), configStore.getEntryDestY(), configStore.getEntryDestZ(),
-                configStore.getEntryDestRotX(), configStore.getEntryDestRotY(), configStore.getEntryDestRotZ());
-            markCooldown(playerId);
-
+            PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
             Player player = store.getComponent(ref, Player.getComponentType());
-            if (player != null) {
-                giveMineItems(player);
-                // Swap HUD: Ascend -> Mine
-                ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-                if (plugin != null) {
-                    plugin.getHudManager().removePlayer(playerId);
-                    MineHudManager mhm = plugin.getMineHudManager();
-                    if (mhm != null) {
-                        PlayerRef pRef = store.getComponent(ref, PlayerRef.getComponentType());
-                        if (pRef != null) {
-                            mhm.attachHud(pRef, player);
-                        }
-                    }
-                }
-            }
+            if (denyMineAccess(playerId, player)) return;
+            enterMine(playerId, playerRef, ref, store,
+                configStore.getEntryDestX(), configStore.getEntryDestY(), configStore.getEntryDestZ(),
+                configStore.getEntryDestRotX(), configStore.getEntryDestRotY(), configStore.getEntryDestRotZ(),
+                true);
             return;
         }
 
         // Exit gate: teleport outside mine + restore menu items
         if (configStore.isInsideExitGate(x, y, z)) {
-            World world = store.getExternalData().getWorld();
-            if (world == null) return;
-
-            teleportPlayer(ref, store, world,
-                configStore.getExitDestX(), configStore.getExitDestY(), configStore.getExitDestZ(),
-                configStore.getExitDestRotX(), configStore.getExitDestRotY(), configStore.getExitDestRotZ());
-            markCooldown(playerId);
-
-            Player player = store.getComponent(ref, Player.getComponentType());
-            if (player != null) {
-                // Swap HUD: Mine -> Ascend
-                ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-                if (plugin != null) {
-                    MineHudManager mhm = plugin.getMineHudManager();
-                    if (mhm != null) {
-                        mhm.detachHud(playerId);
-                    }
-                    PlayerRef pRef = store.getComponent(ref, PlayerRef.getComponentType());
-                    if (pRef != null) {
-                        plugin.getHudManager().attach(pRef, player);
-                    }
-                }
-                AscendInventoryUtils.giveMenuItems(player);
-            }
+            PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+            exitMine(playerId, playerRef, ref, store, true);
         }
+    }
+
+    public boolean canAccessMine(UUID playerId) {
+        AscendPlayerProgress progress = playerStore.getPlayer(playerId);
+        return progress != null && progress.getAscensionCount() >= 1;
+    }
+
+    public boolean denyMineAccess(UUID playerId, Player player) {
+        if (canAccessMine(playerId)) {
+            return false;
+        }
+        if (player != null) {
+            player.sendMessage(Message.raw("[Mine] You need at least 1 ascension to access mines."));
+        }
+        return true;
+    }
+
+    public boolean enterMine(UUID playerId, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store,
+                             double x, double y, double z, float rotX, float rotY, float rotZ,
+                             boolean respectCooldown) {
+        if (ref == null || !ref.isValid() || store == null) {
+            return false;
+        }
+        if (respectCooldown && isOnCooldown(playerId)) {
+            return false;
+        }
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (denyMineAccess(playerId, player)) {
+            return false;
+        }
+
+        World world = store.getExternalData().getWorld();
+        if (world == null) {
+            return false;
+        }
+
+        teleportPlayer(ref, store, world, x, y, z, rotX, rotY, rotZ);
+        markCooldown(playerId);
+
+        if (player != null) {
+            giveMineItems(player);
+        }
+        swapToMineHud(playerId, playerRef, player);
+        return true;
+    }
+
+    public boolean exitMine(UUID playerId, PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store,
+                            boolean respectCooldown) {
+        if (ref == null || !ref.isValid() || store == null) {
+            return false;
+        }
+        if (respectCooldown && isOnCooldown(playerId)) {
+            return false;
+        }
+        World world = store.getExternalData().getWorld();
+        if (world == null) {
+            return false;
+        }
+
+        teleportPlayer(ref, store, world,
+            configStore.getExitDestX(), configStore.getExitDestY(), configStore.getExitDestZ(),
+            configStore.getExitDestRotX(), configStore.getExitDestRotY(), configStore.getExitDestRotZ());
+        markCooldown(playerId);
+
+        Player player = store.getComponent(ref, Player.getComponentType());
+        swapToAscendHud(playerId, playerRef, player);
+        if (player != null) {
+            AscendInventoryUtils.giveMenuItems(player);
+        }
+        return true;
     }
 
     private void teleportPlayer(Ref<EntityStore> ref, Store<EntityStore> store, World world,
@@ -119,6 +148,38 @@ public class MineGateChecker {
         Vector3d destPos = new Vector3d(x, y, z);
         Vector3f destRot = new Vector3f(rotX, rotY, rotZ);
         store.addComponent(ref, Teleport.getComponentType(), new Teleport(world, destPos, destRot));
+    }
+
+    private void swapToMineHud(UUID playerId, PlayerRef playerRef, Player player) {
+        if (player == null) {
+            return;
+        }
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin == null) {
+            return;
+        }
+        plugin.getHudManager().removePlayer(playerId);
+        MineHudManager mineHud = plugin.getMineHudManager();
+        if (mineHud != null && playerRef != null) {
+            mineHud.attachHud(playerRef, player);
+        }
+    }
+
+    private void swapToAscendHud(UUID playerId, PlayerRef playerRef, Player player) {
+        if (player == null) {
+            return;
+        }
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin == null) {
+            return;
+        }
+        MineHudManager mineHud = plugin.getMineHudManager();
+        if (mineHud != null) {
+            mineHud.detachHud(playerId);
+        }
+        if (playerRef != null) {
+            plugin.getHudManager().attach(playerRef, player);
+        }
     }
 
     private void giveMineItems(Player player) {

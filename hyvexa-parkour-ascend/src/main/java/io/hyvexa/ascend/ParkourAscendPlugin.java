@@ -198,14 +198,21 @@ public class ParkourAscendPlugin extends JavaPlugin {
             mineGateChecker = new MineGateChecker(mineConfigStore, playerStore);
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("Failed to initialize mine config store");
+            mineConfigStore = null;
+            mineBonusCalculator = null;
+            mineGateChecker = null;
         }
 
         // Mine player store + manager
-        try {
-            minePlayerStore = new MinePlayerStore();
-            mineManager = new MineManager(mineConfigStore);
-        } catch (Exception e) {
-            LOGGER.atWarning().withCause(e).log("Failed to initialize mine manager");
+        if (mineConfigStore != null) {
+            try {
+                minePlayerStore = new MinePlayerStore();
+                mineManager = new MineManager(mineConfigStore);
+            } catch (Exception e) {
+                LOGGER.atWarning().withCause(e).log("Failed to initialize mine manager");
+                minePlayerStore = null;
+                mineManager = null;
+            }
         }
 
         // Mine HUD manager
@@ -297,7 +304,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
         }
 
         // Mine break system — allows block breaking inside mining zones (overrides NoBreakSystem)
-        if (mineManager != null && minePlayerStore != null) {
+        if (mineConfigStore != null && mineManager != null && minePlayerStore != null) {
             if (registry.getEntityEventTypeForClass(BreakBlockEvent.class) == null) {
                 registry.registerEntityEventType(BreakBlockEvent.class);
             }
@@ -600,6 +607,10 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
     public MinePlayerStore getMinePlayerStore() {
         return minePlayerStore;
+    }
+
+    public MineGateChecker getMineGateChecker() {
+        return mineGateChecker;
     }
 
     public MineRobotManager getMineRobotManager() {
