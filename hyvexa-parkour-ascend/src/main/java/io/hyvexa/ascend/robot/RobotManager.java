@@ -20,6 +20,9 @@ import com.hypixel.hytale.server.npc.NPCPlugin;
 import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.ascension.AscensionManager;
+import io.hyvexa.ascend.mine.MineBonusCalculator;
+import io.hyvexa.ascend.mine.data.MinePlayerProgress;
+import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.ascension.ChallengeManager;
 import io.hyvexa.ascend.command.AscendCommand;
 import io.hyvexa.ascend.data.AscendMap;
@@ -1374,6 +1377,18 @@ public class RobotManager {
                         speedMultiplier *= momentumMultiplier;
                     }
 
+                }
+            }
+
+            // Mine cross-progression bonus
+            MineBonusCalculator mineBonusCalc = plugin.getMineBonusCalculator();
+            if (mineBonusCalc != null) {
+                MinePlayerStore mps = plugin.getMinePlayerStore();
+                if (mps != null) {
+                    MinePlayerProgress mineProgress = mps.getPlayer(ownerId);
+                    if (mineProgress != null) {
+                        speedMultiplier *= mineBonusCalc.getRunnerSpeedMultiplier(mineProgress);
+                    }
                 }
             }
         }
