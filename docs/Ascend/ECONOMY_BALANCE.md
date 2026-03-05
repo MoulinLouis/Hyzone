@@ -1,6 +1,6 @@
 # Ascend Mode - Economy Balance Documentation
 
-Last updated: 2026-02-21
+Last updated: 2026-03-05
 
 This document provides a factual overview of the economy balancing in Ascend mode, including all costs, multipliers, and progression formulas.
 
@@ -19,6 +19,7 @@ This document provides a factual overview of the economy balancing in Ascend mod
 9. [Design Philosophy](#design-philosophy)
 10. [Vexa (Global Currency)](#vexa-global-currency)
 11. [Feathers (Parkour Currency)](#feathers-parkour-currency)
+12. [Mine Economy](#mine-economy)
 
 ---
 
@@ -773,6 +774,9 @@ Runner upgrade costs use `totalLevel = stars × 20 + speedLevel` to ensure conti
 
 ## Version History
 
+- **2026-03-05 (mine v1):** Mine economy documentation
+  - Crystal currency, block prices, upgrades, mine unlocking, cross-progression bonuses
+
 - **2026-02-17 (v19):** Transcendence (4th Prestige) + Map 6 + Summit nerf
   - 4th prestige layer: Transcendence at 1e100 volt with BREAK_ASCENSION + all challenges
   - Full reset including skill tree + challenges; preserves best times, achievements, transcendence count
@@ -942,3 +946,153 @@ Feathers are a parkour-specific currency earned by beating medal time thresholds
 ### Display
 - Feather balance shown on parkour HUD (below vexa, with feather icon)
 - Medal status shown on map selection cards (earned/unearned per tier)
+
+---
+
+## Mine Economy
+
+The mine is a separate progression system within Ascend mode where players break blocks, sell them for crystals, and upgrade their mining capabilities.
+
+> **Note:** All mine economy values are provisional and subject to playtesting. Block prices and mine unlock costs are admin-configured, not hardcoded.
+
+### Crystal Currency
+
+- **Separate currency** from volt -- earned exclusively by selling mined blocks
+- **Storage:** `long` via `AtomicLong` in `MinePlayerProgress.crystals`
+- **Used for:** Mine upgrades, mine unlocking, miner purchases
+- **Floor:** Balance cannot go below 0
+- **Display:** Shown on the mine HUD alongside inventory count
+
+### Block Sell Prices
+
+Each mine has its own block price table, configured per-mine by admins.
+
+- **DB table:** `mine_block_prices` (columns: `mine_id`, `block_type_id`, `price_mantissa`, `price_exp10`)
+- **Price format:** `BigNumber` (mantissa + base-10 exponent), supporting arbitrarily large values
+- **Default price:** `BigNumber.ONE` (1 crystal) if a block type has no configured price
+- **Per-mine isolation:** The same block type can have different prices in different mines
+- **Sell formula:** `crystals earned = sum(block_price x block_count)` for each block type in inventory
+
+### Mine Upgrades
+
+Four upgrade types, purchased with crystals. Each has a unique cost formula and effect curve.
+
+| Upgrade | Max Level | Cost Formula | Effect per Level | Effect at Max |
+|---------|-----------|-------------|------------------|---------------|
+| **Mining Speed** | 100 | `10 x 1.15^level` | +10% speed multiplier | x11.0 speed |
+| **Bag Capacity** | 50 | `25 x 1.2^level` | +10 slots | 550 slots |
+| **Multi-Break** | 20 | `100 x 1.5^level` | +5% chance per level | 100% chance |
+| **Auto-Sell** | 1 | 500 (flat) | Enables automatic selling | On/Off |
+
+#### Mining Speed
+
+- **Formula:** `speedMultiplier = 1.0 + level x 0.10`
+- **Effect:** Multiplies mining speed (inversely affects time between breaks)
+- **Level 0:** x1.0 (base speed)
+- **Level 50:** x6.0
+- **Level 100:** x11.0
+
+#### Bag Capacity
+
+- **Formula:** `capacity = 50 + level x 10`
+- **Effect:** Maximum number of blocks the player can hold before selling
+- **Level 0:** 50 slots
+- **Level 25:** 300 slots
+- **Level 50:** 550 slots
+
+#### Multi-Break
+
+- **Formula:** `chance = level x 5.0%`
+- **Effect:** Probability of breaking an additional block per mine action
+- **Level 0:** 0% (no bonus breaks)
+- **Level 10:** 50% chance
+- **Level 20:** 100% chance (always double break)
+
+#### Auto-Sell
+
+- **Cost:** 500 crystals (one-time purchase)
+- **Effect:** When enabled, blocks are sold immediately upon mining instead of going to inventory
+- **Miner interaction:** Automated miners also sell directly when auto-sell is active
+
+#### Example Cost Progression (Mining Speed)
+
+| Level | Cost | Cumulative |
+|-------|------|------------|
+| 0 | 10 | 10 |
+| 5 | 20 | ~87 |
+| 10 | 40 | ~213 |
+| 20 | 163 | ~1,178 |
+| 50 | 10,837 | ~71,785 |
+| 99 | 9.6M | ~67.8M |
+
+### Mine Unlocking
+
+- **First mine:** Free / unlocked by default
+- **Subsequent mines:** Require crystal payment, configured per-mine in the `mine_definitions` DB table
+- **Unlock cost format:** `BigNumber` (columns: `unlock_cost_mantissa`, `unlock_cost_exp10`)
+- **Unlock is permanent:** Once purchased, a mine stays unlocked
+- **Progression:** Mines are displayed sorted by `display_order`; admins set costs to create a natural progression curve
+
+### Cross-Progression Bonuses (Provisional)
+
+Mine progression provides permanent bonuses to the core Ascend parkour loop. These values are provisional and subject to playtesting.
+
+| Bonus | Source | Effect |
+|-------|--------|--------|
+| Runner Speed | Mine 2 unlock | +5% |
+| Runner Speed | Max mining speed upgrade (level 100) | +10% |
+| Multiplier Gain | Mine 3 unlock | +10% |
+| Multiplier Gain | All miners unlocked | +20% |
+| Volt Gain | Mine 4 unlock | +15% |
+
+**Design intent:** Reward mine investment without making it mandatory. Bonuses are meaningful but not dominant compared to core parkour systems.
+
+### Automated Miners
+
+Each mine can have one automated miner robot per player, unlocked per-mine.
+
+#### Miner State
+
+- **Tracked per-player, per-mine** in `MinePlayerProgress.MinerProgress`
+- **Properties:** `hasMiner` (unlocked), `speedLevel`, `stars`
+- **Persisted to DB** via `mine_player_miners` table
+
+#### Production Rate
+
+```
+base = 6.0 blocks/minute
+speedMultiplier = 1.0 + speedLevel x 0.10
+starMultiplier = 1.0 + stars x 0.50
+productionRate = base x speedMultiplier x starMultiplier
+```
+
+| Speed Level | Stars | Blocks/Minute | Interval |
+|-------------|-------|---------------|----------|
+| 0 | 0 | 6.0 | 10.0s |
+| 5 | 0 | 9.0 | 6.7s |
+| 10 | 0 | 12.0 | 5.0s |
+| 10 | 1 | 18.0 | 3.3s |
+| 10 | 3 | 30.0 | 2.0s |
+| 10 | 5 | 42.0 | 1.4s |
+
+#### Star Tiers
+
+Each star tier changes the miner's visual NPC type:
+
+| Stars | Entity Type | Star Multiplier |
+|-------|-------------|-----------------|
+| 0 | Kweebec Seedling | x1.0 |
+| 1 | Kweebec Sapling | x1.5 |
+| 2 | Kweebec Sproutling | x2.0 |
+| 3 | Kweebec Sapling Pink | x2.5 |
+| 4 | Kweebec Razorleaf | x3.0 |
+| 5+ | Kweebec Rootling | x3.5+ |
+
+#### Miner Behavior
+
+- Miners are spawned as frozen, invulnerable NPCs in the mine zone
+- Production runs on a server-side tick (50ms interval), checking each miner's production timer
+- Miners pick a random block from the zone's weighted block table each production cycle
+- If auto-sell is enabled, the mined block is sold immediately for crystals
+- If auto-sell is off, the block goes into the player's inventory (skipped if bag is full)
+- Miners are spawned when the player joins and despawned when they leave
