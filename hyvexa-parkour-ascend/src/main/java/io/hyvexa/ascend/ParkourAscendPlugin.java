@@ -48,6 +48,7 @@ import io.hyvexa.ascend.mine.MineManager;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
+import io.hyvexa.ascend.mine.robot.MineRobotManager;
 import io.hyvexa.ascend.mine.system.MineBreakSystem;
 import com.hypixel.hytale.server.core.event.events.ecs.BreakBlockEvent;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
@@ -113,6 +114,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
     private MineGateChecker mineGateChecker;
     private MineManager mineManager;
     private MinePlayerStore minePlayerStore;
+    private MineRobotManager mineRobotManager;
     private AscendWhitelistManager whitelistManager;
     private AscendRuntimeConfig runtimeConfig;
     private ScheduledFuture<?> tickTask;
@@ -197,6 +199,16 @@ public class ParkourAscendPlugin extends JavaPlugin {
             mineManager = new MineManager(mineConfigStore);
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("Failed to initialize mine manager");
+        }
+
+        // Mine robot manager (automated miners)
+        if (mineConfigStore != null && minePlayerStore != null) {
+            try {
+                mineRobotManager = new MineRobotManager(mineConfigStore, minePlayerStore);
+                mineRobotManager.start();
+            } catch (Exception e) {
+                LOGGER.atWarning().withCause(e).log("Failed to initialize mine robot manager");
+            }
         }
 
         // Ghost system
@@ -314,6 +326,10 @@ public class ParkourAscendPlugin extends JavaPlugin {
                 // Register player as online for robot spawning
                 if (playerId != null && robotManager != null) {
                     robotManager.onPlayerJoin(playerId);
+                }
+                // Spawn automated miners for this player
+                if (playerId != null && mineRobotManager != null) {
+                    mineRobotManager.onPlayerJoin(playerId, world);
                 }
                 // Reset session-specific tracking
                 if (playerId != null && playerStore != null) {
@@ -477,6 +493,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
         runSafe(() -> playersInAscendWorld.clear(), "Shutdown: playersInAscendWorld clear");
         runSafe(() -> { if (ghostRecorder != null) ghostRecorder.stop(); }, "Shutdown: ghostRecorder stop");
         runSafe(() -> { if (robotManager != null) robotManager.stop(); }, "Shutdown: robotManager stop");
+        runSafe(() -> { if (mineRobotManager != null) mineRobotManager.stop(); }, "Shutdown: mineRobotManager stop");
         runSafe(() -> { if (playerStore != null) playerStore.flushPendingSave(); }, "Shutdown: playerStore flush");
         runSafe(() -> { if (minePlayerStore != null) minePlayerStore.flushAll(); }, "Shutdown: minePlayerStore flush");
         runSafe(() -> WhitelistRegistry.unregister(), "Shutdown: whitelist unregister");
@@ -560,6 +577,10 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
     public MinePlayerStore getMinePlayerStore() {
         return minePlayerStore;
+    }
+
+    public MineRobotManager getMineRobotManager() {
+        return mineRobotManager;
     }
 
     public AscendRuntimeConfig getRuntimeConfig() {
@@ -765,6 +786,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
         runSafe(() -> hudManager.removePlayer(playerId), "Leave cleanup: hudManager");
         runSafe(() -> { if (runTracker != null) runTracker.cancelRun(playerId); }, "Leave cleanup: runTracker");
         runSafe(() -> { if (robotManager != null) robotManager.onPlayerLeave(playerId); }, "Leave cleanup: robotManager");
+        runSafe(() -> { if (mineRobotManager != null) mineRobotManager.onPlayerLeave(playerId); }, "Leave cleanup: mineRobotManager");
         runSafe(() -> { if (challengeManager != null) challengeManager.onPlayerDisconnect(playerId); },
                 "Leave cleanup: challengeManager");
     }
