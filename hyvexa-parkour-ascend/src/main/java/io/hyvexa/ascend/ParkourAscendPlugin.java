@@ -43,6 +43,7 @@ import io.hyvexa.ascend.interaction.AscendResetInteraction;
 import io.hyvexa.ascend.interaction.AscendTranscendenceInteraction;
 import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.summit.SummitManager;
+import io.hyvexa.ascend.mine.MineBonusCalculator;
 import io.hyvexa.ascend.mine.MineGateChecker;
 import io.hyvexa.ascend.mine.MineManager;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
@@ -111,6 +112,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
     private PassiveEarningsManager passiveEarningsManager;
     private TutorialTriggerService tutorialTriggerService;
     private MineConfigStore mineConfigStore;
+    private MineBonusCalculator mineBonusCalculator;
     private MineGateChecker mineGateChecker;
     private MineManager mineManager;
     private MinePlayerStore minePlayerStore;
@@ -188,6 +190,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
         try {
             mineConfigStore = new MineConfigStore();
             mineConfigStore.syncLoad();
+            mineBonusCalculator = new MineBonusCalculator(mineConfigStore);
             mineGateChecker = new MineGateChecker(mineConfigStore, playerStore);
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("Failed to initialize mine config store");
@@ -569,6 +572,10 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
     public MineConfigStore getMineConfigStore() {
         return mineConfigStore;
+    }
+
+    public MineBonusCalculator getMineBonusCalculator() {
+        return mineBonusCalculator;
     }
 
     public MineManager getMineManager() {
