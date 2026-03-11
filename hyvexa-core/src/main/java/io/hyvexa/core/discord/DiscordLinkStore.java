@@ -69,12 +69,10 @@ public class DiscordLinkStore {
                 + ") ENGINE=InnoDB";
 
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
-            try (PreparedStatement stmt = conn.prepareStatement(createCodes)) {
-                DatabaseManager.applyQueryTimeout(stmt);
+            try (PreparedStatement stmt = DatabaseManager.prepare(conn, createCodes)) {
                 stmt.executeUpdate();
             }
-            try (PreparedStatement stmt = conn.prepareStatement(createLinks)) {
-                DatabaseManager.applyQueryTimeout(stmt);
+            try (PreparedStatement stmt = DatabaseManager.prepare(conn, createLinks)) {
                 stmt.executeUpdate();
             }
             migrateGemsRewardedToVexa(conn);
@@ -82,34 +80,6 @@ public class DiscordLinkStore {
             LOGGER.atInfo().log("DiscordLinkStore initialized (tables ensured)");
         } catch (SQLException e) {
             LOGGER.atSevere().withCause(e).log("Failed to create discord link tables");
-        }
-
-        // Migration: add rank sync columns to existing installs
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
-            try (PreparedStatement stmt = conn.prepareStatement(
-                    "ALTER TABLE discord_links ADD COLUMN current_rank VARCHAR(20) DEFAULT 'Unranked'")) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.executeUpdate();
-            }
-        } catch (SQLException e) {
-            if (isDuplicateColumn(e)) {
-                LOGGER.atFine().log("Migration: current_rank column already exists");
-            } else {
-                LOGGER.atWarning().withCause(e).log("Failed to add current_rank column to discord_links");
-            }
-        }
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
-            try (PreparedStatement stmt = conn.prepareStatement(
-                    "ALTER TABLE discord_links ADD COLUMN last_synced_rank VARCHAR(20) DEFAULT NULL")) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.executeUpdate();
-            }
-        } catch (SQLException e) {
-            if (isDuplicateColumn(e)) {
-                LOGGER.atFine().log("Migration: last_synced_rank column already exists");
-            } else {
-                LOGGER.atWarning().withCause(e).log("Failed to add last_synced_rank column to discord_links");
-            }
         }
 
         cleanExpiredCodes();
@@ -140,13 +110,11 @@ public class DiscordLinkStore {
         String insertSql = "INSERT INTO discord_link_codes (code, player_uuid, expires_at) VALUES (?, ?, ?)";
 
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
-            try (PreparedStatement stmt = conn.prepareStatement(deleteSql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
+            try (PreparedStatement stmt = DatabaseManager.prepare(conn, deleteSql)) {
                 stmt.setString(1, playerId.toString());
                 stmt.executeUpdate();
             }
-            try (PreparedStatement stmt = conn.prepareStatement(insertSql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
+            try (PreparedStatement stmt = DatabaseManager.prepare(conn, insertSql)) {
                 stmt.setString(1, code);
                 stmt.setString(2, playerId.toString());
                 stmt.setTimestamp(3, expiresAt);
@@ -184,8 +152,7 @@ public class DiscordLinkStore {
         }
         String sql = "SELECT code FROM discord_link_codes WHERE player_uuid = ? AND expires_at > NOW()";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
+             PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
             stmt.setString(1, playerId.toString());
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -270,10 +237,8 @@ public class DiscordLinkStore {
 
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
             conn.setAutoCommit(false);
-            try (PreparedStatement claimStmt = conn.prepareStatement(claimSql);
-                 PreparedStatement awardStmt = conn.prepareStatement(awardSql)) {
-                DatabaseManager.applyQueryTimeout(claimStmt);
-                DatabaseManager.applyQueryTimeout(awardStmt);
+            try (PreparedStatement claimStmt = DatabaseManager.prepare(conn, claimSql);
+                 PreparedStatement awardStmt = DatabaseManager.prepare(conn, awardSql)) {
 
                 claimStmt.setString(1, playerId.toString());
                 if (claimStmt.executeUpdate() == 0) {
@@ -318,8 +283,7 @@ public class DiscordLinkStore {
         }
         String sql = "UPDATE discord_links SET current_rank = ? WHERE player_uuid = ?";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
+             PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
             stmt.setString(1, rankName);
             stmt.setString(2, playerId.toString());
             stmt.executeUpdate();
@@ -335,9 +299,8 @@ public class DiscordLinkStore {
         try {
             if (columnExists(conn, "discord_links", "gems_rewarded")
                     && !columnExists(conn, "discord_links", "vexa_rewarded")) {
-                try (PreparedStatement stmt = conn.prepareStatement(
+                try (PreparedStatement stmt = DatabaseManager.prepare(conn,
                         "ALTER TABLE discord_links RENAME COLUMN gems_rewarded TO vexa_rewarded")) {
-                    DatabaseManager.applyQueryTimeout(stmt);
                     stmt.executeUpdate();
                     LOGGER.atInfo().log("Renamed discord_links.gems_rewarded -> discord_links.vexa_rewarded");
                 }
@@ -351,9 +314,8 @@ public class DiscordLinkStore {
         if (conn == null) {
             return;
         }
-        try (PreparedStatement stmt = conn.prepareStatement(
+        try (PreparedStatement stmt = DatabaseManager.prepare(conn,
                 "CREATE INDEX idx_discord_link_codes_player_uuid_expires_at ON discord_link_codes (player_uuid, expires_at)")) {
-            DatabaseManager.applyQueryTimeout(stmt);
             stmt.executeUpdate();
         } catch (SQLException e) {
             if (isDuplicateIndex(e)) {
@@ -362,13 +324,6 @@ public class DiscordLinkStore {
                 LOGGER.atWarning().withCause(e).log("Failed to add discord_link_codes player/expires index");
             }
         }
-    }
-
-    /**
-     * Check if a SQLException indicates a duplicate column (MySQL error 1060, SQL state 42S21).
-     */
-    private static boolean isDuplicateColumn(SQLException e) {
-        return e.getErrorCode() == 1060 || "42S21".equals(e.getSQLState());
     }
 
     private static boolean isDuplicateIndex(SQLException e) {
@@ -393,15 +348,13 @@ public class DiscordLinkStore {
         rewardCheckedThisSession.remove(playerId);
         boolean deleted = false;
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
-            try (PreparedStatement stmt = conn.prepareStatement(
+            try (PreparedStatement stmt = DatabaseManager.prepare(conn,
                     "DELETE FROM discord_links WHERE player_uuid = ?")) {
-                DatabaseManager.applyQueryTimeout(stmt);
                 stmt.setString(1, playerId.toString());
                 deleted = stmt.executeUpdate() > 0;
             }
-            try (PreparedStatement stmt = conn.prepareStatement(
+            try (PreparedStatement stmt = DatabaseManager.prepare(conn,
                     "DELETE FROM discord_link_codes WHERE player_uuid = ?")) {
-                DatabaseManager.applyQueryTimeout(stmt);
                 stmt.setString(1, playerId.toString());
                 stmt.executeUpdate();
             }
@@ -430,8 +383,7 @@ public class DiscordLinkStore {
         }
         String sql = "DELETE FROM discord_link_codes WHERE expires_at < NOW()";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
+             PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
             int deleted = stmt.executeUpdate();
             if (deleted > 0) {
                 LOGGER.atInfo().log("Cleaned " + deleted + " expired link codes");
@@ -451,8 +403,7 @@ public class DiscordLinkStore {
         }
         String sql = "SELECT discord_id, linked_at, vexa_rewarded FROM discord_links WHERE player_uuid = ?";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
+             PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
             stmt.setString(1, playerId.toString());
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {

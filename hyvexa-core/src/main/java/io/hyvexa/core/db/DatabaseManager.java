@@ -117,8 +117,7 @@ public class DatabaseManager {
             ensureDuelEnabledColumn();
             // Verify database is reachable
             try (Connection conn = getConnection();
-                 PreparedStatement stmt = conn.prepareStatement("SELECT 1")) {
-                applyQueryTimeout(stmt);
+                 PreparedStatement stmt = prepare(conn, "SELECT 1")) {
                 stmt.executeQuery();
                 LOGGER.atInfo().log("Database health check passed");
             } catch (SQLException healthEx) {
@@ -157,8 +156,7 @@ public class DatabaseManager {
             }
 
             // Test we can query
-            try (PreparedStatement stmt = conn.prepareStatement("SELECT 1")) {
-                applyQueryTimeout(stmt);
+            try (PreparedStatement stmt = prepare(conn, "SELECT 1")) {
                 try (ResultSet rs = stmt.executeQuery()) {
                     if (!rs.next()) {
                         return new TestResult(false, "SELECT 1 returned no results");
@@ -172,8 +170,7 @@ public class DatabaseManager {
             StringBuilder missingTables = new StringBuilder();
 
             String tableCheckSql = "SELECT 1 FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?";
-            try (PreparedStatement tableStmt = conn.prepareStatement(tableCheckSql)) {
-                applyQueryTimeout(tableStmt);
+            try (PreparedStatement tableStmt = prepare(conn, tableCheckSql)) {
                 for (String table : tables) {
                     tableStmt.setString(1, table);
                     try (ResultSet rs = tableStmt.executeQuery()) {
@@ -209,8 +206,7 @@ public class DatabaseManager {
         if (table == null || !ALLOWED_COUNT_TABLES.contains(table)) {
             throw new SQLException("Invalid table name for countRows: " + table);
         }
-        try (PreparedStatement stmt = conn.prepareStatement("SELECT COUNT(*) FROM " + table)) {
-            applyQueryTimeout(stmt);
+        try (PreparedStatement stmt = prepare(conn, "SELECT COUNT(*) FROM " + table)) {
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
                     return rs.getInt(1);
@@ -246,8 +242,7 @@ public class DatabaseManager {
             SELECT 1 FROM information_schema.columns
             WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?
             """;
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            applyQueryTimeout(stmt);
+        try (PreparedStatement stmt = prepare(conn, sql)) {
             stmt.setString(1, table);
             stmt.setString(2, column);
             try (ResultSet rs = stmt.executeQuery()) {
@@ -262,8 +257,7 @@ public class DatabaseManager {
                 return;
             }
             String sql = "ALTER TABLE " + table + " ADD COLUMN " + column + " " + definition;
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                applyQueryTimeout(stmt);
+            try (PreparedStatement stmt = prepare(conn, sql)) {
                 stmt.executeUpdate();
                 LOGGER.atInfo().log("Added column " + table + "." + column);
             }
@@ -278,8 +272,7 @@ public class DatabaseManager {
                 return;
             }
             String sql = "ALTER TABLE " + table + " CHANGE COLUMN " + oldColumn + " " + newColumn + " " + definition;
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                applyQueryTimeout(stmt);
+            try (PreparedStatement stmt = prepare(conn, sql)) {
                 stmt.executeUpdate();
                 LOGGER.atInfo().log("Renamed column " + table + "." + oldColumn + " to " + newColumn);
             }
@@ -314,6 +307,12 @@ public class DatabaseManager {
         try (Statement stmt = conn.createStatement()) {
             stmt.executeUpdate(sql);
         }
+    }
+
+    public static PreparedStatement prepare(Connection conn, String sql) throws SQLException {
+        PreparedStatement stmt = conn.prepareStatement(sql);
+        applyQueryTimeout(stmt);
+        return stmt;
     }
 
     public static void applyQueryTimeout(PreparedStatement stmt) throws SQLException {

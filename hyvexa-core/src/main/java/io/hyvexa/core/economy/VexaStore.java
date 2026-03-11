@@ -95,8 +95,7 @@ public class VexaStore extends CachedCurrencyStore {
         }
         try {
             if (tableExists(conn, "player_gems") && !tableExists(conn, "player_vexa")) {
-                try (PreparedStatement stmt = conn.prepareStatement("RENAME TABLE player_gems TO player_vexa")) {
-                    DatabaseManager.applyQueryTimeout(stmt);
+                try (PreparedStatement stmt = DatabaseManager.prepare(conn, "RENAME TABLE player_gems TO player_vexa")) {
                     stmt.executeUpdate();
                     LOGGER.atInfo().log("Renamed table player_gems -> player_vexa");
                 }
@@ -105,8 +104,7 @@ public class VexaStore extends CachedCurrencyStore {
             if (tableExists(conn, "player_vexa")
                     && columnExists(conn, "player_vexa", "gems")
                     && !columnExists(conn, "player_vexa", "vexa")) {
-                try (PreparedStatement stmt = conn.prepareStatement("ALTER TABLE player_vexa RENAME COLUMN gems TO vexa")) {
-                    DatabaseManager.applyQueryTimeout(stmt);
+                try (PreparedStatement stmt = DatabaseManager.prepare(conn, "ALTER TABLE player_vexa RENAME COLUMN gems TO vexa")) {
                     stmt.executeUpdate();
                     LOGGER.atInfo().log("Renamed column player_vexa.gems -> player_vexa.vexa");
                 }

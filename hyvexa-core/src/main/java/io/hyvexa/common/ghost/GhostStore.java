@@ -62,8 +62,7 @@ public class GhostStore {
                 logger.atWarning().log("Failed to acquire database connection");
                 return;
             }
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
+            try (PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
                 try (ResultSet rs = stmt.executeQuery()) {
                     while (rs.next()) {
                         String playerUuid = rs.getString("player_uuid");
@@ -116,8 +115,7 @@ public class GhostStore {
                     logger.atWarning().log("Failed to acquire database connection");
                     return;
                 }
-                try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                    DatabaseManager.applyQueryTimeout(stmt);
+                try (PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
                     stmt.setString(1, playerId.toString());
                     stmt.setString(2, mapId);
                     stmt.setBytes(3, blob);
@@ -144,8 +142,7 @@ public class GhostStore {
                 logger.atWarning().log("Failed to acquire database connection");
                 return;
             }
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
+            try (PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
                 stmt.setString(1, playerId.toString());
                 stmt.setString(2, mapId);
                 stmt.executeUpdate();

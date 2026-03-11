@@ -49,8 +49,7 @@ public class PurgeSkinStore {
                 + "PRIMARY KEY (uuid, weapon_id, skin_id)"
                 + ") ENGINE=InnoDB";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
+             PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
             stmt.executeUpdate();
             LOGGER.atInfo().log("PurgeSkinStore initialized (purge_weapon_skins table ensured)");
         } catch (SQLException e) {
@@ -158,8 +157,7 @@ public class PurgeSkinStore {
         }
         String sql = "DELETE FROM purge_weapon_skins WHERE uuid = ?";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
+             PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
             stmt.setString(1, playerId.toString());
             stmt.executeUpdate();
         } catch (SQLException e) {
@@ -180,8 +178,7 @@ public class PurgeSkinStore {
         }
         String sql = "SELECT weapon_id, skin_id, selected FROM purge_weapon_skins WHERE uuid = ?";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
+             PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
             stmt.setString(1, playerId.toString());
             try (ResultSet rs = stmt.executeQuery()) {
                 ConcurrentHashMap<String, List<String>> owned = new ConcurrentHashMap<>();
@@ -209,8 +206,7 @@ public class PurgeSkinStore {
         }
         String sql = "INSERT IGNORE INTO purge_weapon_skins (uuid, weapon_id, skin_id, selected) VALUES (?, ?, ?, FALSE)";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
+             PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
             stmt.setString(1, playerId.toString());
             stmt.setString(2, weaponId);
             stmt.setString(3, skinId);
@@ -228,14 +224,12 @@ public class PurgeSkinStore {
         String deselectSql = "UPDATE purge_weapon_skins SET selected = FALSE WHERE uuid = ? AND weapon_id = ?";
         String selectSql = "UPDATE purge_weapon_skins SET selected = TRUE WHERE uuid = ? AND weapon_id = ? AND skin_id = ?";
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
-            try (PreparedStatement stmt = conn.prepareStatement(deselectSql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
+            try (PreparedStatement stmt = DatabaseManager.prepare(conn, deselectSql)) {
                 stmt.setString(1, playerId.toString());
                 stmt.setString(2, weaponId);
                 stmt.executeUpdate();
             }
-            try (PreparedStatement stmt = conn.prepareStatement(selectSql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
+            try (PreparedStatement stmt = DatabaseManager.prepare(conn, selectSql)) {
                 stmt.setString(1, playerId.toString());
                 stmt.setString(2, weaponId);
                 stmt.setString(3, skinId);
@@ -252,8 +246,7 @@ public class PurgeSkinStore {
         }
         String sql = "UPDATE purge_weapon_skins SET selected = FALSE WHERE uuid = ? AND weapon_id = ?";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
+             PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
             stmt.setString(1, playerId.toString());
             stmt.setString(2, weaponId);
             stmt.executeUpdate();

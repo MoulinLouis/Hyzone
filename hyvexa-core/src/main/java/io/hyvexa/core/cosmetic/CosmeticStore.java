@@ -53,8 +53,7 @@ public class CosmeticStore {
                 + "PRIMARY KEY (player_uuid, cosmetic_id)"
                 + ") ENGINE=InnoDB";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
+             PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
             stmt.executeUpdate();
             LOGGER.atInfo().log("CosmeticStore initialized (player_cosmetics table ensured)");
         } catch (SQLException e) {
@@ -173,8 +172,7 @@ public class CosmeticStore {
         if (DatabaseManager.getInstance().isInitialized()) {
             String sql = "DELETE FROM player_cosmetics WHERE player_uuid = ?";
             try (Connection conn = DatabaseManager.getInstance().getConnection();
-                 PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
+                 PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
                 stmt.setString(1, playerId.toString());
                 stmt.executeUpdate();
             } catch (SQLException e) {
@@ -198,8 +196,7 @@ public class CosmeticStore {
         if (DatabaseManager.getInstance().isInitialized()) {
             String sql = "SELECT cosmetic_id, equipped FROM player_cosmetics WHERE player_uuid = ?";
             try (Connection conn = DatabaseManager.getInstance().getConnection();
-                 PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
+                 PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
                 stmt.setString(1, playerId.toString());
                 try (ResultSet rs = stmt.executeQuery()) {
                     while (rs.next()) {
@@ -223,8 +220,7 @@ public class CosmeticStore {
         if (!DatabaseManager.getInstance().isInitialized()) return;
         String sql = "INSERT IGNORE INTO player_cosmetics (player_uuid, cosmetic_id, equipped) VALUES (?, ?, FALSE)";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
+             PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
             stmt.setString(1, playerId.toString());
             stmt.setString(2, cosmeticId);
             stmt.executeUpdate();
@@ -237,8 +233,7 @@ public class CosmeticStore {
         if (!DatabaseManager.getInstance().isInitialized()) return;
         String sql = "UPDATE player_cosmetics SET equipped = ? WHERE player_uuid = ? AND cosmetic_id = ?";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
+             PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
             stmt.setBoolean(1, equipped);
             stmt.setString(2, playerId.toString());
             stmt.setString(3, cosmeticId);

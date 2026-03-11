@@ -40,8 +40,7 @@ public class CosmeticShopConfigStore {
                 + "currency VARCHAR(16) NOT NULL DEFAULT 'vexa'"
                 + ") ENGINE=InnoDB";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(createSql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
+             PreparedStatement stmt = DatabaseManager.prepare(conn,createSql)) {
             stmt.executeUpdate();
             LOGGER.atInfo().log("CosmeticShopConfigStore initialized (cosmetic_shop_config table ensured)");
         } catch (SQLException e) {
@@ -56,8 +55,7 @@ public class CosmeticShopConfigStore {
         configs.clear();
         String sql = "SELECT cosmetic_id, available, price, currency FROM cosmetic_shop_config";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
+             PreparedStatement stmt = DatabaseManager.prepare(conn,sql)) {
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     String id = rs.getString("cosmetic_id");
@@ -135,8 +133,7 @@ public class CosmeticShopConfigStore {
         String sql = "INSERT INTO cosmetic_shop_config (cosmetic_id, available, price, currency) VALUES (?, ?, ?, ?) "
                 + "ON DUPLICATE KEY UPDATE available = ?, price = ?, currency = ?";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
+             PreparedStatement stmt = DatabaseManager.prepare(conn,sql)) {
             stmt.setString(1, cfg.cosmeticId);
             stmt.setBoolean(2, cfg.available);
             stmt.setInt(3, cfg.price);

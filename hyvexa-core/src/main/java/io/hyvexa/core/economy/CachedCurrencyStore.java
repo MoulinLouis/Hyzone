@@ -68,8 +68,7 @@ abstract class CachedCurrencyStore {
                 + ") ENGINE=InnoDB";
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
             preMigrate(conn);
-            try (PreparedStatement stmt = conn.prepareStatement(createSql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
+            try (PreparedStatement stmt = DatabaseManager.prepare(conn, createSql)) {
                 stmt.executeUpdate();
             }
             logger().atInfo().log(currencyLabel() + " store initialized (" + tableName() + " table ensured)");
@@ -201,8 +200,7 @@ abstract class CachedCurrencyStore {
         }
         String sql = "SELECT " + columnName() + " FROM " + tableName() + " WHERE uuid = ?";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
+             PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
             stmt.setString(1, playerId.toString());
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -222,8 +220,7 @@ abstract class CachedCurrencyStore {
         String sql = "INSERT INTO " + tableName() + " (uuid, " + columnName() + ") VALUES (?, ?) "
                 + "ON DUPLICATE KEY UPDATE " + columnName() + " = ?";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
+             PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
             stmt.setString(1, playerId.toString());
             stmt.setLong(2, amount);
             stmt.setLong(3, amount);

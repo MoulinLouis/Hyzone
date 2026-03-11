@@ -36,7 +36,7 @@ public class VoteStore {
             return;
         }
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
-            try (PreparedStatement stmt = conn.prepareStatement(
+            try (PreparedStatement stmt = DatabaseManager.prepare(conn,
                     "CREATE TABLE IF NOT EXISTS player_votes ("
                     + "id BIGINT AUTO_INCREMENT PRIMARY KEY, "
                     + "player_uuid VARCHAR(36) NOT NULL, "
@@ -47,17 +47,15 @@ public class VoteStore {
                     + "INDEX idx_voted_at (voted_at), "
                     + "INDEX idx_player_voted (player_uuid, voted_at)"
                     + ") ENGINE=InnoDB")) {
-                DatabaseManager.applyQueryTimeout(stmt);
                 stmt.executeUpdate();
             }
-            try (PreparedStatement stmt = conn.prepareStatement(
+            try (PreparedStatement stmt = DatabaseManager.prepare(conn,
                     "CREATE TABLE IF NOT EXISTS player_vote_counts ("
                     + "player_uuid VARCHAR(36) NOT NULL PRIMARY KEY, "
                     + "player_name VARCHAR(32) NOT NULL, "
                     + "total_votes INT NOT NULL DEFAULT 0, "
                     + "last_voted_at TIMESTAMP NULL"
                     + ") ENGINE=InnoDB")) {
-                DatabaseManager.applyQueryTimeout(stmt);
                 stmt.executeUpdate();
             }
             LOGGER.atInfo().log("VoteStore initialized (player_votes + player_vote_counts tables ensured)");
@@ -79,20 +77,18 @@ public class VoteStore {
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
             conn.setAutoCommit(false);
             try {
-                try (PreparedStatement stmt = conn.prepareStatement(
+                try (PreparedStatement stmt = DatabaseManager.prepare(conn,
                         "INSERT INTO player_votes (player_uuid, player_name, source) VALUES (?, ?, ?)")) {
-                    DatabaseManager.applyQueryTimeout(stmt);
                     stmt.setString(1, playerId.toString());
                     stmt.setString(2, username);
                     stmt.setString(3, source);
                     stmt.executeUpdate();
                 }
-                try (PreparedStatement stmt = conn.prepareStatement(
+                try (PreparedStatement stmt = DatabaseManager.prepare(conn,
                         "INSERT INTO player_vote_counts (player_uuid, player_name, total_votes, last_voted_at) "
                         + "VALUES (?, ?, 1, NOW()) "
                         + "ON DUPLICATE KEY UPDATE total_votes = total_votes + 1, "
                         + "last_voted_at = NOW(), player_name = VALUES(player_name)")) {
-                    DatabaseManager.applyQueryTimeout(stmt);
                     stmt.setString(1, playerId.toString());
                     stmt.setString(2, username);
                     stmt.executeUpdate();
@@ -132,7 +128,7 @@ public class VoteStore {
      */
     public List<VoterEntry> getTopVoters(int limit) {
         return queryTopVoters("SELECT player_uuid, player_name, total_votes FROM player_vote_counts "
-                + "ORDER BY total_votes DESC LIMIT ?", limit, 0);
+                + "ORDER BY total_votes DESC LIMIT ?", limit);
     }
 
     /**
@@ -144,11 +140,10 @@ public class VoteStore {
             return result;
         }
         try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(
+             PreparedStatement stmt = DatabaseManager.prepare(conn,
                      "SELECT player_uuid, player_name, COUNT(*) AS vote_count FROM player_votes "
                      + "WHERE voted_at >= FROM_UNIXTIME(? / 1000) "
                      + "GROUP BY player_uuid, player_name ORDER BY vote_count DESC LIMIT ?")) {
-            DatabaseManager.applyQueryTimeout(stmt);
             stmt.setLong(1, sinceMs);
             stmt.setInt(2, limit);
             try (ResultSet rs = stmt.executeQuery()) {
@@ -178,9 +173,8 @@ public class VoteStore {
             return 0;
         }
         try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(
+             PreparedStatement stmt = DatabaseManager.prepare(conn,
                      "SELECT total_votes FROM player_vote_counts WHERE player_uuid = ?")) {
-            DatabaseManager.applyQueryTimeout(stmt);
             stmt.setString(1, playerId.toString());
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -193,14 +187,13 @@ public class VoteStore {
         return 0;
     }
 
-    private List<VoterEntry> queryTopVoters(String sql, int limit, long unused) {
+    private List<VoterEntry> queryTopVoters(String sql, int limit) {
         List<VoterEntry> result = new ArrayList<>();
         if (!DatabaseManager.getInstance().isInitialized()) {
             return result;
         }
         try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
+             PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
             stmt.setInt(1, limit);
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {

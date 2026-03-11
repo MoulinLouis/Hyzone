@@ -288,8 +288,7 @@ public class WardrobeBridge {
         }
         String sql = "UPDATE " + table + " SET " + column + " = " + column + " - ? "
                 + "WHERE uuid = ? AND " + column + " >= ?";
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
+        try (PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
             stmt.setLong(1, price);
             stmt.setString(2, playerId.toString());
             stmt.setLong(3, price);
@@ -299,8 +298,7 @@ public class WardrobeBridge {
 
     private void insertOwnedCosmetic(Connection conn, UUID playerId, String cosmeticId) throws SQLException {
         String sql = "INSERT IGNORE INTO player_cosmetics (player_uuid, cosmetic_id, equipped) VALUES (?, ?, FALSE)";
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
+        try (PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
             stmt.setString(1, playerId.toString());
             stmt.setString(2, cosmeticId);
             stmt.executeUpdate();
