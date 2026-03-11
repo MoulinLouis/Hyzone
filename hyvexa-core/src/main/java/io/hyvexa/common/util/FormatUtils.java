@@ -10,56 +10,54 @@ public final class FormatUtils {
     private static final int[] SUFFIX_EXPONENTS = {3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33};
     private static final String[] SUFFIX_LABELS = {"K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Dc"};
 
+    private record TimeComponents(long hours, long minutes, long seconds, long centis, long millis) {}
+
+    private static TimeComponents extract(long durationMs) {
+        long totalMs = Math.max(0L, durationMs);
+        long totalSeconds = totalMs / 1000L;
+        return new TimeComponents(
+            totalSeconds / 3600L,
+            (totalSeconds % 3600L) / 60L,
+            totalSeconds % 60L,
+            (totalMs % 1000L) / 10L,
+            totalMs % 1000L
+        );
+    }
+
     private FormatUtils() {
     }
 
     public static String formatDuration(long durationMs) {
-        long totalMs = Math.max(0L, durationMs);
-        long totalSeconds = totalMs / 1000L;
-        long centis = (totalMs % 1000L) / 10L;
-        long minutes = totalSeconds / 60L;
-        long seconds = totalSeconds % 60L;
-        return String.format(Locale.ROOT, "%d:%02d.%02d", minutes, seconds, centis);
+        TimeComponents t = extract(durationMs);
+        return String.format(Locale.ROOT, "%d:%02d.%02d", t.minutes(), t.seconds(), t.centis());
     }
 
     public static String formatDurationPadded(long durationMs) {
-        long totalMs = Math.max(0L, durationMs);
-        long totalSeconds = totalMs / 1000L;
-        long centis = (totalMs % 1000L) / 10L;
-        long minutes = totalSeconds / 60L;
-        long seconds = totalSeconds % 60L;
-        return String.format(Locale.ROOT, "%02d:%02d.%02d", minutes, seconds, centis);
+        TimeComponents t = extract(durationMs);
+        return String.format(Locale.ROOT, "%02d:%02d.%02d", t.minutes(), t.seconds(), t.centis());
     }
 
     public static String formatDurationLong(long durationMs) {
-        long totalMs = Math.max(0L, durationMs);
-        long totalSeconds = totalMs / 1000L;
-        long ms = totalMs % 1000L;
-        long hours = totalSeconds / 3600L;
-        long minutes = (totalSeconds % 3600L) / 60L;
-        long seconds = totalSeconds % 60L;
+        TimeComponents t = extract(durationMs);
 
-        if (hours > 0L) {
-            return String.format(Locale.ROOT, "%dh %02dm %02d.%03ds", hours, minutes, seconds, ms);
+        if (t.hours() > 0L) {
+            return String.format(Locale.ROOT, "%dh %02dm %02d.%03ds", t.hours(), t.minutes(), t.seconds(), t.millis());
         }
-        if (minutes > 0L) {
-            return String.format(Locale.ROOT, "%dm %02d.%03ds", minutes, seconds, ms);
+        if (t.minutes() > 0L) {
+            return String.format(Locale.ROOT, "%dm %02d.%03ds", t.minutes(), t.seconds(), t.millis());
         }
-        return String.format(Locale.ROOT, "%d.%03ds", seconds, ms);
+        return String.format(Locale.ROOT, "%d.%03ds", t.seconds(), t.millis());
     }
 
     public static String formatPlaytime(long durationMs) {
-        long totalSeconds = Math.max(0L, durationMs / 1000L);
-        long hours = totalSeconds / 3600L;
-        long minutes = (totalSeconds % 3600L) / 60L;
-        long seconds = totalSeconds % 60L;
-        if (hours > 0) {
-            return String.format(Locale.ROOT, "%dh %dm %ds", hours, minutes, seconds);
+        TimeComponents t = extract(durationMs);
+        if (t.hours() > 0) {
+            return String.format(Locale.ROOT, "%dh %dm %ds", t.hours(), t.minutes(), t.seconds());
         }
-        if (minutes > 0) {
-            return String.format(Locale.ROOT, "%dm %ds", minutes, seconds);
+        if (t.minutes() > 0) {
+            return String.format(Locale.ROOT, "%dm %ds", t.minutes(), t.seconds());
         }
-        return String.format(Locale.ROOT, "%ds", seconds);
+        return String.format(Locale.ROOT, "%ds", t.seconds());
     }
 
     public static String truncate(String value, int maxLength) {
