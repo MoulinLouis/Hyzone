@@ -52,10 +52,10 @@ Prioritized list of known issues and improvements. Sourced from a full codebase 
 - **Issue:** 14 tables scattered across 9 individual store/manager classes. No single view of full schema. Compare with Ascend's centralized `AscendDatabaseSetup` (the good pattern).
 - **Fix:** Created `PurgeDatabaseSetup.java` modeled after `AscendDatabaseSetup`. Single source of truth for all 14 Purge tables and 5 migrations.
 
-### 2.3 Create BaseStore abstraction
+### ~~2.3 Create BasePlayerStore abstraction~~ (DONE)
 - **Module:** core
-- **Issue:** 5 simple player stores (`PurgePlayerStore`, `RunOrFallStatsStore`, `WeaponXpStore`, `DuelStatsStore`, `PurgeScrapStore`) share 70-80% identical code — cache lookup, DB fallback, upsert, evict.
-- **Fix:** Extract `BaseStore<K, V>` abstract class with template methods (`tableName()`, `selectByKeySql()`, `upsertSql()`, `parseRow()`, `bindUpsertParams()`). ~70 LOC saved per store, ~350 LOC total.
+- **Issue:** 3 simple player stores (`PurgePlayerStore`, `DuelStatsStore`, `RunOrFallStatsStore`) shared 70-80% identical code — cache lookup, DB fallback, upsert, evict.
+- **Fix:** Extracted `BasePlayerStore<V>` abstract class in core with template methods (`loadSql()`, `upsertSql()`, `parseRow()`, `bindUpsertParams()`, `defaultValue()`). Migrated all 3 stores. `WeaponXpStore` and `PurgeScrapStore` excluded (nested key / dirty tracking patterns don't fit).
 
 ### 2.4 Externalize WardrobeBridge cosmetics to JSON
 - **Module:** core/wardrobe
@@ -142,11 +142,12 @@ Bugs #1.5 and #1.6 above are the only concurrency issues found. The stale cache 
 
 ## Store Pattern Taxonomy
 
-For reference when working on items 2.3 and 2.5:
+For reference when working on item 2.5:
 
 | Pattern | Stores | Characteristics |
 |---------|--------|----------------|
 | CachedCurrencyStore | `VexaStore`, `FeatherStore` | 30-min TTL cache, async refresh |
-| Simple Player Store | `PurgePlayerStore`, `RunOrFallStatsStore`, `WeaponXpStore`, `DuelStatsStore`, `PurgeScrapStore` | Cache + lazy load + upsert (BaseStore candidates) |
+| BasePlayerStore | `PurgePlayerStore`, `DuelStatsStore`, `RunOrFallStatsStore` | Extend `BasePlayerStore<V>` — cache + lazy load + upsert |
+| Simple Player Store | `WeaponXpStore`, `PurgeScrapStore` | Cache + lazy load + upsert (not BasePlayerStore — nested key / dirty tracking) |
 | Transaction Batch Store | `PurgeWaveConfigManager`, `PurgeClassStore`, `PurgeWeaponUpgradeStore`, `RunOrFallConfigStore` | Manual transactions, batch DELETE+INSERT |
 | Complex Multi-Table Store | `AscendPlayerStore`, `ProgressStore`, `DiscordLinkStore` | Multiple tables, dirty tracking, leaderboard cache |
