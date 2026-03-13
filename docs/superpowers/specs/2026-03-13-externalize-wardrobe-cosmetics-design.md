@@ -6,7 +6,7 @@
 
 ## Problem
 
-Shop cosmetics are hardcoded in `WardrobeBridge.COSMETICS` as a `List.of(...)` spanning ~130 lines (160 entries). Adding or removing cosmetics requires recompilation.
+Shop cosmetics are hardcoded in `WardrobeBridge.COSMETICS` as a `List.of(...)` spanning ~130 lines (101 entries). Adding or removing cosmetics requires recompilation.
 
 ## Solution
 
@@ -21,7 +21,7 @@ Load cosmetic definitions from `mods/Parkour/cosmetics.json` at startup. Generat
 
 Responsibilities:
 - `load()`: Read and parse JSON file, return `List<WardrobeCosmeticDef>`
-- `generateDefault()`: Write current cosmetics as default JSON if file missing
+- `generateDefault()`: Write current cosmetics as default JSON if file missing (strips `WD_` prefix from IDs when serializing to avoid double-prefixing on load)
 - Validate on load: reject duplicate IDs, reject blank required fields (fileName, displayName, permissionNode, category)
 - Log warning for entries with null `iconKey` (valid — most entries have null)
 
@@ -52,7 +52,7 @@ Fields map 1:1 to `WardrobeCosmeticDef` record fields:
 
 ### Changes to `WardrobeBridge`
 
-- Replace `private static final List<WardrobeCosmeticDef> COSMETICS = List.of(...)` with `private List<WardrobeCosmeticDef> cosmetics = List.of()` (instance field, initialized empty)
+- Replace `private static final List<WardrobeCosmeticDef> COSMETICS = List.of(...)` with `private volatile List<WardrobeCosmeticDef> cosmetics = List.of()` (instance field, initialized empty, volatile for thread safety)
 - Add `initialize()` method that calls `CosmeticConfigLoader.load()` and stores the result
 - Remove the `wd()` helper method (no longer needed)
 - Update `getAllCosmetics()`, `findById()`, `getCosmeticsByCategory()`, `regrantPermissions()`, `resetAll()` to use instance field instead of static constant
@@ -62,7 +62,7 @@ Fields map 1:1 to `WardrobeCosmeticDef` record fields:
 
 ### Changes to `WardrobePlugin`
 
-- Call `WardrobeBridge.getInstance().initialize()` in `onSetup()` before `StoreInitializer.initialize()`
+- Call `WardrobeBridge.getInstance().initialize()` in `setup()` before `StoreInitializer.initialize()`
 
 ### Error Handling
 
@@ -91,6 +91,7 @@ Fields map 1:1 to `WardrobeCosmeticDef` record fields:
 - `WardrobeShopTab` — uses `WardrobeBridge.getInstance().getCategories()`, `getCosmeticsByCategory()`, `findById()`, `purchase()`
 - `ShopConfigTab` — uses `getCategories()`, `getCosmeticsByCategory()`
 - `WardrobeBuyCommand` — uses `getAllCosmetics()`, `purchase()`
+- `WardrobeResetCommand` — uses `resetAll()`
 - `WardrobePlugin` — uses `regrantPermissions()`
 
 All access cosmetics through `WardrobeBridge` public API which is unchanged.
