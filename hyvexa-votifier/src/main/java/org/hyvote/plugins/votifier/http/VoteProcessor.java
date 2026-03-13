@@ -108,6 +108,23 @@ public final class VoteProcessor {
     }
 
     /**
+     * Builds a status JSON response from the plugin's current configuration.
+     *
+     * @param plugin the plugin instance
+     * @return JSON string with server status
+     */
+    public static String buildStatusJson(HytaleVotifierPlugin plugin) {
+        boolean v1Enabled = plugin.getConfig().protocols() != null
+                && Boolean.TRUE.equals(plugin.getConfig().protocols().v1Enabled());
+        boolean v2Enabled = plugin.getConfig().protocols() != null
+                && Boolean.TRUE.equals(plugin.getConfig().protocols().v2Enabled())
+                && plugin.getConfig().voteSites() != null
+                && plugin.getConfig().voteSites().isV2Enabled();
+
+        return statusJson(plugin.getPluginVersion(), v1Enabled, v2Enabled);
+    }
+
+    /**
      * Result of vote processing, containing either a successful vote or an error.
      */
     public sealed interface VoteResult {

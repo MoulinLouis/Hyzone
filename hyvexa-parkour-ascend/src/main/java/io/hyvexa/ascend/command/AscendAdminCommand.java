@@ -68,7 +68,7 @@ public class AscendAdminCommand extends AbstractAsyncCommand {
     }
 
     private void handleCommand(CommandContext ctx, Player player, Ref<EntityStore> ref, Store<EntityStore> store) {
-        String[] args = CommandUtils.getArgs(ctx);
+        String[] args = CommandUtils.tokenize(ctx);
         if (args.length >= 1 && "holograms".equalsIgnoreCase(args[0])) {
             listHolograms(ctx);
             return;

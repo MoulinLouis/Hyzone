@@ -158,12 +158,7 @@ public class InventorySyncManager {
             return;
         }
         boolean allowDrop = PermissionUtils.isOp(player);
-        InventoryUtils.applyDropFilter(inventory.getHotbar(), allowDrop);
-        InventoryUtils.applyDropFilter(inventory.getStorage(), allowDrop);
-        InventoryUtils.applyDropFilter(inventory.getBackpack(), allowDrop);
-        InventoryUtils.applyDropFilter(inventory.getTools(), allowDrop);
-        InventoryUtils.applyDropFilter(inventory.getUtility(), allowDrop);
-        InventoryUtils.applyDropFilter(inventory.getArmor(), allowDrop);
+        InventoryUtils.applyDropFilters(inventory, allowDrop);
     }
 
     private boolean shouldApplyParkourMode(PlayerRef playerRef, Store<EntityStore> store) {

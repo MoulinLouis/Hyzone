@@ -116,7 +116,7 @@ public class LeaderboardPage extends InteractiveCustomUIPage<LeaderboardPage.Lea
             commandBuilder.set("#PageLabel.Text", "");
             return;
         }
-        String filter = searchText != null ? searchText.trim().toLowerCase() : "";
+        String filter = searchText.trim().toLowerCase();
         List<LeaderboardRow> filtered = new java.util.ArrayList<>();
         for (int i = 0; i < snapshot.size(); i++) {
             MedalStore.MedalScoreEntry entry = snapshot.get(i);

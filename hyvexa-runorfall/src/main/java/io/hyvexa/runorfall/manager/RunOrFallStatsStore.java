@@ -114,17 +114,8 @@ public class RunOrFallStatsStore {
 
     public synchronized void recordWin(@Nonnull UUID playerId, String playerName, long survivedMs,
                                        int blocksBroken, int blinksUsed) {
-        RunOrFallPlayerStats current = cache.computeIfAbsent(playerId,
-                ignored -> new RunOrFallPlayerStats(playerId, sanitizePlayerName(playerName)));
-        RunOrFallPlayerStats next = current.copy();
-        next.setPlayerName(sanitizePlayerName(playerName));
-        next.applyWin(Math.max(0L, survivedMs));
-        next.addBlocksBroken(Math.max(0, blocksBroken));
-        next.addBlinksUsed(Math.max(0, blinksUsed));
-
-        if (save(next)) {
-            cache.put(playerId, next);
-        }
+        recordResult(playerId, playerName, survivedMs, blocksBroken, blinksUsed,
+                (stats, ms) -> stats.applyWin(ms));
     }
 
     public synchronized void recordLoss(@Nonnull UUID playerId, String playerName, long survivedMs) {
@@ -133,11 +124,18 @@ public class RunOrFallStatsStore {
 
     public synchronized void recordLoss(@Nonnull UUID playerId, String playerName, long survivedMs,
                                         int blocksBroken, int blinksUsed) {
+        recordResult(playerId, playerName, survivedMs, blocksBroken, blinksUsed,
+                (stats, ms) -> stats.applyLoss(ms));
+    }
+
+    private synchronized void recordResult(@Nonnull UUID playerId, String playerName, long survivedMs,
+                                           int blocksBroken, int blinksUsed,
+                                           java.util.function.BiConsumer<RunOrFallPlayerStats, Long> mutation) {
         RunOrFallPlayerStats current = cache.computeIfAbsent(playerId,
                 ignored -> new RunOrFallPlayerStats(playerId, sanitizePlayerName(playerName)));
         RunOrFallPlayerStats next = current.copy();
         next.setPlayerName(sanitizePlayerName(playerName));
-        next.applyLoss(Math.max(0L, survivedMs));
+        mutation.accept(next, Math.max(0L, survivedMs));
         next.addBlocksBroken(Math.max(0, blocksBroken));
         next.addBlinksUsed(Math.max(0, blinksUsed));
 
@@ -169,10 +167,8 @@ public class RunOrFallStatsStore {
             return;
         }
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
-            DatabaseManager.ensureColumnExists(conn, "runorfall_player_stats", "total_blocks_broken",
-                    "ALTER TABLE runorfall_player_stats ADD COLUMN total_blocks_broken BIGINT NOT NULL DEFAULT 0");
-            DatabaseManager.ensureColumnExists(conn, "runorfall_player_stats", "total_blinks_used",
-                    "ALTER TABLE runorfall_player_stats ADD COLUMN total_blinks_used BIGINT NOT NULL DEFAULT 0");
+            DatabaseManager.addColumnIfMissing(conn, "runorfall_player_stats", "total_blocks_broken", "BIGINT NOT NULL DEFAULT 0");
+            DatabaseManager.addColumnIfMissing(conn, "runorfall_player_stats", "total_blinks_used", "BIGINT NOT NULL DEFAULT 0");
         } catch (SQLException e) {
             LOGGER.atWarning().withCause(e).log("Failed ensuring RunOrFall stats columns.");
         }

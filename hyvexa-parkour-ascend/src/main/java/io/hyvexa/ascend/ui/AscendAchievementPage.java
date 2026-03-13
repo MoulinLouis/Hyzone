@@ -10,7 +10,6 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.AscendConstants.AchievementCategory;
 import io.hyvexa.ascend.AscendConstants.AchievementType;
 import io.hyvexa.ascend.achievement.AchievementManager;
@@ -143,14 +142,6 @@ public class AscendAchievementPage extends BaseAscendPage {
     }
 
     private void navigateBackToProfile(Ref<EntityStore> ref, Store<EntityStore> store) {
-        Player player = store.getComponent(ref, Player.getComponentType());
-        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (player != null && playerRef != null && plugin != null && plugin.getRobotManager() != null) {
-            player.getPageManager().openCustomPage(ref, store,
-                    new AscendProfilePage(playerRef, playerStore, plugin.getRobotManager()));
-        } else {
-            this.close();
-        }
+        BaseAscendPage.navigateBackToProfile(ref, store, playerStore, this);
     }
 }

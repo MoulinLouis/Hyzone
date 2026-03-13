@@ -46,7 +46,7 @@ public class RunOrFallQueueCommand extends AbstractAsyncCommand {
             return CompletableFuture.completedFuture(null);
         }
 
-        String[] args = CommandUtils.getArgs(ctx);
+        String[] args = CommandUtils.tokenize(ctx);
         return CompletableFuture.runAsync(() -> handle(player, ref, store, world, args), world);
     }
 

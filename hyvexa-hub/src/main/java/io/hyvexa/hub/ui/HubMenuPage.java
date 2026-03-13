@@ -101,93 +101,100 @@ public class HubMenuPage extends InteractiveCustomUIPage<ButtonEventData> {
         }
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         Player player = store.getComponent(ref, Player.getComponentType());
-        if (BUTTON_HUB.equals(data.getButton())) {
-            if (playerRef != null) {
-                router.routeToWorld(playerRef, WorldConstants.WORLD_HUB);
-            }
-            this.close();
-            return;
+        switch (data.getButton()) {
+            case BUTTON_HUB -> handleHub(playerRef);
+            case BUTTON_CLOSE -> this.close();
+            case BUTTON_PARKOUR -> handleParkour(playerRef);
+            case BUTTON_ASCEND -> handleAscend(playerRef, player);
+            case BUTTON_PURGE -> handlePurge(playerRef, player);
+            case BUTTON_RUN_OR_FALL -> handleRunOrFall(playerRef);
+            case BUTTON_DISCORD -> handleDiscord(player);
+            case BUTTON_STORE -> handleStore(player);
+            default -> {}
         }
-        if (BUTTON_CLOSE.equals(data.getButton())) {
-            this.close();
-            return;
+    }
+
+    private void handleHub(PlayerRef playerRef) {
+        if (playerRef != null) {
+            router.routeToWorld(playerRef, WorldConstants.WORLD_HUB);
         }
-        if (BUTTON_PARKOUR.equals(data.getButton())) {
-            if (playerRef != null) {
-                router.routeToWorld(playerRef, WorldConstants.WORLD_PARKOUR);
-            }
-            this.close();
-            return;
+        this.close();
+    }
+
+    private void handleParkour(PlayerRef playerRef) {
+        if (playerRef != null) {
+            router.routeToWorld(playerRef, WorldConstants.WORLD_PARKOUR);
         }
-        if (BUTTON_ASCEND.equals(data.getButton())) {
-            AscendWhitelistManager whitelistManager = WhitelistRegistry.getInstance();
-            if (whitelistManager == null) {
-                // Plugins use separate classloaders, so the registry singleton set by the
-                // Ascend plugin is not visible here. Read the whitelist file directly instead.
-                File whitelistFile = Path.of("mods", "Parkour", "ascend_whitelist.json").toFile();
-                if (whitelistFile.exists()) {
-                    long lastModified = whitelistFile.lastModified();
-                    if (cachedWhitelistManager == null || lastModified != cachedWhitelistModified) {
-                        cachedWhitelistManager = new AscendWhitelistManager(whitelistFile);
-                        cachedWhitelistModified = lastModified;
-                    }
-                    whitelistManager = cachedWhitelistManager;
+        this.close();
+    }
+
+    private void handleAscend(PlayerRef playerRef, Player player) {
+        AscendWhitelistManager whitelistManager = WhitelistRegistry.getInstance();
+        if (whitelistManager == null) {
+            // Plugins use separate classloaders, so the registry singleton set by the
+            // Ascend plugin is not visible here. Read the whitelist file directly instead.
+            File whitelistFile = Path.of("mods", "Parkour", "ascend_whitelist.json").toFile();
+            if (whitelistFile.exists()) {
+                long lastModified = whitelistFile.lastModified();
+                if (cachedWhitelistManager == null || lastModified != cachedWhitelistModified) {
+                    cachedWhitelistManager = new AscendWhitelistManager(whitelistFile);
+                    cachedWhitelistModified = lastModified;
                 }
+                whitelistManager = cachedWhitelistManager;
             }
-            boolean isAllowed;
-            if (whitelistManager != null && whitelistManager.isPublicMode()) {
-                isAllowed = true;
-            } else if (PermissionUtils.isOp(player)) {
-                isAllowed = true;
-            } else if (whitelistManager != null && whitelistManager.isEnabled() && playerRef != null) {
-                String username = playerRef.getUsername();
-                isAllowed = username != null && whitelistManager.contains(username);
-            } else {
-                isAllowed = false;
-            }
-            if (player != null && !isAllowed) {
-                player.sendMessage(MESSAGE_ASCEND_RESTRICTED);
-                this.close();
-                return;
-            }
-            if (playerRef != null) {
-                router.routeToWorld(playerRef, WorldConstants.WORLD_ASCEND);
-            }
+        }
+        boolean isAllowed;
+        if (whitelistManager != null && whitelistManager.isPublicMode()) {
+            isAllowed = true;
+        } else if (PermissionUtils.isOp(player)) {
+            isAllowed = true;
+        } else if (whitelistManager != null && whitelistManager.isEnabled() && playerRef != null) {
+            String username = playerRef.getUsername();
+            isAllowed = username != null && whitelistManager.contains(username);
+        } else {
+            isAllowed = false;
+        }
+        if (player != null && !isAllowed) {
+            player.sendMessage(MESSAGE_ASCEND_RESTRICTED);
             this.close();
             return;
         }
-        if (BUTTON_PURGE.equals(data.getButton())) {
-            if (!PermissionUtils.isOp(player)) {
-                if (player != null) {
-                    player.sendMessage(MESSAGE_PURGE_RESTRICTED);
-                }
-                this.close();
-                return;
-            }
-            if (playerRef != null) {
-                router.routeToWorld(playerRef, WorldConstants.WORLD_PURGE);
-            }
-            this.close();
-            return;
+        if (playerRef != null) {
+            router.routeToWorld(playerRef, WorldConstants.WORLD_ASCEND);
         }
-        if (BUTTON_RUN_OR_FALL.equals(data.getButton())) {
-            if (playerRef != null) {
-                router.routeToWorld(playerRef, WorldConstants.WORLD_RUN_OR_FALL);
-            }
-            this.close();
-            return;
-        }
-        if (BUTTON_DISCORD.equals(data.getButton())) {
+        this.close();
+    }
+
+    private void handlePurge(PlayerRef playerRef, Player player) {
+        if (!PermissionUtils.isOp(player)) {
             if (player != null) {
-                player.sendMessage(MESSAGE_DISCORD);
+                player.sendMessage(MESSAGE_PURGE_RESTRICTED);
             }
+            this.close();
             return;
         }
-        if (BUTTON_STORE.equals(data.getButton())) {
-            if (player != null) {
-                player.sendMessage(MESSAGE_STORE);
-            }
-            return;
+        if (playerRef != null) {
+            router.routeToWorld(playerRef, WorldConstants.WORLD_PURGE);
+        }
+        this.close();
+    }
+
+    private void handleRunOrFall(PlayerRef playerRef) {
+        if (playerRef != null) {
+            router.routeToWorld(playerRef, WorldConstants.WORLD_RUN_OR_FALL);
+        }
+        this.close();
+    }
+
+    private void handleDiscord(Player player) {
+        if (player != null) {
+            player.sendMessage(MESSAGE_DISCORD);
+        }
+    }
+
+    private void handleStore(Player player) {
+        if (player != null) {
+            player.sendMessage(MESSAGE_STORE);
         }
     }
 }

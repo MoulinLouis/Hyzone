@@ -14,11 +14,10 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.AscendConstants.ChallengeType;
-import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.ascension.ChallengeManager;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
-import io.hyvexa.ascend.robot.RobotManager;
+import io.hyvexa.ascend.util.PrestigeHelper;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
@@ -221,13 +220,7 @@ public class AscendChallengePage extends BaseAscendPage {
         }
 
         // Despawn all robots before resetting data to prevent completions with pre-reset multipliers
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin != null) {
-            RobotManager robotManager = plugin.getRobotManager();
-            if (robotManager != null) {
-                robotManager.despawnRobotsForPlayer(playerId);
-            }
-        }
+        PrestigeHelper.despawnRobots(playerId);
 
         List<String> mapsWithRunners = challengeManager.startChallenge(playerId, type);
         if (mapsWithRunners == null) {

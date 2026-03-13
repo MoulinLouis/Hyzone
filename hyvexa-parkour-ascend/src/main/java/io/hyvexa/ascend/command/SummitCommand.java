@@ -72,7 +72,7 @@ public class SummitCommand extends AbstractAsyncCommand {
                 return;
             }
 
-            String[] args = CommandUtils.getArgs(ctx);
+            String[] args = CommandUtils.tokenize(ctx);
             if (args.length == 0) {
                 player.sendMessage(Message.raw("[Summit] Usage: /summit <multiplier|speed|evolution>")
                     .color(SystemMessageUtils.SECONDARY));

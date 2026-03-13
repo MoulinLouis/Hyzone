@@ -66,24 +66,7 @@ public class AdminPlayerStatsPage extends BaseParkourPage {
     public void build(@Nonnull Ref<EntityStore> ref, @Nonnull UICommandBuilder uiCommandBuilder,
                       @Nonnull UIEventBuilder uiEventBuilder, @Nonnull Store<EntityStore> store) {
         uiCommandBuilder.append("Pages/Parkour_AdminPlayerStats.ui");
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_BACK), false);
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#TeleportToPlayerButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TELEPORT_TO_PLAYER), false);
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#TeleportPlayerHereButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TELEPORT_PLAYER_HERE), false);
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#KillPlayerButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_KILL_PLAYER), false);
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#GiveFlyButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_GIVE_FLY), false);
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#RemoveFlyButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_REMOVE_FLY), false);
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ResetInventoryButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_RESET_INVENTORY), false);
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ClearAllProgressButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLEAR_ALL_PROGRESS), false);
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ClearMapProgressButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLEAR_MAP_PROGRESS), false);
+        bindEvents(uiEventBuilder);
         populateSummary(uiCommandBuilder);
         uiCommandBuilder.set("#ActionStatus.Text", statusText);
         buildMapStats(uiCommandBuilder);
@@ -362,28 +345,32 @@ public class AdminPlayerStatsPage extends BaseParkourPage {
     private void sendRefresh() {
         UICommandBuilder commandBuilder = new UICommandBuilder();
         UIEventBuilder eventBuilder = new UIEventBuilder();
-        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_BACK), false);
-        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#TeleportToPlayerButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TELEPORT_TO_PLAYER), false);
-        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#TeleportPlayerHereButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TELEPORT_PLAYER_HERE), false);
-        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#KillPlayerButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_KILL_PLAYER), false);
-        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#GiveFlyButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_GIVE_FLY), false);
-        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#RemoveFlyButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_REMOVE_FLY), false);
-        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ResetInventoryButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_RESET_INVENTORY), false);
-        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ClearAllProgressButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLEAR_ALL_PROGRESS), false);
-        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ClearMapProgressButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLEAR_MAP_PROGRESS), false);
+        bindEvents(eventBuilder);
         commandBuilder.set("#ActionStatus.Text", statusText);
         populateSummary(commandBuilder);
         buildMapStats(commandBuilder);
         this.sendUpdate(commandBuilder, eventBuilder, false);
+    }
+
+    private void bindEvents(UIEventBuilder uiEventBuilder) {
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_BACK), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#TeleportToPlayerButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TELEPORT_TO_PLAYER), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#TeleportPlayerHereButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TELEPORT_PLAYER_HERE), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#KillPlayerButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_KILL_PLAYER), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#GiveFlyButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_GIVE_FLY), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#RemoveFlyButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_REMOVE_FLY), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ResetInventoryButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_RESET_INVENTORY), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ClearAllProgressButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLEAR_ALL_PROGRESS), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ClearMapProgressButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLEAR_MAP_PROGRESS), false);
     }
 
     private String resolveTargetName(PlayerRef targetRef) {

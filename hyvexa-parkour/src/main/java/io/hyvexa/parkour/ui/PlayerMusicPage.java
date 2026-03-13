@@ -299,19 +299,19 @@ public class PlayerMusicPage extends BaseParkourPage {
     }
 
     private static void toggleCheckpointSfx(UUID playerId) {
-        if (playerId == null) {
-            return;
-        }
-        boolean enabled = CHECKPOINT_SFX_ENABLED.getOrDefault(playerId, true);
-        CHECKPOINT_SFX_ENABLED.put(playerId, !enabled);
+        toggleBooleanSetting(CHECKPOINT_SFX_ENABLED, playerId);
     }
 
     private static void toggleVictorySfx(UUID playerId) {
+        toggleBooleanSetting(VICTORY_SFX_ENABLED, playerId);
+    }
+
+    private static void toggleBooleanSetting(ConcurrentHashMap<UUID, Boolean> map, UUID playerId) {
         if (playerId == null) {
             return;
         }
-        boolean enabled = VICTORY_SFX_ENABLED.getOrDefault(playerId, true);
-        VICTORY_SFX_ENABLED.put(playerId, !enabled);
+        boolean enabled = map.getOrDefault(playerId, true);
+        map.put(playerId, !enabled);
     }
 
     private static void applySfxIndicators(UICommandBuilder cmd, UUID playerId) {

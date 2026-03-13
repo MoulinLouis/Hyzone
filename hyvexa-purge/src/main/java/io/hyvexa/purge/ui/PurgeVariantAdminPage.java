@@ -7,8 +7,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
-import com.hypixel.hytale.server.core.Message;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
 import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
@@ -159,11 +157,8 @@ public class PurgeVariantAdminPage extends InteractiveCustomUIPage<PurgeVariantA
     }
 
     private void handleAdd(Ref<EntityStore> ref, Store<EntityStore> store) {
-        Player player = store.getComponent(ref, Player.getComponentType());
         if (!variantConfigManager.isPersistenceAvailable()) {
-            if (player != null) {
-                player.sendMessage(Message.raw("Database unavailable."));
-            }
+            PurgeAdminUtils.sendFeedback(ref, store, "Database unavailable.");
             return;
         }
         // Generate unique key
@@ -175,22 +170,17 @@ public class PurgeVariantAdminPage extends InteractiveCustomUIPage<PurgeVariantA
         }
         String label = "Custom " + index;
         boolean added = variantConfigManager.addVariant(key, label, 50, 20f, 1.0);
-        if (player != null) {
-            if (added) {
-                player.sendMessage(Message.raw("Added variant: " + label + " (" + key + ")"));
-            } else {
-                player.sendMessage(Message.raw("Failed to add variant."));
-            }
+        if (added) {
+            PurgeAdminUtils.sendFeedback(ref, store, "Added variant: " + label + " (" + key + ")");
+        } else {
+            PurgeAdminUtils.sendFeedback(ref, store, "Failed to add variant.");
         }
         sendRefresh();
     }
 
     private void handleDelete(String key, Ref<EntityStore> ref, Store<EntityStore> store) {
-        Player player = store.getComponent(ref, Player.getComponentType());
         if (variantConfigManager.getVariantCount() <= 1) {
-            if (player != null) {
-                player.sendMessage(Message.raw("Cannot delete the last variant."));
-            }
+            PurgeAdminUtils.sendFeedback(ref, store, "Cannot delete the last variant.");
             return;
         }
         boolean removed = variantConfigManager.removeVariant(key);
@@ -198,12 +188,10 @@ public class PurgeVariantAdminPage extends InteractiveCustomUIPage<PurgeVariantA
             editingVariantKey = "";
             variantNameInput = "";
         }
-        if (player != null) {
-            if (removed) {
-                player.sendMessage(Message.raw("Removed variant: " + key));
-            } else {
-                player.sendMessage(Message.raw("Failed to remove variant."));
-            }
+        if (removed) {
+            PurgeAdminUtils.sendFeedback(ref, store, "Removed variant: " + key);
+        } else {
+            PurgeAdminUtils.sendFeedback(ref, store, "Failed to remove variant.");
         }
         sendRefresh();
     }
@@ -237,37 +225,26 @@ public class PurgeVariantAdminPage extends InteractiveCustomUIPage<PurgeVariantA
     }
 
     private void handleSaveName(Ref<EntityStore> ref, Store<EntityStore> store) {
-        Player player = store.getComponent(ref, Player.getComponentType());
         if (editingVariantKey.isEmpty()) {
-            if (player != null) {
-                player.sendMessage(Message.raw("Select a variant to rename first."));
-            }
+            PurgeAdminUtils.sendFeedback(ref, store, "Select a variant to rename first.");
             return;
         }
         String trimmed = variantNameInput != null ? variantNameInput.trim() : "";
         if (trimmed.isEmpty()) {
-            if (player != null) {
-                player.sendMessage(Message.raw("Variant name cannot be empty."));
-            }
+            PurgeAdminUtils.sendFeedback(ref, store, "Variant name cannot be empty.");
             return;
         }
         if (trimmed.length() > 64) {
-            if (player != null) {
-                player.sendMessage(Message.raw("Variant name max length is 64."));
-            }
+            PurgeAdminUtils.sendFeedback(ref, store, "Variant name max length is 64.");
             return;
         }
         if (variantConfigManager.setLabel(editingVariantKey, trimmed)) {
             variantNameInput = trimmed;
-            if (player != null) {
-                player.sendMessage(Message.raw("Renamed variant " + editingVariantKey + " to " + trimmed + "."));
-            }
+            PurgeAdminUtils.sendFeedback(ref, store, "Renamed variant " + editingVariantKey + " to " + trimmed + ".");
             sendRefresh();
             return;
         }
-        if (player != null) {
-            player.sendMessage(Message.raw("Failed to rename variant."));
-        }
+        PurgeAdminUtils.sendFeedback(ref, store, "Failed to rename variant.");
     }
 
     private void handleAdjust(String payload, Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -294,13 +271,7 @@ public class PurgeVariantAdminPage extends InteractiveCustomUIPage<PurgeVariantA
     }
 
     private void openIndex(Ref<EntityStore> ref, Store<EntityStore> store) {
-        Player player = store.getComponent(ref, Player.getComponentType());
-        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-        if (player == null || playerRef == null) {
-            return;
-        }
-        player.getPageManager().openCustomPage(ref, store,
-                new PurgeAdminIndexPage(playerRef, waveConfigManager, instanceManager, weaponConfigManager, variantConfigManager));
+        PurgeAdminUtils.openAdminIndex(ref, store, waveConfigManager, instanceManager, weaponConfigManager, variantConfigManager);
     }
 
     private void sendRefresh() {

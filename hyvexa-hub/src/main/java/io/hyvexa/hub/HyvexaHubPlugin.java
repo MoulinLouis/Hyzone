@@ -96,21 +96,9 @@ public class HyvexaHubPlugin extends JavaPlugin {
                 databaseAvailable = false;
             }
         }
-        try {
-            VexaStore.getInstance().initialize();
-        } catch (Exception e) {
-            LOGGER.atWarning().withCause(e).log("Failed to initialize VexaStore for Hub");
-        }
-        try {
-            DiscordLinkStore.getInstance().initialize();
-        } catch (Exception e) {
-            LOGGER.atWarning().withCause(e).log("Failed to initialize DiscordLinkStore for Hub");
-        }
-        try {
-            AnalyticsStore.getInstance().initialize();
-        } catch (Exception e) {
-            LOGGER.atWarning().withCause(e).log("Failed to initialize AnalyticsStore for Hub");
-        }
+        initStore("VexaStore", () -> VexaStore.getInstance().initialize());
+        initStore("DiscordLinkStore", () -> DiscordLinkStore.getInstance().initialize());
+        initStore("AnalyticsStore", () -> AnalyticsStore.getInstance().initialize());
         router = new HubRouter();
         preloadWorlds();
 
@@ -320,6 +308,14 @@ public class HyvexaHubPlugin extends JavaPlugin {
             }
         }, "hub.hud.attach", "hub HUD attach",
                 "player=" + playerIdText + ", world=" + worldName);
+    }
+
+    private void initStore(String name, Runnable init) {
+        try {
+            init.run();
+        } catch (Exception e) {
+            LOGGER.atWarning().withCause(e).log("Failed to initialize " + name + " for Hub");
+        }
     }
 
     private void registerInteractionCodecs() {

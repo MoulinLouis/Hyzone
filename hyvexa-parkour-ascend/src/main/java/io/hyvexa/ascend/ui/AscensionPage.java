@@ -15,6 +15,7 @@ import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.ascension.AscensionManager;
 import io.hyvexa.ascend.data.AscendPlayerStore;
+import io.hyvexa.ascend.util.PrestigeHelper;
 import io.hyvexa.common.math.BigNumber;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.util.FormatUtils;
@@ -94,12 +95,7 @@ public class AscensionPage extends BaseAscendPage {
         }
 
         // Despawn all robots before resetting data to prevent completions with pre-reset multipliers
-        if (plugin != null) {
-            io.hyvexa.ascend.robot.RobotManager robotManager = plugin.getRobotManager();
-            if (robotManager != null) {
-                robotManager.despawnRobotsForPlayer(playerId);
-            }
-        }
+        PrestigeHelper.despawnRobots(playerId);
 
         int newCount = ascensionManager.performAscension(playerId);
         if (newCount < 0) {
@@ -116,9 +112,7 @@ public class AscensionPage extends BaseAscendPage {
             .color(SystemMessageUtils.SECONDARY));
 
         // Check achievements
-        if (plugin != null && plugin.getAchievementManager() != null) {
-            plugin.getAchievementManager().checkAndUnlockAchievements(playerId, player);
-        }
+        PrestigeHelper.checkAchievements(playerId, player);
 
         // Refresh display
         UICommandBuilder updateBuilder = new UICommandBuilder();

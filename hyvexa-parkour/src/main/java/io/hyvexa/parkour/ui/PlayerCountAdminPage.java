@@ -10,11 +10,8 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.common.ui.ButtonEventData;
-import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.data.PlayerCountStore;
-import io.hyvexa.parkour.data.ProgressStore;
 
 import javax.annotation.Nonnull;
 import java.time.Instant;
@@ -84,20 +81,7 @@ public class PlayerCountAdminPage extends BaseParkourPage {
     }
 
     private void openIndex(Ref<EntityStore> ref, Store<EntityStore> store) {
-        Player player = store.getComponent(ref, Player.getComponentType());
-        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-        if (player == null || playerRef == null) {
-            return;
-        }
-        HyvexaPlugin plugin = HyvexaPlugin.getInstance();
-        if (plugin == null) {
-            return;
-        }
-        MapStore mapStore = plugin.getMapStore();
-        ProgressStore progressStore = plugin.getProgressStore();
-        player.getPageManager().openCustomPage(ref, store,
-                new AdminIndexPage(playerRef, mapStore, progressStore, plugin.getSettingsStore(),
-                        plugin.getPlayerCountStore()));
+        AdminPageUtils.openIndex(ref, store);
     }
 
     private void openSelf(Ref<EntityStore> ref, Store<EntityStore> store) {

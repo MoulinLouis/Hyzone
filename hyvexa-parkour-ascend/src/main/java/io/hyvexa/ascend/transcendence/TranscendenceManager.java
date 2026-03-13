@@ -7,8 +7,6 @@ import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 import io.hyvexa.common.math.BigNumber;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -93,18 +91,7 @@ public class TranscendenceManager {
         progress.setAscensionStartedAt(System.currentTimeMillis());
 
         // === Map progress reset (PB-preserving) ===
-        Map<String, Long> savedPBs = new HashMap<>();
-        for (Map.Entry<String, AscendPlayerProgress.MapProgress> entry : progress.getMapProgress().entrySet()) {
-            Long bestTime = entry.getValue().getBestTimeMs();
-            if (bestTime != null) {
-                savedPBs.put(entry.getKey(), bestTime);
-            }
-        }
-        progress.getMapProgress().clear();
-        for (Map.Entry<String, Long> entry : savedPBs.entrySet()) {
-            AscendPlayerProgress.MapProgress mp = progress.getOrCreateMapProgress(entry.getKey());
-            mp.setBestTimeMs(entry.getValue());
-        }
+        progress.resetMapProgressPreservingPBs();
 
         // === DB cleanup ===
         // markResetPending handles: maps, summit, skills, achievements

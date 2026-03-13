@@ -222,16 +222,7 @@ public class CosmeticManager {
 
     private String resolveParticleId(String id) {
         var map = ParticleSystem.getAssetMap().getAssetMap();
-        if (map.containsKey(id)) return id;
-
-        String idLower = id.toLowerCase();
-        for (String key : map.keySet()) {
-            String keyLower = key.toLowerCase();
-            if (keyLower.equals(idLower) || keyLower.endsWith("/" + idLower) || keyLower.endsWith(idLower)) {
-                return key;
-            }
-        }
-        return null;
+        return resolveKeyByName(map, id);
     }
 
     private void clearCosmeticChannels(Ref<EntityStore> ref, Store<EntityStore> store, UUID playerId) {
@@ -260,39 +251,39 @@ public class CosmeticManager {
     }
 
     private void applyInfiniteEffect(Ref<EntityStore> ref, Store<EntityStore> store, String effectName) {
-        EntityEffect effect = resolveEffect(effectName);
-        if (effect == null) {
-            LOGGER.atWarning().log("Could not resolve effect for cosmetic: " + effectName);
-            return;
-        }
+        ResolvedEffect resolved = resolveEffectSetup(ref, store, effectName);
+        if (resolved == null) return;
 
-        EffectControllerComponent ctrl = store.getComponent(ref, EffectControllerComponent.getComponentType());
-        if (ctrl == null) return;
-
-        int effectIndex = EntityEffect.getAssetMap().getIndex(effect.getId());
-        if (effectIndex < 0) return;
-
-        ctrl.addInfiniteEffect(ref, effectIndex, effect, store);
-        syncEffectsToSelf(ref, store, ctrl);
+        resolved.ctrl.addInfiniteEffect(ref, resolved.effectIndex, resolved.effect, store);
+        syncEffectsToSelf(ref, store, resolved.ctrl);
     }
 
     private void applyTimedEffect(Ref<EntityStore> ref, Store<EntityStore> store, String effectName,
                                   float durationSeconds) {
+        ResolvedEffect resolved = resolveEffectSetup(ref, store, effectName);
+        if (resolved == null) return;
+
+        resolved.ctrl.addEffect(ref, resolved.effectIndex, resolved.effect, durationSeconds, OverlapBehavior.OVERWRITE, store);
+        syncEffectsToSelf(ref, store, resolved.ctrl);
+    }
+
+    private ResolvedEffect resolveEffectSetup(Ref<EntityStore> ref, Store<EntityStore> store, String effectName) {
         EntityEffect effect = resolveEffect(effectName);
         if (effect == null) {
-            LOGGER.atWarning().log("Could not resolve effect for cosmetic preview: " + effectName);
-            return;
+            LOGGER.atWarning().log("Could not resolve effect for cosmetic: " + effectName);
+            return null;
         }
 
         EffectControllerComponent ctrl = store.getComponent(ref, EffectControllerComponent.getComponentType());
-        if (ctrl == null) return;
+        if (ctrl == null) return null;
 
         int effectIndex = EntityEffect.getAssetMap().getIndex(effect.getId());
-        if (effectIndex < 0) return;
+        if (effectIndex < 0) return null;
 
-        ctrl.addEffect(ref, effectIndex, effect, durationSeconds, OverlapBehavior.OVERWRITE, store);
-        syncEffectsToSelf(ref, store, ctrl);
+        return new ResolvedEffect(effect, ctrl, effectIndex);
     }
+
+    private record ResolvedEffect(EntityEffect effect, EffectControllerComponent ctrl, int effectIndex) {}
 
     private void syncEffectsToSelf(Ref<EntityStore> ref, Store<EntityStore> store, EffectControllerComponent ctrl) {
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
@@ -303,23 +294,28 @@ public class CosmeticManager {
     }
 
     private EntityEffect resolveEffect(String name) {
-        var assetMap = EntityEffect.getAssetMap();
-        var map = assetMap.getAssetMap();
+        var map = EntityEffect.getAssetMap().getAssetMap();
+        String key = resolveKeyByName(map, name);
+        return key != null ? map.get(key) : null;
+    }
 
-        EntityEffect effect = map.get(name);
-        if (effect != null) return effect;
+    /**
+     * Fuzzy key lookup: exact match, then case-insensitive, then suffix match.
+     */
+    private static <T> String resolveKeyByName(Map<String, T> map, String name) {
+        if (map.containsKey(name)) return name;
 
-        for (Map.Entry<String, EntityEffect> entry : map.entrySet()) {
-            if (entry.getKey().equalsIgnoreCase(name)) {
-                return entry.getValue();
+        String nameLower = name.toLowerCase();
+        for (String key : map.keySet()) {
+            if (key.equalsIgnoreCase(name)) {
+                return key;
             }
         }
 
-        String nameLower = name.toLowerCase();
-        for (Map.Entry<String, EntityEffect> entry : map.entrySet()) {
-            String key = entry.getKey().toLowerCase();
-            if (key.endsWith("/" + nameLower) || key.endsWith(nameLower)) {
-                return entry.getValue();
+        for (String key : map.keySet()) {
+            String keyLower = key.toLowerCase();
+            if (keyLower.endsWith("/" + nameLower) || keyLower.endsWith(nameLower)) {
+                return key;
             }
         }
 

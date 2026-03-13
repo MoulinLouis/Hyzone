@@ -9,7 +9,6 @@ import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractAsyncCommand;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
-import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.util.CommandUtils;
@@ -50,14 +49,14 @@ public class UnlinkCommand extends AbstractAsyncCommand {
     }
 
     private void handleCommand(CommandContext ctx, Player player) {
-        String[] args = CommandUtils.getArgs(ctx);
+        String[] args = CommandUtils.tokenize(ctx);
         if (args.length < 1) {
             player.sendMessage(Message.raw("Usage: /unlink <player>"));
             return;
         }
         String targetName = args[0];
 
-        PlayerRef targetRef = findPlayer(targetName);
+        PlayerRef targetRef = CommandUtils.findPlayerByName(targetName);
         if (targetRef == null) {
             player.sendMessage(Message.raw("Player not found (must be online): " + targetName));
             return;
@@ -71,12 +70,4 @@ public class UnlinkCommand extends AbstractAsyncCommand {
         }
     }
 
-    private PlayerRef findPlayer(String name) {
-        for (PlayerRef playerRef : Universe.get().getPlayers()) {
-            if (playerRef != null && name.equalsIgnoreCase(playerRef.getUsername())) {
-                return playerRef;
-            }
-        }
-        return null;
-    }
 }

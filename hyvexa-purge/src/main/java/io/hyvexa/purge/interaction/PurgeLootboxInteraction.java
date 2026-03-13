@@ -5,13 +5,10 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.SimpleInteraction;
-import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.purge.HyvexaPurgePlugin;
 import io.hyvexa.purge.data.PurgeSession;
 import io.hyvexa.purge.data.PurgeSessionPlayerState;
 import io.hyvexa.purge.data.PurgeWeaponUpgradeStore;
@@ -22,7 +19,6 @@ import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class PurgeLootboxInteraction extends SimpleInteraction {
@@ -36,36 +32,23 @@ public class PurgeLootboxInteraction extends SimpleInteraction {
     public void handle(@Nonnull Ref<EntityStore> ref, boolean firstRun, float time,
                        @Nonnull InteractionType type, @Nonnull InteractionContext interactionContext) {
         super.handle(ref, firstRun, time, type, interactionContext);
-        if (!ref.isValid()) {
+        PurgeInteractionContext ctx = PurgeInteractionContext.resolve(ref);
+        if (ctx == null) {
             return;
         }
-        var store = ref.getStore();
-        Player player = store.getComponent(ref, Player.getComponentType());
-        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-        if (player == null || playerRef == null) {
-            return;
-        }
-        UUID playerId = playerRef.getUuid();
-        if (playerId == null) {
-            return;
-        }
-        HyvexaPurgePlugin plugin = HyvexaPurgePlugin.getInstance();
-        if (plugin == null) {
-            return;
-        }
-        PurgeSessionManager sessionManager = plugin.getSessionManager();
-        PurgeSession session = sessionManager.getSessionByPlayer(playerId);
+        PurgeSessionManager sessionManager = ctx.plugin().getSessionManager();
+        PurgeSession session = sessionManager.getSessionByPlayer(ctx.playerId());
         if (session == null) {
-            player.sendMessage(Message.raw("No active Purge session."));
+            ctx.player().sendMessage(Message.raw("No active Purge session."));
             return;
         }
-        PurgeSessionPlayerState playerState = session.getPlayerState(playerId);
+        PurgeSessionPlayerState playerState = session.getPlayerState(ctx.playerId());
         if (playerState == null || !playerState.isAlive()) {
             return;
         }
 
         // Get owned weapons, exclude current gun + melee.
-        Set<String> owned = PurgeWeaponUpgradeStore.getInstance().getOwnedWeaponIds(playerId);
+        Set<String> owned = PurgeWeaponUpgradeStore.getInstance().getOwnedWeaponIds(ctx.playerId());
         String currentWeapon = playerState.getCurrentWeaponId();
         String currentMeleeWeapon = playerState.getCurrentMeleeWeaponId();
         List<String> candidates = new ArrayList<>();
@@ -76,12 +59,12 @@ public class PurgeLootboxInteraction extends SimpleInteraction {
         }
 
         if (candidates.isEmpty()) {
-            player.sendMessage(Message.raw("You have no other weapons to roll."));
+            ctx.player().sendMessage(Message.raw("You have no other weapons to roll."));
             return;
         }
 
         // Consume 1 lootbox
-        Inventory inventory = player.getInventory();
+        Inventory inventory = ctx.player().getInventory();
         if (inventory != null && inventory.getHotbar() != null) {
             ItemStack existing = inventory.getHotbar().getItemStack(SLOT_LOOTBOX);
             if (existing != null && !existing.isEmpty()) {
@@ -99,7 +82,7 @@ public class PurgeLootboxInteraction extends SimpleInteraction {
         String rolledWeapon = candidates.get(ThreadLocalRandom.current().nextInt(candidates.size()));
 
         // Open lootbox UI
-        player.getPageManager().openCustomPage(ref, store,
-                new PurgeLootboxRollPage(playerRef, playerId, playerState, rolledWeapon, candidates));
+        ctx.player().getPageManager().openCustomPage(ref, ctx.store(),
+                new PurgeLootboxRollPage(ctx.playerRef(), ctx.playerId(), playerState, rolledWeapon, candidates));
     }
 }

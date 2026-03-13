@@ -30,10 +30,9 @@ public class PaginationState {
         } else if (pageIndex >= totalPages) {
             pageIndex = totalPages - 1;
         }
-        int clampedIndex = pageIndex;
-        int startIndex = clampedIndex * pageSize;
+        int startIndex = pageIndex * pageSize;
         int endIndex = Math.min(startIndex + pageSize, totalEntries);
-        return new PageSlice(startIndex, endIndex, clampedIndex, totalPages);
+        return new PageSlice(startIndex, endIndex, pageIndex, totalPages);
     }
 
     public static class PageSlice {

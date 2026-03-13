@@ -15,6 +15,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 public class PurgeSession {
 
@@ -64,43 +65,29 @@ public class PurgeSession {
     }
 
     public Set<UUID> getConnectedParticipants() {
-        Set<UUID> connected = new HashSet<>();
-        for (PurgeSessionPlayerState playerState : players.values()) {
-            if (playerState.isConnected()) {
-                connected.add(playerState.getPlayerId());
-            }
-        }
-        return Set.copyOf(connected);
+        return filterPlayers(PurgeSessionPlayerState::isConnected);
     }
 
     public Set<UUID> getAliveParticipants() {
-        Set<UUID> alive = new HashSet<>();
-        for (PurgeSessionPlayerState playerState : players.values()) {
-            if (playerState.isAlive()) {
-                alive.add(playerState.getPlayerId());
-            }
-        }
-        return Set.copyOf(alive);
+        return filterPlayers(PurgeSessionPlayerState::isAlive);
     }
 
     public Set<UUID> getAliveConnectedParticipants() {
-        Set<UUID> aliveConnected = new HashSet<>();
-        for (PurgeSessionPlayerState playerState : players.values()) {
-            if (playerState.isAlive() && playerState.isConnected()) {
-                aliveConnected.add(playerState.getPlayerId());
-            }
-        }
-        return Set.copyOf(aliveConnected);
+        return filterPlayers(ps -> ps.isAlive() && ps.isConnected());
     }
 
     public Set<UUID> getDeadThisWaveParticipants() {
-        Set<UUID> deadThisWave = new HashSet<>();
+        return filterPlayers(PurgeSessionPlayerState::isDeadThisWave);
+    }
+
+    private Set<UUID> filterPlayers(Predicate<PurgeSessionPlayerState> predicate) {
+        Set<UUID> result = new HashSet<>();
         for (PurgeSessionPlayerState playerState : players.values()) {
-            if (playerState.isDeadThisWave()) {
-                deadThisWave.add(playerState.getPlayerId());
+            if (predicate.test(playerState)) {
+                result.add(playerState.getPlayerId());
             }
         }
-        return Set.copyOf(deadThisWave);
+        return Set.copyOf(result);
     }
 
     public int getConnectedCount() {
@@ -341,41 +328,24 @@ public class PurgeSession {
     }
 
     public void cancelSpawnTask() {
-        ScheduledFuture<?> task = spawnTask;
-        if (task != null) {
-            task.cancel(false);
-            spawnTask = null;
-        }
+        spawnTask = cancelTask(spawnTask);
     }
 
     public void cancelIntermissionTask() {
-        ScheduledFuture<?> task = intermissionTask;
-        if (task != null) {
-            task.cancel(false);
-            intermissionTask = null;
-        }
+        intermissionTask = cancelTask(intermissionTask);
     }
 
     public void cancelAllTasks() {
-        ScheduledFuture<?> wt = waveTick;
-        if (wt != null) {
-            wt.cancel(false);
-            waveTick = null;
+        waveTick = cancelTask(waveTick);
+        spawnTask = cancelTask(spawnTask);
+        intermissionTask = cancelTask(intermissionTask);
+        upgradeTimeoutTask = cancelTask(upgradeTimeoutTask);
+    }
+
+    private static ScheduledFuture<?> cancelTask(ScheduledFuture<?> task) {
+        if (task != null) {
+            task.cancel(false);
         }
-        ScheduledFuture<?> st = spawnTask;
-        if (st != null) {
-            st.cancel(false);
-            spawnTask = null;
-        }
-        ScheduledFuture<?> it = intermissionTask;
-        if (it != null) {
-            it.cancel(false);
-            intermissionTask = null;
-        }
-        ScheduledFuture<?> ut = upgradeTimeoutTask;
-        if (ut != null) {
-            ut.cancel(false);
-            upgradeTimeoutTask = null;
-        }
+        return null;
     }
 }

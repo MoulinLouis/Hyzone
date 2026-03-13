@@ -19,6 +19,7 @@ import com.hypixel.hytale.server.npc.NPCPlugin;
 import io.hyvexa.common.ghost.GhostRecording;
 import io.hyvexa.common.ghost.GhostSample;
 import io.hyvexa.common.ghost.GhostStore;
+import io.hyvexa.common.util.EntityUtils;
 import io.hyvexa.common.util.OrphanedEntityCleanup;
 import io.hyvexa.common.visibility.EntityVisibilityManager;
 import io.hyvexa.parkour.data.Map;
@@ -185,7 +186,7 @@ public class GhostNpcManager {
 
             Object result = npcPlugin.spawnNPC(store, NPC_ENTITY_TYPE, NPC_DISPLAY_NAME, position, rotation);
             if (result != null) {
-                Ref<EntityStore> entityRef = extractEntityRef(result);
+                Ref<EntityStore> entityRef = EntityUtils.extractEntityRef(result);
                 if (entityRef != null) {
                     state.entityRef = entityRef;
 
@@ -239,28 +240,6 @@ public class GhostNpcManager {
         }
     }
 
-    @SuppressWarnings("unchecked")
-    private Ref<EntityStore> extractEntityRef(Object pairResult) {
-        if (pairResult == null) {
-            return null;
-        }
-        try {
-            for (String methodName : List.of("getFirst", "getLeft", "getKey", "first", "left")) {
-                try {
-                    java.lang.reflect.Method method = pairResult.getClass().getMethod(methodName);
-                    Object value = method.invoke(pairResult);
-                    if (value instanceof Ref<?> ref) {
-                        return (Ref<EntityStore>) ref;
-                    }
-                } catch (NoSuchMethodException ignored) {
-                    // Try next method
-                }
-            }
-        } catch (Exception e) {
-            LOGGER.atWarning().log("Failed to extract entity ref from NPC result: " + e.getMessage());
-        }
-        return null;
-    }
 
     private void despawnNpcEntity(GhostNpcState state) {
         if (state == null) {

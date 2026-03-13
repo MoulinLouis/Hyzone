@@ -22,7 +22,7 @@ public MyCommand() {
     super("mycommand");
     setAllowsExtraArguments(true);  // Required for commands with arguments
 }
-// Parse args with CommandUtils.getArgs(ctx), not ctx.args()
+// Parse args with CommandUtils.tokenize(ctx), not ctx.args()
 ```
 
 ## UI Pages

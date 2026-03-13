@@ -308,28 +308,8 @@ public class RunOrFallGameManager {
             sendToPlayer(playerId, "You left the RunOrFall lobby.");
             teleportPlayerToWorldSpawn(playerId);
         }
-        updateCountdownHudForPlayer(playerId, null);
-        updateBrokenBlocksHudForPlayer(playerId, 0);
-        updateBlinkChargesHudForPlayer(playerId, 0);
-        if (state == GameState.COUNTDOWN && getTotalPendingPlayerCount() < countdownRequiredPlayers) {
-            cancelCountdownInternal("Countdown cancelled: not enough players.");
-        } else if (state == GameState.COUNTDOWN) {
-            updateCountdownMapSelection();
-        }
-        if (state == GameState.ASSEMBLING && lobbyPlayers.size() < countdownRequiredPlayers) {
-            cancelAssemblingInternal("Assembly cancelled: not enough players in lobby.");
-        }
-        if (state == GameState.RUNNING && result.wasAlive()) {
-            statsStore.recordLoss(playerId, resolvePlayerName(playerId), result.survivedMs(),
-                    result.brokenBlocks(), result.blinksUsed());
-            rewardAlivePlayersForEliminationInternal(playerId);
-            broadcastEliminationInternal(playerId, "left the round");
-            checkWinnerInternal();
-        }
+        cleanupAfterPlayerRemoval(playerId, result, "left the round");
         refreshPlayerHotbar(playerId);
-        if (lobbyPlayers.isEmpty() && RunOrFallQueueStore.getInstance().getQueueSize() == 0) {
-            activeWorld = null;
-        }
     }
 
     public synchronized void requestStart(boolean allowSolo) {
@@ -409,6 +389,13 @@ public class RunOrFallGameManager {
         if (!result.wasInLobby() && !result.wasAlive()) {
             return;
         }
+        cleanupAfterPlayerRemoval(playerId, result, "disconnected");
+    }
+
+    private void cleanupAfterPlayerRemoval(UUID playerId, PlayerRemovalResult result, String eliminationReason) {
+        updateCountdownHudForPlayer(playerId, null);
+        updateBrokenBlocksHudForPlayer(playerId, 0);
+        updateBlinkChargesHudForPlayer(playerId, 0);
         if (state == GameState.COUNTDOWN && getTotalPendingPlayerCount() < countdownRequiredPlayers) {
             cancelCountdownInternal("Countdown cancelled: not enough players.");
         } else if (state == GameState.COUNTDOWN) {
@@ -421,12 +408,9 @@ public class RunOrFallGameManager {
             statsStore.recordLoss(playerId, resolvePlayerName(playerId), result.survivedMs(),
                     result.brokenBlocks(), result.blinksUsed());
             rewardAlivePlayersForEliminationInternal(playerId);
-            broadcastEliminationInternal(playerId, "disconnected");
+            broadcastEliminationInternal(playerId, eliminationReason);
             checkWinnerInternal();
         }
-        updateCountdownHudForPlayer(playerId, null);
-        updateBrokenBlocksHudForPlayer(playerId, 0);
-        updateBlinkChargesHudForPlayer(playerId, 0);
         if (lobbyPlayers.isEmpty() && RunOrFallQueueStore.getInstance().getQueueSize() == 0) {
             activeWorld = null;
         }

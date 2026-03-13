@@ -19,8 +19,8 @@ import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.hud.AscendHudManager;
 import io.hyvexa.ascend.hud.ToastType;
-import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.summit.SummitManager;
+import io.hyvexa.ascend.util.PrestigeHelper;
 import io.hyvexa.common.math.BigNumber;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.util.FormatUtils;
@@ -310,12 +310,7 @@ public class SummitPage extends BaseAscendPage {
         }
 
         // Despawn all robots before resetting data to prevent completions with pre-reset multipliers
-        if (plugin != null) {
-            RobotManager robotManager = plugin.getRobotManager();
-            if (robotManager != null) {
-                robotManager.despawnRobotsForPlayer(playerId);
-            }
-        }
+        PrestigeHelper.despawnRobots(playerId);
 
         SummitManager.SummitResult result = summitManager.performSummit(playerId, category);
         if (!result.succeeded()) {
@@ -332,9 +327,7 @@ public class SummitPage extends BaseAscendPage {
             .color(SystemMessageUtils.SECONDARY));
 
         // Check achievements
-        if (plugin != null && plugin.getAchievementManager() != null) {
-            plugin.getAchievementManager().checkAndUnlockAchievements(playerId, player);
-        }
+        PrestigeHelper.checkAchievements(playerId, player);
 
         // Refresh display (auto-refresh will handle subsequent updates)
         if (!isCurrentPage()) {

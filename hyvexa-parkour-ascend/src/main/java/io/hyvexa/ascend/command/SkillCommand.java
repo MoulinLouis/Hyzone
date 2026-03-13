@@ -76,7 +76,7 @@ public class SkillCommand extends AbstractAsyncCommand {
             AscensionManager ascensionManager = plugin.getAscensionManager();
             UUID playerId = playerRef.getUuid();
 
-            String[] args = CommandUtils.getArgs(ctx);
+            String[] args = CommandUtils.tokenize(ctx);
             if (args.length == 0) {
                 showSkillList(player, ascensionManager, playerId);
                 return;

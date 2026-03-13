@@ -12,7 +12,6 @@ import org.hyvote.plugins.votifier.crypto.RSAKeyManager;
 import org.hyvote.plugins.votifier.http.FallbackHttpServer;
 import org.hyvote.plugins.votifier.http.NitradoWebServerBridge;
 import org.hyvote.plugins.votifier.reminder.VoteReminderService;
-import org.hyvote.plugins.votifier.reminder.VoteTracker;
 import org.hyvote.plugins.votifier.socket.VotifierSocketServer;
 import org.hyvote.plugins.votifier.storage.StorageException;
 import org.hyvote.plugins.votifier.storage.VoteStorage;
@@ -303,8 +302,7 @@ public class HytaleVotifierPlugin extends JavaPlugin {
             return;
         }
 
-        VoteTracker voteTracker = new VoteTracker(voteStorage);
-        voteReminderService = new VoteReminderService(this, voteTracker);
+        voteReminderService = new VoteReminderService(this, voteStorage);
         getLogger().at(Level.INFO).log("Vote reminder service enabled - sendOnJoin=%s, delayInSeconds=%d, voteExpiryInterval=%d, storage=%s",
                 reminderConfig.sendOnJoin(), reminderConfig.delayInSeconds(), reminderConfig.voteExpiryInterval(), voteStorage.getType());
     }

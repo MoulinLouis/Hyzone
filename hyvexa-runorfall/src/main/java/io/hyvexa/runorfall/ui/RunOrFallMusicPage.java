@@ -41,8 +41,7 @@ public class RunOrFallMusicPage extends InteractiveCustomUIPage<ButtonEventData>
     private static final String NO_MUSIC_LABEL = "No Music";
     private static final String CELESTE_MUSIC_LABEL = "Celeste OST";
 
-    private static final ConcurrentHashMap<UUID, String> MUSIC_LABELS = new ConcurrentHashMap<>();
-    private static final ConcurrentHashMap<UUID, MusicSelection> MUSIC_SELECTIONS = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<UUID, MusicEntry> MUSIC_ENTRIES = new ConcurrentHashMap<>();
 
     private final RunOrFallStatsStore statsStore;
     private final boolean fromProfile;
@@ -142,8 +141,7 @@ public class RunOrFallMusicPage extends InteractiveCustomUIPage<ButtonEventData>
                 player.sendMessage(Message.raw("Music not loaded."));
                 return;
             }
-            storeMusicLabel(playerRef.getUuid(), label);
-            storeMusicSelection(playerRef.getUuid(), selection);
+            storeMusicEntry(playerRef.getUuid(), label, selection);
             packetHandler.write(new UpdateEnvironmentMusic(musicIndex));
             player.getPageManager().openCustomPage(ref, store,
                     new RunOrFallMusicPage(playerRef, statsStore, fromProfile));
@@ -163,22 +161,15 @@ public class RunOrFallMusicPage extends InteractiveCustomUIPage<ButtonEventData>
         if (playerId == null) {
             return DEFAULT_MUSIC_LABEL;
         }
-        String storedLabel = MUSIC_LABELS.get(playerId);
-        return storedLabel == null ? DEFAULT_MUSIC_LABEL : storedLabel;
+        MusicEntry entry = MUSIC_ENTRIES.get(playerId);
+        return entry == null ? DEFAULT_MUSIC_LABEL : entry.label;
     }
 
-    private static void storeMusicLabel(UUID playerId, String label) {
-        if (playerId == null || label == null) {
+    private static void storeMusicEntry(UUID playerId, String label, MusicSelection selection) {
+        if (playerId == null || label == null || selection == null) {
             return;
         }
-        MUSIC_LABELS.put(playerId, label);
-    }
-
-    private static void storeMusicSelection(UUID playerId, MusicSelection selection) {
-        if (playerId == null || selection == null) {
-            return;
-        }
-        MUSIC_SELECTIONS.put(playerId, selection);
+        MUSIC_ENTRIES.put(playerId, new MusicEntry(label, selection));
     }
 
     public static void applyStoredMusic(@Nonnull PlayerRef playerRef) {
@@ -215,9 +206,13 @@ public class RunOrFallMusicPage extends InteractiveCustomUIPage<ButtonEventData>
         if (playerId == null) {
             return null;
         }
-        MusicSelection selection = MUSIC_SELECTIONS.get(playerId);
-        if (selection == null && MUSIC_LABELS.containsKey(playerId)) {
-            selection = MusicSelection.fromLabel(MUSIC_LABELS.get(playerId));
+        MusicEntry entry = MUSIC_ENTRIES.get(playerId);
+        if (entry == null) {
+            return null;
+        }
+        MusicSelection selection = entry.selection;
+        if (selection == null) {
+            selection = MusicSelection.fromLabel(entry.label);
         }
         if (selection == null) {
             return null;
@@ -235,9 +230,10 @@ public class RunOrFallMusicPage extends InteractiveCustomUIPage<ButtonEventData>
         if (playerId == null) {
             return;
         }
-        MUSIC_LABELS.remove(playerId);
-        MUSIC_SELECTIONS.remove(playerId);
+        MUSIC_ENTRIES.remove(playerId);
     }
+
+    private record MusicEntry(String label, MusicSelection selection) {}
 
     private enum MusicSelectionType {
         DEFAULT,

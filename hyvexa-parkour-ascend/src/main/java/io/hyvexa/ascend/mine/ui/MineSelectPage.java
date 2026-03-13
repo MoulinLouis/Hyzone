@@ -76,7 +76,7 @@ public class MineSelectPage extends BaseAscendPage {
                 ? mine.getName() : mine.getId();
             commandBuilder.set(sel + " #MineName.Text", displayName);
 
-            boolean unlocked = mineProgress.getMineSnapshot(mine.getId()).isUnlocked();
+            boolean unlocked = mineProgress.getMineSnapshot(mine.getId()).unlocked();
 
             if (unlocked) {
                 commandBuilder.set(sel + " #UnlockedGroup.Visible", true);
@@ -160,7 +160,7 @@ public class MineSelectPage extends BaseAscendPage {
             return;
         }
 
-        if (!mineProgress.getMineSnapshot(mineId).isUnlocked()) return;
+        if (!mineProgress.getMineSnapshot(mineId).unlocked()) return;
 
         Player player = store.getComponent(ref, Player.getComponentType());
         MineGateChecker gateChecker = plugin.getMineGateChecker();

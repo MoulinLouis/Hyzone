@@ -7,7 +7,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
-import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
 import com.hypixel.hytale.server.core.ui.builder.EventData;
@@ -150,10 +149,7 @@ public class PurgeWeaponAdminPage extends InteractiveCustomUIPage<PurgeWeaponAdm
 
     private void handleReset(Ref<EntityStore> ref, Store<EntityStore> store) {
         weaponConfigManager.resetDefaults(weaponId);
-        Player player = store.getComponent(ref, Player.getComponentType());
-        if (player != null) {
-            player.sendMessage(Message.raw(weaponConfigManager.getDisplayName(weaponId) + " weapon levels reset to defaults."));
-        }
+        PurgeAdminUtils.sendFeedback(ref, store, weaponConfigManager.getDisplayName(weaponId) + " weapon levels reset to defaults.");
         sendRefresh();
     }
 

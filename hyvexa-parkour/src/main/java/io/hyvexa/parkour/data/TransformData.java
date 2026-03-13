@@ -1,5 +1,8 @@
 package io.hyvexa.parkour.data;
 
+import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3f;
+
 public class TransformData {
     private double x;
     private double y;
@@ -54,6 +57,14 @@ public class TransformData {
 
     public void setRotZ(float rotZ) {
         this.rotZ = rotZ;
+    }
+
+    public Vector3d toPosition() {
+        return new Vector3d(x, y, z);
+    }
+
+    public Vector3f toRotation() {
+        return new Vector3f(rotX, rotY, rotZ);
     }
 
     public TransformData copy() {

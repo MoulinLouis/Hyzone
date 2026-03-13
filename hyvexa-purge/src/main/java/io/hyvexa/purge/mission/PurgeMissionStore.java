@@ -140,8 +140,8 @@ public class PurgeMissionStore {
                 + "(uuid, mission_date, total_kills, best_wave, best_combo, claimed_wave, claimed_kill, claimed_combo) "
                 + "VALUES (?, ?, ?, ?, ?, ?, ?, ?) "
                 + "ON DUPLICATE KEY UPDATE "
-                + "total_kills = ?, best_wave = ?, best_combo = ?, "
-                + "claimed_wave = ?, claimed_kill = ?, claimed_combo = ?";
+                + "total_kills = VALUES(total_kills), best_wave = VALUES(best_wave), best_combo = VALUES(best_combo), "
+                + "claimed_wave = VALUES(claimed_wave), claimed_kill = VALUES(claimed_kill), claimed_combo = VALUES(claimed_combo)";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
@@ -153,13 +153,6 @@ public class PurgeMissionStore {
             stmt.setInt(6, progress.isClaimedWave() ? 1 : 0);
             stmt.setInt(7, progress.isClaimedKill() ? 1 : 0);
             stmt.setInt(8, progress.isClaimedCombo() ? 1 : 0);
-            // ON DUPLICATE KEY UPDATE values
-            stmt.setInt(9, progress.getTotalKills());
-            stmt.setInt(10, progress.getBestWave());
-            stmt.setInt(11, progress.getBestCombo());
-            stmt.setInt(12, progress.isClaimedWave() ? 1 : 0);
-            stmt.setInt(13, progress.isClaimedKill() ? 1 : 0);
-            stmt.setInt(14, progress.isClaimedCombo() ? 1 : 0);
             stmt.executeUpdate();
         } catch (SQLException e) {
             LOGGER.atWarning().withCause(e).log("Failed to persist mission progress for " + playerId);

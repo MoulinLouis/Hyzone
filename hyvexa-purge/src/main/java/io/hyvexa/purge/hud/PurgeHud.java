@@ -23,14 +23,8 @@ public class PurgeHud extends CustomUIHud {
     private int lastUpgAmmo = -1;
     private int lastUpgSpeed = -1;
     private int lastUpgLuck = -1;
-    private String lastWxpName = null;
-    private String lastWxpXpText = null;
-    private int lastWxpBarQuantized = -1;
-    private boolean wxpVisible = false;
-    private String lastMxpName = null;
-    private String lastMxpXpText = null;
-    private int lastMxpBarQuantized = -1;
-    private boolean mxpVisible = false;
+    private final XpState wxpState = new XpState();
+    private final XpState mxpState = new XpState();
     private boolean killMeterVisible = false;
     private int lastKmPlayerCount = -1;
     private final String[] lastKmNames = new String[5];
@@ -192,68 +186,44 @@ public class PurgeHud extends CustomUIHud {
     }
 
     public void updateWeaponXp(String nameText, String xpText, float barProgress) {
-        UICommandBuilder cmd = new UICommandBuilder();
-        boolean changed = false;
-        if (!wxpVisible) {
-            wxpVisible = true;
-            cmd.set("#WeaponXpHud.Visible", true);
-            changed = true;
-        }
-        if (!nameText.equals(lastWxpName)) {
-            lastWxpName = nameText;
-            cmd.set("#WxpWeaponName.Text", nameText);
-            changed = true;
-        }
-        if (!xpText.equals(lastWxpXpText)) {
-            lastWxpXpText = xpText;
-            cmd.set("#WxpXpText.Text", xpText);
-            changed = true;
-        }
-        int quantized = (int) (barProgress * 1000);
-        if (quantized != lastWxpBarQuantized) {
-            lastWxpBarQuantized = quantized;
-            cmd.set("#WxpBar.Value", barProgress);
-            changed = true;
-        }
-        if (changed) {
-            update(false, cmd);
-        }
+        updateXp(wxpState, "#WeaponXpHud", "#WxpWeaponName", "#WxpXpText", "#WxpBar", nameText, xpText, barProgress);
     }
 
     public void hideWeaponXp() {
-        if (wxpVisible) {
-            wxpVisible = false;
-            lastWxpName = null;
-            lastWxpXpText = null;
-            lastWxpBarQuantized = -1;
-            UICommandBuilder cmd = new UICommandBuilder();
-            cmd.set("#WeaponXpHud.Visible", false);
-            update(false, cmd);
-        }
+        hideXp(wxpState, "#WeaponXpHud");
     }
 
     public void updateMeleeXp(String nameText, String xpText, float barProgress) {
+        updateXp(mxpState, "#MeleeXpHud", "#MxpWeaponName", "#MxpXpText", "#MxpBar", nameText, xpText, barProgress);
+    }
+
+    public void hideMeleeXp() {
+        hideXp(mxpState, "#MeleeXpHud");
+    }
+
+    private void updateXp(XpState state, String rootId, String nameId, String xpTextId, String barId,
+                           String nameText, String xpText, float barProgress) {
         UICommandBuilder cmd = new UICommandBuilder();
         boolean changed = false;
-        if (!mxpVisible) {
-            mxpVisible = true;
-            cmd.set("#MeleeXpHud.Visible", true);
+        if (!state.visible) {
+            state.visible = true;
+            cmd.set(rootId + ".Visible", true);
             changed = true;
         }
-        if (!nameText.equals(lastMxpName)) {
-            lastMxpName = nameText;
-            cmd.set("#MxpWeaponName.Text", nameText);
+        if (!nameText.equals(state.lastName)) {
+            state.lastName = nameText;
+            cmd.set(nameId + ".Text", nameText);
             changed = true;
         }
-        if (!xpText.equals(lastMxpXpText)) {
-            lastMxpXpText = xpText;
-            cmd.set("#MxpXpText.Text", xpText);
+        if (!xpText.equals(state.lastXpText)) {
+            state.lastXpText = xpText;
+            cmd.set(xpTextId + ".Text", xpText);
             changed = true;
         }
         int quantized = (int) (barProgress * 1000);
-        if (quantized != lastMxpBarQuantized) {
-            lastMxpBarQuantized = quantized;
-            cmd.set("#MxpBar.Value", barProgress);
+        if (quantized != state.lastBarQuantized) {
+            state.lastBarQuantized = quantized;
+            cmd.set(barId + ".Value", barProgress);
             changed = true;
         }
         if (changed) {
@@ -261,14 +231,11 @@ public class PurgeHud extends CustomUIHud {
         }
     }
 
-    public void hideMeleeXp() {
-        if (mxpVisible) {
-            mxpVisible = false;
-            lastMxpName = null;
-            lastMxpXpText = null;
-            lastMxpBarQuantized = -1;
+    private void hideXp(XpState state, String rootId) {
+        if (state.visible) {
+            state.reset();
             UICommandBuilder cmd = new UICommandBuilder();
-            cmd.set("#MeleeXpHud.Visible", false);
+            cmd.set(rootId + ".Visible", false);
             update(false, cmd);
         }
     }
@@ -363,6 +330,20 @@ public class PurgeHud extends CustomUIHud {
         update(false, cmd);
     }
 
+    private static class XpState {
+        String lastName;
+        String lastXpText;
+        int lastBarQuantized = -1;
+        boolean visible;
+
+        void reset() {
+            lastName = null;
+            lastXpText = null;
+            lastBarQuantized = -1;
+            visible = false;
+        }
+    }
+
     public void resetCache() {
         lastWave = -1;
         lastAlive = -1;
@@ -380,14 +361,8 @@ public class PurgeHud extends CustomUIHud {
         lastUpgAmmo = -1;
         lastUpgSpeed = -1;
         lastUpgLuck = -1;
-        lastWxpName = null;
-        lastWxpXpText = null;
-        lastWxpBarQuantized = -1;
-        wxpVisible = false;
-        lastMxpName = null;
-        lastMxpXpText = null;
-        lastMxpBarQuantized = -1;
-        mxpVisible = false;
+        wxpState.reset();
+        mxpState.reset();
         killMeterVisible = false;
         lastKmPlayerCount = -1;
         for (int i = 0; i < 5; i++) {

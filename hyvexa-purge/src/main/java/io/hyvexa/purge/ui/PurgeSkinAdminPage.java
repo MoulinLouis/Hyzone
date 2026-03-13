@@ -7,7 +7,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
 import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
@@ -68,12 +67,7 @@ public class PurgeSkinAdminPage extends InteractiveCustomUIPage<PurgeSkinAdminPa
         }
 
         if (BUTTON_BACK.equals(button)) {
-            Player player = store.getComponent(ref, Player.getComponentType());
-            PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-            if (player != null && playerRef != null) {
-                player.getPageManager().openCustomPage(ref, store,
-                        new PurgeAdminIndexPage(playerRef, waveConfigManager, instanceManager, weaponConfigManager, variantConfigManager));
-            }
+            PurgeAdminUtils.openAdminIndex(ref, store, waveConfigManager, instanceManager, weaponConfigManager, variantConfigManager);
             return;
         }
 

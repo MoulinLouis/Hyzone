@@ -20,7 +20,6 @@ import io.hyvexa.parkour.util.ParkourUtils;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
 public class LeaderboardMapSelectPage extends BaseParkourPage {
@@ -83,12 +82,7 @@ public class LeaderboardMapSelectPage extends BaseParkourPage {
             return;
         }
         List<Map> maps = new ArrayList<>(mapStore.listMaps());
-        maps.sort(Comparator.comparingInt((Map map) -> {
-                    int difficulty = map.getDifficulty();
-                    return difficulty <= 0 ? Integer.MAX_VALUE : difficulty;
-                })
-                .thenComparing(map -> map.getName() != null ? map.getName() : map.getId(),
-                        String.CASE_INSENSITIVE_ORDER));
+        maps.sort(ParkourUtils.MAP_DIFFICULTY_COMPARATOR);
         String accentColor = UIColorUtils.getCategoryAccentColor(category);
         int index = 0;
         for (Map map : maps) {

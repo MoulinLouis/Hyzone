@@ -62,9 +62,7 @@ class RunTeleporter {
         if (spawn == null) {
             return;
         }
-        Vector3d position = new Vector3d(spawn.getX(), spawn.getY(), spawn.getZ());
-        Vector3f rotation = new Vector3f(spawn.getRotX(), spawn.getRotY(), spawn.getRotZ());
-        addTeleport(ref, store, buffer, new Teleport(store.getExternalData().getWorld(), position, rotation));
+        addTeleport(ref, store, buffer, new Teleport(store.getExternalData().getWorld(), spawn.toPosition(), spawn.toRotation()));
     }
 
     boolean teleportToLastCheckpoint(Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef) {
@@ -90,10 +88,8 @@ class RunTeleporter {
         if (checkpoint == null) {
             return false;
         }
-        Vector3d position = new Vector3d(checkpoint.getX(), checkpoint.getY(), checkpoint.getZ());
-        Vector3f rotation = new Vector3f(checkpoint.getRotX(), checkpoint.getRotY(), checkpoint.getRotZ());
         store.addComponent(ref, Teleport.getComponentType(),
-                new Teleport(store.getExternalData().getWorld(), position, rotation));
+                new Teleport(store.getExternalData().getWorld(), checkpoint.toPosition(), checkpoint.toRotation()));
         recordTeleport(playerRef.getUuid(), TeleportCause.CHECKPOINT);
         run.fallState.fallStartTime = null;
         run.fallState.lastY = null;
@@ -106,12 +102,8 @@ class RunTeleporter {
         if (run == null || run.practiceCheckpoint == null) {
             return false;
         }
-        Vector3d position = new Vector3d(run.practiceCheckpoint.getX(),
-                run.practiceCheckpoint.getY(),
-                run.practiceCheckpoint.getZ());
-        Vector3f rotation = new Vector3f(run.practiceCheckpoint.getRotX(),
-                run.practiceCheckpoint.getRotY(),
-                run.practiceCheckpoint.getRotZ());
+        Vector3d position = run.practiceCheckpoint.toPosition();
+        Vector3f rotation = run.practiceCheckpoint.toRotation();
         World world = store.getExternalData().getWorld();
         if (world == null) {
             return false;
@@ -170,10 +162,8 @@ class RunTeleporter {
                 run.practiceStartCheckpointTouchTimes.putAll(previous.practiceStartCheckpointTouchTimes);
             }
         }
-        Vector3d position = new Vector3d(map.getStart().getX(), map.getStart().getY(), map.getStart().getZ());
-        Vector3f rotation = new Vector3f(map.getStart().getRotX(), map.getStart().getRotY(),
-                map.getStart().getRotZ());
-        store.addComponent(ref, Teleport.getComponentType(), new Teleport(world, position, rotation));
+        store.addComponent(ref, Teleport.getComponentType(),
+                new Teleport(world, map.getStart().toPosition(), map.getStart().toRotation()));
         return true;
     }
 

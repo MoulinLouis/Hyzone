@@ -52,7 +52,7 @@ public class AnalyticsCommand extends AbstractAsyncCommand {
     }
 
     private void handleCommand(CommandContext ctx, Player player) {
-        String[] args = CommandUtils.getArgs(ctx);
+        String[] args = CommandUtils.tokenize(ctx);
         if (args.length == 0) {
             showOverview(player, 7);
             return;

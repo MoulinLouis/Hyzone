@@ -7,8 +7,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
-import com.hypixel.hytale.server.core.Message;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
 import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
@@ -98,56 +96,43 @@ public class PurgeWaveAdminPage extends InteractiveCustomUIPage<PurgeWaveAdminPa
     }
 
     private void handleAdd(Ref<EntityStore> ref, Store<EntityStore> store) {
-        Player player = store.getComponent(ref, Player.getComponentType());
         int waveNumber = waveConfigManager.addWave();
-        if (player != null) {
-            if (waveNumber > 0) {
-                player.sendMessage(Message.raw("Added wave " + waveNumber + " (empty)."));
-            } else if (!waveConfigManager.isPersistenceAvailable()) {
-                player.sendMessage(Message.raw(waveConfigManager.getPersistenceDisabledMessage()));
-            } else {
-                player.sendMessage(Message.raw("Failed to add wave."));
-            }
+        if (waveNumber > 0) {
+            PurgeAdminUtils.sendFeedback(ref, store, "Added wave " + waveNumber + " (empty).");
+        } else if (!waveConfigManager.isPersistenceAvailable()) {
+            PurgeAdminUtils.sendFeedback(ref, store, waveConfigManager.getPersistenceDisabledMessage());
+        } else {
+            PurgeAdminUtils.sendFeedback(ref, store, "Failed to add wave.");
         }
         sendRefresh();
     }
 
     private void handleClear(Ref<EntityStore> ref, Store<EntityStore> store) {
-        Player player = store.getComponent(ref, Player.getComponentType());
         if (!waveConfigManager.isPersistenceAvailable()) {
-            if (player != null) {
-                player.sendMessage(Message.raw(waveConfigManager.getPersistenceDisabledMessage()));
-            }
+            PurgeAdminUtils.sendFeedback(ref, store, waveConfigManager.getPersistenceDisabledMessage());
             return;
         }
         waveConfigManager.clearAll();
-        if (player != null) {
-            player.sendMessage(Message.raw("Cleared all wave definitions."));
-        }
+        PurgeAdminUtils.sendFeedback(ref, store, "Cleared all wave definitions.");
         sendRefresh();
     }
 
     private void handleDelete(String rawWave, Ref<EntityStore> ref, Store<EntityStore> store) {
-        Player player = store.getComponent(ref, Player.getComponentType());
         int waveNumber;
         try {
             waveNumber = Integer.parseInt(rawWave);
         } catch (NumberFormatException e) {
-            if (player != null) {
-                player.sendMessage(Message.raw("Invalid wave number."));
-            }
+            PurgeAdminUtils.sendFeedback(ref, store, "Invalid wave number.");
             return;
         }
 
         boolean removed = waveConfigManager.removeWave(waveNumber);
-        if (player != null) {
-            if (removed) {
-                player.sendMessage(Message.raw("Removed wave " + waveNumber + "."));
-            } else if (!waveConfigManager.isPersistenceAvailable()) {
-                player.sendMessage(Message.raw(waveConfigManager.getPersistenceDisabledMessage()));
-            } else {
-                player.sendMessage(Message.raw("Wave " + waveNumber + " not found."));
-            }
+        if (removed) {
+            PurgeAdminUtils.sendFeedback(ref, store, "Removed wave " + waveNumber + ".");
+        } else if (!waveConfigManager.isPersistenceAvailable()) {
+            PurgeAdminUtils.sendFeedback(ref, store, waveConfigManager.getPersistenceDisabledMessage());
+        } else {
+            PurgeAdminUtils.sendFeedback(ref, store, "Wave " + waveNumber + " not found.");
         }
         sendRefresh();
     }
@@ -177,10 +162,7 @@ public class PurgeWaveAdminPage extends InteractiveCustomUIPage<PurgeWaveAdminPa
         if (updated) {
             sendRefresh();
         } else if (!waveConfigManager.isPersistenceAvailable()) {
-            Player player = store.getComponent(ref, Player.getComponentType());
-            if (player != null) {
-                player.sendMessage(Message.raw(waveConfigManager.getPersistenceDisabledMessage()));
-            }
+            PurgeAdminUtils.sendFeedback(ref, store, waveConfigManager.getPersistenceDisabledMessage());
         }
     }
 
@@ -204,21 +186,12 @@ public class PurgeWaveAdminPage extends InteractiveCustomUIPage<PurgeWaveAdminPa
         if (waveConfigManager.adjustVariantCount(waveNumber, variantKey, delta)) {
             sendRefresh();
         } else if (!waveConfigManager.isPersistenceAvailable()) {
-            Player player = store.getComponent(ref, Player.getComponentType());
-            if (player != null) {
-                player.sendMessage(Message.raw(waveConfigManager.getPersistenceDisabledMessage()));
-            }
+            PurgeAdminUtils.sendFeedback(ref, store, waveConfigManager.getPersistenceDisabledMessage());
         }
     }
 
     private void openIndex(Ref<EntityStore> ref, Store<EntityStore> store) {
-        Player player = store.getComponent(ref, Player.getComponentType());
-        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-        if (player == null || playerRef == null) {
-            return;
-        }
-        player.getPageManager().openCustomPage(ref, store,
-                new PurgeAdminIndexPage(playerRef, waveConfigManager, instanceManager, weaponConfigManager, variantConfigManager));
+        PurgeAdminUtils.openAdminIndex(ref, store, waveConfigManager, instanceManager, weaponConfigManager, variantConfigManager);
     }
 
     private void sendRefresh() {

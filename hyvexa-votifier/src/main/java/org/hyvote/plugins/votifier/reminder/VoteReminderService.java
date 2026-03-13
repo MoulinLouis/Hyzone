@@ -6,6 +6,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import org.hyvote.plugins.votifier.HytaleVotifierPlugin;
 import org.hyvote.plugins.votifier.VoteReminderConfig;
+import org.hyvote.plugins.votifier.storage.VoteStorage;
 import org.hyvote.plugins.votifier.util.VoteReminderUtil;
 
 import java.util.Map;
@@ -33,7 +34,7 @@ public final class VoteReminderService {
     private static final int DEFAULT_CLEANUP_INTERVAL_HOURS = 6;
 
     private final HytaleVotifierPlugin plugin;
-    private final VoteTracker voteTracker;
+    private final VoteStorage voteStorage;
     private final ScheduledExecutorService scheduler;
     private final Map<String, ScheduledFuture<?>> scheduledReminders = new ConcurrentHashMap<>();
 
@@ -41,11 +42,11 @@ public final class VoteReminderService {
      * Creates a new VoteReminderService.
      *
      * @param plugin      the plugin instance
-     * @param voteTracker the vote tracker to check if players have voted
+     * @param voteStorage the vote storage to check if players have voted
      */
-    public VoteReminderService(HytaleVotifierPlugin plugin, VoteTracker voteTracker) {
+    public VoteReminderService(HytaleVotifierPlugin plugin, VoteStorage voteStorage) {
         this.plugin = plugin;
-        this.voteTracker = voteTracker;
+        this.voteStorage = voteStorage;
         this.scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
             Thread t = new Thread(r, "VoteReminderScheduler");
             t.setDaemon(true);
@@ -107,7 +108,7 @@ public final class VoteReminderService {
                     ? config.voteExpiryInterval()
                     : 24;
 
-            int removed = voteTracker.cleanupExpiredVotes(voteExpiryInterval);
+            int removed = voteStorage.cleanupExpiredVotes(voteExpiryInterval);
 
             if (removed > 0 || plugin.getConfig().debug()) {
                 plugin.getLogger().at(Level.INFO).log(
@@ -158,7 +159,7 @@ public final class VoteReminderService {
         int voteExpiryInterval = config.voteExpiryInterval() != null ? config.voteExpiryInterval() : 24;
 
         // Check if player has voted recently
-        if (voteTracker.hasVotedRecently(username, voteExpiryInterval)) {
+        if (voteStorage.hasVotedRecently(username, voteExpiryInterval)) {
             if (plugin.getConfig().debug()) {
                 plugin.getLogger().at(Level.INFO).log(
                         "Player %s has voted recently, skipping reminder", username);
@@ -212,7 +213,7 @@ public final class VoteReminderService {
      * @param username the player's username
      */
     public void recordVote(String username) {
-        voteTracker.recordVote(username);
+        voteStorage.recordVote(username);
 
         // Cancel any pending reminder for this player
         cancelReminder(username.toLowerCase());
@@ -260,7 +261,7 @@ public final class VoteReminderService {
         // Double-check they haven't voted in the meantime
         VoteReminderConfig config = plugin.getConfig().voteReminder();
         int voteExpiryInterval = config != null && config.voteExpiryInterval() != null ? config.voteExpiryInterval() : 24;
-        if (voteTracker.hasVotedRecently(username, voteExpiryInterval)) {
+        if (voteStorage.hasVotedRecently(username, voteExpiryInterval)) {
             if (plugin.getConfig().debug()) {
                 plugin.getLogger().at(Level.INFO).log(
                         "Player %s voted while waiting, skipping reminder", username);
@@ -294,11 +295,11 @@ public final class VoteReminderService {
     }
 
     /**
-     * Gets the vote tracker used by this service.
+     * Gets the vote storage used by this service.
      *
-     * @return the vote tracker
+     * @return the vote storage
      */
-    public VoteTracker getVoteTracker() {
-        return voteTracker;
+    public VoteStorage getVoteStorage() {
+        return voteStorage;
     }
 }

@@ -122,7 +122,7 @@ public class MineBonusCalculator {
                 continue;
             }
             anyUnlocked = true;
-            if (!progress.getMinerSnapshot(mine.getId()).isHasMiner()) {
+            if (!progress.getMinerSnapshot(mine.getId()).hasMiner()) {
                 return false;
             }
         }

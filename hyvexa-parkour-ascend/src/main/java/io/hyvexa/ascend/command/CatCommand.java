@@ -53,7 +53,7 @@ public class CatCommand extends AbstractAsyncCommand {
             return CompletableFuture.completedFuture(null);
         }
 
-        String[] args = CommandUtils.getArgs(ctx);
+        String[] args = CommandUtils.tokenize(ctx);
         if (args.length < 1) {
             return CompletableFuture.completedFuture(null);
         }

@@ -154,7 +154,7 @@ public class OrphanedEntityCleanup {
 
     private void removeOrphanOnWorldThread(UUID entityUuid, Ref<EntityStore> ref) {
         try {
-            if (ref == null || !ref.isValid()) {
+            if (!ref.isValid()) {
                 markCleaned(entityUuid);
                 return;
             }
@@ -167,7 +167,7 @@ public class OrphanedEntityCleanup {
             markCleaned(entityUuid);
         } catch (Exception e) {
             logger.atWarning().log("Failed to remove orphaned entity " + entityUuid + ": " + e.getMessage());
-            if (ref != null && ref.isValid()) {
+            if (ref.isValid()) {
                 pendingRemovals.put(entityUuid, ref);
                 cleanupPending = true;
             } else {

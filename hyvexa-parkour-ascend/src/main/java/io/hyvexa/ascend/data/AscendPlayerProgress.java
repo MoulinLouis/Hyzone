@@ -6,6 +6,7 @@ import io.hyvexa.common.math.BigNumber;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -115,6 +116,24 @@ public class AscendPlayerProgress {
 
     public MapProgress getOrCreateMapProgress(String mapId) {
         return mapProgress.computeIfAbsent(mapId, k -> new MapProgress());
+    }
+
+    /**
+     * Clears all map progress (multipliers, unlocks, robots) while preserving personal best times.
+     */
+    public void resetMapProgressPreservingPBs() {
+        Map<String, Long> savedPBs = new HashMap<>();
+        for (Map.Entry<String, MapProgress> entry : mapProgress.entrySet()) {
+            Long bestTime = entry.getValue().getBestTimeMs();
+            if (bestTime != null) {
+                savedPBs.put(entry.getKey(), bestTime);
+            }
+        }
+        mapProgress.clear();
+        for (Map.Entry<String, Long> entry : savedPBs.entrySet()) {
+            MapProgress mp = getOrCreateMapProgress(entry.getKey());
+            mp.setBestTimeMs(entry.getValue());
+        }
     }
 
     // ========================================

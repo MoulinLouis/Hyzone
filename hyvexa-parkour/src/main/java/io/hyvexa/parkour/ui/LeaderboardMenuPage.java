@@ -16,6 +16,7 @@ import io.hyvexa.parkour.data.Map;
 import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.data.ProgressStore;
 import io.hyvexa.parkour.tracker.RunTracker;
+import io.hyvexa.parkour.util.ParkourUtils;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
@@ -110,19 +111,8 @@ public class LeaderboardMenuPage extends BaseParkourPage {
 
     private List<String> orderCategories(Set<String> categories, List<Map> maps) {
         List<String> ordered = new ArrayList<>(categories);
-        ordered.sort(Comparator.comparingInt((String category) -> getCategoryOrder(category, maps))
+        ordered.sort(Comparator.comparingInt((String category) -> ParkourUtils.getCategoryOrder(category, maps))
                 .thenComparing(String.CASE_INSENSITIVE_ORDER));
         return ordered;
-    }
-
-    private int getCategoryOrder(String category, List<Map> maps) {
-        int minOrder = Integer.MAX_VALUE;
-        for (Map map : maps) {
-            String mapCategory = FormatUtils.normalizeCategory(map.getCategory());
-            if (mapCategory.equalsIgnoreCase(category)) {
-                minOrder = Math.min(minOrder, map.getOrder());
-            }
-        }
-        return minOrder == Integer.MAX_VALUE ? Integer.MAX_VALUE : minOrder;
     }
 }

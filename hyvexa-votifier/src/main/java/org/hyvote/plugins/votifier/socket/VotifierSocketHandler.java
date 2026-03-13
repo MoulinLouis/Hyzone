@@ -1,15 +1,11 @@
 package org.hyvote.plugins.votifier.socket;
 
 import com.google.gson.Gson;
-import com.hypixel.hytale.server.core.HytaleServer;
 import org.hyvote.plugins.votifier.HytaleVotifierPlugin;
 import org.hyvote.plugins.votifier.ProtocolConfig;
 import org.hyvote.plugins.votifier.crypto.CryptoUtil;
 import org.hyvote.plugins.votifier.crypto.VoteDecryptionException;
-import org.hyvote.plugins.votifier.event.VoteEvent;
-import org.hyvote.plugins.votifier.util.BroadcastUtil;
-import org.hyvote.plugins.votifier.util.RewardCommandUtil;
-import org.hyvote.plugins.votifier.util.VoteNotificationUtil;
+import org.hyvote.plugins.votifier.http.VoteProcessor;
 import org.hyvote.plugins.votifier.vote.V2ChallengeException;
 import org.hyvote.plugins.votifier.vote.V2SignatureException;
 import org.hyvote.plugins.votifier.vote.V2VoteParser;
@@ -211,18 +207,7 @@ public class VotifierSocketHandler implements Runnable {
     }
 
     private void processVote(Vote vote) {
-        // Fire vote event for other plugins
-        VoteEvent voteEvent = new VoteEvent(plugin, vote);
-        HytaleServer.get().getEventBus().dispatchFor(VoteEvent.class, plugin.getClass()).dispatch(voteEvent);
-
-        // Display toast notification
-        VoteNotificationUtil.displayVoteToast(plugin, vote);
-
-        // Broadcast announcement
-        BroadcastUtil.broadcastVote(plugin, vote);
-
-        // Execute reward commands
-        RewardCommandUtil.executeRewardCommands(plugin, vote);
+        VoteProcessor.dispatchVote(plugin, vote);
     }
 
     private void sendSuccess(Writer writer) throws IOException {

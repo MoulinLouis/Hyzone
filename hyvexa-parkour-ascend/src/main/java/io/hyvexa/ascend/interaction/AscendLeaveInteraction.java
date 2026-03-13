@@ -115,13 +115,5 @@ public class AscendLeaveInteraction extends SimpleInteraction {
         return true;
     }
 
-    private static final class PendingLeave {
-        private final String mapId;
-        private final long requestedAt;
-
-        private PendingLeave(String mapId, long requestedAt) {
-            this.mapId = mapId;
-            this.requestedAt = requestedAt;
-        }
-    }
+    private record PendingLeave(String mapId, long requestedAt) {}
 }

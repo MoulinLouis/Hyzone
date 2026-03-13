@@ -37,7 +37,7 @@ public class SetAmmoCommand extends AbstractAsyncCommand {
             return CompletableFuture.completedFuture(null);
         }
 
-        String[] args = CommandUtils.getArgs(ctx);
+        String[] args = CommandUtils.tokenize(ctx);
         if (args.length < 1) {
             player.sendMessage(Message.raw("Usage: /setammo <maxAmmo>"));
             return CompletableFuture.completedFuture(null);

@@ -15,10 +15,8 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.parkour.ParkourConstants;
 import io.hyvexa.parkour.data.MapStore;
-import io.hyvexa.parkour.data.ProgressStore;
 import io.hyvexa.parkour.data.SettingsStore;
 
 import javax.annotation.Nonnull;
@@ -45,8 +43,8 @@ public class SettingsAdminPage extends InteractiveCustomUIPage<SettingsAdminPage
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, SettingsData.CODEC);
         this.settingsStore = settingsStore;
         this.mapStore = mapStore;
-        this.fallRespawnSecondsInput = formatSeconds(getCurrentSeconds());
-        this.fallFailsafeVoidInput = formatVoidCutoff(getCurrentFailsafeVoidY());
+        this.fallRespawnSecondsInput = formatDouble(getCurrentSeconds());
+        this.fallFailsafeVoidInput = formatDouble(getCurrentFailsafeVoidY());
     }
 
     @Override
@@ -120,7 +118,7 @@ public class SettingsAdminPage extends InteractiveCustomUIPage<SettingsAdminPage
             return;
         }
         settingsStore.setFallRespawnSeconds(seconds);
-        fallRespawnSecondsInput = formatSeconds(settingsStore.getFallRespawnSeconds());
+        fallRespawnSecondsInput = formatDouble(settingsStore.getFallRespawnSeconds());
         player.sendMessage(Message.raw("Updated fall respawn time to " + fallRespawnSecondsInput + "s."));
         sendRefresh();
     }
@@ -142,29 +140,20 @@ public class SettingsAdminPage extends InteractiveCustomUIPage<SettingsAdminPage
             return;
         }
         settingsStore.setFallFailsafeVoidY(voidY);
-        fallFailsafeVoidInput = formatVoidCutoff(settingsStore.getFallFailsafeVoidY());
+        fallFailsafeVoidInput = formatDouble(settingsStore.getFallFailsafeVoidY());
         player.sendMessage(Message.raw("Updated void cutoff Y to " + fallFailsafeVoidInput + "."));
         sendRefresh();
     }
 
     private void openIndex(Ref<EntityStore> ref, Store<EntityStore> store) {
-        Player player = store.getComponent(ref, Player.getComponentType());
-        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-        if (player == null || playerRef == null) {
-            return;
-        }
-        MapStore mapStore = HyvexaPlugin.getInstance().getMapStore();
-        ProgressStore progressStore = HyvexaPlugin.getInstance().getProgressStore();
-        player.getPageManager().openCustomPage(ref, store,
-                new AdminIndexPage(playerRef, mapStore, progressStore, settingsStore,
-                        HyvexaPlugin.getInstance().getPlayerCountStore()));
+        AdminPageUtils.openIndex(ref, store);
     }
 
     private void populateFields(UICommandBuilder commandBuilder) {
         commandBuilder.set("#FallRespawnField.Value", fallRespawnSecondsInput);
-        commandBuilder.set(LABEL_CURRENT_VALUE, "Current: " + formatSeconds(getCurrentSeconds()) + "s");
+        commandBuilder.set(LABEL_CURRENT_VALUE, "Current: " + formatDouble(getCurrentSeconds()) + "s");
         commandBuilder.set("#FallFailSafeField.Value", fallFailsafeVoidInput);
-        commandBuilder.set(LABEL_FAILSAFE_VALUE, "Current: " + formatVoidCutoff(getCurrentFailsafeVoidY()));
+        commandBuilder.set(LABEL_FAILSAFE_VALUE, "Current: " + formatDouble(getCurrentFailsafeVoidY()));
         commandBuilder.set("#IdleFallOpValue.Text", getIdleFallOpLabel());
         commandBuilder.set("#WeaponDamageValue.Text", getWeaponDamageLabel());
         commandBuilder.set("#TeleportDebugValue.Text", getTeleportDebugLabel());
@@ -226,12 +215,8 @@ public class SettingsAdminPage extends InteractiveCustomUIPage<SettingsAdminPage
         return enabled ? "On" : "Off";
     }
 
-    private static String formatSeconds(double seconds) {
-        return String.format(Locale.ROOT, "%.2f", seconds);
-    }
-
-    private static String formatVoidCutoff(double voidY) {
-        return String.format(Locale.ROOT, "%.2f", voidY);
+    private static String formatDouble(double value) {
+        return String.format(Locale.ROOT, "%.2f", value);
     }
 
     private void toggleIdleFallForOp(Ref<EntityStore> ref, Store<EntityStore> store) {

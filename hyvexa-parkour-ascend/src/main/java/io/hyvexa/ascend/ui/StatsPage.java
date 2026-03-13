@@ -21,7 +21,6 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
-import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.AscendConstants;
 import io.hyvexa.ascend.data.AscendMap;
 import io.hyvexa.ascend.data.AscendMapStore;
@@ -105,16 +104,7 @@ public class StatsPage extends BaseAscendPage {
     }
 
     private void navigateBackToProfile(Ref<EntityStore> ref, Store<EntityStore> store) {
-        com.hypixel.hytale.server.core.entity.entities.Player player =
-                store.getComponent(ref, com.hypixel.hytale.server.core.entity.entities.Player.getComponentType());
-        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (player != null && playerRef != null && plugin != null && plugin.getRobotManager() != null) {
-            player.getPageManager().openCustomPage(ref, store,
-                    new AscendProfilePage(playerRef, playerStore, plugin.getRobotManager()));
-        } else {
-            this.close();
-        }
+        BaseAscendPage.navigateBackToProfile(ref, store, playerStore, this);
     }
 
     private void updateAllStats(UICommandBuilder commandBuilder, UUID playerId) {

@@ -1479,8 +1479,6 @@ public class PurgeWaveManager {
         });
     }
 
-    // --- NPC State ---
-
     // --- Utility ---
 
     private double[] getRefPosition(Ref<EntityStore> ref) {

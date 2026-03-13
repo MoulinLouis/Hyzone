@@ -22,6 +22,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.NPCPlugin;
 import io.hyvexa.common.util.CommandUtils;
+import io.hyvexa.common.util.EntityUtils;
 import io.hyvexa.common.util.PermissionUtils;
 
 import javax.annotation.Nonnull;
@@ -75,7 +76,7 @@ public class MobGalleryCommand extends AbstractAsyncCommand {
             return CompletableFuture.completedFuture(null);
         }
 
-        String[] args = CommandUtils.getArgs(ctx);
+        String[] args = CommandUtils.tokenize(ctx);
         if (args.length == 0) {
             sendHelp(player);
             return CompletableFuture.completedFuture(null);
@@ -246,7 +247,7 @@ public class MobGalleryCommand extends AbstractAsyncCommand {
                                              String roleName, Vector3d position, Vector3f rotation) {
         try {
             Object result = plugin.spawnNPC(store, roleName, roleName, position, rotation);
-            Ref<EntityStore> entityRef = extractEntityRef(result);
+            Ref<EntityStore> entityRef = EntityUtils.extractEntityRef(result);
             if (entityRef == null || !entityRef.isValid()) {
                 return null;
             }
@@ -368,28 +369,6 @@ public class MobGalleryCommand extends AbstractAsyncCommand {
         return npcPlugin;
     }
 
-    @SuppressWarnings("unchecked")
-    private Ref<EntityStore> extractEntityRef(Object pairResult) {
-        if (pairResult == null) {
-            return null;
-        }
-        try {
-            for (String methodName : List.of("getFirst", "getLeft", "getKey", "first", "left")) {
-                try {
-                    java.lang.reflect.Method method = pairResult.getClass().getMethod(methodName);
-                    Object value = method.invoke(pairResult);
-                    if (value instanceof Ref<?> ref) {
-                        return (Ref<EntityStore>) ref;
-                    }
-                } catch (NoSuchMethodException ignored) {
-                    // Try next method.
-                }
-            }
-        } catch (Exception e) {
-            LOGGER.atWarning().log("Failed to extract entity ref from NPC result: " + e.getMessage());
-        }
-        return null;
-    }
 
     private static int pageCount(int size) {
         return Math.max(1, (size + PAGE_SIZE - 1) / PAGE_SIZE);

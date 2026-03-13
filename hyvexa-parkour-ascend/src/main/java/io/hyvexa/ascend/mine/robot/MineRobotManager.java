@@ -107,7 +107,7 @@ public class MineRobotManager {
         List<Mine> allMines = configStore.listMinesSorted();
         for (Mine mine : allMines) {
             MinePlayerProgress.MinerProgressSnapshot minerProg = progress.getMinerSnapshot(mine.getId());
-            if (minerProg.isHasMiner()) {
+            if (minerProg.hasMiner()) {
                 spawnMiner(playerId, mine.getId(), world);
             }
         }
@@ -148,8 +148,8 @@ public class MineRobotManager {
 
         MinerRobotState state = new MinerRobotState(ownerId, mineId);
         if (minerProg != null) {
-            state.setSpeedLevel(minerProg.getSpeedLevel());
-            state.setStars(minerProg.getStars());
+            state.setSpeedLevel(minerProg.speedLevel());
+            state.setStars(minerProg.stars());
         }
         state.setLastProductionTick(System.currentTimeMillis());
 

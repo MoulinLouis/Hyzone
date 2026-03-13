@@ -82,8 +82,8 @@ public class LeaveInteraction extends SimpleInteraction {
         Map map = plugin.getMapStore().getMap(mapId);
         TransformData leaveTeleport = map != null ? map.getLeaveTeleport() : null;
         if (leaveTeleport != null) {
-            Vector3d position = new Vector3d(leaveTeleport.getX(), leaveTeleport.getY(), leaveTeleport.getZ());
-            Vector3f rotation = new Vector3f(leaveTeleport.getRotX(), leaveTeleport.getRotY(), leaveTeleport.getRotZ());
+            Vector3d position = leaveTeleport.toPosition();
+            Vector3f rotation = leaveTeleport.toRotation();
             store.addComponent(ref, Teleport.getComponentType(),
                     new Teleport(store.getExternalData().getWorld(), position, rotation));
         } else {

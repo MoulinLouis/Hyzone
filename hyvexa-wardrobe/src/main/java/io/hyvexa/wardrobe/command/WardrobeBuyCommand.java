@@ -39,7 +39,7 @@ public class WardrobeBuyCommand extends AbstractAsyncCommand {
         PlayerRef playerRef = player.getPlayerRef();
         if (playerRef == null) return CompletableFuture.completedFuture(null);
 
-        String[] args = CommandUtils.getArgs(ctx);
+        String[] args = CommandUtils.tokenize(ctx);
         if (args.length == 0) {
             String available = WardrobeBridge.getInstance().getAllCosmetics().stream()
                     .map(WardrobeBridge.WardrobeCosmeticDef::id)

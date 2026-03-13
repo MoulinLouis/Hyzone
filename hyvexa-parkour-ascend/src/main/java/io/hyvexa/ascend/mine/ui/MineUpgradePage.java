@@ -112,7 +112,7 @@ public class MineUpgradePage extends BaseAscendPage {
             List<Mine> mines = configStore.listMinesSorted();
             int entryIndex = types.length;
             for (Mine mine : mines) {
-                if (!mineProgress.getMineSnapshot(mine.getId()).isUnlocked()) continue;
+                if (!mineProgress.getMineSnapshot(mine.getId()).unlocked()) continue;
 
                 MinePlayerProgress.MinerProgressSnapshot minerState = mineProgress.getMinerSnapshot(mine.getId());
                 commandBuilder.append("#UpgradeItems", "Pages/Ascend_MineUpgradeEntry.ui");
@@ -120,7 +120,7 @@ public class MineUpgradePage extends BaseAscendPage {
 
                 commandBuilder.set(sel + " #UpgradeName.Text", mine.getName() + " Miner");
 
-                if (!minerState.isHasMiner()) {
+                if (!minerState.hasMiner()) {
                     commandBuilder.set(sel + " #LevelText.Text", "Not purchased");
                     commandBuilder.set(sel + " #EffectText.Text", "");
                     commandBuilder.set(sel + " #CostText.Text", "Cost: " + getMinerBuyCost());
@@ -130,8 +130,8 @@ public class MineUpgradePage extends BaseAscendPage {
                         sel + " #BuyButton",
                         EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_BUY_MINER_PREFIX + mine.getId()), false);
                 } else {
-                    int speedLevel = minerState.getSpeedLevel();
-                    int stars = minerState.getStars();
+                    int speedLevel = minerState.speedLevel();
+                    int stars = minerState.stars();
                     boolean fullyMaxed = stars >= MINER_MAX_STARS && speedLevel >= MINER_MAX_SPEED_PER_STAR;
 
                     commandBuilder.set(sel + " #LevelText.Text", "Speed Lv " + speedLevel + " | Star " + stars);
@@ -299,9 +299,9 @@ public class MineUpgradePage extends BaseAscendPage {
         if (player == null) return;
 
         MinePlayerProgress.MinerProgressSnapshot minerState = mineProgress.getMinerSnapshot(mineId);
-        int speedLevel = minerState.getSpeedLevel();
+        int speedLevel = minerState.speedLevel();
 
-        long cost = getMinerSpeedCost(speedLevel, minerState.getStars());
+        long cost = getMinerSpeedCost(speedLevel, minerState.stars());
         MinePlayerProgress.MinerSpeedUpgradeResult result =
             mineProgress.upgradeMinerSpeed(mineId, cost, MINER_MAX_SPEED_PER_STAR);
         if (result == MinePlayerProgress.MinerSpeedUpgradeResult.NO_MINER) {
@@ -333,8 +333,8 @@ public class MineUpgradePage extends BaseAscendPage {
         if (player == null) return;
 
         MinePlayerProgress.MinerProgressSnapshot minerState = mineProgress.getMinerSnapshot(mineId);
-        int speedLevel = minerState.getSpeedLevel();
-        int stars = minerState.getStars();
+        int speedLevel = minerState.speedLevel();
+        int stars = minerState.stars();
 
         long cost = getMinerEvolveCost(stars);
         MinePlayerProgress.MinerEvolutionResult result =
@@ -411,7 +411,7 @@ public class MineUpgradePage extends BaseAscendPage {
             return;
         }
         MinePlayerProgress.MinerProgressSnapshot minerState = mineProgress.getMinerSnapshot(mineId);
-        robotManager.syncMinerSpeed(playerRef.getUuid(), mineId, minerState.getSpeedLevel());
+        robotManager.syncMinerSpeed(playerRef.getUuid(), mineId, minerState.speedLevel());
     }
 
     private void syncMinerEvolution(Store<EntityStore> store, String mineId) {
@@ -427,8 +427,8 @@ public class MineUpgradePage extends BaseAscendPage {
         robotManager.syncMinerEvolution(
             playerRef.getUuid(),
             mineId,
-            minerState.getSpeedLevel(),
-            minerState.getStars(),
+            minerState.speedLevel(),
+            minerState.stars(),
             store.getExternalData().getWorld()
         );
     }

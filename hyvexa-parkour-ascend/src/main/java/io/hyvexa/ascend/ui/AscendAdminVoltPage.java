@@ -27,6 +27,7 @@ import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.data.AscendSettingsStore;
+import io.hyvexa.ascend.util.PrestigeHelper;
 import io.hyvexa.common.math.BigNumber;
 import io.hyvexa.common.util.FormatUtils;
 import io.hyvexa.common.util.SystemMessageUtils;
@@ -210,9 +211,7 @@ public class AscendAdminVoltPage extends InteractiveCustomUIPage<AscendAdminVolt
         }
 
         // Despawn all robots before resetting data to prevent completions with pre-reset multipliers
-        if (plugin.getRobotManager() != null) {
-            plugin.getRobotManager().despawnRobotsForPlayer(playerId);
-        }
+        PrestigeHelper.despawnRobots(playerId);
 
         // Complete active challenge if in one (same routing as normal ascension)
         ChallengeManager challengeManager = plugin.getChallengeManager();
@@ -244,9 +243,7 @@ public class AscendAdminVoltPage extends InteractiveCustomUIPage<AscendAdminVolt
         player.sendMessage(Message.raw("[Ascend] Ascension simulated! (x" + newCount + ")")
             .color(SystemMessageUtils.SUCCESS));
 
-        if (plugin.getAchievementManager() != null) {
-            plugin.getAchievementManager().checkAndUnlockAchievements(playerId, player);
-        }
+        PrestigeHelper.checkAchievements(playerId, player);
 
         UICommandBuilder commandBuilder = new UICommandBuilder();
         commandBuilder.set("#CurrentVoltValue.Text", "0");

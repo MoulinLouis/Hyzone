@@ -281,19 +281,6 @@ public class DatabaseManager {
         }
     }
 
-    public static void ensureColumnExists(Connection conn, String table, String column, String alterSql) {
-        try {
-            if (columnExists(conn, table, column)) {
-                return;
-            }
-            try (Statement stmt = conn.createStatement()) {
-                stmt.executeUpdate(alterSql);
-            }
-        } catch (SQLException e) {
-            LOGGER.atWarning().log("Failed to ensure column " + column + " on table " + table + ": " + e.getMessage());
-        }
-    }
-
     private void createPlayerCheckpointTimesTable(Connection conn) throws SQLException {
         String sql = """
             CREATE TABLE IF NOT EXISTS player_checkpoint_times (

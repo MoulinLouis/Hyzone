@@ -12,9 +12,9 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.AscendConstants;
-import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.transcendence.TranscendenceManager;
+import io.hyvexa.ascend.util.PrestigeHelper;
 import io.hyvexa.common.math.BigNumber;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.util.FormatUtils;
@@ -87,10 +87,7 @@ public class TranscendencePage extends BaseAscendPage {
         }
 
         // Despawn all robots before resetting data to prevent completions with pre-reset multipliers
-        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
-        if (plugin != null && plugin.getRobotManager() != null) {
-            plugin.getRobotManager().despawnRobotsForPlayer(playerId);
-        }
+        PrestigeHelper.despawnRobots(playerId);
 
         int newCount = transcendenceManager.performTranscendence(playerId);
         if (newCount < 0) {
@@ -110,9 +107,7 @@ public class TranscendencePage extends BaseAscendPage {
         }
 
         // Check achievements
-        if (plugin != null && plugin.getAchievementManager() != null) {
-            plugin.getAchievementManager().checkAndUnlockAchievements(playerId, player);
-        }
+        PrestigeHelper.checkAchievements(playerId, player);
 
         // Refresh display
         UICommandBuilder updateBuilder = new UICommandBuilder();

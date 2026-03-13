@@ -29,6 +29,8 @@ import java.util.UUID;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BiConsumer;
+import java.util.function.Predicate;
 
 public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.AutomationData> {
 
@@ -147,108 +149,20 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
         commandBuilder.set("#DisclaimerSpacer.Visible", showDisclaimer);
 
         // Auto-Upgrade section
-        boolean hasSkill = ascensionManager.hasAutoRunners(playerId);
-        boolean isEnabled = playerStore.isAutoUpgradeEnabled(playerId);
-
-        if (!hasSkill) {
-            commandBuilder.set("#UpgradeContent.Visible", false);
-            commandBuilder.set("#UpgradeLockedOverlay.Visible", true);
-        } else {
-            commandBuilder.set("#UpgradeContent.Visible", true);
-            commandBuilder.set("#UpgradeLockedOverlay.Visible", false);
-
-            if (isEnabled) {
-                commandBuilder.set("#ToggleBorder.Background", COLOR_ON);
-                commandBuilder.set("#ToggleText.Text", "Disable");
-                commandBuilder.set("#ToggleText.Style.TextColor", COLOR_ON);
-                commandBuilder.set("#StatusLabel.Text", "Status: ON");
-                commandBuilder.set("#StatusLabel.Style.TextColor", COLOR_ON);
-            } else {
-                commandBuilder.set("#ToggleBorder.Background", COLOR_ACCENT);
-                commandBuilder.set("#ToggleText.Text", "Enable");
-                commandBuilder.set("#ToggleText.Style.TextColor", COLOR_ACCENT);
-                commandBuilder.set("#StatusLabel.Text", "Status: OFF");
-                commandBuilder.set("#StatusLabel.Style.TextColor", COLOR_OFF);
-            }
-        }
+        renderToggleSection(commandBuilder, "Upgrade", "",
+            ascensionManager.hasAutoRunners(playerId), playerStore.isAutoUpgradeEnabled(playerId));
 
         // Auto-Evolution section
-        boolean hasEvoSkill = ascensionManager.hasAutoEvolution(playerId);
-        boolean isEvoEnabled = playerStore.isAutoEvolutionEnabled(playerId);
-
-        if (!hasEvoSkill) {
-            commandBuilder.set("#EvoContent.Visible", false);
-            commandBuilder.set("#EvoLockedOverlay.Visible", true);
-        } else {
-            commandBuilder.set("#EvoContent.Visible", true);
-            commandBuilder.set("#EvoLockedOverlay.Visible", false);
-
-            if (isEvoEnabled) {
-                commandBuilder.set("#EvoToggleBorder.Background", COLOR_ON);
-                commandBuilder.set("#EvoToggleText.Text", "Disable");
-                commandBuilder.set("#EvoToggleText.Style.TextColor", COLOR_ON);
-                commandBuilder.set("#EvoStatusLabel.Text", "Status: ON");
-                commandBuilder.set("#EvoStatusLabel.Style.TextColor", COLOR_ON);
-            } else {
-                commandBuilder.set("#EvoToggleBorder.Background", COLOR_ACCENT);
-                commandBuilder.set("#EvoToggleText.Text", "Enable");
-                commandBuilder.set("#EvoToggleText.Style.TextColor", COLOR_ACCENT);
-                commandBuilder.set("#EvoStatusLabel.Text", "Status: OFF");
-                commandBuilder.set("#EvoStatusLabel.Style.TextColor", COLOR_OFF);
-            }
-        }
+        renderToggleSection(commandBuilder, "Evo", "Evo",
+            ascensionManager.hasAutoEvolution(playerId), playerStore.isAutoEvolutionEnabled(playerId));
 
         // Auto-Ascend section
-        boolean hasAscSkill = ascensionManager.hasAutoAscend(playerId);
-        boolean isAscEnabled = playerStore.isAutoAscendEnabled(playerId);
-
-        if (!hasAscSkill) {
-            commandBuilder.set("#AscContent.Visible", false);
-            commandBuilder.set("#AscLockedOverlay.Visible", true);
-        } else {
-            commandBuilder.set("#AscContent.Visible", true);
-            commandBuilder.set("#AscLockedOverlay.Visible", false);
-
-            if (isAscEnabled) {
-                commandBuilder.set("#AscToggleBorder.Background", COLOR_ON);
-                commandBuilder.set("#AscToggleText.Text", "Disable");
-                commandBuilder.set("#AscToggleText.Style.TextColor", COLOR_ON);
-                commandBuilder.set("#AscStatusLabel.Text", "Status: ON");
-                commandBuilder.set("#AscStatusLabel.Style.TextColor", COLOR_ON);
-            } else {
-                commandBuilder.set("#AscToggleBorder.Background", COLOR_ACCENT);
-                commandBuilder.set("#AscToggleText.Text", "Enable");
-                commandBuilder.set("#AscToggleText.Style.TextColor", COLOR_ACCENT);
-                commandBuilder.set("#AscStatusLabel.Text", "Status: OFF");
-                commandBuilder.set("#AscStatusLabel.Style.TextColor", COLOR_OFF);
-            }
-        }
+        renderToggleSection(commandBuilder, "Asc", "Asc",
+            ascensionManager.hasAutoAscend(playerId), playerStore.isAutoAscendEnabled(playerId));
 
         // Auto-Elevation section
-        boolean hasElevAccess = ascensionManager.hasAutoElevation(playerId);
-        boolean isElevEnabled = playerStore.isAutoElevationEnabled(playerId);
-
-        if (!hasElevAccess) {
-            commandBuilder.set("#ElevContent.Visible", false);
-            commandBuilder.set("#ElevLockedOverlay.Visible", true);
-        } else {
-            commandBuilder.set("#ElevContent.Visible", true);
-            commandBuilder.set("#ElevLockedOverlay.Visible", false);
-
-            if (isElevEnabled) {
-                commandBuilder.set("#ElevToggleBorder.Background", COLOR_ON);
-                commandBuilder.set("#ElevToggleText.Text", "Disable");
-                commandBuilder.set("#ElevToggleText.Style.TextColor", COLOR_ON);
-                commandBuilder.set("#ElevStatusLabel.Text", "Status: ON");
-                commandBuilder.set("#ElevStatusLabel.Style.TextColor", COLOR_ON);
-            } else {
-                commandBuilder.set("#ElevToggleBorder.Background", COLOR_ACCENT);
-                commandBuilder.set("#ElevToggleText.Text", "Enable");
-                commandBuilder.set("#ElevToggleText.Style.TextColor", COLOR_ACCENT);
-                commandBuilder.set("#ElevStatusLabel.Text", "Status: OFF");
-                commandBuilder.set("#ElevStatusLabel.Style.TextColor", COLOR_OFF);
-            }
-        }
+        renderToggleSection(commandBuilder, "Elev", "Elev",
+            ascensionManager.hasAutoElevation(playerId), playerStore.isAutoElevationEnabled(playerId));
 
         // Timer field
         commandBuilder.set("#ElevTimerField.Value", String.valueOf(playerStore.getAutoElevationTimerSeconds(playerId)));
@@ -278,30 +192,8 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
         }
 
         // Auto-Summit section
-        boolean hasSumAccess = ascensionManager.hasAutoSummit(playerId);
-        boolean isSumEnabled = playerStore.isAutoSummitEnabled(playerId);
-
-        if (!hasSumAccess) {
-            commandBuilder.set("#SumContent.Visible", false);
-            commandBuilder.set("#SumLockedOverlay.Visible", true);
-        } else {
-            commandBuilder.set("#SumContent.Visible", true);
-            commandBuilder.set("#SumLockedOverlay.Visible", false);
-
-            if (isSumEnabled) {
-                commandBuilder.set("#SumToggleBorder.Background", COLOR_ON);
-                commandBuilder.set("#SumToggleText.Text", "Disable");
-                commandBuilder.set("#SumToggleText.Style.TextColor", COLOR_ON);
-                commandBuilder.set("#SumStatusLabel.Text", "Status: ON");
-                commandBuilder.set("#SumStatusLabel.Style.TextColor", COLOR_ON);
-            } else {
-                commandBuilder.set("#SumToggleBorder.Background", COLOR_ACCENT);
-                commandBuilder.set("#SumToggleText.Text", "Enable");
-                commandBuilder.set("#SumToggleText.Style.TextColor", COLOR_ACCENT);
-                commandBuilder.set("#SumStatusLabel.Text", "Status: OFF");
-                commandBuilder.set("#SumStatusLabel.Style.TextColor", COLOR_OFF);
-            }
-        }
+        renderToggleSection(commandBuilder, "Sum", "Sum",
+            ascensionManager.hasAutoSummit(playerId), playerStore.isAutoSummitEnabled(playerId));
 
         // Summit timer
         commandBuilder.set("#SumTimerField.Value", String.valueOf(playerStore.getAutoSummitTimerSeconds(playerId)));
@@ -510,72 +402,41 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
     }
 
     private void handleToggle(Ref<EntityStore> ref, Store<EntityStore> store) {
-        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-        Player player = store.getComponent(ref, Player.getComponentType());
-        if (playerRef == null || player == null) {
-            return;
-        }
-
-        UUID playerId = playerRef.getUuid();
-
-        if (!ascensionManager.hasAutoRunners(playerId)) {
-            player.sendMessage(Message.raw("[Automation] Unlock 'Auto-Upgrade' in the Ascendancy Tree first.")
-                .color(SystemMessageUtils.SECONDARY));
-            return;
-        }
-
-        boolean current = playerStore.isAutoUpgradeEnabled(playerId);
-        boolean newState = !current;
-        playerStore.setAutoUpgradeEnabled(playerId, newState);
-
-        if (newState) {
-            player.sendMessage(Message.raw("[Automation] Auto-upgrade enabled.")
-                .color(SystemMessageUtils.SUCCESS));
-        } else {
-            player.sendMessage(Message.raw("[Automation] Auto-upgrade disabled.")
-                .color(SystemMessageUtils.SECONDARY));
-        }
-
-        // Refresh UI
-        UICommandBuilder updateBuilder = new UICommandBuilder();
-        updateState(ref, store, updateBuilder);
-        sendUpdate(updateBuilder, null, false);
+        handleGenericToggle(ref, store,
+            id -> ascensionManager.hasAutoRunners(id),
+            id -> playerStore.isAutoUpgradeEnabled(id),
+            (id, state) -> playerStore.setAutoUpgradeEnabled(id, state),
+            "Auto-Upgrade", "Auto-upgrade");
     }
 
     private void handleToggleEvolution(Ref<EntityStore> ref, Store<EntityStore> store) {
-        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-        Player player = store.getComponent(ref, Player.getComponentType());
-        if (playerRef == null || player == null) {
-            return;
-        }
-
-        UUID playerId = playerRef.getUuid();
-
-        if (!ascensionManager.hasAutoEvolution(playerId)) {
-            player.sendMessage(Message.raw("[Automation] Unlock 'Auto-Evolution' in the Ascendancy Tree first.")
-                .color(SystemMessageUtils.SECONDARY));
-            return;
-        }
-
-        boolean current = playerStore.isAutoEvolutionEnabled(playerId);
-        boolean newState = !current;
-        playerStore.setAutoEvolutionEnabled(playerId, newState);
-
-        if (newState) {
-            player.sendMessage(Message.raw("[Automation] Auto-evolution enabled.")
-                .color(SystemMessageUtils.SUCCESS));
-        } else {
-            player.sendMessage(Message.raw("[Automation] Auto-evolution disabled.")
-                .color(SystemMessageUtils.SECONDARY));
-        }
-
-        // Refresh UI
-        UICommandBuilder updateBuilder = new UICommandBuilder();
-        updateState(ref, store, updateBuilder);
-        sendUpdate(updateBuilder, null, false);
+        handleGenericToggle(ref, store,
+            id -> ascensionManager.hasAutoEvolution(id),
+            id -> playerStore.isAutoEvolutionEnabled(id),
+            (id, state) -> playerStore.setAutoEvolutionEnabled(id, state),
+            "Auto-Evolution", "Auto-evolution");
     }
 
     private void handleToggleAscend(Ref<EntityStore> ref, Store<EntityStore> store) {
+        handleGenericToggle(ref, store,
+            id -> ascensionManager.hasAutoAscend(id),
+            id -> playerStore.isAutoAscendEnabled(id),
+            (id, state) -> playerStore.setAutoAscendEnabled(id, state),
+            "Auto Ascend", "Auto ascend");
+    }
+
+    private void handleToggleElevation(Ref<EntityStore> ref, Store<EntityStore> store) {
+        handleGenericToggle(ref, store,
+            id -> ascensionManager.hasAutoElevation(id),
+            id -> playerStore.isAutoElevationEnabled(id),
+            (id, state) -> playerStore.setAutoElevationEnabled(id, state),
+            "Auto-Elevation", "Auto-elevation");
+    }
+
+    private void handleGenericToggle(Ref<EntityStore> ref, Store<EntityStore> store,
+                                     Predicate<UUID> hasSkill, Predicate<UUID> isEnabled,
+                                     BiConsumer<UUID, Boolean> setEnabled,
+                                     String skillName, String featureName) {
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         Player player = store.getComponent(ref, Player.getComponentType());
         if (playerRef == null || player == null) {
@@ -584,21 +445,20 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
 
         UUID playerId = playerRef.getUuid();
 
-        if (!ascensionManager.hasAutoAscend(playerId)) {
-            player.sendMessage(Message.raw("[Automation] Unlock 'Auto Ascend' in the Ascendancy Tree first.")
+        if (!hasSkill.test(playerId)) {
+            player.sendMessage(Message.raw("[Automation] Unlock '" + skillName + "' in the Ascendancy Tree first.")
                 .color(SystemMessageUtils.SECONDARY));
             return;
         }
 
-        boolean current = playerStore.isAutoAscendEnabled(playerId);
-        boolean newState = !current;
-        playerStore.setAutoAscendEnabled(playerId, newState);
+        boolean newState = !isEnabled.test(playerId);
+        setEnabled.accept(playerId, newState);
 
         if (newState) {
-            player.sendMessage(Message.raw("[Automation] Auto ascend enabled.")
+            player.sendMessage(Message.raw("[Automation] " + featureName + " enabled.")
                 .color(SystemMessageUtils.SUCCESS));
         } else {
-            player.sendMessage(Message.raw("[Automation] Auto ascend disabled.")
+            player.sendMessage(Message.raw("[Automation] " + featureName + " disabled.")
                 .color(SystemMessageUtils.SECONDARY));
         }
 
@@ -607,36 +467,36 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
         sendUpdate(updateBuilder, null, false);
     }
 
-    private void handleToggleElevation(Ref<EntityStore> ref, Store<EntityStore> store) {
-        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-        Player player = store.getComponent(ref, Player.getComponentType());
-        if (playerRef == null || player == null) {
-            return;
-        }
-
-        UUID playerId = playerRef.getUuid();
-
-        if (!ascensionManager.hasAutoElevation(playerId)) {
-            player.sendMessage(Message.raw("[Automation] Unlock 'Auto-Elevation' in the Ascendancy Tree first.")
-                .color(SystemMessageUtils.SECONDARY));
-            return;
-        }
-
-        boolean current = playerStore.isAutoElevationEnabled(playerId);
-        boolean newState = !current;
-        playerStore.setAutoElevationEnabled(playerId, newState);
-
-        if (newState) {
-            player.sendMessage(Message.raw("[Automation] Auto-elevation enabled.")
-                .color(SystemMessageUtils.SUCCESS));
+    /**
+     * Renders the locked/unlocked toggle UI for a single automation section.
+     *
+     * @param contentPrefix prefix for Content/LockedOverlay elements (e.g. "Upgrade", "Evo")
+     * @param togglePrefix  prefix for ToggleBorder/ToggleText/StatusLabel elements (e.g. "" for Upgrade, "Evo" for Evolution)
+     */
+    private void renderToggleSection(UICommandBuilder commandBuilder,
+                                     String contentPrefix, String togglePrefix,
+                                     boolean hasSkill, boolean isEnabled) {
+        if (!hasSkill) {
+            commandBuilder.set("#" + contentPrefix + "Content.Visible", false);
+            commandBuilder.set("#" + contentPrefix + "LockedOverlay.Visible", true);
         } else {
-            player.sendMessage(Message.raw("[Automation] Auto-elevation disabled.")
-                .color(SystemMessageUtils.SECONDARY));
-        }
+            commandBuilder.set("#" + contentPrefix + "Content.Visible", true);
+            commandBuilder.set("#" + contentPrefix + "LockedOverlay.Visible", false);
 
-        UICommandBuilder updateBuilder = new UICommandBuilder();
-        updateState(ref, store, updateBuilder);
-        sendUpdate(updateBuilder, null, false);
+            if (isEnabled) {
+                commandBuilder.set("#" + togglePrefix + "ToggleBorder.Background", COLOR_ON);
+                commandBuilder.set("#" + togglePrefix + "ToggleText.Text", "Disable");
+                commandBuilder.set("#" + togglePrefix + "ToggleText.Style.TextColor", COLOR_ON);
+                commandBuilder.set("#" + togglePrefix + "StatusLabel.Text", "Status: ON");
+                commandBuilder.set("#" + togglePrefix + "StatusLabel.Style.TextColor", COLOR_ON);
+            } else {
+                commandBuilder.set("#" + togglePrefix + "ToggleBorder.Background", COLOR_ACCENT);
+                commandBuilder.set("#" + togglePrefix + "ToggleText.Text", "Enable");
+                commandBuilder.set("#" + togglePrefix + "ToggleText.Style.TextColor", COLOR_ACCENT);
+                commandBuilder.set("#" + togglePrefix + "StatusLabel.Text", "Status: OFF");
+                commandBuilder.set("#" + togglePrefix + "StatusLabel.Style.TextColor", COLOR_OFF);
+            }
+        }
     }
 
     private void handleTimerChanged(Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -756,35 +616,11 @@ public class AutomationPage extends InteractiveCustomUIPage<AutomationPage.Autom
     }
 
     private void handleToggleSummit(Ref<EntityStore> ref, Store<EntityStore> store) {
-        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-        Player player = store.getComponent(ref, Player.getComponentType());
-        if (playerRef == null || player == null) {
-            return;
-        }
-
-        UUID playerId = playerRef.getUuid();
-
-        if (!ascensionManager.hasAutoSummit(playerId)) {
-            player.sendMessage(Message.raw("[Automation] Unlock 'Auto-Summit' in the Ascendancy Tree first.")
-                .color(SystemMessageUtils.SECONDARY));
-            return;
-        }
-
-        boolean current = playerStore.isAutoSummitEnabled(playerId);
-        boolean newState = !current;
-        playerStore.setAutoSummitEnabled(playerId, newState);
-
-        if (newState) {
-            player.sendMessage(Message.raw("[Automation] Auto-summit enabled.")
-                .color(SystemMessageUtils.SUCCESS));
-        } else {
-            player.sendMessage(Message.raw("[Automation] Auto-summit disabled.")
-                .color(SystemMessageUtils.SECONDARY));
-        }
-
-        UICommandBuilder updateBuilder = new UICommandBuilder();
-        updateState(ref, store, updateBuilder);
-        sendUpdate(updateBuilder, null, false);
+        handleGenericToggle(ref, store,
+            id -> ascensionManager.hasAutoSummit(id),
+            id -> playerStore.isAutoSummitEnabled(id),
+            (id, state) -> playerStore.setAutoSummitEnabled(id, state),
+            "Auto-Summit", "Auto-summit");
     }
 
     private void handleSumTimerChanged(Ref<EntityStore> ref, Store<EntityStore> store) {

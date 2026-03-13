@@ -63,26 +63,7 @@ public class AdminIndexPage extends InteractiveCustomUIPage<AdminIndexPage.Admin
     public void build(@Nonnull Ref<EntityStore> ref, @Nonnull UICommandBuilder uiCommandBuilder,
                       @Nonnull UIEventBuilder uiEventBuilder, @Nonnull Store<EntityStore> store) {
         uiCommandBuilder.append("Pages/Parkour_AdminIndex.ui");
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#MapsButton",
-                EventData.of(AdminIndexData.KEY_BUTTON, BUTTON_MAPS), false);
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ProgressButton",
-                EventData.of(AdminIndexData.KEY_BUTTON, BUTTON_PROGRESS), false);
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SettingsButton",
-                EventData.of(AdminIndexData.KEY_BUTTON, BUTTON_SETTINGS), false);
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#PlayersButton",
-                EventData.of(AdminIndexData.KEY_BUTTON, BUTTON_PLAYERS), false);
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#PlaytimeButton",
-                EventData.of(AdminIndexData.KEY_BUTTON, BUTTON_PLAYTIME), false);
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#PopulationButton",
-                EventData.of(AdminIndexData.KEY_BUTTON, BUTTON_POPULATION), false);
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#GlobalMessageButton",
-                EventData.of(AdminIndexData.KEY_BUTTON, BUTTON_GLOBAL_MESSAGES), false);
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#MedalRewardsButton",
-                EventData.of(AdminIndexData.KEY_BUTTON, BUTTON_MEDAL_REWARDS), false);
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#AnnouncementField",
-                EventData.of(AdminIndexData.KEY_ANNOUNCEMENT, "#AnnouncementField.Value"), false);
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#AnnouncementSendButton",
-                EventData.of(AdminIndexData.KEY_BUTTON, BUTTON_BROADCAST), false);
+        bindEvents(uiEventBuilder);
         uiCommandBuilder.set("#AnnouncementField.Value", announcementInput);
     }
 
@@ -166,27 +147,31 @@ public class AdminIndexPage extends InteractiveCustomUIPage<AdminIndexPage.Admin
         UICommandBuilder commandBuilder = new UICommandBuilder();
         UIEventBuilder eventBuilder = new UIEventBuilder();
         commandBuilder.set("#AnnouncementField.Value", announcementInput);
-        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#MapsButton",
-                EventData.of(AdminIndexData.KEY_BUTTON, BUTTON_MAPS), false);
-        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ProgressButton",
-                EventData.of(AdminIndexData.KEY_BUTTON, BUTTON_PROGRESS), false);
-        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SettingsButton",
-                EventData.of(AdminIndexData.KEY_BUTTON, BUTTON_SETTINGS), false);
-        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#PlayersButton",
-                EventData.of(AdminIndexData.KEY_BUTTON, BUTTON_PLAYERS), false);
-        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#PlaytimeButton",
-                EventData.of(AdminIndexData.KEY_BUTTON, BUTTON_PLAYTIME), false);
-        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#PopulationButton",
-                EventData.of(AdminIndexData.KEY_BUTTON, BUTTON_POPULATION), false);
-        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#GlobalMessageButton",
-                EventData.of(AdminIndexData.KEY_BUTTON, BUTTON_GLOBAL_MESSAGES), false);
-        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#MedalRewardsButton",
-                EventData.of(AdminIndexData.KEY_BUTTON, BUTTON_MEDAL_REWARDS), false);
-        eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#AnnouncementField",
-                EventData.of(AdminIndexData.KEY_ANNOUNCEMENT, "#AnnouncementField.Value"), false);
-        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#AnnouncementSendButton",
-                EventData.of(AdminIndexData.KEY_BUTTON, BUTTON_BROADCAST), false);
+        bindEvents(eventBuilder);
         this.sendUpdate(commandBuilder, eventBuilder, false);
+    }
+
+    private void bindEvents(UIEventBuilder uiEventBuilder) {
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#MapsButton",
+                EventData.of(AdminIndexData.KEY_BUTTON, BUTTON_MAPS), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ProgressButton",
+                EventData.of(AdminIndexData.KEY_BUTTON, BUTTON_PROGRESS), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SettingsButton",
+                EventData.of(AdminIndexData.KEY_BUTTON, BUTTON_SETTINGS), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#PlayersButton",
+                EventData.of(AdminIndexData.KEY_BUTTON, BUTTON_PLAYERS), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#PlaytimeButton",
+                EventData.of(AdminIndexData.KEY_BUTTON, BUTTON_PLAYTIME), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#PopulationButton",
+                EventData.of(AdminIndexData.KEY_BUTTON, BUTTON_POPULATION), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#GlobalMessageButton",
+                EventData.of(AdminIndexData.KEY_BUTTON, BUTTON_GLOBAL_MESSAGES), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#MedalRewardsButton",
+                EventData.of(AdminIndexData.KEY_BUTTON, BUTTON_MEDAL_REWARDS), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#AnnouncementField",
+                EventData.of(AdminIndexData.KEY_ANNOUNCEMENT, "#AnnouncementField.Value"), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#AnnouncementSendButton",
+                EventData.of(AdminIndexData.KEY_BUTTON, BUTTON_BROADCAST), false);
     }
 
     public static class AdminIndexData {

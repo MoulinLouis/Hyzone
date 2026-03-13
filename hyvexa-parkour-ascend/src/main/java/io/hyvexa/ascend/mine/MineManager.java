@@ -137,7 +137,7 @@ public class MineManager {
 
     public boolean generateZone(World world, MineZone zone) {
         ResolvedZoneTable resolvedTable = resolvedZoneTables.computeIfAbsent(zone.getId(), ignored -> resolveZoneTable(zone));
-        if (resolvedTable == null || resolvedTable.blockIds.length == 0) return false;
+        if (resolvedTable == null || resolvedTable.blockIds().length == 0) return false;
 
         // Fill all positions in the zone
         ThreadLocalRandom random = ThreadLocalRandom.current();
@@ -160,11 +160,11 @@ public class MineManager {
                     continue;
                 }
                 for (int y = zone.getMinY(); y <= zone.getMaxY(); y++) {
-                    double roll = random.nextDouble() * resolvedTable.totalWeight;
-                    int selectedBlockId = resolvedTable.blockIds[resolvedTable.blockIds.length - 1];
-                    for (int j = 0; j < resolvedTable.cumulativeWeights.length; j++) {
-                        if (roll < resolvedTable.cumulativeWeights[j]) {
-                            selectedBlockId = resolvedTable.blockIds[j];
+                    double roll = random.nextDouble() * resolvedTable.totalWeight();
+                    int selectedBlockId = resolvedTable.blockIds()[resolvedTable.blockIds().length - 1];
+                    for (int j = 0; j < resolvedTable.cumulativeWeights().length; j++) {
+                        if (roll < resolvedTable.cumulativeWeights()[j]) {
+                            selectedBlockId = resolvedTable.blockIds()[j];
                             break;
                         }
                     }
@@ -207,15 +207,5 @@ public class MineManager {
         return ((long) (x & 0xFFFFF) << 40) | ((long) (y & 0xFFFFF) << 20) | (z & 0xFFFFF);
     }
 
-    private static final class ResolvedZoneTable {
-        final int[] blockIds;
-        final double[] cumulativeWeights;
-        final double totalWeight;
-
-        private ResolvedZoneTable(int[] blockIds, double[] cumulativeWeights, double totalWeight) {
-            this.blockIds = blockIds;
-            this.cumulativeWeights = cumulativeWeights;
-            this.totalWeight = totalWeight;
-        }
-    }
+    private record ResolvedZoneTable(int[] blockIds, double[] cumulativeWeights, double totalWeight) {}
 }

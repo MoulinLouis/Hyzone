@@ -7,8 +7,6 @@ import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -82,23 +80,8 @@ public class AscensionManager {
         // Mark for full child-row deletion so stale DB rows are purged
         playerStore.markResetPending(playerId);
 
-        // Preserve personal bests before clearing map progress
-        Map<String, Long> savedPBs = new HashMap<>();
-        for (Map.Entry<String, AscendPlayerProgress.MapProgress> entry : progress.getMapProgress().entrySet()) {
-            Long bestTime = entry.getValue().getBestTimeMs();
-            if (bestTime != null) {
-                savedPBs.put(entry.getKey(), bestTime);
-            }
-        }
-
-        // Reset all map progress (multipliers, unlocks, robots)
-        progress.getMapProgress().clear();
-
-        // Restore personal bests
-        for (Map.Entry<String, Long> entry : savedPBs.entrySet()) {
-            AscendPlayerProgress.MapProgress mp = progress.getOrCreateMapProgress(entry.getKey());
-            mp.setBestTimeMs(entry.getValue());
-        }
+        // Reset all map progress (multipliers, unlocks, robots) while preserving PBs
+        progress.resetMapProgressPreservingPBs();
 
         playerStore.markDirty(playerId);
 

@@ -31,7 +31,6 @@ import java.util.Set;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
 public class MapSelectPage extends BaseParkourPage {
@@ -127,9 +126,8 @@ public class MapSelectPage extends BaseParkourPage {
         }
         runTracker.setActiveMap(playerRef.getUuid(), mapId, map.getStart());
         World world = store.getExternalData().getWorld();
-        Vector3d position = new Vector3d(map.getStart().getX(), map.getStart().getY(), map.getStart().getZ());
-        Vector3f rotation = new Vector3f(map.getStart().getRotX(), map.getStart().getRotY(),
-                map.getStart().getRotZ());
+        Vector3d position = map.getStart().toPosition();
+        Vector3f rotation = map.getStart().toRotation();
         store.addComponent(ref, Teleport.getComponentType(), new Teleport(world, position, rotation));
         String mapName = map.getName() != null && !map.getName().isBlank() ? map.getName() : map.getId();
         player.sendMessage(SystemMessageUtils.withParkourPrefix(
@@ -149,12 +147,7 @@ public class MapSelectPage extends BaseParkourPage {
             return;
         }
         List<Map> maps = new ArrayList<>(mapStore.listMaps());
-        maps.sort(Comparator.comparingInt((Map map) -> {
-                    int difficulty = map.getDifficulty();
-                    return difficulty <= 0 ? Integer.MAX_VALUE : difficulty;
-                })
-                .thenComparing(map -> map.getName() != null ? map.getName() : map.getId(),
-                        String.CASE_INSENSITIVE_ORDER));
+        maps.sort(ParkourUtils.MAP_DIFFICULTY_COMPARATOR);
         String accentColor = UIColorUtils.getCategoryAccentColor(category);
         int index = 0;
         for (Map map : maps) {

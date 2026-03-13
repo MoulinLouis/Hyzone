@@ -15,7 +15,6 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.ui.PaginationState;
 import io.hyvexa.parkour.data.MapStore;
@@ -102,18 +101,7 @@ public class AdminPlayersPage extends InteractiveCustomUIPage<AdminPlayersPage.A
     }
 
     private void openIndex(Ref<EntityStore> ref, Store<EntityStore> store) {
-        Player player = store.getComponent(ref, Player.getComponentType());
-        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-        if (player == null || playerRef == null) {
-            return;
-        }
-        HyvexaPlugin plugin = HyvexaPlugin.getInstance();
-        if (plugin == null) {
-            return;
-        }
-        player.getPageManager().openCustomPage(ref, store,
-                new AdminIndexPage(playerRef, mapStore, progressStore, plugin.getSettingsStore(),
-                        plugin.getPlayerCountStore()));
+        AdminPageUtils.openIndex(ref, store);
     }
 
     private UUID parsePlayerId(String raw, Store<EntityStore> store, Ref<EntityStore> ref) {
@@ -164,7 +152,7 @@ public class AdminPlayersPage extends InteractiveCustomUIPage<AdminPlayersPage.A
         }
         rows.sort(Comparator.comparing((PlayerRow row) -> row.name.toLowerCase(Locale.ROOT))
                 .thenComparing(row -> row.playerId));
-        String filter = searchText != null ? searchText.trim().toLowerCase(Locale.ROOT) : "";
+        String filter = searchText.trim().toLowerCase(Locale.ROOT);
         List<PlayerRow> filtered = new ArrayList<>();
         for (PlayerRow row : rows) {
             if (!filter.isEmpty() && !row.name.toLowerCase(Locale.ROOT).startsWith(filter)) {

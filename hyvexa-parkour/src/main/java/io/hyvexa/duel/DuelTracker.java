@@ -377,9 +377,8 @@ public class DuelTracker {
             player.sendMessage(SystemMessageUtils.duelError("World not available."));
             return false;
         }
-        Vector3d position = new Vector3d(map.getStart().getX(), map.getStart().getY(), map.getStart().getZ());
-        Vector3f rotation = new Vector3f(map.getStart().getRotX(), map.getStart().getRotY(), map.getStart().getRotZ());
-        store.addComponent(ref, Teleport.getComponentType(), new Teleport(world, position, rotation));
+        store.addComponent(ref, Teleport.getComponentType(),
+                new Teleport(world, map.getStart().toPosition(), map.getStart().toRotation()));
         return true;
     }
 
@@ -411,9 +410,8 @@ public class DuelTracker {
         if (world == null) {
             return false;
         }
-        Vector3d position = new Vector3d(checkpoint.getX(), checkpoint.getY(), checkpoint.getZ());
-        Vector3f rotation = new Vector3f(checkpoint.getRotX(), checkpoint.getRotY(), checkpoint.getRotZ());
-        store.addComponent(ref, Teleport.getComponentType(), new Teleport(world, position, rotation));
+        store.addComponent(ref, Teleport.getComponentType(),
+                new Teleport(world, checkpoint.toPosition(), checkpoint.toRotation()));
         state.fallState.reset();
         return true;
     }
@@ -487,9 +485,8 @@ public class DuelTracker {
         if (world == null) {
             return;
         }
-        Vector3d startPos = new Vector3d(map.getStart().getX(), map.getStart().getY(), map.getStart().getZ());
-        Vector3f startRot = new Vector3f(map.getStart().getRotX(), map.getStart().getRotY(), map.getStart().getRotZ());
-        context.store.addComponent(context.ref, Teleport.getComponentType(), new Teleport(world, startPos, startRot));
+        context.store.addComponent(context.ref, Teleport.getComponentType(),
+                new Teleport(world, map.getStart().toPosition(), map.getStart().toRotation()));
     }
 
     private void checkCheckpoints(DuelPlayerState state, PlayerRef playerRef, Player player, Vector3d position,
@@ -553,9 +550,8 @@ public class DuelTracker {
         if (world == null) {
             return;
         }
-        Vector3d position = new Vector3d(spawn.getX(), spawn.getY(), spawn.getZ());
-        Vector3f rotation = new Vector3f(spawn.getRotX(), spawn.getRotY(), spawn.getRotZ());
-        store.addComponent(ref, Teleport.getComponentType(), new Teleport(world, position, rotation));
+        store.addComponent(ref, Teleport.getComponentType(),
+                new Teleport(world, spawn.toPosition(), spawn.toRotation()));
     }
 
     private void preparePlayerForMatch(@Nullable PlayerRef playerRef, Map map) {
@@ -581,10 +577,8 @@ public class DuelTracker {
             }
             resetVipSpeedForDuel(ref, store, playerRef);
             if (map.getStart() != null) {
-                Vector3d position = new Vector3d(map.getStart().getX(), map.getStart().getY(), map.getStart().getZ());
-                Vector3f rotation = new Vector3f(map.getStart().getRotX(), map.getStart().getRotY(),
-                        map.getStart().getRotZ());
-                store.addComponent(ref, Teleport.getComponentType(), new Teleport(world, position, rotation));
+                store.addComponent(ref, Teleport.getComponentType(),
+                        new Teleport(world, map.getStart().toPosition(), map.getStart().toRotation()));
             }
             InventoryUtils.clearAllItems(player);
             InventoryUtils.giveDuelItems(player, map);

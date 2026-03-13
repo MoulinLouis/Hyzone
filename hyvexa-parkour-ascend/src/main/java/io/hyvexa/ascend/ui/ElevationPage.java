@@ -19,7 +19,7 @@ import io.hyvexa.ascend.data.AscendMapStore;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.hud.AscendHudManager;
 import io.hyvexa.ascend.hud.ToastType;
-import io.hyvexa.ascend.robot.RobotManager;
+import io.hyvexa.ascend.util.PrestigeHelper;
 import io.hyvexa.common.math.BigNumber;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.util.FormatUtils;
@@ -104,12 +104,7 @@ public class ElevationPage extends BaseAscendPage {
         }
 
         // Despawn all robots before resetting data to prevent completions with pre-reset multipliers
-        if (plugin != null) {
-            RobotManager robotManager = plugin.getRobotManager();
-            if (robotManager != null) {
-                robotManager.despawnRobotsForPlayer(playerId);
-            }
-        }
+        PrestigeHelper.despawnRobots(playerId);
 
         // Set new elevation and reset volt/accumulators atomically
         int newElevation = currentElevation + purchase.levels;
@@ -135,9 +130,7 @@ public class ElevationPage extends BaseAscendPage {
             playerStore.resetProgressForElevation(playerId, firstMapId);
 
             // Check achievements
-            if (plugin.getAchievementManager() != null) {
-                plugin.getAchievementManager().checkAndUnlockAchievements(playerId, player);
-            }
+            PrestigeHelper.checkAchievements(playerId, player);
         }
 
         // Refresh display only if still current page

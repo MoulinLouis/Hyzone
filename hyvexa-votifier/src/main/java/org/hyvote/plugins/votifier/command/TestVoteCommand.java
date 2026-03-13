@@ -1,6 +1,5 @@
 package org.hyvote.plugins.votifier.command;
 
-import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.AbstractCommand;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -8,10 +7,7 @@ import com.hypixel.hytale.server.core.command.system.arguments.system.DefaultArg
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import org.hyvote.plugins.votifier.HytaleVotifierPlugin;
-import org.hyvote.plugins.votifier.event.VoteEvent;
-import org.hyvote.plugins.votifier.util.BroadcastUtil;
-import org.hyvote.plugins.votifier.util.RewardCommandUtil;
-import org.hyvote.plugins.votifier.util.VoteNotificationUtil;
+import org.hyvote.plugins.votifier.http.VoteProcessor;
 import org.hyvote.plugins.votifier.vote.Vote;
 
 import java.util.concurrent.CompletableFuture;
@@ -26,7 +22,6 @@ import java.util.logging.Level;
  * from within the game, useful for testing vote reward plugins without requiring
  * actual vote site integration.</p>
  *
- * @see VoteEvent
  * @see Vote
  */
 public class TestVoteCommand extends AbstractCommand {
@@ -64,18 +59,8 @@ public class TestVoteCommand extends AbstractCommand {
         // Create Vote record
         Vote vote = new Vote(serviceName, username, address, System.currentTimeMillis());
 
-        // Fire VoteEvent
-        VoteEvent voteEvent = new VoteEvent(plugin, vote);
-        HytaleServer.get().getEventBus().dispatchFor(VoteEvent.class, plugin.getClass()).dispatch(voteEvent);
-
-        // Display toast notification to the player if enabled
-        VoteNotificationUtil.displayVoteToast(plugin, vote);
-
-        // Broadcast vote announcement to all online players if enabled
-        BroadcastUtil.broadcastVote(plugin, vote);
-
-        // Execute reward commands
-        RewardCommandUtil.executeRewardCommands(plugin, vote);
+        // Dispatch vote (fires event, records vote, sends notifications, executes rewards)
+        VoteProcessor.dispatchVote(plugin, vote);
 
         // Send feedback to command sender
         context.sendMessage(Message.raw("Test vote fired for " + username + " from " + serviceName));

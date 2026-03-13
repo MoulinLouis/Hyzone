@@ -65,7 +65,7 @@ public class PetTestCommand extends AbstractAsyncCommand {
             return CompletableFuture.completedFuture(null);
         }
 
-        String[] args = CommandUtils.getArgs(ctx);
+        String[] args = CommandUtils.tokenize(ctx);
         if (args.length == 0) {
             sendHelp(ctx);
             return CompletableFuture.completedFuture(null);

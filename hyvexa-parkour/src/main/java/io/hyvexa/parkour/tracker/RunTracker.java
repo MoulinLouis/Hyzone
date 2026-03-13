@@ -341,8 +341,8 @@ public class RunTracker {
         if (world == null) {
             return true;
         }
-        Vector3d position = new Vector3d(returnPoint.getX(), returnPoint.getY(), returnPoint.getZ());
-        Vector3f rotation = new Vector3f(returnPoint.getRotX(), returnPoint.getRotY(), returnPoint.getRotZ());
+        Vector3d position = returnPoint.toPosition();
+        Vector3f rotation = returnPoint.toRotation();
         teleporter.addTeleport(ref, store, null, new Teleport(world, position, rotation));
         run.fallState.fallStartTime = null;
         run.fallState.lastY = null;
@@ -603,10 +603,8 @@ public class RunTracker {
             return;
         }
         setActiveMap(playerRef.getUuid(), map.getId(), map.getStart());
-        Vector3d position = new Vector3d(map.getStart().getX(), map.getStart().getY(), map.getStart().getZ());
-        Vector3f rotation = new Vector3f(map.getStart().getRotX(), map.getStart().getRotY(),
-                map.getStart().getRotZ());
-        teleporter.addTeleport(ref, store, buffer, new Teleport(store.getExternalData().getWorld(), position, rotation));
+        teleporter.addTeleport(ref, store, buffer,
+                new Teleport(store.getExternalData().getWorld(), map.getStart().toPosition(), map.getStart().toRotation()));
         teleporter.recordTeleport(playerRef.getUuid(), RunTeleporter.TeleportCause.START_TRIGGER);
         player.sendMessage(buildRunStartMessage(map));
         InventoryUtils.giveRunItems(player, map, false);
@@ -624,10 +622,8 @@ public class RunTracker {
         }
         TransformData leaveTeleport = map.getLeaveTeleport();
         if (leaveTeleport != null) {
-            Vector3d targetPosition = new Vector3d(leaveTeleport.getX(), leaveTeleport.getY(), leaveTeleport.getZ());
-            Vector3f targetRotation = new Vector3f(leaveTeleport.getRotX(), leaveTeleport.getRotY(),
-                    leaveTeleport.getRotZ());
-            teleporter.addTeleport(ref, store, buffer, new Teleport(store.getExternalData().getWorld(), targetPosition, targetRotation));
+            teleporter.addTeleport(ref, store, buffer,
+                    new Teleport(store.getExternalData().getWorld(), leaveTeleport.toPosition(), leaveTeleport.toRotation()));
             teleporter.recordTeleport(playerRef.getUuid(), RunTeleporter.TeleportCause.LEAVE_TRIGGER);
         }
         clearActiveMap(playerRef.getUuid());
@@ -827,7 +823,7 @@ public class RunTracker {
             run.startPosition = null;
             return;
         }
-        run.startPosition = new Vector3d(start.getX(), start.getY(), start.getZ());
+        run.startPosition = start.toPosition();
         run.waitingForStart = true;
         run.startTimeMs = System.currentTimeMillis();
         run.elapsedMs = 0L;

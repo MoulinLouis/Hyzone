@@ -33,10 +33,6 @@ public class PurgeSkinShopPage extends InteractiveCustomUIPage<PurgeSkinShopPage
     private static final String BUTTON_CANCEL = "Cancel";
     private static final String PREFIX_BUY = "Buy:";
 
-    private static final List<String> PREVIEW_IDS = List.of(
-            "AK47Default", "AK47Asimov", "AK47Blossom", "AK47CyberpunkNeon", "AK47FrozenVoltage"
-    );
-
     private final UUID playerId;
     // Pending buy confirmation — stores "weaponId:skinId" while confirm overlay is shown
     private String pendingBuyKey;
@@ -197,7 +193,7 @@ public class PurgeSkinShopPage extends InteractiveCustomUIPage<PurgeSkinShopPage
 
             // Toggle preview image
             String previewKey = def.getWeaponId() + def.getSkinId();
-            for (String previewId : PREVIEW_IDS) {
+            for (String previewId : PurgeSkinRegistry.PREVIEW_IDS) {
                 commandBuilder.set(root + " #Prev" + previewId + ".Visible", previewId.equals(previewKey));
             }
 

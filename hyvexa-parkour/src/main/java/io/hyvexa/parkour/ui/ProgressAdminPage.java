@@ -179,15 +179,7 @@ public class ProgressAdminPage extends InteractiveCustomUIPage<ProgressAdminPage
     }
 
     private void openIndex(Ref<EntityStore> ref, Store<EntityStore> store) {
-        Player player = store.getComponent(ref, Player.getComponentType());
-        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-        if (player == null || playerRef == null) {
-            return;
-        }
-        MapStore mapStore = HyvexaPlugin.getInstance().getMapStore();
-        player.getPageManager().openCustomPage(ref, store,
-                new AdminIndexPage(playerRef, mapStore, progressStore, HyvexaPlugin.getInstance().getSettingsStore(),
-                        HyvexaPlugin.getInstance().getPlayerCountStore()));
+        AdminPageUtils.openIndex(ref, store);
     }
 
     private void populateFields(UICommandBuilder commandBuilder) {

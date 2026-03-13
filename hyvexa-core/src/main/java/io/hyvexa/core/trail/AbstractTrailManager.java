@@ -236,41 +236,27 @@ abstract class AbstractTrailManager<TState> {
     }
 
     void broadcastPacket(World world, List<ViewerState> viewers, ToClientPacket packet) {
-        for (ViewerState viewer : viewers) {
-            if (viewer == null) {
-                continue;
-            }
-            PlayerRef playerRef = viewer.playerRef();
-            if (playerRef == null || !playerRef.isValid()) {
-                continue;
-            }
-            Ref<EntityStore> viewerRef = playerRef.getReference();
-            if (viewerRef == null || !viewerRef.isValid()) {
-                continue;
-            }
-            Store<EntityStore> viewerStore = viewerRef.getStore();
-            if (viewerStore.getExternalData().getWorld() != world) {
-                continue;
-            }
-            PacketHandler packetHandler = playerRef.getPacketHandler();
-            if (packetHandler == null) {
-                continue;
-            }
-            packetHandler.writeNoCache(packet);
-        }
+        broadcastPacket(world, viewers, packet, 0, 0, 0, Double.MAX_VALUE);
     }
 
     void broadcastPacket(World world, List<ViewerState> viewers, ToClientPacket packet,
                          double sourceX, double sourceY, double sourceZ) {
+        broadcastPacket(world, viewers, packet, sourceX, sourceY, sourceZ, VIEWER_CULL_DISTANCE_SQ);
+    }
+
+    private void broadcastPacket(World world, List<ViewerState> viewers, ToClientPacket packet,
+                                 double sourceX, double sourceY, double sourceZ, double maxDistanceSq) {
         for (ViewerState viewer : viewers) {
             if (viewer == null) {
                 continue;
             }
-            double dx = viewer.x() - sourceX;
-            double dy = viewer.y() - sourceY;
-            double dz = viewer.z() - sourceZ;
-            if ((dx * dx) + (dy * dy) + (dz * dz) > VIEWER_CULL_DISTANCE_SQ) {
-                continue;
+            if (maxDistanceSq < Double.MAX_VALUE) {
+                double dx = viewer.x() - sourceX;
+                double dy = viewer.y() - sourceY;
+                double dz = viewer.z() - sourceZ;
+                if ((dx * dx) + (dy * dy) + (dz * dz) > maxDistanceSq) {
+                    continue;
+                }
             }
             PlayerRef playerRef = viewer.playerRef();
             if (playerRef == null || !playerRef.isValid()) {

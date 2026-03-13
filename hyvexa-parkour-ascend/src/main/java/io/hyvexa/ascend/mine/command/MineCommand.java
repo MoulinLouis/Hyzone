@@ -81,7 +81,7 @@ public class MineCommand extends AbstractAsyncCommand {
                 return;
             }
 
-            String[] args = CommandUtils.getArgs(ctx);
+            String[] args = CommandUtils.tokenize(ctx);
             MinePlayerProgress progress = mineStore.getOrCreatePlayer(playerRef.getUuid());
 
             if (args.length == 0) {

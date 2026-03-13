@@ -154,7 +154,7 @@ public final class InventoryUtils {
         hotbar.setItemStackForSlot((short) slotIndex, itemStack, false);
     }
 
-    private static void applyDropFilters(Inventory inventory, boolean allowDrop) {
+    public static void applyDropFilters(Inventory inventory, boolean allowDrop) {
         ItemContainer[] containers = {
             inventory.getHotbar(), inventory.getStorage(), inventory.getBackpack(),
             inventory.getTools(), inventory.getUtility(), inventory.getArmor()

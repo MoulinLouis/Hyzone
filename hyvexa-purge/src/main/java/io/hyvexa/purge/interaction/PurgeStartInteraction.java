@@ -5,17 +5,13 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.SimpleInteraction;
-import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.util.ModeGate;
-import io.hyvexa.purge.HyvexaPurgePlugin;
 import io.hyvexa.purge.ui.PurgePartyMenuPage;
 
 import javax.annotation.Nonnull;
-import java.util.UUID;
 
 public class PurgeStartInteraction extends SimpleInteraction {
 
@@ -26,42 +22,29 @@ public class PurgeStartInteraction extends SimpleInteraction {
     public void handle(@Nonnull Ref<EntityStore> ref, boolean firstRun, float time,
                        @Nonnull InteractionType type, @Nonnull InteractionContext interactionContext) {
         super.handle(ref, firstRun, time, type, interactionContext);
-        if (!ref.isValid()) {
+        PurgeInteractionContext ctx = PurgeInteractionContext.resolve(ref);
+        if (ctx == null) {
             return;
         }
-        var store = ref.getStore();
-        Player player = store.getComponent(ref, Player.getComponentType());
-        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-        if (player == null || playerRef == null) {
+        if (ctx.store().getExternalData() == null) {
+            ctx.player().sendMessage(Message.raw("Could not resolve your world."));
             return;
         }
-        if (store.getExternalData() == null) {
-            player.sendMessage(Message.raw("Could not resolve your world."));
-            return;
-        }
-        World world = store.getExternalData().getWorld();
+        World world = ctx.store().getExternalData().getWorld();
         if (world == null) {
-            player.sendMessage(Message.raw("Could not resolve your world."));
+            ctx.player().sendMessage(Message.raw("Could not resolve your world."));
             return;
         }
         if (!ModeGate.isPurgeWorld(world)) {
-            player.sendMessage(Message.raw("You must be in the Purge world."));
+            ctx.player().sendMessage(Message.raw("You must be in the Purge world."));
             return;
         }
-        UUID playerId = playerRef.getUuid();
-        if (playerId == null) {
+        if (ctx.plugin().getSessionManager().hasActiveSession(ctx.playerId())) {
+            ctx.player().sendMessage(Message.raw("You already have an active Purge session."));
             return;
         }
-        HyvexaPurgePlugin plugin = HyvexaPurgePlugin.getInstance();
-        if (plugin == null) {
-            return;
-        }
-        if (plugin.getSessionManager().hasActiveSession(playerId)) {
-            player.sendMessage(Message.raw("You already have an active Purge session."));
-            return;
-        }
-        player.getPageManager().openCustomPage(ref, store,
-                new PurgePartyMenuPage(playerRef, playerId,
-                        plugin.getPartyManager(), plugin.getSessionManager()));
+        ctx.player().getPageManager().openCustomPage(ref, ctx.store(),
+                new PurgePartyMenuPage(ctx.playerRef(), ctx.playerId(),
+                        ctx.plugin().getPartyManager(), ctx.plugin().getSessionManager()));
     }
 }

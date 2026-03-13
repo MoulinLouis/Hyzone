@@ -87,7 +87,7 @@ public class RunOrFallCommand extends AbstractAsyncCommand {
             return;
         }
         UUID playerId = playerRef.getUuid();
-        String[] args = CommandUtils.getArgs(ctx);
+        String[] args = CommandUtils.tokenize(ctx);
         if (args.length == 0) {
             sendUsage(player);
             return;

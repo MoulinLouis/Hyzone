@@ -65,23 +65,12 @@ public class RunRecordsHud extends RunHud {
     }
 
     public void updateMedals(io.hyvexa.parkour.data.Map map, Set<Medal> earned) {
-        if (map == null) {
-            String key = "hidden";
-            if (key.equals(lastMedalsKey)) {
-                return;
-            }
-            lastMedalsKey = key;
-            UICommandBuilder cmd = new UICommandBuilder();
-            cmd.set("#MedalHud.Visible", false);
-            update(false, cmd);
-            return;
-        }
-        Long bronzeMs = map.getBronzeTimeMs();
-        Long silverMs = map.getSilverTimeMs();
-        Long goldMs = map.getGoldTimeMs();
-        Long emeraldMs = map.getEmeraldTimeMs();
+        Long bronzeMs = map != null ? map.getBronzeTimeMs() : null;
+        Long silverMs = map != null ? map.getSilverTimeMs() : null;
+        Long goldMs = map != null ? map.getGoldTimeMs() : null;
+        Long emeraldMs = map != null ? map.getEmeraldTimeMs() : null;
         boolean hasMedals = bronzeMs != null || silverMs != null || goldMs != null || emeraldMs != null;
-        if (!hasMedals) {
+        if (map == null || !hasMedals) {
             String key = "hidden";
             if (key.equals(lastMedalsKey)) {
                 return;

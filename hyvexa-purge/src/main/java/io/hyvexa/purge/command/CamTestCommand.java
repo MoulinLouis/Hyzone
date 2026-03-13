@@ -84,7 +84,7 @@ public class CamTestCommand extends AbstractAsyncCommand {
             PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
             if (playerRef == null) return;
 
-            String[] args = CommandUtils.getArgs(ctx);
+            String[] args = CommandUtils.tokenize(ctx);
             if (args.length == 0) {
                 sendUsage(player);
                 return;

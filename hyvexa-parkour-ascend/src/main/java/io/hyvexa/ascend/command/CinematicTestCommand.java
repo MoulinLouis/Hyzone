@@ -91,7 +91,7 @@ public class CinematicTestCommand extends AbstractAsyncCommand {
                 return;
             }
 
-            String[] args = CommandUtils.getArgs(ctx);
+            String[] args = CommandUtils.tokenize(ctx);
             if (args.length == 0) {
                 showHelp(player);
                 return;

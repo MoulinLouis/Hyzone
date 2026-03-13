@@ -20,6 +20,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.NPCPlugin;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.protocol.AnimationSlot;
+import io.hyvexa.common.util.EntityUtils;
 
 import java.util.List;
 import java.util.UUID;
@@ -172,7 +173,7 @@ public class PetManager {
             Object result = npcPlugin.spawnNPC(store, state.npcType, "Pet", spawnPos, rotation);
             if (result == null) return;
 
-            Ref<EntityStore> entityRef = extractEntityRef(result);
+            Ref<EntityStore> entityRef = EntityUtils.extractEntityRef(result);
             if (entityRef == null) return;
 
             state.entityRef = entityRef;
@@ -352,24 +353,6 @@ public class PetManager {
         state.entityUuid = null;
     }
 
-    @SuppressWarnings("unchecked")
-    private Ref<EntityStore> extractEntityRef(Object pairResult) {
-        if (pairResult == null) return null;
-        try {
-            for (String methodName : List.of("getFirst", "getLeft", "getKey", "first", "left")) {
-                try {
-                    java.lang.reflect.Method method = pairResult.getClass().getMethod(methodName);
-                    Object value = method.invoke(pairResult);
-                    if (value instanceof Ref<?> ref) {
-                        return (Ref<EntityStore>) ref;
-                    }
-                } catch (NoSuchMethodException ignored) {}
-            }
-        } catch (Exception e) {
-            LOGGER.atWarning().log("Failed to extract entity ref from NPC result: " + e.getMessage());
-        }
-        return null;
-    }
 
     private static double clamp(double value, double min, double max) {
         return Math.max(min, Math.min(max, value));

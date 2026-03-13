@@ -30,10 +30,6 @@ public class PurgeSkinSelectPage extends InteractiveCustomUIPage<PurgeSkinSelect
     private static final String BUTTON_DEFAULT = "Default";
     private static final String PREFIX_SELECT = "Select:";
 
-    private static final List<String> PREVIEW_IDS = List.of(
-            "AK47Default", "AK47Asimov", "AK47Blossom", "AK47CyberpunkNeon", "AK47FrozenVoltage"
-    );
-
     private final UUID playerId;
     private final String weaponId;
     private final String weaponDisplayName;
@@ -139,7 +135,7 @@ public class PurgeSkinSelectPage extends InteractiveCustomUIPage<PurgeSkinSelect
         commandBuilder.set(defaultRoot + " #SkinName.Text", "Default");
 
         String defaultPreviewKey = weaponId + "Default";
-        for (String previewId : PREVIEW_IDS) {
+        for (String previewId : PurgeSkinRegistry.PREVIEW_IDS) {
             commandBuilder.set(defaultRoot + " #Prev" + previewId + ".Visible", previewId.equals(defaultPreviewKey));
         }
 
@@ -167,7 +163,7 @@ public class PurgeSkinSelectPage extends InteractiveCustomUIPage<PurgeSkinSelect
 
             // Toggle preview image
             String previewKey = def.getWeaponId() + def.getSkinId();
-            for (String previewId : PREVIEW_IDS) {
+            for (String previewId : PurgeSkinRegistry.PREVIEW_IDS) {
                 commandBuilder.set(root + " #Prev" + previewId + ".Visible", previewId.equals(previewKey));
             }
 

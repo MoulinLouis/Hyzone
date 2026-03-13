@@ -94,7 +94,7 @@ public class PurgeCommand extends AbstractAsyncCommand {
 
     private void handleCommand(CommandContext ctx, Player player, Ref<EntityStore> ref,
                                Store<EntityStore> store, World world) {
-        String[] args = CommandUtils.getArgs(ctx);
+        String[] args = CommandUtils.tokenize(ctx);
         if (args.length == 0) {
             player.sendMessage(Message.raw("Usage: /purge <start|stop|stats|party|upgrade|loadout|shop|skins|scrap|admin>"));
             return;

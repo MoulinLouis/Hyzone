@@ -8,6 +8,13 @@ import java.util.Map;
 
 public final class PurgeSkinRegistry {
 
+    /**
+     * UI preview element IDs used by skin shop and skin select pages.
+     */
+    public static final List<String> PREVIEW_IDS = List.of(
+            "AK47Default", "AK47Asimov", "AK47Blossom", "AK47CyberpunkNeon", "AK47FrozenVoltage"
+    );
+
     private static final Map<String, List<PurgeSkinDefinition>> SKINS = new LinkedHashMap<>();
 
     static {

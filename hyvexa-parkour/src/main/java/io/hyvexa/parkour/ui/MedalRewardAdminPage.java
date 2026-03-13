@@ -15,7 +15,6 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.data.MedalRewardStore;
 import io.hyvexa.parkour.data.ProgressStore;
@@ -94,12 +93,7 @@ public class MedalRewardAdminPage extends InteractiveCustomUIPage<MedalRewardAdm
             return;
         }
         if ("Back".equals(data.button)) {
-            HyvexaPlugin plugin = HyvexaPlugin.getInstance();
-            if (plugin != null) {
-                player.getPageManager().openCustomPage(ref, store,
-                        new AdminIndexPage(playerRef, mapStore, progressStore, plugin.getSettingsStore(),
-                                plugin.getPlayerCountStore()));
-            }
+            AdminPageUtils.openIndex(ref, store);
             return;
         }
         if ("Save".equals(data.button)) {

@@ -277,14 +277,8 @@ public final class HylogramsBridge {
         }
 
         private Object invoke(String methodName, Class<?>[] paramTypes, Object... args) {
-            try {
-                Method method = getCachedMethod(handle.getClass(), methodName, paramTypes);
-                return method.invoke(handle, args);
-            } catch (IllegalAccessException e) {
-                throw new IllegalStateException("Hylograms API access denied for hologram method: " + methodName, e);
-            } catch (InvocationTargetException e) {
-                throw new IllegalStateException("Hylograms hologram method failed: " + methodName, e.getCause() != null ? e.getCause() : e);
-            }
+            Method method = getCachedMethod(handle.getClass(), methodName, paramTypes);
+            return reflectiveInvoke(handle, method, methodName, args);
         }
     }
 
@@ -342,22 +336,20 @@ public final class HylogramsBridge {
         }
 
         private Object invoke(String methodName, Class<?>[] paramTypes, Object... args) {
-            try {
-                Method method = getCachedMethod(handle.getClass(), methodName, paramTypes);
-                return method.invoke(handle, args);
-            } catch (IllegalAccessException e) {
-                throw new IllegalStateException("Hylograms API access denied for builder method: " + methodName, e);
-            } catch (InvocationTargetException e) {
-                throw new IllegalStateException("Hylograms builder method failed: " + methodName, e.getCause() != null ? e.getCause() : e);
-            }
+            Method method = getCachedMethod(handle.getClass(), methodName, paramTypes);
+            return reflectiveInvoke(handle, method, methodName, args);
         }
     }
 
     private static Object invokeStatic(String methodName, Class<?>[] paramTypes, Object... args) {
         Class<?> apiClass = resolveApiClass();
+        Method method = getCachedMethod(apiClass, methodName, paramTypes);
+        return reflectiveInvoke(null, method, methodName, args);
+    }
+
+    private static Object reflectiveInvoke(Object target, Method method, String methodName, Object... args) {
         try {
-            Method method = getCachedMethod(apiClass, methodName, paramTypes);
-            return method.invoke(null, args);
+            return method.invoke(target, args);
         } catch (IllegalAccessException e) {
             throw new IllegalStateException("Hylograms API access denied for method: " + methodName, e);
         } catch (InvocationTargetException e) {

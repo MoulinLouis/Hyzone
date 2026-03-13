@@ -17,7 +17,6 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.CameraManager;
 import com.hypixel.hytale.server.core.io.PacketHandler;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
-import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.util.CommandUtils;
@@ -47,7 +46,7 @@ public class SpectatorCommand extends AbstractAsyncCommand {
             return CompletableFuture.completedFuture(null);
         }
 
-        String[] args = CommandUtils.getArgs(ctx);
+        String[] args = CommandUtils.tokenize(ctx);
         if (args.length < 1) {
             sendUsage(ctx);
             return CompletableFuture.completedFuture(null);
@@ -91,7 +90,7 @@ public class SpectatorCommand extends AbstractAsyncCommand {
         }
 
         String targetName = args[1];
-        PlayerRef targetRef = findPlayer(targetName);
+        PlayerRef targetRef = CommandUtils.findPlayerByName(targetName);
         if (targetRef == null) {
             player.sendMessage(Message.raw("Player not found: " + targetName));
             return;
@@ -137,15 +136,6 @@ public class SpectatorCommand extends AbstractAsyncCommand {
             camMgr.resetCamera(playerRef);
         }
         player.sendMessage(Message.raw("Spectating stopped."));
-    }
-
-    private PlayerRef findPlayer(String name) {
-        for (PlayerRef playerRef : Universe.get().getPlayers()) {
-            if (playerRef != null && name.equalsIgnoreCase(playerRef.getUsername())) {
-                return playerRef;
-            }
-        }
-        return null;
     }
 
     private void sendUsage(CommandContext ctx) {

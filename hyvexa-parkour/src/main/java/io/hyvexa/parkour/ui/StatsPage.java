@@ -17,10 +17,6 @@ import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.data.ProgressStore;
 
 import javax.annotation.Nonnull;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Set;
-
 public class StatsPage extends BaseParkourPage {
 
     private static final String BUTTON_CLOSE = "Close";
@@ -82,14 +78,5 @@ public class StatsPage extends BaseParkourPage {
         commandBuilder.set("#StatsMapsValue.Text", completed + "/" + totalMaps);
         long jumpCount = progressStore.getJumpCount(playerRef.getUuid());
         commandBuilder.set("#StatsJumpsValue.Text", String.valueOf(jumpCount));
-    }
-
-    private static String formatList(Set<String> values) {
-        if (values == null || values.isEmpty()) {
-            return "None";
-        }
-        ArrayList<String> sorted = new ArrayList<>(values);
-        Collections.sort(sorted, String.CASE_INSENSITIVE_ORDER);
-        return String.join(", ", sorted);
     }
 }

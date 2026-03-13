@@ -92,14 +92,7 @@ public class FallbackHttpServer {
         }
 
         try {
-            boolean v1Enabled = plugin.getConfig().protocols() != null
-                    && Boolean.TRUE.equals(plugin.getConfig().protocols().v1Enabled());
-            boolean v2Enabled = plugin.getConfig().protocols() != null
-                    && Boolean.TRUE.equals(plugin.getConfig().protocols().v2Enabled())
-                    && plugin.getConfig().voteSites() != null
-                    && plugin.getConfig().voteSites().isV2Enabled();
-
-            sendResponse(exchange, 200, VoteProcessor.statusJson(plugin.getPluginVersion(), v1Enabled, v2Enabled));
+            sendResponse(exchange, 200, VoteProcessor.buildStatusJson(plugin));
         } catch (Exception e) {
             plugin.getLogger().at(Level.SEVERE).withCause(e).log("Failed to process status request");
             sendError(exchange, 500, "Internal server error");

@@ -1,6 +1,8 @@
 package io.hyvexa.common.util;
 
 import com.hypixel.hytale.server.core.command.system.CommandContext;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.Universe;
 
 import java.util.Arrays;
 
@@ -39,10 +41,18 @@ public final class CommandUtils {
     }
 
     /**
-     * Alias for {@link #tokenize(CommandContext)}.
+     * Find an online player by name (case-insensitive).
+     *
+     * @param name The player name to search for
+     * @return The matching PlayerRef, or null if not found
      */
-    public static String[] getArgs(CommandContext ctx) {
-        return tokenize(ctx);
+    public static PlayerRef findPlayerByName(String name) {
+        for (PlayerRef playerRef : Universe.get().getPlayers()) {
+            if (playerRef != null && name.equalsIgnoreCase(playerRef.getUsername())) {
+                return playerRef;
+            }
+        }
+        return null;
     }
 
 }

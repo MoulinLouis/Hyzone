@@ -200,11 +200,11 @@ public class MinePlayerStore {
                                             auto_sell_level = VALUES(auto_sell_level)
                     """)) {
                 ps.setString(1, playerId.toString());
-                ps.setLong(2, snapshot.getCrystals());
-                ps.setInt(3, snapshot.getUpgradeLevels().getOrDefault(MineUpgradeType.MINING_SPEED, 0));
-                ps.setInt(4, snapshot.getUpgradeLevels().getOrDefault(MineUpgradeType.BAG_CAPACITY, 0));
-                ps.setInt(5, snapshot.getUpgradeLevels().getOrDefault(MineUpgradeType.MULTI_BREAK, 0));
-                ps.setInt(6, snapshot.getUpgradeLevels().getOrDefault(MineUpgradeType.AUTO_SELL, 0));
+                ps.setLong(2, snapshot.crystals());
+                ps.setInt(3, snapshot.upgradeLevels().getOrDefault(MineUpgradeType.MINING_SPEED, 0));
+                ps.setInt(4, snapshot.upgradeLevels().getOrDefault(MineUpgradeType.BAG_CAPACITY, 0));
+                ps.setInt(5, snapshot.upgradeLevels().getOrDefault(MineUpgradeType.MULTI_BREAK, 0));
+                ps.setInt(6, snapshot.upgradeLevels().getOrDefault(MineUpgradeType.AUTO_SELL, 0));
                 ps.executeUpdate();
             }
 
@@ -215,7 +215,7 @@ public class MinePlayerStore {
                 ps.executeUpdate();
             }
 
-            Map<String, Integer> inventory = snapshot.getInventory();
+            Map<String, Integer> inventory = snapshot.inventory();
             if (!inventory.isEmpty()) {
                 try (PreparedStatement ps = conn.prepareStatement(
                         "INSERT INTO mine_player_inventory (player_uuid, block_type_id, amount) VALUES (?, ?, ?)")) {
@@ -230,7 +230,7 @@ public class MinePlayerStore {
             }
 
             // Save mine states
-            Map<String, MinePlayerProgress.MineProgressSnapshot> mineStates = snapshot.getMineStates();
+            Map<String, MinePlayerProgress.MineProgressSnapshot> mineStates = snapshot.mineStates();
             if (!mineStates.isEmpty()) {
                 try (PreparedStatement ps = conn.prepareStatement("""
                         INSERT INTO mine_player_mines (player_uuid, mine_id, unlocked, completed_manually)
@@ -242,8 +242,8 @@ public class MinePlayerStore {
                         ps.setString(1, playerId.toString());
                         ps.setString(2, entry.getKey());
                         MinePlayerProgress.MineProgressSnapshot state = entry.getValue();
-                        ps.setBoolean(3, state.isUnlocked());
-                        ps.setBoolean(4, state.isCompletedManually());
+                        ps.setBoolean(3, state.unlocked());
+                        ps.setBoolean(4, state.completedManually());
                         ps.addBatch();
                     }
                     ps.executeBatch();
@@ -251,7 +251,7 @@ public class MinePlayerStore {
             }
 
             // Save miner states
-            Map<String, MinePlayerProgress.MinerProgressSnapshot> minerStates = snapshot.getMinerStates();
+            Map<String, MinePlayerProgress.MinerProgressSnapshot> minerStates = snapshot.minerStates();
             if (!minerStates.isEmpty()) {
                 try (PreparedStatement ps = conn.prepareStatement("""
                         INSERT INTO mine_player_miners (player_uuid, mine_id, has_miner, speed_level, stars)
@@ -264,9 +264,9 @@ public class MinePlayerStore {
                         ps.setString(1, playerId.toString());
                         ps.setString(2, entry.getKey());
                         MinePlayerProgress.MinerProgressSnapshot state = entry.getValue();
-                        ps.setBoolean(3, state.isHasMiner());
-                        ps.setInt(4, state.getSpeedLevel());
-                        ps.setInt(5, state.getStars());
+                        ps.setBoolean(3, state.hasMiner());
+                        ps.setInt(4, state.speedLevel());
+                        ps.setInt(5, state.stars());
                         ps.addBatch();
                     }
                     ps.executeBatch();

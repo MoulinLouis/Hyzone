@@ -13,6 +13,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.ui.ButtonEventData;
 
 import javax.annotation.Nonnull;
+import java.util.Map;
 
 public class AscendHelpPage extends BaseAscendPage {
 
@@ -25,6 +26,16 @@ public class AscendHelpPage extends BaseAscendPage {
     private static final String BUTTON_ASCENSION = "Ascension";
     private static final String BUTTON_CHALLENGES = "Challenges";
     private static final String BUTTON_CLOSE = "Close";
+
+    private static final Map<String, AscendTutorialPage.Tutorial> BUTTON_TO_TUTORIAL = Map.of(
+        BUTTON_FIRST_COMPLETION, AscendTutorialPage.Tutorial.FIRST_COMPLETION,
+        BUTTON_MAP_UNLOCK, AscendTutorialPage.Tutorial.MAP_UNLOCK,
+        BUTTON_EVOLUTION, AscendTutorialPage.Tutorial.EVOLUTION,
+        BUTTON_ELEVATION, AscendTutorialPage.Tutorial.ELEVATION,
+        BUTTON_SUMMIT, AscendTutorialPage.Tutorial.SUMMIT,
+        BUTTON_ASCENSION, AscendTutorialPage.Tutorial.ASCENSION,
+        BUTTON_CHALLENGES, AscendTutorialPage.Tutorial.CHALLENGES
+    );
 
     public AscendHelpPage(@Nonnull PlayerRef playerRef) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
@@ -74,41 +85,16 @@ public class AscendHelpPage extends BaseAscendPage {
             return;
         }
 
-        switch (data.getButton()) {
-            case BUTTON_WELCOME:
-                player.getPageManager().openCustomPage(ref, store, new AscendWelcomePage(playerRef));
-                break;
-            case BUTTON_FIRST_COMPLETION:
-                player.getPageManager().openCustomPage(ref, store,
-                        new AscendTutorialPage(playerRef, AscendTutorialPage.Tutorial.FIRST_COMPLETION));
-                break;
-            case BUTTON_MAP_UNLOCK:
-                player.getPageManager().openCustomPage(ref, store,
-                        new AscendTutorialPage(playerRef, AscendTutorialPage.Tutorial.MAP_UNLOCK));
-                break;
-            case BUTTON_EVOLUTION:
-                player.getPageManager().openCustomPage(ref, store,
-                        new AscendTutorialPage(playerRef, AscendTutorialPage.Tutorial.EVOLUTION));
-                break;
-            case BUTTON_ELEVATION:
-                player.getPageManager().openCustomPage(ref, store,
-                        new AscendTutorialPage(playerRef, AscendTutorialPage.Tutorial.ELEVATION));
-                break;
-            case BUTTON_SUMMIT:
-                player.getPageManager().openCustomPage(ref, store,
-                        new AscendTutorialPage(playerRef, AscendTutorialPage.Tutorial.SUMMIT));
-                break;
-            case BUTTON_ASCENSION:
-                player.getPageManager().openCustomPage(ref, store,
-                        new AscendTutorialPage(playerRef, AscendTutorialPage.Tutorial.ASCENSION));
-                break;
-            case BUTTON_CHALLENGES:
-                player.getPageManager().openCustomPage(ref, store,
-                        new AscendTutorialPage(playerRef, AscendTutorialPage.Tutorial.CHALLENGES));
-                break;
-            case BUTTON_CLOSE:
-                this.close();
-                break;
+        String button = data.getButton();
+        if (BUTTON_WELCOME.equals(button)) {
+            player.getPageManager().openCustomPage(ref, store, new AscendWelcomePage(playerRef));
+        } else if (BUTTON_CLOSE.equals(button)) {
+            this.close();
+        } else {
+            AscendTutorialPage.Tutorial tutorial = BUTTON_TO_TUTORIAL.get(button);
+            if (tutorial != null) {
+                player.getPageManager().openCustomPage(ref, store, new AscendTutorialPage(playerRef, tutorial));
+            }
         }
     }
 }

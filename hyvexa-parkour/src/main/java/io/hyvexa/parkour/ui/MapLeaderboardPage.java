@@ -131,7 +131,7 @@ public class MapLeaderboardPage extends InteractiveCustomUIPage<MapLeaderboardPa
             commandBuilder.set("#PageLabel.Text", "");
             return;
         }
-        String filter = searchText != null ? searchText.trim().toLowerCase() : "";
+        String filter = searchText.trim().toLowerCase();
         List<Map.Entry<UUID, Long>> sorted = times.entrySet().stream()
                 .sorted(Map.Entry.comparingByValue(Comparator.naturalOrder()))
                 .toList();

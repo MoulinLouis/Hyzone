@@ -64,11 +64,7 @@ public class MinePlayerProgress {
      * Sells all blocks in inventory, returns total crystals earned.
      */
     public synchronized long sellAll(Map<String, BigNumber> blockPrices) {
-        long total = 0;
-        for (var entry : inventory.entrySet()) {
-            BigNumber price = blockPrices.getOrDefault(entry.getKey(), BigNumber.ONE);
-            total += price.multiply(BigNumber.of(entry.getValue(), 0)).toLong();
-        }
+        long total = calculateInventoryValue(blockPrices);
         crystals += total;
         inventory.clear();
         return total;
@@ -333,58 +329,13 @@ public class MinePlayerProgress {
         INSUFFICIENT_CRYSTALS
     }
 
-    public static final class MineProgressSnapshot {
-        private final boolean unlocked;
-        private final boolean completedManually;
+    public record MineProgressSnapshot(boolean unlocked, boolean completedManually) {}
 
-        public MineProgressSnapshot(boolean unlocked, boolean completedManually) {
-            this.unlocked = unlocked;
-            this.completedManually = completedManually;
-        }
+    public record MinerProgressSnapshot(boolean hasMiner, int speedLevel, int stars) {}
 
-        public boolean isUnlocked() { return unlocked; }
-        public boolean isCompletedManually() { return completedManually; }
-    }
-
-    public static final class MinerProgressSnapshot {
-        private final boolean hasMiner;
-        private final int speedLevel;
-        private final int stars;
-
-        public MinerProgressSnapshot(boolean hasMiner, int speedLevel, int stars) {
-            this.hasMiner = hasMiner;
-            this.speedLevel = speedLevel;
-            this.stars = stars;
-        }
-
-        public boolean isHasMiner() { return hasMiner; }
-        public int getSpeedLevel() { return speedLevel; }
-        public int getStars() { return stars; }
-    }
-
-    public static final class PlayerSaveSnapshot {
-        private final long crystals;
-        private final Map<MineUpgradeType, Integer> upgradeLevels;
-        private final Map<String, Integer> inventory;
-        private final Map<String, MineProgressSnapshot> mineStates;
-        private final Map<String, MinerProgressSnapshot> minerStates;
-
-        public PlayerSaveSnapshot(long crystals,
-                                  Map<MineUpgradeType, Integer> upgradeLevels,
-                                  Map<String, Integer> inventory,
-                                  Map<String, MineProgressSnapshot> mineStates,
-                                  Map<String, MinerProgressSnapshot> minerStates) {
-            this.crystals = crystals;
-            this.upgradeLevels = upgradeLevels;
-            this.inventory = inventory;
-            this.mineStates = mineStates;
-            this.minerStates = minerStates;
-        }
-
-        public long getCrystals() { return crystals; }
-        public Map<MineUpgradeType, Integer> getUpgradeLevels() { return upgradeLevels; }
-        public Map<String, Integer> getInventory() { return inventory; }
-        public Map<String, MineProgressSnapshot> getMineStates() { return mineStates; }
-        public Map<String, MinerProgressSnapshot> getMinerStates() { return minerStates; }
-    }
+    public record PlayerSaveSnapshot(long crystals,
+                                     Map<MineUpgradeType, Integer> upgradeLevels,
+                                     Map<String, Integer> inventory,
+                                     Map<String, MineProgressSnapshot> mineStates,
+                                     Map<String, MinerProgressSnapshot> minerStates) {}
 }
