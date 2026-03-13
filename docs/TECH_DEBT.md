@@ -62,10 +62,10 @@ Prioritized list of known issues and improvements. Sourced from a full codebase 
 - **Issue:** Shop cosmetics were hardcoded in `WardrobeBridge.COSMETICS`. Adding/removing cosmetics required recompilation.
 - **Fix:** Created `CosmeticConfigLoader` that loads cosmetic definitions from `mods/Parkour/cosmetics.json` at startup. Generates default file from the original 101 entries on first run.
 
-### 2.5 Consolidate ad-hoc column migrations
+### ~~2.5 Consolidate ad-hoc column migrations~~ (DONE)
 - **Module:** core, parkour, runorfall
-- **Issue:** 19 calls to `DatabaseManager.addColumnIfMissing()` scattered across `MapStore` (4), `MedalRewardStore` (2), `RunOrFallConfigStore` (11), `RunOrFallStatsStore` (2). No centralized migration registry or audit trail.
-- **Fix:** Create a migration registry that tracks which migrations have run (similar to how `AscendDatabaseSetup` handles migrations with version methods).
+- **Issue:** 19 calls to `DatabaseManager.addColumnIfMissing()` scattered across `MapStore` (4), `MedalRewardStore` (2), `RunOrFallConfigStore` (13). No centralized migration registry or audit trail.
+- **Fix:** Created `ParkourDatabaseSetup` and `RunOrFallDatabaseSetup` following the `PurgeDatabaseSetup` pattern. Each has a migrations tracking table and named migration methods. Removed all ad-hoc calls from individual stores.
 
 ### 2.6 Eliminate unnecessary reflection bridges
 - **Module:** parkour

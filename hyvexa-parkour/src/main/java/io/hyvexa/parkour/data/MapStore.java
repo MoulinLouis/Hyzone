@@ -69,13 +69,6 @@ public class MapStore {
                     LOGGER.atWarning().log("Failed to acquire database connection");
                     return;
                 }
-                // Add medal time columns if missing
-                DatabaseManager.addColumnIfMissing(conn, "maps", "bronze_time_ms", "BIGINT DEFAULT NULL");
-                DatabaseManager.addColumnIfMissing(conn, "maps", "silver_time_ms", "BIGINT DEFAULT NULL");
-                DatabaseManager.addColumnIfMissing(conn, "maps", "gold_time_ms", "BIGINT DEFAULT NULL");
-                DatabaseManager.renameColumnIfExists(conn, "maps", "author_time_ms", "emerald_time_ms", "BIGINT DEFAULT NULL");
-                DatabaseManager.addColumnIfMissing(conn, "maps", "emerald_time_ms", "BIGINT DEFAULT NULL");
-
                 // Load all maps
                 try (PreparedStatement stmt = conn.prepareStatement(mapSql)) {
                     DatabaseManager.applyQueryTimeout(stmt);

@@ -36,6 +36,7 @@ import io.hyvexa.runorfall.interaction.RunOrFallProfileInteraction;
 import io.hyvexa.runorfall.interaction.RunOrFallStatsInteraction;
 import io.hyvexa.runorfall.ui.RunOrFallAdminPage;
 import io.hyvexa.runorfall.ui.RunOrFallMusicPage;
+import io.hyvexa.runorfall.data.RunOrFallDatabaseSetup;
 import io.hyvexa.runorfall.manager.RunOrFallConfigStore;
 import io.hyvexa.runorfall.manager.RunOrFallGameManager;
 import io.hyvexa.runorfall.manager.RunOrFallStatsStore;
@@ -109,6 +110,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
                 () -> { if (!DatabaseManager.getInstance().isInitialized()) DatabaseManager.getInstance().initialize(); },
                 () -> VexaStore.getInstance().initialize()
         );
+        RunOrFallDatabaseSetup.ensureTables();
 
         configStore = new RunOrFallConfigStore(new File(folder, "config.json"));
         statsStore = new RunOrFallStatsStore();

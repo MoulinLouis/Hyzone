@@ -34,6 +34,7 @@ import io.hyvexa.core.vote.VoteStore;
 
 import io.hyvexa.parkour.data.GlobalMessageStore;
 import io.hyvexa.parkour.data.MapStore;
+import io.hyvexa.parkour.data.ParkourDatabaseSetup;
 import io.hyvexa.parkour.data.MedalRewardStore;
 import io.hyvexa.parkour.data.MedalStore;
 import io.hyvexa.parkour.data.PlayerCountStore;
@@ -201,6 +202,7 @@ public class HyvexaPlugin extends JavaPlugin {
         try {
             DatabaseManager.getInstance().initialize();
             LOGGER.atInfo().log("Database connection initialized");
+            ParkourDatabaseSetup.ensureTables();
         } catch (Exception e) {
             LOGGER.atSevere().withCause(e).log("Failed to initialize database");
         }

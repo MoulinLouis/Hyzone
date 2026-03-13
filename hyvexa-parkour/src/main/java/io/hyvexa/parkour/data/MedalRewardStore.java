@@ -43,10 +43,6 @@ public class MedalRewardStore {
              PreparedStatement stmt = conn.prepareStatement(createSql)) {
             DatabaseManager.applyQueryTimeout(stmt);
             stmt.executeUpdate();
-            DatabaseManager.renameColumnIfExists(conn, "medal_rewards", "author_feathers", "emerald_feathers", "INT NOT NULL DEFAULT 0");
-            DatabaseManager.renameColumnIfExists(conn, "medal_rewards", "platinum_feathers", "emerald_feathers", "INT NOT NULL DEFAULT 0");
-            DatabaseManager.addColumnIfMissing(conn, "medal_rewards", "emerald_feathers", "INT NOT NULL DEFAULT 0");
-            DatabaseManager.addColumnIfMissing(conn, "medal_rewards", "insane_feathers", "INT NOT NULL DEFAULT 0");
         } catch (SQLException e) {
             LOGGER.atSevere().withCause(e).log("Failed to create medal_rewards table");
             return;

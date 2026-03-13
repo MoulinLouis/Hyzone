@@ -438,19 +438,6 @@ public class RunOrFallConfigStore {
                 stmt.executeUpdate(CREATE_MAP_SPAWNS_TABLE);
                 stmt.executeUpdate(CREATE_MAP_PLATFORMS_TABLE);
             }
-            DatabaseManager.addColumnIfMissing(conn, "runorfall_settings", "active_map_id", "VARCHAR(64) NULL");
-            DatabaseManager.addColumnIfMissing(conn, "runorfall_settings", "min_players", "INT NOT NULL DEFAULT 2");
-            DatabaseManager.addColumnIfMissing(conn, "runorfall_settings", "min_players_time_seconds", "INT NOT NULL DEFAULT 300");
-            DatabaseManager.addColumnIfMissing(conn, "runorfall_settings", "optimal_players", "INT NOT NULL DEFAULT 4");
-            DatabaseManager.addColumnIfMissing(conn, "runorfall_settings", "optimal_players_time_seconds", "INT NOT NULL DEFAULT 60");
-            DatabaseManager.addColumnIfMissing(conn, "runorfall_settings", "blink_distance_blocks", "INT NOT NULL DEFAULT 7");
-            DatabaseManager.addColumnIfMissing(conn, "runorfall_settings", "blink_start_charges", "INT NOT NULL DEFAULT 1");
-            DatabaseManager.addColumnIfMissing(conn, "runorfall_settings", "blink_charge_every_blocks_broken", "INT NOT NULL DEFAULT 100");
-            DatabaseManager.addColumnIfMissing(conn, "runorfall_settings", "feathers_per_minute_alive", "INT NOT NULL DEFAULT 1");
-            DatabaseManager.addColumnIfMissing(conn, "runorfall_settings", "feathers_per_player_eliminated", "INT NOT NULL DEFAULT 5");
-            DatabaseManager.addColumnIfMissing(conn, "runorfall_settings", "feathers_for_win", "INT NOT NULL DEFAULT 25");
-            DatabaseManager.addColumnIfMissing(conn, "runorfall_maps", "min_players", "INT NOT NULL DEFAULT 2");
-            DatabaseManager.addColumnIfMissing(conn, "runorfall_map_platforms", "target_block_item_id", "VARCHAR(128) NULL");
             try (PreparedStatement stmt = conn.prepareStatement(
                     "INSERT INTO runorfall_settings "
                     + "(id, void_y, block_break_delay_seconds, min_players, min_players_time_seconds, "
