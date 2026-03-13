@@ -60,7 +60,7 @@ public class RunOrFallStatsPage extends InteractiveCustomUIPage<ButtonEventData>
         }
         UUID playerId = playerRef.getUuid();
         String playerName = playerRef.getUsername();
-        RunOrFallPlayerStats stats = statsStore.getStats(playerId, playerName);
+        RunOrFallPlayerStats stats = statsStore.getOrLoadWithName(playerId, playerName);
 
         commandBuilder.set("#StatsPlayerName.Text", stats.getPlayerName());
         commandBuilder.set("#StatsWinsValue.Text", String.valueOf(stats.getWins()));

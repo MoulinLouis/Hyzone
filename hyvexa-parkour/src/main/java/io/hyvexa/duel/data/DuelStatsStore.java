@@ -1,6 +1,7 @@
 package io.hyvexa.duel.data;
 
 import com.hypixel.hytale.logger.HytaleLogger;
+import io.hyvexa.core.db.BasePlayerStore;
 import io.hyvexa.core.db.DatabaseManager;
 
 import javax.annotation.Nonnull;
@@ -11,9 +12,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
-public class DuelStatsStore {
+public class DuelStatsStore extends BasePlayerStore<DuelStats> {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final String CREATE_TABLE_SQL = """
@@ -25,8 +25,8 @@ public class DuelStatsStore {
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         )
         """;
-
-    private final ConcurrentHashMap<UUID, DuelStats> cache = new ConcurrentHashMap<>();
+    private static final String LOAD_ALL_SQL =
+        "SELECT player_uuid, player_name, wins, losses FROM duel_player_stats";
 
     public void syncLoad() {
         if (!DatabaseManager.getInstance().isInitialized()) {
@@ -34,40 +34,20 @@ public class DuelStatsStore {
             return;
         }
         ensureTable();
-        String sql = "SELECT player_uuid, player_name, wins, losses FROM duel_player_stats";
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
-            if (conn == null) {
-                LOGGER.atWarning().log("Failed to acquire database connection");
-                return;
+        loadAll(LOAD_ALL_SQL, rs -> {
+            try {
+                return UUID.fromString(rs.getString("player_uuid"));
+            } catch (Exception e) {
+                return null;
             }
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                try (ResultSet rs = stmt.executeQuery()) {
-                    while (rs.next()) {
-                        UUID playerId = UUID.fromString(rs.getString("player_uuid"));
-                        String playerName = rs.getString("player_name");
-                        int wins = rs.getInt("wins");
-                        int losses = rs.getInt("losses");
-                        cache.put(playerId, new DuelStats(playerId, playerName, wins, losses));
-                    }
-                    LOGGER.atInfo().log("DuelStatsStore loaded " + cache.size() + " player stats");
-                }
-            }
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to load DuelStatsStore: " + e.getMessage());
-        }
+        });
+        LOGGER.atInfo().log("DuelStatsStore loaded via syncLoad");
     }
 
     private void ensureTable() {
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
-            if (conn == null) {
-                LOGGER.atWarning().log("Failed to acquire database connection");
-                return;
-            }
-            try (PreparedStatement stmt = conn.prepareStatement(CREATE_TABLE_SQL)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.executeUpdate();
-            }
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement stmt = DatabaseManager.prepare(conn, CREATE_TABLE_SQL)) {
+            stmt.executeUpdate();
         } catch (SQLException e) {
             LOGGER.atSevere().log("Failed to create duel_player_stats table: " + e.getMessage());
         }
@@ -75,13 +55,13 @@ public class DuelStatsStore {
 
     @Nullable
     public DuelStats getStats(@Nonnull UUID playerId) {
-        return cache.get(playerId);
+        return getCached(playerId);
     }
 
     @Nullable
     public DuelStats getStatsByName(@Nonnull String playerName) {
         String target = playerName.trim();
-        for (DuelStats stats : cache.values()) {
+        for (DuelStats stats : cacheValues()) {
             String statsName = stats.getPlayerName();
             if (statsName != null && statsName.equalsIgnoreCase(target)) {
                 return stats;
@@ -92,50 +72,61 @@ public class DuelStatsStore {
 
     @Nonnull
     public java.util.List<DuelStats> listStats() {
-        return new java.util.ArrayList<>(cache.values());
+        return new java.util.ArrayList<>(cacheValues());
     }
 
     public void recordWin(@Nonnull UUID playerId, @Nonnull String playerName) {
-        DuelStats stats = cache.computeIfAbsent(playerId, id -> new DuelStats(id, playerName, 0, 0));
+        DuelStats stats = getCached(playerId);
+        if (stats == null) {
+            stats = new DuelStats(playerId, playerName, 0, 0);
+        }
         stats.setPlayerName(playerName);
         stats.incrementWins();
-        saveToDatabase(stats);
+        save(playerId, stats);
     }
 
     public void recordLoss(@Nonnull UUID playerId, @Nonnull String playerName) {
-        DuelStats stats = cache.computeIfAbsent(playerId, id -> new DuelStats(id, playerName, 0, 0));
+        DuelStats stats = getCached(playerId);
+        if (stats == null) {
+            stats = new DuelStats(playerId, playerName, 0, 0);
+        }
         stats.setPlayerName(playerName);
         stats.incrementLosses();
-        saveToDatabase(stats);
+        save(playerId, stats);
     }
 
-    private void saveToDatabase(@Nonnull DuelStats stats) {
-        if (!DatabaseManager.getInstance().isInitialized()) {
-            return;
-        }
-        String sql = """
+    @Override
+    protected String loadSql() {
+        return "SELECT player_uuid, player_name, wins, losses FROM duel_player_stats WHERE player_uuid = ?";
+    }
+
+    @Override
+    protected String upsertSql() {
+        return """
             INSERT INTO duel_player_stats (player_uuid, player_name, wins, losses, updated_at)
             VALUES (?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 player_name = VALUES(player_name), wins = VALUES(wins),
                 losses = VALUES(losses), updated_at = VALUES(updated_at)
             """;
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
-            if (conn == null) {
-                LOGGER.atWarning().log("Failed to acquire database connection");
-                return;
-            }
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.setString(1, stats.getPlayerId().toString());
-                stmt.setString(2, stats.getPlayerName());
-                stmt.setInt(3, stats.getWins());
-                stmt.setInt(4, stats.getLosses());
-                stmt.setTimestamp(5, new Timestamp(System.currentTimeMillis()));
-                stmt.executeUpdate();
-            }
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to save duel stats: " + e.getMessage());
-        }
+    }
+
+    @Override
+    protected DuelStats parseRow(ResultSet rs, UUID playerId) throws SQLException {
+        return new DuelStats(playerId, rs.getString("player_name"), rs.getInt("wins"), rs.getInt("losses"));
+    }
+
+    @Override
+    protected void bindUpsertParams(PreparedStatement stmt, UUID playerId, DuelStats s) throws SQLException {
+        stmt.setString(1, playerId.toString());
+        stmt.setString(2, s.getPlayerName());
+        stmt.setInt(3, s.getWins());
+        stmt.setInt(4, s.getLosses());
+        stmt.setTimestamp(5, new Timestamp(System.currentTimeMillis()));
+    }
+
+    @Override
+    protected DuelStats defaultValue() {
+        return new DuelStats(null, null, 0, 0);
     }
 }

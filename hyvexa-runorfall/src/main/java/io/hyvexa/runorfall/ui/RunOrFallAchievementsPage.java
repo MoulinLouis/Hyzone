@@ -54,7 +54,7 @@ public class RunOrFallAchievementsPage extends InteractiveCustomUIPage<ButtonEve
             commandBuilder.set("#ProgressText.Text", "0 / 16 unlocked");
             return;
         }
-        RunOrFallPlayerStats stats = statsStore.getStats(currentPlayerRef.getUuid(), currentPlayerRef.getUsername());
+        RunOrFallPlayerStats stats = statsStore.getOrLoadWithName(currentPlayerRef.getUuid(), currentPlayerRef.getUsername());
         buildAchievementCards(stats, commandBuilder);
     }
 

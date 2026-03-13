@@ -414,7 +414,7 @@ public class PurgeSessionManager {
         PurgeSessionPlayerState playerState = session.getPlayerState(playerId);
         int kills = playerState != null ? playerState.getKills() : 0;
 
-        PurgePlayerStats stats = PurgePlayerStore.getInstance().getOrCreate(playerId);
+        PurgePlayerStats stats = PurgePlayerStore.getInstance().getOrLoad(playerId);
         stats.updateBestWave(session.getCurrentWave());
         stats.incrementKills(kills);
         stats.incrementSessions();

@@ -159,7 +159,7 @@ public class PurgeCommand extends AbstractAsyncCommand {
     }
 
     private void handleStats(Player player, UUID playerId) {
-        PurgePlayerStats stats = PurgePlayerStore.getInstance().getOrCreate(playerId);
+        PurgePlayerStats stats = PurgePlayerStore.getInstance().getOrLoad(playerId);
         long scrap = PurgeScrapStore.getInstance().getScrap(playerId);
         player.sendMessage(Message.raw("-- Purge Stats --"));
         player.sendMessage(Message.raw("Best wave: " + stats.getBestWave()));

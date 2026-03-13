@@ -144,7 +144,7 @@ public class HyvexaPurgePlugin extends JavaPlugin {
                 () -> DiscordLinkStore.getInstance().initialize(),
                 () -> AnalyticsStore.getInstance().initialize(),
                 () -> PurgeScrapStore.getInstance().initialize(),
-                () -> PurgePlayerStore.getInstance().initialize(),
+                // PurgePlayerStore: no init needed (BasePlayerStore handles lazy loading)
                 () -> PurgeWeaponUpgradeStore.getInstance().initialize(),
                 () -> PurgeSkinStore.getInstance().initialize(),
                 () -> WeaponXpStore.getInstance().initialize(),
@@ -275,7 +275,7 @@ public class HyvexaPurgePlugin extends JavaPlugin {
             PlayerCleanupHelper.cleanup(playerId, LOGGER,
                     id -> VexaStore.getInstance().evictPlayer(id),
                     id -> DiscordLinkStore.getInstance().evictPlayer(id),
-                    id -> PurgePlayerStore.getInstance().evictPlayer(id),
+                    id -> PurgePlayerStore.getInstance().evict(id),
                     id -> PurgeScrapStore.getInstance().evictPlayer(id),
                     id -> PurgeWeaponUpgradeStore.getInstance().evictPlayer(id),
                     id -> PurgeSkinStore.getInstance().evictPlayer(id),
