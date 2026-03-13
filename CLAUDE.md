@@ -97,6 +97,7 @@ Node.js bot for Discord-Minecraft account linking. Shares the same MySQL databas
 | System architecture | `docs/ARCHITECTURE.md` |
 | Database schema | `docs/DATABASE.md` |
 | grepai reference | `docs/GREPAI.md` |
+| Tech debt & refactoring | `docs/TECH_DEBT.md` |
 | Game balancing | `docs/Ascend/ECONOMY_BALANCE.md` |
 | Help & tutorial system | `docs/Ascend/TUTORIAL_FLOW.md` |
 | Feature history | `CHANGELOG.md` |
