@@ -105,10 +105,10 @@ public final class RunOrFallDatabaseSetup {
 - 13 `DatabaseManager.addColumnIfMissing()` calls
 
 ### HyvexaPlugin.java (parkour entry point)
-**Add** call to `ParkourDatabaseSetup.ensureTables()` in `onEnable()`, before store initialization.
+**Add** call to `ParkourDatabaseSetup.ensureTables()` in `setup()`, immediately after `DatabaseManager.getInstance().initialize()` succeeds — before any store initialization (`MedalRewardStore`, `MapStore`).
 
 ### HyvexaRunOrFallPlugin.java (runorfall entry point)
-**Add** call to `RunOrFallDatabaseSetup.ensureTables()` in `onEnable()`, before `RunOrFallConfigStore.initializeTables()`.
+**Add** call to `RunOrFallDatabaseSetup.ensureTables()` in `setup()`, after `StoreInitializer.initialize()` but before `new RunOrFallConfigStore(...)`.
 
 ## Migration Idempotency
 
@@ -118,6 +118,12 @@ Each migration method follows the Purge pattern:
 3. `INSERT INTO xxx_migrations (migration_key) VALUES (?)` — record completion
 
 This double-safety (migration key check + columnExists check) means existing databases with columns already added will simply record the migration key and skip on subsequent startups.
+
+## Scope
+
+- **Only column migrations move.** Table creation (`CREATE TABLE IF NOT EXISTS`) stays in each store — only `addColumnIfMissing()`/`renameColumnIfExists()` calls are consolidated into the new setup classes.
+- Apply `DatabaseManager.applyQueryTimeout()` to manual migration-key SELECT/INSERT statements, matching the Purge pattern.
+- Each setup class logs a completion summary (e.g., `"Parkour migrations setup complete (2 migrations checked)"`).
 
 ## What Stays Unchanged
 
