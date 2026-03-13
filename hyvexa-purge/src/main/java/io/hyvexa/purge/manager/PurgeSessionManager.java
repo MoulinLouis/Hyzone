@@ -29,7 +29,6 @@ import com.hypixel.hytale.server.core.HytaleServer;
 import io.hyvexa.purge.data.PurgeSessionPlayerState;
 import io.hyvexa.purge.data.SessionState;
 import io.hyvexa.purge.hud.PurgeHudManager;
-import io.hyvexa.purge.mission.PurgeMissionManager;
 import io.hyvexa.purge.ui.PurgeGameOverPage;
 import io.hyvexa.purge.util.PurgePlayerNameResolver;
 
@@ -60,10 +59,8 @@ public class PurgeSessionManager {
     private final PurgeInstanceManager instanceManager;
     private final PurgeWaveManager waveManager;
     private final PurgeHudManager hudManager;
-    private volatile PurgeUpgradeManager upgradeManager;
-    private volatile PurgeClassManager classManager;
-    private volatile PurgeMissionManager missionManager;
     private final AtomicInteger sessionCounter = new AtomicInteger(0);
+    private PurgeManagerRegistry registry;
 
     public PurgeSessionManager(PurgePartyManager partyManager,
                                PurgeInstanceManager instanceManager,
@@ -73,19 +70,10 @@ public class PurgeSessionManager {
         this.instanceManager = instanceManager;
         this.waveManager = waveManager;
         this.hudManager = hudManager;
-        waveManager.setSessionManager(this);
     }
 
-    public void setUpgradeManager(PurgeUpgradeManager upgradeManager) {
-        this.upgradeManager = upgradeManager;
-    }
-
-    public void setClassManager(PurgeClassManager classManager) {
-        this.classManager = classManager;
-    }
-
-    public void setMissionManager(PurgeMissionManager missionManager) {
-        this.missionManager = missionManager;
+    void initRegistry(PurgeManagerRegistry registry) {
+        this.registry = registry;
     }
 
     private String nextSessionId() {
@@ -192,10 +180,7 @@ public class PurgeSessionManager {
                             plugin.grantLoadout(player, ps);
                         }
                         applySessionBaseHealth(ref, store);
-                        PurgeClassManager cm = classManager;
-                        if (cm != null) {
-                            cm.applyClassEffects(session, pid, ref, store);
-                        }
+                        registry.getClassManager().applyClassEffects(session, pid, ref, store);
                         teleportTo(ref, store, instance.startPoint());
                     }
                     hudManager.showRunHud(pid);
@@ -441,11 +426,8 @@ public class PurgeSessionManager {
             PurgeScrapStore.getInstance().flushPlayerAsync(playerId);
         }
 
-        PurgeMissionManager mm = missionManager;
-        if (mm != null) {
-            int bestCombo = playerState != null ? playerState.getBestCombo() : 0;
-            mm.recordSessionResult(playerId, session.getCurrentWave(), kills, bestCombo);
-        }
+        int bestCombo = playerState != null ? playerState.getBestCombo() : 0;
+        registry.getMissionManager().recordSessionResult(playerId, session.getCurrentWave(), kills, bestCombo);
     }
 
     private static final int SCRAP_TIER_1_WAVE = 5;
@@ -472,9 +454,8 @@ public class PurgeSessionManager {
 
     private int calculateTotalScrap(int wave, PurgeSessionPlayerState playerState) {
         int base = calculateScrapReward(wave);
-        PurgeClassManager cm = classManager;
-        double mult = cm != null && playerState != null
-                ? cm.getScrapMultiplier(playerState) : 1.0;
+        double mult = playerState != null
+                ? registry.getClassManager().getScrapMultiplier(playerState) : 1.0;
         int bonus = playerState != null ? playerState.getBonusScrapFromClass() : 0;
         return (int) (base * mult) + bonus;
     }
@@ -520,20 +501,15 @@ public class PurgeSessionManager {
                                        int bestCombo, String reason) {
         Ref<EntityStore> ref = playerState.getPlayerRef();
         runSafe("revert class effects", () -> {
-            PurgeClassManager cm = classManager;
-            if (cm != null && ref != null && ref.isValid()) {
+            if (ref != null && ref.isValid()) {
                 Store<EntityStore> store = ref.getStore();
-                cm.revertClassEffects(session, playerId, ref, store);
+                registry.getClassManager().revertClassEffects(session, playerId, ref, store);
             }
         });
         runSafe("revert upgrades", () -> {
-            PurgeUpgradeManager um = upgradeManager;
-            if (um == null) {
-                return;
-            }
             if (ref != null && ref.isValid()) {
                 Store<EntityStore> store = ref.getStore();
-                um.revertPlayerUpgrades(session, playerId, ref, store);
+                registry.getUpgradeManager().revertPlayerUpgrades(session, playerId, ref, store);
             }
         });
         runSafe("restore base health", () -> {

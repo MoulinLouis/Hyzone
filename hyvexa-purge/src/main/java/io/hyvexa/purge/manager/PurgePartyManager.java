@@ -19,10 +19,10 @@ public class PurgePartyManager {
     private final ConcurrentHashMap<UUID, String> partyIdByPlayer = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, String> pendingInvitePartyByTarget = new ConcurrentHashMap<>();
 
-    private volatile PurgeSessionManager sessionManager;
+    private PurgeManagerRegistry registry;
 
-    public void setSessionManager(PurgeSessionManager sessionManager) {
-        this.sessionManager = sessionManager;
+    void initRegistry(PurgeManagerRegistry registry) {
+        this.registry = registry;
     }
 
     public PurgeParty createParty(UUID creator) {
@@ -65,8 +65,7 @@ public class PurgePartyManager {
         }
 
         // Check target not in a session
-        PurgeSessionManager sm = sessionManager;
-        if (sm != null && sm.hasActiveSession(targetId)) {
+        if (registry.getSessionManager().hasActiveSession(targetId)) {
             sendMessageToPlayer(inviterId, "That player is already in a session.");
             return false;
         }

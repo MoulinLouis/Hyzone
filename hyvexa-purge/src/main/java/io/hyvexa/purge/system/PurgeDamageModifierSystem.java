@@ -59,20 +59,18 @@ public class PurgeDamageModifierSystem extends DamageEventSystem {
     private final PurgeVariantConfigManager variantConfigManager;
     private final PurgeWeaponConfigManager weaponConfigManager;
     private final WeaponXpManager weaponXpManager;
-    private volatile PurgeClassManager classManager;
+    private final PurgeClassManager classManager;
     private volatile SystemGroup<EntityStore> cachedGroup;
 
     public PurgeDamageModifierSystem(PurgeSessionManager sessionManager,
                                       PurgeVariantConfigManager variantConfigManager,
                                       PurgeWeaponConfigManager weaponConfigManager,
-                                      WeaponXpManager weaponXpManager) {
+                                      WeaponXpManager weaponXpManager,
+                                      PurgeClassManager classManager) {
         this.sessionManager = sessionManager;
         this.variantConfigManager = variantConfigManager;
         this.weaponConfigManager = weaponConfigManager;
         this.weaponXpManager = weaponXpManager;
-    }
-
-    public void setClassManager(PurgeClassManager classManager) {
         this.classManager = classManager;
     }
 

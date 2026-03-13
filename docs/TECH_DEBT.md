@@ -42,7 +42,7 @@ Prioritized list of known issues and improvements. Sourced from a full codebase 
 
 ## Tier 2: High Impact (days each)
 
-### 2.1 Fix Purge circular dependencies (PurgeManagerRegistry)
+### ~~2.1 Fix Purge circular dependencies (PurgeManagerRegistry)~~ (DONE)
 - **Module:** purge
 - **Issue:** 10 setter-injected fields across `PurgeSessionManager`, `PurgeWaveManager`, `PurgePartyManager`, `PurgeHudManager`. Volatile fields with no null guards — risk of NPE if setter not called before first tick. The core cycle: WaveManager and SessionManager each need a reference to the other.
 - **Fix:** Create `PurgeManagerRegistry` with a builder that wires all cross-references atomically. All fields become final, no null checks needed, compile-time safety.

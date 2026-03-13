@@ -17,6 +17,7 @@ import io.hyvexa.purge.data.PurgeUpgradeType;
 import io.hyvexa.purge.data.WeaponXpStore;
 import io.hyvexa.purge.manager.WeaponXpManager;
 import io.hyvexa.purge.mission.DailyMissionRotation;
+import io.hyvexa.purge.manager.PurgeManagerRegistry;
 import io.hyvexa.purge.mission.PurgeMissionManager;
 
 import io.hyvexa.purge.data.PurgeSession;
@@ -37,7 +38,11 @@ public class PurgeHudManager {
     private final ConcurrentHashMap<UUID, PurgeSessionPlayerState> comboPlayers = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, PurgeSession> killMeterPlayers = new ConcurrentHashMap<>();
     private volatile long lastKillMeterTickMs;
-    private volatile PurgeMissionManager missionManager;
+    private PurgeManagerRegistry registry;
+
+    void initRegistry(PurgeManagerRegistry registry) {
+        this.registry = registry;
+    }
 
     public void attach(PlayerRef playerRef, Player player) {
         if (playerRef == null || player == null) {
@@ -54,10 +59,6 @@ public class PurgeHudManager {
         player.getHudManager().hideHudComponents(playerRef, HudComponent.Compass);
         player.getHudManager().showHudComponents(playerRef, HudComponent.Health, HudComponent.Stamina);
         MultiHudBridge.showIfNeeded(hud);
-    }
-
-    public void setMissionManager(PurgeMissionManager missionManager) {
-        this.missionManager = missionManager;
     }
 
     public PurgeHud getHud(UUID playerId) {
@@ -301,9 +302,8 @@ public class PurgeHudManager {
             hud.updateVexa(VexaStore.getInstance().getCachedVexa(playerId));
             hud.updateScrap(PurgeScrapStore.getInstance().getScrap(playerId));
             // Update mission panel for idle players (not in a session)
-            PurgeMissionManager mm = missionManager;
-            if (mm != null && !comboPlayers.containsKey(playerId)) {
-                updateMissionHud(hud, mm, playerId);
+            if (!comboPlayers.containsKey(playerId)) {
+                updateMissionHud(hud, registry.getMissionManager(), playerId);
             }
         }
         for (UUID playerId : toRemove) {

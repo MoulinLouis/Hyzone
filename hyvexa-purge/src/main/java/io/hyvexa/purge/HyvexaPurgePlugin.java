@@ -53,6 +53,7 @@ import io.hyvexa.purge.manager.PurgeSessionManager;
 import io.hyvexa.purge.manager.PurgeUpgradeManager;
 import io.hyvexa.purge.manager.PurgeVariantConfigManager;
 import io.hyvexa.purge.manager.PurgeWaveConfigManager;
+import io.hyvexa.purge.manager.PurgeManagerRegistry;
 import io.hyvexa.purge.manager.PurgeWaveManager;
 import io.hyvexa.purge.manager.PurgeWeaponConfigManager;
 import io.hyvexa.purge.manager.WeaponXpManager;
@@ -153,18 +154,21 @@ public class HyvexaPurgePlugin extends JavaPlugin {
         waveManager = new PurgeWaveManager(instanceManager, waveConfigManager, variantConfigManager, hudManager);
         partyManager = new PurgePartyManager();
         sessionManager = new PurgeSessionManager(partyManager, instanceManager, waveManager, hudManager);
-        partyManager.setSessionManager(sessionManager);
         upgradeManager = new PurgeUpgradeManager();
         weaponXpManager = new WeaponXpManager();
         classManager = new PurgeClassManager(upgradeManager);
-        waveManager.setUpgradeManager(upgradeManager);
-        waveManager.setWeaponXpManager(weaponXpManager);
-        waveManager.setClassManager(classManager);
-        sessionManager.setUpgradeManager(upgradeManager);
-        sessionManager.setClassManager(classManager);
         PurgeMissionManager missionManager = new PurgeMissionManager();
-        sessionManager.setMissionManager(missionManager);
-        hudManager.setMissionManager(missionManager);
+
+        PurgeManagerRegistry.builder()
+                .sessionManager(sessionManager)
+                .waveManager(waveManager)
+                .partyManager(partyManager)
+                .hudManager(hudManager)
+                .upgradeManager(upgradeManager)
+                .weaponXpManager(weaponXpManager)
+                .classManager(classManager)
+                .missionManager(missionManager)
+                .build();
 
         // Register damage modifier system
         registerPurgeDamageModifierSystem();
@@ -525,8 +529,7 @@ public class HyvexaPurgePlugin extends JavaPlugin {
             registry.registerEntityEventType(com.hypixel.hytale.server.core.modules.entity.damage.Damage.class);
         }
         if (!registry.hasSystemClass(PurgeDamageModifierSystem.class)) {
-            PurgeDamageModifierSystem dmgSystem = new PurgeDamageModifierSystem(sessionManager, variantConfigManager, weaponConfigManager, weaponXpManager);
-            dmgSystem.setClassManager(classManager);
+            PurgeDamageModifierSystem dmgSystem = new PurgeDamageModifierSystem(sessionManager, variantConfigManager, weaponConfigManager, weaponXpManager, classManager);
             registry.registerSystem(dmgSystem);
         }
     }

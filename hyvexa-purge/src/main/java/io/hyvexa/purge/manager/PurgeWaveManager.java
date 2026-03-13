@@ -97,12 +97,7 @@ public class PurgeWaveManager {
     private final PurgeVariantConfigManager variantConfigManager;
     private final PurgeHudManager hudManager;
     private volatile NPCPlugin npcPlugin;
-
-    // Set by PurgeSessionManager after construction
-    private volatile PurgeSessionManager sessionManager;
-    private volatile PurgeUpgradeManager upgradeManager;
-    private volatile WeaponXpManager weaponXpManager;
-    private volatile PurgeClassManager classManager;
+    private PurgeManagerRegistry registry;
 
     public PurgeWaveManager(PurgeInstanceManager instanceManager,
                             PurgeWaveConfigManager waveConfigManager,
@@ -119,20 +114,8 @@ public class PurgeWaveManager {
         }
     }
 
-    public void setSessionManager(PurgeSessionManager sessionManager) {
-        this.sessionManager = sessionManager;
-    }
-
-    public void setUpgradeManager(PurgeUpgradeManager upgradeManager) {
-        this.upgradeManager = upgradeManager;
-    }
-
-    public void setWeaponXpManager(WeaponXpManager weaponXpManager) {
-        this.weaponXpManager = weaponXpManager;
-    }
-
-    public void setClassManager(PurgeClassManager classManager) {
-        this.classManager = classManager;
+    void initRegistry(PurgeManagerRegistry registry) {
+        this.registry = registry;
     }
 
     public boolean hasConfiguredWaves() {
@@ -675,9 +658,7 @@ public class PurgeWaveManager {
             int deadCount = dead.size();
             session.forEachAliveConnectedPlayerState(ps -> {
                 UUID playerId = ps.getPlayerId();
-                int bonusScrap = (weaponXpManager != null)
-                        ? weaponXpManager.getBonusScrap(playerId, ps.getCurrentWeaponId()) * deadCount
-                        : 0;
+                int bonusScrap = registry.getWeaponXpManager().getBonusScrap(playerId, ps.getCurrentWeaponId()) * deadCount;
                 int reward = baseScrapReward + bonusScrap;
                 if (reward > 0) {
                     PurgeScrapStore.getInstance().addScrap(playerId, reward);
@@ -737,10 +718,7 @@ public class PurgeWaveManager {
                 refreshZombieAggro(session, store);
                 updateZombieNameplates(session, store);
                 updatePlayerHealthHud(session, store, world);
-                PurgeClassManager cm = classManager;
-                if (cm != null) {
-                    cm.tickMedicRegen(session, store);
-                }
+                registry.getClassManager().tickMedicRegen(session, store);
 
                 int alivePlayers = session.getAliveConnectedCount();
                 int aliveZombies = session.getAliveZombieCount();
@@ -748,10 +726,7 @@ public class PurgeWaveManager {
 
                 if (alivePlayers == 0) {
                     if (tryBeginSessionTransition(session)) {
-                        PurgeSessionManager sm = sessionManager;
-                        if (sm != null) {
-                            sm.stopSessionById(session.getSessionId(), "team wiped");
-                        }
+                        registry.getSessionManager().stopSessionById(session.getSessionId(), "team wiped");
                     }
                     return;
                 }
@@ -772,10 +747,7 @@ public class PurgeWaveManager {
                                 + " wave=" + session.getCurrentWave()
                                 + " attempted=" + session.getWaveSpawnAttempts()
                                 + " spawned=" + session.getWaveSpawnSuccesses());
-                        PurgeSessionManager sm = sessionManager;
-                        if (sm != null) {
-                            sm.stopSessionById(session.getSessionId(), "wave spawn failure");
-                        }
+                        registry.getSessionManager().stopSessionById(session.getSessionId(), "wave spawn failure");
                     }
                 }
             } catch (Exception e) {
@@ -976,13 +948,7 @@ public class PurgeWaveManager {
     }
 
     private void showUpgradePopup(PurgeSession session) {
-        PurgeUpgradeManager um = upgradeManager;
-        if (um == null) {
-            session.setState(SessionState.INTERMISSION);
-            startIntermission(session);
-            return;
-        }
-
+        PurgeUpgradeManager um = registry.getUpgradeManager();
         World world = getPurgeWorld();
         if (world == null) {
             session.setState(SessionState.INTERMISSION);
@@ -1071,10 +1037,7 @@ public class PurgeWaveManager {
             return;
         }
         sendMessageToAll(session, "You won! You cleared all configured Purge waves.");
-        PurgeSessionManager sm = sessionManager;
-        if (sm != null) {
-            sm.stopSessionById(session.getSessionId(), "victory");
-        }
+        registry.getSessionManager().stopSessionById(session.getSessionId(), "victory");
     }
 
     public void startIntermission(PurgeSession session) {
@@ -1445,9 +1408,8 @@ public class PurgeWaveManager {
 
                     // Re-apply ammo upgrade to the fresh weapon ItemStack
                     try {
-                        PurgeUpgradeManager um = upgradeManager;
-                        if (um != null && player != null) {
-                            um.reapplyAmmoUpgrade(session, pid, player);
+                        if (player != null) {
+                            registry.getUpgradeManager().reapplyAmmoUpgrade(session, pid, player);
                         }
                     } catch (Exception e) {
                         LOGGER.atFine().log("Failed to re-apply ammo upgrade: " + e.getMessage());

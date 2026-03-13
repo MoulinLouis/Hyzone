@@ -59,20 +59,15 @@ Post-spawn overrides (in `PurgeWaveManager.spawnZombie()`):
 ## Manager Dependency Graph
 
 ```
-Plugin creates in this order:
-  1. spawnPointManager = new PurgeSpawnPointManager()              // loads DB
-  2. settingsManager = new PurgeSettingsManager()                  // start/exit locations
-  3. waveConfigManager = new PurgeWaveConfigManager()              // wave definitions
-  4. hudManager = new PurgeHudManager()
-  5. waveManager = new PurgeWaveManager(spawnPointManager, waveConfigManager, hudManager)
-  6. sessionManager = new PurgeSessionManager(spawnPointManager, waveManager, hudManager, settingsManager)
-       └── constructor calls waveManager.setSessionManager(this)   // breaks circular dep
-  7. upgradeManager = new PurgeUpgradeManager()
-  8. waveManager.setUpgradeManager(upgradeManager)
-  9. sessionManager.setUpgradeManager(upgradeManager)
+Plugin creates managers, then wires cross-references atomically via PurgeManagerRegistry:
+  1. instanceManager, variantConfigManager, waveConfigManager, weaponConfigManager
+  2. hudManager, waveManager, partyManager, sessionManager
+  3. upgradeManager, weaponXpManager, classManager, missionManager
+  4. PurgeManagerRegistry.builder()...build()
+       └── build() calls initRegistry() on sessionManager, waveManager, partyManager, hudManager
 ```
 
-**Circular dependency:** WaveManager needs SessionManager to call `stopSession()` on death/victory. SessionManager needs WaveManager to remove live zombies during cleanup. Resolved with setter injection.
+**Circular dependency:** WaveManager needs SessionManager to call `stopSession()` on death/victory. SessionManager needs WaveManager to remove live zombies during cleanup. Resolved via PurgeManagerRegistry which wires all cross-references atomically after all managers are constructed.
 
 ---
 
