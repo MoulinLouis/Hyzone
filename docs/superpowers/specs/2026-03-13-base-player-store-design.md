@@ -6,7 +6,7 @@
 
 ## Problem
 
-Three player stores — `PurgePlayerStore`, `DuelStatsStore`, `RunOrFallStatsStore` — share 70-80% identical code: ConcurrentHashMap cache, lazy DB load on cache miss, INSERT...ON DUPLICATE KEY UPDATE upsert, eviction, DB-not-initialized guards.
+Three player stores — `PurgePlayerStore`, `DuelStatsStore`, `RunOrFallStatsStore` — share 70-80% identical code: ConcurrentHashMap cache, DB load on cache miss, INSERT...ON DUPLICATE KEY UPDATE upsert, eviction, DB-not-initialized guards.
 
 ## Scope
 
@@ -39,8 +39,8 @@ public abstract class BasePlayerStore<V> {
     /** INSERT ... ON DUPLICATE KEY UPDATE query. */
     protected abstract String upsertSql();
 
-    /** Parse one ResultSet row into V. Cursor is already on the row. */
-    protected abstract V parseRow(ResultSet rs) throws SQLException;
+    /** Parse one ResultSet row into V. Cursor is already on the row. playerId is provided so subclasses don't need to redundantly SELECT the UUID column on single-player loads. */
+    protected abstract V parseRow(ResultSet rs, UUID playerId) throws SQLException;
 
     /** Bind all upsert parameters onto the PreparedStatement. */
     protected abstract void bindUpsertParams(PreparedStatement stmt, UUID playerId, V value) throws SQLException;
@@ -51,20 +51,56 @@ public abstract class BasePlayerStore<V> {
     // --- Provided behavior ---
 
     public V getOrLoad(UUID playerId) {
+        if (playerId == null) return defaultValue();
         return cache.computeIfAbsent(playerId, this::loadFromDatabase);
     }
 
     public void save(UUID playerId, V value) {
+        if (playerId == null) return;
         cache.put(playerId, value);
         persistToDatabase(playerId, value);
     }
 
     public void evict(UUID playerId) {
+        if (playerId == null) return;
         cache.remove(playerId);
     }
 
+    /** Read from cache only, no DB fallback. Returns null if not cached. */
     protected V getCached(UUID playerId) {
-        return cache.get(playerId);
+        return playerId == null ? null : cache.get(playerId);
+    }
+
+    /** Expose cache values for subclasses that need listing (leaderboards). */
+    protected Collection<V> cacheValues() {
+        return cache.values();
+    }
+
+    /** Bulk-load all rows for subclasses that need it (leaderboards). */
+    protected void loadAll(String loadAllSql, Function<ResultSet, UUID> keyExtractor) {
+        if (!DatabaseManager.getInstance().isInitialized()) return;
+        int skipped = 0;
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement stmt = DatabaseManager.prepare(conn, loadAllSql);
+             ResultSet rs = stmt.executeQuery()) {
+            while (rs.next()) {
+                try {
+                    UUID key = keyExtractor.apply(rs);
+                    V value = parseRow(rs, key);
+                    if (key != null && value != null) {
+                        cache.put(key, value);
+                    }
+                } catch (Exception e) {
+                    skipped++;
+                }
+            }
+        } catch (SQLException e) {
+            logError("bulk loading", e);
+        }
+        if (skipped > 0) {
+            HytaleLogger.forEnclosingClass().atWarning()
+                .log("[%s] Skipped %d malformed rows during bulk load", getClass().getSimpleName(), skipped);
+        }
     }
 
     private V loadFromDatabase(UUID playerId) {
@@ -76,7 +112,7 @@ public abstract class BasePlayerStore<V> {
             stmt.setString(1, playerId.toString());
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
-                    return parseRow(rs);
+                    return parseRow(rs, playerId);
                 }
             }
         } catch (SQLException e) {
@@ -99,17 +135,29 @@ public abstract class BasePlayerStore<V> {
     }
 
     private void logError(String context, SQLException e) {
-        HytaleLogger.error("[" + getClass().getSimpleName() + "] DB error " + context + ": " + e.getMessage());
+        HytaleLogger.forEnclosingClass().atWarning().withCause(e)
+            .log("[%s] DB error %s", getClass().getSimpleName(), context);
     }
 }
 ```
+
+### Key Design Decisions
+
+**Null safety:** All public methods guard against null `playerId` (matches existing `PurgePlayerStore` behavior).
+
+**Logging:** Uses `HytaleLogger.forEnclosingClass().atWarning().withCause(e)` to preserve stack traces (matches existing store logging pattern).
+
+**Bulk loading:** `loadAll()` is a protected helper for subclasses that need it (`DuelStatsStore`, `RunOrFallStatsStore` use it for leaderboards). `PurgePlayerStore` doesn't call it. This keeps bulk-load opt-in without polluting the base class API.
+
+**Cache-first saves:** `save()` updates cache then persists. This matches `PurgePlayerStore` and `DuelStatsStore` behavior. `RunOrFallStatsStore` currently does DB-first-then-cache, but this is overly conservative — if the DB write fails, the cache still reflects the game state for the current session, and the next `save()` will retry.
+
+**Thread safety:** `computeIfAbsent` prevents duplicate DB loads. For read-modify-write cycles (`recordWin`/`recordLoss`), concurrent mutations on the same player are not possible in practice — a player can only be in one game/duel at a time. This assumption is documented, and `RunOrFallStatsStore` drops its `synchronized` blocks.
 
 ### Subclass Migrations
 
 #### PurgePlayerStore (purge module)
 
-Before: ~80 LOC with manual cache, load, save, evict, DB guards.
-After: ~35 LOC — singleton boilerplate + 5 template methods.
+Before: ~80 LOC. After: ~35 LOC.
 
 ```java
 public class PurgePlayerStore extends BasePlayerStore<PurgePlayerStats> {
@@ -124,7 +172,7 @@ public class PurgePlayerStore extends BasePlayerStore<PurgePlayerStats> {
         return "INSERT INTO purge_player_stats (uuid, best_wave, total_kills, total_sessions) VALUES (?, ?, ?, ?) "
              + "ON DUPLICATE KEY UPDATE best_wave = ?, total_kills = ?, total_sessions = ?";
     }
-    @Override protected V parseRow(ResultSet rs) throws SQLException {
+    @Override protected PurgePlayerStats parseRow(ResultSet rs, UUID playerId) throws SQLException {
         return new PurgePlayerStats(rs.getInt("best_wave"), rs.getInt("total_kills"), rs.getInt("total_sessions"));
     }
     @Override protected void bindUpsertParams(PreparedStatement stmt, UUID id, PurgePlayerStats s) throws SQLException {
@@ -138,45 +186,55 @@ public class PurgePlayerStore extends BasePlayerStore<PurgePlayerStats> {
 
 #### DuelStatsStore (parkour module)
 
-Before: ~100 LOC with manual cache, load, save, syncLoad, ensureTable.
-After: ~45 LOC — 5 template methods + `getStatsByName()` (linear search, kept as-is) + `recordWin()`/`recordLoss()` convenience methods.
+Before: ~100 LOC. After: ~60 LOC.
 
 Changes:
-- Drops `syncLoad()` bulk-load — uses lazy `getOrLoad()` instead
-- Drops manual `ensureTable()` — table creation handled by module setup
-- Keeps `getStatsByName(String)` as a subclass-specific method (iterates cache values)
-- `recordWin(UUID, name)` and `recordLoss(UUID, name)` call `getOrLoad()` then `save()`
+- Keeps `syncLoad()` — calls `loadAll()` from base class to populate cache for leaderboard
+- Keeps `getStatsByName(String)` — uses `cacheValues()` for linear search
+- Keeps `recordWin(UUID, name)` / `recordLoss(UUID, name)` — call `getOrLoad()` then `save()`
+- Keeps `listStats()` — returns `new ArrayList<>(cacheValues())`
+- **Nullable `getStats(UUID)`**: Subclass provides `getStats(UUID)` that returns `getCached(playerId)` (nullable) for callers like `DuelCommand` that check `if (stats == null)`. `getOrLoad(UUID)` is used internally by `recordWin`/`recordLoss` when a non-null result is needed.
+- `upsertSql()` includes `updated_at` timestamp column (5th parameter)
+- **Table creation**: `ensureTable()` remains on the subclass (parkour module has no centralized DB setup class yet). Called from `syncLoad()` before `loadAll()`.
 
 #### RunOrFallStatsStore (runorfall module)
 
-Before: ~130 LOC with synchronized methods, bulk syncLoad, column migrations.
-After: ~50 LOC — 5 template methods + `recordWin()`/`recordLoss()` convenience methods.
+Before: ~130 LOC. After: ~65 LOC.
 
 Changes:
-- Drops all `synchronized` keywords — `computeIfAbsent` handles thread safety
-- Drops `syncLoad()` bulk-load — uses lazy `getOrLoad()` instead
-- Drops `ensureColumns()` migration calls — column migrations handled by module setup
-- `recordWin(BiConsumer)` / `recordLoss(BiConsumer)` pattern stays, calls `save()` after mutation
+- Keeps `syncLoad()` — calls `loadAll()` from base class to populate cache for leaderboard
+- Drops all `synchronized` keywords
+- Drops `ensureColumns()` — column migrations handled by module setup
+- Keeps `recordWin(BiConsumer)` / `recordLoss(BiConsumer)` pattern, calls `save()` after mutation
+- Keeps `listStats()` — returns `new ArrayList<>(cacheValues())`
+- **Name parameter**: Provides `getOrLoadWithName(UUID, String)` that calls `getOrLoad(UUID)` then updates the player name on the returned object if it differs. Callers migrate from `getStats(UUID, name)` to `getOrLoadWithName(UUID, name)`.
+- **Defensive copy**: Overrides `getOrLoad()` — calls `super.getOrLoad(playerId)` to populate cache, then returns `.copy()` on the result. The `recordResult` methods call `super.getOrLoad()` to get the real cached reference, mutate a copy, then call `save()` to atomically replace the cache entry.
+- **Name sanitization**: `sanitizePlayerName()` remains as a private helper on the subclass (RunOrFall-specific concern).
 
 ### Public API Changes
 
 | Current method | New method | Notes |
 |----------------|------------|-------|
-| `PurgePlayerStore.getOrCreate(UUID)` | `getOrLoad(UUID)` | Rename for consistency |
-| `DuelStatsStore.getStats(UUID)` | `getOrLoad(UUID)` | Same behavior |
-| `RunOrFallStatsStore.getStats(UUID, name)` | `getOrLoad(UUID)` | Name param handled differently (see below) |
+| `PurgePlayerStore.getOrCreate(UUID)` | `getOrLoad(UUID)` | Rename, same behavior |
+| `DuelStatsStore.getStats(UUID)` | `getStats(UUID)` (nullable, kept) + `getOrLoad(UUID)` (non-null, new) | `getStats` returns cached only; `getOrLoad` does DB fallback |
+| `RunOrFallStatsStore.getStats(UUID, name)` | `getOrLoadWithName(UUID, name)` | Delegates to `getOrLoad()` + sets name |
 | `*.evictPlayer(UUID)` | `evict(UUID)` | Simplified name |
+| `*.listStats()` | `listStats()` (kept on subclass) | Uses `cacheValues()` from base |
 
-For `RunOrFallStatsStore.getStats(UUID, name)`: the `name` parameter is used to set the player name on first load. The subclass can override `getOrLoad` or provide a separate `getOrLoadWithName(UUID, String)` method that calls `getOrLoad()` then updates the name field if needed.
+**Caller updates required:**
+- `PurgePlayerStore`: All callers rename `getOrCreate()` -> `getOrLoad()`, `evictPlayer()` -> `evict()`
+- `DuelStatsStore`: `DuelCommand` callers keep using `getStats()` (still nullable). `DuelTracker` callers use `recordWin()`/`recordLoss()` (unchanged).
+- `RunOrFallStatsStore`: Callers rename `getStats(uuid, name)` -> `getOrLoadWithName(uuid, name)`. `recordWin`/`recordLoss` unchanged.
 
 ### Error Handling
 
 - DB-not-initialized: return `defaultValue()`, no log (matches current behavior)
-- SQLException on load: log error via `HytaleLogger.error()`, return `defaultValue()`
-- SQLException on save: log error via `HytaleLogger.error()`, cache still updated (matches current behavior — cache is source of truth during session)
+- SQLException on load: log warning with stack trace via `HytaleLogger`, return `defaultValue()`
+- SQLException on save: log warning with stack trace, cache still updated (cache is source of truth during session)
+- Null playerId: return `defaultValue()` (load) or no-op (save/evict)
 
 ### Testing
 
-Only pure-logic classes with zero Hytale imports are testable per CLAUDE.md. `BasePlayerStore` imports `HytaleLogger` and depends on `DatabaseManager`, so no unit tests. Correctness verified by:
+`BasePlayerStore` depends on `HytaleLogger` and `DatabaseManager` (Hytale imports), so no unit tests per CLAUDE.md constraints. Correctness verified by:
 1. Compile check (gradlew build)
 2. Callers of the 3 stores continue to work unchanged (API compatibility)
