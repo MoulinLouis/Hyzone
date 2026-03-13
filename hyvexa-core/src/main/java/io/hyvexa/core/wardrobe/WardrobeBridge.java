@@ -63,7 +63,7 @@ public class WardrobeBridge {
     }
 
     public void initialize() {
-        this.cosmetics = CosmeticConfigLoader.load();
+        this.cosmetics = List.copyOf(CosmeticConfigLoader.load());
         LOGGER.atInfo().log("Loaded " + cosmetics.size() + " wardrobe cosmetics");
     }
 

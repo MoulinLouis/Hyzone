@@ -57,10 +57,10 @@ Prioritized list of known issues and improvements. Sourced from a full codebase 
 - **Issue:** 3 simple player stores (`PurgePlayerStore`, `DuelStatsStore`, `RunOrFallStatsStore`) shared 70-80% identical code — cache lookup, DB fallback, upsert, evict.
 - **Fix:** Extracted `BasePlayerStore<V>` abstract class in core with template methods (`loadSql()`, `upsertSql()`, `parseRow()`, `bindUpsertParams()`, `defaultValue()`). Migrated all 3 stores. `WeaponXpStore` and `PurgeScrapStore` excluded (nested key / dirty tracking patterns don't fit).
 
-### 2.4 Externalize WardrobeBridge cosmetics to JSON
+### ~~2.4 Externalize WardrobeBridge cosmetics to JSON~~ (DONE)
 - **Module:** core/wardrobe
-- **Issue:** Shop cosmetics are hardcoded in `WardrobeBridge.COSMETICS`. Adding/removing cosmetics requires recompilation.
-- **Fix:** Load cosmetic definitions from a JSON config file at startup.
+- **Issue:** Shop cosmetics were hardcoded in `WardrobeBridge.COSMETICS`. Adding/removing cosmetics required recompilation.
+- **Fix:** Created `CosmeticConfigLoader` that loads cosmetic definitions from `mods/Parkour/cosmetics.json` at startup. Generates default file from the original 101 entries on first run.
 
 ### 2.5 Consolidate ad-hoc column migrations
 - **Module:** core, parkour, runorfall
