@@ -76,10 +76,12 @@ public class AnalyticsStore {
                 + ") ENGINE=InnoDB";
 
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
-            try (PreparedStatement stmt = DatabaseManager.prepare(conn, eventsTable)) {
+            try (PreparedStatement stmt = conn.prepareStatement(eventsTable)) {
+                DatabaseManager.applyQueryTimeout(stmt);
                 stmt.executeUpdate();
             }
-            try (PreparedStatement stmt = DatabaseManager.prepare(conn, dailyTable)) {
+            try (PreparedStatement stmt = conn.prepareStatement(dailyTable)) {
+                DatabaseManager.applyQueryTimeout(stmt);
                 stmt.executeUpdate();
             }
             // Add timestamp columns to players table (safe if already exists)
@@ -92,7 +94,8 @@ public class AnalyticsStore {
     }
 
     private void tryAlterColumn(Connection conn, String sql) {
-        try (PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
             stmt.executeUpdate();
         } catch (SQLException e) {
             // Column already exists — expected on subsequent startups
@@ -135,7 +138,8 @@ public class AnalyticsStore {
         String sql = "INSERT INTO analytics_events (timestamp_ms, player_uuid, event_type, data_json) "
                 + "VALUES (?, ?, ?, ?)";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
             stmt.setLong(1, timestampMs);
             stmt.setString(2, playerId.toString());
             stmt.setString(3, eventType);
@@ -158,16 +162,18 @@ public class AnalyticsStore {
             long now = System.currentTimeMillis();
             try (Connection conn = DatabaseManager.getInstance().getConnection()) {
                 // Always update last_seen_ms
-                try (PreparedStatement stmt = DatabaseManager.prepare(conn,
+                try (PreparedStatement stmt = conn.prepareStatement(
                         "UPDATE players SET last_seen_ms = ? WHERE uuid = ?")) {
+                    DatabaseManager.applyQueryTimeout(stmt);
                     stmt.setLong(1, now);
                     stmt.setString(2, playerId.toString());
                     stmt.executeUpdate();
                 }
                 // Set first_join_ms only if not already set
                 if (isFirstJoin) {
-                    try (PreparedStatement stmt = DatabaseManager.prepare(conn,
+                    try (PreparedStatement stmt = conn.prepareStatement(
                             "UPDATE players SET first_join_ms = ? WHERE uuid = ? AND first_join_ms IS NULL")) {
+                        DatabaseManager.applyQueryTimeout(stmt);
                         stmt.setLong(1, now);
                         stmt.setString(2, playerId.toString());
                         stmt.executeUpdate();
@@ -196,62 +202,47 @@ public class AnalyticsStore {
                     + "WHERE event_type = 'player_join' AND timestamp_ms >= ? AND timestamp_ms < ?",
                     dayStartMs, dayEndMs);
 
-            // New players: player_join with is_new=true
-            int newPlayers = 0;
-            try (PreparedStatement npStmt = DatabaseManager.prepare(conn,
-                    "SELECT data_json FROM analytics_events "
-                    + "WHERE event_type = 'player_join' AND timestamp_ms >= ? AND timestamp_ms < ?")) {
-                npStmt.setLong(1, dayStartMs);
-                npStmt.setLong(2, dayEndMs);
-                try (ResultSet npRs = npStmt.executeQuery()) {
-                    while (npRs.next()) {
-                        if (getBooleanFromJson(npRs.getString("data_json"), "is_new")) {
-                            newPlayers++;
-                        }
-                    }
-                }
-            }
+            // New players: player_join with is_new=true (aggregated in SQL via LIKE)
+            int newPlayers = queryIntScalar(conn,
+                    "SELECT COUNT(*) FROM analytics_events "
+                    + "WHERE event_type = 'player_join' AND timestamp_ms >= ? AND timestamp_ms < ? "
+                    + "AND data_json LIKE '%\"is_new\":true%'",
+                    dayStartMs, dayEndMs);
 
-            // Session stats from player_leave events
+            // Session stats from player_leave events (aggregated in SQL)
             long totalSessionMs = 0;
             int totalSessions = 0;
-            try (PreparedStatement stmt = DatabaseManager.prepare(conn,
-                    "SELECT data_json FROM analytics_events "
-                    + "WHERE event_type = 'player_leave' AND timestamp_ms >= ? AND timestamp_ms < ?")) {
+            long avgSessionMs = 0;
+            try (PreparedStatement stmt = conn.prepareStatement(
+                    "SELECT COUNT(*) AS cnt, COALESCE(SUM(JSON_EXTRACT(data_json, '$.session_ms')), 0) AS total_ms "
+                    + "FROM analytics_events "
+                    + "WHERE event_type = 'player_leave' AND timestamp_ms >= ? AND timestamp_ms < ? "
+                    + "AND JSON_EXTRACT(data_json, '$.session_ms') > 0")) {
+                DatabaseManager.applyQueryTimeout(stmt);
                 stmt.setLong(1, dayStartMs);
                 stmt.setLong(2, dayEndMs);
                 try (ResultSet rs = stmt.executeQuery()) {
-                    while (rs.next()) {
-                        String json = rs.getString("data_json");
-                        long sessionMs = extractLongFromJson(json, "session_ms");
-                        if (sessionMs > 0) {
-                            totalSessionMs += sessionMs;
-                            totalSessions++;
-                        }
+                    if (rs.next()) {
+                        totalSessions = rs.getInt("cnt");
+                        totalSessionMs = rs.getLong("total_ms");
                     }
                 }
             }
-            long avgSessionMs = totalSessions > 0 ? totalSessionMs / totalSessions : 0;
+            if (totalSessions > 0) {
+                avgSessionMs = totalSessionMs / totalSessions;
+            }
 
-            // Mode split from mode_switch events
-            int parkourSwitches = 0;
-            int ascendSwitches = 0;
-            try (PreparedStatement msStmt = DatabaseManager.prepare(conn,
-                    "SELECT data_json FROM analytics_events "
-                    + "WHERE event_type = 'mode_switch' AND timestamp_ms >= ? AND timestamp_ms < ?")) {
-                msStmt.setLong(1, dayStartMs);
-                msStmt.setLong(2, dayEndMs);
-                try (ResultSet msRs = msStmt.executeQuery()) {
-                    while (msRs.next()) {
-                        String toMode = extractStringFromJson(msRs.getString("data_json"), "to");
-                        if ("parkour".equals(toMode)) {
-                            parkourSwitches++;
-                        } else if ("ascend".equals(toMode)) {
-                            ascendSwitches++;
-                        }
-                    }
-                }
-            }
+            // Mode split from mode_switch events (aggregated in SQL via LIKE)
+            int parkourSwitches = queryIntScalar(conn,
+                    "SELECT COUNT(*) FROM analytics_events "
+                    + "WHERE event_type = 'mode_switch' AND timestamp_ms >= ? AND timestamp_ms < ? "
+                    + "AND data_json LIKE '%\"to\":\"parkour\"%'",
+                    dayStartMs, dayEndMs);
+            int ascendSwitches = queryIntScalar(conn,
+                    "SELECT COUNT(*) FROM analytics_events "
+                    + "WHERE event_type = 'mode_switch' AND timestamp_ms >= ? AND timestamp_ms < ? "
+                    + "AND data_json LIKE '%\"to\":\"ascend\"%'",
+                    dayStartMs, dayEndMs);
             int totalSwitches = parkourSwitches + ascendSwitches;
             float parkourPct = totalSwitches > 0 ? (float) parkourSwitches / totalSwitches * 100f : 0f;
             float ascendPct = totalSwitches > 0 ? (float) ascendSwitches / totalSwitches * 100f : 0f;
@@ -272,7 +263,8 @@ public class AnalyticsStore {
                     + "avg_session_ms=VALUES(avg_session_ms), total_sessions=VALUES(total_sessions), "
                     + "parkour_time_pct=VALUES(parkour_time_pct), ascend_time_pct=VALUES(ascend_time_pct), "
                     + "peak_concurrent=VALUES(peak_concurrent)";
-            try (PreparedStatement stmt = DatabaseManager.prepare(conn, upsert)) {
+            try (PreparedStatement stmt = conn.prepareStatement(upsert)) {
+                DatabaseManager.applyQueryTimeout(stmt);
                 stmt.setString(1, date.toString());
                 stmt.setInt(2, dau);
                 stmt.setInt(3, newPlayers);
@@ -303,7 +295,8 @@ public class AnalyticsStore {
                 + "parkour_time_pct, ascend_time_pct, peak_concurrent "
                 + "FROM analytics_daily WHERE date >= ? ORDER BY date DESC";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
             stmt.setString(1, cutoff.toString());
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
@@ -374,7 +367,8 @@ public class AnalyticsStore {
         HytaleServer.SCHEDULED_EXECUTOR.execute(() -> {
             String sql = "DELETE FROM analytics_events WHERE timestamp_ms < ?";
             try (Connection conn = DatabaseManager.getInstance().getConnection();
-                 PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
                 stmt.setLong(1, cutoffMs);
                 int deleted = stmt.executeUpdate();
                 if (deleted > 0) {
@@ -427,7 +421,8 @@ public class AnalyticsStore {
         String sql = "SELECT COUNT(*) FROM analytics_events "
                 + "WHERE event_type = ? AND timestamp_ms >= ? AND data_json LIKE ?";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
             stmt.setString(1, eventType);
             stmt.setLong(2, cutoffMs);
             stmt.setString(3, jsonLikePattern);
@@ -451,7 +446,8 @@ public class AnalyticsStore {
         String sql = "SELECT data_json FROM analytics_events WHERE event_type = ? AND timestamp_ms >= ?";
         Map<String, Integer> counts = new HashMap<>();
         try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
             stmt.setString(1, eventType);
             stmt.setLong(2, cutoffMs);
             try (ResultSet rs = stmt.executeQuery()) {
@@ -482,7 +478,8 @@ public class AnalyticsStore {
         String sql = "SELECT data_json FROM analytics_events WHERE event_type = ? AND timestamp_ms >= ?";
         long total = 0;
         try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
             stmt.setString(1, eventType);
             stmt.setLong(2, cutoffMs);
             try (ResultSet rs = stmt.executeQuery()) {
@@ -502,7 +499,8 @@ public class AnalyticsStore {
     }
 
     private int queryIntScalar(Connection conn, String sql, String strParam, long longParam) throws SQLException {
-        try (PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
             stmt.setString(1, strParam);
             stmt.setLong(2, longParam);
             try (ResultSet rs = stmt.executeQuery()) {
@@ -513,7 +511,8 @@ public class AnalyticsStore {
     }
 
     private int queryIntScalar(Connection conn, String sql, long... params) throws SQLException {
-        try (PreparedStatement stmt = DatabaseManager.prepare(conn, sql)) {
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
             for (int i = 0; i < params.length; i++) {
                 stmt.setLong(i + 1, params[i]);
             }
@@ -572,18 +571,4 @@ public class AnalyticsStore {
         }
     }
 
-    /**
-     * Extract a boolean value from a JSON string like {"key":true}. Returns false for missing/malformed.
-     */
-    private boolean getBooleanFromJson(String json, String key) {
-        JsonObject obj = parseJson(json);
-        if (obj == null || !obj.has(key)) {
-            return false;
-        }
-        try {
-            return obj.get(key).getAsBoolean();
-        } catch (ClassCastException | IllegalStateException | UnsupportedOperationException e) {
-            return false;
-        }
-    }
 }

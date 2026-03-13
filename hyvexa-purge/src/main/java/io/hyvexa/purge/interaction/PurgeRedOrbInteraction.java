@@ -26,7 +26,7 @@ public class PurgeRedOrbInteraction extends SimpleInteraction {
             return;
         }
         PurgeSessionManager sessionManager = ctx.plugin().getSessionManager();
-        if (!sessionManager.hasActiveSession(ctx.playerId())) {
+        if (sessionManager.getSessionByPlayer(ctx.playerId()) == null) {
             ctx.player().sendMessage(Message.raw("No active Purge session."));
             return;
         }

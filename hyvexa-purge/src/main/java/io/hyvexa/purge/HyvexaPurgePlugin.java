@@ -240,7 +240,7 @@ public class HyvexaPurgePlugin extends JavaPlugin {
             }
             // Leaving Purge world
             if (playerId != null) {
-                if (sessionManager.hasActiveSession(playerId)) {
+                if (sessionManager.getSessionByPlayer(playerId) != null) {
                     sessionManager.leaveSession(playerId, "left world");
                 }
                 partyManager.cleanupPlayer(playerId);

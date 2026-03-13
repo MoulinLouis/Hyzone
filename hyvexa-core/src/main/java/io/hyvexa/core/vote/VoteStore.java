@@ -74,36 +74,26 @@ public class VoteStore {
         if (!DatabaseManager.getInstance().isInitialized()) {
             return;
         }
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
-            conn.setAutoCommit(false);
-            try {
-                try (PreparedStatement stmt = DatabaseManager.prepare(conn,
-                        "INSERT INTO player_votes (player_uuid, player_name, source) VALUES (?, ?, ?)")) {
-                    stmt.setString(1, playerId.toString());
-                    stmt.setString(2, username);
-                    stmt.setString(3, source);
-                    stmt.executeUpdate();
-                }
-                try (PreparedStatement stmt = DatabaseManager.prepare(conn,
-                        "INSERT INTO player_vote_counts (player_uuid, player_name, total_votes, last_voted_at) "
-                        + "VALUES (?, ?, 1, NOW()) "
-                        + "ON DUPLICATE KEY UPDATE total_votes = total_votes + 1, "
-                        + "last_voted_at = NOW(), player_name = VALUES(player_name)")) {
-                    stmt.setString(1, playerId.toString());
-                    stmt.setString(2, username);
-                    stmt.executeUpdate();
-                }
-                conn.commit();
-                // Update cache
-                countCache.compute(playerId, (uuid, current) -> (current != null ? current : 0) + 1);
-            } catch (SQLException e) {
-                conn.rollback();
-                throw e;
-            } finally {
-                conn.setAutoCommit(true);
+        boolean committed = DatabaseManager.getInstance().withTransaction(conn -> {
+            try (PreparedStatement stmt = DatabaseManager.prepare(conn,
+                    "INSERT INTO player_votes (player_uuid, player_name, source) VALUES (?, ?, ?)")) {
+                stmt.setString(1, playerId.toString());
+                stmt.setString(2, username);
+                stmt.setString(3, source);
+                stmt.executeUpdate();
             }
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to record vote for " + playerId);
+            try (PreparedStatement stmt = DatabaseManager.prepare(conn,
+                    "INSERT INTO player_vote_counts (player_uuid, player_name, total_votes, last_voted_at) "
+                    + "VALUES (?, ?, 1, NOW()) "
+                    + "ON DUPLICATE KEY UPDATE total_votes = total_votes + 1, "
+                    + "last_voted_at = NOW(), player_name = VALUES(player_name)")) {
+                stmt.setString(1, playerId.toString());
+                stmt.setString(2, username);
+                stmt.executeUpdate();
+            }
+        });
+        if (committed) {
+            countCache.compute(playerId, (uuid, current) -> (current != null ? current : 0) + 1);
         }
     }
 

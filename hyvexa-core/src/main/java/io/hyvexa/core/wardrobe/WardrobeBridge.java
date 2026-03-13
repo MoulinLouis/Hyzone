@@ -247,23 +247,19 @@ public class WardrobeBridge {
         }
 
         // Atomic: deduct currency + insert cosmetic ownership in one transaction
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
-            conn.setAutoCommit(false);
-            try {
-                if (!deductCurrencyRow(conn, currency, playerId, price)) {
-                    conn.rollback();
-                    return error("Not enough " + currency + "! You need " + price + " but have "
-                            + CurrencyBridge.getBalance(currency, playerId) + ".");
-                }
-                insertOwnedCosmetic(conn, playerId, cosmeticId);
-                conn.commit();
-            } catch (Exception e) {
-                conn.rollback();
-                throw e;
+        Boolean purchased = DatabaseManager.getInstance().withTransaction(conn -> {
+            if (!deductCurrencyRow(conn, currency, playerId, price)) {
+                return false;
             }
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to purchase cosmetic " + cosmeticId + " for " + playerId);
+            insertOwnedCosmetic(conn, playerId, cosmeticId);
+            return true;
+        }, null);
+        if (purchased == null) {
             return error("Purchase failed, please try again.");
+        }
+        if (!purchased) {
+            return error("Not enough " + currency + "! You need " + price + " but have "
+                    + CurrencyBridge.getBalance(currency, playerId) + ".");
         }
 
         // Update in-memory caches after successful commit

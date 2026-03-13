@@ -1291,29 +1291,16 @@ public class AscendPlayerStore {
                 "ascend_players"
             };
 
-            try (Connection conn = DatabaseManager.getInstance().getConnection()) {
-                if (conn == null) {
-                    LOGGER.atWarning().log("Failed to acquire database connection");
-                    return;
-                }
-                conn.setAutoCommit(false);
-                try {
-                    for (String table : tables) {
-                        try (PreparedStatement stmt = conn.prepareStatement("DELETE FROM " + table)) {
-                            DatabaseManager.applyQueryTimeout(stmt);
-                            stmt.executeUpdate();
-                        }
+            boolean wiped = DatabaseManager.getInstance().withTransaction(conn -> {
+                for (String table : tables) {
+                    try (PreparedStatement stmt = conn.prepareStatement("DELETE FROM " + table)) {
+                        DatabaseManager.applyQueryTimeout(stmt);
+                        stmt.executeUpdate();
                     }
-                    conn.commit();
-                    LOGGER.atInfo().log("All player progress wiped from database (%d tables cleared)", tables.length);
-                } catch (SQLException e) {
-                    conn.rollback();
-                    throw e;
-                } finally {
-                    conn.setAutoCommit(true);
                 }
-            } catch (SQLException e) {
-                LOGGER.atSevere().log("Failed to wipe all player data: " + e.getMessage());
+            });
+            if (wiped) {
+                LOGGER.atInfo().log("All player progress wiped from database (%d tables cleared)", tables.length);
             }
         }
 

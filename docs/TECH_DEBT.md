@@ -13,10 +13,10 @@ Prioritized list of known issues and improvements. Sourced from a full codebase 
 - **Issue:** `RunOrFallBlinkInteraction` uses reflection to call `RestartCheckpointInteraction` from parkour. This is unnecessary fragility since interfaces in core could bridge the modules.
 - **Fix:** Define `GameModeBridge` interface in core; each module registers its bridge on startup.
 
-### 1.2 Extract CheckpointDetector from RunValidator + DuelTracker
+### ~~1.2 Extract CheckpointDetector from RunValidator + DuelTracker~~ (DONE)
 - **Module:** parkour
 - **Issue:** Checkpoint detection logic is duplicated between `RunValidator` and `DuelTracker`. Bug fixes in one don't propagate to the other.
-- **Fix:** Extract shared `CheckpointDetector` class.
+- **Fix:** Extracted shared `CheckpointDetector` class with `CheckpointState` interface. Both `ActiveRun` and `DuelPlayerState` implement the interface.
 
 ### 1.3 Fix AnalyticsStore SQL (use GROUP BY)
 - **Module:** core

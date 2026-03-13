@@ -897,14 +897,7 @@ public class RobotManager {
     }
 
     private void updatePreviousPosition(RobotState robot, double x, double y, double z) {
-        double[] previousPosition = robot.getPreviousPosition();
-        if (previousPosition == null || previousPosition.length < 3) {
-            previousPosition = new double[3];
-            robot.setPreviousPosition(previousPosition);
-        }
-        previousPosition[0] = x;
-        previousPosition[1] = y;
-        previousPosition[2] = z;
+        robot.setPreviousPosition(new double[]{x, y, z});
     }
 
     private void refreshRobotCache(RobotState robot, AscendMap resolvedMap, long now) {

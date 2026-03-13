@@ -795,9 +795,7 @@ public class RunOrFallConfigStore {
                 (map_id, min_players, lobby_x, lobby_y, lobby_z, lobby_rot_x, lobby_rot_y, lobby_rot_z)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """;
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
-            boolean autoCommit = conn.getAutoCommit();
-            conn.setAutoCommit(false);
+        DatabaseManager.getInstance().withTransaction(conn -> {
             try (PreparedStatement deleteStmt = conn.prepareStatement(deleteSql);
                  PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
                 DatabaseManager.applyQueryTimeout(deleteStmt);
@@ -828,16 +826,8 @@ public class RunOrFallConfigStore {
                     insertStmt.addBatch();
                 }
                 insertStmt.executeBatch();
-                conn.commit();
-            } catch (SQLException e) {
-                conn.rollback();
-                throw e;
-            } finally {
-                conn.setAutoCommit(autoCommit);
             }
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to save RunOrFall maps.");
-        }
+        });
     }
 
     private synchronized void saveSpawnsToDatabase() {
@@ -849,9 +839,7 @@ public class RunOrFallConfigStore {
                 INSERT INTO runorfall_map_spawns (map_id, spawn_order, x, y, z, rot_x, rot_y, rot_z)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """;
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
-            boolean autoCommit = conn.getAutoCommit();
-            conn.setAutoCommit(false);
+        DatabaseManager.getInstance().withTransaction(conn -> {
             try (PreparedStatement deleteStmt = conn.prepareStatement(deleteSql);
                  PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
                 DatabaseManager.applyQueryTimeout(deleteStmt);
@@ -879,16 +867,8 @@ public class RunOrFallConfigStore {
                     }
                 }
                 insertStmt.executeBatch();
-                conn.commit();
-            } catch (SQLException e) {
-                conn.rollback();
-                throw e;
-            } finally {
-                conn.setAutoCommit(autoCommit);
             }
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to save RunOrFall spawns.");
-        }
+        });
     }
 
     private synchronized void savePlatformsToDatabase() {
@@ -901,9 +881,7 @@ public class RunOrFallConfigStore {
                 (map_id, platform_order, min_x, min_y, min_z, max_x, max_y, max_z, target_block_item_id)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """;
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
-            boolean autoCommit = conn.getAutoCommit();
-            conn.setAutoCommit(false);
+        DatabaseManager.getInstance().withTransaction(conn -> {
             try (PreparedStatement deleteStmt = conn.prepareStatement(deleteSql);
                  PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
                 DatabaseManager.applyQueryTimeout(deleteStmt);
@@ -939,16 +917,8 @@ public class RunOrFallConfigStore {
                     }
                 }
                 insertStmt.executeBatch();
-                conn.commit();
-            } catch (SQLException e) {
-                conn.rollback();
-                throw e;
-            } finally {
-                conn.setAutoCommit(autoCommit);
             }
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to save RunOrFall platforms.");
-        }
+        });
     }
 
     private synchronized void persistAllToDatabase() {

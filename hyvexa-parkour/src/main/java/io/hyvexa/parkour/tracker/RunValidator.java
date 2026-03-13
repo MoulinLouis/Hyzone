@@ -5,7 +5,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
@@ -28,6 +27,7 @@ import io.hyvexa.parkour.data.ProgressStore;
 import io.hyvexa.parkour.data.TransformData;
 import io.hyvexa.parkour.ghost.GhostNpcManager;
 import io.hyvexa.parkour.ghost.GhostRecorder;
+import io.hyvexa.parkour.tracker.CheckpointDetector;
 import io.hyvexa.parkour.util.InventoryUtils;
 
 import java.util.ArrayList;
@@ -68,41 +68,27 @@ class RunValidator {
         if (run.practiceEnabled) {
             return;
         }
-        List<TransformData> checkpoints = map.getCheckpoints();
-        if (checkpoints == null || checkpoints.isEmpty()) {
-            return;
-        }
-        if (run.touchedCheckpoints.size() >= checkpoints.size()) {
-            return;
-        }
         List<Long> personalBestSplits = run.personalBestSplits;
-        for (int i = 0; i < checkpoints.size(); i++) {
-            if (run.touchedCheckpoints.contains(i)) {
-                continue;
-            }
-            TransformData checkpoint = checkpoints.get(i);
-            if (checkpoint == null) {
-                continue;
-            }
-            if (distanceSqWithVerticalBonus(position, checkpoint) <= TOUCH_RADIUS_SQ) {
-                run.touchedCheckpoints.add(i);
-                run.lastCheckpointIndex = i;
-                long elapsedMs = resolveInterpolatedTimeMs(run, previousPosition, position, checkpoint,
-                        previousElapsedMs, deltaMs);
-                run.checkpointTouchTimes.put(i, elapsedMs);
-                TrackerUtils.playCheckpointSound(playerRef);
-                CheckpointSplitInfo splitInfo = buildCheckpointSplitInfo(i, elapsedMs, personalBestSplits);
-                player.sendMessage(splitInfo.message);
-                HyvexaPlugin plugin = HyvexaPlugin.getInstance();
-                if (plugin != null && plugin.getHudManager() != null) {
-                    if (splitInfo.hudText != null && splitInfo.hudColor != null) {
-                        plugin.getHudManager().showCheckpointSplit(playerRef, splitInfo.hudText, splitInfo.hudColor);
-                    } else {
-                        plugin.getHudManager().showCheckpointSplit(playerRef, null, null);
+        List<TransformData> checkpoints = map.getCheckpoints();
+        CheckpointDetector.detectCheckpoints(run, position, map,
+                TOUCH_RADIUS_SQ, ParkourConstants.TOUCH_VERTICAL_BONUS,
+                index -> {
+                    TransformData checkpoint = checkpoints.get(index);
+                    long elapsedMs = resolveInterpolatedTimeMs(run, previousPosition, position, checkpoint,
+                            previousElapsedMs, deltaMs);
+                    run.checkpointTouchTimes.put(index, elapsedMs);
+                    TrackerUtils.playCheckpointSound(playerRef);
+                    CheckpointSplitInfo splitInfo = buildCheckpointSplitInfo(index, elapsedMs, personalBestSplits);
+                    player.sendMessage(splitInfo.message);
+                    HyvexaPlugin plugin = HyvexaPlugin.getInstance();
+                    if (plugin != null && plugin.getHudManager() != null) {
+                        if (splitInfo.hudText != null && splitInfo.hudColor != null) {
+                            plugin.getHudManager().showCheckpointSplit(playerRef, splitInfo.hudText, splitInfo.hudColor);
+                        } else {
+                            plugin.getHudManager().showCheckpointSplit(playerRef, null, null);
+                        }
                     }
-                }
-            }
-        }
+                });
     }
 
     void checkFinish(RunTracker.ActiveRun run, PlayerRef playerRef, Player player, Vector3d position, Map map,
@@ -110,16 +96,15 @@ class RunValidator {
                      CommandBuffer<EntityStore> buffer, Vector3d previousPosition, long previousElapsedMs,
                      double deltaMs, RunSessionTracker sessionTracker, RunTeleporter teleporter,
                      RunTracker runTracker) {
-        if (run.practiceEnabled || run.finishTouched || map.getFinish() == null) {
+        if (run.practiceEnabled) {
             return;
         }
-        if (distanceSqWithVerticalBonus(position, map.getFinish()) > TOUCH_RADIUS_SQ) {
+        boolean finished = CheckpointDetector.detectFinish(run, position, map,
+                TOUCH_RADIUS_SQ, ParkourConstants.TOUCH_VERTICAL_BONUS,
+                () -> player.sendMessage(SystemMessageUtils.parkourWarn("You did not reach all checkpoints.")));
+        if (!finished) {
             return;
         }
-        if (!validateCheckpoints(run, map, player)) {
-            return;
-        }
-        run.finishTouched = true;
         TrackerUtils.playFinishSound(playerRef);
         long durationMs = resolveInterpolatedTimeMs(run, previousPosition, position, map.getFinish(),
                 previousElapsedMs, deltaMs);
@@ -158,20 +143,6 @@ class RunValidator {
         teleporter.recordTeleport(playerId, RunTeleporter.TeleportCause.FINISH);
         runTracker.clearActiveMap(playerId);
         InventoryUtils.giveMenuItems(player);
-    }
-
-    private boolean validateCheckpoints(RunTracker.ActiveRun run, Map map, Player player) {
-        List<TransformData> checkpoints = map.getCheckpoints();
-        int checkpointCount = checkpoints != null ? checkpoints.size() : 0;
-        if (checkpointCount > 0 && run.touchedCheckpoints.size() < checkpointCount) {
-            long now = System.currentTimeMillis();
-            if (now - run.lastFinishWarningMs >= 2000L) {
-                run.lastFinishWarningMs = now;
-                player.sendMessage(SystemMessageUtils.parkourWarn("You did not reach all checkpoints."));
-            }
-            return false;
-        }
-        return true;
     }
 
     private ProgressStore.ProgressionResult recordCompletion(RunTracker.ActiveRun run, Map map,

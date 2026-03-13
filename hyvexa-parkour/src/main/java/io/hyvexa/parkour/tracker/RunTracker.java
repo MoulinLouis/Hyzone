@@ -690,7 +690,7 @@ public class RunTracker {
 
     // --- ActiveRun (package-private for collaborator access) ---
 
-    static class ActiveRun {
+    static class ActiveRun implements CheckpointDetector.CheckpointState {
         final String mapId;
         final TrackerUtils.FallState fallState = new TrackerUtils.FallState();
         long startTimeMs;
@@ -724,6 +724,41 @@ public class RunTracker {
             this.mapId = mapId;
             this.startTimeMs = startTimeMs;
             this.elapsedMs = 0L;
+        }
+
+        @Override
+        public Set<Integer> getTouchedCheckpoints() {
+            return touchedCheckpoints;
+        }
+
+        @Override
+        public int getLastCheckpointIndex() {
+            return lastCheckpointIndex;
+        }
+
+        @Override
+        public void setLastCheckpointIndex(int index) {
+            this.lastCheckpointIndex = index;
+        }
+
+        @Override
+        public boolean isFinishTouched() {
+            return finishTouched;
+        }
+
+        @Override
+        public void setFinishTouched(boolean touched) {
+            this.finishTouched = touched;
+        }
+
+        @Override
+        public long getLastFinishWarningMs() {
+            return lastFinishWarningMs;
+        }
+
+        @Override
+        public void setLastFinishWarningMs(long ms) {
+            this.lastFinishWarningMs = ms;
         }
     }
 

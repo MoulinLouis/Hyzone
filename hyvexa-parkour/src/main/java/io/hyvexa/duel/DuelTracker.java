@@ -3,7 +3,6 @@ package io.hyvexa.duel;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.protocol.MovementStates;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.Message;
@@ -25,6 +24,7 @@ import io.hyvexa.parkour.data.Map;
 import io.hyvexa.parkour.data.MapStore;
 import io.hyvexa.parkour.data.SettingsStore;
 import io.hyvexa.parkour.data.TransformData;
+import io.hyvexa.parkour.tracker.CheckpointDetector;
 import io.hyvexa.parkour.tracker.RunTracker;
 import io.hyvexa.parkour.tracker.TrackerUtils;
 import io.hyvexa.parkour.util.PlayerSettingsStore;
@@ -491,46 +491,28 @@ public class DuelTracker {
 
     private void checkCheckpoints(DuelPlayerState state, PlayerRef playerRef, Player player, Vector3d position,
                                   Map map) {
-        List<TransformData> checkpoints = map.getCheckpoints();
-        for (int i = 0; i < checkpoints.size(); i++) {
-            if (state.touchedCheckpoints.contains(i)) {
-                continue;
-            }
-            TransformData checkpoint = checkpoints.get(i);
-            if (checkpoint == null) {
-                continue;
-            }
-            if (distanceSqWithVerticalBonus(position, checkpoint) <= DuelConstants.TOUCH_RADIUS_SQ) {
-                state.touchedCheckpoints.add(i);
-                state.lastCheckpointIndex = i;
-                TrackerUtils.playCheckpointSound(playerRef);
-                player.sendMessage(SystemMessageUtils.duelInfo("Checkpoint reached."));
-            }
-        }
+        CheckpointDetector.detectCheckpoints(state, position, map,
+                DuelConstants.TOUCH_RADIUS_SQ, DuelConstants.TOUCH_VERTICAL_BONUS,
+                index -> {
+                    TrackerUtils.playCheckpointSound(playerRef);
+                    player.sendMessage(SystemMessageUtils.duelInfo("Checkpoint reached."));
+                });
     }
 
     private void checkFinish(DuelPlayerState state, PlayerRef playerRef, Player player, Vector3d position,
                              Map map, DuelMatch match, long now) {
-        if (state.finishTouched || map.getFinish() == null) {
+        boolean finished = CheckpointDetector.detectFinish(state, position, map,
+                DuelConstants.TOUCH_RADIUS_SQ, DuelConstants.TOUCH_VERTICAL_BONUS,
+                () -> player.sendMessage(SystemMessageUtils.duelWarn("You did not reach all checkpoints.")));
+        if (!finished) {
             return;
         }
-        if (distanceSqWithVerticalBonus(position, map.getFinish()) <= DuelConstants.TOUCH_RADIUS_SQ) {
-            int checkpointCount = map.getCheckpoints().size();
-            if (checkpointCount > 0 && state.touchedCheckpoints.size() < checkpointCount) {
-                if (now - state.lastFinishWarningMs >= 2000L) {
-                    state.lastFinishWarningMs = now;
-                    player.sendMessage(SystemMessageUtils.duelWarn("You did not reach all checkpoints."));
-                }
-                return;
-            }
-            state.finishTouched = true;
-            TrackerUtils.playFinishSound(playerRef);
-            long elapsedMs = Math.max(0L, now - match.getRaceStartMs());
-            match.setFinishTimeFor(playerRef.getUuid(), elapsedMs);
-            if (match.trySetWinner(playerRef.getUuid())) {
-                match.setFinishReason(FinishReason.COMPLETED);
-                endMatch(match, FinishReason.COMPLETED, playerRef.getUuid(), match.getOpponent(playerRef.getUuid()));
-            }
+        TrackerUtils.playFinishSound(playerRef);
+        long elapsedMs = Math.max(0L, now - match.getRaceStartMs());
+        match.setFinishTimeFor(playerRef.getUuid(), elapsedMs);
+        if (match.trySetWinner(playerRef.getUuid())) {
+            match.setFinishReason(FinishReason.COMPLETED);
+            endMatch(match, FinishReason.COMPLETED, playerRef.getUuid(), match.getOpponent(playerRef.getUuid()));
         }
     }
 
@@ -947,11 +929,7 @@ public class DuelTracker {
                 map.getCheckpoints());
     }
 
-    private static double distanceSqWithVerticalBonus(Vector3d position, TransformData target) {
-        return TrackerUtils.distanceSqWithVerticalBonus(position, target, DuelConstants.TOUCH_VERTICAL_BONUS);
-    }
-
-    private static final class DuelPlayerState {
+    private static final class DuelPlayerState implements CheckpointDetector.CheckpointState {
         private final String mapId;
         private final Set<Integer> touchedCheckpoints = new HashSet<>();
         private final TrackerUtils.FallState fallState = new TrackerUtils.FallState();
@@ -968,6 +946,41 @@ public class DuelTracker {
             lastCheckpointIndex = -1;
             finishTouched = false;
             fallState.reset();
+        }
+
+        @Override
+        public Set<Integer> getTouchedCheckpoints() {
+            return touchedCheckpoints;
+        }
+
+        @Override
+        public int getLastCheckpointIndex() {
+            return lastCheckpointIndex;
+        }
+
+        @Override
+        public void setLastCheckpointIndex(int index) {
+            this.lastCheckpointIndex = index;
+        }
+
+        @Override
+        public boolean isFinishTouched() {
+            return finishTouched;
+        }
+
+        @Override
+        public void setFinishTouched(boolean touched) {
+            this.finishTouched = touched;
+        }
+
+        @Override
+        public long getLastFinishWarningMs() {
+            return lastFinishWarningMs;
+        }
+
+        @Override
+        public void setLastFinishWarningMs(long ms) {
+            this.lastFinishWarningMs = ms;
         }
     }
 

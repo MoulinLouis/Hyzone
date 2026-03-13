@@ -17,6 +17,7 @@ import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.util.ModeGate;
+import io.hyvexa.core.bridge.GameModeBridge;
 import io.hyvexa.runorfall.HyvexaRunOrFallPlugin;
 import io.hyvexa.runorfall.manager.RunOrFallGameManager;
 import io.hyvexa.runorfall.util.RunOrFallUtils;
@@ -199,20 +200,13 @@ public class RunOrFallBlinkInteraction extends SimpleInteraction {
 
     /**
      * Falls back to parkour's RestartCheckpointInteraction when the blink item is used
-     * outside the RunOrFall world. Uses reflection because hyvexa-runorfall cannot depend
-     * on hyvexa-parkour directly (circular dependency). If the parkour module changes
-     * the class name or method signature, this will silently fail with a log warning.
+     * outside the RunOrFall world. Delegates via GameModeBridge (registered by parkour on startup).
      */
     private void invokeParkourRestartInteraction(Ref<EntityStore> ref, boolean firstRun, float time,
                                                  InteractionType type, InteractionContext interactionContext) {
-        try {
-            Class<?> restartClass = Class.forName("io.hyvexa.parkour.interaction.RestartCheckpointInteraction");
-            Object restartInteraction = restartClass.getDeclaredConstructor().newInstance();
-            restartClass.getMethod("handle", Ref.class, boolean.class, float.class,
-                            InteractionType.class, InteractionContext.class)
-                    .invoke(restartInteraction, ref, firstRun, time, type, interactionContext);
-        } catch (Exception e) {
-            LOGGER.atWarning().withCause(e).log("Failed to route Ingredient_Lightning_Essence to Parkour restart.");
+        if (!GameModeBridge.invoke(GameModeBridge.PARKOUR_RESTART_CHECKPOINT,
+                ref, firstRun, time, type, interactionContext)) {
+            LOGGER.atWarning().log("Failed to route Ingredient_Lightning_Essence to Parkour restart: handler not registered.");
         }
     }
 }

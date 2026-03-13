@@ -394,7 +394,7 @@ public class PurgeSessionManager {
     // --- cleanupPlayer ---
 
     public void cleanupPlayer(UUID playerId) {
-        if (playerId != null && sessionIdByPlayer.containsKey(playerId)) {
+        if (playerId != null && getSessionByPlayer(playerId) != null) {
             leaveSession(playerId, "disconnect");
         }
     }

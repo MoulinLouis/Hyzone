@@ -235,14 +235,12 @@ public class DiscordLinkStore {
         String awardSql = "INSERT INTO player_vexa (uuid, vexa) VALUES (?, ?) "
                 + "ON DUPLICATE KEY UPDATE vexa = vexa + ?";
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
-            conn.setAutoCommit(false);
+        Boolean claimed = DatabaseManager.getInstance().withTransaction(conn -> {
             try (PreparedStatement claimStmt = DatabaseManager.prepare(conn, claimSql);
                  PreparedStatement awardStmt = DatabaseManager.prepare(conn, awardSql)) {
 
                 claimStmt.setString(1, playerId.toString());
                 if (claimStmt.executeUpdate() == 0) {
-                    conn.rollback();
                     return false;
                 }
 
@@ -251,13 +249,10 @@ public class DiscordLinkStore {
                 awardStmt.setLong(3, VEXA_REWARD);
                 awardStmt.executeUpdate();
 
-                conn.commit();
-            } catch (SQLException e) {
-                conn.rollback();
-                throw e;
+                return true;
             }
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to claim discord reward for " + playerId);
+        }, false);
+        if (!claimed) {
             return false;
         }
 

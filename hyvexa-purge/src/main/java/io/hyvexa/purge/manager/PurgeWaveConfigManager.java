@@ -96,8 +96,7 @@ public class PurgeWaveConfigManager {
             String deleteSql = "DELETE FROM purge_waves WHERE wave_number = ?";
             String shiftCountsSql = "UPDATE purge_wave_variant_counts SET wave_number = wave_number - 1 WHERE wave_number > ?";
             String shiftSql = "UPDATE purge_waves SET wave_number = wave_number - 1 WHERE wave_number > ?";
-            try (Connection conn = DatabaseManager.getInstance().getConnection()) {
-                conn.setAutoCommit(false);
+            boolean committed = DatabaseManager.getInstance().withTransaction(conn -> {
                 try (PreparedStatement deleteCountsStmt = conn.prepareStatement(deleteCountsSql);
                      PreparedStatement deleteStmt = conn.prepareStatement(deleteSql);
                      PreparedStatement shiftCountsStmt = conn.prepareStatement(shiftCountsSql);
@@ -118,16 +117,9 @@ public class PurgeWaveConfigManager {
 
                     shiftStmt.setInt(1, waveNumber);
                     shiftStmt.executeUpdate();
-
-                    conn.commit();
-                } catch (SQLException e) {
-                    conn.rollback();
-                    throw e;
-                } finally {
-                    conn.setAutoCommit(true);
                 }
-            } catch (SQLException e) {
-                LOGGER.atWarning().withCause(e).log("Failed to remove purge wave " + waveNumber);
+            });
+            if (!committed) {
                 return false;
             }
 
@@ -346,8 +338,7 @@ public class PurgeWaveConfigManager {
         LOGGER.atInfo().log("Migrating purge_waves from old slow/normal/fast columns to variant counts table");
         String selectSql = "SELECT wave_number, slow_count, normal_count, fast_count FROM purge_waves";
         String insertSql = "INSERT IGNORE INTO purge_wave_variant_counts (wave_number, variant_key, count) VALUES (?, ?, ?)";
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
-            conn.setAutoCommit(false);
+        boolean migrated = DatabaseManager.getInstance().withTransaction(conn -> {
             try (PreparedStatement selectStmt = conn.prepareStatement(selectSql);
                  ResultSet rs = selectStmt.executeQuery()) {
                 try (PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
@@ -392,11 +383,9 @@ public class PurgeWaveConfigManager {
                     LOGGER.atFine().log("Could not drop old column: " + e.getMessage());
                 }
             }
-
-            conn.commit();
+        });
+        if (migrated) {
             LOGGER.atInfo().log("Migration complete: old columns removed");
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to migrate purge wave data");
         }
     }
 

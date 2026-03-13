@@ -131,31 +131,22 @@ public class PurgeClassStore {
         }
 
         PurgeScrapStore scrapStore = PurgeScrapStore.getInstance();
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
-            conn.setAutoCommit(false);
-            try {
-                long currentScrap = scrapStore.selectScrapForUpdate(conn, playerId);
-                if (currentScrap < cost) {
-                    conn.rollback();
-                    return PurchaseResult.NOT_ENOUGH_SCRAP;
-                }
-                scrapStore.updateScrap(conn, playerId, currentScrap - cost);
-                insertClassUnlock(conn, playerId, purgeClass);
-                conn.commit();
-
-                // Update caches only after successful commit
-                scrapStore.applyTransactionalScrapCommit(playerId, currentScrap, currentScrap - cost);
-                unlockedCache.computeIfAbsent(playerId, k -> ConcurrentHashMap.newKeySet()).add(purgeClass);
-                return PurchaseResult.SUCCESS;
-            } catch (SQLException e) {
-                conn.rollback();
-                LOGGER.atWarning().withCause(e).log("Failed to purchase class for " + playerId);
+        long[] scrapSnapshot = new long[1]; // [currentScrap]
+        PurchaseResult result = DatabaseManager.getInstance().withTransaction(conn -> {
+            long currentScrap = scrapStore.selectScrapForUpdate(conn, playerId);
+            if (currentScrap < cost) {
                 return PurchaseResult.NOT_ENOUGH_SCRAP;
             }
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to get connection for class purchase");
-            return PurchaseResult.NOT_ENOUGH_SCRAP;
+            scrapStore.updateScrap(conn, playerId, currentScrap - cost);
+            insertClassUnlock(conn, playerId, purgeClass);
+            scrapSnapshot[0] = currentScrap;
+            return PurchaseResult.SUCCESS;
+        }, PurchaseResult.NOT_ENOUGH_SCRAP);
+        if (result == PurchaseResult.SUCCESS) {
+            scrapStore.applyTransactionalScrapCommit(playerId, scrapSnapshot[0], scrapSnapshot[0] - cost);
+            unlockedCache.computeIfAbsent(playerId, k -> ConcurrentHashMap.newKeySet()).add(purgeClass);
         }
+        return result;
     }
 
     public void evictPlayer(UUID playerId) {

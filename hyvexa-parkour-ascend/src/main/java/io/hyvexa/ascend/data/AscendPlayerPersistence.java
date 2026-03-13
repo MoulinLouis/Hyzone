@@ -858,31 +858,16 @@ class AscendPlayerPersistence {
             "ascend_challenge_records"
         };
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
-            if (conn == null) {
-                LOGGER.atWarning().log("Failed to acquire database connection");
-                return;
-            }
-            conn.setAutoCommit(false);
-            try {
-                for (String table : tables) {
-                    try (PreparedStatement stmt = conn.prepareStatement(
-                        "DELETE FROM " + table + " WHERE player_uuid = ?")) {
-                        DatabaseManager.applyQueryTimeout(stmt);
-                        stmt.setString(1, playerIdStr);
-                        stmt.executeUpdate();
-                    }
+        DatabaseManager.getInstance().withTransaction(conn -> {
+            for (String table : tables) {
+                try (PreparedStatement stmt = conn.prepareStatement(
+                    "DELETE FROM " + table + " WHERE player_uuid = ?")) {
+                    DatabaseManager.applyQueryTimeout(stmt);
+                    stmt.setString(1, playerIdStr);
+                    stmt.executeUpdate();
                 }
-                conn.commit();
-            } catch (SQLException e) {
-                conn.rollback();
-                throw e;
-            } finally {
-                conn.setAutoCommit(true);
             }
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to delete player data during reset: " + e.getMessage());
-        }
+        });
     }
 
     // ========================================

@@ -181,30 +181,22 @@ public class PurgeWeaponUpgradeStore {
         }
 
         PurgeScrapStore scrapStore = PurgeScrapStore.getInstance();
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
-            conn.setAutoCommit(false);
-            try {
-                long currentScrap = scrapStore.selectScrapForUpdate(conn, playerId);
-                if (currentScrap < cost) {
-                    conn.rollback();
-                    return UpgradeResult.NOT_ENOUGH_SCRAP;
-                }
-                scrapStore.updateScrap(conn, playerId, currentScrap - cost);
-                upsertWeaponLevel(conn, playerId, weaponId, nextLevel);
-                conn.commit();
-
-                scrapStore.applyTransactionalScrapCommit(playerId, currentScrap, currentScrap - cost);
-                cache.computeIfAbsent(playerId, k -> new ConcurrentHashMap<>()).put(weaponId, nextLevel);
-                return UpgradeResult.SUCCESS;
-            } catch (SQLException e) {
-                conn.rollback();
-                LOGGER.atWarning().withCause(e).log("Failed to upgrade weapon for " + playerId);
+        long[] scrapSnapshot = new long[1]; // [currentScrap]
+        UpgradeResult result = DatabaseManager.getInstance().withTransaction(conn -> {
+            long currentScrap = scrapStore.selectScrapForUpdate(conn, playerId);
+            if (currentScrap < cost) {
                 return UpgradeResult.NOT_ENOUGH_SCRAP;
             }
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to get connection for weapon upgrade");
-            return UpgradeResult.NOT_ENOUGH_SCRAP;
+            scrapStore.updateScrap(conn, playerId, currentScrap - cost);
+            upsertWeaponLevel(conn, playerId, weaponId, nextLevel);
+            scrapSnapshot[0] = currentScrap;
+            return UpgradeResult.SUCCESS;
+        }, UpgradeResult.NOT_ENOUGH_SCRAP);
+        if (result == UpgradeResult.SUCCESS) {
+            scrapStore.applyTransactionalScrapCommit(playerId, scrapSnapshot[0], scrapSnapshot[0] - cost);
+            cache.computeIfAbsent(playerId, k -> new ConcurrentHashMap<>()).put(weaponId, nextLevel);
         }
+        return result;
     }
 
     public PurchaseResult purchaseWeapon(UUID playerId, String weaponId, long cost) {
@@ -228,30 +220,22 @@ public class PurgeWeaponUpgradeStore {
         }
 
         PurgeScrapStore scrapStore = PurgeScrapStore.getInstance();
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
-            conn.setAutoCommit(false);
-            try {
-                long currentScrap = scrapStore.selectScrapForUpdate(conn, playerId);
-                if (currentScrap < cost) {
-                    conn.rollback();
-                    return PurchaseResult.NOT_ENOUGH_SCRAP;
-                }
-                scrapStore.updateScrap(conn, playerId, currentScrap - cost);
-                upsertWeaponLevel(conn, playerId, weaponId, 1);
-                conn.commit();
-
-                scrapStore.applyTransactionalScrapCommit(playerId, currentScrap, currentScrap - cost);
-                cache.computeIfAbsent(playerId, k -> new ConcurrentHashMap<>()).put(weaponId, 1);
-                return PurchaseResult.SUCCESS;
-            } catch (SQLException e) {
-                conn.rollback();
-                LOGGER.atWarning().withCause(e).log("Failed to purchase weapon for " + playerId);
+        long[] scrapSnapshot = new long[1]; // [currentScrap]
+        PurchaseResult result = DatabaseManager.getInstance().withTransaction(conn -> {
+            long currentScrap = scrapStore.selectScrapForUpdate(conn, playerId);
+            if (currentScrap < cost) {
                 return PurchaseResult.NOT_ENOUGH_SCRAP;
             }
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to get connection for weapon purchase");
-            return PurchaseResult.NOT_ENOUGH_SCRAP;
+            scrapStore.updateScrap(conn, playerId, currentScrap - cost);
+            upsertWeaponLevel(conn, playerId, weaponId, 1);
+            scrapSnapshot[0] = currentScrap;
+            return PurchaseResult.SUCCESS;
+        }, PurchaseResult.NOT_ENOUGH_SCRAP);
+        if (result == PurchaseResult.SUCCESS) {
+            scrapStore.applyTransactionalScrapCommit(playerId, scrapSnapshot[0], scrapSnapshot[0] - cost);
+            cache.computeIfAbsent(playerId, k -> new ConcurrentHashMap<>()).put(weaponId, 1);
         }
+        return result;
     }
 
     public void initializeDefaults(UUID playerId, Set<String> defaultWeaponIds) {

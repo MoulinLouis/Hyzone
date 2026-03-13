@@ -18,6 +18,7 @@ import io.hyvexa.duel.data.DuelPreferenceStore;
 import io.hyvexa.duel.data.DuelStatsStore;
 import io.hyvexa.duel.interaction.DuelMenuInteraction;
 import io.hyvexa.duel.interaction.ForfeitInteraction;
+import io.hyvexa.core.bridge.GameModeBridge;
 import io.hyvexa.core.analytics.AnalyticsStore;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.core.discord.DiscordLinkStore;
@@ -320,6 +321,9 @@ public class HyvexaPlugin extends JavaPlugin {
         announcementManager.refreshChatAnnouncements();
         scheduleLeaderboardHologramRefresh();
 
+        GameModeBridge.register(GameModeBridge.PARKOUR_RESTART_CHECKPOINT,
+                (ref, firstRun, time, type, ctx) ->
+                        new RestartCheckpointInteraction().handle(ref, firstRun, time, type, ctx));
 
         this.getCommandRegistry().registerCommand(new CheckpointCommand());
         this.getCommandRegistry().registerCommand(new DiscordCommand());

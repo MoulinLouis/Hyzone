@@ -403,13 +403,7 @@ public class MapStore {
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
-            if (conn == null) {
-                LOGGER.atWarning().log("Failed to acquire database connection");
-                return;
-            }
-            conn.setAutoCommit(false);
-
+        DatabaseManager.getInstance().withTransaction(conn -> {
             try (PreparedStatement mapStmt = conn.prepareStatement(mapSql);
                  PreparedStatement deleteStmt = conn.prepareStatement(deleteCheckpointsSql);
                  PreparedStatement cpStmt = conn.prepareStatement(insertCheckpointSql)) {
@@ -476,15 +470,8 @@ public class MapStore {
                     }
                     cpStmt.executeBatch();
                 }
-
-                conn.commit();
-            } catch (SQLException e) {
-                conn.rollback();
-                throw e;
             }
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to save map to database: " + e.getMessage());
-        }
+        });
     }
 
     private int setTransform(PreparedStatement stmt, int startIndex, TransformData transform) throws SQLException {

@@ -2,7 +2,6 @@ package io.hyvexa.parkour.command;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -18,14 +17,11 @@ import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.core.state.ModeMessages;
 
 import javax.annotation.Nonnull;
-import java.sql.Connection;
-import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.concurrent.CompletableFuture;
 
 public class DatabaseClearCommand extends AbstractAsyncCommand {
 
-    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final Message MESSAGE_OP_REQUIRED = Message.raw("You must be OP to use /dbclear.");
 
     public DatabaseClearCommand() {
@@ -79,21 +75,15 @@ public class DatabaseClearCommand extends AbstractAsyncCommand {
                 "settings"
         };
 
-        try (Connection conn = db.getConnection();
-             Statement stmt = conn.createStatement()) {
-            conn.setAutoCommit(false);
-            try {
+        boolean cleared = db.withTransaction(conn -> {
+            try (Statement stmt = conn.createStatement()) {
                 for (String table : tables) {
                     stmt.executeUpdate("DELETE FROM " + table);
                 }
-                conn.commit();
-            } catch (SQLException e) {
-                conn.rollback();
-                throw e;
             }
-        } catch (SQLException e) {
-            commandContext.sendMessage(Message.raw("Database clear failed: " + e.getMessage()).color("#ff4444"));
-            LOGGER.atSevere().withCause(e).log("Failed to clear parkour database via /dbclear");
+        });
+        if (!cleared) {
+            commandContext.sendMessage(Message.raw("Database clear failed.").color("#ff4444"));
             return CompletableFuture.completedFuture(null);
         }
 

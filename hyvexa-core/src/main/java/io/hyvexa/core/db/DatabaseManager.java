@@ -302,6 +302,81 @@ public class DatabaseManager {
         return stmt;
     }
 
+    /**
+     * Execute an action inside a transaction, returning a result.
+     * Handles getConnection, setAutoCommit(false), commit, rollback, and setAutoCommit(true).
+     *
+     * @param action       receives the Connection, returns a result
+     * @param defaultValue returned when the action throws
+     * @return the action's result, or defaultValue on failure
+     */
+    public <T> T withTransaction(SQLFunction<Connection, T> action, T defaultValue) {
+        try (Connection conn = getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                T result = action.apply(conn);
+                conn.commit();
+                return result;
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        } catch (SQLException e) {
+            LOGGER.atWarning().withCause(e).log("Transaction failed");
+            return defaultValue;
+        }
+    }
+
+    /**
+     * Execute a void action inside a transaction.
+     * Handles getConnection, setAutoCommit(false), commit, rollback, and setAutoCommit(true).
+     *
+     * @param action receives the Connection
+     * @return true if the transaction committed successfully, false on failure
+     */
+    public boolean withTransaction(SQLConsumer<Connection> action) {
+        try (Connection conn = getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                action.accept(conn);
+                conn.commit();
+                return true;
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        } catch (SQLException e) {
+            LOGGER.atWarning().withCause(e).log("Transaction failed");
+            return false;
+        }
+    }
+
+    /**
+     * Execute an action inside a transaction on an existing connection.
+     * Saves and restores the connection's autocommit state.
+     * Intended for migrations that receive a connection from a caller.
+     *
+     * @param conn   an existing Connection (not closed by this method)
+     * @param action receives the Connection
+     */
+    public static void withTransaction(Connection conn, SQLConsumer<Connection> action) throws SQLException {
+        boolean wasAutoCommit = conn.getAutoCommit();
+        conn.setAutoCommit(false);
+        try {
+            action.accept(conn);
+            conn.commit();
+        } catch (SQLException e) {
+            try { conn.rollback(); } catch (SQLException re) { /* ignore */ }
+            throw e;
+        } finally {
+            try { conn.setAutoCommit(wasAutoCommit); } catch (SQLException e) { /* ignore */ }
+        }
+    }
+
     public static void applyQueryTimeout(PreparedStatement stmt) throws SQLException {
         if (stmt != null) {
             stmt.setQueryTimeout(QUERY_TIMEOUT_SECONDS);

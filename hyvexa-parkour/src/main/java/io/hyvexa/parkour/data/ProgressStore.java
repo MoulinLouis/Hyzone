@@ -390,12 +390,7 @@ public class ProgressStore {
             VALUES (?, ?, ?, ?)
             """;
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
-            if (conn == null) {
-                LOGGER.atWarning().log("Failed to acquire database connection for completion save");
-                return false;
-            }
-            conn.setAutoCommit(false);
+        return DatabaseManager.getInstance().withTransaction(conn -> {
             try (PreparedStatement completionStmt = conn.prepareStatement(completionSql)) {
                 DatabaseManager.applyQueryTimeout(completionStmt);
                 completionStmt.setString(1, request.playerId.toString());
@@ -423,17 +418,9 @@ public class ProgressStore {
                     }
                 }
 
-                conn.commit();
                 return true;
-            } catch (SQLException e) {
-                try { conn.rollback(); } catch (SQLException re) { /* ignore */ }
-                LOGGER.atSevere().log("Failed to save completion (rolled back): " + e.getMessage());
-                return false;
             }
-        } catch (SQLException e) {
-            LOGGER.atSevere().log("Failed to save completion: " + e.getMessage());
-            return false;
-        }
+        }, false);
     }
 
     private void notifyCompletionSaveResult(Consumer<Boolean> completionSavedCallback, boolean completionSaved) {

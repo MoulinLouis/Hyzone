@@ -151,7 +151,7 @@ public class PurgeCommand extends AbstractAsyncCommand {
     }
 
     private void handleStop(Player player, UUID playerId) {
-        if (!sessionManager.hasActiveSession(playerId)) {
+        if (sessionManager.getSessionByPlayer(playerId) == null) {
             player.sendMessage(Message.raw("No active Purge session."));
             return;
         }

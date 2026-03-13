@@ -152,12 +152,7 @@ public class GlobalMessageStore {
         String deleteSql = "DELETE FROM global_messages";
         String insertSql = "INSERT INTO global_messages (message, display_order) VALUES (?, ?)";
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
-            if (conn == null) {
-                LOGGER.atWarning().log("Failed to acquire database connection");
-                return;
-            }
-            conn.setAutoCommit(false);
+        DatabaseManager.getInstance().withTransaction(conn -> {
             try (PreparedStatement deleteStmt = conn.prepareStatement(deleteSql);
                  PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
                 DatabaseManager.applyQueryTimeout(deleteStmt);
@@ -171,14 +166,8 @@ public class GlobalMessageStore {
                     insertStmt.addBatch();
                 }
                 insertStmt.executeBatch();
-                conn.commit();
-            } catch (SQLException e) {
-                conn.rollback();
-                throw e;
             }
-        } catch (SQLException e) {
-            LOGGER.atWarning().log("Failed to save messages: " + e.getMessage());
-        }
+        });
     }
 
     public List<String> getMessages() {
