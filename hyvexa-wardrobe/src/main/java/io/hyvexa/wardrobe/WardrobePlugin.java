@@ -49,6 +49,8 @@ public class WardrobePlugin extends JavaPlugin {
     protected void setup() {
         LOGGER.atInfo().log("Setting up " + this.getName());
 
+        WardrobeBridge.getInstance().initialize();
+
         StoreInitializer.initialize(LOGGER,
                 () -> DatabaseManager.getInstance().initialize(),
                 () -> VexaStore.getInstance().initialize(),
