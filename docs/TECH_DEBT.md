@@ -47,10 +47,10 @@ Prioritized list of known issues and improvements. Sourced from a full codebase 
 - **Issue:** 10 setter-injected fields across `PurgeSessionManager`, `PurgeWaveManager`, `PurgePartyManager`, `PurgeHudManager`. Volatile fields with no null guards — risk of NPE if setter not called before first tick. The core cycle: WaveManager and SessionManager each need a reference to the other.
 - **Fix:** Create `PurgeManagerRegistry` with a builder that wires all cross-references atomically. All fields become final, no null checks needed, compile-time safety.
 
-### 2.2 Centralize Purge DB schema (PurgeDatabaseSetup)
+### ~~2.2 Centralize Purge DB schema (PurgeDatabaseSetup)~~ (DONE)
 - **Module:** purge
-- **Issue:** 11 tables scattered across individual store classes. No single view of full schema. Compare with Ascend's centralized `AscendDatabaseSetup` (the good pattern).
-- **Fix:** Create `PurgeDatabaseSetup.java` modeled after `AscendDatabaseSetup`. Single source of truth for all Purge tables and migrations.
+- **Issue:** 14 tables scattered across 9 individual store/manager classes. No single view of full schema. Compare with Ascend's centralized `AscendDatabaseSetup` (the good pattern).
+- **Fix:** Created `PurgeDatabaseSetup.java` modeled after `AscendDatabaseSetup`. Single source of truth for all 14 Purge tables and 5 migrations.
 
 ### 2.3 Create BaseStore abstraction
 - **Module:** core

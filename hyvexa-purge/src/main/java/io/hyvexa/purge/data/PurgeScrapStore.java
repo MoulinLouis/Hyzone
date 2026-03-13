@@ -44,19 +44,6 @@ public class PurgeScrapStore {
             LOGGER.atWarning().log("Database not initialized, PurgeScrapStore will use in-memory mode");
             return;
         }
-        String sql = "CREATE TABLE IF NOT EXISTS purge_player_scrap ("
-                + "uuid VARCHAR(36) NOT NULL PRIMARY KEY, "
-                + "scrap BIGINT NOT NULL DEFAULT 0, "
-                + "lifetime_scrap_earned BIGINT NOT NULL DEFAULT 0"
-                + ") ENGINE=InnoDB";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.executeUpdate();
-            LOGGER.atInfo().log("PurgeScrapStore initialized (purge_player_scrap table ensured)");
-        } catch (SQLException e) {
-            LOGGER.atSevere().withCause(e).log("Failed to create purge_player_scrap table");
-        }
         startFlushLoop();
     }
 

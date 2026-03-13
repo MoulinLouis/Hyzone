@@ -30,6 +30,7 @@ import io.hyvexa.purge.command.PurgeCommand;
 import io.hyvexa.purge.command.CamTestCommand;
 import io.hyvexa.purge.command.SetAmmoCommand;
 import io.hyvexa.purge.data.PurgeClassStore;
+import io.hyvexa.purge.data.PurgeDatabaseSetup;
 import io.hyvexa.purge.data.PurgePlayerStore;
 import io.hyvexa.purge.data.PurgeScrapStore;
 import io.hyvexa.common.skin.PurgeSkinRegistry;
@@ -129,9 +130,16 @@ public class HyvexaPurgePlugin extends JavaPlugin {
 
     @Override
     protected void setup() {
-        // Initialize all stores
+        // Initialize database connection
         StoreInitializer.initialize(LOGGER,
-                () -> DatabaseManager.getInstance().initialize(),
+                () -> DatabaseManager.getInstance().initialize()
+        );
+
+        // Centralized table setup — all Purge tables and migrations
+        PurgeDatabaseSetup.ensureTables();
+
+        // Initialize stores (tables already exist)
+        StoreInitializer.initialize(LOGGER,
                 () -> VexaStore.getInstance().initialize(),
                 () -> DiscordLinkStore.getInstance().initialize(),
                 () -> AnalyticsStore.getInstance().initialize(),

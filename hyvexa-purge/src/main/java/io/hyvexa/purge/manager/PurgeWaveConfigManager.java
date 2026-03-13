@@ -28,9 +28,6 @@ public class PurgeWaveConfigManager {
 
     public PurgeWaveConfigManager(PurgeVariantConfigManager variantConfigManager) {
         this.variantConfigManager = variantConfigManager;
-        createTable();
-        createVariantCountsTable();
-        migrateFromOldColumns();
         loadAll();
     }
 
@@ -278,114 +275,6 @@ public class PurgeWaveConfigManager {
                 waves.put(shiftedWave, new PurgeWaveDefinition(
                         shiftedWave, wave.variantCounts(), wave.spawnDelayMs(), wave.spawnBatchSize()));
             }
-        }
-    }
-
-    private void createTable() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
-            return;
-        }
-        String sql = "CREATE TABLE IF NOT EXISTS purge_waves ("
-                + "wave_number INT NOT NULL PRIMARY KEY, "
-                + "spawn_delay_ms INT NOT NULL DEFAULT 500, "
-                + "spawn_batch_size INT NOT NULL DEFAULT 5"
-                + ") ENGINE=InnoDB";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.executeUpdate();
-        } catch (SQLException e) {
-            LOGGER.atSevere().withCause(e).log("Failed to create purge_waves table");
-        }
-    }
-
-    private void createVariantCountsTable() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
-            return;
-        }
-        String sql = "CREATE TABLE IF NOT EXISTS purge_wave_variant_counts ("
-                + "wave_number INT NOT NULL, "
-                + "variant_key VARCHAR(32) NOT NULL, "
-                + "count INT NOT NULL DEFAULT 0, "
-                + "PRIMARY KEY (wave_number, variant_key)"
-                + ") ENGINE=InnoDB";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.executeUpdate();
-        } catch (SQLException e) {
-            LOGGER.atSevere().withCause(e).log("Failed to create purge_wave_variant_counts table");
-        }
-    }
-
-    private void migrateFromOldColumns() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
-            return;
-        }
-        // Check if old columns exist
-        boolean hasOldColumns = false;
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             ResultSet rs = conn.getMetaData().getColumns(null, null, "purge_waves", "slow_count")) {
-            hasOldColumns = rs.next();
-        } catch (SQLException e) {
-            LOGGER.atFine().log("Could not check for old columns: " + e.getMessage());
-            return;
-        }
-        if (!hasOldColumns) {
-            return;
-        }
-
-        LOGGER.atInfo().log("Migrating purge_waves from old slow/normal/fast columns to variant counts table");
-        String selectSql = "SELECT wave_number, slow_count, normal_count, fast_count FROM purge_waves";
-        String insertSql = "INSERT IGNORE INTO purge_wave_variant_counts (wave_number, variant_key, count) VALUES (?, ?, ?)";
-        boolean migrated = DatabaseManager.getInstance().withTransaction(conn -> {
-            try (PreparedStatement selectStmt = conn.prepareStatement(selectSql);
-                 ResultSet rs = selectStmt.executeQuery()) {
-                try (PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
-                    while (rs.next()) {
-                        int waveNum = rs.getInt("wave_number");
-                        int slow = rs.getInt("slow_count");
-                        int normal = rs.getInt("normal_count");
-                        int fast = rs.getInt("fast_count");
-                        if (slow > 0) {
-                            insertStmt.setInt(1, waveNum);
-                            insertStmt.setString(2, "SLOW");
-                            insertStmt.setInt(3, slow);
-                            insertStmt.addBatch();
-                        }
-                        if (normal > 0) {
-                            insertStmt.setInt(1, waveNum);
-                            insertStmt.setString(2, "NORMAL");
-                            insertStmt.setInt(3, normal);
-                            insertStmt.addBatch();
-                        }
-                        if (fast > 0) {
-                            insertStmt.setInt(1, waveNum);
-                            insertStmt.setString(2, "FAST");
-                            insertStmt.setInt(3, fast);
-                            insertStmt.addBatch();
-                        }
-                    }
-                    insertStmt.executeBatch();
-                }
-            }
-
-            // Drop old columns
-            String[] dropSqls = {
-                "ALTER TABLE purge_waves DROP COLUMN slow_count",
-                "ALTER TABLE purge_waves DROP COLUMN normal_count",
-                "ALTER TABLE purge_waves DROP COLUMN fast_count"
-            };
-            for (String drop : dropSqls) {
-                try (PreparedStatement stmt = conn.prepareStatement(drop)) {
-                    stmt.executeUpdate();
-                } catch (SQLException e) {
-                    LOGGER.atFine().log("Could not drop old column: " + e.getMessage());
-                }
-            }
-        });
-        if (migrated) {
-            LOGGER.atInfo().log("Migration complete: old columns removed");
         }
     }
 

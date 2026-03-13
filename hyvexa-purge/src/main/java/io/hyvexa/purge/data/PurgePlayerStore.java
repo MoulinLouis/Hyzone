@@ -27,21 +27,6 @@ public class PurgePlayerStore {
     public void initialize() {
         if (!DatabaseManager.getInstance().isInitialized()) {
             LOGGER.atWarning().log("Database not initialized, PurgePlayerStore will use in-memory mode");
-            return;
-        }
-        String sql = "CREATE TABLE IF NOT EXISTS purge_player_stats ("
-                + "uuid VARCHAR(36) NOT NULL PRIMARY KEY, "
-                + "best_wave INT NOT NULL DEFAULT 0, "
-                + "total_kills INT NOT NULL DEFAULT 0, "
-                + "total_sessions INT NOT NULL DEFAULT 0"
-                + ") ENGINE=InnoDB";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.executeUpdate();
-            LOGGER.atInfo().log("PurgePlayerStore initialized (purge_player_stats table ensured)");
-        } catch (SQLException e) {
-            LOGGER.atSevere().withCause(e).log("Failed to create purge_player_stats table");
         }
     }
 

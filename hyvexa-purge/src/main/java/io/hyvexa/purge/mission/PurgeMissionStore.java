@@ -28,26 +28,6 @@ public class PurgeMissionStore {
     public void initialize() {
         if (!DatabaseManager.getInstance().isInitialized()) {
             LOGGER.atWarning().log("Database not initialized, PurgeMissionStore will use in-memory mode");
-            return;
-        }
-        String sql = "CREATE TABLE IF NOT EXISTS purge_daily_missions ("
-                + "uuid VARCHAR(36) NOT NULL, "
-                + "mission_date DATE NOT NULL, "
-                + "total_kills INT NOT NULL DEFAULT 0, "
-                + "best_wave INT NOT NULL DEFAULT 0, "
-                + "best_combo INT NOT NULL DEFAULT 0, "
-                + "claimed_wave TINYINT NOT NULL DEFAULT 0, "
-                + "claimed_combo TINYINT NOT NULL DEFAULT 0, "
-                + "claimed_kill TINYINT NOT NULL DEFAULT 0, "
-                + "PRIMARY KEY (uuid, mission_date)"
-                + ") ENGINE=InnoDB";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.executeUpdate();
-            LOGGER.atInfo().log("PurgeMissionStore initialized (purge_daily_missions table ensured)");
-        } catch (SQLException e) {
-            LOGGER.atSevere().withCause(e).log("Failed to create purge_daily_missions table");
         }
     }
 

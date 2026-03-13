@@ -20,9 +20,6 @@ public class PurgeVariantConfigManager {
     private final ConcurrentHashMap<String, PurgeVariantConfig> variants = new ConcurrentHashMap<>();
 
     public PurgeVariantConfigManager() {
-        createTable();
-        migrateAddNpcType();
-        migrateAddScrapReward();
         loadAll();
         seedDefaults();
     }
@@ -252,74 +249,6 @@ public class PurgeVariantConfigManager {
             LOGGER.atWarning().withCause(e).log("Failed to set label for " + key);
         }
         return false;
-    }
-
-    private void createTable() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
-            return;
-        }
-        String sql = "CREATE TABLE IF NOT EXISTS purge_zombie_variants ("
-                + "variant_key VARCHAR(32) NOT NULL PRIMARY KEY, "
-                + "label VARCHAR(64) NOT NULL, "
-                + "base_health INT NOT NULL DEFAULT 50, "
-                + "base_damage FLOAT NOT NULL DEFAULT 20, "
-                + "speed_multiplier DOUBLE NOT NULL DEFAULT 1.0, "
-                + "npc_type VARCHAR(64) NOT NULL DEFAULT 'Zombie', "
-                + "scrap_reward INT NOT NULL DEFAULT 10"
-                + ") ENGINE=InnoDB";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.executeUpdate();
-        } catch (SQLException e) {
-            LOGGER.atSevere().withCause(e).log("Failed to create purge_zombie_variants table");
-        }
-    }
-
-    private void migrateAddNpcType() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
-            return;
-        }
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             ResultSet rs = conn.getMetaData().getColumns(null, null, "purge_zombie_variants", "npc_type")) {
-            if (rs.next()) {
-                return; // column already exists
-            }
-        } catch (SQLException e) {
-            LOGGER.atFine().log("Could not check for npc_type column: " + e.getMessage());
-            return;
-        }
-        String sql = "ALTER TABLE purge_zombie_variants ADD COLUMN npc_type VARCHAR(64) NOT NULL DEFAULT 'Zombie'";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.executeUpdate();
-            LOGGER.atInfo().log("Added npc_type column to purge_zombie_variants");
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to add npc_type column");
-        }
-    }
-
-    private void migrateAddScrapReward() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
-            return;
-        }
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             ResultSet rs = conn.getMetaData().getColumns(null, null, "purge_zombie_variants", "scrap_reward")) {
-            if (rs.next()) {
-                return; // column already exists
-            }
-        } catch (SQLException e) {
-            LOGGER.atFine().log("Could not check for scrap_reward column: " + e.getMessage());
-            return;
-        }
-        String sql = "ALTER TABLE purge_zombie_variants ADD COLUMN scrap_reward INT NOT NULL DEFAULT 10";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.executeUpdate();
-            LOGGER.atInfo().log("Added scrap_reward column to purge_zombie_variants");
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to add scrap_reward column");
-        }
     }
 
     private void loadAll() {

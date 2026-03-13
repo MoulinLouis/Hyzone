@@ -52,9 +52,6 @@ public class PurgeWeaponConfigManager {
     private static final Map<String, WeaponDefaults> DEFAULT_WEAPONS = buildDefaultWeapons();
 
     public PurgeWeaponConfigManager() {
-        createTable();
-        createDefaultsTable();
-        createSettingsTable();
         seedDefaults();
         seedWeaponDefaults();
         loadAll();
@@ -370,26 +367,6 @@ public class PurgeWeaponConfigManager {
         return DatabaseManager.getInstance().isInitialized();
     }
 
-    private void createTable() {
-        if (!isPersistenceAvailable()) {
-            return;
-        }
-        String sql = "CREATE TABLE IF NOT EXISTS purge_weapon_levels ("
-                + "weapon_id VARCHAR(32) NOT NULL, "
-                + "level INT NOT NULL, "
-                + "damage INT NOT NULL, "
-                + "cost BIGINT NOT NULL DEFAULT 0, "
-                + "PRIMARY KEY (weapon_id, level)"
-                + ") ENGINE=InnoDB";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.executeUpdate();
-        } catch (SQLException e) {
-            LOGGER.atSevere().withCause(e).log("Failed to create purge_weapon_levels table");
-        }
-    }
-
     private void seedDefaults() {
         if (!isPersistenceAvailable()) {
             return;
@@ -536,25 +513,6 @@ public class PurgeWeaponConfigManager {
         return new WeaponDefaults(displayName, List.copyOf(levels));
     }
 
-    private void createDefaultsTable() {
-        if (!isPersistenceAvailable()) {
-            return;
-        }
-        String sql = "CREATE TABLE IF NOT EXISTS purge_weapon_defaults ("
-                + "weapon_id VARCHAR(32) NOT NULL PRIMARY KEY, "
-                + "default_unlocked BOOLEAN NOT NULL DEFAULT FALSE, "
-                + "unlock_cost BIGINT NOT NULL DEFAULT 500, "
-                + "session_weapon BOOLEAN NOT NULL DEFAULT FALSE"
-                + ") ENGINE=InnoDB";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.executeUpdate();
-        } catch (SQLException e) {
-            LOGGER.atSevere().withCause(e).log("Failed to create purge_weapon_defaults table");
-        }
-    }
-
     private void seedWeaponDefaults() {
         if (!isPersistenceAvailable()) {
             return;
@@ -644,37 +602,6 @@ public class PurgeWeaponConfigManager {
             defaultUnlocked.add("WoodSword");
         }
         LOGGER.atInfo().log("Loaded weapon defaults: " + defaultUnlocked.size() + " default unlocked, session weapon: " + sessionWeaponId);
-    }
-
-    private void createSettingsTable() {
-        if (!isPersistenceAvailable()) {
-            return;
-        }
-        // Migrate: drop old table if it has wrong column names
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             ResultSet rs = conn.getMetaData().getColumns(null, null, "purge_settings", "setting_key")) {
-            if (!rs.next()) {
-                // Table exists but missing expected column — drop and recreate
-                try (PreparedStatement drop = conn.prepareStatement("DROP TABLE IF EXISTS purge_settings")) {
-                    DatabaseManager.applyQueryTimeout(drop);
-                    drop.executeUpdate();
-                    LOGGER.atInfo().log("Dropped purge_settings table with wrong schema, will recreate");
-                }
-            }
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to check purge_settings schema");
-        }
-        String sql = "CREATE TABLE IF NOT EXISTS purge_settings ("
-                + "setting_key VARCHAR(64) NOT NULL PRIMARY KEY, "
-                + "setting_value VARCHAR(255) NOT NULL"
-                + ") ENGINE=InnoDB";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.executeUpdate();
-        } catch (SQLException e) {
-            LOGGER.atSevere().withCause(e).log("Failed to create purge_settings table");
-        }
     }
 
     private void loadSettings() {

@@ -38,29 +38,6 @@ public class PurgeClassStore {
     public void initialize() {
         if (!DatabaseManager.getInstance().isInitialized()) {
             LOGGER.atWarning().log("Database not initialized, PurgeClassStore will use in-memory mode");
-            return;
-        }
-        String sql1 = "CREATE TABLE IF NOT EXISTS purge_player_classes ("
-                + "uuid VARCHAR(36) NOT NULL, "
-                + "class_id VARCHAR(32) NOT NULL, "
-                + "PRIMARY KEY (uuid, class_id)"
-                + ") ENGINE=InnoDB";
-        String sql2 = "CREATE TABLE IF NOT EXISTS purge_player_selected_class ("
-                + "uuid VARCHAR(36) NOT NULL PRIMARY KEY, "
-                + "selected_class VARCHAR(32) DEFAULT NULL"
-                + ") ENGINE=InnoDB";
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
-            try (PreparedStatement stmt = conn.prepareStatement(sql1)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.executeUpdate();
-            }
-            try (PreparedStatement stmt = conn.prepareStatement(sql2)) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.executeUpdate();
-            }
-            LOGGER.atInfo().log("PurgeClassStore initialized (purge_player_classes + purge_player_selected_class tables ensured)");
-        } catch (SQLException e) {
-            LOGGER.atSevere().withCause(e).log("Failed to create purge class tables");
         }
     }
 

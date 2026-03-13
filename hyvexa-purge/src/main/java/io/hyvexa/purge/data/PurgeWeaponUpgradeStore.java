@@ -43,63 +43,6 @@ public class PurgeWeaponUpgradeStore {
     public void initialize() {
         if (!DatabaseManager.getInstance().isInitialized()) {
             LOGGER.atWarning().log("Database not initialized, PurgeWeaponUpgradeStore will use in-memory mode");
-            return;
-        }
-        String sql = "CREATE TABLE IF NOT EXISTS purge_weapon_upgrades ("
-                + "uuid VARCHAR(36) NOT NULL, "
-                + "weapon_id VARCHAR(32) NOT NULL, "
-                + "level INT NOT NULL DEFAULT 0, "
-                + "PRIMARY KEY (uuid, weapon_id)"
-                + ") ENGINE=InnoDB";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.executeUpdate();
-            LOGGER.atInfo().log("PurgeWeaponUpgradeStore initialized (purge_weapon_upgrades table ensured)");
-        } catch (SQLException e) {
-            LOGGER.atSevere().withCause(e).log("Failed to create purge_weapon_upgrades table");
-        }
-        runOwnershipMigration();
-    }
-
-    private void runOwnershipMigration() {
-        if (!DatabaseManager.getInstance().isInitialized()) {
-            return;
-        }
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
-            // Create migrations table if needed
-            try (PreparedStatement stmt = conn.prepareStatement(
-                    "CREATE TABLE IF NOT EXISTS purge_migrations ("
-                    + "migration_key VARCHAR(64) NOT NULL PRIMARY KEY"
-                    + ") ENGINE=InnoDB")) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.executeUpdate();
-            }
-            // Check if migration already applied
-            try (PreparedStatement stmt = conn.prepareStatement(
-                    "SELECT 1 FROM purge_migrations WHERE migration_key = 'weapon_ownership_v1'")) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                try (ResultSet rs = stmt.executeQuery()) {
-                    if (rs.next()) {
-                        return; // Already migrated
-                    }
-                }
-            }
-            // Wipe existing upgrade data (fresh start)
-            try (PreparedStatement stmt = conn.prepareStatement("DELETE FROM purge_weapon_upgrades")) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                int deleted = stmt.executeUpdate();
-                LOGGER.atInfo().log("Weapon ownership migration: deleted " + deleted + " existing upgrade rows");
-            }
-            // Record migration
-            try (PreparedStatement stmt = conn.prepareStatement(
-                    "INSERT INTO purge_migrations (migration_key) VALUES ('weapon_ownership_v1')")) {
-                DatabaseManager.applyQueryTimeout(stmt);
-                stmt.executeUpdate();
-            }
-            LOGGER.atInfo().log("Weapon ownership migration complete");
-        } catch (SQLException e) {
-            LOGGER.atWarning().withCause(e).log("Failed to run weapon ownership migration");
         }
     }
 

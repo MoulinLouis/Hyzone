@@ -29,22 +29,6 @@ public class WeaponXpStore {
     public void initialize() {
         if (!DatabaseManager.getInstance().isInitialized()) {
             LOGGER.atWarning().log("Database not initialized, WeaponXpStore will use in-memory mode");
-            return;
-        }
-        String sql = "CREATE TABLE IF NOT EXISTS purge_weapon_xp ("
-                + "uuid VARCHAR(36) NOT NULL, "
-                + "weapon_id VARCHAR(32) NOT NULL, "
-                + "xp INT NOT NULL DEFAULT 0, "
-                + "level INT NOT NULL DEFAULT 0, "
-                + "PRIMARY KEY (uuid, weapon_id)"
-                + ") ENGINE=InnoDB";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            DatabaseManager.applyQueryTimeout(stmt);
-            stmt.executeUpdate();
-            LOGGER.atInfo().log("WeaponXpStore initialized (purge_weapon_xp table ensured)");
-        } catch (SQLException e) {
-            LOGGER.atSevere().withCause(e).log("Failed to create purge_weapon_xp table");
         }
     }
 
