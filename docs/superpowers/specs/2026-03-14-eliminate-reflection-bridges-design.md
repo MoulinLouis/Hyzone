@@ -24,11 +24,15 @@ Parkour and runorfall both depend on `hyvexa-core` but not on each other, so dir
 
 **After** (~40 LOC): direct `FeatherStore.getInstance()` calls with null guard.
 
+The `RunOrFallFeatherBridge` class is retained as a thin facade — 6 call sites across `HyvexaRunOrFallPlugin` and `RunOrFallGameManager` reference it by name.
+
+**Return type note:** `RunOrFallFeatherBridge.addFeathers()` returns `boolean` (success/failure), while `FeatherStore.addFeathers()` returns `long` (new balance). The simplified bridge wraps the call: returns `true` if the call completes without exception, `false` on exception — preserving the existing contract.
+
 Changes:
 - Delete: `resolved`, `available`, `featherStoreInstance`, all `Method` fields, `ensureResolved()`
 - Delete: all `import java.lang.reflect.*`
 - Add: `import io.hyvexa.core.economy.FeatherStore`
-- Each method body becomes a direct call with null check on the singleton instance
+- Each method body becomes a direct call, with try-catch on `addFeathers` to preserve boolean return
 
 ### Part 2: 4 parkour interactions — GameModeBridge handlers
 
@@ -56,6 +60,8 @@ In `HyvexaRunOrFallPlugin` (or a dedicated registration method called from `onEn
 3. **`RUNORFALL_JOIN_LOBBY`**: Extract PlayerRef UUID and World from store. Dispatch `gameManager.joinLobby(uuid, world)` via `CompletableFuture.runAsync(..., world)`.
 
 4. **`RUNORFALL_LEAVE_LOBBY`**: Extract PlayerRef UUID and World from store. Dispatch `gameManager.leaveLobby(uuid, true)` via `CompletableFuture.runAsync(..., world)`.
+
+**Threading:** The handler is responsible for dispatching to the world thread. The parkour-side `GameModeBridge.invoke()` call is synchronous — handlers for join/leave wrap their logic in `CompletableFuture.runAsync(..., world)` internally.
 
 #### Parkour side — replace reflection with GameModeBridge.invoke()
 
