@@ -112,12 +112,12 @@ Base class using template method pattern. Extends `InteractiveCustomUIPage<Searc
 
 | Method | Purpose |
 |--------|---------|
-| `sendRefresh()` | Rebuild and send UI update. Subclasses call after tab switches, category changes, etc. |
+| `sendRefresh()` | Re-bind all events (common + custom) and rebuild content via `buildContent()`, then send UI update. Subclasses call after tab switches, category changes, etc. |
 | `<T> List<T> filterBySearch(List<T>, Function<T, String>)` | Filter items by search text prefix match. Returns full list if search is empty. |
 | `void showEmpty(UICommandBuilder, String)` | Set `#EmptyText.Text` and clear `#PageLabel.Text` |
 | `String getSearchText()` | Access current search text |
 | `PaginationState getPagination()` | Access pagination state for `slice()`, `reset()` |
-| `void resetSearchAndPagination()` | Clear search text and reset to page 0. For tab-switching pages. |
+| `void resetSearchAndPagination()` | Clear search text and reset to page 0. For tab-switching pages that clear search on tab change (`AscendMapLeaderboardPage`, `ChallengeLeaderboardPage`). Pages that preserve search across tabs (`AscendLeaderboardPage`) should call `getPagination().reset()` directly. |
 
 **Private method:**
 
@@ -154,7 +154,9 @@ Same removals. `buildContent(commandBuilder, eventBuilder)` uses the eventBuilde
 
 1. **`build()` and `handleDataEvent()` are final** — prevents subclasses from accidentally reimplementing the shared lifecycle. All page-specific behavior flows through the 5 abstract methods and 1 optional hook.
 
-2. **`buildContent` takes both `UICommandBuilder` and `UIEventBuilder`** — `AdminPlayersPage` binds per-row select button events dynamically during content building. Other pages ignore the eventBuilder parameter.
+2. **`buildContent` takes both `UICommandBuilder` and `UIEventBuilder`** — `AdminPlayersPage` binds per-row select button events dynamically during content building. Other pages ignore the eventBuilder parameter. Note: `sendRefresh()` creates fresh builders and passes them through `bindAllEvents()` + `buildContent()`, so dynamic per-row bindings are correctly re-established on every refresh.
+
+7. **`buildContent` owns all UI state** — subclasses set everything in `buildContent()`: row rendering, headers (e.g. `MapLeaderboardPage`'s `#MapTitle.Text`), tab styles (e.g. `updateTabStyles()`), search field values. Since `sendRefresh()` creates fresh builders, any state not re-set in `buildContent()` is lost. `onPageSetup()` is only for truly one-time setup that doesn't need refreshing (e.g. tab label text and visibility).
 
 3. **Single shared `SearchPaginatedData`** — all 7 pages define structurally identical inner Data classes (same fields, same codec). A shared class eliminates ~105 lines and the risk of drift.
 
@@ -163,6 +165,8 @@ Same removals. `buildContent(commandBuilder, eventBuilder)` uses the eventBuilde
 5. **No generic type parameter on the base class** — the TECH_DEBT item suggested `AbstractSearchablePaginatedPage<D>` but since all pages use identical event data (button + search), a generic is unnecessary. Row types vary but they're local to each subclass's `buildContent`.
 
 6. **`handleCustomButton` is void, not boolean** — the base class has already handled all known buttons (prev/next) before delegating. The subclass handles its own buttons unconditionally; there's no fallback behavior that needs a return value.
+
+8. **`SearchPaginatedData.getSearch()` can return null** — the `search` field is only populated when a `ValueChanged` event fires on the search field. Button-only events leave it null. The base class `handleDataEvent()` guards with `if (data.getSearch() != null)` before updating `searchText`, matching the existing pattern in all 7 pages.
 
 ### Files changed
 
