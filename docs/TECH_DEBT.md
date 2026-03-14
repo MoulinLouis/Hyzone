@@ -72,11 +72,11 @@ Prioritized list of known issues and improvements. Sourced from a full codebase 
 - **Issue:** 5 interaction files in parkour use reflection to access RunOrFall classes (leaderboard, stats, fly toggle, join, feather bridge). `RunOrFallFeatherBridge` is the clearest — FeatherStore is already on the classpath via core.
 - **Fix:** `RunOrFallFeatherBridge` → direct `FeatherStore.getInstance()` calls. For the other 4, registered `GameModeBridge` handlers in runorfall startup; parkour interactions now use `GameModeBridge.invoke()`.
 
-### 2.7 Paginated search page base class
+### ~~2.7 Paginated search page base class~~ (DONE)
 - **Module:** core (used by parkour, ascend)
 - **Issue:** 7+ paginated pages repeat identical `PaginationState` lifecycle, prev/next handling, search filtering, page label rendering (~150 LOC boilerplate per page).
 - **Pages:** `LeaderboardPage`, `MapLeaderboardPage`, `AdminPlayersPage`, `PlaytimeAdminPage`, `AscendLeaderboardPage`, `AscendMapLeaderboardPage`, `ChallengeLeaderboardPage`
-- **Fix:** Extract `AbstractSearchablePaginatedPage<D>` base class in core.
+- **Fix:** Extracted `AbstractSearchablePaginatedPage` base class in core with `SearchPaginatedData` shared event data. Template method pattern with 5 abstract methods. All 7 pages migrated.
 
 ---
 
