@@ -1,13 +1,8 @@
 package io.hyvexa.ascend.ui;
 
-import com.hypixel.hytale.codec.Codec;
-import com.hypixel.hytale.codec.KeyedCodec;
-import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
-import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
 import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
@@ -16,6 +11,7 @@ import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.data.AscendPlayerStore.LeaderboardEntry;
+import io.hyvexa.common.ui.AbstractSearchablePaginatedPage;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.ui.PaginationState;
 import io.hyvexa.common.util.FormatUtils;
@@ -27,62 +23,55 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-public class AscendLeaderboardPage extends InteractiveCustomUIPage<AscendLeaderboardPage.LeaderboardData> {
+public class AscendLeaderboardPage extends AbstractSearchablePaginatedPage {
 
     private static final String BUTTON_CLOSE = "Close";
-    private static final String BUTTON_PREV = "PrevPage";
-    private static final String BUTTON_NEXT = "NextPage";
     private static final String BUTTON_TAB_VOLT = "TabVolt";
     private static final String BUTTON_TAB_ASCENSIONS = "TabAscensions";
     private static final String BUTTON_TAB_RUNS = "TabRuns";
     private static final String BUTTON_TAB_FASTEST = "TabFastest";
 
     private final AscendPlayerStore playerStore;
-    private final PaginationState pagination = new PaginationState(50);
     private LeaderboardCategory currentCategory = LeaderboardCategory.VOLT;
-    private String searchText = "";
 
     public AscendLeaderboardPage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore) {
-        super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, LeaderboardData.CODEC);
+        super(playerRef, 50);
         this.playerStore = playerStore;
     }
 
     @Override
-    public void build(@Nonnull Ref<EntityStore> ref, @Nonnull UICommandBuilder commandBuilder,
-                      @Nonnull UIEventBuilder eventBuilder, @Nonnull Store<EntityStore> store) {
-        commandBuilder.append("Pages/Ascend_Leaderboard.ui");
-        bindEvents(eventBuilder);
+    protected String getPagePath() {
+        return "Pages/Ascend_Leaderboard.ui";
+    }
+
+    @Override
+    protected String getSearchFieldId() {
+        return "#SearchField";
+    }
+
+    @Override
+    protected void bindCustomEvents(UIEventBuilder eventBuilder) {
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CloseButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#TabVolt",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TAB_VOLT), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#TabAscensions",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TAB_ASCENSIONS), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#TabRuns",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TAB_RUNS), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#TabFastest",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TAB_FASTEST), false);
+    }
+
+    @Override
+    protected void buildContent(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
         buildLeaderboard(commandBuilder);
     }
 
     @Override
-    public void handleDataEvent(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store,
-                                @Nonnull LeaderboardData data) {
-        super.handleDataEvent(ref, store, data);
-
-        String previousSearch = searchText;
-        if (data.search != null) {
-            searchText = data.search.trim();
-        }
-
-        if (data.getButton() == null) {
-            if (!previousSearch.equals(searchText)) {
-                pagination.reset();
-                sendRefresh();
-            }
-            return;
-        }
-
-        switch (data.getButton()) {
+    protected void handleCustomButton(String button, Ref<EntityStore> ref, Store<EntityStore> store) {
+        switch (button) {
             case BUTTON_CLOSE -> this.close();
-            case BUTTON_PREV -> {
-                pagination.previous();
-                sendRefresh();
-            }
-            case BUTTON_NEXT -> {
-                pagination.next();
-                sendRefresh();
-            }
             case BUTTON_TAB_VOLT -> switchCategory(LeaderboardCategory.VOLT);
             case BUTTON_TAB_ASCENSIONS -> switchCategory(LeaderboardCategory.ASCENSIONS);
             case BUTTON_TAB_RUNS -> switchCategory(LeaderboardCategory.MANUAL_RUNS);
@@ -95,40 +84,13 @@ public class AscendLeaderboardPage extends InteractiveCustomUIPage<AscendLeaderb
             return;
         }
         currentCategory = category;
-        pagination.reset();
+        getPagination().reset();
         sendRefresh();
-    }
-
-    private void sendRefresh() {
-        UICommandBuilder commandBuilder = new UICommandBuilder();
-        UIEventBuilder eventBuilder = new UIEventBuilder();
-        bindEvents(eventBuilder);
-        buildLeaderboard(commandBuilder);
-        this.sendUpdate(commandBuilder, eventBuilder, false);
-    }
-
-    private void bindEvents(UIEventBuilder eventBuilder) {
-        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CloseButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE), false);
-        eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#SearchField",
-                EventData.of(LeaderboardData.KEY_SEARCH, "#SearchField.Value"), false);
-        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#PrevPageButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_PREV), false);
-        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#NextPageButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_NEXT), false);
-        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#TabVolt",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TAB_VOLT), false);
-        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#TabAscensions",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TAB_ASCENSIONS), false);
-        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#TabRuns",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TAB_RUNS), false);
-        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#TabFastest",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TAB_FASTEST), false);
     }
 
     private void buildLeaderboard(UICommandBuilder commandBuilder) {
         commandBuilder.clear("#LeaderboardCards");
-        commandBuilder.set("#SearchField.Value", searchText);
+        commandBuilder.set("#SearchField.Value", getSearchText());
 
         updateTabStyles(commandBuilder);
 
@@ -146,7 +108,7 @@ public class AscendLeaderboardPage extends InteractiveCustomUIPage<AscendLeaderb
             return;
         }
 
-        String filter = searchText.toLowerCase();
+        String filter = getSearchText().toLowerCase();
         List<LeaderboardRow> filtered = new ArrayList<>();
         for (LeaderboardRow row : sorted) {
             if (!filter.isEmpty()) {
@@ -165,7 +127,7 @@ public class AscendLeaderboardPage extends InteractiveCustomUIPage<AscendLeaderb
         }
 
         commandBuilder.set("#EmptyText.Text", "");
-        PaginationState.PageSlice slice = pagination.slice(filtered.size());
+        PaginationState.PageSlice slice = getPagination().slice(filtered.size());
         int start = slice.startIndex;
         int end = slice.endIndex;
         int index = 0;
@@ -278,25 +240,5 @@ public class AscendLeaderboardPage extends InteractiveCustomUIPage<AscendLeaderb
     }
 
     private record LeaderboardRow(int rank, UUID playerId, String name, String formattedValue) {
-    }
-
-    public static class LeaderboardData extends ButtonEventData {
-        static final String KEY_SEARCH = "@Search";
-
-        public static final BuilderCodec<LeaderboardData> CODEC = BuilderCodec.<LeaderboardData>builder(
-                        LeaderboardData.class, LeaderboardData::new)
-                .addField(new KeyedCodec<>(ButtonEventData.KEY_BUTTON, Codec.STRING),
-                        (data, value) -> data.button = value, data -> data.button)
-                .addField(new KeyedCodec<>(KEY_SEARCH, Codec.STRING),
-                        (data, value) -> data.search = value, data -> data.search)
-                .build();
-
-        private String button;
-        private String search;
-
-        @Override
-        public String getButton() {
-            return button;
-        }
     }
 }

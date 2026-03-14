@@ -2,18 +2,14 @@ package io.hyvexa.parkour.ui;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.codec.Codec;
-import com.hypixel.hytale.codec.KeyedCodec;
-import com.hypixel.hytale.codec.builder.BuilderCodec;
-import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
-import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
 import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import io.hyvexa.common.ui.AbstractSearchablePaginatedPage;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.ui.PaginationState;
 import io.hyvexa.common.util.FormatUtils;
@@ -26,87 +22,46 @@ import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
-public class PlaytimeAdminPage extends InteractiveCustomUIPage<PlaytimeAdminPage.PlaytimeData> {
+public class PlaytimeAdminPage extends AbstractSearchablePaginatedPage {
 
     private static final String BUTTON_BACK = "BackButton";
-    private static final String BUTTON_PREV = "PrevPage";
-    private static final String BUTTON_NEXT = "NextPage";
     private final ProgressStore progressStore;
-    private final PaginationState pagination = new PaginationState(30);
-    private String searchText = "";
 
     public PlaytimeAdminPage(@Nonnull PlayerRef playerRef, ProgressStore progressStore) {
-        super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, PlaytimeData.CODEC);
+        super(playerRef, 30);
         this.progressStore = progressStore;
     }
 
     @Override
-    public void build(@Nonnull Ref<EntityStore> ref, @Nonnull UICommandBuilder uiCommandBuilder,
-                      @Nonnull UIEventBuilder uiEventBuilder, @Nonnull Store<EntityStore> store) {
-        uiCommandBuilder.append("Pages/Parkour_PlaytimeAdmin.ui");
-        bindEvents(uiEventBuilder);
-        buildPlaytimeList(uiCommandBuilder);
+    protected String getPagePath() {
+        return "Pages/Parkour_PlaytimeAdmin.ui";
     }
 
     @Override
-    public void handleDataEvent(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store,
-                                @Nonnull PlaytimeData data) {
-        super.handleDataEvent(ref, store, data);
-        String previousSearch = searchText;
-        if (data.search != null) {
-            searchText = data.search.trim();
-        }
-        if (data.getButton() == null) {
-            if (!previousSearch.equals(searchText)) {
-                pagination.reset();
-                sendRefresh();
-            }
-            return;
-        }
-        if (BUTTON_PREV.equals(data.getButton())) {
-            pagination.previous();
-            sendRefresh();
-            return;
-        }
-        if (BUTTON_NEXT.equals(data.getButton())) {
-            pagination.next();
-            sendRefresh();
-            return;
-        }
-        if (BUTTON_BACK.equals(data.getButton())) {
+    protected String getSearchFieldId() {
+        return "#PlaytimeSearchField";
+    }
+
+    @Override
+    protected void bindCustomEvents(UIEventBuilder eventBuilder) {
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_BACK), false);
+    }
+
+    @Override
+    protected void handleCustomButton(String button, Ref<EntityStore> ref, Store<EntityStore> store) {
+        if (BUTTON_BACK.equals(button)) {
             openIndex(ref, store);
         }
     }
 
-    private void sendRefresh() {
-        UICommandBuilder commandBuilder = new UICommandBuilder();
-        UIEventBuilder eventBuilder = new UIEventBuilder();
-        bindEvents(eventBuilder);
-        buildPlaytimeList(commandBuilder);
-        this.sendUpdate(commandBuilder, eventBuilder, false);
-    }
-
-    private void bindEvents(UIEventBuilder uiEventBuilder) {
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_BACK), false);
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#PlaytimeSearchField",
-                EventData.of(PlaytimeData.KEY_SEARCH, "#PlaytimeSearchField.Value"), false);
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#PrevPageButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_PREV), false);
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#NextPageButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_NEXT), false);
-    }
-
-    private void openIndex(Ref<EntityStore> ref, Store<EntityStore> store) {
-        AdminPageUtils.openIndex(ref, store);
-    }
-
-    private void buildPlaytimeList(UICommandBuilder commandBuilder) {
+    @Override
+    protected void buildContent(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
         commandBuilder.clear("#PlaytimeCards");
-        commandBuilder.set("#PlaytimeSearchField.Value", searchText);
+        commandBuilder.set("#PlaytimeSearchField.Value", getSearchText());
         List<UUID> playerIds = new ArrayList<>(progressStore.getPlayerIds());
         playerIds.sort(Comparator.comparingLong((UUID id) -> progressStore.getPlaytimeMs(id)).reversed());
-        String filter = searchText != null ? searchText.trim().toLowerCase(Locale.ROOT) : "";
+        String filter = getSearchText() != null ? getSearchText().trim().toLowerCase(Locale.ROOT) : "";
         List<UUID> filtered = new ArrayList<>();
         for (UUID playerId : playerIds) {
             if (filter.isEmpty()) {
@@ -126,7 +81,7 @@ public class PlaytimeAdminPage extends InteractiveCustomUIPage<PlaytimeAdminPage
             return;
         }
         commandBuilder.set("#EmptyText.Text", "");
-        PaginationState.PageSlice slice = pagination.slice(filtered.size());
+        PaginationState.PageSlice slice = getPagination().slice(filtered.size());
         long totalPlaytimeMs = 0L;
         for (UUID playerId : filtered) {
             totalPlaytimeMs += progressStore.getPlaytimeMs(playerId);
@@ -147,6 +102,10 @@ public class PlaytimeAdminPage extends InteractiveCustomUIPage<PlaytimeAdminPage
         commandBuilder.set("#PageLabel.Text", slice.getLabel());
     }
 
+    private void openIndex(Ref<EntityStore> ref, Store<EntityStore> store) {
+        AdminPageUtils.openIndex(ref, store);
+    }
+
     private String formatDisplayName(UUID playerId) {
         PlayerRef onlineRef = Universe.get().getPlayer(playerId);
         String name = onlineRef != null ? onlineRef.getUsername() : progressStore.getPlayerName(playerId);
@@ -154,25 +113,5 @@ public class PlaytimeAdminPage extends InteractiveCustomUIPage<PlaytimeAdminPage
             return playerId.toString();
         }
         return name;
-    }
-
-    public static class PlaytimeData extends ButtonEventData {
-        static final String KEY_SEARCH = "@Search";
-
-        public static final BuilderCodec<PlaytimeData> CODEC = BuilderCodec.<PlaytimeData>builder(PlaytimeData.class,
-                        PlaytimeData::new)
-                .addField(new KeyedCodec<>(ButtonEventData.KEY_BUTTON, Codec.STRING),
-                        (data, value) -> data.button = value, data -> data.button)
-                .addField(new KeyedCodec<>(KEY_SEARCH, Codec.STRING),
-                        (data, value) -> data.search = value, data -> data.search)
-                .build();
-
-        private String button;
-        private String search;
-
-        @Override
-        public String getButton() {
-            return button;
-        }
     }
 }

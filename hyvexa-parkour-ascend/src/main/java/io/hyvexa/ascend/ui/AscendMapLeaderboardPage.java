@@ -1,17 +1,12 @@
 package io.hyvexa.ascend.ui;
 
-import com.hypixel.hytale.codec.Codec;
-import com.hypixel.hytale.codec.KeyedCodec;
-import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
-import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
+import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.data.AscendMap;
@@ -21,6 +16,7 @@ import io.hyvexa.ascend.data.AscendPlayerStore.MapLeaderboardEntry;
 import io.hyvexa.ascend.robot.RobotManager;
 import io.hyvexa.ascend.tracker.AscendRunTracker;
 import io.hyvexa.common.ghost.GhostStore;
+import io.hyvexa.common.ui.AbstractSearchablePaginatedPage;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.ui.PaginationState;
 import io.hyvexa.common.util.FormatUtils;
@@ -29,11 +25,9 @@ import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
 
-public class AscendMapLeaderboardPage extends InteractiveCustomUIPage<AscendMapLeaderboardPage.MapLeaderboardData> {
+public class AscendMapLeaderboardPage extends AbstractSearchablePaginatedPage {
 
     private static final String BUTTON_CLOSE = "Close";
-    private static final String BUTTON_PREV = "PrevPage";
-    private static final String BUTTON_NEXT = "NextPage";
     private static final String BUTTON_TAB_PREFIX = "Tab";
 
     private static final int MAX_TABS = 5;
@@ -54,10 +48,8 @@ public class AscendMapLeaderboardPage extends InteractiveCustomUIPage<AscendMapL
     private final AscendRunTracker runTracker;
     private final RobotManager robotManager;
     private final GhostStore ghostStore;
-    private final PaginationState pagination = new PaginationState(50);
     private final List<AscendMap> maps;
     private int currentTabIndex = 0;
-    private String searchText = "";
 
     public AscendMapLeaderboardPage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore, AscendMapStore mapStore) {
         this(playerRef, playerStore, mapStore, null, null, null);
@@ -65,7 +57,7 @@ public class AscendMapLeaderboardPage extends InteractiveCustomUIPage<AscendMapL
 
     public AscendMapLeaderboardPage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore, AscendMapStore mapStore,
                                     AscendRunTracker runTracker, RobotManager robotManager, GhostStore ghostStore) {
-        super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, MapLeaderboardData.CODEC);
+        super(playerRef, 50);
         this.playerStore = playerStore;
         this.mapStore = mapStore;
         this.runTracker = runTracker;
@@ -75,50 +67,49 @@ public class AscendMapLeaderboardPage extends InteractiveCustomUIPage<AscendMapL
     }
 
     @Override
-    public void build(@Nonnull Ref<EntityStore> ref, @Nonnull UICommandBuilder commandBuilder,
-                      @Nonnull UIEventBuilder eventBuilder, @Nonnull Store<EntityStore> store) {
-        commandBuilder.append("Pages/Ascend_MapLeaderboard.ui");
-        bindEvents(eventBuilder);
+    protected String getPagePath() {
+        return "Pages/Ascend_MapLeaderboard.ui";
+    }
+
+    @Override
+    protected String getSearchFieldId() {
+        return "#SearchField";
+    }
+
+    @Override
+    protected void bindCustomEvents(UIEventBuilder eventBuilder) {
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CloseButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE), false);
+
+        int tabCount = Math.min(maps.size(), MAX_TABS);
+        for (int i = 0; i < tabCount; i++) {
+            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#Tab" + i,
+                    EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TAB_PREFIX + i), false);
+        }
+    }
+
+    @Override
+    protected void onPageSetup(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
         setupTabs(commandBuilder);
+    }
+
+    @Override
+    protected void buildContent(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
+        updateTabStyles(commandBuilder);
         buildLeaderboard(commandBuilder);
     }
 
     @Override
-    public void handleDataEvent(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store,
-                                @Nonnull MapLeaderboardData data) {
-        super.handleDataEvent(ref, store, data);
-
-        String previousSearch = searchText;
-        if (data.search != null) {
-            searchText = data.search.trim();
-        }
-
-        if (data.getButton() == null) {
-            if (!previousSearch.equals(searchText)) {
-                pagination.reset();
-                sendRefresh();
-            }
+    protected void handleCustomButton(String button, Ref<EntityStore> ref, Store<EntityStore> store) {
+        if (BUTTON_CLOSE.equals(button)) {
+            handleBack(ref, store);
             return;
         }
-
-        switch (data.getButton()) {
-            case BUTTON_CLOSE -> handleBack(ref, store);
-            case BUTTON_PREV -> {
-                pagination.previous();
-                sendRefresh();
-            }
-            case BUTTON_NEXT -> {
-                pagination.next();
-                sendRefresh();
-            }
-            default -> {
-                if (data.getButton().startsWith(BUTTON_TAB_PREFIX)) {
-                    try {
-                        int tabIndex = Integer.parseInt(data.getButton().substring(BUTTON_TAB_PREFIX.length()));
-                        switchTab(tabIndex);
-                    } catch (NumberFormatException ignored) {
-                    }
-                }
+        if (button.startsWith(BUTTON_TAB_PREFIX)) {
+            try {
+                int tabIndex = Integer.parseInt(button.substring(BUTTON_TAB_PREFIX.length()));
+                switchTab(tabIndex);
+            } catch (NumberFormatException ignored) {
             }
         }
     }
@@ -131,8 +122,7 @@ public class AscendMapLeaderboardPage extends InteractiveCustomUIPage<AscendMapL
             return;
         }
         currentTabIndex = tabIndex;
-        pagination.reset();
-        searchText = "";
+        resetSearchAndPagination();
         sendRefresh();
     }
 
@@ -147,32 +137,6 @@ public class AscendMapLeaderboardPage extends InteractiveCustomUIPage<AscendMapL
             }
         }
         this.close();
-    }
-
-    private void sendRefresh() {
-        UICommandBuilder commandBuilder = new UICommandBuilder();
-        UIEventBuilder eventBuilder = new UIEventBuilder();
-        bindEvents(eventBuilder);
-        updateTabStyles(commandBuilder);
-        buildLeaderboard(commandBuilder);
-        this.sendUpdate(commandBuilder, eventBuilder, false);
-    }
-
-    private void bindEvents(UIEventBuilder eventBuilder) {
-        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CloseButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE), false);
-        eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#SearchField",
-                EventData.of(MapLeaderboardData.KEY_SEARCH, "#SearchField.Value"), false);
-        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#PrevPageButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_PREV), false);
-        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#NextPageButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_NEXT), false);
-
-        int tabCount = Math.min(maps.size(), MAX_TABS);
-        for (int i = 0; i < tabCount; i++) {
-            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#Tab" + i,
-                    EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TAB_PREFIX + i), false);
-        }
     }
 
     private void setupTabs(UICommandBuilder commandBuilder) {
@@ -206,7 +170,7 @@ public class AscendMapLeaderboardPage extends InteractiveCustomUIPage<AscendMapL
 
     private void buildLeaderboard(UICommandBuilder commandBuilder) {
         commandBuilder.clear("#LeaderboardCards");
-        commandBuilder.set("#SearchField.Value", searchText);
+        commandBuilder.set("#SearchField.Value", getSearchText());
 
         if (maps.isEmpty() || currentTabIndex >= maps.size()) {
             commandBuilder.set("#EmptyText.Text", "No maps available.");
@@ -224,7 +188,7 @@ public class AscendMapLeaderboardPage extends InteractiveCustomUIPage<AscendMapL
         }
 
         // Apply search filter
-        String filter = searchText.toLowerCase();
+        String filter = getSearchText().toLowerCase();
         List<MapLeaderboardEntry> filtered = new ArrayList<>();
         for (MapLeaderboardEntry entry : entries) {
             if (!filter.isEmpty()) {
@@ -243,7 +207,7 @@ public class AscendMapLeaderboardPage extends InteractiveCustomUIPage<AscendMapL
         }
 
         commandBuilder.set("#EmptyText.Text", "");
-        PaginationState.PageSlice slice = pagination.slice(filtered.size());
+        PaginationState.PageSlice slice = getPagination().slice(filtered.size());
         int start = slice.startIndex;
         int end = slice.endIndex;
         int index = 0;
@@ -263,25 +227,5 @@ public class AscendMapLeaderboardPage extends InteractiveCustomUIPage<AscendMapL
         }
 
         commandBuilder.set("#PageLabel.Text", slice.getLabel());
-    }
-
-    public static class MapLeaderboardData extends ButtonEventData {
-        static final String KEY_SEARCH = "@Search";
-
-        public static final BuilderCodec<MapLeaderboardData> CODEC = BuilderCodec.<MapLeaderboardData>builder(
-                        MapLeaderboardData.class, MapLeaderboardData::new)
-                .addField(new KeyedCodec<>(ButtonEventData.KEY_BUTTON, Codec.STRING),
-                        (data, value) -> data.button = value, data -> data.button)
-                .addField(new KeyedCodec<>(KEY_SEARCH, Codec.STRING),
-                        (data, value) -> data.search = value, data -> data.search)
-                .build();
-
-        private String button;
-        private String search;
-
-        @Override
-        public String getButton() {
-            return button;
-        }
     }
 }

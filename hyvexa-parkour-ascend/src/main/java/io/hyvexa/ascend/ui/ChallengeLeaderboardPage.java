@@ -1,14 +1,9 @@
 package io.hyvexa.ascend.ui;
 
-import com.hypixel.hytale.codec.Codec;
-import com.hypixel.hytale.codec.KeyedCodec;
-import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
 import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
@@ -18,6 +13,7 @@ import io.hyvexa.ascend.AscendConstants.ChallengeType;
 import io.hyvexa.ascend.ascension.ChallengeManager;
 import io.hyvexa.ascend.ascension.ChallengeManager.ChallengeLeaderboardEntry;
 import io.hyvexa.ascend.data.AscendPlayerStore;
+import io.hyvexa.common.ui.AbstractSearchablePaginatedPage;
 import io.hyvexa.common.ui.ButtonEventData;
 import io.hyvexa.common.ui.PaginationState;
 import io.hyvexa.common.util.FormatUtils;
@@ -26,11 +22,9 @@ import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ChallengeLeaderboardPage extends InteractiveCustomUIPage<ChallengeLeaderboardPage.ChallengeLeaderboardData> {
+public class ChallengeLeaderboardPage extends AbstractSearchablePaginatedPage {
 
     private static final String BUTTON_CLOSE = "Close";
-    private static final String BUTTON_PREV = "PrevPage";
-    private static final String BUTTON_NEXT = "NextPage";
     private static final String BUTTON_TAB_PREFIX = "Tab";
 
     private static final int MAX_TABS = 8;
@@ -41,63 +35,60 @@ public class ChallengeLeaderboardPage extends InteractiveCustomUIPage<ChallengeL
     private final AscendPlayerStore playerStore;
     private final ChallengeManager challengeManager;
     private final ChallengeType[] challengeTypes;
-    private final PaginationState pagination = new PaginationState(50);
     private int currentTabIndex = 0;
-    private String searchText = "";
 
     public ChallengeLeaderboardPage(@Nonnull PlayerRef playerRef, AscendPlayerStore playerStore,
                                      ChallengeManager challengeManager) {
-        super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, ChallengeLeaderboardData.CODEC);
+        super(playerRef, 50);
         this.playerStore = playerStore;
         this.challengeManager = challengeManager;
         this.challengeTypes = ChallengeType.values();
     }
 
     @Override
-    public void build(@Nonnull Ref<EntityStore> ref, @Nonnull UICommandBuilder commandBuilder,
-                      @Nonnull UIEventBuilder eventBuilder, @Nonnull Store<EntityStore> store) {
-        commandBuilder.append("Pages/Ascend_ChallengeLeaderboard.ui");
-        bindEvents(eventBuilder);
+    protected String getPagePath() {
+        return "Pages/Ascend_ChallengeLeaderboard.ui";
+    }
+
+    @Override
+    protected String getSearchFieldId() {
+        return "#SearchField";
+    }
+
+    @Override
+    protected void bindCustomEvents(UIEventBuilder eventBuilder) {
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CloseButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE), false);
+
+        int tabCount = Math.min(challengeTypes.length, MAX_TABS);
+        for (int i = 0; i < tabCount; i++) {
+            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#Tab" + i,
+                    EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TAB_PREFIX + i), false);
+        }
+    }
+
+    @Override
+    protected void onPageSetup(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
         setupTabs(commandBuilder);
+    }
+
+    @Override
+    protected void buildContent(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
+        updateTabStyles(commandBuilder);
         buildLeaderboard(commandBuilder);
     }
 
     @Override
-    public void handleDataEvent(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store,
-                                @Nonnull ChallengeLeaderboardData data) {
-        super.handleDataEvent(ref, store, data);
-
-        String previousSearch = searchText;
-        if (data.search != null) {
-            searchText = data.search.trim();
-        }
-
-        if (data.getButton() == null) {
-            if (!previousSearch.equals(searchText)) {
-                pagination.reset();
-                sendRefresh();
-            }
+    protected void handleCustomButton(String button, Ref<EntityStore> ref, Store<EntityStore> store) {
+        if (BUTTON_CLOSE.equals(button)) {
+            handleBack(ref, store);
             return;
         }
-
-        switch (data.getButton()) {
-            case BUTTON_CLOSE -> handleBack(ref, store);
-            case BUTTON_PREV -> {
-                pagination.previous();
-                sendRefresh();
-            }
-            case BUTTON_NEXT -> {
-                pagination.next();
-                sendRefresh();
-            }
-            default -> {
-                if (data.getButton().startsWith(BUTTON_TAB_PREFIX)) {
-                    try {
-                        int tabIndex = Integer.parseInt(data.getButton().substring(BUTTON_TAB_PREFIX.length()));
-                        switchTab(tabIndex);
-                    } catch (NumberFormatException ignored) {
-                    }
-                }
+        if (button.startsWith(BUTTON_TAB_PREFIX)) {
+            try {
+                int tabIndex = Integer.parseInt(button.substring(BUTTON_TAB_PREFIX.length()));
+                switchTab(tabIndex);
+            } catch (NumberFormatException ignored) {
             }
         }
     }
@@ -110,8 +101,7 @@ public class ChallengeLeaderboardPage extends InteractiveCustomUIPage<ChallengeL
             return;
         }
         currentTabIndex = tabIndex;
-        pagination.reset();
-        searchText = "";
+        resetSearchAndPagination();
         sendRefresh();
     }
 
@@ -124,32 +114,6 @@ public class ChallengeLeaderboardPage extends InteractiveCustomUIPage<ChallengeL
             return;
         }
         this.close();
-    }
-
-    private void sendRefresh() {
-        UICommandBuilder commandBuilder = new UICommandBuilder();
-        UIEventBuilder eventBuilder = new UIEventBuilder();
-        bindEvents(eventBuilder);
-        updateTabStyles(commandBuilder);
-        buildLeaderboard(commandBuilder);
-        this.sendUpdate(commandBuilder, eventBuilder, false);
-    }
-
-    private void bindEvents(UIEventBuilder eventBuilder) {
-        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CloseButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_CLOSE), false);
-        eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#SearchField",
-                EventData.of(ChallengeLeaderboardData.KEY_SEARCH, "#SearchField.Value"), false);
-        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#PrevPageButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_PREV), false);
-        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#NextPageButton",
-                EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_NEXT), false);
-
-        int tabCount = Math.min(challengeTypes.length, MAX_TABS);
-        for (int i = 0; i < tabCount; i++) {
-            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#Tab" + i,
-                    EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_TAB_PREFIX + i), false);
-        }
     }
 
     private void setupTabs(UICommandBuilder commandBuilder) {
@@ -179,7 +143,7 @@ public class ChallengeLeaderboardPage extends InteractiveCustomUIPage<ChallengeL
 
     private void buildLeaderboard(UICommandBuilder commandBuilder) {
         commandBuilder.clear("#LeaderboardCards");
-        commandBuilder.set("#SearchField.Value", searchText);
+        commandBuilder.set("#SearchField.Value", getSearchText());
 
         if (currentTabIndex >= challengeTypes.length) {
             commandBuilder.set("#EmptyText.Text", "No challenges available.");
@@ -197,7 +161,7 @@ public class ChallengeLeaderboardPage extends InteractiveCustomUIPage<ChallengeL
         }
 
         // Apply search filter
-        String filter = searchText.toLowerCase();
+        String filter = getSearchText().toLowerCase();
         List<ChallengeLeaderboardEntry> filtered = new ArrayList<>();
         for (ChallengeLeaderboardEntry entry : entries) {
             if (!filter.isEmpty()) {
@@ -216,7 +180,7 @@ public class ChallengeLeaderboardPage extends InteractiveCustomUIPage<ChallengeL
         }
 
         commandBuilder.set("#EmptyText.Text", "");
-        PaginationState.PageSlice slice = pagination.slice(filtered.size());
+        PaginationState.PageSlice slice = getPagination().slice(filtered.size());
         int start = slice.startIndex;
         int end = slice.endIndex;
         int index = 0;
@@ -236,25 +200,5 @@ public class ChallengeLeaderboardPage extends InteractiveCustomUIPage<ChallengeL
         }
 
         commandBuilder.set("#PageLabel.Text", slice.getLabel());
-    }
-
-    public static class ChallengeLeaderboardData extends ButtonEventData {
-        static final String KEY_SEARCH = "@Search";
-
-        public static final BuilderCodec<ChallengeLeaderboardData> CODEC = BuilderCodec.<ChallengeLeaderboardData>builder(
-                        ChallengeLeaderboardData.class, ChallengeLeaderboardData::new)
-                .addField(new KeyedCodec<>(ButtonEventData.KEY_BUTTON, Codec.STRING),
-                        (data, value) -> data.button = value, data -> data.button)
-                .addField(new KeyedCodec<>(KEY_SEARCH, Codec.STRING),
-                        (data, value) -> data.search = value, data -> data.search)
-                .build();
-
-        private String button;
-        private String search;
-
-        @Override
-        public String getButton() {
-            return button;
-        }
     }
 }
