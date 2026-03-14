@@ -2,8 +2,6 @@ package io.hyvexa.parkour.interaction;
 
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
 import com.hypixel.hytale.server.core.entity.entities.Player;
@@ -14,14 +12,12 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.HyvexaPlugin;
 import io.hyvexa.common.util.ModeGate;
 import io.hyvexa.common.util.SystemMessageUtils;
+import io.hyvexa.core.bridge.GameModeBridge;
 
 import javax.annotation.Nonnull;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 public class ToggleFlyInteraction extends SimpleInteraction {
-    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final String RUN_OR_FALL_PLUGIN_CLASS = "io.hyvexa.runorfall.HyvexaRunOrFallPlugin";
 
     public static final BuilderCodec<ToggleFlyInteraction> CODEC =
             BuilderCodec.builder(ToggleFlyInteraction.class, ToggleFlyInteraction::new).build();
@@ -45,7 +41,8 @@ public class ToggleFlyInteraction extends SimpleInteraction {
             return;
         }
         if (ModeGate.isRunOrFallWorld(world)) {
-            leaveRunOrFallLobby(playerRef, world);
+            GameModeBridge.invoke(GameModeBridge.RUNORFALL_LEAVE_LOBBY,
+                    ref, firstRun, time, type, interactionContext);
             return;
         }
         CompletableFuture.runAsync(() -> {
@@ -61,31 +58,6 @@ public class ToggleFlyInteraction extends SimpleInteraction {
                 player.sendMessage(SystemMessageUtils.parkourInfo("Fly enabled."));
             } else {
                 player.sendMessage(SystemMessageUtils.parkourInfo("Fly disabled."));
-            }
-        }, world);
-    }
-
-    private void leaveRunOrFallLobby(PlayerRef playerRef, World world) {
-        UUID playerId = playerRef != null ? playerRef.getUuid() : null;
-        if (playerId == null) {
-            return;
-        }
-        CompletableFuture.runAsync(() -> {
-            try {
-                Class<?> pluginClass = Class.forName(RUN_OR_FALL_PLUGIN_CLASS);
-                Object runOrFallPlugin = pluginClass.getMethod("getInstance").invoke(null);
-                if (runOrFallPlugin == null) {
-                    return;
-                }
-                Object gameManager = pluginClass.getMethod("getGameManager").invoke(runOrFallPlugin);
-                if (gameManager == null) {
-                    return;
-                }
-                gameManager.getClass().getMethod("leaveLobby", UUID.class, boolean.class)
-                        .invoke(gameManager, playerId, true);
-            } catch (Exception e) {
-                LOGGER.atWarning().withCause(e)
-                        .log("Failed to route Ingredient_Earth_Essence to RunOrFall leave.");
             }
         }, world);
     }

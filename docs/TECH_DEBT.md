@@ -8,10 +8,10 @@ Prioritized list of known issues and improvements. Sourced from a full codebase 
 
 ## Tier 1: Quick Wins (hours each)
 
-### 1.1 Replace RunOrFall reflection bridge with direct calls
+### ~~1.1 Replace RunOrFall reflection bridge with direct calls~~ (DONE)
 - **Module:** runorfall
 - **Issue:** `RunOrFallBlinkInteraction` uses reflection to call `RestartCheckpointInteraction` from parkour. This is unnecessary fragility since interfaces in core could bridge the modules.
-- **Fix:** Define `GameModeBridge` interface in core; each module registers its bridge on startup.
+- **Fix:** Created `GameModeBridge` registry in core with `InteractionHandler` interface. `RunOrFallBlinkInteraction` now uses `GameModeBridge.invoke()` instead of reflection.
 
 ### ~~1.2 Extract CheckpointDetector from RunValidator + DuelTracker~~ (DONE)
 - **Module:** parkour
@@ -67,10 +67,10 @@ Prioritized list of known issues and improvements. Sourced from a full codebase 
 - **Issue:** 19 calls to `DatabaseManager.addColumnIfMissing()` scattered across `MapStore` (4), `MedalRewardStore` (2), `RunOrFallConfigStore` (13). No centralized migration registry or audit trail.
 - **Fix:** Created `ParkourDatabaseSetup` and `RunOrFallDatabaseSetup` following the `PurgeDatabaseSetup` pattern. Each has a migrations tracking table and named migration methods. Removed all ad-hoc calls from individual stores.
 
-### 2.6 Eliminate unnecessary reflection bridges
-- **Module:** parkour
+### ~~2.6 Eliminate unnecessary reflection bridges~~ (DONE)
+- **Module:** parkour, runorfall
 - **Issue:** 5 interaction files in parkour use reflection to access RunOrFall classes (leaderboard, stats, fly toggle, join, feather bridge). `RunOrFallFeatherBridge` is the clearest — FeatherStore is already on the classpath via core.
-- **Fix:** `RunOrFallFeatherBridge` → direct `FeatherStore.getInstance()`. For the other 4, define interfaces in core that each module registers on startup.
+- **Fix:** `RunOrFallFeatherBridge` → direct `FeatherStore.getInstance()` calls. For the other 4, registered `GameModeBridge` handlers in runorfall startup; parkour interactions now use `GameModeBridge.invoke()`.
 
 ### 2.7 Paginated search page base class
 - **Module:** core (used by parkour, ascend)
@@ -138,7 +138,7 @@ Bugs #1.5 and #1.6 above are the only concurrency issues found. The stale cache 
 |----------|-------|--------|
 | DANGEROUS (sun.misc.Unsafe) | 1 (`PurgeWaveManager`) | See item 3.4 |
 | NECESSARY (cross-plugin bridges) | 6 (`HylogramsBridge`, `MultiHudBridge`, `EntityUtils`, `RunOrFallBlinkInteraction`, Votifier detection, JDBC) | Keep — graceful degradation on failure |
-| UNNECESSARY (parkour-to-runorfall) | 5 interaction files | See item 2.6 |
+| ~~UNNECESSARY (parkour-to-runorfall)~~ | ~~5 interaction files~~ | ~~Eliminated in item 2.6~~ |
 
 ## Store Pattern Taxonomy
 

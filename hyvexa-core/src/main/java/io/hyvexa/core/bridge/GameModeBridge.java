@@ -20,6 +20,18 @@ public final class GameModeBridge {
     /** Key for the parkour restart-checkpoint handler. */
     public static final String PARKOUR_RESTART_CHECKPOINT = "parkour:restart_checkpoint";
 
+    /** Key for opening the RunOrFall leaderboard page. */
+    public static final String RUNORFALL_OPEN_LEADERBOARD = "runorfall:open_leaderboard";
+
+    /** Key for opening the RunOrFall stats page. */
+    public static final String RUNORFALL_OPEN_STATS = "runorfall:open_stats";
+
+    /** Key for joining the RunOrFall lobby. */
+    public static final String RUNORFALL_JOIN_LOBBY = "runorfall:join_lobby";
+
+    /** Key for leaving the RunOrFall lobby. */
+    public static final String RUNORFALL_LEAVE_LOBBY = "runorfall:leave_lobby";
+
     /**
      * Handler for a cross-module interaction.
      */

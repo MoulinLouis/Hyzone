@@ -1,22 +1,13 @@
 package io.hyvexa.runorfall.util;
 
 import com.hypixel.hytale.logger.HytaleLogger;
+import io.hyvexa.core.economy.FeatherStore;
 
-import java.lang.reflect.Method;
 import java.util.UUID;
 
 public final class RunOrFallFeatherBridge {
 
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final String FEATHER_STORE_CLASS = "io.hyvexa.core.economy.FeatherStore";
-
-    private static volatile boolean resolved;
-    private static volatile boolean available;
-    private static Object featherStoreInstance;
-    private static Method getFeathersMethod;
-    private static Method getCachedFeathersMethod;
-    private static Method addFeathersMethod;
-    private static Method evictPlayerMethod;
 
     private RunOrFallFeatherBridge() {
     }
@@ -25,54 +16,33 @@ public final class RunOrFallFeatherBridge {
         if (playerId == null) {
             return 0L;
         }
-        ensureResolved();
-        if (!available) {
+        try {
+            return FeatherStore.getInstance().getFeathers(playerId);
+        } catch (Exception e) {
+            LOGGER.atWarning().withCause(e).log("RunOrFall Feather bridge read failed.");
             return 0L;
         }
-        try {
-            Object value = getFeathersMethod.invoke(featherStoreInstance, playerId);
-            if (value instanceof Number number) {
-                return Math.max(0L, number.longValue());
-            }
-        } catch (Exception e) {
-            available = false;
-            LOGGER.atWarning().withCause(e).log("RunOrFall Feather bridge read failed.");
-        }
-        return 0L;
     }
 
     public static long getCachedFeathers(UUID playerId) {
         if (playerId == null) {
             return 0L;
         }
-        ensureResolved();
-        if (!available) {
+        try {
+            return FeatherStore.getInstance().getCachedFeathers(playerId);
+        } catch (Exception e) {
+            LOGGER.atWarning().withCause(e).log("RunOrFall Feather bridge cached read failed.");
             return 0L;
         }
-        try {
-            Object value = getCachedFeathersMethod.invoke(featherStoreInstance, playerId);
-            if (value instanceof Number number) {
-                return Math.max(0L, number.longValue());
-            }
-        } catch (Exception e) {
-            available = false;
-            LOGGER.atWarning().withCause(e).log("RunOrFall Feather bridge cached read failed.");
-        }
-        return 0L;
     }
 
     public static void evictPlayer(UUID playerId) {
         if (playerId == null) {
             return;
         }
-        ensureResolved();
-        if (!available) {
-            return;
-        }
         try {
-            evictPlayerMethod.invoke(featherStoreInstance, playerId);
+            FeatherStore.getInstance().evictPlayer(playerId);
         } catch (Exception e) {
-            available = false;
             LOGGER.atWarning().withCause(e).log("RunOrFall Feather bridge evict failed.");
         }
     }
@@ -81,51 +51,12 @@ public final class RunOrFallFeatherBridge {
         if (playerId == null || amount <= 0L) {
             return false;
         }
-        ensureResolved();
-        if (!available) {
-            return false;
-        }
         try {
-            addFeathersMethod.invoke(featherStoreInstance, playerId, amount);
+            FeatherStore.getInstance().addFeathers(playerId, amount);
             return true;
         } catch (Exception e) {
-            available = false;
             LOGGER.atWarning().withCause(e).log("RunOrFall Feather bridge add failed.");
             return false;
-        }
-    }
-
-    private static void ensureResolved() {
-        if (resolved) {
-            return;
-        }
-        synchronized (RunOrFallFeatherBridge.class) {
-            if (resolved) {
-                return;
-            }
-            try {
-                Class<?> featherStoreClass = Class.forName(FEATHER_STORE_CLASS);
-                Method getInstanceMethod = featherStoreClass.getMethod("getInstance");
-                featherStoreInstance = getInstanceMethod.invoke(null);
-                getFeathersMethod = featherStoreClass.getMethod("getFeathers", UUID.class);
-                try {
-                    getCachedFeathersMethod = featherStoreClass.getMethod("getCachedFeathers", UUID.class);
-                } catch (NoSuchMethodException ignored) {
-                    getCachedFeathersMethod = getFeathersMethod;
-                }
-                addFeathersMethod = featherStoreClass.getMethod("addFeathers", UUID.class, long.class);
-                evictPlayerMethod = featherStoreClass.getMethod("evictPlayer", UUID.class);
-                available = featherStoreInstance != null
-                        && getFeathersMethod != null
-                        && getCachedFeathersMethod != null
-                        && addFeathersMethod != null
-                        && evictPlayerMethod != null;
-            } catch (Exception e) {
-                available = false;
-                LOGGER.atInfo().log("RunOrFall Feather bridge unavailable (Parkour FeatherStore not found).");
-            } finally {
-                resolved = true;
-            }
         }
     }
 }

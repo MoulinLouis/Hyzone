@@ -23,6 +23,7 @@ import io.hyvexa.common.util.InventoryUtils;
 import io.hyvexa.common.util.ModeGate;
 import io.hyvexa.common.util.StoreInitializer;
 import io.hyvexa.common.util.MultiHudBridge;
+import io.hyvexa.core.bridge.GameModeBridge;
 import io.hyvexa.core.db.DatabaseManager;
 import io.hyvexa.core.economy.VexaStore;
 import io.hyvexa.core.queue.RunOrFallQueueCommand;
@@ -35,7 +36,9 @@ import io.hyvexa.runorfall.interaction.RunOrFallJoinInteraction;
 import io.hyvexa.runorfall.interaction.RunOrFallProfileInteraction;
 import io.hyvexa.runorfall.interaction.RunOrFallStatsInteraction;
 import io.hyvexa.runorfall.ui.RunOrFallAdminPage;
+import io.hyvexa.runorfall.ui.RunOrFallLeaderboardPage;
 import io.hyvexa.runorfall.ui.RunOrFallMusicPage;
+import io.hyvexa.runorfall.ui.RunOrFallStatsPage;
 import io.hyvexa.runorfall.data.RunOrFallDatabaseSetup;
 import io.hyvexa.runorfall.manager.RunOrFallConfigStore;
 import io.hyvexa.runorfall.manager.RunOrFallGameManager;
@@ -211,6 +214,8 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
             VexaStore.getInstance().evictPlayer(playerId);
         });
 
+        registerBridgeHandlers();
+
         hudUpdateTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(
                 this::tickHudUpdates, 5000L, 5000L, TimeUnit.MILLISECONDS
         );
@@ -227,6 +232,62 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
         registry.register("Shop_Item_Interaction",
                 io.hyvexa.common.interaction.ShopItemInteraction.class,
                 io.hyvexa.common.interaction.ShopItemInteraction.CODEC);
+    }
+
+    private void registerBridgeHandlers() {
+        GameModeBridge.register(GameModeBridge.RUNORFALL_OPEN_LEADERBOARD,
+                (ref, firstRun, time, type, ctx) -> {
+                    var store = ref.getStore();
+                    Player player = store.getComponent(ref, Player.getComponentType());
+                    PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+                    if (player == null || playerRef == null) {
+                        return;
+                    }
+                    player.getPageManager().openCustomPage(ref, store,
+                            new RunOrFallLeaderboardPage(playerRef, statsStore));
+                });
+
+        GameModeBridge.register(GameModeBridge.RUNORFALL_OPEN_STATS,
+                (ref, firstRun, time, type, ctx) -> {
+                    var store = ref.getStore();
+                    Player player = store.getComponent(ref, Player.getComponentType());
+                    PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+                    if (player == null || playerRef == null) {
+                        return;
+                    }
+                    player.getPageManager().openCustomPage(ref, store,
+                            new RunOrFallStatsPage(playerRef, statsStore));
+                });
+
+        GameModeBridge.register(GameModeBridge.RUNORFALL_JOIN_LOBBY,
+                (ref, firstRun, time, type, ctx) -> {
+                    var store = ref.getStore();
+                    PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+                    UUID playerId = playerRef != null ? playerRef.getUuid() : null;
+                    if (playerId == null) {
+                        return;
+                    }
+                    World world = store.getExternalData() != null ? store.getExternalData().getWorld() : null;
+                    if (world == null) {
+                        return;
+                    }
+                    CompletableFuture.runAsync(() -> gameManager.joinLobby(playerId, world), world);
+                });
+
+        GameModeBridge.register(GameModeBridge.RUNORFALL_LEAVE_LOBBY,
+                (ref, firstRun, time, type, ctx) -> {
+                    var store = ref.getStore();
+                    PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+                    UUID playerId = playerRef != null ? playerRef.getUuid() : null;
+                    if (playerId == null) {
+                        return;
+                    }
+                    World world = store.getExternalData() != null ? store.getExternalData().getWorld() : null;
+                    if (world == null) {
+                        return;
+                    }
+                    CompletableFuture.runAsync(() -> gameManager.leaveLobby(playerId, true), world);
+                });
     }
 
     public RunOrFallStatsStore getStatsStore() {
