@@ -114,8 +114,7 @@ public class MineBreakSystem extends EntityEventSystem<EntityStore, BreakBlockEv
             blocksGained = 2;
         }
 
-        boolean autoSell = mineProgress.isAutoSellEnabled();
-        if (!autoSell && !mineProgress.canAddToInventory(blocksGained)) {
+        if (!mineProgress.canAddToInventory(blocksGained)) {
             sendBagFullMessage(playerId, player);
             return;
         }
@@ -134,19 +133,13 @@ public class MineBreakSystem extends EntityEventSystem<EntityStore, BreakBlockEv
             worldChunk.setBlock(bx, by, bz, 0);
         }
 
-        MineConfigStore configStore = mineManager.getConfigStore();
-        BigNumber blockPrice = configStore.getBlockPrice(zone.getMineId(), blockTypeName);
-
-        if (autoSell) {
-            long earned = blockPrice.multiply(BigNumber.of(blocksGained, 0)).toLong();
-            mineProgress.addCrystals(earned);
-        } else {
-            int stored = mineProgress.addToInventoryUpTo(blockTypeName, blocksGained);
-            if (stored < blocksGained) {
-                int overflow = blocksGained - stored;
-                long fallbackCrystals = blockPrice.multiply(BigNumber.of(overflow, 0)).toLong();
-                mineProgress.addCrystals(fallbackCrystals);
-            }
+        int stored = mineProgress.addToInventoryUpTo(blockTypeName, blocksGained);
+        if (stored < blocksGained) {
+            MineConfigStore configStore = mineManager.getConfigStore();
+            BigNumber blockPrice = configStore.getBlockPrice(zone.getMineId(), blockTypeName);
+            int overflow = blocksGained - stored;
+            long fallbackCrystals = blockPrice.multiply(BigNumber.of(overflow, 0)).toLong();
+            mineProgress.addCrystals(fallbackCrystals);
         }
         minePlayerStore.markDirty(playerId);
 

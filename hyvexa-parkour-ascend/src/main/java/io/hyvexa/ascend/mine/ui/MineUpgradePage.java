@@ -43,8 +43,7 @@ public class MineUpgradePage extends BaseAscendPage {
     private static final String[] DISPLAY_NAMES = {
         "Mining Speed",
         "Bag Capacity",
-        "Multi-Break",
-        "Auto-Sell"
+        "Multi-Break"
     };
 
     private final MinePlayerProgress mineProgress;
@@ -171,7 +170,6 @@ public class MineUpgradePage extends BaseAscendPage {
             case MINING_SPEED -> "Speed: " + String.format("%.1f", effect) + "x";
             case BAG_CAPACITY -> "Capacity: " + (int) effect + " blocks";
             case MULTI_BREAK -> "Chance: " + (int) effect + "%";
-            case AUTO_SELL -> effect >= 1.0 ? "Enabled" : "Disabled";
         };
     }
 

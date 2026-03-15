@@ -18,7 +18,6 @@ import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.data.MineZone;
-import io.hyvexa.common.math.BigNumber;
 import io.hyvexa.common.util.OrphanedEntityCleanup;
 
 import java.nio.file.Path;
@@ -382,13 +381,8 @@ public class MineRobotManager {
         MinePlayerProgress progress = playerStore.getPlayer(state.getOwnerId());
         if (progress == null) return;
 
-        if (progress.isAutoSellEnabled()) {
-            BigNumber price = configStore.getBlockPrice(state.getMineId(), blockType);
-            progress.addCrystals(price.toLong());
-        } else {
-            boolean added = progress.addToInventory(blockType, 1);
-            if (!added) return; // Bag full, skip
-        }
+        boolean added = progress.addToInventory(blockType, 1);
+        if (!added) return; // Bag full, skip
 
         playerStore.markDirty(state.getOwnerId());
     }

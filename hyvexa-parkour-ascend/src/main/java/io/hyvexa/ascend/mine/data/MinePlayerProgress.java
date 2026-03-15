@@ -156,10 +156,6 @@ public class MinePlayerProgress {
         return MineUpgradeType.MULTI_BREAK.getEffect(getUpgradeLevel(MineUpgradeType.MULTI_BREAK)) / 100.0;
     }
 
-    public synchronized boolean isAutoSellEnabled() {
-        return getUpgradeLevel(MineUpgradeType.AUTO_SELL) >= 1;
-    }
-
     // --- Per-mine state ---
 
     public static class MineProgress {
