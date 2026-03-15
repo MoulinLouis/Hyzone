@@ -47,6 +47,13 @@ public class MinePage extends BaseAscendPage {
     private static final int MINER_MAX_SPEED_PER_STAR = 25;
     private static final int MINER_MAX_STARS = 5;
 
+    private static final String[] ACCENT_COLORS = {
+        "Violet", "Red", "Orange", "Green", "Blue", "Gold"
+    };
+    private static final String[] ACCENT_HEX = {
+        "#7c3aed", "#ef4444", "#f59e0b", "#10b981", "#3b82f6", "#f59e0b"
+    };
+
     private static final String[] UPGRADE_DISPLAY_NAMES = {
         "Mining Speed",
         "Bag Capacity",
@@ -106,53 +113,94 @@ public class MinePage extends BaseAscendPage {
             cmd.append("#MinerEntries", "Pages/Ascend_MinePageMinerEntry.ui");
             String sel = "#MinerEntries[" + i + "]";
 
+            // Accent color + button zone color
+            int colorIndex = i % ACCENT_COLORS.length;
+            String colorName = ACCENT_COLORS[colorIndex];
+            String colorHex = ACCENT_HEX[colorIndex];
+            cmd.set(sel + " #AccentViolet.Visible", colorIndex == 0);
+            cmd.set(sel + " #Accent" + colorName + ".Visible", true);
+            cmd.set(sel + " #ButtonBg" + colorName + ".Visible", true);
+
+            // Set segment colors to match accent
+            for (int seg = 1; seg <= MINER_MAX_SPEED_PER_STAR; seg++) {
+                cmd.set(sel + " #Seg" + seg + ".Background", colorHex);
+            }
+
             cmd.set(sel + " #MineName.Text", mine.getName());
 
             boolean unlocked = mineProgress.getMineSnapshot(mine.getId()).unlocked();
             if (!unlocked) {
                 cmd.set(sel + " #LockedOverlay.Visible", true);
-                cmd.set(sel + " #ActionWrap.Visible", false);
-                cmd.set(sel + " #CostText.Visible", false);
                 continue;
             }
 
             MinePlayerProgress.MinerProgressSnapshot minerState = mineProgress.getMinerSnapshot(mine.getId());
+            boolean hasMiner = minerState.hasMiner();
+            int speedLevel = hasMiner ? minerState.speedLevel() : 0;
+            int stars = hasMiner ? minerState.stars() : 0;
 
-            if (!minerState.hasMiner()) {
-                cmd.set(sel + " #MinerStatus.Text", "Not purchased");
-                cmd.set(sel + " #CostText.Text", "Cost: " + getMinerBuyCost());
-                cmd.set(sel + " #ActionButton.Text", "Buy");
-                evt.addEventBinding(CustomUIEventBindingType.Activating,
-                    sel + " #ActionButton",
-                    EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_BUY_MINER_PREFIX + mine.getId()), false);
+            // Progress bar segments
+            for (int seg = 1; seg <= speedLevel; seg++) {
+                cmd.set(sel + " #Seg" + seg + ".Visible", true);
+            }
+
+            // Stars
+            for (int s = 1; s <= stars; s++) {
+                cmd.set(sel + " #Star" + s + ".Visible", true);
+            }
+
+            // Level text
+            cmd.set(sel + " #MinerLevel.Style.TextColor", "#ffffff");
+
+            // Bind buy button
+            evt.addEventBinding(CustomUIEventBindingType.Activating,
+                sel + " #MinerBuyButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, resolveMinerButtonId(hasMiner, speedLevel, stars, mine.getId())), false);
+
+            if (!hasMiner) {
+                cmd.set(sel + " #MinerLevel.Text", "");
+                cmd.set(sel + " #MinerActionStatus.Text", "No Miner");
+                cmd.set(sel + " #ActionText.Text", "Buy Miner");
+                cmd.set(sel + " #ActionPrice.Text", "");
+                cmd.set(sel + " #MinerStatus.Text", "");
             } else {
-                int speedLevel = minerState.speedLevel();
-                int stars = minerState.stars();
                 boolean fullyMaxed = stars >= MINER_MAX_STARS && speedLevel >= MINER_MAX_SPEED_PER_STAR;
-
-                cmd.set(sel + " #MinerStatus.Text", "Speed Lv " + speedLevel + " | Star " + stars);
                 double blocksPerMin = MinerRobotState.getProductionRate(speedLevel, stars);
-                cmd.set(sel + " #ProductionRate.Text", String.format("%.1f", blocksPerMin) + " blocks/min");
+                cmd.set(sel + " #MinerStatus.Text", String.format("%.1f", blocksPerMin) + " blocks/min");
 
                 if (fullyMaxed) {
-                    cmd.set(sel + " #CostText.Visible", false);
-                    cmd.set(sel + " #ActionWrap.Visible", false);
-                    cmd.set(sel + " #MaxedLabel.Visible", true);
+                    cmd.set(sel + " #MinerLevel.Text", "MAX");
+                    cmd.set(sel + " #MinerActionStatus.Text", String.format("%.1f", blocksPerMin) + " b/m");
+                    cmd.set(sel + " #ActionText.Text", "Maxed!");
+                    cmd.set(sel + " #ActionPrice.Text", "");
                 } else if (speedLevel >= MINER_MAX_SPEED_PER_STAR) {
-                    cmd.set(sel + " #CostText.Text", "Cost: " + getMinerEvolveCost(stars));
-                    cmd.set(sel + " #ActionButton.Text", "Evolve");
-                    evt.addEventBinding(CustomUIEventBindingType.Activating,
-                        sel + " #ActionButton",
-                        EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_MINER_EVOLVE_PREFIX + mine.getId()), false);
+                    cmd.set(sel + " #MinerLevel.Text", "Lv." + speedLevel);
+                    cmd.set(sel + " #MinerActionStatus.Text", String.format("%.1f", blocksPerMin) + " b/m");
+                    cmd.set(sel + " #ActionText.Text", "Evolve");
+                    cmd.set(sel + " #ActionPrice.Text", "");
                 } else {
-                    cmd.set(sel + " #CostText.Text", "Cost: " + getMinerSpeedCost(speedLevel, stars));
-                    cmd.set(sel + " #ActionButton.Text", "Upgrade");
-                    evt.addEventBinding(CustomUIEventBindingType.Activating,
-                        sel + " #ActionButton",
-                        EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_MINER_SPEED_PREFIX + mine.getId()), false);
+                    cmd.set(sel + " #MinerLevel.Text", "Lv." + speedLevel);
+                    cmd.set(sel + " #MinerActionStatus.Text", String.format("%.1f", blocksPerMin) + " b/m");
+                    long cost = getMinerSpeedCost(speedLevel, stars);
+                    cmd.set(sel + " #ActionText.Text", "Cost:");
+                    cmd.set(sel + " #ActionPrice.Text", cost + " cryst");
+                    boolean canAfford = mineProgress.getCrystals() >= cost;
+                    cmd.set(sel + " #ButtonDisabledOverlay.Visible", !canAfford);
+                    if (!canAfford) {
+                        cmd.set(sel + " #MinerActionStatus.Style.TextColor", "#9fb0ba");
+                        cmd.set(sel + " #ActionText.Style.TextColor", "#9fb0ba");
+                        cmd.set(sel + " #ActionPrice.Style.TextColor", "#9fb0ba");
+                    }
                 }
             }
         }
+    }
+
+    private String resolveMinerButtonId(boolean hasMiner, int speedLevel, int stars, String mineId) {
+        if (!hasMiner) return BUTTON_BUY_MINER_PREFIX + mineId;
+        if (stars >= MINER_MAX_STARS && speedLevel >= MINER_MAX_SPEED_PER_STAR) return "Noop";
+        if (speedLevel >= MINER_MAX_SPEED_PER_STAR) return BUTTON_MINER_EVOLVE_PREFIX + mineId;
+        return BUTTON_MINER_SPEED_PREFIX + mineId;
     }
 
     private void populateUpgradeTab(UICommandBuilder cmd, UIEventBuilder evt) {
