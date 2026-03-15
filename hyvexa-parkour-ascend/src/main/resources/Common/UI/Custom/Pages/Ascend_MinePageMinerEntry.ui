@@ -1,0 +1,89 @@
+$C = "../Common.ui";
+
+Group {
+  Anchor: (Left: 0, Right: 0, Top: 6, Height: 80);
+  LayoutMode: Full;
+  Background: #ffffff(0.03);
+  OutlineColor: #ffffff(0.04);
+  OutlineSize: 1;
+
+  // Left accent bar
+  Group #AccentBar {
+    Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
+    Background: #f59e0b;
+  }
+
+  // Mine name
+  Label #MineName {
+    Anchor: (Left: 16, Top: 10, Width: 250, Height: 20);
+    Style: (FontSize: 15, TextColor: #f0f4f8, RenderBold: true);
+    Text: "Mine";
+  }
+
+  // Miner status line (e.g. "Speed Lv 12 | Star 2" or "Not purchased")
+  Label #MinerStatus {
+    Anchor: (Left: 16, Top: 32, Width: 220, Height: 18);
+    Style: (FontSize: 12, TextColor: #9fb0ba);
+    Text: "";
+  }
+
+  // Production rate (e.g. "4.2 blocks/min")
+  Label #ProductionRate {
+    Anchor: (Left: 16, Top: 50, Width: 220, Height: 18);
+    Style: (FontSize: 12, TextColor: #f59e0b);
+    Text: "";
+  }
+
+  // Cost label
+  Label #CostText {
+    Anchor: (Right: 110, Top: 10, Width: 120, Height: 18);
+    Style: (FontSize: 12, TextColor: #a78bfa, HorizontalAlignment: End);
+    Text: "";
+  }
+
+  // Action button (Buy / Upgrade Speed / Evolve)
+  Group #ActionWrap {
+    Anchor: (Right: 8, Top: 18, Width: 100, Height: 44);
+
+    TextButton #ActionButton {
+      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+      Text: "Buy";
+      Style: TextButtonStyle(
+        Default: (
+          Background: #3d6b5a,
+          LabelStyle: (FontSize: 13, TextColor: #e0fef0, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+        ),
+        Hovered: (
+          Background: #4d8f7a,
+          LabelStyle: (FontSize: 13, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+        ),
+        Pressed: (
+          Background: #2d5a4a,
+          LabelStyle: (FontSize: 13, TextColor: #e0fef0, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+        ),
+        Sounds: $C.@ButtonSounds,
+      );
+    }
+  }
+
+  // Maxed label (hidden by default)
+  Label #MaxedLabel {
+    Anchor: (Right: 20, Top: 18, Width: 100, Height: 44);
+    Style: (FontSize: 14, TextColor: #4ade80, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center);
+    Text: "MAXED";
+    Visible: false;
+  }
+
+  // Locked overlay (shown when mine not unlocked)
+  Group #LockedOverlay {
+    Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+    Background: #0a1018(0.7);
+    Visible: false;
+
+    Label #LockedLabel {
+      Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+      Style: (FontSize: 13, TextColor: #4a5568, RenderBold: true, Alignment: Center, VerticalAlignment: Center);
+      Text: "Mine Locked";
+    }
+  }
+}

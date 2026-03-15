@@ -936,9 +936,9 @@ public class ParkourAscendPlugin extends JavaPlugin {
             AscendDevInteraction.class, AscendDevInteraction.codec(() -> new AscendDevInteraction(
                 (ref, store, playerRef, plugin) -> {
                     MinePlayerProgress progress = plugin.getMinePlayerStore().getOrCreatePlayer(playerRef.getUuid());
-                    return new io.hyvexa.ascend.mine.ui.MineUpgradePage(playerRef, progress);
+                    return new io.hyvexa.ascend.mine.ui.MinePage(playerRef, progress);
                 },
-                (plugin, player) -> plugin.getMinePlayerStore() != null,
+                (plugin, player) -> plugin.getMinePlayerStore() != null && plugin.getMineConfigStore() != null,
                 true, true)));
     }
 }

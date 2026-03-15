@@ -17,7 +17,7 @@ import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.MineGateChecker;
 import io.hyvexa.ascend.mine.ui.MineSelectPage;
 import io.hyvexa.ascend.mine.ui.MineSellPage;
-import io.hyvexa.ascend.mine.ui.MineUpgradePage;
+import io.hyvexa.ascend.mine.ui.MinePage;
 import io.hyvexa.ascend.ui.MineBagPage;
 import io.hyvexa.common.WorldConstants;
 import io.hyvexa.common.util.CommandUtils;
@@ -97,7 +97,7 @@ public class MineCommand extends AbstractAsyncCommand {
                     player.getPageManager().openCustomPage(ref, store, page);
                 }
                 case "upgrades" -> {
-                    MineUpgradePage page = new MineUpgradePage(playerRef, progress);
+                    MinePage page = new MinePage(playerRef, progress);
                     player.getPageManager().openCustomPage(ref, store, page);
                 }
                 case "select" -> {
