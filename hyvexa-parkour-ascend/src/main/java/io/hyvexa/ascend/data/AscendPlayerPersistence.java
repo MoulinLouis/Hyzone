@@ -329,12 +329,7 @@ class AscendPlayerPersistence {
 
         String deleteChildSql = "DELETE FROM %s WHERE player_uuid = ?";
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
-            if (conn == null) {
-                LOGGER.atWarning().log("Failed to acquire database connection");
-                return;
-            }
-            conn.setAutoCommit(false); // Begin transaction
+        SaveResult result = DatabaseManager.getInstance().withTransaction(conn -> {
             try (PreparedStatement playerStmt = conn.prepareStatement(playerSql);
                  PreparedStatement mapStmt = conn.prepareStatement(mapSql);
                  PreparedStatement summitStmt = conn.prepareStatement(summitSql);
@@ -485,8 +480,7 @@ class AscendPlayerPersistence {
                 }
 
                 if (persistedVersions.isEmpty()) {
-                    conn.rollback();
-                    return;
+                    return null;
                 }
                 playerStmt.executeBatch();
                 mapStmt.executeBatch();
@@ -495,37 +489,33 @@ class AscendPlayerPersistence {
                 achievementStmt.executeBatch();
                 catStmt.executeBatch();
 
-                conn.commit(); // Commit transaction
-
-                // Commit succeeded — now safe to clear reset flags
-                committedResets.forEach(resetPendingPlayers::remove);
-                committedChallengeResets.forEach(transcendenceResetPending::remove);
-
-                // Save succeeded - remove only IDs that were not marked dirty again mid-save.
-                for (Map.Entry<UUID, Long> entry : persistedVersions.entrySet()) {
-                    UUID playerId = entry.getKey();
-                    Long savedVersion = entry.getValue();
-                    dirtyPlayerVersions.compute(playerId, (ignored, currentVersion) -> {
-                        if (currentVersion == null) {
-                            detachedDirtyPlayers.remove(playerId);
-                            return null;
-                        }
-                        if (currentVersion.equals(savedVersion)) {
-                            detachedDirtyPlayers.remove(playerId);
-                            return null;
-                        }
-                        return currentVersion;
-                    });
-                }
-            } catch (SQLException e) {
-                conn.rollback(); // Rollback transaction on error
-                LOGGER.atSevere().log("Failed to save ascend players (rolled back): " + e.getMessage());
-                // On failure, versions remain dirty for the next save cycle
-                throw e; // Re-throw to trigger outer catch
+                return new SaveResult(persistedVersions, committedResets, committedChallengeResets);
             }
-        } catch (SQLException e) {
-            // Outer catch for connection/transaction setup errors
-            LOGGER.atSevere().log("Failed to initialize transaction for ascend player save: " + e.getMessage());
+        }, null);
+
+        if (result == null) {
+            return;
+        }
+
+        // Commit succeeded — now safe to clear reset flags
+        result.committedResets.forEach(resetPendingPlayers::remove);
+        result.committedChallengeResets.forEach(transcendenceResetPending::remove);
+
+        // Save succeeded - remove only IDs that were not marked dirty again mid-save.
+        for (Map.Entry<UUID, Long> entry : result.persistedVersions.entrySet()) {
+            UUID playerId = entry.getKey();
+            Long savedVersion = entry.getValue();
+            dirtyPlayerVersions.compute(playerId, (ignored, currentVersion) -> {
+                if (currentVersion == null) {
+                    detachedDirtyPlayers.remove(playerId);
+                    return null;
+                }
+                if (currentVersion.equals(savedVersion)) {
+                    detachedDirtyPlayers.remove(playerId);
+                    return null;
+                }
+                return currentVersion;
+            });
         }
     }
 
@@ -1241,5 +1231,9 @@ class AscendPlayerPersistence {
         }
 
         return result;
+    }
+
+    private record SaveResult(Map<UUID, Long> persistedVersions, List<UUID> committedResets,
+                               List<UUID> committedChallengeResets) {
     }
 }
