@@ -25,7 +25,7 @@ Effects (glows/trails) and Weapon Skins tabs remain unchanged.
 | Legendary | Gold | 5% | 500 |
 
 - Every wardrobe cosmetic is assigned a rarity by the admin in-game
-- **Default handling:** Cosmetics without a row in `cosmetic_shop_config` are synthesized as Common, case-eligible at read time. `CosmeticShopConfigStore` must return defaults (rarity=COMMON, in_case_pool=true) for missing rows — never null. On first admin edit of any cosmetic, a row is inserted with explicit values.
+- **Default handling:** Cosmetics without a row in `cosmetic_shop_config` are synthesized as Common, enabled, case-eligible at read time. `CosmeticShopConfigStore` must return defaults (enabled=true, rarity=COMMON, in_case_pool=true) for missing rows — never null. On first admin edit of any cosmetic, a row is inserted with explicit values.
 - Probabilities and dupe values are globally configurable by admin in-game
 - With ~110 items, rough distribution: ~77 Common, ~28 Rare, ~5 Legendary (admin decides)
 
@@ -44,7 +44,7 @@ Effects (glows/trails) and Weapon Skins tabs remain unchanged.
 - Case prices are configurable by admin in-game
 - Pool is determined by which rarities are included (not manually curated)
 - Probabilities auto-redistribute proportionally when a tier is excluded
-- Only cosmetics marked as "included in case pool" by admin are eligible
+- Only cosmetics that are **enabled** AND marked as **"included in case pool"** by admin are eligible
 
 ### Edge Cases & Validation
 
@@ -79,7 +79,7 @@ When a player rolls a cosmetic they already own:
 - **4 cosmetics** available for direct purchase, refreshed daily
 - Selection is **fully random** — no forced rarity distribution (can be 4 Common, 4 Legendary, or any mix)
 - Reset at midnight (server time)
-- **Persisted daily snapshot:** On first access each day (or server startup if date changed), the 4 items are selected, written to a `daily_rotation` DB table with the date, and served from that snapshot for the rest of the day. This ensures restarts and mid-day config changes do not alter the lineup. Previous day's snapshot is used to enforce the "no repeat" rule.
+- **Persisted daily snapshot with atomic load-or-create:** `DailyRotationService.getToday()` uses `INSERT IGNORE` (or equivalent) with the date as primary key. The first caller generates candidates and attempts the insert; concurrent callers that lose the race simply read the existing row. This guarantees all players see the same 4 items regardless of concurrent access or restarts. The snapshot is served from an in-memory cache after first load, invalidated on date change. Previous day's snapshot is used to enforce the "no repeat" rule.
 - A cosmetic cannot appear two days in a row
 - Cosmetics the player already owns still display (with "Owned" badge)
 
@@ -99,8 +99,9 @@ The existing Shop Config tab (`/shop` -> admin tab, OP only) is extended.
 
 ### Per-Cosmetic Config
 
+- **Enabled** — Yes/No toggle to control whether this cosmetic is obtainable at all (replaces the old `available` column). Disabled cosmetics are excluded from both cases AND daily rotation.
 - **Rarity** — Common / Rare / Legendary (dropdown or cycle button)
-- **Included in case pool** — Yes/No toggle to exclude specific cosmetics
+- **Included in case pool** — Yes/No toggle to exclude from cases specifically (cosmetic can still appear in daily rotation if enabled)
 - Existing search bar preserved
 
 ### Global Config (New Section)
@@ -159,6 +160,8 @@ CREATE TABLE case_opening_log (
   cosmetic_id VARCHAR(64) NOT NULL,
   rarity VARCHAR(16) NOT NULL,
   was_duplicate BOOLEAN NOT NULL DEFAULT FALSE,
+  feathers_paid INT NOT NULL,
+  feathers_refunded INT NOT NULL DEFAULT 0,
   opened_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_player (player_uuid),
   INDEX idx_opened_at (opened_at)
@@ -173,11 +176,12 @@ Analytics and anti-abuse tracking.
 CREATE TABLE daily_rotation (
   rotation_date DATE NOT NULL PRIMARY KEY,
   cosmetic_ids VARCHAR(512) NOT NULL,
+  prices VARCHAR(256) NOT NULL,
   generated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 ```
 
-Persists the 4 daily items per date. `cosmetic_ids` is a comma-separated list. Only current + previous day rows are needed; older rows can be pruned.
+Persists the 4 daily items per date with their resolved prices (frozen at generation time). `cosmetic_ids` is a comma-separated list, `prices` is a matching comma-separated list of feather prices. Mid-day config changes to dupe values or rotation multiplier do not affect today's prices. Only current + previous day rows are needed; older rows can be pruned.
 
 ### Modified Table: `cosmetic_shop_config`
 
@@ -187,7 +191,7 @@ ALTER TABLE cosmetic_shop_config
   ADD COLUMN in_case_pool BOOLEAN NOT NULL DEFAULT TRUE;
 ```
 
-Existing `price`, `currency`, `available` columns are no longer used for wardrobe cosmetics (cases + rotation replace direct purchase). They remain in the schema but are dead data for wardrobe items. Effects pricing comes from `CosmeticDefinition` enum, not this table. No migration needed — columns are simply ignored for wardrobe cosmetics going forward.
+The existing `available` column is repurposed as the master "enabled" toggle — controls whether a cosmetic is obtainable via cases OR daily rotation. Renamed conceptually but no DDL change needed (boolean semantics are identical). `price` and `currency` columns are no longer used for wardrobe cosmetics and become dead data. Effects pricing comes from `CosmeticDefinition` enum, not this table.
 
 ---
 
@@ -202,7 +206,8 @@ Existing `price`, `currency`, `available` columns are no longer used for wardrob
 | `CaseConfigStore` | Singleton | Persist/load global case config from `case_config` table |
 | `CaseOpeningService` | Service | Roll logic: select tier by probability -> select random cosmetic from tier -> handle dupe |
 | `CaseOpeningLog` | Store | Write opening history to `case_opening_log` |
-| `DailyRotationService` | Service | Compute 4 daily items from date seed, calculate prices |
+| `DailyRotationService` | Service | Compute/load 4 daily items, atomic load-or-create with DB row lock |
+| `DailyShopPurchaseService` | Service | Atomic daily-shop buy: validate item is in today's rotation, compute price (dupe value x multiplier), deduct feathers, grant ownership + permission, log analytics — same transactional guarantees as `WardrobeBridge.purchase` |
 | `CosmeticShopConfigStore` | Modified | Add rarity + in_case_pool fields |
 
 ### Wardrobe Module (hyvexa-wardrobe)
