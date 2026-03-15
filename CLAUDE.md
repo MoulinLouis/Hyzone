@@ -168,6 +168,14 @@ When your changes create orphans:
 
 The test: Every changed line should trace directly to the user's request.
 
+### 4. Course-Correct Mid-Flight
+
+**If your approach isn't working, stop. Don't push through.**
+
+- If a fix keeps cascading into more changes, pause and reconsider the approach.
+- If you're unsure your changes actually work, say so — don't claim completion.
+- Prove it works before marking done: run tests, check output, show evidence.
+
 ---
 
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
