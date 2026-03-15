@@ -918,6 +918,7 @@ CREATE TABLE IF NOT EXISTS mine_players (
   bag_capacity_level INT NOT NULL DEFAULT 0,
   multi_break_level INT NOT NULL DEFAULT 0,
   auto_sell_level INT NOT NULL DEFAULT 0,
+  in_mine TINYINT(1) NOT NULL DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (uuid) REFERENCES ascend_players(uuid) ON DELETE CASCADE
@@ -927,6 +928,7 @@ CREATE TABLE IF NOT EXISTS mine_players (
 Notes:
 - `crystals` is the mine-specific currency (migrated from BigNumber mantissa+exp10 to plain BIGINT)
 - Upgrade level columns added via `ensureMineUpgradeColumns()` migration
+- `in_mine` tracks whether the player is currently in the mine (persisted for reconnect restoration)
 - Manager: `MinePlayerStore` (in `hyvexa-parkour-ascend`) -- dirty-tracking with 5-second batched saves
 
 ## mine_player_inventory
