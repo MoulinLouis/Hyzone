@@ -8,6 +8,9 @@ import io.hyvexa.common.WorldConstants;
 
 public final class InventoryUtils {
 
+    public static final short SLOT_SHOP = 7;
+    public static final short SLOT_SERVER_SELECTOR = 8;
+
     private InventoryUtils() {
     }
 
@@ -51,13 +54,13 @@ public final class InventoryUtils {
     }
 
     public static void giveGlobalItems(ItemContainer hotbar) {
-        safeSetSlot(hotbar, (short) 7, new ItemStack(WorldConstants.ITEM_SHOP, 1));
-        safeSetSlot(hotbar, (short) 8, new ItemStack(WorldConstants.ITEM_SERVER_SELECTOR, 1));
+        safeSetSlot(hotbar, SLOT_SHOP, new ItemStack(WorldConstants.ITEM_SHOP, 1));
+        safeSetSlot(hotbar, SLOT_SERVER_SELECTOR, new ItemStack(WorldConstants.ITEM_SERVER_SELECTOR, 1));
     }
 
     public static void ensureGlobalItems(ItemContainer hotbar) {
-        setIfMissing(hotbar, (short) 7, WorldConstants.ITEM_SHOP);
-        setIfMissing(hotbar, (short) 8, WorldConstants.ITEM_SERVER_SELECTOR);
+        setIfMissing(hotbar, SLOT_SHOP, WorldConstants.ITEM_SHOP);
+        setIfMissing(hotbar, SLOT_SERVER_SELECTOR, WorldConstants.ITEM_SERVER_SELECTOR);
     }
 
     public static void setIfMissing(ItemContainer hotbar, short slot, String itemId) {

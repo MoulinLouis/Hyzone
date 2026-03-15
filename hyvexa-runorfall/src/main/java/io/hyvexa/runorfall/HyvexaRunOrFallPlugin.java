@@ -394,7 +394,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
         setHotbarItem(hotbar, capacity, SLOT_LEADERBOARD, ITEM_LEADERBOARD);
         setHotbarItem(hotbar, capacity, SLOT_PROFILE, ITEM_PROFILE);
         if (state == HotbarState.DEFAULT) {
-            io.hyvexa.common.util.InventoryUtils.giveGlobalItems(hotbar);
+            InventoryUtils.giveGlobalItems(hotbar);
         } else {
             setHotbarItem(hotbar, capacity, SLOT_SHOP, WorldConstants.ITEM_SHOP);
         }

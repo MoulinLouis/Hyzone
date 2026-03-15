@@ -1191,17 +1191,9 @@ public class RobotManager {
         if (plugin != null) {
             PlayerRef playerRef = plugin.getPlayerRef(playerId);
             if (playerRef != null) {
-                Ref<EntityStore> ref = playerRef.getReference();
-                if (ref != null && ref.isValid()) {
-                    Store<EntityStore> store = ref.getStore();
-                    com.hypixel.hytale.server.core.entity.entities.Player player =
-                        store.getComponent(ref, com.hypixel.hytale.server.core.entity.entities.Player.getComponentType());
-                    if (player != null) {
-                        player.sendMessage(com.hypixel.hytale.server.core.Message.raw(
-                            "[Auto-Elevation] Elevated to x" + newMultiplier)
-                            .color(io.hyvexa.common.util.SystemMessageUtils.SUCCESS));
-                    }
-                }
+                playerRef.sendMessage(com.hypixel.hytale.server.core.Message.raw(
+                    "[Auto-Elevation] Elevated to x" + newMultiplier)
+                    .color(io.hyvexa.common.util.SystemMessageUtils.SUCCESS));
             }
         }
 
@@ -1297,17 +1289,9 @@ public class RobotManager {
             // Send chat message
             PlayerRef playerRef = plugin.getPlayerRef(playerId);
             if (playerRef != null) {
-                Ref<EntityStore> ref = playerRef.getReference();
-                if (ref != null && ref.isValid()) {
-                    Store<EntityStore> store = ref.getStore();
-                    com.hypixel.hytale.server.core.entity.entities.Player player =
-                        store.getComponent(ref, com.hypixel.hytale.server.core.entity.entities.Player.getComponentType());
-                    if (player != null) {
-                        player.sendMessage(com.hypixel.hytale.server.core.Message.raw(
-                            "[Auto-Summit] " + category.getDisplayName() + " Lv " + result.newLevel())
-                            .color(io.hyvexa.common.util.SystemMessageUtils.SUCCESS));
-                    }
-                }
+                playerRef.sendMessage(com.hypixel.hytale.server.core.Message.raw(
+                    "[Auto-Summit] " + category.getDisplayName() + " Lv " + result.newLevel())
+                    .color(io.hyvexa.common.util.SystemMessageUtils.SUCCESS));
             }
 
             lastAutoSummitMs.put(playerId, now);
