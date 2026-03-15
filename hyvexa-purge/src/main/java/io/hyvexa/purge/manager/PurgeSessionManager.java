@@ -82,10 +82,6 @@ public class PurgeSessionManager {
 
     // --- Public API ---
 
-    public boolean hasActiveSession(UUID playerId) {
-        return playerId != null && sessionIdByPlayer.containsKey(playerId);
-    }
-
     public PurgeSession getSessionByPlayer(UUID playerId) {
         if (playerId == null) {
             return null;
@@ -102,7 +98,7 @@ public class PurgeSessionManager {
         }
 
         // Phase 1 — Validation
-        if (hasActiveSession(requesterId)) {
+        if (getSessionByPlayer(requesterId) != null) {
             sendMessage(requesterRef, "You already have an active Purge session. Use /purge stop to end it.");
             return;
         }
@@ -222,7 +218,7 @@ public class PurgeSessionManager {
     private void validateAndCollect(UUID memberId,
                                     Map<UUID, Ref<EntityStore>> validPlayers,
                                     List<String> skipped) {
-        if (hasActiveSession(memberId)) {
+        if (getSessionByPlayer(memberId) != null) {
             skipped.add(getPlayerName(memberId) + " (already in a session)");
             return;
         }

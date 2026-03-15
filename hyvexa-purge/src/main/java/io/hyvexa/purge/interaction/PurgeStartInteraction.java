@@ -39,7 +39,7 @@ public class PurgeStartInteraction extends SimpleInteraction {
             ctx.player().sendMessage(Message.raw("You must be in the Purge world."));
             return;
         }
-        if (ctx.plugin().getSessionManager().hasActiveSession(ctx.playerId())) {
+        if (ctx.plugin().getSessionManager().getSessionByPlayer(ctx.playerId()) != null) {
             ctx.player().sendMessage(Message.raw("You already have an active Purge session."));
             return;
         }

@@ -65,7 +65,7 @@ public class PurgePartyManager {
         }
 
         // Check target not in a session
-        if (registry.getSessionManager().hasActiveSession(targetId)) {
+        if (registry.getSessionManager().getSessionByPlayer(targetId) != null) {
             sendMessageToPlayer(inviterId, "That player is already in a session.");
             return false;
         }

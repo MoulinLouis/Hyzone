@@ -501,7 +501,7 @@ public class HyvexaPurgePlugin extends JavaPlugin {
         hudManager.attach(playerRef, player);
         PurgeWeaponUpgradeStore.getInstance().initializeDefaults(
                 playerId, weaponConfigManager.getDefaultWeaponIds());
-        if (sessionManager != null && sessionManager.hasActiveSession(playerId)) {
+        if (sessionManager != null && sessionManager.getSessionByPlayer(playerId) != null) {
             return;
         }
         // PlayerReadyEvent can run before the entity is fully attached to a world.

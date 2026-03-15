@@ -405,7 +405,7 @@ public class PurgePartyMenuPage extends InteractiveCustomUIPage<PurgePartyMenuPa
                 result.add(new InviteCandidate(candidateId, name, InviteCandidateState.UNAVAILABLE, "In party"));
                 continue;
             }
-            if (sessionManager.hasActiveSession(candidateId)) {
+            if (sessionManager.getSessionByPlayer(candidateId) != null) {
                 result.add(new InviteCandidate(candidateId, name, InviteCandidateState.UNAVAILABLE, "In match"));
                 continue;
             }

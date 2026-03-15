@@ -302,7 +302,7 @@ public class PurgeCommand extends AbstractAsyncCommand {
             case "unlock" -> handleClassUnlock(player, playerId, args);
             case "info" -> handleClassInfo(player, playerId, args);
             case "none" -> {
-                if (sessionManager.hasActiveSession(playerId)) {
+                if (sessionManager.getSessionByPlayer(playerId) != null) {
                     player.sendMessage(Message.raw("Cannot change class during an active session."));
                     return;
                 }
@@ -327,7 +327,7 @@ public class PurgeCommand extends AbstractAsyncCommand {
             player.sendMessage(Message.raw(target.getDisplayName() + " is not unlocked. Use /purge class unlock " + target.getDisplayName()));
             return;
         }
-        if (sessionManager.hasActiveSession(playerId)) {
+        if (sessionManager.getSessionByPlayer(playerId) != null) {
             player.sendMessage(Message.raw("Cannot change class during an active session."));
             return;
         }
