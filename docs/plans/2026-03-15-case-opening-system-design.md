@@ -25,7 +25,7 @@ Effects (glows/trails) and Weapon Skins tabs remain unchanged.
 | Legendary | Gold | 5% | 500 |
 
 - Every wardrobe cosmetic is assigned a rarity by the admin in-game
-- Unassigned cosmetics default to Common
+- **Default handling:** Cosmetics without a row in `cosmetic_shop_config` are synthesized as Common, case-eligible at read time. `CosmeticShopConfigStore` must return defaults (rarity=COMMON, in_case_pool=true) for missing rows — never null. On first admin edit of any cosmetic, a row is inserted with explicit values.
 - Probabilities and dupe values are globally configurable by admin in-game
 - With ~110 items, rough distribution: ~77 Common, ~28 Rare, ~5 Legendary (admin decides)
 
@@ -46,14 +46,23 @@ Effects (glows/trails) and Weapon Skins tabs remain unchanged.
 - Probabilities auto-redistribute proportionally when a tier is excluded
 - Only cosmetics marked as "included in case pool" by admin are eligible
 
+### Edge Cases & Validation
+
+- **Empty tier in pool:** If a case includes a rarity tier that has zero eligible cosmetics, that tier is excluded and probabilities redistribute to remaining tiers. Example: Legendary case with 0 Legendary items behaves as Rare-only.
+- **Entire pool empty:** If a case type has zero eligible cosmetics across all its included tiers, the case is grayed out with "No items available" — the Open button is disabled.
+- **Invalid probability totals:** Admin config validates that Common + Rare + Legendary probabilities sum to 100%. Reject saves that don't sum correctly with an error message. On load, if stored values are invalid (legacy/corruption), fall back to defaults (70/25/5).
+- **Fail-closed rule:** If any validation fails at roll time (empty pool, bad config), the opening is rejected, feathers are NOT deducted, and an error message is shown to the player.
+
 ### Opening Flow
 
 1. Player selects a case, sees price + rarities included
-2. Clicks "Open", feathers verified and deducted
-3. Roulette animation plays (items scroll, decelerate, land on result)
-4. Result revealed with rarity color
-5. **If new cosmetic:** "New cosmetic unlocked!" + added to collection
-6. **If duplicate:** "Duplicate! +X feathers" + dupe value refunded
+2. Clicks "Open", feathers verified
+3. **Atomic server-side transaction:** deduct feathers, roll result, grant ownership (or refund dupe value), log to `case_opening_log` — all in one DB transaction. If any step fails, the entire transaction rolls back (feathers not lost).
+4. Server sends result to client
+5. Roulette animation plays (items scroll, decelerate, land on the pre-determined result)
+6. Result revealed with rarity color
+7. **If new cosmetic:** "New cosmetic unlocked!" + permission granted
+8. **If duplicate:** "Duplicate! +X feathers" message (dupe refund already applied in step 3)
 
 ### Duplicate Handling
 
@@ -70,8 +79,7 @@ When a player rolls a cosmetic they already own:
 - **4 cosmetics** available for direct purchase, refreshed daily
 - Selection is **fully random** — no forced rarity distribution (can be 4 Common, 4 Legendary, or any mix)
 - Reset at midnight (server time)
-- Seed based on date so all players see the same items
-- Recalculated on server startup from current date (not persisted)
+- **Persisted daily snapshot:** On first access each day (or server startup if date changed), the 4 items are selected, written to a `daily_rotation` DB table with the date, and served from that snapshot for the rest of the day. This ensures restarts and mid-day config changes do not alter the lineup. Previous day's snapshot is used to enforce the "no repeat" rule.
 - A cosmetic cannot appear two days in a row
 - Cosmetics the player already owns still display (with "Owned" badge)
 
@@ -159,6 +167,18 @@ CREATE TABLE case_opening_log (
 
 Analytics and anti-abuse tracking.
 
+### New Table: `daily_rotation`
+
+```sql
+CREATE TABLE daily_rotation (
+  rotation_date DATE NOT NULL PRIMARY KEY,
+  cosmetic_ids VARCHAR(512) NOT NULL,
+  generated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+```
+
+Persists the 4 daily items per date. `cosmetic_ids` is a comma-separated list. Only current + previous day rows are needed; older rows can be pruned.
+
 ### Modified Table: `cosmetic_shop_config`
 
 ```sql
@@ -167,7 +187,7 @@ ALTER TABLE cosmetic_shop_config
   ADD COLUMN in_case_pool BOOLEAN NOT NULL DEFAULT TRUE;
 ```
 
-Existing `price`, `currency`, `available` columns remain (used by Effects tab, and as fallback).
+Existing `price`, `currency`, `available` columns are no longer used for wardrobe cosmetics (cases + rotation replace direct purchase). They remain in the schema but are dead data for wardrobe items. Effects pricing comes from `CosmeticDefinition` enum, not this table. No migration needed — columns are simply ignored for wardrobe cosmetics going forward.
 
 ---
 
