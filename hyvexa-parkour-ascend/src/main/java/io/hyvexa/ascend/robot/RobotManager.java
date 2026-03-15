@@ -897,7 +897,7 @@ public class RobotManager {
     }
 
     private void updatePreviousPosition(RobotState robot, double x, double y, double z) {
-        robot.setPreviousPosition(new double[]{x, y, z});
+        robot.setPreviousPosition(x, y, z);
     }
 
     private void refreshRobotCache(RobotState robot, AscendMap resolvedMap, long now) {
@@ -1015,7 +1015,7 @@ public class RobotManager {
         if (entityRef != null && entityRef.isValid() && world != null) {
             queueTeleport(teleportsByWorld, world, robot, entityRef,
                     map.getStartX(), map.getStartY(), map.getStartZ(), map.getStartRotY());
-            robot.setPreviousPosition(null);
+            robot.clearPreviousPosition();
         }
     }
 

@@ -156,8 +156,12 @@ public class RobotState {
         return previousPosition;
     }
 
-    public void setPreviousPosition(double[] previousPosition) {
-        this.previousPosition = previousPosition;
+    public void setPreviousPosition(double x, double y, double z) {
+        this.previousPosition = new double[]{x, y, z};
+    }
+
+    public void clearPreviousPosition() {
+        this.previousPosition = null;
     }
 
     public long getInvalidSinceMs() {
