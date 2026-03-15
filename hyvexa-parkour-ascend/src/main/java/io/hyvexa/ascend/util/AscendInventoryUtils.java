@@ -5,7 +5,6 @@ import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import io.hyvexa.ascend.AscendConstants;
-import io.hyvexa.common.WorldConstants;
 import io.hyvexa.common.util.InventoryUtils;
 
 public final class AscendInventoryUtils {
@@ -30,9 +29,7 @@ public final class AscendInventoryUtils {
         hotbar.setItemStackForSlot((short) 2, new ItemStack(AscendConstants.ITEM_DEV_COTTON, 1), false);
         hotbar.setItemStackForSlot((short) 3, new ItemStack(AscendConstants.ITEM_DEV_SHADOWEAVE, 1), false);
         hotbar.setItemStackForSlot((short) 4, new ItemStack(AscendConstants.ITEM_DEV_SILK, 1), false);
-        hotbar.setItemStackForSlot((short) 5, new ItemStack(WorldConstants.ITEM_SHOP, 1), false);
-        short slot = (short) (hotbar.getCapacity() - 1);
-        hotbar.setItemStackForSlot(slot, new ItemStack(WorldConstants.ITEM_SERVER_SELECTOR, 1), false);
+        InventoryUtils.giveGlobalItems(hotbar);
     }
 
     public static void ensureMenuItems(Player player) {
@@ -53,9 +50,7 @@ public final class AscendInventoryUtils {
         InventoryUtils.setIfMissing(hotbar, (short) 2, AscendConstants.ITEM_DEV_COTTON);
         InventoryUtils.setIfMissing(hotbar, (short) 3, AscendConstants.ITEM_DEV_SHADOWEAVE);
         InventoryUtils.setIfMissing(hotbar, (short) 4, AscendConstants.ITEM_DEV_SILK);
-        InventoryUtils.setIfMissing(hotbar, (short) 5, WorldConstants.ITEM_SHOP);
-        short slot = (short) (capacity - 1);
-        InventoryUtils.setIfMissing(hotbar, slot, WorldConstants.ITEM_SERVER_SELECTOR);
+        InventoryUtils.ensureGlobalItems(hotbar);
     }
 
     public static void giveRunItems(Player player) {

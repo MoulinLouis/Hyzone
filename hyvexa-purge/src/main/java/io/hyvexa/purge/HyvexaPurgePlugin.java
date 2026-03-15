@@ -79,9 +79,7 @@ public class HyvexaPurgePlugin extends JavaPlugin {
     private static final short SLOT_MELEE_WEAPON = 1;
     private static final short SLOT_PRIMARY_AMMO = 3;
     private static final short SLOT_LOOTBOX = 2;
-    private static final short SLOT_SHOP = 2;
     private static final short SLOT_QUIT_ORB = 8;
-    private static final short SLOT_SERVER_SELECTOR = 8;
     private static HyvexaPurgePlugin INSTANCE;
 
     private ScheduledFuture<?> hudUpdateTask;
@@ -414,16 +412,7 @@ public class HyvexaPurgePlugin extends JavaPlugin {
         }
         inventory.getHotbar().setItemStackForSlot(SLOT_ORB_BLUE, new ItemStack(ITEM_ORB_BLUE, 1), false);
         inventory.getHotbar().setItemStackForSlot(SLOT_ORB_ORANGE, new ItemStack(ITEM_ORB_ORANGE, 1), false);
-        giveServerSelector(player);
-    }
-
-    private void giveServerSelector(Player player) {
-        Inventory inventory = player.getInventory();
-        if (inventory == null || inventory.getHotbar() == null) {
-            return;
-        }
-        inventory.getHotbar().setItemStackForSlot(SLOT_SERVER_SELECTOR,
-                new ItemStack(WorldConstants.ITEM_SERVER_SELECTOR, 1), false);
+        InventoryUtils.giveGlobalItems(inventory.getHotbar());
     }
 
     private void giveQuitOrb(Player player) {
@@ -523,8 +512,7 @@ public class HyvexaPurgePlugin extends JavaPlugin {
         InventoryUtils.clearAllContainers(player);
         inventory.getHotbar().setItemStackForSlot(SLOT_ORB_BLUE, new ItemStack(ITEM_ORB_BLUE, 1), false);
         inventory.getHotbar().setItemStackForSlot(SLOT_ORB_ORANGE, new ItemStack(ITEM_ORB_ORANGE, 1), false);
-        inventory.getHotbar().setItemStackForSlot(SLOT_SHOP, new ItemStack(WorldConstants.ITEM_SHOP, 1), false);
-        giveServerSelector(player);
+        InventoryUtils.giveGlobalItems(inventory.getHotbar());
     }
 
     private static boolean isInventoryWriteSafe(Player player) {

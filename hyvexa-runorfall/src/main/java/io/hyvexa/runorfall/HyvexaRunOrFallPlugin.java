@@ -66,7 +66,7 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
     private static final short SLOT_PRIMARY = 0;
     private static final short SLOT_LEADERBOARD = 1;
     private static final short SLOT_PROFILE = 2;
-    private static final short SLOT_SHOP = 3;
+    private static final short SLOT_SHOP = 7;
     private static final short SLOT_GAME_SELECTOR = 8;
     private static HyvexaRunOrFallPlugin INSTANCE;
 
@@ -393,9 +393,10 @@ public class HyvexaRunOrFallPlugin extends JavaPlugin {
         setHotbarItem(hotbar, capacity, SLOT_PRIMARY, primaryItem);
         setHotbarItem(hotbar, capacity, SLOT_LEADERBOARD, ITEM_LEADERBOARD);
         setHotbarItem(hotbar, capacity, SLOT_PROFILE, ITEM_PROFILE);
-        setHotbarItem(hotbar, capacity, SLOT_SHOP, WorldConstants.ITEM_SHOP);
         if (state == HotbarState.DEFAULT) {
-            setHotbarItem(hotbar, capacity, SLOT_GAME_SELECTOR, WorldConstants.ITEM_SERVER_SELECTOR);
+            io.hyvexa.common.util.InventoryUtils.giveGlobalItems(hotbar);
+        } else {
+            setHotbarItem(hotbar, capacity, SLOT_SHOP, WorldConstants.ITEM_SHOP);
         }
     }
 

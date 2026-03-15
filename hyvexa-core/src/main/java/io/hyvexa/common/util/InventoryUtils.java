@@ -4,6 +4,7 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
+import io.hyvexa.common.WorldConstants;
 
 public final class InventoryUtils {
 
@@ -47,6 +48,16 @@ public final class InventoryUtils {
             return;
         }
         hotbar.setItemStackForSlot(slot, item, false);
+    }
+
+    public static void giveGlobalItems(ItemContainer hotbar) {
+        safeSetSlot(hotbar, (short) 7, new ItemStack(WorldConstants.ITEM_SHOP, 1));
+        safeSetSlot(hotbar, (short) 8, new ItemStack(WorldConstants.ITEM_SERVER_SELECTOR, 1));
+    }
+
+    public static void ensureGlobalItems(ItemContainer hotbar) {
+        setIfMissing(hotbar, (short) 7, WorldConstants.ITEM_SHOP);
+        setIfMissing(hotbar, (short) 8, WorldConstants.ITEM_SERVER_SELECTOR);
     }
 
     public static void setIfMissing(ItemContainer hotbar, short slot, String itemId) {
