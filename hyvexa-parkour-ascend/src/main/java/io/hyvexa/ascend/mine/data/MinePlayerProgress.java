@@ -13,6 +13,7 @@ public class MinePlayerProgress {
     private final UUID playerId;
     private final Map<String, Integer> inventory = new HashMap<>(); // blockTypeId -> count
     private long crystals;
+    private volatile boolean inMine;
     private final Map<MineUpgradeType, Integer> upgradeLevels = new ConcurrentHashMap<>();
     private final Map<String, MineProgress> mineStates = new ConcurrentHashMap<>();
     private final Map<String, MinerProgress> minerStates = new ConcurrentHashMap<>();
@@ -123,6 +124,9 @@ public class MinePlayerProgress {
     }
 
     public UUID getPlayerId() { return playerId; }
+
+    public boolean isInMine() { return inMine; }
+    public void setInMine(boolean inMine) { this.inMine = inMine; }
 
     // --- Upgrades ---
 
@@ -304,7 +308,8 @@ public class MinePlayerProgress {
             upgradeSnapshot,
             new LinkedHashMap<>(inventory),
             getMineStates(),
-            getMinerStates()
+            getMinerStates(),
+            inMine
         );
     }
 
@@ -337,5 +342,6 @@ public class MinePlayerProgress {
                                      Map<MineUpgradeType, Integer> upgradeLevels,
                                      Map<String, Integer> inventory,
                                      Map<String, MineProgressSnapshot> mineStates,
-                                     Map<String, MinerProgressSnapshot> minerStates) {}
+                                     Map<String, MinerProgressSnapshot> minerStates,
+                                     boolean inMine) {}
 }
