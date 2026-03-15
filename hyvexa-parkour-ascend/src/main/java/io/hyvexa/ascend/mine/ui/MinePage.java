@@ -54,6 +54,10 @@ public class MinePage extends BaseAscendPage {
         "#7c3aed", "#ef4444", "#f59e0b", "#10b981", "#3b82f6", "#f59e0b"
     };
 
+    private static final String[] UPGRADE_ACCENT_COLORS = { "Violet", "Green", "Red" };
+    private static final String[] UPGRADE_ACCENT_HEX = { "#7c3aed", "#10b981", "#ef4444" };
+    private static final int UPGRADE_SEGMENT_COUNT = 20;
+
     private static final String[] UPGRADE_DISPLAY_NAMES = {
         "Mining Speed",
         "Bag Capacity",
@@ -211,23 +215,51 @@ public class MinePage extends BaseAscendPage {
             int maxLevel = type.getMaxLevel();
             boolean maxed = level >= maxLevel;
 
-            cmd.append("#UpgradeItems", "Pages/Ascend_MineUpgradeEntry.ui");
+            cmd.append("#UpgradeItems", "Pages/Ascend_MinePageUpgradeEntry.ui");
             String sel = "#UpgradeItems[" + i + "]";
 
+            // Accent color + button zone color
+            String colorName = UPGRADE_ACCENT_COLORS[i];
+            String colorHex = UPGRADE_ACCENT_HEX[i];
+            cmd.set(sel + " #AccentViolet.Visible", i == 0);
+            cmd.set(sel + " #Accent" + colorName + ".Visible", true);
+            cmd.set(sel + " #ButtonBg" + colorName + ".Visible", true);
+
+            // Segment colors + progress
+            int filledSegments = maxLevel > 0 ? Math.min(UPGRADE_SEGMENT_COUNT, level * UPGRADE_SEGMENT_COUNT / maxLevel) : 0;
+            for (int seg = 1; seg <= UPGRADE_SEGMENT_COUNT; seg++) {
+                cmd.set(sel + " #Seg" + seg + ".Background", colorHex);
+                if (seg <= filledSegments) {
+                    cmd.set(sel + " #Seg" + seg + ".Visible", true);
+                }
+            }
+
             cmd.set(sel + " #UpgradeName.Text", UPGRADE_DISPLAY_NAMES[i]);
-            cmd.set(sel + " #LevelText.Text", "Lv " + level + " / " + maxLevel);
             cmd.set(sel + " #EffectText.Text", getEffectDescription(type, level));
 
+            // Bind buy button
+            evt.addEventBinding(CustomUIEventBindingType.Activating,
+                sel + " #UpgradeBuyButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, maxed ? "Noop" : BUTTON_BUY_UPGRADE_PREFIX + type.name()), false);
+
             if (maxed) {
-                cmd.set(sel + " #CostText.Visible", false);
-                cmd.set(sel + " #BuyWrap.Visible", false);
-                cmd.set(sel + " #MaxedLabel.Visible", true);
+                cmd.set(sel + " #LevelText.Text", "MAX");
+                cmd.set(sel + " #UpgradeStatus.Text", getEffectDescription(type, level));
+                cmd.set(sel + " #ActionText.Text", "Maxed!");
+                cmd.set(sel + " #ActionPrice.Text", "");
             } else {
-                cmd.set(sel + " #CostText.Text", "Cost: " + type.getCost(level));
-                cmd.set(sel + " #MaxedLabel.Visible", false);
-                evt.addEventBinding(CustomUIEventBindingType.Activating,
-                    sel + " #BuyButton",
-                    EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_BUY_UPGRADE_PREFIX + type.name()), false);
+                cmd.set(sel + " #LevelText.Text", "Lv." + level);
+                cmd.set(sel + " #UpgradeStatus.Text", getEffectDescription(type, level));
+                long cost = type.getCost(level);
+                cmd.set(sel + " #ActionText.Text", "Cost:");
+                cmd.set(sel + " #ActionPrice.Text", cost + " cryst");
+                boolean canAfford = mineProgress.getCrystals() >= cost;
+                cmd.set(sel + " #ButtonDisabledOverlay.Visible", !canAfford);
+                if (!canAfford) {
+                    cmd.set(sel + " #UpgradeStatus.Style.TextColor", "#9fb0ba");
+                    cmd.set(sel + " #ActionText.Style.TextColor", "#9fb0ba");
+                    cmd.set(sel + " #ActionPrice.Style.TextColor", "#9fb0ba");
+                }
             }
         }
     }
