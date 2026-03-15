@@ -1,9 +1,7 @@
 package io.hyvexa.core.analytics;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonSyntaxException;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.HytaleServer;
 import io.hyvexa.core.db.DatabaseManager;
@@ -15,7 +13,6 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -443,28 +440,30 @@ public class AnalyticsStore {
         List<Map.Entry<String, Integer>> result = new ArrayList<>();
         if (!DatabaseManager.getInstance().isInitialized()) return result;
         long cutoffMs = dayStartMs(days);
-        String sql = "SELECT data_json FROM analytics_events WHERE event_type = ? AND timestamp_ms >= ?";
-        Map<String, Integer> counts = new HashMap<>();
+        String jsonPath = "$." + jsonKey;
+        String sql = "SELECT JSON_UNQUOTE(JSON_EXTRACT(data_json, ?)) AS val, COUNT(*) AS cnt "
+                + "FROM analytics_events "
+                + "WHERE event_type = ? AND timestamp_ms >= ? "
+                + "AND JSON_EXTRACT(data_json, ?) IS NOT NULL "
+                + "GROUP BY val ORDER BY cnt DESC LIMIT ?";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
-            stmt.setString(1, eventType);
-            stmt.setLong(2, cutoffMs);
+            stmt.setString(1, jsonPath);
+            stmt.setString(2, eventType);
+            stmt.setLong(3, cutoffMs);
+            stmt.setString(4, jsonPath);
+            stmt.setInt(5, limit);
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
-                    String val = extractStringFromJson(rs.getString("data_json"), jsonKey);
+                    String val = rs.getString("val");
                     if (val != null) {
-                        counts.merge(val, 1, Integer::sum);
+                        result.add(Map.entry(val, rs.getInt("cnt")));
                     }
                 }
             }
         } catch (SQLException e) {
             LOGGER.atWarning().withCause(e).log("getTopJsonValues failed: " + eventType);
-        }
-        result.addAll(counts.entrySet());
-        result.sort((a, b) -> Integer.compare(b.getValue(), a.getValue()));
-        if (result.size() > limit) {
-            return result.subList(0, limit);
         }
         return result;
     }
@@ -475,22 +474,22 @@ public class AnalyticsStore {
     public long sumJsonLongField(String eventType, String jsonKey, int days) {
         if (!DatabaseManager.getInstance().isInitialized()) return 0;
         long cutoffMs = dayStartMs(days);
-        String sql = "SELECT data_json FROM analytics_events WHERE event_type = ? AND timestamp_ms >= ?";
-        long total = 0;
+        String jsonPath = "$." + jsonKey;
+        String sql = "SELECT COALESCE(SUM(JSON_EXTRACT(data_json, ?)), 0) AS total "
+                + "FROM analytics_events WHERE event_type = ? AND timestamp_ms >= ?";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             DatabaseManager.applyQueryTimeout(stmt);
-            stmt.setString(1, eventType);
-            stmt.setLong(2, cutoffMs);
+            stmt.setString(1, jsonPath);
+            stmt.setString(2, eventType);
+            stmt.setLong(3, cutoffMs);
             try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    total += extractLongFromJson(rs.getString("data_json"), jsonKey);
-                }
+                if (rs.next()) return rs.getLong("total");
             }
         } catch (SQLException e) {
             LOGGER.atWarning().withCause(e).log("sumJsonLongField failed: " + eventType);
         }
-        return total;
+        return 0;
     }
 
     private long dayStartMs(int daysAgo) {
@@ -523,52 +522,6 @@ public class AnalyticsStore {
             }
         }
         return 0;
-    }
-
-    /**
-     * Parse JSON string into a JsonObject, returning null for malformed input.
-     */
-    private JsonObject parseJson(String json) {
-        if (json == null || json.isEmpty()) {
-            return null;
-        }
-        try {
-            JsonElement element = GSON.fromJson(json, JsonElement.class);
-            return element != null && element.isJsonObject() ? element.getAsJsonObject() : null;
-        } catch (JsonSyntaxException e) {
-            return null;
-        }
-    }
-
-    /**
-     * Extract a long value from a JSON string like {"key":123}. Returns 0 for missing/malformed.
-     */
-    private long extractLongFromJson(String json, String key) {
-        JsonObject obj = parseJson(json);
-        if (obj == null || !obj.has(key)) {
-            return 0;
-        }
-        try {
-            return obj.get(key).getAsLong();
-        } catch (NumberFormatException | ClassCastException | IllegalStateException | UnsupportedOperationException e) {
-            return 0;
-        }
-    }
-
-    /**
-     * Extract a string value from a JSON string like {"key":"value"}. Returns null for missing/malformed.
-     */
-    private String extractStringFromJson(String json, String key) {
-        JsonObject obj = parseJson(json);
-        if (obj == null || !obj.has(key)) {
-            return null;
-        }
-        try {
-            JsonElement el = obj.get(key);
-            return el.isJsonNull() ? null : el.getAsString();
-        } catch (ClassCastException | IllegalStateException | UnsupportedOperationException e) {
-            return null;
-        }
     }
 
 }
