@@ -21,6 +21,7 @@ import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.hud.MineHudManager;
 import io.hyvexa.ascend.util.AscendInventoryUtils;
+import io.hyvexa.common.util.InventoryUtils;
 
 import java.util.Map;
 import java.util.UUID;
@@ -184,6 +185,7 @@ public class MineGateChecker {
 
     private void giveMineItems(Player player) {
         if (player.getWorld() == null) return;
+        InventoryUtils.clearAllContainers(player);
         Inventory inventory = player.getInventory();
         if (inventory == null) return;
         ItemContainer hotbar = inventory.getHotbar();
