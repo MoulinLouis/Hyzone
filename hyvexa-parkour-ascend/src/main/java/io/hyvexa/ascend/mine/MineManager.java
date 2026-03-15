@@ -136,7 +136,7 @@ public class MineManager {
     }
 
     public boolean generateZone(World world, MineZone zone) {
-        ResolvedZoneTable resolvedTable = resolvedZoneTables.computeIfAbsent(zone.getId(), ignored -> resolveZoneTable(zone));
+        ResolvedZoneTable resolvedTable = resolvedZoneTables.compute(zone.getId(), (ignored, prev) -> resolveZoneTable(zone));
         if (resolvedTable == null || resolvedTable.blockIds().length == 0) return false;
 
         // Fill all positions in the zone
