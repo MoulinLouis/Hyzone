@@ -195,23 +195,23 @@ public class ParkourAscendPlugin extends JavaPlugin {
             mineConfigStore = new MineConfigStore();
             mineConfigStore.syncLoad();
             mineBonusCalculator = new MineBonusCalculator(mineConfigStore);
-            mineGateChecker = new MineGateChecker(mineConfigStore, playerStore);
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("Failed to initialize mine config store");
             mineConfigStore = null;
             mineBonusCalculator = null;
-            mineGateChecker = null;
         }
 
-        // Mine player store + manager
+        // Mine player store + manager + gate checker
         if (mineConfigStore != null) {
             try {
                 minePlayerStore = new MinePlayerStore();
                 mineManager = new MineManager(mineConfigStore);
+                mineGateChecker = new MineGateChecker(mineConfigStore, playerStore, minePlayerStore);
             } catch (Exception e) {
                 LOGGER.atWarning().withCause(e).log("Failed to initialize mine manager");
                 minePlayerStore = null;
                 mineManager = null;
+                mineGateChecker = null;
             }
         }
 

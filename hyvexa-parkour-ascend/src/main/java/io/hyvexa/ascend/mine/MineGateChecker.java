@@ -19,6 +19,8 @@ import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.data.AscendPlayerStore;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
+import io.hyvexa.ascend.mine.data.MinePlayerProgress;
+import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.hud.MineHudManager;
 import io.hyvexa.ascend.util.AscendInventoryUtils;
 import io.hyvexa.common.util.InventoryUtils;
@@ -33,11 +35,13 @@ public class MineGateChecker {
 
     private final MineConfigStore configStore;
     private final AscendPlayerStore playerStore;
+    private final MinePlayerStore minePlayerStore;
     private final Map<UUID, Long> lastTeleport = new ConcurrentHashMap<>();
 
-    public MineGateChecker(MineConfigStore configStore, AscendPlayerStore playerStore) {
+    public MineGateChecker(MineConfigStore configStore, AscendPlayerStore playerStore, MinePlayerStore minePlayerStore) {
         this.configStore = configStore;
         this.playerStore = playerStore;
+        this.minePlayerStore = minePlayerStore;
     }
 
     public void checkPlayer(UUID playerId, Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -114,6 +118,11 @@ public class MineGateChecker {
             giveMineItems(player);
         }
         swapToMineHud(playerId, playerRef, player);
+        if (minePlayerStore != null) {
+            MinePlayerProgress progress = minePlayerStore.getOrCreatePlayer(playerId);
+            progress.setInMine(true);
+            minePlayerStore.markDirty(playerId);
+        }
         return true;
     }
 
@@ -139,6 +148,11 @@ public class MineGateChecker {
         swapToAscendHud(playerId, playerRef, player);
         if (player != null) {
             AscendInventoryUtils.giveMenuItems(player);
+        }
+        if (minePlayerStore != null) {
+            MinePlayerProgress progress = minePlayerStore.getOrCreatePlayer(playerId);
+            progress.setInMine(false);
+            minePlayerStore.markDirty(playerId);
         }
         return true;
     }
@@ -183,7 +197,7 @@ public class MineGateChecker {
         }
     }
 
-    private void giveMineItems(Player player) {
+    public void giveMineItems(Player player) {
         if (player.getWorld() == null) return;
         InventoryUtils.clearAllContainers(player);
         Inventory inventory = player.getInventory();
