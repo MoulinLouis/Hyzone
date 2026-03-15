@@ -47,6 +47,9 @@ bin/
 discord-bot/node_modules/
 discord-bot/.env
 
+### Deploy ###
+.env
+
 ### Claude ###
 .claude/
 .grepai/
