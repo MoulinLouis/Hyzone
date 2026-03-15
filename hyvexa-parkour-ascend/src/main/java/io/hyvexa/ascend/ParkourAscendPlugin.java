@@ -195,23 +195,23 @@ public class ParkourAscendPlugin extends JavaPlugin {
             mineConfigStore = new MineConfigStore();
             mineConfigStore.syncLoad();
             mineBonusCalculator = new MineBonusCalculator(mineConfigStore);
-            mineGateChecker = new MineGateChecker(mineConfigStore, playerStore);
         } catch (Exception e) {
             LOGGER.atWarning().withCause(e).log("Failed to initialize mine config store");
             mineConfigStore = null;
             mineBonusCalculator = null;
-            mineGateChecker = null;
         }
 
-        // Mine player store + manager
+        // Mine player store + manager + gate checker
         if (mineConfigStore != null) {
             try {
                 minePlayerStore = new MinePlayerStore();
                 mineManager = new MineManager(mineConfigStore);
+                mineGateChecker = new MineGateChecker(mineConfigStore, playerStore, minePlayerStore);
             } catch (Exception e) {
                 LOGGER.atWarning().withCause(e).log("Failed to initialize mine manager");
                 minePlayerStore = null;
                 mineManager = null;
+                mineGateChecker = null;
             }
         }
 
@@ -391,8 +391,23 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     if (player == null) {
                         return;
                     }
-                    AscendInventoryUtils.giveMenuItems(player);
-                    hudManager.attach(playerRef, player);
+                    boolean restoreToMine = false;
+                    if (minePlayerStore != null && mineGateChecker != null && mineGateChecker.canAccessMine(playerId)) {
+                        MinePlayerProgress mineProgress = minePlayerStore.getOrCreatePlayer(playerId);
+                        restoreToMine = mineProgress.isInMine();
+                    }
+
+                    if (restoreToMine) {
+                        mineGateChecker.giveMineItems(player);
+                        hudManager.removePlayer(playerId);
+                        MineHudManager mhm = getMineHudManager();
+                        if (mhm != null) {
+                            mhm.attachHud(playerRef, player);
+                        }
+                    } else {
+                        AscendInventoryUtils.giveMenuItems(player);
+                        hudManager.attach(playerRef, player);
+                    }
                     AscendMusicPage.applyStoredMusic(playerRef);
                     DiscordLinkStore linkStore = DiscordLinkStore.getInstance();
                     linkStore.checkAndRewardVexaOnLoginAsync(playerId)
@@ -437,13 +452,28 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     if (player == null) {
                         return;
                     }
-                    ensureMenuItemsWhenReady(player, world, MENU_SYNC_MAX_ATTEMPTS);
+                    boolean playerInMine = false;
+                    if (playerId != null && minePlayerStore != null) {
+                        MinePlayerProgress mp = minePlayerStore.getOrCreatePlayer(playerId);
+                        playerInMine = mp.isInMine();
+                    }
+                    if (!playerInMine) {
+                        ensureMenuItemsWhenReady(player, world, MENU_SYNC_MAX_ATTEMPTS);
+                    }
                     return;
                 }
 
                 // Clean up Ascend state on true Ascend -> non-Ascend transitions
                 if (playerId != null && playersInAscendWorld.remove(playerId)) {
                     cleanupAscendState(playerId);
+                    // Clear inMine flag — player explicitly left Ascend world
+                    if (minePlayerStore != null) {
+                        MinePlayerProgress mp = minePlayerStore.getPlayer(playerId);
+                        if (mp != null && mp.isInMine()) {
+                            mp.setInMine(false);
+                            minePlayerStore.markDirty(playerId);
+                        }
+                    }
                 }
             } catch (Exception e) {
                 LOGGER.atWarning().log("Exception in AddPlayerToWorldEvent (ascend): " + e.getMessage());
