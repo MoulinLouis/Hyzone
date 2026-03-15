@@ -9,6 +9,7 @@ import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractAsyncCommand;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.common.util.CommandUtils;
@@ -50,10 +51,13 @@ public abstract class AbstractCurrencyCommand extends AbstractAsyncCommand {
     @Nonnull
     protected CompletableFuture<Void> executeAsync(CommandContext ctx) {
         CommandSender sender = ctx.sender();
+
+        // Console execution: run directly (no world thread needed)
         if (!(sender instanceof Player player)) {
-            ctx.sendMessage(Message.raw("This command can only be used by players."));
+            handleCommand(ctx, null);
             return CompletableFuture.completedFuture(null);
         }
+
         if (!PermissionUtils.isOp(player)) {
             ctx.sendMessage(Message.raw("You must be OP to use this command."));
             return CompletableFuture.completedFuture(null);
@@ -68,11 +72,11 @@ public abstract class AbstractCurrencyCommand extends AbstractAsyncCommand {
         return CompletableFuture.runAsync(() -> handleCommand(ctx, player), world);
     }
 
-    private void handleCommand(CommandContext ctx, Player player) {
+    private void handleCommand(CommandContext ctx, Player senderPlayer) {
         String[] args = CommandUtils.tokenize(ctx);
         String currency = currencyName();
         if (args.length < 2) {
-            player.sendMessage(Message.raw("Usage: /" + commandName + " <set|add|remove|check> <player> [amount]"));
+            ctx.sendMessage(Message.raw("Usage: /" + commandName + " <set|add|remove|check> <player> [amount]"));
             return;
         }
         String action = args[0].toLowerCase();
@@ -80,7 +84,7 @@ public abstract class AbstractCurrencyCommand extends AbstractAsyncCommand {
 
         PlayerRef targetRef = CommandUtils.findPlayerByName(targetName);
         if (targetRef == null) {
-            player.sendMessage(Message.raw("Player not found: " + targetName));
+            ctx.sendMessage(Message.raw("Player not found: " + targetName));
             return;
         }
         UUID targetId = targetRef.getUuid();
@@ -88,45 +92,53 @@ public abstract class AbstractCurrencyCommand extends AbstractAsyncCommand {
         switch (action) {
             case "check" -> {
                 long balance = getCurrency(targetId);
-                player.sendMessage(Message.raw(targetName + " has " + balance + " " + currency + "."));
+                ctx.sendMessage(Message.raw(targetName + " has " + balance + " " + currency + "."));
             }
             case "set" -> {
-                long amount = parseAmount(player, args, 2);
+                long amount = parseAmount(ctx, args, 2);
                 if (amount < 0) return;
                 setCurrency(targetId, amount);
-                player.sendMessage(Message.raw("Set " + targetName + "'s " + currency + " to " + amount + "."));
+                ctx.sendMessage(Message.raw("Set " + targetName + "'s " + currency + " to " + amount + "."));
             }
             case "add" -> {
-                long amount = parseAmount(player, args, 2);
+                long amount = parseAmount(ctx, args, 2);
                 if (amount < 0) return;
                 long newTotal = addCurrency(targetId, amount);
-                player.sendMessage(Message.raw("Added " + amount + " " + currency + " to " + targetName + ". New total: " + newTotal));
+                ctx.sendMessage(Message.raw("Added " + amount + " " + currency + " to " + targetName + ". New total: " + newTotal));
                 onCurrencyAdded(targetRef, amount, newTotal);
+                // Optional broadcast message: everything after the amount is joined as the message
+                if (args.length > 3) {
+                    String broadcastText = String.join(" ", java.util.Arrays.copyOfRange(args, 3, args.length));
+                    Message broadcastMsg = Message.raw(broadcastText);
+                    for (PlayerRef p : Universe.get().getPlayers()) {
+                        if (p != null) p.sendMessage(broadcastMsg);
+                    }
+                }
             }
             case "remove" -> {
-                long amount = parseAmount(player, args, 2);
+                long amount = parseAmount(ctx, args, 2);
                 if (amount < 0) return;
                 long newTotal = removeCurrency(targetId, amount);
-                player.sendMessage(Message.raw("Removed " + amount + " " + currency + " from " + targetName + ". New total: " + newTotal));
+                ctx.sendMessage(Message.raw("Removed " + amount + " " + currency + " from " + targetName + ". New total: " + newTotal));
             }
-            default -> player.sendMessage(Message.raw("Usage: /" + commandName + " <set|add|remove|check> <player> [amount]"));
+            default -> ctx.sendMessage(Message.raw("Usage: /" + commandName + " <set|add|remove|check> <player> [amount]"));
         }
     }
 
-    private long parseAmount(Player player, String[] args, int index) {
+    private long parseAmount(CommandContext ctx, String[] args, int index) {
         if (index >= args.length) {
-            player.sendMessage(Message.raw("Amount is required."));
+            ctx.sendMessage(Message.raw("Amount is required."));
             return -1;
         }
         try {
             long value = Long.parseLong(args[index]);
             if (value < 0) {
-                player.sendMessage(Message.raw("Amount must be non-negative."));
+                ctx.sendMessage(Message.raw("Amount must be non-negative."));
                 return -1;
             }
             return value;
         } catch (NumberFormatException e) {
-            player.sendMessage(Message.raw("Amount must be a number."));
+            ctx.sendMessage(Message.raw("Amount must be a number."));
             return -1;
         }
     }

@@ -6,6 +6,7 @@ import com.hypixel.hytale.common.plugin.PluginIdentifier;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.plugin.PluginManager;
+import com.hypixel.hytale.server.core.command.system.CommandManager;
 import org.hyvote.plugins.votifier.command.TestVoteCommand;
 import org.hyvote.plugins.votifier.command.VoteCommand;
 import org.hyvote.plugins.votifier.crypto.RSAKeyManager;
@@ -50,6 +51,7 @@ public class HytaleVotifierPlugin extends JavaPlugin {
     private VoteReminderService voteReminderService;
     private volatile boolean updateAvailable = false;
     private volatile String latestVersion = null;
+    private volatile boolean voteCommandOverridden = false;
 
     public HytaleVotifierPlugin(@Nonnull JavaPluginInit init) {
         super(init);
@@ -317,6 +319,23 @@ public class HytaleVotifierPlugin extends JavaPlugin {
         getLogger().at(Level.INFO).log("Registered /vote command");
     }
 
+    /**
+     * Overrides the /vote command in the global CommandManager if another plugin
+     * (e.g. HOS:Status) registered one after us. Called once on first PlayerReadyEvent
+     * when all plugins are guaranteed to be loaded.
+     */
+    private void overrideVoteCommand() {
+        if (voteCommandOverridden) return;
+        voteCommandOverridden = true;
+
+        var registrations = CommandManager.get().getCommandRegistration();
+        var existing = registrations.get("vote");
+        if (existing != null && !(existing instanceof VoteCommand)) {
+            registrations.put("vote", new VoteCommand(this));
+            getLogger().at(Level.INFO).log("Overrode /vote command from another plugin");
+        }
+    }
+
     private void registerEventListeners() {
         getEventRegistry().registerGlobal(PlayerReadyEvent.class, this::onPlayerReady);
         getLogger().at(Level.INFO).log("Registered player ready event listener");
@@ -333,6 +352,7 @@ public class HytaleVotifierPlugin extends JavaPlugin {
     }
 
     private void onPlayerReady(PlayerReadyEvent event) {
+        overrideVoteCommand();
         Player player = event.getPlayer();
 
         // Handle vote reminders for all players
