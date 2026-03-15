@@ -391,8 +391,23 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     if (player == null) {
                         return;
                     }
-                    AscendInventoryUtils.giveMenuItems(player);
-                    hudManager.attach(playerRef, player);
+                    boolean restoreToMine = false;
+                    if (minePlayerStore != null && mineGateChecker != null && mineGateChecker.canAccessMine(playerId)) {
+                        MinePlayerProgress mineProgress = minePlayerStore.getOrCreatePlayer(playerId);
+                        restoreToMine = mineProgress.isInMine();
+                    }
+
+                    if (restoreToMine) {
+                        mineGateChecker.giveMineItems(player);
+                        hudManager.removePlayer(playerId);
+                        MineHudManager mhm = getMineHudManager();
+                        if (mhm != null) {
+                            mhm.attachHud(playerRef, player);
+                        }
+                    } else {
+                        AscendInventoryUtils.giveMenuItems(player);
+                        hudManager.attach(playerRef, player);
+                    }
                     AscendMusicPage.applyStoredMusic(playerRef);
                     DiscordLinkStore linkStore = DiscordLinkStore.getInstance();
                     linkStore.checkAndRewardVexaOnLoginAsync(playerId)
@@ -437,7 +452,14 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     if (player == null) {
                         return;
                     }
-                    ensureMenuItemsWhenReady(player, world, MENU_SYNC_MAX_ATTEMPTS);
+                    boolean playerInMine = false;
+                    if (playerId != null && minePlayerStore != null) {
+                        MinePlayerProgress mp = minePlayerStore.getOrCreatePlayer(playerId);
+                        playerInMine = mp.isInMine();
+                    }
+                    if (!playerInMine) {
+                        ensureMenuItemsWhenReady(player, world, MENU_SYNC_MAX_ATTEMPTS);
+                    }
                     return;
                 }
 
