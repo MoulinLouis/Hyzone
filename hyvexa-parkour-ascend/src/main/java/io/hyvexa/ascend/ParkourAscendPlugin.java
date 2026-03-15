@@ -466,6 +466,14 @@ public class ParkourAscendPlugin extends JavaPlugin {
                 // Clean up Ascend state on true Ascend -> non-Ascend transitions
                 if (playerId != null && playersInAscendWorld.remove(playerId)) {
                     cleanupAscendState(playerId);
+                    // Clear inMine flag — player explicitly left Ascend world
+                    if (minePlayerStore != null) {
+                        MinePlayerProgress mp = minePlayerStore.getPlayer(playerId);
+                        if (mp != null && mp.isInMine()) {
+                            mp.setInMine(false);
+                            minePlayerStore.markDirty(playerId);
+                        }
+                    }
                 }
             } catch (Exception e) {
                 LOGGER.atWarning().log("Exception in AddPlayerToWorldEvent (ascend): " + e.getMessage());
