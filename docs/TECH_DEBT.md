@@ -18,25 +18,21 @@ Prioritized list of known issues and improvements. Sourced from a full codebase 
 - **Issue:** Checkpoint detection logic is duplicated between `RunValidator` and `DuelTracker`. Bug fixes in one don't propagate to the other.
 - **Fix:** Extracted shared `CheckpointDetector` class with `CheckpointState` interface. Both `ActiveRun` and `DuelPlayerState` implement the interface.
 
-### 1.3 Fix AnalyticsStore SQL (use GROUP BY)
+### ~~1.3 Fix AnalyticsStore SQL (use GROUP BY)~~ (DONE)
 - **Module:** core
-- **Issue:** `computeDailyAggregates` loads all rows into memory instead of aggregating in SQL. Could spike memory at scale.
-- **Fix:** Rewrite queries to use `GROUP BY` / `COUNT(*)` in SQL.
+- **Fixed:** `getTopJsonValues` now uses `JSON_EXTRACT` + `GROUP BY` / `COUNT(*)` / `ORDER BY DESC LIMIT` in SQL. `sumJsonLongField` now uses `SUM(JSON_EXTRACT(...))`. Removed 3 orphaned Java-side JSON helper methods.
 
-### 1.4 Add DatabaseManager.withTransaction() helper
+### ~~1.4 Add DatabaseManager.withTransaction() helper~~ (DONE)
 - **Module:** core
-- **Issue:** 26 manual transaction sites across 12 files repeat identical `setAutoCommit(false)` / `commit()` / `rollback()` / `setAutoCommit(true)` boilerplate (~390 LOC total).
-- **Fix:** Add a `withTransaction(SQLFunction<Connection, T> action, T defaultValue)` helper method. Eliminates ~220 LOC.
+- **Fixed:** `withTransaction()` helper already existed from prior work. Migrated the last remaining manual transaction site in `AscendPlayerPersistence.doSyncSave()`.
 
-### 1.5 Fix check-then-act race in PurgeSessionManager
+### ~~1.5 Fix check-then-act race in PurgeSessionManager~~ (DONE)
 - **Module:** purge
-- **Issue:** `hasActiveSession()` + `getSessionByPlayer()` called in sequence is racy — session can be removed between the two calls.
-- **Fix:** Callers should use a single `getSessionByPlayer()` call with null check.
+- **Fixed:** All 9 callers migrated from `hasActiveSession()` + `getSessionByPlayer()` to single `getSessionByPlayer()` with null check. Removed the now-unused `hasActiveSession()` method.
 
-### 1.6 Fix volatile array element race in RobotState
+### ~~1.6 Fix volatile array element race in RobotState~~ (DONE)
 - **Module:** ascend
-- **Issue:** `volatile double[] previousPosition` — volatile protects the reference, not array elements. Reader can see mixed old/new XYZ coordinates.
-- **Fix:** Copy-on-write: `this.previousPosition = new double[]{x, y, z}` (new array = atomic swap).
+- **Fixed:** Setter changed to `setPreviousPosition(double x, double y, double z)` which creates a new array internally, enforcing copy-on-write at the API level. Added `clearPreviousPosition()` for null resets.
 
 ---
 
