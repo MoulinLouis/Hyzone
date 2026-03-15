@@ -40,7 +40,7 @@ public class PurgeHudManager {
     private volatile long lastKillMeterTickMs;
     private PurgeManagerRegistry registry;
 
-    void initRegistry(PurgeManagerRegistry registry) {
+    public void initRegistry(PurgeManagerRegistry registry) {
         this.registry = registry;
     }
 
