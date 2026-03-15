@@ -667,15 +667,22 @@ public class RobotManager {
                 state.clearInvalid();
             } else if (hasExistingEntity) {
                 state.markInvalid(now);
-                if (state.isInvalidForTooLong(now, AscendConstants.RUNNER_INVALID_RECOVERY_MS)
-                        && isPlayerNearMapSpawn(playerId, map)) {
-                    UUID oldUuid = state.getEntityUuid();
-                    if (oldUuid != null) {
-                        orphanCleanup.addOrphan(oldUuid);
-                    }
-                    state.setEntityRef(null);
-                    state.setEntityUuid(null);
+                if (state.isInvalidForTooLong(now, AscendConstants.RUNNER_INVALID_RECOVERY_MS)) {
+                    // Clear immediately to prevent repeated dispatch (re-arms after 3s if check fails)
                     state.clearInvalid();
+                    World cachedWorld = state.getCachedWorld();
+                    if (cachedWorld != null) {
+                        cachedWorld.execute(() -> {
+                            if (isPlayerNearMapSpawn(playerId, map)) {
+                                UUID oldUuid = state.getEntityUuid();
+                                if (oldUuid != null) {
+                                    orphanCleanup.addOrphan(oldUuid);
+                                }
+                                state.setEntityRef(null);
+                                state.setEntityUuid(null);
+                            }
+                        });
+                    }
                 }
             }
 
