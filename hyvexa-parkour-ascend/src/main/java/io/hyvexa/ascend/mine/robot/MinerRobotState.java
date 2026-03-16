@@ -15,8 +15,6 @@ public class MinerRobotState {
 
     private int speedLevel = 0;
     private int stars = 0;
-    private long lastProductionTick = 0;
-
     private MinerPhase phase = MinerPhase.IDLE;
     private long phaseStartTime = 0;
     private long cycleStartTime = 0;
@@ -99,8 +97,6 @@ public class MinerRobotState {
     public void setSpeedLevel(int speedLevel) { this.speedLevel = speedLevel; }
     public int getStars() { return stars; }
     public void setStars(int stars) { this.stars = stars; }
-    public long getLastProductionTick() { return lastProductionTick; }
-    public void setLastProductionTick(long lastProductionTick) { this.lastProductionTick = lastProductionTick; }
     public MinerPhase getPhase() { return phase; }
     public void setPhase(MinerPhase phase) { this.phase = phase; }
     public long getPhaseStartTime() { return phaseStartTime; }

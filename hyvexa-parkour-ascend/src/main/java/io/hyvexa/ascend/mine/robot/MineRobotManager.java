@@ -157,7 +157,6 @@ public class MineRobotManager {
             state.setSpeedLevel(minerProg.speedLevel());
             state.setStars(minerProg.stars());
         }
-        state.setLastProductionTick(System.currentTimeMillis());
         state.setCurrentPosition(cx, cy, cz);
         state.setWorldName(world.getName());
         state.setCycleStartTime(System.currentTimeMillis());

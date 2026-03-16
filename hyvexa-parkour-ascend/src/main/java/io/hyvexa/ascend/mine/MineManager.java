@@ -41,11 +41,6 @@ public class MineManager {
         return null;
     }
 
-    public void markBlockBroken(String zoneId, int x, int y, int z) {
-        brokenBlocks.computeIfAbsent(zoneId, k -> ConcurrentHashMap.newKeySet())
-            .add(encodePosition(x, y, z));
-    }
-
     /**
      * Atomically claims a block position as broken. Returns true if this caller is the first
      * to break it (and should receive the reward). Returns false if already broken.
