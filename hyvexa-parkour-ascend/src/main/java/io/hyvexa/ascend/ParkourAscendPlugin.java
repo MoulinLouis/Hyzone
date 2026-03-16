@@ -123,6 +123,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
     private MinePlayerStore minePlayerStore;
     private MineRobotManager mineRobotManager;
     private MineBreakSystem mineBreakSystem;
+    private MineDamageSystem mineDamageSystem;
     private MineHudManager mineHudManager;
     private MineAchievementTracker mineAchievementTracker;
     private AscendWhitelistManager whitelistManager;
@@ -324,7 +325,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
                 registry.registerEntityEventType(DamageBlockEvent.class);
             }
             if (!registry.hasSystemClass(MineDamageSystem.class)) {
-                registry.registerSystem(new MineDamageSystem(mineManager, minePlayerStore));
+                mineDamageSystem = new MineDamageSystem(mineManager, minePlayerStore);
+                registry.registerSystem(mineDamageSystem);
             }
         }
 
@@ -513,6 +515,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     "Disconnect cleanup: minePlayerStore");
             runSafe(() -> { if (mineBreakSystem != null) mineBreakSystem.evict(playerId); },
                     "Disconnect cleanup: mineBreakSystem");
+            runSafe(() -> { if (mineDamageSystem != null) mineDamageSystem.evict(playerId); },
+                    "Disconnect cleanup: mineDamageSystem");
             runSafe(() -> { if (mineAchievementTracker != null) mineAchievementTracker.evict(playerId); },
                     "Disconnect cleanup: mineAchievementTracker");
             runSafe(() -> { if (mineGateChecker != null) mineGateChecker.evict(playerId); },

@@ -1576,11 +1576,18 @@ public class RobotManager {
 
     // Runner Cleanup (Server Restart Handling)
 
+    private RunnerCleanupSystem cleanupSystem;
+
     private void registerCleanupSystem() {
         var registry = EntityStore.REGISTRY;
         if (!registry.hasSystemClass(RunnerCleanupSystem.class)) {
-            registry.registerSystem(new RunnerCleanupSystem(this));
+            cleanupSystem = new RunnerCleanupSystem(this);
+            registry.registerSystem(cleanupSystem);
         }
+    }
+
+    public RunnerCleanupSystem getCleanupSystem() {
+        return cleanupSystem;
     }
 
     public boolean isOrphanedRunner(UUID entityUuid) {
