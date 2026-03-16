@@ -1,8 +1,10 @@
 package io.hyvexa.ascend.mine.robot;
 
+import com.hypixel.hytale.component.Archetype;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
@@ -10,6 +12,7 @@ import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.entity.Frozen;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.Invulnerable;
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -26,6 +29,7 @@ import io.hyvexa.ascend.mine.data.MineZone;
 import io.hyvexa.common.util.OrphanedEntityCleanup;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -59,9 +63,11 @@ public class MineRobotManager {
 
     // ownerId -> mineId -> state
     private final Map<UUID, Map<String, MinerRobotState>> miners = new ConcurrentHashMap<>();
+    private final Set<String> startupCleanupWorlds = ConcurrentHashMap.newKeySet();
 
     private ScheduledFuture<?> tickTask;
     private volatile NPCPlugin npcPlugin;
+    private volatile Query<EntityStore> orphanSweepQuery;
 
     public MineRobotManager(MineConfigStore configStore, MinePlayerStore playerStore, MineManager mineManager) {
         this.configStore = configStore;
@@ -100,9 +106,15 @@ public class MineRobotManager {
         orphanCleanup.saveUuidsForCleanup(getActiveEntityUuids());
         despawnAll();
         miners.clear();
+        startupCleanupWorlds.clear();
     }
 
     // ── Player events ──────────────────────────────────────────────────
+
+    public void prepareWorld(World world) {
+        if (world == null) return;
+        world.execute(() -> cleanupOrphanedMinersOnWorldThread(world));
+    }
 
     public void onPlayerJoin(UUID playerId, World world) {
         if (playerId == null || world == null) return;
@@ -170,7 +182,10 @@ public class MineRobotManager {
         if (npcPlugin == null) return;
 
         String entityType = getMinerEntityType(state.getStars());
-        world.execute(() -> spawnNpcOnWorldThread(state, entityType, world, cx, cy, cz));
+        world.execute(() -> {
+            cleanupOrphanedMinersOnWorldThread(world);
+            spawnNpcOnWorldThread(state, entityType, world, cx, cy, cz);
+        });
     }
 
     private void spawnNpcOnWorldThread(MinerRobotState state, String entityType,
@@ -193,9 +208,7 @@ public class MineRobotManager {
             try {
                 UUIDComponent uuidComponent = store.getComponent(entityRef, UUIDComponent.getComponentType());
                 if (uuidComponent != null) {
-                    UUID entityUuid = uuidComponent.getUuid();
-                    state.setEntityUuid(entityUuid);
-                    orphanCleanup.addOrphan(entityUuid);
+                    state.setEntityUuid(uuidComponent.getUuid());
                 }
             } catch (Exception e) {
                 LOGGER.atWarning().log("Failed to get miner NPC UUID: " + e.getMessage());
@@ -285,7 +298,10 @@ public class MineRobotManager {
         state.setCurrentPosition(cx, cy, cz);
         state.setWorldName(world.getName());
         state.resetPhaseForEvolution();
-        world.execute(() -> spawnNpcOnWorldThread(state, entityType, world, cx, cy, cz));
+        world.execute(() -> {
+            cleanupOrphanedMinersOnWorldThread(world);
+            spawnNpcOnWorldThread(state, entityType, world, cx, cy, cz);
+        });
     }
 
     private void despawnNpc(MinerRobotState state) {
@@ -351,6 +367,168 @@ public class MineRobotManager {
         state.setEntityUuid(null);
         if (uuid != null) {
             orphanCleanup.markCleaned(uuid);
+        }
+    }
+
+    private void cleanupOrphanedMinersOnWorldThread(World world) {
+        String worldName = world != null ? world.getName() : null;
+        if (worldName == null || worldName.isEmpty()) {
+            return;
+        }
+        if (!startupCleanupWorlds.add(worldName)) {
+            return;
+        }
+
+        boolean success = false;
+        try {
+            Store<EntityStore> store = world.getEntityStore().getStore();
+            if (store == null) {
+                return;
+            }
+
+            int removed = removePersistedOrphansByUuid(world, store);
+            removed += removeFrozenMinersInsideMineZones(worldName, store);
+            if (removed > 0) {
+                LOGGER.atInfo().log("Removed " + removed + " orphaned miner NPC(s) from world " + worldName);
+            }
+
+            clearStartupCleanupStateIfExhausted();
+            success = true;
+        } catch (Exception e) {
+            LOGGER.atWarning().log("Failed startup miner cleanup for world " + worldName + ": " + e.getMessage());
+        } finally {
+            if (!success) {
+                startupCleanupWorlds.remove(worldName);
+            }
+        }
+    }
+
+    private int removePersistedOrphansByUuid(World world, Store<EntityStore> store) {
+        int removed = 0;
+        for (UUID orphanUuid : orphanCleanup.getOrphanedUuidsSnapshot()) {
+            if (orphanUuid == null || isActiveMinerUuid(orphanUuid)) {
+                continue;
+            }
+            Ref<EntityStore> ref = world.getEntityStore().getRefFromUUID(orphanUuid);
+            if (removeOrphanedMiner(store, ref, orphanUuid)) {
+                removed++;
+            }
+        }
+        return removed;
+    }
+
+    private int removeFrozenMinersInsideMineZones(String worldName, Store<EntityStore> store) {
+        List<PendingOrphanRemoval> removals = new ArrayList<>();
+        store.forEachChunk(getOrphanSweepQuery(), (chunk, buffer) -> {
+            for (int entityId = 0; entityId < chunk.size(); entityId++) {
+                UUIDComponent uuidComponent = chunk.getComponent(entityId, UUIDComponent.getComponentType());
+                TransformComponent transform = chunk.getComponent(entityId, TransformComponent.getComponentType());
+                if (uuidComponent == null || transform == null) {
+                    continue;
+                }
+
+                UUID entityUuid = uuidComponent.getUuid();
+                if (entityUuid != null && isActiveMinerUuid(entityUuid)) {
+                    continue;
+                }
+
+                Vector3d position = transform.getPosition();
+                if (!isInsideMineZone(worldName, position)) {
+                    continue;
+                }
+
+                Ref<EntityStore> ref = chunk.getReferenceTo(entityId);
+                if (ref == null || !ref.isValid()) {
+                    continue;
+                }
+
+                removals.add(new PendingOrphanRemoval(entityUuid, ref));
+            }
+        });
+
+        int removed = 0;
+        for (PendingOrphanRemoval pendingRemoval : removals) {
+            if (removeOrphanedMiner(store, pendingRemoval.entityRef(), pendingRemoval.entityUuid())) {
+                removed++;
+            }
+        }
+        return removed;
+    }
+
+    private boolean removeOrphanedMiner(Store<EntityStore> store, Ref<EntityStore> ref, UUID entityUuid) {
+        if (ref == null) {
+            return false;
+        }
+        if (!ref.isValid()) {
+            if (entityUuid != null) {
+                orphanCleanup.markCleaned(entityUuid);
+            }
+            return false;
+        }
+        try {
+            store.removeEntity(ref, RemoveReason.REMOVE);
+            if (entityUuid != null) {
+                orphanCleanup.markCleaned(entityUuid);
+            }
+            return true;
+        } catch (Exception e) {
+            String uuidText = entityUuid != null ? entityUuid.toString() : "unknown";
+            LOGGER.atWarning().log("Failed to remove orphaned miner NPC " + uuidText + ": " + e.getMessage());
+            return false;
+        }
+    }
+
+    private boolean isInsideMineZone(String worldName, Vector3d position) {
+        if (worldName == null || position == null) {
+            return false;
+        }
+        double x = position.getX();
+        double y = position.getY();
+        double z = position.getZ();
+
+        for (Mine mine : configStore.listMinesSorted()) {
+            String mineWorld = mine.getWorld();
+            if (mineWorld != null && !mineWorld.isEmpty() && !mineWorld.equals(worldName)) {
+                continue;
+            }
+            for (MineZone zone : mine.getZones()) {
+                if (x >= zone.getMinX() && x < zone.getMaxX() + 1.0
+                        && z >= zone.getMinZ() && z < zone.getMaxZ() + 1.0
+                        && y >= zone.getMinY() - 0.5 && y <= zone.getMaxY() + 1.5) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private Query<EntityStore> getOrphanSweepQuery() {
+        Query<EntityStore> current = orphanSweepQuery;
+        if (current != null) {
+            return current;
+        }
+        var frozenType = Frozen.getComponentType();
+        var invulnerableType = Invulnerable.getComponentType();
+        var uuidType = UUIDComponent.getComponentType();
+        var transformType = TransformComponent.getComponentType();
+        if (frozenType == null || invulnerableType == null || uuidType == null || transformType == null) {
+            return Query.any();
+        }
+        current = Archetype.of(frozenType, invulnerableType, uuidType, transformType);
+        orphanSweepQuery = current;
+        return current;
+    }
+
+    private void clearStartupCleanupStateIfExhausted() {
+        Set<String> configuredMineWorlds = new HashSet<>();
+        for (Mine mine : configStore.listMinesSorted()) {
+            String mineWorld = mine.getWorld();
+            if (mineWorld != null && !mineWorld.isEmpty()) {
+                configuredMineWorlds.add(mineWorld);
+            }
+        }
+        if (configuredMineWorlds.isEmpty() || startupCleanupWorlds.containsAll(configuredMineWorlds)) {
+            orphanCleanup.clearAll();
         }
     }
 
@@ -655,4 +833,17 @@ public class MineRobotManager {
         }
         return uuids;
     }
+
+    public boolean isActiveMinerUuid(UUID entityUuid) {
+        if (entityUuid == null) return false;
+        if (orphanCleanup.isPendingRemoval(entityUuid)) return true;
+        for (Map<String, MinerRobotState> playerMiners : miners.values()) {
+            for (MinerRobotState state : playerMiners.values()) {
+                if (entityUuid.equals(state.getEntityUuid())) return true;
+            }
+        }
+        return false;
+    }
+
+    private record PendingOrphanRemoval(UUID entityUuid, Ref<EntityStore> entityRef) {}
 }

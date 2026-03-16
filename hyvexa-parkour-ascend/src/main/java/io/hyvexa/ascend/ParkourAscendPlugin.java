@@ -347,6 +347,9 @@ public class ParkourAscendPlugin extends JavaPlugin {
                         world.execute(() -> mineManager.generateAllZones(world));
                     }
                 }
+                if (mineRobotManager != null) {
+                    mineRobotManager.prepareWorld(world);
+                }
                 PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
                 if (playerRef == null) {
                     return;

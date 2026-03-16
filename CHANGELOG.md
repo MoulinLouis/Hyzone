@@ -6,6 +6,7 @@
 - Added pickaxe tier system (Wood -> Stone -> Iron -> Crystal -> Void -> Prismatic) with increasing speed multipliers
 
 ### Fixed
+- **Ascend: Orphaned mine Kweebecs after restart** - Automated miners now clean up directly from the mine world before respawning, preventing frozen duplicate Kweebecs from accumulating across server restarts.
 - **Ascend: Mine blocks now require the equipped mine pickaxe** - Hand hits and unrelated items no longer trigger instant mine breaking or fall back to creative block breaking inside mine zones.
 - **Ascend: Mine zones now load and track correctly in negative world coordinates** - Mine block handling no longer silently falls back to vanilla OP/adventure behavior when the configured mine area uses negative coordinates.
 - **Ascend: Mine access and progression hardening** - `/mine` now enforces the ascension gate server-side, `/mine addcrystals` is OP-only, mine-mode entry is shared across gate/UI teleport paths, miner upgrades sync to live NPC/runtime state immediately, and mining persistence/cooldown/reward flows no longer drop state as easily under concurrency.

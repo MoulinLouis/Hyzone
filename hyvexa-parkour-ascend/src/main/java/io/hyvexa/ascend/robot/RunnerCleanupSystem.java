@@ -8,7 +8,6 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.SystemGroup;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
-import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.entity.Frozen;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.Invulnerable;
@@ -24,15 +23,13 @@ import java.util.UUID;
  * On restart, this system identifies those orphaned entities and queues
  * them for deferred removal via RobotManager (outside the ECS tick).
  *
- * Detection strategy: Runners are NPCs with Frozen + Invulnerable components.
- * If such an entity's UUID is not in the active robots list, it's orphaned.
+ * Detection strategy: runners are NPCs with Frozen + Invulnerable components,
+ * and only UUIDs explicitly persisted by RobotManager are eligible for removal.
  *
  * IMPORTANT: Entity removal cannot happen during a system tick (store is
  * processing). Detected orphans are queued and removed via world.execute().
  */
 public class RunnerCleanupSystem extends EntityTickingSystem<EntityStore> {
-
-    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
 
     private final RobotManager robotManager;
     private volatile Query<EntityStore> query;
@@ -44,12 +41,12 @@ public class RunnerCleanupSystem extends EntityTickingSystem<EntityStore> {
     @Override
     public void tick(float delta, int entityId, ArchetypeChunk<EntityStore> chunk, Store<EntityStore> store,
                      CommandBuffer<EntityStore> buffer) {
-        // Skip if cleanup is complete
-        if (robotManager == null || !robotManager.isCleanupPending()) {
+        boolean runnerPending = robotManager != null && robotManager.isCleanupPending();
+        if (!runnerPending) {
             return;
         }
 
-        // Check for runner signature: Frozen + Invulnerable
+        // Check for NPC signature: Frozen + Invulnerable
         Frozen frozen = chunk.getComponent(entityId, Frozen.getComponentType());
         if (frozen == null) {
             return;
@@ -69,25 +66,16 @@ public class RunnerCleanupSystem extends EntityTickingSystem<EntityStore> {
             return;
         }
 
-        // Check if this UUID belongs to an active robot
-        if (robotManager.isActiveRunnerUuid(entityUuid)) {
-            return; // This is a valid, active runner - don't remove
-        }
-        // Only touch known orphan UUIDs loaded/queued by RobotManager.
-        // This prevents deleting unrelated entities that share the same signature.
-        if (!robotManager.isOrphanedRunner(entityUuid)) {
+        if (robotManager != null && robotManager.isActiveRunnerUuid(entityUuid)) {
             return;
         }
 
-        // This is a known orphaned runner UUID
-        // Queue for deferred removal - we cannot call store.removeEntity() during tick
-        Ref<EntityStore> ref = chunk.getReferenceTo(entityId);
-        if (ref == null || !ref.isValid()) {
-            return;
+        if (runnerPending && robotManager.isOrphanedRunner(entityUuid)) {
+            Ref<EntityStore> ref = chunk.getReferenceTo(entityId);
+            if (ref != null && ref.isValid()) {
+                robotManager.queueOrphanForRemoval(entityUuid, ref);
+            }
         }
-
-        // Queue the orphan for deferred removal (outside ECS processing)
-        robotManager.queueOrphanForRemoval(entityUuid, ref);
     }
 
     @Override

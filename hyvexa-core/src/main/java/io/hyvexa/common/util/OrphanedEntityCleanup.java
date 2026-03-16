@@ -89,6 +89,11 @@ public class OrphanedEntityCleanup {
         return orphanedUuids.contains(entityUuid);
     }
 
+    /** Snapshot current orphan UUIDs for direct startup cleanup. */
+    public Set<UUID> getOrphanedUuidsSnapshot() {
+        return Set.copyOf(orphanedUuids);
+    }
+
     /** Add a UUID to the orphaned set. */
     public void addOrphan(UUID entityUuid) {
         if (entityUuid != null) {
@@ -150,6 +155,13 @@ public class OrphanedEntityCleanup {
 
     public boolean isCleanupPending() {
         return cleanupPending || !pendingRemovals.isEmpty();
+    }
+
+    /** Clear all orphan state (stale UUIDs that were never resolved). */
+    public void clearAll() {
+        orphanedUuids.clear();
+        pendingRemovals.clear();
+        cleanupPending = false;
     }
 
     private void removeOrphanOnWorldThread(UUID entityUuid, Ref<EntityStore> ref) {
