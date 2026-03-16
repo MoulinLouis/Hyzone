@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Mine
+- Added pickaxe tier system (Wood -> Stone -> Iron -> Crystal -> Void -> Prismatic) with increasing speed multipliers
+
 ### Fixed
 - **Ascend: Mine access and progression hardening** - `/mine` now enforces the ascension gate server-side, `/mine addcrystals` is OP-only, mine-mode entry is shared across gate/UI teleport paths, miner upgrades sync to live NPC/runtime state immediately, and mining persistence/cooldown/reward flows no longer drop state as easily under concurrency.
 - **Ascend: Runners not working** - Runners now fall back to map base run time when ghost recording is missing, preventing silent zero-earnings. Auto-buy runner gate relaxed to accept best time as proof of completion. Tick scheduler hardened against silent death (catches Throwable). Auto-elevation/summit/upgrade exceptions now isolated so they don't block runner ticking. Challenge reconnect recovery hardened: snapshot deserialization failure no longer deletes the challenge row (preserves for retry), unknown challenge types force-restore the snapshot before cleanup, and DB failures are logged at SEVERE with recovery guidance. Auto-summit/elevation: fixed despawn-before-reset ordering that caused infinite despawn-recreate loop if the operation threw — robots are now reset first (hasRobot=false) before NPC despawn, and each player is isolated with per-player try-catch.
