@@ -1,18 +1,6 @@
 package io.hyvexa.ascend.mine;
 
-import java.util.Map;
-
 public final class MineBlockDisplay {
-
-    private static final Map<String, String> DISPLAY_NAMES = Map.of(
-        "Rock_Stone", "Stone",
-        "Rock_Crystal_Blue_Block", "Blue Crystal",
-        "Rock_Crystal_Green_Block", "Green Crystal",
-        "Rock_Crystal_Pink_Block", "Pink Crystal",
-        "Rock_Crystal_Red_Block", "Red Crystal",
-        "Rock_Crystal_White_Block", "White Crystal",
-        "Rock_Crystal_Yellow_Block", "Yellow Crystal"
-    );
 
     private MineBlockDisplay() {
     }
@@ -25,9 +13,10 @@ public final class MineBlockDisplay {
         if (blockTypeId == null || blockTypeId.isEmpty()) {
             return "Unknown";
         }
-        String direct = DISPLAY_NAMES.get(blockTypeId);
-        if (direct != null) {
-            return direct;
+
+        String registered = MineBlockRegistry.getDisplayName(blockTypeId);
+        if (!registered.equals(blockTypeId)) {
+            return registered;
         }
 
         String name = stripNamespace(blockTypeId);
