@@ -125,49 +125,9 @@ $C.@PageOverlay {
           Text: "Selected: (none)";
         }
 
-        Group {
-          LayoutMode: Left;
-          Anchor: (Top: 4, Height: 28);
-
-          $C.@TextButton #BlockStone {
-            Anchor: (Width: 88, Height: 26);
-            Text: "Stone";
-          }
-
-          $C.@TextButton #BlockBlue {
-            Anchor: (Left: 4, Width: 88, Height: 26);
-            Text: "Blue";
-          }
-
-          $C.@TextButton #BlockGreen {
-            Anchor: (Left: 4, Width: 88, Height: 26);
-            Text: "Green";
-          }
-
-          $C.@TextButton #BlockPink {
-            Anchor: (Left: 4, Width: 88, Height: 26);
-            Text: "Pink";
-          }
-        }
-
-        Group {
-          LayoutMode: Left;
-          Anchor: (Top: 4, Height: 28);
-
-          $C.@TextButton #BlockRed {
-            Anchor: (Width: 88, Height: 26);
-            Text: "Red";
-          }
-
-          $C.@TextButton #BlockWhite {
-            Anchor: (Left: 4, Width: 88, Height: 26);
-            Text: "White";
-          }
-
-          $C.@TextButton #BlockYellow {
-            Anchor: (Left: 4, Width: 88, Height: 26);
-            Text: "Yellow";
-          }
+        $C.@TextButton #ChooseBlockButton {
+          Anchor: (Top: 4, Width: 180, Height: 30);
+          Text: "Choose Block...";
         }
 
         Label {

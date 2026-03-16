@@ -19,39 +19,17 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.ParkourAscendPlugin;
+import io.hyvexa.ascend.mine.MineBlockRegistry;
 import io.hyvexa.ascend.mine.MineManager;
 import io.hyvexa.ascend.mine.data.Mine;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MineZone;
 
 import javax.annotation.Nonnull;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
 public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage.ZoneData> {
-
-    // Predefined blocks: buttonId -> blockTypeId
-    private static final Map<String, String> PREDEFINED_BLOCKS = new LinkedHashMap<>();
-    // Display names for block type IDs
-    private static final Map<String, String> BLOCK_DISPLAY_NAMES = new LinkedHashMap<>();
-    static {
-        PREDEFINED_BLOCKS.put("BlockStone", "Rock_Stone");
-        PREDEFINED_BLOCKS.put("BlockBlue", "Rock_Crystal_Blue_Block");
-        PREDEFINED_BLOCKS.put("BlockGreen", "Rock_Crystal_Green_Block");
-        PREDEFINED_BLOCKS.put("BlockPink", "Rock_Crystal_Pink_Block");
-        PREDEFINED_BLOCKS.put("BlockRed", "Rock_Crystal_Red_Block");
-        PREDEFINED_BLOCKS.put("BlockWhite", "Rock_Crystal_White_Block");
-        PREDEFINED_BLOCKS.put("BlockYellow", "Rock_Crystal_Yellow_Block");
-
-        BLOCK_DISPLAY_NAMES.put("Rock_Stone", "Stone");
-        BLOCK_DISPLAY_NAMES.put("Rock_Crystal_Blue_Block", "Blue Crystal");
-        BLOCK_DISPLAY_NAMES.put("Rock_Crystal_Green_Block", "Green Crystal");
-        BLOCK_DISPLAY_NAMES.put("Rock_Crystal_Pink_Block", "Pink Crystal");
-        BLOCK_DISPLAY_NAMES.put("Rock_Crystal_Red_Block", "Red Crystal");
-        BLOCK_DISPLAY_NAMES.put("Rock_Crystal_White_Block", "White Crystal");
-        BLOCK_DISPLAY_NAMES.put("Rock_Crystal_Yellow_Block", "Yellow Crystal");
-    }
 
     // Shared with AscendAdminCommand so chat pos1/pos2 and UI are synchronized
     private static Map<UUID, int[]> pos1Selections() { return io.hyvexa.ascend.command.AscendAdminCommand.minePos1; }
@@ -72,6 +50,14 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         this.mineConfigStore = mineConfigStore;
         this.mineId = mineId;
         this.playerUuid = playerRef.getUuid();
+    }
+
+    public void setSelectedZoneId(String zoneId) {
+        this.selectedZoneId = zoneId != null ? zoneId : "";
+    }
+
+    public void setSelectedBlockId(String blockId) {
+        this.blockId = blockId != null ? blockId : "";
     }
 
     @Override
@@ -132,9 +118,15 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
             handleDeleteZone(ref, store);
             return;
         }
-        if (PREDEFINED_BLOCKS.containsKey(data.button)) {
-            blockId = PREDEFINED_BLOCKS.get(data.button);
-            sendRefresh(ref, store);
+        if (data.button.equals("ChooseBlock")) {
+            Player player = store.getComponent(ref, Player.getComponentType());
+            PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+            if (player != null && playerRef != null) {
+                MineBlockPickerPage picker = new MineBlockPickerPage(
+                    playerRef, mineConfigStore, mineId, selectedZoneId, blockId
+                );
+                player.getPageManager().openCustomPage(ref, store, picker);
+            }
             return;
         }
         if (data.button.equals(ZoneData.BUTTON_ADD_BLOCK)) {
@@ -268,7 +260,7 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
             player.sendMessage(Message.raw("Probability must be between 0.0 and 1.0."));
             return;
         }
-        String displayName = BLOCK_DISPLAY_NAMES.getOrDefault(blockId, blockId);
+        String displayName = MineBlockRegistry.getDisplayName(blockId);
         zone.getBlockTable().put(blockId, prob);
         mineConfigStore.saveZone(zone);
         player.sendMessage(Message.raw("Block added: " + displayName + " = " + prob));
@@ -283,7 +275,7 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         Double removed = zone.getBlockTable().remove(removeBlockId);
         if (removed != null) {
             mineConfigStore.saveZone(zone);
-            String displayName = BLOCK_DISPLAY_NAMES.getOrDefault(removeBlockId, removeBlockId);
+            String displayName = MineBlockRegistry.getDisplayName(removeBlockId);
             player.sendMessage(Message.raw("Block removed: " + displayName));
         }
         sendRefresh(ref, store);
@@ -392,10 +384,8 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
             EventData.of(ZoneData.KEY_ZONE_ID, "#ZoneIdField.Value"), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#BlockProbField",
             EventData.of(ZoneData.KEY_BLOCK_PROB, "#BlockProbField.Value"), false);
-        for (String btnId : PREDEFINED_BLOCKS.keySet()) {
-            uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#" + btnId,
-                EventData.of(ZoneData.KEY_BUTTON, btnId), false);
-        }
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ChooseBlockButton",
+            EventData.of(ZoneData.KEY_BUTTON, "ChooseBlock"), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#ThresholdField",
             EventData.of(ZoneData.KEY_THRESHOLD, "#ThresholdField.Value"), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#CooldownField",
@@ -427,7 +417,7 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
 
         commandBuilder.set("#ZoneIdField.Value", zoneId != null ? zoneId : "");
         commandBuilder.set("#BlockProbField.Value", blockProb != null ? blockProb : "");
-        String selectedBlockDisplay = blockId.isEmpty() ? "(none)" : BLOCK_DISPLAY_NAMES.getOrDefault(blockId, blockId);
+        String selectedBlockDisplay = blockId.isEmpty() ? "(none)" : MineBlockRegistry.getDisplayName(blockId);
         commandBuilder.set("#SelectedBlockText.Text", "Selected: " + selectedBlockDisplay);
         commandBuilder.set("#ThresholdField.Value", threshold != null ? threshold : "");
         commandBuilder.set("#CooldownField.Value", cooldown != null ? cooldown : "");
@@ -511,7 +501,7 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         for (Map.Entry<String, Double> entry : zone.getBlockTable().entrySet()) {
             commandBuilder.append("#BlockEntries", "Pages/Ascend_MineBlockEntry.ui");
             String sel = "#BlockEntries[" + index + "]";
-            String displayName = BLOCK_DISPLAY_NAMES.getOrDefault(entry.getKey(), entry.getKey());
+            String displayName = MineBlockRegistry.getDisplayName(entry.getKey());
             commandBuilder.set(sel + " #BlockName.Text", displayName);
             commandBuilder.set(sel + " #BlockProb.Text", formatProb(entry.getValue()));
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
