@@ -1,44 +1,56 @@
 $C = "../Common.ui";
 
 Button {
-  Anchor: (Left: 2, Right: 2, Bottom: 6, Height: 56);
-  Background: $C.@InputBoxBackground;
-  Padding: (Left: 12, Right: 12, Top: 8);
+  Anchor: (Left: 0, Right: 0, Top: 6, Height: 48);
+  LayoutMode: Full;
+  Background: #1a2530(0.95);
+  OutlineColor: #ffffff(0.06);
+  OutlineSize: 1;
+  Padding: (Left: 16, Right: 12, Top: 8);
   Style: ButtonStyle(
-    Default: (Background: $C.@InputBoxBackground),
-    Hovered: (Background: #253742),
-    Pressed: (Background: #1a2830),
+    Default: (Background: #1a2530(0.95)),
+    Hovered: (Background: #2d3f50),
+    Pressed: (Background: #1a2530),
     Sounds: $C.@ButtonSounds,
   );
 
+  Group #AccentBar {
+    Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
+    Background: #8b5cf6;
+    Visible: false;
+  }
+
   Group #LayerInfo {
-    Anchor: (Left: 0, Right: 56, Top: 0, Bottom: 0);
+    Anchor: (Left: 4, Right: 44, Top: 0, Bottom: 0);
     LayoutMode: Top;
 
     Label #LayerName {
-      Style: (FontSize: 14, TextColor: #f0f4f8, RenderBold: true);
+      Style: (FontSize: 13, TextColor: #f0f4f8, RenderBold: true);
       Text: "";
     }
 
     Label #LayerDetails {
-      Anchor: (Top: 20);
-      Style: (FontSize: 11, TextColor: #9fb0ba);
+      Anchor: (Top: 2);
+      Style: (FontSize: 11, TextColor: #6b7c8a);
       Text: "";
     }
   }
 
   TextButton #DeleteLayerBtn {
-    Anchor: (Right: 0, Width: 32, Height: 24, Top: 8);
-    Padding: (Left: 9, Top: 2);
+    Anchor: (Right: 0, Top: 4, Width: 28, Height: 24);
     Text: "X";
     Style: TextButtonStyle(
       Default: (
-        Background: #550000(0.6),
-        LabelStyle: (FontSize: 13, TextColor: #ff6666, RenderBold: true)
+        Background: #dc2626(0.4),
+        LabelStyle: (FontSize: 12, TextColor: #fca5a5, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
       ),
       Hovered: (
-        Background: #880000(0.8),
-        LabelStyle: (FontSize: 13, TextColor: #ff9999, RenderBold: true)
+        Background: #dc2626(0.7),
+        LabelStyle: (FontSize: 12, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+      ),
+      Pressed: (
+        Background: #dc2626(0.3),
+        LabelStyle: (FontSize: 12, TextColor: #fca5a5, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
       ),
       Sounds: $C.@ButtonSounds,
     );

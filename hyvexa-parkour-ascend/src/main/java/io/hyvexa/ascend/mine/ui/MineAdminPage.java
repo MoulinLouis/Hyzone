@@ -21,12 +21,11 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.mine.data.Mine;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
-import io.hyvexa.ascend.ui.AscendAdminPanelPage;
 import io.hyvexa.common.math.BigNumber;
+import io.hyvexa.ascend.ui.AscendAdminPanelPage;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
 public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineData> {
@@ -346,12 +345,20 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
         commandBuilder.set("#MineOrderField.Value", mineOrder != null ? mineOrder : "0");
         commandBuilder.set("#MineCostField.Value", mineCost != null ? mineCost : "");
 
-        String selectedInfo = "No mine selected";
+        boolean hasMines = !mineConfigStore.listMinesSorted().isEmpty();
+        boolean hasSelection = selectedMineId != null && !selectedMineId.isBlank();
+
+        // Show form section when a mine is selected or there are no mines (create mode)
+        commandBuilder.set("#FormSection.Visible", hasSelection || !hasMines);
+        // Show empty state only when no mines and no selection
+        commandBuilder.set("#EmptyLabel.Visible", !hasMines);
+
+        String selectedText = "No mine selected";
         String mineInfo = "";
-        if (selectedMineId != null && !selectedMineId.isBlank()) {
+        if (hasSelection) {
             Mine mine = mineConfigStore.getMine(selectedMineId);
             if (mine != null) {
-                selectedInfo = mine.getId() + " (" + mine.getName() + ")";
+                selectedText = mine.getId() + " (" + mine.getName() + ")";
                 boolean hasSpawn = mine.getSpawnX() != 0 || mine.getSpawnY() != 0 || mine.getSpawnZ() != 0;
                 int zoneCount = mine.getZones() != null ? mine.getZones().size() : 0;
                 BigNumber cost = mine.getUnlockCost();
@@ -359,10 +366,10 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
                 mineInfo = "Zones: " + zoneCount + " | Spawn: " + (hasSpawn ? "OK" : "NO")
                     + " | Order: " + mine.getDisplayOrder() + " | Cost: " + costStr;
             } else {
-                selectedInfo = selectedMineId + " (not found)";
+                selectedText = selectedMineId + " (not found)";
             }
         }
-        commandBuilder.set("#SelectedMineText.Text", "Selected: " + selectedInfo);
+        commandBuilder.set("#SelectedMineText.Text", selectedText);
         commandBuilder.set("#MineInfoText.Text", mineInfo);
     }
 
@@ -376,15 +383,17 @@ public class MineAdminPage extends InteractiveCustomUIPage<MineAdminPage.MineDat
             String nameLabel = mine.getName() != null && !mine.getName().isBlank() ? mine.getName() : mine.getId();
             boolean isSelected = mine.getId().equals(selectedMineId);
             if (isSelected) {
-                nameLabel = ">> " + nameLabel;
-                commandBuilder.set(entrySelector + ".Background", "#253742");
-                commandBuilder.set(entrySelector + ".Style.Default.Background", "#253742");
+                commandBuilder.set(entrySelector + ".Background", "#2d3f50");
+                commandBuilder.set(entrySelector + ".Style.Default.Background", "#2d3f50");
+                commandBuilder.set(entrySelector + " #AccentBar.Visible", true);
             }
             commandBuilder.set(entrySelector + " #MineName.Text", nameLabel);
             boolean hasSpawn = mine.getSpawnX() != 0 || mine.getSpawnY() != 0 || mine.getSpawnZ() != 0;
             int zoneCount = mine.getZones() != null ? mine.getZones().size() : 0;
+            BigNumber cost = mine.getUnlockCost();
+            String costStr = cost != null && !cost.equals(BigNumber.ZERO) ? cost.toString() : "Free";
             String status = "Zones: " + zoneCount + " | Spawn: " + (hasSpawn ? "OK" : "NO")
-                + " | Order: " + mine.getDisplayOrder();
+                + " | Order: " + mine.getDisplayOrder() + " | Cost: " + costStr;
             commandBuilder.set(entrySelector + " #MineStatus.Text", status);
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating,
                 entrySelector,

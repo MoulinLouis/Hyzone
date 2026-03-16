@@ -1,34 +1,44 @@
 $C = "../Common.ui";
 
 Group {
-  Anchor: (Height: 28, Left: 0, Right: 0);
-  LayoutMode: Left;
-  Padding: (Left: 4, Top: 2);
+  Anchor: (Left: 0, Right: 0, Top: 4, Height: 36);
+  LayoutMode: Full;
+  Background: #ffffff(0.03);
+  OutlineColor: #ffffff(0.04);
+  OutlineSize: 1;
+
+  ItemIcon #BlockIcon {
+    Anchor: (Left: 8, Top: 4, Width: 28, Height: 28);
+    ShowItemTooltip: true;
+  }
 
   Label #BlockName {
-    Anchor: (Width: 200, Height: 24);
-    Style: (FontSize: 13, TextColor: #9fb0ba);
+    Anchor: (Left: 42, Top: 0, Bottom: 0, Width: 250);
+    Style: (FontSize: 13, TextColor: #f0f4f8, VerticalAlignment: Center);
     Text: "Block";
   }
 
   Label #BlockProb {
-    Anchor: (Left: 4, Width: 80, Height: 24);
-    Style: (FontSize: 13, TextColor: #7a9aa8);
+    Anchor: (Left: 300, Top: 0, Bottom: 0, Width: 80);
+    Style: (FontSize: 13, TextColor: #9fb0ba, VerticalAlignment: Center);
     Text: "0.0";
   }
 
   TextButton #RemoveBtn {
-    Anchor: (Left: 8, Width: 24, Height: 24);
-    Padding: (Left: 6, Top: 2);
+    Anchor: (Right: 8, Top: 6, Width: 24, Height: 24);
     Text: "X";
     Style: TextButtonStyle(
       Default: (
-        Background: #550000(0.6),
-        LabelStyle: (FontSize: 13, TextColor: #ff6666, RenderBold: true)
+        Background: #dc2626(0.4),
+        LabelStyle: (FontSize: 12, TextColor: #fca5a5, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
       ),
       Hovered: (
-        Background: #880000(0.8),
-        LabelStyle: (FontSize: 13, TextColor: #ff9999, RenderBold: true)
+        Background: #dc2626(0.7),
+        LabelStyle: (FontSize: 12, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+      ),
+      Pressed: (
+        Background: #dc2626(0.3),
+        LabelStyle: (FontSize: 12, TextColor: #fca5a5, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
       ),
       Sounds: $C.@ButtonSounds,
     );

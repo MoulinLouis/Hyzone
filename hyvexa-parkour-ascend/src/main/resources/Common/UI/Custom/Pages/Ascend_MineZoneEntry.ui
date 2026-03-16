@@ -1,32 +1,34 @@
 $C = "../Common.ui";
 
 Button {
-  Anchor: (Left: 2, Right: 2, Bottom: 6, Height: 48);
-  Background: $C.@InputBoxBackground;
-  Padding: (Left: 12, Right: 12, Top: 8);
+  Anchor: (Left: 0, Right: 0, Top: 6, Height: 52);
+  LayoutMode: Full;
+  Background: #1a2530(0.95);
+  OutlineColor: #ffffff(0.06);
+  OutlineSize: 1;
+  Padding: (Left: 16, Right: 12, Top: 8);
   Style: ButtonStyle(
-    Default: (Background: $C.@InputBoxBackground),
-    Hovered: (Background: #253742),
-    Pressed: (Background: #1a2830),
+    Default: (Background: #1a2530(0.95)),
+    Hovered: (Background: #2d3f50),
+    Pressed: (Background: #1a2530),
     Sounds: $C.@ButtonSounds,
   );
 
+  Group #AccentBar {
+    Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
+    Background: #f59e0b;
+    Visible: false;
+  }
+
   Label #ZoneName {
-    Anchor: (Top: 0);
-    Style: (
-      FontSize: 15,
-      RenderBold: true,
-      TextColor: #93844c
-    );
+    Anchor: (Left: 4, Top: 0, Right: 0, Height: 18);
+    Style: (FontSize: 14, TextColor: #f0f4f8, RenderBold: true);
     Text: "Zone";
   }
 
   Label #ZoneInfo {
-    Anchor: (Top: 20);
-    Style: (
-      FontSize: 12,
-      TextColor: #9fb0ba
-    );
+    Anchor: (Left: 4, Top: 20, Right: 0, Height: 16);
+    Style: (FontSize: 11, TextColor: #6b7c8a);
     Text: "Info";
   }
 }

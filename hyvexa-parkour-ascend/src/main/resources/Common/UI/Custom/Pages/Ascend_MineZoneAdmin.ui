@@ -1,153 +1,586 @@
 $C = "../Common.ui";
 
 $C.@PageOverlay {
-  $C.@Container {
-    Anchor: (Width: 920, Height: 780);
+  SceneBlur {}
 
-    #Title {
+  Group #ZoneAdminWindow {
+    Anchor: (Width: 680, Height: 620);
+    LayoutMode: Top;
+    Background: #0d1620(0.95);
+    OutlineColor: #ffffff(0.06);
+    OutlineSize: 1;
+
+    // === HEADER ===
+    Group #Header {
+      Anchor: (Left: 0, Right: 0, Height: 52);
+      LayoutMode: Full;
+      Background: #0a1018;
+
       Group {
+        Anchor: (Left: 0, Right: 0, Top: 0, Height: 2);
+        Background: #f59e0b;
+      }
+
+      Label #HeaderTitle {
+        Anchor: (Left: 20, Top: 16, Width: 300, Height: 24);
+        Style: (FontSize: 18, TextColor: #f0f4f8, RenderBold: true);
+        Text: "Mine Zone Admin";
+      }
+
+      Group {
+        Anchor: (Right: 16, Top: 10, Width: 72, Height: 32);
+
         TextButton #BackButton {
-          Anchor: (Left: 12, Top: 4, Width: 64, Height: 24);
-          Padding: (Left: 8, Top: 2);
+          Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
           Text: "Back";
           Style: TextButtonStyle(
             Default: (
-              Background: #000000(0.13),
-              LabelStyle: (FontSize: 14, TextColor: #93844c, RenderBold: true)
+              Background: #ffffff(0.06),
+              LabelStyle: (FontSize: 13, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
             ),
             Hovered: (
-              Background: #000000(0.22),
-              LabelStyle: (FontSize: 14, TextColor: #93844c, RenderBold: true)
+              Background: #ffffff(0.1),
+              LabelStyle: (FontSize: 13, TextColor: #f0f4f8, HorizontalAlignment: Center, VerticalAlignment: Center)
+            ),
+            Pressed: (
+              Background: #ffffff(0.04),
+              LabelStyle: (FontSize: 13, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
             ),
             Sounds: $C.@ButtonSounds,
           );
         }
-        $C.@Title {
-          @Text = "Mine Zone Admin";
-        }
       }
     }
 
-    #Content {
-      LayoutMode: Left;
-      Padding: (Left: 12, Right: 12, Top: 6, Bottom: 12);
+    // === CONTENT ===
+    Group #Content {
+      Anchor: (Left: 0, Right: 0);
+      FlexWeight: 1;
+      LayoutMode: Top;
+      Padding: (Left: 16, Right: 16, Top: 6, Bottom: 12);
 
-      Group #FormColumn {
-        Anchor: (Width: 380);
-        LayoutMode: TopScrolling;
-        ScrollbarStyle: $C.@DefaultScrollbarStyle;
+      // --- Tabs Row ---
+      Group #TabsRow {
+        Anchor: (Left: 0, Right: 0, Height: 40);
+        LayoutMode: Left;
 
-        Label #MineNameTitle {
-          Style: (FontSize: 16, TextColor: #93844c, RenderBold: true);
-          Text: "Mine: (none)";
+        // Tab: Zones (active by default)
+        Group #TabZonesWrap {
+          Anchor: (Height: 36);
+          FlexWeight: 1;
+          OutlineColor: #ffffff(0.04);
+          OutlineSize: 1;
+
+          Group #TabZonesInactiveBg {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Background: #142029;
+            Visible: false;
+          }
+
+          Group #TabZonesActiveBg {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Background: #2d3f50;
+            Visible: true;
+          }
+
+          Group #TabZonesAccent {
+            Anchor: (Left: 0, Right: 0, Top: 0, Height: 3);
+
+            Group #TabZonesAccentInactive {
+              Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+              Background: #142029;
+              Visible: false;
+            }
+
+            Group #TabZonesAccentActive {
+              Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+              Background: #f59e0b;
+              Visible: true;
+            }
+          }
+
+          Label #TabZonesLabel {
+            Anchor: (Left: 0, Right: 0, Top: 6, Bottom: 0);
+            Style: (FontSize: 13, RenderBold: true, TextColor: #f0f4f8, Alignment: Center, VerticalAlignment: Center);
+            Text: "Zones";
+          }
+
+          TextButton #TabZones {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Text: "";
+            Style: TextButtonStyle(
+              Default: (Background: #000000(0)),
+              Hovered: (Background: #ffffff(0.05)),
+              Pressed: (Background: #ffffff(0.1)),
+              Sounds: $C.@ButtonSounds,
+            );
+          }
         }
 
-        Label #SelectedZoneText {
-          Anchor: (Top: 8);
-          Style: (FontSize: 13, TextColor: #9fb0ba, RenderBold: true);
-          Text: "Selected: (none)";
+        Group { Anchor: (Width: 6); }
+
+        // Tab: Blocks (inactive by default)
+        Group #TabBlocksWrap {
+          Anchor: (Height: 36);
+          FlexWeight: 1;
+          OutlineColor: #ffffff(0.04);
+          OutlineSize: 1;
+
+          Group #TabBlocksInactiveBg {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Background: #142029;
+            Visible: true;
+          }
+
+          Group #TabBlocksActiveBg {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Background: #2d3f50;
+            Visible: false;
+          }
+
+          Group #TabBlocksAccent {
+            Anchor: (Left: 0, Right: 0, Top: 0, Height: 3);
+
+            Group #TabBlocksAccentInactive {
+              Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+              Background: #142029;
+              Visible: true;
+            }
+
+            Group #TabBlocksAccentActive {
+              Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+              Background: #22d3ee;
+              Visible: false;
+            }
+          }
+
+          Label #TabBlocksLabel {
+            Anchor: (Left: 0, Right: 0, Top: 6, Bottom: 0);
+            Style: (FontSize: 13, RenderBold: true, TextColor: #9fb0ba, Alignment: Center, VerticalAlignment: Center);
+            Text: "Blocks";
+          }
+
+          TextButton #TabBlocks {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Text: "";
+            Style: TextButtonStyle(
+              Default: (Background: #000000(0)),
+              Hovered: (Background: #ffffff(0.05)),
+              Pressed: (Background: #ffffff(0.1)),
+              Sounds: $C.@ButtonSounds,
+            );
+          }
         }
 
-        Label #ZoneInfoText {
-          Anchor: (Top: 2);
-          Style: (FontSize: 12, TextColor: #7a9aa8);
-          Text: "";
+        Group { Anchor: (Width: 6); }
+
+        // Tab: Layers (inactive by default)
+        Group #TabLayersWrap {
+          Anchor: (Height: 36);
+          FlexWeight: 1;
+          OutlineColor: #ffffff(0.04);
+          OutlineSize: 1;
+
+          Group #TabLayersInactiveBg {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Background: #142029;
+            Visible: true;
+          }
+
+          Group #TabLayersActiveBg {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Background: #2d3f50;
+            Visible: false;
+          }
+
+          Group #TabLayersAccent {
+            Anchor: (Left: 0, Right: 0, Top: 0, Height: 3);
+
+            Group #TabLayersAccentInactive {
+              Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+              Background: #142029;
+              Visible: true;
+            }
+
+            Group #TabLayersAccentActive {
+              Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+              Background: #8b5cf6;
+              Visible: false;
+            }
+          }
+
+          Label #TabLayersLabel {
+            Anchor: (Left: 0, Right: 0, Top: 6, Bottom: 0);
+            Style: (FontSize: 13, RenderBold: true, TextColor: #9fb0ba, Alignment: Center, VerticalAlignment: Center);
+            Text: "Layers";
+          }
+
+          TextButton #TabLayers {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Text: "";
+            Style: TextButtonStyle(
+              Default: (Background: #000000(0)),
+              Hovered: (Background: #ffffff(0.05)),
+              Pressed: (Background: #ffffff(0.1)),
+              Sounds: $C.@ButtonSounds,
+            );
+          }
+        }
+      }
+
+      // ==========================================
+      // TAB CONTENT: ZONES
+      // ==========================================
+      Group #ZonesTab {
+        Anchor: (Left: 0, Right: 0, Top: 8);
+        FlexWeight: 1;
+        LayoutMode: Top;
+        Visible: true;
+
+        // Settings card (regen threshold + cooldown)
+        Group #SettingsCard {
+          Anchor: (Left: 0, Right: 0, Height: 68);
+          LayoutMode: Top;
+          Background: #ffffff(0.03);
+          OutlineColor: #ffffff(0.04);
+          OutlineSize: 1;
+          Padding: (Left: 12, Right: 12, Top: 8, Bottom: 8);
+
+          Label #SelectedZoneText {
+            Style: (FontSize: 13, TextColor: #f0f4f8, RenderBold: true);
+            Text: "No zone selected";
+          }
+
+          Label #ZoneInfoText {
+            Anchor: (Top: 2);
+            Style: (FontSize: 11, TextColor: #6b7c8a);
+            Text: "";
+          }
+
+          Group {
+            Anchor: (Top: 4, Left: 0, Right: 0, Height: 22);
+            LayoutMode: Left;
+
+            Label #Pos1Text {
+              Anchor: (Width: 180);
+              Style: (FontSize: 11, TextColor: #9fb0ba);
+              Text: "Pos1: (not set)";
+            }
+
+            Label #Pos2Text {
+              Anchor: (Left: 8, Width: 180);
+              Style: (FontSize: 11, TextColor: #9fb0ba);
+              Text: "Pos2: (not set)";
+            }
+          }
         }
 
-        Label {
-          Text: "Zone ID";
-          Style: (FontSize: 13, TextColor: #cfd7dc);
-          Anchor: (Top: 8);
-        }
-
-        $C.@TextField #ZoneIdField {
-          Anchor: (Height: 28);
-          Style: (FontSize: 14, TextColor: #ffffff(0.85));
-        }
-
-        Label {
-          Text: "Position (at your feet)";
-          Style: (FontSize: 14, TextColor: #93844c, RenderBold: true);
-          Anchor: (Top: 12);
-        }
-
-        Label #Pos1Text {
-          Anchor: (Top: 2);
-          Style: (FontSize: 12, TextColor: #9fb0ba);
-          Text: "Pos1: (not set)";
-        }
-
-        Label #Pos2Text {
-          Anchor: (Top: 2);
-          Style: (FontSize: 12, TextColor: #9fb0ba);
-          Text: "Pos2: (not set)";
-        }
-
-        Group {
+        // Zone ID input
+        Group #ZoneIdRow {
+          Anchor: (Left: 0, Right: 0, Top: 8, Height: 26);
           LayoutMode: Left;
-          Anchor: (Top: 6, Height: 32);
 
-          $C.@TextButton #Pos1Button {
-            Anchor: (Width: 140, Height: 30);
+          Label {
+            Anchor: (Width: 56, Height: 26);
+            Style: (FontSize: 11, TextColor: #6b7c8a, VerticalAlignment: Center);
+            Text: "Zone ID";
+          }
+
+          $C.@TextField #ZoneIdField {
+            Anchor: (Height: 26);
+            FlexWeight: 1;
+            Style: (FontSize: 13, TextColor: #ffffff(0.85));
+          }
+        }
+
+        // Empty state
+        Label #ZonesEmptyLabel {
+          Anchor: (Left: 0, Right: 0, Top: 16);
+          Style: (FontSize: 14, TextColor: #4b5563, HorizontalAlignment: Center);
+          Text: "No zones configured";
+        }
+
+        // Zone list
+        Group #ZoneList {
+          Anchor: (Left: 0, Right: 0, Top: 6);
+          FlexWeight: 1;
+          LayoutMode: TopScrolling;
+          ScrollbarStyle: $C.@DefaultScrollbarStyle;
+
+          Group #ZoneCards {
+            LayoutMode: Top;
+          }
+        }
+
+        // Zones footer
+        Group #ZonesFooter {
+          Anchor: (Left: 0, Right: 0, Top: 8, Height: 36);
+          LayoutMode: Left;
+
+          TextButton #Pos1Button {
+            Anchor: (Width: 72, Height: 34);
             Text: "Set Pos1";
+            Style: TextButtonStyle(
+              Default: (
+                Background: #ffffff(0.06),
+                LabelStyle: (FontSize: 12, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Hovered: (
+                Background: #ffffff(0.1),
+                LabelStyle: (FontSize: 12, TextColor: #f0f4f8, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Pressed: (
+                Background: #ffffff(0.04),
+                LabelStyle: (FontSize: 12, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Sounds: $C.@ButtonSounds,
+            );
           }
 
-          $C.@TextButton #Pos2Button {
-            Anchor: (Left: 8, Width: 140, Height: 30);
+          TextButton #Pos2Button {
+            Anchor: (Left: 6, Width: 72, Height: 34);
             Text: "Set Pos2";
+            Style: TextButtonStyle(
+              Default: (
+                Background: #ffffff(0.06),
+                LabelStyle: (FontSize: 12, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Hovered: (
+                Background: #ffffff(0.1),
+                LabelStyle: (FontSize: 12, TextColor: #f0f4f8, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Pressed: (
+                Background: #ffffff(0.04),
+                LabelStyle: (FontSize: 12, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Sounds: $C.@ButtonSounds,
+            );
           }
-        }
 
-        Group {
-          LayoutMode: Left;
-          Anchor: (Top: 6, Height: 32);
-
-          $C.@TextButton #CreateZoneButton {
-            Anchor: (Width: 140, Height: 30);
+          TextButton #CreateZoneButton {
+            Anchor: (Left: 6, Width: 100, Height: 34);
             Text: "Create Zone";
+            Style: TextButtonStyle(
+              Default: (
+                Background: #f59e0b,
+                LabelStyle: (FontSize: 12, TextColor: #1a1a2a, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Hovered: (
+                Background: #fbbf24,
+                LabelStyle: (FontSize: 12, TextColor: #1a1a2a, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Pressed: (
+                Background: #d97706,
+                LabelStyle: (FontSize: 12, TextColor: #1a1a2a, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Sounds: $C.@ButtonSounds,
+            );
           }
 
-          $C.@TextButton #DeleteZoneButton {
-            Anchor: (Left: 8, Width: 140, Height: 30);
+          TextButton #DeleteZoneButton {
+            Anchor: (Left: 6, Width: 90, Height: 34);
             Text: "Delete Zone";
+            Style: TextButtonStyle(
+              Default: (
+                Background: #dc2626(0.6),
+                LabelStyle: (FontSize: 12, TextColor: #fca5a5, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Hovered: (
+                Background: #dc2626(0.8),
+                LabelStyle: (FontSize: 12, TextColor: #ffffff, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Pressed: (
+                Background: #dc2626(0.4),
+                LabelStyle: (FontSize: 12, TextColor: #fca5a5, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Sounds: $C.@ButtonSounds,
+            );
+          }
+
+          Group { FlexWeight: 1; }
+
+          TextButton #RegenButton {
+            Anchor: (Width: 80, Height: 34);
+            Text: "Regen";
+            Style: TextButtonStyle(
+              Default: (
+                Background: #22d3ee(0.6),
+                LabelStyle: (FontSize: 12, TextColor: #e0fcff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Hovered: (
+                Background: #22d3ee(0.8),
+                LabelStyle: (FontSize: 12, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Pressed: (
+                Background: #22d3ee(0.4),
+                LabelStyle: (FontSize: 12, TextColor: #e0fcff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Sounds: $C.@ButtonSounds,
+            );
           }
         }
 
-        Label {
-          Text: "Block Table";
-          Style: (FontSize: 14, TextColor: #93844c, RenderBold: true);
-          Anchor: (Top: 12);
+        // Regen settings row
+        Group #RegenRow {
+          Anchor: (Left: 0, Right: 0, Top: 6, Height: 30);
+          LayoutMode: Left;
+
+          Label {
+            Anchor: (Width: 70, Height: 26);
+            Style: (FontSize: 11, TextColor: #6b7c8a, VerticalAlignment: Center);
+            Text: "Threshold";
+          }
+
+          $C.@TextField #ThresholdField {
+            Anchor: (Width: 60, Height: 26);
+            Style: (FontSize: 13, TextColor: #ffffff(0.85));
+          }
+
+          TextButton #SetThresholdButton {
+            Anchor: (Left: 4, Width: 40, Height: 26);
+            Text: "Set";
+            Style: TextButtonStyle(
+              Default: (
+                Background: #ffffff(0.06),
+                LabelStyle: (FontSize: 11, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Hovered: (
+                Background: #ffffff(0.1),
+                LabelStyle: (FontSize: 11, TextColor: #f0f4f8, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Pressed: (
+                Background: #ffffff(0.04),
+                LabelStyle: (FontSize: 11, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Sounds: $C.@ButtonSounds,
+            );
+          }
+
+          Group { Anchor: (Width: 16); }
+
+          Label {
+            Anchor: (Width: 70, Height: 26);
+            Style: (FontSize: 11, TextColor: #6b7c8a, VerticalAlignment: Center);
+            Text: "Cooldown (s)";
+          }
+
+          $C.@TextField #CooldownField {
+            Anchor: (Width: 60, Height: 26);
+            Style: (FontSize: 13, TextColor: #ffffff(0.85));
+          }
+
+          TextButton #SetCooldownButton {
+            Anchor: (Left: 4, Width: 40, Height: 26);
+            Text: "Set";
+            Style: TextButtonStyle(
+              Default: (
+                Background: #ffffff(0.06),
+                LabelStyle: (FontSize: 11, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Hovered: (
+                Background: #ffffff(0.1),
+                LabelStyle: (FontSize: 11, TextColor: #f0f4f8, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Pressed: (
+                Background: #ffffff(0.04),
+                LabelStyle: (FontSize: 11, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Sounds: $C.@ButtonSounds,
+            );
+          }
+        }
+      }
+
+      // ==========================================
+      // TAB CONTENT: BLOCKS
+      // ==========================================
+      Group #BlocksTab {
+        Anchor: (Left: 0, Right: 0, Top: 8);
+        FlexWeight: 1;
+        LayoutMode: Top;
+        Visible: false;
+
+        // Block context subtitle
+        Label #BlockContextLabel {
+          Style: (FontSize: 13, TextColor: #9fb0ba, RenderBold: true);
+          Text: "Zone blocks";
         }
 
+        // Selected block display
         Label #SelectedBlockText {
-          Anchor: (Top: 2);
-          Style: (FontSize: 12, TextColor: #9fb0ba);
+          Anchor: (Top: 4);
+          Style: (FontSize: 12, TextColor: #6b7c8a);
           Text: "Selected: (none)";
         }
 
-        $C.@TextButton #ChooseBlockButton {
-          Anchor: (Top: 4, Width: 180, Height: 30);
-          Text: "Choose Block...";
+        // Block add row
+        Group #BlockAddRow {
+          Anchor: (Left: 0, Right: 0, Top: 6, Height: 28);
+          LayoutMode: Left;
+
+          TextButton #ChooseBlockButton {
+            Anchor: (Width: 120, Height: 28);
+            Text: "Choose Block...";
+            Style: TextButtonStyle(
+              Default: (
+                Background: #ffffff(0.06),
+                LabelStyle: (FontSize: 12, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Hovered: (
+                Background: #ffffff(0.1),
+                LabelStyle: (FontSize: 12, TextColor: #f0f4f8, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Pressed: (
+                Background: #ffffff(0.04),
+                LabelStyle: (FontSize: 12, TextColor: #cfd7dc, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Sounds: $C.@ButtonSounds,
+            );
+          }
+
+          Label {
+            Anchor: (Left: 8, Width: 50, Height: 28);
+            Style: (FontSize: 11, TextColor: #6b7c8a, VerticalAlignment: Center);
+            Text: "Prob:";
+          }
+
+          $C.@TextField #BlockProbField {
+            Anchor: (Width: 70, Height: 28);
+            Style: (FontSize: 13, TextColor: #ffffff(0.85));
+          }
+
+          TextButton #AddBlockButton {
+            Anchor: (Left: 6, Width: 90, Height: 28);
+            Text: "Add Block";
+            Style: TextButtonStyle(
+              Default: (
+                Background: #f59e0b,
+                LabelStyle: (FontSize: 12, TextColor: #1a1a2a, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Hovered: (
+                Background: #fbbf24,
+                LabelStyle: (FontSize: 12, TextColor: #1a1a2a, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Pressed: (
+                Background: #d97706,
+                LabelStyle: (FontSize: 12, TextColor: #1a1a2a, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Sounds: $C.@ButtonSounds,
+            );
+          }
         }
 
-        Label {
-          Text: "Probability (0.0-1.0)";
-          Style: (FontSize: 13, TextColor: #cfd7dc);
-          Anchor: (Top: 4);
+        // Empty state
+        Label #BlocksEmptyLabel {
+          Anchor: (Left: 0, Right: 0, Top: 16);
+          Style: (FontSize: 14, TextColor: #4b5563, HorizontalAlignment: Center);
+          Text: "No blocks configured";
         }
 
-        $C.@TextField #BlockProbField {
-          Anchor: (Height: 28);
-          Style: (FontSize: 14, TextColor: #ffffff(0.85));
-        }
-
-        $C.@TextButton #AddBlockButton {
-          Anchor: (Top: 6, Width: 140, Height: 30);
-          Text: "Add Block";
-        }
-
+        // Block list
         Group #BlockTableList {
-          Anchor: (Top: 8, Height: 120);
+          Anchor: (Left: 0, Right: 0, Top: 8);
+          FlexWeight: 1;
           LayoutMode: TopScrolling;
           ScrollbarStyle: $C.@DefaultScrollbarStyle;
 
@@ -155,136 +588,87 @@ $C.@PageOverlay {
             LayoutMode: Top;
           }
         }
-
-        Label #BlockContextLabel {
-          Anchor: (Top: 4);
-          Style: (FontSize: 11, TextColor: #7a9aa8);
-          Text: "Zone blocks";
-        }
-
-        Group #LayerSection {
-          LayoutMode: Top;
-          Visible: false;
-
-          Label #LayerTitle {
-            Text: "Layers";
-            Style: (FontSize: 14, TextColor: #93844c, RenderBold: true);
-            Anchor: (Top: 12);
-          }
-
-          Group {
-            LayoutMode: Left;
-            Anchor: (Top: 4, Height: 28);
-
-            Label {
-              Text: "Min Y";
-              Style: (FontSize: 13, TextColor: #cfd7dc);
-              Anchor: (Top: 4);
-            }
-
-            $C.@TextField #LayerMinYField {
-              Anchor: (Left: 8, Width: 60, Height: 28);
-              Style: (FontSize: 14, TextColor: #ffffff(0.85));
-            }
-
-            Label {
-              Text: "Max Y";
-              Style: (FontSize: 13, TextColor: #cfd7dc);
-              Anchor: (Left: 12, Top: 4);
-            }
-
-            $C.@TextField #LayerMaxYField {
-              Anchor: (Left: 8, Width: 60, Height: 28);
-              Style: (FontSize: 14, TextColor: #ffffff(0.85));
-            }
-          }
-
-          Group {
-            LayoutMode: Left;
-            Anchor: (Top: 6, Height: 32);
-
-            $C.@TextButton #AddLayerButton {
-              Anchor: (Width: 140, Height: 30);
-              Text: "Add Layer";
-            }
-          }
-
-          Group #LayerListContainer {
-            Anchor: (Top: 8, Height: 120);
-            LayoutMode: TopScrolling;
-            ScrollbarStyle: $C.@DefaultScrollbarStyle;
-
-            Group #LayerCards {
-              LayoutMode: Top;
-            }
-          }
-        }
-
-        Label {
-          Text: "Regeneration";
-          Style: (FontSize: 14, TextColor: #93844c, RenderBold: true);
-          Anchor: (Top: 12);
-        }
-
-        Label {
-          Text: "Threshold (0.0-1.0)";
-          Style: (FontSize: 13, TextColor: #cfd7dc);
-          Anchor: (Top: 4);
-        }
-
-        $C.@TextField #ThresholdField {
-          Anchor: (Height: 28);
-          Style: (FontSize: 14, TextColor: #ffffff(0.85));
-        }
-
-        Label {
-          Text: "Cooldown (seconds)";
-          Style: (FontSize: 13, TextColor: #cfd7dc);
-          Anchor: (Top: 4);
-        }
-
-        $C.@TextField #CooldownField {
-          Anchor: (Height: 28);
-          Style: (FontSize: 14, TextColor: #ffffff(0.85));
-        }
-
-        Group {
-          LayoutMode: Left;
-          Anchor: (Top: 6, Height: 32);
-
-          $C.@TextButton #SetThresholdButton {
-            Anchor: (Width: 140, Height: 30);
-            Text: "Set Threshold";
-          }
-
-          $C.@TextButton #SetCooldownButton {
-            Anchor: (Left: 8, Width: 140, Height: 30);
-            Text: "Set Cooldown";
-          }
-        }
-
-        $C.@TextButton #RegenButton {
-          Anchor: (Top: 8, Width: 140, Height: 30);
-          Text: "Regen Zone";
-        }
       }
 
-      Group #ListColumn {
-        Anchor: (Left: 16, Width: 480);
+      // ==========================================
+      // TAB CONTENT: LAYERS
+      // ==========================================
+      Group #LayersTab {
+        Anchor: (Left: 0, Right: 0, Top: 8);
+        FlexWeight: 1;
         LayoutMode: Top;
+        Visible: false;
 
-        Label {
-          Style: (FontSize: 16, TextColor: #93844c, RenderBold: true);
-          Text: "Zones";
+        // Layer add row
+        Group #LayerAddRow {
+          Anchor: (Left: 0, Right: 0, Height: 30);
+          LayoutMode: Left;
+
+          Label {
+            Anchor: (Width: 40, Height: 28);
+            Style: (FontSize: 11, TextColor: #6b7c8a, VerticalAlignment: Center);
+            Text: "Min Y";
+          }
+
+          $C.@TextField #LayerMinYField {
+            Anchor: (Width: 60, Height: 28);
+            Style: (FontSize: 13, TextColor: #ffffff(0.85));
+          }
+
+          Label {
+            Anchor: (Left: 8, Width: 40, Height: 28);
+            Style: (FontSize: 11, TextColor: #6b7c8a, VerticalAlignment: Center);
+            Text: "Max Y";
+          }
+
+          $C.@TextField #LayerMaxYField {
+            Anchor: (Width: 60, Height: 28);
+            Style: (FontSize: 13, TextColor: #ffffff(0.85));
+          }
+
+          TextButton #AddLayerButton {
+            Anchor: (Left: 8, Width: 90, Height: 28);
+            Text: "Add Layer";
+            Style: TextButtonStyle(
+              Default: (
+                Background: #f59e0b,
+                LabelStyle: (FontSize: 12, TextColor: #1a1a2a, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Hovered: (
+                Background: #fbbf24,
+                LabelStyle: (FontSize: 12, TextColor: #1a1a2a, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Pressed: (
+                Background: #d97706,
+                LabelStyle: (FontSize: 12, TextColor: #1a1a2a, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)
+              ),
+              Sounds: $C.@ButtonSounds,
+            );
+          }
         }
 
-        Group #ZoneList {
-          Anchor: (Top: 6, Width: 460, Height: 660);
+        // Layer info label
+        Label #LayerInfoLabel {
+          Anchor: (Top: 4);
+          Style: (FontSize: 11, TextColor: #6b7c8a);
+          Text: "Select a layer to view its blocks in the Blocks tab";
+        }
+
+        // Empty state
+        Label #LayersEmptyLabel {
+          Anchor: (Left: 0, Right: 0, Top: 16);
+          Style: (FontSize: 14, TextColor: #4b5563, HorizontalAlignment: Center);
+          Text: "No layers configured";
+        }
+
+        // Layer list
+        Group #LayerListContainer {
+          Anchor: (Left: 0, Right: 0, Top: 6);
+          FlexWeight: 1;
           LayoutMode: TopScrolling;
-          Padding: (Left: 6, Right: 6);
           ScrollbarStyle: $C.@DefaultScrollbarStyle;
 
-          Group #ZoneCards {
+          Group #LayerCards {
             LayoutMode: Top;
           }
         }

@@ -1,9 +1,16 @@
 Group {
-  Anchor: (Height: 28, Left: 0, Right: 0);
+  Anchor: (Height: 30, Left: 0, Right: 0, Top: 8);
   Padding: (Left: 8, Top: 6);
 
+  // Separator line
+  Group {
+    Anchor: (Left: 0, Right: 0, Top: 0, Height: 1);
+    Background: #ffffff(0.06);
+  }
+
   Label #CategoryName {
-    Style: (FontSize: 14, TextColor: #93844c, RenderBold: true);
+    Anchor: (Top: 6);
+    Style: (FontSize: 12, TextColor: #f59e0b, RenderBold: true, RenderUppercase: true, LetterSpacing: 1);
     Text: "Category";
   }
 }
