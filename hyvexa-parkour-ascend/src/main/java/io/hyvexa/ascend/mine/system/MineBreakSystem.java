@@ -119,6 +119,11 @@ public class MineBreakSystem extends EntityEventSystem<EntityStore, BreakBlockEv
             return;
         }
 
+        // Atomically claim this block — if a miner or another player already broke it, skip
+        if (!mineManager.tryClaimBlock(zone.getId(), bx, by, bz)) {
+            return;
+        }
+
         // For non-OP: manually remove the block (set to air) — we can't rely on setCancelled(false)
         // because NoBreakSystem may run after us and re-cancel the event.
         // For OP: NoBreakSystem already allows the break, no manual removal needed.
@@ -148,8 +153,6 @@ public class MineBreakSystem extends EntityEventSystem<EntityStore, BreakBlockEv
             mineHudManager.showMineToast(playerId, blockTypeName, blocksGained);
         }
 
-        // Track broken block in zone
-        mineManager.markBlockBroken(zone.getId(), bx, by, bz);
     }
 
     private void sendBagFullMessage(UUID playerId, Player player) {

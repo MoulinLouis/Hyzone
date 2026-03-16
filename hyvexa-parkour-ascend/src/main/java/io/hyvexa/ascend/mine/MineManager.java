@@ -46,6 +46,66 @@ public class MineManager {
             .add(encodePosition(x, y, z));
     }
 
+    /**
+     * Atomically claims a block position as broken. Returns true if this caller is the first
+     * to break it (and should receive the reward). Returns false if already broken.
+     */
+    public boolean tryClaimBlock(String zoneId, int x, int y, int z) {
+        return brokenBlocks.computeIfAbsent(zoneId, k -> ConcurrentHashMap.newKeySet())
+            .add(encodePosition(x, y, z));
+    }
+
+    /**
+     * Rolls back a claim (e.g. when bag is full after claiming but before breaking).
+     */
+    public void unclaimBlock(String zoneId, int x, int y, int z) {
+        Set<Long> broken = brokenBlocks.get(zoneId);
+        if (broken != null) {
+            broken.remove(encodePosition(x, y, z));
+        }
+    }
+
+    /**
+     * Returns a random non-broken block position in the zone as int[3] {x, y, z},
+     * or null if all blocks are broken.
+     */
+    public int[] pickRandomUnbrokenBlock(MineZone zone) {
+        if (zone == null) return null;
+
+        Set<Long> broken = brokenBlocks.get(zone.getId());
+        int totalBlocks = zone.getTotalBlocks();
+        int brokenCount = broken != null ? broken.size() : 0;
+
+        if (brokenCount >= totalBlocks) return null;
+
+        ThreadLocalRandom random = ThreadLocalRandom.current();
+        for (int attempt = 0; attempt < 20; attempt++) {
+            int x = random.nextInt(zone.getMinX(), zone.getMaxX() + 1);
+            int y = random.nextInt(zone.getMinY(), zone.getMaxY() + 1);
+            int z = random.nextInt(zone.getMinZ(), zone.getMaxZ() + 1);
+            if (!isBlockBroken(zone.getId(), x, y, z)) {
+                return new int[]{x, y, z};
+            }
+        }
+
+        // Fallback: linear scan from a random start
+        int rangeX = zone.getMaxX() - zone.getMinX() + 1;
+        int rangeY = zone.getMaxY() - zone.getMinY() + 1;
+        int rangeZ = zone.getMaxZ() - zone.getMinZ() + 1;
+        int startIdx = random.nextInt(totalBlocks);
+        for (int i = 0; i < totalBlocks; i++) {
+            int idx = (startIdx + i) % totalBlocks;
+            int x = zone.getMinX() + (idx / (rangeY * rangeZ));
+            int y = zone.getMinY() + ((idx / rangeZ) % rangeY);
+            int z = zone.getMinZ() + (idx % rangeZ);
+            if (!isBlockBroken(zone.getId(), x, y, z)) {
+                return new int[]{x, y, z};
+            }
+        }
+
+        return null;
+    }
+
     public boolean isBlockBroken(String zoneId, int x, int y, int z) {
         Set<Long> broken = brokenBlocks.get(zoneId);
         return broken != null && broken.contains(encodePosition(x, y, z));
