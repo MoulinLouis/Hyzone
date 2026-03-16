@@ -4,15 +4,20 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
+import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.HytaleServer;
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.entity.Frozen;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.Invulnerable;
+import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
+import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.NPCPlugin;
+import io.hyvexa.ascend.mine.MineManager;
 import io.hyvexa.ascend.mine.data.Mine;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
@@ -49,6 +54,7 @@ public class MineRobotManager {
 
     private final MineConfigStore configStore;
     private final MinePlayerStore playerStore;
+    private final MineManager mineManager;
     private final OrphanedEntityCleanup orphanCleanup;
 
     // ownerId -> mineId -> state
@@ -57,9 +63,10 @@ public class MineRobotManager {
     private ScheduledFuture<?> tickTask;
     private volatile NPCPlugin npcPlugin;
 
-    public MineRobotManager(MineConfigStore configStore, MinePlayerStore playerStore) {
+    public MineRobotManager(MineConfigStore configStore, MinePlayerStore playerStore, MineManager mineManager) {
         this.configStore = configStore;
         this.playerStore = playerStore;
+        this.mineManager = mineManager;
         this.orphanCleanup = new OrphanedEntityCleanup(LOGGER,
                 Path.of("mods", "Parkour", MINER_UUIDS_FILE));
     }
@@ -361,30 +368,233 @@ public class MineRobotManager {
     }
 
     private void tickMiner(MinerRobotState state, long now) {
-        long interval = state.getProductionIntervalMs();
-        if (now - state.getLastProductionTick() < interval) return;
+        switch (state.getPhase()) {
+            case IDLE -> tickIdle(state, now);
+            case MOVING -> tickMoving(state, now);
+            case MINING -> tickMining(state, now);
+            case STOPPED -> tickStopped(state, now);
+        }
+    }
 
-        state.setLastProductionTick(now);
-
-        Mine mine = configStore.getMine(state.getMineId());
-        if (mine == null) return;
-
-        List<MineZone> zones = mine.getZones();
-        if (zones.isEmpty()) return;
-
-        Map<String, Double> blockTable = zones.get(0).getBlockTable();
-        if (blockTable.isEmpty()) return;
-
-        String blockType = pickRandomBlock(blockTable);
-        if (blockType == null) return;
+    private void tickIdle(MinerRobotState state, long now) {
+        long cycleStart = state.getCycleStartTime();
+        if (now - cycleStart < state.getProductionIntervalMs()) {
+            return;
+        }
 
         MinePlayerProgress progress = playerStore.getPlayer(state.getOwnerId());
-        if (progress == null) return;
+        if (progress == null || progress.isInventoryFull()) {
+            state.setPhase(MinerRobotState.MinerPhase.STOPPED);
+            state.setPhaseStartTime(now);
+            return;
+        }
 
-        boolean added = progress.addToInventory(blockType, 1);
-        if (!added) return; // Bag full, skip
+        Mine mine = configStore.getMine(state.getMineId());
+        if (mine == null || mine.getZones().isEmpty()) return;
 
-        playerStore.markDirty(state.getOwnerId());
+        MineZone zone = mine.getZones().get(0);
+
+        if (mineManager.isZoneInCooldown(zone.getId())) {
+            return;
+        }
+
+        int[] target = mineManager.pickRandomUnbrokenBlock(zone);
+        if (target == null) {
+            state.setPhase(MinerRobotState.MinerPhase.STOPPED);
+            state.setPhaseStartTime(now);
+            return;
+        }
+
+        state.setCycleStartTime(now);
+        state.setTargetBlock(target[0], target[1], target[2]);
+        state.setPhase(MinerRobotState.MinerPhase.MOVING);
+        state.setPhaseStartTime(now);
+    }
+
+    private void tickMoving(MinerRobotState state, long now) {
+        if (!state.hasTarget() || !state.isPositionInitialized()) {
+            state.setPhase(MinerRobotState.MinerPhase.IDLE);
+            return;
+        }
+
+        long elapsed = now - state.getPhaseStartTime();
+        long moveDuration = state.getMoveDurationMs();
+
+        double targetX = state.getTargetBlockX() + 0.5;
+        double targetY = state.getTargetBlockY();
+        double targetZ = state.getTargetBlockZ() + 0.5;
+
+        if (elapsed >= moveDuration) {
+            state.setCurrentPosition(targetX, targetY, targetZ);
+            state.setPhase(MinerRobotState.MinerPhase.MINING);
+            state.setPhaseStartTime(now);
+            teleportMiner(state, targetX, targetY, targetZ, true);
+            return;
+        }
+
+        double t = (double) elapsed / moveDuration;
+        t = t * t * (3.0 - 2.0 * t);
+
+        double startX = state.getCurrentX();
+        double startY = state.getCurrentY();
+        double startZ = state.getCurrentZ();
+
+        double interpX = startX + (targetX - startX) * t;
+        double interpY = startY + (targetY - startY) * t;
+        double interpZ = startZ + (targetZ - startZ) * t;
+
+        teleportMiner(state, interpX, interpY, interpZ, true);
+    }
+
+    private void tickMining(MinerRobotState state, long now) {
+        long elapsed = now - state.getPhaseStartTime();
+        if (elapsed < state.getMineDurationMs()) {
+            return;
+        }
+
+        Mine mine = configStore.getMine(state.getMineId());
+        if (mine == null || mine.getZones().isEmpty()) {
+            state.setPhase(MinerRobotState.MinerPhase.IDLE);
+            return;
+        }
+
+        MineZone zone = mine.getZones().get(0);
+
+        if (!state.hasTarget()
+                || !mineManager.tryClaimBlock(zone.getId(),
+                    state.getTargetBlockX(), state.getTargetBlockY(), state.getTargetBlockZ())) {
+            state.setCurrentPosition(
+                state.getTargetBlockX() + 0.5,
+                state.getTargetBlockY(),
+                state.getTargetBlockZ() + 0.5
+            );
+            state.clearTarget();
+            state.setPhase(MinerRobotState.MinerPhase.IDLE);
+            return;
+        }
+
+        readBlockTypeAndReward(state, zone);
+
+        state.setCurrentPosition(
+            state.getTargetBlockX() + 0.5,
+            state.getTargetBlockY(),
+            state.getTargetBlockZ() + 0.5
+        );
+        state.clearTarget();
+
+        state.setPhase(MinerRobotState.MinerPhase.IDLE);
+    }
+
+    private static final long STOPPED_RECHECK_INTERVAL_MS = 2000L;
+
+    private void tickStopped(MinerRobotState state, long now) {
+        if (now - state.getPhaseStartTime() < STOPPED_RECHECK_INTERVAL_MS) {
+            return;
+        }
+        state.setPhaseStartTime(now);
+
+        MinePlayerProgress progress = playerStore.getPlayer(state.getOwnerId());
+        if (progress != null && !progress.isInventoryFull()) {
+            Mine mine = configStore.getMine(state.getMineId());
+            if (mine != null && !mine.getZones().isEmpty()) {
+                MineZone zone = mine.getZones().get(0);
+                if (!mineManager.isZoneInCooldown(zone.getId())
+                        && mineManager.pickRandomUnbrokenBlock(zone) != null) {
+                    state.setPhase(MinerRobotState.MinerPhase.IDLE);
+                }
+            }
+        }
+    }
+
+    private void teleportMiner(MinerRobotState state, double x, double y, double z, boolean faceTarget) {
+        UUID entityUuid = state.getEntityUuid();
+        if (entityUuid == null) return;
+
+        String worldName = state.getWorldName();
+        if (worldName == null) return;
+
+        World world = Universe.get().getWorld(worldName);
+        if (world == null) return;
+
+        float yaw = 0f;
+        if (faceTarget && state.hasTarget()) {
+            double dx = (state.getTargetBlockX() + 0.5) - x;
+            double dz = (state.getTargetBlockZ() + 0.5) - z;
+            if (dx * dx + dz * dz > 0.001) {
+                yaw = (float) Math.toDegrees(Math.atan2(dx, dz));
+            }
+        }
+
+        final float finalYaw = yaw;
+        world.execute(() -> {
+            try {
+                Ref<EntityStore> entityRef = world.getEntityStore().getRefFromUUID(entityUuid);
+                if (entityRef == null || !entityRef.isValid()) return;
+                Store<EntityStore> store = world.getEntityStore().getStore();
+                if (store == null) return;
+                store.addComponent(entityRef, Teleport.getComponentType(),
+                    new Teleport(world, new Vector3d(x, y, z), new Vector3f(0, finalYaw, 0)));
+            } catch (Exception e) {
+                LOGGER.atWarning().log("Failed to teleport miner: " + e.getMessage());
+            }
+        });
+    }
+
+    private void readBlockTypeAndReward(MinerRobotState state, MineZone zone) {
+        String worldName = state.getWorldName();
+        if (worldName == null) return;
+
+        World world = Universe.get().getWorld(worldName);
+        if (world == null) return;
+
+        int bx = state.getTargetBlockX();
+        int by = state.getTargetBlockY();
+        int bz = state.getTargetBlockZ();
+        UUID ownerId = state.getOwnerId();
+
+        world.execute(() -> {
+            try {
+                MinePlayerProgress progress = playerStore.getPlayer(ownerId);
+                if (progress == null || progress.isInventoryFull()) {
+                    mineManager.unclaimBlock(zone.getId(), bx, by, bz);
+                    return;
+                }
+
+                String blockType = null;
+                long chunkIndex = ChunkUtil.indexChunkFromBlock(bx, bz);
+                var chunk = world.getChunkIfInMemory(chunkIndex);
+                if (chunk == null) chunk = world.loadChunkIfInMemory(chunkIndex);
+
+                if (chunk != null) {
+                    int blockId = chunk.getBlock(bx, by, bz);
+                    if (blockId > 0) {
+                        blockType = BlockType.getAssetMap().getName(blockId);
+                    }
+                }
+
+                if (blockType == null) {
+                    blockType = pickRandomBlock(zone.getBlockTable());
+                }
+                if (blockType == null) {
+                    mineManager.unclaimBlock(zone.getId(), bx, by, bz);
+                    return;
+                }
+
+                boolean added = progress.addToInventory(blockType, 1);
+                if (!added) {
+                    mineManager.unclaimBlock(zone.getId(), bx, by, bz);
+                    return;
+                }
+
+                playerStore.markDirty(ownerId);
+
+                if (chunk != null) {
+                    chunk.setBlock(bx, by, bz, 0);
+                }
+            } catch (Exception e) {
+                LOGGER.atWarning().log("Miner readBlockTypeAndReward error: " + e.getMessage());
+            }
+        });
     }
 
     // ── Helpers ────────────────────────────────────────────────────────
