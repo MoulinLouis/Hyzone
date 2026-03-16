@@ -158,6 +158,9 @@ public class MineRobotManager {
             state.setStars(minerProg.stars());
         }
         state.setLastProductionTick(System.currentTimeMillis());
+        state.setCurrentPosition(cx, cy, cz);
+        state.setWorldName(world.getName());
+        state.setCycleStartTime(System.currentTimeMillis());
 
         Map<String, MinerRobotState> playerMiners = miners.computeIfAbsent(ownerId,
                 k -> new ConcurrentHashMap<>());
@@ -280,6 +283,9 @@ public class MineRobotManager {
         double cy = zone.getMinY();
         double cz = (zone.getMinZ() + zone.getMaxZ()) / 2.0;
         String entityType = getMinerEntityType(stars);
+        state.setCurrentPosition(cx, cy, cz);
+        state.setWorldName(world.getName());
+        state.resetPhaseForEvolution();
         world.execute(() -> spawnNpcOnWorldThread(state, entityType, world, cx, cy, cz));
     }
 
