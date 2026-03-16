@@ -115,7 +115,7 @@ public class MineGateChecker {
         markCooldown(playerId);
 
         if (player != null) {
-            giveMineItems(player);
+            giveMineItems(player, playerId);
         }
         swapToMineHud(playerId, playerRef, player);
         if (minePlayerStore != null) {
@@ -197,14 +197,21 @@ public class MineGateChecker {
         }
     }
 
-    public void giveMineItems(Player player) {
+    public void giveMineItems(Player player, UUID playerId) {
         if (player.getWorld() == null) return;
         InventoryUtils.clearAllContainers(player);
         Inventory inventory = player.getInventory();
         if (inventory == null) return;
         ItemContainer hotbar = inventory.getHotbar();
         if (hotbar == null || hotbar.getCapacity() <= 0) return;
-        hotbar.setItemStackForSlot((short) 0, new ItemStack(AscendConstants.ITEM_MINE_PICKAXE, 1), false);
+
+        String pickaxeItemId = AscendConstants.ITEM_MINE_PICKAXE;
+        if (minePlayerStore != null) {
+            MinePlayerProgress progress = minePlayerStore.getOrCreatePlayer(playerId);
+            pickaxeItemId = progress.getPickaxeTierEnum().getItemId();
+        }
+
+        hotbar.setItemStackForSlot((short) 0, new ItemStack(pickaxeItemId, 1), false);
         hotbar.setItemStackForSlot((short) 1, new ItemStack(AscendConstants.ITEM_MINE_CHEST, 1), false);
         InventoryUtils.giveGlobalItems(hotbar);
     }

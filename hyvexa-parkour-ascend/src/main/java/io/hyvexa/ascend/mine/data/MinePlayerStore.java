@@ -87,7 +87,7 @@ public class MinePlayerStore {
             // Load player crystals + upgrades
             MinePlayerProgress progress = null;
             try (PreparedStatement ps = conn.prepareStatement(
-                    "SELECT crystals, mining_speed_level, bag_capacity_level, multi_break_level, in_mine FROM mine_players WHERE uuid = ?")) {
+                    "SELECT crystals, mining_speed_level, bag_capacity_level, multi_break_level, in_mine, pickaxe_tier FROM mine_players WHERE uuid = ?")) {
                 ps.setString(1, playerId.toString());
                 try (ResultSet rs = ps.executeQuery()) {
                     if (rs.next()) {
@@ -97,6 +97,7 @@ public class MinePlayerStore {
                         progress.setUpgradeLevel(MineUpgradeType.BAG_CAPACITY, rs.getInt("bag_capacity_level"));
                         progress.setUpgradeLevel(MineUpgradeType.MULTI_BREAK, rs.getInt("multi_break_level"));
                         progress.setInMine(rs.getBoolean("in_mine"));
+                        progress.setPickaxeTier(rs.getInt("pickaxe_tier"));
                     }
                 }
             }
@@ -194,13 +195,14 @@ public class MinePlayerStore {
                 // Save crystals + upgrades
                 try (PreparedStatement ps = conn.prepareStatement("""
                         INSERT INTO mine_players (uuid, crystals,
-                            mining_speed_level, bag_capacity_level, multi_break_level, in_mine)
-                        VALUES (?, ?, ?, ?, ?, ?)
+                            mining_speed_level, bag_capacity_level, multi_break_level, in_mine, pickaxe_tier)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
                         ON DUPLICATE KEY UPDATE crystals = VALUES(crystals),
                                                 mining_speed_level = VALUES(mining_speed_level),
                                                 bag_capacity_level = VALUES(bag_capacity_level),
                                                 multi_break_level = VALUES(multi_break_level),
-                                                in_mine = VALUES(in_mine)
+                                                in_mine = VALUES(in_mine),
+                                                pickaxe_tier = VALUES(pickaxe_tier)
                         """)) {
                     ps.setString(1, playerId.toString());
                     ps.setLong(2, snapshot.crystals());
@@ -208,6 +210,7 @@ public class MinePlayerStore {
                     ps.setInt(4, snapshot.upgradeLevels().getOrDefault(MineUpgradeType.BAG_CAPACITY, 0));
                     ps.setInt(5, snapshot.upgradeLevels().getOrDefault(MineUpgradeType.MULTI_BREAK, 0));
                     ps.setBoolean(6, snapshot.inMine());
+                    ps.setInt(7, snapshot.pickaxeTier());
                     ps.executeUpdate();
                 }
 

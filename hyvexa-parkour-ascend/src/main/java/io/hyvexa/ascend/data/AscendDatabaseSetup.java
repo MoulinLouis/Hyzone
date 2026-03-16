@@ -285,6 +285,7 @@ public final class AscendDatabaseSetup {
 
             ensureMineUpgradeColumns(conn);
             ensureMineInMineColumn(conn);
+            ensurePickaxeTierColumn(conn);
             migrateCrystalsToBigint(conn);
 
             // Mine block sell prices
@@ -1242,6 +1243,17 @@ public final class AscendDatabaseSetup {
                 stmt.executeUpdate("ALTER TABLE mine_players ADD COLUMN in_mine TINYINT(1) NOT NULL DEFAULT 0");
             } catch (SQLException e) {
                 LOGGER.atSevere().log("Failed to add in_mine column to mine_players: %s", e.getMessage());
+            }
+        }
+    }
+
+    private static void ensurePickaxeTierColumn(Connection conn) {
+        if (conn == null) return;
+        if (!columnExists(conn, "mine_players", "pickaxe_tier")) {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("ALTER TABLE mine_players ADD COLUMN pickaxe_tier INT NOT NULL DEFAULT 0");
+            } catch (SQLException e) {
+                LOGGER.atSevere().log("Failed to add pickaxe_tier column to mine_players: %s", e.getMessage());
             }
         }
     }

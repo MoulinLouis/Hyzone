@@ -30,6 +30,11 @@ import io.hyvexa.common.util.PermissionUtils;
 
 import java.util.List;
 
+import io.hyvexa.ascend.mine.data.PickaxeTier;
+import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.ItemStack;
+import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
+
 /**
  * Tabbed mine page opened by pickaxe right-click.
  * Tab "Miner": per-mine miner cards (buy, upgrade speed, evolve).
@@ -45,6 +50,7 @@ public class MinePage extends BaseAscendPage {
     private static final String BUTTON_MINER_SPEED_PREFIX = "MinerSpeed_";
     private static final String BUTTON_MINER_EVOLVE_PREFIX = "MinerEvolve_";
     private static final String BUTTON_RESET = "ResetAll";
+    private static final String BUTTON_BUY_PICKAXE = "BuyPickaxe";
 
     private static final int MINER_MAX_SPEED_PER_STAR = 25;
     private static final int MINER_MAX_STARS = 5;
@@ -205,6 +211,10 @@ public class MinePage extends BaseAscendPage {
     }
 
     private void populateUpgradeTab(UICommandBuilder cmd, UIEventBuilder evt) {
+        // --- Pickaxe Tier Card ---
+        populatePickaxeCard(cmd, evt);
+
+        // --- Existing upgrade entries ---
         MineUpgradeType[] types = MineUpgradeType.values();
         for (int i = 0; i < types.length; i++) {
             MineUpgradeType type = types[i];
@@ -213,7 +223,7 @@ public class MinePage extends BaseAscendPage {
             boolean maxed = level >= maxLevel;
 
             cmd.append("#UpgradeItems", "Pages/Ascend_MinePageUpgradeEntry.ui");
-            String sel = "#UpgradeItems[" + i + "]";
+            String sel = "#UpgradeItems[" + (i + 1) + "]";  // +1 because pickaxe card is at index 0
 
             // Accent color + button zone color
             String colorName = UPGRADE_ACCENT_COLORS[i];
@@ -259,6 +269,66 @@ public class MinePage extends BaseAscendPage {
                 }
             }
         }
+    }
+
+    private void populatePickaxeCard(UICommandBuilder cmd, UIEventBuilder evt) {
+        cmd.append("#UpgradeItems", "Pages/Ascend_MinePagePickaxeCard.ui");
+        String sel = "#UpgradeItems[0]";
+
+        PickaxeTier current = mineProgress.getPickaxeTierEnum();
+        PickaxeTier next = current.next();
+
+        cmd.set(sel + " #TierName.Text", current.getDisplayName());
+        cmd.set(sel + " #SpeedText.Text", "Speed: " + String.format("%.1f", current.getSpeedMultiplier()) + "x");
+        cmd.set(sel + " #TierLabel.Text", "Tier " + current.getTier());
+
+        if (next == null) {
+            // Maxed
+            cmd.set(sel + " #RequirementText.Text", "");
+            cmd.set(sel + " #ActionText.Text", "Maxed!");
+            cmd.set(sel + " #ActionPrice.Text", "");
+            evt.addEventBinding(CustomUIEventBindingType.Activating,
+                sel + " #PickaxeBuyButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, "Noop"), false);
+        } else {
+            cmd.set(sel + " #RequirementText.Text", "Next: " + next.getDisplayName());
+            cmd.set(sel + " #ActionText.Text", "Upgrade");
+            cmd.set(sel + " #ActionPrice.Text", next.getUnlockCost() + " cryst");
+
+            boolean meetsReq = checkPickaxeRequirement(next);
+            boolean canAfford = mineProgress.getCrystals() >= next.getUnlockCost();
+            boolean canBuy = meetsReq && canAfford;
+
+            if (!canBuy) {
+                cmd.set(sel + " #ButtonDisabledOverlay.Visible", true);
+                if (!meetsReq) {
+                    cmd.set(sel + " #RequirementText.Text", "Requires: " + next.getRequirementDescription());
+                    cmd.set(sel + " #RequirementText.Style.TextColor", "#ef4444");
+                }
+            }
+
+            evt.addEventBinding(CustomUIEventBindingType.Activating,
+                sel + " #PickaxeBuyButton",
+                EventData.of(ButtonEventData.KEY_BUTTON, canBuy ? BUTTON_BUY_PICKAXE : "Noop"), false);
+        }
+    }
+
+    private boolean checkPickaxeRequirement(PickaxeTier tier) {
+        int miningSpeedLevel = mineProgress.getUpgradeLevel(MineUpgradeType.MINING_SPEED);
+
+        MineConfigStore configStore = ParkourAscendPlugin.getInstance().getMineConfigStore();
+        if (configStore == null) return false;
+        List<Mine> mines = configStore.listMinesSorted();
+        int totalMineCount = mines.size();
+
+        List<String> unlockedMineIds = new java.util.ArrayList<>();
+        for (Mine mine : mines) {
+            if (mineProgress.getMineSnapshot(mine.getId()).unlocked()) {
+                unlockedMineIds.add(mine.getId());
+            }
+        }
+
+        return tier.meetsRequirement(miningSpeedLevel, unlockedMineIds, totalMineCount);
     }
 
     // ==================== Tab Switching ====================
@@ -318,7 +388,9 @@ public class MinePage extends BaseAscendPage {
     }
 
     private void handleActionButton(Ref<EntityStore> ref, Store<EntityStore> store, String button) {
-        if (button.startsWith(BUTTON_BUY_MINER_PREFIX)) {
+        if (button.equals(BUTTON_BUY_PICKAXE)) {
+            handleBuyPickaxe(ref, store);
+        } else if (button.startsWith(BUTTON_BUY_MINER_PREFIX)) {
             handleBuyMiner(ref, store, button.substring(BUTTON_BUY_MINER_PREFIX.length()));
         } else if (button.startsWith(BUTTON_MINER_SPEED_PREFIX)) {
             handleMinerSpeedUpgrade(ref, store, button.substring(BUTTON_MINER_SPEED_PREFIX.length()));
@@ -327,6 +399,49 @@ public class MinePage extends BaseAscendPage {
         } else if (button.startsWith(BUTTON_BUY_UPGRADE_PREFIX)) {
             handleBuyUpgrade(ref, store, button.substring(BUTTON_BUY_UPGRADE_PREFIX.length()));
         }
+    }
+
+    private void handleBuyPickaxe(Ref<EntityStore> ref, Store<EntityStore> store) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null) return;
+
+        PickaxeTier next = mineProgress.getPickaxeTierEnum().next();
+        if (next == null) {
+            player.sendMessage(Message.raw("Already at max pickaxe tier!"));
+            return;
+        }
+
+        if (!checkPickaxeRequirement(next)) {
+            player.sendMessage(Message.raw("Requirement not met: " + next.getRequirementDescription()));
+            return;
+        }
+
+        MinePlayerProgress.PickaxeUpgradeResult result = mineProgress.purchasePickaxeTier();
+        if (result == MinePlayerProgress.PickaxeUpgradeResult.ALREADY_MAXED) {
+            player.sendMessage(Message.raw("Already at max pickaxe tier!"));
+            return;
+        }
+        if (result == MinePlayerProgress.PickaxeUpgradeResult.INSUFFICIENT_CRYSTALS) {
+            player.sendMessage(Message.raw("Not enough crystals!"));
+            return;
+        }
+
+        markDirty();
+
+        // Swap held pickaxe to new tier
+        swapPickaxeItem(player);
+
+        player.sendMessage(Message.raw("Upgraded to " + next.getDisplayName() + "!"));
+        sendRefresh(ref, store);
+    }
+
+    private void swapPickaxeItem(Player player) {
+        Inventory inventory = player.getInventory();
+        if (inventory == null) return;
+        ItemContainer hotbar = inventory.getHotbar();
+        if (hotbar == null) return;
+        String newItemId = mineProgress.getPickaxeTierEnum().getItemId();
+        hotbar.setItemStackForSlot((short) 0, new ItemStack(newItemId, 1), false);
     }
 
     // ==================== Miner Handlers ====================
@@ -464,6 +579,8 @@ public class MinePage extends BaseAscendPage {
         for (MineUpgradeType type : MineUpgradeType.values()) {
             mineProgress.setUpgradeLevel(type, 0);
         }
+        mineProgress.setPickaxeTier(0);
+        swapPickaxeItem(player);
 
         for (var entry : mineProgress.getMinerStates().entrySet()) {
             String mineId = entry.getKey();

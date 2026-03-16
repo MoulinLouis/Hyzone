@@ -406,7 +406,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     }
 
                     if (restoreToMine) {
-                        mineGateChecker.giveMineItems(player);
+                        mineGateChecker.giveMineItems(player, playerId);
                         hudManager.removePlayer(playerId);
                         MineHudManager mhm = getMineHudManager();
                         if (mhm != null) {

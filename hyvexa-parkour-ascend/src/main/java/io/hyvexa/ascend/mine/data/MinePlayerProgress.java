@@ -14,6 +14,7 @@ public class MinePlayerProgress {
     private final Map<String, Integer> inventory = new HashMap<>(); // blockTypeId -> count
     private long crystals;
     private volatile boolean inMine;
+    private volatile int pickaxeTier;
     private final Map<MineUpgradeType, Integer> upgradeLevels = new ConcurrentHashMap<>();
     private final Map<String, MineProgress> mineStates = new ConcurrentHashMap<>();
     private final Map<String, MinerProgress> minerStates = new ConcurrentHashMap<>();
@@ -128,6 +129,11 @@ public class MinePlayerProgress {
     public boolean isInMine() { return inMine; }
     public void setInMine(boolean inMine) { this.inMine = inMine; }
 
+    public int getPickaxeTier() { return pickaxeTier; }
+    public void setPickaxeTier(int tier) { this.pickaxeTier = tier; }
+
+    public PickaxeTier getPickaxeTierEnum() { return PickaxeTier.fromTier(pickaxeTier); }
+
     // --- Upgrades ---
 
     public synchronized int getUpgradeLevel(MineUpgradeType type) {
@@ -146,6 +152,22 @@ public class MinePlayerProgress {
         if (!trySpendCrystals(cost)) return false;
         upgradeLevels.put(type, currentLevel + 1);
         return true;
+    }
+
+    public synchronized PickaxeUpgradeResult purchasePickaxeTier() {
+        PickaxeTier current = getPickaxeTierEnum();
+        PickaxeTier next = current.next();
+        if (next == null) return PickaxeUpgradeResult.ALREADY_MAXED;
+        if (!trySpendCrystals(next.getUnlockCost())) return PickaxeUpgradeResult.INSUFFICIENT_CRYSTALS;
+        pickaxeTier = next.getTier();
+        return PickaxeUpgradeResult.SUCCESS;
+    }
+
+    public enum PickaxeUpgradeResult {
+        SUCCESS,
+        ALREADY_MAXED,
+        INSUFFICIENT_CRYSTALS,
+        REQUIREMENT_NOT_MET
     }
 
     public synchronized int getBagCapacity() {
@@ -305,7 +327,8 @@ public class MinePlayerProgress {
             new LinkedHashMap<>(inventory),
             getMineStates(),
             getMinerStates(),
-            inMine
+            inMine,
+            pickaxeTier
         );
     }
 
@@ -339,5 +362,6 @@ public class MinePlayerProgress {
                                      Map<String, Integer> inventory,
                                      Map<String, MineProgressSnapshot> mineStates,
                                      Map<String, MinerProgressSnapshot> minerStates,
-                                     boolean inMine) {}
+                                     boolean inMine,
+                                     int pickaxeTier) {}
 }
