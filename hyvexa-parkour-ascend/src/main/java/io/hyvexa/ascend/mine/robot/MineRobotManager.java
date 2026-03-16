@@ -733,7 +733,7 @@ public class MineRobotManager {
             return;
         }
 
-        String blockType = pickRandomBlock(zone.getBlockTable());
+        String blockType = pickRandomBlock(zone.getBlockTableForY(by));
         if (blockType == null) {
             mineManager.unclaimBlock(zone.getId(), bx, by, bz);
             return;

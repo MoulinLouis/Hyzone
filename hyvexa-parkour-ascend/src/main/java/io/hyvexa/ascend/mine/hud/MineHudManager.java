@@ -10,6 +10,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.mine.MineBlockDisplay;
 import io.hyvexa.ascend.mine.MineManager;
+import io.hyvexa.ascend.mine.data.Mine;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
@@ -146,6 +147,29 @@ public class MineHudManager {
 
     private void updateZoneCooldown(MineHudState state) {
         MineZone currentZone = findCurrentZone(state.playerId);
+
+        // Update mine name
+        String mineName = "";
+        if (currentZone != null) {
+            Mine mine = configStore.getMine(currentZone.getMineId());
+            if (mine != null) {
+                mineName = mine.getName();
+            }
+        }
+        boolean mineNameChanged = !mineName.equals(state.lastMineName == null ? "" : state.lastMineName);
+        if (mineNameChanged) {
+            state.lastMineName = mineName;
+            UICommandBuilder nameBuilder = new UICommandBuilder();
+            boolean showName = !mineName.isEmpty();
+            nameBuilder.set("#MineNameLabel.Visible", showName);
+            nameBuilder.set("#MineNameSep.Visible", showName);
+            if (showName) {
+                nameBuilder.set("#MineNameLabel.Text", mineName);
+            }
+            state.hud.update(false, nameBuilder);
+        }
+
+        // Existing cooldown logic
         long remainingMs = 0;
         if (currentZone != null && mineManager.isZoneInCooldown(currentZone.getId())) {
             remainingMs = mineManager.getZoneCooldownRemainingMs(currentZone.getId());
@@ -252,6 +276,7 @@ public class MineHudManager {
         long lastCrystals = -1;
         String lastInventoryKey;
         String lastCooldownKey;
+        String lastMineName;
 
         MineHudState(UUID playerId, MineHud hud) {
             this.playerId = playerId;
@@ -262,6 +287,7 @@ public class MineHudManager {
             lastCrystals = -1;
             lastInventoryKey = null;
             lastCooldownKey = null;
+            lastMineName = null;
             toastManager.clear();
         }
     }

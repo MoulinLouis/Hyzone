@@ -77,6 +77,18 @@ $C.@PageOverlay {
           Text: "Inventory";
         }
 
+        Label #MineNameLabel {
+          Style: (FontSize: 14, TextColor: #f59e0b, RenderBold: true);
+          Text: "";
+          Visible: false;
+        }
+
+        Group #MineNameSep {
+          Anchor: (Left: 0, Width: 30, Height: 1, Top: 4);
+          Background: #f59e0b(0.3);
+          Visible: false;
+        }
+
         Group #BagSep {
           Anchor: (Left: 0, Width: 30, Height: 2, Top: 6);
           Background: #f59e0b;

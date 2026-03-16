@@ -91,6 +91,11 @@ Mine subsystem:
 - `mine_block_prices` -- sell prices per block type
 - `mine_player_mines` -- per-player mine unlock state
 - `mine_player_miners` -- automated miner state
+- `mine_zone_layers` -- depth layers per zone (Y-range + block distribution)
+
+### Mine Layers
+
+Zones can have depth layers defined by Y-ranges. Each layer has its own block probability table. When generating blocks or rewarding miners, the system picks the block table from the matching layer based on the block's Y coordinate. Zones without layers use the existing zone-level block table (backward compatible). Layers are non-overlapping and kept in ascending Y order. Admins configure layers via the zone admin page.
 
 ## Key Files
 

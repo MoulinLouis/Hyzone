@@ -1,7 +1,9 @@
 package io.hyvexa.ascend.mine.data;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class MineZone {
     private final String id;
@@ -11,6 +13,7 @@ public class MineZone {
     private final Map<String, Double> blockTable = new ConcurrentHashMap<>();
     private double regenThreshold = 0.8;
     private int regenCooldownSeconds = 45;
+    private final List<MineZoneLayer> layers = new CopyOnWriteArrayList<>();
 
     public MineZone(String id, String mineId, int x1, int y1, int z1, int x2, int y2, int z2) {
         this.id = id;
@@ -42,8 +45,22 @@ public class MineZone {
     public int getMaxY() { return maxY; }
     public int getMaxZ() { return maxZ; }
     public Map<String, Double> getBlockTable() { return blockTable; }
+    public List<MineZoneLayer> getLayers() { return layers; }
     public double getRegenThreshold() { return regenThreshold; }
     public int getRegenCooldownSeconds() { return regenCooldownSeconds; }
+
+    /**
+     * Returns the block table for the given Y coordinate.
+     * If a layer covers this Y, returns its table. Otherwise returns the zone-level fallback.
+     */
+    public Map<String, Double> getBlockTableForY(int y) {
+        for (MineZoneLayer layer : layers) {
+            if (layer.containsY(y)) {
+                return layer.getBlockTable();
+            }
+        }
+        return blockTable;
+    }
 
     public void setMinX(int minX) { this.minX = minX; }
     public void setMinY(int minY) { this.minY = minY; }

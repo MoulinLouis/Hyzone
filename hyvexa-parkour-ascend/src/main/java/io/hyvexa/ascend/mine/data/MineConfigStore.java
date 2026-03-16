@@ -11,6 +11,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.Comparator;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -59,6 +60,7 @@ public class MineConfigStore {
                 }
                 loadMines(conn);
                 loadZones(conn);
+                loadLayers(conn);
                 loadGate(conn);
                 loadBlockPrices(conn);
             } catch (SQLException e) {
@@ -133,6 +135,43 @@ public class MineConfigStore {
                     zone.setRegenThreshold(rs.getDouble("regen_threshold"));
                     zone.setRegenCooldownSeconds(rs.getInt("regen_cooldown_seconds"));
                     mine.getZones().add(zone);
+                }
+            }
+        }
+    }
+
+    private void loadLayers(Connection conn) throws SQLException {
+        String sql = "SELECT id, zone_id, min_y, max_y, block_table_json " +
+            "FROM mine_zone_layers ORDER BY zone_id, min_y, max_y, id";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            DatabaseManager.applyQueryTimeout(stmt);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    String zoneId = rs.getString("zone_id");
+                    MineZoneLayer layer = new MineZoneLayer(
+                        rs.getString("id"), zoneId,
+                        rs.getInt("min_y"), rs.getInt("max_y")
+                    );
+                    String json = rs.getString("block_table_json");
+                    if (json != null && !json.isEmpty()) {
+                        Map<String, Double> table = GSON.fromJson(json,
+                            new TypeToken<Map<String, Double>>(){}.getType());
+                        if (table != null) {
+                            layer.getBlockTable().putAll(table);
+                        }
+                    }
+                    boolean attached = false;
+                    for (Mine mine : mines.values()) {
+                        for (MineZone zone : mine.getZones()) {
+                            if (zone.getId().equals(zoneId)) {
+                                zone.getLayers().add(layer);
+                                sortLayers(zone);
+                                attached = true;
+                                break;
+                            }
+                        }
+                        if (attached) break;
+                    }
                 }
             }
         }
@@ -603,6 +642,103 @@ public class MineConfigStore {
         Map<String, BigNumber> prices = blockPrices.get(mineId);
         if (prices == null) return Collections.emptyMap();
         return Collections.unmodifiableMap(prices);
+    }
+
+    // --- Layer CRUD ---
+
+    public void saveLayer(MineZoneLayer layer) {
+        if (layer == null || layer.getId() == null) return;
+
+        lock.writeLock().lock();
+        try {
+            for (Mine mine : mines.values()) {
+                for (MineZone zone : mine.getZones()) {
+                    if (zone.getId().equals(layer.getZoneId())) {
+                        zone.getLayers().removeIf(l -> l.getId().equals(layer.getId()));
+                        zone.getLayers().add(layer);
+                        sortLayers(zone);
+                        break;
+                    }
+                }
+            }
+        } finally {
+            lock.writeLock().unlock();
+        }
+
+        saveLayerToDatabase(layer);
+    }
+
+    private void saveLayerToDatabase(MineZoneLayer layer) {
+        if (!DatabaseManager.getInstance().isInitialized()) return;
+
+        String sql = """
+            INSERT INTO mine_zone_layers (id, zone_id, min_y, max_y, block_table_json)
+            VALUES (?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+                min_y = VALUES(min_y), max_y = VALUES(max_y),
+                block_table_json = VALUES(block_table_json)
+            """;
+
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) return;
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                int i = 1;
+                stmt.setString(i++, layer.getId());
+                stmt.setString(i++, layer.getZoneId());
+                stmt.setInt(i++, layer.getMinY());
+                stmt.setInt(i++, layer.getMaxY());
+                stmt.setString(i, GSON.toJson(layer.getBlockTable()));
+                stmt.executeUpdate();
+            }
+        } catch (SQLException e) {
+            LOGGER.atSevere().log("Failed to save zone layer: " + e.getMessage());
+        }
+    }
+
+    public boolean deleteLayer(String layerId) {
+        lock.writeLock().lock();
+        boolean removed = false;
+        try {
+            for (Mine mine : mines.values()) {
+                for (MineZone zone : mine.getZones()) {
+                    if (zone.getLayers().removeIf(l -> l.getId().equals(layerId))) {
+                        removed = true;
+                        break;
+                    }
+                }
+                if (removed) break;
+            }
+        } finally {
+            lock.writeLock().unlock();
+        }
+
+        if (removed) {
+            deleteLayerFromDatabase(layerId);
+        }
+        return removed;
+    }
+
+    private void deleteLayerFromDatabase(String layerId) {
+        if (!DatabaseManager.getInstance().isInitialized()) return;
+
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            if (conn == null) return;
+            try (PreparedStatement stmt = conn.prepareStatement("DELETE FROM mine_zone_layers WHERE id = ?")) {
+                DatabaseManager.applyQueryTimeout(stmt);
+                stmt.setString(1, layerId);
+                stmt.executeUpdate();
+            }
+        } catch (SQLException e) {
+            LOGGER.atSevere().log("Failed to delete zone layer: " + e.getMessage());
+        }
+    }
+
+    private void sortLayers(MineZone zone) {
+        zone.getLayers().sort(Comparator
+            .comparingInt(MineZoneLayer::getMinY)
+            .thenComparingInt(MineZoneLayer::getMaxY)
+            .thenComparing(MineZoneLayer::getId));
     }
 
     private void invalidateSortedCache() {

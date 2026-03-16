@@ -156,6 +156,70 @@ $C.@PageOverlay {
           }
         }
 
+        Label #BlockContextLabel {
+          Anchor: (Top: 4);
+          Style: (FontSize: 11, TextColor: #7a9aa8);
+          Text: "Zone blocks";
+        }
+
+        Group #LayerSection {
+          LayoutMode: Top;
+          Visible: false;
+
+          Label #LayerTitle {
+            Text: "Layers";
+            Style: (FontSize: 14, TextColor: #93844c, RenderBold: true);
+            Anchor: (Top: 12);
+          }
+
+          Group {
+            LayoutMode: Left;
+            Anchor: (Top: 4, Height: 28);
+
+            Label {
+              Text: "Min Y";
+              Style: (FontSize: 13, TextColor: #cfd7dc);
+              Anchor: (Top: 4);
+            }
+
+            $C.@TextField #LayerMinYField {
+              Anchor: (Left: 8, Width: 60, Height: 28);
+              Style: (FontSize: 14, TextColor: #ffffff(0.85));
+            }
+
+            Label {
+              Text: "Max Y";
+              Style: (FontSize: 13, TextColor: #cfd7dc);
+              Anchor: (Left: 12, Top: 4);
+            }
+
+            $C.@TextField #LayerMaxYField {
+              Anchor: (Left: 8, Width: 60, Height: 28);
+              Style: (FontSize: 14, TextColor: #ffffff(0.85));
+            }
+          }
+
+          Group {
+            LayoutMode: Left;
+            Anchor: (Top: 6, Height: 32);
+
+            $C.@TextButton #AddLayerButton {
+              Anchor: (Width: 140, Height: 30);
+              Text: "Add Layer";
+            }
+          }
+
+          Group #LayerListContainer {
+            Anchor: (Top: 8, Height: 120);
+            LayoutMode: TopScrolling;
+            ScrollbarStyle: $C.@DefaultScrollbarStyle;
+
+            Group #LayerCards {
+              LayoutMode: Top;
+            }
+          }
+        }
+
         Label {
           Text: "Regeneration";
           Style: (FontSize: 14, TextColor: #93844c, RenderBold: true);

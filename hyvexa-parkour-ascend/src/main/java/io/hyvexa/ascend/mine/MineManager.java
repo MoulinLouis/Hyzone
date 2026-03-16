@@ -3,6 +3,7 @@ package io.hyvexa.ascend.mine;
 import io.hyvexa.ascend.mine.data.Mine;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MineZone;
+import io.hyvexa.ascend.mine.data.MineZoneLayer;
 
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
@@ -22,7 +23,6 @@ public class MineManager {
 
     // zoneId -> timestamp when cooldown started (0 = not in cooldown)
     private final Map<String, Long> zoneCooldownStart = new ConcurrentHashMap<>();
-    private final Map<String, ResolvedZoneTable> resolvedZoneTables = new ConcurrentHashMap<>();
 
     private volatile World mineWorld;
 
@@ -213,10 +213,20 @@ public class MineManager {
     }
 
     public boolean generateZone(World world, MineZone zone) {
-        ResolvedZoneTable resolvedTable = resolvedZoneTables.compute(zone.getId(), (ignored, prev) -> resolveZoneTable(zone));
-        if (resolvedTable == null || resolvedTable.blockIds().length == 0) return false;
+        // Resolve tables: one per layer + zone fallback
+        Map<MineZoneLayer, ResolvedZoneTable> layerTables = new LinkedHashMap<>();
+        for (MineZoneLayer layer : zone.getLayers()) {
+            ResolvedZoneTable resolved = resolveBlockTable(layer.getBlockTable());
+            if (resolved != null && resolved.blockIds().length > 0) {
+                layerTables.put(layer, resolved);
+            }
+        }
+        ResolvedZoneTable fallbackTable = resolveBlockTable(zone.getBlockTable());
 
-        // Fill all positions in the zone
+        boolean hasAnyTable = !layerTables.isEmpty()
+            || (fallbackTable != null && fallbackTable.blockIds().length > 0);
+        if (!hasAnyTable) return false;
+
         ThreadLocalRandom random = ThreadLocalRandom.current();
         long currentChunkIndex = ChunkUtil.indexChunkFromBlock(zone.getMinX(), zone.getMinZ());
         var currentChunk = world.getChunkIfInMemory(currentChunkIndex);
@@ -237,11 +247,14 @@ public class MineManager {
                     continue;
                 }
                 for (int y = zone.getMinY(); y <= zone.getMaxY(); y++) {
-                    double roll = random.nextDouble() * resolvedTable.totalWeight();
-                    int selectedBlockId = resolvedTable.blockIds()[resolvedTable.blockIds().length - 1];
-                    for (int j = 0; j < resolvedTable.cumulativeWeights().length; j++) {
-                        if (roll < resolvedTable.cumulativeWeights()[j]) {
-                            selectedBlockId = resolvedTable.blockIds()[j];
+                    ResolvedZoneTable table = resolveTableForY(y, layerTables, fallbackTable);
+                    if (table == null || table.blockIds().length == 0) continue;
+
+                    double roll = random.nextDouble() * table.totalWeight();
+                    int selectedBlockId = table.blockIds()[table.blockIds().length - 1];
+                    for (int j = 0; j < table.cumulativeWeights().length; j++) {
+                        if (roll < table.cumulativeWeights()[j]) {
+                            selectedBlockId = table.blockIds()[j];
                             break;
                         }
                     }
@@ -250,14 +263,23 @@ public class MineManager {
             }
         }
 
-        // Clear broken blocks tracking for this zone
         brokenBlocks.remove(zone.getId());
         return true;
     }
 
-    private ResolvedZoneTable resolveZoneTable(MineZone zone) {
+    private ResolvedZoneTable resolveTableForY(int y, Map<MineZoneLayer, ResolvedZoneTable> layerTables,
+                                                ResolvedZoneTable fallback) {
+        for (var entry : layerTables.entrySet()) {
+            if (entry.getKey().containsY(y)) {
+                return entry.getValue();
+            }
+        }
+        return fallback;
+    }
+
+    private ResolvedZoneTable resolveBlockTable(Map<String, Double> blockTable) {
         Map<Integer, Double> resolvedTable = new LinkedHashMap<>();
-        for (var entry : zone.getBlockTable().entrySet()) {
+        for (var entry : blockTable.entrySet()) {
             int blockId = BlockType.getAssetMap().getIndex(entry.getKey());
             if (blockId >= 0) {
                 resolvedTable.put(blockId, entry.getValue());

@@ -24,6 +24,7 @@ import io.hyvexa.ascend.mine.MineManager;
 import io.hyvexa.ascend.mine.data.Mine;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MineZone;
+import io.hyvexa.ascend.mine.data.MineZoneLayer;
 
 import javax.annotation.Nonnull;
 import java.util.Map;
@@ -44,6 +45,9 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
     private String threshold = "";
     private String cooldown = "";
     private String selectedZoneId = "";
+    private String selectedLayerId = "";
+    private String layerMinY = "";
+    private String layerMaxY = "";
 
     public MineZoneAdminPage(@Nonnull PlayerRef playerRef, MineConfigStore mineConfigStore, String mineId) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, ZoneData.CODEC);
@@ -67,6 +71,7 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         bindEvents(uiEventBuilder);
         populateFields(uiCommandBuilder);
         buildBlockTable(uiCommandBuilder, uiEventBuilder);
+        buildLayerList(uiCommandBuilder, uiEventBuilder);
         buildZoneList(uiCommandBuilder, uiEventBuilder);
     }
 
@@ -86,6 +91,12 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         if (data.cooldown != null) {
             cooldown = data.cooldown.trim();
         }
+        if (data.layerMinY != null) {
+            layerMinY = data.layerMinY.trim();
+        }
+        if (data.layerMaxY != null) {
+            layerMaxY = data.layerMaxY.trim();
+        }
         if (data.button == null) {
             return;
         }
@@ -95,6 +106,9 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         }
         if (data.button.startsWith(ZoneData.BUTTON_SELECT_PREFIX)) {
             selectedZoneId = data.button.substring(ZoneData.BUTTON_SELECT_PREFIX.length());
+            selectedLayerId = "";
+            layerMinY = "";
+            layerMaxY = "";
             MineZone zone = findZone(selectedZoneId);
             if (zone != null) {
                 zoneId = zone.getId();
@@ -116,6 +130,19 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         }
         if (data.button.equals(ZoneData.BUTTON_DELETE_ZONE)) {
             handleDeleteZone(ref, store);
+            return;
+        }
+        if (data.button.equals(ZoneData.BUTTON_ADD_LAYER)) {
+            handleAddLayer(ref, store);
+            return;
+        }
+        if (data.button.startsWith(ZoneData.BUTTON_DELETE_LAYER_PREFIX)) {
+            handleDeleteLayer(ref, store, data.button.substring(ZoneData.BUTTON_DELETE_LAYER_PREFIX.length()));
+            return;
+        }
+        if (data.button.startsWith(ZoneData.BUTTON_SELECT_LAYER_PREFIX)) {
+            selectedLayerId = data.button.substring(ZoneData.BUTTON_SELECT_LAYER_PREFIX.length());
+            sendRefresh(ref, store);
             return;
         }
         if (data.button.equals("ChooseBlock")) {
@@ -234,6 +261,7 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         if (removed) {
             player.sendMessage(Message.raw("Zone deleted: " + id));
             selectedZoneId = "";
+            selectedLayerId = "";
         } else {
             player.sendMessage(Message.raw("Zone not found: " + id));
         }
@@ -261,6 +289,16 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
             return;
         }
         String displayName = MineBlockRegistry.getDisplayName(blockId);
+        if (!selectedLayerId.isEmpty()) {
+            MineZoneLayer layer = findLayer(selectedLayerId);
+            if (layer != null) {
+                layer.getBlockTable().put(blockId, prob);
+                mineConfigStore.saveLayer(layer);
+                player.sendMessage(Message.raw("Block added to layer: " + displayName + " = " + prob));
+                sendRefresh(ref, store);
+                return;
+            }
+        }
         zone.getBlockTable().put(blockId, prob);
         mineConfigStore.saveZone(zone);
         player.sendMessage(Message.raw("Block added: " + displayName + " = " + prob));
@@ -272,6 +310,19 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         if (player == null) return;
         MineZone zone = resolveSelectedZone(player);
         if (zone == null) return;
+        if (!selectedLayerId.isEmpty()) {
+            MineZoneLayer layer = findLayer(selectedLayerId);
+            if (layer != null) {
+                Double removedFromLayer = layer.getBlockTable().remove(removeBlockId);
+                if (removedFromLayer != null) {
+                    mineConfigStore.saveLayer(layer);
+                    String displayName = MineBlockRegistry.getDisplayName(removeBlockId);
+                    player.sendMessage(Message.raw("Block removed from layer: " + displayName));
+                }
+                sendRefresh(ref, store);
+                return;
+            }
+        }
         Double removed = zone.getBlockTable().remove(removeBlockId);
         if (removed != null) {
             mineConfigStore.saveZone(zone);
@@ -349,6 +400,63 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         player.sendMessage(Message.raw("Zone regenerating: " + zone.getId() + " (" + zone.getTotalBlocks() + " blocks)"));
     }
 
+    private void handleAddLayer(Ref<EntityStore> ref, Store<EntityStore> store) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null) return;
+        MineZone zone = resolveSelectedZone(player);
+        if (zone == null) return;
+        int minY, maxY;
+        try {
+            minY = Integer.parseInt(layerMinY);
+            maxY = Integer.parseInt(layerMaxY);
+        } catch (NumberFormatException e) {
+            player.sendMessage(Message.raw("MinY and MaxY must be whole numbers."));
+            return;
+        }
+        if (minY < zone.getMinY() || maxY > zone.getMaxY()) {
+            player.sendMessage(Message.raw("Layer Y range must be within zone bounds (" + zone.getMinY() + "-" + zone.getMaxY() + ")."));
+            return;
+        }
+        for (MineZoneLayer existing : zone.getLayers()) {
+            if (rangesOverlap(minY, maxY, existing.getMinY(), existing.getMaxY())) {
+                player.sendMessage(Message.raw(
+                    "Layer overlaps existing layer " + existing.getId()
+                        + " (Y " + existing.getMinY() + "-" + existing.getMaxY() + ")."));
+                return;
+            }
+        }
+
+        String layerId = java.util.UUID.randomUUID().toString().replace("-", "");
+        MineZoneLayer layer = new MineZoneLayer(layerId, zone.getId(), minY, maxY);
+        mineConfigStore.saveLayer(layer);
+        selectedLayerId = layerId;
+        layerMinY = "";
+        layerMaxY = "";
+        player.sendMessage(Message.raw("Layer created: Y " + layer.getMinY() + "-" + layer.getMaxY()));
+        sendRefresh(ref, store);
+    }
+
+    private void handleDeleteLayer(Ref<EntityStore> ref, Store<EntityStore> store, String layerId) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null) return;
+        boolean removed = mineConfigStore.deleteLayer(layerId);
+        if (removed) {
+            player.sendMessage(Message.raw("Layer deleted."));
+            if (layerId.equals(selectedLayerId)) {
+                selectedLayerId = "";
+            }
+            layerMinY = "";
+            layerMaxY = "";
+        } else {
+            player.sendMessage(Message.raw("Layer not found."));
+        }
+        sendRefresh(ref, store);
+    }
+
+    private boolean rangesOverlap(int minA, int maxA, int minB, int maxB) {
+        return Math.max(minA, minB) <= Math.min(maxA, maxB);
+    }
+
     private void handleBack(Ref<EntityStore> ref, Store<EntityStore> store) {
         Player player = store.getComponent(ref, Player.getComponentType());
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
@@ -375,6 +483,15 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
             if (z.getId().equals(zoneId)) {
                 return z;
             }
+        }
+        return null;
+    }
+
+    private MineZoneLayer findLayer(String layerId) {
+        MineZone zone = findZone(selectedZoneId);
+        if (zone == null) return null;
+        for (MineZoneLayer l : zone.getLayers()) {
+            if (l.getId().equals(layerId)) return l;
         }
         return null;
     }
@@ -406,6 +523,12 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
             EventData.of(ZoneData.KEY_BUTTON, ZoneData.BUTTON_SET_COOLDOWN), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#RegenButton",
             EventData.of(ZoneData.KEY_BUTTON, ZoneData.BUTTON_REGEN), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#LayerMinYField",
+            EventData.of(ZoneData.KEY_LAYER_MIN_Y, "#LayerMinYField.Value"), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#LayerMaxYField",
+            EventData.of(ZoneData.KEY_LAYER_MAX_Y, "#LayerMaxYField.Value"), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#AddLayerButton",
+            EventData.of(ZoneData.KEY_BUTTON, ZoneData.BUTTON_ADD_LAYER), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton",
             EventData.of(ZoneData.KEY_BUTTON, ZoneData.BUTTON_BACK), false);
     }
@@ -419,6 +542,11 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         commandBuilder.set("#BlockProbField.Value", blockProb != null ? blockProb : "");
         String selectedBlockDisplay = blockId.isEmpty() ? "(none)" : MineBlockRegistry.getDisplayName(blockId);
         commandBuilder.set("#SelectedBlockText.Text", "Selected: " + selectedBlockDisplay);
+        String blockContext = selectedLayerId.isEmpty() ? "Zone blocks" : "Layer blocks";
+        commandBuilder.set("#BlockContextLabel.Text", blockContext);
+        commandBuilder.set("#LayerSection.Visible", selectedZoneId != null && !selectedZoneId.isEmpty());
+        commandBuilder.set("#LayerMinYField.Value", layerMinY != null ? layerMinY : "");
+        commandBuilder.set("#LayerMaxYField.Value", layerMaxY != null ? layerMaxY : "");
         commandBuilder.set("#ThresholdField.Value", threshold != null ? threshold : "");
         commandBuilder.set("#CooldownField.Value", cooldown != null ? cooldown : "");
 
@@ -495,10 +623,21 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         commandBuilder.clear("#BlockEntries");
         if (selectedZoneId == null || selectedZoneId.isEmpty()) return;
         MineZone zone = findZone(selectedZoneId);
-        if (zone == null || zone.getBlockTable().isEmpty()) return;
+        if (zone == null) return;
+
+        Map<String, Double> tableToShow = zone.getBlockTable();
+        if (!selectedLayerId.isEmpty()) {
+            MineZoneLayer layer = findLayer(selectedLayerId);
+            if (layer != null) {
+                tableToShow = layer.getBlockTable();
+            } else {
+                selectedLayerId = "";
+            }
+        }
+        if (tableToShow.isEmpty()) return;
 
         int index = 0;
-        for (Map.Entry<String, Double> entry : zone.getBlockTable().entrySet()) {
+        for (Map.Entry<String, Double> entry : tableToShow.entrySet()) {
             commandBuilder.append("#BlockEntries", "Pages/Ascend_MineBlockEntry.ui");
             String sel = "#BlockEntries[" + index + "]";
             String displayName = MineBlockRegistry.getDisplayName(entry.getKey());
@@ -511,11 +650,43 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         }
     }
 
+    private void buildLayerList(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
+        commandBuilder.clear("#LayerCards");
+        if (selectedZoneId == null || selectedZoneId.isEmpty()) return;
+        MineZone zone = findZone(selectedZoneId);
+        if (zone == null) return;
+
+        int index = 0;
+        for (MineZoneLayer layer : zone.getLayers()) {
+            commandBuilder.append("#LayerCards", "Pages/Ascend_MineLayerEntry.ui");
+            String sel = "#LayerCards[" + index + "]";
+
+            boolean isSelected = layer.getId().equals(selectedLayerId);
+            String nameLabel = "Y " + layer.getMinY() + " - " + layer.getMaxY();
+            if (isSelected) {
+                nameLabel = ">> " + nameLabel;
+                commandBuilder.set(sel + ".Background", "#253742");
+                commandBuilder.set(sel + ".Style.Default.Background", "#253742");
+            }
+            commandBuilder.set(sel + " #LayerName.Text", nameLabel);
+            commandBuilder.set(sel + " #LayerDetails.Text",
+                layer.getBlockTable().size() + " block types");
+
+            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, sel,
+                EventData.of(ZoneData.KEY_BUTTON, ZoneData.BUTTON_SELECT_LAYER_PREFIX + layer.getId()), false);
+            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, sel + " #DeleteLayerBtn",
+                EventData.of(ZoneData.KEY_BUTTON, ZoneData.BUTTON_DELETE_LAYER_PREFIX + layer.getId()), false);
+
+            index++;
+        }
+    }
+
     private void sendRefresh(Ref<EntityStore> ref, Store<EntityStore> store) {
         UICommandBuilder commandBuilder = new UICommandBuilder();
         UIEventBuilder eventBuilder = new UIEventBuilder();
         populateFields(commandBuilder);
         buildBlockTable(commandBuilder, eventBuilder);
+        buildLayerList(commandBuilder, eventBuilder);
         buildZoneList(commandBuilder, eventBuilder);
         bindEvents(eventBuilder);
         this.sendUpdate(commandBuilder, eventBuilder, false);
@@ -547,6 +718,11 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         static final String BUTTON_SET_COOLDOWN = "SetCooldown";
         static final String BUTTON_REGEN = "Regen";
         static final String BUTTON_BACK = "Back";
+        static final String KEY_LAYER_MIN_Y = "@LayerMinY";
+        static final String KEY_LAYER_MAX_Y = "@LayerMaxY";
+        static final String BUTTON_ADD_LAYER = "AddLayer";
+        static final String BUTTON_DELETE_LAYER_PREFIX = "DeleteLayer:";
+        static final String BUTTON_SELECT_LAYER_PREFIX = "SelectLayer:";
 
         public static final BuilderCodec<ZoneData> CODEC = BuilderCodec.<ZoneData>builder(ZoneData.class, ZoneData::new)
             .addField(new KeyedCodec<>(KEY_BUTTON, Codec.STRING), (data, value) -> data.button = value, data -> data.button)
@@ -554,6 +730,8 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
             .addField(new KeyedCodec<>(KEY_BLOCK_PROB, Codec.STRING), (data, value) -> data.blockProb = value, data -> data.blockProb)
             .addField(new KeyedCodec<>(KEY_THRESHOLD, Codec.STRING), (data, value) -> data.threshold = value, data -> data.threshold)
             .addField(new KeyedCodec<>(KEY_COOLDOWN, Codec.STRING), (data, value) -> data.cooldown = value, data -> data.cooldown)
+            .addField(new KeyedCodec<>(KEY_LAYER_MIN_Y, Codec.STRING), (data, value) -> data.layerMinY = value, data -> data.layerMinY)
+            .addField(new KeyedCodec<>(KEY_LAYER_MAX_Y, Codec.STRING), (data, value) -> data.layerMaxY = value, data -> data.layerMaxY)
             .build();
 
         private String button;
@@ -561,5 +739,7 @@ public class MineZoneAdminPage extends InteractiveCustomUIPage<MineZoneAdminPage
         private String blockProb;
         private String threshold;
         private String cooldown;
+        private String layerMinY;
+        private String layerMaxY;
     }
 }

@@ -1,0 +1,46 @@
+$C = "../Common.ui";
+
+Button {
+  Anchor: (Left: 2, Right: 2, Bottom: 6, Height: 56);
+  Background: $C.@InputBoxBackground;
+  Padding: (Left: 12, Right: 12, Top: 8);
+  Style: ButtonStyle(
+    Default: (Background: $C.@InputBoxBackground),
+    Hovered: (Background: #253742),
+    Pressed: (Background: #1a2830),
+    Sounds: $C.@ButtonSounds,
+  );
+
+  Group #LayerInfo {
+    Anchor: (Left: 0, Right: 56, Top: 0, Bottom: 0);
+    LayoutMode: Top;
+
+    Label #LayerName {
+      Style: (FontSize: 14, TextColor: #f0f4f8, RenderBold: true);
+      Text: "";
+    }
+
+    Label #LayerDetails {
+      Anchor: (Top: 20);
+      Style: (FontSize: 11, TextColor: #9fb0ba);
+      Text: "";
+    }
+  }
+
+  TextButton #DeleteLayerBtn {
+    Anchor: (Right: 0, Width: 32, Height: 24, Top: 8);
+    Padding: (Left: 9, Top: 2);
+    Text: "X";
+    Style: TextButtonStyle(
+      Default: (
+        Background: #550000(0.6),
+        LabelStyle: (FontSize: 13, TextColor: #ff6666, RenderBold: true)
+      ),
+      Hovered: (
+        Background: #880000(0.8),
+        LabelStyle: (FontSize: 13, TextColor: #ff9999, RenderBold: true)
+      ),
+      Sounds: $C.@ButtonSounds,
+    );
+  }
+}

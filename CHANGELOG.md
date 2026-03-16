@@ -4,6 +4,9 @@
 
 ### Mine
 - Added pickaxe tier system (Wood -> Stone -> Iron -> Crystal -> Void -> Prismatic) with increasing speed multipliers
+- Mine zones now support depth layers -- each Y-range can have its own block distribution
+- Mine name now shows on the HUD when inside a mine zone
+- Admins can configure layers per zone via the zone admin editor
 
 ### Fixed
 - **Ascend: Orphaned mine Kweebecs after restart** - Automated miners now clean up directly from the mine world before respawning, preventing frozen duplicate Kweebecs from accumulating across server restarts.

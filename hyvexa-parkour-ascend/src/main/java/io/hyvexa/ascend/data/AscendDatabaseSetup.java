@@ -252,6 +252,18 @@ public final class AscendDatabaseSetup {
                 """);
 
             stmt.executeUpdate("""
+                CREATE TABLE IF NOT EXISTS mine_zone_layers (
+                    id VARCHAR(32) NOT NULL,
+                    zone_id VARCHAR(32) NOT NULL,
+                    min_y INT NOT NULL,
+                    max_y INT NOT NULL,
+                    block_table_json TEXT NOT NULL DEFAULT '{}',
+                    PRIMARY KEY (id),
+                    FOREIGN KEY (zone_id) REFERENCES mine_zones(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB
+                """);
+
+            stmt.executeUpdate("""
                 CREATE TABLE IF NOT EXISTS mine_gate (
                     id INT NOT NULL PRIMARY KEY DEFAULT 1,
                     min_x DOUBLE NOT NULL DEFAULT 0, min_y DOUBLE NOT NULL DEFAULT 0, min_z DOUBLE NOT NULL DEFAULT 0,
