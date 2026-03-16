@@ -64,63 +64,8 @@ $C.@PageOverlay {
         Anchor: (Left: 0, Right: 0, Height: 40);
         LayoutMode: Left;
 
-        // Tab 1: Miner (active by default)
+        // Tab 1: Upgrade (active by default)
         // Uses overlay pattern from Ascend_Leaderboard.ui — no dynamic Background changes
-        Group #TabMinerWrap {
-          Anchor: (Height: 36);
-          FlexWeight: 1;
-          OutlineColor: #ffffff(0.04);
-          OutlineSize: 1;
-
-          Group #TabMinerInactiveBg {
-            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-            Background: #142029;
-            Visible: false;
-          }
-
-          Group #TabMinerActiveBg {
-            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-            Background: #2d3f50;
-            Visible: true;
-          }
-
-          Group #TabMinerAccent {
-            Anchor: (Left: 0, Right: 0, Top: 0, Height: 3);
-
-            Group #TabMinerAccentInactive {
-              Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-              Background: #142029;
-              Visible: false;
-            }
-
-            Group #TabMinerAccentActive {
-              Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-              Background: #f59e0b;
-              Visible: true;
-            }
-          }
-
-          Label #TabMinerLabel {
-            Anchor: (Left: 0, Right: 0, Top: 6, Bottom: 0);
-            Style: (FontSize: 14, RenderBold: true, TextColor: #f0f4f8, Alignment: Center, VerticalAlignment: Center);
-            Text: "Miner";
-          }
-
-          TextButton #TabMiner {
-            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-            Text: "";
-            Style: TextButtonStyle(
-              Default: (Background: #000000(0)),
-              Hovered: (Background: #ffffff(0.05)),
-              Pressed: (Background: #ffffff(0.1)),
-              Sounds: $C.@ButtonSounds,
-            );
-          }
-        }
-
-        Group { Anchor: (Width: 6); }
-
-        // Tab 2: Upgrade (inactive by default)
         Group #TabUpgradeWrap {
           Anchor: (Height: 36);
           FlexWeight: 1;
@@ -130,13 +75,13 @@ $C.@PageOverlay {
           Group #TabUpgradeInactiveBg {
             Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
             Background: #142029;
-            Visible: true;
+            Visible: false;
           }
 
           Group #TabUpgradeActiveBg {
             Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
             Background: #2d3f50;
-            Visible: false;
+            Visible: true;
           }
 
           Group #TabUpgradeAccent {
@@ -145,19 +90,19 @@ $C.@PageOverlay {
             Group #TabUpgradeAccentInactive {
               Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
               Background: #142029;
-              Visible: true;
+              Visible: false;
             }
 
             Group #TabUpgradeAccentActive {
               Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
               Background: #f59e0b;
-              Visible: false;
+              Visible: true;
             }
           }
 
           Label #TabUpgradeLabel {
             Anchor: (Left: 0, Right: 0, Top: 6, Bottom: 0);
-            Style: (FontSize: 14, RenderBold: true, TextColor: #9fb0ba, Alignment: Center, VerticalAlignment: Center);
+            Style: (FontSize: 14, RenderBold: true, TextColor: #f0f4f8, Alignment: Center, VerticalAlignment: Center);
             Text: "Upgrade";
           }
 
@@ -172,55 +117,84 @@ $C.@PageOverlay {
             );
           }
         }
+
+        Group { Anchor: (Width: 6); }
+
+        // Tab 2: Miner (inactive by default)
+        Group #TabMinerWrap {
+          Anchor: (Height: 36);
+          FlexWeight: 1;
+          OutlineColor: #ffffff(0.04);
+          OutlineSize: 1;
+
+          Group #TabMinerInactiveBg {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Background: #142029;
+            Visible: true;
+          }
+
+          Group #TabMinerActiveBg {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Background: #2d3f50;
+            Visible: false;
+          }
+
+          Group #TabMinerAccent {
+            Anchor: (Left: 0, Right: 0, Top: 0, Height: 3);
+
+            Group #TabMinerAccentInactive {
+              Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+              Background: #142029;
+              Visible: true;
+            }
+
+            Group #TabMinerAccentActive {
+              Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+              Background: #f59e0b;
+              Visible: false;
+            }
+          }
+
+          Label #TabMinerLabel {
+            Anchor: (Left: 0, Right: 0, Top: 6, Bottom: 0);
+            Style: (FontSize: 14, RenderBold: true, TextColor: #9fb0ba, Alignment: Center, VerticalAlignment: Center);
+            Text: "Miner";
+          }
+
+          TextButton #TabMiner {
+            Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+            Text: "";
+            Style: TextButtonStyle(
+              Default: (Background: #000000(0)),
+              Hovered: (Background: #ffffff(0.05)),
+              Pressed: (Background: #ffffff(0.1)),
+              Sounds: $C.@ButtonSounds,
+            );
+          }
+        }
       }
 
-      // Crystals card (shared between tabs)
-      Group #CardCrystals {
-        Anchor: (Left: 0, Right: 0, Height: 36, Top: 8);
-        LayoutMode: Full;
-        Background: #ffffff(0.03);
-        OutlineColor: #ffffff(0.04);
-        OutlineSize: 1;
-
-        Group {
-          Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
-          Background: #a78bfa;
-        }
-
-        Label {
-          Anchor: (Left: 16, Top: 0, Bottom: 0, Width: 100);
-          Style: (FontSize: 13, TextColor: #9fb0ba, VerticalAlignment: Center);
-          Text: "Crystals";
-        }
-
-        Label #CrystalsValue {
-          Anchor: (Left: 120, Right: 16, Top: 0, Bottom: 0);
-          Style: (FontSize: 15, TextColor: #a78bfa, RenderBold: true, VerticalAlignment: Center);
-          Text: "0";
-        }
-      }
-
-      // === MINER TAB CONTENT (visible by default) ===
-      Group #MinerContent {
+      // === UPGRADE TAB CONTENT (visible by default) ===
+      Group #UpgradeContent {
         Anchor: (Left: 0, Right: 0, Top: 8);
         FlexWeight: 1;
         LayoutMode: TopScrolling;
         ScrollbarStyle: $C.@DefaultScrollbarStyle;
 
-        Group #MinerEntries {
+        Group #UpgradeItems {
           LayoutMode: Top;
         }
       }
 
-      // === UPGRADE TAB CONTENT (hidden by default) ===
-      Group #UpgradeContent {
+      // === MINER TAB CONTENT (hidden by default) ===
+      Group #MinerContent {
         Anchor: (Left: 0, Right: 0, Top: 8);
         FlexWeight: 1;
         LayoutMode: TopScrolling;
         ScrollbarStyle: $C.@DefaultScrollbarStyle;
         Visible: false;
 
-        Group #UpgradeItems {
+        Group #MinerEntries {
           LayoutMode: Top;
         }
       }

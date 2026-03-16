@@ -66,7 +66,7 @@ public class MinePage extends BaseAscendPage {
 
     private final MinePlayerProgress mineProgress;
     private final PlayerRef playerRef;
-    private boolean minerTabActive = true;
+    private boolean minerTabActive = false;
 
     public MinePage(@Nonnull PlayerRef playerRef, MinePlayerProgress mineProgress) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction);
@@ -96,16 +96,11 @@ public class MinePage extends BaseAscendPage {
                 EventData.of(ButtonEventData.KEY_BUTTON, BUTTON_RESET), false);
         }
 
-        populateCrystals(cmd);
         populateMinerTab(cmd, evt);
         populateUpgradeTab(cmd, evt);
     }
 
     // ==================== Content Population ====================
-
-    private void populateCrystals(UICommandBuilder cmd) {
-        cmd.set("#CrystalsValue.Text", String.valueOf(mineProgress.getCrystals()));
-    }
 
     private void populateMinerTab(UICommandBuilder cmd, UIEventBuilder evt) {
         MineConfigStore configStore = ParkourAscendPlugin.getInstance().getMineConfigStore();
@@ -454,8 +449,15 @@ public class MinePage extends BaseAscendPage {
             mineProgress.setUpgradeLevel(type, 0);
         }
 
+        for (var entry : mineProgress.getMinerStates().entrySet()) {
+            String mineId = entry.getKey();
+            if (entry.getValue().hasMiner()) {
+                mineProgress.loadMinerState(mineId, true, 0, 0);
+            }
+        }
+
         markDirty();
-        player.sendMessage(Message.raw("All upgrades have been reset."));
+        player.sendMessage(Message.raw("All upgrades and miner levels have been reset."));
         sendRefresh(ref, store);
     }
 
@@ -466,7 +468,6 @@ public class MinePage extends BaseAscendPage {
         UIEventBuilder evt = new UIEventBuilder();
         cmd.clear("#MinerEntries");
         cmd.clear("#UpgradeItems");
-        populateCrystals(cmd);
         populateMinerTab(cmd, evt);
         populateUpgradeTab(cmd, evt);
         this.sendUpdate(cmd, evt, false);

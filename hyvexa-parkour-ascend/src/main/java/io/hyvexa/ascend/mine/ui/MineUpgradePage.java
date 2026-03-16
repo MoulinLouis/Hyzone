@@ -67,8 +67,6 @@ public class MineUpgradePage extends BaseAscendPage {
     }
 
     private void populateContent(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
-        commandBuilder.set("#CrystalsValue.Text", String.valueOf(mineProgress.getCrystals()));
-
         // Show reset button for OP players
         if (PermissionUtils.isOp(playerRef.getUuid())) {
             commandBuilder.set("#ResetWrap.Visible", true);
@@ -223,12 +221,19 @@ public class MineUpgradePage extends BaseAscendPage {
             mineProgress.setUpgradeLevel(type, 0);
         }
 
+        for (var entry : mineProgress.getMinerStates().entrySet()) {
+            String mineId = entry.getKey();
+            if (entry.getValue().hasMiner()) {
+                mineProgress.loadMinerState(mineId, true, 0, 0);
+            }
+        }
+
         MinePlayerStore mineStore = ParkourAscendPlugin.getInstance().getMinePlayerStore();
         if (mineStore != null) {
             mineStore.markDirty(playerRef.getUuid());
         }
 
-        player.sendMessage(Message.raw("All upgrades have been reset."));
+        player.sendMessage(Message.raw("All upgrades and miner levels have been reset."));
         sendRefresh(ref, store);
     }
 
