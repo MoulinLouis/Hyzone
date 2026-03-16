@@ -223,7 +223,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
         // Mine robot manager (automated miners)
         if (mineConfigStore != null && minePlayerStore != null) {
             try {
-                mineRobotManager = new MineRobotManager(mineConfigStore, minePlayerStore);
+                mineRobotManager = new MineRobotManager(mineConfigStore, minePlayerStore, mineManager);
                 mineRobotManager.start();
             } catch (Exception e) {
                 LOGGER.atWarning().withCause(e).log("Failed to initialize mine robot manager");
