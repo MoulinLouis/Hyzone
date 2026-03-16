@@ -78,7 +78,7 @@ Module boundaries:
 | `MineHudManager` | Custom HUD showing crystal count, bag contents, zone cooldown timer, and block-mined toasts |
 | `MineRobotManager` | Automated miner NPCs (Kweebec variants) — spawns per-player per-mine, ticks production on a 50ms scheduled executor, evolves appearance by star level |
 | `MineBonusCalculator` | Cross-progression bonuses from mining milestones that apply to parkour systems (runner speed, multiplier gain, volt gain) |
-| `MineBreakSystem` | ECS `EntityEventSystem<BreakBlockEvent>` — intercepts block breaks inside mining zones, adds blocks to inventory or auto-sells, shows toast |
+| `MineBreakSystem` | ECS `EntityEventSystem<BreakBlockEvent>` — intercepts block breaks inside mining zones, adds blocks to inventory, shows toast |
 | `MineDamageSystem` | ECS `EntityEventSystem<DamageBlockEvent>` — scales block damage by mining speed upgrade multiplier |
 | `MineCommand` | `/mine` command with subcommands: `sell`, `upgrades`, `select`, `addcrystals` (admin) |
 
@@ -89,7 +89,6 @@ Module boundaries:
 | `MINING_SPEED` | 100 | +10% block damage per level |
 | `BAG_CAPACITY` | 50 | +10 bag slots per level (base 50) |
 | `MULTI_BREAK` | 20 | +5% chance to mine 2 blocks per level |
-| `AUTO_SELL` | 1 | Toggle: auto-sell blocks for crystals instead of storing |
 
 **Database tables** (owned by Ascend, created via `AscendDatabaseSetup`):
 

@@ -975,14 +975,13 @@ Each mine has its own block price table, configured per-mine by admins.
 
 ### Mine Upgrades
 
-Four upgrade types, purchased with crystals. Each has a unique cost formula and effect curve.
+Three upgrade types, purchased with crystals. Each has a unique cost formula and effect curve.
 
 | Upgrade | Max Level | Cost Formula | Effect per Level | Effect at Max |
 |---------|-----------|-------------|------------------|---------------|
 | **Mining Speed** | 100 | `10 x 1.15^level` | +10% speed multiplier | x11.0 speed |
 | **Bag Capacity** | 50 | `25 x 1.2^level` | +10 slots | 550 slots |
 | **Multi-Break** | 20 | `100 x 1.5^level` | +5% chance per level | 100% chance |
-| **Auto-Sell** | 1 | 500 (flat) | Enables automatic selling | On/Off |
 
 #### Mining Speed
 
@@ -1007,12 +1006,6 @@ Four upgrade types, purchased with crystals. Each has a unique cost formula and 
 - **Level 0:** 0% (no bonus breaks)
 - **Level 10:** 50% chance
 - **Level 20:** 100% chance (always double break)
-
-#### Auto-Sell
-
-- **Cost:** 500 crystals (one-time purchase)
-- **Effect:** When enabled, blocks are sold immediately upon mining instead of going to inventory
-- **Miner interaction:** Automated miners also sell directly when auto-sell is active
 
 #### Example Cost Progression (Mining Speed)
 
@@ -1093,6 +1086,5 @@ Each star tier changes the miner's visual NPC type:
 - Miners are spawned as frozen, invulnerable NPCs in the mine zone
 - Production runs on a server-side tick (50ms interval), checking each miner's production timer
 - Miners pick a random block from the zone's weighted block table each production cycle
-- If auto-sell is enabled, the mined block is sold immediately for crystals
-- If auto-sell is off, the block goes into the player's inventory (skipped if bag is full)
+- The mined block goes into the player's inventory (skipped if bag is full)
 - Miners are spawned when the player joins and despawned when they leave

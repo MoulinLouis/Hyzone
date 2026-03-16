@@ -8,19 +8,18 @@ Audit du mode Mine au 2026-03-15.
 - **MineManager** - Tracking des blocs cassés par zone, ratio de destruction, cooldown de regen, regeneration (remplissage aléatoire pondéré)
 - **MineConfigStore** - CRUD complet mines/zones/gates/prix en MySQL, cache mémoire avec locks
 - **MinePlayerStore** - Cache session joueur, dirty tracking avec auto-save 5s debounce, persistance multi-table
-- **MinePlayerProgress** - Cristaux, upgrades (4 types), inventaire, états par mine, états par miner
+- **MinePlayerProgress** - Cristaux, upgrades (3 types), inventaire, états par mine, états par miner
 
 ### Data Models
 - **Mine** - id, name, displayOrder, unlockCost (BigNumber), spawn coords/rotation, zones
 - **MineZone** - AABB bounds, blockTable (poids par type de bloc), regenThreshold (0.8), regenCooldownSeconds (45)
-- **MineUpgradeType** - 4 upgrades avec courbes de coût hardcodées :
+- **MineUpgradeType** - 3 upgrades avec courbes de coût hardcodées :
   - Mining Speed (max 100) : `10 x 1.15^level`, +10% vitesse/level
   - Bag Capacity (max 50) : `25 x 1.2^level`, +10 slots/level (base 50)
   - Multi-Break (max 20) : `100 x 1.5^level`, +5% chance/level
-  - Auto-Sell (max 1) : 500 cristaux, vente auto à la casse
 
 ### Gameplay Systems
-- **MineBreakSystem** - Handler BreakBlockEvent : validation joueur, zone, cooldown, multi-break RNG, stockage ou auto-sell
+- **MineBreakSystem** - Handler BreakBlockEvent : validation joueur, zone, cooldown, multi-break RNG, stockage inventaire
 - **MineDamageSystem** - Handler DamageBlockEvent : applique le multiplicateur mining speed du joueur
 - **MineGateChecker** - Détection entry/exit gates par tick, téléportation, swap HUD, cooldown 2s, gate ascension (ascensionCount >= 1)
 - **MineBonusCalculator** - Bonus passifs cross-progression vers le parkour :
@@ -38,7 +37,7 @@ Audit du mode Mine au 2026-03-15.
 ### UI Pages (joueur)
 - **MineSelectPage** - Liste des mines, unlock/teleport
 - **MineSellPage** - Vente de tout l'inventaire pour cristaux
-- **MineUpgradePage** - Achat upgrades globaux + miners par mine
+- **MinePage** - Tabbed page: upgrades globaux (tab 1) + miners par mine (tab 2)
 - **MineBagPage** (via `/mine`) - Affichage inventaire
 - **MineHudManager** - HUD in-game : cristaux, inventaire, cooldowns zones
 - **MineToastManager** - Notifications flottantes 4 slots avec fade-out
@@ -49,8 +48,8 @@ Audit du mode Mine au 2026-03-15.
 - **MineGateAdminPage** - Config entry/exit gates (AABB + destination)
 - **MineBlockPricesPage** - Prix par bloc par mine (mantissa + exponent)
 
-### .ui Files (17 fichiers)
-- Player : MineSelectPage, MineSelectEntry, Ascend_MineSell, Ascend_MineSellEntry, Ascend_MineUpgrade, Ascend_MineUpgradeEntry, Ascend_MineHud, Ascend_MineBag, Ascend_MineBagEntry
+### .ui Files (16 fichiers)
+- Player : MineSelectPage, MineSelectEntry, Ascend_MineSell, Ascend_MineSellEntry, Ascend_MinePage, Ascend_MineHud, Ascend_MineBag, Ascend_MineBagEntry
 - Admin : Ascend_MineAdmin, Ascend_MineAdminEntry, Ascend_MineZoneAdmin, Ascend_MineZoneEntry, Ascend_MineBlockEntry, Ascend_MineGateAdmin, Ascend_MineBlockPrices, Ascend_MineBlockPricesEntry
 
 ### Commandes
