@@ -116,13 +116,6 @@ public class MineConfigStore {
                     int maxY = rs.getInt("max_y");
                     int maxZ = rs.getInt("max_z");
 
-                    if (minX < 0 || minY < 0 || minZ < 0 || maxX < 0 || maxY < 0 || maxZ < 0) {
-                        LOGGER.atWarning().log("Skipping zone %s in mine %s: negative coordinates " +
-                            "(min=%d,%d,%d max=%d,%d,%d)", rs.getString("id"), mineId,
-                            minX, minY, minZ, maxX, maxY, maxZ);
-                        continue;
-                    }
-
                     MineZone zone = new MineZone(
                         rs.getString("id"), mineId,
                         minX, minY, minZ, maxX, maxY, maxZ

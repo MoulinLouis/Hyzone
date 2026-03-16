@@ -14,7 +14,6 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.hyvexa.ascend.ParkourAscendPlugin;
-import io.hyvexa.ascend.data.AscendPlayerProgress;
 import io.hyvexa.ascend.mine.MineManager;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
@@ -93,16 +92,12 @@ public class MineBreakSystem extends EntityEventSystem<EntityStore, BreakBlockEv
             return;
         }
 
-        AscendPlayerProgress ascendProgress = ParkourAscendPlugin.getInstance()
-            .getPlayerStore().getPlayer(playerId);
-        if (ascendProgress == null) {
-            return;
-        }
-        if (ascendProgress.getAscensionCount() < 1) {
+        MinePlayerProgress mineProgress = minePlayerStore.getOrCreatePlayer(playerId);
+        if (!isExpectedPickaxe(mineProgress, event.getItemInHand() != null ? event.getItemInHand().getItemId() : null)) {
+            event.setCancelled(true);
             return;
         }
 
-        MinePlayerProgress mineProgress = minePlayerStore.getOrCreatePlayer(playerId);
         // Resolve block type name
         String blockTypeName = event.getBlockType() != null ? event.getBlockType().getId() : null;
         if (blockTypeName == null) {
@@ -177,6 +172,14 @@ public class MineBreakSystem extends EntityEventSystem<EntityStore, BreakBlockEv
     public void evict(UUID playerId) {
         lastBagFullMessage.remove(playerId);
         lastRegenMessage.remove(playerId);
+    }
+
+    private boolean isExpectedPickaxe(MinePlayerProgress mineProgress, String heldItemId) {
+        if (mineProgress == null || heldItemId == null || heldItemId.isEmpty()) {
+            return false;
+        }
+        String expectedItemId = mineProgress.getPickaxeTierEnum().getItemId();
+        return expectedItemId != null && expectedItemId.equals(heldItemId);
     }
 
     @Override
