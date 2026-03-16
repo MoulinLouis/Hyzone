@@ -1,0 +1,9 @@
+Group {
+  Anchor: (Height: 28, Left: 0, Right: 0);
+  Padding: (Left: 8, Top: 6);
+
+  Label #CategoryName {
+    Style: (FontSize: 14, TextColor: #93844c, RenderBold: true);
+    Text: "Category";
+  }
+}
