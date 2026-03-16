@@ -142,7 +142,7 @@ public class MineRobotManager {
 
         MineZone zone = zones.get(0);
         double cx = (zone.getMinX() + zone.getMaxX()) / 2.0;
-        double cy = zone.getMinY();
+        double cy = zone.getMaxY() + 1.0; // Stand on top of the zone
         double cz = (zone.getMinZ() + zone.getMaxZ()) / 2.0;
 
         // Load speed/star levels from player progress
@@ -278,7 +278,7 @@ public class MineRobotManager {
         }
         MineZone zone = mine.getZones().get(0);
         double cx = (zone.getMinX() + zone.getMaxX()) / 2.0;
-        double cy = zone.getMinY();
+        double cy = zone.getMaxY() + 1.0; // Stand on top of the zone
         double cz = (zone.getMinZ() + zone.getMaxZ()) / 2.0;
         String entityType = getMinerEntityType(stars);
         state.setCurrentPosition(cx, cy, cz);
@@ -425,7 +425,7 @@ public class MineRobotManager {
         long moveDuration = state.getMoveDurationMs();
 
         double targetX = state.getTargetBlockX() + 0.5;
-        double targetY = state.getTargetBlockY();
+        double targetY = state.getTargetBlockY() + 1.0; // Stand on top of the block
         double targetZ = state.getTargetBlockZ() + 0.5;
 
         if (elapsed >= moveDuration) {
@@ -469,7 +469,7 @@ public class MineRobotManager {
                     state.getTargetBlockX(), state.getTargetBlockY(), state.getTargetBlockZ())) {
             state.setCurrentPosition(
                 state.getTargetBlockX() + 0.5,
-                state.getTargetBlockY(),
+                state.getTargetBlockY() + 1.0,
                 state.getTargetBlockZ() + 0.5
             );
             state.clearTarget();

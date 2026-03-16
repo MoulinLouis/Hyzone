@@ -61,8 +61,9 @@ public class MineManager {
     }
 
     /**
-     * Returns a random non-broken block position in the zone as int[3] {x, y, z},
-     * or null if all blocks are broken.
+     * Returns a random non-broken block from the highest available Y layer in the zone.
+     * Mines top-down so the Kweebec walks on the surface instead of through blocks.
+     * Returns int[3] {x, y, z}, or null if all blocks are broken.
      */
     public int[] pickRandomUnbrokenBlock(MineZone zone) {
         if (zone == null) return null;
@@ -74,28 +75,34 @@ public class MineManager {
         if (brokenCount >= totalBlocks) return null;
 
         ThreadLocalRandom random = ThreadLocalRandom.current();
-        for (int attempt = 0; attempt < 20; attempt++) {
-            int x = random.nextInt(zone.getMinX(), zone.getMaxX() + 1);
-            int y = random.nextInt(zone.getMinY(), zone.getMaxY() + 1);
-            int z = random.nextInt(zone.getMinZ(), zone.getMaxZ() + 1);
-            if (!isBlockBroken(zone.getId(), x, y, z)) {
-                return new int[]{x, y, z};
-            }
-        }
-
-        // Fallback: linear scan from a random start
         int rangeX = zone.getMaxX() - zone.getMinX() + 1;
-        int rangeY = zone.getMaxY() - zone.getMinY() + 1;
         int rangeZ = zone.getMaxZ() - zone.getMinZ() + 1;
-        int startIdx = random.nextInt(totalBlocks);
-        for (int i = 0; i < totalBlocks; i++) {
-            int idx = (startIdx + i) % totalBlocks;
-            int x = zone.getMinX() + (idx / (rangeY * rangeZ));
-            int y = zone.getMinY() + ((idx / rangeZ) % rangeY);
-            int z = zone.getMinZ() + (idx % rangeZ);
-            if (!isBlockBroken(zone.getId(), x, y, z)) {
-                return new int[]{x, y, z};
+
+        // Scan from top layer down — pick a random unbroken block in the highest layer
+        for (int y = zone.getMaxY(); y >= zone.getMinY(); y--) {
+            // Quick random attempts on this layer
+            boolean foundAny = false;
+            for (int attempt = 0; attempt < 10; attempt++) {
+                int x = random.nextInt(zone.getMinX(), zone.getMaxX() + 1);
+                int z = random.nextInt(zone.getMinZ(), zone.getMaxZ() + 1);
+                if (!isBlockBroken(zone.getId(), x, y, z)) {
+                    return new int[]{x, y, z};
+                }
+                foundAny = true; // layer has blocks (even if broken)
             }
+
+            // Fallback: linear scan of this layer from random start
+            int layerSize = rangeX * rangeZ;
+            int startIdx = random.nextInt(layerSize);
+            for (int i = 0; i < layerSize; i++) {
+                int idx = (startIdx + i) % layerSize;
+                int x = zone.getMinX() + (idx / rangeZ);
+                int z = zone.getMinZ() + (idx % rangeZ);
+                if (!isBlockBroken(zone.getId(), x, y, z)) {
+                    return new int[]{x, y, z};
+                }
+            }
+            // This layer fully broken, try next layer down
         }
 
         return null;
