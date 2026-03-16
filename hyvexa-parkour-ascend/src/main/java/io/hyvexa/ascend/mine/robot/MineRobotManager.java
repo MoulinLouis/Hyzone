@@ -8,7 +8,6 @@ import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.HytaleServer;
-import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.entity.Frozen;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.Invulnerable;
@@ -565,21 +564,9 @@ public class MineRobotManager {
                     return;
                 }
 
-                String blockType = null;
-                long chunkIndex = ChunkUtil.indexChunkFromBlock(bx, bz);
-                var chunk = world.getChunkIfInMemory(chunkIndex);
-                if (chunk == null) chunk = world.loadChunkIfInMemory(chunkIndex);
-
-                if (chunk != null) {
-                    int blockId = chunk.getBlock(bx, by, bz);
-                    if (blockId > 0) {
-                        blockType = BlockType.getAssetMap().getName(blockId);
-                    }
-                }
-
-                if (blockType == null) {
-                    blockType = pickRandomBlock(zone.getBlockTable());
-                }
+                // Reward uses weighted random from zone table (same distribution as zone gen).
+                // AssetMap has no reverse lookup (int->name), so we can't read the actual block type.
+                String blockType = pickRandomBlock(zone.getBlockTable());
                 if (blockType == null) {
                     mineManager.unclaimBlock(zone.getId(), bx, by, bz);
                     return;
@@ -593,6 +580,10 @@ public class MineRobotManager {
 
                 playerStore.markDirty(ownerId);
 
+                // Break the block visually (set to air)
+                long chunkIndex = ChunkUtil.indexChunkFromBlock(bx, bz);
+                var chunk = world.getChunkIfInMemory(chunkIndex);
+                if (chunk == null) chunk = world.loadChunkIfInMemory(chunkIndex);
                 if (chunk != null) {
                     chunk.setBlock(bx, by, bz, 0);
                 }
