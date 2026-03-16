@@ -233,7 +233,7 @@ Group {
         Anchor: (Left: 0, Right: 0, Top: 1);
         Style: (
           FontSize: 14,
-          TextColor: #9fb0ba,
+          TextColor: #ffffff,
           HorizontalAlignment: Center
         );
         Text: "No Miner";
