@@ -3,9 +3,9 @@
     "Name": "server.items.Tool_Pickaxe_Prismatic.name"
   },
   "Parent": "Tool_Pickaxe_Crude",
-  "Icon": "Icons/ItemsGenerated/Tool_Pickaxe_Wood.png",
-  "Model": "Items/Tools/Pickaxe/Wood.blockymodel",
-  "Texture": "Items/Tools/Pickaxe/Wood_Texture.png",
+  "Icon": "Icons/ItemsGenerated/Tool_Pickaxe_Mithril.png",
+  "Model": "Items/Tools/Pickaxe/Mithril.blockymodel",
+  "Texture": "Items/Tools/Pickaxe/Mithril_Texture.png",
   "Recipe": {
     "Input": [],
     "BenchRequirement": []
