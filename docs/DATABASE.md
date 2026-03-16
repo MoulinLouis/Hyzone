@@ -914,9 +914,9 @@ CREATE TABLE IF NOT EXISTS mine_players (
   uuid VARCHAR(36) PRIMARY KEY,
   crystals BIGINT NOT NULL DEFAULT 0,
   -- Migration columns (added via ALTER TABLE):
-  mining_speed_level INT NOT NULL DEFAULT 0,
+  mining_speed_level INT NOT NULL DEFAULT 0,  -- DEPRECATED: no longer used
   bag_capacity_level INT NOT NULL DEFAULT 0,
-  multi_break_level INT NOT NULL DEFAULT 0,
+  multi_break_level INT NOT NULL DEFAULT 0,   -- DEPRECATED: no longer used
   auto_sell_level INT NOT NULL DEFAULT 0,
   in_mine TINYINT(1) NOT NULL DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

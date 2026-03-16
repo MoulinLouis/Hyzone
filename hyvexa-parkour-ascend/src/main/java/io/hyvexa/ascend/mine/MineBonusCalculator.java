@@ -3,7 +3,6 @@ package io.hyvexa.ascend.mine;
 import io.hyvexa.ascend.mine.data.Mine;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
-import io.hyvexa.ascend.mine.data.MineUpgradeType;
 
 import java.util.List;
 import java.util.Set;
@@ -18,7 +17,6 @@ public class MineBonusCalculator {
 
     // Runner speed bonuses
     private static final double SPEED_BONUS_MINE2_UNLOCKED = 0.05;
-    private static final double SPEED_BONUS_MINING_SPEED_MAXED = 0.10;
 
     // Multiplier gain bonuses
     private static final double MULT_BONUS_MINE3_UNLOCKED = 0.10;
@@ -38,7 +36,7 @@ public class MineBonusCalculator {
 
     /**
      * Runner speed multiplier from mining milestones.
-     * Base 1.0, +0.05 if mine 2 unlocked, +0.10 if MINING_SPEED at max level.
+     * Base 1.0, +0.05 if mine 2 unlocked.
      */
     public double getRunnerSpeedMultiplier(MinePlayerProgress progress) {
         if (progress == null) return 1.0;
@@ -48,10 +46,6 @@ public class MineBonusCalculator {
         String mine2Id = findMineId(MINE2_IDS, "Mine 2");
         if (mine2Id != null && progress.getMineState(mine2Id).isUnlocked()) {
             multiplier += SPEED_BONUS_MINE2_UNLOCKED;
-        }
-
-        if (progress.getUpgradeLevel(MineUpgradeType.MINING_SPEED) >= MineUpgradeType.MINING_SPEED.getMaxLevel()) {
-            multiplier += SPEED_BONUS_MINING_SPEED_MAXED;
         }
 
         return multiplier;

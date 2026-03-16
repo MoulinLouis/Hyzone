@@ -975,21 +975,11 @@ Each mine has its own block price table, configured per-mine by admins.
 
 ### Mine Upgrades
 
-Three upgrade types, purchased with crystals. Each has a unique cost formula and effect curve.
+Purchased with crystals. Mining Speed and Multi-Break upgrades were removed — only Bag Capacity remains.
 
 | Upgrade | Max Level | Cost Formula | Effect per Level | Effect at Max |
 |---------|-----------|-------------|------------------|---------------|
-| **Mining Speed** | 100 | `10 x 1.15^level` | +10% speed multiplier | x11.0 speed |
 | **Bag Capacity** | 50 | `25 x 1.2^level` | +10 slots | 550 slots |
-| **Multi-Break** | 20 | `100 x 1.5^level` | +5% chance per level | 100% chance |
-
-#### Mining Speed
-
-- **Formula:** `speedMultiplier = 1.0 + level x 0.10`
-- **Effect:** Multiplies mining speed (inversely affects time between breaks)
-- **Level 0:** x1.0 (base speed)
-- **Level 50:** x6.0
-- **Level 100:** x11.0
 
 #### Bag Capacity
 
@@ -998,25 +988,6 @@ Three upgrade types, purchased with crystals. Each has a unique cost formula and
 - **Level 0:** 50 slots
 - **Level 25:** 300 slots
 - **Level 50:** 550 slots
-
-#### Multi-Break
-
-- **Formula:** `chance = level x 5.0%`
-- **Effect:** Probability of breaking an additional block per mine action
-- **Level 0:** 0% (no bonus breaks)
-- **Level 10:** 50% chance
-- **Level 20:** 100% chance (always double break)
-
-#### Example Cost Progression (Mining Speed)
-
-| Level | Cost | Cumulative |
-|-------|------|------------|
-| 0 | 10 | 10 |
-| 5 | 20 | ~87 |
-| 10 | 40 | ~213 |
-| 20 | 163 | ~1,178 |
-| 50 | 10,837 | ~71,785 |
-| 99 | 9.6M | ~67.8M |
 
 ### Mine Unlocking
 
@@ -1033,7 +1004,6 @@ Mine progression provides permanent bonuses to the core Ascend parkour loop. The
 | Bonus | Source | Effect |
 |-------|--------|--------|
 | Runner Speed | Mine 2 unlock | +5% |
-| Runner Speed | Max mining speed upgrade (level 100) | +10% |
 | Multiplier Gain | Mine 3 unlock | +10% |
 | Multiplier Gain | All unlocked mines have miners | +20% |
 | Volt Gain | Mine 4 unlock | +15% |

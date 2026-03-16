@@ -26,7 +26,6 @@ import io.hyvexa.common.math.BigNumber;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Handles instant block breaking inside mine zones on first hit (DamageBlockEvent).
@@ -91,10 +90,6 @@ public class MineDamageSystem extends EntityEventSystem<EntityStore, DamageBlock
         if (blockTypeName == null) return;
 
         int blocksGained = 1;
-        double multiBreakChance = mineProgress.getMultiBreakChance();
-        if (multiBreakChance > 0 && ThreadLocalRandom.current().nextDouble() < multiBreakChance) {
-            blocksGained = 2;
-        }
 
         if (!mineProgress.canAddToInventory(blocksGained)) {
             sendBagFullMessage(playerId, player);

@@ -204,14 +204,6 @@ public class MinePlayerProgress {
         return (int) MineUpgradeType.BAG_CAPACITY.getEffect(getUpgradeLevel(MineUpgradeType.BAG_CAPACITY));
     }
 
-    public synchronized double getMiningSpeedMultiplier() {
-        return MineUpgradeType.MINING_SPEED.getEffect(getUpgradeLevel(MineUpgradeType.MINING_SPEED));
-    }
-
-    public synchronized double getMultiBreakChance() {
-        return MineUpgradeType.MULTI_BREAK.getEffect(getUpgradeLevel(MineUpgradeType.MULTI_BREAK)) / 100.0;
-    }
-
     // --- Per-mine state ---
 
     public static class MineProgress {

@@ -38,7 +38,7 @@ import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 /**
  * Tabbed mine page opened by pickaxe right-click.
  * Tab "Miner": per-mine miner cards (buy, upgrade speed, evolve).
- * Tab "Upgrade": global pickaxe upgrades (mining speed, bag capacity, multi-break).
+ * Tab "Upgrade": global pickaxe upgrades (bag capacity).
  */
 public class MinePage extends BaseAscendPage {
 
@@ -62,14 +62,12 @@ public class MinePage extends BaseAscendPage {
         "#7c3aed", "#ef4444", "#f59e0b", "#10b981", "#3b82f6", "#f59e0b"
     };
 
-    private static final String[] UPGRADE_ACCENT_COLORS = { "Violet", "Green", "Red" };
-    private static final String[] UPGRADE_ACCENT_HEX = { "#7c3aed", "#10b981", "#ef4444" };
+    private static final String[] UPGRADE_ACCENT_COLORS = { "Green" };
+    private static final String[] UPGRADE_ACCENT_HEX = { "#10b981" };
     private static final int UPGRADE_SEGMENT_COUNT = 20;
 
     private static final String[] UPGRADE_DISPLAY_NAMES = {
-        "Mining Speed",
-        "Bag Capacity",
-        "Multi-Break"
+        "Bag Capacity"
     };
 
     private final MinePlayerProgress mineProgress;
@@ -228,7 +226,7 @@ public class MinePage extends BaseAscendPage {
             // Accent color + button zone color
             String colorName = UPGRADE_ACCENT_COLORS[i];
             String colorHex = UPGRADE_ACCENT_HEX[i];
-            cmd.set(sel + " #AccentViolet.Visible", i == 0);
+            cmd.set(sel + " #AccentViolet.Visible", false);
             cmd.set(sel + " #Accent" + colorName + ".Visible", true);
             cmd.set(sel + " #ButtonBg" + colorName + ".Visible", true);
 
@@ -314,8 +312,6 @@ public class MinePage extends BaseAscendPage {
     }
 
     private boolean checkPickaxeRequirement(PickaxeTier tier) {
-        int miningSpeedLevel = mineProgress.getUpgradeLevel(MineUpgradeType.MINING_SPEED);
-
         MineConfigStore configStore = ParkourAscendPlugin.getInstance().getMineConfigStore();
         if (configStore == null) return false;
         List<Mine> mines = configStore.listMinesSorted();
@@ -328,7 +324,7 @@ public class MinePage extends BaseAscendPage {
             }
         }
 
-        return tier.meetsRequirement(miningSpeedLevel, unlockedMineIds, totalMineCount);
+        return tier.meetsRequirement(unlockedMineIds, totalMineCount);
     }
 
     // ==================== Tab Switching ====================
@@ -566,8 +562,7 @@ public class MinePage extends BaseAscendPage {
             checkMineAchievement(MineAchievement.MAX_UPGRADES);
         }
 
-        int displayIndex = type.ordinal();
-        player.sendMessage(Message.raw("Upgraded " + UPGRADE_DISPLAY_NAMES[displayIndex] + " to Lv " + mineProgress.getUpgradeLevel(type) + "!"));
+        player.sendMessage(Message.raw("Upgraded " + UPGRADE_DISPLAY_NAMES[type.ordinal()] + " to Lv " + mineProgress.getUpgradeLevel(type) + "!"));
         sendRefresh(ref, store);
     }
 
@@ -616,9 +611,7 @@ public class MinePage extends BaseAscendPage {
     private String getEffectDescription(MineUpgradeType type, int level) {
         double effect = type.getEffect(level);
         return switch (type) {
-            case MINING_SPEED -> "Speed: " + String.format("%.1f", effect) + "x";
             case BAG_CAPACITY -> "Capacity: " + (int) effect + " blocks";
-            case MULTI_BREAK -> "Chance: " + (int) effect + "%";
         };
     }
 

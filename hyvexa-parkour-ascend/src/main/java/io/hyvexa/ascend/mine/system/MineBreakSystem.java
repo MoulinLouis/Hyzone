@@ -27,7 +27,6 @@ import io.hyvexa.common.util.PermissionUtils;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ThreadLocalRandom;
 
 public class MineBreakSystem extends EntityEventSystem<EntityStore, BreakBlockEvent> {
     private final MineManager mineManager;
@@ -105,10 +104,6 @@ public class MineBreakSystem extends EntityEventSystem<EntityStore, BreakBlockEv
         }
 
         int blocksGained = 1;
-        double multiBreakChance = mineProgress.getMultiBreakChance();
-        if (multiBreakChance > 0 && ThreadLocalRandom.current().nextDouble() < multiBreakChance) {
-            blocksGained = 2;
-        }
 
         if (!mineProgress.canAddToInventory(blocksGained)) {
             sendBagFullMessage(playerId, player);
