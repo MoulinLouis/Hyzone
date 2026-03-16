@@ -15,6 +15,8 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
 import io.hyvexa.ascend.ParkourAscendPlugin;
+import io.hyvexa.ascend.mine.achievement.MineAchievement;
+import io.hyvexa.ascend.mine.achievement.MineAchievementTracker;
 import io.hyvexa.ascend.mine.data.Mine;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
@@ -346,6 +348,7 @@ public class MinePage extends BaseAscendPage {
 
         markDirty();
         syncBoughtMiner(store, mineId);
+        checkMineAchievement(MineAchievement.FIRST_MINER);
 
         player.sendMessage(Message.raw("Bought miner for " + getMineName(mineId) + "!"));
         sendRefresh(ref, store);
@@ -404,6 +407,7 @@ public class MinePage extends BaseAscendPage {
 
         markDirty();
         syncMinerEvolution(store, mineId);
+        checkMineAchievement(MineAchievement.EVOLVE_STAR1);
 
         player.sendMessage(Message.raw(getMineName(mineId) + " Miner evolved to Star " + (stars + 1) + "!"));
         sendRefresh(ref, store);
@@ -434,6 +438,18 @@ public class MinePage extends BaseAscendPage {
         }
 
         markDirty();
+
+        // Check if all 3 global upgrades are now maxed
+        boolean allMaxed = true;
+        for (MineUpgradeType t : MineUpgradeType.values()) {
+            if (mineProgress.getUpgradeLevel(t) < t.getMaxLevel()) {
+                allMaxed = false;
+                break;
+            }
+        }
+        if (allMaxed) {
+            checkMineAchievement(MineAchievement.MAX_UPGRADES);
+        }
 
         int displayIndex = type.ordinal();
         player.sendMessage(Message.raw("Upgraded " + UPGRADE_DISPLAY_NAMES[displayIndex] + " to Lv " + mineProgress.getUpgradeLevel(type) + "!"));
@@ -496,6 +512,15 @@ public class MinePage extends BaseAscendPage {
             if (mine != null) return mine.getName();
         }
         return mineId;
+    }
+
+    private void checkMineAchievement(MineAchievement achievement) {
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin == null) return;
+        MineAchievementTracker tracker = plugin.getMineAchievementTracker();
+        if (tracker != null) {
+            tracker.checkAchievement(playerRef.getUuid(), achievement);
+        }
     }
 
     private static long getMinerBuyCost() {

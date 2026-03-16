@@ -20,6 +20,7 @@ import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.data.MineZone;
+import io.hyvexa.ascend.mine.achievement.MineAchievementTracker;
 import io.hyvexa.ascend.mine.hud.MineHudManager;
 import io.hyvexa.common.math.BigNumber;
 import io.hyvexa.common.util.PermissionUtils;
@@ -151,6 +152,15 @@ public class MineBreakSystem extends EntityEventSystem<EntityStore, BreakBlockEv
         MineHudManager mineHudManager = ParkourAscendPlugin.getInstance().getMineHudManager();
         if (mineHudManager != null) {
             mineHudManager.showMineToast(playerId, blockTypeName, blocksGained);
+        }
+
+        // Track blocks mined for achievements
+        ParkourAscendPlugin achPlugin = ParkourAscendPlugin.getInstance();
+        if (achPlugin != null) {
+            MineAchievementTracker achievementTracker = achPlugin.getMineAchievementTracker();
+            if (achievementTracker != null) {
+                achievementTracker.incrementBlocksMined(playerId, blocksGained);
+            }
         }
 
     }

@@ -52,6 +52,7 @@ import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.robot.MineRobotManager;
 import io.hyvexa.ascend.mine.hud.MineHudManager;
+import io.hyvexa.ascend.mine.achievement.MineAchievementTracker;
 import io.hyvexa.ascend.mine.system.MineBreakSystem;
 import io.hyvexa.ascend.mine.system.MineDamageSystem;
 import com.hypixel.hytale.server.core.event.events.ecs.BreakBlockEvent;
@@ -123,6 +124,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
     private MineRobotManager mineRobotManager;
     private MineBreakSystem mineBreakSystem;
     private MineHudManager mineHudManager;
+    private MineAchievementTracker mineAchievementTracker;
     private AscendWhitelistManager whitelistManager;
     private AscendRuntimeConfig runtimeConfig;
     private ScheduledFuture<?> tickTask;
@@ -221,6 +223,9 @@ public class ParkourAscendPlugin extends JavaPlugin {
         if (minePlayerStore != null && mineManager != null && mineConfigStore != null) {
             mineHudManager = new MineHudManager(minePlayerStore, mineManager, mineConfigStore);
         }
+
+        // Mine achievement tracker
+        mineAchievementTracker = new MineAchievementTracker();
 
         // Mine robot manager (automated miners)
         if (mineConfigStore != null && minePlayerStore != null) {
@@ -505,6 +510,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     "Disconnect cleanup: minePlayerStore");
             runSafe(() -> { if (mineBreakSystem != null) mineBreakSystem.evict(playerId); },
                     "Disconnect cleanup: mineBreakSystem");
+            runSafe(() -> { if (mineAchievementTracker != null) mineAchievementTracker.evict(playerId); },
+                    "Disconnect cleanup: mineAchievementTracker");
             runSafe(() -> { if (mineGateChecker != null) mineGateChecker.evict(playerId); },
                     "Disconnect cleanup: mineGateChecker");
             runSafe(() -> VexaStore.getInstance().evictPlayer(playerId),
@@ -654,6 +661,10 @@ public class ParkourAscendPlugin extends JavaPlugin {
 
     public MineHudManager getMineHudManager() {
         return mineHudManager;
+    }
+
+    public MineAchievementTracker getMineAchievementTracker() {
+        return mineAchievementTracker;
     }
 
     public AscendRuntimeConfig getRuntimeConfig() {

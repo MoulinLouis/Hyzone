@@ -18,6 +18,8 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.mine.MineGateChecker;
+import io.hyvexa.ascend.mine.achievement.MineAchievement;
+import io.hyvexa.ascend.mine.achievement.MineAchievementTracker;
 import io.hyvexa.ascend.mine.data.Mine;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
@@ -204,6 +206,22 @@ public class MineSelectPage extends BaseAscendPage {
 
             if (player != null) {
                 player.sendMessage(Message.raw("Unlocked " + mine.getName() + "!"));
+            }
+
+            // Check if all mines are now unlocked (Explorer achievement)
+            List<Mine> allMines = configStore.listMinesSorted();
+            boolean allUnlocked = true;
+            for (Mine m : allMines) {
+                if (!mineProgress.getMineState(m.getId()).isUnlocked()) {
+                    allUnlocked = false;
+                    break;
+                }
+            }
+            if (allUnlocked) {
+                MineAchievementTracker tracker = plugin.getMineAchievementTracker();
+                if (tracker != null) {
+                    tracker.checkAchievement(playerRef.getUuid(), MineAchievement.EXPLORER);
+                }
             }
 
             sendRefresh();

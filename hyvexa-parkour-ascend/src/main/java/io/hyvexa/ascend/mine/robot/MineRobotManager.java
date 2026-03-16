@@ -15,7 +15,9 @@ import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.NPCPlugin;
+import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.mine.MineManager;
+import io.hyvexa.ascend.mine.achievement.MineAchievementTracker;
 import io.hyvexa.ascend.mine.data.Mine;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
@@ -566,6 +568,15 @@ public class MineRobotManager {
         }
 
         playerStore.markDirty(ownerId);
+
+        // Track blocks mined for achievements
+        ParkourAscendPlugin plugin = ParkourAscendPlugin.getInstance();
+        if (plugin != null) {
+            MineAchievementTracker tracker = plugin.getMineAchievementTracker();
+            if (tracker != null) {
+                tracker.incrementBlocksMined(ownerId, 1);
+            }
+        }
 
         // Break the block visually via MineManager's canonical world reference
         mineManager.breakBlockVisually(bx, by, bz);

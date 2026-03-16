@@ -1,0 +1,68 @@
+Group {
+  Anchor: (Left: 0, Right: 0, Height: 64, Top: 6);
+  LayoutMode: Full;
+  Background: #ffffff(0.03);
+  OutlineColor: #ffffff(0.04);
+  OutlineSize: 1;
+
+  // Left accent bar — locked (gray), hidden when completed
+  Group #AchAccentLocked {
+    Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
+    Background: #4b5563;
+  }
+
+  // Left accent bar — completed (green), hidden by default
+  Group #AchAccentDone {
+    Anchor: (Left: 0, Top: 0, Bottom: 0, Width: 4);
+    Visible: false;
+    Background: #4ade80;
+  }
+
+  // Achievement name
+  Label #AchName {
+    Anchor: (Left: 16, Top: 8, Width: 260, Height: 20);
+    Style: (FontSize: 14, TextColor: #f0f4f8, RenderBold: true);
+    Text: "Achievement Name";
+  }
+
+  // Achievement description
+  Label #AchDesc {
+    Anchor: (Left: 16, Top: 28, Width: 260, Height: 16);
+    Style: (FontSize: 11, TextColor: #6b7b8a);
+    Text: "Description";
+  }
+
+  // Progress bar (hidden by default, shown for counter-based when locked)
+  // Uses 10 segments for progress display
+  Group #ProgressBar {
+    Anchor: (Left: 16, Top: 46, Width: 200, Height: 6);
+    Visible: false;
+    LayoutMode: Left;
+    Background: #ffffff(0.06);
+
+    Group #PSeg1 { Anchor: (Width: 20, Top: 0, Bottom: 0); Visible: false; Background: #f59e0b; }
+    Group #PSeg2 { Anchor: (Width: 20, Top: 0, Bottom: 0); Visible: false; Background: #f59e0b; }
+    Group #PSeg3 { Anchor: (Width: 20, Top: 0, Bottom: 0); Visible: false; Background: #f59e0b; }
+    Group #PSeg4 { Anchor: (Width: 20, Top: 0, Bottom: 0); Visible: false; Background: #f59e0b; }
+    Group #PSeg5 { Anchor: (Width: 20, Top: 0, Bottom: 0); Visible: false; Background: #f59e0b; }
+    Group #PSeg6 { Anchor: (Width: 20, Top: 0, Bottom: 0); Visible: false; Background: #f59e0b; }
+    Group #PSeg7 { Anchor: (Width: 20, Top: 0, Bottom: 0); Visible: false; Background: #f59e0b; }
+    Group #PSeg8 { Anchor: (Width: 20, Top: 0, Bottom: 0); Visible: false; Background: #f59e0b; }
+    Group #PSeg9 { Anchor: (Width: 20, Top: 0, Bottom: 0); Visible: false; Background: #f59e0b; }
+    Group #PSeg10 { Anchor: (Width: 20, Top: 0, Bottom: 0); Visible: false; Background: #f59e0b; }
+  }
+
+  // Status label (right side)
+  Label #AchStatus {
+    Anchor: (Right: 16, Top: 10, Width: 140, Height: 18);
+    Style: (FontSize: 13, TextColor: #9fb0ba, HorizontalAlignment: End);
+    Text: "Locked";
+  }
+
+  // Reward label (right side, below status)
+  Label #AchReward {
+    Anchor: (Right: 16, Top: 30, Width: 140, Height: 16);
+    Style: (FontSize: 11, TextColor: #9fb0ba, HorizontalAlignment: End);
+    Text: "+500 crystals";
+  }
+}

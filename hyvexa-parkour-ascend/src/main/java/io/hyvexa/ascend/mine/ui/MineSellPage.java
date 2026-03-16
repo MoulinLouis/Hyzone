@@ -19,6 +19,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
 import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.mine.MineBlockDisplay;
+import io.hyvexa.ascend.mine.achievement.MineAchievementTracker;
 import io.hyvexa.ascend.mine.data.Mine;
 import io.hyvexa.ascend.mine.data.MineConfigStore;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
@@ -120,6 +121,14 @@ public class MineSellPage extends BaseAscendPage {
         }
 
         player.sendMessage(Message.raw("Sold all blocks for " + earned + " crystals!"));
+
+        // Track crystals earned for achievements
+        if (earned > 0) {
+            MineAchievementTracker tracker = ParkourAscendPlugin.getInstance().getMineAchievementTracker();
+            if (tracker != null) {
+                tracker.incrementCrystalsEarned(playerRef.getUuid(), earned);
+            }
+        }
 
         sendRefresh(ref, store);
     }

@@ -15,6 +15,7 @@ import io.hyvexa.ascend.ParkourAscendPlugin;
 import io.hyvexa.ascend.mine.data.MinePlayerProgress;
 import io.hyvexa.ascend.mine.data.MinePlayerStore;
 import io.hyvexa.ascend.mine.MineGateChecker;
+import io.hyvexa.ascend.mine.ui.MineAchievementsPage;
 import io.hyvexa.ascend.mine.ui.MineSelectPage;
 import io.hyvexa.ascend.mine.ui.MineSellPage;
 import io.hyvexa.ascend.mine.ui.MinePage;
@@ -104,6 +105,10 @@ public class MineCommand extends AbstractAsyncCommand {
                     MineSelectPage page = new MineSelectPage(playerRef, progress);
                     player.getPageManager().openCustomPage(ref, store, page);
                 }
+                case "achievements" -> {
+                    MineAchievementsPage page = new MineAchievementsPage(playerRef);
+                    player.getPageManager().openCustomPage(ref, store, page);
+                }
                 case "addcrystals" -> {
                     if (!PermissionUtils.isOp(player)) {
                         player.sendMessage(Message.raw("[Mine] You do not have permission to use this command.").color(SystemMessageUtils.SECONDARY));
@@ -126,7 +131,7 @@ public class MineCommand extends AbstractAsyncCommand {
                         player.sendMessage(Message.raw("[Mine] Invalid number: " + args[1]).color(SystemMessageUtils.SECONDARY));
                     }
                 }
-                default -> player.sendMessage(Message.raw("Unknown subcommand. Use: /mine, /mine sell, /mine upgrades, /mine select, /mine addcrystals <amount>"));
+                default -> player.sendMessage(Message.raw("Unknown subcommand. Use: /mine, /mine sell, /mine upgrades, /mine select, /mine achievements"));
             }
         }, world);
     }

@@ -326,6 +326,25 @@ public final class AscendDatabaseSetup {
                 ) ENGINE=InnoDB
                 """);
 
+            // Mine achievement tracking
+            stmt.executeUpdate("""
+                CREATE TABLE IF NOT EXISTS mine_achievements (
+                    player_uuid VARCHAR(36) NOT NULL,
+                    achievement_id VARCHAR(50) NOT NULL,
+                    completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (player_uuid, achievement_id)
+                ) ENGINE=InnoDB
+                """);
+
+            // Mine player stats (lifetime counters for achievements)
+            stmt.executeUpdate("""
+                CREATE TABLE IF NOT EXISTS mine_player_stats (
+                    player_uuid VARCHAR(36) PRIMARY KEY,
+                    total_blocks_mined BIGINT NOT NULL DEFAULT 0,
+                    total_crystals_earned BIGINT NOT NULL DEFAULT 0
+                ) ENGINE=InnoDB
+                """);
+
             LOGGER.atInfo().log("Ascend database tables ensured");
             } // close try (Statement stmt)
 
