@@ -511,8 +511,8 @@ public class MineRobotManager {
     }
 
     private void teleportMiner(MinerRobotState state, double x, double y, double z, boolean faceTarget) {
-        UUID entityUuid = state.getEntityUuid();
-        if (entityUuid == null) return;
+        Ref<EntityStore> entityRef = state.getEntityRef();
+        if (entityRef == null || !entityRef.isValid()) return;
 
         String worldName = state.getWorldName();
         if (worldName == null) return;
@@ -532,8 +532,7 @@ public class MineRobotManager {
         final float finalYaw = yaw;
         world.execute(() -> {
             try {
-                Ref<EntityStore> entityRef = world.getEntityStore().getRefFromUUID(entityUuid);
-                if (entityRef == null || !entityRef.isValid()) return;
+                if (!entityRef.isValid()) return;
                 Store<EntityStore> store = world.getEntityStore().getStore();
                 if (store == null) return;
                 store.addComponent(entityRef, Teleport.getComponentType(),
