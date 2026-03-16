@@ -109,10 +109,23 @@ public class MineConfigStore {
                     Mine mine = mines.get(mineId);
                     if (mine == null) continue;
 
+                    int minX = rs.getInt("min_x");
+                    int minY = rs.getInt("min_y");
+                    int minZ = rs.getInt("min_z");
+                    int maxX = rs.getInt("max_x");
+                    int maxY = rs.getInt("max_y");
+                    int maxZ = rs.getInt("max_z");
+
+                    if (minX < 0 || minY < 0 || minZ < 0 || maxX < 0 || maxY < 0 || maxZ < 0) {
+                        LOGGER.atWarning().log("Skipping zone %s in mine %s: negative coordinates " +
+                            "(min=%d,%d,%d max=%d,%d,%d)", rs.getString("id"), mineId,
+                            minX, minY, minZ, maxX, maxY, maxZ);
+                        continue;
+                    }
+
                     MineZone zone = new MineZone(
                         rs.getString("id"), mineId,
-                        rs.getInt("min_x"), rs.getInt("min_y"), rs.getInt("min_z"),
-                        rs.getInt("max_x"), rs.getInt("max_y"), rs.getInt("max_z")
+                        minX, minY, minZ, maxX, maxY, maxZ
                     );
 
                     String json = rs.getString("block_table_json");

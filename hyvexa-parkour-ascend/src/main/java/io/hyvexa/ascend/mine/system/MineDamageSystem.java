@@ -41,6 +41,8 @@ public class MineDamageSystem extends EntityEventSystem<EntityStore, DamageBlock
         if (playerId == null) return;
 
         MinePlayerProgress progress = minePlayerStore.getOrCreatePlayer(playerId);
+        if (!progress.getMineState(zone.getMineId()).isUnlocked()) return;
+
         double speedMult = progress.getMiningSpeedMultiplier();
         if (speedMult > 1.0) {
             event.setDamage(event.getDamage() * (float) speedMult);

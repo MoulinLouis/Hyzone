@@ -81,14 +81,12 @@ public class MineManager {
         // Scan from top layer down — pick a random unbroken block in the highest layer
         for (int y = zone.getMaxY(); y >= zone.getMinY(); y--) {
             // Quick random attempts on this layer
-            boolean foundAny = false;
             for (int attempt = 0; attempt < 10; attempt++) {
                 int x = random.nextInt(zone.getMinX(), zone.getMaxX() + 1);
                 int z = random.nextInt(zone.getMinZ(), zone.getMaxZ() + 1);
                 if (!isBlockBroken(zone.getId(), x, y, z)) {
                     return new int[]{x, y, z};
                 }
-                foundAny = true; // layer has blocks (even if broken)
             }
 
             // Fallback: linear scan of this layer from random start

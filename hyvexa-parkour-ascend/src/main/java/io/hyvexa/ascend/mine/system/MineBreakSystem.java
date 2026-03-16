@@ -164,6 +164,11 @@ public class MineBreakSystem extends EntityEventSystem<EntityStore, BreakBlockEv
         }
     }
 
+    public void evict(UUID playerId) {
+        lastBagFullMessage.remove(playerId);
+        lastRegenMessage.remove(playerId);
+    }
+
     @Override
     public Query<EntityStore> getQuery() {
         return Query.any();

@@ -13,9 +13,9 @@ public class MinerRobotState {
     private Ref<EntityStore> entityRef;
     private UUID entityUuid;
 
-    private int speedLevel = 0;
-    private int stars = 0;
-    private MinerPhase phase = MinerPhase.IDLE;
+    private volatile int speedLevel = 0;
+    private volatile int stars = 0;
+    private volatile MinerPhase phase = MinerPhase.IDLE;
     private long phaseStartTime = 0;
     private long cycleStartTime = 0;
 

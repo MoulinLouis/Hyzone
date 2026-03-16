@@ -36,7 +36,8 @@ public class MinePlayerStore {
             progress = new MinePlayerProgress(playerId);
             ensurePlayerRow(playerId);
         }
-        players.put(playerId, progress);
+        MinePlayerProgress existing = players.putIfAbsent(playerId, progress);
+        if (existing != null) return existing;
 
         // Auto-unlock first mine for all players
         List<Mine> mines = ParkourAscendPlugin.getInstance().getMineConfigStore().listMinesSorted();
@@ -188,89 +189,99 @@ public class MinePlayerStore {
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
             if (conn == null) return false;
 
-            // Save crystals + upgrades
-            try (PreparedStatement ps = conn.prepareStatement("""
-                    INSERT INTO mine_players (uuid, crystals,
-                        mining_speed_level, bag_capacity_level, multi_break_level, in_mine)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                    ON DUPLICATE KEY UPDATE crystals = VALUES(crystals),
-                                            mining_speed_level = VALUES(mining_speed_level),
-                                            bag_capacity_level = VALUES(bag_capacity_level),
-                                            multi_break_level = VALUES(multi_break_level),
-                                            in_mine = VALUES(in_mine)
-                    """)) {
-                ps.setString(1, playerId.toString());
-                ps.setLong(2, snapshot.crystals());
-                ps.setInt(3, snapshot.upgradeLevels().getOrDefault(MineUpgradeType.MINING_SPEED, 0));
-                ps.setInt(4, snapshot.upgradeLevels().getOrDefault(MineUpgradeType.BAG_CAPACITY, 0));
-                ps.setInt(5, snapshot.upgradeLevels().getOrDefault(MineUpgradeType.MULTI_BREAK, 0));
-                ps.setBoolean(6, snapshot.inMine());
-                ps.executeUpdate();
-            }
+            conn.setAutoCommit(false);
+            try {
+                // Save crystals + upgrades
+                try (PreparedStatement ps = conn.prepareStatement("""
+                        INSERT INTO mine_players (uuid, crystals,
+                            mining_speed_level, bag_capacity_level, multi_break_level, in_mine)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                        ON DUPLICATE KEY UPDATE crystals = VALUES(crystals),
+                                                mining_speed_level = VALUES(mining_speed_level),
+                                                bag_capacity_level = VALUES(bag_capacity_level),
+                                                multi_break_level = VALUES(multi_break_level),
+                                                in_mine = VALUES(in_mine)
+                        """)) {
+                    ps.setString(1, playerId.toString());
+                    ps.setLong(2, snapshot.crystals());
+                    ps.setInt(3, snapshot.upgradeLevels().getOrDefault(MineUpgradeType.MINING_SPEED, 0));
+                    ps.setInt(4, snapshot.upgradeLevels().getOrDefault(MineUpgradeType.BAG_CAPACITY, 0));
+                    ps.setInt(5, snapshot.upgradeLevels().getOrDefault(MineUpgradeType.MULTI_BREAK, 0));
+                    ps.setBoolean(6, snapshot.inMine());
+                    ps.executeUpdate();
+                }
 
-            // Save inventory — delete + re-insert
-            try (PreparedStatement ps = conn.prepareStatement(
-                    "DELETE FROM mine_player_inventory WHERE player_uuid = ?")) {
-                ps.setString(1, playerId.toString());
-                ps.executeUpdate();
-            }
-
-            Map<String, Integer> inventory = snapshot.inventory();
-            if (!inventory.isEmpty()) {
+                // Save inventory — delete + re-insert
                 try (PreparedStatement ps = conn.prepareStatement(
-                        "INSERT INTO mine_player_inventory (player_uuid, block_type_id, amount) VALUES (?, ?, ?)")) {
-                    for (var entry : inventory.entrySet()) {
-                        ps.setString(1, playerId.toString());
-                        ps.setString(2, entry.getKey());
-                        ps.setInt(3, entry.getValue());
-                        ps.addBatch();
-                    }
-                    ps.executeBatch();
+                        "DELETE FROM mine_player_inventory WHERE player_uuid = ?")) {
+                    ps.setString(1, playerId.toString());
+                    ps.executeUpdate();
                 }
-            }
 
-            // Save mine states
-            Map<String, MinePlayerProgress.MineProgressSnapshot> mineStates = snapshot.mineStates();
-            if (!mineStates.isEmpty()) {
-                try (PreparedStatement ps = conn.prepareStatement("""
-                        INSERT INTO mine_player_mines (player_uuid, mine_id, unlocked, completed_manually)
-                        VALUES (?, ?, ?, ?)
-                        ON DUPLICATE KEY UPDATE unlocked = VALUES(unlocked),
-                                                completed_manually = VALUES(completed_manually)
-                        """)) {
-                    for (var entry : mineStates.entrySet()) {
-                        ps.setString(1, playerId.toString());
-                        ps.setString(2, entry.getKey());
-                        MinePlayerProgress.MineProgressSnapshot state = entry.getValue();
-                        ps.setBoolean(3, state.unlocked());
-                        ps.setBoolean(4, state.completedManually());
-                        ps.addBatch();
+                Map<String, Integer> inventory = snapshot.inventory();
+                if (!inventory.isEmpty()) {
+                    try (PreparedStatement ps = conn.prepareStatement(
+                            "INSERT INTO mine_player_inventory (player_uuid, block_type_id, amount) VALUES (?, ?, ?)")) {
+                        for (var entry : inventory.entrySet()) {
+                            ps.setString(1, playerId.toString());
+                            ps.setString(2, entry.getKey());
+                            ps.setInt(3, entry.getValue());
+                            ps.addBatch();
+                        }
+                        ps.executeBatch();
                     }
-                    ps.executeBatch();
                 }
-            }
 
-            // Save miner states
-            Map<String, MinePlayerProgress.MinerProgressSnapshot> minerStates = snapshot.minerStates();
-            if (!minerStates.isEmpty()) {
-                try (PreparedStatement ps = conn.prepareStatement("""
-                        INSERT INTO mine_player_miners (player_uuid, mine_id, has_miner, speed_level, stars)
-                        VALUES (?, ?, ?, ?, ?)
-                        ON DUPLICATE KEY UPDATE has_miner = VALUES(has_miner),
-                                                speed_level = VALUES(speed_level),
-                                                stars = VALUES(stars)
-                        """)) {
-                    for (var entry : minerStates.entrySet()) {
-                        ps.setString(1, playerId.toString());
-                        ps.setString(2, entry.getKey());
-                        MinePlayerProgress.MinerProgressSnapshot state = entry.getValue();
-                        ps.setBoolean(3, state.hasMiner());
-                        ps.setInt(4, state.speedLevel());
-                        ps.setInt(5, state.stars());
-                        ps.addBatch();
+                // Save mine states
+                Map<String, MinePlayerProgress.MineProgressSnapshot> mineStates = snapshot.mineStates();
+                if (!mineStates.isEmpty()) {
+                    try (PreparedStatement ps = conn.prepareStatement("""
+                            INSERT INTO mine_player_mines (player_uuid, mine_id, unlocked, completed_manually)
+                            VALUES (?, ?, ?, ?)
+                            ON DUPLICATE KEY UPDATE unlocked = VALUES(unlocked),
+                                                    completed_manually = VALUES(completed_manually)
+                            """)) {
+                        for (var entry : mineStates.entrySet()) {
+                            ps.setString(1, playerId.toString());
+                            ps.setString(2, entry.getKey());
+                            MinePlayerProgress.MineProgressSnapshot state = entry.getValue();
+                            ps.setBoolean(3, state.unlocked());
+                            ps.setBoolean(4, state.completedManually());
+                            ps.addBatch();
+                        }
+                        ps.executeBatch();
                     }
-                    ps.executeBatch();
                 }
+
+                // Save miner states
+                Map<String, MinePlayerProgress.MinerProgressSnapshot> minerStates = snapshot.minerStates();
+                if (!minerStates.isEmpty()) {
+                    try (PreparedStatement ps = conn.prepareStatement("""
+                            INSERT INTO mine_player_miners (player_uuid, mine_id, has_miner, speed_level, stars)
+                            VALUES (?, ?, ?, ?, ?)
+                            ON DUPLICATE KEY UPDATE has_miner = VALUES(has_miner),
+                                                    speed_level = VALUES(speed_level),
+                                                    stars = VALUES(stars)
+                            """)) {
+                        for (var entry : minerStates.entrySet()) {
+                            ps.setString(1, playerId.toString());
+                            ps.setString(2, entry.getKey());
+                            MinePlayerProgress.MinerProgressSnapshot state = entry.getValue();
+                            ps.setBoolean(3, state.hasMiner());
+                            ps.setInt(4, state.speedLevel());
+                            ps.setInt(5, state.stars());
+                            ps.addBatch();
+                        }
+                        ps.executeBatch();
+                    }
+                }
+
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
             }
             return true;
         } catch (SQLException e) {

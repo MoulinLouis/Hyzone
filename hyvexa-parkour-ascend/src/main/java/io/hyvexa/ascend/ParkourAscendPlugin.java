@@ -121,6 +121,7 @@ public class ParkourAscendPlugin extends JavaPlugin {
     private MineManager mineManager;
     private MinePlayerStore minePlayerStore;
     private MineRobotManager mineRobotManager;
+    private MineBreakSystem mineBreakSystem;
     private MineHudManager mineHudManager;
     private AscendWhitelistManager whitelistManager;
     private AscendRuntimeConfig runtimeConfig;
@@ -310,7 +311,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
                 registry.registerEntityEventType(BreakBlockEvent.class);
             }
             if (!registry.hasSystemClass(MineBreakSystem.class)) {
-                registry.registerSystem(new MineBreakSystem(mineManager, minePlayerStore));
+                mineBreakSystem = new MineBreakSystem(mineManager, minePlayerStore);
+                registry.registerSystem(mineBreakSystem);
             }
             // Mine damage system — scales block damage by mining speed upgrade
             if (registry.getEntityEventTypeForClass(DamageBlockEvent.class) == null) {
@@ -501,6 +503,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
                     "Disconnect cleanup: playerStore");
             runSafe(() -> { if (minePlayerStore != null) minePlayerStore.evict(playerId); },
                     "Disconnect cleanup: minePlayerStore");
+            runSafe(() -> { if (mineBreakSystem != null) mineBreakSystem.evict(playerId); },
+                    "Disconnect cleanup: mineBreakSystem");
             runSafe(() -> { if (mineGateChecker != null) mineGateChecker.evict(playerId); },
                     "Disconnect cleanup: mineGateChecker");
             runSafe(() -> VexaStore.getInstance().evictPlayer(playerId),
