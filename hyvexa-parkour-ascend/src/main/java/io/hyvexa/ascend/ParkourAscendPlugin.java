@@ -39,6 +39,7 @@ import io.hyvexa.ascend.hud.AscendHudManager;
 import io.hyvexa.ascend.interaction.AbstractAscendPageInteraction;
 import io.hyvexa.ascend.interaction.AscendDevInteraction;
 import io.hyvexa.ascend.interaction.AscendLeaveInteraction;
+import io.hyvexa.ascend.interaction.MineChestInteraction;
 import io.hyvexa.ascend.interaction.AscendResetInteraction;
 import io.hyvexa.ascend.interaction.AscendTranscendenceInteraction;
 import io.hyvexa.ascend.robot.RobotManager;
@@ -943,6 +944,8 @@ public class ParkourAscendPlugin extends JavaPlugin {
         registry.register("Shop_Item_Interaction",
             io.hyvexa.common.interaction.ShopItemInteraction.class,
             io.hyvexa.common.interaction.ShopItemInteraction.CODEC);
+        registry.register("Mine_Chest_Interaction",
+            MineChestInteraction.class, MineChestInteraction.CODEC);
         // Mine Select -> MineSelectPage
         registry.register("Mine_Select_Interaction",
             AscendDevInteraction.class, AscendDevInteraction.codec(() -> new AscendDevInteraction(

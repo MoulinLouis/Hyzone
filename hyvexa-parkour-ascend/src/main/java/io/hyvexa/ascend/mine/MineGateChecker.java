@@ -205,6 +205,7 @@ public class MineGateChecker {
         ItemContainer hotbar = inventory.getHotbar();
         if (hotbar == null || hotbar.getCapacity() <= 0) return;
         hotbar.setItemStackForSlot((short) 0, new ItemStack(AscendConstants.ITEM_MINE_PICKAXE, 1), false);
+        hotbar.setItemStackForSlot((short) 1, new ItemStack(AscendConstants.ITEM_MINE_CHEST, 1), false);
         InventoryUtils.giveGlobalItems(hotbar);
     }
 
