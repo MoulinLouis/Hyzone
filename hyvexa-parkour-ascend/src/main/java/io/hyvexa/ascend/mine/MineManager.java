@@ -153,6 +153,23 @@ public class MineManager {
 
     public void setWorld(World world) { this.mineWorld = world; }
 
+    /**
+     * Sets a block to air on the world thread using the canonical mineWorld reference.
+     * Same code path as zone regeneration (which is known to propagate to clients).
+     */
+    public void breakBlockVisually(int x, int y, int z) {
+        World world = mineWorld;
+        if (world == null) return;
+        world.execute(() -> {
+            long chunkIndex = ChunkUtil.indexChunkFromBlock(x, z);
+            var chunk = world.getChunkIfInMemory(chunkIndex);
+            if (chunk == null) chunk = world.loadChunkIfInMemory(chunkIndex);
+            if (chunk != null) {
+                chunk.setBlock(x, y, z, 0);
+            }
+        });
+    }
+
     public void tick() {
         long now = System.currentTimeMillis();
 

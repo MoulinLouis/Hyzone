@@ -4,7 +4,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
-import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.HytaleServer;
@@ -544,52 +543,33 @@ public class MineRobotManager {
     }
 
     private void readBlockTypeAndReward(MinerRobotState state, MineZone zone) {
-        String worldName = state.getWorldName();
-        if (worldName == null) return;
-
-        World world = Universe.get().getWorld(worldName);
-        if (world == null) return;
-
         int bx = state.getTargetBlockX();
         int by = state.getTargetBlockY();
         int bz = state.getTargetBlockZ();
         UUID ownerId = state.getOwnerId();
 
-        world.execute(() -> {
-            try {
-                MinePlayerProgress progress = playerStore.getPlayer(ownerId);
-                if (progress == null || progress.isInventoryFull()) {
-                    mineManager.unclaimBlock(zone.getId(), bx, by, bz);
-                    return;
-                }
+        MinePlayerProgress progress = playerStore.getPlayer(ownerId);
+        if (progress == null || progress.isInventoryFull()) {
+            mineManager.unclaimBlock(zone.getId(), bx, by, bz);
+            return;
+        }
 
-                // Reward uses weighted random from zone table (same distribution as zone gen).
-                // AssetMap has no reverse lookup (int->name), so we can't read the actual block type.
-                String blockType = pickRandomBlock(zone.getBlockTable());
-                if (blockType == null) {
-                    mineManager.unclaimBlock(zone.getId(), bx, by, bz);
-                    return;
-                }
+        String blockType = pickRandomBlock(zone.getBlockTable());
+        if (blockType == null) {
+            mineManager.unclaimBlock(zone.getId(), bx, by, bz);
+            return;
+        }
 
-                boolean added = progress.addToInventory(blockType, 1);
-                if (!added) {
-                    mineManager.unclaimBlock(zone.getId(), bx, by, bz);
-                    return;
-                }
+        boolean added = progress.addToInventory(blockType, 1);
+        if (!added) {
+            mineManager.unclaimBlock(zone.getId(), bx, by, bz);
+            return;
+        }
 
-                playerStore.markDirty(ownerId);
+        playerStore.markDirty(ownerId);
 
-                // Break the block visually (set to air)
-                long chunkIndex = ChunkUtil.indexChunkFromBlock(bx, bz);
-                var chunk = world.getChunkIfInMemory(chunkIndex);
-                if (chunk == null) chunk = world.loadChunkIfInMemory(chunkIndex);
-                if (chunk != null) {
-                    chunk.setBlock(bx, by, bz, 0);
-                }
-            } catch (Exception e) {
-                LOGGER.atWarning().log("Miner readBlockTypeAndReward error: " + e.getMessage());
-            }
-        });
+        // Break the block visually via MineManager's canonical world reference
+        mineManager.breakBlockVisually(bx, by, bz);
     }
 
     // ── Helpers ────────────────────────────────────────────────────────
