@@ -44,8 +44,10 @@ public class MineDamageSystem extends EntityEventSystem<EntityStore, DamageBlock
         if (!progress.getMineState(zone.getMineId()).isUnlocked()) return;
 
         double speedMult = progress.getMiningSpeedMultiplier();
-        if (speedMult > 1.0) {
-            event.setDamage(event.getDamage() * (float) speedMult);
+        double pickaxeMult = progress.getPickaxeTierEnum().getSpeedMultiplier();
+        double totalMult = speedMult * pickaxeMult;
+        if (totalMult > 1.0) {
+            event.setDamage(event.getDamage() * (float) totalMult);
         }
     }
 
